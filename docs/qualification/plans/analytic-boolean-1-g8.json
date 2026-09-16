@@ -1,0 +1,11 @@
+{
+  "schema": "open-scad-viewer/qualification-plan",
+  "schemaVersion": 1,
+  "capability": "analytic-boolean/1",
+  "gate": "G8-full",
+  "matrixHash": "a392bfd447932bc435b1ff2be68c306caad9c637ab2d67ddb314ce1a4bc10fc3",
+  "oracles": ["disjoint", "contained", "identical", "exact-wall-intersect-volume", "sphere-sphere", "mixed-disjoint", "tube-profile-holes", "torus-query-only-refuse", "frozen-refuse-intersecting-cone"],
+  "mutationCi": ["crates/brep-core analytic_boolean::*", "crates/brep-core curved_boolean_audit", "crates/brep-core solid_audit::*", "crates/brep-core trim_sew::*"],
+  "evidence": "docs/qualification/analytic-boolean-1-evidence-v1.json",
+  "resetPolicy": "false-Complete freezes Unavailable"
+}

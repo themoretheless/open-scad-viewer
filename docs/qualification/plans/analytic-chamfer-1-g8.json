@@ -1,0 +1,10 @@
+{
+  "schema": "open-scad-viewer/qualification-plan",
+  "schemaVersion": 1,
+  "capability": "analytic-chamfer/1",
+  "gate": "G8-full",
+  "oracles": ["af01-cuboid-vertical", "curved-refuse", "no-mesh-relabel"],
+  "mutationCi": ["crates/brep-core analytic_features::analytic_chamfer"],
+  "evidence": "docs/qualification/analytic-chamfer-1-evidence-v1.json",
+  "resetPolicy": "false-Complete freezes Unavailable"
+}

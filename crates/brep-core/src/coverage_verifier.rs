@@ -69,6 +69,45 @@ pub fn verify_complete_with_strata<T>(
     Ok(audit)
 }
 
+/// UV arrangement coverage: Complete classification must expose strata cells and
+/// may not claim Complete when the arrangement recorded zero events on Freeform.
+pub fn verify_uv_arrangement_coverage(
+    complete: bool,
+    event_count: usize,
+    cell_count: usize,
+    hole_count: usize,
+    freeform: bool,
+) -> Result<CoverageAudit> {
+    if freeform && event_count == 0 {
+        return Err(refuse(
+            "Freeform UV arrangement cannot be Complete with zero imprint events",
+        ));
+    }
+    if complete && cell_count == 0 {
+        return Err(refuse(
+            "Complete UV classification must record at least one cell stratum",
+        ));
+    }
+    if !complete {
+        return Ok(CoverageAudit {
+            complete: false,
+            component_count: cell_count,
+            unresolved_count: 1,
+            notes: vec!["uv_incomplete_typed"],
+        });
+    }
+    let mut notes = vec!["uv_arrangement_strata_ok"];
+    if hole_count > 0 {
+        notes.push("uv_holes_present");
+    }
+    Ok(CoverageAudit {
+        complete: true,
+        component_count: cell_count,
+        unresolved_count: 0,
+        notes,
+    })
+}
+
 /// Negative matrix: Incomplete reports must name a typed reason, never pretend Complete.
 pub fn verify_incomplete_refusal<T>(report: &Report<T>) -> Result<CoverageAudit> {
     if report.coverage == Coverage::Complete {
@@ -150,6 +189,7 @@ mod tests {
             vec![vec![1., 0., 0.], vec![1., 1., 0.]],
         ];
         quadratic.weights = vec![vec![1., 1.], vec![1., 1.], vec![1., 1.]];
+        quadratic.weights[1][0] = 2.;
         let report = surface_surface(&flat, &quadratic, Options::default()).unwrap();
         assert_eq!(report.coverage, Coverage::Incomplete);
         verify_incomplete_refusal(&report).unwrap();
@@ -181,5 +221,13 @@ mod tests {
         .unwrap();
         assert_eq!(report.coverage, Coverage::Complete);
         verify_complete_report(&report, false).unwrap();
+    }
+
+    #[test]
+    fn uv_arrangement_coverage_admits_holes_and_refuses_empty_freeform() {
+        let ok = verify_uv_arrangement_coverage(true, 4, 3, 1, false).unwrap();
+        assert!(ok.complete);
+        assert!(ok.notes.contains(&"uv_holes_present"));
+        assert!(verify_uv_arrangement_coverage(true, 0, 1, 0, true).is_err());
     }
 }

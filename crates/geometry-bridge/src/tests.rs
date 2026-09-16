@@ -176,3 +176,181 @@ fn mesh_section_and_toolpath_ops_cut_a_box() {
     .unwrap();
     assert!(gcode["gcode"].as_str().unwrap().contains("G1"));
 }
+
+#[test]
+fn analytic_step_export_import_roundtrip() {
+    let model = encode(brep_core::cylinder(2., 4.).unwrap()).unwrap();
+    let exported = dispatch(json!({
+        "op": "brep_nurbs_export_step",
+        "model": model,
+    }))
+    .unwrap();
+    let text = exported["text"].as_str().unwrap();
+    assert!(text.contains("CYLINDRICAL_SURFACE"));
+    assert!(text.contains("CIRCLE"));
+    assert!(text.contains("ADVANCED_FACE"));
+    assert!(!text.contains("OSCAD_SOLID"));
+    assert!(!text.contains("FACETED_BREP"));
+    assert_eq!(
+        exported["certificate"]["capability"].as_str(),
+        Some("step-interchange/1")
+    );
+    assert_eq!(exported["certificate"]["complete"], true);
+    let imported = dispatch(json!({
+        "op": "brep_nurbs_import_step",
+        "text": text,
+    }))
+    .unwrap();
+    assert_eq!(imported["certificate"]["complete"], true);
+    assert!(imported["model"]["faces"].as_array().unwrap().len() >= 6);
+    let faceted = "ISO-10303-21;\nDATA;\n#1=FACETED_BREP('',#2);\nENDSEC;\nEND-ISO-10303-21;\n";
+    assert!(
+        dispatch(json!({"op": "brep_nurbs_import_step", "text": faceted})).is_err(),
+        "faceted must refuse on analytic import"
+    );
+}
+
+#[test]
+fn freeform_nurbs_step_export_import_roundtrip() {
+    let mut cps = Vec::new();
+    for y in 0..4 {
+        cps.push(
+            (0..4)
+                .map(|x| vec![x as f64, y as f64, 0.05 * (x + y) as f64])
+                .collect::<Vec<_>>(),
+        );
+    }
+    let surface = nurbs_core::surface::Surface {
+        degree_u: 3,
+        degree_v: 3,
+        knots_u: vec![0., 0., 0., 0., 1., 1., 1., 1.],
+        knots_v: vec![0., 0., 0., 0., 1., 1., 1., 1.],
+        control_points: cps,
+        weights: vec![vec![1.; 4]; 4],
+        periodic_u: false,
+        periodic_v: false,
+    };
+    let model = encode(brep_core::bicubic_open_face(surface).unwrap()).unwrap();
+    let exported = dispatch(json!({
+        "op": "brep_nurbs_export_step_freeform",
+        "model": model,
+    }))
+    .unwrap();
+    let text = exported["text"].as_str().unwrap();
+    assert!(text.contains("B_SPLINE_SURFACE_WITH_KNOTS"));
+    assert!(text.contains("OPEN_SHELL"));
+    assert!(!text.contains("MANIFOLD_SOLID_BREP"));
+    assert!(!text.contains("OSCAD_SOLID"));
+    assert_eq!(
+        exported["certificate"]["capability"].as_str(),
+        Some("nurbs-step-bicubic-face/1")
+    );
+    let imported = dispatch(json!({
+        "op": "brep_nurbs_import_step_freeform",
+        "text": text,
+    }))
+    .unwrap();
+    assert_eq!(imported["certificate"]["complete"], true);
+    assert_eq!(imported["model"]["faces"].as_array().unwrap().len(), 1);
+    assert!(
+        dispatch(json!({
+            "op": "brep_nurbs_export_step_freeform",
+            "model": encode(brep_core::cuboid([0.,0.,0.],[1.,1.,1.]).unwrap()).unwrap(),
+        }))
+        .is_err(),
+        "constructor solid must refuse on freeform export"
+    );
+}
+
+#[test]
+fn freeform_nurbs_step_trimmed_and_solid_bridge() {
+    let mut cps = Vec::new();
+    for y in 0..4 {
+        cps.push(
+            (0..4)
+                .map(|x| vec![x as f64, y as f64, 0.02 * (x + y) as f64])
+                .collect::<Vec<_>>(),
+        );
+    }
+    let surface = nurbs_core::surface::Surface {
+        degree_u: 3,
+        degree_v: 3,
+        knots_u: vec![0., 0., 0., 0., 1., 1., 1., 1.],
+        knots_v: vec![0., 0., 0., 0., 1., 1., 1., 1.],
+        control_points: cps,
+        weights: vec![vec![1.; 4]; 4],
+        periodic_u: false,
+        periodic_v: false,
+    };
+    let hole = [[0.2, 0.2], [0.8, 0.2], [0.8, 0.8], [0.2, 0.8]];
+    let trimmed = encode(brep_core::bicubic_trimmed_face(surface, hole).unwrap()).unwrap();
+    let exported = dispatch(json!({
+        "op": "brep_nurbs_export_step_trimmed",
+        "model": trimmed,
+    }))
+    .unwrap();
+    assert!(exported["text"].as_str().unwrap().contains("FACE_BOUND"));
+    assert_eq!(
+        exported["certificate"]["capability"].as_str(),
+        Some("nurbs-step-trimmed-bicubic/1")
+    );
+    let imported = dispatch(json!({
+        "op": "brep_nurbs_import_step_trimmed",
+        "text": exported["text"],
+    }))
+    .unwrap();
+    assert_eq!(
+        imported["model"]["faces"][0]["holes"]
+            .as_array()
+            .unwrap()
+            .len(),
+        1
+    );
+
+    let solid =
+        encode(brep_core::freeform_cuboid_solid([0., 0., 0.], [2., 2., 2.]).unwrap()).unwrap();
+    let sexported = dispatch(json!({
+        "op": "brep_nurbs_export_step_solid",
+        "model": solid,
+    }))
+    .unwrap();
+    let stext = sexported["text"].as_str().unwrap();
+    assert!(stext.contains("MANIFOLD_SOLID_BREP"));
+    assert!(!stext.contains("OSCAD_SOLID"));
+    assert!(!stext.contains("AABB"));
+    assert_eq!(
+        sexported["certificate"]["capability"].as_str(),
+        Some("nurbs-step-solid/1")
+    );
+    let simported = dispatch(json!({
+        "op": "brep_nurbs_import_step_solid",
+        "text": sexported["text"],
+    }))
+    .unwrap();
+    assert_eq!(simported["model"]["faces"].as_array().unwrap().len(), 6);
+
+    let outer = brep_core::freeform_cuboid_solid([0., 0., 0.], [4., 4., 4.]).unwrap();
+    let inner = brep_core::freeform_cuboid_solid([1., 1., 1.], [2., 2., 2.]).unwrap();
+    let (boolean_result, boolean_cert) =
+        brep_core::nurbs_boolean_imprint_solids(&outer, &inner, "difference").unwrap();
+    assert_eq!(boolean_cert.capability, "nurbs-boolean-bezier-le3/1");
+    let boolean_export = dispatch(json!({
+        "op": "brep_nurbs_export_step_solid",
+        "model": encode(boolean_result).unwrap(),
+    }))
+    .unwrap();
+    let boolean_text = boolean_export["text"].as_str().unwrap();
+    assert!(boolean_text.contains("BREP_WITH_VOIDS"));
+    assert!(!boolean_text.contains("OSCAD_SOLID"));
+    assert!(!boolean_text.contains("AABB"));
+    let boolean_import = dispatch(json!({
+        "op": "brep_nurbs_import_step_solid",
+        "text": boolean_text,
+    }))
+    .unwrap();
+    assert_eq!(boolean_import["certificate"]["complete"], true);
+    assert_eq!(
+        boolean_import["model"]["bodies"].as_array().unwrap().len(),
+        1
+    );
+}

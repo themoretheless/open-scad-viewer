@@ -1,0 +1,13 @@
+{
+  "capability": "analytic-chamfer/1",
+  "maturity": "AnalyticComplete",
+  "planId": "analytic-chamfer-1-evidence-v1",
+  "seedPlan": "docs/qualification/plans/analytic-chamfer-1.json",
+  "positiveCorpus": ["AC-01"],
+  "negativeCorpus": ["AC-N1-curved", "mesh-bevel-quarantine"],
+  "bindings": {
+    "rust": ["crates/brep-core/src/analytic_features.rs"],
+    "hostQuarantine": ["src/services/directSolidTools.ts", "src/services/mainSolidExtensions.ts"]
+  },
+  "resetPolicy": "false-Complete freezes Unavailable"
+}

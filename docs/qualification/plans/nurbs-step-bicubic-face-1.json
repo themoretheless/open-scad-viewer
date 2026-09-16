@@ -1,0 +1,83 @@
+{
+  "$schema": "./brep-capability-qualification-plan.schema.json",
+  "schema": "open-scad-viewer/brep-capability-qualification-plan",
+  "schemaVersion": 1,
+  "planId": "nurbs-step-bicubic-face-1",
+  "gate": {
+    "id": "g8-full",
+    "name": "brep-full-closed-matrix",
+    "version": 1
+  },
+  "lifecycle": {
+    "status": "qualified",
+    "qualificationClaim": "qualified"
+  },
+  "claimBoundary": {
+    "candidateClaim": "AnalyticComplete single untrimmed bicubic open face STEP (B_SPLINE_SURFACE_WITH_KNOTS + OPEN_SHELL)",
+    "forbiddenClaims": [
+      "parasolid-parity",
+      "general-nurbs-step",
+      "trimmed-freeform-step",
+      "closed-freeform-solid-step",
+      "manifold-cross-route",
+      "mesh-fallback",
+      "aabb-import",
+      "oscad-solid"
+    ],
+    "notes": [
+      "general-nurbs-step / trimmed / closed solid STEP are lifted to nurbs-step-trimmed-bicubic/1 and nurbs-step-solid/1; this capability remains untrimmed open face only"
+    ]
+  },
+  "capability": "nurbs-step-bicubic-face/1",
+  "scope": {
+    "included": [
+      "uniform bicubic w≡1 non-periodic",
+      "1 face / 4 edges / 4 verts open shell",
+      "B_SPLINE_SURFACE_WITH_KNOTS export/import",
+      "LINE boundary edges",
+      "brep_nurbs_export_step_freeform / import product seam"
+    ],
+    "excluded": [
+      "MANIFOLD_SOLID_BREP",
+      "holes_trims",
+      "rational_weights",
+      "non_bicubic",
+      "FACETED_BREP",
+      "constructor_corpus"
+    ]
+  },
+  "matrix": [
+    {
+      "id": "NSF-01",
+      "expected": "Complete",
+      "blocksQualification": true
+    },
+    {
+      "id": "NSF-N1",
+      "expected": "typed-refuse",
+      "blocksQualification": true
+    }
+  ],
+  "bindings": {
+    "rust": [
+      "crates/brep-core/src/nurbs_step_interchange.rs",
+      "crates/geometry-bridge/src/lib.rs"
+    ],
+    "typescript": [
+      "src/services/cadNurbsStep.ts"
+    ],
+    "registry": "src/services/geometry/brepCapability.ts",
+    "evidenceJson": "docs/qualification/nurbs-step-bicubic-face-1-evidence-v1.json"
+  },
+  "evidence": {
+    "state": "qualified",
+    "notes": [
+      "b_spline_surface_with_knots",
+      "open_shell_no_manifold_solid",
+      "product_seam",
+      "no_aabb_oscad_solid"
+    ]
+  },
+  "resetPolicy": "false-Complete freezes Unavailable",
+  "unresolvedRows": []
+}

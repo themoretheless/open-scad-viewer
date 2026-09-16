@@ -1,0 +1,10 @@
+{
+  "schema": "open-scad-viewer/qualification-plan",
+  "schemaVersion": 1,
+  "capability": "iges-interchange/1",
+  "gate": "G8-full",
+  "oracles": ["export-entity-subset", "import-aabb", "stl-refuse"],
+  "mutationCi": ["crates/brep-core analytic_features::export_iges"],
+  "evidence": "docs/qualification/iges-interchange-1-evidence-v1.json",
+  "resetPolicy": "false-Complete freezes Unavailable"
+}

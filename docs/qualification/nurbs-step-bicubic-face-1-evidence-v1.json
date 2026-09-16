@@ -1,0 +1,23 @@
+{
+  "capability": "nurbs-step-bicubic-face/1",
+  "maturity": "AnalyticComplete",
+  "planId": "nurbs-step-bicubic-face-1-evidence-v1",
+  "seedPlan": "docs/qualification/plans/nurbs-step-bicubic-face-1.json",
+  "positiveCorpus": ["NSF-01-bicubic-open-face-roundtrip"],
+  "negativeCorpus": [
+    "constructor-solid-export-refuse",
+    "rational-weights-refuse",
+    "manifold-solid-import-refuse",
+    "faceted-refuse"
+  ],
+  "bindings": {
+    "rust": [
+      "crates/brep-core/src/nurbs_step_interchange.rs",
+      "crates/geometry-bridge/src/tests.rs"
+    ],
+    "typescript": ["src/services/cadNurbsStep.ts", "tests/cadNurbsStep.test.ts"]
+  },
+  "booleanImprint": false,
+  "permitsTopologyChange": false,
+  "resetPolicy": "false-Complete freezes Unavailable / stop"
+}

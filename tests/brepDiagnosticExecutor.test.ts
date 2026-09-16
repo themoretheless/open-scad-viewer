@@ -61,6 +61,7 @@ describe('isolated B-rep diagnostic execution',()=>{
     expect(receipt.scene).toMatchObject({metrics:'display_mesh_estimates',deviationStatus:'not_certified'})
     expect(lane.snapshot()).toMatchObject({activeWorkerEpoch:null,workersStarted:1,workersTerminated:1,quarantined:false})
     expect(geometryProviderAdmissionForManifest(GEOMETRY_MANIFEST_ARCHIVE['brep-contract-v1']).allowed).toBe(false)
+    expect(geometryProviderAdmissionForManifest(GEOMETRY_MANIFEST_ARCHIVE['brep-closed-v1']).allowed).toBe(true)
     const empty=await lane.evaluate('// @language openscad-viewer/brep-1\ndifference(){cube(1);cube(1);}',policy)
     expect(empty.scene.result.meshes).toEqual([])
     expect(empty.scene.outputs[0].empty).toBe(true)

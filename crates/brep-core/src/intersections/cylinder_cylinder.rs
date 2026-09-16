@@ -162,8 +162,8 @@ fn coaxial(
     let cap_coincidence = a_caps
         .iter()
         .any(|&x| b_caps.iter().any(|&y| (x - y).abs() <= band));
-    let overlap = a.half_height.min(along + b.half_height)
-        - (-a.half_height).max(along - b.half_height);
+    let overlap =
+        a.half_height.min(along + b.half_height) - (-a.half_height).max(along - b.half_height);
     if (a.radius - b.radius).abs() <= band {
         if overlap > band {
             // Equal radii within the band and a clear height overlap: the
@@ -476,8 +476,7 @@ mod tests {
         // gives two foot points at x = (d^2 + r1^2 - r2^2)/(2d), y = +-sqrt.
         let first = crate::analytic::cylinder(2., 8.).unwrap();
         let second = translated(&crate::analytic::cylinder(3., 8.).unwrap(), [3.5, 0., 0.]);
-        let report =
-            intersect_cylinder_cylinder(&first, &second, Options::default()).unwrap();
+        let report = intersect_cylinder_cylinder(&first, &second, Options::default()).unwrap();
         let report = only_lines(&report, 2);
         let d = 3.5_f64;
         let x = (d * d + 4. - 9.) / (2. * d);
@@ -485,8 +484,16 @@ mod tests {
         for (component, sign) in report.components.iter().zip([-1., 1.]) {
             let (curve, start, end, direction, contact, first_uv, second_uv, sampled) =
                 line_of(component);
-            assert!(sub(start, [x, sign * y, 0.]).iter().all(|v| v.abs() <= 1e-12), "{start:?}");
-            assert!(sub(end, [x, sign * y, 8.]).iter().all(|v| v.abs() <= 1e-12), "{end:?}");
+            assert!(
+                sub(start, [x, sign * y, 0.])
+                    .iter()
+                    .all(|v| v.abs() <= 1e-12),
+                "{start:?}"
+            );
+            assert!(
+                sub(end, [x, sign * y, 8.]).iter().all(|v| v.abs() <= 1e-12),
+                "{end:?}"
+            );
             assert!(direction[2].abs() >= 1. - 1e-12, "{direction:?}");
             assert_eq!(contact, Contact::Boundary);
             // Exact degree-1 line, unit knots and weights.
@@ -545,13 +552,16 @@ mod tests {
             &crate::analytic::cylinder(3., 8.).unwrap(),
             [d * u_world[0], d * u_world[1], 0.],
         );
-        let report =
-            intersect_cylinder_cylinder(&first, &second, Options::default()).unwrap();
+        let report = intersect_cylinder_cylinder(&first, &second, Options::default()).unwrap();
         let report = only_lines(&report, 2);
         // The sign = +1 ruling sits on the first cylinder's seam at angle 0.
         let seam = line_of(&report.components[1]);
         assert_eq!(seam.5.len(), 2, "{:?}", seam.5);
-        let us: Vec<f64> = seam.5.iter().map(|lift| lift.arcs[0].control_points[0][0]).collect();
+        let us: Vec<f64> = seam
+            .5
+            .iter()
+            .map(|lift| lift.arcs[0].control_points[0][0])
+            .collect();
         assert!(us.contains(&0.) && us.contains(&1.), "{us:?}");
         assert_ne!(seam.5[0].patch, seam.5[1].patch);
         // The other ruling is strictly inside a quadrant: one patch.
@@ -564,13 +574,23 @@ mod tests {
             rec.center[2] + 2. * rec.frame[0][2],
         ];
         let second_center = [d * u_world[0], d * u_world[1], 4.];
-        assert!(side_residual(foot, rec.center, rec.axis, 2.) <= 1e-12, "{foot:?}");
-        assert!(side_residual(foot, second_center, [0., 0., 1.], 3.) <= 1e-12, "{foot:?}");
+        assert!(
+            side_residual(foot, rec.center, rec.axis, 2.) <= 1e-12,
+            "{foot:?}"
+        );
+        assert!(
+            side_residual(foot, second_center, [0., 0., 1.], 3.) <= 1e-12,
+            "{foot:?}"
+        );
         for component in &report.components {
             let (_, _, _, _, _, first_uv, second_uv, _) = line_of(component);
             let uv_worst = uv_samples(&first, &second, first_uv, second_uv, |p| {
-                side_residual(p, rec.center, rec.axis, 2.)
-                    .max(side_residual(p, second_center, [0., 0., 1.], 3.))
+                side_residual(p, rec.center, rec.axis, 2.).max(side_residual(
+                    p,
+                    second_center,
+                    [0., 0., 1.],
+                    3.,
+                ))
             });
             assert!(uv_worst <= 1e-9, "{uv_worst}");
         }
@@ -582,16 +602,23 @@ mod tests {
         // Partial overlap: the second cylinder spans z in 5..9, so the clip
         // interval is [1, 4] about the first center plane — lines z in 5..8.
         let partial = translated(&crate::analytic::cylinder(3., 4.).unwrap(), [3.5, 0., 5.]);
-        let report =
-            intersect_cylinder_cylinder(&first, &partial, Options::default()).unwrap();
+        let report = intersect_cylinder_cylinder(&first, &partial, Options::default()).unwrap();
         let report = only_lines(&report, 2);
         let d = 3.5_f64;
         let x = (d * d + 4. - 9.) / (2. * d);
         let y = (4. - x * x).sqrt();
         for (component, sign) in report.components.iter().zip([-1., 1.]) {
             let (_, start, end, _, _, _, second_uv, _) = line_of(component);
-            assert!(sub(start, [x, sign * y, 5.]).iter().all(|v| v.abs() <= 1e-12), "{start:?}");
-            assert!(sub(end, [x, sign * y, 8.]).iter().all(|v| v.abs() <= 1e-12), "{end:?}");
+            assert!(
+                sub(start, [x, sign * y, 5.])
+                    .iter()
+                    .all(|v| v.abs() <= 1e-12),
+                "{start:?}"
+            );
+            assert!(
+                sub(end, [x, sign * y, 8.]).iter().all(|v| v.abs() <= 1e-12),
+                "{end:?}"
+            );
             // The second lift spans v in 0..3/4 of its own height.
             let arc = &second_uv[0].arcs[0];
             assert!((arc.control_points[0][1]).abs() <= 1e-12);
@@ -599,17 +626,21 @@ mod tests {
         }
         // Disjoint heights: the clip interval is empty beyond the band.
         let disjoint = translated(&crate::analytic::cylinder(3., 4.).unwrap(), [3.5, 0., 9.]);
-        let report =
-            intersect_cylinder_cylinder(&first, &disjoint, Options::default()).unwrap();
-        assert!(report.components.is_empty() && report.unresolved.is_empty(), "{report:?}");
+        let report = intersect_cylinder_cylinder(&first, &disjoint, Options::default()).unwrap();
+        assert!(
+            report.components.is_empty() && report.unresolved.is_empty(),
+            "{report:?}"
+        );
         assert_eq!(report.coverage, Coverage::NumericallyResolved);
         // Heights touching at one cap plane: a band-thin clip degenerates.
         let touching = translated(&crate::analytic::cylinder(3., 4.).unwrap(), [3.5, 0., 8.]);
-        let report =
-            intersect_cylinder_cylinder(&first, &touching, Options::default()).unwrap();
+        let report = intersect_cylinder_cylinder(&first, &touching, Options::default()).unwrap();
         assert!(report.components.is_empty(), "{report:?}");
         assert_eq!(report.coverage, Coverage::Incomplete);
-        assert_eq!(report.unresolved[0].reason, UnresolvedReason::TangencyOrMultipleRoot);
+        assert_eq!(
+            report.unresolved[0].reason,
+            UnresolvedReason::TangencyOrMultipleRoot
+        );
     }
 
     #[test]
@@ -620,25 +651,39 @@ mod tests {
         // Internal tangency: d == |r1 - r2|.
         let internal = translated(&crate::analytic::cylinder(5., 8.).unwrap(), [3., 0., 0.]);
         for second in [&external, &internal] {
-            let report =
-                intersect_cylinder_cylinder(&first, second, Options::default()).unwrap();
+            let report = intersect_cylinder_cylinder(&first, second, Options::default()).unwrap();
             assert!(report.components.is_empty(), "{report:?}");
             assert_eq!(report.coverage, Coverage::Incomplete);
-            assert_eq!(report.unresolved[0].reason, UnresolvedReason::TangencyOrMultipleRoot);
+            assert_eq!(
+                report.unresolved[0].reason,
+                UnresolvedReason::TangencyOrMultipleRoot
+            );
             assert!(!report.permits_topology_change());
         }
         // Just clear of the external band: separate, empty and resolved.
-        let clear = translated(&crate::analytic::cylinder(3., 8.).unwrap(), [5. + 1e-9, 0., 0.]);
+        let clear = translated(
+            &crate::analytic::cylinder(3., 8.).unwrap(),
+            [5. + 1e-9, 0., 0.],
+        );
         let report = intersect_cylinder_cylinder(&first, &clear, Options::default()).unwrap();
-        assert!(report.components.is_empty() && report.unresolved.is_empty(), "{report:?}");
+        assert!(
+            report.components.is_empty() && report.unresolved.is_empty(),
+            "{report:?}"
+        );
         // Just across: the transverse two-line case.
-        let across = translated(&crate::analytic::cylinder(3., 8.).unwrap(), [5. - 1e-9, 0., 0.]);
+        let across = translated(
+            &crate::analytic::cylinder(3., 8.).unwrap(),
+            [5. - 1e-9, 0., 0.],
+        );
         let report = intersect_cylinder_cylinder(&first, &across, Options::default()).unwrap();
         only_lines(&report, 2);
         // Radially nested without contact: d < |r1 - r2| provably.
         let nested = translated(&crate::analytic::cylinder(5., 8.).unwrap(), [2., 0., 0.]);
         let report = intersect_cylinder_cylinder(&first, &nested, Options::default()).unwrap();
-        assert!(report.components.is_empty() && report.unresolved.is_empty(), "{report:?}");
+        assert!(
+            report.components.is_empty() && report.unresolved.is_empty(),
+            "{report:?}"
+        );
         assert_eq!(report.coverage, Coverage::NumericallyResolved);
     }
 
@@ -650,11 +695,13 @@ mod tests {
         // Radii equal within the outward band: inseparable from coincidence.
         let near = crate::analytic::cylinder(2. + 2e-15, 8.).unwrap();
         for second in [&same, &near] {
-            let report =
-                intersect_cylinder_cylinder(&first, second, Options::default()).unwrap();
+            let report = intersect_cylinder_cylinder(&first, second, Options::default()).unwrap();
             assert!(report.components.is_empty(), "{report:?}");
             assert_eq!(report.coverage, Coverage::Incomplete);
-            assert_eq!(report.unresolved[0].reason, UnresolvedReason::CoincidentTrim);
+            assert_eq!(
+                report.unresolved[0].reason,
+                UnresolvedReason::CoincidentTrim
+            );
             assert!(!report.permits_topology_change());
         }
         // Stacked equal-radius cylinders sharing the cap plane z = 8: the
@@ -662,11 +709,17 @@ mod tests {
         let stacked = translated(&crate::analytic::cylinder(2., 4.).unwrap(), [0., 0., 8.]);
         let report = intersect_cylinder_cylinder(&first, &stacked, Options::default()).unwrap();
         assert!(report.components.is_empty(), "{report:?}");
-        assert_eq!(report.unresolved[0].reason, UnresolvedReason::TangencyOrMultipleRoot);
+        assert_eq!(
+            report.unresolved[0].reason,
+            UnresolvedReason::TangencyOrMultipleRoot
+        );
         // Equal radii, heights disjoint beyond the band: no contact.
         let apart = translated(&crate::analytic::cylinder(2., 4.).unwrap(), [0., 0., 9.]);
         let report = intersect_cylinder_cylinder(&first, &apart, Options::default()).unwrap();
-        assert!(report.components.is_empty() && report.unresolved.is_empty(), "{report:?}");
+        assert!(
+            report.components.is_empty() && report.unresolved.is_empty(),
+            "{report:?}"
+        );
         assert_eq!(report.coverage, Coverage::NumericallyResolved);
     }
 
@@ -677,23 +730,31 @@ mod tests {
         // z in 2..6): the sides never meet and no rim lies on the other side.
         let inner = translated(&crate::analytic::cylinder(1., 4.).unwrap(), [0., 0., 2.]);
         let report = intersect_cylinder_cylinder(&outer, &inner, Options::default()).unwrap();
-        assert!(report.components.is_empty() && report.unresolved.is_empty(), "{report:?}");
+        assert!(
+            report.components.is_empty() && report.unresolved.is_empty(),
+            "{report:?}"
+        );
         assert_eq!(report.coverage, Coverage::NumericallyResolved);
         // Same-height nested cylinders share both cap disks over the smaller
         // radius: an honest coincident-trim region, not resolved empty.
         let shared_caps = crate::analytic::cylinder(1., 8.).unwrap();
-        let report =
-            intersect_cylinder_cylinder(&outer, &shared_caps, Options::default()).unwrap();
+        let report = intersect_cylinder_cylinder(&outer, &shared_caps, Options::default()).unwrap();
         assert!(report.components.is_empty(), "{report:?}");
         assert_eq!(report.coverage, Coverage::Incomplete);
-        assert_eq!(report.unresolved[0].reason, UnresolvedReason::CoincidentTrim);
+        assert_eq!(
+            report.unresolved[0].reason,
+            UnresolvedReason::CoincidentTrim
+        );
         // Stacked cylinders with different radii share the smaller cap disk:
         // an honest coincident-trim region, not a resolved-empty report.
         let stacked = translated(&crate::analytic::cylinder(1., 4.).unwrap(), [0., 0., 8.]);
         let report = intersect_cylinder_cylinder(&outer, &stacked, Options::default()).unwrap();
         assert!(report.components.is_empty(), "{report:?}");
         assert_eq!(report.coverage, Coverage::Incomplete);
-        assert_eq!(report.unresolved[0].reason, UnresolvedReason::CoincidentTrim);
+        assert_eq!(
+            report.unresolved[0].reason,
+            UnresolvedReason::CoincidentTrim
+        );
     }
 
     #[test]
@@ -707,7 +768,10 @@ mod tests {
         let report = intersect_cylinder_cylinder(&first, &tilted, Options::default()).unwrap();
         assert!(report.components.is_empty(), "{report:?}");
         assert_eq!(report.coverage, Coverage::Incomplete);
-        assert_eq!(report.unresolved[0].reason, UnresolvedReason::NearCoincidence);
+        assert_eq!(
+            report.unresolved[0].reason,
+            UnresolvedReason::NearCoincidence
+        );
         // Clearly non-parallel: the general quartic is out of scope.
         let skew = rotated_translated(
             &crate::analytic::cylinder(3., 8.).unwrap(),
@@ -717,13 +781,22 @@ mod tests {
         let report = intersect_cylinder_cylinder(&first, &skew, Options::default()).unwrap();
         assert!(report.components.is_empty(), "{report:?}");
         assert_eq!(report.unresolved.len(), 1);
-        assert_eq!(report.unresolved[0].reason, UnresolvedReason::UnsupportedSurface);
-        assert_eq!(report.unresolved[0].parameter_box, vec![0., 1., 0., 1., 0., 1., 0., 1.]);
+        assert_eq!(
+            report.unresolved[0].reason,
+            UnresolvedReason::UnsupportedSurface
+        );
+        assert_eq!(
+            report.unresolved[0].parameter_box,
+            vec![0., 1., 0., 1., 0., 1., 0., 1.]
+        );
         // A near-coaxial offset inside the recognition band: near_coincidence.
         let near = translated(&crate::analytic::cylinder(2., 8.).unwrap(), [1e-10, 0., 0.]);
         let report = intersect_cylinder_cylinder(&first, &near, Options::default()).unwrap();
         assert!(report.components.is_empty(), "{report:?}");
-        assert_eq!(report.unresolved[0].reason, UnresolvedReason::NearCoincidence);
+        assert_eq!(
+            report.unresolved[0].reason,
+            UnresolvedReason::NearCoincidence
+        );
     }
 
     #[test]
@@ -737,8 +810,7 @@ mod tests {
             angle,
             offset,
         );
-        let report =
-            intersect_cylinder_cylinder(&first, &second, Options::default()).unwrap();
+        let report = intersect_cylinder_cylinder(&first, &second, Options::default()).unwrap();
         let report = only_lines(&report, 2);
         // Independent binary64 oracle in the placed frame.
         let (sin, cos) = angle.sin_cos();
@@ -758,9 +830,22 @@ mod tests {
         for (component, sign) in report.components.iter().zip([-1., 1.]) {
             let (curve, start, end, direction, _, first_uv, second_uv, sampled) =
                 line_of(component);
-            assert!(sub(start, placed([x, sign * y, 0.])).iter().all(|v| v.abs() <= 1e-12), "{start:?}");
-            assert!(sub(end, placed([x, sign * y, 8.])).iter().all(|v| v.abs() <= 1e-12), "{end:?}");
-            assert!(sub(direction, axis).iter().all(|v| v.abs() <= 1e-12), "{direction:?}");
+            assert!(
+                sub(start, placed([x, sign * y, 0.]))
+                    .iter()
+                    .all(|v| v.abs() <= 1e-12),
+                "{start:?}"
+            );
+            assert!(
+                sub(end, placed([x, sign * y, 8.]))
+                    .iter()
+                    .all(|v| v.abs() <= 1e-12),
+                "{end:?}"
+            );
+            assert!(
+                sub(direction, axis).iter().all(|v| v.abs() <= 1e-12),
+                "{direction:?}"
+            );
             let mut worst = 0_f64;
             for k in 0..=8 {
                 let p = curve.evaluate(k as f64 / 8.).unwrap().point;
@@ -772,8 +857,12 @@ mod tests {
             assert!(worst <= 1e-12, "{worst}");
             assert!(sampled <= 1e-12);
             let uv_worst = uv_samples(&first, &second, first_uv, second_uv, |p| {
-                side_residual(p, first_center, axis, 2.)
-                    .max(side_residual(p, second_center, axis, 3.))
+                side_residual(p, first_center, axis, 2.).max(side_residual(
+                    p,
+                    second_center,
+                    axis,
+                    3.,
+                ))
             });
             assert!(uv_worst <= 1e-9, "{uv_worst}");
         }
@@ -784,21 +873,35 @@ mod tests {
         let cylinder = crate::analytic::cylinder(2., 8.).unwrap();
         // Frusta, tubes, spheres and cuboids are not the canonical cylinder.
         for (a, b) in [
-            (crate::analytic::frustum(1., 2., 3.).unwrap(), crate::analytic::cylinder(2., 8.).unwrap()),
-            (crate::analytic::tube(2., 1., 3.).unwrap(), crate::analytic::cylinder(2., 8.).unwrap()),
-            (crate::analytic::cylinder(2., 8.).unwrap(), crate::analytic::sphere(2.).unwrap()),
-            (crate::cuboid([0., 0., 0.], [1., 1., 1.]).unwrap(), crate::analytic::cylinder(2., 8.).unwrap()),
+            (
+                crate::analytic::frustum(1., 2., 3.).unwrap(),
+                crate::analytic::cylinder(2., 8.).unwrap(),
+            ),
+            (
+                crate::analytic::tube(2., 1., 3.).unwrap(),
+                crate::analytic::cylinder(2., 8.).unwrap(),
+            ),
+            (
+                crate::analytic::cylinder(2., 8.).unwrap(),
+                crate::analytic::sphere(2.).unwrap(),
+            ),
+            (
+                crate::cuboid([0., 0., 0.], [1., 1., 1.]).unwrap(),
+                crate::analytic::cylinder(2., 8.).unwrap(),
+            ),
         ] {
             let report = intersect_cylinder_cylinder(&a, &b, Options::default()).unwrap();
             assert!(report.components.is_empty(), "{report:?}");
             assert_eq!(report.coverage, Coverage::Incomplete);
             assert_eq!(report.unresolved.len(), 1);
-            assert_eq!(report.unresolved[0].reason, UnresolvedReason::UnsupportedSurface);
+            assert_eq!(
+                report.unresolved[0].reason,
+                UnresolvedReason::UnsupportedSurface
+            );
         }
         // A canonical pair still resolves.
         let second = translated(&crate::analytic::cylinder(3., 8.).unwrap(), [3.5, 0., 0.]);
-        let report =
-            intersect_cylinder_cylinder(&cylinder, &second, Options::default()).unwrap();
+        let report = intersect_cylinder_cylinder(&cylinder, &second, Options::default()).unwrap();
         assert_eq!(report.coverage, Coverage::NumericallyResolved);
         assert_eq!(report.components.len(), 2);
         // A structurally perturbed cylinder fails validation as a hard error.

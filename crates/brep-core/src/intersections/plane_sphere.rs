@@ -644,7 +644,12 @@ impl value_codec::Serialize for PlaneSphereComponent {
 pub(crate) fn plane_patch(origin: [f64; 3], u: [f64; 3], v: [f64; 3]) -> Model {
     use crate::{Coedge, Edge, Face, FaceUse, Loop, Shell, TopologyIds, Vertex};
     let add = |a: [f64; 3], b: [f64; 3]| [a[0] + b[0], a[1] + b[1], a[2] + b[2]];
-    let corners = [origin, add(origin, u), add(add(origin, u), v), add(origin, v)];
+    let corners = [
+        origin,
+        add(origin, u),
+        add(add(origin, u), v),
+        add(origin, v),
+    ];
     let uv = [[0., 0.], [1., 0.], [1., 1.], [0., 1.]];
     let mut edges = Vec::new();
     let mut coedges = Vec::new();
@@ -703,8 +708,8 @@ pub(crate) fn plane_patch(origin: [f64; 3], u: [f64; 3], v: [f64; 3]) -> Model {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use super::super::sphere_sphere::ARC_WEIGHT;
+    use super::*;
 
     fn translated(model: &Model, offset: [f64; 3]) -> Model {
         crate::transform::affine(
@@ -747,16 +752,18 @@ mod tests {
         assert!(report.unresolved.is_empty(), "{report:?}");
         assert_eq!(report.coverage, Coverage::NumericallyResolved, "{report:?}");
         assert!(!report.permits_topology_change());
-        let [PlaneSphereComponent::Circle {
-            curve,
-            center,
-            radius,
-            normal,
-            full: is_full,
-            plane_uv,
-            sphere_uv,
-            max_sample_residual,
-        }] = &report.components[..]
+        let [
+            PlaneSphereComponent::Circle {
+                curve,
+                center,
+                radius,
+                normal,
+                full: is_full,
+                plane_uv,
+                sphere_uv,
+                max_sample_residual,
+            },
+        ] = &report.components[..]
         else {
             panic!("expected one circle component: {report:?}")
         };
@@ -834,15 +841,26 @@ mod tests {
             only_circle(&report, true);
         let oracle = (4_f64 - 1.).sqrt();
         assert!((radius - oracle).abs() <= 1e-12, "{radius} vs {oracle}");
-        assert!(sub(center, [0., 0., 1.]).iter().all(|x| x.abs() <= 1e-12), "{center:?}");
-        assert!(sub(normal, [0., 0., 1.]).iter().all(|x| x.abs() <= 1e-12), "{normal:?}");
+        assert!(
+            sub(center, [0., 0., 1.]).iter().all(|x| x.abs() <= 1e-12),
+            "{center:?}"
+        );
+        assert!(
+            sub(normal, [0., 0., 1.]).iter().all(|x| x.abs() <= 1e-12),
+            "{normal:?}"
+        );
         // Exact rational circle: four 90-degree arcs, weights cos(pi/4).
         assert_eq!(curve.degree, 2);
-        assert_eq!(curve.knots, vec![0., 0., 0., 1., 1., 2., 2., 3., 3., 4., 4., 4.]);
+        assert_eq!(
+            curve.knots,
+            vec![0., 0., 0., 1., 1., 2., 2., 3., 3., 4., 4., 4.]
+        );
         assert_eq!(curve.control_points.len(), 9);
         assert_eq!(
             curve.weights,
-            vec![1., ARC_WEIGHT, 1., ARC_WEIGHT, 1., ARC_WEIGHT, 1., ARC_WEIGHT, 1.]
+            vec![
+                1., ARC_WEIGHT, 1., ARC_WEIGHT, 1., ARC_WEIGHT, 1., ARC_WEIGHT, 1.
+            ]
         );
         // Sixteen sampled points satisfy both implicit equations.
         let mut worst = 0_f64;
@@ -878,7 +896,10 @@ mod tests {
         assert!(uv_worst <= 1e-9, "{uv_worst}");
         // Operand order is fixed: the sphere as plane operand refuses.
         let swapped = intersect_plane_sphere(&sphere, &plane, Options::default()).unwrap();
-        assert_eq!(swapped.unresolved[0].reason, UnresolvedReason::UnsupportedSurface);
+        assert_eq!(
+            swapped.unresolved[0].reason,
+            UnresolvedReason::UnsupportedSurface
+        );
     }
 
     #[test]
@@ -889,18 +910,26 @@ mod tests {
         let plane = plane_patch([0., -3., 1.], [3., 0., 0.], [0., 6., 0.]);
         let sphere = crate::analytic::sphere(2.).unwrap();
         let report = intersect_plane_sphere(&plane, &sphere, Options::default()).unwrap();
-        let (curve, center, radius, _, plane_uv, sphere_uv, sampled) =
-            only_circle(&report, false);
+        let (curve, center, radius, _, plane_uv, sphere_uv, sampled) = only_circle(&report, false);
         let oracle = 3_f64.sqrt();
         assert!((radius - oracle).abs() <= 1e-12);
-        assert!(sub(center, [0., 0., 1.]).iter().all(|x| x.abs() <= 1e-12), "{center:?}");
+        assert!(
+            sub(center, [0., 0., 1.]).iter().all(|x| x.abs() <= 1e-12),
+            "{center:?}"
+        );
         // Two 90-degree pieces over the half circle.
         assert_eq!(curve.knots, vec![0., 0., 0., 1., 1., 2., 2., 2.]);
         let start = curve.evaluate(0.).unwrap().point;
         let end = curve.evaluate(2.).unwrap().point;
-        assert!(start[0].abs() <= 1e-12 && (start[1] + oracle).abs() <= 1e-12, "{start:?}");
+        assert!(
+            start[0].abs() <= 1e-12 && (start[1] + oracle).abs() <= 1e-12,
+            "{start:?}"
+        );
         assert!((start[2] - 1.).abs() <= 1e-12);
-        assert!(end[0].abs() <= 1e-12 && (end[1] - oracle).abs() <= 1e-12, "{end:?}");
+        assert!(
+            end[0].abs() <= 1e-12 && (end[1] - oracle).abs() <= 1e-12,
+            "{end:?}"
+        );
         assert!((end[2] - 1.).abs() <= 1e-12);
         let mut worst = 0_f64;
         for i in 0..=16 {
@@ -957,26 +986,37 @@ mod tests {
         let at = |z: f64| plane_patch([-1., -1., z], [2., 0., 0.], [0., 2., 0.]);
         // Miss: d = 5 > r, empty and resolved.
         let report = intersect_plane_sphere(&at(5.), &sphere, Options::default()).unwrap();
-        assert!(report.components.is_empty() && report.unresolved.is_empty(), "{report:?}");
+        assert!(
+            report.components.is_empty() && report.unresolved.is_empty(),
+            "{report:?}"
+        );
         assert_eq!(report.coverage, Coverage::NumericallyResolved);
         // Exact tangency and within the outward band: never a point.
         for z in [2., 2. - 3e-14] {
             let report = intersect_plane_sphere(&at(z), &sphere, Options::default()).unwrap();
             assert!(report.components.is_empty(), "{z} {report:?}");
             assert_eq!(report.coverage, Coverage::Incomplete);
-            assert_eq!(report.unresolved[0].reason, UnresolvedReason::TangencyOrMultipleRoot);
+            assert_eq!(
+                report.unresolved[0].reason,
+                UnresolvedReason::TangencyOrMultipleRoot
+            );
         }
         // Just clear of the band above: empty resolved; below: a small circle.
-        let report =
-            intersect_plane_sphere(&at(2. + 1e-12), &sphere, Options::default()).unwrap();
-        assert!(report.components.is_empty() && report.unresolved.is_empty(), "{report:?}");
-        let report =
-            intersect_plane_sphere(&at(2. - 1e-12), &sphere, Options::default()).unwrap();
+        let report = intersect_plane_sphere(&at(2. + 1e-12), &sphere, Options::default()).unwrap();
+        assert!(
+            report.components.is_empty() && report.unresolved.is_empty(),
+            "{report:?}"
+        );
+        let report = intersect_plane_sphere(&at(2. - 1e-12), &sphere, Options::default()).unwrap();
         let (_, _, radius, _, _, _, _) = only_circle(&report, true);
         // rho^2 = r^2 - d^2 loses digits to cancellation; compare squared.
         let d = 2. - 1e-12;
         let oracle = 4_f64 - d * d;
-        assert!((radius * radius - oracle).abs() <= 2e-15, "{} vs {oracle}", radius * radius);
+        assert!(
+            (radius * radius - oracle).abs() <= 2e-15,
+            "{} vs {oracle}",
+            radius * radius
+        );
     }
 
     #[test]
@@ -987,16 +1027,25 @@ mod tests {
         let report = intersect_plane_sphere(&tangent, &sphere, Options::default()).unwrap();
         assert!(report.components.is_empty(), "{report:?}");
         assert_eq!(report.coverage, Coverage::Incomplete);
-        assert_eq!(report.unresolved[0].reason, UnresolvedReason::TangencyOrMultipleRoot);
+        assert_eq!(
+            report.unresolved[0].reason,
+            UnresolvedReason::TangencyOrMultipleRoot
+        );
         // Circle clearly outside the rectangle: empty and resolved.
         let outside = plane_patch([2.5, -3., 1.], [3., 0., 0.], [0., 6., 0.]);
         let report = intersect_plane_sphere(&outside, &sphere, Options::default()).unwrap();
-        assert!(report.components.is_empty() && report.unresolved.is_empty(), "{report:?}");
+        assert!(
+            report.components.is_empty() && report.unresolved.is_empty(),
+            "{report:?}"
+        );
         assert_eq!(report.coverage, Coverage::NumericallyResolved);
         // Plane clear of the sphere in 3D regardless of patch size.
         let far = plane_patch([-10., -10., 4.5], [20., 0., 0.], [0., 20., 0.]);
         let report = intersect_plane_sphere(&far, &sphere, Options::default()).unwrap();
-        assert!(report.components.is_empty() && report.unresolved.is_empty(), "{report:?}");
+        assert!(
+            report.components.is_empty() && report.unresolved.is_empty(),
+            "{report:?}"
+        );
     }
 
     #[test]
@@ -1023,8 +1072,14 @@ mod tests {
         let placed_center = placed([0., 0., 1.]);
         let placed_normal = sub(placed([0., 0., 2.]), placed([0., 0., 1.]));
         assert!((radius - 3_f64.sqrt()).abs() <= 1e-12, "{radius}");
-        assert!(sub(center, placed_center).iter().all(|x| x.abs() <= 1e-12), "{center:?}");
-        assert!(sub(normal, placed_normal).iter().all(|x| x.abs() <= 1e-12), "{normal:?}");
+        assert!(
+            sub(center, placed_center).iter().all(|x| x.abs() <= 1e-12),
+            "{center:?}"
+        );
+        assert!(
+            sub(normal, placed_normal).iter().all(|x| x.abs() <= 1e-12),
+            "{normal:?}"
+        );
         let mut worst = 0_f64;
         for i in 0..16 {
             let p = curve.evaluate(i as f64 / 4.).unwrap().point;
@@ -1052,23 +1107,38 @@ mod tests {
         let sphere = crate::analytic::sphere(2.).unwrap();
         for (a, b) in [
             (plane.clone(), crate::analytic::cylinder(1., 2.).unwrap()),
-            (plane.clone(), crate::cuboid([0., 0., 0.], [1., 1., 1.]).unwrap()),
+            (
+                plane.clone(),
+                crate::cuboid([0., 0., 0.], [1., 1., 1.]).unwrap(),
+            ),
             (crate::analytic::cylinder(1., 2.).unwrap(), sphere.clone()),
             // A closed solid is not a planar patch even though it has faces.
-            (crate::cuboid([0., 0., 0.], [4., 4., 1.]).unwrap(), sphere.clone()),
+            (
+                crate::cuboid([0., 0., 0.], [4., 4., 1.]).unwrap(),
+                sphere.clone(),
+            ),
         ] {
             let report = intersect_plane_sphere(&a, &b, Options::default()).unwrap();
             assert!(report.components.is_empty(), "{report:?}");
             assert_eq!(report.coverage, Coverage::Incomplete);
             assert_eq!(report.unresolved.len(), 1);
-            assert_eq!(report.unresolved[0].reason, UnresolvedReason::UnsupportedSurface);
-            assert_eq!(report.unresolved[0].parameter_box, vec![0., 1., 0., 1., 0., 1., 0., 1.]);
+            assert_eq!(
+                report.unresolved[0].reason,
+                UnresolvedReason::UnsupportedSurface
+            );
+            assert_eq!(
+                report.unresolved[0].parameter_box,
+                vec![0., 1., 0., 1., 0., 1., 0., 1.]
+            );
             assert!(!report.permits_topology_change());
         }
         // A skewed (non-rectangular) affine patch is not canonical.
         let skewed = plane_patch([-3., -3., 1.], [6., 0., 0.], [3., 6., 0.]);
         let report = intersect_plane_sphere(&skewed, &sphere, Options::default()).unwrap();
-        assert_eq!(report.unresolved[0].reason, UnresolvedReason::UnsupportedSurface);
+        assert_eq!(
+            report.unresolved[0].reason,
+            UnresolvedReason::UnsupportedSurface
+        );
         // A structurally perturbed patch (non-unit weight) no longer passes
         // model validation at all: the entry point refuses it outright.
         let mut perturbed = plane.clone();

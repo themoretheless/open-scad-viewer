@@ -409,7 +409,11 @@ pub(crate) fn recognize_cone(model: &Model) -> Result<Option<CanonicalCone>> {
         return Ok(None);
     }
     // In-plane frame from a nonzero ring: x is the quadrant-0 direction.
-    let (ring_center, ring_v) = if r_bottom > 0. { (bottom, 0.) } else { (top, 1.) };
+    let (ring_center, ring_v) = if r_bottom > 0. {
+        (bottom, 0.)
+    } else {
+        (top, 1.)
+    };
     let start = point3_of(&model.faces[sides[0]].surface.evaluate(0., ring_v)?.point);
     let x_perp = radial(start, ring_center);
     let x_length = hypot3(x_perp);
@@ -429,9 +433,8 @@ pub(crate) fn recognize_cone(model: &Model) -> Result<Option<CanonicalCone>> {
         let angle = dot(perp, y_dir).atan2(dot(perp, x_dir));
         let quadrant = (angle / QUARTER).round() as i64;
         let quadrant = quadrant.rem_euclid(4) as usize;
-        let residual =
-            (angle - quadrant as f64 * QUARTER + std::f64::consts::PI).rem_euclid(TAU)
-                - std::f64::consts::PI;
+        let residual = (angle - quadrant as f64 * QUARTER + std::f64::consts::PI).rem_euclid(TAU)
+            - std::f64::consts::PI;
         if residual.abs() > RECOGNITION {
             return Ok(None);
         }
@@ -458,7 +461,11 @@ pub(crate) fn recognize_cone(model: &Model) -> Result<Option<CanonicalCone>> {
                 if actual.len() != 3 {
                     return Ok(None);
                 }
-                let d = [actual[0] - expected[0], actual[1] - expected[1], actual[2] - expected[2]];
+                let d = [
+                    actual[0] - expected[0],
+                    actual[1] - expected[1],
+                    actual[2] - expected[2],
+                ];
                 let deviation = hypot3(d);
                 if !deviation.is_finite() || deviation > RECOGNITION * r_scale + 1e-12 {
                     return Ok(None);
@@ -486,7 +493,11 @@ pub(crate) fn recognize_cone(model: &Model) -> Result<Option<CanonicalCone>> {
         } else {
             return Ok(None);
         };
-        error = error.max(if slot == 0 { axial.abs() } else { (axial - height).abs() });
+        error = error.max(if slot == 0 {
+            axial.abs()
+        } else {
+            (axial - height).abs()
+        });
         let ring_r = if slot == 0 { r_bottom } else { r_top };
         if ring_r == 0. {
             return Ok(None);
@@ -501,13 +512,18 @@ pub(crate) fn recognize_cone(model: &Model) -> Result<Option<CanonicalCone>> {
             for j in 0..2 {
                 let expected: [f64; 3] = std::array::from_fn(|a| {
                     ring_c[a]
-                        + ring_r * ((2. * i as f64 - 1.) * x_dir[a] + (2. * j as f64 - 1.) * y_dir[a])
+                        + ring_r
+                            * ((2. * i as f64 - 1.) * x_dir[a] + (2. * j as f64 - 1.) * y_dir[a])
                 });
                 let actual = &surface.control_points[i][j];
                 if actual.len() != 3 {
                     return Ok(None);
                 }
-                let d = [actual[0] - expected[0], actual[1] - expected[1], actual[2] - expected[2]];
+                let d = [
+                    actual[0] - expected[0],
+                    actual[1] - expected[1],
+                    actual[2] - expected[2],
+                ];
                 let deviation = hypot3(d);
                 if !deviation.is_finite() || deviation > RECOGNITION * r_scale + 1e-12 {
                     return Ok(None);
@@ -931,7 +947,11 @@ fn clip_conic_t(
             continue;
         }
         let root = disc.sqrt();
-        let q = if b >= 0. { -0.5 * (b + root) } else { -0.5 * (b - root) };
+        let q = if b >= 0. {
+            -0.5 * (b + root)
+        } else {
+            -0.5 * (b - root)
+        };
         cuts.push(q / a);
         if q != 0. {
             cuts.push(c / q);
@@ -1008,10 +1028,8 @@ pub fn intersect_plane_cone(
     let _ = options;
     let mut report = Report::default();
     let domain = vec![0., 1., 0., 1., 0., 1., 0., 1.];
-    let (Some(plane), Some(cone)) = (
-        recognize_plane(plane_model)?,
-        recognize_cone(cone_model)?,
-    ) else {
+    let (Some(plane), Some(cone)) = (recognize_plane(plane_model)?, recognize_cone(cone_model)?)
+    else {
         report.unresolved(domain, UnresolvedReason::UnsupportedSurface);
         return Ok(report);
     };
@@ -1037,9 +1055,8 @@ pub fn intersect_plane_cone(
     let band = plane.error + cone.error + 16. * f64::EPSILON * terms;
     // Angular certification: pure-rounding tilts snap, recognition-scale
     // tilts report near_coincidence, clearly oblique angles are exact.
-    let angular_snap = 64. * f64::EPSILON
-        + plane.error / plane.u_len.min(plane.v_len)
-        + cone.error / h;
+    let angular_snap =
+        64. * f64::EPSILON + plane.error / plane.u_len.min(plane.v_len) + cone.error / h;
     let rect = rect_halfplanes(&plane, band);
     // Axial coordinate of the apex from the bottom ring center.
     let t_apex = -cone.r_bottom / m;
@@ -1169,24 +1186,18 @@ pub fn intersect_plane_cone(
             let band_uv = [band / plane.u_len, band / plane.v_len];
             let apex_uv = plane_uv(&plane, apex);
             for sign in [-1., 1.] {
-                let w: [f64; 3] =
-                    std::array::from_fn(|i| cone.axis[i] + sign * m * e2[i]);
+                let w: [f64; 3] = std::array::from_fn(|i| cone.axis[i] + sign * m * e2[i]);
                 let dir_uv = [
                     dot(w, plane.u) / (plane.u_len * plane.u_len),
                     dot(w, plane.v) / (plane.v_len * plane.v_len),
                 ];
-                match clip_line_rect(apex_uv, dir_uv, -t_apex, h - t_apex, band / wlen, band_uv)
-                {
+                match clip_line_rect(apex_uv, dir_uv, -t_apex, h - t_apex, band / wlen, band_uv) {
                     LineClip::Miss => {}
                     LineClip::Tangent => {
-                        report.unresolved(
-                            domain.clone(),
-                            UnresolvedReason::TangencyOrMultipleRoot,
-                        );
+                        report.unresolved(domain.clone(), UnresolvedReason::TangencyOrMultipleRoot);
                     }
                     LineClip::Span(lo, hi) => {
-                        let start: [f64; 3] =
-                            std::array::from_fn(|i| apex[i] + lo * w[i]);
+                        let start: [f64; 3] = std::array::from_fn(|i| apex[i] + lo * w[i]);
                         let end: [f64; 3] = std::array::from_fn(|i| apex[i] + hi * w[i]);
                         let curve = Curve {
                             degree: 1,
@@ -1211,8 +1222,7 @@ pub fn intersect_plane_cone(
                                 periodic: false,
                             }],
                         }];
-                        let max_sample_residual =
-                            side_plane_residuals(&curve, &cone, &plane, 9)?;
+                        let max_sample_residual = side_plane_residuals(&curve, &cone, &plane, 9)?;
                         report.components.push(PlaneConeComponent::Line {
                             curve,
                             start,
@@ -1241,9 +1251,7 @@ pub fn intersect_plane_cone(
             s = (1. - sigma * sigma).sqrt();
             kind = Conic::Parabola;
         } else {
-            let near = RECOGNITION
-                + plane.error / plane.u_len.min(plane.v_len)
-                + cone.error / h;
+            let near = RECOGNITION + plane.error / plane.u_len.min(plane.v_len) + cone.error / h;
             if ga >= 1. - near || ga <= near {
                 // Recognition-scale tilt: cannot be certified — never forced.
                 report.unresolved(domain, UnresolvedReason::NearCoincidence);
@@ -1467,10 +1475,7 @@ pub fn intersect_plane_cone(
                     if t0 < -1. + 1e-9 || t1 > 1. - 1e-9 {
                         // Arc runs into the asymptote: never a guessed
                         // unbounded trim.
-                        report.unresolved(
-                            domain.clone(),
-                            UnresolvedReason::TangencyOrMultipleRoot,
-                        );
+                        report.unresolved(domain.clone(), UnresolvedReason::TangencyOrMultipleRoot);
                         continue;
                     }
                     let curve = bezier_rational_3d(conic_num3(q, e1, e2, num, den), den, t0, t1);
@@ -1696,8 +1701,8 @@ impl value_codec::Serialize for PlaneConeComponent {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use super::super::plane_sphere::plane_patch;
+    use super::*;
 
     fn rotated_translated(model: &Model, angle: f64, offset: [f64; 3]) -> Model {
         let (sin, cos) = angle.sin_cos();
@@ -1779,24 +1784,32 @@ mod tests {
         assert!(report.unresolved.is_empty(), "{report:?}");
         assert_eq!(report.coverage, Coverage::NumericallyResolved);
         assert!(!report.permits_topology_change());
-        let [PlaneConeComponent::Circle {
-            curve,
-            center,
-            radius,
-            normal,
-            full,
-            plane_uv,
-            cone_uv,
-            max_sample_residual,
-        }] = &report.components[..]
+        let [
+            PlaneConeComponent::Circle {
+                curve,
+                center,
+                radius,
+                normal,
+                full,
+                plane_uv,
+                cone_uv,
+                max_sample_residual,
+            },
+        ] = &report.components[..]
         else {
             panic!("expected one circle component: {report:?}")
         };
         assert!(*full);
         assert!((*radius - 2.).abs() <= 1e-12, "{radius}");
-        assert!(sub(*center, [0., 0., 2.5]).iter().all(|x| x.abs() <= 1e-12), "{center:?}");
+        assert!(
+            sub(*center, [0., 0., 2.5]).iter().all(|x| x.abs() <= 1e-12),
+            "{center:?}"
+        );
         assert_eq!(*normal, [0., 0., 1.]);
-        assert_eq!(curve.knots, vec![0., 0., 0., 1., 1., 2., 2., 3., 3., 4., 4., 4.]);
+        assert_eq!(
+            curve.knots,
+            vec![0., 0., 0., 1., 1., 2., 2., 3., 3., 4., 4., 4.]
+        );
         assert_eq!(curve.weights.len(), 9);
         assert!((curve.weights[1] - std::f64::consts::FRAC_1_SQRT_2).abs() <= 1e-15);
         assert!(*max_sample_residual <= 1e-12, "{max_sample_residual}");
@@ -1829,26 +1842,37 @@ mod tests {
         let cone = crate::analytic::frustum(3., 1., 5.).unwrap();
         let report = intersect_plane_cone(&plane, &cone, Options::default()).unwrap();
         assert!(report.unresolved.is_empty(), "{report:?}");
-        let [PlaneConeComponent::Circle {
-            curve,
-            center,
-            full,
-            plane_uv,
-            cone_uv,
-            max_sample_residual,
-            ..
-        }] = &report.components[..]
+        let [
+            PlaneConeComponent::Circle {
+                curve,
+                center,
+                full,
+                plane_uv,
+                cone_uv,
+                max_sample_residual,
+                ..
+            },
+        ] = &report.components[..]
         else {
             panic!("expected one clipped circle: {report:?}")
         };
         assert!(!*full);
-        assert!(sub(*center, [0., 0., 2.5]).iter().all(|x| x.abs() <= 1e-12), "{center:?}");
+        assert!(
+            sub(*center, [0., 0., 2.5]).iter().all(|x| x.abs() <= 1e-12),
+            "{center:?}"
+        );
         assert_eq!(curve.knots, vec![0., 0., 0., 1., 1., 2., 2., 2.]);
         let start = point_of(&curve.evaluate(0.).unwrap().point);
         let end = point_of(&curve.evaluate(2.).unwrap().point);
-        assert!(start[0].abs() <= 1e-12 && (start[1] + 2.).abs() <= 1e-12, "{start:?}");
+        assert!(
+            start[0].abs() <= 1e-12 && (start[1] + 2.).abs() <= 1e-12,
+            "{start:?}"
+        );
         assert!((start[2] - 2.5).abs() <= 1e-12);
-        assert!(end[0].abs() <= 1e-12 && (end[1] - 2.).abs() <= 1e-12, "{end:?}");
+        assert!(
+            end[0].abs() <= 1e-12 && (end[1] - 2.).abs() <= 1e-12,
+            "{end:?}"
+        );
         assert!((end[2] - 2.5).abs() <= 1e-12);
         assert!(*max_sample_residual <= 1e-12, "{max_sample_residual}");
         // Plane UV: two arcs meeting at the phi = 0 seam (1/2, 1/2); the free
@@ -1903,19 +1927,31 @@ mod tests {
             let report = intersect_plane_cone(&at(z), &cone, Options::default()).unwrap();
             assert!(report.components.is_empty(), "{z} {report:?}");
             assert_eq!(report.coverage, Coverage::Incomplete);
-            assert_eq!(report.unresolved[0].reason, UnresolvedReason::CoincidentTrim);
+            assert_eq!(
+                report.unresolved[0].reason,
+                UnresolvedReason::CoincidentTrim
+            );
         }
         // Provably beyond both rings: empty and resolved.
         for z in [6., -1., 5. + 1e-9, -1e-9] {
             let report = intersect_plane_cone(&at(z), &cone, Options::default()).unwrap();
-            assert!(report.components.is_empty() && report.unresolved.is_empty(), "{z} {report:?}");
+            assert!(
+                report.components.is_empty() && report.unresolved.is_empty(),
+                "{z} {report:?}"
+            );
             assert_eq!(report.coverage, Coverage::NumericallyResolved);
         }
         // Just clear of the top ring band below: a full circle near the rim,
         // radius 1 + 0.4e-9 by linear interpolation.
-        let report =
-            intersect_plane_cone(&at(5. - 1e-9), &cone, Options::default()).unwrap();
-        let [PlaneConeComponent::Circle { center, radius, full, .. }] = &report.components[..]
+        let report = intersect_plane_cone(&at(5. - 1e-9), &cone, Options::default()).unwrap();
+        let [
+            PlaneConeComponent::Circle {
+                center,
+                radius,
+                full,
+                ..
+            },
+        ] = &report.components[..]
         else {
             panic!("expected one circle: {report:?}")
         };
@@ -1925,13 +1961,19 @@ mod tests {
         // Apex cone (r_top == 0): the apex-level perpendicular plane is a
         // tangency, never a point component; a mid section is the circle.
         let apex_cone = crate::analytic::frustum(3., 0., 5.).unwrap();
-        let report =
-            intersect_plane_cone(&at(5.), &apex_cone, Options::default()).unwrap();
+        let report = intersect_plane_cone(&at(5.), &apex_cone, Options::default()).unwrap();
         assert!(report.components.is_empty(), "{report:?}");
-        assert_eq!(report.unresolved[0].reason, UnresolvedReason::TangencyOrMultipleRoot);
-        let report =
-            intersect_plane_cone(&at(2.5), &apex_cone, Options::default()).unwrap();
-        let [PlaneConeComponent::Circle { radius, cone_uv, .. }] = &report.components[..] else {
+        assert_eq!(
+            report.unresolved[0].reason,
+            UnresolvedReason::TangencyOrMultipleRoot
+        );
+        let report = intersect_plane_cone(&at(2.5), &apex_cone, Options::default()).unwrap();
+        let [
+            PlaneConeComponent::Circle {
+                radius, cone_uv, ..
+            },
+        ] = &report.components[..]
+        else {
             panic!("expected one circle on the apex cone: {report:?}")
         };
         assert!((*radius - 1.5).abs() <= 1e-12, "{radius}");
@@ -1968,12 +2010,21 @@ mod tests {
             assert_eq!(curve.degree, 1);
             assert_eq!(curve.knots, vec![0., 0., 1., 1.]);
             assert!((start[0].abs() - 3.).abs() <= 1e-12, "{start:?}");
-            assert!(start[1].abs() <= 1e-12 && start[2].abs() <= 1e-12, "{start:?}");
+            assert!(
+                start[1].abs() <= 1e-12 && start[2].abs() <= 1e-12,
+                "{start:?}"
+            );
             assert!((end[0].abs() - 1.).abs() <= 1e-12, "{end:?}");
-            assert!(end[1].abs() <= 1e-12 && (end[2] - 5.).abs() <= 1e-12, "{end:?}");
+            assert!(
+                end[1].abs() <= 1e-12 && (end[2] - 5.).abs() <= 1e-12,
+                "{end:?}"
+            );
             assert_eq!(start[0].signum(), end[0].signum());
             // Unit ruling direction (-/+0.4, 0, 1) / sqrt(1.16).
-            assert!((direction[0].abs() - 0.4 / wlen).abs() <= 1e-12, "{direction:?}");
+            assert!(
+                (direction[0].abs() - 0.4 / wlen).abs() <= 1e-12,
+                "{direction:?}"
+            );
             assert!((direction[2] - 1. / wlen).abs() <= 1e-12, "{direction:?}");
             seen.push(start[0]);
             assert!(*max_sample_residual <= 1e-12, "{max_sample_residual}");
@@ -2007,7 +2058,10 @@ mod tests {
             let PlaneConeComponent::Line { start, end, .. } = component else {
                 panic!("expected lines: {report:?}")
             };
-            assert!((start[0].abs() - 3.).abs() <= 1e-12 && start[2].abs() <= 1e-12, "{start:?}");
+            assert!(
+                (start[0].abs() - 3.).abs() <= 1e-12 && start[2].abs() <= 1e-12,
+                "{start:?}"
+            );
             assert!(end[0].abs() <= 1e-12 && end[1].abs() <= 1e-12, "{end:?}");
             assert!((end[2] - 5.).abs() <= 1e-12, "{end:?}");
         }
@@ -2044,12 +2098,24 @@ mod tests {
             else {
                 panic!("expected hyperbola components: {report:?}")
             };
-            assert!((*semi_transverse - 1.25).abs() <= 1e-12, "{semi_transverse}");
+            assert!(
+                (*semi_transverse - 1.25).abs() <= 1e-12,
+                "{semi_transverse}"
+            );
             assert!((*semi_conjugate - 0.5).abs() <= 1e-12, "{semi_conjugate}");
             // Asymptote slope b / a is exactly the cone slope magnitude.
             assert!((semi_conjugate / semi_transverse - 0.4).abs() <= 1e-12);
-            assert!(sub(*center, [0., 0.5, 7.5]).iter().all(|x| x.abs() <= 1e-12), "{center:?}");
-            assert!(sub(*transverse, [0., 0., -1.]).iter().all(|x| x.abs() <= 1e-12));
+            assert!(
+                sub(*center, [0., 0.5, 7.5])
+                    .iter()
+                    .all(|x| x.abs() <= 1e-12),
+                "{center:?}"
+            );
+            assert!(
+                sub(*transverse, [0., 0., -1.])
+                    .iter()
+                    .all(|x| x.abs() <= 1e-12)
+            );
             assert!((conjugate[0].abs() - 1.).abs() <= 1e-12, "{conjugate:?}");
             assert!(conjugate[1].abs() <= 1e-12 && conjugate[2].abs() <= 1e-12);
             assert!((normal[1].abs() - 1.).abs() <= 1e-12, "{normal:?}");
@@ -2061,7 +2127,8 @@ mod tests {
             let end = point_of(&curve.evaluate(1.).unwrap().point);
             for p in [start, end] {
                 assert!((p[1] - 0.5).abs() <= 1e-12, "{p:?}");
-                let on_bottom = p[2].abs() <= 1e-12 && (p[0].abs() - 8.75_f64.sqrt()).abs() <= 1e-12;
+                let on_bottom =
+                    p[2].abs() <= 1e-12 && (p[0].abs() - 8.75_f64.sqrt()).abs() <= 1e-12;
                 let on_top =
                     (p[2] - 5.).abs() <= 1e-12 && (p[0].abs() - 0.75_f64.sqrt()).abs() <= 1e-12;
                 assert!(on_bottom || on_top, "{p:?}");
@@ -2097,51 +2164,49 @@ mod tests {
         // semi-major is half their distance, 250/91 exactly.
         let v1 = [0., 20. / 7., 5. / 14.];
         let v2 = [0., -20. / 13., 95. / 26.];
-        let mid = [
-            0.,
-            (v1[1] + v2[1]) / 2.,
-            (v1[2] + v2[2]) / 2.,
-        ];
+        let mid = [0., (v1[1] + v2[1]) / 2., (v1[2] + v2[2]) / 2.];
         // Patch exactly through the oracle center: u along world x, v along
         // the in-plane axis projection (0, -0.8, 0.6), half-extent 4.
         let e1p = [0., -0.8, 0.6];
-        let origin = [
-            mid[0] - 4.,
-            mid[1] - 4. * e1p[1],
-            mid[2] - 4. * e1p[2],
-        ];
+        let origin = [mid[0] - 4., mid[1] - 4. * e1p[1], mid[2] - 4. * e1p[2]];
         let plane = plane_patch(origin, [8., 0., 0.], e1p.map(|x| x * 8.));
         let cone = crate::analytic::frustum(3., 1., 5.).unwrap();
         let report = intersect_plane_cone(&plane, &cone, Options::default()).unwrap();
         assert!(report.unresolved.is_empty(), "{report:?}");
-        let [PlaneConeComponent::Ellipse {
-            curve,
-            center,
-            semi_major,
-            semi_minor,
-            major,
-            minor,
-            normal,
-            full,
-            plane_uv,
-            cone_uv,
-            max_sample_residual,
-        }] = &report.components[..]
+        let [
+            PlaneConeComponent::Ellipse {
+                curve,
+                center,
+                semi_major,
+                semi_minor,
+                major,
+                minor,
+                normal,
+                full,
+                plane_uv,
+                cone_uv,
+                max_sample_residual,
+            },
+        ] = &report.components[..]
         else {
             panic!("expected one ellipse: {report:?}")
         };
         assert!(*full);
         let v1 = [0., 20. / 7., 5. / 14.];
         let v2 = [0., -20. / 13., 95. / 26.];
-        let mid = [
-            0.,
-            (v1[1] + v2[1]) / 2.,
-            (v1[2] + v2[2]) / 2.,
-        ];
-        assert!(sub(*center, mid).iter().all(|x| x.abs() <= 1e-12), "{center:?} vs {mid:?}");
+        let mid = [0., (v1[1] + v2[1]) / 2., (v1[2] + v2[2]) / 2.];
+        assert!(
+            sub(*center, mid).iter().all(|x| x.abs() <= 1e-12),
+            "{center:?} vs {mid:?}"
+        );
         assert!((*semi_major - 250. / 91.).abs() <= 1e-12, "{semi_major}");
         assert!((*semi_minor - 2.096570).abs() <= 1e-5, "{semi_minor}");
-        assert!(sub(*major, [0., -0.8, 0.6]).iter().all(|x| x.abs() <= 1e-12), "{major:?}");
+        assert!(
+            sub(*major, [0., -0.8, 0.6])
+                .iter()
+                .all(|x| x.abs() <= 1e-12),
+            "{major:?}"
+        );
         assert!(minor[0].abs() >= 1. - 1e-12, "{minor:?}");
         assert!(minor[1].abs() <= 1e-12 && minor[2].abs() <= 1e-12);
         assert!(normal[0].abs() <= 1e-12, "{normal:?}");
@@ -2151,8 +2216,14 @@ mod tests {
         // The curve's phi = 0 / pi endpoints are the oracle vertices.
         let p0 = point_of(&curve.evaluate(0.).unwrap().point);
         let p2 = point_of(&curve.evaluate(2.).unwrap().point);
-        assert!(sub(p0, v2).iter().all(|x| x.abs() <= 1e-12), "{p0:?} vs {v2:?}");
-        assert!(sub(p2, v1).iter().all(|x| x.abs() <= 1e-12), "{p2:?} vs {v1:?}");
+        assert!(
+            sub(p0, v2).iter().all(|x| x.abs() <= 1e-12),
+            "{p0:?} vs {v2:?}"
+        );
+        assert!(
+            sub(p2, v1).iter().all(|x| x.abs() <= 1e-12),
+            "{p2:?} vs {v1:?}"
+        );
         let empty: Vec<CylinderPatchCurve> = Vec::new();
         let worst = lift_worst(
             &plane,
@@ -2185,26 +2256,45 @@ mod tests {
         let cone = crate::analytic::frustum(3., 1., 5.).unwrap();
         let report = intersect_plane_cone(&plane, &cone, Options::default()).unwrap();
         assert!(report.unresolved.is_empty(), "{report:?}");
-        let [PlaneConeComponent::Parabola {
-            curve,
-            vertex,
-            direction,
-            focal_length,
-            normal: n,
-            plane_uv,
-            cone_uv,
-            max_sample_residual,
-        }] = &report.components[..]
+        let [
+            PlaneConeComponent::Parabola {
+                curve,
+                vertex,
+                direction,
+                focal_length,
+                normal: n,
+                plane_uv,
+                cone_uv,
+                max_sample_residual,
+            },
+        ] = &report.components[..]
         else {
             panic!("expected one parabola: {report:?}")
         };
         assert_eq!(curve.degree, 2);
         assert_eq!(curve.knots, vec![0., 0., 0., 1., 1., 1.]);
-        assert!(curve.weights.iter().all(|w| *w == 1.), "{:?}", curve.weights);
+        assert!(
+            curve.weights.iter().all(|w| *w == 1.),
+            "{:?}",
+            curve.weights
+        );
         // Exact focal-length relation: |L| = 0.8 |d0|, |d0| = 5.5 sigma.
-        assert!((*focal_length - 1.1 * sigma).abs() <= 1e-12, "{focal_length}");
-        assert!(sub(*vertex, [0., -1.0998, 4.7504]).iter().all(|x| x.abs() <= 1e-3), "{vertex:?}");
-        assert!(sub(*direction, [0., sigma, -s]).iter().all(|x| x.abs() <= 1e-12), "{direction:?}");
+        assert!(
+            (*focal_length - 1.1 * sigma).abs() <= 1e-12,
+            "{focal_length}"
+        );
+        assert!(
+            sub(*vertex, [0., -1.0998, 4.7504])
+                .iter()
+                .all(|x| x.abs() <= 1e-3),
+            "{vertex:?}"
+        );
+        assert!(
+            sub(*direction, [0., sigma, -s])
+                .iter()
+                .all(|x| x.abs() <= 1e-12),
+            "{direction:?}"
+        );
         assert!(n[0].abs() <= 1e-12, "{n:?}");
         assert!((n[1].abs() - s).abs() <= 1e-12 && (n[2].abs() - sigma).abs() <= 1e-12);
         assert!(cone_uv.is_none());
@@ -2247,7 +2337,10 @@ mod tests {
         let report = intersect_plane_cone(&plane, &cone, Options::default()).unwrap();
         assert!(report.components.is_empty(), "{report:?}");
         assert_eq!(report.coverage, Coverage::Incomplete);
-        assert_eq!(report.unresolved[0].reason, UnresolvedReason::TangencyOrMultipleRoot);
+        assert_eq!(
+            report.unresolved[0].reason,
+            UnresolvedReason::TangencyOrMultipleRoot
+        );
         // Oblique planes through the apex (ellipse angle and hyperbola
         // angle): the apex is a multiple-root contact, never guessed. The
         // patch spans the plane through the apex along e1 = (1,0,0) (both
@@ -2261,7 +2354,10 @@ mod tests {
             let plane = plane_patch(origin, e1.map(|x| x * 12.), e2.map(|x| x * 16.));
             let report = intersect_plane_cone(&plane, &cone, Options::default()).unwrap();
             assert!(report.components.is_empty(), "{normal:?} {report:?}");
-            assert_eq!(report.unresolved[0].reason, UnresolvedReason::TangencyOrMultipleRoot);
+            assert_eq!(
+                report.unresolved[0].reason,
+                UnresolvedReason::TangencyOrMultipleRoot
+            );
         }
     }
 
@@ -2271,14 +2367,20 @@ mod tests {
         // Perpendicular plane beyond the top ring.
         let plane = plane_patch([-4., -4., 7.], [8., 0., 0.], [0., 8., 0.]);
         let report = intersect_plane_cone(&plane, &cone, Options::default()).unwrap();
-        assert!(report.components.is_empty() && report.unresolved.is_empty(), "{report:?}");
+        assert!(
+            report.components.is_empty() && report.unresolved.is_empty(),
+            "{report:?}"
+        );
         assert_eq!(report.coverage, Coverage::NumericallyResolved);
         // Oblique plane whose ellipse lives entirely below the bottom ring.
         let plane = plane_patch([-30., 20., -20.], [60., 0., 0.], [0., -48., 36.]);
         // normal of that patch is (0, 0.6, 0.8)-ish; ensure a clear miss:
         // n.p = 0.6*20 + 0.8*(-20) = -4 at the origin — far below the cone.
         let report = intersect_plane_cone(&plane, &cone, Options::default()).unwrap();
-        assert!(report.components.is_empty() && report.unresolved.is_empty(), "{report:?}");
+        assert!(
+            report.components.is_empty() && report.unresolved.is_empty(),
+            "{report:?}"
+        );
         assert_eq!(report.coverage, Coverage::NumericallyResolved);
     }
 
@@ -2297,17 +2399,9 @@ mod tests {
             ]
         };
         // Exact pre-rotation patch through the oracle center, then rotated.
-        let mid0 = [
-            0.,
-            (20. / 7. - 20. / 13.) / 2.,
-            (5. / 14. + 95. / 26.) / 2.,
-        ];
+        let mid0 = [0., (20. / 7. - 20. / 13.) / 2., (5. / 14. + 95. / 26.) / 2.];
         let e1p = [0., -0.8, 0.6];
-        let origin0 = [
-            mid0[0] - 4.,
-            mid0[1] - 4. * e1p[1],
-            mid0[2] - 4. * e1p[2],
-        ];
+        let origin0 = [mid0[0] - 4., mid0[1] - 4. * e1p[1], mid0[2] - 4. * e1p[2]];
         let plane = plane_patch(
             rot(origin0),
             sub(rot([origin0[0] + 8., origin0[1], origin0[2]]), rot(origin0)),
@@ -2320,25 +2414,34 @@ mod tests {
                 rot(origin0),
             ),
         );
-        let cone = rotated_translated(&crate::analytic::frustum(3., 1., 5.).unwrap(), angle, offset);
+        let cone = rotated_translated(
+            &crate::analytic::frustum(3., 1., 5.).unwrap(),
+            angle,
+            offset,
+        );
         let report = intersect_plane_cone(&plane, &cone, Options::default()).unwrap();
         assert!(report.unresolved.is_empty(), "{report:?}");
-        let [PlaneConeComponent::Ellipse {
-            center,
-            semi_major,
-            major,
-            full,
-            cone_uv,
-            max_sample_residual,
-            ..
-        }] = &report.components[..]
+        let [
+            PlaneConeComponent::Ellipse {
+                center,
+                semi_major,
+                major,
+                full,
+                cone_uv,
+                max_sample_residual,
+                ..
+            },
+        ] = &report.components[..]
         else {
             panic!("expected one placed ellipse: {report:?}")
         };
         assert!(*full);
         assert!(cone_uv.is_none());
         let mid = rot([0., (20. / 7. - 20. / 13.) / 2., (5. / 14. + 95. / 26.) / 2.]);
-        assert!(sub(*center, mid).iter().all(|x| x.abs() <= 1e-9), "{center:?} vs {mid:?}");
+        assert!(
+            sub(*center, mid).iter().all(|x| x.abs() <= 1e-9),
+            "{center:?} vs {mid:?}"
+        );
         assert!((*semi_major - 250. / 91.).abs() <= 1e-9, "{semi_major}");
         let major_expected = sub(rot([0., -0.8, 0.6]), rot([0., 0., 0.]));
         assert!(
@@ -2361,16 +2464,28 @@ mod tests {
             let report = intersect_plane_cone(&plane, second, Options::default()).unwrap();
             assert!(report.components.is_empty(), "{report:?}");
             assert_eq!(report.coverage, Coverage::Incomplete);
-            assert_eq!(report.unresolved[0].reason, UnresolvedReason::UnsupportedSurface);
-            assert_eq!(report.unresolved[0].parameter_box, vec![0., 1., 0., 1., 0., 1., 0., 1.]);
+            assert_eq!(
+                report.unresolved[0].reason,
+                UnresolvedReason::UnsupportedSurface
+            );
+            assert_eq!(
+                report.unresolved[0].parameter_box,
+                vec![0., 1., 0., 1., 0., 1., 0., 1.]
+            );
             assert!(!report.permits_topology_change());
         }
         // A solid as the plane operand: fixed order, explicit refusal.
         let report = intersect_plane_cone(&frustum, &frustum, Options::default()).unwrap();
-        assert_eq!(report.unresolved[0].reason, UnresolvedReason::UnsupportedSurface);
+        assert_eq!(
+            report.unresolved[0].reason,
+            UnresolvedReason::UnsupportedSurface
+        );
         // Skewed non-rectangular patch: not the canonical planar patch.
         let skewed = plane_patch([-4., -4., 2.5], [8., 0., 0.], [3., 8., 0.]);
         let report = intersect_plane_cone(&skewed, &frustum, Options::default()).unwrap();
-        assert_eq!(report.unresolved[0].reason, UnresolvedReason::UnsupportedSurface);
+        assert_eq!(
+            report.unresolved[0].reason,
+            UnresolvedReason::UnsupportedSurface
+        );
     }
 }

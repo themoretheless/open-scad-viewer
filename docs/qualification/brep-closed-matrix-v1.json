@@ -1,0 +1,82 @@
+{
+  "schema": "open-scad-viewer/brep-closed-matrix",
+  "schemaVersion": 1,
+  "planId": "brep-closed-matrix-v1",
+  "gate": "G8-close",
+  "lifecycle": "frozen",
+  "claimBoundary": "analytic-peer-rust-closed-subset",
+  "matrixHashSeed": "planar-prism+cyl-tube-frustum+sphere|planar-csg+analytic-boolean+af01+as01+asl01+analytic-step|refuse-cone-torus-boolean+nurbs-boolean+manifold-fallback",
+  "matrixHashAlgorithm": "sha256-canonical-json-without-matrixHash",
+  "matrixHash": "a392bfd447932bc435b1ff2be68c306caad9c637ab2d67ddb314ce1a4bc10fc3",
+  "admittedSolids": [
+    "planar-prism",
+    "finite-cylinder",
+    "tube",
+    "frustum",
+    "sphere"
+  ],
+  "queryOnlySurfaces": ["cone", "torus"],
+  "admittedPairCells": [
+    {
+      "pair": "finite-cylinder×finite-cylinder",
+      "frame": "common +Z axis; coincident cap planes",
+      "relations": ["disjoint", "identical", "strict-containment", "two-transverse-wall-generators"],
+      "operations": ["union", "difference", "intersection"],
+      "authorship": "shared exact rational-arc imprint assembly"
+    },
+    {
+      "pair": "sphere×sphere",
+      "relations": ["disjoint", "identical", "strict-containment", "single-transverse-circle"],
+      "operations": ["union", "difference", "intersection"],
+      "authorship": "shared closed-shell assembly after exact UV imprint"
+    },
+    {
+      "pair": "finite-cylinder×sphere",
+      "relations": ["disjoint"],
+      "operations": ["union", "difference", "intersection"],
+      "authorship": "regularized empty algebra"
+    },
+    {
+      "pair": "tube|frustum×admitted-solid",
+      "relations": ["disjoint"],
+      "operations": ["union", "difference", "intersection", "xor"],
+      "authorship": "regularized empty algebra"
+    }
+  ],
+  "admittedOps": [
+    "planar-csg/1",
+    "analytic-boolean/1",
+    "analytic-fillet/1",
+    "analytic-shell/1",
+    "analytic-solid-loft/1",
+    "step-interchange/1"
+  ],
+  "explicitRefuse": [
+    "cone-torus-boolean-until-own-plan",
+    "general-nurbs-boolean",
+    "tangency-coincident-without-cert",
+    "mesh-fallback",
+    "manifold-cross-route",
+    "silent-heal",
+    "prism-authorship-on-curved-boolean-success"
+  ],
+  "invariants": [
+    "fail-closed typed refuse",
+    "operands unchanged on refuse",
+    "topology only from all-Complete aggregate certificates",
+    "TS transport/UI only for closed matrix"
+  ],
+  "bindings": {
+    "capabilityRegistry": "src/services/geometry/brepCapability.ts",
+    "rust": [
+      "crates/brep-core/src/imprint_pipeline.rs",
+      "crates/brep-core/src/profile_imprint.rs",
+      "crates/brep-core/src/analytic_boolean.rs",
+      "crates/brep-core/src/sphere_boolean.rs",
+      "crates/brep-core/src/solid_audit.rs"
+    ]
+  },
+  "resetPolicy": "false-Complete freezes capability to Unavailable",
+  "productDeployGate": "geometryBuildEngine brep availability requires C3+C4 corpus green",
+  "sbom": "docs/qualification/sbom/brep-closed-matrix-release-v1.json"
+}

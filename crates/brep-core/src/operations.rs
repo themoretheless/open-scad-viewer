@@ -1471,21 +1471,35 @@ pub fn boolean(a: &Model, b: &Model, operation: &str) -> Result<Model> {
     if let Some(result) = crate::boolean_support::simplify(a, b, operation)? {
         return Ok(result);
     }
-    // Canonical sphere/sphere pairs: exact regularized curved closure.
-    if let Some(result) = crate::sphere_boolean::boolean(a, b, operation)? {
-        return Ok(result);
-    }
-    if a.edges
+    let has_curved_geometry = a
+        .edges
         .iter()
         .chain(&b.edges)
         .any(|edge| edge.curve.degree > 1)
         || a.faces
             .iter()
             .chain(&b.faces)
-            .any(|face| face.surface.degree_u > 1 || face.surface.degree_v > 1)
-    {
-        if let Some(result) = crate::prismatic_boolean::boolean(a, b, operation)? {
+            .any(|face| face.surface.degree_u > 1 || face.surface.degree_v > 1);
+    // Curved operands are fail-closed: a rejected analytic certificate must
+    // never fall through to prism recognition, polygonal CSG, or Manifold.
+    if has_curved_geometry {
+        if let Some(result) = crate::profile_imprint::boolean(a, b, operation)? {
+            crate::solid_audit::audit_solid(&result)?;
             return Ok(result);
+        }
+        match crate::analytic_boolean::analytic_boolean(a, b, operation) {
+            Ok((result, cert)) => {
+                if !cert.permits_topology_change() || !cert.no_prism_authorship {
+                    return Err(Error::new(
+                        "BREP_ANALYTIC_BOOLEAN_REFUSED",
+                        "Curved Boolean certificate does not permit topology change",
+                    ));
+                }
+                return Ok(result);
+            }
+            Err(analytic_error) => {
+                return Err(analytic_error);
+            }
         }
     }
     // Convex planar CSG is built directly from clipped boundary polygons,

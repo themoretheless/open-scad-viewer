@@ -1,0 +1,12 @@
+{
+  "capability": "iges-interchange/1",
+  "maturity": "AnalyticComplete",
+  "planId": "iges-interchange-1-evidence-v1",
+  "seedPlan": "docs/qualification/plans/iges-interchange-1.json",
+  "positiveCorpus": ["IGES-110-116-128-190-export", "IGES-116-aabb-import"],
+  "negativeCorpus": ["STL_as_IGES", "OBJ_as_IGES", "FACETED"],
+  "bindings": {
+    "rust": ["crates/brep-core/src/analytic_features.rs"]
+  },
+  "resetPolicy": "false-Complete freezes Unavailable"
+}

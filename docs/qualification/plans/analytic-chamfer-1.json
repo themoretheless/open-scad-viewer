@@ -1,0 +1,66 @@
+{
+  "$schema": "./brep-capability-qualification-plan.schema.json",
+  "schema": "open-scad-viewer/brep-capability-qualification-plan",
+  "schemaVersion": 1,
+  "planId": "analytic-chamfer-1",
+  "gate": {
+    "id": "g8-full",
+    "name": "brep-full-closed-matrix",
+    "version": 1
+  },
+  "lifecycle": {
+    "status": "frozen-pending-execution",
+    "qualificationClaim": "walking-slice"
+  },
+  "claimBoundary": {
+    "candidateClaim": "Walking-slice evidence for analytic-chamfer/1 under brep-full-closed-matrix-v1",
+    "forbiddenClaims": [
+      "parasolid-parity",
+      "manifold-cross-route",
+      "mesh-fallback",
+      "silent-heal"
+    ]
+  },
+  "capability": "analytic-chamfer/1",
+  "scope": {
+    "included": [
+      "AF-01-like planar cuboid chamfer"
+    ],
+    "excluded": [
+      "mesh bevel as analytic"
+    ]
+  },
+  "matrix": [
+    {
+      "id": "AC-01",
+      "expected": "Complete",
+      "blocksQualification": false
+    },
+    {
+      "id": "AC-N1",
+      "expected": "typed-refuse",
+      "blocksQualification": false
+    }
+  ],
+  "bindings": {
+    "rust": [
+      "crates/brep-core/src/analytic_features.rs"
+    ],
+    "registry": "src/services/geometry/brepCapability.ts",
+    "evidenceJson": "docs/qualification/analytic-chamfer-1-evidence-v1.json"
+  },
+  "evidence": {
+    "state": "walking-slice-green",
+    "notes": [
+      "plan analytic-chamfer-1 F0-F9 walking slice"
+    ]
+  },
+  "resetPolicy": "false-Complete freezes Unavailable",
+  "unresolvedRows": [
+    {
+      "id": "u-curved",
+      "status": "open",
+      "resolution": "Curved-edge chamfer remains refused"
+    }
+  ]
+}

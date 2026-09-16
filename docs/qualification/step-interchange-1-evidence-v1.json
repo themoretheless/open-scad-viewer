@@ -2,11 +2,47 @@
   "capability": "step-interchange/1",
   "maturity": "AnalyticComplete",
   "planId": "step-interchange-1-evidence-v1",
-  "seedPlan": "docs/design/qualification/step-interchange-1.md",
-  "positiveCorpus": ["ADVANCED_FACE_export", "MANIFOLD_SOLID_BREP_import"],
-  "negativeCorpus": ["FACETED_BREP", "STL_as_Brep", "OBJ_as_Brep"],
+  "seedPlan": "docs/qualification/plans/step-interchange-1.json",
+  "positiveCorpus": [
+    "ADVANCED_FACE_export",
+    "MANIFOLD_SOLID_BREP_import",
+    "PLANE_CYL_CONE_SPHERE_TORUS",
+    "CIRCLE_ring_edges",
+    "cuboid_8V_12E",
+    "tube_face_bound",
+    "apex_frustum_roundtrip",
+    "oriented_tube_roundtrip",
+    "graph_only_topology_roundtrip",
+    "product_seam_brep_nurbs_export_import_step",
+    "AXIS2_PLACEMENT_3D_linked"
+  ],
+  "negativeCorpus": [
+    "FACETED_BREP",
+    "STL_as_Brep",
+    "OBJ_as_Brep",
+    "missing_MANIFOLD_SOLID_BREP",
+    "broken_ADVANCED_FACE_refs",
+    "cylinder_without_plane_span",
+    "cone_without_plane_span",
+    "curved_without_CIRCLE"
+  ],
   "bindings": {
-    "rust": ["crates/brep-core/src/analytic_features.rs"]
+    "rust": [
+      "crates/brep-core/src/step_interchange.rs",
+      "crates/geometry-bridge/src/lib.rs"
+    ],
+    "typescript": ["src/services/cadAnalyticStep.ts"]
   },
+  "notes": [
+    "aabb_import_removed",
+    "oscad_solid_removed",
+    "step_graph_only_import",
+    "step_circle_ring_edges",
+    "step_circle_import_gate",
+    "step_cuboid_12_edge",
+    "step_tube_face_bound",
+    "no_silent_height_defaults",
+    "product_seam"
+  ],
   "resetPolicy": "false-Complete freezes Unavailable"
 }

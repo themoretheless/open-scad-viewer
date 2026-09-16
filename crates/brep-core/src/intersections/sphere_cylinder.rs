@@ -23,8 +23,8 @@
 //! matching the house tangency discipline. Nothing here authorizes a topology
 //! change.
 use super::sphere_sphere::{
-    self, ARC_WEIGHT, CanonicalSphere, RECOGNITION, SpherePatchCircle, circle_arcs,
-    circle_curve, lift,
+    self, ARC_WEIGHT, CanonicalSphere, RECOGNITION, SpherePatchCircle, circle_arcs, circle_curve,
+    lift,
 };
 use super::*;
 use crate::Model;
@@ -262,9 +262,8 @@ pub(crate) fn recognize_cylinder(model: &Model) -> Result<Option<CanonicalCylind
         let angle = dot(perp, y_dir).atan2(dot(perp, x_dir));
         let quadrant = (angle / quarter).round() as i64;
         let quadrant = quadrant.rem_euclid(4) as usize;
-        let residual =
-            (angle - quadrant as f64 * quarter + std::f64::consts::PI).rem_euclid(TAU)
-                - std::f64::consts::PI;
+        let residual = (angle - quadrant as f64 * quarter + std::f64::consts::PI).rem_euclid(TAU)
+            - std::f64::consts::PI;
         if residual.abs() > RECOGNITION {
             return Ok(None);
         }
@@ -291,7 +290,11 @@ pub(crate) fn recognize_cylinder(model: &Model) -> Result<Option<CanonicalCylind
                 if actual.len() != 3 {
                     return Ok(None);
                 }
-                let d = [actual[0] - expected[0], actual[1] - expected[1], actual[2] - expected[2]];
+                let d = [
+                    actual[0] - expected[0],
+                    actual[1] - expected[1],
+                    actual[2] - expected[2],
+                ];
                 let deviation = d[0].hypot(d[1]).hypot(d[2]);
                 if !deviation.is_finite() || deviation > RECOGNITION * radius + 1e-12 {
                     return Ok(None);
@@ -318,7 +321,11 @@ pub(crate) fn recognize_cylinder(model: &Model) -> Result<Option<CanonicalCylind
         } else {
             return Ok(None);
         };
-        error = error.max(if slot == 0 { axial.abs() } else { (axial - height).abs() });
+        error = error.max(if slot == 0 {
+            axial.abs()
+        } else {
+            (axial - height).abs()
+        });
         if cap_assigned[slot] {
             return Ok(None);
         }
@@ -336,7 +343,11 @@ pub(crate) fn recognize_cylinder(model: &Model) -> Result<Option<CanonicalCylind
                 if actual.len() != 2 + 1 {
                     return Ok(None);
                 }
-                let d = [actual[0] - expected[0], actual[1] - expected[1], actual[2] - expected[2]];
+                let d = [
+                    actual[0] - expected[0],
+                    actual[1] - expected[1],
+                    actual[2] - expected[2],
+                ];
                 let deviation = d[0].hypot(d[1]).hypot(d[2]);
                 if !deviation.is_finite() || deviation > RECOGNITION * radius + 1e-12 {
                     return Ok(None);
@@ -410,8 +421,7 @@ fn circle_component(
     axial: f64,
     site: CircleSite,
 ) -> Result<SphereCylinderComponent> {
-    let center =
-        std::array::from_fn(|k| cylinder.center[k] + axial * cylinder.axis[k]);
+    let center = std::array::from_fn(|k| cylinder.center[k] + axial * cylinder.axis[k]);
     let (radius, cylinder_uv) = match site {
         CircleSite::Side => {
             // Side patches: u sweeps the quadrant, v runs bottom to top, so
@@ -619,7 +629,9 @@ pub fn intersect_sphere_cylinder(
     }
     found.sort_by(|a, b| a.0.total_cmp(&b.0));
     for (axial, site) in found {
-        report.components.push(circle_component(&sphere, &cylinder, axial, site)?);
+        report
+            .components
+            .push(circle_component(&sphere, &cylinder, axial, site)?);
     }
     Ok(report)
 }
@@ -686,7 +698,9 @@ mod tests {
         assert_eq!(report.components.len(), count, "{report:?}");
         report
     }
-    fn circle_of(component: &SphereCylinderComponent) -> (
+    fn circle_of(
+        component: &SphereCylinderComponent,
+    ) -> (
         &Curve,
         [f64; 3],
         f64,
@@ -776,23 +790,30 @@ mod tests {
         // the cylinder midpoint: side circles at z = 4 +- sqrt(9 - 4).
         let sphere = translated(&crate::analytic::sphere(3.).unwrap(), [0., 0., 4.]);
         let cylinder = crate::analytic::cylinder(2., 8.).unwrap();
-        let report =
-            intersect_sphere_cylinder(&sphere, &cylinder, Options::default()).unwrap();
+        let report = intersect_sphere_cylinder(&sphere, &cylinder, Options::default()).unwrap();
         let report = only_circles(&report, 2);
         let oracle = (9_f64 - 4.).sqrt();
         for (component, z) in report.components.iter().zip([4. - oracle, 4. + oracle]) {
             let (curve, center, radius, normal, sphere_uv, cylinder_uv, sampled) =
                 circle_of(component);
             assert!((radius - 2.).abs() <= 1e-12, "{radius}");
-            assert!(sub(center, [0., 0., z]).iter().all(|x| x.abs() <= 1e-12), "{center:?}");
+            assert!(
+                sub(center, [0., 0., z]).iter().all(|x| x.abs() <= 1e-12),
+                "{center:?}"
+            );
             assert!(normal[2].abs() >= 1. - 1e-12, "{normal:?}");
             // Exact rational circle: four 90-degree arcs, weights cos(pi/4).
             assert_eq!(curve.degree, 2);
-            assert_eq!(curve.knots, vec![0., 0., 0., 1., 1., 2., 2., 3., 3., 4., 4., 4.]);
+            assert_eq!(
+                curve.knots,
+                vec![0., 0., 0., 1., 1., 2., 2., 3., 3., 4., 4., 4.]
+            );
             assert_eq!(curve.control_points.len(), 9);
             assert_eq!(
                 curve.weights,
-                vec![1., ARC_WEIGHT, 1., ARC_WEIGHT, 1., ARC_WEIGHT, 1., ARC_WEIGHT, 1.]
+                vec![
+                    1., ARC_WEIGHT, 1., ARC_WEIGHT, 1., ARC_WEIGHT, 1., ARC_WEIGHT, 1.
+                ]
             );
             // Sixteen samples satisfy both implicit equations.
             let mut worst = 0_f64;
@@ -836,13 +857,15 @@ mod tests {
         // plane circle has radius 3 > R, so it lies outside the cap disk.
         let sphere = crate::analytic::sphere(3.).unwrap();
         let cylinder = crate::analytic::cylinder(2., 8.).unwrap();
-        let report =
-            intersect_sphere_cylinder(&sphere, &cylinder, Options::default()).unwrap();
+        let report = intersect_sphere_cylinder(&sphere, &cylinder, Options::default()).unwrap();
         let report = only_circles(&report, 1);
-        let (curve, center, radius, _, _, cylinder_uv, sampled) =
-            circle_of(&report.components[0]);
+        let (curve, center, radius, _, _, cylinder_uv, sampled) = circle_of(&report.components[0]);
         assert!((radius - 2.).abs() <= 1e-12);
-        assert!(sub(center, [0., 0., 5_f64.sqrt()]).iter().all(|x| x.abs() <= 1e-12));
+        assert!(
+            sub(center, [0., 0., 5_f64.sqrt()])
+                .iter()
+                .all(|x| x.abs() <= 1e-12)
+        );
         let mut worst = 0_f64;
         for i in 0..16 {
             let p = curve.evaluate(i as f64 / 4.).unwrap().point;
@@ -863,14 +886,16 @@ mod tests {
         // disk; no side contact is possible.
         let sphere = translated(&crate::analytic::sphere(1.5).unwrap(), [0., 0., 7.5]);
         let cylinder = crate::analytic::cylinder(2., 8.).unwrap();
-        let report =
-            intersect_sphere_cylinder(&sphere, &cylinder, Options::default()).unwrap();
+        let report = intersect_sphere_cylinder(&sphere, &cylinder, Options::default()).unwrap();
         let report = only_circles(&report, 1);
         let (curve, center, radius, _, sphere_uv, cylinder_uv, sampled) =
             circle_of(&report.components[0]);
         let oracle = 2_f64.sqrt();
         assert!((radius - oracle).abs() <= 1e-12, "{radius}");
-        assert!(sub(center, [0., 0., 8.]).iter().all(|x| x.abs() <= 1e-12), "{center:?}");
+        assert!(
+            sub(center, [0., 0., 8.]).iter().all(|x| x.abs() <= 1e-12),
+            "{center:?}"
+        );
         let mut worst = 0_f64;
         for i in 0..16 {
             let p = curve.evaluate(i as f64 / 4.).unwrap().point;
@@ -916,9 +941,11 @@ mod tests {
         // the height, cap circles outside the disks).
         let swallow = translated(&crate::analytic::sphere(20.).unwrap(), [0., 0., 4.]);
         for sphere in [&inside, &beyond, &swallow] {
-            let report =
-                intersect_sphere_cylinder(sphere, &cylinder, Options::default()).unwrap();
-            assert!(report.components.is_empty() && report.unresolved.is_empty(), "{report:?}");
+            let report = intersect_sphere_cylinder(sphere, &cylinder, Options::default()).unwrap();
+            assert!(
+                report.components.is_empty() && report.unresolved.is_empty(),
+                "{report:?}"
+            );
             assert_eq!(report.coverage, Coverage::NumericallyResolved);
         }
     }
@@ -935,12 +962,14 @@ mod tests {
         // ambiguity still forbids certifying a cap circle.
         let reaching = translated(&crate::analytic::sphere(2.).unwrap(), [0., 0., 9.]);
         for sphere in [&exact, &near, &reaching] {
-            let report =
-                intersect_sphere_cylinder(sphere, &cylinder, Options::default()).unwrap();
+            let report = intersect_sphere_cylinder(sphere, &cylinder, Options::default()).unwrap();
             assert!(report.components.is_empty(), "{report:?}");
             assert_eq!(report.coverage, Coverage::Incomplete);
             assert_eq!(report.unresolved.len(), 1);
-            assert_eq!(report.unresolved[0].reason, UnresolvedReason::CoincidentTrim);
+            assert_eq!(
+                report.unresolved[0].reason,
+                UnresolvedReason::CoincidentTrim
+            );
             assert!(!report.permits_topology_change());
         }
     }
@@ -950,20 +979,23 @@ mod tests {
         let cylinder = crate::analytic::cylinder(2., 8.).unwrap();
         // r=1.5 sphere tangent to the top cap plane z=8 from inside.
         let sphere = translated(&crate::analytic::sphere(1.5).unwrap(), [0., 0., 6.5]);
-        let report =
-            intersect_sphere_cylinder(&sphere, &cylinder, Options::default()).unwrap();
+        let report = intersect_sphere_cylinder(&sphere, &cylinder, Options::default()).unwrap();
         assert!(report.components.is_empty(), "{report:?}");
         assert_eq!(report.coverage, Coverage::Incomplete);
-        assert_eq!(report.unresolved[0].reason, UnresolvedReason::TangencyOrMultipleRoot);
+        assert_eq!(
+            report.unresolved[0].reason,
+            UnresolvedReason::TangencyOrMultipleRoot
+        );
         // Just clear of the band: strictly inside, empty and resolved.
         let clear = translated(&crate::analytic::sphere(1.5).unwrap(), [0., 0., 6.5 - 1e-9]);
-        let report =
-            intersect_sphere_cylinder(&clear, &cylinder, Options::default()).unwrap();
-        assert!(report.components.is_empty() && report.unresolved.is_empty(), "{report:?}");
+        let report = intersect_sphere_cylinder(&clear, &cylinder, Options::default()).unwrap();
+        assert!(
+            report.components.is_empty() && report.unresolved.is_empty(),
+            "{report:?}"
+        );
         // Just across: a small transverse cap circle.
         let across = translated(&crate::analytic::sphere(1.5).unwrap(), [0., 0., 6.5 + 1e-9]);
-        let report =
-            intersect_sphere_cylinder(&across, &cylinder, Options::default()).unwrap();
+        let report = intersect_sphere_cylinder(&across, &cylinder, Options::default()).unwrap();
         only_circles(&report, 1);
     }
 
@@ -974,35 +1006,44 @@ mod tests {
         let cylinder = crate::analytic::cylinder(2., 8.).unwrap();
         let r = (4_f64 + 16.).sqrt();
         let sphere = translated(&crate::analytic::sphere(r).unwrap(), [0., 0., 4.]);
-        let report =
-            intersect_sphere_cylinder(&sphere, &cylinder, Options::default()).unwrap();
+        let report = intersect_sphere_cylinder(&sphere, &cylinder, Options::default()).unwrap();
         assert!(report.components.is_empty(), "{report:?}");
         assert_eq!(report.coverage, Coverage::Incomplete);
-        assert_eq!(report.unresolved[0].reason, UnresolvedReason::TangencyOrMultipleRoot);
+        assert_eq!(
+            report.unresolved[0].reason,
+            UnresolvedReason::TangencyOrMultipleRoot
+        );
     }
 
     #[test]
     fn near_axial_offset_within_the_band_stays_unresolved() {
         let cylinder = crate::analytic::cylinder(2., 8.).unwrap();
         let sphere = translated(&crate::analytic::sphere(3.).unwrap(), [1e-10, 0., 4.]);
-        let report =
-            intersect_sphere_cylinder(&sphere, &cylinder, Options::default()).unwrap();
+        let report = intersect_sphere_cylinder(&sphere, &cylinder, Options::default()).unwrap();
         assert!(report.components.is_empty(), "{report:?}");
         assert_eq!(report.coverage, Coverage::Incomplete);
-        assert_eq!(report.unresolved[0].reason, UnresolvedReason::NearCoincidence);
+        assert_eq!(
+            report.unresolved[0].reason,
+            UnresolvedReason::NearCoincidence
+        );
     }
 
     #[test]
     fn clearly_off_axis_pairs_are_unsupported_regions() {
         let cylinder = crate::analytic::cylinder(2., 8.).unwrap();
         let sphere = translated(&crate::analytic::sphere(3.).unwrap(), [0.5, 0., 4.]);
-        let report =
-            intersect_sphere_cylinder(&sphere, &cylinder, Options::default()).unwrap();
+        let report = intersect_sphere_cylinder(&sphere, &cylinder, Options::default()).unwrap();
         assert!(report.components.is_empty(), "{report:?}");
         assert_eq!(report.coverage, Coverage::Incomplete);
         assert_eq!(report.unresolved.len(), 1);
-        assert_eq!(report.unresolved[0].reason, UnresolvedReason::UnsupportedSurface);
-        assert_eq!(report.unresolved[0].parameter_box, vec![0., 1., 0., 1., 0., 1., 0., 1.]);
+        assert_eq!(
+            report.unresolved[0].reason,
+            UnresolvedReason::UnsupportedSurface
+        );
+        assert_eq!(
+            report.unresolved[0].parameter_box,
+            vec![0., 1., 0., 1., 0., 1., 0., 1.]
+        );
     }
 
     #[test]
@@ -1011,16 +1052,31 @@ mod tests {
         // Frustum and tube are not the canonical cylinder; cuboids and tori
         // are neither canonical operand.
         for (a, b) in [
-            (crate::analytic::sphere(2.).unwrap(), crate::analytic::frustum(1., 2., 3.).unwrap()),
-            (crate::analytic::sphere(2.).unwrap(), crate::analytic::tube(2., 1., 3.).unwrap()),
-            (crate::cuboid([0., 0., 0.], [1., 1., 1.]).unwrap(), crate::analytic::cylinder(1., 2.).unwrap()),
-            (crate::analytic::torus(3., 1.).unwrap(), crate::analytic::cylinder(1., 2.).unwrap()),
+            (
+                crate::analytic::sphere(2.).unwrap(),
+                crate::analytic::frustum(1., 2., 3.).unwrap(),
+            ),
+            (
+                crate::analytic::sphere(2.).unwrap(),
+                crate::analytic::tube(2., 1., 3.).unwrap(),
+            ),
+            (
+                crate::cuboid([0., 0., 0.], [1., 1., 1.]).unwrap(),
+                crate::analytic::cylinder(1., 2.).unwrap(),
+            ),
+            (
+                crate::analytic::torus(3., 1.).unwrap(),
+                crate::analytic::cylinder(1., 2.).unwrap(),
+            ),
         ] {
             let report = intersect_sphere_cylinder(&a, &b, Options::default()).unwrap();
             assert!(report.components.is_empty(), "{report:?}");
             assert_eq!(report.coverage, Coverage::Incomplete);
             assert_eq!(report.unresolved.len(), 1);
-            assert_eq!(report.unresolved[0].reason, UnresolvedReason::UnsupportedSurface);
+            assert_eq!(
+                report.unresolved[0].reason,
+                UnresolvedReason::UnsupportedSurface
+            );
         }
         // A canonical pair still resolves: sphere r=2 at the bottom ring of
         // cylinder(1, 4) crosses the side once at z = 4 - sqrt(3).
@@ -1046,8 +1102,7 @@ mod tests {
         );
         let cylinder =
             rotated_translated(&crate::analytic::cylinder(2., 8.).unwrap(), angle, offset);
-        let report =
-            intersect_sphere_cylinder(&sphere, &cylinder, Options::default()).unwrap();
+        let report = intersect_sphere_cylinder(&sphere, &cylinder, Options::default()).unwrap();
         let report = only_circles(&report, 2);
         // Independent binary64 oracle in the placed frame.
         let (sin, cos) = angle.sin_cos();
@@ -1070,8 +1125,14 @@ mod tests {
                 circle_of(component);
             let expected = placed([0., 0., z]);
             assert!((radius - 2.).abs() <= 1e-12, "{radius}");
-            assert!(sub(center, expected).iter().all(|x| x.abs() <= 1e-12), "{center:?}");
-            assert!(sub(normal, axis).iter().all(|x| x.abs() <= 1e-12), "{normal:?}");
+            assert!(
+                sub(center, expected).iter().all(|x| x.abs() <= 1e-12),
+                "{center:?}"
+            );
+            assert!(
+                sub(normal, axis).iter().all(|x| x.abs() <= 1e-12),
+                "{normal:?}"
+            );
             let mut worst = 0_f64;
             for i in 0..16 {
                 let p = curve.evaluate(i as f64 / 4.).unwrap().point;
@@ -1112,8 +1173,7 @@ mod tests {
         // bottom cap face, axial slot 0.
         let sphere = translated(&crate::analytic::sphere(1.5).unwrap(), [0., 0., 0.5]);
         let cylinder = crate::analytic::cylinder(2., 8.).unwrap();
-        let report =
-            intersect_sphere_cylinder(&sphere, &cylinder, Options::default()).unwrap();
+        let report = intersect_sphere_cylinder(&sphere, &cylinder, Options::default()).unwrap();
         let report = only_circles(&report, 1);
         let (_, center, radius, _, _, cylinder_uv, _) = circle_of(&report.components[0]);
         assert!((radius - 2_f64.sqrt()).abs() <= 1e-12);

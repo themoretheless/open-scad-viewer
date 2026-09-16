@@ -19,15 +19,25 @@ import { topoIdFromParts } from '../src/core/topologyLineage'
 describe('B-rep product seam', () => {
   it('publishes honest capability maturity without fake Available', () => {
     expect(BREP_CAPABILITY_MATRIX.some(c => c.id === 'analytic-boolean/1')).toBe(true)
-    expect(brepCapability('nurbs-ss-transverse-bicubic/1')?.maturity).toBe('AnalyticComplete')
+    expect(brepCapability('nurbs-ss-bezier-le3/1')?.maturity).toBe('AnalyticComplete')
     expect(brepCapability('analytic-boolean/1')?.maturity).toBe('Qualified')
+    expect(brepCapability('nurbs-boolean-bezier-le3/1')?.maturity).toBe('Unavailable')
+    expect(brepCapability('analytic-chamfer/1')?.maturity).toBe('AnalyticComplete')
+    expect(brepCapability('iges-interchange/1')?.maturity).toBe('AnalyticComplete')
     expect(brepCapability('analytic-fillet/1')?.maturity).toBe('AnalyticComplete')
     expect(brepCapability('step-interchange/1')?.maturity).toBe('AnalyticComplete')
-    expect(() => assertBrepCapabilityAllowsTopology('nurbs-ss-transverse-bicubic/1')).toThrow(
+    expect(brepCapability('nurbs-step-bicubic-face/1')?.maturity).toBe('AnalyticComplete')
+    expect(brepCapability('nurbs-step-trimmed-bicubic/1')?.maturity).toBe('AnalyticComplete')
+    expect(brepCapability('nurbs-step-solid/1')?.maturity).toBe('AnalyticComplete')
+    expect(() => assertBrepCapabilityAllowsTopology('nurbs-ss-bezier-le3/1')).toThrow(
       /does not permit topology change/,
     )
     expect(() => assertBrepCapabilityAllowsTopology('analytic-boolean/1')).not.toThrow()
+    expect(() => assertBrepCapabilityAllowsTopology('nurbs-boolean-bezier-le3/1')).toThrow(
+      /Unavailable; refuse topology change/,
+    )
     expect(() => assertBrepCapabilityAllowsTopology('planar-csg/1')).not.toThrow()
+    expect(BREP_CAPABILITY_MATRIX.some(c => c.id === 'iges-interchange/1')).toBe(true)
   })
 
   it('cancels leases and marks LKG stale', () => {

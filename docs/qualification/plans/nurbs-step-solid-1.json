@@ -1,0 +1,88 @@
+{
+  "$schema": "./brep-capability-qualification-plan.schema.json",
+  "schema": "open-scad-viewer/brep-capability-qualification-plan",
+  "schemaVersion": 1,
+  "planId": "nurbs-step-solid-1",
+  "gate": {
+    "id": "g8-full",
+    "name": "brep-full-closed-matrix",
+    "version": 1
+  },
+  "lifecycle": {
+    "status": "qualified",
+    "qualificationClaim": "qualified"
+  },
+  "claimBoundary": {
+    "candidateClaim": "AnalyticComplete freeform solid STEP: elevated bicubic cuboid / bump face / planar cavity via MANIFOLD_SOLID_BREP + B_SPLINE faces",
+    "forbiddenClaims": [
+      "parasolid-parity",
+      "manifold-cross-route",
+      "mesh-fallback",
+      "aabb-import-descriptor",
+      "oscad-solid"
+    ],
+    "notes": [
+      "general-nurbs-step remains forbidden on step-interchange/1 (constructor corpus); this freeform capability lifts closed bicubic solid STEP for cuboid/bump/cavity only"
+    ]
+  },
+  "capability": "nurbs-step-solid/1",
+  "scope": {
+    "included": [
+      "freeform_cuboid_solid elevated bicubic faces",
+      "freeform_cuboid_with_bump_face",
+      "MANIFOLD_SOLID_BREP / BREP_WITH_VOIDS + CLOSED_SHELL",
+      "LINE edges + VERTEX_POINT",
+      "linked ADVANCED_FACE / FACE_BOUND / EDGE_LOOP / CLOSED_SHELL graph validation",
+      "boolean difference cavity export/import",
+      "brep_nurbs_export_step_solid / import product seam"
+    ],
+    "excluded": [
+      "OPEN_SHELL-only",
+      "rational_weights",
+      "FACETED_BREP",
+      "constructor_AXIS2_CIRCLE_corpus",
+      "OSCAD_SOLID",
+      "AABB_string_descriptor"
+    ]
+  },
+  "matrix": [
+    {
+      "id": "NSS-01",
+      "expected": "Complete",
+      "blocksQualification": true
+    },
+    {
+      "id": "NSS-02",
+      "expected": "Complete",
+      "blocksQualification": true
+    },
+    {
+      "id": "NSS-03",
+      "expected": "Complete",
+      "blocksQualification": true
+    }
+  ],
+  "bindings": {
+    "rust": [
+      "crates/brep-core/src/nurbs_step_solid.rs",
+      "crates/geometry-bridge/src/lib.rs"
+    ],
+    "typescript": [
+      "src/services/cadNurbsStep.ts"
+    ],
+    "registry": "src/services/geometry/brepCapability.ts",
+    "evidenceJson": "docs/qualification/nurbs-step-solid-1-evidence-v1.json"
+  },
+  "evidence": {
+    "state": "qualified",
+    "notes": [
+      "elevated_bicubic_cuboid",
+      "bump_face_roundtrip",
+      "boolean_difference_cavity_step",
+      "unlinked_entity_graph_typed_refuse",
+      "no_aabb_oscad_solid"
+    ]
+  },
+  "resetPolicy": "false-Complete freezes Unavailable",
+  "unresolvedRows": []
+}

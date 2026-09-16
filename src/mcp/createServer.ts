@@ -526,8 +526,11 @@ const brepExecutionSchema = z.object({
     capability_manifest_version: z.literal(CURRENT_BREP_MANIFEST.capabilityManifestVersion),
     manifest_digest: z.literal(CURRENT_BREP_MANIFEST.manifestDigest),
     representation: z.enum(['brep', 'mesh']),
-    evidence: z.literal('planned'),
-    effective_limits: z.object({ sourceCharacters: z.literal(250_000) }),
+    evidence: z.enum(['planned', 'runtime']),
+    effective_limits: z.object({
+      sourceCharacters: z.literal(250_000),
+      triangles: z.literal(750_000),
+    }),
   })
 const currentExecutionSchema = z.union([currentMeshExecutionSchema, brepExecutionSchema])
 const legacyBackfillCommonShape = {
@@ -560,9 +563,10 @@ const executionSchema = z.union([
   currentExecutionSchema,
   legacyBackfillExecutionSchema,
 ])
-const runtimeExecutionSchema = currentMeshExecutionSchema.extend({
-  evidence: z.literal('runtime'),
-})
+const runtimeExecutionSchema = z.union([
+  currentMeshExecutionSchema.extend({ evidence: z.literal('runtime') }),
+  brepExecutionSchema.extend({ evidence: z.literal('runtime') }),
+])
 const persistedRuntimeExecutionSchema = runtimeExecutionSchema
 const engineManifestCommonShape = {
   display_name: z.string(),
@@ -624,8 +628,8 @@ const meshEngineManifestSchema = z.object({
 const brepEngineManifestSchema = z.object({
   ...engineManifestCommonShape,
   engine_class: z.literal('brep'),
-  availability: z.literal('unavailable'),
-  maturity: z.literal('contract'),
+  availability: z.literal('available'),
+  maturity: z.literal('production'),
   engine_key: z.literal(CURRENT_BREP_MANIFEST.engineKey),
   kernel_fingerprint: z.literal(CURRENT_BREP_MANIFEST.kernelFingerprint),
   semantic_program_version: z.literal(CURRENT_BREP_MANIFEST.semanticProgramVersion),
@@ -636,13 +640,16 @@ const brepEngineManifestSchema = z.object({
   ),
   language_contracts: z.tuple([z.literal('openscad-viewer/brep-1')]),
   input_contract: z.literal('semantic-program-required'),
-  capabilities: z.array(z.never()).length(0),
-  representations: z.array(z.never()).length(0),
-  planned_representations: z.tuple([z.literal('brep'), z.literal('mesh')]),
-  export_formats: z.array(z.never()).length(0),
-  limits: z.object({ sourceCharacters: z.literal(250_000) }),
-  isolation: z.literal('not-deployed'),
-  deployment: z.literal('not-deployed'),
+  capabilities: z.array(capabilityIdSchema).min(1),
+  representations: z.tuple([z.literal('brep'), z.literal('mesh')]),
+  planned_representations: z.array(z.never()).length(0),
+  export_formats: z.tuple([z.literal('stl'), z.literal('obj'), z.literal('step')]),
+  limits: z.object({
+    sourceCharacters: z.literal(250_000),
+    triangles: z.literal(750_000),
+  }),
+  isolation: z.literal('in-process-serialized'),
+  deployment: z.literal('node-mcp'),
 })
 const engineRegistrySchema = z.object({
   contract_version: z.literal(1),

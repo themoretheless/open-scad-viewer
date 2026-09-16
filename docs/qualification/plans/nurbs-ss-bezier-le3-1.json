@@ -1,0 +1,83 @@
+{
+  "$schema": "./brep-capability-qualification-plan.schema.json",
+  "schema": "open-scad-viewer/brep-capability-qualification-plan",
+  "schemaVersion": 1,
+  "planId": "nurbs-ss-bezier-le3-1",
+  "gate": {
+    "id": "g8-full",
+    "name": "brep-full-closed-matrix",
+    "version": 1
+  },
+  "lifecycle": {
+    "status": "qualified",
+    "qualificationClaim": "qualified"
+  },
+  "claimBoundary": {
+    "candidateClaim": "AnalyticComplete SS for non-periodic unit-weight single-span Bezier degree 1..3 elevated to bicubic",
+    "forbiddenClaims": [
+      "parasolid-parity",
+      "rational-weights",
+      "degree-greater-than-3",
+      "periodic",
+      "trimmed-ss-without-certificate",
+      "fitted-complete"
+    ]
+  },
+  "capability": "nurbs-ss-bezier-le3/1",
+  "scope": {
+    "included": [
+      "all 9x9 admitted degree-pair combinations for Complete-empty",
+      "all 9x9 admitted degree-pair combinations for planar transverse Complete-line",
+      "degree 2x2, 2x3, and 3x3 non-planar exact iso-curve",
+      "degree elevation to uniform bicubic",
+      "independent Complete report verifier"
+    ],
+    "excluded": [
+      "rational weights",
+      "degree greater than 3",
+      "periodic surfaces",
+      "uncertified tangency and coincidence",
+      "Parasolid parity"
+    ]
+  },
+  "matrix": [
+    {
+      "id": "B1-EMPTY-81",
+      "expected": "Complete",
+      "blocksQualification": true
+    },
+    {
+      "id": "B1-LINE-81",
+      "expected": "Complete",
+      "blocksQualification": true
+    },
+    {
+      "id": "B1-CURVE-03",
+      "expected": "Complete",
+      "blocksQualification": true
+    },
+    {
+      "id": "B1-NEGATIVE",
+      "expected": "typed-refuse",
+      "blocksQualification": true
+    }
+  ],
+  "bindings": {
+    "rust": [
+      "crates/brep-core/src/nurbs_ss_g6.rs",
+      "crates/brep-core/src/coverage_verifier.rs"
+    ],
+    "registry": "src/services/geometry/brepCapability.ts",
+    "evidenceJson": "docs/qualification/nurbs-ss-g6-evidence-v1.json"
+  },
+  "evidence": {
+    "state": "qualified",
+    "notes": [
+      "empty_line_curve",
+      "all_degree_pairs",
+      "false_complete_fail_closed"
+    ]
+  },
+  "resetPolicy": "false-Complete freezes Unavailable",
+  "unresolvedRows": []
+}

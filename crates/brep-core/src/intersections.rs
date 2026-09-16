@@ -30,12 +30,15 @@ pub use plane_cylinder::{PlaneCylinderComponent, intersect_plane_cylinder};
 pub use plane_sphere::{PlanePatchCurve, PlaneSphereComponent, intersect_plane_sphere};
 pub use plane_torus::{PlaneTorusComponent, TorusPatchCurve, intersect_plane_torus};
 pub use sphere_cone::{SphereConeComponent, intersect_sphere_cone};
-pub use sphere_cylinder::{
-    CylinderPatchCurve, SphereCylinderComponent, intersect_sphere_cylinder,
-};
+pub use sphere_cylinder::{CylinderPatchCurve, SphereCylinderComponent, intersect_sphere_cylinder};
 pub use sphere_sphere::{SpherePatchCircle, SphereSphereComponent, intersect_sphere_sphere};
 pub use sphere_torus::{SphereTorusComponent, intersect_sphere_torus};
 pub use torus_torus::{TorusTorusComponent, intersect_torus_torus};
+
+pub(crate) use plane_cone::recognize_cone;
+pub(crate) use plane_torus::recognize_torus;
+pub(crate) use sphere_cylinder::recognize_cylinder;
+pub(crate) use sphere_sphere::recognize as recognize_sphere;
 
 #[derive(Clone, Copy, Debug)]
 pub struct Plane {
@@ -532,8 +535,7 @@ pub fn curve_plane(
             let midpoint_confirms = variations == 1 && residual <= options.distance_tolerance;
             let mut best_face: Option<(f64, f64)> = None;
             for &face in &[interval[0], interval[1]] {
-                let face_residual =
-                    plane.distance(point3(&curve.evaluate(face)?.point)).abs();
+                let face_residual = plane.distance(point3(&curve.evaluate(face)?.point)).abs();
                 if face_residual <= options.distance_tolerance {
                     best_face = Some(match best_face {
                         Some((f, r)) if r <= face_residual => (f, r),
@@ -615,8 +617,10 @@ fn merge_plane_points(report: &mut Report<CurvePlaneComponent>) {
     }
     for i in 0..n {
         for j in i + 1..n {
-            let (Some(a), Some(b)) = (interval(&report.components[i]), interval(&report.components[j]))
-            else {
+            let (Some(a), Some(b)) = (
+                interval(&report.components[i]),
+                interval(&report.components[j]),
+            ) else {
                 continue;
             };
             if a[0] <= b[1] && b[0] <= a[1] {
@@ -2927,7 +2931,11 @@ fn surface_tangents(surface: &Surface, u: f64, v: f64) -> Result<(Vec<[f64; 3]>,
             .filter(|&k| k < u)
             .max_by(f64::total_cmp)
         {
-            if let Some((du, dv)) = surface.trim([a, u, d[2], d[3]])?.evaluate(u, v)?.first_derivatives() {
+            if let Some((du, dv)) = surface
+                .trim([a, u, d[2], d[3]])?
+                .evaluate(u, v)?
+                .first_derivatives()
+            {
                 us.push(du);
                 vs.push(dv);
             }
@@ -2941,7 +2949,11 @@ fn surface_tangents(surface: &Surface, u: f64, v: f64) -> Result<(Vec<[f64; 3]>,
             .filter(|&k| k > u)
             .min_by(f64::total_cmp)
         {
-            if let Some((du, dv)) = surface.trim([u, b, d[2], d[3]])?.evaluate(u, v)?.first_derivatives() {
+            if let Some((du, dv)) = surface
+                .trim([u, b, d[2], d[3]])?
+                .evaluate(u, v)?
+                .first_derivatives()
+            {
                 us.push(du);
                 vs.push(dv);
             }
@@ -2955,7 +2967,11 @@ fn surface_tangents(surface: &Surface, u: f64, v: f64) -> Result<(Vec<[f64; 3]>,
             .filter(|&k| k < v)
             .max_by(f64::total_cmp)
         {
-            if let Some((du, dv)) = surface.trim([d[0], d[1], a, v])?.evaluate(u, v)?.first_derivatives() {
+            if let Some((du, dv)) = surface
+                .trim([d[0], d[1], a, v])?
+                .evaluate(u, v)?
+                .first_derivatives()
+            {
                 us.push(du);
                 vs.push(dv);
             }
@@ -2969,7 +2985,11 @@ fn surface_tangents(surface: &Surface, u: f64, v: f64) -> Result<(Vec<[f64; 3]>,
             .filter(|&k| k > v)
             .min_by(f64::total_cmp)
         {
-            if let Some((du, dv)) = surface.trim([d[0], d[1], v, b])?.evaluate(u, v)?.first_derivatives() {
+            if let Some((du, dv)) = surface
+                .trim([d[0], d[1], v, b])?
+                .evaluate(u, v)?
+                .first_derivatives()
+            {
                 us.push(du);
                 vs.push(dv);
             }
@@ -3029,8 +3049,7 @@ fn plane_face_root(
     } else {
         tangents.first()
     };
-    let transverse =
-        side.is_some_and(|d| dot(plane.normal, *d).abs() > options.distance_tolerance);
+    let transverse = side.is_some_and(|d| dot(plane.normal, *d).abs() > options.distance_tolerance);
     if !at_end && !transverse {
         return Ok(FaceRoot::Ambiguous);
     }
@@ -3297,20 +3316,11 @@ fn resolve_curve_box(
         return Ok(());
     }
     match refine_curve_root(first, second, ta, tb, tm, um, options)? {
-        Refinement::Root(t, u, point, residual) => push_curve_point(
-            report,
-            t,
-            ta,
-            u,
-            tb,
-            point,
-            residual,
-            Contact::Transverse,
-        ),
-        Refinement::Outside => (),
-        Refinement::Failed => {
-            report.unresolved(box4(), UnresolvedReason::TangencyOrMultipleRoot)
+        Refinement::Root(t, u, point, residual) => {
+            push_curve_point(report, t, ta, u, tb, point, residual, Contact::Transverse)
         }
+        Refinement::Outside => (),
+        Refinement::Failed => report.unresolved(box4(), UnresolvedReason::TangencyOrMultipleRoot),
     }
     Ok(())
 }
@@ -3338,9 +3348,10 @@ fn merge_curve_points(report: &mut Report<CurveCurveComponent>) {
     }
     for i in 0..n {
         for j in i + 1..n {
-            let (Some((af, as_)), Some((bf, bs))) =
-                (intervals(&report.components[i]), intervals(&report.components[j]))
-            else {
+            let (Some((af, as_)), Some((bf, bs))) = (
+                intervals(&report.components[i]),
+                intervals(&report.components[j]),
+            ) else {
                 continue;
             };
             if af[0] <= bf[1] && bf[0] <= af[1] && as_[0] <= bs[1] && bs[0] <= as_[1] {
@@ -3372,14 +3383,7 @@ fn merge_curve_points(report: &mut Report<CurveCurveComponent>) {
         else {
             continue;
         };
-        let member = (
-            *first,
-            *second,
-            *point,
-            *residual,
-            *contact,
-            (fi, si),
-        );
+        let member = (*first, *second, *point, *residual, *contact, (fi, si));
         match &mut merged[root] {
             None => {
                 merged[root] = Some(CurveCurveComponent::Point {
@@ -3410,10 +3414,10 @@ fn merge_curve_points(report: &mut Report<CurveCurveComponent>) {
                 if member.4 == Contact::Boundary {
                     *contact = Contact::Boundary;
                 }
-                first_interval[0] = first_interval[0].min(member.5 .0[0]);
-                first_interval[1] = first_interval[1].max(member.5 .0[1]);
-                second_interval[0] = second_interval[0].min(member.5 .1[0]);
-                second_interval[1] = second_interval[1].max(member.5 .1[1]);
+                first_interval[0] = first_interval[0].min(member.5.0[0]);
+                first_interval[1] = first_interval[1].max(member.5.0[1]);
+                second_interval[0] = second_interval[0].min(member.5.1[0]);
+                second_interval[1] = second_interval[1].max(member.5.1[1]);
             }
             _ => unreachable!(),
         }
@@ -3540,9 +3544,8 @@ fn curve_coincidence(
         };
         let sa = projections(piece_a);
         let sb = projections(piece_b);
-        let monotone = |s: &[f64]| {
-            s.windows(2).all(|w| w[1] >= w[0]) || s.windows(2).all(|w| w[1] <= w[0])
-        };
+        let monotone =
+            |s: &[f64]| s.windows(2).all(|w| w[1] >= w[0]) || s.windows(2).all(|w| w[1] <= w[0]);
         if !monotone(&sa) || !monotone(&sb) {
             report.unresolved(box4(), UnresolvedReason::CoincidentTrim);
             return Ok(true);
@@ -3731,8 +3734,7 @@ pub fn curve_curve(
                     admit_curve_corner(first, second, t, u, options, &mut report)?;
                 }
             }
-            if !hulls_excluded(&ha, &hb)
-                && curve_coincidence(pa, pb, ta, tb, options, &mut report)?
+            if !hulls_excluded(&ha, &hb) && curve_coincidence(pa, pb, ta, tb, options, &mut report)?
             {
                 continue;
             }
@@ -3751,7 +3753,18 @@ pub fn curve_curve(
             || depth == options.max_depth
             || (!can_a && !can_b)
         {
-            resolve_curve_box(first, second, ta, tb, tm, um, &ha, &hb, options, &mut report)?;
+            resolve_curve_box(
+                first,
+                second,
+                ta,
+                tb,
+                tm,
+                um,
+                &ha,
+                &hb,
+                options,
+                &mut report,
+            )?;
             continue;
         }
         // Bisect both sides per depth level so depth 48 bounds each width by
@@ -3777,9 +3790,7 @@ pub fn curve_curve(
     merge_curve_points(&mut report);
     report.components.sort_by(|a, b| {
         let parameters = |c: &CurveCurveComponent| match c {
-            CurveCurveComponent::Point {
-                first, second, ..
-            } => (*first, *second),
+            CurveCurveComponent::Point { first, second, .. } => (*first, *second),
             CurveCurveComponent::Overlap {
                 first_interval,
                 second_interval,
@@ -4336,10 +4347,7 @@ fn ruled_coincidence(
                 // The piece image lies inside its control polygon, so the whole
                 // span stays on the surface exactly when every lift does.
                 let vtol = options.parameter_tolerance;
-                if lifts
-                    .iter()
-                    .any(|v| *v < vd[0] - vtol || *v > vd[1] + vtol)
-                {
+                if lifts.iter().any(|v| *v < vd[0] - vtol || *v > vd[1] + vtol) {
                     report.unresolved(box6(), UnresolvedReason::CoincidentTrim);
                     return Ok(true);
                 }
@@ -4377,7 +4385,15 @@ fn ruled_coincidence(
                     kind: OverlapCorrespondenceKind::MobiusV,
                     samples,
                 });
-                push_cs_overlap(ta, uv_start, uv_end, max_residual, false, correspondence, report);
+                push_cs_overlap(
+                    ta,
+                    uv_start,
+                    uv_end,
+                    max_residual,
+                    false,
+                    correspondence,
+                    report,
+                );
                 return Ok(true);
             }
         }
@@ -4556,8 +4572,7 @@ fn refine_cs_root(
         t += step[0];
         u += step[1];
         v += step[2];
-        if step[0].abs() <= wt * 1e-6 && step[1].abs() <= wu * 1e-6 && step[2].abs() <= wv * 1e-6
-        {
+        if step[0].abs() <= wt * 1e-6 && step[1].abs() <= wu * 1e-6 && step[2].abs() <= wv * 1e-6 {
             break;
         }
     }
@@ -4705,9 +4720,10 @@ fn merge_cs_points(report: &mut Report<CurveRuledSurfaceComponent>) {
     }
     for i in 0..n {
         for j in i + 1..n {
-            let (Some((at, au)), Some((bt, bu))) =
-                (intervals(&report.components[i]), intervals(&report.components[j]))
-            else {
+            let (Some((at, au)), Some((bt, bu))) = (
+                intervals(&report.components[i]),
+                intervals(&report.components[j]),
+            ) else {
                 continue;
             };
             if at[0] <= bt[1] && bt[0] <= at[1] && au[0] <= bu[1] && bu[0] <= au[1] {
@@ -4771,8 +4787,8 @@ fn merge_cs_points(report: &mut Report<CurveRuledSurfaceComponent>) {
                 if member.4 == Contact::Boundary {
                     *contact = Contact::Boundary;
                 }
-                t_interval[0] = t_interval[0].min(member.5 .0[0]);
-                t_interval[1] = t_interval[1].max(member.5 .0[1]);
+                t_interval[0] = t_interval[0].min(member.5.0[0]);
+                t_interval[1] = t_interval[1].max(member.5.0[1]);
                 uv_box[0] = uv_box[0].min(member.6[0]);
                 uv_box[1] = uv_box[1].max(member.6[1]);
             }
@@ -4915,8 +4931,7 @@ fn unify_cs_seam(report: &mut Report<CurveRuledSurfaceComponent>, su: [f64; 2]) 
                 let (Some((aci, aus, aue)), Some((bci, bus, bue))) = (
                     overlap_key(&report.components[i]),
                     overlap_key(&report.components[j]),
-                )
-                else {
+                ) else {
                     continue;
                 };
                 // Ruling pair: same lifted V endpoints, touching intervals.
@@ -4943,7 +4958,11 @@ fn unify_cs_seam(report: &mut Report<CurveRuledSurfaceComponent>, su: [f64; 2]) 
                 let (lo, hi) = if i < j { (i, j) } else { (j, i) };
                 let (head, tail) = report.components.split_at_mut(hi);
                 let (first, second) = (&mut head[lo], &mut tail[0]);
-                let (a, b) = if i < j { (first, second) } else { (second, first) };
+                let (a, b) = if i < j {
+                    (first, second)
+                } else {
+                    (second, first)
+                };
                 let CurveRuledSurfaceComponent::Overlap {
                     curve_interval,
                     uv_end,
@@ -5030,17 +5049,16 @@ pub fn curve_ruled_surface(
         );
     };
     // Canonical orientation is ruled in V: linear V with exactly two rows.
-    let swapped = if surface.degree_v == 1
-        && surface.control_points[0].len() == 2
-        && !surface.periodic_v
-    {
-        false
-    } else if surface.degree_u == 1 && surface.control_points.len() == 2 && !surface.periodic_u {
-        true
-    } else {
-        unsupported(&mut report);
-        return Ok(report);
-    };
+    let swapped =
+        if surface.degree_v == 1 && surface.control_points[0].len() == 2 && !surface.periodic_v {
+            false
+        } else if surface.degree_u == 1 && surface.control_points.len() == 2 && !surface.periodic_u
+        {
+            true
+        } else {
+            unsupported(&mut report);
+            return Ok(report);
+        };
     let canonical = if swapped {
         transpose_surface(surface)
     } else {
@@ -5127,7 +5145,17 @@ pub fn curve_ruled_surface(
             || depth == options.max_depth
             || (!can_t && !can_u)
         {
-            resolve_cs_box(curve, &canonical, ta, ua, vd, &hc, &hs, options, &mut report)?;
+            resolve_cs_box(
+                curve,
+                &canonical,
+                ta,
+                ua,
+                vd,
+                &hc,
+                &hs,
+                options,
+                &mut report,
+            )?;
             continue;
         }
         let c_side: Vec<([f64; 2], Vec<[f64; 4]>)> = if can_t {
@@ -5162,7 +5190,9 @@ pub fn curve_ruled_surface(
             } => (curve_interval[0], uv_start[0], uv_start[1]),
         };
         let (x, y) = (key(a), key(b));
-        x.0.total_cmp(&y.0).then(x.1.total_cmp(&y.1)).then(x.2.total_cmp(&y.2))
+        x.0.total_cmp(&y.0)
+            .then(x.1.total_cmp(&y.1))
+            .then(x.2.total_cmp(&y.2))
     });
     if swapped {
         for pending in &mut report.unresolved {
@@ -7598,9 +7628,7 @@ mod tests {
             .components
             .iter()
             .filter_map(|c| match c {
-                CurveCurveComponent::Point {
-                    first, second, ..
-                } => Some((*first, *second)),
+                CurveCurveComponent::Point { first, second, .. } => Some((*first, *second)),
                 _ => None,
             })
             .collect()
@@ -7650,7 +7678,10 @@ mod tests {
         };
         // Line point (t,t,0) on x^2+y^2=1 gives t=1/sqrt(2); the symmetric
         // rational quarter circle reaches 45 degrees at u=1/2.
-        assert!((*first - std::f64::consts::FRAC_1_SQRT_2).abs() < 1e-9, "{report:?}");
+        assert!(
+            (*first - std::f64::consts::FRAC_1_SQRT_2).abs() < 1e-9,
+            "{report:?}"
+        );
         assert!((*second - 0.5).abs() < 1e-9, "{report:?}");
         assert!((point[0] * point[0] + point[1] * point[1] - 1.).abs() < 1e-10);
         assert!(*residual <= 1e-9);
@@ -7709,7 +7740,10 @@ mod tests {
                 panic!("Expected overlap: {report:?}")
             };
             assert_eq!(*first_interval, [0.5, 1.]);
-            assert_eq!(*second_interval, if reversed { [0.5, 1.] } else { [0., 0.5] });
+            assert_eq!(
+                *second_interval,
+                if reversed { [0.5, 1.] } else { [0., 0.5] }
+            );
             assert_eq!(*run_reversed, reversed);
             assert_eq!(*max_control_residual, 0.);
         }
@@ -7784,11 +7818,7 @@ mod tests {
         let two_span = |x: f64| Curve {
             degree: 1,
             knots: vec![0., 0., 0.5, 1., 1.],
-            control_points: vec![
-                vec![x - 1., 0., 0.],
-                vec![x, 0., 0.],
-                vec![x + 1., 0., 0.],
-            ],
+            control_points: vec![vec![x - 1., 0., 0.], vec![x, 0., 0.], vec![x + 1., 0., 0.]],
             weights: vec![1., 1., 1.],
             periodic: false,
         };
@@ -7919,7 +7949,12 @@ mod tests {
             )
             .is_err()
         );
-        assert!(curve_curve(&line, &line, Options::default()).unwrap().permits_topology_change() == false);
+        assert!(
+            curve_curve(&line, &line, Options::default())
+                .unwrap()
+                .permits_topology_change()
+                == false
+        );
     }
 
     /// Full-circle ruled cylinder: radius 2 around the Z axis, z in [0,4].
@@ -8080,9 +8115,18 @@ mod tests {
                 let s = z / 4.;
                 s / (top - s * (top - 1.))
             };
-            assert!((correspondence.samples[0][2] - lift(1.)).abs() < 1e-9, "{report:?}");
-            assert!((correspondence.samples[2][2] - lift(3.)).abs() < 1e-9, "{report:?}");
-            assert!(correspondence.samples.iter().all(|s| s[1] == 0.), "{report:?}");
+            assert!(
+                (correspondence.samples[0][2] - lift(1.)).abs() < 1e-9,
+                "{report:?}"
+            );
+            assert!(
+                (correspondence.samples[2][2] - lift(3.)).abs() < 1e-9,
+                "{report:?}"
+            );
+            assert!(
+                correspondence.samples.iter().all(|s| s[1] == 0.),
+                "{report:?}"
+            );
             // The reconstructed Möbius t->v map matches direct evaluation at
             // seven interior parameters.
             for i in 1..=7 {
@@ -8122,7 +8166,12 @@ mod tests {
             .filter(|(_, uv)| uv[0] < 0.01 || uv[0] > 0.99)
             .collect();
         assert_eq!(seam_side.len(), 2, "{report:?}");
-        assert!(points.iter().any(|(t, uv)| (*t - 5. / 6.).abs() < 1e-9 && (uv[0] - 0.5).abs() < 1e-9), "{report:?}");
+        assert!(
+            points
+                .iter()
+                .any(|(t, uv)| (*t - 5. / 6.).abs() < 1e-9 && (uv[0] - 0.5).abs() < 1e-9),
+            "{report:?}"
+        );
     }
     #[test]
     fn iso_v_overlap_carries_affine_u_correspondence() {
@@ -8134,7 +8183,9 @@ mod tests {
             degree_v: 1,
             knots_u: vec![0., 0., 0., 1., 1., 1.],
             knots_v: vec![0., 0., 1., 1.],
-            control_points: (0..3).map(|i| vec![bottom[i].clone(), top[i].clone()]).collect(),
+            control_points: (0..3)
+                .map(|i| vec![bottom[i].clone(), top[i].clone()])
+                .collect(),
             weights: vec![[1., 1.], [w, w], [1., 1.]]
                 .iter()
                 .map(|r| r.to_vec())
@@ -8171,8 +8222,7 @@ mod tests {
         // interior parameters.
         for i in 1..=5 {
             let t = i as f64 / 6.;
-            let u = s[0][1]
-                + (s[2][1] - s[0][1]) * (t - s[0][0]) / (s[2][0] - s[0][0]);
+            let u = s[0][1] + (s[2][1] - s[0][1]) * (t - s[0][0]) / (s[2][0] - s[0][0]);
             let p = surface.evaluate(u, s[0][2]).unwrap().point;
             let q = curve.evaluate(t).unwrap().point;
             assert!(distance(p, point3(&q)) < 1e-9, "{report:?}");
@@ -8309,7 +8359,9 @@ mod tests {
             degree_v: 1,
             knots_u: vec![0., 0., 0., 1., 1., 1.],
             knots_v: vec![0., 0., 1., 1.],
-            control_points: (0..3).map(|i| vec![bottom[i].clone(), top[i].clone()]).collect(),
+            control_points: (0..3)
+                .map(|i| vec![bottom[i].clone(), top[i].clone()])
+                .collect(),
             weights: vec![[1., 1.], [w, w], [1., 1.]]
                 .iter()
                 .map(|r| r.to_vec())
@@ -8529,15 +8581,18 @@ mod tests {
         let b = line3([1., -1., 0.], [1., 1., 0.]);
         let ta = [0.49999999997089617, 0.5];
         let tb = [0.49999999994179234, 0.5];
-        let tm = ta[0] + (ta[1]-ta[0])*0.5;
-        let um = tb[0] + (tb[1]-tb[0])*0.5;
+        let tm = ta[0] + (ta[1] - ta[0]) * 0.5;
+        let um = tb[0] + (tb[1] - tb[0]) * 0.5;
         eprintln!("tm={tm} um={um}");
         let ja = a.evaluate(tm).unwrap();
         let jb = b.evaluate(um).unwrap();
         eprintln!("ja={:?} jb={:?}", ja.point, jb.point);
         eprintln!("d1a={:?} d1b={:?}", ja.d1, jb.d1);
         eprintln!("sine={:?}", tangent_sine(&a, &b, tm, um));
-        eprintln!("refine={:?}", refine_curve_root(&a, &b, ta, tb, tm, um, Options::default()));
+        eprintln!(
+            "refine={:?}",
+            refine_curve_root(&a, &b, ta, tb, tm, um, Options::default())
+        );
     }
 
     /// Piecewise-linear curve through a C0 kink at (1,1,0) on the plane z=0;
@@ -8546,11 +8601,7 @@ mod tests {
         Curve {
             degree: 1,
             knots: vec![0., 0., 1., 2., 2.],
-            control_points: vec![
-                vec![0., 0., -1.],
-                vec![1., 1., 0.],
-                vec![2., 0., 1.],
-            ],
+            control_points: vec![vec![0., 0., -1.], vec![1., 1., 0.], vec![2., 0., 1.]],
             weights: vec![1.; 3],
             periodic: false,
         }
@@ -8647,9 +8698,12 @@ mod tests {
     #[test]
     fn dyadic_boundary_ruled_surface_root_is_reported_once() {
         // The cubic pierces the ruled plane z=0 at t=1/2, u=3/8, v=1/3.
-        let report =
-            curve_ruled_surface(&dyadic_root_cubic(), &wide_ruled_plane(), Options::default())
-                .unwrap();
+        let report = curve_ruled_surface(
+            &dyadic_root_cubic(),
+            &wide_ruled_plane(),
+            Options::default(),
+        )
+        .unwrap();
         assert_eq!(report.coverage, Coverage::NumericallyResolved, "{report:?}");
         assert!(report.unresolved.is_empty(), "{report:?}");
         let roots = cs_points(&report);
@@ -8675,8 +8729,7 @@ mod tests {
         assert_eq!(report.coverage, Coverage::NumericallyResolved, "{report:?}");
         assert_eq!(cc_points(&report), vec![(1., 0.5)], "{report:?}");
         // Curve/ruled-surface at the curve's domain end.
-        let report =
-            curve_ruled_surface(&ending, &wide_ruled_plane(), Options::default()).unwrap();
+        let report = curve_ruled_surface(&ending, &wide_ruled_plane(), Options::default()).unwrap();
         assert_eq!(report.coverage, Coverage::NumericallyResolved, "{report:?}");
         let roots = cs_points(&report);
         assert_eq!(roots.len(), 1, "{report:?}");

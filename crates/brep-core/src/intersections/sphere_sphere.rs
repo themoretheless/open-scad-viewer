@@ -79,8 +79,7 @@ pub(crate) struct CanonicalSphere {
 pub(crate) fn unit_quarter_arc(curve: &Curve) -> bool {
     curve.degree == 2
         && curve.knots == [0., 0., 0., 1., 1., 1.]
-        && curve.control_points
-            == [[1., 0.].to_vec(), [1., 1.].to_vec(), [0., 1.].to_vec()]
+        && curve.control_points == [[1., 0.].to_vec(), [1., 1.].to_vec(), [0., 1.].to_vec()]
         && curve.weights == [1., ARC_WEIGHT, 1.]
 }
 pub(crate) fn axis_line(curve: &Curve, from: [f64; 2], to: [f64; 2]) -> bool {
@@ -251,13 +250,16 @@ pub(crate) fn recognize(model: &Model) -> Result<Option<CanonicalSphere>> {
         let angle = dot(frame.a, y_dir).atan2(dot(frame.a, x_dir));
         let quadrant = (angle / quarter).round() as i64;
         let quadrant = quadrant.rem_euclid(4) as usize;
-        let residual =
-            (angle - quadrant as f64 * quarter + std::f64::consts::PI).rem_euclid(TAU)
-                - std::f64::consts::PI;
+        let residual = (angle - quadrant as f64 * quarter + std::f64::consts::PI).rem_euclid(TAU)
+            - std::f64::consts::PI;
         if residual.abs() > RECOGNITION {
             return Ok(None);
         }
-        let slot = if hemisphere > 0. { quadrant } else { 4 + quadrant };
+        let slot = if hemisphere > 0. {
+            quadrant
+        } else {
+            4 + quadrant
+        };
         if seen[slot] {
             return Ok(None);
         }
@@ -462,22 +464,15 @@ fn clip_line(normal: [f64; 2], offset: f64) -> Option<([f64; 2], [f64; 2])> {
 
 /// Exact rational quadratic arcs covering the swept interval, each <= 90 degrees.
 pub(crate) fn circle_arcs(center: [f64; 2], rho: f64, start: f64, end: f64) -> Vec<Curve> {
-    let pieces = ((end - start) / std::f64::consts::FRAC_PI_2)
-        .ceil()
-        .max(1.) as usize;
+    let pieces = ((end - start) / std::f64::consts::FRAC_PI_2).ceil().max(1.) as usize;
     (0..pieces)
         .map(|i| {
             let a0 = start + (end - start) * i as f64 / pieces as f64;
             let a1 = start + (end - start) * (i + 1) as f64 / pieces as f64;
             let half = (a1 - a0) / 2.;
             let weight = half.cos();
-            let point = |phi: f64| {
-                [
-                    center[0] + rho * phi.cos(),
-                    center[1] + rho * phi.sin(),
-                ]
-                .to_vec()
-            };
+            let point =
+                |phi: f64| [center[0] + rho * phi.cos(), center[1] + rho * phi.sin()].to_vec();
             let middle = (a0 + a1) / 2.;
             let shoulder = [
                 center[0] + rho / weight * middle.cos(),
@@ -701,7 +696,8 @@ pub(crate) fn lift_clipped(
                     if !(dd > 0.) {
                         continue;
                     }
-                    let t = |q: [f64; 2]| ((q[0] - start[0]) * d[0] + (q[1] - start[1]) * d[1]) / dd;
+                    let t =
+                        |q: [f64; 2]| ((q[0] - start[0]) * d[0] + (q[1] - start[1]) * d[1]) / dd;
                     let (ta, tb, tm) = (t(qa), t(qb), t(qm));
                     if !(-1e-9..=1. + 1e-9).contains(&tm) {
                         continue;
@@ -755,8 +751,8 @@ pub fn intersect_sphere_sphere(
         let scaled = delta.map(|x| x / scale);
         scaled[0].hypot(scaled[1]).hypot(scaled[2]) * scale
     };
-    let band = a.error + b.error
-        + 16. * f64::EPSILON * (distance + scale + a.radius + b.radius + 1.);
+    let band =
+        a.error + b.error + 16. * f64::EPSILON * (distance + scale + a.radius + b.radius + 1.);
     let d_lo = (distance - band).max(0.);
     let d_hi = distance + band;
     let sum = a.radius + b.radius;
@@ -788,8 +784,7 @@ pub fn intersect_sphere_sphere(
     }
     // Transverse pair: the circle exists with clear margin on both sides.
     let normal = delta.map(|x| x / distance);
-    let along = (a.radius * a.radius - b.radius * b.radius + distance * distance)
-        / (2. * distance);
+    let along = (a.radius * a.radius - b.radius * b.radius + distance * distance) / (2. * distance);
     let h2 = a.radius * a.radius - along * along;
     if !h2.is_finite() || h2 <= 0. {
         report.unresolved(domain, UnresolvedReason::TangencyOrMultipleRoot);
@@ -904,15 +899,17 @@ mod tests {
         assert_eq!(report.coverage, Coverage::NumericallyResolved, "{report:?}");
         assert!(report.unresolved.is_empty(), "{report:?}");
         assert!(!report.permits_topology_change());
-        let [SphereSphereComponent::Circle {
-            curve,
-            center,
-            radius,
-            normal,
-            first_uv,
-            second_uv,
-            max_sample_residual,
-        }] = &report.components[..]
+        let [
+            SphereSphereComponent::Circle {
+                curve,
+                center,
+                radius,
+                normal,
+                first_uv,
+                second_uv,
+                max_sample_residual,
+            },
+        ] = &report.components[..]
         else {
             panic!("expected one circle component: {report:?}")
         };
@@ -983,15 +980,26 @@ mod tests {
         // Oracle: circle radius sqrt(r^2 - d^2/4) = sqrt(3), center on the axis.
         let oracle = (4_f64 - 1.).sqrt();
         assert!((radius - oracle).abs() <= 1e-12, "{radius} vs {oracle}");
-        assert!(sub(center, [1., 0., 0.]).iter().all(|x| x.abs() <= 1e-12), "{center:?}");
-        assert!(sub(normal, [1., 0., 0.]).iter().all(|x| x.abs() <= 1e-12), "{normal:?}");
+        assert!(
+            sub(center, [1., 0., 0.]).iter().all(|x| x.abs() <= 1e-12),
+            "{center:?}"
+        );
+        assert!(
+            sub(normal, [1., 0., 0.]).iter().all(|x| x.abs() <= 1e-12),
+            "{normal:?}"
+        );
         // Exact rational circle: four 90-degree arcs, weights cos(pi/4).
         assert_eq!(curve.degree, 2);
-        assert_eq!(curve.knots, vec![0., 0., 0., 1., 1., 2., 2., 3., 3., 4., 4., 4.]);
+        assert_eq!(
+            curve.knots,
+            vec![0., 0., 0., 1., 1., 2., 2., 3., 3., 4., 4., 4.]
+        );
         assert_eq!(curve.control_points.len(), 9);
         assert_eq!(
             curve.weights,
-            vec![1., ARC_WEIGHT, 1., ARC_WEIGHT, 1., ARC_WEIGHT, 1., ARC_WEIGHT, 1.]
+            vec![
+                1., ARC_WEIGHT, 1., ARC_WEIGHT, 1., ARC_WEIGHT, 1., ARC_WEIGHT, 1.
+            ]
         );
         // Sixteen sampled points satisfy both sphere equations.
         let worst = circle_samples(curve, [0., 0., 0.], 2., [2., 0., 0.], 2.);
@@ -1000,20 +1008,27 @@ mod tests {
         // The circle plane x=1 is seen from either center within a +-60-degree
         // cone around +-x: it crosses quadrants 0,3 (both hemispheres) of the
         // first sphere and quadrants 1,2 of the second.
-        assert_eq!(first_uv.iter().map(|l| l.patch).collect::<Vec<_>>(), [0, 3, 4, 7]);
-        assert_eq!(second_uv.iter().map(|l| l.patch).collect::<Vec<_>>(), [1, 2, 5, 6]);
-        assert!(
-            uv_samples(&first, first_uv, ([0., 0., 0.], 2.), ([2., 0., 0.], 2.)) <= 1e-12
+        assert_eq!(
+            first_uv.iter().map(|l| l.patch).collect::<Vec<_>>(),
+            [0, 3, 4, 7]
         );
-        assert!(
-            uv_samples(&second, second_uv, ([2., 0., 0.], 2.), ([0., 0., 0.], 2.)) <= 1e-12
+        assert_eq!(
+            second_uv.iter().map(|l| l.patch).collect::<Vec<_>>(),
+            [1, 2, 5, 6]
         );
+        assert!(uv_samples(&first, first_uv, ([0., 0., 0.], 2.), ([2., 0., 0.], 2.)) <= 1e-12);
+        assert!(uv_samples(&second, second_uv, ([2., 0., 0.], 2.), ([0., 0., 0.], 2.)) <= 1e-12);
         // Operand swap keeps the circle, flips the axis and the UV roles.
         let swapped = intersect_sphere_sphere(&second, &first, Options::default()).unwrap();
         let (_, s_center, s_radius, s_normal, s_first, s_second, _) = only_circle(&swapped);
         assert!((s_radius - radius).abs() <= 1e-15);
         assert!(sub(s_center, center).iter().all(|x| x.abs() <= 1e-12));
-        assert!(s_normal.iter().zip(normal).all(|(x, y)| (x + y).abs() <= 1e-12));
+        assert!(
+            s_normal
+                .iter()
+                .zip(normal)
+                .all(|(x, y)| (x + y).abs() <= 1e-12)
+        );
         assert_eq!(s_first.len(), second_uv.len());
         assert_eq!(s_second.len(), first_uv.len());
     }
@@ -1026,7 +1041,10 @@ mod tests {
         assert!(report.components.is_empty(), "{report:?}");
         assert_eq!(report.coverage, Coverage::Incomplete);
         assert_eq!(report.unresolved.len(), 1);
-        assert_eq!(report.unresolved[0].reason, UnresolvedReason::CoincidentTrim);
+        assert_eq!(
+            report.unresolved[0].reason,
+            UnresolvedReason::CoincidentTrim
+        );
         assert!(!report.permits_topology_change());
     }
 
@@ -1035,13 +1053,19 @@ mod tests {
         let small = crate::analytic::sphere(2.).unwrap();
         let large = crate::analytic::sphere(3.).unwrap();
         let report = intersect_sphere_sphere(&small, &large, Options::default()).unwrap();
-        assert!(report.components.is_empty() && report.unresolved.is_empty(), "{report:?}");
+        assert!(
+            report.components.is_empty() && report.unresolved.is_empty(),
+            "{report:?}"
+        );
         assert_eq!(report.coverage, Coverage::NumericallyResolved);
         // Contained without contact: d = 1 < |3 - 2| is false; use radii 1 and 3.
         let tiny = crate::analytic::sphere(1.).unwrap();
         let shifted = translated(&large, [1., 0., 0.]);
         let report = intersect_sphere_sphere(&tiny, &shifted, Options::default()).unwrap();
-        assert!(report.components.is_empty() && report.unresolved.is_empty(), "{report:?}");
+        assert!(
+            report.components.is_empty() && report.unresolved.is_empty(),
+            "{report:?}"
+        );
         assert_eq!(report.coverage, Coverage::NumericallyResolved);
     }
 
@@ -1050,7 +1074,10 @@ mod tests {
         let first = crate::analytic::sphere(2.).unwrap();
         let second = translated(&first, [5., 0., 0.]);
         let report = intersect_sphere_sphere(&first, &second, Options::default()).unwrap();
-        assert!(report.components.is_empty() && report.unresolved.is_empty(), "{report:?}");
+        assert!(
+            report.components.is_empty() && report.unresolved.is_empty(),
+            "{report:?}"
+        );
         assert_eq!(report.coverage, Coverage::NumericallyResolved);
     }
 
@@ -1063,12 +1090,18 @@ mod tests {
             let report = intersect_sphere_sphere(&first, &second, Options::default()).unwrap();
             assert!(report.components.is_empty(), "{gap} {report:?}");
             assert_eq!(report.coverage, Coverage::Incomplete);
-            assert_eq!(report.unresolved[0].reason, UnresolvedReason::TangencyOrMultipleRoot);
+            assert_eq!(
+                report.unresolved[0].reason,
+                UnresolvedReason::TangencyOrMultipleRoot
+            );
         }
         // Just outside the band the pair resolves empty; just inside, a circle.
         let apart = translated(&first, [4. + 1e-12, 0., 0.]);
         let report = intersect_sphere_sphere(&first, &apart, Options::default()).unwrap();
-        assert!(report.components.is_empty() && report.unresolved.is_empty(), "{report:?}");
+        assert!(
+            report.components.is_empty() && report.unresolved.is_empty(),
+            "{report:?}"
+        );
         let closer = translated(&first, [4. - 1e-12, 0., 0.]);
         let report = intersect_sphere_sphere(&first, &closer, Options::default()).unwrap();
         let (_, _, radius, _, _, _, _) = only_circle(&report);
@@ -1076,7 +1109,11 @@ mod tests {
         // cancellation in any evaluation order; compare squared radii.
         let d = 4_f64 - 1e-12;
         let oracle = 4_f64 - (d / 2.).powi(2);
-        assert!((radius * radius - oracle).abs() <= 2e-15, "{} vs {oracle}", radius * radius);
+        assert!(
+            (radius * radius - oracle).abs() <= 2e-15,
+            "{} vs {oracle}",
+            radius * radius
+        );
     }
 
     #[test]
@@ -1086,12 +1123,18 @@ mod tests {
         let report = intersect_sphere_sphere(&small, &large, Options::default()).unwrap();
         assert!(report.components.is_empty(), "{report:?}");
         assert_eq!(report.coverage, Coverage::Incomplete);
-        assert_eq!(report.unresolved[0].reason, UnresolvedReason::TangencyOrMultipleRoot);
+        assert_eq!(
+            report.unresolved[0].reason,
+            UnresolvedReason::TangencyOrMultipleRoot
+        );
         // Clearly inside the band boundary: d below |r1-r2| is containment
         // (empty, resolved), d above it is a transverse circle.
         let large = translated(&crate::analytic::sphere(3.).unwrap(), [2. - 1e-9, 0., 0.]);
         let report = intersect_sphere_sphere(&small, &large, Options::default()).unwrap();
-        assert!(report.components.is_empty() && report.unresolved.is_empty(), "{report:?}");
+        assert!(
+            report.components.is_empty() && report.unresolved.is_empty(),
+            "{report:?}"
+        );
         let large = translated(&crate::analytic::sphere(3.).unwrap(), [2. + 1e-9, 0., 0.]);
         let report = intersect_sphere_sphere(&small, &large, Options::default()).unwrap();
         only_circle(&report);
@@ -1104,13 +1147,25 @@ mod tests {
         let report = intersect_sphere_sphere(&first, &second, Options::default()).unwrap();
         let (curve, center, radius, normal, first_uv, second_uv, _) = only_circle(&report);
         assert!((radius - 8_f64.sqrt()).abs() <= 1e-12, "{radius}");
-        assert!(sub(center, [0., 0., 1.]).iter().all(|x| x.abs() <= 1e-12), "{center:?}");
-        assert!(sub(normal, [0., 0., 1.]).iter().all(|x| x.abs() <= 1e-12), "{normal:?}");
+        assert!(
+            sub(center, [0., 0., 1.]).iter().all(|x| x.abs() <= 1e-12),
+            "{center:?}"
+        );
+        assert!(
+            sub(normal, [0., 0., 1.]).iter().all(|x| x.abs() <= 1e-12),
+            "{normal:?}"
+        );
         // The parallel at height t = 1 above the equator lifts on sphere 1's
         // north patches (faces 0..4) to UV circles of radius sqrt((r-t)/(r+t));
         // on sphere 2 it sits at t = -1, lifting to the south patches (4..8).
-        assert_eq!(first_uv.iter().map(|l| l.patch).collect::<Vec<_>>(), [0, 1, 2, 3]);
-        assert_eq!(second_uv.iter().map(|l| l.patch).collect::<Vec<_>>(), [4, 5, 6, 7]);
+        assert_eq!(
+            first_uv.iter().map(|l| l.patch).collect::<Vec<_>>(),
+            [0, 1, 2, 3]
+        );
+        assert_eq!(
+            second_uv.iter().map(|l| l.patch).collect::<Vec<_>>(),
+            [4, 5, 6, 7]
+        );
         let t = 1_f64;
         let r = 3_f64;
         let rho = ((r - t) / (r + t)).sqrt();
@@ -1153,7 +1208,9 @@ mod tests {
         assert!((radius - oracle).abs() <= 1e-12, "{radius} vs {oracle}");
         let expected_center = [along * c2[0] / d, along * c2[1] / d, along * c2[2] / d];
         assert!(
-            sub(center, expected_center).iter().all(|x| x.abs() <= 1e-12),
+            sub(center, expected_center)
+                .iter()
+                .all(|x| x.abs() <= 1e-12),
             "{center:?} vs {expected_center:?}"
         );
         let worst = circle_samples(curve, [0., 0., 0.], 2., c2, 1.5);
@@ -1176,8 +1233,14 @@ mod tests {
                 assert!(report.components.is_empty(), "{report:?}");
                 assert_eq!(report.coverage, Coverage::Incomplete);
                 assert_eq!(report.unresolved.len(), 1);
-                assert_eq!(report.unresolved[0].reason, UnresolvedReason::UnsupportedSurface);
-                assert_eq!(report.unresolved[0].parameter_box, vec![0., 1., 0., 1., 0., 1., 0., 1.]);
+                assert_eq!(
+                    report.unresolved[0].reason,
+                    UnresolvedReason::UnsupportedSurface
+                );
+                assert_eq!(
+                    report.unresolved[0].parameter_box,
+                    vec![0., 1., 0., 1., 0., 1., 0., 1.]
+                );
             }
         }
         // A sphere with a perturbed patch is no longer a valid model at all:

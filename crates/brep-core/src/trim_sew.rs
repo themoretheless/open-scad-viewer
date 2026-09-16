@@ -15,6 +15,9 @@ fn refuse(code: &'static str, message: &str) -> Error {
 pub enum ChartKind {
     PlanePoly,
     AnalyticCircle,
+    /// Admitted freeform chart touch for UV arrange walking slice (F3).
+    /// Out-of-matrix freeform DCEL still refuses Complete without strata.
+    Freeform,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -117,6 +120,28 @@ pub fn classify_chart_events(
 pub struct SewEdgeKey {
     pub a: [i64; 3],
     pub b: [i64; 3],
+    /// Curve-shape discriminator. Closed-shell auditing fills this with the
+    /// exact NURBS midpoint so distinct arcs sharing endpoints never collapse.
+    pub mid: Option<[i64; 3]>,
+    /// Shell discriminator prevents touching but disconnected material lumps
+    /// from being welded by coincident geometric coordinates.
+    pub shell: Option<usize>,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum DisplacementOp {
+    None,
+    Refit,
+    Split,
+}
+
+/// Optional displacement record for an authorized heal plan (never silent).
+#[derive(Clone, Debug)]
+pub struct DisplacementRecord {
+    pub before: SewEdgeKey,
+    pub after: SewEdgeKey,
+    pub bound: i64,
+    pub op: DisplacementOp,
 }
 
 #[derive(Clone, Debug)]
@@ -125,18 +150,21 @@ pub struct SewLedgerEntry {
     pub face_a: usize,
     pub face_b: usize,
     pub orientation_agree: bool,
+    pub displacement: Option<DisplacementRecord>,
 }
 
 #[derive(Clone, Debug, Default)]
 pub struct SewSnapshot {
     pub edges: BTreeSet<SewEdgeKey>,
     pub oriented: BTreeMap<SewEdgeKey, bool>,
+    pub displacements: Vec<DisplacementRecord>,
 }
 
 #[derive(Clone, Debug)]
 pub struct SewCertificate {
     pub matched: usize,
     pub complete: bool,
+    pub displacement_budget_ok: bool,
 }
 
 fn quantize(point: [f64; 3], scale: f64) -> Result<[i64; 3]> {
@@ -159,9 +187,19 @@ pub fn sew_edge_key(a: [f64; 3], b: [f64; 3], scale: f64) -> Result<SewEdgeKey> 
         ));
     }
     Ok(if qa <= qb {
-        SewEdgeKey { a: qa, b: qb }
+        SewEdgeKey {
+            a: qa,
+            b: qb,
+            mid: None,
+            shell: None,
+        }
     } else {
-        SewEdgeKey { a: qb, b: qa }
+        SewEdgeKey {
+            a: qb,
+            b: qa,
+            mid: None,
+            shell: None,
+        }
     })
 }
 
@@ -204,18 +242,34 @@ pub fn exact_sew(
         }
         next.edges.insert(key.clone());
         next.oriented.insert(key.clone(), true);
+        for entry in entries {
+            if let Some(disp) = &entry.displacement {
+                if disp.bound < 0 || disp.bound > 1_000_000 {
+                    return Err(refuse(
+                        "BREP_SEW_DISPLACEMENT",
+                        "Displacement bound exceeds sew budget; refuse silent heal",
+                    ));
+                }
+                next.displacements.push(disp.clone());
+            }
+        }
     }
+    let budget_ok = next.displacements.iter().all(|d| d.bound <= 1_000_000);
     Ok((
         next,
         SewCertificate {
             matched: uses.len(),
             complete: true,
+            displacement_budget_ok: budget_ok,
         },
     ))
 }
 
 /// Rollback drill helper: apply sew or restore `base` on any refusal.
-pub fn sew_atomic(base: SewSnapshot, pending: &[SewLedgerEntry]) -> Result<(SewSnapshot, SewCertificate)> {
+pub fn sew_atomic(
+    base: SewSnapshot,
+    pending: &[SewLedgerEntry],
+) -> Result<(SewSnapshot, SewCertificate)> {
     match exact_sew(&base, pending) {
         Ok(done) => Ok(done),
         Err(error) => Err(error),
@@ -319,6 +373,32 @@ pub fn classify_face_outer_loop(
 pub fn sew_closed_model_edges(model: &crate::Model) -> Result<SewCertificate> {
     model.validate()?;
     let scale = model.tolerance_mm.max(1e-9);
+    let mut face_usage = vec![None; model.faces.len()];
+    for (shell_id, shell) in model.shells.iter().enumerate() {
+        if !shell.closed {
+            return Err(refuse(
+                "BREP_SEW_GAP",
+                "Solid sew requires every audited shell to be closed",
+            ));
+        }
+        for use_ in &shell.faces {
+            if face_usage[use_.face]
+                .replace((use_.reversed, shell_id))
+                .is_some()
+            {
+                return Err(refuse(
+                    "BREP_SEW_DUPLICATE",
+                    "Face is owned by more than one shell",
+                ));
+            }
+        }
+    }
+    if face_usage.iter().any(Option::is_none) {
+        return Err(refuse(
+            "BREP_SEW_GAP",
+            "Solid sew found a face not owned by a shell",
+        ));
+    }
     let mut pending = Vec::new();
     for (face_a, face) in model.faces.iter().enumerate() {
         for &wire_id in std::iter::once(&face.outer).chain(face.holes.iter()) {
@@ -327,13 +407,22 @@ pub fn sew_closed_model_edges(model: &crate::Model) -> Result<SewCertificate> {
                 let edge = &model.edges[coedge.edge];
                 let a = model.vertices[edge.vertices[0]].point;
                 let b = model.vertices[edge.vertices[1]].point;
-                let key = sew_edge_key(a, b, scale)?;
-                // Orientation: reversed coedge disagrees with edge direction.
+                let mut key = sew_edge_key(a, b, scale)?;
+                let [lo, hi] = edge.curve.domain();
+                let midpoint = edge.curve.evaluate((lo + hi) * 0.5)?.point;
+                if midpoint.len() != 3 {
+                    return Err(refuse("BREP_SEW_INVALID", "Edge midpoint must be 3D"));
+                }
+                key.mid = Some(quantize([midpoint[0], midpoint[1], midpoint[2]], scale)?);
+                // Shell-level FaceUse reversal flips every coedge orientation.
+                let (shell_reversed, shell_id) = face_usage[face_a].unwrap_or((false, 0));
+                key.shell = Some(shell_id);
                 pending.push(SewLedgerEntry {
                     key,
                     face_a,
                     face_b: face_a,
-                    orientation_agree: !coedge.reversed,
+                    orientation_agree: !(coedge.reversed ^ shell_reversed),
+                    displacement: None,
                 });
             }
         }
@@ -370,6 +459,7 @@ pub fn sew_closed_model_edges(model: &crate::Model) -> Result<SewCertificate> {
             face_b: entries[0].face_a,
             orientation_agree: entries[1].orientation_agree,
             key: entries[1].key.clone(),
+            displacement: None,
         });
     }
     let (_snap, cert) = sew_atomic(SewSnapshot::default(), &paired)?;
@@ -396,7 +486,11 @@ mod tests {
                     edge: 1,
                 },
             ],
-            &[(0.1, CellLabel::Outside), (0.5, CellLabel::Inside), (0.9, CellLabel::Outside)],
+            &[
+                (0.1, CellLabel::Outside),
+                (0.5, CellLabel::Inside),
+                (0.9, CellLabel::Outside),
+            ],
         )
         .unwrap();
         assert!(cert.complete);
@@ -428,12 +522,14 @@ mod tests {
                 face_a: 0,
                 face_b: 1,
                 orientation_agree: true,
+                displacement: None,
             },
             SewLedgerEntry {
                 key: key.clone(),
                 face_a: 1,
                 face_b: 0,
                 orientation_agree: false,
+                displacement: None,
             },
         ];
         let base = SewSnapshot::default();
@@ -451,6 +547,7 @@ mod tests {
             face_a: 0,
             face_b: 1,
             orientation_agree: true,
+            displacement: None,
         }];
         let base = SewSnapshot::default();
         let err = sew_atomic(base.clone(), &pending).unwrap_err();
@@ -467,18 +564,21 @@ mod tests {
                 face_a: 0,
                 face_b: 1,
                 orientation_agree: true,
+                displacement: None,
             },
             SewLedgerEntry {
                 key: key.clone(),
                 face_a: 2,
                 face_b: 3,
                 orientation_agree: false,
+                displacement: None,
             },
             SewLedgerEntry {
                 key: key.clone(),
                 face_a: 4,
                 face_b: 5,
                 orientation_agree: true,
+                displacement: None,
             },
         ];
         assert_eq!(
@@ -491,12 +591,14 @@ mod tests {
                 face_a: 0,
                 face_b: 1,
                 orientation_agree: true,
+                displacement: None,
             },
             SewLedgerEntry {
                 key,
                 face_a: 1,
                 face_b: 0,
                 orientation_agree: true,
+                displacement: None,
             },
         ];
         assert_eq!(

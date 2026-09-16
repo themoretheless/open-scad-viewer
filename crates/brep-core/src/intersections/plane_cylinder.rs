@@ -374,8 +374,7 @@ pub fn intersect_plane_cylinder(
             report.unresolved(domain, UnresolvedReason::CoincidentTrim);
             return Ok(report);
         }
-        let center =
-            std::array::from_fn(|k| cylinder.center[k] + axial * cylinder.axis[k]);
+        let center = std::array::from_fn(|k| cylinder.center[k] + axial * cylinder.axis[k]);
         let r = cylinder.radius;
         let e1 = plane.u.map(|x| x / plane.u_len);
         let e2 = plane.v.map(|x| x / plane.v_len);
@@ -416,8 +415,7 @@ pub fn intersect_plane_cylinder(
             EllipseClip::Arcs(intervals) => {
                 for (a, b) in intervals {
                     let curve = conic_sweep(center, we1, we2, a, b);
-                    let max_sample_residual =
-                        side_plane_residuals(&curve, &cylinder, &plane, 9)?;
+                    let max_sample_residual = side_plane_residuals(&curve, &cylinder, &plane, 9)?;
                     report.components.push(PlaneCylinderComponent::Circle {
                         curve,
                         center,
@@ -479,8 +477,7 @@ pub fn intersect_plane_cylinder(
                     report.unresolved(domain.clone(), UnresolvedReason::TangencyOrMultipleRoot);
                 }
                 LineClip::Span(lo, hi) => {
-                    let start: [f64; 3] =
-                        std::array::from_fn(|k| foot[k] + lo * cylinder.axis[k]);
+                    let start: [f64; 3] = std::array::from_fn(|k| foot[k] + lo * cylinder.axis[k]);
                     let end: [f64; 3] = std::array::from_fn(|k| foot[k] + hi * cylinder.axis[k]);
                     let curve = Curve {
                         degree: 1,
@@ -503,8 +500,7 @@ pub fn intersect_plane_cylinder(
                             periodic: false,
                         }],
                     }];
-                    let max_sample_residual =
-                        side_plane_residuals(&curve, &cylinder, &plane, 9)?;
+                    let max_sample_residual = side_plane_residuals(&curve, &cylinder, &plane, 9)?;
                     report.components.push(PlaneCylinderComponent::Line {
                         curve,
                         start,
@@ -670,8 +666,8 @@ impl value_codec::Serialize for PlaneCylinderComponent {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use super::super::plane_sphere::plane_patch;
+    use super::*;
 
     fn rotated_translated(model: &Model, angle: f64, offset: [f64; 3]) -> Model {
         let (sin, cos) = angle.sin_cos();
@@ -753,25 +749,33 @@ mod tests {
         assert!(report.unresolved.is_empty(), "{report:?}");
         assert_eq!(report.coverage, Coverage::NumericallyResolved);
         assert!(!report.permits_topology_change());
-        let [PlaneCylinderComponent::Circle {
-            curve,
-            center,
-            radius,
-            normal,
-            full,
-            plane_uv,
-            cylinder_uv,
-            max_sample_residual,
-        }] = &report.components[..]
+        let [
+            PlaneCylinderComponent::Circle {
+                curve,
+                center,
+                radius,
+                normal,
+                full,
+                plane_uv,
+                cylinder_uv,
+                max_sample_residual,
+            },
+        ] = &report.components[..]
         else {
             panic!("expected one circle component: {report:?}")
         };
         assert!(*full);
         assert!((*radius - 2.).abs() <= 1e-12, "{radius}");
-        assert!(sub(*center, [0., 0., 4.]).iter().all(|x| x.abs() <= 1e-12), "{center:?}");
+        assert!(
+            sub(*center, [0., 0., 4.]).iter().all(|x| x.abs() <= 1e-12),
+            "{center:?}"
+        );
         assert_eq!(*normal, [0., 0., 1.]);
         // Four exact 90-degree arcs with the unit-circle weights.
-        assert_eq!(curve.knots, vec![0., 0., 0., 1., 1., 2., 2., 3., 3., 4., 4., 4.]);
+        assert_eq!(
+            curve.knots,
+            vec![0., 0., 0., 1., 1., 2., 2., 3., 3., 4., 4., 4.]
+        );
         assert_eq!(curve.weights.len(), 9);
         assert!((curve.weights[1] - std::f64::consts::FRAC_1_SQRT_2).abs() <= 1e-15);
         assert!(*max_sample_residual <= 1e-12, "{max_sample_residual}");
@@ -806,26 +810,37 @@ mod tests {
         let cylinder = crate::analytic::cylinder(2., 8.).unwrap();
         let report = intersect_plane_cylinder(&plane, &cylinder, Options::default()).unwrap();
         assert!(report.unresolved.is_empty(), "{report:?}");
-        let [PlaneCylinderComponent::Circle {
-            curve,
-            center,
-            full,
-            plane_uv,
-            cylinder_uv,
-            max_sample_residual,
-            ..
-        }] = &report.components[..]
+        let [
+            PlaneCylinderComponent::Circle {
+                curve,
+                center,
+                full,
+                plane_uv,
+                cylinder_uv,
+                max_sample_residual,
+                ..
+            },
+        ] = &report.components[..]
         else {
             panic!("expected one clipped circle: {report:?}")
         };
         assert!(!*full);
-        assert!(sub(*center, [0., 0., 4.]).iter().all(|x| x.abs() <= 1e-12), "{center:?}");
+        assert!(
+            sub(*center, [0., 0., 4.]).iter().all(|x| x.abs() <= 1e-12),
+            "{center:?}"
+        );
         assert_eq!(curve.knots, vec![0., 0., 0., 1., 1., 2., 2., 2.]);
         let start = point_of(&curve.evaluate(0.).unwrap().point);
         let end = point_of(&curve.evaluate(2.).unwrap().point);
-        assert!(start[0].abs() <= 1e-12 && (start[1] + 2.).abs() <= 1e-12, "{start:?}");
+        assert!(
+            start[0].abs() <= 1e-12 && (start[1] + 2.).abs() <= 1e-12,
+            "{start:?}"
+        );
         assert!((start[2] - 4.).abs() <= 1e-12);
-        assert!(end[0].abs() <= 1e-12 && (end[1] - 2.).abs() <= 1e-12, "{end:?}");
+        assert!(
+            end[0].abs() <= 1e-12 && (end[1] - 2.).abs() <= 1e-12,
+            "{end:?}"
+        );
         assert!((end[2] - 4.).abs() <= 1e-12);
         assert!(*max_sample_residual <= 1e-12, "{max_sample_residual}");
         // Plane UV: two arcs meeting at the phi = 0 seam (2/3, 1/2); the free
@@ -881,18 +896,23 @@ mod tests {
         let report = intersect_plane_cylinder(&at(8.), &cylinder, Options::default()).unwrap();
         assert!(report.components.is_empty(), "{report:?}");
         assert_eq!(report.coverage, Coverage::Incomplete);
-        assert_eq!(report.unresolved[0].reason, UnresolvedReason::CoincidentTrim);
+        assert_eq!(
+            report.unresolved[0].reason,
+            UnresolvedReason::CoincidentTrim
+        );
         // Provably beyond the cap: empty and resolved.
         for z in [9., 8. + 1e-9] {
             let report = intersect_plane_cylinder(&at(z), &cylinder, Options::default()).unwrap();
-            assert!(report.components.is_empty() && report.unresolved.is_empty(), "{z} {report:?}");
+            assert!(
+                report.components.is_empty() && report.unresolved.is_empty(),
+                "{z} {report:?}"
+            );
             assert_eq!(report.coverage, Coverage::NumericallyResolved);
         }
         // Just clear of the cap band below: a full circle near the rim.
         let report =
             intersect_plane_cylinder(&at(8. - 1e-9), &cylinder, Options::default()).unwrap();
-        let [PlaneCylinderComponent::Circle { center, full, .. }] = &report.components[..]
-        else {
+        let [PlaneCylinderComponent::Circle { center, full, .. }] = &report.components[..] else {
             panic!("expected one circle: {report:?}")
         };
         assert!(*full);
@@ -927,8 +947,14 @@ mod tests {
             };
             assert_eq!(*direction, [0., 0., 1.]);
             assert_eq!(*contact, Contact::Boundary);
-            assert!((start[0] - 1.).abs() <= 1e-12 && start[2].abs() <= 1e-12, "{start:?}");
-            assert!((end[0] - 1.).abs() <= 1e-12 && (end[2] - 8.).abs() <= 1e-12, "{end:?}");
+            assert!(
+                (start[0] - 1.).abs() <= 1e-12 && start[2].abs() <= 1e-12,
+                "{start:?}"
+            );
+            assert!(
+                (end[0] - 1.).abs() <= 1e-12 && (end[2] - 8.).abs() <= 1e-12,
+                "{end:?}"
+            );
             assert!((start[1].abs() - h).abs() <= 1e-12, "{start:?}");
             assert_eq!(start[1], end[1]);
             seen.push(start[1]);
@@ -940,8 +966,14 @@ mod tests {
             let arc = &plane_uv[0].arcs[0];
             assert_eq!(arc.degree, 1);
             let u_const = (3. + start[1]) / 6.;
-            assert!((arc.control_points[0][0] - u_const).abs() <= 1e-12, "{arc:?}");
-            assert!((arc.control_points[1][0] - u_const).abs() <= 1e-12, "{arc:?}");
+            assert!(
+                (arc.control_points[0][0] - u_const).abs() <= 1e-12,
+                "{arc:?}"
+            );
+            assert!(
+                (arc.control_points[1][0] - u_const).abs() <= 1e-12,
+                "{arc:?}"
+            );
             assert!(arc.control_points[0][1].abs() <= 1e-12, "{arc:?}");
             assert!((arc.control_points[1][1] - 0.8).abs() <= 1e-12, "{arc:?}");
             assert!(!cylinder_uv.is_empty());
@@ -965,19 +997,28 @@ mod tests {
         let at = |x: f64| plane_patch([x, -3., 0.], [0., 6., 0.], [0., 0., 10.]);
         // Miss: d = 3 > r, empty and resolved.
         let report = intersect_plane_cylinder(&at(3.), &cylinder, Options::default()).unwrap();
-        assert!(report.components.is_empty() && report.unresolved.is_empty(), "{report:?}");
+        assert!(
+            report.components.is_empty() && report.unresolved.is_empty(),
+            "{report:?}"
+        );
         assert_eq!(report.coverage, Coverage::NumericallyResolved);
         // Tangency and within the band around it: never a guessed line.
         for x in [2., 2. - 3e-14] {
             let report = intersect_plane_cylinder(&at(x), &cylinder, Options::default()).unwrap();
             assert!(report.components.is_empty(), "{x} {report:?}");
             assert_eq!(report.coverage, Coverage::Incomplete);
-            assert_eq!(report.unresolved[0].reason, UnresolvedReason::TangencyOrMultipleRoot);
+            assert_eq!(
+                report.unresolved[0].reason,
+                UnresolvedReason::TangencyOrMultipleRoot
+            );
         }
         // Just clear of the band outside: empty resolved.
         let report =
             intersect_plane_cylinder(&at(2. + 1e-9), &cylinder, Options::default()).unwrap();
-        assert!(report.components.is_empty() && report.unresolved.is_empty(), "{report:?}");
+        assert!(
+            report.components.is_empty() && report.unresolved.is_empty(),
+            "{report:?}"
+        );
         // Just clear inside: two rulings near the tangent line.
         let report =
             intersect_plane_cylinder(&at(2. - 1e-9), &cylinder, Options::default()).unwrap();
@@ -1002,14 +1043,22 @@ mod tests {
         let report = intersect_plane_cylinder(&plane, &cylinder, Options::default()).unwrap();
         assert_eq!(report.coverage, Coverage::Incomplete);
         assert_eq!(report.unresolved.len(), 1, "{report:?}");
-        assert_eq!(report.unresolved[0].reason, UnresolvedReason::TangencyOrMultipleRoot);
-        let [PlaneCylinderComponent::Line { start, end, .. }] = &report.components[..]
-        else {
+        assert_eq!(
+            report.unresolved[0].reason,
+            UnresolvedReason::TangencyOrMultipleRoot
+        );
+        let [PlaneCylinderComponent::Line { start, end, .. }] = &report.components[..] else {
             panic!("expected one resolved line: {report:?}")
         };
         let h = 3_f64.sqrt();
-        assert!((start[0] - 1.).abs() <= 1e-12 && (start[1] + h).abs() <= 1e-12, "{start:?}");
-        assert!(start[2].abs() <= 1e-12 && (end[2] - 8.).abs() <= 1e-12, "{end:?}");
+        assert!(
+            (start[0] - 1.).abs() <= 1e-12 && (start[1] + h).abs() <= 1e-12,
+            "{start:?}"
+        );
+        assert!(
+            start[2].abs() <= 1e-12 && (end[2] - 8.).abs() <= 1e-12,
+            "{end:?}"
+        );
     }
 
     /// Oblique fixture: plane through the cylinder center (0, 0, 4) with
@@ -1035,19 +1084,21 @@ mod tests {
         let report = intersect_plane_cylinder(&plane, &cylinder, Options::default()).unwrap();
         assert!(report.unresolved.is_empty(), "{report:?}");
         assert_eq!(report.coverage, Coverage::NumericallyResolved);
-        let [PlaneCylinderComponent::Ellipse {
-            curve,
-            center,
-            semi_major,
-            semi_minor,
-            major,
-            minor,
-            normal,
-            full,
-            plane_uv,
-            cylinder_uv,
-            max_sample_residual,
-        }] = &report.components[..]
+        let [
+            PlaneCylinderComponent::Ellipse {
+                curve,
+                center,
+                semi_major,
+                semi_minor,
+                major,
+                minor,
+                normal,
+                full,
+                plane_uv,
+                cylinder_uv,
+                max_sample_residual,
+            },
+        ] = &report.components[..]
         else {
             panic!("expected one ellipse: {report:?}")
         };
@@ -1055,10 +1106,22 @@ mod tests {
         assert!(cylinder_uv.is_none(), "cylinder side lift is out of scope");
         assert!((semi_major - 2. / c).abs() <= 1e-12, "{semi_major}");
         assert!((semi_minor - 2.).abs() <= 1e-12, "{semi_minor}");
-        assert!(sub(*center, [0., 0., 4.]).iter().all(|x| x.abs() <= 1e-12), "{center:?}");
-        assert!(sub(*major, [0., c, s]).iter().all(|x| x.abs() <= 1e-12), "{major:?}");
-        assert!(sub(*minor, [-1., 0., 0.]).iter().all(|x| x.abs() <= 1e-12), "{minor:?}");
-        assert!(sub(*normal, [0., -s, c]).iter().all(|x| x.abs() <= 1e-12), "{normal:?}");
+        assert!(
+            sub(*center, [0., 0., 4.]).iter().all(|x| x.abs() <= 1e-12),
+            "{center:?}"
+        );
+        assert!(
+            sub(*major, [0., c, s]).iter().all(|x| x.abs() <= 1e-12),
+            "{major:?}"
+        );
+        assert!(
+            sub(*minor, [-1., 0., 0.]).iter().all(|x| x.abs() <= 1e-12),
+            "{minor:?}"
+        );
+        assert!(
+            sub(*normal, [0., -s, c]).iter().all(|x| x.abs() <= 1e-12),
+            "{normal:?}"
+        );
         // phi = 0 is the major-axis endpoint (0, 2, 4 + 2/sqrt(3)).
         let p0 = point_of(&curve.evaluate(0.).unwrap().point);
         let oracle = [0., 2., 4. + 2. / 3_f64.sqrt()];
@@ -1106,10 +1169,7 @@ mod tests {
             let end = point_of(&curve.evaluate(hi).unwrap().point);
             for p in [start, end] {
                 // Every trim endpoint lies on a cap plane.
-                assert!(
-                    p[2].abs() <= 1e-12 || (p[2] - 8.).abs() <= 1e-12,
-                    "{p:?}"
-                );
+                assert!(p[2].abs() <= 1e-12 || (p[2] - 8.).abs() <= 1e-12, "{p:?}");
                 z_levels.push(p[2]);
                 // ... and on the cylinder side.
                 assert!((p[0].hypot(p[1]) - 2.).abs() <= 1e-12, "{p:?}");
@@ -1131,7 +1191,10 @@ mod tests {
         let report = intersect_plane_cylinder(&plane, &cylinder, Options::default()).unwrap();
         assert!(report.components.is_empty(), "{report:?}");
         assert_eq!(report.coverage, Coverage::Incomplete);
-        assert_eq!(report.unresolved[0].reason, UnresolvedReason::TangencyOrMultipleRoot);
+        assert_eq!(
+            report.unresolved[0].reason,
+            UnresolvedReason::TangencyOrMultipleRoot
+        );
     }
 
     #[test]
@@ -1147,7 +1210,10 @@ mod tests {
         );
         let report = intersect_plane_cylinder(&near_perp, &cylinder, Options::default()).unwrap();
         assert!(report.components.is_empty(), "{report:?}");
-        assert_eq!(report.unresolved[0].reason, UnresolvedReason::NearCoincidence);
+        assert_eq!(
+            report.unresolved[0].reason,
+            UnresolvedReason::NearCoincidence
+        );
         // Recognition-scale tilt off parallel: normal (cos b, 0, sin b) with
         // sin(b) between the rounding snap and the recognition scale.
         let b = 5e-10_f64;
@@ -1159,7 +1225,10 @@ mod tests {
         );
         let report = intersect_plane_cylinder(&near_par, &cylinder, Options::default()).unwrap();
         assert!(report.components.is_empty(), "{report:?}");
-        assert_eq!(report.unresolved[0].reason, UnresolvedReason::NearCoincidence);
+        assert_eq!(
+            report.unresolved[0].reason,
+            UnresolvedReason::NearCoincidence
+        );
     }
 
     #[test]
@@ -1167,24 +1236,39 @@ mod tests {
         let plane = plane_patch([-3., -3., 4.], [6., 0., 0.], [0., 6., 0.]);
         let cylinder = crate::analytic::cylinder(2., 8.).unwrap();
         for (a, b) in [
-            (plane.clone(), crate::cuboid([0., 0., 0.], [1., 1., 1.]).unwrap()),
+            (
+                plane.clone(),
+                crate::cuboid([0., 0., 0.], [1., 1., 1.]).unwrap(),
+            ),
             (plane.clone(), crate::analytic::sphere(2.).unwrap()),
             // Operand order is fixed: the cylinder as plane operand refuses.
             (cylinder.clone(), plane.clone()),
-            (crate::cuboid([0., 0., 0.], [4., 4., 1.]).unwrap(), cylinder.clone()),
+            (
+                crate::cuboid([0., 0., 0.], [4., 4., 1.]).unwrap(),
+                cylinder.clone(),
+            ),
         ] {
             let report = intersect_plane_cylinder(&a, &b, Options::default()).unwrap();
             assert!(report.components.is_empty(), "{report:?}");
             assert_eq!(report.coverage, Coverage::Incomplete);
             assert_eq!(report.unresolved.len(), 1);
-            assert_eq!(report.unresolved[0].reason, UnresolvedReason::UnsupportedSurface);
-            assert_eq!(report.unresolved[0].parameter_box, vec![0., 1., 0., 1., 0., 1., 0., 1.]);
+            assert_eq!(
+                report.unresolved[0].reason,
+                UnresolvedReason::UnsupportedSurface
+            );
+            assert_eq!(
+                report.unresolved[0].parameter_box,
+                vec![0., 1., 0., 1., 0., 1., 0., 1.]
+            );
             assert!(!report.permits_topology_change());
         }
         // A skewed (non-rectangular) affine patch is not canonical.
         let skewed = plane_patch([-3., -3., 4.], [6., 0., 0.], [3., 6., 0.]);
         let report = intersect_plane_cylinder(&skewed, &cylinder, Options::default()).unwrap();
-        assert_eq!(report.unresolved[0].reason, UnresolvedReason::UnsupportedSurface);
+        assert_eq!(
+            report.unresolved[0].reason,
+            UnresolvedReason::UnsupportedSurface
+        );
         // A structurally perturbed patch (non-unit weight) fails validation.
         let mut perturbed = plane.clone();
         perturbed.faces[0].surface.weights[0][0] = 2.;
@@ -1206,19 +1290,21 @@ mod tests {
             rotated_translated(&crate::analytic::cylinder(2., 8.).unwrap(), angle, offset);
         let report = intersect_plane_cylinder(&plane, &cylinder, Options::default()).unwrap();
         assert!(report.unresolved.is_empty(), "{report:?}");
-        let [PlaneCylinderComponent::Ellipse {
-            curve,
-            center,
-            semi_major,
-            semi_minor,
-            major,
-            minor,
-            normal,
-            full,
-            plane_uv,
-            cylinder_uv,
-            max_sample_residual,
-        }] = &report.components[..]
+        let [
+            PlaneCylinderComponent::Ellipse {
+                curve,
+                center,
+                semi_major,
+                semi_minor,
+                major,
+                minor,
+                normal,
+                full,
+                plane_uv,
+                cylinder_uv,
+                max_sample_residual,
+            },
+        ] = &report.components[..]
         else {
             panic!("expected one ellipse: {report:?}")
         };
@@ -1236,19 +1322,27 @@ mod tests {
         assert!((semi_major - 2. / c).abs() <= 1e-12, "{semi_major}");
         assert!((semi_minor - 2.).abs() <= 1e-12, "{semi_minor}");
         assert!(
-            sub(*center, placed([0., 0., 4.])).iter().all(|x| x.abs() <= 1e-12),
+            sub(*center, placed([0., 0., 4.]))
+                .iter()
+                .all(|x| x.abs() <= 1e-12),
             "{center:?}"
         );
         assert!(
-            sub(*major, placed_dir([0., c, s])).iter().all(|x| x.abs() <= 1e-12),
+            sub(*major, placed_dir([0., c, s]))
+                .iter()
+                .all(|x| x.abs() <= 1e-12),
             "{major:?}"
         );
         assert!(
-            sub(*minor, placed_dir([-1., 0., 0.])).iter().all(|x| x.abs() <= 1e-12),
+            sub(*minor, placed_dir([-1., 0., 0.]))
+                .iter()
+                .all(|x| x.abs() <= 1e-12),
             "{minor:?}"
         );
         assert!(
-            sub(*normal, placed_dir([0., -s, c])).iter().all(|x| x.abs() <= 1e-12),
+            sub(*normal, placed_dir([0., -s, c]))
+                .iter()
+                .all(|x| x.abs() <= 1e-12),
             "{normal:?}"
         );
         let p0 = point_of(&curve.evaluate(0.).unwrap().point);

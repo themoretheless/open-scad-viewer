@@ -1,0 +1,25 @@
+import { readFileSync } from 'node:fs'
+import { describe, expect, it } from 'vitest'
+
+describe('freeform NURBS STEP product seam', () => {
+  it('keeps freeform peer separate from analytic and faceted STEP', () => {
+    const freeform = readFileSync('src/services/cadNurbsStep.ts', 'utf8')
+    const analytic = readFileSync('src/services/cadAnalyticStep.ts', 'utf8')
+    const faceted = readFileSync('src/services/cadStep.ts', 'utf8')
+    expect(freeform).toContain('brep_nurbs_export_step_freeform')
+    expect(freeform).toContain('brep_nurbs_import_step_freeform')
+    expect(freeform).toContain('brep_nurbs_export_step_trimmed')
+    expect(freeform).toContain('brep_nurbs_import_step_trimmed')
+    expect(freeform).toContain('brep_nurbs_export_step_solid')
+    expect(freeform).toContain('brep_nurbs_import_step_solid')
+    expect(freeform).toContain('MANIFOLD_SOLID_BREP')
+    expect(freeform).toContain('nurbs-step-bicubic-face/1')
+    expect(freeform).toContain('nurbs-step-trimmed-bicubic/1')
+    expect(freeform).toContain('nurbs-step-solid/1')
+    expect(analytic).toContain('brep_nurbs_export_step')
+    expect(analytic).not.toContain('brep_nurbs_export_step_freeform')
+    expect(analytic).not.toContain('brep_nurbs_export_step_trimmed')
+    expect(analytic).not.toContain('brep_nurbs_export_step_solid')
+    expect(faceted).not.toContain('brep_nurbs_export_step_freeform')
+  })
+})

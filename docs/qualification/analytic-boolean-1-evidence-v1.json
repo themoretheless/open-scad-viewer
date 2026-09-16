@@ -1,34 +1,60 @@
 {
   "capability": "analytic-boolean/1",
   "maturity": "Qualified",
-  "gate": "G5e",
+  "gate": "G8-full",
   "planId": "analytic-boolean-1-evidence-v1",
-  "matrixHashSeed": "cylinder-imprint+listed-analytic-ss+uv-missed-branch",
+  "closedMatrix": "docs/qualification/brep-closed-matrix-v1.json",
+  "matrixHash": "a392bfd447932bc435b1ff2be68c306caad9c637ab2d67ddb314ce1a4bc10fc3",
   "positiveCorpus": [
     "disjoint",
     "contained",
     "identical",
-    "shared-face",
     "cavity",
     "empty",
-    "multi-body"
+    "multi-body",
+    "sphere-sphere-disjoint-union",
+    "intersecting-cyl-wall-union",
+    "intersecting-cyl-wall-difference",
+    "intersecting-cyl-wall-intersection",
+    "unequal-radius-cylinder-analytic-volume-oracle",
+    "tube-profile-imprint-holes",
+    "decoded-profile-imprint-reuse",
+    "mixed-sphere-cylinder-disjoint",
+    "disjoint-frustums"
   ],
-  "negativeCorpus": ["tangent", "coincident", "sphere", "torus", "general-nurbs"],
+  "negativeCorpus": [
+    "tangent",
+    "coincident",
+    "mixed-sphere-cylinder-overlapping-without-imprint",
+    "intersecting-cones-frozen-refuse",
+    "torus-boolean-query-only-refuse",
+    "near-coincident-profile-refuse",
+    "general-nurbs",
+    "prism-authorship"
+  ],
   "invariants": [
     "fail-closed typed refuse",
     "operands unchanged on refuse",
     "no mesh fallback",
     "no Manifold cross-route",
-    "topology only from all-Complete BooleanCertificate"
+    "no prismatic_boolean on curved Boolean success",
+    "topology only from all-Complete BooleanCertificate with no_prism_authorship"
   ],
   "bindings": {
     "rust": [
+      "crates/brep-core/src/imprint_pipeline.rs",
+      "crates/brep-core/src/profile_imprint.rs",
       "crates/brep-core/src/analytic_boolean.rs",
-      "crates/brep-core/src/analytic_ss.rs",
-      "crates/brep-core/src/uv_arrangement.rs"
+      "crates/brep-core/src/sphere_boolean.rs",
+      "crates/brep-core/src/solid_audit.rs",
+      "crates/brep-core/src/uv_arrangement.rs",
+      "crates/brep-core/src/analytic_ss.rs"
     ],
-    "product": ["src/services/geometry/brepCapability.ts"]
+    "product": [
+      "src/services/geometry/brepCapability.ts",
+      "src/services/geometryBuildEngine.ts"
+    ]
   },
   "resetPolicy": "false-Complete freezes capability to Unavailable",
-  "sbomNote": "See docs/qualification/sbom/ full SPDX fingerprints; this evidence binds corpus identity only"
+  "sbomNote": "See docs/qualification/sbom/; G8-full deploy requires plans/g8-full-matrix-index-v1.json green"
 }

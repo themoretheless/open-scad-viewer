@@ -66,20 +66,19 @@ color("red") cube(size);`
     expect(analysis.execution).toMatchObject({ purpose: 'analysis', evidence: 'runtime' })
   })
 
-  it('keeps both engines discoverable and refuses unavailable B-rep without fallback', async () => {
+  it('keeps both engines discoverable and never enables Manifold fallback for B-rep', async () => {
     expect(await service.capabilities()).toMatchObject({
       sourceDirectedRouting: true,
       automaticFallback: false,
       engines: [
         { engineClass: 'mesh', permanent: true, availability: 'available' },
-        { engineClass: 'brep', permanent: true, availability: 'unavailable' },
+        { engineClass: 'brep', permanent: true, availability: 'available' },
       ],
     })
 
     await expect(service.analyze(
       '// @language openscad-viewer/brep-1\ncube(1);',
-    )).rejects.toMatchObject({
-      name: 'GeometryEngineUnavailableError',
+    )).resolves.toMatchObject({
       execution: { engineClass: 'brep', automaticFallback: false },
     })
   })

@@ -56,6 +56,26 @@ Out of scope for R1: product Boolean imprint, signed-weight NURBS, general G2.
 - Work units: 3 clean CI runs; fuzz budget fixed before first run
 - Rollback: any false Complete resets counter and freezes capability at Unavailable
 
+## R1.1 addendum (2026-09-16)
+
+- Capabilities bumped: `nurbs-ss-transverse-bicubic/2`, `nurbs-boolean-transverse-bicubic/2` (supersede `/1`).
+- Admit **elevated planar bilinear → uniform bicubic** before the R1 gate (`as_uniform_bicubic`).
+- Expanded positive corpus: EP-01/02 (elevated planar transverse lines), BC-01
+  (45° planar orientation), BC-02 (non-planar bump × plane exact
+  constant-parameter iso-curve certificate), EP-03 (elevated cuboid Boolean
+  difference).
+- Still refuse: rational ≠ 1, deg > 3 (after elevation path), periodic, trimmed SS without cert, fitted→Complete, `parasolid-parity`.
+- Freeform STEP stack: `nurbs-step-bicubic-face/1`, `nurbs-step-trimmed-bicubic/1`, `nurbs-step-solid/1`.
+
+## Phase B addendum — bezier-le3 (2026-09-16)
+
+- Capabilities: `nurbs-ss-bezier-le3/1`, `nurbs-boolean-bezier-le3/1` **supersede** R1/R1.1 (`transverse-bicubic/1` and `/2`).
+- Finite admitted cell: non-periodic, unit-weight, single-span clamped Bezier with `degree_u,degree_v ∈ {1,2,3}` and control net `(deg+1)×(deg+1)`. Elevate U then V to uniform bicubic (keep historical bilinear 1×1 path) before the transverse gate.
+- Matrix: remove `general-nurbs-boolean-beyond-r1-submatrix` from `explicitRefuse` (the le3 cell is now admitted); **keep** `parasolid-parity` refuse.
+- Product claim: **STEP+NURBS product-matrix closed** for constructor STEP + three freeform STEP caps + bezier-le3 SS/Boolean; not Parasolid.
+- Still refuse: rational ≠ 1, degree > 3, periodic, multi-span, trimmed, fitted→Complete, Parasolid parity.
+- This is a **finite cell**, not a general NURBS Boolean and **still not Parasolid**.
+
 ## Stop clause
 
 If narrow G6 cannot hold zero false-Complete under the frozen seeds, leave analytic B-rep as the explicit production success mode and mark NURBS-SS `Unavailable`.

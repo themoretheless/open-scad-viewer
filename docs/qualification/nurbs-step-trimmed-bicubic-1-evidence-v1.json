@@ -1,0 +1,24 @@
+{
+  "capability": "nurbs-step-trimmed-bicubic/1",
+  "maturity": "AnalyticComplete",
+  "planId": "nurbs-step-trimmed-bicubic-1-evidence-v1",
+  "seedPlan": "docs/qualification/plans/nurbs-step-trimmed-bicubic-1.json",
+  "positiveCorpus": [
+    "NST-01-trimmed-bicubic-hole-roundtrip",
+    "NST-02-eight-pcurve-surface-curve-links"
+  ],
+  "negativeCorpus": [
+    "constructor-solid-export-refuse",
+    "manifold-solid-import-refuse"
+  ],
+  "bindings": {
+    "rust": [
+      "crates/brep-core/src/nurbs_step_trimmed.rs",
+      "crates/geometry-bridge/src/lib.rs"
+    ],
+    "typescript": ["src/services/cadNurbsStep.ts", "tests/cadNurbsStep.test.ts"]
+  },
+  "booleanImprint": false,
+  "permitsTopologyChange": false,
+  "resetPolicy": "false-Complete freezes Unavailable / stop"
+}

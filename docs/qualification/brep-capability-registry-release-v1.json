@@ -1,26 +1,43 @@
 {
-  "gate": "G8",
+  "gate": "G8-full",
   "planId": "brep-capability-registry-release-v1",
+  "supersededBy": "docs/qualification/brep-capability-registry-release-full-v1.json",
   "registry": "src/services/geometry/brepCapability.ts",
+  "closedMatrix": "docs/qualification/brep-full-closed-matrix-v1.json",
+  "g8Index": "docs/qualification/plans/g8-full-matrix-index-v1.json",
   "capabilities": [
     "planar-csg/1",
     "analytic-constructors/1",
     "analytic-boolean/1",
     "intersection-queries/1",
-    "nurbs-ss-transverse-bicubic/1",
+    "nurbs-ss-bezier-le3/1",
+    "nurbs-boolean-bezier-le3/1",
+    "nurbs-step-bicubic-face/1",
+    "nurbs-step-trimmed-bicubic/1",
+    "nurbs-step-solid/1",
     "analytic-fillet/1",
+    "analytic-chamfer/1",
     "analytic-shell/1",
     "analytic-solid-loft/1",
-    "step-interchange/1"
+    "step-interchange/1",
+    "iges-interchange/1"
   ],
   "oracles": [
     "crates/brep-core/src/coverage_verifier.rs",
-    "crates/brep-core/src/uv_arrangement.rs::assert_missed_branch_detected"
+    "crates/brep-core/src/uv_arrangement.rs::assert_missed_branch_detected",
+    "crates/brep-core/src/solid_audit.rs::audit_solid",
+    "crates/brep-core/src/imprint_pipeline.rs::build_imprint_plan",
+    "crates/brep-core/src/nurbs_ss_g6.rs::nurbs_boolean_transverse_bicubic"
   ],
   "rollbackDrills": [
     "assertNoManifoldFallbackOnBrepFailure",
     "kernelLeases cancel marks LKG stale"
   ],
+  "productDeploy": {
+    "geometryBuildEngine": "available",
+    "brepProvider": "deployed-full-matrix",
+    "manifoldPeerAdr": "docs/design/manifold-keep-as-peer-adr.md"
+  },
   "sbom": "docs/qualification/sbom/",
   "unresolvedInShippedMatrix": []
 }

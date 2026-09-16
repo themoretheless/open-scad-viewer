@@ -1,0 +1,86 @@
+{
+  "$schema": "./brep-capability-qualification-plan.schema.json",
+  "schema": "open-scad-viewer/brep-capability-qualification-plan",
+  "schemaVersion": 1,
+  "planId": "step-interchange-1",
+  "gate": {
+    "id": "g8-full",
+    "name": "brep-full-closed-matrix",
+    "version": 1
+  },
+  "lifecycle": {
+    "status": "frozen-executed",
+    "qualificationClaim": "analytic-topology-roundtrip-graph-only-product-seam"
+  },
+  "claimBoundary": {
+    "candidateClaim": "AnalyticComplete constructor STEP: graph-only surfaces+AXIS2+CIRCLE, cuboid 12-edge, tube FACE_BOUND, apex/oriented tube, geometry-bridge + cadAnalyticStep peer",
+    "forbiddenClaims": [
+      "parasolid-parity",
+      "manifold-cross-route",
+      "mesh-fallback",
+      "silent-heal",
+      "general-nurbs-step",
+      "oscad-solid-descriptor-import"
+    ],
+    "notes": [
+      "general-nurbs-step remains out of scope for this constructor capability; freeform B_SPLINE STEP is claimed under nurbs-step-bicubic-face/1, nurbs-step-trimmed-bicubic/1, and nurbs-step-solid/1"
+    ]
+  },
+  "capability": "step-interchange/1",
+  "scope": {
+    "included": [
+      "ADVANCED_FACE manifold export/import",
+      "AXIS2_PLACEMENT_3D linked surfaces",
+      "CIRCLE ring edges and import gate",
+      "cuboid 8V/12E LINE wireframe",
+      "tube FACE_BOUND annular caps",
+      "apex and oriented tube roundtrip",
+      "brep_nurbs_export_step / brep_nurbs_import_step product seam"
+    ],
+    "excluded": [
+      "FACETED_BREP",
+      "STL",
+      "OBJ",
+      "AABB_import",
+      "OSCAD_SOLID_PRODUCT",
+      "silent_height_defaults",
+      "general_NURBS_STEP"
+    ]
+  },
+  "matrix": [
+    {
+      "id": "STEP-01",
+      "expected": "Complete",
+      "blocksQualification": true
+    },
+    {
+      "id": "STEP-N1",
+      "expected": "typed-refuse",
+      "blocksQualification": true
+    }
+  ],
+  "bindings": {
+    "rust": [
+      "crates/brep-core/src/step_interchange.rs",
+      "crates/geometry-bridge/src/lib.rs"
+    ],
+    "typescript": [
+      "src/services/cadAnalyticStep.ts"
+    ],
+    "registry": "src/services/geometry/brepCapability.ts",
+    "evidenceJson": "docs/qualification/step-interchange-1-evidence-v1.json"
+  },
+  "evidence": {
+    "state": "graph-only-topology-roundtrip-product-seam-green",
+    "notes": [
+      "oscad_solid_removed",
+      "step_circle_ring_edges",
+      "step_cuboid_12_edge",
+      "step_tube_face_bound",
+      "product_seam",
+      "no_silent_height_defaults"
+    ]
+  },
+  "resetPolicy": "false-Complete freezes Unavailable",
+  "unresolvedRows": []
+}

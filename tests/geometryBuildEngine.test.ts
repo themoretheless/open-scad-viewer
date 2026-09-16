@@ -48,8 +48,8 @@ describe('GeometryBuildEngine', () => {
       {
         engineClass: 'brep',
         permanent: true,
-        availability: 'unavailable',
-        isolation: 'not-deployed',
+        availability: 'available',
+        isolation: 'in-process-serialized',
       },
     ])
   })

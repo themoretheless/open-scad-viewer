@@ -1,0 +1,262 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://open-scad-viewer.invalid/schemas/brep-capability-qualification-plan-v1.schema.json",
+  "title": "B-rep G8 Capability QualificationPlan",
+  "description": "Schema-strict walking-slice QualificationPlan for brep-full-closed-matrix capabilities. Distinct from G1 semantic-manifold gate schema (gate id hardcoded there).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "schema",
+    "schemaVersion",
+    "planId",
+    "gate",
+    "lifecycle",
+    "claimBoundary",
+    "capability",
+    "scope",
+    "matrix",
+    "bindings",
+    "evidence",
+    "resetPolicy",
+    "unresolvedRows"
+  ],
+  "properties": {
+    "$schema": {
+      "const": "./brep-capability-qualification-plan.schema.json"
+    },
+    "schema": {
+      "const": "open-scad-viewer/brep-capability-qualification-plan"
+    },
+    "schemaVersion": {
+      "const": 1
+    },
+    "matrixHash": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$",
+      "description": "Optional immutable SHA-256 of the capability's frozen matrix."
+    },
+    "planId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"
+    },
+    "gate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "name",
+        "version"
+      ],
+      "properties": {
+        "id": {
+          "const": "g8-full"
+        },
+        "name": {
+          "const": "brep-full-closed-matrix"
+        },
+        "version": {
+          "const": 1
+        }
+      }
+    },
+    "lifecycle": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "qualificationClaim"
+      ],
+      "properties": {
+        "status": {
+          "enum": [
+            "draft",
+            "frozen-pending-execution",
+            "executing",
+            "qualified",
+            "rejected",
+            "superseded"
+          ]
+        },
+        "qualificationClaim": {
+          "enum": [
+            "none",
+            "walking-slice",
+            "qualified"
+          ]
+        }
+      }
+    },
+    "claimBoundary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "candidateClaim",
+        "forbiddenClaims"
+      ],
+      "properties": {
+        "candidateClaim": {
+          "type": "string",
+          "minLength": 1
+        },
+        "forbiddenClaims": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "notes": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "capability": {
+      "type": "string",
+      "minLength": 1
+    },
+    "scope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "included",
+        "excluded"
+      ],
+      "properties": {
+        "included": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string"
+          }
+        },
+        "excluded": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "matrix": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "expected",
+          "blocksQualification"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "expected": {
+            "enum": [
+              "Complete",
+              "typed-refuse",
+              "ResearchOnly"
+            ]
+          },
+          "blocksQualification": {
+            "type": "boolean"
+          }
+        }
+      }
+    },
+    "bindings": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "rust",
+        "registry"
+      ],
+      "properties": {
+        "rust": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string"
+          }
+        },
+        "typescript": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "registry": {
+          "const": "src/services/geometry/brepCapability.ts"
+        },
+        "evidenceJson": {
+          "type": "string"
+        }
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "state",
+        "notes"
+      ],
+      "properties": {
+        "state": {
+          "enum": [
+            "not-executed",
+            "walking-slice-green",
+            "qualified"
+          ]
+        },
+        "notes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "resetPolicy": {
+      "const": "false-Complete freezes Unavailable"
+    },
+    "unresolvedRows": {
+      "type": "array",
+      "minItems": 0,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "status",
+          "resolution"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "open",
+              "accepted-risk",
+              "closed"
+            ]
+          },
+          "resolution": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    }
+  }
+}

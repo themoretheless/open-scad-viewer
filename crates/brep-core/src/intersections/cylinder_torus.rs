@@ -220,8 +220,9 @@ pub fn intersect_cylinder_torus(
     // (quartic) case.
     let direction = cross(cylinder.axis, torus.axis);
     let tilt = direction[0].hypot(direction[1]).hypot(direction[2]);
-    let axis_snap =
-        64. * f64::EPSILON + cylinder.error / (2. * cylinder.half_height) + torus.error / (2. * torus.major);
+    let axis_snap = 64. * f64::EPSILON
+        + cylinder.error / (2. * cylinder.half_height)
+        + torus.error / (2. * torus.major);
     if tilt > axis_snap {
         let reason = if tilt <= RECOGNITION {
             UnresolvedReason::NearCoincidence
@@ -254,7 +255,12 @@ pub fn intersect_cylinder_torus(
         report.unresolved(domain, reason);
         return Ok(report);
     }
-    let (r, big_r, r_c, half) = (torus.minor, torus.major, cylinder.radius, cylinder.half_height);
+    let (r, big_r, r_c, half) = (
+        torus.minor,
+        torus.major,
+        cylinder.radius,
+        cylinder.half_height,
+    );
     let mut tangency = false;
     let mut found: Vec<(f64, CircleSite)> = Vec::new();
     // Meridian line rho = R_c against the circle (rho - R)^2 + z^2 = r^2.
@@ -351,7 +357,8 @@ pub fn intersect_cylinder_torus(
             .then(radius_of(&x.1).total_cmp(&radius_of(&y.1)))
     });
     for (z, site) in found {
-        report.components
+        report
+            .components
             .push(circle_component(&cylinder, &torus, z, site)?);
     }
     Ok(report)
@@ -526,7 +533,9 @@ mod tests {
             assert_eq!(curve.control_points.len(), 9);
             assert_eq!(
                 curve.weights,
-                vec![1., ARC_WEIGHT, 1., ARC_WEIGHT, 1., ARC_WEIGHT, 1., ARC_WEIGHT, 1.]
+                vec![
+                    1., ARC_WEIGHT, 1., ARC_WEIGHT, 1., ARC_WEIGHT, 1., ARC_WEIGHT, 1.
+                ]
             );
             // Sixteen samples satisfy both implicit equations.
             let mut worst = 0_f64;
@@ -645,7 +654,10 @@ mod tests {
         // cuts the torus at 3 +- sqrt(1 - 0.0625), both inside the disk:
         // four cap circles.
         let torus = crate::analytic::torus(3., 1.).unwrap();
-        let cylinder = translated(&crate::analytic::cylinder(4.5, 0.5).unwrap(), [0., 0., -0.25]);
+        let cylinder = translated(
+            &crate::analytic::cylinder(4.5, 0.5).unwrap(),
+            [0., 0., -0.25],
+        );
         let report = intersect_cylinder_torus(&cylinder, &torus, Options::default()).unwrap();
         let report = only_circles(&report, 4);
         let s = (1_f64 - 0.0625).sqrt();
@@ -702,8 +714,7 @@ mod tests {
         let torus = crate::analytic::torus(3., 1.).unwrap();
         for r_c in [2., 2. + 2e-15, 2. - 2e-15, 4., 4. + 2e-15, 4. - 2e-15] {
             let cylinder = translated(&crate::analytic::cylinder(r_c, 8.).unwrap(), [0., 0., -4.]);
-            let report =
-                intersect_cylinder_torus(&cylinder, &torus, Options::default()).unwrap();
+            let report = intersect_cylinder_torus(&cylinder, &torus, Options::default()).unwrap();
             assert!(report.components.is_empty(), "{report:?}");
             assert_eq!(report.coverage, Coverage::Incomplete);
             assert_eq!(
@@ -713,11 +724,20 @@ mod tests {
             assert!(!report.permits_topology_change());
         }
         // Just clear of the band on the outside: provable miss, resolved.
-        let clear = translated(&crate::analytic::cylinder(2. - 1e-9, 8.).unwrap(), [0., 0., -4.]);
+        let clear = translated(
+            &crate::analytic::cylinder(2. - 1e-9, 8.).unwrap(),
+            [0., 0., -4.],
+        );
         let report = intersect_cylinder_torus(&clear, &torus, Options::default()).unwrap();
-        assert!(report.components.is_empty() && report.unresolved.is_empty(), "{report:?}");
+        assert!(
+            report.components.is_empty() && report.unresolved.is_empty(),
+            "{report:?}"
+        );
         // Just across: two small transverse circles around the inner equator.
-        let across = translated(&crate::analytic::cylinder(2. + 1e-9, 8.).unwrap(), [0., 0., -4.]);
+        let across = translated(
+            &crate::analytic::cylinder(2. + 1e-9, 8.).unwrap(),
+            [0., 0., -4.],
+        );
         let report = intersect_cylinder_torus(&across, &torus, Options::default()).unwrap();
         only_circles(&report, 2);
     }
@@ -733,11 +753,16 @@ mod tests {
         // R_c = 1.5 disks.
         let narrow = translated(&crate::analytic::cylinder(1.5, 1.).unwrap(), [0., 0., -0.5]);
         // Huge cylinder swallowing the whole torus.
-        let huge = translated(&crate::analytic::cylinder(20., 40.).unwrap(), [0., 0., -20.]);
+        let huge = translated(
+            &crate::analytic::cylinder(20., 40.).unwrap(),
+            [0., 0., -20.],
+        );
         for cylinder in [&thin, &narrow, &huge] {
-            let report =
-                intersect_cylinder_torus(cylinder, &torus, Options::default()).unwrap();
-            assert!(report.components.is_empty() && report.unresolved.is_empty(), "{report:?}");
+            let report = intersect_cylinder_torus(cylinder, &torus, Options::default()).unwrap();
+            assert!(
+                report.components.is_empty() && report.unresolved.is_empty(),
+                "{report:?}"
+            );
             assert_eq!(report.coverage, Coverage::NumericallyResolved);
         }
     }
@@ -750,8 +775,10 @@ mod tests {
         // guessed circles. The outer cap circles (radius 3.5) are absent.
         let torus = crate::analytic::torus(3., 1.).unwrap();
         let half = 0.75_f64.sqrt();
-        let cylinder =
-            translated(&crate::analytic::cylinder(2.5, 2. * half).unwrap(), [0., 0., -half]);
+        let cylinder = translated(
+            &crate::analytic::cylinder(2.5, 2. * half).unwrap(),
+            [0., 0., -half],
+        );
         let report = intersect_cylinder_torus(&cylinder, &torus, Options::default()).unwrap();
         assert!(report.components.is_empty(), "{report:?}");
         assert_eq!(report.coverage, Coverage::Incomplete);
@@ -776,9 +803,15 @@ mod tests {
         );
         // Just clear of the band on the outside: both caps beyond the tube,
         // resolved empty.
-        let clear = translated(&crate::analytic::cylinder(5., 2.).unwrap(), [0., 0., 2. + 1e-9]);
+        let clear = translated(
+            &crate::analytic::cylinder(5., 2.).unwrap(),
+            [0., 0., 2. + 1e-9],
+        );
         let report = intersect_cylinder_torus(&clear, &torus, Options::default()).unwrap();
-        assert!(report.components.is_empty() && report.unresolved.is_empty(), "{report:?}");
+        assert!(
+            report.components.is_empty() && report.unresolved.is_empty(),
+            "{report:?}"
+        );
         // Just across: the top cap clears the tube (h_c = 1 + 1e-9) and the
         // bottom cap at h_c = -(1 - 1e-9) cuts two small cap circles.
         let across = translated(&crate::analytic::cylinder(5., 2.).unwrap(), [0., 0., 1e-9]);
@@ -795,7 +828,10 @@ mod tests {
         let report = intersect_cylinder_torus(&near, &torus, Options::default()).unwrap();
         assert!(report.components.is_empty(), "{report:?}");
         assert_eq!(report.coverage, Coverage::Incomplete);
-        assert_eq!(report.unresolved[0].reason, UnresolvedReason::NearCoincidence);
+        assert_eq!(
+            report.unresolved[0].reason,
+            UnresolvedReason::NearCoincidence
+        );
         // Recognition-scale tilt of the cylinder axis: near_coincidence.
         let (sin, cos) = 1e-10_f64.sin_cos();
         let tilted = crate::transform::affine(
@@ -810,7 +846,10 @@ mod tests {
         .unwrap();
         let report = intersect_cylinder_torus(&tilted, &torus, Options::default()).unwrap();
         assert!(report.components.is_empty(), "{report:?}");
-        assert_eq!(report.unresolved[0].reason, UnresolvedReason::NearCoincidence);
+        assert_eq!(
+            report.unresolved[0].reason,
+            UnresolvedReason::NearCoincidence
+        );
     }
 
     #[test]
@@ -830,12 +869,14 @@ mod tests {
         )
         .unwrap();
         for cylinder in [&off, &tilted] {
-            let report =
-                intersect_cylinder_torus(cylinder, &torus, Options::default()).unwrap();
+            let report = intersect_cylinder_torus(cylinder, &torus, Options::default()).unwrap();
             assert!(report.components.is_empty(), "{report:?}");
             assert_eq!(report.coverage, Coverage::Incomplete);
             assert_eq!(report.unresolved.len(), 1);
-            assert_eq!(report.unresolved[0].reason, UnresolvedReason::UnsupportedSurface);
+            assert_eq!(
+                report.unresolved[0].reason,
+                UnresolvedReason::UnsupportedSurface
+            );
             assert_eq!(
                 report.unresolved[0].parameter_box,
                 vec![0., 1., 0., 1., 0., 1., 0., 1.]
@@ -850,17 +891,35 @@ mod tests {
         // Spheres, cuboids, tori-as-first-operand and swapped operand order
         // are not the canonical pair.
         for (a, b) in [
-            (crate::analytic::sphere(2.).unwrap(), crate::analytic::torus(3., 1.).unwrap()),
-            (crate::cuboid([0., 0., 0.], [1., 1., 1.]).unwrap(), crate::analytic::torus(3., 1.).unwrap()),
-            (crate::analytic::torus(2., 1.).unwrap(), crate::analytic::torus(3., 1.).unwrap()),
-            (crate::analytic::torus(3., 1.).unwrap(), crate::analytic::cylinder(2.2, 8.).unwrap()),
-            (crate::analytic::cylinder(2.2, 8.).unwrap(), crate::analytic::sphere(2.).unwrap()),
+            (
+                crate::analytic::sphere(2.).unwrap(),
+                crate::analytic::torus(3., 1.).unwrap(),
+            ),
+            (
+                crate::cuboid([0., 0., 0.], [1., 1., 1.]).unwrap(),
+                crate::analytic::torus(3., 1.).unwrap(),
+            ),
+            (
+                crate::analytic::torus(2., 1.).unwrap(),
+                crate::analytic::torus(3., 1.).unwrap(),
+            ),
+            (
+                crate::analytic::torus(3., 1.).unwrap(),
+                crate::analytic::cylinder(2.2, 8.).unwrap(),
+            ),
+            (
+                crate::analytic::cylinder(2.2, 8.).unwrap(),
+                crate::analytic::sphere(2.).unwrap(),
+            ),
         ] {
             let report = intersect_cylinder_torus(&a, &b, Options::default()).unwrap();
             assert!(report.components.is_empty(), "{report:?}");
             assert_eq!(report.coverage, Coverage::Incomplete);
             assert_eq!(report.unresolved.len(), 1);
-            assert_eq!(report.unresolved[0].reason, UnresolvedReason::UnsupportedSurface);
+            assert_eq!(
+                report.unresolved[0].reason,
+                UnresolvedReason::UnsupportedSurface
+            );
         }
         // A canonical pair still resolves.
         let report = intersect_cylinder_torus(&cylinder, &torus, Options::default()).unwrap();
@@ -871,10 +930,12 @@ mod tests {
         let mut perturbed = torus.clone();
         perturbed.faces[0].surface.control_points[1][1][0] += 1e-6;
         perturbed.rebuild_topology_ids();
-        let report =
-            intersect_cylinder_torus(&cylinder, &perturbed, Options::default()).unwrap();
+        let report = intersect_cylinder_torus(&cylinder, &perturbed, Options::default()).unwrap();
         assert!(report.components.is_empty(), "{report:?}");
-        assert_eq!(report.unresolved[0].reason, UnresolvedReason::UnsupportedSurface);
+        assert_eq!(
+            report.unresolved[0].reason,
+            UnresolvedReason::UnsupportedSurface
+        );
     }
 
     #[test]
@@ -909,7 +970,10 @@ mod tests {
                 sub(center, expected).iter().all(|x| x.abs() <= 1e-12),
                 "{center:?}"
             );
-            assert!(sub(normal, axis).iter().all(|x| x.abs() <= 1e-12), "{normal:?}");
+            assert!(
+                sub(normal, axis).iter().all(|x| x.abs() <= 1e-12),
+                "{normal:?}"
+            );
             let placed_check = |p: [f64; 3]| {
                 let rel = sub(p, placed([0., 0., 0.]));
                 let a = dot(rel, axis);

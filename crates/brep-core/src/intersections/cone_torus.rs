@@ -177,9 +177,7 @@ fn circle_component(
                 let rel = sub(point, cone.bottom);
                 let a = dot(rel, cone.axis);
                 let perp = sub(rel, cone.axis.map(|x| x * a));
-                (perp[0].hypot(perp[1]).hypot(perp[2])
-                    - (cone.r_bottom + cone.slope * a))
-                    .abs()
+                (perp[0].hypot(perp[1]).hypot(perp[2]) - (cone.r_bottom + cone.slope * a)).abs()
             }
             CircleSite::Cap(slot, _) => {
                 let q = if slot == 0 { 0. } else { cone.height };
@@ -219,10 +217,8 @@ pub fn intersect_cone_torus(
     let _ = options;
     let mut report = Report::default();
     let domain = vec![0., 1., 0., 1., 0., 1., 0., 1.];
-    let (Some(cone), Some(torus)) = (
-        recognize_cone(cone_model)?,
-        recognize_torus(torus_model)?,
-    ) else {
+    let (Some(cone), Some(torus)) = (recognize_cone(cone_model)?, recognize_torus(torus_model)?)
+    else {
         report.unresolved(domain, UnresolvedReason::UnsupportedSurface);
         return Ok(report);
     };
@@ -283,7 +279,11 @@ pub fn intersect_cone_torus(
     // z(t) = z_b + s t with s = +-1 the axes' relative orientation; the
     // meridian circle is symmetric in z, so the sign enters only the height
     // map and the torus profile angles.
-    let s = if dot(cone.axis, torus.axis) >= 0. { 1. } else { -1. };
+    let s = if dot(cone.axis, torus.axis) >= 0. {
+        1.
+    } else {
+        -1.
+    };
     let z_b = dot(sub(cone.bottom, torus.center), torus.axis);
     let mut tangency = false;
     let mut found: Vec<(f64, CircleSite)> = Vec::new();
@@ -414,7 +414,9 @@ pub fn intersect_cone_torus(
             .then(radius_of(&x.1).total_cmp(&radius_of(&y.1)))
     });
     for (z, site) in found {
-        report.components.push(circle_component(&cone, &torus, z, site)?);
+        report
+            .components
+            .push(circle_component(&cone, &torus, z, site)?);
     }
     Ok(report)
 }
@@ -470,7 +472,12 @@ mod tests {
     fn flipped(model: &Model, z0: f64) -> Model {
         crate::transform::affine(
             model,
-            [[1., 0., 0., 0.], [0., -1., 0., 0.], [0., 0., -1., z0], [0., 0., 0., 1.]],
+            [
+                [1., 0., 0., 0.],
+                [0., -1., 0., 0.],
+                [0., 0., -1., z0],
+                [0., 0., 0., 1.],
+            ],
         )
         .unwrap()
     }
@@ -582,12 +589,14 @@ mod tests {
         // two side circles (rho=2, z=0) and (rho=2.2, z=0.6), both cap
         // planes at |h|=3 clear of the tube.
         let torus = crate::analytic::torus(3., 1.).unwrap();
-        let cone = translated(&crate::analytic::frustum(1., 3., 6.).unwrap(), [0., 0., -3.]);
+        let cone = translated(
+            &crate::analytic::frustum(1., 3., 6.).unwrap(),
+            [0., 0., -3.],
+        );
         let report = intersect_cone_torus(&cone, &torus, Options::default()).unwrap();
         let report = only_circles(&report, 2);
         for (component, (rho, z)) in report.components.iter().zip([(2., 0.), (2.2, 0.6)]) {
-            let (curve, center, radius, normal, cone_uv, torus_uv, sampled) =
-                circle_of(component);
+            let (curve, center, radius, normal, cone_uv, torus_uv, sampled) = circle_of(component);
             assert!((radius - rho).abs() <= 1e-12, "{radius}");
             assert!(
                 sub(center, [0., 0., z]).iter().all(|x| x.abs() <= 1e-12),
@@ -603,7 +612,9 @@ mod tests {
             assert_eq!(curve.control_points.len(), 9);
             assert_eq!(
                 curve.weights,
-                vec![1., ARC_WEIGHT, 1., ARC_WEIGHT, 1., ARC_WEIGHT, 1., ARC_WEIGHT, 1.]
+                vec![
+                    1., ARC_WEIGHT, 1., ARC_WEIGHT, 1., ARC_WEIGHT, 1., ARC_WEIGHT, 1.
+                ]
             );
             // Sixteen samples satisfy the cone side profile and the torus
             // implicit equation.
@@ -684,9 +695,11 @@ mod tests {
         for i in 0..16 {
             let p = curve.evaluate(i as f64 / 4.).unwrap().point;
             let p = [p[0], p[1], p[2]];
-            worst = worst
-                .max(side_residual_z(p, 1., 1. / 3., 0.))
-                .max(implicit(sub(p, [0., 0., 6.5]), 3., 1.));
+            worst = worst.max(side_residual_z(p, 1., 1. / 3., 0.)).max(implicit(
+                sub(p, [0., 0., 6.5]),
+                3.,
+                1.,
+            ));
         }
         assert!(worst <= 1e-10, "{worst}");
         assert!(sampled <= 1e-10, "{sampled}");
@@ -806,12 +819,17 @@ mod tests {
         // t = 3 and 3.6 in the cone's own axial parameter map to the circles
         // (rho=2, z=0) and (rho=2.2, z=-0.6) — sorted z=-0.6 first.
         let torus = crate::analytic::torus(3., 1.).unwrap();
-        let cone = flipped(&translated(&crate::analytic::frustum(1., 3., 6.).unwrap(), [0., 0., -3.]), 0.);
+        let cone = flipped(
+            &translated(
+                &crate::analytic::frustum(1., 3., 6.).unwrap(),
+                [0., 0., -3.],
+            ),
+            0.,
+        );
         let report = intersect_cone_torus(&cone, &torus, Options::default()).unwrap();
         let report = only_circles(&report, 2);
         for (component, (rho, z)) in report.components.iter().zip([(2.2, -0.6), (2., 0.)]) {
-            let (curve, center, radius, normal, cone_uv, torus_uv, sampled) =
-                circle_of(component);
+            let (curve, center, radius, normal, cone_uv, torus_uv, sampled) = circle_of(component);
             assert!((radius - rho).abs() <= 1e-12, "{radius} vs {rho}");
             assert!(
                 sub(center, [0., 0., z]).iter().all(|x| x.abs() <= 1e-12),
@@ -851,8 +869,10 @@ mod tests {
         let tangent_z = 6. - 10_f64.sqrt();
         for dz in [0., 2e-15, -2e-15] {
             let cone = crate::analytic::frustum(1., 3., 6.).unwrap();
-            let torus =
-                translated(&crate::analytic::torus(3., 1.).unwrap(), [0., 0., tangent_z + dz]);
+            let torus = translated(
+                &crate::analytic::torus(3., 1.).unwrap(),
+                [0., 0., tangent_z + dz],
+            );
             let report = intersect_cone_torus(&cone, &torus, Options::default()).unwrap();
             assert!(report.components.is_empty(), "{report:?}");
             assert_eq!(report.coverage, Coverage::Incomplete);
@@ -869,7 +889,10 @@ mod tests {
             [0., 0., tangent_z - 1e-9],
         );
         let report = intersect_cone_torus(&cone, &clear, Options::default()).unwrap();
-        assert!(report.components.is_empty() && report.unresolved.is_empty(), "{report:?}");
+        assert!(
+            report.components.is_empty() && report.unresolved.is_empty(),
+            "{report:?}"
+        );
         // Just across: two small transverse side circles around the foot.
         let across = translated(
             &crate::analytic::torus(3., 1.).unwrap(),
@@ -927,16 +950,27 @@ mod tests {
         );
         // Just clear of the band on the outside: the bottom cap plane at
         // h_c = 1 + 1e-9 clears the tube, resolved empty.
-        let clear = translated(&crate::analytic::frustum(1., 3., 6.).unwrap(), [0., 0., 1. + 1e-9]);
+        let clear = translated(
+            &crate::analytic::frustum(1., 3., 6.).unwrap(),
+            [0., 0., 1. + 1e-9],
+        );
         let report = intersect_cone_torus(&clear, &torus, Options::default()).unwrap();
-        assert!(report.components.is_empty() && report.unresolved.is_empty(), "{report:?}");
+        assert!(
+            report.components.is_empty() && report.unresolved.is_empty(),
+            "{report:?}"
+        );
         // Just across: the bottom cap at h_c = 1 - 1e-9 crosses the tube,
         // but both circle radii 3 +- sqrt(1 - h_c^2) (about 3 +- 4.5e-5) lie
         // provably outside the r_bottom=1 disk — resolved empty.
-        let across =
-            translated(&crate::analytic::frustum(1., 3., 6.).unwrap(), [0., 0., 1. - 1e-9]);
+        let across = translated(
+            &crate::analytic::frustum(1., 3., 6.).unwrap(),
+            [0., 0., 1. - 1e-9],
+        );
         let report = intersect_cone_torus(&across, &torus, Options::default()).unwrap();
-        assert!(report.components.is_empty() && report.unresolved.is_empty(), "{report:?}");
+        assert!(
+            report.components.is_empty() && report.unresolved.is_empty(),
+            "{report:?}"
+        );
     }
 
     #[test]
@@ -950,12 +984,21 @@ mod tests {
         // Small frustum around the center plane in the torus hole: the side
         // line misses the meridian circle, both bottom cap circle radii lie
         // outside the r_bottom=0.5 disk, the top cap clears the tube.
-        let thin = translated(&crate::analytic::frustum(0.5, 1.5, 2.).unwrap(), [0., 0., -0.5]);
+        let thin = translated(
+            &crate::analytic::frustum(0.5, 1.5, 2.).unwrap(),
+            [0., 0., -0.5],
+        );
         // Frustum far beyond the tube.
-        let far = translated(&crate::analytic::frustum(1., 3., 6.).unwrap(), [0., 0., 100.]);
+        let far = translated(
+            &crate::analytic::frustum(1., 3., 6.).unwrap(),
+            [0., 0., 100.],
+        );
         for cone in [&flat, &thin, &far] {
             let report = intersect_cone_torus(cone, &torus, Options::default()).unwrap();
-            assert!(report.components.is_empty() && report.unresolved.is_empty(), "{report:?}");
+            assert!(
+                report.components.is_empty() && report.unresolved.is_empty(),
+                "{report:?}"
+            );
             assert_eq!(report.coverage, Coverage::NumericallyResolved);
         }
     }
@@ -963,13 +1006,19 @@ mod tests {
     #[test]
     fn near_coaxial_bands_stay_unresolved_not_forced() {
         let torus = crate::analytic::torus(3., 1.).unwrap();
-        let base = translated(&crate::analytic::frustum(1., 3., 6.).unwrap(), [0., 0., -3.]);
+        let base = translated(
+            &crate::analytic::frustum(1., 3., 6.).unwrap(),
+            [0., 0., -3.],
+        );
         // Center-line offset inside the recognition band: near_coincidence.
         let near = translated(&base, [1e-10, 0., 0.]);
         let report = intersect_cone_torus(&near, &torus, Options::default()).unwrap();
         assert!(report.components.is_empty(), "{report:?}");
         assert_eq!(report.coverage, Coverage::Incomplete);
-        assert_eq!(report.unresolved[0].reason, UnresolvedReason::NearCoincidence);
+        assert_eq!(
+            report.unresolved[0].reason,
+            UnresolvedReason::NearCoincidence
+        );
         // Recognition-scale tilt of the cone axis: near_coincidence.
         let (sin, cos) = 1e-10_f64.sin_cos();
         let tilted = crate::transform::affine(
@@ -984,13 +1033,19 @@ mod tests {
         .unwrap();
         let report = intersect_cone_torus(&tilted, &torus, Options::default()).unwrap();
         assert!(report.components.is_empty(), "{report:?}");
-        assert_eq!(report.unresolved[0].reason, UnresolvedReason::NearCoincidence);
+        assert_eq!(
+            report.unresolved[0].reason,
+            UnresolvedReason::NearCoincidence
+        );
     }
 
     #[test]
     fn clearly_off_axis_or_tilted_pairs_are_unsupported_regions() {
         let torus = crate::analytic::torus(3., 1.).unwrap();
-        let base = translated(&crate::analytic::frustum(1., 3., 6.).unwrap(), [0., 0., -3.]);
+        let base = translated(
+            &crate::analytic::frustum(1., 3., 6.).unwrap(),
+            [0., 0., -3.],
+        );
         let off = translated(&base, [0.5, 0., 0.]);
         let (sin, cos) = 0.3_f64.sin_cos();
         let tilted = crate::transform::affine(
@@ -1008,7 +1063,10 @@ mod tests {
             assert!(report.components.is_empty(), "{report:?}");
             assert_eq!(report.coverage, Coverage::Incomplete);
             assert_eq!(report.unresolved.len(), 1);
-            assert_eq!(report.unresolved[0].reason, UnresolvedReason::UnsupportedSurface);
+            assert_eq!(
+                report.unresolved[0].reason,
+                UnresolvedReason::UnsupportedSurface
+            );
             assert_eq!(
                 report.unresolved[0].parameter_box,
                 vec![0., 1., 0., 1., 0., 1., 0., 1.]
@@ -1019,23 +1077,47 @@ mod tests {
     #[test]
     fn noncanonical_operands_are_explicit_unsupported_regions() {
         let torus = crate::analytic::torus(3., 1.).unwrap();
-        let cone = translated(&crate::analytic::frustum(1., 3., 6.).unwrap(), [0., 0., -3.]);
+        let cone = translated(
+            &crate::analytic::frustum(1., 3., 6.).unwrap(),
+            [0., 0., -3.],
+        );
         // Spheres, cuboids, cylinders (an equal-radius frustum is refused as
         // a cone operand), tori-as-first-operand and swapped operand order
         // are not the canonical pair.
         for (a, b) in [
-            (crate::analytic::sphere(2.).unwrap(), crate::analytic::torus(3., 1.).unwrap()),
-            (crate::cuboid([0., 0., 0.], [1., 1., 1.]).unwrap(), crate::analytic::torus(3., 1.).unwrap()),
-            (crate::analytic::cylinder(2.2, 8.).unwrap(), crate::analytic::torus(3., 1.).unwrap()),
-            (crate::analytic::torus(2., 1.).unwrap(), crate::analytic::torus(3., 1.).unwrap()),
-            (crate::analytic::torus(3., 1.).unwrap(), crate::analytic::frustum(1., 3., 6.).unwrap()),
-            (crate::analytic::frustum(1., 3., 6.).unwrap(), crate::analytic::sphere(2.).unwrap()),
+            (
+                crate::analytic::sphere(2.).unwrap(),
+                crate::analytic::torus(3., 1.).unwrap(),
+            ),
+            (
+                crate::cuboid([0., 0., 0.], [1., 1., 1.]).unwrap(),
+                crate::analytic::torus(3., 1.).unwrap(),
+            ),
+            (
+                crate::analytic::cylinder(2.2, 8.).unwrap(),
+                crate::analytic::torus(3., 1.).unwrap(),
+            ),
+            (
+                crate::analytic::torus(2., 1.).unwrap(),
+                crate::analytic::torus(3., 1.).unwrap(),
+            ),
+            (
+                crate::analytic::torus(3., 1.).unwrap(),
+                crate::analytic::frustum(1., 3., 6.).unwrap(),
+            ),
+            (
+                crate::analytic::frustum(1., 3., 6.).unwrap(),
+                crate::analytic::sphere(2.).unwrap(),
+            ),
         ] {
             let report = intersect_cone_torus(&a, &b, Options::default()).unwrap();
             assert!(report.components.is_empty(), "{report:?}");
             assert_eq!(report.coverage, Coverage::Incomplete);
             assert_eq!(report.unresolved.len(), 1);
-            assert_eq!(report.unresolved[0].reason, UnresolvedReason::UnsupportedSurface);
+            assert_eq!(
+                report.unresolved[0].reason,
+                UnresolvedReason::UnsupportedSurface
+            );
         }
         // A canonical pair still resolves.
         let report = intersect_cone_torus(&cone, &torus, Options::default()).unwrap();
@@ -1054,7 +1136,10 @@ mod tests {
         perturbed_torus.rebuild_topology_ids();
         let report = intersect_cone_torus(&cone, &perturbed_torus, Options::default()).unwrap();
         assert!(report.components.is_empty(), "{report:?}");
-        assert_eq!(report.unresolved[0].reason, UnresolvedReason::UnsupportedSurface);
+        assert_eq!(
+            report.unresolved[0].reason,
+            UnresolvedReason::UnsupportedSurface
+        );
     }
 
     #[test]
@@ -1065,7 +1150,10 @@ mod tests {
         let offset = [0.3, -0.2, 1.1];
         let torus = rotated_translated(&crate::analytic::torus(3., 1.).unwrap(), angle, offset);
         let cone = rotated_translated(
-            &translated(&crate::analytic::frustum(1., 3., 6.).unwrap(), [0., 0., -3.]),
+            &translated(
+                &crate::analytic::frustum(1., 3., 6.).unwrap(),
+                [0., 0., -3.],
+            ),
             angle,
             offset,
         );
@@ -1083,15 +1171,17 @@ mod tests {
         let axis = sub(placed([0., 0., 1.]), placed([0., 0., 0.]));
         let base = placed([0., 0., -3.]);
         for (component, (rho, z)) in report.components.iter().zip([(2., 0.), (2.2, 0.6)]) {
-            let (curve, center, radius, normal, cone_uv, torus_uv, sampled) =
-                circle_of(component);
+            let (curve, center, radius, normal, cone_uv, torus_uv, sampled) = circle_of(component);
             let expected = placed([0., 0., z]);
             assert!((radius - rho).abs() <= 1e-12, "{radius}");
             assert!(
                 sub(center, expected).iter().all(|x| x.abs() <= 1e-12),
                 "{center:?}"
             );
-            assert!(sub(normal, axis).iter().all(|x| x.abs() <= 1e-12), "{normal:?}");
+            assert!(
+                sub(normal, axis).iter().all(|x| x.abs() <= 1e-12),
+                "{normal:?}"
+            );
             let placed_check = |p: [f64; 3]| {
                 let rel = sub(p, placed([0., 0., 0.]));
                 let a = dot(rel, axis);

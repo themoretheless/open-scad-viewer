@@ -15,7 +15,10 @@ export interface BrepCapabilityDescriptor {
   readonly qualificationPlan?: string
 }
 
-/** Never advertise Available/Qualified for unfinished gates. */
+/**
+ * Full-matrix registry (`brep-full-closed-matrix-v1` / G8-full).
+ * Maturity bumps only after walking-slice evidence is green.
+ */
 export const BREP_CAPABILITY_MATRIX: readonly BrepCapabilityDescriptor[] = Object.freeze([
   Object.freeze({
     id: 'planar-csg/1',
@@ -28,59 +31,105 @@ export const BREP_CAPABILITY_MATRIX: readonly BrepCapabilityDescriptor[] = Objec
     id: 'analytic-constructors/1',
     maturity: 'AnalyticComplete' as const,
     permitsTopologyChange: false,
-    notes: 'Cylinder/sphere/torus/revolve constructors with identity matrix',
+    notes: 'Cylinder/sphere/torus/cone/revolve constructors with identity matrix',
+    qualificationPlan: 'docs/qualification/brep-full-closed-matrix-v1.json',
   }),
   Object.freeze({
     id: 'analytic-boolean/1',
     maturity: 'Qualified' as const,
     permitsTopologyChange: true,
     notes:
-      'G5e cylinder imprint BooleanCertificate + listed analytic SS (plane/cyl/cone/sphere/torus contacts); UV classify+missed-branch; no mesh/Manifold fallback',
-    qualificationPlan: 'docs/qualification/analytic-boolean-1-evidence-v1.json',
+      'Frozen analytic matrix: exact cylinder wall + sphere imprint; disjoint tube/frustum and cylinder/sphere; non-empty mixed and cone/torus refuse; no prism/mesh/Manifold authorship',
+    qualificationPlan: 'docs/qualification/plans/analytic-boolean-1-g8.json',
   }),
   Object.freeze({
     id: 'intersection-queries/1',
     maturity: 'AnalyticComplete' as const,
     permitsTopologyChange: false,
-    notes:
-      'Affine SS + analytic_ss listed contacts may be Complete; general NURBS remain Incomplete/NumericallyResolved',
+    notes: 'Affine + listed analytic SS may be Complete; general NURBS Incomplete until G6 expand',
+    qualificationPlan: 'docs/qualification/brep-full-closed-matrix-v1.json',
   }),
   Object.freeze({
-    id: 'nurbs-ss-transverse-bicubic/1',
+    id: 'nurbs-ss-bezier-le3/1',
     maturity: 'AnalyticComplete' as const,
     permitsTopologyChange: false,
     notes:
-      'G6 R1 expand: Complete-empty + planar transverse Complete line; overlap/coincident refuse; no Boolean imprint',
-    qualificationPlan: 'docs/qualification/nurbs-ss-g6-evidence-v1.json',
+      'G6 Phase B: non-rational Bezier deg≤3×≤3 elevated to bicubic; Complete-empty/line/curve when certified; supersedes transverse-bicubic/2',
+    qualificationPlan: 'docs/qualification/plans/nurbs-ss-bezier-le3-1.json',
+  }),
+  Object.freeze({
+    id: 'nurbs-boolean-bezier-le3/1',
+    maturity: 'Unavailable' as const,
+    permitsTopologyChange: false,
+    notes:
+      'Frozen after audit: SS queries remain scoped, but contacting-solid face-split topology authorship is not qualified',
+    qualificationPlan: 'docs/qualification/plans/nurbs-boolean-bezier-le3-1.json',
   }),
   Object.freeze({
     id: 'analytic-fillet/1',
     maturity: 'AnalyticComplete' as const,
     permitsTopologyChange: true,
-    notes: 'AF-01 cylindrical fillet on axis-aligned cuboid vertical edges; AF-N1 curved refuse',
+    notes: 'AF-01 + multi-edge chain remapping by durable XY; curved edges refuse',
     qualificationPlan: 'docs/qualification/analytic-fillet-1-evidence-v1.json',
+  }),
+  Object.freeze({
+    id: 'analytic-chamfer/1',
+    maturity: 'AnalyticComplete' as const,
+    permitsTopologyChange: true,
+    notes: 'AF-01-like cuboid vertical edge chamfer; mesh bevel must not be relabeled',
+    qualificationPlan: 'docs/qualification/plans/analytic-chamfer-1-g8.json',
   }),
   Object.freeze({
     id: 'analytic-shell/1',
     maturity: 'AnalyticComplete' as const,
     permitsTopologyChange: true,
-    notes: 'AS-01 planar cuboid shell via shell_planar + certificate',
+    notes: 'AS-01 closed cuboid offset + cylinder wall offset',
     qualificationPlan: 'docs/qualification/analytic-shell-1-evidence-v1.json',
   }),
   Object.freeze({
     id: 'analytic-solid-loft/1',
     maturity: 'AnalyticComplete' as const,
     permitsTopologyChange: true,
-    notes: 'ASL-01 SectionMatch ruled solid loft; surface-as-solid refuse',
+    notes: 'ASL-01 ruled SectionMatch; FrameLaw Frenet/RMF/fixed production sweep',
     qualificationPlan: 'docs/qualification/analytic-solid-loft-1-evidence-v1.json',
   }),
   Object.freeze({
     id: 'step-interchange/1',
     maturity: 'AnalyticComplete' as const,
     permitsTopologyChange: false,
+    notes: 'AP214/AP242 graph-only + product seam: CIRCLE rings, cuboid 12-edge, tube FACE_BOUND, apex/oriented tube; cadAnalyticStep beside faceted cadStep; OSCAD_SOLID/AABB/silent-height removed',
+    qualificationPlan: 'docs/design/qualification/step-interchange-1.md',
+  }),
+  Object.freeze({
+    id: 'nurbs-step-bicubic-face/1',
+    maturity: 'AnalyticComplete' as const,
+    permitsTopologyChange: false,
     notes:
-      'Analytic ADVANCED_FACE / MANIFOLD_SOLID_BREP export+import; FACETED_BREP refuse; not STL/OBJ',
-    qualificationPlan: 'docs/qualification/step-interchange-1-evidence-v1.json',
+      'Freeform STEP: single untrimmed bicubic open face (B_SPLINE + OPEN_SHELL); cadNurbsStep peer; solids/trims/rational refuse',
+    qualificationPlan: 'docs/design/qualification/nurbs-step-bicubic-face-1.md',
+  }),
+  Object.freeze({
+    id: 'nurbs-step-trimmed-bicubic/1',
+    maturity: 'AnalyticComplete' as const,
+    permitsTopologyChange: false,
+    notes:
+      'Freeform STEP: trimmed bicubic open face (FACE_OUTER_BOUND + FACE_BOUND + OPEN_SHELL); solids refuse',
+    qualificationPlan: 'docs/qualification/plans/nurbs-step-trimmed-bicubic-1.json',
+  }),
+  Object.freeze({
+    id: 'nurbs-step-solid/1',
+    maturity: 'AnalyticComplete' as const,
+    permitsTopologyChange: false,
+    notes:
+      'Freeform STEP solid: elevated bicubic cuboid / bump / cavity via MANIFOLD_SOLID_BREP + B_SPLINE; no OSCAD_SOLID/AABB',
+    qualificationPlan: 'docs/qualification/plans/nurbs-step-solid-1.json',
+  }),
+  Object.freeze({
+    id: 'iges-interchange/1',
+    maturity: 'AnalyticComplete' as const,
+    permitsTopologyChange: false,
+    notes: 'IGES 110/116/128/190 plus solid 186/514/510/144; STL/OBJ refuse',
+    qualificationPlan: 'docs/qualification/plans/iges-interchange-1-g8.json',
   }),
 ])
 

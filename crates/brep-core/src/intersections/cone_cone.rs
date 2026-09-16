@@ -73,10 +73,18 @@ struct OrientedProfile<'a> {
 }
 impl OrientedProfile<'_> {
     fn lo(&self) -> f64 {
-        if self.sign > 0. { self.origin } else { self.origin - self.cone.height }
+        if self.sign > 0. {
+            self.origin
+        } else {
+            self.origin - self.cone.height
+        }
     }
     fn hi(&self) -> f64 {
-        if self.sign > 0. { self.origin + self.cone.height } else { self.origin }
+        if self.sign > 0. {
+            self.origin + self.cone.height
+        } else {
+            self.origin
+        }
     }
     /// Radius profile rho(s) in the shared coordinate; linear between rings.
     fn radius(&self, s: f64) -> f64 {
@@ -128,13 +136,19 @@ fn circle_component(
     let first_uv = first
         .sides
         .iter()
-        .map(|&patch| CylinderPatchCurve { patch, arcs: iso_v(s / first.height) })
+        .map(|&patch| CylinderPatchCurve {
+            patch,
+            arcs: iso_v(s / first.height),
+        })
         .collect();
     let second_uv = profile
         .cone
         .sides
         .iter()
-        .map(|&patch| CylinderPatchCurve { patch, arcs: iso_v(profile.v(s)) })
+        .map(|&patch| CylinderPatchCurve {
+            patch,
+            arcs: iso_v(profile.v(s)),
+        })
         .collect();
     let curve = circle_curve(center, radius, first.frame[0], first.frame[1]);
     let second = profile.cone;
@@ -147,8 +161,9 @@ fn circle_component(
             let perp = sub(rel, cone.axis.map(|x| x * a));
             (norm3(perp) - (cone.r_bottom + cone.slope * a)).abs()
         };
-        max_sample_residual =
-            max_sample_residual.max(side_residual(first)).max(side_residual(second));
+        max_sample_residual = max_sample_residual
+            .max(side_residual(first))
+            .max(side_residual(second));
     }
     Ok(ConeConeComponent::Circle {
         curve,
@@ -178,8 +193,7 @@ pub fn intersect_cone_cone(
     let _ = options;
     let mut report = Report::default();
     let domain = vec![0., 1., 0., 1., 0., 1., 0., 1.];
-    let (Some(first), Some(second)) =
-        (recognize_cone(first_model)?, recognize_cone(second_model)?)
+    let (Some(first), Some(second)) = (recognize_cone(first_model)?, recognize_cone(second_model)?)
     else {
         report.unresolved(domain, UnresolvedReason::UnsupportedSurface);
         return Ok(report);
@@ -237,8 +251,16 @@ pub fn intersect_cone_cone(
         report.unresolved(domain, reason);
         return Ok(report);
     }
-    let sign = if dot(first.axis, second.axis) >= 0. { 1. } else { -1. };
-    let profile = OrientedProfile { cone: &second, origin: s0, sign };
+    let sign = if dot(first.axis, second.axis) >= 0. {
+        1.
+    } else {
+        -1.
+    };
+    let profile = OrientedProfile {
+        cone: &second,
+        origin: s0,
+        sign,
+    };
     let lo = 0_f64.max(profile.lo());
     let hi = first.height.min(profile.hi());
     // Ring-plane coincidences (rim/rim, rim-on-cap, apex-on-cap): coaxial
@@ -323,7 +345,9 @@ pub fn intersect_cone_cone(
         report.unresolved(domain, UnresolvedReason::TangencyOrMultipleRoot);
         return Ok(report);
     }
-    report.components.push(circle_component(&first, &profile, s)?);
+    report
+        .components
+        .push(circle_component(&first, &profile, s)?);
     if tangency {
         report.unresolved(domain, UnresolvedReason::TangencyOrMultipleRoot);
     }
@@ -381,7 +405,12 @@ mod tests {
     fn flipped(model: &Model, z0: f64) -> Model {
         crate::transform::affine(
             model,
-            [[1., 0., 0., 0.], [0., -1., 0., 0.], [0., 0., -1., z0], [0., 0., 0., 1.]],
+            [
+                [1., 0., 0., 0.],
+                [0., -1., 0., 0.],
+                [0., 0., -1., z0],
+                [0., 0., 0., 1.],
+            ],
         )
         .unwrap()
     }
@@ -398,7 +427,15 @@ mod tests {
     #[allow(clippy::type_complexity)]
     fn circle_of(
         component: &ConeConeComponent,
-    ) -> (&Curve, [f64; 3], f64, [f64; 3], &[CylinderPatchCurve], &[CylinderPatchCurve], f64) {
+    ) -> (
+        &Curve,
+        [f64; 3],
+        f64,
+        [f64; 3],
+        &[CylinderPatchCurve],
+        &[CylinderPatchCurve],
+        f64,
+    ) {
         let ConeConeComponent::Circle {
             curve,
             center,
@@ -408,7 +445,15 @@ mod tests {
             second_uv,
             max_sample_residual,
         } = component;
-        (curve, *center, *radius, *normal, first_uv, second_uv, *max_sample_residual)
+        (
+            curve,
+            *center,
+            *radius,
+            *normal,
+            first_uv,
+            second_uv,
+            *max_sample_residual,
+        )
     }
     /// Cone side profile residual of a canonical z-up cone.
     fn side_residual_z(point: [f64; 3], r_bottom: f64, slope: f64) -> f64 {
@@ -452,11 +497,17 @@ mod tests {
         let (curve, center, radius, normal, first_uv, second_uv, sampled) =
             circle_of(&report.components[0]);
         assert!((radius - 2.4).abs() <= 1e-12, "{radius}");
-        assert!(sub(center, [0., 0., 4.2]).iter().all(|x| x.abs() <= 1e-12), "{center:?}");
+        assert!(
+            sub(center, [0., 0., 4.2]).iter().all(|x| x.abs() <= 1e-12),
+            "{center:?}"
+        );
         assert!(normal[2] >= 1. - 1e-12, "{normal:?}");
         // Exact rational circle: four 90-degree arcs, weights cos(pi/4).
         assert_eq!(curve.degree, 2);
-        assert_eq!(curve.knots, vec![0., 0., 0., 1., 1., 2., 2., 3., 3., 4., 4., 4.]);
+        assert_eq!(
+            curve.knots,
+            vec![0., 0., 0., 1., 1., 2., 2., 3., 3., 4., 4., 4.]
+        );
         assert_eq!(curve.control_points.len(), 9);
         // Sixteen samples satisfy both implicit side equations.
         let mut worst = 0_f64;
@@ -494,7 +545,10 @@ mod tests {
         let first = crate::analytic::frustum(3., 1., 6.).unwrap();
         let second = translated(&crate::analytic::frustum(4., 2., 2.).unwrap(), [0., 0., 2.]);
         let report = intersect_cone_cone(&first, &second, Options::default()).unwrap();
-        assert!(report.components.is_empty() && report.unresolved.is_empty(), "{report:?}");
+        assert!(
+            report.components.is_empty() && report.unresolved.is_empty(),
+            "{report:?}"
+        );
         assert_eq!(report.coverage, Coverage::NumericallyResolved);
     }
 
@@ -503,9 +557,15 @@ mod tests {
         // Cone2 provably above cone1 with a 0.5 gap between the facing ring
         // planes: no shared point is possible in any radius relation.
         let first = crate::analytic::frustum(1., 3., 6.).unwrap();
-        let second = translated(&crate::analytic::frustum(1., 2., 3.).unwrap(), [0., 0., 6.5]);
+        let second = translated(
+            &crate::analytic::frustum(1., 2., 3.).unwrap(),
+            [0., 0., 6.5],
+        );
         let report = intersect_cone_cone(&first, &second, Options::default()).unwrap();
-        assert!(report.components.is_empty() && report.unresolved.is_empty(), "{report:?}");
+        assert!(
+            report.components.is_empty() && report.unresolved.is_empty(),
+            "{report:?}"
+        );
         assert_eq!(report.coverage, Coverage::NumericallyResolved);
     }
 
@@ -515,13 +575,18 @@ mod tests {
         // carries the same profile over the overlap z 2..6: coincident_trim,
         // never a surface component.
         let first = crate::analytic::frustum(1., 3., 6.).unwrap();
-        let second =
-            translated(&crate::analytic::frustum(5. / 3., 11. / 3., 6.).unwrap(), [0., 0., 2.]);
+        let second = translated(
+            &crate::analytic::frustum(5. / 3., 11. / 3., 6.).unwrap(),
+            [0., 0., 2.],
+        );
         let report = intersect_cone_cone(&first, &second, Options::default()).unwrap();
         assert!(report.components.is_empty(), "{report:?}");
         assert_eq!(report.coverage, Coverage::Incomplete);
         assert_eq!(report.unresolved.len(), 1);
-        assert_eq!(report.unresolved[0].reason, UnresolvedReason::CoincidentTrim);
+        assert_eq!(
+            report.unresolved[0].reason,
+            UnresolvedReason::CoincidentTrim
+        );
         assert!(!report.permits_topology_change());
     }
 
@@ -532,7 +597,10 @@ mod tests {
         let first = crate::analytic::frustum(1., 3., 6.).unwrap();
         let second = translated(&crate::analytic::frustum(2., 4., 6.).unwrap(), [0., 0., 2.]);
         let report = intersect_cone_cone(&first, &second, Options::default()).unwrap();
-        assert!(report.components.is_empty() && report.unresolved.is_empty(), "{report:?}");
+        assert!(
+            report.components.is_empty() && report.unresolved.is_empty(),
+            "{report:?}"
+        );
         assert_eq!(report.coverage, Coverage::NumericallyResolved);
     }
 
@@ -547,13 +615,19 @@ mod tests {
         let report = intersect_cone_cone(&first, &second, Options::default()).unwrap();
         assert!(report.components.is_empty(), "{report:?}");
         assert_eq!(report.coverage, Coverage::Incomplete);
-        assert_eq!(report.unresolved[0].reason, UnresolvedReason::TangencyOrMultipleRoot);
+        assert_eq!(
+            report.unresolved[0].reason,
+            UnresolvedReason::TangencyOrMultipleRoot
+        );
         // Different ring radii at the shared plane (rim circle inside the
         // larger cap disk) are still a boundary contact: unresolved.
         let nested = translated(&crate::analytic::frustum(2., 4., 6.).unwrap(), [0., 0., 6.]);
         let report = intersect_cone_cone(&first, &nested, Options::default()).unwrap();
         assert!(report.components.is_empty(), "{report:?}");
-        assert_eq!(report.unresolved[0].reason, UnresolvedReason::TangencyOrMultipleRoot);
+        assert_eq!(
+            report.unresolved[0].reason,
+            UnresolvedReason::TangencyOrMultipleRoot
+        );
     }
 
     #[test]
@@ -567,7 +641,10 @@ mod tests {
         let report = intersect_cone_cone(&first, &second, Options::default()).unwrap();
         assert!(report.components.is_empty(), "{report:?}");
         assert_eq!(report.coverage, Coverage::Incomplete);
-        assert_eq!(report.unresolved[0].reason, UnresolvedReason::TangencyOrMultipleRoot);
+        assert_eq!(
+            report.unresolved[0].reason,
+            UnresolvedReason::TangencyOrMultipleRoot
+        );
     }
 
     #[test]
@@ -580,7 +657,10 @@ mod tests {
         let report = intersect_cone_cone(&first, &second, Options::default()).unwrap();
         assert!(report.components.is_empty(), "{report:?}");
         assert_eq!(report.coverage, Coverage::Incomplete);
-        assert_eq!(report.unresolved[0].reason, UnresolvedReason::TangencyOrMultipleRoot);
+        assert_eq!(
+            report.unresolved[0].reason,
+            UnresolvedReason::TangencyOrMultipleRoot
+        );
     }
 
     #[test]
@@ -597,7 +677,10 @@ mod tests {
         let (curve, center, radius, normal, first_uv, second_uv, sampled) =
             circle_of(&report.components[0]);
         assert!((radius - 17. / 6.).abs() <= 1e-12, "{radius}");
-        assert!(sub(center, [0., 0., 5.5]).iter().all(|x| x.abs() <= 1e-12), "{center:?}");
+        assert!(
+            sub(center, [0., 0., 5.5]).iter().all(|x| x.abs() <= 1e-12),
+            "{center:?}"
+        );
         assert!(normal[2] >= 1. - 1e-12, "{normal:?}");
         let mut worst = 0_f64;
         for i in 0..16 {
@@ -625,21 +708,35 @@ mod tests {
         let first = crate::analytic::frustum(1., 3., 6.).unwrap();
         // Recognition-scale perpendicular offset: near_coincidence, never
         // forced coaxial.
-        let offset = translated(&crate::analytic::frustum(4., 2., 4.).unwrap(), [1e-10, 0., 1.]);
+        let offset = translated(
+            &crate::analytic::frustum(4., 2., 4.).unwrap(),
+            [1e-10, 0., 1.],
+        );
         let report = intersect_cone_cone(&first, &offset, Options::default()).unwrap();
         assert!(report.components.is_empty(), "{report:?}");
         assert_eq!(report.coverage, Coverage::Incomplete);
-        assert_eq!(report.unresolved[0].reason, UnresolvedReason::NearCoincidence);
+        assert_eq!(
+            report.unresolved[0].reason,
+            UnresolvedReason::NearCoincidence
+        );
         // Recognition-scale tilt: near_coincidence as well.
-        let tilted =
-            rotated_translated(&crate::analytic::frustum(4., 2., 4.).unwrap(), 1e-10, [0., 0., 1.]);
+        let tilted = rotated_translated(
+            &crate::analytic::frustum(4., 2., 4.).unwrap(),
+            1e-10,
+            [0., 0., 1.],
+        );
         let report = intersect_cone_cone(&first, &tilted, Options::default()).unwrap();
         assert!(report.components.is_empty(), "{report:?}");
-        assert_eq!(report.unresolved[0].reason, UnresolvedReason::NearCoincidence);
+        assert_eq!(
+            report.unresolved[0].reason,
+            UnresolvedReason::NearCoincidence
+        );
         // Pure-rounding offsets snap: 1e-14 stays coaxial and resolves the
         // same circle as the exact pair.
-        let snapped =
-            translated(&crate::analytic::frustum(4., 2., 4.).unwrap(), [1e-14, 0., 1.]);
+        let snapped = translated(
+            &crate::analytic::frustum(4., 2., 4.).unwrap(),
+            [1e-14, 0., 1.],
+        );
         let report = intersect_cone_cone(&first, &snapped, Options::default()).unwrap();
         only_circles(&report, 1);
     }
@@ -648,17 +745,29 @@ mod tests {
     fn off_axis_and_non_parallel_pairs_are_unsupported_regions() {
         let first = crate::analytic::frustum(1., 3., 6.).unwrap();
         // Parallel but 0.5 off the axis: coaxial quartic, out of scope.
-        let off = translated(&crate::analytic::frustum(4., 2., 4.).unwrap(), [0.5, 0., 1.]);
+        let off = translated(
+            &crate::analytic::frustum(4., 2., 4.).unwrap(),
+            [0.5, 0., 1.],
+        );
         // Tilted 0.5 rad: the general quartic, out of scope.
-        let tilted =
-            rotated_translated(&crate::analytic::frustum(4., 2., 4.).unwrap(), 0.5, [0., 0., 1.]);
+        let tilted = rotated_translated(
+            &crate::analytic::frustum(4., 2., 4.).unwrap(),
+            0.5,
+            [0., 0., 1.],
+        );
         for second in [&off, &tilted] {
             let report = intersect_cone_cone(&first, second, Options::default()).unwrap();
             assert!(report.components.is_empty(), "{report:?}");
             assert_eq!(report.coverage, Coverage::Incomplete);
             assert_eq!(report.unresolved.len(), 1);
-            assert_eq!(report.unresolved[0].reason, UnresolvedReason::UnsupportedSurface);
-            assert_eq!(report.unresolved[0].parameter_box, vec![0., 1., 0., 1., 0., 1., 0., 1.]);
+            assert_eq!(
+                report.unresolved[0].reason,
+                UnresolvedReason::UnsupportedSurface
+            );
+            assert_eq!(
+                report.unresolved[0].parameter_box,
+                vec![0., 1., 0., 1., 0., 1., 0., 1.]
+            );
         }
     }
 
@@ -668,17 +777,35 @@ mod tests {
         // Equal-radius frusta are cylinders (refused as cone operands), and
         // spheres, tubes, cuboids and tori are not the canonical cone.
         for (a, b) in [
-            (crate::analytic::frustum(1., 3., 6.).unwrap(), crate::analytic::cylinder(1., 3.).unwrap()),
-            (crate::analytic::frustum(1., 3., 6.).unwrap(), crate::analytic::sphere(2.).unwrap()),
-            (crate::analytic::tube(2., 1., 3.).unwrap(), crate::analytic::frustum(1., 3., 6.).unwrap()),
-            (crate::cuboid([0., 0., 0.], [1., 1., 1.]).unwrap(), crate::analytic::frustum(1., 3., 6.).unwrap()),
-            (crate::analytic::torus(3., 1.).unwrap(), crate::analytic::frustum(1., 3., 6.).unwrap()),
+            (
+                crate::analytic::frustum(1., 3., 6.).unwrap(),
+                crate::analytic::cylinder(1., 3.).unwrap(),
+            ),
+            (
+                crate::analytic::frustum(1., 3., 6.).unwrap(),
+                crate::analytic::sphere(2.).unwrap(),
+            ),
+            (
+                crate::analytic::tube(2., 1., 3.).unwrap(),
+                crate::analytic::frustum(1., 3., 6.).unwrap(),
+            ),
+            (
+                crate::cuboid([0., 0., 0.], [1., 1., 1.]).unwrap(),
+                crate::analytic::frustum(1., 3., 6.).unwrap(),
+            ),
+            (
+                crate::analytic::torus(3., 1.).unwrap(),
+                crate::analytic::frustum(1., 3., 6.).unwrap(),
+            ),
         ] {
             let report = intersect_cone_cone(&a, &b, Options::default()).unwrap();
             assert!(report.components.is_empty(), "{report:?}");
             assert_eq!(report.coverage, Coverage::Incomplete);
             assert_eq!(report.unresolved.len(), 1);
-            assert_eq!(report.unresolved[0].reason, UnresolvedReason::UnsupportedSurface);
+            assert_eq!(
+                report.unresolved[0].reason,
+                UnresolvedReason::UnsupportedSurface
+            );
         }
         // A structurally perturbed cone fails validation as a hard error.
         let mut perturbed = crate::analytic::frustum(1., 2., 3.).unwrap();
@@ -691,8 +818,11 @@ mod tests {
         // The crossing pair of the first test rigidly placed about X by 0.5.
         let angle = 0.5;
         let offset = [0.3, -0.2, 1.1];
-        let first =
-            rotated_translated(&crate::analytic::frustum(1., 3., 6.).unwrap(), angle, offset);
+        let first = rotated_translated(
+            &crate::analytic::frustum(1., 3., 6.).unwrap(),
+            angle,
+            offset,
+        );
         let second = rotated_translated(
             &translated(&crate::analytic::frustum(4., 2., 4.).unwrap(), [0., 0., 1.]),
             angle,
@@ -714,8 +844,14 @@ mod tests {
         let expected = placed([0., 0., 4.2]);
         let axis = sub(placed([0., 0., 1.]), placed([0., 0., 0.]));
         assert!((radius - 2.4).abs() <= 1e-12, "{radius}");
-        assert!(sub(center, expected).iter().all(|x| x.abs() <= 1e-12), "{center:?}");
-        assert!(sub(normal, axis).iter().all(|x| x.abs() <= 1e-12), "{normal:?}");
+        assert!(
+            sub(center, expected).iter().all(|x| x.abs() <= 1e-12),
+            "{center:?}"
+        );
+        assert!(
+            sub(normal, axis).iter().all(|x| x.abs() <= 1e-12),
+            "{normal:?}"
+        );
         let side = |p: [f64; 3], origin: [f64; 3], r_bottom: f64, slope: f64| {
             let rel = sub(p, origin);
             let a = dot(rel, axis);
@@ -727,7 +863,9 @@ mod tests {
         let mut worst = 0_f64;
         for i in 0..16 {
             let p = point_of(&curve.evaluate(i as f64 / 4.).unwrap().point);
-            worst = worst.max(side(p, origin1, 1., 1. / 3.)).max(side(p, origin2, 4., -0.5));
+            worst = worst
+                .max(side(p, origin1, 1., 1. / 3.))
+                .max(side(p, origin2, 4., -0.5));
         }
         assert!(worst <= 1e-12, "{worst}");
         assert!(sampled <= 1e-12);

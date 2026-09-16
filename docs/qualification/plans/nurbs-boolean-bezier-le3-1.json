@@ -1,0 +1,94 @@
+{
+  "$schema": "./brep-capability-qualification-plan.schema.json",
+  "schema": "open-scad-viewer/brep-capability-qualification-plan",
+  "schemaVersion": 1,
+  "planId": "nurbs-boolean-bezier-le3-1",
+  "gate": {
+    "id": "g8-full",
+    "name": "brep-full-closed-matrix",
+    "version": 1
+  },
+  "lifecycle": {
+    "status": "rejected",
+    "qualificationClaim": "none"
+  },
+  "claimBoundary": {
+    "candidateClaim": "AnalyticComplete Boolean for solids whose every face is in the bezier-le3 cell",
+    "forbiddenClaims": [
+      "parasolid-parity",
+      "manifold-cross-route",
+      "mesh-fallback",
+      "silent-heal",
+      "out-of-matrix-face-success"
+    ]
+  },
+  "capability": "nurbs-boolean-bezier-le3/1",
+  "scope": {
+    "included": [
+      "Complete-empty, planar-line, and certified non-planar curve certificates",
+      "union, difference, and intersection",
+      "disjoint and exact containment algebra",
+      "freeform STEP Boolean-result roundtrip"
+    ],
+    "excluded": [
+      "rational weights",
+      "degree greater than 3",
+      "periodic surfaces",
+      "uncertified overlap",
+      "Parasolid parity"
+    ]
+  },
+  "matrix": [
+    {
+      "id": "B2-EMPTY",
+      "expected": "Complete",
+      "blocksQualification": true
+    },
+    {
+      "id": "B2-LINE",
+      "expected": "Complete",
+      "blocksQualification": true
+    },
+    {
+      "id": "B2-CURVE",
+      "expected": "Complete",
+      "blocksQualification": true
+    },
+    {
+      "id": "B2-OPS",
+      "expected": "Complete",
+      "blocksQualification": true
+    },
+    {
+      "id": "B2-NEGATIVE",
+      "expected": "typed-refuse",
+      "blocksQualification": true
+    }
+  ],
+  "bindings": {
+    "rust": [
+      "crates/brep-core/src/nurbs_ss_g6.rs",
+      "crates/brep-core/src/imprint_pipeline.rs"
+    ],
+    "typescript": [
+      "src/services/geometry/brepCapability.ts"
+    ],
+    "registry": "src/services/geometry/brepCapability.ts",
+    "evidenceJson": "docs/qualification/nurbs-boolean-transverse-bicubic-1-evidence-v1.json"
+  },
+  "evidence": {
+    "state": "not-executed",
+    "notes": [
+      "frozen-unavailable-after-face-split-authorship-audit",
+      "G6 SS query remains separate and does not permit topology change"
+    ]
+  },
+  "resetPolicy": "false-Complete freezes Unavailable",
+  "unresolvedRows": [
+    {
+      "id": "B2-FACE-SPLIT",
+      "status": "open",
+      "resolution": "Implement and independently qualify face splitting, shared intersection edges, classification, sew, and solid audit."
+    }
+  ]
+}

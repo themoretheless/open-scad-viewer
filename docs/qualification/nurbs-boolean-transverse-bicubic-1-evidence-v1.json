@@ -1,0 +1,21 @@
+{
+  "capability": "nurbs-boolean-bezier-le3/1",
+  "maturity": "Unavailable",
+  "planId": "nurbs-boolean-transverse-bicubic-1-evidence-v1",
+  "supersedes": "nurbs-boolean-transverse-bicubic/2",
+  "seedPlan": "docs/qualification/plans/nurbs-boolean-bezier-le3-1.json",
+  "positiveCorpus": [],
+  "negativeCorpus": [
+    "out-of-matrix-rational",
+    "degree-gt-3",
+    "periodic",
+    "any-out-of-matrix-solid-face-refuses",
+    "complete-ss-curve-without-qualified-face-split-refuses"
+  ],
+  "bindings": {
+    "rust": ["crates/brep-core/src/nurbs_ss_g6.rs"]
+  },
+  "booleanImprint": false,
+  "permitsTopologyChange": false,
+  "resetPolicy": "false-Complete freezes Unavailable / stop"
+}

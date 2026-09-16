@@ -110,22 +110,26 @@ pub fn complete_line_plane(
         }]));
     }
     if d0.abs() <= tol {
-        return Ok(complete_report(vec![CurvePlaneComponent::Point(CurvePoint {
-            parameter: 0.,
-            parameter_interval: [0., 0.],
-            point: start,
-            plane_residual: d0.abs(),
-            contact: Contact::Boundary,
-        })]));
+        return Ok(complete_report(vec![CurvePlaneComponent::Point(
+            CurvePoint {
+                parameter: 0.,
+                parameter_interval: [0., 0.],
+                point: start,
+                plane_residual: d0.abs(),
+                contact: Contact::Boundary,
+            },
+        )]));
     }
     if d1.abs() <= tol {
-        return Ok(complete_report(vec![CurvePlaneComponent::Point(CurvePoint {
-            parameter: 1.,
-            parameter_interval: [1., 1.],
-            point: end,
-            plane_residual: d1.abs(),
-            contact: Contact::Boundary,
-        })]));
+        return Ok(complete_report(vec![CurvePlaneComponent::Point(
+            CurvePoint {
+                parameter: 1.,
+                parameter_interval: [1., 1.],
+                point: end,
+                plane_residual: d1.abs(),
+                contact: Contact::Boundary,
+            },
+        )]));
     }
     if d0.signum() == d1.signum() {
         return Ok(complete_report(vec![]));
@@ -145,21 +149,23 @@ pub fn complete_line_plane(
             UnresolvedReason::NearCoincidence,
         ));
     }
-    if let Err(_) = crate::predicate_evidence::require_transverse_line_plane_evidence(
-        start, end, plane,
-    ) {
+    if let Err(_) =
+        crate::predicate_evidence::require_transverse_line_plane_evidence(start, end, plane)
+    {
         return Ok(incomplete_report(
             vec![0., 1.],
             UnresolvedReason::NearCoincidence,
         ));
     }
-    Ok(complete_report(vec![CurvePlaneComponent::Point(CurvePoint {
-        parameter: t,
-        parameter_interval: [t, t],
-        point,
-        plane_residual: residual,
-        contact: Contact::Transverse,
-    })]))
+    Ok(complete_report(vec![CurvePlaneComponent::Point(
+        CurvePoint {
+            parameter: t,
+            parameter_interval: [t, t],
+            point,
+            plane_residual: residual,
+            contact: Contact::Transverse,
+        },
+    )]))
 }
 
 /// Finite right circular cylinder × plane (axis-aligned height interval).
@@ -380,7 +386,8 @@ pub fn plane_cone(
     }]))
 }
 
-/// Two finite co-axial cylinders: empty, identical wall (refuse), or out-of-matrix.
+/// Two finite parallel cylinders: empty, coincident walls (empty), or two
+/// generator `Line`s for transverse wall contact. Skew / non-parallel refuse.
 pub fn cylinder_cylinder(
     a_origin: [f64; 3],
     a_dir: [f64; 3],
@@ -392,7 +399,7 @@ pub fn cylinder_cylinder(
     b_height: [f64; 2],
     options: Options,
 ) -> Result<Report<AnalyticSsComponent>> {
-    let _ = options.validate()?;
+    let options = options.validate()?;
     let a_axis = normalize(a_dir)?;
     let b_axis = normalize(b_dir)?;
     if !(a_radius.is_finite() && b_radius.is_finite() && a_radius > 0. && b_radius > 0.) {
@@ -409,6 +416,11 @@ pub fn cylinder_cylinder(
     let radial = sub(delta, mul(a_axis, dot(delta, a_axis)));
     let separation = norm(radial);
     let tol = options.distance_tolerance;
+    let z0 = a_height[0].max(b_height[0]);
+    let z1 = a_height[1].min(b_height[1]);
+    if z1 < z0 - tol {
+        return Ok(complete_report(vec![AnalyticSsComponent::Empty]));
+    }
     if separation > a_radius + b_radius + tol {
         return Ok(complete_report(vec![AnalyticSsComponent::Empty]));
     }
@@ -421,12 +433,72 @@ pub fn cylinder_cylinder(
     if separation <= tol && (a_radius - b_radius).abs() <= tol {
         return Ok(complete_report(vec![AnalyticSsComponent::Empty]));
     }
-    // Shared-axis / tangent / intersecting walls are out of the listed-contact matrix.
-    let _ = unsupported;
-    Ok(incomplete_report(
-        vec![a_height[0], a_height[1], b_height[0], b_height[1]],
-        UnresolvedReason::UnsupportedSurface,
-    ))
+    // Near-tangent band: refuse Incomplete (not certified for imprint).
+    if (separation - (a_radius + b_radius)).abs() <= tol
+        || (separation - (a_radius - b_radius).abs()).abs() <= tol
+    {
+        return Ok(incomplete_report(
+            vec![a_height[0], a_height[1], b_height[0], b_height[1]],
+            UnresolvedReason::NearCoincidence,
+        ));
+    }
+    // Transverse parallel wall contact → two generator lines from 2D circle×circle.
+    if separation <= tol {
+        let _ = unsupported;
+        return Ok(incomplete_report(
+            vec![a_height[0], a_height[1], b_height[0], b_height[1]],
+            UnresolvedReason::UnsupportedSurface,
+        ));
+    }
+    let ux = radial[0] / separation;
+    let uy = radial[1] / separation;
+    let uz = radial[2] / separation;
+    let a =
+        (a_radius * a_radius - b_radius * b_radius + separation * separation) / (2. * separation);
+    let h2 = a_radius * a_radius - a * a;
+    if h2 <= 0. {
+        return Ok(incomplete_report(
+            vec![a_height[0], a_height[1], b_height[0], b_height[1]],
+            UnresolvedReason::NearCoincidence,
+        ));
+    }
+    let h = h2.sqrt();
+    let mid = add(a_origin, mul([ux, uy, uz], a));
+    // Perpendicular in the plane orthogonal to the shared axis.
+    let px = a_axis[1] * uz - a_axis[2] * uy;
+    let py = a_axis[2] * ux - a_axis[0] * uz;
+    let pz = a_axis[0] * uy - a_axis[1] * ux;
+    let pn = (px * px + py * py + pz * pz).sqrt();
+    if pn <= 1e-15 {
+        return Ok(incomplete_report(
+            vec![a_height[0], a_height[1], b_height[0], b_height[1]],
+            UnresolvedReason::UnsupportedSurface,
+        ));
+    }
+    let (px, py, pz) = (px / pn * h, py / pn * h, pz / pn * h);
+    let p0 = [mid[0] + px, mid[1] + py, mid[2] + pz];
+    let p1 = [mid[0] - px, mid[1] - py, mid[2] - pz];
+    let start0 = add(
+        p0,
+        mul(a_axis, z0 - dot(p0, a_axis) + dot(a_origin, a_axis)),
+    );
+    // Project intersection points onto the axis parameter range [z0, z1].
+    let axial0 = |p: [f64; 3]| -> f64 { dot(sub(p, a_origin), a_axis) };
+    let lift = |p: [f64; 3], z: f64| -> [f64; 3] {
+        let cur = axial0(p);
+        add(p, mul(a_axis, z - cur))
+    };
+    let _ = start0;
+    Ok(complete_report(vec![
+        AnalyticSsComponent::Line {
+            start: lift(p0, z0),
+            end: lift(p0, z1),
+        },
+        AnalyticSsComponent::Line {
+            start: lift(p1, z0),
+            end: lift(p1, z1),
+        },
+    ]))
 }
 
 /// Two spheres: Complete empty / tangent point / circle; near-band Incomplete.
@@ -482,7 +554,9 @@ pub fn sphere_sphere(
     Ok(incomplete_report(vec![], UnresolvedReason::NearCoincidence))
 }
 
-/// Finite cylinder × sphere: Complete empty when clearly separated; otherwise Incomplete.
+/// Finite cylinder × sphere: Complete empty when separated; Complete circle when
+/// sphere center lies on the cylinder axis and the section is a transverse circle
+/// strictly between the caps; otherwise Incomplete / frozen refuse.
 pub fn cylinder_sphere(
     cyl_origin: [f64; 3],
     cyl_dir: [f64; 3],
@@ -498,23 +572,125 @@ pub fn cylinder_sphere(
         && sphere_radius.is_finite()
         && cyl_radius > 0.
         && sphere_radius > 0.)
-        || !cyl_origin.iter().chain(&sphere_center).all(|x| x.is_finite())
+        || !cyl_origin
+            .iter()
+            .chain(&sphere_center)
+            .all(|x| x.is_finite())
     {
-        return Err(invalid("Cylinder/sphere parameters must be finite and positive"));
+        return Err(invalid(
+            "Cylinder/sphere parameters must be finite and positive",
+        ));
     }
     let delta = sub(sphere_center, cyl_origin);
     let axial = dot(delta, axis);
     let radial = sub(delta, mul(axis, axial));
     let separation = norm(radial);
     let tol = options.distance_tolerance;
-    let outside_height = axial < cyl_height[0] - sphere_radius - tol
-        || axial > cyl_height[1] + sphere_radius + tol;
+    let outside_height =
+        axial < cyl_height[0] - sphere_radius - tol || axial > cyl_height[1] + sphere_radius + tol;
     if outside_height || separation > cyl_radius + sphere_radius + tol {
         return Ok(complete_report(vec![AnalyticSsComponent::Empty]));
     }
-    let _ = cyl_height;
+    // Axial transverse circle (sphere center on axis, section between caps).
+    if separation <= tol {
+        let r2 = sphere_radius * sphere_radius - 0.;
+        let _ = r2;
+        // Intersection of sphere with cylinder wall: circle in plane ⊥ axis at
+        // the sphere center when cyl_radius < sphere_radius and height admits.
+        if (cyl_radius - sphere_radius).abs() <= tol {
+            return Ok(incomplete_report(
+                vec![cyl_height[0], cyl_height[1]],
+                UnresolvedReason::NearCoincidence,
+            ));
+        }
+        if cyl_radius + tol < sphere_radius
+            && axial >= cyl_height[0] + tol
+            && axial <= cyl_height[1] - tol
+        {
+            let half = (sphere_radius * sphere_radius - cyl_radius * cyl_radius).sqrt();
+            if half.is_finite()
+                && axial - half >= cyl_height[0] - tol
+                && axial + half <= cyl_height[1] + tol
+            {
+                return Ok(complete_report(vec![AnalyticSsComponent::Circle {
+                    center: add(cyl_origin, mul(axis, axial)),
+                    normal: axis,
+                    radius: cyl_radius,
+                }]));
+            }
+        }
+        return Ok(incomplete_report(
+            vec![cyl_height[0], cyl_height[1]],
+            UnresolvedReason::UnsupportedSurface,
+        ));
+    }
     Ok(incomplete_report(
         vec![cyl_height[0], cyl_height[1]],
+        UnresolvedReason::UnsupportedSurface,
+    ))
+}
+
+/// Coaxial / parallel finite cones (apex+axis+radii envelopes): Complete empty when
+/// clearly separated; coincident/intersecting walls Incomplete (frozen refuse).
+pub fn cone_cone(
+    a_apex: [f64; 3],
+    a_axis: [f64; 3],
+    a_radius: f64,
+    a_height: f64,
+    b_apex: [f64; 3],
+    b_axis: [f64; 3],
+    b_radius: f64,
+    b_height: f64,
+    options: Options,
+) -> Result<Report<AnalyticSsComponent>> {
+    let options = options.validate()?;
+    let a_dir = normalize(a_axis)?;
+    let b_dir = normalize(b_axis)?;
+    if !(a_radius > 0. && b_radius > 0. && a_height > 0. && b_height > 0.) {
+        return Err(invalid("Cone parameters must be positive and finite"));
+    }
+    if norm(cross(a_dir, b_dir)) > 1e-12 {
+        return Ok(incomplete_report(
+            vec![0., a_height, 0., b_height],
+            UnresolvedReason::UnsupportedSurface,
+        ));
+    }
+    let delta = sub(b_apex, a_apex);
+    let radial = sub(delta, mul(a_dir, dot(delta, a_dir)));
+    let separation = norm(radial);
+    let tol = options.distance_tolerance;
+    let a_extent = a_radius + a_height;
+    let b_extent = b_radius + b_height;
+    if separation > a_extent + b_extent + tol {
+        return Ok(complete_report(vec![AnalyticSsComponent::Empty]));
+    }
+    Ok(incomplete_report(
+        vec![0., a_height, 0., b_height],
+        UnresolvedReason::UnsupportedSurface,
+    ))
+}
+
+/// Torus × torus: Complete empty when bounding spheres are disjoint; else Incomplete.
+pub fn torus_torus(
+    a_center: [f64; 3],
+    a_major: f64,
+    a_minor: f64,
+    b_center: [f64; 3],
+    b_major: f64,
+    b_minor: f64,
+    options: Options,
+) -> Result<Report<AnalyticSsComponent>> {
+    let options = options.validate()?;
+    if !(a_major > a_minor && a_minor > 0. && b_major > b_minor && b_minor > 0.) {
+        return Err(invalid("Torus requires major > minor > 0"));
+    }
+    let d = norm(sub(b_center, a_center));
+    let tol = options.distance_tolerance;
+    if d > a_major + a_minor + b_major + b_minor + tol {
+        return Ok(complete_report(vec![AnalyticSsComponent::Empty]));
+    }
+    Ok(incomplete_report(
+        vec![],
         UnresolvedReason::UnsupportedSurface,
     ))
 }
@@ -534,7 +710,9 @@ pub fn plane_torus(
     if !(major.is_finite() && minor.is_finite() && major > minor && minor > 0.)
         || !center.iter().all(|x| x.is_finite())
     {
-        return Err(invalid("Torus parameters must be finite with major > minor > 0"));
+        return Err(invalid(
+            "Torus parameters must be finite with major > minor > 0",
+        ));
     }
     let cos = dot(plane.normal, axis).abs();
     let tol = options.distance_tolerance;
@@ -550,7 +728,10 @@ pub fn plane_torus(
     if d.abs() > major + minor + tol {
         return Ok(complete_report(vec![AnalyticSsComponent::Empty]));
     }
-    Ok(incomplete_report(vec![], UnresolvedReason::UnsupportedSurface))
+    Ok(incomplete_report(
+        vec![],
+        UnresolvedReason::UnsupportedSurface,
+    ))
 }
 
 #[cfg(test)]
@@ -600,10 +781,7 @@ mod tests {
         .unwrap();
         assert_eq!(report.coverage, Coverage::Complete);
         verify_complete_report(&report, true).unwrap();
-        assert!(matches!(
-            report.components[0],
-            AnalyticSsComponent::Empty
-        ));
+        assert!(matches!(report.components[0], AnalyticSsComponent::Empty));
     }
 
     #[test]
@@ -661,14 +839,7 @@ mod tests {
 
     #[test]
     fn sphere_sphere_transverse_circle_is_complete() {
-        let report = sphere_sphere(
-            [0., 0., 0.],
-            5.,
-            [6., 0., 0.],
-            5.,
-            Options::default(),
-        )
-        .unwrap();
+        let report = sphere_sphere([0., 0., 0.], 5., [6., 0., 0.], 5., Options::default()).unwrap();
         verify_complete_report(&report, false).unwrap();
         match &report.components[0] {
             AnalyticSsComponent::Circle { radius, center, .. } => {

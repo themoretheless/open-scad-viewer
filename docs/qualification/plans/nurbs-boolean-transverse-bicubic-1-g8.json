@@ -1,0 +1,17 @@
+{
+  "schema": "open-scad-viewer/qualification-plan",
+  "schemaVersion": 1,
+  "capability": "nurbs-boolean-bezier-le3/1",
+  "gate": "G8-full",
+  "oracles": [
+    "complete-empty",
+    "planar-transverse-line",
+    "bezier-le3-elevated-transverse",
+    "elevated-cuboid-boolean",
+    "out-of-matrix-refuse"
+  ],
+  "booleanImprint": true,
+  "mutationCi": ["crates/brep-core nurbs_ss_g6::*"],
+  "evidence": "docs/qualification/nurbs-boolean-transverse-bicubic-1-evidence-v1.json",
+  "resetPolicy": "false-Complete freezes Unavailable"
+}

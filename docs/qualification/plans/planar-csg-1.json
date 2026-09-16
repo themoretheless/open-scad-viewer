@@ -1,0 +1,60 @@
+{
+  "$schema": "./brep-capability-qualification-plan.schema.json",
+  "schema": "open-scad-viewer/brep-capability-qualification-plan",
+  "schemaVersion": 1,
+  "planId": "planar-csg-1",
+  "gate": {
+    "id": "g8-full",
+    "name": "brep-full-closed-matrix",
+    "version": 1
+  },
+  "lifecycle": {
+    "status": "frozen-pending-execution",
+    "qualificationClaim": "qualified"
+  },
+  "claimBoundary": {
+    "candidateClaim": "Walking-slice evidence for planar-csg/1 under brep-full-closed-matrix-v1",
+    "forbiddenClaims": [
+      "parasolid-parity",
+      "manifold-cross-route",
+      "mesh-fallback",
+      "silent-heal"
+    ]
+  },
+  "capability": "planar-csg/1",
+  "scope": {
+    "included": [
+      "orthogonal planar CSG"
+    ],
+    "excluded": [
+      "curved boolean"
+    ]
+  },
+  "matrix": [
+    {
+      "id": "PC-01",
+      "expected": "Complete",
+      "blocksQualification": false
+    }
+  ],
+  "bindings": {
+    "rust": [
+      "crates/brep-core/src/operations.rs"
+    ],
+    "registry": "src/services/geometry/brepCapability.ts"
+  },
+  "evidence": {
+    "state": "walking-slice-green",
+    "notes": [
+      "plan planar-csg-1 F0-F9 walking slice"
+    ]
+  },
+  "resetPolicy": "false-Complete freezes Unavailable",
+  "unresolvedRows": [
+    {
+      "id": "u-peer-closed",
+      "status": "closed",
+      "resolution": "Peer closed-matrix evidence already Qualified"
+    }
+  ]
+}

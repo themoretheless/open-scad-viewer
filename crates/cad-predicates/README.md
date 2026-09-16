@@ -1,11 +1,13 @@
-# Candidate native predicate foundation
+# Candidate native predicate foundation (production-candidate)
 
 This crate implements the three predicates in the existing G2a inventory:
-`orient2d`, `orient3d`, and `compare_squared_distance`. It is a candidate
-implementation, not qualification evidence, a closed G2 gate, or a solid
-certificate. It has no runtime dependencies and is not connected to the current
-B-rep, geometry bridge, or WASM dependency closure. Existing numerical geometry
-decisions and their `not_certified` status are unchanged.
+`orient2d`, `orient3d`, and `compare_squared_distance`. Status: **production-candidate**
+for B-rep corroboration via `brep-core::predicate_evidence` (transverse line/plane
+Complete and UV orientation checks). It is not yet a closed G2 qualification gate
+or a solid certificate by itself. It has no runtime dependencies beyond what
+`brep-core` already pulls for evidence bridging. Existing numerical geometry
+decisions and their `not_certified` status are unchanged unless an explicit
+Complete path invokes these predicates.
 
 ## Inputs and identities
 

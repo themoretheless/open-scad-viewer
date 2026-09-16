@@ -1,0 +1,70 @@
+{
+  "$schema": "./brep-capability-qualification-plan.schema.json",
+  "schema": "open-scad-viewer/brep-capability-qualification-plan",
+  "schemaVersion": 1,
+  "planId": "analytic-boolean-1",
+  "matrixHash": "a392bfd447932bc435b1ff2be68c306caad9c637ab2d67ddb314ce1a4bc10fc3",
+  "gate": {
+    "id": "g8-full",
+    "name": "brep-full-closed-matrix",
+    "version": 1
+  },
+  "lifecycle": {
+    "status": "qualified",
+    "qualificationClaim": "qualified"
+  },
+  "claimBoundary": {
+    "candidateClaim": "Full-matrix analytic-boolean/1 under brep-full-closed-matrix-v1",
+    "forbiddenClaims": [
+      "parasolid-parity",
+      "manifold-cross-route",
+      "mesh-fallback",
+      "silent-heal",
+      "prism-authorship-on-curved-boolean-success"
+    ]
+  },
+  "capability": "analytic-boolean/1",
+  "scope": {
+    "included": [
+      "cylinder empty algebra",
+      "exact cylinder wall rational-arc split and closed-shell assembly",
+      "sphere imprint through shared closed-shell assembly",
+      "disjoint cylinder/sphere empty algebra",
+      "disjoint tube/frustum empty algebra"
+    ],
+    "excluded": [
+      "general NURBS boolean",
+      "non-empty tube/frustum contact",
+      "non-empty sphere/cylinder contact",
+      "cone/torus boolean",
+      "parasolid parity"
+    ]
+  },
+  "matrix": [
+    {
+      "id": "AB-F1-F2",
+      "expected": "Complete",
+      "blocksQualification": false
+    }
+  ],
+  "bindings": {
+    "rust": [
+      "crates/brep-core/src/analytic_boolean.rs",
+      "crates/brep-core/src/imprint_pipeline.rs",
+      "crates/brep-core/src/analytic_ss.rs",
+      "crates/brep-core/src/sphere_boolean.rs",
+      "crates/brep-core/src/operations.rs"
+    ],
+    "registry": "src/services/geometry/brepCapability.ts",
+    "evidenceJson": "docs/qualification/analytic-boolean-1-evidence-v1.json"
+  },
+  "evidence": {
+    "state": "qualified",
+    "notes": [
+      "Exact cylinder wall output is volume-oracled for union/difference/intersection",
+      "Curved operands fail closed before every prism/mesh/Manifold route"
+    ]
+  },
+  "resetPolicy": "false-Complete freezes Unavailable",
+  "unresolvedRows": []
+}

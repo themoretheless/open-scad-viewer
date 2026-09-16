@@ -4,7 +4,7 @@
 //! Complete strata before coverage is published.
 
 use cad_predicates::{
-    AuthoredScalar, Outcome, PredicateContext, Sign, SourceArena, ToleranceContext, Limits,
+    AuthoredScalar, Limits, Outcome, PredicateContext, Sign, SourceArena, ToleranceContext,
     orient3d,
 };
 use nurbs_core::{Error, Result};
@@ -43,11 +43,11 @@ fn plane_frame(plane: Plane) -> Result<[[f64; 3]; 3]> {
         plane.normal[2] * u[0] - plane.normal[0] * u[2],
         plane.normal[0] * u[1] - plane.normal[1] * u[0],
     ];
-    Ok([origin, [origin[0] + u[0], origin[1] + u[1], origin[2] + u[2]], [
-        origin[0] + v[0],
-        origin[1] + v[1],
-        origin[2] + v[2],
-    ]])
+    Ok([
+        origin,
+        [origin[0] + u[0], origin[1] + u[1], origin[2] + u[2]],
+        [origin[0] + v[0], origin[1] + v[1], origin[2] + v[2]],
+    ])
 }
 
 fn sign_of(decision: &cad_predicates::Decision) -> Result<Sign> {
@@ -92,12 +92,14 @@ pub fn require_transverse_line_plane_evidence(
     let c = triple(6)?;
     let start_pt = triple(9)?;
     let end_pt = triple(12)?;
-    let s0 = sign_of(&orient3d(&mut ctx, a, b, c, start_pt).map_err(|_| {
-        refuse("orient3d failed for line start halfspace")
-    })?)?;
-    let s1 = sign_of(&orient3d(&mut ctx, a, b, c, end_pt).map_err(|_| {
-        refuse("orient3d failed for line end halfspace")
-    })?)?;
+    let s0 = sign_of(
+        &orient3d(&mut ctx, a, b, c, start_pt)
+            .map_err(|_| refuse("orient3d failed for line start halfspace"))?,
+    )?;
+    let s1 = sign_of(
+        &orient3d(&mut ctx, a, b, c, end_pt)
+            .map_err(|_| refuse("orient3d failed for line end halfspace"))?,
+    )?;
     if s0 == Sign::Zero || s1 == Sign::Zero {
         return Err(refuse(
             "Endpoint lies on supporting plane in predicate arithmetic; not transverse",
@@ -109,6 +111,42 @@ pub fn require_transverse_line_plane_evidence(
         ));
     }
     Ok("cad_predicates_orient3d_opposite_halfspaces")
+}
+
+/// Corroborate that three authored points form a positively oriented triangle (2D lift).
+pub fn require_positive_orient2d_evidence(
+    a: [f64; 2],
+    b: [f64; 2],
+    c: [f64; 2],
+) -> Result<&'static str> {
+    use cad_predicates::orient2d;
+    let mut values = Vec::with_capacity(6);
+    for p in [a, b, c] {
+        values.extend(p.into_iter().map(bits));
+    }
+    let arena = SourceArena::authored("brep-predicate-orient2d", 1, values)
+        .map_err(|_| refuse("Failed to admit authored 2D coordinates"))?;
+    let tolerance = ToleranceContext::default_valid();
+    let mut ctx = PredicateContext::new(&arena, &tolerance, Limits::default(), None);
+    let leaf = |i: usize| {
+        arena
+            .leaf(i)
+            .map_err(|_| refuse("Missing authored leaf for orient2d"))
+    };
+    let decision = orient2d(
+        &mut ctx,
+        [leaf(0)?, leaf(1)?],
+        [leaf(2)?, leaf(3)?],
+        [leaf(4)?, leaf(5)?],
+    )
+    .map_err(|_| refuse("orient2d failed"))?;
+    match sign_of(&decision)? {
+        Sign::Positive => Ok("cad_predicates_orient2d_positive"),
+        Sign::Negative => Err(refuse(
+            "Triangle orientation is clockwise; refuse positive evidence",
+        )),
+        Sign::Zero => Err(refuse("Collinear triangle; refuse orient2d evidence")),
+    }
 }
 
 #[cfg(test)]
@@ -143,5 +181,12 @@ mod tests {
             )
             .is_err()
         );
+    }
+
+    #[test]
+    fn positive_orient2d_evidence() {
+        let note = require_positive_orient2d_evidence([0., 0.], [1., 0.], [0., 1.]).unwrap();
+        assert!(note.contains("orient2d"));
+        assert!(require_positive_orient2d_evidence([0., 0.], [0., 1.], [1., 0.]).is_err());
     }
 }

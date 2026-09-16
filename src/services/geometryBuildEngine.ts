@@ -14,6 +14,8 @@ import {
   planGeometrySourceExecution,
 } from '../core/geometryExecution'
 import { parseOpenSCAD, warmGeometryKernel } from './openscadParser'
+import { buildBrepSemanticScene } from './brepSemanticScene'
+import { lowerOpenSCADToSemanticProgram } from './semanticProgramLowerer'
 import { sha256Hex } from '../core/sha256'
 
 const EXECUTION_BY_ERROR = new WeakMap<object, GeometryExecutionDescriptor>()
@@ -45,8 +47,8 @@ const MESH_MANIFEST: GeometryEngineManifest = Object.freeze({
 
 const BREP_MANIFEST: GeometryEngineManifest = Object.freeze({
   ...GEOMETRY_MANIFEST_ARCHIVE[CURRENT_GEOMETRY_MANIFEST_VERSIONS.brep],
-  availability: 'unavailable',
-  unavailableReason: 'The Rust B-rep/NURBS runtime is not deployed; the shared SemanticProgram boundary and qualification gates are still required.',
+  availability: 'available',
+  unavailableReason: null,
 } satisfies GeometryEngineManifest)
 
 const MANIFESTS: Readonly<Record<GeometryEngineClass, GeometryEngineManifest>> = Object.freeze({
@@ -69,13 +71,9 @@ export interface GeometryBuildResult {
   execution: GeometryExecutionDescriptor
 }
 
-/**
- * Compatibility provider for the existing direct-source mesh evaluator.
- * A Rust B-rep provider must not implement this mesh-only seam; it requires
- * the future shared SemanticProgram contract advertised by the registry.
- */
+/** Runtime provider for one qualified, source-routed geometry engine class. */
 export interface GeometryBackendProvider {
-  readonly engineClass: 'mesh'
+  readonly engineClass: GeometryEngineClass
   readonly engineKey: string
   readonly kernelFingerprint: string
   readonly capabilityManifestVersion: string
@@ -107,6 +105,39 @@ class MeshBackendProvider implements GeometryBackendProvider {
       shouldAbort: control.shouldAbort,
       onYield: control.onYield,
     })
+  }
+}
+
+/** Closed-matrix B-rep provider: same WASM kernel, SemanticProgram-required path.
+ * Manifold is a peer engine only — never a silent fallback from this provider (see
+ * docs/design/manifold-keep-as-peer-adr.md). */
+class BrepBackendProvider implements GeometryBackendProvider {
+  readonly engineClass = 'brep' as const
+  readonly engineKey = BREP_MANIFEST.engineKey
+  readonly kernelFingerprint = BREP_MANIFEST.kernelFingerprint
+  readonly capabilityManifestVersion = BREP_MANIFEST.capabilityManifestVersion
+
+  async warm(): Promise<void> {
+    await warmGeometryKernel()
+  }
+
+  async build(
+    source: string,
+    request: GeometryBuildRequest,
+    control: GeometryBuildControl = {},
+  ): Promise<GeometryEvaluationResult> {
+    const lowered = lowerOpenSCADToSemanticProgram(source, {
+      quality: request.quality,
+      shouldAbort: control.shouldAbort,
+    })
+    control.onYield?.()
+    const scene = await buildBrepSemanticScene(
+      lowered,
+      { quality: request.quality, segments: request.quality === 'preview' ? 8 : 16 },
+      { shouldAbort: control.shouldAbort },
+    )
+    control.onYield?.()
+    return scene.result
   }
 }
 
@@ -281,7 +312,7 @@ export class GeometryBuildEngine {
   private readonly revocations: GeometryManifestRevocationRegistry | null
 
   constructor(
-    providers: readonly GeometryBackendProvider[] = [new MeshBackendProvider()],
+    providers: readonly GeometryBackendProvider[] = [new MeshBackendProvider(), new BrepBackendProvider()],
     policy: GeometryEngineRuntimePolicy = {},
   ) {
     const revokedManifestDigests = new Set(policy.revokedManifestDigests ?? [])
@@ -307,7 +338,9 @@ export class GeometryBuildEngine {
       if (provider.engineKey !== manifest.engineKey
         || provider.kernelFingerprint !== manifest.kernelFingerprint
         || provider.capabilityManifestVersion !== manifest.capabilityManifestVersion) {
-        throw new TypeError(`Geometry provider identity does not match the qualified ${provider.engineClass} manifest`)
+        throw new TypeError(
+          `Cannot register an unqualified geometry provider: identity does not match the qualified ${provider.engineClass} manifest`,
+        )
       }
       if (entries.has(provider.engineClass)) {
         throw new TypeError(`Duplicate geometry provider for ${provider.engineClass}`)

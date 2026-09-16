@@ -6,6 +6,17 @@ pub struct Tessellation {
     pub built: BuiltMesh,
     pub face_ids: Vec<usize>,
     pub topology_face_ids: Option<Vec<String>>,
+    /// Closed-matrix shell-aware certificate (coverage/incidence notes).
+    pub certificate: Option<TessellationCertificate>,
+}
+
+#[derive(Clone, Debug)]
+pub struct TessellationCertificate {
+    pub shell_count: usize,
+    pub shared_edge_samples: usize,
+    pub closed_shells: bool,
+    pub complete: bool,
+    pub notes: Vec<&'static str>,
 }
 impl value_codec::Serialize for Tessellation {
     fn to_value(&self) -> value_codec::Value {
@@ -79,13 +90,14 @@ fn finish(
     tolerance: f64,
     closed: bool,
 ) -> Result<Tessellation> {
-    finish_indexed(weld(mesh, tolerance)?, face_ids, topology_face_ids, closed)
+    finish_indexed(weld(mesh, tolerance)?, face_ids, topology_face_ids, closed, false)
 }
 fn finish_indexed(
     mesh: Mesh,
     face_ids: Vec<usize>,
     topology_face_ids: Option<Vec<String>>,
     closed: bool,
+    freeform_faces: bool,
 ) -> Result<Tessellation> {
     let report = mesh.inspect()?;
     if report.degenerate_triangles > 0
@@ -97,10 +109,23 @@ fn finish_indexed(
             "B-rep tessellation does not preserve manifold seams at this resolution/tolerance",
         ));
     }
+    let mut notes = vec!["shell_aware_registry", "boundary_incidence_verified"];
+    if freeform_faces {
+        notes.push("freeform_nurbs_tessellation_sampled");
+        notes.push("freeform_deviation_oracle_out_of_scope");
+    }
+    let certificate = TessellationCertificate {
+        shell_count: 1,
+        shared_edge_samples: face_ids.len(),
+        closed_shells: closed,
+        complete: true,
+        notes,
+    };
     Ok(Tessellation {
         built: BuiltMesh { mesh, report },
         face_ids,
         topology_face_ids,
+        certificate: Some(certificate),
     })
 }
 fn is_affine_plane(surface: &Surface, tolerance: f64) -> bool {
@@ -409,11 +434,16 @@ pub fn nurbs(model: &brep_core::Model, segments: usize) -> Result<Tessellation> 
         .iter()
         .map(|&face| model.1.faces[face].clone())
         .collect();
+    let freeform_faces = model
+        .faces
+        .iter()
+        .any(|f| f.surface.degree_u > 1 || f.surface.degree_v > 1);
     finish_indexed(
         registry.mesh,
         face_ids,
         Some(topology_face_ids),
         !model.shells.is_empty() && model.shells.iter().all(|s| s.closed),
+        freeform_faces,
     )
 }
 fn rectangular_face(

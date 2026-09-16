@@ -1,0 +1,76 @@
+{
+  "$schema": "./brep-capability-qualification-plan.schema.json",
+  "schema": "open-scad-viewer/brep-capability-qualification-plan",
+  "schemaVersion": 1,
+  "planId": "nurbs-boolean-transverse-bicubic-1",
+  "gate": {
+    "id": "g8-full",
+    "name": "brep-full-closed-matrix",
+    "version": 1
+  },
+  "lifecycle": {
+    "status": "frozen-executed",
+    "qualificationClaim": "bezier-le3-complete-empty-line-curve-boolean-imprint"
+  },
+  "claimBoundary": {
+    "candidateClaim": "Phase B NURBS Boolean imprint (bezier-le3 elevated to bicubic) under brep-full-closed-matrix-v1; capability nurbs-boolean-bezier-le3/1",
+    "forbiddenClaims": [
+      "parasolid-parity",
+      "manifold-cross-route",
+      "mesh-fallback",
+      "silent-heal"
+    ]
+  },
+  "capability": "nurbs-boolean-bezier-le3/1",
+  "scope": {
+    "included": [
+      "Bezier deg≤3 planar transverse Boolean imprint certificate",
+      "certified non-planar constant-parameter iso-curve imprint certificate",
+      "elevated planar bilinear and mixed-degree le3 admission",
+      "solid union/difference/intersection for disjoint, containment, or Complete curve",
+      "all solid faces must be inside the bezier-le3 cell"
+    ],
+    "excluded": [
+      "general NURBS boolean beyond bezier-le3 finite cell",
+      "rational weights",
+      "degree > 3",
+      "parasolid-parity"
+    ]
+  },
+  "matrix": [
+    {
+      "id": "NB-01",
+      "expected": "Complete",
+      "blocksQualification": true
+    },
+    {
+      "id": "EP-03",
+      "expected": "Complete",
+      "blocksQualification": true
+    },
+    {
+      "id": "NB-N1",
+      "expected": "typed-refuse",
+      "blocksQualification": true
+    }
+  ],
+  "bindings": {
+    "rust": [
+      "crates/brep-core/src/nurbs_ss_g6.rs"
+    ],
+    "registry": "src/services/geometry/brepCapability.ts",
+    "evidenceJson": "docs/qualification/nurbs-boolean-transverse-bicubic-1-evidence-v1.json"
+  },
+  "evidence": {
+    "state": "r11-walking-slice-green",
+    "notes": [
+      "elevated_planar_admission",
+      "nonplanar_curve_certificate",
+      "union_difference_intersection",
+      "any_out_of_matrix_face_refuses",
+      "topology_change_permitted_on_complete_imprint"
+    ]
+  },
+  "resetPolicy": "false-Complete freezes Unavailable",
+  "unresolvedRows": []
+}

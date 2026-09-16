@@ -46,8 +46,8 @@
 use super::plane_cone::{CanonicalCone, recognize_cone};
 use super::sphere_cylinder::CylinderPatchCurve;
 use super::sphere_sphere::{
-    self, ARC_WEIGHT, CanonicalSphere, RECOGNITION, SpherePatchCircle, circle_arcs,
-    circle_curve, lift,
+    self, ARC_WEIGHT, CanonicalSphere, RECOGNITION, SpherePatchCircle, circle_arcs, circle_curve,
+    lift,
 };
 use super::*;
 use crate::Model;
@@ -146,9 +146,7 @@ fn circle_component(
                 let rel = sub(point, cone.bottom);
                 let a = dot(rel, cone.axis);
                 let perp = sub(rel, cone.axis.map(|x| x * a));
-                (perp[0].hypot(perp[1]).hypot(perp[2])
-                    - (cone.r_bottom + cone.slope * a))
-                    .abs()
+                (perp[0].hypot(perp[1]).hypot(perp[2]) - (cone.r_bottom + cone.slope * a)).abs()
             }
             CircleSite::Cap(..) => (dot(sub(point, cone.bottom), cone.axis) - axial).abs(),
         };
@@ -198,8 +196,7 @@ pub fn intersect_sphere_cone(
         let scaled = perp.map(|x| x / pscale);
         scaled[0].hypot(scaled[1]).hypot(scaled[2]) * pscale
     };
-    let terms =
-        s0.abs() + cone.height + sphere.radius + cone.r_bottom + cone.r_top + 1.;
+    let terms = s0.abs() + cone.height + sphere.radius + cone.r_bottom + cone.r_top + 1.;
     // Outward binary64 classification band: both recognition deviations plus
     // a rounding allowance on the axial coordinates and radii.
     let band = sphere.error + cone.error + 16. * f64::EPSILON * terms;
@@ -208,8 +205,7 @@ pub fn intersect_sphere_cone(
     // larger is the unsupported general (quartic) configuration.
     let snap = 64. * f64::EPSILON * terms;
     if d_perp > snap {
-        let near =
-            RECOGNITION * (sphere.radius + cone.r_bottom + cone.r_top + cone.height);
+        let near = RECOGNITION * (sphere.radius + cone.r_bottom + cone.r_top + cone.height);
         let reason = if d_perp <= near {
             UnresolvedReason::NearCoincidence
         } else {
@@ -312,7 +308,9 @@ pub fn intersect_sphere_cone(
     }
     found.sort_by(|a, b| a.0.total_cmp(&b.0));
     for (axial, site) in found {
-        report.components.push(circle_component(&sphere, &cone, axial, site)?);
+        report
+            .components
+            .push(circle_component(&sphere, &cone, axial, site)?);
     }
     Ok(report)
 }
@@ -375,7 +373,9 @@ mod tests {
         report
     }
     #[allow(clippy::type_complexity)]
-    fn circle_of(component: &SphereConeComponent) -> (
+    fn circle_of(
+        component: &SphereConeComponent,
+    ) -> (
         &Curve,
         [f64; 3],
         f64,
@@ -471,18 +471,25 @@ mod tests {
         for (component, qi) in report.components.iter().zip([q(-1.), q(1.)]) {
             let z = 3. + qi;
             let rho = 1. + z / 3.;
-            let (curve, center, radius, normal, sphere_uv, cone_uv, sampled) =
-                circle_of(component);
+            let (curve, center, radius, normal, sphere_uv, cone_uv, sampled) = circle_of(component);
             assert!((radius - rho).abs() <= 1e-12, "{radius}");
-            assert!(sub(center, [0., 0., z]).iter().all(|x| x.abs() <= 1e-12), "{center:?}");
+            assert!(
+                sub(center, [0., 0., z]).iter().all(|x| x.abs() <= 1e-12),
+                "{center:?}"
+            );
             assert!(normal[2].abs() >= 1. - 1e-12, "{normal:?}");
             // Exact rational circle: four 90-degree arcs, weights cos(pi/4).
             assert_eq!(curve.degree, 2);
-            assert_eq!(curve.knots, vec![0., 0., 0., 1., 1., 2., 2., 3., 3., 4., 4., 4.]);
+            assert_eq!(
+                curve.knots,
+                vec![0., 0., 0., 1., 1., 2., 2., 3., 3., 4., 4., 4.]
+            );
             assert_eq!(curve.control_points.len(), 9);
             assert_eq!(
                 curve.weights,
-                vec![1., ARC_WEIGHT, 1., ARC_WEIGHT, 1., ARC_WEIGHT, 1., ARC_WEIGHT, 1.]
+                vec![
+                    1., ARC_WEIGHT, 1., ARC_WEIGHT, 1., ARC_WEIGHT, 1., ARC_WEIGHT, 1.
+                ]
             );
             // Sixteen samples satisfy both implicit equations.
             let mut worst = 0_f64;
@@ -505,15 +512,9 @@ mod tests {
                 assert!((arc.control_points[1][1] - z / 6.).abs() <= 1e-12);
             }
             assert!(!sphere_uv.is_empty());
-            let uv_worst = uv_samples(
-                &sphere,
-                &cone,
-                [0., 0., 3.],
-                2.,
-                sphere_uv,
-                cone_uv,
-                |p| side_residual_z(p, 1., 1. / 3.),
-            );
+            let uv_worst = uv_samples(&sphere, &cone, [0., 0., 3.], 2., sphere_uv, cone_uv, |p| {
+                side_residual_z(p, 1., 1. / 3.)
+            });
             assert!(uv_worst <= 1e-9, "{uv_worst}");
         }
     }
@@ -529,10 +530,12 @@ mod tests {
         let cone = crate::analytic::frustum(2., 4., 6.).unwrap();
         let report = intersect_sphere_cone(&sphere, &cone, Options::default()).unwrap();
         let report = only_circles(&report, 1);
-        let (curve, center, radius, _, _, cone_uv, sampled) =
-            circle_of(&report.components[0]);
+        let (curve, center, radius, _, _, cone_uv, sampled) = circle_of(&report.components[0]);
         assert!((radius - 2.4).abs() <= 1e-12, "{radius}");
-        assert!(sub(center, [0., 0., 1.2]).iter().all(|x| x.abs() <= 1e-12), "{center:?}");
+        assert!(
+            sub(center, [0., 0., 1.2]).iter().all(|x| x.abs() <= 1e-12),
+            "{center:?}"
+        );
         let mut worst = 0_f64;
         for i in 0..16 {
             let p = curve.evaluate(i as f64 / 4.).unwrap().point;
@@ -560,7 +563,10 @@ mod tests {
             circle_of(&report.components[0]);
         let oracle = 2_f64.sqrt();
         assert!((radius - oracle).abs() <= 1e-12, "{radius}");
-        assert!(sub(center, [0., 0., 6.]).iter().all(|x| x.abs() <= 1e-12), "{center:?}");
+        assert!(
+            sub(center, [0., 0., 6.]).iter().all(|x| x.abs() <= 1e-12),
+            "{center:?}"
+        );
         let mut worst = 0_f64;
         for i in 0..16 {
             let p = curve.evaluate(i as f64 / 4.).unwrap().point;
@@ -635,7 +641,10 @@ mod tests {
         let swallow = translated(&crate::analytic::sphere(20.).unwrap(), [0., 0., 3.]);
         for sphere in [&inside, &beyond, &swallow] {
             let report = intersect_sphere_cone(sphere, &cone, Options::default()).unwrap();
-            assert!(report.components.is_empty() && report.unresolved.is_empty(), "{report:?}");
+            assert!(
+                report.components.is_empty() && report.unresolved.is_empty(),
+                "{report:?}"
+            );
             assert_eq!(report.coverage, Coverage::NumericallyResolved);
         }
     }
@@ -651,7 +660,10 @@ mod tests {
             let report = intersect_sphere_cone(&sphere, &cone, Options::default()).unwrap();
             assert!(report.components.is_empty(), "{report:?}");
             assert_eq!(report.coverage, Coverage::Incomplete);
-            assert_eq!(report.unresolved[0].reason, UnresolvedReason::TangencyOrMultipleRoot);
+            assert_eq!(
+                report.unresolved[0].reason,
+                UnresolvedReason::TangencyOrMultipleRoot
+            );
             assert!(!report.permits_topology_change());
         }
         // Just clear of the band on the outside: provable miss, resolved.
@@ -660,7 +672,10 @@ mod tests {
             [0., 0., 3.],
         );
         let report = intersect_sphere_cone(&clear, &cone, Options::default()).unwrap();
-        assert!(report.components.is_empty() && report.unresolved.is_empty(), "{report:?}");
+        assert!(
+            report.components.is_empty() && report.unresolved.is_empty(),
+            "{report:?}"
+        );
         // Just across: two small transverse side circles around the foot
         // t = 3 - 0.6 = 2.4.
         let across = translated(
@@ -681,7 +696,10 @@ mod tests {
         let report = intersect_sphere_cone(&sphere, &cone, Options::default()).unwrap();
         assert!(report.components.is_empty(), "{report:?}");
         assert_eq!(report.coverage, Coverage::Incomplete);
-        assert_eq!(report.unresolved[0].reason, UnresolvedReason::TangencyOrMultipleRoot);
+        assert_eq!(
+            report.unresolved[0].reason,
+            UnresolvedReason::TangencyOrMultipleRoot
+        );
     }
 
     #[test]
@@ -695,14 +713,20 @@ mod tests {
         let sphere = translated(&crate::analytic::sphere(2.).unwrap(), [0., 0., 2.]);
         let report = intersect_sphere_cone(&sphere, &cone, Options::default()).unwrap();
         assert_eq!(report.coverage, Coverage::Incomplete);
-        assert_eq!(report.unresolved[0].reason, UnresolvedReason::TangencyOrMultipleRoot);
+        assert_eq!(
+            report.unresolved[0].reason,
+            UnresolvedReason::TangencyOrMultipleRoot
+        );
         assert_eq!(report.components.len(), 1, "{report:?}");
         let (_, center, radius, _, _, cone_uv, sampled) = circle_of(&report.components[0]);
         // Oracle: rho_c = 6/5, roots q = (-18/25 +- 2) * 25/34; the in-range
         // root is q = 32/34 = 16/17, t = 50/17, rho = 3 * 10/17 = 30/17.
         let t = 50. / 17.;
         assert!((radius - 30. / 17.).abs() <= 1e-12, "{radius}");
-        assert!(sub(center, [0., 0., t]).iter().all(|x| x.abs() <= 1e-12), "{center:?}");
+        assert!(
+            sub(center, [0., 0., t]).iter().all(|x| x.abs() <= 1e-12),
+            "{center:?}"
+        );
         assert!(sampled <= 1e-12);
         assert_eq!(cone_uv.len(), 4);
         // Sphere centered at the apex height cutting the side transversally
@@ -720,11 +744,17 @@ mod tests {
         let report = intersect_sphere_cone(&sphere, &cone, Options::default()).unwrap();
         assert!(report.components.is_empty(), "{report:?}");
         assert_eq!(report.coverage, Coverage::Incomplete);
-        assert_eq!(report.unresolved[0].reason, UnresolvedReason::TangencyOrMultipleRoot);
+        assert_eq!(
+            report.unresolved[0].reason,
+            UnresolvedReason::TangencyOrMultipleRoot
+        );
         // Just clear of the band: strictly inside, empty and resolved.
         let clear = translated(&crate::analytic::sphere(1.5).unwrap(), [0., 0., 4.5 - 1e-9]);
         let report = intersect_sphere_cone(&clear, &cone, Options::default()).unwrap();
-        assert!(report.components.is_empty() && report.unresolved.is_empty(), "{report:?}");
+        assert!(
+            report.components.is_empty() && report.unresolved.is_empty(),
+            "{report:?}"
+        );
         // Just across: a small transverse cap circle.
         let across = translated(&crate::analytic::sphere(1.5).unwrap(), [0., 0., 4.5 + 1e-9]);
         let report = intersect_sphere_cone(&across, &cone, Options::default()).unwrap();
@@ -738,7 +768,10 @@ mod tests {
         let report = intersect_sphere_cone(&sphere, &cone, Options::default()).unwrap();
         assert!(report.components.is_empty(), "{report:?}");
         assert_eq!(report.coverage, Coverage::Incomplete);
-        assert_eq!(report.unresolved[0].reason, UnresolvedReason::NearCoincidence);
+        assert_eq!(
+            report.unresolved[0].reason,
+            UnresolvedReason::NearCoincidence
+        );
     }
 
     #[test]
@@ -749,8 +782,14 @@ mod tests {
         assert!(report.components.is_empty(), "{report:?}");
         assert_eq!(report.coverage, Coverage::Incomplete);
         assert_eq!(report.unresolved.len(), 1);
-        assert_eq!(report.unresolved[0].reason, UnresolvedReason::UnsupportedSurface);
-        assert_eq!(report.unresolved[0].parameter_box, vec![0., 1., 0., 1., 0., 1., 0., 1.]);
+        assert_eq!(
+            report.unresolved[0].reason,
+            UnresolvedReason::UnsupportedSurface
+        );
+        assert_eq!(
+            report.unresolved[0].parameter_box,
+            vec![0., 1., 0., 1., 0., 1., 0., 1.]
+        );
     }
 
     #[test]
@@ -761,17 +800,35 @@ mod tests {
         // and tubes, cuboids and tori are neither canonical operand; swapped
         // operand order is refused by the fixed order.
         for (a, b) in [
-            (crate::analytic::sphere(2.).unwrap(), crate::analytic::cylinder(1., 3.).unwrap()),
-            (crate::analytic::sphere(2.).unwrap(), crate::analytic::tube(2., 1., 3.).unwrap()),
-            (crate::cuboid([0., 0., 0.], [1., 1., 1.]).unwrap(), crate::analytic::frustum(1., 2., 3.).unwrap()),
-            (crate::analytic::torus(3., 1.).unwrap(), crate::analytic::frustum(1., 2., 3.).unwrap()),
-            (crate::analytic::frustum(1., 2., 3.).unwrap(), crate::analytic::sphere(2.).unwrap()),
+            (
+                crate::analytic::sphere(2.).unwrap(),
+                crate::analytic::cylinder(1., 3.).unwrap(),
+            ),
+            (
+                crate::analytic::sphere(2.).unwrap(),
+                crate::analytic::tube(2., 1., 3.).unwrap(),
+            ),
+            (
+                crate::cuboid([0., 0., 0.], [1., 1., 1.]).unwrap(),
+                crate::analytic::frustum(1., 2., 3.).unwrap(),
+            ),
+            (
+                crate::analytic::torus(3., 1.).unwrap(),
+                crate::analytic::frustum(1., 2., 3.).unwrap(),
+            ),
+            (
+                crate::analytic::frustum(1., 2., 3.).unwrap(),
+                crate::analytic::sphere(2.).unwrap(),
+            ),
         ] {
             let report = intersect_sphere_cone(&a, &b, Options::default()).unwrap();
             assert!(report.components.is_empty(), "{report:?}");
             assert_eq!(report.coverage, Coverage::Incomplete);
             assert_eq!(report.unresolved.len(), 1);
-            assert_eq!(report.unresolved[0].reason, UnresolvedReason::UnsupportedSurface);
+            assert_eq!(
+                report.unresolved[0].reason,
+                UnresolvedReason::UnsupportedSurface
+            );
         }
         // A canonical pair still resolves: sphere r=1.5 at z=1 against the
         // frustum r 1 -> 2 over z 0..3 crosses the side once (the other root
@@ -797,8 +854,11 @@ mod tests {
             angle,
             offset,
         );
-        let cone =
-            rotated_translated(&crate::analytic::frustum(1., 3., 6.).unwrap(), angle, offset);
+        let cone = rotated_translated(
+            &crate::analytic::frustum(1., 3., 6.).unwrap(),
+            angle,
+            offset,
+        );
         let report = intersect_sphere_cone(&sphere, &cone, Options::default()).unwrap();
         let report = only_circles(&report, 2);
         // Independent binary64 oracle in the placed frame.
@@ -820,12 +880,17 @@ mod tests {
         for (component, qi) in report.components.iter().zip([q(-1.), q(1.)]) {
             let z = 3. + qi;
             let rho = 1. + z / 3.;
-            let (curve, center, radius, normal, sphere_uv, cone_uv, sampled) =
-                circle_of(component);
+            let (curve, center, radius, normal, sphere_uv, cone_uv, sampled) = circle_of(component);
             let expected = placed([0., 0., z]);
             assert!((radius - rho).abs() <= 1e-12, "{radius}");
-            assert!(sub(center, expected).iter().all(|x| x.abs() <= 1e-12), "{center:?}");
-            assert!(sub(normal, axis).iter().all(|x| x.abs() <= 1e-12), "{normal:?}");
+            assert!(
+                sub(center, expected).iter().all(|x| x.abs() <= 1e-12),
+                "{center:?}"
+            );
+            assert!(
+                sub(normal, axis).iter().all(|x| x.abs() <= 1e-12),
+                "{normal:?}"
+            );
             let mut worst = 0_f64;
             for i in 0..16 {
                 let p = curve.evaluate(i as f64 / 4.).unwrap().point;
@@ -842,20 +907,12 @@ mod tests {
             assert_eq!(cone_uv.len(), 4);
             assert!(!sphere_uv.is_empty());
             let axis = normal;
-            let uv_worst = uv_samples(
-                &sphere,
-                &cone,
-                sphere_center,
-                2.,
-                sphere_uv,
-                cone_uv,
-                |p| {
-                    let rel = sub(p, placed([0., 0., 0.]));
-                    let a = dot(rel, axis);
-                    let perp = sub(rel, axis.map(|x| x * a));
-                    (perp[0].hypot(perp[1]).hypot(perp[2]) - (1. + a / 3.)).abs()
-                },
-            );
+            let uv_worst = uv_samples(&sphere, &cone, sphere_center, 2., sphere_uv, cone_uv, |p| {
+                let rel = sub(p, placed([0., 0., 0.]));
+                let a = dot(rel, axis);
+                let perp = sub(rel, axis.map(|x| x * a));
+                (perp[0].hypot(perp[1]).hypot(perp[2]) - (1. + a / 3.)).abs()
+            });
             assert!(uv_worst <= 1e-9, "{uv_worst}");
         }
     }

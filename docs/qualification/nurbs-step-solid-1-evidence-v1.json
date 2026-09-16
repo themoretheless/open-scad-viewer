@@ -1,0 +1,26 @@
+{
+  "capability": "nurbs-step-solid/1",
+  "maturity": "AnalyticComplete",
+  "planId": "nurbs-step-solid-1-evidence-v1",
+  "seedPlan": "docs/qualification/plans/nurbs-step-solid-1.json",
+  "positiveCorpus": [
+    "NSS-01-freeform-cuboid-topology-roundtrip",
+    "NSS-02-bump-face-roundtrip",
+    "NSS-03-boolean-difference-step-roundtrip"
+  ],
+  "negativeCorpus": [
+    "unlinked-closed-shell-face-refuse",
+    "missing-b-spline-surface-refuse",
+    "non-bezier-le3-face-refuse"
+  ],
+  "bindings": {
+    "rust": [
+      "crates/brep-core/src/nurbs_step_solid.rs",
+      "crates/geometry-bridge/src/lib.rs"
+    ],
+    "typescript": ["src/services/cadNurbsStep.ts", "tests/cadNurbsStep.test.ts"]
+  },
+  "booleanImprint": false,
+  "permitsTopologyChange": false,
+  "resetPolicy": "false-Complete freezes Unavailable / stop"
+}

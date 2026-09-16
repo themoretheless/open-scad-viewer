@@ -20,11 +20,11 @@
 //! circles tangent to a patch boundary, coincident crossings of both spheres'
 //! patch boundaries, and patch-interior caps on BOTH spheres (no patch
 //! crossing exists to anchor the imprint segmentation).
+use crate::intersections::Options;
 use crate::intersections::sphere_sphere::{
     self, CanonicalSphere, PatchUvSection, SphereSphereComponent,
 };
-use crate::intersections::Options;
-use crate::{Body, Coedge, Edge, Face, FaceUse, Loop, Model, Shell, TopologyIds, Vertex};
+use crate::{Coedge, Edge, Face, FaceUse, Loop, Model, Vertex};
 use nurbs_core::{Error, Result, curve::Curve};
 use std::collections::BTreeMap;
 
@@ -63,8 +63,7 @@ pub(crate) fn boolean(a: &Model, b: &Model, operation: &str) -> Result<Option<Mo
     if !matches!(operation, "union" | "difference" | "intersection") {
         return Ok(None);
     }
-    let (Some(sa), Some(sb)) = (sphere_sphere::recognize(a)?, sphere_sphere::recognize(b)?)
-    else {
+    let (Some(sa), Some(sb)) = (sphere_sphere::recognize(a)?, sphere_sphere::recognize(b)?) else {
         return Ok(None);
     };
     let report = sphere_sphere::intersect_sphere_sphere(a, b, Options::default())?;
@@ -80,13 +79,15 @@ pub(crate) fn boolean(a: &Model, b: &Model, operation: &str) -> Result<Option<Mo
         [] => Ok(Some(separated_or_contained(
             a, b, operation, &sa, &sb, tolerance,
         )?)),
-        [SphereSphereComponent::Circle {
-            curve,
-            center,
-            radius,
-            normal,
-            ..
-        }] => Ok(Some(Imprint::run(
+        [
+            SphereSphereComponent::Circle {
+                curve,
+                center,
+                radius,
+                normal,
+                ..
+            },
+        ] => Ok(Some(Imprint::run(
             a, b, operation, sa, sb, curve, *center, *radius, *normal, tolerance,
         )?)),
         _ => Err(unsupported(
@@ -152,44 +153,7 @@ fn separated_or_contained(
 /// Strict containment difference: outer body with the inner sphere's boundary
 /// as an inverted cavity shell.
 fn cavity(outer: &Model, inner: &Model, tolerance: f64) -> Result<Model> {
-    let mut result = outer.clone();
-    result.tolerance_mm = tolerance;
-    let (v, e, l, f, s) = (
-        outer.vertices.len(),
-        outer.edges.len(),
-        outer.loops.len(),
-        outer.faces.len(),
-        outer.shells.len(),
-    );
-    result.vertices.extend(inner.vertices.iter().cloned());
-    result.edges.extend(inner.edges.iter().cloned().map(|mut edge| {
-        edge.vertices.iter_mut().for_each(|id| *id += v);
-        edge
-    }));
-    result.loops.extend(inner.loops.iter().cloned().map(|mut wire| {
-        wire.coedges.iter_mut().for_each(|use_| use_.edge += e);
-        wire
-    }));
-    result.faces.extend(inner.faces.iter().cloned().map(|mut face| {
-        face.outer += l;
-        face.holes.iter_mut().for_each(|id| *id += l);
-        face
-    }));
-    result.shells.push(Shell {
-        faces: inner.shells[0]
-            .faces
-            .iter()
-            .map(|use_| FaceUse {
-                face: use_.face + f,
-                reversed: !use_.reversed,
-            })
-            .collect(),
-        closed: true,
-    });
-    result.bodies[0].inner_shells.push(s);
-    result.inherit_topology_ids(&[outer, inner]);
-    result.validate()?;
-    Ok(result)
+    crate::imprint_pipeline::cavity(outer, inner, tolerance)
 }
 
 /// One sphere's recognized structure plus its section data.
@@ -433,7 +397,10 @@ impl<'m> Imprint<'m> {
         let band = canons[0].error + canons[1].error + 1e-9 * scale + 64. * f64::EPSILON * scale;
         let mut imprint = Self {
             src: [a, b],
-            sides: [Side::new(a, canons[0].clone()), Side::new(b, canons[1].clone())],
+            sides: [
+                Side::new(a, canons[0].clone()),
+                Side::new(b, canons[1].clone()),
+            ],
             center,
             rho,
             e1,
@@ -470,27 +437,16 @@ impl<'m> Imprint<'m> {
         imprint.order_segments()?;
         imprint.classify()?;
         imprint.assemble()?;
-        let mut model = Model(
-            brep_topology::Model {
-                vertices: imprint.vertices,
-                edges: imprint.edges,
-                loops: imprint.loops,
-                faces: imprint.faces,
-                shells: vec![Shell {
-                    faces: imprint.shell,
-                    closed: true,
-                }],
-                bodies: vec![Body {
-                    outer_shell: 0,
-                    inner_shells: vec![],
-                }],
-                tolerance_mm: tolerance,
-            },
-            TopologyIds::default(),
-        );
-        model.inherit_topology_ids(&[a, b]);
-        match model.validate() {
-            Ok(_) => Ok(model),
+        match crate::imprint_pipeline::assemble_imprint_solid(
+            imprint.vertices,
+            imprint.edges,
+            imprint.loops,
+            imprint.faces,
+            imprint.shell,
+            tolerance,
+            &[a, b],
+        ) {
+            Ok(model) => Ok(model),
             Err(e) if e.code == "BREP_RESOURCE_LIMIT" => Err(e),
             Err(e) => Err(unsupported(format!(
                 "Sphere/sphere Boolean result failed validation: {}",
@@ -544,7 +500,9 @@ impl<'m> Imprint<'m> {
                             "Sphere/sphere Boolean: section circle is tangent to a sphere patch boundary",
                         ));
                     }
-                    self.sides[s].sections.insert(patch, PatchSec::Ring { cc, ruv });
+                    self.sides[s]
+                        .sections
+                        .insert(patch, PatchSec::Ring { cc, ruv });
                     continue;
                 }
                 let mut record = PatchSec::Chord {
@@ -769,12 +727,9 @@ impl<'m> Imprint<'m> {
             return Ok(uv);
         }
         let point = self.xings[id].point;
-        let uv = self.sides[s]
-            .canon
-            .invert_uv(patch, point)
-            .ok_or_else(|| {
-                unsupported("Sphere/sphere Boolean: section point escapes its patch chart")
-            })?;
+        let uv = self.sides[s].canon.invert_uv(patch, point).ok_or_else(|| {
+            unsupported("Sphere/sphere Boolean: section point escapes its patch chart")
+        })?;
         if uv[0] < -1e-7
             || uv[1] < -1e-7
             || uv[0] > 1. + 1e-7
@@ -882,7 +837,9 @@ impl<'m> Imprint<'m> {
     /// and the ccw boundary chain w1->w0; the backward region takes the rest.
     fn classify_chord(&self, s: usize, patch: usize) -> Result<(bool, bool)> {
         let PatchSec::Chord { w, piece, tau, .. } = self.sides[s].sections[&patch] else {
-            return Err(unsupported("Sphere/sphere Boolean: internal section kind mismatch"));
+            return Err(unsupported(
+                "Sphere/sphere Boolean: internal section kind mismatch",
+            ));
         };
         let other = 1 - s;
         // Chains: forward region chain runs w1 -> w0, backward chain w0 -> w1.
@@ -924,10 +881,7 @@ impl<'m> Imprint<'m> {
             };
             let mut class = None;
             for delta in [1e-2, 1e-3, 1e-4] {
-                let uv = [
-                    uv_mid[0] + inward[0] * delta,
-                    uv_mid[1] + inward[1] * delta,
-                ];
+                let uv = [uv_mid[0] + inward[0] * delta, uv_mid[1] + inward[1] * delta];
                 let point = self.surface_point(s, patch, uv)?;
                 let inside = self.classify_point(other, point)?;
                 if let Some(previous) = class {
@@ -1241,11 +1195,9 @@ impl<'m> Imprint<'m> {
         let (ekey, mut pcurve) = if whole {
             (EKey::Orig(s, edge_id), oc.pcurve.clone())
         } else {
-            let splits = self
-                .edge_cross
-                .get(&(s, edge_id))
-                .cloned()
-                .ok_or_else(|| unsupported("Sphere/sphere Boolean: chain piece of an uncrossed edge"))?;
+            let splits = self.edge_cross.get(&(s, edge_id)).cloned().ok_or_else(|| {
+                unsupported("Sphere/sphere Boolean: chain piece of an uncrossed edge")
+            })?;
             let count = splits.len() + 1;
             let j = (0..count)
                 .find(|&j| {

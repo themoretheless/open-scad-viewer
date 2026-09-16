@@ -19,16 +19,23 @@ pub mod analytic_features;
 pub mod analytic_ss;
 mod boolean_support;
 pub mod coverage_verifier;
+pub mod imprint_pipeline;
 pub mod intersections;
 pub mod nurbs_ss_g6;
+pub mod nurbs_step_interchange;
+mod nurbs_step_shared;
+pub mod nurbs_step_solid;
+pub mod nurbs_step_trimmed;
 pub mod operations;
 pub mod planar_trim;
 pub mod predicate_evidence;
 pub mod prism;
 pub mod prism_frame;
-mod prismatic_boolean;
+mod profile_imprint;
 pub mod sketch;
+pub mod solid_audit;
 mod sphere_boolean;
+pub mod step_interchange;
 mod stepped_prism;
 pub mod transactions;
 pub mod transform;
@@ -38,15 +45,32 @@ pub use analytic::{
     cylinder, frustum, revolve, revolve_angle, revolve_region, revolve_region_angle, revolve_wire,
     revolve_wire_angle, ruled_loft, sphere, torus, tube,
 };
-pub use analytic_boolean::{analytic_boolean, BooleanCertificate};
+pub use analytic_boolean::{BooleanCertificate, analytic_boolean};
 pub use analytic_features::{
-    analytic_fillet, analytic_shell, analytic_solid_loft, export_step, import_step,
-    FeatureCertificate,
+    FeatureCertificate, analytic_chamfer, analytic_fillet, analytic_fillet_chain, analytic_shell,
+    analytic_solid_loft, export_iges, frame_law_ruled_sweep, import_iges,
+};
+pub use nurbs_ss_g6::{
+    G6_CAPABILITY, G6_MATURITY, G6Component, G6Maturity, NURBS_BOOLEAN_CAPABILITY,
+    NurbsBooleanImprintCertificate, narrow_transverse_bezier_le3, narrow_transverse_bicubic,
+    nurbs_boolean_imprint_solids, nurbs_boolean_transverse_bicubic,
+};
+pub use nurbs_step_interchange::{
+    NURBS_STEP_BICUBIC_FACE_CAPABILITY, bicubic_open_face, export_nurbs_step, import_nurbs_step,
+};
+pub use nurbs_step_solid::{
+    NURBS_STEP_SOLID_CAPABILITY, export_nurbs_step_solid, freeform_cuboid_solid,
+    freeform_cuboid_with_bump_face, import_nurbs_step_solid,
+};
+pub use nurbs_step_trimmed::{
+    NURBS_STEP_TRIMMED_BICUBIC_CAPABILITY, bicubic_trimmed_face, export_nurbs_step_trimmed,
+    import_nurbs_step_trimmed,
 };
 pub use operations::{
     boolean, chamfer, chamfer_edges, extrude_polygon, extrude_polygon_with_holes, faceted_cylinder,
     faceted_loft, faceted_revolve, faceted_sphere, faceted_sweep, fillet, fillet_edges,
 };
+pub use step_interchange::{export_step, import_step};
 
 pub use brep_topology::{Body, FaceUse, Shell, Vertex};
 pub type Edge = brep_topology::Edge<Curve>;

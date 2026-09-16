@@ -315,6 +315,7 @@ pub fn tessellate_patches(set: &PatchSet, segments: usize) -> Result<brep::Tesse
         built: BuiltMesh { mesh, report },
         face_ids: ids,
         topology_face_ids: None,
+        certificate: None,
     })
 }
 

@@ -783,8 +783,7 @@ pub fn intersect_plane_torus(
     let r = torus.minor;
     for side in [1., -1.] {
         let inward = m.map(|x| x * side);
-        let circle_center =
-            std::array::from_fn(|k| torus.center[k] + side * torus.major * m[k]);
+        let circle_center = std::array::from_fn(|k| torus.center[k] + side * torus.major * m[k]);
         // Circle basis (outward radial, axis): the circle parameter is the
         // profile angle exactly.
         let w1 = inward.map(|x| x * r);
@@ -1016,7 +1015,10 @@ mod tests {
         assert!(uv_worst <= 1e-9, "{uv_worst}");
         // Operand order is fixed: the torus as plane operand refuses.
         let swapped = intersect_plane_torus(&torus, &plane, Options::default()).unwrap();
-        assert_eq!(swapped.unresolved[0].reason, UnresolvedReason::UnsupportedSurface);
+        assert_eq!(
+            swapped.unresolved[0].reason,
+            UnresolvedReason::UnsupportedSurface
+        );
     }
 
     #[test]
@@ -1104,7 +1106,10 @@ mod tests {
         let mut signed = Vec::new();
         for (curve, center, radius, full, plane_uv, torus_uv, sampled) in &circles {
             assert!((radius - 1.).abs() <= 1e-12, "{radius}");
-            assert!(center[1].abs() <= 1e-12 && center[2].abs() <= 1e-12, "{center:?}");
+            assert!(
+                center[1].abs() <= 1e-12 && center[2].abs() <= 1e-12,
+                "{center:?}"
+            );
             assert!((center[0].abs() - 3.).abs() <= 1e-12, "{center:?}");
             signed.push(center[0]);
             assert!(full);
@@ -1150,7 +1155,10 @@ mod tests {
         let at = |y: f64| plane_patch([-5., y, -5.], [10., 0., 0.], [0., 0., 10.]);
         let refused = intersect_plane_torus(&at(0.5), &torus, Options::default()).unwrap();
         assert!(refused.components.is_empty());
-        assert_eq!(refused.unresolved[0].reason, UnresolvedReason::UnsupportedSurface);
+        assert_eq!(
+            refused.unresolved[0].reason,
+            UnresolvedReason::UnsupportedSurface
+        );
         let near = intersect_plane_torus(&at(1e-12), &torus, Options::default()).unwrap();
         assert!(near.components.is_empty());
         assert_eq!(near.unresolved[0].reason, UnresolvedReason::NearCoincidence);
@@ -1167,7 +1175,10 @@ mod tests {
         );
         let report = intersect_plane_torus(&oblique, &torus, Options::default()).unwrap();
         assert!(report.components.is_empty());
-        assert_eq!(report.unresolved[0].reason, UnresolvedReason::UnsupportedSurface);
+        assert_eq!(
+            report.unresolved[0].reason,
+            UnresolvedReason::UnsupportedSurface
+        );
         // Recognition-scale tilts off either axial configuration report
         // near_coincidence, never forced: 1 - cos(a) ~ a^2/2 <= 1e-9 off
         // perpendicular, sin(b) ~ b <= 1e-9 off parallel.
@@ -1178,7 +1189,10 @@ mod tests {
             [0., 10. * a.cos(), 10. * a.sin()],
         );
         let report = intersect_plane_torus(&tilted_perp, &torus, Options::default()).unwrap();
-        assert_eq!(report.unresolved[0].reason, UnresolvedReason::NearCoincidence);
+        assert_eq!(
+            report.unresolved[0].reason,
+            UnresolvedReason::NearCoincidence
+        );
         let b: f64 = 1e-10;
         let tilted_par = plane_patch(
             [-5., -5. * b.sin(), -5.],
@@ -1186,7 +1200,10 @@ mod tests {
             [0., 10. * b.sin(), 10. * b.cos()],
         );
         let report = intersect_plane_torus(&tilted_par, &torus, Options::default()).unwrap();
-        assert_eq!(report.unresolved[0].reason, UnresolvedReason::NearCoincidence);
+        assert_eq!(
+            report.unresolved[0].reason,
+            UnresolvedReason::NearCoincidence
+        );
     }
 
     #[test]
@@ -1210,8 +1227,14 @@ mod tests {
             assert_eq!(curve.knots, vec![0., 0., 0., 1., 1., 2., 2., 2.]);
             let start = curve.evaluate(0.).unwrap().point;
             let end = curve.evaluate(2.).unwrap().point;
-            assert!(start[0].abs() <= 1e-12 && (start[1] + rho).abs() <= 1e-12, "{start:?}");
-            assert!(end[0].abs() <= 1e-12 && (end[1] - rho).abs() <= 1e-12, "{end:?}");
+            assert!(
+                start[0].abs() <= 1e-12 && (start[1] + rho).abs() <= 1e-12,
+                "{start:?}"
+            );
+            assert!(
+                end[0].abs() <= 1e-12 && (end[1] - rho).abs() <= 1e-12,
+                "{end:?}"
+            );
             let mut worst = 0_f64;
             for i in 0..=16 {
                 let p = curve.evaluate(i as f64 / 8.).unwrap().point;
@@ -1274,8 +1297,16 @@ mod tests {
         // The recognizer recovers the placed axis, center and radii.
         let recognized = recognize_torus(&torus).unwrap().unwrap();
         let (sin, cos) = angle.sin_cos();
-        assert!((recognized.major - 3.).abs() <= 1e-12, "{}", recognized.major);
-        assert!((recognized.minor - 1.).abs() <= 1e-12, "{}", recognized.minor);
+        assert!(
+            (recognized.major - 3.).abs() <= 1e-12,
+            "{}",
+            recognized.major
+        );
+        assert!(
+            (recognized.minor - 1.).abs() <= 1e-12,
+            "{}",
+            recognized.minor
+        );
         assert!(
             sub(recognized.axis, [0., -sin, cos])
                 .iter()
@@ -1284,7 +1315,9 @@ mod tests {
             recognized.axis
         );
         assert!(
-            sub(recognized.center, offset).iter().all(|x| x.abs() <= 1e-12),
+            sub(recognized.center, offset)
+                .iter()
+                .all(|x| x.abs() <= 1e-12),
             "{:?}",
             recognized.center
         );
@@ -1343,15 +1376,24 @@ mod tests {
         for (a, b) in [
             (plane.clone(), crate::analytic::cylinder(1., 2.).unwrap()),
             (plane.clone(), crate::analytic::sphere(2.).unwrap()),
-            (plane.clone(), crate::cuboid([0., 0., 0.], [1., 1., 1.]).unwrap()),
+            (
+                plane.clone(),
+                crate::cuboid([0., 0., 0.], [1., 1., 1.]).unwrap(),
+            ),
             (crate::analytic::cylinder(1., 2.).unwrap(), torus.clone()),
-            (crate::cuboid([0., 0., 0.], [4., 4., 4.]).unwrap(), torus.clone()),
+            (
+                crate::cuboid([0., 0., 0.], [4., 4., 4.]).unwrap(),
+                torus.clone(),
+            ),
         ] {
             let report = intersect_plane_torus(&a, &b, Options::default()).unwrap();
             assert!(report.components.is_empty(), "{report:?}");
             assert_eq!(report.coverage, Coverage::Incomplete);
             assert_eq!(report.unresolved.len(), 1);
-            assert_eq!(report.unresolved[0].reason, UnresolvedReason::UnsupportedSurface);
+            assert_eq!(
+                report.unresolved[0].reason,
+                UnresolvedReason::UnsupportedSurface
+            );
             assert_eq!(
                 report.unresolved[0].parameter_box,
                 vec![0., 1., 0., 1., 0., 1., 0., 1.]
@@ -1361,14 +1403,20 @@ mod tests {
         // A skewed (non-rectangular) affine patch is not canonical.
         let skewed = plane_patch([-5., -5., 0.4], [10., 0., 0.], [3., 10., 0.]);
         let report = intersect_plane_torus(&skewed, &torus, Options::default()).unwrap();
-        assert_eq!(report.unresolved[0].reason, UnresolvedReason::UnsupportedSurface);
+        assert_eq!(
+            report.unresolved[0].reason,
+            UnresolvedReason::UnsupportedSurface
+        );
         // A structurally perturbed torus (one moved control point) fails the
         // exact certification and refuses.
         let mut perturbed = torus.clone();
         perturbed.faces[0].surface.control_points[1][1][0] += 1e-6;
         perturbed.rebuild_topology_ids();
         let report = intersect_plane_torus(&plane, &perturbed, Options::default()).unwrap();
-        assert_eq!(report.unresolved[0].reason, UnresolvedReason::UnsupportedSurface);
+        assert_eq!(
+            report.unresolved[0].reason,
+            UnresolvedReason::UnsupportedSurface
+        );
         // A valid canonical pair still resolves.
         let report = intersect_plane_torus(&plane, &torus, Options::default()).unwrap();
         assert_eq!(report.coverage, Coverage::NumericallyResolved);

@@ -1,0 +1,27 @@
+{
+  "schema": "open-scad-viewer/brep-closed-matrix-release-sbom",
+  "schemaVersion": 1,
+  "recordedAt": "2026-09-16",
+  "matrix": {
+    "path": "docs/qualification/brep-closed-matrix-v1.json",
+    "sha256": "a392bfd447932bc435b1ff2be68c306caad9c637ab2d67ddb314ce1a4bc10fc3"
+  },
+  "workspacePackages": [
+    "brep-core@0.1.0",
+    "brep-topology@0.1.0",
+    "cad-predicates@0.1.0",
+    "geometry-bridge@0.1.0",
+    "geometry-wasm@0.1.0"
+  ],
+  "dependencySbom": {
+    "index": "docs/qualification/sbom/g0-project-spdx-v1.json",
+    "cargo": "docs/qualification/sbom/g0-cargo-spdx-v1.spdx.json",
+    "npm": "docs/qualification/sbom/g0-npm-spdx-v1.spdx.json"
+  },
+  "claimBoundary": [
+    "frozen analytic-peer matrix only",
+    "no Parasolid/OCCT parity",
+    "no general NURBS Boolean",
+    "no Manifold completion of B-rep failure"
+  ]
+}

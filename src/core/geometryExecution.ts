@@ -268,8 +268,65 @@ const ownRustCadManifest: GeometryEngineStaticManifest = {
 }
 ownRustCadManifest.manifestDigest = computeGeometryManifestDigest(ownRustCadManifest)
 
+const brepClosedManifest: GeometryEngineStaticManifest = {
+  engineClass: 'brep',
+  displayName: 'Rust B-rep/NURBS kernel (closed analytic peer)',
+  permanent: true,
+  maturity: 'production',
+  engineKey: 'rust-brep-closed-v1',
+  kernelFingerprint: `sha256:${OWN_RUST_CAD_EVIDENCE.wasmSha256}`,
+  semanticProgramVersion: 'semantic-program-contract-v1',
+  capabilityManifestVersion: 'brep-closed-v1',
+  languageContracts: ['openscad-viewer/brep-1'],
+  inputContract: 'semantic-program-required',
+  capabilities: [
+    'analysis.metrics',
+    'csg.boolean',
+    'export.obj',
+    'export.stl',
+    'export.step',
+    'geometry.brep',
+    'nurbs.curves',
+    'nurbs.surfaces',
+    'topology.stable-ids',
+  ],
+  plannedCapabilities: [],
+  qualities: ['preview', 'full'],
+  representations: ['brep', 'mesh'],
+  plannedRepresentations: [],
+  exportFormats: ['stl', 'obj', 'step'],
+  plannedExportFormats: [],
+  limits: { sourceCharacters: 250_000, triangles: 750_000 },
+  isolation: 'in-process-serialized',
+  deployment: 'node-mcp',
+  qualification: {
+    status: 'qualified',
+    recordId: 'docs/qualification/brep-closed-matrix-v1.json',
+    corpusVersion: 'brep-closed-matrix-v1',
+    target: 'browser-worker/node-mcp',
+  },
+  dependency: {
+    packageName: 'workspace:geometry-bridge',
+    version: '0.1.0',
+    licenseExpression: 'MIT',
+    sbomRef: 'THIRD_PARTY_NOTICES.md',
+    sbomSha256: OWN_RUST_CAD_EVIDENCE.noticesSha256,
+    lockfileSha256: OWN_RUST_CAD_EVIDENCE.lockfileSha256,
+  },
+  rollbackCompatibility: {
+    disableEngineCapability: true,
+    sourceContractPreserved: true,
+    crossEngineFallback: false,
+    minimumCatalogSchema: 3,
+  },
+  manifestDigest: '',
+  automaticFallback: false,
+}
+brepClosedManifest.manifestDigest = computeGeometryManifestDigest(brepClosedManifest)
+
 export const GEOMETRY_MANIFEST_ARCHIVE = deepFreeze({
   'own-rust-node-v1': deepFreeze(ownRustCadManifest),
+  'brep-closed-v1': deepFreeze(brepClosedManifest),
   'brep-contract-v1': deepFreeze({
     engineClass: 'brep',
     displayName: 'Rust B-rep/NURBS kernel',
@@ -327,7 +384,7 @@ export const GEOMETRY_MANIFEST_ARCHIVE = deepFreeze({
 
 export const CURRENT_GEOMETRY_MANIFEST_VERSIONS = Object.freeze({
   mesh: 'own-rust-node-v1',
-  brep: 'brep-contract-v1',
+  brep: 'brep-closed-v1',
 } as const)
 
 export type GeometryProviderAdmissionMode =

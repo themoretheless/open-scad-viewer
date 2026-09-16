@@ -1,0 +1,80 @@
+{
+  "$schema": "./brep-capability-qualification-plan.schema.json",
+  "schema": "open-scad-viewer/brep-capability-qualification-plan",
+  "schemaVersion": 1,
+  "planId": "nurbs-step-trimmed-bicubic-1",
+  "gate": {
+    "id": "g8-full",
+    "name": "brep-full-closed-matrix",
+    "version": 1
+  },
+  "lifecycle": {
+    "status": "qualified",
+    "qualificationClaim": "qualified"
+  },
+  "claimBoundary": {
+    "candidateClaim": "AnalyticComplete single trimmed bicubic open face STEP (B_SPLINE + FACE_OUTER_BOUND + FACE_BOUND + OPEN_SHELL)",
+    "forbiddenClaims": [
+      "parasolid-parity",
+      "closed-freeform-solid-step",
+      "manifold-cross-route",
+      "mesh-fallback",
+      "aabb-import",
+      "oscad-solid"
+    ],
+    "notes": [
+      "general-nurbs-step is out of step-interchange/1 (constructor) and is lifted here for trimmed freeform open faces only; solids live on nurbs-step-solid/1"
+    ]
+  },
+  "capability": "nurbs-step-trimmed-bicubic/1",
+  "scope": {
+    "included": [
+      "uniform bicubic w≡1 non-periodic",
+      "1 face / 8 edges / 8 verts / 1 hole open shell",
+      "FACE_OUTER_BOUND + FACE_BOUND",
+      "PCURVE + SURFACE_CURVE UV boundary links",
+      "brep_nurbs_export_step_trimmed / import product seam"
+    ],
+    "excluded": [
+      "MANIFOLD_SOLID_BREP",
+      "rational_weights",
+      "non_bicubic",
+      "FACETED_BREP",
+      "constructor_corpus"
+    ]
+  },
+  "matrix": [
+    {
+      "id": "NST-01",
+      "expected": "Complete",
+      "blocksQualification": true
+    },
+    {
+      "id": "NST-N1",
+      "expected": "typed-refuse",
+      "blocksQualification": true
+    }
+  ],
+  "bindings": {
+    "rust": [
+      "crates/brep-core/src/nurbs_step_trimmed.rs",
+      "crates/geometry-bridge/src/lib.rs"
+    ],
+    "typescript": [
+      "src/services/cadNurbsStep.ts"
+    ],
+    "registry": "src/services/geometry/brepCapability.ts",
+    "evidenceJson": "docs/qualification/nurbs-step-trimmed-bicubic-1-evidence-v1.json"
+  },
+  "evidence": {
+    "state": "qualified",
+    "notes": [
+      "face_outer_bound_plus_face_bound",
+      "pcurve_surface_curve_uv_links",
+      "open_shell_no_manifold_solid",
+      "product_seam"
+    ]
+  },
+  "resetPolicy": "false-Complete freezes Unavailable",
+  "unresolvedRows": []
+}

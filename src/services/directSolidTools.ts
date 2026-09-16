@@ -22,12 +22,18 @@ export function pushPullFace(body:DirectBody,faceIndex:number,distance:number):D
 }
 /** Native retained-body editing; fillet surfaces are currently planar facets. */
 export function bevelBrepBody(body:DirectBody,edges:number[],size:number,kind:'chamfer'|'fillet',segments=16):DirectBody {
+ if(body.brep){
+  throw new Error(`Mesh ${kind} cannot be claimed as analytic-${kind} for B-rep bodies; refuse faceted fallback (openscad-viewer/brep-1 quarantine)`)
+ }
  return callGeometryRust('cad_edge_edit',{body,edges,size,kind,segments})
 }
 export function bevelSolidEdge(body:DirectBody,edgeIndex:number,size:number,kind:'chamfer'|'fillet'):DirectBody {
  return bevelBrepBody(body,[edgeIndex],size,kind)
 }
 export function shellSolid(body:DirectBody,openingFaces:number[],thickness:number):DirectBody {
+ if(body.brep){
+  throw new Error('Mesh shell cannot be claimed as analytic-shell for B-rep bodies; refuse faceted fallback (openscad-viewer/brep-1 quarantine)')
+ }
  return callGeometryRust('cad_planar_edit',{body,action:'shell',faces:openingFaces,amount:thickness})
 }
 export function splitSolid(body:DirectBody,normal:Vec3,offset:number):[DirectBody,DirectBody] {

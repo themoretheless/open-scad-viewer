@@ -68,8 +68,14 @@ function sphereShell(body:DirectBody,openings:number[],thickness:number):DirectB
 }
 
 export function extendedShell(body:DirectBody,openings:number[],thickness:number,step?:number,adaptive=false):DirectBody{
+ if(body.brep){
+  throw new Error('Mesh shell cannot be claimed as analytic-shell for B-rep bodies; refuse sampled/mesh fallback')
+ }
  try{return specializedShell(body,openings,thickness)}catch{return sampledShell(body,openings,thickness,step,adaptive)}
 }
 export function extendedBevel(body:DirectBody,edgeIndex:number,size:number,kind:'fillet'|'chamfer'):DirectBody{
+ if(body.brep){
+  throw new Error(`Mesh ${kind} cannot be claimed as analytic-${kind} for B-rep bodies; refuse localMeshBevel fallback`)
+ }
  try{return specializedBevel(body,edgeIndex,size,kind)}catch{return localMeshBevel(body,edgeIndex,size,kind)}
 }

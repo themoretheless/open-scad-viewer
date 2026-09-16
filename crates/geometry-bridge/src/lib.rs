@@ -592,6 +592,94 @@ pub fn dispatch(v: Value) -> Result<Value> {
             field(&v, "segments")?,
         )?),
         "brep_nurbs_inspect" => encode(field::<brep_core::Model>(&v, "model")?.validate()?),
+        "brep_nurbs_export_step" => {
+            let (text, cert) = brep_core::export_step(&field(&v, "model")?)?;
+            encode(json!({
+                "text": text,
+                "certificate": {
+                    "capability": cert.capability,
+                    "complete": cert.complete,
+                    "notes": cert.notes,
+                }
+            }))
+        }
+        "brep_nurbs_import_step" => {
+            let (model, cert) = brep_core::import_step(&field::<String>(&v, "text")?)?;
+            encode(json!({
+                "model": model,
+                "certificate": {
+                    "capability": cert.capability,
+                    "complete": cert.complete,
+                    "notes": cert.notes,
+                }
+            }))
+        }
+        "brep_nurbs_export_step_freeform" => {
+            let (text, cert) = brep_core::export_nurbs_step(&field(&v, "model")?)?;
+            encode(json!({
+                "text": text,
+                "certificate": {
+                    "capability": cert.capability,
+                    "complete": cert.complete,
+                    "notes": cert.notes,
+                }
+            }))
+        }
+        "brep_nurbs_import_step_freeform" => {
+            let (model, cert) = brep_core::import_nurbs_step(&field::<String>(&v, "text")?)?;
+            encode(json!({
+                "model": model,
+                "certificate": {
+                    "capability": cert.capability,
+                    "complete": cert.complete,
+                    "notes": cert.notes,
+                }
+            }))
+        }
+        "brep_nurbs_export_step_trimmed" => {
+            let (text, cert) = brep_core::export_nurbs_step_trimmed(&field(&v, "model")?)?;
+            encode(json!({
+                "text": text,
+                "certificate": {
+                    "capability": cert.capability,
+                    "complete": cert.complete,
+                    "notes": cert.notes,
+                }
+            }))
+        }
+        "brep_nurbs_import_step_trimmed" => {
+            let (model, cert) = brep_core::import_nurbs_step_trimmed(&field::<String>(&v, "text")?)?;
+            encode(json!({
+                "model": model,
+                "certificate": {
+                    "capability": cert.capability,
+                    "complete": cert.complete,
+                    "notes": cert.notes,
+                }
+            }))
+        }
+        "brep_nurbs_export_step_solid" => {
+            let (text, cert) = brep_core::export_nurbs_step_solid(&field(&v, "model")?)?;
+            encode(json!({
+                "text": text,
+                "certificate": {
+                    "capability": cert.capability,
+                    "complete": cert.complete,
+                    "notes": cert.notes,
+                }
+            }))
+        }
+        "brep_nurbs_import_step_solid" => {
+            let (model, cert) = brep_core::import_nurbs_step_solid(&field::<String>(&v, "text")?)?;
+            encode(json!({
+                "model": model,
+                "certificate": {
+                    "capability": cert.capability,
+                    "complete": cert.complete,
+                    "notes": cert.notes,
+                }
+            }))
+        }
         "brep_nurbs_tessellate" => {
             encode(brep::nurbs(&field(&v, "model")?, field(&v, "segments")?)?)
         }

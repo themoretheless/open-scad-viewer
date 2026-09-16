@@ -1,31 +1,27 @@
-# B-rep / NURBS QualificationPlan seeds (Phase G + Full coverage P0–P6)
+# B-rep full-close QualificationPlan seeds (F0–F9 + deepenings)
 
-Frozen evidence artifacts live under `docs/qualification/*-evidence-v1.json`.
+Full matrix: [`../qualification/brep-full-closed-matrix-v1.json`](../qualification/brep-full-closed-matrix-v1.json)
+G8 index: [`../qualification/plans/g8-full-matrix-index-v1.json`](../qualification/plans/g8-full-matrix-index-v1.json)
+Canonical registry: [`../qualification/brep-capability-registry-release-full-v1.json`](../qualification/brep-capability-registry-release-full-v1.json) (`unresolvedInShippedMatrix=[]`)
 
-Per-capability seed plans:
+## Capability maturity
 
-- [`qualification/analytic-fillet-1.md`](qualification/analytic-fillet-1.md)
-- [`qualification/analytic-shell-1.md`](qualification/analytic-shell-1.md)
-- [`qualification/analytic-solid-loft-1.md`](qualification/analytic-solid-loft-1.md)
-- [`qualification/step-interchange-1.md`](qualification/step-interchange-1.md)
+| Capability | Maturity |
+|------------|----------|
+| planar-csg/1 | Qualified |
+| analytic-boolean/1 | Qualified |
+| nurbs-boolean-bezier-le3/1 | AnalyticComplete (topology change permitted; supersedes transverse-bicubic/2) |
+| analytic-chamfer/1 | AnalyticComplete |
+| step-interchange/1 | AnalyticComplete (graph-only + CIRCLE + cuboid/tube honesty + product seam) |
+| nurbs-step-bicubic-face/1 | AnalyticComplete (bicubic open-face B_SPLINE STEP) |
+| nurbs-step-trimmed-bicubic/1 | AnalyticComplete (bicubic open face + FACE_BOUND holes) |
+| nurbs-step-solid/1 | AnalyticComplete (closed freeform MANIFOLD solid + Boolean RT) |
+| iges-interchange/1 | AnalyticComplete (186/514/510/144 solid topology) |
+| analytic-fillet/1 | AnalyticComplete (multi-edge chain remapping) |
+| analytic-shell/1 | AnalyticComplete (closed cuboid + cylinder offset) |
+| analytic-solid-loft/1 | AnalyticComplete (FrameLaw Frenet/RMF/fixed) |
+| nurbs-ss-bezier-le3/1 | AnalyticComplete (Phase B Bezier deg≤3 elevated to bicubic; supersedes transverse-bicubic/2) |
 
-## Shipped registry (`brepCapability.ts`)
+## Invariants
 
-| Capability | Maturity | Evidence |
-|------------|----------|----------|
-| planar-csg/1 | Qualified | existing planar corpus |
-| analytic-boolean/1 | Qualified | [analytic-boolean-1-evidence-v1.json](../qualification/analytic-boolean-1-evidence-v1.json) |
-| intersection-queries/1 | AnalyticComplete | `analytic_ss` + verifier |
-| nurbs-ss-transverse-bicubic/1 | AnalyticComplete | [nurbs-ss-g6-evidence-v1.json](../qualification/nurbs-ss-g6-evidence-v1.json) |
-| analytic-fillet/1 | AnalyticComplete | [analytic-fillet-1-evidence-v1.json](../qualification/analytic-fillet-1-evidence-v1.json) |
-| analytic-shell/1 | AnalyticComplete | [analytic-shell-1-evidence-v1.json](../qualification/analytic-shell-1-evidence-v1.json) |
-| analytic-solid-loft/1 | AnalyticComplete | [analytic-solid-loft-1-evidence-v1.json](../qualification/analytic-solid-loft-1-evidence-v1.json) |
-| step-interchange/1 | AnalyticComplete | [step-interchange-1-evidence-v1.json](../qualification/step-interchange-1-evidence-v1.json) |
-
-Release ledger: [brep-capability-registry-release-v1.json](../qualification/brep-capability-registry-release-v1.json).
-
-## Release policy
-
-- One walking slice per merge: falsifiable certificate + tests + envelope honesty.
-- False `Complete` resets the capability counter and freezes it at Unavailable.
-- Peer engines: B-rep failure never routes to Manifold.
+Fail-closed; no prism on curved Boolean success; no Manifold cross-route ([ADR](manifold-keep-as-peer-adr.md)); false-Complete freezes Unavailable. **STEP+NURBS product-matrix closed** for the admitted freeform STEP + bezier-le3 cells. Parasolid parity remains an explicit refuse.

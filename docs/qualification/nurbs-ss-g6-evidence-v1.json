@@ -1,13 +1,32 @@
 {
-  "capability": "nurbs-ss-transverse-bicubic/1",
+  "capability": "nurbs-ss-bezier-le3/1",
   "maturity": "AnalyticComplete",
   "planId": "nurbs-ss-g6-evidence-v1",
-  "seedPlan": "docs/design/r1-nurbs-ss-spike-adr.md",
-  "positiveCorpus": ["R1-04-complete-empty", "R1-01-planar-transverse-line"],
-  "negativeCorpus": ["R1-02-coincident", "R1-03-near-tangent", "rational-weights", "non-bicubic"],
+  "supersedes": "nurbs-ss-transverse-bicubic/2",
+  "seedPlan": "docs/qualification/plans/nurbs-ss-bezier-le3-1.json",
+  "positiveCorpus": [
+    "R1-04-complete-empty",
+    "R1-01-planar-transverse-line",
+    "EP-01-elevated-planar-x-bicubic-line",
+    "EP-02-elevated-planar-x-elevated-planar-line",
+    "BC-01-planar-45-orientation-line",
+    "BC-02-nonplanar-bump-certified-iso-curve",
+    "B1-le3-degree-pair-matrix-empty",
+    "B1-le3-degree-pair-matrix-line",
+    "B1-le3-nonplanar-certified-iso-curve"
+  ],
+  "negativeCorpus": [
+    "R1-02-coincident",
+    "R1-03-near-tangent",
+    "rational-weights",
+    "degree-gt-3",
+    "periodic",
+    "trimmed-boundaries"
+  ],
   "bindings": {
     "rust": ["crates/brep-core/src/nurbs_ss_g6.rs", "crates/brep-core/src/intersections.rs"]
   },
   "booleanImprint": false,
+  "relatedBooleanImprintEvidence": "docs/qualification/nurbs-boolean-transverse-bicubic-1-evidence-v1.json",
   "resetPolicy": "false-Complete freezes Unavailable / stop"
 }

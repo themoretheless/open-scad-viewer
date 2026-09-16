@@ -87,14 +87,13 @@ agreement; it does not claim general solid-geometric certification.
   `BooleanCertificate` on the frozen analytic cylinder corpus. Individual
   intersection reports still report `permitsTopologyChange: false`.
 - `analytic_ss` / `coverage_verifier` publish finite Complete plane↔quadric
-  contacts; out-of-matrix pairs refuse. `nurbs_ss_g6` is R1-narrow only.
+  contacts; out-of-matrix pairs refuse. `nurbs_ss_g6` is R1.1
+  (`nurbs-ss-bezier-le3/1`: Bezier deg≤3 elevated to bicubic).
 - `trim_sew` provides chart classification + exact sew without auto-heal.
-- `analytic_features` keeps fillet/shell/solid-loft/STEP at Unavailable until
-  per-capability QualificationPlan release (faceted ≠ analytic).
-  and bounded coordinate-roundoff normalization; its adjustment report is an
-  estimate, not an exact-arithmetic certificate. No mesh authors this topology.
-  Separate exterior components may meet at isolated profile endpoints; they
-  retain separate vertex/edge ownership. Hole-boundary contacts are refused.
+- `analytic_features` publishes AnalyticComplete fillet/chamfer/shell/solid-loft
+  under their QualificationPlans (faceted ≠ analytic). Constructor STEP lives in
+  `step_interchange`; freeform bicubic open-face STEP in `nurbs_step_interchange`
+  (`nurbs-step-bicubic-face/1`).
 - `prism::extrude(loops, z_min, z_max)` accepts material-left 2D NURBS loops:
   CCW outer boundaries, CW holes, and nested islands. Active knots split retained
   curves into individual edges so a closed multi-span curve does not collapse
@@ -199,9 +198,10 @@ budget for complex revolves and fails explicitly. Face IDs are independent of
 this display detail. Mesh volume converges with detail; it is not an exact
 analytic volume certificate.
 
-General curved Boolean intersections, analytic blends, curved shell/offset
-operations, STEP interchange, and geometric solid certification are still
-open work. Exact primitives do not imply support for those operations.
+General NURBS Boolean beyond the R1.1 finite cell, freeform STEP solids/trims
+beyond `nurbs-step-bicubic-face/1`, and geometric solid certification beyond
+AnalyticComplete peers remain separate gates. Exact primitives do not imply
+Parasolid parity.
 
 ## Native full-model transactions
 

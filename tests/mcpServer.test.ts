@@ -145,6 +145,7 @@ describe('OpenSCAD MCP server', () => {
       'modelgraph_svg_preview',
       'modelgraph_text_compile',
       'openscad_analyze',
+      'openscad_brep_capabilities',
       'openscad_build_history',
       'openscad_catalog_stats',
       'openscad_check',
@@ -227,7 +228,7 @@ describe('OpenSCAD MCP server', () => {
         automatic_fallback: false,
         engines: [
           { engine_class: 'mesh', permanent: true, availability: 'available' },
-          { engine_class: 'brep', permanent: true, availability: 'unavailable' },
+          { engine_class: 'brep', permanent: true, availability: 'available' },
         ],
       },
       geometry_host: {
@@ -268,7 +269,7 @@ describe('OpenSCAD MCP server', () => {
     })
   })
 
-  it('discovers immutable engine manifests and refuses B-rep without mesh fallback', async () => {
+  it('discovers immutable engine manifests and executes B-rep without mesh fallback', async () => {
     const { request } = await connectedServer()
     const listed = await request('tools/call', {
       name: 'openscad_list_engines',
@@ -285,6 +286,7 @@ describe('OpenSCAD MCP server', () => {
         }
       }
     }
+    expect(listed).toHaveProperty('structuredContent')
     expect(listed.structuredContent.geometry_engines).toMatchObject({
       automatic_fallback: false,
       engines: [
@@ -293,7 +295,7 @@ describe('OpenSCAD MCP server', () => {
           availability: 'available',
           manifest_resource_uri: 'openscad://engines/mesh/capabilities/own-rust-node-v1',
         },
-        { engine_class: 'brep', availability: 'unavailable' },
+        { engine_class: 'brep', availability: 'available' },
       ],
     })
 
@@ -307,23 +309,23 @@ describe('OpenSCAD MCP server', () => {
       permanent: true,
       input_contract: 'semantic-program-required',
       semantic_program_version: 'semantic-program-contract-v1',
-      capability_manifest_version: 'brep-contract-v1',
+      capability_manifest_version: 'brep-closed-v1',
       manifest_digest: expect.stringMatching(/^[a-f0-9]{64}$/),
-      capabilities: [],
-      planned_capabilities: expect.arrayContaining(['geometry.brep', 'nurbs.surfaces']),
-      limits: { sourceCharacters: 250_000 },
-      isolation: 'not-deployed',
-      deployment: 'not-deployed',
+      capabilities: expect.arrayContaining(['geometry.brep', 'csg.boolean']),
+      planned_capabilities: [],
+      limits: { sourceCharacters: 250_000, triangles: 750_000 },
+      isolation: 'in-process-serialized',
+      deployment: 'node-mcp',
       qualification: {
-        status: 'not-qualified',
-        record_id: null,
-        corpus_version: null,
-        target: 'not-deployed',
+        status: 'qualified',
+        record_id: 'docs/qualification/brep-closed-matrix-v1.json',
+        corpus_version: 'brep-closed-matrix-v1',
+        target: 'browser-worker/node-mcp',
       },
       dependency: {
-        package_name: null,
-        sbom_ref: null,
-        sbom_sha256: null,
+        package_name: 'workspace:geometry-bridge',
+        sbom_ref: 'THIRD_PARTY_NOTICES.md',
+        sbom_sha256: expect.stringMatching(/^[a-f0-9]{64}$/),
       },
       rollback_compatibility: {
         disable_engine_capability: true,
@@ -407,11 +409,11 @@ describe('OpenSCAD MCP server', () => {
         {
           engine_class: 'brep',
           manifest_digest: expect.stringMatching(/^[a-f0-9]{64}$/),
-          kernel_fingerprint: 'not-deployed',
-          browser_mcp_status: 'not-deployed',
-          mcp_provider_manifest_isolation: 'not-deployed',
-          mcp_host_isolation: 'not-deployed',
-          mcp_host_contract_id: null,
+          kernel_fingerprint: GEOMETRY_MANIFEST_ARCHIVE['brep-closed-v1'].kernelFingerprint,
+          browser_mcp_status: 'qualification-pending',
+          mcp_provider_manifest_isolation: 'in-process-serialized',
+          mcp_host_isolation: 'disposable-worker-per-job',
+          mcp_host_contract_id: 'mcp-geometry-host-isolation-v1',
         },
       ],
     })
@@ -436,14 +438,10 @@ describe('OpenSCAD MCP server', () => {
     const checked = await request('tools/call', {
       name: 'openscad_check',
       arguments: { source, quality: 'full' },
-    }) as { isError: boolean; structuredContent: { error: { code: string; details: object } } }
+    }) as { isError?: boolean; structuredContent: { analysis: { execution: { engine_class: string } } } }
     expect(checked).toMatchObject({
-      isError: true,
       structuredContent: {
-        error: {
-          code: 'engine_unavailable',
-          details: { engine_class: 'brep', automatic_fallback: false },
-        },
+        analysis: { execution: { engine_class: 'brep' } },
       },
     })
 
@@ -451,19 +449,16 @@ describe('OpenSCAD MCP server', () => {
       name: 'openscad_analyze',
       arguments: { source, quality: 'full' },
     }) as {
-      isError: boolean
+      isError?: boolean
       structuredContent: {
-        error: { code: string }
         build: { status: string; execution: { engine_class: string; evidence: string } }
       }
     }
     expect(analyzed).toMatchObject({
-      isError: true,
       structuredContent: {
-        error: { code: 'engine_unavailable' },
         build: {
-          status: 'failed',
-          execution: { engine_class: 'brep', evidence: 'planned' },
+          status: 'succeeded',
+          execution: { engine_class: 'brep', evidence: 'runtime' },
         },
       },
     })

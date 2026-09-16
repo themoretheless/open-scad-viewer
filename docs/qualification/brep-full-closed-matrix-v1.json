@@ -1,0 +1,68 @@
+{
+  "schema": "open-scad-viewer/brep-closed-matrix",
+  "schemaVersion": 1,
+  "planId": "brep-full-closed-matrix-v1",
+  "gate": "G8-full",
+  "lifecycle": "frozen",
+  "claimBoundary": "project-kernel-full-brep-rust",
+  "supersedes": "brep-closed-matrix-v1",
+  "matrixHashSeed": "planar-prism+cyl+tube+frustum+sphere+cone+torus|analytic-boolean-full+nurbs-bezier-le3+fillet-chamfer-shell-loft-sweep+step+nurbs-step-face-trim-solid+iges|no-prism-curved+no-manifold-fallback+no-parasolid",
+  "admittedSolids": [
+    "planar-prism",
+    "finite-cylinder",
+    "tube",
+    "frustum",
+    "sphere",
+    "cone",
+    "torus"
+  ],
+  "admittedOps": [
+    "planar-csg/1",
+    "analytic-boolean/1",
+    "nurbs-ss-bezier-le3/1",
+    "nurbs-step-bicubic-face/1",
+    "nurbs-step-trimmed-bicubic/1",
+    "nurbs-step-solid/1",
+    "analytic-fillet/1",
+    "analytic-chamfer/1",
+    "analytic-shell/1",
+    "analytic-solid-loft/1",
+    "step-interchange/1",
+    "iges-interchange/1"
+  ],
+  "explicitRefuse": [
+    "tangency-coincident-without-cert",
+    "mesh-fallback",
+    "manifold-cross-route",
+    "silent-heal",
+    "prism-authorship-on-curved-boolean-success",
+    "nurbs-boolean-contacting-solids-until-qualified-face-split",
+    "arbitrary-third-party-ap214-entity-graphs",
+    "parasolid-parity"
+  ],
+  "invariants": [
+    "fail-closed typed refuse",
+    "operands unchanged on refuse",
+    "topology only from all-Complete aggregate certificates",
+    "TS transport/UI only for full matrix",
+    "no prismatic_boolean on curved Boolean success"
+  ],
+  "bindings": {
+    "capabilityRegistry": "src/services/geometry/brepCapability.ts",
+    "peerBasis": "docs/qualification/brep-closed-matrix-v1.json",
+    "rust": [
+      "crates/brep-core/src/imprint_pipeline.rs",
+      "crates/brep-core/src/analytic_boolean.rs",
+      "crates/brep-core/src/sphere_boolean.rs",
+      "crates/brep-core/src/solid_audit.rs",
+      "crates/brep-core/src/nurbs_ss_g6.rs",
+      "crates/brep-core/src/nurbs_step_interchange.rs",
+      "crates/brep-core/src/nurbs_step_trimmed.rs",
+      "crates/brep-core/src/nurbs_step_solid.rs",
+      "crates/brep-core/src/analytic_features.rs"
+    ]
+  },
+  "resetPolicy": "false-Complete freezes capability to Unavailable",
+  "productDeployGate": "full-matrix capabilities Qualified only after per-capability evidence green",
+  "unresolvedInShippedMatrix": []
+}

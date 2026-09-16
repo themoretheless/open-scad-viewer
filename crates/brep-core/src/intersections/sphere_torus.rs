@@ -49,7 +49,9 @@
 //! There is no sphere/torus surface coincidence, so `CoincidentTrim` does
 //! not arise; every degeneracy reported here is an explicit tangency
 //! region. Nothing here authorizes a topology change.
-use super::plane_torus::{CanonicalTorus, TorusPatchCurve, lift_parallel, recognize_torus, torus_residual};
+use super::plane_torus::{
+    CanonicalTorus, TorusPatchCurve, lift_parallel, recognize_torus, torus_residual,
+};
 use super::sphere_sphere::{
     self, ARC_WEIGHT, CanonicalSphere, RECOGNITION, SpherePatchCircle, circle_curve, lift,
 };
@@ -223,7 +225,8 @@ pub fn intersect_sphere_torus(
     }
     found.sort_by(|a, b| a.0.total_cmp(&b.0));
     for (z, rho) in found {
-        report.components
+        report
+            .components
             .push(circle_component(&sphere, &torus, z, rho)?);
     }
     Ok(report)
@@ -420,7 +423,9 @@ mod tests {
             assert_eq!(curve.control_points.len(), 9);
             assert_eq!(
                 curve.weights,
-                vec![1., ARC_WEIGHT, 1., ARC_WEIGHT, 1., ARC_WEIGHT, 1., ARC_WEIGHT, 1.]
+                vec![
+                    1., ARC_WEIGHT, 1., ARC_WEIGHT, 1., ARC_WEIGHT, 1., ARC_WEIGHT, 1.
+                ]
             );
             // Sixteen samples satisfy both implicit equations.
             let mut worst = 0_f64;
@@ -466,7 +471,10 @@ mod tests {
     fn off_center_sphere_yields_two_distinct_circles() {
         // Torus R=3, r=1; sphere r=sqrt(26) centered at z=-4: d=5, a=0,
         // l=1 — the exact circles of radii 3.8 at z=-0.6 and 2.2 at z=0.6.
-        let sphere = translated(&crate::analytic::sphere(26_f64.sqrt()).unwrap(), [0., 0., -4.]);
+        let sphere = translated(
+            &crate::analytic::sphere(26_f64.sqrt()).unwrap(),
+            [0., 0., -4.],
+        );
         let torus = crate::analytic::torus(3., 1.).unwrap();
         let report = intersect_sphere_torus(&sphere, &torus, Options::default()).unwrap();
         let report = only_circles(&report, 2);
@@ -543,7 +551,10 @@ mod tests {
         // Just clear of the band on the outside: provable miss, resolved.
         let clear = crate::analytic::sphere(2. - 1e-9).unwrap();
         let report = intersect_sphere_torus(&clear, &torus, Options::default()).unwrap();
-        assert!(report.components.is_empty() && report.unresolved.is_empty(), "{report:?}");
+        assert!(
+            report.components.is_empty() && report.unresolved.is_empty(),
+            "{report:?}"
+        );
         // Just across: two small transverse circles around the inner equator.
         let across = crate::analytic::sphere(2. + 1e-9).unwrap();
         let report = intersect_sphere_torus(&across, &torus, Options::default()).unwrap();
@@ -569,7 +580,10 @@ mod tests {
         // Just larger: the sphere swallows the tube, provably contained.
         let swallow = crate::analytic::sphere(4. + 1e-9).unwrap();
         let report = intersect_sphere_torus(&swallow, &torus, Options::default()).unwrap();
-        assert!(report.components.is_empty() && report.unresolved.is_empty(), "{report:?}");
+        assert!(
+            report.components.is_empty() && report.unresolved.is_empty(),
+            "{report:?}"
+        );
         // Just smaller: two transverse circles around the outer equator.
         let across = crate::analytic::sphere(4. - 1e-9).unwrap();
         let report = intersect_sphere_torus(&across, &torus, Options::default()).unwrap();
@@ -596,7 +610,10 @@ mod tests {
         let swallow = crate::analytic::sphere(10.).unwrap();
         for sphere in [&hole, &far, &swallow] {
             let report = intersect_sphere_torus(sphere, &torus, Options::default()).unwrap();
-            assert!(report.components.is_empty() && report.unresolved.is_empty(), "{report:?}");
+            assert!(
+                report.components.is_empty() && report.unresolved.is_empty(),
+                "{report:?}"
+            );
             assert_eq!(report.coverage, Coverage::NumericallyResolved);
         }
     }
@@ -604,24 +621,34 @@ mod tests {
     #[test]
     fn near_axial_offset_within_the_band_stays_unresolved() {
         let torus = crate::analytic::torus(3., 1.).unwrap();
-        let sphere =
-            translated(&crate::analytic::sphere(5.2_f64.sqrt()).unwrap(), [1e-10, 0., 0.]);
+        let sphere = translated(
+            &crate::analytic::sphere(5.2_f64.sqrt()).unwrap(),
+            [1e-10, 0., 0.],
+        );
         let report = intersect_sphere_torus(&sphere, &torus, Options::default()).unwrap();
         assert!(report.components.is_empty(), "{report:?}");
         assert_eq!(report.coverage, Coverage::Incomplete);
-        assert_eq!(report.unresolved[0].reason, UnresolvedReason::NearCoincidence);
+        assert_eq!(
+            report.unresolved[0].reason,
+            UnresolvedReason::NearCoincidence
+        );
     }
 
     #[test]
     fn clearly_off_axis_pairs_are_unsupported_regions() {
         let torus = crate::analytic::torus(3., 1.).unwrap();
-        let sphere =
-            translated(&crate::analytic::sphere(5.2_f64.sqrt()).unwrap(), [0.5, 0., 0.]);
+        let sphere = translated(
+            &crate::analytic::sphere(5.2_f64.sqrt()).unwrap(),
+            [0.5, 0., 0.],
+        );
         let report = intersect_sphere_torus(&sphere, &torus, Options::default()).unwrap();
         assert!(report.components.is_empty(), "{report:?}");
         assert_eq!(report.coverage, Coverage::Incomplete);
         assert_eq!(report.unresolved.len(), 1);
-        assert_eq!(report.unresolved[0].reason, UnresolvedReason::UnsupportedSurface);
+        assert_eq!(
+            report.unresolved[0].reason,
+            UnresolvedReason::UnsupportedSurface
+        );
         assert_eq!(
             report.unresolved[0].parameter_box,
             vec![0., 1., 0., 1., 0., 1., 0., 1.]
@@ -636,17 +663,35 @@ mod tests {
         // canonical operand; swapped operand order is refused by the fixed
         // order.
         for (a, b) in [
-            (crate::analytic::cylinder(1., 3.).unwrap(), crate::analytic::torus(3., 1.).unwrap()),
-            (crate::analytic::sphere(2.).unwrap(), crate::analytic::sphere(2.).unwrap()),
-            (crate::analytic::torus(3., 1.).unwrap(), crate::analytic::torus(2., 1.).unwrap()),
-            (crate::cuboid([0., 0., 0.], [1., 1., 1.]).unwrap(), crate::analytic::torus(3., 1.).unwrap()),
-            (crate::analytic::torus(3., 1.).unwrap(), crate::analytic::sphere(2.).unwrap()),
+            (
+                crate::analytic::cylinder(1., 3.).unwrap(),
+                crate::analytic::torus(3., 1.).unwrap(),
+            ),
+            (
+                crate::analytic::sphere(2.).unwrap(),
+                crate::analytic::sphere(2.).unwrap(),
+            ),
+            (
+                crate::analytic::torus(3., 1.).unwrap(),
+                crate::analytic::torus(2., 1.).unwrap(),
+            ),
+            (
+                crate::cuboid([0., 0., 0.], [1., 1., 1.]).unwrap(),
+                crate::analytic::torus(3., 1.).unwrap(),
+            ),
+            (
+                crate::analytic::torus(3., 1.).unwrap(),
+                crate::analytic::sphere(2.).unwrap(),
+            ),
         ] {
             let report = intersect_sphere_torus(&a, &b, Options::default()).unwrap();
             assert!(report.components.is_empty(), "{report:?}");
             assert_eq!(report.coverage, Coverage::Incomplete);
             assert_eq!(report.unresolved.len(), 1);
-            assert_eq!(report.unresolved[0].reason, UnresolvedReason::UnsupportedSurface);
+            assert_eq!(
+                report.unresolved[0].reason,
+                UnresolvedReason::UnsupportedSurface
+            );
         }
         // A canonical pair still resolves.
         let report = intersect_sphere_torus(&sphere, &torus, Options::default()).unwrap();
@@ -659,7 +704,10 @@ mod tests {
         perturbed.rebuild_topology_ids();
         let report = intersect_sphere_torus(&sphere, &perturbed, Options::default()).unwrap();
         assert!(report.components.is_empty(), "{report:?}");
-        assert_eq!(report.unresolved[0].reason, UnresolvedReason::UnsupportedSurface);
+        assert_eq!(
+            report.unresolved[0].reason,
+            UnresolvedReason::UnsupportedSurface
+        );
     }
 
     #[test]
@@ -668,7 +716,10 @@ mod tests {
         let angle = 0.5;
         let offset = [0.3, -0.2, 1.1];
         let sphere = rotated_translated(
-            &translated(&crate::analytic::sphere(26_f64.sqrt()).unwrap(), [0., 0., -4.]),
+            &translated(
+                &crate::analytic::sphere(26_f64.sqrt()).unwrap(),
+                [0., 0., -4.],
+            ),
             angle,
             offset,
         );
@@ -695,7 +746,10 @@ mod tests {
                 sub(center, expected).iter().all(|x| x.abs() <= 1e-12),
                 "{center:?}"
             );
-            assert!(sub(normal, axis).iter().all(|x| x.abs() <= 1e-12), "{normal:?}");
+            assert!(
+                sub(normal, axis).iter().all(|x| x.abs() <= 1e-12),
+                "{normal:?}"
+            );
             let mut worst = 0_f64;
             for i in 0..16 {
                 let p = curve.evaluate(i as f64 / 4.).unwrap().point;

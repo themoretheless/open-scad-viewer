@@ -1,0 +1,89 @@
+{
+  "schema": "open-scad-viewer/qualification-plan",
+  "schemaVersion": 1,
+  "gate": "G8-full",
+  "matrix": "docs/qualification/brep-full-closed-matrix-v1.json",
+  "registry": "docs/qualification/brep-capability-registry-release-full-v1.json",
+  "capabilities": [
+    {
+      "id": "planar-csg/1",
+      "plan": "docs/qualification/plans/planar-csg-1.json",
+      "evidence": "docs/qualification/brep-native-workbench-boolean-v1.json",
+      "maturityTarget": "Qualified"
+    },
+    {
+      "id": "analytic-boolean/1",
+      "plan": "docs/qualification/plans/analytic-boolean-1-g8.json",
+      "evidence": "docs/qualification/analytic-boolean-1-evidence-v1.json",
+      "maturityTarget": "Qualified"
+    },
+    {
+      "id": "nurbs-ss-bezier-le3/1",
+      "plan": "docs/qualification/plans/nurbs-ss-bezier-le3-1.json",
+      "evidence": "docs/qualification/nurbs-ss-g6-evidence-v1.json",
+      "maturityTarget": "AnalyticComplete"
+    },
+    {
+      "id": "nurbs-step-bicubic-face/1",
+      "plan": "docs/qualification/plans/nurbs-step-bicubic-face-1.json",
+      "evidence": "docs/qualification/nurbs-step-bicubic-face-1-evidence-v1.json",
+      "maturityTarget": "AnalyticComplete"
+    },
+    {
+      "id": "nurbs-step-trimmed-bicubic/1",
+      "plan": "docs/qualification/plans/nurbs-step-trimmed-bicubic-1.json",
+      "evidence": "docs/qualification/nurbs-step-trimmed-bicubic-1-evidence-v1.json",
+      "maturityTarget": "AnalyticComplete"
+    },
+    {
+      "id": "nurbs-step-solid/1",
+      "plan": "docs/qualification/plans/nurbs-step-solid-1.json",
+      "evidence": "docs/qualification/nurbs-step-solid-1-evidence-v1.json",
+      "maturityTarget": "AnalyticComplete"
+    },
+    {
+      "id": "analytic-fillet/1",
+      "plan": "docs/qualification/plans/analytic-fillet-1.json",
+      "evidence": "docs/qualification/analytic-fillet-1-evidence-v1.json",
+      "maturityTarget": "AnalyticComplete"
+    },
+    {
+      "id": "analytic-chamfer/1",
+      "plan": "docs/qualification/plans/analytic-chamfer-1-g8.json",
+      "evidence": "docs/qualification/analytic-chamfer-1-evidence-v1.json",
+      "maturityTarget": "AnalyticComplete"
+    },
+    {
+      "id": "analytic-shell/1",
+      "plan": "docs/qualification/plans/analytic-shell-1.json",
+      "evidence": "docs/qualification/analytic-shell-1-evidence-v1.json",
+      "maturityTarget": "AnalyticComplete"
+    },
+    {
+      "id": "analytic-solid-loft/1",
+      "plan": "docs/qualification/plans/analytic-solid-loft-1.json",
+      "evidence": "docs/qualification/analytic-solid-loft-1-evidence-v1.json",
+      "maturityTarget": "AnalyticComplete"
+    },
+    {
+      "id": "step-interchange/1",
+      "plan": "docs/qualification/plans/step-interchange-1.json",
+      "evidence": "docs/qualification/step-interchange-1-evidence-v1.json",
+      "maturityTarget": "AnalyticComplete"
+    },
+    {
+      "id": "iges-interchange/1",
+      "plan": "docs/qualification/plans/iges-interchange-1-g8.json",
+      "evidence": "docs/qualification/iges-interchange-1-evidence-v1.json",
+      "maturityTarget": "AnalyticComplete"
+    }
+  ],
+  "unresolvedInShippedMatrix": [],
+  "invariants": [
+    "fail-closed",
+    "no-prism-on-curved-boolean-success",
+    "no-manifold-cross-route",
+    "false-Complete-freezes-Unavailable"
+  ],
+  "sbomNote": "Canonical registry successor: docs/qualification/brep-capability-registry-release-full-v1.json"
+}
