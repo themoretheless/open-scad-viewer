@@ -1,18 +1,20 @@
 import { readFileSync, readdirSync, statSync } from 'node:fs'
 import { extname, join, relative } from 'node:path'
 import { createRequire } from 'node:module'
+import { fileURLToPath } from 'node:url'
 import { verifyPackedWasmChunk } from './verify-packed-wasm.mjs'
 
-const root = new URL('../dist/', import.meta.url)
+const rootUrl = new URL('../dist/', import.meta.url)
+const root = fileURLToPath(rootUrl)
 const files = []
 function walk(directory) {
   for (const name of readdirSync(directory)) {
     const path = join(directory, name)
     if (statSync(path).isDirectory()) walk(path)
-    else files.push({ path: relative(root.pathname, path), bytes: statSync(path).size, extension: extname(path) })
+    else files.push({ path: relative(root, path).replaceAll('\\', '/'), bytes: statSync(path).size, extension: extname(path) })
   }
 }
-walk(root.pathname)
+walk(root)
 
 const limits = new Map([
   ['.html', 10_000],
@@ -79,14 +81,14 @@ if (geometryBytes.length !== 1 || geometryBytes[0].bytes > geometryChunkBudget) 
   throw new Error(`Expected one shared geometry kernel chunk within ${geometryChunkBudget} bytes`)
 }
 verifyPackedWasmChunk(
-  readFileSync(new URL(geometryBytes[0].path, root), 'utf8'),
+  readFileSync(new URL(geometryBytes[0].path, rootUrl), 'utf8'),
   readFileSync(new URL('../src/generated/geometry-kernels/kernel_bg.wasm', import.meta.url)),
   'Geometry kernel',
 )
 const harfBuzzBytes = files.filter(file => /^assets\/harfbuzz-bytes-[^/]+\.js$/.test(file.path))
 if (harfBuzzBytes.length !== 1) throw new Error('Expected one shared packed HarfBuzz runtime')
 verifyPackedWasmChunk(
-  readFileSync(new URL(harfBuzzBytes[0].path, root), 'utf8'),
+  readFileSync(new URL(harfBuzzBytes[0].path, rootUrl), 'utf8'),
   readFileSync(createRequire(import.meta.url).resolve('harfbuzzjs/hb.wasm')),
   'HarfBuzz',
 )
@@ -97,7 +99,7 @@ for (const [name, artifact, compression] of [
   const packed = files.filter(file => new RegExp(`^assets/${name}-[^/]+\\.js$`).test(file.path))
   if (packed.length !== 1) throw new Error(`Expected one shared ${name} runtime`)
   verifyPackedWasmChunk(
-    readFileSync(new URL(packed[0].path, root), 'utf8'),
+    readFileSync(new URL(packed[0].path, rootUrl), 'utf8'),
     readFileSync(new URL(`../crates/target/wasm32-unknown-unknown/release/${artifact}.wasm`, import.meta.url)),
     name,
     compression,
