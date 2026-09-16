@@ -11,7 +11,17 @@ use super::wgpu::util::DeviceExt;
 
 use super::GpuContext;
 
-const SHADER: &str = r#"
+/// Metal (Apple GPUs) tunes toward a smaller, SIMD-group-aligned workgroup to
+/// keep more threadgroups resident; every other backend — including Vulkan on
+/// NVIDIA/"CUDA-class" hardware — keeps the larger default that hides memory
+/// latency with more warps in flight. See `gpu_compute::tuned_workgroup_size`.
+const WG_METAL: u32 = 128;
+const WG_DEFAULT: u32 = 256;
+
+// Template placeholders substituted per backend tuning (`__WG__`); plain
+// `String::replace` avoids escaping every brace in the WGSL body the way a
+// `format!` template would require.
+const SHADER_TEMPLATE: &str = r#"
 struct Params {
     rows: u32,
     cols: u32,
@@ -34,11 +44,11 @@ struct ColBest {
 
 const NONE: u32 = 0xFFFFFFFFu;
 const INF: f32 = 3.402823466e+38;
-const WG: u32 = 256u;
+const WG: u32 = __WG__u;
 
-var<workgroup> sh_d: array<f32, 256>;
-var<workgroup> sh_i: array<u32, 256>;
-var<workgroup> sh_s: array<f32, 256>;
+var<workgroup> sh_d: array<f32, __WG__>;
+var<workgroup> sh_i: array<u32, __WG__>;
+var<workgroup> sh_s: array<f32, __WG__>;
 
 // True when (a_d, a_i) outranks (b_d, b_i): smaller distance, then smaller index.
 fn better(a_d: f32, a_i: u32, b_d: f32, b_i: u32) -> bool {
@@ -56,7 +66,7 @@ fn dist(row: u32, col: u32) -> f32 {
     return d;
 }
 
-@compute @workgroup_size(256)
+@compute @workgroup_size(__WG__)
 fn match_rows(@builtin(workgroup_id) wg: vec3<u32>, @builtin(local_invocation_id) lid: vec3<u32>) {
     let row = wg.x;
     var best_d = INF;
@@ -99,7 +109,7 @@ fn match_rows(@builtin(workgroup_id) wg: vec3<u32>, @builtin(local_invocation_id
     }
 }
 
-@compute @workgroup_size(256)
+@compute @workgroup_size(__WG__)
 fn match_cols(@builtin(workgroup_id) wg: vec3<u32>, @builtin(local_invocation_id) lid: vec3<u32>) {
     let col = wg.x;
     var best_d = INF;
@@ -134,6 +144,10 @@ fn match_cols(@builtin(workgroup_id) wg: vec3<u32>, @builtin(local_invocation_id
 }
 "#;
 
+fn shader_source(wg: u32) -> String {
+    SHADER_TEMPLATE.replace("__WG__", &wg.to_string())
+}
+
 pub struct RowBest {
     pub j: usize,
     pub d1: f32,
@@ -150,14 +164,29 @@ pub struct GpuMatcher {
     layout: wgpu::BindGroupLayout,
     rows_pipeline: wgpu::ComputePipeline,
     cols_pipeline: wgpu::ComputePipeline,
+    /// The workgroup size baked into the compiled pipelines, chosen per
+    /// backend by `gpu_compute::tuned_workgroup_size`. Exposed for tests
+    /// (hence `allow(dead_code)` on non-test builds).
+    #[allow(dead_code)]
+    workgroup_size: u32,
 }
 
 impl GpuMatcher {
     pub fn new(context: &GpuContext) -> Self {
+        let workgroup_size =
+            gpu_compute::tuned_workgroup_size(context.backend, WG_METAL, WG_DEFAULT);
+        Self::with_workgroup_size(context, workgroup_size)
+    }
+
+    /// Builds the pipelines for an explicit workgroup size, bypassing backend
+    /// auto-detection. `new` is the production entry point; this is what lets
+    /// tests exercise both the Metal-tuned and default-tuned kernel variants
+    /// on whatever adapter the test machine actually has.
+    fn with_workgroup_size(context: &GpuContext, workgroup_size: u32) -> Self {
         let device = &context.device;
         let module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("match_descriptors"),
-            source: wgpu::ShaderSource::Wgsl(SHADER.into()),
+            source: wgpu::ShaderSource::Wgsl(shader_source(workgroup_size).into()),
         });
         let layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
             label: Some("match_descriptors"),
@@ -196,7 +225,13 @@ impl GpuMatcher {
             layout,
             rows_pipeline,
             cols_pipeline,
+            workgroup_size,
         }
+    }
+
+    #[cfg(test)]
+    fn workgroup_size(&self) -> u32 {
+        self.workgroup_size
     }
 
     /// Nearest/second-nearest per row and nearest per column over the full
@@ -456,5 +491,64 @@ mod tests {
             "column selections must agree with CPU"
         );
         eprintln!("bit-exact rows: {row_exact}/{}", ref_a.len());
+    }
+
+    #[test]
+    fn gpu_matcher_picks_the_backend_tuned_workgroup_size() {
+        let Some(context) = GpuContext::new() else {
+            eprintln!("no GPU adapter; skipping");
+            return;
+        };
+        let matcher = GpuMatcher::new(&context);
+        let expected = gpu_compute::tuned_workgroup_size(context.backend, WG_METAL, WG_DEFAULT);
+        assert_eq!(matcher.workgroup_size(), expected);
+        if context.backend == wgpu::Backend::Metal {
+            assert_eq!(matcher.workgroup_size(), WG_METAL);
+        } else {
+            assert_eq!(matcher.workgroup_size(), WG_DEFAULT);
+        }
+    }
+
+    /// Both the Metal-tuned (128) and default (256) workgroup variants must
+    /// produce results that agree with the CPU reference, regardless of
+    /// which one the test machine's actual backend happens to select — this
+    /// is what protects the templated shader from a size-specific bug.
+    #[test]
+    fn gpu_matching_agrees_with_cpu_for_both_workgroup_tunings() {
+        let Some(context) = GpuContext::new() else {
+            eprintln!("no GPU adapter; skipping");
+            return;
+        };
+        let da = descriptors(23, 300);
+        let db = descriptors(29, 280);
+        let (ref_a, ref_b) = cpu_reference(&da, &db);
+        for &wg in &[WG_METAL, WG_DEFAULT] {
+            let matcher = GpuMatcher::with_workgroup_size(&context, wg);
+            let (rows, cols) = matcher.match_descriptors(&da, &db);
+            let row_close = rows
+                .iter()
+                .zip(&ref_a)
+                .filter(|(gpu, cpu)| {
+                    gpu.j == cpu.0 && (gpu.d1 - cpu.1).abs() <= 1e-4 * cpu.1.max(1.)
+                })
+                .count();
+            let col_close = cols
+                .iter()
+                .zip(&ref_b)
+                .filter(|(gpu, cpu)| {
+                    gpu.i == cpu.0 && (gpu.d1 - cpu.1).abs() <= 1e-4 * cpu.1.max(1.)
+                })
+                .count();
+            assert_eq!(
+                row_close,
+                ref_a.len(),
+                "WG={wg}: row selections must agree with CPU"
+            );
+            assert_eq!(
+                col_close,
+                ref_b.len(),
+                "WG={wg}: column selections must agree with CPU"
+            );
+        }
     }
 }

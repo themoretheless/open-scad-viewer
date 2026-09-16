@@ -44,6 +44,11 @@ pub fn block_on<F: Future>(future: F) -> F::Output {
 pub struct GpuContext {
     pub device: wgpu::Device,
     pub queue: wgpu::Queue,
+    /// The wgpu backend actually bound (Metal on macOS, Vulkan elsewhere —
+    /// including NVIDIA/"CUDA-class" hardware, which wgpu drives through
+    /// Vulkan rather than a dedicated CUDA backend). Kernels that template
+    /// their workgroup size read this to pick a per-backend tuning.
+    pub backend: wgpu::Backend,
 }
 
 impl GpuContext {
@@ -60,6 +65,7 @@ impl GpuContext {
             ..Default::default()
         }))
         .ok()?;
+        let backend = adapter.get_info().backend;
         let (device, queue) = block_on(adapter.request_device(&wgpu::DeviceDescriptor {
             label: Some("gpu-compute"),
             required_features: wgpu::Features::empty(),
@@ -69,7 +75,48 @@ impl GpuContext {
             trace: wgpu::Trace::Off,
         }))
         .ok()?;
-        Some(Self { device, queue })
+        Some(Self {
+            device,
+            queue,
+            backend,
+        })
+    }
+}
+
+/// Per-backend workgroup-size tuning for compute kernels that template their
+/// WGSL source with a `WG` constant. Apple GPUs (Metal) are tile-based
+/// deferred renderers whose occupancy is limited by threadgroup memory and
+/// per-core execution-unit count; smaller workgroups (aligned to the 32-wide
+/// SIMD-group) keep more threadgroups resident and in flight. NVIDIA GPUs —
+/// which wgpu drives through Vulkan, since there is no separate CUDA backend
+/// for custom shaders — have deep multi-warp schedulers per SM and benefit
+/// from larger workgroups that hide memory latency with more warps in
+/// flight, so every non-Metal backend keeps the larger default.
+///
+/// `metal_size` and `default_size` should both be powers of two; callers
+/// that reduce across the workgroup (e.g. tree reductions halving the
+/// stride) depend on that.
+pub fn tuned_workgroup_size(backend: wgpu::Backend, metal_size: u32, default_size: u32) -> u32 {
+    match backend {
+        wgpu::Backend::Metal => metal_size,
+        _ => default_size,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn tuned_workgroup_size_selects_metal_variant() {
+        assert_eq!(tuned_workgroup_size(wgpu::Backend::Metal, 128, 256), 128);
+    }
+
+    #[test]
+    fn tuned_workgroup_size_falls_back_to_default_off_metal() {
+        assert_eq!(tuned_workgroup_size(wgpu::Backend::Vulkan, 128, 256), 256);
+        assert_eq!(tuned_workgroup_size(wgpu::Backend::Dx12, 128, 256), 256);
+        assert_eq!(tuned_workgroup_size(wgpu::Backend::Gl, 128, 256), 256);
     }
 }
 
