@@ -81,6 +81,10 @@ export const COMMAND_REGISTRY = [
     keywords: ['mesh', 'interchange'], scopes: ['global'], palette: true,
   },
   {
+    id: 'convert-mesh', labelKey: 'convertFile', aliasKeys: ['convertFile'],
+    keywords: ['convert', 'import', 'stl', 'obj', 'ply', 'off', 'amf', '3mf', 'конвертировать'], scopes: ['global'], palette: true,
+  },
+  {
     id: 'share', labelKey: 'share', aliasKeys: ['share'],
     keywords: ['link', 'copy'], scopes: ['global'], palette: true,
   },

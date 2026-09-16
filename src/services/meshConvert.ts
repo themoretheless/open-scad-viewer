@@ -4,13 +4,13 @@
  * (`meshExportFormats`). Geometry only: colours, textures, units metadata and
  * per-object identities are not carried across.
  */
-import { inspectNurbsMesh } from './geometry/tessellation'
+import type { PolygonMesh } from './geometry/polygon'
+import { inspectNurbsMesh, type NurbsMesh } from './geometry/tessellation'
 import { MESH_EXPORT_FORMATS, exportMeshFormat, exportMeshFormatCompressed, type MeshExportFormat } from './meshExportFormats'
 import {
   importMeshFile,
   MESH_IMPORT_FORMATS,
   stripMeshExtension,
-  type ImportedMesh,
   type MeshImportFormat,
   type MeshImportOptions,
 } from './meshImport'
@@ -60,10 +60,10 @@ export function isMeshExportFormat(value: string): value is MeshExportFormat {
 }
 
 /** Build the export-ready mesh wrapper (Rust inspection report attached). */
-export function importedMeshToExportMesh(mesh: ImportedMesh) {
+export function polygonMeshToExportMesh(mesh: PolygonMesh): NurbsMesh {
   const positions = [...mesh.positions], indices = [...mesh.indices]
   const report = inspectNurbsMesh(positions, indices)
-  return { positions, indices, report: { ...report, errorBoundCertified: false, selfIntersectionStatus: 'not_checked' as const } }
+  return { positions, indices, report: { ...report, errorBoundCertified: false, selfIntersectionStatus: 'not_checked' } }
 }
 
 export function convertedFileName(inputName: string, extension: string): string {
@@ -82,7 +82,7 @@ export async function convertMeshFile(
   const bytes = input instanceof Uint8Array ? input : new Uint8Array(input)
   const { compressed = true, ...importOptions } = options
   const imported = await importMeshFile(fileName, bytes, importOptions)
-  const exportMesh = importedMeshToExportMesh(imported)
+  const exportMesh = polygonMeshToExportMesh(imported)
   const artifact = compressed
     ? await exportMeshFormatCompressed(exportMesh, target)
     : exportMeshFormat(exportMesh, target)

@@ -22,7 +22,6 @@ import {
   moveVerticesProportional,
   parseMeshDocument,
   separateFaces,
-  stlBufferToPolygonMesh,
   subdivideFaces,
   symmetrizeMesh,
   transformMesh,
@@ -32,6 +31,11 @@ import {
 } from '../services/meshEditing'
 import { defaultDirectCamera, projectDirectPoint } from '../services/directModelingTools'
 import { storageGet, storageSet } from '../services/safeStorage'
+import { importMeshFromFile, MESH_IMPORT_ACCEPT, stripMeshExtension } from '../services/meshImport'
+import { polygonMeshToExportMesh, MESH_EXPORT_FORMATS, MESH_FORMAT_LABELS, type MeshExportFormat } from '../services/meshConvert'
+import { exportMeshFormatCompressed } from '../services/meshExportFormats'
+import { downloadBytes } from '../services/downloadArtifact'
+import type { PolygonMesh } from '../services/geometry/polygon'
 
 const props = defineProps<{ open: boolean; locale: string }>()
 const emit = defineEmits<{ close: []; exportToSolid: [doc: MeshWorkspaceDocument] }>()
@@ -361,16 +365,16 @@ function removeSelected() {
   })
 }
 
-async function importStl(event: Event) {
+async function importMesh(event: Event) {
   const input = event.target as HTMLInputElement
   const file = input.files?.[0]
   if (!file) return
   try {
-    if (file.size > 20_000_000) throw new Error('STL exceeds 20 MB.')
-    const mesh = stlBufferToPolygonMesh(await file.arrayBuffer())
+    const imported = await importMeshFromFile(file, { weld: 1e-4 })
+    const mesh: PolygonMesh = { positions: [...imported.positions], indices: [...imported.indices] }
     const d = history.document
-    const id = `stl-${Date.now().toString(36)}`
-    d.objects.push({ id, name: file.name.replace(/\.stl$/i, '') || 'STL', mesh, visible: true })
+    const id = `${imported.format}-${Date.now().toString(36)}`
+    d.objects.push({ id, name: stripMeshExtension(file.name) || imported.format.toUpperCase(), mesh, visible: true })
     commit(d)
     selection.value = id
   } catch (e) {
@@ -391,6 +395,17 @@ function downloadStl() {
     a.click()
     URL.revokeObjectURL(url)
   })
+}
+
+const exportFormat = ref<MeshExportFormat>('3mf')
+async function downloadMesh() {
+  try {
+    if (!selected.value) throw new Error(label('Выберите объект.', 'Select an object.'))
+    const artifact = await exportMeshFormatCompressed(polygonMeshToExportMesh(selected.value.mesh), exportFormat.value)
+    downloadBytes(artifact.data, artifact.mimeType, `${selected.value.name || 'mesh'}.${artifact.extension}`)
+  } catch (e) {
+    error.value = e instanceof Error ? e.message : String(e)
+  }
 }
 
 function downloadJson() {
@@ -481,8 +496,8 @@ const scene = computed(() => document.value.objects.filter(o => o.visible).map(o
           <h3>{{ label('Объекты', 'Objects') }}</h3>
           <button type="button" @click="addPrimitive('box')">+ Cube</button>
           <button type="button" @click="addPrimitive('sphere')">+ UV Sphere</button>
-          <button type="button" @click="fileInput?.click()">{{ label('Импорт STL', 'Import STL') }}</button>
-          <input ref="fileInput" type="file" accept=".stl,model/stl" hidden @change="importStl" />
+          <button type="button" @click="fileInput?.click()">{{ label('Импорт STL / OBJ / PLY / OFF / AMF / 3MF', 'Import STL / OBJ / PLY / OFF / AMF / 3MF') }}</button>
+          <input ref="fileInput" type="file" :accept="MESH_IMPORT_ACCEPT" hidden @change="importMesh" />
           <ul>
             <li v-for="object in document.objects" :key="object.id">
               <button type="button" :class="{ active: selection === object.id }" @click="selection = object.id; selectedVerts = []; selectedFaces = []; selectedEdges = []">
@@ -565,6 +580,10 @@ const scene = computed(() => document.value.objects.filter(o => o.visible).map(o
         <section>
           <h3>{{ label('Экспорт', 'Export') }}</h3>
           <button type="button" :disabled="!selected" @click="downloadStl">STL</button>
+          <select v-model="exportFormat" :aria-label="label('Формат экспорта', 'Export format')">
+            <option v-for="format in MESH_EXPORT_FORMATS" :key="format" :value="format">{{ MESH_FORMAT_LABELS[format] }}</option>
+          </select>
+          <button type="button" :disabled="!selected" @click="downloadMesh">{{ label('Скачать', 'Download') }}</button>
           <button type="button" @click="downloadJson">JSON</button>
         </section>
 

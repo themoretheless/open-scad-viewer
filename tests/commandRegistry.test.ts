@@ -23,7 +23,7 @@ describe('command registry', () => {
     const ids = COMMAND_REGISTRY.map(command => command.id)
     expect(new Set(ids).size).toBe(ids.length)
     expect(ids).toEqual(expect.arrayContaining([
-      'render', 'open', 'save', 'find', 'replace', 'export-stl', 'export-obj', 'share',
+      'render', 'open', 'save', 'find', 'replace', 'export-stl', 'export-obj', 'convert-mesh', 'share',
       'focus', 'fit', 'isolate', 'deselect', 'previous-view', 'projection',
       'grid', 'shaded', 'edges', 'xray', 'select-point', 'select-face',
       'select-object', 'measure', 'section', 'sidebar', 'iso', 'front',

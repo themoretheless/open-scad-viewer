@@ -4,7 +4,9 @@ import { editorBlocks, indentSelection, guideFitsIndent } from './services/edito
 import { formatCode } from './services/codeFormat'
 import { highlightCode } from './services/codeHighlight'
 import { computed, defineAsyncComponent, nextTick, onMounted, onUnmounted, ref, shallowRef, watch, watchEffect } from 'vue'
-import type { MeshExportFormat } from './services/meshExportFormats'
+import { MESH_EXPORT_FORMATS, type MeshExportFormat } from './services/meshExportFormats'
+import { MESH_FORMAT_LABELS } from './services/meshConvert'
+import { detectMeshImportFormat, MESH_IMPORT_ACCEPT } from './services/meshImport'
 import CommandPalette from './components/CommandPalette.vue'
 import CustomizerPanel from './components/CustomizerPanel.vue'
 import ExampleGallery from './components/ExampleGallery.vue'
@@ -134,6 +136,7 @@ const L: Record<Language, Record<string, string>> = {
     basic: 'Примитивы', csg: 'Настоящий CSG', house: 'Дом с модулями', tower: 'Параметрическая башня',
     open: 'Открыть', save: 'Сохранить', share: 'Поделиться',
     exportStl: 'Экспорт STL', exportObj: 'Экспорт OBJ', parameters: 'Параметры',
+    convertFile: 'Конвертировать…', convertFileHelp: 'Конвертировать файл STL / OBJ / PLY / OFF / AMF / 3MF в выбранный формат', converted: 'Файл конвертирован', exportFormat: 'Формат экспорта',
     noParameters: 'Добавьте верхнеуровневые переменные; диапазон слайдера: // [min:step:max]',
     openFile: 'Открыть файл OpenSCAD', saveFile: 'Сохранить исходник OpenSCAD', shareFile: 'Скопировать ссылку на модель',
     meshes: 'Объекты', triangles: 'Треугольники', volume: 'Объём', area: 'Площадь', time: 'Сборка',
@@ -181,6 +184,7 @@ const L: Record<Language, Record<string, string>> = {
     basic: 'Primitives', csg: 'Real CSG', house: 'Modular house', tower: 'Parametric tower',
     open: 'Open', save: 'Save', share: 'Share',
     exportStl: 'Export STL', exportObj: 'Export OBJ', parameters: 'Parameters',
+    convertFile: 'Convert…', convertFileHelp: 'Convert an STL / OBJ / PLY / OFF / AMF / 3MF file to the selected export format', converted: 'File converted', exportFormat: 'Export format',
     noParameters: 'Add top-level variables; slider metadata: // [min:step:max]',
     openFile: 'Open an OpenSCAD file', saveFile: 'Save OpenSCAD source', shareFile: 'Copy a link to this model',
     meshes: 'Objects', triangles: 'Triangles', volume: 'Volume', area: 'Surface', time: 'Build',
@@ -295,6 +299,7 @@ function syncHighlightScroll() {
 }
 const findInputRef = ref<HTMLInputElement | null>(null)
 const fileInputRef = ref<HTMLInputElement | null>(null)
+const convertInputRef = ref<HTMLInputElement | null>(null)
 const mainRef = ref<HTMLElement | null>(null)
 const error = ref('')
 const editorDiagnostic = ref<EditorDiagnostic | null>(null)
@@ -1622,7 +1627,28 @@ async function openSelectedFile(event: Event) {
 
 async function handleDrop(event: DragEvent) {
   const file = event.dataTransfer?.files?.[0]
-  if (file) await openFile(file)
+  if (!file) return
+  if (detectMeshImportFormat(file.name)) await convertFile(file)
+  else await openFile(file)
+}
+
+function triggerConvert() { convertInputRef.value?.click() }
+
+async function convertSelectedFile(event: Event) {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  input.value = ''
+  if (file) await convertFile(file)
+}
+
+/** Convert a dropped/picked mesh file to the selected export format and download it. */
+async function convertFile(file: File) {
+  try {
+    const { convertMeshFile } = await import('./services/meshConvert')
+    const result = await convertMeshFile(file.name, await file.arrayBuffer(), additionalExportFormat.value)
+    downloadBlob(new Blob([result.data.slice().buffer as ArrayBuffer], { type: result.mimeType }), result.fileName)
+    showNotice(`${t('converted')}: ${result.source.format.toUpperCase()} → ${result.format.toUpperCase()}`)
+  } catch (error) { showNotice(error instanceof Error ? error.message : 'Conversion failed') }
 }
 
 async function openFile(file: File) {
@@ -2166,6 +2192,7 @@ function executeCommand(id: string) {
       break
     case 'export-stl': exportStl(); break
     case 'export-obj': exportObj(); break
+    case 'convert-mesh': triggerConvert(); break
     case 'share': void shareSource(); break
     case 'fit': fitView(); break
     case 'focus': focusSelection(); break
@@ -2425,12 +2452,14 @@ function sanitizeFileName(name: string) { return (name.replace(/[^\w.() -]+/g, '
           <button class="btn" type="button" :title="t('shareFile')" @click="shareSource">⌁ {{ t('share') }}</button>
           <button class="btn export-btn" type="button" :disabled="!canExport" @click="exportStl">STL</button>
           <button class="btn export-btn" type="button" :disabled="!canExport" @click="exportObj">OBJ</button>
-          <select v-model="additionalExportFormat" class="btn export-btn" :aria-label="lang === 'ru' ? 'Формат экспорта' : 'Export format'">
-            <option value="3mf">3MF</option><option value="ply">PLY</option><option value="off">OFF</option><option value="amf">AMF</option>
+          <select v-model="additionalExportFormat" class="btn export-btn" :aria-label="t('exportFormat')">
+            <option v-for="format in MESH_EXPORT_FORMATS" :key="format" :value="format">{{ MESH_FORMAT_LABELS[format] }}</option>
           </select>
           <button class="btn export-btn" type="button" :disabled="!canExport" @click="exportAdditionalMesh">{{ lang === 'ru' ? 'Скачать' : 'Download' }}</button>
+          <button class="btn export-btn" type="button" :title="t('convertFileHelp')" @click="triggerConvert">{{ t('convertFile') }}</button>
           <span class="file-name" :title="fileName">{{ fileName }}</span>
           <input ref="fileInputRef" class="sr-only" type="file" accept=".scad,text/plain" @change="openSelectedFile">
+          <input ref="convertInputRef" class="sr-only" type="file" :accept="MESH_IMPORT_ACCEPT" @change="convertSelectedFile">
         </div>
 
         <div v-if="findOpen" class="find-bar" role="search" @keydown="handleFindKeydown">
