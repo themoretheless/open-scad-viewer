@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 /**
  * Convert a mesh file between formats using the repository's own decoders and
- * Rust writers. Run through npm (builds the geometry kernel first):
+ * Rust writers. Run `npm run build:geometry` once, then:
  *
- *   npm run convert -- input.stl output.3mf
- *   npm run convert -- input.obj --to ply [--out dir/] [--weld 1e-4] [--source-format obj]
+ *   node --import tsx scripts/convert-mesh.ts input.stl output.3mf
+ *   node --import tsx scripts/convert-mesh.ts input.obj --to ply [--out dir/] [--weld 1e-4] [--source-format obj]
  *
  * Supported input: STL (ASCII/binary), OBJ, PLY (ASCII/binary), OFF, AMF, 3MF.
  * Supported output: stl, stl_binary, obj, ply, off, amf, 3mf.
@@ -33,7 +33,7 @@ interface Options {
 
 function usage(): never {
   console.error([
-    'Usage: npm run convert -- <input> [<output>] [--to <format>] [--out <dir>] [--weld <tolerance>|off] [--source-format <format>] [--no-compress]',
+    'Usage: node --import tsx scripts/convert-mesh.ts <input> [<output>] [--to <format>] [--out <dir>] [--weld <tolerance>|off] [--source-format <format>] [--no-compress]',
     `  input formats:  ${MESH_IMPORT_FORMATS.join(', ')}`,
     `  output formats: ${MESH_EXPORT_FORMATS.join(', ')} (from <output> extension or --to)`,
   ].join('\n'))

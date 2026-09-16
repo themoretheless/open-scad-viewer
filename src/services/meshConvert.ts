@@ -6,31 +6,21 @@
  */
 import type { PolygonMesh } from './geometry/polygon'
 import { inspectNurbsMesh, type NurbsMesh } from './geometry/tessellation'
-import { MESH_EXPORT_FORMATS, exportMeshFormat, exportMeshFormatCompressed, type MeshExportFormat } from './meshExportFormats'
+import { exportMeshFormat, exportMeshFormatCompressed } from './meshExportFormats'
 import {
-  importMeshFile,
+  isMeshExportFormat,
+  MESH_EXPORT_FORMATS,
+  MESH_FORMAT_LABELS,
   MESH_IMPORT_FORMATS,
+  MESH_PRINTING_FORMATS,
   stripMeshExtension,
+  type MeshExportFormat,
   type MeshImportFormat,
-  type MeshImportOptions,
-} from './meshImport'
+} from './meshFormats'
+import { importMeshFile, type MeshImportOptions } from './meshImport'
 
-export { MESH_EXPORT_FORMATS, MESH_IMPORT_FORMATS }
+export { isMeshExportFormat, MESH_EXPORT_FORMATS, MESH_FORMAT_LABELS, MESH_IMPORT_FORMATS, MESH_PRINTING_FORMATS }
 export type { MeshExportFormat, MeshImportFormat }
-
-/** Human-readable labels shared by the UI and MCP descriptions. */
-export const MESH_FORMAT_LABELS: Readonly<Record<MeshExportFormat | MeshImportFormat, string>> = Object.freeze({
-  stl: 'STL (ASCII)',
-  stl_binary: 'STL (binary)',
-  obj: 'OBJ',
-  ply: 'PLY',
-  off: 'OFF',
-  amf: 'AMF',
-  '3mf': '3MF',
-})
-
-/** Formats whose writers require closed, consistently oriented geometry. */
-export const MESH_PRINTING_FORMATS: readonly MeshExportFormat[] = Object.freeze(['3mf', 'amf'])
 
 export interface MeshConvertOptions extends MeshImportOptions {
   /** 3MF only: DEFLATE the OPC package. Default true. */
@@ -53,10 +43,6 @@ export interface MeshConvertResult {
     readonly sourceVertexCount: number
     readonly degenerateTriangles: number
   }
-}
-
-export function isMeshExportFormat(value: string): value is MeshExportFormat {
-  return (MESH_EXPORT_FORMATS as readonly string[]).includes(value)
 }
 
 /** Build the export-ready mesh wrapper (Rust inspection report attached). */

@@ -20,4 +20,6 @@ for the five-format surface (those three plus machine `.gcode` and `.gcode.3mf`)
 
 Maximum 100000 triangles and 4 MiB per new-format artifact. Existing browser STL/OBJ exporters retain their previous policies. Exports validate indices, finite coordinates and mesh topology; they do not certify self-intersection freedom or printability. No STEP or general B-rep export is implied.
 
+The reverse direction (importing any of these formats and converting between them) is described in [mesh-import-convert.md](mesh-import-convert.md).
+
 Tests independently reimport ASCII/binary STL, 3MF, AMF and OFF with the existing import subsystem and compare triangle counts and bounds. OBJ indexing, PLY declarations, determinism, transformed/mirrored geometry, open-surface refusals and MCP binary transport have regression coverage. Browser 3MF download is checked through the actual UI.
