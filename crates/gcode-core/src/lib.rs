@@ -13,10 +13,17 @@ pub const COORDINATE_RESOLUTION_MM: f64 = 0.00001;
 const MIN_FEEDRATE_MM_S: f64 = 0.001 / 60.0;
 const PROLOGUE: [&str; 5] = ["G21", "G90", "M82", "M200 D0", "G92 E0"];
 
+mod flavor;
+mod foreign;
 mod job;
 mod package_3mf;
 
-pub use job::{emit_job, parse_job, JobProfile, JOB_DIALECT};
+pub use flavor::Flavor;
+pub use foreign::{
+    detect, parse_any, parse_foreign, parse_foreign_with, DialectInfo, Generator,
+    ASSUMED_FILAMENT_DIAMETER_MM,
+};
+pub use job::{emit_job, job_flavor, parse_job, JobProfile, JOB_DIALECT};
 pub use math_core::{Error, Result};
 pub use package_3mf::{
     emit_3mf, emit_gcode_3mf_job, extract_gcode_3mf, extract_member_3mf, package_gcode_3mf,

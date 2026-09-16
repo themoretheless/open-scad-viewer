@@ -30,8 +30,8 @@ pub use pipeline::{
 pub use travel::{path_end, path_start, travel_after_path_mm, travel_mm};
 
 pub use gcode_core::{
-    emit, emit_3mf, emit_gcode_3mf_job, emit_job, parse, parse_job, JobProfile, MachineProfile,
-    MeshBody, PlannedLayer, PlannedPath, JOB_DIALECT, MAX_LAYERS, MAX_MOVES,
+    emit, emit_3mf, emit_gcode_3mf_job, emit_job, parse, parse_job, Flavor, JobProfile,
+    MachineProfile, MeshBody, PlannedLayer, PlannedPath, JOB_DIALECT, MAX_LAYERS, MAX_MOVES,
 };
 pub use math_core::{Error, Result};
 

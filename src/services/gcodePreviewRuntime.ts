@@ -1,4 +1,4 @@
-import { emitPolygonMeshGcode, emitPolygonMeshGcodeJob, GCODE_PREVIEW_DIALECT, parseGcodePreview } from './geometry/polygon'
+import { emitPolygonMeshGcode, emitPolygonMeshGcodeJob, inspectGcode } from './geometry/polygon'
 import { flattenGroupGeometry } from './meshFlatten'
 import { checkGcodePreviewJob, type GcodePreviewRequest, type GcodePreviewResponse } from './gcodePreviewProtocol'
 
@@ -8,8 +8,20 @@ export function executeGcodePreview(request: GcodePreviewRequest): GcodePreviewR
     if (!request || request.version !== 1 || !Number.isSafeInteger(request.id) || request.id < 1) throw new Error('Invalid G-code worker request.')
     const job = checkGcodePreviewJob(request.job)
     if (job.kind === 'parse') {
-      const preview = parseGcodePreview(job.gcode)
-      return { version: 1, id: request.id, ok: true, result: { gcode: job.gcode, preview, dialect: GCODE_PREVIEW_DIALECT } }
+      const inspected = inspectGcode(job.gcode)
+      return {
+        version: 1,
+        id: request.id,
+        ok: true,
+        result: {
+          gcode: job.gcode,
+          preview: inspected.preview,
+          dialect: inspected.dialect,
+          native: inspected.native,
+          generator: inspected.generator,
+          flavor: inspected.flavor,
+        },
+      }
     }
     const mesh = flattenGroupGeometry([job.mesh])
     if (job.kind === 'job') {
@@ -23,6 +35,8 @@ export function executeGcodePreview(request: GcodePreviewRequest): GcodePreviewR
           preview: result.preview,
           dialect: result.dialect,
           gcode3mfBase64: result.gcode3mfBase64,
+          native: true,
+          flavor: result.flavor,
         },
       }
     }

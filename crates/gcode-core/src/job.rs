@@ -1,15 +1,15 @@
 //! Machine job dialect: heating, retract, start/end. Not LAN upload.
 
+use crate::flavor::{ShutdownStep, StartupStep};
 use crate::{
     invalid, number, output_limit, require_layers, rounded_coordinate, valid_coordinate,
-    valid_dimension, words, BoundedOutput, GcodeBounds, GcodeMove, GcodePreview, MachineProfile,
-    PlannedLayer, Result, MAX_COORDINATE_MM, MAX_LAYERS, MAX_LINE_BYTES, MAX_MOVES,
-    MAX_OUTPUT_BYTES,
+    valid_dimension, words, BoundedOutput, Flavor, GcodeBounds, GcodeMove, GcodePreview,
+    MachineProfile, PlannedLayer, Result, MAX_COORDINATE_MM, MAX_LAYERS, MAX_LINE_BYTES,
+    MAX_MOVES, MAX_OUTPUT_BYTES,
 };
 use std::fmt::Write;
 
 pub const JOB_DIALECT: &str = "open-scad-viewer/print-job 1";
-const JOB_PROLOGUE: [&str; 5] = ["G21", "G90", "M82", "M200 D0", "G92 E0"];
 const MIN_FEEDRATE_MM_S: f64 = 0.001 / 60.0;
 
 #[derive(Clone, Debug, PartialEq)]
@@ -25,6 +25,8 @@ pub struct JobProfile {
     /// PWM 0..=255; `0` omits fan commands.
     pub fan_speed: u8,
     pub home_axes: bool,
+    /// Firmware family that selects startup/prologue/shutdown commands.
+    pub flavor: Flavor,
 }
 
 impl Default for JobProfile {
@@ -39,6 +41,7 @@ impl Default for JobProfile {
             retract_min_travel_mm: 2.0,
             fan_speed: 255,
             home_axes: true,
+            flavor: Flavor::Marlin,
         }
     }
 }
@@ -98,21 +101,21 @@ pub fn emit_job(layers: &[PlannedLayer], job: &JobProfile) -> Result<String> {
     let travel_f = machine.travel_feedrate_mm_s * 60.0;
     let retract_f = job.retract_feedrate_mm_s * 60.0;
     let unretract_f = job.unretract_feedrate_mm_s * 60.0;
+    let flavor = job.flavor;
     let mut out = BoundedOutput(String::new());
     writeln!(
         out,
-        "; {JOB_DIALECT}\n; Machine job: heating and retract enabled; not a LAN upload certificate\n;FILAMENT_DIAMETER_MM:{}\n;NOZZLE_TEMP_C:{}\n;BED_TEMP_C:{}\n;EST_TIME_S:0",
-        machine.filament_diameter_mm, job.nozzle_temp_c, job.bed_temp_c
+        "; {JOB_DIALECT}\n;FLAVOR:{}\n; Machine job: heating and retract enabled; not a LAN upload certificate\n;FILAMENT_DIAMETER_MM:{}\n;NOZZLE_TEMP_C:{}\n;BED_TEMP_C:{}\n;EST_TIME_S:0",
+        flavor.header_label(), machine.filament_diameter_mm, job.nozzle_temp_c, job.bed_temp_c
     )
     .map_err(output_limit)?;
-    writeln!(out, "M140 S{:.0}", job.bed_temp_c).map_err(output_limit)?;
-    writeln!(out, "M104 S{:.0}", job.nozzle_temp_c).map_err(output_limit)?;
-    writeln!(out, "M190 S{:.0}", job.bed_temp_c).map_err(output_limit)?;
-    writeln!(out, "M109 S{:.0}", job.nozzle_temp_c).map_err(output_limit)?;
+    for command in flavor.heat_commands(job) {
+        writeln!(out, "{command}").map_err(output_limit)?;
+    }
     if job.home_axes {
         writeln!(out, "G28").map_err(output_limit)?;
     }
-    for command in JOB_PROLOGUE {
+    for command in flavor.prologue() {
         writeln!(out, "{command}").map_err(output_limit)?;
     }
     if job.fan_speed > 0 {
@@ -124,8 +127,11 @@ pub fn emit_job(layers: &[PlannedLayer], job: &JobProfile) -> Result<String> {
     let mut filament_retracted = false;
     for (index, layer) in layers.iter().enumerate() {
         let z = rounded_coordinate(layer.z_mm);
-        writeln!(out, ";LAYER:{index}\n;Z:{z:.5}\nG1 Z{z:.5} F{travel_f:.3}")
-            .map_err(output_limit)?;
+        writeln!(out, ";LAYER:{index}\n;Z:{z:.5}").map_err(output_limit)?;
+        if let Some(command) = flavor.layer_command(index, layers.len()) {
+            writeln!(out, "{command}").map_err(output_limit)?;
+        }
+        writeln!(out, "G1 Z{z:.5} F{travel_f:.3}").map_err(output_limit)?;
         for path in &layer.paths {
             let Some(first) = path.points.first() else {
                 continue;
@@ -222,7 +228,9 @@ pub fn emit_job(layers: &[PlannedLayer], job: &JobProfile) -> Result<String> {
     if job.home_axes {
         writeln!(out, "G28 X Y").map_err(output_limit)?;
     }
-    writeln!(out, "M104 S0\nM140 S0").map_err(output_limit)?;
+    for command in flavor.shutdown_commands() {
+        writeln!(out, "{command}").map_err(output_limit)?;
+    }
     Ok(out.0)
 }
 
@@ -235,7 +243,17 @@ struct Startup {
     prologue: usize,
 }
 
-/// Strict parser for `print-job 1`. Accepts heat/home/fan/retract; returns preview totals.
+/// Reads the `;FLAVOR:` header. Files without it are the original Marlin layout.
+pub fn job_flavor(gcode: &str) -> Result<Flavor> {
+    for line in gcode.lines().take(16) {
+        if let Some(label) = line.trim().strip_prefix(";FLAVOR:") {
+            return Flavor::from_name(label);
+        }
+    }
+    Ok(Flavor::Marlin)
+}
+
+/// Strict parser for `print-job 1` in any supported flavor. Returns preview totals.
 pub fn parse_job(gcode: &str) -> Result<GcodePreview> {
     if gcode.len() > MAX_OUTPUT_BYTES {
         return Err(invalid(
@@ -249,6 +267,8 @@ pub fn parse_job(gcode: &str) -> Result<GcodePreview> {
             "Not an open-scad-viewer print job",
         ));
     }
+    let flavor = job_flavor(gcode)?;
+    let prologue = flavor.prologue();
     let mut result = GcodePreview {
         layers: 0,
         extrusion_mm: 0.0,
@@ -269,6 +289,7 @@ pub fn parse_job(gcode: &str) -> Result<GcodePreview> {
     let mut annotated_z = None;
     let mut move_count = 0usize;
     let mut finished = false;
+    let mut nozzle_off = false;
     let mut peak_e: f64 = 0.0;
     for (line_index, raw) in gcode.lines().enumerate().skip(1) {
         let line_result: Result<()> = (|| {
@@ -305,12 +326,13 @@ pub fn parse_job(gcode: &str) -> Result<GcodePreview> {
             if line.starts_with(";NOZZLE_TEMP_C:")
                 || line.starts_with(";BED_TEMP_C:")
                 || line.starts_with(";EST_TIME_S:")
+                || line.starts_with(";FLAVOR:")
                 || line.starts_with("; Machine job:")
             {
                 return Ok(());
             }
             if let Some(text) = line.strip_prefix(";LAYER:") {
-                if !startup_ready(&startup) || diameter.is_none() {
+                if !startup_ready(&startup, prologue.len()) || diameter.is_none() {
                     return Err(invalid(
                         "GCODE_PROLOGUE",
                         "Layers require heat, modes, and filament metadata",
@@ -364,63 +386,84 @@ pub fn parse_job(gcode: &str) -> Result<GcodePreview> {
             }
             let mut tokens = command_text.split_whitespace();
             let command = tokens.next().unwrap_or("");
-            if result.layers == 0 && startup.prologue < JOB_PROLOGUE.len() {
-                match command {
-                    "M140" | "M104" | "M190" | "M109" => {
-                        admit_temp(command, tokens.next())?;
-                        match command {
-                            "M140" => startup.bed_set = true,
-                            "M104" => startup.nozzle_set = true,
-                            "M190" => startup.bed_wait = true,
-                            "M109" => startup.nozzle_wait = true,
-                            _ => unreachable!(),
-                        }
-                        return Ok(());
+            let rest: Vec<&str> = tokens.collect();
+            if result.layers == 0 && startup.prologue < prologue.len() {
+                if let Some(step) = flavor.startup_step(command, &rest)? {
+                    match step {
+                        StartupStep::BedSet => startup.bed_set = true,
+                        StartupStep::NozzleSet => startup.nozzle_set = true,
+                        StartupStep::BedWait => startup.bed_wait = true,
+                        StartupStep::NozzleWait => startup.nozzle_wait = true,
+                        StartupStep::ToolSelect => {}
                     }
-                    "G28" => {
-                        if tokens.next().is_some() {
-                            return Err(invalid(
-                                "GCODE_SYNTAX",
-                                "Startup G28 must have no axis words",
-                            ));
-                        }
-                        return Ok(());
-                    }
-                    _ => {
-                        if !(startup.bed_set
-                            && startup.nozzle_set
-                            && startup.bed_wait
-                            && startup.nozzle_wait)
-                        {
-                            return Err(invalid(
-                                "GCODE_PROLOGUE",
-                                "Expected M140, M104, M190, M109 before units/modes",
-                            ));
-                        }
-                        if command_text
-                            .split_whitespace()
-                            .ne(JOB_PROLOGUE[startup.prologue].split_whitespace())
-                        {
-                            return Err(invalid(
-                                "GCODE_PROLOGUE",
-                                "Expected G21, G90, M82, M200 D0, then G92 E0",
-                            ));
-                        }
-                        startup.prologue += 1;
-                        return Ok(());
-                    }
+                    return Ok(());
                 }
+                if command == "G28" {
+                    if !rest.is_empty() {
+                        return Err(invalid(
+                            "GCODE_SYNTAX",
+                            "Startup G28 must have no axis words",
+                        ));
+                    }
+                    return Ok(());
+                }
+                if !(startup.bed_set
+                    && startup.nozzle_set
+                    && startup.bed_wait
+                    && startup.nozzle_wait)
+                {
+                    return Err(invalid(
+                        "GCODE_PROLOGUE",
+                        "Expected bed and nozzle heat-and-wait commands before units/modes",
+                    ));
+                }
+                if command_text
+                    .split_whitespace()
+                    .ne(prologue[startup.prologue].split_whitespace())
+                {
+                    return Err(invalid("GCODE_PROLOGUE", flavor.prologue_error()));
+                }
+                startup.prologue += 1;
+                return Ok(());
             }
-            if result.layers == 0 && startup.prologue == JOB_PROLOGUE.len() {
+            if result.layers == 0 && startup.prologue == prologue.len() {
                 if command == "M106" {
-                    admit_fan(tokens.next())?;
+                    admit_fan(rest.first().copied())?;
                     return Ok(());
                 }
                 if command == "G0" || command == "G1" {
                     return Err(invalid("GCODE_LAYER", "Motion must follow a layer marker"));
                 }
             }
-            if command == "M107" || command == "M104" || command == "M140" || command == "G28" {
+            if command == "SET_PRINT_STATS_INFO" {
+                if flavor != Flavor::Klipper || result.layers == 0 || current_layer_z.is_some() {
+                    return Err(invalid(
+                        "GCODE_UNSUPPORTED_COMMAND",
+                        "SET_PRINT_STATS_INFO is only allowed after a Klipper layer marker",
+                    ));
+                }
+                for word in &rest {
+                    let Some((key, value)) = word.split_once('=') else {
+                        return Err(invalid("GCODE_SYNTAX", "Expected KEY=VALUE words"));
+                    };
+                    let value = value
+                        .parse::<usize>()
+                        .map_err(|_| invalid("GCODE_SYNTAX", "Layer counts must be integers"))?;
+                    match key {
+                        "CURRENT_LAYER" if value == result.layers => {}
+                        "TOTAL_LAYER" if result.layers == 1 && (1..=MAX_LAYERS).contains(&value) => {}
+                        _ => {
+                            return Err(invalid(
+                                "GCODE_LAYER",
+                                "Print stats layer numbers must match the layer markers",
+                            ))
+                        }
+                    }
+                }
+                return Ok(());
+            }
+            let shutdown = flavor.shutdown_step(command, &rest)?;
+            if shutdown.is_some() || command == "M107" || command == "G28" {
                 if result.layers == 0 {
                     return Err(invalid(
                         "GCODE_PROLOGUE",
@@ -428,7 +471,7 @@ pub fn parse_job(gcode: &str) -> Result<GcodePreview> {
                     ));
                 }
                 if command == "M107" {
-                    if tokens.next().is_some() {
+                    if !rest.is_empty() {
                         return Err(invalid("GCODE_SYNTAX", "M107 takes no arguments"));
                     }
                     return Ok(());
@@ -436,8 +479,8 @@ pub fn parse_job(gcode: &str) -> Result<GcodePreview> {
                 if command == "G28" {
                     let mut saw_x = false;
                     let mut saw_y = false;
-                    for token in tokens {
-                        match token {
+                    for token in &rest {
+                        match *token {
                             "X" => saw_x = true,
                             "Y" => saw_y = true,
                             _ => {
@@ -456,18 +499,18 @@ pub fn parse_job(gcode: &str) -> Result<GcodePreview> {
                     }
                     return Ok(());
                 }
-                let word = tokens
-                    .next()
-                    .ok_or_else(|| invalid("GCODE_SYNTAX", "Temperature needs an S word"))?;
-                if !word.starts_with('S') || number(&word[1..])? != 0.0 || tokens.next().is_some()
-                {
-                    return Err(invalid(
-                        "GCODE_UNSUPPORTED_COMMAND",
-                        "Only S0 cooldown is allowed after layers",
-                    ));
-                }
-                if command == "M140" {
-                    finished = true;
+                match shutdown {
+                    Some(ShutdownStep::NozzleOff) => nozzle_off = true,
+                    Some(ShutdownStep::Final) => {
+                        if !nozzle_off {
+                            return Err(invalid(
+                                "GCODE_PROLOGUE",
+                                "Shutdown must turn heaters off before the final command",
+                            ));
+                        }
+                        finished = true;
+                    }
+                    None => unreachable!(),
                 }
                 return Ok(());
             }
@@ -487,7 +530,7 @@ pub fn parse_job(gcode: &str) -> Result<GcodePreview> {
                     "G-code job exceeded 100000 moves or paths",
                 ));
             }
-            let words = words(tokens)?;
+            let words = words(rest.iter().copied())?;
             let old_position = position;
             let was_known = known.iter().all(|v| *v);
             for (index, value) in [words.x, words.y, words.z].into_iter().enumerate() {
@@ -631,7 +674,7 @@ pub fn parse_job(gcode: &str) -> Result<GcodePreview> {
             )
         })?;
     }
-    if !startup_ready(&startup) || diameter.is_none() {
+    if !startup_ready(&startup, prologue.len()) || diameter.is_none() {
         return Err(invalid(
             "GCODE_PROLOGUE",
             "Job is missing heat, units/modes, or filament metadata",
@@ -661,30 +704,12 @@ pub fn parse_job(gcode: &str) -> Result<GcodePreview> {
     Ok(result)
 }
 
-fn startup_ready(startup: &Startup) -> bool {
+fn startup_ready(startup: &Startup, prologue_len: usize) -> bool {
     startup.bed_set
         && startup.nozzle_set
         && startup.bed_wait
         && startup.nozzle_wait
-        && startup.prologue == JOB_PROLOGUE.len()
-}
-
-fn admit_temp(command: &str, word: Option<&str>) -> Result<()> {
-    let word = word.ok_or_else(|| invalid("GCODE_SYNTAX", &format!("{command} needs an S word")))?;
-    if !word.starts_with('S') {
-        return Err(invalid(
-            "GCODE_SYNTAX",
-            &format!("{command} needs an S word"),
-        ));
-    }
-    let value = number(&word[1..])?;
-    if !value.is_finite() || !(0.0..=500.0).contains(&value) {
-        return Err(invalid(
-            "GCODE_INVALID_SETTINGS",
-            "Temperature must be finite and within 0..500 C",
-        ));
-    }
-    Ok(())
+        && startup.prologue == prologue_len
 }
 
 fn admit_fan(word: Option<&str>) -> Result<()> {
@@ -738,6 +763,60 @@ mod tests {
         assert_eq!(preview.layers, 1);
         assert!(preview.extrusion_mm > 0.0);
         assert!(preview.print_distance_mm > 0.0);
+    }
+
+    #[test]
+    fn every_flavor_round_trips_and_rejects_other_flavors_prologue() {
+        for flavor in Flavor::ALL {
+            let job = JobProfile { flavor, ..JobProfile::default() };
+            let gcode = emit_job(&[square()], &job).unwrap();
+            assert!(gcode.contains(&format!(";FLAVOR:{}\n", flavor.header_label())));
+            assert_eq!(job_flavor(&gcode).unwrap(), flavor);
+            let preview = parse_job(&gcode).unwrap();
+            assert_eq!(preview.layers, 1);
+            assert!(preview.extrusion_mm > 0.0);
+            for other in Flavor::ALL.into_iter().filter(|other| *other != flavor) {
+                let relabeled = gcode.replacen(
+                    &format!(";FLAVOR:{}", flavor.header_label()),
+                    &format!(";FLAVOR:{}", other.header_label()),
+                    1,
+                );
+                assert_eq!(parse_job(&relabeled).unwrap_err().code, "GCODE_PROLOGUE");
+            }
+        }
+    }
+
+    #[test]
+    fn klipper_flavor_omits_m200_and_uses_native_heaters() {
+        let job = JobProfile { flavor: Flavor::Klipper, ..JobProfile::default() };
+        let gcode = emit_job(&[square()], &job).unwrap();
+        assert!(!gcode.contains("M200"));
+        assert!(!gcode.contains("M109"));
+        assert!(gcode.contains("SET_HEATER_TEMPERATURE HEATER=extruder TARGET=210"));
+        assert!(gcode.contains("TEMPERATURE_WAIT SENSOR=heater_bed MINIMUM=60"));
+        assert!(gcode.contains("SET_PRINT_STATS_INFO TOTAL_LAYER=1 CURRENT_LAYER=1"));
+        assert!(gcode.ends_with("TURN_OFF_HEATERS\nM84\n"));
+    }
+
+    #[test]
+    fn reprapfirmware_flavor_uses_g10_tool_temperatures() {
+        let job = JobProfile { flavor: Flavor::RepRapFirmware, ..JobProfile::default() };
+        let gcode = emit_job(&[square()], &job).unwrap();
+        assert!(gcode.contains("G10 P0 S210 R210\nT0\nM190 S60\nM116\n"));
+        assert!(gcode.contains("M200 D0"));
+        parse_job(&gcode).unwrap();
+    }
+
+    #[test]
+    fn flavor_header_is_optional_for_marlin_and_unknown_names_fail() {
+        let gcode = emit_job(&[square()], &JobProfile::default()).unwrap();
+        let legacy = gcode.replacen(";FLAVOR:Marlin\n", "", 1);
+        assert!(!legacy.contains("FLAVOR"));
+        assert_eq!(parse_job(&legacy).unwrap().layers, 1);
+        let unknown = gcode.replacen(";FLAVOR:Marlin", ";FLAVOR:Sailfish", 1);
+        assert_eq!(parse_job(&unknown).unwrap_err().code, "GCODE_FLAVOR");
+        assert_eq!(Flavor::from_name("RRF").unwrap(), Flavor::RepRapFirmware);
+        assert_eq!(Flavor::from_name("marlin2").unwrap(), Flavor::Marlin);
     }
 
     #[test]

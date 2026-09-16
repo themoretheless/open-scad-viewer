@@ -47,6 +47,52 @@ fn job_export_returns_print_job_and_gcode_3mf() {
     assert_eq!(extracted, gcode);
     let model = gcode_core::extract_member_3mf(&bytes, "3D/3dmodel.model").unwrap();
     assert!(model.contains("<triangle"));
+    assert_eq!(result["flavor"].as_str().unwrap(), "marlin");
+}
+
+#[test]
+fn job_export_honours_flavor_and_rejects_unknown_names() {
+    let mut klipper = request("mesh_gcode_job");
+    klipper["flavor"] = json!("klipper");
+    let result = dispatch(klipper).unwrap();
+    assert_eq!(result["flavor"].as_str().unwrap(), "klipper");
+    let gcode = result["gcode"].as_str().unwrap();
+    assert!(gcode.contains(";FLAVOR:Klipper"));
+    assert!(gcode.contains("TEMPERATURE_WAIT SENSOR=extruder"));
+    assert!(!gcode.contains("M200"));
+    let inspected = dispatch(json!({"op": "gcode_parse", "gcode": gcode})).unwrap();
+    assert_eq!(inspected["native"], json!(true));
+    assert_eq!(inspected["flavor"].as_str().unwrap(), "Klipper");
+    assert_eq!(inspected["preview"]["layers"], result["preview"]["layers"]);
+
+    let mut rrf = request("mesh_gcode_job");
+    rrf["flavor"] = json!("RRF");
+    let result = dispatch(rrf).unwrap();
+    assert_eq!(result["flavor"].as_str().unwrap(), "reprapfirmware");
+    assert!(result["gcode"].as_str().unwrap().contains("G10 P0"));
+
+    let mut bad = request("mesh_gcode_job");
+    bad["flavor"] = json!("sailfish");
+    assert!(dispatch(bad).is_err());
+    let mut wrong_type = request("mesh_gcode_job");
+    wrong_type["flavor"] = json!(3);
+    assert!(dispatch(wrong_type).is_err());
+}
+
+#[test]
+fn foreign_slicer_files_are_previewed_tolerantly_with_detection() {
+    let cura = ";FLAVOR:Marlin\n;Generated with Cura_SteamEngine 5.6\nM82\nG28\nG92 E0\n;LAYER_COUNT:2\n;LAYER:0\nG0 X0 Y0 Z0.2 F6000\nG1 X10 Y0 E1 F1200\n;LAYER:1\nG0 Z0.4\nG1 X0 Y0 E2\n";
+    let result = dispatch(json!({"op": "gcode_parse", "gcode": cura})).unwrap();
+    assert_eq!(result["native"], json!(false));
+    assert_eq!(result["generator"].as_str().unwrap(), "Cura");
+    assert_eq!(result["flavor"].as_str().unwrap(), "Marlin");
+    assert_eq!(result["preview"]["layers"], 2);
+    assert!(result["dialect"].as_str().unwrap().contains("tolerant"));
+    let flat = dispatch(json!({"op": "gcode_preview", "gcode": cura})).unwrap();
+    assert_eq!(flat, result["preview"]);
+    // Native preview files remain strict even through the tolerant entry point.
+    let broken = format!("; {}\nG1 X0 Y0\n", slicer_core::GCODE_DIALECT);
+    assert!(dispatch(json!({"op": "gcode_parse", "gcode": broken})).is_err());
 }
 
 #[test]
