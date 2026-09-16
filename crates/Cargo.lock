@@ -1360,6 +1360,7 @@ dependencies = [
 name = "osv-math"
 version = "0.1.0"
 dependencies = [
+ "gpu-compute",
  "rbench",
 ]
 

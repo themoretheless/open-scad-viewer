@@ -16,7 +16,10 @@ import {resolve, join} from 'node:path'
 import {fileURLToPath} from 'node:url'
 
 const root = fileURLToPath(new URL('../', import.meta.url))
-const kernels = [{cu: 'crates/sdf-core/src/sdf_grid.cu', ptx: 'crates/sdf-core/src/sdf_grid.ptx'}]
+const kernels = [
+  {cu: 'crates/sdf-core/src/sdf_grid.cu', ptx: 'crates/sdf-core/src/sdf_grid.ptx'},
+  {cu: 'crates/math-core/src/transform.cu', ptx: 'crates/math-core/src/transform.ptx'},
+]
 const args = process.argv.slice(2)
 const check = args.includes('--check')
 const archIndex = args.indexOf('--arch')

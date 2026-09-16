@@ -15,6 +15,17 @@ publish = true
 name = "math_core"
 path = "src/lib.rs"
 
+[features]
+# Portable batch vector/matrix kernels (wgpu compute shaders) for large point
+# sets; the CPU reference (`transform_points`) always stays available.
+gpu = ["dep:gpu-compute"]
+# CUDA driver-API port of the batch transform kernel; includes the wgpu path
+# as fallback.
+cuda = ["gpu", "gpu-compute/cuda"]
+
+[dependencies]
+gpu-compute = { path = "../gpu-compute", optional = true }
+
 [dev-dependencies]
 rbench = { workspace = true }
 

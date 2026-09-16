@@ -305,6 +305,47 @@ pub fn solve<const N: usize>(mut a: [[f64; N]; N], mut b: [f64; N]) -> Option<[f
     }
     Some(b)
 }
+/// Batch `q = M*p + t` over a large point set. This is the CPU reference for
+/// [`transform_points_accelerated`] and is exact (f64); the GPU/CUDA paths run
+/// the same formula in f32 and only differ at that precision.
+pub fn transform_points(points: &[V3], m: M3, t: V3) -> Vec<V3> {
+    points.iter().map(|&p| add(mv(m, p), t)).collect()
+}
+
+/// WGSL source for the batch transform compute shader (feature `gpu`); the
+/// `gpu` and `cuda` modules both target this exact formula.
+pub const TRANSFORM_WGSL: &str = include_str!("transform.wgsl");
+
+#[cfg(feature = "cuda")]
+pub mod cuda;
+#[cfg(feature = "gpu")]
+pub mod gpu;
+
+/// `transform_points` with an optional GPU/CUDA batch kernel. `Acceleration::Cuda`
+/// runs the PTX port through the CUDA driver (feature `cuda`), then the wgpu
+/// shader (feature `gpu`), then the CPU reference; anything unavailable or that
+/// fails falls through to the next stage, so the CPU result is always returned.
+pub fn transform_points_accelerated(
+    points: &[V3],
+    m: M3,
+    t: V3,
+    #[allow(unused_variables)] acceleration: Acceleration,
+) -> Vec<V3> {
+    #[cfg(feature = "gpu")]
+    if acceleration.is_gpu() {
+        #[cfg(feature = "cuda")]
+        if acceleration == Acceleration::Cuda
+            && let Some(values) = cuda::transform_points_cuda(points, m, t)
+        {
+            return values;
+        }
+        if let Some(values) = gpu::transform_points_gpu(points, m, t) {
+            return values;
+        }
+    }
+    transform_points(points, m, t)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -343,6 +384,81 @@ mod tests {
         for i in 0..3 {
             for j in 0..3 {
                 assert!((a[i][j] - b[i][j]).abs() < 1e-6);
+            }
+        }
+    }
+}
+
+#[cfg(test)]
+mod transform_tests {
+    use super::*;
+    #[test]
+    fn transform_points_matches_scalar_mv_add() {
+        let m = rotation([0.3, -0.2, 0.7]);
+        let t = [1., -2., 0.5];
+        let points: Vec<V3> = (0..37)
+            .map(|i| {
+                let f = i as f64;
+                [f * 0.37 - 5., f * -0.11 + 2., f * 0.05]
+            })
+            .collect();
+        let got = transform_points(&points, m, t);
+        for (p, q) in points.iter().zip(&got) {
+            let expected = add(mv(m, *p), t);
+            for k in 0..3 {
+                assert!((expected[k] - q[k]).abs() < 1e-12);
+            }
+        }
+    }
+    #[test]
+    fn transform_points_accelerated_cpu_matches_reference() {
+        let m = ID;
+        let t = [1., 2., 3.];
+        let points = vec![[0., 0., 0.], [1., 1., 1.], [-1., 2., -3.]];
+        let got = transform_points_accelerated(&points, m, t, Acceleration::Cpu);
+        let want = transform_points(&points, m, t);
+        assert_eq!(got, want);
+    }
+    #[test]
+    fn transform_points_accelerated_empty_input() {
+        let got = transform_points_accelerated(&[], ID, [0., 0., 0.], Acceleration::Gpu);
+        assert!(got.is_empty());
+    }
+    #[cfg(feature = "gpu")]
+    #[test]
+    fn transform_points_accelerated_gpu_dispatch_matches_cpu() {
+        let m = rotation([-0.4, 0.2, 0.6]);
+        let t = [3., -1., 0.25];
+        let points: Vec<V3> = (0..64)
+            .map(|i| {
+                let f = i as f64;
+                [f * 0.2 - 6., f * 0.05, (f * 0.11).cos() * 3.]
+            })
+            .collect();
+        let got = transform_points_accelerated(&points, m, t, Acceleration::Gpu);
+        let want = transform_points(&points, m, t);
+        for (g, w) in got.iter().zip(&want) {
+            for k in 0..3 {
+                assert!((g[k] - w[k]).abs() < 5e-4, "{g:?} vs {w:?}");
+            }
+        }
+    }
+    #[cfg(feature = "cuda")]
+    #[test]
+    fn transform_points_accelerated_cuda_dispatch_matches_cpu() {
+        let m = rotation([-0.4, 0.2, 0.6]);
+        let t = [3., -1., 0.25];
+        let points: Vec<V3> = (0..64)
+            .map(|i| {
+                let f = i as f64;
+                [f * 0.2 - 6., f * 0.05, (f * 0.11).cos() * 3.]
+            })
+            .collect();
+        let got = transform_points_accelerated(&points, m, t, Acceleration::Cuda);
+        let want = transform_points(&points, m, t);
+        for (g, w) in got.iter().zip(&want) {
+            for k in 0..3 {
+                assert!((g[k] - w[k]).abs() < 5e-4, "{g:?} vs {w:?}");
             }
         }
     }
