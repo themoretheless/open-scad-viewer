@@ -4,7 +4,6 @@
 //! by the CPU field closure. Extraction stays on the CPU reference path.
 use crate::mesh_shell::{LATTICE_WGSL, Node, P};
 use gpu_compute::{BackendReport, GpuContext, read_buffer, storage_entry, uniform_entry, wgpu};
-use wgpu::util::DeviceExt;
 
 type Segments = [(P, P, f64, f64)];
 
@@ -13,6 +12,21 @@ struct GpuLattice {
     queue: wgpu::Queue,
     layout: wgpu::BindGroupLayout,
     pipeline: wgpu::ComputePipeline,
+    buffers: std::cell::RefCell<Option<Buffers>>,
+}
+
+struct Buffers {
+    node_capacity: usize,
+    triangle_capacity: usize,
+    segment_capacity: usize,
+    value_capacity: usize,
+    params: wgpu::Buffer,
+    nodes: wgpu::Buffer,
+    triangles: wgpu::Buffer,
+    segments: wgpu::Buffer,
+    values: wgpu::Buffer,
+    values_read: wgpu::Buffer,
+    bind: wgpu::BindGroup,
 }
 
 /// Preorder flattening of the recursive BVH: min/max (6 f32), left/right
@@ -87,7 +101,111 @@ impl GpuLattice {
             queue: context.queue.clone(),
             layout,
             pipeline,
+            buffers: std::cell::RefCell::new(None),
         }
+    }
+
+    fn ensure_buffers(
+        &self,
+        node_values: usize,
+        triangle_values: usize,
+        segment_count: usize,
+        value_count: usize,
+    ) {
+        let stale = match &*self.buffers.borrow() {
+            Some(b) => {
+                b.node_capacity < node_values
+                    || b.triangle_capacity < triangle_values
+                    || b.segment_capacity < segment_count
+                    || b.value_capacity < value_count
+            }
+            None => true,
+        };
+        if !stale {
+            return;
+        }
+        let device = &self.device;
+        let node_capacity = node_values.max(1);
+        let triangle_capacity = triangle_values.max(1);
+        let segment_capacity = segment_count.max(1);
+        let value_capacity = value_count.max(1);
+        let mk = |label: &str, size: u64, usage| {
+            device.create_buffer(&wgpu::BufferDescriptor {
+                label: Some(label),
+                size,
+                usage,
+                mapped_at_creation: false,
+            })
+        };
+        let params = mk(
+            "lattice_params",
+            80,
+            wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+        );
+        let nodes = mk(
+            "lattice_nodes",
+            (node_capacity * 4) as u64,
+            wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+        );
+        let triangles = mk(
+            "lattice_tris",
+            (triangle_capacity * 4) as u64,
+            wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+        );
+        let segments = mk(
+            "lattice_segments",
+            (segment_capacity * 32) as u64,
+            wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+        );
+        let values = mk(
+            "lattice_values",
+            (value_capacity * 4) as u64,
+            wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC,
+        );
+        let values_read = mk(
+            "lattice_values_read",
+            (value_capacity * 4) as u64,
+            wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
+        );
+        let bind = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("lattice"),
+            layout: &self.layout,
+            entries: &[
+                wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: params.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 1,
+                    resource: nodes.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 2,
+                    resource: triangles.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 3,
+                    resource: segments.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 4,
+                    resource: values.as_entire_binding(),
+                },
+            ],
+        });
+        *self.buffers.borrow_mut() = Some(Buffers {
+            node_capacity,
+            triangle_capacity,
+            segment_capacity,
+            value_capacity,
+            params,
+            nodes,
+            triangles,
+            segments,
+            values,
+            values_read,
+            bind,
+        });
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -108,7 +226,6 @@ impl GpuLattice {
         top_z: f64,
     ) -> Vec<f32> {
         let total = (cells[0] + 1) * (cells[1] + 1) * (cells[2] + 1);
-        let device = &self.device;
         let mut params = Vec::with_capacity(80);
         for v in [
             cells[0] as u32,
@@ -139,13 +256,6 @@ impl GpuLattice {
         ] {
             params.extend_from_slice(&v.to_ne_bytes());
         }
-        let mk = |label: &str, bytes: &[u8], usage| {
-            device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                label: Some(label),
-                contents: if bytes.is_empty() { &[0u8; 4] } else { bytes },
-                usage,
-            })
-        };
         let nodes_bytes = gpu_compute::pack_f32(nodes);
         let tris_bytes = gpu_compute::pack_f32(triangles);
         let mut seg_bytes = Vec::with_capacity(segments.len() * 32);
@@ -156,64 +266,38 @@ impl GpuLattice {
             seg_bytes.extend_from_slice(&(*length2 as f32).to_ne_bytes());
             seg_bytes.extend_from_slice(&(*r as f32).to_ne_bytes());
         }
-        let params_buf = mk("params", &params, wgpu::BufferUsages::UNIFORM);
-        let nodes_buf = mk("nodes", &nodes_bytes, wgpu::BufferUsages::STORAGE);
-        let tris_buf = mk("tris", &tris_bytes, wgpu::BufferUsages::STORAGE);
-        let seg_buf = mk("segments", &seg_bytes, wgpu::BufferUsages::STORAGE);
+        self.ensure_buffers(nodes.len(), triangles.len(), segments.len(), total);
+        let buffers = self.buffers.borrow();
+        let b = buffers.as_ref().expect("ensure_buffers was just called");
+        self.queue.write_buffer(&b.params, 0, &params);
+        if !nodes_bytes.is_empty() {
+            self.queue.write_buffer(&b.nodes, 0, &nodes_bytes);
+        }
+        if !tris_bytes.is_empty() {
+            self.queue.write_buffer(&b.triangles, 0, &tris_bytes);
+        }
+        if !seg_bytes.is_empty() {
+            self.queue.write_buffer(&b.segments, 0, &seg_bytes);
+        }
         let value_bytes = (total * 4) as u64;
-        let out_buf = device.create_buffer(&wgpu::BufferDescriptor {
-            label: Some("values"),
-            size: value_bytes,
-            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC,
-            mapped_at_creation: false,
-        });
-        let read_buf = device.create_buffer(&wgpu::BufferDescriptor {
-            label: Some("values_read"),
-            size: value_bytes,
-            usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
-            mapped_at_creation: false,
-        });
-        let bind = device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("lattice"),
-            layout: &self.layout,
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: params_buf.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: nodes_buf.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 2,
-                    resource: tris_buf.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 3,
-                    resource: seg_buf.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 4,
-                    resource: out_buf.as_entire_binding(),
-                },
-            ],
-        });
-        let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
-            label: Some("lattice"),
-        });
+        let mut encoder = self
+            .device
+            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                label: Some("lattice"),
+            });
         {
             let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
                 label: Some("lattice"),
                 timestamp_writes: None,
             });
             pass.set_pipeline(&self.pipeline);
-            pass.set_bind_group(0, &bind, &[]);
+            pass.set_bind_group(0, &b.bind, &[]);
             pass.dispatch_workgroups((total as u32).div_ceil(256), 1, 1);
         }
-        encoder.copy_buffer_to_buffer(&out_buf, 0, &read_buf, 0, value_bytes);
+        encoder.copy_buffer_to_buffer(&b.values, 0, &b.values_read, 0, value_bytes);
         self.queue.submit([encoder.finish()]);
-        let raw = read_buffer(device, &read_buf, total * 4);
+        let raw = read_buffer(&self.device, &b.values_read, total * 4);
+        b.values_read.unmap();
         raw.chunks_exact(4)
             .take(total)
             .map(|c| f32::from_ne_bytes(c.try_into().unwrap()))
