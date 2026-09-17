@@ -73,6 +73,27 @@ recommendation directly. It's a starting point tuned to the RTX 5090 numbers
 above, not a guarantee for every device — treat it as a reasonable default,
 not a substitute for benchmarking workloads where the choice actually matters.
 
+## ICP / rigid point-cloud registration
+
+`rigid_transform(source, target)` computes the least-squares rigid transform
+for known correspondences (Kabsch/SVD). `icp_register(source, target, options)`
+adds iterative closest-point registration on top: each iteration transforms
+the source, finds closest target correspondences with
+`nearest_neighbor_accelerated`, rejects optional distance outliers, fits the
+next rigid delta, and composes the final `RigidTransform`.
+
+This is where the nearest-neighbor kernel becomes a higher-level primitive:
+`IcpOptions::default()` uses `Acceleration::Auto`, so large ICP batches select
+CUDA/wgpu automatically when available and otherwise stay on the CPU reference.
+Measured with `cargo run --release -p osv-math --features cuda --example
+icp_registration` on the same RTX 5090:
+
+| points | work/iteration | cpu | auto/cuda | iterations |
+| --- | --- | --- | --- | --- |
+| 1,000 | 1,000,000 | 2.297 ms | 0.421 ms | 3 |
+| 5,000 | 25,000,000 | 56.703 ms | 1.212 ms | 3 |
+| 20,000 | 400,000,000 | 911.654 ms | 5.109 ms | 3 |
+
 ## License
 
 MIT — see repository root `LICENSE`.
