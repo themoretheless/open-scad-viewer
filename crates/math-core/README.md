@@ -23,6 +23,7 @@ src/
 ├─ acceleration.rs     # Cpu/Auto/Gpu/Cuda placement and size heuristics
 ├─ linalg.rs           # dense vector/matrix helpers, eigen/SVD/solve
 ├─ nearest_neighbor.rs # CPU reference plus GPU/CUDA dispatch
+├─ chamfer.rs          # point-cloud Chamfer distance over nearest-neighbor
 ├─ registration.rs     # rigid transform fitting and ICP
 ├─ gpu.rs              # portable wgpu backend: Metal/Vulkan/DX12/WebGPU
 └─ cuda.rs             # CUDA driver/PTX backend
@@ -122,6 +123,32 @@ For runtime diagnostics, `cargo run -p osv-math --features cuda --example
 backend_report` prints the placement labels, portable wgpu backend report
 (`metal`, `vulkan`, `dx12`, or `webgpu`) and native CUDA device report when
 available.
+
+## Chamfer distance
+
+`directed_chamfer_distance(queries, targets, acceleration)` computes the mean
+nearest-neighbor squared distance from one point cloud into another.
+`chamfer_distance(a, b, acceleration)` runs both directions and returns the
+directed summaries plus symmetric mean/RMS values:
+
+```rust
+use math_core::{Acceleration, chamfer_distance};
+
+let score = chamfer_distance(&cloud_a, &cloud_b, Acceleration::Auto)?;
+println!("symmetric RMS = {}", score.symmetric_rms_distance);
+```
+
+This is a higher-level geometry metric over the same nearest-neighbor kernels,
+so it inherits their CPU/Auto/Gpu/Cuda placement behavior and grows faster as
+both cloud sizes increase. Measured with `cargo run --release -p osv-math
+--features cuda --example bench_chamfer` on the RTX 5090:
+
+| cloud sizes | cpu | auto | gpu | cuda |
+| --- | --- | --- | --- | --- |
+| 1,000 × 1,000 | 1.488 ms | 0.211 ms | 0.572 ms | 0.283 ms |
+| 5,000 × 2,000 | 14.956 ms | 0.589 ms | 1.284 ms | 0.622 ms |
+| 20,000 × 5,000 | 150.961 ms | 1.847 ms | 3.687 ms | 1.907 ms |
+| 100,000 × 10,000 | 1547.560 ms | 7.699 ms | 15.062 ms | 7.351 ms |
 
 ## Pairwise squared distances
 
