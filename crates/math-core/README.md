@@ -10,6 +10,24 @@ Rust crate name remains `math_core` (`use math_core::…`). Builds on **stable**
 math-core = { package = "osv-math", version = "0.1" }
 ```
 
+## Crate layout
+
+The crate root is a thin facade: downstream users still import from
+`math_core::{...}`, while implementation is split by domain:
+
+```text
+src/
+├─ lib.rs              # public facade: module wiring + pub use
+├─ types.rs            # V2, V3, M3, ID
+├─ error.rs            # Error, Result, ensure()
+├─ acceleration.rs     # Cpu/Auto/Gpu/Cuda placement and size heuristics
+├─ linalg.rs           # dense vector/matrix helpers, eigen/SVD/solve
+├─ nearest_neighbor.rs # CPU reference plus GPU/CUDA dispatch
+├─ registration.rs     # rigid transform fitting and ICP
+├─ gpu.rs              # portable wgpu backend: Metal/Vulkan/DX12/WebGPU
+└─ cuda.rs             # CUDA driver/PTX backend
+```
+
 ## `transform_points` — plain CPU math, no GPU/CUDA
 
 `transform_points(points, m, t)` batches `q = M*p + t` over a point set, in
