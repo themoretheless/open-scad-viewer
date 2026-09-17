@@ -43,7 +43,7 @@ PHOTO_ACCELERATION=cuda  # same kernels on NVIDIA via wgpu; see docs/design/nati
 ```
 
 The optional `gpu` feature adds `wgpu` and accelerates descriptor matching
-(2.8-42x on the synthetic descriptor benchmark) and the frontoparallel NCC
+(3.2-47x on the synthetic descriptor benchmark) and the frontoparallel NCC
 depth sweep (batched, selection on the GPU: ~10x of the dense stage, 31-68 ms
 on the frozen sets) via Metal on macOS and Vulkan/DX12 on Linux/Windows;
 `Acceleration::Gpu` is opt-in and falls back to the CPU reference without an
@@ -59,12 +59,14 @@ descriptor matching by measured pair-work: below 10K candidate pairs it keeps
 the CPU scan; from 10K upward it uses the portable GPU path. Check or tune the
 recommendation with `features::recommended_for_descriptor_matching(a, b)` and
 `cargo run --release -p photogrammetry-core --features gpu --example
-bench_matching`. On an RTX 5090 through wgpu/Vulkan:
+bench_matching`. Descriptor buffers are cached grow-only per matcher, so
+repeated stable-size image-pair matching avoids per-call device allocation.
+On an RTX 5090 through wgpu/Vulkan:
 
 | features A × B | work | recommended | CPU | Auto |
 | --- | --- | --- | --- | --- |
-| 64 × 64 | 4K | cpu | 0.298 ms | 0.289 ms |
-| 128 × 128 | 16K | gpu | 1.160 ms | 0.411 ms |
-| 256 × 512 | 131K | gpu | 8.796 ms | 0.870 ms |
-| 1,024 × 1,024 | 1.0M | gpu | 66.609 ms | 2.521 ms |
-| 2,048 × 2,048 | 4.2M | gpu | 257.260 ms | 6.116 ms |
+| 64 × 64 | 4K | cpu | 0.283 ms | 0.279 ms |
+| 128 × 128 | 16K | gpu | 1.178 ms | 0.368 ms |
+| 256 × 512 | 131K | gpu | 9.114 ms | 0.890 ms |
+| 1,024 × 1,024 | 1.0M | gpu | 66.600 ms | 2.414 ms |
+| 2,048 × 2,048 | 4.2M | gpu | 258.474 ms | 5.452 ms |

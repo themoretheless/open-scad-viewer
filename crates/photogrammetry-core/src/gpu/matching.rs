@@ -7,7 +7,6 @@
 //! separately; CPU remains the deterministic reference.
 
 use super::wgpu;
-use super::wgpu::util::DeviceExt;
 
 use super::GpuContext;
 
@@ -158,6 +157,19 @@ pub struct ColBest {
     pub d1: f32,
 }
 
+struct Buffers {
+    row_capacity: usize,
+    col_capacity: usize,
+    params: wgpu::Buffer,
+    descriptors_a: wgpu::Buffer,
+    descriptors_b: wgpu::Buffer,
+    rows_out: wgpu::Buffer,
+    cols_out: wgpu::Buffer,
+    read_rows: wgpu::Buffer,
+    read_cols: wgpu::Buffer,
+    bind: wgpu::BindGroup,
+}
+
 pub struct GpuMatcher {
     device: wgpu::Device,
     queue: wgpu::Queue,
@@ -169,6 +181,7 @@ pub struct GpuMatcher {
     /// (hence `allow(dead_code)` on non-test builds).
     #[allow(dead_code)]
     workgroup_size: u32,
+    buffers: std::cell::RefCell<Option<Buffers>>,
 }
 
 impl GpuMatcher {
@@ -226,6 +239,7 @@ impl GpuMatcher {
             rows_pipeline,
             cols_pipeline,
             workgroup_size,
+            buffers: std::cell::RefCell::new(None),
         }
     }
 
@@ -244,92 +258,32 @@ impl GpuMatcher {
     ) -> (Vec<RowBest>, Vec<ColBest>) {
         let rows = da.len() as u32;
         let cols = db.len() as u32;
-        let device = &self.device;
-
-        let params = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label: Some("params"),
-            contents: &[rows.to_ne_bytes(), cols.to_ne_bytes()].concat(),
-            usage: wgpu::BufferUsages::UNIFORM,
-        });
         let packed_a = pack_descriptors(da);
         let packed_b = pack_descriptors(db);
-        // Zero-feature inputs (blank photos) still bind: wgpu rejects
-        // zero-size storage buffers.
-        let buf_a = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label: Some("da"),
-            contents: if packed_a.is_empty() {
-                &[0u8; 4]
-            } else {
-                &packed_a
-            },
-            usage: wgpu::BufferUsages::STORAGE,
-        });
-        let buf_b = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label: Some("db"),
-            contents: if packed_b.is_empty() {
-                &[0u8; 4]
-            } else {
-                &packed_b
-            },
-            usage: wgpu::BufferUsages::STORAGE,
-        });
+        self.ensure_buffers(da.len(), db.len());
         let row_bytes = (rows as u64) * 12;
         let col_bytes = (cols as u64) * 8;
-        let out_rows = device.create_buffer(&wgpu::BufferDescriptor {
-            label: Some("rows_out"),
-            size: row_bytes.max(12),
-            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC,
-            mapped_at_creation: false,
-        });
-        let out_cols = device.create_buffer(&wgpu::BufferDescriptor {
-            label: Some("cols_out"),
-            size: col_bytes.max(8),
-            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC,
-            mapped_at_creation: false,
-        });
-        let read_rows = device.create_buffer(&wgpu::BufferDescriptor {
-            label: Some("read_rows"),
-            size: row_bytes.max(12),
-            usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
-            mapped_at_creation: false,
-        });
-        let read_cols = device.create_buffer(&wgpu::BufferDescriptor {
-            label: Some("read_cols"),
-            size: col_bytes.max(8),
-            usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
-            mapped_at_creation: false,
-        });
+        let buffers = self.buffers.borrow();
+        let buffers = buffers.as_ref().expect("ensure_buffers was just called");
+        self.queue.write_buffer(
+            &buffers.params,
+            0,
+            &[rows.to_ne_bytes(), cols.to_ne_bytes()].concat(),
+        );
+        if !packed_a.is_empty() {
+            self.queue
+                .write_buffer(&buffers.descriptors_a, 0, &packed_a);
+        }
+        if !packed_b.is_empty() {
+            self.queue
+                .write_buffer(&buffers.descriptors_b, 0, &packed_b);
+        }
 
-        let bind = device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("match_descriptors"),
-            layout: &self.layout,
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: params.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: buf_a.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 2,
-                    resource: buf_b.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 3,
-                    resource: out_rows.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 4,
-                    resource: out_cols.as_entire_binding(),
-                },
-            ],
-        });
-
-        let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
-            label: Some("match"),
-        });
+        let mut encoder = self
+            .device
+            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                label: Some("match"),
+            });
         if rows > 0 && cols > 0 {
             {
                 let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
@@ -337,7 +291,7 @@ impl GpuMatcher {
                     timestamp_writes: None,
                 });
                 pass.set_pipeline(&self.rows_pipeline);
-                pass.set_bind_group(0, &bind, &[]);
+                pass.set_bind_group(0, &buffers.bind, &[]);
                 pass.dispatch_workgroups(rows, 1, 1);
             }
             {
@@ -346,16 +300,30 @@ impl GpuMatcher {
                     timestamp_writes: None,
                 });
                 pass.set_pipeline(&self.cols_pipeline);
-                pass.set_bind_group(0, &bind, &[]);
+                pass.set_bind_group(0, &buffers.bind, &[]);
                 pass.dispatch_workgroups(cols, 1, 1);
             }
         }
-        encoder.copy_buffer_to_buffer(&out_rows, 0, &read_rows, 0, row_bytes.max(12));
-        encoder.copy_buffer_to_buffer(&out_cols, 0, &read_cols, 0, col_bytes.max(8));
+        encoder.copy_buffer_to_buffer(
+            &buffers.rows_out,
+            0,
+            &buffers.read_rows,
+            0,
+            row_bytes.max(12),
+        );
+        encoder.copy_buffer_to_buffer(
+            &buffers.cols_out,
+            0,
+            &buffers.read_cols,
+            0,
+            col_bytes.max(8),
+        );
         self.queue.submit([encoder.finish()]);
 
-        let rows_raw = super::read_buffer(device, &read_rows, row_bytes as usize);
-        let cols_raw = super::read_buffer(device, &read_cols, col_bytes as usize);
+        let rows_raw = super::read_buffer(&self.device, &buffers.read_rows, row_bytes as usize);
+        buffers.read_rows.unmap();
+        let cols_raw = super::read_buffer(&self.device, &buffers.read_cols, col_bytes as usize);
+        buffers.read_cols.unmap();
 
         let rows_out_vec = rows_raw
             .chunks_exact(12)
@@ -379,6 +347,99 @@ impl GpuMatcher {
             })
             .collect();
         (rows_out_vec, cols_out_vec)
+    }
+
+    fn ensure_buffers(&self, row_count: usize, col_count: usize) {
+        let stale = match &*self.buffers.borrow() {
+            Some(buffers) => buffers.row_capacity < row_count || buffers.col_capacity < col_count,
+            None => true,
+        };
+        if !stale {
+            return;
+        }
+        let device = &self.device;
+        let row_capacity = row_count.max(1);
+        let col_capacity = col_count.max(1);
+        let params = device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("match_params"),
+            size: 8,
+            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        });
+        let descriptors_a = device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("match_da"),
+            size: (row_capacity * 128 * 4) as u64,
+            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        });
+        let descriptors_b = device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("match_db"),
+            size: (col_capacity * 128 * 4) as u64,
+            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        });
+        let rows_out = device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("match_rows_out"),
+            size: (row_capacity * 12) as u64,
+            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC,
+            mapped_at_creation: false,
+        });
+        let cols_out = device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("match_cols_out"),
+            size: (col_capacity * 8) as u64,
+            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC,
+            mapped_at_creation: false,
+        });
+        let read_rows = device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("match_read_rows"),
+            size: (row_capacity * 12) as u64,
+            usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        });
+        let read_cols = device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("match_read_cols"),
+            size: (col_capacity * 8) as u64,
+            usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        });
+        let bind = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("match_descriptors"),
+            layout: &self.layout,
+            entries: &[
+                wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: params.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 1,
+                    resource: descriptors_a.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 2,
+                    resource: descriptors_b.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 3,
+                    resource: rows_out.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 4,
+                    resource: cols_out.as_entire_binding(),
+                },
+            ],
+        });
+        *self.buffers.borrow_mut() = Some(Buffers {
+            row_capacity,
+            col_capacity,
+            params,
+            descriptors_a,
+            descriptors_b,
+            rows_out,
+            cols_out,
+            read_rows,
+            read_cols,
+            bind,
+        });
     }
 }
 
