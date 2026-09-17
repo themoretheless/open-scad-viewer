@@ -14,6 +14,8 @@ use gpu_compute::cuda::{
 pub const NEAREST_NEIGHBOR_PTX: &str = include_str!("nearest_neighbor.ptx");
 /// PTX generated from `nearest_two.cu` by `scripts/build-cuda-kernels.mjs`.
 pub const NEAREST_TWO_PTX: &str = include_str!("nearest_two.ptx");
+/// PTX generated from `nearest_four.cu` by `scripts/build-cuda-kernels.mjs`.
+pub const NEAREST_FOUR_PTX: &str = include_str!("nearest_four.ptx");
 /// PTX generated from `distance_pairs.cu` by `scripts/build-cuda-kernels.mjs`.
 pub const DISTANCE_PAIRS_PTX: &str = include_str!("distance_pairs.ptx");
 /// PTX generated from `distance_pair_sum.cu` by `scripts/build-cuda-kernels.mjs`.
@@ -302,6 +304,124 @@ thread_local! {
 pub(crate) fn nearest_two_cuda(queries: &[V3], targets: &[V3]) -> Option<Vec<crate::TwoNearest>> {
     SHARED_NEAREST_TWO.with(|cell| {
         let shared: &Option<&CudaNearestTwo> = cell;
+        shared.and_then(|nn| nn.run(queries, targets))
+    })
+}
+
+struct CudaNearestFour {
+    device: CudaDevice,
+    kernel: CudaFunction,
+    buffers: std::cell::RefCell<Option<NearestFourBuffers>>,
+}
+
+struct NearestFourBuffers {
+    query_capacity: usize,
+    target_capacity: usize,
+    queries: CudaSlice<f32>,
+    targets: CudaSlice<f32>,
+    out_indices: CudaSlice<u32>,
+    out_distances: CudaSlice<f32>,
+}
+
+impl CudaNearestFour {
+    fn new() -> Option<Self> {
+        let device = CudaDevice::new()?;
+        let module = device.load_ptx(NEAREST_FOUR_PTX)?;
+        let kernel = module.load_function("nearest_four").ok()?;
+        Some(Self {
+            device,
+            kernel,
+            buffers: std::cell::RefCell::new(None),
+        })
+    }
+
+    fn ensure_buffers(&self, query_count: usize, target_count: usize) -> Option<()> {
+        let stale = match &*self.buffers.borrow() {
+            Some(b) => b.query_capacity < query_count || b.target_capacity < target_count,
+            None => true,
+        };
+        if !stale {
+            return Some(());
+        }
+        let query_capacity = query_count.max(1);
+        let target_capacity = target_count.max(1);
+        let stream = &self.device.stream;
+        let queries = stream.alloc_zeros::<f32>(query_capacity * 3).ok()?;
+        let targets = stream.alloc_zeros::<f32>(target_capacity * 3).ok()?;
+        let out_indices = stream.alloc_zeros::<u32>(query_capacity * 4).ok()?;
+        let out_distances = stream.alloc_zeros::<f32>(query_capacity * 4).ok()?;
+        *self.buffers.borrow_mut() = Some(NearestFourBuffers {
+            query_capacity,
+            target_capacity,
+            queries,
+            targets,
+            out_indices,
+            out_distances,
+        });
+        Some(())
+    }
+
+    fn run(&self, queries: &[V3], targets: &[V3]) -> Option<Vec<crate::FourNearest>> {
+        let query_count = queries.len();
+        let target_count = targets.len();
+        let stream = &self.device.stream;
+        let flat_q: Vec<f32> = queries.iter().flatten().map(|&v| v as f32).collect();
+        let flat_t: Vec<f32> = targets.iter().flatten().map(|&v| v as f32).collect();
+        self.ensure_buffers(query_count, target_count)?;
+        let mut buffers = self.buffers.borrow_mut();
+        let b = buffers.as_mut().expect("ensure_buffers was just called");
+        if !flat_q.is_empty() {
+            let mut view = b.queries.slice_mut(0..flat_q.len());
+            stream.memcpy_htod(&flat_q, &mut view).ok()?;
+        }
+        if !flat_t.is_empty() {
+            let mut view = b.targets.slice_mut(0..flat_t.len());
+            stream.memcpy_htod(&flat_t, &mut view).ok()?;
+        }
+        let query_count_u32 = query_count as u32;
+        let target_count_u32 = target_count as u32;
+        let q_view = b.queries.slice(0..(query_count * 3).max(1));
+        let t_view = b.targets.slice(0..(target_count * 3).max(1));
+        let mut indices_view = b.out_indices.slice_mut(0..(query_count * 4).max(1));
+        let mut distances_view = b.out_distances.slice_mut(0..(query_count * 4).max(1));
+        let mut launch = stream.launch_builder(&self.kernel);
+        launch
+            .arg(&query_count_u32)
+            .arg(&target_count_u32)
+            .arg(&q_view)
+            .arg(&t_view)
+            .arg(&mut indices_view)
+            .arg(&mut distances_view);
+        unsafe { launch.launch(launch_1d(query_count_u32, BLOCK)) }.ok()?;
+        let mut indices = vec![0u32; query_count * 4];
+        let mut distances = vec![0f32; query_count * 4];
+        if query_count > 0 {
+            stream.memcpy_dtoh(&indices_view, &mut indices).ok()?;
+            stream.memcpy_dtoh(&distances_view, &mut distances).ok()?;
+        }
+        Some(
+            (0..query_count)
+                .map(|idx| {
+                    std::array::from_fn(|k| {
+                        let off = idx * 4 + k;
+                        (indices[off], distances[off] as f64)
+                    })
+                })
+                .collect(),
+        )
+    }
+}
+
+thread_local! {
+    static SHARED_NEAREST_FOUR: std::cell::LazyCell<Option<&'static CudaNearestFour>> =
+        std::cell::LazyCell::new(|| {
+            CudaNearestFour::new().map(|nn| Box::leak(Box::new(nn)) as &'static CudaNearestFour)
+        });
+}
+
+pub(crate) fn nearest_four_cuda(queries: &[V3], targets: &[V3]) -> Option<Vec<crate::FourNearest>> {
+    SHARED_NEAREST_FOUR.with(|cell| {
+        let shared: &Option<&CudaNearestFour> = cell;
         shared.and_then(|nn| nn.run(queries, targets))
     })
 }

@@ -163,24 +163,28 @@ recommendation directly. It's a starting point tuned to the RTX 5090 numbers
 above, not a guarantee for every device — treat it as a reasonable default,
 not a substitute for benchmarking workloads where the choice actually matters.
 
-`nearest_two_accelerated(queries, targets, acceleration)` uses the same
-placement model for exact top-2 nearest-neighbor search. It returns the best
-and second-best target for each query, which is useful for ratio tests,
-correspondence filtering and robust registration pipelines:
+`nearest_two_accelerated(queries, targets, acceleration)` and
+`nearest_four_accelerated(queries, targets, acceleration)` use the same
+placement model for exact top-k nearest-neighbor search. Top-2 returns the
+best and second-best target for each query, which is useful for ratio tests,
+correspondence filtering and robust registration pipelines; top-4 supports
+small local-neighborhood workflows without jumping to an approximate index:
 
 ```rust
-use math_core::{Acceleration, nearest_two_accelerated};
+use math_core::{Acceleration, nearest_four_accelerated, nearest_two_accelerated};
 
 let pairs = nearest_two_accelerated(&queries, &targets, Acceleration::Auto);
 let best = pairs[0][0];
 let second = pairs[0][1];
+let neighbors = nearest_four_accelerated(&queries, &targets, Acceleration::Auto);
 ```
 
 Top-2 has the same O(queries × targets) arithmetic intensity, so it gets
 dedicated WGSL/CUDA kernels (`nearest_two.wgsl`, `nearest_two.cu`) instead of
 being built from two CPU passes. Device buffers are cached grow-only, matching
 the top-1 nearest-neighbor path for repeated stable-size registration and
-filtering workloads. Measured with `cargo run --release -p osv-math --features
+filtering workloads. Top-4 follows the same model with packed output buffers
+(`nearest_four.wgsl`, `nearest_four.cu`). Measured with `cargo run --release -p osv-math --features
 cuda --example bench_nearest_two` on the RTX 5090:
 
 | queries × targets | work | cpu | auto | gpu | cuda |
@@ -189,6 +193,16 @@ cuda --example bench_nearest_two` on the RTX 5090:
 | 1,024 × 1,024 | 1.0M | 1.106 ms | 0.128 ms | 0.262 ms | 0.204 ms |
 | 4,096 × 4,096 | 16.8M | 17.723 ms | 0.319 ms | 0.825 ms | 0.318 ms |
 | 16,384 × 8,192 | 134M | 143.374 ms | 0.807 ms | 1.417 ms | 0.788 ms |
+
+Top-4 benchmark (`cargo run --release -p osv-math --features cuda --example
+bench_nearest_four`) on the same host:
+
+| queries × targets | work | cpu | auto | gpu | cuda | auto speedup |
+| --- | --- | --- | --- | --- | --- | --- |
+| 256 × 512 | 131K | 0.182 ms | 0.183 ms | 0.197 ms | 0.086 ms | 1.00x |
+| 1,024 × 1,024 | 1.0M | 1.512 ms | 0.157 ms | 0.274 ms | 0.137 ms | 9.62x |
+| 4,096 × 4,096 | 16.8M | 25.104 ms | 0.414 ms | 0.858 ms | 0.399 ms | 60.61x |
+| 16,384 × 8,192 | 134M | 198.779 ms | 1.042 ms | 1.813 ms | 1.131 ms | 190.71x |
 
 For runtime diagnostics, `cargo run -p osv-math --features cuda --example
 backend_report` prints the placement labels, portable wgpu backend report

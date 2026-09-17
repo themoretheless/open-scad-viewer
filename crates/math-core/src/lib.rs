@@ -7,6 +7,7 @@ mod distance_pairs;
 mod error;
 mod linalg;
 mod moments;
+mod nearest_four;
 mod nearest_neighbor;
 mod nearest_two;
 mod registration;
@@ -36,6 +37,9 @@ pub use linalg::{
 pub use moments::{
     POINT_MOMENTS_WGSL_TEMPLATE, PointMoments, PointPlane, PointPrincipalAxes, point_fit_plane,
     point_moments, point_moments_accelerated, point_principal_axes,
+};
+pub use nearest_four::{
+    FourNearest, NEAREST_FOUR_WGSL, nearest_four, nearest_four_accelerated, nearest_four_first_two,
 };
 pub use nearest_neighbor::{NEAREST_NEIGHBOR_WGSL, nearest_neighbor, nearest_neighbor_accelerated};
 pub use nearest_two::{

@@ -2270,6 +2270,230 @@ pub fn nearest_two_gpu(queries: &[V3], targets: &[V3]) -> Option<Vec<crate::TwoN
     })
 }
 
+struct GpuNearestFour {
+    device: wgpu::Device,
+    queue: wgpu::Queue,
+    layout: wgpu::BindGroupLayout,
+    pipeline: wgpu::ComputePipeline,
+    buffers: std::cell::RefCell<Option<NearestFourBuffers>>,
+}
+
+struct NearestFourBuffers {
+    query_capacity: usize,
+    target_capacity: usize,
+    params: wgpu::Buffer,
+    queries: wgpu::Buffer,
+    targets: wgpu::Buffer,
+    out_indices: wgpu::Buffer,
+    out_distances: wgpu::Buffer,
+    read_indices: wgpu::Buffer,
+    read_distances: wgpu::Buffer,
+    bind: wgpu::BindGroup,
+}
+
+impl GpuNearestFour {
+    fn new(context: &GpuContext) -> Self {
+        let device = &context.device;
+        let module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
+            label: Some("nearest_four"),
+            source: wgpu::ShaderSource::Wgsl(crate::NEAREST_FOUR_WGSL.into()),
+        });
+        let layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+            label: Some("nearest_four"),
+            entries: &[
+                uniform_entry(0),
+                storage_entry(1, true),
+                storage_entry(2, true),
+                storage_entry(3, false),
+                storage_entry(4, false),
+            ],
+        });
+        let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+            label: Some("nearest_four"),
+            bind_group_layouts: &[Some(&layout)],
+            immediate_size: 0,
+        });
+        let pipeline = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
+            label: Some("nearest_four"),
+            layout: Some(&pipeline_layout),
+            module: &module,
+            entry_point: Some("main"),
+            compilation_options: Default::default(),
+            cache: None,
+        });
+        Self {
+            device: device.clone(),
+            queue: context.queue.clone(),
+            layout,
+            pipeline,
+            buffers: std::cell::RefCell::new(None),
+        }
+    }
+
+    fn ensure_buffers(&self, query_count: usize, target_count: usize) {
+        let stale = match &*self.buffers.borrow() {
+            Some(b) => b.query_capacity < query_count || b.target_capacity < target_count,
+            None => true,
+        };
+        if !stale {
+            return;
+        }
+        let query_capacity = query_count.max(1);
+        let target_capacity = target_count.max(1);
+        let device = &self.device;
+        let mk = |label: &str, size: u64, usage| {
+            device.create_buffer(&wgpu::BufferDescriptor {
+                label: Some(label),
+                size,
+                usage,
+                mapped_at_creation: false,
+            })
+        };
+        let params = mk(
+            "nearest_four_params",
+            16,
+            wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+        );
+        let queries = mk(
+            "nearest_four_queries",
+            (query_capacity * 12) as u64,
+            wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+        );
+        let targets = mk(
+            "nearest_four_targets",
+            (target_capacity * 12) as u64,
+            wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+        );
+        let out_bytes = (query_capacity * 4 * 4) as u64;
+        let out_indices = mk(
+            "nearest_four_indices",
+            out_bytes,
+            wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC,
+        );
+        let out_distances = mk(
+            "nearest_four_distances",
+            out_bytes,
+            wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC,
+        );
+        let read_indices = mk(
+            "nearest_four_read_indices",
+            out_bytes,
+            wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
+        );
+        let read_distances = mk(
+            "nearest_four_read_distances",
+            out_bytes,
+            wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
+        );
+        let bind = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("nearest_four"),
+            layout: &self.layout,
+            entries: &[
+                wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: params.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 1,
+                    resource: queries.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 2,
+                    resource: targets.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 3,
+                    resource: out_indices.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 4,
+                    resource: out_distances.as_entire_binding(),
+                },
+            ],
+        });
+        *self.buffers.borrow_mut() = Some(NearestFourBuffers {
+            query_capacity,
+            target_capacity,
+            params,
+            queries,
+            targets,
+            out_indices,
+            out_distances,
+            read_indices,
+            read_distances,
+            bind,
+        });
+    }
+
+    fn run(&self, queries: &[V3], targets: &[V3]) -> Vec<crate::FourNearest> {
+        let query_count = queries.len();
+        let target_count = targets.len();
+        let flat_q: Vec<f32> = queries.iter().flatten().map(|&v| v as f32).collect();
+        let flat_t: Vec<f32> = targets.iter().flatten().map(|&v| v as f32).collect();
+        self.ensure_buffers(query_count, target_count);
+        let buffers = self.buffers.borrow();
+        let b = buffers.as_ref().expect("ensure_buffers was just called");
+        let mut params = Vec::with_capacity(16);
+        params.extend_from_slice(&(query_count as u32).to_le_bytes());
+        params.extend_from_slice(&(target_count as u32).to_le_bytes());
+        params.extend_from_slice(&0u32.to_le_bytes());
+        params.extend_from_slice(&0u32.to_le_bytes());
+        self.queue.write_buffer(&b.params, 0, &params);
+        self.queue
+            .write_buffer(&b.queries, 0, &gpu_compute::pack_f32(&flat_q));
+        self.queue
+            .write_buffer(&b.targets, 0, &gpu_compute::pack_f32(&flat_t));
+        let mut encoder = self
+            .device
+            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                label: Some("nearest_four"),
+            });
+        {
+            let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
+                label: Some("nearest_four"),
+                timestamp_writes: None,
+            });
+            pass.set_pipeline(&self.pipeline);
+            pass.set_bind_group(0, &b.bind, &[]);
+            pass.dispatch_workgroups((query_count.max(1) as u32).div_ceil(256), 1, 1);
+        }
+        let copy_bytes = (query_count * 4 * 4) as u64;
+        encoder.copy_buffer_to_buffer(&b.out_indices, 0, &b.read_indices, 0, copy_bytes);
+        encoder.copy_buffer_to_buffer(&b.out_distances, 0, &b.read_distances, 0, copy_bytes);
+        self.queue.submit([encoder.finish()]);
+        let indices = read_buffer(&self.device, &b.read_indices, query_count * 4 * 4);
+        b.read_indices.unmap();
+        let distances = read_buffer(&self.device, &b.read_distances, query_count * 4 * 4);
+        b.read_distances.unmap();
+        (0..query_count)
+            .map(|idx| {
+                std::array::from_fn(|k| {
+                    let off = (idx * 4 + k) * 4;
+                    (
+                        u32::from_ne_bytes(indices[off..off + 4].try_into().unwrap()),
+                        f32::from_ne_bytes(distances[off..off + 4].try_into().unwrap()) as f64,
+                    )
+                })
+            })
+            .collect()
+    }
+}
+
+thread_local! {
+    static SHARED_NEAREST_FOUR: std::cell::LazyCell<Option<&'static GpuNearestFour>> =
+        std::cell::LazyCell::new(|| {
+            GpuContext::new()
+                .map(|context| Box::leak(Box::new(GpuNearestFour::new(&context))) as &'static GpuNearestFour)
+        });
+}
+
+pub fn nearest_four_gpu(queries: &[V3], targets: &[V3]) -> Option<Vec<crate::FourNearest>> {
+    SHARED_NEAREST_FOUR.with(|cell| {
+        let shared: &Option<&GpuNearestFour> = cell;
+        shared.map(|kernel| kernel.run(queries, targets))
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

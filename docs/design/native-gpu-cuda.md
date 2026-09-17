@@ -25,7 +25,7 @@ the portable GPU path on the same machine.
 
 | Crate | Kernel | wgpu (`gpu`) | CUDA (`cuda`) |
 |-------|--------|--------------|---------------|
-| `math-core` | Exact nearest-neighbor, top-2 nearest-neighbor and Chamfer point-cloud distance batches | `nearest_neighbor.wgsl`, `nearest_two.wgsl`, `chamfer.wgsl` | `nearest_neighbor.cu` / `nearest_two.cu` / `chamfer.cu` → PTX |
+| `math-core` | Exact nearest-neighbor, top-2/top-4 nearest-neighbor and Chamfer point-cloud distance batches | `nearest_neighbor.wgsl`, `nearest_two.wgsl`, `nearest_four.wgsl`, `chamfer.wgsl` | `nearest_neighbor.cu` / `nearest_two.cu` / `nearest_four.cu` / `chamfer.cu` → PTX |
 | `math-core` | One-to-one squared-distance vector/sum batches | `distance_pairs.wgsl`, `distance_pair_sum.wgsl` | `distance_pairs.cu` / `distance_pair_sum.cu` → PTX |
 | `math-core` | Fused transform-and-distance registration score (`transformed_squared_distance_pair_sum_accelerated`) | `transformed_distance_pair_sum.wgsl` | `transformed_distance_pair_sum.cu` → PTX |
 | `math-core` | Point-cloud AABB bounds reduction (`point_bounds_accelerated`) | `point_bounds.wgsl` | `point_bounds.cu` → PTX |
