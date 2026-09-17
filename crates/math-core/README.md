@@ -131,7 +131,8 @@ acceleration)` adds explicit `Gpu`/`Cuda` offload through the same portable
 wgpu and CUDA-driver layers as nearest-neighbor. Device buffers are cached
 grow-only per thread for stable-size repeated calls.
 `squared_distance_pair_sum_accelerated` uses a device-side partial reduction
-for scalar RMSE/loss-style consumers, reading only partial sums back.
+for scalar RMSE/loss-style consumers, reading only partial sums back; that
+reduction path also reuses grow-only device buffers.
 
 This kernel is intentionally conservative in `Auto`: unlike nearest-neighbor,
 it is only O(pair_count) with a few FLOPs per pair, so on discrete GPUs the
@@ -142,22 +143,22 @@ regressing callers:
 
 | pairs | cpu | auto | gpu | cuda |
 | --- | --- | --- | --- | --- |
-| 10,000 | 0.008 ms | 0.008 ms | 0.338 ms | 0.113 ms |
-| 100,000 | 0.124 ms | 0.067 ms | 3.281 ms | 0.901 ms |
-| 250,000 | 0.304 ms | 0.311 ms | 8.336 ms | 1.985 ms |
-| 1,000,000 | 1.893 ms | 1.968 ms | 29.375 ms | 8.320 ms |
-| 3,000,000 | 6.153 ms | 6.177 ms | 87.506 ms | 24.352 ms |
+| 10,000 | 0.009 ms | 0.008 ms | 0.322 ms | 0.098 ms |
+| 100,000 | 0.130 ms | 0.068 ms | 3.224 ms | 0.859 ms |
+| 250,000 | 0.322 ms | 0.347 ms | 8.167 ms | 2.035 ms |
+| 1,000,000 | 1.933 ms | 2.126 ms | 28.189 ms | 8.822 ms |
+| 3,000,000 | 6.184 ms | 6.143 ms | 85.045 ms | 24.921 ms |
 
 Scalar sum reduction avoids reading all distances but still has to upload both
 input point arrays, so `Auto` remains CPU there too:
 
 | pairs | cpu sum | auto sum | gpu sum | cuda sum |
 | --- | --- | --- | --- | --- |
-| 10,000 | 0.019 ms | 0.016 ms | 0.352 ms | 0.098 ms |
-| 100,000 | 0.141 ms | 0.131 ms | 3.459 ms | 0.692 ms |
-| 250,000 | 0.639 ms | 0.598 ms | 7.350 ms | 1.925 ms |
-| 1,000,000 | 2.819 ms | 2.966 ms | 28.223 ms | 7.494 ms |
-| 3,000,000 | 8.431 ms | 8.628 ms | 86.299 ms | 22.989 ms |
+| 10,000 | 0.014 ms | 0.013 ms | 0.321 ms | 0.101 ms |
+| 100,000 | 0.140 ms | 0.130 ms | 3.236 ms | 0.765 ms |
+| 250,000 | 0.499 ms | 0.500 ms | 7.807 ms | 2.198 ms |
+| 1,000,000 | 3.809 ms | 2.809 ms | 29.933 ms | 7.079 ms |
+| 3,000,000 | 8.414 ms | 8.885 ms | 79.100 ms | 21.326 ms |
 
 ## ICP / rigid point-cloud registration
 

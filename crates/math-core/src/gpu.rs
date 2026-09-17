@@ -456,6 +456,18 @@ struct GpuDistancePairSum {
     queue: wgpu::Queue,
     layout: wgpu::BindGroupLayout,
     pipeline: wgpu::ComputePipeline,
+    buffers: std::cell::RefCell<Option<DistancePairSumBuffers>>,
+}
+
+struct DistancePairSumBuffers {
+    pair_capacity: usize,
+    partial_capacity: usize,
+    params: wgpu::Buffer,
+    a: wgpu::Buffer,
+    b: wgpu::Buffer,
+    out: wgpu::Buffer,
+    read: wgpu::Buffer,
+    bind: wgpu::BindGroup,
 }
 
 impl GpuDistancePairSum {
@@ -492,19 +504,20 @@ impl GpuDistancePairSum {
             queue: context.queue.clone(),
             layout,
             pipeline,
+            buffers: std::cell::RefCell::new(None),
         }
     }
 
-    fn run(&self, a: &[V3], b: &[V3]) -> f64 {
-        let pair_count = a.len();
-        let partial_count = pair_count.div_ceil(256).max(1);
-        let flat_a: Vec<f32> = a.iter().flatten().map(|&v| v as f32).collect();
-        let flat_b: Vec<f32> = b.iter().flatten().map(|&v| v as f32).collect();
-        let mut params = Vec::with_capacity(16);
-        params.extend_from_slice(&(pair_count as u32).to_le_bytes());
-        params.extend_from_slice(&0u32.to_le_bytes());
-        params.extend_from_slice(&0u32.to_le_bytes());
-        params.extend_from_slice(&0u32.to_le_bytes());
+    fn ensure_buffers(&self, pair_count: usize, partial_count: usize) {
+        let stale = match &*self.buffers.borrow() {
+            Some(b) => b.pair_capacity < pair_count || b.partial_capacity < partial_count,
+            None => true,
+        };
+        if !stale {
+            return;
+        }
+        let pair_capacity = pair_count.max(1);
+        let partial_capacity = partial_count.max(1);
         let device = &self.device;
         let mk = |label: &str, size: u64, usage| {
             device.create_buffer(&wgpu::BufferDescriptor {
@@ -514,58 +527,84 @@ impl GpuDistancePairSum {
                 mapped_at_creation: false,
             })
         };
-        let params_buf = mk(
+        let params = mk(
             "distance_pair_sum_params",
             16,
             wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
         );
-        let a_buf = mk(
+        let a = mk(
             "distance_pair_sum_a",
-            (flat_a.len().max(1) * 4) as u64,
+            (pair_capacity * 12) as u64,
             wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
         );
-        let b_buf = mk(
+        let b = mk(
             "distance_pair_sum_b",
-            (flat_b.len().max(1) * 4) as u64,
+            (pair_capacity * 12) as u64,
             wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
         );
-        let out_buf = mk(
+        let out = mk(
             "distance_pair_sum_out",
-            (partial_count * 4) as u64,
+            (partial_capacity * 4) as u64,
             wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC,
         );
-        let read_buf = mk(
+        let read = mk(
             "distance_pair_sum_read",
-            (partial_count * 4) as u64,
+            (partial_capacity * 4) as u64,
             wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
         );
-        self.queue.write_buffer(&params_buf, 0, &params);
-        self.queue
-            .write_buffer(&a_buf, 0, &gpu_compute::pack_f32(&flat_a));
-        self.queue
-            .write_buffer(&b_buf, 0, &gpu_compute::pack_f32(&flat_b));
         let bind = device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("distance_pair_sum"),
             layout: &self.layout,
             entries: &[
                 wgpu::BindGroupEntry {
                     binding: 0,
-                    resource: params_buf.as_entire_binding(),
+                    resource: params.as_entire_binding(),
                 },
                 wgpu::BindGroupEntry {
                     binding: 1,
-                    resource: a_buf.as_entire_binding(),
+                    resource: a.as_entire_binding(),
                 },
                 wgpu::BindGroupEntry {
                     binding: 2,
-                    resource: b_buf.as_entire_binding(),
+                    resource: b.as_entire_binding(),
                 },
                 wgpu::BindGroupEntry {
                     binding: 3,
-                    resource: out_buf.as_entire_binding(),
+                    resource: out.as_entire_binding(),
                 },
             ],
         });
+        *self.buffers.borrow_mut() = Some(DistancePairSumBuffers {
+            pair_capacity,
+            partial_capacity,
+            params,
+            a,
+            b,
+            out,
+            read,
+            bind,
+        });
+    }
+
+    fn run(&self, a: &[V3], b: &[V3]) -> f64 {
+        let pair_count = a.len();
+        let partial_count = pair_count.div_ceil(256).max(1);
+        self.ensure_buffers(pair_count, partial_count);
+        let flat_a: Vec<f32> = a.iter().flatten().map(|&v| v as f32).collect();
+        let flat_b: Vec<f32> = b.iter().flatten().map(|&v| v as f32).collect();
+        let mut params = Vec::with_capacity(16);
+        params.extend_from_slice(&(pair_count as u32).to_le_bytes());
+        params.extend_from_slice(&0u32.to_le_bytes());
+        params.extend_from_slice(&0u32.to_le_bytes());
+        params.extend_from_slice(&0u32.to_le_bytes());
+        let device = &self.device;
+        let buffers = self.buffers.borrow();
+        let buffers = buffers.as_ref().expect("ensure_buffers was just called");
+        self.queue.write_buffer(&buffers.params, 0, &params);
+        self.queue
+            .write_buffer(&buffers.a, 0, &gpu_compute::pack_f32(&flat_a));
+        self.queue
+            .write_buffer(&buffers.b, 0, &gpu_compute::pack_f32(&flat_b));
         let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
             label: Some("distance_pair_sum"),
         });
@@ -575,13 +614,19 @@ impl GpuDistancePairSum {
                 timestamp_writes: None,
             });
             pass.set_pipeline(&self.pipeline);
-            pass.set_bind_group(0, &bind, &[]);
+            pass.set_bind_group(0, &buffers.bind, &[]);
             pass.dispatch_workgroups(partial_count as u32, 1, 1);
         }
-        encoder.copy_buffer_to_buffer(&out_buf, 0, &read_buf, 0, (partial_count * 4) as u64);
+        encoder.copy_buffer_to_buffer(
+            &buffers.out,
+            0,
+            &buffers.read,
+            0,
+            (partial_count * 4) as u64,
+        );
         self.queue.submit([encoder.finish()]);
-        let raw = read_buffer(device, &read_buf, partial_count * 4);
-        read_buf.unmap();
+        let raw = read_buffer(device, &buffers.read, partial_count * 4);
+        buffers.read.unmap();
         raw.chunks_exact(4)
             .take(partial_count)
             .map(|d| f32::from_ne_bytes(d.try_into().unwrap()) as f64)

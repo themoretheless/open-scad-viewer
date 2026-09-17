@@ -394,6 +394,15 @@ pub(crate) fn squared_distance_pairs_cuda(a: &[V3], b: &[V3]) -> Option<Vec<f64>
 struct CudaDistancePairSum {
     device: CudaDevice,
     kernel: CudaFunction,
+    buffers: std::cell::RefCell<Option<DistancePairSumBuffers>>,
+}
+
+struct DistancePairSumBuffers {
+    pair_capacity: usize,
+    partial_capacity: usize,
+    a: CudaSlice<f32>,
+    b: CudaSlice<f32>,
+    out: CudaSlice<f32>,
 }
 
 impl CudaDistancePairSum {
@@ -401,7 +410,35 @@ impl CudaDistancePairSum {
         let device = CudaDevice::new()?;
         let module = device.load_ptx(DISTANCE_PAIR_SUM_PTX)?;
         let kernel = module.load_function("squared_distance_pair_sum").ok()?;
-        Some(Self { device, kernel })
+        Some(Self {
+            device,
+            kernel,
+            buffers: std::cell::RefCell::new(None),
+        })
+    }
+
+    fn ensure_buffers(&self, pair_count: usize, partial_count: usize) -> Option<()> {
+        let stale = match &*self.buffers.borrow() {
+            Some(b) => b.pair_capacity < pair_count || b.partial_capacity < partial_count,
+            None => true,
+        };
+        if !stale {
+            return Some(());
+        }
+        let pair_capacity = pair_count.max(1);
+        let partial_capacity = partial_count.max(1);
+        let stream = &self.device.stream;
+        let a = stream.alloc_zeros::<f32>(pair_capacity * 3).ok()?;
+        let b = stream.alloc_zeros::<f32>(pair_capacity * 3).ok()?;
+        let out = stream.alloc_zeros::<f32>(partial_capacity).ok()?;
+        *self.buffers.borrow_mut() = Some(DistancePairSumBuffers {
+            pair_capacity,
+            partial_capacity,
+            a,
+            b,
+            out,
+        });
+        Some(())
     }
 
     fn run(&self, a: &[V3], b: &[V3]) -> Option<f64> {
@@ -413,13 +450,21 @@ impl CudaDistancePairSum {
         let stream = &self.device.stream;
         let flat_a: Vec<f32> = a.iter().flatten().map(|&v| v as f32).collect();
         let flat_b: Vec<f32> = b.iter().flatten().map(|&v| v as f32).collect();
-        let a_dev = self.device.upload(&flat_a).ok()?;
-        let b_dev = self.device.upload(&flat_b).ok()?;
-        let mut out = stream.alloc_zeros::<f32>(partial_count).ok()?;
+        self.ensure_buffers(pair_count, partial_count)?;
+        let mut buffers = self.buffers.borrow_mut();
+        let buffers = buffers.as_mut().expect("ensure_buffers was just called");
+        {
+            let mut a_view = buffers.a.slice_mut(0..(pair_count * 3).max(1));
+            stream.memcpy_htod(&flat_a, &mut a_view).ok()?;
+        }
+        {
+            let mut b_view = buffers.b.slice_mut(0..(pair_count * 3).max(1));
+            stream.memcpy_htod(&flat_b, &mut b_view).ok()?;
+        }
         let pair_count_u32 = pair_count as u32;
-        let a_view = a_dev.slice(0..(pair_count * 3).max(1));
-        let b_view = b_dev.slice(0..(pair_count * 3).max(1));
-        let mut out_view = out.slice_mut(0..partial_count);
+        let a_view = buffers.a.slice(0..(pair_count * 3).max(1));
+        let b_view = buffers.b.slice(0..(pair_count * 3).max(1));
+        let mut out_view = buffers.out.slice_mut(0..partial_count);
         let mut launch = stream.launch_builder(&self.kernel);
         launch
             .arg(&pair_count_u32)
