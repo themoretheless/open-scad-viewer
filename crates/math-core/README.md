@@ -23,7 +23,7 @@ src/
 ├─ acceleration.rs     # Cpu/Auto/Gpu/Cuda placement and size heuristics
 ├─ linalg.rs           # dense vector/matrix helpers, eigen/SVD/solve
 ├─ transform_error.rs  # fused transform-and-distance registration score
-├─ bounds.rs           # point-cloud bounds reduction
+├─ bounds.rs           # point-cloud and transformed bounds reductions
 ├─ moments.rs          # point-cloud centroid/covariance reduction
 ├─ nearest_neighbor.rs # CPU reference plus GPU/CUDA dispatch
 ├─ chamfer.rs          # point-cloud Chamfer distance over nearest-neighbor
@@ -69,6 +69,26 @@ Use
 `cargo run --release -p osv-math --features cuda --example bench_transform_error`
 to benchmark your hardware and force `Gpu`/`Cuda` when the surrounding pipeline
 already keeps data near a device workload.
+
+## Transformed point-cloud bounds
+
+`transformed_point_bounds_accelerated(points, m, t, acceleration)` computes
+the axis-aligned bounds of `M*p+t` directly, without allocating a transformed
+point cloud. This is a small but common geometry building block for
+registration, culling and scene diagnostics. Explicit `Gpu`/`Cuda` placements
+run fused WGSL/CUDA reducers (`transformed_point_bounds.wgsl` /
+`transformed_point_bounds.cu`) with grow-only device buffers; `Auto` stays CPU
+because repeated measurements did not show a stable device crossover.
+
+| points | fused cpu | auto | gpu | cuda | materialized CPU |
+| --- | --- | --- | --- | --- | --- |
+| 10,000 | 0.050 ms | 0.063 ms | 0.237 ms | 0.148 ms | 0.041 ms |
+| 100,000 | 0.505 ms | 0.647 ms | 1.695 ms | 0.515 ms | 0.582 ms |
+| 1,000,000 | 5.082 ms | 6.788 ms | 15.507 ms | 6.224 ms | 6.032 ms |
+| 5,000,000 | 26.306 ms | 35.054 ms | 72.990 ms | 32.331 ms | 31.257 ms |
+
+Use `cargo run --release -p osv-math --features cuda --example bench_transformed_bounds`
+to measure your hardware.
 
 ## GPU / CUDA nearest-neighbor search
 

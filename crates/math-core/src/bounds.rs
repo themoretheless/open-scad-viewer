@@ -1,7 +1,10 @@
-use crate::{Acceleration, Error, Result, V3};
+use crate::{Acceleration, Error, M3, Result, V3, add, mv};
 
 /// WGSL template for point-cloud axis-aligned bounds reduction.
 pub const POINT_BOUNDS_WGSL_TEMPLATE: &str = include_str!("point_bounds.wgsl");
+/// WGSL template for transformed point-cloud axis-aligned bounds reduction.
+pub const TRANSFORMED_POINT_BOUNDS_WGSL_TEMPLATE: &str =
+    include_str!("transformed_point_bounds.wgsl");
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct PointBounds {
@@ -54,6 +57,33 @@ pub fn point_bounds(points: &[V3]) -> Result<PointBounds> {
     Ok(PointBounds::new(points.len(), min, max))
 }
 
+/// Exact CPU axis-aligned bounds after applying `q = M*p + t` to each point.
+pub fn transformed_point_bounds(points: &[V3], m: M3, t: V3) -> Result<PointBounds> {
+    if points.is_empty() {
+        return Err(Error::new(
+            "invalid_point_bounds_input",
+            "transformed_point_bounds expects at least one point",
+        ));
+    }
+    let mut min = [f64::INFINITY; 3];
+    let mut max = [f64::NEG_INFINITY; 3];
+    for &point in points {
+        if point.iter().any(|value| !value.is_finite()) {
+            return Err(Error::new(
+                "invalid_point_bounds_input",
+                "transformed_point_bounds expects finite point coordinates",
+            ));
+        }
+        let transformed = add(mv(m, point), t);
+        for axis in 0..3 {
+            let value = transformed[axis];
+            min[axis] = min[axis].min(value);
+            max[axis] = max[axis].max(value);
+        }
+    }
+    Ok(PointBounds::new(points.len(), min, max))
+}
+
 /// [`point_bounds`] with optional GPU/CUDA reduction kernels. `Auto` currently
 /// keeps the CPU reference; explicit `Gpu`/`Cuda` force device execution and
 /// fall back to CPU if no device is available.
@@ -88,9 +118,46 @@ pub fn point_bounds_accelerated(
     point_bounds(points)
 }
 
+/// [`transformed_point_bounds`] with optional GPU/CUDA reduction kernels.
+pub fn transformed_point_bounds_accelerated(
+    points: &[V3],
+    m: M3,
+    t: V3,
+    #[allow(unused_variables)] acceleration: Acceleration,
+) -> Result<PointBounds> {
+    if points.is_empty() {
+        return Err(Error::new(
+            "invalid_point_bounds_input",
+            "transformed_point_bounds_accelerated expects at least one point",
+        ));
+    }
+    if points.iter().flatten().any(|value| !value.is_finite()) {
+        return Err(Error::new(
+            "invalid_point_bounds_input",
+            "transformed_point_bounds_accelerated expects finite point coordinates",
+        ));
+    }
+    #[allow(unused_variables)]
+    let acceleration = acceleration.resolve_for_transformed_point_bounds(points.len());
+    #[cfg(feature = "gpu")]
+    if acceleration.is_gpu() {
+        #[cfg(feature = "cuda")]
+        if acceleration == Acceleration::Cuda
+            && let Some(bounds) = crate::cuda::transformed_point_bounds_cuda(points, m, t)
+        {
+            return Ok(bounds);
+        }
+        if let Some(bounds) = crate::gpu::transformed_point_bounds_gpu(points, m, t) {
+            return Ok(bounds);
+        }
+    }
+    transformed_point_bounds(points, m, t)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::{rotation, transform_points};
 
     fn points(n: usize) -> Vec<V3> {
         (0..n)
@@ -131,6 +198,43 @@ mod tests {
         );
     }
 
+    #[test]
+    fn transformed_point_bounds_matches_materialized_reference() {
+        let points = points(257);
+        let m = rotation([0.2, -0.1, 0.3]);
+        let t = [1., -0.5, 0.25];
+        let transformed = transform_points(&points, m, t);
+        assert_eq!(
+            transformed_point_bounds(&points, m, t).unwrap(),
+            point_bounds(&transformed).unwrap()
+        );
+    }
+
+    #[test]
+    fn transformed_point_bounds_rejects_empty_and_nonfinite_points() {
+        assert!(transformed_point_bounds(&[], [[0.; 3]; 3], [0.; 3]).is_err());
+        assert!(
+            transformed_point_bounds_accelerated(
+                &[[f64::NAN, 0., 0.]],
+                [[0.; 3]; 3],
+                [0.; 3],
+                Acceleration::Gpu
+            )
+            .is_err()
+        );
+    }
+
+    #[test]
+    fn transformed_point_bounds_auto_matches_cpu_reference() {
+        let points = points(257);
+        let m = rotation([0.2, -0.1, 0.3]);
+        let t = [1., -0.5, 0.25];
+        assert_eq!(
+            transformed_point_bounds_accelerated(&points, m, t, Acceleration::Auto).unwrap(),
+            transformed_point_bounds(&points, m, t).unwrap()
+        );
+    }
+
     #[cfg(feature = "gpu")]
     #[test]
     fn point_bounds_gpu_matches_cpu_reference() {
@@ -149,6 +253,34 @@ mod tests {
         let points = points(4097);
         let got = point_bounds_accelerated(&points, Acceleration::Cuda).unwrap();
         let want = point_bounds(&points).unwrap();
+        for axis in 0..3 {
+            assert!((got.min[axis] - want.min[axis]).abs() < 1e-4);
+            assert!((got.max[axis] - want.max[axis]).abs() < 1e-4);
+        }
+    }
+
+    #[cfg(feature = "gpu")]
+    #[test]
+    fn transformed_point_bounds_gpu_matches_cpu_reference() {
+        let points = points(4097);
+        let m = rotation([0.2, -0.1, 0.3]);
+        let t = [1., -0.5, 0.25];
+        let got = transformed_point_bounds_accelerated(&points, m, t, Acceleration::Gpu).unwrap();
+        let want = transformed_point_bounds(&points, m, t).unwrap();
+        for axis in 0..3 {
+            assert!((got.min[axis] - want.min[axis]).abs() < 1e-4);
+            assert!((got.max[axis] - want.max[axis]).abs() < 1e-4);
+        }
+    }
+
+    #[cfg(feature = "cuda")]
+    #[test]
+    fn transformed_point_bounds_cuda_matches_cpu_reference() {
+        let points = points(4097);
+        let m = rotation([0.2, -0.1, 0.3]);
+        let t = [1., -0.5, 0.25];
+        let got = transformed_point_bounds_accelerated(&points, m, t, Acceleration::Cuda).unwrap();
+        let want = transformed_point_bounds(&points, m, t).unwrap();
         for axis in 0..3 {
             assert!((got.min[axis] - want.min[axis]).abs() < 1e-4);
             assert!((got.max[axis] - want.max[axis]).abs() < 1e-4);

@@ -29,6 +29,7 @@ the portable GPU path on the same machine.
 | `math-core` | One-to-one squared-distance vector/sum batches | `distance_pairs.wgsl`, `distance_pair_sum.wgsl` | `distance_pairs.cu` / `distance_pair_sum.cu` → PTX |
 | `math-core` | Fused transform-and-distance registration score (`transformed_squared_distance_pair_sum_accelerated`) | `transformed_distance_pair_sum.wgsl` | `transformed_distance_pair_sum.cu` → PTX |
 | `math-core` | Point-cloud AABB bounds reduction (`point_bounds_accelerated`) | `point_bounds.wgsl` | `point_bounds.cu` → PTX |
+| `math-core` | Transformed point-cloud AABB bounds (`transformed_point_bounds_accelerated`) | `transformed_point_bounds.wgsl` | `transformed_point_bounds.cu` → PTX |
 | `math-core` | Point-cloud centroid/covariance reduction (`point_moments_accelerated`) | `point_moments.wgsl` | `point_moments.cu` → PTX |
 | `math-core` | Fused point-cloud bounds + moments summary (`point_cloud_stats_accelerated`) | `point_cloud_stats.wgsl` | `point_cloud_stats.cu` → PTX |
 | `sdf-core` | Grid sampling of primitive/CSG/mesh-distance fields (`polygonize_accelerated`) | `SDF_WGSL`, cached grow-only buffers | `sdf_grid.cu` → `sdf_grid.ptx`, cached grow-only buffers |
@@ -97,3 +98,6 @@ is where the device placements pay off (~270× here).
   ports for parity and device-resident experiments, but `Auto` stays on CPU:
   measured RTX 5090 runs are upload-bound (5M pairs: CPU fused 11.4 ms, CUDA
   33.6 ms, wgpu 130.4 ms).
+- Transformed point-cloud bounds has explicit wgpu/CUDA ports, but `Auto`
+  stays on CPU because repeated RTX 5090 measurements did not show a stable
+  device crossover (1M points: CPU 5.06 ms, CUDA 5.72 ms, wgpu 14.76 ms).

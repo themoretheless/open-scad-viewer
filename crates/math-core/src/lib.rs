@@ -15,7 +15,10 @@ mod transform_error;
 mod types;
 
 pub use acceleration::Acceleration;
-pub use bounds::{POINT_BOUNDS_WGSL_TEMPLATE, PointBounds, point_bounds, point_bounds_accelerated};
+pub use bounds::{
+    POINT_BOUNDS_WGSL_TEMPLATE, PointBounds, TRANSFORMED_POINT_BOUNDS_WGSL_TEMPLATE, point_bounds,
+    point_bounds_accelerated, transformed_point_bounds, transformed_point_bounds_accelerated,
+};
 pub use chamfer::{
     CHAMFER_WGSL_TEMPLATE, ChamferDistance, DirectedChamfer, chamfer_distance,
     directed_chamfer_distance, directed_hausdorff_distance, hausdorff_distance,

@@ -1105,6 +1105,238 @@ pub fn point_bounds_gpu(points: &[V3]) -> Option<crate::PointBounds> {
     })
 }
 
+struct GpuTransformedPointBounds {
+    device: wgpu::Device,
+    queue: wgpu::Queue,
+    layout: wgpu::BindGroupLayout,
+    pipeline: wgpu::ComputePipeline,
+    workgroup_size: u32,
+    buffers: std::cell::RefCell<Option<TransformedPointBoundsBuffers>>,
+}
+
+struct TransformedPointBoundsBuffers {
+    point_capacity: usize,
+    partial_capacity: usize,
+    params: wgpu::Buffer,
+    points: wgpu::Buffer,
+    out_min: wgpu::Buffer,
+    out_max: wgpu::Buffer,
+    read_min: wgpu::Buffer,
+    read_max: wgpu::Buffer,
+    bind: wgpu::BindGroup,
+}
+
+impl GpuTransformedPointBounds {
+    fn new(context: &GpuContext) -> Self {
+        let workgroup_size =
+            gpu_compute::tuned_workgroup_size(context.backend, WG_METAL, WG_DEFAULT);
+        let device = &context.device;
+        let module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
+            label: Some("transformed_point_bounds"),
+            source: wgpu::ShaderSource::Wgsl(
+                crate::TRANSFORMED_POINT_BOUNDS_WGSL_TEMPLATE
+                    .replace("__WG__", &workgroup_size.to_string())
+                    .into(),
+            ),
+        });
+        let layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+            label: Some("transformed_point_bounds"),
+            entries: &[
+                uniform_entry(0),
+                storage_entry(1, true),
+                storage_entry(2, false),
+                storage_entry(3, false),
+            ],
+        });
+        let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+            label: Some("transformed_point_bounds"),
+            bind_group_layouts: &[Some(&layout)],
+            immediate_size: 0,
+        });
+        let pipeline = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
+            label: Some("transformed_point_bounds"),
+            layout: Some(&pipeline_layout),
+            module: &module,
+            entry_point: Some("main"),
+            compilation_options: Default::default(),
+            cache: None,
+        });
+        Self {
+            device: device.clone(),
+            queue: context.queue.clone(),
+            layout,
+            pipeline,
+            workgroup_size,
+            buffers: std::cell::RefCell::new(None),
+        }
+    }
+
+    fn ensure_buffers(&self, point_count: usize, partial_count: usize) {
+        let stale = match &*self.buffers.borrow() {
+            Some(b) => b.point_capacity < point_count || b.partial_capacity < partial_count,
+            None => true,
+        };
+        if !stale {
+            return;
+        }
+        let point_capacity = point_count.max(1);
+        let partial_capacity = partial_count.max(1);
+        let device = &self.device;
+        let mk = |label: &str, size: u64, usage| {
+            device.create_buffer(&wgpu::BufferDescriptor {
+                label: Some(label),
+                size,
+                usage,
+                mapped_at_creation: false,
+            })
+        };
+        let params = mk(
+            "transformed_point_bounds_params",
+            64,
+            wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+        );
+        let points = mk(
+            "transformed_point_bounds_points",
+            (point_capacity * 12) as u64,
+            wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+        );
+        let partial_bytes = (partial_capacity * 12) as u64;
+        let out_min = mk(
+            "transformed_point_bounds_out_min",
+            partial_bytes,
+            wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC,
+        );
+        let out_max = mk(
+            "transformed_point_bounds_out_max",
+            partial_bytes,
+            wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC,
+        );
+        let read_min = mk(
+            "transformed_point_bounds_read_min",
+            partial_bytes,
+            wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
+        );
+        let read_max = mk(
+            "transformed_point_bounds_read_max",
+            partial_bytes,
+            wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
+        );
+        let bind = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("transformed_point_bounds"),
+            layout: &self.layout,
+            entries: &[
+                wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: params.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 1,
+                    resource: points.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 2,
+                    resource: out_min.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 3,
+                    resource: out_max.as_entire_binding(),
+                },
+            ],
+        });
+        *self.buffers.borrow_mut() = Some(TransformedPointBoundsBuffers {
+            point_capacity,
+            partial_capacity,
+            params,
+            points,
+            out_min,
+            out_max,
+            read_min,
+            read_max,
+            bind,
+        });
+    }
+
+    fn run(&self, points: &[V3], m: M3, t: V3) -> crate::PointBounds {
+        let point_count = points.len();
+        let partial_count = point_count.div_ceil(self.workgroup_size as usize).max(1);
+        self.ensure_buffers(point_count, partial_count);
+        let flat: Vec<f32> = points.iter().flatten().map(|&v| v as f32).collect();
+        let mut params = Vec::with_capacity(64);
+        params.extend_from_slice(&(point_count as u32).to_le_bytes());
+        params.extend_from_slice(&0u32.to_le_bytes());
+        params.extend_from_slice(&0u32.to_le_bytes());
+        params.extend_from_slice(&0u32.to_le_bytes());
+        for row in 0..3 {
+            for col in 0..3 {
+                params.extend_from_slice(&(m[row][col] as f32).to_le_bytes());
+            }
+            params.extend_from_slice(&(t[row] as f32).to_le_bytes());
+        }
+        let device = &self.device;
+        let buffers = self.buffers.borrow();
+        let buffers = buffers.as_ref().expect("ensure_buffers was just called");
+        self.queue.write_buffer(&buffers.params, 0, &params);
+        self.queue
+            .write_buffer(&buffers.points, 0, &gpu_compute::pack_f32(&flat));
+        let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
+            label: Some("transformed_point_bounds"),
+        });
+        {
+            let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
+                label: Some("transformed_point_bounds"),
+                timestamp_writes: None,
+            });
+            pass.set_pipeline(&self.pipeline);
+            pass.set_bind_group(0, &buffers.bind, &[]);
+            pass.dispatch_workgroups(partial_count as u32, 1, 1);
+        }
+        let partial_bytes = (partial_count * 12) as u64;
+        encoder.copy_buffer_to_buffer(&buffers.out_min, 0, &buffers.read_min, 0, partial_bytes);
+        encoder.copy_buffer_to_buffer(&buffers.out_max, 0, &buffers.read_max, 0, partial_bytes);
+        self.queue.submit([encoder.finish()]);
+        let raw_min = read_buffer(device, &buffers.read_min, partial_count * 12);
+        buffers.read_min.unmap();
+        let raw_max = read_buffer(device, &buffers.read_max, partial_count * 12);
+        buffers.read_max.unmap();
+        let mut min = [f64::INFINITY; 3];
+        let mut max = [f64::NEG_INFINITY; 3];
+        for chunk in raw_min.chunks_exact(12).take(partial_count) {
+            for axis in 0..3 {
+                let start = axis * 4;
+                min[axis] = min[axis]
+                    .min(f32::from_ne_bytes(chunk[start..start + 4].try_into().unwrap()) as f64);
+            }
+        }
+        for chunk in raw_max.chunks_exact(12).take(partial_count) {
+            for axis in 0..3 {
+                let start = axis * 4;
+                max[axis] = max[axis]
+                    .max(f32::from_ne_bytes(chunk[start..start + 4].try_into().unwrap()) as f64);
+            }
+        }
+        crate::PointBounds::new(point_count, min, max)
+    }
+}
+
+thread_local! {
+    static SHARED_TRANSFORMED_POINT_BOUNDS: std::cell::LazyCell<Option<&'static GpuTransformedPointBounds>> =
+        std::cell::LazyCell::new(|| {
+            GpuContext::new()
+                .map(|context| Box::leak(Box::new(GpuTransformedPointBounds::new(&context))) as &'static GpuTransformedPointBounds)
+        });
+}
+
+/// Transformed point-cloud axis-aligned bounds on the GPU; `None` without an adapter.
+pub fn transformed_point_bounds_gpu(points: &[V3], m: M3, t: V3) -> Option<crate::PointBounds> {
+    if points.is_empty() {
+        return None;
+    }
+    SHARED_TRANSFORMED_POINT_BOUNDS.with(|cell| {
+        let shared: &Option<&GpuTransformedPointBounds> = cell;
+        shared.map(|kernel| kernel.run(points, m, t))
+    })
+}
+
 struct GpuPointMoments {
     device: wgpu::Device,
     queue: wgpu::Queue,

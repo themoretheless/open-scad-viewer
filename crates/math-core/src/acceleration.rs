@@ -134,6 +134,23 @@ impl Acceleration {
             explicit => explicit,
         }
     }
+
+    /// Suggests a placement for transformed point-cloud bounds. This fused
+    /// O(n) kernel is close enough to the CPU reference that measured device
+    /// wins were not stable, so Auto preserves the CPU path. Explicit
+    /// `Gpu`/`Cuda` still force device execution.
+    pub const fn recommended_for_transformed_point_bounds(point_count: usize) -> Self {
+        let _ = point_count;
+        Self::Cpu
+    }
+
+    /// Resolves `Auto` for transformed point-cloud bounds.
+    pub const fn resolve_for_transformed_point_bounds(self, point_count: usize) -> Self {
+        match self {
+            Self::Auto => Self::recommended_for_transformed_point_bounds(point_count),
+            explicit => explicit,
+        }
+    }
 }
 
 #[cfg(test)]
@@ -226,6 +243,26 @@ mod tests {
         }
         assert_eq!(
             Acceleration::Gpu.resolve_for_point_cloud_stats(10_000),
+            Acceleration::Gpu
+        );
+    }
+
+    #[test]
+    fn recommended_for_transformed_point_bounds_stays_on_cpu() {
+        assert_eq!(
+            Acceleration::recommended_for_transformed_point_bounds(10_000),
+            Acceleration::Cpu
+        );
+        assert_eq!(
+            Acceleration::Auto.resolve_for_transformed_point_bounds(10_000),
+            Acceleration::Cpu
+        );
+        assert_eq!(
+            Acceleration::recommended_for_transformed_point_bounds(1_000_000),
+            Acceleration::Cpu
+        );
+        assert_eq!(
+            Acceleration::Gpu.resolve_for_transformed_point_bounds(10_000),
             Acceleration::Gpu
         );
     }
