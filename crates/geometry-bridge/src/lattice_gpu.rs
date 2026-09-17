@@ -289,6 +289,14 @@ pub(crate) fn try_gpu(
     })
 }
 
+/// Portable wgpu backend currently used for lattice field sampling.
+pub fn backend_label() -> Option<&'static str> {
+    SHARED.with(|cell| {
+        let shared: &Option<&(GpuContext, GpuLattice)> = cell;
+        shared.map(|(context, _)| context.backend_label())
+    })
+}
+
 /// Test hook: whether a GPU adapter is available (the accelerated path then
 /// actually engages instead of falling back).
 #[cfg(test)]

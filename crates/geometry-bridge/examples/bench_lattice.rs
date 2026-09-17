@@ -1,9 +1,22 @@
 //! Temporary lattice benchmark (may be removed after qualification).
 use geometry_bridge::mesh_shell;
 use polygon_core::solid::primitives::cube;
+use sdf_core::Acceleration;
 use std::time::Instant;
 
+#[derive(Clone, Copy)]
+struct Mode {
+    name: &'static str,
+    acceleration: Acceleration,
+}
+
 fn main() {
+    #[cfg(feature = "gpu")]
+    println!(
+        "wgpu backend: {}",
+        geometry_bridge::lattice_gpu::backend_label().unwrap_or("none (falls back to cpu)")
+    );
+
     let mesh = cube([40., 40., 40.], false).unwrap();
     let mut nodes = Vec::new();
     for x in 0..3 {
@@ -31,6 +44,25 @@ fn main() {
         }
     }
     println!("nodes={} edges={}", nodes.len(), edges.len());
+    let modes = [
+        Mode {
+            name: "cpu",
+            acceleration: Acceleration::Cpu,
+        },
+        Mode {
+            name: "auto",
+            acceleration: Acceleration::Auto,
+        },
+        Mode {
+            name: "gpu",
+            acceleration: Acceleration::Gpu,
+        },
+        Mode {
+            name: "cuda",
+            acceleration: Acceleration::Cuda,
+        },
+    ];
+
     for organic in [false, true] {
         let reference = mesh_shell::lattice(
             &mesh,
@@ -45,53 +77,66 @@ fn main() {
             false,
         )
         .unwrap();
-        let mut cpu_times = Vec::new();
-        let mut gpu_times = Vec::new();
-        let mut cpu_tris = 0;
-        let mut gpu_tris = 0;
-        for i in 0..6 {
-            let gpu = i % 2 == 1;
-            let start = Instant::now();
-            let out = mesh_shell::lattice_accelerated(
-                &mesh,
-                nodes.clone(),
-                edges.clone(),
-                3.5,
-                3.5,
-                1.5,
-                organic,
-                false,
-                0.,
-                false,
-                if gpu {
-                    sdf_core::Acceleration::Gpu
-                } else {
-                    sdf_core::Acceleration::Cpu
-                },
-            )
-            .unwrap();
-            let ms = start.elapsed().as_secs_f64() * 1000.;
-            (if gpu { &mut gpu_times } else { &mut cpu_times }).push(ms);
-            if gpu {
-                gpu_tris = out.mesh.indices.len() / 3
-            } else {
-                cpu_tris = out.mesh.indices.len() / 3
+        let mut summary = Vec::new();
+        for mode in &modes {
+            let mut times = Vec::new();
+            let mut triangles = 0usize;
+            let mut volume_delta = 0.;
+            for _ in 0..3 {
+                let start = Instant::now();
+                let out = mesh_shell::lattice_accelerated(
+                    &mesh,
+                    nodes.clone(),
+                    edges.clone(),
+                    3.5,
+                    3.5,
+                    1.5,
+                    organic,
+                    false,
+                    0.,
+                    false,
+                    mode.acceleration,
+                )
+                .unwrap();
+                times.push(start.elapsed().as_secs_f64() * 1000.);
+                triangles = out.mesh.indices.len() / 3;
+                volume_delta = (out.report.signed_volume_mm3 - reference.report.signed_volume_mm3)
+                    .abs()
+                    / reference.report.signed_volume_mm3;
+                assert!(
+                    volume_delta < 0.001,
+                    "{} volume diverges beyond 0.1%",
+                    mode.name
+                );
             }
-            let dv = (out.report.signed_volume_mm3 - reference.report.signed_volume_mm3).abs()
-                / reference.report.signed_volume_mm3;
+            times.sort_by(f64::total_cmp);
+            let median = times[times.len() / 2];
             println!(
-                "  organic={organic} gpu={gpu}: volume delta {:.6}%",
-                dv * 100.
+                "  organic={organic} mode={}: {:.0}ms, triangles={}, volume delta {:.6}%",
+                mode.name,
+                median,
+                triangles,
+                volume_delta * 100.
             );
-            assert!(dv < 0.001, "volume diverges beyond 0.1%");
+            summary.push((mode.name, median, triangles));
         }
-        cpu_times.sort_by(f64::total_cmp);
-        gpu_times.sort_by(f64::total_cmp);
+        let cpu = summary[0];
         println!(
-            "organic={organic}: cpu {:.0}ms gpu {:.0}ms | triangles cpu={cpu_tris} gpu={gpu_tris} ({:+.2}%)",
-            cpu_times[cpu_times.len() / 2],
-            gpu_times[gpu_times.len() / 2],
-            (gpu_tris as f64 - cpu_tris as f64) / cpu_tris as f64 * 100.
+            "organic={organic}: baseline {} {:.0}ms, fastest {} {:.0}ms ({:.2}x)",
+            cpu.0,
+            cpu.1,
+            summary.iter().min_by(|a, b| a.1.total_cmp(&b.1)).unwrap().0,
+            summary
+                .iter()
+                .map(|entry| entry.1)
+                .min_by(f64::total_cmp)
+                .unwrap(),
+            cpu.1
+                / summary
+                    .iter()
+                    .map(|entry| entry.1)
+                    .min_by(f64::total_cmp)
+                    .unwrap()
         );
     }
 }
