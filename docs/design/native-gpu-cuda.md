@@ -27,7 +27,7 @@ the portable GPU path on the same machine.
 |-------|--------|--------------|---------------|
 | `math-core` | Exact nearest-neighbor and top-2 nearest-neighbor batches | `nearest_neighbor.wgsl`, `nearest_two.wgsl` | `nearest_neighbor.cu` / `nearest_two.cu` → PTX |
 | `math-core` | One-to-one squared-distance vector/sum batches | `distance_pairs.wgsl`, `distance_pair_sum.wgsl` | `distance_pairs.cu` / `distance_pair_sum.cu` → PTX |
-| `sdf-core` | Grid sampling of primitive/CSG/mesh-distance fields (`polygonize_accelerated`) | `SDF_WGSL` | `sdf_grid.cu` → `sdf_grid.ptx` |
+| `sdf-core` | Grid sampling of primitive/CSG/mesh-distance fields (`polygonize_accelerated`) | `SDF_WGSL`, cached grow-only buffers | `sdf_grid.cu` → `sdf_grid.ptx`, cached grow-only buffers |
 | `geometry-bridge` | Lattice implicit field (`lattice_accelerated`) | `LATTICE_WGSL`, cached grow-only buffers | runs the wgpu shader |
 | `photogrammetry-core` | Descriptor matching | cached WGSL pipelines/buffers | `matching.cu` → `matching.ptx` |
 | `photogrammetry-core` | Frontoparallel NCC depth sweep | cached WGSL pipelines/buffers | runs the wgpu shader |
@@ -69,8 +69,8 @@ the nvcc release used to generate it (currently CUDA 13.x → an R580+ driver).
 
 | Field | CPU | wgpu (Vulkan) | CUDA |
 |-------|-----|---------------|------|
-| Smooth-union primitives, 64³ grid | 94.0 ms | 90.2 ms | 90.4 ms |
-| Mesh distance, 1088 triangles, 16³ grid | 434.2 ms | 1.8 ms | 1.6 ms |
+| Smooth-union primitives, 64³ grid | 65.5 ms | 58.6 ms | 58.1 ms |
+| Mesh distance, 1088 triangles, 16³ grid | 324.7 ms | 1.5 ms | 1.5 ms |
 
 The primitive field is dominated by CPU marching-tetrahedra extraction, which
 neither placement moves off the CPU; the brute-force mesh-distance sampling
