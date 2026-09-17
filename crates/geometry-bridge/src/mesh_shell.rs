@@ -4,6 +4,7 @@ fn fail(message: impl Into<String>) -> Error {
     Error::new("GEOMETRY_INVALID_INPUT", message)
 }
 pub(crate) type P = [f64; 3];
+use crate::Acceleration;
 use math_core::{cross, dot, sub};
 #[derive(Clone)]
 pub(crate) struct Triangle {
@@ -604,7 +605,7 @@ pub fn lattice(
         open_top,
         wall_depth,
         keep_core,
-        sdf_core::Acceleration::Cpu,
+        Acceleration::Cpu,
     )
 }
 
@@ -615,14 +616,14 @@ pub fn recommended_for_lattice(
     grid_points: usize,
     source_triangles: usize,
     segment_count: usize,
-) -> sdf_core::Acceleration {
+) -> Acceleration {
     const GPU_WORK_THRESHOLD: usize = 500_000;
     let complexity = source_triangles.saturating_add(segment_count).max(1);
     let work = grid_points.saturating_mul(complexity);
     if cfg!(feature = "gpu") && work >= GPU_WORK_THRESHOLD {
-        sdf_core::Acceleration::Gpu
+        Acceleration::Gpu
     } else {
-        sdf_core::Acceleration::Cpu
+        Acceleration::Cpu
     }
 }
 
@@ -641,7 +642,7 @@ pub fn lattice_accelerated(
     open_top: bool,
     wall_depth: f64,
     keep_core: bool,
-    acceleration: sdf_core::Acceleration,
+    acceleration: Acceleration,
 ) -> Result<BuiltMesh> {
     let report = mesh.inspect()?;
     if !report.closed || report.signed_volume_mm3 <= 0. || mesh.indices.len() / 3 > 30000 {
@@ -725,7 +726,7 @@ pub fn lattice_accelerated(
     }
     let grid_points = (cells[0] + 1) * (cells[1] + 1) * (cells[2] + 1);
     let acceleration = match acceleration {
-        sdf_core::Acceleration::Auto => {
+        Acceleration::Auto => {
             recommended_for_lattice(grid_points, mesh.indices.len() / 3, segments.len())
         }
         explicit => explicit,
@@ -826,13 +827,13 @@ mod tests {
     fn lattice_auto_recommendation_tracks_work_size() {
         assert_eq!(
             recommended_for_lattice(1_000, 8, 8),
-            sdf_core::Acceleration::Cpu
+            Acceleration::Cpu
         );
         let large = recommended_for_lattice(100_000, 12, 54);
         if cfg!(feature = "gpu") {
-            assert_eq!(large, sdf_core::Acceleration::Gpu);
+            assert_eq!(large, Acceleration::Gpu);
         } else {
-            assert_eq!(large, sdf_core::Acceleration::Cpu);
+            assert_eq!(large, Acceleration::Cpu);
         }
     }
 
@@ -865,7 +866,7 @@ mod tests {
             false,
             0.,
             false,
-            sdf_core::Acceleration::Auto,
+            Acceleration::Auto,
         )
         .unwrap();
         assert_eq!(automatic.mesh.indices.len(), reference.mesh.indices.len());
@@ -904,7 +905,7 @@ mod tests {
             false,
             0.,
             false,
-            sdf_core::Acceleration::Gpu,
+            Acceleration::Gpu,
         )
         .unwrap();
         if crate::lattice_gpu::try_gpu_available() {

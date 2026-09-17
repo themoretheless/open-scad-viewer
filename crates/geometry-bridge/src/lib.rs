@@ -14,6 +14,7 @@
 )]
 #![allow(unused_features)]
 pub mod brep;
+pub use math_core::Acceleration;
 pub mod brep_attestation;
 mod brep_display;
 pub mod brep_envelope;

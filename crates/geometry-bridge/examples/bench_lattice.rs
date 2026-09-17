@@ -1,7 +1,7 @@
 //! Temporary lattice benchmark (may be removed after qualification).
 use geometry_bridge::mesh_shell;
+use geometry_bridge::Acceleration;
 use polygon_core::solid::primitives::cube;
-use sdf_core::Acceleration;
 use std::time::Instant;
 
 #[derive(Clone, Copy)]
