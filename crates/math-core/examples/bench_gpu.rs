@@ -82,6 +82,11 @@ fn make_points(n: usize, seed: f64) -> Vec<V3> {
 }
 
 fn main() {
+    #[cfg(feature = "gpu")]
+    println!(
+        "wgpu backend: {}",
+        math_core::gpu::backend_label().unwrap_or("none (falls back to cpu)")
+    );
     #[cfg(feature = "cuda")]
     println!(
         "cuda device: {}",

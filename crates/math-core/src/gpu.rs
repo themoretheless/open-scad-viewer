@@ -248,6 +248,13 @@ pub fn nearest_neighbor_gpu(queries: &[V3], targets: &[V3]) -> Option<Vec<(u32, 
     })
 }
 
+pub fn backend_label() -> Option<&'static str> {
+    SHARED.with(|cell| {
+        let shared: &Option<&(GpuContext, GpuNearestNeighbor)> = cell;
+        shared.map(|(context, _)| context.backend_label())
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

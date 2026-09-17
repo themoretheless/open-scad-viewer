@@ -91,6 +91,11 @@ fn compare(label: &str, field: &Field, grid: &Grid, rounds: usize) {
 }
 
 fn main() {
+    #[cfg(feature = "gpu")]
+    println!(
+        "wgpu backend: {}",
+        sdf_core::gpu_backend_label().unwrap_or("none (falls back to cpu)")
+    );
     #[cfg(feature = "cuda")]
     println!(
         "cuda device: {}",

@@ -168,3 +168,10 @@ pub(crate) fn sample_grid_gpu(flat: &FlatField, grid: &Grid) -> Option<Vec<f32>>
         shared.map(|(_, sdf)| sdf.run(flat, grid))
     })
 }
+
+pub(crate) fn backend_label() -> Option<&'static str> {
+    SHARED.with(|cell| {
+        let shared: &Option<&(GpuContext, GpuSdf)> = cell;
+        shared.map(|(context, _)| context.backend_label())
+    })
+}

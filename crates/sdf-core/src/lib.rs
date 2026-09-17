@@ -24,6 +24,11 @@ pub mod flat;
 #[cfg(feature = "gpu")]
 mod gpu;
 
+#[cfg(feature = "gpu")]
+pub fn gpu_backend_label() -> Option<&'static str> {
+    gpu::backend_label()
+}
+
 /// The grid-sampling compute shader (WGSL), shared by the native `gpu` feature
 /// and the browser WebGPU host path; both must execute the identical text.
 pub const SDF_WGSL: &str = r##"

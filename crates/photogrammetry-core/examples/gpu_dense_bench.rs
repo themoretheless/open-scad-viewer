@@ -80,8 +80,18 @@ fn main() {
     let kernel_side = env_usize("DENSE_KERNEL_SIDE", 256);
     let hypotheses = env_usize("DENSE_HYPOTHESES", 64);
     let prior = base.sparse_depth_prior || std::env::var_os("DENSE_SPARSE_PRIOR").is_some();
+    let backend = {
+        #[cfg(feature = "gpu")]
+        {
+            photogrammetry_core::gpu::backend_label().unwrap_or("none")
+        }
+        #[cfg(not(feature = "gpu"))]
+        {
+            "none"
+        }
+    };
     println!(
-        "{{\"schema\":1,\"acceleration\":\"{acceleration:?}\",\"accurate\":{accurate},\"patch_radius\":{radius},\"repeats\":{repeats},\"tolerance\":0.04,\"scenes\":["
+        "{{\"schema\":1,\"acceleration\":\"{acceleration:?}\",\"gpu_backend\":\"{backend}\",\"accurate\":{accurate},\"patch_radius\":{radius},\"repeats\":{repeats},\"tolerance\":0.04,\"scenes\":["
     );
     let mut first = true;
     let mut f1_sum = 0.;

@@ -91,6 +91,21 @@ impl GpuContext {
             backend,
         })
     }
+
+    pub fn backend_label(&self) -> &'static str {
+        backend_label(self.backend)
+    }
+}
+
+pub const fn backend_label(backend: wgpu::Backend) -> &'static str {
+    match backend {
+        wgpu::Backend::Noop => "noop",
+        wgpu::Backend::Vulkan => "vulkan",
+        wgpu::Backend::Metal => "metal",
+        wgpu::Backend::Dx12 => "dx12",
+        wgpu::Backend::Gl => "gl",
+        wgpu::Backend::BrowserWebGpu => "webgpu",
+    }
 }
 
 /// Per-backend workgroup-size tuning for compute kernels that template their
@@ -120,6 +135,7 @@ mod tests {
     #[test]
     fn tuned_workgroup_size_selects_metal_variant() {
         assert_eq!(tuned_workgroup_size(wgpu::Backend::Metal, 128, 256), 128);
+        assert_eq!(backend_label(wgpu::Backend::Metal), "metal");
     }
 
     #[test]
@@ -127,6 +143,9 @@ mod tests {
         assert_eq!(tuned_workgroup_size(wgpu::Backend::Vulkan, 128, 256), 256);
         assert_eq!(tuned_workgroup_size(wgpu::Backend::Dx12, 128, 256), 256);
         assert_eq!(tuned_workgroup_size(wgpu::Backend::Gl, 128, 256), 256);
+        assert_eq!(backend_label(wgpu::Backend::Vulkan), "vulkan");
+        assert_eq!(backend_label(wgpu::Backend::Dx12), "dx12");
+        assert_eq!(backend_label(wgpu::Backend::BrowserWebGpu), "webgpu");
     }
 }
 

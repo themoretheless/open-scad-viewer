@@ -16,3 +16,7 @@ pub(crate) use gpu_compute::{
 
 pub mod matching;
 pub mod sweep;
+
+pub fn backend_label() -> Option<&'static str> {
+    GpuContext::new().map(|context| context.backend_label())
+}
