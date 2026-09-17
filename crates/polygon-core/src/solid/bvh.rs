@@ -12,6 +12,7 @@ pub const LEAF_BIT: u32 = 0x8000_0000;
 /// Math.min/Math.max semantics: NaN propagates, and among equal zeros the
 /// sign follows JavaScript (-0 wins min, +0 wins max). Inputs here are always
 /// finite, so only the zero-sign rule is observable in the output bytes.
+#[inline(always)]
 fn js_min(a: f64, b: f64) -> f64 {
     if b < a || (b == a && b.is_sign_negative()) {
         b
@@ -20,6 +21,7 @@ fn js_min(a: f64, b: f64) -> f64 {
     }
 }
 
+#[inline(always)]
 fn js_max(a: f64, b: f64) -> f64 {
     if b > a || (b == a && b.is_sign_positive()) {
         b
@@ -43,6 +45,14 @@ fn next_power_of_two(value: usize) -> usize {
     2usize.pow((value as f64).log2().ceil() as u32)
 }
 
+/// Per-record buffers for the valid triangles. Invariant (established once in
+/// [`build_mesh_bvh`] and never changed): `order` is a permutation of
+/// `0..valid_count`, `centroids.len() == 3 * valid_count`,
+/// `triangle_bounds.len() == 6 * valid_count` and
+/// `source_triangles.len() == valid_count`. Every `build_node` /
+/// `select_nth` range satisfies `start <= end <= valid_count`. The unchecked
+/// accessors below rely on exactly that invariant; the quickselect and the
+/// node bounds loop are the O(n log n) hot path of the build.
 struct Builder<'a> {
     triangle_bounds: &'a [f32],
     centroids: &'a [f32],
@@ -54,26 +64,59 @@ struct Builder<'a> {
 }
 
 impl Builder<'_> {
+    #[inline(always)]
+    fn record(&self, slot: usize) -> u32 {
+        debug_assert!(slot < self.order.len());
+        unsafe { *self.order.get_unchecked(slot) }
+    }
+
+    #[inline(always)]
+    fn swap_records(&mut self, a: usize, b: usize) {
+        debug_assert!(a < self.order.len() && b < self.order.len());
+        let base = self.order.as_mut_ptr();
+        unsafe { std::ptr::swap(base.add(a), base.add(b)) }
+    }
+
+    #[inline(always)]
+    fn centroid(&self, record: u32, axis: usize) -> f64 {
+        let i = record as usize * 3 + axis;
+        debug_assert!(axis < 3 && i < self.centroids.len());
+        unsafe { *self.centroids.get_unchecked(i) as f64 }
+    }
+
+    #[inline(always)]
+    fn triangle_bound(&self, record: u32, k: usize) -> f64 {
+        let i = record as usize * 6 + k;
+        debug_assert!(k < 6 && i < self.triangle_bounds.len());
+        unsafe { *self.triangle_bounds.get_unchecked(i) as f64 }
+    }
+
+    #[inline(always)]
+    fn source(&self, record: u32) -> f64 {
+        debug_assert!((record as usize) < self.source_triangles.len());
+        unsafe { *self.source_triangles.get_unchecked(record as usize) as f64 }
+    }
+
+    #[inline(always)]
     fn compare_records(&self, left: u32, right: u32, axis: usize) -> f64 {
-        let difference = self.centroids[left as usize * 3 + axis] as f64
-            - self.centroids[right as usize * 3 + axis] as f64;
+        let difference = self.centroid(left, axis) - self.centroid(right, axis);
         if difference != 0.0 {
             return difference;
         }
         // Original triangle number is a stable, deterministic tiebreaker.
-        (self.source_triangles[left as usize] as f64)
-            - (self.source_triangles[right as usize] as f64)
+        self.source(left) - self.source(right)
     }
 
     /// In-place deterministic quickselect with a three-way partition.
     fn select_nth(&mut self, start: usize, end: usize, nth: usize, axis: usize) {
+        debug_assert!(start <= end && end <= self.order.len());
         let mut low = start;
         let mut high = end;
         while high - low > 1 {
             let middle = low + ((high - low) >> 1);
-            let low_record = self.order[low];
-            let middle_record = self.order[middle];
-            let high_record = self.order[high - 1];
+            let low_record = self.record(low);
+            let middle_record = self.record(middle);
+            let high_record = self.record(high - 1);
             // Allocation-free median-of-three pivot selection.
             let pivot = if self.compare_records(low_record, middle_record, axis) < 0.0 {
                 if self.compare_records(middle_record, high_record, axis) < 0.0 {
@@ -95,14 +138,14 @@ impl Builder<'_> {
             let mut cursor = low;
             let mut after = high;
             while cursor < after {
-                let comparison = self.compare_records(self.order[cursor], pivot, axis);
+                let comparison = self.compare_records(self.record(cursor), pivot, axis);
                 if comparison < 0.0 {
-                    self.order.swap(before, cursor);
+                    self.swap_records(before, cursor);
                     before += 1;
                     cursor += 1;
                 } else if comparison > 0.0 {
                     after -= 1;
-                    self.order.swap(cursor, after);
+                    self.swap_records(cursor, after);
                 } else {
                     cursor += 1;
                 }
@@ -118,6 +161,7 @@ impl Builder<'_> {
     }
 
     fn build_node(&mut self, start: usize, end: usize) -> usize {
+        debug_assert!(start <= end && end <= self.order.len());
         let node = self.nodes.len() / 2;
         self.nodes.resize(self.nodes.len() + 2, 0);
         let mut min = [f64::INFINITY; 3];
@@ -126,14 +170,13 @@ impl Builder<'_> {
         let mut centroid_max = [f64::NEG_INFINITY; 3];
 
         for slot in start..end {
-            let record = self.order[slot] as usize;
-            let bounds_offset = record * 6;
+            let record = self.record(slot);
             for axis in 0..3 {
-                let lo = self.triangle_bounds[bounds_offset + axis] as f64;
-                let hi = self.triangle_bounds[bounds_offset + 3 + axis] as f64;
+                let lo = self.triangle_bound(record, axis);
+                let hi = self.triangle_bound(record, 3 + axis);
                 min[axis] = js_min(min[axis], lo);
                 max[axis] = js_max(max[axis], hi);
-                let c = self.centroids[record * 3 + axis] as f64;
+                let c = self.centroid(record, axis);
                 centroid_min[axis] = js_min(centroid_min[axis], c);
                 centroid_max[axis] = js_max(centroid_max[axis], c);
             }
@@ -177,7 +220,8 @@ impl Builder<'_> {
 /// Build the BVH. Inputs are pre-validated by the host: `vertex_stride` and
 /// `leaf_size` are already clamped, and the empty-mesh case never reaches
 /// this function. Degenerate and non-finite triangles are omitted, matching
-/// the reference builder.
+/// the reference builder. A stride below three cannot address xyz, so every
+/// triangle is treated as invalid rather than reading past a vertex.
 pub fn build_mesh_bvh(
     vertices: &[f32],
     indices: &[u32],
@@ -185,33 +229,38 @@ pub fn build_mesh_bvh(
     leaf_size: usize,
 ) -> MeshBvh {
     let triangle_count = indices.len() / 3;
-    let vertex_count = vertices.len() / vertex_stride;
+    // `ia < vertex_count` and `vertex_stride >= 3` together imply
+    // `ia * vertex_stride + 3 <= vertices.len()`, which `xyz` relies on.
+    let vertex_count = if vertex_stride >= 3 {
+        vertices.len() / vertex_stride
+    } else {
+        0
+    };
+    #[inline(always)]
+    fn xyz(vertices: &[f32], offset: usize) -> [f64; 3] {
+        debug_assert!(offset + 3 <= vertices.len());
+        unsafe {
+            [
+                *vertices.get_unchecked(offset) as f64,
+                *vertices.get_unchecked(offset + 1) as f64,
+                *vertices.get_unchecked(offset + 2) as f64,
+            ]
+        }
+    }
 
     let mut source_triangles = Vec::with_capacity(triangle_count);
     let mut triangle_bounds: Vec<f32> = Vec::with_capacity(triangle_count * 6);
     let mut centroids: Vec<f32> = Vec::with_capacity(triangle_count * 3);
 
-    for triangle in 0..triangle_count {
-        let index_offset = triangle * 3;
-        let ia = indices[index_offset] as usize;
-        let ib = indices[index_offset + 1] as usize;
-        let ic = indices[index_offset + 2] as usize;
+    for (triangle, &[ia, ib, ic]) in indices.as_chunks::<3>().0.iter().enumerate() {
+        let (ia, ib, ic) = (ia as usize, ib as usize, ic as usize);
         if ia >= vertex_count || ib >= vertex_count || ic >= vertex_count {
             continue;
         }
 
-        let a = ia * vertex_stride;
-        let b = ib * vertex_stride;
-        let c = ic * vertex_stride;
-        let ax = vertices[a] as f64;
-        let ay = vertices[a + 1] as f64;
-        let az = vertices[a + 2] as f64;
-        let bx = vertices[b] as f64;
-        let by = vertices[b + 1] as f64;
-        let bz = vertices[b + 2] as f64;
-        let cx = vertices[c] as f64;
-        let cy = vertices[c + 1] as f64;
-        let cz = vertices[c + 2] as f64;
+        let [ax, ay, az] = xyz(vertices, ia * vertex_stride);
+        let [bx, by, bz] = xyz(vertices, ib * vertex_stride);
+        let [cx, cy, cz] = xyz(vertices, ic * vertex_stride);
         if ![ax, ay, az, bx, by, bz, cx, cy, cz]
             .iter()
             .all(|v| v.is_finite())
@@ -270,6 +319,9 @@ pub fn build_mesh_bvh(
     // of leaves, so the node buffers are pre-sized to that bound.
     let maximum_leaves = next_power_of_two(valid_count.div_ceil(leaf_size));
     let maximum_nodes = maximum_leaves * 2 - 1;
+    // Establishes the `Builder` invariant its unchecked accessors rely on.
+    assert_eq!(centroids.len(), valid_count * 3);
+    assert_eq!(triangle_bounds.len(), valid_count * 6);
     let mut builder = Builder {
         triangle_bounds: &triangle_bounds,
         centroids: &centroids,

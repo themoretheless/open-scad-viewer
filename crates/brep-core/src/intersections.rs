@@ -2864,6 +2864,7 @@ fn hulls_excluded(a: &[[f64; 4]], b: &[[f64; 4]]) -> bool {
     let rb = hull_ranges(b);
     (0..3).any(|axis| ra[axis][1] < rb[axis][0] || rb[axis][1] < ra[axis][0])
 }
+#[inline(always)]
 fn distance(a: [f64; 3], b: [f64; 3]) -> f64 {
     let d = sub(a, b);
     d[0].hypot(d[1]).hypot(d[2])
@@ -5218,15 +5219,19 @@ pub fn curve_ruled_surface(
     Ok(report)
 }
 
+#[inline(always)]
 fn point3(p: &[f64]) -> [f64; 3] {
     [p[0], p[1], p[2]]
 }
+#[inline(always)]
 fn dot(a: [f64; 3], b: [f64; 3]) -> f64 {
     a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
 }
+#[inline(always)]
 fn sub(a: [f64; 3], b: [f64; 3]) -> [f64; 3] {
-    std::array::from_fn(|i| a[i] - b[i])
+    [a[0] - b[0], a[1] - b[1], a[2] - b[2]]
 }
+#[inline(always)]
 fn cross(a: [f64; 3], b: [f64; 3]) -> [f64; 3] {
     [
         a[1] * b[2] - a[2] * b[1],
