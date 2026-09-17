@@ -305,45 +305,80 @@ pub fn solve<const N: usize>(mut a: [[f64; N]; N], mut b: [f64; N]) -> Option<[f
     }
     Some(b)
 }
-/// Batch `q = M*p + t` over a large point set. This is the CPU reference for
-/// [`transform_points_accelerated`] and is exact (f64); the GPU/CUDA paths run
-/// the same formula in f32 and only differ at that precision.
+/// Batch `q = M*p + t` over a large point set. Plain CPU math: this formula
+/// is too arithmetically cheap per point (three fused multiply-adds) for a
+/// GPU/CUDA kernel to ever amortize its launch/synchronization latency —
+/// measured with `examples/bench_gpu.rs`, GPU and CUDA placements are slower
+/// than this reference at every size from 1K to 5M points, even with device
+/// buffers reused across calls. There is intentionally no
+/// `transform_points_accelerated`: see [`nearest_neighbor_accelerated`] for
+/// an operation from this crate whose GPU/CUDA placements do win.
 pub fn transform_points(points: &[V3], m: M3, t: V3) -> Vec<V3> {
     points.iter().map(|&p| add(mv(m, p), t)).collect()
 }
 
-/// WGSL source for the batch transform compute shader (feature `gpu`); the
+/// Brute-force nearest-neighbor search: for every query point, the index into
+/// `targets` of its closest point and the squared Euclidean distance to it
+/// (`(u32::MAX, f64::INFINITY)` for a query when `targets` is empty). This is
+/// the CPU reference for [`nearest_neighbor_accelerated`]; O(queries *
+/// targets) work, exact in f64.
+pub fn nearest_neighbor(queries: &[V3], targets: &[V3]) -> Vec<(u32, f64)> {
+    queries
+        .iter()
+        .map(|&q| {
+            let mut best_index = u32::MAX;
+            let mut best_dist = f64::INFINITY;
+            for (i, &t) in targets.iter().enumerate() {
+                let d = sub(q, t);
+                let dist = dot(d, d);
+                if dist < best_dist {
+                    best_dist = dist;
+                    best_index = i as u32;
+                }
+            }
+            (best_index, best_dist)
+        })
+        .collect()
+}
+
+/// WGSL source for the nearest-neighbor compute shader (feature `gpu`); the
 /// `gpu` and `cuda` modules both target this exact formula.
-pub const TRANSFORM_WGSL: &str = include_str!("transform.wgsl");
+pub const NEAREST_NEIGHBOR_WGSL: &str = include_str!("nearest_neighbor.wgsl");
 
 #[cfg(feature = "cuda")]
 pub mod cuda;
 #[cfg(feature = "gpu")]
 pub mod gpu;
 
-/// `transform_points` with an optional GPU/CUDA batch kernel. `Acceleration::Cuda`
-/// runs the PTX port through the CUDA driver (feature `cuda`), then the wgpu
-/// shader (feature `gpu`), then the CPU reference; anything unavailable or that
-/// fails falls through to the next stage, so the CPU result is always returned.
-pub fn transform_points_accelerated(
-    points: &[V3],
-    m: M3,
-    t: V3,
+/// `nearest_neighbor` with an optional GPU/CUDA batch kernel.
+/// `Acceleration::Cuda` runs the PTX port through the CUDA driver (feature
+/// `cuda`), then the wgpu shader (feature `gpu`), then the CPU reference;
+/// anything unavailable or that fails falls through to the next stage, so
+/// the CPU result is always returned. Unlike [`transform_points`], this
+/// operation has enough work per query (a full scan of `targets`) that the
+/// GPU/CUDA placements measurably win at moderate-to-large sizes — see
+/// `examples/bench_gpu.rs`.
+pub fn nearest_neighbor_accelerated(
+    queries: &[V3],
+    targets: &[V3],
     #[allow(unused_variables)] acceleration: Acceleration,
-) -> Vec<V3> {
+) -> Vec<(u32, f64)> {
+    if queries.is_empty() || targets.is_empty() {
+        return nearest_neighbor(queries, targets);
+    }
     #[cfg(feature = "gpu")]
     if acceleration.is_gpu() {
         #[cfg(feature = "cuda")]
         if acceleration == Acceleration::Cuda
-            && let Some(values) = cuda::transform_points_cuda(points, m, t)
+            && let Some(values) = cuda::nearest_neighbor_cuda(queries, targets)
         {
             return values;
         }
-        if let Some(values) = gpu::transform_points_gpu(points, m, t) {
+        if let Some(values) = gpu::nearest_neighbor_gpu(queries, targets) {
             return values;
         }
     }
-    transform_points(points, m, t)
+    nearest_neighbor(queries, targets)
 }
 
 #[cfg(test)]
@@ -410,56 +445,84 @@ mod transform_tests {
             }
         }
     }
+}
+
+#[cfg(test)]
+mod nearest_neighbor_tests {
+    use super::*;
     #[test]
-    fn transform_points_accelerated_cpu_matches_reference() {
-        let m = ID;
-        let t = [1., 2., 3.];
-        let points = vec![[0., 0., 0.], [1., 1., 1.], [-1., 2., -3.]];
-        let got = transform_points_accelerated(&points, m, t, Acceleration::Cpu);
-        let want = transform_points(&points, m, t);
+    fn nearest_neighbor_finds_closest_by_brute_force() {
+        let queries = vec![[0., 0., 0.], [10., 0., 0.], [-5., -5., -5.]];
+        let targets = vec![[1., 0., 0.], [0., 0., 0.9], [9., 0.5, 0.], [-4., -4., -4.]];
+        let got = nearest_neighbor(&queries, &targets);
+        assert_eq!(got[0], (1, 0.81));
+        assert_eq!(got[1].0, 2);
+        assert_eq!(got[2].0, 3);
+    }
+    #[test]
+    fn nearest_neighbor_empty_targets_is_infinite() {
+        let got = nearest_neighbor(&[[0., 0., 0.]], &[]);
+        assert_eq!(got, vec![(u32::MAX, f64::INFINITY)]);
+    }
+    #[test]
+    fn nearest_neighbor_empty_queries_is_empty() {
+        assert!(nearest_neighbor(&[], &[[0., 0., 0.]]).is_empty());
+    }
+    #[test]
+    fn nearest_neighbor_accelerated_cpu_matches_reference() {
+        let queries = vec![[0., 0., 0.], [1., 1., 1.], [-1., 2., -3.]];
+        let targets = vec![[0.1, 0., 0.], [5., 5., 5.]];
+        let got = nearest_neighbor_accelerated(&queries, &targets, Acceleration::Cpu);
+        let want = nearest_neighbor(&queries, &targets);
         assert_eq!(got, want);
     }
     #[test]
-    fn transform_points_accelerated_empty_input() {
-        let got = transform_points_accelerated(&[], ID, [0., 0., 0.], Acceleration::Gpu);
+    fn nearest_neighbor_accelerated_empty_input() {
+        let got = nearest_neighbor_accelerated(&[], &[[0., 0., 0.]], Acceleration::Gpu);
         assert!(got.is_empty());
+        let got = nearest_neighbor_accelerated(&[[0., 0., 0.]], &[], Acceleration::Gpu);
+        assert_eq!(got, vec![(u32::MAX, f64::INFINITY)]);
     }
     #[cfg(feature = "gpu")]
     #[test]
-    fn transform_points_accelerated_gpu_dispatch_matches_cpu() {
-        let m = rotation([-0.4, 0.2, 0.6]);
-        let t = [3., -1., 0.25];
-        let points: Vec<V3> = (0..64)
+    fn nearest_neighbor_accelerated_gpu_dispatch_matches_cpu() {
+        let queries: Vec<V3> = (0..96)
             .map(|i| {
                 let f = i as f64;
                 [f * 0.2 - 6., f * 0.05, (f * 0.11).cos() * 3.]
             })
             .collect();
-        let got = transform_points_accelerated(&points, m, t, Acceleration::Gpu);
-        let want = transform_points(&points, m, t);
-        for (g, w) in got.iter().zip(&want) {
-            for k in 0..3 {
-                assert!((g[k] - w[k]).abs() < 5e-4, "{g:?} vs {w:?}");
-            }
+        let targets: Vec<V3> = (0..30)
+            .map(|i| {
+                let f = i as f64;
+                [f * -0.3 + 2., (f * 0.4).sin() * 2., f * 0.15]
+            })
+            .collect();
+        let got = nearest_neighbor_accelerated(&queries, &targets, Acceleration::Gpu);
+        let want = nearest_neighbor(&queries, &targets);
+        for ((_gi, gd), (_wi, wd)) in got.iter().zip(&want) {
+            assert!((gd - wd).abs() < 5e-3 * wd.max(1.0), "{gd} vs {wd}");
         }
     }
     #[cfg(feature = "cuda")]
     #[test]
-    fn transform_points_accelerated_cuda_dispatch_matches_cpu() {
-        let m = rotation([-0.4, 0.2, 0.6]);
-        let t = [3., -1., 0.25];
-        let points: Vec<V3> = (0..64)
+    fn nearest_neighbor_accelerated_cuda_dispatch_matches_cpu() {
+        let queries: Vec<V3> = (0..96)
             .map(|i| {
                 let f = i as f64;
                 [f * 0.2 - 6., f * 0.05, (f * 0.11).cos() * 3.]
             })
             .collect();
-        let got = transform_points_accelerated(&points, m, t, Acceleration::Cuda);
-        let want = transform_points(&points, m, t);
-        for (g, w) in got.iter().zip(&want) {
-            for k in 0..3 {
-                assert!((g[k] - w[k]).abs() < 5e-4, "{g:?} vs {w:?}");
-            }
+        let targets: Vec<V3> = (0..30)
+            .map(|i| {
+                let f = i as f64;
+                [f * -0.3 + 2., (f * 0.4).sin() * 2., f * 0.15]
+            })
+            .collect();
+        let got = nearest_neighbor_accelerated(&queries, &targets, Acceleration::Cuda);
+        let want = nearest_neighbor(&queries, &targets);
+        for ((_gi, gd), (_wi, wd)) in got.iter().zip(&want) {
+            assert!((gd - wd).abs() < 5e-3 * wd.max(1.0), "{gd} vs {wd}");
         }
     }
 }

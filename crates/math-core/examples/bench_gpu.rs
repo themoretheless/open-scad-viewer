@@ -1,16 +1,22 @@
-//! GPU/CUDA vs CPU batch-transform benchmark (may be removed after qualification).
-//! `cargo run --release -p osv-math --features cuda --example bench_gpu`.
-use math_core::{Acceleration, V3, rotation, transform_points, transform_points_accelerated};
+//! GPU/CUDA vs CPU nearest-neighbor benchmark (may be removed after
+//! qualification). `cargo run --release -p osv-math --features cuda --example bench_gpu`.
+//!
+//! Unlike a per-point affine transform (too cheap to amortize kernel-launch
+//! overhead — see `crates/math-core/README.md`), brute-force nearest-neighbor
+//! search does `target_count` work per query, so it has enough arithmetic
+//! intensity for GPU/CUDA placements to actually win at moderate-to-large
+//! sizes. This benchmark measures where that crossover is on this machine.
+use math_core::{Acceleration, V3, nearest_neighbor, nearest_neighbor_accelerated};
 use std::time::Instant;
 
 /// Placements to compare: CPU reference, wgpu shader and (feature `cuda`) the
-/// CUDA driver port. `TRANSFORM_BENCH_MODES=cpu,cuda` narrows the set.
+/// CUDA driver port. `NEAREST_NEIGHBOR_BENCH_MODES=cpu,cuda` narrows the set.
 fn modes() -> Vec<Acceleration> {
     let mut modes = vec![Acceleration::Cpu, Acceleration::Gpu];
     if cfg!(feature = "cuda") {
         modes.push(Acceleration::Cuda);
     }
-    if let Ok(filter) = std::env::var("TRANSFORM_BENCH_MODES") {
+    if let Ok(filter) = std::env::var("NEAREST_NEIGHBOR_BENCH_MODES") {
         let wanted: Vec<Acceleration> = filter.split(',').filter_map(Acceleration::parse).collect();
         modes.retain(|mode| wanted.contains(mode));
     }
@@ -22,30 +28,29 @@ fn median(times: &mut [f64]) -> f64 {
     times[times.len() / 2]
 }
 
-fn compare(label: &str, points: &[V3], rounds: usize) {
-    let m = rotation([0.3, -0.2, 0.7]);
-    let t = [1., -2., 0.5];
+fn compare(queries: &[V3], targets: &[V3], rounds: usize) {
     let modes = modes();
-    let reference = transform_points(points, m, t);
+    let reference = nearest_neighbor(queries, targets);
     let mut times = vec![Vec::new(); modes.len()];
     for round in 0..rounds {
         for (index, &acceleration) in modes.iter().enumerate() {
             let start = Instant::now();
-            let got = transform_points_accelerated(points, m, t, acceleration);
+            let got = nearest_neighbor_accelerated(queries, targets, acceleration);
             times[index].push(start.elapsed().as_secs_f64() * 1000.);
             if round == 0 {
-                for (a, b) in reference.iter().zip(&got) {
-                    for k in 0..3 {
-                        let tol = if acceleration == Acceleration::Cpu {
-                            1e-12
-                        } else {
-                            5e-3
-                        };
-                        assert!(
-                            (a[k] - b[k]).abs() < tol,
-                            "{acceleration:?} mismatch: {a:?} vs {b:?}"
-                        );
-                    }
+                for ((ri, rd), (gi, gd)) in reference.iter().zip(&got) {
+                    // f32 vs f64 rounding can flip the argmin between two
+                    // near-tied targets; only the winning *distance* is a
+                    // meaningful correctness check across precisions.
+                    let tol = if acceleration == Acceleration::Cpu {
+                        1e-12
+                    } else {
+                        5e-3 * rd.max(1.0)
+                    };
+                    assert!(
+                        (rd - gd).abs() < tol,
+                        "{acceleration:?} dist mismatch: {rd:?} (idx {ri}) vs {gd:?} (idx {gi})"
+                    );
                 }
             }
         }
@@ -55,7 +60,25 @@ fn compare(label: &str, points: &[V3], rounds: usize) {
         .zip(times.iter_mut())
         .map(|(mode, times)| format!("{} median {:.3}ms", mode.label(), median(times)))
         .collect();
-    println!("{label} ({} points): {}", points.len(), summary.join(", "));
+    println!(
+        "nearest_neighbor ({} queries x {} targets): {}",
+        queries.len(),
+        targets.len(),
+        summary.join(", ")
+    );
+}
+
+fn make_points(n: usize, seed: f64) -> Vec<V3> {
+    (0..n)
+        .map(|i| {
+            let f = i as f64 + seed;
+            [
+                f * 0.011 - 500.,
+                (f * 0.0027).sin() * 200.,
+                (f * 0.0043).cos() * 200.,
+            ]
+        })
+        .collect()
 }
 
 fn main() {
@@ -64,17 +87,18 @@ fn main() {
         "cuda device: {}",
         math_core::cuda::device_name().unwrap_or_else(|| "none (falls back to wgpu/cpu)".into())
     );
-    for &n in &[1_000usize, 100_000, 1_000_000, 5_000_000] {
-        let points: Vec<V3> = (0..n)
-            .map(|i| {
-                let f = i as f64;
-                [
-                    f * 0.001 - 500.,
-                    (f * 0.0007).sin() * 200.,
-                    (f * 0.0003).cos() * 200.,
-                ]
-            })
-            .collect();
-        compare("transform_points", &points, 5);
+    // (query_count, target_count) pairs spanning from clearly CPU-favored
+    // (tiny target sets) to the regime where the O(queries * targets) brute
+    // force gives the GPU/CUDA placements enough work to win.
+    for &(q, t) in &[
+        (1_000usize, 100usize),
+        (10_000, 1_000),
+        (100_000, 1_000),
+        (100_000, 5_000),
+        (1_000_000, 2_000),
+    ] {
+        let queries = make_points(q, 0.0);
+        let targets = make_points(t, 1_000_000.0);
+        compare(&queries, &targets, 5);
     }
 }

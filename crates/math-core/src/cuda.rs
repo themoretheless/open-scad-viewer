@@ -1,34 +1,37 @@
-//! CUDA batch transform (feature `cuda`): runs the PTX port of
-//! `TRANSFORM_WGSL` (`transform.cu` → `transform.ptx`) over a point set
+//! CUDA nearest-neighbor search (feature `cuda`): runs the PTX port of
+//! `NEAREST_NEIGHBOR_WGSL` (`nearest_neighbor.cu` → `nearest_neighbor.ptx`)
 //! through the CUDA driver API. f32 arithmetic — see [`crate::Acceleration`].
 //!
-//! Device buffers are cached per point-set capacity (grow-only) so repeated
-//! calls at a stable size amortize allocation; only the elements actually
-//! used for the current call are copied to/from the device.
-use crate::{M3, V3};
+//! Device buffers are cached per query/target capacity (grow-only) so
+//! repeated calls at a stable size amortize allocation; only the elements
+//! actually used for the current call are copied to/from the device.
+use crate::V3;
 use gpu_compute::cuda::{CudaDevice, CudaFunction, CudaSlice, PushKernelArg, launch_1d};
 
-/// PTX generated from `transform.cu` by `scripts/build-cuda-kernels.mjs`.
-pub const TRANSFORM_PTX: &str = include_str!("transform.ptx");
+/// PTX generated from `nearest_neighbor.cu` by `scripts/build-cuda-kernels.mjs`.
+pub const NEAREST_NEIGHBOR_PTX: &str = include_str!("nearest_neighbor.ptx");
 const BLOCK: u32 = 256;
 
 struct Buffers {
-    capacity: usize,
-    input: CudaSlice<f32>,
-    output: CudaSlice<f32>,
+    query_capacity: usize,
+    target_capacity: usize,
+    queries: CudaSlice<f32>,
+    targets: CudaSlice<f32>,
+    out_index: CudaSlice<u32>,
+    out_dist: CudaSlice<f32>,
 }
 
-struct CudaTransform {
+struct CudaNearestNeighbor {
     device: CudaDevice,
     kernel: CudaFunction,
     buffers: std::cell::RefCell<Option<Buffers>>,
 }
 
-impl CudaTransform {
+impl CudaNearestNeighbor {
     fn new() -> Option<Self> {
         let device = CudaDevice::new()?;
-        let module = device.load_ptx(TRANSFORM_PTX)?;
-        let kernel = module.load_function("transform_points").ok()?;
+        let module = device.load_ptx(NEAREST_NEIGHBOR_PTX)?;
+        let kernel = module.load_function("nearest_neighbor").ok()?;
         Some(Self {
             device,
             kernel,
@@ -36,71 +39,82 @@ impl CudaTransform {
         })
     }
 
-    /// (Re)allocates the device slices when `count` exceeds the cached
-    /// capacity; a no-op otherwise, so repeated calls at a stable or
-    /// shrinking size reuse the same device allocations.
-    fn ensure_buffers(&self, count: usize) -> Option<()> {
+    /// (Re)allocates the device slices when either capacity is exceeded; a
+    /// no-op otherwise, so repeated calls at a stable or shrinking size
+    /// reuse the same device allocations.
+    fn ensure_buffers(&self, query_count: usize, target_count: usize) -> Option<()> {
         let stale = match &*self.buffers.borrow() {
-            Some(buffers) => buffers.capacity < count,
+            Some(b) => b.query_capacity < query_count || b.target_capacity < target_count,
             None => true,
         };
         if !stale {
             return Some(());
         }
-        let capacity = count.max(1);
+        let query_capacity = query_count.max(1);
+        let target_capacity = target_count.max(1);
         let stream = &self.device.stream;
-        let input = stream.alloc_zeros::<f32>(capacity * 3).ok()?;
-        let output = stream.alloc_zeros::<f32>(capacity * 3).ok()?;
+        let queries = stream.alloc_zeros::<f32>(query_capacity * 3).ok()?;
+        let targets = stream.alloc_zeros::<f32>(target_capacity * 3).ok()?;
+        let out_index = stream.alloc_zeros::<u32>(query_capacity).ok()?;
+        let out_dist = stream.alloc_zeros::<f32>(query_capacity).ok()?;
         *self.buffers.borrow_mut() = Some(Buffers {
-            capacity,
-            input,
-            output,
+            query_capacity,
+            target_capacity,
+            queries,
+            targets,
+            out_index,
+            out_dist,
         });
         Some(())
     }
 
-    fn run(&self, points: &[V3], m: M3, t: V3) -> Option<Vec<V3>> {
-        let count = points.len();
-        self.ensure_buffers(count)?;
+    fn run(&self, queries: &[V3], targets: &[V3]) -> Option<Vec<(u32, f64)>> {
+        let query_count = queries.len();
+        let target_count = targets.len();
+        self.ensure_buffers(query_count, target_count)?;
         let stream = &self.device.stream;
-        let flat: Vec<f32> = points.iter().flatten().map(|&v| v as f32).collect();
+        let flat_q: Vec<f32> = queries.iter().flatten().map(|&v| v as f32).collect();
+        let flat_t: Vec<f32> = targets.iter().flatten().map(|&v| v as f32).collect();
         let mut buffers = self.buffers.borrow_mut();
         let b = buffers.as_mut().expect("ensure_buffers was just called");
-        if !flat.is_empty() {
-            let mut input_view = b.input.slice_mut(0..flat.len());
-            stream.memcpy_htod(&flat, &mut input_view).ok()?;
+        if !flat_q.is_empty() {
+            let mut view = b.queries.slice_mut(0..flat_q.len());
+            stream.memcpy_htod(&flat_q, &mut view).ok()?;
         }
-        let mrow: [f32; 9] = std::array::from_fn(|i| m[i / 3][i % 3] as f32);
-        let tr: [f32; 3] = std::array::from_fn(|i| t[i] as f32);
-        let count_u32 = count as u32;
-        let elems = (count * 3).max(1);
-        let input_view = b.input.slice(0..elems);
-        let mut output_view = b.output.slice_mut(0..elems);
+        if !flat_t.is_empty() {
+            let mut view = b.targets.slice_mut(0..flat_t.len());
+            stream.memcpy_htod(&flat_t, &mut view).ok()?;
+        }
+        let query_count_u32 = query_count as u32;
+        let target_count_u32 = target_count as u32;
+        let q_elems = (query_count * 3).max(1);
+        let t_elems = (target_count * 3).max(1);
+        let out_elems = query_count.max(1);
+        let queries_view = b.queries.slice(0..q_elems);
+        let targets_view = b.targets.slice(0..t_elems);
+        let mut out_index_view = b.out_index.slice_mut(0..out_elems);
+        let mut out_dist_view = b.out_dist.slice_mut(0..out_elems);
         let mut launch = stream.launch_builder(&self.kernel);
         launch
-            .arg(&mrow[0])
-            .arg(&mrow[1])
-            .arg(&mrow[2])
-            .arg(&mrow[3])
-            .arg(&mrow[4])
-            .arg(&mrow[5])
-            .arg(&mrow[6])
-            .arg(&mrow[7])
-            .arg(&mrow[8])
-            .arg(&tr[0])
-            .arg(&tr[1])
-            .arg(&tr[2])
-            .arg(&count_u32)
-            .arg(&input_view)
-            .arg(&mut output_view);
-        unsafe { launch.launch(launch_1d(count_u32, BLOCK)) }.ok()?;
-        let mut out = vec![0f32; count * 3];
-        if count > 0 {
-            stream.memcpy_dtoh(&output_view, &mut out).ok()?;
+            .arg(&query_count_u32)
+            .arg(&target_count_u32)
+            .arg(&queries_view)
+            .arg(&targets_view)
+            .arg(&mut out_index_view)
+            .arg(&mut out_dist_view);
+        unsafe { launch.launch(launch_1d(query_count_u32, BLOCK)) }.ok()?;
+        if query_count == 0 {
+            return Some(Vec::new());
         }
+        let mut out_index = vec![0u32; query_count];
+        let mut out_dist = vec![0f32; query_count];
+        stream.memcpy_dtoh(&out_index_view, &mut out_index).ok()?;
+        stream.memcpy_dtoh(&out_dist_view, &mut out_dist).ok()?;
         Some(
-            out.chunks_exact(3)
-                .map(|c| [c[0] as f64, c[1] as f64, c[2] as f64])
+            out_index
+                .into_iter()
+                .zip(out_dist)
+                .map(|(i, d)| (i, d as f64))
                 .collect(),
         )
     }
@@ -108,16 +122,16 @@ impl CudaTransform {
 
 thread_local! {
     // Process-lifetime context, module and stream; see `sdf-core`'s `cuda.rs`.
-    static SHARED: std::cell::LazyCell<Option<&'static CudaTransform>> =
+    static SHARED: std::cell::LazyCell<Option<&'static CudaNearestNeighbor>> =
         std::cell::LazyCell::new(|| {
-            CudaTransform::new().map(|t| Box::leak(Box::new(t)) as &'static CudaTransform)
+            CudaNearestNeighbor::new().map(|nn| Box::leak(Box::new(nn)) as &'static CudaNearestNeighbor)
         });
 }
 
 /// True when a CUDA device and the kernel module are available on this thread.
 pub fn available() -> bool {
     SHARED.with(|cell| {
-        let shared: &Option<&CudaTransform> = cell;
+        let shared: &Option<&CudaNearestNeighbor> = cell;
         shared.is_some()
     })
 }
@@ -125,51 +139,53 @@ pub fn available() -> bool {
 /// Device name for diagnostics/benchmarks; `None` without a CUDA device.
 pub fn device_name() -> Option<String> {
     SHARED.with(|cell| {
-        let shared: &Option<&CudaTransform> = cell;
-        shared.map(|t| t.device.name.clone())
+        let shared: &Option<&CudaNearestNeighbor> = cell;
+        shared.map(|nn| nn.device.name.clone())
     })
 }
 
-/// Transforms every point on the CUDA device; `None` without a device or on
-/// any driver error (the caller then tries the wgpu path and the CPU reference).
-pub(crate) fn transform_points_cuda(points: &[V3], m: M3, t: V3) -> Option<Vec<V3>> {
+/// Finds each query's nearest target on the CUDA device; `None` without a
+/// device or on any driver error (the caller then tries the wgpu path and
+/// the CPU reference).
+pub(crate) fn nearest_neighbor_cuda(queries: &[V3], targets: &[V3]) -> Option<Vec<(u32, f64)>> {
     SHARED.with(|cell| {
-        let shared: &Option<&CudaTransform> = cell;
-        shared.and_then(|transform| transform.run(points, m, t))
+        let shared: &Option<&CudaNearestNeighbor> = cell;
+        shared.and_then(|nn| nn.run(queries, targets))
     })
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{ID, add, mv};
 
     #[test]
-    fn cuda_transform_matches_cpu_reference_when_available() {
-        let m = crate::rotation([0.1, 0.4, -0.2]);
-        let t = [1.0, -2.0, 3.5];
-        let points: Vec<V3> = (0..200)
+    fn cuda_nearest_neighbor_matches_cpu_reference_when_available() {
+        let queries: Vec<V3> = (0..64)
             .map(|i| {
                 let f = i as f64;
                 [f * 0.13 - 10., f * -0.07 + 4., (f * 0.031).sin() * 5.]
             })
             .collect();
-        let Some(got) = transform_points_cuda(&points, m, t) else {
+        let targets: Vec<V3> = (0..20)
+            .map(|i| {
+                let f = i as f64;
+                [f * 0.9 - 6., (f * 0.21).cos() * 4., f * -0.4]
+            })
+            .collect();
+        let Some(got) = nearest_neighbor_cuda(&queries, &targets) else {
             eprintln!("no CUDA device available; skipping");
             return;
         };
-        assert_eq!(got.len(), points.len());
-        for (p, q) in points.iter().zip(&got) {
-            let expected = add(mv(m, *p), t);
-            for k in 0..3 {
-                assert!((expected[k] - q[k]).abs() < 5e-4, "{expected:?} vs {q:?}");
-            }
+        let want = crate::nearest_neighbor(&queries, &targets);
+        assert_eq!(got.len(), want.len());
+        for ((_gi, gd), (_wi, wd)) in got.iter().zip(&want) {
+            assert!((gd - wd).abs() < 5e-3 * wd.max(1.0), "{gd} vs {wd}");
         }
     }
 
     #[test]
-    fn cuda_transform_empty_input() {
-        if let Some(got) = transform_points_cuda(&[], ID, [0., 0., 0.]) {
+    fn cuda_nearest_neighbor_empty_input() {
+        if let Some(got) = nearest_neighbor_cuda(&[], &[[0., 0., 0.]]) {
             assert!(got.is_empty());
         }
     }

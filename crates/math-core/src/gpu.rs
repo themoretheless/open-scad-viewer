@@ -1,22 +1,27 @@
-//! GPU batch transform (feature `gpu`): runs the shared `TRANSFORM_WGSL`
-//! shader over a point set. f32 arithmetic — see [`crate::Acceleration`].
+//! GPU nearest-neighbor search (feature `gpu`): for every query point, finds
+//! the index and squared distance of the closest target point by brute
+//! force. f32 arithmetic — see [`crate::Acceleration`].
 //!
-//! Device buffers are cached per point-set capacity (grow-only) so repeated
-//! calls at a stable size amortize allocation; only the bytes actually
-//! written/read for the current call cross the wire.
-use crate::{M3, V3};
+//! Device buffers are cached per query/target capacity (grow-only) so
+//! repeated calls at a stable size amortize allocation; only the bytes
+//! actually written/read for the current call cross the wire.
+use crate::V3;
 use gpu_compute::{GpuContext, read_buffer, storage_entry, uniform_entry, wgpu};
 
 struct Buffers {
-    capacity: usize,
+    query_capacity: usize,
+    target_capacity: usize,
     params: wgpu::Buffer,
-    input: wgpu::Buffer,
-    output: wgpu::Buffer,
-    read: wgpu::Buffer,
+    queries: wgpu::Buffer,
+    targets: wgpu::Buffer,
+    out_index: wgpu::Buffer,
+    out_dist: wgpu::Buffer,
+    read_index: wgpu::Buffer,
+    read_dist: wgpu::Buffer,
     bind: wgpu::BindGroup,
 }
 
-struct GpuTransform {
+struct GpuNearestNeighbor {
     device: wgpu::Device,
     queue: wgpu::Queue,
     layout: wgpu::BindGroupLayout,
@@ -24,28 +29,30 @@ struct GpuTransform {
     buffers: std::cell::RefCell<Option<Buffers>>,
 }
 
-impl GpuTransform {
+impl GpuNearestNeighbor {
     fn new(context: &GpuContext) -> Self {
         let device = &context.device;
         let module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
-            label: Some("transform_points"),
-            source: wgpu::ShaderSource::Wgsl(crate::TRANSFORM_WGSL.into()),
+            label: Some("nearest_neighbor"),
+            source: wgpu::ShaderSource::Wgsl(crate::NEAREST_NEIGHBOR_WGSL.into()),
         });
         let layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-            label: Some("transform_points"),
+            label: Some("nearest_neighbor"),
             entries: &[
                 uniform_entry(0),
                 storage_entry(1, true),
-                storage_entry(2, false),
+                storage_entry(2, true),
+                storage_entry(3, false),
+                storage_entry(4, false),
             ],
         });
         let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-            label: Some("transform_points"),
+            label: Some("nearest_neighbor"),
             bind_group_layouts: &[Some(&layout)],
             immediate_size: 0,
         });
         let pipeline = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-            label: Some("transform_points"),
+            label: Some("nearest_neighbor"),
             layout: Some(&pipeline_layout),
             module: &module,
             entry_point: Some("main"),
@@ -61,46 +68,64 @@ impl GpuTransform {
         }
     }
 
-    /// (Re)allocates the device buffers and bind group when `count` exceeds
-    /// the cached capacity; a no-op otherwise, so repeated calls at a stable
-    /// or shrinking size reuse the same GPU allocations.
-    fn ensure_buffers(&self, count: usize) {
+    /// (Re)allocates the device buffers and bind group when either capacity
+    /// is exceeded; a no-op otherwise, so repeated calls at a stable or
+    /// shrinking size reuse the same GPU allocations.
+    fn ensure_buffers(&self, query_count: usize, target_count: usize) {
         let stale = match &*self.buffers.borrow() {
-            Some(buffers) => buffers.capacity < count,
+            Some(b) => b.query_capacity < query_count || b.target_capacity < target_count,
             None => true,
         };
         if !stale {
             return;
         }
         let device = &self.device;
-        let capacity = count.max(1);
-        let value_bytes = (capacity * 12) as u64;
+        let query_capacity = query_count.max(1);
+        let target_capacity = target_count.max(1);
         let params = device.create_buffer(&wgpu::BufferDescriptor {
-            label: Some("transform_params"),
-            size: 64,
+            label: Some("nn_params"),
+            size: 16,
             usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
             mapped_at_creation: false,
         });
-        let input = device.create_buffer(&wgpu::BufferDescriptor {
-            label: Some("transform_in"),
-            size: value_bytes,
+        let queries = device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("nn_queries"),
+            size: (query_capacity * 12) as u64,
             usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
             mapped_at_creation: false,
         });
-        let output = device.create_buffer(&wgpu::BufferDescriptor {
-            label: Some("transform_out"),
-            size: value_bytes,
+        let targets = device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("nn_targets"),
+            size: (target_capacity * 12) as u64,
+            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        });
+        let out_index = device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("nn_out_index"),
+            size: (query_capacity * 4) as u64,
             usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC,
             mapped_at_creation: false,
         });
-        let read = device.create_buffer(&wgpu::BufferDescriptor {
-            label: Some("transform_read"),
-            size: value_bytes,
+        let out_dist = device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("nn_out_dist"),
+            size: (query_capacity * 4) as u64,
+            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC,
+            mapped_at_creation: false,
+        });
+        let read_index = device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("nn_read_index"),
+            size: (query_capacity * 4) as u64,
+            usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        });
+        let read_dist = device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("nn_read_dist"),
+            size: (query_capacity * 4) as u64,
             usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
             mapped_at_creation: false,
         });
         let bind = device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("transform_points"),
+            label: Some("nearest_neighbor"),
             layout: &self.layout,
             entries: &[
                 wgpu::BindGroupEntry {
@@ -109,128 +134,152 @@ impl GpuTransform {
                 },
                 wgpu::BindGroupEntry {
                     binding: 1,
-                    resource: input.as_entire_binding(),
+                    resource: queries.as_entire_binding(),
                 },
                 wgpu::BindGroupEntry {
                     binding: 2,
-                    resource: output.as_entire_binding(),
+                    resource: targets.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 3,
+                    resource: out_index.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 4,
+                    resource: out_dist.as_entire_binding(),
                 },
             ],
         });
         *self.buffers.borrow_mut() = Some(Buffers {
-            capacity,
+            query_capacity,
+            target_capacity,
             params,
-            input,
-            output,
-            read,
+            queries,
+            targets,
+            out_index,
+            out_dist,
+            read_index,
+            read_dist,
             bind,
         });
     }
 
-    fn run(&self, points: &[V3], m: M3, t: V3) -> Vec<V3> {
-        let count = points.len();
-        self.ensure_buffers(count);
-        // Uniform layout matches transform.wgsl's `Params`: three padded
-        // vec3<f32> matrix rows, then a padded vec3<f32> translation + u32 count.
-        let mut params = Vec::with_capacity(64);
-        for row in m {
-            for v in row {
-                params.extend_from_slice(&(v as f32).to_le_bytes());
-            }
-            params.extend_from_slice(&0f32.to_le_bytes());
-        }
-        for v in t {
-            params.extend_from_slice(&(v as f32).to_le_bytes());
-        }
-        params.extend_from_slice(&(count as u32).to_le_bytes());
-        let flat: Vec<f32> = points.iter().flatten().map(|&v| v as f32).collect();
-        let input_bytes = gpu_compute::pack_f32(&flat);
-        let value_bytes = (count * 12) as u64;
+    fn run(&self, queries: &[V3], targets: &[V3]) -> Vec<(u32, f64)> {
+        let query_count = queries.len();
+        let target_count = targets.len();
+        self.ensure_buffers(query_count, target_count);
+        // Uniform layout matches nearest_neighbor.wgsl's `Params`: two counts
+        // padded to a 16-byte uniform buffer.
+        let mut params = Vec::with_capacity(16);
+        params.extend_from_slice(&(query_count as u32).to_le_bytes());
+        params.extend_from_slice(&(target_count as u32).to_le_bytes());
+        params.extend_from_slice(&0u32.to_le_bytes());
+        params.extend_from_slice(&0u32.to_le_bytes());
+        let flat_q: Vec<f32> = queries.iter().flatten().map(|&v| v as f32).collect();
+        let flat_t: Vec<f32> = targets.iter().flatten().map(|&v| v as f32).collect();
 
         let buffers = self.buffers.borrow();
         let b = buffers.as_ref().expect("ensure_buffers was just called");
         self.queue.write_buffer(&b.params, 0, &params);
-        if !input_bytes.is_empty() {
-            self.queue.write_buffer(&b.input, 0, &input_bytes);
+        if !flat_q.is_empty() {
+            self.queue
+                .write_buffer(&b.queries, 0, &gpu_compute::pack_f32(&flat_q));
+        }
+        if !flat_t.is_empty() {
+            self.queue
+                .write_buffer(&b.targets, 0, &gpu_compute::pack_f32(&flat_t));
         }
         let mut encoder = self
             .device
             .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("transform_points"),
+                label: Some("nearest_neighbor"),
             });
         {
             let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
-                label: Some("transform_points"),
+                label: Some("nearest_neighbor"),
                 timestamp_writes: None,
             });
             pass.set_pipeline(&self.pipeline);
             pass.set_bind_group(0, &b.bind, &[]);
-            pass.dispatch_workgroups((count.max(1) as u32).div_ceil(256), 1, 1);
+            pass.dispatch_workgroups((query_count.max(1) as u32).div_ceil(256), 1, 1);
         }
-        if value_bytes > 0 {
-            encoder.copy_buffer_to_buffer(&b.output, 0, &b.read, 0, value_bytes);
+        let out_bytes = (query_count * 4) as u64;
+        if out_bytes > 0 {
+            encoder.copy_buffer_to_buffer(&b.out_index, 0, &b.read_index, 0, out_bytes);
+            encoder.copy_buffer_to_buffer(&b.out_dist, 0, &b.read_dist, 0, out_bytes);
         }
         self.queue.submit([encoder.finish()]);
-        let raw = read_buffer(&self.device, &b.read, count * 12);
-        b.read.unmap();
-        raw.chunks_exact(4)
-            .take(count * 3)
-            .map(|c| f32::from_ne_bytes(c.try_into().unwrap()) as f64)
-            .collect::<Vec<f64>>()
-            .chunks_exact(3)
-            .map(|c| [c[0], c[1], c[2]])
+        if query_count == 0 {
+            return Vec::new();
+        }
+        let raw_index = read_buffer(&self.device, &b.read_index, query_count * 4);
+        b.read_index.unmap();
+        let raw_dist = read_buffer(&self.device, &b.read_dist, query_count * 4);
+        b.read_dist.unmap();
+        raw_index
+            .chunks_exact(4)
+            .zip(raw_dist.chunks_exact(4))
+            .take(query_count)
+            .map(|(i, d)| {
+                (
+                    u32::from_ne_bytes(i.try_into().unwrap()),
+                    f32::from_ne_bytes(d.try_into().unwrap()) as f64,
+                )
+            })
             .collect()
     }
 }
 
 thread_local! {
     // Process-lifetime device and pipeline; see `sdf-core`'s `gpu.rs`.
-    static SHARED: std::cell::LazyCell<Option<&'static (GpuContext, GpuTransform)>> =
+    static SHARED: std::cell::LazyCell<Option<&'static (GpuContext, GpuNearestNeighbor)>> =
         std::cell::LazyCell::new(|| GpuContext::new().map(|c| {
-            let transform = GpuTransform::new(&c);
-            Box::leak(Box::new((c, transform))) as &'static (GpuContext, GpuTransform)
+            let nn = GpuNearestNeighbor::new(&c);
+            Box::leak(Box::new((c, nn))) as &'static (GpuContext, GpuNearestNeighbor)
         }));
 }
 
-/// Transforms every point on the GPU; `None` without an adapter (CPU fallback).
-pub fn transform_points_gpu(points: &[V3], m: M3, t: V3) -> Option<Vec<V3>> {
+/// Finds each query's nearest target on the GPU; `None` without an adapter
+/// (CPU fallback).
+pub fn nearest_neighbor_gpu(queries: &[V3], targets: &[V3]) -> Option<Vec<(u32, f64)>> {
     SHARED.with(|cell| {
-        let shared: &Option<&(GpuContext, GpuTransform)> = cell;
-        shared.map(|(_, transform)| transform.run(points, m, t))
+        let shared: &Option<&(GpuContext, GpuNearestNeighbor)> = cell;
+        shared.map(|(_, nn)| nn.run(queries, targets))
     })
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{ID, add, mv};
 
     #[test]
-    fn gpu_transform_matches_cpu_reference_when_available() {
-        let m = crate::rotation([0.1, 0.4, -0.2]);
-        let t = [1.0, -2.0, 3.5];
-        let points: Vec<V3> = (0..200)
+    fn gpu_nearest_neighbor_matches_cpu_reference_when_available() {
+        let queries: Vec<V3> = (0..64)
             .map(|i| {
                 let f = i as f64;
                 [f * 0.13 - 10., f * -0.07 + 4., (f * 0.031).sin() * 5.]
             })
             .collect();
-        let Some(got) = transform_points_gpu(&points, m, t) else {
+        let targets: Vec<V3> = (0..20)
+            .map(|i| {
+                let f = i as f64;
+                [f * 0.9 - 6., (f * 0.21).cos() * 4., f * -0.4]
+            })
+            .collect();
+        let Some(got) = nearest_neighbor_gpu(&queries, &targets) else {
             eprintln!("no wgpu adapter available; skipping");
             return;
         };
-        assert_eq!(got.len(), points.len());
-        for (p, q) in points.iter().zip(&got) {
-            let expected = add(mv(m, *p), t);
-            for k in 0..3 {
-                assert!((expected[k] - q[k]).abs() < 5e-4, "{expected:?} vs {q:?}");
-            }
+        let want = crate::nearest_neighbor(&queries, &targets);
+        assert_eq!(got.len(), want.len());
+        for ((_gi, gd), (_wi, wd)) in got.iter().zip(&want) {
+            assert!((gd - wd).abs() < 5e-3 * wd.max(1.0), "{gd} vs {wd}");
         }
     }
 
     #[test]
-    fn gpu_transform_empty_input() {
-        if let Some(got) = transform_points_gpu(&[], ID, [0., 0., 0.]) {
+    fn gpu_nearest_neighbor_empty_input() {
+        if let Some(got) = nearest_neighbor_gpu(&[], &[[0., 0., 0.]]) {
             assert!(got.is_empty());
         }
     }
