@@ -102,6 +102,11 @@ pub fn launch_1d(total: u32, block: u32) -> LaunchConfig {
     }
 }
 
+/// Probes the selected CUDA device without constructing a kernel pipeline.
+pub fn available_device_report() -> Option<CudaDeviceReport> {
+    CudaDevice::new().map(|device| device.report())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -123,6 +128,11 @@ mod tests {
             let report = device.report();
             assert_eq!(report.name, device.name);
             assert_eq!(report.multiprocessors, device.multiprocessors);
+            assert!(report.native_cuda);
+        }
+        if let Some(report) = available_device_report() {
+            assert!(!report.name.is_empty());
+            assert!(report.multiprocessors >= 1);
             assert!(report.native_cuda);
         }
     }

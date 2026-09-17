@@ -173,6 +173,12 @@ pub const fn backend_label(backend: wgpu::Backend) -> &'static str {
     BackendReport::from_wgpu(backend).label
 }
 
+/// Probes the preferred portable compute backend without constructing a
+/// domain-specific kernel pipeline.
+pub fn available_backend_report() -> Option<BackendReport> {
+    GpuContext::new().map(|context| context.backend_report())
+}
+
 /// Per-backend workgroup-size tuning for compute kernels that template their
 /// WGSL source with a `WG` constant. Apple GPUs (Metal) are tile-based
 /// deferred renderers whose occupancy is limited by threadgroup memory and
@@ -225,6 +231,24 @@ mod tests {
         assert!(!BackendReport::from_wgpu(wgpu::Backend::Vulkan).browser_api);
         assert!(BackendReport::from_wgpu(wgpu::Backend::BrowserWebGpu).browser_api);
         assert!(!BackendReport::from_wgpu(wgpu::Backend::Noop).native_api);
+    }
+
+    #[test]
+    fn available_backend_report_is_well_formed_when_present() {
+        if let Some(report) = available_backend_report() {
+            assert!(!report.label.is_empty());
+            assert_eq!(
+                report.label,
+                backend_label(match report.kind {
+                    BackendKind::Noop => wgpu::Backend::Noop,
+                    BackendKind::Vulkan => wgpu::Backend::Vulkan,
+                    BackendKind::Metal => wgpu::Backend::Metal,
+                    BackendKind::Dx12 => wgpu::Backend::Dx12,
+                    BackendKind::Gl => wgpu::Backend::Gl,
+                    BackendKind::WebGpu => wgpu::Backend::BrowserWebGpu,
+                })
+            );
+        }
     }
 }
 
