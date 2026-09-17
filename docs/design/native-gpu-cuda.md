@@ -35,11 +35,11 @@ the portable GPU path on the same machine.
 | `sdf-core` | Grid sampling of primitive/CSG/mesh-distance fields (`polygonize_accelerated`) | `SDF_WGSL`, cached grow-only buffers | `sdf_grid.cu` → `sdf_grid.ptx`, cached grow-only buffers |
 | `geometry-bridge` | Lattice implicit field (`lattice_accelerated`) | `LATTICE_WGSL`, cached grow-only buffers | `lattice.cu` → `lattice.ptx`, cached grow-only buffers |
 | `photogrammetry-core` | Descriptor matching | cached WGSL pipelines/buffers | `matching.cu` → `matching.ptx` |
-| `photogrammetry-core` | Frontoparallel NCC depth sweep | cached WGSL pipelines/buffers | runs the wgpu shader |
+| `photogrammetry-core` | Frontoparallel NCC depth sweep | cached WGSL pipelines/buffers | `sweep.cu` → `sweep.ptx` (sweep-and-select, per-pass gray atlas) |
 
 The CUDA and WGSL kernels are line-by-line ports of the same text and are
-tested against each other (`cuda_and_wgpu_samplers_agree`, tolerance 1e-3 in
-f32) and against the CPU reference (`cuda_sampling_matches_cpu_field_within_tolerance`).
+tested against each other (`cuda_and_wgpu_samplers_agree` and, for the dense
+sweep, `cuda_and_wgpu_sweep_selections_agree`, tolerance 1e-3 in f32) and against the CPU reference (`cuda_sampling_matches_cpu_field_within_tolerance`).
 wgpu kernels that use workgroup reductions can specialize for Metal's
 tile-based GPUs with smaller 128-wide workgroups while keeping 256-wide groups
 for Vulkan/DX12/WebGPU.
@@ -84,6 +84,12 @@ the nvcc release used to generate it (currently CUDA 13.x → an R580+ driver).
 | Mesh distance, 1088 triangles, 16³ grid | 324.7 ms | 1.5 ms | 1.5 ms |
 | Geometry lattice, cube shell + 54 struts | 79 ms | 40 ms | 39 ms |
 | Organic geometry lattice, cube shell + 54 struts | 85 ms | 41 ms | 40 ms |
+
+Dense frontoparallel sweep (RTX 5090, `gpu_dense_bench`, 256-px synthetic
+kernel scene, depth stage): CPU 5614 ms, wgpu/Vulkan 14.9 ms, CUDA 9.2 ms, with
+identical surface accuracy (mean surface error 0.0125, F1 0.892 on the analytic
+scenes). The native kernel is the same sweep-and-select text as the shader, so
+the only difference is skipping the wgpu layer on NVIDIA.
 
 The primitive field is dominated by CPU marching-tetrahedra extraction, which
 neither placement moves off the CPU; the brute-force mesh-distance sampling

@@ -612,18 +612,21 @@ pub(super) fn estimate_prepared(
     // and one submit; coarse-to-fine passes depend on each other and keep the
     // per-view path inside `sweep_depth`.
     #[cfg(feature = "gpu")]
-    let mut gpu_batch = (options.acceleration.is_gpu()
+    let batch_eligible = options.acceleration.is_gpu()
         && options.estimator == DenseEstimator::FrontoparallelSweep
-        && !options.coarse_to_fine)
-        .then(crate::gpu::sweep::shared)
-        .flatten()
-        .map(|sweep| {
-            let rasters: Vec<Option<(&[f32], usize, usize)>> = grayscale
-                .iter()
-                .map(|g| g.as_ref().map(|g| (g.values.as_slice(), g.width, g.height)))
-                .collect();
-            (sweep, sweep.upload_grays(&rasters))
-        });
+        && !options.coarse_to_fine;
+    // Dispatch order for the batched pass: native CUDA when it was requested
+    // and a device exists, then the wgpu sweep, then the CPU sweep.
+    #[cfg(feature = "cuda")]
+    let cuda_sweep = (batch_eligible && options.acceleration == crate::Acceleration::Cuda)
+        .then(crate::gpu::sweep::cuda::shared)
+        .flatten();
+    #[cfg(feature = "gpu")]
+    let wgpu_sweep = batch_eligible.then(crate::gpu::sweep::shared).flatten();
+    #[cfg(all(feature = "gpu", not(feature = "cuda")))]
+    let gpu_batch = wgpu_sweep.is_some();
+    #[cfg(feature = "cuda")]
+    let gpu_batch = wgpu_sweep.is_some() || cuda_sweep.is_some();
     #[cfg(feature = "gpu")]
     let mut gpu_jobs: Vec<crate::gpu::sweep::SweepJob> = Vec::new();
     #[cfg(feature = "gpu")]
@@ -640,8 +643,7 @@ pub(super) fn estimate_prepared(
         };
         let gray = grayscale[index].as_ref().unwrap();
         #[cfg(feature = "gpu")]
-        if let Some((_, atlas)) = &gpu_batch {
-            let _ = atlas;
+        if gpu_batch {
             let sources = build_view_sources(
                 sparse,
                 grayscale,
@@ -831,36 +833,112 @@ pub(super) fn estimate_prepared(
         });
     }
     #[cfg(feature = "gpu")]
-    if let Some((sweep, atlas)) = gpu_batch.take() {
-        let mut batch = sweep.batch(&atlas);
-        for job in &gpu_jobs {
-            batch.push(job);
-        }
+    if gpu_batch {
+        let rasters: Vec<Option<(&[f32], usize, usize)>> = grayscale
+            .iter()
+            .map(|g| g.as_ref().map(|g| (g.values.as_slice(), g.width, g.height)))
+            .collect();
         cancelled(progress, "depth", 0, active.len() * options.max_side)?;
-        let selections = batch.finish();
-        if selections.len() != gpu_pending.len() {
-            return Err(crate::error("GPU sweep returned an unexpected view count"));
-        }
-        for ((index, preamble, source_count), selection) in gpu_pending.into_iter().zip(selections)
-        {
-            count_gpu_work(
-                &mut diagnostics,
-                preamble.width,
-                preamble.height,
-                source_count,
-                options,
-            );
-            let (depth, confidence) =
-                maps_from_selection(&selection, preamble.near, preamble.far, options);
-            maps.push(DepthMap {
-                image: index,
-                width: preamble.width,
-                height: preamble.height,
-                step: preamble.step,
-                depth,
-                confidence,
-                neighbors: preamble.neighbors,
-            });
+        #[cfg(feature = "cuda")]
+        let selections = cuda_sweep.and_then(|sweep| {
+            let atlas = sweep.upload_grays(&rasters)?;
+            sweep.run_batch(&atlas, &gpu_jobs)
+        });
+        #[cfg(not(feature = "cuda"))]
+        let selections: Option<Vec<Vec<Option<crate::gpu::sweep::Selection>>>> = None;
+        let selections = selections.or_else(|| {
+            wgpu_sweep.map(|sweep| {
+                let atlas = sweep.upload_grays(&rasters);
+                let mut batch = sweep.batch(&atlas);
+                for job in &gpu_jobs {
+                    batch.push(job);
+                }
+                batch.finish()
+            })
+        });
+        match selections {
+            Some(selections) => {
+                if selections.len() != gpu_pending.len() {
+                    return Err(crate::error("GPU sweep returned an unexpected view count"));
+                }
+                for ((index, preamble, source_count), selection) in
+                    gpu_pending.into_iter().zip(selections)
+                {
+                    count_gpu_work(
+                        &mut diagnostics,
+                        preamble.width,
+                        preamble.height,
+                        source_count,
+                        options,
+                    );
+                    let (depth, confidence) =
+                        maps_from_selection(&selection, preamble.near, preamble.far, options);
+                    maps.push(DepthMap {
+                        image: index,
+                        width: preamble.width,
+                        height: preamble.height,
+                        step: preamble.step,
+                        depth,
+                        confidence,
+                        neighbors: preamble.neighbors,
+                    });
+                }
+            }
+            // Native CUDA was the only device backend and failed at run time;
+            // the pending views finish on the CPU instead of being dropped.
+            None => {
+                let cpu_options = DenseOptions {
+                    acceleration: crate::Acceleration::Cpu,
+                    ..options.clone()
+                };
+                for (index, preamble, _) in gpu_pending {
+                    let gray = grayscale[index].as_ref().unwrap();
+                    let mut sources = build_view_sources(
+                        sparse,
+                        grayscale,
+                        &preamble,
+                        options.patch_radius,
+                        preamble.step,
+                    );
+                    let ranges = if options.sparse_depth_prior {
+                        sparse_intervals(
+                            sparse,
+                            index,
+                            preamble.reference,
+                            preamble.width,
+                            preamble.height,
+                            preamble.step,
+                            preamble.near,
+                            preamble.far,
+                        )
+                    } else {
+                        None
+                    };
+                    let (depth, confidence) = sweep_depth(
+                        gray,
+                        preamble.reference,
+                        &mut sources,
+                        preamble.width,
+                        preamble.height,
+                        preamble.step,
+                        preamble.near,
+                        preamble.far,
+                        ranges.as_ref(),
+                        &cpu_options,
+                        &mut diagnostics,
+                        &mut |_| Ok(()),
+                    )?;
+                    maps.push(DepthMap {
+                        image: index,
+                        width: preamble.width,
+                        height: preamble.height,
+                        step: preamble.step,
+                        depth,
+                        confidence,
+                        neighbors: preamble.neighbors,
+                    });
+                }
+            }
         }
         cancelled(
             progress,
@@ -1466,7 +1544,18 @@ fn gpu_sweep_single(
     inverse_span: f64,
     options: &DenseOptions,
 ) -> Option<(Vec<f64>, Vec<f32>)> {
-    let sweep = crate::gpu::sweep::shared()?;
+    // Backend choice first: without any device the payload is never built.
+    #[cfg(feature = "cuda")]
+    let cuda_sweep = (options.acceleration == crate::Acceleration::Cuda)
+        .then(crate::gpu::sweep::cuda::shared)
+        .flatten();
+    let wgpu_sweep = crate::gpu::sweep::shared();
+    #[cfg(feature = "cuda")]
+    if cuda_sweep.is_none() && wgpu_sweep.is_none() {
+        return None;
+    }
+    #[cfg(not(feature = "cuda"))]
+    wgpu_sweep?;
     // Local atlas: the reference at slot 0, sources renumbered after it.
     let mut rasters: Vec<Option<(&[f32], usize, usize)>> =
         vec![Some((gray.values.as_slice(), gray.width, gray.height))];
@@ -1487,7 +1576,6 @@ fn gpu_sweep_single(
             rays: source.rays,
         });
     }
-    let atlas = sweep.upload_grays(&rasters);
     let job = gpu_job(
         0,
         reference,
@@ -1501,6 +1589,17 @@ fn gpu_sweep_single(
         inverse_span,
         options,
     );
+    // Native CUDA first for Acceleration::Cuda, then the wgpu sweep; both
+    // return None to leave the CPU sweep in charge.
+    #[cfg(feature = "cuda")]
+    if let Some(sweep) = cuda_sweep
+        && let Some(atlas) = sweep.upload_grays(&rasters)
+        && let Some(selection) = sweep.run(&atlas, &job)
+    {
+        return Some(maps_from_selection(&selection, near, far, options));
+    }
+    let sweep = wgpu_sweep?;
+    let atlas = sweep.upload_grays(&rasters);
     let mut batch = sweep.batch(&atlas);
     batch.push(&job);
     let selection = batch.finish().pop()?;
@@ -1915,6 +2014,219 @@ mod tests {
         assert!(
             agree as f64 >= 0.95 * valid as f64,
             "host split disagrees: {agree}/{valid}"
+        );
+    }
+
+    /// Shifted-plane scene shared by the CUDA parity tests: a random reference
+    /// texture and the same texture shifted 10 px left, which a camera
+    /// translated -0.5 along x sees for the plane z = 4 (f*B/z = 80*0.5/4).
+    #[cfg(feature = "cuda")]
+    fn shifted_plane() -> (GrayImage, GrayImage, Camera, Camera) {
+        let mut rng = 0xABCDEFu64;
+        let mut tex = vec![0f32; 80 * 80];
+        for v in &mut tex {
+            rng = rng
+                .wrapping_mul(6364136223846793005)
+                .wrapping_add(1442695040888963407);
+            *v = (rng >> 33) as f32 / 2147483648.0;
+        }
+        let mut src_values = vec![0f32; 80 * 80];
+        for y in 0..80 {
+            for x in 0..70 {
+                src_values[y * 80 + x] = tex[y * 80 + x + 10];
+            }
+        }
+        (
+            GrayImage {
+                width: 80,
+                height: 80,
+                values: tex,
+            },
+            GrayImage {
+                width: 80,
+                height: 80,
+                values: src_values,
+            },
+            Camera::identity(80., 40., 40.),
+            Camera {
+                rotation: ID,
+                translation: [-0.5, 0., 0.],
+                focal: 80.,
+                cx: 40.,
+                cy: 40.,
+            },
+        )
+    }
+
+    #[cfg(feature = "cuda")]
+    fn shifted_plane_source<'a>(
+        image: &'a GrayImage,
+        camera: &'a Camera,
+        step: f64,
+    ) -> Vec<Source<'a>> {
+        vec![Source {
+            index: 1,
+            image,
+            camera,
+            rotation: ID,
+            translation: [-0.5, 0., 0.],
+            offsets: std::array::from_fn(|i| {
+                [
+                    ((i % 3) as f64 - 1.) * step / 80.,
+                    ((i / 3) as f64 - 1.) * step / 80.,
+                    0.,
+                ]
+            }),
+            rays: [[0.; 3]; 25],
+        }]
+    }
+
+    /// The native CUDA sweep must reproduce the CPU depth map as closely as the
+    /// wgpu sweep does (same f32 kernel semantics, same tolerance).
+    #[cfg(feature = "cuda")]
+    #[test]
+    fn cuda_sweep_matches_cpu_on_shifted_plane() {
+        let (ref_gray, src_gray, reference, source_camera) = shifted_plane();
+        let options = |acceleration| DenseOptions {
+            acceleration,
+            depth_hypotheses: 16,
+            patch_radius: 1,
+            min_support_views: 1,
+            ..Default::default()
+        };
+        let run = |acceleration| {
+            let mut sources = shifted_plane_source(&src_gray, &source_camera, 2.);
+            let mut diagnostics = DenseDiagnostics::default();
+            sweep_depth(
+                &ref_gray,
+                &reference,
+                &mut sources,
+                40,
+                40,
+                2.,
+                2.,
+                8.,
+                None,
+                &options(acceleration),
+                &mut diagnostics,
+                &mut |_| Ok(()),
+            )
+            .unwrap()
+            .0
+        };
+        let cpu = run(crate::Acceleration::Cpu);
+        if crate::gpu::sweep::cuda::shared().is_none() {
+            eprintln!("no CUDA device; skipping");
+            return;
+        }
+        let cuda = run(crate::Acceleration::Cuda);
+        let mut valid = 0;
+        let mut agree = 0;
+        for i in 0..cpu.len() {
+            if cpu[i] > 0. {
+                valid += 1;
+                if (cuda[i] - cpu[i]).abs() <= 0.15 {
+                    agree += 1;
+                }
+            }
+        }
+        assert!(valid > 400, "plane should be mostly valid: {valid}");
+        assert!(
+            agree as f64 >= 0.95 * valid as f64,
+            "CUDA depth rows disagree with CPU: {agree}/{valid}"
+        );
+    }
+
+    /// Both device backends run the same sweep-and-select text, so their
+    /// per-pixel selections must agree bin for bin (f32 contraction only moves
+    /// borderline scores) and unsupported option sets must decline natively.
+    #[cfg(feature = "cuda")]
+    #[test]
+    fn cuda_and_wgpu_sweep_selections_agree() {
+        let (ref_gray, src_gray, reference, source_camera) = shifted_plane();
+        let sources = shifted_plane_source(&src_gray, &source_camera, 2.);
+        let options = DenseOptions {
+            acceleration: crate::Acceleration::Cuda,
+            depth_hypotheses: 16,
+            patch_radius: 1,
+            min_support_views: 1,
+            ..Default::default()
+        };
+        let (near, far) = (2., 8.);
+        let hypotheses = hypothesis_grid(near, far, options.depth_hypotheses);
+        let job = gpu_job(
+            0,
+            &reference,
+            &sources,
+            40,
+            40,
+            2.,
+            &hypotheses[..options.depth_hypotheses],
+            None,
+            near,
+            1. / near - 1. / far,
+            &options,
+        );
+        let rasters: Vec<Option<(&[f32], usize, usize)>> = vec![
+            Some((ref_gray.values.as_slice(), ref_gray.width, ref_gray.height)),
+            Some((src_gray.values.as_slice(), src_gray.width, src_gray.height)),
+        ];
+        let Some(cuda) = crate::gpu::sweep::cuda::shared() else {
+            eprintln!("no CUDA device; skipping");
+            return;
+        };
+        let cuda_atlas = cuda.upload_grays(&rasters).unwrap();
+        let cuda_selection = cuda.run(&cuda_atlas, &job).unwrap();
+        // Patch radius 3 (49 taps) exceeds the kernel's 25-tap capacity: the
+        // native path declines instead of approximating the shader.
+        let wide = DenseOptions {
+            patch_radius: 3,
+            ..options.clone()
+        };
+        let wide_job = gpu_job(
+            0,
+            &reference,
+            &sources,
+            40,
+            40,
+            2.,
+            &hypotheses[..options.depth_hypotheses],
+            None,
+            near,
+            1. / near - 1. / far,
+            &wide,
+        );
+        assert!(
+            cuda.run(&cuda_atlas, &wide_job).is_none(),
+            "oversized patches must fall back"
+        );
+        let Some(sweep) = crate::gpu::sweep::shared() else {
+            eprintln!("no wgpu adapter; skipping the cross-backend comparison");
+            return;
+        };
+        let atlas = sweep.upload_grays(&rasters);
+        let mut batch = sweep.batch(&atlas);
+        batch.push(&job);
+        let wgpu_selection = batch.finish().pop().unwrap();
+        assert_eq!(cuda_selection.len(), wgpu_selection.len());
+        let mut valid = 0;
+        let mut agree = 0;
+        for (cuda_pixel, wgpu_pixel) in cuda_selection.iter().zip(&wgpu_selection) {
+            match (cuda_pixel, wgpu_pixel) {
+                (Some(a), Some(b)) => {
+                    valid += 1;
+                    if a.bin == b.bin && (a.score - b.score).abs() <= 1e-3 {
+                        agree += 1;
+                    }
+                }
+                (None, None) => {}
+                _ => valid += 1,
+            }
+        }
+        assert!(valid > 400, "plane should be mostly valid: {valid}");
+        assert!(
+            agree as f64 >= 0.98 * valid as f64,
+            "CUDA and wgpu selections disagree: {agree}/{valid}"
         );
     }
 
