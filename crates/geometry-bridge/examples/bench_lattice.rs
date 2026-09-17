@@ -14,7 +14,7 @@ fn main() {
     #[cfg(feature = "gpu")]
     println!(
         "wgpu backend: {}",
-        geometry_bridge::lattice_gpu::backend_label().unwrap_or("none (falls back to cpu)")
+        geometry_bridge::gpu_backend_label().unwrap_or("none (falls back to cpu)")
     );
 
     let mesh = cube([40., 40., 40.], false).unwrap();

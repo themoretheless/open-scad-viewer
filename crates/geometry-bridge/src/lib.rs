@@ -73,6 +73,11 @@ pub use languages::{
     compile_modelgraph, compile_modelgraph_nurbs, compile_modelgraph_text,
     compile_modelgraph_text_nurbs, execute_modelgraph_text,
 };
+
+#[cfg(feature = "gpu")]
+pub fn gpu_backend_label() -> Option<&'static str> {
+    lattice_gpu::backend_label()
+}
 mod path2d;
 pub mod reconstruction;
 mod sdf_gpu;
