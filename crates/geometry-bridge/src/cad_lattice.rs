@@ -799,13 +799,11 @@ pub fn lightening(v: Value) -> Result<Value> {
             keep_core,
         )?
         .mesh;
-        reduced_mesh = value_codec::from_value(
-            decimate(value_codec::json!({
-                "mesh": reduced_mesh,
-                "tolerance": step * 1.5,
-                "target": 2600f64
-            }))?,
-        )
+        reduced_mesh = value_codec::from_value(decimate(value_codec::json!({
+            "mesh": reduced_mesh,
+            "tolerance": step * 1.5,
+            "target": 2600f64
+        }))?)
         .map_err(|e| input(format!("Invalid mesh: {e}")))?;
         let compact_positions = reduced_mesh
             .positions
@@ -984,8 +982,7 @@ pub fn lightening(v: Value) -> Result<Value> {
 }
 
 /// User-facing admission message, kept identical to the pre-migration TS text.
-const PRINT_SETTINGS_MESSAGE: &str =
-    "Проверьте сопло, высоту слоя, число линий и длину моста.";
+const PRINT_SETTINGS_MESSAGE: &str = "Проверьте сопло, высоту слоя, число линий и длину моста.";
 
 fn print_setting(settings: &Value, key: &str) -> Result<f64> {
     settings[key]

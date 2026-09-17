@@ -1,4 +1,5 @@
-import { booleanPolygonMeshes, brushPolygonMesh, deformPolygonMesh, extrudePolygonFaces, extrudePolygonProfile, exportPolygonStl, inspectPolygonMesh, type PolygonMesh } from './geometry/polygon'
+import type { SculptBrush } from './geometryEditing'
+import { booleanPolygonMeshes, brushPolygonMesh, sculptPolygonMesh, deformPolygonMesh, extrudePolygonFaces, extrudePolygonProfile, exportPolygonStl, inspectPolygonMesh, type PolygonMesh } from './geometry/polygon'
 import { parseBinaryStl } from './stlImport'
 
 export type MeshSelectMode = 'object' | 'vertex' | 'edge' | 'face'
@@ -459,6 +460,11 @@ export function symmetrizeMesh(mesh: PolygonMesh, axis: 0 | 1 | 2 = 0): PolygonM
 export function brushDisplace(mesh: PolygonMesh, center: [number, number, number], radius: number, displacement: [number, number, number]): PolygonMesh {
   if (!finite(radius) || radius <= 0 || !center.every(finite) || !displacement.every(finite)) throw new Error('Invalid brush.')
   return brushPolygonMesh(mesh, { center, radius, displacement })
+}
+
+/** Applies a sculpt stroke (grab/draw/inflate/smooth/flatten/pinch) with falloff and symmetry. */
+export function sculptMesh(mesh: PolygonMesh, brush: SculptBrush): PolygonMesh {
+  return sculptPolygonMesh(mesh, brush)
 }
 
 export function twistMesh(mesh: PolygonMesh, radiansPerUnit: number, origin: [number, number, number] = [0, 0, 0]): PolygonMesh {

@@ -20,9 +20,7 @@ fn exact(value: &Value, keys: &[&str]) -> Result<()> {
         .as_object()
         .ok_or_else(|| invalid("Expected a semantic envelope object"))?;
     if object.len() != keys.len() || keys.iter().any(|key| !object.contains_key(*key)) {
-        return Err(invalid(
-            "Semantic envelope fields do not match the schema",
-        ));
+        return Err(invalid("Semantic envelope fields do not match the schema"));
     }
     Ok(())
 }
@@ -117,7 +115,10 @@ fn validate_diagnostic_templates(templates: &[Value], operation_count: usize) ->
         return Err(invalid("Semantic diagnostic template limit exceeded"));
     }
     for (index, template) in templates.iter().enumerate() {
-        exact(template, &["id", "code", "severity", "operation", "arguments"])?;
+        exact(
+            template,
+            &["id", "code", "severity", "operation", "arguments"],
+        )?;
         if template["id"].as_u64() != Some(index as u64) {
             return Err(invalid(
                 "Semantic diagnostic template IDs must equal array positions",
@@ -143,10 +144,14 @@ fn validate_diagnostic_templates(templates: &[Value], operation_count: usize) ->
                 .as_u64()
                 .ok_or_else(|| invalid("Semantic diagnostic operation reference is invalid"))?;
             if operation_count == 0 {
-                return Err(invalid("Semantic diagnostic references an absent operation"));
+                return Err(invalid(
+                    "Semantic diagnostic references an absent operation",
+                ));
             }
             if operation >= operation_count as u64 {
-                return Err(invalid("Semantic diagnostic operation reference is invalid"));
+                return Err(invalid(
+                    "Semantic diagnostic operation reference is invalid",
+                ));
             }
         }
         let arguments = template["arguments"]
@@ -180,8 +185,8 @@ fn validate_provenance(
     if provenance.len() > 50_000 {
         return Err(invalid("Semantic provenance limit exceeded"));
     }
-    let operations = operations
-        .ok_or_else(|| invalid("Semantic provenance requires semantic operations"))?;
+    let operations =
+        operations.ok_or_else(|| invalid("Semantic provenance requires semantic operations"))?;
     if provenance.len() != operations.len() {
         return Err(invalid(
             "Every static operation needs exactly one source record",
@@ -239,7 +244,9 @@ fn validate_tessellation_intents(request: &Value, intents: &[Value]) -> Result<(
             .as_u64()
             .ok_or_else(|| invalid("Semantic tessellation occurrence reference is invalid"))?;
         if occurrence >= occurrences.len() as u64 {
-            return Err(invalid("Semantic tessellation occurrence reference is invalid"));
+            return Err(invalid(
+                "Semantic tessellation occurrence reference is invalid",
+            ));
         }
         if occurrences[occurrence as usize]["node"].is_null() {
             return Err(invalid(
@@ -399,9 +406,10 @@ mod tests {
         dropped["provenance"].as_array_mut().unwrap().remove(0);
         assert!(admit(&dropped).is_err());
         let mut extended = program_request();
-        extended["provenance"].as_array_mut().unwrap().push(
-            json!({"operation":3,"span":{"start":0,"end":1},"label":"extra"}),
-        );
+        extended["provenance"]
+            .as_array_mut()
+            .unwrap()
+            .push(json!({"operation":3,"span":{"start":0,"end":1},"label":"extra"}));
         assert!(admit(&extended).is_err());
         // Operation order.
         let mut reordered = program_request();
@@ -508,9 +516,10 @@ mod tests {
         dropped["diagnostics"].as_array_mut().unwrap().remove(0);
         assert!(admit(&dropped).is_err());
         let mut extended = program_request();
-        extended["diagnostics"].as_array_mut().unwrap().push(
-            json!({"template":2,"message":"extra","span":null}),
-        );
+        extended["diagnostics"]
+            .as_array_mut()
+            .unwrap()
+            .push(json!({"template":2,"message":"extra","span":null}));
         assert!(admit(&extended).is_err());
         // Template order.
         let mut reordered = program_request();
@@ -521,10 +530,7 @@ mod tests {
         request["diagnostics"][0]["message"] = json!("x".repeat(1_000_001));
         assert!(admit(&request).is_err());
         // Out-of-range and reversed spans (empty spans stay admissible).
-        for span in [
-            json!({"start":9,"end":65}),
-            json!({"start":30,"end":29}),
-        ] {
+        for span in [json!({"start":9,"end":65}), json!({"start":30,"end":29})] {
             let mut request = program_request();
             request["diagnostics"][1]["span"] = span;
             assert!(admit(&request).is_err());
@@ -532,7 +538,10 @@ mod tests {
         // Diagnostics require the transported templates, and a present span
         // requires the source descriptor.
         let mut request = program_request();
-        request.as_object_mut().unwrap().remove("diagnosticTemplates");
+        request
+            .as_object_mut()
+            .unwrap()
+            .remove("diagnosticTemplates");
         assert!(admit(&request).is_err());
         let mut request = program_request();
         request.as_object_mut().unwrap().remove("source");

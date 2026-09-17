@@ -230,3 +230,99 @@ fn brush_edits_reject_invalid_brushes_and_inputs() {
     broken.knots.pop();
     assert!(edit::brush_curve(&broken, &ok).is_err());
 }
+
+#[test]
+fn sculpt_targets_expose_polygon_and_net_structure() {
+    let c = circle();
+    let (positions, normals, rings) = edit::curve_sculpt_target(&c).unwrap();
+    assert_eq!(positions.len(), 3);
+    assert_eq!(rings, vec![vec![1], vec![0, 2], vec![1]]);
+    near(&normals[0], &[0., 0., 0.]);
+    near(
+        &normals[1],
+        &[
+            std::f64::consts::FRAC_1_SQRT_2,
+            std::f64::consts::FRAC_1_SQRT_2,
+            0.,
+        ],
+    );
+    let s = surface::extrude(&c, [0., 0., 3.]).unwrap();
+    let (_, snormals, srings) = edit::surface_sculpt_target(&s).unwrap();
+    assert_eq!(
+        snormals.len(),
+        s.control_points.len() * s.control_points[0].len()
+    );
+    assert!(srings.iter().all(|r| (2..=4).contains(&r.len())));
+    assert!(
+        snormals
+            .iter()
+            .all(|n| (math_core::norm(*n) - 1.).abs() < 1e-9)
+    );
+}
+#[test]
+fn sculpt_edits_preserve_rational_definition() {
+    use geometry_ops::{Falloff, SculptBrush, SculptKind};
+    let c = circle();
+    let draw = edit::sculpt_curve(
+        &c,
+        &SculptBrush::new(SculptKind::Draw { strength: 1. }, [1., 1., 0.], 0.5),
+    )
+    .unwrap();
+    assert_eq!(draw.knots, c.knots);
+    assert_eq!(draw.weights, c.weights);
+    near(
+        &draw.control_points[1],
+        &[
+            1. + std::f64::consts::FRAC_1_SQRT_2,
+            1. + std::f64::consts::FRAC_1_SQRT_2,
+            0.,
+        ],
+    );
+    near(&draw.control_points[0], &c.control_points[0]);
+    let smooth = edit::sculpt_curve(
+        &c,
+        &SculptBrush::new(SculptKind::Smooth { strength: 1. }, [1., 1., 0.], 0.5),
+    )
+    .unwrap();
+    near(&smooth.control_points[1], &[0.5, 0.5, 0.]);
+    let s = surface::extrude(&c, [0., 0., 3.]).unwrap();
+    let inflate = edit::sculpt_surface(
+        &s,
+        &SculptBrush {
+            falloff: Falloff::Constant,
+            ..SculptBrush::new(SculptKind::Inflate { strength: 0.5 }, [0.; 3], 100.)
+        },
+    )
+    .unwrap();
+    assert_eq!(inflate.knots_u, s.knots_u);
+    assert_eq!(inflate.weights, s.weights);
+    for (a, b) in s
+        .control_points
+        .iter()
+        .flatten()
+        .zip(inflate.control_points.iter().flatten())
+    {
+        let d: Vec<f64> = a.iter().zip(b).map(|(x, y)| y - x).collect();
+        assert!((math_core::norm([d[0], d[1], d[2]]) - 0.5).abs() < 1e-9);
+    }
+    assert!(
+        edit::sculpt_curve(
+            &c,
+            &SculptBrush::new(SculptKind::Flatten { strength: 1.5 }, [0.; 3], 1.)
+        )
+        .is_err()
+    );
+    let mut flat = c.clone();
+    flat.control_points = flat
+        .control_points
+        .iter()
+        .map(|p| p[..2].to_vec())
+        .collect();
+    assert!(
+        edit::sculpt_curve(
+            &flat,
+            &SculptBrush::new(SculptKind::Draw { strength: 1. }, [0.; 3], 1.)
+        )
+        .is_err()
+    );
+}

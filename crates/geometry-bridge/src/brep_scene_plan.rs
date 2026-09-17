@@ -34,7 +34,9 @@ pub fn plan(v: &Value) -> Result<Value> {
     );
     let preimage = format!("brep-display-policy-v1\n{policy}");
     let digest = Sha256::digest(preimage.as_bytes());
-    Ok(json!({"quality":quality,"segments":segments,"policy":policy,"displayPolicyHash":hex(&digest)}))
+    Ok(
+        json!({"quality":quality,"segments":segments,"policy":policy,"displayPolicyHash":hex(&digest)}),
+    )
 }
 
 #[cfg(test)]

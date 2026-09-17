@@ -77,7 +77,10 @@ fn validate_source(source: &Value) -> Result<()> {
         .as_str()
         .ok_or_else(|| invalid("Expected a semantic source digest"))?;
     let bytes = sha256.as_bytes();
-    if bytes.len() != 64 || !bytes.iter().all(|b| b.is_ascii_hexdigit() && !b.is_ascii_uppercase())
+    if bytes.len() != 64
+        || !bytes
+            .iter()
+            .all(|b| b.is_ascii_hexdigit() && !b.is_ascii_uppercase())
     {
         return Err(invalid(
             "Semantic source digest must be a lowercase SHA-256",
@@ -88,7 +91,8 @@ fn validate_source(source: &Value) -> Result<()> {
     Ok(())
 }
 
-pub(crate) fn validate_schema_version(version: &Value) -> Result<()> {    exact(version, &["major", "minor"])?;
+pub(crate) fn validate_schema_version(version: &Value) -> Result<()> {
+    exact(version, &["major", "minor"])?;
     let major = bounded_integer(&version["major"], u64::MAX)?;
     let minor = bounded_integer(&version["minor"], u64::MAX)?;
     if major == 1 && minor <= 1 {
@@ -195,9 +199,7 @@ fn signature(node: &Value) -> Result<Signature<'_>> {
         .get("valueType")
         .ok_or_else(|| invalid("Semantic node is missing its value type"))?;
     let missing = || invalid("Semantic node value type is incomplete");
-    let evidence = value_type["evidence"]["tag"]
-        .as_str()
-        .ok_or_else(missing)?;
+    let evidence = value_type["evidence"]["tag"].as_str().ok_or_else(missing)?;
     let (certificate_profile, certificate_policy_hash) = if evidence == "certified-approximation" {
         (
             Some(
@@ -233,8 +235,12 @@ pub(crate) fn inputs(node: &Value, kind: &str) -> Result<Vec<usize>> {
             .ok_or_else(|| invalid("Semantic node input reference is invalid"))
     };
     Ok(match kind {
-        "transform" | "linear-extrude" | "rotate-extrude-analytic"
-        | "rotate-extrude-polygonal" | "projection" | "offset" => vec![index(&node["input"])?],
+        "transform"
+        | "linear-extrude"
+        | "rotate-extrude-analytic"
+        | "rotate-extrude-polygonal"
+        | "projection"
+        | "offset" => vec![index(&node["input"])?],
         "boolean" | "hull" => node["inputs"]
             .as_array()
             .ok_or_else(|| invalid("Semantic node is missing its inputs"))?
@@ -275,7 +281,8 @@ pub fn derive_capability_closure(
         capabilities.insert(format!("geometry.space.{}", own.space));
         capabilities.insert(format!("representation.{}", own.representation));
         capabilities.insert(format!("evidence.{}", own.evidence));
-        if let (Some(profile), Some(policy)) = (own.certificate_profile, own.certificate_policy_hash)
+        if let (Some(profile), Some(policy)) =
+            (own.certificate_profile, own.certificate_policy_hash)
         {
             capabilities.insert(format!("evidence.profile.{profile}"));
             capabilities.insert(format!("evidence.policy.sha256.{policy}"));
@@ -369,9 +376,8 @@ pub fn validate(request: &Value, nodes: &[Value]) -> Result<()> {
         .transpose()?;
     if let Some(closure) = request.get("capabilityClosure") {
         let closure = sorted_identifiers(closure, 128)?;
-        let declared = declared.ok_or_else(|| {
-            invalid("Semantic capability closure requires declared capabilities")
-        })?;
+        let declared = declared
+            .ok_or_else(|| invalid("Semantic capability closure requires declared capabilities"))?;
         let result_tag = request
             .get("result")
             .and_then(|result| result["tag"].as_str())
@@ -416,7 +422,11 @@ pub fn validate(request: &Value, nodes: &[Value]) -> Result<()> {
             let occurrences = occurrences
                 .as_array()
                 .ok_or_else(|| invalid("Expected a semantic occurrence array"))?;
-            super::brep_identity::validate_occurrence_identity(occurrences, operations, nodes.len())?;
+            super::brep_identity::validate_occurrence_identity(
+                occurrences,
+                operations,
+                nodes.len(),
+            )?;
             // Optional-but-strict occurrence-production replay: with
             // occurrences present the semantic result and execution plan must
             // be transported too (they always are on the executor path).
@@ -427,7 +437,9 @@ pub fn validate(request: &Value, nodes: &[Value]) -> Result<()> {
                     .get("result")
                     .filter(|value| value.is_object())
                     .ok_or_else(|| {
-                        invalid("Semantic occurrence production replay requires the semantic result")
+                        invalid(
+                            "Semantic occurrence production replay requires the semantic result",
+                        )
                     })?;
                 let execution = request
                     .get("execution")
@@ -539,14 +551,8 @@ mod tests {
             {"id":0,"kind":"rectangle","size":[2,3],"center":false,"valueType":region_type()},
             {"id":1,"kind":"linear-extrude","input":0,"height":4,"twistDegrees":0,"slices":1,"scale":[1,1],"center":false,"valueType":solid_type()},
         ]);
-        let derived = derive_capability_closure(
-            &[],
-            extrusion.as_array().unwrap(),
-            "single",
-            2,
-            0,
-        )
-        .unwrap();
+        let derived =
+            derive_capability_closure(&[], extrusion.as_array().unwrap(), "single", 2, 0).unwrap();
         assert_eq!(
             derived,
             vec![
@@ -587,8 +593,7 @@ mod tests {
             assert!(validate(&request, &nodes()).is_err());
         }
         let mut boundaries = envelope();
-        boundaries["source"] =
-            json!({"sha256":"f".repeat(64),"utf8ByteLength":4_000_000,"utf16CodeUnitLength":250_000});
+        boundaries["source"] = json!({"sha256":"f".repeat(64),"utf8ByteLength":4_000_000,"utf16CodeUnitLength":250_000});
         validate(&boundaries, &nodes()).unwrap();
         boundaries["source"] =
             json!({"sha256":"0".repeat(64),"utf8ByteLength":0,"utf16CodeUnitLength":0});
@@ -666,7 +671,11 @@ mod tests {
             json!(["bad cap"]),
             json!([".leading"]),
             json!(["x".repeat(129)]),
-            json!((0..33).map(|index| format!("cap{index:02}")).collect::<Vec<_>>()),
+            json!(
+                (0..33)
+                    .map(|index| format!("cap{index:02}"))
+                    .collect::<Vec<_>>()
+            ),
         ] {
             let mut request = envelope();
             request["declaredCapabilities"] = declared;
@@ -680,7 +689,11 @@ mod tests {
         for closure in [
             json!(["b.cap", "a.cap"]),
             json!(["a.cap", "a.cap"]),
-            json!((0..129).map(|index| format!("cap{index:03}")).collect::<Vec<_>>()),
+            json!(
+                (0..129)
+                    .map(|index| format!("cap{index:03}"))
+                    .collect::<Vec<_>>()
+            ),
         ] {
             let mut request = envelope();
             request["capabilityClosure"] = closure;
@@ -752,7 +765,8 @@ mod tests {
         assert!(validate(&request, &nodes()).is_err());
         // A malformed transported template is refused before nodes execute.
         let mut request = envelope();
-        request["diagnosticTemplates"] = json!([{"id":0,"code":"bad-code","severity":"info","operation":null,"arguments":[]}]);
+        request["diagnosticTemplates"] =
+            json!([{"id":0,"code":"bad-code","severity":"info","operation":null,"arguments":[]}]);
         assert!(validate(&request, &nodes()).is_err());
     }
 }

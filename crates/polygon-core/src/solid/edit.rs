@@ -43,6 +43,64 @@ pub fn brush(mesh: &Mesh, brush: &geometry_ops::Brush) -> Result<BuiltMesh> {
         .collect();
     finish(result)
 }
+/// Area-weighted unit vertex normals and one-ring adjacency of a triangle mesh.
+pub fn sculpt_target(mesh: &Mesh) -> Result<geometry_ops::SculptData> {
+    mesh.validate()?;
+    let positions: Vec<[f64; 3]> = mesh
+        .positions
+        .as_chunks::<3>()
+        .0
+        .iter()
+        .map(|p| [p[0], p[1], p[2]])
+        .collect();
+    let mut normals = vec![[0.; 3]; positions.len()];
+    let mut rings = vec![BTreeSet::new(); positions.len()];
+    for t in mesh.indices.as_chunks::<3>().0 {
+        let [a, b, c] = *t;
+        let n = crate::cross(
+            crate::sub(positions[b], positions[a]),
+            crate::sub(positions[c], positions[a]),
+        );
+        for &v in t {
+            normals[v] = math_core::add(normals[v], n);
+        }
+        rings[a].extend([b, c]);
+        rings[b].extend([a, c]);
+        rings[c].extend([a, b]);
+    }
+    let normals = normals
+        .into_iter()
+        .map(|n| {
+            if crate::norm(n) > 1e-18 {
+                math_core::unit(n)
+            } else {
+                n
+            }
+        })
+        .collect();
+    Ok((
+        positions,
+        normals,
+        rings.into_iter().map(|r| r.into_iter().collect()).collect(),
+    ))
+}
+/// Applies a sculpt brush to vertex positions; topology is unchanged and the
+/// result must remain a valid triangle mesh.
+pub fn sculpt(mesh: &Mesh, brush: &geometry_ops::SculptBrush) -> Result<BuiltMesh> {
+    brush.validate()?;
+    let (positions, normals, adjacency) = sculpt_target(mesh)?;
+    let moved = geometry_ops::sculpt(
+        &geometry_ops::SculptTarget {
+            positions: &positions,
+            normals: &normals,
+            adjacency: &adjacency,
+        },
+        brush,
+    )?;
+    let mut result = mesh.clone();
+    result.positions = moved.into_iter().flatten().collect();
+    finish(result)
+}
 /// Extrudes selected triangles together, retaining neighboring faces and adding
 /// walls around every boundary loop. Selecting the entire closed mesh is rejected.
 pub fn extrude_faces(mesh: &Mesh, triangles: &[usize], vector: [f64; 3]) -> Result<BuiltMesh> {
@@ -214,6 +272,130 @@ mod tests {
             assert!((b[0] - a[0] - 3.).abs() < 1e-4 && b[1] == a[1] && b[2] == a[2]);
         }
         assert!(shifted.report.closed);
+    }
+    #[test]
+    fn sculpt_target_has_outward_unit_normals_and_full_rings() {
+        let cube = cube();
+        let (positions, normals, rings) = sculpt_target(&cube.mesh).unwrap();
+        assert_eq!(positions.len(), normals.len());
+        assert_eq!(positions.len(), rings.len());
+        for (p, n) in positions.iter().zip(&normals) {
+            assert!((crate::norm(*n) - 1.).abs() < 1e-12);
+            assert!(
+                crate::dot(*n, [p[0], p[1], p[2] - 1.]) > 0.,
+                "normal points away from the centroid"
+            );
+        }
+        assert!(
+            rings
+                .iter()
+                .all(|r| r.len() >= 3 && r.windows(2).all(|w| w[0] < w[1]))
+        );
+    }
+    #[test]
+    fn sculpt_kinds_change_the_solid_as_expected() {
+        use geometry_ops::{Falloff, SculptBrush, SculptKind, Symmetry};
+        let cube = cube();
+        let volume = |m: &BuiltMesh| m.report.signed_volume_mm3;
+        let draw = sculpt(
+            &cube.mesh,
+            &SculptBrush::new(SculptKind::Draw { strength: 0.5 }, [0., 0., 2.], 1.2),
+        )
+        .unwrap();
+        assert!(draw.report.closed && volume(&draw) > volume(&cube));
+        assert!((max_z(&draw.mesh) - 2.5).abs() < 1e-9 || max_z(&draw.mesh) > 2.);
+        let carve = sculpt(
+            &cube.mesh,
+            &SculptBrush::new(SculptKind::Draw { strength: -0.5 }, [0., 0., 2.], 1.2),
+        )
+        .unwrap();
+        assert!(carve.report.closed && volume(&carve) < volume(&cube));
+        let inflate = sculpt(
+            &cube.mesh,
+            &SculptBrush {
+                falloff: Falloff::Constant,
+                ..SculptBrush::new(SculptKind::Inflate { strength: 0.5 }, [0., 0., 1.], 100.)
+            },
+        )
+        .unwrap();
+        assert!(inflate.report.closed && volume(&inflate) > volume(&cube));
+        let grab = sculpt(
+            &cube.mesh,
+            &SculptBrush::new(
+                SculptKind::Grab {
+                    displacement: [0., 0., 1.],
+                },
+                [1., 1., 2.],
+                0.5,
+            ),
+        )
+        .unwrap();
+        assert_eq!(
+            grab.mesh.positions,
+            brush(
+                &cube.mesh,
+                &geometry_ops::Brush {
+                    center: [1., 1., 2.],
+                    radius: 0.5,
+                    displacement: [0., 0., 1.]
+                }
+            )
+            .unwrap()
+            .mesh
+            .positions
+        );
+        // Smooth on an already-smooth box barely moves it; flatten on the flat top does nothing.
+        let smooth = sculpt(
+            &cube.mesh,
+            &SculptBrush::new(SculptKind::Smooth { strength: 0.5 }, [0., 0., 1.], 100.),
+        )
+        .unwrap();
+        assert!(smooth.report.closed);
+        let flatten = sculpt(
+            &cube.mesh,
+            &SculptBrush::new(SculptKind::Flatten { strength: 1. }, [0., 0., 2.], 0.9),
+        )
+        .unwrap();
+        assert!(flatten.report.closed);
+        let pinch = sculpt(
+            &cube.mesh,
+            &SculptBrush {
+                falloff: Falloff::Constant,
+                ..SculptBrush::new(SculptKind::Pinch { strength: 0.5 }, [0., 0., 2.], 1.5)
+            },
+        )
+        .unwrap();
+        assert!(pinch.report.closed && volume(&pinch) < volume(&cube));
+        // Mirrored grab raises both +x and -x corners; topology never changes.
+        let mut mirrored = SculptBrush::new(
+            SculptKind::Grab {
+                displacement: [0., 0., 1.],
+            },
+            [1., 1., 2.],
+            0.5,
+        );
+        mirrored.symmetry = Symmetry {
+            axes: [true, true, false],
+            origin: [0.; 3],
+        };
+        let sym = sculpt(&cube.mesh, &mirrored).unwrap();
+        assert_eq!(sym.mesh.indices, cube.mesh.indices);
+        let top = sym
+            .mesh
+            .positions
+            .as_chunks::<3>()
+            .0
+            .iter()
+            .filter(|p| (p[2] - 3.).abs() < 1e-9)
+            .count();
+        assert!(top >= 4);
+        assert!(
+            sculpt(
+                &cube.mesh,
+                &SculptBrush::new(SculptKind::Draw { strength: f64::NAN }, [0.; 3], 1.)
+            )
+            .is_err()
+        );
     }
     #[test]
     fn brush_rejects_invalid_brush_and_degenerate_results() {

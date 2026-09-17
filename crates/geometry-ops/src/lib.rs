@@ -11,8 +11,10 @@
 #![allow(unused_features)]
 pub use math_core::{Error, Result, V3, finite};
 pub type Point = V3;
+pub mod sculpt;
+pub use sculpt::{Falloff, SculptBrush, SculptData, SculptKind, SculptTarget, Symmetry, sculpt};
 const INVALID_INPUT: &str = "GEOMETRY_INVALID_INPUT";
-fn fail(message: impl Into<String>) -> Error {
+pub(crate) fn fail(message: impl Into<String>) -> Error {
     Error::new(INVALID_INPUT, message)
 }
 #[derive(Clone, Debug)]

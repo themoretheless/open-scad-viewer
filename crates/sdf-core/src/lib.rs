@@ -101,10 +101,21 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>) {
     for (var n = 0u; n < params.n_nodes; n++) {
         let base = n * 8u;
         let kind = kinds[n];
-        if (kind <= 2u) {
-            // Leaves: sphere / box / torus with translate-folded parameters.
+        if (kind <= 2u || kind == 10u) {
+            // Leaves: sphere / box / torus / capsule with translate-folded parameters.
             var v = 0.0;
-            if (kind == 0u) {
+            if (kind == 10u) {
+                let a = vec3f(node_params[base], node_params[base + 1u], node_params[base + 2u]);
+                let b = vec3f(node_params[base + 3u], node_params[base + 4u], node_params[base + 5u]);
+                let ab = b - a;
+                let ap = p - a;
+                var t = 0.0;
+                let denom = dot(ab, ab);
+                if (denom > 0.0) {
+                    t = clamp(dot(ap, ab) / denom, 0.0, 1.0);
+                }
+                v = length(ap - ab * t) - node_params[base + 6u];
+            } else if (kind == 0u) {
                 let c = vec3f(node_params[base], node_params[base + 1u], node_params[base + 2u]);
                 v = length(p - c) - node_params[base + 3u];
             } else if (kind == 1u) {
@@ -167,6 +178,11 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>) {
                 v = max(a, b);
             } else if (kind == 5u) {
                 v = max(a, -b);
+            } else if (kind == 11u) {
+                let k = node_params[base];
+                let na = -a;
+                let h = clamp(0.5 + 0.5 * (b - na) / k, 0.0, 1.0);
+                v = -(b * (1.0 - h) + na * h - k * h * (1.0 - h));
             } else {
                 let k = node_params[base];
                 let h = clamp(0.5 + 0.5 * (b - a) / k, 0.0, 1.0);
@@ -214,6 +230,11 @@ pub enum Field {
         major_radius: f64,
         minor_radius: f64,
     },
+    Capsule {
+        a: Point,
+        b: Point,
+        radius: f64,
+    },
     Union {
         a: Box<Field>,
         b: Box<Field>,
@@ -227,6 +248,11 @@ pub enum Field {
         b: Box<Field>,
     },
     SmoothUnion {
+        a: Box<Field>,
+        b: Box<Field>,
+        radius: f64,
+    },
+    SmoothDifference {
         a: Box<Field>,
         b: Box<Field>,
         radius: f64,
@@ -344,11 +370,30 @@ impl value_codec::Serialize for Field {
                 object.insert("kind".into(), value_codec::Value::String("torus".into()));
                 value_codec::Value::Object(object)
             }
+            Self::Capsule { a, b, radius } => {
+                let mut object = value_codec::Map::new();
+                object.insert("a".into(), value_codec::Serialize::to_value(a));
+                object.insert("b".into(), value_codec::Serialize::to_value(b));
+                object.insert("radius".into(), value_codec::Serialize::to_value(radius));
+                object.insert("kind".into(), value_codec::Value::String("capsule".into()));
+                value_codec::Value::Object(object)
+            }
             Self::Union { a, b } => {
                 let mut object = value_codec::Map::new();
                 object.insert("a".into(), value_codec::Serialize::to_value(a));
                 object.insert("b".into(), value_codec::Serialize::to_value(b));
                 object.insert("kind".into(), value_codec::Value::String("union".into()));
+                value_codec::Value::Object(object)
+            }
+            Self::SmoothDifference { a, b, radius } => {
+                let mut object = value_codec::Map::new();
+                object.insert("a".into(), value_codec::Serialize::to_value(a));
+                object.insert("b".into(), value_codec::Serialize::to_value(b));
+                object.insert("radius".into(), value_codec::Serialize::to_value(radius));
+                object.insert(
+                    "kind".into(),
+                    value_codec::Value::String("smooth_difference".into()),
+                );
                 value_codec::Value::Object(object)
             }
             Self::Intersection { a, b } => {
@@ -585,6 +630,50 @@ impl<'de> value_codec::Deserialize<'de> for Field {
                 )?;
                 Ok(Self::Difference { a, b })
             }
+            "capsule" => {
+                let mut object = value
+                    .as_object()
+                    .ok_or_else(|| value_codec::error("Expected object"))?
+                    .clone();
+                let a: Point = value_codec::Deserialize::from_value(
+                    object
+                        .remove("a")
+                        .ok_or_else(|| value_codec::error("Missing field a"))?,
+                )?;
+                let b: Point = value_codec::Deserialize::from_value(
+                    object
+                        .remove("b")
+                        .ok_or_else(|| value_codec::error("Missing field b"))?,
+                )?;
+                let radius: f64 = value_codec::Deserialize::from_value(
+                    object
+                        .remove("radius")
+                        .ok_or_else(|| value_codec::error("Missing field radius"))?,
+                )?;
+                Ok(Self::Capsule { a, b, radius })
+            }
+            "smooth_difference" => {
+                let mut object = value
+                    .as_object()
+                    .ok_or_else(|| value_codec::error("Expected object"))?
+                    .clone();
+                let a: Box<Field> = value_codec::Deserialize::from_value(
+                    object
+                        .remove("a")
+                        .ok_or_else(|| value_codec::error("Missing field a"))?,
+                )?;
+                let b: Box<Field> = value_codec::Deserialize::from_value(
+                    object
+                        .remove("b")
+                        .ok_or_else(|| value_codec::error("Missing field b"))?,
+                )?;
+                let radius: f64 = value_codec::Deserialize::from_value(
+                    object
+                        .remove("radius")
+                        .ok_or_else(|| value_codec::error("Missing field radius"))?,
+                )?;
+                Ok(Self::SmoothDifference { a, b, radius })
+            }
             "smooth_union" => {
                 let mut object = value
                     .as_object()
@@ -644,6 +733,10 @@ impl<'de> value_codec::Deserialize<'de> for Field {
             _ => Err(value_codec::error("Unknown enum variant")),
         }
     }
+}
+fn smooth_min(a: f64, b: f64, k: f64) -> f64 {
+    let h = (0.5 + 0.5 * (b - a) / k).clamp(0., 1.);
+    b * (1. - h) + a * h - k * h * (1. - h)
 }
 fn positive(x: f64) -> bool {
     x.is_finite() && x > 0. && x <= 1e6
@@ -807,7 +900,8 @@ impl Field {
                 | Field::Difference { a, b } => {
                     walk(a, depth + 1, budget) && walk(b, depth + 1, budget)
                 }
-                Field::SmoothUnion { a, b, radius } => {
+                Field::Capsule { a, b, radius } => finite(*a) && finite(*b) && positive(*radius),
+                Field::SmoothUnion { a, b, radius } | Field::SmoothDifference { a, b, radius } => {
                     positive(*radius) && walk(a, depth + 1, budget) && walk(b, depth + 1, budget)
                 }
                 Field::Offset { input, distance } => {
@@ -859,14 +953,24 @@ impl Field {
                 let q = sub(p, *center);
                 (q[0].hypot(q[1]) - major_radius).hypot(q[2]) - minor_radius
             }
+            Self::Capsule { a, b, radius } => {
+                let ab = sub(*b, *a);
+                let ap = sub(p, *a);
+                let denom = dot(ab, ab);
+                let t = if denom > 0. {
+                    (dot(ap, ab) / denom).clamp(0., 1.)
+                } else {
+                    0.
+                };
+                length(sub(ap, math_core::scale(ab, t))) - radius
+            }
             Self::Union { a, b } => a.sample(p).min(b.sample(p)),
             Self::Intersection { a, b } => a.sample(p).max(b.sample(p)),
             Self::Difference { a, b } => a.sample(p).max(-b.sample(p)),
-            Self::SmoothUnion { a, b, radius: k } => {
-                let a = a.sample(p);
-                let b = b.sample(p);
-                let h = (0.5 + 0.5 * (b - a) / k).clamp(0., 1.);
-                b * (1. - h) + a * h - k * h * (1. - h)
+            Self::SmoothUnion { a, b, radius: k } => smooth_min(a.sample(p), b.sample(p), *k),
+            // Smooth max(a, -b): the polynomial smooth-union mirrored through negation.
+            Self::SmoothDifference { a, b, radius: k } => {
+                -smooth_min(-a.sample(p), b.sample(p), *k)
             }
             Self::Offset { input, distance } => input.sample(p) - distance,
             Self::Translate { input, vector } => input.sample(sub(p, *vector)),
@@ -884,7 +988,8 @@ impl Field {
             Self::Union { a, b }
             | Self::Intersection { a, b }
             | Self::Difference { a, b }
-            | Self::SmoothUnion { a, b, .. } => a.sample_work() + b.sample_work(),
+            | Self::SmoothUnion { a, b, .. }
+            | Self::SmoothDifference { a, b, .. } => a.sample_work() + b.sample_work(),
             Self::Deform { input, .. }
             | Self::Offset { input, .. }
             | Self::Translate { input, .. } => input.sample_work(),
@@ -1202,6 +1307,24 @@ impl Field {
         out.validate()?;
         Ok(out)
     }
+    /// Applies one sculpt stroke: a primitive tool shape combined with the field
+    /// by hard or smooth-blended add/remove.
+    pub fn sculpt(&self, stroke: &SdfStroke) -> Result<Self> {
+        self.validate()?;
+        stroke.validate()?;
+        let tool = stroke.tool.field();
+        tool.validate()?;
+        let a = Box::new(self.clone());
+        let b = Box::new(tool);
+        let out = match (stroke.remove, stroke.blend) {
+            (false, None) => Self::Union { a, b },
+            (true, None) => Self::Difference { a, b },
+            (false, Some(radius)) => Self::SmoothUnion { a, b, radius },
+            (true, Some(radius)) => Self::SmoothDifference { a, b, radius },
+        };
+        out.validate()?;
+        Ok(out)
+    }
     pub fn sculpt_sphere(&self, center: Point, radius: f64, remove: bool) -> Result<Self> {
         self.validate()?;
         let sphere = Self::Sphere { center, radius };
@@ -1219,6 +1342,150 @@ impl Field {
         };
         out.validate()?;
         Ok(out)
+    }
+}
+
+/// Tool shape of an SDF sculpt stroke.
+#[derive(Clone, Debug, PartialEq)]
+pub enum SdfTool {
+    Sphere { center: Point, radius: f64 },
+    Box { center: Point, half_size: Point },
+    Capsule { a: Point, b: Point, radius: f64 },
+}
+impl SdfTool {
+    pub fn field(&self) -> Field {
+        match self {
+            Self::Sphere { center, radius } => Field::Sphere {
+                center: *center,
+                radius: *radius,
+            },
+            Self::Box { center, half_size } => Field::Box {
+                center: *center,
+                half_size: *half_size,
+            },
+            Self::Capsule { a, b, radius } => Field::Capsule {
+                a: *a,
+                b: *b,
+                radius: *radius,
+            },
+        }
+    }
+}
+impl value_codec::Serialize for SdfTool {
+    fn to_value(&self) -> value_codec::Value {
+        let mut object = value_codec::Map::new();
+        match self {
+            Self::Sphere { center, radius } => {
+                object.insert("shape".into(), value_codec::Value::String("sphere".into()));
+                object.insert("center".into(), value_codec::Serialize::to_value(center));
+                object.insert("radius".into(), value_codec::Serialize::to_value(radius));
+            }
+            Self::Box { center, half_size } => {
+                object.insert("shape".into(), value_codec::Value::String("box".into()));
+                object.insert("center".into(), value_codec::Serialize::to_value(center));
+                object.insert(
+                    "half_size".into(),
+                    value_codec::Serialize::to_value(half_size),
+                );
+            }
+            Self::Capsule { a, b, radius } => {
+                object.insert("shape".into(), value_codec::Value::String("capsule".into()));
+                object.insert("a".into(), value_codec::Serialize::to_value(a));
+                object.insert("b".into(), value_codec::Serialize::to_value(b));
+                object.insert("radius".into(), value_codec::Serialize::to_value(radius));
+            }
+        }
+        value_codec::Value::Object(object)
+    }
+}
+impl<'de> value_codec::Deserialize<'de> for SdfTool {
+    fn from_value(value: value_codec::Value) -> value_codec::Result<Self> {
+        let mut object = value
+            .as_object()
+            .ok_or_else(|| value_codec::error("Expected object"))?
+            .clone();
+        let shape = object
+            .remove("shape")
+            .and_then(|v| v.as_str().map(str::to_owned))
+            .ok_or_else(|| value_codec::error("Missing field shape"))?;
+        let mut take = |name: &str| {
+            object
+                .remove(name)
+                .ok_or_else(|| value_codec::error(format!("Missing field {name}")))
+        };
+        Ok(match shape.as_str() {
+            "sphere" => Self::Sphere {
+                center: value_codec::Deserialize::from_value(take("center")?)?,
+                radius: value_codec::Deserialize::from_value(take("radius")?)?,
+            },
+            "box" => Self::Box {
+                center: value_codec::Deserialize::from_value(take("center")?)?,
+                half_size: value_codec::Deserialize::from_value(take("half_size")?)?,
+            },
+            "capsule" => Self::Capsule {
+                a: value_codec::Deserialize::from_value(take("a")?)?,
+                b: value_codec::Deserialize::from_value(take("b")?)?,
+                radius: value_codec::Deserialize::from_value(take("radius")?)?,
+            },
+            _ => return Err(value_codec::error("Unknown sculpt tool shape")),
+        })
+    }
+}
+/// One SDF sculpt stroke. `blend` is the smooth-blend radius; `None` keeps hard CSG.
+#[derive(Clone, Debug, PartialEq)]
+pub struct SdfStroke {
+    pub tool: SdfTool,
+    pub remove: bool,
+    pub blend: Option<f64>,
+}
+impl SdfStroke {
+    pub fn validate(&self) -> Result<()> {
+        self.tool.field().validate()?;
+        match self.blend {
+            Some(k) if !positive(k) => Err(error("Invalid sculpt blend radius")),
+            _ => Ok(()),
+        }
+    }
+}
+impl value_codec::Serialize for SdfStroke {
+    fn to_value(&self) -> value_codec::Value {
+        let mut object = value_codec::Map::new();
+        object.insert("tool".into(), value_codec::Serialize::to_value(&self.tool));
+        object.insert(
+            "remove".into(),
+            value_codec::Serialize::to_value(&self.remove),
+        );
+        object.insert(
+            "blend".into(),
+            value_codec::Serialize::to_value(&self.blend),
+        );
+        value_codec::Value::Object(object)
+    }
+}
+impl<'de> value_codec::Deserialize<'de> for SdfStroke {
+    fn from_value(value: value_codec::Value) -> value_codec::Result<Self> {
+        let mut object = value
+            .as_object()
+            .ok_or_else(|| value_codec::error("Expected object"))?
+            .clone();
+        let tool: SdfTool = value_codec::Deserialize::from_value(
+            object
+                .remove("tool")
+                .ok_or_else(|| value_codec::error("Missing field tool"))?,
+        )?;
+        let remove: bool = match object.remove("remove") {
+            Some(value_codec::Value::Null) | None => false,
+            Some(v) => value_codec::Deserialize::from_value(v)?,
+        };
+        let blend: Option<f64> = match object.remove("blend") {
+            Some(value_codec::Value::Null) | None => None,
+            Some(v) => Some(value_codec::Deserialize::from_value(v)?),
+        };
+        Ok(Self {
+            tool,
+            remove,
+            blend,
+        })
     }
 }
 
@@ -1400,6 +1667,164 @@ mod tests {
         let mesh = polygonize(&strokes, &grid(16)).unwrap();
         assert!(triangles_closed(&mesh));
         assert!(triangles_ok(&mesh));
+    }
+    #[test]
+    fn capsule_and_smooth_difference_sample_correctly() {
+        let capsule = Field::Capsule {
+            a: [0.; 3],
+            b: [2., 0., 0.],
+            radius: 0.5,
+        };
+        assert_eq!(capsule.evaluate([1., 0., 0.]).unwrap(), -0.5);
+        assert_eq!(capsule.evaluate([3., 0., 0.]).unwrap(), 0.5);
+        assert_eq!(capsule.evaluate([1., 1., 0.]).unwrap(), 0.5);
+        let degenerate = Field::Capsule {
+            a: [0.; 3],
+            b: [0.; 3],
+            radius: 1.,
+        };
+        assert_eq!(
+            degenerate.evaluate([0., 2., 0.]).unwrap(),
+            1.,
+            "zero-length capsule is a sphere"
+        );
+        let hard = Field::Difference {
+            a: Box::new(sphere()),
+            b: Box::new(Field::Sphere {
+                center: [1., 0., 0.],
+                radius: 0.5,
+            }),
+        };
+        let smooth = Field::SmoothDifference {
+            a: Box::new(sphere()),
+            b: Box::new(Field::Sphere {
+                center: [1., 0., 0.],
+                radius: 0.5,
+            }),
+            radius: 0.3,
+        };
+        // Far from the seam the smooth result equals the hard result; near it, material is removed more.
+        assert!(
+            (smooth.evaluate([-0.9, 0., 0.]).unwrap() - hard.evaluate([-0.9, 0., 0.]).unwrap())
+                .abs()
+                < 1e-12
+        );
+        assert!(
+            (smooth.evaluate([1., 0., 0.]).unwrap() - hard.evaluate([1., 0., 0.]).unwrap()).abs()
+                < 1e-12
+        );
+        // On the seam circle both distances vanish; the blend lifts the value by k/4.
+        let seam = [0.875, (1. - 0.875f64 * 0.875).sqrt(), 0.];
+        assert!(hard.evaluate(seam).unwrap().abs() < 1e-9);
+        assert!((smooth.evaluate(seam).unwrap() - 0.3 / 4.).abs() < 1e-9);
+        assert!(triangles_closed(&polygonize(&smooth, &grid(16)).unwrap()));
+    }
+    #[test]
+    fn sculpt_strokes_compose_tools_and_blend_modes() {
+        let base = sphere();
+        let add = base
+            .sculpt(&SdfStroke {
+                tool: SdfTool::Box {
+                    center: [1.2, 0., 0.],
+                    half_size: [0.3; 3],
+                },
+                remove: false,
+                blend: None,
+            })
+            .unwrap();
+        assert!(matches!(add, Field::Union { .. }));
+        assert!(add.evaluate([1.2, 0., 0.]).unwrap() < 0.);
+        let smooth_add = base
+            .sculpt(&SdfStroke {
+                tool: SdfTool::Capsule {
+                    a: [0., 0., 0.8],
+                    b: [0., 0., 1.6],
+                    radius: 0.2,
+                },
+                remove: false,
+                blend: Some(0.2),
+            })
+            .unwrap();
+        assert!(matches!(smooth_add, Field::SmoothUnion { .. }));
+        assert!(smooth_add.evaluate([0., 0., 1.6]).unwrap() < 0.);
+        let hard_remove = base
+            .sculpt(&SdfStroke {
+                tool: SdfTool::Sphere {
+                    center: [0.; 3],
+                    radius: 0.5,
+                },
+                remove: true,
+                blend: None,
+            })
+            .unwrap();
+        assert_eq!(hard_remove.evaluate([0.; 3]).unwrap(), 0.5);
+        assert!(matches!(hard_remove, Field::Difference { .. }));
+        let smooth_remove = base
+            .sculpt(&SdfStroke {
+                tool: SdfTool::Sphere {
+                    center: [1., 0., 0.],
+                    radius: 0.5,
+                },
+                remove: true,
+                blend: Some(0.25),
+            })
+            .unwrap();
+        assert!(matches!(smooth_remove, Field::SmoothDifference { .. }));
+        assert!(smooth_remove.evaluate([0.6, 0., 0.]).unwrap() > 0.);
+        let mesh = polygonize(&smooth_remove, &grid(16)).unwrap();
+        assert!(triangles_closed(&mesh) && triangles_ok(&mesh));
+        let round: SdfStroke = value_codec::from_value(
+            value_codec::to_value(SdfStroke {
+                tool: SdfTool::Capsule {
+                    a: [0.; 3],
+                    b: [1., 0., 0.],
+                    radius: 0.2,
+                },
+                remove: true,
+                blend: Some(0.1),
+            })
+            .unwrap(),
+        )
+        .unwrap();
+        assert_eq!(round.blend, Some(0.1));
+        assert!(round.remove);
+        for bad in [
+            SdfStroke {
+                tool: SdfTool::Sphere {
+                    center: [0.; 3],
+                    radius: 0.,
+                },
+                remove: false,
+                blend: None,
+            },
+            SdfStroke {
+                tool: SdfTool::Box {
+                    center: [0.; 3],
+                    half_size: [1., -1., 1.],
+                },
+                remove: false,
+                blend: None,
+            },
+            SdfStroke {
+                tool: SdfTool::Capsule {
+                    a: [f64::NAN; 3],
+                    b: [0.; 3],
+                    radius: 1.,
+                },
+                remove: false,
+                blend: None,
+            },
+            SdfStroke {
+                tool: SdfTool::Sphere {
+                    center: [0.; 3],
+                    radius: 1.,
+                },
+                remove: false,
+                blend: Some(0.),
+            },
+        ] {
+            assert!(base.sculpt(&bad).is_err());
+        }
     }
     #[test]
     fn sculpt_sphere_rejects_invalid_strokes() {

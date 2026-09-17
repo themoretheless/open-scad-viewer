@@ -217,7 +217,8 @@ export const revolvePolygonProfile=(profile:number[][],angle=360,segments=32,cap
 export const loftPolygonSections=(sections:number[][][],caps=true):PolygonBuild=>callGeometryRust('polygon_loft',{sections,caps})
 export const sweepPolygonProfile=(profile:number[][],path:number[][],up=[1,0,0],caps=true):PolygonBuild=>callGeometryRust('polygon_sweep',{profile,path,up,caps})
 
-import type {GeometryDeformation,GeometryBrush} from '../geometryEditing'
+import {validateSculptBrush,type GeometryDeformation,type GeometryBrush,type SculptBrush} from '../geometryEditing'
+export const sculptPolygonMesh=(mesh:PolygonMesh,brush:SculptBrush):PolygonBuild=>{validateSculptBrush(brush);return callGeometryRust('polygon_sculpt',{mesh,brush})}
 export const deformPolygonMesh=(mesh:PolygonMesh,deformation:GeometryDeformation):PolygonBuild=>callGeometryRust('polygon_deform',{mesh,deformation})
 export const brushPolygonMesh=(mesh:PolygonMesh,brush:GeometryBrush):PolygonBuild=>callGeometryRust('polygon_brush',{mesh,brush})
 export const extrudePolygonFaces=(mesh:PolygonMesh,triangles:number[],vector:number[]):PolygonBuild=>callGeometryRust('polygon_extrude_faces',{mesh,triangles,vector})

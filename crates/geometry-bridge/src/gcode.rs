@@ -2,8 +2,7 @@
 use crate::{Error, Mesh, Result, field, input};
 use base64::Engine;
 use slicer_core::{
-    Flavor, GcodePreview, JobProfile, MeshBody, OptimizeSettings, ToolpathLayer,
-    ToolpathSettings,
+    Flavor, GcodePreview, JobProfile, MeshBody, OptimizeSettings, ToolpathLayer, ToolpathSettings,
 };
 use value_codec::{Value, json};
 
@@ -256,7 +255,8 @@ pub(crate) fn export_job(v: &Value) -> Result<Value> {
     let gcode = slicer_core::emit_job_gcode(&layers, &job, &optimize)?;
     let preview = slicer_core::parse_gcode_job(&gcode)?;
     require_positive_extrusion(&preview)?;
-    let packaged = slicer_core::emit_job_gcode_3mf(&layers, &job, &optimize, Some(&mesh_body(&mesh)))?;
+    let packaged =
+        slicer_core::emit_job_gcode_3mf(&layers, &job, &optimize, Some(&mesh_body(&mesh)))?;
     Ok(json!({
         "gcode": gcode,
         "gcode3mfBase64": base64::engine::general_purpose::STANDARD.encode(packaged),

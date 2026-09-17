@@ -319,6 +319,62 @@ mod tests {
         assert!(out.subdivide(2).unwrap().triangulate().is_ok());
     }
     #[test]
+    fn sculpt_uses_cage_normals_and_keeps_faces() {
+        use geometry_ops::{Falloff, SculptBrush, SculptKind};
+        let cage = Cage::extrude(
+            &[[0., 0., 0.], [2., 0., 0.], [2., 2., 0.], [0., 2., 0.]],
+            [0., 0., 2.],
+        )
+        .unwrap();
+        let (normals, rings) = cage.sculpt_target().unwrap();
+        assert_eq!(normals.len(), 8);
+        assert!(rings.iter().all(|r| r.len() == 3));
+        for (p, n) in cage.vertices.iter().zip(&normals) {
+            assert!(math_core::dot(*n, math_core::sub(*p, [1., 1., 1.])) > 0.);
+        }
+        let inflate = cage
+            .sculpt(&SculptBrush {
+                falloff: Falloff::Constant,
+                ..SculptBrush::new(SculptKind::Inflate { strength: 1. }, [1., 1., 1.], 100.)
+            })
+            .unwrap();
+        assert_eq!(inflate.faces, cage.faces);
+        for (p, q) in cage.vertices.iter().zip(&inflate.vertices) {
+            assert!((math_core::norm(math_core::sub(*q, *p)) - 1.).abs() < 1e-12);
+        }
+        let smooth = cage
+            .sculpt(&SculptBrush::new(
+                SculptKind::Smooth { strength: 1. },
+                [2., 2., 2.],
+                0.5,
+            ))
+            .unwrap();
+        let mean = [
+            (2. + 2. + 0.) / 3.,
+            (0. + 2. + 2.) / 3.,
+            (2. + 0. + 2.) / 3.,
+        ];
+        let moved = smooth
+            .vertices
+            .iter()
+            .zip(&cage.vertices)
+            .find(|(a, b)| a != b)
+            .unwrap()
+            .0;
+        for k in 0..3 {
+            assert!((moved[k] - mean[k]).abs() < 1e-12);
+        }
+        assert!(smooth.subdivide(2).unwrap().triangulate().is_ok());
+        assert!(
+            cage.sculpt(&SculptBrush::new(
+                SculptKind::Pinch { strength: 2. },
+                [0.; 3],
+                1.
+            ))
+            .is_err()
+        );
+    }
+    #[test]
     fn brush_rejects_invalid_brush_and_invalid_cage() {
         let b = geometry_ops::Brush {
             center: [0.; 3],
@@ -455,6 +511,56 @@ impl Cage {
             .iter()
             .map(|&p| brush.apply(p))
             .collect::<Result<_>>()?;
+        cage.validate()?;
+        Ok(cage)
+    }
+    /// Newell face normals accumulated per control vertex, plus edge adjacency.
+    pub fn sculpt_target(&self) -> Result<(Vec<Point>, Vec<Vec<usize>>)> {
+        self.validate()?;
+        let mut normals = vec![[0.; 3]; self.vertices.len()];
+        let mut rings = vec![BTreeSet::new(); self.vertices.len()];
+        for f in &self.faces {
+            let mut n = [0.; 3];
+            for i in 0..f.len() {
+                let a = self.vertices[f[i]];
+                let b = self.vertices[f[(i + 1) % f.len()]];
+                n[0] += (a[1] - b[1]) * (a[2] + b[2]);
+                n[1] += (a[2] - b[2]) * (a[0] + b[0]);
+                n[2] += (a[0] - b[0]) * (a[1] + b[1]);
+                rings[f[i]].insert(f[(i + 1) % f.len()]);
+                rings[f[(i + 1) % f.len()]].insert(f[i]);
+            }
+            for &v in f {
+                normals[v] = math_core::add(normals[v], n);
+            }
+        }
+        Ok((
+            normals
+                .into_iter()
+                .map(|n| {
+                    if math_core::norm(n) > 1e-18 {
+                        math_core::unit(n)
+                    } else {
+                        n
+                    }
+                })
+                .collect(),
+            rings.into_iter().map(|r| r.into_iter().collect()).collect(),
+        ))
+    }
+    /// Sculpts control vertices; faces are unchanged and the cage stays valid.
+    pub fn sculpt(&self, brush: &geometry_ops::SculptBrush) -> Result<Self> {
+        brush.validate()?;
+        let (normals, adjacency) = self.sculpt_target()?;
+        let mut cage = self.clone();
+        cage.vertices = geometry_ops::sculpt(
+            &geometry_ops::SculptTarget {
+                positions: &self.vertices,
+                normals: &normals,
+                adjacency: &adjacency,
+            },
+            brush,
+        )?;
         cage.validate()?;
         Ok(cage)
     }

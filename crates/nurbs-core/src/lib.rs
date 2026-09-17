@@ -61,6 +61,18 @@ pub fn dispatch(v: Value) -> Result<Value> {
             &field(&v, "brush")?,
         )?);
     }
+    if op == "nurbs_sculpt_curve" {
+        return encode(edit::sculpt_curve(
+            &field(&v, "curve")?,
+            &field(&v, "brush")?,
+        )?);
+    }
+    if op == "nurbs_sculpt_surface" {
+        return encode(edit::sculpt_surface(
+            &field(&v, "surface")?,
+            &field(&v, "brush")?,
+        )?);
+    }
     if op == "nurbs_brush_surface" {
         return encode(edit::brush_surface(
             &field(&v, "surface")?,

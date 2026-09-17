@@ -347,8 +347,8 @@ impl<'a> Replay<'a> {
         let rule = production_rule(operation)?;
         let category = operation_category(operation)?;
         let name = operation_name(operation)?;
-        let is_compiler_frontier_frame = category == "control"
-            && ["$body", "$then", "$else", "$expansion"].contains(&name);
+        let is_compiler_frontier_frame =
+            category == "control" && ["$body", "$then", "$else", "$expansion"].contains(&name);
         let mut frontier: Vec<ProductionItem> = Vec::new();
         let mut has_body = false;
         let mut schedule: Vec<ScheduleEvent> = Vec::new();
@@ -413,9 +413,7 @@ impl<'a> Replay<'a> {
             }
             ProductionRule::Primitive => {
                 if !frontier.is_empty() {
-                    return Err(invalid(
-                        "Primitive production frontier must be empty",
-                    ));
+                    return Err(invalid("Primitive production frontier must be empty"));
                 }
                 self.require_output_count(&output_rows, 1)?;
                 let expected: &[&str] = match name {
@@ -429,7 +427,13 @@ impl<'a> Replay<'a> {
                     _ => return Err(invalid("Unknown semantic primitive operation")),
                 };
                 let produced = self.require_node_kind(output_rows[0], expected)?;
-                own(self, &mut schedule, &mut output_items, output_rows[0], produced)?;
+                own(
+                    self,
+                    &mut schedule,
+                    &mut output_items,
+                    output_rows[0],
+                    produced,
+                )?;
             }
             ProductionRule::TransformMap
             | ProductionRule::ProjectionMap
@@ -547,12 +551,17 @@ impl<'a> Replay<'a> {
                             "N-ary reduction inputs must exactly equal the ordered occurrence frontier",
                         ));
                     }
-                    own(self, &mut schedule, &mut output_items, output_rows[0], produced)?;
+                    own(
+                        self,
+                        &mut schedule,
+                        &mut output_items,
+                        output_rows[0],
+                        produced,
+                    )?;
                 }
             }
             ProductionRule::Difference => {
-                let direct_children =
-                    self.children.get(&canonical).cloned().unwrap_or_default();
+                let direct_children = self.children.get(&canonical).cloned().unwrap_or_default();
                 let bodies: Vec<usize> = direct_children
                     .iter()
                     .copied()
@@ -622,16 +631,14 @@ impl<'a> Replay<'a> {
                                     "Runtime occurrence groups must follow parent-before-child order",
                                 )
                             })?;
-                        let visible: Vec<ProductionItem> = if !child_production
-                            .output_items
-                            .is_empty()
-                        {
-                            child_production.output_items.clone()
-                        } else if child_production.transparent {
-                            child_production.frontier.clone()
-                        } else {
-                            Vec::new()
-                        };
+                        let visible: Vec<ProductionItem> =
+                            if !child_production.output_items.is_empty() {
+                                child_production.output_items.clone()
+                            } else if child_production.transparent {
+                                child_production.frontier.clone()
+                            } else {
+                                Vec::new()
+                            };
                         self.append_frontier(&mut bucket, &visible, Some(*child))?;
                     }
                     buckets.push(bucket);
@@ -677,9 +684,9 @@ impl<'a> Replay<'a> {
                     }
                 } else if cutters.is_empty() {
                     self.require_output_count(&output_rows, 1)?;
-                    let output_node = self.rows[output_rows[0]]
-                        .node
-                        .ok_or_else(|| invalid("Semantic difference output row must carry a node"))?;
+                    let output_node = self.rows[output_rows[0]].node.ok_or_else(|| {
+                        invalid("Semantic difference output row must carry a node")
+                    })?;
                     if base.len() == 1 {
                         if output_node != base[0].node {
                             return Err(invalid(
@@ -701,8 +708,7 @@ impl<'a> Replay<'a> {
                                     "Multi-item difference base requires one canonical union reducer",
                                 )
                             })?;
-                        if reducer_inputs != base.iter().map(|item| item.node).collect::<Vec<_>>()
-                        {
+                        if reducer_inputs != base.iter().map(|item| item.node).collect::<Vec<_>>() {
                             return Err(invalid(
                                 "Multi-item difference base requires one canonical union reducer",
                             ));
@@ -739,9 +745,8 @@ impl<'a> Replay<'a> {
                             }
                             return Ok(());
                         }
-                        let reducer_inputs = self
-                            .boolean_union_inputs(reference)?
-                            .ok_or_else(|| {
+                        let reducer_inputs =
+                            self.boolean_union_inputs(reference)?.ok_or_else(|| {
                                 invalid("Difference requires one canonical ordered union reducer")
                             })?;
                         if reducer_inputs != items.iter().map(|item| item.node).collect::<Vec<_>>()
@@ -1035,12 +1040,9 @@ pub fn validate_occurrence_production(
                 }
             }
             ScheduleEvent::Group(group) => {
-                let production = replay
-                    .production_by_canonical
-                    .get(&group)
-                    .ok_or_else(|| {
-                        invalid("Occurrence-production schedule references an absent group")
-                    })?;
+                let production = replay.production_by_canonical.get(&group).ok_or_else(|| {
+                    invalid("Occurrence-production schedule references an absent group")
+                })?;
                 for child in production.schedule.iter().rev() {
                     schedule_stack.push(*child);
                 }
