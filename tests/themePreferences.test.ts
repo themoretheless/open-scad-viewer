@@ -20,7 +20,7 @@ describe('theme preferences', () => {
     expect(resolveTheme('system', false).id).toBe('light')
     expect(resolveTheme('nord', false).id).toBe('nord')
     expect(themeCanvasColor(resolveTheme('dark', false))).toEqual([
-      0x11 / 255, 0x13 / 255, 0x18 / 255,
+      0x14 / 255, 0x12 / 255, 0x10 / 255,
     ])
   })
 

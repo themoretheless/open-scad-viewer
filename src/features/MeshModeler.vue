@@ -38,7 +38,7 @@ import { exportMeshFormatCompressed } from '../services/meshExportFormats'
 import { downloadBytes } from '../services/downloadArtifact'
 import type { PolygonMesh } from '../services/geometry/polygon'
 
-const props = defineProps<{ open: boolean; locale: string }>()
+const props = defineProps<{ open: boolean; locale: string; seedDocument?: MeshWorkspaceDocument | null }>()
 const emit = defineEmits<{ close: []; exportToSolid: [doc: MeshWorkspaceDocument] }>()
 const ru = computed(() => props.locale === 'ru')
 const label = (a: string, b: string) => (ru.value ? a : b)
@@ -80,7 +80,9 @@ const view = ref(140)
 const center = ref<[number, number]>([0, 0])
 const workspace = ref<HTMLElement>()
 const fileInput = ref<HTMLInputElement>()
-let orbit: { x: number; y: number; yaw: number; pitch: number } | null = null
+// LMB / RMB drag orbits, Shift or middle drag pans; a drag past the threshold swallows the following click so picking stays intact.
+let orbit: { x: number; y: number; yaw: number; pitch: number; pan: boolean; center: [number, number]; moved: boolean } | null = null
+let dragSwallowsClick = false
 
 watch(() => props.open, async open => {
   if (open) {
@@ -99,6 +101,33 @@ watch(() => props.open, async open => {
 watch(document, d => {
   try { storageSet(storageKey, JSON.stringify(d)) } catch { /* ignore quota */ }
 }, { deep: true })
+
+// A seed (the Code scene or a Solid document) replaces the workspace once; later opens keep the user's edits.
+const appliedSeeds = new WeakSet<MeshWorkspaceDocument>()
+watch([() => props.open, () => props.seedDocument], ([open, seed]) => {
+  if (!open || !seed || appliedSeeds.has(seed)) return
+  try {
+    commit(parseMeshDocument(JSON.stringify(seed)))
+    selection.value = history.document.objects[0]?.id ?? ''
+    selectedVerts.value = []; selectedFaces.value = []; selectedEdges.value = []
+    appliedSeeds.add(seed)
+  } catch (e) { error.value = e instanceof Error ? e.message : String(e) }
+}, { immediate: true })
+const floorVisible = ref(true)
+const floorLines = computed(() => {
+  const cam = camera.value
+  // The SVG shows roughly 10000 / view world units across; keep about 20 grid cells in view.
+  const step = Math.pow(10, Math.floor(Math.log10(Math.max(1, 10000 / view.value / 4))))
+  const extent = step * 20
+  const lines: string[] = []
+  for (let i = -20; i <= 20; i++) {
+    const n = i * step
+    for (const line of [[[-extent, n, 0], [extent, n, 0]], [[n, -extent, 0], [n, extent, 0]]] as const) {
+      lines.push(line.map(p => { const q = projectDirectPoint([p[0], p[1], p[2]], cam); return `${q[0]},${-q[1]}` }).join(' '))
+    }
+  }
+  return lines
+})
 
 const selected = computed(() => document.value.objects.find(o => o.id === selection.value))
 const stats = computed(() => {
@@ -454,20 +483,40 @@ function projected(objectId: string) {
 }
 
 function onPointerDown(event: PointerEvent) {
-  if (event.button === 1 || event.button === 2 || event.shiftKey) {
-    orbit = { x: event.clientX, y: event.clientY, yaw: camera.value.yaw, pitch: camera.value.pitch }
-    ;(event.currentTarget as Element).setPointerCapture(event.pointerId)
+  if (event.button > 2) return
+  dragSwallowsClick = false
+  orbit = {
+    x: event.clientX, y: event.clientY, yaw: camera.value.yaw, pitch: camera.value.pitch,
+    pan: event.button === 1 || event.shiftKey, center: [center.value[0], center.value[1]], moved: false,
   }
+  ;(event.currentTarget as Element).setPointerCapture(event.pointerId)
 }
 function onPointerMove(event: PointerEvent) {
   if (!orbit) return
+  const dx = event.clientX - orbit.x, dy = event.clientY - orbit.y
+  if (!orbit.moved && Math.hypot(dx, dy) < 4) return
+  orbit.moved = true
+  dragSwallowsClick = true
+  if (orbit.pan) {
+    const svg = event.currentTarget as SVGSVGElement
+    const unit = 200 / Math.max(1, Math.min(svg.clientWidth, svg.clientHeight))
+    center.value = [orbit.center[0] + dx * unit, orbit.center[1] + dy * unit]
+    return
+  }
   camera.value = {
     ...camera.value,
-    yaw: orbit.yaw + (event.clientX - orbit.x) * 0.01,
-    pitch: Math.max(-1.4, Math.min(1.4, orbit.pitch + (event.clientY - orbit.y) * 0.01)),
+    yaw: orbit.yaw + dx * 0.01,
+    pitch: Math.max(-1.4, Math.min(1.4, orbit.pitch + dy * 0.01)),
   }
 }
 function onPointerUp() { orbit = null }
+function onClickCapture(event: MouseEvent) {
+  if (!dragSwallowsClick) return
+  dragSwallowsClick = false
+  event.stopPropagation()
+  event.preventDefault()
+}
+function resetView() { camera.value = defaultDirectCamera(); view.value = 140; center.value = [0, 0] }
 function onWheel(event: WheelEvent) {
   event.preventDefault()
   view.value = Math.max(20, Math.min(800, view.value * (event.deltaY > 0 ? 0.9 : 1.1)))
@@ -480,7 +529,9 @@ const scene = computed(() => document.value.objects.filter(o => o.visible).map(o
   <div v-if="open" ref="workspace" class="mesh-workspace" tabindex="0" @keydown.escape="emit('close')">
     <header class="mesh-bar">
       <strong>{{ label('Mesh', 'Mesh') }}</strong>
-      <span class="hint">{{ label('Редактирование полигонов (Blender-like)', 'Polygon editing (Blender-like)') }}</span>
+      <span class="hint">{{ label('ЛКМ: вращение · Shift или СКМ: панорама · колесо: масштаб · клик: выбрать', 'LMB: orbit · Shift or MMB: pan · wheel: zoom · click: select') }}</span>
+      <button type="button" @click="resetView">{{ label('Сбросить вид', 'Reset view') }}</button>
+      <button type="button" :aria-pressed="floorVisible" :aria-label="label('Сетка', 'Grid')" @click="floorVisible = !floorVisible">#</button>
       <button type="button" :disabled="!undoable" @click="undo">Undo</button>
       <button type="button" :disabled="!redoable" @click="redo">Redo</button>
       <button type="button" @click="emit('exportToSolid', document)">{{ label('В Solid', 'To Solid') }}</button>
@@ -604,15 +655,21 @@ const scene = computed(() => document.value.objects.filter(o => o.visible).map(o
         <p v-if="error" class="error">{{ error }}</p>
       </aside>
 
+      <div class="mesh-view-wrap">
+      <div v-if="!scene.length" class="mesh-empty"><strong>{{ label('Объектов пока нет', 'No objects yet') }}</strong><span>{{ label('Добавьте куб или сферу, импортируйте сетку или соберите модель в Code: сцена переносится сюда автоматически.', 'Add a cube or sphere, import a mesh, or build a model in Code: the scene carries over here automatically.') }}</span></div>
       <svg
         class="mesh-view"
         viewBox="-100 -100 200 200"
         @pointerdown="onPointerDown"
         @pointermove="onPointerMove"
         @pointerup="onPointerUp"
+        @pointercancel="onPointerUp"
+        @click.capture="onClickCapture"
+        @contextmenu.prevent
         @wheel.prevent="onWheel"
       >
         <g :transform="`translate(${center[0]},${center[1]}) scale(${view / 100})`">
+          <g v-if="floorVisible" pointer-events="none"><polyline v-for="(line, i) in floorLines" :key="i" :points="line" fill="none" stroke="var(--border)" stroke-opacity=".45" stroke-width=".5" vector-effect="non-scaling-stroke" /></g>
           <g v-for="object in scene" :key="object.id" :opacity="object.id === selection ? 1 : 0.55">
             <polygon
               v-for="tri in object.tris"
@@ -643,6 +700,7 @@ const scene = computed(() => document.value.objects.filter(o => o.visible).map(o
           </g>
         </g>
       </svg>
+      </div>
     </div>
   </div>
 </template>
@@ -650,52 +708,65 @@ const scene = computed(() => document.value.objects.filter(o => o.visible).map(o
 <style scoped>
 .mesh-workspace {
   position: fixed;
-  inset: 0;
-  z-index: 40;
+  inset: 46px 0 28px;
+  z-index: 20;
   display: flex;
   flex-direction: column;
-  background: #12151a;
-  color: #e8eaed;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 13px;
 }
+@media (max-width: 750px) { .mesh-workspace { inset: 0; } }
 .mesh-bar {
   display: flex;
   gap: 0.5rem;
   align-items: center;
   padding: 0.5rem 0.75rem;
-  border-bottom: 1px solid #2a313c;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
 }
-.mesh-bar .hint { opacity: 0.7; font-size: 0.85rem; margin-right: auto; }
+.mesh-bar .hint { color: var(--text-dim); font-size: 0.85rem; margin-right: auto; }
 .mesh-bar button, .mesh-side button, .mesh-side select, .mesh-side input {
-  background: #1c2330;
+  background: var(--surface-raised);
   color: inherit;
-  border: 1px solid #334;
-  border-radius: 4px;
-  padding: 0.25rem 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.3rem 0.55rem;
+  font: inherit;
+  cursor: pointer;
 }
+.mesh-bar button:hover:not(:disabled), .mesh-side button:hover:not(:disabled) { background: var(--hover); }
+.mesh-bar button:disabled, .mesh-side button:disabled { opacity: .45; cursor: default; }
+.mesh-bar button:focus-visible, .mesh-side button:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 .mesh-bar .close { margin-left: 0.25rem; }
-.mesh-body { flex: 1; display: grid; grid-template-columns: 280px 1fr; min-height: 0; }
+.mesh-body { flex: 1; display: grid; grid-template-columns: 280px minmax(0, 1fr); min-height: 0; }
 .mesh-side {
   overflow: auto;
   padding: 0.75rem;
-  border-right: 1px solid #2a313c;
+  border-right: 1px solid var(--border);
+  background: var(--surface);
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
 }
-.mesh-side h3 { margin: 0 0 0.35rem; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.04em; opacity: 0.75; }
+.mesh-side h3 { margin: 0 0 0.35rem; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-dim); }
 .mesh-side label { display: flex; justify-content: space-between; gap: 0.5rem; font-size: 0.85rem; margin: 0.2rem 0; }
 .mesh-side ul { list-style: none; padding: 0; margin: 0.35rem 0 0; }
 .mesh-side li button { width: 100%; text-align: left; margin-top: 0.2rem; }
-.mesh-side button.active, .row button.active { outline: 1px solid #6af; }
+.mesh-side button.active, .row button.active { border-color: var(--accent); color: var(--accent); }
 .row { display: flex; flex-wrap: wrap; gap: 0.25rem; }
-.mesh-view { width: 100%; height: 100%; background: radial-gradient(circle at 30% 20%, #1b2433, #0d1016 70%); }
+.mesh-view { width: 100%; height: 100%; background: var(--canvas-bg); }
+.mesh-view-wrap { position: relative; min-width: 0; min-height: 0; }
+.mesh-empty { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; text-align: center; pointer-events: none; color: var(--text-dim); padding: 24px; }
+.mesh-empty strong { font-size: 18px; font-weight: 500; }
+.mesh-empty span { font-size: 12px; max-width: 300px; }
 .mesh-view .face { fill: #3d5a80; stroke: #0b1220; stroke-width: 0.15; cursor: pointer; }
-.mesh-view .face.selected { fill: #f4a261; }
+.mesh-view .face.selected { fill: var(--accent); }
 .mesh-view .edge { stroke: #8ecaff; stroke-width: 0.8; vector-effect: non-scaling-stroke; cursor: crosshair; }
 .mesh-view .edge.selected { stroke: #ffca6a; stroke-width: 2.5; }
 .mesh-view .vert { fill: #eee; cursor: pointer; }
 .mesh-view .vert.selected { fill: #e76f51; }
-.tool-hint { margin: 0.2rem 0 0.45rem; font-size: 0.78rem; opacity: 0.72; }
-.stats { font-size: 0.8rem; opacity: 0.75; }
-.error { color: #f88; font-size: 0.85rem; }
+.tool-hint { margin: 0.2rem 0 0.45rem; font-size: 0.78rem; color: var(--text-dim); }
+.stats { font-size: 0.8rem; color: var(--text-dim); }
+.error { color: var(--danger); font-size: 0.85rem; }
 </style>

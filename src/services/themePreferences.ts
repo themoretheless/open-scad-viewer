@@ -8,21 +8,22 @@ export interface ThemeDefinition {
   readonly tokens: Readonly<Record<string, string>>
 }
 
+// Warm neutral ground with a clay accent; every value is checked by assertThemeCatalog.
 const darkTokens = {
-  '--bg': '#111216', '--surface': '#1a1c22', '--surface-raised': '#22252d',
-  '--border': '#687284', '--text': '#eef0f5', '--text-dim': '#aeb4c0',
-  '--accent': '#559dff', '--accent-strong': '#1666bd', '--hover': '#2a2e38',
-  '--danger': '#ff6b63', '--warning': '#f5bd55', '--canvas-bg': '#111318', '--focus': '#8ec1ff',
+  '--bg': '#1c1a17', '--surface': '#221f1b', '--surface-raised': '#2a2622',
+  '--border': '#7a7266', '--text': '#f1ece3', '--text-dim': '#a8a094',
+  '--accent': '#d97757', '--accent-strong': '#b5533a', '--hover': '#33302a',
+  '--danger': '#ff8f80', '--warning': '#f0b458', '--canvas-bg': '#141210', '--focus': '#f0a488',
 } as const
 
 export const THEME_CATALOG: readonly ThemeDefinition[] = Object.freeze([
   { id: 'dark', name: { ru: 'Тёмная', en: 'Dark' }, scheme: 'dark', tokens: darkTokens },
   {
     id: 'light', name: { ru: 'Светлая', en: 'Light' }, scheme: 'light', tokens: {
-      '--bg': '#f2f4f8', '--surface': '#ffffff', '--surface-raised': '#f7f8fa',
-      '--border': '#747f90', '--text': '#171a21', '--text-dim': '#4f5969',
-      '--accent': '#176fd1', '--accent-strong': '#0c5eb9', '--hover': '#e8edf5',
-      '--danger': '#a92724', '--warning': '#765000', '--canvas-bg': '#171a20', '--focus': '#075dae',
+      '--bg': '#f4f1ea', '--surface': '#fbfaf7', '--surface-raised': '#efebe2',
+      '--border': '#8a8275', '--text': '#1f1c18', '--text-dim': '#5e574d',
+      '--accent': '#b8543a', '--accent-strong': '#a2472f', '--hover': '#ebe6db',
+      '--danger': '#b3261e', '--warning': '#8a5b00', '--canvas-bg': '#e9e4da', '--focus': '#a2472f',
     } },
   {
     id: 'nord', name: { ru: 'Nord', en: 'Nord' }, scheme: 'dark', tokens: {

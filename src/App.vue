@@ -3,7 +3,7 @@ import { isModelGraphText } from './services/modelGraphTextDetect'
 import { editorBlocks, indentSelection, guideFitsIndent } from './services/editorBlocks'
 import { formatCode } from './services/codeFormat'
 import { highlightCode } from './services/codeHighlight'
-import { computed, defineAsyncComponent, nextTick, onMounted, onUnmounted, ref, shallowRef, watch, watchEffect } from 'vue'
+import { computed, defineAsyncComponent, nextTick, onMounted, onUnmounted, ref, shallowRef, watch, watchEffect, type ComponentPublicInstance } from 'vue'
 import { detectMeshImportFormat, MESH_EXPORT_FORMATS, MESH_FORMAT_LABELS, MESH_IMPORT_ACCEPT, type MeshExportFormat } from './services/meshFormats'
 import CommandPalette from './components/CommandPalette.vue'
 import CustomizerPanel from './components/CustomizerPanel.vue'
@@ -13,8 +13,8 @@ import {restoreSourceHistory,boundedSourceHistory} from './services/mainSourceEd
 import type { DirectDocument } from './services/directModeling'
 import type { WorkspaceMode } from './services/workspaceModes'
 import { workspaceModeHint } from './services/workspaceModes'
-import { sceneMeshesToSolidDocument, meshDocumentToSolidDocument } from './services/solidBridge'
-import type { MeshWorkspaceDocument } from './services/meshEditing'
+import { sceneMeshesToSolidDocument, meshDocumentToSolidDocument, meshDataToPolygon, polygonToMeshObject } from './services/solidBridge'
+import { emptyMeshDocument, type MeshWorkspaceDocument } from './services/meshEditing'
 const DirectModeler = defineAsyncComponent(() => import('./features/DirectModeler.vue'))
 const MeshModeler = defineAsyncComponent(() => import('./features/MeshModeler.vue'))
 const MainModelingTools = defineAsyncComponent(() => import('./features/MainModelingTools.vue'))
@@ -175,6 +175,10 @@ const L: Record<Language, Record<string, string>> = {
     needsFullBuild: 'Нужна актуальная точная сборка', noPreviousView: 'История видов пока пуста',
     buildInProgress: 'Дождитесь завершения текущей сборки',
     depthCandidate: 'цель в глубине',
+    export: 'Экспорт', exportTitle: 'Экспорт модели', download: 'Скачать', cancel: 'Отмена', more: 'Ещё', close: 'Закрыть',
+    svg: 'SVG ↔ 3D', photo: '3D по фотографиям', perf: 'Замеры сборки', modelTools: 'Инструменты моделирования',
+    generators: 'Генераторы', codeToSolid: 'Перенести сцену в Solid', codeToMesh: 'Перенести сцену в Mesh', fileMenu: 'Файл', forPrinting: 'печать', forCad: 'CAD, Blender',
+    savedDraftStatus: 'Черновик сохранён в браузере', exportScope: 'Экспортируется вся сцена одним телом', renderShortcut: 'Рендер',
   },
   en: {
     title: 'OpenSCAD Viewer',
@@ -223,6 +227,10 @@ const L: Record<Language, Record<string, string>> = {
     needsFullBuild: 'An up-to-date full build is required', noPreviousView: 'View history is empty',
     buildInProgress: 'Wait for the current build to finish',
     depthCandidate: 'depth target',
+    export: 'Export', exportTitle: 'Export model', download: 'Download', cancel: 'Cancel', more: 'More', close: 'Close',
+    svg: 'SVG ↔ 3D', photo: '3D from photos', perf: 'Build measurements', modelTools: 'Modeling tools',
+    generators: 'Generators', codeToSolid: 'Bring scene into Solid', codeToMesh: 'Bring scene into Mesh', fileMenu: 'File', forPrinting: 'printing', forCad: 'CAD, Blender',
+    savedDraftStatus: 'Draft saved in browser', exportScope: 'The whole scene is exported as one body', renderShortcut: 'Render',
   },
 }
 
@@ -358,6 +366,16 @@ const mechanicalGeneratorOpen = ref(false)
 const directModelerOpen = ref(false)
 const meshModelerOpen = ref(false)
 const solidSeedDocument = ref<DirectDocument | null>(null)
+const meshSeedDocument = ref<MeshWorkspaceDocument | null>(null)
+function sceneMeshesToMeshDocument(): MeshWorkspaceDocument {
+  const doc = emptyMeshDocument()
+  const prefix = lang.value === 'ru' ? 'Объект' : 'Object'
+  sceneMeshes.value.forEach((mesh, index) => {
+    const polygon = meshDataToPolygon(mesh)
+    if (polygon) doc.objects.push(polygonToMeshObject(polygon, `${prefix} ${index + 1}`, `scene-${index + 1}-${Date.now().toString(36)}`))
+  })
+  return doc
+}
 
 const workspaceMode = computed<WorkspaceMode>(() => {
   if (meshModelerOpen.value) return 'mesh'
@@ -372,13 +390,29 @@ function openWorkspaceMode(mode: WorkspaceMode) {
     solidSeedDocument.value = null
     return
   }
+  // Switching away from Code carries the built scene along, like the explicit "bring scene" actions.
+  const fromCode = workspaceMode.value === 'code' && sceneMeshes.value.length > 0 && !rendering.value
   if (mode === 'solid') {
+    if (fromCode) { bringCodeToSolid(); return }
     meshModelerOpen.value = false
     directModelerOpen.value = true
     return
   }
+  if (fromCode) { bringCodeToMesh(); return }
   directModelerOpen.value = false
   meshModelerOpen.value = true
+}
+
+function bringCodeToMesh() {
+  if (!sceneMeshes.value.length) return
+  try {
+    meshSeedDocument.value = sceneMeshesToMeshDocument()
+    solidSeedDocument.value = null
+    directModelerOpen.value = false
+    meshModelerOpen.value = true
+  } catch (caught) {
+    error.value = caught instanceof Error ? caught.message : String(caught)
+  }
 }
 
 function bringCodeToSolid() {
@@ -395,6 +429,7 @@ function bringCodeToSolid() {
 
 function openMeshFromSolid() {
   solidSeedDocument.value = null
+  meshSeedDocument.value = null
   directModelerOpen.value = false
   meshModelerOpen.value = true
 }
@@ -502,7 +537,13 @@ const sectionOffset = computed(() => sceneState.value.section.offset)
 const sectionFlip = computed(() => sceneState.value.section.flip)
 const scanPanelOpen = ref(false)
 const scanToggleRef = ref<HTMLButtonElement | null>(null)
-const dockTab = ref<'scene' | 'inspect' | 'parameters'>('scene')
+type DockTab = 'scene' | 'inspect' | 'parameters' | 'svg' | 'photo' | 'perf'
+const dockTab = ref<DockTab>('scene')
+const modelToolsVisible = ref(storageGet('scad-model-tools') !== 'false')
+function toggleModelTools() {
+  modelToolsVisible.value = !modelToolsVisible.value
+  storageSet('scad-model-tools', String(modelToolsVisible.value))
+}
 const dockOpen = ref(true)
 const findOpen = ref(false)
 const replaceOpen = ref(false)
@@ -524,12 +565,56 @@ watch([findQuery, findCaseSensitive, code], () => {
 const dockToggleRef = ref<HTMLButtonElement | null>(null)
 const editorMaxWidth = ref(820)
 
-const dockTabs = ['scene', 'inspect', 'parameters'] as const
+const dockTabs: readonly DockTab[] = ['scene', 'inspect', 'parameters', 'svg', 'photo', 'perf']
+const DOCK_ICONS: Record<DockTab, string> = {
+  scene: 'M4 6h16M4 12h16M4 18h16',
+  inspect: 'M12 3v3M12 18v3M3 12h3M18 12h3M12 7a5 5 0 1 0 0 10 5 5 0 0 0 0-10z',
+  parameters: 'M4 8h10M18 8h2M4 16h4M12 16h8M16 6a2 2 0 1 0 0 4 2 2 0 0 0 0-4zM10 14a2 2 0 1 0 0 4 2 2 0 0 0 0-4z',
+  svg: 'M4 4h16v16H4zM4 15l5-5 4 4 3-3 4 4M15 8h.01',
+  photo: 'M4 8h3l2-3h6l2 3h3v11H4zM12 17a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z',
+  perf: 'M4 20V10M10 20V4M16 20v-8M22 20H2',
+}
+// Panels moved into the dock are <details> components; open them when their tab shows.
+function revealDockDetails(el: Element | ComponentPublicInstance | null) {
+  if (!(el instanceof HTMLElement)) return
+  for (const details of el.querySelectorAll<HTMLDetailsElement>(':scope > details')) {
+    if (!details.open) details.open = true
+  }
+}
+const DOCK_KEY_MAP: Record<string, RovingFocusKey> = {
+  ArrowLeft: 'ArrowLeft', ArrowUp: 'ArrowLeft', ArrowRight: 'ArrowRight', ArrowDown: 'ArrowRight', Home: 'Home', End: 'End',
+}
+const exportDialogOpen = ref(false)
+const exportDialogRef = ref<HTMLElement | null>(null)
+function openExportDialog() {
+  exportDialogOpen.value = true
+  void nextTick(() => {
+    const dialog = exportDialogRef.value
+    ;(dialog?.querySelector<HTMLElement>('input:checked') ?? dialog?.querySelector<HTMLElement>('button'))?.focus()
+  })
+}
+async function confirmExport() {
+  exportDialogOpen.value = false
+  await exportAdditionalMesh()
+}
+const persistenceLabel = computed(() => workspaceConflict.value
+  ? t('storageConflict')
+  : workspacePersistenceStatus.value === 'saving' ? t('savingDraft')
+    : workspacePersistenceStatus.value === 'error' ? t('unsavedDraft') : t('savedDraftStatus'))
+function closeMenus() {
+  for (const menu of document.querySelectorAll<HTMLDetailsElement>('.app details.menu[open]')) menu.open = false
+}
+function closeMenusOutside(event: Event) {
+  const target = event.target as Element | null
+  if (target?.closest('details.menu')) return
+  closeMenus()
+}
 function handleDockTabKeydown(event: KeyboardEvent) {
-  if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return
+  const key = DOCK_KEY_MAP[event.key]
+  if (!key) return
   event.preventDefault()
   const current = dockTabs.indexOf(dockTab.value)
-  const next = nextRovingIndex(current, dockTabs.length, event.key as RovingFocusKey)
+  const next = nextRovingIndex(current, dockTabs.length, key)
   dockTab.value = dockTabs[next]
   void nextTick(() => document.getElementById(`dock-tab-${dockTab.value}`)?.focus())
 }
@@ -1686,7 +1771,7 @@ function downloadBlob(blob: Blob, name: string) {
   URL.revokeObjectURL(url)
 }
 
-const additionalExportFormat = ref<MeshExportFormat>('3mf')
+const additionalExportFormat = ref<MeshExportFormat>('stl_binary')
 async function exportAdditionalMesh() {
   if (!canExport.value) return
   try {
@@ -2339,17 +2424,43 @@ function sanitizeFileName(name: string) { return (name.replace(/[^\w.() -]+/g, '
 </script>
 
 <template>
-  <div class="app" @dragover.prevent @drop.prevent="handleDrop">
+  <div class="app" @dragover.prevent @drop.prevent="handleDrop" @pointerdown.capture="closeMenusOutside">
     <nav class="topbar" aria-label="Application" :inert="functionReferenceOpen">
       <div class="topbar-left">
-        <svg class="logo" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-          <path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/>
+        <svg class="logo" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true">
+          <path d="M12 3 3 8v8l9 5 9-5V8z"/><path d="M3 8l9 5 9-5M12 13v8"/>
         </svg>
         <span class="brand">{{ t('title') }}</span>
-        <span class="kernel-badge">Manifold</span>
-        <span class="kernel-badge" :title="currentBackendQuality.transparency === 'object-sorted-alpha' ? t('transparencySorted') : undefined">
-          {{ currentBackendQuality.backend === 'webgpu-interactive' ? t('backendWebGpu') : t('backendHeadless') }}
-        </span>
+        <span class="topbar-divider" aria-hidden="true" />
+        <details class="menu file-menu">
+          <summary class="file-chip" :title="t('fileMenu')">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6"/></svg>
+            <span class="file-chip-name">{{ fileName }}</span>
+            <span v-if="workspaceConflict || workspacePersistenceStatus !== 'saved'" class="file-chip-dot" :class="workspaceConflict ? 'error' : workspacePersistenceStatus" aria-hidden="true" />
+            <svg class="chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+          </summary>
+          <div class="menu-list" @click="closeMenus">
+            <button type="button" :title="t('openFile')" @click="triggerOpen">{{ t('open') }}</button>
+            <button type="button" :title="t('saveFile')" @click="saveSource">{{ t('save') }}</button>
+            <button type="button" :disabled="savingBrowser" :title="t('saveBrowserHelp')" @click="saveBrowserDraft">{{ savingBrowser ? t('savingDraft') : t('saveBrowser') }}</button>
+            <button type="button" :title="t('shareFile')" @click="shareSource">{{ t('share') }}</button>
+            <button type="button" :title="t('convertFileHelp')" @click="triggerConvert">{{ t('convertFile') }}</button>
+            <span class="menu-status" role="status">{{ persistenceLabel }}</span>
+          </div>
+        </details>
+        <input ref="fileInputRef" class="sr-only" type="file" accept=".scad,text/plain" @change="openSelectedFile">
+        <input ref="convertInputRef" class="sr-only" type="file" :accept="MESH_IMPORT_ACCEPT" @change="convertSelectedFile">
+      </div>
+      <div class="mode-switch" role="group" :aria-label="lang === 'ru' ? 'Режим работы' : 'Workspace mode'">
+        <button
+          v-for="mode in (['code', 'solid', 'mesh'] as const)"
+          :key="mode"
+          type="button"
+          :class="{ active: workspaceMode === mode }"
+          :aria-pressed="workspaceMode === mode"
+          :title="workspaceModeHint(mode, lang)"
+          @click="openWorkspaceMode(mode)"
+        >{{ mode === 'code' ? 'Code' : mode === 'solid' ? 'Solid' : 'Mesh' }}</button>
       </div>
       <div class="topbar-right">
         <div v-if="workspaceConflict" class="persistence-conflict" role="alert">
@@ -2362,17 +2473,20 @@ function sanitizeFileName(name: string) { return (name.replace(/[^\w.() -]+/g, '
           v-else-if="workspacePersistenceStatus === 'error'"
           class="persistence-status persistence-error"
           type="button"
-          :title="t('retrySave')"
+          :title="storageFailureDetail || t('retrySave')"
           @click="retryWorkspacePersistence"
         >⚠ {{ t('unsavedDraft') }}</button>
-        <span v-if="workspacePersistenceStatus === 'error' && storageFailureDetail" class="persistence-error-detail" role="status">{{ storageFailureDetail }}</span>
-        <span
-          v-if="!workspaceConflict && workspacePersistenceStatus === 'saving'"
-          class="persistence-status"
-          role="status"
-        >{{ t('savingDraft') }}</span>
         <button class="icon-btn command-btn" type="button" :title="t('commandHelp')" aria-keyshortcuts="Control+K Meta+K" @click="paletteOpen = true">
-          <span aria-hidden="true">⌘</span> {{ t('commands') }} <kbd>Ctrl K</kbd>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+          <span>{{ t('commands') }}</span> <kbd>Ctrl K</kbd>
+        </button>
+        <button class="btn topbar-action" type="button" :title="t('exportTitle')" @click="openExportDialog">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v12M6 9l6 6 6-6"/><path d="M4 19h16"/></svg>
+          <span>{{ t('export') }}</span>
+        </button>
+        <button class="btn topbar-action share-action" type="button" :title="t('shareFile')" @click="shareSource">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 13.5 6.8 4M15.4 6.5l-6.8 4"/></svg>
+          <span>{{ t('share') }}</span>
         </button>
         <button
           class="icon-btn"
@@ -2396,7 +2510,8 @@ function sanitizeFileName(name: string) { return (name.replace(/[^\w.() -]+/g, '
           </select>
         </label>
         <button class="icon-btn" type="button" :aria-label="isDark ? t('lightTheme') : t('darkTheme')" :aria-pressed="isDark" @click="toggleTheme">
-          <span aria-hidden="true">{{ isDark ? '☾' : '☀' }}</span>
+          <svg v-if="isDark" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+          <svg v-else width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
         </button>
       </div>
     </nav>
@@ -2405,59 +2520,38 @@ function sanitizeFileName(name: string) { return (name.replace(/[^\w.() -]+/g, '
       <section class="editor-panel" :style="{ width: `${editorWidth}px` }" :aria-label="t('editor')">
         <div class="toolbar editor-toolbar">
           <button class="btn btn-primary" type="button" title="Ctrl/⌘+Enter" :disabled="rendering" @click="doRender('full')">
-            <span class="play" aria-hidden="true">▶</span> {{ t('render') }}
+            <svg class="play" width="11" height="11" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6 4v16l14-8z"/></svg>
+            {{ t('render') }}
           </button>
           <label class="auto-check"><input v-model="autoRender" type="checkbox"> {{ t('auto') }}</label>
-          <span class="toolbar-divider" aria-hidden="true" />
-          <div class="mode-switch" role="group" :aria-label="lang === 'ru' ? 'Режим работы' : 'Workspace mode'">
-            <button
-              v-for="mode in (['code', 'solid', 'mesh'] as const)"
-              :key="mode"
-              class="btn"
-              type="button"
-              :class="{ 'btn-primary': workspaceMode === mode }"
-              :aria-pressed="workspaceMode === mode"
-              :title="workspaceModeHint(mode, lang)"
-              @click="openWorkspaceMode(mode)"
-            >{{ mode === 'code' ? 'Code' : mode === 'solid' ? 'Solid' : 'Mesh' }}</button>
-          </div>
-          <button
-            class="btn"
-            type="button"
-            :disabled="!sceneMeshes.length || rendering"
-            :title="lang === 'ru' ? 'Перенести текущую сцену Code → Solid' : 'Bring current Code scene into Solid'"
-            @click="bringCodeToSolid"
-          >{{ lang === 'ru' ? 'Code→Solid' : 'Code→Solid' }}</button>
-          <button class="btn" type="button" @click="mechanicalGeneratorOpen = true">⚙ {{ lang === 'ru' ? 'Генераторы' : 'Generators' }}</button>
-          <button class="btn" type="button" @click="exampleGalleryOpen = true">▦ {{ t('examples') }}</button>
+          <span class="toolbar-spacer" aria-hidden="true" />
+          <button class="btn" type="button" @click="exampleGalleryOpen = true">{{ t('examples') }}</button>
+          <button class="btn" type="button" @click="mechanicalGeneratorOpen = true">{{ t('generators') }}</button>
           <button
             ref="functionReferenceButton"
-            class="btn"
+            class="icon-btn"
             type="button"
             :title="`${t('functionReference')} (F1)`"
+            :aria-label="t('functionReference')"
             aria-keyshortcuts="F1"
             aria-haspopup="dialog"
             :aria-expanded="functionReferenceOpen"
             @click="openFunctionReference()"
-          >{{ t('functionReference') }}</button>
-        </div>
-
-        <div class="toolbar file-toolbar">
-          <button class="btn" type="button" :title="t('openFile')" @click="triggerOpen">↥ {{ t('open') }}</button>
-          <button class="btn" type="button" :title="t('saveFile')" @click="saveSource">↧ {{ t('save') }}</button>
-          <button class="btn" type="button" title="Alt+Shift+F" aria-keyshortcuts="Alt+Shift+F" @click="formatEditor">{{ t('format') }}</button>
-          <button class="btn" type="button" :disabled="savingBrowser" :title="t('saveBrowserHelp')" @click="saveBrowserDraft">{{ savingBrowser ? t('savingDraft') : t('saveBrowser') }}</button>
-          <button class="btn" type="button" :title="t('shareFile')" @click="shareSource">⌁ {{ t('share') }}</button>
-          <button class="btn export-btn" type="button" :disabled="!canExport" @click="exportStl">STL</button>
-          <button class="btn export-btn" type="button" :disabled="!canExport" @click="exportObj">OBJ</button>
-          <select v-model="additionalExportFormat" class="btn export-btn" :aria-label="t('exportFormat')">
-            <option v-for="format in MESH_EXPORT_FORMATS" :key="format" :value="format">{{ MESH_FORMAT_LABELS[format] }}</option>
-          </select>
-          <button class="btn export-btn" type="button" :disabled="!canExport" @click="exportAdditionalMesh">{{ lang === 'ru' ? 'Скачать' : 'Download' }}</button>
-          <button class="btn export-btn" type="button" :title="t('convertFileHelp')" @click="triggerConvert">{{ t('convertFile') }}</button>
-          <span class="file-name" :title="fileName">{{ fileName }}</span>
-          <input ref="fileInputRef" class="sr-only" type="file" accept=".scad,text/plain" @change="openSelectedFile">
-          <input ref="convertInputRef" class="sr-only" type="file" :accept="MESH_IMPORT_ACCEPT" @change="convertSelectedFile">
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.7.3-1 .8-1 1.5"/><path d="M12 17h.01"/></svg>
+          </button>
+          <details class="menu more-menu">
+            <summary class="icon-btn" :title="t('more')" :aria-label="t('more')">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>
+            </summary>
+            <div class="menu-list menu-right" @click="closeMenus">
+              <button type="button" aria-keyshortcuts="Alt+Shift+F" @click="formatEditor">{{ t('format') }} <kbd>Alt Shift F</kbd></button>
+              <button type="button" @click="openEditorFind(false)">{{ t('find') }}</button>
+              <button type="button" @click="openEditorFind(true)">{{ t('replace') }}</button>
+              <button type="button" :disabled="!sceneMeshes.length || rendering" @click="bringCodeToSolid">{{ t('codeToSolid') }}</button>
+              <button type="button" :disabled="!sceneMeshes.length || rendering" @click="bringCodeToMesh">{{ t('codeToMesh') }}</button>
+            </div>
+          </details>
         </div>
 
         <div v-if="findOpen" class="find-bar" role="search" @keydown="handleFindKeydown">
@@ -2541,22 +2635,6 @@ function sanitizeFileName(name: string) { return (name.replace(/[^\w.() -]+/g, '
           <span v-if="meshCount">{{ t('area') }} <strong>{{ formatNumber(surfaceArea, 2) }}</strong></span>
           <span class="status" :class="{ stale, busy: rendering, failed: !!error }">{{ statusText }} · {{ formatNumber(renderDuration, 0) }} ms</span>
         </footer>
-        <SvgPanel :meshes="sceneMeshes" :hit="selectedHit" :available="canExport" :locale="lang" :can-append="!isModelGraphText(code)" :remaining-source="MAX_WORKSPACE_SOURCE_LENGTH - code.length - 2" :append-revision="workspaceDocument.documentId + ':' + workspaceDocument.mutation" @append="source => { replacePresetSource(code + '\n\n' + source); nextTick(() => doRender('full')) }" />
-        <PhotogrammetryPanel :locale="lang" :can-append="!isModelGraphText(code)" :remaining-source="MAX_WORKSPACE_SOURCE_LENGTH - code.length - 2" @append="source => replacePresetSource(code + '\n\n' + source)" />
-<details class="performance-panel">
-    <summary>{{ lang === 'ru' ? 'Замеры сборки' : 'Build measurements' }}<span v-if="performanceLast"> · {{ performanceLast.quality }} · {{ performanceMs(performanceLast.hostMs) }}</span></summary>
-    <div class="performance-content">
-      <p>{{ lang === 'ru' ? 'Последние 60 успешных публикаций этой сессии. Отправка кадра не означает его показ на экране. Этапы вложены друг в друга: значения не нужно складывать.' : 'Last 60 successful publications in this session. Frame submission is not display presentation. Timings overlap; do not add them together.' }}</p>
-      <p>{{ lang === 'ru' ? 'Сборки / вытеснены / запуски Worker / принудительные перезапуски' : 'Builds / superseded / Worker starts / forced restarts' }}: {{ buildCounters.builds }} / {{ buildCounters.superseded }} / {{ buildCounters.workerStarts }} / {{ buildCounters.hardRestarts }}</p>
-      <table v-if="performanceLast">
-        <caption>{{ lang === 'ru' ? 'Последняя публикация' : 'Latest publication' }} · {{ performanceLast.quality }} · #{{ performanceLast.revision }}</caption>
-        <tbody><tr v-for="row in performanceRows" :key="row[0]"><th scope="row">{{ row[0] }}</th><td>{{ row[1] }}</td></tr></tbody>
-      </table>
-      <p v-else>{{ lang === 'ru' ? 'Замеры появятся после успешной сборки.' : 'Measurements will appear after a successful build.' }}</p>
-      <p>{{ lang === 'ru' ? '«—»: этап не наблюдался. Объём загрузки учитывает только вершины и индексы, без рёбер и служебных данных.' : '“—”: boundary not observed. Upload bytes cover vertices and indices only, excluding edges and auxiliary data.' }}</p>
-      <button type="button" :disabled="!performanceSamples.length" @click="exportPerformance">{{ lang === 'ru' ? 'Скачать отчёт JSON' : 'Download JSON report' }}</button>
-    </div>
-  </details>
       </section>
 
       <div
@@ -2576,11 +2654,15 @@ function sanitizeFileName(name: string) { return (name.replace(/[^\w.() -]+/g, '
         @keydown="resizeEditorWithKeyboard"
       ><span /></div>
 
-      <section class="canvas-panel" :aria-label="t('viewport')" @pointerdown.capture="mainShiftSelection = $event.shiftKey">
+      <section class="canvas-panel" :class="{ 'with-dock': dockOpen, 'tools-hidden': !modelToolsVisible }" :aria-label="t('viewport')" @pointerdown.capture="mainShiftSelection = $event.shiftKey">
         <MainModelingTools :project="mainProject" :ray="mainRay" :camera-revision="mainCameraRevision" :selected-indices="mainSelectedIndices" @select-many="mainSelectMany" :meshes="sceneMeshes" :selected="selectedMesh" :hit="selectedHit" :source="code" :ready="!rendering && !stale && renderedSource === code" :locale="lang" :can-undo="!rendering && mainEditPast.at(-1)?.after === code" :can-redo="!rendering && mainEditFuture.at(-1)?.before === code" @append="appendMainPrimitive" @apply="commitMainSource" @solid="continueMainEditInSolid" @preview="previewMainGeometry" @undo="undoMainGeometry()" @redo="undoMainGeometry(true)" />
-        <div class="viewer-toolbar">
-          <button class="view-btn" type="button" :title="t('fit')" @click="fitView">⌗ <span>{{ t('fit') }}</span></button>
-          <button class="view-btn icon-only" type="button" :title="t('reset')" @click="resetView">↺</button>
+        <div class="viewer-toolbar" :class="{ 'with-dock': dockOpen }">
+          <button class="view-btn icon-only" type="button" :title="t('fit')" :aria-label="t('fit')" @click="fitView">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5"/></svg>
+          </button>
+          <button class="view-btn icon-only" type="button" :title="t('reset')" :aria-label="t('reset')" @click="resetView">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg>
+          </button>
           <button
             class="view-btn icon-only"
             type="button"
@@ -2592,15 +2674,20 @@ function sanitizeFileName(name: string) { return (name.replace(/[^\w.() -]+/g, '
           <button class="view-btn" type="button" :aria-pressed="projection === 'orthographic'" @click="toggleProjection">
             {{ projection === 'perspective' ? t('perspective') : t('orthographic') }}
           </button>
-          <button class="view-btn" type="button" :aria-pressed="gridVisible" @click="toggleGrid"># {{ t('grid') }}</button>
+          <button class="view-btn" type="button" :aria-pressed="gridVisible" @click="toggleGrid">{{ t('grid') }}</button>
           <button
             ref="scanToggleRef" class="view-btn scan-toggle" type="button"
             :class="{ active: sectionEnabled }" :aria-label="t('section')" :title="t('section')"
             :aria-expanded="scanPanelOpen" aria-controls="scan-plane-panel"
             :disabled="!sectionAvailable && !sectionEnabled"
             @click="scanPanelOpen = !scanPanelOpen"
-          ><span aria-hidden="true">◩</span> {{ t('scanPlane') }}<i v-if="sectionEnabled" class="scan-active-dot" aria-hidden="true" /></button>
-          <button ref="dockToggleRef" class="view-btn icon-only" type="button" :aria-label="t('sidebar')" :aria-expanded="dockOpen" aria-controls="cad-sidebar" @click="dockOpen = !dockOpen">▥</button>
+          >{{ t('scanPlane') }}<i v-if="sectionEnabled" class="scan-active-dot" aria-hidden="true" /></button>
+          <button class="view-btn icon-only" type="button" :aria-label="t('modelTools')" :title="t('modelTools')" :aria-pressed="modelToolsVisible" @click="toggleModelTools">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M14 4l6 6-9 9H5v-6z"/><path d="M12 6l6 6"/></svg>
+          </button>
+          <button ref="dockToggleRef" class="view-btn icon-only" type="button" :aria-label="t('sidebar')" :aria-pressed="dockOpen" :aria-expanded="dockOpen" aria-controls="cad-sidebar" @click="dockOpen = !dockOpen">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M15 4v16"/></svg>
+          </button>
           <label class="view-select-label">
             <span class="sr-only">{{ t('display') }}</span>
             <select v-model="displayMode" class="view-select display-select" :aria-label="t('display')" @change="changeDisplayMode">
@@ -2661,12 +2748,29 @@ function sanitizeFileName(name: string) { return (name.replace(/[^\w.() -]+/g, '
           <ViewCube :active-view="activeView" :yaw="cameraYaw" :pitch="cameraPitch" @view="setStandardView" />
         </div>
         <div v-if="dockOpen" id="cad-sidebar" class="cad-dock">
-          <div class="dock-tabs" role="tablist" :aria-label="t('sidebar')" @keydown="handleDockTabKeydown">
-            <button id="dock-tab-scene" type="button" role="tab" aria-controls="dock-panel" :aria-selected="dockTab === 'scene'" :tabindex="dockTab === 'scene' ? 0 : -1" :class="{ active: dockTab === 'scene' }" @click="dockTab = 'scene'">{{ t('scene') }}</button>
-            <button id="dock-tab-inspect" type="button" role="tab" aria-controls="dock-panel" :aria-selected="dockTab === 'inspect'" :tabindex="dockTab === 'inspect' ? 0 : -1" :class="{ active: dockTab === 'inspect' }" @click="dockTab = 'inspect'">{{ t('inspect') }}</button>
-            <button id="dock-tab-parameters" type="button" role="tab" aria-controls="dock-panel" :aria-selected="dockTab === 'parameters'" :tabindex="dockTab === 'parameters' ? 0 : -1" :class="{ active: dockTab === 'parameters' }" @click="dockTab = 'parameters'">{{ t('parameters') }}</button>
-            <button class="dock-close" type="button" :aria-label="t('closeSidebar')" @click="closeDock">×</button>
+          <div class="dock-rail" role="tablist" aria-orientation="vertical" :aria-label="t('sidebar')" @keydown="handleDockTabKeydown">
+            <button
+              v-for="tab in dockTabs"
+              :id="`dock-tab-${tab}`"
+              :key="tab"
+              type="button"
+              role="tab"
+              aria-controls="dock-panel"
+              :aria-selected="dockTab === tab"
+              :aria-label="t(tab)"
+              :title="t(tab)"
+              :tabindex="dockTab === tab ? 0 : -1"
+              :class="{ active: dockTab === tab }"
+              @click="dockTab = tab"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path :d="DOCK_ICONS[tab]"/></svg>
+            </button>
+            <span class="dock-rail-spacer" aria-hidden="true" />
+            <button class="dock-close" type="button" :aria-label="t('closeSidebar')" :title="t('closeSidebar')" @click="closeDock">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+            </button>
           </div>
+          <div class="dock-body">
           <div id="dock-panel" class="dock-panel" role="tabpanel" :aria-labelledby="`dock-tab-${dockTab}`">
           <SceneOutliner
             v-if="dockTab === 'scene'"
@@ -2724,6 +2828,28 @@ function sanitizeFileName(name: string) { return (name.replace(/[^\w.() -]+/g, '
             @reset-section="resetSection"
           />
           </div>
+          <div v-else-if="dockTab === 'svg'" class="dock-scroll" :ref="revealDockDetails">
+          <SvgPanel :meshes="sceneMeshes" :hit="selectedHit" :available="canExport" :locale="lang" :can-append="!isModelGraphText(code)" :remaining-source="MAX_WORKSPACE_SOURCE_LENGTH - code.length - 2" :append-revision="workspaceDocument.documentId + ':' + workspaceDocument.mutation" @append="source => { replacePresetSource(code + '\n\n' + source); nextTick(() => doRender('full')) }" />
+          </div>
+          <div v-else-if="dockTab === 'photo'" class="dock-scroll" :ref="revealDockDetails">
+          <PhotogrammetryPanel :locale="lang" :can-append="!isModelGraphText(code)" :remaining-source="MAX_WORKSPACE_SOURCE_LENGTH - code.length - 2" @append="source => replacePresetSource(code + '\n\n' + source)" />
+          </div>
+          <div v-else-if="dockTab === 'perf'" class="dock-scroll" :ref="revealDockDetails">
+<details class="performance-panel" open>
+    <summary>{{ lang === 'ru' ? 'Замеры сборки' : 'Build measurements' }}<span v-if="performanceLast"> · {{ performanceLast.quality }} · {{ performanceMs(performanceLast.hostMs) }}</span></summary>
+    <div class="performance-content">
+      <p>{{ lang === 'ru' ? 'Последние 60 успешных публикаций этой сессии. Отправка кадра не означает его показ на экране. Этапы вложены друг в друга: значения не нужно складывать.' : 'Last 60 successful publications in this session. Frame submission is not display presentation. Timings overlap; do not add them together.' }}</p>
+      <p>{{ lang === 'ru' ? 'Сборки / вытеснены / запуски Worker / принудительные перезапуски' : 'Builds / superseded / Worker starts / forced restarts' }}: {{ buildCounters.builds }} / {{ buildCounters.superseded }} / {{ buildCounters.workerStarts }} / {{ buildCounters.hardRestarts }}</p>
+      <table v-if="performanceLast">
+        <caption>{{ lang === 'ru' ? 'Последняя публикация' : 'Latest publication' }} · {{ performanceLast.quality }} · #{{ performanceLast.revision }}</caption>
+        <tbody><tr v-for="row in performanceRows" :key="row[0]"><th scope="row">{{ row[0] }}</th><td>{{ row[1] }}</td></tr></tbody>
+      </table>
+      <p v-else>{{ lang === 'ru' ? 'Замеры появятся после успешной сборки.' : 'Measurements will appear after a successful build.' }}</p>
+      <p>{{ lang === 'ru' ? '«—»: этап не наблюдался. Объём загрузки учитывает только вершины и индексы, без рёбер и служебных данных.' : '“—”: boundary not observed. Upload bytes cover vertices and indices only, excluding edges and auxiliary data.' }}</p>
+      <button type="button" :disabled="!performanceSamples.length" @click="exportPerformance">{{ lang === 'ru' ? 'Скачать отчёт JSON' : 'Download JSON report' }}</button>
+    </div>
+  </details>
+          </div>
           <div v-else class="customizer-card" @pointerdown.capture="beginParameterGesture" @change.capture="commitParameterControl">
             <section class="parameter-presets" :aria-label="lang === 'ru' ? 'Варианты параметров' : 'Parameter presets'">
               <strong>{{ lang === 'ru' ? 'Варианты параметров' : 'Parameter presets' }}</strong>
@@ -2754,6 +2880,7 @@ function sanitizeFileName(name: string) { return (name.replace(/[^\w.() -]+/g, '
             />
           </div>
           </div>
+          </div>
         </div>
         <div v-if="selectedMesh !== null || isolated" class="selection-hud" role="status">
           <span v-if="selectedMesh !== null">
@@ -2770,9 +2897,45 @@ function sanitizeFileName(name: string) { return (name.replace(/[^\w.() -]+/g, '
         </div>
         <div v-if="rendering" class="rendering-badge" role="status"><span class="spinner" />{{ t('compiling') }} · {{ t(renderingQuality) }}</div>
         <div v-else-if="stale" class="stale-badge">{{ t('stale') }}</div>
-        <div class="canvas-hint">{{ t('hint') }}</div>
+        <div class="canvas-hint" :class="{ 'with-dock': dockOpen }">{{ t('hint') }}</div>
       </section>
     </main>
+
+    <footer class="statusbar" :aria-label="lang === 'ru' ? 'Состояние' : 'Status'">
+      <span class="status-item"><i class="status-dot" :class="gpuOk ? 'ok' : 'off'" aria-hidden="true" />{{ currentBackendQuality.backend === 'webgpu-interactive' ? t('backendWebGpu') : t('backendHeadless') }}</span>
+      <span class="status-item kernel-badge">Manifold</span>
+      <span v-if="currentBackendQuality.transparency === 'object-sorted-alpha'" class="status-item">{{ t('transparencySorted') }}</span>
+      <span class="status-item" role="status">{{ persistenceLabel }}</span>
+      <span class="statusbar-spacer" aria-hidden="true" />
+      <span class="status-item status-hint">{{ t('renderShortcut') }} <kbd>Ctrl ↵</kbd> · {{ t('fit') }} <kbd>F</kbd> · {{ t('commands') }} <kbd>Ctrl K</kbd></span>
+    </footer>
+
+    <div v-if="exportDialogOpen" class="dialog-backdrop" @click.self="exportDialogOpen = false">
+      <div ref="exportDialogRef" class="dialog export-dialog" role="dialog" aria-modal="true" aria-labelledby="export-dialog-title" @keydown.escape.stop="exportDialogOpen = false">
+        <header class="dialog-header">
+          <div>
+            <h2 id="export-dialog-title">{{ t('exportTitle') }}</h2>
+            <p>{{ fileName }} · {{ t('meshes') }} {{ formatNumber(meshCount) }} · {{ t('triangles') }} {{ formatNumber(triangleCount) }}</p>
+          </div>
+          <button class="icon-btn" type="button" :aria-label="t('close')" @click="exportDialogOpen = false">×</button>
+        </header>
+        <fieldset class="format-grid">
+          <legend>{{ t('exportFormat') }}</legend>
+          <label v-for="format in MESH_EXPORT_FORMATS" :key="format" class="format-card" :class="{ active: additionalExportFormat === format }">
+            <input v-model="additionalExportFormat" type="radio" name="export-format" :value="format">
+            <span class="format-name">{{ MESH_FORMAT_LABELS[format] }}</span>
+            <small>{{ format === 'obj' || format === 'ply' || format === 'off' ? t('forCad') : t('forPrinting') }}</small>
+          </label>
+        </fieldset>
+        <p class="dialog-note" :class="{ warning: !canExport }">{{ canExport ? t('exportScope') : t('needsFullBuild') }}</p>
+        <footer class="dialog-footer">
+          <button class="btn" type="button" :title="t('convertFileHelp')" @click="exportDialogOpen = false; triggerConvert()">{{ t('convertFile') }}</button>
+          <span class="statusbar-spacer" aria-hidden="true" />
+          <button class="btn" type="button" @click="exportDialogOpen = false">{{ t('cancel') }}</button>
+          <button class="btn btn-primary" type="button" :disabled="!canExport" @click="confirmExport">{{ t('download') }} {{ MESH_FORMAT_LABELS[additionalExportFormat] }}</button>
+        </footer>
+      </div>
+    </div>
 
     <div v-if="notice" class="toast" role="status">{{ notice }}</div>
     <CommandPalette
@@ -2795,6 +2958,7 @@ function sanitizeFileName(name: string) { return (name.replace(/[^\w.() -]+/g, '
     <MeshModeler
       :open="meshModelerOpen"
       :locale="lang"
+      :seed-document="meshSeedDocument"
       @close="meshModelerOpen = false"
       @export-to-solid="meshToSolid"
     />
@@ -2825,35 +2989,38 @@ function sanitizeFileName(name: string) { return (name.replace(/[^\w.() -]+/g, '
 
 <style>
 :root {
-  --bg: #111216;
-  --surface: #1a1c22;
-  --surface-raised: #22252d;
-  --border: #30343e;
-  --text: #eef0f5;
-  --text-dim: #a4a9b5;
-  --accent: #559dff;
-  --accent-strong: #287eea;
-  --hover: #2a2e38;
-  --danger: #ff6b63;
-  --warning: #f5bd55;
-  --canvas-bg: #111318;
-  --focus: #8ec1ff;
+  --bg: #1c1a17;
+  --surface: #221f1b;
+  --surface-raised: #2a2622;
+  --border: #3a352e;
+  --text: #f1ece3;
+  --text-dim: #a8a094;
+  --accent: #d97757;
+  --accent-strong: #b5533a;
+  --hover: #33302a;
+  --danger: #ff8f80;
+  --warning: #f0b458;
+  --canvas-bg: #141210;
+  --focus: #f0a488;
+  --font-ui: "Inter Tight", ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+  --radius: 8px;
 }
 
 [data-theme="light"] {
-  --bg: #f2f4f8;
-  --surface: #ffffff;
-  --surface-raised: #f7f8fa;
-  --border: #d3d8e2;
-  --text: #171a21;
-  --text-dim: #596273;
-  --accent: #176fd1;
-  --accent-strong: #0c5eb9;
-  --hover: #e8edf5;
-  --danger: #be302c;
+  --bg: #f4f1ea;
+  --surface: #fbfaf7;
+  --surface-raised: #efebe2;
+  --border: #d5cfc2;
+  --text: #1f1c18;
+  --text-dim: #5e574d;
+  --accent: #b8543a;
+  --accent-strong: #a2472f;
+  --hover: #ebe6db;
+  --danger: #b3261e;
   --warning: #8a5b00;
-  --canvas-bg: #171a20;
-  --focus: #176fd1;
+  --canvas-bg: #e9e4da;
+  --focus: #a2472f;
 }
 
 *, *::before, *::after { box-sizing: border-box; }
@@ -2862,7 +3029,8 @@ body {
   overflow: hidden;
   background: var(--bg);
   color: var(--text);
-  font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-family: var(--font-ui);
+  font-size: 13px;
 }
 button, select, textarea, input { font: inherit; }
 button, select { color: inherit; }
@@ -2899,240 +3067,366 @@ button, select { color: inherit; }
 
 <style scoped>
 .app { display: flex; flex-direction: column; min-height: 100vh; height: 100dvh; background: var(--bg); }
+
+/* Top bar */
 .topbar {
-  z-index: 10; min-height: 44px; display: flex; align-items: center; justify-content: space-between;
-  padding: 6px 12px; background: color-mix(in srgb, var(--surface) 94%, transparent);
-  border-bottom: 1px solid var(--border); flex-shrink: 0;
+  z-index: 10; height: 46px; display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 12px;
+  padding: 0 12px 0 14px; background: var(--surface); border-bottom: 1px solid var(--border); flex-shrink: 0;
 }
-.topbar-left, .topbar-right { display: flex; align-items: center; gap: 9px; }
-.logo { color: var(--accent); filter: drop-shadow(0 0 8px color-mix(in srgb, var(--accent) 35%, transparent)); }
-.brand { font-weight: 720; letter-spacing: -0.02em; }
-.kernel-badge {
-  padding: 2px 7px; border: 1px solid color-mix(in srgb, var(--accent) 35%, var(--border));
-  border-radius: 999px; color: var(--accent); font-size: 0.68rem; font-weight: 650;
-}
-.persistence-status {
-  border: 0; background: transparent; color: var(--text-dim); font-size: .7rem; white-space: nowrap;
-}
-.persistence-error { color: var(--danger); cursor: pointer; }
-.persistence-error:hover { text-decoration: underline; }
-.persistence-conflict { display: flex; align-items: center; gap: 5px; color: var(--danger); font-size: .68rem; }
-.persistence-conflict button {
-  border: 1px solid var(--border); border-radius: 5px; background: var(--surface-raised);
-  color: var(--text); padding: 3px 6px; cursor: pointer;
-}
+.topbar-left, .topbar-right { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.topbar-right { justify-content: flex-end; }
+.logo { color: var(--accent); flex-shrink: 0; }
+.brand { font-weight: 600; font-size: 14px; letter-spacing: -0.01em; white-space: nowrap; }
+.topbar-divider { width: 1px; height: 20px; background: var(--border); margin-inline: 4px; }
+.kernel-badge { font-family: var(--font-mono); }
+
 .icon-btn, .btn, .view-btn {
-  min-height: 30px; border: 1px solid var(--border); border-radius: 7px; background: var(--surface-raised);
-  color: var(--text); cursor: pointer; transition: background .12s, border-color .12s, transform .12s;
+  min-height: 30px; border: 1px solid var(--border); border-radius: var(--radius); background: transparent;
+  color: var(--text); cursor: pointer; transition: background .12s, border-color .12s;
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
 }
-.icon-btn { min-width: 34px; padding: 4px 8px; }
-.command-btn { display: flex; align-items: center; gap: 6px; padding-inline: 9px; font-size: .72rem; }
-.theme-picker select { max-width: 116px; min-height: 30px; padding: 4px 7px; color: inherit; background: var(--surface-raised); border: 1px solid var(--border); border-radius: 6px; font-size: .7rem; }
-.command-btn kbd {
-  padding: 1px 5px; border: 1px solid var(--border); border-radius: 4px;
-  color: var(--text-dim); background: var(--bg); font: .62rem ui-monospace, monospace;
-}
-.lang-btn { font-size: .76rem; font-weight: 700; }
-.icon-btn:hover, .btn:hover, .view-btn:hover { background: var(--hover); border-color: color-mix(in srgb, var(--accent) 45%, var(--border)); }
-.icon-btn:focus-visible, .btn:focus-visible, .view-btn:focus-visible, .select:focus-visible,
-.view-select:focus-visible, .splitter:focus-visible, .gpu-canvas:focus-visible, .code:focus-visible {
+.icon-btn { min-width: 30px; padding: 0 7px; color: var(--text-dim); }
+.icon-btn:hover, .btn:hover, .view-btn:hover { background: var(--hover); color: var(--text); }
+.icon-btn:focus-visible, .btn:focus-visible, .view-btn:focus-visible, .select:focus-visible, summary:focus-visible,
+.view-select:focus-visible, .splitter:focus-visible, .gpu-canvas:focus-visible, .code:focus-visible, .dock-rail button:focus-visible,
+.selection-modes button:focus-visible, .format-card:focus-within, .mode-switch button:focus-visible {
   outline: 2px solid var(--focus); outline-offset: 2px;
 }
+.btn { padding: 0 10px; font-size: 13px; font-weight: 500; white-space: nowrap; }
+.btn:disabled, .icon-btn:disabled { opacity: .5; cursor: default; }
+.btn-primary { background: var(--accent); border-color: var(--accent); color: var(--bg); font-weight: 600; }
+.btn-primary:hover { background: var(--accent-strong); border-color: var(--accent-strong); color: #fff; }
+.btn-primary:disabled { cursor: progress; }
+.topbar-action span { display: inline; }
+.command-btn { min-width: 150px; justify-content: flex-start; padding-inline: 10px; background: var(--bg); color: var(--text-dim); font-weight: 400; }
+.command-btn span { flex: 1; text-align: left; }
+.command-btn kbd, .menu-list kbd, .status-hint kbd {
+  padding: 1px 5px; border: 1px solid var(--border); border-radius: 4px; color: var(--text-dim);
+  font: 11px var(--font-mono); white-space: nowrap;
+}
+.lang-btn { font-size: 12px; font-weight: 600; }
+.theme-picker select {
+  max-width: 100px; height: 30px; padding: 0 7px; color: inherit; background: transparent;
+  border: 1px solid var(--border); border-radius: var(--radius); font-size: 12px;
+}
+
+/* Menus (details/summary) */
+.menu { position: relative; }
+.menu > summary { list-style: none; cursor: pointer; }
+.menu > summary::-webkit-details-marker { display: none; }
+.menu-list {
+  position: absolute; z-index: 20; top: calc(100% + 6px); left: 0; min-width: 220px; display: flex; flex-direction: column; gap: 2px;
+  padding: 6px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface);
+  box-shadow: 0 16px 44px rgba(0,0,0,.28);
+}
+.menu-list.menu-right { left: auto; right: 0; }
+.more-menu { margin-left: auto; }
+.menu-list button {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 32px; padding: 0 10px;
+  border: 0; border-radius: 6px; background: transparent; color: var(--text); cursor: pointer; text-align: left; font-size: 13px; white-space: nowrap;
+}
+.menu-list button:hover, .menu-list button:focus-visible { background: var(--hover); outline: none; }
+.menu-list button:disabled { opacity: .45; cursor: default; }
+.menu-status { padding: 8px 10px 4px; border-top: 1px solid var(--border); margin-top: 4px; color: var(--text-dim); font-size: 12px; }
+.file-chip {
+  display: inline-flex; align-items: center; gap: 8px; height: 30px; padding: 0 10px; border-radius: var(--radius);
+  border: 1px solid transparent; color: var(--text); max-width: 320px;
+}
+.file-chip:hover, .menu[open] > .file-chip { background: var(--hover); border-color: var(--border); }
+.file-chip svg { color: var(--text-dim); flex-shrink: 0; }
+.file-chip-name { font-family: var(--font-mono); font-size: 12.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.file-chip-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--warning); flex-shrink: 0; }
+.file-chip-dot.error { background: var(--danger); }
+.persistence-status { border: 0; background: transparent; color: var(--text-dim); font-size: 12px; white-space: nowrap; }
+.persistence-error { color: var(--danger); cursor: pointer; }
+.persistence-error:hover { text-decoration: underline; }
+.persistence-conflict { display: flex; align-items: center; gap: 5px; color: var(--danger); font-size: 12px; }
+.persistence-conflict button {
+  border: 1px solid var(--border); border-radius: 6px; background: var(--surface-raised);
+  color: var(--text); padding: 3px 6px; cursor: pointer;
+}
+
+/* Mode switch */
+.mode-switch { display: inline-flex; gap: 2px; padding: 3px; border: 1px solid var(--border); border-radius: 9px; justify-self: center; }
+.mode-switch button {
+  min-width: 64px; height: 26px; padding: 0 14px; border: 0; border-radius: 6px; background: transparent;
+  color: var(--text-dim); font-weight: 500; cursor: pointer;
+}
+.mode-switch button:hover { color: var(--text); background: var(--hover); }
+.mode-switch button.active { background: var(--text); color: var(--bg); font-weight: 600; }
+
+/* Layout */
 .no-gpu { position: absolute; z-index: 8; inset: 0; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 14px; color: var(--danger); background: var(--canvas-bg); font-size: 1rem; padding: 40px; text-align: center; }
 .main { flex: 1; min-height: 0; display: flex; overflow: hidden; }
 .editor-panel {
   min-width: 300px; min-height: 0; max-width: calc(100vw - 320px); display: flex; flex-direction: column;
-  background: var(--surface); overflow-x: hidden; overflow-y: auto;
+  background: var(--bg); border-right: 1px solid var(--border); overflow-x: hidden; overflow-y: auto;
 }
-.toolbar { display: flex; align-items: center; gap: 7px; padding: 7px 9px; border-bottom: 1px solid var(--border); }
-.editor-toolbar { flex-wrap: wrap; }
-.mode-switch { display: inline-flex; gap: 0.2rem; padding: 0.15rem; border: 1px solid var(--border); border-radius: 8px; background: var(--panel-muted, transparent); }
-.mode-switch .btn { min-width: 4.2rem; }
-.file-toolbar { flex-wrap: wrap; padding-block: 5px; background: color-mix(in srgb, var(--surface-raised) 55%, var(--surface)); }
-.btn { padding: 4px 10px; font-size: .76rem; white-space: nowrap; }
-.btn:disabled { opacity: .55; cursor: progress; }
-.btn-primary { background: var(--accent-strong); border-color: var(--accent-strong); color: white; font-weight: 700; }
-.btn-primary:hover { background: var(--accent); }
-.play { font-size: .65rem; margin-right: 2px; }
-.auto-check { display: flex; align-items: center; gap: 5px; color: var(--text-dim); font-size: .75rem; cursor: pointer; }
-.auto-check input { accent-color: var(--accent); }
+.toolbar { display: flex; align-items: center; gap: 6px; padding: 6px 8px; border-bottom: 1px solid var(--border); }
+.editor-toolbar { flex-wrap: wrap; min-height: 42px; }
+.toolbar-spacer, .statusbar-spacer { flex: 1; }
+.play { margin-right: 1px; }
+.auto-check { display: flex; align-items: center; gap: 7px; color: var(--text-dim); font-size: 13px; cursor: pointer; padding-inline: 4px; }
+.auto-check input { accent-color: var(--accent); margin: 0; }
 .toolbar-divider { width: 1px; align-self: stretch; background: var(--border); margin-inline: 2px; }
 .select, .view-select {
-  height: 30px; max-width: 155px; border: 1px solid var(--border); border-radius: 7px;
-  padding: 3px 25px 3px 8px; background: var(--surface-raised); font-size: .74rem;
+  height: 28px; max-width: 155px; border: 1px solid var(--border); border-radius: 6px;
+  padding: 0 22px 0 8px; background: var(--bg); color: var(--text); font-size: 12px;
 }
-.file-name { min-width: 0; margin-left: auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-dim); font-size: .7rem; }
-.export-btn { padding-inline: 7px; color: var(--text-dim); font-size: .65rem; font-weight: 720; letter-spacing: .04em; }
+
+/* Find */
 .find-bar {
-  display: flex; flex-wrap: wrap; align-items: center; gap: 5px; padding: 5px 8px;
-  border-bottom: 1px solid var(--border); background: var(--surface-raised); font-size: .68rem;
+  display: flex; flex-wrap: wrap; align-items: center; gap: 5px; padding: 6px 10px;
+  border-bottom: 1px solid var(--border); background: var(--surface); font-size: 12px;
 }
 .find-bar > input[type="search"], .find-bar > input[type="text"] {
-  min-width: 90px; flex: 1 1 110px; height: 28px; padding: 3px 7px; border: 1px solid var(--border);
-  border-radius: 5px; background: var(--bg); color: var(--text);
+  min-width: 90px; flex: 1 1 110px; height: 28px; padding: 3px 8px; border: 1px solid var(--border);
+  border-radius: 6px; background: var(--bg); color: var(--text);
 }
-.find-bar button { min-width: 28px; min-height: 28px; border: 1px solid var(--border); border-radius: 5px; background: var(--surface); cursor: pointer; }
+.find-bar button { min-width: 28px; min-height: 28px; border: 1px solid var(--border); border-radius: 6px; background: transparent; color: var(--text); cursor: pointer; }
+.find-bar button:hover { background: var(--hover); }
 .find-bar button:disabled { opacity: .45; cursor: default; }
 .find-status { min-width: 42px; color: var(--text-dim); text-align: center; }
 .find-case { display: flex; align-items: center; gap: 4px; color: var(--text-dim); white-space: nowrap; }
+
+/* Code */
 .code {
   flex: 1; width: 100%; min-height: 120px; resize: none; border: 0; outline: 0; padding: 14px 15px;
   background: var(--bg); color: var(--text); caret-color: var(--accent);
-  font-family: "JetBrains Mono", "SFMono-Regular", Consolas, monospace; font-size: .82rem; line-height: 1.58;
+  font-family: var(--font-mono); font-size: 12.5px; line-height: 1.6;
   font-weight: 400; font-style: normal; font-kerning: none; font-variant-ligatures: none; letter-spacing: 0; word-spacing: 0;
   tab-size: 2; white-space: pre; overflow: auto;
 }
 .code-editor { position: relative; display: flex; flex: 1; min-height: 120px; overflow: hidden; background: var(--bg); }
 .code-content { position: relative; isolation: isolate; flex: 1; min-width: 0; }
-.code-gutter { flex: 0 0 auto; width: calc(var(--line-number-digits) * 1ch + 38px); overflow: hidden; border-right: 1px solid var(--border); color: var(--text-dim); user-select: none; font: .82rem/1.58 "JetBrains Mono", "SFMono-Regular", Consolas, monospace; }
+.code-gutter { flex: 0 0 auto; width: calc(var(--line-number-digits) * 1ch + 38px); overflow: hidden; color: var(--text-dim); opacity: .7; user-select: none; font: 12.5px/1.6 var(--font-mono); }
 .code-gutter pre { margin: 0; padding: 14px 10px; text-align: right; font: inherit; white-space: pre; }
 .code-editor .code { position: absolute; inset: 0; height: 100%; margin: 0; box-sizing: border-box; }
 .code-highlight { z-index: 0; pointer-events: none; overflow: hidden; }
 .highlight-content { display: block; width: max-content; min-width: 100%; transform-origin: top left; }
 .code-input { z-index: 2; background: transparent; color: transparent; -webkit-text-fill-color: transparent; }
 .code-input::selection { background: color-mix(in srgb, var(--accent) 35%, transparent); }
-.code-highlight :deep(.syntax-comment) { color: #84929f; }
-.code-highlight :deep(.syntax-keyword) { color: #c792ea; }
-.code-highlight :deep(.syntax-string) { color: #9acb88; }
-.code-highlight :deep(.syntax-number) { color: #e8ac76; }
-.code-highlight :deep(.syntax-function) { color: #76c7df; }
-.code-highlight :deep(.syntax-property) { color: #d5c288; }
-.code-highlight :deep(.syntax-operator) { color: #b7bfea; }
+.code-highlight :deep(.syntax-comment) { color: color-mix(in srgb, var(--text-dim) 80%, var(--bg)); }
+.code-highlight :deep(.syntax-keyword) { color: #7ab8f5; }
+.code-highlight :deep(.syntax-string) { color: #9fd0a8; }
+.code-highlight :deep(.syntax-number) { color: #9fd0a8; }
+.code-highlight :deep(.syntax-function) { color: var(--accent); }
+.code-highlight :deep(.syntax-property) { color: var(--warning); }
+.code-highlight :deep(.syntax-operator) { color: var(--text-dim); }
+[data-theme="light"] .code-highlight :deep(.syntax-keyword) { color: #1f6fc2; }
+[data-theme="light"] .code-highlight :deep(.syntax-string), [data-theme="light"] .code-highlight :deep(.syntax-number) { color: #2f7d3f; }
 @media (forced-colors: active) {
   .code-highlight { display: none; }
   .code-input { color: CanvasText; -webkit-text-fill-color: CanvasText; }
 }
-.message { margin: 7px 9px 0; padding: 8px 10px; border-radius: 7px; font: .74rem/1.45 ui-monospace, monospace; white-space: pre-wrap; overflow-wrap: anywhere; }
+
+/* Messages and stats */
+.message { margin: 8px 10px 0; padding: 8px 10px; border-radius: var(--radius); font: 12px/1.45 var(--font-mono); white-space: pre-wrap; overflow-wrap: anywhere; }
 .diagnostic-link { all: unset; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
 .diagnostic-link:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; border-radius: 2px; }
-.error { color: var(--danger); background: color-mix(in srgb, var(--danger) 10%, transparent); border: 1px solid color-mix(in srgb, var(--danger) 35%, transparent); }
-.warning { max-height: 88px; overflow: auto; color: var(--warning); background: color-mix(in srgb, var(--warning) 9%, transparent); border: 1px solid color-mix(in srgb, var(--warning) 28%, transparent); }
-.stats { display: flex; flex-wrap: wrap; align-items: center; gap: 5px 11px; min-height: 31px; padding: 5px 10px; border-top: 1px solid var(--border); color: var(--text-dim); font-size: .68rem; }
-.stats strong { color: var(--text); font-weight: 650; }
-.status { margin-left: auto; }
+.error { color: var(--danger); background: color-mix(in srgb, var(--danger) 12%, transparent); border: 1px solid color-mix(in srgb, var(--danger) 35%, transparent); }
+.warning { max-height: 88px; overflow: auto; color: var(--warning); background: color-mix(in srgb, var(--warning) 10%, transparent); border: 1px solid color-mix(in srgb, var(--warning) 28%, transparent); }
+.stats { display: flex; flex-wrap: wrap; align-items: center; gap: 5px 12px; min-height: 34px; padding: 5px 12px; border-top: 1px solid var(--border); color: var(--text-dim); font-size: 12px; }
+.stats strong { color: var(--text); font-weight: 600; font-variant-numeric: tabular-nums; }
+.status { margin-left: auto; display: flex; align-items: center; gap: 6px; color: #9fd0a8; }
+.status::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
 .status.busy { color: var(--accent); }
 .status.stale { color: var(--warning); }
 .status.failed { color: var(--danger); }
+[data-theme="light"] .status { color: #2f7d3f; }
+
+/* Splitter */
 .splitter {
-  position: relative; z-index: 4; width: 7px; flex: 0 0 7px; cursor: col-resize;
-  background: var(--surface); border-inline: 1px solid var(--border); touch-action: none;
+  position: relative; z-index: 4; width: 6px; flex: 0 0 6px; cursor: col-resize;
+  background: var(--surface); touch-action: none;
 }
 .splitter::before { content: ''; position: absolute; inset: 0 -9px; }
 .splitter span { position: absolute; width: 2px; height: 34px; inset: 50% auto auto 50%; transform: translate(-50%, -50%); border-radius: 2px; background: var(--border); }
 .splitter:hover span, .splitter:focus-visible span { background: var(--accent); }
+
+/* Viewport */
 .canvas-panel { flex: 1; min-width: 0; position: relative; overflow: hidden; background: var(--canvas-bg); }
 .gpu-canvas { width: 100%; height: 100%; display: block; touch-action: none; outline: 0; }
 .viewer-toolbar {
-  position: absolute; z-index: 3; top: 9px; left: 50%; transform: translateX(-50%);
-  display: flex; align-items: center; gap: 5px; max-width: calc(100% - 18px); padding: 4px;
-  border: 1px solid color-mix(in srgb, var(--border) 76%, transparent); border-radius: 9px;
-  background: color-mix(in srgb, #171920 82%, transparent); backdrop-filter: blur(9px); color: #f2f4f8;
+  position: absolute; z-index: 3; top: 12px; left: 50%; transform: translateX(-50%);
+  display: flex; align-items: center; gap: 2px; max-width: calc(100% - 24px); padding: 4px;
+  border: 1px solid var(--border); border-radius: 12px;
+  background: color-mix(in srgb, var(--surface) 86%, transparent); backdrop-filter: blur(10px); color: var(--text);
 }
-.view-btn { min-height: 28px; padding: 3px 8px; background: transparent; border-color: transparent; color: inherit; font-size: .7rem; }
-.view-btn[aria-pressed="true"] { background: color-mix(in srgb, var(--accent) 24%, transparent); border-color: color-mix(in srgb, var(--accent) 42%, transparent); }
-.view-btn.icon-only { min-width: 28px; padding-inline: 6px; font-size: .9rem; }
+.viewer-toolbar.with-dock { left: calc((100% - 344px) / 2); max-width: calc(100% - 368px); }
+.view-btn { min-height: 32px; padding: 0 11px; border-color: transparent; color: var(--text-dim); font-size: 13px; font-weight: 500; }
+.view-btn:hover { color: var(--text); }
+.view-btn[aria-pressed="true"], .view-btn.active { background: var(--surface-raised); color: var(--text); }
+.view-btn.icon-only { min-width: 32px; padding-inline: 0; }
 .scan-toggle { display: flex; align-items: center; gap: 5px; white-space: nowrap; }
-.scan-toggle.active { background: color-mix(in srgb, var(--accent) 24%, transparent); border-color: var(--accent); }
 .scan-active-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--accent); }
-.view-select { max-width: 110px; height: 28px; color: #f2f4f8; background: #252932; border-color: #3b414d; }
-.display-select { max-width: 90px; }
-.view-cube-wrap { position: absolute; z-index: 2; top: 58px; right: 13px; }
-.view-cube-wrap.with-dock { right: 326px; }
+.view-select-label { display: flex; align-items: center; }
+.view-select { max-width: 110px; }
+.display-select { max-width: 96px; }
+.view-cube-wrap { position: absolute; z-index: 2; top: 60px; right: 14px; }
+.view-cube-wrap.with-dock { right: 358px; }
 .selection-modes {
-  position: absolute; z-index: 3; top: 58px; left: 12px; display: flex; gap: 3px; padding: 3px;
-  border: 1px solid rgba(255,255,255,.12); border-radius: 8px; background: rgba(18,21,27,.84);
-  color: #f2f4f8; box-shadow: 0 6px 24px rgba(0,0,0,.18); backdrop-filter: blur(8px);
+  position: absolute; z-index: 3; top: 60px; left: 14px; display: flex; flex-direction: column; gap: 2px; padding: 3px;
+  border: 1px solid var(--border); border-radius: 9px; background: color-mix(in srgb, var(--surface) 86%, transparent);
+  color: var(--text); backdrop-filter: blur(8px);
 }
 .selection-modes button {
-  min-height: 26px; display: flex; align-items: center; gap: 5px; padding: 3px 7px; border: 1px solid transparent;
-  border-radius: 5px; background: transparent; color: inherit; cursor: pointer; font-size: .65rem;
+  min-height: 34px; min-width: 34px; display: flex; align-items: center; justify-content: center; gap: 6px; padding: 0 8px; border: 0;
+  border-radius: 7px; background: transparent; color: var(--text-dim); cursor: pointer; font-size: 12px;
 }
-.selection-modes button:hover { background: rgba(255,255,255,.07); }
-.selection-modes button.active { background: rgba(85,157,255,.24); border-color: rgba(101,176,255,.48); }
-.selection-modes kbd { color: rgba(255,255,255,.48); font: .56rem ui-monospace, monospace; }
-.mode-point { width: 6px; height: 6px; border-radius: 50%; background: #6bc3ff; box-shadow: 0 0 5px #6bc3ff; }
-.mode-face { width: 9px; height: 9px; border: 1px solid #6bc3ff; background: rgba(107,195,255,.2); transform: skewY(-18deg); }
-.mode-body { width: 9px; height: 9px; border: 1px solid #6bc3ff; box-shadow: inset 2px -2px rgba(107,195,255,.28); }
+.selection-modes button > span:not(.mode-point, .mode-face, .mode-body) { display: none; }
+.selection-modes button:hover { background: var(--hover); color: var(--text); }
+.selection-modes button.active { background: var(--surface-raised); color: var(--text); }
+.selection-modes kbd { display: none; }
+.mode-point { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+.mode-face { width: 10px; height: 10px; border: 1.5px solid currentColor; background: color-mix(in srgb, currentColor 25%, transparent); transform: skewY(-18deg); }
+.mode-body { width: 10px; height: 10px; border: 1.5px solid currentColor; box-shadow: inset 2px -2px color-mix(in srgb, currentColor 30%, transparent); }
+
+/* Dock */
 .cad-dock {
-  position: absolute; z-index: 4; top: 57px; right: 9px; bottom: 34px; width: min(304px, calc(100% - 18px));
-  min-height: 0; display: flex; flex-direction: column; border-radius: 9px; background: var(--surface);
-  box-shadow: 0 16px 44px rgba(0,0,0,.32);
+  position: absolute; z-index: 4; top: 0; right: 0; bottom: 0; width: min(344px, calc(100% - 16px));
+  min-height: 0; display: flex; background: var(--bg); border-left: 1px solid var(--border);
 }
-.dock-tabs {
-  flex: 0 0 32px; display: grid; grid-template-columns: 1fr 1fr 1.15fr 28px; gap: 2px; padding: 3px;
-  border: 1px solid var(--border); border-bottom: 0; border-radius: 9px 9px 0 0; background: var(--surface-raised);
+.dock-rail {
+  flex: 0 0 46px; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px 0;
+  border-right: 1px solid var(--border);
 }
-.dock-tabs button { border: 0; border-radius: 5px; background: transparent; color: var(--text-dim); cursor: pointer; font-size: .63rem; }
-.dock-tabs button:hover { color: var(--text); background: var(--hover); }
-.dock-tabs button.active { color: var(--text); background: color-mix(in srgb, var(--accent) 20%, var(--surface)); }
-.dock-tabs .dock-close { font-size: 1rem; }
-.dock-panel { min-height: 0; display: flex; flex: 1; flex-direction: column; }
-.dock-panel > :deep(.outliner), .dock-panel > :deep(.inspect-panel) { width: 100%; min-height: 0; flex: 1; border-radius: 0 0 9px 9px; }
-.customizer-card { min-height: 0; flex: 1; overflow: auto; border: 1px solid var(--border); border-radius: 0 0 9px 9px; background: var(--surface); }
+.dock-rail button, .dock-close {
+  width: 34px; height: 34px; border: 0; border-radius: var(--radius); background: transparent; color: var(--text-dim); cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+}
+.dock-rail button:hover, .dock-close:hover { color: var(--text); background: var(--hover); }
+.dock-rail button.active { color: var(--text); background: var(--surface-raised); }
+.dock-rail-spacer { flex: 1; }
+.dock-body { flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; }
+.dock-panel { min-height: 0; display: flex; flex: 1; flex-direction: column; overflow: hidden; }
+.dock-panel > :deep(.outliner), .dock-panel > :deep(.inspect-panel) { width: 100%; min-height: 0; flex: 1; border-radius: 0; border-width: 0; }
+.customizer-card { min-height: 0; flex: 1; overflow: auto; background: var(--bg); }
+.dock-scroll { min-height: 0; flex: 1; overflow: auto; overscroll-behavior: contain; }
+.dock-scroll :deep(details.svg-panel), .dock-scroll :deep(details.photo-panel), .dock-scroll > .performance-panel { border: 0; border-radius: 0; background: transparent; }
+.dock-scroll :deep(details.svg-panel > summary), .dock-scroll :deep(details.photo-panel > summary), .dock-scroll > .performance-panel > summary { display: none; }
+.dock-scroll :deep(.svg-content) { max-height: none; padding: 12px; }
+.dock-scroll :deep(.photo-content) { padding: 12px; }
+.dock-scroll > .performance-panel { border-top: 0; }
+.dock-scroll > .performance-panel .performance-content { max-height: none; padding: 12px; }
+.canvas-panel :deep(.main-model-tools) {
+  left: 14px; right: auto; bottom: 34px; max-width: calc(100% - 28px); padding: 6px 8px; border-radius: 12px;
+  background: color-mix(in srgb, var(--surface) 90%, transparent); backdrop-filter: blur(10px);
+}
+.canvas-panel.with-dock :deep(.main-model-tools) { max-width: calc(100% - 372px); }
+.canvas-panel.tools-hidden :deep(.main-model-tools) { display: none; }
+
+/* HUD and badges */
 .selection-hud {
-  position: absolute; z-index: 3; top: 98px; left: 12px; display: flex; align-items: center; gap: 7px;
-  min-height: 30px; padding: 4px 6px 4px 9px; border: 1px solid rgba(255,255,255,.13);
-  border-radius: 8px; background: rgba(18,21,27,.82); color: #f2f4f8;
-  box-shadow: 0 6px 24px rgba(0,0,0,.18); backdrop-filter: blur(8px); font-size: .7rem;
+  position: absolute; z-index: 3; top: 12px; left: 14px; display: flex; align-items: center; gap: 8px;
+  min-height: 30px; padding: 0 6px 0 10px; border: 1px solid var(--border);
+  border-radius: var(--radius); background: color-mix(in srgb, var(--surface) 86%, transparent); color: var(--text);
+  backdrop-filter: blur(8px); font-size: 12.5px;
 }
 .selection-hud > span { display: flex; align-items: center; gap: 6px; }
-.selection-dot { width: 7px; height: 7px; border-radius: 50%; background: #65b0ff; box-shadow: 0 0 8px #65b0ff; }
+.selection-dot { width: 8px; height: 8px; border-radius: 2px; background: var(--accent); }
 .selection-hud button {
-  width: 24px; height: 22px; padding: 0; border: 1px solid rgba(255,255,255,.14);
-  border-radius: 5px; background: rgba(255,255,255,.06); color: inherit; cursor: pointer;
+  min-width: 24px; height: 22px; padding: 0 6px; border: 1px solid var(--border);
+  border-radius: 5px; background: transparent; color: var(--text-dim); cursor: pointer;
 }
-.selection-hud button:hover, .selection-hud button[aria-pressed="true"] { background: rgba(85,157,255,.28); border-color: rgba(101,176,255,.55); }
+.selection-hud button:hover, .selection-hud button[aria-pressed="true"] { background: var(--surface-raised); color: var(--text); }
 .rendering-badge, .stale-badge {
-  position: absolute; z-index: 2; top: 55px; left: 50%; transform: translateX(-50%);
-  display: flex; align-items: center; gap: 7px; padding: 6px 10px; border-radius: 999px;
-  background: rgba(18, 21, 27, .82); color: #f2f4f8; border: 1px solid rgba(255,255,255,.12);
-  backdrop-filter: blur(8px); font-size: .7rem; pointer-events: none;
+  position: absolute; z-index: 2; top: 58px; left: 50%; transform: translateX(-50%);
+  display: flex; align-items: center; gap: 7px; padding: 6px 12px; border-radius: 999px;
+  background: color-mix(in srgb, var(--surface) 86%, transparent); color: var(--text); border: 1px solid var(--border);
+  backdrop-filter: blur(8px); font-size: 12px; pointer-events: none;
 }
-.stale-badge { color: #ffd37c; }
-.spinner { width: 11px; height: 11px; border: 2px solid rgba(255,255,255,.25); border-top-color: var(--accent); border-radius: 50%; animation: spin .7s linear infinite; }
+.stale-badge { color: var(--warning); }
+.spinner { width: 11px; height: 11px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin .7s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 .canvas-hint {
-  position: absolute; z-index: 2; bottom: 9px; left: 50%; transform: translateX(-50%);
-  max-width: calc(100% - 18px); padding: 4px 8px; border-radius: 5px; color: rgba(255,255,255,.68);
-  background: rgba(9,11,15,.48); font-size: .68rem; text-align: center; pointer-events: none;
+  position: absolute; z-index: 2; bottom: 10px; right: 14px;
+  max-width: calc(100% - 28px); color: var(--text-dim); font-size: 11.5px; text-align: right; pointer-events: none;
 }
+.canvas-hint.with-dock { right: 358px; }
+
+/* Status bar */
+.statusbar {
+  height: 28px; flex-shrink: 0; display: flex; align-items: center; gap: 16px; padding: 0 14px;
+  background: var(--surface); border-top: 1px solid var(--border); color: var(--text-dim); font-size: 11.5px; white-space: nowrap; overflow: hidden;
+}
+.status-item { display: inline-flex; align-items: center; gap: 6px; }
+.status-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--danger); }
+.status-dot.ok { background: #9fd0a8; }
+[data-theme="light"] .status-dot.ok { background: #2f7d3f; }
+.status-hint kbd { font-size: 10.5px; padding: 0 4px; }
+
+/* Dialogs */
+.dialog-backdrop { position: fixed; z-index: 40; inset: 0; display: flex; align-items: center; justify-content: center; padding: 20px; background: rgba(0,0,0,.45); }
+.dialog {
+  width: min(620px, 100%); max-height: 100%; overflow: auto; display: flex; flex-direction: column;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 14px; box-shadow: 0 24px 64px rgba(0,0,0,.4);
+}
+.dialog-header { display: flex; align-items: flex-start; gap: 10px; padding: 18px 20px 14px; border-bottom: 1px solid var(--border); }
+.dialog-header > div { flex: 1; }
+.dialog-header h2 { margin: 0; font-size: 17px; font-weight: 600; letter-spacing: -0.01em; }
+.dialog-header p { margin: 2px 0 0; color: var(--text-dim); }
+.format-grid { margin: 0; padding: 18px 20px 8px; border: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.format-grid legend { padding: 0; margin-bottom: 8px; color: var(--text-dim); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; }
+.format-card {
+  display: flex; flex-direction: column; gap: 3px; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--border);
+  background: var(--bg); cursor: pointer;
+}
+.format-card.active { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 14%, var(--bg)); }
+.format-card input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.format-name { font-weight: 600; }
+.format-card small { color: var(--text-dim); font-size: 11.5px; }
+.dialog-note { margin: 6px 20px 14px; padding: 10px 12px; border-radius: var(--radius); background: var(--bg); border: 1px solid var(--border); color: var(--text-dim); font-size: 12.5px; }
+.dialog-note.warning { color: var(--warning); }
+.dialog-footer { display: flex; align-items: center; gap: 8px; padding: 14px 20px; border-top: 1px solid var(--border); background: var(--bg); border-radius: 0 0 14px 14px; }
 .toast {
-  position: fixed; z-index: 30; left: 50%; bottom: 22px; transform: translateX(-50%);
-  padding: 8px 13px; border: 1px solid var(--border); border-radius: 8px;
-  background: var(--surface-raised); box-shadow: 0 8px 32px rgba(0,0,0,.28); font-size: .78rem;
+  position: fixed; z-index: 50; left: 50%; bottom: 44px; transform: translateX(-50%);
+  padding: 8px 13px; border: 1px solid var(--border); border-radius: var(--radius);
+  background: var(--surface-raised); box-shadow: 0 8px 32px rgba(0,0,0,.28); font-size: 13px;
+}
+
+@media (max-width: 1360px) {
+  .topbar-action.share-action span { display: none; }
+}
+
+@media (max-width: 1100px) {
+  .command-btn { min-width: 0; }
+  .command-btn span, .command-btn kbd { display: none; }
+  .topbar-action span { display: none; }
+  .theme-picker { display: none; }
 }
 
 @media (max-width: 800px) {
-  .kernel-badge { display: none; }
+  .topbar { grid-template-columns: 1fr auto; row-gap: 0; height: auto; min-height: 44px; padding-block: 6px; }
+  .mode-switch { grid-column: 1 / -1; justify-self: stretch; }
+  .mode-switch button { flex: 1; }
   .main { flex-direction: column; overflow: auto; }
-  .editor-panel { width: 100% !important; min-width: 0; max-width: none; height: 46dvh; flex: 0 0 46dvh; }
-  .editor-panel:has(.svg-panel[open]) { height: auto; min-height: 46dvh; flex-basis: auto; }
+  .editor-panel { width: 100% !important; min-width: 0; max-width: none; height: 46dvh; flex: 0 0 46dvh; border-right: 0; }
   .splitter { display: none; }
   .canvas-panel { min-height: 46dvh; flex: 1 0 46dvh; border-top: 1px solid var(--border); }
-  .view-btn span { display: none; }
-  .viewer-toolbar { left: 8px; right: 8px; transform: none; justify-content: center; }
-  /* No downscale: badge hit targets must stay at least 24x24 CSS px here. */
-  .view-cube-wrap { top: 55px; right: 8px; }
+  .viewer-toolbar, .viewer-toolbar.with-dock { left: 8px; right: 8px; max-width: none; transform: none; justify-content: center; flex-wrap: wrap; }
+  .view-cube-wrap { top: 60px; right: 8px; }
   .view-cube-wrap.with-dock { display: none; }
-  .selection-modes { top: 53px; left: 8px; }
-  .selection-hud { top: 91px; left: 8px; }
-  .cad-dock { top: 91px; right: 8px; bottom: 32px; }
-  .stats { font-size: .64rem; }
+  .selection-modes { top: 60px; left: 8px; }
+  .selection-hud { top: 12px; left: 8px; }
+  .cad-dock { width: min(344px, calc(100% - 8px)); }
+  .canvas-panel :deep(.main-model-tools), .canvas-panel.with-dock :deep(.main-model-tools) { left: 8px; right: 8px; max-width: none; }
+  .canvas-hint, .canvas-hint.with-dock { right: 8px; }
+  .stats { font-size: 11.5px; }
   .status { width: 100%; margin-left: 0; }
+  .statusbar { gap: 10px; }
+  .status-hint { display: none; }
+  .format-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 @media (max-width: 480px) {
-  .topbar { min-height: 40px; }
-  .file-toolbar .btn { padding-inline: 7px; }
+  .brand { display: none; }
+  .file-chip { max-width: 160px; }
   .select { max-width: 128px; }
-  .view-btn { padding-inline: 5px; }
+  .view-btn { padding-inline: 6px; }
   .view-select { max-width: 78px; }
   .display-select { max-width: 66px; }
-  .command-btn kbd, .command-btn > span { display: none; }
-  .command-btn { padding-inline: 7px; }
-  .theme-picker select { max-width: 86px; }
   .view-cube-wrap { display: none; }
-  .selection-modes button > span:not(.mode-point, .mode-face, .mode-body), .selection-modes kbd { display: none; }
   .selection-hud { max-width: calc(100% - 16px); }
   .canvas-hint { white-space: normal; }
 }
@@ -3146,31 +3440,6 @@ button, select { color: inherit; }
   button, select, input, textarea { border: 1px solid ButtonText !important; }
   :focus-visible { outline: 2px solid Highlight !important; outline-offset: 2px; }
 }
-.performance-panel { flex: 0 0 auto; border-top: 1px solid var(--border); color: var(--text); font-size: .72rem; }
-.performance-panel summary { cursor: pointer; padding: 8px 12px; }
-.performance-panel summary span, .performance-panel p { color: var(--text-dim); }
-.performance-content { padding: 0 12px 10px; max-height: 280px; overflow: auto; }
-.performance-panel p { line-height: 1.45; }
-.performance-panel table { width: 100%; border-collapse: collapse; }
-.performance-panel caption { text-align: left; font-weight: 600; margin: 8px 0; }
-.performance-panel th, .performance-panel td { padding: 4px 0; border-bottom: 1px solid var(--border); }
-.performance-panel th { text-align: left; font-weight: 400; }
-.performance-panel td { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
-.performance-panel button { padding: 6px 10px; background: var(--surface-raised); border: 1px solid var(--border); border-radius: 5px; color: var(--text); cursor: pointer; }
-.performance-panel button:disabled { opacity: .5; cursor: default; }
-
-.parameter-presets { padding: 10px; border-bottom: 1px solid var(--border); display: grid; gap: 8px; font-size: .72rem; }
-.parameter-presets p { margin: 0; color: var(--text-dim); line-height: 1.45; }
-.parameter-presets input, .parameter-presets select { width: 100%; min-width: 0; padding: 6px; border: 1px solid var(--border); border-radius: 5px; background: var(--surface-raised); color: var(--text); }
-.preset-save { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px; }
-.preset-actions { display: flex; gap: 6px; flex-wrap: wrap; }
-.parameter-presets button { padding: 6px 8px; border: 1px solid var(--border); border-radius: 5px; background: var(--surface-raised); color: var(--text); cursor: pointer; }
-.parameter-presets button:disabled { opacity: .5; cursor: default; }
-.compute-inspector { flex: 1; min-height: 0; overflow: auto; display: flex; flex-direction: column; }
-.compute-panel { display: grid; gap: 8px; padding: 10px; border: 1px solid var(--border); font-size: .72rem; }
-.compute-panel p { margin: 0; line-height: 1.45; color: var(--text-dim); }
-.compute-panel button { padding: 7px; color: var(--text); background: var(--surface-raised); border: 1px solid var(--border); border-radius: 5px; cursor: pointer; }
-.compute-panel button:disabled { opacity: .5; cursor: default; }
 </style>
 
 <style scoped>
