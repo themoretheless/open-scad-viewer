@@ -101,7 +101,8 @@ available.
 `squared_distance_pairs(a, b)` computes one-to-one squared Euclidean distances
 for equal-length point arrays. `squared_distance_pairs_accelerated(a, b,
 acceleration)` adds explicit `Gpu`/`Cuda` offload through the same portable
-wgpu and CUDA-driver layers as nearest-neighbor.
+wgpu and CUDA-driver layers as nearest-neighbor. Device buffers are cached
+grow-only per thread for stable-size repeated calls.
 
 This kernel is intentionally conservative in `Auto`: unlike nearest-neighbor,
 it is only O(pair_count) with a few FLOPs per pair, so on discrete GPUs the
@@ -112,11 +113,11 @@ regressing callers:
 
 | pairs | cpu | auto | gpu | cuda |
 | --- | --- | --- | --- | --- |
-| 10,000 | 0.009 ms | 0.008 ms | 0.344 ms | 0.110 ms |
-| 100,000 | 0.098 ms | 0.071 ms | 3.464 ms | 0.865 ms |
-| 250,000 | 0.296 ms | 0.305 ms | 8.152 ms | 2.227 ms |
-| 1,000,000 | 1.840 ms | 1.960 ms | 27.985 ms | 8.473 ms |
-| 3,000,000 | 10.628 ms | 6.151 ms | 83.720 ms | 25.558 ms |
+| 10,000 | 0.008 ms | 0.008 ms | 0.338 ms | 0.113 ms |
+| 100,000 | 0.124 ms | 0.067 ms | 3.281 ms | 0.901 ms |
+| 250,000 | 0.304 ms | 0.311 ms | 8.336 ms | 1.985 ms |
+| 1,000,000 | 1.893 ms | 1.968 ms | 29.375 ms | 8.320 ms |
+| 3,000,000 | 6.153 ms | 6.177 ms | 87.506 ms | 24.352 ms |
 
 ## ICP / rigid point-cloud registration
 

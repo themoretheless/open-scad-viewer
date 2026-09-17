@@ -165,6 +165,14 @@ pub(crate) fn nearest_neighbor_cuda(queries: &[V3], targets: &[V3]) -> Option<Ve
 struct CudaDistancePairs {
     device: CudaDevice,
     kernel: CudaFunction,
+    buffers: std::cell::RefCell<Option<DistancePairBuffers>>,
+}
+
+struct DistancePairBuffers {
+    capacity: usize,
+    a: CudaSlice<f32>,
+    b: CudaSlice<f32>,
+    out: CudaSlice<f32>,
 }
 
 impl CudaDistancePairs {
@@ -172,7 +180,33 @@ impl CudaDistancePairs {
         let device = CudaDevice::new()?;
         let module = device.load_ptx(DISTANCE_PAIRS_PTX)?;
         let kernel = module.load_function("squared_distance_pairs").ok()?;
-        Some(Self { device, kernel })
+        Some(Self {
+            device,
+            kernel,
+            buffers: std::cell::RefCell::new(None),
+        })
+    }
+
+    fn ensure_buffers(&self, pair_count: usize) -> Option<()> {
+        let stale = match &*self.buffers.borrow() {
+            Some(buffers) => buffers.capacity < pair_count,
+            None => true,
+        };
+        if !stale {
+            return Some(());
+        }
+        let capacity = pair_count.max(1);
+        let stream = &self.device.stream;
+        let a = stream.alloc_zeros::<f32>(capacity * 3).ok()?;
+        let b = stream.alloc_zeros::<f32>(capacity * 3).ok()?;
+        let out = stream.alloc_zeros::<f32>(capacity).ok()?;
+        *self.buffers.borrow_mut() = Some(DistancePairBuffers {
+            capacity,
+            a,
+            b,
+            out,
+        });
+        Some(())
     }
 
     fn run(&self, a: &[V3], b: &[V3]) -> Option<Vec<f64>> {
@@ -183,13 +217,21 @@ impl CudaDistancePairs {
         let stream = &self.device.stream;
         let flat_a: Vec<f32> = a.iter().flatten().map(|&v| v as f32).collect();
         let flat_b: Vec<f32> = b.iter().flatten().map(|&v| v as f32).collect();
-        let a_dev = self.device.upload(&flat_a).ok()?;
-        let b_dev = self.device.upload(&flat_b).ok()?;
-        let mut out = stream.alloc_zeros::<f32>(pair_count.max(1)).ok()?;
+        self.ensure_buffers(pair_count)?;
+        let mut buffers = self.buffers.borrow_mut();
+        let buffers = buffers.as_mut().expect("ensure_buffers was just called");
+        {
+            let mut a_view = buffers.a.slice_mut(0..(pair_count * 3).max(1));
+            stream.memcpy_htod(&flat_a, &mut a_view).ok()?;
+        }
+        {
+            let mut b_view = buffers.b.slice_mut(0..(pair_count * 3).max(1));
+            stream.memcpy_htod(&flat_b, &mut b_view).ok()?;
+        }
         let pair_count_u32 = pair_count as u32;
-        let a_view = a_dev.slice(0..(pair_count * 3).max(1));
-        let b_view = b_dev.slice(0..(pair_count * 3).max(1));
-        let mut out_view = out.slice_mut(0..pair_count.max(1));
+        let a_view = buffers.a.slice(0..(pair_count * 3).max(1));
+        let b_view = buffers.b.slice(0..(pair_count * 3).max(1));
+        let mut out_view = buffers.out.slice_mut(0..pair_count.max(1));
         let mut launch = stream.launch_builder(&self.kernel);
         launch
             .arg(&pair_count_u32)
