@@ -9,7 +9,7 @@ resvg = { path = "vendor/resvg" }
 
 [workspace.package]
 edition = "2024"
-# Last stable Cargo accepts as rust-version. Dev/CI compile with nightly-2026-09-10.
+# Last stable Cargo accepts as rust-version. Dev/CI compile with floating nightly.
 rust-version = "1.98"
 publish = false
 
