@@ -91,6 +91,11 @@ recommendation directly. It's a starting point tuned to the RTX 5090 numbers
 above, not a guarantee for every device — treat it as a reasonable default,
 not a substitute for benchmarking workloads where the choice actually matters.
 
+For runtime diagnostics, `cargo run -p osv-math --features cuda --example
+backend_report` prints the placement labels, portable wgpu backend report
+(`metal`, `vulkan`, `dx12`, or `webgpu`) and native CUDA device report when
+available.
+
 ## ICP / rigid point-cloud registration
 
 `rigid_transform(source, target)` computes the least-squares rigid transform
