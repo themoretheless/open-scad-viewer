@@ -29,6 +29,7 @@ the portable GPU path on the same machine.
 | `math-core` | One-to-one squared-distance vector/sum batches | `distance_pairs.wgsl`, `distance_pair_sum.wgsl` | `distance_pairs.cu` / `distance_pair_sum.cu` → PTX |
 | `math-core` | Point-cloud AABB bounds reduction (`point_bounds_accelerated`) | `point_bounds.wgsl` | `point_bounds.cu` → PTX |
 | `math-core` | Point-cloud centroid/covariance reduction (`point_moments_accelerated`) | `point_moments.wgsl` | `point_moments.cu` → PTX |
+| `math-core` | Fused point-cloud bounds + moments summary (`point_cloud_stats_accelerated`) | `point_cloud_stats.wgsl` | `point_cloud_stats.cu` → PTX |
 | `sdf-core` | Grid sampling of primitive/CSG/mesh-distance fields (`polygonize_accelerated`) | `SDF_WGSL`, cached grow-only buffers | `sdf_grid.cu` → `sdf_grid.ptx`, cached grow-only buffers |
 | `geometry-bridge` | Lattice implicit field (`lattice_accelerated`) | `LATTICE_WGSL`, cached grow-only buffers | runs the wgpu shader |
 | `photogrammetry-core` | Descriptor matching | cached WGSL pipelines/buffers | `matching.cu` → `matching.ptx` |

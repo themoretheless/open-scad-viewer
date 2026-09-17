@@ -114,6 +114,26 @@ impl Acceleration {
             explicit => explicit,
         }
     }
+
+    /// Suggests a placement for fused point-cloud summary reductions
+    /// (bounds + moments). wgpu is upload-bound on the measured discrete GPU,
+    /// but the fused CUDA path beats the CPU reference for large clouds.
+    pub const fn recommended_for_point_cloud_stats(point_count: usize) -> Self {
+        const CUDA_POINT_THRESHOLD: usize = 500_000;
+        if cfg!(feature = "cuda") && point_count >= CUDA_POINT_THRESHOLD {
+            Self::Cuda
+        } else {
+            Self::Cpu
+        }
+    }
+
+    /// Resolves `Auto` for fused point-cloud summary reductions.
+    pub const fn resolve_for_point_cloud_stats(self, point_count: usize) -> Self {
+        match self {
+            Self::Auto => Self::recommended_for_point_cloud_stats(point_count),
+            explicit => explicit,
+        }
+    }
 }
 
 #[cfg(test)]
@@ -185,6 +205,28 @@ mod tests {
         assert_eq!(
             Acceleration::Auto.resolve_for_distance_pairs(2_000_000),
             Acceleration::Cpu
+        );
+    }
+
+    #[test]
+    fn recommended_for_point_cloud_stats_uses_cuda_only_for_large_clouds() {
+        assert_eq!(
+            Acceleration::recommended_for_point_cloud_stats(10_000),
+            Acceleration::Cpu
+        );
+        assert_eq!(
+            Acceleration::Auto.resolve_for_point_cloud_stats(10_000),
+            Acceleration::Cpu
+        );
+        let large = Acceleration::recommended_for_point_cloud_stats(1_000_000);
+        if cfg!(feature = "cuda") {
+            assert_eq!(large, Acceleration::Cuda);
+        } else {
+            assert_eq!(large, Acceleration::Cpu);
+        }
+        assert_eq!(
+            Acceleration::Gpu.resolve_for_point_cloud_stats(10_000),
+            Acceleration::Gpu
         );
     }
 }

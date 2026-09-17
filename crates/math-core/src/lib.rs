@@ -10,6 +10,7 @@ mod moments;
 mod nearest_neighbor;
 mod nearest_two;
 mod registration;
+mod stats;
 mod types;
 
 pub use acceleration::Acceleration;
@@ -38,6 +39,10 @@ pub use nearest_two::{
     nearest_two_first_only, nearest_two_ratios_accelerated,
 };
 pub use registration::{IcpOptions, IcpReport, RigidTransform, icp_register, rigid_transform};
+pub use stats::{
+    POINT_CLOUD_STATS_WGSL_TEMPLATE, PointCloudStats, point_cloud_stats,
+    point_cloud_stats_accelerated,
+};
 pub use types::{ID, M3, V2, V3};
 
 #[cfg(feature = "cuda")]

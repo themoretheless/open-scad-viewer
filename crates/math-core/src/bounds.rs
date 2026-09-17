@@ -13,7 +13,7 @@ pub struct PointBounds {
 }
 
 impl PointBounds {
-    fn new(samples: usize, min: V3, max: V3) -> Self {
+    pub(crate) fn new(samples: usize, min: V3, max: V3) -> Self {
         Self {
             samples,
             min,

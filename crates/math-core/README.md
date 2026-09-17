@@ -222,9 +222,10 @@ covariance matrix for a finite point cloud. `point_principal_axes(points,
 acceleration)` builds on that covariance to return PCA variances and unit axes
 for orientation/normal workflows. `point_moments_accelerated(points,
 acceleration)` adds fused wgpu/CUDA reductions with grow-only buffers and
-Metal/default workgroup tuning. Like bounds, this is mostly memory movement on
-discrete GPUs, so `Auto` stays on the exact CPU path; explicit `Gpu`/`Cuda`
-remain useful for integrated-GPU experiments and backend validation.
+Metal/default workgroup tuning. Like bounds, this standalone reducer is mostly
+memory movement on discrete GPUs, so `Auto` stays on the exact CPU path;
+explicit `Gpu`/`Cuda` remain useful for integrated-GPU experiments and backend
+validation.
 
 Measured with `cargo run --release -p osv-math --features cuda --example
 bench_point_moments` on the RTX 5090:
@@ -235,6 +236,19 @@ bench_point_moments` on the RTX 5090:
 | 100,000 | 0.332 ms | 0.338 ms | 1.793 ms | 0.601 ms |
 | 1,000,000 | 3.593 ms | 3.508 ms | 15.199 ms | 5.023 ms |
 | 5,000,000 | 18.004 ms | 18.056 ms | 73.931 ms | 24.893 ms |
+
+`point_cloud_stats(points)` returns bounds and moments together.
+`point_cloud_stats_accelerated(points, acceleration)` fuses both summaries
+into one device pass/upload. That fused CUDA path finally amortizes the
+fixed overhead for large clouds, so `Auto` selects CUDA from 500K points when
+the `cuda` feature is built and otherwise keeps CPU:
+
+| points | fused cpu | fused auto | fused gpu | fused cuda | separate cpu | separate cuda |
+| --- | --- | --- | --- | --- | --- | --- |
+| 10,000 | 0.059 ms | 0.058 ms | 0.331 ms | 0.170 ms | 0.070 ms | 0.231 ms |
+| 100,000 | 0.586 ms | 0.580 ms | 1.757 ms | 0.571 ms | 0.705 ms | 1.093 ms |
+| 1,000,000 | 6.298 ms | 5.059 ms | 15.156 ms | 4.928 ms | 7.659 ms | 10.152 ms |
+| 5,000,000 | 32.023 ms | 23.940 ms | 74.866 ms | 23.759 ms | 38.781 ms | 47.066 ms |
 
 ## ICP / rigid point-cloud registration
 
