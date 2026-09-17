@@ -70,7 +70,10 @@ function hostCompilerArgs() {
 // Strip the toolkit/build banner so the committed text only changes when the
 // kernel or nvcc version changes, not per machine.
 function normalize(ptx) {
-  return ptx.replace(/\r\n/g, '\n').replace(/^\/\/ Based on .*\n/gm, '')
+  return ptx
+    .replace(/\r\n/g, '\n')
+    .replace(/^\/\/ Based on .*\n/gm, '')
+    .replace(/\n+$/, '\n')
 }
 
 const out = mkdtempSync(join(tmpdir(), 'osv-cuda-'))
