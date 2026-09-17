@@ -39,34 +39,34 @@ PHOTO_ACCURACY=on       # qualified accuracy bundle; with PHOTO_DENSE also
                         # DenseOptions::accurate() (5x5 patches, dual scale,
                         # sparse depth prior: -27% surface error on analytic scenes)
 PHOTO_ACCELERATION=gpu   # requires building with --features gpu (wgpu)
-PHOTO_ACCELERATION=cuda  # same kernels on NVIDIA via wgpu; see docs/design/native-gpu-cuda.md
+PHOTO_ACCELERATION=cuda  # native descriptor PTX, wgpu fallback for other kernels
 ```
 
 The optional `gpu` feature adds `wgpu` and accelerates descriptor matching
 (3.2-47x on the synthetic descriptor benchmark) and the frontoparallel NCC
 depth sweep (batched, selection on the GPU: ~10x of the dense stage, 31-68 ms
-on the frozen sets) via Metal on macOS and Vulkan/DX12 on Linux/Windows;
-`Acceleration::Gpu` is opt-in and falls back to the CPU reference without an
-adapter. `Acceleration::Cuda` is accepted too: these kernels are portable
-shaders, so it runs the same wgpu path (dedicated PTX ports currently exist in
-`math-core` and `sdf-core`). CPU defaults stay bit-identical with or without
-the feature. Browser builds keep the feature off; there the same WGSL sweep
-runs through WebGPU from the viewer's worker.
+on the frozen sets) via Metal on macOS and Vulkan/DX12 on Linux/Windows.
+The optional `cuda` feature adds native PTX descriptor matching on NVIDIA, with
+the wgpu path as fallback for kernels that do not have a CUDA port. CPU
+defaults stay bit-identical with or without the feature. Browser builds keep
+the feature off; there the same WGSL sweep runs through WebGPU from the
+viewer's worker.
 Qualification and measured numbers: [gpu-matching-2026-09-09](../../docs/qualification/photogrammetry/gpu-matching-2026-09-09.md).
 
 `FeatureOptions { acceleration: Acceleration::Auto, .. }` now resolves
 descriptor matching by measured pair-work: below 10K candidate pairs it keeps
-the CPU scan; from 10K upward it uses the portable GPU path. Check or tune the
+the CPU scan; from 10K upward it uses CUDA when the crate is built with
+`--features cuda`, otherwise the portable GPU path. Check or tune the
 recommendation with `features::recommended_for_descriptor_matching(a, b)` and
-`cargo run --release -p photogrammetry-core --features gpu --example
+`cargo run --release -p photogrammetry-core --features cuda --example
 bench_matching`. Descriptor buffers are cached grow-only per matcher, so
 repeated stable-size image-pair matching avoids per-call device allocation.
-On an RTX 5090 through wgpu/Vulkan:
+On an RTX 5090:
 
-| features A × B | work | recommended | CPU | Auto |
-| --- | --- | --- | --- | --- |
-| 64 × 64 | 4K | cpu | 0.283 ms | 0.279 ms |
-| 128 × 128 | 16K | gpu | 1.178 ms | 0.368 ms |
-| 256 × 512 | 131K | gpu | 9.114 ms | 0.890 ms |
-| 1,024 × 1,024 | 1.0M | gpu | 66.600 ms | 2.414 ms |
-| 2,048 × 2,048 | 4.2M | gpu | 258.474 ms | 5.452 ms |
+| features A × B | work | recommended | CPU | Auto | wgpu/Vulkan | CUDA |
+| --- | --- | --- | --- | --- | --- | --- |
+| 64 × 64 | 4K | cpu | 0.295 ms | 0.287 ms | 0.206 ms | 0.122 ms |
+| 128 × 128 | 16K | cuda | 1.186 ms | 0.089 ms | 0.289 ms | 0.131 ms |
+| 256 × 512 | 131K | cuda | 8.585 ms | 0.226 ms | 0.750 ms | 0.229 ms |
+| 1,024 × 1,024 | 1.0M | cuda | 66.665 ms | 1.181 ms | 2.158 ms | 1.272 ms |
+| 2,048 × 2,048 | 4.2M | cuda | 258.194 ms | 3.964 ms | 5.887 ms | 3.991 ms |

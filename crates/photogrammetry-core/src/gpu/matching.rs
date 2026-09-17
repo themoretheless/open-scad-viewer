@@ -147,11 +147,13 @@ fn shader_source(wg: u32) -> String {
     SHADER_TEMPLATE.replace("__WG__", &wg.to_string())
 }
 
+#[derive(Clone, Copy, Debug)]
 pub struct RowBest {
     pub j: usize,
     pub d1: f32,
     pub d2: f32,
 }
+#[derive(Clone, Copy, Debug)]
 pub struct ColBest {
     pub i: usize,
     pub d1: f32,
@@ -467,6 +469,225 @@ pub fn match_pair(da: &[[f32; 128]], db: &[[f32; 128]]) -> Option<(Vec<RowBest>,
     })
 }
 
+pub fn match_pair_accelerated(
+    da: &[[f32; 128]],
+    db: &[[f32; 128]],
+    acceleration: crate::Acceleration,
+) -> Option<(Vec<RowBest>, Vec<ColBest>)> {
+    #[cfg(feature = "cuda")]
+    if acceleration == crate::Acceleration::Cuda
+        && let Some(result) = cuda::match_pair_cuda(da, db)
+    {
+        return Some(result);
+    }
+    match_pair(da, db)
+}
+
+#[cfg(feature = "cuda")]
+mod cuda {
+    use super::{ColBest, RowBest};
+    use gpu_compute::cuda::{CudaDevice, CudaFunction, CudaSlice, LaunchConfig, PushKernelArg};
+
+    const MATCHING_PTX: &str = include_str!("matching.ptx");
+    const BLOCK: u32 = 256;
+
+    struct Buffers {
+        row_capacity: usize,
+        col_capacity: usize,
+        descriptors_a: CudaSlice<f32>,
+        descriptors_b: CudaSlice<f32>,
+        row_j: CudaSlice<u32>,
+        row_d1: CudaSlice<f32>,
+        row_d2: CudaSlice<f32>,
+        col_i: CudaSlice<u32>,
+        col_d1: CudaSlice<f32>,
+    }
+
+    struct CudaMatcher {
+        device: CudaDevice,
+        rows_kernel: CudaFunction,
+        cols_kernel: CudaFunction,
+        buffers: std::cell::RefCell<Option<Buffers>>,
+    }
+
+    impl CudaMatcher {
+        fn new() -> Option<Self> {
+            let device = CudaDevice::new()?;
+            let module = device.load_ptx(MATCHING_PTX)?;
+            let rows_kernel = module.load_function("match_descriptor_rows").ok()?;
+            let cols_kernel = module.load_function("match_descriptor_cols").ok()?;
+            Some(Self {
+                device,
+                rows_kernel,
+                cols_kernel,
+                buffers: std::cell::RefCell::new(None),
+            })
+        }
+
+        fn ensure_buffers(&self, rows: usize, cols: usize) -> Option<()> {
+            let stale = match &*self.buffers.borrow() {
+                Some(b) => b.row_capacity < rows || b.col_capacity < cols,
+                None => true,
+            };
+            if !stale {
+                return Some(());
+            }
+            let row_capacity = rows.max(1);
+            let col_capacity = cols.max(1);
+            let stream = &self.device.stream;
+            let descriptors_a = stream.alloc_zeros::<f32>(row_capacity * 128).ok()?;
+            let descriptors_b = stream.alloc_zeros::<f32>(col_capacity * 128).ok()?;
+            let row_j = stream.alloc_zeros::<u32>(row_capacity).ok()?;
+            let row_d1 = stream.alloc_zeros::<f32>(row_capacity).ok()?;
+            let row_d2 = stream.alloc_zeros::<f32>(row_capacity).ok()?;
+            let col_i = stream.alloc_zeros::<u32>(col_capacity).ok()?;
+            let col_d1 = stream.alloc_zeros::<f32>(col_capacity).ok()?;
+            *self.buffers.borrow_mut() = Some(Buffers {
+                row_capacity,
+                col_capacity,
+                descriptors_a,
+                descriptors_b,
+                row_j,
+                row_d1,
+                row_d2,
+                col_i,
+                col_d1,
+            });
+            Some(())
+        }
+
+        fn run(
+            &self,
+            da: &[[f32; 128]],
+            db: &[[f32; 128]],
+        ) -> Option<(Vec<RowBest>, Vec<ColBest>)> {
+            let rows = da.len();
+            let cols = db.len();
+            if rows == 0 || cols == 0 {
+                return Some((
+                    vec![
+                        RowBest {
+                            j: usize::MAX,
+                            d1: f32::INFINITY,
+                            d2: f32::INFINITY,
+                        };
+                        rows
+                    ],
+                    vec![
+                        ColBest {
+                            i: usize::MAX,
+                            d1: f32::INFINITY,
+                        };
+                        cols
+                    ],
+                ));
+            }
+            self.ensure_buffers(rows, cols)?;
+            let stream = &self.device.stream;
+            let mut buffers = self.buffers.borrow_mut();
+            let b = buffers.as_mut().expect("ensure_buffers was just called");
+            let flat_a: Vec<f32> = da.iter().flatten().copied().collect();
+            let flat_b: Vec<f32> = db.iter().flatten().copied().collect();
+            {
+                let mut view = b.descriptors_a.slice_mut(0..flat_a.len());
+                stream.memcpy_htod(&flat_a, &mut view).ok()?;
+            }
+            {
+                let mut view = b.descriptors_b.slice_mut(0..flat_b.len());
+                stream.memcpy_htod(&flat_b, &mut view).ok()?;
+            }
+            let rows_u32 = rows as u32;
+            let cols_u32 = cols as u32;
+            let a_view = b.descriptors_a.slice(0..flat_a.len().max(1));
+            let b_view = b.descriptors_b.slice(0..flat_b.len().max(1));
+            let mut row_j_view = b.row_j.slice_mut(0..rows.max(1));
+            let mut row_d1_view = b.row_d1.slice_mut(0..rows.max(1));
+            let mut row_d2_view = b.row_d2.slice_mut(0..rows.max(1));
+            let mut row_launch = stream.launch_builder(&self.rows_kernel);
+            row_launch
+                .arg(&rows_u32)
+                .arg(&cols_u32)
+                .arg(&a_view)
+                .arg(&b_view)
+                .arg(&mut row_j_view)
+                .arg(&mut row_d1_view)
+                .arg(&mut row_d2_view);
+            unsafe { row_launch.launch(launch_1d_blocks(rows_u32)) }.ok()?;
+            let mut col_i_view = b.col_i.slice_mut(0..cols.max(1));
+            let mut col_d1_view = b.col_d1.slice_mut(0..cols.max(1));
+            let mut col_launch = stream.launch_builder(&self.cols_kernel);
+            col_launch
+                .arg(&rows_u32)
+                .arg(&cols_u32)
+                .arg(&a_view)
+                .arg(&b_view)
+                .arg(&mut col_i_view)
+                .arg(&mut col_d1_view);
+            unsafe { col_launch.launch(launch_1d_blocks(cols_u32)) }.ok()?;
+
+            let mut row_j = vec![0u32; rows];
+            let mut row_d1 = vec![0f32; rows];
+            let mut row_d2 = vec![0f32; rows];
+            let mut col_i = vec![0u32; cols];
+            let mut col_d1 = vec![0f32; cols];
+            stream.memcpy_dtoh(&row_j_view, &mut row_j).ok()?;
+            stream.memcpy_dtoh(&row_d1_view, &mut row_d1).ok()?;
+            stream.memcpy_dtoh(&row_d2_view, &mut row_d2).ok()?;
+            stream.memcpy_dtoh(&col_i_view, &mut col_i).ok()?;
+            stream.memcpy_dtoh(&col_d1_view, &mut col_d1).ok()?;
+
+            Some((
+                (0..rows)
+                    .map(|i| RowBest {
+                        j: if row_j[i] == u32::MAX {
+                            usize::MAX
+                        } else {
+                            row_j[i] as usize
+                        },
+                        d1: row_d1[i],
+                        d2: row_d2[i],
+                    })
+                    .collect(),
+                (0..cols)
+                    .map(|i| ColBest {
+                        i: if col_i[i] == u32::MAX {
+                            usize::MAX
+                        } else {
+                            col_i[i] as usize
+                        },
+                        d1: col_d1[i],
+                    })
+                    .collect(),
+            ))
+        }
+    }
+
+    fn launch_1d_blocks(blocks: u32) -> LaunchConfig {
+        LaunchConfig {
+            grid_dim: (blocks.max(1), 1, 1),
+            block_dim: (BLOCK, 1, 1),
+            shared_mem_bytes: 0,
+        }
+    }
+
+    thread_local! {
+        static SHARED: std::cell::LazyCell<Option<&'static CudaMatcher>> =
+            std::cell::LazyCell::new(|| {
+                CudaMatcher::new().map(|matcher| Box::leak(Box::new(matcher)) as &'static CudaMatcher)
+            });
+    }
+
+    pub(super) fn match_pair_cuda(
+        da: &[[f32; 128]],
+        db: &[[f32; 128]],
+    ) -> Option<(Vec<RowBest>, Vec<ColBest>)> {
+        SHARED.with(|cell| {
+            let shared: &Option<&CudaMatcher> = cell;
+            shared.and_then(|matcher| matcher.run(da, db))
+        })
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -611,5 +832,33 @@ mod tests {
                 "WG={wg}: column selections must agree with CPU"
             );
         }
+    }
+
+    #[cfg(feature = "cuda")]
+    #[test]
+    fn cuda_matching_agrees_with_cpu_on_synthetic_descriptors() {
+        let da = descriptors(31, 300);
+        let db = descriptors(37, 280);
+        let Some((rows, cols)) = match_pair_accelerated(&da, &db, crate::Acceleration::Cuda) else {
+            eprintln!("no CUDA/wgpu adapter; skipping");
+            return;
+        };
+        let (ref_a, ref_b) = cpu_reference(&da, &db);
+        let row_close = rows
+            .iter()
+            .zip(&ref_a)
+            .filter(|(gpu, cpu)| gpu.j == cpu.0 && (gpu.d1 - cpu.1).abs() <= 1e-4 * cpu.1.max(1.))
+            .count();
+        let col_close = cols
+            .iter()
+            .zip(&ref_b)
+            .filter(|(gpu, cpu)| gpu.i == cpu.0 && (gpu.d1 - cpu.1).abs() <= 1e-4 * cpu.1.max(1.))
+            .count();
+        assert_eq!(row_close, ref_a.len(), "row selections must agree with CPU");
+        assert_eq!(
+            col_close,
+            ref_b.len(),
+            "column selections must agree with CPU"
+        );
     }
 }

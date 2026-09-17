@@ -163,11 +163,19 @@ fn descriptor_matching_auto_recommends_gpu_only_for_large_work() {
     );
     assert_eq!(
         recommended_for_descriptor_matching(128, 128),
-        crate::Acceleration::Gpu
+        if cfg!(feature = "cuda") {
+            crate::Acceleration::Cuda
+        } else {
+            crate::Acceleration::Gpu
+        }
     );
     assert_eq!(
         resolve_for_descriptor_matching(crate::Acceleration::Auto, 128, 128),
-        crate::Acceleration::Gpu
+        if cfg!(feature = "cuda") {
+            crate::Acceleration::Cuda
+        } else {
+            crate::Acceleration::Gpu
+        }
     );
     assert_eq!(
         resolve_for_descriptor_matching(crate::Acceleration::Cuda, 128, 128),

@@ -454,10 +454,18 @@ pub const fn recommended_for_descriptor_matching(
 ) -> crate::Acceleration {
     const GPU_WORK_THRESHOLD: usize = 10_000;
     let Some(work) = a_count.checked_mul(b_count) else {
-        return crate::Acceleration::Gpu;
+        return if cfg!(feature = "cuda") {
+            crate::Acceleration::Cuda
+        } else {
+            crate::Acceleration::Gpu
+        };
     };
     if work >= GPU_WORK_THRESHOLD {
-        crate::Acceleration::Gpu
+        if cfg!(feature = "cuda") {
+            crate::Acceleration::Cuda
+        } else {
+            crate::Acceleration::Gpu
+        }
     } else {
         crate::Acceleration::Cpu
     }
@@ -483,7 +491,7 @@ pub fn matches_with_options(a: &[Feature], b: &[Feature], options: &FeatureOptio
     let acceleration = resolve_for_descriptor_matching(options.acceleration, da.len(), db.len());
     #[cfg(feature = "gpu")]
     let gpu_done = acceleration.is_gpu()
-        && match crate::gpu::matching::match_pair(&da, &db) {
+        && match crate::gpu::matching::match_pair_accelerated(&da, &db, acceleration) {
             Some((rows, cols)) => {
                 for (i, row) in rows.iter().enumerate() {
                     best_a[i] = (row.j, row.d1, row.d2);

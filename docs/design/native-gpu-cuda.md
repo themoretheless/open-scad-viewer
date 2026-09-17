@@ -29,7 +29,8 @@ the portable GPU path on the same machine.
 | `math-core` | One-to-one squared-distance vector/sum batches | `distance_pairs.wgsl`, `distance_pair_sum.wgsl` | `distance_pairs.cu` / `distance_pair_sum.cu` → PTX |
 | `sdf-core` | Grid sampling of primitive/CSG/mesh-distance fields (`polygonize_accelerated`) | `SDF_WGSL` | `sdf_grid.cu` → `sdf_grid.ptx` |
 | `geometry-bridge` | Lattice implicit field (`lattice_accelerated`) | `LATTICE_WGSL`, cached grow-only buffers | runs the wgpu shader |
-| `photogrammetry-core` | Descriptor matching, frontoparallel NCC depth sweep | cached WGSL pipelines/buffers | runs the wgpu shaders |
+| `photogrammetry-core` | Descriptor matching | cached WGSL pipelines/buffers | `matching.cu` → `matching.ptx` |
+| `photogrammetry-core` | Frontoparallel NCC depth sweep | cached WGSL pipelines/buffers | runs the wgpu shader |
 
 The CUDA and WGSL kernels are line-by-line ports of the same text and are
 tested against each other (`cuda_and_wgpu_samplers_agree`, tolerance 1e-3 in
