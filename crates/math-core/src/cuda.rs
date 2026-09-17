@@ -12,6 +12,8 @@ use gpu_compute::cuda::{
 
 /// PTX generated from `nearest_neighbor.cu` by `scripts/build-cuda-kernels.mjs`.
 pub const NEAREST_NEIGHBOR_PTX: &str = include_str!("nearest_neighbor.ptx");
+/// PTX generated from `distance_pairs.cu` by `scripts/build-cuda-kernels.mjs`.
+pub const DISTANCE_PAIRS_PTX: &str = include_str!("distance_pairs.ptx");
 const BLOCK: u32 = 256;
 
 struct Buffers {
@@ -160,6 +162,62 @@ pub(crate) fn nearest_neighbor_cuda(queries: &[V3], targets: &[V3]) -> Option<Ve
     })
 }
 
+struct CudaDistancePairs {
+    device: CudaDevice,
+    kernel: CudaFunction,
+}
+
+impl CudaDistancePairs {
+    fn new() -> Option<Self> {
+        let device = CudaDevice::new()?;
+        let module = device.load_ptx(DISTANCE_PAIRS_PTX)?;
+        let kernel = module.load_function("squared_distance_pairs").ok()?;
+        Some(Self { device, kernel })
+    }
+
+    fn run(&self, a: &[V3], b: &[V3]) -> Option<Vec<f64>> {
+        if a.len() != b.len() {
+            return None;
+        }
+        let pair_count = a.len();
+        let stream = &self.device.stream;
+        let flat_a: Vec<f32> = a.iter().flatten().map(|&v| v as f32).collect();
+        let flat_b: Vec<f32> = b.iter().flatten().map(|&v| v as f32).collect();
+        let a_dev = self.device.upload(&flat_a).ok()?;
+        let b_dev = self.device.upload(&flat_b).ok()?;
+        let mut out = stream.alloc_zeros::<f32>(pair_count.max(1)).ok()?;
+        let pair_count_u32 = pair_count as u32;
+        let a_view = a_dev.slice(0..(pair_count * 3).max(1));
+        let b_view = b_dev.slice(0..(pair_count * 3).max(1));
+        let mut out_view = out.slice_mut(0..pair_count.max(1));
+        let mut launch = stream.launch_builder(&self.kernel);
+        launch
+            .arg(&pair_count_u32)
+            .arg(&a_view)
+            .arg(&b_view)
+            .arg(&mut out_view);
+        unsafe { launch.launch(launch_1d(pair_count_u32, BLOCK)) }.ok()?;
+        let mut host = vec![0f32; pair_count];
+        stream.memcpy_dtoh(&out_view, &mut host).ok()?;
+        Some(host.into_iter().map(|value| value as f64).collect())
+    }
+}
+
+thread_local! {
+    static SHARED_DISTANCE_PAIRS: std::cell::LazyCell<Option<&'static CudaDistancePairs>> =
+        std::cell::LazyCell::new(|| {
+            CudaDistancePairs::new().map(|kernel| Box::leak(Box::new(kernel)) as &'static CudaDistancePairs)
+        });
+}
+
+/// One-to-one squared distances on the CUDA device; `None` without a device.
+pub(crate) fn squared_distance_pairs_cuda(a: &[V3], b: &[V3]) -> Option<Vec<f64>> {
+    SHARED_DISTANCE_PAIRS.with(|cell| {
+        let shared: &Option<&CudaDistancePairs> = cell;
+        shared.and_then(|kernel| kernel.run(a, b))
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -193,6 +251,30 @@ mod tests {
     fn cuda_nearest_neighbor_empty_input() {
         if let Some(got) = nearest_neighbor_cuda(&[], &[[0., 0., 0.]]) {
             assert!(got.is_empty());
+        }
+    }
+
+    #[test]
+    fn cuda_squared_distance_pairs_matches_cpu_reference_when_available() {
+        let a: Vec<V3> = (0..128)
+            .map(|i| {
+                let f = i as f64;
+                [f * 0.07, (f * 0.03).sin(), (f * 0.11).cos()]
+            })
+            .collect();
+        let b: Vec<V3> = (0..128)
+            .map(|i| {
+                let f = i as f64;
+                [f * -0.02, (f * 0.13).cos(), (f * 0.17).sin()]
+            })
+            .collect();
+        let Some(got) = squared_distance_pairs_cuda(&a, &b) else {
+            eprintln!("no CUDA device available; skipping");
+            return;
+        };
+        let want = crate::squared_distance_pairs(&a, &b).unwrap();
+        for (got, want) in got.iter().zip(&want) {
+            assert!((got - want).abs() < 1e-4 * want.max(1.0), "{got} vs {want}");
         }
     }
 

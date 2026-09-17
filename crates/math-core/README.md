@@ -96,6 +96,28 @@ backend_report` prints the placement labels, portable wgpu backend report
 (`metal`, `vulkan`, `dx12`, or `webgpu`) and native CUDA device report when
 available.
 
+## Pairwise squared distances
+
+`squared_distance_pairs(a, b)` computes one-to-one squared Euclidean distances
+for equal-length point arrays. `squared_distance_pairs_accelerated(a, b,
+acceleration)` adds explicit `Gpu`/`Cuda` offload through the same portable
+wgpu and CUDA-driver layers as nearest-neighbor.
+
+This kernel is intentionally conservative in `Auto`: unlike nearest-neighbor,
+it is only O(pair_count) with a few FLOPs per pair, so on discrete GPUs the
+copy/readback cost dominates. Measured with `cargo run --release -p osv-math
+--features cuda --example bench_distance_pairs` on the RTX 5090, explicit
+device execution is correct but slower; `Auto` therefore stays on CPU to avoid
+regressing callers:
+
+| pairs | cpu | auto | gpu | cuda |
+| --- | --- | --- | --- | --- |
+| 10,000 | 0.009 ms | 0.008 ms | 0.344 ms | 0.110 ms |
+| 100,000 | 0.098 ms | 0.071 ms | 3.464 ms | 0.865 ms |
+| 250,000 | 0.296 ms | 0.305 ms | 8.152 ms | 2.227 ms |
+| 1,000,000 | 1.840 ms | 1.960 ms | 27.985 ms | 8.473 ms |
+| 3,000,000 | 10.628 ms | 6.151 ms | 83.720 ms | 25.558 ms |
+
 ## ICP / rigid point-cloud registration
 
 `rigid_transform(source, target)` computes the least-squares rigid transform

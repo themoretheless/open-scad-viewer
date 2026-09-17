@@ -1,6 +1,7 @@
 //! Small dense linear algebra and accelerated geometry math kernels.
 
 mod acceleration;
+mod distance_pairs;
 mod error;
 mod linalg;
 mod nearest_neighbor;
@@ -8,6 +9,9 @@ mod registration;
 mod types;
 
 pub use acceleration::Acceleration;
+pub use distance_pairs::{
+    DISTANCE_PAIRS_WGSL, squared_distance_pairs, squared_distance_pairs_accelerated,
+};
 pub use error::{Error, Result, ensure};
 pub use linalg::{
     add, add2, cross, cross2, det, dot, dot2, eigen, finite, mm, mv, norm, norm2, rotation, scale,

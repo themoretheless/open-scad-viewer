@@ -96,6 +96,24 @@ impl Acceleration {
             explicit => explicit,
         }
     }
+
+    /// Suggests a placement for one-to-one batched squared distances. This is
+    /// O(pair_count) with only a few FLOPs per element; measured GPU/CUDA
+    /// paths do not amortize launch/copy/readback overhead, so Auto preserves
+    /// the CPU reference. Explicit `Gpu`/`Cuda` still force device execution.
+    pub const fn recommended_for_distance_pairs(pair_count: usize) -> Self {
+        let _ = pair_count;
+        Self::Cpu
+    }
+
+    /// Resolves `Auto` for batched one-to-one squared distances; explicit
+    /// placements pass through unchanged.
+    pub const fn resolve_for_distance_pairs(self, pair_count: usize) -> Self {
+        match self {
+            Self::Auto => Self::recommended_for_distance_pairs(pair_count),
+            explicit => explicit,
+        }
+    }
 }
 
 #[cfg(test)]
@@ -147,6 +165,26 @@ mod tests {
             Acceleration::Auto
                 .resolve_for_nearest_neighbor(1_000_000, 2_000)
                 .is_gpu()
+        );
+    }
+
+    #[test]
+    fn recommended_for_distance_pairs_keeps_small_batches_on_cpu() {
+        assert_eq!(
+            Acceleration::recommended_for_distance_pairs(10_000),
+            Acceleration::Cpu
+        );
+        assert_eq!(
+            Acceleration::recommended_for_distance_pairs(usize::MAX),
+            Acceleration::Cpu
+        );
+        assert_eq!(
+            Acceleration::Cpu.resolve_for_distance_pairs(2_000_000),
+            Acceleration::Cpu
+        );
+        assert_eq!(
+            Acceleration::Auto.resolve_for_distance_pairs(2_000_000),
+            Acceleration::Cpu
         );
     }
 }
