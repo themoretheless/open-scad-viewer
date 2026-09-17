@@ -1,0 +1,13 @@
+{
+  "schema": "open-scad-viewer/nurbs-foundation-registry",
+  "schemaVersion": 5,
+  "successorOf": "docs/qualification/nurbs-foundation-registry-v4.json",
+  "entries": [
+    {"id": "nurbs-foundation/1", "state": "frozen-qualified", "plan": "docs/qualification/plans/nurbs-foundation-1.json", "evidence": "docs/qualification/nurbs-foundation-1-evidence-v1.json"},
+    {"id": "nurbs-foundation/2", "state": "frozen-qualified", "plan": "docs/qualification/plans/nurbs-foundation-2.json", "evidence": "docs/qualification/nurbs-foundation-2-evidence-v1.json", "matrix": "docs/qualification/nurbs-foundation-2-matrix-v1.json"},
+    {"id": "nurbs-foundation/3", "state": "frozen-qualified", "plan": "docs/qualification/plans/nurbs-foundation-3.json", "evidence": "docs/qualification/nurbs-foundation-3-evidence-v1.json", "matrix": "docs/qualification/nurbs-foundation-3-matrix-v1.json"},
+    {"id": "nurbs-foundation/4", "state": "frozen-qualified", "plan": "docs/qualification/plans/nurbs-foundation-4.json", "evidence": "docs/qualification/nurbs-foundation-4-evidence-v1.json", "matrix": "docs/qualification/nurbs-foundation-4-matrix-v1.json"},
+    {"id": "nurbs-foundation/5", "state": "qualified-finite-cell", "plan": "docs/qualification/plans/nurbs-foundation-5.json", "evidence": "docs/qualification/nurbs-foundation-5-evidence-v1.json", "matrix": "docs/qualification/nurbs-foundation-5-matrix-v1.json"},
+    {"id": "nurbs-cc-cs/1", "state": "qualified-finite-cell", "plan": "docs/qualification/plans/nurbs-cc-cs-1.json", "evidence": "docs/qualification/nurbs-cc-cs-1-evidence-v1.json", "matrix": "docs/qualification/nurbs-cc-cs-1-matrix-v1.json"}
+  ]
+}

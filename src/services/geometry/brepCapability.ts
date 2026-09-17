@@ -418,6 +418,55 @@ export const BREP_CAPABILITY_MATRIX: readonly BrepCapabilityDescriptor[] = Objec
     notes: 'Strict 80-column IGES 5.3 finite successor: rational curves/surfaces, direct vertex/edge/loop/face/shell/solid graphs, pcurves, multiple bodies/cavities and graph-bound identity; no AABB, constructor or mesh reconstruction',
     qualificationPlan: 'docs/qualification/plans/iges-interchange-2.json',
   }),
+  Object.freeze({
+    id: 'nurbs-foundation/1',
+    maturity: 'Qualified' as const,
+    permitsTopologyChange: false,
+    notes: 'Frozen positive-denominator, span hull, planar regularity, linear projection and exact insertion/elevation foundation',
+    qualificationPlan: 'docs/qualification/plans/nurbs-foundation-1.json',
+  }),
+  Object.freeze({
+    id: 'nurbs-foundation/2',
+    maturity: 'Qualified' as const,
+    permitsTopologyChange: false,
+    notes: 'Bounded rational curve stationary-root isolation, global surface projection coverage, homogeneous normal cones and rollback-certified spline simplification',
+    qualificationPlan: 'docs/qualification/plans/nurbs-foundation-2.json',
+  }),
+  Object.freeze({
+    id: 'nurbs-foundation/3',
+    maturity: 'Qualified' as const,
+    permitsTopologyChange: false,
+    notes: 'Finite wrapped periodic editing, adaptive simplification envelopes, affine surface projection uniqueness, knot-cell singularity localization, monotone rational maps and bounded approximate-only fitting',
+    qualificationPlan: 'docs/qualification/plans/nurbs-foundation-3.json',
+  }),
+  Object.freeze({
+    id: 'nurbs-foundation/4',
+    maturity: 'Qualified' as const,
+    permitsTopologyChange: false,
+    notes: 'Krawczyk/interval surface projection uniqueness, recursive sub-knot-cell singularity localization, exact nonlinear map control-net materialization, and unstructured cloud fitting with admitted-domain Hausdorff enclosure',
+    qualificationPlan: 'docs/qualification/plans/nurbs-foundation-4.json',
+  }),
+  Object.freeze({
+    id: 'nurbs-foundation/5',
+    maturity: 'Qualified' as const,
+    permitsTopologyChange: false,
+    notes: 'Certified bounded general NURBS curve/curve and curve/surface intersection with Bernstein/Krawczyk isolation, contact multiplicity, CoedgeTrim maps and ToleranceContext evidence; nested/periodic composition materialization',
+    qualificationPlan: 'docs/qualification/plans/nurbs-foundation-5.json',
+  }),
+  Object.freeze({
+    id: 'nurbs-cc-cs/1',
+    maturity: 'Qualified' as const,
+    permitsTopologyChange: false,
+    notes: 'Product CC/CS capability over nurbs-foundation/5: complete branch isolation for admitted positive-weight degrees 1..25 with unresolved only on resource/conditioning boundaries',
+    qualificationPlan: 'docs/qualification/plans/nurbs-cc-cs-1.json',
+  }),
+  Object.freeze({
+    id: 'nurbs-ss/1',
+    maturity: 'Qualified' as const,
+    permitsTopologyChange: false,
+    notes: 'Certified bounded general NURBS surface/surface intersection over admitted positive-weight degrees 1..25 with 4D Bernstein/Krawczyk/continuation BranchGraph, rational UV DCEL, CoedgeTrim maps; Boolean mutation authority deferred',
+    qualificationPlan: 'docs/qualification/plans/nurbs-ss-1.json',
+  }),
 ])
 
 export function brepCapability(id: string): BrepCapabilityDescriptor | undefined {

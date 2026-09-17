@@ -24,6 +24,7 @@ pub mod imprint_pipeline;
 pub mod intersections;
 pub mod iges_interchange_v2;
 pub mod nurbs_ss_g6;
+pub mod nurbs_ss_general;
 pub mod nurbs_step_interchange;
 mod nurbs_step_shared;
 pub mod nurbs_step_solid;
@@ -71,6 +72,10 @@ pub use analytic_features::{
 };
 pub use iges_interchange_v2::{
     IGES_INTERCHANGE_V2_CAPABILITY, IgesV2Report, export_iges_v2, import_iges_v2,
+};
+pub use nurbs_ss_general::{
+    GENERAL_SS_CAPABILITY, GeneralBranchGraph, GeneralSsBranch, branch_graph_from_ss_report,
+    rational_traces_from_ss_report, verify_general_ss_branch_graph,
 };
 pub use nurbs_ss_g6::{
     G6_CAPABILITY, G6_MATURITY, G6Component, G6Maturity, NURBS_BOOLEAN_CAPABILITY,

@@ -65,4 +65,30 @@ export function registerModelGraphNurbsTools(server: McpServer) {
             return failure(error);
         }
     });
+    server.registerTool('modelgraph_nurbs_intersect', {
+        description: 'Certified bounded NURBS curve/curve, curve/surface, or surface/surface intersection. SS returns BranchGraph/UV arrangement evidence with CoedgeTrim maps; Boolean mutation authority stays false.',
+        inputSchema: z.object({
+            mode: z.enum(['curve_curve', 'curve_surface', 'surface_surface']),
+            first: z.record(z.string(), z.unknown()),
+            second: z.record(z.string(), z.unknown()),
+        }),
+        annotations,
+    }, async (input) => {
+        try {
+            const {
+                intersectNurbsCurveCurveCertified,
+                intersectNurbsCurveSurfaceCertified,
+                intersectNurbsSurfaceSurfaceCertified,
+            } = await import('../services/nurbsFoundation');
+            if (input.mode === 'curve_curve') {
+                return text(intersectNurbsCurveCurveCertified(input.first as never, input.second as never));
+            }
+            if (input.mode === 'curve_surface') {
+                return text(intersectNurbsCurveSurfaceCertified(input.first as never, input.second as never));
+            }
+            return text(intersectNurbsSurfaceSurfaceCertified(input.first as never, input.second as never));
+        } catch (error) {
+            return failure(error);
+        }
+    });
 }

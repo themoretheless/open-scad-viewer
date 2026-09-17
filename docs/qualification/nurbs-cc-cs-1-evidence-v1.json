@@ -1,0 +1,25 @@
+{
+  "capability": "nurbs-cc-cs/1",
+  "maturity": "FiniteCell",
+  "dependsOn": "nurbs-foundation/5",
+  "executedAt": "2026-09-17",
+  "positiveCorpus": [
+    "TS intersectNurbsCurveCurveCertified complete transverse report",
+    "TS intersectNurbsCurveSurfaceCertified piercing and overlap with CoedgeTrim",
+    "ModelGraph foundation_successor version nurbs-foundation/5",
+    "MCP modelgraph_nurbs_intersect tool registration"
+  ],
+  "negativeCorpus": [
+    "surface-surface not offered by product CC/CS queries",
+    "permitsTopologyChange remains false on capability descriptors"
+  ],
+  "executed": [
+    {"command": "npx vitest run tests/nurbsFoundation.test.ts", "result": "passed including certified CC/CS product test"},
+    {"command": "npm run typecheck", "result": "passed"},
+    {"command": "npm run build", "result": "passed; 68 artifacts, 5476474 bytes"}
+  ],
+  "knownGaps": [
+    "Boolean topology change authorization"
+  ],
+  "successor": "nurbs-ss/1"
+}

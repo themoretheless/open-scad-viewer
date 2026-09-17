@@ -1,0 +1,55 @@
+{
+  "$schema": "./brep-capability-qualification-plan-v12.schema.json",
+  "schema": "open-scad-viewer/brep-capability-qualification-plan",
+  "schemaVersion": 12,
+  "planId": "nurbs-foundation-2",
+  "gate": {"id":"g8-full","name":"brep-full-closed-matrix","version":12},
+  "lifecycle": {"status":"qualified","qualificationClaim":"finite-cell"},
+  "claimBoundary": {
+    "candidateClaim": "Bounded positive-weight rational NURBS successor with complete curve stationary candidates, complete surface minimizer boxes, homogeneous normal cones and atomic simplification rollback.",
+    "forbiddenClaims": [
+      "periodic-knot-removal-or-degree-reduction",
+      "minimal-or-tight-simplification-error-bounds",
+      "surface-projection-uniqueness-from-coarse-resource-terminal-boxes",
+      "singularity-resolution-when-the-normal-cone-contains-zero",
+      "unbounded-degree-control-count-or-certificate-work"
+    ]
+  },
+  "capability": "nurbs-foundation/2",
+  "successorOf": "nurbs-foundation/1",
+  "dependencies": [{"capability":"nurbs-foundation/1","requiredMaturity":"Qualified"}],
+  "scope": {
+    "included": [
+      "degree 1..25 curves with at most 256 controls and positive certified denominators",
+      "degree 1..25 surfaces with 2..32 controls per axis",
+      "per-Bezier-span rational stationary numerator Bernstein sign-variation isolation with endpoints and multiple-root classification",
+      "strict global distance-interval uniqueness proof when one curve candidate separates",
+      "2D outward-hull subdivision retaining every global surface minimizer box and four certified boundary reductions",
+      "homogeneous rational derivative cross-product Bernstein bounds for nonplanar surface normal regularity and exact singular patches",
+      "non-periodic curve and surface knot removal and degree reduction with outward global Hausdorff bounds and atomic rollback",
+      "ToleranceContext identities through Rust, WASM, TypeScript and ModelGraph successor reports"
+    ],
+    "excluded": [
+      "periodic simplification",
+      "tight local simplification bounds",
+      "surface uniqueness when terminal boxes overlap",
+      "localized singularity boxes after an unresolved normal cone",
+      "surface fitting and general surface-surface Boolean closure"
+    ]
+  },
+  "matrix": [
+    {"id":"CA12-NF2-CURVE-GLOBAL-PROJECTION","expected":"Complete","blocksQualification":true},
+    {"id":"CA12-NF2-SURFACE-GLOBAL-PROJECTION","expected":"Complete","blocksQualification":true},
+    {"id":"CA12-NF2-NONPLANAR-NORMAL-CONE","expected":"Complete","blocksQualification":true},
+    {"id":"CA12-NF2-CERTIFIED-SIMPLIFICATION","expected":"Complete","blocksQualification":true},
+    {"id":"CA12-NF2-WASM-TS-PRODUCT","expected":"Complete","blocksQualification":true}
+  ],
+  "bindings": {
+    "implementation":["crates/nurbs-core/src/foundation.rs","crates/nurbs-core/src/tests.rs","src/services/nurbsFoundation.ts","src/services/modelGraphNurbsKernel.ts","tests/nurbsFoundation.test.ts"],
+    "registry":"src/services/geometry/brepCapability.ts",
+    "evidenceJson":"docs/qualification/nurbs-foundation-2-evidence-v1.json"
+  },
+  "evidence":{"state":"qualified","notes":["Written after Rust, bridge, WASM and focused product tests executed.","No cargo fmt was run."]},
+  "resetPolicy":"false-Complete freezes this capability and transitively stales all dependents; recovery requires a successor capability ID",
+  "unresolvedRows":[]
+}

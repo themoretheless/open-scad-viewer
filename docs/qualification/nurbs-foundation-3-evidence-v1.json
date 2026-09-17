@@ -1,0 +1,44 @@
+{
+  "capability":"nurbs-foundation/3",
+  "maturity":"FiniteCell",
+  "baseline":"de5bea8 plus uncommitted nurbs-foundation/2 successor",
+  "executedAt":"2026-09-17",
+  "positiveCorpus":[
+    "degree-2 wrapped periodic curve insertion and half-open seam crossing split",
+    "C0 C1 C2 seam residual report",
+    "strict positive nonlinear rational quadratic parameter map",
+    "piecewise contiguous mapping and semantic composition implementation",
+    "bounded Bezier least-squares curve fit marked approximate",
+    "tensor degree-one surface fit marked approximate",
+    "affine surface Gram uniqueness proof",
+    "precision-90 independent rational-map oracle"
+  ],
+  "negativeCorpus":[
+    "periodic edit zero-budget rollback",
+    "half-open seam endpoint insertion refusal",
+    "nonmonotone rational map derivative refusal",
+    "discontinuous piecewise mapping refusal",
+    "fit control resource plus-one refusal",
+    "rank failure through pivoted elimination",
+    "existing weight denominator and request resource mutations"
+  ],
+  "executed":[
+    {"command":"cargo test --locked --manifest-path crates/Cargo.toml -p nurbs-core","result":"17 passed"},
+    {"command":"cargo test --locked --manifest-path crates/Cargo.toml -p geometry-bridge","result":"passed"},
+    {"command":"npm run build:geometry","result":"passed"},
+    {"command":"npx vitest run tests/nurbsFoundation.test.ts tests/nurbsCurve.test.ts tests/nurbsSurface.test.ts tests/modelGraphNurbs.test.ts","result":"4 files, 44 tests passed"},
+    {"command":"npm run typecheck","result":"passed"},
+    {"command":"npm run build","result":"passed"},
+    {"command":"node scripts/validate-json-schema.mjs docs/qualification/plans/brep-capability-qualification-plan-v12.schema.json docs/qualification/plans/nurbs-foundation-3.json","result":"valid"},
+    {"command":"python3 scripts/nurbs-foundation-3-oracle.py","result":"precision 90; 4097 strict-monotonicity samples"},
+    {"command":"git diff --check","result":"passed"}
+  ],
+  "resourceBounds":{"periodicControls":256,"mappingPieces":64,"compositionFactors":16,"fitSites":4096,"fitControls":26,"surfaceControlsPerAxis":32},
+  "knownGaps":[
+    "general nonlinear surface projection uniqueness when retained interval boxes overlap",
+    "normal singularity localization below a Bezier knot cell",
+    "materialized exact NURBS control net for arbitrary nonlinear rational composition",
+    "unstructured point-cloud surface approximation with global Hausdorff certificate",
+    "general CC CS and SS intersection"
+  ]
+}

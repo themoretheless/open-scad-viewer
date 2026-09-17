@@ -13,6 +13,8 @@
 pub mod curve;
 pub mod edit;
 pub mod foundation;
+pub mod intersection;
+pub mod ss_intersection;
 pub mod surface;
 use value_codec::{Deserialize, Serialize};
 use value_codec::{Value, json};
@@ -71,6 +73,13 @@ pub fn dispatch(v: Value) -> Result<Value> {
             optional_field(&v, "tolerance")?,
         );
     }
+    if op == "surface_project_certified" {
+        return foundation::project_surface(
+            &field(&v, "surface")?,
+            field(&v, "point")?,
+            optional_field(&v, "tolerance")?,
+        );
+    }
     if op == "curve_interpolate_certified" {
         return foundation::interpolate_polyline(
             field(&v, "points")?,
@@ -106,6 +115,117 @@ pub fn dispatch(v: Value) -> Result<Value> {
             0.,
             field(&v, "degree")?,
             optional_field(&v, "tolerance")?,
+        );
+    }
+    if op == "curve_remove_certified" {
+        return foundation::remove_curve_knot(
+            &field(&v, "curve")?, field(&v, "u")?, field(&v, "maxError")?,
+            optional_field(&v, "tolerance")?,
+        );
+    }
+    if op == "curve_reduce_certified" {
+        return foundation::reduce_curve_degree(
+            &field(&v, "curve")?, field(&v, "degree")?, field(&v, "maxError")?,
+            optional_field(&v, "tolerance")?,
+        );
+    }
+    if op == "surface_remove_certified" || op == "surface_reduce_certified" {
+        return foundation::reduce_surface_axis(
+            &field(&v, "surface")?, field(&v, "axis")?,
+            if op == "surface_remove_certified" {"remove"} else {"reduce"},
+            v.get("u").and_then(Value::as_f64).unwrap_or(0.),
+            v.get("degree").and_then(Value::as_u64).unwrap_or(1) as usize,
+            field(&v, "maxError")?, optional_field(&v, "tolerance")?,
+        );
+    }
+    if op == "curve_periodic_edit_certified" {
+        let operation: String=field(&v,"operation")?;
+        return foundation::edit_periodic_curve(
+            &field(&v,"curve")?,&operation,
+            v.get("u").and_then(Value::as_f64).unwrap_or(0.),
+            v.get("degree").and_then(Value::as_u64).unwrap_or(1) as usize,
+            field(&v,"maxError")?,optional_field(&v,"tolerance")?
+        );
+    }
+    if op == "curve_periodic_split_certified" {
+        return foundation::split_periodic_curve(
+            &field(&v,"curve")?,field(&v,"u")?,optional_field(&v,"tolerance")?
+        );
+    }
+    if op == "surface_periodic_edit_certified" {
+        let operation: String=field(&v,"operation")?;
+        return foundation::edit_periodic_surface(
+            &field(&v,"surface")?,field(&v,"axis")?,&operation,
+            v.get("u").and_then(Value::as_f64).unwrap_or(0.),
+            v.get("degree").and_then(Value::as_u64).unwrap_or(1) as usize,
+            field(&v,"maxError")?,optional_field(&v,"tolerance")?
+        );
+    }
+    if op == "curve_reparameterization_certify" {
+        return foundation::certify_reparameterization(&v["mapping"],optional_field(&v,"tolerance")?);
+    }
+    if op == "curve_reparameterized_evaluate" {
+        return foundation::evaluate_reparameterized_curve(
+            &field(&v,"curve")?,&v["mapping"],field(&v,"u")?,optional_field(&v,"tolerance")?
+        );
+    }
+    if op == "curve_fit_certified" {
+        return foundation::fit_curve_points(
+            field(&v,"points")?,field(&v,"controlCount")?,optional_field(&v,"tolerance")?
+        );
+    }
+    if op == "surface_interpolate_certified" || op == "surface_fit_certified" {
+        return foundation::interpolate_surface_grid(
+            field(&v,"points")?,op=="surface_fit_certified",optional_field(&v,"tolerance")?
+        );
+    }
+    if op == "curve_materialize_reparameterization" {
+        return foundation::materialize_reparameterized_curve(
+            &field(&v,"curve")?,&v["mapping"],optional_field(&v,"tolerance")?
+        );
+    }
+    if op == "curve_fit_cloud_certified" {
+        return foundation::fit_curve_cloud_certified(
+            field(&v,"points")?,field(&v,"controlCount")?,optional_field(&v,"tolerance")?
+        );
+    }
+    if op == "surface_fit_cloud_certified" {
+        return foundation::fit_surface_cloud_certified(
+            field(&v,"points")?,field(&v,"controlsU")?,field(&v,"controlsV")?,optional_field(&v,"tolerance")?
+        );
+    }
+    if op == "curve_curve_intersect_certified" {
+        return intersection::intersect_curve_curve(
+            &field(&v, "first")?,
+            &field(&v, "second")?,
+            optional_field(&v, "tolerance")?,
+        );
+    }
+    if op == "curve_surface_intersect_certified" {
+        return intersection::intersect_curve_surface(
+            &field(&v, "curve")?,
+            &field(&v, "surface")?,
+            optional_field(&v, "tolerance")?,
+        );
+    }
+    if op == "surface_surface_intersect_certified" {
+        return ss_intersection::intersect_surface_surface(
+            &field(&v, "first")?,
+            &field(&v, "second")?,
+            optional_field(&v, "tolerance")?,
+        );
+    }
+    if op == "surface_surface_verify_coverage" {
+        return ss_intersection::verify_ss_coverage(&v["report"]);
+    }
+    if op == "nurbs_intersection_resource_probe" {
+        return intersection::resource_boundary_probe(field(&v, "degree")?, field(&v, "controls")?);
+    }
+    if op == "nurbs_ss_resource_probe" {
+        return ss_intersection::ss_resource_probe(
+            field(&v, "degreeU")?,
+            field(&v, "degreeV")?,
+            field(&v, "controls")?,
         );
     }
     if op == "nurbs_deform_curve" {

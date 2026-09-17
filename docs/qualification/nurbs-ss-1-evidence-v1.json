@@ -1,0 +1,30 @@
+{
+  "capability": "nurbs-ss/1",
+  "maturity": "FiniteCell",
+  "dependsOn": "nurbs-cc-cs/1",
+  "executedAt": "2026-09-17",
+  "positiveCorpus": [
+    "Rust ss_intersection transverse plane/plane BranchGraph with CoedgeTrim",
+    "Rust coincident overlap and parallel empty reports with revoked topology authority",
+    "brep-core general BranchGraph without graph-patch iso fixture",
+    "TS intersectNurbsSurfaceSurfaceCertified product query",
+    "ModelGraph foundation_successor version nurbs-ss/1",
+    "MCP modelgraph_nurbs_intersect surface_surface mode",
+    "scripts/nurbs-ss-1-oracle.py multiprecision residual oracle"
+  ],
+  "negativeCorpus": [
+    "booleanMutationAuthority remains false",
+    "topologyAuthority.granted remains false on complete reports",
+    "graph-patch iso fixture not used as SS authority"
+  ],
+  "executed": [
+    {"command": "cargo test --locked --manifest-path crates/Cargo.toml -p nurbs-core -- ss_ intersection", "result": "passed including certified_general_surface_surface_intersection"},
+    {"command": "cargo test --locked --manifest-path crates/Cargo.toml -p brep-core --lib general_ss", "result": "passed"},
+    {"command": "npx vitest run tests/nurbsFoundation.test.ts", "result": "passed including certified SS product test"},
+    {"command": "python3 scripts/nurbs-ss-1-oracle.py", "result": "transverse residuals 0; parallel gap 2; coincident residual 0"}
+  ],
+  "knownGaps": [
+    "Boolean topology mutation authorship",
+    "regularized solid Boolean pipeline over general SS"
+  ]
+}

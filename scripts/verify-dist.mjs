@@ -58,7 +58,16 @@ const limits = new Map([
 // retain a bounded 36167-byte margin without adding a second kernel payload.
 // STEP /8 whole-domain regularity and coupled-sense certificates measure
 // 2862093 bytes; retain a bounded 7907-byte margin.
-const geometryChunkBudget = 2_870_000
+// NURBS Foundation /2 adds stationary/root and 2D projection isolation,
+// homogeneous normal cones and rollback-certified simplification. The shared
+// packed kernel measures 2898818 bytes; retain a bounded 31182-byte margin.
+// NURBS Foundation /4 adds Krawczyk uniqueness, recursive singularity
+// localization, exact map materialization and cloud Hausdorff fitting. The
+// shared packed kernel measures 2937483 bytes; retain a bounded 32517-byte margin.
+// NURBS SS /1 adds certified general surface/surface intersection with 4D
+// Bernstein/Krawczyk/continuation. The shared packed kernel measures 2985083
+// bytes; retain a bounded 34917-byte margin.
+const geometryChunkBudget = 3_020_000
 // WASM is losslessly packed in JS chunks; validate its actual decoded module
 // and source identity below instead of relying on an artifact's file suffix.
 for (const required of ['.html', '.css', '.js']) {
@@ -162,6 +171,10 @@ for (const [name, artifact, compression] of [
 // V11 direct interchange measures 5305991 bytes across the distribution;
 // retain a bounded 44009-byte margin.
 // STEP /8 measures 5365565 bytes; retain a bounded 9435-byte margin.
-const totalBudget = 5_375_000
+// NURBS Foundation /2 measures 5409272 bytes across the distribution; retain
+// a bounded 30728-byte margin matching the shared-kernel successor gate.
+// NURBS Foundation /4 measures 5449335 bytes; retain a bounded 30665-byte margin.
+// NURBS SS /1 adds general surface/surface to the packed kernel; bump total once.
+const totalBudget = 5_560_000
 if (total > totalBudget) throw new Error(`dist totals ${total} bytes; budget is ${totalBudget}`)
 console.log(`Verified ${files.length} dist artifacts (${total} bytes)`)

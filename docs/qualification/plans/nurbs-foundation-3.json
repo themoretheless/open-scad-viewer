@@ -1,0 +1,59 @@
+{
+  "$schema":"./brep-capability-qualification-plan-v12.schema.json",
+  "schema":"open-scad-viewer/brep-capability-qualification-plan",
+  "schemaVersion":12,
+  "planId":"nurbs-foundation-3",
+  "gate":{"id":"g8-full","name":"brep-full-closed-matrix","version":12},
+  "lifecycle":{"status":"qualified","qualificationClaim":"finite-cell"},
+  "claimBoundary":{
+    "candidateClaim":"Finite append-only NURBS foundation successor for wrapped periodic edits, adaptive error envelopes, affine projection uniqueness, knot-cell singularity localization, monotone rational parameter maps and bounded approximate-only fitting.",
+    "forbiddenClaims":[
+      "general nonlinear surface projection uniqueness when interval boxes overlap",
+      "sub-knot-cell singularity localization",
+      "exact control-net composition for arbitrary rational parameter maps",
+      "global Hausdorff error inferred from an unstructured point cloud",
+      "unbounded fitting or periodic edit resources"
+    ]
+  },
+  "capability":"nurbs-foundation/3",
+  "successorOf":"nurbs-foundation/2",
+  "dependencies":[{"capability":"nurbs-foundation/2","requiredMaturity":"Qualified"}],
+  "scope":{
+    "included":[
+      "wrapped periodic curve insertion removal elevation reduction and seam-crossing split with rollback",
+      "axiswise wrapped periodic surface insertion removal elevation and reduction",
+      "C0 C1 C2 periodic seam residual certificates",
+      "adaptive sampled plus certified derivative-Lipschitz curve simplification envelopes",
+      "strict Gram determinant uniqueness proof for affine rational surface projection cells",
+      "complete unresolved normal-cone localization to rational Bezier knot cells",
+      "strictly monotone positive rational and contiguous piecewise maps with semantic composition and inverse interval chains",
+      "bounded curve least-squares fitting and tensor degree-one surface interpolation or approximate-fit reports",
+      "rank conditioning resource and no-fitted-to-exact-promotion reports through Rust WASM TypeScript and ModelGraph"
+    ],
+    "excluded":[
+      "general nonlinear surface projection uniqueness after terminal-box overlap",
+      "subcell normal-cone singularity isolation",
+      "materialized exact NURBS control-net composition for nonlinear maps",
+      "point-cloud-to-surface fitting without authored grid correspondence",
+      "general curve-curve curve-surface or surface-surface intersection"
+    ]
+  },
+  "matrix":[
+    {"id":"CA12-NF3-PERIODIC-CURVE","expected":"Complete","blocksQualification":true},
+    {"id":"CA12-NF3-PERIODIC-SURFACE","expected":"Complete","blocksQualification":true},
+    {"id":"CA12-NF3-ADAPTIVE-ERROR","expected":"Complete","blocksQualification":true},
+    {"id":"CA12-NF3-AFFINE-UNIQUENESS","expected":"Complete","blocksQualification":true},
+    {"id":"CA12-NF3-SINGULARITY-LOCALIZATION","expected":"Complete","blocksQualification":true},
+    {"id":"CA12-NF3-REPARAMETERIZATION","expected":"Complete","blocksQualification":true},
+    {"id":"CA12-NF3-FITTING","expected":"Complete","blocksQualification":true},
+    {"id":"CA12-NF3-PRODUCT","expected":"Complete","blocksQualification":true}
+  ],
+  "bindings":{
+    "implementation":["crates/nurbs-core/src/foundation.rs","crates/nurbs-core/src/lib.rs","crates/nurbs-core/src/tests.rs","src/services/nurbsFoundation.ts","src/services/modelGraphNurbsKernel.ts","tests/nurbsFoundation.test.ts","scripts/nurbs-foundation-3-oracle.py"],
+    "registry":"src/services/geometry/brepCapability.ts",
+    "evidenceJson":"docs/qualification/nurbs-foundation-3-evidence-v1.json"
+  },
+  "evidence":{"state":"qualified","notes":["Artifacts were appended only after native, bridge, WASM and product tests passed.","No cargo fmt was run."]},
+  "resetPolicy":"false-Complete freezes this capability and transitively stales all dependents; recovery requires a successor capability ID",
+  "unresolvedRows":[]
+}

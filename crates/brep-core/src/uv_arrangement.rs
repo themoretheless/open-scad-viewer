@@ -83,6 +83,14 @@ pub enum LiftedUvGeometry {
         side: TensorBoundary,
         domain: [[f64; 2]; 2],
     },
+    /// Certified rational curved pcurve trace (interval/exact correspondence).
+    RationalCurvedTrace {
+        samples: Vec<[f64; 2]>,
+        closed: bool,
+        correspondence: &'static str,
+        overlap: bool,
+        singular: bool,
+    },
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -308,7 +316,14 @@ fn arrange_lifted_uv_impl(
     resource_limit: usize,
     tensor_admitted: bool,
 ) -> Result<LiftedUvArrangement> {
-    if chart == ChartKind::Freeform {
+    if chart == ChartKind::Freeform
+        && !primitives.iter().all(|p| {
+            matches!(
+                p.geometry,
+                LiftedUvGeometry::RationalCurvedTrace { .. }
+            )
+        })
+    {
         return Err(refuse(
             "Generic Freeform curves are not admitted for Complete UV arrangement",
         ));
@@ -375,6 +390,39 @@ fn arrange_lifted_uv_impl(
                     TensorBoundary::VMax => ([umax, vmax], [umin, vmax]),
                 };
                 segments.push((primitive.edge_id, start, end));
+            }
+            (
+                LiftedUvGeometry::RationalCurvedTrace {
+                    samples,
+                    closed,
+                    correspondence: _,
+                    overlap: _,
+                    singular,
+                },
+                ChartKind::PlanePoly | ChartKind::Freeform,
+            ) => {
+                if *singular {
+                    return Err(refuse(
+                        "Singular UV strata refuse Complete DCEL until regularized",
+                    ));
+                }
+                if samples.len() < 2 || samples.iter().flatten().any(|v| !v.is_finite()) {
+                    return Err(refuse(
+                        "Rational curved UV trace needs at least two finite samples",
+                    ));
+                }
+                for window in samples.windows(2) {
+                    if window[0] != window[1] {
+                        segments.push((primitive.edge_id, window[0], window[1]));
+                    }
+                }
+                if *closed && samples.len() > 2 {
+                    let first = samples[0];
+                    let last = *samples.last().unwrap();
+                    if first != last {
+                        segments.push((primitive.edge_id, last, first));
+                    }
+                }
             }
             _ => return Err(refuse("Lifted primitive does not match its admitted chart")),
         }
@@ -675,6 +723,22 @@ pub fn arrange_lifted_uv(
     resource_limit: usize,
 ) -> Result<LiftedUvArrangement> {
     arrange_lifted_uv_impl(context, chart, primitives, resource_limit, false)
+}
+
+/// DCEL for certified rational curved SS pcurve traces (overlaps, loops, holes).
+/// Does not use the graph-patch iso fixture path.
+pub fn arrange_rational_curved_ss_uv(
+    context: &ToleranceContext,
+    primitives: &[LiftedUvPrimitive],
+    resource_limit: usize,
+) -> Result<LiftedUvArrangement> {
+    arrange_lifted_uv_impl(
+        context,
+        ChartKind::PlanePoly,
+        primitives,
+        resource_limit,
+        false,
+    )
 }
 
 /// Exact finite chart for one tensor rectangle and its complete set of
