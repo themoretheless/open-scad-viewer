@@ -10,7 +10,9 @@ mod types;
 
 pub use acceleration::Acceleration;
 pub use distance_pairs::{
-    DISTANCE_PAIRS_WGSL, squared_distance_pairs, squared_distance_pairs_accelerated,
+    DISTANCE_PAIR_SUM_WGSL, DISTANCE_PAIRS_WGSL, squared_distance_pair_sum,
+    squared_distance_pair_sum_accelerated, squared_distance_pairs,
+    squared_distance_pairs_accelerated,
 };
 pub use error::{Error, Result, ensure};
 pub use linalg::{

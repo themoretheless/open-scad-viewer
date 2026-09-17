@@ -103,6 +103,8 @@ for equal-length point arrays. `squared_distance_pairs_accelerated(a, b,
 acceleration)` adds explicit `Gpu`/`Cuda` offload through the same portable
 wgpu and CUDA-driver layers as nearest-neighbor. Device buffers are cached
 grow-only per thread for stable-size repeated calls.
+`squared_distance_pair_sum_accelerated` uses a device-side partial reduction
+for scalar RMSE/loss-style consumers, reading only partial sums back.
 
 This kernel is intentionally conservative in `Auto`: unlike nearest-neighbor,
 it is only O(pair_count) with a few FLOPs per pair, so on discrete GPUs the
@@ -118,6 +120,17 @@ regressing callers:
 | 250,000 | 0.304 ms | 0.311 ms | 8.336 ms | 1.985 ms |
 | 1,000,000 | 1.893 ms | 1.968 ms | 29.375 ms | 8.320 ms |
 | 3,000,000 | 6.153 ms | 6.177 ms | 87.506 ms | 24.352 ms |
+
+Scalar sum reduction avoids reading all distances but still has to upload both
+input point arrays, so `Auto` remains CPU there too:
+
+| pairs | cpu sum | auto sum | gpu sum | cuda sum |
+| --- | --- | --- | --- | --- |
+| 10,000 | 0.019 ms | 0.016 ms | 0.352 ms | 0.098 ms |
+| 100,000 | 0.141 ms | 0.131 ms | 3.459 ms | 0.692 ms |
+| 250,000 | 0.639 ms | 0.598 ms | 7.350 ms | 1.925 ms |
+| 1,000,000 | 2.819 ms | 2.966 ms | 28.223 ms | 7.494 ms |
+| 3,000,000 | 8.431 ms | 8.628 ms | 86.299 ms | 22.989 ms |
 
 ## ICP / rigid point-cloud registration
 

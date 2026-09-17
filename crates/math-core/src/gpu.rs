@@ -451,6 +451,163 @@ pub fn squared_distance_pairs_gpu(a: &[V3], b: &[V3]) -> Option<Vec<f64>> {
     })
 }
 
+struct GpuDistancePairSum {
+    device: wgpu::Device,
+    queue: wgpu::Queue,
+    layout: wgpu::BindGroupLayout,
+    pipeline: wgpu::ComputePipeline,
+}
+
+impl GpuDistancePairSum {
+    fn new(context: &GpuContext) -> Self {
+        let device = &context.device;
+        let module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
+            label: Some("distance_pair_sum"),
+            source: wgpu::ShaderSource::Wgsl(crate::DISTANCE_PAIR_SUM_WGSL.into()),
+        });
+        let layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+            label: Some("distance_pair_sum"),
+            entries: &[
+                uniform_entry(0),
+                storage_entry(1, true),
+                storage_entry(2, true),
+                storage_entry(3, false),
+            ],
+        });
+        let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+            label: Some("distance_pair_sum"),
+            bind_group_layouts: &[Some(&layout)],
+            immediate_size: 0,
+        });
+        let pipeline = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
+            label: Some("distance_pair_sum"),
+            layout: Some(&pipeline_layout),
+            module: &module,
+            entry_point: Some("main"),
+            compilation_options: Default::default(),
+            cache: None,
+        });
+        Self {
+            device: device.clone(),
+            queue: context.queue.clone(),
+            layout,
+            pipeline,
+        }
+    }
+
+    fn run(&self, a: &[V3], b: &[V3]) -> f64 {
+        let pair_count = a.len();
+        let partial_count = pair_count.div_ceil(256).max(1);
+        let flat_a: Vec<f32> = a.iter().flatten().map(|&v| v as f32).collect();
+        let flat_b: Vec<f32> = b.iter().flatten().map(|&v| v as f32).collect();
+        let mut params = Vec::with_capacity(16);
+        params.extend_from_slice(&(pair_count as u32).to_le_bytes());
+        params.extend_from_slice(&0u32.to_le_bytes());
+        params.extend_from_slice(&0u32.to_le_bytes());
+        params.extend_from_slice(&0u32.to_le_bytes());
+        let device = &self.device;
+        let mk = |label: &str, size: u64, usage| {
+            device.create_buffer(&wgpu::BufferDescriptor {
+                label: Some(label),
+                size,
+                usage,
+                mapped_at_creation: false,
+            })
+        };
+        let params_buf = mk(
+            "distance_pair_sum_params",
+            16,
+            wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+        );
+        let a_buf = mk(
+            "distance_pair_sum_a",
+            (flat_a.len().max(1) * 4) as u64,
+            wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+        );
+        let b_buf = mk(
+            "distance_pair_sum_b",
+            (flat_b.len().max(1) * 4) as u64,
+            wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+        );
+        let out_buf = mk(
+            "distance_pair_sum_out",
+            (partial_count * 4) as u64,
+            wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC,
+        );
+        let read_buf = mk(
+            "distance_pair_sum_read",
+            (partial_count * 4) as u64,
+            wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
+        );
+        self.queue.write_buffer(&params_buf, 0, &params);
+        self.queue
+            .write_buffer(&a_buf, 0, &gpu_compute::pack_f32(&flat_a));
+        self.queue
+            .write_buffer(&b_buf, 0, &gpu_compute::pack_f32(&flat_b));
+        let bind = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("distance_pair_sum"),
+            layout: &self.layout,
+            entries: &[
+                wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: params_buf.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 1,
+                    resource: a_buf.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 2,
+                    resource: b_buf.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 3,
+                    resource: out_buf.as_entire_binding(),
+                },
+            ],
+        });
+        let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
+            label: Some("distance_pair_sum"),
+        });
+        {
+            let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
+                label: Some("distance_pair_sum"),
+                timestamp_writes: None,
+            });
+            pass.set_pipeline(&self.pipeline);
+            pass.set_bind_group(0, &bind, &[]);
+            pass.dispatch_workgroups(partial_count as u32, 1, 1);
+        }
+        encoder.copy_buffer_to_buffer(&out_buf, 0, &read_buf, 0, (partial_count * 4) as u64);
+        self.queue.submit([encoder.finish()]);
+        let raw = read_buffer(device, &read_buf, partial_count * 4);
+        read_buf.unmap();
+        raw.chunks_exact(4)
+            .take(partial_count)
+            .map(|d| f32::from_ne_bytes(d.try_into().unwrap()) as f64)
+            .sum()
+    }
+}
+
+thread_local! {
+    static SHARED_DISTANCE_PAIR_SUM: std::cell::LazyCell<Option<&'static GpuDistancePairSum>> =
+        std::cell::LazyCell::new(|| {
+            GpuContext::new()
+                .map(|context| Box::leak(Box::new(GpuDistancePairSum::new(&context))) as &'static GpuDistancePairSum)
+        });
+}
+
+/// Sum of one-to-one squared distances on the GPU; `None` without an adapter.
+pub fn squared_distance_pair_sum_gpu(a: &[V3], b: &[V3]) -> Option<f64> {
+    if a.len() != b.len() {
+        return None;
+    }
+    SHARED_DISTANCE_PAIR_SUM.with(|cell| {
+        let shared: &Option<&GpuDistancePairSum> = cell;
+        shared.map(|kernel| kernel.run(a, b))
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -509,5 +666,27 @@ mod tests {
         for (got, want) in got.iter().zip(&want) {
             assert!((got - want).abs() < 1e-4 * want.max(1.0), "{got} vs {want}");
         }
+    }
+
+    #[test]
+    fn gpu_squared_distance_pair_sum_matches_cpu_reference_when_available() {
+        let a: Vec<V3> = (0..1024)
+            .map(|i| {
+                let f = i as f64;
+                [f * 0.07, (f * 0.03).sin(), (f * 0.11).cos()]
+            })
+            .collect();
+        let b: Vec<V3> = (0..1024)
+            .map(|i| {
+                let f = i as f64;
+                [f * -0.02, (f * 0.13).cos(), (f * 0.17).sin()]
+            })
+            .collect();
+        let Some(got) = squared_distance_pair_sum_gpu(&a, &b) else {
+            eprintln!("no wgpu adapter available; skipping");
+            return;
+        };
+        let want = crate::squared_distance_pair_sum(&a, &b).unwrap();
+        assert!((got - want).abs() < 1e-4 * want.max(1.0), "{got} vs {want}");
     }
 }
