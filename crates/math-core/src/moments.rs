@@ -1,4 +1,4 @@
-use crate::{Acceleration, Error, M3, Result, V3};
+use crate::{Acceleration, Error, M3, Result, V3, eigen};
 
 /// WGSL template for point-cloud moment reduction.
 pub const POINT_MOMENTS_WGSL_TEMPLATE: &str = include_str!("point_moments.wgsl");
@@ -11,6 +11,15 @@ pub struct PointMoments {
     pub second_moment: M3,
     /// Central covariance `E[(p-c) * (p-c)^T]`.
     pub covariance: M3,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct PointPrincipalAxes {
+    pub moments: PointMoments,
+    /// Covariance eigenvalues in descending order.
+    pub variances: V3,
+    /// Unit eigenvectors in the same order as `variances`.
+    pub axes: [V3; 3],
 }
 
 impl PointMoments {
@@ -99,6 +108,25 @@ pub fn point_moments_accelerated(
     point_moments(points)
 }
 
+/// Principal point-cloud axes from the covariance eigensystem. Moments can be
+/// CPU, GPU or CUDA; the final 3x3 eigensolve runs on the CPU.
+pub fn point_principal_axes(
+    points: &[V3],
+    acceleration: Acceleration,
+) -> Result<PointPrincipalAxes> {
+    let moments = point_moments_accelerated(points, acceleration)?;
+    let (values, vectors) = eigen(moments.covariance);
+    let mut order = [0usize, 1, 2];
+    order.sort_by(|&a, &b| values[b].total_cmp(&values[a]));
+    let variances = order.map(|axis| values[axis].max(0.));
+    let axes = order.map(|axis| [vectors[0][axis], vectors[1][axis], vectors[2][axis]]);
+    Ok(PointPrincipalAxes {
+        moments,
+        variances,
+        axes,
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -142,6 +170,22 @@ mod tests {
             point_moments_accelerated(&points, Acceleration::Auto).unwrap(),
             point_moments(&points).unwrap()
         );
+    }
+
+    #[test]
+    fn point_principal_axes_orders_variance_descending() {
+        let points = [
+            [-3., 0., 0.],
+            [-1., 0., 0.],
+            [1., 0., 0.],
+            [3., 0., 0.],
+            [0., 0.2, 0.],
+            [0., -0.2, 0.],
+        ];
+        let got = point_principal_axes(&points, Acceleration::Cpu).unwrap();
+        assert!(got.variances[0] > got.variances[1]);
+        assert!(got.variances[1] > got.variances[2]);
+        assert!(got.axes[0][0].abs() > 0.99);
     }
 
     #[cfg(feature = "gpu")]

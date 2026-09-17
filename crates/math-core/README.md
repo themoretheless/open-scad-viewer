@@ -218,7 +218,9 @@ bench_point_bounds` on the RTX 5090:
 ## Point-cloud moments
 
 `point_moments(points)` computes the centroid, mean outer product and central
-covariance matrix for a finite point cloud. `point_moments_accelerated(points,
+covariance matrix for a finite point cloud. `point_principal_axes(points,
+acceleration)` builds on that covariance to return PCA variances and unit axes
+for orientation/normal workflows. `point_moments_accelerated(points,
 acceleration)` adds fused wgpu/CUDA reductions with grow-only buffers and
 Metal/default workgroup tuning. Like bounds, this is mostly memory movement on
 discrete GPUs, so `Auto` stays on the exact CPU path; explicit `Gpu`/`Cuda`
