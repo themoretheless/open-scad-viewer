@@ -1,7 +1,7 @@
 use crate::{Acceleration, Error, Result, V3, nearest_neighbor_accelerated};
 
-/// WGSL source for directed Chamfer partial reduction.
-pub const CHAMFER_WGSL: &str = include_str!("chamfer.wgsl");
+/// WGSL template for directed Chamfer partial reduction.
+pub const CHAMFER_WGSL_TEMPLATE: &str = include_str!("chamfer.wgsl");
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct DirectedChamfer {

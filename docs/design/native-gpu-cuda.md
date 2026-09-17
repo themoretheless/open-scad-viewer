@@ -35,6 +35,9 @@ the portable GPU path on the same machine.
 The CUDA and WGSL kernels are line-by-line ports of the same text and are
 tested against each other (`cuda_and_wgpu_samplers_agree`, tolerance 1e-3 in
 f32) and against the CPU reference (`cuda_sampling_matches_cpu_field_within_tolerance`).
+wgpu kernels that use workgroup reductions can specialize for Metal's
+tile-based GPUs with smaller 128-wide workgroups while keeping 256-wide groups
+for Vulkan/DX12/WebGPU.
 
 ## Building and running
 

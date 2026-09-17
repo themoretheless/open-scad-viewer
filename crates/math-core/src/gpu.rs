@@ -8,6 +8,9 @@
 use crate::V3;
 use gpu_compute::{BackendReport, GpuContext, read_buffer, storage_entry, uniform_entry, wgpu};
 
+const WG_METAL: u32 = 128;
+const WG_DEFAULT: u32 = 256;
+
 struct Buffers {
     query_capacity: usize,
     target_capacity: usize,
@@ -658,6 +661,7 @@ struct GpuChamfer {
     queue: wgpu::Queue,
     layout: wgpu::BindGroupLayout,
     pipeline: wgpu::ComputePipeline,
+    workgroup_size: u32,
     buffers: std::cell::RefCell<Option<ChamferBuffers>>,
 }
 
@@ -677,10 +681,16 @@ struct ChamferBuffers {
 
 impl GpuChamfer {
     fn new(context: &GpuContext) -> Self {
+        let workgroup_size =
+            gpu_compute::tuned_workgroup_size(context.backend, WG_METAL, WG_DEFAULT);
         let device = &context.device;
         let module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("chamfer"),
-            source: wgpu::ShaderSource::Wgsl(crate::CHAMFER_WGSL.into()),
+            source: wgpu::ShaderSource::Wgsl(
+                crate::CHAMFER_WGSL_TEMPLATE
+                    .replace("__WG__", &workgroup_size.to_string())
+                    .into(),
+            ),
         });
         let layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
             label: Some("chamfer"),
@@ -710,6 +720,7 @@ impl GpuChamfer {
             queue: context.queue.clone(),
             layout,
             pipeline,
+            workgroup_size,
             buffers: std::cell::RefCell::new(None),
         }
     }
@@ -817,7 +828,7 @@ impl GpuChamfer {
     fn run(&self, queries: &[V3], targets: &[V3]) -> crate::DirectedChamfer {
         let query_count = queries.len();
         let target_count = targets.len();
-        let partial_count = query_count.div_ceil(256).max(1);
+        let partial_count = query_count.div_ceil(self.workgroup_size as usize).max(1);
         self.ensure_buffers(query_count, target_count, partial_count);
         let flat_q: Vec<f32> = queries.iter().flatten().map(|&v| v as f32).collect();
         let flat_t: Vec<f32> = targets.iter().flatten().map(|&v| v as f32).collect();

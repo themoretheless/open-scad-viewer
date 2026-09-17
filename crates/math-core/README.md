@@ -144,6 +144,8 @@ println!("Hausdorff = {}", score.hausdorff_distance);
 This is a higher-level geometry metric over nearest-neighbor work. Device
 placements use fused directed-Chamfer reduction kernels, so they read back one
 sum/max pair per workgroup instead of one nearest-neighbor result per query.
+The wgpu shader uses the shared backend tuning (`128`-wide workgroups on Metal,
+`256` elsewhere).
 Measured with `cargo run --release -p osv-math --features cuda --example
 bench_chamfer` on the RTX 5090:
 

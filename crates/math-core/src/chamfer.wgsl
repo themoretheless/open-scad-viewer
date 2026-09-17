@@ -1,3 +1,4 @@
+// Template placeholder `__WG__` is substituted per wgpu backend.
 struct Params {
     query_count: u32,
     target_count: u32,
@@ -11,10 +12,12 @@ struct Params {
 @group(0) @binding(3) var<storage, read_write> out_sum: array<f32>;
 @group(0) @binding(4) var<storage, read_write> out_max: array<f32>;
 
-var<workgroup> sums: array<f32, 256>;
-var<workgroup> maxes: array<f32, 256>;
+const WG: u32 = __WG__u;
 
-@compute @workgroup_size(256)
+var<workgroup> sums: array<f32, __WG__>;
+var<workgroup> maxes: array<f32, __WG__>;
+
+@compute @workgroup_size(__WG__)
 fn main(
     @builtin(global_invocation_id) gid: vec3<u32>,
     @builtin(local_invocation_id) lid: vec3<u32>,
@@ -45,7 +48,7 @@ fn main(
     maxes[lid.x] = best;
     workgroupBarrier();
 
-    var stride = 128u;
+    var stride = WG / 2u;
     loop {
         if (stride == 0u) {
             break;
