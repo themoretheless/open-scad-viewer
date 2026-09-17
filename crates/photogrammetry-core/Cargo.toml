@@ -6,7 +6,8 @@ rust-version.workspace = true
 publish.workspace = true
 
 [features]
-gpu = ["dep:gpu-compute"]
+gpu = ["dep:gpu-compute", "math-core/gpu"]
+cuda = ["gpu", "math-core/cuda"]
 
 [dependencies]
 math-core = { package = "osv-math", path = "../math-core" }

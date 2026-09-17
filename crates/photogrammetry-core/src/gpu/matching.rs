@@ -7,7 +7,6 @@
 //! separately; CPU remains the deterministic reference.
 
 use super::wgpu;
-use super::wgpu::util::DeviceExt;
 
 use super::GpuContext;
 
@@ -148,14 +147,29 @@ fn shader_source(wg: u32) -> String {
     SHADER_TEMPLATE.replace("__WG__", &wg.to_string())
 }
 
+#[derive(Clone, Copy, Debug)]
 pub struct RowBest {
     pub j: usize,
     pub d1: f32,
     pub d2: f32,
 }
+#[derive(Clone, Copy, Debug)]
 pub struct ColBest {
     pub i: usize,
     pub d1: f32,
+}
+
+struct Buffers {
+    row_capacity: usize,
+    col_capacity: usize,
+    params: wgpu::Buffer,
+    descriptors_a: wgpu::Buffer,
+    descriptors_b: wgpu::Buffer,
+    rows_out: wgpu::Buffer,
+    cols_out: wgpu::Buffer,
+    read_rows: wgpu::Buffer,
+    read_cols: wgpu::Buffer,
+    bind: wgpu::BindGroup,
 }
 
 pub struct GpuMatcher {
@@ -169,6 +183,7 @@ pub struct GpuMatcher {
     /// (hence `allow(dead_code)` on non-test builds).
     #[allow(dead_code)]
     workgroup_size: u32,
+    buffers: std::cell::RefCell<Option<Buffers>>,
 }
 
 impl GpuMatcher {
@@ -226,6 +241,7 @@ impl GpuMatcher {
             rows_pipeline,
             cols_pipeline,
             workgroup_size,
+            buffers: std::cell::RefCell::new(None),
         }
     }
 
@@ -244,92 +260,32 @@ impl GpuMatcher {
     ) -> (Vec<RowBest>, Vec<ColBest>) {
         let rows = da.len() as u32;
         let cols = db.len() as u32;
-        let device = &self.device;
-
-        let params = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label: Some("params"),
-            contents: &[rows.to_ne_bytes(), cols.to_ne_bytes()].concat(),
-            usage: wgpu::BufferUsages::UNIFORM,
-        });
         let packed_a = pack_descriptors(da);
         let packed_b = pack_descriptors(db);
-        // Zero-feature inputs (blank photos) still bind: wgpu rejects
-        // zero-size storage buffers.
-        let buf_a = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label: Some("da"),
-            contents: if packed_a.is_empty() {
-                &[0u8; 4]
-            } else {
-                &packed_a
-            },
-            usage: wgpu::BufferUsages::STORAGE,
-        });
-        let buf_b = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label: Some("db"),
-            contents: if packed_b.is_empty() {
-                &[0u8; 4]
-            } else {
-                &packed_b
-            },
-            usage: wgpu::BufferUsages::STORAGE,
-        });
+        self.ensure_buffers(da.len(), db.len());
         let row_bytes = (rows as u64) * 12;
         let col_bytes = (cols as u64) * 8;
-        let out_rows = device.create_buffer(&wgpu::BufferDescriptor {
-            label: Some("rows_out"),
-            size: row_bytes.max(12),
-            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC,
-            mapped_at_creation: false,
-        });
-        let out_cols = device.create_buffer(&wgpu::BufferDescriptor {
-            label: Some("cols_out"),
-            size: col_bytes.max(8),
-            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC,
-            mapped_at_creation: false,
-        });
-        let read_rows = device.create_buffer(&wgpu::BufferDescriptor {
-            label: Some("read_rows"),
-            size: row_bytes.max(12),
-            usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
-            mapped_at_creation: false,
-        });
-        let read_cols = device.create_buffer(&wgpu::BufferDescriptor {
-            label: Some("read_cols"),
-            size: col_bytes.max(8),
-            usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
-            mapped_at_creation: false,
-        });
+        let buffers = self.buffers.borrow();
+        let buffers = buffers.as_ref().expect("ensure_buffers was just called");
+        self.queue.write_buffer(
+            &buffers.params,
+            0,
+            &[rows.to_ne_bytes(), cols.to_ne_bytes()].concat(),
+        );
+        if !packed_a.is_empty() {
+            self.queue
+                .write_buffer(&buffers.descriptors_a, 0, &packed_a);
+        }
+        if !packed_b.is_empty() {
+            self.queue
+                .write_buffer(&buffers.descriptors_b, 0, &packed_b);
+        }
 
-        let bind = device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("match_descriptors"),
-            layout: &self.layout,
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: params.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: buf_a.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 2,
-                    resource: buf_b.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 3,
-                    resource: out_rows.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 4,
-                    resource: out_cols.as_entire_binding(),
-                },
-            ],
-        });
-
-        let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
-            label: Some("match"),
-        });
+        let mut encoder = self
+            .device
+            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                label: Some("match"),
+            });
         if rows > 0 && cols > 0 {
             {
                 let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
@@ -337,7 +293,7 @@ impl GpuMatcher {
                     timestamp_writes: None,
                 });
                 pass.set_pipeline(&self.rows_pipeline);
-                pass.set_bind_group(0, &bind, &[]);
+                pass.set_bind_group(0, &buffers.bind, &[]);
                 pass.dispatch_workgroups(rows, 1, 1);
             }
             {
@@ -346,16 +302,30 @@ impl GpuMatcher {
                     timestamp_writes: None,
                 });
                 pass.set_pipeline(&self.cols_pipeline);
-                pass.set_bind_group(0, &bind, &[]);
+                pass.set_bind_group(0, &buffers.bind, &[]);
                 pass.dispatch_workgroups(cols, 1, 1);
             }
         }
-        encoder.copy_buffer_to_buffer(&out_rows, 0, &read_rows, 0, row_bytes.max(12));
-        encoder.copy_buffer_to_buffer(&out_cols, 0, &read_cols, 0, col_bytes.max(8));
+        encoder.copy_buffer_to_buffer(
+            &buffers.rows_out,
+            0,
+            &buffers.read_rows,
+            0,
+            row_bytes.max(12),
+        );
+        encoder.copy_buffer_to_buffer(
+            &buffers.cols_out,
+            0,
+            &buffers.read_cols,
+            0,
+            col_bytes.max(8),
+        );
         self.queue.submit([encoder.finish()]);
 
-        let rows_raw = super::read_buffer(device, &read_rows, row_bytes as usize);
-        let cols_raw = super::read_buffer(device, &read_cols, col_bytes as usize);
+        let rows_raw = super::read_buffer(&self.device, &buffers.read_rows, row_bytes as usize);
+        buffers.read_rows.unmap();
+        let cols_raw = super::read_buffer(&self.device, &buffers.read_cols, col_bytes as usize);
+        buffers.read_cols.unmap();
 
         let rows_out_vec = rows_raw
             .chunks_exact(12)
@@ -379,6 +349,99 @@ impl GpuMatcher {
             })
             .collect();
         (rows_out_vec, cols_out_vec)
+    }
+
+    fn ensure_buffers(&self, row_count: usize, col_count: usize) {
+        let stale = match &*self.buffers.borrow() {
+            Some(buffers) => buffers.row_capacity < row_count || buffers.col_capacity < col_count,
+            None => true,
+        };
+        if !stale {
+            return;
+        }
+        let device = &self.device;
+        let row_capacity = row_count.max(1);
+        let col_capacity = col_count.max(1);
+        let params = device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("match_params"),
+            size: 8,
+            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        });
+        let descriptors_a = device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("match_da"),
+            size: (row_capacity * 128 * 4) as u64,
+            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        });
+        let descriptors_b = device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("match_db"),
+            size: (col_capacity * 128 * 4) as u64,
+            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        });
+        let rows_out = device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("match_rows_out"),
+            size: (row_capacity * 12) as u64,
+            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC,
+            mapped_at_creation: false,
+        });
+        let cols_out = device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("match_cols_out"),
+            size: (col_capacity * 8) as u64,
+            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC,
+            mapped_at_creation: false,
+        });
+        let read_rows = device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("match_read_rows"),
+            size: (row_capacity * 12) as u64,
+            usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        });
+        let read_cols = device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("match_read_cols"),
+            size: (col_capacity * 8) as u64,
+            usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        });
+        let bind = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("match_descriptors"),
+            layout: &self.layout,
+            entries: &[
+                wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: params.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 1,
+                    resource: descriptors_a.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 2,
+                    resource: descriptors_b.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 3,
+                    resource: rows_out.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 4,
+                    resource: cols_out.as_entire_binding(),
+                },
+            ],
+        });
+        *self.buffers.borrow_mut() = Some(Buffers {
+            row_capacity,
+            col_capacity,
+            params,
+            descriptors_a,
+            descriptors_b,
+            rows_out,
+            cols_out,
+            read_rows,
+            read_cols,
+            bind,
+        });
     }
 }
 
@@ -404,6 +467,225 @@ pub fn match_pair(da: &[[f32; 128]], db: &[[f32; 128]]) -> Option<(Vec<RowBest>,
         let shared: &Option<&(GpuContext, GpuMatcher)> = cell;
         shared.map(|(_, matcher)| matcher.match_descriptors(da, db))
     })
+}
+
+pub fn match_pair_accelerated(
+    da: &[[f32; 128]],
+    db: &[[f32; 128]],
+    acceleration: crate::Acceleration,
+) -> Option<(Vec<RowBest>, Vec<ColBest>)> {
+    #[cfg(feature = "cuda")]
+    if acceleration == crate::Acceleration::Cuda
+        && let Some(result) = cuda::match_pair_cuda(da, db)
+    {
+        return Some(result);
+    }
+    match_pair(da, db)
+}
+
+#[cfg(feature = "cuda")]
+mod cuda {
+    use super::{ColBest, RowBest};
+    use gpu_compute::cuda::{CudaDevice, CudaFunction, CudaSlice, LaunchConfig, PushKernelArg};
+
+    const MATCHING_PTX: &str = include_str!("matching.ptx");
+    const BLOCK: u32 = 256;
+
+    struct Buffers {
+        row_capacity: usize,
+        col_capacity: usize,
+        descriptors_a: CudaSlice<f32>,
+        descriptors_b: CudaSlice<f32>,
+        row_j: CudaSlice<u32>,
+        row_d1: CudaSlice<f32>,
+        row_d2: CudaSlice<f32>,
+        col_i: CudaSlice<u32>,
+        col_d1: CudaSlice<f32>,
+    }
+
+    struct CudaMatcher {
+        device: CudaDevice,
+        rows_kernel: CudaFunction,
+        cols_kernel: CudaFunction,
+        buffers: std::cell::RefCell<Option<Buffers>>,
+    }
+
+    impl CudaMatcher {
+        fn new() -> Option<Self> {
+            let device = CudaDevice::new()?;
+            let module = device.load_ptx(MATCHING_PTX)?;
+            let rows_kernel = module.load_function("match_descriptor_rows").ok()?;
+            let cols_kernel = module.load_function("match_descriptor_cols").ok()?;
+            Some(Self {
+                device,
+                rows_kernel,
+                cols_kernel,
+                buffers: std::cell::RefCell::new(None),
+            })
+        }
+
+        fn ensure_buffers(&self, rows: usize, cols: usize) -> Option<()> {
+            let stale = match &*self.buffers.borrow() {
+                Some(b) => b.row_capacity < rows || b.col_capacity < cols,
+                None => true,
+            };
+            if !stale {
+                return Some(());
+            }
+            let row_capacity = rows.max(1);
+            let col_capacity = cols.max(1);
+            let stream = &self.device.stream;
+            let descriptors_a = stream.alloc_zeros::<f32>(row_capacity * 128).ok()?;
+            let descriptors_b = stream.alloc_zeros::<f32>(col_capacity * 128).ok()?;
+            let row_j = stream.alloc_zeros::<u32>(row_capacity).ok()?;
+            let row_d1 = stream.alloc_zeros::<f32>(row_capacity).ok()?;
+            let row_d2 = stream.alloc_zeros::<f32>(row_capacity).ok()?;
+            let col_i = stream.alloc_zeros::<u32>(col_capacity).ok()?;
+            let col_d1 = stream.alloc_zeros::<f32>(col_capacity).ok()?;
+            *self.buffers.borrow_mut() = Some(Buffers {
+                row_capacity,
+                col_capacity,
+                descriptors_a,
+                descriptors_b,
+                row_j,
+                row_d1,
+                row_d2,
+                col_i,
+                col_d1,
+            });
+            Some(())
+        }
+
+        fn run(
+            &self,
+            da: &[[f32; 128]],
+            db: &[[f32; 128]],
+        ) -> Option<(Vec<RowBest>, Vec<ColBest>)> {
+            let rows = da.len();
+            let cols = db.len();
+            if rows == 0 || cols == 0 {
+                return Some((
+                    vec![
+                        RowBest {
+                            j: usize::MAX,
+                            d1: f32::INFINITY,
+                            d2: f32::INFINITY,
+                        };
+                        rows
+                    ],
+                    vec![
+                        ColBest {
+                            i: usize::MAX,
+                            d1: f32::INFINITY,
+                        };
+                        cols
+                    ],
+                ));
+            }
+            self.ensure_buffers(rows, cols)?;
+            let stream = &self.device.stream;
+            let mut buffers = self.buffers.borrow_mut();
+            let b = buffers.as_mut().expect("ensure_buffers was just called");
+            let flat_a: Vec<f32> = da.iter().flatten().copied().collect();
+            let flat_b: Vec<f32> = db.iter().flatten().copied().collect();
+            {
+                let mut view = b.descriptors_a.slice_mut(0..flat_a.len());
+                stream.memcpy_htod(&flat_a, &mut view).ok()?;
+            }
+            {
+                let mut view = b.descriptors_b.slice_mut(0..flat_b.len());
+                stream.memcpy_htod(&flat_b, &mut view).ok()?;
+            }
+            let rows_u32 = rows as u32;
+            let cols_u32 = cols as u32;
+            let a_view = b.descriptors_a.slice(0..flat_a.len().max(1));
+            let b_view = b.descriptors_b.slice(0..flat_b.len().max(1));
+            let mut row_j_view = b.row_j.slice_mut(0..rows.max(1));
+            let mut row_d1_view = b.row_d1.slice_mut(0..rows.max(1));
+            let mut row_d2_view = b.row_d2.slice_mut(0..rows.max(1));
+            let mut row_launch = stream.launch_builder(&self.rows_kernel);
+            row_launch
+                .arg(&rows_u32)
+                .arg(&cols_u32)
+                .arg(&a_view)
+                .arg(&b_view)
+                .arg(&mut row_j_view)
+                .arg(&mut row_d1_view)
+                .arg(&mut row_d2_view);
+            unsafe { row_launch.launch(launch_1d_blocks(rows_u32)) }.ok()?;
+            let mut col_i_view = b.col_i.slice_mut(0..cols.max(1));
+            let mut col_d1_view = b.col_d1.slice_mut(0..cols.max(1));
+            let mut col_launch = stream.launch_builder(&self.cols_kernel);
+            col_launch
+                .arg(&rows_u32)
+                .arg(&cols_u32)
+                .arg(&a_view)
+                .arg(&b_view)
+                .arg(&mut col_i_view)
+                .arg(&mut col_d1_view);
+            unsafe { col_launch.launch(launch_1d_blocks(cols_u32)) }.ok()?;
+
+            let mut row_j = vec![0u32; rows];
+            let mut row_d1 = vec![0f32; rows];
+            let mut row_d2 = vec![0f32; rows];
+            let mut col_i = vec![0u32; cols];
+            let mut col_d1 = vec![0f32; cols];
+            stream.memcpy_dtoh(&row_j_view, &mut row_j).ok()?;
+            stream.memcpy_dtoh(&row_d1_view, &mut row_d1).ok()?;
+            stream.memcpy_dtoh(&row_d2_view, &mut row_d2).ok()?;
+            stream.memcpy_dtoh(&col_i_view, &mut col_i).ok()?;
+            stream.memcpy_dtoh(&col_d1_view, &mut col_d1).ok()?;
+
+            Some((
+                (0..rows)
+                    .map(|i| RowBest {
+                        j: if row_j[i] == u32::MAX {
+                            usize::MAX
+                        } else {
+                            row_j[i] as usize
+                        },
+                        d1: row_d1[i],
+                        d2: row_d2[i],
+                    })
+                    .collect(),
+                (0..cols)
+                    .map(|i| ColBest {
+                        i: if col_i[i] == u32::MAX {
+                            usize::MAX
+                        } else {
+                            col_i[i] as usize
+                        },
+                        d1: col_d1[i],
+                    })
+                    .collect(),
+            ))
+        }
+    }
+
+    fn launch_1d_blocks(blocks: u32) -> LaunchConfig {
+        LaunchConfig {
+            grid_dim: (blocks.max(1), 1, 1),
+            block_dim: (BLOCK, 1, 1),
+            shared_mem_bytes: 0,
+        }
+    }
+
+    thread_local! {
+        static SHARED: std::cell::LazyCell<Option<&'static CudaMatcher>> =
+            std::cell::LazyCell::new(|| {
+                CudaMatcher::new().map(|matcher| Box::leak(Box::new(matcher)) as &'static CudaMatcher)
+            });
+    }
+
+    pub(super) fn match_pair_cuda(
+        da: &[[f32; 128]],
+        db: &[[f32; 128]],
+    ) -> Option<(Vec<RowBest>, Vec<ColBest>)> {
+        SHARED.with(|cell| {
+            let shared: &Option<&CudaMatcher> = cell;
+            shared.and_then(|matcher| matcher.run(da, db))
+        })
+    }
 }
 
 #[cfg(test)]
@@ -550,5 +832,33 @@ mod tests {
                 "WG={wg}: column selections must agree with CPU"
             );
         }
+    }
+
+    #[cfg(feature = "cuda")]
+    #[test]
+    fn cuda_matching_agrees_with_cpu_on_synthetic_descriptors() {
+        let da = descriptors(31, 300);
+        let db = descriptors(37, 280);
+        let Some((rows, cols)) = match_pair_accelerated(&da, &db, crate::Acceleration::Cuda) else {
+            eprintln!("no CUDA/wgpu adapter; skipping");
+            return;
+        };
+        let (ref_a, ref_b) = cpu_reference(&da, &db);
+        let row_close = rows
+            .iter()
+            .zip(&ref_a)
+            .filter(|(gpu, cpu)| gpu.j == cpu.0 && (gpu.d1 - cpu.1).abs() <= 1e-4 * cpu.1.max(1.))
+            .count();
+        let col_close = cols
+            .iter()
+            .zip(&ref_b)
+            .filter(|(gpu, cpu)| gpu.i == cpu.0 && (gpu.d1 - cpu.1).abs() <= 1e-4 * cpu.1.max(1.))
+            .count();
+        assert_eq!(row_close, ref_a.len(), "row selections must agree with CPU");
+        assert_eq!(
+            col_close,
+            ref_b.len(),
+            "column selections must agree with CPU"
+        );
     }
 }

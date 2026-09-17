@@ -442,15 +442,56 @@ pub fn matches(a: &[Feature], b: &[Feature]) -> Vec<Match> {
     matches_with_options(a, b, &FeatureOptions::BASELINE)
 }
 
+/// Conservative placement recommendation for full descriptor matching.
+///
+/// Descriptor matching compares 128 floats per candidate pair and scans both
+/// directions, so it has much higher arithmetic intensity than one-to-one
+/// vector math. The portable wgpu path covers Metal/Vulkan/DX12; there is no
+/// dedicated CUDA PTX matcher, so `Cuda` falls through to the same shader.
+pub const fn recommended_for_descriptor_matching(
+    a_count: usize,
+    b_count: usize,
+) -> crate::Acceleration {
+    const GPU_WORK_THRESHOLD: usize = 10_000;
+    let Some(work) = a_count.checked_mul(b_count) else {
+        return if cfg!(feature = "cuda") {
+            crate::Acceleration::Cuda
+        } else {
+            crate::Acceleration::Gpu
+        };
+    };
+    if work >= GPU_WORK_THRESHOLD {
+        if cfg!(feature = "cuda") {
+            crate::Acceleration::Cuda
+        } else {
+            crate::Acceleration::Gpu
+        }
+    } else {
+        crate::Acceleration::Cpu
+    }
+}
+
+pub const fn resolve_for_descriptor_matching(
+    acceleration: crate::Acceleration,
+    a_count: usize,
+    b_count: usize,
+) -> crate::Acceleration {
+    match acceleration {
+        crate::Acceleration::Auto => recommended_for_descriptor_matching(a_count, b_count),
+        explicit => explicit,
+    }
+}
+
 pub fn matches_with_options(a: &[Feature], b: &[Feature], options: &FeatureOptions) -> Vec<Match> {
     let mut best_a = vec![(usize::MAX, f32::INFINITY, f32::INFINITY); a.len()];
     let mut best_b = vec![(usize::MAX, f32::INFINITY); b.len()];
     // Flatten descriptors to a dense 512-byte stride instead of the Feature layout.
     let da: Vec<[f32; 128]> = a.iter().map(|x| x.descriptor).collect();
     let db: Vec<[f32; 128]> = b.iter().map(|x| x.descriptor).collect();
+    let acceleration = resolve_for_descriptor_matching(options.acceleration, da.len(), db.len());
     #[cfg(feature = "gpu")]
-    let gpu_done = options.acceleration.is_gpu()
-        && match crate::gpu::matching::match_pair(&da, &db) {
+    let gpu_done = acceleration.is_gpu()
+        && match crate::gpu::matching::match_pair_accelerated(&da, &db, acceleration) {
             Some((rows, cols)) => {
                 for (i, row) in rows.iter().enumerate() {
                     best_a[i] = (row.j, row.d1, row.d2);

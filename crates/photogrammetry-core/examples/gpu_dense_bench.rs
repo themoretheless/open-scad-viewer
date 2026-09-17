@@ -1,7 +1,7 @@
 //! GPU dense-sweep benchmark: analytic scenes with ground truth (accuracy and
 //! whole-stage timing) plus a synthetic raw sweep-kernel timing. Emits JSON.
 //!
-//! DENSE_ACCELERATION=gpu|cpu (default gpu; requires --features gpu for gpu)
+//! DENSE_ACCELERATION=auto|gpu|metal|cuda|cpu (default gpu; requires --features gpu for device modes)
 //! DENSE_ACCURATE=1 starts from `DenseOptions::accurate()` instead of the defaults
 //! DENSE_REPEAT=N            median of N timed runs after one warmup (default 5)
 //! DENSE_PATCH_RADIUS=1|2    (default 1, the product default)
@@ -80,8 +80,18 @@ fn main() {
     let kernel_side = env_usize("DENSE_KERNEL_SIDE", 256);
     let hypotheses = env_usize("DENSE_HYPOTHESES", 64);
     let prior = base.sparse_depth_prior || std::env::var_os("DENSE_SPARSE_PRIOR").is_some();
+    let backend = {
+        #[cfg(feature = "gpu")]
+        {
+            photogrammetry_core::gpu::backend_label().unwrap_or("none")
+        }
+        #[cfg(not(feature = "gpu"))]
+        {
+            "none"
+        }
+    };
     println!(
-        "{{\"schema\":1,\"acceleration\":\"{acceleration:?}\",\"accurate\":{accurate},\"patch_radius\":{radius},\"repeats\":{repeats},\"tolerance\":0.04,\"scenes\":["
+        "{{\"schema\":1,\"acceleration\":\"{acceleration:?}\",\"gpu_backend\":\"{backend}\",\"accurate\":{accurate},\"patch_radius\":{radius},\"repeats\":{repeats},\"tolerance\":0.04,\"scenes\":["
     );
     let mut first = true;
     let mut f1_sum = 0.;

@@ -1,5 +1,8 @@
 //! Compare ASCII XYZ or ASCII PLY vertices in an already established common frame.
-use photogrammetry_core::evaluation::{DistanceSummary, EvaluationOptions, evaluate_clouds};
+use photogrammetry_core::{
+    Acceleration,
+    evaluation::{DistanceSummary, EvaluationOptions, evaluate_clouds},
+};
 use std::{
     fs,
     io::{BufRead, BufReader, Read},
@@ -147,31 +150,61 @@ fn summary(s: &DistanceSummary) -> String {
     )
 }
 
+fn vec3(v: [f64; 3]) -> String {
+    format!("[{},{},{}]", v[0], v[1], v[2])
+}
+
+fn matrix3(m: [[f64; 3]; 3]) -> String {
+    format!("[{},{},{}]", vec3(m[0]), vec3(m[1]), vec3(m[2]))
+}
+
+fn cloud_stats(s: &math_core::PointCloudStats) -> String {
+    format!(
+        "{{\"samples\":{},\"bounds\":{{\"min\":{},\"max\":{},\"center\":{},\"extent\":{}}},\"centroid\":{},\"covariance\":{}}}",
+        s.samples,
+        vec3(s.bounds.min),
+        vec3(s.bounds.max),
+        vec3(s.bounds.center),
+        vec3(s.bounds.extent),
+        vec3(s.moments.centroid),
+        matrix3(s.moments.covariance)
+    )
+}
+
 fn run() -> Result<(), Box<dyn std::error::Error>> {
     let args = std::env::args().skip(1).collect::<Vec<_>>();
-    if !(3..=4).contains(&args.len()) {
-        return Err("Usage: evaluate MODEL.xyz|ply REFERENCE.xyz|ply TOLERANCE [VOXEL_SIZE]. Coordinates must already share a frame and scale. Reference must describe the evaluated domain. No scale fit is performed.".into());
+    if !(3..=5).contains(&args.len()) {
+        return Err("Usage: evaluate MODEL.xyz|ply REFERENCE.xyz|ply TOLERANCE [VOXEL_SIZE] [ACCELERATION=auto]. Coordinates must already share a frame and scale. Reference must describe the evaluated domain. No scale fit is performed.".into());
     }
     let model = read_points(&args[0])?;
     let reference = read_points(&args[1])?;
     let options = EvaluationOptions {
         tolerance: args[2].parse()?,
         voxel_size: args.get(3).map(|s| s.parse()).transpose()?,
+        acceleration: args
+            .get(4)
+            .map(|s| Acceleration::parse(s).ok_or("Unknown acceleration"))
+            .transpose()?
+            .unwrap_or(Acceleration::Auto),
     };
     let started = std::time::Instant::now();
     let r = evaluate_clouds(&model, &reference, &options, |_, _, _| true)?;
     println!(
-        "{{\"format\":\"open-scad-viewer/cloud-evaluation\",\"version\":1,\"metric\":\"point_to_point\",\"scale_fitted\":false,\"tolerance\":{},\"voxel_size\":{},\"input_model\":{},\"input_reference\":{},\"model_to_reference\":{},\"reference_to_model\":{},\"precision\":{},\"recall\":{},\"f1\":{},\"symmetric_mean\":{},\"evaluation_ms\":{}}}",
+        "{{\"format\":\"open-scad-viewer/cloud-evaluation\",\"version\":1,\"metric\":\"point_to_point\",\"scale_fitted\":false,\"tolerance\":{},\"voxel_size\":{},\"input_model\":{},\"input_reference\":{},\"model_stats\":{},\"reference_stats\":{},\"model_to_reference\":{},\"reference_to_model\":{},\"precision\":{},\"recall\":{},\"f1\":{},\"symmetric_mean\":{},\"symmetric_maximum\":{},\"hausdorff_distance\":{},\"evaluation_ms\":{}}}",
         options.tolerance,
         options.voxel_size.map_or("null".into(), |v| v.to_string()),
         r.input_reconstructed,
         r.input_reference,
+        cloud_stats(&r.reconstructed_stats),
+        cloud_stats(&r.reference_stats),
         summary(&r.reconstructed_to_reference),
         summary(&r.reference_to_reconstructed),
         r.precision,
         r.recall,
         r.f1,
         r.symmetric_mean,
+        r.symmetric_maximum,
+        r.hausdorff_distance,
         started.elapsed().as_secs_f64() * 1000.
     );
     Ok(())

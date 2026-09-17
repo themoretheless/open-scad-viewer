@@ -152,6 +152,38 @@ fn bounded_matching_agrees_bit_for_bit_with_exhaustive_distances() {
 }
 
 #[test]
+fn descriptor_matching_auto_recommends_gpu_only_for_large_work() {
+    assert_eq!(
+        recommended_for_descriptor_matching(64, 64),
+        crate::Acceleration::Cpu
+    );
+    assert_eq!(
+        resolve_for_descriptor_matching(crate::Acceleration::Auto, 64, 64),
+        crate::Acceleration::Cpu
+    );
+    assert_eq!(
+        recommended_for_descriptor_matching(128, 128),
+        if cfg!(feature = "cuda") {
+            crate::Acceleration::Cuda
+        } else {
+            crate::Acceleration::Gpu
+        }
+    );
+    assert_eq!(
+        resolve_for_descriptor_matching(crate::Acceleration::Auto, 128, 128),
+        if cfg!(feature = "cuda") {
+            crate::Acceleration::Cuda
+        } else {
+            crate::Acceleration::Gpu
+        }
+    );
+    assert_eq!(
+        resolve_for_descriptor_matching(crate::Acceleration::Cuda, 128, 128),
+        crate::Acceleration::Cuda
+    );
+}
+
+#[test]
 fn second_chance_appends_relaxed_mutual_matches_without_precision_regression() {
     fn bits(ms: &[Match]) -> Vec<(usize, usize, u32, u32)> {
         ms.iter()

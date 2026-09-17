@@ -25,6 +25,13 @@ pub struct CudaDevice {
     pub multiprocessors: u32,
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct CudaDeviceReport {
+    pub name: String,
+    pub multiprocessors: u32,
+    pub native_cuda: bool,
+}
+
 impl CudaDevice {
     /// Retains the primary context of the selected device. `None` when the
     /// driver library is absent, no device exists, or initialization fails.
@@ -64,6 +71,14 @@ impl CudaDevice {
             .ok()
     }
 
+    pub fn report(&self) -> CudaDeviceReport {
+        CudaDeviceReport {
+            name: self.name.clone(),
+            multiprocessors: self.multiprocessors,
+            native_cuda: true,
+        }
+    }
+
     /// Uploads a host slice; empty inputs upload one zero element so every
     /// kernel parameter is a valid device pointer.
     pub fn upload<T: cudarc::driver::DeviceRepr + Default + Clone>(
@@ -87,6 +102,11 @@ pub fn launch_1d(total: u32, block: u32) -> LaunchConfig {
     }
 }
 
+/// Probes the selected CUDA device without constructing a kernel pipeline.
+pub fn available_device_report() -> Option<CudaDeviceReport> {
+    CudaDevice::new().map(|device| device.report())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -105,6 +125,15 @@ mod tests {
         if let Some(device) = CudaDevice::new() {
             assert!(!device.name.is_empty());
             assert!(device.multiprocessors >= 1);
+            let report = device.report();
+            assert_eq!(report.name, device.name);
+            assert_eq!(report.multiprocessors, device.multiprocessors);
+            assert!(report.native_cuda);
+        }
+        if let Some(report) = available_device_report() {
+            assert!(!report.name.is_empty());
+            assert!(report.multiprocessors >= 1);
+            assert!(report.native_cuda);
         }
     }
 }

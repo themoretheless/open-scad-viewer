@@ -14,6 +14,7 @@
 )]
 #![allow(unused_features)]
 pub mod brep;
+pub use math_core::Acceleration;
 pub mod brep_attestation;
 mod brep_display;
 pub mod brep_envelope;
@@ -59,6 +60,8 @@ pub mod intersections;
 mod languages;
 #[cfg(feature = "gpu")]
 pub mod lattice_gpu;
+#[cfg(feature = "cuda")]
+mod lattice_cuda;
 mod mesh;
 pub mod mesh_analysis;
 mod mesh_export_file;
@@ -73,6 +76,16 @@ pub use languages::{
     compile_modelgraph, compile_modelgraph_nurbs, compile_modelgraph_text,
     compile_modelgraph_text_nurbs, execute_modelgraph_text,
 };
+
+#[cfg(feature = "gpu")]
+pub fn gpu_backend_label() -> Option<&'static str> {
+    gpu_backend_report().map(|report| report.label)
+}
+
+#[cfg(feature = "gpu")]
+pub fn gpu_backend_report() -> Option<gpu_compute::BackendReport> {
+    lattice_gpu::backend_report()
+}
 mod path2d;
 pub mod reconstruction;
 mod sdf_gpu;

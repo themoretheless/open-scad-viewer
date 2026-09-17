@@ -25,13 +25,24 @@ the portable GPU path on the same machine.
 
 | Crate | Kernel | wgpu (`gpu`) | CUDA (`cuda`) |
 |-------|--------|--------------|---------------|
-| `sdf-core` | Grid sampling of primitive/CSG/mesh-distance fields (`polygonize_accelerated`) | `SDF_WGSL` | `sdf_grid.cu` → `sdf_grid.ptx` |
-| `geometry-bridge` | Lattice implicit field (`lattice_accelerated`) | `LATTICE_WGSL` | runs the wgpu shader |
-| `photogrammetry-core` | Descriptor matching, frontoparallel NCC depth sweep | yes | runs the wgpu shaders |
+| `math-core` | Exact nearest-neighbor, top-2/top-4 nearest-neighbor and Chamfer point-cloud distance batches | `nearest_neighbor.wgsl`, `nearest_two.wgsl`, `nearest_four.wgsl`, `chamfer.wgsl` | `nearest_neighbor.cu` / `nearest_two.cu` / `nearest_four.cu` / `chamfer.cu` → PTX |
+| `math-core` | One-to-one squared-distance vector/sum batches | `distance_pairs.wgsl`, `distance_pair_sum.wgsl` | `distance_pairs.cu` / `distance_pair_sum.cu` → PTX |
+| `math-core` | Fused transform-and-distance registration score (`transformed_squared_distance_pair_sum_accelerated`) | `transformed_distance_pair_sum.wgsl` | `transformed_distance_pair_sum.cu` → PTX |
+| `math-core` | Point-cloud AABB bounds reduction (`point_bounds_accelerated`) | `point_bounds.wgsl` | `point_bounds.cu` → PTX |
+| `math-core` | Transformed point-cloud AABB bounds (`transformed_point_bounds_accelerated`) | `transformed_point_bounds.wgsl` | `transformed_point_bounds.cu` → PTX |
+| `math-core` | Point-cloud centroid/covariance reduction (`point_moments_accelerated`) | `point_moments.wgsl` | `point_moments.cu` → PTX |
+| `math-core` | Fused point-cloud bounds + moments summary (`point_cloud_stats_accelerated`) | `point_cloud_stats.wgsl` | `point_cloud_stats.cu` → PTX |
+| `sdf-core` | Grid sampling of primitive/CSG/mesh-distance fields (`polygonize_accelerated`) | `SDF_WGSL`, cached grow-only buffers | `sdf_grid.cu` → `sdf_grid.ptx`, cached grow-only buffers |
+| `geometry-bridge` | Lattice implicit field (`lattice_accelerated`) | `LATTICE_WGSL`, cached grow-only buffers | `lattice.cu` → `lattice.ptx`, cached grow-only buffers |
+| `photogrammetry-core` | Descriptor matching | cached WGSL pipelines/buffers | `matching.cu` → `matching.ptx` |
+| `photogrammetry-core` | Frontoparallel NCC depth sweep | cached WGSL pipelines/buffers | runs the wgpu shader |
 
 The CUDA and WGSL kernels are line-by-line ports of the same text and are
 tested against each other (`cuda_and_wgpu_samplers_agree`, tolerance 1e-3 in
 f32) and against the CPU reference (`cuda_sampling_matches_cpu_field_within_tolerance`).
+wgpu kernels that use workgroup reductions can specialize for Metal's
+tile-based GPUs with smaller 128-wide workgroups while keeping 256-wide groups
+for Vulkan/DX12/WebGPU.
 
 ## Building and running
 
@@ -44,8 +55,11 @@ the dispatch order above continues.
 ```sh
 cargo test --manifest-path crates/Cargo.toml -p sdf-core --features cuda
 cargo run --release --manifest-path crates/Cargo.toml -p sdf-core --features cuda --example bench_gpu
+cargo run --manifest-path crates/Cargo.toml -p sdf-core --features cuda --example backend_report
+cargo run --manifest-path crates/Cargo.toml -p geometry-bridge --features gpu --example backend_report
+cargo run --manifest-path crates/Cargo.toml -p photogrammetry-core --features cuda --example backend_report
 PHOTO_ACCELERATION=cuda cargo run --release --manifest-path crates/Cargo.toml \
-  -p photogrammetry-core --features gpu --example reconstruct -- out.ply FOCAL a.ppm b.ppm
+  -p photogrammetry-core --features cuda --example reconstruct -- out.ply FOCAL a.ppm b.ppm
 ```
 
 `OSV_CUDA_DEVICE=<ordinal>` selects a device other than 0. The photogrammetry
@@ -66,12 +80,16 @@ the nvcc release used to generate it (currently CUDA 13.x → an R580+ driver).
 
 | Field | CPU | wgpu (Vulkan) | CUDA |
 |-------|-----|---------------|------|
-| Smooth-union primitives, 64³ grid | 94.0 ms | 90.2 ms | 90.4 ms |
-| Mesh distance, 1088 triangles, 16³ grid | 434.2 ms | 1.8 ms | 1.6 ms |
+| Smooth-union primitives, 64³ grid | 65.5 ms | 58.6 ms | 58.1 ms |
+| Mesh distance, 1088 triangles, 16³ grid | 324.7 ms | 1.5 ms | 1.5 ms |
+| Geometry lattice, cube shell + 54 struts | 79 ms | 40 ms | 39 ms |
+| Organic geometry lattice, cube shell + 54 struts | 85 ms | 41 ms | 40 ms |
 
 The primitive field is dominated by CPU marching-tetrahedra extraction, which
 neither placement moves off the CPU; the brute-force mesh-distance sampling
-is where the device placements pay off (~270× here).
+is where the device placements pay off (~270× here). Geometry lattice still
+extracts/audits on CPU, but the native CUDA field sampler avoids the extra
+wgpu layer on NVIDIA and gives about 2× end-to-end for the benchmarked shell.
 
 ## Boundaries
 
@@ -80,3 +98,18 @@ is where the device placements pay off (~270× here).
   CPU under every placement.
 - Browser builds keep both native features off; the viewer uses WebGPU
   directly with the same WGSL text.
+- Fused transform-and-distance registration scoring has explicit wgpu/CUDA
+  ports for parity and device-resident experiments, but `Auto` stays on CPU:
+  measured RTX 5090 runs are upload-bound (5M pairs: CPU fused 11.4 ms, CUDA
+  33.6 ms, wgpu 130.4 ms).
+- Transformed point-cloud bounds has explicit wgpu/CUDA ports, but `Auto`
+  stays on CPU because repeated RTX 5090 measurements did not show a stable
+  device crossover (1M points: CPU 5.06 ms, CUDA 5.72 ms, wgpu 14.76 ms).
+- Transformed point-cloud stats composes transformed bounds with accelerated
+  source moments plus the analytic moment transform; it deliberately avoids a
+  separate CUDA/WGSL kernel because the composed summary is still memory-bound.
+- Point-cloud plane fitting (`point_fit_plane`) reuses the moments reducers and
+  performs only the final 3x3 eigensolve on CPU.
+- Local point-cloud plane fitting (`local_point_planes`) reuses top-4
+  nearest-neighbor kernels for the heavy neighborhood search and fits each
+  tiny local plane on CPU.

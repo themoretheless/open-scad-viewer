@@ -271,13 +271,15 @@ fn pack_sweep_payload(images: &[Image], views: &[Option<HostSweepView>]) -> Vec<
 /// Selects the compute backend for subsequent sparse/dense runs: 0 = CPU
 /// (default), 1 = GPU (opt-in, qualified separately; falls back to CPU when no
 /// adapter or no `gpu` feature), 2 = CUDA (native NVIDIA placement; the
-/// photogrammetry kernels are portable shaders, so it behaves as GPU here).
+/// photogrammetry kernels are portable shaders, so it behaves as GPU here),
+/// 3 = Auto (kernel-specific placement heuristic when available, otherwise GPU).
 /// Errors reset nothing.
 pub fn set_acceleration_host(value: u32) -> Result<Vec<u8>> {
     let acceleration = match value {
         0 => photogrammetry_core::Acceleration::Cpu,
         1 => photogrammetry_core::Acceleration::Gpu,
         2 => photogrammetry_core::Acceleration::Cuda,
+        3 => photogrammetry_core::Acceleration::Auto,
         _ => return Err(input("Unknown acceleration mode")),
     };
     PHOTO.with(|session| session.borrow_mut().acceleration = acceleration);

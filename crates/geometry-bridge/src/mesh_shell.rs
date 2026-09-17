@@ -4,6 +4,7 @@ fn fail(message: impl Into<String>) -> Error {
     Error::new("GEOMETRY_INVALID_INPUT", message)
 }
 pub(crate) type P = [f64; 3];
+use crate::Acceleration;
 use math_core::{cross, dot, sub};
 #[derive(Clone)]
 pub(crate) struct Triangle {
@@ -134,6 +135,46 @@ impl Node {
         }
     }
 }
+
+/// Preorder flattening of the recursive BVH: min/max (6 f32), left/right
+/// (i32, -1 for leaves), triangle window (start, count as u32 bits). Shared
+/// by the wgpu and CUDA lattice kernels.
+#[cfg(any(feature = "gpu", feature = "cuda"))]
+pub(crate) fn flatten_lattice_bvh(root: &Node) -> (Vec<f32>, Vec<f32>) {
+    let mut nodes: Vec<f32> = Vec::new();
+    let mut triangles: Vec<f32> = Vec::new();
+    fn emit(node: &Node, nodes: &mut Vec<f32>, triangles: &mut Vec<f32>) -> u32 {
+        let index = (nodes.len() / 10) as u32;
+        nodes.resize(nodes.len() + 10, 0.);
+        for k in 0..3 {
+            nodes[index as usize * 10 + k] = node.min[k] as f32;
+            nodes[index as usize * 10 + 3 + k] = node.max[k] as f32;
+        }
+        if let Some(children) = &node.children {
+            let left = emit(&children[0], nodes, triangles);
+            let right = emit(&children[1], nodes, triangles);
+            nodes[index as usize * 10 + 6] = f32::from_bits(left);
+            nodes[index as usize * 10 + 7] = f32::from_bits(right);
+        } else {
+            nodes[index as usize * 10 + 6] = f32::from_bits(u32::MAX);
+            nodes[index as usize * 10 + 7] = f32::from_bits(u32::MAX);
+            let start = (triangles.len() / 9) as u32;
+            for t in &node.triangles {
+                for point in t.p {
+                    for k in 0..3 {
+                        triangles.push(point[k] as f32);
+                    }
+                }
+            }
+            nodes[index as usize * 10 + 8] = f32::from_bits(start);
+            nodes[index as usize * 10 + 9] = f32::from_bits(triangles.len() as u32 / 9 - start);
+        }
+        index
+    }
+    emit(root, &mut nodes, &mut triangles);
+    (nodes, triangles)
+}
+
 pub fn shell(mesh: &Mesh, openings: &[usize], thickness: f64, step: f64) -> Result<BuiltMesh> {
     shell_options(mesh, openings, thickness, step, false)
 }
@@ -604,8 +645,28 @@ pub fn lattice(
         open_top,
         wall_depth,
         keep_core,
-        sdf_core::Acceleration::Cpu,
+        Acceleration::Cpu,
     )
+}
+
+/// Size-based placement recommendation for the spatial lattice field sampler.
+/// Work scales with sampled grid points times the source shell and graph
+/// complexity; extraction/audit remain CPU-bound, so small grids stay on CPU.
+pub fn recommended_for_lattice(
+    grid_points: usize,
+    source_triangles: usize,
+    segment_count: usize,
+) -> Acceleration {
+    const GPU_WORK_THRESHOLD: usize = 500_000;
+    let complexity = source_triangles.saturating_add(segment_count).max(1);
+    let work = grid_points.saturating_mul(complexity);
+    if cfg!(feature = "cuda") && work >= GPU_WORK_THRESHOLD {
+        Acceleration::Cuda
+    } else if cfg!(feature = "gpu") && work >= GPU_WORK_THRESHOLD {
+        Acceleration::Gpu
+    } else {
+        Acceleration::Cpu
+    }
 }
 
 /// `lattice` with an optional GPU field sampler: the implicit field (BVH signed
@@ -623,7 +684,7 @@ pub fn lattice_accelerated(
     open_top: bool,
     wall_depth: f64,
     keep_core: bool,
-    acceleration: sdf_core::Acceleration,
+    acceleration: Acceleration,
 ) -> Result<BuiltMesh> {
     let report = mesh.inspect()?;
     if !report.closed || report.signed_volume_mm3 <= 0. || mesh.indices.len() / 3 > 30000 {
@@ -705,6 +766,13 @@ pub fn lattice_accelerated(
             "Spatial lattice exceeds 64 grid cells per axis. Increase strut thickness and grid step.",
         ));
     }
+    let grid_points = (cells[0] + 1) * (cells[1] + 1) * (cells[2] + 1);
+    let acceleration = match acceleration {
+        Acceleration::Auto => {
+            recommended_for_lattice(grid_points, mesh.indices.len() / 3, segments.len())
+        }
+        explicit => explicit,
+    };
     if !wall_depth.is_finite() || wall_depth < 0. || wall_depth > 0. && wall_depth < step * 2. {
         return Err(fail("Wall depth must be at least two sampling steps"));
     }
@@ -747,36 +815,33 @@ pub fn lattice_accelerated(
         };
         source.max(material)
     };
-    let output = {
-        #[cfg(feature = "gpu")]
-        if acceleration.is_gpu() {
-            // The lattice field is a BVH closure with only a WGSL port; `Cuda`
-            // therefore runs the wgpu kernel (Vulkan/DX12 on NVIDIA).
-            match crate::lattice_gpu::try_gpu(
-                &all, &segments, min, max, cells, skin, organic, open_top, wall_depth, keep_core,
-                blend, &field,
-            )? {
-                Some(mesh) => mesh,
-                None => crate::mesh_from_triangles(sdf_core::polygonize_with(
-                    &field,
-                    &sdf_core::Grid { min, max, cells },
-                )?),
-            }
-        } else {
-            crate::mesh_from_triangles(sdf_core::polygonize_with(
-                &field,
-                &sdf_core::Grid { min, max, cells },
-            )?)
-        }
-        #[cfg(not(feature = "gpu"))]
-        {
-            let _ = acceleration;
-            crate::mesh_from_triangles(sdf_core::polygonize_with(
-                field,
-                &sdf_core::Grid { min, max, cells },
-            )?)
-        }
+    #[cfg(feature = "gpu")]
+    let mut output = None;
+    #[cfg(not(feature = "gpu"))]
+    let output = None;
+    #[cfg(feature = "cuda")]
+    if acceleration == Acceleration::Cuda {
+        output = crate::lattice_cuda::try_cuda(
+            &all, &segments, min, max, cells, skin, organic, open_top, wall_depth, keep_core,
+            blend, &field,
+        )?;
+    }
+    #[cfg(feature = "gpu")]
+    if output.is_none() && acceleration.is_gpu() {
+        output = crate::lattice_gpu::try_gpu(
+            &all, &segments, min, max, cells, skin, organic, open_top, wall_depth, keep_core,
+            blend, &field,
+        )?;
+    }
+    let output = match output {
+        Some(mesh) => mesh,
+        None => crate::mesh_from_triangles(sdf_core::polygonize_with(
+            &field,
+            &sdf_core::Grid { min, max, cells },
+        )?),
     };
+    #[cfg(not(feature = "gpu"))]
+    let _ = acceleration;
     let result = output.inspect()?;
     if !result.closed
         || result.degenerate_triangles > 0
@@ -796,6 +861,57 @@ pub fn lattice_accelerated(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn lattice_auto_recommendation_tracks_work_size() {
+        assert_eq!(recommended_for_lattice(1_000, 8, 8), Acceleration::Cpu);
+        let large = recommended_for_lattice(100_000, 12, 54);
+        if cfg!(feature = "cuda") {
+            assert_eq!(large, Acceleration::Cuda);
+        } else if cfg!(feature = "gpu") {
+            assert_eq!(large, Acceleration::Gpu);
+        } else {
+            assert_eq!(large, Acceleration::Cpu);
+        }
+    }
+
+    #[test]
+    fn lattice_auto_matches_cpu_on_small_grid() {
+        let mesh = polygon_core::solid::primitives::cube([20.; 3], false).unwrap();
+        let nodes = vec![[5., 5., 5.], [15., 5., 5.], [5., 15., 5.], [5., 5., 15.]];
+        let edges = vec![[0, 1], [0, 2], [0, 3]];
+        let reference = lattice(
+            &mesh,
+            nodes.clone(),
+            edges.clone(),
+            4.,
+            0.,
+            3.,
+            false,
+            false,
+            0.,
+            false,
+        )
+        .unwrap();
+        let automatic = lattice_accelerated(
+            &mesh,
+            nodes,
+            edges,
+            4.,
+            0.,
+            3.,
+            false,
+            false,
+            0.,
+            false,
+            Acceleration::Auto,
+        )
+        .unwrap();
+        assert_eq!(automatic.mesh.indices.len(), reference.mesh.indices.len());
+        assert!(
+            (automatic.report.signed_volume_mm3 - reference.report.signed_volume_mm3).abs() < 1e-9
+        );
+    }
 
     #[cfg(feature = "gpu")]
     #[test]
@@ -827,10 +943,59 @@ mod tests {
             false,
             0.,
             false,
-            sdf_core::Acceleration::Gpu,
+            Acceleration::Gpu,
         )
         .unwrap();
         if crate::lattice_gpu::try_gpu_available() {
+            let dt =
+                (accelerated.mesh.indices.len() as f64 - reference.mesh.indices.len() as f64).abs();
+            assert!(
+                dt <= 0.01 * reference.mesh.indices.len() as f64,
+                "triangle counts diverge: {} vs {}",
+                reference.mesh.indices.len(),
+                accelerated.mesh.indices.len()
+            );
+            let dv = (accelerated.report.signed_volume_mm3 - reference.report.signed_volume_mm3)
+                .abs()
+                / reference.report.signed_volume_mm3;
+            assert!(dv < 0.001, "volume diverges: {dv}");
+        }
+    }
+
+    #[cfg(feature = "cuda")]
+    #[test]
+    fn cuda_lattice_matches_cpu_reference() {
+        let mesh = polygon_core::solid::primitives::cube([30.; 3], false).unwrap();
+        let nodes = vec![[5., 5., 5.], [25., 5., 5.], [5., 25., 5.], [5., 5., 25.]];
+        let edges = vec![[0, 1], [0, 2], [0, 3]];
+        let reference = lattice(
+            &mesh,
+            nodes.clone(),
+            edges.clone(),
+            2.,
+            0.,
+            1.,
+            false,
+            false,
+            0.,
+            false,
+        )
+        .unwrap();
+        let accelerated = lattice_accelerated(
+            &mesh,
+            nodes,
+            edges,
+            2.,
+            0.,
+            1.,
+            false,
+            false,
+            0.,
+            false,
+            Acceleration::Cuda,
+        )
+        .unwrap();
+        if crate::lattice_cuda::try_cuda_available() {
             let dt =
                 (accelerated.mesh.indices.len() as f64 - reference.mesh.indices.len() as f64).abs();
             assert!(
