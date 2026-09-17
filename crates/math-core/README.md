@@ -106,15 +106,17 @@ let second = pairs[0][1];
 
 Top-2 has the same O(queries × targets) arithmetic intensity, so it gets
 dedicated WGSL/CUDA kernels (`nearest_two.wgsl`, `nearest_two.cu`) instead of
-being built from two CPU passes. Measured with `cargo run --release -p
-osv-math --features cuda --example bench_nearest_two` on the RTX 5090:
+being built from two CPU passes. Device buffers are cached grow-only, matching
+the top-1 nearest-neighbor path for repeated stable-size registration and
+filtering workloads. Measured with `cargo run --release -p osv-math --features
+cuda --example bench_nearest_two` on the RTX 5090:
 
 | queries × targets | work | cpu | auto | gpu | cuda |
 | --- | --- | --- | --- | --- | --- |
-| 256 × 512 | 131K | 0.189 ms | 0.152 ms | 0.248 ms | 0.155 ms |
-| 1,024 × 1,024 | 1.0M | 1.116 ms | 0.165 ms | 0.277 ms | 0.185 ms |
-| 4,096 × 4,096 | 16.8M | 17.865 ms | 0.369 ms | 0.671 ms | 0.375 ms |
-| 16,384 × 8,192 | 134M | 146.094 ms | 0.803 ms | 1.375 ms | 0.822 ms |
+| 256 × 512 | 131K | 0.132 ms | 0.134 ms | 0.220 ms | 0.081 ms |
+| 1,024 × 1,024 | 1.0M | 1.106 ms | 0.128 ms | 0.262 ms | 0.204 ms |
+| 4,096 × 4,096 | 16.8M | 17.723 ms | 0.319 ms | 0.825 ms | 0.318 ms |
+| 16,384 × 8,192 | 134M | 143.374 ms | 0.807 ms | 1.417 ms | 0.788 ms |
 
 For runtime diagnostics, `cargo run -p osv-math --features cuda --example
 backend_report` prints the placement labels, portable wgpu backend report

@@ -169,6 +169,18 @@ pub(crate) fn nearest_neighbor_cuda(queries: &[V3], targets: &[V3]) -> Option<Ve
 struct CudaNearestTwo {
     device: CudaDevice,
     kernel: CudaFunction,
+    buffers: std::cell::RefCell<Option<NearestTwoBuffers>>,
+}
+
+struct NearestTwoBuffers {
+    query_capacity: usize,
+    target_capacity: usize,
+    queries: CudaSlice<f32>,
+    targets: CudaSlice<f32>,
+    out_i0: CudaSlice<u32>,
+    out_d0: CudaSlice<f32>,
+    out_i1: CudaSlice<u32>,
+    out_d1: CudaSlice<f32>,
 }
 
 impl CudaNearestTwo {
@@ -176,7 +188,41 @@ impl CudaNearestTwo {
         let device = CudaDevice::new()?;
         let module = device.load_ptx(NEAREST_TWO_PTX)?;
         let kernel = module.load_function("nearest_two").ok()?;
-        Some(Self { device, kernel })
+        Some(Self {
+            device,
+            kernel,
+            buffers: std::cell::RefCell::new(None),
+        })
+    }
+
+    fn ensure_buffers(&self, query_count: usize, target_count: usize) -> Option<()> {
+        let stale = match &*self.buffers.borrow() {
+            Some(b) => b.query_capacity < query_count || b.target_capacity < target_count,
+            None => true,
+        };
+        if !stale {
+            return Some(());
+        }
+        let query_capacity = query_count.max(1);
+        let target_capacity = target_count.max(1);
+        let stream = &self.device.stream;
+        let queries = stream.alloc_zeros::<f32>(query_capacity * 3).ok()?;
+        let targets = stream.alloc_zeros::<f32>(target_capacity * 3).ok()?;
+        let out_i0 = stream.alloc_zeros::<u32>(query_capacity).ok()?;
+        let out_d0 = stream.alloc_zeros::<f32>(query_capacity).ok()?;
+        let out_i1 = stream.alloc_zeros::<u32>(query_capacity).ok()?;
+        let out_d1 = stream.alloc_zeros::<f32>(query_capacity).ok()?;
+        *self.buffers.borrow_mut() = Some(NearestTwoBuffers {
+            query_capacity,
+            target_capacity,
+            queries,
+            targets,
+            out_i0,
+            out_d0,
+            out_i1,
+            out_d1,
+        });
+        Some(())
     }
 
     fn run(&self, queries: &[V3], targets: &[V3]) -> Option<Vec<crate::TwoNearest>> {
@@ -185,26 +231,25 @@ impl CudaNearestTwo {
         let stream = &self.device.stream;
         let flat_q: Vec<f32> = queries.iter().flatten().map(|&v| v as f32).collect();
         let flat_t: Vec<f32> = targets.iter().flatten().map(|&v| v as f32).collect();
-        let mut q_dev = stream.alloc_zeros::<f32>((query_count * 3).max(1)).ok()?;
-        let mut t_dev = stream.alloc_zeros::<f32>((target_count * 3).max(1)).ok()?;
-        let mut out_i0 = stream.alloc_zeros::<u32>(query_count.max(1)).ok()?;
-        let mut out_d0 = stream.alloc_zeros::<f32>(query_count.max(1)).ok()?;
-        let mut out_i1 = stream.alloc_zeros::<u32>(query_count.max(1)).ok()?;
-        let mut out_d1 = stream.alloc_zeros::<f32>(query_count.max(1)).ok()?;
+        self.ensure_buffers(query_count, target_count)?;
+        let mut buffers = self.buffers.borrow_mut();
+        let b = buffers.as_mut().expect("ensure_buffers was just called");
         if !flat_q.is_empty() {
-            stream.memcpy_htod(&flat_q, &mut q_dev).ok()?;
+            let mut view = b.queries.slice_mut(0..flat_q.len());
+            stream.memcpy_htod(&flat_q, &mut view).ok()?;
         }
         if !flat_t.is_empty() {
-            stream.memcpy_htod(&flat_t, &mut t_dev).ok()?;
+            let mut view = b.targets.slice_mut(0..flat_t.len());
+            stream.memcpy_htod(&flat_t, &mut view).ok()?;
         }
         let query_count_u32 = query_count as u32;
         let target_count_u32 = target_count as u32;
-        let q_view = q_dev.slice(0..(query_count * 3).max(1));
-        let t_view = t_dev.slice(0..(target_count * 3).max(1));
-        let mut i0_view = out_i0.slice_mut(0..query_count.max(1));
-        let mut d0_view = out_d0.slice_mut(0..query_count.max(1));
-        let mut i1_view = out_i1.slice_mut(0..query_count.max(1));
-        let mut d1_view = out_d1.slice_mut(0..query_count.max(1));
+        let q_view = b.queries.slice(0..(query_count * 3).max(1));
+        let t_view = b.targets.slice(0..(target_count * 3).max(1));
+        let mut i0_view = b.out_i0.slice_mut(0..query_count.max(1));
+        let mut d0_view = b.out_d0.slice_mut(0..query_count.max(1));
+        let mut i1_view = b.out_i1.slice_mut(0..query_count.max(1));
+        let mut d1_view = b.out_d1.slice_mut(0..query_count.max(1));
         let mut launch = stream.launch_builder(&self.kernel);
         launch
             .arg(&query_count_u32)
