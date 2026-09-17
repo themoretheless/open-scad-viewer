@@ -6,7 +6,7 @@
 //! repeated calls at a stable size amortize allocation; only the bytes
 //! actually written/read for the current call cross the wire.
 use crate::V3;
-use gpu_compute::{GpuContext, read_buffer, storage_entry, uniform_entry, wgpu};
+use gpu_compute::{BackendReport, GpuContext, read_buffer, storage_entry, uniform_entry, wgpu};
 
 struct Buffers {
     query_capacity: usize,
@@ -249,9 +249,13 @@ pub fn nearest_neighbor_gpu(queries: &[V3], targets: &[V3]) -> Option<Vec<(u32, 
 }
 
 pub fn backend_label() -> Option<&'static str> {
+    backend_report().map(|report| report.label)
+}
+
+pub fn backend_report() -> Option<BackendReport> {
     SHARED.with(|cell| {
         let shared: &Option<&(GpuContext, GpuNearestNeighbor)> = cell;
-        shared.map(|(context, _)| context.backend_label())
+        shared.map(|(context, _)| context.backend_report())
     })
 }
 

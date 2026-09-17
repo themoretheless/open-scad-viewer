@@ -11,12 +11,16 @@
 //! class GPUs and others) reached through Vulkan/DX12.
 
 pub(crate) use gpu_compute::{
-    GpuContext, pack_f32, read_buffer, storage_entry, uniform_entry, wgpu,
+    BackendReport, GpuContext, pack_f32, read_buffer, storage_entry, uniform_entry, wgpu,
 };
 
 pub mod matching;
 pub mod sweep;
 
 pub fn backend_label() -> Option<&'static str> {
-    GpuContext::new().map(|context| context.backend_label())
+    backend_report().map(|report| report.label)
+}
+
+pub fn backend_report() -> Option<BackendReport> {
+    GpuContext::new().map(|context| context.backend_report())
 }

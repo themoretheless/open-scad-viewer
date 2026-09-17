@@ -6,7 +6,9 @@
 //! repeated calls at a stable size amortize allocation; only the elements
 //! actually used for the current call are copied to/from the device.
 use crate::V3;
-use gpu_compute::cuda::{CudaDevice, CudaFunction, CudaSlice, PushKernelArg, launch_1d};
+use gpu_compute::cuda::{
+    CudaDevice, CudaDeviceReport, CudaFunction, CudaSlice, PushKernelArg, launch_1d,
+};
 
 /// PTX generated from `nearest_neighbor.cu` by `scripts/build-cuda-kernels.mjs`.
 pub const NEAREST_NEIGHBOR_PTX: &str = include_str!("nearest_neighbor.ptx");
@@ -138,9 +140,13 @@ pub fn available() -> bool {
 
 /// Device name for diagnostics/benchmarks; `None` without a CUDA device.
 pub fn device_name() -> Option<String> {
+    device_report().map(|report| report.name)
+}
+
+pub fn device_report() -> Option<CudaDeviceReport> {
     SHARED.with(|cell| {
         let shared: &Option<&CudaNearestNeighbor> = cell;
-        shared.map(|nn| nn.device.report().name)
+        shared.map(|nn| nn.device.report())
     })
 }
 

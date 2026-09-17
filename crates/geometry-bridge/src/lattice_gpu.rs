@@ -3,7 +3,7 @@
 //! in f32. Points whose ray-parity walk overflows write NaN and are recomputed
 //! by the CPU field closure. Extraction stays on the CPU reference path.
 use crate::mesh_shell::{LATTICE_WGSL, Node, P};
-use gpu_compute::{GpuContext, read_buffer, storage_entry, uniform_entry, wgpu};
+use gpu_compute::{BackendReport, GpuContext, read_buffer, storage_entry, uniform_entry, wgpu};
 use wgpu::util::DeviceExt;
 
 type Segments = [(P, P, f64, f64)];
@@ -291,9 +291,13 @@ pub(crate) fn try_gpu(
 
 /// Portable wgpu backend currently used for lattice field sampling.
 pub fn backend_label() -> Option<&'static str> {
+    backend_report().map(|report| report.label)
+}
+
+pub fn backend_report() -> Option<BackendReport> {
     SHARED.with(|cell| {
         let shared: &Option<&(GpuContext, GpuLattice)> = cell;
-        shared.map(|(context, _)| context.backend_label())
+        shared.map(|(context, _)| context.backend_report())
     })
 }
 

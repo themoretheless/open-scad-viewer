@@ -26,7 +26,12 @@ mod gpu;
 
 #[cfg(feature = "gpu")]
 pub fn gpu_backend_label() -> Option<&'static str> {
-    gpu::backend_label()
+    gpu_backend_report().map(|report| report.label)
+}
+
+#[cfg(feature = "gpu")]
+pub fn gpu_backend_report() -> Option<gpu_compute::BackendReport> {
+    gpu::backend_report()
 }
 
 /// The grid-sampling compute shader (WGSL), shared by the native `gpu` feature

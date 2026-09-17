@@ -3,7 +3,7 @@
 //! the CUDA driver API. f32 arithmetic — see `math_core::Acceleration`.
 use crate::Grid;
 use crate::flat::FlatField;
-use gpu_compute::cuda::{CudaDevice, CudaFunction, PushKernelArg, launch_1d};
+use gpu_compute::cuda::{CudaDevice, CudaDeviceReport, CudaFunction, PushKernelArg, launch_1d};
 
 /// PTX generated from `sdf_grid.cu` by `scripts/build-cuda-kernels.mjs`.
 pub const SDF_PTX: &str = include_str!("sdf_grid.ptx");
@@ -77,9 +77,13 @@ pub fn available() -> bool {
 
 /// Device name for diagnostics/benchmarks; None without a CUDA device.
 pub fn device_name() -> Option<String> {
+    device_report().map(|report| report.name)
+}
+
+pub fn device_report() -> Option<CudaDeviceReport> {
     SHARED.with(|cell| {
         let shared: &Option<&CudaSdf> = cell;
-        shared.map(|sdf| sdf.device.report().name)
+        shared.map(|sdf| sdf.device.report())
     })
 }
 

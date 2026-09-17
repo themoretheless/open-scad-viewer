@@ -2,7 +2,7 @@
 //! flattened field tree. f32 arithmetic — see `math_core::Acceleration`.
 use crate::Grid;
 use crate::flat::FlatField;
-use gpu_compute::{GpuContext, read_buffer, storage_entry, uniform_entry, wgpu};
+use gpu_compute::{BackendReport, GpuContext, read_buffer, storage_entry, uniform_entry, wgpu};
 use wgpu::util::DeviceExt;
 
 struct GpuSdf {
@@ -169,9 +169,9 @@ pub(crate) fn sample_grid_gpu(flat: &FlatField, grid: &Grid) -> Option<Vec<f32>>
     })
 }
 
-pub(crate) fn backend_label() -> Option<&'static str> {
+pub(crate) fn backend_report() -> Option<BackendReport> {
     SHARED.with(|cell| {
         let shared: &Option<&(GpuContext, GpuSdf)> = cell;
-        shared.map(|(context, _)| context.backend_label())
+        shared.map(|(context, _)| context.backend_report())
     })
 }

@@ -76,7 +76,12 @@ pub use languages::{
 
 #[cfg(feature = "gpu")]
 pub fn gpu_backend_label() -> Option<&'static str> {
-    lattice_gpu::backend_label()
+    gpu_backend_report().map(|report| report.label)
+}
+
+#[cfg(feature = "gpu")]
+pub fn gpu_backend_report() -> Option<gpu_compute::BackendReport> {
+    lattice_gpu::backend_report()
 }
 mod path2d;
 pub mod reconstruction;
