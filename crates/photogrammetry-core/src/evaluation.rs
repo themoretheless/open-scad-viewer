@@ -1,7 +1,9 @@
 //! Bidirectional point-sample evaluation in a caller-established coordinate frame.
 //! No registration, scale fitting, or inferred ground truth is performed here.
 use crate::Result;
-use math_core::{Acceleration, nearest_neighbor_accelerated};
+use math_core::{
+    Acceleration, PointCloudStats, nearest_neighbor_accelerated, point_cloud_stats_accelerated,
+};
 use std::collections::HashMap;
 use std::hash::{BuildHasherDefault, Hasher};
 
@@ -64,6 +66,10 @@ pub struct DistanceSummary {
 pub struct CloudEvaluation {
     pub input_reconstructed: usize,
     pub input_reference: usize,
+    /// Bounds, centroid and covariance of the sampled reconstructed/model cloud.
+    pub reconstructed_stats: PointCloudStats,
+    /// Bounds, centroid and covariance of the sampled reference cloud.
+    pub reference_stats: PointCloudStats,
     /// Reconstructed sample to reference sample: geometric accuracy direction.
     pub reconstructed_to_reference: DistanceSummary,
     /// Reference sample to reconstructed sample: completeness direction.
@@ -309,6 +315,8 @@ pub fn evaluate_clouds(
     }
     let a = sampled(reconstructed, options.voxel_size, &mut progress)?;
     let b = sampled(reference, options.voxel_size, &mut progress)?;
+    let reconstructed_stats = point_cloud_stats_accelerated(&a, options.acceleration)?;
+    let reference_stats = point_cloud_stats_accelerated(&b, options.acceleration)?;
     let acceleration = options
         .acceleration
         .resolve_for_nearest_neighbor(a.len(), b.len());
@@ -343,6 +351,8 @@ pub fn evaluate_clouds(
     Ok(CloudEvaluation {
         input_reconstructed: reconstructed.len(),
         input_reference: reference.len(),
+        reconstructed_stats,
+        reference_stats,
         symmetric_mean: (accuracy.mean + completeness.mean) / 2.,
         symmetric_maximum,
         hausdorff_distance: symmetric_maximum,
@@ -385,6 +395,12 @@ mod tests {
         assert_eq!(report.reconstructed_to_reference.maximum, 1.);
         assert_eq!(report.symmetric_maximum, 1.);
         assert_eq!(report.hausdorff_distance, 1.);
+        assert_eq!(report.reconstructed_stats.bounds.min, [0., 0., 0.]);
+        assert_eq!(report.reconstructed_stats.bounds.max, [2., 2., 0.]);
+        assert_eq!(
+            report.reference_stats.moments.centroid,
+            [1. / 3., 1. / 3., 0.]
+        );
     }
     #[test]
     fn exact_tree_matches_brute_force_on_nonuniform_cloud() {

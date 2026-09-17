@@ -150,6 +150,27 @@ fn summary(s: &DistanceSummary) -> String {
     )
 }
 
+fn vec3(v: [f64; 3]) -> String {
+    format!("[{},{},{}]", v[0], v[1], v[2])
+}
+
+fn matrix3(m: [[f64; 3]; 3]) -> String {
+    format!("[{},{},{}]", vec3(m[0]), vec3(m[1]), vec3(m[2]))
+}
+
+fn cloud_stats(s: &math_core::PointCloudStats) -> String {
+    format!(
+        "{{\"samples\":{},\"bounds\":{{\"min\":{},\"max\":{},\"center\":{},\"extent\":{}}},\"centroid\":{},\"covariance\":{}}}",
+        s.samples,
+        vec3(s.bounds.min),
+        vec3(s.bounds.max),
+        vec3(s.bounds.center),
+        vec3(s.bounds.extent),
+        vec3(s.moments.centroid),
+        matrix3(s.moments.covariance)
+    )
+}
+
 fn run() -> Result<(), Box<dyn std::error::Error>> {
     let args = std::env::args().skip(1).collect::<Vec<_>>();
     if !(3..=5).contains(&args.len()) {
@@ -169,11 +190,13 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     let started = std::time::Instant::now();
     let r = evaluate_clouds(&model, &reference, &options, |_, _, _| true)?;
     println!(
-        "{{\"format\":\"open-scad-viewer/cloud-evaluation\",\"version\":1,\"metric\":\"point_to_point\",\"scale_fitted\":false,\"tolerance\":{},\"voxel_size\":{},\"input_model\":{},\"input_reference\":{},\"model_to_reference\":{},\"reference_to_model\":{},\"precision\":{},\"recall\":{},\"f1\":{},\"symmetric_mean\":{},\"symmetric_maximum\":{},\"hausdorff_distance\":{},\"evaluation_ms\":{}}}",
+        "{{\"format\":\"open-scad-viewer/cloud-evaluation\",\"version\":1,\"metric\":\"point_to_point\",\"scale_fitted\":false,\"tolerance\":{},\"voxel_size\":{},\"input_model\":{},\"input_reference\":{},\"model_stats\":{},\"reference_stats\":{},\"model_to_reference\":{},\"reference_to_model\":{},\"precision\":{},\"recall\":{},\"f1\":{},\"symmetric_mean\":{},\"symmetric_maximum\":{},\"hausdorff_distance\":{},\"evaluation_ms\":{}}}",
         options.tolerance,
         options.voxel_size.map_or("null".into(), |v| v.to_string()),
         r.input_reconstructed,
         r.input_reference,
+        cloud_stats(&r.reconstructed_stats),
+        cloud_stats(&r.reference_stats),
         summary(&r.reconstructed_to_reference),
         summary(&r.reference_to_reconstructed),
         r.precision,

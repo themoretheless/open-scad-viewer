@@ -16,10 +16,11 @@ Outputs are relative-scale, partial observations. Unregistered views are explici
 `evaluation::evaluate_clouds` computes exact bidirectional point-to-point
 metrics in a pre-established common frame/scale, including directed summaries,
 precision/recall/F1, symmetric mean distance and symmetric Hausdorff
-worst-case distance. The `evaluate` example reads ASCII XYZ/PLY and emits
-JSON; it performs no registration or scale fitting. `evaluation_comparison`
-checks the spatial index against exhaustive distances. See [comparative
-validation](../../docs/photogrammetry-improvements.md).
+worst-case distance. It also reports sampled model/reference bounds, centroid
+and covariance through `math-core`'s fused point-cloud stats primitive. The
+`evaluate` example reads ASCII XYZ/PLY and emits JSON; it performs no
+registration or scale fitting. `evaluation_comparison` checks the spatial index
+against exhaustive distances. See [comparative validation](../../docs/photogrammetry-improvements.md).
 
 `EvaluationOptions::acceleration` accepts `Cpu` (exact KD-tree), explicit
 `Gpu`/`Cuda`, or `Auto`. `Auto` keeps small sampled clouds on the KD-tree and
