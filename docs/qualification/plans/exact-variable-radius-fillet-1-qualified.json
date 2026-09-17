@@ -1,0 +1,59 @@
+{
+  "$schema": "./brep-capability-qualification-plan-v12.schema.json",
+  "schema": "open-scad-viewer/brep-capability-qualification-plan",
+  "schemaVersion": 12,
+  "planId": "exact-variable-radius-fillet-1-qualified",
+  "gate": {"id": "g8-full", "name": "brep-full-closed-matrix", "version": 12},
+  "lifecycle": {"status": "qualified", "qualificationClaim": "finite-cell"},
+  "claimBoundary": {
+    "candidateClaim": "Append-only product exact-variable-radius-fillet/1: exact linear radius law on one vertical edge of an audited axis-aligned cuboid with rational conical fillet face, sew/audit/ChangeSet naming; constant-radius substitution and valence-3 networks typed-refuse.",
+    "forbiddenClaims": [
+      "constant-radius silent substitution",
+      "valence-3 corner blend authorship",
+      "multi-edge variable-radius networks",
+      "nonlinear radius laws",
+      "parasolid parity"
+    ]
+  },
+  "capability": "exact-variable-radius-fillet/1",
+  "successorOf": "analytic-multi-edge-fillet/1",
+  "dependencies": [
+    {"capability": "numeric-evidence-curved-brep/1", "requiredMaturity": "Qualified"},
+    {"capability": "exact-sew/1", "requiredMaturity": "Qualified"},
+    {"capability": "global-solid-audit/1", "requiredMaturity": "Qualified"},
+    {"capability": "persistent-naming/1", "requiredMaturity": "Qualified"}
+  ],
+  "scope": {
+    "included": [
+      "one vertical (+Z) edge of an audited AA cuboid",
+      "linear endpoint radius pair with positive unequal radii inside profile collision bounds",
+      "rational conical side face from homologous quarter-circle loft",
+      "audit, ChangeSet persistent naming, bridge/WASM/TS product query"
+    ],
+    "excluded": [
+      "equal endpoint radii (constant-radius capabilities)",
+      "cap edges and valence-3 corner networks",
+      "non-cuboid / non-vertical edges",
+      "nonlinear laws, healing, mesh fallback"
+    ]
+  },
+  "matrix": [
+    {"id": "BL7-VARIABLE-RADIUS-LAW-AND-TRANSITIONS", "expected": "Complete", "blocksQualification": true},
+    {"id": "VR-NO-CONSTANT-SUBSTITUTION", "expected": "typed-refuse", "blocksQualification": true},
+    {"id": "VR-PRODUCT", "expected": "Complete", "blocksQualification": true}
+  ],
+  "bindings": {
+    "implementation": [
+      "crates/brep-core/src/analytic_features.rs",
+      "crates/brep-core/src/imprint_pipeline.rs",
+      "crates/geometry-bridge/src/lib.rs",
+      "src/services/geometry/brep.ts",
+      "src/services/geometry/brepCapability.ts"
+    ],
+    "registry": "src/services/geometry/brepCapability.ts",
+    "evidenceJson": "docs/qualification/exact-variable-radius-fillet-1-evidence-v1.json"
+  },
+  "evidence": {"state": "qualified", "notes": ["Qualified after native and bridge gates."]},
+  "resetPolicy": "false-Complete freezes this capability and transitively stales all dependents; recovery requires a successor capability ID",
+  "unresolvedRows": []
+}

@@ -1,59 +1,88 @@
 {
-  "$schema": "./brep-capability-qualification-plan-v12.schema.json",
+  "$schema": "./brep-capability-qualification-plan-v7.schema.json",
   "schema": "open-scad-viewer/brep-capability-qualification-plan",
-  "schemaVersion": 12,
+  "schemaVersion": 7,
   "planId": "exact-variable-radius-fillet-1",
-  "gate": {"id": "g8-full", "name": "brep-full-closed-matrix", "version": 12},
-  "lifecycle": {"status": "qualified", "qualificationClaim": "finite-cell"},
+  "gate": {
+    "id": "g8-full",
+    "name": "brep-full-closed-matrix",
+    "version": 7
+  },
+  "lifecycle": {
+    "status": "frozen-pending-execution",
+    "qualificationClaim": "none"
+  },
   "claimBoundary": {
-    "candidateClaim": "Append-only product exact-variable-radius-fillet/1: exact linear radius law on one vertical edge of an audited axis-aligned cuboid with rational conical fillet face, sew/audit/ChangeSet naming; constant-radius substitution and valence-3 networks typed-refuse.",
+    "candidateClaim": "Candidate exact bounded variable-radius law with complete endpoint and corner transitions.",
     "forbiddenClaims": [
-      "constant-radius silent substitution",
-      "valence-3 corner blend authorship",
-      "multi-edge variable-radius networks",
-      "nonlinear radius laws",
-      "parasolid parity"
+      "No exact bounded radius law, collision enclosure, transition continuity, or corner ownership proof exists."
     ]
   },
   "capability": "exact-variable-radius-fillet/1",
   "successorOf": "analytic-multi-edge-fillet/1",
   "dependencies": [
-    {"capability": "numeric-evidence-curved-brep/1", "requiredMaturity": "Qualified"},
-    {"capability": "exact-sew/1", "requiredMaturity": "Qualified"},
-    {"capability": "global-solid-audit/1", "requiredMaturity": "Qualified"},
-    {"capability": "persistent-naming/1", "requiredMaturity": "Qualified"}
+    {
+      "capability": "numeric-evidence-curved-brep/1",
+      "requiredMaturity": "Qualified"
+    },
+    {
+      "capability": "boundary-correspondence/1",
+      "requiredMaturity": "Qualified"
+    },
+    {
+      "capability": "exact-sew/1",
+      "requiredMaturity": "Qualified"
+    },
+    {
+      "capability": "global-solid-audit/1",
+      "requiredMaturity": "Qualified"
+    },
+    {
+      "capability": "persistent-naming/1",
+      "requiredMaturity": "Qualified"
+    }
   ],
   "scope": {
     "included": [
-      "one vertical (+Z) edge of an audited AA cuboid",
-      "linear endpoint radius pair with positive unequal radii inside profile collision bounds",
-      "rational conical side face from homologous quarter-circle loft",
-      "audit, ChangeSet persistent naming, bridge/WASM/TS product query"
+      "A strict native/bridge/WASM typed-refusal seam prevents constant-radius substitution."
     ],
     "excluded": [
-      "equal endpoint radii (constant-radius capabilities)",
-      "cap edges and valence-3 corner networks",
-      "non-cuboid / non-vertical edges",
-      "nonlinear laws, healing, mesh fallback"
+      "No exact bounded radius law, collision enclosure, transition continuity, or corner ownership proof exists."
     ]
   },
   "matrix": [
-    {"id": "BL7-VARIABLE-RADIUS-LAW-AND-TRANSITIONS", "expected": "Complete", "blocksQualification": true},
-    {"id": "VR-NO-CONSTANT-SUBSTITUTION", "expected": "typed-refuse", "blocksQualification": true},
-    {"id": "VR-PRODUCT", "expected": "Complete", "blocksQualification": true}
+    {
+      "id": "BL7-VARIABLE-RADIUS-LAW-AND-TRANSITIONS",
+      "expected": "typed-refuse",
+      "blocksQualification": true
+    }
   ],
   "bindings": {
     "implementation": [
       "crates/brep-core/src/analytic_features.rs",
       "crates/brep-core/src/imprint_pipeline.rs",
+      "crates/brep-core/src/operations.rs",
+      "crates/brep-core/src/lib.rs",
       "crates/geometry-bridge/src/lib.rs",
+      "crates/geometry-bridge/src/tests.rs",
       "src/services/geometry/brep.ts",
       "src/services/geometry/brepCapability.ts"
     ],
     "registry": "src/services/geometry/brepCapability.ts",
-    "evidenceJson": "docs/qualification/exact-variable-radius-fillet-1-evidence-v1.json"
+    "evidenceJson": "docs/qualification/exact-variable-radius-fillet-1-evidence-v7.json"
   },
-  "evidence": {"state": "qualified", "notes": ["Qualified after native and bridge gates."]},
+  "evidence": {
+    "state": "not-executed",
+    "notes": [
+      "No qualification run is claimed; the product seam refuses atomically."
+    ]
+  },
   "resetPolicy": "false-Complete freezes this capability and transitively stales all dependents; recovery requires a successor capability ID",
-  "unresolvedRows": []
+  "unresolvedRows": [
+    {
+      "id": "BL7-VARIABLE-RADIUS-LAW-AND-TRANSITIONS",
+      "status": "open",
+      "resolution": "Implement and independently prove the excluded exact geometry and topology ownership before creating a successor release."
+    }
+  ]
 }

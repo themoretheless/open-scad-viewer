@@ -586,6 +586,120 @@ pub fn exact_variable_radius_fillet(
     )
 }
 
+/// Exact equal-radius valence-3 corner blend: three concurrent cuboid edges at the
+/// max corner become rational quarter-cylinders joined by a stereographic spherical octant.
+pub fn exact_valence3_corner_blend(
+    model: &Model,
+    edges: &[usize],
+    radius: f64,
+) -> Result<AuditedFeatureResult> {
+    audit_solid(model).map_err(|_| {
+        refuse(
+            "BREP_VALENCE3_CORNER_BLEND_REFUSED",
+            "Valence-3 corner blend source must pass the global solid audit",
+        )
+    })?;
+    if !(radius.is_finite() && radius > 0.) {
+        return Err(refuse(
+            "BREP_VALENCE3_CORNER_BLEND_REFUSED",
+            "Valence-3 radius must be finite and positive",
+        ));
+    }
+    if edges.len() != 3 {
+        return Err(refuse(
+            "BREP_VALENCE3_CORNER_BLEND_REFUSED",
+            "exact-valence3-corner-blend/1 admits exactly three concurrent edges at the max corner",
+        ));
+    }
+    if !is_axis_aligned_cuboid(model) {
+        return Err(refuse(
+            "BREP_VALENCE3_CORNER_BLEND_REFUSED",
+            "exact-valence3-corner-blend/1 admits axis-aligned planar cuboids only",
+        ));
+    }
+    let (min, max) = model_bounds(model);
+    if (0..3).any(|i| max[i] - min[i] <= 2. * radius) {
+        return Err(refuse(
+            "BREP_VALENCE3_CORNER_BLEND_REFUSED",
+            "Cuboid extents too small for the valence-3 radius",
+        ));
+    }
+    let mut corner_vertex = None;
+    for &edge in edges {
+        if edge >= model.edges.len() {
+            return Err(refuse(
+                "BREP_VALENCE3_CORNER_BLEND_REFUSED",
+                "Edge index out of range",
+            ));
+        }
+        if model.edges[edge].curve.degree != 1 {
+            return Err(refuse(
+                "BREP_VALENCE3_CORNER_BLEND_REFUSED",
+                "Curved edges are outside exact-valence3-corner-blend/1",
+            ));
+        }
+    }
+    // Three edges must share exactly one common vertex, and that vertex must be the max corner.
+    let sets: Vec<[usize; 2]> = edges
+        .iter()
+        .map(|&e| model.edges[e].vertices)
+        .collect();
+    for &v in &sets[0] {
+        if sets[1].contains(&v) && sets[2].contains(&v) {
+            corner_vertex = Some(v);
+            break;
+        }
+    }
+    let Some(vid) = corner_vertex else {
+        return Err(refuse(
+            "BREP_VALENCE3_CORNER_BLEND_REFUSED",
+            "Selected edges do not meet at a single valence-3 vertex",
+        ));
+    };
+    let p = model.vertices[vid].point;
+    let at_max = (0..3).all(|i| (p[i] - max[i]).abs() <= model.tolerance_mm.max(1e-9));
+    if !at_max {
+        return Err(refuse(
+            "BREP_VALENCE3_CORNER_BLEND_REFUSED",
+            "exact-valence3-corner-blend/1 admits the axis-aligned max corner only",
+        ));
+    }
+    let result = crate::imprint_pipeline::valence3_cuboid_max_corner(model, min, max, radius)
+        .map_err(|error| {
+            refuse(
+                "BREP_VALENCE3_CORNER_BLEND_REFUSED",
+                &format!("Valence-3 authorship refused: {}", error.message),
+            )
+        })?;
+    let spheres = result
+        .faces
+        .iter()
+        .filter(|f| f.surface.degree_u == 2 && f.surface.degree_v == 2)
+        .count();
+    let cylinders = result
+        .faces
+        .iter()
+        .filter(|f| f.surface.degree_u == 2 && f.surface.degree_v == 1)
+        .count();
+    if spheres != 1 || cylinders < 3 {
+        return Err(refuse(
+            "BREP_VALENCE3_CORNER_BLEND_REFUSED",
+            "Valence-3 result missing sphere octant or three cylinder faces",
+        ));
+    }
+    certify_blend_result(
+        result,
+        EXACT_VALENCE3_CORNER_BLEND_CAPABILITY,
+        vec![
+            "exact_equal_radius_sphere_octant",
+            "three_rational_cylinders",
+            "plane_cylinder_sphere_network",
+        ],
+        radius,
+        "BREP_VALENCE3_CORNER_BLEND_REFUSED",
+    )
+}
+
 /// AF-01: cuboid single convex edge → cylindrical fillet via corner cutter − cylinder.
 pub fn analytic_fillet(
     model: &Model,
@@ -2653,6 +2767,57 @@ mod tests {
         assert!(out.naming_complete);
         assert!(out.feature.notes.contains(&"exact_linear_radius_law"));
         assert!(out.feature.notes.contains(&"no_constant_radius_substitution"));
+        out.model.validate().unwrap();
+    }
+
+    #[test]
+    fn exact_valence3_corner_blend_authors_sphere_and_three_cylinders() {
+        let source = cuboid([0., 0., 0.], [10., 8., 6.]).unwrap();
+        let (min, max) = model_bounds(&source);
+        let edges: Vec<usize> = source
+            .edges
+            .iter()
+            .enumerate()
+            .filter_map(|(index, edge)| {
+                let a = source.vertices[edge.vertices[0]].point;
+                let b = source.vertices[edge.vertices[1]].point;
+                let mid = [
+                    0.5 * (a[0] + b[0]),
+                    0.5 * (a[1] + b[1]),
+                    0.5 * (a[2] + b[2]),
+                ];
+                let on_max_x = (mid[0] - max[0]).abs() <= 1e-9;
+                let on_max_y = (mid[1] - max[1]).abs() <= 1e-9;
+                let on_max_z = (mid[2] - max[2]).abs() <= 1e-9;
+                let touches_corner = edge.vertices.iter().any(|&v| {
+                    let p = source.vertices[v].point;
+                    (0..3).all(|i| (p[i] - max[i]).abs() <= 1e-9)
+                });
+                let axis_edge = (on_max_x && on_max_y)
+                    || (on_max_x && on_max_z)
+                    || (on_max_y && on_max_z);
+                (touches_corner && axis_edge).then_some(index)
+            })
+            .collect();
+        assert_eq!(edges.len(), 3, "expected three max-corner edges, got {edges:?}");
+        let _ = min;
+        let out = exact_valence3_corner_blend(&source, &edges, 1.).unwrap();
+        assert_eq!(out.feature.capability, EXACT_VALENCE3_CORNER_BLEND_CAPABILITY);
+        assert!(out.feature.complete && out.naming_complete && out.audit.ok);
+        assert!(out.feature.notes.contains(&"exact_equal_radius_sphere_octant"));
+        let spheres = out
+            .model
+            .faces
+            .iter()
+            .filter(|f| f.surface.degree_u == 2 && f.surface.degree_v == 2)
+            .count();
+        let cylinders = out
+            .model
+            .faces
+            .iter()
+            .filter(|f| f.surface.degree_u == 2 && f.surface.degree_v == 1)
+            .count();
+        assert_eq!((spheres, cylinders), (1, 3));
         out.model.validate().unwrap();
     }
 

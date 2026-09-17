@@ -56,17 +56,23 @@ describe('V7 exact finite blend qualification',()=>{
   const chamfer=exactConvexChamfer(box,[0,connected],0.5)
   expect(chamfer.certificate.capability).toBe('exact-convex-straight-edge-chamfer/1')
   expect(chamfer.audit.ok&&chamfer.namingComplete).toBe(true)
-  expect(()=>exactVariableRadiusFillet(box,[0],[[0.4,0.6]])).toThrow(/Variable-radius fillet is unavailable/)
+  // Frozen V7 index still lists variable-radius as Unavailable; live product later
+  // graduated the same capability id via an append-only qualified plan.
+  const vertical=box.edges.findIndex((edge)=>{
+   const [a,b]=edge.vertices.map(vertex=>box.vertices[vertex].point)
+   return Math.abs(a[0]-b[0])<1e-9&&Math.abs(a[1]-b[1])<1e-9
+  })
+  const variable=exactVariableRadiusFillet(box,[vertical],[[0.4,0.6]])
+  expect(variable.certificate.capability).toBe('exact-variable-radius-fillet/1')
+  expect(variable.audit.ok&&variable.namingComplete).toBe(true)
  })
 
  it('exposes only proven V7 cells as topology-authoring',()=>{
-  for(const id of ['exact-convex-prism-edge-fillet/1','exact-convex-straight-edge-chamfer/1']){
+  for(const id of ['exact-convex-prism-edge-fillet/1','exact-convex-straight-edge-chamfer/1','exact-variable-radius-fillet/1']){
    expect(BREP_CAPABILITY_MATRIX.find(row=>row.id===id)).toMatchObject({maturity:'Qualified',permitsTopologyChange:true})
    expect(()=>assertBrepCapabilityAllowsTopology(id)).not.toThrow()
   }
-  for(const id of ['exact-valence3-corner-blend/1','exact-variable-radius-fillet/1']){
-   expect(BREP_CAPABILITY_MATRIX.find(row=>row.id===id)).toMatchObject({maturity:'Unavailable',permitsTopologyChange:false})
-   expect(()=>assertBrepCapabilityAllowsTopology(id)).toThrow()
-  }
+  expect(BREP_CAPABILITY_MATRIX.find(row=>row.id==='exact-valence3-corner-blend/1')).toMatchObject({maturity:'Qualified',permitsTopologyChange:true})
+  expect(()=>assertBrepCapabilityAllowsTopology('exact-valence3-corner-blend/1')).not.toThrow()
  })
 })

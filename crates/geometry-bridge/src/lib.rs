@@ -1001,6 +1001,14 @@ pub fn dispatch(v: Value) -> Result<Value> {
                 &field::<Vec<[f64; 2]>>(&v, "radii")?,
             )?)
         }
+        "brep_nurbs_exact_valence3_corner_blend" => {
+            require_exact_fields(&v, &["op", "model", "edges", "radius"], "valence-3 corner blend request")?;
+            encode(brep_core::exact_valence3_corner_blend(
+                &field(&v, "model")?,
+                &field::<Vec<usize>>(&v, "edges")?,
+                field::<f64>(&v, "radius")?,
+            )?)
+        }
         "brep_nurbs_audited_parallel_frame_sweep" => {
             let frame_law: String = field(&v, "frameLaw")?;
             encode(brep_core::audited_parallel_frame_sweep(

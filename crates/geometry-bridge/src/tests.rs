@@ -464,11 +464,47 @@ fn audited_feature_successors_cross_the_bridge_with_certificates() {
     assert_eq!(variable["audit"]["ok"], true);
     assert!(dispatch(json!({
         "op":"brep_nurbs_exact_variable_radius_fillet",
-        "model":encode(model).unwrap(),
+        "model":encode(model.clone()).unwrap(),
         "edges":[vertical],
         "radii":[[0.5,0.5]]
     }))
     .is_err());
+    let max = [10., 8., 6.];
+    let corner_edges: Vec<usize> = model
+        .edges
+        .iter()
+        .enumerate()
+        .filter_map(|(index, edge)| {
+            let touches = edge.vertices.iter().any(|&v| {
+                let p = model.vertices[v].point;
+                (0..3).all(|i| (p[i] - max[i]).abs() <= 1e-9)
+            });
+            let a = model.vertices[edge.vertices[0]].point;
+            let b = model.vertices[edge.vertices[1]].point;
+            let mid = [
+                0.5 * (a[0] + b[0]),
+                0.5 * (a[1] + b[1]),
+                0.5 * (a[2] + b[2]),
+            ];
+            let axis = ((mid[0] - max[0]).abs() <= 1e-9 && (mid[1] - max[1]).abs() <= 1e-9)
+                || ((mid[0] - max[0]).abs() <= 1e-9 && (mid[2] - max[2]).abs() <= 1e-9)
+                || ((mid[1] - max[1]).abs() <= 1e-9 && (mid[2] - max[2]).abs() <= 1e-9);
+            (touches && axis).then_some(index)
+        })
+        .collect();
+    assert_eq!(corner_edges.len(), 3);
+    let valence3 = dispatch(json!({
+        "op":"brep_nurbs_exact_valence3_corner_blend",
+        "model":encode(model).unwrap(),
+        "edges":corner_edges,
+        "radius":1.0
+    }))
+    .unwrap();
+    assert_eq!(
+        valence3["certificate"]["capability"].as_str(),
+        Some("exact-valence3-corner-blend/1")
+    );
+    assert_eq!(valence3["audit"]["ok"], true);
 
     let sweep = dispatch(json!({
         "op":"brep_nurbs_audited_parallel_frame_sweep",

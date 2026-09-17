@@ -68,7 +68,7 @@ pub use analytic_features::{
     analytic_fillet_chain, analytic_shell, analytic_solid_loft, audited_multi_edge_fillet,
     audited_bent_rmf_sweep, audited_multi_section_loft, audited_parallel_frame_sweep,
     exact_analytic_shell, exact_convex_chamfer, exact_convex_prism_fillet, export_iges,
-    exact_variable_radius_fillet, frame_law_ruled_sweep, import_iges,
+    exact_variable_radius_fillet, exact_valence3_corner_blend, frame_law_ruled_sweep, import_iges,
     EXACT_VARIABLE_RADIUS_FILLET_CAPABILITY, EXACT_VALENCE3_CORNER_BLEND_CAPABILITY,
 };
 pub use iges_interchange_v2::{

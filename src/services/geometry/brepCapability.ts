@@ -221,17 +221,17 @@ export const BREP_CAPABILITY_MATRIX: readonly BrepCapabilityDescriptor[] = Objec
   }),
   Object.freeze({
     id: 'exact-valence3-corner-blend/1',
-    maturity: 'Unavailable' as const,
-    permitsTopologyChange: false,
-    notes: 'Sphere/rational rolling-ball ownership and deterministic mixed-edge valence-3 transition proof remain incomplete',
-    qualificationPlan: 'docs/qualification/plans/exact-valence3-corner-blend-1.json',
+    maturity: 'Qualified' as const,
+    permitsTopologyChange: true,
+    notes: 'Exact equal-radius plane/cylinder/sphere valence-3 network at the max corner of an audited AA cuboid: three rational quarter-cylinders and one stereographic spherical octant with sew/audit/ChangeSet naming',
+    qualificationPlan: 'docs/qualification/plans/exact-valence3-corner-blend-1-qualified.json',
   }),
   Object.freeze({
     id: 'exact-variable-radius-fillet/1',
     maturity: 'Qualified' as const,
     permitsTopologyChange: true,
     notes: 'Exact linear radius law on one vertical edge of an audited axis-aligned cuboid with rational conical fillet face; constant-radius substitution and valence-3 networks remain typed-refuse',
-    qualificationPlan: 'docs/qualification/plans/exact-variable-radius-fillet-1.json',
+    qualificationPlan: 'docs/qualification/plans/exact-variable-radius-fillet-1-qualified.json',
   }),
   Object.freeze({
     id: 'exact-parallel-frame-sweep/1',
