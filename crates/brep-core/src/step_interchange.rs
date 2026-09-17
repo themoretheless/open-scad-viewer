@@ -1343,9 +1343,11 @@ fn kind_from_surfaces(entities: &BTreeMap<usize, (String, String)>) -> Option<An
             }
             height
         };
-        let r_top = rb + height * semi.tan();
+        // `tan` differs across libm implementations; a true apex must recover to exactly 0.
+        let snap_apex = |r: f64| if r.abs() <= 1e-9 { 0. } else { r };
+        let r_top = snap_apex(rb + height * semi.tan());
         return Some(AnalyticKind::Frustum {
-            r_bottom: rb,
+            r_bottom: snap_apex(rb),
             r_top,
             height,
             origin: o,
