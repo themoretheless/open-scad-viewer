@@ -43,12 +43,28 @@ PHOTO_ACCELERATION=cuda  # same kernels on NVIDIA via wgpu; see docs/design/nati
 ```
 
 The optional `gpu` feature adds `wgpu` and accelerates descriptor matching
-(3.3-18.9x) and the frontoparallel NCC depth sweep (batched, selection on the
-GPU: ~10x of the dense stage, 31-68 ms on the frozen sets) via
-Metal on macOS and Vulkan/DX12 on Linux/Windows; `Acceleration::Gpu` is opt-in and
-falls back to the CPU reference without an adapter. `Acceleration::Cuda` is
-accepted too: these kernels are portable shaders, so it runs the same wgpu path
-(dedicated PTX ports currently exist in `sdf-core`). CPU defaults stay
-bit-identical with or without the feature. Browser builds keep the feature off;
-there the same WGSL sweep runs through WebGPU from the viewer's worker.
+(2.8-42x on the synthetic descriptor benchmark) and the frontoparallel NCC
+depth sweep (batched, selection on the GPU: ~10x of the dense stage, 31-68 ms
+on the frozen sets) via Metal on macOS and Vulkan/DX12 on Linux/Windows;
+`Acceleration::Gpu` is opt-in and falls back to the CPU reference without an
+adapter. `Acceleration::Cuda` is accepted too: these kernels are portable
+shaders, so it runs the same wgpu path (dedicated PTX ports currently exist in
+`math-core` and `sdf-core`). CPU defaults stay bit-identical with or without
+the feature. Browser builds keep the feature off; there the same WGSL sweep
+runs through WebGPU from the viewer's worker.
 Qualification and measured numbers: [gpu-matching-2026-09-09](../../docs/qualification/photogrammetry/gpu-matching-2026-09-09.md).
+
+`FeatureOptions { acceleration: Acceleration::Auto, .. }` now resolves
+descriptor matching by measured pair-work: below 10K candidate pairs it keeps
+the CPU scan; from 10K upward it uses the portable GPU path. Check or tune the
+recommendation with `features::recommended_for_descriptor_matching(a, b)` and
+`cargo run --release -p photogrammetry-core --features gpu --example
+bench_matching`. On an RTX 5090 through wgpu/Vulkan:
+
+| features A × B | work | recommended | CPU | Auto |
+| --- | --- | --- | --- | --- |
+| 64 × 64 | 4K | cpu | 0.298 ms | 0.289 ms |
+| 128 × 128 | 16K | gpu | 1.160 ms | 0.411 ms |
+| 256 × 512 | 131K | gpu | 8.796 ms | 0.870 ms |
+| 1,024 × 1,024 | 1.0M | gpu | 66.609 ms | 2.521 ms |
+| 2,048 × 2,048 | 4.2M | gpu | 257.260 ms | 6.116 ms |
