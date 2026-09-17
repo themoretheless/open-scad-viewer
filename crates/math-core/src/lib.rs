@@ -6,6 +6,7 @@ mod chamfer;
 mod distance_pairs;
 mod error;
 mod linalg;
+mod local_plane;
 mod moments;
 mod nearest_four;
 mod nearest_neighbor;
@@ -34,6 +35,7 @@ pub use linalg::{
     add, add2, cross, cross2, det, dot, dot2, eigen, finite, mm, mv, norm, norm2, rotation, scale,
     scale2, smallest, solve, sub, sub2, svd, tr, transform_points, unit, unit2,
 };
+pub use local_plane::{LocalPlane, local_point_planes};
 pub use moments::{
     POINT_MOMENTS_WGSL_TEMPLATE, PointMoments, PointPlane, PointPrincipalAxes, point_fit_plane,
     point_moments, point_moments_accelerated, point_principal_axes,

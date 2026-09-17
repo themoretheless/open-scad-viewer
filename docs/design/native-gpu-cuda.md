@@ -106,3 +106,6 @@ is where the device placements pay off (~270× here).
   separate CUDA/WGSL kernel because the composed summary is still memory-bound.
 - Point-cloud plane fitting (`point_fit_plane`) reuses the moments reducers and
   performs only the final 3x3 eigensolve on CPU.
+- Local point-cloud plane fitting (`local_point_planes`) reuses top-4
+  nearest-neighbor kernels for the heavy neighborhood search and fits each
+  tiny local plane on CPU.

@@ -22,6 +22,7 @@ src/
 ├─ error.rs            # Error, Result, ensure()
 ├─ acceleration.rs     # Cpu/Auto/Gpu/Cuda placement and size heuristics
 ├─ linalg.rs           # dense vector/matrix helpers, eigen/SVD/solve
+├─ local_plane.rs      # top-4 local plane/normal fitting
 ├─ transform_error.rs  # fused transform-and-distance registration score
 ├─ bounds.rs           # point-cloud and transformed bounds reductions
 ├─ moments.rs          # point-cloud centroid/covariance reduction
@@ -203,6 +204,23 @@ bench_nearest_four`) on the same host:
 | 1,024 × 1,024 | 1.0M | 1.512 ms | 0.157 ms | 0.274 ms | 0.137 ms | 9.62x |
 | 4,096 × 4,096 | 16.8M | 25.104 ms | 0.414 ms | 0.858 ms | 0.399 ms | 60.61x |
 | 16,384 × 8,192 | 134M | 198.779 ms | 1.042 ms | 1.813 ms | 1.131 ms | 190.71x |
+
+`local_point_planes(queries, support, acceleration)` builds on top-4: it finds
+the four nearest support points for every query and fits a tiny PCA plane to
+that neighborhood, returning a deterministic normal, offset and RMS distance.
+The expensive neighborhood search uses `Auto`/CUDA/wgpu; the 4-point plane fit
+stays on CPU. This is useful for local surface normals and small-neighborhood
+geometry filters.
+
+Measured with `cargo run --release -p osv-math --features cuda --example
+bench_local_planes`:
+
+| queries × support | work | cpu | auto | gpu | cuda | auto speedup |
+| --- | --- | --- | --- | --- | --- | --- |
+| 256 × 512 | 131K | 0.255 ms | 0.254 ms | 0.278 ms | 0.189 ms | 1.01x |
+| 1,024 × 1,024 | 1.0M | 1.907 ms | 0.467 ms | 0.676 ms | 0.451 ms | 4.09x |
+| 4,096 × 4,096 | 16.8M | 27.622 ms | 1.981 ms | 2.413 ms | 1.851 ms | 13.94x |
+| 16,384 × 8,192 | 134M | 215.305 ms | 6.975 ms | 8.065 ms | 6.705 ms | 30.87x |
 
 For runtime diagnostics, `cargo run -p osv-math --features cuda --example
 backend_report` prints the placement labels, portable wgpu backend report
