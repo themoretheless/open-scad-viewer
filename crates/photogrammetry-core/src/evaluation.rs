@@ -1,6 +1,7 @@
 //! Bidirectional point-sample evaluation in a caller-established coordinate frame.
 //! No registration, scale fitting, or inferred ground truth is performed here.
 use crate::Result;
+use math_core::{Acceleration, nearest_neighbor_accelerated};
 use std::collections::HashMap;
 use std::hash::{BuildHasherDefault, Hasher};
 
@@ -34,6 +35,17 @@ pub struct EvaluationOptions {
     /// Optional common voxel grid for density-normalized sampling of both clouds.
     /// Origin is zero in the established common frame. None preserves input density.
     pub voxel_size: Option<f64>,
+    /// `Cpu` (default) builds an exact KD-tree per cloud, O(log n) per query.
+    /// `Gpu`/`Cuda` instead run a brute-force batch nearest-neighbor kernel:
+    /// measured (`examples/kdtree_vs_gpu.rs`, RTX 5090) 3-11x faster than the
+    /// KD-tree from 2K to 1M points per cloud despite the worse asymptotic
+    /// complexity, because the GPU's parallelism outweighs the KD-tree's
+    /// pointer-chasing recursion at these sizes; re-measure for your own
+    /// hardware and cloud sizes before relying on this for a hard real-time
+    /// budget. Requires this crate's `gpu` (or `cuda`) feature; otherwise
+    /// silently uses the KD-tree regardless of this setting, since the
+    /// alternative — a plain CPU brute-force scan — would be a regression.
+    pub acceleration: Acceleration,
 }
 
 #[derive(Clone, Debug)]
@@ -213,6 +225,25 @@ impl Tree {
     }
 }
 
+fn summarize(mut values: Vec<f64>, tolerance: f64) -> DistanceSummary {
+    values.sort_unstable_by(f64::total_cmp);
+    let samples = values.len();
+    let quantile = |q: f64| {
+        let position = (samples - 1) as f64 * q;
+        let lower = position.floor() as usize;
+        let upper = position.ceil() as usize;
+        values[lower] + (values[upper] - values[lower]) * position.fract()
+    };
+    DistanceSummary {
+        samples,
+        mean: values.iter().sum::<f64>() / samples as f64,
+        median: quantile(0.5),
+        p95: quantile(0.95),
+        maximum: values[samples - 1],
+        within_tolerance: values.iter().filter(|&&d| d <= tolerance).count(),
+    }
+}
+
 fn distances(
     queries: &Tree,
     tree: &Tree,
@@ -228,22 +259,22 @@ fn distances(
             progress("evaluation_distance", i, queries.nodes.len())
         })?);
     }
-    values.sort_unstable_by(f64::total_cmp);
-    let samples = values.len();
-    let quantile = |q: f64| {
-        let position = (samples - 1) as f64 * q;
-        let lower = position.floor() as usize;
-        let upper = position.ceil() as usize;
-        values[lower] + (values[upper] - values[lower]) * position.fract()
-    };
-    Ok(DistanceSummary {
-        samples,
-        mean: values.iter().sum::<f64>() / samples as f64,
-        median: quantile(0.5),
-        p95: quantile(0.95),
-        maximum: values[samples - 1],
-        within_tolerance: values.iter().filter(|&&d| d <= tolerance).count(),
-    })
+    Ok(summarize(values, tolerance))
+}
+
+/// Same result as [`distances`], via a single batch GPU/CUDA nearest-neighbor
+/// call instead of building a KD-tree; see [`EvaluationOptions::acceleration`].
+fn distances_accelerated(
+    queries: &[Point],
+    targets: &[Point],
+    tolerance: f64,
+    acceleration: Acceleration,
+) -> DistanceSummary {
+    let values = nearest_neighbor_accelerated(queries, targets, acceleration)
+        .into_iter()
+        .map(|(_, squared)| squared.sqrt())
+        .collect();
+    summarize(values, tolerance)
 }
 
 /// Both inputs must already use the same frame and scale. Reference points must
@@ -272,13 +303,26 @@ pub fn evaluate_clouds(
     }
     let a = sampled(reconstructed, options.voxel_size, &mut progress)?;
     let b = sampled(reference, options.voxel_size, &mut progress)?;
-    // The trees hold the same point multisets as the sampled vectors, and the
-    // sorted summaries do not depend on query order, so the clones of the
-    // sampled clouds are unnecessary.
-    let ta = Tree::new(a, &mut progress)?;
-    let tb = Tree::new(b, &mut progress)?;
-    let accuracy = distances(&ta, &tb, options.tolerance, &mut progress)?;
-    let completeness = distances(&tb, &ta, options.tolerance, &mut progress)?;
+    let (accuracy, completeness) = if options.acceleration.is_gpu() && cfg!(feature = "gpu") {
+        if !progress("evaluation_index", 0, 1) {
+            return Err(crate::error("Cancelled"));
+        }
+        let accuracy = distances_accelerated(&a, &b, options.tolerance, options.acceleration);
+        let completeness = distances_accelerated(&b, &a, options.tolerance, options.acceleration);
+        if !progress("evaluation_distance", 1, 1) {
+            return Err(crate::error("Cancelled"));
+        }
+        (accuracy, completeness)
+    } else {
+        // The trees hold the same point multisets as the sampled vectors, and the
+        // sorted summaries do not depend on query order, so the clones of the
+        // sampled clouds are unnecessary.
+        let ta = Tree::new(a, &mut progress)?;
+        let tb = Tree::new(b, &mut progress)?;
+        let accuracy = distances(&ta, &tb, options.tolerance, &mut progress)?;
+        let completeness = distances(&tb, &ta, options.tolerance, &mut progress)?;
+        (accuracy, completeness)
+    };
     let precision = accuracy.within_tolerance as f64 / accuracy.samples as f64;
     let recall = completeness.within_tolerance as f64 / completeness.samples as f64;
     let f1 = if precision + recall == 0. {
@@ -305,6 +349,7 @@ mod tests {
         EvaluationOptions {
             tolerance: 0.01,
             voxel_size: None,
+            acceleration: Acceleration::Cpu,
         }
     }
     #[test]
@@ -381,6 +426,50 @@ mod tests {
         let b = evaluate_clouds(&duplicate, &reference, &opt, |_, _, _| true).unwrap();
         assert_eq!(a.f1, b.f1);
         assert_eq!(b.reconstructed_to_reference.samples, 2);
+    }
+    #[test]
+    fn accelerated_matches_kdtree_when_the_gpu_feature_is_off() {
+        // Without this crate's `gpu`/`cuda` feature compiled in, requesting
+        // `Gpu`/`Cuda` must silently keep using the exact KD-tree rather than
+        // falling through to a slow CPU brute-force scan; with the feature
+        // on it exercises the real accelerated kernel (f32), so allow a
+        // small tolerance instead of bit-exact equality either way.
+        let p = (0..300)
+            .map(|i| {
+                [
+                    ((i * 97) % 301) as f64 / 30.,
+                    (i % 71) as f64,
+                    (i % 89) as f64,
+                ]
+            })
+            .collect::<Vec<_>>();
+        let q = (0..250)
+            .map(|i| {
+                [
+                    ((i * 53) % 199) as f64 / 20.,
+                    (i % 61) as f64,
+                    (i % 83) as f64,
+                ]
+            })
+            .collect::<Vec<_>>();
+        let cpu = evaluate_clouds(&p, &q, &options(), |_, _, _| true).unwrap();
+        for acceleration in [Acceleration::Gpu, Acceleration::Cuda] {
+            let opt = EvaluationOptions {
+                acceleration,
+                ..options()
+            };
+            let accelerated = evaluate_clouds(&p, &q, &opt, |_, _, _| true).unwrap();
+            assert!(
+                (cpu.reconstructed_to_reference.mean - accelerated.reconstructed_to_reference.mean)
+                    .abs()
+                    < 1e-3
+            );
+            assert!(
+                (cpu.reference_to_reconstructed.mean - accelerated.reference_to_reconstructed.mean)
+                    .abs()
+                    < 1e-3
+            );
+        }
     }
     #[test]
     fn invalid_and_cancelled_evaluation_are_explicit() {

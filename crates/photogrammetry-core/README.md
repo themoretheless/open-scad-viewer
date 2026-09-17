@@ -15,6 +15,16 @@ Outputs are relative-scale, partial observations. Unregistered views are explici
 
 `evaluation::evaluate_clouds` computes exact bidirectional point-to-point metrics in a pre-established common frame/scale. The `evaluate` example reads ASCII XYZ/PLY and emits JSON; it performs no registration or scale fitting. `evaluation_comparison` checks the spatial index against exhaustive distances. See [comparative validation](../../docs/photogrammetry-improvements.md).
 
+`EvaluationOptions::acceleration` (default `Cpu`, the exact KD-tree) can instead
+run the distance search as a brute-force batch GPU/CUDA kernel via this
+crate's `gpu`/`cuda` feature (forwarded to `math-core`). Counterintuitively,
+this wins: `examples/kdtree_vs_gpu.rs` measured it 3-11x faster than the
+KD-tree on an NVIDIA RTX 5090, at every size from 2,000 to 1,000,000 points
+per cloud — the KD-tree's better asymptotic complexity (O(log n) vs O(n) per
+query) does not outweigh the GPU's parallelism at these scales. Without the
+feature compiled in, this setting is a no-op and the KD-tree always runs, so
+switching it on can only help, never silently regress to a slow CPU scan.
+
 ## Native usage and acceleration
 
 The crate is a plain Rust library (`rlib`, std-only) and works unchanged outside

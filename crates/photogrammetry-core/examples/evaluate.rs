@@ -1,5 +1,8 @@
 //! Compare ASCII XYZ or ASCII PLY vertices in an already established common frame.
-use photogrammetry_core::evaluation::{DistanceSummary, EvaluationOptions, evaluate_clouds};
+use photogrammetry_core::{
+    Acceleration,
+    evaluation::{DistanceSummary, EvaluationOptions, evaluate_clouds},
+};
 use std::{
     fs,
     io::{BufRead, BufReader, Read},
@@ -149,14 +152,19 @@ fn summary(s: &DistanceSummary) -> String {
 
 fn run() -> Result<(), Box<dyn std::error::Error>> {
     let args = std::env::args().skip(1).collect::<Vec<_>>();
-    if !(3..=4).contains(&args.len()) {
-        return Err("Usage: evaluate MODEL.xyz|ply REFERENCE.xyz|ply TOLERANCE [VOXEL_SIZE]. Coordinates must already share a frame and scale. Reference must describe the evaluated domain. No scale fit is performed.".into());
+    if !(3..=5).contains(&args.len()) {
+        return Err("Usage: evaluate MODEL.xyz|ply REFERENCE.xyz|ply TOLERANCE [VOXEL_SIZE] [ACCELERATION]. Coordinates must already share a frame and scale. Reference must describe the evaluated domain. No scale fit is performed.".into());
     }
     let model = read_points(&args[0])?;
     let reference = read_points(&args[1])?;
     let options = EvaluationOptions {
         tolerance: args[2].parse()?,
         voxel_size: args.get(3).map(|s| s.parse()).transpose()?,
+        acceleration: args
+            .get(4)
+            .map(|s| Acceleration::parse(s).ok_or("Unknown acceleration"))
+            .transpose()?
+            .unwrap_or_default(),
     };
     let started = std::time::Instant::now();
     let r = evaluate_clouds(&model, &reference, &options, |_, _, _| true)?;
