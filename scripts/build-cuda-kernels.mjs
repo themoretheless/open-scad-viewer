@@ -32,6 +32,7 @@ const kernels = [
   {cu: 'crates/math-core/src/point_cloud_stats.cu', ptx: 'crates/math-core/src/point_cloud_stats.ptx'},
   {cu: 'crates/photogrammetry-core/src/gpu/matching.cu', ptx: 'crates/photogrammetry-core/src/gpu/matching.ptx'},
   {cu: 'crates/photogrammetry-core/src/gpu/sweep.cu', ptx: 'crates/photogrammetry-core/src/gpu/sweep.ptx'},
+  {cu: 'crates/photogrammetry-core/src/gpu/rectification.cu', ptx: 'crates/photogrammetry-core/src/gpu/rectification.ptx'},
 ]
 const args = process.argv.slice(2)
 const check = args.includes('--check')

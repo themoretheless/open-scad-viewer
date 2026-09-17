@@ -16,6 +16,7 @@ pub(crate) use gpu_compute::{
 };
 
 pub mod matching;
+pub mod rectification;
 pub mod sweep;
 
 pub fn backend_label() -> Option<&'static str> {

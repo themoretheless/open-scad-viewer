@@ -9,6 +9,13 @@ Outputs are relative-scale, partial observations. Unregistered views are explici
 
 `calibration::rectify` accepts measured Brown–Conrady intrinsics of the EXIF-oriented original raster and returns corrected RGB plus applied-camera provenance. No automatic fitting is performed. Both sparse and dense consume that same corrected image. Details: [calibration guide](../../docs/photogrammetry-calibration.md).
 
+`RectificationOptions::acceleration` defaults to `Cpu`, the deterministic
+reference. Explicit `Gpu` maps and bilinearly samples independent output
+pixels through portable WGSL (Metal/Vulkan/DX12); `Cuda` tries its native PTX
+kernel, then WGSL, then CPU. `Auto` chooses WGSL from 256×256 output pixels
+upward. Validation, focal/zoom search, cancellation, invalid-pixel retry, and
+report construction always remain on the CPU.
+
 `FeatureOptions::ROOT` and `GeometryOptions::CONSENSUS` are the tested defaults; `BASELINE` variants preserve algorithm comparisons. Relative-pose estimation requires an identity first-camera pose (finite elements, tolerance 1e-12). Experimental ROBUST/PHYSICAL variants have documented regressions and are not defaults.
 
 `DenseOptions` retains 3×3 frontoparallel sweep by default. `DenseEstimator::SlantedPlane` with patch radius 2 is experimental; it improves some sloped scenes and can lose thin geometry. Source-sample counters quantify work separately from hypothesis count.
