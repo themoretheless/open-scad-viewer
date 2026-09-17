@@ -2,7 +2,7 @@
 //! flattened to plain arrays; each grid point runs `LATTICE_WGSL` on the GPU
 //! in f32. Points whose ray-parity walk overflows write NaN and are recomputed
 //! by the CPU field closure. Extraction stays on the CPU reference path.
-use crate::mesh_shell::{LATTICE_WGSL, Node, P};
+use crate::mesh_shell::{LATTICE_WGSL, Node, P, flatten_lattice_bvh};
 use gpu_compute::{BackendReport, GpuContext, read_buffer, storage_entry, uniform_entry, wgpu};
 
 type Segments = [(P, P, f64, f64)];
@@ -27,43 +27,6 @@ struct Buffers {
     values: wgpu::Buffer,
     values_read: wgpu::Buffer,
     bind: wgpu::BindGroup,
-}
-
-/// Preorder flattening of the recursive BVH: min/max (6 f32), left/right
-/// (i32, -1 for leaves), triangle window (start, count as u32 bits).
-fn flatten_bvh(root: &Node) -> (Vec<f32>, Vec<f32>) {
-    let mut nodes: Vec<f32> = Vec::new();
-    let mut triangles: Vec<f32> = Vec::new();
-    fn emit(node: &Node, nodes: &mut Vec<f32>, triangles: &mut Vec<f32>) -> u32 {
-        let index = (nodes.len() / 10) as u32;
-        nodes.resize(nodes.len() + 10, 0.);
-        for k in 0..3 {
-            nodes[index as usize * 10 + k] = node.min[k] as f32;
-            nodes[index as usize * 10 + 3 + k] = node.max[k] as f32;
-        }
-        if let Some(children) = &node.children {
-            let left = emit(&children[0], nodes, triangles);
-            let right = emit(&children[1], nodes, triangles);
-            nodes[index as usize * 10 + 6] = f32::from_bits(left);
-            nodes[index as usize * 10 + 7] = f32::from_bits(right);
-        } else {
-            nodes[index as usize * 10 + 6] = f32::from_bits(u32::MAX);
-            nodes[index as usize * 10 + 7] = f32::from_bits(u32::MAX);
-            let start = (triangles.len() / 9) as u32;
-            for t in &node.triangles {
-                for point in t.p {
-                    for k in 0..3 {
-                        triangles.push(point[k] as f32);
-                    }
-                }
-            }
-            nodes[index as usize * 10 + 8] = f32::from_bits(start);
-            nodes[index as usize * 10 + 9] = f32::from_bits(triangles.len() as u32 / 9 - start);
-        }
-        index
-    }
-    emit(root, &mut nodes, &mut triangles);
-    (nodes, triangles)
 }
 
 impl GpuLattice {
@@ -335,7 +298,7 @@ pub(crate) fn try_gpu(
         let shared: &Option<&(GpuContext, GpuLattice)> = cell;
         shared
             .map(|(_, lattice)| {
-                let (nodes, triangles) = flatten_bvh(all);
+                let (nodes, triangles) = flatten_lattice_bvh(all);
                 let mut values = lattice.run(
                     &nodes, &triangles, segments, min, max, cells, skin, blend, organic, open_top,
                     wall_depth, keep_core, all.max[2],

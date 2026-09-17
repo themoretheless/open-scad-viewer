@@ -60,6 +60,8 @@ pub mod intersections;
 mod languages;
 #[cfg(feature = "gpu")]
 pub mod lattice_gpu;
+#[cfg(feature = "cuda")]
+mod lattice_cuda;
 mod mesh;
 pub mod mesh_analysis;
 mod mesh_export_file;

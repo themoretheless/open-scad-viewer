@@ -33,7 +33,7 @@ the portable GPU path on the same machine.
 | `math-core` | Point-cloud centroid/covariance reduction (`point_moments_accelerated`) | `point_moments.wgsl` | `point_moments.cu` → PTX |
 | `math-core` | Fused point-cloud bounds + moments summary (`point_cloud_stats_accelerated`) | `point_cloud_stats.wgsl` | `point_cloud_stats.cu` → PTX |
 | `sdf-core` | Grid sampling of primitive/CSG/mesh-distance fields (`polygonize_accelerated`) | `SDF_WGSL`, cached grow-only buffers | `sdf_grid.cu` → `sdf_grid.ptx`, cached grow-only buffers |
-| `geometry-bridge` | Lattice implicit field (`lattice_accelerated`) | `LATTICE_WGSL`, cached grow-only buffers | runs the wgpu shader |
+| `geometry-bridge` | Lattice implicit field (`lattice_accelerated`) | `LATTICE_WGSL`, cached grow-only buffers | `lattice.cu` → `lattice.ptx`, cached grow-only buffers |
 | `photogrammetry-core` | Descriptor matching | cached WGSL pipelines/buffers | `matching.cu` → `matching.ptx` |
 | `photogrammetry-core` | Frontoparallel NCC depth sweep | cached WGSL pipelines/buffers | runs the wgpu shader |
 
@@ -82,10 +82,14 @@ the nvcc release used to generate it (currently CUDA 13.x → an R580+ driver).
 |-------|-----|---------------|------|
 | Smooth-union primitives, 64³ grid | 65.5 ms | 58.6 ms | 58.1 ms |
 | Mesh distance, 1088 triangles, 16³ grid | 324.7 ms | 1.5 ms | 1.5 ms |
+| Geometry lattice, cube shell + 54 struts | 79 ms | 40 ms | 39 ms |
+| Organic geometry lattice, cube shell + 54 struts | 85 ms | 41 ms | 40 ms |
 
 The primitive field is dominated by CPU marching-tetrahedra extraction, which
 neither placement moves off the CPU; the brute-force mesh-distance sampling
-is where the device placements pay off (~270× here).
+is where the device placements pay off (~270× here). Geometry lattice still
+extracts/audits on CPU, but the native CUDA field sampler avoids the extra
+wgpu layer on NVIDIA and gives about 2× end-to-end for the benchmarked shell.
 
 ## Boundaries
 
