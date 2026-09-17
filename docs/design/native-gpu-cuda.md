@@ -49,6 +49,7 @@ cargo test --manifest-path crates/Cargo.toml -p sdf-core --features cuda
 cargo run --release --manifest-path crates/Cargo.toml -p sdf-core --features cuda --example bench_gpu
 cargo run --manifest-path crates/Cargo.toml -p sdf-core --features cuda --example backend_report
 cargo run --manifest-path crates/Cargo.toml -p geometry-bridge --features gpu --example backend_report
+cargo run --manifest-path crates/Cargo.toml -p photogrammetry-core --features cuda --example backend_report
 PHOTO_ACCELERATION=cuda cargo run --release --manifest-path crates/Cargo.toml \
   -p photogrammetry-core --features gpu --example reconstruct -- out.ply FOCAL a.ppm b.ppm
 ```
