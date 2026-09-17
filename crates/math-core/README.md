@@ -22,6 +22,7 @@ src/
 ├─ error.rs            # Error, Result, ensure()
 ├─ acceleration.rs     # Cpu/Auto/Gpu/Cuda placement and size heuristics
 ├─ linalg.rs           # dense vector/matrix helpers, eigen/SVD/solve
+├─ transform_error.rs  # fused transform-and-distance registration score
 ├─ bounds.rs           # point-cloud bounds reduction
 ├─ moments.rs          # point-cloud centroid/covariance reduction
 ├─ nearest_neighbor.rs # CPU reference plus GPU/CUDA dispatch
@@ -41,6 +42,33 @@ placements slower than this CPU reference at every size from 1K to 5M points
 multiply-adds per point is too little work to amortize kernel-launch and
 host/device synchronization latency. This crate only ships GPU/CUDA
 acceleration for operations that measurably win; see below.
+
+## Fused transform-and-error scoring
+
+`transformed_squared_distance_pair_sum_accelerated(source, target, m, t,
+acceleration)` evaluates the registration/ICP scoring form in one pass:
+transform each moving/source point by `q = M*p + t`, compare it to the
+corresponding target point and reduce the squared distances. The CPU reference
+keeps exact f64 behavior, while explicit `Gpu`/`Cuda` placements run a fused
+f32 reduction (`transformed_distance_pair_sum.wgsl` /
+`transformed_distance_pair_sum.cu`) and read back only partial sums. This is
+preferable to materializing `transform_points(source, m, t)` and then running
+a second distance pass when evaluating many registration hypotheses.
+
+`Auto` shares the conservative one-to-one distance placement and stays on CPU:
+on the RTX 5090 this fused CPU pass is already faster than materializing the
+transformed cloud, while explicit device paths remain upload-bound.
+
+| pairs | cpu fused | auto | gpu | cuda | materialized CPU |
+| --- | --- | --- | --- | --- | --- |
+| 1,000 | 0.002 ms | 0.002 ms | 0.117 ms | 0.048 ms | 0.005 ms |
+| 100,000 | 0.201 ms | 0.199 ms | 3.211 ms | 0.655 ms | 0.504 ms |
+| 5,000,000 | 11.397 ms | 11.303 ms | 130.366 ms | 33.581 ms | 28.238 ms |
+
+Use
+`cargo run --release -p osv-math --features cuda --example bench_transform_error`
+to benchmark your hardware and force `Gpu`/`Cuda` when the surrounding pipeline
+already keeps data near a device workload.
 
 ## GPU / CUDA nearest-neighbor search
 

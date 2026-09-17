@@ -11,6 +11,7 @@ mod nearest_neighbor;
 mod nearest_two;
 mod registration;
 mod stats;
+mod transform_error;
 mod types;
 
 pub use acceleration::Acceleration;
@@ -42,6 +43,10 @@ pub use registration::{IcpOptions, IcpReport, RigidTransform, icp_register, rigi
 pub use stats::{
     POINT_CLOUD_STATS_WGSL_TEMPLATE, PointCloudStats, point_cloud_stats,
     point_cloud_stats_accelerated,
+};
+pub use transform_error::{
+    TRANSFORMED_DISTANCE_PAIR_SUM_WGSL, transformed_squared_distance_pair_rmse,
+    transformed_squared_distance_pair_sum, transformed_squared_distance_pair_sum_accelerated,
 };
 pub use types::{ID, M3, V2, V3};
 

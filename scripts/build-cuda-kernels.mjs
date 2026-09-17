@@ -21,6 +21,7 @@ const kernels = [
   {cu: 'crates/math-core/src/nearest_neighbor.cu', ptx: 'crates/math-core/src/nearest_neighbor.ptx'},
   {cu: 'crates/math-core/src/distance_pairs.cu', ptx: 'crates/math-core/src/distance_pairs.ptx'},
   {cu: 'crates/math-core/src/distance_pair_sum.cu', ptx: 'crates/math-core/src/distance_pair_sum.ptx'},
+  {cu: 'crates/math-core/src/transformed_distance_pair_sum.cu', ptx: 'crates/math-core/src/transformed_distance_pair_sum.ptx'},
   {cu: 'crates/math-core/src/nearest_two.cu', ptx: 'crates/math-core/src/nearest_two.ptx'},
   {cu: 'crates/math-core/src/chamfer.cu', ptx: 'crates/math-core/src/chamfer.ptx'},
   {cu: 'crates/math-core/src/point_bounds.cu', ptx: 'crates/math-core/src/point_bounds.ptx'},

@@ -5,7 +5,7 @@
 //! Device buffers are cached per query/target capacity (grow-only) so
 //! repeated calls at a stable size amortize allocation; only the bytes
 //! actually written/read for the current call cross the wire.
-use crate::V3;
+use crate::{M3, V3};
 use gpu_compute::{BackendReport, GpuContext, read_buffer, storage_entry, uniform_entry, wgpu};
 
 const WG_METAL: u32 = 128;
@@ -653,6 +653,219 @@ pub fn squared_distance_pair_sum_gpu(a: &[V3], b: &[V3]) -> Option<f64> {
     SHARED_DISTANCE_PAIR_SUM.with(|cell| {
         let shared: &Option<&GpuDistancePairSum> = cell;
         shared.map(|kernel| kernel.run(a, b))
+    })
+}
+
+struct GpuTransformedDistancePairSum {
+    device: wgpu::Device,
+    queue: wgpu::Queue,
+    layout: wgpu::BindGroupLayout,
+    pipeline: wgpu::ComputePipeline,
+    buffers: std::cell::RefCell<Option<TransformedDistancePairSumBuffers>>,
+}
+
+struct TransformedDistancePairSumBuffers {
+    pair_capacity: usize,
+    partial_capacity: usize,
+    params: wgpu::Buffer,
+    source: wgpu::Buffer,
+    target: wgpu::Buffer,
+    out: wgpu::Buffer,
+    read: wgpu::Buffer,
+    bind: wgpu::BindGroup,
+}
+
+impl GpuTransformedDistancePairSum {
+    fn new(context: &GpuContext) -> Self {
+        let device = &context.device;
+        let module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
+            label: Some("transformed_distance_pair_sum"),
+            source: wgpu::ShaderSource::Wgsl(crate::TRANSFORMED_DISTANCE_PAIR_SUM_WGSL.into()),
+        });
+        let layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+            label: Some("transformed_distance_pair_sum"),
+            entries: &[
+                uniform_entry(0),
+                storage_entry(1, true),
+                storage_entry(2, true),
+                storage_entry(3, false),
+            ],
+        });
+        let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+            label: Some("transformed_distance_pair_sum"),
+            bind_group_layouts: &[Some(&layout)],
+            immediate_size: 0,
+        });
+        let pipeline = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
+            label: Some("transformed_distance_pair_sum"),
+            layout: Some(&pipeline_layout),
+            module: &module,
+            entry_point: Some("main"),
+            compilation_options: Default::default(),
+            cache: None,
+        });
+        Self {
+            device: device.clone(),
+            queue: context.queue.clone(),
+            layout,
+            pipeline,
+            buffers: std::cell::RefCell::new(None),
+        }
+    }
+
+    fn ensure_buffers(&self, pair_count: usize, partial_count: usize) {
+        let stale = match &*self.buffers.borrow() {
+            Some(b) => b.pair_capacity < pair_count || b.partial_capacity < partial_count,
+            None => true,
+        };
+        if !stale {
+            return;
+        }
+        let pair_capacity = pair_count.max(1);
+        let partial_capacity = partial_count.max(1);
+        let device = &self.device;
+        let mk = |label: &str, size: u64, usage| {
+            device.create_buffer(&wgpu::BufferDescriptor {
+                label: Some(label),
+                size,
+                usage,
+                mapped_at_creation: false,
+            })
+        };
+        let params = mk(
+            "transformed_distance_pair_sum_params",
+            64,
+            wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+        );
+        let source = mk(
+            "transformed_distance_pair_sum_source",
+            (pair_capacity * 12) as u64,
+            wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+        );
+        let target = mk(
+            "transformed_distance_pair_sum_target",
+            (pair_capacity * 12) as u64,
+            wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+        );
+        let out = mk(
+            "transformed_distance_pair_sum_out",
+            (partial_capacity * 4) as u64,
+            wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC,
+        );
+        let read = mk(
+            "transformed_distance_pair_sum_read",
+            (partial_capacity * 4) as u64,
+            wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
+        );
+        let bind = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("transformed_distance_pair_sum"),
+            layout: &self.layout,
+            entries: &[
+                wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: params.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 1,
+                    resource: source.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 2,
+                    resource: target.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 3,
+                    resource: out.as_entire_binding(),
+                },
+            ],
+        });
+        *self.buffers.borrow_mut() = Some(TransformedDistancePairSumBuffers {
+            pair_capacity,
+            partial_capacity,
+            params,
+            source,
+            target,
+            out,
+            read,
+            bind,
+        });
+    }
+
+    fn run(&self, source: &[V3], target: &[V3], m: M3, t: V3) -> f64 {
+        let pair_count = source.len();
+        let partial_count = pair_count.div_ceil(256).max(1);
+        self.ensure_buffers(pair_count, partial_count);
+        let flat_source: Vec<f32> = source.iter().flatten().map(|&v| v as f32).collect();
+        let flat_target: Vec<f32> = target.iter().flatten().map(|&v| v as f32).collect();
+        let mut params = Vec::with_capacity(64);
+        params.extend_from_slice(&(pair_count as u32).to_le_bytes());
+        params.extend_from_slice(&0u32.to_le_bytes());
+        params.extend_from_slice(&0u32.to_le_bytes());
+        params.extend_from_slice(&0u32.to_le_bytes());
+        for row in 0..3 {
+            for col in 0..3 {
+                params.extend_from_slice(&(m[row][col] as f32).to_le_bytes());
+            }
+            params.extend_from_slice(&(t[row] as f32).to_le_bytes());
+        }
+        let device = &self.device;
+        let buffers = self.buffers.borrow();
+        let buffers = buffers.as_ref().expect("ensure_buffers was just called");
+        self.queue.write_buffer(&buffers.params, 0, &params);
+        self.queue
+            .write_buffer(&buffers.source, 0, &gpu_compute::pack_f32(&flat_source));
+        self.queue
+            .write_buffer(&buffers.target, 0, &gpu_compute::pack_f32(&flat_target));
+        let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
+            label: Some("transformed_distance_pair_sum"),
+        });
+        {
+            let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
+                label: Some("transformed_distance_pair_sum"),
+                timestamp_writes: None,
+            });
+            pass.set_pipeline(&self.pipeline);
+            pass.set_bind_group(0, &buffers.bind, &[]);
+            pass.dispatch_workgroups(partial_count as u32, 1, 1);
+        }
+        encoder.copy_buffer_to_buffer(
+            &buffers.out,
+            0,
+            &buffers.read,
+            0,
+            (partial_count * 4) as u64,
+        );
+        self.queue.submit([encoder.finish()]);
+        let raw = read_buffer(device, &buffers.read, partial_count * 4);
+        buffers.read.unmap();
+        raw.chunks_exact(4)
+            .take(partial_count)
+            .map(|d| f32::from_ne_bytes(d.try_into().unwrap()) as f64)
+            .sum()
+    }
+}
+
+thread_local! {
+    static SHARED_TRANSFORMED_DISTANCE_PAIR_SUM: std::cell::LazyCell<Option<&'static GpuTransformedDistancePairSum>> =
+        std::cell::LazyCell::new(|| {
+            GpuContext::new()
+                .map(|context| Box::leak(Box::new(GpuTransformedDistancePairSum::new(&context))) as &'static GpuTransformedDistancePairSum)
+        });
+}
+
+/// Fused transform-and-sum of one-to-one squared distances on the GPU; `None` without an adapter.
+pub fn transformed_squared_distance_pair_sum_gpu(
+    source: &[V3],
+    target: &[V3],
+    m: M3,
+    t: V3,
+) -> Option<f64> {
+    if source.len() != target.len() {
+        return None;
+    }
+    SHARED_TRANSFORMED_DISTANCE_PAIR_SUM.with(|cell| {
+        let shared: &Option<&GpuTransformedDistancePairSum> = cell;
+        shared.map(|kernel| kernel.run(source, target, m, t))
     })
 }
 

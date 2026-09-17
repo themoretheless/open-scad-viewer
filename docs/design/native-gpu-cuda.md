@@ -27,6 +27,7 @@ the portable GPU path on the same machine.
 |-------|--------|--------------|---------------|
 | `math-core` | Exact nearest-neighbor, top-2 nearest-neighbor and Chamfer point-cloud distance batches | `nearest_neighbor.wgsl`, `nearest_two.wgsl`, `chamfer.wgsl` | `nearest_neighbor.cu` / `nearest_two.cu` / `chamfer.cu` → PTX |
 | `math-core` | One-to-one squared-distance vector/sum batches | `distance_pairs.wgsl`, `distance_pair_sum.wgsl` | `distance_pairs.cu` / `distance_pair_sum.cu` → PTX |
+| `math-core` | Fused transform-and-distance registration score (`transformed_squared_distance_pair_sum_accelerated`) | `transformed_distance_pair_sum.wgsl` | `transformed_distance_pair_sum.cu` → PTX |
 | `math-core` | Point-cloud AABB bounds reduction (`point_bounds_accelerated`) | `point_bounds.wgsl` | `point_bounds.cu` → PTX |
 | `math-core` | Point-cloud centroid/covariance reduction (`point_moments_accelerated`) | `point_moments.wgsl` | `point_moments.cu` → PTX |
 | `math-core` | Fused point-cloud bounds + moments summary (`point_cloud_stats_accelerated`) | `point_cloud_stats.wgsl` | `point_cloud_stats.cu` → PTX |
@@ -92,3 +93,7 @@ is where the device placements pay off (~270× here).
   CPU under every placement.
 - Browser builds keep both native features off; the viewer uses WebGPU
   directly with the same WGSL text.
+- Fused transform-and-distance registration scoring has explicit wgpu/CUDA
+  ports for parity and device-resident experiments, but `Auto` stays on CPU:
+  measured RTX 5090 runs are upload-bound (5M pairs: CPU fused 11.4 ms, CUDA
+  33.6 ms, wgpu 130.4 ms).
