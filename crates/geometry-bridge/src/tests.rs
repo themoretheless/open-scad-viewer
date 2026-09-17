@@ -939,3 +939,82 @@ fn general_multispan_boolean_bridge_is_strict_and_audited() {
         .is_err());
     }
 }
+
+#[test]
+fn certified_freeform_tessellation_crosses_bridge() {
+    let planar = encode(brep_core::freeform_cuboid_solid([0., 0., 0.], [2., 3., 4.]).unwrap())
+        .unwrap();
+    assert!(dispatch(json!({
+        "op":"brep_nurbs_certified_tessellate",
+        "model":planar,
+        "chordToleranceMm":0.1,
+        "maxTriangles":20000
+    }))
+    .is_err());
+    let planar_cert = dispatch(json!({
+        "op":"brep_nurbs_certified_freeform_tessellate",
+        "model":planar,
+        "chordToleranceMm":0.1,
+        "maxTriangles":20000
+    }))
+    .unwrap();
+    assert_eq!(
+        planar_cert["capability"].as_str(),
+        Some("certified-generic-rational-freeform-tessellation/1")
+    );
+    assert!(planar_cert["surfaceToMeshDeviationMm"].as_f64().unwrap() <= 1e-12);
+    assert_eq!(planar_cert["namingComplete"], true);
+    assert_eq!(planar_cert["audit"]["ok"], true);
+
+    let bump = encode(
+        brep_core::freeform_cuboid_with_bump_face([0., 0., 0.], [2., 2., 2.]).unwrap(),
+    )
+    .unwrap();
+    let bump_cert = dispatch(json!({
+        "op":"brep_nurbs_certified_freeform_tessellate",
+        "model":bump,
+        "chordToleranceMm":0.5,
+        "maxTriangles":20000
+    }))
+    .unwrap();
+    assert_eq!(
+        bump_cert["capability"].as_str(),
+        Some("certified-generic-rational-freeform-tessellation/1")
+    );
+    assert!(bump_cert["surfaceToMeshDeviationMm"].as_f64().unwrap() <= 0.5);
+    assert!(bump_cert["resourceProof"]["subdivisionsPerPatch"].as_u64().unwrap() >= 1);
+}
+
+#[test]
+fn certified_freeform_mass_crosses_bridge() {
+    let planar = encode(brep_core::freeform_cuboid_solid([1., 2., 3.], [3., 6., 9.]).unwrap())
+        .unwrap();
+    assert!(dispatch(json!({
+        "op":"brep_nurbs_certified_mass_properties",
+        "model":planar
+    }))
+    .is_err());
+    let mass = dispatch(json!({
+        "op":"brep_nurbs_certified_freeform_mass_properties",
+        "model":planar
+    }))
+    .unwrap();
+    assert_eq!(
+        mass["capability"].as_str(),
+        Some("certified-generic-rational-freeform-mass-quadrature/1")
+    );
+    let volume = &mass["volumeMm3"];
+    assert!(volume["lower"].as_f64().unwrap() <= 48.);
+    assert!(volume["upper"].as_f64().unwrap() >= 48.);
+    assert_eq!(mass["namingComplete"], true);
+
+    let bump = encode(
+        brep_core::freeform_cuboid_with_bump_face([0., 0., 0.], [2., 2., 2.]).unwrap(),
+    )
+    .unwrap();
+    assert!(dispatch(json!({
+        "op":"brep_nurbs_certified_freeform_mass_properties",
+        "model":bump
+    }))
+    .is_err());
+}

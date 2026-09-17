@@ -723,6 +723,14 @@ pub fn dispatch(v: Value) -> Result<Value> {
             field(&v, "offset")?,
         )?),
         "brep_nurbs_box" => encode(brep_core::cuboid(field(&v, "min")?, field(&v, "max")?)?),
+        "brep_nurbs_freeform_cuboid" => encode(brep_core::freeform_cuboid_solid(
+            field(&v, "min")?,
+            field(&v, "max")?,
+        )?),
+        "brep_nurbs_freeform_cuboid_bump" => encode(brep_core::freeform_cuboid_with_bump_face(
+            field(&v, "min")?,
+            field(&v, "max")?,
+        )?),
         "brep_nurbs_revolve" => encode(brep_core::revolve_angle(
             &field::<Vec<[f64; 2]>>(&v, "profile")?,
             v.get("angleDegrees")
@@ -777,6 +785,10 @@ pub fn dispatch(v: Value) -> Result<Value> {
         "brep_nurbs_certified_mass_properties" => {
             let model: brep_core::Model = field(&v, "model")?;
             encode(brep_core::analysis::certified_mass_properties(&model)?)
+        }
+        "brep_nurbs_certified_freeform_mass_properties" => {
+            let model: brep_core::Model = field(&v, "model")?;
+            encode(brep_core::analysis::certified_freeform_mass_properties(&model)?)
         }
         "brep_nurbs_authorized_heal_v2" => {
             require_exact_fields(&v, &["op", "model", "operation"], "heal request")?;
@@ -1480,6 +1492,13 @@ pub fn dispatch(v: Value) -> Result<Value> {
             encode(brep::nurbs(&field(&v, "model")?, field(&v, "segments")?)?)
         }
         "brep_nurbs_certified_tessellate" => encode(brep::certified_nurbs(
+            &field(&v, "model")?,
+            field(&v, "chordToleranceMm")?,
+            v.get("maxTriangles")
+                .and_then(Value::as_u64)
+                .unwrap_or(20_000) as usize,
+        )?),
+        "brep_nurbs_certified_freeform_tessellate" => encode(brep::certified_freeform_nurbs(
             &field(&v, "model")?,
             field(&v, "chordToleranceMm")?,
             v.get("maxTriangles")

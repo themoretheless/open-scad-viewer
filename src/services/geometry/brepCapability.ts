@@ -374,6 +374,15 @@ export const BREP_CAPABILITY_MATRIX: readonly BrepCapabilityDescriptor[] = Objec
     qualificationPlan: 'docs/qualification/plans/certified-brep-tessellation-2.json',
   }),
   Object.freeze({
+    id: 'certified-generic-rational-freeform-tessellation/1',
+    maturity: 'Qualified' as const,
+    permitsTopologyChange: false,
+    notes:
+      'Finite equal-weight clamped Bezier freeform shells (degree ≤3): Bernstein second-difference two-sided deviation, shared-edge incidence, adaptive 1..32 subdivisions; varying weights, periodicity, loft/sweep and higher degree typed-refuse',
+    qualificationPlan:
+      'docs/qualification/plans/certified-generic-rational-freeform-tessellation-1.json',
+  }),
+  Object.freeze({
     id: 'certified-mass-properties/2',
     maturity: 'Qualified' as const,
     permitsTopologyChange: false,
@@ -381,8 +390,17 @@ export const BREP_CAPABILITY_MATRIX: readonly BrepCapabilityDescriptor[] = Objec
     qualificationPlan: 'docs/qualification/plans/certified-mass-properties-2.json',
   }),
   Object.freeze({
+    id: 'certified-generic-rational-freeform-mass-quadrature/1',
+    maturity: 'Qualified' as const,
+    permitsTopologyChange: false,
+    notes:
+      'Finite planar equal-weight Bezier AA cuboid mass enclosures (elevated freeform_cuboid_solid); bump and varying-weight freeform quadrature remain typed-refuse',
+    qualificationPlan:
+      'docs/qualification/plans/certified-generic-rational-freeform-mass-quadrature-1.json',
+  }),
+  Object.freeze({
     id: 'nurbs-step-bicubic-face/1',
-    maturity: 'AnalyticComplete' as const,
+    maturity: 'Qualified' as const,
     permitsTopologyChange: false,
     notes:
       'Freeform STEP: single untrimmed bicubic open face (B_SPLINE + OPEN_SHELL); cadNurbsStep peer; solids/trims/rational refuse',
@@ -390,7 +408,7 @@ export const BREP_CAPABILITY_MATRIX: readonly BrepCapabilityDescriptor[] = Objec
   }),
   Object.freeze({
     id: 'nurbs-step-trimmed-bicubic/1',
-    maturity: 'AnalyticComplete' as const,
+    maturity: 'Qualified' as const,
     permitsTopologyChange: false,
     notes:
       'Freeform STEP: trimmed bicubic open face (FACE_OUTER_BOUND + FACE_BOUND + OPEN_SHELL); solids refuse',
@@ -398,7 +416,7 @@ export const BREP_CAPABILITY_MATRIX: readonly BrepCapabilityDescriptor[] = Objec
   }),
   Object.freeze({
     id: 'nurbs-step-solid/1',
-    maturity: 'AnalyticComplete' as const,
+    maturity: 'Qualified' as const,
     permitsTopologyChange: false,
     notes:
       'Freeform STEP solid: elevated bicubic cuboid / bump / cavity via MANIFOLD_SOLID_BREP + B_SPLINE; no OSCAD_SOLID/AABB',

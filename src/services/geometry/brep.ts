@@ -72,6 +72,8 @@ export type PolygonBrep=BrepModel<null,{mesh:PolygonMesh;sourceFaceId:number},nu
 export interface BrepReport {topologyValid:boolean;solidGeometryStatus:'not_certified'}
 export interface BrepMesh extends PolygonBuild {faceIds:number[];topologyFaceIds?:string[]}
 export const createBrepBox=(min:number[],max:number[]):NurbsBrep=>callGeometryRust('brep_nurbs_box',{min,max})
+export const createFreeformBrepCuboid=(min:number[],max:number[]):NurbsBrep=>callGeometryRust('brep_nurbs_freeform_cuboid',{min,max})
+export const createFreeformBrepCuboidBump=(min:number[],max:number[]):NurbsBrep=>callGeometryRust('brep_nurbs_freeform_cuboid_bump',{min,max})
 /** Exact rational B-reps; mesh detail does not change their authored geometry. */
 export const revolveBrepProfile=(profile:[number,number][],angleDegrees=360):NurbsBrep=>callGeometryRust('brep_nurbs_revolve',{profile,angleDegrees})
 export const createBrepCylinder=(radius:number,height:number):NurbsBrep=>callGeometryRust('brep_nurbs_cylinder',{radius,height})
@@ -105,6 +107,10 @@ export interface CertifiedBrepMassProperties {
  namingComplete:true
  composition:{componentCount:number;cavityCount:number;signedShellComposition:true}
  proof:'closed_form_analytic_with_outward_rounded_binary64_enclosures'
+}
+export interface CertifiedFreeformBrepMassProperties extends Omit<CertifiedBrepMassProperties,'capability'|'proof'> {
+ capability:'certified-generic-rational-freeform-mass-quadrature/1'
+ proof:'closed_form_planar_freeform_bezier_cuboid_enclosures'
 }
 export type AuthorizedHealOperation =
   | {kind:'endpointSnap';vertex:number;to:[number,number,number]}
@@ -149,6 +155,7 @@ export const exactAnalyticShell=(
 export const splitNurbsBrep=(model:NurbsBrep,normal:[number,number,number],offset:number):[NurbsBrep,NurbsBrep]=>callGeometryRust('brep_nurbs_split',{model,normal,offset})
 export const analyzeNurbsBrep=(model:NurbsBrep,relativeTolerance=1e-7,maxEvaluations=300000):BrepMassProperties=>callGeometryRust('brep_nurbs_mass_properties',{model,relativeTolerance,maxEvaluations})
 export const analyzeCertifiedNurbsBrep=(model:NurbsBrep):CertifiedBrepMassProperties=>callGeometryRust('brep_nurbs_certified_mass_properties',{model})
+export const analyzeCertifiedFreeformNurbsBrep=(model:NurbsBrep):CertifiedFreeformBrepMassProperties=>callGeometryRust('brep_nurbs_certified_freeform_mass_properties',{model})
 /** Strict native transaction: correspondence and topology evidence are derived in Rust. */
 export const authorizedHealNurbsBrep=(model:NurbsBrep,operation:AuthorizedHealOperation):AuthorizedHealResult=>callGeometryRust('brep_nurbs_authorized_heal_v2',{model,operation})
 export const createBrepTube=(outerRadius:number,innerRadius:number,height:number):NurbsBrep=>callGeometryRust('brep_nurbs_tube',{outerRadius,innerRadius,height})
@@ -295,6 +302,10 @@ export interface CertifiedBrepTessellation {
  resourceProof:{triangleBudget:number;subdivisionsPerPatch:number;adaptiveSelection:true}
 }
 export const tessellateCertifiedNurbsBrep=(model:NurbsBrep,chordToleranceMm:number,maxTriangles=20000):CertifiedBrepTessellation=>callGeometryRust('brep_nurbs_certified_tessellate',{model,chordToleranceMm,maxTriangles})
+export interface CertifiedFreeformBrepTessellation extends Omit<CertifiedBrepTessellation,'capability'> {
+ capability:'certified-generic-rational-freeform-tessellation/1'
+}
+export const tessellateCertifiedFreeformNurbsBrep=(model:NurbsBrep,chordToleranceMm:number,maxTriangles=20000):CertifiedFreeformBrepTessellation=>callGeometryRust('brep_nurbs_certified_freeform_tessellate',{model,chordToleranceMm,maxTriangles})
 export const prepareBrepDisplay=(model:NurbsBrep,segments=4):Pick<BrepMesh,'report'|'faceIds'|'topologyFaceIds'>&{displayVertices:number[];displayIndices:number[];surfaceArea:number}=>callGeometryRust('brep_nurbs_display',{model,segments})
 export const nurbsBrepToPolygon=(model:NurbsBrep,segments=4):PolygonBrep=>callGeometryRust('brep_nurbs_to_polygon',{model,segments})
 export const polygonBrepFromMesh=(mesh:PolygonMesh,faceIds?:number[]):PolygonBrep=>callGeometryRust('brep_polygon_from_mesh',{mesh,...(faceIds?{faceIds}:{})})

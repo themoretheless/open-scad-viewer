@@ -83,6 +83,208 @@ pub fn certified_tessellation_deviation(model: &Model, segments: usize) -> Resul
     Ok(maximum)
 }
 
+/// Append-only freeform tessellation finite cell. Equal-weight clamped Bezier
+/// shells (degree ≤ 3) get a Bernstein second-difference enclosure; varying
+/// weights, periodicity, loft/sweep authorship, and higher degree remain refuse.
+pub const FREEFORM_TESSELLATION_CAPABILITY: &str =
+    "certified-generic-rational-freeform-tessellation/1";
+
+fn point3(point: &[f64]) -> Option<[f64; 3]> {
+    (point.len() >= 3 && point.iter().take(3).all(|c| c.is_finite()))
+        .then(|| [point[0], point[1], point[2]])
+}
+
+fn point_sub(a: [f64; 3], b: [f64; 3]) -> [f64; 3] {
+    [a[0] - b[0], a[1] - b[1], a[2] - b[2]]
+}
+
+fn point_norm(a: [f64; 3]) -> f64 {
+    (a[0] * a[0] + a[1] * a[1] + a[2] * a[2]).sqrt()
+}
+
+fn bezier_clamped_knots(knots: &[f64], degree: usize, controls: usize) -> bool {
+    if degree == 0 || controls != degree + 1 || knots.len() != 2 * (degree + 1) {
+        return false;
+    }
+    let lo = knots[0];
+    let hi = knots[knots.len() - 1];
+    if !(lo.is_finite() && hi.is_finite() && hi > lo) {
+        return false;
+    }
+    let span = hi - lo;
+    knots
+        .iter()
+        .take(degree + 1)
+        .all(|k| (*k - lo).abs() <= 16. * f64::EPSILON * span.max(1.))
+        && knots
+            .iter()
+            .skip(degree + 1)
+            .all(|k| (*k - hi).abs() <= 16. * f64::EPSILON * span.max(1.))
+}
+
+fn equal_positive_weights(surface: &Surface) -> bool {
+    let Some(first) = surface.weights.first().and_then(|row| row.first()).copied() else {
+        return false;
+    };
+    first.is_finite()
+        && first > 0.
+        && surface.weights.iter().flatten().all(|w| {
+            w.is_finite() && *w > 0. && (*w - first).abs() <= 16. * f64::EPSILON * first.max(1.)
+        })
+}
+
+fn control_net_coplanar(surface: &Surface, tolerance: f64) -> bool {
+    let pts: Vec<[f64; 3]> = surface
+        .control_points
+        .iter()
+        .flatten()
+        .filter_map(|p| point3(p))
+        .collect();
+    if pts.len() < 3 {
+        return false;
+    }
+    let o = pts[0];
+    let mut normal = [0., 0., 0.];
+    for i in 1..pts.len() {
+        for j in (i + 1)..pts.len() {
+            let a = point_sub(pts[i], o);
+            let b = point_sub(pts[j], o);
+            let c = [
+                a[1] * b[2] - a[2] * b[1],
+                a[2] * b[0] - a[0] * b[2],
+                a[0] * b[1] - a[1] * b[0],
+            ];
+            let len = point_norm(c);
+            if len > tolerance {
+                normal = [c[0] / len, c[1] / len, c[2] / len];
+                break;
+            }
+        }
+        if normal != [0., 0., 0.] {
+            break;
+        }
+    }
+    if normal == [0., 0., 0.] {
+        return true;
+    }
+    pts.iter().all(|p| {
+        let d = (p[0] - o[0]) * normal[0] + (p[1] - o[1]) * normal[1] + (p[2] - o[2]) * normal[2];
+        d.abs() <= tolerance
+    })
+}
+
+fn admitted_freeform_bezier_surface(surface: &Surface) -> bool {
+    (1..=3).contains(&surface.degree_u)
+        && (1..=3).contains(&surface.degree_v)
+        && !surface.periodic_u
+        && !surface.periodic_v
+        && surface.control_points.len() == surface.degree_u + 1
+        && surface
+            .control_points
+            .iter()
+            .all(|row| row.len() == surface.degree_v + 1 && row.iter().all(|p| point3(p).is_some()))
+        && surface.weights.len() == surface.control_points.len()
+        && surface
+            .weights
+            .iter()
+            .zip(&surface.control_points)
+            .all(|(w_row, p_row)| w_row.len() == p_row.len())
+        && bezier_clamped_knots(&surface.knots_u, surface.degree_u, surface.control_points.len())
+        && bezier_clamped_knots(
+            &surface.knots_v,
+            surface.degree_v,
+            surface.control_points[0].len(),
+        )
+        && equal_positive_weights(surface)
+}
+
+/// Bernstein second-difference coefficient M = ‖S_uu‖ + 2‖S_uv‖ + ‖S_vv‖.
+fn bernstein_second_diff_coeff(surface: &Surface) -> Result<f64> {
+    if !admitted_freeform_bezier_surface(surface) {
+        return Err(Error::new(
+            "BREP_CERTIFIED_TESSELLATION_REFUSED",
+            "Freeform tessellation /1 admits equal-weight clamped Bezier faces of degree ≤3 only",
+        ));
+    }
+    if control_net_coplanar(surface, 1e-8) {
+        return Ok(0.);
+    }
+    let pu = surface.degree_u as f64;
+    let pv = surface.degree_v as f64;
+    let rows = surface.control_points.len();
+    let cols = surface.control_points[0].len();
+    let pt = |i: usize, j: usize| -> [f64; 3] {
+        point3(&surface.control_points[i][j]).expect("admitted net is finite 3D")
+    };
+    let mut max_uu: f64 = 0.;
+    if rows >= 3 {
+        for i in 0..rows - 2 {
+            for j in 0..cols {
+                let d2 = point_sub(point_sub(pt(i + 2, j), pt(i + 1, j)), point_sub(pt(i + 1, j), pt(i, j)));
+                max_uu = max_uu.max(point_norm(d2));
+            }
+        }
+    }
+    let mut max_vv: f64 = 0.;
+    if cols >= 3 {
+        for i in 0..rows {
+            for j in 0..cols - 2 {
+                let d2 = point_sub(point_sub(pt(i, j + 2), pt(i, j + 1)), point_sub(pt(i, j + 1), pt(i, j)));
+                max_vv = max_vv.max(point_norm(d2));
+            }
+        }
+    }
+    let mut max_uv: f64 = 0.;
+    if rows >= 2 && cols >= 2 {
+        for i in 0..rows - 1 {
+            for j in 0..cols - 1 {
+                let mixed = point_sub(
+                    point_sub(pt(i + 1, j + 1), pt(i + 1, j)),
+                    point_sub(pt(i, j + 1), pt(i, j)),
+                );
+                max_uv = max_uv.max(point_norm(mixed));
+            }
+        }
+    }
+    let suu = pu * (pu - 1.).max(0.) * max_uu;
+    let svv = pv * (pv - 1.).max(0.) * max_vv;
+    let suv = pu * pv * max_uv;
+    Ok(suu + 2. * suv + svv)
+}
+
+/// Two-sided freeform tessellation deviation for equal-weight Bezier solids.
+/// Bound: M / (8 n²) with M the Bernstein second-difference coefficient.
+pub fn certified_freeform_tessellation_deviation(
+    model: &Model,
+    segments: usize,
+) -> Result<f64> {
+    if !(1..=32).contains(&segments) {
+        return Err(Error::new(
+            "BREP_TESSELLATION_BUDGET_EXHAUSTED",
+            "Certified freeform tessellation needs 1..32 subdivisions per patch",
+        ));
+    }
+    if model.bodies.is_empty() || model.shells.is_empty() {
+        return Err(Error::new(
+            "BREP_CERTIFIED_TESSELLATION_REFUSED",
+            "Freeform tessellation /1 requires closed solid bodies",
+        ));
+    }
+    if !model.shells.iter().all(|shell| shell.closed) {
+        return Err(Error::new(
+            "BREP_CERTIFIED_TESSELLATION_REFUSED",
+            "Freeform tessellation /1 requires closed shells",
+        ));
+    }
+    let n = segments as f64;
+    let mut maximum: f64 = 0.;
+    for face in &model.faces {
+        let coeff = bernstein_second_diff_coeff(&face.surface)?;
+        maximum = maximum.max(coeff / (8. * n * n));
+    }
+    Ok(next_up(maximum))
+}
+
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct CertifiedInterval {
     pub lower: f64,
@@ -174,6 +376,28 @@ fn axis_aligned_box(model: &Model) -> Option<([f64; 3], [f64; 3])> {
     {
         return None;
     }
+    axis_aligned_corners(model)
+}
+
+/// AA cuboid recovered from equal-weight planar Bezier freeform faces (elevated
+/// bicubic cuboids). Used by the freeform mass finite cell only.
+fn axis_aligned_freeform_box(model: &Model) -> Option<([f64; 3], [f64; 3])> {
+    if model.vertices.len() != 8
+        || model.faces.len() != 6
+        || model.bodies.len() != 1
+        || !model.bodies[0].inner_shells.is_empty()
+        || model.edges.iter().any(|edge| edge.curve.degree != 1)
+        || model.faces.iter().any(|face| {
+            !admitted_freeform_bezier_surface(&face.surface)
+                || !control_net_coplanar(&face.surface, 1e-8)
+        })
+    {
+        return None;
+    }
+    axis_aligned_corners(model)
+}
+
+fn axis_aligned_corners(model: &Model) -> Option<([f64; 3], [f64; 3])> {
     let mut min = [f64::INFINITY; 3];
     let mut max = [f64::NEG_INFINITY; 3];
     for vertex in &model.vertices {
@@ -554,6 +778,75 @@ pub fn certified_mass_properties(model: &Model) -> Result<CertifiedMassPropertie
         component_count: parts.len(),
         cavity_count: model.bodies.iter().map(|body| body.inner_shells.len()).sum(),
         proof: "closed_form_analytic_with_outward_rounded_binary64_enclosures",
+    })
+}
+
+/// Append-only freeform mass finite cell for planar equal-weight Bezier AA
+/// cuboids (elevated freeform_cuboid_solid). Bump/varying-weight quadrature
+/// remains typed-refuse for a successor.
+pub const FREEFORM_MASS_CAPABILITY: &str =
+    "certified-generic-rational-freeform-mass-quadrature/1";
+
+pub fn certified_freeform_mass_properties(model: &Model) -> Result<CertifiedMassProperties> {
+    model.validate()?;
+    let audit = audit_solid(model)?;
+    let context = model.tolerance_context()?;
+    let (min, max) = axis_aligned_freeform_box(model).ok_or_else(|| {
+        Error::new(
+            "BREP_CERTIFIED_MASS_REFUSED",
+            "Freeform mass /1 admits planar equal-weight Bezier AA cuboids only; bump and varying-weight quadrature remain non-certified",
+        )
+    })?;
+    let d = std::array::from_fn::<_, 3, _>(|i| max[i] - min[i]);
+    if d.iter().any(|v| *v <= 0.) {
+        return Err(Error::new(
+            "BREP_CERTIFIED_MASS_REFUSED",
+            "Freeform mass /1 requires a positive AA cuboid extent",
+        ));
+    }
+    let volume = d[0] * d[1] * d[2];
+    let area = 2. * (d[0] * d[1] + d[1] * d[2] + d[2] * d[0]);
+    let centroid = std::array::from_fn(|i| (min[i] + max[i]) / 2.);
+    let inertia = [
+        [volume * (d[1] * d[1] + d[2] * d[2]) / 12., 0., 0.],
+        [0., volume * (d[0] * d[0] + d[2] * d[2]) / 12., 0.],
+        [0., 0., volume * (d[0] * d[0] + d[1] * d[1]) / 12.],
+    ];
+    let scale = d.into_iter().fold(0., f64::max);
+    let naming_complete = model.persistent_naming_complete()
+        && model.1.faces.len() == model.faces.len()
+        && model.1.edges.len() == model.edges.len();
+    if !naming_complete {
+        return Err(Error::new(
+            "BREP_CERTIFIED_MASS_REFUSED",
+            "Freeform mass lacks complete ChangeSet/naming evidence",
+        ));
+    }
+    let evidence = compose_predicate_evidence(
+        &context,
+        [
+            PredicateEvidence::positional(&context, 0., scale)?,
+            PredicateEvidence::topology_preservation(
+                &context,
+                "planar freeform Bezier cuboid matches audited closed boundary",
+                audit.ok,
+            )?,
+        ],
+    )?;
+    Ok(CertifiedMassProperties {
+        capability: FREEFORM_MASS_CAPABILITY,
+        surface_area_mm2: enclosure(area, scale * scale),
+        volume_mm3: enclosure(volume, scale.powi(3)),
+        centroid: centroid.map(|v| enclosure(v, scale)),
+        inertia_mm5: certified_tensor(inertia, scale.powi(5)),
+        context: context.spec_identity(),
+        evidence,
+        audit,
+        change_set: model.1.change_set.clone(),
+        naming_complete,
+        component_count: 1,
+        cavity_count: 0,
+        proof: "closed_form_planar_freeform_bezier_cuboid_enclosures",
     })
 }
 
@@ -1297,5 +1590,52 @@ mod tests {
         contains(hollow.volume_mm3, 104. * std::f64::consts::PI / 3.);
         assert_eq!(hollow.component_count, 2);
         assert_eq!(hollow.cavity_count, 1);
+    }
+
+    #[test]
+    fn freeform_tessellation_bounds_planar_cuboid_and_bump() {
+        let planar = crate::freeform_cuboid_solid([0., 0., 0.], [2., 3., 4.]).unwrap();
+        assert_eq!(
+            certified_tessellation_deviation(&planar, 4).unwrap_err().code,
+            "BREP_CERTIFIED_TESSELLATION_REFUSED"
+        );
+        let planar_dev = certified_freeform_tessellation_deviation(&planar, 1).unwrap();
+        assert!(planar_dev <= 1e-12, "planar elevated cuboid should be zero-bound");
+
+        let bump = crate::freeform_cuboid_with_bump_face([0., 0., 0.], [2., 2., 2.]).unwrap();
+        let coarse = certified_freeform_tessellation_deviation(&bump, 1).unwrap();
+        let fine = certified_freeform_tessellation_deviation(&bump, 4).unwrap();
+        assert!(coarse > 0., "bump needs a positive Bernstein bound");
+        assert!(fine < coarse, "bound must tighten with subdivisions");
+        assert!(fine <= coarse / 15., "1/n² scaling should dominate");
+
+        let mut unequal = bump.clone();
+        unequal.faces[1].surface.weights[1][1] = 2.;
+        assert_eq!(
+            certified_freeform_tessellation_deviation(&unequal, 4)
+                .unwrap_err()
+                .code,
+            "BREP_CERTIFIED_TESSELLATION_REFUSED"
+        );
+    }
+
+    #[test]
+    fn freeform_mass_encloses_planar_cuboid_and_refuses_bump() {
+        let planar = crate::freeform_cuboid_solid([1., 2., 3.], [3., 6., 9.]).unwrap();
+        assert_eq!(
+            certified_mass_properties(&planar).unwrap_err().code,
+            "BREP_CERTIFIED_MASS_REFUSED"
+        );
+        let mass = certified_freeform_mass_properties(&planar).unwrap();
+        assert_eq!(mass.capability, FREEFORM_MASS_CAPABILITY);
+        contains(mass.volume_mm3, 48.);
+        contains(mass.surface_area_mm2, 88.);
+        assert!(mass.audit.ok && mass.naming_complete);
+
+        let bump = crate::freeform_cuboid_with_bump_face([0., 0., 0.], [2., 2., 2.]).unwrap();
+        assert_eq!(
+            certified_freeform_mass_properties(&bump).unwrap_err().code,
+            "BREP_CERTIFIED_MASS_REFUSED"
+        );
     }
 }

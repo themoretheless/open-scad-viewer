@@ -65,6 +65,7 @@ describe('B-rep G8 release gate', () => {
       'g8-full-matrix-index-v16.json',
       'g8-full-matrix-index-v17.json',
       'g8-full-matrix-index-v18.json',
+      'g8-full-matrix-index-v19.json',
       'analytic-boolean-1-g8.json',
       'analytic-chamfer-1-g8.json',
       'iges-interchange-1-g8.json',

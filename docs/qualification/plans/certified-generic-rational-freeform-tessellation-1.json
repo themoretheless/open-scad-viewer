@@ -1,0 +1,62 @@
+{
+  "$schema": "./brep-capability-qualification-plan-v12.schema.json",
+  "schema": "open-scad-viewer/brep-capability-qualification-plan",
+  "schemaVersion": 12,
+  "planId": "certified-generic-rational-freeform-tessellation-1",
+  "gate": {"id": "g8-full", "name": "brep-full-closed-matrix", "version": 12},
+  "lifecycle": {"status": "qualified", "qualificationClaim": "finite-cell"},
+  "claimBoundary": {
+    "candidateClaim": "Append-only certified-generic-rational-freeform-tessellation/1: equal-weight clamped Bezier freeform closed solids of degree ≤3 with Bernstein second-difference two-sided deviation, shared-edge incidence, adaptive 1..32 subdivisions and 12..20000 triangle budgets.",
+    "forbiddenClaims": [
+      "varying-weight rational patches",
+      "periodic or multi-span B-splines",
+      "degree > 3",
+      "loft / bent / twisted / scaled sweep surfaces",
+      "unbounded freeform certification",
+      "parasolid parity"
+    ]
+  },
+  "capability": "certified-generic-rational-freeform-tessellation/1",
+  "successorOf": "certified-brep-tessellation/2",
+  "dependencies": [
+    {"capability": "numeric-evidence-curved-brep/1", "requiredMaturity": "Qualified"},
+    {"capability": "boundary-correspondence/1", "requiredMaturity": "Qualified"},
+    {"capability": "exact-sew/1", "requiredMaturity": "Qualified"},
+    {"capability": "global-solid-audit/1", "requiredMaturity": "Qualified"},
+    {"capability": "persistent-naming/1", "requiredMaturity": "Qualified"},
+    {"capability": "certified-brep-tessellation/2", "requiredMaturity": "Qualified"}
+  ],
+  "scope": {
+    "included": [
+      "freeform_cuboid_solid elevated planar bicubic faces (zero geometric bound)",
+      "freeform_cuboid_with_bump_face equal-weight bicubic bump",
+      "Bernstein M/(8n²) two-sided deviation and shared-edge registry certificates",
+      "bridge/WASM/TS product query brep_nurbs_certified_freeform_tessellate"
+    ],
+    "excluded": [
+      "varying weights, periodicity, multi-span graphs",
+      "loft and bent/twisted/scaled sweep authorship",
+      "certified-brep-tessellation/2 analytic shell matrix (unchanged typed-refuse for freeform)"
+    ]
+  },
+  "matrix": [
+    {"id": "FF-TESS-PLANAR-BICUBIC-ZERO-BOUND", "expected": "Complete", "blocksQualification": true},
+    {"id": "FF-TESS-BUMP-BERNSTEIN-MONOTONE", "expected": "Complete", "blocksQualification": true},
+    {"id": "FF-TESS-UNEQUAL-WEIGHT-REFUSE", "expected": "typed-refuse", "blocksQualification": true},
+    {"id": "FF-TESS-PRODUCT-BRIDGE", "expected": "Complete", "blocksQualification": true}
+  ],
+  "bindings": {
+    "implementation": [
+      "crates/brep-core/src/analysis.rs",
+      "crates/geometry-bridge/src/brep.rs",
+      "crates/geometry-bridge/src/lib.rs",
+      "src/services/geometry/brep.ts",
+      "src/services/geometry/brepCapability.ts"
+    ],
+    "registry": "src/services/geometry/brepCapability.ts",
+    "evidenceJson": "docs/qualification/certified-generic-rational-freeform-tessellation-1-evidence-v1.json"
+  },
+  "evidence": {"state": "qualified", "notes": ["Qualified after native and bridge gates for the equal-weight Bezier finite cell."]},
+  "resetPolicy": "false-Complete freezes this capability and transitively stales all dependents; recovery requires a successor capability ID",
+  "unresolvedRows": []
+}

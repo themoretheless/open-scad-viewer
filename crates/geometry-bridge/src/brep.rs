@@ -20,6 +20,8 @@ pub struct TessellationCertificate {
 }
 
 pub const CERTIFIED_TESSELLATION_CAPABILITY: &str = "certified-brep-tessellation/2";
+pub const FREEFORM_TESSELLATION_CAPABILITY: &str =
+    "certified-generic-rational-freeform-tessellation/1";
 
 pub struct CertifiedTessellation {
     pub tessellation: Tessellation,
@@ -154,6 +156,33 @@ fn finish_indexed(
     closed: bool,
     freeform_faces: bool,
 ) -> Result<Tessellation> {
+    finish_indexed_mode(
+        mesh,
+        face_ids,
+        topology_face_ids,
+        closed,
+        if freeform_faces {
+            FreeformTessNote::SampledUncertified
+        } else {
+            FreeformTessNote::None
+        },
+    )
+}
+
+#[derive(Clone, Copy)]
+enum FreeformTessNote {
+    None,
+    SampledUncertified,
+    BernsteinCertified,
+}
+
+fn finish_indexed_mode(
+    mesh: Mesh,
+    face_ids: Vec<usize>,
+    topology_face_ids: Option<Vec<String>>,
+    closed: bool,
+    freeform_note: FreeformTessNote,
+) -> Result<Tessellation> {
     let report = mesh.inspect()?;
     if report.degenerate_triangles > 0
         || report.non_manifold_edges > 0
@@ -166,9 +195,15 @@ fn finish_indexed(
         )));
     }
     let mut notes = vec!["shell_aware_registry", "boundary_incidence_verified"];
-    if freeform_faces {
-        notes.push("freeform_nurbs_tessellation_sampled");
-        notes.push("freeform_deviation_oracle_out_of_scope");
+    match freeform_note {
+        FreeformTessNote::None => {}
+        FreeformTessNote::SampledUncertified => {
+            notes.push("freeform_nurbs_tessellation_sampled");
+            notes.push("freeform_deviation_oracle_out_of_scope");
+        }
+        FreeformTessNote::BernsteinCertified => {
+            notes.push("freeform_bernstein_second_diff_bound");
+        }
     }
     let certificate = TessellationCertificate {
         shell_count: 1,
@@ -462,6 +497,14 @@ fn triangulate_boundary(
     Ok(out)
 }
 pub fn nurbs(model: &brep_core::Model, segments: usize) -> Result<Tessellation> {
+    nurbs_with_freeform_note(model, segments, FreeformTessNote::SampledUncertified)
+}
+
+fn nurbs_with_freeform_note(
+    model: &brep_core::Model,
+    segments: usize,
+    freeform_note: FreeformTessNote,
+) -> Result<Tessellation> {
     model.validate()?;
     if !(1..=32).contains(&segments) {
         return Err(input("B-rep tessellation segments must be 1..32"));
@@ -498,12 +541,17 @@ pub fn nurbs(model: &brep_core::Model, segments: usize) -> Result<Tessellation> 
         .faces
         .iter()
         .any(|f| f.surface.degree_u > 1 || f.surface.degree_v > 1);
-    let mut result = finish_indexed(
+    let note = if freeform_faces {
+        freeform_note
+    } else {
+        FreeformTessNote::None
+    };
+    let mut result = finish_indexed_mode(
         registry.mesh,
         face_ids,
         Some(topology_face_ids),
         !model.shells.is_empty() && model.shells.iter().all(|s| s.closed),
-        freeform_faces,
+        note,
     )?;
     if let Some(certificate) = &mut result.certificate {
         certificate.shell_count = model.shells.len();
@@ -586,6 +634,92 @@ pub fn certified_nurbs(
     )?;
     Ok(CertifiedTessellation {
         capability: CERTIFIED_TESSELLATION_CAPABILITY,
+        context: context.spec_identity(),
+        surface_to_mesh_deviation_mm: deviation,
+        mesh_to_surface_deviation_mm: deviation,
+        audit,
+        evidence,
+        change_set: model.1.change_set.clone(),
+        naming_complete,
+        max_triangles,
+        subdivisions_per_patch: segments,
+        tessellation,
+    })
+}
+
+/// Certified freeform tessellation finite cell: equal-weight clamped Bezier
+/// shells with Bernstein second-difference deviation (capability /1).
+pub fn certified_freeform_nurbs(
+    model: &brep_core::Model,
+    chord_tolerance_mm: f64,
+    max_triangles: usize,
+) -> Result<CertifiedTessellation> {
+    use brep_core::predicate_evidence::{PredicateEvidence, compose_predicate_evidence};
+    if !(chord_tolerance_mm.is_finite() && chord_tolerance_mm > 0.)
+        || !(12..=20_000).contains(&max_triangles)
+    {
+        return Err(nurbs_core::Error::new(
+            "BREP_TESSELLATION_OPTIONS_INVALID",
+            "Chord tolerance must be positive and triangle budget 12..20000",
+        ));
+    }
+    model.validate()?;
+    let audit = brep_core::solid_audit::audit_solid(model)?;
+    brep_core::analysis::certified_freeform_tessellation_deviation(model, 1)?;
+    let segments = (1..=32)
+        .find(|segments| {
+            brep_core::analysis::certified_freeform_tessellation_deviation(model, *segments)
+                .is_ok_and(|deviation| deviation <= chord_tolerance_mm)
+        })
+        .ok_or_else(|| {
+            nurbs_core::Error::new(
+                "BREP_TESSELLATION_BUDGET_EXHAUSTED",
+                "Requested freeform Bernstein deviation needs more than 32 subdivisions per patch",
+            )
+        })?;
+    let deviation =
+        brep_core::analysis::certified_freeform_tessellation_deviation(model, segments)?;
+    let tessellation =
+        nurbs_with_freeform_note(model, segments, FreeformTessNote::BernsteinCertified)?;
+    if tessellation.built.mesh.indices.len() / 3 > max_triangles {
+        return Err(nurbs_core::Error::new(
+            "BREP_TESSELLATION_BUDGET_EXHAUSTED",
+            "Certified freeform tessellation exceeded its triangle budget",
+        ));
+    }
+    let certificate = tessellation.certificate.as_ref().ok_or_else(|| {
+        nurbs_core::Error::new(
+            "BREP_CERTIFIED_TESSELLATION_REFUSED",
+            "Tessellation did not publish incidence coverage",
+        )
+    })?;
+    let naming_complete = model.persistent_naming_complete()
+        && model.1.faces.len() == model.faces.len()
+        && model.1.edges.len() == model.edges.len();
+    if !certificate.complete
+        || !certificate.closed_shells
+        || !tessellation.built.report.closed
+        || !naming_complete
+    {
+        return Err(nurbs_core::Error::new(
+            "BREP_CERTIFIED_TESSELLATION_REFUSED",
+            "Coverage, audit, ChangeSet, or naming evidence is incomplete",
+        ));
+    }
+    let context = model.tolerance_context()?;
+    let evidence = compose_predicate_evidence(
+        &context,
+        [
+            PredicateEvidence::positional(&context, 0., chord_tolerance_mm)?,
+            PredicateEvidence::topology_preservation(
+                &context,
+                "shared-edge identity, orientation, and Bernstein freeform deviation",
+                true,
+            )?,
+        ],
+    )?;
+    Ok(CertifiedTessellation {
+        capability: FREEFORM_TESSELLATION_CAPABILITY,
         context: context.spec_identity(),
         surface_to_mesh_deviation_mm: deviation,
         mesh_to_surface_deviation_mm: deviation,
