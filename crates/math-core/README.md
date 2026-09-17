@@ -129,13 +129,16 @@ available.
 `directed_chamfer_distance(queries, targets, acceleration)` computes the mean
 nearest-neighbor squared distance from one point cloud into another.
 `chamfer_distance(a, b, acceleration)` runs both directions and returns the
-directed summaries plus symmetric mean/RMS values:
+directed summaries plus symmetric mean/RMS and Hausdorff worst-case values.
+`directed_hausdorff_distance` / `hausdorff_distance` expose the worst-case
+metric directly:
 
 ```rust
 use math_core::{Acceleration, chamfer_distance};
 
 let score = chamfer_distance(&cloud_a, &cloud_b, Acceleration::Auto)?;
 println!("symmetric RMS = {}", score.symmetric_rms_distance);
+println!("Hausdorff = {}", score.hausdorff_distance);
 ```
 
 This is a higher-level geometry metric over the same nearest-neighbor kernels,

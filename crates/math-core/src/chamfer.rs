@@ -14,6 +14,8 @@ pub struct ChamferDistance {
     pub b_to_a: DirectedChamfer,
     pub symmetric_mean_squared_distance: f64,
     pub symmetric_rms_distance: f64,
+    pub symmetric_max_squared_distance: f64,
+    pub hausdorff_distance: f64,
 }
 
 /// Mean nearest-neighbor squared distance from every `queries` point into
@@ -53,12 +55,35 @@ pub fn chamfer_distance(a: &[V3], b: &[V3], acceleration: Acceleration) -> Resul
     let b_to_a = directed_chamfer_distance(b, a, acceleration)?;
     let symmetric_mean_squared_distance =
         0.5 * (a_to_b.mean_squared_distance + b_to_a.mean_squared_distance);
+    let symmetric_max_squared_distance =
+        f64::max(a_to_b.max_squared_distance, b_to_a.max_squared_distance);
     Ok(ChamferDistance {
         a_to_b,
         b_to_a,
         symmetric_mean_squared_distance,
         symmetric_rms_distance: symmetric_mean_squared_distance.sqrt(),
+        symmetric_max_squared_distance,
+        hausdorff_distance: symmetric_max_squared_distance.sqrt(),
     })
+}
+
+/// Directed Hausdorff distance from `queries` into `targets`: the largest
+/// nearest-neighbor distance across the query cloud.
+pub fn directed_hausdorff_distance(
+    queries: &[V3],
+    targets: &[V3],
+    acceleration: Acceleration,
+) -> Result<f64> {
+    Ok(directed_chamfer_distance(queries, targets, acceleration)?
+        .max_squared_distance
+        .sqrt())
+}
+
+/// Symmetric Hausdorff distance: the maximum of both directed nearest-neighbor
+/// distances. Uses the same accelerated nearest-neighbor backend as
+/// [`chamfer_distance`].
+pub fn hausdorff_distance(a: &[V3], b: &[V3], acceleration: Acceleration) -> Result<f64> {
+    Ok(chamfer_distance(a, b, acceleration)?.hausdorff_distance)
 }
 
 #[cfg(test)]
@@ -94,6 +119,19 @@ mod tests {
         assert_eq!(got.b_to_a.mean_squared_distance, 32.5);
         assert_eq!(got.symmetric_mean_squared_distance, 16.75);
         assert_eq!(got.symmetric_rms_distance, 16.75_f64.sqrt());
+        assert_eq!(got.symmetric_max_squared_distance, 64.);
+        assert_eq!(got.hausdorff_distance, 8.);
+    }
+
+    #[test]
+    fn hausdorff_reports_worst_case_distance() {
+        let a = [[0., 0., 0.], [2., 0., 0.]];
+        let b = [[1., 0., 0.], [10., 0., 0.]];
+        assert_eq!(
+            directed_hausdorff_distance(&a, &b, Acceleration::Cpu).unwrap(),
+            1.
+        );
+        assert_eq!(hausdorff_distance(&a, &b, Acceleration::Cpu).unwrap(), 8.);
     }
 
     #[test]
