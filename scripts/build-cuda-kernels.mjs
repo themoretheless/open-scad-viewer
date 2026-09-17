@@ -23,6 +23,7 @@ const kernels = [
   {cu: 'crates/math-core/src/distance_pair_sum.cu', ptx: 'crates/math-core/src/distance_pair_sum.ptx'},
   {cu: 'crates/math-core/src/nearest_two.cu', ptx: 'crates/math-core/src/nearest_two.ptx'},
   {cu: 'crates/math-core/src/chamfer.cu', ptx: 'crates/math-core/src/chamfer.ptx'},
+  {cu: 'crates/math-core/src/point_bounds.cu', ptx: 'crates/math-core/src/point_bounds.ptx'},
   {cu: 'crates/photogrammetry-core/src/gpu/matching.cu', ptx: 'crates/photogrammetry-core/src/gpu/matching.ptx'},
 ]
 const args = process.argv.slice(2)

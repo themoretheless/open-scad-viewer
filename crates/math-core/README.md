@@ -22,6 +22,7 @@ src/
 ├─ error.rs            # Error, Result, ensure()
 ├─ acceleration.rs     # Cpu/Auto/Gpu/Cuda placement and size heuristics
 ├─ linalg.rs           # dense vector/matrix helpers, eigen/SVD/solve
+├─ bounds.rs           # point-cloud bounds reduction
 ├─ nearest_neighbor.rs # CPU reference plus GPU/CUDA dispatch
 ├─ chamfer.rs          # point-cloud Chamfer distance over nearest-neighbor
 ├─ registration.rs     # rigid transform fitting and ICP
@@ -192,6 +193,26 @@ input point arrays, so `Auto` remains CPU there too:
 | 250,000 | 0.499 ms | 0.500 ms | 7.807 ms | 2.198 ms |
 | 1,000,000 | 3.809 ms | 2.809 ms | 29.933 ms | 7.079 ms |
 | 3,000,000 | 8.414 ms | 8.885 ms | 79.100 ms | 21.326 ms |
+
+## Point-cloud bounds
+
+`point_bounds(points)` computes exact CPU axis-aligned bounds, center and
+extent for a point cloud. `point_bounds_accelerated(points, acceleration)`
+adds fused wgpu/CUDA reductions with grow-only buffers and the same
+Metal/default workgroup tuning as Chamfer. Because this is O(points) with very
+little arithmetic per point, `Auto` intentionally keeps the CPU reference;
+explicit `Gpu`/`Cuda` remain available for integrated-GPU/low-copy
+experiments or for validating backend behavior.
+
+Measured with `cargo run --release -p osv-math --features cuda --example
+bench_point_bounds` on the RTX 5090:
+
+| points | cpu | auto | gpu | cuda |
+| --- | --- | --- | --- | --- |
+| 10,000 | 0.053 ms | 0.041 ms | 0.356 ms | 0.216 ms |
+| 100,000 | 0.422 ms | 0.401 ms | 1.856 ms | 0.670 ms |
+| 1,000,000 | 4.188 ms | 4.155 ms | 15.795 ms | 5.097 ms |
+| 5,000,000 | 21.135 ms | 21.265 ms | 77.053 ms | 25.854 ms |
 
 ## ICP / rigid point-cloud registration
 

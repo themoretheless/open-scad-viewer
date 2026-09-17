@@ -1,6 +1,7 @@
 //! Small dense linear algebra and accelerated geometry math kernels.
 
 mod acceleration;
+mod bounds;
 mod chamfer;
 mod distance_pairs;
 mod error;
@@ -11,6 +12,7 @@ mod registration;
 mod types;
 
 pub use acceleration::Acceleration;
+pub use bounds::{POINT_BOUNDS_WGSL_TEMPLATE, PointBounds, point_bounds, point_bounds_accelerated};
 pub use chamfer::{
     CHAMFER_WGSL_TEMPLATE, ChamferDistance, DirectedChamfer, chamfer_distance,
     directed_chamfer_distance, directed_hausdorff_distance, hausdorff_distance,
