@@ -1,0 +1,28 @@
+{
+  "$schema": "./brep-capability-evidence-v12.schema.json",
+  "schema": "open-scad-viewer/brep-capability-evidence",
+  "schemaVersion": 12,
+  "evidenceId": "tolerant-complex-heal-1-evidence-v12",
+  "capability": "tolerant-complex-heal/1",
+  "maturity": "Qualified",
+  "state": "qualified",
+  "plan": "docs/qualification/plans/tolerant-complex-heal-1.json",
+  "runs": [
+    {
+      "id": "native-bridge-wasm-tolerant-complex-heal-1-2026-09-17-v12",
+      "result": "pass",
+      "artifactHash": "ed071262671145756a1e2df2c2378a80727d182b0492024cf7153b424990fa01"
+    }
+  ],
+  "oracles": [
+    "close_topology::tests::solid_typestate_is_not_weakened",
+    "close_topology::tests::radial_fans_and_orientation_are_checked",
+    "close_topology::tests::multi_cell_heal_budgets_partitions_and_atomic_refusal",
+    "tests/brepQualificationV12.test.ts"
+  ],
+  "unresolvedRows": [],
+  "attestation": {
+    "fabricatedRuns": false,
+    "note": "Recorded only after native topology, interchange, mutation, budget, bridge and artifact tests passed."
+  }
+}

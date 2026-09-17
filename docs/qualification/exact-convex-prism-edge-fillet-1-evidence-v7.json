@@ -1,0 +1,28 @@
+{
+  "$schema": "./brep-capability-evidence-v7.schema.json",
+  "schema": "open-scad-viewer/brep-capability-evidence",
+  "schemaVersion": 7,
+  "evidenceId": "exact-convex-prism-edge-fillet-1-evidence-v7",
+  "capability": "exact-convex-prism-edge-fillet/1",
+  "maturity": "Qualified",
+  "state": "qualified",
+  "plan": "docs/qualification/plans/exact-convex-prism-edge-fillet-1.json",
+  "runs": [
+    {
+      "id": "native-bridge-wasm-blends-2026-09-17-v7",
+      "result": "pass",
+      "artifactHash": "6f8242353008c59b7b86980d8c0098ff42b19cf4934c45363da106f28b2f2d7a"
+    }
+  ],
+  "oracles": [
+    "analytic_features::tests::exact_prism_fillet_supports_mixed_and_closed_profile_selections_under_rigid_placement",
+    "analytic_features::tests::exact_prism_fillet_has_independent_square_volume_and_radius_oracles",
+    "analytic_features::tests::exact_convex_chamfer_handles_connected_chain_permutations_atomically",
+    "geometry_bridge::tests::audited_feature_successors_cross_the_bridge_with_certificates"
+  ],
+  "unresolvedRows": [],
+  "attestation": {
+    "fabricatedRuns": false,
+    "note": "Recorded only after scoped native and bridge execution; exact exclusions remain refusals."
+  }
+}

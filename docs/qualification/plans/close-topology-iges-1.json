@@ -1,0 +1,84 @@
+{
+  "$schema": "./brep-capability-qualification-plan-v12.schema.json",
+  "schema": "open-scad-viewer/brep-capability-qualification-plan",
+  "schemaVersion": 12,
+  "planId": "close-topology-iges-1",
+  "gate": {
+    "id": "g8-full",
+    "name": "brep-full-closed-matrix",
+    "version": 12
+  },
+  "lifecycle": {
+    "status": "qualified",
+    "qualificationClaim": "finite-cell"
+  },
+  "claimBoundary": {
+    "candidateClaim": "Direct bounded solid-cell complex IGES roundtrip preserving supplemental non-manifold incidence.",
+    "forbiddenClaims": [
+      "sheet/open-shell IGES entities",
+      "local transforms",
+      "fallback reconstruction"
+    ]
+  },
+  "capability": "close-topology-iges/1",
+  "successorOf": "iges-interchange/2",
+  "dependencies": [
+    {
+      "capability": "close-topology/1",
+      "requiredMaturity": "Qualified"
+    },
+    {
+      "capability": "iges-interchange/2",
+      "requiredMaturity": "Qualified"
+    }
+  ],
+  "scope": {
+    "included": [
+      "direct IGES /2 payload per manifold cell",
+      "shared-face, radial-ring and fan preservation",
+      "16 MiB aggregate bound"
+    ],
+    "excluded": [
+      "sheet/open-shell IGES entities",
+      "local transforms",
+      "fallback reconstruction"
+    ]
+  },
+  "matrix": [
+    {
+      "id": "CA12-IGES-CELL-COMPLEX-ROUNDTRIP",
+      "expected": "Complete",
+      "blocksQualification": true
+    },
+    {
+      "id": "CA12-IGES-INCIDENCE-IDENTITY",
+      "expected": "Complete",
+      "blocksQualification": true
+    },
+    {
+      "id": "CA12-IGES-SHEET-TRANSFORM-RESOURCE",
+      "expected": "typed-refuse",
+      "blocksQualification": true
+    }
+  ],
+  "bindings": {
+    "implementation": [
+      "crates/brep-core/src/close_topology.rs",
+      "crates/brep-core/src/lib.rs",
+      "crates/geometry-bridge/src/lib.rs",
+      "src/services/geometry/brep.ts",
+      "src/services/geometry/brepCapability.ts",
+      "tests/brepQualificationV12.test.ts"
+    ],
+    "registry": "src/services/geometry/brepCapability.ts",
+    "evidenceJson": "docs/qualification/close-topology-iges-1-evidence-v12.json"
+  },
+  "evidence": {
+    "state": "qualified",
+    "notes": [
+      "Only the finite test-backed cells are qualified; excluded cases remain typed refusals."
+    ]
+  },
+  "resetPolicy": "false-Complete freezes this capability and transitively stales all dependents; recovery requires a successor capability ID",
+  "unresolvedRows": []
+}

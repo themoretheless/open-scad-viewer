@@ -1616,6 +1616,13 @@ pub fn sew_closed_model_edges(model: &crate::Model) -> Result<SewCertificate> {
         for &wire_id in std::iter::once(&face.outer).chain(face.holes.iter()) {
             let wire = &model.loops[wire_id];
             for (cyclic_index, coedge) in wire.coedges.iter().enumerate() {
+                // A collapsed parametric boundary has zero geometric measure
+                // and is not a sew seam. Several cone patches may reference
+                // the same pole edge; manifold incidence is carried by their
+                // nondegenerate radial edges and the shared pole vertex.
+                if model.edges[coedge.edge].degenerate {
+                    continue;
+                }
                 let (shell_reversed, shell_id) = face_usage[face_a].unwrap_or((false, 0));
                 edge_uses.entry(coedge.edge).or_default().push((
                     face_a,

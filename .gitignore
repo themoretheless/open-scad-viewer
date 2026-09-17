@@ -14,6 +14,9 @@ coverage
 tools/manifold-bench/tmp/
 tools/manifold-bench/historical/
 
+# Qualification runs are append-only downloadable CI artifacts, never source.
+output/qualification/
+
 # Machine-local rbench experiment trees (HTML/JSON reports).
 .rbench/
 

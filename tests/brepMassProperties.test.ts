@@ -57,10 +57,13 @@ it('publishes finite certified mass and tessellation enclosures',()=>{
   const certified=tessellateCertifiedNurbsBrep(body,.02)
   expect(certified.surfaceToMeshDeviationMm).toBeLessThanOrEqual(.02)
   expect(certified.meshToSurfaceDeviationMm).toBe(certified.surfaceToMeshDeviationMm)
-  expect(certified.coverage).toEqual({sharedEdgeIdentity:true,orientation:true,noTJunctions:true})
+  expect(certified.coverage).toMatchObject({sharedEdgeIdentity:true,orientation:true,noTJunctions:true,noCracks:true})
   expect(certified.tessellation.report.closed).toBe(true)
  }
- expect(()=>analyzeCertifiedNurbsBrep(createBrepSphere(2))).toThrow(/finite|admits|outside/i)
+ const sphere=analyzeCertifiedNurbsBrep(createBrepSphere(2))
+ expect(sphere.capability).toBe('certified-mass-properties/2')
+ expect(sphere.volumeMm3.lower).toBeLessThanOrEqual(32*Math.PI/3)
+ expect(sphere.volumeMm3.upper).toBeGreaterThanOrEqual(32*Math.PI/3)
  expect(()=>tessellateCertifiedNurbsBrep(createBrepCylinder(100,10),1e-12)).toThrow(/32|budget/i)
 })
 

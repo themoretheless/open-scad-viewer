@@ -609,6 +609,90 @@ pub(crate) fn rounded_cuboid_vertical_edges(
     extrude_curve_loop(&curves, min[2], max[2], source.tolerance_mm, &[source])
 }
 
+/// Exact constant-radius rounding of selected vertices of a strictly convex
+/// CCW profile, extruded along local +Z. Every round is one positive-weight
+/// rational circular arc and therefore authors a cylindrical, not faceted,
+/// side face.
+pub(crate) fn rounded_convex_prism_edges(
+    source: &Model,
+    profile: &[[f64; 2]],
+    rounded: &[bool],
+    radius: f64,
+    z0: f64,
+    z1: f64,
+) -> Result<Model> {
+    if profile.len() < 3
+        || profile.len() != rounded.len()
+        || !(radius.is_finite() && radius > 0. && z1 > z0)
+    {
+        return Err(refuse("Rounded convex prism parameters are invalid"));
+    }
+    let n = profile.len();
+    let mut entry = profile.to_vec();
+    let mut exit = profile.to_vec();
+    let mut arcs = vec![None; n];
+    let mut tangent = vec![0.; n];
+    for i in 0..n {
+        if !rounded[i] {
+            continue;
+        }
+        let p = profile[i];
+        let prev = profile[(i + n - 1) % n];
+        let next = profile[(i + 1) % n];
+        let unit = |d: [f64; 2]| {
+            let length = d[0].hypot(d[1]);
+            (length > 1e-12).then_some([d[0] / length, d[1] / length])
+        };
+        let u = unit([prev[0] - p[0], prev[1] - p[1]])
+            .ok_or_else(|| refuse("Rounded profile has a collapsed incoming edge"))?;
+        let v = unit([next[0] - p[0], next[1] - p[1]])
+            .ok_or_else(|| refuse("Rounded profile has a collapsed outgoing edge"))?;
+        let theta = (u[0] * v[0] + u[1] * v[1]).clamp(-1., 1.).acos();
+        let turn = std::f64::consts::PI - theta;
+        if !(theta > 1e-6 && turn > 1e-6) {
+            return Err(refuse("Rounded profile requires strict convexity"));
+        }
+        let distance = radius / (theta * 0.5).tan();
+        let bisector_length = (u[0] + v[0]).hypot(u[1] + v[1]);
+        let center_distance = radius / (theta * 0.5).sin();
+        let center = [
+            p[0] + center_distance * (u[0] + v[0]) / bisector_length,
+            p[1] + center_distance * (u[1] + v[1]) / bisector_length,
+        ];
+        entry[i] = [p[0] + distance * u[0], p[1] + distance * u[1]];
+        exit[i] = [p[0] + distance * v[0], p[1] + distance * v[1]];
+        tangent[i] = distance;
+        let start = (entry[i][1] - center[1]).atan2(entry[i][0] - center[0]);
+        arcs[i] = Some(CircleArc {
+            center,
+            radius,
+            start,
+            sweep: turn,
+        });
+    }
+    for i in 0..n {
+        let length = (profile[(i + 1) % n][0] - profile[i][0])
+            .hypot(profile[(i + 1) % n][1] - profile[i][1]);
+        if tangent[i] + tangent[(i + 1) % n] >= length - source.tolerance_mm * 8. {
+            return Err(refuse(
+                "Fillet radius collides on an adjacent profile edge",
+            ));
+        }
+    }
+    let mut curves = Vec::with_capacity(n * 2);
+    for i in 0..n {
+        if let Some(arc) = arcs[i] {
+            curves.push(arc_curve(arc, z0));
+        }
+        let next = (i + 1) % n;
+        curves.push(crate::line(
+            vec![exit[i][0], exit[i][1], z0],
+            vec![entry[next][0], entry[next][1], z0],
+        ));
+    }
+    extrude_curve_loop(&curves, z0, z1, source.tolerance_mm, &[source])
+}
+
 /// Parallel cylinder wall imprint from Complete generator-line events.
 ///
 /// After a Complete imprint plan is certified, author the retained circular

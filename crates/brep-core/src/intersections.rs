@@ -35,7 +35,7 @@ pub use sphere_sphere::{SpherePatchCircle, SphereSphereComponent, intersect_sphe
 pub use sphere_torus::{SphereTorusComponent, intersect_sphere_torus};
 pub use torus_torus::{TorusTorusComponent, intersect_torus_torus};
 
-pub(crate) use plane_cone::recognize_cone;
+pub(crate) use plane_cone::{CanonicalCone, recognize_cone};
 pub(crate) use plane_torus::recognize_torus;
 pub(crate) use sphere_cylinder::recognize_cylinder;
 pub(crate) use sphere_sphere::recognize as recognize_sphere;

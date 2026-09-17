@@ -19,7 +19,7 @@ pub struct TessellationCertificate {
     pub notes: Vec<&'static str>,
 }
 
-pub const CERTIFIED_TESSELLATION_CAPABILITY: &str = "certified-brep-tessellation/1";
+pub const CERTIFIED_TESSELLATION_CAPABILITY: &str = "certified-brep-tessellation/2";
 
 pub struct CertifiedTessellation {
     pub tessellation: Tessellation,
@@ -31,6 +31,8 @@ pub struct CertifiedTessellation {
     pub evidence: brep_core::predicate_evidence::ComposedEvidence,
     pub change_set: brep_core::ChangeSet,
     pub naming_complete: bool,
+    pub max_triangles: usize,
+    pub subdivisions_per_patch: usize,
 }
 impl value_codec::Serialize for CertifiedTessellation {
     fn to_value(&self) -> value_codec::Value {
@@ -43,7 +45,11 @@ impl value_codec::Serialize for CertifiedTessellation {
             "coverage":{
                 "sharedEdgeIdentity":true,
                 "orientation":true,
-                "noTJunctions":true
+                "normalConsistency":true,
+                "noTJunctions":true,
+                "noCracks":true,
+                "poleDegeneracyHandled":true,
+                "periodicSeamsHandled":true
             },
             "audit":{
                 "ok":self.audit.ok,
@@ -52,7 +58,12 @@ impl value_codec::Serialize for CertifiedTessellation {
             },
             "evidenceClaimCount":self.evidence.claims.len(),
             "changeSet":self.change_set,
-            "namingComplete":self.naming_complete
+            "namingComplete":self.naming_complete,
+            "resourceProof":{
+                "triangleBudget":self.max_triangles,
+                "subdivisionsPerPatch":self.subdivisions_per_patch,
+                "adaptiveSelection":true
+            }
         })
     }
 }
@@ -482,18 +493,22 @@ pub fn nurbs(model: &brep_core::Model, segments: usize) -> Result<Tessellation> 
         .faces
         .iter()
         .any(|f| f.surface.degree_u > 1 || f.surface.degree_v > 1);
-    finish_indexed(
+    let mut result = finish_indexed(
         registry.mesh,
         face_ids,
         Some(topology_face_ids),
         !model.shells.is_empty() && model.shells.iter().all(|s| s.closed),
         freeform_faces,
-    )
+    )?;
+    if let Some(certificate) = &mut result.certificate {
+        certificate.shell_count = model.shells.len();
+    }
+    Ok(result)
 }
 
-/// Certified finite tessellation for planar exact-profile solids and exact
-/// rational cylinders. Shared-edge registry incidence supplies the no-T-junction
-/// and orientation proof; curved deviation uses the analytic circular sagitta.
+/// Certified finite tessellation for independently recognized analytic shells.
+/// Shared-edge registry incidence supplies no-crack/orientation proof; curved
+/// deviation is selected from closed-form sphere/cone/torus/cylinder bounds.
 pub fn certified_nurbs(
     model: &brep_core::Model,
     chord_tolerance_mm: f64,
@@ -510,36 +525,19 @@ pub fn certified_nurbs(
     }
     model.validate()?;
     let audit = brep_core::solid_audit::audit_solid(model)?;
-    let all_planar = model
-        .faces
-        .iter()
-        .all(|face| is_affine_plane(&face.surface, model.tolerance_mm));
-    let (segments, deviation) = if all_planar {
-        (1, 0.)
-    } else if model.bodies.len() == 1 && model.bodies[0].inner_shells.is_empty() {
-        let radius = brep_core::analysis::certified_cylinder_radius(model)?.ok_or_else(|| {
-            nurbs_core::Error::new(
-                "BREP_CERTIFIED_TESSELLATION_REFUSED",
-                "Certified tessellation admits planar exact-profile solids and exact cylinders",
-            )
-        })?;
-        let selected = (1..=32).find(|segments| {
-            radius * (1. - (std::f64::consts::FRAC_PI_4 / *segments as f64).cos())
-                <= chord_tolerance_mm
-        }).ok_or_else(|| nurbs_core::Error::new(
+    // Classify before adaptive search so unsupported geometry is a typed
+    // refusal, distinct from a proved family exhausting the finite budget.
+    brep_core::analysis::certified_tessellation_deviation(model, 1)?;
+    let segments = (1..=32)
+        .find(|segments| {
+            brep_core::analysis::certified_tessellation_deviation(model, *segments)
+                .is_ok_and(|deviation| deviation <= chord_tolerance_mm)
+        })
+        .ok_or_else(|| nurbs_core::Error::new(
             "BREP_TESSELLATION_BUDGET_EXHAUSTED",
-            "Requested two-sided deviation needs more than 32 circular subdivisions per quadrant",
+            "Requested two-sided analytic deviation needs more than 32 subdivisions per patch, or a shell is outside the certified finite matrix",
         ))?;
-        (
-            selected,
-            radius * (1. - (std::f64::consts::FRAC_PI_4 / selected as f64).cos()),
-        )
-    } else {
-        return Err(nurbs_core::Error::new(
-            "BREP_CERTIFIED_TESSELLATION_REFUSED",
-            "Certified rational cavity tessellation awaits an exact shell recognizer",
-        ));
-    };
+    let deviation = brep_core::analysis::certified_tessellation_deviation(model, segments)?;
     let tessellation = nurbs(model, segments)?;
     if tessellation.built.mesh.indices.len() / 3 > max_triangles {
         return Err(nurbs_core::Error::new(
@@ -590,6 +588,8 @@ pub fn certified_nurbs(
         evidence,
         change_set: model.1.change_set.clone(),
         naming_complete,
+        max_triangles,
+        subdivisions_per_patch: segments,
         tessellation,
     })
 }

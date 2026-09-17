@@ -6,7 +6,7 @@ use crate::predicate_evidence::{ComposedEvidence, PredicateEvidence, compose_pre
 use crate::solid_audit::{SolidAuditCertificate, audit_solid};
 use cad_predicates::ToleranceSpecIdentity;
 
-pub const CERTIFIED_MASS_PROPERTIES_CAPABILITY: &str = "certified-mass-properties/1";
+pub const CERTIFIED_MASS_PROPERTIES_CAPABILITY: &str = "certified-mass-properties/2";
 
 /// Radius witness for the finite exact-cylinder tessellation cell. Kept here so
 /// bridge code cannot depend on private analytic recognizer internals.
@@ -14,10 +14,93 @@ pub fn certified_cylinder_radius(model: &Model) -> Result<Option<f64>> {
     Ok(crate::intersections::recognize_cylinder(model)?.map(|cylinder| cylinder.radius))
 }
 
+fn affine_surface(surface: &Surface, tolerance: f64) -> bool {
+    surface.degree_u == 1
+        && surface.degree_v == 1
+        && surface.control_points.len() == 2
+        && surface.control_points.iter().all(|row| row.len() == 2)
+        && surface.weights.iter().flatten().all(|weight| {
+            (*weight - surface.weights[0][0]).abs() <= 16. * f64::EPSILON
+        })
+        && (0..3).all(|axis| {
+            (surface.control_points[0][0][axis] + surface.control_points[1][1][axis]
+                - surface.control_points[0][1][axis]
+                - surface.control_points[1][0][axis])
+                .abs()
+                <= tolerance
+        })
+}
+
+/// Closed-form upper deviation bound for the finite certified tessellation
+/// successor. Every owned shell is independently recognized; unsupported
+/// rational/freeform shells refuse instead of inheriting a sampled estimate.
+pub fn certified_tessellation_deviation(model: &Model, segments: usize) -> Result<f64> {
+    if !(1..=32).contains(&segments) {
+        return Err(Error::new(
+            "BREP_TESSELLATION_BUDGET_EXHAUSTED",
+            "Certified analytic tessellation needs 1..32 subdivisions per patch",
+        ));
+    }
+    let mut maximum: f64 = 0.;
+    for body in &model.bodies {
+        for (&shell, cavity) in std::iter::once((&body.outer_shell, false))
+            .chain(body.inner_shells.iter().map(|shell| (shell, true)))
+        {
+            let component =
+                crate::solid_audit::isolated_outward_shell(model, shell, cavity)?;
+            let n = segments as f64;
+            let bound = if component
+                .faces
+                .iter()
+                .all(|face| affine_surface(&face.surface, model.tolerance_mm))
+            {
+                0.
+            } else if let Some(sphere) = crate::intersections::recognize_sphere(&component)? {
+                // Stereographic quarter patches: radial angle is at most
+                // 2 atan(1/n), azimuth at most pi/(2n). Their spherical-cap
+                // sum bounds every patch triangle and both directed distances.
+                let angle = (2. * (1. / n).atan()).hypot(std::f64::consts::FRAC_PI_2 / n);
+                sphere.radius * (1. - angle.cos())
+            } else if let Some(cone) = crate::intersections::recognize_cone(&component)? {
+                cone.r_bottom.max(cone.r_top)
+                    * (1. - (std::f64::consts::FRAC_PI_4 / n).cos())
+            } else if let Some(torus) = crate::intersections::recognize_torus(&component)? {
+                let sagitta = 1. - (std::f64::consts::FRAC_PI_4 / n).cos();
+                (torus.major + 2. * torus.minor) * sagitta
+            } else if let Some(cylinder) =
+                crate::intersections::recognize_cylinder(&component)?
+            {
+                cylinder.radius * (1. - (std::f64::consts::FRAC_PI_4 / n).cos())
+            } else {
+                return Err(Error::new(
+                    "BREP_CERTIFIED_TESSELLATION_REFUSED",
+                    "Certified tessellation /2 admits planar, sphere, cone/frustum, torus, and cylinder shells; generic rational/freeform deviation is not certified",
+                ));
+            };
+            maximum = maximum.max(next_up(bound));
+        }
+    }
+    Ok(maximum)
+}
+
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct CertifiedInterval {
     pub lower: f64,
     pub upper: f64,
+}
+fn next_up(value: f64) -> f64 {
+    if value == f64::INFINITY {
+        value
+    } else if value == 0. {
+        f64::from_bits(1)
+    } else if value > 0. {
+        f64::from_bits(value.to_bits() + 1)
+    } else {
+        f64::from_bits(value.to_bits() - 1)
+    }
+}
+fn next_down(value: f64) -> f64 {
+    -next_up(-value)
 }
 #[derive(Clone, Debug)]
 pub struct CertifiedMassProperties {
@@ -31,6 +114,9 @@ pub struct CertifiedMassProperties {
     pub audit: SolidAuditCertificate,
     pub change_set: ChangeSet,
     pub naming_complete: bool,
+    pub component_count: usize,
+    pub cavity_count: usize,
+    pub proof: &'static str,
 }
 impl value_codec::Serialize for CertifiedInterval {
     fn to_value(&self) -> value_codec::Value {
@@ -55,7 +141,13 @@ impl value_codec::Serialize for CertifiedMassProperties {
                 "selfIntersectionPairsChecked":self.audit.self_intersection_pairs_checked
             },
             "changeSet":self.change_set,
-            "namingComplete":self.naming_complete
+            "namingComplete":self.naming_complete,
+            "composition":{
+                "componentCount":self.component_count,
+                "cavityCount":self.cavity_count,
+                "signedShellComposition":true
+            },
+            "proof":self.proof
         })
     }
 }
@@ -63,15 +155,23 @@ impl value_codec::Serialize for CertifiedMassProperties {
 fn enclosure(value: f64, scale: f64) -> CertifiedInterval {
     let error = (value.abs() + scale.abs() + 1.) * f64::EPSILON * 128.;
     CertifiedInterval {
-        lower: value - error,
-        upper: value + error,
+        lower: next_down(value - error),
+        upper: next_up(value + error),
     }
 }
 fn certified_tensor(value: [[f64; 3]; 3], scale: f64) -> [[CertifiedInterval; 3]; 3] {
     value.map(|row| row.map(|entry| enclosure(entry, scale)))
 }
 fn axis_aligned_box(model: &Model) -> Option<([f64; 3], [f64; 3])> {
-    if model.vertices.len() != 8 || model.faces.len() != 6 || model.bodies.len() != 1 {
+    if model.vertices.len() != 8
+        || model.faces.len() != 6
+        || model.bodies.len() != 1
+        || model
+            .faces
+            .iter()
+            .any(|face| !affine_surface(&face.surface, model.tolerance_mm))
+        || model.edges.iter().any(|edge| edge.curve.degree != 1)
+    {
         return None;
     }
     let mut min = [f64::INFINITY; 3];
@@ -104,6 +204,145 @@ fn axis_inertia(mass: f64, radius2: f64, height: f64, axis: [f64; 3]) -> [[f64; 
             (if i == j { transverse } else { 0. }) + (axial - transverse) * axis[i] * axis[j]
         })
     })
+}
+fn revolution_inertia(
+    axial: f64,
+    transverse: f64,
+    axis: [f64; 3],
+) -> [[f64; 3]; 3] {
+    std::array::from_fn(|i| {
+        std::array::from_fn(|j| {
+            (if i == j { transverse } else { 0. }) + (axial - transverse) * axis[i] * axis[j]
+        })
+    })
+}
+
+#[derive(Clone, Copy)]
+struct ExactProperties {
+    area: f64,
+    volume: f64,
+    centroid: [f64; 3],
+    inertia: [[f64; 3]; 3],
+    scale: f64,
+}
+
+fn polynomial_integral(coefficients: &[f64], height: f64) -> f64 {
+    coefficients
+        .iter()
+        .enumerate()
+        .map(|(power, coefficient)| {
+            coefficient * height.powi(power as i32 + 1) / (power + 1) as f64
+        })
+        .sum()
+}
+
+fn conical_properties(cone: crate::intersections::CanonicalCone) -> ExactProperties {
+    let (a, b, h) = (cone.r_bottom, (cone.r_top - cone.r_bottom) / cone.height, cone.height);
+    let r2 = [a * a, 2. * a * b, b * b];
+    let r4 = [
+        a.powi(4),
+        4. * a.powi(3) * b,
+        6. * a * a * b * b,
+        4. * a * b.powi(3),
+        b.powi(4),
+    ];
+    let volume = std::f64::consts::PI * polynomial_integral(&r2, h);
+    let first = std::f64::consts::PI
+        * polynomial_integral(&[0., r2[0], r2[1], r2[2]], h);
+    let z = first / volume;
+    let axial = std::f64::consts::PI * polynomial_integral(&r4, h) / 2.;
+    let shifted_r2 = [
+        z * z * r2[0],
+        z * z * r2[1] - 2. * z * r2[0],
+        z * z * r2[2] - 2. * z * r2[1] + r2[0],
+        -2. * z * r2[2] + r2[1],
+        r2[2],
+    ];
+    let transverse = std::f64::consts::PI
+        * (polynomial_integral(&r4, h) / 4. + polynomial_integral(&shifted_r2, h));
+    let centroid = std::array::from_fn(|i| cone.bottom[i] + z * cone.axis[i]);
+    ExactProperties {
+        area: std::f64::consts::PI
+            * ((a + cone.r_top) * h.hypot(cone.r_top - a) + a * a + cone.r_top.powi(2)),
+        volume,
+        centroid,
+        inertia: revolution_inertia(axial, transverse, cone.axis),
+        scale: h.max(a).max(cone.r_top),
+    }
+}
+
+fn exact_component_properties(model: &Model) -> Result<ExactProperties> {
+    if let Some((min, max)) = axis_aligned_box(model) {
+        let d = std::array::from_fn::<_, 3, _>(|i| max[i] - min[i]);
+        let volume = d[0] * d[1] * d[2];
+        return Ok(ExactProperties {
+            area: 2. * (d[0] * d[1] + d[1] * d[2] + d[2] * d[0]),
+            volume,
+            centroid: std::array::from_fn(|i| (min[i] + max[i]) / 2.),
+            inertia: [
+                [volume * (d[1] * d[1] + d[2] * d[2]) / 12., 0., 0.],
+                [0., volume * (d[0] * d[0] + d[2] * d[2]) / 12., 0.],
+                [0., 0., volume * (d[0] * d[0] + d[1] * d[1]) / 12.],
+            ],
+            scale: d.into_iter().fold(0., f64::max),
+        });
+    }
+    if let Some((outer, inner, height, centroid)) = canonical_tube(model) {
+        let volume = std::f64::consts::PI * (outer * outer - inner * inner) * height;
+        return Ok(ExactProperties {
+            area: 2. * std::f64::consts::PI
+                * ((outer + inner) * height + outer * outer - inner * inner),
+            volume,
+            centroid,
+            inertia: axis_inertia(volume, outer * outer + inner * inner, height, [0., 0., 1.]),
+            scale: height.max(outer),
+        });
+    }
+    if let Some((area, volume, centroid, inertia, scale)) = exact_vertical_prism(model) {
+        return Ok(ExactProperties { area, volume, centroid, inertia, scale });
+    }
+    if let Some(sphere) = crate::intersections::recognize_sphere(model)? {
+        let volume = 4. * std::f64::consts::PI * sphere.radius.powi(3) / 3.;
+        let diagonal = 2. * volume * sphere.radius.powi(2) / 5.;
+        return Ok(ExactProperties {
+            area: 4. * std::f64::consts::PI * sphere.radius.powi(2),
+            volume,
+            centroid: sphere.center,
+            inertia: [[diagonal, 0., 0.], [0., diagonal, 0.], [0., 0., diagonal]],
+            scale: sphere.radius,
+        });
+    }
+    if let Some(cone) = crate::intersections::recognize_cone(model)? {
+        return Ok(conical_properties(cone));
+    }
+    if let Some(torus) = crate::intersections::recognize_torus(model)? {
+        let volume = 2. * std::f64::consts::PI.powi(2) * torus.major * torus.minor.powi(2);
+        let axial = volume * (torus.major.powi(2) + 0.75 * torus.minor.powi(2));
+        let transverse =
+            volume * (0.5 * torus.major.powi(2) + 0.625 * torus.minor.powi(2));
+        return Ok(ExactProperties {
+            area: 4. * std::f64::consts::PI.powi(2) * torus.major * torus.minor,
+            volume,
+            centroid: torus.center,
+            inertia: revolution_inertia(axial, transverse, torus.axis),
+            scale: torus.major + torus.minor,
+        });
+    }
+    if let Some(cylinder) = crate::intersections::recognize_cylinder(model)? {
+        let height = 2. * cylinder.half_height;
+        let volume = std::f64::consts::PI * cylinder.radius.powi(2) * height;
+        return Ok(ExactProperties {
+            area: 2. * std::f64::consts::PI * cylinder.radius * (height + cylinder.radius),
+            volume,
+            centroid: cylinder.center,
+            inertia: axis_inertia(volume, cylinder.radius.powi(2), height, cylinder.axis),
+            scale: height.max(cylinder.radius),
+        });
+    }
+    Err(Error::new(
+        "BREP_CERTIFIED_MASS_REFUSED",
+        "Certified mass /2 admits recognized analytic shells and exact planar prisms; generic rational/freeform quadrature remains non-certified",
+    ))
 }
 fn canonical_tube(model: &Model) -> Option<(f64, f64, f64, [f64; 3])> {
     if model.bodies.len() != 1
@@ -148,13 +387,11 @@ fn canonical_tube(model: &Model) -> Option<(f64, f64, f64, [f64; 3])> {
 }
 
 fn exact_vertical_prism(model: &Model) -> Option<(f64, f64, [f64; 3], [[f64; 3]; 3], f64)> {
-    if model.faces.iter().any(|f| {
-        !f.surface
-            .weights
-            .iter()
-            .flatten()
-            .all(|w| *w == f.surface.weights[0][0])
-    }) || model.edges.iter().any(|edge| edge.curve.degree != 1)
+    if model
+        .faces
+        .iter()
+        .any(|face| !affine_surface(&face.surface, model.tolerance_mm))
+        || model.edges.iter().any(|edge| edge.curve.degree != 1)
     {
         return None;
     }
@@ -249,61 +486,40 @@ pub fn certified_mass_properties(model: &Model) -> Result<CertifiedMassPropertie
     model.validate()?;
     let audit = audit_solid(model)?;
     let context = model.tolerance_context()?;
-    let (area, volume, centroid, inertia, scale) = if let Some((min, max)) = axis_aligned_box(model)
-    {
-        let d = std::array::from_fn::<_, 3, _>(|i| max[i] - min[i]);
-        let volume = d[0] * d[1] * d[2];
-        let area = 2. * (d[0] * d[1] + d[1] * d[2] + d[2] * d[0]);
-        let centroid = std::array::from_fn(|i| (min[i] + max[i]) / 2.);
-        let inertia = [
-            [volume * (d[1] * d[1] + d[2] * d[2]) / 12., 0., 0.],
-            [0., volume * (d[0] * d[0] + d[2] * d[2]) / 12., 0.],
-            [0., 0., volume * (d[0] * d[0] + d[1] * d[1]) / 12.],
-        ];
-        (
-            area,
-            volume,
-            centroid,
-            inertia,
-            d.into_iter().fold(0., f64::max),
-        )
-    } else if let Some((outer, inner, height, centroid)) = canonical_tube(model) {
-        let radius2 = outer * outer + inner * inner;
-        let volume = std::f64::consts::PI * (outer * outer - inner * inner) * height;
-        let area =
-            2. * std::f64::consts::PI * ((outer + inner) * height + outer * outer - inner * inner);
-        (
-            area,
-            volume,
-            centroid,
-            axis_inertia(volume, radius2, height, [0., 0., 1.]),
-            height.max(outer),
-        )
-    } else if let Some(prism) = exact_vertical_prism(model) {
-        prism
-    } else if model.bodies.len() == 1 && model.bodies[0].inner_shells.is_empty() {
-        let cylinder = crate::intersections::recognize_cylinder(model)?.ok_or_else(|| {
-            Error::new(
-                "BREP_CERTIFIED_MASS_REFUSED",
-                "Certified mass admits boxes, exact profiles, cylinders, and canonical tubes",
-            )
-        })?;
-        let height = 2. * cylinder.half_height;
-        let volume = std::f64::consts::PI * cylinder.radius.powi(2) * height;
-        let area = 2. * std::f64::consts::PI * cylinder.radius * (height + cylinder.radius);
-        (
-            area,
-            volume,
-            cylinder.center,
-            axis_inertia(volume, cylinder.radius.powi(2), height, cylinder.axis),
-            height.max(cylinder.radius),
-        )
-    } else {
-        return Err(Error::new(
-            "BREP_CERTIFIED_MASS_REFUSED",
-            "Shape is outside the finite exact mass-property matrix; estimates remain non-certified",
-        ));
-    };
+    let mut parts = Vec::new();
+    for body in &model.bodies {
+        parts.push((exact_component_properties(&crate::solid_audit::isolated_outward_shell(
+            model, body.outer_shell, false,
+        )?)?, 1.));
+        for &shell in &body.inner_shells {
+            parts.push((exact_component_properties(&crate::solid_audit::isolated_outward_shell(
+                model, shell, true,
+            )?)?, -1.));
+        }
+    }
+    if parts.is_empty() {
+        return Err(Error::new("BREP_CERTIFIED_MASS_REFUSED", "Certified mass requires at least one body"));
+    }
+    let area = parts.iter().map(|(p, _)| p.area).sum::<f64>();
+    let volume = parts.iter().map(|(p, sign)| sign * p.volume).sum::<f64>();
+    if volume <= 0. {
+        return Err(Error::new("BREP_CERTIFIED_MASS_REFUSED", "Signed analytic shell composition has non-positive volume"));
+    }
+    let centroid = std::array::from_fn(|i| {
+        parts.iter().map(|(p, sign)| sign * p.volume * p.centroid[i]).sum::<f64>() / volume
+    });
+    let mut inertia = [[0.; 3]; 3];
+    for (part, sign) in &parts {
+        let d = std::array::from_fn::<_, 3, _>(|i| part.centroid[i] - centroid[i]);
+        let d2 = d.iter().map(|x| x * x).sum::<f64>();
+        for i in 0..3 {
+            for j in 0..3 {
+                inertia[i][j] += sign * (part.inertia[i][j]
+                    + part.volume * ((if i == j { d2 } else { 0. }) - d[i] * d[j]));
+            }
+        }
+    }
+    let scale = parts.iter().map(|(p, _)| p.scale).fold(0., f64::max);
     let naming_complete = model.persistent_naming_complete()
         && model.1.faces.len() == model.faces.len()
         && model.1.edges.len() == model.edges.len();
@@ -335,6 +551,9 @@ pub fn certified_mass_properties(model: &Model) -> Result<CertifiedMassPropertie
         audit,
         change_set: model.1.change_set.clone(),
         naming_complete,
+        component_count: parts.len(),
+        cavity_count: model.bodies.iter().map(|body| body.inner_shells.len()).sum(),
+        proof: "closed_form_analytic_with_outward_rounded_binary64_enclosures",
     })
 }
 
@@ -1045,11 +1264,38 @@ mod tests {
             certified_mass_properties(&mutated).unwrap_err().code,
             "BREP_CERTIFIED_MASS_REFUSED"
         );
-        assert_eq!(
-            certified_mass_properties(&sphere(2.).unwrap())
-                .unwrap_err()
-                .code,
-            "BREP_CERTIFIED_MASS_REFUSED"
-        );
+        let sphere = certified_mass_properties(&sphere(2.).unwrap()).unwrap();
+        contains(sphere.volume_mm3, 32. * std::f64::consts::PI / 3.);
+    }
+
+    #[test]
+    fn certified_successor_encloses_cone_frustum_torus_and_spherical_cavity() {
+        let cone = certified_mass_properties(&frustum(3., 0., 4.).unwrap()).expect("cone");
+        contains(cone.volume_mm3, 12. * std::f64::consts::PI);
+        contains(cone.surface_area_mm2, 24. * std::f64::consts::PI);
+        contains(cone.centroid[2], 1.);
+        contains(cone.inertia_mm5[2][2], 32.4 * std::f64::consts::PI);
+        contains(cone.inertia_mm5[0][0], 23.4 * std::f64::consts::PI);
+
+        let frustum =
+            certified_mass_properties(&frustum(3., 1., 4.).unwrap()).expect("frustum");
+        contains(frustum.volume_mm3, 52. * std::f64::consts::PI / 3.);
+
+        let torus = certified_mass_properties(&torus(5., 2.).unwrap()).expect("torus");
+        contains(torus.volume_mm3, 40. * std::f64::consts::PI.powi(2));
+        contains(torus.surface_area_mm2, 40. * std::f64::consts::PI.powi(2));
+        contains(torus.inertia_mm5[2][2], 1120. * std::f64::consts::PI.powi(2));
+        contains(torus.inertia_mm5[0][0], 600. * std::f64::consts::PI.powi(2));
+
+        let cavity = crate::imprint_pipeline::cavity(
+            &sphere(3.).unwrap(),
+            &sphere(1.).unwrap(),
+            1e-7,
+        )
+        .unwrap();
+        let hollow = certified_mass_properties(&cavity).expect("cavity");
+        contains(hollow.volume_mm3, 104. * std::f64::consts::PI / 3.);
+        assert_eq!(hollow.component_count, 2);
+        assert_eq!(hollow.cavity_count, 1);
     }
 }

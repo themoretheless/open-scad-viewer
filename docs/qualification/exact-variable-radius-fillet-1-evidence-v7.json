@@ -1,0 +1,23 @@
+{
+  "$schema": "./brep-capability-evidence-v7.schema.json",
+  "schema": "open-scad-viewer/brep-capability-evidence",
+  "schemaVersion": 7,
+  "evidenceId": "exact-variable-radius-fillet-1-evidence-v7",
+  "capability": "exact-variable-radius-fillet/1",
+  "maturity": "Unavailable",
+  "state": "not-executed",
+  "plan": "docs/qualification/plans/exact-variable-radius-fillet-1.json",
+  "runs": [],
+  "oracles": [],
+  "unresolvedRows": [
+    {
+      "id": "BL7-VARIABLE-RADIUS-LAW-AND-TRANSITIONS",
+      "status": "open",
+      "resolution": "Implement and independently prove the excluded exact geometry and topology ownership before creating a successor release."
+    }
+  ],
+  "attestation": {
+    "fabricatedRuns": false,
+    "note": "No execution or geometry completion is claimed."
+  }
+}

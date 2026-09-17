@@ -1799,6 +1799,50 @@ pub fn shell_planar(model: &Model, openings: &[usize], thickness: f64) -> Result
     out.validate()?;
     Ok(out)
 }
+
+/// Exact outward shell of a convex planar body. The expanded support-plane
+/// envelope is cut by the original body; selected opening supports extend that
+/// cutter through the expanded envelope. No sampled or mesh offset is used.
+pub fn shell_planar_outward(model: &Model, openings: &[usize], thickness: f64) -> Result<Model> {
+    if !thickness.is_finite() || !(1e-5..=1e6).contains(&thickness) {
+        return Err(Error::new(
+            "BREP_INVALID_SIZE",
+            "Shell thickness must be 0.00001..1000000 mm",
+        ));
+    }
+    let source_planes = convex_planes(model)?;
+    if source_planes.len() > 64 {
+        return Err(Error::new(
+            "BREP_RESOURCE_LIMIT",
+            "Planar shell supports at most 64 support planes",
+        ));
+    }
+    let faces = &model.shells[model.bodies[0].outer_shell].faces;
+    if openings.iter().any(|f| !faces.iter().any(|u| u.face == *f)) {
+        return Err(Error::new(
+            "BREP_INVALID_SELECTION",
+            "Unknown shell opening face",
+        ));
+    }
+    let mut envelope_planes = source_planes.clone();
+    for plane in &mut envelope_planes {
+        plane.offset += thickness;
+    }
+    let envelope = model_from_planes(&envelope_planes, model.tolerance_mm)?;
+    let mut cutter_planes = source_planes;
+    for (plane, face) in cutter_planes.iter_mut().zip(faces) {
+        if openings.contains(&face.face) {
+            plane.offset += thickness * 2.;
+        }
+    }
+    // This also proves that all selected extensions retain a bounded cutter
+    // and that no support-plane collision consumed the authored envelope.
+    let cutter = model_from_planes(&cutter_planes, model.tolerance_mm)?;
+    let mut out = boolean(&envelope, &cutter, "difference")?;
+    out.inherit_topology_ids(&[model]);
+    out.validate()?;
+    Ok(out)
+}
 /// Two closed pieces from an exact support-plane cut of a convex planar body.
 pub fn split_planar(model: &Model, normal: [f64; 3], offset: f64) -> Result<[Model; 2]> {
     if normal.iter().any(|v| !v.is_finite()) || !offset.is_finite() {

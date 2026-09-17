@@ -40,11 +40,25 @@ describe('B-rep G8 release gate', () => {
       'brep-capability-qualification-plan-v3.schema.json',
       'brep-capability-qualification-plan-v4.schema.json',
       'brep-capability-qualification-plan-v5.schema.json',
+      'brep-capability-qualification-plan-v6.schema.json',
+      'brep-capability-qualification-plan-v7.schema.json',
+      'brep-capability-qualification-plan-v8.schema.json',
+      'brep-capability-qualification-plan-v9.schema.json',
+      'brep-capability-qualification-plan-v10.schema.json',
+      'brep-capability-qualification-plan-v11.schema.json',
+      'brep-capability-qualification-plan-v12.schema.json',
       'g8-full-matrix-index-v1.json',
       'g8-full-matrix-index-v2.json',
       'g8-full-matrix-index-v3.json',
       'g8-full-matrix-index-v4.json',
       'g8-full-matrix-index-v5.json',
+      'g8-full-matrix-index-v6.json',
+      'g8-full-matrix-index-v7.json',
+      'g8-full-matrix-index-v8.json',
+      'g8-full-matrix-index-v9.json',
+      'g8-full-matrix-index-v10.json',
+      'g8-full-matrix-index-v11.json',
+      'g8-full-matrix-index-v12.json',
       'analytic-boolean-1-g8.json',
       'analytic-chamfer-1-g8.json',
       'iges-interchange-1-g8.json',
@@ -53,7 +67,21 @@ describe('B-rep G8 release gate', () => {
     for (const name of readdirSync(plansDir).filter(name => name.endsWith('.json'))) {
       if (excluded.has(name)) continue
       const plan = readJson(`docs/qualification/plans/${name}`)
-      const expectedSchema = plan.schemaVersion === 5
+      const expectedSchema = plan.schemaVersion === 12
+        ? './brep-capability-qualification-plan-v12.schema.json'
+        : plan.schemaVersion === 11
+        ? './brep-capability-qualification-plan-v11.schema.json'
+        : plan.schemaVersion === 10
+        ? './brep-capability-qualification-plan-v10.schema.json'
+        : plan.schemaVersion === 9
+        ? './brep-capability-qualification-plan-v9.schema.json'
+        : plan.schemaVersion === 8
+        ? './brep-capability-qualification-plan-v8.schema.json'
+        : plan.schemaVersion === 7
+        ? './brep-capability-qualification-plan-v7.schema.json'
+        : plan.schemaVersion === 6
+        ? './brep-capability-qualification-plan-v6.schema.json'
+        : plan.schemaVersion === 5
         ? './brep-capability-qualification-plan-v5.schema.json'
         : plan.schemaVersion === 4
         ? './brep-capability-qualification-plan-v4.schema.json'

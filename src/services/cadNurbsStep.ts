@@ -126,3 +126,25 @@ export function importDirectStepV3(text: string): DirectStepV3Import {
   }
   return callGeometryRust('brep_nurbs_import_step_v3', { text })
 }
+
+export interface DirectStepV4Certificate extends Omit<AnalyticStepCertificate,'capability'> {
+  capability:'step-interchange/4'
+}
+export interface DirectStepV4Export extends Omit<DirectStepV3Export,'certificate'> {
+  certificate:DirectStepV4Certificate
+}
+export interface DirectStepV4Import extends Omit<DirectStepV3Import,'certificate'> {
+  certificate:DirectStepV4Certificate
+}
+
+/** Direct `/4` successor export; retains `/3` graph identity and finite limits. */
+export const exportDirectStepV4=(model:NurbsBrep):DirectStepV4Export=>
+  callGeometryRust('brep_nurbs_export_step_v4',{model})
+
+/** `/4` additionally admits exact endpoint point selectors and finite rational analytic carriers. */
+export function importDirectStepV4(text:string):DirectStepV4Import {
+  if (/\b(FACETED_BREP|TESSELLATED_|CSG_SOLID|OPEN_SHELL|EXTERNALLY_DEFINED_)\b/i.test(text)) {
+    throw new Error('step-interchange/4 refuses faceted, tessellated, CSG, open-shell, and external-reference roots')
+  }
+  return callGeometryRust('brep_nurbs_import_step_v4',{text})
+}

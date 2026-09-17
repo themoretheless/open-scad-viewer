@@ -310,6 +310,23 @@ fn direct_step_v3_bridge_preserves_exact_graph() {
 }
 
 #[test]
+fn direct_iges_v2_bridge_preserves_exact_graph() {
+    let model = brep_core::freeform_cuboid_solid([0., 0., 0.], [2., 3., 4.]).unwrap();
+    let exported = dispatch(json!({
+        "op":"brep_nurbs_export_iges_v2",
+        "model":encode(model).unwrap(),
+    })).unwrap();
+    assert_eq!(exported["certificate"]["capability"].as_str(),Some("iges-interchange/2"));
+    assert_eq!(exported["identity"]["preserved"],true);
+    assert!(exported["text"].as_str().unwrap().lines().all(|line|line.len()==80));
+    let imported=dispatch(json!({"op":"brep_nurbs_import_iges_v2","text":exported["text"]})).unwrap();
+    assert_eq!(imported["identity"]["preserved"],true);
+    assert_eq!(imported["model"]["vertices"].as_array().unwrap().len(),8);
+    assert_eq!(imported["model"]["edges"].as_array().unwrap().len(),12);
+    assert_eq!(imported["model"]["faces"].as_array().unwrap().len(),6);
+}
+
+#[test]
 fn audited_feature_successors_cross_the_bridge_with_certificates() {
     let model = brep_core::cuboid([0., 0., 0.], [10., 8., 6.]).unwrap();
     let edges = model
@@ -326,8 +343,8 @@ fn audited_feature_successors_cross_the_bridge_with_certificates() {
         .collect::<Vec<_>>();
     let fillet = dispatch(json!({
         "op":"brep_nurbs_audited_multi_edge_fillet",
-        "model":encode(model).unwrap(),
-        "edges":edges,
+        "model":encode(model.clone()).unwrap(),
+        "edges":edges.clone(),
         "radius":0.5
     }))
     .unwrap();
@@ -338,6 +355,44 @@ fn audited_feature_successors_cross_the_bridge_with_certificates() {
     assert_eq!(fillet["certificate"]["complete"], true);
     assert_eq!(fillet["audit"]["ok"], true);
     assert_eq!(fillet["namingComplete"], true);
+    let exact_fillet = dispatch(json!({
+        "op":"brep_nurbs_exact_convex_prism_fillet",
+        "model":encode(model.clone()).unwrap(),
+        "edges":edges,
+        "radius":0.4
+    }))
+    .unwrap();
+    assert_eq!(
+        exact_fillet["certificate"]["capability"].as_str(),
+        Some("exact-convex-prism-edge-fillet/1")
+    );
+    assert_eq!(exact_fillet["audit"]["ok"], true);
+    let connected = model.edges[0]
+        .vertices
+        .iter()
+        .find_map(|vertex| {
+            (1..model.edges.len()).find(|edge| model.edges[*edge].vertices.contains(vertex))
+        })
+        .unwrap();
+    let chamfer = dispatch(json!({
+        "op":"brep_nurbs_exact_convex_chamfer",
+        "model":encode(model.clone()).unwrap(),
+        "edges":[0,connected],
+        "distance":0.5
+    }))
+    .unwrap();
+    assert_eq!(
+        chamfer["certificate"]["capability"].as_str(),
+        Some("exact-convex-straight-edge-chamfer/1")
+    );
+    assert_eq!(chamfer["audit"]["ok"], true);
+    assert!(dispatch(json!({
+        "op":"brep_nurbs_exact_variable_radius_fillet",
+        "model":encode(model).unwrap(),
+        "edges":[0],
+        "radii":[[0.4,0.6]]
+    }))
+    .is_err());
 
     let sweep = dispatch(json!({
         "op":"brep_nurbs_audited_parallel_frame_sweep",
@@ -361,6 +416,80 @@ fn audited_feature_successors_cross_the_bridge_with_certificates() {
         }))
         .is_err()
     );
+}
+
+#[test]
+fn exact_analytic_shell_crosses_bridge_with_audited_certificate() {
+    let model = brep_core::cuboid([0., 0., 0.], [10., 8., 6.]).unwrap();
+    let before = value_codec::to_string(&model).unwrap();
+    let result = dispatch(json!({
+        "op":"brep_nurbs_exact_analytic_shell",
+        "model":encode(model.clone()).unwrap(),
+        "openings":[0,1],
+        "thickness":0.5,
+        "direction":"inward"
+    }))
+    .unwrap();
+    assert_eq!(
+        result["certificate"]["capability"].as_str(),
+        Some("analytic-shell/2")
+    );
+    assert_eq!(result["certificate"]["complete"], true);
+    assert_eq!(result["audit"]["ok"], true);
+    assert_eq!(result["namingComplete"], true);
+    assert!(result["changeSet"]["changes"].as_array().unwrap().len() > 0);
+    assert_eq!(before, value_codec::to_string(&model).unwrap());
+    assert!(dispatch(json!({
+        "op":"brep_nurbs_exact_analytic_shell",
+        "model":encode(model).unwrap(),
+        "openings":[0,2],
+        "thickness":0.5,
+        "direction":"inward"
+    }))
+    .is_err());
+}
+
+#[test]
+fn exact_loft_and_bent_rmf_successors_cross_bridge_atomically() {
+    let loft = dispatch(json!({
+        "op":"brep_nurbs_audited_multi_section_loft_v2",
+        "sections":[
+            [[-1.,-1.,0.],[1.,-1.,0.],[1.,1.,0.],[-1.,1.,0.]],
+            [[-1.5,-1.,2.],[1.5,-1.,2.],[1.5,1.,2.],[-1.5,1.,2.]],
+            [[-1.,-0.75,5.],[1.,-0.75,5.],[1.,0.75,5.],[-1.,0.75,5.]]
+        ]
+    }))
+    .unwrap();
+    assert_eq!(
+        loft["certificate"]["capability"].as_str(),
+        Some("analytic-solid-loft/2")
+    );
+    assert_eq!(loft["audit"]["ok"], true);
+    assert_eq!(loft["model"]["faces"].as_array().unwrap().len(), 10);
+
+    let sweep = dispatch(json!({
+        "op":"brep_nurbs_audited_bent_rmf_sweep_v2",
+        "profile":[[-0.2,-0.2],[0.2,-0.2],[0.2,0.2],[-0.2,0.2]],
+        "path":[[0.,0.,0.],[0.,0.,3.],[0.,1.,6.],[0.,3.,9.]],
+        "twistRadians":[0.,0.1,0.2,0.3],
+        "scales":[1.,1.1,1.2,1.25]
+    }))
+    .unwrap();
+    assert_eq!(
+        sweep["certificate"]["capability"].as_str(),
+        Some("exact-parallel-frame-sweep/2")
+    );
+    assert_eq!(sweep["audit"]["ok"], true);
+    assert_eq!(sweep["namingComplete"], true);
+    assert_eq!(sweep["model"]["faces"].as_array().unwrap().len(), 14);
+    assert!(dispatch(json!({
+        "op":"brep_nurbs_audited_bent_rmf_sweep_v2",
+        "profile":[[-0.2,-0.2],[0.2,-0.2],[0.2,0.2],[-0.2,0.2]],
+        "path":[[0.,0.,0.],[0.,0.,3.],[0.,0.,0.]],
+        "twistRadians":[0.,0.,0.],
+        "scales":[1.,1.,1.]
+    }))
+    .is_err());
 }
 
 #[test]
@@ -649,7 +778,7 @@ fn general_multispan_boolean_bridge_is_strict_and_audited() {
         let cutter = encode(brep_core::cuboid([0.25, -1., -1.], [0.75, 2., 3.]).unwrap())
             .unwrap();
         for (operation, components, faces) in
-            [("intersection", 1, 6), ("difference", 2, 12)]
+            [("intersection", 1, 6), ("difference", 2, 12), ("union", 3, 18)]
         {
             let result = dispatch(json!({
                 "op":"brep_nurbs_boolean_general",
@@ -660,13 +789,15 @@ fn general_multispan_boolean_bridge_is_strict_and_audited() {
             .unwrap();
             assert_eq!(
                 result["certificate"]["capability"].as_str(),
-                Some("nurbs-boolean-bezier-le3/7")
+                Some("nurbs-boolean-bezier-le3/8")
             );
             assert_eq!(
                 result["certificate"]["authority"].as_str(),
                 Some("author-general-nurbs-boolean")
             );
             assert_eq!(result["certificate"]["status"].as_str(), Some("Complete"));
+            assert_eq!(result["certificate"]["operandOrder"].as_str(), Some("source-tool"));
+            assert_eq!(result["certificate"]["exactRegionMembership"].as_bool(), Some(true));
             assert_eq!(result["certificate"]["branchGraph"]["components"].as_u64(), Some(2));
             assert_eq!(result["certificate"]["branchGraph"]["complete"].as_bool(), Some(true));
             assert_eq!(result["certificate"]["uv"]["complete"].as_bool(), Some(true));
@@ -675,13 +806,15 @@ fn general_multispan_boolean_bridge_is_strict_and_audited() {
             assert_eq!(result["certificate"]["audit"]["ok"].as_bool(), Some(true));
             assert_eq!(result["certificate"]["noFallback"].as_bool(), Some(true));
         }
-        assert!(dispatch(json!({
+        let reversed = dispatch(json!({
             "op":"brep_nurbs_boolean_general",
-            "a":graph,
-            "b":cutter,
-            "operation":"union"
+            "a":cutter,
+            "b":graph,
+            "operation":"difference"
         }))
-        .is_err());
+        .unwrap();
+        assert_eq!(reversed["certificate"]["operandOrder"].as_str(), Some("tool-source"));
+        assert_eq!(reversed["certificate"]["partitionCells"].as_u64(), Some(4));
         assert!(dispatch(json!({
             "op":"brep_nurbs_boolean_general",
             "a":graph,

@@ -130,6 +130,109 @@ fn require_exact_fields(value: &Value, expected: &[&str], label: &str) -> Result
     Ok(())
 }
 
+fn close_topology_role(value: &str) -> Result<brep_core::BodyRole> {
+    Ok(match value {
+        "wire" => brep_core::BodyRole::Wire,
+        "face" => brep_core::BodyRole::Face,
+        "sheet-shell" => brep_core::BodyRole::SheetShell,
+        "open-shell" => brep_core::BodyRole::OpenShell,
+        "solid" => brep_core::BodyRole::Solid,
+        "compound" => brep_core::BodyRole::Compound,
+        _ => return Err(input("Unknown close-topology body role")),
+    })
+}
+
+fn close_topology_audit_value(value: &Value) -> Result<Value> {
+    require_exact_fields(
+        value,
+        &["op", "parts", "sharedFaces", "radialRings", "vertexFans"],
+        "close topology request",
+    )?;
+    let parts_value = value["parts"].as_array().ok_or_else(|| input("parts must be an array"))?;
+    let mut parts = Vec::with_capacity(parts_value.len());
+    for part in parts_value {
+        require_exact_fields(part, &["role", "model"], "close topology part")?;
+        parts.push(brep_core::ComplexPart {
+            role: close_topology_role(part["role"].as_str().ok_or_else(|| input("part role must be a string"))?)?,
+            model: value_codec::from_value(part["model"].clone()).map_err(|e| input(e.to_string()))?,
+        });
+    }
+    let mut shared_faces = Vec::new();
+    for relation in value["sharedFaces"].as_array().ok_or_else(|| input("sharedFaces must be an array"))? {
+        let uses = relation.as_array().ok_or_else(|| input("shared face must be an array"))?;
+        shared_faces.push(brep_core::SharedFace {
+            uses: uses.iter().map(|use_| {
+                require_exact_fields(use_, &["part", "face", "reversed"], "shared face use")?;
+                Ok(brep_core::FaceRef {
+                    part: field(use_, "part")?,
+                    face: field(use_, "face")?,
+                    reversed: field(use_, "reversed")?,
+                })
+            }).collect::<Result<Vec<_>>>()?,
+        });
+    }
+    let mut radial_rings = Vec::new();
+    for relation in value["radialRings"].as_array().ok_or_else(|| input("radialRings must be an array"))? {
+        let uses = relation.as_array().ok_or_else(|| input("radial ring must be an array"))?;
+        radial_rings.push(brep_core::EdgeRadialRing {
+            uses: uses.iter().map(|use_| {
+                require_exact_fields(use_, &["part", "face", "edge", "reversed"], "radial use")?;
+                Ok(brep_core::EdgeUseRef {
+                    part: field(use_, "part")?,
+                    face: field(use_, "face")?,
+                    edge: field(use_, "edge")?,
+                    reversed: field(use_, "reversed")?,
+                })
+            }).collect::<Result<Vec<_>>>()?,
+        });
+    }
+    let mut vertex_fans = Vec::new();
+    for fan in value["vertexFans"].as_array().ok_or_else(|| input("vertexFans must be an array"))? {
+        require_exact_fields(fan, &["part", "vertex", "closed", "uses"], "vertex fan")?;
+        let uses = fan["uses"].as_array().ok_or_else(|| input("fan uses must be an array"))?;
+        vertex_fans.push(brep_core::VertexFan {
+            vertex: (field(fan, "part")?, field(fan, "vertex")?),
+            closed: field(fan, "closed")?,
+            uses: uses.iter().map(|use_| {
+                require_exact_fields(use_, &["part", "face", "vertex"], "vertex fan use")?;
+                Ok(brep_core::VertexUseRef {
+                    part: field(use_, "part")?,
+                    face: field(use_, "face")?,
+                    vertex: field(use_, "vertex")?,
+                })
+            }).collect::<Result<Vec<_>>>()?,
+        });
+    }
+    let audited = brep_core::MixedDimensionalBrep::new(
+        parts, shared_faces, radial_rings, vertex_fans, vec![],
+    )?.audit()?;
+    let certificate = audited.certificate();
+    let boundary_faces = audited.boundary_faces();
+    Ok(json!({
+        "certificate": {
+            "capability": certificate.capability,
+            "complete": certificate.complete,
+            "partCount": certificate.part_count,
+            "solidCellCount": certificate.solid_cell_count,
+            "sheetCount": certificate.sheet_count,
+            "openShellCount": certificate.open_shell_count,
+            "sharedFaceCount": certificate.shared_face_count,
+            "nonManifoldEdgeCount": certificate.non_manifold_edge_count,
+            "vertexFanCount": certificate.vertex_fan_count,
+            "boundaryFaceCount": certificate.boundary_face_count,
+            "maxRadialValence": certificate.max_radial_valence,
+            "namingComplete": certificate.naming_complete,
+            "notes": certificate.notes
+        },
+        "boundaryFaces": boundary_faces.iter().map(|face| json!({
+            "part":face.part,"face":face.face,"reversed":face.reversed
+        })).collect::<Vec<_>>(),
+        "decomposition": audited.manifold_decomposition().into_iter().map(|part| json!({
+            "role":part.role.as_str(),"model":part.model
+        })).collect::<Vec<_>>()
+    }))
+}
+
 fn response(result: Result<Value>) -> String {
     match result {
         Ok(value) => json!({"ok":true,"value":value}),
@@ -226,6 +329,10 @@ fn general_nurbs_boolean_value(
             "authority": certificate.authority,
             "status": certificate.status,
             "operation": certificate.operation,
+            "operandOrder": certificate.operand_order,
+            "exactRegionMembership": certificate.exact_region_membership,
+            "partitionCells": certificate.partition_cells,
+            "cavityCount": certificate.cavity_count,
             "branchGraph": {
                 "components": certificate.branch_graph.certificate.component_count,
                 "fragments": certificate.branch_graph.certificate.fragment_count,
@@ -635,6 +742,22 @@ pub fn dispatch(v: Value) -> Result<Value> {
             &field::<Vec<usize>>(&v, "openings")?,
             field(&v, "thickness")?,
         )?),
+        "brep_nurbs_exact_analytic_shell" => {
+            require_exact_fields(
+                &v,
+                &["op", "model", "openings", "thickness", "direction"],
+                "exact analytic shell request",
+            )?;
+            encode(brep_core::exact_analytic_shell(
+                &field(&v, "model")?,
+                &field::<Vec<usize>>(&v, "openings")?,
+                field(&v, "thickness")?,
+                v.get("direction")
+                    .and_then(Value::as_str)
+                    .ok_or_else(|| input("Invalid shell direction"))?,
+            )?)
+        }
+        "brep_nurbs_close_topology_v1" => close_topology_audit_value(&v),
         "brep_nurbs_split" => encode(brep_core::operations::split_planar(
             &field(&v, "model")?,
             field(&v, "normal")?,
@@ -852,12 +975,55 @@ pub fn dispatch(v: Value) -> Result<Value> {
                 field(&v, "radius")?,
             )?)
         }
+        "brep_nurbs_exact_convex_chamfer" => {
+            require_exact_fields(&v, &["op", "model", "edges", "distance"], "exact chamfer request")?;
+            encode(brep_core::exact_convex_chamfer(
+                &field(&v, "model")?,
+                &field::<Vec<usize>>(&v, "edges")?,
+                field(&v, "distance")?,
+            )?)
+        }
+        "brep_nurbs_exact_convex_prism_fillet" => {
+            require_exact_fields(&v, &["op", "model", "edges", "radius"], "exact fillet request")?;
+            encode(brep_core::exact_convex_prism_fillet(
+                &field(&v, "model")?,
+                &field::<Vec<usize>>(&v, "edges")?,
+                field(&v, "radius")?,
+            )?)
+        }
+        "brep_nurbs_exact_variable_radius_fillet" => {
+            require_exact_fields(&v, &["op", "model", "edges", "radii"], "variable-radius fillet request")?;
+            encode(brep_core::exact_variable_radius_fillet(
+                &field(&v, "model")?,
+                &field::<Vec<usize>>(&v, "edges")?,
+                &field::<Vec<[f64; 2]>>(&v, "radii")?,
+            )?)
+        }
         "brep_nurbs_audited_parallel_frame_sweep" => {
             let frame_law: String = field(&v, "frameLaw")?;
             encode(brep_core::audited_parallel_frame_sweep(
                 &field::<Vec<[f64; 2]>>(&v, "profile")?,
                 &field::<Vec<[f64; 3]>>(&v, "path")?,
                 &frame_law,
+            )?)
+        }
+        "brep_nurbs_audited_multi_section_loft_v2" => {
+            require_exact_fields(&v, &["op", "sections"], "multi-section loft request")?;
+            encode(brep_core::audited_multi_section_loft(
+                &field::<Vec<Vec<[f64; 3]>>>(&v, "sections")?,
+            )?)
+        }
+        "brep_nurbs_audited_bent_rmf_sweep_v2" => {
+            require_exact_fields(
+                &v,
+                &["op", "profile", "path", "twistRadians", "scales"],
+                "bent RMF sweep request",
+            )?;
+            encode(brep_core::audited_bent_rmf_sweep(
+                &field::<Vec<[f64; 2]>>(&v, "profile")?,
+                &field::<Vec<[f64; 3]>>(&v, "path")?,
+                &field::<Vec<f64>>(&v, "twistRadians")?,
+                &field::<Vec<f64>>(&v, "scales")?,
             )?)
         }
         "brep_nurbs_inspect" => encode(field::<brep_core::Model>(&v, "model")?.validate()?),
@@ -960,6 +1126,54 @@ pub fn dispatch(v: Value) -> Result<Value> {
                 "ignoredEntities": report.ignored_entities,
                 "instanceCount": report.instance_count,
                 "reachableCount": report.reachable_count,
+            }))
+        }
+        "brep_nurbs_export_step_v4" => {
+            let (text, cert, report) = brep_core::export_step_v4(&field(&v, "model")?)?;
+            encode(json!({
+                "text":text,"certificate":{"capability":cert.capability,"complete":cert.complete,"notes":cert.notes},
+                "identity":{"preserved":report.identity.preserved,"source":report.identity.source,
+                    "preservedCount":report.identity.preserved_count,"createdCount":report.identity.created_count,"lostCount":report.identity.lost_count},
+                "ignoredEntities":report.ignored_entities,"instanceCount":report.instance_count,"reachableCount":report.reachable_count,
+            }))
+        }
+        "brep_nurbs_import_step_v4" => {
+            let (model, cert, report) = brep_core::import_step_v4(&field::<String>(&v, "text")?)?;
+            encode(json!({
+                "model":model,"certificate":{"capability":cert.capability,"complete":cert.complete,"notes":cert.notes},
+                "identity":{"preserved":report.identity.preserved,"source":report.identity.source,
+                    "preservedCount":report.identity.preserved_count,"createdCount":report.identity.created_count,"lostCount":report.identity.lost_count},
+                "ignoredEntities":report.ignored_entities,"instanceCount":report.instance_count,"reachableCount":report.reachable_count,
+            }))
+        }
+        "brep_nurbs_export_iges_v2" => {
+            let (text, cert, report) = brep_core::export_iges_v2(&field(&v, "model")?)?;
+            encode(json!({
+                "text": text,
+                "certificate": {"capability":cert.capability,"complete":cert.complete,"notes":cert.notes},
+                "identity": {
+                    "preserved":report.identity.preserved,"source":report.identity.source,
+                    "preservedCount":report.identity.preserved_count,
+                    "createdCount":report.identity.created_count,"lostCount":report.identity.lost_count,
+                },
+                "ignoredMetadata":report.ignored_metadata,
+                "entityCount":report.entity_count,
+                "topologyCount":report.topology_count,
+            }))
+        }
+        "brep_nurbs_import_iges_v2" => {
+            let (model, cert, report) = brep_core::import_iges_v2(&field::<String>(&v, "text")?)?;
+            encode(json!({
+                "model":model,
+                "certificate": {"capability":cert.capability,"complete":cert.complete,"notes":cert.notes},
+                "identity": {
+                    "preserved":report.identity.preserved,"source":report.identity.source,
+                    "preservedCount":report.identity.preserved_count,
+                    "createdCount":report.identity.created_count,"lostCount":report.identity.lost_count,
+                },
+                "ignoredMetadata":report.ignored_metadata,
+                "entityCount":report.entity_count,
+                "topologyCount":report.topology_count,
             }))
         }
         "brep_nurbs_export_step_freeform" => {

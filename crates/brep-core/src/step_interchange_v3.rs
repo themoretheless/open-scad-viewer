@@ -11,6 +11,7 @@ use nurbs_core::{Error, Result, curve::Curve, surface::Surface};
 use std::collections::{BTreeMap, BTreeSet};
 
 pub const STEP_INTERCHANGE_V3_CAPABILITY: &str = "step-interchange/3";
+pub const STEP_INTERCHANGE_V4_CAPABILITY: &str = "step-interchange/4";
 const MAX_BYTES: usize = 16 * 1024 * 1024;
 const MAX_INSTANCES: usize = 65_536;
 const MAX_PARSE_DEPTH: usize = 32;
@@ -360,13 +361,23 @@ fn conic_curve(origin: &[f64], x: &[f64], y: &[f64], a: f64, b: f64) -> Result<C
     let c = Curve { degree: 2, knots: vec![0.,0.,0.,1.,1.,2.,2.,3.,3.,4.,4.,4.], control_points: cps, weights, periodic: false };
     c.validate()?; Ok(c)
 }
-fn trim_parameters(v: &Value) -> Result<f64> {
+fn trim_parameters(entities: &BTreeMap<usize, Entity>, v: &Value, base: &Curve, dim: usize, scale: f64) -> Result<f64> {
     let items = list(v, "TRIMMED_CURVE trim selector")?;
     if items.len() != 1 { return Err(refuse("TRIMMED_CURVE admits one parameter selector per end")); }
     match &items[0] {
         Value::Number(_) | Value::Integer(_) => number(&items[0], "TRIMMED_CURVE parameter"),
         Value::Call(name, args) if name == "PARAMETER_VALUE" && args.len() == 1 => number(&args[0], "PARAMETER_VALUE"),
-        _ => Err(refuse("TRIMMED_CURVE point selectors are typed-refused; use parameter selectors")),
+        Value::Ref(id) => {
+            let target = point(entities, *id, dim, scale)?;
+            let domain = base.domain();
+            let start = base.evaluate(domain[0])?.point;
+            let end = base.evaluate(domain[1])?.point;
+            let distance = |p: &[f64]| p.iter().zip(&target).map(|(a,b)|(a-b)*(a-b)).sum::<f64>().sqrt();
+            if distance(&start) <= 1e-7 { Ok(domain[0]) }
+            else if distance(&end) <= 1e-7 { Ok(domain[1]) }
+            else { Err(refuse("TRIMMED_CURVE point selector is not an exact basis endpoint")) }
+        }
+        _ => Err(refuse("TRIMMED_CURVE selector is outside the parameter/exact-endpoint subset")),
     }
 }
 fn trim_conic(base: &Curve, start: f64, end: f64, sense: bool) -> Result<Curve> {
@@ -413,7 +424,7 @@ fn curve(entities: &BTreeMap<usize, Entity>, id: usize, dim: usize, scale: f64) 
         let basis_id=one_ref(&a[1],"TRIMMED_CURVE basis")?;
         let (basis_ty,_)=call(entities,basis_id)?;
         let base=curve(entities,basis_id,dim,scale)?;
-        let start=trim_parameters(&a[2])?; let end=trim_parameters(&a[3])?; let sense=boolean(&a[4],"TRIMMED_CURVE sense")?;
+        let start=trim_parameters(entities,&a[2],&base,dim,scale)?; let end=trim_parameters(entities,&a[3],&base,dim,scale)?; let sense=boolean(&a[4],"TRIMMED_CURVE sense")?;
         if matches!(basis_ty,"CIRCLE"|"ELLIPSE") { return trim_conic(&base,start,end,sense); }
         if basis_ty=="LINE" {
             let p0=base.evaluate(start)?.point; let p1=base.evaluate(end)?.point;
@@ -433,6 +444,49 @@ fn curve(entities: &BTreeMap<usize, Entity>, id: usize, dim: usize, scale: f64) 
     c.validate()?;
     Ok(c)
 }
+fn analytic_surface(entities:&BTreeMap<usize,Entity>,ty:&str,a:&[Value],scale:f64)->Result<Surface>{
+    let expected=if ty=="TOROIDAL_SURFACE"{4}else if ty=="CONICAL_SURFACE"{4}else{3};
+    if a.len()!=expected{return Err(refuse(format!("{ty} argument count mismatch")))}
+    let (o,x,y)=axis2(entities,one_ref(&a[1],"analytic surface placement")?,3,scale)?;
+    let z=[x[1]*y[2]-x[2]*y[1],x[2]*y[0]-x[0]*y[2],x[0]*y[1]-x[1]*y[0]];
+    let radius=number(&a[2],"analytic surface radius")?*scale;
+    if !(radius>0.){return Err(refuse("Analytic surface radius must be positive"))}
+    let angles=[0.,std::f64::consts::FRAC_PI_4,std::f64::consts::FRAC_PI_2,3.*std::f64::consts::FRAC_PI_4,std::f64::consts::PI,5.*std::f64::consts::FRAC_PI_4,3.*std::f64::consts::FRAC_PI_2,7.*std::f64::consts::FRAC_PI_4,std::f64::consts::TAU];
+    let wu=[1.,std::f64::consts::FRAC_1_SQRT_2,1.,std::f64::consts::FRAC_1_SQRT_2,1.,std::f64::consts::FRAC_1_SQRT_2,1.,std::f64::consts::FRAC_1_SQRT_2,1.];
+    let ku=vec![0.,0.,0.,std::f64::consts::FRAC_PI_2,std::f64::consts::FRAC_PI_2,std::f64::consts::PI,std::f64::consts::PI,3.*std::f64::consts::FRAC_PI_2,3.*std::f64::consts::FRAC_PI_2,std::f64::consts::TAU,std::f64::consts::TAU,std::f64::consts::TAU];
+    let (v_angles,wv,kv)=if matches!(ty,"SPHERICAL_SURFACE"){
+        (vec![-std::f64::consts::FRAC_PI_2,-std::f64::consts::FRAC_PI_4,0.,std::f64::consts::FRAC_PI_4,std::f64::consts::FRAC_PI_2],
+         vec![1.,std::f64::consts::FRAC_1_SQRT_2,1.,std::f64::consts::FRAC_1_SQRT_2,1.],
+         vec![-std::f64::consts::FRAC_PI_2,-std::f64::consts::FRAC_PI_2,-std::f64::consts::FRAC_PI_2,0.,0.,std::f64::consts::FRAC_PI_2,std::f64::consts::FRAC_PI_2,std::f64::consts::FRAC_PI_2])
+    }else if ty=="TOROIDAL_SURFACE"{(angles.to_vec(),wu.to_vec(),ku.clone())}
+    else{(vec![-1e6,1e6],vec![1.,1.],vec![-1e6,-1e6,1e6,1e6])};
+    let minor=if ty=="TOROIDAL_SURFACE"{let r=number(&a[3],"torus minor radius")?*scale;if !(r>0.&&r<radius){return Err(refuse("TOROIDAL_SURFACE requires 0 < minor < major"))}r}else{radius};
+    let semi=if ty=="CONICAL_SURFACE"{number(&a[3],"cone semi-angle")?}else{0.};
+    let mut cps=Vec::new();let mut weights=Vec::new();
+    for (iu,&angle) in angles.iter().enumerate(){
+        let radial=[x[0]*angle.cos()+y[0]*angle.sin(),x[1]*angle.cos()+y[1]*angle.sin(),x[2]*angle.cos()+y[2]*angle.sin()];
+        let mut row=Vec::new();let mut wr=Vec::new();
+        for (iv,&v) in v_angles.iter().enumerate(){
+            let shoulder_scale=if iu%2==1{1./wu[iu]}else{1.};
+            let meridian_scale=if iv%2==1&&matches!(ty,"SPHERICAL_SURFACE"|"TOROIDAL_SURFACE"){1./wv[iv]}else{1.};
+            let (radial_distance,height)=match ty{
+                "CYLINDRICAL_SURFACE"=>(radius*shoulder_scale,v),
+                "CONICAL_SURFACE"=>((radius+v*semi.tan())*shoulder_scale,v),
+                "SPHERICAL_SURFACE"=>(radius*v.cos()*shoulder_scale*meridian_scale,radius*v.sin()*meridian_scale),
+                "TOROIDAL_SURFACE"=>((radius+minor*v.cos()*meridian_scale)*shoulder_scale,minor*v.sin()*meridian_scale),
+                _=>return Err(refuse("Unsupported analytic surface")),
+            };
+            row.push((0..3).map(|j|o[j]+radial_distance*radial[j]+height*z[j]).collect());
+            wr.push(wu[iu]*wv[iv]);
+        }
+        cps.push(row);weights.push(wr);
+    }
+    // Full rational circles are clamped at an explicit seam. Periodic lifts
+    // remain carried by CoedgeTrim; marking this net periodic would require
+    // repeating `degree` control rows and would change the STEP angle domain.
+    let s=Surface{degree_u:2,degree_v:if v_angles.len()>2{2}else{1},knots_u:ku,knots_v:kv,control_points:cps,weights,periodic_u:false,periodic_v:false};
+    s.validate()?;Ok(s)
+}
 fn surface(entities: &BTreeMap<usize, Entity>, id: usize, scale: f64) -> Result<Surface> {
     let (ty, a) = call(entities, id)?;
     if ty == "PLANE" {
@@ -445,7 +499,7 @@ fn surface(entities: &BTreeMap<usize, Entity>, id: usize, scale: f64) -> Result<
         s.validate()?; return Ok(s);
     }
     if matches!(ty,"CYLINDRICAL_SURFACE"|"CONICAL_SURFACE"|"SPHERICAL_SURFACE"|"TOROIDAL_SURFACE") {
-        return Err(refuse(format!("{ty} periodic/angular parameterization cannot map one-to-one to the current finite rational surface topology")));
+        return Err(refuse(format!("{ty} periodic/angular parameterization is available only in step-interchange/4")));
     }
     if ty != "B_SPLINE_SURFACE_WITH_KNOTS" {
         return Err(refuse(format!("Reachable surface {ty} is typed-refused by the direct native subset")));
@@ -468,6 +522,12 @@ fn surface(entities: &BTreeMap<usize, Entity>, id: usize, scale: f64) -> Result<
     };
     s.validate()?;
     Ok(s)
+}
+fn surface_v4(entities:&BTreeMap<usize,Entity>,id:usize,scale:f64)->Result<Surface>{
+    let (ty,a)=call(entities,id)?;
+    if matches!(ty,"CYLINDRICAL_SURFACE"|"CONICAL_SURFACE"|"SPHERICAL_SURFACE"|"TOROIDAL_SURFACE"){
+        analytic_surface(entities,ty,a,scale)
+    }else{surface(entities,id,scale)}
 }
 
 fn si_scale(args: &[Value]) -> Result<f64> {
@@ -608,7 +668,7 @@ fn verify_correspondence(c3: &Curve, pc: &Curve, s: &Surface, reversed: bool) ->
 }
 
 struct DirectBuilder<'a> {
-    entities: &'a BTreeMap<usize, Entity>, scale: f64,
+    entities: &'a BTreeMap<usize, Entity>, scale: f64, analytic_surfaces: bool,
     vertices: Vec<Vertex>, vertex_map: BTreeMap<usize, usize>,
     edges: Vec<Edge>, edge_map: BTreeMap<usize, usize>,
     loops: Vec<Loop>, loop_entity: Vec<usize>, faces: Vec<Face>, face_entity: Vec<usize>,
@@ -663,7 +723,7 @@ impl<'a> DirectBuilder<'a> {
         let (ty, a) = call(self.entities, id)?;
         if ty != "ADVANCED_FACE" || a.len() != 4 { return Err(refuse("CLOSED_SHELL member is not ADVANCED_FACE")); }
         let sid = one_ref(&a[2], "ADVANCED_FACE surface")?;
-        let surface = surface(self.entities, sid, self.scale)?;
+        let surface = if self.analytic_surfaces { surface_v4(self.entities,sid,self.scale)? } else { surface(self.entities,sid,self.scale)? };
         let mut outer = None; let mut holes = Vec::new();
         for bound in list(&a[1], "ADVANCED_FACE bounds")? {
             let bid = one_ref(bound, "ADVANCED_FACE bound")?;
@@ -807,7 +867,7 @@ const UNREACHABLE_ALLOWLIST: &[&str] = &[
     "REPRESENTATION_RELATIONSHIP_WITH_TRANSFORMATION",
 ];
 
-pub fn import_step_v3(text: &str) -> Result<(Model, FeatureCertificate, StepV3Report)> {
+fn import_step_direct(text: &str, analytic_surfaces: bool, capability: &'static str) -> Result<(Model, FeatureCertificate, StepV3Report)> {
     if !text.to_ascii_uppercase().contains("ISO-10303-21") { return Err(refuse("Not an ISO-10303-21 exchange")); }
     let entities = parse(text)?;
     let representations:Vec<_>=entities.iter().filter_map(|(id,_)|call(&entities,*id).ok().and_then(|(ty,_)|(ty=="ADVANCED_BREP_SHAPE_REPRESENTATION").then_some(*id))).collect();
@@ -843,7 +903,7 @@ pub fn import_step_v3(text: &str) -> Result<(Model, FeatureCertificate, StepV3Re
     let scale = length_scale(&entities,&linked)?;
     let placement=reachable_transform(&entities,&linked,scale)?;
     let mut builder = DirectBuilder {
-        entities: &entities, scale, vertices: vec![], vertex_map: BTreeMap::new(),
+        entities: &entities, scale, analytic_surfaces, vertices: vec![], vertex_map: BTreeMap::new(),
         edges: vec![], edge_map: BTreeMap::new(), loops: vec![], loop_entity: vec![],
         faces: vec![], face_entity: vec![], shells: vec![], shell_entity: vec![],
         bodies: vec![], body_entity: vec![],
@@ -860,9 +920,17 @@ pub fn import_step_v3(text: &str) -> Result<(Model, FeatureCertificate, StepV3Re
     let identity = restore_identity(&entities, &identity_map, &mut model)?;
     model.validate()?;
     Ok((model, FeatureCertificate {
-        capability: STEP_INTERCHANGE_V3_CAPABILITY, complete: true,
+        capability, complete: true,
         notes: vec!["direct_part21_topology", "line_circle_ellipse_trimmed_curve", "plane_and_rational_multispan_bspline_surface", "periodic_analytic_surfaces_typed_refused_parameterization", "shared_topology_senses_holes", "multi_body_multi_cavity", "si_and_positive_conversion_units", "reachable_rigid_placements_only", "independent_curve_pcurve_check", "bounded_reachable_graph"],
     }, StepV3Report { identity, ignored_entities: ignored.into_iter().collect(), instance_count: entities.len(), reachable_count: linked.len() }))
+}
+
+pub fn import_step_v3(text: &str) -> Result<(Model, FeatureCertificate, StepV3Report)> {
+    import_step_direct(text, false, STEP_INTERCHANGE_V3_CAPABILITY)
+}
+
+pub fn import_step_v4(text: &str) -> Result<(Model, FeatureCertificate, StepV3Report)> {
+    import_step_direct(text, true, STEP_INTERCHANGE_V4_CAPABILITY)
 }
 
 struct Writer { next: usize, rows: BTreeMap<usize, String> }
@@ -991,6 +1059,13 @@ pub fn export_step_v3(model: &Model) -> Result<(String, FeatureCertificate, Step
     let count = model.vertices.len()+model.edges.len()+model.loops.len()+model.faces.len()+model.shells.len()+model.bodies.len();
     Ok((text, FeatureCertificate { capability: STEP_INTERCHANGE_V3_CAPABILITY, complete: true, notes: vec!["direct_model_export", "no_constructor_recognition", "canonical_local_graph_identity"] },
         StepV3Report { identity: crate::step_interchange::StepIdentityReport { preserved: true, source: "internal-metadata", preserved_count: count, created_count: 0, lost_count: 0 }, ignored_entities: vec![], instance_count: parsed.len(), reachable_count: parsed.len() }))
+}
+
+pub fn export_step_v4(model: &Model) -> Result<(String, FeatureCertificate, StepV3Report)> {
+    let (text, mut certificate, report) = export_step_v3(model)?;
+    certificate.capability = STEP_INTERCHANGE_V4_CAPABILITY;
+    certificate.notes.extend(["analytic_periodic_carriers_import", "exact_endpoint_point_selectors"]);
+    Ok((text, certificate, report))
 }
 
 #[cfg(test)]
@@ -1155,6 +1230,25 @@ mod tests {
             assert_eq!(error.code, "BREP_STEP_V3_REFUSED");
             assert!(error.message.contains("parameterization"));
         }
+    }
+
+    #[test]
+    fn v4_maps_finite_analytic_carriers_and_endpoint_point_selectors() {
+        let entities=parse("\
+#1=CARTESIAN_POINT('',(0.,0.,0.));#2=DIRECTION('',(0.,0.,1.));#3=DIRECTION('',(1.,0.,0.));
+#4=AXIS2_PLACEMENT_3D('',#1,#2,#3);#5=CYLINDRICAL_SURFACE('',#4,2.);
+#6=CONICAL_SURFACE('',#4,2.,0.2);#7=SPHERICAL_SURFACE('',#4,2.);#8=TOROIDAL_SURFACE('',#4,4.,1.);
+#9=CARTESIAN_POINT('',(1.,0.,0.));#10=DIRECTION('',(1.,0.,0.));#11=VECTOR('',#10,1.);
+#12=LINE('',#9,#11);#13=CARTESIAN_POINT('',(2.,0.,0.));#14=TRIMMED_CURVE('',#12,(#9),(#13),.T.,.PARAMETER.);
+").unwrap();
+        for id in 5..=8 {
+            let s=surface_v4(&entities,id,1.).unwrap();
+            assert!((s.knots_u[s.knots_u.len()-s.degree_u-1]-std::f64::consts::TAU).abs()<1e-12);
+            s.validate().unwrap();
+        }
+        let c=curve(&entities,14,3,1.).unwrap();
+        assert_eq!(c.control_points[0],vec![1.,0.,0.]);
+        assert_eq!(c.control_points[1],vec![2.,0.,0.]);
     }
 
     #[test]

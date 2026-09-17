@@ -1,0 +1,45 @@
+{
+  "id": "own-rust-cad-v5",
+  "successorOf": "docs/qualification/own-rust-cad-v4.json",
+  "previousSha256": "fa09bf87b3cd821b489475c19469646fa0e841f89f76251bd959d74c6e9842c6",
+  "recordedAt": "2026-09-17",
+  "purpose": "Append-only current-byte fingerprint for the V8 exact analytic shell/offset successor.",
+  "qualificationClaim": "none",
+  "wasm": {
+    "path": "src/generated/geometry-kernels/kernel_bg.wasm",
+    "sha256": "c002e386a167938830204519ad16ea874e729273dcfaabbb2fff87c7eb3722d4",
+    "byteLength": 8803145
+  },
+  "sourceBundle": {
+    "canonicalization": "UTF-8 path sorted: path + NUL + exact file bytes + LF",
+    "sha256": "0379a60de8d156896f7610a6e8bee6da495eeae9fa7538b7386e803a528edb0b",
+    "paths": [
+      "crates/brep-core/src/analytic_features.rs",
+      "crates/brep-core/src/imprint_pipeline.rs",
+      "crates/brep-core/src/lib.rs",
+      "crates/brep-core/src/nurbs_ss_g6.rs",
+      "crates/brep-core/src/operations.rs",
+      "crates/brep-core/src/solid_audit.rs",
+      "crates/brep-core/src/step_interchange_v3.rs",
+      "crates/brep-core/src/transactions.rs",
+      "crates/brep-core/src/trim_sew.rs",
+      "crates/brep-core/src/uv_arrangement.rs",
+      "crates/brep-topology/src/lib.rs",
+      "crates/geometry-bridge/src/lib.rs",
+      "crates/geometry-bridge/src/tests.rs",
+      "src/services/cadNurbsStep.ts",
+      "src/services/geometry/brep.ts",
+      "src/services/geometry/brepCapability.ts",
+      "tests/brepQualificationV8.test.ts"
+    ]
+  },
+  "dependencyFingerprints": {
+    "noticesSha256": "e1facd281eb7939480f00827d812505d6e0909581acff3fcc7bffb3d9fd23fd6",
+    "npmLockfileSha256": "70eb933b3607298caa00f7cdd96a953f313e6cc080a34f9b3c5c58694c765704",
+    "rustLockfileSha256": "64b3a93468e81b0560b7c3a60341540ea0bdff2daa62a22ff542d9dcb2396e3c"
+  },
+  "claimBoundary": [
+    "This is a reproducible byte fingerprint, not an external clean qualification run.",
+    "It does not approve G0, G1, adjacent openings, single-cap or tube face openings, mixed curved-planar openings, or any mesh shell fallback."
+  ]
+}

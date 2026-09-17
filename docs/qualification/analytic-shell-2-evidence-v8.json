@@ -1,0 +1,31 @@
+{
+  "$schema": "./brep-capability-evidence-v8.schema.json",
+  "schema": "open-scad-viewer/brep-capability-evidence",
+  "schemaVersion": 8,
+  "evidenceId": "analytic-shell-2-evidence-v8",
+  "capability": "analytic-shell/2",
+  "maturity": "Qualified",
+  "state": "qualified",
+  "plan": "docs/qualification/plans/analytic-shell-2.json",
+  "runs": [
+    {
+      "id": "native-bridge-wasm-shell-offsets-2026-09-17-v8",
+      "result": "pass",
+      "artifactHash": "9e4b26c03202ae40dd8f6f122c85f0c3dfce364ea9892532f22d7921c5a9eb17"
+    }
+  ],
+  "oracles": [
+    "analytic_features::tests::exact_shell_offsets_planar_inward_outward_and_nonadjacent_openings",
+    "analytic_features::tests::exact_shell_has_independent_box_volume_area_thickness_oracles",
+    "analytic_features::tests::exact_cylinder_shell_is_rigid_stable_and_refuses_unowned_rims",
+    "analytic_features::tests::exact_tube_offsets_preserve_topology_under_rigid_placement",
+    "analytic_features::tests::exact_shell_refusals_are_atomic_and_typed",
+    "geometry_bridge::tests::exact_analytic_shell_crosses_bridge_with_audited_certificate",
+    "tests/brepQualificationV8.test.ts"
+  ],
+  "unresolvedRows": [],
+  "attestation": {
+    "fabricatedRuns": false,
+    "note": "Recorded for the exact bounded V8 cells only. Adjacent, single-cap, tube-opening and mixed-surface transition rows remain typed refusals."
+  }
+}

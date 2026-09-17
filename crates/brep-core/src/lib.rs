@@ -18,9 +18,11 @@ pub mod analytic_boolean;
 pub mod analytic_features;
 pub mod analytic_ss;
 mod boolean_support;
+pub mod close_topology;
 pub mod coverage_verifier;
 pub mod imprint_pipeline;
 pub mod intersections;
+pub mod iges_interchange_v2;
 pub mod nurbs_ss_g6;
 pub mod nurbs_step_interchange;
 mod nurbs_step_shared;
@@ -47,11 +49,28 @@ pub use analytic::{
     revolve_wire_angle, ruled_loft, sphere, torus, tube,
 };
 pub use analytic_boolean::{BooleanCertificate, analytic_boolean, analytic_boolean_audited};
+pub use close_topology::{
+    AuditedTopologyComplex, BodyRole, CLOSE_TOPOLOGY_CAPABILITY,
+    CLOSE_TOPOLOGY_IGES_CAPABILITY, CLOSE_TOPOLOGY_STEP_CAPABILITY, ComplexHealCertificate,
+    ComplexHealPlan, ComplexInterchangeCertificate, ComplexPart, CorrespondenceKind,
+    EdgeRadialRing, EdgeUseRef, ExactParameterPartition, FaceRef, LocalCorrespondence,
+    MixedDimensionalBrep, SharedFace, TOLERANT_COMPLEX_HEAL_CAPABILITY,
+    TopologyComplexCertificate, VertexFan, VertexUseRef, certify_complex_heal,
+    complex_relation_id, export_complex_iges, export_complex_step, import_complex_iges,
+    import_complex_step,
+};
 pub use analytic_features::{
     AUDITED_MULTI_EDGE_FILLET_CAPABILITY, AuditedFeatureResult,
+    EXACT_ANALYTIC_SHELL_CAPABILITY, EXACT_BENT_RMF_SWEEP_CAPABILITY, EXACT_CONVEX_CHAMFER_CAPABILITY,
+    EXACT_CONVEX_PRISM_FILLET_CAPABILITY, EXACT_MULTI_SECTION_LOFT_CAPABILITY,
     EXACT_PARALLEL_FRAME_SWEEP_CAPABILITY, FeatureCertificate, analytic_chamfer, analytic_fillet,
     analytic_fillet_chain, analytic_shell, analytic_solid_loft, audited_multi_edge_fillet,
-    audited_parallel_frame_sweep, export_iges, frame_law_ruled_sweep, import_iges,
+    audited_bent_rmf_sweep, audited_multi_section_loft, audited_parallel_frame_sweep,
+    exact_analytic_shell, exact_convex_chamfer, exact_convex_prism_fillet, export_iges,
+    exact_variable_radius_fillet, frame_law_ruled_sweep, import_iges,
+};
+pub use iges_interchange_v2::{
+    IGES_INTERCHANGE_V2_CAPABILITY, IgesV2Report, export_iges_v2, import_iges_v2,
 };
 pub use nurbs_ss_g6::{
     G6_CAPABILITY, G6_MATURITY, G6Component, G6Maturity, NURBS_BOOLEAN_CAPABILITY,
@@ -91,7 +110,8 @@ pub use step_interchange::{
     import_step_v2,
 };
 pub use step_interchange_v3::{
-    STEP_INTERCHANGE_V3_CAPABILITY, StepV3Report, export_step_v3, import_step_v3,
+    STEP_INTERCHANGE_V3_CAPABILITY, STEP_INTERCHANGE_V4_CAPABILITY, StepV3Report,
+    export_step_v3, export_step_v4, import_step_v3, import_step_v4,
 };
 
 pub use brep_topology::{

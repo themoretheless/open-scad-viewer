@@ -72,7 +72,7 @@ fn certified_planar_and_rational_cells_publish_two_sided_coverage() {
 }
 
 #[test]
-fn certified_tessellation_has_typed_budget_mutation_and_shape_refusals() {
+fn certified_tessellation_has_typed_budget_mutation_and_sphere_successor() {
     let cylinder = cylinder(100., 10.).unwrap();
     let error = match geometry_bridge::brep::certified_nurbs(&cylinder, 1e-12, 20_000) {
         Ok(_) => panic!("tiny tolerance unexpectedly certified"),
@@ -86,9 +86,9 @@ fn certified_tessellation_has_typed_budget_mutation_and_shape_refusals() {
         Err(error) => error,
     };
     assert_eq!(error.code, "BREP_CERTIFIED_TESSELLATION_REFUSED");
-    let error = match geometry_bridge::brep::certified_nurbs(&sphere(2.).unwrap(), 0.1, 20_000) {
-        Ok(_) => panic!("sphere unexpectedly entered finite tessellation matrix"),
-        Err(error) => error,
-    };
-    assert_eq!(error.code, "BREP_CERTIFIED_TESSELLATION_REFUSED");
+    let sphere =
+        geometry_bridge::brep::certified_nurbs(&sphere(2.).unwrap(), 0.1, 20_000).unwrap();
+    assert_eq!(sphere.capability, "certified-brep-tessellation/2");
+    assert!(sphere.surface_to_mesh_deviation_mm <= 0.1);
+    assert!(sphere.tessellation.built.report.closed);
 }

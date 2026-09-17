@@ -1,0 +1,84 @@
+{
+  "$schema": "./brep-capability-qualification-plan-v12.schema.json",
+  "schema": "open-scad-viewer/brep-capability-qualification-plan",
+  "schemaVersion": 12,
+  "planId": "close-topology-step-1",
+  "gate": {
+    "id": "g8-full",
+    "name": "brep-full-closed-matrix",
+    "version": 12
+  },
+  "lifecycle": {
+    "status": "qualified",
+    "qualificationClaim": "finite-cell"
+  },
+  "claimBoundary": {
+    "candidateClaim": "Direct bounded solid-cell complex STEP roundtrip preserving supplemental non-manifold incidence.",
+    "forbiddenClaims": [
+      "sheet/open-shell STEP entities",
+      "assemblies",
+      "fallback reconstruction"
+    ]
+  },
+  "capability": "close-topology-step/1",
+  "successorOf": "step-interchange/4",
+  "dependencies": [
+    {
+      "capability": "close-topology/1",
+      "requiredMaturity": "Qualified"
+    },
+    {
+      "capability": "step-interchange/4",
+      "requiredMaturity": "Qualified"
+    }
+  ],
+  "scope": {
+    "included": [
+      "direct STEP /4 payload per manifold cell",
+      "shared-face, radial-ring and fan preservation",
+      "16 MiB aggregate bound"
+    ],
+    "excluded": [
+      "sheet/open-shell STEP entities",
+      "assemblies",
+      "fallback reconstruction"
+    ]
+  },
+  "matrix": [
+    {
+      "id": "CA12-STEP-CELL-COMPLEX-ROUNDTRIP",
+      "expected": "Complete",
+      "blocksQualification": true
+    },
+    {
+      "id": "CA12-STEP-INCIDENCE-IDENTITY",
+      "expected": "Complete",
+      "blocksQualification": true
+    },
+    {
+      "id": "CA12-STEP-SHEET-ASSEMBLY-RESOURCE",
+      "expected": "typed-refuse",
+      "blocksQualification": true
+    }
+  ],
+  "bindings": {
+    "implementation": [
+      "crates/brep-core/src/close_topology.rs",
+      "crates/brep-core/src/lib.rs",
+      "crates/geometry-bridge/src/lib.rs",
+      "src/services/geometry/brep.ts",
+      "src/services/geometry/brepCapability.ts",
+      "tests/brepQualificationV12.test.ts"
+    ],
+    "registry": "src/services/geometry/brepCapability.ts",
+    "evidenceJson": "docs/qualification/close-topology-step-1-evidence-v12.json"
+  },
+  "evidence": {
+    "state": "qualified",
+    "notes": [
+      "Only the finite test-backed cells are qualified; excluded cases remain typed refusals."
+    ]
+  },
+  "resetPolicy": "false-Complete freezes this capability and transitively stales all dependents; recovery requires a successor capability ID",
+  "unresolvedRows": []
+}

@@ -1,0 +1,28 @@
+{
+  "$schema": "./brep-capability-evidence-v11.schema.json",
+  "schema": "open-scad-viewer/brep-capability-evidence",
+  "schemaVersion": 11,
+  "evidenceId": "step-interchange-4-evidence-v11",
+  "capability": "step-interchange/4",
+  "maturity": "Qualified",
+  "state": "qualified",
+  "plan": "docs/qualification/plans/step-interchange-4.json",
+  "runs": [
+    {
+      "id": "native-bridge-wasm-step-interchange-4-2026-09-17-v11",
+      "result": "pass",
+      "artifactHash": "5bd76353e1df60337c68e046197c4995f767db4c2598e6573eb2d70f187897fc"
+    }
+  ],
+  "oracles": [
+    "iges_interchange_v2::tests::direct_roundtrip_is_80_column_and_preserves_graph_identity",
+    "step_interchange_v3::tests::direct_roundtrip_preserves_topology_and_identity",
+    "geometry_bridge::tests::direct_iges_v2_bridge_preserves_exact_graph",
+    "tests/brepInterchangeV11.test.ts"
+  ],
+  "unresolvedRows": [],
+  "attestation": {
+    "fabricatedRuns": false,
+    "note": "Recorded after direct kernel and bridge roundtrip, malformed/resource/refusal, typecheck, build and product tests pass."
+  }
+}

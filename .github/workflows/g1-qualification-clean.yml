@@ -1,89 +1,255 @@
-name: G1 qualification clean fragments
+name: G1 v34 exact clean matrix
 
-# Executes G1 plan v18 matrix harness commands on Ubuntu runners.
-# Artifacts are uploaded; promotion to clean-post-freeze / u07 closure still
-# requires the frozen cleanRunDefinition (sanitized env, wiped caches, OS image
-# digests, no result reuse). Do not treat a green CI job alone as qualification.
+# Manual-only: each matrix cell is one fresh hosted job and one frozen clean run.
+# A green aggregate establishes complete matrix evidence, not qualification,
+# approval, production registration, or cutover.
 
 on:
   workflow_dispatch:
     inputs:
-      row:
-        description: Matrix row id from semantic-manifold-g1-plan-v18.json
-        required: true
-        type: choice
-        options:
-          - oracle-differential
-          - comparator-mutations
-          - semantic-special-terminals
-          - node-worker-identifiers
-          - mcp-supervisor-hard-kill
-          - mcp-stdio-store-isolation
-          - dependency-and-cutover-audit
-          - mcp-memory-slope
-      env_id:
-        description: Environment id
-        required: true
-        type: choice
-        options:
-          - ubuntu-node20
-          - ubuntu-node22
-      run_index:
-        description: Clean-run index (1-based)
+      source_sha:
+        description: Exact 40-character commit SHA selected by this workflow dispatch
         required: true
         type: string
-        default: '1'
 
 permissions:
   contents: read
+  actions: read
 
 concurrency:
-  group: g1-qual-${{ github.event.inputs.row }}-${{ github.event.inputs.env_id }}-${{ github.event.inputs.run_index }}
+  group: g1-v34-exact-${{ github.ref }}
   cancel-in-progress: false
 
+env:
+  PLAN_ID: semantic-manifold-g1-plan-v34
+  CANDIDATE_ID: semantic-manifold-g1-candidate-run-v34
+  NPM_VERSION: 10.9.8
+
 jobs:
-  fragment:
+  prepare:
     runs-on: ubuntu-24.04
-    timeout-minutes: 120
+    timeout-minutes: 5
+    outputs:
+      node_matrix: ${{ steps.matrix.outputs.node_matrix }}
+      browser_matrix: ${{ steps.matrix.outputs.browser_matrix }}
     steps:
-      - uses: actions/checkout@v6
-
-      - name: Resolve Node version for environment
-        id: node
-        run: |
-          case "${{ github.event.inputs.env_id }}" in
-            ubuntu-node20) echo "version=20.19.0" >> "$GITHUB_OUTPUT" ;;
-            ubuntu-node22) echo "version=22.23.2" >> "$GITHUB_OUTPUT" ;;
-            *) echo "unknown env"; exit 1 ;;
-          esac
-
-      - uses: actions/setup-node@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
-          node-version: ${{ steps.node.outputs.version }}
-
-      - name: Verify npm and install
+          ref: ${{ inputs.source_sha }}
+          clean: true
+      - name: Verify dispatched source
+        shell: bash
         run: |
-          node -v
-          npm -v
+          set -euo pipefail
+          test '${{ inputs.source_sha }}' = '${{ github.sha }}'
+          test "$(git rev-parse HEAD)" = '${{ inputs.source_sha }}'
+          test -z "$(git status --porcelain --untracked-files=no)"
+      - id: matrix
+        shell: bash
+        run: |
+          set -euo pipefail
+          matrix="$(node scripts/g1-github-actions.mjs matrix)"
+          node_matrix="$(node -e 'const value=JSON.parse(process.argv[1]);process.stdout.write(JSON.stringify(value.nodes))' "$matrix")"
+          browser_matrix="$(node -e 'const value=JSON.parse(process.argv[1]);process.stdout.write(JSON.stringify(value.browsers))' "$matrix")"
+          echo "node_matrix=$node_matrix" >> "$GITHUB_OUTPUT"
+          echo "browser_matrix=$browser_matrix" >> "$GITHUB_OUTPUT"
+
+  node-fragments:
+    needs: prepare
+    name: ${{ matrix.environment }} / ${{ matrix.row }} / run-${{ matrix.run_index }}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      max-parallel: 8
+      matrix: ${{ fromJSON(needs.prepare.outputs.node_matrix) }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ inputs.source_sha }}
+          clean: true
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: ${{ matrix.node_version }}
+          architecture: ${{ contains(matrix.environment, 'macos') && 'arm64' || 'x64' }}
+      - uses: dtolnay/rust-toolchain@02cb101ec7c40f2c49e1d9714d64511d8e1b74de
+        with:
+          toolchain: nightly-2026-09-10
+          targets: wasm32-unknown-unknown
+      - name: Wipe prior state
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          @('node_modules','tools/browser-qualification/node_modules','dist','.vite','.vitest',
+            'output/qualification/semantic-manifold-g1-candidate-run-v34',
+            "$HOME/.cache/ms-playwright","$HOME/Library/Caches/ms-playwright") |
+            ForEach-Object { Remove-Item -Recurse -Force -ErrorAction SilentlyContinue $_ }
+          Get-ChildItem -Recurse -Force -Include '*.duckdb','*.duckdb.wal' |
+            Remove-Item -Force -ErrorAction SilentlyContinue
+      - name: Fetch frozen runtime archives
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          New-Item -ItemType Directory -Force .qualification-toolchain | Out-Null
+          $artifact = switch ('${{ matrix.environment }}') {
+            'ubuntu-node20' { 'node-v20.19.0-linux-x64.tar.xz' }
+            'ubuntu-node22' { 'node-v22.23.2-linux-x64.tar.xz' }
+            'macos-node20' { 'node-v20.19.0-darwin-arm64.tar.gz' }
+            'windows-node20' { 'node-v20.19.0-win-x64.zip' }
+            default { throw 'Unknown environment' }
+          }
+          $version = '${{ matrix.node_version }}'
+          Invoke-WebRequest -Uri "https://nodejs.org/dist/v$version/$artifact" -OutFile ".qualification-toolchain/$artifact"
+          Invoke-WebRequest -Uri 'https://registry.npmjs.org/npm/-/npm-10.9.8.tgz' -OutFile '.qualification-toolchain/npm-10.9.8.tgz'
+          "NODE_ARCHIVE=$((Resolve-Path ".qualification-toolchain/$artifact").Path)" | Out-File -Append -Encoding utf8 $env:GITHUB_ENV
+          "NPM_ARCHIVE=$((Resolve-Path '.qualification-toolchain/npm-10.9.8.tgz').Path)" | Out-File -Append -Encoding utf8 $env:GITHUB_ENV
+      - name: Install exact dependency graphs
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          npm install --global $env:NPM_ARCHIVE --registry=https://registry.npmjs.org/ --audit=false --fund=false
+          if ((npm --version) -ne '10.9.8') { throw 'npm version mismatch' }
           npm ci --include=dev --registry=https://registry.npmjs.org/ --audit=false --fund=false
-
-      - name: Run fragment (discovery classification until protocol proof lands)
-        env:
-          QUALIFICATION_PLAN_ID: semantic-manifold-g1-plan-v18
-          QUALIFICATION_SEED: 'ci'
-          CI: '1'
+          npm ci --prefix tools/browser-qualification --ignore-scripts --include=dev --registry=https://registry.npmjs.org/ --audit=false --fund=false
+      - name: Verify frozen identities
+        shell: pwsh
         run: |
-          node scripts/run-g1-candidate-clean-fragment.mjs \
-            --row "${{ github.event.inputs.row }}" \
-            --env "${{ github.event.inputs.env_id }}" \
-            --run-index "${{ github.event.inputs.run_index }}" \
-            --node-bin "$(command -v node)" \
-            --classification discovery-only
-
-      - uses: actions/upload-artifact@v4
+          $ErrorActionPreference = 'Stop'
+          @('NODE_OPTIONS','NODE_PATH','NODE_PRESERVE_SYMLINKS','NPM_CONFIG_PREFIX','NPM_CONFIG_CACHE',
+            'npm_config_registry','HTTP_PROXY','HTTPS_PROXY','ALL_PROXY','http_proxy','https_proxy','all_proxy',
+            'PLAYWRIGHT_BROWSERS_PATH','PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD','LD_PRELOAD','DYLD_INSERT_LIBRARIES') |
+            ForEach-Object { Remove-Item "Env:$_" -ErrorAction SilentlyContinue }
+          $out = "output/qualification/$env:CANDIDATE_ID/github-actions/${{ matrix.row }}--${{ matrix.environment }}--run-${{ matrix.run_index }}"
+          New-Item -ItemType Directory -Force $out | Out-Null
+          node scripts/g1-github-actions.mjs preflight `
+            --environment '${{ matrix.environment }}' `
+            --node-archive $env:NODE_ARCHIVE `
+            --npm-archive $env:NPM_ARCHIVE `
+            --source-sha '${{ inputs.source_sha }}' `
+            --output "$out/preflight.json"
+          node scripts/g1-github-actions.mjs run `
+            --row '${{ matrix.row }}' `
+            --environment '${{ matrix.environment }}' `
+            --run-index '${{ matrix.run_index }}' `
+            --preflight "$out/preflight.json" `
+            --output $out
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: always()
         with:
-          name: g1-v18-${{ github.event.inputs.row }}-${{ github.event.inputs.env_id }}-run${{ github.event.inputs.run_index }}
-          path: |
-            output/qualification/semantic-manifold-g1-candidate-run-v18/
-          if-no-files-found: warn
+          name: g1-v34-${{ matrix.row }}--${{ matrix.environment }}--run-${{ matrix.run_index }}
+          path: output/qualification/semantic-manifold-g1-candidate-run-v34/github-actions/
+          if-no-files-found: error
+          retention-days: 30
+          compression-level: 6
+
+  browser-fragments:
+    needs: prepare
+    name: ${{ matrix.environment }} / ${{ matrix.row }} / run-${{ matrix.run_index }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix: ${{ fromJSON(needs.prepare.outputs.browser_matrix) }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ inputs.source_sha }}
+          clean: true
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: ${{ matrix.node_version }}
+          architecture: x64
+      - uses: dtolnay/rust-toolchain@02cb101ec7c40f2c49e1d9714d64511d8e1b74de
+        with:
+          toolchain: nightly-2026-09-10
+          targets: wasm32-unknown-unknown
+      - name: Wipe prior state
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf node_modules tools/browser-qualification/node_modules dist .vite .vitest \
+            output/qualification/semantic-manifold-g1-candidate-run-v34 \
+            "$HOME/.cache/ms-playwright"
+          rm -f ./*.duckdb ./*.duckdb.wal
+      - name: Fetch and install exact toolchains
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .qualification-toolchain
+          node_archive=node-v22.23.2-linux-x64.tar.xz
+          curl --fail --silent --show-error --location \
+            "https://nodejs.org/dist/v22.23.2/$node_archive" \
+            --output ".qualification-toolchain/$node_archive"
+          curl --fail --silent --show-error --location \
+            https://registry.npmjs.org/npm/-/npm-10.9.8.tgz \
+            --output .qualification-toolchain/npm-10.9.8.tgz
+          echo "NODE_ARCHIVE=$PWD/.qualification-toolchain/$node_archive" >> "$GITHUB_ENV"
+          echo "NPM_ARCHIVE=$PWD/.qualification-toolchain/npm-10.9.8.tgz" >> "$GITHUB_ENV"
+          npm install --global "$PWD/.qualification-toolchain/npm-10.9.8.tgz" \
+            --registry=https://registry.npmjs.org/ --audit=false --fund=false
+          test "$(npm --version)" = 10.9.8
+          npm ci --include=dev --registry=https://registry.npmjs.org/ --audit=false --fund=false
+          npm ci --prefix tools/browser-qualification --ignore-scripts --include=dev \
+            --registry=https://registry.npmjs.org/ --audit=false --fund=false
+          tools/browser-qualification/node_modules/.bin/playwright install --with-deps '${{ matrix.browser }}'
+          npm run build:geometry
+      - name: Verify and run frozen browser fragment
+        shell: bash
+        run: |
+          set -euo pipefail
+          unset NODE_OPTIONS NODE_PATH NODE_PRESERVE_SYMLINKS NPM_CONFIG_PREFIX NPM_CONFIG_CACHE npm_config_registry
+          unset HTTP_PROXY HTTPS_PROXY ALL_PROXY http_proxy https_proxy all_proxy
+          unset PLAYWRIGHT_BROWSERS_PATH PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD LD_PRELOAD DYLD_INSERT_LIBRARIES
+          out="output/qualification/$CANDIDATE_ID/github-actions/${{ matrix.row }}--${{ matrix.environment }}--run-${{ matrix.run_index }}"
+          mkdir -p "$out"
+          node scripts/g1-github-actions.mjs preflight \
+            --environment '${{ matrix.environment }}' \
+            --node-archive "$NODE_ARCHIVE" \
+            --npm-archive "$NPM_ARCHIVE" \
+            --source-sha '${{ inputs.source_sha }}' \
+            --output "$out/preflight.json"
+          node scripts/g1-github-actions.mjs run \
+            --row '${{ matrix.row }}' \
+            --environment '${{ matrix.environment }}' \
+            --run-index '${{ matrix.run_index }}' \
+            --preflight "$out/preflight.json" \
+            --output "$out"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: g1-v34-${{ matrix.row }}--${{ matrix.environment }}--run-${{ matrix.run_index }}
+          path: output/qualification/semantic-manifold-g1-candidate-run-v34/github-actions/
+          if-no-files-found: error
+          retention-days: 30
+          compression-level: 6
+
+  aggregate:
+    if: always()
+    needs: [prepare, node-fragments, browser-fragments]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ inputs.source_sha }}
+          clean: true
+      - run: mkdir -p downloaded-g1-v34
+      - uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5
+        continue-on-error: true
+        with:
+          pattern: g1-v34-*
+          path: downloaded-g1-v34
+      - name: Verify complete artifact set
+        run: |
+          node scripts/g1-github-actions.mjs aggregate \
+            --artifacts downloaded-g1-v34 \
+            --source-sha '${{ inputs.source_sha }}' \
+            --output output/qualification/semantic-manifold-g1-candidate-run-v34/github-actions/aggregate/result.json
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: g1-v34-aggregate
+          path: output/qualification/semantic-manifold-g1-candidate-run-v34/github-actions/aggregate/
+          if-no-files-found: error
+          retention-days: 90

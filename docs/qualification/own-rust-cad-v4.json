@@ -1,0 +1,44 @@
+{
+  "id": "own-rust-cad-v4",
+  "successorOf": "docs/qualification/own-rust-cad-v3.json",
+  "previousSha256": "6ca6e8ea8a5b54be7711dc49a179b232a671ce17613d079ff12a087b12a12f7b",
+  "recordedAt": "2026-09-17",
+  "purpose": "Append-only current-byte fingerprint for the B-rep V7 exact finite blend successors.",
+  "qualificationClaim": "none",
+  "wasm": {
+    "path": "src/generated/geometry-kernels/kernel_bg.wasm",
+    "sha256": "0c4173179383d03e3065aa8d9df595073e06f740584f1b19b88388b86d517256",
+    "byteLength": 8778069
+  },
+  "sourceBundle": {
+    "canonicalization": "UTF-8 path sorted: path + NUL + exact file bytes + LF",
+    "sha256": "2df44b50b99d1f7ac243fc29e56f0abf2854a4fc12778796c68ade93e7168fdb",
+    "paths": [
+      "crates/brep-core/src/analytic_features.rs",
+      "crates/brep-core/src/imprint_pipeline.rs",
+      "crates/brep-core/src/lib.rs",
+      "crates/brep-core/src/nurbs_ss_g6.rs",
+      "crates/brep-core/src/operations.rs",
+      "crates/brep-core/src/solid_audit.rs",
+      "crates/brep-core/src/step_interchange_v3.rs",
+      "crates/brep-core/src/transactions.rs",
+      "crates/brep-core/src/trim_sew.rs",
+      "crates/brep-core/src/uv_arrangement.rs",
+      "crates/brep-topology/src/lib.rs",
+      "crates/geometry-bridge/src/lib.rs",
+      "crates/geometry-bridge/src/tests.rs",
+      "src/services/cadNurbsStep.ts",
+      "src/services/geometry/brep.ts",
+      "src/services/geometry/brepCapability.ts"
+    ]
+  },
+  "dependencyFingerprints": {
+    "noticesSha256": "e1facd281eb7939480f00827d812505d6e0909581acff3fcc7bffb3d9fd23fd6",
+    "npmLockfileSha256": "70eb933b3607298caa00f7cdd96a953f313e6cc080a34f9b3c5c58694c765704",
+    "rustLockfileSha256": "64b3a93468e81b0560b7c3a60341540ea0bdff2daa62a22ff542d9dcb2396e3c"
+  },
+  "claimBoundary": [
+    "This is a reproducible byte fingerprint, not an external clean qualification run.",
+    "It does not approve G0, G1, variable-radius fillets, valence-3 rolling-ball corners, or capability scope beyond the V7 release artifacts."
+  ]
+}
