@@ -122,7 +122,14 @@ yet connected to geometric construction or the shared WASM runtime.
   searchable RU/EN descriptions, signatures, parameters, and copyable examples
   for OpenSCAD and ModelGraph Text. It opens in the current document's language;
   select a function name in the editor and press F1 to look it up.
-- Binary STL and OBJ export with object transforms baked into the result.
+- Binary STL and OBJ export with object transforms baked into the result, plus
+  ASCII STL, 3MF, PLY, OFF and AMF from the export selector.
+- Mesh import and format conversion: STL (ASCII/binary), OBJ, PLY (ASCII/binary),
+  OFF, AMF and 3MF open as objects in the Mesh workbench or bodies in the Solid
+  workbench, and any of them converts to any export format from the toolbar
+  **Convert…** button, a drag-and-drop, the `mesh_convert` MCP tool or
+  `node --import tsx scripts/convert-mesh.ts input.stl output.3mf`. See
+  [mesh import and conversion](docs/design/mesh-import-convert.md).
 - Optional local MCP server with typed OpenSCAD tools/resources and a
   persistent DuckDB catalog for models, revisions, builds, and bounded exports.
 - Opt-in upstream OpenSCAD oracle with multi-file/binary project bundles,
@@ -266,6 +273,9 @@ Available tools:
   by `expected_revision`;
 - `openscad_export` — bounded full-quality STL/OBJ export returned as an MCP
   resource link and persisted in DuckDB;
+- `mesh_convert` — stateless conversion of an uploaded STL/OBJ/PLY/OFF/AMF/3MF
+  file to STL (ASCII/binary), 3MF, OBJ, PLY, OFF or AMF, returned as an embedded
+  resource with source statistics;
 - `openscad_official_status` — availability of the optional upstream oracle,
   exact runtime/archive digests,
   pinned default-font/license digests, export formats, experimental-feature

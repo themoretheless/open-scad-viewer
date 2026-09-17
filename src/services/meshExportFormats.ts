@@ -1,7 +1,7 @@
 import { export3mfInKernel, exportMeshArtifactInKernel } from './geometry/meshArtifactExport';
 import { type NurbsMesh } from './geometry/tessellation';
-export const MESH_EXPORT_FORMATS = ['stl', 'stl_binary', '3mf', 'obj', 'ply', 'off', 'amf'] as const;
-export type MeshExportFormat = typeof MESH_EXPORT_FORMATS[number];
+import { MESH_EXPORT_FORMATS, type MeshExportFormat } from './meshFormats';
+export { MESH_EXPORT_FORMATS, type MeshExportFormat };
 type ExportMesh = NurbsMesh & { parts?: NurbsMesh[] };
 function exportUnchecked(mesh: ExportMesh, format: MeshExportFormat, compressed = false) {
     if (!MESH_EXPORT_FORMATS.includes(format))

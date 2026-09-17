@@ -126,6 +126,7 @@ describe('OpenSCAD MCP server', () => {
       tools: Array<{ name: string; annotations?: { destructiveHint?: boolean; readOnlyHint?: boolean } }>
     }
     expect(listed.tools.map(tool => tool.name).sort()).toEqual([
+      'mesh_convert',
       'modelgraph_check',
       'modelgraph_compile',
       'modelgraph_export',
@@ -1200,4 +1201,36 @@ describe('Mechanical generators over MCP',()=>{
     expect(rejected.isError).toBe(true)
     expect(rejected.structuredContent.error.code).toBe('invalid_mechanical_geometry')
   },30000)
+})
+
+describe('mesh_convert tool', () => {
+  const cubeObj = [
+    'v 0 0 0', 'v 1 0 0', 'v 1 1 0', 'v 0 1 0', 'v 0 0 1', 'v 1 0 1', 'v 1 1 1', 'v 0 1 1',
+    'f 1 4 3 2', 'f 5 6 7 8', 'f 1 2 6 5', 'f 2 3 7 6', 'f 3 4 8 7', 'f 4 1 5 8', '',
+  ].join('\n')
+  type Converted = { isError?: boolean; structuredContent: { format: string; file_name: string; source: { format: string; triangle_count: number; vertex_count: number }; error?: { code: string } }; content: Array<{ type: string; resource?: { blob: string; mimeType: string } }> }
+
+  it('converts an OBJ upload to 3MF and back to PLY through embedded resources', async () => {
+    const { request } = await connectedServer()
+    const to3mf = await request('tools/call', { name: 'mesh_convert', arguments: { file_name: 'cube.obj', data_base64: Buffer.from(cubeObj).toString('base64'), format: '3mf' } }) as Converted
+    expect(to3mf.isError).not.toBe(true)
+    expect(to3mf.structuredContent).toMatchObject({ format: '3mf', file_name: 'cube.3mf', source: { format: 'obj', triangle_count: 12, vertex_count: 8 } })
+    const blob = to3mf.content.find(item => item.type === 'resource')?.resource
+    expect(blob?.mimeType).toBe('model/3mf')
+    expect(Buffer.from(blob!.blob, 'base64').readUInt32LE(0)).toBe(0x04034b50)
+    const toPly = await request('tools/call', { name: 'mesh_convert', arguments: { file_name: 'cube.3mf', data_base64: blob!.blob, format: 'ply' } }) as Converted
+    expect(toPly.isError).not.toBe(true)
+    expect(toPly.structuredContent.source).toMatchObject({ format: '3mf', triangle_count: 12, vertex_count: 8 })
+    expect(Buffer.from(toPly.content.find(item => item.type === 'resource')!.resource!.blob, 'base64').toString()).toContain('element face 12')
+  })
+
+  it('reports typed errors for unsupported input and bad base64', async () => {
+    const { request } = await connectedServer()
+    const unsupported = await request('tools/call', { name: 'mesh_convert', arguments: { file_name: 'model.gltf', data_base64: Buffer.from('{}').toString('base64'), format: 'stl' } }) as Converted
+    expect(unsupported.isError).toBe(true)
+    expect(unsupported.structuredContent.error?.code).toBe('unsupported-format')
+    const garbage = await request('tools/call', { name: 'mesh_convert', arguments: { file_name: 'cube.obj', data_base64: '!!!', format: 'stl' } }) as Converted
+    expect(garbage.isError).toBe(true)
+    expect(garbage.structuredContent.error?.code).toBe('invalid-data')
+  })
 })

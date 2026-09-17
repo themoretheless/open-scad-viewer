@@ -157,6 +157,11 @@ for (const [name, artifact, compression] of [
 // Closure V3 measures 5215998 bytes across the same 68 artifacts. Retain a
 // bounded distribution margin alongside the chunk-specific gate. The bounded
 // multi-span Boolean successor remains capped by the stricter chunk gate above.
-const totalBudget = 5_300_000
+// Mesh import/convert (STL/OBJ/PLY/OFF/AMF/3MF → any export format) adds a
+// lazily loaded ~42 kB converter chunk that reuses the OpenSCAD import()
+// decoders outside the geometry worker (5261863 -> 5308461 bytes measured;
+// the eager index chunk and the geometry chunk are unchanged), so the total
+// budget moves once.
+const totalBudget = 5_350_000
 if (total > totalBudget) throw new Error(`dist totals ${total} bytes; budget is ${totalBudget}`)
 console.log(`Verified ${files.length} dist artifacts (${total} bytes)`)

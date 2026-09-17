@@ -7,7 +7,10 @@ import { solidTopology, facePlane, pushPullFace, bevelSolidEdge, bevelBrepBody, 
 import { storageGet, storageSet } from '../services/safeStorage'
 import { exportPolygonStl, polygonBoundaryLoops, revolvePolygonProfile } from '../services/geometry/polygon'
 import { applyDirectExtrusion, circularDirectCopies, defaultDirectCamera, directExtrusionTool, directFaceShade, projectDirectPoint, snapDirectPoint, unprojectDirectXY } from '../services/directModelingTools'
-import { stlBufferToPolygonMesh } from '../services/meshEditing'
+import { importMeshFromFile, MESH_IMPORT_ACCEPT, stripMeshExtension } from '../services/meshImport'
+import { polygonMeshToExportMesh, MESH_EXPORT_FORMATS, MESH_FORMAT_LABELS, type MeshExportFormat } from '../services/meshConvert'
+import { exportMeshFormatCompressed } from '../services/meshExportFormats'
+import { downloadBytes } from '../services/downloadArtifact'
 import { solidDocumentToMeshDocument } from '../services/solidBridge'
 import { createSolidNurbsCurve, createSolidNurbsSurface, importModelGraphNurbs, matchSolidNurbsCurvesG1, matchSolidNurbsSurfacesG1, nurbsCurveToSketch, sampleSolidNurbsCurve, tessellateSolidNurbsSurface, updateSolidNurbsControlPoint } from '../services/solidNurbs'
 import { elevateNurbsCurve, insertNurbsKnot } from '../services/nurbsCurve'
@@ -375,16 +378,24 @@ async function importFile(event: Event) {
   }) } }
   catch (e) { error.value = String(e) } finally { input.value = '' }
 }
+const bodyExportFormat = ref<MeshExportFormat>('stl_binary')
+async function downloadBody() {
+  try {
+    if (!selectedBody.value) throw new Error(label('Выберите тело.', 'Select a body.'))
+    const artifact = await exportMeshFormatCompressed(polygonMeshToExportMesh(selectedBody.value.mesh), bodyExportFormat.value)
+    downloadBytes(artifact.data, artifact.mimeType, `${selectedBody.value.name || 'body'}.${artifact.extension}`)
+  } catch (e) { error.value = e instanceof Error ? e.message : String(e) }
+}
 async function importStl(event: Event) {
   const input = event.target as HTMLInputElement, file = input.files?.[0]
   try {
     if (!file) return
-    if (file.size > 20_000_000) throw new Error('STL exceeds 20 MB.')
-    const mesh = stlBufferToPolygonMesh(await file.arrayBuffer())
+    const imported = await importMeshFromFile(file, { weld: 1e-4 })
+    const mesh = { positions: [...imported.positions], indices: [...imported.indices] }
     run(() => {
       const d = history.document
       const id = crypto.randomUUID()
-      d.bodies.push({ id, name: file.name.replace(/\.stl$/i, '') || 'STL', mesh })
+      d.bodies.push({ id, name: stripMeshExtension(file.name) || imported.format.toUpperCase(), mesh })
       commit(d)
       selection.value = id
       mode.value = '3d'
@@ -730,8 +741,8 @@ watch([() => props.open, () => props.seedDocument], ([open, seed]) => {
       <details class="file-menu"><summary>{{ label('Файл', 'File') }} ▾</summary><div>
         <button @click="download(JSON.stringify(document), 'solid-model.json')">{{ label('Скачать проект JSON', 'Download JSON project') }}</button>
         <label class="file-open">{{ label('Открыть Solid / ModelGraph NURBS', 'Open Solid / ModelGraph NURBS') }}<input type="file" accept=".json,application/json" @change="importFile"></label>
-        <button type="button" @click="stlInput?.click()">{{ label('Импорт STL как тело', 'Import STL as body') }}</button>
-        <input ref="stlInput" type="file" accept=".stl,model/stl" hidden @change="importStl" />
+        <button type="button" @click="stlInput?.click()">{{ label('Импорт STL / OBJ / PLY / OFF / AMF / 3MF как тело', 'Import STL / OBJ / PLY / OFF / AMF / 3MF as body') }}</button>
+        <input ref="stlInput" type="file" :accept="MESH_IMPORT_ACCEPT" hidden @change="importStl" />
         <button :disabled="!document.bodies.length" @click="download(directBodiesScad(document), 'solid-bodies.scad')">{{ label('Экспорт SCAD (bake)', 'Export SCAD (bake)') }}</button>
         <button :disabled="!document.bodies.length || !canAppend" @click="appendBodies">{{ embedded ? label('Bake в код', 'Bake into code') : label('Bake в Code (append)', 'Bake into Code (append)') }}</button>
         <button :disabled="!document.bodies.length" @click="sendToMesh">{{ label('Открыть в Mesh', 'Open in Mesh') }}</button>
@@ -748,7 +759,7 @@ watch([() => props.open, () => props.seedDocument], ([open, seed]) => {
       </details>
       <label>{{ label('Сфера / цилиндр / конус','Sphere / cylinder / cone') }} <select v-model="roundGeometry"><option value="exact">{{ label('Точные поверхности','Exact surfaces') }}</option><option value="faceted">{{ label('Гранёный · planar Boolean','Faceted · planar Boolean') }}</option></select></label>
       <label>{{ label('Размер, мм','Size, mm') }} <input v-model.number="primitiveSize" type="number" min="0.1" max="10000" /></label>
-      <button type="button" @click="stlInput?.click()">STL</button>
+      <button type="button" :title="label('Импорт сетки как тело', 'Import mesh as body')" @click="stlInput?.click()">{{ label('Импорт сетки', 'Import mesh') }}</button>
       <button v-if="embedded" :disabled="!canAppend" @click="appendBodies">{{ label('Применить в код (bake)','Apply to code') }}</button>
       <span class="subtle">{{ label('Solid хранит свой документ; bake в .scad — только по кнопке.','Solid keeps its own document; bake to .scad is explicit.') }}</span>
     </div>
@@ -768,7 +779,7 @@ watch([() => props.open, () => props.seedDocument], ([open, seed]) => {
               <button v-for="(name,value) in {body:label('Тела','Bodies'),face:label('Грани','Faces'),edge:label('Рёбра','Edges')}" :key="value" :aria-pressed="pickMode===value" @click="pickMode=value;advancedOp=null;boxSelect=false">{{ name }}</button>
               <button :aria-pressed="boxSelect" @click="boxSelect=!boxSelect">{{ label('Рамка','Box select') }}</button>
               <select v-model="gizmoMode" :aria-label="label('Манипулятор','Manipulator')"><option value="move">{{ label('Двигать','Move') }}</option><option value="rotate">{{ label('Вращать','Rotate') }}</option><option value="scale">{{ label('Масштаб','Scale') }}</option></select>
-              <button :aria-pressed="!movingBody" @click="movingBody = false">{{ label('↻ Обзор', '↻ Orbit') }}</button><button :aria-pressed="movingBody" @click="movingBody = true">{{ label('↔ Двигать · G', '↔ Move · G') }}</button><button @click="camera = defaultDirectCamera(); fit('3d')">ISO</button><button :aria-pressed="floorVisible" @click="floorVisible = !floorVisible" :aria-label="label('Сетка 3D', '3D grid')">#</button><span class="subtle">{{ pickMode==='face'?label('Ctrl/⌘ + клик — несколько открытых граней','Ctrl/⌘ click — multiple openings'):label('ПКМ — вращать · Shift — панорама', 'Right drag to orbit · Shift to pan') }}</span><button :disabled="!selectedBody" @click="run(() => download(exportPolygonStl(selectedBody!.mesh), 'body.stl'))">↓ STL</button></template>
+              <button :aria-pressed="!movingBody" @click="movingBody = false">{{ label('↻ Обзор', '↻ Orbit') }}</button><button :aria-pressed="movingBody" @click="movingBody = true">{{ label('↔ Двигать · G', '↔ Move · G') }}</button><button @click="camera = defaultDirectCamera(); fit('3d')">ISO</button><button :aria-pressed="floorVisible" @click="floorVisible = !floorVisible" :aria-label="label('Сетка 3D', '3D grid')">#</button><span class="subtle">{{ pickMode==='face'?label('Ctrl/⌘ + клик — несколько открытых граней','Ctrl/⌘ click — multiple openings'):label('ПКМ — вращать · Shift — панорама', 'Right drag to orbit · Shift to pan') }}</span><button :disabled="!selectedBody" @click="run(() => download(exportPolygonStl(selectedBody!.mesh), 'body.stl'))">↓ STL</button><select v-model="bodyExportFormat" :aria-label="label('Формат экспорта тела', 'Body export format')"><option v-for="format in MESH_EXPORT_FORMATS" :key="format" :value="format">{{ MESH_FORMAT_LABELS[format] }}</option></select><button :disabled="!selectedBody" @click="downloadBody">↓ {{ label('Скачать', 'Download') }}</button></template>
           </div>
           <div class="canvas-wrap">
             <svg :viewBox="viewBox(pane)" tabindex="0" :aria-label="pane === '2d' ? label('Холст эскизов 2D', '2D sketch canvas') : label('Холст тел 3D', '3D body canvas')" @contextmenu.prevent @wheel.prevent="zoom(pane, $event.deltaY > 0 ? 1.1 : 1/1.1)" @pointerdown="down($event, pane)" @pointermove="move" @pointerup="up" @pointercancel="cancelGesture" @lostpointercapture="cancelGesture">
