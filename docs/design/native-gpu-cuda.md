@@ -51,7 +51,7 @@ cargo run --manifest-path crates/Cargo.toml -p sdf-core --features cuda --exampl
 cargo run --manifest-path crates/Cargo.toml -p geometry-bridge --features gpu --example backend_report
 cargo run --manifest-path crates/Cargo.toml -p photogrammetry-core --features cuda --example backend_report
 PHOTO_ACCELERATION=cuda cargo run --release --manifest-path crates/Cargo.toml \
-  -p photogrammetry-core --features gpu --example reconstruct -- out.ply FOCAL a.ppm b.ppm
+  -p photogrammetry-core --features cuda --example reconstruct -- out.ply FOCAL a.ppm b.ppm
 ```
 
 `OSV_CUDA_DEVICE=<ordinal>` selects a device other than 0. The photogrammetry
