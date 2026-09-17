@@ -169,7 +169,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     let started = std::time::Instant::now();
     let r = evaluate_clouds(&model, &reference, &options, |_, _, _| true)?;
     println!(
-        "{{\"format\":\"open-scad-viewer/cloud-evaluation\",\"version\":1,\"metric\":\"point_to_point\",\"scale_fitted\":false,\"tolerance\":{},\"voxel_size\":{},\"input_model\":{},\"input_reference\":{},\"model_to_reference\":{},\"reference_to_model\":{},\"precision\":{},\"recall\":{},\"f1\":{},\"symmetric_mean\":{},\"evaluation_ms\":{}}}",
+        "{{\"format\":\"open-scad-viewer/cloud-evaluation\",\"version\":1,\"metric\":\"point_to_point\",\"scale_fitted\":false,\"tolerance\":{},\"voxel_size\":{},\"input_model\":{},\"input_reference\":{},\"model_to_reference\":{},\"reference_to_model\":{},\"precision\":{},\"recall\":{},\"f1\":{},\"symmetric_mean\":{},\"symmetric_maximum\":{},\"hausdorff_distance\":{},\"evaluation_ms\":{}}}",
         options.tolerance,
         options.voxel_size.map_or("null".into(), |v| v.to_string()),
         r.input_reconstructed,
@@ -180,6 +180,8 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
         r.recall,
         r.f1,
         r.symmetric_mean,
+        r.symmetric_maximum,
+        r.hausdorff_distance,
         started.elapsed().as_secs_f64() * 1000.
     );
     Ok(())

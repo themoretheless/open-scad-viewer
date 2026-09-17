@@ -13,7 +13,13 @@ Outputs are relative-scale, partial observations. Unregistered views are explici
 
 `DenseOptions` retains 3×3 frontoparallel sweep by default. `DenseEstimator::SlantedPlane` with patch radius 2 is experimental; it improves some sloped scenes and can lose thin geometry. Source-sample counters quantify work separately from hypothesis count.
 
-`evaluation::evaluate_clouds` computes exact bidirectional point-to-point metrics in a pre-established common frame/scale. The `evaluate` example reads ASCII XYZ/PLY and emits JSON; it performs no registration or scale fitting. `evaluation_comparison` checks the spatial index against exhaustive distances. See [comparative validation](../../docs/photogrammetry-improvements.md).
+`evaluation::evaluate_clouds` computes exact bidirectional point-to-point
+metrics in a pre-established common frame/scale, including directed summaries,
+precision/recall/F1, symmetric mean distance and symmetric Hausdorff
+worst-case distance. The `evaluate` example reads ASCII XYZ/PLY and emits
+JSON; it performs no registration or scale fitting. `evaluation_comparison`
+checks the spatial index against exhaustive distances. See [comparative
+validation](../../docs/photogrammetry-improvements.md).
 
 `EvaluationOptions::acceleration` accepts `Cpu` (exact KD-tree), explicit
 `Gpu`/`Cuda`, or `Auto`. `Auto` keeps small sampled clouds on the KD-tree and

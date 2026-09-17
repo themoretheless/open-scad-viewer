@@ -72,6 +72,10 @@ pub struct CloudEvaluation {
     pub recall: f64,
     pub f1: f64,
     pub symmetric_mean: f64,
+    /// Maximum of both directed nearest-neighbor maxima: symmetric Hausdorff distance.
+    pub symmetric_maximum: f64,
+    /// Alias for [`CloudEvaluation::symmetric_maximum`] using the conventional metric name.
+    pub hausdorff_distance: f64,
 }
 
 fn validate(points: &[Point]) -> Result<()> {
@@ -335,10 +339,13 @@ pub fn evaluate_clouds(
     } else {
         2. * precision * recall / (precision + recall)
     };
+    let symmetric_maximum = f64::max(accuracy.maximum, completeness.maximum);
     Ok(CloudEvaluation {
         input_reconstructed: reconstructed.len(),
         input_reference: reference.len(),
         symmetric_mean: (accuracy.mean + completeness.mean) / 2.,
+        symmetric_maximum,
+        hausdorff_distance: symmetric_maximum,
         reconstructed_to_reference: accuracy,
         reference_to_reconstructed: completeness,
         precision,
@@ -376,6 +383,8 @@ mod tests {
         assert_eq!(report.precision, 1. / 3.);
         assert_eq!(report.recall, 1. / 3.);
         assert_eq!(report.reconstructed_to_reference.maximum, 1.);
+        assert_eq!(report.symmetric_maximum, 1.);
+        assert_eq!(report.hausdorff_distance, 1.);
     }
     #[test]
     fn exact_tree_matches_brute_force_on_nonuniform_cloud() {
