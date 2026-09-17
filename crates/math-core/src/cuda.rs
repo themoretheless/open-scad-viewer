@@ -1,16 +1,27 @@
 //! CUDA batch transform (feature `cuda`): runs the PTX port of
 //! `TRANSFORM_WGSL` (`transform.cu` → `transform.ptx`) over a point set
 //! through the CUDA driver API. f32 arithmetic — see [`crate::Acceleration`].
+//!
+//! Device buffers are cached per point-set capacity (grow-only) so repeated
+//! calls at a stable size amortize allocation; only the elements actually
+//! used for the current call are copied to/from the device.
 use crate::{M3, V3};
-use gpu_compute::cuda::{CudaDevice, CudaFunction, PushKernelArg, launch_1d};
+use gpu_compute::cuda::{CudaDevice, CudaFunction, CudaSlice, PushKernelArg, launch_1d};
 
 /// PTX generated from `transform.cu` by `scripts/build-cuda-kernels.mjs`.
 pub const TRANSFORM_PTX: &str = include_str!("transform.ptx");
 const BLOCK: u32 = 256;
 
+struct Buffers {
+    capacity: usize,
+    input: CudaSlice<f32>,
+    output: CudaSlice<f32>,
+}
+
 struct CudaTransform {
     device: CudaDevice,
     kernel: CudaFunction,
+    buffers: std::cell::RefCell<Option<Buffers>>,
 }
 
 impl CudaTransform {
@@ -18,18 +29,53 @@ impl CudaTransform {
         let device = CudaDevice::new()?;
         let module = device.load_ptx(TRANSFORM_PTX)?;
         let kernel = module.load_function("transform_points").ok()?;
-        Some(Self { device, kernel })
+        Some(Self {
+            device,
+            kernel,
+            buffers: std::cell::RefCell::new(None),
+        })
+    }
+
+    /// (Re)allocates the device slices when `count` exceeds the cached
+    /// capacity; a no-op otherwise, so repeated calls at a stable or
+    /// shrinking size reuse the same device allocations.
+    fn ensure_buffers(&self, count: usize) -> Option<()> {
+        let stale = match &*self.buffers.borrow() {
+            Some(buffers) => buffers.capacity < count,
+            None => true,
+        };
+        if !stale {
+            return Some(());
+        }
+        let capacity = count.max(1);
+        let stream = &self.device.stream;
+        let input = stream.alloc_zeros::<f32>(capacity * 3).ok()?;
+        let output = stream.alloc_zeros::<f32>(capacity * 3).ok()?;
+        *self.buffers.borrow_mut() = Some(Buffers {
+            capacity,
+            input,
+            output,
+        });
+        Some(())
     }
 
     fn run(&self, points: &[V3], m: M3, t: V3) -> Option<Vec<V3>> {
         let count = points.len();
+        self.ensure_buffers(count)?;
         let stream = &self.device.stream;
         let flat: Vec<f32> = points.iter().flatten().map(|&v| v as f32).collect();
-        let input = self.device.upload(&flat).ok()?;
-        let mut output = stream.alloc_zeros::<f32>((count * 3).max(1)).ok()?;
+        let mut buffers = self.buffers.borrow_mut();
+        let b = buffers.as_mut().expect("ensure_buffers was just called");
+        if !flat.is_empty() {
+            let mut input_view = b.input.slice_mut(0..flat.len());
+            stream.memcpy_htod(&flat, &mut input_view).ok()?;
+        }
         let mrow: [f32; 9] = std::array::from_fn(|i| m[i / 3][i % 3] as f32);
         let tr: [f32; 3] = std::array::from_fn(|i| t[i] as f32);
         let count_u32 = count as u32;
+        let elems = (count * 3).max(1);
+        let input_view = b.input.slice(0..elems);
+        let mut output_view = b.output.slice_mut(0..elems);
         let mut launch = stream.launch_builder(&self.kernel);
         launch
             .arg(&mrow[0])
@@ -45,11 +91,13 @@ impl CudaTransform {
             .arg(&tr[1])
             .arg(&tr[2])
             .arg(&count_u32)
-            .arg(&input)
-            .arg(&mut output);
+            .arg(&input_view)
+            .arg(&mut output_view);
         unsafe { launch.launch(launch_1d(count_u32, BLOCK)) }.ok()?;
-        let mut out = stream.clone_dtoh(&output).ok()?;
-        out.truncate(count * 3);
+        let mut out = vec![0f32; count * 3];
+        if count > 0 {
+            stream.memcpy_dtoh(&output_view, &mut out).ok()?;
+        }
         Some(
             out.chunks_exact(3)
                 .map(|c| [c[0] as f64, c[1] as f64, c[2] as f64])

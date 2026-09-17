@@ -1,14 +1,27 @@
 //! GPU batch transform (feature `gpu`): runs the shared `TRANSFORM_WGSL`
 //! shader over a point set. f32 arithmetic — see [`crate::Acceleration`].
+//!
+//! Device buffers are cached per point-set capacity (grow-only) so repeated
+//! calls at a stable size amortize allocation; only the bytes actually
+//! written/read for the current call cross the wire.
 use crate::{M3, V3};
 use gpu_compute::{GpuContext, read_buffer, storage_entry, uniform_entry, wgpu};
-use wgpu::util::DeviceExt;
+
+struct Buffers {
+    capacity: usize,
+    params: wgpu::Buffer,
+    input: wgpu::Buffer,
+    output: wgpu::Buffer,
+    read: wgpu::Buffer,
+    bind: wgpu::BindGroup,
+}
 
 struct GpuTransform {
     device: wgpu::Device,
     queue: wgpu::Queue,
     layout: wgpu::BindGroupLayout,
     pipeline: wgpu::ComputePipeline,
+    buffers: std::cell::RefCell<Option<Buffers>>,
 }
 
 impl GpuTransform {
@@ -44,12 +57,79 @@ impl GpuTransform {
             queue: context.queue.clone(),
             layout,
             pipeline,
+            buffers: std::cell::RefCell::new(None),
         }
     }
 
-    fn run(&self, points: &[V3], m: M3, t: V3) -> Vec<V3> {
+    /// (Re)allocates the device buffers and bind group when `count` exceeds
+    /// the cached capacity; a no-op otherwise, so repeated calls at a stable
+    /// or shrinking size reuse the same GPU allocations.
+    fn ensure_buffers(&self, count: usize) {
+        let stale = match &*self.buffers.borrow() {
+            Some(buffers) => buffers.capacity < count,
+            None => true,
+        };
+        if !stale {
+            return;
+        }
         let device = &self.device;
+        let capacity = count.max(1);
+        let value_bytes = (capacity * 12) as u64;
+        let params = device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("transform_params"),
+            size: 64,
+            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        });
+        let input = device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("transform_in"),
+            size: value_bytes,
+            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        });
+        let output = device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("transform_out"),
+            size: value_bytes,
+            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC,
+            mapped_at_creation: false,
+        });
+        let read = device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("transform_read"),
+            size: value_bytes,
+            usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        });
+        let bind = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("transform_points"),
+            layout: &self.layout,
+            entries: &[
+                wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: params.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 1,
+                    resource: input.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 2,
+                    resource: output.as_entire_binding(),
+                },
+            ],
+        });
+        *self.buffers.borrow_mut() = Some(Buffers {
+            capacity,
+            params,
+            input,
+            output,
+            read,
+            bind,
+        });
+    }
+
+    fn run(&self, points: &[V3], m: M3, t: V3) -> Vec<V3> {
         let count = points.len();
+        self.ensure_buffers(count);
         // Uniform layout matches transform.wgsl's `Params`: three padded
         // vec3<f32> matrix rows, then a padded vec3<f32> translation + u32 count.
         let mut params = Vec::with_capacity(64);
@@ -64,66 +144,35 @@ impl GpuTransform {
         }
         params.extend_from_slice(&(count as u32).to_le_bytes());
         let flat: Vec<f32> = points.iter().flatten().map(|&v| v as f32).collect();
-        let input = gpu_compute::pack_f32(&flat);
-        let mk = |label: &str, bytes: &[u8], usage| {
-            device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                label: Some(label),
-                contents: bytes,
-                usage,
-            })
-        };
-        let params_buf = mk("transform_params", &params, wgpu::BufferUsages::UNIFORM);
-        let in_buf = mk(
-            "transform_in",
-            if input.is_empty() { &[0u8; 12] } else { &input },
-            wgpu::BufferUsages::STORAGE,
-        );
-        let value_bytes = (count.max(1) * 12) as u64;
-        let out_buf = device.create_buffer(&wgpu::BufferDescriptor {
-            label: Some("transform_out"),
-            size: value_bytes,
-            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC,
-            mapped_at_creation: false,
-        });
-        let read_buf = device.create_buffer(&wgpu::BufferDescriptor {
-            label: Some("transform_read"),
-            size: value_bytes,
-            usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
-            mapped_at_creation: false,
-        });
-        let bind = device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("transform_points"),
-            layout: &self.layout,
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: params_buf.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: in_buf.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 2,
-                    resource: out_buf.as_entire_binding(),
-                },
-            ],
-        });
-        let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
-            label: Some("transform_points"),
-        });
+        let input_bytes = gpu_compute::pack_f32(&flat);
+        let value_bytes = (count * 12) as u64;
+
+        let buffers = self.buffers.borrow();
+        let b = buffers.as_ref().expect("ensure_buffers was just called");
+        self.queue.write_buffer(&b.params, 0, &params);
+        if !input_bytes.is_empty() {
+            self.queue.write_buffer(&b.input, 0, &input_bytes);
+        }
+        let mut encoder = self
+            .device
+            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                label: Some("transform_points"),
+            });
         {
             let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
                 label: Some("transform_points"),
                 timestamp_writes: None,
             });
             pass.set_pipeline(&self.pipeline);
-            pass.set_bind_group(0, &bind, &[]);
+            pass.set_bind_group(0, &b.bind, &[]);
             pass.dispatch_workgroups((count.max(1) as u32).div_ceil(256), 1, 1);
         }
-        encoder.copy_buffer_to_buffer(&out_buf, 0, &read_buf, 0, value_bytes);
+        if value_bytes > 0 {
+            encoder.copy_buffer_to_buffer(&b.output, 0, &b.read, 0, value_bytes);
+        }
         self.queue.submit([encoder.finish()]);
-        let raw = read_buffer(device, &read_buf, count * 12);
+        let raw = read_buffer(&self.device, &b.read, count * 12);
+        b.read.unmap();
         raw.chunks_exact(4)
             .take(count * 3)
             .map(|c| f32::from_ne_bytes(c.try_into().unwrap()) as f64)
