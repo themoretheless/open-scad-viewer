@@ -815,7 +815,10 @@ pub fn lattice_accelerated(
         };
         source.max(material)
     };
+    #[cfg(feature = "gpu")]
     let mut output = None;
+    #[cfg(not(feature = "gpu"))]
+    let output = None;
     #[cfg(feature = "cuda")]
     if acceleration == Acceleration::Cuda {
         output = crate::lattice_cuda::try_cuda(
