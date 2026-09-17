@@ -66,6 +66,12 @@ fn main() {
         "wgpu backend: {}",
         photogrammetry_core::gpu::backend_label().unwrap_or("none (falls back to cpu)")
     );
+    #[cfg(feature = "cuda")]
+    println!(
+        "cuda device: {}",
+        photogrammetry_core::gpu::cuda_device_name()
+            .unwrap_or_else(|| "none (falls back to wgpu/cpu)".into())
+    );
     println!("features_a,features_b,work,recommended,cpu_ms,auto_ms,gpu_ms,cuda_ms,auto_speedup");
     for (a_count, b_count) in [
         (64, 64),

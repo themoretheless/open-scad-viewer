@@ -61,7 +61,9 @@ recommendation with `features::recommended_for_descriptor_matching(a, b)` and
 `cargo run --release -p photogrammetry-core --features cuda --example
 bench_matching`. Descriptor buffers are cached grow-only per matcher, so
 repeated stable-size image-pair matching avoids per-call device allocation.
-On an RTX 5090:
+`photogrammetry_core::gpu::backend_report()` reports the portable backend
+(`metal`, `vulkan`, `dx12`, `webgpu`); with `--features cuda`,
+`cuda_device_report()` reports the native CUDA device. On an RTX 5090:
 
 | features A × B | work | recommended | CPU | Auto | wgpu/Vulkan | CUDA |
 | --- | --- | --- | --- | --- | --- | --- |
