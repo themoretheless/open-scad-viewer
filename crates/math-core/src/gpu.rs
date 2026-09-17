@@ -892,6 +892,206 @@ pub fn point_bounds_gpu(points: &[V3]) -> Option<crate::PointBounds> {
     })
 }
 
+struct GpuPointMoments {
+    device: wgpu::Device,
+    queue: wgpu::Queue,
+    layout: wgpu::BindGroupLayout,
+    pipeline: wgpu::ComputePipeline,
+    workgroup_size: u32,
+    buffers: std::cell::RefCell<Option<PointMomentsBuffers>>,
+}
+
+struct PointMomentsBuffers {
+    point_capacity: usize,
+    partial_capacity: usize,
+    params: wgpu::Buffer,
+    points: wgpu::Buffer,
+    out: wgpu::Buffer,
+    read: wgpu::Buffer,
+    bind: wgpu::BindGroup,
+}
+
+impl GpuPointMoments {
+    fn new(context: &GpuContext) -> Self {
+        let workgroup_size =
+            gpu_compute::tuned_workgroup_size(context.backend, WG_METAL, WG_DEFAULT);
+        let device = &context.device;
+        let module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
+            label: Some("point_moments"),
+            source: wgpu::ShaderSource::Wgsl(
+                crate::POINT_MOMENTS_WGSL_TEMPLATE
+                    .replace("__WG__", &workgroup_size.to_string())
+                    .into(),
+            ),
+        });
+        let layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+            label: Some("point_moments"),
+            entries: &[
+                uniform_entry(0),
+                storage_entry(1, true),
+                storage_entry(2, false),
+            ],
+        });
+        let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+            label: Some("point_moments"),
+            bind_group_layouts: &[Some(&layout)],
+            immediate_size: 0,
+        });
+        let pipeline = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
+            label: Some("point_moments"),
+            layout: Some(&pipeline_layout),
+            module: &module,
+            entry_point: Some("main"),
+            compilation_options: Default::default(),
+            cache: None,
+        });
+        Self {
+            device: device.clone(),
+            queue: context.queue.clone(),
+            layout,
+            pipeline,
+            workgroup_size,
+            buffers: std::cell::RefCell::new(None),
+        }
+    }
+
+    fn ensure_buffers(&self, point_count: usize, partial_count: usize) {
+        let stale = match &*self.buffers.borrow() {
+            Some(b) => b.point_capacity < point_count || b.partial_capacity < partial_count,
+            None => true,
+        };
+        if !stale {
+            return;
+        }
+        let point_capacity = point_count.max(1);
+        let partial_capacity = partial_count.max(1);
+        let device = &self.device;
+        let mk = |label: &str, size: u64, usage| {
+            device.create_buffer(&wgpu::BufferDescriptor {
+                label: Some(label),
+                size,
+                usage,
+                mapped_at_creation: false,
+            })
+        };
+        let params = mk(
+            "point_moments_params",
+            16,
+            wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+        );
+        let points = mk(
+            "point_moments_points",
+            (point_capacity * 12) as u64,
+            wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+        );
+        let partial_bytes = (partial_capacity * 9 * 4) as u64;
+        let out = mk(
+            "point_moments_out",
+            partial_bytes,
+            wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC,
+        );
+        let read = mk(
+            "point_moments_read",
+            partial_bytes,
+            wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
+        );
+        let bind = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("point_moments"),
+            layout: &self.layout,
+            entries: &[
+                wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: params.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 1,
+                    resource: points.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 2,
+                    resource: out.as_entire_binding(),
+                },
+            ],
+        });
+        *self.buffers.borrow_mut() = Some(PointMomentsBuffers {
+            point_capacity,
+            partial_capacity,
+            params,
+            points,
+            out,
+            read,
+            bind,
+        });
+    }
+
+    fn run(&self, points: &[V3]) -> crate::PointMoments {
+        let point_count = points.len();
+        let partial_count = point_count.div_ceil(self.workgroup_size as usize).max(1);
+        self.ensure_buffers(point_count, partial_count);
+        let flat: Vec<f32> = points.iter().flatten().map(|&v| v as f32).collect();
+        let mut params = Vec::with_capacity(16);
+        params.extend_from_slice(&(point_count as u32).to_le_bytes());
+        params.extend_from_slice(&0u32.to_le_bytes());
+        params.extend_from_slice(&0u32.to_le_bytes());
+        params.extend_from_slice(&0u32.to_le_bytes());
+        let device = &self.device;
+        let buffers = self.buffers.borrow();
+        let buffers = buffers.as_ref().expect("ensure_buffers was just called");
+        self.queue.write_buffer(&buffers.params, 0, &params);
+        self.queue
+            .write_buffer(&buffers.points, 0, &gpu_compute::pack_f32(&flat));
+        let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
+            label: Some("point_moments"),
+        });
+        {
+            let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
+                label: Some("point_moments"),
+                timestamp_writes: None,
+            });
+            pass.set_pipeline(&self.pipeline);
+            pass.set_bind_group(0, &buffers.bind, &[]);
+            pass.dispatch_workgroups(partial_count as u32, 1, 1);
+        }
+        let partial_bytes = partial_count * 9 * 4;
+        encoder.copy_buffer_to_buffer(&buffers.out, 0, &buffers.read, 0, partial_bytes as u64);
+        self.queue.submit([encoder.finish()]);
+        let raw = read_buffer(device, &buffers.read, partial_bytes);
+        buffers.read.unmap();
+        let mut accum = [0.; 9];
+        for chunk in raw.chunks_exact(36).take(partial_count) {
+            for item in 0..9 {
+                let start = item * 4;
+                accum[item] +=
+                    f32::from_ne_bytes(chunk[start..start + 4].try_into().unwrap()) as f64;
+            }
+        }
+        crate::PointMoments::from_sums(
+            point_count,
+            [accum[0], accum[1], accum[2]],
+            [accum[3], accum[4], accum[5], accum[6], accum[7], accum[8]],
+        )
+    }
+}
+
+thread_local! {
+    static SHARED_POINT_MOMENTS: std::cell::LazyCell<Option<&'static GpuPointMoments>> =
+        std::cell::LazyCell::new(|| {
+            GpuContext::new()
+                .map(|context| Box::leak(Box::new(GpuPointMoments::new(&context))) as &'static GpuPointMoments)
+        });
+}
+
+/// Point-cloud centroid/covariance reduction on the GPU; `None` without an adapter.
+pub fn point_moments_gpu(points: &[V3]) -> Option<crate::PointMoments> {
+    if points.is_empty() {
+        return None;
+    }
+    SHARED_POINT_MOMENTS.with(|cell| {
+        let shared: &Option<&GpuPointMoments> = cell;
+        shared.map(|kernel| kernel.run(points))
+    })
+}
+
 struct GpuChamfer {
     device: wgpu::Device,
     queue: wgpu::Queue,

@@ -23,6 +23,7 @@ src/
 ├─ acceleration.rs     # Cpu/Auto/Gpu/Cuda placement and size heuristics
 ├─ linalg.rs           # dense vector/matrix helpers, eigen/SVD/solve
 ├─ bounds.rs           # point-cloud bounds reduction
+├─ moments.rs          # point-cloud centroid/covariance reduction
 ├─ nearest_neighbor.rs # CPU reference plus GPU/CUDA dispatch
 ├─ chamfer.rs          # point-cloud Chamfer distance over nearest-neighbor
 ├─ registration.rs     # rigid transform fitting and ICP
@@ -213,6 +214,25 @@ bench_point_bounds` on the RTX 5090:
 | 100,000 | 0.422 ms | 0.401 ms | 1.856 ms | 0.670 ms |
 | 1,000,000 | 4.188 ms | 4.155 ms | 15.795 ms | 5.097 ms |
 | 5,000,000 | 21.135 ms | 21.265 ms | 77.053 ms | 25.854 ms |
+
+## Point-cloud moments
+
+`point_moments(points)` computes the centroid, mean outer product and central
+covariance matrix for a finite point cloud. `point_moments_accelerated(points,
+acceleration)` adds fused wgpu/CUDA reductions with grow-only buffers and
+Metal/default workgroup tuning. Like bounds, this is mostly memory movement on
+discrete GPUs, so `Auto` stays on the exact CPU path; explicit `Gpu`/`Cuda`
+remain useful for integrated-GPU experiments and backend validation.
+
+Measured with `cargo run --release -p osv-math --features cuda --example
+bench_point_moments` on the RTX 5090:
+
+| points | cpu | auto | gpu | cuda |
+| --- | --- | --- | --- | --- |
+| 10,000 | 0.035 ms | 0.035 ms | 0.293 ms | 0.160 ms |
+| 100,000 | 0.332 ms | 0.338 ms | 1.793 ms | 0.601 ms |
+| 1,000,000 | 3.593 ms | 3.508 ms | 15.199 ms | 5.023 ms |
+| 5,000,000 | 18.004 ms | 18.056 ms | 73.931 ms | 24.893 ms |
 
 ## ICP / rigid point-cloud registration
 

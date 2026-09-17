@@ -22,6 +22,8 @@ pub const DISTANCE_PAIR_SUM_PTX: &str = include_str!("distance_pair_sum.ptx");
 pub const CHAMFER_PTX: &str = include_str!("chamfer.ptx");
 /// PTX generated from `point_bounds.cu` by `scripts/build-cuda-kernels.mjs`.
 pub const POINT_BOUNDS_PTX: &str = include_str!("point_bounds.ptx");
+/// PTX generated from `point_moments.cu` by `scripts/build-cuda-kernels.mjs`.
+pub const POINT_MOMENTS_PTX: &str = include_str!("point_moments.ptx");
 const BLOCK: u32 = 256;
 
 struct Buffers {
@@ -752,6 +754,108 @@ thread_local! {
 pub(crate) fn point_bounds_cuda(points: &[V3]) -> Option<crate::PointBounds> {
     SHARED_POINT_BOUNDS.with(|cell| {
         let shared: &Option<&CudaPointBounds> = cell;
+        shared.and_then(|kernel| kernel.run(points))
+    })
+}
+
+struct CudaPointMoments {
+    device: CudaDevice,
+    kernel: CudaFunction,
+    buffers: std::cell::RefCell<Option<PointMomentsBuffers>>,
+}
+
+struct PointMomentsBuffers {
+    point_capacity: usize,
+    partial_capacity: usize,
+    points: CudaSlice<f32>,
+    out: CudaSlice<f32>,
+}
+
+impl CudaPointMoments {
+    fn new() -> Option<Self> {
+        let device = CudaDevice::new()?;
+        let module = device.load_ptx(POINT_MOMENTS_PTX)?;
+        let kernel = module.load_function("point_moments_reduce").ok()?;
+        Some(Self {
+            device,
+            kernel,
+            buffers: std::cell::RefCell::new(None),
+        })
+    }
+
+    fn ensure_buffers(&self, point_count: usize, partial_count: usize) -> Option<()> {
+        let stale = match &*self.buffers.borrow() {
+            Some(b) => b.point_capacity < point_count || b.partial_capacity < partial_count,
+            None => true,
+        };
+        if !stale {
+            return Some(());
+        }
+        let point_capacity = point_count.max(1);
+        let partial_capacity = partial_count.max(1);
+        let stream = &self.device.stream;
+        let points = stream.alloc_zeros::<f32>(point_capacity * 3).ok()?;
+        let out = stream.alloc_zeros::<f32>(partial_capacity * 9).ok()?;
+        *self.buffers.borrow_mut() = Some(PointMomentsBuffers {
+            point_capacity,
+            partial_capacity,
+            points,
+            out,
+        });
+        Some(())
+    }
+
+    fn run(&self, points: &[V3]) -> Option<crate::PointMoments> {
+        if points.is_empty() {
+            return None;
+        }
+        let point_count = points.len();
+        let partial_count = point_count.div_ceil(BLOCK as usize).max(1);
+        let stream = &self.device.stream;
+        let flat: Vec<f32> = points.iter().flatten().map(|&v| v as f32).collect();
+        self.ensure_buffers(point_count, partial_count)?;
+        let mut buffers = self.buffers.borrow_mut();
+        let buffers = buffers.as_mut().expect("ensure_buffers was just called");
+        {
+            let mut points_view = buffers.points.slice_mut(0..point_count * 3);
+            stream.memcpy_htod(&flat, &mut points_view).ok()?;
+        }
+        let point_count_u32 = point_count as u32;
+        let points_view = buffers.points.slice(0..point_count * 3);
+        let mut out_view = buffers.out.slice_mut(0..partial_count * 9);
+        let mut launch = stream.launch_builder(&self.kernel);
+        launch
+            .arg(&point_count_u32)
+            .arg(&points_view)
+            .arg(&mut out_view);
+        unsafe { launch.launch(launch_1d(point_count_u32, BLOCK)) }.ok()?;
+        let mut partials = vec![0f32; partial_count * 9];
+        stream.memcpy_dtoh(&out_view, &mut partials).ok()?;
+        let mut accum = [0.; 9];
+        for chunk in partials.chunks_exact(9) {
+            for item in 0..9 {
+                accum[item] += chunk[item] as f64;
+            }
+        }
+        Some(crate::PointMoments::from_sums(
+            point_count,
+            [accum[0], accum[1], accum[2]],
+            [accum[3], accum[4], accum[5], accum[6], accum[7], accum[8]],
+        ))
+    }
+}
+
+thread_local! {
+    static SHARED_POINT_MOMENTS: std::cell::LazyCell<Option<&'static CudaPointMoments>> =
+        std::cell::LazyCell::new(|| {
+            CudaPointMoments::new().map(|kernel| Box::leak(Box::new(kernel)) as &'static CudaPointMoments)
+        });
+}
+
+/// Point-cloud centroid/covariance reduction on the CUDA device; `None` without a device.
+pub(crate) fn point_moments_cuda(points: &[V3]) -> Option<crate::PointMoments> {
+    SHARED_POINT_MOMENTS.with(|cell| {
+        let shared: &Option<&CudaPointMoments> = cell;
         shared.and_then(|kernel| kernel.run(points))
     })
 }

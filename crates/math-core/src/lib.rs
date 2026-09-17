@@ -6,6 +6,7 @@ mod chamfer;
 mod distance_pairs;
 mod error;
 mod linalg;
+mod moments;
 mod nearest_neighbor;
 mod nearest_two;
 mod registration;
@@ -26,6 +27,9 @@ pub use error::{Error, Result, ensure};
 pub use linalg::{
     add, add2, cross, cross2, det, dot, dot2, eigen, finite, mm, mv, norm, norm2, rotation, scale,
     scale2, smallest, solve, sub, sub2, svd, tr, transform_points, unit, unit2,
+};
+pub use moments::{
+    POINT_MOMENTS_WGSL_TEMPLATE, PointMoments, point_moments, point_moments_accelerated,
 };
 pub use nearest_neighbor::{NEAREST_NEIGHBOR_WGSL, nearest_neighbor, nearest_neighbor_accelerated};
 pub use nearest_two::{
