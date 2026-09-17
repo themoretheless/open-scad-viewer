@@ -35,6 +35,10 @@ pub const EXACT_BENT_RMF_SWEEP_CAPABILITY: &str = "exact-parallel-frame-sweep/2"
 /// Qualified finite shell/offset successor. The admitted cells are audited
 /// convex planar-faced bodies and exact finite cylinders under rigid placement.
 pub const EXACT_ANALYTIC_SHELL_CAPABILITY: &str = "analytic-shell/2";
+/// Exact linear radius law on one vertical edge of an audited AA cuboid.
+pub const EXACT_VARIABLE_RADIUS_FILLET_CAPABILITY: &str = "exact-variable-radius-fillet/1";
+/// Exact equal-radius sphere/cylinder valence-3 corner on an audited AA cuboid.
+pub const EXACT_VALENCE3_CORNER_BLEND_CAPABILITY: &str = "exact-valence3-corner-blend/1";
 
 #[derive(Clone, Debug)]
 pub struct AuditedFeatureResult {
@@ -443,17 +447,143 @@ pub fn exact_convex_prism_fillet(
     )
 }
 
-/// Explicit fail-closed product seam for variable-radius requests. No bounded
-/// exact radius law or complete junction proof is claimed by the V7 cell.
+/// Exact linear radius law on one vertical edge of an audited axis-aligned
+/// cuboid. Endpoint radii must be positive, unequal (constant radius stays on
+/// the constant-fillet capabilities), and within the profile collision bound.
+/// Cap edges and multi-edge / valence-3 networks remain typed-refused.
 pub fn exact_variable_radius_fillet(
-    _model: &Model,
-    _edges: &[usize],
-    _radii: &[[f64; 2]],
+    model: &Model,
+    edges: &[usize],
+    radii: &[[f64; 2]],
 ) -> Result<AuditedFeatureResult> {
-    Err(refuse(
+    audit_solid(model).map_err(|_| {
+        refuse(
+            "BREP_VARIABLE_RADIUS_FILLET_REFUSED",
+            "Variable-radius fillet source must pass the global solid audit",
+        )
+    })?;
+    if edges.len() != 1 || radii.len() != 1 {
+        return Err(refuse(
+            "BREP_VARIABLE_RADIUS_FILLET_REFUSED",
+            "exact-variable-radius-fillet/1 admits exactly one vertical cuboid edge and one linear radius pair",
+        ));
+    }
+    let [r0, r1] = radii[0];
+    if !(r0.is_finite() && r1.is_finite() && r0 > 0. && r1 > 0.) {
+        return Err(refuse(
+            "BREP_VARIABLE_RADIUS_FILLET_REFUSED",
+            "Endpoint radii must be finite and positive",
+        ));
+    }
+    if (r0 - r1).abs() <= model.tolerance_mm.max(1e-12) {
+        return Err(refuse(
+            "BREP_VARIABLE_RADIUS_FILLET_REFUSED",
+            "Constant radius must use the constant-radius fillet capabilities; refuse silent substitution",
+        ));
+    }
+    if !is_axis_aligned_cuboid(model) {
+        return Err(refuse(
+            "BREP_VARIABLE_RADIUS_FILLET_REFUSED",
+            "exact-variable-radius-fillet/1 admits axis-aligned planar cuboids only",
+        ));
+    }
+    let edge = edges[0];
+    if edge >= model.edges.len() {
+        return Err(refuse(
+            "BREP_VARIABLE_RADIUS_FILLET_REFUSED",
+            "Edge index out of range",
+        ));
+    }
+    let edge_ref = &model.edges[edge];
+    if edge_ref.curve.degree != 1 {
+        return Err(refuse(
+            "BREP_VARIABLE_RADIUS_FILLET_REFUSED",
+            "Curved edges are outside exact-variable-radius-fillet/1",
+        ));
+    }
+    let a = model.vertices[edge_ref.vertices[0]].point;
+    let b = model.vertices[edge_ref.vertices[1]].point;
+    let dir = [b[0] - a[0], b[1] - a[1], b[2] - a[2]];
+    let vertical = dir[0].abs() <= 1e-12 && dir[1].abs() <= 1e-12 && dir[2].abs() > 1e-12;
+    if !vertical {
+        return Err(refuse(
+            "BREP_VARIABLE_RADIUS_FILLET_REFUSED",
+            "exact-variable-radius-fillet/1 admits vertical (+Z) cuboid edges only",
+        ));
+    }
+    let (min, max) = model_bounds(model);
+    let rmax = r0.max(r1);
+    if max[0] - min[0] <= 2. * rmax || max[1] - min[1] <= 2. * rmax {
+        return Err(refuse(
+            "BREP_VARIABLE_RADIUS_FILLET_REFUSED",
+            "Cuboid extents too small for the endpoint radii",
+        ));
+    }
+    let height = (a[2] - b[2]).abs();
+    if !(height.is_finite() && height > rmax * 2.) {
+        return Err(refuse(
+            "BREP_VARIABLE_RADIUS_FILLET_REFUSED",
+            "Edge too short for the requested endpoint radii",
+        ));
+    }
+    let x = (a[0] + b[0]) * 0.5;
+    let y = (a[1] + b[1]) * 0.5;
+    let at_max_x = (x - max[0]).abs() <= (x - min[0]).abs();
+    let at_max_y = (y - max[1]).abs() <= (y - min[1]).abs();
+    let corner = match (at_max_x, at_max_y) {
+        (false, false) => 0,
+        (true, false) => 1,
+        (true, true) => 2,
+        (false, true) => 3,
+    };
+    let mut rounded = [false; 4];
+    rounded[corner] = true;
+    // radii[0] applies at vertices[0], radii[1] at vertices[1]; map to z-order.
+    let (radius_bottom, radius_top) = if a[2] <= b[2] {
+        (r0, r1)
+    } else {
+        (r1, r0)
+    };
+    let result = crate::imprint_pipeline::variable_radius_cuboid_vertical_edges(
+        model,
+        min,
+        max,
+        rounded,
+        radius_bottom,
+        radius_top,
+    )
+    .map_err(|error| {
+        refuse(
+            "BREP_VARIABLE_RADIUS_FILLET_REFUSED",
+            &format!("Variable-radius fillet authorship refused: {}", error.message),
+        )
+    })?;
+    let has_cone = result.faces.iter().any(|face| {
+        face.surface.degree_u > 1
+            && face.surface.degree_v == 1
+            && face.surface.control_points.iter().any(|row| {
+                row.len() == 2
+                    && (row[0][0] - row[1][0]).hypot(row[0][1] - row[1][1]) > model.tolerance_mm
+            })
+    });
+    if !has_cone {
+        return Err(refuse(
+            "BREP_VARIABLE_RADIUS_FILLET_REFUSED",
+            "Variable-radius result missing conical fillet face",
+        ));
+    }
+    certify_blend_result(
+        result,
+        EXACT_VARIABLE_RADIUS_FILLET_CAPABILITY,
+        vec![
+            "exact_linear_radius_law",
+            "rational_conical_fillet_face",
+            "no_constant_radius_substitution",
+            "no_valence3_corner",
+        ],
+        rmax,
         "BREP_VARIABLE_RADIUS_FILLET_REFUSED",
-        "Variable-radius fillet is unavailable: exact bounded law and corner-transition proof are incomplete",
-    ))
+    )
 }
 
 /// AF-01: cuboid single convex edge → cylindrical fillet via corner cutter − cylinder.
@@ -2493,12 +2623,37 @@ mod tests {
                 .code,
             "BREP_EXACT_FILLET_REFUSED"
         );
+        // Constant-radius pair must not silently substitute.
         assert_eq!(
-            exact_variable_radius_fillet(&source, &[0], &[[0.5, 0.75]])
+            exact_variable_radius_fillet(&source, &[0], &[[0.5, 0.5]])
                 .unwrap_err()
                 .code,
             "BREP_VARIABLE_RADIUS_FILLET_REFUSED"
         );
+    }
+
+    #[test]
+    fn exact_variable_radius_fillet_authors_linear_law_on_vertical_cuboid_edge() {
+        let source = cuboid([0.; 3], [10.; 3]).unwrap();
+        let edge = source
+            .edges
+            .iter()
+            .position(|edge| {
+                let a = source.vertices[edge.vertices[0]].point;
+                let b = source.vertices[edge.vertices[1]].point;
+                (a[0] - b[0]).abs() <= 1e-12
+                    && (a[1] - b[1]).abs() <= 1e-12
+                    && (a[0] - 10.).abs() <= 1e-9
+                    && (a[1] - 10.).abs() <= 1e-9
+            })
+            .expect("vertical +X/+Y edge");
+        let out = exact_variable_radius_fillet(&source, &[edge], &[[0.5, 1.5]]).unwrap();
+        assert_eq!(out.feature.capability, EXACT_VARIABLE_RADIUS_FILLET_CAPABILITY);
+        assert!(out.feature.complete);
+        assert!(out.naming_complete);
+        assert!(out.feature.notes.contains(&"exact_linear_radius_law"));
+        assert!(out.feature.notes.contains(&"no_constant_radius_substitution"));
+        out.model.validate().unwrap();
     }
 
     #[test]

@@ -349,6 +349,8 @@ fn general_nurbs_boolean_value(
                 "complete": certificate.uv.permits_trim_classification()
             },
             "exactCurvePcurveCount": certificate.exact_curve_pcurve_count,
+            "ssReportsComplete": certificate.ss_reports_complete,
+            "ssFacePairs": certificate.ss_face_pairs,
             "sew": {
                 "matched": certificate.sew.matched,
                 "complete": certificate.sew.complete,

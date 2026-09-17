@@ -46,8 +46,9 @@ pub const NURBS_BOOLEAN_CAPABILITY_V4: &str = "nurbs-boolean-bezier-le3/4";
 pub const NURBS_BOOLEAN_CAPABILITY_V5: &str = "nurbs-boolean-bezier-le3/5";
 pub const NURBS_BOOLEAN_CAPABILITY_V7: &str = "nurbs-boolean-bezier-le3/7";
 pub const NURBS_BOOLEAN_CAPABILITY_V8: &str = "nurbs-boolean-bezier-le3/8";
-/// Development authority for `author-general-nurbs-boolean`.  Deliberately
-/// does not use the reserved `/6` qualification identifier.
+/// Product Boolean successor over nurbs-ss/1 for the admitted multispan×affine cell.
+pub const NURBS_BOOLEAN_SS_CAPABILITY: &str = "nurbs-boolean/1";
+/// Authority for nurbs-boolean/1 general authorship. Distinct from finite `/8`.
 pub const GENERAL_NURBS_BOOLEAN_AUTHORITY: &str = "author-general-nurbs-boolean";
 pub const NURBS_BOOLEAN_V1_MATURITY: G6Maturity = G6Maturity::Unavailable;
 
@@ -2720,9 +2721,10 @@ pub struct GeneralNurbsBooleanNaming {
     pub operation_stable: bool,
 }
 
-/// Aggregate native authority for the unqualified general multispan author.
+/// Aggregate native authority for nurbs-boolean/1 over nurbs-ss/1.
 /// The sealed BranchGraph and global UV arrangement are retained, rather than
-/// projected to caller-supplied booleans.
+/// projected to caller-supplied booleans. Independent SS face-pair reports must
+/// agree on transverse roots before topology change is granted.
 #[derive(Clone, Debug)]
 pub struct GeneralNurbsBooleanCertificate {
     pub capability: &'static str,
@@ -2743,12 +2745,18 @@ pub struct GeneralNurbsBooleanCertificate {
     pub result_components: usize,
     pub result_faces: usize,
     pub no_fallback: bool,
+    /// Independent nurbs-ss/1 face-pair reports that agreed on transverse roots.
+    pub ss_reports_complete: bool,
+    pub ss_face_pairs: usize,
 }
 
 impl GeneralNurbsBooleanCertificate {
     pub fn permits_topology_change(&self) -> bool {
-        self.authority == GENERAL_NURBS_BOOLEAN_AUTHORITY
+        self.capability == NURBS_BOOLEAN_SS_CAPABILITY
+            && self.authority == GENERAL_NURBS_BOOLEAN_AUTHORITY
             && self.status == "Complete"
+            && self.ss_reports_complete
+            && self.ss_face_pairs > 0
             && matches!(self.operation.as_str(), "union" | "intersection" | "difference")
             && matches!(self.operand_order, "source-tool" | "tool-source")
             && (self.operation != "union" || self.operand_order == "source-tool")
@@ -3017,6 +3025,8 @@ pub fn author_general_nurbs_boolean(
     let mut candidate_pairs = 0usize;
     let mut plane_span_count = 0usize;
     let mut denominator_lower_bound = source_decomposition.denominator_lower_bound;
+    let mut ss_face_pairs = 0usize;
+    let mut ss_roots = Vec::<f64>::new();
     for (cutter_face, face) in cutter.faces.iter().enumerate() {
         let Some((plane_origin, plane_normal)) =
             planar_support(&face.surface, cutter.tolerance_mm.max(1e-9) * 8.)
@@ -3032,6 +3042,71 @@ pub fn author_general_nurbs_boolean(
         let minimum = distances.iter().copied().fold(f64::INFINITY, f64::min);
         let maximum = distances.iter().copied().fold(f64::NEG_INFINITY, f64::max);
         if minimum < -clear && maximum > clear {
+            let ss = nurbs_core::ss_intersection::intersect_surface_surface(
+                top,
+                &face.surface,
+                source.tolerance_context().ok(),
+            )
+            .map_err(|error| {
+                refuse(&format!(
+                    "nurbs-ss/1 refused cutter face {cutter_face}: {}",
+                    error.message
+                ))
+            })?;
+            if ss["version"] != "nurbs-ss/1"
+                || ss["coverage"]["complete"] != true
+                || ss["coverage"]["missedBranchProof"] != true
+                || ss["booleanMutationAuthority"] != false
+                || !ss["unresolved"]
+                    .as_array()
+                    .map(|a| a.is_empty())
+                    .unwrap_or(false)
+            {
+                return Err(refuse(
+                    "nurbs-boolean/1 requires complete nurbs-ss/1 reports without Boolean mutation authority",
+                ));
+            }
+            ss_face_pairs = ss_face_pairs
+                .checked_add(1)
+                .ok_or_else(|| Error::new("BREP_SS_RESOURCE_LIMIT", "SS face-pair overflow"))?;
+            for component in ss["components"].as_array().cloned().unwrap_or_default() {
+                if component["kind"] != "curve" || component["contactClass"] != "transverse" {
+                    if matches!(
+                        component["kind"].as_str(),
+                        Some("empty") | Some("overlap")
+                    ) {
+                        continue;
+                    }
+                    if component["kind"] == "curve" {
+                        return Err(refuse(
+                            "nurbs-boolean/1 admits only transverse curve strata from nurbs-ss/1",
+                        ));
+                    }
+                    continue;
+                }
+                let pcurve = &component["pcurveFirst"];
+                let start = pcurve
+                    .get("start")
+                    .and_then(value_codec::Value::as_array)
+                    .ok_or_else(|| refuse("SS pcurveFirst missing start"))?;
+                let end = pcurve
+                    .get("end")
+                    .and_then(value_codec::Value::as_array)
+                    .ok_or_else(|| refuse("SS pcurveFirst missing end"))?;
+                let s0 = start[0].as_f64().unwrap_or(f64::NAN);
+                let s1 = start[1].as_f64().unwrap_or(f64::NAN);
+                let e0 = end[0].as_f64().unwrap_or(f64::NAN);
+                let e1 = end[1].as_f64().unwrap_or(f64::NAN);
+                if (s0 - e0).abs() <= clear {
+                    ss_roots.push(s0);
+                } else if (s1 - e1).abs() <= clear {
+                    ss_roots.push(s1);
+                } else {
+                    return Err(refuse(
+                        "nurbs-boolean/1 requires iso-aligned SS pcurves on the source chart",
+                    ));
+                }
+            }
             let graph = certify_multispan_ss(
                 top,
                 &face.surface,
@@ -3094,6 +3169,21 @@ pub fn author_general_nurbs_boolean(
     roots.dedup_by(|left, right| left.to_bits() == right.to_bits());
     if roots.len() != 2 || roots[0] <= 0. || roots[1] >= 1. {
         return Err(refuse("Finite affine slab requires exactly two strict-interior branch roots"));
+    }
+    ss_roots.sort_by(f64::total_cmp);
+    ss_roots.dedup_by(|left, right| (*left - *right).abs() <= clear);
+    if ss_roots.len() != roots.len()
+        || ss_roots
+            .iter()
+            .zip(&roots)
+            .any(|(ss, branch)| (ss - branch).abs() > clear)
+    {
+        return Err(refuse(
+            "nurbs-ss/1 transverse roots disagree with sealed BranchGraph roots",
+        ));
+    }
+    if ss_face_pairs == 0 {
+        return Err(refuse("nurbs-boolean/1 requires at least one complete nurbs-ss/1 face pair"));
     }
     let axis = branch_axis.unwrap();
     let uv = crate::uv_arrangement::arrange_multispan_branch_graph_uv(
@@ -3277,7 +3367,7 @@ pub fn author_general_nurbs_boolean(
     audit.notes.push("cavity_and_component_separation_ok");
     let result = audited.into_model();
     let certificate = GeneralNurbsBooleanCertificate {
-        capability: NURBS_BOOLEAN_CAPABILITY_V8,
+        capability: NURBS_BOOLEAN_SS_CAPABILITY,
         authority: GENERAL_NURBS_BOOLEAN_AUTHORITY,
         status: "Complete",
         operation: operation.into(),
@@ -3295,6 +3385,8 @@ pub fn author_general_nurbs_boolean(
         result_components: result.bodies.len(),
         result_faces: result.faces.len(),
         no_fallback: true,
+        ss_reports_complete: true,
+        ss_face_pairs,
     };
     if !certificate.permits_topology_change() || !result.persistent_naming_complete() {
         return Err(refuse("General NURBS aggregate authority failed closed"));
@@ -4769,7 +4861,7 @@ mod tests {
             {
                 let (result, certificate) =
                     author_general_nurbs_boolean(&graph, &cutter, operation).unwrap();
-                assert_eq!(certificate.capability, NURBS_BOOLEAN_CAPABILITY_V8);
+                assert_eq!(certificate.capability, NURBS_BOOLEAN_SS_CAPABILITY);
                 assert!(certificate.permits_topology_change());
                 assert_eq!(certificate.branch_graph.components.len(), 2);
                 assert_eq!(certificate.result_components, bodies);
@@ -4808,7 +4900,7 @@ mod tests {
             ] {
                 let (result, certificate) =
                     author_general_nurbs_boolean(a, b, operation).unwrap();
-                assert_eq!(certificate.capability, NURBS_BOOLEAN_CAPABILITY_V8);
+                assert_eq!(certificate.capability, NURBS_BOOLEAN_SS_CAPABILITY);
                 assert_eq!(certificate.operand_order, order);
                 assert!(certificate.exact_region_membership);
                 assert_eq!(certificate.partition_cells, if operation == "union" { 3 } else { 4 });

@@ -331,17 +331,6 @@ fn extrude_curve_loop(
     tolerance: f64,
     sources: &[&Model],
 ) -> Result<Model> {
-    let n = bottom_curves.len();
-    if n < 2 || z1 <= z0 {
-        return Err(refuse(
-            "Curve-loop extrusion requires a closed loop and positive height",
-        ));
-    }
-    let bottom_points: Vec<[f64; 3]> = bottom_curves
-        .iter()
-        .map(|curve| [curve.control_points[0][0], curve.control_points[0][1], z0])
-        .collect();
-    let top_points: Vec<[f64; 3]> = bottom_points.iter().map(|p| [p[0], p[1], z1]).collect();
     let top_curves: Vec<Curve> = bottom_curves
         .iter()
         .cloned()
@@ -351,6 +340,45 @@ fn extrude_curve_loop(
             }
             curve
         })
+        .collect();
+    loft_curve_loops(bottom_curves, &top_curves, z0, z1, tolerance, sources)
+}
+
+/// Loft two homologous closed curve loops at z0/z1 into a closed solid.
+/// Bottom and top must share degree/knot/weight structure per span so side
+/// patches remain exact rational ruled surfaces (cylinders or cones).
+fn loft_curve_loops(
+    bottom_curves: &[Curve],
+    top_curves: &[Curve],
+    z0: f64,
+    z1: f64,
+    tolerance: f64,
+    sources: &[&Model],
+) -> Result<Model> {
+    let n = bottom_curves.len();
+    if n < 2 || z1 <= z0 || top_curves.len() != n {
+        return Err(refuse(
+            "Curve-loop loft requires homologous closed loops and positive height",
+        ));
+    }
+    for (bottom, top) in bottom_curves.iter().zip(top_curves) {
+        if bottom.degree != top.degree
+            || bottom.knots != top.knots
+            || bottom.weights != top.weights
+            || bottom.control_points.len() != top.control_points.len()
+        {
+            return Err(refuse(
+                "Curve-loop loft requires matching span structure on bottom and top",
+            ));
+        }
+    }
+    let bottom_points: Vec<[f64; 3]> = bottom_curves
+        .iter()
+        .map(|curve| [curve.control_points[0][0], curve.control_points[0][1], z0])
+        .collect();
+    let top_points: Vec<[f64; 3]> = top_curves
+        .iter()
+        .map(|curve| [curve.control_points[0][0], curve.control_points[0][1], z1])
         .collect();
     let mut vertices: Vec<Vertex> = bottom_points
         .iter()
@@ -449,13 +477,16 @@ fn extrude_curve_loop(
     }
     let mut min = [f64::INFINITY; 2];
     let mut max = [f64::NEG_INFINITY; 2];
-    for curve in bottom_curves {
+    for curve in bottom_curves.iter().chain(top_curves) {
         for point in &curve.control_points {
             min[0] = min[0].min(point[0]);
             min[1] = min[1].min(point[1]);
             max[0] = max[0].max(point[0]);
             max[1] = max[1].max(point[1]);
         }
+    }
+    if !(max[0] > min[0] && max[1] > min[1]) {
+        return Err(refuse("Curve-loop loft caps require a positive XY span"));
     }
     let cap_surface = |z: f64| Surface {
         degree_u: 1,
@@ -472,7 +503,7 @@ fn extrude_curve_loop(
     };
     for (z, edge_ids, curves, reversed) in [
         (z0, &bottom_edges, bottom_curves, true),
-        (z1, &top_edges, top_curves.as_slice(), false),
+        (z1, &top_edges, top_curves, false),
     ] {
         let outer = loops.len();
         loops.push(Loop {
@@ -542,71 +573,101 @@ pub(crate) fn rounded_cuboid_vertical_edges(
     rounded: [bool; 4],
     radius: f64,
 ) -> Result<Model> {
-    if !(radius.is_finite()
-        && radius > 0.
-        && 2. * radius < max[0] - min[0]
-        && 2. * radius < max[1] - min[1])
-    {
-        return Err(refuse("Rounded cuboid radius exceeds the AF-01 profile"));
-    }
-    let corners = [
-        [min[0], min[1]],
-        [max[0], min[1]],
-        [max[0], max[1]],
-        [min[0], max[1]],
-    ];
-    let entry = [
-        [min[0], min[1] + radius],
-        [max[0] - radius, min[1]],
-        [max[0], max[1] - radius],
-        [min[0] + radius, max[1]],
-    ];
-    let exit = [
-        [min[0] + radius, min[1]],
-        [max[0], min[1] + radius],
-        [max[0] - radius, max[1]],
-        [min[0], max[1] - radius],
-    ];
-    let centers = [
-        [min[0] + radius, min[1] + radius],
-        [max[0] - radius, min[1] + radius],
-        [max[0] - radius, max[1] - radius],
-        [min[0] + radius, max[1] - radius],
-    ];
-    let starts = [
-        std::f64::consts::PI,
-        -std::f64::consts::FRAC_PI_2,
-        0.,
-        std::f64::consts::FRAC_PI_2,
-    ];
-    let effective_entry: Vec<[f64; 2]> = (0..4)
-        .map(|i| if rounded[i] { entry[i] } else { corners[i] })
-        .collect();
-    let effective_exit: Vec<[f64; 2]> = (0..4)
-        .map(|i| if rounded[i] { exit[i] } else { corners[i] })
-        .collect();
-    let mut curves = Vec::new();
-    for i in 0..4 {
-        if rounded[i] {
-            curves.push(arc_curve(
-                CircleArc {
-                    center: centers[i],
-                    radius,
-                    start: starts[i],
-                    sweep: std::f64::consts::FRAC_PI_2,
-                },
-                min[2],
-            ));
-        }
-        let next = (i + 1) % 4;
-        let a = effective_exit[i];
-        let b = effective_entry[next];
-        curves.push(crate::line(
-            vec![a[0], a[1], min[2]],
-            vec![b[0], b[1], min[2]],
+    variable_radius_cuboid_vertical_edges(source, min, max, rounded, radius, radius)
+}
+
+/// Linear radius law along +Z for selected vertical cuboid corners. Endpoint
+/// radii must be positive and fit the profile; equal radii recover the cylinder
+/// AF-01 cell as a cone-of-zero-taper special case.
+pub(crate) fn variable_radius_cuboid_vertical_edges(
+    source: &Model,
+    min: [f64; 3],
+    max: [f64; 3],
+    rounded: [bool; 4],
+    radius_bottom: f64,
+    radius_top: f64,
+) -> Result<Model> {
+    let radii = [radius_bottom, radius_top];
+    if radii.iter().any(|radius| {
+        !(radius.is_finite()
+            && *radius > 0.
+            && 2. * radius < max[0] - min[0]
+            && 2. * radius < max[1] - min[1])
+    }) {
+        return Err(refuse(
+            "Variable-radius cuboid radii exceed the admitted profile",
         ));
     }
-    extrude_curve_loop(&curves, min[2], max[2], source.tolerance_mm, &[source])
+    let profile_at = |radius: f64, z: f64| -> Result<Vec<Curve>> {
+        let corners = [
+            [min[0], min[1]],
+            [max[0], min[1]],
+            [max[0], max[1]],
+            [min[0], max[1]],
+        ];
+        let entry = [
+            [min[0], min[1] + radius],
+            [max[0] - radius, min[1]],
+            [max[0], max[1] - radius],
+            [min[0] + radius, max[1]],
+        ];
+        let exit = [
+            [min[0] + radius, min[1]],
+            [max[0], min[1] + radius],
+            [max[0] - radius, max[1]],
+            [min[0], max[1] - radius],
+        ];
+        let centers = [
+            [min[0] + radius, min[1] + radius],
+            [max[0] - radius, min[1] + radius],
+            [max[0] - radius, max[1] - radius],
+            [min[0] + radius, max[1] - radius],
+        ];
+        let starts = [
+            std::f64::consts::PI,
+            -std::f64::consts::FRAC_PI_2,
+            0.,
+            std::f64::consts::FRAC_PI_2,
+        ];
+        let effective_entry: Vec<[f64; 2]> = (0..4)
+            .map(|i| if rounded[i] { entry[i] } else { corners[i] })
+            .collect();
+        let effective_exit: Vec<[f64; 2]> = (0..4)
+            .map(|i| if rounded[i] { exit[i] } else { corners[i] })
+            .collect();
+        let mut curves = Vec::new();
+        for i in 0..4 {
+            if rounded[i] {
+                curves.push(arc_curve(
+                    CircleArc {
+                        center: centers[i],
+                        radius,
+                        start: starts[i],
+                        sweep: std::f64::consts::FRAC_PI_2,
+                    },
+                    z,
+                ));
+            }
+            let next = (i + 1) % 4;
+            let a = effective_exit[i];
+            let b = effective_entry[next];
+            curves.push(crate::line(
+                vec![a[0], a[1], z],
+                vec![b[0], b[1], z],
+            ));
+        }
+        Ok(curves)
+    };
+    let bottom = profile_at(radius_bottom, min[2])?;
+    let top = profile_at(radius_top, max[2])?;
+    loft_curve_loops(
+        &bottom,
+        &top,
+        min[2],
+        max[2],
+        source.tolerance_mm,
+        &[source],
+    )
 }
 
 /// Exact constant-radius rounding of selected vertices of a strictly convex

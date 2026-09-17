@@ -24,7 +24,7 @@
     {"command": "python3 scripts/nurbs-ss-1-oracle.py", "result": "transverse residuals 0; parallel gap 2; coincident residual 0"}
   ],
   "knownGaps": [
-    "Boolean topology mutation authorship",
-    "regularized solid Boolean pipeline over general SS"
+    "freeform×freeform solid Boolean successor",
+    "tangency and coincidence Boolean ownership"
   ]
 }

@@ -228,9 +228,9 @@ export const BREP_CAPABILITY_MATRIX: readonly BrepCapabilityDescriptor[] = Objec
   }),
   Object.freeze({
     id: 'exact-variable-radius-fillet/1',
-    maturity: 'Unavailable' as const,
-    permitsTopologyChange: false,
-    notes: 'Exact bounded radius law, collision proof, and junction continuity proof remain incomplete; product seam typed-refuses',
+    maturity: 'Qualified' as const,
+    permitsTopologyChange: true,
+    notes: 'Exact linear radius law on one vertical edge of an audited axis-aligned cuboid with rational conical fillet face; constant-radius substitution and valence-3 networks remain typed-refuse',
     qualificationPlan: 'docs/qualification/plans/exact-variable-radius-fillet-1.json',
   }),
   Object.freeze({
@@ -347,7 +347,7 @@ export const BREP_CAPABILITY_MATRIX: readonly BrepCapabilityDescriptor[] = Objec
   }),
   Object.freeze({
     id:'step-interchange/10',
-    maturity:'ResearchOnly' as const,
+    maturity:'Qualified' as const,
     permitsTopologyChange:false,
     notes:'Qualified append-only retained AP242 product envelope for affine occurrence graphs and tessellated presentation; pinned STEPcode and independent native, WASM, IndexedDB and browser graph/presentation gates passed',
     qualificationPlan:'docs/qualification/plans/step-interchange-10.json',
@@ -464,8 +464,15 @@ export const BREP_CAPABILITY_MATRIX: readonly BrepCapabilityDescriptor[] = Objec
     id: 'nurbs-ss/1',
     maturity: 'Qualified' as const,
     permitsTopologyChange: false,
-    notes: 'Certified bounded general NURBS surface/surface intersection over admitted positive-weight degrees 1..25 with 4D Bernstein/Krawczyk/continuation BranchGraph, rational UV DCEL, CoedgeTrim maps; Boolean mutation authority deferred',
+    notes: 'Certified bounded general NURBS surface/surface intersection over admitted positive-weight degrees 1..25 with 4D Bernstein/Krawczyk/continuation BranchGraph, rational UV DCEL, CoedgeTrim maps; Boolean mutation deferred to nurbs-boolean/1',
     qualificationPlan: 'docs/qualification/plans/nurbs-ss-1.json',
+  }),
+  Object.freeze({
+    id: 'nurbs-boolean/1',
+    maturity: 'Qualified' as const,
+    permitsTopologyChange: true,
+    notes: 'Regularized solid Boolean over nurbs-ss/1: multispan positive-weight graph × affine parallelotope with independent SS root agreement, exact region partition, sew/audit/ChangeSet naming; tangency, coincidence, and freeform×freeform remain typed-refuse',
+    qualificationPlan: 'docs/qualification/plans/nurbs-boolean-1.json',
   }),
 ])
 

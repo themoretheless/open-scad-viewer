@@ -69,6 +69,7 @@ pub use analytic_features::{
     audited_bent_rmf_sweep, audited_multi_section_loft, audited_parallel_frame_sweep,
     exact_analytic_shell, exact_convex_chamfer, exact_convex_prism_fillet, export_iges,
     exact_variable_radius_fillet, frame_law_ruled_sweep, import_iges,
+    EXACT_VARIABLE_RADIUS_FILLET_CAPABILITY, EXACT_VALENCE3_CORNER_BLEND_CAPABILITY,
 };
 pub use iges_interchange_v2::{
     IGES_INTERCHANGE_V2_CAPABILITY, IgesV2Report, export_iges_v2, import_iges_v2,
@@ -85,6 +86,7 @@ pub use nurbs_ss_g6::{
     BranchCompletenessCertificate, BranchComponent, BranchGraph, BranchOrientation,
     CertifiedBranchFragment, CurvedGraphBooleanCertificate, NurbsBooleanImprintCertificate,
     GeneralNurbsBooleanCertificate, GeneralNurbsBooleanNaming, GENERAL_NURBS_BOOLEAN_AUTHORITY,
+    NURBS_BOOLEAN_SS_CAPABILITY,
     RationalBezierDecomposition, RationalBezierPatchSpan, TensorSpanId, TransverseSpanEvidence,
     author_general_nurbs_boolean, canonical_bezier_graph_solid,
     canonical_multispan_graph_solid, canonical_rational_graph_solid, certify_multispan_ss,

@@ -1,0 +1,24 @@
+{
+  "capability": "exact-variable-radius-fillet/1",
+  "maturity": "FiniteCell",
+  "dependsOn": "analytic-multi-edge-fillet/1",
+  "executedAt": "2026-09-17",
+  "positiveCorpus": [
+    "Rust exact_variable_radius_fillet linear law on vertical cuboid edge",
+    "rational conical fillet face with audit and naming",
+    "geometry-bridge product certificate exact-variable-radius-fillet/1"
+  ],
+  "negativeCorpus": [
+    "equal endpoint radii refuse constant-radius substitution",
+    "non-vertical edges refuse"
+  ],
+  "executed": [
+    {"command": "cargo test --locked --manifest-path crates/Cargo.toml -p brep-core --lib exact_variable_radius", "result": "passed"},
+    {"command": "cargo test --locked --manifest-path crates/Cargo.toml -p geometry-bridge --lib audited_feature_successors", "result": "passed"}
+  ],
+  "knownGaps": [
+    "exact-valence3-corner-blend/1",
+    "multi-edge variable-radius networks",
+    "nonlinear radius laws"
+  ]
+}

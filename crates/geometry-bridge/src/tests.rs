@@ -421,7 +421,7 @@ fn audited_feature_successors_cross_the_bridge_with_certificates() {
     let exact_fillet = dispatch(json!({
         "op":"brep_nurbs_exact_convex_prism_fillet",
         "model":encode(model.clone()).unwrap(),
-        "edges":edges,
+        "edges":edges.clone(),
         "radius":0.4
     }))
     .unwrap();
@@ -430,6 +430,7 @@ fn audited_feature_successors_cross_the_bridge_with_certificates() {
         Some("exact-convex-prism-edge-fillet/1")
     );
     assert_eq!(exact_fillet["audit"]["ok"], true);
+    let vertical = edges[0];
     let connected = model.edges[0]
         .vertices
         .iter()
@@ -449,11 +450,23 @@ fn audited_feature_successors_cross_the_bridge_with_certificates() {
         Some("exact-convex-straight-edge-chamfer/1")
     );
     assert_eq!(chamfer["audit"]["ok"], true);
+    let variable = dispatch(json!({
+        "op":"brep_nurbs_exact_variable_radius_fillet",
+        "model":encode(model.clone()).unwrap(),
+        "edges":[vertical],
+        "radii":[[0.4,0.6]]
+    }))
+    .unwrap();
+    assert_eq!(
+        variable["certificate"]["capability"].as_str(),
+        Some("exact-variable-radius-fillet/1")
+    );
+    assert_eq!(variable["audit"]["ok"], true);
     assert!(dispatch(json!({
         "op":"brep_nurbs_exact_variable_radius_fillet",
         "model":encode(model).unwrap(),
-        "edges":[0],
-        "radii":[[0.4,0.6]]
+        "edges":[vertical],
+        "radii":[[0.5,0.5]]
     }))
     .is_err());
 
@@ -852,7 +865,7 @@ fn general_multispan_boolean_bridge_is_strict_and_audited() {
             .unwrap();
             assert_eq!(
                 result["certificate"]["capability"].as_str(),
-                Some("nurbs-boolean-bezier-le3/8")
+                Some("nurbs-boolean/1")
             );
             assert_eq!(
                 result["certificate"]["authority"].as_str(),
@@ -861,6 +874,8 @@ fn general_multispan_boolean_bridge_is_strict_and_audited() {
             assert_eq!(result["certificate"]["status"].as_str(), Some("Complete"));
             assert_eq!(result["certificate"]["operandOrder"].as_str(), Some("source-tool"));
             assert_eq!(result["certificate"]["exactRegionMembership"].as_bool(), Some(true));
+            assert_eq!(result["certificate"]["ssReportsComplete"].as_bool(), Some(true));
+            assert!(result["certificate"]["ssFacePairs"].as_u64().unwrap_or(0) > 0);
             assert_eq!(result["certificate"]["branchGraph"]["components"].as_u64(), Some(2));
             assert_eq!(result["certificate"]["branchGraph"]["complete"].as_bool(), Some(true));
             assert_eq!(result["certificate"]["uv"]["complete"].as_bool(), Some(true));

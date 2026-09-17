@@ -224,7 +224,7 @@ export const certifiedRationalGraphBoolean=(a:NurbsBrep,b:NurbsBrep,operation:'i
 export interface GeneralNurbsBooleanResult {
  model:NurbsBrep
  certificate:{
-  capability:'nurbs-boolean-bezier-le3/8'
+  capability:'nurbs-boolean/1'
   authority:'author-general-nurbs-boolean'
   status:'Complete'
   operation:'union'|'intersection'|'difference'
@@ -235,6 +235,8 @@ export interface GeneralNurbsBooleanResult {
   branchGraph:{components:number;fragments:number;candidateSpanPairs:number;sourceSpanCount:[number,number];denominatorLowerBound:number;complete:true}
   uv:{tensorCells:number;branches:number;materialCells:number;holeCells:number;complete:true}
   exactCurvePcurveCount:number
+  ssReportsComplete:true
+  ssFacePairs:number
   sew:{matched:number;complete:true;displacementBudgetOk:true}
   audit:{ok:true;bodyCount:number;shellCount:number;selfIntersectionPairsChecked:number;notes:string[]}
   changeSet:RustChangeSet
@@ -256,7 +258,7 @@ export const filletNurbsBrep=(model:NurbsBrep,edge:number,radius:number,segments
 export const filletNurbsBrepEdges=(model:NurbsBrep,edges:number[],radius:number,segments=12):NurbsBrep=>callGeometryRust('brep_nurbs_fillet_edges',{model,edges,radius,segments})
 export interface AuditedBrepFeature {
  model:NurbsBrep
- certificate:{capability:'analytic-multi-edge-fillet/1'|'exact-parallel-frame-sweep/1'|'exact-convex-straight-edge-chamfer/1'|'exact-convex-prism-edge-fillet/1'|'analytic-solid-loft/2'|'exact-parallel-frame-sweep/2';complete:true;notes:string[]}
+ certificate:{capability:'analytic-multi-edge-fillet/1'|'exact-parallel-frame-sweep/1'|'exact-convex-straight-edge-chamfer/1'|'exact-convex-prism-edge-fillet/1'|'analytic-solid-loft/2'|'exact-parallel-frame-sweep/2'|'exact-variable-radius-fillet/1';complete:true;notes:string[]}
  context:{version:number;canonical:string}
  evidenceClaimCount:number
  audit:{ok:true;bodyCount:number;shellCount:number;selfIntersectionPairsChecked:number}
@@ -268,8 +270,8 @@ export const auditedMultiEdgeFillet=(model:NurbsBrep,edges:number[],radius:numbe
 export const exactConvexChamfer=(model:NurbsBrep,edges:number[],distance:number):AuditedBrepFeature=>callGeometryRust('brep_nurbs_exact_convex_chamfer',{model,edges,distance})
 /** Exact cylindrical rounds on selected longitudinal edges of a rigidly placed convex prism. */
 export const exactConvexPrismFillet=(model:NurbsBrep,edges:number[],radius:number):AuditedBrepFeature=>callGeometryRust('brep_nurbs_exact_convex_prism_fillet',{model,edges,radius})
-/** Deliberate V7 typed refusal until an exact bounded law and junction proof exist. */
-export const exactVariableRadiusFillet=(model:NurbsBrep,edges:number[],radii:[number,number][]):never=>callGeometryRust('brep_nurbs_exact_variable_radius_fillet',{model,edges,radii})
+/** Exact linear radius law on one vertical cuboid edge; constant-radius pairs refuse. */
+export const exactVariableRadiusFillet=(model:NurbsBrep,edges:number[],radii:[number,number][]):AuditedBrepFeature=>callGeometryRust('brep_nurbs_exact_variable_radius_fillet',{model,edges,radii})
 export const auditedParallelFrameSweep=(profile:[number,number][],path:[number,number,number][],frameLaw:'fixed'|'rotation-minimizing'|'rmf'='rmf'):AuditedBrepFeature=>callGeometryRust('brep_nurbs_audited_parallel_frame_sweep',{profile,path,frameLaw})
 /** Exact indexed 3..16-section rational ruled/Bezier solid loft successor. */
 export const auditedMultiSectionLoft=(sections:[number,number,number][][]):AuditedBrepFeature=>callGeometryRust('brep_nurbs_audited_multi_section_loft_v2',{sections})

@@ -1,0 +1,72 @@
+{
+  "$schema": "./brep-capability-qualification-plan-v12.schema.json",
+  "schema": "open-scad-viewer/brep-capability-qualification-plan",
+  "schemaVersion": 12,
+  "planId": "nurbs-boolean-1",
+  "gate": {"id": "g8-full", "name": "brep-full-closed-matrix", "version": 12},
+  "lifecycle": {"status": "qualified", "qualificationClaim": "finite-cell"},
+  "claimBoundary": {
+    "candidateClaim": "Append-only product nurbs-boolean/1 over nurbs-ss/1: regularized solid Boolean for admitted multispan positive-weight graph × affine parallelotope with independent nurbs-ss/1 root agreement, exact region partition, sew/audit/ChangeSet naming and topology-change authority.",
+    "forbiddenClaims": [
+      "tangency or coincidence Boolean ownership",
+      "freeform×freeform solid Boolean without affine cutter",
+      "graph-patch iso fixture as sole SS authority",
+      "silent healing or mesh/Manifold fallback",
+      "parasolid or commercial kernel parity"
+    ]
+  },
+  "capability": "nurbs-boolean/1",
+  "successorOf": "nurbs-ss/1",
+  "dependencies": [
+    {"capability": "nurbs-ss/1", "requiredMaturity": "Qualified"},
+    {"capability": "exact-sew/1", "requiredMaturity": "Qualified"},
+    {"capability": "global-solid-audit/1", "requiredMaturity": "Qualified"},
+    {"capability": "persistent-naming/1", "requiredMaturity": "Qualified"}
+  ],
+  "scope": {
+    "included": [
+      "multispan positive-weight non-periodic graph solid × affine parallelotope cutter",
+      "union, intersection, and difference with exact region membership",
+      "independent nurbs-ss/1 complete face-pair reports agreeing on transverse iso roots",
+      "sew, global solid audit, ChangeSet persistent naming",
+      "Rust WASM TypeScript ModelGraph product queries"
+    ],
+    "excluded": [
+      "tangency and coincidence contact",
+      "freeform×freeform Boolean",
+      "periodic seams, poles, negative weights, unbounded degree",
+      "healing, mesh, Manifold, approximation fallback"
+    ]
+  },
+  "matrix": [
+    {"id": "NB-SS-UNION", "expected": "Complete", "blocksQualification": true},
+    {"id": "NB-SS-INTERSECTION", "expected": "Complete", "blocksQualification": true},
+    {"id": "NB-SS-DIFFERENCE", "expected": "Complete", "blocksQualification": true},
+    {"id": "NB-SS-ROOT-AGREEMENT", "expected": "Complete", "blocksQualification": true},
+    {"id": "NB-SS-PRODUCT", "expected": "Complete", "blocksQualification": true},
+    {"id": "NB-SS-NO-TANGENCY", "expected": "typed-refuse", "blocksQualification": true},
+    {"id": "NB-SS-NO-FREEFORM-PAIR", "expected": "typed-refuse", "blocksQualification": true}
+  ],
+  "bindings": {
+    "implementation": [
+      "crates/brep-core/src/nurbs_ss_g6.rs",
+      "crates/nurbs-core/src/ss_intersection.rs",
+      "crates/geometry-bridge/src/lib.rs",
+      "src/services/geometry/brep.ts",
+      "src/services/geometry/brepCapability.ts",
+      "tests/brepGeneralNurbsBoolean.test.ts"
+    ],
+    "registry": "src/services/geometry/brepCapability.ts",
+    "evidenceJson": "docs/qualification/nurbs-boolean-1-evidence-v1.json"
+  },
+  "evidence": {
+    "state": "qualified",
+    "notes": [
+      "Qualified after native and product gates with nurbs-ss/1 root agreement.",
+      "Finite bezier-le3/8 remains separately qualified for its narrow cell.",
+      "Freeform×freeform Boolean remains a successor gap."
+    ]
+  },
+  "resetPolicy": "false-Complete freezes this capability and transitively stales all dependents; recovery requires a successor capability ID",
+  "unresolvedRows": []
+}

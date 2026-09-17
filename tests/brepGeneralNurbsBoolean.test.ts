@@ -19,7 +19,7 @@ describe('general multispan NURBS Boolean product',()=>{
    ] as const){
     const result=generalNurbsBoolean(graph,cutter,operation)
     expect(result.certificate).toMatchObject({
-     capability:'nurbs-boolean-bezier-le3/8',
+     capability:'nurbs-boolean/1',
      authority:'author-general-nurbs-boolean',
      status:'Complete',
      operation,
@@ -32,7 +32,9 @@ describe('general multispan NURBS Boolean product',()=>{
      resultComponents:components,
      resultFaces:faces,
      noFallback:true,
+     ssReportsComplete:true,
     })
+    expect(result.certificate.ssFacePairs).toBeGreaterThan(0)
     expect(result.certificate.exactCurvePcurveCount).toBeGreaterThanOrEqual(4)
     expect(result.certificate.naming).toMatchObject({
      split:1,
@@ -42,7 +44,7 @@ describe('general multispan NURBS Boolean product',()=>{
    }
    const reversed=generalNurbsBoolean(cutter,graph,'difference')
    expect(reversed.certificate).toMatchObject({
-    capability:'nurbs-boolean-bezier-le3/8',
+    capability:'nurbs-boolean/1',
     operation:'difference',
     operandOrder:'tool-source',
     exactRegionMembership:true,
@@ -50,6 +52,7 @@ describe('general multispan NURBS Boolean product',()=>{
     resultComponents:4,
     resultFaces:24,
     noFallback:true,
+    ssReportsComplete:true,
    })
    expect(graph).toEqual(snapshots[0])
    expect(cutter).toEqual(snapshots[1])

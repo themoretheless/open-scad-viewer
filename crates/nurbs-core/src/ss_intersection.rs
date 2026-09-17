@@ -77,20 +77,35 @@ fn proportional_grids(a: &[Vec<[f64; 4]>], b: &[Vec<[f64; 4]>], tol: f64) -> boo
 }
 
 fn affine_plane(surface: &Surface) -> Result<Option<([f64; 3], f64, [f64; 3], [f64; 3])>> {
-    if surface.degree_u != 1 || surface.degree_v != 1 {
-        return Ok(None);
-    }
+    // Any positive-weight coplanar chart is an affine plane carrier, not only deg 1×1.
     let o = point3(&surface.control_points[0][0])?;
-    let u_dir = [
-        surface.control_points[1][0][0] - o[0],
-        surface.control_points[1][0][1] - o[1],
-        surface.control_points[1][0][2] - o[2],
-    ];
-    let v_dir = [
-        surface.control_points[0][1][0] - o[0],
-        surface.control_points[0][1][1] - o[1],
-        surface.control_points[0][1][2] - o[2],
-    ];
+    let mut u_dir = None;
+    let mut v_dir = None;
+    for row in &surface.control_points {
+        for corner in row {
+            let p = point3(corner)?;
+            let d = [p[0] - o[0], p[1] - o[1], p[2] - o[2]];
+            if norm3(d) <= 1e-15 {
+                continue;
+            }
+            if u_dir.is_none() {
+                u_dir = Some(d);
+                continue;
+            }
+            let u = u_dir.unwrap();
+            let c = cross3(u, d);
+            if norm3(c) > 1e-12 {
+                v_dir = Some(d);
+                break;
+            }
+        }
+        if v_dir.is_some() {
+            break;
+        }
+    }
+    let (Some(u_dir), Some(v_dir)) = (u_dir, v_dir) else {
+        return Ok(None);
+    };
     let n = cross3(u_dir, v_dir);
     let nn = norm3(n);
     if !(nn > 0.) {
@@ -101,12 +116,224 @@ fn affine_plane(surface: &Surface) -> Result<Option<([f64; 3], f64, [f64; 3], [f
     for row in &surface.control_points {
         for corner in row {
             let p = point3(corner)?;
-            if (dot3(normal, p) - offset).abs() > 1e-12 {
+            if (dot3(normal, p) - offset).abs() > 1e-9 {
                 return Ok(None);
             }
         }
     }
     Ok(Some((normal, offset, u_dir, v_dir)))
+}
+
+/// Exact iso branches of a general chart against an affine plane when signed
+/// distance separates as a monotone function of one parameter on the control net.
+fn surface_plane_iso_components(
+    surface: &Surface,
+    normal: [f64; 3],
+    offset: f64,
+    plane: &Surface,
+    floor: f64,
+) -> Result<Option<Vec<Value>>> {
+    let domain = surface_domain(surface);
+    let nu = surface.control_points.len();
+    let nv = surface.control_points[0].len();
+    let signed_ctrl = |i: usize, j: usize| -> Result<f64> {
+        let p = point3(&surface.control_points[i][j])?;
+        Ok(dot3(normal, p) - offset)
+    };
+    let signed_at = |u: f64, v: f64| -> Result<f64> {
+        let p = point3(&surface.evaluate(u, v)?.point)?;
+        Ok(dot3(normal, p) - offset)
+    };
+    let greville = |knots: &[f64], degree: usize, i: usize| -> f64 {
+        if degree == 0 {
+            return knots[i];
+        }
+        knots[i + 1..i + 1 + degree].iter().sum::<f64>() / degree as f64
+    };
+    let origin = point3(&plane.control_points[0][0])?;
+    let Some((_, _, u_dir, v_dir)) = affine_plane(plane)? else {
+        return Ok(None);
+    };
+    let plane_domain = surface_domain(plane);
+    let mut components = Vec::new();
+
+    // Iso-U: control rows nearly constant in signed distance, adjacent rows change sign.
+    let mut row_vals = Vec::with_capacity(nu);
+    let mut row_ok = true;
+    for i in 0..nu {
+        let mut lo = f64::INFINITY;
+        let mut hi = f64::NEG_INFINITY;
+        for j in 0..nv {
+            let s = signed_ctrl(i, j)?;
+            lo = lo.min(s);
+            hi = hi.max(s);
+        }
+        if hi - lo > floor * 8. {
+            row_ok = false;
+            break;
+        }
+        row_vals.push(0.5 * (lo + hi));
+    }
+    if row_ok {
+        for i in 0..nu.saturating_sub(1) {
+            let a = row_vals[i];
+            let b = row_vals[i + 1];
+            if a * b > 0. && a.abs() > floor && b.abs() > floor {
+                continue;
+            }
+            let mut lo = greville(&surface.knots_u, surface.degree_u, i)
+                .clamp(domain[0][0], domain[0][1]);
+            let mut hi = greville(&surface.knots_u, surface.degree_u, i + 1)
+                .clamp(domain[0][0], domain[0][1]);
+            if hi < lo {
+                std::mem::swap(&mut lo, &mut hi);
+            }
+            let v_mid = 0.5 * (domain[1][0] + domain[1][1]);
+            let mut u = 0.5 * (lo + hi);
+            for _ in 0..64 {
+                let s = signed_at(u, v_mid)?;
+                if s.abs() <= floor {
+                    break;
+                }
+                let slo = signed_at(lo, v_mid)?;
+                if slo * s <= 0. {
+                    hi = u;
+                } else {
+                    lo = u;
+                }
+                u = 0.5 * (lo + hi);
+            }
+            if signed_at(u, v_mid)?.abs() > floor * 32. {
+                continue;
+            }
+            if !(u > domain[0][0] + floor && u < domain[0][1] - floor) {
+                continue;
+            }
+            let start_p = point3(&surface.evaluate(u, domain[1][0])?.point)?;
+            let end_p = point3(&surface.evaluate(u, domain[1][1])?.point)?;
+            if (dot3(normal, start_p) - offset).abs() > floor * 32.
+                || (dot3(normal, end_p) - offset).abs() > floor * 32.
+            {
+                continue;
+            }
+            let uv_b0 = invert_uv(origin, u_dir, v_dir, plane_domain, start_p)?;
+            let uv_b1 = invert_uv(origin, u_dir, v_dir, plane_domain, end_p)?;
+            components.push(json!({
+                "kind":"curve",
+                "closed":false,
+                "contactClass":"transverse",
+                "multiplicity":1,
+                "orientation":1,
+                "samples":[
+                    {"point":start_p,"uvFirst":[u,domain[1][0]],"uvSecond":uv_b0,"parameter":0.},
+                    {"point":end_p,"uvFirst":[u,domain[1][1]],"uvSecond":uv_b1,"parameter":1.}
+                ],
+                "pcurveFirst":{"kind":"line","start":[u,domain[1][0]],"end":[u,domain[1][1]],"correspondence":"exact_affine"},
+                "pcurveSecond":{"kind":"line","start":uv_b0,"end":uv_b1,"correspondence":"exact_affine"},
+                "endpoints":[
+                    {"location":"boundary","uvFirst":[u,domain[1][0]],"uvSecond":uv_b0},
+                    {"location":"boundary","uvFirst":[u,domain[1][1]],"uvSecond":uv_b1}
+                ],
+                "seamWrap":[[0,0],[0,0]],
+                "geometryEnclosure":enclosure_of(start_p, floor),
+                "coedgeTrim":coedge_trim([0.,1.],[0.,1.],[[0,0],[0,0]]),
+                "materialSides":[1,-1],
+                "ownership":"half_open_span_faces",
+                "junction":false
+            }));
+        }
+    }
+
+    // Iso-V candidates with Greville + bisection.
+    let mut col_vals = Vec::with_capacity(nv);
+    let mut col_ok = true;
+    for j in 0..nv {
+        let mut lo = f64::INFINITY;
+        let mut hi = f64::NEG_INFINITY;
+        for i in 0..nu {
+            let s = signed_ctrl(i, j)?;
+            lo = lo.min(s);
+            hi = hi.max(s);
+        }
+        if hi - lo > floor * 8. {
+            col_ok = false;
+            break;
+        }
+        col_vals.push(0.5 * (lo + hi));
+    }
+    if col_ok {
+        for j in 0..nv.saturating_sub(1) {
+            let a = col_vals[j];
+            let b = col_vals[j + 1];
+            if a * b > 0. && a.abs() > floor && b.abs() > floor {
+                continue;
+            }
+            let mut lo = greville(&surface.knots_v, surface.degree_v, j)
+                .clamp(domain[1][0], domain[1][1]);
+            let mut hi = greville(&surface.knots_v, surface.degree_v, j + 1)
+                .clamp(domain[1][0], domain[1][1]);
+            if hi < lo {
+                std::mem::swap(&mut lo, &mut hi);
+            }
+            let u_mid = 0.5 * (domain[0][0] + domain[0][1]);
+            let mut v = 0.5 * (lo + hi);
+            for _ in 0..64 {
+                let s = signed_at(u_mid, v)?;
+                if s.abs() <= floor {
+                    break;
+                }
+                let slo = signed_at(u_mid, lo)?;
+                if slo * s <= 0. {
+                    hi = v;
+                } else {
+                    lo = v;
+                }
+                v = 0.5 * (lo + hi);
+            }
+            if signed_at(u_mid, v)?.abs() > floor * 32. {
+                continue;
+            }
+            if !(v > domain[1][0] + floor && v < domain[1][1] - floor) {
+                continue;
+            }
+            let start_p = point3(&surface.evaluate(domain[0][0], v)?.point)?;
+            let end_p = point3(&surface.evaluate(domain[0][1], v)?.point)?;
+            if (dot3(normal, start_p) - offset).abs() > floor * 32.
+                || (dot3(normal, end_p) - offset).abs() > floor * 32.
+            {
+                continue;
+            }
+            let uv_b0 = invert_uv(origin, u_dir, v_dir, plane_domain, start_p)?;
+            let uv_b1 = invert_uv(origin, u_dir, v_dir, plane_domain, end_p)?;
+            components.push(json!({
+                "kind":"curve",
+                "closed":false,
+                "contactClass":"transverse",
+                "multiplicity":1,
+                "orientation":1,
+                "samples":[
+                    {"point":start_p,"uvFirst":[domain[0][0],v],"uvSecond":uv_b0,"parameter":0.},
+                    {"point":end_p,"uvFirst":[domain[0][1],v],"uvSecond":uv_b1,"parameter":1.}
+                ],
+                "pcurveFirst":{"kind":"line","start":[domain[0][0],v],"end":[domain[0][1],v],"correspondence":"exact_affine"},
+                "pcurveSecond":{"kind":"line","start":uv_b0,"end":uv_b1,"correspondence":"exact_affine"},
+                "endpoints":[
+                    {"location":"boundary","uvFirst":[domain[0][0],v],"uvSecond":uv_b0},
+                    {"location":"boundary","uvFirst":[domain[0][1],v],"uvSecond":uv_b1}
+                ],
+                "seamWrap":[[0,0],[0,0]],
+                "geometryEnclosure":enclosure_of(start_p, floor),
+                "coedgeTrim":coedge_trim([0.,1.],[0.,1.],[[0,0],[0,0]]),
+                "materialSides":[1,-1],
+                "ownership":"half_open_span_faces",
+                "junction":false
+            }));
+        }
+    }
+    if components.is_empty() {
+        return Ok(None);
+    }
+    Ok(Some(components))
 }
 
 fn invert_uv(
@@ -806,6 +1033,55 @@ pub fn intersect_surface_surface(
             first,
             second,
         ));
+    }
+    // Exact iso reduction for a freeform chart against an affine plane carrier.
+    if let Some((n, o, _, _)) = affine_plane(second)? {
+        if let Some(iso) = surface_plane_iso_components(first, n, o, second, dist_floor)? {
+            return Ok(encode_ss_report(
+                iso,
+                unresolved,
+                boxes_visited.max(1),
+                bernstein_excluded,
+                krawczyk_isolated,
+                true,
+                &tolerance,
+                first,
+                second,
+            ));
+        }
+    }
+    if let Some((n, o, _, _)) = affine_plane(first)? {
+        if let Some(mut iso) = surface_plane_iso_components(second, n, o, first, dist_floor)? {
+            for component in &mut iso {
+                if let Some(obj) = component.as_object_mut() {
+                    let a = obj.remove("pcurveFirst").unwrap_or(Value::Null);
+                    let b = obj.remove("pcurveSecond").unwrap_or(Value::Null);
+                    obj.insert("pcurveFirst".into(), b);
+                    obj.insert("pcurveSecond".into(), a);
+                    if let Some(samples) = obj.get_mut("samples").and_then(Value::as_array_mut) {
+                        for sample in samples {
+                            if let Some(s) = sample.as_object_mut() {
+                                let ua = s.remove("uvFirst").unwrap_or(Value::Null);
+                                let ub = s.remove("uvSecond").unwrap_or(Value::Null);
+                                s.insert("uvFirst".into(), ub);
+                                s.insert("uvSecond".into(), ua);
+                            }
+                        }
+                    }
+                }
+            }
+            return Ok(encode_ss_report(
+                iso,
+                unresolved,
+                boxes_visited.max(1),
+                bernstein_excluded,
+                krawczyk_isolated,
+                true,
+                &tolerance,
+                first,
+                second,
+            ));
+        }
     }
 
     let cells_a = surface_spans(first)?;
