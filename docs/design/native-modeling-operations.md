@@ -31,8 +31,13 @@ subdivision cages and NURBS curves/surfaces. Brush kinds: `grab` (translate),
 (one-ring Laplacian), `flatten` (project onto the average tangent plane) and
 `pinch` (pull toward the center). Falloffs: `smooth`, `linear`, `sharp`,
 `root`, `sphere`, `constant`. Optional X/Y/Z symmetry mirrors the stroke
-across the world planes. Each kernel supplies positions, normals and adjacency
-for its own control data; NURBS normals are derived from the control net.
+across the world planes. Kernels hand the engine a `SculptTarget` (positions,
+unit normals, one-ring adjacency) built from their own control data:
+polygon meshes and subdivision cages share `SculptTarget::from_faces` (Newell
+normals over faces of any arity), while NURBS derive normals from the control
+net. Each brush kind is a small operation over a per-center `Pass` (falloff
+weights, affected set, area normal), so adding a brush means adding one
+variant and one method rather than touching the loop.
 
 SDF sculpting uses `SdfStroke`: a `sphere`, `box` or `capsule` tool, `add` or
 `remove` mode and an optional smooth-blend radius (`smooth_union` /

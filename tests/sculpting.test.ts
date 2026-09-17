@@ -5,8 +5,8 @@ import {evaluateSdf,sculptSdf,sculptSdfSphere,tessellateSdf,type SdfField,type S
 import {brushNurbsCurve,brushNurbsSurface,sculptNurbsCurve,sculptNurbsSurface,extrudeNurbsCurve} from '../src/services/nurbsConstructors'
 import {evaluateNurbsCurve,type NurbsCurve} from '../src/services/nurbsCurve'
 import {evaluateNurbsSurface} from '../src/services/nurbsSurface'
-import {brushDisplace,sculptMesh} from '../src/services/meshEditing'
-import {SCULPT_FALLOFFS,SCULPT_KINDS,validateSculptBrush,type GeometryBrush,type SculptBrush} from '../src/services/geometryEditing'
+import {brushDisplace,meshCentroid,sculptMesh} from '../src/services/meshEditing'
+import {SCULPT_FALLOFFS,SCULPT_KINDS,buildSculptBrush,isFractionalSculptKind,validateSculptBrush,type GeometryBrush,type SculptBrush} from '../src/services/geometryEditing'
 
 const square=[[-1,-1],[1,-1],[1,1],[-1,1]]
 const cube=()=>extrudePolygonProfile({outer:square,holes:[]},[0,0,2])
@@ -204,5 +204,18 @@ describe('sculpting through WASM',()=>{
    {tool:{shape:'sphere',center:[0,0,0],radius:1},blend:-1},
   ]
   for(const stroke of bad)expect(()=>sculptSdf(base,stroke)).toThrow()
+ })
+ it('buildSculptBrush and meshCentroid assemble a validated stroke from UI settings',()=>{
+  const mesh={positions:[0,0,0, 2,0,0, 0,2,0, 0,0,2],indices:[0,2,1, 0,1,3, 0,3,2, 1,2,3]}
+  expect(meshCentroid(mesh)).toEqual([0.5,0.5,0.5])
+  expect(meshCentroid(mesh,[1,2])).toEqual([1,1,0])
+  const settings={radius:2,strength:3,falloff:'linear' as const,mirror:[true,false,false] as [boolean,boolean,boolean]}
+  const grab=buildSculptBrush({...settings,kind:'grab'},[1,1,0])
+  expect(grab).toMatchObject({kind:'grab',displacement:[0,0,3],center:[1,1,0],radius:2,falloff:'linear',symmetry:{axes:[true,false,false],origin:[0,0,0]}})
+  expect(buildSculptBrush({...settings,kind:'smooth'},[0,0,0])).toMatchObject({kind:'smooth',strength:1})
+  expect(buildSculptBrush({...settings,kind:'draw'},[0,0,0])).toMatchObject({kind:'draw',strength:3})
+  expect(SCULPT_KINDS.filter(isFractionalSculptKind)).toEqual(['smooth','flatten','pinch'])
+  expect(()=>buildSculptBrush({...settings,radius:0,kind:'draw'},[0,0,0])).toThrow(/radius/)
+  expect(sculptMesh(mesh,grab).positions.length).toBe(12)
  })
 })

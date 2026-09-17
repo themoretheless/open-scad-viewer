@@ -1325,23 +1325,13 @@ impl Field {
         out.validate()?;
         Ok(out)
     }
+    /// Hard sphere add/remove; the historical entry point, now a `sculpt` shorthand.
     pub fn sculpt_sphere(&self, center: Point, radius: f64, remove: bool) -> Result<Self> {
-        self.validate()?;
-        let sphere = Self::Sphere { center, radius };
-        sphere.validate()?;
-        let out = if remove {
-            Self::Difference {
-                a: Box::new(self.clone()),
-                b: Box::new(sphere),
-            }
-        } else {
-            Self::Union {
-                a: Box::new(self.clone()),
-                b: Box::new(sphere),
-            }
-        };
-        out.validate()?;
-        Ok(out)
+        self.sculpt(&SdfStroke {
+            tool: SdfTool::Sphere { center, radius },
+            remove,
+            blend: None,
+        })
     }
 }
 

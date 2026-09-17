@@ -11,8 +11,9 @@
 #![allow(unused_features)]
 pub use math_core::{Error, Result, V3, finite};
 pub type Point = V3;
+mod codec;
 pub mod sculpt;
-pub use sculpt::{Falloff, SculptBrush, SculptData, SculptKind, SculptTarget, Symmetry, sculpt};
+pub use sculpt::{Falloff, SculptBrush, SculptKind, SculptTarget, Symmetry, unit_or_zero};
 const INVALID_INPUT: &str = "GEOMETRY_INVALID_INPUT";
 pub(crate) fn fail(message: impl Into<String>) -> Error {
     Error::new(INVALID_INPUT, message)
@@ -72,67 +73,23 @@ impl value_codec::Serialize for Deformation {
 }
 impl<'de> value_codec::Deserialize<'de> for Deformation {
     fn from_value(value: value_codec::Value) -> value_codec::Result<Self> {
-        match value["kind"].as_str().unwrap_or("") {
-            "twist" => {
-                let mut object = value
-                    .as_object()
-                    .ok_or_else(|| value_codec::error("Expected object"))?
-                    .clone();
-                let origin: Point = value_codec::Deserialize::from_value(
-                    object
-                        .remove("origin")
-                        .ok_or_else(|| value_codec::error("Missing field origin"))?,
-                )?;
-                let radians_per_unit: f64 = value_codec::Deserialize::from_value(
-                    object
-                        .remove("radians_per_unit")
-                        .ok_or_else(|| value_codec::error("Missing field radians_per_unit"))?,
-                )?;
-                Ok(Self::Twist {
-                    origin,
-                    radians_per_unit,
-                })
-            }
-            "bend" => {
-                let mut object = value
-                    .as_object()
-                    .ok_or_else(|| value_codec::error("Expected object"))?
-                    .clone();
-                let origin: Point = value_codec::Deserialize::from_value(
-                    object
-                        .remove("origin")
-                        .ok_or_else(|| value_codec::error("Missing field origin"))?,
-                )?;
-                let radius: f64 = value_codec::Deserialize::from_value(
-                    object
-                        .remove("radius")
-                        .ok_or_else(|| value_codec::error("Missing field radius"))?,
-                )?;
-                Ok(Self::Bend { origin, radius })
-            }
-            "lattice" => {
-                let mut object = value
-                    .as_object()
-                    .ok_or_else(|| value_codec::error("Expected object"))?
-                    .clone();
-                let min: Point = value_codec::Deserialize::from_value(
-                    object
-                        .remove("min")
-                        .ok_or_else(|| value_codec::error("Missing field min"))?,
-                )?;
-                let max: Point = value_codec::Deserialize::from_value(
-                    object
-                        .remove("max")
-                        .ok_or_else(|| value_codec::error("Missing field max"))?,
-                )?;
-                let controls: Box<[Point; 8]> = value_codec::Deserialize::from_value(
-                    object
-                        .remove("controls")
-                        .ok_or_else(|| value_codec::error("Missing field controls"))?,
-                )?;
-                Ok(Self::Lattice { min, max, controls })
-            }
-            _ => Err(value_codec::error("Unknown enum variant")),
+        let mut object = codec::object(value)?;
+        let kind: String = codec::required(&mut object, "kind")?;
+        match kind.as_str() {
+            "twist" => Ok(Self::Twist {
+                origin: codec::required(&mut object, "origin")?,
+                radians_per_unit: codec::required(&mut object, "radians_per_unit")?,
+            }),
+            "bend" => Ok(Self::Bend {
+                origin: codec::required(&mut object, "origin")?,
+                radius: codec::required(&mut object, "radius")?,
+            }),
+            "lattice" => Ok(Self::Lattice {
+                min: codec::required(&mut object, "min")?,
+                max: codec::required(&mut object, "max")?,
+                controls: codec::required(&mut object, "controls")?,
+            }),
+            _ => Err(value_codec::error("Unknown deformation kind")),
         }
     }
 }
@@ -257,29 +214,11 @@ impl value_codec::Serialize for Brush {
 }
 impl<'de> value_codec::Deserialize<'de> for Brush {
     fn from_value(value: value_codec::Value) -> value_codec::Result<Self> {
-        let mut object = value
-            .as_object()
-            .ok_or_else(|| value_codec::error("Expected object"))?
-            .clone();
-        let center: Point = value_codec::Deserialize::from_value(
-            object
-                .remove("center")
-                .ok_or_else(|| value_codec::error("Missing field center"))?,
-        )?;
-        let radius: f64 = value_codec::Deserialize::from_value(
-            object
-                .remove("radius")
-                .ok_or_else(|| value_codec::error("Missing field radius"))?,
-        )?;
-        let displacement: Point = value_codec::Deserialize::from_value(
-            object
-                .remove("displacement")
-                .ok_or_else(|| value_codec::error("Missing field displacement"))?,
-        )?;
+        let mut object = codec::object(value)?;
         Ok(Self {
-            center,
-            radius,
-            displacement,
+            center: codec::required(&mut object, "center")?,
+            radius: codec::required(&mut object, "radius")?,
+            displacement: codec::required(&mut object, "displacement")?,
         })
     }
 }
@@ -301,19 +240,8 @@ impl Brush {
         if !finite(p) {
             return Err(fail("Invalid brush point"));
         }
-        let d = p
-            .iter()
-            .zip(self.center)
-            .map(|(a, b)| (a - b).powi(2))
-            .sum::<f64>()
-            .sqrt()
-            / self.radius;
-        let w = if d >= 1. {
-            0.
-        } else {
-            let t = 1. - d;
-            t * t * (3. - 2. * t)
-        };
+        let w =
+            Falloff::Smooth.weight(math_core::norm(math_core::sub(p, self.center)) / self.radius);
         let q = std::array::from_fn(|k| p[k] + w * self.displacement[k]);
         if finite(q) {
             Ok(q)

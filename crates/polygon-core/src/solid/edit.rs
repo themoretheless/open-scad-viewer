@@ -44,59 +44,22 @@ pub fn brush(mesh: &Mesh, brush: &geometry_ops::Brush) -> Result<BuiltMesh> {
     finish(result)
 }
 /// Area-weighted unit vertex normals and one-ring adjacency of a triangle mesh.
-pub fn sculpt_target(mesh: &Mesh) -> Result<geometry_ops::SculptData> {
+pub fn sculpt_target(mesh: &Mesh) -> Result<geometry_ops::SculptTarget> {
     mesh.validate()?;
-    let positions: Vec<[f64; 3]> = mesh
+    let positions = mesh
         .positions
         .as_chunks::<3>()
         .0
         .iter()
         .map(|p| [p[0], p[1], p[2]])
         .collect();
-    let mut normals = vec![[0.; 3]; positions.len()];
-    let mut rings = vec![BTreeSet::new(); positions.len()];
-    for t in mesh.indices.as_chunks::<3>().0 {
-        let [a, b, c] = *t;
-        let n = crate::cross(
-            crate::sub(positions[b], positions[a]),
-            crate::sub(positions[c], positions[a]),
-        );
-        for &v in t {
-            normals[v] = math_core::add(normals[v], n);
-        }
-        rings[a].extend([b, c]);
-        rings[b].extend([a, c]);
-        rings[c].extend([a, b]);
-    }
-    let normals = normals
-        .into_iter()
-        .map(|n| {
-            if crate::norm(n) > 1e-18 {
-                math_core::unit(n)
-            } else {
-                n
-            }
-        })
-        .collect();
-    Ok((
-        positions,
-        normals,
-        rings.into_iter().map(|r| r.into_iter().collect()).collect(),
-    ))
+    let faces = mesh.indices.as_chunks::<3>().0.iter().map(|t| t.as_slice());
+    geometry_ops::SculptTarget::from_faces(positions, faces)
 }
 /// Applies a sculpt brush to vertex positions; topology is unchanged and the
 /// result must remain a valid triangle mesh.
 pub fn sculpt(mesh: &Mesh, brush: &geometry_ops::SculptBrush) -> Result<BuiltMesh> {
-    brush.validate()?;
-    let (positions, normals, adjacency) = sculpt_target(mesh)?;
-    let moved = geometry_ops::sculpt(
-        &geometry_ops::SculptTarget {
-            positions: &positions,
-            normals: &normals,
-            adjacency: &adjacency,
-        },
-        brush,
-    )?;
+    let moved = sculpt_target(mesh)?.sculpt(brush)?;
     let mut result = mesh.clone();
     result.positions = moved.into_iter().flatten().collect();
     finish(result)
@@ -276,7 +239,11 @@ mod tests {
     #[test]
     fn sculpt_target_has_outward_unit_normals_and_full_rings() {
         let cube = cube();
-        let (positions, normals, rings) = sculpt_target(&cube.mesh).unwrap();
+        let geometry_ops::SculptTarget {
+            positions,
+            normals,
+            adjacency: rings,
+        } = sculpt_target(&cube.mesh).unwrap();
         assert_eq!(positions.len(), normals.len());
         assert_eq!(positions.len(), rings.len());
         for (p, n) in positions.iter().zip(&normals) {

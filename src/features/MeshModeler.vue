@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, ref, shallowRef, watch } from 'vue'
-import { SCULPT_FALLOFFS, SCULPT_KINDS, type SculptBrush, type SculptFalloff, type SculptKind } from '../services/geometryEditing'
-import { sculptMesh } from '../services/meshEditing'
+import { SCULPT_FALLOFFS, SCULPT_KINDS, buildSculptBrush, isFractionalSculptKind, type SculptFalloff, type SculptKind } from '../services/geometryEditing'
+import { meshCentroid, sculptMesh } from '../services/meshEditing'
 import {
   MeshHistory,
   booleanMeshObjects,
@@ -67,7 +67,7 @@ const brushStrength = ref(1)
 const brushKind = ref<SculptKind>('grab')
 const brushFalloff = ref<SculptFalloff>('smooth')
 const brushMirror = ref<[boolean, boolean, boolean]>([false, false, false])
-const brushIsFraction = computed(() => brushKind.value === 'smooth' || brushKind.value === 'flatten' || brushKind.value === 'pinch')
+const brushIsFraction = computed(() => isFractionalSculptKind(brushKind.value))
 const twistAmount = ref(0.1)
 const booleanOp = ref<'union' | 'difference' | 'intersection'>('union')
 const booleanTarget = ref('')
@@ -300,29 +300,9 @@ function applyBrush() {
   run(() => {
     if (!selected.value) return
     const mesh = selected.value.mesh
-    const count = mesh.positions.length / 3
-    const center: [number, number, number] = [0, 0, 0]
-    for (let i = 0; i < count; i++) {
-      center[0] += mesh.positions[i * 3]
-      center[1] += mesh.positions[i * 3 + 1]
-      center[2] += mesh.positions[i * 3 + 2]
-    }
-    center[0] /= count; center[1] /= count; center[2] /= count
     // Selected vertices define the stroke center when present; otherwise the object centroid.
-    if (selectedVerts.value.length) {
-      center[0] = center[1] = center[2] = 0
-      for (const v of selectedVerts.value) {
-        center[0] += mesh.positions[v * 3]
-        center[1] += mesh.positions[v * 3 + 1]
-        center[2] += mesh.positions[v * 3 + 2]
-      }
-      center[0] /= selectedVerts.value.length; center[1] /= selectedVerts.value.length; center[2] /= selectedVerts.value.length
-    }
-    const common = { center, radius: brushRadius.value, falloff: brushFalloff.value, symmetry: { axes: [...brushMirror.value] as [boolean, boolean, boolean], origin: [0, 0, 0] } }
-    const strength = brushIsFraction.value ? Math.min(1, Math.max(0, brushStrength.value)) : brushStrength.value
-    const brush: SculptBrush = brushKind.value === 'grab'
-      ? { kind: 'grab', displacement: [0, 0, brushStrength.value], ...common }
-      : { kind: brushKind.value, strength, ...common }
+    const center = meshCentroid(mesh, selectedVerts.value)
+    const brush = buildSculptBrush({ kind: brushKind.value, radius: brushRadius.value, strength: brushStrength.value, falloff: brushFalloff.value, mirror: brushMirror.value }, center)
     const d = history.document
     const index = d.objects.findIndex(o => o.id === selection.value)
     d.objects[index] = { ...d.objects[index], mesh: sculptMesh(mesh, brush) }

@@ -11,6 +11,9 @@ export const SCULPT_FALLOFFS:readonly SculptFalloff[]=['smooth','linear','sharp'
 export interface SculptSymmetry {axes:[boolean,boolean,boolean];origin?:number[]}
 export type SculptKind='grab'|'draw'|'inflate'|'smooth'|'flatten'|'pinch'
 export const SCULPT_KINDS:readonly SculptKind[]=['grab','draw','inflate','smooth','flatten','pinch']
+/** Kinds whose strength is a fraction in [0, 1]; the rest take a signed distance. */
+export const FRACTIONAL_SCULPT_KINDS:readonly SculptKind[]=['smooth','flatten','pinch']
+export const isFractionalSculptKind=(kind:SculptKind):boolean=>FRACTIONAL_SCULPT_KINDS.includes(kind)
 /**
  * Representation-independent sculpt stroke. `grab` translates by `displacement`;
  * `draw`/`inflate` push along the area/vertex normal by `strength` (a distance,
@@ -27,6 +30,20 @@ export function validateSculptBrush(brush:SculptBrush):void {
  if(brush.kind==='grab'){if(brush.displacement.length!==3||!brush.displacement.every(finiteCoord))throw new Error('Sculpt grab displacement must be a finite 3D vector.');return}
  if(!SCULPT_KINDS.includes(brush.kind))throw new Error('Unknown sculpt brush kind.')
  if(!Number.isFinite(brush.strength))throw new Error('Sculpt brush strength must be finite.')
- if((brush.kind==='smooth'||brush.kind==='flatten'||brush.kind==='pinch')&&(brush.strength<0||brush.strength>1))throw new Error(`Sculpt ${brush.kind} strength must be within [0, 1].`)
- if((brush.kind==='draw'||brush.kind==='inflate')&&Math.abs(brush.strength)>1e6)throw new Error('Sculpt brush strength exceeds coordinate limits.')
+ if(isFractionalSculptKind(brush.kind)){if(brush.strength<0||brush.strength>1)throw new Error(`Sculpt ${brush.kind} strength must be within [0, 1].`)}
+ else if(Math.abs(brush.strength)>1e6)throw new Error('Sculpt brush strength exceeds coordinate limits.')
+}
+/** UI-level brush settings independent of where the stroke lands. */
+export interface SculptBrushSettings {kind:SculptKind;radius:number;strength:number;falloff:SculptFalloff;mirror:[boolean,boolean,boolean]}
+/**
+ * Assembles a validated brush at `center`. `grab` pushes along +Z by `strength`;
+ * fractional kinds clamp `strength` into [0, 1]; symmetry mirrors about the world origin.
+ */
+export function buildSculptBrush(settings:SculptBrushSettings,center:number[]):SculptBrush {
+ const common={center,radius:settings.radius,falloff:settings.falloff,symmetry:{axes:[...settings.mirror] as [boolean,boolean,boolean],origin:[0,0,0]}}
+ const brush:SculptBrush=settings.kind==='grab'
+  ?{kind:'grab',displacement:[0,0,settings.strength],...common}
+  :{kind:settings.kind,strength:isFractionalSculptKind(settings.kind)?Math.min(1,Math.max(0,settings.strength)):settings.strength,...common}
+ validateSculptBrush(brush)
+ return brush
 }

@@ -39,13 +39,7 @@ pub fn brush_surface(s: &Surface, b: &geometry_ops::Brush) -> Result<Surface> {
     map_surface(s, |p| b.apply(p))
 }
 
-fn unit_or_zero(v: [f64; 3]) -> [f64; 3] {
-    if math_core::norm(v) > 1e-18 {
-        math_core::unit(v)
-    } else {
-        [0.; 3]
-    }
-}
+use geometry_ops::unit_or_zero;
 fn point3(p: &[f64]) -> Result<[f64; 3]> {
     if p.len() != 3 {
         return Err(input("Control edit requires 3D coordinates"));
@@ -55,7 +49,7 @@ fn point3(p: &[f64]) -> Result<[f64; 3]> {
 /// Control-polygon sculpt data: neighbors are the previous/next controls
 /// (wrapping for periodic curves) and the "normal" is the discrete curvature
 /// direction `p - mean(neighbors)`, zero where the polygon is straight.
-pub fn curve_sculpt_target(c: &Curve) -> Result<geometry_ops::SculptData> {
+pub fn curve_sculpt_target(c: &Curve) -> Result<geometry_ops::SculptTarget> {
     c.validate()?;
     let positions = c
         .control_points
@@ -93,11 +87,15 @@ pub fn curve_sculpt_target(c: &Curve) -> Result<geometry_ops::SculptData> {
             unit_or_zero(math_core::sub(positions[i], mean))
         })
         .collect();
-    Ok((positions, normals, adjacency))
+    Ok(geometry_ops::SculptTarget {
+        positions,
+        normals,
+        adjacency,
+    })
 }
 /// Control-net sculpt data: 4-neighborhood over the (u, v) grid (wrapping on
 /// periodic axes) and normals from central/one-sided differences of the net.
-pub fn surface_sculpt_target(s: &Surface) -> Result<geometry_ops::SculptData> {
+pub fn surface_sculpt_target(s: &Surface) -> Result<geometry_ops::SculptTarget> {
     s.validate()?;
     let nu = s.control_points.len();
     let nv = s.control_points[0].len();
@@ -140,35 +138,21 @@ pub fn surface_sculpt_target(s: &Surface) -> Result<geometry_ops::SculptData> {
             }
         }
     }
-    Ok((positions, normals, adjacency))
+    Ok(geometry_ops::SculptTarget {
+        positions,
+        normals,
+        adjacency,
+    })
 }
 pub fn sculpt_curve(c: &Curve, b: &geometry_ops::SculptBrush) -> Result<Curve> {
-    b.validate()?;
-    let (positions, normals, adjacency) = curve_sculpt_target(c)?;
-    let moved = geometry_ops::sculpt(
-        &geometry_ops::SculptTarget {
-            positions: &positions,
-            normals: &normals,
-            adjacency: &adjacency,
-        },
-        b,
-    )?;
+    let moved = curve_sculpt_target(c)?.sculpt(b)?;
     let mut out = c.clone();
     out.control_points = moved.into_iter().map(|p| p.to_vec()).collect();
     out.validate()?;
     Ok(out)
 }
 pub fn sculpt_surface(s: &Surface, b: &geometry_ops::SculptBrush) -> Result<Surface> {
-    b.validate()?;
-    let (positions, normals, adjacency) = surface_sculpt_target(s)?;
-    let moved = geometry_ops::sculpt(
-        &geometry_ops::SculptTarget {
-            positions: &positions,
-            normals: &normals,
-            adjacency: &adjacency,
-        },
-        b,
-    )?;
+    let moved = surface_sculpt_target(s)?.sculpt(b)?;
     let nv = s.control_points[0].len();
     let mut out = s.clone();
     for (k, p) in moved.into_iter().enumerate() {

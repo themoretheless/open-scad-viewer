@@ -467,6 +467,19 @@ export function sculptMesh(mesh: PolygonMesh, brush: SculptBrush): PolygonMesh {
   return sculptPolygonMesh(mesh, brush)
 }
 
+/** Mean position of `vertices` (all vertices when omitted or empty). */
+export function meshCentroid(mesh: PolygonMesh, vertices: readonly number[] = []): [number, number, number] {
+  const count = mesh.positions.length / 3
+  const picked = vertices.length ? vertices : Array.from({ length: count }, (_, i) => i)
+  const center: [number, number, number] = [0, 0, 0]
+  for (const v of picked) {
+    center[0] += mesh.positions[v * 3]
+    center[1] += mesh.positions[v * 3 + 1]
+    center[2] += mesh.positions[v * 3 + 2]
+  }
+  return center.map(c => c / picked.length) as [number, number, number]
+}
+
 export function twistMesh(mesh: PolygonMesh, radiansPerUnit: number, origin: [number, number, number] = [0, 0, 0]): PolygonMesh {
   if (!finite(radiansPerUnit) || !origin.every(finite)) throw new Error('Invalid twist.')
   return deformPolygonMesh(mesh, { kind: 'twist', origin, radians_per_unit: radiansPerUnit })

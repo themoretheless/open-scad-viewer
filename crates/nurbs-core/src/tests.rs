@@ -234,7 +234,11 @@ fn brush_rejects_invalid_brushes_and_inputs() {
 #[test]
 fn sculpt_targets_expose_polygon_and_net_structure() {
     let c = circle();
-    let (positions, normals, rings) = edit::curve_sculpt_target(&c).unwrap();
+    let geometry_ops::SculptTarget {
+        positions,
+        normals,
+        adjacency: rings,
+    } = edit::curve_sculpt_target(&c).unwrap();
     assert_eq!(positions.len(), 3);
     assert_eq!(rings, vec![vec![1], vec![0, 2], vec![1]]);
     near(&normals[0], &[0., 0., 0.]);
@@ -247,7 +251,11 @@ fn sculpt_targets_expose_polygon_and_net_structure() {
         ],
     );
     let s = surface::extrude(&c, [0., 0., 3.]).unwrap();
-    let (_, snormals, srings) = edit::surface_sculpt_target(&s).unwrap();
+    let geometry_ops::SculptTarget {
+        normals: snormals,
+        adjacency: srings,
+        ..
+    } = edit::surface_sculpt_target(&s).unwrap();
     assert_eq!(
         snormals.len(),
         s.control_points.len() * s.control_points[0].len()

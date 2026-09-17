@@ -2,8 +2,9 @@
 //! positions together with per-vertex unit normals and one-ring adjacency; the
 //! engine returns displaced positions and never touches topology. Kernels own
 //! normal/adjacency construction and post-edit validity checks.
-use crate::{Point, Result, fail, finite};
+use crate::{Point, Result, codec, fail, finite};
 use math_core::{add, dot, norm, scale, sub, unit};
+use std::collections::BTreeSet;
 use value_codec::{Deserialize, Map, Serialize, Value, error};
 
 /// Radial weight profile over the normalized distance `d = |p - center| / radius`.
@@ -73,6 +74,11 @@ impl<'de> Deserialize<'de> for Falloff {
     }
 }
 
+/// `v / |v|`, or the zero vector when `v` is (numerically) zero.
+pub fn unit_or_zero(v: Point) -> Point {
+    if norm(v) > 1e-18 { unit(v) } else { [0.; 3] }
+}
+
 /// Mirror the stroke across axis-aligned planes through `origin`.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Symmetry {
@@ -135,19 +141,11 @@ impl Serialize for Symmetry {
 }
 impl<'de> Deserialize<'de> for Symmetry {
     fn from_value(value: Value) -> value_codec::Result<Self> {
-        let mut object = value
-            .as_object()
-            .ok_or_else(|| error("Expected object"))?
-            .clone();
-        let axes: [bool; 3] = match object.remove("axes") {
-            Some(v) => Deserialize::from_value(v)?,
-            None => [false; 3],
-        };
-        let origin: Point = match object.remove("origin") {
-            Some(v) => Deserialize::from_value(v)?,
-            None => [0.; 3],
-        };
-        Ok(Self { axes, origin })
+        let mut object = codec::object(value)?;
+        Ok(Self {
+            axes: codec::optional(&mut object, "axes", [false; 3])?,
+            origin: codec::optional(&mut object, "origin", [0.; 3])?,
+        })
     }
 }
 
@@ -167,6 +165,7 @@ pub enum SculptKind {
     Pinch { strength: f64 },
 }
 impl SculptKind {
+    pub const NAMES: [&'static str; 6] = ["grab", "draw", "inflate", "smooth", "flatten", "pinch"];
     pub fn name(&self) -> &'static str {
         match self {
             Self::Grab { .. } => "grab",
@@ -175,6 +174,28 @@ impl SculptKind {
             Self::Smooth { .. } => "smooth",
             Self::Flatten { .. } => "flatten",
             Self::Pinch { .. } => "pinch",
+        }
+    }
+    /// Builds a strength-parameterized kind by name; `None` for `grab` or unknown names.
+    pub fn with_strength(name: &str, strength: f64) -> Option<Self> {
+        Some(match name {
+            "draw" => Self::Draw { strength },
+            "inflate" => Self::Inflate { strength },
+            "smooth" => Self::Smooth { strength },
+            "flatten" => Self::Flatten { strength },
+            "pinch" => Self::Pinch { strength },
+            _ => return None,
+        })
+    }
+    /// The scalar parameter of every kind except `grab`.
+    pub fn strength(&self) -> Option<f64> {
+        match self {
+            Self::Grab { .. } => None,
+            Self::Draw { strength }
+            | Self::Inflate { strength }
+            | Self::Smooth { strength }
+            | Self::Flatten { strength }
+            | Self::Pinch { strength } => Some(*strength),
         }
     }
     /// Whether this brush needs per-vertex normals from the caller.
@@ -200,6 +221,42 @@ impl SculptKind {
         } else {
             Err(fail("Invalid sculpt brush strength"))
         }
+    }
+    /// Applies one (possibly mirrored) pass of this brush to `out`.
+    fn apply(&self, pass: &Pass<'_>, vector: Point, out: &mut [Point]) {
+        match *self {
+            Self::Grab { .. } => pass.grab(vector, out),
+            Self::Draw { strength } => pass.draw(strength, out),
+            Self::Inflate { strength } => pass.inflate(strength, out),
+            Self::Smooth { strength } => pass.smooth(strength, out),
+            Self::Flatten { strength } => pass.flatten(strength, out),
+            Self::Pinch { strength } => pass.pinch(strength, out),
+        }
+    }
+    /// Flat wire encoding: `kind` plus `displacement` or `strength`.
+    fn write(&self, object: &mut codec::Object) {
+        object.insert("kind".into(), Value::String(self.name().into()));
+        match self {
+            Self::Grab { displacement } => {
+                object.insert("displacement".into(), displacement.to_value());
+            }
+            _ => {
+                object.insert("strength".into(), self.strength().to_value());
+            }
+        }
+    }
+    fn read(object: &mut codec::Object) -> value_codec::Result<Self> {
+        let name: String = codec::required(object, "kind")?;
+        if !Self::NAMES.contains(&name.as_str()) {
+            return Err(error("Unknown sculpt brush kind"));
+        }
+        if name == "grab" {
+            return Ok(Self::Grab {
+                displacement: codec::required(object, "displacement")?,
+            });
+        }
+        let strength = codec::required(object, "strength")?;
+        Self::with_strength(&name, strength).ok_or_else(|| error("Unknown sculpt brush kind"))
     }
 }
 
@@ -233,25 +290,16 @@ impl SculptBrush {
     }
     /// Falloff weight of a point for the unmirrored stroke.
     pub fn weight(&self, p: Point) -> f64 {
-        self.falloff.weight(norm(sub(p, self.center)) / self.radius)
+        self.weight_from(self.center, p)
+    }
+    fn weight_from(&self, center: Point, p: Point) -> f64 {
+        self.falloff.weight(norm(sub(p, center)) / self.radius)
     }
 }
 impl Serialize for SculptBrush {
     fn to_value(&self) -> Value {
         let mut object = Map::new();
-        object.insert("kind".into(), Value::String(self.kind.name().into()));
-        match &self.kind {
-            SculptKind::Grab { displacement } => {
-                object.insert("displacement".into(), displacement.to_value());
-            }
-            SculptKind::Draw { strength }
-            | SculptKind::Inflate { strength }
-            | SculptKind::Smooth { strength }
-            | SculptKind::Flatten { strength }
-            | SculptKind::Pinch { strength } => {
-                object.insert("strength".into(), strength.to_value());
-            }
-        }
+        self.kind.write(&mut object);
         object.insert("center".into(), self.center.to_value());
         object.insert("radius".into(), self.radius.to_value());
         object.insert("falloff".into(), self.falloff.to_value());
@@ -261,174 +309,208 @@ impl Serialize for SculptBrush {
 }
 impl<'de> Deserialize<'de> for SculptBrush {
     fn from_value(value: Value) -> value_codec::Result<Self> {
-        let mut object = value
-            .as_object()
-            .ok_or_else(|| error("Expected object"))?
-            .clone();
-        let kind_name = object
-            .remove("kind")
-            .and_then(|v| v.as_str().map(str::to_owned))
-            .ok_or_else(|| error("Missing field kind"))?;
-        let mut take = |name: &str| {
-            object
-                .remove(name)
-                .ok_or_else(|| error(format!("Missing field {name}")))
-        };
-        let kind = match kind_name.as_str() {
-            "grab" => SculptKind::Grab {
-                displacement: Deserialize::from_value(take("displacement")?)?,
-            },
-            "draw" => SculptKind::Draw {
-                strength: Deserialize::from_value(take("strength")?)?,
-            },
-            "inflate" => SculptKind::Inflate {
-                strength: Deserialize::from_value(take("strength")?)?,
-            },
-            "smooth" => SculptKind::Smooth {
-                strength: Deserialize::from_value(take("strength")?)?,
-            },
-            "flatten" => SculptKind::Flatten {
-                strength: Deserialize::from_value(take("strength")?)?,
-            },
-            "pinch" => SculptKind::Pinch {
-                strength: Deserialize::from_value(take("strength")?)?,
-            },
-            _ => return Err(error("Unknown sculpt brush kind")),
-        };
-        let center: Point = Deserialize::from_value(take("center")?)?;
-        let radius: f64 = Deserialize::from_value(take("radius")?)?;
-        let falloff = match object.remove("falloff") {
-            Some(Value::Null) | None => Falloff::Smooth,
-            Some(v) => Deserialize::from_value(v)?,
-        };
-        let symmetry = match object.remove("symmetry") {
-            Some(Value::Null) | None => Symmetry::default(),
-            Some(v) => Deserialize::from_value(v)?,
-        };
+        let mut object = codec::object(value)?;
         Ok(Self {
-            kind,
-            center,
-            radius,
-            falloff,
-            symmetry,
+            kind: SculptKind::read(&mut object)?,
+            center: codec::required(&mut object, "center")?,
+            radius: codec::required(&mut object, "radius")?,
+            falloff: codec::optional(&mut object, "falloff", Falloff::Smooth)?,
+            symmetry: codec::optional(&mut object, "symmetry", Symmetry::default())?,
         })
     }
 }
 
 /// Vertex data a kernel exposes for sculpting. `normals` and `adjacency` may be
 /// empty when the brush does not need them (see `SculptKind::needs_*`).
-/// Owned `(positions, unit normals, one-ring adjacency)` triple a kernel extracts from its control data.
-pub type SculptData = (Vec<[f64; 3]>, Vec<[f64; 3]>, Vec<Vec<usize>>);
-
-pub struct SculptTarget<'a> {
-    pub positions: &'a [Point],
-    pub normals: &'a [Point],
-    pub adjacency: &'a [Vec<usize>],
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct SculptTarget {
+    pub positions: Vec<Point>,
+    pub normals: Vec<Point>,
+    pub adjacency: Vec<Vec<usize>>,
+}
+impl SculptTarget {
+    /// Positions alone; suitable for `grab`.
+    pub fn positions(positions: Vec<Point>) -> Self {
+        Self {
+            positions,
+            ..Self::default()
+        }
+    }
+    /// Derives unit vertex normals (Newell face normals accumulated per vertex,
+    /// area weighted) and edge one-rings from polygonal faces of any arity.
+    pub fn from_faces<'f>(
+        positions: Vec<Point>,
+        faces: impl IntoIterator<Item = &'f [usize]>,
+    ) -> Result<Self> {
+        let n = positions.len();
+        let mut normals = vec![[0.; 3]; n];
+        let mut rings = vec![BTreeSet::new(); n];
+        for face in faces {
+            if face.iter().any(|&v| v >= n) {
+                return Err(fail("Sculpt face references a missing vertex"));
+            }
+            let mut normal = [0.; 3];
+            for (k, &a) in face.iter().enumerate() {
+                let b = face[(k + 1) % face.len()];
+                let (p, q) = (positions[a], positions[b]);
+                normal[0] += (p[1] - q[1]) * (p[2] + q[2]);
+                normal[1] += (p[2] - q[2]) * (p[0] + q[0]);
+                normal[2] += (p[0] - q[0]) * (p[1] + q[1]);
+                rings[a].insert(b);
+                rings[b].insert(a);
+            }
+            for &v in face {
+                normals[v] = add(normals[v], normal);
+            }
+        }
+        Ok(Self {
+            positions,
+            normals: normals.into_iter().map(unit_or_zero).collect(),
+            adjacency: rings.into_iter().map(|r| r.into_iter().collect()).collect(),
+        })
+    }
+    fn check(&self, brush: &SculptBrush) -> Result<()> {
+        let n = self.positions.len();
+        if n == 0 {
+            return Err(fail("Sculpt target has no vertices"));
+        }
+        if self.positions.iter().any(|p| !finite(*p)) {
+            return Err(fail("Sculpt target has invalid coordinates"));
+        }
+        if brush.kind.needs_normals()
+            && (self.normals.len() != n || self.normals.iter().any(|p| !finite(*p)))
+        {
+            return Err(fail("Sculpt target normals do not match vertices"));
+        }
+        if brush.kind.needs_adjacency()
+            && (self.adjacency.len() != n || self.adjacency.iter().flatten().any(|&i| i >= n))
+        {
+            return Err(fail("Sculpt target adjacency does not match vertices"));
+        }
+        Ok(())
+    }
+    /// Applies the brush (and its mirrored passes, in order) and returns the new
+    /// positions. Vertex count and order are preserved.
+    pub fn sculpt(&self, brush: &SculptBrush) -> Result<Vec<Point>> {
+        brush.validate()?;
+        self.check(brush)?;
+        let vector = match brush.kind {
+            SculptKind::Grab { displacement } => displacement,
+            _ => [0.; 3],
+        };
+        let mut out = self.positions.clone();
+        for (center, vector) in brush.symmetry.passes(brush.center, vector) {
+            if let Some(pass) = Pass::new(self, &out, brush, center) {
+                brush.kind.apply(&pass, vector, &mut out);
+            }
+        }
+        if out.iter().any(|p| !finite(*p)) {
+            return Err(fail("Sculpt exceeds coordinate limits"));
+        }
+        Ok(out)
+    }
 }
 
-/// Applies the brush (and its mirrored passes, in order) and returns the new
-/// positions. Vertex count and order are preserved.
-pub fn sculpt(target: &SculptTarget<'_>, brush: &SculptBrush) -> Result<Vec<Point>> {
-    brush.validate()?;
-    let n = target.positions.len();
-    if n == 0 {
-        return Err(fail("Sculpt target has no vertices"));
-    }
-    if target.positions.iter().any(|p| !finite(*p)) {
-        return Err(fail("Sculpt target has invalid coordinates"));
-    }
-    if brush.kind.needs_normals()
-        && (target.normals.len() != n || target.normals.iter().any(|p| !finite(*p)))
-    {
-        return Err(fail("Sculpt target normals do not match vertices"));
-    }
-    if brush.kind.needs_adjacency()
-        && (target.adjacency.len() != n || target.adjacency.iter().flatten().any(|&i| i >= n))
-    {
-        return Err(fail("Sculpt target adjacency does not match vertices"));
-    }
-    let vector = match brush.kind {
-        SculptKind::Grab { displacement } => displacement,
-        _ => [0.; 3],
-    };
-    let mut out = target.positions.to_vec();
-    for (center, vector) in brush.symmetry.passes(brush.center, vector) {
-        let weights: Vec<f64> = out
+/// One stroke center's footprint: falloff weights and the affected vertex set.
+struct Pass<'a> {
+    target: &'a SculptTarget,
+    center: Point,
+    weights: Vec<f64>,
+    affected: Vec<usize>,
+}
+impl<'a> Pass<'a> {
+    /// `None` when no vertex lies inside the radius.
+    fn new(
+        target: &'a SculptTarget,
+        current: &[Point],
+        brush: &SculptBrush,
+        center: Point,
+    ) -> Option<Self> {
+        let weights: Vec<f64> = current
             .iter()
-            .map(|p| brush.falloff.weight(norm(sub(*p, center)) / brush.radius))
+            .map(|p| brush.weight_from(center, *p))
             .collect();
-        let affected: Vec<usize> = (0..n).filter(|&i| weights[i] > 0.).collect();
-        if affected.is_empty() {
-            continue;
+        let affected: Vec<usize> = (0..current.len()).filter(|&i| weights[i] > 0.).collect();
+        (!affected.is_empty()).then_some(Self {
+            target,
+            center,
+            weights,
+            affected,
+        })
+    }
+    /// Calls `f(vertex, weight)` for every affected vertex, returning a displacement to add.
+    fn displace(&self, out: &mut [Point], mut f: impl FnMut(usize, f64) -> Point) {
+        for &i in &self.affected {
+            out[i] = add(out[i], f(i, self.weights[i]));
         }
-        let area_normal = || {
-            let sum = affected.iter().fold([0.; 3], |acc, &i| {
-                add(acc, scale(unit(target.normals[i]), weights[i]))
-            });
-            (norm(sum) > 1e-12).then(|| unit(sum))
+    }
+    /// Weighted mean of the affected vertex normals; `None` when they cancel.
+    fn area_normal(&self) -> Option<Point> {
+        let sum = self.affected.iter().fold([0.; 3], |acc, &i| {
+            add(
+                acc,
+                scale(unit_or_zero(self.target.normals[i]), self.weights[i]),
+            )
+        });
+        (norm(sum) > 1e-12).then(|| unit(sum))
+    }
+    fn weighted_centroid(&self, points: &[Point]) -> Point {
+        let total: f64 = self.affected.iter().map(|&i| self.weights[i]).sum();
+        let sum = self.affected.iter().fold([0.; 3], |acc, &i| {
+            add(acc, scale(points[i], self.weights[i]))
+        });
+        scale(sum, 1. / total)
+    }
+    fn grab(&self, vector: Point, out: &mut [Point]) {
+        self.displace(out, |_, w| scale(vector, w));
+    }
+    fn draw(&self, strength: f64, out: &mut [Point]) {
+        let Some(nrm) = self.area_normal() else {
+            return;
         };
-        match brush.kind {
-            SculptKind::Grab { .. } => {
-                for &i in &affected {
-                    out[i] = add(out[i], scale(vector, weights[i]));
-                }
-            }
-            SculptKind::Draw { strength } => {
-                let Some(nrm) = area_normal() else { continue };
-                for &i in &affected {
-                    out[i] = add(out[i], scale(nrm, weights[i] * strength));
-                }
-            }
-            SculptKind::Inflate { strength } => {
-                for &i in &affected {
-                    let nrm = target.normals[i];
-                    if norm(nrm) > 1e-12 {
-                        out[i] = add(out[i], scale(unit(nrm), weights[i] * strength));
-                    }
-                }
-            }
-            SculptKind::Smooth { strength } => {
-                let snapshot = out.clone();
-                for &i in &affected {
-                    let ring = &target.adjacency[i];
-                    if ring.is_empty() {
-                        continue;
-                    }
-                    let mean = scale(
-                        ring.iter().fold([0.; 3], |acc, &j| add(acc, snapshot[j])),
-                        1. / ring.len() as f64,
-                    );
-                    out[i] = add(out[i], scale(sub(mean, out[i]), weights[i] * strength));
-                }
-            }
-            SculptKind::Flatten { strength } => {
-                let Some(nrm) = area_normal() else { continue };
-                let total: f64 = affected.iter().map(|&i| weights[i]).sum();
-                let centroid = scale(
-                    affected
-                        .iter()
-                        .fold([0.; 3], |acc, &i| add(acc, scale(out[i], weights[i]))),
-                    1. / total,
-                );
-                for &i in &affected {
-                    let height = dot(sub(centroid, out[i]), nrm);
-                    out[i] = add(out[i], scale(nrm, height * weights[i] * strength));
-                }
-            }
-            SculptKind::Pinch { strength } => {
-                let Some(nrm) = area_normal() else { continue };
-                for &i in &affected {
-                    let to_axis = sub(center, out[i]);
-                    let tangent = sub(to_axis, scale(nrm, dot(to_axis, nrm)));
-                    out[i] = add(out[i], scale(tangent, weights[i] * strength));
-                }
-            }
-        }
+        self.displace(out, |_, w| scale(nrm, w * strength));
     }
-    if out.iter().any(|p| !finite(*p)) {
-        return Err(fail("Sculpt exceeds coordinate limits"));
+    fn inflate(&self, strength: f64, out: &mut [Point]) {
+        self.displace(out, |i, w| {
+            scale(unit_or_zero(self.target.normals[i]), w * strength)
+        });
     }
-    Ok(out)
+    fn smooth(&self, strength: f64, out: &mut [Point]) {
+        let snapshot = out.to_vec();
+        self.displace(out, |i, w| {
+            let ring = &self.target.adjacency[i];
+            if ring.is_empty() {
+                return [0.; 3];
+            }
+            let mean = scale(
+                ring.iter().fold([0.; 3], |acc, &j| add(acc, snapshot[j])),
+                1. / ring.len() as f64,
+            );
+            scale(sub(mean, snapshot[i]), w * strength)
+        });
+    }
+    fn flatten(&self, strength: f64, out: &mut [Point]) {
+        let Some(nrm) = self.area_normal() else {
+            return;
+        };
+        let before = out.to_vec();
+        let centroid = self.weighted_centroid(&before);
+        self.displace(out, |i, w| {
+            let height = dot(sub(centroid, before[i]), nrm);
+            scale(nrm, height * w * strength)
+        });
+    }
+    fn pinch(&self, strength: f64, out: &mut [Point]) {
+        let Some(nrm) = self.area_normal() else {
+            return;
+        };
+        let before = out.to_vec();
+        self.displace(out, |i, w| {
+            let to_axis = sub(self.center, before[i]);
+            let tangent = sub(to_axis, scale(nrm, dot(to_axis, nrm)));
+            scale(tangent, w * strength)
+        });
+    }
 }
 
 #[cfg(test)]
@@ -462,12 +544,15 @@ mod tests {
         }
         (positions, normals, adjacency)
     }
-    fn target<'a>(g: &'a (Vec<Point>, Vec<Point>, Vec<Vec<usize>>)) -> SculptTarget<'a> {
+    fn target(g: &(Vec<Point>, Vec<Point>, Vec<Vec<usize>>)) -> SculptTarget {
         SculptTarget {
-            positions: &g.0,
-            normals: &g.1,
-            adjacency: &g.2,
+            positions: g.0.clone(),
+            normals: g.1.clone(),
+            adjacency: g.2.clone(),
         }
+    }
+    fn sculpt(target: &SculptTarget, brush: &SculptBrush) -> Result<Vec<Point>> {
+        target.sculpt(brush)
     }
     #[test]
     fn falloff_profiles_are_bounded_monotone_and_named() {
@@ -627,9 +712,9 @@ mod tests {
             .collect();
         let normals = cube.iter().map(|p| unit(*p)).collect::<Vec<_>>();
         let t = SculptTarget {
-            positions: &cube,
-            normals: &normals,
-            adjacency: &[],
+            positions: cube.clone(),
+            normals,
+            adjacency: vec![],
         };
         let mut inflate = SculptBrush::new(SculptKind::Inflate { strength: 1. }, [1., 1., 1.], 0.5);
         inflate.symmetry.axes = [true; 3];
@@ -684,9 +769,8 @@ mod tests {
         );
         // Missing normals for a normal-based brush; missing adjacency for smooth.
         let no_normals = SculptTarget {
-            positions: &g.0,
-            normals: &[],
-            adjacency: &g.2,
+            normals: vec![],
+            ..target(&g)
         };
         assert!(sculpt(&no_normals, &ok).is_err());
         assert!(
@@ -703,9 +787,8 @@ mod tests {
             .is_ok()
         );
         let no_ring = SculptTarget {
-            positions: &g.0,
-            normals: &g.1,
-            adjacency: &[],
+            adjacency: vec![],
+            ..target(&g)
         };
         assert!(
             sculpt(
@@ -714,17 +797,11 @@ mod tests {
             )
             .is_err()
         );
-        let empty = SculptTarget {
-            positions: &[],
-            normals: &[],
-            adjacency: &[],
-        };
+        let empty = SculptTarget::default();
         assert!(sculpt(&empty, &ok).is_err());
-        let bad_ring = vec![vec![99usize]; 9];
         let t = SculptTarget {
-            positions: &g.0,
-            normals: &g.1,
-            adjacency: &bad_ring,
+            adjacency: vec![vec![99usize]; 9],
+            ..target(&g)
         };
         assert!(
             sculpt(
@@ -733,6 +810,43 @@ mod tests {
             )
             .is_err()
         );
+    }
+    #[test]
+    fn from_faces_builds_outward_unit_normals_and_rings_for_any_arity() {
+        // Unit cube as six quads (CCW seen from outside) and as twelve triangles.
+        let cube: Vec<Point> = (0..8)
+            .map(|b| std::array::from_fn(|k| if b >> k & 1 == 0 { -1. } else { 1. }))
+            .collect();
+        let quads: Vec<Vec<usize>> = vec![
+            vec![0, 2, 3, 1],
+            vec![4, 5, 7, 6],
+            vec![0, 1, 5, 4],
+            vec![2, 6, 7, 3],
+            vec![0, 4, 6, 2],
+            vec![1, 3, 7, 5],
+        ];
+        let tris: Vec<Vec<usize>> = quads
+            .iter()
+            .flat_map(|q| [vec![q[0], q[1], q[2]], vec![q[0], q[2], q[3]]])
+            .collect();
+        let from_quads =
+            SculptTarget::from_faces(cube.clone(), quads.iter().map(Vec::as_slice)).unwrap();
+        let from_tris =
+            SculptTarget::from_faces(cube.clone(), tris.iter().map(Vec::as_slice)).unwrap();
+        for (i, p) in cube.iter().enumerate() {
+            near(from_quads.normals[i], unit(*p));
+            // Fan triangulation weights the corner unevenly; direction stays outward and unit.
+            assert!((norm(from_tris.normals[i]) - 1.).abs() < 1e-12);
+            assert!(dot(from_tris.normals[i], unit(*p)) > 0.9);
+            assert_eq!(from_quads.adjacency[i].len(), 3);
+            assert!(
+                from_quads.adjacency[i]
+                    .iter()
+                    .all(|j| from_tris.adjacency[i].contains(j))
+            );
+        }
+        assert!(SculptTarget::from_faces(cube, [[0usize, 1, 9].as_slice()]).is_err());
+        assert_eq!(SculptTarget::positions(vec![[0.; 3]]).normals.len(), 0);
     }
     #[test]
     fn brush_round_trips_through_codec_with_defaults() {

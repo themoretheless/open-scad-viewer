@@ -326,7 +326,11 @@ mod tests {
             [0., 0., 2.],
         )
         .unwrap();
-        let (normals, rings) = cage.sculpt_target().unwrap();
+        let geometry_ops::SculptTarget {
+            normals,
+            adjacency: rings,
+            ..
+        } = cage.sculpt_target().unwrap();
         assert_eq!(normals.len(), 8);
         assert!(rings.iter().all(|r| r.len() == 3));
         for (p, n) in cage.vertices.iter().zip(&normals) {
@@ -515,52 +519,15 @@ impl Cage {
         Ok(cage)
     }
     /// Newell face normals accumulated per control vertex, plus edge adjacency.
-    pub fn sculpt_target(&self) -> Result<(Vec<Point>, Vec<Vec<usize>>)> {
+    pub fn sculpt_target(&self) -> Result<geometry_ops::SculptTarget> {
         self.validate()?;
-        let mut normals = vec![[0.; 3]; self.vertices.len()];
-        let mut rings = vec![BTreeSet::new(); self.vertices.len()];
-        for f in &self.faces {
-            let mut n = [0.; 3];
-            for i in 0..f.len() {
-                let a = self.vertices[f[i]];
-                let b = self.vertices[f[(i + 1) % f.len()]];
-                n[0] += (a[1] - b[1]) * (a[2] + b[2]);
-                n[1] += (a[2] - b[2]) * (a[0] + b[0]);
-                n[2] += (a[0] - b[0]) * (a[1] + b[1]);
-                rings[f[i]].insert(f[(i + 1) % f.len()]);
-                rings[f[(i + 1) % f.len()]].insert(f[i]);
-            }
-            for &v in f {
-                normals[v] = math_core::add(normals[v], n);
-            }
-        }
-        Ok((
-            normals
-                .into_iter()
-                .map(|n| {
-                    if math_core::norm(n) > 1e-18 {
-                        math_core::unit(n)
-                    } else {
-                        n
-                    }
-                })
-                .collect(),
-            rings.into_iter().map(|r| r.into_iter().collect()).collect(),
-        ))
+        let faces = self.faces.iter().map(Vec::as_slice);
+        geometry_ops::SculptTarget::from_faces(self.vertices.clone(), faces)
     }
     /// Sculpts control vertices; faces are unchanged and the cage stays valid.
     pub fn sculpt(&self, brush: &geometry_ops::SculptBrush) -> Result<Self> {
-        brush.validate()?;
-        let (normals, adjacency) = self.sculpt_target()?;
         let mut cage = self.clone();
-        cage.vertices = geometry_ops::sculpt(
-            &geometry_ops::SculptTarget {
-                positions: &self.vertices,
-                normals: &normals,
-                adjacency: &adjacency,
-            },
-            brush,
-        )?;
+        cage.vertices = self.sculpt_target()?.sculpt(brush)?;
         cage.validate()?;
         Ok(cage)
     }
