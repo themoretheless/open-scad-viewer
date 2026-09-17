@@ -608,6 +608,24 @@ pub fn lattice(
     )
 }
 
+/// Size-based placement recommendation for the spatial lattice field sampler.
+/// Work scales with sampled grid points times the source shell and graph
+/// complexity; extraction/audit remain CPU-bound, so small grids stay on CPU.
+pub fn recommended_for_lattice(
+    grid_points: usize,
+    source_triangles: usize,
+    segment_count: usize,
+) -> sdf_core::Acceleration {
+    const GPU_WORK_THRESHOLD: usize = 500_000;
+    let complexity = source_triangles.saturating_add(segment_count).max(1);
+    let work = grid_points.saturating_mul(complexity);
+    if cfg!(feature = "gpu") && work >= GPU_WORK_THRESHOLD {
+        sdf_core::Acceleration::Gpu
+    } else {
+        sdf_core::Acceleration::Cpu
+    }
+}
+
 /// `lattice` with an optional GPU field sampler: the implicit field (BVH signed
 /// distance plus capsule graph) is evaluated on the GPU in f32; snap, boundary
 /// validation, marching-tetrahedra and the final mesh audit stay on the CPU.
@@ -705,6 +723,13 @@ pub fn lattice_accelerated(
             "Spatial lattice exceeds 64 grid cells per axis. Increase strut thickness and grid step.",
         ));
     }
+    let grid_points = (cells[0] + 1) * (cells[1] + 1) * (cells[2] + 1);
+    let acceleration = match acceleration {
+        sdf_core::Acceleration::Auto => {
+            recommended_for_lattice(grid_points, mesh.indices.len() / 3, segments.len())
+        }
+        explicit => explicit,
+    };
     if !wall_depth.is_finite() || wall_depth < 0. || wall_depth > 0. && wall_depth < step * 2. {
         return Err(fail("Wall depth must be at least two sampling steps"));
     }
@@ -796,6 +821,58 @@ pub fn lattice_accelerated(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn lattice_auto_recommendation_tracks_work_size() {
+        assert_eq!(
+            recommended_for_lattice(1_000, 8, 8),
+            sdf_core::Acceleration::Cpu
+        );
+        let large = recommended_for_lattice(100_000, 12, 54);
+        if cfg!(feature = "gpu") {
+            assert_eq!(large, sdf_core::Acceleration::Gpu);
+        } else {
+            assert_eq!(large, sdf_core::Acceleration::Cpu);
+        }
+    }
+
+    #[test]
+    fn lattice_auto_matches_cpu_on_small_grid() {
+        let mesh = polygon_core::solid::primitives::cube([20.; 3], false).unwrap();
+        let nodes = vec![[5., 5., 5.], [15., 5., 5.], [5., 15., 5.], [5., 5., 15.]];
+        let edges = vec![[0, 1], [0, 2], [0, 3]];
+        let reference = lattice(
+            &mesh,
+            nodes.clone(),
+            edges.clone(),
+            4.,
+            0.,
+            3.,
+            false,
+            false,
+            0.,
+            false,
+        )
+        .unwrap();
+        let automatic = lattice_accelerated(
+            &mesh,
+            nodes,
+            edges,
+            4.,
+            0.,
+            3.,
+            false,
+            false,
+            0.,
+            false,
+            sdf_core::Acceleration::Auto,
+        )
+        .unwrap();
+        assert_eq!(automatic.mesh.indices.len(), reference.mesh.indices.len());
+        assert!(
+            (automatic.report.signed_volume_mm3 - reference.report.signed_volume_mm3).abs() < 1e-9
+        );
+    }
 
     #[cfg(feature = "gpu")]
     #[test]
