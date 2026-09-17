@@ -57,10 +57,11 @@ The optional `cuda` feature adds native PTX descriptor matching and a native
 PTX frontoparallel sweep-and-select kernel on NVIDIA (RTX 5090, 256-px synthetic
 scene: depth stage 5614 ms CPU, 14.9 ms wgpu, 9.2 ms CUDA, identical surface
 accuracy), with the wgpu path as fallback for kernels that do not have a CUDA
-port or for option sets the native kernel does not cover (more than 128
-hypotheses or patches wider than 5x5). CPU defaults stay bit-identical with or
-without the feature. Browser builds keep the feature off; there the same WGSL
-sweep runs through WebGPU from the viewer's worker.
+port or for internally constructed sweep jobs outside the native kernel's
+contract (more than 128 hypotheses or patches wider than 5x5). Public
+`DenseOptions` already restricts those limits. CPU defaults stay bit-identical
+with or without the feature. Browser builds keep the feature off; there the
+same WGSL sweep runs through WebGPU from the viewer's worker.
 Qualification and measured numbers: [gpu-matching-2026-09-09](../../docs/qualification/photogrammetry/gpu-matching-2026-09-09.md).
 
 `FeatureOptions { acceleration: Acceleration::Auto, .. }` now resolves

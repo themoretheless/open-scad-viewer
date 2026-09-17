@@ -891,7 +891,7 @@ pub(super) fn estimate_prepared(
                     acceleration: crate::Acceleration::Cpu,
                     ..options.clone()
                 };
-                for (index, preamble, _) in gpu_pending {
+                for (view_number, (index, preamble, _)) in gpu_pending.into_iter().enumerate() {
                     let gray = grayscale[index].as_ref().unwrap();
                     let mut sources = build_view_sources(
                         sparse,
@@ -926,7 +926,14 @@ pub(super) fn estimate_prepared(
                         ranges.as_ref(),
                         &cpu_options,
                         &mut diagnostics,
-                        &mut |_| Ok(()),
+                        &mut |row| {
+                            cancelled(
+                                progress,
+                                "depth",
+                                view_number * options.max_side + row,
+                                active.len() * options.max_side,
+                            )
+                        },
                     )?;
                     maps.push(DepthMap {
                         image: index,

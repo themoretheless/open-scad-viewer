@@ -446,8 +446,8 @@ pub fn matches(a: &[Feature], b: &[Feature]) -> Vec<Match> {
 ///
 /// Descriptor matching compares 128 floats per candidate pair and scans both
 /// directions, so it has much higher arithmetic intensity than one-to-one
-/// vector math. The portable wgpu path covers Metal/Vulkan/DX12; there is no
-/// dedicated CUDA PTX matcher, so `Cuda` falls through to the same shader.
+/// vector math. The portable wgpu path covers Metal/Vulkan/DX12; when enabled,
+/// `Cuda` uses the native PTX matcher first and falls back to that shader.
 pub const fn recommended_for_descriptor_matching(
     a_count: usize,
     b_count: usize,
