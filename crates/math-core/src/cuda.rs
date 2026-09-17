@@ -12,6 +12,8 @@ use gpu_compute::cuda::{
 
 /// PTX generated from `nearest_neighbor.cu` by `scripts/build-cuda-kernels.mjs`.
 pub const NEAREST_NEIGHBOR_PTX: &str = include_str!("nearest_neighbor.ptx");
+/// PTX generated from `nearest_two.cu` by `scripts/build-cuda-kernels.mjs`.
+pub const NEAREST_TWO_PTX: &str = include_str!("nearest_two.ptx");
 /// PTX generated from `distance_pairs.cu` by `scripts/build-cuda-kernels.mjs`.
 pub const DISTANCE_PAIRS_PTX: &str = include_str!("distance_pairs.ptx");
 /// PTX generated from `distance_pair_sum.cu` by `scripts/build-cuda-kernels.mjs`.
@@ -160,6 +162,88 @@ pub fn device_report() -> Option<CudaDeviceReport> {
 pub(crate) fn nearest_neighbor_cuda(queries: &[V3], targets: &[V3]) -> Option<Vec<(u32, f64)>> {
     SHARED.with(|cell| {
         let shared: &Option<&CudaNearestNeighbor> = cell;
+        shared.and_then(|nn| nn.run(queries, targets))
+    })
+}
+
+struct CudaNearestTwo {
+    device: CudaDevice,
+    kernel: CudaFunction,
+}
+
+impl CudaNearestTwo {
+    fn new() -> Option<Self> {
+        let device = CudaDevice::new()?;
+        let module = device.load_ptx(NEAREST_TWO_PTX)?;
+        let kernel = module.load_function("nearest_two").ok()?;
+        Some(Self { device, kernel })
+    }
+
+    fn run(&self, queries: &[V3], targets: &[V3]) -> Option<Vec<crate::TwoNearest>> {
+        let query_count = queries.len();
+        let target_count = targets.len();
+        let stream = &self.device.stream;
+        let flat_q: Vec<f32> = queries.iter().flatten().map(|&v| v as f32).collect();
+        let flat_t: Vec<f32> = targets.iter().flatten().map(|&v| v as f32).collect();
+        let mut q_dev = stream.alloc_zeros::<f32>((query_count * 3).max(1)).ok()?;
+        let mut t_dev = stream.alloc_zeros::<f32>((target_count * 3).max(1)).ok()?;
+        let mut out_i0 = stream.alloc_zeros::<u32>(query_count.max(1)).ok()?;
+        let mut out_d0 = stream.alloc_zeros::<f32>(query_count.max(1)).ok()?;
+        let mut out_i1 = stream.alloc_zeros::<u32>(query_count.max(1)).ok()?;
+        let mut out_d1 = stream.alloc_zeros::<f32>(query_count.max(1)).ok()?;
+        if !flat_q.is_empty() {
+            stream.memcpy_htod(&flat_q, &mut q_dev).ok()?;
+        }
+        if !flat_t.is_empty() {
+            stream.memcpy_htod(&flat_t, &mut t_dev).ok()?;
+        }
+        let query_count_u32 = query_count as u32;
+        let target_count_u32 = target_count as u32;
+        let q_view = q_dev.slice(0..(query_count * 3).max(1));
+        let t_view = t_dev.slice(0..(target_count * 3).max(1));
+        let mut i0_view = out_i0.slice_mut(0..query_count.max(1));
+        let mut d0_view = out_d0.slice_mut(0..query_count.max(1));
+        let mut i1_view = out_i1.slice_mut(0..query_count.max(1));
+        let mut d1_view = out_d1.slice_mut(0..query_count.max(1));
+        let mut launch = stream.launch_builder(&self.kernel);
+        launch
+            .arg(&query_count_u32)
+            .arg(&target_count_u32)
+            .arg(&q_view)
+            .arg(&t_view)
+            .arg(&mut i0_view)
+            .arg(&mut d0_view)
+            .arg(&mut i1_view)
+            .arg(&mut d1_view);
+        unsafe { launch.launch(launch_1d(query_count_u32, BLOCK)) }.ok()?;
+        let mut i0 = vec![0u32; query_count];
+        let mut d0 = vec![0f32; query_count];
+        let mut i1 = vec![0u32; query_count];
+        let mut d1 = vec![0f32; query_count];
+        if query_count > 0 {
+            stream.memcpy_dtoh(&i0_view, &mut i0).ok()?;
+            stream.memcpy_dtoh(&d0_view, &mut d0).ok()?;
+            stream.memcpy_dtoh(&i1_view, &mut i1).ok()?;
+            stream.memcpy_dtoh(&d1_view, &mut d1).ok()?;
+        }
+        Some(
+            (0..query_count)
+                .map(|idx| [(i0[idx], d0[idx] as f64), (i1[idx], d1[idx] as f64)])
+                .collect(),
+        )
+    }
+}
+
+thread_local! {
+    static SHARED_NEAREST_TWO: std::cell::LazyCell<Option<&'static CudaNearestTwo>> =
+        std::cell::LazyCell::new(|| {
+            CudaNearestTwo::new().map(|nn| Box::leak(Box::new(nn)) as &'static CudaNearestTwo)
+        });
+}
+
+pub(crate) fn nearest_two_cuda(queries: &[V3], targets: &[V3]) -> Option<Vec<crate::TwoNearest>> {
+    SHARED_NEAREST_TWO.with(|cell| {
+        let shared: &Option<&CudaNearestTwo> = cell;
         shared.and_then(|nn| nn.run(queries, targets))
     })
 }

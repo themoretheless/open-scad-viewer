@@ -91,6 +91,31 @@ recommendation directly. It's a starting point tuned to the RTX 5090 numbers
 above, not a guarantee for every device — treat it as a reasonable default,
 not a substitute for benchmarking workloads where the choice actually matters.
 
+`nearest_two_accelerated(queries, targets, acceleration)` uses the same
+placement model for exact top-2 nearest-neighbor search. It returns the best
+and second-best target for each query, which is useful for ratio tests,
+correspondence filtering and robust registration pipelines:
+
+```rust
+use math_core::{Acceleration, nearest_two_accelerated};
+
+let pairs = nearest_two_accelerated(&queries, &targets, Acceleration::Auto);
+let best = pairs[0][0];
+let second = pairs[0][1];
+```
+
+Top-2 has the same O(queries × targets) arithmetic intensity, so it gets
+dedicated WGSL/CUDA kernels (`nearest_two.wgsl`, `nearest_two.cu`) instead of
+being built from two CPU passes. Measured with `cargo run --release -p
+osv-math --features cuda --example bench_nearest_two` on the RTX 5090:
+
+| queries × targets | work | cpu | auto | gpu | cuda |
+| --- | --- | --- | --- | --- | --- |
+| 256 × 512 | 131K | 0.189 ms | 0.152 ms | 0.248 ms | 0.155 ms |
+| 1,024 × 1,024 | 1.0M | 1.116 ms | 0.165 ms | 0.277 ms | 0.185 ms |
+| 4,096 × 4,096 | 16.8M | 17.865 ms | 0.369 ms | 0.671 ms | 0.375 ms |
+| 16,384 × 8,192 | 134M | 146.094 ms | 0.803 ms | 1.375 ms | 0.822 ms |
+
 For runtime diagnostics, `cargo run -p osv-math --features cuda --example
 backend_report` prints the placement labels, portable wgpu backend report
 (`metal`, `vulkan`, `dx12`, or `webgpu`) and native CUDA device report when

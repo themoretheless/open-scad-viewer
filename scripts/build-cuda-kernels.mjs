@@ -21,6 +21,7 @@ const kernels = [
   {cu: 'crates/math-core/src/nearest_neighbor.cu', ptx: 'crates/math-core/src/nearest_neighbor.ptx'},
   {cu: 'crates/math-core/src/distance_pairs.cu', ptx: 'crates/math-core/src/distance_pairs.ptx'},
   {cu: 'crates/math-core/src/distance_pair_sum.cu', ptx: 'crates/math-core/src/distance_pair_sum.ptx'},
+  {cu: 'crates/math-core/src/nearest_two.cu', ptx: 'crates/math-core/src/nearest_two.ptx'},
 ]
 const args = process.argv.slice(2)
 const check = args.includes('--check')

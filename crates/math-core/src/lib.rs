@@ -5,6 +5,7 @@ mod distance_pairs;
 mod error;
 mod linalg;
 mod nearest_neighbor;
+mod nearest_two;
 mod registration;
 mod types;
 
@@ -20,6 +21,10 @@ pub use linalg::{
     scale2, smallest, solve, sub, sub2, svd, tr, transform_points, unit, unit2,
 };
 pub use nearest_neighbor::{NEAREST_NEIGHBOR_WGSL, nearest_neighbor, nearest_neighbor_accelerated};
+pub use nearest_two::{
+    NEAREST_TWO_WGSL, Neighbor, TwoNearest, nearest_two, nearest_two_accelerated,
+    nearest_two_first_only, nearest_two_ratios_accelerated,
+};
 pub use registration::{IcpOptions, IcpReport, RigidTransform, icp_register, rigid_transform};
 pub use types::{ID, M3, V2, V3};
 
