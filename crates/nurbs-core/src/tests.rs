@@ -162,7 +162,7 @@ fn output_budget_is_checked_before_elevation() {
 }
 
 #[test]
-fn brush_edits_move_controls_locally_and_preserve_rational_definition() {
+fn brush_moves_controls_locally_and_preserves_rational_definition() {
     let c = circle();
     let b = geometry_ops::Brush {
         center: [1., 1., 0.],
@@ -205,7 +205,7 @@ fn brush_edits_move_controls_locally_and_preserve_rational_definition() {
     );
 }
 #[test]
-fn brush_edits_reject_invalid_brushes_and_inputs() {
+fn brush_rejects_invalid_brushes_and_inputs() {
     let c = circle();
     let bad = geometry_ops::Brush {
         center: [0.; 3],

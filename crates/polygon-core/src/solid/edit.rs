@@ -408,7 +408,7 @@ mod tests {
             };
             assert!(brush(&cube.mesh, &b).is_err(), "{radius}");
         }
-        // Collapsing the whole top face onto the bottom creates degenerate triangles.
+        // Collapsing the whole top face to the single point [0, 0, 2] creates degenerate triangles.
         let flatten = geometry_ops::Brush {
             center: [0., 0., 2.],
             radius: 1e-3,
