@@ -45,18 +45,31 @@ arithmetic intensity to win. **Measured, not assumed:** `cargo run --release
 
 | queries × targets | cpu | gpu | cuda |
 | --- | --- | --- | --- |
-| 1,000 × 100 | 0.081 ms | 0.235 ms | 0.134 ms |
-| 10,000 × 1,000 | 7.988 ms | 0.535 ms | 0.277 ms |
-| 100,000 × 1,000 | 79.548 ms | 2.170 ms | 0.874 ms |
-| 100,000 × 5,000 | 385.195 ms | 2.638 ms | 1.184 ms |
-| 1,000,000 × 2,000 | 1630.644 ms | 19.476 ms | 7.885 ms |
+| 1,000 × 100 | 0.078 ms | 0.260 ms | 0.137 ms |
+| 3,000 × 100 | 0.237 ms | 0.238 ms | 0.138 ms |
+| 1,000 × 1,000 | 0.750 ms | 0.309 ms | 0.175 ms |
+| 3,000 × 1,000 | 2.260 ms | 0.366 ms | 0.185 ms |
+| 10,000 × 1,000 | 7.782 ms | 0.493 ms | 0.265 ms |
+| 100,000 × 1,000 | 76.676 ms | 2.243 ms | 0.902 ms |
+| 100,000 × 5,000 | 384.680 ms | 2.670 ms | 1.177 ms |
+| 1,000,000 × 2,000 | 1592.680 ms | 19.780 ms | 8.181 ms |
 
-At the smallest size CPU still wins (fixed per-call overhead dominates), but
-past roughly 10K queries × 1K targets both GPU placements pull ahead, up to
+At the smallest size CPU still wins (fixed per-call overhead dominates); CUDA
+crosses over first, already winning by 3,000 × 100 (work = 300K), while wgpu
+breaks even a bit later and pulls ahead from around 1M work upward — up to
 ~200x faster than CPU at 1M queries × 2K targets. `Acceleration::Cpu` remains
 the right choice for small batches; pick `Gpu`/`Cuda` once your workload sits
 in this regime, and re-run the benchmark for your own sizes/hardware before
 relying on the numbers above.
+
+Don't want to hand-tune that threshold yourself?
+`Acceleration::recommended_for_nearest_neighbor(query_count, target_count)`
+encodes the crossover above as a `queries * targets` "work" threshold (CUDA
+from ~200K, wgpu from ~700K, falling back to `Cpu` below that and to whichever
+placement is fastest if the multiplication would overflow `usize`). It's a
+starting point tuned to the RTX 5090 numbers above, not a guarantee for every
+device — treat it as a reasonable default, not a substitute for benchmarking
+workloads where the choice actually matters.
 
 ## License
 

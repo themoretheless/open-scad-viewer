@@ -92,6 +92,11 @@ fn main() {
     // force gives the GPU/CUDA placements enough work to win.
     for &(q, t) in &[
         (1_000usize, 100usize),
+        (3_000, 100),
+        (1_000, 1_000),
+        (3_000, 300),
+        (5_000, 300),
+        (3_000, 1_000),
         (10_000, 1_000),
         (100_000, 1_000),
         (100_000, 5_000),

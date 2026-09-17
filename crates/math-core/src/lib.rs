@@ -46,6 +46,40 @@ impl Acceleration {
             Self::Cuda => "cuda",
         }
     }
+
+    /// Suggests a placement for [`nearest_neighbor_accelerated`] from the
+    /// problem size alone, so callers don't have to hand-tune a threshold or
+    /// benchmark their own workload before picking an `Acceleration`.
+    ///
+    /// Based on `queries.len() * targets.len()` ("work"): brute-force
+    /// nearest-neighbor is O(work), so it — not either dimension alone —
+    /// governs the crossover. Measured with `examples/bench_gpu.rs` on an
+    /// NVIDIA RTX 5090 (CUDA 13.4): the CPU reference wins up to work ≈
+    /// 100K (e.g. 1,000×100, cpu 0.078ms vs cuda 0.137ms) but CUDA already
+    /// wins by 300K (3,000×100, cpu 0.237ms vs cuda 0.138ms) and wins by
+    /// 15-300x from 10M work upward; wgpu crosses over later, roughly
+    /// breaking even around 300K-1M work before pulling ahead. This is a
+    /// starting point tuned to that hardware, not a guarantee for every
+    /// GPU/CUDA device — re-benchmark for workloads where the choice
+    /// matters.
+    pub const fn recommended_for_nearest_neighbor(query_count: usize, target_count: usize) -> Self {
+        const CUDA_WORK_THRESHOLD: usize = 200_000;
+        const GPU_WORK_THRESHOLD: usize = 700_000;
+        let Some(work) = query_count.checked_mul(target_count) else {
+            return if cfg!(feature = "cuda") {
+                Self::Cuda
+            } else {
+                Self::Gpu
+            };
+        };
+        if cfg!(feature = "cuda") && work >= CUDA_WORK_THRESHOLD {
+            Self::Cuda
+        } else if work >= GPU_WORK_THRESHOLD {
+            Self::Gpu
+        } else {
+            Self::Cpu
+        }
+    }
 }
 
 /// Shared geometry error. Codes stay crate-specific; the type is one.
@@ -398,6 +432,27 @@ mod tests {
             assert_eq!(Acceleration::parse(mode.label()), Some(mode));
         }
         assert_eq!(Acceleration::default(), Acceleration::Cpu);
+    }
+
+    #[test]
+    fn recommended_for_nearest_neighbor_scales_with_work() {
+        // Tiny problem: well under every threshold, stays on the CPU.
+        assert_eq!(
+            Acceleration::recommended_for_nearest_neighbor(1_000, 100),
+            Acceleration::Cpu
+        );
+        // Huge problem: comfortably past every threshold, always off-CPU.
+        let huge = Acceleration::recommended_for_nearest_neighbor(1_000_000, 2_000);
+        assert!(huge.is_gpu());
+        // A work count so large it would overflow usize still recommends a
+        // GPU/CUDA placement rather than panicking or wrapping.
+        assert!(Acceleration::recommended_for_nearest_neighbor(usize::MAX, 2).is_gpu());
+        // recommended_for_nearest_neighbor(0, _) and (_, 0) is a degenerate
+        // no-op query, but must still return a valid placement, not panic.
+        assert_eq!(
+            Acceleration::recommended_for_nearest_neighbor(0, 0),
+            Acceleration::Cpu
+        );
     }
     #[test]
     fn eigen_reconstructs() {
