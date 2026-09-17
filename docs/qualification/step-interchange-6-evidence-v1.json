@@ -1,0 +1,30 @@
+{
+  "$schema":"./brep-capability-evidence-v12.schema.json",
+  "schema":"open-scad-viewer/brep-capability-evidence",
+  "schemaVersion":12,
+  "evidenceId":"step-interchange-6-evidence-v12",
+  "capability":"step-interchange/6",
+  "maturity":"ResearchOnly",
+  "state":"rejected",
+  "plan":"docs/qualification/plans/step-interchange-6.json",
+  "runs":[],
+  "oracles":[
+    "step_interchange_v3::tests::v6_roundtrips_certified_pole_boundaries",
+    "step_interchange_v3::tests::v6_applies_nonuniform_occurrence_affine_and_refuses_singular",
+    "step_interchange_v3::tests::v6_exact_and_plus_one_resource_boundaries",
+    "step_interchange_v3::tests::v6_exhausts_valid_edge_oriented_bound_face_and_void_senses",
+    "brep::registry_tests::periodic_step_sphere_tessellates_with_shared_seam_and_poles",
+    "geometry_bridge::tests::direct_step_v6_bridge_roundtrips_poles_and_reports_identities",
+    "tests/brepStepV6ExternalResolver.test.ts",
+    "tests/brepStepV6Workbench.test.ts",
+    "tools/browser-qualification/step-v6-retained-browser.mjs"
+  ],
+  "unresolvedRows":[
+    {"id":"CA12-STEP6-PERIODIC-POLES","status":"open","resolution":"Generated fixture roundtrips and sampled checks are not a whole-domain pole/seam certificate."},
+    {"id":"CA12-STEP6-SENSE-MATRIX","status":"open","resolution":"The current permutation test does not cover coupled periodic, pole, hole FACE_BOUND and oriented-void cases."},
+    {"id":"CA12-STEP6-EXTERNAL-RESOLVER","status":"open","resolution":"Resolved documents remain independent imports and are not composed into the root assembly graph."},
+    {"id":"CA12-STEP6-BROWSER-DOCUMENT","status":"open","resolution":"The Chromium script calls modules directly and localStorage only; it does not drive the editor UI or IndexedDB workspace lifecycle."},
+    {"id":"CA12-STEP6-RESOURCE-BOUNDARIES","status":"open","resolution":"The original evidence omitted several claimed exact/+1 byte, store and traversal boundaries."}
+  ],
+  "attestation":{"fabricatedRuns":false,"note":"Prior pass records were removed because their logs were absent and their assertions did not prove every blocking claim. Focused audit runs are reported separately and do not qualify this successor."}
+}

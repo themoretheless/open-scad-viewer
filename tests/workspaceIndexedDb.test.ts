@@ -132,6 +132,16 @@ describe('IndexedDB workspace persistence', () => {
     await repository.close()
   })
 
+  it('enforces the durable source boundary in UTF-8 bytes', async () => {
+    const repository = new IndexedDbWorkspaceRepository(new IDBFactory())
+    const exact = snapshot('é'.repeat(MAX_WORKSPACE_SOURCE_LENGTH / 2), 12, 1)
+    await expect(repository.save(exact, null)).resolves.toBeUndefined()
+    const plusOne = {...exact,source:exact.source+'a',revision:2,mutation:2,updatedAt:13}
+    await expect(repository.save(plusOne, exact)).rejects.toThrow(RangeError)
+    await expect(repository.load()).resolves.toEqual({status:'found',snapshot:exact})
+    await repository.close()
+  })
+
   it('rejects malformed structured-cloned rows instead of trusting IndexedDB', async () => {
     const factory = new IDBFactory()
     const repository = new IndexedDbWorkspaceRepository(factory)

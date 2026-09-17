@@ -1,0 +1,32 @@
+{
+  "schema":"open-scad-viewer/qualification-run-manifest",
+  "runId":"step-interchange-6-run-v1",
+  "date":"2026-09-17",
+  "qualificationDisposition":"rejected-by-audit",
+  "artifactAvailability":"Only output/qualification/step-interchange-6-v1/browser-retained.json is present. The listed command log digests are historical records, not independently verifiable qualification artifacts.",
+  "runner":{"os":"darwin-25.6.0","rustc":"1.100.0-nightly (a36d05efa 2026-09-09)","cargo":"1.100.0-nightly (3c0b53475 2026-09-04)","node":"v22.23.2","npm":"10.9.8","independentParser":"steputils"},
+  "commands":[
+    {"command":"cargo test --locked --manifest-path crates/Cargo.toml -p brep-core","result":"pass","logSha256":"a3706396d24468640d11716c556ef0c719a6401d54ffc85dcdcdad9f129c0fa0"},
+    {"command":"cargo test --locked --manifest-path crates/Cargo.toml -p geometry-bridge","result":"pass","logSha256":"93880589583984651441ff98187ea78f1ee12e7e146dc41529b306d69203e667"},
+    {"command":"npx vitest run tests/brepStepV6ExternalResolver.test.ts tests/brepStepV6Workbench.test.ts tests/brepStepV5Workbench.test.ts","result":"pass","logSha256":"fa7cc84ed20b0e94bfb1abf9ffc36fa82237f660f7f3216a91f3d46d21d73a1b"},
+    {"command":"npm run typecheck","result":"pass","logSha256":"f9cd8c157a4ddcafc82710b68033e797728205c09ec843c2a4ae5ee119f9241f"},
+    {"command":"node tools/browser-qualification/step-v6-retained-browser.mjs","result":"pass","logSha256":"d15b1cb427700931b3855e3abc5d25f8f7dbcbe568b211bb664c6e72e55af5e8"},
+    {"command":"npm run build","result":"pass","logSha256":"6afc62a1b1fd1133783d28b23827ef27732880556912575db53a53899c30ba66"},
+    {"command":"AJV plan/evidence validation; Vitest v14/v13/release gate; git diff --check","result":"pass","logSha256":"46349808c46c0d31a649777ab3a8ea89a11ea06021fde3d6adcf4d06745365b3"},
+    {"command":"/tmp/open-scad-step-validator/bin/python - steputils.p21.readfile tests/fixtures/step-v6/*.step","result":"pass","parsedInstanceCounts":[286,273,273,688,226,194]}
+  ],
+  "sourceHashes":{
+    "crates/brep-core/src/step_interchange_v3.rs":"31ecdee28a1c2c58add0f12f1166dbe1d00db43467905f40c0a99a312661412d",
+    "crates/geometry-bridge/src/lib.rs":"33144ec09d554361a34464969b137dea0b4f89d9e3cbf411912901c599a05610",
+    "crates/geometry-bridge/src/brep.rs":"1e07ed1699894cc2d4c138253e7059a929238ad288e97c699d6b986da7833db0",
+    "src/services/cadStepExternalResolver.ts":"c3f39293e00a69500b1125cfbdc31e500627d294d790116bf7f7ab7657ec9457"
+  },
+  "fixtureHashes":{
+    "assembly":"c970eed174b6ccca387c8def4d2ec1761c6f35d632e8282563c299df544d763f",
+    "cone":"1552a7d23c51cc20da317b4fca3fba16779230610a11ed9293b14cf8d43ab743",
+    "cylinder":"0e894d6195e6fa9d467673291d0716a0cacbd6b808f49641bdaefde07aad973f",
+    "torus":"095e6fd4eab41cfa6392debff81d93a8f49b62bc3a045b00ad2adb18b3620d5c",
+    "poleCone":"b245762f111f78c9cfbfc81fd83f1ddfe57361ec70c4f05052c14c5bb7514526",
+    "poleSphere":"3955f7d7c12961e0e5c8ee5196799625888ee4459b6831d692ec8e01ee13ed0c"
+  }
+}

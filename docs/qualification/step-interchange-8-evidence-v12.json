@@ -1,0 +1,27 @@
+{
+  "$schema":"./brep-capability-evidence-v12.schema.json",
+  "schema":"open-scad-viewer/brep-capability-evidence",
+  "schemaVersion":12,
+  "evidenceId":"step-interchange-8-evidence-v12",
+  "capability":"step-interchange/8",
+  "maturity":"Qualified",
+  "state":"qualified",
+  "plan":"docs/qualification/plans/step-interchange-8.json",
+  "runs":[
+    {"id":"step-interchange-8-stepcode-ap242-ed4","result":"pass","artifactHash":"c8ee3ec2394fe1e3e06785518f544d334862165f825e859d9bcc4c3003c526c2"},
+    {"id":"step-interchange-8-coupled-sense-matrix","result":"pass","artifactHash":"dbf3bde4c6508e151cdc9fade2886cc86d2cc08e4bd4d99b25c74d48fa3a2087"},
+    {"id":"step-interchange-8-browser-workbench-indexeddb","result":"pass","artifactHash":"6abd7a82d47cfc59ec395b5d772b442ea25873336c67eabf22257c067ab37e79"}
+  ],
+  "oracles":[
+    "output/qualification/step-interchange-8-v1/stepcode-oracle-result.json",
+    "output/qualification/step-interchange-8-v1/stepcode-raw-logs",
+    "output/qualification/step-interchange-8-v1/coupled-sense-matrix.json",
+    "output/qualification/step-interchange-8-v1/browser-workbench-indexeddb.json",
+    "step_interchange_v3::tests::v8_carries_whole_domain_regularity_in_the_topology_certificate",
+    "step_interchange_v3::tests::v8_exhausts_all_coupled_sense_masks_with_equivalence_or_refusal",
+    "geometry_bridge::tests::direct_step_v8_bridge_exposes_whole_domain_certificate",
+    "scripts/qualify-step-interchange-v8.mjs"
+  ],
+  "unresolvedRows":[],
+  "attestation":{"fabricatedRuns":false,"note":"Independent STEPcode accepted all 20 positive exported fixtures with zero errors/warnings and rejected all three negative mutations. Whole-domain and 384 executed coupled-sense cases passed before /8 was admitted."}
+}

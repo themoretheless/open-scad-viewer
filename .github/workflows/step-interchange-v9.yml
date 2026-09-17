@@ -1,0 +1,41 @@
+name: STEP interchange v9 qualification
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'crates/brep-core/**'
+      - 'crates/geometry-bridge/**'
+      - 'src/services/cadNurbsStep.ts'
+      - 'src/services/cadStep.ts'
+      - 'src/services/cadStepExternalResolver.ts'
+      - 'src/services/cadStepRouting.ts'
+      - 'scripts/qualify-step-interchange-v9.mjs'
+      - 'scripts/validate-step-ap242.mjs'
+      - 'tests/fixtures/step-v9/**'
+      - 'tools/stepcode-ap242-ed4-manifest.json'
+
+jobs:
+  qualify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.23.2'
+          cache: npm
+      - uses: dtolnay/rust-toolchain@nightly
+      - run: npm ci
+      - name: Build and run independent AP242 oracle
+        run: node scripts/qualify-step-interchange-v9.mjs
+      - name: Verify native and bridge routes
+        run: cargo test --locked --manifest-path crates/Cargo.toml -p brep-core -p geometry-bridge step_v9
+      - name: Verify product adapters and release
+        run: npm run typecheck && npx vitest run tests/brepStepV5Workbench.test.ts tests/brepStepV6ExternalResolver.test.ts tests/brepQualificationV17.test.ts
+      - name: Upload raw validator evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: step-interchange-v9-evidence
+          path: output/qualification/step-interchange-9-v1
+          if-no-files-found: error

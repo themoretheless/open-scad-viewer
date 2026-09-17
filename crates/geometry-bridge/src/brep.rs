@@ -160,9 +160,10 @@ fn finish_indexed(
         || report.orientation_conflicts > 0
         || closed && !report.closed
     {
-        return Err(input(
-            "B-rep tessellation does not preserve manifold seams at this resolution/tolerance",
-        ));
+        return Err(input(format!(
+            "B-rep tessellation does not preserve manifold seams at this resolution/tolerance (degenerate={}, non_manifold={}, orientation_conflicts={}, closed={})",
+            report.degenerate_triangles,report.non_manifold_edges,report.orientation_conflicts,report.closed
+        )));
     }
     let mut notes = vec!["shell_aware_registry", "boundary_incidence_verified"];
     if freeform_faces {
@@ -318,6 +319,7 @@ impl EdgeSamplingRegistry {
     fn verify_boundary_uses(&self, model: &brep_core::Model, face_ids: &[usize]) -> Result<()> {
         let mut actual = BTreeMap::<(usize, usize, usize), i32>::new();
         let add = |map: &mut BTreeMap<(usize, usize, usize), i32>, face, a: usize, b: usize| {
+            if a==b{return}
             *map.entry((face, a.min(b), a.max(b))).or_default() += if a < b { 1 } else { -1 };
         };
         for (triangle, &face) in self.mesh.indices.as_chunks::<3>().0.iter().zip(face_ids) {
@@ -356,9 +358,12 @@ impl EdgeSamplingRegistry {
         actual.retain(|_, count| *count != 0);
         expected.retain(|_, count| *count != 0);
         if actual != expected {
-            return Err(input(
-                "Tessellation face boundaries do not match the authored edge sample registry",
-            ));
+            let first=actual.iter().find(|(key,value)|expected.get(key)!=Some(value))
+                .map(|(key,value)|format!("actual {key:?}={value}, expected {:?}",expected.get(key)))
+                .or_else(||expected.iter().find(|(key,value)|actual.get(key)!=Some(value))
+                    .map(|(key,value)|format!("expected {key:?}={value}, actual {:?}",actual.get(key))))
+                .unwrap_or_default();
+            return Err(input(format!("Tessellation face boundaries do not match the authored edge sample registry: {first}")));
         }
         Ok(())
     }
@@ -599,70 +604,75 @@ fn rectangular_face(
     segments: usize,
     registry: &EdgeSamplingRegistry,
 ) -> Result<Option<FaceMesh>> {
-    let corners = model.loop_uv(face.outer, 1)?;
     let coedges = &model.loops[face.outer].coedges;
+    let corners = model.loop_uv(face.outer, 1)?;
+    let min_u=corners.iter().map(|point|point[0]).fold(f64::INFINITY,f64::min);
+    let max_u=corners.iter().map(|point|point[0]).fold(f64::NEG_INFINITY,f64::max);
+    let min_v=corners.iter().map(|point|point[1]).fold(f64::INFINITY,f64::min);
+    let max_v=corners.iter().map(|point|point[1]).fold(f64::NEG_INFINITY,f64::max);
     let rectangular = face.holes.is_empty()
-        && corners.len() == 4
+        && corners.len()>=4
         && coedges.iter().all(|c| {
             c.pcurve.degree == 1
                 && c.pcurve.control_points.len() == 2
                 && c.pcurve.weights.iter().all(|w| *w == c.pcurve.weights[0])
-        })
-        && corners[0][1] == corners[1][1]
-        && corners[1][0] == corners[2][0]
-        && corners[2][1] == corners[3][1]
-        && corners[3][0] == corners[0][0]
-        && corners[1][0] > corners[0][0]
-        && corners[3][1] > corners[0][1];
+                && {
+                    let a=&c.pcurve.control_points[0];let b=&c.pcurve.control_points[1];
+                    (a[0]==b[0]||a[1]==b[1])
+                        && [a,b].iter().all(|p|p[0]==min_u||p[0]==max_u||p[1]==min_v||p[1]==max_v)
+                }
+        })&&max_u>min_u&&max_v>min_v;
     if !rectangular {
         return Ok(None);
     }
-    if coedges.iter().any(|c| registry.divisions(c) != segments) {
-        return Err(input("Rectangular patch edge schedules disagree"));
-    }
+    let horizontal=|v:f64|coedges.iter().filter(|coedge|{
+        let points=&coedge.pcurve.control_points;points[0][1]==v&&points[1][1]==v&&!model.edges[coedge.edge].degenerate
+    }).map(|coedge|registry.divisions(coedge)).sum::<usize>();
+    let vertical=|u:f64|coedges.iter().filter(|coedge|{
+        let points=&coedge.pcurve.control_points;points[0][0]==u&&points[1][0]==u&&!model.edges[coedge.edge].degenerate
+    }).map(|coedge|registry.divisions(coedge)).sum::<usize>();
+    let segments_u=horizontal(min_v).max(horizontal(max_v));
+    let segments_v=vertical(min_u).max(vertical(max_u));
+    if segments_u==0||segments_v==0{return Err(input("Rectangular patch has no ordinary boundary schedule"))}
     let poles: Vec<_> = coedges
         .iter()
         .filter(|c| model.edges[c.edge].degenerate)
         .map(|c| model.edges[c.edge].vertices[0])
         .collect();
+    let mut boundary=BTreeMap::<(usize,usize),usize>::new();
+    let mut pole_rows=BTreeMap::<usize,usize>::new();
+    for coedge in coedges{
+        let divisions=registry.divisions(coedge);let domain=coedge.pcurve.domain();
+        for sample in 0..=divisions{
+            let t=sample as f64/divisions as f64;
+            let uv=coedge.pcurve.evaluate(domain[0]+t*(domain[1]-domain[0]))?.point;
+            let key=(((uv[0]-min_u)/(max_u-min_u)*segments_u as f64).round() as usize,
+                ((uv[1]-min_v)/(max_v-min_v)*segments_v as f64).round() as usize);
+            let position=registry.position(coedge,sample)?;
+            boundary.insert(key,position);
+            if model.edges[coedge.edge].degenerate{pole_rows.insert(key.1,position);}
+        }
+    }
     let mut out = FaceMesh {
         uv: vec![],
         shared: vec![],
         triangles: vec![],
     };
-    for y in 0..=segments {
-        for x in 0..=segments {
-            let mut shared = None;
-            for (boundary, coedge, sample) in [
-                (y == 0, 0, x),
-                (x == segments, 1, y),
-                (y == segments, 2, segments - x),
-                (x == 0, 3, segments - y),
-            ] {
-                if boundary {
-                    let id = registry.position(&coedges[coedge], sample)?;
-                    if let Some(previous) = shared
-                        && previous != id
-                    {
-                        return Err(input(
-                            "Rectangular patch corners have conflicting authored vertices",
-                        ));
-                    }
-                    shared = Some(id);
-                }
-            }
+    for y in 0..=segments_v {
+        for x in 0..=segments_u {
+            let shared=boundary.get(&(x,y)).copied().or_else(||pole_rows.get(&y).copied());
             out.uv.push([
-                corners[0][0] + (corners[1][0] - corners[0][0]) * x as f64 / segments as f64,
-                corners[0][1] + (corners[3][1] - corners[0][1]) * y as f64 / segments as f64,
+                min_u+(max_u-min_u)*x as f64/segments_u as f64,
+                min_v+(max_v-min_v)*y as f64/segments_v as f64,
             ]);
             out.shared.push(shared);
         }
     }
-    for y in 0..segments {
-        for x in 0..segments {
-            let a = y * (segments + 1) + x;
+    for y in 0..segments_v {
+        for x in 0..segments_u {
+            let a = y * (segments_u + 1) + x;
             let b = a + 1;
-            let d = a + segments + 1;
+            let d = a + segments_u + 1;
             let c = d + 1;
             for triangle in [[a, b, c], [a, c, d]] {
                 let repeated = (0..3).find_map(|i| {
@@ -863,6 +873,13 @@ mod registry_tests {
             },
             brep_core::TopologyIds::default(),
         )
+    }
+    #[test]
+    fn periodic_step_sphere_tessellates_with_shared_seam_and_poles(){
+        let source=brep_core::sphere(2.).unwrap();
+        let text=brep_core::export_step_v6(&source).unwrap().0;
+        let model=brep_core::import_step_v6(&text).unwrap().0;
+        nurbs(&model,8).unwrap();
     }
     fn append_model(target: &mut brep_core::Model, mut source: brep_core::Model) {
         let (vertices, edges, loops, faces, shells) = (

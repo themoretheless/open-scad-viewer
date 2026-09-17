@@ -1,0 +1,37 @@
+import {readFileSync} from 'node:fs'
+import {describe,expect,it} from 'vitest'
+const read=(path:string)=>JSON.parse(readFileSync(path,'utf8'))
+
+describe('G8 append-only STEP /6 audit disposition',()=>{
+  it('advances v13 index, matrix and registry without mutation',()=>{
+    const index=read('docs/qualification/plans/g8-full-matrix-index-v14.json')
+    const matrix=read('docs/qualification/brep-full-closed-matrix-v14.json')
+    const registry=read('docs/qualification/brep-capability-registry-release-full-v14.json')
+    expect(index.successorOf).toBe('docs/qualification/plans/g8-full-matrix-index-v13.json')
+    expect(matrix.successorOf).toBe('docs/qualification/brep-full-closed-matrix-v13.json')
+    expect(registry.successorOf).toBe('docs/qualification/brep-capability-registry-release-full-v13.json')
+    expect(index.capabilities.find((entry:{id:string})=>entry.id==='step-interchange/6')).toMatchObject({maturity:'ResearchOnly',releaseState:'candidate'})
+    expect(index.capabilities.find((entry:{id:string})=>entry.id==='step-interchange/5')).toMatchObject({maturity:'AnalyticComplete',releaseState:'candidate'})
+    expect(matrix.admittedOps).not.toContain('step-interchange/6')
+    expect(matrix.admittedOps).not.toContain('step-interchange/5')
+    expect(matrix.pendingQualification).toContain('step-interchange/6')
+    expect(matrix.pendingQualification).toContain('step-interchange/5')
+    expect(registry.capabilities).not.toContain('step-interchange/6')
+    expect(registry.capabilities).not.toContain('step-interchange/5')
+    expect(registry.excludedPendingQualification).toContain('step-interchange/6')
+    expect(registry.excludedPendingQualification).toContain('step-interchange/5')
+  })
+  it('records blocking rows instead of treating pass strings as qualification',()=>{
+    const plan=read('docs/qualification/plans/step-interchange-6.json')
+    const evidence=read('docs/qualification/step-interchange-6-evidence-v1.json')
+    const run=read('docs/qualification/step-interchange-6-run-v1.json')
+    expect(plan.lifecycle.status).toBe('rejected')
+    expect(plan.unresolvedRows.length).toBeGreaterThan(0)
+    expect(evidence.state).toBe('rejected')
+    expect(evidence.maturity).toBe('ResearchOnly')
+    expect(evidence.unresolvedRows).toEqual(plan.unresolvedRows.map((row:{id:string;status:string;resolution:string})=>expect.objectContaining({id:row.id,status:'open'})))
+    expect(evidence.runs).toEqual([])
+    expect(evidence.attestation.fabricatedRuns).toBe(false)
+    expect(run.commands.every((entry:{result:string})=>entry.result==='pass')).toBe(true)
+  })
+})

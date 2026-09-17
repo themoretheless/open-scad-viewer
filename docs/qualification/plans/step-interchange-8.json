@@ -1,0 +1,35 @@
+{
+  "$schema":"./brep-capability-qualification-plan-v12.schema.json",
+  "schema":"open-scad-viewer/brep-capability-qualification-plan",
+  "schemaVersion":12,
+  "planId":"step-interchange-8",
+  "gate":{"id":"g8-full","name":"brep-full-closed-matrix","version":12},
+  "lifecycle":{"status":"qualified","qualificationClaim":"qualified"},
+  "claimBoundary":{
+    "candidateClaim":"Finite AP242 Edition 4 direct manifold B-rep interchange with independent STEPcode validation, exact rational whole-domain seam/pole certificates, exhaustive coupled sense cases, bounded explicit external composition, and retained browser lifecycle.",
+    "forbiddenClaims":["Full or unbounded STEP support","Any schema other than the pinned AP242 Edition 4 MIM longform","Generic freeform singular-carrier regularity","Ambient filesystem or network resolution","Linking STEPcode-generated code into the product kernel"]
+  },
+  "capability":"step-interchange/8",
+  "successorOf":"step-interchange/7",
+  "dependencies":[{"capability":"persistent-naming/1","requiredMaturity":"Qualified"}],
+  "scope":{
+    "included":["Append-only Rust/WASM/TypeScript /8 route","Pinned STEPcode p21read_sdai_ap242 qualification oracle","Cylinder, cone, sphere, and torus whole-domain rational interval identities","Collapsed pole-boundary interval unions and lifted seam periods","All 128 coupled sense masks over seam, pole, hole, edge, bound, face, shell, and void orientation","Digest-bound cancellable external traversal and occurrence-local TopoIds","Retained IndexedDB workbench export/reimport"],
+    "excluded":["Unbounded AP242 entities and application domains outside the direct finite manifold B-rep subset"]
+  },
+  "matrix":[
+    {"id":"CA12-STEP8-PERIODIC-POLES","expected":"Complete","blocksQualification":true},
+    {"id":"CA12-STEP8-SENSE-MATRIX","expected":"Complete","blocksQualification":true},
+    {"id":"CA12-STEP8-EXTERNAL-GRAPH","expected":"Complete","blocksQualification":true},
+    {"id":"CA12-STEP8-WORKBENCH-IDB","expected":"Complete","blocksQualification":true},
+    {"id":"CA12-STEP8-RESOURCE-BOUNDARIES","expected":"Complete","blocksQualification":true},
+    {"id":"CA12-STEP8-AP242-SEMANTICS","expected":"Complete","blocksQualification":true}
+  ],
+  "bindings":{
+    "implementation":["crates/brep-core/src/step_interchange_v3.rs","crates/geometry-bridge/src/lib.rs","src/services/cadNurbsStep.ts","src/services/cadStepExternalResolver.ts","src/services/cadStepRouting.ts","scripts/validate-step-ap242.mjs","scripts/qualify-step-interchange-v8.mjs","tools/stepcode-ap242-ed4-manifest.json"],
+    "registry":"src/services/geometry/brepCapability.ts",
+    "evidenceJson":"docs/qualification/step-interchange-8-evidence-v12.json"
+  },
+  "evidence":{"state":"qualified","notes":["All blocking rows closed only after the independent oracle, whole-domain certificates, and coupled matrix passed. Rejected /5 through /7 artifacts remain unchanged."]},
+  "resetPolicy":"false-Complete freezes this capability and transitively stales all dependents; recovery requires a successor capability ID",
+  "unresolvedRows":[]
+}

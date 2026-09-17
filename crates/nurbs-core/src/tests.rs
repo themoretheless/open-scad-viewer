@@ -160,3 +160,146 @@ fn output_budget_is_checked_before_elevation() {
     };
     assert_eq!(c.elevate(25).unwrap_err().code, "NURBS_RESOURCE_LIMIT");
 }
+
+#[test]
+fn foundation_curve_certificate_is_outward_and_positive() {
+    let c = circle();
+    let certificate = foundation::certify_curve(&c, None).unwrap();
+    assert_eq!(certificate["version"], "nurbs-foundation/1");
+    let spans = certificate["spans"].as_array().unwrap();
+    assert_eq!(spans.len(), 1);
+    assert!(spans[0]["denominatorLower"].as_f64().unwrap() > 0.);
+    assert!(spans[0]["min"][0].as_f64().unwrap() < 0.);
+    assert!(spans[0]["max"][1].as_f64().unwrap() > 1.);
+    assert_eq!(
+        spans[0]["regularity"]["classification"],
+        "certified_regular"
+    );
+}
+
+#[test]
+fn foundation_handles_adversarial_positive_weights_and_surface_cells() {
+    for exponent in -6..=6 {
+        let mut c = circle();
+        c.weights = vec![1., 10_f64.powi(exponent), 1.];
+        let certificate = foundation::certify_curve(&c, None).unwrap();
+        assert!(certificate["spans"][0]["denominatorLower"]
+            .as_f64()
+            .unwrap()
+            > 0.);
+        for i in 0..=32 {
+            let point = c.evaluate(i as f64 / 32.).unwrap().point;
+            for axis in 0..3 {
+                assert!(point[axis] >= certificate["spans"][0]["min"][axis].as_f64().unwrap());
+                assert!(point[axis] <= certificate["spans"][0]["max"][axis].as_f64().unwrap());
+            }
+        }
+    }
+    let surface = surface::Surface {
+        degree_u: 1,
+        degree_v: 1,
+        knots_u: vec![0., 0., 1., 1.],
+        knots_v: vec![0., 0., 1., 1.],
+        control_points: vec![
+            vec![vec![0., 0., 0.], vec![0., 2., 0.]],
+            vec![vec![3., 0., 0.], vec![3., 2., 0.]],
+        ],
+        weights: vec![vec![1., 2.], vec![3., 4.]],
+        periodic_u: false,
+        periodic_v: false,
+    };
+    let certificate = foundation::certify_surface(&surface, None).unwrap();
+    assert_eq!(certificate["cells"].as_array().unwrap().len(), 1);
+    assert_eq!(
+        certificate["cells"][0]["normalRegularity"]["classification"],
+        "certified_planar_regular"
+    );
+}
+
+#[test]
+fn certified_projection_reports_uniqueness_and_ambiguity() {
+    let line = Curve::from_polyline(vec![vec![0., 0.], vec![2., 0.]]).unwrap();
+    let projected = foundation::project_curve(&line, &[0.5, 1.], None).unwrap();
+    assert_eq!(projected["status"], "unique");
+    assert!((projected["candidates"][0]["point"][0].as_f64().unwrap() - 0.5).abs() < 1e-14);
+
+    let polyline =
+        Curve::from_polyline(vec![vec![-1., 0.], vec![0., 1.], vec![1., 0.]]).unwrap();
+    let ambiguous = foundation::project_curve(&polyline, &[0., 0.], None).unwrap();
+    assert_eq!(ambiguous["status"], "nonunique_or_unresolved");
+    assert_eq!(ambiguous["candidates"].as_array().unwrap().len(), 2);
+}
+
+#[test]
+fn interpolation_approximation_and_exact_reparameterization_are_certified() {
+    let interpolation = foundation::interpolate_polyline(
+        vec![vec![0., 0.], vec![1., 2.], vec![3., 4.]],
+        None,
+    )
+    .unwrap();
+    assert_eq!(
+        interpolation["certificate"]["dataSiteErrorUpper"].as_f64(),
+        Some(0.)
+    );
+    let approximation = foundation::approximate_curve(&circle(), None).unwrap();
+    assert!(approximation["certificate"]["hausdorffErrorUpper"]
+        .as_f64()
+        .unwrap()
+        .is_finite());
+
+    let periodic = Curve {
+        degree: 2,
+        knots: (0..9).map(|i| i as f64).collect(),
+        control_points: vec![
+            vec![1., 0.],
+            vec![0., 1.],
+            vec![-1., 0.],
+            vec![0., -1.],
+            vec![1., 0.],
+            vec![0., 1.],
+        ],
+        weights: vec![1.; 6],
+        periodic: true,
+    };
+    let result = foundation::reparameterize_curve(&periodic, [-3., 5.], None).unwrap();
+    let mapped: Curve = value_codec::from_value(result["curve"].clone()).unwrap();
+    assert!(mapped.periodic);
+    for i in 0..=32 {
+        let old_u = 2. + 4. * i as f64 / 32.;
+        let new_u = -3. + 8. * i as f64 / 32.;
+        near(
+            &periodic.evaluate(old_u).unwrap().point,
+            &mapped.evaluate(new_u).unwrap().point,
+        );
+    }
+}
+
+#[test]
+fn foundation_boundary_and_mutation_limits_are_deterministic() {
+    let degree = 25;
+    let controls = 26;
+    let c = Curve {
+        degree,
+        knots: std::iter::repeat_n(0., degree + 1)
+            .chain(std::iter::repeat_n(1., degree + 1))
+            .collect(),
+        control_points: (0..controls)
+            .map(|i| vec![i as f64 / 25., (i % 3) as f64])
+            .collect(),
+        weights: (0..controls)
+            .map(|i| 10_f64.powi((i as i32 % 13) - 6))
+            .collect(),
+        periodic: false,
+    };
+    assert!(foundation::certify_curve(&c, None).is_ok());
+    let mut too_high = c.clone();
+    too_high.degree = 26;
+    too_high.knots.push(1.);
+    assert_eq!(too_high.validate().unwrap_err().code, "NURBS_INVALID_INPUT");
+    let mut nonpositive = c;
+    nonpositive.weights[7] = 0.;
+    assert_eq!(
+        nonpositive.validate().unwrap_err().code,
+        "NURBS_INVALID_INPUT"
+    );
+}

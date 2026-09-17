@@ -298,4 +298,13 @@ export const inspectPolygonBrep=(model:PolygonBrep):BrepReport=>callGeometryRust
 export const tessellatePolygonBrep=(model:PolygonBrep):BrepMesh=>callGeometryRust('brep_polygon_tessellate',{model})
 /** Affine edit of authored carriers. Reflections also reverse shell face uses. */
 export const transformNurbsBrep=(model:NurbsBrep,matrix:number[][]):NurbsBrep=>callGeometryRust('brep_nurbs_transform',{model,matrix})
+/** `/7` document composition assigns fresh occurrence-local TopoIds in Rust. */
+export const composeStepV7Occurrences=(models:NurbsBrep[]):NurbsBrep=>
+  callGeometryRust('brep_nurbs_compose_step_v7',{models})
+/** Qualified `/8` composition retains whole-domain topology certification. */
+export const composeStepV8Occurrences=(models:NurbsBrep[]):NurbsBrep=>
+  callGeometryRust('brep_nurbs_compose_step_v8',{models})
+/** `/9` composition assigns occurrence-local identities to solids and sheets. */
+export const composeStepV9Occurrences=(models:NurbsBrep[]):NurbsBrep=>
+  callGeometryRust('brep_nurbs_compose_step_v9',{models})
 export const placeNurbsBrep=(model:NurbsBrep,origin:number[],u:number[],v:number[],offset:number[]):NurbsBrep=>callGeometryRust('brep_nurbs_workplane',{model,origin,u,v,offset})

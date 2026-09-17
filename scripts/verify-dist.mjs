@@ -56,7 +56,9 @@ const limits = new Map([
 // produce a 2759353-byte chunk. Retain a bounded 40647-byte margin.
 // V11 direct IGES/STEP parsers produce a measured 2813833-byte packed chunk;
 // retain a bounded 36167-byte margin without adding a second kernel payload.
-const geometryChunkBudget = 2_850_000
+// STEP /8 whole-domain regularity and coupled-sense certificates measure
+// 2862093 bytes; retain a bounded 7907-byte margin.
+const geometryChunkBudget = 2_870_000
 // WASM is losslessly packed in JS chunks; validate its actual decoded module
 // and source identity below instead of relying on an artifact's file suffix.
 for (const required of ['.html', '.css', '.js']) {
@@ -159,6 +161,7 @@ for (const [name, artifact, compression] of [
 // multi-span Boolean successor remains capped by the stricter chunk gate above.
 // V11 direct interchange measures 5305991 bytes across the distribution;
 // retain a bounded 44009-byte margin.
-const totalBudget = 5_350_000
+// STEP /8 measures 5365565 bytes; retain a bounded 9435-byte margin.
+const totalBudget = 5_375_000
 if (total > totalBudget) throw new Error(`dist totals ${total} bytes; budget is ${totalBudget}`)
 console.log(`Verified ${files.length} dist artifacts (${total} bytes)`)

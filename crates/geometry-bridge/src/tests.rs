@@ -310,6 +310,69 @@ fn direct_step_v3_bridge_preserves_exact_graph() {
 }
 
 #[test]
+fn direct_step_v5_bridge_exposes_ap242_report() {
+    let model = brep_core::freeform_cuboid_solid([0., 0., 0.], [2., 3., 4.]).unwrap();
+    let exported=dispatch(json!({"op":"brep_nurbs_export_step_v5","model":encode(model).unwrap()})).unwrap();
+    assert_eq!(exported["certificate"]["capability"],"step-interchange/5");
+    assert!(exported["text"].as_str().unwrap().contains("SHAPE_DEFINITION_REPRESENTATION"));
+    let imported=dispatch(json!({"op":"brep_nurbs_import_step_v5","text":exported["text"]})).unwrap();
+    assert_eq!(imported["identity"]["preserved"],true);
+    assert_eq!(imported["metadataLoss"].as_array().unwrap().len(),0);
+}
+
+#[test]
+fn direct_step_v6_bridge_roundtrips_poles_and_reports_identities(){
+    let model=brep_core::frustum(2.,0.,3.).unwrap();
+    let exported=dispatch(json!({"op":"brep_nurbs_export_step_v6","model":encode(model).unwrap()})).unwrap();
+    assert_eq!(exported["certificate"]["capability"],"step-interchange/6");
+    let imported=dispatch(json!({"op":"brep_nurbs_import_step_v6","text":exported["text"]})).unwrap();
+    assert_eq!(imported["model"]["bodies"].as_array().unwrap().len(),1);
+    assert_eq!(imported["definitionIdentities"].as_array().unwrap().len(),1);
+    assert_eq!(imported["occurrenceIdentities"].as_array().unwrap().len(),1);
+}
+
+#[test]
+fn direct_step_v7_bridge_composes_occurrence_topology(){
+    let model=brep_core::freeform_cuboid_solid([0.,0.,0.],[1.,1.,1.]).unwrap();
+    let exported=dispatch(json!({"op":"brep_nurbs_export_step_v7","model":encode(model).unwrap()})).unwrap();
+    assert_eq!(exported["certificate"]["capability"],"step-interchange/7");
+    let imported=dispatch(json!({"op":"brep_nurbs_import_step_v7","text":exported["text"]})).unwrap();
+    let composed=dispatch(json!({"op":"brep_nurbs_compose_step_v7","models":[imported["model"].clone(),imported["model"].clone()]})).unwrap();
+    assert_eq!(composed["bodies"].as_array().unwrap().len(),2);
+    let ids=composed["topologyIds"]["bodies"].as_array().unwrap();
+    assert_eq!(ids.len(),2);
+    assert_ne!(ids[0],ids[1]);
+}
+
+#[test]
+fn direct_step_v8_bridge_exposes_whole_domain_certificate(){
+    let model=brep_core::sphere(2.).unwrap();
+    let exported=dispatch(json!({"op":"brep_nurbs_export_step_v8","model":encode(model).unwrap()})).unwrap();
+    assert_eq!(exported["certificate"]["capability"],"step-interchange/8");
+    assert_eq!(exported["certificate"]["coupledSenseCases"],128);
+    assert_eq!(exported["certificate"]["regularity"][0]["carrier"],"sphere");
+    let imported=dispatch(json!({"op":"brep_nurbs_import_step_v8","text":exported["text"]})).unwrap();
+    assert_eq!(imported["certificate"]["complete"],true);
+    assert_eq!(imported["certificate"]["regularity"][0]["collapsedBoundaries"].as_array().unwrap().len(),2);
+}
+
+#[test]
+fn direct_step_v9_bridge_retains_open_shell(){
+    let control_points=(0..4).map(|u|(0..4).map(|v|
+        vec![u as f64/3.,v as f64/3.,(u*v) as f64/90.]).collect()).collect();
+    let surface=nurbs_core::surface::Surface{degree_u:3,degree_v:3,
+        knots_u:vec![0.,0.,0.,0.,1.,1.,1.,1.],knots_v:vec![0.,0.,0.,0.,1.,1.,1.,1.],
+        control_points,weights:vec![vec![1.;4];4],periodic_u:false,periodic_v:false};
+    let model=brep_core::bicubic_open_face(surface).unwrap();
+    let exported=dispatch(json!({"op":"brep_nurbs_export_step_v9","model":encode(model).unwrap()})).unwrap();
+    assert_eq!(exported["certificate"]["capability"],"step-interchange/9");
+    assert!(exported["text"].as_str().unwrap().contains("SHELL_BASED_SURFACE_MODEL"));
+    let imported=dispatch(json!({"op":"brep_nurbs_import_step_v9","text":exported["text"]})).unwrap();
+    assert_eq!(imported["model"]["bodies"].as_array().unwrap().len(),0);
+    assert_eq!(imported["model"]["shells"][0]["closed"],false);
+}
+
+#[test]
 fn direct_iges_v2_bridge_preserves_exact_graph() {
     let model = brep_core::freeform_cuboid_solid([0., 0., 0.], [2., 3., 4.]).unwrap();
     let exported = dispatch(json!({

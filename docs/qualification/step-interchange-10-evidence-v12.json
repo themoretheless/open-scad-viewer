@@ -1,0 +1,26 @@
+{
+  "$schema":"./brep-capability-evidence-v12.schema.json",
+  "schema":"open-scad-viewer/brep-capability-evidence",
+  "schemaVersion":12,
+  "evidenceId":"step-interchange-10-evidence-v12",
+  "capability":"step-interchange/10",
+  "maturity":"Qualified",
+  "state":"qualified",
+  "plan":"docs/qualification/plans/step-interchange-10.json",
+  "runs":[
+    {"id":"step-interchange-10-stepcode-ap242-ed4","result":"pass","artifactHash":"3b03eb9d2ad3f6639e6e421781cb3e3746e57cea70517d38ccf6d14578e172a6"},
+    {"id":"step-interchange-10-native-graph-mutation","result":"pass","artifactHash":"47e25ed887c60f2c0481bce639f4114e94856c31f17ed2b1337e320679469468"},
+    {"id":"step-interchange-10-native-affine-operators","result":"pass","artifactHash":"ae9e660e2572e7b3dd4ade6fd03469829e314361811bc25e652e776b15116756"},
+    {"id":"step-interchange-10-bridge-wasm-presentation","result":"pass","artifactHash":"4ceecf93da741687ba145b35667841ce5a4d0e75a1b8c97a723e669dd5de1152"},
+    {"id":"step-interchange-10-browser-workbench-indexeddb","result":"pass","artifactHash":"306d6b402c8536c2d216de669499fc4e3261e1db6811e9aa51f7c55ca88d956b"}
+  ],
+  "oracles":[
+    "docs/qualification/step-interchange-10-run-v1.json",
+    "output/qualification/step-interchange-10-v1/stepcode-raw-logs",
+    "output/qualification/step-interchange-10-v1/browser-workbench-indexeddb.json",
+    "step_interchange_v3::tests::v10_retains_affine_occurrence_graph_and_detects_mutation",
+    "tests/brepStepV10Product.test.ts"
+  ],
+  "unresolvedRows":[],
+  "attestation":{"fabricatedRuns":false,"note":"All qualification gates ran after implementation. The authoritative Part 21 graph round-tripped exactly through native bridge/WASM, workbench and IndexedDB; the identifier-independent graph oracle retained one shared definition and three affine occurrences. Tessellated strip/fan and presentation tests remained on the faceted route. No required in-scope geometry-product STEP gaps remain."}
+}

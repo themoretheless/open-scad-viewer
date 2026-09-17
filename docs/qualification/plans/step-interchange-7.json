@@ -1,0 +1,32 @@
+{
+  "$schema":"./brep-capability-qualification-plan-v12.schema.json",
+  "schema":"open-scad-viewer/brep-capability-qualification-plan",
+  "schemaVersion":12,
+  "planId":"step-interchange-7",
+  "gate":{"id":"g8-full","name":"brep-full-closed-matrix","version":12},
+  "lifecycle":{"status":"rejected","qualificationClaim":"none"},
+  "claimBoundary":{"candidateClaim":"Bounded AP242 direct B-rep route with append-only /7 ABI, digest-bound explicit external resolution, one recomposed occurrence model, occurrence-local TopoIds, UTF-8 store accounting, and independently bound semantic-validator status.","forbiddenClaims":["Full or unbounded STEP support","AP242 semantic conformance without a frozen independent validator result","Whole-domain seam or pole proof based only on finite sampling","Complete sense coverage without coupled generated cases","Ambient filesystem or network resolution"]},
+  "capability":"step-interchange/7",
+  "successorOf":"step-interchange/6",
+  "dependencies":[{"capability":"persistent-naming/1","requiredMaturity":"Qualified"}],
+  "scope":{"included":["Append-only Rust/WASM/TypeScript /7 route","Digest-bound cancellable external traversal","One recomposed bounded occurrence model with fresh body TopoIds","UTF-8 byte accounting for bundle and IndexedDB workspace source","Independent validator adapter with unavailable/not-checked product status"],"excluded":["Any row listed open below"]},
+  "matrix":[
+    {"id":"CA12-STEP7-PERIODIC-POLES","expected":"Complete","blocksQualification":true},
+    {"id":"CA12-STEP7-SENSE-MATRIX","expected":"Complete","blocksQualification":true},
+    {"id":"CA12-STEP7-EXTERNAL-GRAPH","expected":"Complete","blocksQualification":true},
+    {"id":"CA12-STEP7-WORKBENCH-IDB","expected":"Complete","blocksQualification":true},
+    {"id":"CA12-STEP7-RESOURCE-BOUNDARIES","expected":"Complete","blocksQualification":true},
+    {"id":"CA12-STEP7-AP242-SEMANTICS","expected":"Complete","blocksQualification":true}
+  ],
+  "bindings":{"implementation":["crates/brep-core/src/step_interchange_v3.rs","crates/geometry-bridge/src/lib.rs","src/services/cadNurbsStep.ts","src/services/cadStepExternalResolver.ts","src/services/cadStepRouting.ts","src/services/cadStepConformance.ts","src/services/cadStepIndexedDb.ts","src/services/workspaceIndexedDb.ts","src/features/CadWorkbenchPanel.vue","scripts/validate-step-ap242.mjs","tools/step-semantic-validator-manifest.json"],"registry":"src/services/geometry/brepCapability.ts","evidenceJson":"docs/qualification/step-interchange-7-evidence-v12.json"},
+  "evidence":{"state":"rejected","notes":["Implementation evidence closes neither mathematical proof by assertion nor external semantic conformance while the validator is unavailable."]},
+  "resetPolicy":"false-Complete freezes this capability and transitively stales all dependents; recovery requires a successor capability ID",
+  "unresolvedRows":[
+    {"id":"CA12-STEP7-PERIODIC-POLES","status":"open","resolution":"The /7 rational control-net identity proves full boundary isoparametric seams and constant poles, but certified regularity neighborhoods and non-boundary lifted seam intervals for all four carriers remain absent."},
+    {"id":"CA12-STEP7-SENSE-MATRIX","status":"open","resolution":"Generate and verify coupled seam, pole, hole, ADVANCED_FACE and ORIENTED_CLOSED_SHELL combinations; existing tests vary dimensions independently."},
+    {"id":"CA12-STEP7-EXTERNAL-GRAPH","status":"closed","resolution":"Digest-bound documents are recomposed into one validated model with fresh occurrence-local body TopoIds and document/definition/occurrence bindings."},
+    {"id":"CA12-STEP7-WORKBENCH-IDB","status":"closed","resolution":"The retained Chromium artifact drives CadWorkbenchPanel import, editor mutation, workspace save, project model-store reload, UI export and /7 reimport."},
+    {"id":"CA12-STEP7-RESOURCE-BOUNDARIES","status":"closed","resolution":"Exact/+1 parser, output, workspace/store and external byte/count/depth boundaries use UTF-8 byte accounting; transform/unit/occurrence limits remain pinned by native tests."},
+    {"id":"CA12-STEP7-AP242-SEMANTICS","status":"open","resolution":"Provision a legally redistributable or frozen AP242 semantic validator, bind executable version/hash, and retain its real result. Current status is intentionally not-checked."}
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "schema":"open-scad-viewer/step-interchange-v9-run",
+  "status":"pass",
+  "validator":{
+    "name":"STEPcode p21read_sdai_ap242",
+    "version":"0.9.1",
+    "sourceCommit":"ed686ee1d9cb8bf763ab8d61ef6d417c3b45c146",
+    "executableSha256":"a9258791296493ed5de470b1e98f8ba44dbb1bdd7fd8b2e29662bade36e07043",
+    "schemaSha256":"e7e93cf97880fd87d634e4b9ee58400da0a1be6c06a1de76ec13807ecdc15ccb"
+  },
+  "positiveFixtures":[
+    {"path":"tests/fixtures/step-v9/self-authored-ap242-open-shell.step","result":"accepted-zero-errors-zero-warnings","sha256":"81729e725c81fd69a95f3bc6796baabf434588ba7266384cc3b66cc193bc3ece"},
+    {"path":"tests/fixtures/step-v9/self-authored-ap242-cylinder.step","result":"accepted-zero-errors-zero-warnings"}
+  ],
+  "negativeFixtures":[
+    {"path":"output/qualification/step-interchange-8-v1/negative-mutations/wrong-coordinate-type.step","result":"rejected-one-error-zero-warnings"}
+  ],
+  "rawLogs":"output/qualification/step-interchange-9-v1/stepcode-raw-logs",
+  "browserEvidence":{"path":"output/qualification/step-interchange-9-v1/browser-workbench-indexeddb.json","sha256":"e8d57bec445eca9fad837f9297ea2afce0b136880eafe4a4cd52df2786c0d05d"}
+}

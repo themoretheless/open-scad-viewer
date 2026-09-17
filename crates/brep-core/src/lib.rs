@@ -110,8 +110,14 @@ pub use step_interchange::{
     import_step_v2,
 };
 pub use step_interchange_v3::{
-    STEP_INTERCHANGE_V3_CAPABILITY, STEP_INTERCHANGE_V4_CAPABILITY, StepV3Report,
-    export_step_v3, export_step_v4, import_step_v3, import_step_v4,
+    STEP_INTERCHANGE_V3_CAPABILITY, STEP_INTERCHANGE_V4_CAPABILITY, STEP_INTERCHANGE_V5_CAPABILITY,
+    STEP_INTERCHANGE_V6_CAPABILITY, STEP_INTERCHANGE_V7_CAPABILITY, STEP_INTERCHANGE_V8_CAPABILITY,
+    STEP_INTERCHANGE_V9_CAPABILITY, STEP_INTERCHANGE_V10_CAPABILITY,
+    StepRegularityEvidence, StepV3Report, StepV8Certificate, StepV10Document, compose_step_v7_occurrences,
+    compose_step_v8_occurrences, compose_step_v9_occurrences,
+    export_step_v3, export_step_v4, export_step_v5, export_step_v6, export_step_v7, export_step_v8,
+    export_step_v9, export_step_v10, import_step_v3, import_step_v4, import_step_v5, import_step_v6,
+    import_step_v7, import_step_v8, import_step_v9, import_step_v10,
 };
 
 pub use brep_topology::{
@@ -1555,11 +1561,11 @@ fn validate_pole_boundary(surface: &Surface, pcurve: &Curve, pole: [f64; 3]) -> 
     ];
     let a = &pcurve.control_points[0];
     let b = &pcurve.control_points[1];
-    let spans = |a: f64, b: f64, domain: [f64; 2]| {
-        (a == domain[0] && b == domain[1]) || (b == domain[0] && a == domain[1])
+    let lies_in = |a: f64, b: f64, domain: [f64; 2]| {
+        a != b && a >= domain[0] && a <= domain[1] && b >= domain[0] && b <= domain[1]
     };
     let same = |p: &Vec<f64>| p.as_slice() == pole.as_slice();
-    let collapsed = if a[0] == b[0] && spans(a[1], b[1], v) {
+    let collapsed = if a[0] == b[0] && lies_in(a[1], b[1], v) {
         if a[0] == u[0] {
             surface.control_points[0].iter().all(same)
         } else if a[0] == u[1] {
@@ -1567,7 +1573,7 @@ fn validate_pole_boundary(surface: &Surface, pcurve: &Curve, pole: [f64; 3]) -> 
         } else {
             false
         }
-    } else if a[1] == b[1] && spans(a[0], b[0], u) {
+    } else if a[1] == b[1] && lies_in(a[0], b[0], u) {
         if a[1] == v[0] {
             surface.control_points.iter().all(|r| same(&r[0]))
         } else if a[1] == v[1] {

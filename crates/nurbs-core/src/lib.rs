@@ -12,6 +12,7 @@
 #![allow(unused_features)]
 pub mod curve;
 pub mod edit;
+pub mod foundation;
 pub mod surface;
 use value_codec::{Deserialize, Serialize};
 use value_codec::{Value, json};
@@ -41,8 +42,72 @@ fn field<T: for<'a> Deserialize<'a>>(v: &Value, k: &str) -> Result<T> {
 fn encode<T: Serialize>(v: T) -> Result<Value> {
     value_codec::to_value(v).map_err(|e| numeric_err(e.to_string()))
 }
+fn optional_field<T: for<'a> Deserialize<'a>>(v: &Value, k: &str) -> Result<Option<T>> {
+    match v.get(k) {
+        Some(value) if !value.is_null() => value_codec::from_value(value.clone())
+            .map(Some)
+            .map_err(|e| input(format!("Invalid {k}: {e}"))),
+        _ => Ok(None),
+    }
+}
 pub fn dispatch(v: Value) -> Result<Value> {
     let op: String = field(&v, "op")?;
+    if op == "curve_certify_foundation" {
+        return foundation::certify_curve(
+            &field(&v, "curve")?,
+            optional_field(&v, "tolerance")?,
+        );
+    }
+    if op == "surface_certify_foundation" {
+        return foundation::certify_surface(
+            &field(&v, "surface")?,
+            optional_field(&v, "tolerance")?,
+        );
+    }
+    if op == "curve_project_certified" {
+        return foundation::project_curve(
+            &field(&v, "curve")?,
+            &field::<Vec<f64>>(&v, "point")?,
+            optional_field(&v, "tolerance")?,
+        );
+    }
+    if op == "curve_interpolate_certified" {
+        return foundation::interpolate_polyline(
+            field(&v, "points")?,
+            optional_field(&v, "tolerance")?,
+        );
+    }
+    if op == "curve_approximate_certified" {
+        return foundation::approximate_curve(
+            &field(&v, "curve")?,
+            optional_field(&v, "tolerance")?,
+        );
+    }
+    if op == "curve_reparameterize_exact" {
+        return foundation::reparameterize_curve(
+            &field(&v, "curve")?,
+            field(&v, "domain")?,
+            optional_field(&v, "tolerance")?,
+        );
+    }
+    if op == "curve_insert_certified" {
+        return foundation::certify_exact_edit(
+            &field(&v, "curve")?,
+            "insert",
+            field(&v, "u")?,
+            field(&v, "count")?,
+            optional_field(&v, "tolerance")?,
+        );
+    }
+    if op == "curve_elevate_certified" {
+        return foundation::certify_exact_edit(
+            &field(&v, "curve")?,
+            "elevate",
+            0.,
+            field(&v, "degree")?,
+            optional_field(&v, "tolerance")?,
+        );
+    }
     if op == "nurbs_deform_curve" {
         return encode(edit::deform_curve(
             &field(&v, "curve")?,

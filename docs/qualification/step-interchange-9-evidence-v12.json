@@ -1,0 +1,27 @@
+{
+  "$schema":"./brep-capability-evidence-v12.schema.json",
+  "schema":"open-scad-viewer/brep-capability-evidence",
+  "schemaVersion":12,
+  "evidenceId":"step-interchange-9-evidence-v12",
+  "capability":"step-interchange/9",
+  "maturity":"Qualified",
+  "state":"qualified",
+  "plan":"docs/qualification/plans/step-interchange-9.json",
+  "runs":[
+    {"id":"step-interchange-9-stepcode-ap242-ed4","result":"pass","artifactHash":"05166d46b730b384bc7215468e9f367e5aa1de90fd121f421c4164ff9e57f785"},
+    {"id":"step-interchange-9-native-bridge-wasm-product-routes","result":"pass","artifactHash":"81729e725c81fd69a95f3bc6796baabf434588ba7266384cc3b66cc193bc3ece"},
+    {"id":"step-interchange-9-browser-workbench-indexeddb","result":"pass","artifactHash":"e8d57bec445eca9fad837f9297ea2afce0b136880eafe4a4cd52df2786c0d05d"}
+  ],
+  "oracles":[
+    "docs/qualification/step-interchange-9-run-v1.json",
+    "output/qualification/step-interchange-9-v1/stepcode-raw-logs",
+    "output/qualification/step-interchange-9-v1/browser-workbench-indexeddb.json",
+    "step_interchange_v3::tests::v9_certifies_interior_point_inverse_and_ambiguity",
+    "step_interchange_v3::tests::v6_applies_nonuniform_occurrence_affine_and_refuses_singular",
+    "step_interchange_v3::tests::v9_roundtrips_retained_open_shell",
+    "geometry_bridge::tests::direct_step_v9_bridge_retains_open_shell",
+    "tests/brepStepV5Workbench.test.ts"
+  ],
+  "unresolvedRows":[],
+  "attestation":{"fabricatedRuns":false,"note":"Pinned STEPcode AP242 Edition 4 accepted both /9 exports with zero errors/warnings and rejected the malformed coordinate mutation. Native, bridge/WASM, routing, IndexedDB and headless-browser retained open-shell roundtrips passed. Qualification is restricted by the plan forbiddenClaims."}
+}

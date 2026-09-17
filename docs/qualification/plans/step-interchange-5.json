@@ -1,0 +1,93 @@
+{
+  "$schema": "./brep-capability-qualification-plan-v12.schema.json",
+  "schema": "open-scad-viewer/brep-capability-qualification-plan",
+  "schemaVersion": 12,
+  "planId": "step-interchange-5",
+  "gate": {
+    "id": "g8-full",
+    "name": "brep-full-closed-matrix",
+    "version": 12
+  },
+  "lifecycle": {
+    "status": "rejected",
+    "qualificationClaim": "none"
+  },
+  "claimBoundary": {
+    "candidateClaim": "First standards-conformant AP242 retained B-rep closure unit with selected product/context, rational complex composition, oriented void shells, collision-resistant identity, explicit loss reporting and workbench routing.",
+    "forbiddenClaims": [
+      "Full STEP or assembly support",
+      "External references, singular pole topology, non-rigid transforms or ambiguous occurrence graphs",
+      "Complete periodic SEAM_CURVE coverage for analytic cylinder, cone, sphere and torus faces",
+      "Noncanonical standalone FACE_BOUND, ADVANCED_FACE or shell-sense permutations without a paired manifold orientation proof",
+      "Exhaustive malformed/resource +1 matrix beyond lexer bytes/depth/count, graph depth, output bytes and workbench store bytes",
+      "AP242 semantic conformance based only on self-authored fixtures and syntax parsing",
+      "Editor-driven durable lifecycle based only on service tests or source-string assertions"
+    ]
+  },
+  "capability": "step-interchange/5",
+  "successorOf": "step-interchange/4",
+  "dependencies": [
+    {
+      "capability": "persistent-naming/1",
+      "requiredMaturity": "Qualified"
+    }
+  ],
+  "scope": {
+    "included": [
+      "AP242 HEADER/DATA/END structure and selected ADVANCED_BREP_SHAPE_REPRESENTATION",
+      "Reachable GLOBAL_UNIT_ASSIGNED_CONTEXT without orphan fallback",
+      "Standard RATIONAL_B_SPLINE_CURVE and RATIONAL_B_SPLINE_SURFACE complex composition",
+      "ORIENTED_CLOSED_SHELL voids, SHA-256 canonical identity, field-level metadata loss",
+      "Ordered nested representation relationships with distinct exact-rigid body occurrences",
+      "Content-aware durable retained editing/export and explicitly separate faceted workbench routes"
+    ],
+    "excluded": [
+      "Assemblies and external references",
+      "Non-rigid, cyclic or ambiguous occurrence placement graphs",
+      "Pole edges and unbounded entities",
+      "Complete analytic SEAM_CURVE/lifted-UV coverage",
+      "Unpaired noncanonical bound, face and shell sense permutations",
+      "Exhaustive transformation-chain, unit-chain and browser-memory resource boundaries",
+      "Independent vendor/standards-authority AP242 semantic fixture validation",
+      "Workbench UI plus IndexedDB save/reload lifecycle qualification"
+    ]
+  },
+  "matrix": [
+    {"id": "CA12-STEP5-AP242-COMPOSITION", "expected": "Complete", "blocksQualification": true},
+    {"id": "CA12-STEP5-VOID-CONTEXT-IDENTITY", "expected": "Complete", "blocksQualification": true},
+    {"id": "CA12-STEP5-OCCURRENCE-PLACEMENT", "expected": "Complete", "blocksQualification": true},
+    {"id": "CA12-STEP5-NARROW-FIXTURE-BOUNDARY", "expected": "Complete", "blocksQualification": true},
+    {"id": "CA12-STEP5-DURABLE-WORKBENCH", "expected": "Complete", "blocksQualification": true}
+  ],
+  "bindings": {
+    "implementation": [
+      "crates/brep-core/src/step_interchange_v3.rs",
+      "crates/geometry-bridge/src/lib.rs",
+      "src/services/cadNurbsStep.ts",
+      "src/services/cadStepRouting.ts",
+      "src/features/CadWorkbenchPanel.vue",
+      "tests/brepStepV5Workbench.test.ts"
+    ],
+    "registry": "src/services/geometry/brepCapability.ts",
+    "evidenceJson": "docs/qualification/step-interchange-5-evidence-v12.json"
+  },
+  "evidence": {
+    "state": "rejected",
+    "notes": [
+      "The geometry and Part 21 slice is implemented and focused tests pass, but self-authored fixtures plus service-level persistence do not qualify AP242 semantic interoperability or the editor/store lifecycle."
+    ]
+  },
+  "resetPolicy": "false-Complete freezes this capability and transitively stales all dependents; recovery requires a successor capability ID",
+  "unresolvedRows": [
+    {
+      "id": "CA12-STEP5-AP242-COMPOSITION",
+      "status": "open",
+      "resolution": "Validate exported rational and void entities against an independent AP242 EXPRESS/semantic implementation and non-self-authored fixtures; steputils proves Part 21 syntax only."
+    },
+    {
+      "id": "CA12-STEP5-DURABLE-WORKBENCH",
+      "status": "open",
+      "resolution": "Drive real workbench UI import, document edit, IndexedDB persistence, reload, export and reimport with authoritative B-rep and metadata checks."
+    }
+  ]
+}

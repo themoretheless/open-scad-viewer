@@ -1,0 +1,44 @@
+{
+  "schema": "open-scad-viewer/step-semantic-validator-adapter",
+  "schemaVersion": 2,
+  "validator": {
+    "name": "STEPcode p21read_sdai_ap242",
+    "version": "0.9.1",
+    "sourceUrl": "https://github.com/stepcode/stepcode.git",
+    "sourceCommit": "ed686ee1d9cb8bf763ab8d61ef6d417c3b45c146",
+    "license": "BSD-3-Clause",
+    "licenseUrl": "https://raw.githubusercontent.com/stepcode/stepcode/ed686ee1d9cb8bf763ab8d61ef6d417c3b45c146/COPYING",
+    "licenseSha256": "c787486f3e1358cf1cb4456b56e00862de9c0433e7d49f5501d1289ff8bef37e",
+    "schema": {
+      "name": "AP242_MANAGED_MODEL_BASED_3D_ENGINEERING_MIM_LF",
+      "identifier": "{ 1 0 10303 442 7 1 4 }",
+      "edition": "AP242 Edition 4 (2025)",
+      "url": "https://standards.iso.org/iso/ts/10303/-442/ed-7/tech/express/mim_lf.exp",
+      "sha256": "e7e93cf97880fd87d634e4b9ee58400da0a1be6c06a1de76ec13807ecdc15ccb",
+      "provenancePage": "https://www.mbx-if.org/home/mbx/resources/express-schemas/"
+    },
+    "buildPatch": {
+      "purpose": "Disable STEPcode's duplicate basename self-tests; qualification fixtures are driven externally.",
+      "patchedFileSha256": "286745ef40abc2672ee921138b65070595198d583f891f4074d5c06bc66c0c18"
+    },
+    "knownBuilds": [{
+      "platform": "arm64-apple-darwin25.6.0",
+      "executableSha256": "a9258791296493ed5de470b1e98f8ba44dbb1bdd7fd8b2e29662bade36e07043",
+      "schemaLibrarySha256": "2e1452ca707dc75a227390188be972dca04f7a7db07acc0d0b5896d97ff89553"
+    }]
+  },
+  "status": "pinned-source-build",
+  "requiredEnvironment": {
+    "executable": "STEP_AP242_VALIDATOR",
+    "sha256": "STEP_AP242_VALIDATOR_SHA256",
+    "version": "STEP_AP242_VALIDATOR_VERSION",
+    "rawLogDirectory": "STEP_AP242_LOG_DIR"
+  },
+  "contract": {
+    "arguments": ["<fixture>", "<roundtrip-output>"],
+    "passExitCode": 0,
+    "rejectExitCodes": [1],
+    "adapterErrorExitCode": 2
+  },
+  "note": "STEPcode remains an independent qualification oracle. Its generated code is not translated into or linked with the product kernel."
+}

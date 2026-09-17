@@ -1,0 +1,84 @@
+{
+  "schema": "open-scad-viewer/qualification-run",
+  "schemaVersion": 1,
+  "runId": "step-interchange-5-2026-09-17-v1",
+  "qualificationDisposition": "rejected-by-audit",
+  "artifactAvailability": "Only output/qualification/step-interchange-5-v1/README.txt is present. The listed command digests are historical records, not independently verifiable qualification artifacts.",
+  "runner": {
+    "os": "Darwin 25.6.0 arm64",
+    "rustc": "1.100.0-nightly (a36d05efa 2026-09-09)",
+    "cargo": "1.100.0-nightly (3c0b53475 2026-09-04)",
+    "node": "v22.23.2",
+    "npm": "10.9.8"
+  },
+  "source": {
+    "branch": "qualify/g1-v34",
+    "baseCommit": "f862f2fcbe88a790fbac6c68724fd0921fc38a48",
+    "files": {
+      "crates/brep-core/src/step_interchange_v3.rs": "b6b3e4c1d60cdcfd1a5602a6ce0befabdd7a3fbd14db915b66da809c3c7f57c0",
+      "crates/geometry-bridge/src/lib.rs": "6ac148abf4bea0d2193ba87f7048c25924f96a27d221bc5c6a0a8a5d67097bac",
+      "src/services/cadNurbsStep.ts": "26d36c7bc5ef430a63c203a4adf20e81a53012f693f9f4da5b7386a26e5e8473",
+      "src/services/cadStepRouting.ts": "86de348dc831efafd465a948a7bc86f6a460a95f459a9b70660a2293db52f6b8",
+      "src/features/CadWorkbenchPanel.vue": "9f2145c40e0923c6d0dcf34e97400f0de91d7cfd00c156a5d3a5ec58fcc2654b",
+      "tests/brepStepV5Workbench.test.ts": "f759e52ea560210fc962d5b49d84cb8c5b859c14a099c1b1969ded756066e0ef",
+      "src/services/geometry/brepCapability.ts": "95a946e2d37e33e9129ce2d3f7e4e1ab1388dd1c539b0cb264f8f59a1dfe16dc",
+      "tests/brepQualificationV13.test.ts": "1bda3cf9a21066365b5942bbabdb298adeacef2a2f97a3588705a1beb2f0647c",
+      "tests/brepQualificationReleaseGate.test.ts": "00ca44b13c53a7a5910a25f33144d6b4b6bde96d269788724423d087df38be47"
+    },
+    "locks": {
+      "crates/Cargo.lock": "5eb9c25ccd0a845364d020859d1c3b8dc6e8c9321adc6b20f0273bed6e0fb2bb",
+      "package-lock.json": "70eb933b3607298caa00f7cdd96a953f313e6cc080a34f9b3c5c58694c765704"
+    }
+  },
+  "commands": [
+    {
+      "command": "cargo test --locked --manifest-path crates/Cargo.toml -p brep-core step_interchange_v3::tests -- --nocapture",
+      "result": "pass",
+      "tests": 16,
+      "artifact": "output/qualification/step-interchange-5-v1/rust-step-tests.log",
+      "sha256": "cc87d72a1895fa94b5900a6b4e40081d3addcdef7277eb6f793d2f80af18afa0"
+    },
+    {
+      "command": "cargo test --locked --manifest-path crates/Cargo.toml -p geometry-bridge direct_step_v5_bridge_exposes_ap242_report -- --nocapture",
+      "result": "pass",
+      "tests": 1,
+      "artifact": "output/qualification/step-interchange-5-v1/bridge-tests.log",
+      "sha256": "dbb75dd2a71148fc463e8627f48f0c4179cfa6feaaa03547dcce518735c83294"
+    },
+    {
+      "command": "npm run build:geometry",
+      "result": "pass",
+      "artifact": "output/qualification/step-interchange-5-v1/build-geometry.log",
+      "sha256": "b300503d9ae2220a1029af73558f56a6dcce2cd304017a2dc10d91af790e077f"
+    },
+    {
+      "command": "npx vitest run tests/brepStepV5Workbench.test.ts tests/brepInterchangeV11.test.ts tests/cadWorkbench.test.ts tests/brepQualificationV13.test.ts tests/brepQualificationV12.test.ts tests/brepQualificationReleaseGate.test.ts",
+      "result": "pass",
+      "tests": 44,
+      "artifact": "output/qualification/step-interchange-5-v1/product-tests.log",
+      "sha256": "9fe0499529f952388d664df2eea0e7d4bea97cd0ff23641941af3ca958a65f98"
+    },
+    {
+      "command": "npm run typecheck",
+      "result": "pass",
+      "artifact": "output/qualification/step-interchange-5-v1/typecheck.log",
+      "sha256": "e0585f17e6f3c77c1c8d457c9926150411f19f06d8aeb38ff407a893bbb06a46"
+    },
+    {
+      "command": "npm run build",
+      "result": "pass",
+      "artifact": "output/qualification/step-interchange-5-v1/build.log",
+      "sha256": "221de023a1613a3fd847e0b80a6e6872cb9a69eba50433a3c7bff09940282f86"
+    }
+  ],
+  "fixtures": {
+    "self-authored-ap242-cone.step": "65f7fce534fd23afed313e1037adc58601bb2d174b44ccb1f07514d203cee6f8",
+    "self-authored-ap242-cylinder.step": "602fc9dee82b140231f8e65b2cdc4d72558845289940545fdb0558bf1c6c6a85",
+    "self-authored-ap242-inch.step": "c87fb7c452618abe864535c16421650f90b84043eba4101114ad18d27d15f78b",
+    "self-authored-ap242-metre.step": "b2318878a3460a983b56b6efd7a77b38c471a3b98ad2c7d2cfcb00e20dd7cadf",
+    "self-authored-ap242-multiple-void.step": "37bb26a967b016161ca21d07ac9fdf0fcf43b96888890edd3877d9c9f4ed503e",
+    "self-authored-ap242-nested-placement.step": "8738c5da9bf55b302a96cc54b50a547ae21c70e9261c87bb671d61b786f63922",
+    "self-authored-ap242-torus.step": "fbed76007519dedc74baf62eac2cd87e85ccbf6940fe150f6e0ca763b37574ef",
+    "self-authored-ap242-void.step": "0eeb42b841e65cf4bcc519304c9384948d02c0133df6ae88a9a3197b6545ff3a"
+  }
+}
