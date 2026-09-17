@@ -104,3 +104,5 @@ is where the device placements pay off (~270× here).
 - Transformed point-cloud stats composes transformed bounds with accelerated
   source moments plus the analytic moment transform; it deliberately avoids a
   separate CUDA/WGSL kernel because the composed summary is still memory-bound.
+- Point-cloud plane fitting (`point_fit_plane`) reuses the moments reducers and
+  performs only the final 3x3 eigensolve on CPU.

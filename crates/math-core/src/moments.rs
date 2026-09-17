@@ -1,4 +1,4 @@
-use crate::{Acceleration, Error, M3, Result, V3, eigen};
+use crate::{Acceleration, Error, M3, Result, V3, dot, eigen, unit};
 
 /// WGSL template for point-cloud moment reduction.
 pub const POINT_MOMENTS_WGSL_TEMPLATE: &str = include_str!("point_moments.wgsl");
@@ -20,6 +20,19 @@ pub struct PointPrincipalAxes {
     pub variances: V3,
     /// Unit eigenvectors in the same order as `variances`.
     pub axes: [V3; 3],
+}
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct PointPlane {
+    pub samples: usize,
+    /// Unit normal of the least-squares plane. The sign is normalized
+    /// deterministically from its largest component.
+    pub normal: V3,
+    /// Plane equation offset: `dot(normal, p) + offset = 0`.
+    pub offset: f64,
+    /// Root-mean-square orthogonal distance to the plane.
+    pub rms_distance: f64,
+    pub axes: PointPrincipalAxes,
 }
 
 impl PointMoments {
@@ -127,6 +140,38 @@ pub fn point_principal_axes(
     })
 }
 
+fn orient_normal(mut normal: V3) -> V3 {
+    normal = unit(normal);
+    let axis = (0..3)
+        .max_by(|&a, &b| normal[a].abs().total_cmp(&normal[b].abs()))
+        .unwrap();
+    if normal[axis] < 0. {
+        normal = [-normal[0], -normal[1], -normal[2]];
+    }
+    normal
+}
+
+/// Least-squares plane fit from point-cloud PCA. Moment reduction can run on
+/// CPU, GPU or CUDA; the final 3x3 eigensolve runs on CPU.
+pub fn point_fit_plane(points: &[V3], acceleration: Acceleration) -> Result<PointPlane> {
+    if points.len() < 3 {
+        return Err(Error::new(
+            "invalid_point_plane_input",
+            "point_fit_plane expects at least 3 points",
+        ));
+    }
+    let axes = point_principal_axes(points, acceleration)?;
+    let normal = orient_normal(axes.axes[2]);
+    let offset = -dot(normal, axes.moments.centroid);
+    Ok(PointPlane {
+        samples: points.len(),
+        normal,
+        offset,
+        rms_distance: axes.variances[2].sqrt(),
+        axes,
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -188,6 +233,34 @@ mod tests {
         assert!(got.axes[0][0].abs() > 0.99);
     }
 
+    #[test]
+    fn point_fit_plane_recovers_known_plane() {
+        let points: Vec<_> = (0..32)
+            .flat_map(|ix| {
+                (0..16).map(move |iy| {
+                    let x = ix as f64 * 0.1 - 1.5;
+                    let y = iy as f64 * 0.1 - 0.7;
+                    let z = 2. + 0.25 * x - 0.5 * y;
+                    [x, y, z]
+                })
+            })
+            .collect();
+        let got = point_fit_plane(&points, Acceleration::Cpu).unwrap();
+        let want = orient_normal([-0.25, 0.5, 1.]);
+        for axis in 0..3 {
+            assert!((got.normal[axis] - want[axis]).abs() < 1e-10);
+        }
+        assert!(got.rms_distance < 1e-10);
+        for point in &points {
+            assert!((dot(got.normal, *point) + got.offset).abs() < 1e-10);
+        }
+    }
+
+    #[test]
+    fn point_fit_plane_rejects_too_few_points() {
+        assert!(point_fit_plane(&[[0.; 3], [1.; 3]], Acceleration::Cpu).is_err());
+    }
+
     #[cfg(feature = "gpu")]
     #[test]
     fn point_moments_gpu_matches_cpu_reference() {
@@ -218,5 +291,29 @@ mod tests {
                 assert!((got.covariance[i][j] - want.covariance[i][j]).abs() < 2e-2);
             }
         }
+    }
+
+    #[cfg(feature = "gpu")]
+    #[test]
+    fn point_fit_plane_gpu_matches_cpu_reference() {
+        let points = points(4097);
+        let got = point_fit_plane(&points, Acceleration::Gpu).unwrap();
+        let want = point_fit_plane(&points, Acceleration::Cpu).unwrap();
+        for axis in 0..3 {
+            assert!((got.normal[axis] - want.normal[axis]).abs() < 1e-3);
+        }
+        assert!((got.rms_distance - want.rms_distance).abs() < 1e-3);
+    }
+
+    #[cfg(feature = "cuda")]
+    #[test]
+    fn point_fit_plane_cuda_matches_cpu_reference() {
+        let points = points(4097);
+        let got = point_fit_plane(&points, Acceleration::Cuda).unwrap();
+        let want = point_fit_plane(&points, Acceleration::Cpu).unwrap();
+        for axis in 0..3 {
+            assert!((got.normal[axis] - want.normal[axis]).abs() < 1e-3);
+        }
+        assert!((got.rms_distance - want.rms_distance).abs() < 1e-3);
     }
 }

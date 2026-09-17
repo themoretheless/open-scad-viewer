@@ -289,11 +289,13 @@ bench_point_bounds` on the RTX 5090:
 `point_moments(points)` computes the centroid, mean outer product and central
 covariance matrix for a finite point cloud. `point_principal_axes(points,
 acceleration)` builds on that covariance to return PCA variances and unit axes
-for orientation/normal workflows. `point_moments_accelerated(points,
-acceleration)` adds fused wgpu/CUDA reductions with grow-only buffers and
-Metal/default workgroup tuning. Like bounds, this standalone reducer is mostly
-memory movement on discrete GPUs, so `Auto` stays on the exact CPU path;
-explicit `Gpu`/`Cuda` remain useful for integrated-GPU experiments and backend
+for orientation/normal workflows. `point_fit_plane(points, acceleration)` uses
+the smallest PCA variance/axis as a least-squares plane normal and reports the
+RMS orthogonal distance. `point_moments_accelerated(points, acceleration)`
+adds fused wgpu/CUDA reductions with grow-only buffers and Metal/default
+workgroup tuning. Like bounds, this standalone reducer is mostly memory
+movement on discrete GPUs, so `Auto` stays on the exact CPU path; explicit
+`Gpu`/`Cuda` remain useful for integrated-GPU experiments and backend
 validation.
 
 Measured with `cargo run --release -p osv-math --features cuda --example
@@ -305,6 +307,17 @@ bench_point_moments` on the RTX 5090:
 | 100,000 | 0.332 ms | 0.338 ms | 1.793 ms | 0.601 ms |
 | 1,000,000 | 3.593 ms | 3.508 ms | 15.199 ms | 5.023 ms |
 | 5,000,000 | 18.004 ms | 18.056 ms | 73.931 ms | 24.893 ms |
+
+Plane fitting adds only a 3x3 eigensolve after moments, so it follows the same
+placement profile (`cargo run --release -p osv-math --features cuda --example
+bench_point_plane`):
+
+| points | cpu | auto | gpu | cuda |
+| --- | --- | --- | --- | --- |
+| 10,000 | 0.032 ms | 0.032 ms | 0.233 ms | 0.113 ms |
+| 100,000 | 0.321 ms | 0.324 ms | 1.702 ms | 0.491 ms |
+| 1,000,000 | 3.229 ms | 3.181 ms | 15.745 ms | 4.915 ms |
+| 5,000,000 | 17.044 ms | 17.581 ms | 77.347 ms | 23.471 ms |
 
 `point_cloud_stats(points)` returns bounds and moments together.
 `point_cloud_stats_accelerated(points, acceleration)` fuses both summaries

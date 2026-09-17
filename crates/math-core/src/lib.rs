@@ -34,8 +34,8 @@ pub use linalg::{
     scale2, smallest, solve, sub, sub2, svd, tr, transform_points, unit, unit2,
 };
 pub use moments::{
-    POINT_MOMENTS_WGSL_TEMPLATE, PointMoments, PointPrincipalAxes, point_moments,
-    point_moments_accelerated, point_principal_axes,
+    POINT_MOMENTS_WGSL_TEMPLATE, PointMoments, PointPlane, PointPrincipalAxes, point_fit_plane,
+    point_moments, point_moments_accelerated, point_principal_axes,
 };
 pub use nearest_neighbor::{NEAREST_NEIGHBOR_WGSL, nearest_neighbor, nearest_neighbor_accelerated};
 pub use nearest_two::{
