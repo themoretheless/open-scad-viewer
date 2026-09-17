@@ -101,3 +101,6 @@ is where the device placements pay off (~270× here).
 - Transformed point-cloud bounds has explicit wgpu/CUDA ports, but `Auto`
   stays on CPU because repeated RTX 5090 measurements did not show a stable
   device crossover (1M points: CPU 5.06 ms, CUDA 5.72 ms, wgpu 14.76 ms).
+- Transformed point-cloud stats composes transformed bounds with accelerated
+  source moments plus the analytic moment transform; it deliberately avoids a
+  separate CUDA/WGSL kernel because the composed summary is still memory-bound.

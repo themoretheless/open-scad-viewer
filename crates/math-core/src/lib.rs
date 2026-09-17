@@ -45,7 +45,8 @@ pub use nearest_two::{
 pub use registration::{IcpOptions, IcpReport, RigidTransform, icp_register, rigid_transform};
 pub use stats::{
     POINT_CLOUD_STATS_WGSL_TEMPLATE, PointCloudStats, point_cloud_stats,
-    point_cloud_stats_accelerated,
+    point_cloud_stats_accelerated, transformed_point_cloud_stats,
+    transformed_point_cloud_stats_accelerated,
 };
 pub use transform_error::{
     TRANSFORMED_DISTANCE_PAIR_SUM_WGSL, transformed_squared_distance_pair_rmse,

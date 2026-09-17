@@ -90,6 +90,27 @@ because repeated measurements did not show a stable device crossover.
 Use `cargo run --release -p osv-math --features cuda --example bench_transformed_bounds`
 to measure your hardware.
 
+`transformed_point_cloud_stats_accelerated(points, m, t, acceleration)` extends
+that idea to a full bounds + centroid/covariance summary. Bounds use the fused
+transformed-bounds backend above; moments are computed from the source moments
+and transformed analytically (`centroid' = M*centroid+t`,
+`covariance' = M*covariance*M^T`), so callers avoid allocating a transformed
+cloud while still reusing the existing CPU/GPU/CUDA reducers.
+
+On the RTX 5090 this remains an O(n), memory-bound summary, so `Auto` stays
+conservative; explicit device paths are available for pipelines that already
+want those placements:
+
+| points | cpu | auto | gpu | cuda | materialized CPU |
+| --- | --- | --- | --- | --- | --- |
+| 10,000 | 0.071 ms | 0.109 ms | 0.667 ms | 0.230 ms | 0.060 ms |
+| 100,000 | 0.703 ms | 1.110 ms | 3.856 ms | 1.142 ms | 0.794 ms |
+| 1,000,000 | 7.222 ms | 11.683 ms | 34.745 ms | 10.610 ms | 8.443 ms |
+| 5,000,000 | 36.579 ms | 59.573 ms | 171.160 ms | 53.474 ms | 41.811 ms |
+
+Use `cargo run --release -p osv-math --features cuda --example bench_transformed_stats`
+to compare it with materializing transformed points first.
+
 ## GPU / CUDA nearest-neighbor search
 
 `nearest_neighbor_accelerated(queries, targets, acceleration)` finds, for
