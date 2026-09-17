@@ -38,10 +38,11 @@ fn uv_sphere(
     geometry_ops::Triangles { positions, indices }
 }
 
-/// Placements to compare: CPU reference, wgpu shader and (feature `cuda`) the
-/// CUDA driver port. `SDF_BENCH_MODES=cpu,cuda` narrows the set.
+/// Placements to compare: CPU reference, Auto heuristic, wgpu shader and
+/// (feature `cuda`) the CUDA driver port. `SDF_BENCH_MODES=cpu,auto,cuda`
+/// narrows the set.
 fn modes() -> Vec<Acceleration> {
-    let mut modes = vec![Acceleration::Cpu, Acceleration::Gpu];
+    let mut modes = vec![Acceleration::Cpu, Acceleration::Auto, Acceleration::Gpu];
     if cfg!(feature = "cuda") {
         modes.push(Acceleration::Cuda);
     }

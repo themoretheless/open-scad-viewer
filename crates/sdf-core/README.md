@@ -8,6 +8,16 @@ neutral `geometry_ops::Triangles` buffer. Mesh inspect lives in the bridge.
 `polygonize_with(closure, grid)` also supports arbitrary user-supplied scalar
 fields in native Rust.
 
+`polygonize_accelerated(field, grid, acceleration)` samples eligible primitive,
+CSG and mesh-distance fields on the device, then keeps snap-to-zero, boundary
+validation and marching-tetrahedra extraction on the CPU. `Acceleration::Auto`
+uses `recommended_for_polygonize(field, grid)`: small cheap fields stay on CPU;
+larger or mesh-heavy sample workloads select CUDA when compiled, otherwise the
+portable wgpu backend (Metal on macOS, Vulkan/DX12 elsewhere). On an RTX 5090,
+`examples/bench_gpu.rs` measured primitive 64^3 extraction at 67ms CPU vs
+62ms CUDA/wgpu, while a 1088-triangle mesh-distance field at 16^3 was 324ms
+CPU vs 1.3-1.6ms device.
+
 Primitive fields are signed distances. Boolean combinations and offsets of those
 combinations are implicit fields, not generally exact distances. Offsetting such
 a field does not promise a geometrically exact constant-distance surface.

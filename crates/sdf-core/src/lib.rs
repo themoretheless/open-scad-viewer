@@ -1173,18 +1173,62 @@ pub fn polygonize_with_values(field: &Field, grid: &Grid, values: &[f32]) -> Res
         grid,
     )
 }
+
+fn grid_sample_count(grid: &Grid) -> usize {
+    grid.cells.iter().map(|n| n + 1).product()
+}
+
+/// Suggests a placement for [`polygonize_accelerated`] from grid size and SDF
+/// field cost. Primitive CSG fields are cheap per point, while mesh-distance
+/// fields do a brute-force triangle scan at every grid sample; this combines
+/// both into `grid samples * field.sample_work()` units.
+///
+/// Measured with `examples/bench_gpu.rs` on an NVIDIA RTX 5090 (CUDA 13.4):
+/// primitive CSG at 64^3 (~550K work units) is only slightly faster on
+/// CUDA/wgpu (67ms CPU vs 62ms device), while a 1088-triangle mesh-distance
+/// field at 16^3 (~5.3M work units) is ~200x faster (324ms CPU vs 1.3-1.6ms
+/// device). `Auto` therefore stays on CPU below 500K work and prefers CUDA
+/// (or portable wgpu, including Metal on macOS) once the device launch cost is
+/// likely amortized.
+pub fn recommended_for_polygonize(field: &Field, grid: &Grid) -> Acceleration {
+    const SDF_GPU_WORK_THRESHOLD: usize = 500_000;
+    let work = grid_sample_count(grid).saturating_mul(field.sample_work());
+    if work < SDF_GPU_WORK_THRESHOLD {
+        Acceleration::Cpu
+    } else if cfg!(feature = "cuda") {
+        Acceleration::Cuda
+    } else {
+        Acceleration::Gpu
+    }
+}
+
+fn resolve_polygonize_acceleration(
+    acceleration: Acceleration,
+    field: &Field,
+    grid: &Grid,
+) -> Acceleration {
+    match acceleration {
+        Acceleration::Auto => recommended_for_polygonize(field, grid),
+        explicit => explicit,
+    }
+}
+
 /// `polygonize` with an optional GPU grid sampler. Eligible fields (primitive
 /// and CSG trees) sample the grid on the GPU in f32; the snap-to-zero, boundary
 /// validation and marching-tetrahedra extraction stay on the CPU. Everything
 /// else — and any failure — falls back to the CPU reference.
 ///
+/// `Acceleration::Auto` uses [`recommended_for_polygonize`].
 /// `Acceleration::Cuda` runs the PTX port through the CUDA driver (feature
-/// `cuda`), then the wgpu shader (feature `gpu`), then the CPU reference.
+/// `cuda`), then the wgpu shader (feature `gpu`, Metal on macOS), then the CPU
+/// reference.
 pub fn polygonize_accelerated(
     field: &Field,
     grid: &Grid,
     #[allow(unused_variables)] acceleration: Acceleration,
 ) -> Result<Triangles> {
+    #[allow(unused_variables)]
+    let acceleration = resolve_polygonize_acceleration(acceleration, field, grid);
     #[cfg(feature = "gpu")]
     if acceleration.is_gpu() {
         check_grid_budget(field, grid)?;
@@ -1235,6 +1279,67 @@ impl Field {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
+
+    #[test]
+    fn polygonize_auto_recommendation_tracks_work_size() {
+        let sphere = Field::Sphere {
+            center: [0.; 3],
+            radius: 1.,
+        };
+        let tiny = Grid {
+            min: [-1.5; 3],
+            max: [1.5; 3],
+            cells: [8, 8, 8],
+        };
+        assert_eq!(
+            recommended_for_polygonize(&sphere, &tiny),
+            Acceleration::Cpu
+        );
+        let large = Grid {
+            cells: [64, 64, 64],
+            ..tiny.clone()
+        };
+        let smooth = Field::SmoothUnion {
+            a: Box::new(sphere.clone()),
+            b: Box::new(Field::Box {
+                center: [0.5; 3],
+                half_size: [0.75; 3],
+            }),
+            radius: 0.25,
+        };
+        assert!(recommended_for_polygonize(&smooth, &large).is_gpu());
+        let mut mesh = Triangles {
+            positions: vec![
+                0., 0., 0., //
+                1., 0., 0., 0., 1., 0.,
+            ],
+            indices: Vec::new(),
+        };
+        for _ in 0..1024 {
+            mesh.indices.extend([0, 1, 2]);
+        }
+        let mesh_field = Field::from_triangles(mesh, false).unwrap();
+        assert!(recommended_for_polygonize(&mesh_field, &tiny).is_gpu());
+    }
+
+    #[test]
+    fn polygonize_auto_matches_cpu_on_small_grid() {
+        let field = Field::Sphere {
+            center: [0.; 3],
+            radius: 1.,
+        };
+        let grid = Grid {
+            min: [-1.5; 3],
+            max: [1.5; 3],
+            cells: [8, 8, 8],
+        };
+        let cpu = polygonize(&field, &grid).unwrap();
+        let automatic = polygonize_accelerated(&field, &grid, Acceleration::Auto).unwrap();
+        assert_eq!(cpu.indices, automatic.indices);
+        assert_eq!(cpu.positions, automatic.positions);
+    }
+
     #[cfg(feature = "gpu")]
     #[test]
     fn gpu_sampling_matches_cpu_field_within_tolerance() {
@@ -1482,7 +1587,6 @@ mod tests {
         }
     }
 
-    use super::*;
     fn sphere() -> Field {
         Field::Sphere {
             center: [0.; 3],
