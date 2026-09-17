@@ -52,9 +52,11 @@ pub fn dispatch(v: Value) -> Result<Value> {
             &field(&v, "surface")?,
             options,
         )?),
-        Some("brep_intersect_curve_ruled_surface") => encode(
-            intersections::curve_ruled_surface(&field(&v, "curve")?, &field(&v, "surface")?, options)?,
-        ),
+        Some("brep_intersect_curve_ruled_surface") => encode(intersections::curve_ruled_surface(
+            &field(&v, "curve")?,
+            &field(&v, "surface")?,
+            options,
+        )?),
         Some("brep_intersect_sphere_sphere") => encode(intersections::intersect_sphere_sphere(
             &field(&v, "first")?,
             &field(&v, "second")?,
@@ -75,25 +77,23 @@ pub fn dispatch(v: Value) -> Result<Value> {
             &field(&v, "second")?,
             options,
         )?),
-        Some("brep_intersect_cylinder_cylinder") => encode(
-            intersections::intersect_cylinder_cylinder(
+        Some("brep_intersect_cylinder_cylinder") => {
+            encode(intersections::intersect_cylinder_cylinder(
                 &field(&v, "first")?,
                 &field(&v, "second")?,
                 options,
-            )?,
-        ),
+            )?)
+        }
         Some("brep_intersect_plane_sphere") => encode(intersections::intersect_plane_sphere(
             &field(&v, "first")?,
             &field(&v, "second")?,
             options,
         )?),
-        Some("brep_intersect_plane_cylinder") => encode(
-            intersections::intersect_plane_cylinder(
-                &field(&v, "first")?,
-                &field(&v, "second")?,
-                options,
-            )?,
-        ),
+        Some("brep_intersect_plane_cylinder") => encode(intersections::intersect_plane_cylinder(
+            &field(&v, "first")?,
+            &field(&v, "second")?,
+            options,
+        )?),
         Some("brep_intersect_plane_cone") => encode(intersections::intersect_plane_cone(
             &field(&v, "first")?,
             &field(&v, "second")?,
@@ -151,7 +151,10 @@ mod tests {
         let second =
             nurbs_core::curve::Curve::from_polyline(vec![vec![1., -1., 0.], vec![1., 1., 0.]])
                 .unwrap();
-        let result = super::dispatch(value_codec::json!({"op":"brep_intersect_curve_curve","first":first,"second":second})).unwrap();
+        let result = super::dispatch(
+            value_codec::json!({"op":"brep_intersect_curve_curve","first":first,"second":second}),
+        )
+        .unwrap();
         assert_eq!(result["coverage"].as_str(), Some("numerically_resolved"));
         assert_eq!(result["permitsTopologyChange"].as_bool(), Some(false));
         assert_eq!(result["evidence"].as_str(), Some("numerical_uncertified"));
@@ -203,11 +206,9 @@ mod tests {
         assert_eq!(hit["contact"].as_str(), Some("transverse"));
         assert_eq!(hit["uvBox"].as_array().map(Vec::len), Some(4));
         // Ruling coincidence serializes the lifted UV path endpoints.
-        let ruling = nurbs_core::curve::Curve::from_polyline(vec![
-            vec![0.5, 0.25, 0.],
-            vec![0.5, 0.75, 0.],
-        ])
-        .unwrap();
+        let ruling =
+            nurbs_core::curve::Curve::from_polyline(vec![vec![0.5, 0.25, 0.], vec![0.5, 0.75, 0.]])
+                .unwrap();
         let overlap = super::dispatch(value_codec::json!({"op":"brep_intersect_curve_ruled_surface","curve":ruling,"surface":surface})).unwrap();
         let component = &overlap["components"][0];
         assert_eq!(component["kind"].as_str(), Some("overlap"));
@@ -231,11 +232,9 @@ mod tests {
             periodic_u: false,
             periodic_v: false,
         };
-        let curve = nurbs_core::curve::Curve::from_polyline(vec![
-            vec![1., 1., -1.],
-            vec![1., 1., 2.],
-        ])
-        .unwrap();
+        let curve =
+            nurbs_core::curve::Curve::from_polyline(vec![vec![1., 1., -1.], vec![1., 1., 2.]])
+                .unwrap();
         let refused = super::dispatch(value_codec::json!({"op":"brep_intersect_curve_ruled_surface","curve":curve,"surface":curved})).unwrap();
         assert_eq!(refused["coverage"].as_str(), Some("incomplete"));
         assert_eq!(
@@ -248,7 +247,12 @@ mod tests {
         let first = brep_core::analytic::sphere(2.).unwrap();
         let second = brep_core::transform::affine(
             &first,
-            [[1., 0., 0., 2.], [0., 1., 0., 0.], [0., 0., 1., 0.], [0., 0., 0., 1.]],
+            [
+                [1., 0., 0., 2.],
+                [0., 1., 0., 0.],
+                [0., 0., 1., 0.],
+                [0., 0., 0., 1.],
+            ],
         )
         .unwrap();
         let result = super::dispatch(
@@ -263,10 +267,7 @@ mod tests {
         assert!((circle["radius"].as_f64().unwrap() - 3_f64.sqrt()).abs() <= 1e-12);
         assert_eq!(circle["center"].as_array().map(Vec::len), Some(3));
         assert!((circle["center"][0].as_f64().unwrap() - 1.).abs() <= 1e-12);
-        assert_eq!(
-            circle["curve"]["weights"].as_array().map(Vec::len),
-            Some(9)
-        );
+        assert_eq!(circle["curve"]["weights"].as_array().map(Vec::len), Some(9));
         assert_eq!(
             circle["curve"]["weights"][1].as_f64(),
             Some(std::f64::consts::FRAC_1_SQRT_2)
@@ -282,7 +283,12 @@ mod tests {
         let place = |x: f64| {
             brep_core::transform::affine(
                 &sphere,
-                [[1., 0., 0., x], [0., 1., 0., 0.], [0., 0., 1., 0.], [0., 0., 0., 1.]],
+                [
+                    [1., 0., 0., x],
+                    [0., 1., 0., 0.],
+                    [0., 0., 1., 0.],
+                    [0., 0., 0., 1.],
+                ],
             )
             .unwrap()
         };
@@ -330,7 +336,12 @@ mod tests {
     fn serialized_sphere_cylinder_report_carries_exact_circles_and_stays_uncertified() {
         let sphere = brep_core::transform::affine(
             &brep_core::analytic::sphere(3.).unwrap(),
-            [[1., 0., 0., 0.], [0., 1., 0., 0.], [0., 0., 1., 4.], [0., 0., 0., 1.]],
+            [
+                [1., 0., 0., 0.],
+                [0., 1., 0., 0.],
+                [0., 0., 1., 4.],
+                [0., 0., 0., 1.],
+            ],
         )
         .unwrap();
         let cylinder = brep_core::analytic::cylinder(2., 8.).unwrap();
@@ -345,13 +356,8 @@ mod tests {
         let circle = &result["components"][0];
         assert_eq!(circle["kind"].as_str(), Some("circle"));
         assert!((circle["radius"].as_f64().unwrap() - 2.).abs() <= 1e-12);
-        assert!(
-            (circle["center"][2].as_f64().unwrap() - (4. - 5_f64.sqrt())).abs() <= 1e-12
-        );
-        assert_eq!(
-            circle["curve"]["weights"].as_array().map(Vec::len),
-            Some(9)
-        );
+        assert!((circle["center"][2].as_f64().unwrap() - (4. - 5_f64.sqrt())).abs() <= 1e-12);
+        assert_eq!(circle["curve"]["weights"].as_array().map(Vec::len), Some(9));
         assert_eq!(
             circle["curve"]["weights"][1].as_f64(),
             Some(std::f64::consts::FRAC_1_SQRT_2)
@@ -367,7 +373,12 @@ mod tests {
         let place = |radius: f64, x: f64, z: f64| {
             brep_core::transform::affine(
                 &brep_core::analytic::sphere(radius).unwrap(),
-                [[1., 0., 0., x], [0., 1., 0., 0.], [0., 0., 1., z], [0., 0., 0., 1.]],
+                [
+                    [1., 0., 0., x],
+                    [0., 1., 0., 0.],
+                    [0., 0., 1., z],
+                    [0., 0., 0., 1.],
+                ],
             )
             .unwrap()
         };
@@ -417,7 +428,12 @@ mod tests {
     fn serialized_sphere_cone_report_carries_exact_circles_and_stays_uncertified() {
         let sphere = brep_core::transform::affine(
             &brep_core::analytic::sphere(2.).unwrap(),
-            [[1., 0., 0., 0.], [0., 1., 0., 0.], [0., 0., 1., 3.], [0., 0., 0., 1.]],
+            [
+                [1., 0., 0., 0.],
+                [0., 1., 0., 0.],
+                [0., 0., 1., 3.],
+                [0., 0., 0., 1.],
+            ],
         )
         .unwrap();
         let cone = brep_core::analytic::frustum(1., 3., 6.).unwrap();
@@ -435,10 +451,7 @@ mod tests {
         // lower circle sits at z = 1.8 with the interpolated radius 1.6.
         assert!((circle["radius"].as_f64().unwrap() - 1.6).abs() <= 1e-12);
         assert!((circle["center"][2].as_f64().unwrap() - 1.8).abs() <= 1e-12);
-        assert_eq!(
-            circle["curve"]["weights"].as_array().map(Vec::len),
-            Some(9)
-        );
+        assert_eq!(circle["curve"]["weights"].as_array().map(Vec::len), Some(9));
         assert_eq!(
             circle["curve"]["weights"][1].as_f64(),
             Some(std::f64::consts::FRAC_1_SQRT_2)
@@ -454,7 +467,12 @@ mod tests {
         let place = |radius: f64, x: f64, z: f64| {
             brep_core::transform::affine(
                 &brep_core::analytic::sphere(radius).unwrap(),
-                [[1., 0., 0., x], [0., 1., 0., 0.], [0., 0., 1., z], [0., 0., 0., 1.]],
+                [
+                    [1., 0., 0., x],
+                    [0., 1., 0., 0.],
+                    [0., 0., 1., z],
+                    [0., 0., 0., 1.],
+                ],
             )
             .unwrap()
         };
@@ -506,7 +524,12 @@ mod tests {
         let first = brep_core::analytic::frustum(1., 3., 6.).unwrap();
         let second = brep_core::transform::affine(
             &brep_core::analytic::frustum(4., 2., 4.).unwrap(),
-            [[1., 0., 0., 0.], [0., 1., 0., 0.], [0., 0., 1., 1.], [0., 0., 0., 1.]],
+            [
+                [1., 0., 0., 0.],
+                [0., 1., 0., 0.],
+                [0., 0., 1., 1.],
+                [0., 0., 0., 1.],
+            ],
         )
         .unwrap();
         let result = super::dispatch(
@@ -523,10 +546,7 @@ mod tests {
         // the radius 2.4, strictly inside both height ranges.
         assert!((circle["radius"].as_f64().unwrap() - 2.4).abs() <= 1e-12);
         assert!((circle["center"][2].as_f64().unwrap() - 4.2).abs() <= 1e-12);
-        assert_eq!(
-            circle["curve"]["weights"].as_array().map(Vec::len),
-            Some(9)
-        );
+        assert_eq!(circle["curve"]["weights"].as_array().map(Vec::len), Some(9));
         assert_eq!(
             circle["curve"]["weights"][1].as_f64(),
             Some(std::f64::consts::FRAC_1_SQRT_2)
@@ -536,12 +556,18 @@ mod tests {
         assert_eq!(circle["firstUv"].as_array().map(Vec::len), Some(4));
         assert_eq!(circle["secondUv"].as_array().map(Vec::len), Some(4));
         assert!(
-            (circle["firstUv"][0]["arcs"][0]["controlPoints"][0][1].as_f64().unwrap() - 0.7)
+            (circle["firstUv"][0]["arcs"][0]["controlPoints"][0][1]
+                .as_f64()
+                .unwrap()
+                - 0.7)
                 .abs()
                 <= 1e-12
         );
         assert!(
-            (circle["secondUv"][0]["arcs"][0]["controlPoints"][0][1].as_f64().unwrap() - 0.8)
+            (circle["secondUv"][0]["arcs"][0]["controlPoints"][0][1]
+                .as_f64()
+                .unwrap()
+                - 0.8)
                 .abs()
                 <= 1e-12
         );
@@ -553,7 +579,12 @@ mod tests {
         let place = |r_bottom: f64, r_top: f64, height: f64, z: f64| {
             brep_core::transform::affine(
                 &brep_core::analytic::frustum(r_bottom, r_top, height).unwrap(),
-                [[1., 0., 0., 0.], [0., 1., 0., 0.], [0., 0., 1., z], [0., 0., 0., 1.]],
+                [
+                    [1., 0., 0., 0.],
+                    [0., 1., 0., 0.],
+                    [0., 0., 1., z],
+                    [0., 0., 0., 1.],
+                ],
             )
             .unwrap()
         };
@@ -595,7 +626,12 @@ mod tests {
         // Clearly off-axis: the general quartic is out of scope.
         let off_axis = brep_core::transform::affine(
             &brep_core::analytic::frustum(4., 2., 4.).unwrap(),
-            [[1., 0., 0., 0.5], [0., 1., 0., 0.], [0., 0., 1., 1.], [0., 0., 0., 1.]],
+            [
+                [1., 0., 0., 0.5],
+                [0., 1., 0., 0.],
+                [0., 0., 1., 1.],
+                [0., 0., 0., 1.],
+            ],
         )
         .unwrap();
         let off_axis = run(&first, &off_axis);
@@ -617,7 +653,12 @@ mod tests {
         let first = brep_core::analytic::cylinder(2., 8.).unwrap();
         let second = brep_core::transform::affine(
             &brep_core::analytic::cylinder(3., 8.).unwrap(),
-            [[1., 0., 0., 3.5], [0., 1., 0., 0.], [0., 0., 1., 0.], [0., 0., 0., 1.]],
+            [
+                [1., 0., 0., 3.5],
+                [0., 1., 0., 0.],
+                [0., 0., 1., 0.],
+                [0., 0., 0., 1.],
+            ],
         )
         .unwrap();
         let result = super::dispatch(
@@ -659,7 +700,12 @@ mod tests {
         let place = |radius: f64, height: f64, x: f64, z: f64| {
             brep_core::transform::affine(
                 &brep_core::analytic::cylinder(radius, height).unwrap(),
-                [[1., 0., 0., x], [0., 1., 0., 0.], [0., 0., 1., z], [0., 0., 0., 1.]],
+                [
+                    [1., 0., 0., x],
+                    [0., 1., 0., 0.],
+                    [0., 0., 1., z],
+                    [0., 0., 0., 1.],
+                ],
             )
             .unwrap()
         };
@@ -699,7 +745,12 @@ mod tests {
         let (sin, cos) = 0.3_f64.sin_cos();
         let skew = brep_core::transform::affine(
             &brep_core::analytic::cylinder(3., 8.).unwrap(),
-            [[1., 0., 0., 3.5], [0., cos, -sin, 0.], [0., sin, cos, 0.], [0., 0., 0., 1.]],
+            [
+                [1., 0., 0., 3.5],
+                [0., cos, -sin, 0.],
+                [0., sin, cos, 0.],
+                [0., 0., 0., 1.],
+            ],
         )
         .unwrap();
         let refused = run(&first, &skew);
@@ -728,7 +779,12 @@ mod tests {
             periodic: false,
         };
         let add = |a: [f64; 3], b: [f64; 3]| [a[0] + b[0], a[1] + b[1], a[2] + b[2]];
-        let corners = [origin, add(origin, u), add(add(origin, u), v), add(origin, v)];
+        let corners = [
+            origin,
+            add(origin, u),
+            add(add(origin, u), v),
+            add(origin, v),
+        ];
         let uv = [[0., 0.], [1., 0.], [1., 1.], [0., 1.]];
         let mut edges = Vec::new();
         let mut coedges = Vec::new();
@@ -805,7 +861,10 @@ mod tests {
             circle["curve"]["weights"][1].as_f64(),
             Some(std::f64::consts::FRAC_1_SQRT_2)
         );
-        assert_eq!(circle["planeUv"][0]["arcs"].as_array().map(Vec::len), Some(4));
+        assert_eq!(
+            circle["planeUv"][0]["arcs"].as_array().map(Vec::len),
+            Some(4)
+        );
         assert!(!circle["sphereUv"].as_array().unwrap().is_empty());
         assert!(circle["maxSampleResidual"].as_f64().unwrap() <= 1e-12);
     }
@@ -1035,11 +1094,11 @@ mod tests {
             assert!((circle["radius"].as_f64().unwrap() - oracle).abs() <= 1e-12);
             assert!((circle["center"][2].as_f64().unwrap() - 0.4).abs() <= 1e-12);
             assert_eq!(circle["full"].as_bool(), Some(true));
+            assert_eq!(circle["curve"]["weights"].as_array().map(Vec::len), Some(9));
             assert_eq!(
-                circle["curve"]["weights"].as_array().map(Vec::len),
-                Some(9)
+                circle["planeUv"][0]["arcs"].as_array().map(Vec::len),
+                Some(4)
             );
-            assert_eq!(circle["planeUv"][0]["arcs"].as_array().map(Vec::len), Some(4));
             // Iso-v parallel lifts: one degree-1 line per revolution quadrant.
             assert_eq!(circle["torusUv"].as_array().map(Vec::len), Some(4));
             for lift in circle["torusUv"].as_array().unwrap() {
@@ -1091,7 +1150,10 @@ mod tests {
         assert_eq!(miss["coverage"].as_str(), Some("numerically_resolved"));
         assert_eq!(miss["components"].as_array().map(Vec::len), Some(0));
         // Offset parallel-to-axis plane (Cassini oval): unsupported.
-        let cassini = run(&plane_patch([-5., 0.5, -5.], [10., 0., 0.], [0., 0., 10.]), &torus);
+        let cassini = run(
+            &plane_patch([-5., 0.5, -5.], [10., 0., 0.], [0., 0., 10.]),
+            &torus,
+        );
         assert_eq!(
             cassini["unresolved"][0]["reason"].as_str(),
             Some("unsupported_surface")
@@ -1099,7 +1161,11 @@ mod tests {
         // Oblique plane: the quartic section is refused honestly.
         let s = std::f64::consts::FRAC_1_SQRT_2;
         let oblique = run(
-            &plane_patch([-5., -5. * s, -5. * s], [10., 0., 0.], [0., 10. * s, 10. * s]),
+            &plane_patch(
+                [-5., -5. * s, -5. * s],
+                [10., 0., 0.],
+                [0., 10. * s, 10. * s],
+            ),
             &torus,
         );
         assert_eq!(
@@ -1140,10 +1206,7 @@ mod tests {
             assert!((circle["radius"].as_f64().unwrap() - 2.2).abs() <= 1e-12);
             let z = if k == 0 { -0.6 } else { 0.6 };
             assert!((circle["center"][2].as_f64().unwrap() - z).abs() <= 1e-12);
-            assert_eq!(
-                circle["curve"]["weights"].as_array().map(Vec::len),
-                Some(9)
-            );
+            assert_eq!(circle["curve"]["weights"].as_array().map(Vec::len), Some(9));
             // Iso-v parallel lifts: one degree-1 line per revolution quadrant.
             assert_eq!(circle["torusUv"].as_array().map(Vec::len), Some(4));
             for lift in circle["torusUv"].as_array().unwrap() {
@@ -1272,10 +1335,7 @@ mod tests {
             assert!((circle["radius"].as_f64().unwrap() - 2.2).abs() <= 1e-12);
             let z = if k == 0 { -0.6 } else { 0.6 };
             assert!((circle["center"][2].as_f64().unwrap() - z).abs() <= 1e-12);
-            assert_eq!(
-                circle["curve"]["weights"].as_array().map(Vec::len),
-                Some(9)
-            );
+            assert_eq!(circle["curve"]["weights"].as_array().map(Vec::len), Some(9));
             // Side lifts: one degree-1 iso-v line per side patch.
             assert_eq!(circle["cylinderUv"].as_array().map(Vec::len), Some(4));
             for lift in circle["cylinderUv"].as_array().unwrap() {
@@ -1414,10 +1474,7 @@ mod tests {
             let (rho, z) = [(2., 0.), (2.2, 0.6)][k];
             assert!((circle["radius"].as_f64().unwrap() - rho).abs() <= 1e-12);
             assert!((circle["center"][2].as_f64().unwrap() - z).abs() <= 1e-12);
-            assert_eq!(
-                circle["curve"]["weights"].as_array().map(Vec::len),
-                Some(9)
-            );
+            assert_eq!(circle["curve"]["weights"].as_array().map(Vec::len), Some(9));
             // Cone side lifts: one degree-1 iso-v line per side patch.
             assert_eq!(circle["coneUv"].as_array().map(Vec::len), Some(4));
             for lift in circle["coneUv"].as_array().unwrap() {
@@ -1569,10 +1626,7 @@ mod tests {
             let rho = [2.4, 3.6][k];
             assert!((circle["radius"].as_f64().unwrap() - rho).abs() <= 1e-12);
             assert!((circle["center"][2].as_f64().unwrap() - 0.8).abs() <= 1e-12);
-            assert_eq!(
-                circle["curve"]["weights"].as_array().map(Vec::len),
-                Some(9)
-            );
+            assert_eq!(circle["curve"]["weights"].as_array().map(Vec::len), Some(9));
             // Both torus lifts: one degree-1 iso-v line per revolution
             // quadrant patch of the profile row.
             for key in ["firstUv", "secondUv"] {
@@ -1663,10 +1717,7 @@ mod tests {
             refused["unresolved"][0]["reason"].as_str(),
             Some("unsupported_surface")
         );
-        let refused = run(
-            &brep_core::analytic::cylinder(2.2, 8.).unwrap(),
-            &first,
-        );
+        let refused = run(&brep_core::analytic::cylinder(2.2, 8.).unwrap(), &first);
         assert_eq!(
             refused["unresolved"][0]["reason"].as_str(),
             Some("unsupported_surface")

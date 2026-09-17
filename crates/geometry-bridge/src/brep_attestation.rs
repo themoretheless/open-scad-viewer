@@ -26,9 +26,7 @@ fn exact(value: &Value, keys: &[&str]) -> Result<()> {
         .as_object()
         .ok_or_else(|| invalid("Expected a semantic envelope object"))?;
     if object.len() != keys.len() || keys.iter().any(|key| !object.contains_key(*key)) {
-        return Err(invalid(
-            "Semantic envelope fields do not match the schema",
-        ));
+        return Err(invalid("Semantic envelope fields do not match the schema"));
     }
     Ok(())
 }
@@ -60,12 +58,7 @@ const CORE_KEYS: [&str; 14] = [
     "diagnosticTemplates",
 ];
 /// Envelope-level components that also travel as top-level request fields.
-const COMPONENT_KEYS: [&str; 4] = [
-    "source",
-    "provenance",
-    "tessellationIntents",
-    "diagnostics",
-];
+const COMPONENT_KEYS: [&str; 4] = ["source", "provenance", "tessellationIntents", "diagnostics"];
 
 /// Admits a transported SemanticProgramEnvelopeV1 object: exact envelope and
 /// core key sets, the schema literals, and deep-equality between every
@@ -130,20 +123,14 @@ fn sha256_hex(bytes: &[u8]) -> String {
 fn js_whitespace(c: char) -> bool {
     matches!(
         c,
-        '\t' | '\n'
-            | '\u{b}'
-            | '\u{c}'
-            | '\r'
-            | ' '
-            | '\u{a0}'
-            | '\u{1680}'
-            | '\u{2000}'..='\u{200a}'
-            | '\u{2028}'
-            | '\u{2029}'
-            | '\u{202f}'
-            | '\u{205f}'
-            | '\u{3000}'
-            | '\u{feff}'
+        '\t' | '\n' | '\u{b}' | '\u{c}' | '\r' | ' ' | '\u{a0}' | '\u{1680}' | '\u{2000}'
+            ..='\u{200a}'
+                | '\u{2028}'
+                | '\u{2029}'
+                | '\u{202f}'
+                | '\u{205f}'
+                | '\u{3000}'
+                | '\u{feff}'
     )
 }
 
@@ -647,11 +634,29 @@ mod tests {
         let base = attested_request();
         let valid = base["sourceText"].as_str().unwrap().to_owned();
         for (name, text) in [
-            ("unsupported contract", valid.replace("openscad-viewer/brep-1", "openscad-viewer/brep-2")),
-            ("duplicated language", valid.replace("// 😀 note", "// @language openscad-viewer/brep-1\n// 😀 note")),
-            ("engine selection", valid.replace("// 😀 note", "// @engine manifold\n// 😀 note")),
-            ("malformed reserved", valid.replace("// 😀 note", "// @Language\n// 😀 note")),
-            ("directive after body", format!("{valid}\n// @language legacy/current")),
+            (
+                "unsupported contract",
+                valid.replace("openscad-viewer/brep-1", "openscad-viewer/brep-2"),
+            ),
+            (
+                "duplicated language",
+                valid.replace(
+                    "// 😀 note",
+                    "// @language openscad-viewer/brep-1\n// 😀 note",
+                ),
+            ),
+            (
+                "engine selection",
+                valid.replace("// 😀 note", "// @engine manifold\n// 😀 note"),
+            ),
+            (
+                "malformed reserved",
+                valid.replace("// 😀 note", "// @Language\n// 😀 note"),
+            ),
+            (
+                "directive after body",
+                format!("{valid}\n// @language legacy/current"),
+            ),
         ] {
             let mut request = attested_request();
             request["source"] = descriptor(&text);
@@ -662,7 +667,10 @@ mod tests {
         }
         // A @requires header matching the declared capabilities admits.
         let mut request = attested_request();
-        let text = valid.replace("// 😀 note", "// @requires custom.feature, custom.feature\n// 😀 note");
+        let text = valid.replace(
+            "// 😀 note",
+            "// @requires custom.feature, custom.feature\n// 😀 note",
+        );
         request["source"] = descriptor(&text);
         request["sourceText"] = json!(text);
         attest_source(&request).unwrap();
@@ -805,7 +813,8 @@ mod tests {
         // A tampered envelope-only provenance row is adopted and refused.
         let mut envelope_only = json!({"nodes": [box_node()]});
         let mut envelope = envelope_object(&envelope_request());
-        envelope["provenance"] = json!([{"operation":0,"span":{"start":0,"end":1},"label":"forged"}]);
+        envelope["provenance"] =
+            json!([{"operation":0,"span":{"start":0,"end":1},"label":"forged"}]);
         envelope_only["envelope"] = envelope;
         assert!(super::super::brep_envelope::validate(&envelope_only, &nodes()).is_err());
     }

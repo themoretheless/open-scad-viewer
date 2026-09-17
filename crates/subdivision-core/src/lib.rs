@@ -292,6 +292,120 @@ mod tests {
         assert!(c.validate().is_err());
         assert!(square().subdivide(6).is_err());
     }
+    #[test]
+    fn brush_edits_cage_vertices_locally_and_preserves_faces() {
+        let cage = Cage::extrude(
+            &[[0., 0., 0.], [2., 0., 0.], [2., 2., 0.], [0., 2., 0.]],
+            [0., 0., 2.],
+        )
+        .unwrap();
+        let b = geometry_ops::Brush {
+            center: [2., 2., 2.],
+            radius: 0.5,
+            displacement: [0., 0., 1.],
+        };
+        let out = cage.brush(&b).unwrap();
+        assert_eq!(out.faces, cage.faces);
+        assert_eq!(out.vertices.len(), cage.vertices.len());
+        let moved: Vec<_> = cage
+            .vertices
+            .iter()
+            .zip(&out.vertices)
+            .filter(|(a, b)| a != b)
+            .collect();
+        assert_eq!(moved.len(), 1);
+        assert_eq!(*moved[0].0, [2., 2., 2.]);
+        assert_eq!(*moved[0].1, [2., 2., 3.]);
+        assert!(out.subdivide(2).unwrap().triangulate().is_ok());
+    }
+    #[test]
+    fn sculpt_uses_cage_normals_and_keeps_faces() {
+        use geometry_ops::{Falloff, SculptBrush, SculptKind};
+        let cage = Cage::extrude(
+            &[[0., 0., 0.], [2., 0., 0.], [2., 2., 0.], [0., 2., 0.]],
+            [0., 0., 2.],
+        )
+        .unwrap();
+        let geometry_ops::SculptTarget {
+            normals,
+            adjacency: rings,
+            ..
+        } = cage.sculpt_target().unwrap();
+        assert_eq!(normals.len(), 8);
+        assert!(rings.iter().all(|r| r.len() == 3));
+        for (p, n) in cage.vertices.iter().zip(&normals) {
+            assert!(math_core::dot(*n, math_core::sub(*p, [1., 1., 1.])) > 0.);
+        }
+        let inflate = cage
+            .sculpt(&SculptBrush {
+                falloff: Falloff::Constant,
+                ..SculptBrush::new(SculptKind::Inflate { strength: 1. }, [1., 1., 1.], 100.)
+            })
+            .unwrap();
+        assert_eq!(inflate.faces, cage.faces);
+        for (p, q) in cage.vertices.iter().zip(&inflate.vertices) {
+            assert!((math_core::norm(math_core::sub(*q, *p)) - 1.).abs() < 1e-12);
+        }
+        let smooth = cage
+            .sculpt(&SculptBrush::new(
+                SculptKind::Smooth { strength: 1. },
+                [2., 2., 2.],
+                0.5,
+            ))
+            .unwrap();
+        let mean = [
+            (2. + 2. + 0.) / 3.,
+            (0. + 2. + 2.) / 3.,
+            (2. + 0. + 2.) / 3.,
+        ];
+        let moved = smooth
+            .vertices
+            .iter()
+            .zip(&cage.vertices)
+            .find(|(a, b)| a != b)
+            .unwrap()
+            .0;
+        for k in 0..3 {
+            assert!((moved[k] - mean[k]).abs() < 1e-12);
+        }
+        assert!(smooth.subdivide(2).unwrap().triangulate().is_ok());
+        assert!(
+            cage.sculpt(&SculptBrush::new(
+                SculptKind::Pinch { strength: 2. },
+                [0.; 3],
+                1.
+            ))
+            .is_err()
+        );
+    }
+    #[test]
+    fn brush_rejects_invalid_brush_and_invalid_cage() {
+        let b = geometry_ops::Brush {
+            center: [0.; 3],
+            radius: 1.,
+            displacement: [0., 0., 1.],
+        };
+        assert!(
+            square()
+                .brush(&geometry_ops::Brush {
+                    radius: 0.,
+                    ..b.clone()
+                })
+                .is_err()
+        );
+        assert!(
+            square()
+                .brush(&geometry_ops::Brush {
+                    displacement: [f64::NAN; 3],
+                    ..b.clone()
+                })
+                .is_err()
+        );
+        let mut broken = square();
+        broken.faces.push(vec![0, 1, 2]);
+        assert!(broken.brush(&b).is_err());
+        assert_eq!(square().brush(&b).unwrap().vertices[0], [0., 0., 1.]);
+    }
     fn boundary_edges(t: &geometry_ops::Triangles) -> usize {
         let mut edges = BTreeMap::new();
         for tri in t.indices.as_chunks::<3>().0 {
@@ -401,6 +515,19 @@ impl Cage {
             .iter()
             .map(|&p| brush.apply(p))
             .collect::<Result<_>>()?;
+        cage.validate()?;
+        Ok(cage)
+    }
+    /// Newell face normals accumulated per control vertex, plus edge adjacency.
+    pub fn sculpt_target(&self) -> Result<geometry_ops::SculptTarget> {
+        self.validate()?;
+        let faces = self.faces.iter().map(Vec::as_slice);
+        geometry_ops::SculptTarget::from_faces(self.vertices.clone(), faces)
+    }
+    /// Sculpts control vertices; faces are unchanged and the cage stays valid.
+    pub fn sculpt(&self, brush: &geometry_ops::SculptBrush) -> Result<Self> {
+        let mut cage = self.clone();
+        cage.vertices = self.sculpt_target()?.sculpt(brush)?;
         cage.validate()?;
         Ok(cage)
     }

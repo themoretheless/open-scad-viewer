@@ -133,9 +133,7 @@ fn require_exact_fields(value: &Value, expected: &[&str], label: &str) -> Result
     let object = value
         .as_object()
         .ok_or_else(|| input(format!("{label} must be an object")))?;
-    if object.len() != expected.len()
-        || !expected.iter().all(|field| object.contains_key(*field))
-    {
+    if object.len() != expected.len() || !expected.iter().all(|field| object.contains_key(*field)) {
         return Err(input(format!(
             "{label} contains missing or unauthorized fields"
         )));
@@ -437,6 +435,13 @@ pub fn dispatch(v: Value) -> Result<Value> {
             &field(&v, "mesh")?,
             &field(&v, "deformation")?,
         )?),
+        "polygon_sculpt" => encode(polygon_core::solid::edit::sculpt(
+            &field(&v, "mesh")?,
+            &field(&v, "brush")?,
+        )?),
+        "subdivision_sculpt" => {
+            encode(field::<subdivision_core::Cage>(&v, "cage")?.sculpt(&field(&v, "brush")?)?)
+        }
         "polygon_brush" => encode(polygon_core::solid::edit::brush(
             &field(&v, "mesh")?,
             &field(&v, "brush")?,
@@ -455,6 +460,11 @@ pub fn dispatch(v: Value) -> Result<Value> {
         "sdf_deform" => {
             encode(field::<sdf_core::Field>(&v, "field")?.deform(field(&v, "deformation")?)?)
         }
+        "sdf_sculpt" => encode(field::<sdf_core::Field>(&v, "field")?.sculpt(&field::<
+            sdf_core::SdfStroke,
+        >(
+            &v, "stroke"
+        )?)?),
         "sdf_sculpt_sphere" => encode(field::<sdf_core::Field>(&v, "field")?.sculpt_sphere(
             field(&v, "center")?,
             field(&v, "radius")?,
@@ -679,11 +689,7 @@ pub fn dispatch(v: Value) -> Result<Value> {
                 .ok_or_else(|| input("Invalid operation kind"))?;
             match kind {
                 "endpointSnap" => {
-                    require_exact_fields(
-                        operation,
-                        &["kind", "vertex", "to"],
-                        "endpoint snap",
-                    )?;
+                    require_exact_fields(operation, &["kind", "vertex", "to"], "endpoint snap")?;
                     encode(brep_core::transactions::authorized_heal_endpoint(
                         &model,
                         field(operation, "vertex")?,
@@ -762,18 +768,16 @@ pub fn dispatch(v: Value) -> Result<Value> {
             field(&v, "radialSegments")?,
             field(&v, "latitudeSegments")?,
         )?),
-        "brep_nurbs_canonical_graph_solid_v3" => encode(
-            brep_core::canonical_bezier_graph_solid(
+        "brep_nurbs_canonical_graph_solid_v3" => encode(brep_core::canonical_bezier_graph_solid(
+            field(&v, "degreeU")?,
+            field(&v, "degreeV")?,
+        )?),
+        "brep_nurbs_canonical_rational_graph_solid_v5" => {
+            encode(brep_core::canonical_rational_graph_solid(
                 field(&v, "degreeU")?,
                 field(&v, "degreeV")?,
-            )?,
-        ),
-        "brep_nurbs_canonical_rational_graph_solid_v5" => encode(
-            brep_core::canonical_rational_graph_solid(
-                field(&v, "degreeU")?,
-                field(&v, "degreeV")?,
-            )?,
-        ),
+            )?)
+        }
         "brep_nurbs_canonical_multispan_graph_solid" => {
             require_exact_fields(&v, &["op", "spansU", "spansV"], "multispan graph request")?;
             encode(brep_core::canonical_multispan_graph_solid(
@@ -782,50 +786,77 @@ pub fn dispatch(v: Value) -> Result<Value> {
             )?)
         }
         "brep_nurbs_boolean_bezier_le3_v3" => {
-            require_exact_fields(&v, &["op", "a", "b", "operation"], "V3 graph Boolean request")?;
+            require_exact_fields(
+                &v,
+                &["op", "a", "b", "operation"],
+                "V3 graph Boolean request",
+            )?;
             let a: brep_core::Model = field(&v, "a")?;
             let b: brep_core::Model = field(&v, "b")?;
             let operation = v
                 .get("operation")
                 .and_then(Value::as_str)
                 .ok_or_else(|| input("Invalid operation"))?;
-            let (model, certificate) =
-                brep_core::nurbs_boolean_graph_patch_v3(&a, &b, operation)?;
+            let (model, certificate) = brep_core::nurbs_boolean_graph_patch_v3(&a, &b, operation)?;
             curved_graph_boolean_value(model, certificate)
         }
         "brep_nurbs_boolean_bezier_le3_v4_unequal" => {
-            require_exact_fields(&v, &["op", "a", "b", "operation"], "V4 unequal graph Boolean request")?;
+            require_exact_fields(
+                &v,
+                &["op", "a", "b", "operation"],
+                "V4 unequal graph Boolean request",
+            )?;
             let (model, certificate) = brep_core::nurbs_boolean_graph_patch_unequal_v4(
                 &field(&v, "a")?,
                 &field(&v, "b")?,
-                v.get("operation").and_then(Value::as_str).ok_or_else(|| input("Invalid operation"))?,
+                v.get("operation")
+                    .and_then(Value::as_str)
+                    .ok_or_else(|| input("Invalid operation"))?,
             )?;
             curved_graph_boolean_value(model, certificate)
         }
         "brep_nurbs_boolean_bezier_le3_v4_containment" => {
-            require_exact_fields(&v, &["op", "graph", "cutter", "operation"], "V4 containment graph Boolean request")?;
+            require_exact_fields(
+                &v,
+                &["op", "graph", "cutter", "operation"],
+                "V4 containment graph Boolean request",
+            )?;
             let (model, certificate) = brep_core::nurbs_boolean_graph_containment_v4(
                 &field(&v, "graph")?,
                 &field(&v, "cutter")?,
-                v.get("operation").and_then(Value::as_str).ok_or_else(|| input("Invalid operation"))?,
+                v.get("operation")
+                    .and_then(Value::as_str)
+                    .ok_or_else(|| input("Invalid operation"))?,
             )?;
             contained_graph_boolean_value(model, certificate)
         }
         "brep_nurbs_boolean_bezier_le3_v5_rational" => {
-            require_exact_fields(&v, &["op", "a", "b", "operation"], "V5 rational graph Boolean request")?;
+            require_exact_fields(
+                &v,
+                &["op", "a", "b", "operation"],
+                "V5 rational graph Boolean request",
+            )?;
             let (model, certificate) = brep_core::nurbs_boolean_rational_graph_patch_v5(
                 &field(&v, "a")?,
                 &field(&v, "b")?,
-                v.get("operation").and_then(Value::as_str).ok_or_else(|| input("Invalid operation"))?,
+                v.get("operation")
+                    .and_then(Value::as_str)
+                    .ok_or_else(|| input("Invalid operation"))?,
             )?;
             curved_graph_boolean_value(model, certificate)
         }
         "brep_nurbs_boolean_general" => {
-            require_exact_fields(&v, &["op", "a", "b", "operation"], "general NURBS Boolean request")?;
+            require_exact_fields(
+                &v,
+                &["op", "a", "b", "operation"],
+                "general NURBS Boolean request",
+            )?;
             let (model, certificate) = brep_core::author_general_nurbs_boolean(
                 &field(&v, "a")?,
                 &field(&v, "b")?,
-                v.get("operation").and_then(Value::as_str).ok_or_else(|| input("Invalid operation"))?,
+                v.get("operation")
+                    .and_then(Value::as_str)
+                    .ok_or_else(|| input("Invalid operation"))?,
             )?;
             general_nurbs_boolean_value(model, certificate)
         }
@@ -955,8 +986,7 @@ pub fn dispatch(v: Value) -> Result<Value> {
             }))
         }
         "brep_nurbs_import_step_v3" => {
-            let (model, cert, report) =
-                brep_core::import_step_v3(&field::<String>(&v, "text")?)?;
+            let (model, cert, report) = brep_core::import_step_v3(&field::<String>(&v, "text")?)?;
             encode(json!({
                 "model": model,
                 "certificate": {

@@ -43,11 +43,16 @@ fn rederive_occurrence_digests(occurrences: &mut [Value], operations: &[Value]) 
     let mut ids: Vec<String> = Vec::with_capacity(occurrences.len());
     for index in 0..occurrences.len() {
         let operation = occurrences[index]["operation"].as_u64().unwrap() as usize;
-        let parent = occurrences[index]["parent"].as_u64().map(|row| row as usize);
+        let parent = occurrences[index]["parent"]
+            .as_u64()
+            .map(|row| row as usize);
         let static_parent = occurrences[index]["staticParent"]
             .as_u64()
             .map(|row| row as usize);
-        let slots = occurrences[index]["dynamicSlots"].as_array().unwrap().clone();
+        let slots = occurrences[index]["dynamicSlots"]
+            .as_array()
+            .unwrap()
+            .clone();
         let id = super::super::brep_identity::derive_occurrence_id(
             parent.map(|row| ids[row].as_str()),
             static_parent.map(|row| ids[row].as_str()),
@@ -55,8 +60,9 @@ fn rederive_occurrence_digests(occurrences: &mut [Value], operations: &[Value]) 
             &slots,
         );
         if let Some(ordinal) = occurrences[index]["outputOrdinal"].as_u64() {
-            occurrences[index]["sceneEntityId"] =
-                json!(super::super::brep_identity::derive_scene_entity_id(&id, ordinal));
+            occurrences[index]["sceneEntityId"] = json!(
+                super::super::brep_identity::derive_scene_entity_id(&id, ordinal)
+            );
         }
         occurrences[index]["occurrenceId"] = json!(id.clone());
         ids.push(id);
@@ -156,7 +162,10 @@ fn refuses_a_broken_transform_map_chain() {
         &fixture.execution,
     )
     .unwrap_err();
-    assert!(error.message.contains("matching ordered frontier"), "{error:?}");
+    assert!(
+        error.message.contains("matching ordered frontier"),
+        "{error:?}"
+    );
     // A transform output row carrying the wrong node kind is refused too.
     let mut fixture = load("difference");
     fixture.occurrences[3]["node"] = json!(3);
@@ -176,29 +185,36 @@ fn refuses_a_bad_boolean_operand_structure() {
         &fixture.execution,
     )
     .unwrap_err();
-    assert!(error.message.contains("ordered occurrence frontier"), "{error:?}");
+    assert!(
+        error.message.contains("ordered occurrence frontier"),
+        "{error:?}"
+    );
     // The boolean node operation must match its static operation.
     let mut fixture = load("unionTransform");
     fixture.nodes[3]["operation"] = json!("intersection");
-    assert!(validate_occurrence_production(
-        &fixture.operations,
-        &fixture.occurrences,
-        &fixture.nodes,
-        &fixture.result,
-        &fixture.execution,
-    )
-    .is_err());
+    assert!(
+        validate_occurrence_production(
+            &fixture.operations,
+            &fixture.occurrences,
+            &fixture.nodes,
+            &fixture.result,
+            &fixture.execution,
+        )
+        .is_err()
+    );
     // Difference root must consume exactly reduced base and cutters.
     let mut fixture = load("difference");
     fixture.nodes[3]["operation"] = json!("union");
-    assert!(validate_occurrence_production(
-        &fixture.operations,
-        &fixture.occurrences,
-        &fixture.nodes,
-        &fixture.result,
-        &fixture.execution,
-    )
-    .is_err());
+    assert!(
+        validate_occurrence_production(
+            &fixture.operations,
+            &fixture.occurrences,
+            &fixture.nodes,
+            &fixture.result,
+            &fixture.execution,
+        )
+        .is_err()
+    );
 }
 
 #[test]
@@ -207,14 +223,16 @@ fn refuses_a_hull_reduction_mismatch() {
     let mut fixture = load("hull");
     fixture.nodes[3]["kind"] = json!("boolean");
     fixture.nodes[3]["operation"] = json!("union");
-    assert!(validate_occurrence_production(
-        &fixture.operations,
-        &fixture.occurrences,
-        &fixture.nodes,
-        &fixture.result,
-        &fixture.execution,
-    )
-    .is_err());
+    assert!(
+        validate_occurrence_production(
+            &fixture.operations,
+            &fixture.occurrences,
+            &fixture.nodes,
+            &fixture.result,
+            &fixture.execution,
+        )
+        .is_err()
+    );
 }
 
 #[test]
@@ -226,8 +244,9 @@ fn refuses_a_misplaced_output_ordinal() {
         .as_str()
         .unwrap()
         .to_owned();
-    fixture.occurrences[3]["sceneEntityId"] =
-        json!(super::super::brep_identity::derive_scene_entity_id(&occurrence_id, 1));
+    fixture.occurrences[3]["sceneEntityId"] = json!(
+        super::super::brep_identity::derive_scene_entity_id(&occurrence_id, 1)
+    );
     assert!(admit(&fixture).is_err());
     // A non-producing frame row cannot own an output slot either.
     let mut fixture = load("difference");
@@ -237,8 +256,9 @@ fn refuses_a_misplaced_output_ordinal() {
         .as_str()
         .unwrap()
         .to_owned();
-    fixture.occurrences[1]["sceneEntityId"] =
-        json!(super::super::brep_identity::derive_scene_entity_id(&occurrence_id, 0));
+    fixture.occurrences[1]["sceneEntityId"] = json!(
+        super::super::brep_identity::derive_scene_entity_id(&occurrence_id, 0)
+    );
     assert!(admit(&fixture).is_err());
 }
 
@@ -300,35 +320,41 @@ fn refuses_a_broken_result_frontier_match() {
     // The transported result must equal the synthetic program frontier.
     let mut fixture = load("difference");
     fixture.result["item"]["producerOccurrence"] = json!(1);
-    assert!(validate_occurrence_production(
-        &fixture.operations,
-        &fixture.occurrences,
-        &fixture.nodes,
-        &fixture.result,
-        &fixture.execution,
-    )
-    .is_err());
+    assert!(
+        validate_occurrence_production(
+            &fixture.operations,
+            &fixture.occurrences,
+            &fixture.nodes,
+            &fixture.result,
+            &fixture.execution,
+        )
+        .is_err()
+    );
     let mut fixture = load("difference");
     fixture.result["item"]["identityOccurrence"] = json!(2);
-    assert!(validate_occurrence_production(
-        &fixture.operations,
-        &fixture.occurrences,
-        &fixture.nodes,
-        &fixture.result,
-        &fixture.execution,
-    )
-    .is_err());
+    assert!(
+        validate_occurrence_production(
+            &fixture.operations,
+            &fixture.occurrences,
+            &fixture.nodes,
+            &fixture.result,
+            &fixture.execution,
+        )
+        .is_err()
+    );
     // A multi-result children() program: dropping one item unbalances it.
     let mut fixture = load("children");
     fixture.result["items"].as_array_mut().unwrap().remove(1);
-    assert!(validate_occurrence_production(
-        &fixture.operations,
-        &fixture.occurrences,
-        &fixture.nodes,
-        &fixture.result,
-        &fixture.execution,
-    )
-    .is_err());
+    assert!(
+        validate_occurrence_production(
+            &fixture.operations,
+            &fixture.occurrences,
+            &fixture.nodes,
+            &fixture.result,
+            &fixture.execution,
+        )
+        .is_err()
+    );
 }
 
 #[test]
@@ -337,25 +363,29 @@ fn refuses_interrupted_legacy_evaluation_artifacts() {
     // first); the replay refuses them defensively as host-side territory.
     let mut fixture = load("difference");
     fixture.execution["terminal"] = json!({"tag":"legacy-language-error"});
-    assert!(validate_occurrence_production(
-        &fixture.operations,
-        &fixture.occurrences,
-        &fixture.nodes,
-        &fixture.result,
-        &fixture.execution,
-    )
-    .is_err());
+    assert!(
+        validate_occurrence_production(
+            &fixture.operations,
+            &fixture.occurrences,
+            &fixture.nodes,
+            &fixture.result,
+            &fixture.execution,
+        )
+        .is_err()
+    );
     let mut fixture = load("difference");
     fixture.execution["discardedEffects"] =
         json!([{"tag":"legacy-difference-cutters","root":0,"ownerOccurrence":0}]);
-    assert!(validate_occurrence_production(
-        &fixture.operations,
-        &fixture.occurrences,
-        &fixture.nodes,
-        &fixture.result,
-        &fixture.execution,
-    )
-    .is_err());
+    assert!(
+        validate_occurrence_production(
+            &fixture.operations,
+            &fixture.occurrences,
+            &fixture.nodes,
+            &fixture.result,
+            &fixture.execution,
+        )
+        .is_err()
+    );
 }
 
 #[test]

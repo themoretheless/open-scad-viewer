@@ -160,3 +160,177 @@ fn output_budget_is_checked_before_elevation() {
     };
     assert_eq!(c.elevate(25).unwrap_err().code, "NURBS_RESOURCE_LIMIT");
 }
+
+#[test]
+fn brush_moves_controls_locally_and_preserves_rational_definition() {
+    let c = circle();
+    let b = geometry_ops::Brush {
+        center: [1., 1., 0.],
+        radius: 0.5,
+        displacement: [0., 0., 2.],
+    };
+    let out = edit::brush_curve(&c, &b).unwrap();
+    assert_eq!(out.degree, c.degree);
+    assert_eq!(out.knots, c.knots);
+    assert_eq!(out.weights, c.weights);
+    assert_eq!(out.control_points[0], c.control_points[0]);
+    assert_eq!(out.control_points[2], c.control_points[2]);
+    near(&out.control_points[1], &[1., 1., 2.]);
+    // Endpoints are interpolated by the clamped curve and remain untouched.
+    near(&out.evaluate(0.).unwrap().point, &[1., 0., 0.]);
+    near(&out.evaluate(1.).unwrap().point, &[0., 1., 0.]);
+    assert!(out.evaluate(0.5).unwrap().point[2] > 0.);
+
+    let s = surface::extrude(&c, [0., 0., 3.]).unwrap();
+    let sb = geometry_ops::Brush {
+        center: [1., 1., 3.],
+        radius: 0.5,
+        displacement: [1., 0., 0.],
+    };
+    let sout = edit::brush_surface(&s, &sb).unwrap();
+    assert_eq!(sout.knots_u, s.knots_u);
+    assert_eq!(sout.knots_v, s.knots_v);
+    assert_eq!(sout.weights, s.weights);
+    let moved = s
+        .control_points
+        .iter()
+        .flatten()
+        .zip(sout.control_points.iter().flatten())
+        .filter(|(a, b)| a != b)
+        .count();
+    assert_eq!(moved, 1, "exactly one control point lies inside the brush");
+    near(
+        &sout.evaluate(0., 0.).unwrap().point,
+        &s.evaluate(0., 0.).unwrap().point,
+    );
+}
+#[test]
+fn brush_rejects_invalid_brushes_and_inputs() {
+    let c = circle();
+    let bad = geometry_ops::Brush {
+        center: [0.; 3],
+        radius: 0.,
+        displacement: [1., 0., 0.],
+    };
+    assert!(edit::brush_curve(&c, &bad).is_err());
+    let s = surface::extrude(&c, [0., 0., 3.]).unwrap();
+    assert!(edit::brush_surface(&s, &bad).is_err());
+    let ok = geometry_ops::Brush { radius: 1., ..bad };
+    let mut flat = c.clone();
+    flat.control_points = flat
+        .control_points
+        .iter()
+        .map(|p| p[..2].to_vec())
+        .collect();
+    assert!(
+        edit::brush_curve(&flat, &ok).is_err(),
+        "2D controls are rejected"
+    );
+    let mut broken = c.clone();
+    broken.knots.pop();
+    assert!(edit::brush_curve(&broken, &ok).is_err());
+}
+
+#[test]
+fn sculpt_targets_expose_polygon_and_net_structure() {
+    let c = circle();
+    let geometry_ops::SculptTarget {
+        positions,
+        normals,
+        adjacency: rings,
+    } = edit::curve_sculpt_target(&c).unwrap();
+    assert_eq!(positions.len(), 3);
+    assert_eq!(rings, vec![vec![1], vec![0, 2], vec![1]]);
+    near(&normals[0], &[0., 0., 0.]);
+    near(
+        &normals[1],
+        &[
+            std::f64::consts::FRAC_1_SQRT_2,
+            std::f64::consts::FRAC_1_SQRT_2,
+            0.,
+        ],
+    );
+    let s = surface::extrude(&c, [0., 0., 3.]).unwrap();
+    let geometry_ops::SculptTarget {
+        normals: snormals,
+        adjacency: srings,
+        ..
+    } = edit::surface_sculpt_target(&s).unwrap();
+    assert_eq!(
+        snormals.len(),
+        s.control_points.len() * s.control_points[0].len()
+    );
+    assert!(srings.iter().all(|r| (2..=4).contains(&r.len())));
+    assert!(
+        snormals
+            .iter()
+            .all(|n| (math_core::norm(*n) - 1.).abs() < 1e-9)
+    );
+}
+#[test]
+fn sculpt_edits_preserve_rational_definition() {
+    use geometry_ops::{Falloff, SculptBrush, SculptKind};
+    let c = circle();
+    let draw = edit::sculpt_curve(
+        &c,
+        &SculptBrush::new(SculptKind::Draw { strength: 1. }, [1., 1., 0.], 0.5),
+    )
+    .unwrap();
+    assert_eq!(draw.knots, c.knots);
+    assert_eq!(draw.weights, c.weights);
+    near(
+        &draw.control_points[1],
+        &[
+            1. + std::f64::consts::FRAC_1_SQRT_2,
+            1. + std::f64::consts::FRAC_1_SQRT_2,
+            0.,
+        ],
+    );
+    near(&draw.control_points[0], &c.control_points[0]);
+    let smooth = edit::sculpt_curve(
+        &c,
+        &SculptBrush::new(SculptKind::Smooth { strength: 1. }, [1., 1., 0.], 0.5),
+    )
+    .unwrap();
+    near(&smooth.control_points[1], &[0.5, 0.5, 0.]);
+    let s = surface::extrude(&c, [0., 0., 3.]).unwrap();
+    let inflate = edit::sculpt_surface(
+        &s,
+        &SculptBrush {
+            falloff: Falloff::Constant,
+            ..SculptBrush::new(SculptKind::Inflate { strength: 0.5 }, [0.; 3], 100.)
+        },
+    )
+    .unwrap();
+    assert_eq!(inflate.knots_u, s.knots_u);
+    assert_eq!(inflate.weights, s.weights);
+    for (a, b) in s
+        .control_points
+        .iter()
+        .flatten()
+        .zip(inflate.control_points.iter().flatten())
+    {
+        let d: Vec<f64> = a.iter().zip(b).map(|(x, y)| y - x).collect();
+        assert!((math_core::norm([d[0], d[1], d[2]]) - 0.5).abs() < 1e-9);
+    }
+    assert!(
+        edit::sculpt_curve(
+            &c,
+            &SculptBrush::new(SculptKind::Flatten { strength: 1.5 }, [0.; 3], 1.)
+        )
+        .is_err()
+    );
+    let mut flat = c.clone();
+    flat.control_points = flat
+        .control_points
+        .iter()
+        .map(|p| p[..2].to_vec())
+        .collect();
+    assert!(
+        edit::sculpt_curve(
+            &flat,
+            &SculptBrush::new(SculptKind::Draw { strength: 1. }, [0.; 3], 1.)
+        )
+        .is_err()
+    );
+}

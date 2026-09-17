@@ -15,6 +15,8 @@ pub const KIND_SMOOTH_UNION: u32 = 6;
 pub const KIND_OFFSET: u32 = 7;
 pub const KIND_MESH_UNSIGNED: u32 = 8;
 pub const KIND_MESH_SIGNED: u32 = 9;
+pub const KIND_CAPSULE: u32 = 10;
+pub const KIND_SMOOTH_DIFFERENCE: u32 = 11;
 
 /// Postorder records: leaves first, value ops after their operands, so the
 /// shader evaluates with a plain value stack.
@@ -78,6 +80,15 @@ impl Field {
                     offset,
                     &[*major_radius as f32, *minor_radius as f32],
                 ),
+                Field::Capsule { a, b, radius } => {
+                    let mut params = [0f32; 8];
+                    for i in 0..3 {
+                        params[i] = (a[i] + offset[i]) as f32;
+                        params[3 + i] = (b[i] + offset[i]) as f32;
+                    }
+                    params[6] = *radius as f32;
+                    leaf(flat, KIND_CAPSULE, params);
+                }
                 Field::Union { a, b }
                 | Field::Intersection { a, b }
                 | Field::Difference { a, b } => {
@@ -90,12 +101,16 @@ impl Field {
                     };
                     leaf(flat, kind, [0.; 8]);
                 }
-                Field::SmoothUnion { a, b, radius } => {
+                Field::SmoothUnion { a, b, radius } | Field::SmoothDifference { a, b, radius } => {
                     walk(a, offset, flat)?;
                     walk(b, offset, flat)?;
                     let mut params = [0.; 8];
                     params[0] = *radius as f32;
-                    leaf(flat, KIND_SMOOTH_UNION, params);
+                    let kind = match field {
+                        Field::SmoothUnion { .. } => KIND_SMOOTH_UNION,
+                        _ => KIND_SMOOTH_DIFFERENCE,
+                    };
+                    leaf(flat, kind, params);
                 }
                 Field::Offset { input, distance } => {
                     walk(input, offset, flat)?;

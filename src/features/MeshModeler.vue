@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { computed, nextTick, ref, shallowRef, watch } from 'vue'
+import { SCULPT_FALLOFFS, SCULPT_KINDS, buildSculptBrush, isFractionalSculptKind, type SculptFalloff, type SculptKind } from '../services/geometryEditing'
+import { meshCentroid, sculptMesh } from '../services/meshEditing'
 import {
   MeshHistory,
   booleanMeshObjects,
-  brushDisplace,
   buildEdgeList,
   createBoxMesh,
   createUvSphereMesh,
@@ -67,6 +68,10 @@ const insetAmount = ref(0.5)
 const mergeDistance = ref(0.01)
 const brushRadius = ref(5)
 const brushStrength = ref(1)
+const brushKind = ref<SculptKind>('grab')
+const brushFalloff = ref<SculptFalloff>('smooth')
+const brushMirror = ref<[boolean, boolean, boolean]>([false, false, false])
+const brushIsFraction = computed(() => isFractionalSculptKind(brushKind.value))
 const twistAmount = ref(0.1)
 const booleanOp = ref<'union' | 'difference' | 'intersection'>('union')
 const booleanTarget = ref('')
@@ -299,20 +304,12 @@ function applyBrush() {
   run(() => {
     if (!selected.value) return
     const mesh = selected.value.mesh
-    const count = mesh.positions.length / 3
-    const center: [number, number, number] = [0, 0, 0]
-    for (let i = 0; i < count; i++) {
-      center[0] += mesh.positions[i * 3]
-      center[1] += mesh.positions[i * 3 + 1]
-      center[2] += mesh.positions[i * 3 + 2]
-    }
-    center[0] /= count; center[1] /= count; center[2] /= count
+    // Selected vertices define the stroke center when present; otherwise the object centroid.
+    const center = meshCentroid(mesh, selectedVerts.value)
+    const brush = buildSculptBrush({ kind: brushKind.value, radius: brushRadius.value, strength: brushStrength.value, falloff: brushFalloff.value, mirror: brushMirror.value }, center)
     const d = history.document
     const index = d.objects.findIndex(o => o.id === selection.value)
-    d.objects[index] = {
-      ...d.objects[index],
-      mesh: brushDisplace(mesh, center, brushRadius.value, [0, 0, brushStrength.value]),
-    }
+    d.objects[index] = { ...d.objects[index], mesh: sculptMesh(mesh, brush) }
     commit(d)
   })
 }
@@ -553,9 +550,25 @@ const scene = computed(() => document.value.objects.filter(o => o.visible).map(o
           <button type="button" @click="applySeparate">Separate faces</button>
           <button type="button" @click="applyJoin">Join objects</button>
           <button type="button" @click="applySymmetrize">Symmetrize X</button>
-          <label>Brush R <input v-model.number="brushRadius" type="number" step="0.5" min="0.1" /></label>
-          <label>Brush Z <input v-model.number="brushStrength" type="number" step="0.1" /></label>
-          <button type="button" @click="applyBrush">Sculpt brush</button>
+          <h3>{{ label('Скульптинг', 'Sculpt') }}</h3>
+          <label>{{ label('Кисть', 'Brush') }}
+            <select v-model="brushKind">
+              <option v-for="k in SCULPT_KINDS" :key="k" :value="k">{{ k }}</option>
+            </select>
+          </label>
+          <label>Falloff
+            <select v-model="brushFalloff">
+              <option v-for="f in SCULPT_FALLOFFS" :key="f" :value="f">{{ f }}</option>
+            </select>
+          </label>
+          <label>R <input v-model.number="brushRadius" type="number" step="0.5" min="0.1" /></label>
+          <label>{{ brushIsFraction ? label('Доля', 'Amount') : label('Сила', 'Strength') }}
+            <input v-model.number="brushStrength" type="number" :step="brushIsFraction ? 0.05 : 0.1" :min="brushIsFraction ? 0 : undefined" :max="brushIsFraction ? 1 : undefined" />
+          </label>
+          <label title="Mirror X"><input v-model="brushMirror[0]" type="checkbox" /> X</label>
+          <label title="Mirror Y"><input v-model="brushMirror[1]" type="checkbox" /> Y</label>
+          <label title="Mirror Z"><input v-model="brushMirror[2]" type="checkbox" /> Z</label>
+          <button type="button" @click="applyBrush">{{ label('Мазок', 'Stroke') }}</button>
           <label>Twist <input v-model.number="twistAmount" type="number" step="0.05" /></label>
           <button type="button" @click="applyTwist">Twist deform</button>
           <button type="button" @click="applySubdivide">Subdivide all</button>

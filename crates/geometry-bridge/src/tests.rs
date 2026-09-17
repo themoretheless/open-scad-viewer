@@ -319,8 +319,7 @@ fn audited_feature_successors_cross_the_bridge_with_certificates() {
         .filter_map(|(index, edge)| {
             let a = model.vertices[edge.vertices[0]].point;
             let b = model.vertices[edge.vertices[1]].point;
-            ((a[0] - b[0]).abs() <= 1e-12 && (a[1] - b[1]).abs() <= 1e-12)
-                .then_some(index)
+            ((a[0] - b[0]).abs() <= 1e-12 && (a[1] - b[1]).abs() <= 1e-12).then_some(index)
         })
         .take(2)
         .collect::<Vec<_>>();
@@ -501,7 +500,11 @@ fn authorized_heal_v2_bridge_derives_evidence_and_preserves_source() {
         .filter(|edge| edge.vertices.contains(&vertex))
         .count();
     let mut to = model.vertices[vertex].point;
-    to[1] += model.tolerance_context().unwrap().spatial_bounds().absolute_mm
+    to[1] += model
+        .tolerance_context()
+        .unwrap()
+        .spatial_bounds()
+        .absolute_mm
         / (incident + 1) as f64
         * 0.25;
     let source = encode(model).unwrap();
@@ -518,7 +521,10 @@ fn authorized_heal_v2_bridge_derives_evidence_and_preserves_source() {
         Some("authorized-heal-gap-le1/2")
     );
     assert_eq!(result["certificate"]["status"].as_str(), Some("Complete"));
-    assert_eq!(result["certificate"]["namingComplete"].as_bool(), Some(true));
+    assert_eq!(
+        result["certificate"]["namingComplete"].as_bool(),
+        Some(true)
+    );
     assert!(
         result["certificate"]["displacementLedger"][0]["actualMm"]
             .as_f64()
@@ -567,7 +573,10 @@ fn curved_graph_boolean_v3_bridge_serializes_audited_authority() {
         Some(false)
     );
     assert_eq!(result["certificate"]["audit"]["ok"].as_bool(), Some(true));
-    assert_eq!(result["certificate"]["namingComplete"].as_bool(), Some(true));
+    assert_eq!(
+        result["certificate"]["namingComplete"].as_bool(),
+        Some(true)
+    );
     assert!(
         dispatch(json!({
             "op":"brep_nurbs_boolean_bezier_le3_v3",
@@ -608,8 +617,14 @@ fn curved_graph_boolean_v4_v5_bridge_serializes_cell_specific_authority() {
         "operation":"difference"
     }))
     .unwrap();
-    assert_eq!(contained["certificate"]["cavityProof"].as_bool(), Some(true));
-    assert_eq!(contained["certificate"]["audit"]["shellCount"].as_u64(), Some(2));
+    assert_eq!(
+        contained["certificate"]["cavityProof"].as_bool(),
+        Some(true)
+    );
+    assert_eq!(
+        contained["certificate"]["audit"]["shellCount"].as_u64(),
+        Some(2)
+    );
 
     let rational = dispatch(json!({
         "op":"brep_nurbs_canonical_rational_graph_solid_v5",
@@ -646,11 +661,8 @@ fn general_multispan_boolean_bridge_is_strict_and_audited() {
             "spansV":v
         }))
         .unwrap();
-        let cutter = encode(brep_core::cuboid([0.25, -1., -1.], [0.75, 2., 3.]).unwrap())
-            .unwrap();
-        for (operation, components, faces) in
-            [("intersection", 1, 6), ("difference", 2, 12)]
-        {
+        let cutter = encode(brep_core::cuboid([0.25, -1., -1.], [0.75, 2., 3.]).unwrap()).unwrap();
+        for (operation, components, faces) in [("intersection", 1, 6), ("difference", 2, 12)] {
             let result = dispatch(json!({
                 "op":"brep_nurbs_boolean_general",
                 "a":graph,
@@ -667,28 +679,44 @@ fn general_multispan_boolean_bridge_is_strict_and_audited() {
                 Some("author-general-nurbs-boolean")
             );
             assert_eq!(result["certificate"]["status"].as_str(), Some("Complete"));
-            assert_eq!(result["certificate"]["branchGraph"]["components"].as_u64(), Some(2));
-            assert_eq!(result["certificate"]["branchGraph"]["complete"].as_bool(), Some(true));
-            assert_eq!(result["certificate"]["uv"]["complete"].as_bool(), Some(true));
-            assert_eq!(result["certificate"]["resultComponents"].as_u64(), Some(components));
+            assert_eq!(
+                result["certificate"]["branchGraph"]["components"].as_u64(),
+                Some(2)
+            );
+            assert_eq!(
+                result["certificate"]["branchGraph"]["complete"].as_bool(),
+                Some(true)
+            );
+            assert_eq!(
+                result["certificate"]["uv"]["complete"].as_bool(),
+                Some(true)
+            );
+            assert_eq!(
+                result["certificate"]["resultComponents"].as_u64(),
+                Some(components)
+            );
             assert_eq!(result["certificate"]["resultFaces"].as_u64(), Some(faces));
             assert_eq!(result["certificate"]["audit"]["ok"].as_bool(), Some(true));
             assert_eq!(result["certificate"]["noFallback"].as_bool(), Some(true));
         }
-        assert!(dispatch(json!({
-            "op":"brep_nurbs_boolean_general",
-            "a":graph,
-            "b":cutter,
-            "operation":"union"
-        }))
-        .is_err());
-        assert!(dispatch(json!({
-            "op":"brep_nurbs_boolean_general",
-            "a":graph,
-            "b":cutter,
-            "operation":"intersection",
-            "fallback":"mesh"
-        }))
-        .is_err());
+        assert!(
+            dispatch(json!({
+                "op":"brep_nurbs_boolean_general",
+                "a":graph,
+                "b":cutter,
+                "operation":"union"
+            }))
+            .is_err()
+        );
+        assert!(
+            dispatch(json!({
+                "op":"brep_nurbs_boolean_general",
+                "a":graph,
+                "b":cutter,
+                "operation":"intersection",
+                "fallback":"mesh"
+            }))
+            .is_err()
+        );
     }
 }
