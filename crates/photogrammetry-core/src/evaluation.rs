@@ -35,7 +35,9 @@ pub struct EvaluationOptions {
     /// Optional common voxel grid for density-normalized sampling of both clouds.
     /// Origin is zero in the established common frame. None preserves input density.
     pub voxel_size: Option<f64>,
-    /// `Cpu` (default) builds an exact KD-tree per cloud, O(log n) per query.
+    /// `Cpu` builds an exact KD-tree per cloud, O(log n) per query. `Auto`
+    /// keeps small batches on the KD-tree and selects `Gpu`/`Cuda` for larger
+    /// batches using `math-core`'s measured nearest-neighbor threshold.
     /// `Gpu`/`Cuda` instead run a brute-force batch nearest-neighbor kernel:
     /// measured (`examples/kdtree_vs_gpu.rs`, RTX 5090) 3-11x faster than the
     /// KD-tree from 2K to 1M points per cloud despite the worse asymptotic
@@ -303,12 +305,15 @@ pub fn evaluate_clouds(
     }
     let a = sampled(reconstructed, options.voxel_size, &mut progress)?;
     let b = sampled(reference, options.voxel_size, &mut progress)?;
-    let (accuracy, completeness) = if options.acceleration.is_gpu() && cfg!(feature = "gpu") {
+    let acceleration = options
+        .acceleration
+        .resolve_for_nearest_neighbor(a.len(), b.len());
+    let (accuracy, completeness) = if acceleration.is_gpu() && cfg!(feature = "gpu") {
         if !progress("evaluation_index", 0, 1) {
             return Err(crate::error("Cancelled"));
         }
-        let accuracy = distances_accelerated(&a, &b, options.tolerance, options.acceleration);
-        let completeness = distances_accelerated(&b, &a, options.tolerance, options.acceleration);
+        let accuracy = distances_accelerated(&a, &b, options.tolerance, acceleration);
+        let completeness = distances_accelerated(&b, &a, options.tolerance, acceleration);
         if !progress("evaluation_distance", 1, 1) {
             return Err(crate::error("Cancelled"));
         }
@@ -428,7 +433,7 @@ mod tests {
         assert_eq!(b.reconstructed_to_reference.samples, 2);
     }
     #[test]
-    fn accelerated_matches_kdtree_when_the_gpu_feature_is_off() {
+    fn requested_acceleration_matches_kdtree_metrics() {
         // Without this crate's `gpu`/`cuda` feature compiled in, requesting
         // `Gpu`/`Cuda` must silently keep using the exact KD-tree rather than
         // falling through to a slow CPU brute-force scan; with the feature
@@ -470,6 +475,41 @@ mod tests {
                     < 1e-3
             );
         }
+    }
+    #[test]
+    fn auto_acceleration_matches_kdtree_metrics() {
+        let p = (0..600)
+            .map(|i| {
+                [
+                    ((i * 97) % 601) as f64 / 30.,
+                    (i % 71) as f64,
+                    (i % 89) as f64,
+                ]
+            })
+            .collect::<Vec<_>>();
+        let q = (0..600)
+            .map(|i| {
+                [
+                    ((i * 53) % 607) as f64 / 20.,
+                    (i % 61) as f64,
+                    (i % 83) as f64,
+                ]
+            })
+            .collect::<Vec<_>>();
+        let cpu = evaluate_clouds(&p, &q, &options(), |_, _, _| true).unwrap();
+        let opt = EvaluationOptions {
+            acceleration: Acceleration::Auto,
+            ..options()
+        };
+        let automatic = evaluate_clouds(&p, &q, &opt, |_, _, _| true).unwrap();
+        assert!(
+            (cpu.reconstructed_to_reference.mean - automatic.reconstructed_to_reference.mean).abs()
+                < 1e-3
+        );
+        assert!(
+            (cpu.reference_to_reconstructed.mean - automatic.reference_to_reconstructed.mean).abs()
+                < 1e-3
+        );
     }
     #[test]
     fn invalid_and_cancelled_evaluation_are_explicit() {

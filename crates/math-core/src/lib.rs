@@ -4,9 +4,11 @@ pub type V3 = [f64; 3];
 pub type M3 = [[f64; 3]; 3];
 pub const ID: M3 = [[1., 0., 0.], [0., 1., 0.], [0., 0., 1.]];
 
-/// Compute placement. `Cpu` is the deterministic reference; the others are
-/// opt-in and fall back to the CPU reference when unavailable.
+/// Compute placement. `Cpu` is the deterministic reference; `Auto` lets the
+/// callee choose from the problem size; the device placements are opt-in and
+/// fall back to the CPU reference when unavailable.
 ///
+/// - `Auto`: size-based placement selection, tuned per kernel.
 /// - `Gpu`: portable compute shaders (wgpu — Vulkan/DX12/Metal natively,
 ///   WebGPU in the browser). Reaches NVIDIA hardware through Vulkan/DX12.
 /// - `Cuda`: the CUDA driver API on NVIDIA hardware (native `cuda` feature).
@@ -17,22 +19,26 @@ pub const ID: M3 = [[1., 0., 0.], [0., 1., 0.], [0., 0., 1.]];
 pub enum Acceleration {
     #[default]
     Cpu,
+    Auto,
     Gpu,
     Cuda,
 }
 
 impl Acceleration {
-    /// True for every device placement (`Gpu` or `Cuda`); kernels that only
-    /// have a portable shader use this instead of comparing against `Gpu`.
+    /// True for every device-capable placement (`Auto`, `Gpu`, or `Cuda`);
+    /// kernels that only have a portable shader use this instead of comparing
+    /// against `Gpu`. Kernels with a real size heuristic should resolve
+    /// `Auto` first, as [`nearest_neighbor_accelerated`] does.
     #[inline]
     pub const fn is_gpu(self) -> bool {
-        matches!(self, Self::Gpu | Self::Cuda)
+        matches!(self, Self::Auto | Self::Gpu | Self::Cuda)
     }
 
-    /// Parses the CLI/environment spelling (`cpu`, `gpu`, `cuda`).
+    /// Parses the CLI/environment spelling (`cpu`, `auto`, `gpu`, `cuda`).
     pub fn parse(value: &str) -> Option<Self> {
         match value.trim().to_ascii_lowercase().as_str() {
             "cpu" => Some(Self::Cpu),
+            "auto" => Some(Self::Auto),
             "gpu" | "wgpu" | "webgpu" => Some(Self::Gpu),
             "cuda" => Some(Self::Cuda),
             _ => None,
@@ -42,6 +48,7 @@ impl Acceleration {
     pub const fn label(self) -> &'static str {
         match self {
             Self::Cpu => "cpu",
+            Self::Auto => "auto",
             Self::Gpu => "gpu",
             Self::Cuda => "cuda",
         }
@@ -78,6 +85,19 @@ impl Acceleration {
             Self::Gpu
         } else {
             Self::Cpu
+        }
+    }
+
+    /// Resolves `Auto` for [`nearest_neighbor_accelerated`]; explicit
+    /// placements pass through unchanged.
+    pub const fn resolve_for_nearest_neighbor(
+        self,
+        query_count: usize,
+        target_count: usize,
+    ) -> Self {
+        match self {
+            Self::Auto => Self::recommended_for_nearest_neighbor(query_count, target_count),
+            explicit => explicit,
         }
     }
 }
@@ -400,6 +420,8 @@ pub fn nearest_neighbor_accelerated(
     if queries.is_empty() || targets.is_empty() {
         return nearest_neighbor(queries, targets);
     }
+    #[allow(unused_variables)]
+    let acceleration = acceleration.resolve_for_nearest_neighbor(queries.len(), targets.len());
     #[cfg(feature = "gpu")]
     if acceleration.is_gpu() {
         #[cfg(feature = "cuda")]
@@ -421,14 +443,21 @@ mod tests {
     #[test]
     fn acceleration_parse_and_placement() {
         assert_eq!(Acceleration::parse("cpu"), Some(Acceleration::Cpu));
+        assert_eq!(Acceleration::parse("auto"), Some(Acceleration::Auto));
         assert_eq!(Acceleration::parse(" GPU "), Some(Acceleration::Gpu));
         assert_eq!(Acceleration::parse("webgpu"), Some(Acceleration::Gpu));
         assert_eq!(Acceleration::parse("cuda"), Some(Acceleration::Cuda));
         assert_eq!(Acceleration::parse("opencl"), None);
         assert!(!Acceleration::Cpu.is_gpu());
+        assert!(Acceleration::Auto.is_gpu());
         assert!(Acceleration::Gpu.is_gpu());
         assert!(Acceleration::Cuda.is_gpu());
-        for mode in [Acceleration::Cpu, Acceleration::Gpu, Acceleration::Cuda] {
+        for mode in [
+            Acceleration::Cpu,
+            Acceleration::Auto,
+            Acceleration::Gpu,
+            Acceleration::Cuda,
+        ] {
             assert_eq!(Acceleration::parse(mode.label()), Some(mode));
         }
         assert_eq!(Acceleration::default(), Acceleration::Cpu);
@@ -452,6 +481,15 @@ mod tests {
         assert_eq!(
             Acceleration::recommended_for_nearest_neighbor(0, 0),
             Acceleration::Cpu
+        );
+        assert_eq!(
+            Acceleration::Cpu.resolve_for_nearest_neighbor(1_000_000, 2_000),
+            Acceleration::Cpu
+        );
+        assert!(
+            Acceleration::Auto
+                .resolve_for_nearest_neighbor(1_000_000, 2_000)
+                .is_gpu()
         );
     }
     #[test]
@@ -530,6 +568,26 @@ mod nearest_neighbor_tests {
         let got = nearest_neighbor_accelerated(&queries, &targets, Acceleration::Cpu);
         let want = nearest_neighbor(&queries, &targets);
         assert_eq!(got, want);
+    }
+    #[test]
+    fn nearest_neighbor_accelerated_auto_matches_reference() {
+        let queries: Vec<V3> = (0..512)
+            .map(|i| {
+                let f = i as f64;
+                [f * 0.07, (f * 0.13).sin(), (f * 0.11).cos()]
+            })
+            .collect();
+        let targets: Vec<V3> = (0..512)
+            .map(|i| {
+                let f = i as f64;
+                [f * -0.03, (f * 0.17).cos(), (f * 0.19).sin()]
+            })
+            .collect();
+        let got = nearest_neighbor_accelerated(&queries, &targets, Acceleration::Auto);
+        let want = nearest_neighbor(&queries, &targets);
+        for ((_gi, gd), (_wi, wd)) in got.iter().zip(&want) {
+            assert!((gd - wd).abs() < 1e-3);
+        }
     }
     #[test]
     fn nearest_neighbor_accelerated_empty_input() {

@@ -153,7 +153,7 @@ fn summary(s: &DistanceSummary) -> String {
 fn run() -> Result<(), Box<dyn std::error::Error>> {
     let args = std::env::args().skip(1).collect::<Vec<_>>();
     if !(3..=5).contains(&args.len()) {
-        return Err("Usage: evaluate MODEL.xyz|ply REFERENCE.xyz|ply TOLERANCE [VOXEL_SIZE] [ACCELERATION]. Coordinates must already share a frame and scale. Reference must describe the evaluated domain. No scale fit is performed.".into());
+        return Err("Usage: evaluate MODEL.xyz|ply REFERENCE.xyz|ply TOLERANCE [VOXEL_SIZE] [ACCELERATION=auto]. Coordinates must already share a frame and scale. Reference must describe the evaluated domain. No scale fit is performed.".into());
     }
     let model = read_points(&args[0])?;
     let reference = read_points(&args[1])?;
@@ -164,7 +164,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
             .get(4)
             .map(|s| Acceleration::parse(s).ok_or("Unknown acceleration"))
             .transpose()?
-            .unwrap_or_default(),
+            .unwrap_or(Acceleration::Auto),
     };
     let started = std::time::Instant::now();
     let r = evaluate_clouds(&model, &reference, &options, |_, _, _| true)?;

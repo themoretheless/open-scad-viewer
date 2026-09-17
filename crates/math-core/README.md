@@ -27,11 +27,12 @@ acceleration for operations that measurably win; see below.
 every query point, the index of its closest point in `targets` and the
 squared distance to it. `Acceleration::Cpu` (default) is the exact f64
 reference (`nearest_neighbor`), brute force in O(queries × targets);
-`Acceleration::Gpu` (feature `gpu`) runs a portable wgpu compute shader in
-f32, one thread per query scanning every target; `Acceleration::Cuda`
-(feature `cuda`, needs the `gpu` feature too) runs a CUDA driver-API PTX port
-of the same kernel, falling back to the wgpu shader and then the CPU
-reference when a device or kernel is unavailable. Both optional features
+`Acceleration::Auto` resolves from `queries.len() * targets.len()` using the
+measured crossover below; `Acceleration::Gpu` (feature `gpu`) runs a portable
+wgpu compute shader in f32, one thread per query scanning every target;
+`Acceleration::Cuda` (feature `cuda`, needs the `gpu` feature too) runs a CUDA
+driver-API PTX port of the same kernel, falling back to the wgpu shader and
+then the CPU reference when a device or kernel is unavailable. Both optional features
 require nightly Rust (through `gpu-compute`); regenerate the checked-in PTX
 with `npm run build:cuda-kernels`. Device buffers are cached per query/target
 capacity (grow-only), so repeated calls at a stable size reuse allocations
@@ -66,10 +67,11 @@ Don't want to hand-tune that threshold yourself?
 `Acceleration::recommended_for_nearest_neighbor(query_count, target_count)`
 encodes the crossover above as a `queries * targets` "work" threshold (CUDA
 from ~200K, wgpu from ~700K, falling back to `Cpu` below that and to whichever
-placement is fastest if the multiplication would overflow `usize`). It's a
-starting point tuned to the RTX 5090 numbers above, not a guarantee for every
-device — treat it as a reasonable default, not a substitute for benchmarking
-workloads where the choice actually matters.
+placement is fastest if the multiplication would overflow `usize`).
+Passing `Acceleration::Auto` to `nearest_neighbor_accelerated` applies that
+recommendation directly. It's a starting point tuned to the RTX 5090 numbers
+above, not a guarantee for every device — treat it as a reasonable default,
+not a substitute for benchmarking workloads where the choice actually matters.
 
 ## License
 

@@ -1,9 +1,9 @@
-//! Does `EvaluationOptions::acceleration`'s brute-force GPU/CUDA path ever
-//! beat the exact KD-tree that `evaluate_clouds` uses by default? KD-tree
-//! query is O(log n) per point; brute force is O(target_count) per point
-//! regardless of GPU parallelism, so the crossover (if any) should shrink
-//! and eventually vanish as cloud size grows toward photogrammetry-core's
-//! real 2,000,000-point ceiling.
+//! Does `EvaluationOptions::acceleration = Auto`'s GPU/CUDA path ever beat
+//! the exact KD-tree that `evaluate_clouds` uses with `Cpu`? KD-tree query is
+//! O(log n) per point; brute force is O(target_count) per point regardless of
+//! GPU parallelism, so the crossover (if any) should shrink and eventually
+//! vanish as cloud size grows toward photogrammetry-core's real
+//! 2,000,000-point ceiling.
 //!
 //! `cargo run --release -p photogrammetry-core --features cuda --example kdtree_vs_gpu`
 //! (drop `--features cuda` to fall back to the wgpu shader; without the
@@ -30,8 +30,8 @@ fn cloud(n: usize, phase: f64) -> Vec<[f64; 3]> {
 
 fn main() {
     let acceleration = match std::env::var("KDTREE_VS_GPU_ACCELERATION") {
-        Ok(value) => Acceleration::parse(&value).unwrap_or(Acceleration::Cuda),
-        Err(_) => Acceleration::Cuda,
+        Ok(value) => Acceleration::parse(&value).unwrap_or(Acceleration::Auto),
+        Err(_) => Acceleration::Auto,
     };
     let cpu_options = EvaluationOptions {
         tolerance: 0.004,
@@ -45,7 +45,7 @@ fn main() {
     println!("acceleration = {acceleration:?}");
     println!(
         "{:>10} {:>10} {:>10} | {:>12} {:>12} | {:>10}",
-        "model_n", "ref_n", "work", "kdtree_ms", "gpu_ms", "gpu_faster"
+        "model_n", "ref_n", "work", "kdtree_ms", "auto_ms", "winner"
     );
     // Sizes bracketing the crossover found for the single-direction
     // benchmark (`bench_gpu.rs`), then climbing toward photogrammetry-core's

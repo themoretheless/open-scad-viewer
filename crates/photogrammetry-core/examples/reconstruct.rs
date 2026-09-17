@@ -94,12 +94,12 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                 ..b
             });
     }
-    // PHOTO_ACCELERATION=gpu|cuda requires building with --features gpu. The
+    // PHOTO_ACCELERATION=auto|gpu|cuda requires building with --features gpu. The
     // photogrammetry kernels are portable shaders, so `cuda` selects the same
     // wgpu path (Vulkan/DX12 on NVIDIA); see math_core::Acceleration.
     let acceleration = match std::env::var("PHOTO_ACCELERATION") {
         Ok(value) => photogrammetry_core::Acceleration::parse(&value)
-            .ok_or_else(|| format!("Unknown PHOTO_ACCELERATION={value} (cpu|gpu|cuda)"))?,
+            .ok_or_else(|| format!("Unknown PHOTO_ACCELERATION={value} (cpu|auto|gpu|cuda)"))?,
         Err(_) => photogrammetry_core::Acceleration::Cpu,
     };
     if acceleration.is_gpu() {
@@ -108,7 +108,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
             options.feature_options.acceleration = acceleration;
         }
         #[cfg(not(feature = "gpu"))]
-        return Err("PHOTO_ACCELERATION=gpu|cuda requires --features gpu".into());
+        return Err("PHOTO_ACCELERATION=auto|gpu|cuda requires --features gpu".into());
     }
     let outcome = reconstruct_detailed(&images, &options, |stage, n, total| {
         eprintln!("{stage}: {n}/{total}");
