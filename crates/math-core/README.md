@@ -285,7 +285,8 @@ for known correspondences (Kabsch/SVD). `icp_register(source, target, options)`
 adds iterative closest-point registration on top: each iteration transforms
 the source, finds closest target correspondences with
 `nearest_neighbor_accelerated`, rejects optional distance outliers, fits the
-next rigid delta, and composes the final `RigidTransform`.
+next rigid delta, scores the post-fit residual with the fused transform-error
+reduction, and composes the final `RigidTransform`.
 
 This is where the nearest-neighbor kernel becomes a higher-level primitive:
 `IcpOptions::default()` uses `Acceleration::Auto`, so large ICP batches select
@@ -295,9 +296,9 @@ icp_registration` on the same RTX 5090:
 
 | points | work/iteration | cpu | auto/cuda | iterations |
 | --- | --- | --- | --- | --- |
-| 1,000 | 1,000,000 | 2.297 ms | 0.421 ms | 3 |
-| 5,000 | 25,000,000 | 56.703 ms | 1.212 ms | 3 |
-| 20,000 | 400,000,000 | 911.654 ms | 5.109 ms | 3 |
+| 1,000 | 1,000,000 | 1.565 ms | 0.329 ms | 2 |
+| 5,000 | 25,000,000 | 37.791 ms | 0.948 ms | 2 |
+| 20,000 | 400,000,000 | 614.513 ms | 3.547 ms | 2 |
 
 ## License
 

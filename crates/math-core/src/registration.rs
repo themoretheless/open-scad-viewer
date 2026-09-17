@@ -1,6 +1,7 @@
 use crate::{
     Acceleration, Error, ID, M3, Result, V3, add, det, finite, mm, mv,
     nearest_neighbor_accelerated, scale, sub, svd, tr, transform_points,
+    transformed_squared_distance_pair_sum_accelerated,
 };
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -116,9 +117,10 @@ pub fn rigid_transform(source: &[V3], target: &[V3]) -> Result<RigidTransform> {
 }
 
 /// Point-to-point Iterative Closest Point. The nearest-neighbor stage is the
-/// expensive step and uses [`nearest_neighbor_accelerated`], so `Gpu`/`Cuda`
-/// or `Auto` can accelerate large registrations while preserving the CPU
-/// reference path.
+/// expensive step and uses [`nearest_neighbor_accelerated`]; the fitted delta
+/// is scored with [`transformed_squared_distance_pair_sum_accelerated`], so
+/// `Gpu`/`Cuda` or `Auto` can accelerate large registrations while preserving
+/// the CPU reference path.
 pub fn icp_register(source: &[V3], target: &[V3], options: IcpOptions) -> Result<IcpReport> {
     if source.len() < 3 || target.len() < 3 {
         return Err(Error::new(
@@ -165,14 +167,12 @@ pub fn icp_register(source: &[V3], target: &[V3], options: IcpOptions) -> Result
         let pairs = nearest_neighbor_accelerated(&current, target, options.acceleration);
         let mut from = Vec::with_capacity(source.len());
         let mut to = Vec::with_capacity(source.len());
-        let mut squared_sum = 0.;
         for (i, &(j, squared)) in pairs.iter().enumerate() {
             if j == u32::MAX || max_squared.is_some_and(|cap| squared > cap) {
                 continue;
             }
             from.push(current[i]);
             to.push(target[j as usize]);
-            squared_sum += squared;
         }
         if from.len() < 3 {
             return Err(Error::new(
@@ -180,9 +180,17 @@ pub fn icp_register(source: &[V3], target: &[V3], options: IcpOptions) -> Result
                 "ICP found fewer than 3 correspondences",
             ));
         }
-        let mse = squared_sum / from.len() as f64;
+        let delta = rigid_transform(&from, &to)?;
+        let mse = transformed_squared_distance_pair_sum_accelerated(
+            &from,
+            &to,
+            delta.rotation,
+            delta.translation,
+            options.acceleration,
+        )? / from.len() as f64;
+        let next_transform = transform.then(delta);
         report = IcpReport {
-            transform,
+            transform: next_transform,
             iterations: iteration + 1,
             correspondences: from.len(),
             mean_squared_error: mse,
@@ -191,10 +199,8 @@ pub fn icp_register(source: &[V3], target: &[V3], options: IcpOptions) -> Result
             break;
         }
         last_mse = mse;
-        let delta = rigid_transform(&from, &to)?;
         current = transform_points(&current, delta.rotation, delta.translation);
-        transform = transform.then(delta);
-        report.transform = transform;
+        transform = next_transform;
     }
     Ok(report)
 }
@@ -270,6 +276,36 @@ mod registration_tests {
         assert!(report.mean_squared_error < 1e-8);
         assert!(report.iterations <= 20);
         assert_transform_close(report.transform, want, 1e-4);
+    }
+
+    #[test]
+    fn icp_reports_post_fit_error_for_iteration() {
+        let source = vec![
+            [0., 0., 0.],
+            [10., 0., 0.],
+            [0., 10., 0.],
+            [0., 0., 10.],
+            [10., 10., 10.],
+        ];
+        let want = RigidTransform {
+            rotation: rotation([0.002, -0.001, 0.0015]),
+            translation: [0.01, -0.012, 0.006],
+        };
+        let target: Vec<_> = source.iter().map(|&p| want.apply(p)).collect();
+        let report = icp_register(
+            &source,
+            &target,
+            IcpOptions {
+                acceleration: Acceleration::Cpu,
+                max_iterations: 1,
+                tolerance: 0.,
+                max_correspondence_distance: Some(0.1),
+            },
+        )
+        .unwrap();
+        assert_eq!(report.iterations, 1);
+        assert!(report.mean_squared_error < 1e-10);
+        assert_transform_close(report.transform, want, 1e-5);
     }
 
     #[test]
