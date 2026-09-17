@@ -1,7 +1,8 @@
 //! Point-to-point ICP benchmark over the accelerated nearest-neighbor kernel.
 //!
 //! `cargo run --release -p osv-math --features cuda --example icp_registration`
-//! (drop `--features cuda` for wgpu, or use `ICP_ACCELERATION=cpu|auto|gpu|cuda`).
+//! (drop `--features cuda` for wgpu/Metal, or use
+//! `ICP_ACCELERATION=cpu|auto|gpu|metal|cuda`).
 use math_core::{Acceleration, IcpOptions, RigidTransform, V3, icp_register, rotation};
 use std::time::Instant;
 

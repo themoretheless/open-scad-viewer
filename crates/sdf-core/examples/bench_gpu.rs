@@ -39,8 +39,8 @@ fn uv_sphere(
 }
 
 /// Placements to compare: CPU reference, Auto heuristic, wgpu shader and
-/// (feature `cuda`) the CUDA driver port. `SDF_BENCH_MODES=cpu,auto,cuda`
-/// narrows the set.
+/// (feature `cuda`) the CUDA driver port. `SDF_BENCH_MODES=cpu,auto,metal,cuda`
+/// narrows the set (`metal` maps to the portable wgpu mode).
 fn modes() -> Vec<Acceleration> {
     let mut modes = vec![Acceleration::Cpu, Acceleration::Auto, Acceleration::Gpu];
     if cfg!(feature = "cuda") {

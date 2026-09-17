@@ -1,7 +1,7 @@
 //! GPU dense-sweep benchmark: analytic scenes with ground truth (accuracy and
 //! whole-stage timing) plus a synthetic raw sweep-kernel timing. Emits JSON.
 //!
-//! DENSE_ACCELERATION=auto|gpu|cuda|cpu (default gpu; requires --features gpu for device modes)
+//! DENSE_ACCELERATION=auto|gpu|metal|cuda|cpu (default gpu; requires --features gpu for device modes)
 //! DENSE_ACCURATE=1 starts from `DenseOptions::accurate()` instead of the defaults
 //! DENSE_REPEAT=N            median of N timed runs after one warmup (default 5)
 //! DENSE_PATCH_RADIUS=1|2    (default 1, the product default)

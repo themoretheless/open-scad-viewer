@@ -34,12 +34,14 @@ impl Acceleration {
         matches!(self, Self::Auto | Self::Gpu | Self::Cuda)
     }
 
-    /// Parses the CLI/environment spelling (`cpu`, `auto`, `gpu`, `cuda`).
+    /// Parses the CLI/environment spelling (`cpu`, `auto`, `gpu`, `metal`,
+    /// `cuda`). `metal` maps to `Gpu`, the portable wgpu backend that binds
+    /// Metal on macOS and Vulkan/DX12 elsewhere.
     pub fn parse(value: &str) -> Option<Self> {
         match value.trim().to_ascii_lowercase().as_str() {
             "cpu" => Some(Self::Cpu),
             "auto" => Some(Self::Auto),
-            "gpu" | "wgpu" | "webgpu" => Some(Self::Gpu),
+            "gpu" | "wgpu" | "webgpu" | "metal" => Some(Self::Gpu),
             "cuda" => Some(Self::Cuda),
             _ => None,
         }
@@ -641,6 +643,7 @@ mod tests {
         assert_eq!(Acceleration::parse("cpu"), Some(Acceleration::Cpu));
         assert_eq!(Acceleration::parse("auto"), Some(Acceleration::Auto));
         assert_eq!(Acceleration::parse(" GPU "), Some(Acceleration::Gpu));
+        assert_eq!(Acceleration::parse("metal"), Some(Acceleration::Gpu));
         assert_eq!(Acceleration::parse("webgpu"), Some(Acceleration::Gpu));
         assert_eq!(Acceleration::parse("cuda"), Some(Acceleration::Cuda));
         assert_eq!(Acceleration::parse("opencl"), None);
