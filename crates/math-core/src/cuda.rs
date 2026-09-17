@@ -18,6 +18,8 @@ pub const NEAREST_TWO_PTX: &str = include_str!("nearest_two.ptx");
 pub const DISTANCE_PAIRS_PTX: &str = include_str!("distance_pairs.ptx");
 /// PTX generated from `distance_pair_sum.cu` by `scripts/build-cuda-kernels.mjs`.
 pub const DISTANCE_PAIR_SUM_PTX: &str = include_str!("distance_pair_sum.ptx");
+/// PTX generated from `chamfer.cu` by `scripts/build-cuda-kernels.mjs`.
+pub const CHAMFER_PTX: &str = include_str!("chamfer.ptx");
 const BLOCK: u32 = 256;
 
 struct Buffers {
@@ -490,6 +492,144 @@ pub(crate) fn squared_distance_pair_sum_cuda(a: &[V3], b: &[V3]) -> Option<f64> 
     SHARED_DISTANCE_PAIR_SUM.with(|cell| {
         let shared: &Option<&CudaDistancePairSum> = cell;
         shared.and_then(|kernel| kernel.run(a, b))
+    })
+}
+
+struct CudaChamfer {
+    device: CudaDevice,
+    kernel: CudaFunction,
+    buffers: std::cell::RefCell<Option<ChamferBuffers>>,
+}
+
+struct ChamferBuffers {
+    query_capacity: usize,
+    target_capacity: usize,
+    partial_capacity: usize,
+    queries: CudaSlice<f32>,
+    targets: CudaSlice<f32>,
+    out_sum: CudaSlice<f32>,
+    out_max: CudaSlice<f32>,
+}
+
+impl CudaChamfer {
+    fn new() -> Option<Self> {
+        let device = CudaDevice::new()?;
+        let module = device.load_ptx(CHAMFER_PTX)?;
+        let kernel = module.load_function("directed_chamfer_reduce").ok()?;
+        Some(Self {
+            device,
+            kernel,
+            buffers: std::cell::RefCell::new(None),
+        })
+    }
+
+    fn ensure_buffers(
+        &self,
+        query_count: usize,
+        target_count: usize,
+        partial_count: usize,
+    ) -> Option<()> {
+        let stale = match &*self.buffers.borrow() {
+            Some(b) => {
+                b.query_capacity < query_count
+                    || b.target_capacity < target_count
+                    || b.partial_capacity < partial_count
+            }
+            None => true,
+        };
+        if !stale {
+            return Some(());
+        }
+        let query_capacity = query_count.max(1);
+        let target_capacity = target_count.max(1);
+        let partial_capacity = partial_count.max(1);
+        let stream = &self.device.stream;
+        let queries = stream.alloc_zeros::<f32>(query_capacity * 3).ok()?;
+        let targets = stream.alloc_zeros::<f32>(target_capacity * 3).ok()?;
+        let out_sum = stream.alloc_zeros::<f32>(partial_capacity).ok()?;
+        let out_max = stream.alloc_zeros::<f32>(partial_capacity).ok()?;
+        *self.buffers.borrow_mut() = Some(ChamferBuffers {
+            query_capacity,
+            target_capacity,
+            partial_capacity,
+            queries,
+            targets,
+            out_sum,
+            out_max,
+        });
+        Some(())
+    }
+
+    fn run(&self, queries: &[V3], targets: &[V3]) -> Option<crate::DirectedChamfer> {
+        if queries.is_empty() || targets.is_empty() {
+            return None;
+        }
+        let query_count = queries.len();
+        let target_count = targets.len();
+        let partial_count = query_count.div_ceil(BLOCK as usize).max(1);
+        let stream = &self.device.stream;
+        let flat_q: Vec<f32> = queries.iter().flatten().map(|&v| v as f32).collect();
+        let flat_t: Vec<f32> = targets.iter().flatten().map(|&v| v as f32).collect();
+        self.ensure_buffers(query_count, target_count, partial_count)?;
+        let mut buffers = self.buffers.borrow_mut();
+        let buffers = buffers.as_mut().expect("ensure_buffers was just called");
+        {
+            let mut q_view = buffers.queries.slice_mut(0..query_count * 3);
+            stream.memcpy_htod(&flat_q, &mut q_view).ok()?;
+        }
+        {
+            let mut t_view = buffers.targets.slice_mut(0..target_count * 3);
+            stream.memcpy_htod(&flat_t, &mut t_view).ok()?;
+        }
+        let query_count_u32 = query_count as u32;
+        let target_count_u32 = target_count as u32;
+        let q_view = buffers.queries.slice(0..query_count * 3);
+        let t_view = buffers.targets.slice(0..target_count * 3);
+        let mut sum_view = buffers.out_sum.slice_mut(0..partial_count);
+        let mut max_view = buffers.out_max.slice_mut(0..partial_count);
+        let mut launch = stream.launch_builder(&self.kernel);
+        launch
+            .arg(&query_count_u32)
+            .arg(&target_count_u32)
+            .arg(&q_view)
+            .arg(&t_view)
+            .arg(&mut sum_view)
+            .arg(&mut max_view);
+        unsafe { launch.launch(launch_1d(query_count_u32, BLOCK)) }.ok()?;
+        let mut sums = vec![0f32; partial_count];
+        let mut maxes = vec![0f32; partial_count];
+        stream.memcpy_dtoh(&sum_view, &mut sums).ok()?;
+        stream.memcpy_dtoh(&max_view, &mut maxes).ok()?;
+        let sum: f64 = sums.into_iter().map(|value| value as f64).sum();
+        let max_squared_distance = maxes
+            .into_iter()
+            .map(|value| value as f64)
+            .fold(0., f64::max);
+        let mean_squared_distance = sum / query_count as f64;
+        Some(crate::DirectedChamfer {
+            samples: query_count,
+            mean_squared_distance,
+            rms_distance: mean_squared_distance.sqrt(),
+            max_squared_distance,
+        })
+    }
+}
+
+thread_local! {
+    static SHARED_CHAMFER: std::cell::LazyCell<Option<&'static CudaChamfer>> =
+        std::cell::LazyCell::new(|| {
+            CudaChamfer::new().map(|kernel| Box::leak(Box::new(kernel)) as &'static CudaChamfer)
+        });
+}
+
+/// Directed Chamfer reduction on the CUDA device; `None` without a device.
+pub(crate) fn directed_chamfer_cuda(
+    queries: &[V3],
+    targets: &[V3],
+) -> Option<crate::DirectedChamfer> {
+    SHARED_CHAMFER.with(|cell| {
+        let shared: &Option<&CudaChamfer> = cell;
+        shared.and_then(|kernel| kernel.run(queries, targets))
     })
 }
 

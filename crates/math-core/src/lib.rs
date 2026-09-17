@@ -12,7 +12,7 @@ mod types;
 
 pub use acceleration::Acceleration;
 pub use chamfer::{
-    ChamferDistance, DirectedChamfer, chamfer_distance, directed_chamfer_distance,
+    CHAMFER_WGSL, ChamferDistance, DirectedChamfer, chamfer_distance, directed_chamfer_distance,
     directed_hausdorff_distance, hausdorff_distance,
 };
 pub use distance_pairs::{

@@ -141,17 +141,18 @@ println!("symmetric RMS = {}", score.symmetric_rms_distance);
 println!("Hausdorff = {}", score.hausdorff_distance);
 ```
 
-This is a higher-level geometry metric over the same nearest-neighbor kernels,
-so it inherits their CPU/Auto/Gpu/Cuda placement behavior and grows faster as
-both cloud sizes increase. Measured with `cargo run --release -p osv-math
---features cuda --example bench_chamfer` on the RTX 5090:
+This is a higher-level geometry metric over nearest-neighbor work. Device
+placements use fused directed-Chamfer reduction kernels, so they read back one
+sum/max pair per workgroup instead of one nearest-neighbor result per query.
+Measured with `cargo run --release -p osv-math --features cuda --example
+bench_chamfer` on the RTX 5090:
 
 | cloud sizes | cpu | auto | gpu | cuda |
 | --- | --- | --- | --- | --- |
-| 1,000 × 1,000 | 1.488 ms | 0.211 ms | 0.572 ms | 0.283 ms |
-| 5,000 × 2,000 | 14.956 ms | 0.589 ms | 1.284 ms | 0.622 ms |
-| 20,000 × 5,000 | 150.961 ms | 1.847 ms | 3.687 ms | 1.907 ms |
-| 100,000 × 10,000 | 1547.560 ms | 7.699 ms | 15.062 ms | 7.351 ms |
+| 1,000 × 1,000 | 1.486 ms | 0.274 ms | 0.537 ms | 0.280 ms |
+| 5,000 × 2,000 | 15.087 ms | 0.632 ms | 1.307 ms | 0.592 ms |
+| 20,000 × 5,000 | 150.253 ms | 1.719 ms | 3.960 ms | 1.679 ms |
+| 100,000 × 10,000 | 1526.633 ms | 7.169 ms | 14.744 ms | 6.848 ms |
 
 ## Pairwise squared distances
 

@@ -1,5 +1,8 @@
 use crate::{Acceleration, Error, Result, V3, nearest_neighbor_accelerated};
 
+/// WGSL source for directed Chamfer partial reduction.
+pub const CHAMFER_WGSL: &str = include_str!("chamfer.wgsl");
+
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct DirectedChamfer {
     pub samples: usize,
@@ -30,6 +33,20 @@ pub fn directed_chamfer_distance(
             "invalid_chamfer_input",
             "directed_chamfer_distance expects non-empty point clouds",
         ));
+    }
+    #[allow(unused_variables)]
+    let acceleration = acceleration.resolve_for_nearest_neighbor(queries.len(), targets.len());
+    #[cfg(feature = "gpu")]
+    if acceleration.is_gpu() {
+        #[cfg(feature = "cuda")]
+        if acceleration == Acceleration::Cuda
+            && let Some(summary) = crate::cuda::directed_chamfer_cuda(queries, targets)
+        {
+            return Ok(summary);
+        }
+        if let Some(summary) = crate::gpu::directed_chamfer_gpu(queries, targets) {
+            return Ok(summary);
+        }
     }
     let distances = nearest_neighbor_accelerated(queries, targets, acceleration);
     let mut sum = 0.;

@@ -653,6 +653,246 @@ pub fn squared_distance_pair_sum_gpu(a: &[V3], b: &[V3]) -> Option<f64> {
     })
 }
 
+struct GpuChamfer {
+    device: wgpu::Device,
+    queue: wgpu::Queue,
+    layout: wgpu::BindGroupLayout,
+    pipeline: wgpu::ComputePipeline,
+    buffers: std::cell::RefCell<Option<ChamferBuffers>>,
+}
+
+struct ChamferBuffers {
+    query_capacity: usize,
+    target_capacity: usize,
+    partial_capacity: usize,
+    params: wgpu::Buffer,
+    queries: wgpu::Buffer,
+    targets: wgpu::Buffer,
+    out_sum: wgpu::Buffer,
+    out_max: wgpu::Buffer,
+    read_sum: wgpu::Buffer,
+    read_max: wgpu::Buffer,
+    bind: wgpu::BindGroup,
+}
+
+impl GpuChamfer {
+    fn new(context: &GpuContext) -> Self {
+        let device = &context.device;
+        let module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
+            label: Some("chamfer"),
+            source: wgpu::ShaderSource::Wgsl(crate::CHAMFER_WGSL.into()),
+        });
+        let layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+            label: Some("chamfer"),
+            entries: &[
+                uniform_entry(0),
+                storage_entry(1, true),
+                storage_entry(2, true),
+                storage_entry(3, false),
+                storage_entry(4, false),
+            ],
+        });
+        let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+            label: Some("chamfer"),
+            bind_group_layouts: &[Some(&layout)],
+            immediate_size: 0,
+        });
+        let pipeline = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
+            label: Some("chamfer"),
+            layout: Some(&pipeline_layout),
+            module: &module,
+            entry_point: Some("main"),
+            compilation_options: Default::default(),
+            cache: None,
+        });
+        Self {
+            device: device.clone(),
+            queue: context.queue.clone(),
+            layout,
+            pipeline,
+            buffers: std::cell::RefCell::new(None),
+        }
+    }
+
+    fn ensure_buffers(&self, query_count: usize, target_count: usize, partial_count: usize) {
+        let stale = match &*self.buffers.borrow() {
+            Some(b) => {
+                b.query_capacity < query_count
+                    || b.target_capacity < target_count
+                    || b.partial_capacity < partial_count
+            }
+            None => true,
+        };
+        if !stale {
+            return;
+        }
+        let query_capacity = query_count.max(1);
+        let target_capacity = target_count.max(1);
+        let partial_capacity = partial_count.max(1);
+        let device = &self.device;
+        let mk = |label: &str, size: u64, usage| {
+            device.create_buffer(&wgpu::BufferDescriptor {
+                label: Some(label),
+                size,
+                usage,
+                mapped_at_creation: false,
+            })
+        };
+        let params = mk(
+            "chamfer_params",
+            16,
+            wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+        );
+        let queries = mk(
+            "chamfer_queries",
+            (query_capacity * 12) as u64,
+            wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+        );
+        let targets = mk(
+            "chamfer_targets",
+            (target_capacity * 12) as u64,
+            wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+        );
+        let out_sum = mk(
+            "chamfer_out_sum",
+            (partial_capacity * 4) as u64,
+            wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC,
+        );
+        let out_max = mk(
+            "chamfer_out_max",
+            (partial_capacity * 4) as u64,
+            wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC,
+        );
+        let read_sum = mk(
+            "chamfer_read_sum",
+            (partial_capacity * 4) as u64,
+            wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
+        );
+        let read_max = mk(
+            "chamfer_read_max",
+            (partial_capacity * 4) as u64,
+            wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
+        );
+        let bind = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("chamfer"),
+            layout: &self.layout,
+            entries: &[
+                wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: params.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 1,
+                    resource: queries.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 2,
+                    resource: targets.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 3,
+                    resource: out_sum.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 4,
+                    resource: out_max.as_entire_binding(),
+                },
+            ],
+        });
+        *self.buffers.borrow_mut() = Some(ChamferBuffers {
+            query_capacity,
+            target_capacity,
+            partial_capacity,
+            params,
+            queries,
+            targets,
+            out_sum,
+            out_max,
+            read_sum,
+            read_max,
+            bind,
+        });
+    }
+
+    fn run(&self, queries: &[V3], targets: &[V3]) -> crate::DirectedChamfer {
+        let query_count = queries.len();
+        let target_count = targets.len();
+        let partial_count = query_count.div_ceil(256).max(1);
+        self.ensure_buffers(query_count, target_count, partial_count);
+        let flat_q: Vec<f32> = queries.iter().flatten().map(|&v| v as f32).collect();
+        let flat_t: Vec<f32> = targets.iter().flatten().map(|&v| v as f32).collect();
+        let mut params = Vec::with_capacity(16);
+        params.extend_from_slice(&(query_count as u32).to_le_bytes());
+        params.extend_from_slice(&(target_count as u32).to_le_bytes());
+        params.extend_from_slice(&0u32.to_le_bytes());
+        params.extend_from_slice(&0u32.to_le_bytes());
+        let device = &self.device;
+        let buffers = self.buffers.borrow();
+        let buffers = buffers.as_ref().expect("ensure_buffers was just called");
+        self.queue.write_buffer(&buffers.params, 0, &params);
+        self.queue
+            .write_buffer(&buffers.queries, 0, &gpu_compute::pack_f32(&flat_q));
+        self.queue
+            .write_buffer(&buffers.targets, 0, &gpu_compute::pack_f32(&flat_t));
+        let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
+            label: Some("chamfer"),
+        });
+        {
+            let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
+                label: Some("chamfer"),
+                timestamp_writes: None,
+            });
+            pass.set_pipeline(&self.pipeline);
+            pass.set_bind_group(0, &buffers.bind, &[]);
+            pass.dispatch_workgroups(partial_count as u32, 1, 1);
+        }
+        let partial_bytes = (partial_count * 4) as u64;
+        encoder.copy_buffer_to_buffer(&buffers.out_sum, 0, &buffers.read_sum, 0, partial_bytes);
+        encoder.copy_buffer_to_buffer(&buffers.out_max, 0, &buffers.read_max, 0, partial_bytes);
+        self.queue.submit([encoder.finish()]);
+        let raw_sum = read_buffer(device, &buffers.read_sum, partial_count * 4);
+        buffers.read_sum.unmap();
+        let raw_max = read_buffer(device, &buffers.read_max, partial_count * 4);
+        buffers.read_max.unmap();
+        let sum: f64 = raw_sum
+            .chunks_exact(4)
+            .take(partial_count)
+            .map(|value| f32::from_ne_bytes(value.try_into().unwrap()) as f64)
+            .sum();
+        let max_squared_distance = raw_max
+            .chunks_exact(4)
+            .take(partial_count)
+            .map(|value| f32::from_ne_bytes(value.try_into().unwrap()) as f64)
+            .fold(0., f64::max);
+        let mean_squared_distance = sum / query_count as f64;
+        crate::DirectedChamfer {
+            samples: query_count,
+            mean_squared_distance,
+            rms_distance: mean_squared_distance.sqrt(),
+            max_squared_distance,
+        }
+    }
+}
+
+thread_local! {
+    static SHARED_CHAMFER: std::cell::LazyCell<Option<&'static GpuChamfer>> =
+        std::cell::LazyCell::new(|| {
+            GpuContext::new()
+                .map(|context| Box::leak(Box::new(GpuChamfer::new(&context))) as &'static GpuChamfer)
+        });
+}
+
+/// Directed Chamfer partial reduction on the GPU; `None` without an adapter.
+pub fn directed_chamfer_gpu(queries: &[V3], targets: &[V3]) -> Option<crate::DirectedChamfer> {
+    if queries.is_empty() || targets.is_empty() {
+        return None;
+    }
+    SHARED_CHAMFER.with(|cell| {
+        let shared: &Option<&GpuChamfer> = cell;
+        shared.map(|kernel| kernel.run(queries, targets))
+    })
+}
+
 struct GpuNearestTwo {
     device: wgpu::Device,
     queue: wgpu::Queue,
