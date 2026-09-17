@@ -140,7 +140,7 @@ pub fn available() -> bool {
 pub fn device_name() -> Option<String> {
     SHARED.with(|cell| {
         let shared: &Option<&CudaNearestNeighbor> = cell;
-        shared.map(|nn| nn.device.name.clone())
+        shared.map(|nn| nn.device.report().name)
     })
 }
 

@@ -25,6 +25,13 @@ pub struct CudaDevice {
     pub multiprocessors: u32,
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct CudaDeviceReport {
+    pub name: String,
+    pub multiprocessors: u32,
+    pub native_cuda: bool,
+}
+
 impl CudaDevice {
     /// Retains the primary context of the selected device. `None` when the
     /// driver library is absent, no device exists, or initialization fails.
@@ -62,6 +69,14 @@ impl CudaDevice {
         self.context
             .load_module(cudarc::nvrtc::Ptx::from_src(ptx))
             .ok()
+    }
+
+    pub fn report(&self) -> CudaDeviceReport {
+        CudaDeviceReport {
+            name: self.name.clone(),
+            multiprocessors: self.multiprocessors,
+            native_cuda: true,
+        }
     }
 
     /// Uploads a host slice; empty inputs upload one zero element so every
@@ -105,6 +120,10 @@ mod tests {
         if let Some(device) = CudaDevice::new() {
             assert!(!device.name.is_empty());
             assert!(device.multiprocessors >= 1);
+            let report = device.report();
+            assert_eq!(report.name, device.name);
+            assert_eq!(report.multiprocessors, device.multiprocessors);
+            assert!(report.native_cuda);
         }
     }
 }

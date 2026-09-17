@@ -79,7 +79,7 @@ pub fn available() -> bool {
 pub fn device_name() -> Option<String> {
     SHARED.with(|cell| {
         let shared: &Option<&CudaSdf> = cell;
-        shared.map(|sdf| sdf.device.name.clone())
+        shared.map(|sdf| sdf.device.report().name)
     })
 }
 

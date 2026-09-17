@@ -61,6 +61,74 @@ pub struct GpuContext {
     pub backend: wgpu::Backend,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum BackendKind {
+    Noop,
+    Vulkan,
+    Metal,
+    Dx12,
+    Gl,
+    WebGpu,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct BackendReport {
+    pub kind: BackendKind,
+    pub label: &'static str,
+    pub native_api: bool,
+    pub browser_api: bool,
+    pub metal: bool,
+}
+
+impl BackendReport {
+    pub const fn from_wgpu(backend: wgpu::Backend) -> Self {
+        match backend {
+            wgpu::Backend::Noop => Self {
+                kind: BackendKind::Noop,
+                label: "noop",
+                native_api: false,
+                browser_api: false,
+                metal: false,
+            },
+            wgpu::Backend::Vulkan => Self {
+                kind: BackendKind::Vulkan,
+                label: "vulkan",
+                native_api: true,
+                browser_api: false,
+                metal: false,
+            },
+            wgpu::Backend::Metal => Self {
+                kind: BackendKind::Metal,
+                label: "metal",
+                native_api: true,
+                browser_api: false,
+                metal: true,
+            },
+            wgpu::Backend::Dx12 => Self {
+                kind: BackendKind::Dx12,
+                label: "dx12",
+                native_api: true,
+                browser_api: false,
+                metal: false,
+            },
+            wgpu::Backend::Gl => Self {
+                kind: BackendKind::Gl,
+                label: "gl",
+                native_api: true,
+                browser_api: false,
+                metal: false,
+            },
+            wgpu::Backend::BrowserWebGpu => Self {
+                kind: BackendKind::WebGpu,
+                label: "webgpu",
+                native_api: false,
+                browser_api: true,
+                metal: false,
+            },
+        }
+    }
+}
+
 impl GpuContext {
     pub fn new() -> Option<Self> {
         let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
@@ -93,19 +161,16 @@ impl GpuContext {
     }
 
     pub fn backend_label(&self) -> &'static str {
-        backend_label(self.backend)
+        self.backend_report().label
+    }
+
+    pub fn backend_report(&self) -> BackendReport {
+        BackendReport::from_wgpu(self.backend)
     }
 }
 
 pub const fn backend_label(backend: wgpu::Backend) -> &'static str {
-    match backend {
-        wgpu::Backend::Noop => "noop",
-        wgpu::Backend::Vulkan => "vulkan",
-        wgpu::Backend::Metal => "metal",
-        wgpu::Backend::Dx12 => "dx12",
-        wgpu::Backend::Gl => "gl",
-        wgpu::Backend::BrowserWebGpu => "webgpu",
-    }
+    BackendReport::from_wgpu(backend).label
 }
 
 /// Per-backend workgroup-size tuning for compute kernels that template their
@@ -136,6 +201,16 @@ mod tests {
     fn tuned_workgroup_size_selects_metal_variant() {
         assert_eq!(tuned_workgroup_size(wgpu::Backend::Metal, 128, 256), 128);
         assert_eq!(backend_label(wgpu::Backend::Metal), "metal");
+        assert_eq!(
+            BackendReport::from_wgpu(wgpu::Backend::Metal),
+            BackendReport {
+                kind: BackendKind::Metal,
+                label: "metal",
+                native_api: true,
+                browser_api: false,
+                metal: true,
+            }
+        );
     }
 
     #[test]
@@ -146,6 +221,10 @@ mod tests {
         assert_eq!(backend_label(wgpu::Backend::Vulkan), "vulkan");
         assert_eq!(backend_label(wgpu::Backend::Dx12), "dx12");
         assert_eq!(backend_label(wgpu::Backend::BrowserWebGpu), "webgpu");
+        assert!(BackendReport::from_wgpu(wgpu::Backend::Vulkan).native_api);
+        assert!(!BackendReport::from_wgpu(wgpu::Backend::Vulkan).browser_api);
+        assert!(BackendReport::from_wgpu(wgpu::Backend::BrowserWebGpu).browser_api);
+        assert!(!BackendReport::from_wgpu(wgpu::Backend::Noop).native_api);
     }
 }
 
