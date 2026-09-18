@@ -1,5 +1,12 @@
-//! OpenSCAD and ModelGraph frontends. Optional: enable the `languages` feature.
-use super::*;
+//! OpenSCAD and ModelGraph frontends behind their own linear-memory ABI.
+//!
+//! Split out of `geometry-bridge` so the geometry kernel ships without a language frontend: this crate
+//! only parses and compiles source into documents, and the host runs the geometry operations they name.
+#![feature(try_blocks, yeet_expr)]
+#![allow(unused_features)]
+pub mod abi;
+mod openscad;
+use value_codec::{Value, json};
 
 /// Source-to-graph frontend shared by browser workers and native callers.
 pub fn compile_modelgraph_text(source: &str) -> String {
@@ -176,7 +183,7 @@ pub fn compile_modelgraph_text_nurbs(input: &str) -> String {
     runtime_response(result, None)
 }
 
-pub(crate) fn abi_language(op: u32, value: Value) -> Value {
+pub fn abi_language(op: u32, value: Value) -> Value {
     match op {
         1 => match value.as_str() {
             Some(s) => match modelgraph_text::compile(s) {
@@ -217,8 +224,8 @@ pub(crate) fn abi_language(op: u32, value: Value) -> Value {
             },
             None,
         ),
-        10 => crate::openscad::scad_compile(&value),
-        11 => crate::openscad::scad_eval(&value),
+        10 => openscad::scad_compile(&value),
+        11 => openscad::scad_eval(&value),
         _ => {
             json!({"ok":false,"error":{"code":"GEOMETRY_INVALID_INPUT","message":"Unknown ABI operation"}})
         }

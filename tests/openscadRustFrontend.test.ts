@@ -9,7 +9,7 @@ import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 import type { LanguageDiagnosticCode } from '../src/core/languageContract'
 import { compileOpenSCAD, type OpenScadLanguageProfile } from '../src/services/openscadCompiler'
-import { scadCompileRust } from '../src/services/geometry/kernel'
+import { scadCompileRust } from '../src/services/languages/kernel'
 
 interface Fixture {
   contract: string

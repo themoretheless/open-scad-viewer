@@ -9,8 +9,7 @@ publish.workspace = true
 crate-type = ["rlib"]
 
 [features]
-default = ["languages"]
-languages = ["dep:openscad-core", "dep:modelgraph-runtime", "dep:modelgraph-text"]
+default = []
 gpu = ["dep:gpu-compute"]
 cuda = ["gpu", "gpu-compute/cuda", "sdf-core/cuda"]
 
@@ -19,9 +18,7 @@ math-core = { package = "osv-math", path = "../math-core" }
 gpu-compute = { path = "../gpu-compute", optional = true }
 value-codec = { path = "../value-codec" }
 geometry-ops = { path = "../geometry-ops" }
-modelgraph-runtime = { path = "../modelgraph-runtime", optional = true }
 mechanical-core = { path = "../mechanical-core" }
-modelgraph-text = { path = "../modelgraph-text", optional = true }
 sketch-core = { path = "../sketch-core" }
 brep-topology = { path = "../brep-topology" }
 brep-core = { path = "../brep-core" }
@@ -33,7 +30,6 @@ sdf-core = { path = "../sdf-core" }
 nurbs-core = { path = "../nurbs-core" }
 polygon-core = { path = "../polygon-core" }
 slicer-core = { path = "../slicer-core" }
-openscad-core = { path = "../openscad-core", optional = true }
 usvg = { version = "0.47.0", default-features = false, features = ["text"] }
 svgtypes = "0.16.1"
 base64 = "0.22"

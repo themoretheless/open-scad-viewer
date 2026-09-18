@@ -7,7 +7,9 @@ const tests=['tests/valueBinaryCodec.test.ts','tests/cadBinaryTransport.test.ts'
 const hash=path=>createHash('sha256').update(readFileSync(path)).digest('hex')
 const wasmPath='src/generated/geometry-kernels/kernel_bg.wasm'
 const wasmSha256=hash(wasmPath)
-execFileSync(process.execPath,['node_modules/vitest/vitest.mjs','run',...tests,'--reporter=json','--outputFile=output/own-cad-qualification.json'],{stdio:'inherit'})
+// The corpus spawns real production workers with their own startup deadlines; running the files
+// serially keeps the gate deterministic instead of failing under parallel load.
+execFileSync(process.execPath,['node_modules/vitest/vitest.mjs','run','--no-file-parallelism',...tests,'--reporter=json','--outputFile=output/own-cad-qualification.json'],{stdio:'inherit'})
 if(hash(wasmPath)!==wasmSha256)throw new Error('WASM changed during qualification')
 const result=JSON.parse(readFileSync('output/own-cad-qualification.json','utf8'))
 if(!result.success||result.numFailedTests||result.numPendingTests)throw new Error('Incomplete qualification')

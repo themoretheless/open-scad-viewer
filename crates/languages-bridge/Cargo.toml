@@ -1,0 +1,15 @@
+[package]
+name = "languages-bridge"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[lib]
+crate-type = ["rlib"]
+
+[dependencies]
+value-codec = { path = "../value-codec" }
+modelgraph-runtime = { path = "../modelgraph-runtime" }
+modelgraph-text = { path = "../modelgraph-text" }
+openscad-core = { path = "../openscad-core" }

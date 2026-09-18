@@ -24,5 +24,6 @@ tools/manifold-bench/historical/
 crates/**/target/
 src/generated/nurbs-kernel/
 src/generated/geometry-kernels/
+src/generated/language-kernel/
 src/generated/wasm-brotli/
 src/generated/harfbuzz/

@@ -5,6 +5,7 @@ import {fileURLToPath} from 'node:url'
 import {resolve} from 'node:path'
 import {buildWasmBrotli} from './build-wasm-brotli.mjs'
 import {encodeBase85} from './wasm-base85.mjs'
+import {optimizeWasm} from './wasm-optimize.mjs'
 const root=fileURLToPath(new URL('../',import.meta.url)),output=resolve(root,'src/generated/geometry-kernels')
 const cargoTarget=resolve(root,'crates/target')
 buildWasmBrotli(root,cargoTarget)
@@ -15,7 +16,9 @@ const result=spawnSync('cargo',['build','--locked','--release','--config','profi
 if(result.error)throw result.error;if(result.status!==0)process.exit(result.status??1)
 mkdirSync(output,{recursive:true})
 for(const file of ['kernel.js','kernel.d.ts','kernel_bg.wasm.d.ts'])rmSync(resolve(output,file),{force:true})
-const wasm=readFileSync(resolve(cargoTarget,'wasm32-unknown-unknown/release/geometry_wasm.wasm'))
+const built=resolve(cargoTarget,'wasm32-unknown-unknown/release/geometry_wasm.wasm')
+optimizeWasm(built)
+const wasm=readFileSync(built)
 const module=new WebAssembly.Module(wasm)
 if(WebAssembly.Module.imports(module).length)throw new Error('Geometry WASM must not import external functions')
 writeFileSync(resolve(output,'kernel_bg.wasm'),wasm)

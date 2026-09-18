@@ -27,7 +27,7 @@
     "pretest": "npm run build:geometry",
     "pretypecheck": "npm run build:geometry",
     "premcp": "npm run build:geometry",
-    "build:geometry": "node scripts/build-geometry-kernels.mjs && node scripts/build-photogrammetry.mjs && node scripts/pack-harfbuzz.mjs",
+    "build:geometry": "node scripts/build-geometry-kernels.mjs && node scripts/build-language-kernel.mjs && node scripts/build-photogrammetry.mjs && node scripts/pack-harfbuzz.mjs",
     "test:geometry": "npm run build:geometry && cargo test --locked --manifest-path crates/Cargo.toml --workspace && vitest run tests/nurbsCurve.test.ts tests/nurbsSurface.test.ts tests/nurbsTessellation.test.ts tests/modelGraphNurbs.test.ts tests/modelGraphNurbsMcp.test.ts tests/geometryInterop.test.ts",
     "build:photogrammetry": "node scripts/build-photogrammetry.mjs",
     "build:cuda-kernels": "node scripts/build-cuda-kernels.mjs"

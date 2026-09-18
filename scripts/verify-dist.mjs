@@ -165,6 +165,10 @@ for (const [name, artifact, compression] of [
 // The workspace redesign (single top bar with an export dialog, dock tabs, per-mode command palettes,
 // icon toolbars and the Solid WebGPU display layer) adds ~57 kB to the eager index chunk
 // (5308461 -> 5406747 bytes measured; the geometry chunk is unchanged), so the total budget moves once.
-const totalBudget = 5_450_000
+// Splitting the OpenSCAD and ModelGraph frontends into their own kernel (language-kernel-bytes)
+// trades ~150 kB of total distribution for a geometry kernel that drops from 8811985 to 6591424
+// bytes unpacked: it instantiates on the main thread again, and a session that never compiles
+// source never fetches the 445 kB language chunk (5406202 -> 5557245 bytes measured).
+const totalBudget = 5_600_000
 if (total > totalBudget) throw new Error(`dist totals ${total} bytes; budget is ${totalBudget}`)
 console.log(`Verified ${files.length} dist artifacts (${total} bytes)`)

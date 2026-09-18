@@ -696,10 +696,7 @@ dependencies = [
  "image-webp",
  "imagesize",
  "mechanical-core",
- "modelgraph-runtime",
- "modelgraph-text",
  "nurbs-core",
- "openscad-core",
  "osv-math",
  "planar-geometry",
  "polygon-core",
@@ -1036,6 +1033,23 @@ dependencies = [
  "euclid",
  "polycool",
  "smallvec",
+]
+
+[[package]]
+name = "languages-bridge"
+version = "0.1.0"
+dependencies = [
+ "modelgraph-runtime",
+ "modelgraph-text",
+ "openscad-core",
+ "value-codec",
+]
+
+[[package]]
+name = "languages-wasm"
+version = "0.1.0"
+dependencies = [
+ "languages-bridge",
 ]
 
 [[package]]

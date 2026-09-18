@@ -1,4 +1,4 @@
-import { prepareGraphRust } from './geometry/kernel'
+import { prepareGraphRust } from './languages/kernel'
 import type { ModelGraphNumericType } from './modelGraphNumericType'
 import { MECHANICAL_GENERATOR_GUIDE } from './mechanicalGeneratorContract'
 import type { placeAssembly } from './modelGraphAssembly'

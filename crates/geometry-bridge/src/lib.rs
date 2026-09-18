@@ -55,8 +55,6 @@ mod cad_thread;
 mod camera_gestures;
 mod gcode;
 pub mod intersections;
-#[cfg(feature = "languages")]
-mod languages;
 #[cfg(feature = "gpu")]
 pub mod lattice_gpu;
 #[cfg(feature = "cuda")]
@@ -66,15 +64,8 @@ pub mod mesh_analysis;
 mod mesh_export_file;
 pub mod mesh_picking;
 pub mod mesh_shell;
-#[cfg(feature = "languages")]
-pub mod openscad;
 mod scene_picking;
 mod viewport;
-#[cfg(feature = "languages")]
-pub use languages::{
-    compile_modelgraph, compile_modelgraph_nurbs, compile_modelgraph_text,
-    compile_modelgraph_text_nurbs, execute_modelgraph_text,
-};
 
 #[cfg(feature = "gpu")]
 pub fn gpu_backend_label() -> Option<&'static str> {

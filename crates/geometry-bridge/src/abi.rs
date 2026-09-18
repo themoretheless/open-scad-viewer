@@ -3,13 +3,10 @@
 use super::*;
 use std::cell::RefCell;
 
-#[cfg(feature = "languages")]
-fn language_abi(op: u32, value: Value) -> Value {
-    crate::languages::abi_language(op, value)
-}
-#[cfg(not(feature = "languages"))]
+/// Language frontends ship as their own module (`languages-wasm`); the host routes their operations
+/// there. Keeping the numbers reserved here makes a misrouted call explicit instead of silent.
 fn language_abi(_op: u32, _value: Value) -> Value {
-    json!({"ok":false,"error":{"code":"GEOMETRY_FEATURE","message":"Language frontends require the languages feature"}})
+    json!({"ok":false,"error":{"code":"GEOMETRY_FEATURE","message":"Language frontends live in the language kernel"}})
 }
 thread_local! {static SAMPLERS:RefCell<Vec<Option<SurfaceSampler>>>=const{RefCell::new(Vec::new())};}
 const LIMIT: usize = 32 * 1024 * 1024;
