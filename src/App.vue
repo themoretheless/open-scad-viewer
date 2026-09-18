@@ -12,7 +12,7 @@ const MechanicalGenerator = defineAsyncComponent(() => import('./features/Mechan
 import {restoreSourceHistory,boundedSourceHistory} from './services/mainSourceEditing'
 import type { DirectDocument } from './services/directModeling'
 import type { WorkspaceMode } from './services/workspaceModes'
-import { workspaceModeHint } from './services/workspaceModes'
+import { WORKSPACE_MODES, workspaceModeHint, workspaceModeLabel } from './services/workspaceModes'
 import { sceneMeshesToSolidDocument, meshDocumentToSolidDocument, meshDataToPolygon, polygonToMeshObject } from './services/solidBridge'
 import { emptyMeshDocument, type MeshWorkspaceDocument } from './services/meshEditing'
 const DirectModeler = defineAsyncComponent(() => import('./features/DirectModeler.vue'))
@@ -385,31 +385,23 @@ function sceneMeshesToMeshDocument(): MeshWorkspaceDocument {
   return doc
 }
 
-const workspaceMode = computed<WorkspaceMode>(() => {
-  if (meshModelerOpen.value) return 'mesh'
-  if (directModelerOpen.value) return 'solid'
-  return 'code'
-})
+const workspaceMode = computed<WorkspaceMode>(() => (meshModelerOpen.value ? 'mesh' : 'solid'))
+
+/** Source is no longer a workspace of its own; it opens as a drawer over either one. */
+const editorOpen = ref(false)
 
 function openWorkspaceMode(mode: WorkspaceMode) {
-  if (mode === 'code') {
-    directModelerOpen.value = false
-    meshModelerOpen.value = false
-    solidSeedDocument.value = null
-    return
-  }
-  // Switching away from Code carries the built scene along, like the explicit "bring scene" actions.
-  const fromCode = workspaceMode.value === 'code' && sceneMeshes.value.length > 0 && !rendering.value
   if (mode === 'solid') {
-    if (fromCode) { bringCodeToSolid(); return }
     meshModelerOpen.value = false
     directModelerOpen.value = true
     return
   }
-  if (fromCode) { bringCodeToMesh(); return }
   directModelerOpen.value = false
   meshModelerOpen.value = true
 }
+
+// Solid is the resting workspace: with no Code tab there is nothing else to show.
+if (!directModelerOpen.value && !meshModelerOpen.value) directModelerOpen.value = true
 
 function bringCodeToMesh() {
   if (!sceneMeshes.value.length) return
@@ -552,7 +544,8 @@ const mainToolsRef = ref<InstanceType<typeof MainModelingTools> | null>(null)
 const MAIN_COMMAND_PREFIX = 'main:'
 const visiblePaletteCommands = computed<PaletteCommand[]>(() => {
   const base = paletteCommands.value.filter(isPaletteCommandEnabled)
-  if (workspaceMode.value !== 'code') return base
+  // The source tools only make sense while the editor drawer is showing.
+  if (!editorOpen.value) return base
   const tools = (mainToolsRef.value?.commands ?? []) as readonly PaletteCommand[]
   return [...base, ...tools.filter(command => command.enabled !== false).map(command => ({ ...command, id: MAIN_COMMAND_PREFIX + command.id }))]
 })
@@ -2466,15 +2459,26 @@ function sanitizeFileName(name: string) { return (name.replace(/[^\w.() -]+/g, '
       </div>
       <div class="mode-switch" role="group" :aria-label="lang === 'ru' ? 'Режим работы' : 'Workspace mode'">
         <button
-          v-for="mode in (['code', 'solid', 'mesh'] as const)"
+          v-for="mode in WORKSPACE_MODES"
           :key="mode"
           type="button"
           :class="{ active: workspaceMode === mode }"
           :aria-pressed="workspaceMode === mode"
           :title="workspaceModeHint(mode, lang)"
           @click="openWorkspaceMode(mode)"
-        >{{ mode === 'code' ? 'Code' : mode === 'solid' ? 'Solid' : 'Mesh' }}</button>
+        >{{ workspaceModeLabel(mode, lang) }}</button>
       </div>
+      <button
+        class="icon-btn source-toggle"
+        type="button"
+        :class="{ active: editorOpen }"
+        :aria-pressed="editorOpen"
+        :aria-label="lang === 'ru' ? 'Исходный код' : 'Source'"
+        :title="lang === 'ru' ? 'Исходный код' : 'Source'"
+        @click="editorOpen = !editorOpen"
+      >
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M8 6 3 12l5 6M16 6l5 6-5 6"/></svg>
+      </button>
       <div class="topbar-right">
         <div v-if="workspaceConflict" class="persistence-conflict" role="alert">
           <span>⚠ {{ t('storageConflict') }}</span>
@@ -2529,7 +2533,12 @@ function sanitizeFileName(name: string) { return (name.replace(/[^\w.() -]+/g, '
       </div>
     </nav>
 
-    <main ref="mainRef" class="main" :inert="directModelerOpen || meshModelerOpen || functionReferenceOpen">
+    <main
+      ref="mainRef"
+      class="main"
+      :class="{ 'editor-drawer': editorOpen }"
+      :inert="!editorOpen && (directModelerOpen || meshModelerOpen || functionReferenceOpen)"
+    >
       <section class="editor-panel" :style="{ width: `${editorWidth}px` }" :aria-label="t('editor')">
         <div class="toolbar editor-toolbar">
           <button class="btn btn-primary" type="button" title="Ctrl/⌘+Enter" :disabled="rendering" @click="doRender('full')">
@@ -3173,6 +3182,27 @@ button, select { color: inherit; }
 /* Layout */
 .no-gpu { position: absolute; z-index: 8; inset: 0; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 14px; color: var(--danger); background: var(--canvas-bg); font-size: 1rem; padding: 40px; text-align: center; }
 .main { flex: 1; min-height: 0; display: flex; overflow: hidden; }
+/* With no Code workspace the source opens over the active one. The viewport stays
+   laid out off to the side: hiding it would resize its canvas to zero. */
+.main.editor-drawer {
+  position: fixed;
+  inset: 46px auto 28px 0;
+  z-index: 30;
+  width: min(560px, 82vw);
+  border-right: 1px solid var(--border);
+  box-shadow: 0 0 40px #0006;
+}
+.main.editor-drawer > .splitter { display: none; }
+.main.editor-drawer > section:not(.editor-panel) {
+  position: absolute;
+  inset: 0 auto 0 100%;
+  width: 60vw;
+  visibility: hidden;
+  pointer-events: none;
+}
+.main.editor-drawer .editor-panel { width: 100% !important; max-width: none; }
+.source-toggle.active { color: var(--accent); border-color: var(--accent); }
+
 .editor-panel {
   min-width: 300px; min-height: 0; max-width: calc(100vw - 320px); display: flex; flex-direction: column;
   background: var(--bg); border-right: 1px solid var(--border); overflow-x: hidden; overflow-y: auto;
