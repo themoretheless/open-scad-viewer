@@ -23,6 +23,7 @@ import { identity, type Mat4 } from './math3d'
 import { buildMeshBvh } from './meshBvh'
 import { extractSemanticEdges } from './meshTopology'
 import { AbortedError, OpenSCADParseError, positionKernelError } from './openscadErrors'
+import { createBrepRecordingKernelOps } from './solid/brepRecorder'
 import { bindOpenScad, prepareOpenScadFrontEnd } from './openscadBinder'
 import {
   createDeferredOpenScadBuiltinArguments,
@@ -133,6 +134,12 @@ import { CSS_COLORS, clamp01, nextColor, resetPalette, type RGBA } from './opens
 export { AbortedError, OpenSCADParseError } from './openscadErrors'
 
 export interface ParseOptions {
+  /**
+   * Record the exact solid graph beside the polygon evaluation, for the Solid
+   * workspace. Off by default: the bounded worker protocol accepts an exact set of
+   * result keys, so the field must not appear on the ordinary display route.
+   */
+  recordExactSolids?: boolean
   /** Versioned frontend profile. The legacy public route remains subset@1. */
   languageProfile?: OpenScadLanguageProfile
   quality?: GeometryQuality
@@ -3744,6 +3751,11 @@ async function parseInternal(
       ])
   const parsedAt = now()
   const kernelSession = await defaultGeometryKernel.openEvalSession()
+  // Recording costs only a small JSON graph, but it is opt-in because the result
+  // crosses a protocol that validates an exact set of keys.
+  const exactRecorder = options.recordExactSolids === true
+    ? createBrepRecordingKernelOps(kernelSession.kernel)
+    : null
   const warnings: string[] = []
   const modules = new Map(bound.modules)
   const functions = new Map(bound.functions)
@@ -3757,7 +3769,7 @@ async function parseInternal(
   const sourceReferences = new Map<number, MeshSourceReference>()
   const reduced = { value: false }
   let ctx: EvalContext = {
-    kernel: kernelSession.kernel,
+    kernel: exactRecorder?.ops ?? kernelSession.kernel,
     source,
     project,
     importAssets,
@@ -3802,8 +3814,15 @@ async function parseInternal(
     let volume = 0
     let surfaceArea = 0
     let triangleCount = 0
-    for (const shape of solids) {
+    const exactRoots: NonNullable<ParseResult['exactSolids']>['roots'][number][] = []
+    for (const [index, shape] of solids.entries()) {
       if (options.shouldAbort?.()) throw new AbortedError()
+      // Resolved here, while the handle is still alive and before its mesh is extracted.
+      if (exactRecorder) {
+        const name = `Body ${index + 1}`
+        const resolved = exactRecorder.recording.resolve(shape.geometry)
+        exactRoots.push('id' in resolved ? { name, id: resolved.id } : { name, inexact: resolved.inexact })
+      }
       const analysis = ctx.kernel.analyzeSolid(shape.geometry)
       volume += analysis.volume
       surfaceArea += analysis.surfaceArea
@@ -3868,6 +3887,7 @@ async function parseInternal(
     const analyzedAt = now()
     return {
       meshes, warnings, volume, surfaceArea, quality, reduced: reduced.value,
+      ...(exactRecorder ? { exactSolids: { nodes: exactRecorder.recording.nodes, roots: exactRoots } } : {}),
       timings: {
         parseMs,
         bindMs,
