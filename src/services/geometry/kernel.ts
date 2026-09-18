@@ -72,16 +72,21 @@ export function warmGeometryKernel(): Promise<void> {
   if (initialized) return Promise.resolve()
   warming ??= (async () => {
     const module = await WebAssembly.compile(unpackBrotliWasmBase64(wasmBase64))
+    // Instantiate asynchronously as well: browsers refuse a synchronous instantiation of a module over
+    // 8 MB on the main thread, which is where the viewport and the Solid workspace warm the kernel.
+    const instance = await WebAssembly.instantiate(module)
     // A synchronous caller may have initialized the runtime while compilation
     // was pending. Its native snapshots must remain attached to that instance.
     if (!initialized) {
-      wasm = new WebAssembly.Instance(module).exports as KernelExports
+      wasm = instance.exports as KernelExports
       wasmMemory = wasm.memory
       initialized = true
     }
   })().finally(() => { warming = undefined })
   return warming
 }
+/** True once an instance exists, so main-thread callers can avoid the synchronous compile path. */
+export function isGeometryKernelReady(): boolean { return initialized }
 function initialize(): void {
   if (readingCadMesh) throw new Error('WASM calls are not allowed while reading a borrowed CAD mesh')
   if (initialized) return

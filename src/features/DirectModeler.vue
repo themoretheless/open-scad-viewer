@@ -20,6 +20,7 @@ import { createSolidNurbsCurve, createSolidNurbsSurface, importModelGraphNurbs, 
 import { elevateNurbsCurve, insertNurbsKnot } from '../services/nurbsCurve'
 import { elevateNurbsSurface, insertNurbsSurfaceKnot, isoNurbsCurve, trimNurbsSurface } from '../services/nurbsSurface'
 import { extrudeNurbsCurve } from '../services/nurbsConstructors'
+import { isGeometryKernelReady, warmGeometryKernel } from '../services/geometry/kernel'
 import { createRuledSketchLoft, createBrepSphere, createBrepTorus, analyzeNurbsBrep, type BrepMassProperties, booleanNurbsBrep, createBrepBox, revolveBrepProfile, createBrepCylinder, createBrepFrustum, createBrepTube, createFacetedBrepCylinder, createFacetedBrepRevolve, createFacetedBrepSphere, extrudeBrepPolygon, tessellateNurbsBrep, type BrepBooleanOperation, type NurbsBrep } from '../services/geometry/brep'
 const props = defineProps<{ open: boolean; locale: string; canAppend: boolean; remainingSource: number; embedded?: boolean; initialDocument?: DirectDocument; initialSelection?: string; seedDocument?: DirectDocument | null; paletteRequest?: number }>()
 const emit = defineEmits<{ close: []; append: [source: string]; toMesh: [] }>()
@@ -503,6 +504,10 @@ function splitKey(e: KeyboardEvent) {
 // mesh for picking, topology and export; the view draws a denser mesh with smoothed normals, and every display
 // triangle points back at the nearest working triangle so face picking and highlighting keep working.
 const DISPLAY_SEGMENTS = 12
+// Chrome refuses a synchronous WebAssembly.Module over 8 MB on the main thread, so the display
+// tessellation waits for the kernel's asynchronous warm-up and shows the working mesh until then.
+const kernelReady = ref(isGeometryKernelReady())
+if (!kernelReady.value) void warmGeometryKernel().then(() => { kernelReady.value = true }).catch(() => {})
 const DISPLAY_TRIANGLE_BUDGET = 4000
 const smoothDisplay = ref(true)
 interface DisplayMesh { mesh: { positions: number[]; indices: number[] }; map: number[] | null; normals: number[][] }
@@ -537,7 +542,7 @@ function displayMeshFor(b: ReturnType<typeof directExtrusionTool>): DisplayMesh 
   if (cached) return cached
   let result: DisplayMesh
   const brep = (b as { brep?: NurbsBrep }).brep
-  if (smoothDisplay.value && brep) {
+  if (smoothDisplay.value && brep && kernelReady.value) {
     try {
       const dense = tessellateNurbsBrep(brep, DISPLAY_SEGMENTS)
       if (dense.indices.length / 3 > DISPLAY_TRIANGLE_BUDGET) throw new Error('display budget')
@@ -623,9 +628,9 @@ function meshPolygons(b: ReturnType<typeof directExtrusionTool>) {
     return { id: b.id, triangle, key: b.id + ':' + i, points: face.map(p => project(p, '3d').join(',')).join(' '), shade: display.map ? shadeFromNormal(display.normals[i]) : directFaceShade(mesh, i, camera.value), depth: face.reduce((n,p) => n + projectDirectPoint(p,camera.value)[2], 0) }
   })
 }
-watch(smoothDisplay, () => { for (const body of document.value.bodies) displayCache.delete(body.mesh) })
+watch([smoothDisplay, kernelReady], () => { for (const body of document.value.bodies) displayCache.delete(body.mesh) })
 const polygons = computed(() => document.value.bodies.flatMap(meshPolygons).sort((a,b)=>a.depth-b.depth))
-const nurbsSurfacePolygons = computed(() => (document.value.surfaces ?? []).flatMap(item => {
+const nurbsSurfacePolygons = computed(() => !kernelReady.value ? [] : (document.value.surfaces ?? []).flatMap(item => {
   try { return meshPolygons({ id: item.id, name: item.name, mesh: tessellateSolidNurbsSurface(item) }).sort((a,b)=>a.depth-b.depth) }
   catch { return [] }
 }))
