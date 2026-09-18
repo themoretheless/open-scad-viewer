@@ -438,6 +438,10 @@ async function downloadMesh() {
 
 // Command palette: header actions, object tools and edit operations, filtered to what applies to the current selection.
 const paletteOpen = ref(false)
+const dockOpen = ref(storageGet('scad-mesh-dock') !== 'false')
+const dockTab = ref<'scene' | 'props'>('scene')
+watch(dockOpen, open => storageSet('scad-mesh-dock', String(open)))
+const propsOpen = computed({ get: () => dockOpen.value && dockTab.value === 'props', set: open => { if (open) { dockOpen.value = true; dockTab.value = 'props' } else dockTab.value = 'scene' } })
 watch(() => props.paletteRequest, request => { if (request && props.open) paletteOpen.value = true })
 type MeshCommand = PaletteCommand & { run: () => void }
 const meshCommands = computed<MeshCommand[]>(() => {
@@ -450,6 +454,7 @@ const meshCommands = computed<MeshCommand[]>(() => {
     cmd('add-sphere', 'UV-сфера', 'UV Sphere', () => addPrimitive('sphere'), { detail: label('Добавить', 'Add') }),
     cmd('import', 'Импорт сетки', 'Import mesh', () => fileInput.value?.click(), { detail: 'STL / OBJ / PLY / OFF / AMF / 3MF' }),
     ...modes.map(([mode, ru, en, key]) => cmd(`mode-${mode}`, ru, en, () => { selectMode.value = mode }, { shortcut: key, enabled: selectMode.value !== mode })),
+    cmd('props', propsOpen.value ? 'Скрыть панель свойств' : 'Панель свойств', propsOpen.value ? 'Hide properties panel' : 'Properties panel', () => { propsOpen.value = !propsOpen.value }, { detail: label('Вид', 'View') }),
     cmd('reset-view', 'Сбросить вид', 'Reset view', resetView, { detail: label('Вид', 'View') }),
     cmd('grid', floorVisible.value ? 'Скрыть сетку' : 'Показать сетку', floorVisible.value ? 'Hide grid' : 'Show grid', () => { floorVisible.value = !floorVisible.value }, { detail: label('Вид', 'View') }),
     cmd('undo', 'Отменить', 'Undo', undo, { shortcut: 'Ctrl Z', enabled: undoable.value }),
@@ -481,7 +486,11 @@ defineExpose({ meshCommands, executeMeshCommand })
 function onWorkspaceKey(event: KeyboardEvent) {
   if (paletteOpen.value) return
   if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') { event.preventDefault(); paletteOpen.value = true; return }
-  if (event.key === 'Escape') { if (elementDrag) { cancelElementDrag(); return } emit('close') }
+  if (event.key === 'Escape') { if (elementDrag) { cancelElementDrag(); return } if (propsOpen.value) { propsOpen.value = false; return } emit('close') }
+  if ((event.target as HTMLElement).matches('input,textarea,select')) return
+  const modes: Record<string, MeshSelectMode> = { '1': 'object', '2': 'vertex', '3': 'edge', '4': 'face' }
+  if (modes[event.key]) { selectMode.value = modes[event.key]; return }
+  if (event.key.toLowerCase() === 'f') resetView()
 }
 function downloadJson() {
   const blob = new Blob([JSON.stringify(document.value)], { type: 'application/json' })
@@ -556,7 +565,12 @@ function startElementDrag(event: PointerEvent, objectId: string, kind: 'vertex' 
       : [...new Set(selectedFaces.value.flatMap(face => [mesh.indices[face * 3], mesh.indices[face * 3 + 1], mesh.indices[face * 3 + 2]]))]
   const target = event.currentTarget as SVGGraphicsElement
   const svg = target.ownerSVGElement ?? (target as unknown as SVGSVGElement)
-  elementDrag = { objectId, vertexIds, base: { positions: [...mesh.positions], indices: [...mesh.indices] }, x: event.clientX, y: event.clientY, moved: false, svg }
+  // Meshes may carry per-face duplicates of a corner; move every index that shares the position.
+  const byPosition = new Map<string, number[]>()
+  const keyOf = (i: number) => `${mesh.positions[i * 3].toFixed(5)},${mesh.positions[i * 3 + 1].toFixed(5)},${mesh.positions[i * 3 + 2].toFixed(5)}`
+  for (let i = 0; i < mesh.positions.length / 3; i++) { const key = keyOf(i); const list = byPosition.get(key); if (list) list.push(i); else byPosition.set(key, [i]) }
+  const expanded = [...new Set(vertexIds.flatMap(i => byPosition.get(keyOf(i)) ?? [i]))]
+  elementDrag = { objectId, vertexIds: expanded, base: { positions: [...mesh.positions], indices: [...mesh.indices] }, x: event.clientX, y: event.clientY, moved: false, svg }
   dragSwallowsClick = false
   ;(event.currentTarget as Element).setPointerCapture(event.pointerId)
 }
@@ -641,127 +655,38 @@ const scene = computed(() => document.value.objects.filter(o => o.visible).map(o
       <button type="button" class="command-search" :title="label('Поиск команд · Ctrl/⌘ K', 'Search commands · Ctrl/⌘ K')" @click="paletteOpen = true"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><span>{{ label('Команда…', 'Command…') }}</span><kbd>Ctrl K</kbd></button>
       <span class="hint"></span>
       <button type="button" class="icon" :disabled="!undoable" :title="label('Отменить · Ctrl/⌘ Z', 'Undo · Ctrl/⌘ Z')" :aria-label="label('Отменить', 'Undo')" @click="undo"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 14 4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-3"/></svg></button>
+      <details class="file-menu"><summary :title="label('Файл', 'File')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6"/></svg><span>{{ label('Файл', 'File') }}</span><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></summary><div>
+        <button type="button" @click="fileInput?.click()">{{ label('Импорт STL / OBJ / PLY / OFF / AMF / 3MF', 'Import STL / OBJ / PLY / OFF / AMF / 3MF') }}</button>
+        <button type="button" :disabled="!selected" @click="downloadStl">{{ label('Скачать STL выбранного', 'Download selected as STL') }}</button>
+        <label class="file-row"><select v-model="exportFormat" :aria-label="label('Формат экспорта', 'Export format')"><option v-for="format in MESH_EXPORT_FORMATS" :key="format" :value="format">{{ MESH_FORMAT_LABELS[format] }}</option></select><button type="button" :disabled="!selected" @click="downloadMesh">{{ label('Скачать', 'Download') }}</button></label>
+        <button type="button" @click="downloadJson">{{ label('Скачать проект JSON', 'Download JSON project') }}</button>
+        <button type="button" :disabled="!document.objects.length" @click="emit('exportToSolid', document)">{{ label('Открыть в Solid', 'Open in Solid') }}</button>
+      </div></details>
       <button type="button" class="icon" :disabled="!redoable" :title="label('Повторить · Ctrl/⌘ Shift Z', 'Redo · Ctrl/⌘ Shift Z')" :aria-label="label('Повторить', 'Redo')" @click="redo"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 14 5-5-5-5"/><path d="M20 9H9a5 5 0 0 0 0 10h3"/></svg></button>
     </header>
     <CommandPalette v-if="paletteOpen" :open="paletteOpen" :commands="meshCommands.filter(command => command.enabled !== false)" @close="paletteOpen = false" @execute="executeMeshCommand" />
 
     <div class="mesh-body">
-      <aside class="mesh-side">
-        <section>
-          <h3>{{ label('Объекты', 'Objects') }}</h3>
-          <button type="button" @click="addPrimitive('box')">+ Cube</button>
-          <button type="button" @click="addPrimitive('sphere')">+ UV Sphere</button>
-          <button type="button" @click="fileInput?.click()">{{ label('Импорт STL / OBJ / PLY / OFF / AMF / 3MF', 'Import STL / OBJ / PLY / OFF / AMF / 3MF') }}</button>
-          <input ref="fileInput" type="file" :accept="MESH_IMPORT_ACCEPT" hidden @change="importMesh" />
-          <ul>
-            <li v-for="object in document.objects" :key="object.id">
-              <button type="button" :class="{ active: selection === object.id }" @click="selection = object.id; selectedVerts = []; selectedFaces = []; selectedEdges = []">
-                {{ object.name }}
-              </button>
-            </li>
-          </ul>
-        </section>
-
-        <section>
-          <h3>{{ label('Режим выбора', 'Select mode') }}</h3>
-          <div class="row">
-            <button v-for="mode in (['object', 'vertex', 'edge', 'face'] as const)" :key="mode" type="button" :class="{ active: selectMode === mode }" @click="selectMode = mode">{{ mode }}</button>
-          </div>
-        </section>
-
-        <section v-if="selected">
-          <h3>{{ label('Трансформ', 'Transform') }} G / R / S</h3>
-          <label>ΔX <input v-model.number="dx" type="number" step="0.1" /></label>
-          <label>ΔY <input v-model.number="dy" type="number" step="0.1" /></label>
-          <label>ΔZ <input v-model.number="dz" type="number" step="0.1" /></label>
-          <label>{{ label('Угол', 'Angle') }} <input v-model.number="angle" type="number" step="1" /></label>
-          <label>{{ label('Масштаб', 'Scale') }} <input v-model.number="scale" type="number" step="0.05" min="0.01" /></label>
-          <template v-if="selectMode === 'vertex'">
-            <label><span>O · {{ label('Пропорционально', 'Proportional') }}</span><input v-model="proportionalEdit" type="checkbox" /></label>
-            <label v-if="proportionalEdit">{{ label('Радиус влияния', 'Influence radius') }} <input v-model.number="proportionalRadius" type="number" step="0.5" min="0.01" /></label>
-            <p v-if="proportionalEdit" class="tool-hint">{{ label('Плавный спад по расстоянию в пространстве.', 'Smooth falloff by spatial distance.') }}</p>
-          </template>
-          <button type="button" @click="transformSelected">{{ label('Применить', 'Apply') }}</button>
-        </section>
-
-        <section v-if="selected && selectMode === 'face'">
-          <h3>Edit · Face</h3>
-          <label>E {{ label('Выдавить', 'Extrude') }} <input v-model.number="extrudeDistance" type="number" step="0.1" /></label>
-          <button type="button" @click="applyExtrude">Extrude</button>
-          <label>I {{ label('Inset', 'Inset') }} <input v-model.number="insetAmount" type="number" step="0.05" min="0.01" /></label>
-          <button type="button" @click="applyInset">Inset</button>
-          <button type="button" @click="applySubdivide">Subdivide</button>
-          <button type="button" @click="applyDeleteFaces">Delete faces</button>
-          <button type="button" @click="applyFlip">Flip normals</button>
-        </section>
-
-        <section v-if="selected && selectMode === 'edge'">
-          <h3>Edit · Edge</h3>
-          <p class="tool-hint">{{ label('Клик выбирает рёбра; Shift вращает вид.', 'Click edges to select; Shift orbits the view.') }}</p>
-          <button type="button" :disabled="!selectedEdges.length" @click="applyKnife">K · {{ label('Разрез по середине', 'Knife at midpoint') }}</button>
-        </section>
-
-        <section v-if="selected">
-          <h3>{{ label('Топология', 'Topology') }}</h3>
-          <label>{{ label('Слияние', 'Merge by distance') }} <input v-model.number="mergeDistance" type="number" step="0.001" min="0.0001" /></label>
-          <button type="button" @click="applyMerge">Merge</button>
-          <button type="button" @click="applySeparate">Separate faces</button>
-          <button type="button" @click="applyJoin">Join objects</button>
-          <button type="button" @click="applySymmetrize">Symmetrize X</button>
-          <h3>{{ label('Скульптинг', 'Sculpt') }}</h3>
-          <label>{{ label('Кисть', 'Brush') }}
-            <select v-model="brushKind">
-              <option v-for="k in SCULPT_KINDS" :key="k" :value="k">{{ k }}</option>
-            </select>
-          </label>
-          <label>Falloff
-            <select v-model="brushFalloff">
-              <option v-for="f in SCULPT_FALLOFFS" :key="f" :value="f">{{ f }}</option>
-            </select>
-          </label>
-          <label>R <input v-model.number="brushRadius" type="number" step="0.5" min="0.1" /></label>
-          <label>{{ brushIsFraction ? label('Доля', 'Amount') : label('Сила', 'Strength') }}
-            <input v-model.number="brushStrength" type="number" :step="brushIsFraction ? 0.05 : 0.1" :min="brushIsFraction ? 0 : undefined" :max="brushIsFraction ? 1 : undefined" />
-          </label>
-          <label title="Mirror X"><input v-model="brushMirror[0]" type="checkbox" /> X</label>
-          <label title="Mirror Y"><input v-model="brushMirror[1]" type="checkbox" /> Y</label>
-          <label title="Mirror Z"><input v-model="brushMirror[2]" type="checkbox" /> Z</label>
-          <button type="button" @click="applyBrush">{{ label('Мазок', 'Stroke') }}</button>
-          <label>Twist <input v-model.number="twistAmount" type="number" step="0.05" /></label>
-          <button type="button" @click="applyTwist">Twist deform</button>
-          <button type="button" @click="applySubdivide">Subdivide all</button>
-          <button type="button" @click="applyDuplicate">Duplicate</button>
-          <button type="button" @click="removeSelected">Delete object</button>
-        </section>
-
-        <section v-if="document.objects.length > 1">
-          <h3>Boolean</h3>
-          <select v-model="booleanOp">
-            <option value="union">Union</option>
-            <option value="difference">Difference</option>
-            <option value="intersection">Intersection</option>
-          </select>
-          <select v-model="booleanTarget">
-            <option value="">{{ label('Второй объект…', 'Second object…') }}</option>
-            <option v-for="object in document.objects.filter(o => o.id !== selection)" :key="object.id" :value="object.id">{{ object.name }}</option>
-          </select>
-          <button type="button" @click="applyBoolean">{{ label('Выполнить', 'Run') }}</button>
-        </section>
-
-        <section>
-          <h3>{{ label('Экспорт', 'Export') }}</h3>
-          <button type="button" :disabled="!selected" @click="downloadStl">STL</button>
-          <select v-model="exportFormat" :aria-label="label('Формат экспорта', 'Export format')">
-            <option v-for="format in MESH_EXPORT_FORMATS" :key="format" :value="format">{{ MESH_FORMAT_LABELS[format] }}</option>
-          </select>
-          <button type="button" :disabled="!selected" @click="downloadMesh">{{ label('Скачать', 'Download') }}</button>
-          <button type="button" @click="downloadJson">JSON</button>
-        </section>
-
-        <p v-if="stats" class="stats">{{ stats.vertices }}v · {{ stats.edges }}e · {{ stats.faces }}f · {{ stats.closed ? 'closed' : 'open' }}</p>
-        <p v-if="error" class="error">{{ error }}</p>
-      </aside>
-
+      <input ref="fileInput" type="file" :accept="MESH_IMPORT_ACCEPT" hidden @change="importMesh" />
+      <div class="pane-tools" role="toolbar" :aria-label="label('Инструменты Mesh', 'Mesh tools')">
+        <button type="button" class="tool-icon" :title="label('Куб', 'Cube')" :aria-label="label('Куб', 'Cube')" @click="addPrimitive('box')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7l8-4 8 4-8 4zM4 7v10l8 4 8-4V7M12 11v10"/></svg></button>
+        <button type="button" class="tool-icon" :title="label('UV-сфера', 'UV Sphere')" :aria-label="label('UV-сфера', 'UV Sphere')" @click="addPrimitive('sphere')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM3 12h18M12 3c-3 2.5-3 15.5 0 18M12 3c3 2.5 3 15.5 0 18"/></svg></button>
+        <button type="button" class="tool-icon" :title="label('Импорт сетки', 'Import mesh')" :aria-label="label('Импорт сетки', 'Import mesh')" @click="fileInput?.click()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21V9M6 15l6-6 6 6M4 5h16"/></svg></button>
+        <span class="tool-divider" aria-hidden="true"></span>
+        <button type="button" class="tool-icon" :title="label('Объект · 1', 'Object · 1')" :aria-label="label('Объект · 1', 'Object · 1')" :aria-pressed="selectMode==='object'" @click="selectMode='object'"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" fill-opacity="0.35" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M4 7l8-4 8 4-8 4zM4 7v10l8 4 8-4V7M12 11v10"/></svg></button>
+        <button type="button" class="tool-icon" :title="label('Вершина · 2', 'Vertex · 2')" :aria-label="label('Вершина · 2', 'Vertex · 2')" :aria-pressed="selectMode==='vertex'" @click="selectMode='vertex'"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M4 7l8-4 8 4-8 4zM4 7v10l8 4 8-4V7"/><path d="M4 4.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5zM20 4.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5zM12 8.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5z" fill="currentColor"/></svg></button>
+        <button type="button" class="tool-icon" :title="label('Ребро · 3', 'Edge · 3')" :aria-label="label('Ребро · 3', 'Edge · 3')" :aria-pressed="selectMode==='edge'" @click="selectMode='edge'"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M4 7l8-4 8 4-8 4zM4 7v10l8 4 8-4V7"/><path d="M12 11v10" stroke-width="3.5"/></svg></button>
+        <button type="button" class="tool-icon" :title="label('Грань · 4', 'Face · 4')" :aria-label="label('Грань · 4', 'Face · 4')" :aria-pressed="selectMode==='face'" @click="selectMode='face'"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M4 7l8-4 8 4-8 4z" fill="currentColor" fill-opacity="0.45"/><path d="M4 7v10l8 4 8-4V7M12 11v10"/></svg></button>
+        <span class="tool-divider" aria-hidden="true"></span>
+        <button type="button" class="tool-icon" :title="label('Сбросить вид', 'Reset view')" :aria-label="label('Сбросить вид', 'Reset view')" @click="resetView()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7M3 4v5h5"/></svg></button>
+        <button type="button" class="tool-icon" :title="label('Сетка', 'Grid')" :aria-label="label('Сетка', 'Grid')" :aria-pressed="floorVisible" @click="floorVisible = !floorVisible"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 9h18M3 15h18M9 3v18M15 3v18M3 3h18v18H3z"/></svg></button>
+        <span class="tool-divider" aria-hidden="true"></span>
+        <button type="button" class="tool-icon" :title="label('Панель свойств', 'Properties panel')" :aria-label="label('Панель свойств', 'Properties panel')" :aria-pressed="propsOpen" @click="propsOpen = !propsOpen"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h10M18 8h2M4 16h4M12 16h8"/><circle cx="16" cy="8" r="2"/><circle cx="10" cy="16" r="2"/></svg></button>
+        <span class="subtle">{{ stats ? `${stats.vertices}v · ${stats.edges}e · ${stats.faces}f · ${stats.closed ? label('замкнут', 'closed') : label('открыт', 'open')}` : label('ЛКМ: вращение · Shift: панорама · колесо: масштаб', 'LMB: orbit · Shift: pan · wheel: zoom') }}</span>
+        <p v-if="error" class="error" role="alert">{{ error }}</p>
+      </div>
+      <div class="mesh-stage">
+      <div class="mesh-stage-view">
       <div class="mesh-view-wrap">
       <div v-if="!scene.length" class="mesh-empty"><strong>{{ label('Объектов пока нет', 'No objects yet') }}</strong><span>{{ label('Добавьте куб или сферу, импортируйте сетку или соберите модель в Code: сцена переносится сюда автоматически.', 'Add a cube or sphere, import a mesh, or build a model in Code: the scene carries over here automatically.') }}</span></div>
       <svg
@@ -811,6 +736,105 @@ const scene = computed(() => document.value.objects.filter(o => o.visible).map(o
         </g>
       </svg>
       </div>
+      </div>
+      </div>
+      <aside class="side-dock" :class="{ collapsed: !dockOpen }" :aria-label="label('Панель', 'Panel')">
+        <div class="dock-rail" role="tablist" aria-orientation="vertical">
+          <button type="button" role="tab" :aria-selected="dockOpen && dockTab === 'scene'" :aria-label="label('Сцена', 'Scene')" :title="label('Сцена', 'Scene')" @click="dockTab = 'scene'; dockOpen = true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
+          <button type="button" role="tab" :aria-selected="dockOpen && dockTab === 'props'" :aria-label="label('Свойства', 'Properties')" :title="label('Свойства', 'Properties')" @click="dockTab = 'props'; dockOpen = true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 8h10M18 8h2M4 16h4M12 16h8M16 6a2 2 0 1 0 0 4 2 2 0 0 0 0-4zM10 14a2 2 0 1 0 0 4 2 2 0 0 0 0-4z"/></svg></button>
+          <span class="dock-rail-spacer"></span>
+          <button type="button" :aria-label="dockOpen ? label('Свернуть панель', 'Collapse panel') : label('Развернуть панель', 'Expand panel')" :title="dockOpen ? label('Свернуть панель', 'Collapse panel') : label('Развернуть панель', 'Expand panel')" @click="dockOpen = !dockOpen"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path :d="dockOpen ? 'M9 6l6 6-6 6' : 'M15 6l-6 6 6 6'"/></svg></button>
+        </div>
+        <div v-if="dockOpen" class="dock-body">
+          <template v-if="dockTab === 'scene'">
+            <div class="dock-heading">{{ label('Сцена', 'Scene') }} <span>{{ document.objects.length }}</span></div>
+            <ul class="scene-list">
+              <li v-for="object in document.objects" :key="object.id"><button type="button" :aria-label="object.name" :aria-pressed="selection === object.id" @click="selection = object.id; selectedVerts = []; selectedFaces = []; selectedEdges = []"><span class="dot body"></span>{{ object.name }}<small>{{ object.mesh.indices.length / 3 }} △</small></button></li>
+              <li v-if="!document.objects.length" class="scene-empty">{{ label('Объектов нет. Добавьте куб или сферу, импортируйте сетку или соберите модель в Code.', 'No objects. Add a cube or sphere, import a mesh, or build a model in Code.') }}</li>
+            </ul>
+          </template>
+          <template v-else>
+            <div class="dock-heading">{{ selected?.name || label('Свойства', 'Properties') }}</div>
+            <div class="dock-props">
+        <section v-if="selected">
+          <h3>{{ label('Трансформ', 'Transform') }} G / R / S</h3>
+          <label>ΔX <input v-model.number="dx" type="number" step="0.1" /></label>
+          <label>ΔY <input v-model.number="dy" type="number" step="0.1" /></label>
+          <label>ΔZ <input v-model.number="dz" type="number" step="0.1" /></label>
+          <label>{{ label('Угол', 'Angle') }} <input v-model.number="angle" type="number" step="1" /></label>
+          <label>{{ label('Масштаб', 'Scale') }} <input v-model.number="scale" type="number" step="0.05" min="0.01" /></label>
+          <template v-if="selectMode === 'vertex'">
+            <label><span>O · {{ label('Пропорционально', 'Proportional') }}</span><input v-model="proportionalEdit" type="checkbox" /></label>
+            <label v-if="proportionalEdit">{{ label('Радиус влияния', 'Influence radius') }} <input v-model.number="proportionalRadius" type="number" step="0.5" min="0.01" /></label>
+            <p v-if="proportionalEdit" class="tool-hint">{{ label('Плавный спад по расстоянию в пространстве.', 'Smooth falloff by spatial distance.') }}</p>
+          </template>
+          <button type="button" @click="transformSelected">{{ label('Применить', 'Apply') }}</button>
+        </section>
+        <section v-if="selected && selectMode === 'face'">
+          <h3>Edit · Face</h3>
+          <label>E {{ label('Выдавить', 'Extrude') }} <input v-model.number="extrudeDistance" type="number" step="0.1" /></label>
+          <button type="button" @click="applyExtrude">Extrude</button>
+          <label>I {{ label('Inset', 'Inset') }} <input v-model.number="insetAmount" type="number" step="0.05" min="0.01" /></label>
+          <button type="button" @click="applyInset">Inset</button>
+          <button type="button" @click="applySubdivide">Subdivide</button>
+          <button type="button" @click="applyDeleteFaces">Delete faces</button>
+          <button type="button" @click="applyFlip">Flip normals</button>
+        </section>
+        <section v-if="selected && selectMode === 'edge'">
+          <h3>Edit · Edge</h3>
+          <p class="tool-hint">{{ label('Клик выбирает рёбра; Shift вращает вид.', 'Click edges to select; Shift orbits the view.') }}</p>
+          <button type="button" :disabled="!selectedEdges.length" @click="applyKnife">K · {{ label('Разрез по середине', 'Knife at midpoint') }}</button>
+        </section>
+        <section v-if="selected">
+          <h3>{{ label('Топология', 'Topology') }}</h3>
+          <label>{{ label('Слияние', 'Merge by distance') }} <input v-model.number="mergeDistance" type="number" step="0.001" min="0.0001" /></label>
+          <button type="button" @click="applyMerge">Merge</button>
+          <button type="button" @click="applySeparate">Separate faces</button>
+          <button type="button" @click="applyJoin">Join objects</button>
+          <button type="button" @click="applySymmetrize">Symmetrize X</button>
+          <h3>{{ label('Скульптинг', 'Sculpt') }}</h3>
+          <label>{{ label('Кисть', 'Brush') }}
+            <select v-model="brushKind">
+              <option v-for="k in SCULPT_KINDS" :key="k" :value="k">{{ k }}</option>
+            </select>
+          </label>
+          <label>Falloff
+            <select v-model="brushFalloff">
+              <option v-for="f in SCULPT_FALLOFFS" :key="f" :value="f">{{ f }}</option>
+            </select>
+          </label>
+          <label>R <input v-model.number="brushRadius" type="number" step="0.5" min="0.1" /></label>
+          <label>{{ brushIsFraction ? label('Доля', 'Amount') : label('Сила', 'Strength') }}
+            <input v-model.number="brushStrength" type="number" :step="brushIsFraction ? 0.05 : 0.1" :min="brushIsFraction ? 0 : undefined" :max="brushIsFraction ? 1 : undefined" />
+          </label>
+          <label title="Mirror X"><input v-model="brushMirror[0]" type="checkbox" /> X</label>
+          <label title="Mirror Y"><input v-model="brushMirror[1]" type="checkbox" /> Y</label>
+          <label title="Mirror Z"><input v-model="brushMirror[2]" type="checkbox" /> Z</label>
+          <button type="button" @click="applyBrush">{{ label('Мазок', 'Stroke') }}</button>
+          <label>Twist <input v-model.number="twistAmount" type="number" step="0.05" /></label>
+          <button type="button" @click="applyTwist">Twist deform</button>
+          <button type="button" @click="applySubdivide">Subdivide all</button>
+          <button type="button" @click="applyDuplicate">Duplicate</button>
+          <button type="button" @click="removeSelected">Delete object</button>
+        </section>
+        <section v-if="document.objects.length > 1">
+          <h3>Boolean</h3>
+          <select v-model="booleanOp">
+            <option value="union">Union</option>
+            <option value="difference">Difference</option>
+            <option value="intersection">Intersection</option>
+          </select>
+          <select v-model="booleanTarget">
+            <option value="">{{ label('Второй объект…', 'Second object…') }}</option>
+            <option v-for="object in document.objects.filter(o => o.id !== selection)" :key="object.id" :value="object.id">{{ object.name }}</option>
+          </select>
+          <button type="button" @click="applyBoolean">{{ label('Выполнить', 'Run') }}</button>
+        </section>
+        <p v-if="!selected" class="tool-hint">{{ label('Выберите объект в полосе снизу или кликом по холсту.', 'Select an object in the strip below or by clicking the canvas.') }}</p>
+            </div>
+          </template>
+        </div>
+      </aside>
     </div>
   </div>
 </template>
@@ -841,7 +865,7 @@ const scene = computed(() => document.value.objects.filter(o => o.visible).map(o
 .mesh-bar .command-search span { flex: 1; text-align: left; }
 .mesh-bar .command-search kbd { font: 11px var(--font-mono, monospace); padding: 1px 5px; border: 1px solid var(--border); border-radius: 4px; }
 .mesh-bar .icon { width: 32px; height: 32px; padding: 0; display: inline-flex; align-items: center; justify-content: center; }
-.mesh-bar button, .mesh-side button, .mesh-side select, .mesh-side input {
+.mesh-bar button, .dock-props button, .dock-props select, .dock-props input {
   background: var(--surface-raised);
   color: inherit;
   border: 1px solid var(--border);
@@ -850,25 +874,51 @@ const scene = computed(() => document.value.objects.filter(o => o.visible).map(o
   font: inherit;
   cursor: pointer;
 }
-.mesh-bar button:hover:not(:disabled), .mesh-side button:hover:not(:disabled) { background: var(--hover); }
-.mesh-bar button:disabled, .mesh-side button:disabled { opacity: .45; cursor: default; }
-.mesh-bar button:focus-visible, .mesh-side button:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.mesh-bar button:hover:not(:disabled), .dock-props button:hover:not(:disabled) { background: var(--hover); }
+.mesh-bar button:disabled, .dock-props button:disabled { opacity: .45; cursor: default; }
+.mesh-bar button:focus-visible, .dock-props button:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 .mesh-bar .close { margin-left: 0.25rem; }
-.mesh-body { flex: 1; display: grid; grid-template-columns: 280px minmax(0, 1fr); min-height: 0; }
-.mesh-side {
-  overflow: auto;
-  padding: 0.75rem;
-  border-right: 1px solid var(--border);
-  background: var(--surface);
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-}
-.mesh-side h3 { margin: 0 0 0.35rem; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-dim); }
-.mesh-side label { display: flex; justify-content: space-between; gap: 0.5rem; font-size: 0.85rem; margin: 0.2rem 0; }
-.mesh-side ul { list-style: none; padding: 0; margin: 0.35rem 0 0; }
-.mesh-side li button { width: 100%; text-align: left; margin-top: 0.2rem; }
-.mesh-side button.active, .row button.active { border-color: var(--accent); color: var(--accent); }
+.mesh-body { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+.pane-tools { min-height: 46px; padding: 7px 12px; display: flex; gap: 5px; align-items: center; flex-wrap: wrap; border-bottom: 1px solid var(--border); background: var(--surface); }
+.pane-tools .subtle { flex: 1; color: var(--text-dim); font-size: 12px; }
+.pane-tools .error { flex-basis: 100%; margin: 0; }
+.tool-icon { width: 34px; height: 34px; padding: 0; display: inline-flex; align-items: center; justify-content: center; border-radius: 7px; background: var(--surface-raised); border: 1px solid var(--border); color: var(--text); cursor: pointer; }
+.tool-icon:hover { background: var(--hover); }
+.tool-icon[aria-pressed=true] { border-color: var(--accent); color: var(--accent); }
+.tool-divider { width: 1px; height: 22px; background: var(--border); margin: 0 3px; }
+.mesh-stage { flex: 1; min-height: 0; display: flex; }
+.mesh-stage-view { flex: 1; min-width: 0; position: relative; }
+.side-dock { flex: 0 0 344px; display: flex; min-height: 0; border-left: 1px solid var(--border); background: var(--bg); }
+.side-dock.collapsed { flex-basis: 46px; }
+.dock-rail { flex: 0 0 46px; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px 0; border-right: 1px solid var(--border); }
+.dock-rail button { width: 34px; height: 34px; padding: 0; border: 0; border-radius: 8px; background: transparent; color: var(--text-dim); display: flex; align-items: center; justify-content: center; cursor: pointer; }
+.dock-rail button:hover { color: var(--text); background: var(--hover); }
+.dock-rail button[aria-selected=true] { color: var(--text); background: var(--surface-raised); }
+.dock-rail-spacer { flex: 1; }
+.dock-body { flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; overflow: auto; }
+.dock-heading { height: 42px; flex-shrink: 0; display: flex; align-items: center; gap: 8px; padding: 0 12px; border-bottom: 1px solid var(--border); font-weight: 600; }
+.dock-heading span { color: var(--text-dim); font-weight: 400; }
+.scene-list { list-style: none; margin: 0; padding: 6px; display: flex; flex-direction: column; gap: 1px; }
+.scene-list li > button { width: 100%; display: flex; align-items: center; gap: 8px; height: 32px; padding: 0 8px; border: 0; border-radius: 7px; background: transparent; color: var(--text); text-align: left; font-family: var(--font-mono, monospace); font-size: 12.5px; cursor: pointer; }
+.scene-list li > button:hover { background: var(--hover); }
+.scene-list li > button[aria-pressed=true] { background: color-mix(in srgb, var(--accent) 16%, var(--bg)); outline: 1px solid var(--accent); outline-offset: -1px; }
+.scene-list small { margin-left: auto; font-size: 11px; color: var(--text-dim); font-family: var(--font-ui, sans-serif); }
+.dot { width: 8px; height: 8px; border-radius: 2px; background: #c3b7a3; }
+.scene-empty { padding: 16px 12px; color: var(--text-dim); font-size: 12px; line-height: 1.5; }
+.dock-props { display: flex; flex-direction: column; gap: 0.75rem; padding: 12px 14px; }
+@media (max-width: 750px) { .side-dock { display: none; } }
+.file-menu { position: relative; }
+.file-menu > summary { display: inline-flex; align-items: center; gap: 6px; list-style: none; cursor: pointer; padding: 0.3rem 0.55rem; background: var(--surface-raised); border: 1px solid var(--border); border-radius: 6px; }
+.file-menu > summary::-webkit-details-marker { display: none; }
+.file-menu > div { position: absolute; right: 0; top: 40px; z-index: 7; width: 270px; display: grid; gap: 6px; padding: 10px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; box-shadow: 0 8px 30px #0004; }
+.file-menu button, .file-menu select { background: var(--surface-raised); border: 1px solid var(--border); border-radius: 6px; color: var(--text); padding: 0.3rem 0.55rem; font: inherit; cursor: pointer; text-align: left; }
+.file-row { display: flex; gap: 6px; }
+.file-row select { flex: 1; }
+.dock-props h3 { margin: 0 0 0.35rem; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-dim); }
+.dock-props label { display: flex; justify-content: space-between; gap: 0.5rem; font-size: 0.85rem; margin: 0.2rem 0; }
+.dock-props ul { list-style: none; padding: 0; margin: 0.35rem 0 0; }
+.dock-props li button { width: 100%; text-align: left; margin-top: 0.2rem; }
+.dock-props button.active, .row button.active { border-color: var(--accent); color: var(--accent); }
 .row { display: flex; flex-wrap: wrap; gap: 0.25rem; }
 .mesh-view { width: 100%; height: 100%; background: var(--canvas-bg); }
 .mesh-view-wrap { position: relative; min-width: 0; min-height: 0; }

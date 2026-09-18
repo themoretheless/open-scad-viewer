@@ -2921,10 +2921,6 @@ function sanitizeFileName(name: string) { return (name.replace(/[^\w.() -]+/g, '
       <span class="status-item kernel-badge">Manifold</span>
       <span v-if="currentBackendQuality.transparency === 'object-sorted-alpha'" class="status-item">{{ t('transparencySorted') }}</span>
       <span class="status-item" role="status">{{ persistenceLabel }}</span>
-      <span class="statusbar-spacer" aria-hidden="true" />
-      <span v-if="workspaceMode === 'solid'" class="status-item status-hint">{{ lang === 'ru' ? 'Выдавить' : 'Extrude' }} <kbd>E</kbd> · {{ lang === 'ru' ? 'Двигать' : 'Move' }} <kbd>G</kbd> · {{ t('fit') }} <kbd>F</kbd> · {{ t('commands') }} <kbd>Ctrl K</kbd> · {{ t('shortcuts') }} <kbd>?</kbd></span>
-      <span v-else-if="workspaceMode === 'mesh'" class="status-item status-hint">{{ lang === 'ru' ? 'Режимы' : 'Modes' }} <kbd>1–4</kbd> · {{ lang === 'ru' ? 'Двигать' : 'Move' }} <kbd>G</kbd> · {{ t('fit') }} <kbd>F</kbd></span>
-      <span v-else class="status-item status-hint">{{ t('renderShortcut') }} <kbd>Ctrl ↵</kbd> · {{ t('fit') }} <kbd>F</kbd> · {{ t('commands') }} <kbd>Ctrl K</kbd></span>
     </footer>
 
     <div v-if="exportDialogOpen" class="dialog-backdrop" @click.self="exportDialogOpen = false">
