@@ -8,7 +8,7 @@ import { directCornerTool, directRevolveTool, applyDirectRevolve } from '../serv
 import { sampleCurve, transformSketch, bakeSketch, offsetSketch, trimSketch, extendSketch, worldPoint, xyPlane, unit3, cross3, type SketchPlane, type Vec3 } from '../services/directSketchGeometry'
 import { solidTopology, facePlane, pushPullFace, bevelSolidEdge, bevelBrepBody, shellSolid, splitSolid, transformSelection } from '../services/directSolidTools'
 import { storageGet, storageSet } from '../services/safeStorage'
-import { exportPolygonStl, polygonBoundaryLoops, revolvePolygonProfile } from '../services/geometry/polygon'
+import { booleanPolygonMeshes, exportPolygonStl, polygonBoundaryLoops, revolvePolygonProfile } from '../services/geometry/polygon'
 import { applyDirectExtrusion, circularDirectCopies, defaultDirectCamera, directExtrusionTool, directFaceShade, projectDirectPoint, snapDirectPoint, unprojectDirectXY } from '../services/directModelingTools'
 import { importMeshFromFile, MESH_IMPORT_ACCEPT, stripMeshExtension } from '../services/meshImport'
 import { polygonMeshToExportMesh, MESH_EXPORT_FORMATS, MESH_FORMAT_LABELS, type MeshExportFormat } from '../services/meshConvert'
@@ -154,6 +154,7 @@ watch(selectedCvPoint, point => {
 }, { immediate: true })
 const selectedIds = computed(() => [...new Set([selection.value,...extraSelection.value].filter(Boolean))])
 const selectedBrepBodies = computed(() => selectedIds.value.map(id=>document.value.bodies.find(b=>b.id===id)).filter(b=>b?.brep))
+const twoSelectedBodies = computed(() => selectedIds.value.length === 2 && selectedIds.value.every(id => document.value.bodies.some(body => body.id === id)))
 const selectedCurvePair = computed(() => selectedIds.value.length === 2 && selectedIds.value.every(id => document.value.curves?.some(item => item.id === id)) ? selectedIds.value : null)
 const selectedSurfacePair = computed(() => selectedIds.value.length === 2 && selectedIds.value.every(id => document.value.surfaces?.some(item => item.id === id)) ? selectedIds.value : null)
 const topology = computed(() => selectedBody.value ? solidTopology(selectedBody.value.mesh) : {faces:[],edges:[]})
@@ -214,9 +215,19 @@ function retessellateSelectedBrep() { run(() => {
 }) }
 function applyBrepBoolean(operation:BrepBooleanOperation){run(()=>{
  const bodies=selectedIds.value.map(id=>history.document.bodies.find(b=>b.id===id)).filter((b):b is NonNullable<typeof b>=>!!b)
- if(bodies.length!==2||!bodies[0].brep||!bodies[1].brep)throw Error('Select exactly two B-rep bodies; the first selected body is A.')
- const d=history.document,result=bodyFromBrep(bodies[0],booleanNurbsBrep(bodies[0].brep,bodies[1].brep,operation))
- d.bodies=d.bodies.filter(b=>b.id!==bodies[1].id).flatMap(b=>b.id===bodies[0].id?(result.brep.bodies.length?[result]:[]):[b]);commit(d);selection.value=result.brep.bodies.length?result.id:'';extraSelection.value=[]
+ if(bodies.length!==2)throw Error(label('Выберите ровно два тела: первое выбранное — A.','Select exactly two bodies; the first selected body is A.'))
+ const d=history.document
+ // Both bodies exact: keep the authored B-rep. Otherwise fall back to the mesh boolean, which always applies.
+ if(bodies[0].brep&&bodies[1].brep){
+  const result=bodyFromBrep(bodies[0],booleanNurbsBrep(bodies[0].brep,bodies[1].brep,operation))
+  d.bodies=d.bodies.filter(b=>b.id!==bodies[1].id).flatMap(b=>b.id===bodies[0].id?(result.brep.bodies.length?[result]:[]):[b]);commit(d);selection.value=result.brep.bodies.length?result.id:'';extraSelection.value=[]
+  return
+ }
+ if(operation==='xor')throw Error(label('XOR доступен только для двух точных тел B-rep.','XOR is available only for two exact B-rep bodies.'))
+ const built=booleanPolygonMeshes(bodies[0].mesh,bodies[1].mesh,operation)
+ const empty=built.indices.length===0
+ const result={...bodies[0],brep:undefined,mesh:{positions:[...built.positions],indices:[...built.indices]}}
+ d.bodies=d.bodies.filter(b=>b.id!==bodies[1].id).flatMap(b=>b.id===bodies[0].id?(empty?[]:[result]):[b]);commit(d);selection.value=empty?'':result.id;extraSelection.value=[]
 })}
 function resultAdvanced():DirectDocument {
  const d=history.document,p=advanced.value,id=selection.value,b=d.bodies.find(b=>b.id===id),s=d.sketches.find(s=>s.id===id)
@@ -777,7 +788,10 @@ const solidCommands = computed<SolidCommand[]>(() => {
   const needClosed = label('Нужен замкнутый эскиз', 'A closed sketch is required')
   const needFace = label('Выберите грань тела', 'Select a body face')
   const needEdge = label('Выберите ребро тела', 'Select a body edge')
+  const twoBodies = twoSelectedBodies.value
   const twoBrep = selectedBrepBodies.value.length === 2 && selectedIds.value.length === 2
+  const booleanDetail = twoBrep ? label('Точный B-rep', 'Exact B-rep') : label('По сетке', 'Mesh boolean')
+  const needTwo = label('Выберите два тела: Shift + клик', 'Select two bodies: Shift + click')
   const cmd = (id: string, ru: string, en: string, run: () => void, extra: Partial<PaletteCommand> = {}): SolidCommand =>
     ({ id, label: label(ru, en), aliases: [ru, en], run, ...extra })
   const toolCmd = (value: typeof tool.value, ru: string, en: string, shortcut?: string) =>
@@ -805,10 +819,10 @@ const solidCommands = computed<SolidCommand[]>(() => {
     cmd('grid', floorVisible.value ? 'Скрыть сетку 3D' : 'Показать сетку 3D', floorVisible.value ? 'Hide 3D grid' : 'Show 3D grid', () => { floorVisible.value = !floorVisible.value }, { detail: label('Вид', 'View') }),
     cmd('undo', 'Отменить', 'Undo', () => undo(), { shortcut: 'Ctrl Z', enabled: undoable.value, disabledReason: label('Нечего отменять', 'Nothing to undo') }),
     cmd('redo', 'Повторить', 'Redo', () => undo(true), { shortcut: 'Ctrl Shift Z', enabled: redoable.value, disabledReason: label('Нечего повторять', 'Nothing to redo') }),
-    cmd('brep-union', 'B-rep объединить', 'B-rep Union', () => applyBrepBoolean('union'), { detail: label('Два тела B-rep', 'Two B-rep bodies'), enabled: twoBrep, disabledReason: label('Выберите два тела B-rep', 'Select two B-rep bodies') }),
-    cmd('brep-difference', 'B-rep A − B', 'B-rep A − B', () => applyBrepBoolean('difference'), { detail: label('Два тела B-rep', 'Two B-rep bodies'), enabled: twoBrep, disabledReason: label('Выберите два тела B-rep', 'Select two B-rep bodies') }),
-    cmd('brep-intersection', 'B-rep пересечение', 'B-rep Intersection', () => applyBrepBoolean('intersection'), { detail: label('Два тела B-rep', 'Two B-rep bodies'), enabled: twoBrep, disabledReason: label('Выберите два тела B-rep', 'Select two B-rep bodies') }),
-    cmd('brep-xor', 'B-rep XOR', 'B-rep XOR', () => applyBrepBoolean('xor'), { detail: label('Два тела B-rep', 'Two B-rep bodies'), enabled: twoBrep, disabledReason: label('Выберите два тела B-rep', 'Select two B-rep bodies') }),
+    cmd('brep-union', 'Объединить тела', 'Union bodies', () => applyBrepBoolean('union'), { detail: booleanDetail, aliases: ['Объединить тела', 'Union bodies', 'B-rep объединить', 'B-rep Union'], keywords: ['boolean', 'булев', 'union', 'merge', 'слить'], enabled: twoBodies, disabledReason: needTwo }),
+    cmd('brep-difference', 'Вычесть: A − B', 'Subtract: A − B', () => applyBrepBoolean('difference'), { detail: booleanDetail, aliases: ['Вычесть: A − B', 'Subtract: A − B', 'B-rep A − B'], keywords: ['boolean', 'булев', 'union', 'merge', 'слить'], enabled: twoBodies, disabledReason: needTwo }),
+    cmd('brep-intersection', 'Пересечение тел', 'Intersect bodies', () => applyBrepBoolean('intersection'), { detail: booleanDetail, aliases: ['Пересечение тел', 'Intersect bodies', 'B-rep пересечение', 'B-rep Intersection'], keywords: ['boolean', 'булев', 'union', 'merge', 'слить'], enabled: twoBodies, disabledReason: needTwo }),
+    cmd('brep-xor', 'B-rep XOR', 'B-rep XOR', () => applyBrepBoolean('xor'), { detail: label('Два точных тела B-rep', 'Two exact B-rep bodies'), enabled: twoBrep, disabledReason: label('Нужны два точных тела B-rep', 'Two exact B-rep bodies are required') }),
     cmd('push', 'Push / Pull', 'Push / Pull', () => beginAdvanced('push'), { detail: label('Грань', 'Face'), enabled: !!(body && selectedFace.value), disabledReason: needFace }),
     cmd('face-sketch', 'Эскиз на грани', 'Sketch on face', faceSketch, { detail: label('Грань', 'Face'), enabled: !!(body && selectedFace.value), disabledReason: needFace }),
     cmd('shell', 'Shell', 'Shell', () => beginAdvanced('shell'), { detail: label('Грань', 'Face'), enabled: !!(body && selectedFace.value), disabledReason: needFace }),
@@ -1077,6 +1091,12 @@ watch([() => props.open, () => props.seedDocument], ([open, seed]) => {
               <button class="tool-icon" :title="label('Вершины','Vertices')" :aria-label="label('Вершины','Vertices')" :aria-pressed="pickMode==='vertex'" @click="pickMode='vertex';advancedOp=null;boxSelect=false"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M4 7l8-4 8 4-8 4zM4 7v10l8 4 8-4V7"/><path d="M4 4.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5zM20 4.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5zM12 8.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5z" fill="currentColor"/></svg></button>
               <button class="tool-icon" :title="label('Рёбра','Edges')" :aria-label="label('Рёбра','Edges')" :aria-pressed="pickMode==='edge'" @click="pickMode='edge';advancedOp=null;boxSelect=false"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path :d="TOOL_ICONS.edge" /><path d="M12 11v10" stroke-width="3.5" /></svg></button>
               <button class="tool-icon" :title="label('Рамка','Box select')" :aria-label="label('Рамка','Box select')" :aria-pressed="boxSelect" @click="boxSelect=!boxSelect"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><path :d="TOOL_ICONS.box" /></svg></button>
+              <span v-if="twoSelectedBodies" class="tool-divider" aria-hidden="true"></span>
+              <div v-if="twoSelectedBodies" class="tool-group" role="group" :aria-label="label('Булевы операции','Boolean operations')">
+                <button class="tool-icon" :title="label('Объединить тела','Union bodies')" :aria-label="label('Объединить тела','Union bodies')" @click="applyBrepBoolean('union')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M9 8a5 5 0 1 0 0 10 5 5 0 0 0 0-10zM15 8a5 5 0 1 0 0 10 5 5 0 0 0 0-10z" fill="currentColor" fill-opacity=".3"/></svg></button>
+                <button class="tool-icon" :title="label('Вычесть: A − B','Subtract: A − B')" :aria-label="label('Вычесть: A − B','Subtract: A − B')" @click="applyBrepBoolean('difference')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M9 8a5 5 0 1 0 0 10 5 5 0 0 0 0-10z" fill="currentColor" fill-opacity=".3"/><path d="M15 8a5 5 0 1 0 0 10 5 5 0 0 0 0-10z" stroke-dasharray="3 2"/></svg></button>
+                <button class="tool-icon" :title="label('Пересечение тел','Intersect bodies')" :aria-label="label('Пересечение тел','Intersect bodies')" @click="applyBrepBoolean('intersection')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M9 8a5 5 0 1 0 0 10 5 5 0 0 0 0-10zM15 8a5 5 0 1 0 0 10 5 5 0 0 0 0-10z"/><path d="M12 8.8a5 5 0 0 0 0 8.4 5 5 0 0 0 0-8.4z" fill="currentColor" fill-opacity=".45" stroke="none"/></svg></button>
+              </div>
               <span class="tool-divider" aria-hidden="true"></span>
               <div class="tool-group" role="group" :aria-label="label('Манипулятор','Manipulator')">
                 <button v-for="(name, value) in { move: label('Манипулятор: двигать','Gizmo: move'), rotate: label('Манипулятор: вращать','Gizmo: rotate'), scale: label('Манипулятор: масштаб','Gizmo: scale') }" :key="value" class="tool-icon" :title="name" :aria-label="name" :aria-pressed="gizmoMode===value" @click="gizmoMode=value"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><path :d="TOOL_ICONS[value]" /></svg></button>
