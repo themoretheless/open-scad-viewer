@@ -12,6 +12,7 @@ const MechanicalGenerator = defineAsyncComponent(() => import('./features/Mechan
 import {restoreSourceHistory,boundedSourceHistory} from './services/mainSourceEditing'
 import type { DirectDocument } from './services/directModeling'
 import { emptyDirectDocument } from './services/directModeling'
+import type { DirectBody } from './services/directModeling'
 import type { WorkspaceMode } from './services/workspaceModes'
 import { WORKSPACE_MODES, workspaceModeHint, workspaceModeLabel } from './services/workspaceModes'
 import { sceneMeshesToSolidDocument, meshDocumentToSolidDocument, meshDataToPolygon, polygonToMeshObject } from './services/solidBridge'
@@ -391,6 +392,7 @@ const workspaceMode = computed<WorkspaceMode>(() => (meshModelerOpen.value ? 'me
 /** Source is no longer a workspace of its own; it opens as a drawer over either one. */
 const editorOpen = ref(false)
 const solidBuilding = ref(false)
+const solidAppendBodies = ref<{ bodies: DirectBody[]; token: number } | null>(null)
 
 function openWorkspaceMode(mode: WorkspaceMode) {
   if (mode === 'solid') {
@@ -412,7 +414,7 @@ if (!directModelerOpen.value && !meshModelerOpen.value) directModelerOpen.value 
  * result keys, so the exact graph cannot ride the display route yet. A large model
  * will therefore block the interface until that protocol carries the graph too.
  */
-async function buildSolidFromSource() {
+async function buildSolidFromSource(asGroup = false) {
   if (solidBuilding.value) return
   solidBuilding.value = true
   error.value = ''
@@ -430,7 +432,16 @@ async function buildSolidFromSource() {
       return
     }
     const bodies = buildExactSolidBodies(plan.nodes, plan.roots)
-    solidSeedDocument.value = { ...emptyDirectDocument(), bodies }
+    if (asGroup) {
+      // Named after the document, so rebuilding replaces the group instead of stacking copies.
+      const group = fileName.value.replace(/\.scad$/i, '') || 'source'
+      solidAppendBodies.value = {
+        bodies: bodies.map(body => ({ ...body, group })),
+        token: (solidAppendBodies.value?.token ?? 0) + 1,
+      }
+    } else {
+      solidSeedDocument.value = { ...emptyDirectDocument(), bodies }
+    }
     meshModelerOpen.value = false
     directModelerOpen.value = true
     editorOpen.value = false
@@ -2589,7 +2600,7 @@ function sanitizeFileName(name: string) { return (name.replace(/[^\w.() -]+/g, '
             type="button"
             :disabled="solidBuilding"
             :title="lang === 'ru' ? 'Собрать точные тела (NURBS) и открыть в Solid' : 'Build exact NURBS solids and open them in Solid'"
-            @click="buildSolidFromSource"
+            @click="buildSolidFromSource(false)"
           >{{ solidBuilding ? '…' : (lang === 'ru' ? 'В Solid' : 'To Solid') }}</button>
           <span class="toolbar-spacer" aria-hidden="true" />
           <button class="btn" type="button" @click="exampleGalleryOpen = true">{{ t('examples') }}</button>
@@ -3018,6 +3029,8 @@ function sanitizeFileName(name: string) { return (name.replace(/[^\w.() -]+/g, '
       :can-append="!isModelGraphText(code)"
       :remaining-source="MAX_WORKSPACE_SOURCE_LENGTH - code.length - 2"
       :seed-document="solidSeedDocument"
+      :append-bodies="solidAppendBodies"
+      @group-from-source="buildSolidFromSource(true)"
       :palette-request="solidPaletteRequest"
       @close="directModelerOpen = false; solidSeedDocument = null"
       @to-mesh="openMeshFromSolid"

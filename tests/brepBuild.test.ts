@@ -75,6 +75,18 @@ describe('exact solid build', () => {
     expect(() => parseDirectDocument(JSON.stringify(document))).not.toThrow()
   })
 
+  it('keeps a group label through document validation, and rejects an empty one', () => {
+    const graph = createBrepGraphBuilder()
+    const solid = graph.box([0, 0, 0], [1, 1, 1])
+    const [body] = buildExactSolidBodies(graph.nodes, [{ name: 'Part', id: nodeId(solid) }])
+
+    const grouped = { ...emptyDirectDocument(), bodies: [{ ...body, group: 'model' }] }
+    expect(parseDirectDocument(JSON.stringify(grouped)).bodies[0].group).toBe('model')
+
+    const empty = { ...emptyDirectDocument(), bodies: [{ ...body, group: '' }] }
+    expect(() => parseDirectDocument(JSON.stringify(empty))).toThrow(/group/i)
+  })
+
   it('refuses an inexact root by naming the operation responsible', () => {
     const graph = createBrepGraphBuilder()
     expect(() => buildExactSolidBodies(graph.nodes, [{ name: 'Blob', inexact: 'hull' }]))

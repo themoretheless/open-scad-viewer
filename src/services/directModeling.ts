@@ -8,7 +8,9 @@ import { inspectNurbsBrep, type NurbsBrep } from './geometry/brep'
 
 export type Point2 = [number, number]
 export interface DirectSketch { id: string; name: string; points: Point2[]; closed: boolean; analytic?: AnalyticCurve; plane?: SketchPlane }
-export interface DirectBody { id: string; name: string; mesh: PolygonMesh; brep?: NurbsBrep }
+/** `group` names a flat, optional grouping shown in the scene list. Bodies built from
+ * source share one, so a rebuild can be recognised, replaced or deleted as a unit. */
+export interface DirectBody { id: string; name: string; mesh: PolygonMesh; brep?: NurbsBrep; group?: string }
 export interface DirectDocument { version: 1; sketches: DirectSketch[]; bodies: DirectBody[]; curves?: SolidNurbsCurve[]; surfaces?: SolidNurbsSurface[] }
 export const emptyDirectDocument = (): DirectDocument => ({ version: 1, sketches: [], bodies: [], curves: [], surfaces: [] })
 const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value))
@@ -35,6 +37,9 @@ export function parseDirectDocument(text: string): DirectDocument {
     if (typeof s.closed !== 'boolean' || !Array.isArray(s.points) || s.points.length < 2 || s.points.length > 512 || (s.closed && s.points.length < 3) || !s.points.every(p => Array.isArray(p) && p.length === 2 && p.every(finite))) throw new Error('Invalid sketch.')
   }
   for (const b of d.bodies) {
+    if (b.group !== undefined && (typeof b.group !== 'string' || b.group.length === 0 || b.group.length > 100)) {
+      throw new Error('Invalid body group.')
+    }
     const m = b.mesh
     if (!m || !Array.isArray(m.positions) || !Array.isArray(m.indices) || m.positions.length < 9 || m.positions.length > 150_000 || m.positions.length % 3 || m.indices.length < 3 || m.indices.length > 150_000 || m.indices.length % 3 || !m.positions.every(finite) || !m.indices.every(i => Number.isInteger(i) && i >= 0 && i < m.positions.length / 3)) throw new Error('Invalid body mesh.')
     if (b.brep) {
