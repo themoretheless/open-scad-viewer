@@ -481,7 +481,7 @@ defineExpose({ meshCommands, executeMeshCommand })
 function onWorkspaceKey(event: KeyboardEvent) {
   if (paletteOpen.value) return
   if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') { event.preventDefault(); paletteOpen.value = true; return }
-  if (event.key === 'Escape') emit('close')
+  if (event.key === 'Escape') { if (elementDrag) { cancelElementDrag(); return } emit('close') }
 }
 function downloadJson() {
   const blob = new Blob([JSON.stringify(document.value)], { type: 'application/json' })
@@ -531,6 +531,65 @@ function projected(objectId: string) {
   return { tris, verts, edges }
 }
 
+// Dragging a vertex, edge or face moves the current selection in the screen plane (LMB, no modifiers);
+// the working copy previews on every move and one history step is committed on release.
+let elementDrag: { objectId: string; vertexIds: number[]; base: PolygonMesh; x: number; y: number; moved: boolean; svg: SVGSVGElement } | null = null
+function screenDeltaToWorld(dxPx: number, dyPx: number, svg: SVGSVGElement): [number, number, number] {
+  const unit = 200 / Math.max(1, Math.min(svg.clientWidth, svg.clientHeight)) / (view.value / 100)
+  const sx = dxPx * unit, sy = -dyPx * unit
+  // Inverse of projectDirectPoint's rotation applied to the screen-plane vector (sx, sy, 0).
+  const cam = camera.value, cy = Math.cos(cam.yaw), sy0 = Math.sin(cam.yaw), cp = Math.cos(cam.pitch), sp = Math.sin(cam.pitch)
+  return [sx * cy + sy * sy0 * sp, -sx * sy0 + sy * cy * sp, -sy * cp]
+}
+function startElementDrag(event: PointerEvent, objectId: string, kind: 'vertex' | 'edge' | 'face', id: number) {
+  if (event.button !== 0 || event.shiftKey || event.altKey || selectMode.value === 'object') { onPointerDown(event); return }
+  if (selectMode.value !== kind) { onPointerDown(event); return }
+  event.stopPropagation()
+  const object = document.value.objects.find(o => o.id === objectId)
+  if (!object) return
+  if (selection.value !== objectId) { selection.value = objectId; selectedVerts.value = []; selectedFaces.value = []; selectedEdges.value = [] }
+  const list = kind === 'vertex' ? selectedVerts : kind === 'face' ? selectedFaces : selectedEdges
+  if (!list.value.includes(id)) { list.value = [...list.value, id] }
+  const mesh = object.mesh
+  const vertexIds = kind === 'vertex' ? [...selectedVerts.value]
+    : kind === 'edge' ? [...new Set(selectedEdges.value.flatMap(edge => buildEdgeList(mesh)[edge] ?? []))]
+      : [...new Set(selectedFaces.value.flatMap(face => [mesh.indices[face * 3], mesh.indices[face * 3 + 1], mesh.indices[face * 3 + 2]]))]
+  const target = event.currentTarget as SVGGraphicsElement
+  const svg = target.ownerSVGElement ?? (target as unknown as SVGSVGElement)
+  elementDrag = { objectId, vertexIds, base: { positions: [...mesh.positions], indices: [...mesh.indices] }, x: event.clientX, y: event.clientY, moved: false, svg }
+  dragSwallowsClick = false
+  ;(event.currentTarget as Element).setPointerCapture(event.pointerId)
+}
+function moveElementDrag(event: PointerEvent) {
+  const drag = elementDrag
+  if (!drag) return
+  const dxPx = event.clientX - drag.x, dyPx = event.clientY - drag.y
+  if (!drag.moved && Math.hypot(dxPx, dyPx) < 3) return
+  drag.moved = true
+  dragSwallowsClick = true
+  const delta = screenDeltaToWorld(dxPx, dyPx, drag.svg)
+  try {
+    const mesh = selectMode.value === 'vertex' && proportionalEdit.value
+      ? moveVerticesProportional(drag.base, drag.vertexIds, delta, proportionalRadius.value)
+      : moveVertices(drag.base, drag.vertexIds, delta)
+    const current = history.document
+    document.value = { ...current, objects: current.objects.map(o => o.id === drag.objectId ? { ...o, mesh } : o) }
+  } catch (e) { error.value = e instanceof Error ? e.message : String(e) }
+}
+function endElementDrag() {
+  const drag = elementDrag
+  if (!drag) return
+  elementDrag = null
+  if (!drag.moved) return
+  const preview = document.value
+  document.value = history.document
+  run(() => commit(preview))
+}
+function cancelElementDrag() {
+  if (!elementDrag) return
+  elementDrag = null
+  document.value = history.document
+}
 function onPointerDown(event: PointerEvent) {
   if (event.button > 2) return
   dragSwallowsClick = false
@@ -541,6 +600,7 @@ function onPointerDown(event: PointerEvent) {
   ;(event.currentTarget as Element).setPointerCapture(event.pointerId)
 }
 function onPointerMove(event: PointerEvent) {
+  if (elementDrag) { moveElementDrag(event); return }
   if (!orbit) return
   const dx = event.clientX - orbit.x, dy = event.clientY - orbit.y
   if (!orbit.moved && Math.hypot(dx, dy) < 4) return
@@ -558,7 +618,7 @@ function onPointerMove(event: PointerEvent) {
     pitch: Math.max(-1.4, Math.min(1.4, orbit.pitch + dy * 0.01)),
   }
 }
-function onPointerUp() { orbit = null }
+function onPointerUp() { orbit = null; endElementDrag() }
 function onClickCapture(event: MouseEvent) {
   if (!dragSwallowsClick) return
   dragSwallowsClick = false
@@ -723,6 +783,7 @@ const scene = computed(() => document.value.objects.filter(o => o.visible).map(o
               :key="`${object.id}-${tri.face}`"
               :points="tri.points"
               :class="{ face: true, selected: object.id === selection && selectedFaces.includes(tri.face) }"
+              @pointerdown="startElementDrag($event, object.id, 'face', tri.face)"
               @click.stop="selection = object.id; selectMode === 'face' && togglePick('face', tri.face)"
             />
             <line
@@ -733,6 +794,7 @@ const scene = computed(() => document.value.objects.filter(o => o.visible).map(o
               :x2="edge.x2"
               :y2="edge.y2"
               :class="{ edge: true, selected: object.id === selection && selectedEdges.includes(edge.id) }"
+              @pointerdown="startElementDrag($event, object.id, 'edge', edge.id)"
               @click.stop="selection = object.id; togglePick('edge', edge.id)"
             />
             <circle
@@ -742,6 +804,7 @@ const scene = computed(() => document.value.objects.filter(o => o.visible).map(o
               :cy="vert.y"
               r="0.6"
               :class="{ vert: true, selected: selectedVerts.includes(vert.id) }"
+              @pointerdown="startElementDrag($event, object.id, 'vertex', vert.id)"
               @click.stop="selection = object.id; togglePick('vertex', vert.id)"
             />
           </g>
@@ -754,6 +817,7 @@ const scene = computed(() => document.value.objects.filter(o => o.visible).map(o
 
 <style scoped>
 .mesh-workspace {
+  user-select: none;
   position: fixed;
   inset: 46px 0 28px;
   z-index: 20;
@@ -815,7 +879,7 @@ const scene = computed(() => document.value.objects.filter(o => o.visible).map(o
 .mesh-view .face.selected { fill: var(--accent); }
 .mesh-view .edge { stroke: #8ecaff; stroke-width: 0.8; vector-effect: non-scaling-stroke; cursor: crosshair; }
 .mesh-view .edge.selected { stroke: #ffca6a; stroke-width: 2.5; }
-.mesh-view .vert { fill: #eee; cursor: pointer; }
+.mesh-view .vert { fill: #eee; cursor: grab; }
 .mesh-view .vert.selected { fill: #e76f51; }
 .tool-hint { margin: 0.2rem 0 0.45rem; font-size: 0.78rem; color: var(--text-dim); }
 .stats { font-size: 0.8rem; color: var(--text-dim); }
