@@ -11,7 +11,9 @@ export interface DirectSketch { id: string; name: string; points: Point2[]; clos
 /** `group` names a flat, optional grouping shown in the scene list. Bodies built from
  * source share one, so a rebuild can be recognised, replaced or deleted as a unit. */
 export interface DirectBody { id: string; name: string; mesh: PolygonMesh; brep?: NurbsBrep; group?: string }
-export interface DirectDocument { version: 1; sketches: DirectSketch[]; bodies: DirectBody[]; curves?: SolidNurbsCurve[]; surfaces?: SolidNurbsSurface[] }
+/** A group owns the source its bodies were built from, so it stays editable and rebuildable. */
+export interface DirectGroup { name: string; source: string }
+export interface DirectDocument { version: 1; sketches: DirectSketch[]; bodies: DirectBody[]; curves?: SolidNurbsCurve[]; surfaces?: SolidNurbsSurface[]; groups?: DirectGroup[] }
 export const emptyDirectDocument = (): DirectDocument => ({ version: 1, sketches: [], bodies: [], curves: [], surfaces: [] })
 const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value))
 const finite = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v) && Math.abs(v) <= 1e6
@@ -23,6 +25,15 @@ export function parseDirectDocument(text: string): DirectDocument {
   d.curves ??= []
   d.surfaces ??= []
   if (!Array.isArray(d.curves) || !Array.isArray(d.surfaces) || d.curves.length + d.surfaces.length > 128) throw new Error('Invalid Solid NURBS collection.')
+  // Absent rather than empty, so a document with no groups stays identical to one
+  // written before groups existed.
+  if (d.groups !== undefined && (!Array.isArray(d.groups) || d.groups.length > 64)) throw new Error('Invalid group collection.')
+  const groupNames = new Set<string>()
+  for (const g of d.groups ?? []) {
+    if (!g || typeof g.name !== 'string' || g.name.length === 0 || g.name.length > 100 || groupNames.has(g.name)) throw new Error('Invalid group name.')
+    if (typeof g.source !== 'string' || g.source.length > 100_000) throw new Error('Invalid group source.')
+    groupNames.add(g.name)
+  }
   const ids = new Set<string>()
   for (const item of [...d.sketches, ...d.bodies, ...d.curves, ...d.surfaces]) {
     if (typeof item.id !== 'string' || ids.has(item.id) || typeof item.name !== 'string' || item.name.length > 100) throw new Error('Invalid object identity.')

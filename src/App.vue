@@ -392,7 +392,7 @@ const workspaceMode = computed<WorkspaceMode>(() => (meshModelerOpen.value ? 'me
 /** Source is no longer a workspace of its own; it opens as a drawer over either one. */
 const editorOpen = ref(false)
 const solidBuilding = ref(false)
-const solidAppendBodies = ref<{ bodies: DirectBody[]; token: number } | null>(null)
+const solidAppendBodies = ref<{ bodies: DirectBody[]; token: number; group?: { name: string; source: string } } | null>(null)
 
 function openWorkspaceMode(mode: WorkspaceMode) {
   if (mode === 'solid') {
@@ -414,6 +414,38 @@ if (!directModelerOpen.value && !meshModelerOpen.value) directModelerOpen.value 
  * result keys, so the exact graph cannot ride the display route yet. A large model
  * will therefore block the interface until that protocol carries the graph too.
  */
+/** Builds one group's own source and hands the bodies back tagged with its name. */
+async function buildSolidGroup(request: { name: string; source: string }) {
+  if (solidBuilding.value) return
+  solidBuilding.value = true
+  error.value = ''
+  try {
+    const [{ parseOpenSCAD }, { buildExactSolidBodies }] = await Promise.all([
+      import('./services/openscadParser'),
+      import('./services/solid/brepBuild'),
+    ])
+    const evaluated = await parseOpenSCAD(request.source, { recordExactSolids: true })
+    const plan = evaluated.exactSolids
+    if (!plan || plan.roots.length === 0) {
+      error.value = lang.value === 'ru'
+        ? 'Код группы не описывает ни одного тела.'
+        : 'The group source describes no solids.'
+      return
+    }
+    const bodies = buildExactSolidBodies(plan.nodes, plan.roots)
+      .map(body => ({ ...body, group: request.name }))
+    solidAppendBodies.value = {
+      bodies,
+      group: { name: request.name, source: request.source },
+      token: (solidAppendBodies.value?.token ?? 0) + 1,
+    }
+  } catch (caught) {
+    error.value = caught instanceof Error ? caught.message : String(caught)
+  } finally {
+    solidBuilding.value = false
+  }
+}
+
 async function buildSolidFromSource(asGroup = false) {
   if (solidBuilding.value) return
   solidBuilding.value = true
@@ -3030,7 +3062,8 @@ function sanitizeFileName(name: string) { return (name.replace(/[^\w.() -]+/g, '
       :remaining-source="MAX_WORKSPACE_SOURCE_LENGTH - code.length - 2"
       :seed-document="solidSeedDocument"
       :append-bodies="solidAppendBodies"
-      @group-from-source="buildSolidFromSource(true)"
+      :group-building="solidBuilding"
+      @build-group="buildSolidGroup"
       :palette-request="solidPaletteRequest"
       @close="directModelerOpen = false; solidSeedDocument = null"
       @to-mesh="openMeshFromSolid"

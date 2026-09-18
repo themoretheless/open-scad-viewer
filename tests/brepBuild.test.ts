@@ -87,6 +87,23 @@ describe('exact solid build', () => {
     expect(() => parseDirectDocument(JSON.stringify(empty))).toThrow(/group/i)
   })
 
+  it('stores a group source in the document and rejects a duplicate group name', () => {
+    const graph = createBrepGraphBuilder()
+    const solid = graph.box([0, 0, 0], [1, 1, 1])
+    const [body] = buildExactSolidBodies(graph.nodes, [{ name: 'Part', id: nodeId(solid) }])
+
+    const document = {
+      ...emptyDirectDocument(),
+      bodies: [{ ...body, group: 'rig' }],
+      groups: [{ name: 'rig', source: 'cube([1,1,1]);' }],
+    }
+    const parsed = parseDirectDocument(JSON.stringify(document))
+    expect(parsed.groups).toEqual([{ name: 'rig', source: 'cube([1,1,1]);' }])
+
+    const duplicated = { ...document, groups: [...document.groups, { name: 'rig', source: '' }] }
+    expect(() => parseDirectDocument(JSON.stringify(duplicated))).toThrow(/group name/i)
+  })
+
   it('refuses an inexact root by naming the operation responsible', () => {
     const graph = createBrepGraphBuilder()
     expect(() => buildExactSolidBodies(graph.nodes, [{ name: 'Blob', inexact: 'hull' }]))
