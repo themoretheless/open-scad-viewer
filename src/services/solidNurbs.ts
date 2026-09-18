@@ -1,5 +1,4 @@
 import type { DirectDocument, DirectSketch, Point2 } from './directModeling'
-import { buildOwnNurbs } from './modelGraphNurbsKernel'
 import type { NurbsCurve } from './nurbsCurve'
 import { evaluateNurbsCurve, validateNurbsCurve } from './nurbsCurve'
 import type { NurbsSurface } from './nurbsSurface'
@@ -73,27 +72,6 @@ export function nurbsCurveToSketch(item: SolidNurbsCurve): DirectSketch {
   const closed = Math.hypot(points[0][0] - points.at(-1)![0], points[0][1] - points.at(-1)![1]) < 1e-7
   if (closed) points.pop()
   return { id: crypto.randomUUID(), name: `${item.name} · sampled sketch`, points, closed }
-}
-
-export function importModelGraphNurbs(document: unknown): Pick<SolidDocumentWithNurbs, 'curves' | 'surfaces'> {
-  const built = buildOwnNurbs(document, { action: 'build', display: { segments: 16, subdivisionLevels: 1 } })
-  const definitions = built.report.definitions as Record<string, ({ kind: string } & Record<string, unknown>)>
-  const curves: SolidNurbsCurve[] = []
-  const surfaces: SolidNurbsSurface[] = []
-  for (const [nodeId, definition] of Object.entries(definitions)) {
-    const { kind, ...data } = definition
-    if (kind === 'curve') {
-      const curve = data as unknown as NurbsCurve
-      validateNurbsCurve(curve)
-      curves.push({ id: crypto.randomUUID(), name: nodeId, curve })
-    } else if (kind === 'surface') {
-      const surface = data as unknown as NurbsSurface
-      validateNurbsSurface(surface)
-      surfaces.push({ id: crypto.randomUUID(), name: nodeId, surface, segmentsU: 16, segmentsV: 16 })
-    }
-  }
-  if (!curves.length && !surfaces.length) throw new Error('ModelGraph has no reachable NURBS curves or surfaces.')
-  return { curves, surfaces }
 }
 
 export function createSolidNurbsCurve(id = crypto.randomUUID()): SolidNurbsCurve {

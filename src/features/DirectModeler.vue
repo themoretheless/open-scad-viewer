@@ -16,7 +16,7 @@ import { polygonMeshToExportMesh, MESH_EXPORT_FORMATS, MESH_FORMAT_LABELS, type 
 import { exportMeshFormatCompressed } from '../services/meshExportFormats'
 import { downloadBytes } from '../services/downloadArtifact'
 import { solidDocumentToMeshDocument } from '../services/solidBridge'
-import { createSolidNurbsCurve, createSolidNurbsSurface, importModelGraphNurbs, matchSolidNurbsCurvesG1, matchSolidNurbsSurfacesG1, nurbsCurveToSketch, sampleSolidNurbsCurve, tessellateSolidNurbsSurface, updateSolidNurbsControlPoint } from '../services/solidNurbs'
+import { createSolidNurbsCurve, createSolidNurbsSurface, matchSolidNurbsCurvesG1, matchSolidNurbsSurfacesG1, nurbsCurveToSketch, sampleSolidNurbsCurve, tessellateSolidNurbsSurface, updateSolidNurbsControlPoint } from '../services/solidNurbs'
 import { elevateNurbsCurve, insertNurbsKnot } from '../services/nurbsCurve'
 import { elevateNurbsSurface, insertNurbsSurfaceKnot, isoNurbsCurve, trimNurbsSurface } from '../services/nurbsSurface'
 import { extrudeNurbsCurve } from '../services/nurbsConstructors'
@@ -432,17 +432,20 @@ function sendToMesh() {
 function download(text: string, name: string) { const url = URL.createObjectURL(new Blob([text], { type: 'text/plain' })); const a = window.document.createElement('a'); a.href = url; a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(url), 1000) }
 async function importFile(event: Event) {
   const input = event.target as HTMLInputElement, file = input.files?.[0]
-  try { if (file) { if (file.size > 4_000_000) throw new Error('Document exceeds 4 MB.'); const text = await file.text(); run(() => {
-    cancelGesture()
+  try { if (file) { if (file.size > 4_000_000) throw new Error('Document exceeds 4 MB.'); const text = await file.text()
     const parsed = JSON.parse(text)
-    if (parsed?.language === 'modelgraph/nurbs-1') {
-      const imported = importModelGraphNurbs(parsed), d = history.document
-      d.curves!.push(...imported.curves); d.surfaces!.push(...imported.surfaces)
-      commit(d); selection.value = imported.surfaces[0]?.id ?? imported.curves[0]?.id ?? ''
-    } else {
-      commit(parseDirectDocument(text)); selection.value = ''
-    }
-  }) } }
+    // The ModelGraph frontends are their own WASM kernel; fetch it only for such a document.
+    const importNurbs = parsed?.language === 'modelgraph/nurbs-1' ? (await import('../services/solidNurbsImport')).importModelGraphNurbs : null
+    run(() => {
+      cancelGesture()
+      if (importNurbs) {
+        const imported = importNurbs(parsed), d = history.document
+        d.curves!.push(...imported.curves); d.surfaces!.push(...imported.surfaces)
+        commit(d); selection.value = imported.surfaces[0]?.id ?? imported.curves[0]?.id ?? ''
+      } else {
+        commit(parseDirectDocument(text)); selection.value = ''
+      }
+    }) } }
   catch (e) { error.value = String(e) } finally { input.value = '' }
 }
 const bodyExportFormat = ref<MeshExportFormat>('stl_binary')

@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import { emptyDirectDocument, parseDirectDocument } from '../src/services/directModeling'
 import { solidDocumentToMeshDocument } from '../src/services/solidBridge'
+import { importModelGraphNurbs } from '../src/services/solidNurbsImport'
 import {
   createSolidNurbsCurve,
   createSolidNurbsSurface,
-  importModelGraphNurbs,
   matchSolidNurbsCurvesG1,
   matchSolidNurbsSurfacesG1,
   nurbsCurveToSketch,
