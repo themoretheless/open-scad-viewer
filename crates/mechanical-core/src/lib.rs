@@ -1,10 +1,46 @@
-//! Sampled involute and phase-aligned thread generation, bounded before emission.
-use super::emit::append_number;
-use crate::{Error, Result};
+//! Gear, planetary and thread geometry generators.
+//!
+//! Extracted from `modelgraph-runtime` so the geometry bridge can expose threading without linking a
+//! language frontend. The crate owns only value math and SCAD source emission.
 use std::collections::HashMap;
 use std::f64::consts::{PI, TAU};
 use std::fmt::Write;
 use value_codec::{Value, json};
+
+/// A generator failure, carried back to whichever caller owns the public error shape.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Error {
+    pub path: String,
+    pub message: String,
+}
+pub type Result<T> = std::result::Result<T, Error>;
+
+/// ECMAScript-compatible spelling for finite generated coordinates. Keep the
+/// decimal interval used by JSON.stringify, including a canonical positive zero.
+/// The same spelling as a standalone string.
+pub fn number(v: f64) -> String {
+    let mut out = String::with_capacity(24);
+    append_number(&mut out, v);
+    out
+}
+pub fn append_number(out: &mut String, v: f64) {
+    if v == 0. {
+        out.push('0');
+    } else if v.abs() < 1e-6 || v.abs() >= 1e21 {
+        let scientific = format!("{v:e}");
+        let (mantissa, exponent) = scientific.split_once('e').unwrap();
+        let exponent: i32 = exponent.parse().unwrap();
+        write!(
+            out,
+            "{mantissa}e{}{exponent}",
+            if exponent >= 0 { "+" } else { "" }
+        )
+        .unwrap();
+    } else {
+        write!(out, "{v}").unwrap();
+    }
+}
+// Sampled involute and phase-aligned thread generation, bounded before emission.
 type Point = [f64; 2];
 pub struct Generated {
     pub source: String,
@@ -12,7 +48,7 @@ pub struct Generated {
     pub parts: Vec<Value>,
 }
 fn err(path: &str, message: impl Into<String>) -> Error {
-    Error::new("invalid_mechanical_geometry", path, message)
+    Error { path: path.into(), message: message.into() }
 }
 fn n(o: &Value, key: &str) -> f64 {
     o[key].as_f64().unwrap()
@@ -140,7 +176,7 @@ fn gear_profile(o: &Value, path: &str) -> Result<(Vec<Vec<Point>>, Value)> {
             path,
             format!(
                 "Gear requires at least {} teeth at this pressure angle; undercut and profile shift are not implemented.",
-                super::emit::number(minimum)
+                number(minimum)
             ),
         ));
     }

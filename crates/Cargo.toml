@@ -1,5 +1,5 @@
 [workspace]
-members = ["value-codec", "math-core", "cad-predicates", "gpu-compute", "modelgraph-runtime", "modelgraph-text", "sketch-core", "geometry-ops", "planar-geometry", "brep-topology", "brep-core", "nurbs-core", "polygon-core", "gcode-core", "gcode-optimize", "printer-core", "printer-cli", "slicer-core", "mechanics-core", "openscad-core", "geometry-bridge", "geometry-wasm", "wasm-brotli", "subdivision-core", "sdf-core", "photogrammetry-core", "photogrammetry-ffi", "photogrammetry-wasm"]
+members = ["value-codec", "math-core", "cad-predicates", "gpu-compute", "modelgraph-runtime", "modelgraph-text", "sketch-core", "geometry-ops", "planar-geometry", "brep-topology", "brep-core", "nurbs-core", "polygon-core", "gcode-core", "gcode-optimize", "printer-core", "printer-cli", "slicer-core", "mechanics-core", "mechanical-core", "openscad-core", "geometry-bridge", "geometry-wasm", "wasm-brotli", "subdivision-core", "sdf-core", "photogrammetry-core", "photogrammetry-ffi", "photogrammetry-wasm"]
 resolver = "3"
 exclude = ["vendor/usvg", "vendor/resvg"]
 

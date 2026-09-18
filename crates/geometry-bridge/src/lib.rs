@@ -51,7 +51,6 @@ mod cad_sketch_offset;
 mod cad_sketch_trim;
 mod cad_split;
 mod cad_texture;
-#[cfg(feature = "languages")]
 mod cad_thread;
 mod camera_gestures;
 mod gcode;
@@ -1171,16 +1170,13 @@ pub fn dispatch(v: Value) -> Result<Value> {
         "cad_ruled_sketch_loft" => cad_sections::ruled(v),
         "cad_build_sections" => cad_sections::build(v),
         "cad_path_points" => cad_path::sample(v),
-        #[cfg(feature = "languages")]
         "cad_thread_body" => cad_thread::apply(v),
-        #[cfg(feature = "languages")]
         "cad_thread_geometry" => {
-            modelgraph_runtime::thread_geometry(&field::<Value>(&v, "options")?)
+            mechanical_core::thread_geometry(&field::<Value>(&v, "options")?)
                 .map_err(|e| input(e.message))
         }
-        #[cfg(feature = "languages")]
         "cad_thread_radius" => encode(
-            modelgraph_runtime::thread_radius(
+            mechanical_core::thread_radius(
                 &field::<Value>(&v, "options")?,
                 field(&v, "angle")?,
                 field(&v, "z")?,

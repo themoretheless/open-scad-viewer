@@ -11,8 +11,14 @@
 mod assembly;
 pub mod emit;
 pub mod eval;
-mod mechanical;
-pub use mechanical::{thread_geometry, thread_radius};
+// Gear, planetary and thread generators live in `mechanical-core` so the geometry bridge can use
+// them without a language frontend. The public surface stays here.
+pub use mechanical_core::{thread_geometry, thread_radius};
+impl From<mechanical_core::Error> for Error {
+    fn from(error: mechanical_core::Error) -> Self {
+        Error::new("invalid_mechanical_geometry", error.path, error.message)
+    }
+}
 pub mod nurbs;
 mod profiles;
 pub mod range;

@@ -2,31 +2,13 @@
 use crate::eval::{Evaluator, Scope, Value as RuntimeValue, numeric_value, sequence};
 use crate::units::{ANGLE, Dimension, LENGTH, SCALAR};
 use crate::{Error, Result};
-use crate::{assembly, mechanical, profiles, sketch};
+use crate::{assembly, profiles, sketch};
 use std::collections::{HashMap, HashSet};
-use std::fmt::Write;
 use std::rc::Rc;
 use value_codec::{Value, json};
 
-/// ECMAScript-compatible spelling for finite generated coordinates. Keep the
-/// decimal interval used by JSON.stringify, including a canonical positive zero.
-pub fn append_number(out: &mut String, v: f64) {
-    if v == 0. {
-        out.push('0');
-    } else if v.abs() < 1e-6 || v.abs() >= 1e21 {
-        let scientific = format!("{v:e}");
-        let (mantissa, exponent) = scientific.split_once('e').unwrap();
-        let exponent: i32 = exponent.parse().unwrap();
-        write!(
-            out,
-            "{mantissa}e{}{exponent}",
-            if exponent >= 0 { "+" } else { "" }
-        )
-        .unwrap();
-    } else {
-        write!(out, "{v}").unwrap();
-    }
-}
+/// Re-exported from `mechanical-core`, which owns the generated-source number spelling.
+pub use mechanical_core::append_number;
 pub fn number(v: f64) -> String {
     let mut out = String::with_capacity(24);
     append_number(&mut out, v);
@@ -472,9 +454,9 @@ impl<'a> Emitter<'a> {
                     options[k] = json!(self.value(v, scope, &current, k, dim)?);
                 }
                 let generated = match op {
-                    "gear" => mechanical::gear(&options, &current)?,
-                    "thread" => mechanical::thread(&options, &current)?,
-                    _ => mechanical::planetary(&options, &current)?,
+                    "gear" => mechanical_core::gear(&options, &current)?,
+                    "thread" => mechanical_core::thread(&options, &current)?,
+                    _ => mechanical_core::planetary(&options, &current)?,
                 };
                 self.mechanical_characters += generated.source.chars().count();
                 if self.mechanical_characters > 220000 {

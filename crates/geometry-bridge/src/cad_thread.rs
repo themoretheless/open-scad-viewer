@@ -38,7 +38,7 @@ pub fn apply(v: Value) -> Result<Value> {
         return Err(input("Thread origin must be finite."));
     }
     let mode: String = field(&v, "mode")?;
-    let generated=modelgraph_runtime::thread_geometry(&value_codec::json!({"diameter":width,"pitch":pitch,"length":depth,"internal":false,"wall":1.,"clearance":0.,"starts":1.,"left_handed":false,"segments_per_turn":16.})).map_err(|e|input(e.message))?;
+    let generated=mechanical_core::thread_geometry(&value_codec::json!({"diameter":width,"pitch":pitch,"length":depth,"internal":false,"wall":1.,"clearance":0.,"starts":1.,"left_handed":false,"segments_per_turn":16.})).map_err(|e|input(e.message))?;
     let cutter: Mesh = field(&generated, "mesh")?;
     let u = unit(cross(
         n,

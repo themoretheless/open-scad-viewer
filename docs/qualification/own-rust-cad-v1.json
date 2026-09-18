@@ -1,9 +1,9 @@
 {
   "id": "own-rust-cad-v1",
-  "wasmSha256": "fde93f46f61330609eaab5c7470be0bb24a2ff14a64d0b83788c5c0051d82af6",
-  "noticesSha256": "e1facd281eb7939480f00827d812505d6e0909581acff3fcc7bffb3d9fd23fd6",
-  "lockfileSha256": "547204a944a135f114ea1346207bfc3fc557f537c1b6002f6df7a6416eeb93cf",
-  "rustLockfileSha256": "16cea0b66727c5f79e5985a1457c13b28f5db037d9fb736fc28f480eba7bbafb",
+  "wasmSha256": "63f56c97defe9d725642114cc925a4116248535959981d99cebcd858d7313f1b",
+  "noticesSha256": "ff988c02c87aac5ee582a393378bb59ff40a024850dd377abd0cde7fdad231e6",
+  "lockfileSha256": "70eb933b3607298caa00f7cdd96a953f313e6cc080a34f9b3c5c58694c765704",
+  "rustLockfileSha256": "c93faa0a3fce4769c284b36415bece79bed68f33bbfb9d68a2b309ad59680542",
   "tests": [
     "tests/valueBinaryCodec.test.ts",
     "tests/cadBinaryTransport.test.ts",
@@ -16,7 +16,7 @@
     "tests/mcpDirectGeometrySupervisor.test.ts",
     "tests/mcpServer.test.ts"
   ],
-  "passedTests": 218,
+  "passedTests": 220,
   "environment": {
     "platform": "darwin",
     "architecture": "arm64",
