@@ -11,6 +11,7 @@ import ExampleGallery from './components/ExampleGallery.vue'
 const MechanicalGenerator = defineAsyncComponent(() => import('./features/MechanicalGenerator.vue'))
 import {restoreSourceHistory,boundedSourceHistory} from './services/mainSourceEditing'
 import type { DirectDocument } from './services/directModeling'
+import { emptyDirectDocument } from './services/directModeling'
 import type { WorkspaceMode } from './services/workspaceModes'
 import { WORKSPACE_MODES, workspaceModeHint, workspaceModeLabel } from './services/workspaceModes'
 import { sceneMeshesToSolidDocument, meshDocumentToSolidDocument, meshDataToPolygon, polygonToMeshObject } from './services/solidBridge'
@@ -389,6 +390,7 @@ const workspaceMode = computed<WorkspaceMode>(() => (meshModelerOpen.value ? 'me
 
 /** Source is no longer a workspace of its own; it opens as a drawer over either one. */
 const editorOpen = ref(false)
+const solidBuilding = ref(false)
 
 function openWorkspaceMode(mode: WorkspaceMode) {
   if (mode === 'solid') {
@@ -402,6 +404,42 @@ function openWorkspaceMode(mode: WorkspaceMode) {
 
 // Solid is the resting workspace: with no Code tab there is nothing else to show.
 if (!directModelerOpen.value && !meshModelerOpen.value) directModelerOpen.value = true
+
+/**
+ * Builds the source as exact solids and hands them to the Solid workspace.
+ *
+ * This runs on the main thread: the bounded worker protocol accepts an exact set of
+ * result keys, so the exact graph cannot ride the display route yet. A large model
+ * will therefore block the interface until that protocol carries the graph too.
+ */
+async function buildSolidFromSource() {
+  if (solidBuilding.value) return
+  solidBuilding.value = true
+  error.value = ''
+  try {
+    const [{ parseOpenSCAD }, { buildExactSolidBodies }] = await Promise.all([
+      import('./services/openscadParser'),
+      import('./services/solid/brepBuild'),
+    ])
+    const evaluated = await parseOpenSCAD(code.value, { recordExactSolids: true })
+    const plan = evaluated.exactSolids
+    if (!plan || plan.roots.length === 0) {
+      error.value = lang.value === 'ru'
+        ? 'Исходник не описывает ни одного тела.'
+        : 'The source describes no solids.'
+      return
+    }
+    const bodies = buildExactSolidBodies(plan.nodes, plan.roots)
+    solidSeedDocument.value = { ...emptyDirectDocument(), bodies }
+    meshModelerOpen.value = false
+    directModelerOpen.value = true
+    editorOpen.value = false
+  } catch (caught) {
+    error.value = caught instanceof Error ? caught.message : String(caught)
+  } finally {
+    solidBuilding.value = false
+  }
+}
 
 function bringCodeToMesh() {
   if (!sceneMeshes.value.length) return
@@ -2546,6 +2584,13 @@ function sanitizeFileName(name: string) { return (name.replace(/[^\w.() -]+/g, '
             {{ t('render') }}
           </button>
           <label class="auto-check"><input v-model="autoRender" type="checkbox"> {{ t('auto') }}</label>
+          <button
+            class="btn"
+            type="button"
+            :disabled="solidBuilding"
+            :title="lang === 'ru' ? 'Собрать точные тела (NURBS) и открыть в Solid' : 'Build exact NURBS solids and open them in Solid'"
+            @click="buildSolidFromSource"
+          >{{ solidBuilding ? '…' : (lang === 'ru' ? 'В Solid' : 'To Solid') }}</button>
           <span class="toolbar-spacer" aria-hidden="true" />
           <button class="btn" type="button" @click="exampleGalleryOpen = true">{{ t('examples') }}</button>
           <button class="btn" type="button" @click="mechanicalGeneratorOpen = true">{{ t('generators') }}</button>
