@@ -162,6 +162,9 @@ for (const [name, artifact, compression] of [
 // decoders outside the geometry worker (5261863 -> 5308461 bytes measured;
 // the eager index chunk and the geometry chunk are unchanged), so the total
 // budget moves once.
-const totalBudget = 5_350_000
+// The workspace redesign (single top bar with an export dialog, dock tabs, per-mode command palettes,
+// icon toolbars and the Solid WebGPU display layer) adds ~57 kB to the eager index chunk
+// (5308461 -> 5406747 bytes measured; the geometry chunk is unchanged), so the total budget moves once.
+const totalBudget = 5_450_000
 if (total > totalBudget) throw new Error(`dist totals ${total} bytes; budget is ${totalBudget}`)
 console.log(`Verified ${files.length} dist artifacts (${total} bytes)`)
