@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, ref, shallowRef, watch } from 'vue'
+import CommandPalette from '../components/CommandPalette.vue'
+import type { PaletteCommand } from '../services/commandSearch'
 import { SCULPT_FALLOFFS, SCULPT_KINDS, buildSculptBrush, isFractionalSculptKind, type SculptFalloff, type SculptKind } from '../services/geometryEditing'
 import { meshCentroid, sculptMesh } from '../services/meshEditing'
 import {
@@ -38,7 +40,7 @@ import { exportMeshFormatCompressed } from '../services/meshExportFormats'
 import { downloadBytes } from '../services/downloadArtifact'
 import type { PolygonMesh } from '../services/geometry/polygon'
 
-const props = defineProps<{ open: boolean; locale: string; seedDocument?: MeshWorkspaceDocument | null }>()
+const props = defineProps<{ open: boolean; locale: string; seedDocument?: MeshWorkspaceDocument | null; paletteRequest?: number }>()
 const emit = defineEmits<{ close: []; exportToSolid: [doc: MeshWorkspaceDocument] }>()
 const ru = computed(() => props.locale === 'ru')
 const label = (a: string, b: string) => (ru.value ? a : b)
@@ -434,6 +436,53 @@ async function downloadMesh() {
   }
 }
 
+// Command palette: header actions, object tools and edit operations, filtered to what applies to the current selection.
+const paletteOpen = ref(false)
+watch(() => props.paletteRequest, request => { if (request && props.open) paletteOpen.value = true })
+type MeshCommand = PaletteCommand & { run: () => void }
+const meshCommands = computed<MeshCommand[]>(() => {
+  const cmd = (id: string, ru: string, en: string, run: () => void, extra: Partial<PaletteCommand> = {}): MeshCommand => ({ id, label: label(ru, en), aliases: [ru, en], run, ...extra })
+  const hasObject = !!selected.value, hasFaces = selectedFaces.value.length > 0, hasEdges = selectedEdges.value.length > 0
+  const needObject = label('Выберите объект', 'Select an object'), needFaces = label('Выберите грани', 'Select faces')
+  const modes: Array<[MeshSelectMode, string, string, string]> = [['object', 'Режим: объект', 'Mode: object', '1'], ['vertex', 'Режим: вершина', 'Mode: vertex', '2'], ['edge', 'Режим: ребро', 'Mode: edge', '3'], ['face', 'Режим: грань', 'Mode: face', '4']]
+  return [
+    cmd('add-box', 'Куб', 'Cube', () => addPrimitive('box'), { detail: label('Добавить', 'Add') }),
+    cmd('add-sphere', 'UV-сфера', 'UV Sphere', () => addPrimitive('sphere'), { detail: label('Добавить', 'Add') }),
+    cmd('import', 'Импорт сетки', 'Import mesh', () => fileInput.value?.click(), { detail: 'STL / OBJ / PLY / OFF / AMF / 3MF' }),
+    ...modes.map(([mode, ru, en, key]) => cmd(`mode-${mode}`, ru, en, () => { selectMode.value = mode }, { shortcut: key, enabled: selectMode.value !== mode })),
+    cmd('reset-view', 'Сбросить вид', 'Reset view', resetView, { detail: label('Вид', 'View') }),
+    cmd('grid', floorVisible.value ? 'Скрыть сетку' : 'Показать сетку', floorVisible.value ? 'Hide grid' : 'Show grid', () => { floorVisible.value = !floorVisible.value }, { detail: label('Вид', 'View') }),
+    cmd('undo', 'Отменить', 'Undo', undo, { shortcut: 'Ctrl Z', enabled: undoable.value }),
+    cmd('redo', 'Повторить', 'Redo', redo, { shortcut: 'Ctrl Shift Z', enabled: redoable.value }),
+    cmd('transform', 'Применить трансформ', 'Apply transform', transformSelected, { detail: label('Выбранное', 'Selection'), enabled: hasObject, disabledReason: needObject }),
+    cmd('extrude', 'Выдавить грани', 'Extrude faces', applyExtrude, { detail: label('Грани', 'Faces'), shortcut: 'E', enabled: hasObject && hasFaces, disabledReason: needFaces }),
+    cmd('inset', 'Inset', 'Inset', applyInset, { detail: label('Грани', 'Faces'), shortcut: 'I', enabled: hasObject && hasFaces, disabledReason: needFaces }),
+    cmd('subdivide', 'Subdivide', 'Subdivide', applySubdivide, { detail: label('Грани', 'Faces'), enabled: hasObject, disabledReason: needObject }),
+    cmd('delete-faces', 'Удалить грани', 'Delete faces', applyDeleteFaces, { detail: label('Грани', 'Faces'), enabled: hasObject && hasFaces, disabledReason: needFaces }),
+    cmd('flip', 'Перевернуть нормали', 'Flip normals', applyFlip, { detail: label('Грани', 'Faces'), enabled: hasObject, disabledReason: needObject }),
+    cmd('knife', 'Разрез по середине рёбер', 'Knife at edge midpoints', applyKnife, { detail: label('Рёбра', 'Edges'), shortcut: 'K', enabled: hasObject && hasEdges, disabledReason: label('Выберите рёбра', 'Select edges') }),
+    cmd('merge', 'Слияние по расстоянию', 'Merge by distance', applyMerge, { detail: label('Топология', 'Topology'), enabled: hasObject, disabledReason: needObject }),
+    cmd('separate', 'Отделить грани', 'Separate faces', applySeparate, { detail: label('Топология', 'Topology'), enabled: hasObject && hasFaces, disabledReason: needFaces }),
+    cmd('join', 'Объединить объекты', 'Join objects', applyJoin, { detail: label('Топология', 'Topology'), enabled: document.value.objects.length > 1, disabledReason: label('Нужно два объекта', 'Two objects are required') }),
+    cmd('symmetrize', 'Симметрия по X', 'Symmetrize X', applySymmetrize, { detail: label('Топология', 'Topology'), enabled: hasObject, disabledReason: needObject }),
+    cmd('twist', 'Twist deform', 'Twist deform', applyTwist, { detail: label('Деформация', 'Deform'), enabled: hasObject, disabledReason: needObject }),
+    cmd('duplicate', 'Дублировать объект', 'Duplicate object', applyDuplicate, { enabled: hasObject, disabledReason: needObject }),
+    cmd('delete-object', 'Удалить объект', 'Delete object', removeSelected, { enabled: hasObject, disabledReason: needObject }),
+    cmd('to-solid', 'Открыть в Solid', 'Open in Solid', () => emit('exportToSolid', document.value), { detail: label('Файл', 'File'), enabled: document.value.objects.length > 0, disabledReason: label('Нет объектов', 'No objects') }),
+    cmd('download-json', 'Скачать проект JSON', 'Download JSON project', downloadJson, { detail: label('Файл', 'File') }),
+  ]
+})
+function executeMeshCommand(id: string) {
+  paletteOpen.value = false
+  const target = meshCommands.value.find(command => command.id === id)
+  if (target && target.enabled !== false) run(target.run)
+}
+defineExpose({ meshCommands, executeMeshCommand })
+function onWorkspaceKey(event: KeyboardEvent) {
+  if (paletteOpen.value) return
+  if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') { event.preventDefault(); paletteOpen.value = true; return }
+  if (event.key === 'Escape') emit('close')
+}
 function downloadJson() {
   const blob = new Blob([JSON.stringify(document.value)], { type: 'application/json' })
   const url = URL.createObjectURL(blob)
@@ -526,17 +575,15 @@ const scene = computed(() => document.value.objects.filter(o => o.visible).map(o
 </script>
 
 <template>
-  <div v-if="open" ref="workspace" class="mesh-workspace" tabindex="0" @keydown.escape="emit('close')">
+  <div v-if="open" ref="workspace" class="mesh-workspace" tabindex="0" @keydown="onWorkspaceKey">
     <header class="mesh-bar">
       <strong>{{ label('Mesh', 'Mesh') }}</strong>
-      <span class="hint">{{ label('ЛКМ: вращение · Shift или СКМ: панорама · колесо: масштаб · клик: выбрать', 'LMB: orbit · Shift or MMB: pan · wheel: zoom · click: select') }}</span>
-      <button type="button" @click="resetView">{{ label('Сбросить вид', 'Reset view') }}</button>
-      <button type="button" :aria-pressed="floorVisible" :aria-label="label('Сетка', 'Grid')" @click="floorVisible = !floorVisible">#</button>
-      <button type="button" :disabled="!undoable" @click="undo">Undo</button>
-      <button type="button" :disabled="!redoable" @click="redo">Redo</button>
-      <button type="button" @click="emit('exportToSolid', document)">{{ label('В Solid', 'To Solid') }}</button>
-      <button type="button" class="close" @click="emit('close')">{{ label('Закрыть', 'Close') }}</button>
+      <button type="button" class="command-search" :title="label('Поиск команд · Ctrl/⌘ K', 'Search commands · Ctrl/⌘ K')" @click="paletteOpen = true"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><span>{{ label('Команда…', 'Command…') }}</span><kbd>Ctrl K</kbd></button>
+      <span class="hint"></span>
+      <button type="button" class="icon" :disabled="!undoable" :title="label('Отменить · Ctrl/⌘ Z', 'Undo · Ctrl/⌘ Z')" :aria-label="label('Отменить', 'Undo')" @click="undo"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 14 4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-3"/></svg></button>
+      <button type="button" class="icon" :disabled="!redoable" :title="label('Повторить · Ctrl/⌘ Shift Z', 'Redo · Ctrl/⌘ Shift Z')" :aria-label="label('Повторить', 'Redo')" @click="redo"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 14 5-5-5-5"/><path d="M20 9H9a5 5 0 0 0 0 10h3"/></svg></button>
     </header>
+    <CommandPalette v-if="paletteOpen" :open="paletteOpen" :commands="meshCommands.filter(command => command.enabled !== false)" @close="paletteOpen = false" @execute="executeMeshCommand" />
 
     <div class="mesh-body">
       <aside class="mesh-side">
@@ -725,7 +772,11 @@ const scene = computed(() => document.value.objects.filter(o => o.visible).map(o
   border-bottom: 1px solid var(--border);
   background: var(--surface);
 }
-.mesh-bar .hint { color: var(--text-dim); font-size: 0.85rem; margin-right: auto; }
+.mesh-bar .hint { margin-right: auto; }
+.mesh-bar .command-search { display: inline-flex; align-items: center; gap: 8px; min-width: 190px; background: var(--bg); color: var(--text-dim); border-radius: 8px; padding: 6px 10px; }
+.mesh-bar .command-search span { flex: 1; text-align: left; }
+.mesh-bar .command-search kbd { font: 11px var(--font-mono, monospace); padding: 1px 5px; border: 1px solid var(--border); border-radius: 4px; }
+.mesh-bar .icon { width: 32px; height: 32px; padding: 0; display: inline-flex; align-items: center; justify-content: center; }
 .mesh-bar button, .mesh-side button, .mesh-side select, .mesh-side input {
   background: var(--surface-raised);
   color: inherit;

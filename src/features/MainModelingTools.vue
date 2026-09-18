@@ -18,6 +18,7 @@ import type {DirectBody,DirectDocument} from '../services/directModeling'
 import type {Ray3} from '../services/math3d'
 import type {MeshData} from '../core/mesh'
 import type {PickHit} from '../services/rendererContracts'
+import type {PaletteCommand} from '../services/commandSearch'
 import {previewMeshes,primitiveSource,sceneFace,sceneBody,type MainOperation,type MainParameters} from '../services/mainModeling'
 const props=defineProps<{meshes:MeshData[];selected:number|null;hit:PickHit|null;source:string;ready:boolean;locale:string;canUndo:boolean;canRedo:boolean;selectedIndices:number[];project:(p:readonly number[])=>[number,number]|null;ray:(x:number,y:number)=>Ray3|null;cameraRevision:number}>()
 const emit=defineEmits<{append:[source:string];apply:[source:string];solid:[document:DirectDocument];preview:[meshes:MeshData[]|null];undo:[];redo:[];selectMany:[indices:number[]]}>()
@@ -57,6 +58,28 @@ function choose(kind:MainOperation){
   })
  }
 }
+// Everything the old button strip offered, as palette commands; only the ones that apply right now are enabled.
+type MainCommand=PaletteCommand&{run:()=>void}
+const commands=computed<MainCommand[]>(()=>{
+ const cmd=(id:string,ru:string,en:string,run:()=>void,extra:Partial<PaletteCommand>={}):MainCommand=>({id,label:l(ru,en),aliases:[ru,en],run,...extra})
+ const bodyLabel=props.selected===null?'':l(`Тело ${props.selected+1} · ${props.selectedIndices.length} выбрано`,`Body ${props.selected+1} · ${props.selectedIndices.length} selected`)
+ const needBody=l('Соберите модель и выберите тело','Build the model and select a body')
+ return [
+  cmd('box-select',boxSelect.value?'Выключить рамку':'Рамка выделения',boxSelect.value?'Box select off':'Box select',()=>{cancel();sketchOpen.value=false;boxSelect.value=!boxSelect.value},{detail:l('Выделение','Selection')}),
+  cmd('sketch-xy','Эскиз XY','XY sketch',()=>{cancel();workbenchOpen.value=false;sketchAnchor.value=null;sketchPlane.value=xyPlane();sketchOpen.value=true},{detail:l('Эскиз','Sketch')}),
+  cmd('cad-ops','Операции CAD','CAD operations',()=>{cancel();sketchOpen.value=false;workbenchAction.value='union';workbenchOpen.value=!workbenchOpen.value},{detail:l('Панель','Panel')}),
+  cmd('texture','Текстура','Texture',()=>{cancel();sketchOpen.value=false;workbenchAction.value='texture';workbenchOpen.value=true},{detail:l('Панель','Panel')}),
+  cmd('lighten','Облегчение','Lighten',()=>{cancel();sketchOpen.value=false;workbenchAction.value='lighten';workbenchOpen.value=true},{detail:l('Панель','Panel')}),
+  cmd('dimensions',dimensionOpen.value?'Скрыть размеры':'Размеры',dimensionOpen.value?'Hide dimensions':'Dimensions',()=>{dimensionOpen.value=!dimensionOpen.value},{detail:l('Наложение','Overlay')}),
+  ...kinds.map(k=>cmd(`add-${k[0]}`,k[1],k[2],()=>run(()=>emit('append',primitiveSource(k[0],size.value))),{detail:l(`Примитив · ${size.value} мм`,`Primitive · ${size.value} mm`),keywords:['primitive','примитив']})),
+  ...[10,20,50].map(mm=>cmd(`size-${mm}`,`Размер примитива ${mm} мм`,`Primitive size ${mm} mm`,()=>{size.value=mm},{detail:l('Настройка','Setting'),enabled:size.value!==mm})),
+  cmd('undo','Отменить правку','Undo edit',()=>{cancel();emit('undo')},{shortcut:'Ctrl Z',enabled:props.canUndo,disabledReason:l('Нечего отменять','Nothing to undo')}),
+  cmd('redo','Повторить правку','Redo edit',()=>{cancel();emit('redo')},{shortcut:'Ctrl Shift Z',enabled:props.canRedo,disabledReason:l('Нечего повторять','Nothing to redo')}),
+  ...ops.map(o=>cmd(`op-${o[0]}`,o[1],o[2],()=>choose(o[0]),{detail:bodyLabel||l('Тело','Body'),enabled:props.selected!==null&&props.ready,disabledReason:needBody})),
+ ]
+})
+function execute(id:string){const target=commands.value.find(c=>c.id===id);if(target&&target.enabled!==false)target.run()}
+defineExpose({commands,execute})
 function edgeLabel(i:number){const t=topology.value,e=t?.topology.edges[i];if(!t||!e)return String(i+1);const point=(n:number)=>t.body.mesh.positions.slice(n*3,n*3+3).map(x=>Number(x.toFixed(1))).join(', ');return `${i+1}: (${point(e.a)}) → (${point(e.b)})`}
 
 async function result(){
@@ -84,9 +107,7 @@ function applySketch(body:DirectBody,cut:boolean){run(()=>{if(!props.ready)throw
  <CadWorkbenchPanel v-if="workbenchOpen" :key="workbenchAction" :initial-action="workbenchAction" :meshes="meshes" :selection="selectedIndices" :hit="hit" :source="source" :ready="ready" :locale="locale" @apply="emit('apply',$event)" @preview="emit('preview',$event)" @close="workbenchOpen=false" />
  <MainSketchTools v-if="sketchOpen" :key="sketchAnchor?JSON.stringify(sketchAnchor):JSON.stringify(sketchPlane)" :session-key="sketchAnchor?JSON.stringify(sketchAnchor):undefined" :snap-points="snapPoints" :plane="sketchPlane" :project="project" :ray="ray" :revision="cameraRevision" :locale="locale" @body="applySketch" @close="sketchOpen=false" />
  <MainModelingOverlay v-if="!sketchOpen" :meshes="meshes" :selected="selected" :selection="selectedIndices" :hit="hit" :operation="op" :parameters="p" :project="project" :revision="cameraRevision" :box="boxSelect" @parameters="p=$event" @preview="preview" @apply="apply" @cancel="cancel" @select="emit('selectMany',$event)" @box-done="boxSelect=false" />
- <div class="main-model-tools" @keydown.stop>
-  <div class="primitives"><button :aria-pressed="boxSelect" @click="cancel();sketchOpen=false;boxSelect=!boxSelect">{{ l('Рамка','Box select') }}</button><button @click="cancel();workbenchOpen=false;sketchAnchor=null;sketchPlane=xyPlane();sketchOpen=true">{{ l('Эскиз XY','XY sketch') }}</button><button @click="cancel();sketchOpen=false;workbenchAction='union';workbenchOpen=!workbenchOpen">{{ l('Операции CAD','CAD operations') }}</button><button @click="cancel();sketchOpen=false;workbenchAction='texture';workbenchOpen=true">{{ l('Текстура','Texture') }}</button><button @click="cancel();sketchOpen=false;workbenchAction='lighten';workbenchOpen=true">{{ l('Облегчение','Lighten') }}</button><button :aria-pressed="dimensionOpen" @click="dimensionOpen=!dimensionOpen">{{ l('Размеры','Dimensions') }}</button><strong>{{ l('Примитивы','Primitives') }}</strong><button v-for="k in kinds" :key="k[0]" @click="run(()=>emit('append',primitiveSource(k[0],size)))">{{ l(k[1],k[2]) }}</button><label>{{ l('мм','mm') }} <input v-model.number="size" aria-label="Primitive size" type="number" min="0.1" max="10000"></label><button :title="l('Отменить изменение','Undo edit')" :disabled="!canUndo" @click="cancel();emit('undo')">↶</button><button :title="l('Повторить изменение','Redo edit')" :disabled="!canRedo" @click="cancel();emit('redo')">↷</button></div>
-  <div v-if="selected!==null" class="operations"><span>{{ l('Тело','Body') }} {{ selected+1 }} · {{ selectedIndices.length }} {{ l('выбрано','selected') }}</span><button v-for="o in ops" :key="o[0]" :disabled="!ready" :aria-pressed="op===o[0]" @click="choose(o[0])">{{ l(o[1],o[2]) }}</button></div>
+ <div v-if="op||error||working" class="main-model-tools" @keydown.stop>
   <div v-if="op" class="parameters">
    <label v-if="!['move','duplicate','delete'].includes(op)">{{ l('Размер / угол','Size / angle') }} <input v-model.number="p.amount" type="number" step="0.5"></label>
    <template v-if="['move','duplicate','profile'].includes(op)"><label v-for="axis in (op==='profile'?['x','y']:['x','y','z']) as ('x'|'y'|'z')[]" :key="axis">{{ axis.toUpperCase() }} <input v-model.number="p[axis]" type="number"></label></template>
@@ -105,5 +126,5 @@ function applySketch(body:DirectBody,cut:boolean){run(()=>{if(!props.ready)throw
  </div>
 </template>
 <style scoped>
-.main-model-tools{position:absolute;left:8px;right:8px;bottom:35px;z-index:5;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:7px;padding:7px;max-height:40%;overflow:auto;font-size:12px}.primitives,.operations,.parameters{display:flex;align-items:center;flex-wrap:wrap;gap:5px}.operations,.parameters{margin-top:6px}button,input,select{font:inherit;color:var(--text);background:var(--surface-raised);border:1px solid var(--border);border-radius:4px;padding:5px}button{cursor:pointer}button:disabled{opacity:.4}button[aria-pressed=true]{border-color:var(--accent)}button.primary{background:var(--accent);color:var(--bg);font-weight:600}input[type=number]{width:64px}label{display:flex;align-items:center;gap:3px}small{width:100%;color:var(--text-dim)}p{color:var(--danger);margin:6px 0}
+.main-model-tools{position:absolute;left:8px;right:8px;bottom:35px;z-index:5;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:7px;padding:7px;max-height:40%;overflow:auto;font-size:12px}.parameters{display:flex;align-items:center;flex-wrap:wrap;gap:5px}button,input,select{font:inherit;color:var(--text);background:var(--surface-raised);border:1px solid var(--border);border-radius:4px;padding:5px}button{cursor:pointer}button:disabled{opacity:.4}button[aria-pressed=true]{border-color:var(--accent)}button.primary{background:var(--accent);color:var(--bg);font-weight:600}input[type=number]{width:64px}label{display:flex;align-items:center;gap:3px}small{width:100%;color:var(--text-dim)}p{color:var(--danger);margin:6px 0}
 </style>

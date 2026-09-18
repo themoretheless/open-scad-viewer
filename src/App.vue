@@ -55,7 +55,7 @@ import {
   type PaletteCommandId,
   type PaletteCommandRuntimeState,
 } from './services/commandRegistry'
-import { isPaletteCommandEnabled } from './services/commandSearch'
+import { isPaletteCommandEnabled, type PaletteCommand } from './services/commandSearch'
 import { backendQuality } from './services/backendQuality'
 import { clampEditorWidth, editorWidthBounds } from './services/layoutSizing'
 import { nextRovingIndex, type RovingFocusKey } from './services/rovingFocus'
@@ -366,6 +366,14 @@ const mechanicalGeneratorOpen = ref(false)
 const directModelerOpen = ref(false)
 const meshModelerOpen = ref(false)
 const solidSeedDocument = ref<DirectDocument | null>(null)
+// Incremented to ask the Solid workspace to open its own command palette.
+const solidPaletteRequest = ref(0)
+const meshPaletteRequest = ref(0)
+function openCommandPalette() {
+  if (directModelerOpen.value) solidPaletteRequest.value++
+  else if (meshModelerOpen.value) meshPaletteRequest.value++
+  else paletteOpen.value = true
+}
 const meshSeedDocument = ref<MeshWorkspaceDocument | null>(null)
 function sceneMeshesToMeshDocument(): MeshWorkspaceDocument {
   const doc = emptyMeshDocument()
@@ -539,11 +547,15 @@ const scanPanelOpen = ref(false)
 const scanToggleRef = ref<HTMLButtonElement | null>(null)
 type DockTab = 'scene' | 'inspect' | 'parameters' | 'svg' | 'photo' | 'perf'
 const dockTab = ref<DockTab>('scene')
-const modelToolsVisible = ref(storageGet('scad-model-tools') !== 'false')
-function toggleModelTools() {
-  modelToolsVisible.value = !modelToolsVisible.value
-  storageSet('scad-model-tools', String(modelToolsVisible.value))
-}
+// Direct-modeling actions of the Code viewport are reached through the command palette.
+const mainToolsRef = ref<InstanceType<typeof MainModelingTools> | null>(null)
+const MAIN_COMMAND_PREFIX = 'main:'
+const visiblePaletteCommands = computed<PaletteCommand[]>(() => {
+  const base = paletteCommands.value.filter(isPaletteCommandEnabled)
+  if (workspaceMode.value !== 'code') return base
+  const tools = (mainToolsRef.value?.commands ?? []) as readonly PaletteCommand[]
+  return [...base, ...tools.filter(command => command.enabled !== false).map(command => ({ ...command, id: MAIN_COMMAND_PREFIX + command.id }))]
+})
 const dockOpen = ref(true)
 const findOpen = ref(false)
 const replaceOpen = ref(false)
@@ -2255,6 +2267,7 @@ function lineAndColumn(source: string, offset: number) {
 }
 
 function executeCommand(id: string) {
+  if (id.startsWith(MAIN_COMMAND_PREFIX)) { paletteOpen.value = false; mainToolsRef.value?.execute(id.slice(MAIN_COMMAND_PREFIX.length)); return }
   const target = paletteCommands.value.find(candidate => candidate.id === id)
   if (target && !isPaletteCommandEnabled(target)) return
   const paletteWasOpen = paletteOpen.value
@@ -2476,7 +2489,7 @@ function sanitizeFileName(name: string) { return (name.replace(/[^\w.() -]+/g, '
           :title="storageFailureDetail || t('retrySave')"
           @click="retryWorkspacePersistence"
         >⚠ {{ t('unsavedDraft') }}</button>
-        <button class="icon-btn command-btn" type="button" :title="t('commandHelp')" aria-keyshortcuts="Control+K Meta+K" @click="paletteOpen = true">
+        <button class="icon-btn command-btn" type="button" :title="t('commandHelp')" aria-keyshortcuts="Control+K Meta+K" @click="openCommandPalette">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
           <span>{{ t('commands') }}</span> <kbd>Ctrl K</kbd>
         </button>
@@ -2654,8 +2667,8 @@ function sanitizeFileName(name: string) { return (name.replace(/[^\w.() -]+/g, '
         @keydown="resizeEditorWithKeyboard"
       ><span /></div>
 
-      <section class="canvas-panel" :class="{ 'with-dock': dockOpen, 'tools-hidden': !modelToolsVisible }" :aria-label="t('viewport')" @pointerdown.capture="mainShiftSelection = $event.shiftKey">
-        <MainModelingTools :project="mainProject" :ray="mainRay" :camera-revision="mainCameraRevision" :selected-indices="mainSelectedIndices" @select-many="mainSelectMany" :meshes="sceneMeshes" :selected="selectedMesh" :hit="selectedHit" :source="code" :ready="!rendering && !stale && renderedSource === code" :locale="lang" :can-undo="!rendering && mainEditPast.at(-1)?.after === code" :can-redo="!rendering && mainEditFuture.at(-1)?.before === code" @append="appendMainPrimitive" @apply="commitMainSource" @solid="continueMainEditInSolid" @preview="previewMainGeometry" @undo="undoMainGeometry()" @redo="undoMainGeometry(true)" />
+      <section class="canvas-panel" :class="{ 'with-dock': dockOpen }" :aria-label="t('viewport')" @pointerdown.capture="mainShiftSelection = $event.shiftKey">
+        <MainModelingTools ref="mainToolsRef" :project="mainProject" :ray="mainRay" :camera-revision="mainCameraRevision" :selected-indices="mainSelectedIndices" @select-many="mainSelectMany" :meshes="sceneMeshes" :selected="selectedMesh" :hit="selectedHit" :source="code" :ready="!rendering && !stale && renderedSource === code" :locale="lang" :can-undo="!rendering && mainEditPast.at(-1)?.after === code" :can-redo="!rendering && mainEditFuture.at(-1)?.before === code" @append="appendMainPrimitive" @apply="commitMainSource" @solid="continueMainEditInSolid" @preview="previewMainGeometry" @undo="undoMainGeometry()" @redo="undoMainGeometry(true)" />
         <div class="viewer-toolbar" :class="{ 'with-dock': dockOpen }">
           <button class="view-btn icon-only" type="button" :title="t('fit')" :aria-label="t('fit')" @click="fitView">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5"/></svg>
@@ -2670,32 +2683,34 @@ function sanitizeFileName(name: string) { return (name.replace(/[^\w.() -]+/g, '
             :aria-label="t('previousView')"
             :title="canPreviousView ? `${t('previousView')} · [` : t('noPreviousView')"
             @click="previousView"
-          >←</button>
-          <button class="view-btn" type="button" :aria-pressed="projection === 'orthographic'" @click="toggleProjection">
-            {{ projection === 'perspective' ? t('perspective') : t('orthographic') }}
+          ><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg></button>
+          <button class="view-btn icon-only" type="button" :aria-pressed="projection === 'orthographic'" :aria-label="projection === 'perspective' ? t('perspective') : t('orthographic')" :title="`${projection === 'perspective' ? t('perspective') : t('orthographic')} → ${projection === 'perspective' ? t('orthographic') : t('perspective')}`" @click="toggleProjection">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path v-if="projection === 'perspective'" d="M4 20L9 4h6l5 16zM6.5 12h11M5 16h14"/><path v-else d="M4 7l8-4 8 4-8 4zM4 7v10l8 4 8-4V7M12 11v10"/></svg>
           </button>
-          <button class="view-btn" type="button" :aria-pressed="gridVisible" @click="toggleGrid">{{ t('grid') }}</button>
+          <button class="view-btn icon-only" type="button" :aria-pressed="gridVisible" :aria-label="t('grid')" :title="t('grid')" @click="toggleGrid">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 9h18M3 15h18M9 3v18M15 3v18"/><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
+          </button>
           <button
-            ref="scanToggleRef" class="view-btn scan-toggle" type="button"
-            :class="{ active: sectionEnabled }" :aria-label="t('section')" :title="t('section')"
+            ref="scanToggleRef" class="view-btn icon-only scan-toggle" type="button"
+            :class="{ active: sectionEnabled }" :aria-label="t('section')" :title="t('scanPlane')"
             :aria-expanded="scanPanelOpen" aria-controls="scan-plane-panel"
             :disabled="!sectionAvailable && !sectionEnabled"
             @click="scanPanelOpen = !scanPanelOpen"
-          >{{ t('scanPlane') }}<i v-if="sectionEnabled" class="scan-active-dot" aria-hidden="true" /></button>
-          <button class="view-btn icon-only" type="button" :aria-label="t('modelTools')" :title="t('modelTools')" :aria-pressed="modelToolsVisible" @click="toggleModelTools">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M14 4l6 6-9 9H5v-6z"/><path d="M12 6l6 6"/></svg>
-          </button>
+          ><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7l8-4 8 4-8 4z"/><path d="M4 7v10l8 4 8-4V7"/><path d="M2 12h20" stroke-dasharray="3 2"/></svg><i v-if="sectionEnabled" class="scan-active-dot" aria-hidden="true" /></button>
           <button ref="dockToggleRef" class="view-btn icon-only" type="button" :aria-label="t('sidebar')" :aria-pressed="dockOpen" :aria-expanded="dockOpen" aria-controls="cad-sidebar" @click="dockOpen = !dockOpen">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M15 4v16"/></svg>
           </button>
-          <label class="view-select-label">
-            <span class="sr-only">{{ t('display') }}</span>
-            <select v-model="displayMode" class="view-select display-select" :aria-label="t('display')" @change="changeDisplayMode">
-              <option value="shaded">{{ t('shaded') }}</option>
-              <option value="edges">{{ t('edges') }}</option>
-              <option value="xray">{{ t('xray') }}</option>
-            </select>
-          </label>
+          <div class="display-modes" role="group" :aria-label="t('display')">
+            <button class="view-btn icon-only" type="button" :aria-pressed="displayMode === 'shaded'" :aria-label="t('shaded')" :title="t('shaded')" @click="setDisplayMode('shaded')">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7l8-4 8 4-8 4z" fill="currentColor" fill-opacity="0.35"/><path d="M4 7v10l8 4 8-4V7M12 11v10"/></svg>
+            </button>
+            <button class="view-btn icon-only" type="button" :aria-pressed="displayMode === 'edges'" :aria-label="t('edges')" :title="t('edges')" @click="setDisplayMode('edges')">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7l8-4 8 4-8 4zM4 7v10l8 4 8-4V7M12 11v10M4 7l8 14M20 7l-8 14"/></svg>
+            </button>
+            <button class="view-btn icon-only" type="button" :aria-pressed="displayMode === 'xray'" :aria-label="t('xray')" :title="t('xray')" @click="setDisplayMode('xray')">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7l8-4 8 4-8 4zM4 7v10l8 4 8-4V7M12 11v10" stroke-opacity="0.45"/><path d="M4 17l8-4 8 4M12 3v10"/></svg>
+            </button>
+          </div>
           <label class="view-select-label">
             <span class="sr-only">{{ t('view') }}</span>
             <select v-model="standardView" class="view-select" :aria-label="t('view')" @change="changeStandardView">
@@ -2907,7 +2922,9 @@ function sanitizeFileName(name: string) { return (name.replace(/[^\w.() -]+/g, '
       <span v-if="currentBackendQuality.transparency === 'object-sorted-alpha'" class="status-item">{{ t('transparencySorted') }}</span>
       <span class="status-item" role="status">{{ persistenceLabel }}</span>
       <span class="statusbar-spacer" aria-hidden="true" />
-      <span class="status-item status-hint">{{ t('renderShortcut') }} <kbd>Ctrl ↵</kbd> · {{ t('fit') }} <kbd>F</kbd> · {{ t('commands') }} <kbd>Ctrl K</kbd></span>
+      <span v-if="workspaceMode === 'solid'" class="status-item status-hint">{{ lang === 'ru' ? 'Выдавить' : 'Extrude' }} <kbd>E</kbd> · {{ lang === 'ru' ? 'Двигать' : 'Move' }} <kbd>G</kbd> · {{ t('fit') }} <kbd>F</kbd> · {{ t('commands') }} <kbd>Ctrl K</kbd> · {{ t('shortcuts') }} <kbd>?</kbd></span>
+      <span v-else-if="workspaceMode === 'mesh'" class="status-item status-hint">{{ lang === 'ru' ? 'Режимы' : 'Modes' }} <kbd>1–4</kbd> · {{ lang === 'ru' ? 'Двигать' : 'Move' }} <kbd>G</kbd> · {{ t('fit') }} <kbd>F</kbd></span>
+      <span v-else class="status-item status-hint">{{ t('renderShortcut') }} <kbd>Ctrl ↵</kbd> · {{ t('fit') }} <kbd>F</kbd> · {{ t('commands') }} <kbd>Ctrl K</kbd></span>
     </footer>
 
     <div v-if="exportDialogOpen" class="dialog-backdrop" @click.self="exportDialogOpen = false">
@@ -2940,7 +2957,7 @@ function sanitizeFileName(name: string) { return (name.replace(/[^\w.() -]+/g, '
     <div v-if="notice" class="toast" role="status">{{ notice }}</div>
     <CommandPalette
       :open="paletteOpen"
-      :commands="paletteCommands"
+      :commands="visiblePaletteCommands"
       :restore-focus="!shortcutHelpOpen && !functionReferenceOpen"
       @close="paletteOpen = false"
       @execute="executeCommand"
@@ -2951,6 +2968,7 @@ function sanitizeFileName(name: string) { return (name.replace(/[^\w.() -]+/g, '
       :can-append="!isModelGraphText(code)"
       :remaining-source="MAX_WORKSPACE_SOURCE_LENGTH - code.length - 2"
       :seed-document="solidSeedDocument"
+      :palette-request="solidPaletteRequest"
       @close="directModelerOpen = false; solidSeedDocument = null"
       @to-mesh="openMeshFromSolid"
       @append="source => { replacePresetSource(code + '\n\n' + source); nextTick(() => doRender('full')) }"
@@ -2959,6 +2977,7 @@ function sanitizeFileName(name: string) { return (name.replace(/[^\w.() -]+/g, '
       :open="meshModelerOpen"
       :locale="lang"
       :seed-document="meshSeedDocument"
+      :palette-request="meshPaletteRequest"
       @close="meshModelerOpen = false"
       @export-to-solid="meshToSolid"
     />
@@ -3262,7 +3281,7 @@ button, select { color: inherit; }
 .scan-active-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--accent); }
 .view-select-label { display: flex; align-items: center; }
 .view-select { max-width: 110px; }
-.display-select { max-width: 96px; }
+.display-modes { display: flex; gap: 2px; }
 .view-cube-wrap { position: absolute; z-index: 2; top: 60px; right: 14px; }
 .view-cube-wrap.with-dock { right: 358px; }
 .selection-modes {
@@ -3314,7 +3333,7 @@ button, select { color: inherit; }
   background: color-mix(in srgb, var(--surface) 90%, transparent); backdrop-filter: blur(10px);
 }
 .canvas-panel.with-dock :deep(.main-model-tools) { max-width: calc(100% - 372px); }
-.canvas-panel.tools-hidden :deep(.main-model-tools) { display: none; }
+
 
 /* HUD and badges */
 .selection-hud {
@@ -3425,7 +3444,6 @@ button, select { color: inherit; }
   .select { max-width: 128px; }
   .view-btn { padding-inline: 6px; }
   .view-select { max-width: 78px; }
-  .display-select { max-width: 66px; }
   .view-cube-wrap { display: none; }
   .selection-hud { max-width: calc(100% - 16px); }
   .canvas-hint { white-space: normal; }

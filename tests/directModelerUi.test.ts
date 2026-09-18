@@ -1,4 +1,4 @@
-import {createRenderer,h,nextTick,shallowReactive} from 'vue'
+import {createRenderer,h,nextTick,shallowReactive,shallowRef} from 'vue'
 import {it,expect,vi,afterEach} from 'vitest'
 import DirectModeler from '../src/features/DirectModeler.vue'
 import {extrudeDirectSketch,type DirectDocument} from '../src/services/directModeling'
@@ -33,11 +33,15 @@ async function mount(props: Record<string,unknown> = {}){
  vi.stubGlobal('Document',class {});vi.stubGlobal('ShadowRoot',class {});vi.stubGlobal('document',{activeElement:null});vi.stubGlobal('window',{document:{activeElement:null}});vi.stubGlobal('SVGSVGElement',Node)
  vi.stubGlobal('DOMPoint',class {constructor(public x:number,public y:number){}matrixTransform(){return this}})
  const currentProps=shallowReactive({open:true,locale:'en',canAppend:true,remainingSource:100000,...props})
- const root=new Node('root'),app=renderer.createApp({setup:()=>()=>h(DirectModeler,currentProps)});app.mount(root);mounts.push(()=>app.unmount());await nextTick()
+ const instance=shallowRef<any>(null)
+ const root=new Node('root'),app=renderer.createApp({setup:()=>()=>h(DirectModeler,{...currentProps,ref:instance})});app.mount(root);mounts.push(()=>app.unmount());await nextTick()
  const all=(n:Node=root):Node[]=>[n,...n.children.flatMap(all)]
  const text=(n:Node):string=>n.text+n.children.map(text).join('')
- const button=(name:string)=>{const n=all().find(n=>n.tag==='button'&&text(n)===name);if(!n)throw Error('Missing button '+name);return n}
- const click=async(name:string,shiftKey=false)=>{button(name).props.onClick({shiftKey});await nextTick()}
+ const findButton=(name:string)=>all().find(n=>n.tag==='button'&&(text(n)===name||n.props['aria-label']===name||n.props['aria-label']===name.replace(/^\+ /,'')))
+ const button=(name:string)=>{const n=findButton(name);if(!n)throw Error('Missing button '+name);return n}
+ // Context actions live in the command palette; fall back to executing the matching command by its label.
+ const command=(name:string)=>{const label=name.replace(/ · .*$/,'');return (instance.value?.solidCommands as Array<{id:string;label:string;aliases?:readonly string[]}>|undefined)?.find(c=>c.label===label||c.aliases?.includes(label))}
+ const click=async(name:string,shiftKey=false)=>{const n=findButton(name);if(n){n.props.onClick({shiftKey});await nextTick();return}const c=command(name);if(!c)throw Error('Missing button '+name);instance.value.executeSolidCommand(c.id);await nextTick()}
  const svg=()=>all().find(n=>n.tag==='svg'&&n.props['aria-label']==='3D body canvas')!
  const event=(n:Node,x=0,y=0)=>({button:0,target:n,currentTarget:n,clientX:x,clientY:y,pointerId:1,preventDefault(){},stopPropagation(){}})
  const pointer=async(n:Node,x=0,y=0)=>{n.props.onPointerdown(event(n,x,y));await nextTick()}
@@ -53,7 +57,7 @@ function cylinderSeed(): DirectDocument {
 it('changes retained B-rep display detail and restores the previous mesh with Undo',async()=>{
  const seed=cylinderSeed(),before=structuredClone(seed.bodies[0])
  const ui=await mount({seedDocument:seed})
- await ui.click('Imported cylinder')
+ await ui.click('Imported cylinder');await ui.click('B-rep detail')
  const field=ui.all().find(n=>n.tag==='input'&&n.parent&&ui.text(n.parent).startsWith('B-rep detail'))!
  field.props['onUpdate:modelValue'](8);await nextTick();await ui.click('Retessellate')
  expect(ui.doc().bodies[0].mesh.indices.length).toBeGreaterThan(before.mesh.indices.length)
@@ -163,7 +167,7 @@ it('binds analytic radius editing and offset without baking the curve',async()=>
 })
 it('binds extend and trim to the selected 2D edge',async()=>{
  const ui=await mount();await ui.click('Line');await ui.click('Extend');await ui.click('Apply · Enter');expect(ui.doc().sketches.find(s=>s.id==='line')?.points.at(-1)).toEqual([5,-5])
- await ui.click('✂ Trim');const svg=ui.all().find(n=>n.tag==='svg'&&n.props['aria-label']==='2D sketch canvas')!,path=ui.all(svg).find(n=>n.tag==='path'&&n.props.d==='M 0,5 L 5,5')!
+ await ui.click('Trim');const svg=ui.all().find(n=>n.tag==='svg'&&n.props['aria-label']==='2D sketch canvas')!,path=ui.all(svg).find(n=>n.tag==='path'&&n.props.d==='M 0,5 L 5,5')!
  await ui.pointer(path,2,5);expect(ui.doc().sketches.some(s=>s.id==='line')).toBe(false)
  await ui.click('↶');expect(ui.doc().sketches.find(s=>s.id==='line')?.points.at(-1)).toEqual([5,-5])
 })
@@ -182,7 +186,7 @@ it('commits a gizmo drag once and undoes it',async()=>{
 })
 it('box-selects multiple sketches and deletes the selection atomically',async()=>{
  const ui=await mount(),svg=ui.all().find(n=>n.tag==='svg'&&n.props['aria-label']==='2D sketch canvas')!
- const box=ui.all().find(n=>n.tag==='button'&&ui.text(n)==='Box select')!;box.props.onClick();await nextTick()
+ await ui.click('Box select')
  await ui.pointer(svg,-1,-11);svg.props.onPointermove(ui.event(svg,11,11));svg.props.onPointerup(ui.event(svg,11,11));await nextTick()
  await ui.click('Delete');expect(ui.doc().sketches.map(s=>s.name)).toEqual(['Circle']);await ui.click('↶');expect(ui.doc().sketches).toHaveLength(4)
 })
@@ -240,7 +244,7 @@ it('creates rational tube/frustum solids and retains the faceted cylinder option
 
 it('preserves authored B-rep for movement and push while refusing retained shell',async()=>{
  const ui=await mount();await ui.click('Box');const original=ui.doc().bodies.at(-1)!
- await ui.click('↔ Move · G');const svg=ui.svg();await ui.pointer(ui.all(svg).find(n=>n.tag==='polygon'&&n.props.onPointerdown)!,0,0)
+ await ui.click('Move · G');const svg=ui.svg();await ui.pointer(ui.all(svg).find(n=>n.tag==='polygon'&&n.props.onPointerdown)!,0,0)
  svg.props.onPointermove(ui.event(svg,4,3));svg.props.onPointerup(ui.event(svg,4,3));await nextTick()
  const moved=ui.doc().bodies.find(b=>b.id===original.id)!
  expect(moved.brep).toBeDefined();expect(moved.brep!.topologyIds).toEqual(original.brep!.topologyIds);expect(moved.brep!.vertices).not.toEqual(original.brep!.vertices)

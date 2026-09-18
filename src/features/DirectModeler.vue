@@ -1,5 +1,8 @@
 <script setup lang="ts">
-import { computed, nextTick, onUnmounted, ref, shallowRef, watch } from 'vue'
+import { computed, nextTick, onUnmounted, ref, shallowRef, watch, watchEffect, type ComponentPublicInstance } from 'vue'
+import { SolidGpuLayer, isSolidGpuSupported, smoothTriangleList, type SolidGpuBody } from '../services/solidGpuView'
+import CommandPalette from '../components/CommandPalette.vue'
+import type { PaletteCommand } from '../services/commandSearch'
 import { bodyPoints, DirectHistory, directBodiesScad, emptyDirectDocument, extrudeDirectSketch, extrudeSketchBrep, parseDirectDocument, type DirectDocument, type Point2 } from '../services/directModeling'
 import { directCornerTool, directRevolveTool, applyDirectRevolve } from '../services/directProfileTools'
 import { sampleCurve, transformSketch, bakeSketch, offsetSketch, trimSketch, extendSketch, worldPoint, xyPlane, unit3, cross3, type SketchPlane, type Vec3 } from '../services/directSketchGeometry'
@@ -17,7 +20,7 @@ import { elevateNurbsCurve, insertNurbsKnot } from '../services/nurbsCurve'
 import { elevateNurbsSurface, insertNurbsSurfaceKnot, isoNurbsCurve, trimNurbsSurface } from '../services/nurbsSurface'
 import { extrudeNurbsCurve } from '../services/nurbsConstructors'
 import { createRuledSketchLoft, createBrepSphere, createBrepTorus, analyzeNurbsBrep, type BrepMassProperties, booleanNurbsBrep, createBrepBox, revolveBrepProfile, createBrepCylinder, createBrepFrustum, createBrepTube, createFacetedBrepCylinder, createFacetedBrepRevolve, createFacetedBrepSphere, extrudeBrepPolygon, tessellateNurbsBrep, type BrepBooleanOperation, type NurbsBrep } from '../services/geometry/brep'
-const props = defineProps<{ open: boolean; locale: string; canAppend: boolean; remainingSource: number; embedded?: boolean; initialDocument?: DirectDocument; initialSelection?: string; seedDocument?: DirectDocument | null }>()
+const props = defineProps<{ open: boolean; locale: string; canAppend: boolean; remainingSource: number; embedded?: boolean; initialDocument?: DirectDocument; initialSelection?: string; seedDocument?: DirectDocument | null; paletteRequest?: number }>()
 const emit = defineEmits<{ close: []; append: [source: string]; toMesh: [] }>()
 const ru = computed(() => props.locale === 'ru')
 const label = (a: string, b: string) => ru.value ? a : b
@@ -35,10 +38,19 @@ const selection = ref(props.initialSelection ?? ''), mode = ref<'2d' | '3d'>('2d
 const draft = ref<Point2[]>([]), height = ref(10), dx = ref(0), dy = ref(0), dz = ref(0), angle = ref(0), scale = ref(1)
 type Pane = '2d' | '3d'
 const workspace = ref<HTMLElement>(), splitArea = ref<HTMLElement>()
-const split = ref(50)
+const split = ref(34)
 const views = ref<Record<Pane, number>>({ '2d': 160, '3d': 160 })
 const centers = ref<Record<Pane, Point2>>({ '2d': [0, 0], '3d': [0, 0] })
 const panes: Pane[] = ['2d', '3d']
+// The 2D sketch pane is hidden by default; it opens on demand or when a sketch tool is picked.
+const sketchPaneOpen = ref(storageGet('scad-solid-sketch-pane') === 'true')
+function toggleSketchPane(open = !sketchPaneOpen.value) {
+  sketchPaneOpen.value = open
+  storageSet('scad-solid-sketch-pane', String(open))
+  if (!open && mode.value === '2d') mode.value = '3d'
+}
+// Picking a sketch tool reveals the pane for this session without changing the saved preference.
+watch([mode, tool], ([value]) => { if (value === '2d') sketchPaneOpen.value = true })
 const camera = ref(defaultDirectCamera()), hovered = ref(''), snap = ref(true), grid = ref(1)
 const snapMarker = ref<Point2 | null>(null)
 const drawMeasure = ref(''), operation = ref<'extrude' | 'revolve' | 'fillet' | 'dogear' | 'array' | null>(null)
@@ -67,6 +79,8 @@ let fitNextPreview = false
 let previewTimer: ReturnType<typeof setTimeout> | undefined
 onUnmounted(() => { clearTimeout(previewTimer) })
 let orbitDrag: { x: number; y: number; yaw: number; pitch: number; pointer: number; svg: SVGSVGElement } | null = null
+// While the camera is being dragged the view falls back to the working mesh so orbiting stays responsive.
+const cameraDragging = ref(false)
 let heightDrag: { y: number; height: number; pointer: number; svg: SVGSVGElement } | null = null
 let gesture: { start: Point2; document: DirectDocument; vertex: number | null; id: string; pointer: number; pane: Pane; svg: SVGSVGElement; pan: boolean; center: Point2 } | null = null
 const extraSelection=ref<string[]>([]),pickMode=ref<'body'|'face'|'edge'>('body'),faceIndex=ref(-1),edgeIndex=ref(-1),edgeIndexes=ref<number[]>([]),openingFaces=ref<number[]>([])
@@ -137,7 +151,7 @@ function faceSketch() {run(()=>{
  if(!selectedBody.value||!selectedFace.value)return
  const b=selectedBody.value,f=selectedFace.value,plane=facePlane(b,f),points=bodyPoints(b)
  workplaneOutline.value=polygonBoundaryLoops({positions:b.mesh.positions,indices:f.triangles.flatMap(t=>b.mesh.indices.slice(t*3,t*3+3))}).map(loop=>loop.map(i=>{const q=points[i].map((v,k)=>v-plane.origin[k]);return [q.reduce((s,v,k)=>s+v*plane.u[k],0),q.reduce((s,v,k)=>s+v*plane.v[k],0)] as Point2}))
- activePlane.value=plane;extraSelection.value=[];selection.value='';tool.value='rectangle';mode.value='2d';centers.value['2d']=[0,0];views.value['2d']=100;advancedOp.value=null
+ activePlane.value=plane;extraSelection.value=[];selection.value='';tool.value='rectangle';mode.value='2d';sketchPaneOpen.value=true;centers.value['2d']=[0,0];views.value['2d']=100;advancedOp.value=null
 })}
 function bodyFromBrep(body:NonNullable<typeof selectedBody.value>,brep:NurbsBrep) {
  const built=tessellateNurbsBrep(brep,brepSegments.value)
@@ -433,13 +447,131 @@ function splitKey(e: KeyboardEvent) {
   if (!['ArrowLeft', 'ArrowRight', 'Home'].includes(e.key)) return
   e.preventDefault(); split.value = e.key === 'Home' ? 50 : Math.max(25, Math.min(75, split.value + (e.key === 'ArrowLeft' ? -2 : 2)))
 }
-function meshPolygons(b: ReturnType<typeof directExtrusionTool>) {
-  const points = bodyPoints(b)
-  return Array.from({ length: b.mesh.indices.length / 3 }, (_, i) => {
-    const face = b.mesh.indices.slice(i * 3, i * 3 + 3).map(j => points[j])
-    return { id: b.id, triangle: i, key: b.id + ':' + i, points: face.map(p => project(p, '3d').join(',')).join(' '), shade: directFaceShade(b.mesh,i,camera.value), depth: face.reduce((n,p) => n + projectDirectPoint(p,camera.value)[2], 0) }
+// Display tessellation for exact B-rep bodies: the authored mesh (segments = brepSegments) stays the working
+// mesh for picking, topology and export; the view draws a denser mesh with smoothed normals, and every display
+// triangle points back at the nearest working triangle so face picking and highlighting keep working.
+const DISPLAY_SEGMENTS = 12
+const DISPLAY_TRIANGLE_BUDGET = 4000
+const smoothDisplay = ref(true)
+interface DisplayMesh { mesh: { positions: number[]; indices: number[] }; map: number[] | null; normals: number[][] }
+const displayCache = new WeakMap<object, DisplayMesh>()
+function triangleCentroidsAndNormals(mesh: { positions: number[]; indices: number[] }) {
+  const count = mesh.indices.length / 3, centroids: number[][] = [], normals: number[][] = []
+  for (let t = 0; t < count; t++) {
+    const [a, b, c] = [0, 1, 2].map(k => { const i = mesh.indices[t * 3 + k]; return mesh.positions.slice(i * 3, i * 3 + 3) })
+    centroids.push([0, 1, 2].map(k => (a[k] + b[k] + c[k]) / 3))
+    const u = b.map((v, k) => v - a[k]), w = c.map((v, k) => v - a[k])
+    const n = [u[1] * w[2] - u[2] * w[1], u[2] * w[0] - u[0] * w[2], u[0] * w[1] - u[1] * w[0]], len = Math.hypot(...n) || 1
+    normals.push(n.map(v => v / len))
+  }
+  return { centroids, normals }
+}
+function smoothTriangleNormals(mesh: { positions: number[]; indices: number[] }, flat: number[][]): number[][] {
+  // Vertices are shared by position (tessellation may duplicate them per face), so average by rounded coordinates.
+  const byPosition = new Map<string, number[]>()
+  const key = (i: number) => mesh.positions.slice(i * 3, i * 3 + 3).map(v => v.toFixed(5)).join(',')
+  for (let t = 0; t < flat.length; t++) for (let k = 0; k < 3; k++) {
+    const id = key(mesh.indices[t * 3 + k]), acc = byPosition.get(id) ?? [0, 0, 0]
+    byPosition.set(id, acc.map((v, j) => v + flat[t][j]))
+  }
+  return flat.map((n, t) => {
+    const sum = [0, 1, 2].map(k => byPosition.get(key(mesh.indices[t * 3 + k]))!).reduce((acc, v) => acc.map((x, j) => x + v[j]), [0, 0, 0])
+    const len = Math.hypot(...sum)
+    return len > 1e-9 ? sum.map(v => v / len) : n
   })
 }
+function displayMeshFor(b: ReturnType<typeof directExtrusionTool>): DisplayMesh {
+  const cached = displayCache.get(b.mesh)
+  if (cached) return cached
+  let result: DisplayMesh
+  const brep = (b as { brep?: NurbsBrep }).brep
+  if (smoothDisplay.value && brep) {
+    try {
+      const dense = tessellateNurbsBrep(brep, DISPLAY_SEGMENTS)
+      if (dense.indices.length / 3 > DISPLAY_TRIANGLE_BUDGET) throw new Error('display budget')
+      const denseMesh = { positions: [...dense.positions], indices: [...dense.indices] }
+      const work = triangleCentroidsAndNormals(b.mesh), view = triangleCentroidsAndNormals(denseMesh)
+      const map = view.centroids.map((c, t) => {
+        let best = 0, bestScore = Infinity
+        for (let w = 0; w < work.centroids.length; w++) {
+          const d = Math.hypot(c[0] - work.centroids[w][0], c[1] - work.centroids[w][1], c[2] - work.centroids[w][2])
+          const facing = 1 - (view.normals[t][0] * work.normals[w][0] + view.normals[t][1] * work.normals[w][1] + view.normals[t][2] * work.normals[w][2])
+          const score = d * (1 + facing * 4)
+          if (score < bestScore) { bestScore = score; best = w }
+        }
+        return best
+      })
+      result = { mesh: denseMesh, map, normals: smoothTriangleNormals(denseMesh, view.normals) }
+    } catch { result = { mesh: b.mesh, map: null, normals: triangleCentroidsAndNormals(b.mesh).normals } }
+  } else {
+    result = { mesh: b.mesh, map: null, normals: triangleCentroidsAndNormals(b.mesh).normals }
+  }
+  displayCache.set(b.mesh, result)
+  return result
+}
+function shadeFromNormal(n: number[]): number {
+  const light = projectDirectPoint([n[0], n[1], n[2]], camera.value)
+  return Math.max(24, Math.min(78, 48 + 20 * light[2] - 15 * light[1] + 8 * light[0]))
+}
+const COARSE_DISPLAY: Pick<DisplayMesh, 'map'> = { map: null }
+// WebGPU layer under the 3D SVG: draws dense, per-pixel shaded surfaces with the same camera; the SVG then only
+// keeps transparent working-mesh polygons for picking plus gizmos and previews.
+const gpuActive = ref(false)
+let gpuLayer: SolidGpuLayer | null = null
+let gpuResize: ResizeObserver | null = null
+let gpuInitStarted = false
+function mountGpuCanvas(el: Element | ComponentPublicInstance | null) {
+  if (typeof HTMLCanvasElement === 'undefined' || !(el instanceof HTMLCanvasElement) || gpuInitStarted || !isSolidGpuSupported()) return
+  gpuInitStarted = true
+  const layer = new SolidGpuLayer(el)
+  void layer.init().then(ok => {
+    if (!ok) { layer.destroy(); return }
+    gpuLayer = layer
+    const wrap = el.parentElement
+    if (wrap) {
+      gpuResize = new ResizeObserver(() => layer.resize(wrap.clientWidth, wrap.clientHeight, window.devicePixelRatio || 1))
+      gpuResize.observe(wrap)
+      layer.resize(wrap.clientWidth, wrap.clientHeight, window.devicePixelRatio || 1)
+    }
+    gpuActive.value = true
+  })
+}
+onUnmounted(() => { gpuResize?.disconnect(); gpuLayer?.destroy(); gpuLayer = null })
+const gpuBodies = computed<SolidGpuBody[]>(() => {
+  if (!gpuActive.value) return []
+  const hideSelected = !!advancedPreview.value.document
+  return document.value.bodies.flatMap(b => {
+    if (hideSelected && selectedIds.value.includes(b.id)) return []
+    const display = displayMeshFor(b)
+    const flat = smoothTriangleList(display.mesh.positions, display.mesh.indices)
+    const count = display.mesh.indices.length / 3
+    const bodyHue = selectedIds.value.includes(b.id) ? 266 : hovered.value === b.id ? 190 : 220
+    const faceHighlight = selectedBody.value?.id === b.id && pickMode.value === 'face'
+    const hues = new Float32Array(count)
+    for (let i = 0; i < count; i++) {
+      const working = display.map ? display.map[i] : i
+      hues[i] = faceHighlight && selectedFaceTriangles.value.has(working) ? 40 : bodyHue
+    }
+    return [{ positions: flat.positions, normals: flat.normals, hues }]
+  })
+})
+watch(gpuBodies, bodies => gpuLayer?.setBodies(bodies), { flush: 'post' })
+watchEffect(() => {
+  if (!gpuActive.value) return
+  const size = views.value['3d'], center = centers.value['3d']
+  gpuLayer?.setView({ camera: camera.value, viewBox: [center[0] - size / 2, center[1] - size / 2, size] })
+})
+watch(gpuActive, active => { if (active && gpuLayer) gpuLayer.setBodies(gpuBodies.value) })
+function meshPolygons(b: ReturnType<typeof directExtrusionTool>) {
+  const display: DisplayMesh = cameraDragging.value || gpuActive.value ? { ...COARSE_DISPLAY, mesh: b.mesh, normals: [] } : displayMeshFor(b)
+  const mesh = display.mesh, points = bodyPoints({ ...b, mesh })
+  return Array.from({ length: mesh.indices.length / 3 }, (_, i) => {
+    const face = mesh.indices.slice(i * 3, i * 3 + 3).map(j => points[j])
+    const triangle = display.map ? display.map[i] : i
+    return { id: b.id, triangle, key: b.id + ':' + i, points: face.map(p => project(p, '3d').join(',')).join(' '), shade: display.map ? shadeFromNormal(display.normals[i]) : directFaceShade(mesh, i, camera.value), depth: face.reduce((n,p) => n + projectDirectPoint(p,camera.value)[2], 0) }
+  })
+}
+watch(smoothDisplay, () => { for (const body of document.value.bodies) displayCache.delete(body.mesh) })
 const polygons = computed(() => document.value.bodies.flatMap(meshPolygons).sort((a,b)=>a.depth-b.depth))
 const nurbsSurfacePolygons = computed(() => (document.value.surfaces ?? []).flatMap(item => {
   try { return meshPolygons({ id: item.id, name: item.name, mesh: tessellateSolidNurbsSurface(item) }).sort((a,b)=>a.depth-b.depth) }
@@ -485,7 +617,7 @@ function position(e: PointerEvent): Point2 {
   return [point.x, point.y]
 }
 function plane(p: Point2, pane: Pane): Point2 { return pane === '2d' ? [p[0], -p[1]] : unprojectDirectXY(p,camera.value) }
-function cancelGesture() { if(cvDrag){document.value=cvDrag.before;cvDrag=null} if(curveDrag){document.value=curveDrag.before;curveDrag=null} if(manipulatorDrag){document.value=manipulatorDrag.before;if(manipulatorDrag.kind==='push')advancedOp.value=null;if(manipulatorDrag.kind==='split')advanced.value.distance=manipulatorDrag.initial;manipulatorDrag=null}selectionBox.value=null; if (gesture) { document.value = gesture.document; gesture = null } if (heightDrag) height.value = heightDrag.height; heightDrag = null; orbitDrag = null; draft.value = []; drawMeasure.value = ''; snapMarker.value = null }
+function cancelGesture() { if(cvDrag){document.value=cvDrag.before;cvDrag=null} if(curveDrag){document.value=curveDrag.before;curveDrag=null} if(manipulatorDrag){document.value=manipulatorDrag.before;if(manipulatorDrag.kind==='push')advancedOp.value=null;if(manipulatorDrag.kind==='split')advanced.value.distance=manipulatorDrag.initial;manipulatorDrag=null}selectionBox.value=null; if (gesture) { document.value = gesture.document; gesture = null } if (heightDrag) height.value = heightDrag.height; heightDrag = null; orbitDrag = null; draft.value = []; drawMeasure.value = ''; snapMarker.value = null; cameraDragging.value = false }
 function down(e: PointerEvent, pane: Pane, id = '', vertex: number | null = null, triangle = -1) {
   if (![0, 1, 2].includes(e.button) || gesture) return
   if(e.button===0&&id&&e.shiftKey&&pickMode.value==='body'){pickObject(id,pane,true);return}
@@ -505,12 +637,12 @@ function down(e: PointerEvent, pane: Pane, id = '', vertex: number | null = null
   if(boxSelect.value&&e.button===0&&!pan){const p=position(e);selectionBox.value={start:p,end:p,pane};svg.setPointerCapture(e.pointerId);return}
   if (pane === '3d' && !pan && (e.button === 2 || (!movingBody.value && e.button === 0))) {
     if (id && !operation.value && !advancedOp.value) {if(!selectedIds.value.includes(id))pickObject(id,pane)}
-    orbitDrag = { x:e.clientX, y:e.clientY, yaw:camera.value.yaw, pitch:camera.value.pitch, pointer:e.pointerId, svg }; svg.setPointerCapture(e.pointerId); return
+    orbitDrag = { x:e.clientX, y:e.clientY, yaw:camera.value.yaw, pitch:camera.value.pitch, pointer:e.pointerId, svg }; cameraDragging.value = true; svg.setPointerCapture(e.pointerId); return
   }
   let p: Point2
   try { p = plane(position(e), pane) } catch (e) { error.value = String(e); return }
   if (pane === '2d' && !pan) p = snapped(p,e)
-  if (pan) { gesture = { start: position(e), document: history.document, vertex: null, id: '', pointer: e.pointerId, pane, svg, pan: true, center: [...centers.value[pane]] }; svg.setPointerCapture(e.pointerId); return }
+  if (pan) { gesture = { start: position(e), document: history.document, vertex: null, id: '', pointer: e.pointerId, pane, svg, pan: true, center: [...centers.value[pane]] }; cameraDragging.value = true; svg.setPointerCapture(e.pointerId); return }
   if(pane==='2d'&&tool.value==='trim'){if(id)trimAt(id,p);return}
   if (pane === '2d' && cornerActive.value) { if (id === selection.value && vertex !== null) cornerVertex.value = vertex; return }
   if (pane === '2d' && operation.value) operation.value = null
@@ -568,6 +700,7 @@ function move(e: PointerEvent) {
   document.value = d
 }
 function up(e: PointerEvent) {
+  cameraDragging.value = false
   if(cvDrag&&cvDrag.pointer===e.pointerId){move(e);cvDrag=null;run(()=>commit(document.value));return}
   if(curveDrag){move(e);curveDrag=null;run(()=>commit(document.value));return}
   if(selectionBox.value){const box=selectionBox.value,min=[Math.min(box.start[0],box.end[0]),Math.min(box.start[1],box.end[1])],max=[Math.max(box.start[0],box.end[0]),Math.max(box.start[1],box.end[1])]
@@ -593,15 +726,99 @@ function up(e: PointerEvent) {
   })
   if (error.value && JSON.stringify(history.document) === JSON.stringify(before)) document.value = before
 }
+
+// Command palette: every tool, primitive and context action of the workspace, searchable by its Russian or English name.
+const paletteOpen = ref(false)
+const exactCardOpen = ref(false)
+watch(() => props.paletteRequest, request => { if (request && props.open) paletteOpen.value = true })
+type SolidCommand = PaletteCommand & { run: () => void }
+const solidCommands = computed<SolidCommand[]>(() => {
+  const sketch = selectedSketch.value, body = selectedBody.value, nurbs = selectedNurbs.value
+  const anySelection = !!(sketch || body || nurbs)
+  const needSelection = label('Сначала выберите объект', 'Select an object first')
+  const needClosed = label('Нужен замкнутый эскиз', 'A closed sketch is required')
+  const needFace = label('Выберите грань тела', 'Select a body face')
+  const needEdge = label('Выберите ребро тела', 'Select a body edge')
+  const twoBrep = selectedBrepBodies.value.length === 2 && selectedIds.value.length === 2
+  const cmd = (id: string, ru: string, en: string, run: () => void, extra: Partial<PaletteCommand> = {}): SolidCommand =>
+    ({ id, label: label(ru, en), aliases: [ru, en], run, ...extra })
+  const toolCmd = (value: typeof tool.value, ru: string, en: string, shortcut?: string) =>
+    cmd(`tool-${value}`, ru, en, () => { cancelGesture(); operation.value = null; advancedOp.value = null; boxSelect.value = false; tool.value = value; mode.value = '2d'; sketchPaneOpen.value = true }, { detail: label('Инструмент 2D', '2D tool'), shortcut })
+  const list: SolidCommand[] = [
+    toolCmd('select', 'Выбор', 'Select', 'V'), toolCmd('rectangle', 'Прямоугольник', 'Rectangle', 'R'), toolCmd('circle', 'Круг', 'Circle', 'C'),
+    toolCmd('arc', 'Дуга', 'Arc'), toolCmd('trim', 'Обрезать', 'Trim'), toolCmd('polyline', 'Ломаная', 'Polyline', 'L'),
+    cmd('box-select', 'Рамка', 'Box select', () => { boxSelect.value = !boxSelect.value }, { detail: label('Выделение', 'Selection') }),
+    ...primitiveKinds.map(kind => cmd(`add-${kind}`, primitiveLabel(kind), primitiveLabel(kind), () => addPrimitive(kind), { detail: label('Добавить примитив', 'Add primitive'), keywords: ['primitive', 'примитив', kind] })),
+    cmd('add-curve', 'NURBS-кривая', 'NURBS curve', () => addNurbs('curve'), { detail: label('Добавить', 'Add') }),
+    cmd('add-surface', 'NURBS-поверхность', 'NURBS surface', () => addNurbs('surface'), { detail: label('Добавить', 'Add') }),
+    cmd('pick-body', 'Выбирать тела', 'Pick bodies', () => { pickMode.value = 'body'; advancedOp.value = null; boxSelect.value = false }, { detail: label('Режим выбора 3D', '3D pick mode') }),
+    cmd('pick-face', 'Выбирать грани', 'Pick faces', () => { pickMode.value = 'face'; advancedOp.value = null; boxSelect.value = false }, { detail: label('Режим выбора 3D', '3D pick mode') }),
+    cmd('pick-edge', 'Выбирать рёбра', 'Pick edges', () => { pickMode.value = 'edge'; advancedOp.value = null; boxSelect.value = false }, { detail: label('Режим выбора 3D', '3D pick mode') }),
+    cmd('gizmo-move', 'Манипулятор: двигать', 'Gizmo: move', () => { gizmoMode.value = 'move' }),
+    cmd('gizmo-rotate', 'Манипулятор: вращать', 'Gizmo: rotate', () => { gizmoMode.value = 'rotate' }),
+    cmd('gizmo-scale', 'Манипулятор: масштаб', 'Gizmo: scale', () => { gizmoMode.value = 'scale' }),
+    cmd('orbit', 'Обзор камерой', 'Orbit camera', () => { movingBody.value = false }, { detail: label('Вид', 'View') }),
+    cmd('move-body', 'Двигать тело', 'Move body', () => { movingBody.value = true }, { detail: label('Вид', 'View'), shortcut: 'G' }),
+    cmd('sketch-pane', sketchPaneOpen.value ? 'Скрыть панель эскизов 2D' : 'Показать панель эскизов 2D', sketchPaneOpen.value ? 'Hide 2D sketch pane' : 'Show 2D sketch pane', () => toggleSketchPane(), { detail: label('Вид', 'View') }),
+    cmd('fit', 'Вписать', 'Fit', () => fit(mode.value), { detail: label('Вид', 'View'), shortcut: 'F' }),
+    cmd('iso', 'Изометрия', 'Isometric view', () => { camera.value = defaultDirectCamera(); fit('3d') }, { detail: label('Вид', 'View') }),
+    cmd('smooth', smoothDisplay.value ? 'Показывать B-rep гранёным' : 'Показывать B-rep гладким', smoothDisplay.value ? 'Show B-rep faceted' : 'Show B-rep smooth', () => { smoothDisplay.value = !smoothDisplay.value }, { detail: label('Вид', 'View') }),
+    cmd('grid', floorVisible.value ? 'Скрыть сетку 3D' : 'Показать сетку 3D', floorVisible.value ? 'Hide 3D grid' : 'Show 3D grid', () => { floorVisible.value = !floorVisible.value }, { detail: label('Вид', 'View') }),
+    cmd('undo', 'Отменить', 'Undo', () => undo(), { shortcut: 'Ctrl Z', enabled: undoable.value, disabledReason: label('Нечего отменять', 'Nothing to undo') }),
+    cmd('redo', 'Повторить', 'Redo', () => undo(true), { shortcut: 'Ctrl Shift Z', enabled: redoable.value, disabledReason: label('Нечего повторять', 'Nothing to redo') }),
+    cmd('brep-union', 'B-rep объединить', 'B-rep Union', () => applyBrepBoolean('union'), { detail: label('Два тела B-rep', 'Two B-rep bodies'), enabled: twoBrep, disabledReason: label('Выберите два тела B-rep', 'Select two B-rep bodies') }),
+    cmd('brep-difference', 'B-rep A − B', 'B-rep A − B', () => applyBrepBoolean('difference'), { detail: label('Два тела B-rep', 'Two B-rep bodies'), enabled: twoBrep, disabledReason: label('Выберите два тела B-rep', 'Select two B-rep bodies') }),
+    cmd('brep-intersection', 'B-rep пересечение', 'B-rep Intersection', () => applyBrepBoolean('intersection'), { detail: label('Два тела B-rep', 'Two B-rep bodies'), enabled: twoBrep, disabledReason: label('Выберите два тела B-rep', 'Select two B-rep bodies') }),
+    cmd('brep-xor', 'B-rep XOR', 'B-rep XOR', () => applyBrepBoolean('xor'), { detail: label('Два тела B-rep', 'Two B-rep bodies'), enabled: twoBrep, disabledReason: label('Выберите два тела B-rep', 'Select two B-rep bodies') }),
+    cmd('push', 'Push / Pull', 'Push / Pull', () => beginAdvanced('push'), { detail: label('Грань', 'Face'), enabled: !!(body && selectedFace.value), disabledReason: needFace }),
+    cmd('face-sketch', 'Эскиз на грани', 'Sketch on face', faceSketch, { detail: label('Грань', 'Face'), enabled: !!(body && selectedFace.value), disabledReason: needFace }),
+    cmd('shell', 'Shell', 'Shell', () => beginAdvanced('shell'), { detail: label('Грань', 'Face'), enabled: !!(body && selectedFace.value), disabledReason: needFace }),
+    cmd('chamfer', 'Фаска 3D', 'Chamfer 3D', () => beginAdvanced('chamfer'), { detail: label('Ребро', 'Edge'), enabled: !!body && edgeIndex.value >= 0, disabledReason: needEdge }),
+    cmd('edge-fillet', 'Скруглить 3D', 'Fillet 3D', () => beginAdvanced('edge-fillet'), { detail: label('Ребро', 'Edge'), enabled: !!body && edgeIndex.value >= 0, disabledReason: needEdge }),
+    cmd('split', 'Разрезать', 'Split', () => beginAdvanced('split'), { detail: label('Тело', 'Body'), enabled: !!body, disabledReason: label('Выберите тело', 'Select a body') }),
+    cmd('brep-properties', 'Свойства B-rep', 'B-rep properties', measureSelectedBrep, { detail: label('Тело', 'Body'), enabled: !!body?.brep, disabledReason: label('Выберите тело B-rep', 'Select a B-rep body') }),
+    cmd('retessellate', 'Перестроить mesh', 'Retessellate', retessellateSelectedBrep, { detail: label('Тело', 'Body'), enabled: !!body?.brep, disabledReason: label('Выберите тело B-rep', 'Select a B-rep body') }),
+    cmd('curve', 'Параметры кривой', 'Curve parameters', () => beginAdvanced('curve'), { detail: label('Эскиз', 'Sketch'), enabled: !!sketch?.analytic, disabledReason: label('Выберите круг или дугу', 'Select a circle or arc') }),
+    cmd('offset', 'Offset', 'Offset', () => beginAdvanced('offset'), { detail: label('Эскиз', 'Sketch'), enabled: !!(sketch && (sketch.closed || sketch.analytic)), disabledReason: needClosed }),
+    cmd('extend', 'Продлить', 'Extend', () => beginAdvanced('extend'), { detail: label('Эскиз', 'Sketch'), enabled: !!(sketch && !sketch.closed && !sketch.analytic), disabledReason: label('Выберите незамкнутую линию', 'Select an open line') }),
+    cmd('transform', 'Преобразовать выбор', 'Transform selection', () => beginAdvanced('transform'), { enabled: anySelection && !nurbs, disabledReason: needSelection }),
+    cmd('exact-transform', 'Точные преобразования', 'Exact transforms', () => { exactCardOpen.value = true }, { detail: label('Числовой ввод', 'Numeric input'), enabled: !!(sketch || body), disabledReason: needSelection }),
+    cmd('brep-detail', 'Детализация B-rep', 'B-rep detail', () => { exactCardOpen.value = true }, { detail: label('Числовой ввод', 'Numeric input'), enabled: !!body?.brep, disabledReason: label('Выберите тело B-rep', 'Select a B-rep body') }),
+    cmd('extrude', 'Выдавить', 'Extrude', () => beginExtrude(), { detail: label('Эскиз', 'Sketch'), shortcut: 'E', enabled: !!sketch?.closed, disabledReason: needClosed }),
+    cmd('revolve', 'Вращение', 'Revolve', () => beginExtrude('revolve'), { detail: label('Эскиз', 'Sketch'), enabled: !!sketch?.closed, disabledReason: needClosed }),
+    cmd('loft', 'B-rep loft', 'B-rep loft', () => beginAdvanced('loft'), { detail: label('Эскиз', 'Sketch'), enabled: !!sketch && selectedIds.value.length >= 2, disabledReason: label('Выберите два и более эскиза', 'Select two or more sketches') }),
+    cmd('fillet', 'Скруглить', 'Fillet', () => beginCorner('fillet'), { detail: label('Эскиз', 'Sketch'), enabled: !!sketch?.closed, disabledReason: needClosed }),
+    cmd('dogear', 'DogEar', 'DogEar', () => beginCorner('dogear'), { detail: label('Эскиз', 'Sketch'), enabled: !!sketch?.closed, disabledReason: needClosed }),
+    cmd('array', 'Круговые копии', 'Circular copies', () => { advancedOp.value = null; operation.value = operation.value === 'array' ? null : 'array' }, { detail: label('Эскиз', 'Sketch'), enabled: !!sketch, disabledReason: label('Выберите эскиз', 'Select a sketch') }),
+    cmd('duplicate', 'Копия', 'Duplicate', duplicate, { shortcut: 'Ctrl D', enabled: anySelection && !nurbs, disabledReason: needSelection }),
+    cmd('delete', 'Удалить', 'Delete', remove, { shortcut: 'Del', enabled: anySelection, disabledReason: needSelection }),
+    cmd('bake', 'Bake в Code', 'Bake into Code', appendBodies, { detail: label('Файл', 'File'), enabled: document.value.bodies.length > 0 && props.canAppend, disabledReason: label('Нет тел для переноса', 'No bodies to bake') }),
+    cmd('to-mesh', 'Открыть в Mesh', 'Open in Mesh', sendToMesh, { detail: label('Файл', 'File'), enabled: document.value.bodies.length > 0, disabledReason: label('Нет тел', 'No bodies') }),
+    cmd('download-json', 'Скачать проект JSON', 'Download JSON project', () => download(JSON.stringify(document.value), 'solid-model.json'), { detail: label('Файл', 'File') }),
+    cmd('download-scad', 'Экспорт SCAD', 'Export SCAD', () => download(directBodiesScad(document.value), 'solid-bodies.scad'), { detail: label('Файл', 'File'), enabled: document.value.bodies.length > 0, disabledReason: label('Нет тел', 'No bodies') }),
+    cmd('help', 'Горячие клавиши', 'Keyboard shortcuts', () => { showHelp.value = !showHelp.value }, { shortcut: '?' }),
+  ]
+  return list
+})
+function executeSolidCommand(id: string) {
+  paletteOpen.value = false
+  const target = solidCommands.value.find(command => command.id === id)
+  if (target && target.enabled !== false) run(target.run)
+}
+// Tests and the App shell drive the workspace through the same command list the palette shows.
+defineExpose({ solidCommands, executeSolidCommand })
+
 function keydown(e: KeyboardEvent) {
-  if (e.key === 'Escape') { e.preventDefault(); cancelGesture(); operation.value = null; advancedOp.value=null; return }
+  if (paletteOpen.value) return
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); paletteOpen.value = true; return }
+  if (e.key === 'Escape') { e.preventDefault(); exactCardOpen.value = false; cancelGesture(); operation.value = null; advancedOp.value=null; return }
   if(e.key==='Enter'&&advancedOp.value){e.preventDefault();applyAdvanced();return}
   if (e.key === 'Enter' && operation.value) { e.preventDefault(); solidActive.value ? extrude() : cornerActive.value ? applyCorner() : applyCopies(); return }
   if ((e.target as HTMLElement).matches('input,textarea,select')) return
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'd') { e.preventDefault(); duplicate(); return }
   if (!e.ctrlKey && !e.metaKey && !e.altKey) {
     const k = e.key.toLowerCase(), tools = { v:'select', r:'rectangle', c:'circle', l:'polyline' } as const
-    if (k in tools) { cancelGesture(); operation.value = null; advancedOp.value=null; boxSelect.value=false; tool.value = tools[k as keyof typeof tools]; mode.value = '2d' }
+    if (k in tools) { cancelGesture(); operation.value = null; advancedOp.value=null; boxSelect.value=false; tool.value = tools[k as keyof typeof tools]; mode.value = '2d'; sketchPaneOpen.value = true }
     if (k === 'e') beginExtrude()
     if (k === 'f') fit(mode.value)
     if (k === 'g') movingBody.value = !movingBody.value
@@ -616,6 +833,39 @@ if (props.initialDocument) void nextTick(() => { fit('2d'); fit('3d') })
 const primitiveKinds = ['box','wedge','cylinder','frustum','tube','cone','sphere','torus'] as const
 const roundGeometry=ref<'exact'|'faceted'>('exact')
 const primitiveSize = ref(20),primitiveTopRadius=ref(5),primitiveInnerRadius=ref(7)
+// 24x24 stroke icons for the pane tool bars; labels stay in the tooltip and aria-label.
+const TOOL_ICONS = {
+  select: 'M5 3l14 8-7 1.5L8 20z',
+  rectangle: 'M4 6h16v12H4z',
+  circle: 'M12 4a8 8 0 1 0 0 16 8 8 0 0 0 0-16z',
+  arc: 'M4 18A10 10 0 0 1 20 10M4 18h.01M20 10h.01',
+  trim: 'M6 3a3 3 0 1 0 0 6 3 3 0 0 0 0-6zM6 15a3 3 0 1 0 0 6 3 3 0 0 0 0-6zM20 4 8.5 15.5M20 20 8.5 8.5',
+  polyline: 'M3 18l6-10 5 6 7-9',
+  box: 'M4 4h4M10 4h4M16 4h4M4 20h4M10 20h4M16 20h4M4 8v4M4 14v4M20 8v4M20 14v4',
+  body: 'M4 7l8-4 8 4-8 4zM4 7v10l8 4 8-4V7M12 11v10',
+  face: 'M4 7l8-4 8 4-8 4zM4 7v10l8 4 8-4V7M12 11v10',
+  edge: 'M4 7l8-4 8 4-8 4zM4 7v10l8 4 8-4V7M12 11v10',
+  move: 'M12 2v20M2 12h20M12 2l-3 3M12 2l3 3M12 22l-3-3M12 22l3-3M2 12l3-3M2 12l3 3M22 12l-3-3M22 12l-3 3',
+  rotate: 'M3 12a9 9 0 1 0 3-6.7M3 4v5h5',
+  scale: 'M21 3l-7 7M21 3h-6M21 3v6M3 21l7-7M3 21h6M3 21v-6',
+  orbit: 'M12 3a9 9 0 1 0 9 9M21 3v6h-6M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8z',
+  grip: 'M5 9V7a2 2 0 0 1 4 0v2M9 9V5a2 2 0 0 1 4 0v4M13 9V6a2 2 0 0 1 4 0v5M17 11a2 2 0 0 1 4 0v4a7 7 0 0 1-7 7h-2a7 7 0 0 1-6-3.5L3 13a2 2 0 0 1 3-2l1 1.5',
+  grid: 'M3 9h18M3 15h18M9 3v18M15 3v18M3 3h18v18H3z',
+  download: 'M12 3v12M6 9l6 6 6-6M4 19h16',
+} as const
+// 24x24 stroke icons for the primitive bar; labels stay in the tooltip and aria-label.
+const PRIMITIVE_ICONS: Record<typeof primitiveKinds[number] | 'curve' | 'surface', string> = {
+  box: 'M4 7l8-4 8 4-8 4zM4 7v10l8 4 8-4V7M12 11v10',
+  wedge: 'M4 17V9l16 8zM4 9l8-4 12 12-4 0M12 5v12',
+  cylinder: 'M12 3c-4.4 0-8 1.3-8 3s3.6 3 8 3 8-1.3 8-3-3.6-3-8-3zM4 6v12c0 1.7 3.6 3 8 3s8-1.3 8-3V6',
+  frustum: 'M9 4h6l5 14c0 1.7-3.6 3-8 3s-8-1.3-8-3zM9 4c0 1 1.3 1.5 3 1.5S15 5 15 4',
+  tube: 'M12 3c-4.4 0-8 1.3-8 3s3.6 3 8 3 8-1.3 8-3-3.6-3-8-3zM4 6v12c0 1.7 3.6 3 8 3s8-1.3 8-3V6M12 4.5c-2 0-3.5.7-3.5 1.5s1.5 1.5 3.5 1.5 3.5-.7 3.5-1.5-1.5-1.5-3.5-1.5',
+  cone: 'M12 3l8 15c0 1.7-3.6 3-8 3s-8-1.3-8-3zM4 18c0-1.7 3.6-3 8-3s8 1.3 8 3',
+  sphere: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM3 12h18M12 3c-3 2.5-3 15.5 0 18M12 3c3 2.5 3 15.5 0 18',
+  torus: 'M12 6c-5.5 0-10 2.7-10 6s4.5 6 10 6 10-2.7 10-6-4.5-6-10-6zM12 10c-2.2 0-4 .9-4 2s1.8 2 4 2 4-.9 4-2-1.8-2-4-2',
+  curve: 'M3 18c4-12 8 12 12 0s3-6 6-6M3 18h.01M21 12h.01',
+  surface: 'M3 8c3-3 6 3 9 0s6-3 9 0v9c-3 3-6-3-9 0s-6 3-9 0zM3 12.5c3-3 6 3 9 0s6-3 9 0',
+}
 function primitiveLabel(kind: typeof primitiveKinds[number]) { return ({box:label('Куб','Box'),wedge:label('Клин','Wedge'),cylinder:label('Цилиндр','Cylinder'),cone:label('Конус','Cone'),sphere:label('Сфера','Sphere'),frustum:label('Усечённый конус','Frustum'),tube:label('Труба','Tube'),torus:label('Тор','Torus')})[kind] }
 function addPrimitive(kind: typeof primitiveKinds[number]) { run(() => {
  const size=primitiveSize.value
@@ -732,13 +982,17 @@ watch([() => props.open, () => props.seedDocument], ([open, seed]) => {
 <template>
   <section v-show="open" ref="workspace" class="direct-workspace" :class="{ embedded }" tabindex="-1" :aria-label="label('Solid — CAD-лепка', 'Solid — CAD sculpt')" @keydown.stop="keydown">
     <header class="workspace-bar">
-      <button class="back" @click="emit('close')">← {{ label('Code', 'Code') }}</button>
+      <button v-if="embedded" class="back" @click="emit('close')">← {{ label('Code', 'Code') }}</button>
       <strong>{{ label('Solid', 'Solid') }}</strong>
       <span class="subtle">{{ label('Plasticity-like CAD', 'Plasticity-like CAD') }}</span>
       <div class="history-tools"><button :disabled="!undoable" @click="undo()" :title="label('Отменить · Ctrl/⌘ Z', 'Undo · Ctrl/⌘ Z')">↶</button><button :disabled="!redoable" @click="undo(true)" :title="label('Повторить · Ctrl/⌘ Shift Z', 'Redo · Ctrl/⌘ Shift Z')">↷</button></div>
       <button @click="showHelp = !showHelp" title="Keyboard shortcuts">?</button>
-      <span class="save-status" role="status">{{ saveError ? label('Не сохранено', 'Unsaved') : label('Сохранено в браузере', 'Saved in browser') }}</span>
-      <details class="file-menu"><summary>{{ label('Файл', 'File') }} ▾</summary><div>
+      <button class="command-search" :title="label('Поиск команд · Ctrl/⌘ K', 'Search commands · Ctrl/⌘ K')" @click="paletteOpen = true"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><span>{{ label('Команда…', 'Command…') }}</span><kbd>Ctrl K</kbd></button>
+      <span class="save-status" :class="{ error: saveError }" role="status" :title="saveError ? label('Не сохранено', 'Unsaved') : label('Сохранено в браузере', 'Saved in browser')" :aria-label="saveError ? label('Не сохранено', 'Unsaved') : label('Сохранено в браузере', 'Saved in browser')">
+        <svg v-if="saveError" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 8v5M12 17h.01"/><path d="M10.3 3.9 2.5 18a2 2 0 0 0 1.7 3h15.6a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>
+        <svg v-else width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 18a4.5 4.5 0 0 1-.6-9A6 6 0 0 1 18 8.5 3.8 3.8 0 0 1 17.5 18z"/><path d="m9 13 2 2 4-4"/></svg>
+      </span>
+      <details class="file-menu"><summary :title="label('Файл', 'File')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6"/></svg><span>{{ label('Файл', 'File') }}</span><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></summary><div>
         <button @click="download(JSON.stringify(document), 'solid-model.json')">{{ label('Скачать проект JSON', 'Download JSON project') }}</button>
         <label class="file-open">{{ label('Открыть Solid / ModelGraph NURBS', 'Open Solid / ModelGraph NURBS') }}<input type="file" accept=".json,application/json" @change="importFile"></label>
         <button type="button" @click="stlInput?.click()">{{ label('Импорт STL / OBJ / PLY / OFF / AMF / 3MF как тело', 'Import STL / OBJ / PLY / OFF / AMF / 3MF as body') }}</button>
@@ -750,9 +1004,10 @@ watch([() => props.open, () => props.seedDocument], ([open, seed]) => {
     </header>
     <div class="primitive-bar">
       <strong>{{ label('Примитивы','Primitives') }}</strong>
-      <button v-for="kind in primitiveKinds" :key="kind" @click="addPrimitive(kind)">{{ primitiveLabel(kind) }}</button>
-      <button @click="addNurbs('curve')">+ {{ label('NURBS-кривая','NURBS curve') }}</button>
-      <button @click="addNurbs('surface')">+ {{ label('NURBS-поверхность','NURBS surface') }}</button>
+      <button v-for="kind in primitiveKinds" :key="kind" class="primitive-icon" :title="primitiveLabel(kind)" :aria-label="primitiveLabel(kind)" @click="addPrimitive(kind)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><path :d="PRIMITIVE_ICONS[kind]" /></svg></button>
+      <span class="primitive-divider" aria-hidden="true"></span>
+      <button class="primitive-icon" :title="label('NURBS-кривая','NURBS curve')" :aria-label="label('NURBS-кривая','NURBS curve')" @click="addNurbs('curve')"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><path :d="PRIMITIVE_ICONS.curve" /></svg></button>
+      <button class="primitive-icon" :title="label('NURBS-поверхность','NURBS surface')" :aria-label="label('NURBS-поверхность','NURBS surface')" @click="addNurbs('surface')"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><path :d="PRIMITIVE_ICONS.surface" /></svg></button>
       <details><summary>{{ label('Параметры круглых тел','Round solid options') }}</summary>
       <label>{{ label('Верхний радиус конуса, мм','Frustum top radius, mm') }} <input v-model.number="primitiveTopRadius" type="number" min="0.00001" /></label>
       <label>{{ label('Внутренний радиус трубы, мм','Tube inner radius, mm') }} <input v-model.number="primitiveInnerRadius" type="number" min="0.00001" /></label>
@@ -763,25 +1018,43 @@ watch([() => props.open, () => props.seedDocument], ([open, seed]) => {
       <button v-if="embedded" :disabled="!canAppend" @click="appendBodies">{{ label('Применить в код (bake)','Apply to code') }}</button>
       <span class="subtle">{{ label('Solid хранит свой документ; bake в .scad — только по кнопке.','Solid keeps its own document; bake to .scad is explicit.') }}</span>
     </div>
-    <div ref="splitArea" class="split-workspace" :style="{ '--split': split + '%' }">
+    <div ref="splitArea" class="split-workspace" :class="{ 'sketch-hidden': !sketchPaneOpen }" :style="{ '--split': split + '%' }">
       <template v-for="pane in panes" :key="pane">
-        <div v-if="pane === '3d'" class="splitter" role="separator" tabindex="0" aria-orientation="vertical" :aria-label="label('Ширина 2D и 3D', '2D and 3D width')" :aria-valuenow="Math.round(split)" :aria-valuemin="25" :aria-valuemax="75" @pointerdown="resizeSplit" @pointermove="moveSplit" @pointerup="($event.currentTarget as HTMLElement).releasePointerCapture($event.pointerId)" @keydown="splitKey" @dblclick="split = 50"><span /></div>
-        <section class="pane" :class="{ active: mode === pane }" :aria-label="pane === '2d' ? label('2D — эскизы', '2D — sketches') : label('3D — тела', '3D — bodies')">
-          <header class="pane-heading"><strong>{{ pane === '2d' ? label('2D · Эскизы', '2D · Sketches') : label('3D · Тела', '3D · Bodies') }}</strong><span>{{ pane === '2d' ? (samePlane(activePlane,xyPlane())?label('Плоскость XY · мм', 'XY plane · mm'):label('Плоскость грани · мм','Face plane · mm')) : label('Орбита · мм', 'Orbit · mm') }}</span><button @click="fit(pane)">{{ label('Вписать', 'Fit') }}</button></header>
+        <div v-if="pane === '3d' && sketchPaneOpen" class="splitter" role="separator" tabindex="0" aria-orientation="vertical" :aria-label="label('Ширина 2D и 3D', '2D and 3D width')" :aria-valuenow="Math.round(split)" :aria-valuemin="25" :aria-valuemax="75" @pointerdown="resizeSplit" @pointermove="moveSplit" @pointerup="($event.currentTarget as HTMLElement).releasePointerCapture($event.pointerId)" @keydown="splitKey" @dblclick="split = 50"><span /></div>
+        <section v-show="pane === '3d' || sketchPaneOpen" class="pane" :class="{ active: mode === pane }" :aria-label="pane === '2d' ? label('2D — эскизы', '2D — sketches') : label('3D — тела', '3D — bodies')">
           <div class="pane-tools">
             <template v-if="pane === '2d'">
-              <button v-for="(name, value) in { select: label('↖ Выбор · V', '↖ Select · V'), rectangle: label('□ Прямоугольник · R', '□ Rectangle · R'), circle: label('○ Круг · C', '○ Circle · C'), arc: label('◜ Дуга', '◜ Arc'), trim: label('✂ Обрезать','✂ Trim'), polyline: label('⌁ Ломаная · L', '⌁ Polyline · L') }" :key="value" :aria-pressed="tool === value" @click="cancelGesture(); operation = null; advancedOp=null; boxSelect=false; tool = value; mode = '2d'">{{ name }}</button>
-              <button :aria-pressed="boxSelect" @click="boxSelect=!boxSelect">{{ label('Рамка','Box select') }}</button>
-              <button @click="activePlane=xyPlane();workplaneOutline=[];selection='';extraSelection=[]">XY</button>
+              <button v-for="(name, value) in { select: label('Выбор · V', 'Select · V'), rectangle: label('Прямоугольник · R', 'Rectangle · R'), circle: label('Круг · C', 'Circle · C'), arc: label('Дуга', 'Arc'), trim: label('Обрезать','Trim'), polyline: label('Ломаная · L', 'Polyline · L') }" :key="value" class="tool-icon" :title="name" :aria-label="name" :aria-pressed="tool === value" @click="cancelGesture(); operation = null; advancedOp=null; boxSelect=false; tool = value; mode = '2d'"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><path :d="TOOL_ICONS[value]" /></svg></button>
+              <button class="tool-icon" :title="label('Рамка','Box select')" :aria-label="label('Рамка','Box select')" :aria-pressed="boxSelect" @click="boxSelect=!boxSelect"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><path :d="TOOL_ICONS.box" /></svg></button>
+              <button :title="label('Вернуться к плоскости XY','Back to the XY plane')" @click="activePlane=xyPlane();workplaneOutline=[];selection='';extraSelection=[]">XY</button>
               <label class="snap-toggle"><input v-model="snap" type="checkbox">{{ label('Привязка', 'Snap') }}</label><input v-if="snap" class="grid-input" v-model.number="grid" type="number" min=".01" step=".5" :aria-label="label('Шаг сетки', 'Grid step')">
+              <button class="tool-icon" :title="label('Вписать · F', 'Fit · F')" :aria-label="label('Вписать', 'Fit')" @click="fit('2d')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5"/></svg></button>
+              <button class="tool-icon" :title="label('Скрыть панель эскизов', 'Hide sketch pane')" :aria-label="label('Скрыть панель эскизов', 'Hide sketch pane')" @click="toggleSketchPane(false)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
             </template>
             <template v-else>
-              <button v-for="(name,value) in {body:label('Тела','Bodies'),face:label('Грани','Faces'),edge:label('Рёбра','Edges')}" :key="value" :aria-pressed="pickMode===value" @click="pickMode=value;advancedOp=null;boxSelect=false">{{ name }}</button>
-              <button :aria-pressed="boxSelect" @click="boxSelect=!boxSelect">{{ label('Рамка','Box select') }}</button>
-              <select v-model="gizmoMode" :aria-label="label('Манипулятор','Manipulator')"><option value="move">{{ label('Двигать','Move') }}</option><option value="rotate">{{ label('Вращать','Rotate') }}</option><option value="scale">{{ label('Масштаб','Scale') }}</option></select>
-              <button :aria-pressed="!movingBody" @click="movingBody = false">{{ label('↻ Обзор', '↻ Orbit') }}</button><button :aria-pressed="movingBody" @click="movingBody = true">{{ label('↔ Двигать · G', '↔ Move · G') }}</button><button @click="camera = defaultDirectCamera(); fit('3d')">ISO</button><button :aria-pressed="floorVisible" @click="floorVisible = !floorVisible" :aria-label="label('Сетка 3D', '3D grid')">#</button><span class="subtle">{{ pickMode==='face'?label('Ctrl/⌘ + клик — несколько открытых граней','Ctrl/⌘ click — multiple openings'):label('ПКМ — вращать · Shift — панорама', 'Right drag to orbit · Shift to pan') }}</span><button :disabled="!selectedBody" @click="run(() => download(exportPolygonStl(selectedBody!.mesh), 'body.stl'))">↓ STL</button><select v-model="bodyExportFormat" :aria-label="label('Формат экспорта тела', 'Body export format')"><option v-for="format in MESH_EXPORT_FORMATS" :key="format" :value="format">{{ MESH_FORMAT_LABELS[format] }}</option></select><button :disabled="!selectedBody" @click="downloadBody">↓ {{ label('Скачать', 'Download') }}</button></template>
+              <button class="tool-icon" :title="label('Тела','Bodies')" :aria-label="label('Тела','Bodies')" :aria-pressed="pickMode==='body'" @click="pickMode='body';advancedOp=null;boxSelect=false"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" fill-opacity="0.35" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path :d="TOOL_ICONS.body" /></svg></button>
+              <button class="tool-icon" :title="label('Грани','Faces')" :aria-label="label('Грани','Faces')" :aria-pressed="pickMode==='face'" @click="pickMode='face';advancedOp=null;boxSelect=false"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M4 7l8-4 8 4-8 4z" fill="currentColor" fill-opacity="0.45" /><path :d="TOOL_ICONS.face" /></svg></button>
+              <button class="tool-icon" :title="label('Рёбра','Edges')" :aria-label="label('Рёбра','Edges')" :aria-pressed="pickMode==='edge'" @click="pickMode='edge';advancedOp=null;boxSelect=false"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path :d="TOOL_ICONS.edge" /><path d="M12 11v10" stroke-width="3.5" /></svg></button>
+              <button class="tool-icon" :title="label('Рамка','Box select')" :aria-label="label('Рамка','Box select')" :aria-pressed="boxSelect" @click="boxSelect=!boxSelect"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><path :d="TOOL_ICONS.box" /></svg></button>
+              <span class="tool-divider" aria-hidden="true"></span>
+              <div class="tool-group" role="group" :aria-label="label('Манипулятор','Manipulator')">
+                <button v-for="(name, value) in { move: label('Манипулятор: двигать','Gizmo: move'), rotate: label('Манипулятор: вращать','Gizmo: rotate'), scale: label('Манипулятор: масштаб','Gizmo: scale') }" :key="value" class="tool-icon" :title="name" :aria-label="name" :aria-pressed="gizmoMode===value" @click="gizmoMode=value"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><path :d="TOOL_ICONS[value]" /></svg></button>
+              </div>
+              <span class="tool-divider" aria-hidden="true"></span>
+              <button class="tool-icon" :title="label('Обзор','Orbit')" :aria-label="label('Обзор','Orbit')" :aria-pressed="!movingBody" @click="movingBody = false"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><path :d="TOOL_ICONS.orbit" /></svg></button>
+              <button class="tool-icon" :title="label('Двигать тело · G','Move body · G')" :aria-label="label('Двигать · G','Move · G')" :aria-pressed="movingBody" @click="movingBody = true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><path :d="TOOL_ICONS.grip" /></svg></button>
+              <button class="tool-icon" :aria-pressed="sketchPaneOpen" :title="label('Панель эскизов 2D', '2D sketch pane')" :aria-label="label('Панель эскизов 2D', '2D sketch pane')" @click="toggleSketchPane()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M10 4v16"/></svg></button>
+              <button class="tool-icon" :title="label('Вписать · F', 'Fit · F')" :aria-label="label('Вписать', 'Fit')" @click="fit('3d')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5"/></svg></button>
+              <button :title="label('Изометрия и вписать','Isometric view and fit')" @click="camera = defaultDirectCamera(); fit('3d')">ISO</button>
+              <button class="tool-icon" :aria-pressed="smoothDisplay" :title="label('Гладкий показ B-rep', 'Smooth B-rep display')" :aria-label="label('Гладкий показ B-rep', 'Smooth B-rep display')" @click="smoothDisplay = !smoothDisplay"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z"/><path d="M8 9c1 3 2 3 4 3s3 0 4-3" stroke-opacity=".5"/></svg></button>
+              <button class="tool-icon" :aria-pressed="floorVisible" :title="label('Сетка 3D', '3D grid')" :aria-label="label('Сетка 3D', '3D grid')" @click="floorVisible = !floorVisible"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><path :d="TOOL_ICONS.grid" /></svg></button>
+              <span class="subtle">{{ pickMode==='face'?label('Ctrl/⌘ + клик — несколько открытых граней','Ctrl/⌘ click — multiple openings'):label('ЛКМ/ПКМ — вращать · Shift — панорама', 'Drag to orbit · Shift to pan') }}</span>
+              <button class="tool-icon" :disabled="!selectedBody" :title="label('Скачать STL выбранного тела','Download selected body as STL')" :aria-label="label('Скачать STL','Download STL')" @click="run(() => download(exportPolygonStl(selectedBody!.mesh), 'body.stl'))"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><path :d="TOOL_ICONS.download" /></svg><span class="tool-tag">STL</span></button>
+              <select v-model="bodyExportFormat" :aria-label="label('Формат экспорта тела', 'Body export format')"><option v-for="format in MESH_EXPORT_FORMATS" :key="format" :value="format">{{ MESH_FORMAT_LABELS[format] }}</option></select>
+              <button class="tool-icon" :disabled="!selectedBody" :title="label('Скачать выбранное тело в выбранном формате','Download the selected body in the chosen format')" :aria-label="label('Скачать', 'Download')" @click="downloadBody"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><path :d="TOOL_ICONS.download" /></svg></button></template>
           </div>
           <div class="canvas-wrap">
+            <canvas v-if="pane === '3d'" :ref="mountGpuCanvas" class="gpu-layer" aria-hidden="true"></canvas>
             <svg :viewBox="viewBox(pane)" tabindex="0" :aria-label="pane === '2d' ? label('Холст эскизов 2D', '2D sketch canvas') : label('Холст тел 3D', '3D body canvas')" @contextmenu.prevent @wheel.prevent="zoom(pane, $event.deltaY > 0 ? 1.1 : 1/1.1)" @pointerdown="down($event, pane)" @pointermove="move" @pointerup="up" @pointercancel="cancelGesture" @lostpointercapture="cancelGesture">
               <defs><pattern :id="'direct-grid-' + pane" width="10" height="10" patternUnits="userSpaceOnUse"><path d="M 10 0 L 0 0 0 10" fill="none" stroke="var(--border)" stroke-opacity=".45" stroke-width=".5" vector-effect="non-scaling-stroke" /></pattern></defs>
               <rect v-if="pane === '2d'" x="-2000000" y="-2000000" width="4000000" height="4000000" :fill="'url(#direct-grid-' + pane + ')'" />
@@ -808,7 +1081,7 @@ watch([() => props.open, () => props.seedDocument], ([open, seed]) => {
  :points="draft.map(p => project(p, '2d').join(',')).join(' ')" fill="none" stroke="var(--accent)" stroke-dasharray="4 3" vector-effect="non-scaling-stroke" pointer-events="none" />
               </g>
               <g v-else>
-                <polygon v-for="p in polygons" v-show="!advancedPreview.document || !selectedIds.includes(p.id)" :key="p.key" :points="p.points" :fill="`hsl(${selectedBody?.id===p.id && selectedFaceTriangles.has(p.triangle) && pickMode==='face' ? 40 : selectedIds.includes(p.id) ? 266 : hovered === p.id ? 190 : 220} 45% ${p.shade}%)`" :stroke="`hsl(${selectedIds.includes(p.id) ? 266 : 220} 45% ${p.shade}%)`" stroke-width=".6" @pointerenter="hovered = p.id" @pointerleave="hovered = ''" vector-effect="non-scaling-stroke" @pointerdown.stop="down($event, pane, p.id, null, p.triangle)" />
+                <polygon v-for="p in polygons" v-show="!advancedPreview.document || !selectedIds.includes(p.id)" :key="p.key" :points="p.points" :fill="gpuActive ? 'transparent' : `hsl(${selectedBody?.id===p.id && selectedFaceTriangles.has(p.triangle) && pickMode==='face' ? 40 : selectedIds.includes(p.id) ? 266 : hovered === p.id ? 190 : 220} 45% ${p.shade}%)`" :stroke="gpuActive ? 'none' : `hsl(${selectedIds.includes(p.id) ? 266 : 220} 45% ${p.shade}%)`" :pointer-events="gpuActive ? 'fill' : undefined" stroke-width=".6" @pointerenter="hovered = p.id" @pointerleave="hovered = ''" vector-effect="non-scaling-stroke" @pointerdown.stop="down($event, pane, p.id, null, p.triangle)" />
                 <polygon v-for="p in nurbsSurfacePolygons" :key="'surface-'+p.key" :points="p.points" :fill="selectedIds.includes(p.id)?'#8061bd':'#315f72'" fill-opacity=".72" stroke="#77eac5" stroke-opacity=".35" stroke-width=".5" vector-effect="non-scaling-stroke" @pointerdown.stop="pickObject(p.id,'3d')" />
                 <polyline v-for="curve in nurbsCurvePaths" :key="'curve-'+curve.id" :points="curve.points" fill="none" :stroke="selectedIds.includes(curve.id)?'#ffc977':'#77eac5'" stroke-width="3" vector-effect="non-scaling-stroke" @pointerdown.stop="pickObject(curve.id,'3d')" />
                 <g v-if="selectedNurbs" class="nurbs-cage">
@@ -945,56 +1218,33 @@ watch([() => props.open, () => props.seedDocument], ([open, seed]) => {
         </section>
       </template>
     </div>
-    <footer class="context-bar">
+    <footer v-if="tool === 'polyline' && draft.length" class="context-bar">
       <template v-if="tool === 'polyline' && draft.length"><span>{{ draft.length }} {{ label('точек', 'points') }}</span><button :disabled="draft.length < 3" @click="finish(true)">{{ label('Замкнуть контур', 'Close contour') }}</button><button :disabled="draft.length < 2" @click="finish(false)">{{ label('Завершить линию', 'Finish line') }}</button><button @click="cancelGesture">Esc</button></template>
-      <template v-else-if="selectedSketch || selectedBody || selectedNurbs">
-        <strong>{{ selectedIds.length>1 ? label('Выбрано: ','Selected: ')+selectedIds.length : selectedSketch?.name || selectedBody?.name || selectedNurbs?.name }}</strong>
-        <template v-if="selectedBrepBodies.length===2 && selectedIds.length===2">
-          <small v-if="selectedBody?.brep?.faces.some(face=>face.surface.degreeU>1||face.surface.degreeV>1)">{{ label('Boolean поддерживает параллельные выдавливания с прямыми и дугами окружностей.', 'Boolean supports parallel extrusions with lines and circular arcs.') }}</small>
-          <button @click="applyBrepBoolean('union')">{{ label('B-rep объединить','B-rep Union') }}</button>
-          <button @click="applyBrepBoolean('difference')">{{ label('B-rep A − B','B-rep A − B') }}</button>
-          <button @click="applyBrepBoolean('intersection')">{{ label('B-rep пересечение','B-rep Intersection') }}</button>
-          <button @click="applyBrepBoolean('xor')">B-rep XOR</button>
-        </template>
-        <button v-if="selectedBody && selectedFace" @click="beginAdvanced('push')">Push / Pull</button>
-        <button v-if="selectedBody && selectedFace" @click="faceSketch">{{ label('Эскиз на грани','Sketch on face') }}</button>
-        <button v-if="selectedBody && selectedFace" @click="beginAdvanced('shell')">Shell</button>
-        <button v-if="selectedBody && edgeIndex>=0" @click="beginAdvanced('chamfer')">{{ label('Фаска 3D','Chamfer 3D') }}</button>
-        <button v-if="selectedBody && edgeIndex>=0" @click="beginAdvanced('edge-fillet')">{{ label('Скруглить 3D','Fillet 3D') }}</button>
-        <button v-if="selectedBody" @click="beginAdvanced('split')">{{ label('Разрезать','Split') }}</button>
-        <template v-if="selectedBody?.brep">
-          <label>{{ label('Детализация B-rep','B-rep detail') }}<input v-model.number="brepSegments" type="number" min="1" max="32" step="1"></label>
-          <button @click="measureSelectedBrep">{{ label('Свойства B-rep','B-rep properties') }}</button>
-          <small v-if="brepMass">{{ label('По поверхностям NURBS: ','From NURBS surfaces: ') }}V = {{ brepMass.signedVolumeMm3.toFixed(4) }} mm³ · A = {{ brepMass.surfaceAreaMm2.toFixed(4) }} mm² · {{ label('центр','centroid') }} [{{ brepMass.centroid.map(v=>v.toFixed(3)).join(', ') }}]. {{ label('Численная оценка','Numerical estimate') }}.</small>
-          <button @click="retessellateSelectedBrep">{{ label('Перестроить mesh','Retessellate') }}</button>
-        </template>
-        <button v-if="selectedSketch?.analytic" @click="beginAdvanced('curve')">{{ label('Параметры кривой','Curve parameters') }}</button>
-        <button v-if="selectedSketch && (selectedSketch.closed||selectedSketch.analytic)" @click="beginAdvanced('offset')">Offset</button>
-        <button v-if="selectedSketch && !selectedSketch.closed && !selectedSketch.analytic" @click="beginAdvanced('extend')">{{ label('Продлить','Extend') }}</button>
-        <button v-if="!selectedNurbs" @click="beginAdvanced('transform')">{{ label('Преобразовать выбор','Transform selection') }}</button>
-        <button v-if="selectedSketch" class="primary" :disabled="!selectedSketch.closed" @click="beginExtrude()">{{ label('Выдавить · E', 'Extrude · E') }}</button>
-        <button v-if="selectedSketch" :disabled="!selectedSketch.closed" @click="beginExtrude('revolve')">{{ label('Вращение', 'Revolve') }}</button>
-        <button v-if="selectedSketch" :disabled="selectedIds.length<2" @click="beginAdvanced('loft')">B-rep loft</button>
-        <button v-if="selectedSketch" :disabled="!selectedSketch.closed" @click="beginCorner('fillet')">{{ label('Скруглить', 'Fillet') }}</button>
-        <button v-if="selectedSketch" :disabled="!selectedSketch.closed" @click="beginCorner('dogear')">DogEar</button>
-        <button v-if="selectedSketch" @click="advancedOp=null; operation = operation === 'array' ? null : 'array'">{{ label('Круговые копии', 'Circular copies') }}</button><button v-if="!selectedNurbs" @click="duplicate">{{ label('Копия · ⌘/Ctrl D', 'Duplicate · ⌘/Ctrl D') }}</button>
-        <details v-if="!selectedNurbs" class="transform-menu"><summary>{{ label('Точные преобразования', 'Exact transforms') }}</summary><div>
-          <label>X <input v-model.number="dx" type="number" aria-label="ΔX"></label><label>Y <input v-model.number="dy" type="number" aria-label="ΔY"></label><label v-if="selectedBody">Z <input v-model.number="dz" type="number" aria-label="ΔZ"></label>
-          <label>↻ <input v-model.number="angle" type="number" :aria-label="label('Поворот Z', 'Z rotation')">°</label><label>× <input v-model.number="scale" type="number" min=".001" step=".1" :aria-label="label('Масштаб', 'Scale')"></label><button @click="transform">{{ label('Применить', 'Apply') }}</button>
-        </div></details><button class="delete" @click="remove">{{ label('Удалить', 'Delete') }}</button>
-      </template>
-      <span v-else class="subtle">{{ label('R — прямоугольник · C — круг · L — ломаная · V — выбор · E — выдавить · F — вписать · ? — помощь', 'R rectangle · C circle · L polyline · V select · E extrude · F fit · ? help') }}</span>
     </footer>
+    <div v-if="exactCardOpen && (selectedSketch || selectedBody)" class="exact-card" role="dialog" :aria-label="label('Точные преобразования', 'Exact transforms')">
+      <header><strong>{{ selectedSketch?.name || selectedBody?.name }}</strong><button type="button" :aria-label="label('Закрыть', 'Close')" @click="exactCardOpen = false">×</button></header>
+      <div class="exact-grid">
+        <label>X <input v-model.number="dx" type="number" aria-label="ΔX"></label><label>Y <input v-model.number="dy" type="number" aria-label="ΔY"></label><label v-if="selectedBody">Z <input v-model.number="dz" type="number" aria-label="ΔZ"></label>
+        <label>↻ <input v-model.number="angle" type="number" :aria-label="label('Поворот Z', 'Z rotation')">°</label><label>× <input v-model.number="scale" type="number" min=".001" step=".1" :aria-label="label('Масштаб', 'Scale')"></label>
+      </div>
+      <div class="exact-actions"><button class="primary" @click="transform">{{ label('Применить', 'Apply') }}</button></div>
+      <template v-if="selectedBody?.brep">
+        <label class="exact-detail">{{ label('Детализация B-rep', 'B-rep detail') }}<input v-model.number="brepSegments" type="number" min="1" max="32" step="1"></label>
+        <div class="exact-actions"><button @click="retessellateSelectedBrep">{{ label('Перестроить mesh', 'Retessellate') }}</button><button @click="measureSelectedBrep">{{ label('Свойства B-rep', 'B-rep properties') }}</button></div>
+        <small v-if="brepMass">V = {{ brepMass.signedVolumeMm3.toFixed(4) }} mm³ · A = {{ brepMass.surfaceAreaMm2.toFixed(4) }} mm² · {{ label('центр', 'centroid') }} [{{ brepMass.centroid.map(v=>v.toFixed(3)).join(', ') }}]</small>
+      </template>
+    </div>
+    <CommandPalette v-if="paletteOpen" :open="paletteOpen" :commands="solidCommands.filter(command => command.enabled !== false)" @close="paletteOpen = false" @execute="executeSolidCommand" />
     <div v-if="showHelp" class="help-card"><p>{{ label('Грани: выберите поверхность, затем тяните её или жёлтую ручку. Ctrl/⌘ + клик выбирает несколько открытых граней для Shell. Для фаски и скругления включите «Рёбра».','Faces: select a surface, then drag it or its yellow handle. Ctrl/⌘ click selects multiple Shell openings. Switch to Edges for chamfers and fillets.') }}</p><p>{{ label('Shift + клик и «Рамка» выделяют несколько объектов. Манипулятор двигает, вращает и масштабирует весь выбор. У окружностей и дуг есть ручки центра, радиуса и концов дуги.','Shift click and Box select select multiple objects. The gizmo moves, rotates and scales the whole selection. Circles and arcs have center, radius and arc endpoint handles.') }}</p><strong>{{ label('Управление', 'Controls') }}</strong><p>{{ label('2D: тяните фигуру или вершину. Alt временно отключает привязку. Ломаная замыкается кликом по первой точке.', '2D: drag shapes or vertices. Alt bypasses snapping. Close a polyline by clicking its first point.') }}</p><p>{{ label('3D: тяните для вращения; G включает перемещение тела. ПКМ всегда вращает. Shift или средняя кнопка — панорама. Колесо — масштаб.', '3D: drag to orbit; G enables body movement. Right drag always orbits. Shift or middle drag pans. Wheel zooms.') }}</p><p>{{ label('E — предпросмотр выдавливания; зелёная ручка меняет высоту. Enter подтверждает, Escape отменяет. Ctrl/⌘ Z — отмена, Ctrl/⌘ Shift Z — повтор.', 'E previews extrusion; the green handle changes height. Enter applies, Escape cancels. Ctrl/⌘ Z undoes; Ctrl/⌘ Shift Z redoes.') }}</p><button @click="showHelp = false">{{ label('Понятно', 'Got it') }}</button></div>
     <div v-if="error" class="error-bar" role="alert">{{ error }} <button @click="error = ''">×</button></div>
   </section>
 </template>
 <style scoped>
-.direct-workspace{position:fixed;inset:46px 0 28px;z-index:20;display:flex;flex-direction:column;min-height:0;background:var(--bg);color:var(--text);outline:none;font-size:13px}.workspace-bar{display:flex;align-items:center;gap:16px;padding:10px 16px;border-bottom:1px solid var(--border);background:var(--surface)}button,input,summary,.file-open{color:var(--text);background:var(--surface-raised);border:1px solid var(--border);border-radius:5px;padding:7px 10px;font:inherit}button,summary{cursor:pointer}button:disabled{opacity:.4;cursor:default}button:hover:not(:disabled){background:var(--hover)}button:focus-visible,summary:focus-visible{outline:2px solid var(--accent)}[aria-pressed=true]{border-color:var(--accent);color:var(--accent)}.back{background:transparent}.history-tools{display:flex;gap:4px}.history-tools button{font-size:20px;padding:2px 12px}.save-status{margin-left:auto;color:var(--text-dim);font-size:12px}.file-menu{position:relative}.file-menu>div{position:absolute;right:0;top:40px;z-index:5;width:250px;display:grid;gap:6px;padding:10px;background:var(--surface);border:1px solid var(--border);box-shadow:0 8px 30px #0004}.file-open input{display:block;width:100%;padding:4px;font-size:11px}.split-workspace{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,var(--split)) 7px minmax(0,1fr)}.pane{display:flex;flex-direction:column;min-width:0;min-height:0}.pane-heading{display:flex;align-items:center;gap:12px;padding:10px 14px;background:var(--surface);border-bottom:1px solid var(--border)}.pane-heading strong{font-size:14px}.pane-heading span{font-size:11px;color:var(--text-dim)}.pane-heading button{margin-left:auto;padding:4px 9px}.pane-tools{min-height:46px;padding:7px 12px;display:flex;gap:5px;align-items:center;flex-wrap:wrap;border-bottom:1px solid var(--border)}.pane-tools .subtle{flex:1}.pane-tools button{font-size:12px}.canvas-wrap{flex:1;min-height:120px;position:relative;overflow:hidden}.canvas-wrap svg{width:100%;height:100%;display:block;touch-action:none;outline:none}.canvas-wrap svg:focus-visible{box-shadow:inset 0 0 0 2px var(--accent)}.selected{stroke-width:3}.splitter{background:var(--surface-raised);cursor:col-resize;touch-action:none;display:flex;align-items:center;justify-content:center;border-inline:1px solid var(--border)}.splitter:hover,.splitter:focus-visible{background:var(--accent)}.splitter span{height:35px;width:2px;background:var(--text-dim);border-radius:2px}.object-strip{min-height:47px;max-height:90px;overflow:auto;display:flex;align-items:center;gap:6px;padding:8px 12px;flex-wrap:wrap;border-top:1px solid var(--border);background:var(--surface)}.object-strip>span{font-size:11px;color:var(--text-dim);margin-right:5px}.object-strip button{font-size:12px;padding:4px 8px}.context-bar{min-height:60px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:10px 16px;border-top:1px solid var(--border);background:var(--surface)}.context-bar label{display:flex;align-items:center;gap:5px;color:var(--text-dim)}.context-bar input{width:65px;padding:6px}.primary{background:var(--accent);color:var(--bg);font-weight:600}.delete{margin-left:auto}.subtle{color:var(--text-dim);font-size:12px}.empty-hint{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;text-align:center;pointer-events:none;color:var(--text-dim);padding:25px}.empty-hint strong{font-size:18px;font-weight:500}.empty-hint span{font-size:12px;max-width:280px}.zoom-tools{position:absolute;right:14px;bottom:14px;display:flex;gap:4px}.zoom-tools button{font-size:18px}.error-bar{padding:10px 16px;color:var(--danger);background:var(--surface);display:flex;justify-content:space-between}@media(max-width:750px){.direct-workspace{inset:0}.workspace-bar{gap:8px;padding:8px}.workspace-bar>strong{font-size:12px}.save-status{display:none}.pane-heading{padding:8px;gap:5px}.pane-heading span{display:none}.pane-tools{padding:5px}.pane-tools button{padding:5px;font-size:11px}.context-bar{gap:7px;padding:8px}.context-bar input{width:52px}.empty-hint strong{font-size:14px}}
+.direct-workspace{position:fixed;inset:46px 0 28px;z-index:20;display:flex;flex-direction:column;min-height:0;background:var(--bg);color:var(--text);outline:none;font-size:13px}.workspace-bar{display:flex;align-items:center;gap:16px;padding:10px 16px;border-bottom:1px solid var(--border);background:var(--surface)}button,input,summary,.file-open{color:var(--text);background:var(--surface-raised);border:1px solid var(--border);border-radius:5px;padding:7px 10px;font:inherit}button,summary{cursor:pointer}button:disabled{opacity:.4;cursor:default}button:hover:not(:disabled){background:var(--hover)}button:focus-visible,summary:focus-visible{outline:2px solid var(--accent)}[aria-pressed=true]{border-color:var(--accent);color:var(--accent)}.back{background:transparent}.command-search{display:inline-flex;align-items:center;gap:8px;min-width:190px;padding:6px 10px;background:var(--bg);color:var(--text-dim);border-radius:8px}.command-search span{flex:1;text-align:left}.command-search kbd{font:11px var(--font-mono,monospace);padding:1px 5px;border:1px solid var(--border);border-radius:4px}.history-tools{display:flex;gap:4px}.history-tools button{font-size:20px;padding:2px 12px}.save-status{margin-left:auto;display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;color:var(--text-dim)}.save-status.error{color:var(--danger)}.file-menu>summary{display:inline-flex;align-items:center;gap:6px;list-style:none}.file-menu>summary::-webkit-details-marker{display:none}.file-menu{position:relative}.file-menu>div{position:absolute;right:0;top:40px;z-index:5;width:250px;display:grid;gap:6px;padding:10px;background:var(--surface);border:1px solid var(--border);box-shadow:0 8px 30px #0004}.file-open input{display:block;width:100%;padding:4px;font-size:11px}.split-workspace{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,var(--split)) 7px minmax(0,1fr)}.split-workspace.sketch-hidden{grid-template-columns:minmax(0,1fr)}.pane-heading .pane-toggle{margin-left:auto;padding:4px 8px}.pane-heading .pane-toggle+button{margin-left:0}.pane{display:flex;flex-direction:column;min-width:0;min-height:0}.pane-heading{display:flex;align-items:center;gap:12px;padding:10px 14px;background:var(--surface);border-bottom:1px solid var(--border)}.pane-heading strong{font-size:14px}.pane-heading span{font-size:11px;color:var(--text-dim)}.pane-heading button{margin-left:auto;padding:4px 9px}.pane-tools{min-height:46px;padding:7px 12px;display:flex;gap:5px;align-items:center;flex-wrap:wrap;border-bottom:1px solid var(--border)}.pane-tools .subtle{flex:1}.pane-tools button{font-size:12px}.canvas-wrap{flex:1;min-height:120px;position:relative;overflow:hidden}.canvas-wrap svg{position:relative;width:100%;height:100%;display:block;touch-action:none;outline:none}.gpu-layer{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}.canvas-wrap svg:focus-visible{box-shadow:inset 0 0 0 2px var(--accent)}.selected{stroke-width:3}.splitter{background:var(--surface-raised);cursor:col-resize;touch-action:none;display:flex;align-items:center;justify-content:center;border-inline:1px solid var(--border)}.splitter:hover,.splitter:focus-visible{background:var(--accent)}.splitter span{height:35px;width:2px;background:var(--text-dim);border-radius:2px}.object-strip{min-height:47px;max-height:90px;overflow:auto;display:flex;align-items:center;gap:6px;padding:8px 12px;flex-wrap:wrap;border-top:1px solid var(--border);background:var(--surface)}.object-strip>span{font-size:11px;color:var(--text-dim);margin-right:5px}.object-strip button{font-size:12px;padding:4px 8px}.context-bar{min-height:60px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:10px 16px;border-top:1px solid var(--border);background:var(--surface)}.context-bar label{display:flex;align-items:center;gap:5px;color:var(--text-dim)}.context-bar input{width:65px;padding:6px}.primary{background:var(--accent);color:var(--bg);font-weight:600}.delete{margin-left:auto}.subtle{color:var(--text-dim);font-size:12px}.empty-hint{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;text-align:center;pointer-events:none;color:var(--text-dim);padding:25px}.empty-hint strong{font-size:18px;font-weight:500}.empty-hint span{font-size:12px;max-width:280px}.zoom-tools{position:absolute;right:14px;bottom:14px;display:flex;gap:4px}.zoom-tools button{font-size:18px}.exact-card{position:absolute;left:14px;bottom:14px;z-index:6;width:min(320px,90vw);display:grid;gap:10px;padding:14px;background:var(--surface);border:1px solid var(--border);border-radius:10px;box-shadow:0 8px 30px #0004}.exact-card header{display:flex;align-items:center;justify-content:space-between;gap:8px}.exact-card header button{padding:2px 8px}.exact-grid{display:flex;flex-wrap:wrap;gap:8px}.exact-grid label,.exact-detail{display:flex;align-items:center;gap:5px;color:var(--text-dim)}.exact-grid input,.exact-detail input{width:64px;padding:6px}.exact-actions{display:flex;gap:6px;flex-wrap:wrap}.exact-card small{color:var(--text-dim);line-height:1.5}.error-bar{padding:10px 16px;color:var(--danger);background:var(--surface);display:flex;justify-content:space-between}@media(max-width:750px){.direct-workspace{inset:0}.workspace-bar{gap:8px;padding:8px}.workspace-bar>strong{font-size:12px}.save-status{display:none}.pane-heading{padding:8px;gap:5px}.pane-heading span{display:none}.pane-tools{padding:5px}.pane-tools button{padding:5px;font-size:11px}.context-bar{gap:7px;padding:8px}.context-bar input{width:52px}.empty-hint strong{font-size:14px}}
 .hovered{stroke:#e1d4ff;stroke-width:3}.operation-card{position:absolute;right:14px;top:14px;width:245px;display:grid;gap:10px;padding:15px;background:var(--surface);border:1px solid var(--border);border-radius:9px;box-shadow:0 8px 24px #0003}.operation-card small{font-size:11px;color:var(--text-dim);line-height:1.5}.operation-card label{display:flex;justify-content:space-between;align-items:center;gap:8px}.operation-card input{width:90px}.operation-card select{max-width:145px;background:var(--surface-raised);color:var(--text);padding:5px;border:1px solid var(--border)}.operation-card>div{display:flex;gap:5px}.segmented button{padding:5px 8px;font-size:12px}.live-measure{position:absolute;left:14px;top:14px;padding:8px 12px;border-radius:5px;background:var(--surface);color:var(--accent);font:14px monospace;pointer-events:none}.height-handle{cursor:ns-resize}.snap-toggle{display:flex;align-items:center;gap:4px;font-size:11px;margin-left:auto}.grid-input{width:50px;padding:4px}.transform-menu{position:relative}.transform-menu>div{position:absolute;bottom:40px;left:0;width:270px;display:flex;flex-wrap:wrap;gap:10px;padding:14px;border:1px solid var(--border);background:var(--surface);border-radius:8px;box-shadow:0 8px 24px #0003}.help-card{max-height:75vh;overflow:auto;position:absolute;right:18px;bottom:76px;width:min(360px,85vw);padding:20px;background:var(--surface);border:1px solid var(--border);border-radius:10px;box-shadow:0 8px 30px #0004;font-size:13px;line-height:1.6;z-index:5}@media(max-width:750px){.operation-card{width:195px;padding:10px;right:8px;top:8px}.pane-tools .subtle{display:none}.snap-toggle{margin-left:0}}
 .nurbs-card{max-height:calc(100% - 28px);overflow:auto}.nurbs-cage circle{cursor:move}.trim-grid{display:grid!important;grid-template-columns:1fr 1fr;gap:5px!important}.trim-grid label{display:grid!important;gap:2px!important;font-size:11px}.trim-grid input{width:100%!important;box-sizing:border-box}
 </style>
 
 <style scoped>
-.direct-workspace.embedded{position:absolute;inset:0;z-index:9}.embedded .workspace-bar{flex-wrap:wrap;gap:8px;padding:6px}.primitive-bar{display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:8px;border-bottom:1px solid var(--border)}.primitive-bar input{width:75px}.embedded .pane-tools{padding:5px}.embedded .save-status{display:none}
+.direct-workspace.embedded{position:absolute;inset:0;z-index:9}.embedded .workspace-bar{flex-wrap:wrap;gap:8px;padding:6px}.primitive-bar{display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:8px;border-bottom:1px solid var(--border)}.primitive-bar input{width:75px}.primitive-icon{width:36px;height:36px;padding:0;display:inline-flex;align-items:center;justify-content:center;border-radius:8px}.primitive-icon:hover{color:var(--accent)}.tool-icon{width:34px;height:34px;padding:0;display:inline-flex;align-items:center;justify-content:center;gap:3px;border-radius:7px}.tool-icon .tool-tag{font-size:9px;font-weight:700;letter-spacing:.04em}.tool-icon:has(.tool-tag){width:auto;padding:0 7px}.tool-group{display:inline-flex;gap:3px}.tool-divider{width:1px;height:22px;background:var(--border);margin:0 3px}.primitive-divider{width:1px;height:22px;background:var(--border);margin:0 4px}.embedded .pane-tools{padding:5px}.embedded .save-status{display:none}
 </style>
