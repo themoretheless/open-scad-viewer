@@ -13,6 +13,21 @@ release certification.
 
 ## Current verification
 
+A later uninterrupted full run on published `8f96044d` passed 3271 tests and
+failed 10 (336 passing files, five failing; 110.18 seconds). In addition to the
+nine evidence failures below, `coreMesh.test.ts` detected a new direct parser
+import in the MCP worker startup path. The worker now warms the existing
+`defaultGeometryKernel` facade directly, preserving parser-consumer boundaries
+without widening the allowlist. After that correction, all 39 tests across
+coreMesh, MCP supervisor, production isolation and MCP CLI passed, as did MCP
+type checking. A second full run after this correction has not been performed.
+Log: `/private/tmp/osv-8f96044d-full-tests.log`.
+
+The previous remote run 35473144674 has now completed: Rust, macOS native smoke,
+Windows native smoke and official OpenSCAD passed; both Node jobs failed.
+Run 35475213799 for `8f96044d` was still in progress when inspected and does not
+contain the subsequent parser-import correction.
+
 Pre-publication focused verification passed 42 tests across compiler registration,
 streaming, surface groups, MCP supervisor and production isolation, plus six Node
 tests for package integrity and the new read-only drift auditor. UI type checking
