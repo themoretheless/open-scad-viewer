@@ -73,3 +73,44 @@ Evidence downloaded locally to
 `/private/tmp/osv-ci-failed.log`; new local measurements are
 `/private/tmp/osv-readiness-serial.json` and
 `/private/tmp/osv-readiness-concurrent.json`.
+
+## CI contention reproduced on fd03ebcf
+
+Run 35475827899, Node 22 job 105984846087, now supplies both reports. This
+supersedes the earlier note that the concurrent workflow had not yet run.
+Node v22.23.2, Linux x64, Intel Xeon Platinum 8573C:
+
+| Workload | Samples | Cold available | Cold response ms | Warmup settled ms | Warm response ms |
+| --- | ---: | ---: | --- | --- | --- |
+| Sequential fresh processes | 3 | 3/3 | 196.852-219.658 | 196.858-219.663 | 0.027-0.043 |
+| Four concurrent fresh processes, three waves | 12 | 0/12 | 251.408-341.990 | 355.973-501.295 | 0.099-0.262 |
+
+Both mesh and B-rep are unavailable with `readiness-timeout` in every concurrent
+cold sample, and available after the original warmup settles. The benchmark exits
+successfully because eventual availability is asserted; that success is not a
+claim that cold admission meets 250 ms. Timer callbacks themselves can be delayed
+under load, so an observed timeout response may exceed the nominal deadline.
+These results isolate within-run contention; they are not a speedup comparison
+against the earlier AMD runner.
+
+The same Node 22 job reports 3260 passed, 17 failed and five skipped tests.
+There are remaining readiness failures in `geometryWorkerAssertion.test.ts` and
+`mcpGeometryService.test.ts` (the latter directly calls the in-process
+`HeadlessGeometryService`), plus unavailable capability expectations in
+`geometryBuildEngine.test.ts`. The disposable-worker startup fix therefore does
+not cover every cold initialization path. Oracle/HTTP test timeouts and MCP stdio
+shutdown failure are separate observations; do not attribute them to readiness
+without a causal trace. The Manifold shadow test's printed failed-build result
+also does not identify its underlying failure cause.
+
+Next lifecycle work must cover browser workers and in-process service startup
+with explicit initialization, cancellation and deadline ownership. Do not hide
+these failures by globally increasing 250 ms or reducing CI concurrency. The
+qualification/fingerprint failures remain independent problems.
+
+Downloaded reports:
+`/private/tmp/osv-readiness-ci-35475827899-node22/provider-readiness.json` and
+`/private/tmp/osv-readiness-ci-35475827899-node22/provider-readiness-concurrent.json`.
+Completed-job log: `/private/tmp/osv-ci-35475827899-node22-job.log`. The CLI run-log
+command waits for the entire run; the completed job's REST logs endpoint provides
+this evidence while other jobs are still running.
