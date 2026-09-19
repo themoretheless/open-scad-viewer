@@ -1,6 +1,7 @@
 name: STEP interchange V10
 on:
   push:
+    branches: [main]
     paths:
       - 'crates/brep-core/src/step_interchange_v3.rs'
       - 'crates/geometry-bridge/src/**'
@@ -15,6 +16,9 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with: {node-version: 20, cache: npm}
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: nightly-2026-09-16
+          targets: wasm32-unknown-unknown
       - run: npm ci
       - run: node scripts/qualify-step-interchange-v10.mjs
