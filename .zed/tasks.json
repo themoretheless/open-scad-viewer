@@ -11,6 +11,22 @@
     "reveal": "always"
   },
   {
+    "label": "dev server + browser",
+    "command": "npm",
+    "args": ["run", "dev", "--", "--port", "5173", "--strictPort", "--open"],
+    "cwd": "$ZED_WORKTREE_ROOT",
+    "allow_concurrent_runs": false,
+    "reveal": "always"
+  },
+  {
+    "label": "dev server + browser (skip kernel rebuild)",
+    "command": "npx",
+    "args": ["vite", "--port", "5173", "--strictPort", "--open"],
+    "cwd": "$ZED_WORKTREE_ROOT",
+    "allow_concurrent_runs": false,
+    "reveal": "always"
+  },
+  {
     "label": "dev server (skip kernel rebuild)",
     "command": "npx",
     "args": ["vite", "--port", "5173", "--strictPort"],
