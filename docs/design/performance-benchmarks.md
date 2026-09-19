@@ -131,6 +131,13 @@ Synthetic GPU spheres deliberately include all tessellation edges to stress the
 edge pass. Their index count includes degenerate pole triangles. This workload
 is a rendering stress case, not a claim about edge counts produced by OpenSCAD.
 
+The CPU `dense-sphere` fixture uses three `$fn=128` spheres (48,384 output
+triangles). This intentionally remains below the kernel's documented
+100,000-triangle per-mesh budget while keeping BVH, edge extraction, hashing
+and export large enough to profile. Unsupported capacity probes, including
+`$fn=192` and `$fn=256`, belong in the separate CSG scaling benchmark and are
+recorded as expected refusals rather than making the standard CPU suite partial.
+
 ## Continuous FPS and separate GPU diagnostics
 
 `--fps` runs continuous camera rotation, close zoom and section animation with

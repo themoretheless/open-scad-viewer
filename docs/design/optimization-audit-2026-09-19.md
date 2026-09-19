@@ -78,10 +78,13 @@ GC-сессиями; кооперативная отмена между statemen
 
 ### 2.1 Сборочная гигиена
 
-- `cargo clippy --workspace --all-targets -- -D warnings` падает на первом же
-  крейте (`osv-math`, 5 × `needless_range_loop`), без `-D` даёт 548
-  уникальных диагностик (brep-core 280, geometry-bridge 89, nurbs-core 49).
-  CI устанавливает компонент clippy во всех трёх job'ах и не запускает его.
+- `cargo clippy --workspace --all-targets -- -D warnings` всё ещё не является
+  чистым: исходный аудит насчитал 548 уникальных диагностик (brep-core 280,
+  geometry-bridge 89, nurbs-core 49). Первый корневой блокер в `osv-math`
+  (5 × `needless_range_loop`) устранён без allow-атрибутов, а CI теперь
+  запускает строгий Clippy для этого общего математического крейта. Остальные
+  крейты следует подключать по мере очистки, не скрывая baseline глобальным
+  allow-list.
 - `crates/Cargo.toml` на HEAD не содержал `mechanical-core`,
   `languages-bridge`, `languages-wasm` (регрессия коммита `fdf7b1a`);
   `cargo metadata --manifest-path crates/languages-wasm/Cargo.toml` отвечал
