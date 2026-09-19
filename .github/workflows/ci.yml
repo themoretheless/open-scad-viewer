@@ -13,6 +13,24 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  rust:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v6
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: nightly-2026-09-16
+          components: clippy
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            crates/target
+          key: rust-${{ runner.os }}-${{ hashFiles('crates/Cargo.lock', 'rust-toolchain.toml') }}
+      - run: cargo test --locked --manifest-path crates/Cargo.toml --workspace
+      - run: cargo clippy --locked --manifest-path crates/Cargo.toml -p osv-math --all-targets -- -D warnings
+
   check:
     runs-on: ubuntu-latest
     timeout-minutes: 40
@@ -39,13 +57,11 @@ jobs:
           key: rust-${{ runner.os }}-${{ hashFiles('crates/Cargo.lock', 'rust-toolchain.toml') }}
       - run: npm ci
       - run: npm run build:geometry
-      - run: cargo test --locked --manifest-path crates/Cargo.toml --workspace
-      - run: cargo clippy --locked --manifest-path crates/Cargo.toml -p osv-math --all-targets -- -D warnings
       - run: npm run check
 
   native-smoke:
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 40
+    timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix:
@@ -74,7 +90,7 @@ jobs:
 
   official-openscad-mcp:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
@@ -94,6 +110,5 @@ jobs:
           key: rust-${{ runner.os }}-${{ hashFiles('crates/Cargo.lock', 'rust-toolchain.toml') }}
       - run: npm ci
       - run: npm run build:geometry
-      - run: cargo test --locked --manifest-path crates/Cargo.toml --workspace
       - run: npm run setup:openscad
       - run: npm run test:official
