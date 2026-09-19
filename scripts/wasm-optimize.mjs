@@ -5,7 +5,18 @@ import {statSync} from 'node:fs'
 // fingerprinted artifact produces the same bytes on every machine.
 export function optimizeWasm(file) {
   const before = statSync(file).size
-  const result = spawnSync('wasm-opt', ['-Oz', '--all-features', file, '-o', file], {stdio: 'inherit'})
+  const result = spawnSync('wasm-opt', [
+    '-Oz',
+    '--enable-bulk-memory',
+    '--enable-sign-ext',
+    '--enable-nontrapping-float-to-int',
+    '--enable-mutable-globals',
+    '--enable-reference-types',
+    '--enable-multivalue',
+    file,
+    '-o',
+    file,
+  ], {stdio: 'inherit'})
   if (result.error?.code === 'ENOENT') {
     throw new Error('wasm-opt (binaryen) is required to build the kernels: install binaryen, or `cargo install wasm-opt`.')
   }
