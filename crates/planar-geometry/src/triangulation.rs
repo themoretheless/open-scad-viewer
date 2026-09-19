@@ -5,13 +5,15 @@ use crate::tessellation::FillMesh;
 use crate::{check, Result};
 use math_core::{cross2, sub2};
 
+const MAX_PROFILE_VERTICES: usize = 4096;
+
 pub fn triangulate_profile(outer: &[[f64; 2]], holes: &[Vec<[f64; 2]>]) -> Result<FillMesh> {
     check(
         outer.len() >= 3 && holes.iter().all(|h| h.len() >= 3),
         "Profile rings need at least three vertices",
     )?;
     check(
-        outer.len() + holes.iter().map(Vec::len).sum::<usize>() <= crate::limits::ARRANGEMENT_EDGES,
+        outer.len() + holes.iter().map(Vec::len).sum::<usize>() <= MAX_PROFILE_VERTICES,
         "Profile triangulation budget exceeded",
     )?;
     check(
@@ -195,7 +197,7 @@ pub fn triangulate_profile(outer: &[[f64; 2]], holes: &[Vec<[f64; 2]>]) -> Resul
         ring.splice(index + 1..index + 1, ids);
     }
     check(
-        ring.len() <= crate::limits::ARRANGEMENT_EDGES,
+        ring.len() <= MAX_PROFILE_VERTICES,
         "Profile triangulation budget exceeded",
     )?;
     let mut remaining = ring;
@@ -315,5 +317,20 @@ mod tests {
     fn self_intersecting_profiles_are_rejected() {
         let outer = vec![[0.0, 0.0], [4.0, 4.0], [0.0, 4.0], [4.0, 0.0]];
         assert!(triangulate_profile(&outer, &[]).is_err());
+    }
+
+    #[test]
+    fn oversized_profiles_refuse_before_visibility_work() {
+        let holes = (0..1024)
+            .map(|i| {
+                square(
+                    (i % 32) as f64 * 2.0 + 1.0,
+                    (i / 32) as f64 * 2.0 + 1.0,
+                    0.5,
+                )
+            })
+            .collect::<Vec<_>>();
+        let error = triangulate_profile(&square(0.0, 0.0, 64.0), &holes).unwrap_err();
+        assert_eq!(error.message, "Profile triangulation budget exceeded");
     }
 }
