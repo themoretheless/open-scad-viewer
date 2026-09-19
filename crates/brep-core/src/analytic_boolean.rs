@@ -13,6 +13,8 @@ use crate::imprint_pipeline::{self, SpatialRelation};
 use crate::intersections::{Coverage, Options, Plane, Report};
 use crate::solid_audit::audit_solid;
 use crate::sphere_boolean;
+use crate::box_sphere_boolean;
+use crate::cylinder_sphere_boolean;
 use crate::trim_sew::{
     CellLabel, ChartEvent, ChartKind, ClassificationCertificate, SewCertificate,
     classify_chart_events, classify_face_outer_loop, classify_imprint_circle_events,
@@ -449,6 +451,27 @@ fn sphere_pair_boolean(
     Ok((result, cert))
 }
 
+fn box_sphere_pair_boolean(
+    a: &Model,
+    b: &Model,
+    operation: &str,
+) -> Result<(Model, BooleanCertificate)> {
+    let Some(result) = box_sphere_boolean::boolean(a, b, operation)? else {
+        return Err(unsupported("Box/sphere Boolean did not admit these operands"));
+    };
+    result.validate()?;
+    let classification = classify_chart_events(
+        ChartKind::AnalyticCircle,
+        vec![],
+        &[(0.5, CellLabel::Outside)],
+    )?;
+    // The plane/sphere section circle is exact and UV-certified inside
+    // box_sphere_boolean (pcurves re-sampled against the 3D arc).
+    let coverages = vec![Coverage::Complete];
+    let cert = certificate_for(operation, coverages, classification, true, &result)?;
+    Ok((result, cert))
+}
+
 fn sphere_envelope(model: &Model) -> Result<([f64; 3], f64)> {
     let (min, max) = model_bounds(model);
     let center = [
@@ -532,6 +555,18 @@ pub fn analytic_boolean(
         }
         return sphere_pair_boolean(a, b, operation);
     }
+    if matches!(
+        (class_a, class_b),
+        (AnalyticClass::AxisAlignedBox, AnalyticClass::Sphere)
+            | (AnalyticClass::Sphere, AnalyticClass::AxisAlignedBox)
+    ) {
+        if operation == "xor" {
+            return Err(refuse(
+                "Box/sphere xor is outside the closed matrix walking slice",
+            ));
+        }
+        return box_sphere_pair_boolean(a, b, operation);
+    }
 
     // Cylinder × cylinder (F1 wall imprint + empty algebra).
     if class_a == AnalyticClass::FiniteCylinder && class_b == AnalyticClass::FiniteCylinder {
@@ -565,6 +600,26 @@ pub fn analytic_boolean(
         return Err(refuse(
             "Cone/torus Boolean is query-only and outside the frozen matrix",
         ));
+    }
+
+    // Axial cylinder × sphere: exact rings through the sphere-mate engine.
+    if matches!(
+        (class_a, class_b),
+        (AnalyticClass::FiniteCylinder, AnalyticClass::Sphere)
+            | (AnalyticClass::Sphere, AnalyticClass::FiniteCylinder)
+    ) && operation != "xor"
+    {
+        if let Some(result) = cylinder_sphere_boolean::boolean(a, b, operation)? {
+            result.validate()?;
+            let classification = classify_chart_events(
+                ChartKind::AnalyticCircle,
+                vec![],
+                &[(0.5, CellLabel::Outside)],
+            )?;
+            let coverages = vec![Coverage::Complete];
+            let cert = certificate_for(operation, coverages, classification, true, &result)?;
+            return Ok((result, cert));
+        }
     }
 
     // Mixed cylinder/sphere: Complete empty → empty algebra; else frozen refuse.
@@ -777,11 +832,95 @@ mod tests {
     }
 
     #[test]
+    fn box_sphere_dome_is_certified_for_every_operation() {
+        let b = crate::cuboid([-10., -10., -10.], [10., 10., 10.]).unwrap();
+        let s = crate::transform::affine(
+            &sphere(5.).unwrap(),
+            [
+                [1., 0., 0., 0.3],
+                [0., 1., 0., -0.7],
+                [0., 0., 1., 8.],
+                [0., 0., 0., 1.],
+            ],
+        )
+        .unwrap();
+        for operation in ["union", "difference", "intersection"] {
+            let (model, cert) = analytic_boolean(&b, &s, operation).unwrap();
+            assert!(cert.no_prism_authorship, "{operation}");
+            assert!(cert.all_complete(), "{operation}");
+            assert_eq!(model.bodies.len(), 1, "{operation}");
+            model.validate().unwrap();
+            let (swapped, _) = analytic_boolean(&s, &b, operation).unwrap();
+            swapped.validate().unwrap();
+        }
+        let err = analytic_boolean(&b, &s, "xor").unwrap_err();
+        assert_eq!(err.code, "BREP_ANALYTIC_BOOLEAN_REFUSED");
+    }
+
+    #[test]
+    fn box_sphere_edge_corner_and_bar_are_certified() {
+        let place = |r: f64, at: [f64; 3]| {
+            crate::transform::affine(
+                &sphere(r).unwrap(),
+                [
+                    [1., 0., 0., at[0]],
+                    [0., 1., 0., at[1]],
+                    [0., 0., 1., at[2]],
+                    [0., 0., 0., 1.],
+                ],
+            )
+            .unwrap()
+        };
+        let big = crate::cuboid([-10., -10., -10.], [10., 10., 10.]).unwrap();
+        let bar = crate::cuboid([-10., -1.5, -1.2], [10., 1.5, 1.2]).unwrap();
+        let cases = [
+            (big.clone(), place(4., [9., 0.4, 9.])),
+            (big, place(4., [9.3, 8.9, 9.1])),
+            (bar, place(4., [0.3, 0.1, -0.2])),
+        ];
+        for (b, s) in &cases {
+            for operation in ["union", "difference", "intersection"] {
+                let (model, cert) = analytic_boolean(b, s, operation).unwrap();
+                assert!(cert.no_prism_authorship, "{operation}");
+                assert!(cert.all_complete(), "{operation}");
+                model.validate().unwrap();
+            }
+        }
+        let (bar_cut, _) = analytic_boolean(&cases[2].0, &cases[2].1, "difference").unwrap();
+        assert_eq!(bar_cut.bodies.len(), 2);
+    }
+
+    #[test]
     fn planar_box_pair_refuses_analytic_path() {
         let a = extrude_polygon(&[[0., 0.], [2., 0.], [2., 2.], [0., 2.]], 0., 1.).unwrap();
         let b = extrude_polygon(&[[1., 1.], [3., 1.], [3., 3.], [1., 3.]], 0., 1.).unwrap();
         let err = analytic_boolean(&a, &b, "union").unwrap_err();
         assert_eq!(err.code, "BREP_UNSUPPORTED_OPERATION");
+    }
+
+    #[test]
+    fn axial_cylinder_sphere_is_certified() {
+        let c = cylinder(3., 10.).unwrap();
+        let s = crate::transform::affine(
+            &sphere(4.).unwrap(),
+            [
+                [1., 0., 0., 0.],
+                [0., 1., 0., 0.],
+                [0., 0., 1., 5.],
+                [0., 0., 0., 1.],
+            ],
+        )
+        .unwrap();
+        for operation in ["union", "difference", "intersection"] {
+            let (model, cert) = analytic_boolean(&c, &s, operation).unwrap();
+            assert!(cert.no_prism_authorship, "{operation}");
+            assert!(cert.all_complete(), "{operation}");
+            model.validate().unwrap();
+            let (swapped, _) = analytic_boolean(&s, &c, operation).unwrap();
+            swapped.validate().unwrap();
+        }
+        let (stubs, _) = analytic_boolean(&c, &s, "difference").unwrap();
+        assert_eq!(stubs.bodies.len(), 2);
     }
 
     #[test]

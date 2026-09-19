@@ -18,6 +18,9 @@ pub mod analytic_boolean;
 pub mod analytic_features;
 pub mod analytic_ss;
 mod boolean_support;
+mod box_sphere_boolean;
+mod sphere_mate;
+mod cylinder_sphere_boolean;
 pub mod coverage_verifier;
 pub mod imprint_pipeline;
 pub mod intersections;
@@ -899,7 +902,11 @@ impl Model {
                     face_owners[use_.face].insert(key.clone());
                     let face = &self.faces[use_.face];
                     for &wire in std::iter::once(&face.outer).chain(&face.holes) {
-                        loop_owners[wire].insert(key.clone());
+                        // Two faces on different surfaces may bound the same
+                        // curve loop in the same UV sense (a ring hole on a
+                        // plane and on a reversed sphere patch): qualify the
+                        // loop by its face, which carries the surface.
+                        loop_owners[wire].insert(faces[use_.face].clone());
                         for coedge in &self.loops[wire].coedges {
                             edge_owners[coedge.edge].insert(key.clone());
                             for &vertex in &self.edges[coedge.edge].vertices {
