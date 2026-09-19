@@ -17,12 +17,11 @@ metrics. Mesh volume and area depend on display sampling. The report never
 asserts a deviation certificate, geometry qualification or production availability.
 
 The Node API is `createBrepDiagnosticSupervisor()` from
-`src/mcp/brepDiagnosticSupervisor.ts`. The browser API is
-`createBrepDiagnosticWorkerLane()` from
-`src/services/brepDiagnosticWorkerLane.ts`. Both expose
+`src/mcp/brepDiagnosticSupervisor.ts`. It exposes
 `evaluate(source, {quality, segments}, {signal, deadlineMs})`. Each successful
 receipt retains the normalized program JSON and native B-rep snapshots in its
-scene. Callers must handle typed refusals; there is no geometry fallback.
+scene. Callers must handle typed refusals; there is no geometry fallback. The
+former browser worker lane was removed after confirming it had no importers.
 
 Source must explicitly declare `// @language openscad-viewer/brep-1`. Capability
 declarations using `@requires` are refused because this lane cannot attest a
