@@ -5,13 +5,17 @@ use crate::tessellation::FillMesh;
 use crate::{Result, check};
 use math_core::{cross2, sub2};
 
+const MAX_VERTICES: usize = 4096;
+const MAX_WORK: usize = 8_000_000;
+
 pub fn triangulate_profile(outer: &[[f64; 2]], holes: &[Vec<[f64; 2]>]) -> Result<FillMesh> {
     check(
         outer.len() >= 3 && holes.iter().all(|h| h.len() >= 3),
         "Profile rings need at least three vertices",
     )?;
+    let vertex_count = outer.len() + holes.iter().map(Vec::len).sum::<usize>();
     check(
-        outer.len() + holes.iter().map(Vec::len).sum::<usize>() <= 2048,
+        vertex_count.saturating_add(holes.len().saturating_mul(2)) <= MAX_VERTICES,
         "Profile triangulation budget exceeded",
     )?;
     check(
@@ -32,6 +36,7 @@ pub fn triangulate_profile(outer: &[[f64; 2]], holes: &[Vec<[f64; 2]>]) -> Resul
         ring.reverse()
     }
     let point = |m: &FillMesh, i: usize| m.positions[i];
+    let mut work = 0;
     let mut ordered_holes = holes.to_vec();
     ordered_holes.sort_by(|a, b| {
         a.iter()
@@ -52,60 +57,83 @@ pub fn triangulate_profile(outer: &[[f64; 2]], holes: &[Vec<[f64; 2]>]) -> Resul
             .unwrap();
         h.rotate_left(start);
         let hp = h[0];
-        let mut options: Vec<_> = (0..ring.len()).collect();
-        options.sort_by(|&i, &j| {
-            let a = point(&m, ring[i]);
-            let b = point(&m, ring[j]);
-            (a[0] - hp[0])
-                .hypot(a[1] - hp[1])
-                .total_cmp(&(b[0] - hp[0]).hypot(b[1] - hp[1]))
-        });
+        let mut options: Vec<_> = ring
+            .iter()
+            .enumerate()
+            .map(|(i, &id)| {
+                let p = point(&m, id);
+                ((p[0] - hp[0]).hypot(p[1] - hp[1]), i)
+            })
+            .collect();
+        options.sort_by(|a, b| a.0.total_cmp(&b.0));
         let current_boundary: Vec<_> = ring.iter().map(|&i| point(&m, i)).collect();
-        let index = options
-            .into_iter()
-            .find(|&i| {
-                let p = point(&m, ring[i]);
-                let d = sub2(hp, p);
-                let midpoint = [(p[0] + hp[0]) / 2., (p[1] + hp[1]) / 2.];
-                if !crate::rings::contains_point(midpoint, outer)
-                    || holes
-                        .iter()
-                        .any(|hole| crate::rings::contains_point(midpoint, hole))
-                {
-                    return false;
-                }
-                for boundary in std::iter::once(outer)
-                    .chain(holes.iter().map(Vec::as_slice))
-                    .chain(std::iter::once(current_boundary.as_slice()))
-                {
-                    for k in 0..boundary.len() {
-                        let a = boundary[k];
-                        let b = boundary[(k + 1) % boundary.len()];
-                        let e = sub2(b, a);
-                        let den = cross2(d, e);
-                        if den.abs() > 1e-14 {
-                            let t = cross2(sub2(a, p), e) / den;
-                            let u = cross2(sub2(a, p), d) / den;
-                            if t > 1e-10 && t < 1. - 1e-10 && u >= -1e-10 && u <= 1. + 1e-10 {
-                                return false;
-                            }
-                        } else if cross2(sub2(a, p), d).abs() <= 1e-14 {
-                            // A bridge may touch its endpoints, but must not run
-                            // along a hole edge or an earlier bridge corridor.
-                            let length_squared = d[0] * d[0] + d[1] * d[1];
-                            let parameter = |q: [f64; 2]| {
-                                ((q[0] - p[0]) * d[0] + (q[1] - p[1]) * d[1]) / length_squared
-                            };
-                            let (ta, tb) = (parameter(a), parameter(b));
-                            if ta.min(tb).max(0.) < ta.max(tb).min(1.) - 1e-10 {
-                                return false;
-                            }
+        let index = options.into_iter().map(|(_, i)| i).find(|&i| {
+            let p = point(&m, ring[i]);
+            let d = sub2(hp, p);
+            // A bridge endpoint may occur in several sectors of the stitched
+            // boundary. Visibility alone cannot select the correct occurrence.
+            let prev = sub2(point(&m, ring[(i + ring.len() - 1) % ring.len()]), p);
+            let next = sub2(point(&m, ring[(i + 1) % ring.len()]), p);
+            let after_next = cross2(next, d);
+            let before_prev = cross2(d, prev);
+            let inside = if cross2(next, prev) > 0. {
+                after_next >= 0. && before_prev >= 0.
+            } else {
+                after_next > 0. || before_prev > 0.
+            };
+            if !inside {
+                return false;
+            }
+            // Charge both point containment and boundary visibility scans
+            // conservatively before traversing them, including early exits.
+            work += 2 * vertex_count + current_boundary.len();
+            if work > MAX_WORK {
+                return false;
+            }
+            let midpoint = [(p[0] + hp[0]) / 2., (p[1] + hp[1]) / 2.];
+            if !crate::rings::contains_point(midpoint, outer)
+                || holes
+                    .iter()
+                    .any(|hole| crate::rings::contains_point(midpoint, hole))
+            {
+                return false;
+            }
+            for boundary in std::iter::once(outer)
+                .chain(holes.iter().map(Vec::as_slice))
+                .chain(std::iter::once(current_boundary.as_slice()))
+            {
+                for k in 0..boundary.len() {
+                    let a = boundary[k];
+                    let b = boundary[(k + 1) % boundary.len()];
+                    let e = sub2(b, a);
+                    let den = cross2(d, e);
+                    if den.abs() > 1e-14 {
+                        let t = cross2(sub2(a, p), e) / den;
+                        let u = cross2(sub2(a, p), d) / den;
+                        if t > 1e-10 && t < 1. - 1e-10 && u >= -1e-10 && u <= 1. + 1e-10 {
+                            return false;
+                        }
+                    } else if cross2(sub2(a, p), d).abs() <= 1e-14 {
+                        // A bridge may touch its endpoints, but must not run
+                        // along a hole edge or an earlier bridge corridor.
+                        let length_squared = d[0] * d[0] + d[1] * d[1];
+                        let parameter = |q: [f64; 2]| {
+                            ((q[0] - p[0]) * d[0] + (q[1] - p[1]) * d[1]) / length_squared
+                        };
+                        let (ta, tb) = (parameter(a), parameter(b));
+                        if ta.min(tb).max(0.) < ta.max(tb).min(1.) - 1e-10 {
+                            return false;
                         }
                     }
                 }
-                true
-            })
-            .ok_or_else(|| crate::error("No visible bridge for profile hole"))?;
+            }
+            true
+        });
+        check(
+            work <= MAX_WORK,
+            "Profile triangulation work budget exceeded",
+        )?;
+        let index = index.ok_or_else(|| crate::error("No visible bridge for profile hole"))?;
         let mut ids = Vec::new();
         for p in h {
             ids.push(m.positions.len());
@@ -115,54 +143,95 @@ pub fn triangulate_profile(outer: &[[f64; 2]], holes: &[Vec<[f64; 2]>]) -> Resul
         ids.push(ring[index]);
         ring.splice(index + 1..index + 1, ids);
     }
-    check(ring.len() <= 2048, "Profile triangulation budget exceeded")?;
-    let mut remaining = ring;
+    m.indices = clip_ears(&m.positions, &ring, &mut work)?;
+    Ok(m)
+}
+
+fn clip_ears(positions: &[[f64; 2]], ring: &[usize], work: &mut usize) -> Result<Vec<u32>> {
+    let mut remaining = ring.to_vec();
+    let mut indices = Vec::with_capacity((ring.len() - 2) * 3);
+    // Keep scans contiguous, but do not revisit the same rejected prefix after
+    // every removal. Benchmarked against indexed linked-list traversal.
+    let mut cursor = 0;
     let eps = 1e-12;
     while remaining.len() > 3 {
         let n = remaining.len();
-        let mut ear = None;
-        for i in 0..n {
-            let a = remaining[(i + n - 1) % n];
-            let b = remaining[i];
-            let c = remaining[(i + 1) % n];
-            let pa = point(&m, a);
-            let pb = point(&m, b);
-            let pc = point(&m, c);
+        let mut selected = None;
+        for offset in 0..n {
+            let i = (cursor + offset) % n;
+            *work += 1;
+            check(
+                *work <= MAX_WORK,
+                "Profile triangulation work budget exceeded",
+            )?;
+            let (a, b, c) = (
+                remaining[(i + n - 1) % n],
+                remaining[i],
+                remaining[(i + 1) % n],
+            );
+            let (pa, pb, pc) = (positions[a], positions[b], positions[c]);
             if cross2(sub2(pb, pa), sub2(pc, pb)) <= eps {
                 continue;
             }
+            let min = [pa[0].min(pb[0]).min(pc[0]), pa[1].min(pb[1]).min(pc[1])];
+            let max = [pa[0].max(pb[0]).max(pc[0]), pa[1].max(pb[1]).max(pc[1])];
             let blocked = remaining.iter().any(|&v| {
-                let p = point(&m, v);
-                if p == pa || p == pb || p == pc {
-                    return false;
-                }
-                cross2(sub2(pb, pa), sub2(p, pa)) >= -eps
+                *work += 1;
+                let p = positions[v];
+                p != pa
+                    && p != pb
+                    && p != pc
+                    && p[0] >= min[0]
+                    && p[0] <= max[0]
+                    && p[1] >= min[1]
+                    && p[1] <= max[1]
+                    && cross2(sub2(pb, pa), sub2(p, pa)) >= -eps
                     && cross2(sub2(pc, pb), sub2(p, pb)) >= -eps
                     && cross2(sub2(pa, pc), sub2(p, pc)) >= -eps
             });
+            check(
+                *work <= MAX_WORK,
+                "Profile triangulation work budget exceeded",
+            )?;
             if !blocked {
-                ear = Some((i, [a, b, c]));
+                selected = Some((i, [a as u32, b as u32, c as u32]));
                 break;
             }
         }
-        if let Some((i, t)) = ear {
-            m.indices.extend(t.map(|i| i as u32));
-            remaining.remove(i);
-        } else {
-            return Err(crate::error(
-                "Profile cannot be triangulated without crossing its boundary",
-            ));
-        }
+        let (index, triangle) = selected.ok_or_else(|| {
+            crate::error("Profile cannot be triangulated without crossing its boundary")
+        })?;
+        indices.extend(triangle);
+        remaining.remove(index);
+        cursor = index % remaining.len();
     }
-    if remaining.len() == 3 {
-        m.indices.extend(remaining.into_iter().map(|i| i as u32))
-    }
-    Ok(m)
+    let (a, b, c) = (
+        positions[remaining[0]],
+        positions[remaining[1]],
+        positions[remaining[2]],
+    );
+    let final_area = cross2(sub2(b, a), sub2(c, a));
+    check(
+        final_area.is_finite() && final_area > 0.,
+        "Profile has a degenerate final triangle",
+    )?;
+    indices.extend(remaining.into_iter().map(|i| i as u32));
+    Ok(indices)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn ear_clipping_stops_at_the_work_budget() {
+        let points = [[0., 0.], [1., 0.], [1., 1.], [0., 1.]];
+        let mut work = MAX_WORK;
+        assert!(
+            clip_ears(&points, &[0, 1, 2, 3], &mut work)
+                .unwrap_err()
+                .contains("work budget")
+        );
+    }
     #[test]
     fn concave_caps_with_holes_preserve_area_in_all_orientations() {
         let outer = [[0., 0.], [5., 0.], [5., 2.], [3., 2.], [3., 5.], [0., 5.]];

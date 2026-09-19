@@ -6,6 +6,7 @@ import {
   GeometryLanguageContractError,
 } from '../services/geometryBuildEngine'
 import { AbortedError, OpenSCADParseError } from '../services/openscadParser'
+import { isExactSolidRequest } from '../services/solid/exactSolidProtocol'
 import { meshTransferables } from '../core/mesh'
 import type { GeometryExecutionDescriptor } from '../core/geometryExecution'
 import {
@@ -33,6 +34,7 @@ let latestDocumentRevision = -1
 // A bounded high-water tombstone prevents both active and post-terminal replay
 // without retaining an unbounded set of completed jobs for the Worker lifetime.
 let highestAcceptedJobId = -1
+let exactJobStarted = false
 
 const UNPUBLISHABLE_RESULT_ERROR = Object.freeze({
   name: 'GeometryWorkerProtocolError',
@@ -315,6 +317,21 @@ function cancelBuild(request: Extract<GeometryWorkerRequest, { type: 'cancel' }>
 }
 
 self.addEventListener('message', (event: MessageEvent<unknown>) => {
+  if (exactJobStarted) return
+  // Exact Solid clients own a disposable instance of this same worker entry.
+  // Their JSON result is separate from the display protocol and has no handles.
+  if (event.data && typeof event.data === 'object' && 'kind' in event.data && event.data.kind === 'exact-solid') {
+    if (highestAcceptedJobId !== -1 || !isExactSolidRequest(event.data)) return
+    exactJobStarted = true
+    void import('../services/solid/exactSolidRuntime')
+      .then(({ runExactSolidRequest }) => runExactSolidRequest(event.data))
+      .then(response => self.postMessage(response))
+      .catch(() => self.postMessage({
+        kind: 'exact-solid', version: 1, ok: false,
+        error: { name: 'Error', message: 'Could not load exact-solid processing.' },
+      }))
+    return
+  }
   // Validation happens before any lifecycle state changes, so a malformed ID
   // cannot poison later work. Every accepted build reaches an explicit
   // succeeded/failed/stale/cancelled terminal unless the worker is replaced.

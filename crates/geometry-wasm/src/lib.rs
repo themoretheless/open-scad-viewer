@@ -179,9 +179,20 @@ pub extern "C" fn abi_render_mesh(id: u32, crease_cosine: f64) -> u64 {
     geometry_bridge::abi::abi_render_mesh(id, crease_cosine)
 }
 
+/// Display mesh, BVH and semantic edges from the same retained solid.
+#[unsafe(no_mangle)]
+pub extern "C" fn abi_analyze_solid(
+    id: u32,
+    normal_cosine: f64,
+    edge_cosine: f64,
+    leaf: usize,
+) -> u64 {
+    geometry_bridge::abi::abi_analyze_solid(id, normal_cosine, edge_cosine, leaf)
+}
+
 /// # Safety
 /// The handle must reference a live result from `abi_bvh_build`,
-/// `abi_semantic_edges` or `abi_render_mesh`.
+/// `abi_semantic_edges`, `abi_render_mesh` or `abi_analyze_solid`.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn abi_array_field(handle: usize, slot: u32) -> usize {
     unsafe { geometry_bridge::abi::abi_array_field(handle, slot) }

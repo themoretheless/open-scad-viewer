@@ -129,6 +129,19 @@ afterEach(() => {
 })
 
 describe('geometry Worker lifecycle', () => {
+  it('does not let a malformed exact-solid request consume a display worker', async () => {
+    parseOpenSCADMock.mockResolvedValue(identityResult({ entityId: 'entity:box', operationId: 'op:box', instanceId: 'entity:box' }))
+    const scope = new FakeWorkerScope()
+    vi.stubGlobal('self', scope)
+    await import('../src/workers/geometry.worker')
+    scope.dispatchMessage({ kind: 'exact-solid', version: 2, source: 'cube(1);' } as unknown as GeometryWorkerRequest)
+    const source = 'cube(1);'
+    scope.dispatchMessage({ protocolVersion: GEOMETRY_WORKER_PROTOCOL_VERSION,
+      type: 'build', documentRevision: 1, jobId: 1, source, sourceSha256: sha256Hex(source), quality: 'full' })
+    await vi.waitFor(() => expect(scope.events.at(-1)?.status).toBe('succeeded'))
+    expect(parseOpenSCADMock).toHaveBeenCalledOnce()
+  })
+
   it('publishes exact 256-code-unit entity, operation, and instance identities', async () => {
     const identities = {
       entityId: identity('entity:', 256),

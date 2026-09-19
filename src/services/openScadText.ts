@@ -268,19 +268,8 @@ function textError(
 async function loadHarfBuzz(): Promise<HarfBuzzApi> {
   if (!harfBuzzPromise) {
     const attempt = (async () => {
-      const [
-        { default: createHarfBuzzModule },
-        { default: bindHarfBuzz },
-        { default: wasmBase64 },
-        { unpackBrotliWasmBase64 },
-      ] = await Promise.all([
-        import('harfbuzzjs/hb.js'),
-        import('harfbuzzjs/hbjs.js'),
-        import('../generated/harfbuzz/bytes'),
-        import('./wasmBrotliPacking'),
-      ])
-      const module = await createHarfBuzzModule({wasmBinary: unpackBrotliWasmBase64(wasmBase64)})
-      return bindHarfBuzz(module) as HarfBuzzApi
+      const { createTextRuntime } = await import('./openScadTextRuntime')
+      return await createTextRuntime() as HarfBuzzApi
     })()
       .catch(error => textError(
         'E_TEXT_RUNTIME_UNAVAILABLE',

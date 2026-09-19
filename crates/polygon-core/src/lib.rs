@@ -19,6 +19,7 @@
 pub mod appearance;
 pub mod gradient_mesh;
 pub mod mesh_export;
+mod mesh_topology;
 pub mod model_3mf;
 pub mod package_3mf;
 pub mod scene_flatten;
@@ -427,18 +428,10 @@ impl Mesh {
             self.positions[3 * index + 2],
         ])
     }
-    fn edges(&self) -> BTreeMap<(usize, usize), Vec<[usize; 2]>> {
-        let mut edges = BTreeMap::<_, Vec<_>>::new();
-        for t in self.indices.as_chunks::<3>().0 {
-            for k in 0..3 {
-                let a = t[k];
-                let b = t[(k + 1) % 3];
-                edges.entry((a.min(b), a.max(b))).or_default().push([a, b]);
-            }
-        }
-        edges
-    }
     pub fn inspect(&self) -> Result<Report> {
+        self.inspect_with_edges().map(|(report, _)| report)
+    }
+    fn inspect_with_edges(&self) -> Result<(Report, mesh_topology::EdgeUses)> {
         self.validate()?;
         let reference = if self.positions.is_empty() {
             [0.; 3]
@@ -471,40 +464,42 @@ impl Mesh {
             volume.is_finite(),
             "Mesh volume exceeded finite numeric bounds.",
         )?;
-        let edges = self.edges();
-        let boundary = edges.values().filter(|u| u.len() == 1).count();
-        let non_manifold = edges.values().filter(|u| u.len() > 2).count();
-        let orientation = edges
-            .values()
-            .filter(|u| u.len() == 2 && u[0][0] == u[1][0])
-            .count();
-        Ok(Report {
-            boolean: None,
-            triangle_count: self.indices.len() / 3,
-            vertex_count: self.positions.len() / 3,
-            boundary_edges: boundary,
-            non_manifold_edges: non_manifold,
-            orientation_conflicts: orientation,
-            degenerate_triangles: degenerate,
-            closed: !self.indices.is_empty()
-                && boundary == 0
-                && non_manifold == 0
-                && orientation == 0
-                && degenerate == 0,
-            signed_volume_mm3: volume / 6.,
-            error_bound_certified: false,
-            self_intersection_status: "not_checked".into(),
-            construction: Construction::TriangleMesh,
-            uv_area: None,
-            sampled_deviation_mm: None,
-            parameter_seams_welded: None,
-            collapsed_boundary_count: None,
-        })
+        let edges = mesh_topology::EdgeUses::new(&self.indices);
+        let mesh_topology::EdgeCounts {
+            boundary,
+            non_manifold,
+            orientation,
+        } = edges.counts();
+        Ok((
+            Report {
+                boolean: None,
+                triangle_count: self.indices.len() / 3,
+                vertex_count: self.positions.len() / 3,
+                boundary_edges: boundary,
+                non_manifold_edges: non_manifold,
+                orientation_conflicts: orientation,
+                degenerate_triangles: degenerate,
+                closed: !self.indices.is_empty()
+                    && boundary == 0
+                    && non_manifold == 0
+                    && orientation == 0
+                    && degenerate == 0,
+                signed_volume_mm3: volume / 6.,
+                error_bound_certified: false,
+                self_intersection_status: "not_checked".into(),
+                construction: Construction::TriangleMesh,
+                uv_area: None,
+                sampled_deviation_mm: None,
+                parameter_seams_welded: None,
+                collapsed_boundary_count: None,
+            },
+            edges,
+        ))
     }
     /// Ordered boundary loops, each repeating its first vertex at the end.
     /// Ambiguous nonmanifold/branching boundaries are rejected, not guessed.
     pub fn boundary_loops(&self) -> Result<Vec<Vec<usize>>> {
-        let report = self.inspect()?;
+        let (report, edges) = self.inspect_with_edges()?;
         check(
             report.non_manifold_edges == 0
                 && report.orientation_conflicts == 0
@@ -513,13 +508,13 @@ impl Mesh {
         )?;
         let mut next = BTreeMap::new();
         let mut incoming = BTreeSet::new();
-        for uses in self.edges().values().filter(|u| u.len() == 1) {
-            let [a, b] = uses[0];
+        for [a, b] in edges.boundary() {
             check(
                 next.insert(a, b).is_none() && incoming.insert(b),
                 "Boundary loops branch at a vertex.",
             )?;
         }
+        drop(edges);
         check(
             next.keys().all(|k| incoming.contains(k)),
             "Boundary chain does not close.",
@@ -580,7 +575,7 @@ impl Mesh {
             vector.iter().all(|v| v.is_finite()) && norm(vector) > 0.,
             "Thickening vector must be finite and nonzero.",
         )?;
-        let source = self.inspect()?;
+        let (source, edges) = self.inspect_with_edges()?;
         check(
             source.non_manifold_edges == 0
                 && source.orientation_conflicts == 0
@@ -605,10 +600,10 @@ impl Mesh {
             let [a, b, c] = [t[0], t[1], t[2]];
             indices.extend([a, c, b, a + count, b + count, c + count]);
         }
-        for uses in self.edges().values().filter(|u| u.len() == 1) {
-            let [a, b] = uses[0];
+        for [a, b] in edges.boundary() {
             indices.extend([a, b, b + count, a, b + count, a + count]);
         }
+        drop(edges);
         // New wall vertices are not samples of the original surface: drop UVs.
         let mut mesh = Self {
             positions,

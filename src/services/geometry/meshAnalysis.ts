@@ -5,7 +5,7 @@
  * buffers (they must survive memory.grow and worker transfers), then the
  * handle is released. Validation and error contracts stay with the callers.
  */
-import type {MeshTopologyDiagnostics} from '../../core/mesh'
+import type {MeshBvh, MeshTopologyDiagnostics} from '../../core/mesh'
 import {GeometryKernelError, decodeNurbsResult, kernelRuntime} from './kernel'
 
 export interface KernelBvhResult {
@@ -146,6 +146,58 @@ export interface KernelRenderMesh {
   readonly faceIds: Uint32Array<ArrayBuffer>
 }
 
+function copyRenderMesh(wasm: ReturnType<typeof kernelRuntime>['exports'], buffer: ArrayBuffer, handle: number): KernelRenderMesh {
+  const u32 = (slot: number) => new Uint32Array(new Uint32Array(buffer, wasm.abi_array_field(handle, slot), wasm.abi_array_field(handle, slot + 1)))
+  return {
+    vertices: new Float32Array(new Float32Array(buffer, wasm.abi_array_field(handle, 0), wasm.abi_array_field(handle, 1))),
+    indices: u32(2),
+    mergeFrom: u32(4),
+    mergeTo: u32(6),
+    faceIds: u32(8),
+  }
+}
+
+export interface KernelSolidAnalysis {
+  readonly mesh: KernelRenderMesh
+  readonly bvh: MeshBvh
+  readonly semanticEdges: KernelSemanticEdgesResult
+}
+
+/** One retained-solid call, no uploads; all returned arrays are exclusive host copies. */
+export function analyzeSolidInKernel(id: number): KernelSolidAnalysis {
+  if (!Number.isInteger(id) || id < 1 || id > 0xffffffff) throw new GeometryKernelError('GEOMETRY_INVALID_INPUT', 'Invalid CAD handle')
+  const {exports: wasm, memory, takeResponse} = kernelRuntime()
+  const leafSize = 8
+  let handle = 0
+  try {
+    handle = decodeNurbsResult<number>(takeResponse(wasm.abi_analyze_solid(
+      id, Math.cos(52.5 * Math.PI / 180), Math.cos(30 * Math.PI / 180), leafSize,
+    )))
+    const buffer = memory.buffer
+    const u32 = (slot: number) => new Uint32Array(new Uint32Array(buffer, wasm.abi_array_field(handle, slot), wasm.abi_array_field(handle, slot + 1)))
+    const nodes = u32(12)
+    return {
+      mesh: copyRenderMesh(wasm, buffer, handle),
+      bvh: {
+        version: 1, vertexStride: 6, leafSize, nodeCount: nodes.length / 2,
+        bounds: new Float32Array(new Float32Array(buffer, wasm.abi_array_field(handle, 10), wasm.abi_array_field(handle, 11))),
+        nodes, triangles: u32(14),
+      },
+      semanticEdges: {
+        indices: u32(16),
+        diagnostics: {
+          boundary: wasm.abi_array_field(handle, 18),
+          crease: wasm.abi_array_field(handle, 19),
+          nonManifold: wasm.abi_array_field(handle, 20),
+          degenerate: wasm.abi_array_field(handle, 21),
+        },
+      },
+    }
+  } finally {
+    if (handle) wasm.abi_array_free(handle)
+  }
+}
+
 /**
  * Build the display mesh of a retained solid inside the kernel: crease-split
  * vertex normals, merge pairs and face ids in one call, copied out once. No
@@ -163,14 +215,7 @@ export function renderMeshInKernel(id: number, creaseCosine: number): KernelRend
     // Constructing from the linear-memory view copies into a fresh exclusive
     // ArrayBuffer, which the Worker protocol requires for transfer.
     const buffer = memory.buffer
-    const u32 = (slot: number) => new Uint32Array(new Uint32Array(buffer, wasm.abi_array_field(handle, slot), wasm.abi_array_field(handle, slot + 1)))
-    return {
-      vertices: new Float32Array(new Float32Array(buffer, wasm.abi_array_field(handle, 0), wasm.abi_array_field(handle, 1))),
-      indices: u32(2),
-      mergeFrom: u32(4),
-      mergeTo: u32(6),
-      faceIds: u32(8),
-    }
+    return copyRenderMesh(wasm, buffer, handle)
   } finally {
     if (handle) wasm.abi_array_free(handle)
   }

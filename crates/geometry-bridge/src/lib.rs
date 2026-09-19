@@ -60,6 +60,7 @@ pub mod lattice_gpu;
 #[cfg(feature = "cuda")]
 mod lattice_cuda;
 mod mesh;
+mod mesh_render;
 pub mod mesh_analysis;
 mod mesh_export_file;
 pub mod mesh_picking;

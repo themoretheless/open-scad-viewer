@@ -187,7 +187,7 @@ describe('CadGeometryKernel lifecycle', () => {
         const result = await parseOpenSCAD(source)
         expect(result.volume).toBeCloseTo(8)
         expect(result.meshes[0].vertices.every(Number.isFinite)).toBe(true)
-        expect(normals).toHaveBeenCalled()
+        expect(normals).not.toHaveBeenCalled()
       } else if (outcome === 'failure') {
         await expect(parseOpenSCAD(`${source} assert(false, "stop");`)).rejects.toThrow('stop')
       } else {

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { executeBrepNativeProgram, type BrepNativeOutput } from '../src/services/brepNativeExecutor'
 import { BrepSemanticBackendError } from '../src/services/brepSemanticErrors'
-import { analyzeNurbsBrep, tessellateNurbsBrep } from '../src/services/geometry/brep'
+import { analyzeNurbsBrep, inspectNurbsBrep, tessellateNurbsBrep } from '../src/services/geometry/brep'
 import { lowerOpenSCADToSemanticProgram } from '../src/services/semanticProgramLowerer'
 import type { SemanticExecutionControl } from '../src/services/semanticProgramExecutor'
 
@@ -98,12 +98,42 @@ describe('analytic B-rep native program execution', () => {
         backendCause: { code: 'E_BREP_SEMANTIC_UNSUPPORTED' },
       })
     }
-    await expect(execute('intersection(){sphere(2);translate([1,0,0]) sphere(2);}'))
-      .rejects.toMatchObject({ code: 'E_SEMANTIC_BACKEND_FAILURE', backendCause: { kernelCause: expect.any(Error) } })
     await expect(executeBrepNativeProgram(lowerOpenSCADToSemanticProgram('cube(1);')))
       .rejects.toMatchObject({ code: 'E_SEMANTIC_BACKEND_BEGIN', backendCause: { code: 'E_BREP_SEMANTIC_UNSUPPORTED' } })
     const valid = await execute('cube(1);')
     await valid.dispose()
+  })
+
+  it('authors an overlapping sphere lens as rational surfaces with the analytic volume', async () => {
+    const result = await execute('intersection(){sphere(2);translate([1,0,0]) sphere(2);}')
+    try {
+      expect(result.outputs).toHaveLength(1)
+      const model = solid(result.outputs[0])
+      expect(result.outputs[0].value.valueType.evidence).toEqual({ tag: 'representation-preserving' })
+      expect(inspectNurbsBrep(model)).toMatchObject({ topologyValid: true, bodyCount: 1, boundaryEdgeCount: 0, solidGeometryStatus: 'not_certified' })
+      expect(model.faces).toHaveLength(8)
+      expect(model.faces.every(face => face.surface.degreeU === 2 && face.surface.degreeV === 2)).toBe(true)
+      expect(model.faces.some(face => face.surface.weights.some(row => row.some(weight => weight !== 1)))).toBe(true)
+      // Two equal spherical caps, each with radius 2 and height 1.5.
+      const expectedVolume = 2 * Math.PI * 1.5 ** 2 * (2 - 1.5 / 3)
+      const mass = analyzeNurbsBrep(model)
+      expect(mass.signedVolumeMm3).toBeCloseTo(expectedVolume, 7)
+      expect(mass.centroid[0]).toBeCloseTo(0.5, 8)
+      expect(mass.centroid[1]).toBeCloseTo(0, 8)
+      expect(mass.centroid[2]).toBeCloseTo(0, 8)
+      let previous = 0
+      for (const detail of [1, 2, 4]) {
+        const mesh = tessellateNurbsBrep(model, detail)
+        expect(mesh.report).toMatchObject({ closed: true, nonManifoldEdges: 0, orientationConflicts: 0, degenerateTriangles: 0 })
+        expect(mesh.report.signedVolumeMm3).toBeGreaterThan(previous)
+        expect(mesh.report.signedVolumeMm3).toBeLessThan(expectedVolume)
+        previous = mesh.report.signedVolumeMm3
+      }
+      const restored = JSON.parse(JSON.stringify(model))
+      expect(inspectNurbsBrep(restored).topologyValid).toBe(true)
+      expect(analyzeNurbsBrep(restored).signedVolumeMm3).toBeCloseTo(expectedVolume, 7)
+    } finally { await result.dispose() }
+    expect(result.disposed).toBe(true)
   })
 
   it('aborts between native graph steps and preserves unrelated committed snapshots', async () => {

@@ -1,4 +1,5 @@
 import { tessellateBrepGear, type BrepGearSpec } from './geometry/brep'
+import { analyzeSolidInKernel, type KernelSolidAnalysis } from './geometry/meshAnalysis'
 import Module, {
   type CrossSection,
   type ErrorStatus,
@@ -42,6 +43,8 @@ export interface CadKernelSolidAnalysis {
   readonly volume: number
   readonly surfaceArea: number
   readonly mesh: CadKernelMesh
+  readonly bvh: KernelSolidAnalysis['bvh']
+  readonly semanticEdges: KernelSolidAnalysis['semanticEdges']
 }
 
 export interface CadKernelOps {
@@ -421,33 +424,26 @@ export function createCadKernelOps(
       const solid = geometry3(input)
       const volume = solid.volume()
       const surfaceArea = solid.surfaceArea()
-      const normalized = handle(3, solid.calculateNormals(0, 52.5))
-      try {
-        // getMesh() returns arrays the kernel copied out for this call only;
-        // they are owned here and may be published or transferred as they are.
-        const mesh = geometry3(normalized).getMesh()
-        return Object.freeze({
-          volume,
-          surfaceArea,
-          mesh: Object.freeze({
-            numProp: mesh.numProp,
-            numTri: mesh.numTri,
-            numVert: mesh.numVert,
-            vertProperties: mesh.vertProperties,
-            triVerts: mesh.triVerts,
-            mergeFromVert: mesh.mergeFromVert,
-            mergeToVert: mesh.mergeToVert,
-            runIndex: mesh.runIndex,
-            runOriginalID: mesh.runOriginalID,
-            runFlags: mesh.runFlags,
-            faceID: mesh.faceID,
-          }),
-        })
-      } finally {
-        const owned = ownedHandle(normalized, 3)
-        owned.deleted = true
-        owned.geometry.delete()
-      }
+      const { mesh, bvh, semanticEdges } = analyzeSolidInKernel(solid.handle)
+      return Object.freeze({
+        volume,
+        surfaceArea,
+        bvh,
+        semanticEdges,
+        mesh: Object.freeze({
+          numProp: 6,
+          numTri: mesh.indices.length / 3,
+          numVert: mesh.vertices.length / 6,
+          vertProperties: mesh.vertices,
+          triVerts: mesh.indices,
+          mergeFromVert: mesh.mergeFrom,
+          mergeToVert: mesh.mergeTo,
+          runIndex: new Uint32Array([0, mesh.indices.length]),
+          runOriginalID: new Uint32Array([solid.originalID()]),
+          runFlags: new Uint8Array([0]),
+          faceID: mesh.faceIds,
+        }),
+      })
     },
     delete(input) {
       const owned = ownedHandle(input)

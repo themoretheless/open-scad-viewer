@@ -68,10 +68,9 @@ fn pairwise(op: Operation) -> impl FnMut(&Mesh, &Mesh) -> polygon_core::Result<M
 }
 
 fn main() -> rbench::Result<()> {
-    // 36 holes on a 6x6 grid: the largest drilled plate the current planar
-    // triangulation accepts on the prism path. 64 holes exceed its 2,048-vertex
-    // budget and the BSP fallback then exhausts the stitch budget
-    // (csg-scaling-2026-09-19.md); raise this once the triangulation is replaced.
+    // Preserve the historical 36-hole workload for comparisons. Expanded
+    // 64/100-hole profiles are covered by bench_profile_triangulation and the
+    // production OpenSCAD CSG scaling benchmark.
     let plate = cube([86., 86., 8.], true).unwrap();
     let holes = hole_cutters(36, 32);
     let hole_area = 16. * (std::f64::consts::PI / 16.).sin() * 9.;

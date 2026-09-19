@@ -58,7 +58,7 @@ describe('own NURBS through the MCP protocol', () => {
 
   it('discovers the own-kernel tools and provides a language resource with precise export limits', async () => {
     const listed = await request('tools/list') as { tools: Array<{ name: string; annotations: { readOnlyHint: boolean } }> }
-    expect(listed.tools.map(tool => tool.name).sort()).toEqual(['modelgraph_nurbs_build', 'modelgraph_nurbs_compile', 'modelgraph_nurbs_evaluate', 'modelgraph_nurbs_export', 'modelgraph_nurbs_language'])
+    expect(listed.tools.map(tool => tool.name).sort()).toEqual(['modelgraph_nurbs_build', 'modelgraph_nurbs_compile', 'modelgraph_nurbs_evaluate', 'modelgraph_nurbs_export', 'modelgraph_nurbs_intersect', 'modelgraph_nurbs_language'])
     expect(listed.tools.every(tool => tool.annotations.readOnlyHint)).toBe(true)
     const resources = await request('resources/list') as { resources: Array<{ uri: string }> }
     expect(resources.resources.map(resource => resource.uri)).toContain('openscad://language/modelgraph-nurbs-1')
@@ -71,6 +71,26 @@ describe('own NURBS through the MCP protocol', () => {
     expect(language.schema.properties.language.const).toBe('modelgraph/nurbs-1')
     const direct = await tool('modelgraph_nurbs_language', {})
     expect(direct.structuredContent).toEqual(language)
+  })
+
+  it('returns intersection evidence without granting topology mutation and recovers after invalid input', async () => {
+    const invalid = await tool('modelgraph_nurbs_intersect', { mode: 'surface_surface', first: {}, second: {} })
+    expect(invalid.isError).toBe(true)
+    expect(invalid.structuredContent).toMatchObject({ error: { code: 'NURBS_REQUEST_FAILED', message: expect.any(String) } })
+    const xy = {
+      degreeU: 1, degreeV: 1, knotsU: [0, 0, 1, 1], knotsV: [0, 0, 1, 1],
+      controlPoints: [[[0, 0, 0], [0, 1, 0]], [[1, 0, 0], [1, 1, 0]]], weights: [[1, 1], [1, 1]],
+    }
+    const xz = { ...xy, controlPoints: [[[0, 0, 0], [0, 0, 1]], [[1, 0, 0], [1, 0, 1]]] }
+    const result = await tool('modelgraph_nurbs_intersect', { mode: 'surface_surface', first: xy, second: xz })
+    expect(result.isError).toBe(false)
+    expect(result.structuredContent).toMatchObject({
+      version: 'nurbs-ss/1', kind: 'surface_surface', coverage: { complete: true },
+      booleanMutationAuthority: false, topologyAuthority: { granted: false },
+      components: expect.arrayContaining([expect.objectContaining({ kind: 'curve' })]),
+      branchGraph: { components: expect.arrayContaining([expect.any(Object)]) },
+    })
+    expect(JSON.parse(result.content.find(item => item.type === 'text')!.text!)).toEqual(result.structuredContent)
   })
 
   it('compiles parameterized control points and evaluates rational coordinates and derivatives', async () => {

@@ -251,6 +251,16 @@ describe('DirectGeometrySupervisor', () => {
     expect(supervisor.snapshot()).toMatchObject({ workersStarted: 2, workersJoined: 2 })
   }, 30_000)
 
+  it('joins a real failed build before admitting a fresh successful worker', async () => {
+    const supervisor = new DirectGeometrySupervisor({ jobDeadlineMs: 10_000, startupTimeoutMs: 5_000 })
+    supervisors.add(supervisor)
+    await expect(supervisor.build('assert(false, "join failure path");', 'full', 'analysis')).rejects.toThrow('join failure path')
+    await expect(supervisor.build('cube(2);', 'full', 'analysis')).resolves.toMatchObject({ result: { volume: 8 } })
+    expect(supervisor.snapshot()).toMatchObject({
+      workersStarted: 2, workersJoined: 2, quarantined: false, admittedJobs: 0,
+    })
+  }, 30_000)
+
   it('runs one disposable worker at a time and joins before settlement or the next FIFO job', async () => {
     const { supervisor, workers } = createHarness()
     const joinGate = deferred<number>()

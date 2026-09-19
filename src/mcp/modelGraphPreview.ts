@@ -1,6 +1,7 @@
 import { deflateSync } from 'node:zlib'
 import type { MeshData } from '../core/mesh'
 const SIZE = 192
+export const MODELGRAPH_PREVIEW_TRIANGLE_LIMIT = 20000
 function crc32(bytes: Uint8Array) {
   let crc = 0xffffffff
   for (const byte of bytes) { crc ^= byte; for (let i = 0; i < 8; i++) crc = (crc >>> 1) ^ (0xedb88320 & -(crc & 1)) }
@@ -21,7 +22,7 @@ type P = [number, number, number]
 /** Orthographic CPU snapshots of actual triangles, independent of a browser/GPU. */
 export function renderModelGraphPreviews(meshes: Pick<MeshData, 'vertices' | 'indices' | 'transform'>[]) {
   const count = meshes.reduce((n, mesh) => n + mesh.indices.length / 3, 0)
-  if (count > 20000) throw new Error('Preview triangle limit (20000) exceeded.')
+  if (count > MODELGRAPH_PREVIEW_TRIANGLE_LIMIT) throw new Error(`Preview triangle limit (${MODELGRAPH_PREVIEW_TRIANGLE_LIMIT}) exceeded.`)
   const triangles: P[][] = []
   for (const mesh of meshes) for (let i = 0; i < mesh.indices.length; i += 3) {
     const t = mesh.transform

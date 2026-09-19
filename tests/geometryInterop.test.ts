@@ -56,3 +56,35 @@ it('clips a curved NURBS-derived solid and conserves its volume', () => {
   expect(inside.report.signedVolumeMm3).toBeCloseTo(100,7)
   expect(inside.report.signedVolumeMm3+outside.report.signedVolumeMm3).toBeCloseTo(a.report.signedVolumeMm3,7)
 })
+
+it('preserves exact indexed inspection diagnostics without welding coordinates', () => {
+  const positions = [0,0,0, 2,0,0, 2,3,0, 0,3,0, 0,0,0]
+  for (const [indices, expected] of [
+    [[], {boundaryEdges:0,nonManifoldEdges:0,orientationConflicts:0,degenerateTriangles:0}],
+    [[0,1,2,0,2,3], {boundaryEdges:4,nonManifoldEdges:0,orientationConflicts:0,degenerateTriangles:0}],
+    [[0,1,2,0,3,2], {boundaryEdges:4,nonManifoldEdges:0,orientationConflicts:1,degenerateTriangles:0}],
+    [[0,1,2,0,3,2,0,2,1], {boundaryEdges:2,nonManifoldEdges:1,orientationConflicts:0,degenerateTriangles:0}],
+    [[0,1,2,4,2,3], {boundaryEdges:6,nonManifoldEdges:0,orientationConflicts:0,degenerateTriangles:0}],
+    [[0,0,1], {boundaryEdges:1,nonManifoldEdges:0,orientationConflicts:0,degenerateTriangles:1}],
+  ] as const) {
+    const report = inspectPolygonMesh({positions,indices:[...indices]})
+    expect(report).toMatchObject({...expected,closed:false,signedVolumeMm3:0,construction:'triangle_mesh',selfIntersectionStatus:'not_checked',errorBoundCertified:false})
+  }
+  const ambiguous = {positions,indices:[0,1,2,4,2,3]}
+  expect(() => polygonBoundaryLoops(ambiguous)).toThrow(/branch/)
+  expect(() => thickenPolygonMesh({positions,indices:[0,1,2,0,3,2]},[0,0,1])).toThrow(/oriented/)
+})
+
+it('keeps canonical boundary and thickening output order through WASM', () => {
+  const mesh = {positions:[0,0,0,2,0,0,2,3,0,0,3,0],indices:[0,1,2,0,2,3]}
+  expect(polygonBoundaryLoops(mesh)).toEqual([[0,1,2,3,0]])
+  expect(polygonBoundaryLoops({...mesh,indices:[0,2,3,0,1,2]})).toEqual([[0,1,2,3,0]])
+  expect(polygonBoundaryLoops({...mesh,indices:[2,1,0,3,2,0]})).toEqual([[0,3,2,1,0]])
+  expect(thickenPolygonMesh(mesh,[0,0,4]).indices).toEqual([
+    0,2,1,4,5,6,0,3,2,4,6,7,
+    0,1,5,0,5,4,3,0,4,3,4,7,
+    1,2,6,1,6,5,2,3,7,2,7,6,
+  ])
+  expect(() => inspectPolygonMesh({...mesh,uv:[0,0]})).toThrow(/Malformed/)
+  expect(() => inspectPolygonMesh({...mesh,indices:[0,1,99]})).toThrow(/Malformed/)
+})

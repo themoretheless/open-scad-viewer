@@ -16,8 +16,6 @@ import {
 } from '../core/semanticProgram'
 import { geometryAssetId } from '../core/scene'
 import { identity } from './math3d'
-import { buildMeshBvh } from './meshBvh'
-import { extractSemanticEdges } from './meshTopology'
 import {
   analyzeManifoldPlanSolid,
   inspectManifoldPlanPayload,
@@ -284,13 +282,7 @@ export async function assembleLegacyV5Result(
       if ((vertex & 0x3fff) === 0x3fff) await yieldForCancellation(options)
     }
     const indices = new Uint32Array(kernelMesh.triVerts)
-    const bvh = buildMeshBvh(vertices, indices)
-    await yieldForCancellation(options)
-    const semanticEdges = extractSemanticEdges(vertices, indices, {
-      creaseAngleDegrees: 30,
-      mergeFromVert: kernelMesh.mergeFromVert,
-      mergeToVert: kernelMesh.mergeToVert,
-    })
+    const { bvh, semanticEdges } = analysis
     await yieldForCancellation(options)
     const view = inspectManifoldPlanPayload(payload)
     const provenance: MeshProvenanceRun[] = []

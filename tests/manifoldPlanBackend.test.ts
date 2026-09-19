@@ -375,6 +375,11 @@ function fakeKernel(options: FakeKernelOptions = {}): {
   const emptyAnalysis: CadKernelSolidAnalysis = {
     volume: 0,
     surfaceArea: 0,
+    bvh: {
+      version: 1, vertexStride: 6, leafSize: 8, nodeCount: 0,
+      bounds: new Float32Array(), nodes: new Uint32Array(), triangles: new Uint32Array(),
+    },
+    semanticEdges: { indices: new Uint32Array(), diagnostics: { boundary: 0, crease: 0, nonManifold: 0, degenerate: 0 } },
     mesh: {
       numProp: 6,
       numTri: 0,

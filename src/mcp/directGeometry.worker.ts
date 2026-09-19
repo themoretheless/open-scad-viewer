@@ -57,6 +57,8 @@ function postTerminal(
   terminal: DirectGeometryTerminal,
   transfer: readonly ArrayBuffer[] = [],
 ): void {
+  // The supervisor owns terminate-and-join. Keep the port alive until then:
+  // natural worker teardown can race terminate() and exceed its join deadline.
   if (terminalPosted) return
   let publishable = terminal
   let publishTransfer = transfer
@@ -79,7 +81,9 @@ function postTerminal(
       }
     }
   } finally {
-    parentPort!.close()
+    // With no deliverable terminal, let exit report a crash instead of leaving
+    // the parent waiting for the full job deadline.
+    if (!terminalPosted) parentPort!.close()
   }
 }
 

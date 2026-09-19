@@ -129,17 +129,15 @@ assert(2 + 2 == 5, "dimension contract failed") unsupported_child();`
     expect(result.meshes[0].color[3]).toBe(1)
   })
 
-  it('subtracts many separated cutters that are taller than the base', async () => {
-    // The drilled-plate idiom: a 6x6 grid of holes at $fn=32 with cutters
-    // longer than the plate. 36 holes take the exact prism arrangement; the
-    // planar triangulation still refuses 64 (docs/design/csg-scaling-2026-09-19.md).
-    const step = 80 / 6
-    const holes = Array.from({ length: 36 }, (_, i) =>
-      `translate([${-40 + step / 2 + (i % 6) * step}, ${-40 + step / 2 + Math.floor(i / 6) * step}, 0]) cylinder(h = 12, r = 3, center = true);`)
+  it.each([16, 36, 64, 100])('subtracts %i separated cutters that are taller than the base', async count => {
+    const side = Math.sqrt(count)
+    const step = 80 / side
+    const holes = Array.from({ length: count }, (_, i) =>
+      `translate([${-40 + step / 2 + (i % side) * step}, ${-40 + step / 2 + Math.floor(i / side) * step}, 0]) cylinder(h = 12, r = 3, center = true);`)
     const result = await parseOpenSCAD(`$fn = 32;\ndifference() {\n  cube([86, 86, 8], center = true);\n  ${holes.join('\n  ')}\n}`)
     const holeArea = 16 * 9 * Math.sin(Math.PI / 16)
     expect(result.meshes).toHaveLength(1)
-    expect(result.volume).toBeCloseTo(86 * 86 * 8 - 36 * holeArea * 8, 3)
+    expect(result.volume).toBeCloseTo(86 * 86 * 8 - count * holeArea * 8, 3)
     expect(result.meshes[0].topology).toMatchObject({ boundary: 0, nonManifold: 0 })
     expect(bounds(result.meshes)).toEqual({ min: [-43, -43, -4], max: [43, 43, 4] })
   })
@@ -156,7 +154,7 @@ assert(2 + 2 == 5, "dimension contract failed") unsupported_child();`
   })
 
   it('unions separated dense bodies above the BSP admission cap without clipping', async () => {
-    const result = await parseOpenSCAD('$fn = 128; union() { sphere(r = 30); translate([70, 0, 0]) sphere(r = 30); translate([140, 0, 0]) sphere(r = 30); }')
+    const result = await parseOpenSCAD('$fn = 128; union() { sphere(r = 30); translate([90, 0, 0]) sphere(r = 30); translate([180, 0, 0]) sphere(r = 30); }')
     const single = await parseOpenSCAD('$fn = 128; sphere(r = 30);')
     expect(result.meshes).toHaveLength(1)
     expect(result.meshes[0].indices.length).toBe(3 * single.meshes[0].indices.length)

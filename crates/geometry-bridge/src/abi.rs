@@ -424,6 +424,18 @@ pub fn abi_render_mesh(id: u32, crease_cosine: f64) -> u64 {
     ))
 }
 
+/// Display mesh, BVH and semantic edges from a retained solid, without host uploads.
+pub fn abi_analyze_solid(id: u32, normal_cosine: f64, edge_cosine: f64, leaf: usize) -> u64 {
+    if !normal_cosine.is_finite() || !edge_cosine.is_finite() || !(1..=64).contains(&leaf) {
+        return packed(geometry(Err(input("Invalid solid analysis parameters"))));
+    }
+    packed(geometry(
+        mesh_analysis::analyze_solid(id, normal_cosine, edge_cosine, leaf)
+            .map(|analysis| mesh_analysis::store(mesh_analysis::AnalysisBuffers::Solid(analysis)))
+            .and_then(encode),
+    ))
+}
+
 /// Read one pointer/length/diagnostic slot of a stored analysis result.
 /// # Safety
 /// The handle must reference a live array result (BVH, edges, placement, or export).

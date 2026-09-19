@@ -9,7 +9,11 @@
     yeet_expr
 )]
 #![allow(unused_features)]
-use nurbs_core::{Error, Result, curve::Curve, surface::Surface};
+use nurbs_core::{
+    Error, Result,
+    curve::Curve,
+    surface::{Surface, SurfaceSampler},
+};
 use std::collections::{BTreeMap, BTreeSet};
 
 pub use brep_topology::{MAX_COEDGES, MAX_ENTITIES, MAX_FACES};
@@ -318,10 +322,9 @@ impl value_codec::Serialize for Model {
 }
 impl<'de> value_codec::Deserialize<'de> for Model {
     fn from_value(value: value_codec::Value) -> value_codec::Result<Self> {
-        let mut object = value
-            .as_object()
-            .ok_or_else(|| value_codec::error("Expected B-rep object"))?
-            .clone();
+        let value_codec::Value::Object(mut object) = value else {
+            return Err(value_codec::error("Expected B-rep object"));
+        };
         let ids = object
             .remove("topologyIds")
             .map(TopologyIds::from_value)
@@ -1458,7 +1461,9 @@ impl Model {
         let mut loop_owner = vec![None; self.loops.len()];
         let mut edge_used = vec![false; self.edges.len()];
         for (fi, f) in self.faces.iter().enumerate() {
-            f.surface.validate()?;
+            // Sampling the same immutable face must not revalidate its complete
+            // control net for every coedge parameter.
+            let surface = SurfaceSampler::new(&f.surface)?;
             for (li, &l) in std::iter::once(&f.outer).chain(&f.holes).enumerate() {
                 let wire = self
                     .loops
@@ -1508,7 +1513,7 @@ impl Model {
                     for i in 0..=8 {
                         let t = i as f64 / 8.;
                         let uv = curve_point(&c.pcurve, t)?;
-                        let p = f.surface.evaluate(uv[0], uv[1])?.point;
+                        let p = surface.evaluate(uv[0], uv[1])?.point;
                         let q = curve_point(&edge.curve, if c.reversed { 1. - t } else { t })?;
                         require(
                             distance(&p, &q) <= tol,

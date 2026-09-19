@@ -1,5 +1,6 @@
 import { defaultGeometryKernel } from './cadGeometryKernel'
-import { compileModelGraph, type ModelGraph, type ModelGraphCompilation } from './modelGraph'
+import { compileModelGraph } from './modelGraphCompiler'
+import type { ModelGraph, ModelGraphCompilation } from './modelGraph'
 import { contoursExtrusion, type SvgContours } from './svgGeometry'
 import { MAX_WORKSPACE_SOURCE_LENGTH } from './workspaceDocument'
 

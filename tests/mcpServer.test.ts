@@ -138,6 +138,7 @@ describe('OpenSCAD MCP server', () => {
       'modelgraph_nurbs_compile',
       'modelgraph_nurbs_evaluate',
       'modelgraph_nurbs_export',
+      'modelgraph_nurbs_intersect',
       'modelgraph_nurbs_language',
       'modelgraph_report',
       'modelgraph_set_parameters',
@@ -1190,14 +1191,28 @@ describe('Mechanical generators over MCP',()=>{
       const response=await request('tools/call',{name:'modelgraph_generate',arguments:{kind}}) as {isError?:boolean;content:Array<{type:string}>;structuredContent:{document:unknown;analysis:{volume:number;meshCount:number};mechanical_reports:unknown[];mechanical_parts:Array<{document:unknown}>}}
       expect(response.isError,JSON.stringify(response.structuredContent).slice(0,500)).not.toBe(true)
       expect(response.structuredContent.analysis.volume).toBeGreaterThan(0)
-      expect(response.content.filter(c=>c.type==='image')).toHaveLength(3)
+      expect(response.content.filter(c=>c.type==='image'), `${kind}: ${JSON.stringify({
+        images_status: Reflect.get(response.structuredContent, 'images_status'),
+        image_error: Reflect.get(response.structuredContent, 'image_error'),
+      })}`).toHaveLength(3)
       expect(response.structuredContent.mechanical_reports).toHaveLength(1)
+      expect(response.structuredContent.document).toMatchObject({ segments: 48 })
+      const primaryHash = Reflect.get(response.structuredContent, 'document_sha256')
+      const previewHash = Reflect.get(response.structuredContent, 'preview_document_sha256')
+      expect(previewHash).toMatch(/^[a-f0-9]{64}$/)
+      if (kind === 'planetary_gears') expect(previewHash).not.toBe(primaryHash)
+      else expect(previewHash).toBe(primaryHash)
       if(kind==='planetary_gears')expect(response.structuredContent.mechanical_parts).toHaveLength(5)
       const exported=await request('tools/call',{name:'modelgraph_export',arguments:{document:response.structuredContent.document,format:'3mf'}}) as {isError?:boolean;content:Array<{resource:{blob:string}}>}
       expect(exported.isError).not.toBe(true)
       expect(Buffer.from(exported.content[0].resource.blob,'base64').readUInt32LE(0)).toBe(0x04034b50)
     }
-    const rejected=await request('tools/call',{name:'modelgraph_generate',arguments:{kind:'gear',teeth:8}}) as {isError:boolean;structuredContent:{error:{code:string}}}
+    const small=await request('tools/call',{name:'modelgraph_generate',arguments:{kind:'gear',teeth:8}}) as {isError?:boolean;structuredContent:{mechanical_reports:unknown[]}}
+    expect(small.isError).not.toBe(true)
+    expect(small.structuredContent.mechanical_reports).toEqual([expect.objectContaining({
+      teeth: 8, minimum_external_teeth_without_undercut: 18, root_transition: 'radial_below_base_circle',
+    })])
+    const rejected=await request('tools/call',{name:'modelgraph_generate',arguments:{kind:'gear',teeth:2}}) as {isError:boolean;structuredContent:{error:{code:string}}}
     expect(rejected.isError).toBe(true)
     expect(rejected.structuredContent.error.code).toBe('invalid_mechanical_geometry')
   },30000)

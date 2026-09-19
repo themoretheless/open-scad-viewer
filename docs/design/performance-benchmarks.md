@@ -5,6 +5,8 @@ real viewport renderer. They are development tools, run separately from unit
 tests. Machine-dependent timing thresholds do not gate correctness tests.
 
 Measured findings and changes: [2026-09-07 results](performance-results-2026-09-07.md).
+Retained-solid analysis and identical-workload CPU comparison:
+[2026-09-19 results](solid-analysis-2026-09-19.md).
 Continuous animation and draw-call optimization: [FPS results](performance-fps-2026-09-07.md).
 
 ## Run
@@ -16,12 +18,83 @@ npm run bench:gpu -- --out tmp/performance/gpu-baseline
 npm run bench:gpu -- --heap-sampling --out tmp/performance/gpu-profiles
 npm run bench:gpu -- --fps --fps-diagnostics --frames 100 --warmup 20 --out tmp/performance/fps
 npm run bench:memory -- tmp/performance/cad-memory.json
+npm run bench:workers -- tmp/performance/worker-lifecycle.json 5
+npm run bench:nurbs-process -- tmp/performance/nurbs-process.json 5
+npm run bench:bootstrap -- --out tmp/performance/wasm-bootstrap.json --samples 9
+npm run bench:profiles -- --out tmp/performance/profile-triangulation.json
+npm run bench:analysis -- --out tmp/performance/solid-analysis.json
+node --import tsx benchmarks/own-cad/bench-csg-scaling.mts --out tmp/performance/csg-scaling.json
 ```
 
 Each output directory must be new. CPU defaults to four fixtures, two warmups
 and nine measured repetitions; `--quick` is a smoke check. GPU defaults to
 30 measured frames per case after eight warmups, eight scene replacements and
 three half-second idle windows. Use `--help` for bounded workload controls.
+
+`bench:workers` takes an optional new JSON output path and iteration count
+(default 5, range 1..50). Each iteration starts three fresh production Node
+workers: an expected assertion refusal, a successful cube build and a capability
+probe. It checks that all workers are joined before settlement, the next request
+works after a refusal, and the supervisor is neither busy nor quarantined.
+Timings include worker startup, evaluation and teardown; the production join
+deadline is unchanged. This is not browser edit latency. Run it without other
+tests or benchmarks competing for CPU. Without an output path it prints the
+full JSON report; an existing output file is never overwritten.
+
+`bench:nurbs-process` has the same output-path/iteration arguments. It measures
+the production disposable NURBS subprocess boundary on union, intersection,
+difference and a 3.8 MB STL response. It includes parent validation, fresh child
+startup, calculation, response transfer and child close. Each sample verifies
+volume, closed topology and deterministic whole-response hashes. Compare the
+fixture hash and response hashes before comparing timings across revisions.
+It does not isolate native CSG throughput or browser interaction latency.
+
+`bench:bootstrap` measures the compression-only Rust WASM decoder in a fresh
+Node worker/isolate per sample. It separates unpacking the decoder itself,
+compilation, instantiation, upload, base85/Brotli decode and owned output copy.
+It verifies the exact decoded geometry artifact outside the measured interval.
+Use repeated `--decoder /absolute/variant.wasm` options to compare up to four
+decoder builds on identical input. Variant order alternates each iteration;
+workers run sequentially. Import/startup/join and geometry compilation are not
+included; process-wide V8 and OS caches can warm. The report fingerprints the
+actual WASM variants and host inputs, and never overwrites an existing report.
+
+`bench:profiles` builds the locked native release triangulation example. Three
+warmups and nine timed samples cover synthetic hole grids and actual profiles
+constructed by the prism Boolean path. Fixture construction and validation are
+outside timing. Validation checks area, authored coordinates, every oriented
+boundary segment and paired interior edges, not only volume. Reports contain
+the full fixture arrays/hash, selected source and executable fingerprints,
+raw samples and explicit refusals. This is not the whole Boolean or WASM path.
+
+`bench-csg-scaling.mts` measures that production WASM path through
+`parseOpenSCAD`, including evaluation and mesh analysis. It accepts case IDs,
+`--samples` (default 7, range 1..50), `--warmups` (default 2, range 0..10), and a
+new `--out` file. It records actual medians, raw phase samples, source hashes,
+artifact fingerprints and environment. Volume/topology validation is outside
+timing. Failures remain report rows, not fast successful samples; the runner
+can finish successfully with refused cases. See the
+[profile results and limits](profile-triangulation-2026-09-19.md).
+
+`bench:analysis` isolates warm retained-solid export, display preparation, BVH,
+semantic edges and the combined analysis call. Schema v2 also measures uncached
+kernel inspection and host asset hashing as separate phases. Defaults are three warmups/nine
+samples; `--warmups` accepts 0..20 and `--samples` 1..100. All returned buffer
+bytes must be deterministic, and the combined result must match separate
+calls. Reports retain input/output SHA-256, selected source/artifact hashes,
+environment and every timing sample. Verification hashing/validation is outside
+timing; only the explicit `assetHash` phase times product identity hashing.
+Individual replays include their own transport/copies (and BVH/edge uploads),
+so their times are not an additive breakdown of the combined call. Solid
+construction, startup, provenance, workers and GPU are excluded. The combined
+call excludes metrics and host hashing; the new probes measure them separately.
+Inspection bypasses the `CadSolid` wrapper's cached report, since a repeated
+`volume()` call on one wrapper would only measure cache access. Use `bench:cpu`
+separately for the whole parser/build path.
+Measured [dense display preparation results](mesh-render-2026-09-19.md) include
+the byte-parity contract and limitations of comparing isolated replays.
+The [inspection follow-up](mesh-inspection-2026-09-19.md) compares the original
+edge tree, a sorted pair array and the retained packed-index implementation.
 
 The GPU runner uses the repository's isolated Playwright package under
 `tools/browser-qualification`, builds a separate production Vite entry, serves
@@ -124,6 +197,44 @@ diagnostics intentionally serialize samples and must not be converted into FPS.
 | Settled idle renderer | Does rendering stop after pending work is complete? |
 
 ## Optimization decisions
+
+For emitted-code duplication and the exact-solid main-thread route, see
+[bundle attribution](bundle-audit-2026-09-19.md). Run `npm run audit:bundle` for
+source-map attribution; rebuild without source maps before checking delivery size.
+The [exact-solid worker check](exact-solid-worker-2026-09-19.md) exercises the built
+browser worker, group replacement and hard cancellation, and records remaining
+main-thread callback gaps separately from end-to-end wall time.
+Its [cooperative validation follow-up](solid-receive-2026-09-19.md) documents the
+CPU profile, shared sync/async validator, cancellation boundary and remaining
+single-body latency.
+Use `npm run bench:brep-validation` for isolated native B-rep inspection; the
+[validated face sampler report](brep-validation-2026-09-19.md) separates those
+measurements from the browser's complete source-to-body path.
+`npm run bench:brep-decode` isolates owned value-tree decoding; its
+[report](brep-decode-2026-09-19.md) includes canonical output hashes and explicitly
+excludes input preparation from the measured interval.
+
+Mechanical preview isolation: `node --import tsx benchmarks/mechanical-preview.mts`.
+The [report](mechanical-preview-2026-09-19.md) separates full-detail geometry from
+bounded display-only tessellation and measures the extra image-generation cost.
+
+Direct history: `node --import tsx benchmarks/direct-history.mts [output-json]`.
+The [report](direct-history-2026-09-19.md) measures undo/redo with defensive copies
+and checks identical document hashes before and after snapshot-size retention.
+
+Direct validation: `node --import tsx benchmarks/direct-validation.mts [output-json]`.
+The [cache report](brep-inspection-cache-2026-09-19.md) measures warm validation
+of the 20-body spinner and states the exact retained-key bound and its limits.
+The [owned JSON follow-up](owned-json-2026-09-19.md) removes a redundant full-tree
+copy while preserving number normalization and caller isolation.
+
+The [ModelGraph runtime/schema split](modelgraph-runtime-split-2026-09-19.md)
+records delivery-byte savings, compatibility hashes and real browser checks;
+the existing bundle audit and exact-solid browser commands reproduce its checks.
+
+WASM packaging: `npm run audit:wasm-package -- baseline.wasm candidate.wasm --out report.json`.
+The [convergence experiment](wasm-package-audit-2026-09-19.md) records a rejected
+size-only candidate and distinguishes compressed delivery bytes from raw WASM.
 
 Changes should be selected from recorded baseline results and validated with the
 same workloads and output checksums. Prioritize costs visible at realistic scene

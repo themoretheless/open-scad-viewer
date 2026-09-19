@@ -21,8 +21,6 @@ import type {
   SourceOperationId,
 } from '../core/mesh'
 import { identity, type Mat4 } from './math3d'
-import { buildMeshBvh } from './meshBvh'
-import { extractSemanticEdges } from './meshTopology'
 import { AbortedError, OpenSCADParseError, positionKernelError } from './openscadErrors'
 import { createBrepRecordingKernelOps } from './solid/brepRecorder'
 import { bindOpenScad, prepareOpenScadFrontEnd } from './openscadBinder'
@@ -3900,14 +3898,7 @@ async function parseInternal(
         }
       }
       const indices = isExclusiveView(mesh.triVerts, mesh.triVerts.length) ? mesh.triVerts : new Uint32Array(mesh.triVerts)
-      const bvh = buildMeshBvh(vertices, indices)
-      await control.yieldIfDue()
-      const semanticEdges = extractSemanticEdges(vertices, indices, {
-        creaseAngleDegrees: 30,
-        mergeFromVert: mesh.mergeFromVert,
-        mergeToVert: mesh.mergeToVert,
-      })
-      await control.yieldIfDue()
+      const { bvh, semanticEdges } = analysis
       const provenance: MeshProvenanceRun[] = []
       for (let run = 0; run < mesh.runOriginalID.length; run++) {
         const triangleStart = (mesh.runIndex[run] ?? 0) / 3

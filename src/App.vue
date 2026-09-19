@@ -392,12 +392,15 @@ const workspaceMode = computed<WorkspaceMode>(() => (meshModelerOpen.value ? 'me
 /** Source is no longer a workspace of its own; it opens as a drawer over either one. */
 const editorOpen = ref(false)
 const solidBuilding = ref(false)
+let solidBuildAbort: AbortController | null = null
+function cancelSolidBuild() { solidBuildAbort?.abort() }
 const solidAppendBodies = ref<{ bodies: DirectBody[]; token: number; group?: { name: string; source: string; replaces: string | null } } | null>(null)
 /** Set while the left panel edits one scene group's source instead of the document. */
 const groupEdit = ref<{ name: string; source: string; replaces: string | null } | null>(null)
 const groupHighlight = computed(() => (groupEdit.value ? highlightCode(groupEdit.value.source, 'group.scad') : ''))
 
 function openGroupEditor(request: { name: string; source: string; replaces: string | null }) {
+  cancelSolidBuild()
   groupEdit.value = { ...request }
   editorOpen.value = true
 }
@@ -418,39 +421,40 @@ if (!directModelerOpen.value && !meshModelerOpen.value) directModelerOpen.value 
 /**
  * Builds the source as exact solids and hands them to the Solid workspace.
  *
- * This runs on the main thread: the bounded worker protocol accepts an exact set of
- * result keys, so the exact graph cannot ride the display route yet. A large model
- * will therefore block the interface until that protocol carries the graph too.
+ * Evaluation and exact construction run in a disposable geometry worker.
  */
 /** Builds one group's own source and hands the bodies back tagged with its name. */
 async function buildSolidGroup(request: { name: string; source: string; replaces: string | null }) {
-  if (solidBuilding.value) return
+  if (solidBuilding.value) return false
   solidBuilding.value = true
+  const abort = new AbortController()
+  solidBuildAbort = abort
   error.value = ''
   try {
-    const [{ evaluateExactSolidsOnMainThread }, { buildExactSolidBodies }] = await Promise.all([
-      import('./services/geometryBuildEngine'),
-      import('./services/solid/brepBuild'),
-    ])
-    const evaluated = await evaluateExactSolidsOnMainThread(request.source)
-    const plan = evaluated.exactSolids
-    if (!plan || plan.roots.length === 0) {
+    const { buildExactSolidsInWorker } = await import('./services/solid/exactSolidClient')
+    const built = await buildExactSolidsInWorker(request.source, abort.signal)
+    if (abort.signal.aborted) return false
+    if (built.length === 0) {
       error.value = lang.value === 'ru'
         ? 'Код группы не описывает ни одного тела.'
         : 'The group source describes no solids.'
-      return
+      return false
     }
-    const bodies = buildExactSolidBodies(plan.nodes, plan.roots)
+    const bodies = built
       .map(body => ({ ...body, group: request.name }))
     solidAppendBodies.value = {
       bodies,
       group: { name: request.name, source: request.source, replaces: request.replaces },
       token: (solidAppendBodies.value?.token ?? 0) + 1,
     }
-    groupEdit.value = null
+    // Do not discard edits made while the requested snapshot was being built.
+    if (groupEdit.value?.name === request.name && groupEdit.value.source === request.source) groupEdit.value = null
+    return true
   } catch (caught) {
-    error.value = caught instanceof Error ? caught.message : String(caught)
+    if (!abort.signal.aborted) error.value = caught instanceof Error ? caught.message : String(caught)
+    return false
   } finally {
+    if (solidBuildAbort === abort) solidBuildAbort = null
     solidBuilding.value = false
   }
 }
@@ -462,8 +466,7 @@ async function buildSolidGroup(request: { name: string; source: string; replaces
  */
 async function buildSolidFromSource() {
   const name = fileName.value.replace(SOURCE_FILE_EXTENSION, '') || 'source'
-  await buildSolidGroup({ name, source: code.value, replaces: name })
-  if (error.value) return
+  if (!await buildSolidGroup({ name, source: code.value, replaces: name })) return
   meshModelerOpen.value = false
   directModelerOpen.value = true
   editorOpen.value = false
@@ -1079,6 +1082,7 @@ function bindRendererCallbacks(instance: WebGPURenderer) {
 }
 
 onUnmounted(() => {
+  solidBuildAbort?.abort()
   cancelGeometryAnalysis()
   layoutResizeObserver?.disconnect()
   layoutResizeObserver = null
@@ -2638,7 +2642,7 @@ function sanitizeFileName(name: string) { return (name.replace(/[^\w.() -]+/g, '
             :aria-label="lang === 'ru' ? 'Имя группы' : 'Group name'"
           >
           <span class="toolbar-spacer" aria-hidden="true" />
-          <button class="btn" type="button" @click="groupEdit = null">{{ lang === 'ru' ? 'Отмена' : 'Cancel' }}</button>
+          <button class="btn" type="button" @click="cancelSolidBuild(); groupEdit = null">{{ lang === 'ru' ? 'Отмена' : 'Cancel' }}</button>
           <button
             class="btn btn-primary"
             type="button"
@@ -2676,6 +2680,7 @@ function sanitizeFileName(name: string) { return (name.replace(/[^\w.() -]+/g, '
             :title="lang === 'ru' ? 'Собрать точные тела (NURBS) и открыть в Solid' : 'Build exact NURBS solids and open them in Solid'"
             @click="buildSolidFromSource()"
           >{{ solidBuilding ? '…' : (lang === 'ru' ? 'В Solid' : 'To Solid') }}</button>
+          <button v-if="solidBuilding" class="btn" type="button" @click="cancelSolidBuild()">{{ lang === 'ru' ? 'Отмена' : 'Cancel' }}</button>
           <span class="toolbar-spacer" aria-hidden="true" />
           <button class="btn" type="button" @click="exampleGalleryOpen = true">{{ t('examples') }}</button>
           <button class="btn" type="button" @click="mechanicalGeneratorOpen = true">{{ t('generators') }}</button>

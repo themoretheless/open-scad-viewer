@@ -34,12 +34,13 @@ opt-level = 3
 [profile.release.package.polygon-core]
 opt-level = 3
 
-# A small synchronous compression bootstrap, separate from all geometry code.
+# Separate compression bootstrap: opt-level 2 measured faster and smaller than
+# z for cold WASM decoding. See docs/design/solid-analysis-2026-09-19.md.
 [profile.release.package.wasm-brotli]
-opt-level = "z"
+opt-level = 2
 [profile.release.package.brotli-decompressor]
-opt-level = "z"
+opt-level = 2
 [profile.release.package.alloc-no-stdlib]
-opt-level = "z"
+opt-level = 2
 [profile.release.package.alloc-stdlib]
-opt-level = "z"
+opt-level = 2

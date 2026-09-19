@@ -5,6 +5,7 @@ import { runOwnNurbs } from '../src/mcp/modelGraphNurbsRuntime';
 import { extrudeNurbsCurve, revolveNurbsCurve, loftNurbsCurves } from '../src/services/nurbsConstructors';
 import { evaluateNurbsSurface } from '../src/services/nurbsSurface';
 import type { NurbsCurve } from '../src/services/nurbsCurve';
+import { nurbsProcessFixtures } from '../benchmarks/nurbs-process-fixtures';
 const line: NurbsCurve = { degree: 1, knots: [0, 0, 1, 1], controlPoints: [[10, 0, 0], [10, 0, 20]], weights: [1, 1] };
 it('builds an exact rational cylinder surface from its generating line', () => {
     const surface = revolveNurbsCurve(line, [0, 0, 0], [0, 0, 1], 360);
@@ -83,6 +84,23 @@ it('enforces depth through a shared subgraph reached earlier on a shallow branch
         nodes.push({ id: `b${i}`, op: 'curve_edit', input: i ? `b${i - 1}` : 'a28' });
     nodes.push({ id: 'join', op: 'ruled_surface', inputs: ['a28', 'b28'] });
     expect(() => compileModelGraphNurbs({ ...MODELGRAPH_NURBS_EXAMPLE, nodes, root: 'join' })).toThrow('depth');
+});
+
+it('drains a multi-megabyte STL response before joining the NURBS process', async () => {
+    const document = nurbsProcessFixtures.find(fixture => fixture.name === 'large-stl')!.document;
+    const request = { action: 'export', format: 'stl' } as const;
+    const expected = buildOwnNurbs(document, request);
+    expect(Buffer.byteLength(JSON.stringify(expected))).toBeGreaterThan(1024 * 1024);
+    expect(await runOwnNurbs(document, request)).toEqual(expected);
+});
+
+it('joins a cancelled real process before accepting the following request', async () => {
+    const controller = new AbortController();
+    const pending = runOwnNurbs(MODELGRAPH_NURBS_SURFACE_EXAMPLE, { action: 'build' }, controller.signal);
+    const cancelled = expect(pending).rejects.toThrow('cancelled');
+    controller.abort();
+    await cancelled;
+    expect((await runOwnNurbs(MODELGRAPH_NURBS_EXAMPLE, { action: 'build' })).ok).toBe(true);
 });
 
 it('builds mesh CSG through the NURBS graph and handles empty intersections', async () => {

@@ -26,7 +26,7 @@ difference() {
   },
   {
     id: 'dense-sphere',
-    description: 'One mesh containing three spheres at the supported $fn=256 cap; dense analysis, BVH and export.',
-    source: '$fn=256; union() { sphere(r=30); translate([70,0,0]) sphere(r=30); translate([140,0,0]) sphere(r=30); }',
+    description: 'One mesh containing three separated high-resolution spheres; dense analysis, BVH and export.',
+    source: '$fn=128; union() { sphere(r=30); translate([90,0,0]) sphere(r=30); translate([180,0,0]) sphere(r=30); }',
   },
 ]

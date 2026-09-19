@@ -1,11 +1,11 @@
-import { prepareGraphRust } from './languages/kernel'
+import { compileModelGraph, ModelGraphError } from './modelGraphCompiler'
+export { compileModelGraph, ModelGraphError, hashModelGraphDocument } from './modelGraphCompiler'
 import type { ModelGraphNumericType } from './modelGraphNumericType'
 import { MECHANICAL_GENERATOR_GUIDE } from './mechanicalGeneratorContract'
 import type { placeAssembly } from './modelGraphAssembly'
 import type { solveModelGraphSketch } from './modelGraphSketch'
 import { z } from 'zod/v4'
 import type { Dimension, Unit } from './modelGraphUnits'
-import { sha256Hex } from '../core/sha256'
 
 export type CheckedValueType = {name:string;args?:CheckedValueType[];fields?:Record<string,CheckedValueType>}
 export type MatchPattern =
@@ -180,18 +180,6 @@ const modelGraphSchema = z.object({
 }
 export const { modelGraphSchema, expressionSchema, matchPatternSchema } = /* @__PURE__ */ createModelGraphSchemas()
 export type ModelGraph = z.infer<typeof modelGraphSchema>
-export class ModelGraphError extends Error {
-  constructor(readonly code: string, readonly path: string, message: string, readonly details?: unknown) { super(message) }
-}
-
-function canonical(value: unknown): string {
-  if (Array.isArray(value)) return `[${value.map(canonical).join(',')}]`
-  if (value !== null && typeof value === 'object') return `{${Object.keys(value).sort().map(key => `${JSON.stringify(key)}:${canonical((value as Record<string, unknown>)[key])}`).join(',')}}`
-  return JSON.stringify(value)
-}
-
-export const hashModelGraphDocument = (document: unknown) => sha256Hex(canonical(document))
-
 export type ModelGraphCompilation = {
   document: ModelGraph
   geometry_assertions: Array<Omit<NonNullable<ModelGraph['geometry_assertions']>[number], 'expected' | 'tolerance'> & {expected:number; tolerance:number; source?:string; instance_path?:string}>
@@ -204,12 +192,6 @@ export type ModelGraphCompilation = {
   source: string
   source_map: Array<{node_id:string;line:number;instance_path:string}>
   execution_target: 'legacy/current+own-rust-cad'
-}
-/** Rust validates and evaluates the graph; JS only handles transport and revision hashing. */
-export function compileModelGraph(value: unknown): ModelGraphCompilation {
-  const result = prepareGraphRust<Omit<ModelGraphCompilation,'document_sha256'>>('graph',value)
-  if (!result.ok) throw new ModelGraphError(result.error.code,result.error.path,result.error.message,result.error.details)
-  return {...result.value,document_sha256:sha256Hex(canonical(result.value.document))}
 }
 
 export function setModelGraphParameters(value: unknown, expectedHash: string, updates: Array<{ id: string; value: number }>) {

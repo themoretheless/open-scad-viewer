@@ -7,7 +7,7 @@ import {tessellateSdfGpuAware as tessellateSdf,evaluateSdf,type SdfField} from '
 import {transformNurbsBrep,createBrepSphere,createBrepGear,createBrepTorus,createBrepBox,revolveBrepProfile,createBrepCylinder,createBrepFrustum,createBrepTube,extrudeBrepCurves,extrudeBrepPolygon,booleanNurbsBrep,chamferNurbsBrepEdges,filletNurbsBrepEdges,tessellateNurbsBrep,type NurbsBrep} from './geometry/brep';
 import { inspectPolygonMesh,booleanPolygonMeshes } from './geometry/polygon';
 import { exportMeshFormat, meshExportBase64, type MeshExportFormat } from './meshExportFormats';
-import { compileModelGraphNurbs } from './modelGraphNurbs';
+import { compileModelGraphNurbs } from './modelGraphNurbsCompiler';
 import { validateNurbsCurve, evaluateNurbsCurve, insertNurbsKnot, elevateNurbsCurve, trimNurbsCurve, reverseNurbsCurve, nurbsCurveBounds, type NurbsCurve } from './nurbsCurve';
 import { validateNurbsSurface, evaluateNurbsSurface, insertNurbsSurfaceKnot, elevateNurbsSurface, trimNurbsSurface, reverseNurbsSurface, isoNurbsCurve, nurbsSurfaceBounds, type NurbsSurface } from './nurbsSurface';
 import {certifyNurbsCurveFoundation, certifyNurbsSurfaceFoundation} from './nurbsFoundation';

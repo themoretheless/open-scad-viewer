@@ -1,10 +1,13 @@
 import {callGeometryRust} from './geometry/kernel'
+import { MAX_DOCUMENT_CHARACTERS } from './directDocumentLimits'
+export { MAX_DOCUMENT_CHARACTERS } from './directDocumentLimits'
 import { sampleCurve, worldPoints, dot3, type AnalyticCurve, type SketchPlane } from './directSketchGeometry'
 import { extrudePolygonProfile, type PolygonMesh } from './geometry/polygon'
 import { validateNurbsCurve } from './nurbsCurve'
 import { validateNurbsSurface } from './nurbsSurface'
 import type { SolidNurbsCurve, SolidNurbsSurface } from './solidNurbs'
-import { inspectNurbsBrep, type NurbsBrep } from './geometry/brep'
+import type { NurbsBrep } from './geometry/brep'
+import { BrepInspectionCache } from './brepInspectionCache'
 
 export type Point2 = [number, number]
 export interface DirectSketch { id: string; name: string; points: Point2[]; closed: boolean; analytic?: AnalyticCurve; plane?: SketchPlane }
@@ -20,37 +23,27 @@ export interface DirectInterchangeMetadata {
 export interface DirectDocument { version: 1; sketches: DirectSketch[]; bodies: DirectBody[]; curves?: SolidNurbsCurve[]; surfaces?: SolidNurbsSurface[]; groups?: DirectGroup[]; interchange?: DirectInterchangeMetadata }
 export const emptyDirectDocument = (): DirectDocument => ({ version: 1, sketches: [], bodies: [], curves: [], surfaces: [] })
 const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value))
+const DEEP_JSON_NORMALIZATION = Symbol('deep JSON normalization')
+/** Only for a freshly parsed, exclusively owned JSON tree, never caller-owned objects. */
+function normalizeOwnedJson(value: unknown, depth = 0): unknown {
+  if (depth > 64) throw DEEP_JSON_NORMALIZATION
+  if (typeof value === 'number') return Number.isFinite(value) ? (value === 0 ? 0 : value) : null
+  if (Array.isArray(value)) {
+    for (let i = 0; i < value.length; i++) value[i] = normalizeOwnedJson(value[i], depth + 1)
+  } else if (value !== null && typeof value === 'object') {
+    const object = value as Record<string, unknown>
+    for (const key of Object.keys(object)) object[key] = normalizeOwnedJson(object[key], depth + 1)
+  }
+  return value
+}
 const finite = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v) && Math.abs(v) <= 1e6
 
-/**
- * B-rep inspection memoized by content.
- *
- * Every commit re-validates the whole document, and inspecting the topology of each
- * B-rep body took ~11 ms of a ~12 ms validation on a six-body scene, felt as a hitch
- * after each drag, undo or redo. Bodies are cloned on every commit, so identity cannot
- * serve as the key; the serialized topology can, and hashing it costs well under 1 ms.
- */
-const inspectedBreps = new Map<string, true>()
-const INSPECTED_BREP_LIMIT = 128
-function inspectBrepOnce(brep: NurbsBrep): void {
-  const key = JSON.stringify(brep)
-  if (inspectedBreps.has(key)) return
-  inspectNurbsBrep(brep)
-  if (inspectedBreps.size >= INSPECTED_BREP_LIMIT) inspectedBreps.delete(inspectedBreps.keys().next().value!)
-  inspectedBreps.set(key, true)
-}
+const inspectedBreps = new BrepInspectionCache()
 
-/**
- * A Solid document lives in memory as JSON. Twenty exact herringbone gears serialize
- * to about 20 MB (each helical wall face is a cubic loft with hundreds of control
- * points), so the bound is the one the other in-memory artifacts use, not the size
- * of a browser draft.
- */
-export const MAX_DOCUMENT_CHARACTERS = 64 * 1024 * 1024
 /** localStorage holds about 5 MB per origin; bigger documents are kept in memory only. */
 export const MAX_DRAFT_CHARACTERS = 4_000_000
 
-export function parseDirectDocument(text: string): DirectDocument {
+function* directDocumentValidation(text: string): Generator<void, DirectDocument> {
   // In-memory bound only; the browser draft has its own, smaller quota (see persist in DirectModeler).
   if (text.length > MAX_DOCUMENT_CHARACTERS) throw new Error('Document exceeds 64 MB.')
   const d = JSON.parse(text) as DirectDocument
@@ -87,6 +80,7 @@ export function parseDirectDocument(text: string): DirectDocument {
       if (![origin,u,v].every(p=>Array.isArray(p)&&p.length===3&&p.every(finite)) || Math.abs(dot3(u,u)-1)>1e-6 || Math.abs(dot3(v,v)-1)>1e-6 || Math.abs(dot3(u,v))>1e-6) throw new Error('Invalid sketch workplane.')
     }
     if (typeof s.closed !== 'boolean' || !Array.isArray(s.points) || s.points.length < 2 || s.points.length > 512 || (s.closed && s.points.length < 3) || !s.points.every(p => Array.isArray(p) && p.length === 2 && p.every(finite))) throw new Error('Invalid sketch.')
+    yield
   }
   for (const b of d.bodies) {
     if (b.group !== undefined && (typeof b.group !== 'string' || b.group.length === 0 || b.group.length > 100)) {
@@ -95,7 +89,7 @@ export function parseDirectDocument(text: string): DirectDocument {
     const m = b.mesh
     if (!m || !Array.isArray(m.positions) || !Array.isArray(m.indices) || m.positions.length < 9 || m.positions.length > 150_000 || m.positions.length % 3 || m.indices.length < 3 || m.indices.length > 150_000 || m.indices.length % 3 || !m.positions.every(finite) || !m.indices.every(i => Number.isInteger(i) && i >= 0 && i < m.positions.length / 3)) throw new Error('Invalid body mesh.')
     if (b.brep) {
-      inspectBrepOnce(b.brep)
+      inspectedBreps.inspect(b.brep)
       if ([b.brep.vertices,b.brep.edges,b.brep.loops,b.brep.faces,b.brep.shells,b.brep.bodies].every(items=>items.length===0)) throw new Error('An empty B-rep cannot be stored as a displayed body; remove the body entry.')
       if (b.brep.faces.length === 0) throw new Error('Displayed body B-rep must include at least one face.')
       const meshAabb = aabbFromPositions(m.positions)
@@ -114,14 +108,56 @@ export function parseDirectDocument(text: string): DirectDocument {
         }
       }
     }
+    yield
   }
-  for (const item of d.curves) validateNurbsCurve(item.curve)
+  for (const item of d.curves) { validateNurbsCurve(item.curve); yield }
   for (const item of d.surfaces) {
     if (!Number.isInteger(item.segmentsU) || item.segmentsU < 2 || item.segmentsU > 64 ||
         !Number.isInteger(item.segmentsV) || item.segmentsV < 2 || item.segmentsV > 64) throw new Error('Invalid NURBS display tessellation.')
     validateNurbsSurface(item.surface)
+    yield
   }
-  return clone(d)
+  // JSON.parse and newly sampled sketch points already have exclusive ownership.
+  // Preserve JSON number normalization without serializing/copying the whole tree.
+  try { normalizeOwnedJson(d); return d }
+  catch (error) {
+    if (error !== DEEP_JSON_NORMALIZATION) throw error
+    // This is a fast-path depth threshold, not a new document admission limit.
+    return clone(d)
+  }
+}
+
+export function parseDirectDocument(text: string): DirectDocument {
+  const validation = directDocumentValidation(text)
+  for (;;) {
+    const step = validation.next()
+    if (step.done) return step.value
+  }
+}
+
+/** Same checks as the synchronous history/import route, yielding between objects.
+ * A single B-rep inspection remains synchronous; no partially checked document escapes.
+ */
+export async function parseDirectDocumentAsync(text: string, options: {
+  signal?: AbortSignal
+  yieldControl?: () => Promise<void>
+} = {}): Promise<DirectDocument> {
+  const validation = directDocumentValidation(text)
+  const yieldControl = options.yieldControl ?? (() => new Promise<void>(resolve => setTimeout(resolve, 0)))
+  let sliceStarted = performance.now()
+  try {
+    for (;;) {
+      if (options.signal?.aborted) throw new DOMException('Operation cancelled', 'AbortError')
+      const step = validation.next()
+      if (step.done) return step.value
+      if (performance.now() - sliceStarted >= 8) {
+        await yieldControl()
+        sliceStarted = performance.now()
+      }
+    }
+  } finally {
+    validation.return(undefined as never)
+  }
 }
 
 const aabbFromPositions = (positions: number[]): [number, number, number, number, number, number] => {
@@ -155,46 +191,41 @@ const aabbFromBrep = (brep: NurbsBrep): { inner: Aabb; outer: Aabb } => {
 }
 
 /** Snapshots contain independent geometry, never sketch references or a feature tree. */
+interface DirectSnapshot { document: DirectDocument; characters: number }
 export class DirectHistory {
-  private past: DirectDocument[] = []
-  private future: DirectDocument[] = []
-  private current: DirectDocument
-  /** Serialized size of `current`, kept so the byte bound never re-serializes the stack. */
-  private currentBytes: number
-  private pastBytes: number[] = []
+  private past: DirectSnapshot[] = []
+  private future: DirectSnapshot[] = []
+  private current: DirectSnapshot
   constructor(document = emptyDirectDocument()) {
     const text = JSON.stringify(document)
-    this.current = parseDirectDocument(text)
-    this.currentBytes = JSON.stringify(this.current).length
+    const validated = parseDirectDocument(text)
+    this.current = { document: validated, characters: JSON.stringify(validated).length }
   }
-  get document() { return clone(this.current) }
+  get document() { return clone(this.current.document) }
   get canUndo() { return this.past.length > 0 }
   get canRedo() { return this.future.length > 0 }
   commit(document: DirectDocument) {
     const text = JSON.stringify(document)
     const next = parseDirectDocument(text)
     const nextText = JSON.stringify(next)
-    if (nextText.length === this.currentBytes && nextText === JSON.stringify(this.current)) return
+    if (nextText.length === this.current.characters && nextText === JSON.stringify(this.current.document)) return
     this.past.push(this.current)
-    this.pastBytes.push(this.currentBytes)
-    // Bound retained snapshots by both count and bytes. Sizes are tracked as snapshots are
-    // pushed: measuring by serializing the whole stack made every commit cost O(history),
-    // which is heavy once bodies carry B-rep topology.
-    let retained = this.pastBytes.reduce((sum, bytes) => sum + bytes, 0)
+    // The existing bound counts serialized characters, not actual heap bytes.
+    // Size travels with its snapshot through undo/redo; neither needs to serialize it again.
+    let retained = this.past.reduce((sum, snapshot) => sum + snapshot.characters, 0)
     while (this.past.length > 80 || (this.past.length > 1 && retained > 16_000_000)) {
-      this.past.shift()
-      retained -= this.pastBytes.shift() ?? 0
+      retained -= this.past.shift()!.characters
     }
-    this.current = next; this.currentBytes = nextText.length; this.future = []
+    this.current = { document: next, characters: nextText.length }; this.future = []
   }
   undo() {
     const d = this.past.pop()
-    if (d) { this.pastBytes.pop(); this.future.push(this.current); this.current = d; this.currentBytes = JSON.stringify(d).length }
+    if (d) { this.future.push(this.current); this.current = d }
     return this.document
   }
   redo() {
     const d = this.future.pop()
-    if (d) { this.past.push(this.current); this.pastBytes.push(this.currentBytes); this.current = d; this.currentBytes = JSON.stringify(d).length }
+    if (d) { this.past.push(this.current); this.current = d }
     return this.document
   }
 }

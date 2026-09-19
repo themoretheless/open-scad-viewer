@@ -10,9 +10,10 @@ process.stdin.on('end', () => {
             request: OwnNurbsRequest;
         };
         const result = buildOwnNurbs(request.document, request.request);
-        process.stdout.write(JSON.stringify(result));
+        // EOF publishes the complete response; the parent owns termination and join.
+        process.stdout.end(JSON.stringify(result));
     }
     catch (error) {
-        process.stdout.write(JSON.stringify({ ok: false, error: { code: 'NURBS_OPERATION_FAILED', message: error instanceof Error ? error.message.slice(0, 1500) : 'NURBS operation failed.' } }));
+        process.stdout.end(JSON.stringify({ ok: false, error: { code: 'NURBS_OPERATION_FAILED', message: error instanceof Error ? error.message.slice(0, 1500) : 'NURBS operation failed.' } }));
     }
 });

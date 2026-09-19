@@ -1,6 +1,5 @@
-import { prepareGraphRust } from './languages/kernel'
+export { compileModelGraphNurbs, ModelGraphNurbsError, hashNurbsDocument } from './modelGraphNurbsCompiler'
 import { z } from 'zod/v4';
-import { sha256Hex } from '../core/sha256';
 const id = z.string().regex(/^[A-Za-z][A-Za-z0-9_]{0,31}$/);
 const number = z.number().finite().min(-1e6).max(1e6);
 const scalar = z.union([number, z.object({ param: id }).strict()]);
@@ -72,24 +71,11 @@ type Resolved<T> = T extends {
     [K in keyof T]: Resolved<T[K]>;
 } : T;
 export type ResolvedModelGraphNurbs = Resolved<ModelGraphNurbs>;
-export class ModelGraphNurbsError extends Error {
-    constructor(readonly code: string, readonly path: string, message: string) { super(message); this.name = 'ModelGraphNurbsError'; }
-}
-function fail(code: string, path: string, message: string): never { throw new ModelGraphNurbsError(code, path, message); }
 export type ModelGraphNurbsCompilation = {
     document: ModelGraphNurbs
     resolved_document: ResolvedModelGraphNurbs
     document_sha256: string
     execution_target: 'own-nurbs'
-}
-export function compileModelGraphNurbs(input: unknown): ModelGraphNurbsCompilation {
-    const result=prepareGraphRust<Omit<ModelGraphNurbsCompilation,'document_sha256'>>('nurbs',input)
-    if(!result.ok)fail(result.error.code,result.error.path,result.error.message)
-    return {...result.value,document_sha256:hashNurbsDocument(result.value.document)}
-}
-export function hashNurbsDocument(document: unknown): string {
-    const canonical = (v: unknown): string => Array.isArray(v) ? `[${v.map(canonical).join(',')}]` : v && typeof v === 'object' ? `{${Object.entries(v).sort(([a], [b]) => a.localeCompare(b)).map(([k, x]) => JSON.stringify(k) + ':' + canonical(x)).join(',')}}` : JSON.stringify(v)
-    return sha256Hex(canonical(document))
 }
 export const MODELGRAPH_NURBS_GUIDE = `ModelGraph NURBS uses our own Rust numerical kernel, with no third-party spline or B-rep kernel. Select language:"modelgraph/nurbs-1",units:"mm". Scalars are finite numbers or {param:"id"}; define parameters:[{id,value}],nodes and root. Read the accompanying schema. Graph IDs are unique, all nodes reachable, cycles forbidden. Maximum128nodes, depth32 and30000values. This contract uses own Rust geometry and the shared brep-topology library, without routing into Manifold.
 curve nodes specify degree, expanded knots, control_points (all2D orall3D), positive weights and periodic. surface nodes specify degree_u/v, knots_u/v, control_points[u][v][xyz], weights[u][v], periodic_u/v. Expanded knots have controlCount+degree+1 entries, finite nondecreasing values and active domain[knots[degree],knots[controlCount]]. Periodic data uses explicitly wrapped control points and extended knots, not an implicit one-period kernel-specific convention. Evaluation is homogeneous rational B-spline evaluation with first and second derivatives. At insufficient-continuity knots derivatives can be unavailable. Degenerate surface normals/curvatures are null; inspect derivative_status.

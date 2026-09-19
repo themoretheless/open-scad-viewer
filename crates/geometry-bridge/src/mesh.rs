@@ -5,6 +5,7 @@ use polygon_core::Mesh;
 use polygon_core::solid::{boolean, modeling, primitives as solid, section};
 use std::{cell::RefCell, collections::HashMap, rc::Rc};
 use value_codec::{Value, json};
+pub(crate) use crate::mesh_render::RenderMesh;
 #[derive(Clone)]
 enum Shape {
     Solid(Mesh),
@@ -558,151 +559,9 @@ pub(crate) fn export_buffers(id: u32) -> Result<crate::CadMeshBuffer> {
         face_ids: ids.into_iter().map(|v| v as u32).collect(),
     })
 }
-/// Display mesh of a retained solid: stride-6 `f32` position/normal vertices
-/// with crease-split normals, the property-vertex merge pairs the semantic-edge
-/// extractor expects, and per-triangle face ids.
-pub(crate) struct RenderMesh {
-    pub(crate) vertices: Vec<f32>,
-    pub(crate) indices: Vec<u32>,
-    pub(crate) merge_from: Vec<u32>,
-    pub(crate) merge_to: Vec<u32>,
-    pub(crate) face_ids: Vec<u32>,
-}
-
-/// `Math.hypot` as V8 evaluates it (scaled Kahan summation), so normals match
-/// the previous host implementation bit for bit.
-fn js_hypot3(v: [f64; 3]) -> f64 {
-    let mut max = 0_f64;
-    let mut has_nan = false;
-    let mut magnitudes = [0_f64; 3];
-    for (slot, value) in magnitudes.iter_mut().zip(v) {
-        if value.is_nan() {
-            has_nan = true;
-        } else {
-            *slot = value.abs();
-            if *slot > max {
-                max = *slot;
-            }
-        }
-    }
-    if max == f64::INFINITY {
-        return f64::INFINITY;
-    }
-    if has_nan {
-        return f64::NAN;
-    }
-    if max == 0. {
-        return 0.;
-    }
-    let (mut sum, mut compensation) = (0_f64, 0_f64);
-    for magnitude in magnitudes {
-        let n = magnitude / max;
-        let summand = n * n - compensation;
-        let preliminary = sum + summand;
-        compensation = (preliminary - sum) - summand;
-        sum = preliminary;
-    }
-    sum.sqrt() * max
-}
-
-/// `Math.round`: ties toward positive infinity.
-fn js_round(x: f64) -> f64 {
-    if !x.is_finite() || x.fract() == 0. {
-        return x;
-    }
-    let floor = x.floor();
-    if x - floor >= 0.5 { floor + 1. } else { floor }
-}
-
-/// `v / length`, or zero when JavaScript would treat `length` as falsy.
-fn js_normalized(v: [f64; 3], length: f64) -> [f64; 3] {
-    if length == 0. || length.is_nan() {
-        [0.; 3]
-    } else {
-        v.map(|x| x / length)
-    }
-}
-
-/// Crease-split vertex normals over the export snapshot. Face normals
-/// accumulate in triangle order and property vertices are keyed by their
-/// source vertex plus the normal rounded to 1e-7, exactly as the host did
-/// before this moved into the kernel; output arrays are therefore identical.
+/// Detach the registry-owned solid before preparing its display buffers.
 pub(crate) fn render_buffers(id: u32, crease_cosine: f64) -> Result<RenderMesh> {
-    let snapshot = export_buffers(id)?;
-    let positions = &snapshot.positions;
-    let indices = &snapshot.indices;
-    let vertex_count = positions.len() / 3;
-    let triangle_count = indices.len() / 3;
-    let point = |i: u32| -> [f64; 3] {
-        let i = i as usize * 3;
-        [positions[i], positions[i + 1], positions[i + 2]]
-    };
-    let mut face_normals = Vec::with_capacity(triangle_count);
-    let mut adjacent: Vec<Vec<u32>> = vec![Vec::new(); vertex_count];
-    for (t, tri) in indices.as_chunks::<3>().0.iter().enumerate() {
-        let p0 = point(tri[0]);
-        let p1 = point(tri[1]);
-        let p2 = point(tri[2]);
-        let a = [p1[0] - p0[0], p1[1] - p0[1], p1[2] - p0[2]];
-        let b = [p2[0] - p0[0], p2[1] - p0[1], p2[2] - p0[2]];
-        let n = [
-            a[1] * b[2] - a[2] * b[1],
-            a[2] * b[0] - a[0] * b[2],
-            a[0] * b[1] - a[1] * b[0],
-        ];
-        face_normals.push(js_normalized(n, js_hypot3(n)));
-        for &i in tri {
-            adjacent[i as usize].push(t as u32);
-        }
-    }
-    let mut vertices: Vec<f32> = Vec::new();
-    let mut out_indices: Vec<u32> = Vec::with_capacity(indices.len());
-    let mut raw_ids: Vec<u32> = Vec::new();
-    let mut unique: HashMap<(u32, [i64; 3]), u32> = HashMap::new();
-    for (i, &id) in indices.iter().enumerate() {
-        let face = face_normals[i / 3];
-        let mut normal = [0_f64; 3];
-        for &t in &adjacent[id as usize] {
-            let n = face_normals[t as usize];
-            let alignment = n[0] * face[0] + n[1] * face[1] + n[2] * face[2];
-            if alignment >= crease_cosine - 1e-10 {
-                for k in 0..3 {
-                    normal[k] += n[k];
-                }
-            }
-        }
-        let normal = js_normalized(normal, js_hypot3(normal));
-        let key = (id, normal.map(|v| js_round(v * 1e7) as i64));
-        let next = (vertices.len() / 6) as u32;
-        let index = *unique.entry(key).or_insert_with(|| {
-            let p = point(id);
-            vertices.extend(p.iter().chain(normal.iter()).map(|&v| v as f32));
-            raw_ids.push(id);
-            next
-        });
-        out_indices.push(index);
-    }
-    let mut first: HashMap<u32, u32> = HashMap::new();
-    let mut merge_from = Vec::new();
-    let mut merge_to = Vec::new();
-    for (i, &id) in raw_ids.iter().enumerate() {
-        match first.get(&id) {
-            None => {
-                first.insert(id, i as u32);
-            }
-            Some(&previous) => {
-                merge_from.push(i as u32);
-                merge_to.push(previous);
-            }
-        }
-    }
-    Ok(RenderMesh {
-        vertices,
-        indices: out_indices,
-        merge_from,
-        merge_to,
-        face_ids: snapshot.face_ids,
-    })
+    Ok(crate::mesh_render::render(export_buffers(id)?, crease_cosine))
 }
 pub(crate) fn import_buffers(stride: usize, vertices: &[f32], indices: &[u32]) -> Result<u32> {
     if !(3..=64).contains(&stride) || !vertices.len().is_multiple_of(stride) {

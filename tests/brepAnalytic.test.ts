@@ -1,5 +1,5 @@
 import {expect,it} from 'vitest'
-import {createBrepCylinder,createBrepFrustum,createBrepTube,createBrepTorus,inspectNurbsBrep,tessellateNurbsBrep,booleanNurbsBrep,createBrepBox,extrudeBrepPolygon} from '../src/services/geometry/brep'
+import {createBrepCylinder,createBrepFrustum,createBrepTube,createBrepTorus,inspectNurbsBrep,analyzeNurbsBrep,tessellateNurbsBrep,booleanNurbsBrep,createBrepBox,extrudeBrepPolygon} from '../src/services/geometry/brep'
 import {transformSelection} from '../src/services/directSolidTools'
 
 it('tessellates exact curved solids without open seams across display resolutions',()=>{
@@ -25,15 +25,30 @@ it('tessellates exact curved solids without open seams across display resolution
 it('preserves rational solids and identities through transforms and serialization',()=>{
  const brep=createBrepTube(3,1,5),built=tessellateNurbsBrep(brep,8)
  const document=transformSelection({version:1,sketches:[],bodies:[{id:'b',name:'Tube',brep,mesh:{positions:built.positions,indices:built.indices}}]},['b'],[5,-2,7],[1,1,1],43,2)
- const result=JSON.parse(JSON.stringify(document.bodies[0].brep))
+ const result:typeof brep=JSON.parse(JSON.stringify(document.bodies[0].brep))
  expect(inspectNurbsBrep(result).topologyValid).toBe(true)
- expect(result.topologyIds.faces).toEqual(brep.topologyIds!.faces)
+ expect(result.topologyIds!.faces).toEqual(brep.topologyIds!.faces)
  expect(tessellateNurbsBrep(result,8).report.signedVolumeMm3).toBeCloseTo(built.report.signedVolumeMm3*8,6)
  const separated=booleanNurbsBrep(result,createBrepBox([0,0,0],[1,1,1]),'union')
  expect(inspectNurbsBrep(separated).topologyValid).toBe(true)
  expect(separated.bodies).toHaveLength(2)
  expect(separated.faces.filter(face=>face.surface.degreeU>1||face.surface.degreeV>1)).toHaveLength(result.faces.filter(face=>face.surface.degreeU>1||face.surface.degreeV>1).length)
- expect(()=>booleanNurbsBrep(createBrepTorus(4,1),createBrepBox([-1,-1,-1],[1,1,1]),'union')).toThrow(/curved|unsupported|torus/i)
+})
+it('preserves separated torus and box carriers despite overlapping bounding boxes',()=>{
+ const torus=createBrepTorus(4,1),box=createBrepBox([-1,-1,-1],[1,1,1])
+ const before=JSON.stringify([torus,box])
+ const result=booleanNurbsBrep(torus,box,'union')
+ expect(inspectNurbsBrep(result)).toMatchObject({topologyValid:true,bodyCount:2,boundaryEdgeCount:0,solidGeometryStatus:'not_certified'})
+ expect(result.faces.map(face=>JSON.stringify(face.surface)).sort()).toEqual([...torus.faces,...box.faces].map(face=>JSON.stringify(face.surface)).sort())
+ expect(analyzeNurbsBrep(result).signedVolumeMm3).toBeCloseTo(8*Math.PI**2+8,7)
+ expect(tessellateNurbsBrep(result,4).report).toMatchObject({closed:true,nonManifoldEdges:0,orientationConflicts:0})
+ expect(JSON.stringify([torus,box])).toBe(before)
+ const restored=JSON.parse(JSON.stringify(result))
+ expect(inspectNurbsBrep(restored).topologyValid).toBe(true)
+ expect(analyzeNurbsBrep(restored).signedVolumeMm3).toBeCloseTo(8*Math.PI**2+8,7)
+})
+it('refuses torus contact coincident with existing box trim edges without a faceted fallback',()=>{
+ expect(()=>booleanNurbsBrep(createBrepTorus(4,1),createBrepBox([0,0,0],[10,10,10]),'union')).toThrow(/coincident boundaries/)
 })
 it('extrudes concave outer boundaries with several holes without filling notches',()=>{
  const profile:[number,number][]=[[0,0],[8,0],[8,3],[4,3],[4,7],[0,7]]

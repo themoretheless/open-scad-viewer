@@ -2,6 +2,22 @@ use brep_core::{Model, cuboid};
 use value_codec::{Deserialize, Serialize, json};
 
 #[test]
+fn owned_decode_preserves_non_object_refusal() {
+    for value in [
+        json!(null),
+        json!(false),
+        json!(1),
+        json!("body"),
+        json!([]),
+    ] {
+        assert_eq!(
+            Model::from_value(value).unwrap_err().to_string(),
+            "Expected B-rep object"
+        );
+    }
+}
+
+#[test]
 fn missing_identity_tables_are_generated_only_after_safe_validation() {
     let model = cuboid([0.; 3], [2.; 3]).unwrap();
     let mut legacy = model.to_value();

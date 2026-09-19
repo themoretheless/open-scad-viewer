@@ -645,11 +645,10 @@ mod tests {
         assert!(prism_boolean(&plate, &everything, "difference").unwrap().unwrap().indices.is_empty());
     }
 
-    /// Documents the current planar-triangulation limits the prism path
-    /// inherits (docs/design/csg-scaling-2026-09-19.md). Callers fall back to
-    /// the general Boolean on these errors; the grid itself is valid input.
+    /// Regression for the aligned 4x4 bridge failure and the former 2048-vertex
+    /// ceiling. These valid profiles must stay on the exact prism path.
     #[test]
-    fn prism_difference_grid_of_holes_reports_triangulation_limits() {
+    fn prism_difference_grid_of_holes_preserves_closed_volume() {
         let plate = cube([86., 86., 8.], true).unwrap();
         let hole = cylinder(12., 3., 3., 32, true).unwrap();
         let grid = |count: usize| -> Mesh {
@@ -670,18 +669,12 @@ mod tests {
                 .collect();
             join(&holes).unwrap()
         };
-        let four = prism_boolean(&plate, &grid(4), "difference").unwrap().unwrap();
-        assert!(four.inspect().unwrap().closed);
-        // Hole bridging fails on this aligned 4x4 grid; 64 holes exceed the
-        // 2,048-vertex profile budget. Both are triangulation limits, not
-        // invalid geometry, so they surface as errors the caller may retry.
-        assert_eq!(
-            prism_boolean(&plate, &grid(16), "difference").unwrap_err().message,
-            "Profile cannot be triangulated without crossing its boundary"
-        );
-        assert_eq!(
-            prism_boolean(&plate, &grid(64), "difference").unwrap_err().message,
-            "Profile triangulation budget exceeded"
-        );
+        for count in [4, 16, 36, 64, 100] {
+            let result = prism_boolean(&plate, &grid(count), "difference").unwrap().unwrap();
+            let report = result.inspect().unwrap();
+            assert!(report.closed, "{count} holes");
+            let expected = 86. * 86. * 8. - count as f64 * 16. * 9. * (std::f64::consts::PI / 16.).sin() * 8.;
+            assert!((report.signed_volume_mm3 - expected).abs() < expected * 1e-10, "{count} holes");
+        }
     }
 }

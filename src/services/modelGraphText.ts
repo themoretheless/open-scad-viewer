@@ -1,5 +1,7 @@
-import { hashNurbsDocument, type ModelGraphNurbsCompilation } from './modelGraphNurbs'
-import { ModelGraphError, hashModelGraphDocument, type ModelGraphCompilation } from './modelGraph'
+import { hashNurbsDocument } from './modelGraphNurbsCompiler'
+import { ModelGraphError, hashModelGraphDocument } from './modelGraphCompiler'
+import type { ModelGraphNurbsCompilation } from './modelGraphNurbs'
+import type { ModelGraphCompilation } from './modelGraph'
 import type { CustomizerParameter } from './scadCustomizer'
 import { prepareGraphRust } from './languages/kernel'
 

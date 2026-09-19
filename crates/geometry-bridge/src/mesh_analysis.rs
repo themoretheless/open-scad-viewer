@@ -2,6 +2,33 @@
 //! Results outlive the call that produced them so the host can copy typed
 //! views out of linear memory; `free` consumes the handle exactly once.
 
+pub struct SolidAnalysis {
+    mesh: crate::mesh::RenderMesh,
+    bvh: polygon_core::solid::bvh::MeshBvh,
+    edges: polygon_core::solid::edges::SemanticEdges,
+}
+
+/// Analyze the same f32 display buffers the host publishes, while they are
+/// still in the kernel. Merge pairs preserve the source solid's topology.
+pub fn analyze_solid(
+    id: u32,
+    normal_cosine: f64,
+    edge_cosine: f64,
+    leaf_size: usize,
+) -> crate::Result<SolidAnalysis> {
+    let mesh = crate::mesh::render_buffers(id, normal_cosine)?;
+    let bvh = polygon_core::solid::bvh::build_mesh_bvh(&mesh.vertices, &mesh.indices, 6, leaf_size);
+    let edges = polygon_core::solid::edges::extract_semantic_edges(
+        &mesh.vertices,
+        &mesh.indices,
+        &mesh.merge_from,
+        &mesh.merge_to,
+        false,
+        edge_cosine,
+    );
+    Ok(SolidAnalysis { mesh, bvh, edges })
+}
+
 pub enum AnalysisBuffers {
     Bytes {
         bytes: Vec<u8>,
@@ -25,6 +52,7 @@ pub enum AnalysisBuffers {
         diagnostics: [u32; 4],
     },
     Render(crate::mesh::RenderMesh),
+    Solid(SolidAnalysis),
 }
 
 thread_local! {
@@ -56,6 +84,8 @@ pub fn store(result: AnalysisBuffers) -> usize {
 /// (boundary, crease, non-manifold, degenerate) directly.
 /// Render: 0/1 vertices (f32, stride 6), 2/3 indices, 4/5 merge-from,
 /// 6/7 merge-to, 8/9 face ids (all u32).
+/// Solid: Render slots 0..=9, 10/11 BVH bounds (f32), 12/13 BVH nodes,
+/// 14/15 BVH triangles, 16/17 edge indices (u32), 18..=21 diagnostic counters.
 pub fn field(handle: usize, slot: u32) -> usize {
     RESULTS.with(|results| {
         let results = results.borrow();
@@ -110,21 +140,41 @@ pub fn field(handle: usize, slot: u32) -> usize {
                 2..=5 => diagnostics[slot as usize - 2] as usize,
                 _ => 0,
             },
-            AnalysisBuffers::Render(mesh) => match slot {
-                0 => mesh.vertices.as_ptr() as usize,
-                1 => mesh.vertices.len(),
-                2 => mesh.indices.as_ptr() as usize,
-                3 => mesh.indices.len(),
-                4 => mesh.merge_from.as_ptr() as usize,
-                5 => mesh.merge_from.len(),
-                6 => mesh.merge_to.as_ptr() as usize,
-                7 => mesh.merge_to.len(),
-                8 => mesh.face_ids.as_ptr() as usize,
-                9 => mesh.face_ids.len(),
+            AnalysisBuffers::Render(mesh) => render_field(mesh, slot),
+            AnalysisBuffers::Solid(result) => match slot {
+                0..=9 => render_field(&result.mesh, slot),
+                10 => result.bvh.bounds.as_ptr() as usize,
+                11 => result.bvh.bounds.len(),
+                12 => result.bvh.nodes.as_ptr() as usize,
+                13 => result.bvh.nodes.len(),
+                14 => result.bvh.triangles.as_ptr() as usize,
+                15 => result.bvh.triangles.len(),
+                16 => result.edges.indices.as_ptr() as usize,
+                17 => result.edges.indices.len(),
+                18 => result.edges.diagnostics.boundary as usize,
+                19 => result.edges.diagnostics.crease as usize,
+                20 => result.edges.diagnostics.non_manifold as usize,
+                21 => result.edges.diagnostics.degenerate as usize,
                 _ => 0,
             },
         }
     })
+}
+
+fn render_field(mesh: &crate::mesh::RenderMesh, slot: u32) -> usize {
+    match slot {
+        0 => mesh.vertices.as_ptr() as usize,
+        1 => mesh.vertices.len(),
+        2 => mesh.indices.as_ptr() as usize,
+        3 => mesh.indices.len(),
+        4 => mesh.merge_from.as_ptr() as usize,
+        5 => mesh.merge_from.len(),
+        6 => mesh.merge_to.as_ptr() as usize,
+        7 => mesh.merge_to.len(),
+        8 => mesh.face_ids.as_ptr() as usize,
+        9 => mesh.face_ids.len(),
+        _ => 0,
+    }
 }
 
 pub fn free(handle: usize) {

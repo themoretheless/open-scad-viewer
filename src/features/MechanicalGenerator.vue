@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from 'vue'
-import { compileModelGraph } from '../services/modelGraph'
+import { compileModelGraph } from '../services/modelGraphCompiler'
 import { createMechanicalDocument, GEAR_DEFAULTS, PLANETARY_DEFAULTS, THREAD_DEFAULTS } from '../services/mechanicalGeneratorContract'
 const props=defineProps<{open:boolean;locale:'ru'|'en'}>()
 const emit=defineEmits<{close:[];generate:[source:string,name:string];downloadCurrent:[]}>()

@@ -27,6 +27,8 @@ export async function runOwnNurbs(document: unknown, request: OwnNurbsRequest, s
         return await new Promise((resolve, reject) => {
             const child = spawn(process.execPath, ['--import', 'tsx', entry], { cwd: root, stdio: ['pipe', 'pipe', 'pipe'], shell: false, env: { PATH: process.env.PATH ?? '', SYSTEMROOT: process.env.SYSTEMROOT ?? '' } });
             let text = '', bytes = 0, failure: Error | undefined;
+            let result: OwnNurbsResult | undefined;
+            let terminatedAfterResponse = false;
             const kill = (error: Error) => { failure ??= error; child.kill('SIGKILL'); }, abort = () => kill(new Error('NURBS request cancelled.'));
             const timer = setTimeout(() => kill(new Error('NURBS request exceeded 30 seconds.')), 30000);
             signal?.addEventListener('abort', abort, { once: true });
@@ -37,22 +39,35 @@ export async function runOwnNurbs(document: unknown, request: OwnNurbsRequest, s
                 kill(new Error('NURBS response exceeds 12 MiB.'));
             else
                 text += s; });
+            child.stdout.on('error', () => kill(new Error('NURBS response could not be read.')));
+            child.stdout.on('end', () => {
+                if (failure) return;
+                try {
+                    const parsed = JSON.parse(text);
+                    if (typeof parsed?.ok !== 'boolean') throw new Error('Invalid response');
+                    result = parsed;
+                } catch {
+                    kill(new Error('Invalid NURBS process response.'));
+                    return;
+                }
+                // End-of-response is not process exit. Stop disposable V8 background
+                // work, but retain the admission slot and deadline until close/join.
+                if (child.exitCode === null && child.signalCode === null)
+                    terminatedAfterResponse = child.kill('SIGKILL');
+            });
             child.stderr.on('data', () => { });
             child.stdin.on('error', () => { });
             child.on('error', () => { failure ??= new Error('NURBS process could not start.'); });
-            child.on('close', code => { clearTimeout(timer); signal?.removeEventListener('abort', abort); if (failure) {
+            child.on('close', (code, exitSignal) => { clearTimeout(timer); signal?.removeEventListener('abort', abort); if (failure) {
                 reject(failure);
                 return;
-            } if (code !== 0) {
+            } if (code !== 0 && !(terminatedAfterResponse && exitSignal === 'SIGKILL')) {
                 reject(new Error('NURBS process failed; no other kernel was used.'));
                 return;
-            } try {
-                const result = JSON.parse(text);
-                if (typeof result?.ok !== 'boolean')
-                    throw new Error('Invalid response');
+            } if (result) {
                 resolve(result);
             }
-            catch {
+            else {
                 reject(new Error('Invalid NURBS process response.'));
             } });
             child.stdin.end(data);

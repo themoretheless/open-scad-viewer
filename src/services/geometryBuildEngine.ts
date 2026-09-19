@@ -596,14 +596,12 @@ export class GeometryBuildEngine {
 /**
  * Evaluates source with exact-solid recording, for the Solid workspace.
  *
- * This is the engine facade's one deliberate main-thread evaluation. The bounded worker
- * protocol validates an exact set of result keys and cannot carry the exact graph yet,
- * so the graph is produced here rather than routed through the worker; a large model
- * therefore blocks the interface for the duration. Callers must not reach the parser
+ * The Solid worker records and builds the graph within its own realm.
+ * Callers must not reach the parser
  * directly: keeping every parser consumer behind this facade is what the architecture
  * test in tests/coreMesh.test.ts pins.
  */
-export function evaluateExactSolidsOnMainThread(source: string): Promise<GeometryEvaluationResult> {
+export function evaluateExactSolids(source: string): Promise<GeometryEvaluationResult> {
   return parseOpenSCAD(source, { recordExactSolids: true })
 }
 
