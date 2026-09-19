@@ -32,3 +32,19 @@ rbench = { workspace = true }
 [[example]]
 name = "bench_leaf_math"
 path = "examples/bench_leaf_math.rs"
+
+[[example]]
+name = "bench_point_bounds"
+path = "examples/bench_point_bounds.rs"
+
+[[example]]
+name = "bench_point_moments"
+path = "examples/bench_point_moments.rs"
+
+[[example]]
+name = "bench_nearest_two"
+path = "examples/bench_nearest_two.rs"
+
+[[example]]
+name = "bench_chamfer"
+path = "examples/bench_chamfer.rs"
