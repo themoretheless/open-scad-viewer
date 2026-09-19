@@ -36,8 +36,8 @@ it('uses declared pitch geometry and preserves external/internal profile volumes
   }
 })
 
-it('rejects undercut, impossible planets, invalid thread dimensions and excessive mesh work',()=>{
-  expect(()=>buildModelGraphGear({...GEAR_DEFAULTS,teeth:10})).toThrow('undercut')
+it('rejects tiny gears, impossible planets, invalid thread dimensions and excessive mesh work',()=>{
+  expect(()=>buildModelGraphGear({...GEAR_DEFAULTS,teeth:2})).toThrow('3 to 256')
   expect(()=>buildModelGraphGear({...GEAR_DEFAULTS,bore:1000})).toThrow('bore')
   expect(()=>buildModelGraphPlanetary({...PLANETARY_DEFAULTS,planet_teeth:18})).toThrow('interference')
   expect(()=>buildModelGraphPlanetary({...PLANETARY_DEFAULTS,planet_count:5})).toThrow('integer')

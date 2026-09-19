@@ -12,7 +12,7 @@ function circularLensArea(r:number,R:number,d:number):number {
 }
 
 it('builds and exports the public stepped enclosure with retained curved B-rep authority',()=>{
-  const source=readFileSync(new URL('../examples/brep/stepped-enclosure.modelgraph.scad',import.meta.url),'utf8')
+  const source=readFileSync(new URL('../examples/brep/stepped-enclosure.mg',import.meta.url),'utf8')
   expect(EXAMPLES['brep-enclosure']).toBe(source)
   const compiled=compileModelGraphText(source)
   expect(compiled.execution_target).toBe('own-nurbs')

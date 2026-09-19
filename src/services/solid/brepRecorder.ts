@@ -80,6 +80,22 @@ export function createBrepRecordingKernelOps(
       return tag(base.sphere(radius, radialSegments), graph.sphere(radius))
     },
 
+    gear(spec, segments) {
+      return tag(base.gear(spec, segments), graph.gear({
+        module: spec.module,
+        teeth: spec.teeth,
+        height: spec.height,
+        pressure_angle: spec.pressureAngle,
+        helix_angle: spec.helixAngle,
+        herringbone: spec.herringbone,
+        bore: spec.bore,
+        internal: spec.internal,
+        rim_width: spec.rimWidth,
+        clearance: spec.clearance,
+        backlash: spec.backlash,
+      }))
+    },
+
     cylinder(height, radiusBottom, radiusTop, radialSegments, center) {
       const result = base.cylinder(height, radiusBottom, radiusTop, radialSegments, center)
       const solid = graph.cylinder(radiusBottom, radiusTop, height)

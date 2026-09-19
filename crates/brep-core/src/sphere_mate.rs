@@ -19,23 +19,24 @@
 //! pole or vertex, a hit or seam event that cannot be certified apart from
 //! its neighbours, arcs meeting tangentially in UV, and any region sample
 //! that falls inside the error band of a classification.
+use crate::Model;
+pub(crate) use crate::imprint_assembly::face_reversed;
+use crate::imprint_assembly::{Assembler, ChartVertices, EKey, VKey};
 use crate::imprint_pipeline::{self, SpatialRelation};
 use crate::intersections::sphere_sphere::{self, CanonicalSphere, PatchUvSection};
-use crate::{Coedge, Edge, Face, FaceUse, Loop, Model, Vertex};
+use crate::uv_regions::{Piece, normalized, pcurve_point};
 use nurbs_core::{Error, Result, curve::Curve, surface::Surface};
 use std::collections::BTreeMap;
 
 pub(crate) const TAU: f64 = std::f64::consts::TAU;
 /// UV clearance demanded between an event and a patch corner.
-const CORNER: f64 = 1e-7;
+pub(crate) const CORNER: f64 = 1e-7;
 /// UV boundary-membership margin.
 pub(crate) const BOUNDARY_UV: f64 = 1e-9;
 /// Largest 3D sweep of one arc piece (single-span exactness margin).
 const MAX_SPAN: f64 = std::f64::consts::FRAC_PI_2 + 1e-9;
 /// Angular clearance between two events on one section circle.
 pub(crate) const EVENT_GAP: f64 = 1e-8;
-/// Offsets tried when sampling a UV region interior.
-const SAMPLE_DELTAS: [f64; 4] = [1e-2, 1e-3, 1e-4, 1e-5];
 
 pub(crate) fn unsupported(message: impl Into<String>) -> Error {
     Error::new("BREP_UNSUPPORTED_OPERATION", message)
@@ -61,16 +62,6 @@ pub(crate) fn dist(a: [f64; 3], b: [f64; 3]) -> f64 {
 }
 pub(crate) fn point3(p: &[f64]) -> [f64; 3] {
     [p[0], p[1], p[2]]
-}
-
-/// Original shell orientation of one face of a single-shell model.
-pub(crate) fn face_reversed(model: &Model, face: usize) -> bool {
-    model.shells[0]
-        .faces
-        .iter()
-        .find(|use_| use_.face == face)
-        .map(|use_| use_.reversed)
-        .unwrap_or(false)
 }
 
 /// Affine inversion of a bilinear affine face `P(u,v) = P00 + u U + v V`.
@@ -131,7 +122,7 @@ pub(crate) fn plane_contact(
 // Sphere patch UV helpers (quarter disk: u-axis, quarter arc, v-axis)
 // ---------------------------------------------------------------------------
 
-fn piece_of(w: [f64; 2]) -> Result<usize> {
+pub(crate) fn piece_of(w: [f64; 2]) -> Result<usize> {
     for corner in [[0., 0.], [1., 0.], [0., 1.]] {
         if (w[0] - corner[0]).hypot(w[1] - corner[1]) <= CORNER {
             return Err(unsupported(
@@ -151,7 +142,7 @@ fn piece_of(w: [f64; 2]) -> Result<usize> {
         )),
     }
 }
-fn snap_to_piece(piece: usize, w: [f64; 2]) -> [f64; 2] {
+pub(crate) fn snap_to_piece(piece: usize, w: [f64; 2]) -> [f64; 2] {
     match piece {
         0 => [w[0], 0.],
         2 => [0., w[1]],
@@ -163,7 +154,7 @@ fn snap_to_piece(piece: usize, w: [f64; 2]) -> [f64; 2] {
 }
 /// Piece parameter in loop (CCW) direction: piece 0 is (0,0)->(1,0), piece 1
 /// the rational quarter arc (1,0)->(0,1), piece 2 is (0,1)->(0,0).
-fn piece_tau(piece: usize, w: [f64; 2]) -> f64 {
+pub(crate) fn piece_tau(piece: usize, w: [f64; 2]) -> f64 {
     match piece {
         0 => w[0],
         2 => 1. - w[1],
@@ -177,7 +168,7 @@ pub(crate) fn quarter_arc_parameter(cos: f64, sin: f64) -> f64 {
     let aw = sphere_sphere::ARC_WEIGHT;
     s / (aw + s * (1. - aw))
 }
-fn strictly_inside_quarter_disk(uv: [f64; 2], margin: f64) -> bool {
+pub(crate) fn strictly_inside_quarter_disk(uv: [f64; 2], margin: f64) -> bool {
     uv[0] > margin && uv[1] > margin && uv[0] * uv[0] + uv[1] * uv[1] < 1. - margin
 }
 
@@ -261,50 +252,16 @@ impl Circle {
     }
 }
 
-/// A special vertex of the result: an edge hit, a seam crossing or a
-/// refinement point, with every original edge it lies on as
-/// (operand, edge, edge parameter).
-struct VRec {
-    point: [f64; 3],
-    on_edges: Vec<(usize, usize, f64)>,
-    /// The vertex coincides with an original vertex (operand, index).
-    orig: Option<(usize, usize)>,
-}
-
 /// One arc piece of the intersection network.
 pub(crate) struct Arc {
     pub(crate) face: usize,
     /// Owning sphere patch; `None` when the piece runs along a sphere seam
     /// and is an original sphere edge (or a piece of one).
     pub(crate) patch: Option<usize>,
-    pub(crate) ends: [VKey; 2],
-    /// Exact rational quadratic over [0, 1], +phi orientation.
-    pub(crate) curve: Curve,
+    /// The 3D edge carrying this piece; its +phi curve and ends live in the
+    /// assembler's network entry of the same index.
     key: EKey,
     /// The +phi orientation runs against the 3D edge `key`.
-    reversed: bool,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-pub(crate) enum VKey {
-    Orig(usize, usize),
-    Special(usize),
-}
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-enum EKey {
-    Arc(usize),
-    Orig(usize, usize),
-    /// Piece `j` of split edge `(operand, edge)`.
-    Piece(usize, usize, usize),
-}
-
-/// One undirected UV piece of a chart arrangement.
-struct Piece {
-    v: [usize; 2],
-    /// Forward pcurve, from v[0] to v[1].
-    pcurve: Curve,
-    key: EKey,
-    /// Forward direction runs against the 3D edge.
     reversed: bool,
 }
 
@@ -326,29 +283,18 @@ pub(crate) trait Mate: Sized {
 }
 
 pub(crate) struct Imprint<'m, M: Mate> {
-    src: [&'m Model; 2],
+    pub(crate) asm: Assembler<'m>,
     pub(crate) mate_index: usize,
     pub(crate) mate: &'m M,
     pub(crate) sphere: CanonicalSphere,
     pub(crate) band: f64,
-    want_inside: [bool; 2],
-    flip: [bool; 2],
     pub(crate) circles: Vec<Circle>,
     /// Sphere: per face, coedge index of each UV boundary piece.
     sphere_pieces: [[usize; 3]; 8],
-    specials: Vec<VRec>,
-    /// (operand, edge) -> sorted (t, special vertex).
-    splits: BTreeMap<(usize, usize), Vec<(f64, usize)>>,
     /// UV of a special vertex in a sphere patch chart.
     patch_uv: BTreeMap<(usize, usize), [f64; 2]>,
+    /// Parallel to `asm.net`.
     arcs: Vec<Arc>,
-    vertices: Vec<Vertex>,
-    edges: Vec<Edge>,
-    loops: Vec<Loop>,
-    faces: Vec<Face>,
-    shell: Vec<FaceUse>,
-    vmap: BTreeMap<VKey, usize>,
-    emap: BTreeMap<EKey, usize>,
 }
 
 /// Run the engine for `a op b`, where operand `mate_index` is the mate and
@@ -375,22 +321,7 @@ pub(crate) fn run<M: Mate>(
     imprint.refine_and_build_arcs()?;
     imprint.emit_mate()?;
     imprint.emit_sphere()?;
-    match imprint_pipeline::assemble_imprint_components(
-        imprint.vertices,
-        imprint.edges,
-        imprint.loops,
-        imprint.faces,
-        imprint.shell,
-        tolerance,
-        &[a, b],
-    ) {
-        Ok(model) => Ok(model),
-        Err(e) if e.code == "BREP_RESOURCE_LIMIT" => Err(e),
-        Err(e) => Err(unsupported(format!(
-            "Sphere Boolean result failed validation: {}",
-            e.message
-        ))),
-    }
+    imprint.asm.finish(tolerance)
 }
 
 impl<'m, M: Mate> Imprint<'m, M> {
@@ -403,10 +334,44 @@ impl<'m, M: Mate> Imprint<'m, M> {
         band: f64,
         operation: &str,
     ) -> Self {
-        let src = [a, b];
-        let sphere_model = src[1 - mate_index];
-        let sphere_pieces: [[usize; 3]; 8] = std::array::from_fn(|face| {
-            let wire = &sphere_model.loops[sphere_model.faces[face].outer];
+        let sphere_model = [a, b][1 - mate_index];
+        let sphere_pieces = Self::sphere_boundary_pieces(sphere_model);
+        Self {
+            asm: Assembler::new(a, b, operation),
+            mate_index,
+            mate,
+            sphere,
+            band,
+            circles: Vec::new(),
+            sphere_pieces,
+            patch_uv: BTreeMap::new(),
+            arcs: Vec::new(),
+        }
+    }
+
+    fn sphere_index(&self) -> usize {
+        1 - self.mate_index
+    }
+    fn sphere_model(&self) -> &'m Model {
+        self.asm.src[self.sphere_index()]
+    }
+
+    /// Register a sphere hit on mate edge `e` at parameter `t`; a hit already
+    /// registered at that edge parameter is returned instead of duplicated.
+    pub(crate) fn hit(&mut self, point: [f64; 3], e: usize, t: f64) -> usize {
+        let o = self.mate_index;
+        if let Some(id) = self.asm.split_at(o, e, t, 1e-9) {
+            return id;
+        }
+        let id = self.asm.special(point);
+        self.asm.attach_edge(id, o, e, t);
+        id
+    }
+    /// Per-face coedge index of each quarter-disk boundary piece (u-axis,
+    /// quarter arc, v-axis) of a canonical sphere model.
+    pub(crate) fn sphere_boundary_pieces(model: &Model) -> [[usize; 3]; 8] {
+        std::array::from_fn(|face| {
+            let wire = &model.loops[model.faces[face].outer];
             let mut map = [usize::MAX; 3];
             for (i, coedge) in wire.coedges.iter().enumerate() {
                 let piece = if sphere_sphere::unit_quarter_arc(&coedge.pcurve) {
@@ -419,77 +384,11 @@ impl<'m, M: Mate> Imprint<'m, M> {
                 map[piece] = i;
             }
             map
-        });
-        // Operand order for these two arrays is call order (a, b).
-        let want_inside = [
-            operation == "intersection",
-            matches!(operation, "intersection" | "difference"),
-        ];
-        let flip = [false, operation == "difference"];
-        Self {
-            src,
-            mate_index,
-            mate,
-            sphere,
-            band,
-            want_inside,
-            flip,
-            circles: Vec::new(),
-            sphere_pieces,
-            specials: Vec::new(),
-            splits: BTreeMap::new(),
-            patch_uv: BTreeMap::new(),
-            arcs: Vec::new(),
-            vertices: Vec::new(),
-            edges: Vec::new(),
-            loops: Vec::new(),
-            faces: Vec::new(),
-            shell: Vec::new(),
-            vmap: BTreeMap::new(),
-            emap: BTreeMap::new(),
-        }
-    }
-
-    fn sphere_index(&self) -> usize {
-        1 - self.mate_index
-    }
-    fn sphere_model(&self) -> &'m Model {
-        self.src[self.sphere_index()]
-    }
-
-    fn attach_edge(&mut self, id: usize, o: usize, e: usize, t: f64) {
-        self.specials[id].on_edges.push((o, e, t));
-        let table = self.splits.entry((o, e)).or_default();
-        table.push((t, id));
-        table.sort_by(|a, b| a.0.total_cmp(&b.0));
-    }
-    fn special(&mut self, point: [f64; 3]) -> usize {
-        let id = self.specials.len();
-        self.specials.push(VRec {
-            point,
-            on_edges: Vec::new(),
-            orig: None,
-        });
-        id
-    }
-    /// Register a sphere hit on mate edge `e` at parameter `t`.
-    pub(crate) fn hit(&mut self, point: [f64; 3], e: usize, t: f64) -> usize {
-        let id = self.special(point);
-        self.attach_edge(id, self.mate_index, e, t);
-        id
+        })
     }
     /// True when the point is strictly inside the sphere; ambiguous → refusal.
     pub(crate) fn inside_sphere(&self, point: [f64; 3]) -> Result<bool> {
-        let d = dist(point, self.sphere.center) - self.sphere.radius;
-        if d < -self.band {
-            Ok(true)
-        } else if d > self.band {
-            Ok(false)
-        } else {
-            Err(unsupported(
-                "Sphere Boolean: region classification falls within the error band of the sphere",
-            ))
-        }
+        sphere_inside(&self.sphere, point, self.band)
     }
     /// Containment relation "mate contains sphere" in call order.
     pub(crate) fn mate_contains_sphere(&self) -> SpatialRelation {
@@ -513,7 +412,7 @@ impl<'m, M: Mate> Imprint<'m, M> {
         if self.circles.iter().any(|c| !c.inside.is_empty()) {
             return Ok(None);
         }
-        let mate_vertex = self.src[self.mate_index].vertices[0].point;
+        let mate_vertex = self.asm.src[self.mate_index].vertices[0].point;
         if self.inside_sphere(mate_vertex)? {
             return Ok(Some(self.sphere_contains_mate()));
         }
@@ -607,6 +506,7 @@ impl<'m, M: Mate> Imprint<'m, M> {
                         continue;
                     };
                     let existing = self
+                        .asm
                         .splits
                         .get(&(o, edge))
                         .and_then(|table| table.iter().find(|(et, _)| (et - t).abs() <= 1e-9))
@@ -614,18 +514,19 @@ impl<'m, M: Mate> Imprint<'m, M> {
                     let id = match (existing, at_end) {
                         (Some(id), _) => id,
                         (None, Some(hit)) => {
-                            if dist(self.specials[hit].point, point) > 1e-7 * scale + self.band {
+                            if dist(self.asm.specials[hit].point, point) > 1e-7 * scale + self.band
+                            {
                                 return Err(unsupported(
                                     "Sphere Boolean: a seam crossing falls within the event \
                                      band of an edge hit without coinciding with it",
                                 ));
                             }
-                            self.attach_edge(hit, o, edge, t);
+                            self.asm.attach_edge(hit, o, edge, t);
                             hit
                         }
                         (None, None) => {
-                            let id = self.special(point);
-                            self.attach_edge(id, o, edge, t);
+                            let id = self.asm.special(point);
+                            self.asm.attach_edge(id, o, edge, t);
                             self.circles[i].events[k].push((local, id));
                             id
                         }
@@ -670,7 +571,7 @@ impl<'m, M: Mate> Imprint<'m, M> {
                     for q in 0..4 {
                         let phi = 0.37 + q as f64 * std::f64::consts::FRAC_PI_2;
                         let point = self.circles[i].point_at(phi);
-                        let id = self.special(point);
+                        let id = self.asm.special(point);
                         stations.push((phi, id));
                     }
                 }
@@ -689,7 +590,7 @@ impl<'m, M: Mate> Imprint<'m, M> {
                     for p in 1..parts {
                         let phi = lo + (hi - lo) * p as f64 / parts as f64;
                         let point = self.circles[i].point_at(phi);
-                        let id = self.special(point);
+                        let id = self.asm.special(point);
                         refined.push((phi, id));
                     }
                 }
@@ -715,9 +616,9 @@ impl<'m, M: Mate> Imprint<'m, M> {
                         degree: 2,
                         knots: vec![0., 0., 0., 1., 1., 1.],
                         control_points: vec![
-                            self.specials[v0].point.to_vec(),
+                            self.asm.specials[v0].point.to_vec(),
                             shoulder.to_vec(),
-                            self.specials[v1].point.to_vec(),
+                            self.asm.specials[v1].point.to_vec(),
                         ],
                         weights: vec![1., weight, 1.],
                         periodic: false,
@@ -725,13 +626,13 @@ impl<'m, M: Mate> Imprint<'m, M> {
                     let midpoint = circle.point_at(mid);
                     let patch = self.owner_patch(midpoint)?;
                     let face = circle.face;
-                    let key = EKey::Arc(self.arcs.len());
+                    let k = self
+                        .asm
+                        .push_net([VKey::Special(v0), VKey::Special(v1)], curve);
                     self.arcs.push(Arc {
                         face,
                         patch: Some(patch),
-                        ends: [VKey::Special(v0), VKey::Special(v1)],
-                        curve,
-                        key,
+                        key: EKey::Net(k),
                         reversed: false,
                     });
                 }
@@ -824,14 +725,14 @@ impl<'m, M: Mate> Imprint<'m, M> {
                 |phi: f64, id: Option<usize>, this: &mut Self| -> Result<Option<(f64, VKey)>> {
                     let Some(id) = id else { return Ok(None) };
                     // A hit at a sphere vertex takes that vertex's identity.
-                    let point = this.specials[id].point;
+                    let point = this.asm.specials[id].point;
                     for (e, phi0, phi1) in &edges {
                         for (vi, vphi) in [(0usize, *phi0), (1usize, *phi1)] {
                             let v = model.edges[*e].vertices[vi];
                             if dist(model.vertices[v].point, point)
                                 <= this.band + 1e-9 * this.sphere.radius
                             {
-                                this.specials[id].orig = Some((o, v));
+                                this.asm.specials[id].orig = Some((o, v));
                             }
                             let _ = vphi;
                         }
@@ -923,8 +824,9 @@ impl<'m, M: Mate> Imprint<'m, M> {
                     (if forward { t_hi } else { t_lo }, kb),
                 ] {
                     if let VKey::Special(id) = key {
-                        if self.specials[id].orig.is_none() && t > 0. && t < 1. {
+                        if self.asm.specials[id].orig.is_none() && t > 0. && t < 1. {
                             let known = self
+                                .asm
                                 .splits
                                 .get(&(o, e))
                                 .map(|table| {
@@ -934,7 +836,7 @@ impl<'m, M: Mate> Imprint<'m, M> {
                                 })
                                 .unwrap_or(false);
                             if !known {
-                                self.attach_edge(id, o, e, t);
+                                self.asm.attach_edge(id, o, e, t);
                             }
                         }
                     }
@@ -943,7 +845,7 @@ impl<'m, M: Mate> Imprint<'m, M> {
                 let (key, curve) = if whole {
                     (EKey::Orig(o, e), model.edges[e].curve.clone())
                 } else {
-                    let table = self.splits.get(&(o, e)).cloned().unwrap_or_default();
+                    let table = self.asm.splits.get(&(o, e)).cloned().unwrap_or_default();
                     let n = table.len() + 1;
                     let j = (0..n)
                         .find(|&j| {
@@ -960,25 +862,16 @@ impl<'m, M: Mate> Imprint<'m, M> {
                     )
                 };
                 let curve = if forward { curve } else { curve.reverse()? };
+                self.asm.push_net([ka, kb], curve);
                 self.arcs.push(Arc {
                     face,
                     patch: None,
-                    ends: [ka, kb],
-                    curve,
                     key,
                     reversed: !forward,
                 });
             }
         }
         Ok(())
-    }
-
-    /// 3D point of a chart vertex key.
-    fn point_of(&self, key: VKey) -> [f64; 3] {
-        match key {
-            VKey::Special(id) => self.specials[id].point,
-            VKey::Orig(o, v) => self.src[o].vertices[v].point,
-        }
     }
 
     /// The single sphere patch containing a point strictly inside its chart.
@@ -1004,160 +897,8 @@ impl<'m, M: Mate> Imprint<'m, M> {
     // Result topology
     // -----------------------------------------------------------------------
 
-    fn vertex(&mut self, key: VKey) -> usize {
-        let key = match key {
-            VKey::Special(id) => match self.specials[id].orig {
-                Some((o, v)) => VKey::Orig(o, v),
-                None => key,
-            },
-            other => other,
-        };
-        if let Some(&id) = self.vmap.get(&key) {
-            return id;
-        }
-        let point = match key {
-            VKey::Special(id) => self.specials[id].point,
-            VKey::Orig(o, v) => self.src[o].vertices[v].point,
-        };
-        let id = self.vertices.len();
-        self.vertices.push(Vertex { point });
-        self.vmap.insert(key, id);
-        id
-    }
-
-    /// Vertex key at one original edge parameter of operand `o`.
-    fn vkey_at(&self, o: usize, edge: usize, t: f64) -> Result<VKey> {
-        let src = &self.src[o].edges[edge];
-        if t <= 0. {
-            return Ok(VKey::Orig(o, src.vertices[0]));
-        }
-        if t >= 1. {
-            return Ok(VKey::Orig(o, src.vertices[1]));
-        }
-        let table = self
-            .splits
-            .get(&(o, edge))
-            .ok_or_else(|| unsupported("Sphere Boolean: split edge has no event table"))?;
-        for &(et, id) in table {
-            if (et - t).abs() <= 1e-12 {
-                return Ok(VKey::Special(id));
-            }
-        }
-        Err(unsupported(
-            "Sphere Boolean: split parameter does not match an event",
-        ))
-    }
-
-    fn edge(&mut self, key: EKey) -> Result<usize> {
-        if let Some(&id) = self.emap.get(&key) {
-            return Ok(id);
-        }
-        let edge = match key {
-            EKey::Arc(k) => {
-                let v0 = self.vertex(self.arcs[k].ends[0]);
-                let v1 = self.vertex(self.arcs[k].ends[1]);
-                Edge {
-                    degenerate: false,
-                    vertices: [v0, v1],
-                    curve: self.arcs[k].curve.clone(),
-                }
-            }
-            EKey::Orig(o, e) => {
-                let src = &self.src[o].edges[e];
-                let v0 = self.vertex(VKey::Orig(o, src.vertices[0]));
-                let v1 = self.vertex(VKey::Orig(o, src.vertices[1]));
-                Edge {
-                    degenerate: false,
-                    vertices: [v0, v1],
-                    curve: src.curve.clone(),
-                }
-            }
-            EKey::Piece(o, e, j) => {
-                let table = self
-                    .splits
-                    .get(&(o, e))
-                    .cloned()
-                    .ok_or_else(|| unsupported("Sphere Boolean: piece of an unsplit edge"))?;
-                let t_lo = if j == 0 { 0. } else { table[j - 1].0 };
-                let t_hi = if j == table.len() { 1. } else { table[j].0 };
-                let v0 = self.vertex(self.vkey_at(o, e, t_lo)?);
-                let v1 = self.vertex(self.vkey_at(o, e, t_hi)?);
-                Edge {
-                    degenerate: false,
-                    vertices: [v0, v1],
-                    curve: self.src[o].edges[e].curve.trim(t_lo, t_hi)?,
-                }
-            }
-        };
-        let id = self.edges.len();
-        self.edges.push(edge);
-        self.emap.insert(key, id);
-        Ok(id)
-    }
-
-    /// Boundary pieces of one original face of operand `o`, in loop order,
-    /// split at the events on its edges: (from, to, forward pcurve, 3D edge
-    /// key, forward runs against the 3D edge).
-    fn boundary_pieces(
-        &self,
-        o: usize,
-        face: usize,
-    ) -> Result<Vec<(VKey, VKey, Curve, EKey, bool)>> {
-        let model = self.src[o];
-        let wire = &model.loops[model.faces[face].outer];
-        let mut out = Vec::new();
-        for coedge in &wire.coedges {
-            let e = coedge.edge;
-            let table = self.splits.get(&(o, e)).cloned().unwrap_or_default();
-            if table.is_empty() {
-                let src = &model.edges[e];
-                let (va, vb) = if coedge.reversed {
-                    (src.vertices[1], src.vertices[0])
-                } else {
-                    (src.vertices[0], src.vertices[1])
-                };
-                out.push((
-                    VKey::Orig(o, va),
-                    VKey::Orig(o, vb),
-                    normalized(coedge.pcurve.clone()),
-                    EKey::Orig(o, e),
-                    coedge.reversed,
-                ));
-                continue;
-            }
-            let count = table.len() + 1;
-            let order: Vec<usize> = if coedge.reversed {
-                (0..count).rev().collect()
-            } else {
-                (0..count).collect()
-            };
-            for j in order {
-                let t_lo = if j == 0 { 0. } else { table[j - 1].0 };
-                let t_hi = if j == count - 1 { 1. } else { table[j].0 };
-                let (tau_a, tau_b) = if coedge.reversed {
-                    (1. - t_hi, 1. - t_lo)
-                } else {
-                    (t_lo, t_hi)
-                };
-                let (ka, kb) = if coedge.reversed {
-                    (self.vkey_at(o, e, t_hi)?, self.vkey_at(o, e, t_lo)?)
-                } else {
-                    (self.vkey_at(o, e, t_lo)?, self.vkey_at(o, e, t_hi)?)
-                };
-                out.push((
-                    ka,
-                    kb,
-                    normalized(coedge.pcurve.trim(tau_a, tau_b)?),
-                    EKey::Piece(o, e, j),
-                    coedge.reversed,
-                ));
-            }
-        }
-        Ok(out)
-    }
-
-    /// Exact pcurve of an arc in its sphere patch: degree-2 Bernstein
-    /// conversion of the inverted 3D arc, resampled against the surface.
+    /// Exact pcurve of an arc in its sphere patch, ends snapped to the chart
+    /// vertices and resampled against the surface.
     fn patch_arc_pcurve(&self, k: usize, uv0: [f64; 2], uv1: [f64; 2]) -> Result<Curve> {
         let arc = &self.arcs[k];
         let Some(patch) = arc.patch else {
@@ -1165,66 +906,15 @@ impl<'m, M: Mate> Imprint<'m, M> {
                 "Sphere Boolean: seam piece has no owning patch",
             ));
         };
-        let (a, b, pole) = self.sphere.frame(patch);
-        let center = self.sphere.center;
-        let radius = self.sphere.radius;
-        let curve = &arc.curve;
-        let sample = |t: f64| -> (f64, f64, f64) {
-            let b0 = (1. - t) * (1. - t);
-            let b1 = 2. * t * (1. - t);
-            let b2 = t * t;
-            let mut h = [0.; 3];
-            let mut hw = 0.;
-            for (i, basis) in [b0, b1, b2].into_iter().enumerate() {
-                let w = basis * curve.weights[i];
-                for axis in 0..3 {
-                    h[axis] += w * curve.control_points[i][axis];
-                }
-                hw += w;
-            }
-            let d = std::array::from_fn(|axis| h[axis] - center[axis] * hw);
-            (dot(d, a), dot(d, b), radius * hw + dot(d, pole))
-        };
-        let f0 = sample(0.);
-        let f1 = sample(0.5);
-        let f2 = sample(1.);
-        let bern = |f: (f64, f64, f64), i: usize| -> f64 {
-            match i {
-                0 => f.0,
-                2 => f.2,
-                _ => 2. * f.1 - 0.5 * f.0 - 0.5 * f.2,
-            }
-        };
-        let mut control_points = Vec::with_capacity(3);
-        let mut weights = Vec::with_capacity(3);
-        for i in 0..3 {
-            let den = bern((f0.2, f1.2, f2.2), i);
-            if !(den > 0.) {
-                return Err(unsupported(
-                    "Sphere Boolean: arc leaves the patch hemisphere",
-                ));
-            }
-            control_points.push(vec![
-                bern((f0.0, f1.0, f2.0), i) / den,
-                bern((f0.1, f1.1, f2.1), i) / den,
-            ]);
-            weights.push(den);
-        }
-        control_points[0] = uv0.to_vec();
-        control_points[2] = uv1.to_vec();
-        let pcurve = Curve {
-            degree: 2,
-            knots: vec![0., 0., 0., 1., 1., 1.],
-            control_points,
-            weights,
-            periodic: false,
-        };
+        let mut pcurve = sphere_arc_pcurve(&self.sphere, patch, &self.asm.net[k].curve)?;
+        pcurve.control_points[0] = uv0.to_vec();
+        pcurve.control_points[2] = uv1.to_vec();
         let surface = &self.sphere_model().faces[patch].surface;
         verify_pcurve(
             &pcurve,
-            curve,
+            &self.asm.net[k].curve,
             surface,
-            1e-9 * radius.max(1.) + self.sphere.error,
+            1e-9 * self.sphere.radius.max(1.) + self.sphere.error,
         )?;
         Ok(pcurve)
     }
@@ -1235,7 +925,7 @@ impl<'m, M: Mate> Imprint<'m, M> {
         if let Some(&uv) = self.patch_uv.get(&(patch, id)) {
             return Ok(uv);
         }
-        let point = self.specials[id].point;
+        let point = self.asm.specials[id].point;
         let uv = self
             .sphere
             .invert_uv(patch, point)
@@ -1249,177 +939,12 @@ impl<'m, M: Mate> Imprint<'m, M> {
         Ok(uv)
     }
 
-    fn emit_face(
-        &mut self,
-        o: usize,
-        face: usize,
-        reversed: bool,
-        outer: Vec<Coedge>,
-        holes: Vec<Vec<Coedge>>,
-        surface: Option<Surface>,
-    ) {
-        let outer_id = self.loops.len();
-        self.loops.push(Loop { coedges: outer });
-        let mut hole_ids = Vec::with_capacity(holes.len());
-        for hole in holes {
-            hole_ids.push(self.loops.len());
-            self.loops.push(Loop { coedges: hole });
-        }
-        let id = self.faces.len();
-        self.faces.push(Face {
-            surface: surface.unwrap_or_else(|| self.src[o].faces[face].surface.clone()),
-            outer: outer_id,
-            holes: hole_ids,
-        });
-        self.shell.push(FaceUse {
-            face: id,
-            reversed: reversed ^ self.flip[o],
-        });
-    }
-
-    /// Whole original face, edges remapped and split where seam pieces or
-    /// hits divided them.
-    fn emit_whole(&mut self, o: usize, face: usize, reversed: bool) -> Result<()> {
-        let mut out = Vec::new();
-        for (_, _, pcurve, key, rev) in self.boundary_pieces(o, face)? {
-            let edge = self.edge(key)?;
-            out.push(Coedge {
-                edge,
-                reversed: rev,
-                pcurve,
-            });
-        }
-        self.emit_face(o, face, reversed, out, vec![], None);
-        Ok(())
-    }
-
-    /// The face surface trimmed to the UV bounding box of a region and
-    /// re-parameterized to the unit square, with the region pcurves mapped by
-    /// the same affine change (exact for lines and rational arcs). The
-    /// control hull of the result becomes tight: the solid audit proves body
-    /// separation from surface control points, and downstream consumers keep
-    /// their unit-domain assumption.
-    fn tight_surface(
-        &self,
-        o: usize,
-        face: usize,
-        outer: &mut [Coedge],
-        holes: &mut [Vec<Coedge>],
-    ) -> Result<Surface> {
-        let source = &self.src[o].faces[face].surface;
-        let du = [
-            source.knots_u[source.degree_u],
-            source.knots_u[source.knots_u.len() - 1 - source.degree_u],
-        ];
-        let dv = [
-            source.knots_v[source.degree_v],
-            source.knots_v[source.knots_v.len() - 1 - source.degree_v],
-        ];
-        let mut lo = [f64::INFINITY; 2];
-        let mut hi = [f64::NEG_INFINITY; 2];
-        for coedge in outer.iter().chain(holes.iter().flatten()) {
-            for p in &coedge.pcurve.control_points {
-                for k in 0..2 {
-                    lo[k] = lo[k].min(p[k]);
-                    hi[k] = hi[k].max(p[k]);
-                }
-            }
-        }
-        let margin = 1e-12;
-        let u0 = (lo[0] - margin).max(du[0]);
-        let u1 = (hi[0] + margin).min(du[1]);
-        let v0 = (lo[1] - margin).max(dv[0]);
-        let v1 = (hi[1] + margin).min(dv[1]);
-        if !(u1 - u0 > 1e-9) || !(v1 - v0 > 1e-9) {
-            return Err(unsupported("Sphere Boolean: face region collapses in UV"));
-        }
-        if u0 == du[0] && u1 == du[1] && v0 == dv[0] && v1 == dv[1] {
-            return Ok(source.clone());
-        }
-        let mut surface = source.trim([u0, u1, v0, v1])?;
-        surface.knots_u = surface
-            .knots_u
-            .iter()
-            .map(|k| (k - u0) / (u1 - u0))
-            .collect();
-        surface.knots_v = surface
-            .knots_v
-            .iter()
-            .map(|k| (k - v0) / (v1 - v0))
-            .collect();
-        for coedge in outer.iter_mut().chain(holes.iter_mut().flatten()) {
-            for p in &mut coedge.pcurve.control_points {
-                p[0] = ((p[0] - u0) / (u1 - u0)).clamp(0., 1.);
-                p[1] = ((p[1] - v0) / (v1 - v0)).clamp(0., 1.);
-            }
-        }
-        Ok(surface)
-    }
-
-    /// Arrange one chart and emit its kept regions.
-    fn emit_chart(
-        &mut self,
-        o: usize,
-        face: usize,
-        reversed: bool,
-        pieces: Vec<Piece>,
-        vertex_count: usize,
-    ) -> Result<()> {
-        let want = self.want_inside[o];
-        let arrangement = arrange(pieces, vertex_count)?;
-        for region in &arrangement.regions {
-            let sample = region_sample(&arrangement, region)?;
-            let point = point3(
-                &self.src[o].faces[face]
-                    .surface
-                    .evaluate(sample[0], sample[1])?
-                    .point,
-            );
-            let inside = if o == self.mate_index {
-                self.inside_sphere(point)?
-            } else {
-                self.mate.inside(point, self.band)?
-            };
-            if inside != want {
-                continue;
-            }
-            let mut outer = self.cycle_coedges(&arrangement, region.outer)?;
-            let mut holes = Vec::with_capacity(region.holes.len());
-            for &hole in &region.holes {
-                holes.push(self.cycle_coedges(&arrangement, hole)?);
-            }
-            let surface = self.tight_surface(o, face, &mut outer, &mut holes)?;
-            self.emit_face(o, face, reversed, outer, holes, Some(surface));
-        }
-        Ok(())
-    }
-
-    fn cycle_coedges(&mut self, arrangement: &Arrangement, cycle: usize) -> Result<Vec<Coedge>> {
-        let mut out = Vec::new();
-        for &h in &arrangement.cycles[cycle] {
-            let half = &arrangement.halves[h];
-            let piece = &arrangement.pieces[half.piece];
-            let edge = self.edge(piece.key)?;
-            let (pcurve, reversed) = if half.forward {
-                (piece.pcurve.clone(), piece.reversed)
-            } else {
-                (piece.pcurve.reverse()?, !piece.reversed)
-            };
-            out.push(Coedge {
-                edge,
-                reversed,
-                pcurve,
-            });
-        }
-        Ok(out)
-    }
-
     /// Mate faces: untouched faces whole (classified by their centre sample),
     /// crossed faces through arrangement.
     fn emit_mate(&mut self) -> Result<()> {
         let o = self.mate_index;
-        let want = self.want_inside[o];
-        let model = self.src[o];
+        let want = self.asm.want_inside[o];
+        let model = self.asm.src[o];
         for face in 0..model.faces.len() {
             let reversed = face_reversed(model, face);
             let arcs: Vec<usize> = (0..self.arcs.len())
@@ -1428,17 +953,17 @@ impl<'m, M: Mate> Imprint<'m, M> {
             if arcs.is_empty() {
                 let centre = point3(&model.faces[face].surface.evaluate(0.5, 0.5)?.point);
                 if self.inside_sphere(centre)? == want {
-                    self.emit_whole(o, face, reversed)?;
+                    self.asm.emit_whole(o, face, reversed)?;
                 }
                 continue;
             }
             let mut chart = ChartVertices::default();
             let mut pieces = Vec::new();
-            for (ka, kb, pcurve, key, rev) in self.boundary_pieces(o, face)? {
+            for (ka, kb, pcurve, key, rev) in self.asm.boundary_pieces(o, face)? {
                 let ua = pcurve_point(&pcurve, 0.)?;
                 let ub = pcurve_point(&pcurve, 1.)?;
-                let a = chart.index(self.chart_key(ka), ua);
-                let b = chart.index(self.chart_key(kb), ub);
+                let a = chart.index(self.asm.chart_key(ka), ua);
+                let b = chart.index(self.asm.chart_key(kb), ub);
                 pieces.push(Piece {
                     v: [a, b],
                     pcurve,
@@ -1448,18 +973,18 @@ impl<'m, M: Mate> Imprint<'m, M> {
             }
             let surface = model.faces[face].surface.clone();
             for k in arcs {
-                let [ka, kb] = self.arcs[k].ends;
-                let mut pcurve = self.mate.arc_pcurve(face, &self.arcs[k].curve)?;
-                let ua = self.mate.uv_of(face, self.point_of(ka))?;
-                let ub = self.mate.uv_of(face, self.point_of(kb))?;
-                let a = chart.index(self.chart_key(ka), ua);
-                let b = chart.index(self.chart_key(kb), ub);
+                let [ka, kb] = self.asm.net[k].ends;
+                let mut pcurve = self.mate.arc_pcurve(face, &self.asm.net[k].curve)?;
+                let ua = self.mate.uv_of(face, self.asm.point_of(ka))?;
+                let ub = self.mate.uv_of(face, self.asm.point_of(kb))?;
+                let a = chart.index(self.asm.chart_key(ka), ua);
+                let b = chart.index(self.asm.chart_key(kb), ub);
                 let n = pcurve.control_points.len();
                 pcurve.control_points[0] = chart.uvs[a].to_vec();
                 pcurve.control_points[n - 1] = chart.uvs[b].to_vec();
                 verify_pcurve(
                     &pcurve,
-                    &self.arcs[k].curve,
+                    &self.asm.net[k].curve,
                     &surface,
                     1e-9 * self.sphere.radius.max(1.) + self.band,
                 )?;
@@ -1470,27 +995,19 @@ impl<'m, M: Mate> Imprint<'m, M> {
                     reversed: self.arcs[k].reversed,
                 });
             }
-            self.emit_chart(o, face, reversed, pieces, chart.uvs.len())?;
+            let sphere = self.sphere.clone();
+            let band = self.band;
+            let keep = move |p: [f64; 3]| Ok(sphere_inside(&sphere, p, band)? == want);
+            self.asm
+                .emit_chart(o, face, reversed, pieces, chart.len(), &keep)?;
         }
         Ok(())
-    }
-
-    /// Chart identity of a vertex key: specials that coincide with an
-    /// original vertex share its chart slot.
-    fn chart_key(&self, key: VKey) -> VKey {
-        match key {
-            VKey::Special(id) => match self.specials[id].orig {
-                Some((o, v)) => VKey::Orig(o, v),
-                None => key,
-            },
-            other => other,
-        }
     }
 
     /// Sphere patches: untouched patches whole, crossed through arrangement.
     fn emit_sphere(&mut self) -> Result<()> {
         let o = self.sphere_index();
-        let want = self.want_inside[o];
+        let want = self.asm.want_inside[o];
         let model = self.sphere_model();
         for patch in 0..8 {
             let reversed = face_reversed(model, patch);
@@ -1502,13 +1019,13 @@ impl<'m, M: Mate> Imprint<'m, M> {
                 // pass exactly through the sphere vertices.
                 let sample = point3(&model.faces[patch].surface.evaluate(0.3, 0.3)?.point);
                 if self.mate.inside(sample, self.band)? == want {
-                    self.emit_whole(o, patch, reversed)?;
+                    self.asm.emit_whole(o, patch, reversed)?;
                 }
                 continue;
             }
             let mut chart = ChartVertices::default();
             let mut pieces = Vec::new();
-            for (ka, kb, mut pcurve, key, rev) in self.boundary_pieces(o, patch)? {
+            for (ka, kb, mut pcurve, key, rev) in self.asm.boundary_pieces(o, patch)? {
                 let ua = match ka {
                     VKey::Special(id) => self.patch_vertex_uv(patch, id)?,
                     VKey::Orig(..) => pcurve_point(&pcurve, 0.)?,
@@ -1520,8 +1037,8 @@ impl<'m, M: Mate> Imprint<'m, M> {
                 let n = pcurve.control_points.len();
                 pcurve.control_points[0] = ua.to_vec();
                 pcurve.control_points[n - 1] = ub.to_vec();
-                let a = chart.index(self.chart_key(ka), ua);
-                let b = chart.index(self.chart_key(kb), ub);
+                let a = chart.index(self.asm.chart_key(ka), ua);
+                let b = chart.index(self.asm.chart_key(kb), ub);
                 pieces.push(Piece {
                     v: [a, b],
                     pcurve,
@@ -1530,7 +1047,7 @@ impl<'m, M: Mate> Imprint<'m, M> {
                 });
             }
             for k in arcs {
-                let [ka, kb] = self.arcs[k].ends;
+                let [ka, kb] = self.asm.net[k].ends;
                 let (VKey::Special(v0), VKey::Special(v1)) = (ka, kb) else {
                     return Err(unsupported(
                         "Sphere Boolean: patch arc bounded by an original vertex",
@@ -1544,13 +1061,31 @@ impl<'m, M: Mate> Imprint<'m, M> {
                 pieces.push(Piece {
                     v: [a, b],
                     pcurve,
-                    key: EKey::Arc(k),
+                    key: EKey::Net(k),
                     reversed: false,
                 });
             }
-            self.emit_chart(o, patch, reversed, pieces, chart.uvs.len())?;
+            let mate = self.mate;
+            let band = self.band;
+            let keep = move |p: [f64; 3]| Ok(mate.inside(p, band)? == want);
+            self.asm
+                .emit_chart(o, patch, reversed, pieces, chart.len(), &keep)?;
         }
         Ok(())
+    }
+}
+
+/// True when the point is strictly inside the sphere; ambiguous → refusal.
+pub(crate) fn sphere_inside(sphere: &CanonicalSphere, point: [f64; 3], band: f64) -> Result<bool> {
+    let d = dist(point, sphere.center) - sphere.radius;
+    if d < -band {
+        Ok(true)
+    } else if d > band {
+        Ok(false)
+    } else {
+        Err(unsupported(
+            "Sphere Boolean: region classification falls within the error band of the sphere",
+        ))
     }
 }
 
@@ -1593,9 +1128,75 @@ fn curve_parameter_of(curve: &Curve, point: [f64; 3], limit: f64) -> Result<f64>
     Ok(t)
 }
 
+/// Exact pcurve of a single-span rational quadratic arc on the sphere in
+/// patch `patch`: degree-2 Bernstein conversion of the inverted 3D arc. The
+/// caller snaps the ends to its chart vertices and verifies by sampling.
+pub(crate) fn sphere_arc_pcurve(
+    sphere: &CanonicalSphere,
+    patch: usize,
+    curve: &Curve,
+) -> Result<Curve> {
+    let (a, b, pole) = sphere.frame(patch);
+    let center = sphere.center;
+    let radius = sphere.radius;
+    let sample = |t: f64| -> (f64, f64, f64) {
+        let b0 = (1. - t) * (1. - t);
+        let b1 = 2. * t * (1. - t);
+        let b2 = t * t;
+        let mut h = [0.; 3];
+        let mut hw = 0.;
+        for (i, basis) in [b0, b1, b2].into_iter().enumerate() {
+            let w = basis * curve.weights[i];
+            for axis in 0..3 {
+                h[axis] += w * curve.control_points[i][axis];
+            }
+            hw += w;
+        }
+        let d = std::array::from_fn(|axis| h[axis] - center[axis] * hw);
+        (dot(d, a), dot(d, b), radius * hw + dot(d, pole))
+    };
+    let f0 = sample(0.);
+    let f1 = sample(0.5);
+    let f2 = sample(1.);
+    let bern = |f: (f64, f64, f64), i: usize| -> f64 {
+        match i {
+            0 => f.0,
+            2 => f.2,
+            _ => 2. * f.1 - 0.5 * f.0 - 0.5 * f.2,
+        }
+    };
+    let mut control_points = Vec::with_capacity(3);
+    let mut weights = Vec::with_capacity(3);
+    for i in 0..3 {
+        let den = bern((f0.2, f1.2, f2.2), i);
+        if !(den > 0.) {
+            return Err(unsupported(
+                "Sphere Boolean: arc leaves the patch hemisphere",
+            ));
+        }
+        control_points.push(vec![
+            bern((f0.0, f1.0, f2.0), i) / den,
+            bern((f0.1, f1.1, f2.1), i) / den,
+        ]);
+        weights.push(den);
+    }
+    Ok(Curve {
+        degree: 2,
+        knots: vec![0., 0., 0., 1., 1., 1.],
+        control_points,
+        weights,
+        periodic: false,
+    })
+}
+
 /// Sample `pcurve` through `surface` against the 3D `curve` at matching
 /// parameters; both are single-span over [0, 1].
-fn verify_pcurve(pcurve: &Curve, curve: &Curve, surface: &Surface, limit: f64) -> Result<()> {
+pub(crate) fn verify_pcurve(
+    pcurve: &Curve,
+    curve: &Curve,
+    surface: &Surface,
+    limit: f64,
+) -> Result<()> {
     for i in 0..=8 {
         let t = i as f64 / 8.;
         let uv = pcurve.evaluate(t)?.point;
@@ -1608,301 +1209,4 @@ fn verify_pcurve(pcurve: &Curve, curve: &Curve, surface: &Surface, limit: f64) -
         }
     }
     Ok(())
-}
-
-/// Chart vertex table: topology key -> chart index, with its UV.
-#[derive(Default)]
-struct ChartVertices {
-    keys: Vec<VKey>,
-    uvs: Vec<[f64; 2]>,
-}
-impl ChartVertices {
-    fn index(&mut self, key: VKey, uv: [f64; 2]) -> usize {
-        if let Some(i) = self.keys.iter().position(|k| *k == key) {
-            i
-        } else {
-            self.keys.push(key);
-            self.uvs.push(uv);
-            self.keys.len() - 1
-        }
-    }
-}
-
-// ---------------------------------------------------------------------------
-// Planar UV arrangement: cycles of a piece graph, regions with holes
-// ---------------------------------------------------------------------------
-
-struct Half {
-    piece: usize,
-    forward: bool,
-    from: usize,
-    to: usize,
-    /// Outgoing tangent angle at `from`.
-    angle: f64,
-}
-
-struct Region {
-    outer: usize,
-    holes: Vec<usize>,
-}
-
-struct Arrangement {
-    pieces: Vec<Piece>,
-    halves: Vec<Half>,
-    /// Half-edge ids of each cycle, in traversal order.
-    cycles: Vec<Vec<usize>>,
-    /// Sampled polygon of each cycle.
-    polygons: Vec<Vec<[f64; 2]>>,
-    regions: Vec<Region>,
-}
-
-fn pcurve_point(curve: &Curve, t: f64) -> Result<[f64; 2]> {
-    let p = curve.evaluate(t)?.point;
-    Ok([p[0], p[1]])
-}
-
-/// The same curve over the knot domain [0, 1]; `Curve::trim` keeps the
-/// sub-domain of its source, and every chart routine here samples in [0, 1].
-fn normalized(curve: Curve) -> Curve {
-    let [a, b] = curve.domain();
-    if a == 0. && b == 1. {
-        return curve;
-    }
-    let mut out = curve;
-    out.knots = out.knots.iter().map(|k| (k - a) / (b - a)).collect();
-    out
-}
-
-fn tangent_angle(curve: &Curve, at_start: bool) -> Result<f64> {
-    let n = curve.control_points.len();
-    let (p, q) = if at_start {
-        (&curve.control_points[0], &curve.control_points[1])
-    } else {
-        (&curve.control_points[n - 1], &curve.control_points[n - 2])
-    };
-    let d = [q[0] - p[0], q[1] - p[1]];
-    let len = d[0].hypot(d[1]);
-    if !(len > 1e-12) {
-        return Err(unsupported(
-            "Sphere Boolean: degenerate pcurve tangent in the UV arrangement",
-        ));
-    }
-    Ok(d[1].atan2(d[0]))
-}
-
-fn signed_area(polygon: &[[f64; 2]]) -> f64 {
-    let mut area = 0.;
-    for i in 0..polygon.len() {
-        let a = polygon[i];
-        let b = polygon[(i + 1) % polygon.len()];
-        area += a[0] * b[1] - b[0] * a[1];
-    }
-    area / 2.
-}
-
-fn point_in_polygon(polygon: &[[f64; 2]], p: [f64; 2]) -> bool {
-    let mut winding = 0i32;
-    for i in 0..polygon.len() {
-        let a = polygon[i];
-        let b = polygon[(i + 1) % polygon.len()];
-        let side = (b[0] - a[0]) * (p[1] - a[1]) - (p[0] - a[0]) * (b[1] - a[1]);
-        if a[1] <= p[1] {
-            if b[1] > p[1] && side > 0. {
-                winding += 1;
-            }
-        } else if b[1] <= p[1] && side < 0. {
-            winding -= 1;
-        }
-    }
-    winding != 0
-}
-
-fn arrange(pieces: Vec<Piece>, vertex_count: usize) -> Result<Arrangement> {
-    let mut halves = Vec::with_capacity(pieces.len() * 2);
-    for (i, piece) in pieces.iter().enumerate() {
-        halves.push(Half {
-            piece: i,
-            forward: true,
-            from: piece.v[0],
-            to: piece.v[1],
-            angle: tangent_angle(&piece.pcurve, true)?,
-        });
-        halves.push(Half {
-            piece: i,
-            forward: false,
-            from: piece.v[1],
-            to: piece.v[0],
-            angle: tangent_angle(&piece.pcurve, false)?,
-        });
-    }
-    let mut outgoing: Vec<Vec<(f64, usize)>> = vec![Vec::new(); vertex_count];
-    for (h, half) in halves.iter().enumerate() {
-        outgoing[half.from].push((half.angle, h));
-    }
-    for list in outgoing.iter_mut() {
-        if list.len() < 2 {
-            return Err(unsupported(
-                "Sphere Boolean: dangling vertex in the UV arrangement",
-            ));
-        }
-        list.sort_by(|a, b| a.0.total_cmp(&b.0));
-        for w in 0..list.len() {
-            let a = list[w].0;
-            let b = if w + 1 == list.len() {
-                list[0].0 + TAU
-            } else {
-                list[w + 1].0
-            };
-            if b - a < 1e-9 {
-                return Err(unsupported(
-                    "Sphere Boolean: two UV branches leave a vertex tangentially",
-                ));
-            }
-        }
-    }
-    // next(h): at v = to(h), the outgoing half-edge clockwise-adjacent to
-    // twin(h), which keeps the bounded region on the left.
-    let mut next = vec![usize::MAX; halves.len()];
-    for h in 0..halves.len() {
-        let twin = h ^ 1;
-        let v = halves[h].to;
-        let list = &outgoing[v];
-        let idx = list
-            .iter()
-            .position(|&(_, id)| id == twin)
-            .ok_or_else(|| unsupported("Sphere Boolean: twin half-edge missing"))?;
-        next[h] = list[(idx + list.len() - 1) % list.len()].1;
-    }
-    let mut cycles: Vec<Vec<usize>> = Vec::new();
-    let mut visited = vec![false; halves.len()];
-    for start in 0..halves.len() {
-        if visited[start] {
-            continue;
-        }
-        let mut cycle = Vec::new();
-        let mut h = start;
-        loop {
-            if visited[h] {
-                return Err(unsupported(
-                    "Sphere Boolean: UV arrangement walk is not a simple cycle",
-                ));
-            }
-            visited[h] = true;
-            cycle.push(h);
-            h = next[h];
-            if h == start {
-                break;
-            }
-        }
-        cycles.push(cycle);
-    }
-    let mut polygons = Vec::with_capacity(cycles.len());
-    let mut areas = Vec::with_capacity(cycles.len());
-    for cycle in &cycles {
-        let mut polygon = Vec::new();
-        for &h in cycle {
-            let piece = &pieces[halves[h].piece];
-            for s in 0..16 {
-                let t = s as f64 / 16.;
-                let t = if halves[h].forward { t } else { 1. - t };
-                polygon.push(pcurve_point(&piece.pcurve, t)?);
-            }
-        }
-        areas.push(signed_area(&polygon));
-        polygons.push(polygon);
-    }
-    // CCW cycles bound regions; CW cycles are holes of the smallest CCW
-    // cycle containing a point just to their left, or the chart exterior.
-    let mut regions: Vec<Region> = Vec::new();
-    let mut region_of_cycle: BTreeMap<usize, usize> = BTreeMap::new();
-    for (c, &area) in areas.iter().enumerate() {
-        if area > 0. {
-            region_of_cycle.insert(c, regions.len());
-            regions.push(Region {
-                outer: c,
-                holes: Vec::new(),
-            });
-        }
-    }
-    for (c, &area) in areas.iter().enumerate() {
-        if area > 0. {
-            continue;
-        }
-        let probe = left_probe(&pieces, &halves, &cycles[c], &polygons, None)?;
-        let mut best: Option<(f64, usize)> = None;
-        for (&outer, &r) in &region_of_cycle {
-            if point_in_polygon(&polygons[outer], probe) {
-                let a = areas[outer];
-                if best.map(|(ba, _)| a < ba).unwrap_or(true) {
-                    best = Some((a, r));
-                }
-            }
-        }
-        if let Some((_, r)) = best {
-            regions[r].holes.push(c);
-        }
-    }
-    Ok(Arrangement {
-        pieces,
-        halves,
-        cycles,
-        polygons,
-        regions,
-    })
-}
-
-/// A point just left of some half-edge of a cycle; with a constraint it must
-/// lie inside that outer polygon and outside the listed holes.
-fn left_probe(
-    pieces: &[Piece],
-    halves: &[Half],
-    cycle: &[usize],
-    polygons: &[Vec<[f64; 2]>],
-    constraint: Option<(usize, &[usize])>,
-) -> Result<[f64; 2]> {
-    for &h in cycle {
-        let half = &halves[h];
-        let piece = &pieces[half.piece];
-        let (t0, t1) = if half.forward {
-            (0.5, 0.5 + 1e-4)
-        } else {
-            (0.5, 0.5 - 1e-4)
-        };
-        let m = pcurve_point(&piece.pcurve, t0)?;
-        let q = pcurve_point(&piece.pcurve, t1)?;
-        let d = [q[0] - m[0], q[1] - m[1]];
-        let len = d[0].hypot(d[1]);
-        if !(len > 0.) {
-            continue;
-        }
-        let left = [-d[1] / len, d[0] / len];
-        for delta in SAMPLE_DELTAS {
-            let p = [m[0] + left[0] * delta, m[1] + left[1] * delta];
-            match constraint {
-                None => return Ok(p),
-                Some((outer, holes)) => {
-                    if point_in_polygon(&polygons[outer], p)
-                        && holes
-                            .iter()
-                            .all(|&hole| !point_in_polygon(&polygons[hole], p))
-                    {
-                        return Ok(p);
-                    }
-                }
-            }
-        }
-    }
-    Err(unsupported(
-        "Sphere Boolean: could not sample a UV region interior",
-    ))
-}
-
-fn region_sample(arrangement: &Arrangement, region: &Region) -> Result<[f64; 2]> {
-    left_probe(
-        &arrangement.pieces,
-        &arrangement.halves,
-        &arrangement.cycles[region.outer],
-        &arrangement.polygons,
-        Some((region.outer, &region.holes)),
-    )
 }

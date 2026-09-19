@@ -4,8 +4,8 @@
 его можно присвоить переменной, вернуть из функции, передать в `show`,
 использовать внутри `foreach` и LINQ. Вычисление выполняет Rust.
 
-Готовые исходники: [несколько видов геометрии](../../examples/modelgraph-text/pattern-matching.scad)
-и [коробка SKADIS](../../examples/modelgraph-text/skadis-box-linq.scad).
+Готовые исходники: [несколько видов геометрии](../../examples/modelgraph-text/pattern-matching.mg)
+и [коробка SKADIS](../../examples/modelgraph-text/skadis-box-linq.mg).
 
 ```text
 show match part

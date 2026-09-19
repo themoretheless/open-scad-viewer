@@ -32,11 +32,17 @@ it('omits degenerate triangles without creating invalid face references',()=>{
  expect(()=>solidTopology({positions:[0,0,0],indices:[0,1,2]})).toThrow()
  expect(solidTopology({positions:[],indices:[]})).toEqual({faces:[],edges:[]})
 })
-it('bounds plane-search work and recovers after refusal',()=>{
+it('keeps plane search linear on a body where every triangle is its own plane',()=>{
+ // 6400 parallel planes used to cost 6400^2/2 comparisons and trip the 20M
+ // budget; the grid lookup only compares neighbouring cells. A curved gear
+ // in the Solid workspace is exactly this shape.
  const positions:number[]=[],indices:number[]=[]
  for(let i=0;i<6400;i++){positions.push(0,0,i,1,0,i,0,1,i);indices.push(i*3,i*3+1,i*3+2)}
- expect(()=>solidTopology({positions,indices})).toThrow('plane comparisons')
- expect(solidTopology({positions:[0,0,0,1,0,0,0,1,0],indices:[0,1,2]}).faces).toHaveLength(1)
+ const started=performance.now()
+ expect(solidTopology({positions,indices}).faces).toHaveLength(6400)
+ expect(performance.now()-started).toBeLessThan(2000)
+ // Planes closer than the match tolerance still merge through the grid.
+ expect(solidTopology({positions:[0,0,0,1,0,0,0,1,0,0,0,5e-7,1,0,5e-7,0,1,5e-7],indices:[0,1,2,3,4,5]}).faces).toHaveLength(1)
 })
 it('preserves legacy seam grouping at exact decimal half ties',()=>{
  const x=1/256,y=0.0039063

@@ -4,7 +4,7 @@ import DirectModeler from '../src/features/DirectModeler.vue'
 import {extrudeDirectSketch,type DirectDocument} from '../src/services/directModeling'
 import {sampleCurve} from '../src/services/directSketchGeometry'
 import {inspectPolygonMesh} from '../src/services/geometry/polygon'
-import {createBrepBox,analyzeNurbsBrep,createBrepCylinder,tessellateNurbsBrep} from '../src/services/geometry/brep'
+import {createBrepBox,analyzeNurbsBrep,createBrepCylinder,createBrepSphere,transformNurbsBrep,tessellateNurbsBrep} from '../src/services/geometry/brep'
 class Node {
  parent:Node|null=null;children:Node[]=[];props:Record<string,any>={};style:Record<string,any>={};text='';value:any='';selected=false
  constructor(public tag:string){}
@@ -110,6 +110,25 @@ it('removes a fully subtracted B-rep body and restores it with Undo',async()=>{
  await ui.click('Stock');await ui.click('Cutter',true);await ui.click('B-rep A − B');await ui.click('OK')
  expect(ui.doc().bodies).toEqual([])
  await ui.click('↶');expect(ui.doc().bodies.map(b=>b.id)).toEqual(['Stock','Cutter'])
+})
+it('reports the stated tolerance when a subtraction falls back to the numerical trace',async()=>{
+ // An off-axis sphere in a cylinder wall has no exact family: the kernel traces the
+ // intersection numerically, the body carries its tolerance and the notice says so.
+ const stock=createBrepCylinder(3,5),cutter=transformNurbsBrep(createBrepSphere(2),[[1,0,0,2.5],[0,1,0,0.4],[0,0,1,2.5],[0,0,0,1]])
+ const body=(id:string,brep:ReturnType<typeof createBrepCylinder>)=>{const built=tessellateNurbsBrep(brep,4);return {id,name:id,brep,mesh:{positions:built.positions,indices:built.indices}}}
+ const ui=await mount({initialDocument:{version:1,sketches:[],bodies:[body('Stock',stock),body('Cutter',cutter)]}})
+ await ui.click('Stock');await ui.click('Cutter',true);await ui.click('B-rep A − B');await ui.click('OK')
+ expect(ui.doc().bodies).toHaveLength(1)
+ expect(ui.doc().bodies[0].brep!.toleranceMm).toBeGreaterThan(1e-6)
+ expect(ui.text(ui.all()[0])).toContain('traced numerically within')
+ // An exact pair (a sphere on the axis, fully inside: a cavity) keeps the kernel
+ // tolerance and shows no such notice.
+ await ui.click('↶')
+ const axial=transformNurbsBrep(createBrepSphere(1.5),[[1,0,0,0],[0,1,0,0],[0,0,1,2.5],[0,0,0,1]])
+ const exact=await mount({initialDocument:{version:1,sketches:[],bodies:[body('Stock',stock),body('Cutter',axial)]}})
+ await exact.click('Stock');await exact.click('Cutter',true);await exact.click('B-rep A − B');await exact.click('OK')
+ expect(exact.doc().bodies[0].brep!.toleranceMm).toBeLessThan(1e-6)
+ expect(exact.text(exact.all()[0])).not.toContain('traced numerically')
 })
 it('binds an edge selection to chamfer and creates a shell with the selected opening',async()=>{
  const ui=await mount();await ui.click('Cube');await ui.click('Edges');const edge=ui.all(ui.svg()).find(n=>n.tag==='polyline'&&n.props.onPointerdown)!;await ui.pointer(edge)

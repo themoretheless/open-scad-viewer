@@ -40,6 +40,7 @@ export const modelGraphNurbsSchema = z.object({
         z.object({id,op:z.literal('brep_box'),min:vector,max:vector}).strict(),
         z.object({id,op:z.literal('brep_sphere'),radius:scalar}).strict(),
         z.object({id,op:z.literal('brep_torus'),major_radius:scalar,minor_radius:scalar}).strict(),
+        z.object({id,op:z.literal('brep_gear'),module:scalar,teeth:z.number().int().min(3).max(256),height:scalar,pressure_angle:scalar.default(20),helix_angle:scalar.default(0),herringbone:z.boolean().default(false),bore:scalar.default(0),internal:z.boolean().default(false),rim_width:scalar.default(2),clearance:scalar.default(0.25),backlash:scalar.default(0)}).strict(),
         z.object({id,op:z.literal('brep_cylinder'),radius:scalar,height:scalar}).strict(),
         z.object({id,op:z.literal('brep_frustum'),bottom_radius:scalar,top_radius:scalar,height:scalar}).strict(),
         z.object({id,op:z.literal('brep_tube'),outer_radius:scalar,inner_radius:scalar,height:scalar}).strict(),

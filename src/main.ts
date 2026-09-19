@@ -1,4 +1,5 @@
 import { createApp, markRaw } from 'vue'
+import { sourceFileExtension } from './services/modelGraphTextDetect'
 import App from './App.vue'
 import { EXAMPLES } from './data/examples'
 import { storageGet, storageGetEnum, storageKeys, storageRemove, storageSet } from './services/safeStorage'
@@ -36,10 +37,11 @@ const workspacePersistence = new BrowserWorkspacePersistence(
   new IndexedDbWorkspaceRepository(),
   legacyStorage,
 )
+const importedSource = readWorkspaceShareHash(location.hash)
 const bootstrap = await workspacePersistence.initialize({
   fallbackSource: EXAMPLES.basic,
-  importedSource: readWorkspaceShareHash(location.hash),
-  importedFileName: 'shared-model.scad',
+  importedSource,
+  importedFileName: `shared-model${sourceFileExtension(importedSource ?? '')}`,
 })
 
 // A valid shared source remains recoverable in the URL until IndexedDB has

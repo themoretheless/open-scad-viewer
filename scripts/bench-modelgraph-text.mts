@@ -11,7 +11,7 @@ import {compileTextRust} from '../src/services/geometryRustKernel'
 const option=(key:string)=>process.argv.find(a=>a.startsWith(key+'='))?.slice(key.length+1)
 const referencePath=option('--reference')
 const reference=referencePath?(await import(pathToFileURL(resolve(referencePath)).href)).compileModelGraphText:undefined
-const samples=['examples/skadis-box/skadis-dovetail.modelgraph.scad','examples/modelgraph-text/generic-functions.scad','examples/modelgraph-text/range-pattern.scad']
+const samples=['examples/skadis-box/skadis-dovetail.mg','examples/modelgraph-text/generic-functions.mg','examples/modelgraph-text/range-pattern.mg']
 const firstSource=readFileSync(samples[0]!,'utf8')
 const coldStart=performance.now();compileTextRust(firstSource);const coldFrontendMs=performance.now()-coldStart
 const results=[]

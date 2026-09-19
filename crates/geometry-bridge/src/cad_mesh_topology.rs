@@ -1,7 +1,7 @@
 //! Display-only planar grouping; this does not construct authored B-rep topology.
 use super::{Result, Value, encode, field, input};
 use polygon_core::Mesh;
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::{BTreeMap, BTreeSet, HashMap};
 struct Face {
     triangles: Vec<usize>,
     normal: [f64; 3],
@@ -72,6 +72,22 @@ pub fn topology(v: Value) -> Result<Value> {
     let mut faces: Vec<Face> = Vec::new();
     let mut triangle_faces = vec![None; mesh.indices.len() / 3];
     let mut comparisons = 0usize;
+    // Planes are looked up through a grid on (normal, offset) so a curved
+    // body, where nearly every triangle is its own plane, stays linear: two
+    // planes within the match tolerance (1e-8 on the normal dot, 1e-6 on the
+    // offset) always land in the same or an adjacent cell, so the candidate
+    // scan over the 3^4 neighbouring cells is exhaustive.
+    const NORMAL_CELL: f64 = 1e-3;
+    const OFFSET_CELL: f64 = 1e-4;
+    let cell = |normal: [f64; 3], offset: f64| -> [i64; 4] {
+        [
+            (normal[0] / NORMAL_CELL).floor() as i64,
+            (normal[1] / NORMAL_CELL).floor() as i64,
+            (normal[2] / NORMAL_CELL).floor() as i64,
+            (offset / OFFSET_CELL).floor() as i64,
+        ]
+    };
+    let mut grid: HashMap<[i64; 4], Vec<usize>> = HashMap::new();
     for (i, ids) in mesh.indices.chunks_exact(3).enumerate() {
         let a = points[ids[0]];
         let b = points[ids[1]];
@@ -95,17 +111,29 @@ pub fn topology(v: Value) -> Result<Value> {
         if !offset.is_finite() {
             return Err(input("Nonfinite display plane."));
         }
+        let home = cell(normal, offset);
         let mut found = None;
-        for (j, f) in faces.iter().enumerate() {
-            comparisons += 1;
-            if comparisons > 20_000_000 {
-                return Err(input(
-                    "Display topology exceeds 20000000 plane comparisons.",
-                ));
-            }
-            if dot(f.normal, normal) > 1. - 1e-8 && (f.offset - offset).abs() < 1e-6 {
-                found = Some(j);
-                break;
+        'search: for dx in -1..=1 {
+            for dy in -1..=1 {
+                for dz in -1..=1 {
+                    for dw in -1..=1 {
+                        let key = [home[0] + dx, home[1] + dy, home[2] + dz, home[3] + dw];
+                        for &j in grid.get(&key).map(Vec::as_slice).unwrap_or(&[]) {
+                            comparisons += 1;
+                            if comparisons > 20_000_000 {
+                                return Err(input(
+                                    "Display topology exceeds 20000000 plane comparisons.",
+                                ));
+                            }
+                            let f = &faces[j];
+                            if dot(f.normal, normal) > 1. - 1e-8 && (f.offset - offset).abs() < 1e-6
+                            {
+                                found = Some(j);
+                                break 'search;
+                            }
+                        }
+                    }
+                }
             }
         }
         let index = found.unwrap_or_else(|| {
@@ -116,6 +144,7 @@ pub fn topology(v: Value) -> Result<Value> {
                 vertices: Vec::new(),
                 center: [0.; 3],
             });
+            grid.entry(home).or_default().push(faces.len() - 1);
             faces.len() - 1
         });
         faces[index].triangles.push(i);

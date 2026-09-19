@@ -1510,9 +1510,17 @@ pub fn boolean(a: &Model, b: &Model, operation: &str) -> Result<Model> {
             return crate::nurbs_ss_g6::nurbs_boolean_imprint_solids(a, b, operation)
                 .map(|(model, _certificate)| model);
         }
-        if let Some(result) = crate::profile_imprint::boolean(a, b, operation)? {
-            crate::solid_audit::audit_solid(&result)?;
-            return Ok(result);
+        match crate::profile_imprint::boolean(a, b, operation) {
+            Ok(Some(result)) => {
+                crate::solid_audit::audit_solid(&result)?;
+                return Ok(result);
+            }
+            Ok(None) => {}
+            // A profile family that cannot read an operand (free-form
+            // trims, fitted flanks) is not a verdict on the pair: the
+            // analytic matrix and the tolerant fallback still get to try.
+            Err(e) if e.code == "BREP_UNSUPPORTED_PLANAR_TRIM" => {}
+            Err(e) => return Err(e),
         }
         match crate::analytic_boolean::analytic_boolean(a, b, operation) {
             Ok((result, cert)) => {
@@ -1525,7 +1533,29 @@ pub fn boolean(a: &Model, b: &Model, operation: &str) -> Result<Model> {
                 return Ok(result);
             }
             Err(analytic_error) => {
-                return Err(analytic_error);
+                // The exact matrix refused this pair. A numerical
+                // surface/surface trace with a stated tolerance is the
+                // fallback; its result carries `tolerance_mm` so callers can
+                // tell it from an exact one. Hard errors (invalid input,
+                // resource limits) are not retried.
+                if !matches!(
+                    analytic_error.code,
+                    "BREP_UNSUPPORTED_OPERATION"
+                        | "BREP_ANALYTIC_BOOLEAN_REFUSED"
+                        | "BREP_SOLID_AUDIT_REFUSED"
+                ) || operation == "xor"
+                {
+                    return Err(analytic_error);
+                }
+                return crate::tolerant_boolean::boolean(a, b, operation).map_err(|tolerant| {
+                    Error::new(
+                        analytic_error.code,
+                        format!(
+                            "{}; tolerant fallback: {}",
+                            analytic_error.message, tolerant.message
+                        ),
+                    )
+                });
             }
         }
     }

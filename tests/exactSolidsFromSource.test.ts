@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import { parseOpenSCAD } from '../src/services/openscadParser'
 import { buildExactSolidBodies, InexactSolidError } from '../src/services/solid/brepBuild'
@@ -56,6 +57,44 @@ describe('exact solids from source', () => {
     expect(() => buildExactSolidBodies(plan.nodes, plan.roots)).toThrow(InexactSolidError)
     expect(() => buildExactSolidBodies(plan.nodes, plan.roots)).toThrow(/hull/)
   })
+
+  it('builds an involute gear from the brep_gear builtin as one exact body with six faces per tooth', async () => {
+    const result = await evaluate('brep_gear(module = 2, teeth = 12, height = 5, helix = 20, herringbone = true, bore = 6);')
+    expect(result.meshes).toHaveLength(1)
+    const plan = result.exactSolids!
+    const [body] = buildExactSolidBodies(plan.nodes, plan.roots)
+    // 12 teeth x 6 outline curves + 6 bore arcs (one per two teeth), twice for the
+    // herringbone halves, plus two caps.
+    expect(body.brep!.faces).toHaveLength((12 * 6 + 6) * 2 + 2)
+    const extent = bounds(body.mesh.positions)
+    expect(extent.max[2]).toBeCloseTo(5, 6)
+    expect(extent.max[0]).toBeCloseTo(14, 1)
+  }, 30000)
+
+  it('builds the planetary spinner as twenty exact herringbone gears', async () => {
+    // The spinner used to be a sampled polygon prototype; its gears are now
+    // the brep_gear builtin, so the Solid workspace gets sun, ring and 18
+    // planets as NURBS bodies.
+    const source = readFileSync(new URL('../examples/modelgraph-text/planetary-spinner.mg', import.meta.url), 'utf8')
+    const result = await evaluate(source)
+    expect(result.meshes.length).toBeGreaterThan(0)
+    const plan = result.exactSolids!
+    expect(plan.roots).toHaveLength(20)
+    const bodies = buildExactSolidBodies(plan.nodes, plan.roots)
+    expect(bodies).toHaveLength(20)
+    expect(bodies.every(b => b.brep && b.brep.faces.length > 8)).toBe(true)
+  }, 120000)
+
+  it('lowers a helical ModelGraph gear through the same builtin', async () => {
+    const result = await evaluate([
+      '// @modelgraph-text/1',
+      'wheel = gear(teeth: 24, module: 1.5mm, thickness: 8mm, helix_angle: 30deg, herringbone: true, bore: 5mm)',
+      'show wheel',
+    ].join('\n'))
+    const plan = result.exactSolids!
+    const [body] = buildExactSolidBodies(plan.nodes, plan.roots)
+    expect(body.brep!.faces).toHaveLength((24 * 6 + 12) * 2 + 2)
+  }, 60000)
 
   it('records the second language too, since it compiles through the same evaluator', async () => {
     const result = await evaluate([

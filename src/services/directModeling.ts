@@ -36,8 +36,19 @@ function inspectBrepOnce(brep: NurbsBrep): void {
   inspectedBreps.set(key, true)
 }
 
+/**
+ * A Solid document lives in memory as JSON. Twenty exact herringbone gears serialize
+ * to about 20 MB (each helical wall face is a cubic loft with hundreds of control
+ * points), so the bound is the one the other in-memory artifacts use, not the size
+ * of a browser draft.
+ */
+export const MAX_DOCUMENT_CHARACTERS = 64 * 1024 * 1024
+/** localStorage holds about 5 MB per origin; bigger documents are kept in memory only. */
+export const MAX_DRAFT_CHARACTERS = 4_000_000
+
 export function parseDirectDocument(text: string): DirectDocument {
-  if (text.length > 4_000_000) throw new Error('Document exceeds 4 MB.')
+  // In-memory bound only; the browser draft has its own, smaller quota (see persist in DirectModeler).
+  if (text.length > MAX_DOCUMENT_CHARACTERS) throw new Error('Document exceeds 64 MB.')
   const d = JSON.parse(text) as DirectDocument
   if (!d || d.version !== 1 || !Array.isArray(d.sketches) || !Array.isArray(d.bodies) || d.sketches.length + d.bodies.length > 200) throw new Error('Invalid direct modeling document.')
   d.curves ??= []
@@ -76,15 +87,17 @@ export function parseDirectDocument(text: string): DirectDocument {
       if ([b.brep.vertices,b.brep.edges,b.brep.loops,b.brep.faces,b.brep.shells,b.brep.bodies].every(items=>items.length===0)) throw new Error('An empty B-rep cannot be stored as a displayed body; remove the body entry.')
       if (b.brep.faces.length === 0) throw new Error('Displayed body B-rep must include at least one face.')
       const meshAabb = aabbFromPositions(m.positions)
-      const brepAabb = aabbFromBrep(b.brep)
-      const diag = Math.hypot(
-        Math.max(meshAabb[1] - meshAabb[0], brepAabb[1] - brepAabb[0]),
-        Math.max(meshAabb[3] - meshAabb[2], brepAabb[3] - brepAabb[2]),
-        Math.max(meshAabb[5] - meshAabb[4], brepAabb[5] - brepAabb[4]),
-      )
+      const { inner, outer } = aabbFromBrep(b.brep)
+      const diag = Math.hypot(outer[1] - outer[0], outer[3] - outer[2], outer[5] - outer[4])
       const slack = Math.max(1e-3, 1e-4 * Math.max(diag, 1))
-      for (let i = 0; i < 6; i++) {
-        if (Math.abs(meshAabb[i] - brepAabb[i]) > slack) {
+      // The mesh samples the B-rep, so it can never leave the control hull and
+      // must reach every vertex; curved edges and trimmed faces may legitimately
+      // extend past the vertices (a tilted section circle has no vertex at its
+      // extreme), so the vertex box is only a lower bound.
+      for (let axis = 0; axis < 3; axis++) {
+        const lo = 2 * axis, hi = 2 * axis + 1
+        if (meshAabb[lo] < outer[lo] - slack || meshAabb[hi] > outer[hi] + slack ||
+            meshAabb[lo] > inner[lo] + slack || meshAabb[hi] < inner[hi] - slack) {
           throw new Error('Displayed body B-rep and mesh AABBs disagree; refuse stale mesh pairing.')
         }
       }
@@ -110,18 +123,23 @@ const aabbFromPositions = (positions: number[]): [number, number, number, number
   return [minX, maxX, minY, maxY, minZ, maxZ]
 }
 
-const aabbFromBrep = (brep: NurbsBrep): [number, number, number, number, number, number] => {
-  if (!brep.vertices.length) throw new Error('B-rep vertices are required for mesh correspondence.')
-  let minX = brep.vertices[0].point[0], maxX = minX
-  let minY = brep.vertices[0].point[1], maxY = minY
-  let minZ = brep.vertices[0].point[2], maxZ = minZ
-  for (const vertex of brep.vertices) {
-    const [x, y, z] = vertex.point
-    if (x < minX) minX = x; if (x > maxX) maxX = x
-    if (y < minY) minY = y; if (y > maxY) maxY = y
-    if (z < minZ) minZ = z; if (z > maxZ) maxZ = z
+type Aabb = [number, number, number, number, number, number]
+const growAabb = (box: Aabb, p: readonly number[]) => {
+  for (let axis = 0; axis < 3; axis++) {
+    if (p[axis] < box[2 * axis]) box[2 * axis] = p[axis]
+    if (p[axis] > box[2 * axis + 1]) box[2 * axis + 1] = p[axis]
   }
-  return [minX, maxX, minY, maxY, minZ, maxZ]
+}
+/** `inner`: the vertex box (the mesh must reach it); `outer`: the control hull of every
+ *  surface and edge curve (positive rational weights keep the geometry inside it). */
+const aabbFromBrep = (brep: NurbsBrep): { inner: Aabb; outer: Aabb } => {
+  if (!brep.vertices.length) throw new Error('B-rep vertices are required for mesh correspondence.')
+  const inner: Aabb = [Infinity, -Infinity, Infinity, -Infinity, Infinity, -Infinity]
+  for (const vertex of brep.vertices) growAabb(inner, vertex.point)
+  const outer: Aabb = [...inner]
+  for (const edge of brep.edges) for (const p of edge.curve.controlPoints) growAabb(outer, p)
+  for (const face of brep.faces) for (const row of face.surface.controlPoints) for (const p of row) growAabb(outer, p)
+  return { inner, outer }
 }
 
 /** Snapshots contain independent geometry, never sketch references or a feature tree. */

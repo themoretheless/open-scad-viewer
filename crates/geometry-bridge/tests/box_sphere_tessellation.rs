@@ -76,6 +76,74 @@ fn box_sphere_results_tessellate_within_their_vertex_bounds() {
             placed_sphere(4., [10., 10., 10.]),
         ),
         ("split seam", big, placed_sphere(5., [10., 7., 0.])),
+        (
+            "sphere sphere",
+            sphere(3.).unwrap(),
+            placed_sphere(3., [4.1, 0.3, -0.2]),
+        ),
+        (
+            "sphere bulge",
+            sphere(5.).unwrap(),
+            placed_sphere(1.5, [4.6, 0.7, 0.9]),
+        ),
+        // Tolerant fallback results (numerical SSI).
+        (
+            "tolerant off-axis",
+            cylinder(3., 10.).unwrap(),
+            placed_sphere(2., [2.5, 0.4, 5.]),
+        ),
+        (
+            "tolerant box sphere",
+            cuboid([-4., -4., -4.], [4., 4., 4.]).unwrap(),
+            placed_sphere(3., [3.1, 2.7, 2.9]),
+        ),
+        (
+            "tolerant two stubs",
+            cylinder(3., 10.).unwrap(),
+            placed_sphere(4., [0.2, 0.1, 5.]),
+        ),
+        (
+            "tolerant drilled sphere",
+            sphere(5.).unwrap(),
+            transform::affine(
+                &cylinder(1., 20.).unwrap(),
+                [
+                    [1., 0., 0., 0.3],
+                    [0., 1., 0., 0.2],
+                    [0., 0., 1., -10.],
+                    [0., 0., 0., 1.],
+                ],
+            )
+            .unwrap(),
+        ),
+        (
+            "tolerant crossing cylinders",
+            cylinder(2., 12.).unwrap(),
+            transform::affine(
+                &cylinder(1.2, 12.).unwrap(),
+                [
+                    [1., 0., 0., 0.3],
+                    [0., 0., -1., 6.],
+                    [0., 1., 0., 6.],
+                    [0., 0., 0., 1.],
+                ],
+            )
+            .unwrap(),
+        ),
+        (
+            "tolerant torus box",
+            cuboid([0., 0., 0.], [10., 10., 10.]).unwrap(),
+            transform::affine(
+                &brep_core::torus(4., 1.).unwrap(),
+                [
+                    [1., 0., 0., 0.3],
+                    [0., 1., 0., 0.7],
+                    [0., 0., 1., 0.4],
+                    [0., 0., 0., 1.],
+                ],
+            )
+            .unwrap(),
+        ),
     ];
     for (name, b, s) in &cases {
         for operation in ["union", "difference", "intersection"] {
@@ -92,12 +160,36 @@ fn box_sphere_results_tessellate_within_their_vertex_bounds() {
                     t.built.report.signed_volume_mm3 > 0.,
                     "{name} {operation} lod {segments} volume"
                 );
+                // The mesh samples the B-rep: it must reach every vertex and
+                // never leave the control hull (curved edges and trimmed
+                // faces may legitimately extend past the vertices).
                 let mesh = aabb(t.built.mesh.positions.chunks(3).map(|p| [p[0], p[1], p[2]]));
                 let verts = aabb(model.vertices.iter().map(|v| v.point));
-                for k in 0..6 {
+                let hull = aabb(
+                    model
+                        .vertices
+                        .iter()
+                        .map(|v| v.point)
+                        .chain(model.edges.iter().flat_map(|e| {
+                            e.curve.control_points.iter().map(|p| [p[0], p[1], p[2]])
+                        }))
+                        .chain(model.faces.iter().flat_map(|f| {
+                            f.surface
+                                .control_points
+                                .iter()
+                                .flatten()
+                                .map(|p| [p[0], p[1], p[2]])
+                        })),
+                );
+                for axis in 0..3 {
+                    let (lo, hi) = (2 * axis, 2 * axis + 1);
                     assert!(
-                        (mesh[k] - verts[k]).abs() < 1e-3,
-                        "{name} {operation} lod {segments}: mesh {mesh:?} vs vertices {verts:?}"
+                        mesh[lo] >= hull[lo] - 1e-9 && mesh[hi] <= hull[hi] + 1e-9,
+                        "{name} {operation} lod {segments}: mesh {mesh:?} leaves hull {hull:?}"
+                    );
+                    assert!(
+                        mesh[lo] <= verts[lo] + 1e-3 && mesh[hi] >= verts[hi] - 1e-3,
+                        "{name} {operation} lod {segments}: mesh {mesh:?} misses vertices {verts:?}"
                     );
                 }
             }

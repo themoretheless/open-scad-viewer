@@ -57,7 +57,7 @@ export function buildModelGraphGearProfile(options: GearOptions): { loops: Point
     if (key !== 'internal' && (typeof value !== 'number' || !Number.isFinite(value))) throw new Error(`Gear ${key} must be finite.`)
   }
   if (typeof o.internal !== 'boolean') throw new Error('Gear internal must be boolean.')
-  if (!Number.isInteger(o.teeth) || o.teeth < 8 || o.teeth > 128) throw new Error('Gear teeth must be an integer from 8 to 128.')
+  if (!Number.isInteger(o.teeth) || o.teeth < 3 || o.teeth > 256) throw new Error('Gear teeth must be an integer from 3 to 256.')
   if (!Number.isInteger(o.flank_segments) || o.flank_segments < 3 || o.flank_segments > 12) throw new Error('Gear flank_segments must be an integer from 3 to 12.')
   if (o.module < 0.1 || o.module > 100) throw new Error('Gear module must be from 0.1 to 100 mm.')
   if (o.pressure_angle < 14.5 || o.pressure_angle > 30) throw new Error('Gear pressure_angle must be from 14.5 to 30 degrees.')
@@ -66,8 +66,8 @@ export function buildModelGraphGearProfile(options: GearOptions): { loops: Point
   if (o.clearance < 0 || o.clearance > o.module) throw new Error('Gear clearance must be from zero to one module.')
   if (o.bore < 0 || o.rim_width < 0 || o.rim_width > 10000) throw new Error('Gear bore and rim_width must be nonnegative, with rim_width at most 10000 mm.')
   const alpha = o.pressure_angle * Math.PI / 180
+  // Reported only: brep_gear draws a radial flank below the base circle, so small tooth counts build without undercut.
   const minimumTeeth = Math.ceil(2 / Math.sin(alpha) ** 2 - 1e-12)
-  if (!o.internal && o.teeth < minimumTeeth) throw new Error(`Gear requires at least ${minimumTeeth} teeth at this pressure angle; undercut and profile shift are not implemented.`)
   const pitch = o.module * o.teeth / 2
   const base = pitch * Math.cos(alpha)
   const tip = pitch + (o.internal ? -o.module : o.module)

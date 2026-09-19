@@ -2,7 +2,7 @@
 
 Implemented compact authoring syntax, lowered to the existing ModelGraph/1 document and compiler. Begin `.scad` files with `// @modelgraph-text/1`; the supported viewer parser detects this marker. Official OpenSCAD tools do not accept this frontend.
 
-See `examples/modelgraph-text/ring-pattern.scad` for a runnable example.
+See `examples/modelgraph-text/ring-pattern.mg` for a runnable example.
 
 - Newlines or semicolons separate declarations. Continue a pipeline on the next line with `.`.
 - Arithmetic: `+`, `-`, `*`, `/`, unary minus, parentheses and vectors.
@@ -24,7 +24,7 @@ Validation covers actual Manifold construction, the repeat example, parameter/un
 
 ## Own Rust NURBS and mesh operations
 
-See `examples/modelgraph-text/nurbs-boolean.scad`. Use `nurbs_surface(degree_u,degree_v,knots_u,knots_v,control_points,weights)` or `nurbs_curve(degree,knots,control_points,weights)`, with positional or named arguments. Pipe surfaces into `tessellate(segments_u,segments_v)` and meshes into `thicken(vector)`. NURBS constructors are `surface_extrude(vector)` and `surface_revolve(origin,axis,angle)`; `transform(matrix)` takes an affine 4x4 matrix. Both piped and dotted call forms work.
+See `examples/modelgraph-text/nurbs-boolean.mg`. Use `nurbs_surface(degree_u,degree_v,knots_u,knots_v,control_points,weights)` or `nurbs_curve(degree,knots,control_points,weights)`, with positional or named arguments. Pipe surfaces into `tessellate(segments_u,segments_v)` and meshes into `thicken(vector)`. NURBS constructors are `surface_extrude(vector)` and `surface_revolve(origin,axis,angle)`; `transform(matrix)` takes an affine 4x4 matrix. Both piped and dotted call forms work.
 
 `mesh_union(a,b)`, `mesh_intersection(a,b)` and `a.mesh_subtract(b)` lower to own Rust mesh CSG. They require exactly two closed oriented meshes. This branch produces `modelgraph/nurbs-1` with `execution_target: own-nurbs`; the viewer publishes the resulting mesh directly, without compiling generated SCAD or invoking Manifold. Empty results clear the scene. Use `modelgraph_nurbs_build/evaluate/export` with the returned document over MCP.
 
@@ -36,7 +36,7 @@ This branch currently rejects legacy primitives, groups, repeat and assertions i
 
 ## SKADIS dovetail example
 
-`examples/skadis-box/skadis-dovetail.modelgraph.scad` is the editable Text/1
+`examples/skadis-box/skadis-dovetail.mg` is the editable Text/1
 translation of the original `skadis-dovetail.scad`. It retains dimension and fit
 parameters, part selection (0 assembly, 1 box, 2 hook oriented for printing),
 optional friction ridge (0/1), and construction constraints. Source colors are
@@ -77,7 +77,7 @@ new branch. Canonical legacy choices retain parameters and local bindings.
 
 ## Block functions, generics and named records
 
-The runnable `examples/modelgraph-text/generic-functions.scad` demonstrates:
+The runnable `examples/modelgraph-text/generic-functions.mg` demonstrates:
 
 ```text
 struct Point3D<T> {

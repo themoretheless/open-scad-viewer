@@ -149,9 +149,14 @@ fn finish_indexed(
         || report.orientation_conflicts > 0
         || closed && !report.closed
     {
-        return Err(input(
-            "B-rep tessellation does not preserve manifold seams at this resolution/tolerance",
-        ));
+        return Err(input(&format!(
+            "B-rep tessellation does not preserve manifold seams at this resolution/tolerance \
+             (degenerate {}, non-manifold {}, orientation conflicts {}, closed {})",
+            report.degenerate_triangles,
+            report.non_manifold_edges,
+            report.orientation_conflicts,
+            report.closed
+        )));
     }
     let mut notes = vec!["shell_aware_registry", "boundary_incidence_verified"];
     if freeform_faces {
@@ -192,6 +197,9 @@ fn is_affine_plane(surface: &Surface, tolerance: f64) -> bool {
 }
 #[derive(Clone, Copy)]
 struct BoundarySample {
+    /// Authored edges this sample lies on: its own coedge's edge, and for
+    /// the coedge's start vertex also the previous coedge's edge.
+    edges: [usize; 2],
     uv: [f64; 2],
     position: usize,
 }
@@ -269,7 +277,9 @@ impl EdgeSamplingRegistry {
         wire: usize,
     ) -> Result<Vec<BoundarySample>> {
         let mut samples = Vec::new();
-        for coedge in &model.loops[wire].coedges {
+        let coedges = &model.loops[wire].coedges;
+        for (k, coedge) in coedges.iter().enumerate() {
+            let previous = coedges[(k + coedges.len() - 1) % coedges.len()].edge;
             let divisions = self.divisions(coedge);
             let [a, b] = coedge.pcurve.domain();
             for i in 0..=divisions {
@@ -298,7 +308,16 @@ impl EdgeSamplingRegistry {
                     ));
                 }
                 if i < divisions {
-                    samples.push(BoundarySample { uv, position });
+                    let edges = if i == 0 {
+                        [coedge.edge, previous]
+                    } else {
+                        [coedge.edge, coedge.edge]
+                    };
+                    samples.push(BoundarySample {
+                        edges,
+                        uv,
+                        position,
+                    });
                 }
             }
         }
@@ -401,7 +420,8 @@ fn triangulate_boundary(
 ) -> Result<FaceMesh> {
     let mut boundary = BTreeMap::new();
     for sample in outer.iter().chain(holes.iter().flatten()) {
-        if let Some(previous) = boundary.insert(uv_key(sample.uv), sample.position)
+        if let Some((previous, _)) =
+            boundary.insert(uv_key(sample.uv), (sample.position, sample.edges))
             && previous != sample.position
         {
             return Err(input(
@@ -423,15 +443,17 @@ fn triangulate_boundary(
     };
     let mut local = BTreeMap::<[u64; 2], usize>::new();
     let mut remap = Vec::new();
+    let mut edges_of = Vec::new();
     for point in fill.positions {
         let key = uv_key(point);
-        let global = *boundary
+        let (global, edges) = *boundary
             .get(&key)
             .ok_or_else(|| input("Triangulation introduced an unowned boundary position"))?;
         let index = *local.entry(key).or_insert_with(|| {
             let index = out.uv.len();
             out.uv.push(point);
             out.shared.push(Some(global));
+            edges_of.push(edges);
             index
         });
         remap.push(index);
@@ -443,7 +465,64 @@ fn triangulate_boundary(
         }
         out.triangles.push(triangle);
     }
+    split_boundary_chords(&mut out, &edges_of);
     Ok(out)
+}
+
+/// A boundary-only triangulation connects boundary samples by chords that
+/// are interior to this face. Along a curved authored edge the face across
+/// it can pick the same chord between the same two samples, and the two
+/// meshes then share an edge that is not authored: four triangles on one 3D
+/// edge, no longer a manifold shell. Split every chord between two samples
+/// of one authored edge at its midpoint with a private interior vertex;
+/// chords lie inside the polygon, so the midpoint does. Samples of a
+/// straight edge are collinear and never chorded, so planar faces keep
+/// their boundary-only triangulation.
+fn split_boundary_chords(mesh: &mut FaceMesh, edges_of: &[[usize; 2]]) {
+    let same_edge = |p: usize, q: usize| {
+        edges_of[p].iter().any(|e| edges_of[q].contains(e))
+    };
+    loop {
+        let mut incidence = BTreeMap::<[usize; 2], Vec<usize>>::new();
+        for (index, t) in mesh.triangles.iter().enumerate() {
+            for k in 0..3 {
+                let (p, q) = (t[k], t[(k + 1) % 3]);
+                incidence.entry([p.min(q), p.max(q)]).or_default().push(index);
+            }
+        }
+        let chord = incidence.iter().find(|([p, q], tris)| {
+            tris.len() == 2
+                && mesh.shared[*p].is_some()
+                && mesh.shared[*q].is_some()
+                && same_edge(*p, *q)
+        });
+        let Some((&[p, q], tris)) = chord else {
+            return;
+        };
+        let (first, second) = (tris[0].min(tris[1]), tris[0].max(tris[1]));
+        let m = mesh.uv.len();
+        mesh.uv.push([
+            (mesh.uv[p][0] + mesh.uv[q][0]) / 2.,
+            (mesh.uv[p][1] + mesh.uv[q][1]) / 2.,
+        ]);
+        mesh.shared.push(None);
+        let mut replacement = Vec::with_capacity(4);
+        for &index in &[first, second] {
+            let t = mesh.triangles[index];
+            let x = t.into_iter().find(|&v| v != p && v != q).unwrap();
+            // Keep the winding: p -> q -> x becomes p -> m -> x, m -> q -> x.
+            if (0..3).any(|k| t[k] == p && t[(k + 1) % 3] == q) {
+                replacement.push([p, m, x]);
+                replacement.push([m, q, x]);
+            } else {
+                replacement.push([q, m, x]);
+                replacement.push([m, p, x]);
+            }
+        }
+        mesh.triangles.swap_remove(second);
+        mesh.triangles.swap_remove(first);
+        mesh.triangles.extend(replacement);
+    }
 }
 pub fn nurbs(model: &brep_core::Model, segments: usize) -> Result<Tessellation> {
     model.validate()?;
@@ -908,7 +987,17 @@ fn clamp_interior_to_trims(
             }
         }
         if let Some((_, q)) = best {
-            *point = q;
+            // Land just inside the boundary rather than on it, so the moved
+            // sample never coincides with a boundary sample (which would fold
+            // a triangle or break the shared seam samples).
+            let away = [point[0] - q[0], point[1] - q[1]];
+            let len = away[0].hypot(away[1]);
+            let nudged = if len > 0. {
+                [q[0] - away[0] / len * 1e-4, q[1] - away[1] / len * 1e-4]
+            } else {
+                q
+            };
+            *point = if inside(nudged) { nudged } else { q };
         }
     }
     Ok(mesh)

@@ -1056,6 +1056,8 @@ fn node(value: &mut Value, path: &str) -> Result<()> {
             bool_default("internal", false),
             number_default("rim_width", 6.0),
             number_default("flank_segments", 6.0),
+            number_default("helix_angle", 0.0),
+            bool_default("herringbone", false),
         ],
         "planetary_spinner" => &[
             ID,
@@ -1082,6 +1084,8 @@ fn node(value: &mut Value, path: &str) -> Result<()> {
             number_default("rim_width", 6.0),
             number_default("flank_segments", 6.0),
             number_default("carrier_angle", 0.0),
+            number_default("helix_angle", 0.0),
+            bool_default("herringbone", false),
         ],
         "thread" => &[
             ID,

@@ -16,7 +16,7 @@ describe('remote ModelGraph MCP', () => {
   it('builds generic block functions and named records through MCP', async () => {
     const {call}=await start()
     const tool=async(name:string,args:unknown)=>(await (await call('tools/call',{name,arguments:args})).json()).result
-    const compiled=await tool('modelgraph_text_compile',{source:readFileSync('examples/modelgraph-text/generic-functions.scad','utf8')})
+    const compiled=await tool('modelgraph_text_compile',{source:readFileSync('examples/modelgraph-text/generic-functions.mg','utf8')})
     expect(compiled.isError,JSON.stringify(compiled)).not.toBe(true)
     const checked=await tool('modelgraph_check',{document:compiled.structuredContent.document})
     expect(checked.isError,JSON.stringify(checked)).not.toBe(true)
@@ -25,7 +25,7 @@ describe('remote ModelGraph MCP', () => {
   it('compiles own NURBS text and exports through the indicated MCP route', async () => {
     const {call}=await start()
     const tool=async(name:string,args:unknown)=>(await (await call('tools/call',{name,arguments:args})).json()).result
-    const compiled=await tool('modelgraph_text_compile',{source:readFileSync('examples/modelgraph-text/nurbs-boolean.scad','utf8')})
+    const compiled=await tool('modelgraph_text_compile',{source:readFileSync('examples/modelgraph-text/nurbs-boolean.mg','utf8')})
     expect(compiled.isError).not.toBe(true)
     expect(compiled.structuredContent.execution_target).toBe('own-nurbs')
     const exported=await tool('modelgraph_nurbs_export',{document:compiled.structuredContent.document,format:'stl'})

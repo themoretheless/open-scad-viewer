@@ -22,6 +22,11 @@ fn invalid(message: impl Into<String>) -> Error {
 fn require(ok: bool, message: &str) -> Result<()> {
     math_core::ensure(ok, INVALID_TOPOLOGY, message)
 }
+/// Resource ceilings of one validated model.
+pub const MAX_ENTITIES: usize = 16384;
+pub const MAX_FACES: usize = 1024;
+pub const MAX_COEDGES: usize = 32768;
+
 #[derive(Clone, Debug)]
 pub struct Vertex<V = [f64; 3]> {
     pub point: V,
@@ -574,10 +579,14 @@ impl<C, S, P, V> Model<C, S, P, V> {
             + self.shells.len()
             + self.bodies.len();
         let uses = self.loops.iter().map(|l| l.coedges.len()).sum::<usize>();
-        if count > 4096 || uses > 8192 || self.faces.len() > 256 {
+        // Gear bodies carry a few hundred faces (six per tooth, twice for a
+        // herringbone); the ceiling stays a guard against runaway authoring.
+        if count > MAX_ENTITIES || uses > MAX_COEDGES || self.faces.len() > MAX_FACES {
             return Err(Error {
                 code: "BREP_RESOURCE_LIMIT",
-                message: "B-rep exceeds 4096 entities, 256 faces or 8192 coedges".into(),
+                message: format!(
+                    "B-rep exceeds {MAX_ENTITIES} entities, {MAX_FACES} faces or {MAX_COEDGES} coedges"
+                ),
             });
         }
         require(

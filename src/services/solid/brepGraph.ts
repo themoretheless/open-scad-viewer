@@ -22,10 +22,26 @@ export type Matrix4 = [number[], number[], number[], number[]]
 
 const TAU = Math.PI * 2
 
+export interface BrepGearNodeSpec {
+  module: number
+  teeth: number
+  height: number
+  pressure_angle?: number
+  helix_angle?: number
+  herringbone?: boolean
+  bore?: number
+  internal?: boolean
+  rim_width?: number
+  clearance?: number
+  backlash?: number
+}
+
 export interface BrepGraphBuilder {
   readonly nodes: readonly BrepNode[]
   box(min: readonly number[], max: readonly number[]): BrepValue
   sphere(radius: number): BrepValue
+  /** Involute gear; keys follow the graph node (`pressure_angle`, `helix_angle`, `rim_width`). */
+  gear(spec: BrepGearNodeSpec): BrepValue
   /** A cylinder or, for unequal radii, a frustum. Both sit with the base at z = 0. */
   cylinder(radiusBottom: number, radiusTop: number, height: number): BrepValue
   tube(outerRadius: number, innerRadius: number, height: number): BrepValue
@@ -125,6 +141,7 @@ export function createBrepGraphBuilder(): BrepGraphBuilder {
 
     box: (min, max) => node({ op: 'brep_box', min: [...min], max: [...max] }),
     sphere: radius => node({ op: 'brep_sphere', radius }),
+    gear: spec => node({ op: 'brep_gear', ...spec }),
     tube: (outerRadius, innerRadius, height) =>
       node({ op: 'brep_tube', outer_radius: outerRadius, inner_radius: innerRadius, height }),
     torus: (majorRadius, minorRadius) =>

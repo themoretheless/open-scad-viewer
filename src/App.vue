@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { isModelGraphText } from './services/modelGraphTextDetect'
+import { isModelGraphText, SOURCE_FILE_ACCEPT, SOURCE_FILE_EXTENSION, sourceFileExtension, withSourceExtension } from './services/modelGraphTextDetect'
 import { editorBlocks, indentSelection, guideFitsIndent } from './services/editorBlocks'
 import { formatCode } from './services/codeFormat'
 import { highlightCode } from './services/codeHighlight'
@@ -455,42 +455,18 @@ async function buildSolidGroup(request: { name: string; source: string; replaces
   }
 }
 
-async function buildSolidFromSource(asGroup = false) {
-  if (solidBuilding.value) return
-  solidBuilding.value = true
-  error.value = ''
-  try {
-    const [{ evaluateExactSolidsOnMainThread }, { buildExactSolidBodies }] = await Promise.all([
-      import('./services/geometryBuildEngine'),
-      import('./services/solid/brepBuild'),
-    ])
-    const evaluated = await evaluateExactSolidsOnMainThread(code.value)
-    const plan = evaluated.exactSolids
-    if (!plan || plan.roots.length === 0) {
-      error.value = lang.value === 'ru'
-        ? 'Исходник не описывает ни одного тела.'
-        : 'The source describes no solids.'
-      return
-    }
-    const bodies = buildExactSolidBodies(plan.nodes, plan.roots)
-    if (asGroup) {
-      // Named after the document, so rebuilding replaces the group instead of stacking copies.
-      const group = fileName.value.replace(/\.scad$/i, '') || 'source'
-      solidAppendBodies.value = {
-        bodies: bodies.map(body => ({ ...body, group })),
-        token: (solidAppendBodies.value?.token ?? 0) + 1,
-      }
-    } else {
-      solidSeedDocument.value = { ...emptyDirectDocument(), bodies }
-    }
-    meshModelerOpen.value = false
-    directModelerOpen.value = true
-    editorOpen.value = false
-  } catch (caught) {
-    error.value = caught instanceof Error ? caught.message : String(caught)
-  } finally {
-    solidBuilding.value = false
-  }
+/**
+ * The editor's document becomes one group in the Solid scene, named after the file
+ * and carrying its source, so the dock lists it as code that can be edited and
+ * rebuilt; building again replaces the group instead of stacking copies.
+ */
+async function buildSolidFromSource() {
+  const name = fileName.value.replace(SOURCE_FILE_EXTENSION, '') || 'source'
+  await buildSolidGroup({ name, source: code.value, replaces: name })
+  if (error.value) return
+  meshModelerOpen.value = false
+  directModelerOpen.value = true
+  editorOpen.value = false
 }
 
 function bringCodeToMesh() {
@@ -1786,7 +1762,7 @@ async function loadEditorDocument(example: string, nextFileName: string) {
 
 async function loadExample(id: string) {
   const example = EXAMPLES[id]
-  if (example) await loadEditorDocument(example, `${id}.scad`)
+  if (example) await loadEditorDocument(example, `${id}${sourceFileExtension(example)}`)
 }
 
 async function loadMechanicalModel(source: string, name: string) {
@@ -1840,7 +1816,7 @@ async function openFile(file: File) {
     return
   }
   code.value = source
-  const requestedName = file.name.endsWith('.scad') ? file.name : `${file.name}.scad`
+  const requestedName = withSourceExtension(file.name, source)
   fileName.value = requestedName.slice(0, MAX_WORKSPACE_FILE_NAME_LENGTH)
   fitNextRender = true
   showNotice(t('opened'))
@@ -1887,7 +1863,7 @@ function exportStl() {
   const bytes = buildBinaryStl(sceneMeshes.value, fileName.value)
   const buffer = new ArrayBuffer(bytes.byteLength)
   new Uint8Array(buffer).set(bytes)
-  downloadBlob(new Blob([buffer], { type: 'model/stl' }), sanitizeFileName(fileName.value).replace(/\.scad$/i, '.stl'))
+  downloadBlob(new Blob([buffer], { type: 'model/stl' }), sanitizeFileName(fileName.value).replace(SOURCE_FILE_EXTENSION, '.stl'))
   showNotice(t('exported'))
 }
 
@@ -2515,7 +2491,7 @@ function readCommandMru(): string[] {
   return [...new Set(value.filter((item): item is string => typeof item === 'string' && item.length > 0))].slice(0, 12)
 }
 function clamp(value: number, min: number, max: number) { return Math.max(min, Math.min(max, value)) }
-function sanitizeFileName(name: string) { return (name.replace(/[^\w.() -]+/g, '_') || 'model.scad').replace(/\.scad.*$/i, '.scad') }
+function sanitizeFileName(name: string) { return (name.replace(/[^\w.() -]+/g, '_') || 'model.scad').replace(/\.mg.*$/i, '.mg').replace(/\.scad.*$/i, '.scad') }
 
 </script>
 
@@ -2544,7 +2520,7 @@ function sanitizeFileName(name: string) { return (name.replace(/[^\w.() -]+/g, '
             <span class="menu-status" role="status">{{ persistenceLabel }}</span>
           </div>
         </details>
-        <input ref="fileInputRef" class="sr-only" type="file" accept=".scad,text/plain" @change="openSelectedFile">
+        <input ref="fileInputRef" class="sr-only" type="file" :accept="SOURCE_FILE_ACCEPT" @change="openSelectedFile">
         <input ref="convertInputRef" class="sr-only" type="file" :accept="MESH_IMPORT_ACCEPT" @change="convertSelectedFile">
       </div>
       <div class="mode-switch" role="group" :aria-label="lang === 'ru' ? 'Режим работы' : 'Workspace mode'">
@@ -2680,7 +2656,7 @@ function sanitizeFileName(name: string) { return (name.replace(/[^\w.() -]+/g, '
             type="button"
             :disabled="solidBuilding"
             :title="lang === 'ru' ? 'Собрать точные тела (NURBS) и открыть в Solid' : 'Build exact NURBS solids and open them in Solid'"
-            @click="buildSolidFromSource(false)"
+            @click="buildSolidFromSource()"
           >{{ solidBuilding ? '…' : (lang === 'ru' ? 'В Solid' : 'To Solid') }}</button>
           <span class="toolbar-spacer" aria-hidden="true" />
           <button class="btn" type="button" @click="exampleGalleryOpen = true">{{ t('examples') }}</button>

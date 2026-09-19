@@ -1042,7 +1042,17 @@ mod tests {
                 let properties = crate::analysis::mass_properties(&union, 1e-7, 800_000).unwrap();
                 assert!((properties.signed_volume_mm3 - expected_volume).abs() < 1e-6);
             } else {
-                assert!(union.is_err());
+                // Outside the exact matrix the union either refuses or comes
+                // back through the tolerant fallback, which says so through
+                // its tolerance and never as an exact-tolerance result.
+                match union {
+                    Err(_) => {}
+                    Ok(union) => {
+                        assert!(union.tolerance_mm > 1e-6);
+                        assert_eq!(union.bodies.len(), 1);
+                        assert_eq!(union.validate().unwrap().boundary_edge_count, 0);
+                    }
+                }
             }
         }
     }

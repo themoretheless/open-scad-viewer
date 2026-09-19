@@ -1,6 +1,6 @@
 [
   {
-    "path": "examples/skadis-box/skadis-dovetail.modelgraph.scad",
+    "path": "examples/skadis-box/skadis-dovetail.mg",
     "source": "// @modelgraph-text/1\n// SKADIS bottom-insert asymmetric dovetail. Dimensions in mm.\n// part: 0 assembly, 1 box upright, 2 hook on its flat side.\nsegments 40\nparam part: 0 range 0..2\nparam width: 120 range 60..300\nparam depth: 75 range 30..200\nparam height: 80 range 50..250\nparam wall: 3 range 2..6\nparam floor_thickness: 4 range 2..8\nparam back_thickness: 7 range 7..12\nparam corner_radius: 5 range 3..12\nparam hook_count: 2 range 2..5\nparam hook_spacing_steps: 2 range 1..6\nparam mount_top_offset: 14 range 14..30\nparam fit: 0.25 range 0.15..0.4\nparam friction_ridge_enabled: 1 range 0..1\n\nhook_width = 4.4\nhook_spacing = 40 * hook_spacing_steps\nhook_span = (hook_count - 1) * hook_spacing\nmount_shift = height - mount_top_offset - 66\nrib_height = height - mount_top_offset + 12\nvalidate width. atLeast(hook_span + 32).message(\"Box too narrow for hooks\")\nvalidate height. atLeast(mount_top_offset + 36)\nvalidate depth. atLeast(back_thickness + wall + 12)\nvalidate corner_radius. atLeast(wall)\nvalidate (2 * corner_radius). lessThan(width)\nvalidate (2 * corner_radius). lessThan(depth)\nvalidate (hook_count % 1). equalTo(0)\nvalidate (hook_spacing_steps % 1). equalTo(0)\nvalidate (part % 1). equalTo(0)\nvalidate (friction_ridge_enabled % 1). equalTo(0)\n\n// Rounded rectangle with named inputs and result.\nfn roundedRectangle width: f64, depth: f64, radius: f64 -> Geometry\n    ret hull(\n        circle(radius).translate([radius, radius, 0]),\n        circle(radius).translate([width-radius, radius, 0]),\n        circle(radius).translate([radius, depth-radius, 0]),\n        circle(radius).translate([width-radius, depth-radius, 0]),\n    )\nmale_section = polygon([[-2.2,0],[2.2,0],[6.2,4],[-2.2,4]])\nfemale_section = male_section.offset(delta: fit)\nunder_roof = polygon([[-3,-2],[8,-2],[8,66+mount_shift],[-3,77+mount_shift]])\n.extrude(40)\n.rotate([90,0,90])\n.translate([-20,0,0])\nchannel = union(\n    intersection(female_section.extrude(height+1).translate([0,0,-1]), under_roof),\n    box([4.4+2*fit,3.1,67.3+mount_shift]).translate([-2.2-fit,-3,-1])\n)\n// corner_radius >= wall makes corner_radius-wall+1 >= 1.\nouter = roundedRectangle(width, depth, corner_radius).extrude(height)\ninner = roundedRectangle(width-2*wall, depth-back_thickness-wall, corner_radius-wall+1)\n.extrude(height)\n.translate([wall,back_thickness,floor_thickness])\nrib = roundedRectangle(16, 10, 2).extrude(rib_height)\nribs = union([for i in 0..<hook_count => rib.translate([(width-hook_span)/2+i*hook_spacing-6,0,0])])\nchannels = union([for i in 0..<hook_count => channel.translate([(width-hook_span)/2+i*hook_spacing,0,0])])\nbody = union(outer.subtract(inner), ribs).subtract(channels)\n\nblade_profile = union(\n    rectangle([12.6,4]).translate([-9.6,62,0]),\n    rectangle([4,12]).translate([-9.6,54,0]),\n    rectangle([3,24]).translate([0,42,0])\n).offset(0.7).offset(delta: -0.7)\nfriction_ridge = hull(\n    box([0.01,0.6,0.1]).translate([4.2,2,46]),\n    box([0.65,0.6,4]).translate([4.2,2,48]),\n    box([0.01,0.6,0.1]).translate([4.2,2,54])\n)\nridge = [for i in 0..<1 where friction_ridge_enabled == 1 => friction_ridge.translate([0,0,mount_shift])]\nneck = intersection(\n    male_section.extrude(36).translate([0,0,42+mount_shift]),\n    under_roof.translate([0,0,-fit])\n)\nblade = blade_profile.extrude(hook_width).rotate([90,0,90]).translate([-2.2,0,mount_shift])\nhook = union(ridge, neck, blade)\nprint_hook = hook.translate([0,0,-42-mount_shift]).rotate([0,-90,0]).translate([10,0,2.2])\n\nbox_output = [for i in 0..<1 where part != 2 => body]\nhook_output = [for i in 0..<1 where part == 2 => print_hook]\nassembly_hooks = [for i in 0..<hook_count where part == 0 => hook.translate([(width-hook_span)/2+i*hook_spacing,0,0])]\nshow [box_output, hook_output, assembly_hooks]\n",
     "document": {
       "language": "modelgraph/1",
@@ -2387,7 +2387,7 @@
     ]
   },
   {
-    "path": "examples/modelgraph-text/generic-functions.scad",
+    "path": "examples/modelgraph-text/generic-functions.mg",
     "source": "// @modelgraph-text/1\n// Generic records, column parameters, named results and destructuring.\nstruct Point3D<T> {\n    x: f32,\n    y: f32,\n    z: T,\n}\n\nmakePoint = fn<T>\n    x: f32,\n    y: f32,\n    z: T,\n->\n    point: Point3D<T>,\n    count: int,\n{\n    ret {\n        point: Point3D<T> { x, y, z },\n        count: 1,\n    }\n}\n\nparam height = 12 range 1..40\n{ point, count } = makePoint(10, 20, height)\nbody = box([point.x, point.y, point.z])\nshow body\nassert body. hasBodies(count)\n",
     "document": {
       "language": "modelgraph/1",
@@ -2751,7 +2751,7 @@
     ]
   },
   {
-    "path": "examples/modelgraph-text/range-pattern.scad",
+    "path": "examples/modelgraph-text/range-pattern.mg",
     "source": "// @modelgraph-text/1\nparam count = 18 range 1..24\nparam orbit = 20mm range 5mm..50mm\nparam height = 4mm range 1mm..10mm\n\nangles = 0deg..<360deg count count\npart = box([2mm, 2mm, height])\nparts = [\n  for angle in angles\n  => part.translate(x: orbit).rotate(z: angle)\n]\nshow parts\n\nassert parts. hasBodies(count).isWatertight()\nassert measure(parts).height. approximately(height, tolerance: 0.01mm)\n",
     "document": {
       "language": "modelgraph/1",
@@ -2914,7 +2914,7 @@
     ]
   },
   {
-    "path": "examples/modelgraph-text/nurbs-boolean.scad",
+    "path": "examples/modelgraph-text/nurbs-boolean.mg",
     "source": "// @modelgraph-text/1\nparam width = 20mm range 10mm..40mm\nparam thickness = 4mm range 1mm..8mm\npatch = nurbs_surface(\n  degree_u: 1, degree_v: 1,\n  knots_u: [0,0,1,1], knots_v: [0,0,1,1],\n  control_points: [[[0,0,0],[0,width,0]],[[width,0,0],[width,width,0]]],\n  weights: [[1,1],[1,1]]\n)\nbody = patch.tessellate(2,2).thicken([0,0,thickness])\ncutter = patch.transform([[1,0,0,width/2],[0,1,0,width/2],[0,0,1,0],[0,0,0,1]])\n.tessellate(2,2).thicken([0,0,thickness])\nshow body.mesh_subtract(cutter)\n",
     "document": {
       "language": "modelgraph/nurbs-1",

@@ -8,12 +8,19 @@
  * A root that the recorder marked inexact is refused by name rather than approximated.
  */
 import { buildOwnNurbs } from '../modelGraphNurbsKernel'
-import type { NurbsBrep } from '../geometry/brep'
+import { brepGearFaceCount, type NurbsBrep } from '../geometry/brep'
 import type { DirectBody } from '../directModeling'
 import type { BrepNode } from './brepGraph'
 
 /** Display tessellation only; the stored body keeps its exact topology. */
-const DISPLAY = { segments: 8, subdivisionLevels: 1 } as const
+const DISPLAY_SEGMENTS = 8
+
+/**
+ * The bridge refuses a display mesh above this many triangles. A face at `segments`
+ * per edge costs about 2*segments^2 of them, so a body with many faces (a gear has
+ * six per tooth) is drawn coarser rather than refused.
+ */
+const TRIANGLE_BUDGET = 16000
 
 /** The NURBS document contract caps a graph at 128 nodes. */
 const MAX_NODES = 128
@@ -63,7 +70,10 @@ function buildExactSolidBody(
     nodes: reachable,
     root,
   }
-  const built = buildOwnNurbs(document, { action: 'build', display: DISPLAY })
+  const built = buildOwnNurbs(document, {
+    action: 'build',
+    display: { segments: displaySegments(reachable), subdivisionLevels: 1 },
+  })
   const mesh = (built as { mesh?: { positions: number[]; indices: number[] } }).mesh
   if (!mesh) throw new Error(`"${name}" produced no displayable geometry.`)
   const definitions = built.report.definitions as Record<string, { kind: string } & Record<string, unknown>>
@@ -78,6 +88,19 @@ function buildExactSolidBody(
     mesh: { positions: mesh.positions, indices: mesh.indices },
     brep: brep as unknown as NurbsBrep,
   }
+}
+
+/** Coarser display for bodies whose face count would overrun the triangle budget. */
+function displaySegments(nodes: readonly BrepNode[]): number {
+  let faces = 0
+  for (const node of nodes) {
+    if (node.op !== 'brep_gear') continue
+    const gear = node as unknown as { teeth: number; herringbone?: boolean; bore?: number; internal?: boolean }
+    faces += brepGearFaceCount(gear)
+  }
+  let segments = DISPLAY_SEGMENTS
+  while (segments > 1 && 2 * faces * segments * segments > TRIANGLE_BUDGET) segments--
+  return segments
 }
 
 /**

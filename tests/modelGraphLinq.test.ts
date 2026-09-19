@@ -134,7 +134,7 @@ it('supports empty string keys, geometry lists per iteration, and the documented
   const multi='// @modelgraph-text/1\nshow foreach i in 0..<2 => [box([1,1,1]).translate([i*10,0,0]), box([1,1,1]).translate([i*10,3,0])]'
   expect((await parseOpenSCAD(multi)).meshes).toHaveLength(4)
   const {readFileSync}=await import('node:fs')
-  const source=readFileSync('examples/modelgraph-text/foreach-linq.scad','utf8')
+  const source=readFileSync('examples/modelgraph-text/foreach-linq.mg','utf8')
   expect((await parseOpenSCAD(source)).meshes).toHaveLength(12)
   expect(compileModelGraphText(formatCode(source)).source).toBe(compileModelGraphText(source).source)
 })
