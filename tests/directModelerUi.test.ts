@@ -1,5 +1,9 @@
 import {createRenderer,h,nextTick,shallowReactive,shallowRef} from 'vue'
 import {it,expect,vi,afterEach} from 'vitest'
+import {readFileSync} from 'node:fs'
+import {resolve} from 'node:path'
+import {IDBFactory} from 'fake-indexeddb'
+import * as stepStore from '../src/services/cadStepIndexedDb'
 import DirectModeler from '../src/features/DirectModeler.vue'
 import {extrudeDirectSketch,type DirectDocument} from '../src/services/directModeling'
 import {sampleCurve} from '../src/services/directSketchGeometry'
@@ -53,6 +57,57 @@ function cylinderSeed(): DirectDocument {
  return {version:1,sketches:[],bodies:[{id:'imported-cylinder',name:'Imported cylinder',brep,
   mesh:{positions:built.positions,indices:built.indices}}]}
 }
+
+it('imports STEP through the Solid file input and keeps Undo independent of the saved original',async()=>{
+ const ui=await mount(),before=ui.doc()
+ vi.stubGlobal('indexedDB',new IDBFactory())
+ const text=readFileSync(resolve('tests/fixtures/step-v6/self-authored-ap242-assembly.step'),'utf8')
+ const input=ui.all().find(n=>n.tag==='input'&&n.props.accept==='.step,.stp')!
+ const target={files:[{size:Buffer.byteLength(text),text:async()=>text}],value:'assembly.step'}
+ await input.props.onChange({target});await nextTick()
+ expect(target.value).toBe('')
+ expect(ui.doc().bodies).toHaveLength(before.bodies.length+1)
+ expect(ui.doc().bodies[0]).toEqual(before.bodies[0])
+ expect(ui.all().some(n=>n.props.role==='alert')).toBe(false)
+ expect((await stepStore.loadProjectStepModel())?.document?.occurrenceIdentities).toHaveLength(3)
+ await ui.click('↶')
+ expect(ui.doc()).toEqual(before)
+ expect((await stepStore.loadProjectStepModel())?.document?.occurrenceIdentities).toHaveLength(3)
+})
+
+it('does not overwrite scene edits made while a STEP original is being saved',async()=>{
+ const ui=await mount()
+ let started!:()=>void,finish!:()=>void
+ const saving=new Promise<void>(resolve=>{started=resolve})
+ const pending=new Promise<void>(resolve=>{finish=resolve})
+ const save=vi.spyOn(stepStore,'saveProjectStepModel').mockImplementation(()=>{started();return pending})
+ try{
+  const text=readFileSync(resolve('tests/fixtures/step-v6/self-authored-ap242-assembly.step'),'utf8')
+  const input=ui.all().find(n=>n.tag==='input'&&n.props.accept==='.step,.stp')!
+  const importing=input.props.onChange({target:{files:[{size:Buffer.byteLength(text),text:async()=>text}],value:''}})
+  await saving
+  await ui.click('Box');const edited=ui.doc()
+  finish();await importing;await nextTick()
+  expect(ui.doc()).toEqual(edited)
+  expect(ui.all().some(n=>n.props.role==='alert'&&ui.text(n).includes('scene changed'))).toBe(true)
+ }finally{finish();save.mockRestore()}
+})
+
+it('refuses oversized and malformed STEP files without changing the scene or leaving import busy',async()=>{
+ const ui=await mount(),before=ui.doc()
+ const input=ui.all().find(n=>n.tag==='input'&&n.props.accept==='.step,.stp')!
+ const read=vi.fn(async()=> 'not STEP')
+ const target={files:[{size:16*1024*1024+1,text:read}],value:'large.step'}
+ await input.props.onChange({target});await nextTick()
+ expect(read).not.toHaveBeenCalled()
+ expect(target.value).toBe('')
+ expect(ui.doc()).toEqual(before)
+ target.files[0]!.size=8
+ await input.props.onChange({target});await nextTick()
+ expect(read).toHaveBeenCalledOnce()
+ expect(ui.doc()).toEqual(before)
+ expect(ui.button('Import STEP').props.disabled).toBe(false)
+})
 
 it('changes retained B-rep display detail and restores the previous mesh with Undo',async()=>{
  const seed=cylinderSeed(),before=structuredClone(seed.bodies[0])

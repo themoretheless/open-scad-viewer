@@ -36,6 +36,7 @@ if (props.initialDocument) initial = props.initialDocument
 const history = new DirectHistory(initial)
 const document = shallowRef(history.document)
 const stlInput = ref<HTMLInputElement>()
+const stepInput = ref<HTMLInputElement>(), stepBusy = ref(false)
 const undoable = ref(false), redoable = ref(false)
 const selection = ref(props.initialSelection ?? ''), mode = ref<'2d' | '3d'>('2d'), tool = ref<'select' | 'rectangle' | 'circle' | 'arc' | 'polyline' | 'trim'>('select')
 const draft = ref<Point2[]>([]), height = ref(10), dx = ref(0), dy = ref(0), dz = ref(0), angle = ref(0), scale = ref(1)
@@ -726,6 +727,40 @@ async function importStl(event: Event) {
     })
   } catch (e) { error.value = e instanceof Error ? e.message : String(e) }
   finally { input.value = '' }
+}
+async function importStep(event: Event) {
+  const input = event.target as HTMLInputElement, file = input.files?.[0]
+  if (stepBusy.value) { input.value = ''; return }
+  stepBusy.value = true; error.value = ''; notice.value = ''
+  try {
+    if (!file) return
+    if (file.size > 16 * 1024 * 1024) throw Error('STEP file exceeds 16 MiB.')
+    const text = await file.text()
+    const {prepareSolidStepImport} = await import('../services/solidStepExchange')
+    if (!props.open) return
+    cancelGesture()
+    const before = document.value
+    const imported = await prepareSolidStepImport(text, before)
+    if (!props.open || document.value !== before) {
+      throw Error(imported.report.retained
+        ? 'AP242 original saved, but the scene changed during import. Import again to add its bodies.'
+        : 'The scene changed during STEP import. Import again to add its bodies.')
+    }
+    commit(imported.document)
+    operation.value = null; advancedOp.value = null; subtract.value = null; boxSelect.value = false
+    pickObject(imported.selected, '3d'); fit('3d')
+    notice.value = imported.report.retained
+      ? label(`AP242: ${imported.report.occurrenceIdentities.length} экземпляров; оригинал сохранён.`, `AP242: ${imported.report.occurrenceIdentities.length} occurrence(s); original saved.`)
+      : label('STEP: сетка импортирована.', 'STEP: mesh imported.')
+  } catch (e) { error.value = e instanceof Error ? e.message : String(e) }
+  finally { stepBusy.value = false; input.value = '' }
+}
+async function exportStepOriginal() {
+  error.value = ''
+  try {
+    const {exportSolidStepOriginal} = await import('../services/solidStepExchange')
+    download(await exportSolidStepOriginal(), 'retained-model.step')
+  } catch (e) { error.value = e instanceof Error ? e.message : String(e) }
 }
 function project(p: number[], pane: Pane): Point2 { return pane === '2d' ? [p[0], -p[1]] : projectDirectPoint([p[0],p[1],p[2]??0], camera.value).slice(0,2) as Point2 }
 function viewBox(pane: Pane) { const size = views.value[pane], center = centers.value[pane]; return `${center[0] - size / 2} ${center[1] - size / 2} ${size} ${size}` }
@@ -1504,6 +1539,9 @@ watch([() => props.open, () => props.seedDocument], ([open, seed]) => {
         <label class="file-open">{{ label('Открыть Solid / ModelGraph NURBS', 'Open Solid / ModelGraph NURBS') }}<input type="file" accept=".json,application/json" @change="importFile"></label>
         <button type="button" @click="stlInput?.click()">{{ label('Импорт STL / OBJ / PLY / OFF / AMF / 3MF как тело', 'Import STL / OBJ / PLY / OFF / AMF / 3MF as body') }}</button>
         <input ref="stlInput" type="file" :accept="MESH_IMPORT_ACCEPT" hidden @change="importStl" />
+        <button type="button" :disabled="stepBusy" @click="stepInput?.click()">{{ label('Импорт STEP', 'Import STEP') }}</button>
+        <input ref="stepInput" type="file" accept=".step,.stp" hidden @change="importStep" />
+        <button type="button" :disabled="stepBusy" @click="exportStepOriginal">{{ label('Экспорт AP242-оригинала', 'Export AP242 original') }}</button>
         <button :disabled="!document.bodies.length" @click="download(directBodiesScad(document), 'solid-bodies.scad')">{{ label('Экспорт SCAD (bake)', 'Export SCAD (bake)') }}</button>
         <button :disabled="!document.bodies.length || !canAppend" @click="appendBodies">{{ embedded ? label('Bake в код', 'Bake into code') : label('Bake в Code (append)', 'Bake into Code (append)') }}</button>
         <button :disabled="!document.bodies.length" @click="sendToMesh">{{ label('Открыть в Mesh', 'Open in Mesh') }}</button>
@@ -1836,5 +1874,10 @@ watch([() => props.open, () => props.seedDocument], ([open, seed]) => {
 </style>
 
 <style scoped>
+@media(max-width:750px){
+  .workspace-bar{flex-wrap:wrap}
+  .command-search{flex:1 1 160px;min-width:0}
+  .file-menu>div{max-width:calc(100vw - 16px);max-height:calc(100dvh - 140px);overflow:auto;box-sizing:border-box}
+}
 .direct-workspace.embedded{position:absolute;inset:0;z-index:9}.embedded .workspace-bar{flex-wrap:wrap;gap:8px;padding:6px}.primitive-bar{display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:8px;border-bottom:1px solid var(--border)}.primitive-bar input{width:75px}.primitive-icon{width:36px;height:36px;padding:0;display:inline-flex;align-items:center;justify-content:center;border-radius:8px}.primitive-icon:hover{color:var(--accent)}.tool-icon{width:34px;height:34px;padding:0;display:inline-flex;align-items:center;justify-content:center;gap:3px;border-radius:7px}.tool-icon .tool-tag{font-size:9px;font-weight:700;letter-spacing:.04em}.tool-icon:has(.tool-tag){width:auto;padding:0 7px}.tool-group{display:inline-flex;gap:3px}.tool-divider{width:1px;height:22px;background:var(--border);margin:0 3px}.primitive-divider{width:1px;height:22px;background:var(--border);margin:0 4px}.embedded .pane-tools{padding:5px}.embedded .save-status{display:none}
 </style>

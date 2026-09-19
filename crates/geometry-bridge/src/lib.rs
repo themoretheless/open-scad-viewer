@@ -117,6 +117,11 @@ pub(crate) fn triangles_from_mesh(m: &Mesh) -> geometry_ops::Triangles {
 fn field<T: for<'a> Deserialize<'a>>(v: &Value, k: &str) -> Result<T> {
     value_codec::from_value(v[k].clone()).map_err(|e| input(format!("Invalid {k}: {e}")))
 }
+/// Consume a single-use field from an owned request; preserve `field`'s missing-value errors.
+fn take_field<T: for<'a> Deserialize<'a>>(v: &mut Value, k: &str) -> Result<T> {
+    let value = v.as_object_mut().and_then(|object| object.remove(k)).unwrap_or(Value::Null);
+    value_codec::from_value(value).map_err(|e| input(format!("Invalid {k}: {e}")))
+}
 fn encode(v: impl Serialize) -> Result<Value> {
     value_codec::to_value(v).map_err(|e| input(e.to_string()))
 }
@@ -466,7 +471,7 @@ pub fn boundary_curves(mesh: &Mesh) -> Result<Vec<Curve>> {
         })
         .collect()
 }
-pub fn dispatch(v: Value) -> Result<Value> {
+pub fn dispatch(mut v: Value) -> Result<Value> {
     match v["op"].as_str().unwrap_or("") {
         "brep_intersect_surface_surface"
         | "brep_intersect_curve_segment"
@@ -1105,7 +1110,7 @@ pub fn dispatch(v: Value) -> Result<Value> {
                 &field::<Vec<f64>>(&v, "scales")?,
             )?)
         }
-        "brep_nurbs_inspect" => encode(field::<brep_core::Model>(&v, "model")?.validate()?),
+        "brep_nurbs_inspect" => encode(take_field::<brep_core::Model>(&mut v, "model")?.validate()?),
         "brep_nurbs_export_step" => {
             let (text, cert) = brep_core::export_step(&field(&v, "model")?)?;
             encode(json!({
@@ -1545,17 +1550,17 @@ pub fn dispatch(v: Value) -> Result<Value> {
             }))
         }
         "brep_nurbs_tessellate" => {
-            encode(brep::nurbs(&field(&v, "model")?, field(&v, "segments")?)?)
+            encode(brep::nurbs(&take_field(&mut v, "model")?, field(&v, "segments")?)?)
         }
         "brep_nurbs_certified_tessellate" => encode(brep::certified_nurbs(
-            &field(&v, "model")?,
+            &take_field(&mut v, "model")?,
             field(&v, "chordToleranceMm")?,
             v.get("maxTriangles")
                 .and_then(Value::as_u64)
                 .unwrap_or(20_000) as usize,
         )?),
         "brep_nurbs_certified_freeform_tessellate" => encode(brep::certified_freeform_nurbs(
-            &field(&v, "model")?,
+            &take_field(&mut v, "model")?,
             field(&v, "chordToleranceMm")?,
             v.get("maxTriangles")
                 .and_then(Value::as_u64)
@@ -1563,7 +1568,7 @@ pub fn dispatch(v: Value) -> Result<Value> {
         )?),
         "brep_nurbs_display" => brep_display::dispatch(v),
         "brep_nurbs_to_polygon" => {
-            let t = brep::nurbs(&field(&v, "model")?, field(&v, "segments")?)?;
+            let t = brep::nurbs(&take_field(&mut v, "model")?, field(&v, "segments")?)?;
             encode(polygon_core::solid::brep::from_mesh(
                 &t.built.mesh,
                 Some(&t.face_ids),

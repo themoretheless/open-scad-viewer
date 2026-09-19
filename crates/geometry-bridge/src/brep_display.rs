@@ -1,5 +1,5 @@
 //! Native display conversion; these mesh metrics are estimates, not B-rep certificates.
-use super::{Mesh, Result, Value, field, input};
+use super::{Mesh, Result, Value, field, input, take_field};
 use std::collections::BTreeMap;
 use value_codec::json;
 fn cross(a: [f64; 3], b: [f64; 3]) -> [f64; 3] {
@@ -76,8 +76,8 @@ fn prepare(mesh: &Mesh) -> Result<(Vec<f32>, Vec<usize>, f64)> {
     }
     Ok((vertices, (0..mesh.indices.len()).collect(), area))
 }
-pub(crate) fn dispatch(v: Value) -> Result<Value> {
-    let tessellation = super::brep::nurbs(&field(&v, "model")?, field(&v, "segments")?)?;
+pub(crate) fn dispatch(mut v: Value) -> Result<Value> {
+    let tessellation = super::brep::nurbs(&take_field(&mut v, "model")?, field(&v, "segments")?)?;
     let (vertices, indices, area) = prepare(&tessellation.built.mesh)?;
     let mut value = json!({
         "report":tessellation.built.report,

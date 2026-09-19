@@ -23,6 +23,7 @@
     "bench:exact-solid-browser": "node benchmarks/exact-solid-browser.mjs",
     "bench:brep-validation": "cargo run --release --locked --manifest-path crates/Cargo.toml -p brep-core --example bench_validation",
     "bench:brep-decode": "cargo run --release --locked --manifest-path crates/Cargo.toml -p brep-core --example bench_decode",
+    "bench:brep-dispatch": "cargo run --release --locked --manifest-path crates/Cargo.toml -p geometry-bridge --example bench_brep_dispatch",
     "bench:gpu": "node scripts/bench-gpu.mjs",
     "bench:memory": "node --expose-gc --import tsx benchmarks/cad-memory.mjs",
     "setup:openscad": "node --import tsx scripts/official-openscad-runtime.mjs install",

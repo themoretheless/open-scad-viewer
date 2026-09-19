@@ -220,6 +220,10 @@ measurements from the browser's complete source-to-body path.
 `npm run bench:brep-decode` isolates owned value-tree decoding; its
 [report](brep-decode-2026-09-19.md) includes canonical output hashes and explicitly
 excludes input preparation from the measured interval.
+`npm run bench:brep-dispatch` measures owned request decoding, validation and
+response encoding in the production native dispatcher. The
+[owned request report](owned-brep-request-2026-09-19.md) distinguishes that
+interval from isolated decoding and browser/WASM performance.
 
 Mechanical preview isolation: `node --import tsx benchmarks/mechanical-preview.mts`.
 The [report](mechanical-preview-2026-09-19.md) separates full-detail geometry from

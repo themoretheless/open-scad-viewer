@@ -6,8 +6,16 @@ on:
       - 'crates/brep-core/src/step_interchange_v3.rs'
       - 'crates/geometry-bridge/src/**'
       - 'src/services/cadStep*.ts'
+      - 'src/services/solidStepExchange.ts'
+      - 'src/features/DirectModeler.vue'
+      - 'tests/solidStepExchange.test.ts'
+      - 'tests/directModelerUi.test.ts'
       - 'tests/brepStepV10Product.test.ts'
       - 'scripts/qualify-step-interchange-v10.mjs'
+      - 'scripts/qualification-step.mjs'
+      - 'tests/qualificationStep.test.mjs'
+      - 'tools/browser-qualification/**'
+      - '.github/workflows/step-interchange-v10.yml'
   pull_request:
 jobs:
   qualify:
@@ -21,4 +29,16 @@ jobs:
           toolchain: nightly-2026-09-16
           targets: wasm32-unknown-unknown
       - run: npm ci
+      - run: node --test tests/qualificationStep.test.mjs
+      - run: npm ci --prefix tools/browser-qualification --ignore-scripts --include=dev --audit=false --fund=false
+      - run: tools/browser-qualification/node_modules/.bin/playwright install --with-deps chromium
       - run: node scripts/qualify-step-interchange-v10.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: step-v10-diagnostics
+          path: |
+            output/qualification/step-interchange-10-v1/*.log
+            output/qualification/step-interchange-10-v1/*.json
+            output/qualification/step-interchange-10-v1/*.png
+          if-no-files-found: warn
