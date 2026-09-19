@@ -42,7 +42,7 @@ if (isMainThread) {
     }
   }
   for (const input of [...inputs, ...hostInputs]) assert.equal(hash(await readFile(input.path)), input.sha256, `${input.path} changed`)
-  const phases = ['inflateMs', 'compileMs', 'instantiateMs', 'uploadMs', 'decodeMs', 'copyMs', 'totalMs']
+  const phases = ['inflateMs', 'compileMs', 'instantiateMs', 'uploadMs', 'decodeMs', 'copyMs', 'totalMs', 'kernelCompileMs', 'kernelInstantiateMs', 'readyMs']
   const summary = inputs.map(({ path }) => {
     const selected = samples.filter(sample => sample.path === path)
     const result = { path, wasmBytes: selected[0].wasmBytes, literalBytes: selected[0].literalBytes }
@@ -58,7 +58,7 @@ if (isMainThread) {
     boundaries: [
       'Fresh worker/isolate and decoder instance for each sample; process-wide V8/OS caches may warm. No discarded warmups.',
       'Same generated geometry package, exact decoded bytes asserted against kernel_bg.wasm outside timings.',
-      'Measures synchronous decoder bootstrap, upload, decoding and output copy, not geometry compilation or whole-job latency.',
+      'totalMs measures synchronous decoder bootstrap through output copy; readyMs additionally includes asynchronous geometry compilation and instantiation, not whole-job latency.',
       'Worker creation, module imports, fixture reads, decoder packaging, verification and join excluded from timing.',
       'Single worker at a time, alternating variant order. Run without other builds/tests/profilers. No timing threshold.',
     ], samples, summary,
@@ -94,6 +94,12 @@ if (isMainThread) {
   assert.notEqual(result, 0n)
   const bytes = new Uint8Array(decoder.memory.buffer, Number(result & 0xffffffffn), Number(result >> 32n)).slice()
   const copied = performance.now()
+  const kernelModule = await WebAssembly.compile(bytes)
+  const kernelCompiled = performance.now()
+  const kernel = await WebAssembly.instantiate(kernelModule)
+  const ready = performance.now()
+  assert.equal(typeof kernel.exports.abi_request, 'function')
+  assert.ok(kernel.exports.memory instanceof WebAssembly.Memory)
   const original = await readFile(new URL('../src/generated/geometry-kernels/kernel_bg.wasm', import.meta.url))
   assert.equal(Buffer.compare(original, bytes), 0, 'decoded geometry bytes changed')
   parentPort.on('message', () => {})
@@ -101,5 +107,6 @@ if (isMainThread) {
     decoderSha256: hash(wasm), geometrySha256: hash(bytes), wasmBytes: wasm.length, literalBytes: literal.length,
     inflateMs: inflated - start, compileMs: compiled - inflated, instantiateMs: instantiated - compiled,
     uploadMs: uploaded - instantiated, decodeMs: decompressed - uploaded, copyMs: copied - decompressed, totalMs: copied - start,
+    kernelCompileMs: kernelCompiled - copied, kernelInstantiateMs: ready - kernelCompiled, readyMs: ready - start,
   })
 }

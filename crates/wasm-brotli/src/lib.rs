@@ -62,14 +62,17 @@ fn decode_base85(input: &[u8]) -> Option<Vec<u8>> {
         return None;
     }
     let mut output = Vec::with_capacity(size);
-    for group in input[5..].chunks_exact(5) {
-        for byte in word(group)?.to_be_bytes() {
-            if output.len() < size {
-                output.push(byte)
-            } else if byte != 0 {
-                return None;
-            }
+    let full_end = 5 + (size / 4) * 5;
+    for group in input[5..full_end].chunks_exact(5) {
+        output.extend_from_slice(&word(group)?.to_be_bytes());
+    }
+    let tail = size % 4;
+    if tail != 0 {
+        let bytes = word(&input[full_end..])?.to_be_bytes();
+        if bytes[tail..].iter().any(|&byte| byte != 0) {
+            return None;
         }
+        output.extend_from_slice(&bytes[..tail]);
     }
     Some(output)
 }
@@ -169,5 +172,35 @@ mod tests {
         assert!(decode_base85(b"000050000000001").is_none());
         assert!(decode_base85(b"0000500000").is_none());
         assert_eq!(prepare_encoded(ENCODED_LIMIT + 1), 0);
+    }
+
+    #[test]
+    fn base85_full_words_and_every_tail_length_roundtrip() {
+        fn encode_word(mut value: u32, output: &mut Vec<u8>) {
+            let mut digits = [0; 5];
+            for digit in digits.iter_mut().rev() {
+                *digit = ALPHABET[(value % 85) as usize];
+                value /= 85;
+            }
+            output.extend_from_slice(&digits);
+        }
+        for size in 5..=512 {
+            let bytes: Vec<_> = (0..size).map(|i| ((i * 37 + size) % 256) as u8).collect();
+            let mut encoded = Vec::new();
+            encode_word(size as u32, &mut encoded);
+            for chunk in bytes.chunks(4) {
+                let mut block = [0; 4];
+                block[..chunk.len()].copy_from_slice(chunk);
+                encode_word(u32::from_be_bytes(block), &mut encoded);
+            }
+            assert_eq!(decode_base85(&encoded), Some(bytes));
+            if size % 4 != 0 {
+                let last = encoded.len() - 5;
+                let invalid = word(&encoded[last..]).unwrap() | 1;
+                encoded.truncate(last);
+                encode_word(invalid, &mut encoded);
+                assert!(decode_base85(&encoded).is_none());
+            }
+        }
     }
 }

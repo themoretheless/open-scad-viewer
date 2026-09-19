@@ -2,7 +2,7 @@
 import {encodeBinary} from '../valueBinaryCodec'
 import {decodePacked, writeLinear} from '../wasmHost'
 import {unpackBrotliWasmBase64} from '../wasmBrotliPacking'
-import {compileStreamingWasm} from '../wasmStreaming'
+import {compileOptionalWasm} from '../wasmCompilation'
 import wasmBase64 from '../../generated/geometry-kernels/bytes'
 import {
   assertGeometryLeaseCurrent,
@@ -74,8 +74,10 @@ let warming: Promise<void> | undefined
 export function warmGeometryKernel(): Promise<void> {
   if (initialized) return Promise.resolve()
   warming ??= (async () => {
-    const module = await compileStreamingWasm('/wasm/geometry-kernel.wasm')
-      ?? await WebAssembly.compile(unpackBrotliWasmBase64(wasmBase64))
+    // Keep the large imported constant outside a logical expression: Rolldown
+    // otherwise inlines a payload copy into every consumer of this fallback.
+    let module = await compileOptionalWasm('/wasm/geometry-kernel.wasm')
+    if (!module) module = await WebAssembly.compile(unpackBrotliWasmBase64(wasmBase64))
     // Instantiate asynchronously as well: browsers refuse a synchronous instantiation of a module over
     // 8 MB on the main thread, which is where the viewport and the Solid workspace warm the kernel.
     const instance = await WebAssembly.instantiate(module)

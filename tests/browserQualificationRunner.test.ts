@@ -360,6 +360,7 @@ describe('actual-browser qualification runner', () => {
     ))).toMatchObject({ bytes: expect.any(Number), sha256: expect.stringMatching(/^[a-f0-9]{64}$/) })
     expect(evidence.workerArtifacts.length).toBeGreaterThan(0)
     expect(evidence.workerArtifacts.every((path: string) => path.startsWith('assets/'))).toBe(true)
+    expect(evidence.artifacts.some((artifact: {path: string}) => artifact.path.startsWith('wasm/'))).toBe(false)
   })
 
   it('configures every preview as a fresh loopback-only ephemeral Vite server', async () => {

@@ -57,8 +57,12 @@ jobs:
           key: rust-wasm-immutable-v2-${{ runner.os }}-${{ hashFiles('crates/Cargo.lock', 'rust-toolchain.toml') }}
       - run: npm ci
       - run: npm run test:wasm-optimize
+      - run: npm run test:qualification-drift
       - run: npm run build:geometry
       - run: node --import tsx benchmarks/provider-readiness.mts > provider-readiness.json
+      - run: node --import tsx benchmarks/provider-readiness.mts > provider-readiness-concurrent.json
+        env:
+          READINESS_CONCURRENCY: '4'
       # Kernels are built above. npm lifecycle hooks would optimize/pack them
       # again before each command, despite Cargo's incremental cache.
       - run: node node_modules/vue-tsc/bin/vue-tsc.js --noEmit
@@ -70,7 +74,9 @@ jobs:
         if: always()
         with:
           name: provider-readiness-node-${{ matrix.node-version }}
-          path: provider-readiness.json
+          path: |
+            provider-readiness.json
+            provider-readiness-concurrent.json
           if-no-files-found: warn
 
   native-smoke:

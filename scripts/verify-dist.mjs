@@ -2,7 +2,7 @@ import { readFileSync, readdirSync, statSync } from 'node:fs'
 import { extname, join, relative } from 'node:path'
 import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
-import { verifyPackedWasmChunk } from './verify-packed-wasm.mjs'
+import { verifyPackedWasmChunk, verifyUniquePackedWasm, verifyRawWasm } from './verify-packed-wasm.mjs'
 
 const rootUrl = new URL('../dist/', import.meta.url)
 const root = fileURLToPath(rootUrl)
@@ -69,14 +69,10 @@ const limits = new Map([
 // bytes; retain a bounded 34917-byte margin.
 const geometryChunkBudget = 3_020_000
 const jsChunkBudgets = [
-  // Browser-side geometry and SVG workers now carry their own Rust/decoder
-  // host plumbing while raw .wasm files are also published for streaming
-  // compile/code-cache. Measured on 2026-09-19: 3,258,801 bytes.
-  [/^assets\/geometry\.worker-[^/]+\.js$/, 3_350_000],
-  // Main WebGPU renderer chunk, measured on 2026-09-19: 2,872,959 bytes.
-  [/^assets\/renderer-[^/]+\.js$/, 2_950_000],
-  // SVG import worker with resvg/usvg and font plumbing, measured: 2,822,512 bytes.
-  [/^assets\/svg\.worker-[^/]+\.js$/, 2_900_000],
+  // After removing logical-expression payload inlining: 470353 / 84511 / 34064 bytes.
+  [/^assets\/geometry\.worker-[^/]+\.js$/, 500_000],
+  [/^assets\/renderer-[^/]+\.js$/, 100_000],
+  [/^assets\/svg\.worker-[^/]+\.js$/, 50_000],
   // Split OpenSCAD language kernel bytes, measured: 436,678 bytes.
   [/^assets\/language-kernel-bytes-[^/]+\.js$/, 470_000],
   // Photogrammetry kernel bytes, measured after WGSL variants: 243,472 bytes.
@@ -116,6 +112,11 @@ for (const file of files) {
 const total = files
   .filter(file => !/^wasm\/(geometry-kernel|language-kernel|photogrammetry)\.wasm$/.test(file.path))
   .reduce((sum, file) => sum + file.bytes, 0)
+verifyUniquePackedWasm((function* () {
+  for (const file of files) {
+    if (file.extension === '.js') yield {path: file.path, source: readFileSync(join(root, file.path), 'utf8')}
+  }
+})())
 // Own CAD adds ~96 kB to the shared Rust payload and must not ship a separate
 // foreign CSG package. The complete distribution is smaller (~2.3 MB).
 if (files.some(file => /manifold-3d/i.test(file.path))) throw new Error('Foreign manifold-3d artifact in dist')
@@ -131,6 +132,25 @@ verifyPackedWasmChunk(
   readFileSync(new URL('../src/generated/geometry-kernels/kernel_bg.wasm', import.meta.url)),
   'Geometry kernel',
 )
+const languageBytes = files.filter(file => /^assets\/language-kernel-bytes-[^/]+\.js$/.test(file.path))
+if (languageBytes.length !== 1) throw new Error('Expected one shared packed language kernel')
+verifyPackedWasmChunk(
+  readFileSync(new URL(languageBytes[0].path, rootUrl), 'utf8'),
+  readFileSync(new URL('../src/generated/language-kernel/kernel_bg.wasm', import.meta.url)),
+  'Language kernel',
+)
+let rawWasmBytes = 0
+for (const [name, original] of [
+  ['geometry-kernel', '../src/generated/geometry-kernels/kernel_bg.wasm'],
+  ['language-kernel', '../src/generated/language-kernel/kernel_bg.wasm'],
+  ['photogrammetry', '../crates/target/wasm32-unknown-unknown/release/photogrammetry_wasm.wasm'],
+]) {
+  rawWasmBytes += verifyRawWasm(
+    readFileSync(new URL(`wasm/${name}.wasm`, rootUrl)),
+    readFileSync(new URL(original, import.meta.url)),
+    name,
+  )
+}
 const harfBuzzBytes = files.filter(file => /^assets\/harfbuzz-bytes-[^/]+\.js$/.test(file.path))
 if (harfBuzzBytes.length !== 1) throw new Error('Expected one shared packed HarfBuzz runtime')
 verifyPackedWasmChunk(
@@ -216,9 +236,8 @@ for (const [name, artifact, compression] of [
 // bytes unpacked: it instantiates on the main thread again, and a session that never compiles
 // source never fetches the 445 kB language chunk (5406202 -> 5557245 bytes measured).
 // NURBS SS /1 adds general surface/surface to the packed kernel; the budget above already covers it.
-// Streaming-WASM publication keeps raw modules out of this total, but the
-// browser runtime split now carries explicit geometry/SVG/renderer chunks:
-// 14,142,085 bytes measured on the 2026-09-19 WebGPU variants build.
-const totalBudget = 14_400_000
+// Raw streaming modules remain separately bounded above. Removing three inlined
+// geometry payload copies reduces the JS/assets total to 5,776,741 bytes.
+const totalBudget = 6_000_000
 if (total > totalBudget) throw new Error(`dist totals ${total} bytes; budget is ${totalBudget}`)
-console.log(`Verified ${files.length} dist artifacts (${total} bytes)`)
+console.log(`Verified ${files.length} dist artifacts (${total} asset bytes + ${rawWasmBytes} raw WASM bytes = ${total + rawWasmBytes} total bytes)`)

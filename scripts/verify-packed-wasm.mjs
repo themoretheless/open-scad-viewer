@@ -1,5 +1,26 @@
 import {brotliDecompressSync, inflateRawSync} from 'node:zlib'
 import {decodeBase85} from './wasm-base85.mjs'
+import {createHash} from 'node:crypto'
+
+export function verifyRawWasm(raw, expected, label) {
+  if (!Buffer.from(raw.buffer, raw.byteOffset, raw.byteLength).equals(expected)) {
+    throw new Error(`${label}: streaming WASM differs from the original`)
+  }
+  return raw.byteLength
+}
+
+/** Inspect emitted strings: source maps do not attribute inlined payload copies. */
+export function verifyUniquePackedWasm(assets) {
+  const owners = new Map()
+  for (const {path, source} of assets) {
+    for (const match of source.matchAll(/(["'`])(b85:[^"'`\\\r\n]+)\1/g)) {
+      const hash = createHash('sha256').update(match[2]).digest('hex')
+      if (owners.has(hash)) throw new Error(`Duplicate packed WASM literal: ${owners.get(hash)} and ${path}`)
+      owners.set(hash, path)
+    }
+  }
+  return owners.size
+}
 
 /** Validate the emitted literal without executing generated application code. */
 export function verifyPackedWasmChunk(source, expected, label, compression = 'brotli') {

@@ -38,3 +38,38 @@ it('does not merge across a non-manifold shared edge',()=>{
  const ids=inferSurfaceIds(vertices,new Uint32Array([0,1,2,1,0,3,0,1,4]))
  expect(new Set(ids).size).toBe(3)
 })
+it('welds exact duplicate positions including signed zero but preserves winding barriers',()=>{
+ const p=[[0,0,0],[1,0,0],[0,1,0],[-0,1,0],[1,-0,0],[1,1,0]]
+ const vertices=new Float32Array(p.flatMap(v=>[...v,0,0,1]))
+ expect(Array.from(inferSurfaceIds(vertices,new Uint32Array([0,1,2,3,4,5])))).toEqual([0,0])
+ expect(Array.from(inferSurfaceIds(vertices,new Uint32Array([0,1,2,4,3,5])))).toEqual([0,1])
+})
+it('keeps degenerate triangles separate and handles an empty mesh',()=>{
+ const vertices=new Float32Array([[0,0,0],[1,0,0],[0,1,0]].flatMap(v=>[...v,0,0,1]))
+ expect(Array.from(inferSurfaceIds(vertices,new Uint32Array([0,1,2,1,0,0])))).toEqual([0,1])
+ expect(inferSurfaceIds(new Float32Array(),new Uint32Array())).toEqual(new Uint32Array())
+})
+it('rejects invalid indices, nonfinite coordinates, stride and grouping angles',()=>{
+ const vertices=new Float32Array(18)
+ expect(()=>inferSurfaceIds(vertices,new Uint32Array([0,1,3]))).toThrow('Invalid triangle index')
+ vertices[0]=NaN
+ expect(()=>inferSurfaceIds(vertices,new Uint32Array([0,1,2]))).toThrow('Nonfinite mesh position')
+ expect(()=>inferSurfaceIds(new Float32Array(5),new Uint32Array())).toThrow('Invalid surface grouping')
+ for(const angle of [-1,61,NaN])expect(()=>inferSurfaceIds(new Float32Array(),new Uint32Array(),angle)).toThrow('Invalid surface grouping')
+})
+it('keeps edge keys distinct when unused vertices exceed the numeric edge radix',()=>{
+ const far=2097154
+ const vertices=new Float32Array((far+3)*6)
+ for(let i=0;i<far;i++)vertices[i*6]=i
+ vertices.set([0,1,0,0,0,1],far*6)
+ vertices.set([1,.5,0,0,0,1],(far+1)*6)
+ vertices.set([-1,.5,0,0,0,1],(far+2)*6)
+ // Without compact referenced IDs, (0,far) aliases (1,2), making the first
+ // edge appear non-manifold and incorrectly separating the coplanar pair.
+ expect(Array.from(inferSurfaceIds(vertices,new Uint32Array([0,far,far+1,far,0,far+2,1,2,3])))).toEqual([0,0,1])
+})
+it('still rejects nonfinite unused positions',()=>{
+ const vertices=new Float32Array(24)
+ vertices[18]=Infinity
+ expect(()=>inferSurfaceIds(vertices,new Uint32Array([0,1,2]))).toThrow('Nonfinite mesh position')
+})

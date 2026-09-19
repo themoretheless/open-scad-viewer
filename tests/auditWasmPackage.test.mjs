@@ -2,6 +2,33 @@ import assert from 'node:assert/strict'
 import { createHash } from 'node:crypto'
 import test from 'node:test'
 import { auditWasmPackage } from '../scripts/audit-wasm-package.mjs'
+import { verifyUniquePackedWasm, verifyRawWasm } from '../scripts/verify-packed-wasm.mjs'
+
+test('binds streaming bytes exactly, rejecting equal-size drift and truncation', () => {
+  const wasm = Buffer.from([0,97,115,109,1,0,0,0])
+  expectMatching(wasm, wasm)
+  const changed = Buffer.from(wasm)
+  changed[4] = 2
+  assert.throws(() => verifyRawWasm(changed, wasm, 'test'), /streaming WASM differs/)
+  assert.throws(() => verifyRawWasm(wasm.subarray(1), wasm, 'test'), /streaming WASM differs/)
+  // Respect view offsets rather than comparing the entire backing allocation.
+  const backing = Buffer.concat([Buffer.from([255]), wasm, Buffer.from([255])])
+  expectMatching(backing.subarray(1, -1), wasm)
+  function expectMatching(raw, expected) {
+    assert.equal(verifyRawWasm(raw, expected, 'test'), expected.length)
+  }
+})
+
+test('rejects packed payload copies across chunks and within one chunk', () => {
+  const asset = (path, source) => ({path, source})
+  assert.equal(verifyUniquePackedWasm([asset('a.js', 'const a="b85:first";'), asset('b.js', "const b='b85:second';")]), 2)
+  assert.throws(() => verifyUniquePackedWasm([
+    asset('shared.js', 'export default "b85:first";'),
+    asset('worker.js', 'compile(unpack(`b85:first`));'),
+  ]), /Duplicate packed WASM literal: shared.js and worker.js/)
+  assert.throws(() => verifyUniquePackedWasm([asset('a.js', 'f("b85:first");g("b85:first");')]), /Duplicate packed WASM/)
+  assert.equal(verifyUniquePackedWasm([asset('a.js', 'import value from "./shared.js";')]), 0)
+})
 
 test('packs a valid module with an exact roundtrip and stable fingerprints', () => {
   const wasm = Buffer.from([0, 97, 115, 109, 1, 0, 0, 0])

@@ -7,12 +7,17 @@ import { loadQualificationPlaywrightPackage } from '../scripts/qualificationPlay
 
 const root = path.resolve('dist')
 const out = path.resolve(process.env.EXACT_SOLID_BENCH_OUT || 'tmp/performance/exact-solid-browser')
+const forceWasmFallback = process.env.EXACT_SOLID_WASM_FALLBACK === '1'
 await mkdir(out, { recursive: true })
 const clientFile = (await readdir(path.join(root, 'assets'))).find(file => /^exactSolidClient-.*\.js$/.test(file))
 assert.ok(clientFile, 'Build the app before running this browser check')
 const server = createServer(async (request, response) => {
   try {
     const url = new URL(request.url, 'http://localhost')
+    if (forceWasmFallback && url.pathname.startsWith('/wasm/')) {
+      response.writeHead(404).end()
+      return
+    }
     if (url.pathname === '/__bench') {
       response.setHeader('Content-Type', 'text/html')
       response.end('<!doctype html><html><body>Exact solid worker check</body></html>')
@@ -20,7 +25,7 @@ const server = createServer(async (request, response) => {
     }
     const file = path.resolve(root, `.${url.pathname === '/' ? '/index.html' : decodeURIComponent(url.pathname)}`)
     if (!file.startsWith(`${root}${path.sep}`)) { response.writeHead(403).end(); return }
-    response.setHeader('Content-Type', file.endsWith('.js') ? 'text/javascript' : file.endsWith('.css') ? 'text/css' : file.endsWith('.html') ? 'text/html' : 'application/octet-stream')
+    response.setHeader('Content-Type', file.endsWith('.js') ? 'text/javascript' : file.endsWith('.css') ? 'text/css' : file.endsWith('.html') ? 'text/html' : file.endsWith('.wasm') ? 'application/wasm' : 'application/octet-stream')
     response.end(await readFile(file))
   } catch { response.writeHead(404).end() }
 })
@@ -33,6 +38,15 @@ try {
     ...(process.env.CHROMIUM_EXECUTABLE ? { executablePath: process.env.CHROMIUM_EXECUTABLE } : {}),
   })
   const page = await browser.newPage()
+  await page.addInitScript(() => {
+    globalThis.__successfulStreamingCompiles = 0
+    const compile = WebAssembly.compileStreaming.bind(WebAssembly)
+    WebAssembly.compileStreaming = async (...args) => {
+      const module = await compile(...args)
+      globalThis.__successfulStreamingCompiles++
+      return module
+    }
+  })
   const pageErrors = []
   page.on('pageerror', error => pageErrors.push(error.message))
   await page.goto(`${origin}/__bench`)
@@ -131,6 +145,10 @@ try {
   assert.equal(await page.locator('.scene-list .dot.body').count(), 2)
   assert.equal(await sourceEditor.inputValue(), sources[2])
   result.app.mechanicalGenerator = { allKinds: true, invalidInputRefused: true, recovered: true }
+  result.streaming = { forcedFallback: forceWasmFallback,
+    successfulCompiles: await page.evaluate(() => globalThis.__successfulStreamingCompiles) }
+  if (forceWasmFallback) assert.equal(result.streaming.successfulCompiles, 0)
+  else assert.ok(result.streaming.successfulCompiles > 0, 'Browser startup must exercise streaming compilation')
   assert.deepEqual(pageErrors, [])
   const assets = []
   for (const file of (await readdir(path.join(root, 'assets'))).filter(file => file.endsWith('.js')).sort()) {

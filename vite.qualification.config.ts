@@ -11,6 +11,8 @@ const qualificationEntry = fileURLToPath(
  */
 export default defineConfig({
   base: './',
+  // This isolated entry uses embedded kernels, not product streaming assets.
+  publicDir: false,
   build: {
     outDir: 'tmp/browser-qualification-dist',
     emptyOutDir: true,

@@ -1,6 +1,7 @@
 import { parentPort } from 'node:worker_threads'
 import type { GeometryExecutionDescriptor } from '../core/geometryExecution'
 import { meshTransferables } from '../core/mesh'
+import { warmGeometryKernel } from '../services/openscadParser'
 import {
   defaultGeometryBuildEngine,
   type GeometryBuildResult,
@@ -162,4 +163,8 @@ function accept(value: unknown): void {
   if (isDirectGeometryCancel(value, activeRequest)) cancelled = true
 }
 
+// Cold compilation belongs to the supervisor's bounded startup phase. Requests
+// stay queued until this realm is ready; provider readiness keeps its 250 ms
+// deadline without treating disposable-worker compilation as an unavailable engine.
+await warmGeometryKernel()
 parentPort.on('message', accept)

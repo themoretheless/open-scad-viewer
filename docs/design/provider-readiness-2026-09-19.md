@@ -40,3 +40,36 @@ All 19 GeometryBuildEngine tests pass, including a new fake-timer test proving
 timeout, immediate refusal while pending, late recovery, single warmup, and
 timer cleanup. Existing hung-provider refusal remains intact. No production
 timeout, retry policy or fingerprint assertions were weakened.
+# CI and contention follow-up
+
+The downloaded `provider-readiness-node-22` artifact from CI run 35470505256
+(commit 2dbec2f833dc1bfe32743e2d079a41219a218164) reports fresh-process
+readiness at 241.15, 229.97 and 222.42 ms on Linux x64 / AMD EPYC 7763,
+Node 22.23.2. Warm checks were 0.031-0.032 ms. All three sequential cold
+samples were available, but the margin to the unchanged 250 ms deadline was
+only 9-28 ms. That same run's test log contains repeated readiness-timeout
+failures. The macOS MCP smoke also failed its first analysis, but its printed
+assertion does not expose the failure cause; do not assume the same cause.
+
+The benchmark now supports `READINESS_CONCURRENCY=1..16` (default 1), with
+three sequential waves and concurrent fresh children within each wave.
+`Promise.allSettled` joins all children before surfacing any error; each child
+retains the 60-second bound and eventual-availability assertion. Cold timeout
+remains an observed outcome, not a benchmark failure that discards the report.
+
+Local control (same current generated kernel, no concurrent build/test):
+three serial samples 86-87 ms; 24 samples in eight-child waves 99-108 ms.
+All cold checks succeeded. Thus local contention increases startup cost but
+does not reproduce the CI failure. These absolute values are not comparable
+to CI as a speedup: CPU, artifact and host conditions differ.
+
+The check matrix now collects both sequential and four-child-wave reports
+in the existing readiness artifact. This workflow edit has not yet run in CI.
+No production readiness deadline, provider selection, fallback policy, or
+qualification expectation is relaxed by this diagnostic change.
+
+Evidence downloaded locally to
+`/private/tmp/osv-readiness-ci-35470505256/provider-readiness.json` and
+`/private/tmp/osv-ci-failed.log`; new local measurements are
+`/private/tmp/osv-readiness-serial.json` and
+`/private/tmp/osv-readiness-concurrent.json`.

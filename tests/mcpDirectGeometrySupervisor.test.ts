@@ -1,6 +1,6 @@
 import { EventEmitter } from 'node:events'
 import { PassThrough } from 'node:stream'
-import type { Worker } from 'node:worker_threads'
+import { Worker } from 'node:worker_threads'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { GeometryQuality } from '../src/core/build'
 import {
@@ -260,6 +260,54 @@ describe('DirectGeometrySupervisor', () => {
       workersStarted: 2, workersJoined: 2, quarantined: false, admittedJobs: 0,
     })
   }, 30_000)
+
+  it('admits a delayed cold kernel under the worker startup deadline', async () => {
+    const supervisor = new DirectGeometrySupervisor({
+      workerFactory: () => new Worker(new URL('./fixtures/directGeometrySlowWarm.worker.mjs', import.meta.url), {
+        workerData: {delayMs: 350}, env: {}, stdout: true, stderr: true,
+      }),
+      startupTimeoutMs: 5_000, jobDeadlineMs: 10_000,
+    })
+    supervisors.add(supervisor)
+    await expect(supervisor.build('cube(2);', 'full', 'analysis')).resolves.toMatchObject({
+      result: {volume: 8, surfaceArea: 24},
+    })
+    await expect(supervisor.capabilities()).resolves.toMatchObject({
+      engines: [{engineClass: 'mesh', availability: 'available'}, {engineClass: 'brep', availability: 'available'}],
+    })
+    expect(supervisor.snapshot()).toMatchObject({workersStarted: 2, workersJoined: 2, admittedJobs: 0})
+  }, 15_000)
+
+  it('terminates and joins a real worker whose cold kernel exceeds startup deadline', async () => {
+    const supervisor = new DirectGeometrySupervisor({
+      workerFactory: () => new Worker(new URL('./fixtures/directGeometrySlowWarm.worker.mjs', import.meta.url), {
+        workerData: {delayMs: 60_000}, env: {}, stdout: true, stderr: true,
+      }),
+      startupTimeoutMs: 1_000, jobDeadlineMs: 10_000,
+    })
+    supervisors.add(supervisor)
+    await expect(supervisor.build('cube(2);', 'full', 'analysis')).rejects.toBeInstanceOf(DirectGeometryStartupError)
+    expect(supervisor.snapshot()).toMatchObject({workersStarted: 1, workersJoined: 1, admittedJobs: 0, quarantined: false})
+  }, 15_000)
+
+  it('cancels and joins during real cold initialization before any started handshake', async () => {
+    const supervisor = new DirectGeometrySupervisor({
+      workerFactory: () => new Worker(new URL('./fixtures/directGeometrySlowWarm.worker.mjs', import.meta.url), {
+        workerData: {delayMs: 60_000}, env: {}, stdout: true, stderr: true,
+      }),
+      startupTimeoutMs: 5_000, jobDeadlineMs: 10_000,
+    })
+    supervisors.add(supervisor)
+    const controller = new AbortController()
+    const result = supervisor.build('cube(2);', 'full', 'analysis', controller.signal)
+    const timer = setTimeout(() => controller.abort(), 100)
+    try {
+      await expect(result).rejects.toMatchObject({name: 'AbortError'})
+    } finally {
+      clearTimeout(timer)
+    }
+    expect(supervisor.snapshot()).toMatchObject({workersStarted: 1, workersJoined: 1, admittedJobs: 0, quarantined: false})
+  }, 15_000)
 
   it('runs one disposable worker at a time and joins before settlement or the next FIFO job', async () => {
     const { supervisor, workers } = createHarness()
