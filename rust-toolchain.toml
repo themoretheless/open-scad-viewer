@@ -1,5 +1,5 @@
 [toolchain]
-# Floating nightly: always the latest nightly features.
-channel = "nightly"
+# Keep generated WASM compatible with the Node 20 validation/runtime floor.
+channel = "nightly-2026-09-16"
 targets = ["wasm32-unknown-unknown"]
 components = ["rustfmt", "clippy"]
