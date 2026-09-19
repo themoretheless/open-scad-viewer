@@ -585,15 +585,15 @@ In-flight changes must be re-read and their tests inspected before updating a ro
 | 9b. Extrusion and revolution of ProfileSet | `extrude_polygon_with_holes`, `revolve`, direct modeling and ModelGraph tests | Partial. Concave polygon extrusion with holes, full-turn straight-segment profiles, supported axis contacts and signed partial revolutions with exact caps are implemented. Native tests cover their oriented volumes and pole topology. Complete arbitrary supported profile curves, revolution profile holes, general workplanes and consistent New/Add/Cut behavior, with the complete analytic/topological matrix. |
 | 9c. Regularized curved Boolean / SolidSet | `crates/brep-core/src/{imprint_pipeline,profile_imprint,analytic_boolean,sphere_boolean,solid_audit,analytic_ss}.rs` | **Closed** for the frozen matrix: exact rational-arc cylinder/profile imprint, sphere under `BooleanCertificate`, disjoint admitted mixed empty algebra, and typed refuse for non-empty mixed/cone/torus cells; no `prismatic_boolean`, mesh, or Manifold authorship. |
 | 10. Canonicalization, exact sewing, explicit healing | `trim_sew.rs`, `solid_audit.rs` | **Qualified finite v2 cells** for boundary correspondence, exact proof-bound sew and global solid audit. `authorized-heal-gap-le1/1` remains **Unavailable**: only zero-displacement transaction/refusal tests exist; no positive-gap bridge/product evidence exists, and silent heal remains forbidden. |
-| 11. Certified shell-aware tessellation | `geometry-bridge/src/brep.rs` TessellationCertificate | **Qualified finite v2 cell** (`certified-brep-tessellation/1`) for planar exact-profile solids and exact rational cylinders with two-sided deviation and shared-edge incidence. Spheres, cavities and generic freeform surfaces typed-refuse. |
+| 11. Certified shell-aware tessellation | `geometry-bridge/src/brep.rs` TessellationCertificate | **Qualified finite V10 successor** (`certified-brep-tessellation/2`) for independently recognized planar, sphere, cone/frustum, ring-torus and cylinder shells, including analytic cavities and separated bodies. It publishes two directed analytic deviation bounds, normal/orientation and exact shared-edge conformity, pole/seam/apex handling, no-crack coverage and adaptive budgets. Generic rational/freeform, graph/multispan Boolean, nonplanar loft and bent/twisted/scaled sweep surfaces typed-refuse. |
 | 12. Native/WASM execution, cancellation, ABI, scene v6 | `kernelLeases`, native graph executor | **Closed** for deployed closed-matrix provider + lease/cancel/LKG drills. Broader OOM/chunk scene-v6 remains operational hardening. |
 | 13. Browser/MCP B-rep activation | `geometryBuildEngine` + MCP capabilities | **Closed**: brep provider `available`; honest matrix; no Manifold cross-route. |
 | 14. Full qualification and release | `brep-full-closed-matrix-v2.json`, `plans/g8-full-matrix-index-v2.json`, `brep-capability-registry-release-full-v2.json` | **Closed for the release-qualified v2 subset** under g8-full. Only runtime `Qualified` rows with a fully Qualified transitive dependency closure ship; `authorized-heal-gap-le1/1` stays pending and every older below-Qualified `/1` cell is explicit-refuse. Existing v1 artifacts remain byte-immutable. |
 | N1. Persistent naming across rebuilds | `selectionTransfer.ts` roles/anchors + N1 corpus | **Closed** for roles/anchors + rebuild/ambiguity corpus helpers (no nearest-face). |
 | R1/G6. General NURBS surface intersection | `docs/design/r1-nurbs-ss-spike-adr.md`, `nurbs_ss_g6.rs` | The query-only `nurbs-ss-bezier-le3/1` stays **AnalyticComplete** and Boolean `/1` stays **Unavailable**. Successor `nurbs-boolean-bezier-le3/2` is **Qualified** only for strict partial contact between equal-span affine-planar Bezier profile prisms; containment, tangency, unequal spans, healing and fallback refuse. |
 | Later features: analytic fillet/chamfer, shell/offset, loft/sweep, direct face edits | `analytic_features.rs`, `geometry/brep.ts` | **Qualified finite v2 successors**: `analytic-multi-edge-fillet/1` for constant-radius vertical edges of audited axis-aligned cuboids, and `exact-parallel-frame-sweep/1` for straight parallel-frame translations. General transition networks, bent paths, twist/scale laws, shell/offset and mesh relabeling remain refused or ResearchOnly. |
-| Mesh-independent analysis | `crates/brep-core/src/analysis.rs`, `tests/brepMassProperties.test.ts` | **Qualified finite v2 cell** (`certified-mass-properties/1`) for interval-enclosed area, volume, centroid and inertia of boxes, cylinders, tubes and exact-profile prisms. General `converged_estimate` remains non-certified; sphere/torus/cone/freeform cells refuse certification. |
-| Exchange and persistence | `export_step_v2/import_step_v2`, `export_nurbs_step_solid_v2/import_nurbs_step_solid_v2` | `step-interchange/2` is **Qualified** for explicit SI context, rigid placement, at most 32 bodies, at most one cavity per body, and opaque identity preservation/loss reporting. `/1` states remain frozen; FACETED/STL/OBJ, oversized graphs and arbitrary third-party topology refuse. |
+| Mesh-independent analysis | `crates/brep-core/src/analysis.rs`, `tests/brepMassProperties.test.ts`, `tests/brepQualificationV10.test.ts` | **Qualified finite V10 successor** (`certified-mass-properties/2`) for outward-rounded closed-form area, volume, centroid and full inertia enclosures of exact planar prisms, cylinders, tubes, spheres, cones/frusta and ring tori, with signed cavity/multiple-body composition and parallel-axis transport. General `converged_estimate`, generic rational/freeform, graph/multispan Boolean, nonplanar loft and bent/twisted/scaled sweep results remain explicitly non-certified. |
+| Exchange and persistence | `iges_interchange_v2.rs`, `step_interchange_v3.rs`, `cadIges.ts`, `cadNurbsStep.ts` | **Qualified finite V11 successors**: `iges-interchange/2` directly maps strict 80-column IGES rational curve/surface and 186/502/504/508/510/514 topology graphs with pcurves, bodies/cavities and graph-bound identity; `step-interchange/4` adds seam-bearing rational analytic carriers and exact endpoint point selectors to `/3`. Legacy `/1`–`/3` evidence remains frozen. Assemblies/external references without complete bounded occurrence identity, unknown geometry, non-rigid transforms, faceted/mesh fallback and silent healing explicitly refuse. |
 
 ## Dependency order for the remaining work
 
@@ -3600,3 +3600,33 @@ quartic configurations (the Villarceau oblique plane/torus section and
 the non-parallel cylinder/cylinder and tilted torus pairs among them),
 Boolean consumption of the sections, tangency certification, and the
 general NURBS SS research spike.
+
+### V12 bounded non-manifold and mixed-dimensional topology
+
+`close-topology/1` adds a separate audited complex typestate over unchanged
+manifold `Model` parts. It explicitly records wire, face, sheet-shell,
+open-shell, solid and compound roles; shared-face cell uses (valence 2..8);
+cyclic edge radial-use rings (valence 3..16); and disconnected vertex fans.
+Every solid cell independently passes `GloballyAuditedSolidSet`; a complex can
+enter that legacy typestate only when it contains exactly one solid and no
+supplemental incidence. Boundary extraction removes shared internal faces and
+manifold decomposition returns the immutable source cells without fitting,
+welding or tolerance matching.
+
+`tolerant-complex-heal/1` certifies 1..256 explicit local vertex/edge/face
+correspondences across at most 64 parts. Each relation binds entity identities,
+a non-empty context hierarchy and provenance, a per-entity physical budget and
+one cumulative budget. Edge split/merge authority requires 2..16 bit-exact,
+contiguous child parameter intervals covering one exact carrier domain.
+Over-budget, stale, duplicate, approximate, unbounded and singular cases
+refuse. The certificate records rollback safety, idempotence and no tolerance
+growth; actual geometry mutation remains in the existing recipe-bound native
+transaction.
+
+`close-topology-step/1` and `close-topology-iges/1` round-trip the qualified
+solid-cell complex as bounded envelopes of direct STEP /4 or IGES /2 manifold
+payloads plus explicit shared-face/radial/fan incidence. Mixed sheet/open-shell
+interchange is not claimed and typed-refuses. V12 adds four qualified finite
+capabilities, eight explicit refusal classes, an append-only matrix/index/
+registry release, own-Rust CAD V9 evidence, and a G0 V16 / G1 V33 no-claim
+freeze with zero completed work units and zero imported clean runs.

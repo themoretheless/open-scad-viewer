@@ -1,0 +1,48 @@
+{
+  "id": "own-rust-cad-v6",
+  "successorOf": "docs/qualification/own-rust-cad-v5.json",
+  "previousSha256": "c6100705c560fc3008e379e20a48ff737ecbb8bbf280f2f1204c370f6c5fc504",
+  "recordedAt": "2026-09-17",
+  "purpose": "Append-only current-byte fingerprint for the V9 exact multi-section loft and bent RMF sweep successors.",
+  "qualificationClaim": "none",
+  "wasm": {
+    "path": "src/generated/geometry-kernels/kernel_bg.wasm",
+    "sha256": "daf19bf6e907f00ebb8b1360f3c9869927eb98ec35c4701c4debf2318ea72890",
+    "byteLength": 8826595
+  },
+  "sourceBundle": {
+    "canonicalization": "UTF-8 path sorted: path + NUL + exact file bytes + LF",
+    "sha256": "1f3660ff974d53a386aa02d507be3489bb11ccecd1d9b8227e6707453965cbe0",
+    "paths": [
+      "crates/brep-core/src/analytic.rs",
+      "crates/brep-core/src/analytic/loft.rs",
+      "crates/brep-core/src/analytic_features.rs",
+      "crates/brep-core/src/imprint_pipeline.rs",
+      "crates/brep-core/src/lib.rs",
+      "crates/brep-core/src/nurbs_ss_g6.rs",
+      "crates/brep-core/src/operations.rs",
+      "crates/brep-core/src/solid_audit.rs",
+      "crates/brep-core/src/step_interchange_v3.rs",
+      "crates/brep-core/src/transactions.rs",
+      "crates/brep-core/src/trim_sew.rs",
+      "crates/brep-core/src/uv_arrangement.rs",
+      "crates/brep-topology/src/lib.rs",
+      "crates/geometry-bridge/src/lib.rs",
+      "crates/geometry-bridge/src/tests.rs",
+      "src/services/cadNurbsStep.ts",
+      "src/services/geometry/brep.ts",
+      "src/services/geometry/brepCapability.ts",
+      "tests/brepQualificationV8.test.ts",
+      "tests/brepQualificationV9.test.ts"
+    ]
+  },
+  "dependencyFingerprints": {
+    "noticesSha256": "e1facd281eb7939480f00827d812505d6e0909581acff3fcc7bffb3d9fd23fd6",
+    "npmLockfileSha256": "70eb933b3607298caa00f7cdd96a953f313e6cc080a34f9b3c5c58694c765704",
+    "rustLockfileSha256": "64b3a93468e81b0560b7c3a60341540ea0bdff2daa62a22ff542d9dcb2396e3c"
+  },
+  "claimBoundary": [
+    "This is a reproducible byte fingerprint, not an external clean qualification run.",
+    "It does not approve G0, G1, curved degree-greater-than-1 paths, freeform sections, cusps, singular frames, invalid scale/twist, self-intersection, closed-loop holonomy, mesh, healing or fallback."
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "capability": "certified-generic-rational-freeform-tessellation/1",
+  "maturity": "FiniteCell",
+  "dependsOn": "certified-brep-tessellation/2",
+  "executedAt": "2026-09-17",
+  "positiveCorpus": [
+    "Rust certified_freeform_tessellation_deviation zero-bounds freeform_cuboid_solid",
+    "Bernstein bound tightens 1/n² on freeform_cuboid_with_bump_face",
+    "geometry-bridge certified_freeform_nurbs stamps certified-generic-rational-freeform-tessellation/1",
+    "TS tessellateCertifiedFreeformNurbsBrep product query"
+  ],
+  "negativeCorpus": [
+    "certified-brep-tessellation/2 still refuses freeform cuboids",
+    "unequal face weights refuse"
+  ],
+  "executed": [
+    {"command": "cargo test --locked --manifest-path crates/Cargo.toml -p brep-core --lib freeform_tessellation_bounds", "result": "passed"},
+    {"command": "cargo test --locked --manifest-path crates/Cargo.toml -p geometry-bridge --lib certified_freeform_tessellation", "result": "passed"},
+    {"command": "npm run build:geometry", "result": "passed"},
+    {"command": "npx vitest run tests/brepMassProperties.test.ts tests/brepQualificationV19.test.ts", "result": "passed"}
+  ],
+  "knownGaps": [
+    "varying-weight rational freeform deviation (ExplicitRefuse: freeform-varying-weight-analysis)",
+    "freeform×freeform Boolean (ExplicitRefuse: freeform-x-freeform-boolean)"
+  ]
+}

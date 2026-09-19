@@ -1,0 +1,106 @@
+{
+  "$schema": "./brep-capability-qualification-plan-v10.schema.json",
+  "schema": "open-scad-viewer/brep-capability-qualification-plan",
+  "schemaVersion": 10,
+  "planId": "certified-brep-tessellation-2",
+  "gate": {
+    "id": "g8-full",
+    "name": "brep-full-closed-matrix",
+    "version": 10
+  },
+  "lifecycle": {
+    "status": "qualified",
+    "qualificationClaim": "finite-cell"
+  },
+  "claimBoundary": {
+    "candidateClaim": "Finite certified tessellation for independently recognized planar, sphere, cone/frustum, ring-torus and cylinder shells, including analytic cavities and separated multiple bodies.",
+    "forbiddenClaims": [
+      "Generic rational/freeform, graph/multispan Boolean, loft and bent/twisted/scaled sweep surfaces without a proved patch deviation enclosure.",
+      "More than 32 subdivisions, more than 20000 triangles, open shells, incomplete naming, approximation, healing, mesh fallback or guessed certification."
+    ]
+  },
+  "capability": "certified-brep-tessellation/2",
+  "successorOf": "certified-brep-tessellation/1",
+  "dependencies": [
+    {
+      "capability": "numeric-evidence-curved-brep/1",
+      "requiredMaturity": "Qualified"
+    },
+    {
+      "capability": "boundary-correspondence/1",
+      "requiredMaturity": "Qualified"
+    },
+    {
+      "capability": "exact-sew/1",
+      "requiredMaturity": "Qualified"
+    },
+    {
+      "capability": "global-solid-audit/1",
+      "requiredMaturity": "Qualified"
+    },
+    {
+      "capability": "persistent-naming/1",
+      "requiredMaturity": "Qualified"
+    }
+  ],
+  "scope": {
+    "included": [
+      "Two directed analytic surface/mesh deviation bounds, normal/orientation checks, exact shared-edge sample identity, no T-junctions or cracks.",
+      "Stereographic sphere poles, torus periodic seams, cone apex degeneracy, adaptive 1..32 subdivisions per analytic patch and 12..20000 triangle budgets.",
+      "Complete source ChangeSet/persistent naming binding and body/cavity shell audit."
+    ],
+    "excluded": [
+      "Generic rational/freeform, graph/multispan Boolean, loft and bent/twisted/scaled sweep surfaces without a proved patch deviation enclosure.",
+      "More than 32 subdivisions, more than 20000 triangles, open shells, incomplete naming, approximation, healing, mesh fallback or guessed certification."
+    ]
+  },
+  "matrix": [
+    {
+      "id": "CA10-TESS-ANALYTIC-TWO-SIDED-DEVIATION",
+      "expected": "Complete",
+      "blocksQualification": true
+    },
+    {
+      "id": "CA10-TESS-POLE-SEAM-APEX-CONFORMITY",
+      "expected": "Complete",
+      "blocksQualification": true
+    },
+    {
+      "id": "CA10-TESS-CAVITY-MULTIBODY-NAMING",
+      "expected": "Complete",
+      "blocksQualification": true
+    },
+    {
+      "id": "CA10-TESS-MONOTONE-ADAPTIVE-BUDGET",
+      "expected": "Complete",
+      "blocksQualification": true
+    },
+    {
+      "id": "CA10-TESS-GENERIC-FREEFORM-LOFT-SWEEP",
+      "expected": "typed-refuse",
+      "blocksQualification": true
+    }
+  ],
+  "bindings": {
+    "implementation": [
+      "crates/brep-core/src/analysis.rs",
+      "crates/brep-core/src/intersections.rs",
+      "crates/brep-core/src/solid_audit.rs",
+      "crates/geometry-bridge/src/brep.rs",
+      "crates/geometry-bridge/src/lib.rs",
+      "src/services/geometry/brep.ts",
+      "src/services/geometry/brepCapability.ts"
+    ],
+    "registry": "src/services/geometry/brepCapability.ts",
+    "evidenceJson": "docs/qualification/certified-brep-tessellation-2-evidence-v10.json"
+  },
+  "evidence": {
+    "state": "qualified",
+    "notes": [
+      "Qualification is limited to independently recognized analytic shells and exact closed-form bounds.",
+      "Every generic freeform/loft/bent-sweep row is a typed refusal; numerical convergence estimates are never relabeled certified."
+    ]
+  },
+  "resetPolicy": "false-Complete freezes this capability and transitively stales all dependents; recovery requires a successor capability ID",
+  "unresolvedRows": []
+}

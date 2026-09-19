@@ -1,0 +1,86 @@
+{
+  "schema": "open-scad-viewer/g1-github-actions-environment",
+  "schemaVersion": 1,
+  "freezeId": "g1-github-actions-v34",
+  "recordedAt": "2026-09-17",
+  "runnerImages": {
+    "ubuntu-24.04": {
+      "imageOS": "ubuntu24",
+      "imageVersion": "20260907.300.1",
+      "release": "https://github.com/actions/runner-images/releases/tag/ubuntu24%2F20260907.300"
+    },
+    "macos-15-arm64": {
+      "imageOS": "macos15",
+      "imageVersion": "20260907.0337.1",
+      "release": "https://github.com/actions/runner-images/releases/tag/macos-15-arm64%2F20260907.0337"
+    },
+    "windows-2025": {
+      "imageOS": "win25",
+      "imageVersion": "20260913.261.1",
+      "release": "https://github.com/actions/runner-images/releases/tag/win25%2F20260913.261"
+    }
+  },
+  "actions": {
+    "actions/checkout": "d23441a48e516b6c34aea4fa41551a30e30af803",
+    "actions/setup-node": "249970729cb0ef3589644e2896645e5dc5ba9c38",
+    "actions/upload-artifact": "ea165f8d65b6e75b540449e92b4886f43607fa02",
+    "actions/download-artifact": "634f93cb2916e3fdff6788551b99b062d0335ce0",
+    "dtolnay/rust-toolchain": "02cb101ec7c40f2c49e1d9714d64511d8e1b74de"
+  },
+  "playwright": {
+    "version": "1.62.1",
+    "hostPlatform": "ubuntu24.04-x64",
+    "canonicalization": "Sorted entries: regular file = F + NUL + relative path + NUL + lowercase file SHA-256 + LF; symlink = L + NUL + relative path + NUL + unmodified in-tree link target + LF",
+    "browserTrees": {
+      "chromium-1234": {
+        "treeSha256": "fda682bedcbd36d81c5e9eb2d029d93b44d1d67245a8d53510732bbe0b7e1203",
+        "manifestByteLength": 32010,
+        "entryCount": 305
+      },
+      "chromium_headless_shell-1234": {
+        "treeSha256": "36ce22fd3236c8ab852654fd3284c472946a3c84dec6efaf9da03df5561d96a1",
+        "manifestByteLength": 34394,
+        "entryCount": 289
+      },
+      "ffmpeg-1011": {
+        "treeSha256": "db04ec4661892fdaefd75c410cdbc4de50fca4432c50fe7378c4c5e0cf6450d2",
+        "manifestByteLength": 343,
+        "entryCount": 4
+      },
+      "webkit-2336": {
+        "treeSha256": "6f94bc13b4b6d303e55f3134604a7ca3dbc6bbd792593c0aaf20fd635b6dca5d",
+        "manifestByteLength": 5229,
+        "entryCount": 56
+      }
+    },
+    "requiredTrees": {
+      "chromium": [
+        "chromium-1234",
+        "chromium_headless_shell-1234",
+        "ffmpeg-1011"
+      ],
+      "webkit": [
+        "webkit-2336"
+      ]
+    },
+    "executedTree": {
+      "chromium": "chromium_headless_shell-1234",
+      "webkit": "webkit-2336"
+    }
+  },
+  "sourceIdentity": {
+    "expected": "workflow_dispatch source_sha must equal github.sha, checkout HEAD, and every fragment sourceSha",
+    "format": "40 lowercase hexadecimal Git commit object id",
+    "workingTree": "tracked files must be clean after dependency installation and before evidence execution"
+  },
+  "downloadedNodeArchivePolicy": {
+    "classification": "identity-evidence-only",
+    "statement": "The downloaded official Node archive is SHA-256 checked against the frozen release artifact but is not executed. actions/setup-node provisions the executable, whose exact version, platform, and architecture are checked separately.",
+    "mustNotClaim": "Downloaded archive bytes are the executing Node binary."
+  },
+  "claimBoundary": {
+    "qualificationClaim": "none",
+    "completedCleanRuns": 0,
+    "completedWorkUnits": 0
+  }
+}

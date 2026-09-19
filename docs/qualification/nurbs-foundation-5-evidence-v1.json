@@ -1,0 +1,52 @@
+{
+  "capability": "nurbs-foundation/5",
+  "maturity": "FiniteCell",
+  "baseline": "uncommitted nurbs-foundation/2-/4 plus STEP work",
+  "executedAt": "2026-09-17",
+  "positiveCorpus": [
+    "transverse degree-1 line/line crossing at t=u=1/2 with complete coverage",
+    "coincident self-overlap with CoedgeTrim map",
+    "curve/plane piercing at mid-parameter with geometry enclosure",
+    "curve-on-plane coincident overlap with correspondence samples",
+    "nested identity composition materialization tree",
+    "adversarial scaled weighted and periodic seam pairs",
+    "Decimal precision-96 independent CC/CS residual oracle with zero crossing residual"
+  ],
+  "negativeCorpus": [
+    "degree 0 and degree 26 resource refusal",
+    "controls 257 resource refusal",
+    "certificate mutation does not alter subsequent authoritative intersection",
+    "surface-surface excluded from this capability"
+  ],
+  "executed": [
+    {"command": "cargo test --locked --manifest-path crates/Cargo.toml -p nurbs-core", "result": "20 passed"},
+    {"command": "cargo test --locked --manifest-path crates/Cargo.toml -p geometry-bridge", "result": "passed"},
+    {"command": "npm run build:geometry", "result": "passed"},
+    {"command": "npx vitest run tests/nurbsFoundation.test.ts tests/nurbsCurve.test.ts tests/nurbsSurface.test.ts tests/modelGraphNurbs.test.ts", "result": "4 files, 46 tests passed"},
+    {"command": "npm run typecheck", "result": "passed"},
+    {"command": "npm run build", "result": "passed; 68 artifacts, 5476474 bytes"},
+    {"command": "node scripts/validate-json-schema.mjs docs/qualification/plans/brep-capability-qualification-plan-v12.schema.json docs/qualification/plans/nurbs-foundation-5.json docs/qualification/plans/nurbs-cc-cs-1.json", "result": "valid"},
+    {"command": "python3 scripts/nurbs-foundation-5-oracle.py", "result": "precision 96; curve-curve crossing residual 0"},
+    {"command": "git diff --check", "result": "passed"}
+  ],
+  "resourceBounds": {
+    "maxDegree": 25,
+    "maxControls": 256,
+    "maxBoxes": 8192,
+    "maxSpans": 4096,
+    "compositionNesting": 8,
+    "composedDegree": 25
+  },
+  "knownGaps": [
+    "general surface-surface intersection",
+    "Boolean topology authorship from CC/CS reports",
+    "commercial kernel parity"
+  ],
+  "intersectionAudit": {
+    "curveCurve": "closed for admitted positive-weight degrees 1..25 with Bernstein/Krawczyk isolation, half-open ownership, contact multiplicity and CoedgeTrim overlaps",
+    "curveSurface": "closed for planar exact reduction and general hull subdivision with ToleranceContext evidence",
+    "composition": "closed for nested and periodic-cover materialization",
+    "blocksGeneralSS": false,
+    "evidence": "docs/qualification/nurbs-foundation-5-evidence-v1.json; crates/nurbs-core/src/tests.rs::foundation_v5_certified_curve_curve_and_curve_surface; tests/nurbsFoundation.test.ts"
+  }
+}

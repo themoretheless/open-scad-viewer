@@ -1,0 +1,37 @@
+{
+  "$schema": "./brep-capability-evidence-v12.schema.json",
+  "schema": "open-scad-viewer/brep-capability-evidence",
+  "schemaVersion": 12,
+  "evidenceId": "step-interchange-5-evidence-v12",
+  "capability": "step-interchange/5",
+  "maturity": "AnalyticComplete",
+  "state": "rejected",
+  "plan": "docs/qualification/plans/step-interchange-5.json",
+  "runs": [],
+  "oracles": [
+    "step_interchange_v3::tests::v5_emits_selected_ap242_context_and_roundtrips",
+    "step_interchange_v3::tests::v5_uses_rational_complexes_and_oriented_void_shells",
+    "step_interchange_v3::tests::v5_orders_distinct_occurrence_transforms_and_refuses_cycle_or_ambiguity",
+    "step_interchange_v3::tests::v5_roundtrips_rational_analytic_bodies_and_sense_combinations",
+    "step_interchange_v3::tests::aggregate_parser_and_graph_budgets_refuse",
+    "geometry_bridge::tests::direct_step_v5_bridge_exposes_ap242_report",
+    "tests/brepStepV5Workbench.test.ts",
+    "tests/brepInterchangeV11.test.ts"
+  ],
+  "unresolvedRows": [
+    {
+      "id": "CA12-STEP5-AP242-COMPOSITION",
+      "status": "open",
+      "resolution": "Independent Part 21 syntax parsing is green, but no AP242 EXPRESS/semantic validator or independently authored fixture currently proves interoperability."
+    },
+    {
+      "id": "CA12-STEP5-DURABLE-WORKBENCH",
+      "status": "open",
+      "resolution": "Current tests call services directly or inspect component source; they do not execute the editor UI and IndexedDB lifecycle."
+    }
+  ],
+  "attestation": {
+    "fabricatedRuns": false,
+    "note": "Prior pass records were removed because the referenced logs are absent and their tests do not establish every blocking qualification claim. Focused audit runs are observational only."
+  }
+}

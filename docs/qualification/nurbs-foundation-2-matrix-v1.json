@@ -1,0 +1,16 @@
+{
+  "schema": "open-scad-viewer/nurbs-foundation-matrix",
+  "schemaVersion": 1,
+  "capability": "nurbs-foundation/2",
+  "successorOf": "nurbs-foundation/1",
+  "rows": [
+    {"id":"NF2-CURVE-GLOBAL-PROJECTION","status":"Complete","evidence":["crates/nurbs-core/src/tests.rs","tests/nurbsFoundation.test.ts","scripts/nurbs-foundation-2-oracle.py"]},
+    {"id":"NF2-SURFACE-GLOBAL-PROJECTION","status":"Complete","evidence":["crates/nurbs-core/src/foundation.rs","tests/nurbsFoundation.test.ts"]},
+    {"id":"NF2-NONPLANAR-NORMAL-CONE","status":"Complete","evidence":["crates/nurbs-core/src/tests.rs","tests/nurbsFoundation.test.ts"]},
+    {"id":"NF2-CERTIFIED-SIMPLIFICATION","status":"Complete","evidence":["crates/nurbs-core/src/foundation.rs","crates/nurbs-core/src/tests.rs"]},
+    {"id":"NF2-WASM-TS-PRODUCT","status":"Complete","evidence":["src/services/nurbsFoundation.ts","src/services/modelGraphNurbsKernel.ts","tests/nurbsFoundation.test.ts"]},
+    {"id":"NF2-PERIODIC-SIMPLIFICATION","status":"ResearchOnly","evidence":[]}
+  ],
+  "blockingOpenRows": [],
+  "resourceBounds": {"curveDegree":25,"curveControls":256,"surfaceControlsPerAxis":32,"certificateCells":4096,"requestBytes":2097152}
+}

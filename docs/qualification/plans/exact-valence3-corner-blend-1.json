@@ -1,0 +1,88 @@
+{
+  "$schema": "./brep-capability-qualification-plan-v7.schema.json",
+  "schema": "open-scad-viewer/brep-capability-qualification-plan",
+  "schemaVersion": 7,
+  "planId": "exact-valence3-corner-blend-1",
+  "gate": {
+    "id": "g8-full",
+    "name": "brep-full-closed-matrix",
+    "version": 7
+  },
+  "lifecycle": {
+    "status": "frozen-pending-execution",
+    "qualificationClaim": "none"
+  },
+  "claimBoundary": {
+    "candidateClaim": "Candidate exact plane/cylinder/sphere or rational valence-3 corner transition network.",
+    "forbiddenClaims": [
+      "No complete deterministic trim ownership, setback feasibility, tangency, self-intersection, and persistent naming proof exists."
+    ]
+  },
+  "capability": "exact-valence3-corner-blend/1",
+  "successorOf": "analytic-multi-edge-fillet/1",
+  "dependencies": [
+    {
+      "capability": "numeric-evidence-curved-brep/1",
+      "requiredMaturity": "Qualified"
+    },
+    {
+      "capability": "boundary-correspondence/1",
+      "requiredMaturity": "Qualified"
+    },
+    {
+      "capability": "exact-sew/1",
+      "requiredMaturity": "Qualified"
+    },
+    {
+      "capability": "global-solid-audit/1",
+      "requiredMaturity": "Qualified"
+    },
+    {
+      "capability": "persistent-naming/1",
+      "requiredMaturity": "Qualified"
+    }
+  ],
+  "scope": {
+    "included": [
+      "Typed product refusal records the intended transition boundary without topology authorship."
+    ],
+    "excluded": [
+      "No complete deterministic trim ownership, setback feasibility, tangency, self-intersection, and persistent naming proof exists."
+    ]
+  },
+  "matrix": [
+    {
+      "id": "BL7-VALENCE3-SPHERE-RATIONAL-OWNERSHIP",
+      "expected": "ResearchOnly",
+      "blocksQualification": true
+    }
+  ],
+  "bindings": {
+    "implementation": [
+      "crates/brep-core/src/analytic_features.rs",
+      "crates/brep-core/src/imprint_pipeline.rs",
+      "crates/brep-core/src/operations.rs",
+      "crates/brep-core/src/lib.rs",
+      "crates/geometry-bridge/src/lib.rs",
+      "crates/geometry-bridge/src/tests.rs",
+      "src/services/geometry/brep.ts",
+      "src/services/geometry/brepCapability.ts"
+    ],
+    "registry": "src/services/geometry/brepCapability.ts",
+    "evidenceJson": "docs/qualification/exact-valence3-corner-blend-1-evidence-v7.json"
+  },
+  "evidence": {
+    "state": "not-executed",
+    "notes": [
+      "No qualification run is claimed; the product seam refuses atomically."
+    ]
+  },
+  "resetPolicy": "false-Complete freezes this capability and transitively stales all dependents; recovery requires a successor capability ID",
+  "unresolvedRows": [
+    {
+      "id": "BL7-VALENCE3-SPHERE-RATIONAL-OWNERSHIP",
+      "status": "open",
+      "resolution": "Implement and independently prove the excluded exact geometry and topology ownership before creating a successor release."
+    }
+  ]
+}

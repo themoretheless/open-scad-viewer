@@ -1,0 +1,28 @@
+{
+  "$schema": "./brep-capability-evidence-v9.schema.json",
+  "schema": "open-scad-viewer/brep-capability-evidence",
+  "schemaVersion": 9,
+  "evidenceId": "analytic-solid-loft-2-evidence-v9",
+  "capability": "analytic-solid-loft/2",
+  "maturity": "Qualified",
+  "state": "qualified",
+  "plan": "docs/qualification/plans/analytic-solid-loft-2.json",
+  "runs": [
+    {
+      "id": "native-bridge-wasm-analytic-solid-loft-2-2026-09-17-v9",
+      "result": "pass",
+      "artifactHash": "be83fb65a9cea12a99d6bc1eda28ab58673ab1a106eff9442814eadb1b891bcf"
+    }
+  ],
+  "oracles": [
+    "analytic_features::tests::exact_multi_section_loft_has_correspondence_topology_and_audit_oracles",
+    "analytic_features::tests::loft_sweep_mutations_refuse_atomically_with_exact_codes",
+    "geometry_bridge::tests::exact_loft_and_bent_rmf_successors_cross_bridge_atomically",
+    "tests/brepQualificationV9.test.ts"
+  ],
+  "unresolvedRows": [],
+  "attestation": {
+    "fabricatedRuns": false,
+    "note": "Recorded for the exact bounded V9 cells only; every listed exclusion remains a typed refusal and no G0/G1 approval is claimed."
+  }
+}

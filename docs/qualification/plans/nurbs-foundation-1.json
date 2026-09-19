@@ -1,0 +1,88 @@
+{
+  "$schema": "./brep-capability-qualification-plan.schema.json",
+  "schema": "open-scad-viewer/brep-capability-qualification-plan",
+  "schemaVersion": 1,
+  "planId": "nurbs-foundation-1",
+  "gate": {
+    "id": "g8-full",
+    "name": "brep-full-closed-matrix",
+    "version": 1
+  },
+  "lifecycle": {
+    "status": "qualified",
+    "qualificationClaim": "walking-slice"
+  },
+  "claimBoundary": {
+    "candidateClaim": "Product NURBS foundation closure unit: outward positive-weight span bounds, conservative regularity, bounded approximation, linear-span projection, exact insertion/elevation wrappers and affine reparameterization",
+    "forbiddenClaims": [
+      "general-nurbs-projection",
+      "general-surface-regularity",
+      "certified-knot-removal",
+      "certified-degree-reduction",
+      "nonlinear-rational-reparameterization",
+      "full-periodic-editing",
+      "general-surface-surface-boolean"
+    ],
+    "notes": [
+      "Unresolved classifications are first-class results and must not be promoted to proofs.",
+      "This is the first closure unit; it is not general NURBS Boolean qualification."
+    ]
+  },
+  "capability": "nurbs-foundation/1",
+  "scope": {
+    "included": [
+      "degree 1..25 curves with at most 256 controls",
+      "degree 1..25 surfaces with 2..32 controls per axis",
+      "positive weights in [1e-12,1e12] with conditioning at most 1e12",
+      "outward-rounded per-span and per-cell hull/denominator certificates",
+      "recursive Bernstein curve regularity classification",
+      "planar surface normal regularity and explicit unresolved classification",
+      "analytic degree-one projection uniqueness and conservative global candidates",
+      "piecewise-linear interpolation and conservative Hausdorff approximation",
+      "zero-error insertion/elevation wrappers and exact affine monotone reparameterization",
+      "ToleranceContext identity/evidence through Rust, WASM, TypeScript and ModelGraph reports"
+    ],
+    "excluded": [
+      "general interval stationary-root isolation",
+      "nonplanar interval normal cone proofs",
+      "knot removal and degree reduction",
+      "non-affine rational or piecewise reparameterization",
+      "period-preserving knot and degree edits",
+      "surface interpolation/approximation",
+      "surface closest point",
+      "general surface/surface intersection and Boolean closure"
+    ]
+  },
+  "matrix": [
+    {"id": "NF1-RUST-SPAN-CERT", "expected": "Complete", "blocksQualification": true},
+    {"id": "NF1-WASM-TS-PRODUCT", "expected": "Complete", "blocksQualification": true},
+    {"id": "NF1-BOUNDARY-MUTATION", "expected": "Complete", "blocksQualification": true},
+    {"id": "NF1-GENERAL-PROJECTION", "expected": "ResearchOnly", "blocksQualification": false},
+    {"id": "NF1-FULL-PERIODIC-EDIT", "expected": "ResearchOnly", "blocksQualification": false}
+  ],
+  "bindings": {
+    "rust": [
+      "crates/nurbs-core/src/foundation.rs",
+      "crates/nurbs-core/src/tests.rs"
+    ],
+    "typescript": [
+      "src/services/nurbsFoundation.ts",
+      "src/services/modelGraphNurbsKernel.ts",
+      "tests/nurbsFoundation.test.ts"
+    ],
+    "registry": "src/services/geometry/brepCapability.ts",
+    "evidenceJson": "docs/qualification/nurbs-foundation-1-evidence-v1.json"
+  },
+  "evidence": {
+    "state": "walking-slice-green",
+    "notes": [
+      "Evidence was written only after Rust core, bridge, WASM product and TypeScript tests passed.",
+      "No cargo fmt was run."
+    ]
+  },
+  "resetPolicy": "false-Complete freezes Unavailable",
+  "unresolvedRows": [
+    {"id": "NF1-GENERAL-PROJECTION", "status": "open", "resolution": "Implement interval stationary-polynomial root isolation and global uniqueness proofs."},
+    {"id": "NF1-FULL-PERIODIC-EDIT", "status": "open", "resolution": "Implement seam-preserving periodic insertion, removal, elevation and reduction in wrapped storage."}
+  ]
+}

@@ -1,0 +1,131 @@
+{
+  "$schema": "./brep-capability-qualification-plan-v8.schema.json",
+  "schema": "open-scad-viewer/brep-capability-qualification-plan",
+  "schemaVersion": 8,
+  "planId": "analytic-shell-2",
+  "gate": {
+    "id": "g8-full",
+    "name": "brep-full-closed-matrix",
+    "version": 8
+  },
+  "lifecycle": {
+    "status": "qualified",
+    "qualificationClaim": "finite-cell"
+  },
+  "claimBoundary": {
+    "candidateClaim": "Qualified exact finite shell/offset successor for audited convex planar bodies, finite cylinders, and constructor tubes under rigid placement.",
+    "forbiddenClaims": [
+      "Adjacent planar face openings: exact corner-transition ownership is not authored.",
+      "Single-cap cylinder openings and tube face openings: exact annular rim transition ownership is not authored.",
+      "Mixed curved-planar openings, nonconvex or disconnected bodies, periodic freeform offsets, local thickness laws, healing, mesh, Manifold, approximation, or fallback."
+    ]
+  },
+  "capability": "analytic-shell/2",
+  "successorOf": "analytic-shell/1",
+  "dependencies": [
+    {
+      "capability": "numeric-evidence-curved-brep/1",
+      "requiredMaturity": "Qualified"
+    },
+    {
+      "capability": "boundary-correspondence/1",
+      "requiredMaturity": "Qualified"
+    },
+    {
+      "capability": "exact-sew/1",
+      "requiredMaturity": "Qualified"
+    },
+    {
+      "capability": "global-solid-audit/1",
+      "requiredMaturity": "Qualified"
+    },
+    {
+      "capability": "persistent-naming/1",
+      "requiredMaturity": "Qualified"
+    }
+  ],
+  "scope": {
+    "included": [
+      "Audited convex planar-faced single bodies: exact inward/outward support-plane intersection with closed or unique nonadjacent face openings.",
+      "Exact finite rational cylinders under rigid placement: closed inward/outward radial and axial shells, or dual nonadjacent cap openings.",
+      "Exact constructor tubes under rigid placement: bounded inward/outward radial and axial body offsets with preserved annular topology.",
+      "Collapse, boundedness, support collision, audit, cavity orientation, naming, permutation, bridge/WASM serialization, mutation and atomic-refusal coverage."
+    ],
+    "excluded": [
+      "Adjacent planar face openings: exact corner-transition ownership is not authored.",
+      "Single-cap cylinder openings and tube face openings: exact annular rim transition ownership is not authored.",
+      "Mixed curved-planar openings, nonconvex or disconnected bodies, periodic freeform offsets, local thickness laws, healing, mesh, Manifold, approximation, or fallback."
+    ]
+  },
+  "matrix": [
+    {
+      "id": "SH8-PLANAR-INWARD-OUTWARD-SUPPORT-OFFSET",
+      "expected": "Complete",
+      "blocksQualification": true
+    },
+    {
+      "id": "SH8-PLANAR-NONADJACENT-MULTIPLE-OPENINGS",
+      "expected": "Complete",
+      "blocksQualification": true
+    },
+    {
+      "id": "SH8-CYLINDER-CLOSED-DUAL-CAP-RIGID",
+      "expected": "Complete",
+      "blocksQualification": true
+    },
+    {
+      "id": "SH8-TUBE-INWARD-OUTWARD-RIGID",
+      "expected": "Complete",
+      "blocksQualification": true
+    },
+    {
+      "id": "SH8-VOLUME-AREA-THICKNESS-TOPOLOGY",
+      "expected": "Complete",
+      "blocksQualification": true
+    },
+    {
+      "id": "SH8-BRIDGE-WASM-MUTATION-ATOMICITY",
+      "expected": "Complete",
+      "blocksQualification": true
+    },
+    {
+      "id": "SH8-ADJACENT-PLANAR-CORNER-TRANSITIONS",
+      "expected": "typed-refuse",
+      "blocksQualification": true
+    },
+    {
+      "id": "SH8-SINGLE-CAP-AND-TUBE-OPENING-RIMS",
+      "expected": "typed-refuse",
+      "blocksQualification": true
+    },
+    {
+      "id": "SH8-MIXED-CURVED-PLANAR-OPENINGS",
+      "expected": "typed-refuse",
+      "blocksQualification": true
+    }
+  ],
+  "bindings": {
+    "implementation": [
+      "crates/brep-core/src/analytic_features.rs",
+      "crates/brep-core/src/operations.rs",
+      "crates/brep-core/src/imprint_pipeline.rs",
+      "crates/brep-core/src/solid_audit.rs",
+      "crates/brep-core/src/lib.rs",
+      "crates/geometry-bridge/src/lib.rs",
+      "crates/geometry-bridge/src/tests.rs",
+      "src/services/geometry/brep.ts",
+      "src/services/geometry/brepCapability.ts"
+    ],
+    "registry": "src/services/geometry/brepCapability.ts",
+    "evidenceJson": "docs/qualification/analytic-shell-2-evidence-v8.json"
+  },
+  "evidence": {
+    "state": "qualified",
+    "notes": [
+      "Only exact cells with native and bridge coverage are released.",
+      "Every unsupported transition is typed-refused before source mutation; no mesh shell fallback exists."
+    ]
+  },
+  "resetPolicy": "false-Complete freezes this capability and transitively stales all dependents; recovery requires a successor capability ID",
+  "unresolvedRows": []
+}

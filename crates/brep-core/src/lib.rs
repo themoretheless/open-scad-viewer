@@ -28,10 +28,13 @@ pub mod gear;
 pub use gear::{GearGeometry, GearSpec, gear, gear_with_report};
 mod uv_regions;
 mod cylinder_sphere_boolean;
+pub mod close_topology;
 pub mod coverage_verifier;
 pub mod imprint_pipeline;
 pub mod intersections;
+pub mod iges_interchange_v2;
 pub mod nurbs_ss_g6;
+pub mod nurbs_ss_general;
 pub mod nurbs_step_interchange;
 mod nurbs_step_shared;
 pub mod nurbs_step_solid;
@@ -57,11 +60,33 @@ pub use analytic::{
     revolve_wire_angle, ruled_loft, sphere, torus, tube,
 };
 pub use analytic_boolean::{BooleanCertificate, analytic_boolean, analytic_boolean_audited};
+pub use close_topology::{
+    AuditedTopologyComplex, BodyRole, CLOSE_TOPOLOGY_CAPABILITY,
+    CLOSE_TOPOLOGY_IGES_CAPABILITY, CLOSE_TOPOLOGY_STEP_CAPABILITY, ComplexHealCertificate,
+    ComplexHealPlan, ComplexInterchangeCertificate, ComplexPart, CorrespondenceKind,
+    EdgeRadialRing, EdgeUseRef, ExactParameterPartition, FaceRef, LocalCorrespondence,
+    MixedDimensionalBrep, SharedFace, TOLERANT_COMPLEX_HEAL_CAPABILITY,
+    TopologyComplexCertificate, VertexFan, VertexUseRef, certify_complex_heal,
+    complex_relation_id, export_complex_iges, export_complex_step, import_complex_iges,
+    import_complex_step,
+};
 pub use analytic_features::{
     AUDITED_MULTI_EDGE_FILLET_CAPABILITY, AuditedFeatureResult,
+    EXACT_ANALYTIC_SHELL_CAPABILITY, EXACT_BENT_RMF_SWEEP_CAPABILITY, EXACT_CONVEX_CHAMFER_CAPABILITY,
+    EXACT_CONVEX_PRISM_FILLET_CAPABILITY, EXACT_MULTI_SECTION_LOFT_CAPABILITY,
     EXACT_PARALLEL_FRAME_SWEEP_CAPABILITY, FeatureCertificate, analytic_chamfer, analytic_fillet,
     analytic_fillet_chain, analytic_shell, analytic_solid_loft, audited_multi_edge_fillet,
-    audited_parallel_frame_sweep, export_iges, frame_law_ruled_sweep, import_iges,
+    audited_bent_rmf_sweep, audited_multi_section_loft, audited_parallel_frame_sweep,
+    exact_analytic_shell, exact_convex_chamfer, exact_convex_prism_fillet, export_iges,
+    exact_variable_radius_fillet, exact_valence3_corner_blend, frame_law_ruled_sweep, import_iges,
+    EXACT_VARIABLE_RADIUS_FILLET_CAPABILITY, EXACT_VALENCE3_CORNER_BLEND_CAPABILITY,
+};
+pub use iges_interchange_v2::{
+    IGES_INTERCHANGE_V2_CAPABILITY, IgesV2Report, export_iges_v2, import_iges_v2,
+};
+pub use nurbs_ss_general::{
+    GENERAL_SS_CAPABILITY, GeneralBranchGraph, GeneralSsBranch, branch_graph_from_ss_report,
+    rational_traces_from_ss_report, verify_general_ss_branch_graph,
 };
 pub use nurbs_ss_g6::{
     G6_CAPABILITY, G6_MATURITY, G6Component, G6Maturity, NURBS_BOOLEAN_CAPABILITY,
@@ -71,6 +96,7 @@ pub use nurbs_ss_g6::{
     BranchCompletenessCertificate, BranchComponent, BranchGraph, BranchOrientation,
     CertifiedBranchFragment, CurvedGraphBooleanCertificate, NurbsBooleanImprintCertificate,
     GeneralNurbsBooleanCertificate, GeneralNurbsBooleanNaming, GENERAL_NURBS_BOOLEAN_AUTHORITY,
+    NURBS_BOOLEAN_SS_CAPABILITY,
     RationalBezierDecomposition, RationalBezierPatchSpan, TensorSpanId, TransverseSpanEvidence,
     author_general_nurbs_boolean, canonical_bezier_graph_solid,
     canonical_multispan_graph_solid, canonical_rational_graph_solid, certify_multispan_ss,
@@ -101,7 +127,14 @@ pub use step_interchange::{
     import_step_v2,
 };
 pub use step_interchange_v3::{
-    STEP_INTERCHANGE_V3_CAPABILITY, StepV3Report, export_step_v3, import_step_v3,
+    STEP_INTERCHANGE_V3_CAPABILITY, STEP_INTERCHANGE_V4_CAPABILITY, STEP_INTERCHANGE_V5_CAPABILITY,
+    STEP_INTERCHANGE_V6_CAPABILITY, STEP_INTERCHANGE_V7_CAPABILITY, STEP_INTERCHANGE_V8_CAPABILITY,
+    STEP_INTERCHANGE_V9_CAPABILITY, STEP_INTERCHANGE_V10_CAPABILITY,
+    StepRegularityEvidence, StepV3Report, StepV8Certificate, StepV10Document, compose_step_v7_occurrences,
+    compose_step_v8_occurrences, compose_step_v9_occurrences,
+    export_step_v3, export_step_v4, export_step_v5, export_step_v6, export_step_v7, export_step_v8,
+    export_step_v9, export_step_v10, import_step_v3, import_step_v4, import_step_v5, import_step_v6,
+    import_step_v7, import_step_v8, import_step_v9, import_step_v10,
 };
 
 pub use brep_topology::{
@@ -1554,11 +1587,11 @@ fn validate_pole_boundary(surface: &Surface, pcurve: &Curve, pole: [f64; 3]) -> 
     ];
     let a = &pcurve.control_points[0];
     let b = &pcurve.control_points[1];
-    let spans = |a: f64, b: f64, domain: [f64; 2]| {
-        (a == domain[0] && b == domain[1]) || (b == domain[0] && a == domain[1])
+    let lies_in = |a: f64, b: f64, domain: [f64; 2]| {
+        a != b && a >= domain[0] && a <= domain[1] && b >= domain[0] && b <= domain[1]
     };
     let same = |p: &Vec<f64>| p.as_slice() == pole.as_slice();
-    let collapsed = if a[0] == b[0] && spans(a[1], b[1], v) {
+    let collapsed = if a[0] == b[0] && lies_in(a[1], b[1], v) {
         if a[0] == u[0] {
             surface.control_points[0].iter().all(same)
         } else if a[0] == u[1] {
@@ -1566,7 +1599,7 @@ fn validate_pole_boundary(surface: &Surface, pcurve: &Curve, pole: [f64; 3]) -> 
         } else {
             false
         }
-    } else if a[1] == b[1] && spans(a[0], b[0], u) {
+    } else if a[1] == b[1] && lies_in(a[0], b[0], u) {
         if a[1] == v[0] {
             surface.control_points.iter().all(|r| same(&r[0]))
         } else if a[1] == v[1] {

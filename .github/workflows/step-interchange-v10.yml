@@ -1,0 +1,20 @@
+name: STEP interchange V10
+on:
+  push:
+    paths:
+      - 'crates/brep-core/src/step_interchange_v3.rs'
+      - 'crates/geometry-bridge/src/**'
+      - 'src/services/cadStep*.ts'
+      - 'tests/brepStepV10Product.test.ts'
+      - 'scripts/qualify-step-interchange-v10.mjs'
+  pull_request:
+jobs:
+  qualify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: 20, cache: npm}
+      - uses: dtolnay/rust-toolchain@stable
+      - run: npm ci
+      - run: node scripts/qualify-step-interchange-v10.mjs

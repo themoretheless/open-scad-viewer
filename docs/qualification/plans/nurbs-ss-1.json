@@ -1,0 +1,70 @@
+{
+  "$schema": "./brep-capability-qualification-plan-v12.schema.json",
+  "schema": "open-scad-viewer/brep-capability-qualification-plan",
+  "schemaVersion": 12,
+  "planId": "nurbs-ss-1",
+  "gate": {"id": "g8-full", "name": "brep-full-closed-matrix", "version": 12},
+  "lifecycle": {"status": "qualified", "qualificationClaim": "finite-cell"},
+  "claimBoundary": {
+    "candidateClaim": "Append-only product nurbs-ss/1 over nurbs-cc-cs/1: certified bounded general NURBS surface/surface intersection for admitted positive-weight degrees 1..25 with 4D Bernstein/interval/Krawczyk/continuation isolation, BranchGraph components, rational UV DCEL, CoedgeTrim maps and ToleranceContext evidence without authorizing Boolean topology mutation.",
+    "forbiddenClaims": [
+      "Boolean topology mutation from SS reports",
+      "graph-patch iso fixture as general SS authority",
+      "silent healing of unresolved resource or conditioning bands",
+      "parasolid or commercial kernel parity"
+    ]
+  },
+  "capability": "nurbs-ss/1",
+  "successorOf": "nurbs-cc-cs/1",
+  "dependencies": [{"capability": "nurbs-cc-cs/1", "requiredMaturity": "Qualified"}],
+  "scope": {
+    "included": [
+      "certified general SS over multispan trimmed nonperiodic periodic positive-weight surfaces degrees 1..25",
+      "complete 4D parameter strata with BranchGraph for transverse open/closed curves multiple components junctions boundary contacts seam wrap pole passage tangency coincidence",
+      "coverage verifier missed-branch proof with ToleranceContext binding and topology authority revocation on unresolved",
+      "rational curved UV arrangement/DCEL with overlaps loops holes singular strata",
+      "exact/interval pcurve/3D correspondence and CoedgeTrim maps",
+      "Rust WASM TypeScript ModelGraph MCP product queries",
+      "independent multiprecision SS oracle and adversarial corpus"
+    ],
+    "excluded": [
+      "Boolean mutation authorship",
+      "regularized solid Boolean pipeline",
+      "negative-weight or unbounded-degree inputs"
+    ]
+  },
+  "matrix": [
+    {"id": "CA12-SS-TRANSVERSE", "expected": "Complete", "blocksQualification": true},
+    {"id": "CA12-SS-COINCIDENT", "expected": "Complete", "blocksQualification": true},
+    {"id": "CA12-SS-EMPTY", "expected": "Complete", "blocksQualification": true},
+    {"id": "CA12-SS-COVERAGE", "expected": "Complete", "blocksQualification": true},
+    {"id": "CA12-SS-PRODUCT", "expected": "Complete", "blocksQualification": true},
+    {"id": "CA12-SS-NO-BOOLEAN", "expected": "typed-refuse", "blocksQualification": true}
+  ],
+  "bindings": {
+    "implementation": [
+      "crates/nurbs-core/src/ss_intersection.rs",
+      "crates/brep-core/src/nurbs_ss_general.rs",
+      "crates/brep-core/src/uv_arrangement.rs",
+      "crates/nurbs-core/src/lib.rs",
+      "crates/nurbs-core/src/tests.rs",
+      "src/services/nurbsFoundation.ts",
+      "src/services/modelGraphNurbsKernel.ts",
+      "src/mcp/modelGraphNurbsTools.ts",
+      "tests/nurbsFoundation.test.ts",
+      "scripts/nurbs-ss-1-oracle.py"
+    ],
+    "registry": "src/services/geometry/brepCapability.ts",
+    "evidenceJson": "docs/qualification/nurbs-ss-1-evidence-v1.json"
+  },
+  "evidence": {
+    "state": "qualified",
+    "notes": [
+      "Qualified only after native/product gates on nurbs-cc-cs/1 successor path.",
+      "No cargo fmt was run.",
+      "Boolean mutation authority remains false."
+    ]
+  },
+  "resetPolicy": "false-Complete freezes this capability and transitively stales all dependents; recovery requires a successor capability ID",
+  "unresolvedRows": []
+}

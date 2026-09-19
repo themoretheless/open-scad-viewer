@@ -1,0 +1,14 @@
+{
+  "schema": "open-scad-viewer/nurbs-foundation-matrix",
+  "schemaVersion": 5,
+  "capability": "nurbs-foundation/5",
+  "successorOf": "docs/qualification/nurbs-foundation-4-matrix-v1.json",
+  "rows": [
+    {"id": "NF5-CURVE-CURVE", "status": "Complete", "evidence": ["crates/nurbs-core/src/intersection.rs", "crates/nurbs-core/src/tests.rs", "tests/nurbsFoundation.test.ts", "scripts/nurbs-foundation-5-oracle.py"]},
+    {"id": "NF5-CURVE-SURFACE", "status": "Complete", "evidence": ["crates/nurbs-core/src/intersection.rs", "crates/nurbs-core/src/tests.rs", "tests/nurbsFoundation.test.ts"]},
+    {"id": "NF5-CONTACT-OWNERSHIP", "status": "Complete", "evidence": ["crates/nurbs-core/src/intersection.rs", "crates/nurbs-core/src/tests.rs"]},
+    {"id": "NF5-COMPOSITION", "status": "Complete", "evidence": ["crates/nurbs-core/src/foundation.rs", "crates/nurbs-core/src/tests.rs"]},
+    {"id": "NF5-PRODUCT", "status": "Complete", "evidence": ["src/services/nurbsFoundation.ts", "src/services/modelGraphNurbsKernel.ts", "src/mcp/modelGraphNurbsTools.ts", "tests/nurbsFoundation.test.ts"]}
+  ],
+  "blockingOpenRows": []
+}

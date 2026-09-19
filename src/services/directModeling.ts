@@ -13,7 +13,11 @@ export interface DirectSketch { id: string; name: string; points: Point2[]; clos
 export interface DirectBody { id: string; name: string; mesh: PolygonMesh; brep?: NurbsBrep; group?: string }
 /** A group owns the source its bodies were built from, so it stays editable and rebuildable. */
 export interface DirectGroup { name: string; source: string }
-export interface DirectDocument { version: 1; sketches: DirectSketch[]; bodies: DirectBody[]; curves?: SolidNurbsCurve[]; surfaces?: SolidNurbsSurface[]; groups?: DirectGroup[] }
+export interface DirectInterchangeMetadata {
+  step?:{route:string;retained:boolean;refusalBoundary:string[];identityLoss:string[];metadataLoss:string[];
+    definitionIdentities:string[];occurrenceIdentities:string[];productHierarchy:string[];externalReferences:string[]}
+}
+export interface DirectDocument { version: 1; sketches: DirectSketch[]; bodies: DirectBody[]; curves?: SolidNurbsCurve[]; surfaces?: SolidNurbsSurface[]; groups?: DirectGroup[]; interchange?: DirectInterchangeMetadata }
 export const emptyDirectDocument = (): DirectDocument => ({ version: 1, sketches: [], bodies: [], curves: [], surfaces: [] })
 const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value))
 const finite = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v) && Math.abs(v) <= 1e6
@@ -53,6 +57,14 @@ export function parseDirectDocument(text: string): DirectDocument {
   if (!d || d.version !== 1 || !Array.isArray(d.sketches) || !Array.isArray(d.bodies) || d.sketches.length + d.bodies.length > 200) throw new Error('Invalid direct modeling document.')
   d.curves ??= []
   d.surfaces ??= []
+  if(d.interchange){
+    const step=d.interchange.step
+    if(step&&(typeof step.route!=='string'||typeof step.retained!=='boolean'
+      ||![step.refusalBoundary,step.identityLoss,step.metadataLoss,step.definitionIdentities,step.occurrenceIdentities,step.productHierarchy,step.externalReferences]
+        .every(values=>Array.isArray(values)&&values.length<=1024&&values.every(value=>typeof value==='string'&&value.length<=4096)))){
+      throw Error('Invalid interchange metadata.')
+    }
+  }
   if (!Array.isArray(d.curves) || !Array.isArray(d.surfaces) || d.curves.length + d.surfaces.length > 128) throw new Error('Invalid Solid NURBS collection.')
   // Absent rather than empty, so a document with no groups stays identical to one
   // written before groups existed.

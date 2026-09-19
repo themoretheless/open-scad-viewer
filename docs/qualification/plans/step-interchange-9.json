@@ -1,0 +1,36 @@
+{
+  "$schema":"./brep-capability-qualification-plan-v12.schema.json",
+  "schema":"open-scad-viewer/brep-capability-qualification-plan",
+  "schemaVersion":12,
+  "planId":"step-interchange-9",
+  "gate":{"id":"g8-full","name":"brep-full-closed-matrix","version":12},
+  "lifecycle":{"status":"qualified","qualificationClaim":"qualified"},
+  "claimBoundary":{
+    "candidateClaim":"Bounded AP242 Edition 4 retained geometry-product successor with certified point-selector inverse isolation, exact collapsed-boundary ownership, general invertible affine occurrence import, solid and open-shell products, explicit triangular tessellation routing, precise procedural-product refusal, and digest-authorized external resolution.",
+    "forbiddenClaims":["Unbounded STEP support","Implicit filesystem or network resolution","Mesh relabeling as B-rep or CSG","Authored affine occurrence graphs","Tessellated strips, fans, texture coordinates, or presentation fidelity","Arbitrary singular surfaces without exact boundary ownership"]
+  },
+  "capability":"step-interchange/9",
+  "successorOf":"step-interchange/8",
+  "dependencies":[{"capability":"step-interchange/8","requiredMaturity":"Qualified"},{"capability":"persistent-naming/1","requiredMaturity":"Qualified"}],
+  "scope":{
+    "included":["Append-only native, bridge, WASM and TypeScript /9 route","Positive-weight rational trimmed-curve point inverse with knot-span convex-hull isolation and bounded residual","Exact rational collapsed-edge ownership with one pole TopoId","Invertible nonuniform, shear and reflection occurrence import with occurrence-local TopoIds","MANIFOLD_SURFACE_SHAPE_REPRESENTATION plus SHELL_BASED_SURFACE_MODEL and OPEN_SHELL persistence","TRIANGULATED_FACE_SET to explicit faceted geometry","Precise semantic CSG unsupported-product reports without mesh promotion","Common AP242 product, property, material, approval, person, date, security and style metadata domains","Explicit digest-bound cancellable external resolver only","STEPcode AP242 Edition 4 positive and negative validation","IndexedDB workbench export/reimport"],
+    "excluded":["Affine occurrence graph authorship from the flattened native Model","AP242 tessellated strips/fans/normals/textures","A procedural CSG evaluator"]
+  },
+  "matrix":[
+    {"id":"CA12-STEP9-INVERSE-POLES","expected":"Complete","blocksQualification":true},
+    {"id":"CA12-STEP9-AFFINE-IMPORT","expected":"Complete","blocksQualification":true},
+    {"id":"CA12-STEP9-OPEN-SHELL","expected":"Complete","blocksQualification":true},
+    {"id":"CA12-STEP9-PRODUCT-ROUTING","expected":"Complete","blocksQualification":true},
+    {"id":"CA12-STEP9-SECURITY-BOUNDARY","expected":"Complete","blocksQualification":true},
+    {"id":"CA12-STEP9-AP242-ORACLE","expected":"Complete","blocksQualification":true},
+    {"id":"CA12-STEP9-ROUNDTRIPS","expected":"Complete","blocksQualification":true}
+  ],
+  "bindings":{
+    "implementation":["crates/brep-core/src/step_interchange_v3.rs","crates/geometry-bridge/src/lib.rs","src/services/cadNurbsStep.ts","src/services/cadStep.ts","src/services/cadStepRouting.ts","src/services/cadStepExternalResolver.ts","src/services/cadStepIndexedDb.ts"],
+    "registry":"src/services/geometry/brepCapability.ts",
+    "evidenceJson":"docs/qualification/step-interchange-9-evidence-v12.json"
+  },
+  "evidence":{"state":"qualified","notes":["Qualification is limited to the finite included list; forbidden claims remain explicit product gaps. STEP /8 artifacts are unchanged."]},
+  "resetPolicy":"false-Complete freezes this capability and transitively stales all dependents; recovery requires a successor capability ID",
+  "unresolvedRows":[]
+}

@@ -1,0 +1,44 @@
+{
+  "schema":"open-scad-viewer/qualification-run-manifest",
+  "runId":"step-interchange-8-run-v1",
+  "date":"2026-09-17",
+  "qualificationDisposition":"qualified",
+  "validator":{
+    "name":"STEPcode p21read_sdai_ap242",
+    "version":"0.9.1",
+    "sourceUrl":"https://github.com/stepcode/stepcode.git",
+    "sourceCommit":"ed686ee1d9cb8bf763ab8d61ef6d417c3b45c146",
+    "license":"BSD-3-Clause",
+    "licenseSha256":"c787486f3e1358cf1cb4456b56e00862de9c0433e7d49f5501d1289ff8bef37e",
+    "schemaUrl":"https://standards.iso.org/iso/ts/10303/-442/ed-7/tech/express/mim_lf.exp",
+    "schemaSha256":"e7e93cf97880fd87d634e4b9ee58400da0a1be6c06a1de76ec13807ecdc15ccb",
+    "executablePath":"output/qualification/step-interchange-8-v1/toolchain/stepcode-build/bin/p21read_sdai_ap242",
+    "executableSha256":"a9258791296493ed5de470b1e98f8ba44dbb1bdd7fd8b2e29662bade36e07043",
+    "schemaLibrarySha256":"2e1452ca707dc75a227390188be972dca04f7a7db07acc0d0b5896d97ff89553",
+    "rawLogPath":"output/qualification/step-interchange-8-v1/stepcode-raw-logs"
+  },
+  "commands":[
+    {"command":"node scripts/qualify-step-interchange-v8.mjs","result":"pass","positiveFixtures":20,"negativeMutationsRejected":3,"artifact":"output/qualification/step-interchange-8-v1/stepcode-oracle-result.json","artifactSha256":"c8ee3ec2394fe1e3e06785518f544d334862165f825e859d9bcc4c3003c526c2"},
+    {"command":"cargo test --locked --manifest-path crates/Cargo.toml -p brep-core v8_","result":"pass","executedSenseCases":384,"equivalentCases":6,"expectedRefusals":378},
+    {"command":"cargo test --locked --manifest-path crates/Cargo.toml -p geometry-bridge direct_step_v8","result":"pass"},
+    {"command":"node tools/browser-qualification/step-v8-workbench-indexeddb.mjs","result":"pass","artifact":"output/qualification/step-interchange-8-v1/browser-workbench-indexeddb.json","artifactSha256":"6abd7a82d47cfc59ec395b5d772b442ea25873336c67eabf22257c067ab37e79"}
+  ],
+  "sourceHashes":{
+    "crates/brep-core/src/step_interchange_v3.rs":"d7b636ff7dcf4fd8fb4a5da604119524528d7e0cb4a9927fb3e72fa76817ec5e",
+    "crates/brep-core/src/lib.rs":"3ed34ec5612bac750613d01a433e8555aa250fbae020789add1aabcc59a05360",
+    "crates/geometry-bridge/src/lib.rs":"d5b378136971b69f56d3a85f8b8ea5dcbc15cc0fe62e83265713a289335daac4",
+    "src/services/cadNurbsStep.ts":"e5d0767c0830c6213974c89196ca2fa38d99a92c232d6869ff3c742a32097d15",
+    "src/services/cadStepRouting.ts":"d1250b77bf3a7067f7045365fb0dd8ddccd2641eda22b2c92c8cd36fe8e1b739",
+    "scripts/qualify-step-interchange-v8.mjs":"0194e7e570cbbfb8c67ec7ef9f05e4586c078ce4a1d8430bebec2385fbcf81ed",
+    "scripts/validate-step-ap242.mjs":"f30d6fe9b5bf08e443c5e186e827e53dc5e848ec6551e59f0e4c979d5a5221ab",
+    "tools/stepcode-ap242-ed4-manifest.json":"f9f59c871a4a507e7390381d951263696526b9615218a68bbbe0ea76f5972ab3"
+  },
+  "remainingInScopeStepGaps":[
+    "Entities and AP242 application domains outside the bounded direct manifold B-rep subset",
+    "Generic freeform singular rational surfaces not matching certified cylinder, cone, sphere, or torus identities",
+    "Non-rigid occurrence transforms not defined by the pinned AP242 Edition 4 schema",
+    "Interior point trim selectors without an exact inverse",
+    "Open shells, tessellated roots, CSG roots, and ambient external resolution"
+  ],
+  "attestation":{"fabricatedSemanticPass":false,"stepcodeLinkedIntoKernel":false,"priorRejectedCapabilitiesPreserved":["step-interchange/5","step-interchange/6","step-interchange/7"]}
+}

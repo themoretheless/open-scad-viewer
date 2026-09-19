@@ -31,3 +31,75 @@ export function importFacetedStep(text:string):DirectBody[]{
   const mesh={positions,indices},r=inspectPolygonMesh(mesh);if(!r.closed||r.signedVolumeMm3<=0)throw Error('STEP shell is not a closed outward-oriented solid.');return {id:crypto.randomUUID(),name:'STEP '+(index+1),mesh}
  })
 }
+
+export interface StepTessellatedPresentation {
+ representationIdentity:string
+ itemIdentity:string
+ primitive:'triangles'|'strips-and-fans'
+ normals:number[]
+ colors:string[]
+ layers:string[]
+ textureCoordinates:number[]
+ source:string
+}
+export interface TessellatedStepImport {bodies:DirectBody[];presentation:StepTessellatedPresentation[];metadataLoss:string[]}
+const splitStepArgs=(value:string)=>{
+ const out:string[]=[],start=0;let depth=0,quote=false,last=start
+ for(let i=0;i<value.length;i++){const c=value[i];if(c==="'"&&value[i+1]==="'"){i++;continue}if(c==="'")quote=!quote
+  else if(!quote&&c==='(')depth++;else if(!quote&&c===')')depth--;else if(!quote&&c===','&&depth===0){out.push(value.slice(last,i));last=i+1}}
+ out.push(value.slice(last));return out.map(field=>field.trim())
+}
+const stepIdentity=(value:string)=>{let hash=2166136261;for(const byte of new TextEncoder().encode(value.replace(/#\d+/g,'#'))){hash^=byte;hash=Math.imul(hash,16777619)}return `step10:${(hash>>>0).toString(16).padStart(8,'0')}`}
+const indexRows=(value:string)=>[...value.matchAll(/\(([\d,\s]+)\)/g)].map(match=>match[1].split(',').map(Number)).filter(row=>row.length>=3&&row.every(Number.isInteger))
+const stripTriangles=(row:number[])=>Array.from({length:row.length-2},(_,i)=>i%2?[row[i+1],row[i],row[i+2]]:[row[i],row[i+1],row[i+2]])
+const fanTriangles=(row:number[])=>Array.from({length:row.length-2},(_,i)=>[row[0],row[i+1],row[i+2]])
+
+/** AP242 tessellated decoder. Presentation remains explicitly tessellated and is never promoted to B-rep. */
+export function importTessellatedStepV10(text:string):TessellatedStepImport{
+ if(new TextEncoder().encode(text).byteLength>20_000_000)throw Error('STEP tessellated file exceeds 20 MB.')
+ if(!/\bTESSELLATED_SHAPE_REPRESENTATION\s*\(/i.test(text))throw Error('No TESSELLATED_SHAPE_REPRESENTATION product found.')
+ const entities=new Map<string,{type:string;args:string}>()
+ for(const match of text.matchAll(/#(\d+)\s*=\s*([A-Z_0-9]+)\s*\((.*?)\)\s*;/gis)){
+  if(entities.has(match[1]))throw Error('Duplicate STEP tessellated entity.')
+  entities.set(match[1],{type:match[2].toUpperCase(),args:match[3]})
+ }
+ const number=(value:string)=>Number(value.replace(/[dD]/,'E'))
+ const pointLists=new Map<string,number[][]>()
+ for(const [id,entity] of entities){
+  if(entity.type!=='CARTESIAN_POINT_LIST_3D')continue
+  const points=[...entity.args.matchAll(/\(\s*([+-]?(?:\d+\.?\d*|\.\d+)(?:[eEdD][+-]?\d+)?)\s*,\s*([+-]?(?:\d+\.?\d*|\.\d+)(?:[eEdD][+-]?\d+)?)\s*,\s*([+-]?(?:\d+\.?\d*|\.\d+)(?:[eEdD][+-]?\d+)?)\s*\)/g)]
+    .map(match=>[number(match[1]),number(match[2]),number(match[3])])
+  if(!points.length||points.some(point=>point.some(value=>!Number.isFinite(value))))throw Error(`Invalid CARTESIAN_POINT_LIST_3D #${id}.`)
+  pointLists.set(id,points)
+ }
+ const sets=[...entities.entries()].filter(([,entity])=>['TRIANGULATED_FACE_SET','COMPLEX_TRIANGULATED_FACE_SET'].includes(entity.type))
+ if(!sets.length)throw Error('TESSELLATED_SHAPE_REPRESENTATION contains no supported triangulated face set.')
+ const representation=[...entities.entries()].find(([,entity])=>entity.type==='TESSELLATED_SHAPE_REPRESENTATION')
+ const representationIdentity=stepIdentity(representation?.[1].args??'TESSELLATED_SHAPE_REPRESENTATION')
+ const presentations:StepTessellatedPresentation[]=[]
+ const bodies=sets.map(([id,entity],ordinal)=>{
+  const coordinateId=entity.args.match(/#(\d+)/)?.[1],points=coordinateId&&pointLists.get(coordinateId)
+  if(!points)throw Error(`Triangulated face set #${id} has no CARTESIAN_POINT_LIST_3D coordinates.`)
+  const fields=splitStepArgs(entity.args)
+  let triples=indexRows(entity.args).filter(row=>row.length===3)
+  let primitive:StepTessellatedPresentation['primitive']='triangles'
+  if(entity.type==='COMPLEX_TRIANGULATED_FACE_SET'&&fields.length>=7){
+   const strips=indexRows(fields[5]),fans=indexRows(fields[6])
+   if(strips.length||fans.length){triples=[...strips.flatMap(stripTriangles),...fans.flatMap(fanTriangles)];primitive='strips-and-fans'}
+  }
+  triples=triples.filter(indices=>indices.every(index=>index>=1&&index<=points.length))
+  if(!triples.length)throw Error(`Triangulated face set #${id} has no valid coordinate indices.`)
+  const normals=(fields[3]?.match(/[+-]?(?:\d+\.?\d*|\.\d+)(?:[eEdD][+-]?\d+)?/g)??[]).map(number).filter(Number.isFinite)
+  const colors=[...entities.entries()].filter(([,candidate])=>/COLOUR|STYLE/.test(candidate.type)
+    &&(candidate.type==='COLOUR_RGB'||candidate.args.includes(`#${id}`))).map(([key])=>`#${key}`)
+  const layers=[...entities.entries()].filter(([,candidate])=>candidate.type==='PRESENTATION_LAYER_ASSIGNMENT'&&candidate.args.includes(`#${id}`)).map(([key])=>`#${key}`)
+  const textureCoordinates=[...entities.values()].filter(candidate=>/TEXTURE.*COORDINATE/.test(candidate.type)&&candidate.args.includes(`#${id}`))
+    .flatMap(candidate=>(candidate.args.match(/[+-]?(?:\d+\.?\d*|\.\d+)(?:[eEdD][+-]?\d+)?/g)??[]).map(number).filter(Number.isFinite))
+  presentations.push({representationIdentity,itemIdentity:stepIdentity(entity.type+'('+entity.args+')'),primitive,
+    normals,colors,layers,textureCoordinates,source:`#${id}=${entity.type}(${entity.args});`})
+  return {id:crypto.randomUUID(),name:`STEP tessellated ${ordinal+1}`,
+    mesh:{positions:points.flat(),indices:triples.flatMap(triangle=>triangle.map(index=>index-1))}}
+ })
+ return {bodies,presentation:presentations,metadataLoss:[]}
+}
+export const importTessellatedStep=(text:string):DirectBody[]=>importTessellatedStepV10(text).bodies

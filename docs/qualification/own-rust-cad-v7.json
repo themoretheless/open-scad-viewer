@@ -1,0 +1,53 @@
+{
+  "id": "own-rust-cad-v7",
+  "successorOf": "docs/qualification/own-rust-cad-v6.json",
+  "previousSha256": "c08740e378a28d8794bb1d7237a6b696d89b4ca6dfb1725f52c4b39321dbe94d",
+  "recordedAt": "2026-09-17",
+  "purpose": "Append-only current-byte fingerprint for V10 certified analytic tessellation and mass-property successors.",
+  "qualificationClaim": "none",
+  "wasm": {
+    "path": "src/generated/geometry-kernels/kernel_bg.wasm",
+    "sha256": "f654b30c2da39cd86e390a27f9777714c113a5e609c516b72d0f96abf84faf36",
+    "byteLength": 8838055
+  },
+  "sourceBundle": {
+    "canonicalization": "UTF-8 path sorted: path + NUL + exact file bytes + LF",
+    "sha256": "00b577ce257be657a2bcc56b5963acc2f6fe52b617efc1d72e7723eb66d5b114",
+    "paths": [
+      "crates/brep-core/src/analysis.rs",
+      "crates/brep-core/src/analytic.rs",
+      "crates/brep-core/src/analytic/loft.rs",
+      "crates/brep-core/src/analytic_features.rs",
+      "crates/brep-core/src/imprint_pipeline.rs",
+      "crates/brep-core/src/intersections.rs",
+      "crates/brep-core/src/lib.rs",
+      "crates/brep-core/src/nurbs_ss_g6.rs",
+      "crates/brep-core/src/operations.rs",
+      "crates/brep-core/src/solid_audit.rs",
+      "crates/brep-core/src/step_interchange_v3.rs",
+      "crates/brep-core/src/transactions.rs",
+      "crates/brep-core/src/trim_sew.rs",
+      "crates/brep-core/src/uv_arrangement.rs",
+      "crates/brep-topology/src/lib.rs",
+      "crates/geometry-bridge/src/brep.rs",
+      "crates/geometry-bridge/src/lib.rs",
+      "crates/geometry-bridge/src/tests.rs",
+      "src/services/cadNurbsStep.ts",
+      "src/services/geometry/brep.ts",
+      "src/services/geometry/brepCapability.ts",
+      "tests/brepQualificationV10.test.ts",
+      "tests/brepQualificationV8.test.ts",
+      "tests/brepQualificationV9.test.ts"
+    ]
+  },
+  "dependencyFingerprints": {
+    "noticesSha256": "e1facd281eb7939480f00827d812505d6e0909581acff3fcc7bffb3d9fd23fd6",
+    "npmLockfileSha256": "70eb933b3607298caa00f7cdd96a953f313e6cc080a34f9b3c5c58694c765704",
+    "rustLockfileSha256": "64b3a93468e81b0560b7c3a60341540ea0bdff2daa62a22ff542d9dcb2396e3c"
+  },
+  "claimBoundary": [
+    "This is a reproducible byte fingerprint, not an external clean qualification run.",
+    "It covers only the released finite analytic shell cells; generic rational/freeform, graph/multispan Boolean, nonplanar loft and bent/twisted/scaled sweep certification remains refused.",
+    "It does not approve G0, G1, production cutover, mesh fallback, healing or estimates relabeled certified."
+  ]
+}

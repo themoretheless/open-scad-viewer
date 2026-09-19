@@ -6,8 +6,9 @@ import {
 } from './workspaceDocument'
 
 export const WORKSPACE_DATABASE_NAME = 'open-scad-viewer'
-export const WORKSPACE_DATABASE_VERSION = 1
+export const WORKSPACE_DATABASE_VERSION = 2
 export const WORKSPACE_OBJECT_STORE = 'workspace'
+export const WORKSPACE_STEP_MODEL_STORE = 'step-models'
 const ACTIVE_WORKSPACE_SLOT = 'active'
 
 interface WorkspaceRow {
@@ -153,6 +154,9 @@ export class IndexedDbWorkspaceRepository implements WorkspaceSnapshotRepository
         const database = request.result
         if (!database.objectStoreNames.contains(WORKSPACE_OBJECT_STORE)) {
           database.createObjectStore(WORKSPACE_OBJECT_STORE, { keyPath: 'slot' })
+        }
+        if (!database.objectStoreNames.contains(WORKSPACE_STEP_MODEL_STORE)) {
+          database.createObjectStore(WORKSPACE_STEP_MODEL_STORE, { keyPath: 'slot' })
         }
       }
       request.onblocked = () => fail(new WorkspaceIndexedDbBlockedError())

@@ -1,0 +1,99 @@
+{
+  "$schema": "./brep-capability-qualification-plan-v12.schema.json",
+  "schema": "open-scad-viewer/brep-capability-qualification-plan",
+  "schemaVersion": 12,
+  "planId": "close-topology-1",
+  "gate": {
+    "id": "g8-full",
+    "name": "brep-full-closed-matrix",
+    "version": 12
+  },
+  "lifecycle": {
+    "status": "qualified",
+    "qualificationClaim": "finite-cell"
+  },
+  "claimBoundary": {
+    "candidateClaim": "Bounded explicit non-manifold and mixed-dimensional complex over independently audited manifold cells.",
+    "forbiddenClaims": [
+      "unbounded branching",
+      "implicit carrier matching",
+      "singular geometry",
+      "entry into GloballyAuditedSolidSet"
+    ]
+  },
+  "capability": "close-topology/1",
+  "successorOf": "persistent-naming/1",
+  "dependencies": [
+    {
+      "capability": "global-solid-audit/1",
+      "requiredMaturity": "Qualified"
+    },
+    {
+      "capability": "persistent-naming/1",
+      "requiredMaturity": "Qualified"
+    }
+  ],
+  "scope": {
+    "included": [
+      "1..64 immutable parts",
+      "2..8 shared-face cells",
+      "3..16 edge radial uses",
+      "explicit disconnected vertex fans",
+      "wire/face/sheet-shell/open-shell/solid/compound roles",
+      "boundary extraction and manifold decomposition"
+    ],
+    "excluded": [
+      "unbounded branching",
+      "implicit carrier matching",
+      "singular geometry",
+      "entry into GloballyAuditedSolidSet"
+    ]
+  },
+  "matrix": [
+    {
+      "id": "CA12-TOPOLOGY-ROLE-TYPESTATES",
+      "expected": "Complete",
+      "blocksQualification": true
+    },
+    {
+      "id": "CA12-RADIAL-FAN-ORIENTATION",
+      "expected": "Complete",
+      "blocksQualification": true
+    },
+    {
+      "id": "CA12-BOUNDARY-DECOMPOSE-RECOMPOSE",
+      "expected": "Complete",
+      "blocksQualification": true
+    },
+    {
+      "id": "CA12-SOLID-TYPESTATE-SEPARATION",
+      "expected": "Complete",
+      "blocksQualification": true
+    },
+    {
+      "id": "CA12-BRANCH-SINGULAR-RESOURCE",
+      "expected": "typed-refuse",
+      "blocksQualification": true
+    }
+  ],
+  "bindings": {
+    "implementation": [
+      "crates/brep-core/src/close_topology.rs",
+      "crates/brep-core/src/lib.rs",
+      "crates/geometry-bridge/src/lib.rs",
+      "src/services/geometry/brep.ts",
+      "src/services/geometry/brepCapability.ts",
+      "tests/brepQualificationV12.test.ts"
+    ],
+    "registry": "src/services/geometry/brepCapability.ts",
+    "evidenceJson": "docs/qualification/close-topology-1-evidence-v12.json"
+  },
+  "evidence": {
+    "state": "qualified",
+    "notes": [
+      "Only the finite test-backed cells are qualified; excluded cases remain typed refusals."
+    ]
+  },
+  "resetPolicy": "false-Complete freezes this capability and transitively stales all dependents; recovery requires a successor capability ID",
+  "unresolvedRows": []
+}

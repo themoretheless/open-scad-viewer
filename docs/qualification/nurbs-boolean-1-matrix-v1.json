@@ -1,0 +1,16 @@
+{
+  "schema": "open-scad-viewer/nurbs-boolean-matrix",
+  "schemaVersion": 1,
+  "capability": "nurbs-boolean/1",
+  "dependsOn": "nurbs-ss/1",
+  "rows": [
+    {"id": "NB-SS-UNION", "status": "Complete", "evidence": ["crates/brep-core/src/nurbs_ss_g6.rs", "tests/brepGeneralNurbsBoolean.test.ts"]},
+    {"id": "NB-SS-INTERSECTION", "status": "Complete", "evidence": ["crates/brep-core/src/nurbs_ss_g6.rs", "tests/brepGeneralNurbsBoolean.test.ts"]},
+    {"id": "NB-SS-DIFFERENCE", "status": "Complete", "evidence": ["crates/brep-core/src/nurbs_ss_g6.rs", "tests/brepGeneralNurbsBoolean.test.ts"]},
+    {"id": "NB-SS-ROOT-AGREEMENT", "status": "Complete", "evidence": ["crates/brep-core/src/nurbs_ss_g6.rs", "crates/nurbs-core/src/ss_intersection.rs"]},
+    {"id": "NB-SS-PRODUCT", "status": "Complete", "evidence": ["src/services/geometry/brep.ts", "crates/geometry-bridge/src/lib.rs", "tests/brepGeneralNurbsBoolean.test.ts"]},
+    {"id": "NB-SS-NO-TANGENCY", "status": "typed-refuse", "evidence": ["tests/brepGeneralNurbsBoolean.test.ts", "docs/qualification/plans/nurbs-boolean-1.json"]},
+    {"id": "NB-SS-NO-FREEFORM-PAIR", "status": "typed-refuse", "evidence": ["docs/qualification/plans/nurbs-boolean-1.json"]}
+  ],
+  "blockingOpenRows": []
+}

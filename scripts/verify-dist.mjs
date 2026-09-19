@@ -56,7 +56,20 @@ const limits = new Map([
 // the final packed chunk is 2728218 bytes. Retain a bounded 21782-byte margin.
 // The bounded multi-span Boolean certificate and exact branch/UV proof payload
 // produce a 2759353-byte chunk. Retain a bounded 40647-byte margin.
-const geometryChunkBudget = 2_800_000
+// V11 direct IGES/STEP parsers produce a measured 2813833-byte packed chunk;
+// retain a bounded 36167-byte margin without adding a second kernel payload.
+// STEP /8 whole-domain regularity and coupled-sense certificates measure
+// 2862093 bytes; retain a bounded 7907-byte margin.
+// NURBS Foundation /2 adds stationary/root and 2D projection isolation,
+// homogeneous normal cones and rollback-certified simplification. The shared
+// packed kernel measures 2898818 bytes; retain a bounded 31182-byte margin.
+// NURBS Foundation /4 adds Krawczyk uniqueness, recursive singularity
+// localization, exact map materialization and cloud Hausdorff fitting. The
+// shared packed kernel measures 2937483 bytes; retain a bounded 32517-byte margin.
+// NURBS SS /1 adds certified general surface/surface intersection with 4D
+// Bernstein/Krawczyk/continuation. The shared packed kernel measures 2985083
+// bytes; retain a bounded 34917-byte margin.
+const geometryChunkBudget = 3_020_000
 // WASM is losslessly packed in JS chunks; validate its actual decoded module
 // and source identity below instead of relying on an artifact's file suffix.
 for (const required of ['.html', '.css', '.js']) {
@@ -169,6 +182,7 @@ for (const [name, artifact, compression] of [
 // trades ~150 kB of total distribution for a geometry kernel that drops from 8811985 to 6591424
 // bytes unpacked: it instantiates on the main thread again, and a session that never compiles
 // source never fetches the 445 kB language chunk (5406202 -> 5557245 bytes measured).
+// NURBS SS /1 adds general surface/surface to the packed kernel; the budget above already covers it.
 const totalBudget = 5_600_000
 if (total > totalBudget) throw new Error(`dist totals ${total} bytes; budget is ${totalBudget}`)
 console.log(`Verified ${files.length} dist artifacts (${total} bytes)`)

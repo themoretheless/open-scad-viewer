@@ -1,0 +1,21 @@
+{
+  "schema":"open-scad-viewer/qualification-run-manifest",
+  "runId":"step-interchange-7-run-v1",
+  "date":"2026-09-17",
+  "qualificationDisposition":"rejected-with-partial-closure",
+  "commands":[
+    {"command":"cargo test --locked --manifest-path crates/Cargo.toml -p brep-core -p geometry-bridge","result":"pass"},
+    {"command":"npx vitest run STEP /7 focused product, IndexedDB and release tests","result":"pass"},
+    {"command":"npm run typecheck && npm run build","result":"pass"},
+    {"command":"node tools/browser-qualification/step-v7-workbench-indexeddb.mjs","result":"pass","artifact":"output/qualification/step-interchange-7-v1/browser-workbench-indexeddb.json","artifactSha256":"42a453efda7384acd1efdf5626c68d6bb346fede031ce7cb6f455292e140d46d"},
+    {"command":"node scripts/validate-step-ap242.mjs <fixture>","result":"not-checked","exitCode":2,"reason":"validator-unavailable"},
+    {"command":"AJV plan/evidence validation and git diff --check","result":"pass"}
+  ],
+  "sourceHashes":{
+    "crates/brep-core/src/step_interchange_v3.rs":"a94024dba0af5eec99f38f439962b13dc86cf4e7cb782068b7a7ff252464f9ba",
+    "src/services/cadStepExternalResolver.ts":"43516614b390e299bada0ae1fcb595f9c902f8ee790cf81fa4aa5e0015992667",
+    "src/services/cadStepIndexedDb.ts":"d10fb674956ba862c1e431e1468575142b94c09209960986500f30f0f5739000",
+    "tools/step-semantic-validator-manifest.json":"6aa34968a9521eaa3bb90553fe7e615d863db40835217b071c3e2a568775d89e"
+  },
+  "attestation":{"fabricatedSemanticPass":false,"note":"The independent AP242 semantic result is unavailable/not-checked; this run does not qualify /7."}
+}

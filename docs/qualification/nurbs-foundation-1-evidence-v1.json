@@ -1,0 +1,55 @@
+{
+  "capability": "nurbs-foundation/1",
+  "maturity": "WalkingSlice",
+  "planId": "nurbs-foundation-1-evidence-v1",
+  "seedPlan": "docs/qualification/plans/nurbs-foundation-1.json",
+  "executedAt": "2026-09-17",
+  "positiveCorpus": [
+    "analytic rational quadratic quarter circle",
+    "positive weights across decimal exponents -6..6",
+    "degree-25 boundary curve with varied weights",
+    "rational bilinear planar surface",
+    "unique line projection and symmetric polyline ambiguity",
+    "periodic exact affine domain remapping",
+    "ModelGraph native curve product report"
+  ],
+  "negativeCorpus": [
+    "degree boundary +1",
+    "nonpositive weight mutation",
+    "existing malformed JSON and resource limit corpus"
+  ],
+  "executed": [
+    {"command": "cargo test --locked --manifest-path crates/Cargo.toml -p nurbs-core", "result": "13 passed"},
+    {"command": "npm run build:geometry", "result": "passed"},
+    {"command": "npx vitest run tests/nurbsFoundation.test.ts tests/nurbsCurve.test.ts tests/nurbsSurface.test.ts tests/modelGraphNurbs.test.ts", "result": "4 files, 39 tests passed"},
+    {"command": "cargo test --locked --manifest-path crates/Cargo.toml -p geometry-bridge", "result": "passed"},
+    {"command": "npm run typecheck", "result": "passed"},
+    {"command": "node scripts/validate-json-schema.mjs docs/languages/modelgraph-nurbs-1.schema.json docs/languages/modelgraph-nurbs-1.example.json docs/languages/modelgraph-nurbs-1.surface.example.json", "result": "2 documents valid"}
+  ],
+  "bindings": {
+    "rust": [
+      "crates/nurbs-core/src/foundation.rs",
+      "crates/nurbs-core/src/tests.rs"
+    ],
+    "typescript": [
+      "src/services/nurbsFoundation.ts",
+      "src/services/modelGraphNurbsKernel.ts",
+      "tests/nurbsFoundation.test.ts"
+    ]
+  },
+  "determinism": {
+    "rounding": "binary64-nextafter-outward",
+    "ordering": "active knot span order",
+    "resourceCellLimit": 4096,
+    "requestByteLimit": 2097152
+  },
+  "knownGaps": [
+    "general interval closest-point root isolation and uniqueness",
+    "certified nonplanar normal regularity",
+    "knot removal and degree reduction",
+    "nonlinear rational and piecewise reparameterization",
+    "full seam-preserving periodic editing",
+    "surface fitting and closest point",
+    "general NURBS surface/surface and Boolean closure"
+  ]
+}

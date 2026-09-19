@@ -1,0 +1,24 @@
+{
+  "capability": "exact-valence3-corner-blend/1",
+  "maturity": "FiniteCell",
+  "dependsOn": "analytic-multi-edge-fillet/1",
+  "executedAt": "2026-09-17",
+  "positiveCorpus": [
+    "Rust exact_valence3_corner_blend authors sphere octant + three cylinders on AA cuboid max corner",
+    "audit and ChangeSet naming complete",
+    "geometry-bridge product certificate exact-valence3-corner-blend/1"
+  ],
+  "negativeCorpus": [
+    "non-max corners refuse",
+    "edge count other than three refuses"
+  ],
+  "executed": [
+    {"command": "cargo test --locked --manifest-path crates/Cargo.toml -p brep-core --lib exact_valence3", "result": "passed"},
+    {"command": "cargo test --locked --manifest-path crates/Cargo.toml -p geometry-bridge --lib audited_feature_successors", "result": "passed"}
+  ],
+  "knownGaps": [
+    "unequal-radius valence-3",
+    "multi-corner networks",
+    "freeform×freeform Boolean successor"
+  ]
+}

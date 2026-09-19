@@ -1,0 +1,203 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://open-scad-viewer.invalid/schemas/brep-capability-qualification-plan-v10.schema.json",
+  "title": "Append-only B-rep successor qualification plan v10",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema", "schema", "schemaVersion", "planId", "gate", "lifecycle",
+    "claimBoundary", "capability", "successorOf", "dependencies", "scope",
+    "matrix", "bindings", "evidence", "resetPolicy", "unresolvedRows"
+  ],
+  "properties": {
+    "$schema": { "const": "./brep-capability-qualification-plan-v10.schema.json" },
+    "schema": { "const": "open-scad-viewer/brep-capability-qualification-plan" },
+    "schemaVersion": { "const": 10 },
+    "planId": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"
+    },
+    "gate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "version"],
+      "properties": {
+        "id": { "const": "g8-full" },
+        "name": { "const": "brep-full-closed-matrix" },
+        "version": { "const": 10 }
+      }
+    },
+    "lifecycle": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "qualificationClaim"],
+      "properties": {
+        "status": {
+          "enum": [
+            "draft", "frozen-pending-execution", "executing", "qualified",
+            "rejected", "stale", "superseded"
+          ]
+        },
+        "qualificationClaim": {
+          "enum": ["none", "walking-slice", "finite-cell", "qualified"]
+        }
+      }
+    },
+    "claimBoundary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["candidateClaim", "forbiddenClaims"],
+      "properties": {
+        "candidateClaim": { "type": "string", "minLength": 1 },
+        "forbiddenClaims": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "capability": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*/[1-9][0-9]*$"
+    },
+    "successorOf": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*/[1-9][0-9]*$"
+    },
+    "dependencies": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["capability", "requiredMaturity"],
+        "properties": {
+          "capability": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*/[1-9][0-9]*$"
+          },
+          "requiredMaturity": { "const": "Qualified" }
+        }
+      }
+    },
+    "scope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["included", "excluded"],
+      "properties": {
+        "included": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "excluded": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "matrix": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "expected", "blocksQualification"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^CA10-[A-Z0-9-]+$" },
+          "expected": { "enum": ["Complete", "typed-refuse", "ResearchOnly"] },
+          "blocksQualification": { "const": true }
+        }
+      }
+    },
+    "bindings": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["implementation", "registry", "evidenceJson"],
+      "properties": {
+        "implementation": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "registry": { "const": "src/services/geometry/brepCapability.ts" },
+        "evidenceJson": { "type": "string", "minLength": 1 }
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["state", "notes"],
+      "properties": {
+        "state": {
+          "enum": ["not-executed", "executing", "qualified", "rejected", "stale"]
+        },
+        "notes": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "resetPolicy": {
+      "const": "false-Complete freezes this capability and transitively stales all dependents; recovery requires a successor capability ID"
+    },
+    "unresolvedRows": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "status", "resolution"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^CA10-[A-Z0-9-]+$" },
+          "status": { "enum": ["open", "accepted-risk", "closed"] },
+          "resolution": { "type": "string", "minLength": 1 }
+        }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "lifecycle": {
+            "type": "object",
+            "properties": { "status": { "const": "qualified" } },
+            "required": ["status"]
+          }
+        },
+        "required": ["lifecycle"]
+      },
+      "then": {
+        "properties": {
+          "lifecycle": {
+            "type": "object",
+            "properties": {
+              "qualificationClaim": { "enum": ["walking-slice", "finite-cell", "qualified"] }
+            }
+          },
+          "evidence": {
+            "type": "object",
+            "properties": { "state": { "const": "qualified" } }
+          },
+          "unresolvedRows": { "type": "array", "maxItems": 0 }
+        }
+      },
+      "else": {
+        "properties": {
+          "lifecycle": {
+            "type": "object",
+            "properties": { "qualificationClaim": { "const": "none" } }
+          },
+          "unresolvedRows": { "type": "array", "minItems": 1 }
+        }
+      }
+    }
+  ]
+}

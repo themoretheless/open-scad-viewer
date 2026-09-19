@@ -1,0 +1,51 @@
+{
+  "capability": "nurbs-foundation/2",
+  "maturity": "FiniteCell",
+  "planId": "nurbs-foundation-2-evidence-v1",
+  "seedPlan": "docs/qualification/plans/nurbs-foundation-2.json",
+  "baseline": "de5bea8",
+  "executedAt": "2026-09-17",
+  "positiveCorpus": [
+    "rational quadratic circle stationary projection",
+    "curve endpoint and symmetric nonunique projection",
+    "rational extruded-surface projection with four boundary reductions",
+    "nonplanar bilinear patch homogeneous normal cone",
+    "inserted repeated-knot removal with accepted budget",
+    "Decimal precision-80 independent projection oracle",
+    "ModelGraph successor foundation product report"
+  ],
+  "negativeCorpus": [
+    "zero simplification budget atomic rollback",
+    "absent and endpoint knot refusal",
+    "nonpositive denominator mutation",
+    "request and certificate resource bounds"
+  ],
+  "executed": [
+    {"command":"cargo test --locked --manifest-path crates/Cargo.toml -p nurbs-core","result":"15 passed"},
+    {"command":"cargo test --locked --manifest-path crates/Cargo.toml -p geometry-bridge","result":"passed"},
+    {"command":"npm run build:geometry","result":"passed"},
+    {"command":"npx vitest run tests/nurbsFoundation.test.ts tests/nurbsCurve.test.ts tests/nurbsSurface.test.ts tests/modelGraphNurbs.test.ts","result":"4 files, 41 tests passed"},
+    {"command":"npm run typecheck","result":"passed"},
+    {"command":"npm run build","result":"passed; 68 artifacts, 5409272 bytes"},
+    {"command":"node scripts/validate-json-schema.mjs docs/qualification/plans/brep-capability-qualification-plan-v12.schema.json docs/qualification/plans/nurbs-foundation-2.json","result":"valid"},
+    {"command":"python3 scripts/nurbs-foundation-2-oracle.py","result":"precision 80 oracle passed"},
+    {"command":"git diff --check","result":"passed"}
+  ],
+  "certificatePolicy": {
+    "rounding":"binary64-nextafter-outward",
+    "curveRootMethod":"Bernstein sign variation",
+    "surfaceMethod":"outward rational hull subdivision plus boundary reduction",
+    "normalMethod":"homogeneous derivative cross-product Bernstein cone",
+    "simplificationFailure":"return source unchanged with rolledBack=true",
+    "resourceCellLimit":4096,
+    "requestByteLimit":2097152
+  },
+  "knownGaps": [
+    "periodic knot removal and degree reduction",
+    "tight span-aligned simplification error bounds",
+    "surface closest-point uniqueness for overlapping terminal boxes",
+    "subcell localization when a nonplanar normal cone contains zero",
+    "nonlinear rational reparameterization",
+    "surface fitting and general NURBS surface-surface Boolean closure"
+  ]
+}

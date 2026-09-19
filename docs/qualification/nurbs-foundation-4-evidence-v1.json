@@ -1,0 +1,58 @@
+{
+  "capability": "nurbs-foundation/4",
+  "maturity": "FiniteCell",
+  "baseline": "de5bea8 plus uncommitted nurbs-foundation/2 and /3 successors",
+  "executedAt": "2026-09-17",
+  "positiveCorpus": [
+    "affine bilinear unique surface projection with Gram or separation proof",
+    "recursive singularity localization report with regular complement",
+    "exact identity nonlinear map materialization of rational quarter circle",
+    "unstructured curve cloud fit with Hausdorff >= site residual",
+    "unstructured surface cloud fit under PCA-plane parameters",
+    "Decimal precision-96 independent composition oracle with zero identity error"
+  ],
+  "negativeCorpus": [
+    "surface cloud controls-per-axis resource plus-one refusal",
+    "nested composition materialization refusal",
+    "certificate mutation does not alter subsequent authoritative projection",
+    "existing weight denominator request and periodic budget refusals"
+  ],
+  "executed": [
+    {"command": "cargo test --locked --manifest-path crates/Cargo.toml -p nurbs-core", "result": "18 passed"},
+    {"command": "cargo test --locked --manifest-path crates/Cargo.toml -p geometry-bridge", "result": "passed"},
+    {"command": "npm run build:geometry", "result": "passed"},
+    {"command": "npx vitest run tests/nurbsFoundation.test.ts tests/nurbsCurve.test.ts tests/nurbsSurface.test.ts tests/modelGraphNurbs.test.ts", "result": "4 files, 45 tests passed"},
+    {"command": "npm run typecheck", "result": "passed"},
+    {"command": "npm run build", "result": "passed; 68 artifacts, 5449335 bytes"},
+    {"command": "node scripts/validate-json-schema.mjs docs/qualification/plans/brep-capability-qualification-plan-v12.schema.json docs/qualification/plans/nurbs-foundation-4.json", "result": "valid"},
+    {"command": "python3 scripts/nurbs-foundation-4-oracle.py", "result": "precision 96; identity composition max error 0"},
+    {"command": "git diff --check", "result": "passed"}
+  ],
+  "resourceBounds": {
+    "compositionCurveDegree": 8,
+    "compositionMapControls": 9,
+    "composedDegree": 25,
+    "composedControls": 256,
+    "cloudCurveSites": 4096,
+    "cloudCurveControls": 26,
+    "cloudSurfaceSites": 4096,
+    "cloudSurfaceControlsPerAxis": 8,
+    "certificateCells": 4096
+  },
+  "knownGaps": [
+    "general CC CS and SS intersection and Boolean closure",
+    "nested composition-tree materialization into one control net",
+    "periodic wrapped exact nonlinear map materialization",
+    "Hausdorff claims outside the admitted delta-net and Lipschitz assumptions"
+  ],
+  "preIntersectionAudit": {
+    "representation": "closed for degree/control/weight/period limits already in /1",
+    "edit": "closed for insert/elevate/remove/reduce including wrapped periodic /3",
+    "evaluation": "closed for jets continuity and ToleranceContext identities",
+    "projection": "closed for curve stationary isolation and surface uniqueness via separation/Krawczyk /4",
+    "reparameterization": "closed for affine exact, certified monotone rational maps, and exact admitted materialization /4",
+    "fitting": "closed for grid interpolation approximate fits and unstructured cloud Hausdorff under admitted assumptions /4",
+    "blocksGeneralIntersection": false,
+    "evidence": "docs/qualification/nurbs-foundation-4-evidence-v1.json; crates/nurbs-core/src/tests.rs::foundation_v4_closes_pre_intersection_gaps; tests/nurbsFoundation.test.ts"
+  }
+}

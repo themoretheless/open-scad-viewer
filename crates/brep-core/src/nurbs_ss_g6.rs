@@ -45,8 +45,10 @@ pub const NURBS_BOOLEAN_CAPABILITY_V3: &str = "nurbs-boolean-bezier-le3/3";
 pub const NURBS_BOOLEAN_CAPABILITY_V4: &str = "nurbs-boolean-bezier-le3/4";
 pub const NURBS_BOOLEAN_CAPABILITY_V5: &str = "nurbs-boolean-bezier-le3/5";
 pub const NURBS_BOOLEAN_CAPABILITY_V7: &str = "nurbs-boolean-bezier-le3/7";
-/// Development authority for `author-general-nurbs-boolean`.  Deliberately
-/// does not use the reserved `/6` qualification identifier.
+pub const NURBS_BOOLEAN_CAPABILITY_V8: &str = "nurbs-boolean-bezier-le3/8";
+/// Product Boolean successor over nurbs-ss/1 for the admitted multispan×affine cell.
+pub const NURBS_BOOLEAN_SS_CAPABILITY: &str = "nurbs-boolean/1";
+/// Authority for nurbs-boolean/1 general authorship. Distinct from finite `/8`.
 pub const GENERAL_NURBS_BOOLEAN_AUTHORITY: &str = "author-general-nurbs-boolean";
 pub const NURBS_BOOLEAN_V1_MATURITY: G6Maturity = G6Maturity::Unavailable;
 
@@ -2719,15 +2721,20 @@ pub struct GeneralNurbsBooleanNaming {
     pub operation_stable: bool,
 }
 
-/// Aggregate native authority for the unqualified general multispan author.
+/// Aggregate native authority for nurbs-boolean/1 over nurbs-ss/1.
 /// The sealed BranchGraph and global UV arrangement are retained, rather than
-/// projected to caller-supplied booleans.
+/// projected to caller-supplied booleans. Independent SS face-pair reports must
+/// agree on transverse roots before topology change is granted.
 #[derive(Clone, Debug)]
 pub struct GeneralNurbsBooleanCertificate {
     pub capability: &'static str,
     pub authority: &'static str,
     pub status: &'static str,
     pub operation: String,
+    pub operand_order: &'static str,
+    pub exact_region_membership: bool,
+    pub partition_cells: usize,
+    pub cavity_count: usize,
     pub branch_graph: BranchGraph,
     pub uv: crate::uv_arrangement::MultiSpanUvArrangement,
     pub exact_curve_pcurve_count: usize,
@@ -2738,13 +2745,24 @@ pub struct GeneralNurbsBooleanCertificate {
     pub result_components: usize,
     pub result_faces: usize,
     pub no_fallback: bool,
+    /// Independent nurbs-ss/1 face-pair reports that agreed on transverse roots.
+    pub ss_reports_complete: bool,
+    pub ss_face_pairs: usize,
 }
 
 impl GeneralNurbsBooleanCertificate {
     pub fn permits_topology_change(&self) -> bool {
-        self.authority == GENERAL_NURBS_BOOLEAN_AUTHORITY
+        self.capability == NURBS_BOOLEAN_SS_CAPABILITY
+            && self.authority == GENERAL_NURBS_BOOLEAN_AUTHORITY
             && self.status == "Complete"
-            && matches!(self.operation.as_str(), "intersection" | "difference")
+            && self.ss_reports_complete
+            && self.ss_face_pairs > 0
+            && matches!(self.operation.as_str(), "union" | "intersection" | "difference")
+            && matches!(self.operand_order, "source-tool" | "tool-source")
+            && (self.operation != "union" || self.operand_order == "source-tool")
+            && (self.operation != "difference" || self.operand_order != "tool-source" || self.cavity_count == 0)
+            && self.exact_region_membership
+            && self.partition_cells > 0
             && self.branch_graph.permits_topology_authorship()
             && self.branch_graph.components.len() >= 2
             && self.uv.permits_trim_classification()
@@ -2930,9 +2948,34 @@ fn author_general_operation_naming(
     })
 }
 
+fn graph_frame_box(
+    origin: [f64; 3],
+    u: [f64; 3],
+    v: [f64; 3],
+    normal: [f64; 3],
+    bounds: [[f64; 2]; 3],
+    tolerance: f64,
+) -> Result<Model> {
+    let local = crate::cuboid(
+        [bounds[0][0], bounds[1][0], bounds[2][0]],
+        [bounds[0][1], bounds[1][1], bounds[2][1]],
+    )?;
+    let matrix = [
+        [u[0], v[0], normal[0], origin[0]],
+        [u[1], v[1], normal[1], origin[1]],
+        [u[2], v[2], normal[2], origin[2]],
+        [0., 0., 0., 1.],
+    ];
+    let mut model = crate::transform::affine(&local, matrix)?;
+    model.tolerance_mm = tolerance;
+    model.validate()?;
+    Ok(model)
+}
+
 /// Finite closed-solid author for a positive rational multispan graph and an
 /// affine slab exposing at least two disjoint, transverse, complete iso
-/// branches. Union and cutter-minus-source remain refused without fallback.
+/// branches. The `/8` successor also authors an exact disjoint-interior
+/// partition for union and tool-minus-source difference without fallback.
 pub fn author_general_nurbs_boolean(
     a: &Model,
     b: &Model,
@@ -2940,11 +2983,8 @@ pub fn author_general_nurbs_boolean(
 ) -> Result<(Model, GeneralNurbsBooleanCertificate)> {
     a.validate()?;
     b.validate()?;
-    if operation == "union" {
-        return Err(refuse("General NURBS union lacks a proof-complete exterior shell author"));
-    }
-    if !matches!(operation, "intersection" | "difference") {
-        return Err(refuse("General NURBS author admits intersection or source-difference only"));
+    if !matches!(operation, "union" | "intersection" | "difference") {
+        return Err(refuse("General NURBS author admits union, intersection, or difference only"));
     }
     let a_graph = canonical_graph_frame_cell(a, true, true).ok();
     let b_graph = canonical_graph_frame_cell(b, true, true).ok();
@@ -2953,9 +2993,6 @@ pub fn author_general_nurbs_boolean(
         (None, Some(frame)) => (b, a, false, frame),
         _ => return Err(refuse("Exactly one operand must be an admitted multispan graph solid")),
     };
-    if operation == "difference" && !source_is_a {
-        return Err(refuse("Cutter-minus-graph is not proof-complete"));
-    }
     if cutter.bodies.len() != 1
         || cutter.shells.len() != 1
         || !cutter.bodies[0].inner_shells.is_empty()
@@ -2988,6 +3025,8 @@ pub fn author_general_nurbs_boolean(
     let mut candidate_pairs = 0usize;
     let mut plane_span_count = 0usize;
     let mut denominator_lower_bound = source_decomposition.denominator_lower_bound;
+    let mut ss_face_pairs = 0usize;
+    let mut ss_roots = Vec::<f64>::new();
     for (cutter_face, face) in cutter.faces.iter().enumerate() {
         let Some((plane_origin, plane_normal)) =
             planar_support(&face.surface, cutter.tolerance_mm.max(1e-9) * 8.)
@@ -3003,6 +3042,71 @@ pub fn author_general_nurbs_boolean(
         let minimum = distances.iter().copied().fold(f64::INFINITY, f64::min);
         let maximum = distances.iter().copied().fold(f64::NEG_INFINITY, f64::max);
         if minimum < -clear && maximum > clear {
+            let ss = nurbs_core::ss_intersection::intersect_surface_surface(
+                top,
+                &face.surface,
+                source.tolerance_context().ok(),
+            )
+            .map_err(|error| {
+                refuse(&format!(
+                    "nurbs-ss/1 refused cutter face {cutter_face}: {}",
+                    error.message
+                ))
+            })?;
+            if ss["version"] != "nurbs-ss/1"
+                || ss["coverage"]["complete"] != true
+                || ss["coverage"]["missedBranchProof"] != true
+                || ss["booleanMutationAuthority"] != false
+                || !ss["unresolved"]
+                    .as_array()
+                    .map(|a| a.is_empty())
+                    .unwrap_or(false)
+            {
+                return Err(refuse(
+                    "nurbs-boolean/1 requires complete nurbs-ss/1 reports without Boolean mutation authority",
+                ));
+            }
+            ss_face_pairs = ss_face_pairs
+                .checked_add(1)
+                .ok_or_else(|| Error::new("BREP_SS_RESOURCE_LIMIT", "SS face-pair overflow"))?;
+            for component in ss["components"].as_array().cloned().unwrap_or_default() {
+                if component["kind"] != "curve" || component["contactClass"] != "transverse" {
+                    if matches!(
+                        component["kind"].as_str(),
+                        Some("empty") | Some("overlap")
+                    ) {
+                        continue;
+                    }
+                    if component["kind"] == "curve" {
+                        return Err(refuse(
+                            "nurbs-boolean/1 admits only transverse curve strata from nurbs-ss/1",
+                        ));
+                    }
+                    continue;
+                }
+                let pcurve = &component["pcurveFirst"];
+                let start = pcurve
+                    .get("start")
+                    .and_then(value_codec::Value::as_array)
+                    .ok_or_else(|| refuse("SS pcurveFirst missing start"))?;
+                let end = pcurve
+                    .get("end")
+                    .and_then(value_codec::Value::as_array)
+                    .ok_or_else(|| refuse("SS pcurveFirst missing end"))?;
+                let s0 = start[0].as_f64().unwrap_or(f64::NAN);
+                let s1 = start[1].as_f64().unwrap_or(f64::NAN);
+                let e0 = end[0].as_f64().unwrap_or(f64::NAN);
+                let e1 = end[1].as_f64().unwrap_or(f64::NAN);
+                if (s0 - e0).abs() <= clear {
+                    ss_roots.push(s0);
+                } else if (s1 - e1).abs() <= clear {
+                    ss_roots.push(s1);
+                } else {
+                    return Err(refuse(
+                        "nurbs-boolean/1 requires iso-aligned SS pcurves on the source chart",
+                    ));
+                }
+            }
             let graph = certify_multispan_ss(
                 top,
                 &face.surface,
@@ -3066,6 +3170,21 @@ pub fn author_general_nurbs_boolean(
     if roots.len() != 2 || roots[0] <= 0. || roots[1] >= 1. {
         return Err(refuse("Finite affine slab requires exactly two strict-interior branch roots"));
     }
+    ss_roots.sort_by(f64::total_cmp);
+    ss_roots.dedup_by(|left, right| (*left - *right).abs() <= clear);
+    if ss_roots.len() != roots.len()
+        || ss_roots
+            .iter()
+            .zip(&roots)
+            .any(|(ss, branch)| (ss - branch).abs() > clear)
+    {
+        return Err(refuse(
+            "nurbs-ss/1 transverse roots disagree with sealed BranchGraph roots",
+        ));
+    }
+    if ss_face_pairs == 0 {
+        return Err(refuse("nurbs-boolean/1 requires at least one complete nurbs-ss/1 face pair"));
+    }
     let axis = branch_axis.unwrap();
     let uv = crate::uv_arrangement::arrange_multispan_branch_graph_uv(
         &context,
@@ -3112,6 +3231,25 @@ pub fn author_general_nurbs_boolean(
         .flatten()
         .map(|point| dot(sub([point[0], point[1], point[2]], origin), normal))
         .fold(f64::NEG_INFINITY, f64::max);
+    if cutter.vertices.len() != 8
+        || cutter.faces.len() != 6
+        || cutter.vertices.iter().any(|vertex| {
+            let rhs = sub(vertex.point, origin);
+            let ru = dot(rhs, u);
+            let rv = dot(rhs, v);
+            let local = [
+                (ru * vv - rv * uv_dot) / determinant,
+                (rv * uu - ru * uv_dot) / determinant,
+                dot(rhs, normal),
+            ];
+            (0..3).any(|index| {
+                (local[index] - projected[0][index]).abs() > clear
+                    && (local[index] - projected[1][index]).abs() > clear
+            })
+        })
+    {
+        return Err(refuse("Affine cutter is not an exact graph-frame parallelotope"));
+    }
     if projected[0][varying] > -clear
         || projected[1][varying] < 1. + clear
         || projected[0][2] > floor_height - clear
@@ -3121,21 +3259,94 @@ pub fn author_general_nurbs_boolean(
     {
         return Err(refuse("Affine cutter lacks complete varying/floor/roof slab coverage"));
     }
-    let bounds = match (operation, axis) {
-        ("intersection", ExactIsoAxis::U) => vec![[roots[0], roots[1], 0., 1.]],
-        ("intersection", ExactIsoAxis::V) => vec![[0., 1., roots[0], roots[1]]],
-        ("difference", ExactIsoAxis::U) => {
+    let source_bounds = match (operation, source_is_a, axis) {
+        ("intersection", _, ExactIsoAxis::U) => vec![[roots[0], roots[1], 0., 1.]],
+        ("intersection", _, ExactIsoAxis::V) => vec![[0., 1., roots[0], roots[1]]],
+        ("difference", true, ExactIsoAxis::U) => {
             vec![[0., roots[0], 0., 1.], [roots[1], 1., 0., 1.]]
         }
-        ("difference", ExactIsoAxis::V) => {
+        ("difference", true, ExactIsoAxis::V) => {
             vec![[0., 1., 0., roots[0]], [0., 1., roots[1], 1.]]
         }
+        ("union", true, ExactIsoAxis::U) => {
+            vec![[0., roots[0], 0., 1.], [roots[1], 1., 0., 1.]]
+        }
+        ("union", true, ExactIsoAxis::V) => {
+            vec![[0., 1., 0., roots[0]], [0., 1., roots[1], 1.]]
+        }
+        ("union", false, _) => return Err(refuse("Union requires graph-source operand order")),
+        ("difference", false, _) => vec![],
         _ => unreachable!(),
     };
-    let mut pieces = bounds
+    let naming_bounds = if source_bounds.is_empty() {
+        match axis {
+            ExactIsoAxis::U => vec![[roots[0], roots[1], 0., 1.]],
+            ExactIsoAxis::V => vec![[0., 1., roots[0], roots[1]]],
+        }
+    } else {
+        source_bounds.clone()
+    };
+    let mut pieces = source_bounds
         .iter()
         .map(|bound| clipped_graph_solid(source, top, origin, u, v, floor_offset, *bound))
         .collect::<Result<Vec<_>>>()?;
+    if operation == "union" {
+        pieces.push(cutter.clone());
+    } else if operation == "difference" && !source_is_a {
+        let [fixed_min, fixed_max] = [roots[0], roots[1]];
+        let (u_bounds, v_bounds) = match axis {
+            ExactIsoAxis::U => ([fixed_min, fixed_max], [0., 1.]),
+            ExactIsoAxis::V => ([0., 1.], [fixed_min, fixed_max]),
+        };
+        let roof_offset = normal.map(|value| value * projected[1][2]);
+        pieces.push(clipped_graph_solid(
+            source,
+            top,
+            origin,
+            u,
+            v,
+            roof_offset,
+            [u_bounds[0], u_bounds[1], v_bounds[0], v_bounds[1]],
+        )?);
+        if projected[0][2] < floor_height - clear {
+            pieces.push(graph_frame_box(
+                origin,
+                u,
+                v,
+                normal,
+                [u_bounds, [projected[0][1], projected[1][1]], [projected[0][2], floor_height]],
+                source.tolerance_mm.max(cutter.tolerance_mm),
+            )?);
+        }
+        for outside_v in [[projected[0][1], 0.], [1., projected[1][1]]] {
+            if outside_v[1] > outside_v[0] + clear {
+                pieces.push(graph_frame_box(
+                    origin,
+                    u,
+                    v,
+                    normal,
+                    [u_bounds, outside_v, [floor_height, projected[1][2]]],
+                    source.tolerance_mm.max(cutter.tolerance_mm),
+                )?);
+            }
+        }
+        for outside_u in [[projected[0][0], u_bounds[0]], [u_bounds[1], projected[1][0]]] {
+            if outside_u[1] > outside_u[0] + clear {
+                pieces.push(graph_frame_box(
+                    origin,
+                    u,
+                    v,
+                    normal,
+                    [outside_u, [projected[0][1], projected[1][1]], [floor_height, projected[1][2]]],
+                    source.tolerance_mm.max(cutter.tolerance_mm),
+                )?);
+            }
+        }
+    }
+    if pieces.is_empty() {
+        return Err(refuse("Exact regularized region partition is empty"));
+    }
+    let partition_cells = pieces.len();
     let mut result = pieces.remove(0);
     for piece in pieces {
         result = crate::boolean_support::separated_union(&result, &piece)?;
@@ -3146,7 +3357,7 @@ pub fn author_general_nurbs_boolean(
         cutter,
         source_face,
         operation,
-        &bounds,
+        &naming_bounds,
         axis,
     )?;
     let audited = LocallyValidatedModel::new(result)?.audit()?;
@@ -3156,10 +3367,14 @@ pub fn author_general_nurbs_boolean(
     audit.notes.push("cavity_and_component_separation_ok");
     let result = audited.into_model();
     let certificate = GeneralNurbsBooleanCertificate {
-        capability: NURBS_BOOLEAN_CAPABILITY_V7,
+        capability: NURBS_BOOLEAN_SS_CAPABILITY,
         authority: GENERAL_NURBS_BOOLEAN_AUTHORITY,
         status: "Complete",
         operation: operation.into(),
+        operand_order: if source_is_a { "source-tool" } else { "tool-source" },
+        exact_region_membership: true,
+        partition_cells,
+        cavity_count: 0,
         exact_curve_pcurve_count: branch_graph.certificate.fragment_count * 2,
         branch_graph,
         uv,
@@ -3170,6 +3385,8 @@ pub fn author_general_nurbs_boolean(
         result_components: result.bodies.len(),
         result_faces: result.faces.len(),
         no_fallback: true,
+        ss_reports_complete: true,
+        ss_face_pairs,
     };
     if !certificate.permits_topology_change() || !result.persistent_naming_complete() {
         return Err(refuse("General NURBS aggregate authority failed closed"));
@@ -4633,7 +4850,7 @@ mod tests {
     }
 
     #[test]
-    fn general_multispan_boolean_authors_intersection_and_two_component_difference() {
+    fn general_multispan_boolean_authors_exact_region_operations() {
         for spans in [(2, 1), (1, 2), (2, 2)] {
             let graph = canonical_multispan_graph_solid(spans.0, spans.1).unwrap();
             let cutter = crate::cuboid([0.25, -1., -1.], [0.75, 2., 3.]).unwrap();
@@ -4644,7 +4861,7 @@ mod tests {
             {
                 let (result, certificate) =
                     author_general_nurbs_boolean(&graph, &cutter, operation).unwrap();
-                assert_eq!(certificate.capability, NURBS_BOOLEAN_CAPABILITY_V7);
+                assert_eq!(certificate.capability, NURBS_BOOLEAN_SS_CAPABILITY);
                 assert!(certificate.permits_topology_change());
                 assert_eq!(certificate.branch_graph.components.len(), 2);
                 assert_eq!(certificate.result_components, bodies);
@@ -4677,11 +4894,23 @@ mod tests {
             }
             assert_eq!(value_codec::Serialize::to_value(&graph), graph_snapshot);
             assert_eq!(value_codec::Serialize::to_value(&cutter), cutter_snapshot);
-            let union = author_general_nurbs_boolean(&graph, &cutter, "union").unwrap_err();
-            assert_eq!(union.code, "BREP_NURBS_SS_REFUSED");
-            let reversed =
-                author_general_nurbs_boolean(&cutter, &graph, "difference").unwrap_err();
-            assert_eq!(reversed.code, "BREP_NURBS_SS_REFUSED");
+            for (a, b, operation, order) in [
+                (&graph, &cutter, "union", "source-tool"),
+                (&cutter, &graph, "difference", "tool-source"),
+            ] {
+                let (result, certificate) =
+                    author_general_nurbs_boolean(a, b, operation).unwrap();
+                assert_eq!(certificate.capability, NURBS_BOOLEAN_SS_CAPABILITY);
+                assert_eq!(certificate.operand_order, order);
+                assert!(certificate.exact_region_membership);
+                assert_eq!(certificate.partition_cells, if operation == "union" { 3 } else { 4 });
+                assert_eq!(certificate.result_components, certificate.partition_cells);
+                assert_eq!(certificate.result_faces, certificate.partition_cells * 6);
+                assert!(certificate.sew.complete && certificate.audit.ok);
+                assert!(certificate.change_set.validate().is_ok());
+                assert!(certificate.permits_topology_change());
+                assert!(result.persistent_naming_complete());
+            }
             assert_eq!(value_codec::Serialize::to_value(&graph), graph_snapshot);
             assert_eq!(value_codec::Serialize::to_value(&cutter), cutter_snapshot);
         }
@@ -4706,5 +4935,40 @@ mod tests {
         assert_eq!(base.1.edges, moved.1.edges);
         assert_eq!(base.1.faces, moved.1.faces);
         assert_eq!(base.1.bodies, moved.1.bodies);
+    }
+
+    #[test]
+    fn general_multispan_boolean_has_independent_regularized_volume_oracle() {
+        let graph = canonical_multispan_graph_solid(2, 2).unwrap();
+        let cutter = crate::cuboid([0.25, -1., -1.], [0.75, 2., 3.]).unwrap();
+        let volume = |model: &Model| {
+            crate::analysis::mass_properties(model, 1e-9, 500_000)
+                .unwrap()
+                .signed_volume_mm3
+                .abs()
+        };
+        let intersection = author_general_nurbs_boolean(&graph, &cutter, "intersection")
+            .unwrap()
+            .0;
+        let source_difference = author_general_nurbs_boolean(&graph, &cutter, "difference")
+            .unwrap()
+            .0;
+        let union = author_general_nurbs_boolean(&graph, &cutter, "union")
+            .unwrap()
+            .0;
+        let reversed = author_general_nurbs_boolean(&cutter, &graph, "difference")
+            .unwrap()
+            .0;
+        let (vg, vc, vi, vd, vu, vr) = (
+            volume(&graph),
+            volume(&cutter),
+            volume(&intersection),
+            volume(&source_difference),
+            volume(&union),
+            volume(&reversed),
+        );
+        for residual in [vg - vi - vd, vc - vi - vr, vu - vg - vc + vi] {
+            assert!(residual.abs() < 1e-7, "regularized volume residual {residual:e}");
+        }
     }
 }

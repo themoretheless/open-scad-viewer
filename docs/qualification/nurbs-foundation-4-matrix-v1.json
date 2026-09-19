@@ -1,0 +1,14 @@
+{
+  "schema": "open-scad-viewer/nurbs-foundation-matrix",
+  "schemaVersion": 4,
+  "capability": "nurbs-foundation/4",
+  "successorOf": "docs/qualification/nurbs-foundation-3-matrix-v1.json",
+  "rows": [
+    {"id": "NF4-SURFACE-UNIQUENESS", "status": "Complete", "evidence": ["crates/nurbs-core/src/foundation.rs", "crates/nurbs-core/src/tests.rs", "tests/nurbsFoundation.test.ts"]},
+    {"id": "NF4-SINGULARITY-LOCALIZATION", "status": "Complete", "evidence": ["crates/nurbs-core/src/foundation.rs", "crates/nurbs-core/src/tests.rs"]},
+    {"id": "NF4-MAP-MATERIALIZATION", "status": "Complete", "evidence": ["crates/nurbs-core/src/foundation.rs", "scripts/nurbs-foundation-4-oracle.py", "tests/nurbsFoundation.test.ts"]},
+    {"id": "NF4-CLOUD-HAUSDORFF", "status": "Complete", "evidence": ["crates/nurbs-core/src/foundation.rs", "tests/nurbsFoundation.test.ts"]},
+    {"id": "NF4-PRODUCT", "status": "Complete", "evidence": ["src/services/nurbsFoundation.ts", "src/services/modelGraphNurbsKernel.ts", "tests/nurbsFoundation.test.ts"]}
+  ],
+  "blockingOpenRows": []
+}

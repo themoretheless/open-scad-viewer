@@ -1,0 +1,132 @@
+{
+  "$schema": "./brep-capability-qualification-plan-v6.schema.json",
+  "schema": "open-scad-viewer/brep-capability-qualification-plan",
+  "schemaVersion": 6,
+  "planId": "nurbs-boolean-bezier-le3-8",
+  "gate": {
+    "id": "g8-full",
+    "name": "brep-full-closed-matrix",
+    "version": 6
+  },
+  "lifecycle": {
+    "status": "qualified",
+    "qualificationClaim": "finite-cell"
+  },
+  "claimBoundary": {
+    "candidateClaim": "Qualified exact-region union and tool-minus-source difference successor for the /7 exactly-two-transverse-branch cell.",
+    "forbiddenClaims": [
+      "Tangency and higher-order contact: homogeneous derivative multiplicity isolation does not yet carry complete singular-UV regularized topology ownership.",
+      "Coincidence and rational patch-region overlap: no complete deterministic boundary ownership/removal proof is implemented, including identical-region overlap.",
+      "Gray-band contact, branch junctions, ambiguous joins, periodic seams, poles, nonpositive weights, degree above 3, unsupported rational boundary parameterizations, and resource overflow.",
+      "Tool-source union, source-tool reversed semantics outside ordinary difference, healing, mesh, prism, Manifold, approximation, or any fallback."
+    ]
+  },
+  "capability": "nurbs-boolean-bezier-le3/8",
+  "successorOf": "nurbs-boolean-bezier-le3/7",
+  "dependencies": [
+    {
+      "capability": "numeric-evidence-curved-brep/1",
+      "requiredMaturity": "Qualified"
+    },
+    {
+      "capability": "boundary-correspondence/1",
+      "requiredMaturity": "Qualified"
+    },
+    {
+      "capability": "exact-sew/1",
+      "requiredMaturity": "Qualified"
+    },
+    {
+      "capability": "global-solid-audit/1",
+      "requiredMaturity": "Qualified"
+    },
+    {
+      "capability": "persistent-naming/1",
+      "requiredMaturity": "Qualified"
+    },
+    {
+      "capability": "nurbs-boolean-bezier-le3/7",
+      "requiredMaturity": "Qualified"
+    }
+  ],
+  "scope": {
+    "included": [
+      "The exact /7 bounded positive-weight non-periodic degree 2-3, one-or-two-spans-per-axis graph/affine-parallelotope cell with exactly two disjoint regular transverse branches.",
+      "Topology-authoring graph-source union as three disjoint-interior closed cells: the affine tool and the two source exterior graph cells.",
+      "Topology-authoring tool-minus-source reversed difference as four disjoint-interior closed cells: graph-roof complement, floor complement, and two varying-axis exterior cells.",
+      "Exact region membership from certified branch roots and graph-frame interval partitions; shared curve/pcurve authority, UV classification, sew, global audit, persistent naming, bridge/WASM serialization, and no fallback.",
+      "Checked finite limits inherited from /7; exact graph-frame parallelotope recognition is additionally required."
+    ],
+    "excluded": [
+      "Tangency and higher-order contact: homogeneous derivative multiplicity isolation does not yet carry complete singular-UV regularized topology ownership.",
+      "Coincidence and rational patch-region overlap: no complete deterministic boundary ownership/removal proof is implemented, including identical-region overlap.",
+      "Gray-band contact, branch junctions, ambiguous joins, periodic seams, poles, nonpositive weights, degree above 3, unsupported rational boundary parameterizations, and resource overflow.",
+      "Tool-source union, source-tool reversed semantics outside ordinary difference, healing, mesh, prism, Manifold, approximation, or any fallback."
+    ]
+  },
+  "matrix": [
+    {
+      "id": "NB8-UNION-EXACT-REGION-PARTITION",
+      "expected": "Complete",
+      "blocksQualification": true
+    },
+    {
+      "id": "NB8-REVERSED-DIFFERENCE-EXACT-REGION-PARTITION",
+      "expected": "Complete",
+      "blocksQualification": true
+    },
+    {
+      "id": "NB8-BRANCH-UV-PCURVE-SEW-AUDIT-NAMING",
+      "expected": "Complete",
+      "blocksQualification": true
+    },
+    {
+      "id": "NB8-NATIVE-BRIDGE-WASM-PRODUCT-MUTATION",
+      "expected": "Complete",
+      "blocksQualification": true
+    },
+    {
+      "id": "NB8-TANGENCY-MULTIPLICITY-AND-SINGULAR-UV",
+      "expected": "typed-refuse",
+      "blocksQualification": true
+    },
+    {
+      "id": "NB8-COINCIDENCE-OWNERSHIP-AND-REMOVAL",
+      "expected": "typed-refuse",
+      "blocksQualification": true
+    },
+    {
+      "id": "NB8-OTHER-CONTACT-AND-BOUNDARY-CLASSES",
+      "expected": "typed-refuse",
+      "blocksQualification": true
+    }
+  ],
+  "bindings": {
+    "implementation": [
+      "crates/brep-core/src/lib.rs",
+      "crates/brep-core/src/nurbs_ss_g6.rs",
+      "crates/brep-core/src/solid_audit.rs",
+      "crates/brep-core/src/operations.rs",
+      "crates/brep-core/src/transactions.rs",
+      "crates/brep-core/src/trim_sew.rs",
+      "crates/brep-core/src/uv_arrangement.rs",
+      "crates/brep-topology/src/lib.rs",
+      "crates/geometry-bridge/src/lib.rs",
+      "crates/geometry-bridge/src/tests.rs",
+      "src/services/geometry/brep.ts",
+      "src/services/geometry/brepCapability.ts",
+      "src/services/geometry/kernel.ts"
+    ],
+    "registry": "src/services/geometry/brepCapability.ts",
+    "evidenceJson": "docs/qualification/nurbs-boolean-bezier-le3-8-evidence-v6.json"
+  },
+  "evidence": {
+    "state": "qualified",
+    "notes": [
+      "Only union and tool-minus-source difference are added; every /7 operation remains qualified unchanged.",
+      "Tangency and coincidence are refused because complete regularized ownership, not merely contact detection, is required."
+    ]
+  },
+  "resetPolicy": "false-Complete freezes this capability and transitively stales all dependents; recovery requires a successor capability ID",
+  "unresolvedRows": []
+}

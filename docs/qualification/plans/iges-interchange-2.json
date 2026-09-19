@@ -1,0 +1,95 @@
+{
+  "$schema": "./brep-capability-qualification-plan-v11.schema.json",
+  "schema": "open-scad-viewer/brep-capability-qualification-plan",
+  "schemaVersion": 11,
+  "planId": "iges-interchange-2",
+  "gate": {
+    "id": "g8-full",
+    "name": "brep-full-closed-matrix",
+    "version": 11
+  },
+  "lifecycle": {
+    "status": "qualified",
+    "qualificationClaim": "finite-cell"
+  },
+  "claimBoundary": {
+    "candidateClaim": "Strict finite direct IGES 5.3 rational B-rep graph interchange with 80-column section validation, shared topology, pcurves, multiple bodies/cavities and graph-bound identity.",
+    "forbiddenClaims": [
+      "Legacy /1 point-AABB reconstruction",
+      "Entity-local transformations, assemblies, external references, open/nonmanifold shells",
+      "Unknown geometric entities, mesh/faceted fallback, healing, constructor recognition"
+    ]
+  },
+  "capability": "iges-interchange/2",
+  "successorOf": "iges-interchange/1",
+  "dependencies": [
+    {
+      "capability": "global-solid-audit/1",
+      "requiredMaturity": "Qualified"
+    },
+    {
+      "capability": "persistent-naming/1",
+      "requiredMaturity": "Qualified"
+    }
+  ],
+  "scope": {
+    "included": [
+      "Entities 126, 128, 186, 502, 504, 508, 510 and 514 with form-15 graph-bound identity properties",
+      "Millimetre and bounded standard global length units; exact rational curves, surfaces and UV pcurves",
+      "Direct closed manifold topology, holes, shared edge indices, multiple shells, cavities and bodies; ignored color/name metadata report"
+    ],
+    "excluded": [
+      "Legacy /1 point-AABB reconstruction",
+      "Entity-local transformations, assemblies, external references, open/nonmanifold shells",
+      "Unknown geometric entities, mesh/faceted fallback, healing, constructor recognition"
+    ]
+  },
+  "matrix": [
+    {
+      "id": "CA11-IGES2-STRICT-SECTIONS-RESOURCES",
+      "expected": "Complete",
+      "blocksQualification": true
+    },
+    {
+      "id": "CA11-IGES2-RATIONAL-DIRECT-ROUNDTRIP",
+      "expected": "Complete",
+      "blocksQualification": true
+    },
+    {
+      "id": "CA11-IGES2-TOPOLOGY-PCURVE-IDENTITY",
+      "expected": "Complete",
+      "blocksQualification": true
+    },
+    {
+      "id": "CA11-IGES2-MULTIBODY-CAVITY",
+      "expected": "Complete",
+      "blocksQualification": true
+    },
+    {
+      "id": "CA11-IGES2-UNKNOWN-NONMANIFOLD-TRANSFORM",
+      "expected": "typed-refuse",
+      "blocksQualification": true
+    }
+  ],
+  "bindings": {
+    "implementation": [
+      "crates/brep-core/src/iges_interchange_v2.rs",
+      "crates/brep-core/src/step_interchange_v3.rs",
+      "crates/geometry-bridge/src/lib.rs",
+      "src/services/cadIges.ts",
+      "src/services/cadNurbsStep.ts",
+      "tests/brepInterchangeV11.test.ts",
+      "tests/brepQualificationV11.test.ts"
+    ],
+    "registry": "src/services/geometry/brepCapability.ts",
+    "evidenceJson": "docs/qualification/iges-interchange-2-evidence-v11.json"
+  },
+  "evidence": {
+    "state": "qualified",
+    "notes": [
+      "Qualification is limited to the coherent proven finite subset; every excluded construct is a typed refusal."
+    ]
+  },
+  "resetPolicy": "false-Complete freezes this capability and transitively stales all dependents; recovery requires a successor capability ID",
+  "unresolvedRows": []
+}

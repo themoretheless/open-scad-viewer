@@ -14,6 +14,9 @@ coverage
 tools/manifold-bench/tmp/
 tools/manifold-bench/historical/
 
+# Qualification runs are append-only downloadable CI artifacts, never source.
+output/qualification/
+
 # Machine-local rbench experiment trees (HTML/JSON reports).
 .rbench/
 
@@ -27,3 +30,11 @@ src/generated/geometry-kernels/
 src/generated/language-kernel/
 src/generated/wasm-brotli/
 src/generated/harfbuzz/
+
+# Symlinks with these names (worktrees pointing at another checkout) must stay untracked too:
+# the directory patterns above match only real directories.
+crates/target
+src/generated/geometry-kernels
+src/generated/language-kernel
+src/generated/wasm-brotli
+src/generated/harfbuzz

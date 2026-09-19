@@ -1,0 +1,27 @@
+{
+  "$schema":"./brep-capability-evidence-v12.schema.json",
+  "schema":"open-scad-viewer/brep-capability-evidence",
+  "schemaVersion":12,
+  "evidenceId":"step-interchange-7-evidence-v12",
+  "capability":"step-interchange/7",
+  "maturity":"ResearchOnly",
+  "state":"rejected",
+  "plan":"docs/qualification/plans/step-interchange-7.json",
+  "runs":[{"id":"step-interchange-7-browser-workbench-indexeddb","result":"pass","artifactHash":"42a453efda7384acd1efdf5626c68d6bb346fede031ce7cb6f455292e140d46d"}],
+  "oracles":[
+    "geometry_bridge::tests::direct_step_v7_bridge_composes_occurrence_topology",
+    "tests/brepStepV6ExternalResolver.test.ts",
+    "tests/workspaceIndexedDb.test.ts",
+    "output/qualification/step-interchange-7-v1/browser-workbench-indexeddb.json",
+    "scripts/validate-step-ap242.mjs"
+  ],
+  "unresolvedRows":[
+    {"id":"CA12-STEP7-PERIODIC-POLES","status":"open","resolution":"Boundary isoparametric control nets and constant poles are checked symbolically, but complete regularity-neighborhood and lifted interval evidence is absent."},
+    {"id":"CA12-STEP7-SENSE-MATRIX","status":"open","resolution":"Existing permutations are independent rather than exhaustive coupled cases."},
+    {"id":"CA12-STEP7-EXTERNAL-GRAPH","status":"closed","resolution":"Product tests prove one digest-bound recomposed model and distinct occurrence TopoIds."},
+    {"id":"CA12-STEP7-WORKBENCH-IDB","status":"closed","resolution":"Retained Chromium artifact proves the requested UI/project-store lifecycle."},
+    {"id":"CA12-STEP7-RESOURCE-BOUNDARIES","status":"closed","resolution":"Native and product tests cover exact/+1 UTF-8 input, output, store, instance/reference/count/depth, unit, transform, occurrence and external traversal boundaries."},
+    {"id":"CA12-STEP7-AP242-SEMANTICS","status":"open","resolution":"No independent AP242 semantic validator is installed; adapter exits 2 and reports not-checked."}
+  ],
+  "attestation":{"fabricatedRuns":false,"note":"No qualification pass is recorded. The validator-unavailable result and remaining mathematical/UI/resource gaps are explicit."}
+}

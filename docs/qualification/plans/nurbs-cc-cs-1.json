@@ -1,0 +1,54 @@
+{
+  "$schema": "./brep-capability-qualification-plan-v12.schema.json",
+  "schema": "open-scad-viewer/brep-capability-qualification-plan",
+  "schemaVersion": 12,
+  "planId": "nurbs-cc-cs-1",
+  "gate": {"id": "g8-full", "name": "brep-full-closed-matrix", "version": 12},
+  "lifecycle": {"status": "qualified", "qualificationClaim": "finite-cell"},
+  "claimBoundary": {
+    "candidateClaim": "Append-only product CC/CS capability over nurbs-foundation/5: certified bounded general NURBS curve/curve and curve/surface intersection usable by topology consumers via CoedgeTrim maps and ToleranceContext evidence without authorizing Boolean topology change.",
+    "forbiddenClaims": [
+      "general surface-surface intersection",
+      "permitsTopologyChange true from intersection reports",
+      "silent healing of unresolved resource or conditioning bands"
+    ]
+  },
+  "capability": "nurbs-cc-cs/1",
+  "successorOf": "nurbs-foundation/5",
+  "dependencies": [{"capability": "nurbs-foundation/5", "requiredMaturity": "Qualified"}],
+  "scope": {
+    "included": [
+      "product TS and MCP curve_curve and curve_surface certified queries",
+      "CoedgeTrim publication for coincident overlaps",
+      "complete coverage when unresolved is empty"
+    ],
+    "excluded": [
+      "general SS",
+      "Boolean authorship"
+    ]
+  },
+  "matrix": [
+    {"id": "CA12-CCCS-CURVE-CURVE", "expected": "Complete", "blocksQualification": true},
+    {"id": "CA12-CCCS-CURVE-SURFACE", "expected": "Complete", "blocksQualification": true},
+    {"id": "CA12-CCCS-PRODUCT", "expected": "Complete", "blocksQualification": true}
+  ],
+  "bindings": {
+    "implementation": [
+      "crates/nurbs-core/src/intersection.rs",
+      "src/services/nurbsFoundation.ts",
+      "src/mcp/modelGraphNurbsTools.ts",
+      "tests/nurbsFoundation.test.ts"
+    ],
+    "registry": "src/services/geometry/brepCapability.ts",
+    "evidenceJson": "docs/qualification/nurbs-cc-cs-1-evidence-v1.json"
+  },
+  "evidence": {
+    "state": "qualified",
+    "notes": [
+      "Qualified only after full actual native/product gates on nurbs-foundation/5.",
+      "No cargo fmt was run."
+    ]
+  },
+  "resetPolicy": "false-Complete freezes this capability and transitively stales all dependents; recovery requires a successor capability ID",
+  "unresolvedRows": []
+}

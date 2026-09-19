@@ -1,0 +1,18 @@
+{
+  "schema": "open-scad-viewer/step-semantic-validator-adapter",
+  "schemaVersion": 1,
+  "validator": null,
+  "status": "unavailable",
+  "requiredEnvironment": {
+    "executable": "STEP_AP242_VALIDATOR",
+    "sha256": "STEP_AP242_VALIDATOR_SHA256",
+    "version": "STEP_AP242_VALIDATOR_VERSION"
+  },
+  "contract": {
+    "arguments": ["--schema", "AP242_MANAGED_MODEL_BASED_3D_ENGINEERING", "--input", "<fixture>"],
+    "passExitCode": 0,
+    "rejectExitCodes": [1],
+    "adapterErrorExitCode": 2
+  },
+  "note": "No independently executable AP242 semantic validator is installed or vendored. This manifest is intentionally not a conformance pass."
+}

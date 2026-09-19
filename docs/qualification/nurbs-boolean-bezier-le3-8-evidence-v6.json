@@ -1,0 +1,30 @@
+{
+  "$schema": "./brep-capability-evidence-v6.schema.json",
+  "schema": "open-scad-viewer/brep-capability-evidence",
+  "schemaVersion": 6,
+  "evidenceId": "nurbs-boolean-bezier-le3-8-evidence-v6",
+  "capability": "nurbs-boolean-bezier-le3/8",
+  "maturity": "Qualified",
+  "state": "qualified",
+  "plan": "docs/qualification/plans/nurbs-boolean-bezier-le3-8.json",
+  "runs": [
+    {
+      "id": "native-bridge-wasm-product-mutation-2026-09-17-v6",
+      "result": "pass",
+      "artifactHash": "741ff495657544298927e9cfee0da3cafa2e9f64ab257283015202f8571fc77b"
+    }
+  ],
+  "oracles": [
+    "nurbs_ss_g6::tests::general_multispan_boolean_authors_exact_region_operations",
+    "nurbs_ss_g6::tests::general_multispan_boolean_naming_is_rigid_transform_stable",
+    "nurbs_ss_g6::tests::general_multispan_boolean_has_independent_regularized_volume_oracle",
+    "geometry_bridge::tests::general_multispan_boolean_bridge_is_strict_and_audited",
+    "tests/brepGeneralNurbsBoolean.test.ts",
+    "tests/brepQualificationV6.test.ts"
+  ],
+  "unresolvedRows": [],
+  "attestation": {
+    "fabricatedRuns": false,
+    "note": "Recorded only after native and bridge runs. Tangency and coincidence remain explicit typed refusals because no complete regularized topology ownership proof exists."
+  }
+}

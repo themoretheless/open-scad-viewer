@@ -25,16 +25,55 @@ export interface BrepTopologyIds {
  changeSet?:RustChangeSet
 }
 export interface BrepTopologyLineageRecord {
- operation:'persist'|'split'|'merge'
+ operation:'persist'|'split'|'merge'|'share'|'decompose'|'recompose'
  entityKind:'vertex'|'edge'|'face'|'loop'|'shell'|'body'
  parents:TopoId[]
  children:TopoId[]
 }
+export type BrepBodyRole='wire'|'face'|'sheet-shell'|'open-shell'|'solid'|'compound'
+export interface MixedBrepPart {role:BrepBodyRole;model:NurbsBrep}
+export interface MixedBrepFaceUse {part:number;face:number;reversed:boolean}
+export interface MixedBrepEdgeUse extends MixedBrepFaceUse {edge:number}
+export interface MixedBrepVertexUse {part:number;face:number;vertex:number}
+export interface MixedBrepVertexFan {
+ part:number
+ vertex:number
+ closed:boolean
+ uses:MixedBrepVertexUse[]
+}
+export interface AuditedMixedBrep {
+ certificate:{
+  capability:'close-topology/1'
+  complete:true
+  partCount:number
+  solidCellCount:number
+  sheetCount:number
+  openShellCount:number
+  sharedFaceCount:number
+  nonManifoldEdgeCount:number
+  vertexFanCount:number
+  boundaryFaceCount:number
+  maxRadialValence:number
+  namingComplete:true
+  notes:string[]
+ }
+ boundaryFaces:MixedBrepFaceUse[]
+ decomposition:MixedBrepPart[]
+}
+/** Bounded explicit non-manifold/mixed-dimensional audit; solid audit stays manifold-only. */
+export const auditMixedDimensionalBrep=(
+ parts:MixedBrepPart[],
+ sharedFaces:MixedBrepFaceUse[][]=[],
+ radialRings:MixedBrepEdgeUse[][]=[],
+ vertexFans:MixedBrepVertexFan[]=[],
+):AuditedMixedBrep=>callGeometryRust('brep_nurbs_close_topology_v1',{parts,sharedFaces,radialRings,vertexFans})
 export type NurbsBrep=BrepModel<NurbsCurve,NurbsSurface,NurbsCurve>
 export type PolygonBrep=BrepModel<null,{mesh:PolygonMesh;sourceFaceId:number},null>
 export interface BrepReport {topologyValid:boolean;solidGeometryStatus:'not_certified'}
 export interface BrepMesh extends PolygonBuild {faceIds:number[];topologyFaceIds?:string[]}
 export const createBrepBox=(min:number[],max:number[]):NurbsBrep=>callGeometryRust('brep_nurbs_box',{min,max})
+export const createFreeformBrepCuboid=(min:number[],max:number[]):NurbsBrep=>callGeometryRust('brep_nurbs_freeform_cuboid',{min,max})
+export const createFreeformBrepCuboidBump=(min:number[],max:number[]):NurbsBrep=>callGeometryRust('brep_nurbs_freeform_cuboid_bump',{min,max})
 /** Exact rational B-reps; mesh detail does not change their authored geometry. */
 export const revolveBrepProfile=(profile:[number,number][],angleDegrees=360):NurbsBrep=>callGeometryRust('brep_nurbs_revolve',{profile,angleDegrees})
 export const createBrepCylinder=(radius:number,height:number):NurbsBrep=>callGeometryRust('brep_nurbs_cylinder',{radius,height})
@@ -92,7 +131,7 @@ export interface BrepMassProperties {
 }
 export interface CertifiedInterval {lower:number;upper:number}
 export interface CertifiedBrepMassProperties {
- capability:'certified-mass-properties/1'
+ capability:'certified-mass-properties/2'
  status:'certified_enclosure'
  surfaceAreaMm2:CertifiedInterval
  volumeMm3:CertifiedInterval
@@ -103,6 +142,12 @@ export interface CertifiedBrepMassProperties {
  audit:{ok:boolean;bodyCount:number;shellCount:number;selfIntersectionPairsChecked:number}
  changeSet:RustChangeSet
  namingComplete:true
+ composition:{componentCount:number;cavityCount:number;signedShellComposition:true}
+ proof:'closed_form_analytic_with_outward_rounded_binary64_enclosures'
+}
+export interface CertifiedFreeformBrepMassProperties extends Omit<CertifiedBrepMassProperties,'capability'|'proof'> {
+ capability:'certified-generic-rational-freeform-mass-quadrature/1'
+ proof:'closed_form_planar_freeform_bezier_cuboid_enclosures'
 }
 export type AuthorizedHealOperation =
   | {kind:'endpointSnap';vertex:number;to:[number,number,number]}
@@ -124,9 +169,30 @@ export interface AuthorizedHealResult {
 /** Integrates authored NURBS and trim curves; independent of display tessellation. */
 export const pushNurbsBrepFace=(model:NurbsBrep,face:number,distance:number):NurbsBrep=>callGeometryRust('brep_nurbs_push_face',{model,face,distance})
 export const shellNurbsBrep=(model:NurbsBrep,openings:number[],thickness:number):NurbsBrep=>callGeometryRust('brep_nurbs_shell',{model,openings,thickness})
+export interface ExactAnalyticShellResult {
+ model:NurbsBrep
+ certificate:{
+  capability:'analytic-shell/2'
+  complete:true
+  notes:string[]
+ }
+ context:{version:number;canonical:string}
+ evidenceClaimCount:number
+ audit:{ok:true;bodyCount:number;shellCount:number;selfIntersectionPairsChecked:number;notes:string[]}
+ changeSet:RustChangeSet
+ namingComplete:true
+}
+/** Exact support-plane or rational radial/axial shell; unsupported transitions refuse atomically. */
+export const exactAnalyticShell=(
+ model:NurbsBrep,
+ openings:number[],
+ thickness:number,
+ direction:'inward'|'outward',
+):ExactAnalyticShellResult=>callGeometryRust('brep_nurbs_exact_analytic_shell',{model,openings,thickness,direction})
 export const splitNurbsBrep=(model:NurbsBrep,normal:[number,number,number],offset:number):[NurbsBrep,NurbsBrep]=>callGeometryRust('brep_nurbs_split',{model,normal,offset})
 export const analyzeNurbsBrep=(model:NurbsBrep,relativeTolerance=1e-7,maxEvaluations=300000):BrepMassProperties=>callGeometryRust('brep_nurbs_mass_properties',{model,relativeTolerance,maxEvaluations})
 export const analyzeCertifiedNurbsBrep=(model:NurbsBrep):CertifiedBrepMassProperties=>callGeometryRust('brep_nurbs_certified_mass_properties',{model})
+export const analyzeCertifiedFreeformNurbsBrep=(model:NurbsBrep):CertifiedFreeformBrepMassProperties=>callGeometryRust('brep_nurbs_certified_freeform_mass_properties',{model})
 /** Strict native transaction: correspondence and topology evidence are derived in Rust. */
 export const authorizedHealNurbsBrep=(model:NurbsBrep,operation:AuthorizedHealOperation):AuthorizedHealResult=>callGeometryRust('brep_nurbs_authorized_heal_v2',{model,operation})
 export const createBrepTube=(outerRadius:number,innerRadius:number,height:number):NurbsBrep=>callGeometryRust('brep_nurbs_tube',{outerRadius,innerRadius,height})
@@ -202,13 +268,19 @@ export const certifiedRationalGraphBoolean=(a:NurbsBrep,b:NurbsBrep,operation:'i
 export interface GeneralNurbsBooleanResult {
  model:NurbsBrep
  certificate:{
-  capability:'nurbs-boolean-bezier-le3/7'
+  capability:'nurbs-boolean/1'
   authority:'author-general-nurbs-boolean'
   status:'Complete'
-  operation:'intersection'|'difference'
+  operation:'union'|'intersection'|'difference'
+  operandOrder:'source-tool'|'tool-source'
+  exactRegionMembership:true
+  partitionCells:number
+  cavityCount:number
   branchGraph:{components:number;fragments:number;candidateSpanPairs:number;sourceSpanCount:[number,number];denominatorLowerBound:number;complete:true}
   uv:{tensorCells:number;branches:number;materialCells:number;holeCells:number;complete:true}
   exactCurvePcurveCount:number
+  ssReportsComplete:true
+  ssFacePairs:number
   sew:{matched:number;complete:true;displacementBudgetOk:true}
   audit:{ok:true;bodyCount:number;shellCount:number;selfIntersectionPairsChecked:number;notes:string[]}
   changeSet:RustChangeSet
@@ -220,9 +292,9 @@ export interface GeneralNurbsBooleanResult {
 }
 export const createCanonicalMultispanGraphSolid=(spansU:1|2,spansV:1|2):NurbsBrep=>callGeometryRust('brep_nurbs_canonical_multispan_graph_solid',{spansU,spansV})
 /** Strict certificate-bearing product operation; never crosses to mesh/Manifold. */
-export const generalNurbsBoolean=(a:NurbsBrep,b:NurbsBrep,operation:'intersection'|'difference'):GeneralNurbsBooleanResult=>callGeometryRust('brep_nurbs_boolean_general',{a,b,operation})
+export const generalNurbsBoolean=(a:NurbsBrep,b:NurbsBrep,operation:'union'|'intersection'|'difference'):GeneralNurbsBooleanResult=>callGeometryRust('brep_nurbs_boolean_general',{a,b,operation})
 /** Model-only compatibility projection delegates to the strict product operation. */
-export const generalNurbsBooleanModel=(a:NurbsBrep,b:NurbsBrep,operation:'intersection'|'difference'):NurbsBrep=>generalNurbsBoolean(a,b,operation).model
+export const generalNurbsBooleanModel=(a:NurbsBrep,b:NurbsBrep,operation:'union'|'intersection'|'difference'):NurbsBrep=>generalNurbsBoolean(a,b,operation).model
 export const booleanNurbsBrep=(a:NurbsBrep,b:NurbsBrep,operation:BrepBooleanOperation):NurbsBrep=>callGeometryRust('brep_nurbs_boolean',{a,b,operation})
 export const chamferNurbsBrep=(model:NurbsBrep,edge:number,size:number):NurbsBrep=>callGeometryRust('brep_nurbs_chamfer',{model,edge,size})
 export const chamferNurbsBrepEdges=(model:NurbsBrep,edges:number[],size:number):NurbsBrep=>callGeometryRust('brep_nurbs_chamfer_edges',{model,edges,size})
@@ -230,30 +302,47 @@ export const filletNurbsBrep=(model:NurbsBrep,edge:number,radius:number,segments
 export const filletNurbsBrepEdges=(model:NurbsBrep,edges:number[],radius:number,segments=12):NurbsBrep=>callGeometryRust('brep_nurbs_fillet_edges',{model,edges,radius,segments})
 export interface AuditedBrepFeature {
  model:NurbsBrep
- certificate:{capability:'analytic-multi-edge-fillet/1'|'exact-parallel-frame-sweep/1';complete:true;notes:string[]}
+ certificate:{capability:'analytic-multi-edge-fillet/1'|'exact-parallel-frame-sweep/1'|'exact-convex-straight-edge-chamfer/1'|'exact-convex-prism-edge-fillet/1'|'analytic-solid-loft/2'|'exact-parallel-frame-sweep/2'|'exact-variable-radius-fillet/1'|'exact-valence3-corner-blend/1';complete:true;notes:string[]}
  context:{version:number;canonical:string}
  evidenceClaimCount:number
- audit:{ok:true;bodyCount:number;shellCount:number}
+ audit:{ok:true;bodyCount:number;shellCount:number;selfIntersectionPairsChecked:number}
  changeSet:RustChangeSet
  namingComplete:true
 }
 export const auditedMultiEdgeFillet=(model:NurbsBrep,edges:number[],radius:number):AuditedBrepFeature=>callGeometryRust('brep_nurbs_audited_multi_edge_fillet',{model,edges,radius})
+/** Exact equal-distance chamfer on a connected open/closed convex edge selection. */
+export const exactConvexChamfer=(model:NurbsBrep,edges:number[],distance:number):AuditedBrepFeature=>callGeometryRust('brep_nurbs_exact_convex_chamfer',{model,edges,distance})
+/** Exact cylindrical rounds on selected longitudinal edges of a rigidly placed convex prism. */
+export const exactConvexPrismFillet=(model:NurbsBrep,edges:number[],radius:number):AuditedBrepFeature=>callGeometryRust('brep_nurbs_exact_convex_prism_fillet',{model,edges,radius})
+/** Exact linear radius law on one vertical cuboid edge; constant-radius pairs refuse. */
+export const exactVariableRadiusFillet=(model:NurbsBrep,edges:number[],radii:[number,number][]):AuditedBrepFeature=>callGeometryRust('brep_nurbs_exact_variable_radius_fillet',{model,edges,radii})
+/** Exact equal-radius sphere+cylinder valence-3 blend at the AA cuboid max corner. */
+export const exactValence3CornerBlend=(model:NurbsBrep,edges:number[],radius:number):AuditedBrepFeature=>callGeometryRust('brep_nurbs_exact_valence3_corner_blend',{model,edges,radius})
 export const auditedParallelFrameSweep=(profile:[number,number][],path:[number,number,number][],frameLaw:'fixed'|'rotation-minimizing'|'rmf'='rmf'):AuditedBrepFeature=>callGeometryRust('brep_nurbs_audited_parallel_frame_sweep',{profile,path,frameLaw})
+/** Exact indexed 3..16-section rational ruled/Bezier solid loft successor. */
+export const auditedMultiSectionLoft=(sections:[number,number,number][][]):AuditedBrepFeature=>callGeometryRust('brep_nurbs_audited_multi_section_loft_v2',{sections})
+/** Exact open bent degree-1 Bezier path with bounded discrete RMF, twist, and positive scale laws. */
+export const auditedBentRmfSweep=(profile:[number,number][],path:[number,number,number][],twistRadians:number[],scales:number[]):AuditedBrepFeature=>callGeometryRust('brep_nurbs_audited_bent_rmf_sweep_v2',{profile,path,twistRadians,scales})
 export const inspectNurbsBrep=(model:NurbsBrep):BrepReport=>callGeometryRust('brep_nurbs_inspect',{model})
 export const tessellateNurbsBrep=(model:NurbsBrep,segments=4):BrepMesh=>callGeometryRust('brep_nurbs_tessellate',{model,segments})
 export interface CertifiedBrepTessellation {
- capability:'certified-brep-tessellation/1'
+ capability:'certified-brep-tessellation/2'
  tessellation:BrepMesh
  context:{version:number;canonical:string}
  surfaceToMeshDeviationMm:number
  meshToSurfaceDeviationMm:number
- coverage:{sharedEdgeIdentity:true;orientation:true;noTJunctions:true}
+ coverage:{sharedEdgeIdentity:true;orientation:true;normalConsistency:true;noTJunctions:true;noCracks:true;poleDegeneracyHandled:true;periodicSeamsHandled:true}
  audit:{ok:boolean;bodyCount:number;shellCount:number}
  evidenceClaimCount:number
  changeSet:RustChangeSet
  namingComplete:true
+ resourceProof:{triangleBudget:number;subdivisionsPerPatch:number;adaptiveSelection:true}
 }
 export const tessellateCertifiedNurbsBrep=(model:NurbsBrep,chordToleranceMm:number,maxTriangles=20000):CertifiedBrepTessellation=>callGeometryRust('brep_nurbs_certified_tessellate',{model,chordToleranceMm,maxTriangles})
+export interface CertifiedFreeformBrepTessellation extends Omit<CertifiedBrepTessellation,'capability'> {
+ capability:'certified-generic-rational-freeform-tessellation/1'
+}
+export const tessellateCertifiedFreeformNurbsBrep=(model:NurbsBrep,chordToleranceMm:number,maxTriangles=20000):CertifiedFreeformBrepTessellation=>callGeometryRust('brep_nurbs_certified_freeform_tessellate',{model,chordToleranceMm,maxTriangles})
 export const prepareBrepDisplay=(model:NurbsBrep,segments=4):Pick<BrepMesh,'report'|'faceIds'|'topologyFaceIds'>&{displayVertices:number[];displayIndices:number[];surfaceArea:number}=>callGeometryRust('brep_nurbs_display',{model,segments})
 export const nurbsBrepToPolygon=(model:NurbsBrep,segments=4):PolygonBrep=>callGeometryRust('brep_nurbs_to_polygon',{model,segments})
 export const polygonBrepFromMesh=(mesh:PolygonMesh,faceIds?:number[]):PolygonBrep=>callGeometryRust('brep_polygon_from_mesh',{mesh,...(faceIds?{faceIds}:{})})
@@ -261,4 +350,13 @@ export const inspectPolygonBrep=(model:PolygonBrep):BrepReport=>callGeometryRust
 export const tessellatePolygonBrep=(model:PolygonBrep):BrepMesh=>callGeometryRust('brep_polygon_tessellate',{model})
 /** Affine edit of authored carriers. Reflections also reverse shell face uses. */
 export const transformNurbsBrep=(model:NurbsBrep,matrix:number[][]):NurbsBrep=>callGeometryRust('brep_nurbs_transform',{model,matrix})
+/** `/7` document composition assigns fresh occurrence-local TopoIds in Rust. */
+export const composeStepV7Occurrences=(models:NurbsBrep[]):NurbsBrep=>
+  callGeometryRust('brep_nurbs_compose_step_v7',{models})
+/** Qualified `/8` composition retains whole-domain topology certification. */
+export const composeStepV8Occurrences=(models:NurbsBrep[]):NurbsBrep=>
+  callGeometryRust('brep_nurbs_compose_step_v8',{models})
+/** `/9` composition assigns occurrence-local identities to solids and sheets. */
+export const composeStepV9Occurrences=(models:NurbsBrep[]):NurbsBrep=>
+  callGeometryRust('brep_nurbs_compose_step_v9',{models})
 export const placeNurbsBrep=(model:NurbsBrep,origin:number[],u:number[],v:number[],offset:number[]):NurbsBrep=>callGeometryRust('brep_nurbs_workplane',{model,origin,u,v,offset})

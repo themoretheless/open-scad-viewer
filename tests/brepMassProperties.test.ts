@@ -1,5 +1,5 @@
 import {expect,it} from 'vitest'
-import {analyzeCertifiedNurbsBrep,analyzeNurbsBrep,auditedMultiEdgeFillet,auditedParallelFrameSweep,createBrepBox,createBrepCylinder,createBrepFrustum,createBrepSphere,createBrepTorus,createBrepTube,tessellateCertifiedNurbsBrep,tessellateNurbsBrep} from '../src/services/geometry/brep'
+import {analyzeCertifiedFreeformNurbsBrep,analyzeCertifiedNurbsBrep,analyzeNurbsBrep,auditedMultiEdgeFillet,auditedParallelFrameSweep,createBrepBox,createBrepCylinder,createBrepFrustum,createBrepSphere,createBrepTorus,createBrepTube,createFreeformBrepCuboid,createFreeformBrepCuboidBump,tessellateCertifiedFreeformNurbsBrep,tessellateCertifiedNurbsBrep,tessellateNurbsBrep} from '../src/services/geometry/brep'
 import {transformSelection} from '../src/services/directSolidTools'
 
 it('integrates rational surfaces and trims independently of the display mesh',()=>{
@@ -57,10 +57,13 @@ it('publishes finite certified mass and tessellation enclosures',()=>{
   const certified=tessellateCertifiedNurbsBrep(body,.02)
   expect(certified.surfaceToMeshDeviationMm).toBeLessThanOrEqual(.02)
   expect(certified.meshToSurfaceDeviationMm).toBe(certified.surfaceToMeshDeviationMm)
-  expect(certified.coverage).toEqual({sharedEdgeIdentity:true,orientation:true,noTJunctions:true})
+  expect(certified.coverage).toMatchObject({sharedEdgeIdentity:true,orientation:true,noTJunctions:true,noCracks:true})
   expect(certified.tessellation.report.closed).toBe(true)
  }
- expect(()=>analyzeCertifiedNurbsBrep(createBrepSphere(2))).toThrow(/finite|admits|outside/i)
+ const sphere=analyzeCertifiedNurbsBrep(createBrepSphere(2))
+ expect(sphere.capability).toBe('certified-mass-properties/2')
+ expect(sphere.volumeMm3.lower).toBeLessThanOrEqual(32*Math.PI/3)
+ expect(sphere.volumeMm3.upper).toBeGreaterThanOrEqual(32*Math.PI/3)
  expect(()=>tessellateCertifiedNurbsBrep(createBrepCylinder(100,10),1e-12)).toThrow(/32|budget/i)
 })
 
@@ -76,4 +79,24 @@ it('publishes audited finite feature successors and refuses bent frames',()=>{
  const sweep=auditedParallelFrameSweep([[0,0],[2,0],[2,1],[0,1]],[[3,-1,0],[3,-1,4]],'rmf')
  expect(sweep).toMatchObject({certificate:{capability:'exact-parallel-frame-sweep/1',complete:true},audit:{ok:true},namingComplete:true})
  expect(()=>auditedParallelFrameSweep([[0,0],[2,0],[2,1],[0,1]],[[0,0,0],[0,0,2],[0,1,4]],'rmf')).toThrow(/straight|collinear|parallel/i)
+})
+
+it('certifies freeform Bezier cuboid tessellation and planar mass finite cells',()=>{
+ const planar=createFreeformBrepCuboid([1,2,3],[3,6,9])
+ expect(()=>analyzeCertifiedNurbsBrep(planar)).toThrow(/freeform|refused/i)
+ expect(()=>tessellateCertifiedNurbsBrep(planar,.1)).toThrow(/freeform|refused/i)
+ const mass=analyzeCertifiedFreeformNurbsBrep(planar)
+ expect(mass.capability).toBe('certified-generic-rational-freeform-mass-quadrature/1')
+ expect(mass.volumeMm3.lower).toBeLessThanOrEqual(48)
+ expect(mass.volumeMm3.upper).toBeGreaterThanOrEqual(48)
+ expect(mass.namingComplete).toBe(true)
+ const tess=tessellateCertifiedFreeformNurbsBrep(planar,.1)
+ expect(tess.capability).toBe('certified-generic-rational-freeform-tessellation/1')
+ expect(tess.surfaceToMeshDeviationMm).toBeLessThanOrEqual(1e-12)
+ expect(tess.tessellation.report.closed).toBe(true)
+ const bump=createFreeformBrepCuboidBump([0,0,0],[2,2,2])
+ expect(()=>analyzeCertifiedFreeformNurbsBrep(bump)).toThrow(/freeform|bump|refused/i)
+ const bumpTess=tessellateCertifiedFreeformNurbsBrep(bump,.5)
+ expect(bumpTess.capability).toBe('certified-generic-rational-freeform-tessellation/1')
+ expect(bumpTess.surfaceToMeshDeviationMm).toBeLessThanOrEqual(.5)
 })

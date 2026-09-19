@@ -1,0 +1,108 @@
+{
+  "$schema": "./brep-capability-qualification-plan-v12.schema.json",
+  "schema": "open-scad-viewer/brep-capability-qualification-plan",
+  "schemaVersion": 12,
+  "planId": "tolerant-complex-heal-1",
+  "gate": {
+    "id": "g8-full",
+    "name": "brep-full-closed-matrix",
+    "version": 12
+  },
+  "lifecycle": {
+    "status": "qualified",
+    "qualificationClaim": "finite-cell"
+  },
+  "claimBoundary": {
+    "candidateClaim": "Finite explicit cross-part correspondence certification with immutable budgets and exact parameter-partition authority.",
+    "forbiddenClaims": [
+      "silent matching",
+      "tolerance growth",
+      "approximate carrier splits",
+      "overlapping or stale identities",
+      "large gaps"
+    ]
+  },
+  "capability": "tolerant-complex-heal/1",
+  "successorOf": "authorized-heal-gap-le1/2",
+  "dependencies": [
+    {
+      "capability": "numeric-evidence-curved-brep/1",
+      "requiredMaturity": "Qualified"
+    },
+    {
+      "capability": "boundary-correspondence/1",
+      "requiredMaturity": "Qualified"
+    },
+    {
+      "capability": "persistent-naming/1",
+      "requiredMaturity": "Qualified"
+    },
+    {
+      "capability": "close-topology/1",
+      "requiredMaturity": "Qualified"
+    }
+  ],
+  "scope": {
+    "included": [
+      "vertex/edge/face correspondences",
+      "per-entity and cumulative physical budgets",
+      "context hierarchy and provenance",
+      "exact contiguous edge carrier parameter partitions",
+      "transactional rollback and idempotence"
+    ],
+    "excluded": [
+      "silent matching",
+      "tolerance growth",
+      "approximate carrier splits",
+      "overlapping or stale identities",
+      "large gaps"
+    ]
+  },
+  "matrix": [
+    {
+      "id": "CA12-HEAL-MULTIPART-CORRESPONDENCE",
+      "expected": "Complete",
+      "blocksQualification": true
+    },
+    {
+      "id": "CA12-HEAL-ENTITY-CUMULATIVE-BUDGET",
+      "expected": "Complete",
+      "blocksQualification": true
+    },
+    {
+      "id": "CA12-HEAL-EXACT-PARTITION",
+      "expected": "Complete",
+      "blocksQualification": true
+    },
+    {
+      "id": "CA12-HEAL-ROLLBACK-IDEMPOTENCE",
+      "expected": "Complete",
+      "blocksQualification": true
+    },
+    {
+      "id": "CA12-HEAL-LARGE-GAP-STALE",
+      "expected": "typed-refuse",
+      "blocksQualification": true
+    }
+  ],
+  "bindings": {
+    "implementation": [
+      "crates/brep-core/src/close_topology.rs",
+      "crates/brep-core/src/lib.rs",
+      "crates/geometry-bridge/src/lib.rs",
+      "src/services/geometry/brep.ts",
+      "src/services/geometry/brepCapability.ts",
+      "tests/brepQualificationV12.test.ts"
+    ],
+    "registry": "src/services/geometry/brepCapability.ts",
+    "evidenceJson": "docs/qualification/tolerant-complex-heal-1-evidence-v12.json"
+  },
+  "evidence": {
+    "state": "qualified",
+    "notes": [
+      "Only the finite test-backed cells are qualified; excluded cases remain typed refusals."
+    ]
+  },
+  "resetPolicy": "false-Complete freezes this capability and transitively stales all dependents; recovery requires a successor capability ID",
+  "unresolvedRows": []
+}

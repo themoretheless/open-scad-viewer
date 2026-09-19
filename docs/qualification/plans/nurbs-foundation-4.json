@@ -1,0 +1,66 @@
+{
+  "$schema": "./brep-capability-qualification-plan-v12.schema.json",
+  "schema": "open-scad-viewer/brep-capability-qualification-plan",
+  "schemaVersion": 12,
+  "planId": "nurbs-foundation-4",
+  "gate": {"id": "g8-full", "name": "brep-full-closed-matrix", "version": 12},
+  "lifecycle": {"status": "qualified", "qualificationClaim": "finite-cell"},
+  "claimBoundary": {
+    "candidateClaim": "Append-only NURBS foundation successor closing pre-intersection gaps: Krawczyk/interval surface projection uniqueness across overlapping boxes, recursive sub-knot-cell singularity localization, exact homogeneous Bernstein materialization of admitted piecewise rational parameter maps, and unstructured cloud fitting with admitted-domain global Hausdorff enclosure marked approximate-only.",
+    "forbiddenClaims": [
+      "general CC CS or SS intersection",
+      "unbounded cloud fitting without admitted delta-net assumptions",
+      "nested semantic map composition materialization into one control net",
+      "periodic exact nonlinear map materialization",
+      "parasolid or commercial kernel parity"
+    ]
+  },
+  "capability": "nurbs-foundation/4",
+  "successorOf": "nurbs-foundation/3",
+  "dependencies": [{"capability": "nurbs-foundation/3", "requiredMaturity": "Qualified"}],
+  "scope": {
+    "included": [
+      "surface closest-point uniqueness via strict distance separation or Krawczyk isolation with global lower-bound exclusion",
+      "recursive subdivision of unresolved normal-cone cells into isolated singular points, singular-curve candidates, regular complement and unresolved remainder",
+      "exact control-net materialization for admitted non-periodic piecewise rational maps by homogeneous Bernstein clear-denominator composition with degree/resource accounting",
+      "unstructured point-cloud curve and surface fitting with robust pivoted rank handling",
+      "global Hausdorff enclosure under explicit chordal/PCA delta-net and Lipschitz remainder assumptions",
+      "Rust WASM TypeScript and ModelGraph product reports"
+    ],
+    "excluded": [
+      "general curve-curve curve-surface and surface-surface intersection",
+      "materialization of nested composition trees into a single spline",
+      "periodic wrapped exact nonlinear materialization",
+      "Hausdorff claims without the admitted sampled-domain assumptions"
+    ]
+  },
+  "matrix": [
+    {"id": "CA12-NF4-SURFACE-UNIQUENESS", "expected": "Complete", "blocksQualification": true},
+    {"id": "CA12-NF4-SINGULARITY-LOCALIZATION", "expected": "Complete", "blocksQualification": true},
+    {"id": "CA12-NF4-MAP-MATERIALIZATION", "expected": "Complete", "blocksQualification": true},
+    {"id": "CA12-NF4-CLOUD-HAUSDORFF", "expected": "Complete", "blocksQualification": true},
+    {"id": "CA12-NF4-PRODUCT", "expected": "Complete", "blocksQualification": true}
+  ],
+  "bindings": {
+    "implementation": [
+      "crates/nurbs-core/src/foundation.rs",
+      "crates/nurbs-core/src/lib.rs",
+      "crates/nurbs-core/src/tests.rs",
+      "src/services/nurbsFoundation.ts",
+      "src/services/modelGraphNurbsKernel.ts",
+      "tests/nurbsFoundation.test.ts",
+      "scripts/nurbs-foundation-4-oracle.py"
+    ],
+    "registry": "src/services/geometry/brepCapability.ts",
+    "evidenceJson": "docs/qualification/nurbs-foundation-4-evidence-v1.json"
+  },
+  "evidence": {
+    "state": "qualified",
+    "notes": [
+      "Artifacts appended only after native bridge WASM product typecheck and build gates passed.",
+      "No cargo fmt was run."
+    ]
+  },
+  "resetPolicy": "false-Complete freezes this capability and transitively stales all dependents; recovery requires a successor capability ID",
+  "unresolvedRows": []
+}

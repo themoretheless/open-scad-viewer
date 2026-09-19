@@ -1,0 +1,108 @@
+{
+  "$schema": "./brep-capability-qualification-plan-v10.schema.json",
+  "schema": "open-scad-viewer/brep-capability-qualification-plan",
+  "schemaVersion": 10,
+  "planId": "certified-mass-properties-2",
+  "gate": {
+    "id": "g8-full",
+    "name": "brep-full-closed-matrix",
+    "version": 10
+  },
+  "lifecycle": {
+    "status": "qualified",
+    "qualificationClaim": "finite-cell"
+  },
+  "claimBoundary": {
+    "candidateClaim": "Closed-form certified enclosures for independently recognized analytic shells with signed cavity and multiple-body composition.",
+    "forbiddenClaims": [
+      "The converged-estimate quadrature API, generic rational/freeform and curved graph/multispan Boolean results.",
+      "Non-planar lofts and bent/twisted/scaled sweeps until Bernstein/interval area, volume, centroid and inertia enclosures with a convergence proof are implemented.",
+      "Open/non-positive compositions, incomplete naming, estimates relabeled certified, mesh fallback or resource exhaustion."
+    ]
+  },
+  "capability": "certified-mass-properties/2",
+  "successorOf": "certified-mass-properties/1",
+  "dependencies": [
+    {
+      "capability": "numeric-evidence-curved-brep/1",
+      "requiredMaturity": "Qualified"
+    },
+    {
+      "capability": "boundary-correspondence/1",
+      "requiredMaturity": "Qualified"
+    },
+    {
+      "capability": "exact-sew/1",
+      "requiredMaturity": "Qualified"
+    },
+    {
+      "capability": "global-solid-audit/1",
+      "requiredMaturity": "Qualified"
+    },
+    {
+      "capability": "persistent-naming/1",
+      "requiredMaturity": "Qualified"
+    }
+  ],
+  "scope": {
+    "included": [
+      "Exact formulas with outward binary64 enclosures for area, volume, centroid and full centroidal inertia of planar prisms, cylinders, tubes, spheres, cones/frusta and ring tori.",
+      "Signed shell composition with parallel-axis transport for cavities and separated bodies, source topology/naming binding and solid audit.",
+      "Rigid transforms, analytic oracle formulas and mutation/refusal coverage."
+    ],
+    "excluded": [
+      "The converged-estimate quadrature API, generic rational/freeform and curved graph/multispan Boolean results.",
+      "Non-planar lofts and bent/twisted/scaled sweeps until Bernstein/interval area, volume, centroid and inertia enclosures with a convergence proof are implemented.",
+      "Open/non-positive compositions, incomplete naming, estimates relabeled certified, mesh fallback or resource exhaustion."
+    ]
+  },
+  "matrix": [
+    {
+      "id": "CA10-MASS-SPHERE-CONE-FRUSTUM-TORUS",
+      "expected": "Complete",
+      "blocksQualification": true
+    },
+    {
+      "id": "CA10-MASS-CAVITY-MULTIBODY-SIGNED",
+      "expected": "Complete",
+      "blocksQualification": true
+    },
+    {
+      "id": "CA10-MASS-CENTROID-INERTIA-TRANSFORM",
+      "expected": "Complete",
+      "blocksQualification": true
+    },
+    {
+      "id": "CA10-MASS-ORACLE-MUTATION-COMPOSITION",
+      "expected": "Complete",
+      "blocksQualification": true
+    },
+    {
+      "id": "CA10-MASS-GENERIC-QUADRATURE-LOFT-SWEEP",
+      "expected": "typed-refuse",
+      "blocksQualification": true
+    }
+  ],
+  "bindings": {
+    "implementation": [
+      "crates/brep-core/src/analysis.rs",
+      "crates/brep-core/src/intersections.rs",
+      "crates/brep-core/src/solid_audit.rs",
+      "crates/geometry-bridge/src/brep.rs",
+      "crates/geometry-bridge/src/lib.rs",
+      "src/services/geometry/brep.ts",
+      "src/services/geometry/brepCapability.ts"
+    ],
+    "registry": "src/services/geometry/brepCapability.ts",
+    "evidenceJson": "docs/qualification/certified-mass-properties-2-evidence-v10.json"
+  },
+  "evidence": {
+    "state": "qualified",
+    "notes": [
+      "Qualification is limited to independently recognized analytic shells and exact closed-form bounds.",
+      "Every generic freeform/loft/bent-sweep row is a typed refusal; numerical convergence estimates are never relabeled certified."
+    ]
+  },
+  "resetPolicy": "false-Complete freezes this capability and transitively stales all dependents; recovery requires a successor capability ID",
+  "unresolvedRows": []
+}

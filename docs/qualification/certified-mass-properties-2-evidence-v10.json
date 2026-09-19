@@ -1,0 +1,27 @@
+{
+  "$schema": "./brep-capability-evidence-v10.schema.json",
+  "schema": "open-scad-viewer/brep-capability-evidence",
+  "schemaVersion": 10,
+  "evidenceId": "certified-mass-properties-2-evidence-v10",
+  "capability": "certified-mass-properties/2",
+  "maturity": "Qualified",
+  "state": "qualified",
+  "plan": "docs/qualification/plans/certified-mass-properties-2.json",
+  "runs": [
+    {
+      "id": "native-bridge-wasm-certified-mass-properties-2-2026-09-17-v10",
+      "result": "pass",
+      "artifactHash": "dabd620ada97df87c30879e47933544fab5e0392f1ede583f1626db9951d73d2"
+    }
+  ],
+  "oracles": [
+    "analysis::tests::certified_successor_encloses_cone_frustum_torus_and_spherical_cavity",
+    "geometry_bridge::brep::registry_tests::poles_round_holes_and_partial_turns_share_edge_indices_at_each_detail",
+    "tests/brepQualificationV10.test.ts"
+  ],
+  "unresolvedRows": [],
+  "attestation": {
+    "fabricatedRuns": false,
+    "note": "Recorded only after native, bridge, WASM and strict product tests pass; generic rational/freeform certification remains explicitly refused."
+  }
+}

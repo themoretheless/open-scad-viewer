@@ -70,6 +70,8 @@ function validFileName(value: unknown): value is string {
   return typeof value === 'string' && value.length > 0 && value.length <= MAX_WORKSPACE_FILE_NAME_LENGTH
 }
 
+export const workspaceSourceByteLength=(value:string):number=>new TextEncoder().encode(value).byteLength
+
 function fallbackDocumentId(): string {
   const cryptoApi = globalThis.crypto
   if (cryptoApi && typeof cryptoApi.randomUUID === 'function') return cryptoApi.randomUUID()
@@ -193,7 +195,7 @@ export function parseWorkspaceDocumentValue(value: unknown): WorkspaceDocumentSn
     || !validDocumentId(candidate.documentId)
     || !validFileName(candidate.fileName)
     || typeof candidate.source !== 'string'
-    || candidate.source.length > MAX_WORKSPACE_SOURCE_LENGTH) return null
+    || workspaceSourceByteLength(candidate.source) > MAX_WORKSPACE_SOURCE_LENGTH) return null
   const parameterPresets = candidate.schemaVersion === 1 ? [] : parseParameterPresets(candidate.parameterPresets)
   if (parameterPresets === null) return null
   const revision = finiteRevision(candidate.revision)

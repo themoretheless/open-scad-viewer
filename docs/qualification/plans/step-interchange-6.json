@@ -1,0 +1,73 @@
+{
+  "$schema": "./brep-capability-qualification-plan-v12.schema.json",
+  "schema": "open-scad-viewer/brep-capability-qualification-plan",
+  "schemaVersion": 12,
+  "planId": "step-interchange-6",
+  "gate": {"id":"g8-full","name":"brep-full-closed-matrix","version":12},
+  "lifecycle": {"status":"rejected","qualificationClaim":"none"},
+  "claimBoundary": {
+    "candidateClaim": "Research-only AP242 successor with executable periodic seam/pole fixtures, sense variants, bounded nonuniform occurrences, explicit digest-bound external document fetching and retained browser storage.",
+    "forbiddenClaims": [
+      "Unbounded or full STEP support",
+      "Ambient filesystem or network resolution",
+      "Singular affine transforms",
+      "PMI, kinematics, tessellated STEP, wireframe STEP or arbitrary external schema editions",
+      "Cross-document assembly linking or one merged authoritative external product graph",
+      "Exhaustive coupled seam, pole, FACE_BOUND and shell-sense permutations",
+      "Editor-UI-driven IndexedDB document lifecycle or complete exact/+1 resource coverage"
+    ]
+  },
+  "capability": "step-interchange/6",
+  "successorOf": "step-interchange/5",
+  "dependencies": [{"capability":"persistent-naming/1","requiredMaturity":"Qualified"}],
+  "scope": {
+    "included": [
+      "Cylinder, cone, sphere and torus SEAM_CURVE fixtures with lifted UV and sampled pole-boundary validation",
+      "Selected EDGE_CURVE, ORIENTED_EDGE, bound, ADVANCED_FACE and ORIENTED_CLOSED_SHELL sense equivalents",
+      "Shared AP242 definitions and bounded occurrence paths with product hierarchy reports",
+      "Rigid and invertible nonuniform CARTESIAN_TRANSFORMATION_OPERATOR_3DNON_UNIFORM occurrences",
+      "Explicit digest/size/depth/count allowlisted external document fetching with cancellation signaling",
+      "Direct-document metadata retention and browser localStorage import/edit/persist/export/reimport",
+      "Exact and plus-one parser, graph, unit, placement, occurrence and selected byte boundaries"
+    ],
+    "excluded": [
+      "PMI, kinematics, tessellated and wireframe STEP",
+      "Unbounded assembly or external-document traversal",
+      "Implicit external document access",
+      "Cross-document topology or occurrence composition",
+      "Complete coupled sense-permutation proof",
+      "Certified whole-domain pole regularity",
+      "Workbench UI/IndexedDB lifecycle proof and remaining exact/+1 store/output boundaries"
+    ]
+  },
+  "matrix": [
+    {"id":"CA12-STEP6-PERIODIC-POLES","expected":"Complete","blocksQualification":true},
+    {"id":"CA12-STEP6-SENSE-MATRIX","expected":"Complete","blocksQualification":true},
+    {"id":"CA12-STEP6-AFFINE-ASSEMBLY","expected":"Complete","blocksQualification":true},
+    {"id":"CA12-STEP6-EXTERNAL-RESOLVER","expected":"Complete","blocksQualification":true},
+    {"id":"CA12-STEP6-BROWSER-DOCUMENT","expected":"Complete","blocksQualification":true},
+    {"id":"CA12-STEP6-RESOURCE-BOUNDARIES","expected":"Complete","blocksQualification":true}
+  ],
+  "bindings": {
+    "implementation": [
+      "crates/brep-core/src/step_interchange_v3.rs",
+      "crates/geometry-bridge/src/lib.rs",
+      "src/services/cadNurbsStep.ts",
+      "src/services/cadStepRouting.ts",
+      "src/services/cadStepExternalResolver.ts",
+      "src/services/directModeling.ts",
+      "src/features/CadWorkbenchPanel.vue"
+    ],
+    "registry":"src/services/geometry/brepCapability.ts",
+    "evidenceJson":"docs/qualification/step-interchange-6-evidence-v1.json"
+  },
+  "evidence":{"state":"rejected","notes":["Focused implementation tests pass, but audit found that external documents are imported independently rather than linked into one authoritative assembly, the browser script bypasses the editor UI/IndexedDB document path, sense and pole proofs are incomplete, and several exact/+1 resource claims are absent."]},
+  "resetPolicy":"false-Complete freezes this capability and transitively stales all dependents; recovery requires a successor capability ID",
+  "unresolvedRows":[
+    {"id":"CA12-STEP6-PERIODIC-POLES","status":"open","resolution":"Add whole-domain seam correspondence and pole regularity/topology proof beyond generated fixture roundtrips and finite sampling."},
+    {"id":"CA12-STEP6-SENSE-MATRIX","status":"open","resolution":"Exercise coupled periodic seam, pole, FACE_BOUND hole, ADVANCED_FACE and ORIENTED_CLOSED_SHELL permutations against geometry/topology invariants."},
+    {"id":"CA12-STEP6-EXTERNAL-RESOLVER","status":"open","resolution":"Bind explicitly resolved external documents into one bounded authoritative product/occurrence graph; independent child imports are not assembly closure."},
+    {"id":"CA12-STEP6-BROWSER-DOCUMENT","status":"open","resolution":"Drive actual workbench import/edit/save/reload/export/reimport through the editor document and IndexedDB lifecycle rather than importing modules directly and using only localStorage."},
+    {"id":"CA12-STEP6-RESOURCE-BOUNDARIES","status":"open","resolution":"Add exact and +1 tests for all claimed input/output/store and external traversal byte/count/depth limits, including multibyte UTF-8."}
+  ]
+}

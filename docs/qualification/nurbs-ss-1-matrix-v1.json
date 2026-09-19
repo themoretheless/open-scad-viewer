@@ -1,0 +1,15 @@
+{
+  "schema": "open-scad-viewer/nurbs-ss-matrix",
+  "schemaVersion": 1,
+  "capability": "nurbs-ss/1",
+  "dependsOn": "nurbs-cc-cs/1",
+  "rows": [
+    {"id": "CA12-SS-TRANSVERSE", "status": "Complete", "evidence": ["crates/nurbs-core/src/ss_intersection.rs", "crates/nurbs-core/src/tests.rs", "tests/nurbsFoundation.test.ts"]},
+    {"id": "CA12-SS-COINCIDENT", "status": "Complete", "evidence": ["crates/nurbs-core/src/ss_intersection.rs", "tests/nurbsFoundation.test.ts"]},
+    {"id": "CA12-SS-EMPTY", "status": "Complete", "evidence": ["crates/nurbs-core/src/ss_intersection.rs", "crates/nurbs-core/src/tests.rs"]},
+    {"id": "CA12-SS-COVERAGE", "status": "Complete", "evidence": ["crates/nurbs-core/src/ss_intersection.rs", "crates/brep-core/src/nurbs_ss_general.rs"]},
+    {"id": "CA12-SS-PRODUCT", "status": "Complete", "evidence": ["src/services/nurbsFoundation.ts", "src/mcp/modelGraphNurbsTools.ts", "src/services/modelGraphNurbsKernel.ts", "tests/nurbsFoundation.test.ts"]},
+    {"id": "CA12-SS-NO-BOOLEAN", "status": "typed-refuse", "evidence": ["crates/brep-core/src/nurbs_ss_general.rs", "src/services/geometry/brepCapability.ts", "docs/qualification/plans/nurbs-ss-1.json"]}
+  ],
+  "blockingOpenRows": []
+}

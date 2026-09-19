@@ -1,0 +1,56 @@
+{
+  "$schema": "./brep-capability-qualification-plan-v12.schema.json",
+  "schema": "open-scad-viewer/brep-capability-qualification-plan",
+  "schemaVersion": 12,
+  "planId": "certified-generic-rational-freeform-mass-quadrature-1",
+  "gate": {"id": "g8-full", "name": "brep-full-closed-matrix", "version": 12},
+  "lifecycle": {"status": "qualified", "qualificationClaim": "finite-cell"},
+  "claimBoundary": {
+    "candidateClaim": "Append-only certified-generic-rational-freeform-mass-quadrature/1: closed-form area/volume/centroid/inertia enclosures for planar equal-weight Bezier AA cuboids (elevated freeform_cuboid_solid).",
+    "forbiddenClaims": [
+      "bump / non-planar freeform quadrature",
+      "varying-weight rational freeform mass",
+      "loft / bent sweep mass certification",
+      "unbounded freeform quadrature",
+      "parasolid parity"
+    ]
+  },
+  "capability": "certified-generic-rational-freeform-mass-quadrature/1",
+  "successorOf": "certified-mass-properties/2",
+  "dependencies": [
+    {"capability": "numeric-evidence-curved-brep/1", "requiredMaturity": "Qualified"},
+    {"capability": "global-solid-audit/1", "requiredMaturity": "Qualified"},
+    {"capability": "persistent-naming/1", "requiredMaturity": "Qualified"},
+    {"capability": "certified-mass-properties/2", "requiredMaturity": "Qualified"}
+  ],
+  "scope": {
+    "included": [
+      "freeform_cuboid_solid elevated planar bicubic AA cuboids",
+      "exact box area/volume/centroid/inertia with binary64 outward enclosures",
+      "bridge/WASM/TS product query brep_nurbs_certified_freeform_mass_properties"
+    ],
+    "excluded": [
+      "freeform_cuboid_with_bump_face and other non-planar freeform shells",
+      "varying weights and multi-body freeform cavities",
+      "certified-mass-properties/2 analytic matrix (unchanged typed-refuse for freeform)"
+    ]
+  },
+  "matrix": [
+    {"id": "FF-MASS-PLANAR-CUBOID-ENCLOSURE", "expected": "Complete", "blocksQualification": true},
+    {"id": "FF-MASS-BUMP-REFUSE", "expected": "typed-refuse", "blocksQualification": true},
+    {"id": "FF-MASS-PRODUCT-BRIDGE", "expected": "Complete", "blocksQualification": true}
+  ],
+  "bindings": {
+    "implementation": [
+      "crates/brep-core/src/analysis.rs",
+      "crates/geometry-bridge/src/lib.rs",
+      "src/services/geometry/brep.ts",
+      "src/services/geometry/brepCapability.ts"
+    ],
+    "registry": "src/services/geometry/brepCapability.ts",
+    "evidenceJson": "docs/qualification/certified-generic-rational-freeform-mass-quadrature-1-evidence-v1.json"
+  },
+  "evidence": {"state": "qualified", "notes": ["Qualified after native and bridge gates for planar freeform cuboids."]},
+  "resetPolicy": "false-Complete freezes this capability and transitively stales all dependents; recovery requires a successor capability ID",
+  "unresolvedRows": []
+}

@@ -76,6 +76,195 @@ fn positive_support(coefficients: [f64; 3], remaining: &mut usize) -> Result<()>
     }
     Ok(())
 }
+
+fn section_frame(section: &[P]) -> Result<(P, P, P, Vec<[f64; 2]>)> {
+    let origin = section[0];
+    let u = unit(sub(section[1], origin));
+    let n = unit(cross(u, sub(section[2], origin)));
+    if u.iter().chain(n.iter()).any(|value| !value.is_finite()) {
+        return Err(Error::new(
+            "BREP_LOFT_SECTION_COLLAPSE_REFUSED",
+            "Section frame is singular",
+        ));
+    }
+    let v = cross(n, u);
+    let mut profile = Vec::with_capacity(section.len());
+    for point in section {
+        let delta = sub(*point, origin);
+        if dot(delta, n).abs() > 1e-7 {
+            return Err(Error::new(
+                "BREP_LOFT_SECTION_TOPOLOGY_REFUSED",
+                "Every admitted section must be planar",
+            ));
+        }
+        profile.push([dot(delta, u), dot(delta, v)]);
+    }
+    let mut sign = 0.;
+    for i in 0..profile.len() {
+        let a = profile[i];
+        let b = profile[(i + 1) % profile.len()];
+        let c = profile[(i + 2) % profile.len()];
+        let turn = side(difference(b, a), difference(c, b));
+        if turn <= 1e-9 {
+            return Err(Error::new(
+                "BREP_LOFT_SECTION_COLLAPSE_REFUSED",
+                "Section must be simple, strictly convex, and consistently indexed",
+            ));
+        }
+        sign += turn;
+    }
+    if sign <= 1e-8 {
+        return Err(Error::new(
+            "BREP_LOFT_SECTION_COLLAPSE_REFUSED",
+            "Section has no certified positive area",
+        ));
+    }
+    Ok((origin, u, v, profile))
+}
+
+/// Exact bounded multi-section solid with one bilinear rational Bezier patch
+/// per corresponding edge and span. Unlike `ruled_loft`, section planes may
+/// turn between spans. Every section is a degree-1 rational NURBS loop and all
+/// joins share authored edges, so adjacent side patches are exactly C0.
+pub(crate) fn piecewise_ruled_loft(sections: &[Vec<P>]) -> Result<Model> {
+    if sections.len() < 2 || sections.len() > 16 {
+        return Err(Error::new(
+            "BREP_LOFT_RESOURCE_REFUSED",
+            "Piecewise ruled loft admits 2..16 sections",
+        ));
+    }
+    let count = sections[0].len();
+    if !(3..=16).contains(&count) || sections.iter().any(|section| section.len() != count) {
+        return Err(Error::new(
+            "BREP_LOFT_CORRESPONDENCE_REFUSED",
+            "Sections require one exact, equal 3..16 vertex correspondence",
+        ));
+    }
+    if sections
+        .iter()
+        .flatten()
+        .flatten()
+        .any(|value| !value.is_finite() || value.abs() > 1e6)
+    {
+        return Err(Error::new(
+            "BREP_INVALID_SIZE",
+            "Loft coordinates must be finite and within 1000000 mm",
+        ));
+    }
+    let frames = sections
+        .iter()
+        .map(|section| section_frame(section))
+        .collect::<Result<Vec<_>>>()?;
+    for pair in sections.windows(2) {
+        for i in 0..count {
+            let j = (i + 1) % count;
+            let edge0 = sub(pair[0][j], pair[0][i]);
+            let edge1 = sub(pair[1][j], pair[1][i]);
+            let ruling0 = sub(pair[1][i], pair[0][i]);
+            let ruling1 = sub(pair[1][j], pair[0][j]);
+            let bounds = [
+                cross(edge0, ruling0),
+                cross(edge0, ruling1),
+                cross(edge1, ruling0),
+                cross(edge1, ruling1),
+            ];
+            if bounds
+                .iter()
+                .any(|normal| dot(*normal, *normal) <= 1e-16)
+            {
+                return Err(Error::new(
+                    "BREP_LOFT_SECTION_COLLAPSE_REFUSED",
+                    "A ruled side has an unresolved zero-Jacobian Bernstein bound",
+                ));
+            }
+        }
+    }
+
+    let mut build = Builder::new();
+    let ids: Vec<Vec<usize>> = sections
+        .iter()
+        .map(|section| {
+            section
+                .iter()
+                .map(|&point| {
+                    let id = build.model.vertices.len();
+                    build.model.vertices.push(Vertex { point });
+                    id
+                })
+                .collect()
+        })
+        .collect();
+    for layer in 0..sections.len() - 1 {
+        for i in 0..count {
+            let j = (i + 1) % count;
+            let a = sections[layer][i];
+            let b = sections[layer][j];
+            let c = sections[layer + 1][j];
+            let d = sections[layer + 1][i];
+            build.rectangular_patch(
+                surface(vec![
+                    vec![a.to_vec(), d.to_vec()],
+                    vec![b.to_vec(), c.to_vec()],
+                ]),
+                [
+                    ids[layer][i],
+                    ids[layer][j],
+                    ids[layer + 1][j],
+                    ids[layer + 1][i],
+                ],
+                [
+                    line(a.to_vec(), b.to_vec()),
+                    line(b.to_vec(), c.to_vec()),
+                    line(c.to_vec(), d.to_vec()),
+                    line(d.to_vec(), a.to_vec()),
+                ],
+            );
+        }
+    }
+    for layer in [0, sections.len() - 1] {
+        let (origin, u, v, profile) = &frames[layer];
+        let mut min = [f64::INFINITY; 2];
+        let mut max = [f64::NEG_INFINITY; 2];
+        for point in profile {
+            for axis in 0..2 {
+                min[axis] = min[axis].min(point[axis]);
+                max[axis] = max[axis].max(point[axis]);
+            }
+        }
+        let point = |x: f64, y: f64| -> Vec<f64> {
+            (0..3)
+                .map(|axis| origin[axis] + x * u[axis] + y * v[axis])
+                .collect()
+        };
+        let uv = |p: [f64; 2]| {
+            vec![
+                (p[0] - min[0]) / (max[0] - min[0]),
+                (p[1] - min[1]) / (max[1] - min[1]),
+            ]
+        };
+        let mut edges = Vec::with_capacity(count);
+        for i in 0..count {
+            let j = (i + 1) % count;
+            edges.push(build.coedge(
+                ids[layer][i],
+                ids[layer][j],
+                line(sections[layer][i].to_vec(), sections[layer][j].to_vec()),
+                line(uv(profile[i]), uv(profile[j])),
+            ));
+        }
+        let wire = build.wire(edges);
+        build.face(
+            surface(vec![
+                vec![point(min[0], min[1]), point(min[0], max[1])],
+                vec![point(max[0], min[1]), point(max[0], max[1])],
+            ]),
+            wire,
+            vec![],
+            layer == 0,
+        );
+    }
+    build.finish()
+}
 /// Matching vertices define a straight ruling between each adjacent section.
 /// Subdivided Bernstein support bounds admit convex intermediate profiles.
 /// This bounded numerical admission is sufficient, not a certified or complete

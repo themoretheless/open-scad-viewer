@@ -206,6 +206,7 @@ dependencies = [
  "cad-predicates",
  "nurbs-core",
  "planar-geometry",
+ "sha2",
  "value-codec",
 ]
 
@@ -1254,6 +1255,7 @@ dependencies = [
 name = "nurbs-core"
 version = "0.1.0"
 dependencies = [
+ "cad-predicates",
  "geometry-ops",
  "osv-math",
  "value-codec",

@@ -1,0 +1,307 @@
+{
+  "schema": "open-scad-viewer/g0-toolchain-fingerprints",
+  "schemaVersion": 1,
+  "fingerprintId": "g0-toolchain-fingerprints-v14",
+  "recordedAt": "2026-09-17",
+  "previousFingerprintId": "g0-toolchain-fingerprints-v13",
+  "purpose": "Bind append-only V10 certified analytic tessellation and mass-property successors plus rebuilt own-Rust WASM while preserving every prior freeze and resetting G1 clean work.",
+  "claimBoundary": {
+    "includes": [
+      "Exact SHA-256 of listed lock/manifest/notices/toolchain files",
+      "Observed rustc version line",
+      "Exact SHA-256 of the Geometry Closure V3 own-Rust source bundle and rebuilt WASM"
+    ],
+    "excludes": [
+      "Full SPDX SBOM",
+      "Playwright qualification locks",
+      "Any rewrite of G0 v1-v13 or G1 v1 through v30",
+      "G0 closure, G1 qualification, completed clean work, or production cutover"
+    ]
+  },
+  "toolchain": {
+    "rustToolchainFile": "rust-toolchain.toml",
+    "rustChannel": "nightly-2026-09-10",
+    "observedRustcVersionLine": "rustc 1.100.0-nightly (a36d05efa 2026-09-09)",
+    "wasmTarget": "wasm32-unknown-unknown"
+  },
+  "artifacts": [
+    {
+      "id": "root-package-manifest",
+      "path": "package.json",
+      "sha256": "8c9cbefde8aecc2d42ad5bbabb135828b0d32ad24c2d7ee6ebeadcfff25cc2ee",
+      "byteLength": 2822
+    },
+    {
+      "id": "root-package-lockfile",
+      "path": "package-lock.json",
+      "sha256": "70eb933b3607298caa00f7cdd96a953f313e6cc080a34f9b3c5c58694c765704",
+      "byteLength": 76018
+    },
+    {
+      "id": "root-npmrc",
+      "path": ".npmrc",
+      "sha256": "8d1c8cce74ec8034361b3c300fcc7103dd8458556de93cd60cb9dd29e633799d",
+      "byteLength": 59
+    },
+    {
+      "id": "third-party-notices",
+      "path": "THIRD_PARTY_NOTICES.md",
+      "sha256": "e1facd281eb7939480f00827d812505d6e0909581acff3fcc7bffb3d9fd23fd6",
+      "byteLength": 5950
+    },
+    {
+      "id": "rust-toolchain",
+      "path": "rust-toolchain.toml",
+      "sha256": "17d94e17861fa80938478d479cec468668fa708c1c8e6120663a4341ca7535da",
+      "byteLength": 190
+    },
+    {
+      "id": "crates-workspace-manifest",
+      "path": "crates/Cargo.toml",
+      "sha256": "fe611e00ab8d0b92872f41ff627961d509d7803bd9ff8be224b12d5d6684dffe",
+      "byteLength": 1798
+    },
+    {
+      "id": "crates-lockfile",
+      "path": "crates/Cargo.lock",
+      "sha256": "64b3a93468e81b0560b7c3a60341540ea0bdff2daa62a22ff542d9dcb2396e3c",
+      "byteLength": 72167
+    },
+    {
+      "id": "own-rust-cad-v2-evidence",
+      "path": "docs/qualification/own-rust-cad-v2.json",
+      "sha256": "ba6ad0bb6166bb2f54dba30fb3245d5074c78a032da23902bfc5768beff6e395",
+      "byteLength": 1874
+    },
+    {
+      "id": "geometry-v3-source-01",
+      "path": "crates/brep-core/src/lib.rs",
+      "sha256": "2d309532b65dd0075a6a3dbc54077853e73a33272b9ab347216b78891a86bb28",
+      "byteLength": 66511
+    },
+    {
+      "id": "geometry-v3-source-02",
+      "path": "crates/brep-core/src/nurbs_ss_g6.rs",
+      "sha256": "3404d2e296df866412bdb64b399bd81a5601c7d8abb5a6673a9b189b3eb3f5fb",
+      "byteLength": 179488
+    },
+    {
+      "id": "geometry-v3-source-03",
+      "path": "crates/brep-core/src/operations.rs",
+      "sha256": "998281505d4b90e9586d6f313cebae52c6afd014d56314dcbd7875b135f9b36f",
+      "byteLength": 97604
+    },
+    {
+      "id": "geometry-v3-source-04",
+      "path": "crates/brep-core/src/solid_audit.rs",
+      "sha256": "a71318a948a9f362ef51b39f43e31946f8703716ee148acdad16704f5a03bcc7",
+      "byteLength": 25751
+    },
+    {
+      "id": "geometry-v3-source-05",
+      "path": "crates/brep-core/src/step_interchange_v3.rs",
+      "sha256": "614a06b7f4a64acb11a0ca79a9975a73c8b6b46055049f08f1112d0f5bea6fa2",
+      "byteLength": 68135
+    },
+    {
+      "id": "geometry-v3-source-06",
+      "path": "crates/brep-core/src/transactions.rs",
+      "sha256": "2de0d9b474d314dc7c87ce37b6c23c3dbfbd7261d60c25ca07a1f98fb4e6e4bc",
+      "byteLength": 16903
+    },
+    {
+      "id": "geometry-v3-source-07",
+      "path": "crates/brep-core/src/trim_sew.rs",
+      "sha256": "ebff76cd74dea072f3668dc0d296cbc31813484d78b324e87cef84b3f3dc9cf0",
+      "byteLength": 87654
+    },
+    {
+      "id": "geometry-v3-source-08",
+      "path": "crates/brep-core/src/uv_arrangement.rs",
+      "sha256": "cedea8961daa455b03d3f4cce31414869d7ac8a55937173ab002c6b29a6908ee",
+      "byteLength": 57431
+    },
+    {
+      "id": "geometry-v3-source-09",
+      "path": "crates/brep-topology/src/lib.rs",
+      "sha256": "fce4a3a3780e97b3b9fd3a0ccc1307a61f0af865ca44847bf2f1c05b91848227",
+      "byteLength": 45204
+    },
+    {
+      "id": "geometry-v3-source-10",
+      "path": "crates/geometry-bridge/src/lib.rs",
+      "sha256": "042f2c792d0161edb1a912b416fae5b3ef04a59b64749647cf06fd01f64b6b22",
+      "byteLength": 54208
+    },
+    {
+      "id": "geometry-v3-source-11",
+      "path": "src/core/ownRustCadEvidence.ts",
+      "sha256": "45773ac207d189c7b121001bd375ac918b596498b513e96358836b234cff8cfa",
+      "byteLength": 474
+    },
+    {
+      "id": "geometry-v3-source-12",
+      "path": "src/services/cadNurbsStep.ts",
+      "sha256": "691a2d22234dfd2d423958ad0c3fe3682d15160e2dc8d61387d9a0f5d6b8f149",
+      "byteLength": 4909
+    },
+    {
+      "id": "geometry-v3-source-13",
+      "path": "src/services/geometry/brep.ts",
+      "sha256": "c8ca252e07bafcb716625cc6129e5e4a63c88557a4e694ab214e9333a81e9818",
+      "byteLength": 18139
+    },
+    {
+      "id": "geometry-v3-source-14",
+      "path": "src/services/geometry/brepCapability.ts",
+      "sha256": "e20d67b1532e713d38df0625ad7b7e3198294711cf0ba581a4ddb1a58a0bea54",
+      "byteLength": 17761
+    },
+    {
+      "id": "own-rust-cad-v3-evidence",
+      "path": "docs/qualification/own-rust-cad-v3.json",
+      "sha256": "6ca6e8ea8a5b54be7711dc49a179b232a671ce17613d079ff12a087b12a12f7b",
+      "byteLength": 1894
+    },
+    {
+      "id": "own-rust-cad-v4-evidence",
+      "path": "docs/qualification/own-rust-cad-v4.json",
+      "sha256": "fa09bf87b3cd821b489475c19469646fa0e841f89f76251bd959d74c6e9842c6",
+      "byteLength": 2020
+    },
+    {
+      "id": "geometry-v3-source-15",
+      "path": "src/services/geometry/brep.ts",
+      "sha256": "c8ca252e07bafcb716625cc6129e5e4a63c88557a4e694ab214e9333a81e9818",
+      "byteLength": 18139
+    },
+    {
+      "id": "geometry-v3-source-16",
+      "path": "src/services/geometry/brepCapability.ts",
+      "sha256": "e20d67b1532e713d38df0625ad7b7e3198294711cf0ba581a4ddb1a58a0bea54",
+      "byteLength": 17761
+    },
+    {
+      "id": "own-rust-cad-v5-evidence",
+      "path": "docs/qualification/own-rust-cad-v5.json",
+      "sha256": "c6100705c560fc3008e379e20a48ff737ecbb8bbf280f2f1204c370f6c5fc504",
+      "byteLength": 2066
+    },
+    {
+      "id": "geometry-v3-source-17",
+      "path": "tests/brepQualificationV8.test.ts",
+      "sha256": "d2cc6b6fda3b2fd83411fe58280757de7ebce3ce8dd49b67cee3a2ba47c3a302",
+      "byteLength": 3170
+    },
+    {
+      "id": "own-rust-cad-v6-evidence",
+      "path": "docs/qualification/own-rust-cad-v6.json",
+      "sha256": "c08740e378a28d8794bb1d7237a6b696d89b4ca6dfb1725f52c4b39321dbe94d",
+      "byteLength": 2272
+    },
+    {
+      "id": "geometry-v3-source-18",
+      "path": "crates/brep-core/src/analytic.rs",
+      "sha256": "d931a8b7d305fa3bee85a8ed357e289d24d6dfa324e208d82814eabb096afc96",
+      "byteLength": 51911
+    },
+    {
+      "id": "geometry-v3-source-19",
+      "path": "crates/brep-core/src/analytic/loft.rs",
+      "sha256": "60863b8b16b3ad3041b7f3fb43259417281b2d4ee90a18630385a57b03bb0138",
+      "byteLength": 15298
+    },
+    {
+      "id": "geometry-v3-source-20",
+      "path": "crates/brep-core/src/analytic_features.rs",
+      "sha256": "d22c182f7c5f2bb7b68b0d926ca6c6e869005f48e235ca005b27ba753d27e902",
+      "byteLength": 103516
+    },
+    {
+      "id": "geometry-v3-source-21",
+      "path": "crates/brep-core/src/imprint_pipeline.rs",
+      "sha256": "e0bee09cc9ed340ca8860c104c8fa0c5023df310a476f8d1f1418178c8939640",
+      "byteLength": 30105
+    },
+    {
+      "id": "geometry-v3-source-22",
+      "path": "crates/geometry-bridge/src/tests.rs",
+      "sha256": "68ba1b16ad21cad6a9e6e800ca62182cf7fbbba1d4a51c9f656e5f8cebf791e3",
+      "byteLength": 27490
+    },
+    {
+      "id": "geometry-v3-source-23",
+      "path": "tests/brepQualificationV9.test.ts",
+      "sha256": "c41a03978dc6824c4b0d79986e4a0dd69fc79d01b5cd397e7c8767d767cac9a5",
+      "byteLength": 4942
+    },
+    {
+      "id": "own-rust-cad-v7-evidence",
+      "path": "docs/qualification/own-rust-cad-v7.json",
+      "sha256": "9733e8d4b7f6be5634fd173aad2a4eb71d8e57d620b98234e3672d0851cff232",
+      "byteLength": 2553
+    },
+    {
+      "id": "geometry-v3-source-24",
+      "path": "crates/brep-core/src/analysis.rs",
+      "sha256": "f8021b0d3e97d96699949782cbdae55cfd0208504ef6abca65bba59b6a1be331",
+      "byteLength": 50791
+    },
+    {
+      "id": "geometry-v3-source-25",
+      "path": "crates/brep-core/src/intersections.rs",
+      "sha256": "5e1150e4b6e025630aeaa2da47ceae0bfa06c2c75c8a957d9968b538567f378c",
+      "byteLength": 341752
+    },
+    {
+      "id": "geometry-v3-source-26",
+      "path": "crates/geometry-bridge/src/brep.rs",
+      "sha256": "94e95761e1ec2002aea68e7a22b25d31797e46c15317333bf2cc91d73b9d6ec8",
+      "byteLength": 46751
+    },
+    {
+      "id": "geometry-v3-source-27",
+      "path": "tests/brepQualificationV10.test.ts",
+      "sha256": "5d90fda128991f58bf46d5188c93eb790f012ea5325726d250eae95707041406",
+      "byteLength": 4792
+    }
+  ],
+  "knownDrift": [
+    {
+      "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v13.json",
+      "bindingId": "geometry-v3-source-04",
+      "note": "Current bytes are newly bound in v14; v13 remains archived. Bind append-only V10 certified analytic tessellation and mass-property successors plus rebuilt own-Rust WASM while preserving every prior freeze and resetting G1 clean work."
+    },
+    {
+      "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v13.json",
+      "bindingId": "geometry-v3-source-07",
+      "note": "Current bytes are newly bound in v14; v13 remains archived. Bind append-only V10 certified analytic tessellation and mass-property successors plus rebuilt own-Rust WASM while preserving every prior freeze and resetting G1 clean work."
+    },
+    {
+      "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v13.json",
+      "bindingId": "geometry-v3-source-11",
+      "note": "Current bytes are newly bound in v14; v13 remains archived. Bind append-only V10 certified analytic tessellation and mass-property successors plus rebuilt own-Rust WASM while preserving every prior freeze and resetting G1 clean work."
+    },
+    {
+      "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v13.json",
+      "bindingId": "geometry-v3-source-13",
+      "note": "Current bytes are newly bound in v14; v13 remains archived. Bind append-only V10 certified analytic tessellation and mass-property successors plus rebuilt own-Rust WASM while preserving every prior freeze and resetting G1 clean work."
+    },
+    {
+      "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v13.json",
+      "bindingId": "geometry-v3-source-14",
+      "note": "Current bytes are newly bound in v14; v13 remains archived. Bind append-only V10 certified analytic tessellation and mass-property successors plus rebuilt own-Rust WASM while preserving every prior freeze and resetting G1 clean work."
+    },
+    {
+      "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v13.json",
+      "bindingId": "geometry-v3-source-15",
+      "note": "Current bytes are newly bound in v14; v13 remains archived. Bind append-only V10 certified analytic tessellation and mass-property successors plus rebuilt own-Rust WASM while preserving every prior freeze and resetting G1 clean work."
+    },
+    {
+      "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v13.json",
+      "bindingId": "geometry-v3-source-16",
+      "note": "Current bytes are newly bound in v14; v13 remains archived. Bind append-only V10 certified analytic tessellation and mass-property successors plus rebuilt own-Rust WASM while preserving every prior freeze and resetting G1 clean work."
+    }
+  ],
+  "previousFingerprintSha256": "4020e99bfefe6289a328258a4d2e423cc0c8f5262468661afe87706f7e514fd4"
+}

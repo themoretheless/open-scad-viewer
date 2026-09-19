@@ -1,0 +1,42 @@
+{
+  "id": "own-rust-cad-v3",
+  "successorOf": "docs/qualification/own-rust-cad-v2.json",
+  "previousSha256": "ba6ad0bb6166bb2f54dba30fb3245d5074c78a032da23902bfc5768beff6e395",
+  "recordedAt": "2026-09-17",
+  "purpose": "Append-only current-byte fingerprint for the B-rep V6 exact-region NURBS operation successor.",
+  "qualificationClaim": "none",
+  "wasm": {
+    "path": "src/generated/geometry-kernels/kernel_bg.wasm",
+    "sha256": "5837e681b6ac826ef52317d64d2ea590a354165ddbbb8ca40e024de99656a8bc",
+    "byteLength": 8754264
+  },
+  "sourceBundle": {
+    "canonicalization": "UTF-8 path sorted: path + NUL + exact file bytes + LF",
+    "sha256": "61c06f7ffeda16601a9154b3c2c5b7a68be91db198e348eac60ad8b3ade0b1da",
+    "paths": [
+      "crates/brep-core/src/lib.rs",
+      "crates/brep-core/src/nurbs_ss_g6.rs",
+      "crates/brep-core/src/operations.rs",
+      "crates/brep-core/src/solid_audit.rs",
+      "crates/brep-core/src/step_interchange_v3.rs",
+      "crates/brep-core/src/transactions.rs",
+      "crates/brep-core/src/trim_sew.rs",
+      "crates/brep-core/src/uv_arrangement.rs",
+      "crates/brep-topology/src/lib.rs",
+      "crates/geometry-bridge/src/lib.rs",
+      "crates/geometry-bridge/src/tests.rs",
+      "src/services/cadNurbsStep.ts",
+      "src/services/geometry/brep.ts",
+      "src/services/geometry/brepCapability.ts"
+    ]
+  },
+  "dependencyFingerprints": {
+    "noticesSha256": "e1facd281eb7939480f00827d812505d6e0909581acff3fcc7bffb3d9fd23fd6",
+    "npmLockfileSha256": "70eb933b3607298caa00f7cdd96a953f313e6cc080a34f9b3c5c58694c765704",
+    "rustLockfileSha256": "64b3a93468e81b0560b7c3a60341540ea0bdff2daa62a22ff542d9dcb2396e3c"
+  },
+  "claimBoundary": [
+    "This is a reproducible byte fingerprint, not an external clean qualification run.",
+    "It does not approve G0, G1, tangency, coincidence, or capability scope beyond the V6 release artifacts."
+  ]
+}

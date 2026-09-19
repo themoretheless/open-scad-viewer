@@ -26,9 +26,9 @@ describe('B-rep product seam', () => {
     expect(brepCapability('iges-interchange/1')?.maturity).toBe('ResearchOnly')
     expect(brepCapability('analytic-fillet/1')?.maturity).toBe('ResearchOnly')
     expect(brepCapability('step-interchange/1')?.maturity).toBe('AnalyticComplete')
-    expect(brepCapability('nurbs-step-bicubic-face/1')?.maturity).toBe('AnalyticComplete')
-    expect(brepCapability('nurbs-step-trimmed-bicubic/1')?.maturity).toBe('AnalyticComplete')
-    expect(brepCapability('nurbs-step-solid/1')?.maturity).toBe('AnalyticComplete')
+    expect(brepCapability('nurbs-step-bicubic-face/1')?.maturity).toBe('Qualified')
+    expect(brepCapability('nurbs-step-trimmed-bicubic/1')?.maturity).toBe('Qualified')
+    expect(brepCapability('nurbs-step-solid/1')?.maturity).toBe('Qualified')
     for (const id of [
       'numeric-evidence-curved-brep/1',
       'boundary-correspondence/1',

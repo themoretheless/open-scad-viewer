@@ -1,0 +1,95 @@
+{
+  "$schema": "./brep-capability-qualification-plan-v11.schema.json",
+  "schema": "open-scad-viewer/brep-capability-qualification-plan",
+  "schemaVersion": 11,
+  "planId": "step-interchange-4",
+  "gate": {
+    "id": "g8-full",
+    "name": "brep-full-closed-matrix",
+    "version": 11
+  },
+  "lifecycle": {
+    "status": "qualified",
+    "qualificationClaim": "finite-cell"
+  },
+  "claimBoundary": {
+    "candidateClaim": "Finite direct STEP successor adding safely representable seam-bearing rational analytic carriers and exact endpoint point selectors while retaining /3 topology identity and bounds.",
+    "forbiddenClaims": [
+      "Assemblies and external references without complete occurrence identity and bounds",
+      "Interior point selectors without an exact analytic inverse, singular pole edges and non-rigid transformations",
+      "Faceted, tessellated, CSG, constructor/AABB reconstruction, mesh fallback or silent healing"
+    ]
+  },
+  "capability": "step-interchange/4",
+  "successorOf": "step-interchange/3",
+  "dependencies": [
+    {
+      "capability": "global-solid-audit/1",
+      "requiredMaturity": "Qualified"
+    },
+    {
+      "capability": "persistent-naming/1",
+      "requiredMaturity": "Qualified"
+    }
+  ],
+  "scope": {
+    "included": [
+      "Direct /3 topology, units, placements, multiple holes/bodies/cavities and graph-bound identity",
+      "Cylinder, cone, sphere and ring-torus converted to finite rational carriers with angular parameter domains",
+      "TRIMMED_CURVE parameter selectors and point selectors exactly equal to a basis endpoint"
+    ],
+    "excluded": [
+      "Assemblies and external references without complete occurrence identity and bounds",
+      "Interior point selectors without an exact analytic inverse, singular pole edges and non-rigid transformations",
+      "Faceted, tessellated, CSG, constructor/AABB reconstruction, mesh fallback or silent healing"
+    ]
+  },
+  "matrix": [
+    {
+      "id": "CA11-STEP4-DIRECT-GRAPH-IDENTITY",
+      "expected": "Complete",
+      "blocksQualification": true
+    },
+    {
+      "id": "CA11-STEP4-ANALYTIC-RATIONAL-CARRIERS",
+      "expected": "Complete",
+      "blocksQualification": true
+    },
+    {
+      "id": "CA11-STEP4-ENDPOINT-POINT-SELECTORS",
+      "expected": "Complete",
+      "blocksQualification": true
+    },
+    {
+      "id": "CA11-STEP4-MULTIBODY-HOLES-UNITS",
+      "expected": "Complete",
+      "blocksQualification": true
+    },
+    {
+      "id": "CA11-STEP4-ASSEMBLY-EXTERNAL-POLE",
+      "expected": "typed-refuse",
+      "blocksQualification": true
+    }
+  ],
+  "bindings": {
+    "implementation": [
+      "crates/brep-core/src/iges_interchange_v2.rs",
+      "crates/brep-core/src/step_interchange_v3.rs",
+      "crates/geometry-bridge/src/lib.rs",
+      "src/services/cadIges.ts",
+      "src/services/cadNurbsStep.ts",
+      "tests/brepInterchangeV11.test.ts",
+      "tests/brepQualificationV11.test.ts"
+    ],
+    "registry": "src/services/geometry/brepCapability.ts",
+    "evidenceJson": "docs/qualification/step-interchange-4-evidence-v11.json"
+  },
+  "evidence": {
+    "state": "qualified",
+    "notes": [
+      "Qualification is limited to the coherent proven finite subset; every excluded construct is a typed refusal."
+    ]
+  },
+  "resetPolicy": "false-Complete freezes this capability and transitively stales all dependents; recovery requires a successor capability ID",
+  "unresolvedRows": []
+}

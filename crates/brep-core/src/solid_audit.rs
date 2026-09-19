@@ -34,6 +34,10 @@ impl AuditAabb {
     fn separated(self, other: Self, margin: f64) -> bool {
         (0..3).any(|i| self.max[i] + margin < other.min[i] || other.max[i] + margin < self.min[i])
     }
+
+    fn interiors_disjoint(self, other: Self) -> bool {
+        (0..3).any(|i| self.max[i] <= other.min[i] || other.max[i] <= self.min[i])
+    }
 }
 
 /// A model which has passed the complete local topology/geometry validator.
@@ -123,7 +127,12 @@ fn union_bounds(bounds: impl IntoIterator<Item = AuditAabb>) -> Option<AuditAabb
     })
 }
 
-fn isolated_outward_shell(model: &Model, shell_id: usize, cavity_role: bool) -> Result<Model> {
+/// Extract one owned shell as a standalone outward-oriented body.
+///
+/// Certified analysis uses this to recognize each body/cavity component
+/// independently before composing signed measures. No geometry is fitted or
+/// healed; the returned topology is a strict subset of the source carriers.
+pub fn isolated_outward_shell(model: &Model, shell_id: usize, cavity_role: bool) -> Result<Model> {
     use std::collections::BTreeMap;
     let source_shell = &model.shells[shell_id];
     let mut face_map = BTreeMap::new();
@@ -573,6 +582,7 @@ fn audit_validated(model: &Model) -> Result<SolidAuditCertificate> {
     for i in 0..body_bounds.len() {
         for j in i + 1..body_bounds.len() {
             if !body_bounds[i].separated(body_bounds[j], margin)
+                && !body_bounds[i].interiors_disjoint(body_bounds[j])
                 && !supported_body_separation(model, i, j)?
             {
                 return Err(refuse(

@@ -1,0 +1,20 @@
+{
+  "schema": "open-scad-viewer/nurbs-foundation-registry",
+  "schemaVersion": 2,
+  "successorOf": "docs/qualification/nurbs-foundation-1-evidence-v1.json",
+  "entries": [
+    {
+      "id":"nurbs-foundation/1",
+      "state":"frozen-qualified",
+      "plan":"docs/qualification/plans/nurbs-foundation-1.json",
+      "evidence":"docs/qualification/nurbs-foundation-1-evidence-v1.json"
+    },
+    {
+      "id":"nurbs-foundation/2",
+      "state":"qualified-finite-cell",
+      "plan":"docs/qualification/plans/nurbs-foundation-2.json",
+      "evidence":"docs/qualification/nurbs-foundation-2-evidence-v1.json",
+      "matrix":"docs/qualification/nurbs-foundation-2-matrix-v1.json"
+    }
+  ]
+}

@@ -1,0 +1,28 @@
+{
+  "$schema": "./brep-capability-evidence-v9.schema.json",
+  "schema": "open-scad-viewer/brep-capability-evidence",
+  "schemaVersion": 9,
+  "evidenceId": "exact-parallel-frame-sweep-2-evidence-v9",
+  "capability": "exact-parallel-frame-sweep/2",
+  "maturity": "Qualified",
+  "state": "qualified",
+  "plan": "docs/qualification/plans/exact-parallel-frame-sweep-2.json",
+  "runs": [
+    {
+      "id": "native-bridge-wasm-exact-parallel-frame-sweep-2-2026-09-17-v9",
+      "result": "pass",
+      "artifactHash": "be83fb65a9cea12a99d6bc1eda28ab58673ab1a106eff9442814eadb1b891bcf"
+    }
+  ],
+  "oracles": [
+    "analytic_features::tests::exact_bent_rmf_sweep_certifies_path_frame_laws_and_reversal",
+    "analytic_features::tests::loft_sweep_mutations_refuse_atomically_with_exact_codes",
+    "geometry_bridge::tests::exact_loft_and_bent_rmf_successors_cross_bridge_atomically",
+    "tests/brepQualificationV9.test.ts"
+  ],
+  "unresolvedRows": [],
+  "attestation": {
+    "fabricatedRuns": false,
+    "note": "Recorded for the exact bounded V9 cells only; every listed exclusion remains a typed refusal and no G0/G1 approval is claimed."
+  }
+}

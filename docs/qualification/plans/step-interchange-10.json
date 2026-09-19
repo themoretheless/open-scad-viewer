@@ -1,0 +1,35 @@
+{
+  "$schema":"./brep-capability-qualification-plan-v12.schema.json",
+  "schema":"open-scad-viewer/brep-capability-qualification-plan",
+  "schemaVersion":12,
+  "planId":"step-interchange-10",
+  "gate":{"id":"g8-full","name":"brep-full-closed-matrix","version":12},
+  "lifecycle":{"status":"qualified","qualificationClaim":"qualified"},
+  "claimBoundary":{
+    "candidateClaim":"Append-only AP242 Edition 4 retained product envelope preserving affine occurrence relationship graphs, shared definitions, occurrence-local identities, hierarchy, metadata and tessellated presentation without B-rep relabeling.",
+    "forbiddenClaims":["Unbounded STEP support","Implicit filesystem or network resolution","Procedural CSG evaluation or conversion","Tessellated geometry relabeled as B-rep","Editing retained relationship or presentation graphs"]
+  },
+  "capability":"step-interchange/10",
+  "successorOf":"step-interchange/9",
+  "dependencies":[{"capability":"step-interchange/9","requiredMaturity":"Qualified"},{"capability":"persistent-naming/1","requiredMaturity":"Qualified"}],
+  "scope":{
+    "included":["Lossless authoritative Part 21 graph envelope","Identifier-independent canonical graph identity","Shared definition and affine occurrence retention","Nonuniform, shear and reflection operator retention","Occurrence-local TopoId reports","AP242 triangle, strip and fan faceted preview","Normals, colors, layers and texture-coordinate presentation retention","Field-level loss reports","Native, bridge, WASM, workbench and IndexedDB roundtrips","Precise procedural CSG refusal"],
+    "excluded":["Ambient implicit external access","Procedural CSG evaluator","Authoring mutations to retained relationship graphs"]
+  },
+  "matrix":[
+    {"id":"CA12-STEP10-OCCURRENCE-GRAPH","expected":"Complete","blocksQualification":true},
+    {"id":"CA12-STEP10-TESSELLATED-PRESENTATION","expected":"Complete","blocksQualification":true},
+    {"id":"CA12-STEP10-METADATA-LOSS","expected":"Complete","blocksQualification":true},
+    {"id":"CA12-STEP10-AP242-ORACLES","expected":"Complete","blocksQualification":true},
+    {"id":"CA12-STEP10-ROUNDTRIPS","expected":"Complete","blocksQualification":true},
+    {"id":"CA12-STEP10-RESOURCE-MUTATION","expected":"Complete","blocksQualification":true}
+  ],
+  "bindings":{
+    "implementation":["crates/brep-core/src/step_interchange_v3.rs","crates/geometry-bridge/src/lib.rs","src/services/cadNurbsStep.ts","src/services/cadStep.ts","src/services/cadStepRouting.ts","src/services/cadStepIndexedDb.ts"],
+    "registry":"src/services/geometry/brepCapability.ts",
+    "evidenceJson":"docs/qualification/step-interchange-10-evidence-v12.json"
+  },
+  "evidence":{"state":"qualified","notes":["Pinned STEPcode AP242 Ed4, native graph mutation, bridge/WASM, presentation, workbench, IndexedDB and headless-browser gates passed."]},
+  "resetPolicy":"false-Complete freezes this capability and transitively stales all dependents; recovery requires a successor capability ID",
+  "unresolvedRows":[]
+}

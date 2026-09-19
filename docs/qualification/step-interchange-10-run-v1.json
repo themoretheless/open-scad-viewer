@@ -1,0 +1,15 @@
+{
+  "schema":"open-scad-viewer/step-interchange-v10-run",
+  "status":"pass",
+  "validator":{
+    "name":"STEPcode p21read_sdai_ap242",
+    "version":"0.9.1",
+    "sourceCommit":"ed686ee1d9cb8bf763ab8d61ef6d417c3b45c146",
+    "executableSha256":"a9258791296493ed5de470b1e98f8ba44dbb1bdd7fd8b2e29662bade36e07043",
+    "schemaSha256":"e7e93cf97880fd87d634e4b9ee58400da0a1be6c06a1de76ec13807ecdc15ccb"
+  },
+  "oracleResult":{"path":"output/qualification/step-interchange-10-v1/oracle-result.json","sha256":"0c3f4b55e854da74ba273b901e085228af335d216c70a01e2ad97d6681fcf5ca"},
+  "browserEvidence":{"path":"output/qualification/step-interchange-10-v1/browser-workbench-indexeddb.json","sha256":"1e271f987418cda8972bf4f37654523d0c1dc01d47ddedf6060839162e0cdd57"},
+  "graphOracle":{"identity":"dcb80f62479bc7fa6f38058afe1a8106d0cfe9f101f2da325ff3afb954f57357","definitions":1,"occurrences":3,"exactSourceRoundtrip":true},
+  "scopeAudit":{"remainingRequiredGeometryProductStepGaps":[],"outOfScope":["ambient implicit external access","procedural CSG conversion"]}
+}

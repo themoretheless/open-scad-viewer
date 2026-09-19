@@ -528,6 +528,14 @@ pub struct Segment {
     curve: Curve,
     domain: [f64; 2],
 }
+impl Segment {
+    pub fn definition(&self) -> &Curve {
+        &self.curve
+    }
+    pub fn domain(&self) -> [f64; 2] {
+        self.domain
+    }
+}
 impl value_codec::Serialize for Segment {
     fn to_value(&self) -> value_codec::Value {
         let mut object = value_codec::Map::new();

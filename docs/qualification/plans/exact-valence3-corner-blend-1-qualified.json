@@ -1,0 +1,57 @@
+{
+  "$schema": "./brep-capability-qualification-plan-v12.schema.json",
+  "schema": "open-scad-viewer/brep-capability-qualification-plan",
+  "schemaVersion": 12,
+  "planId": "exact-valence3-corner-blend-1-qualified",
+  "gate": {"id": "g8-full", "name": "brep-full-closed-matrix", "version": 12},
+  "lifecycle": {"status": "qualified", "qualificationClaim": "finite-cell"},
+  "claimBoundary": {
+    "candidateClaim": "Append-only product exact-valence3-corner-blend/1: equal-radius plane/cylinder/sphere network at the max corner of an audited AA cuboid with three rational quarter-cylinders and one stereographic spherical octant; sew/audit/ChangeSet naming.",
+    "forbiddenClaims": [
+      "unequal radii",
+      "non-max cuboid corners",
+      "multi-corner networks",
+      "non-cuboid solids",
+      "parasolid parity"
+    ]
+  },
+  "capability": "exact-valence3-corner-blend/1",
+  "successorOf": "analytic-multi-edge-fillet/1",
+  "dependencies": [
+    {"capability": "numeric-evidence-curved-brep/1", "requiredMaturity": "Qualified"},
+    {"capability": "exact-sew/1", "requiredMaturity": "Qualified"},
+    {"capability": "global-solid-audit/1", "requiredMaturity": "Qualified"},
+    {"capability": "persistent-naming/1", "requiredMaturity": "Qualified"}
+  ],
+  "scope": {
+    "included": [
+      "three concurrent edges at the AA cuboid max corner",
+      "equal positive radius fitting 2R inside all extents",
+      "rational quarter-cylinders along the three edges and stereographic spherical octant",
+      "audit, ChangeSet persistent naming, bridge/WASM/TS product query"
+    ],
+    "excluded": [
+      "unequal radii and non-max corners",
+      "multi-corner / non-cuboid networks",
+      "healing, mesh fallback"
+    ]
+  },
+  "matrix": [
+    {"id": "BL7-VALENCE3-SPHERE-RATIONAL-OWNERSHIP", "expected": "Complete", "blocksQualification": true},
+    {"id": "V3-PRODUCT", "expected": "Complete", "blocksQualification": true}
+  ],
+  "bindings": {
+    "implementation": [
+      "crates/brep-core/src/analytic_features.rs",
+      "crates/brep-core/src/imprint_pipeline.rs",
+      "crates/geometry-bridge/src/lib.rs",
+      "src/services/geometry/brep.ts",
+      "src/services/geometry/brepCapability.ts"
+    ],
+    "registry": "src/services/geometry/brepCapability.ts",
+    "evidenceJson": "docs/qualification/exact-valence3-corner-blend-1-evidence-v1.json"
+  },
+  "evidence": {"state": "qualified", "notes": ["Qualified after native and bridge gates."]},
+  "resetPolicy": "false-Complete freezes this capability and transitively stales all dependents; recovery requires a successor capability ID",
+  "unresolvedRows": []
+}

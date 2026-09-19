@@ -1,0 +1,69 @@
+{
+  "$schema": "./brep-capability-qualification-plan-v12.schema.json",
+  "schema": "open-scad-viewer/brep-capability-qualification-plan",
+  "schemaVersion": 12,
+  "planId": "nurbs-foundation-5",
+  "gate": {"id": "g8-full", "name": "brep-full-closed-matrix", "version": 12},
+  "lifecycle": {"status": "qualified", "qualificationClaim": "finite-cell"},
+  "claimBoundary": {
+    "candidateClaim": "Append-only NURBS foundation successor providing one certified bounded general curve/curve and curve/surface intersection engine over admitted positive-weight degrees 1..25 with Bernstein/interval/Krawczyk isolation, contact multiplicity, CoedgeTrim maps, nested/periodic composition materialization, and unresolved only on resource or conditioning boundaries.",
+    "forbiddenClaims": [
+      "general surface-surface intersection",
+      "Boolean topology authorship from intersection reports",
+      "parasolid or commercial kernel parity",
+      "unbounded degree or control resources beyond the admitted matrix"
+    ]
+  },
+  "capability": "nurbs-foundation/5",
+  "successorOf": "nurbs-foundation/4",
+  "dependencies": [{"capability": "nurbs-foundation/4", "requiredMaturity": "Qualified"}],
+  "scope": {
+    "included": [
+      "certified general NURBS curve/curve intersection for nonperiodic and periodic positive-weight curves",
+      "certified general NURBS curve/surface intersection including planar exact reduction and general hull subdivision",
+      "endpoint and half-open knot ownership",
+      "transverse crossings and even/odd tangency multiplicity classification",
+      "coincident overlap intervals with deterministic ownership and CoedgeTrim maps",
+      "seams wrap counts poles singularities and multiple roots or components",
+      "exact or interval parameter boxes geometry enclosures orientation and ToleranceContext evidence",
+      "nested and periodic rational composition materialization where admitted",
+      "Rust WASM TypeScript ModelGraph and MCP product queries"
+    ],
+    "excluded": [
+      "general surface-surface intersection",
+      "Boolean topology change authorization",
+      "negative-weight or unbounded-degree inputs"
+    ]
+  },
+  "matrix": [
+    {"id": "CA12-NF5-CURVE-CURVE", "expected": "Complete", "blocksQualification": true},
+    {"id": "CA12-NF5-CURVE-SURFACE", "expected": "Complete", "blocksQualification": true},
+    {"id": "CA12-NF5-CONTACT-OWNERSHIP", "expected": "Complete", "blocksQualification": true},
+    {"id": "CA12-NF5-COMPOSITION", "expected": "Complete", "blocksQualification": true},
+    {"id": "CA12-NF5-PRODUCT", "expected": "Complete", "blocksQualification": true}
+  ],
+  "bindings": {
+    "implementation": [
+      "crates/nurbs-core/src/intersection.rs",
+      "crates/nurbs-core/src/foundation.rs",
+      "crates/nurbs-core/src/lib.rs",
+      "crates/nurbs-core/src/tests.rs",
+      "src/services/nurbsFoundation.ts",
+      "src/services/modelGraphNurbsKernel.ts",
+      "src/mcp/modelGraphNurbsTools.ts",
+      "tests/nurbsFoundation.test.ts",
+      "scripts/nurbs-foundation-5-oracle.py"
+    ],
+    "registry": "src/services/geometry/brepCapability.ts",
+    "evidenceJson": "docs/qualification/nurbs-foundation-5-evidence-v1.json"
+  },
+  "evidence": {
+    "state": "qualified",
+    "notes": [
+      "Artifacts appended only after native bridge WASM product typecheck and build gates passed.",
+      "No cargo fmt was run."
+    ]
+  },
+  "resetPolicy": "false-Complete freezes this capability and transitively stales all dependents; recovery requires a successor capability ID",
+  "unresolvedRows": []
+}

@@ -1,0 +1,12 @@
+{
+  "schema": "open-scad-viewer/nurbs-cc-cs-matrix",
+  "schemaVersion": 1,
+  "capability": "nurbs-cc-cs/1",
+  "dependsOn": "nurbs-foundation/5",
+  "rows": [
+    {"id": "CCCS-CURVE-CURVE", "status": "Complete", "evidence": ["crates/nurbs-core/src/intersection.rs", "src/services/nurbsFoundation.ts", "tests/nurbsFoundation.test.ts"]},
+    {"id": "CCCS-CURVE-SURFACE", "status": "Complete", "evidence": ["crates/nurbs-core/src/intersection.rs", "src/services/nurbsFoundation.ts", "tests/nurbsFoundation.test.ts"]},
+    {"id": "CCCS-PRODUCT", "status": "Complete", "evidence": ["src/mcp/modelGraphNurbsTools.ts", "src/services/modelGraphNurbsKernel.ts", "tests/nurbsFoundation.test.ts"]}
+  ],
+  "blockingOpenRows": []
+}
