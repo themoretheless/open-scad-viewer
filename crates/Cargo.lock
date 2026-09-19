@@ -206,6 +206,7 @@ dependencies = [
  "cad-predicates",
  "nurbs-core",
  "planar-geometry",
+ "rbench",
  "sha2",
  "value-codec",
 ]
@@ -1430,6 +1431,7 @@ version = "0.1.0"
 dependencies = [
  "gpu-compute",
  "osv-math",
+ "rbench",
 ]
 
 [[package]]

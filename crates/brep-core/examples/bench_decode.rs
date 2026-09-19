@@ -1,8 +1,9 @@
 use brep_core::{GearSpec, Model, gear};
+use rbench::{DropPolicy, Suite};
 use sha2::{Digest, Sha256};
-use std::{hint::black_box, time::Instant};
 
-fn main() {
+fn main() -> rbench::Result<()> {
+    let mut suite = Suite::new("brep-core/decode");
     for teeth in [12, 32, 60] {
         let model = gear(&GearSpec {
             teeth,
@@ -18,24 +19,22 @@ fn main() {
             .iter()
             .map(|byte| format!("{byte:02x}"))
             .collect();
-        for _ in 0..3 {
-            black_box(value_codec::from_value::<Model>(value.clone()).unwrap());
-        }
-        let mut samples = Vec::new();
-        for _ in 0..9 {
-            let input = value.clone();
-            let start = Instant::now();
-            let decoded = value_codec::from_value::<Model>(black_box(input)).unwrap();
-            samples.push(start.elapsed().as_secs_f64() * 1000.);
-            assert_eq!(value_codec::to_string(&decoded).unwrap(), canonical);
-        }
-        let mut sorted = samples.clone();
-        sorted.sort_by(f64::total_cmp);
-        println!(
-            "{{\"teeth\":{teeth},\"faces\":{},\"serializedBytes\":{},\"sha256\":\"{sha256}\",\"p50Ms\":{},\"samplesMs\":{samples:?}}}",
-            model.faces.len(),
-            canonical.len(),
-            sorted[sorted.len() / 2]
-        );
+        let input = value.clone();
+        let expected = canonical.clone();
+        suite
+            .bench_with_input(
+                Box::leak(format!("decode/{teeth}-teeth").into_boxed_str()),
+                move || input.clone(),
+                move |input| {
+                    let decoded = value_codec::from_value::<Model>(input.clone()).unwrap();
+                    assert_eq!(value_codec::to_string(&decoded).unwrap(), expected);
+                    decoded.faces.len()
+                },
+                DropPolicy::InsideTiming,
+            )
+            .parameter("teeth", teeth as f64)
+            .parameter("bytes", canonical.len() as f64)
+            .parameter("sha256_bytes", sha256.len() as f64);
     }
+    suite.main()
 }

@@ -1,7 +1,7 @@
 //! Symmetric Chamfer distance benchmark.
 //! `cargo run --release -p osv-math --features cuda --example bench_chamfer`.
 use math_core::{Acceleration, V3, chamfer_distance};
-use std::time::Instant;
+use rbench::{DropPolicy, Suite};
 
 fn modes() -> Vec<Acceleration> {
     let mut modes = vec![Acceleration::Cpu, Acceleration::Auto, Acceleration::Gpu];
@@ -13,11 +13,6 @@ fn modes() -> Vec<Acceleration> {
         modes.retain(|mode| wanted.contains(mode));
     }
     modes
-}
-
-fn median(times: &mut [f64]) -> f64 {
-    times.sort_by(f64::total_cmp);
-    times[times.len() / 2]
 }
 
 fn points(n: usize, seed: f64) -> Vec<V3> {
@@ -33,48 +28,41 @@ fn points(n: usize, seed: f64) -> Vec<V3> {
         .collect()
 }
 
-fn compare(a: &[V3], b: &[V3], rounds: usize) {
+fn add_cases(suite: &mut Suite, a: &[V3], b: &[V3]) {
     let modes = modes();
     let reference = chamfer_distance(a, b, Acceleration::Cpu).unwrap();
-    let mut times = vec![Vec::new(); modes.len()];
-    for round in 0..rounds {
-        for (index, &mode) in modes.iter().enumerate() {
-            let start = Instant::now();
-            let got = chamfer_distance(a, b, mode).unwrap();
-            times[index].push(start.elapsed().as_secs_f64() * 1000.);
-            if round == 0 {
-                let tol = if mode == Acceleration::Cpu {
-                    1e-12
-                } else {
-                    5e-3 * reference.symmetric_mean_squared_distance.max(1.0)
-                };
-                assert!(
-                    (got.symmetric_mean_squared_distance
-                        - reference.symmetric_mean_squared_distance)
-                        .abs()
-                        < tol,
-                    "{mode:?} mismatch: {:?} vs {:?}",
-                    got,
-                    reference
-                );
-            }
-        }
+    for mode in modes {
+        let input_a = a.to_vec();
+        let input_b = b.to_vec();
+        suite
+            .bench_with_input(
+                Box::leak(
+                    format!("chamfer/{}x{}/{}", a.len(), b.len(), mode.label()).into_boxed_str(),
+                ),
+                move || (input_a.clone(), input_b.clone()),
+                move |(a, b)| {
+                    let got = chamfer_distance(a, b, mode).unwrap();
+                    let tol = if mode == Acceleration::Cpu {
+                        1e-12
+                    } else {
+                        5e-3 * reference.symmetric_mean_squared_distance.max(1.0)
+                    };
+                    assert!(
+                        (got.symmetric_mean_squared_distance
+                            - reference.symmetric_mean_squared_distance)
+                            .abs()
+                            < tol
+                    );
+                    got.symmetric_rms_distance
+                },
+                DropPolicy::InsideTiming,
+            )
+            .parameter("a", a.len() as f64)
+            .parameter("b", b.len() as f64);
     }
-    let summary: Vec<String> = modes
-        .iter()
-        .zip(times.iter_mut())
-        .map(|(mode, times)| format!("{} median {:.3}ms", mode.label(), median(times)))
-        .collect();
-    println!(
-        "chamfer ({} x {}): {}, rms {:.6}",
-        a.len(),
-        b.len(),
-        summary.join(", "),
-        reference.symmetric_rms_distance
-    );
 }
 
-fn main() {
+fn main() -> rbench::Result<()> {
     #[cfg(feature = "gpu")]
     println!(
         "wgpu backend: {}",
@@ -85,6 +73,7 @@ fn main() {
         "cuda device: {}",
         math_core::cuda::device_name().unwrap_or_else(|| "none (falls back to wgpu/cpu)".into())
     );
+    let mut suite = Suite::new("math-core/chamfer");
     for &(a, b) in &[
         (1_000usize, 1_000usize),
         (5_000, 2_000),
@@ -93,6 +82,7 @@ fn main() {
     ] {
         let a = points(a, 0.);
         let b = points(b, 1_000_000.);
-        compare(&a, &b, 5);
+        add_cases(&mut suite, &a, &b);
     }
+    suite.main()
 }
