@@ -1,6 +1,6 @@
 {
   "capability": "certified-generic-rational-freeform-tessellation/1",
-  "maturity": "FiniteCell",
+  "maturity": "Qualified",
   "dependsOn": "certified-brep-tessellation/2",
   "executedAt": "2026-09-17",
   "positiveCorpus": [

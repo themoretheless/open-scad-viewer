@@ -2,6 +2,7 @@ import {describe,expect,it} from 'vitest'
 import {
  createBrepBox,
  createCanonicalMultispanGraphSolid,
+ createFreeformBrepCuboid,
  generalNurbsBoolean,
  generalNurbsBooleanModel,
 } from '../src/services/geometry/brep'
@@ -92,5 +93,14 @@ describe('general multispan NURBS Boolean product',()=>{
   const rationalBoundary=structuredClone(cutter)
   rationalBoundary.faces[0]!.surface.weights[0]![0]=2
   expectAtomicRefusal(graph,rationalBoundary,'intersection')
+ })
+
+ it('explicitly refuses freeform×freeform Boolean (matrix ExplicitRefuse)',()=>{
+  const a=createFreeformBrepCuboid([0,0,0],[2,2,2])
+  const b=createFreeformBrepCuboid([1,1,-1],[3,3,3])
+  const before=[structuredClone(a),structuredClone(b)]
+  expect(()=>generalNurbsBoolean(a,b,'intersection')).toThrow(/graph solid|affine|nurbs/i)
+  expect(a).toEqual(before[0])
+  expect(b).toEqual(before[1])
  })
 })

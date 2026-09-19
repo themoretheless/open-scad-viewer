@@ -3,15 +3,15 @@ import {expect,it,vi} from 'vitest'
 it('initializes asynchronously and retries a failed compile',async()=>{
  vi.resetModules()
  const kernel=await import('../src/services/geometry/kernel')
- const compile=vi.spyOn(WebAssembly,'compile').mockRejectedValueOnce(new Error('injected compile failure'))
+ const instantiate=vi.spyOn(WebAssembly,'instantiate').mockRejectedValueOnce(new Error('injected compile failure'))
  try{
   await expect(kernel.warmGeometryKernel()).rejects.toThrow('injected compile failure')
   await kernel.warmGeometryKernel()
   const runtime=kernel.kernelRuntime()
   await kernel.warmGeometryKernel()
   expect(kernel.kernelRuntime().exports).toBe(runtime.exports)
-  expect(compile).toHaveBeenCalledTimes(2)
- }finally{compile.mockRestore()}
+  expect(instantiate).toHaveBeenCalledTimes(2)
+ }finally{instantiate.mockRestore()}
 })
 
 it('shares warmup and never replaces a synchronously initialized native owner',async()=>{

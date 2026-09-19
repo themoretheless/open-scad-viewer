@@ -49,7 +49,7 @@ describe('G8 append-only freeform analysis + ledger catch-up v19',()=>{
    lifecycle:{status:'qualified'},
    unresolvedRows:[],
   })
-  expect(tessEv.capability).toBe('certified-generic-rational-freeform-tessellation/1')
+  expect(tessEv).toMatchObject({capability:'certified-generic-rational-freeform-tessellation/1',maturity:'Qualified'})
 
   const mass=read('docs/qualification/plans/certified-generic-rational-freeform-mass-quadrature-1.json')
   const massEv=read('docs/qualification/certified-generic-rational-freeform-mass-quadrature-1-evidence-v1.json')
@@ -58,6 +58,14 @@ describe('G8 append-only freeform analysis + ledger catch-up v19',()=>{
    lifecycle:{status:'qualified'},
    unresolvedRows:[],
   })
-  expect(massEv.capability).toBe('certified-generic-rational-freeform-mass-quadrature/1')
+  expect(massEv).toMatchObject({capability:'certified-generic-rational-freeform-mass-quadrature/1',maturity:'Qualified'})
+
+  const booleanPlan=read('docs/qualification/plans/nurbs-boolean-1.json')
+  expect(JSON.stringify(booleanPlan)).not.toMatch(/successor gap/i)
+  expect(matrixExplicitRefuse()).toContain('freeform-x-freeform-boolean')
  })
 })
+
+function matrixExplicitRefuse():string[]{
+ return read('docs/qualification/brep-full-closed-matrix-v19.json').explicitRefuse as string[]
+}

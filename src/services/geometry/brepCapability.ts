@@ -386,7 +386,7 @@ export const BREP_CAPABILITY_MATRIX: readonly BrepCapabilityDescriptor[] = Objec
     id: 'certified-mass-properties/2',
     maturity: 'Qualified' as const,
     permitsTopologyChange: false,
-    notes: 'Closed-form interval enclosures for planar prisms, spheres, cones/frusta, tori, cylinders and tubes with signed analytic cavity/multiple-body composition; generic rational/freeform quadrature explicitly non-certified',
+    notes: 'Closed-form interval enclosures for planar prisms, spheres, cones/frusta, tori, cylinders and tubes with signed analytic cavity/multiple-body composition; freeform planar cuboids graduate to certified-generic-rational-freeform-mass-quadrature/1; bump/varying-weight remain ExplicitRefuse',
     qualificationPlan: 'docs/qualification/plans/certified-mass-properties-2.json',
   }),
   Object.freeze({
@@ -394,7 +394,7 @@ export const BREP_CAPABILITY_MATRIX: readonly BrepCapabilityDescriptor[] = Objec
     maturity: 'Qualified' as const,
     permitsTopologyChange: false,
     notes:
-      'Finite planar equal-weight Bezier AA cuboid mass enclosures (elevated freeform_cuboid_solid); bump and varying-weight freeform quadrature remain typed-refuse',
+      'Finite planar equal-weight Bezier AA cuboid mass enclosures (elevated freeform_cuboid_solid); bump and varying-weight freeform quadrature remain ExplicitRefuse',
     qualificationPlan:
       'docs/qualification/plans/certified-generic-rational-freeform-mass-quadrature-1.json',
   }),
@@ -489,7 +489,7 @@ export const BREP_CAPABILITY_MATRIX: readonly BrepCapabilityDescriptor[] = Objec
     id: 'nurbs-boolean/1',
     maturity: 'Qualified' as const,
     permitsTopologyChange: true,
-    notes: 'Regularized solid Boolean over nurbs-ss/1: multispan positive-weight graph × affine parallelotope with independent SS root agreement, exact region partition, sew/audit/ChangeSet naming; tangency, coincidence, and freeform×freeform remain typed-refuse',
+    notes: 'Regularized solid Boolean over nurbs-ss/1: multispan positive-weight graph × affine parallelotope with independent SS root agreement, exact region partition, sew/audit/ChangeSet naming; tangency, coincidence, and freeform×freeform remain ExplicitRefuse (freeform-x-freeform-boolean)',
     qualificationPlan: 'docs/qualification/plans/nurbs-boolean-1.json',
   }),
 ])

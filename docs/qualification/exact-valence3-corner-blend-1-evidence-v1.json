@@ -17,8 +17,8 @@
     {"command": "cargo test --locked --manifest-path crates/Cargo.toml -p geometry-bridge --lib audited_feature_successors", "result": "passed"}
   ],
   "knownGaps": [
-    "unequal-radius valence-3",
-    "multi-corner networks",
-    "freeform×freeform Boolean successor"
+    "unequal-radius valence-3 (ExplicitRefuse / out of exact-valence3-corner-blend/1)",
+    "multi-corner networks (ExplicitRefuse / out of exact-valence3-corner-blend/1)",
+    "freeform×freeform Boolean (ExplicitRefuse: freeform-x-freeform-boolean)"
   ]
 }

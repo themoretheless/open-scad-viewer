@@ -64,7 +64,7 @@
     "notes": [
       "Qualified after native and product gates with nurbs-ss/1 root agreement.",
       "Finite bezier-le3/8 remains separately qualified for its narrow cell.",
-      "Freeform×freeform Boolean remains a successor gap."
+      "Freeform×freeform Boolean is ExplicitRefuse (matrix token freeform-x-freeform-boolean); out of nurbs-boolean/1 claim boundary."
     ]
   },
   "resetPolicy": "false-Complete freezes this capability and transitively stales all dependents; recovery requires a successor capability ID",

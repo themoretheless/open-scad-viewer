@@ -76,7 +76,7 @@
       "plan": "docs/qualification/plans/authorized-heal-gap-le1-1.json",
       "evidence": "docs/qualification/authorized-heal-gap-le1-1-evidence-v2.json",
       "maturity": "Unavailable",
-      "releaseState": "candidate",
+      "releaseState": "refused",
       "dependencies": [
         "numeric-evidence-curved-brep/1",
         "boundary-correspondence/1",
@@ -240,7 +240,7 @@
       "plan": "docs/qualification/plans/nurbs-boolean-bezier-le3-6.json",
       "evidence": "docs/qualification/nurbs-boolean-bezier-le3-6-evidence-v4.json",
       "maturity": "Unavailable",
-      "releaseState": "candidate",
+      "releaseState": "refused",
       "dependencies": [
         "numeric-evidence-curved-brep/1",
         "boundary-correspondence/1",
@@ -480,7 +480,7 @@
         "persistent-naming/1"
       ],
       "maturity": "AnalyticComplete",
-      "releaseState": "candidate"
+      "releaseState": "refused"
     },
     {
       "id": "step-interchange/6",
@@ -500,7 +500,7 @@
         "persistent-naming/1"
       ],
       "maturity": "ResearchOnly",
-      "releaseState": "candidate"
+      "releaseState": "refused"
     },
     {
       "id": "step-interchange/8",

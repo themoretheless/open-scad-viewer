@@ -90,6 +90,9 @@ export function isGeometryKernelReady(): boolean { return initialized }
 function initialize(): void {
   if (readingCadMesh) throw new Error('WASM calls are not allowed while reading a borrowed CAD mesh')
   if (initialized) return
+  if (typeof window !== 'undefined') {
+    throw new Error('Geometry kernel must be warmed with warmGeometryKernel() before use on the main thread')
+  }
   wasm = new WebAssembly.Instance(new WebAssembly.Module(unpackBrotliWasmBase64(wasmBase64))).exports as KernelExports
   wasmMemory=wasm.memory
   initialized = true

@@ -24,7 +24,7 @@
     {"command": "python3 scripts/nurbs-ss-1-oracle.py", "result": "transverse residuals 0; parallel gap 2; coincident residual 0"}
   ],
   "knownGaps": [
-    "freeform×freeform solid Boolean successor",
-    "tangency and coincidence Boolean ownership"
+    "freeform×freeform solid Boolean (ExplicitRefuse: freeform-x-freeform-boolean)",
+    "tangency and coincidence Boolean ownership (ExplicitRefuse under nurbs-boolean/1)"
   ]
 }

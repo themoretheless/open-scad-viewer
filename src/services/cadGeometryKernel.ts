@@ -1,4 +1,5 @@
 import Module, { type CadSolid, type CadToplevel } from './geometry/module'
+import { warmGeometryKernel } from './geometry/kernel'
 import { KernelHandleTable, type GeometryKernel, type GeometryKernelSession } from './geometryKernel'
 import { createCadKernelOps, type CadKernelOps } from './cadKernelOps'
 
@@ -129,6 +130,7 @@ function defaultDependencies(): CadKernelDependencies {
   let cleanup = () => {}
   return {
     async load() {
+      await warmGeometryKernel()
       const module = await Module()
       module.setup()
       return module

@@ -1,6 +1,6 @@
 {
   "capability": "certified-generic-rational-freeform-mass-quadrature/1",
-  "maturity": "FiniteCell",
+  "maturity": "Qualified",
   "dependsOn": "certified-mass-properties/2",
   "executedAt": "2026-09-17",
   "positiveCorpus": [
