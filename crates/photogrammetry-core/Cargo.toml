@@ -12,3 +12,10 @@ cuda = ["gpu", "math-core/cuda"]
 [dependencies]
 math-core = { package = "osv-math", path = "../math-core" }
 gpu-compute = { path = "../gpu-compute", optional = true }
+
+[dev-dependencies]
+rbench = { workspace = true }
+
+[[example]]
+name = "bench_matching"
+path = "examples/bench_matching.rs"

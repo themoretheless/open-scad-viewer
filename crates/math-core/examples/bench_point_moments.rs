@@ -1,7 +1,8 @@
 //! Point-cloud centroid/covariance reduction benchmark.
 //! `cargo run --release -p osv-math --features cuda --example bench_point_moments`.
 use math_core::{Acceleration, V3, point_moments_accelerated};
-use std::time::Instant;
+use rbench::{DropPolicy, Suite};
+use std::sync::Arc;
 
 fn modes() -> Vec<Acceleration> {
     let mut modes = vec![Acceleration::Cpu, Acceleration::Auto, Acceleration::Gpu];
@@ -13,11 +14,6 @@ fn modes() -> Vec<Acceleration> {
         modes.retain(|mode| wanted.contains(mode));
     }
     modes
-}
-
-fn median(times: &mut [f64]) -> f64 {
-    times.sort_by(f64::total_cmp);
-    times[times.len() / 2]
 }
 
 fn points(n: usize) -> Vec<V3> {
@@ -33,41 +29,34 @@ fn points(n: usize) -> Vec<V3> {
         .collect()
 }
 
-fn compare(points: &[V3], rounds: usize) {
+fn add_cases(suite: &mut Suite, points: &[V3], n: usize) {
     let modes = modes();
     let reference = point_moments_accelerated(points, Acceleration::Cpu).unwrap();
-    let mut times = vec![Vec::new(); modes.len()];
-    for round in 0..rounds {
-        for (index, &mode) in modes.iter().enumerate() {
-            let start = Instant::now();
-            let got = point_moments_accelerated(points, mode).unwrap();
-            times[index].push(start.elapsed().as_secs_f64() * 1000.);
-            if round == 0 {
-                let tol = if mode.is_gpu() && mode != Acceleration::Auto {
-                    1e-1
-                } else {
-                    1e-9
-                };
-                for axis in 0..3 {
-                    assert!((got.centroid[axis] - reference.centroid[axis]).abs() < tol);
-                }
-            }
-        }
+    for mode in modes {
+        let input = Arc::new(points.to_vec());
+        suite
+            .bench_with_input(
+                Box::leak(format!("point_moments/{n}/{}", mode.label()).into_boxed_str()),
+                move || Arc::clone(&input),
+                move |points| {
+                    let got = point_moments_accelerated(points, mode).unwrap();
+                    let tol = if mode.is_gpu() && mode != Acceleration::Auto {
+                        1e-1
+                    } else {
+                        1e-9
+                    };
+                    for axis in 0..3 {
+                        assert!((got.centroid[axis] - reference.centroid[axis]).abs() < tol);
+                    }
+                    got.centroid
+                },
+                DropPolicy::InsideTiming,
+            )
+            .parameter("points", n as f64);
     }
-    let summary: Vec<String> = modes
-        .iter()
-        .zip(times.iter_mut())
-        .map(|(mode, times)| format!("{} median {:.3}ms", mode.label(), median(times)))
-        .collect();
-    println!(
-        "point_moments ({} points): {}, centroid={:?}",
-        points.len(),
-        summary.join(", "),
-        reference.centroid
-    );
 }
 
-fn main() {
+fn main() -> rbench::Result<()> {
     #[cfg(feature = "gpu")]
     println!(
         "wgpu backend: {}",
@@ -78,7 +67,10 @@ fn main() {
         "cuda device: {}",
         math_core::cuda::device_name().unwrap_or_else(|| "none (falls back to wgpu/cpu)".into())
     );
+    let mut suite = Suite::new("math-core/point-moments");
     for &n in &[10_000usize, 100_000, 1_000_000, 5_000_000] {
-        compare(&points(n), 7);
+        let data = points(n);
+        add_cases(&mut suite, &data, n);
     }
+    suite.main()
 }

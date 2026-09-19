@@ -2,7 +2,8 @@ use photogrammetry_core::Acceleration;
 use photogrammetry_core::features::{
     Feature, FeatureOptions, matches_with_options, recommended_for_descriptor_matching,
 };
-use std::time::Instant;
+use rbench::{DropPolicy, Suite};
+use std::sync::Arc;
 
 fn descriptor(seed: &mut u64) -> [f32; 128] {
     let mut raw = [0f32; 128];
@@ -34,33 +35,38 @@ fn options(acceleration: Acceleration) -> FeatureOptions {
     }
 }
 
-fn median_ms(mut values: Vec<f64>) -> f64 {
-    values.sort_by(f64::total_cmp);
-    values[values.len() / 2]
-}
-
-fn run_one(a_count: usize, b_count: usize, acceleration: Acceleration) -> (f64, usize, u64) {
+fn add_case(suite: &mut Suite, a_count: usize, b_count: usize, acceleration: Acceleration) {
     let a = features(a_count, 0x5317_91ab);
     let b = features(b_count, 0x89ab_13df);
+    let reference = matches_with_options(&a, &b, &options(Acceleration::Cpu));
     let options = options(acceleration);
-    let mut times = Vec::new();
-    let mut len = 0;
-    let mut checksum = 0u64;
-    for _ in 0..5 {
-        let start = Instant::now();
-        let matches = matches_with_options(&a, &b, &options);
-        times.push(start.elapsed().as_secs_f64() * 1000.);
-        len = matches.len();
-        checksum = matches
-            .iter()
-            .take(1024)
-            .map(|m| (m.a as u64) ^ ((m.b as u64) << 32))
-            .sum();
-    }
-    (median_ms(times), len, checksum)
+    let a = Arc::new(a);
+    let b = Arc::new(b);
+    suite
+        .bench_with_input(
+            Box::leak(
+                format!("matching/{a_count}x{b_count}/{}", acceleration.label()).into_boxed_str(),
+            ),
+            move || (Arc::clone(&a), Arc::clone(&b)),
+            move |(a, b)| {
+                let matches = matches_with_options(a, b, &options);
+                assert_eq!(
+                    matches.iter().map(|m| (m.a, m.b)).collect::<Vec<_>>(),
+                    reference.iter().map(|m| (m.a, m.b)).collect::<Vec<_>>()
+                );
+                matches
+                    .iter()
+                    .take(1024)
+                    .map(|m| (m.a as u64) ^ ((m.b as u64) << 32))
+                    .sum::<u64>()
+            },
+            DropPolicy::InsideTiming,
+        )
+        .parameter("features_a", a_count as f64)
+        .parameter("features_b", b_count as f64);
 }
 
-fn main() {
+fn main() -> rbench::Result<()> {
     #[cfg(feature = "gpu")]
     println!(
         "wgpu backend: {}",
@@ -72,7 +78,7 @@ fn main() {
         photogrammetry_core::gpu::cuda_device_name()
             .unwrap_or_else(|| "none (falls back to wgpu/cpu)".into())
     );
-    println!("features_a,features_b,work,recommended,cpu_ms,auto_ms,gpu_ms,cuda_ms,auto_speedup");
+    let mut suite = Suite::new("photogrammetry/matching");
     for (a_count, b_count) in [
         (64, 64),
         (128, 128),
@@ -81,21 +87,15 @@ fn main() {
         (1_024, 1_024),
         (2_048, 2_048),
     ] {
-        let (cpu, cpu_len, cpu_sum) = run_one(a_count, b_count, Acceleration::Cpu);
-        let (auto, auto_len, auto_sum) = run_one(a_count, b_count, Acceleration::Auto);
-        let (gpu, gpu_len, gpu_sum) = run_one(a_count, b_count, Acceleration::Gpu);
-        let (cuda, cuda_len, cuda_sum) = run_one(a_count, b_count, Acceleration::Cuda);
-        assert_eq!(auto_len, cpu_len);
-        assert_eq!(gpu_len, cpu_len);
-        assert_eq!(cuda_len, cpu_len);
-        assert_eq!(auto_sum, cpu_sum);
-        assert_eq!(gpu_sum, cpu_sum);
-        assert_eq!(cuda_sum, cpu_sum);
-        println!(
-            "{a_count},{b_count},{},{},{cpu:.3},{auto:.3},{gpu:.3},{cuda:.3},{:.2}x",
-            a_count * b_count,
-            recommended_for_descriptor_matching(a_count, b_count).label(),
-            cpu / auto.max(1e-9)
-        );
+        for acceleration in [
+            Acceleration::Cpu,
+            Acceleration::Auto,
+            Acceleration::Gpu,
+            Acceleration::Cuda,
+        ] {
+            add_case(&mut suite, a_count, b_count, acceleration);
+        }
+        let _ = recommended_for_descriptor_matching(a_count, b_count);
     }
+    suite.main()
 }

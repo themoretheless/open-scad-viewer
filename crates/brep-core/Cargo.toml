@@ -12,3 +12,14 @@ brep-topology = { path = "../brep-topology" }
 planar-geometry = { path = "../planar-geometry" }
 cad-predicates = { path = "../cad-predicates" }
 sha2 = "0.11"
+
+[dev-dependencies]
+rbench = { workspace = true }
+
+[[example]]
+name = "bench_validation"
+path = "examples/bench_validation.rs"
+
+[[example]]
+name = "bench_decode"
+path = "examples/bench_decode.rs"

@@ -24,6 +24,31 @@ npm run bench:bootstrap -- --out tmp/performance/wasm-bootstrap.json --samples 9
 npm run bench:profiles -- --out tmp/performance/profile-triangulation.json
 npm run bench:analysis -- --out tmp/performance/solid-analysis.json
 node --import tsx benchmarks/own-cad/bench-csg-scaling.mts --out tmp/performance/csg-scaling.json
+
+# Native Rust rbench examples (release binaries; `--profile quick` is a
+# reproducible smoke profile and can be replaced with the desired profile).
+cargo rbench run --program crates/target/release/examples/bench_boolean --protocol \
+  --repetitions 8 -o .rbench/boolean -- --profile quick
+cargo rbench run --program crates/target/release/examples/bench_mesh_kernels --protocol \
+  --repetitions 8 -o .rbench/mesh-kernels -- --profile quick
+cargo rbench run --program crates/target/release/examples/bench_sdf_cpu --protocol \
+  --repetitions 8 -o .rbench/sdf-cpu -- --profile quick
+cargo rbench run --program crates/target/release/examples/bench_print_export --protocol \
+  --repetitions 8 -o .rbench/print-export -- --profile quick --json
+cargo rbench run --program crates/target/release/examples/bench_point_bounds --protocol \
+  --repetitions 8 -o .rbench/point-bounds -- --profile quick
+cargo rbench run --program crates/target/release/examples/bench_point_moments --protocol \
+  --repetitions 8 -o .rbench/point-moments -- --profile quick
+cargo rbench run --program crates/target/release/examples/bench_nearest_two --protocol \
+  --repetitions 8 -o .rbench/nearest-two -- --profile quick
+cargo rbench run --program crates/target/release/examples/bench_chamfer --protocol \
+  --repetitions 8 -o .rbench/chamfer -- --profile quick
+cargo rbench run --program crates/target/release/examples/bench_validation --protocol \
+  --repetitions 8 -o .rbench/brep-validation -- --profile quick
+cargo rbench run --program crates/target/release/examples/bench_decode --protocol \
+  --repetitions 8 -o .rbench/brep-decode -- --profile quick
+cargo rbench run --program crates/target/release/examples/bench_matching --protocol \
+  --repetitions 8 -o .rbench/matching -- --profile quick
 ```
 
 Each output directory must be new. CPU defaults to four fixtures, two warmups
@@ -259,3 +284,13 @@ are separate execution paths and are outside these benchmark results.
 Foreign `manifold-3d` comparison timings are also outside the product. Install
 and run them only from [`tools/manifold-bench`](../../tools/manifold-bench/README.md);
 do not add that package to the application lockfile.
+
+The remaining manual Rust examples are `bench_profile_triangulation`,
+`bench_point_cloud_stats`, `bench_distance_pairs`, `bench_local_planes`,
+`bench_nearest_four`, `bench_transformed_bounds`, `bench_transformed_stats`,
+`bench_transform_error`, `bench_point_plane`, `bench_gpu` (math and SDF),
+`bench_lattice`, and `bench_printer_lan`. The first nine retain bespoke
+multi-phase/diagnostic output and are not yet protocolized. GPU examples are
+left manual because timing includes real device queues and backend selection;
+`bench_printer_lan` is left manual because it measures real LAN/network
+behavior. These should not be interpreted as rbench results.
