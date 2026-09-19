@@ -45,6 +45,21 @@ describe('mesh selection overlays', () => {
     expect(overlay.boundaryLines.length).toBe(18)
   })
 
+  it('compacts preallocated face output after invalid triangles without retaining a tail', () => {
+    const withInvalid = new Uint32Array([0, 1, 2, 0, 1, 99, 1, 3, 2])
+    const actual = buildFaceOverlayGeometry(vertices, withInvalid, new Uint32Array([7, 7, 7]), identity(), 0, 7)
+    const expected = buildFaceOverlayGeometry(vertices, indices, new Uint32Array([7, 7]), identity(), 0, 7)
+    expect(actual).toEqual(expected)
+    expect(actual.triangles.buffer.byteLength).toBe(actual.triangles.byteLength)
+
+    const invalidVertices = vertices.slice()
+    invalidVertices[6] = NaN
+    const empty = buildFaceOverlayGeometry(invalidVertices, indices, new Uint32Array([7, 7]), identity(), 0, 7)
+    expect(empty.triangles.length).toBe(0)
+    expect(empty.triangles.buffer.byteLength).toBe(0)
+    expect(empty.boundaryLines.length).toBe(0)
+  })
+
   it('groups triangles by face id in ascending CSR rows', () => {
     const index = buildFaceTriangleIndex(new Uint32Array([3, 5, 3, 9]), 4)
     expect(index).not.toBeNull()

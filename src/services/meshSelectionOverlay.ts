@@ -143,14 +143,19 @@ export function buildFaceOverlayGeometry(
   }
   if (!faceTriangles.length) faceTriangles = [triangleIndex]
 
-  const trianglePositions: number[] = []
+  const trianglePositions = new Float32Array(faceTriangles.length * 9)
+  let writtenPositions = 0
   const edges = new Map<string, EdgeUse>()
   for (const triangle of faceTriangles) {
     const vertexIndices = triangleVertexIndices(indices, triangle)
     if (!vertexIndices) continue
     const points = vertexIndices.map(vertex => worldVertex(vertices, transform, vertex))
     if (points.some(point => point === null)) continue
-    for (const point of points as Vec3[]) trianglePositions.push(...point)
+    for (const point of points as Vec3[]) {
+      trianglePositions[writtenPositions++] = point[0]
+      trianglePositions[writtenPositions++] = point[1]
+      trianglePositions[writtenPositions++] = point[2]
+    }
 
     for (let edge = 0; edge < 3; edge++) {
       const from = vertexIndices[edge]
@@ -173,7 +178,7 @@ export function buildFaceOverlayGeometry(
   }
 
   return {
-    triangles: new Float32Array(trianglePositions),
+    triangles: writtenPositions === trianglePositions.length ? trianglePositions : trianglePositions.slice(0, writtenPositions),
     boundaryLines: new Float32Array(boundaryPositions),
   }
 }
