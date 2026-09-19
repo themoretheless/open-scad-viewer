@@ -19,3 +19,7 @@ rbench = { workspace = true }
 [[example]]
 name = "bench_mesh_kernels"
 path = "examples/bench_mesh_kernels.rs"
+
+[[example]]
+name = "bench_boolean"
+path = "examples/bench_boolean.rs"

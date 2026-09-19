@@ -59,6 +59,7 @@ interface KernelExports extends WebAssembly.Exports {
  abi_export_prepare(vp:number,vl:number,ip:number,il:number,mp:number,ml:number,float32:number):bigint
  abi_export_append(handle:number,vp:number,vl:number,ip:number,il:number,mp:number,ml:number):bigint
  abi_semantic_edges(vp:number,vl:number,ip:number,il:number,mfp:number,mfl:number,mtp:number,mtl:number,weld:number,creaseDotThreshold:number):bigint
+ abi_render_mesh(id:number,creaseCosine:number):bigint
  abi_array_field(handle:number,slot:number):number
  abi_array_free(handle:number):void
 }

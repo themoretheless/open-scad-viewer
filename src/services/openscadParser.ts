@@ -192,6 +192,12 @@ const MAX_VALUE_ELEMENTS = 1_000_000
  * which allocates per-slice cross-sections before MAX_TRIANGLES can fire. */
 const MAX_EXTRUDE_SLICES = 512
 
+/** True when `view` is a fresh array of exactly `length` elements that owns its
+ * whole buffer, so it can be published or transferred without a copy. */
+function isExclusiveView(view: Float32Array | Uint32Array, length: number): boolean {
+  return view.length === length && view.byteOffset === 0 && view.buffer.byteLength === view.byteLength
+}
+
 type Vec2 = [number, number]
 type Vec3 = [number, number, number]
 
@@ -3032,6 +3038,29 @@ function transformByMatrix(shapes: Shape[], value: Value, node: CallNode, ctx: E
   })
 }
 
+/**
+ * Mixed-dimension policy shared by every Boolean module: the legacy profile
+ * rejects mixed children, the stable profile warns and keeps the first child's
+ * dimension (an intersection with a foreign dimension is empty).
+ */
+function homogeneousShapes(
+  shapes: Shape[],
+  operation: 'union' | 'intersection' | 'difference',
+  ctx: EvalContext,
+  p: number,
+  diagnosticName: string = operation,
+): Shape[] {
+  if (shapes.length === 0) return []
+  const dimension = shapes[0].dimension
+  if (!shapes.some(shape => shape.dimension !== dimension)) return shapes
+  if (!isStableProfile(ctx)) {
+    evaluationError(ctx, p, `${diagnosticName}() cannot mix 2D and 3D children`)
+  }
+  warn(ctx, `${diagnosticName}() ignored child geometry with a different dimension`)
+  if (operation === 'intersection') return []
+  return shapes.filter(shape => shape.dimension === dimension)
+}
+
 function booleanShapes(
   sourceShapes: Shape[],
   operation: 'union' | 'intersection',
@@ -3039,20 +3068,10 @@ function booleanShapes(
   p: number,
   diagnosticName: string = operation,
 ): Shape[] {
-  let shapes = sourceShapes
-  if (shapes.length === 0) return []
-  const dimension = shapes[0].dimension
-  if (shapes.some(shape => shape.dimension !== dimension)) {
-    if (!isStableProfile(ctx)) {
-      evaluationError(ctx, p, `${diagnosticName}() cannot mix 2D and 3D children`)
-    }
-    warn(ctx, `${diagnosticName}() ignored child geometry with a different dimension`)
-    if (operation === 'intersection') return []
-    shapes = shapes.filter(shape => shape.dimension === dimension)
-  }
-  if (shapes.length === 1) return shapes
+  const shapes = homogeneousShapes(sourceShapes, operation, ctx, p, diagnosticName)
+  if (shapes.length <= 1) return shapes
   ctx.control?.poll()
-  if (dimension === 3) {
+  if (shapes[0].dimension === 3) {
     const solids = shapes.map(shape => (shape as Shape3D).geometry)
     const geometry = kernelCall(ctx, p, () => ctx.kernel.boolean3(operation, solids))
     return [{ dimension: 3, geometry, color: shapes[0].color, entityId: currentEntityId(ctx) }]
@@ -3075,14 +3094,19 @@ async function differenceChildren(node: CallNode, ctx: EvalContext): Promise<Sha
     ctx,
     node.p,
   )
-  const cutters = booleanShapes(
-    childContext === null
-      ? await evalNodes(node.children.slice(1), ctx)
-      : await evalPreparedNodes(node.children.slice(1), childContext),
-    'union',
-    ctx,
-    node.p,
-  )
+  // Every child statement is one cutter operand (a loop or module child is the
+  // union of its own shapes), matching the SemanticProgram lane byte for byte.
+  // The operands stay separate: A \ (B1 ∪ B2 …) equals ((A \ B1) \ B2) …, and
+  // the kernel subtracts bound-separated cutters in small local batches
+  // instead of first unioning them into one large cutter.
+  const cutterOperands: Shape[] = []
+  for (const child of node.children.slice(1)) {
+    const shapes = childContext === null
+      ? await evalNodes([child], ctx)
+      : await evalPreparedNodes([child], childContext)
+    cutterOperands.push(...booleanShapes(shapes, 'union', ctx, node.p))
+  }
+  const cutters = homogeneousShapes(cutterOperands, 'union', ctx, node.p)
   if (base.length === 0 || cutters.length === 0) return base
   if (base[0].dimension !== cutters[0].dimension) {
     if (isStableProfile(ctx)) {
@@ -3093,16 +3117,18 @@ async function differenceChildren(node: CallNode, ctx: EvalContext): Promise<Sha
   }
   ctx.control?.poll()
   if (base[0].dimension === 3) {
+    const operands = [base[0].geometry, ...cutters.map(cutter => (cutter as Shape3D).geometry)]
     return [{
       dimension: 3,
-      geometry: ctx.kernel.boolean3('difference', [base[0].geometry, (cutters[0] as Shape3D).geometry]),
+      geometry: kernelCall(ctx, node.p, () => ctx.kernel.boolean3('difference', operands)),
       color: base[0].color,
       entityId: currentEntityId(ctx),
     }]
   }
+  const operands = [base[0].geometry, ...cutters.map(cutter => (cutter as Shape2D).geometry)]
   return [{
     dimension: 2,
-    geometry: ctx.kernel.boolean2('difference', [base[0].geometry, (cutters[0] as Shape2D).geometry]),
+    geometry: kernelCall(ctx, node.p, () => ctx.kernel.boolean2('difference', operands)),
     color: base[0].color,
     entityId: currentEntityId(ctx),
   }]
@@ -3859,11 +3885,13 @@ async function parseInternal(
       triangleCount += mesh.numTri
       if (triangleCount > MAX_TRIANGLES) evaluationError(ctx, 0, `Rendered model exceeds ${MAX_TRIANGLES.toLocaleString()} triangles`)
       if (mesh.numProp < 6) evaluationError(ctx, 0, 'Geometry kernel did not produce normals')
-      const vertices = new Float32Array(mesh.numVert * 6)
-      if (mesh.numProp === 6) {
-        // Exactly position+normal: one memcpy instead of 6 writes per vertex.
-        vertices.set(mesh.vertProperties.subarray(0, mesh.numVert * 6))
+      let vertices: Float32Array
+      if (mesh.numProp === 6 && isExclusiveView(mesh.vertProperties, mesh.numVert * 6)) {
+        // The kernel copied this array out for this analysis alone; publish it
+        // without another copy. The Worker protocol requires exclusive buffers.
+        vertices = mesh.vertProperties
       } else {
+        vertices = new Float32Array(mesh.numVert * 6)
         for (let vertex = 0; vertex < mesh.numVert; vertex++) {
           const sourceOffset = vertex * mesh.numProp
           const targetOffset = vertex * 6
@@ -3871,7 +3899,7 @@ async function parseInternal(
           if ((vertex & 0x3fff) === 0x3fff) await control.yieldIfDue()
         }
       }
-      const indices = new Uint32Array(mesh.triVerts)
+      const indices = isExclusiveView(mesh.triVerts, mesh.triVerts.length) ? mesh.triVerts : new Uint32Array(mesh.triVerts)
       const bvh = buildMeshBvh(vertices, indices)
       await control.yieldIfDue()
       const semanticEdges = extractSemanticEdges(vertices, indices, {
@@ -3906,7 +3934,7 @@ async function parseInternal(
         edgeIndices: semanticEdges.indices,
         color: [...shape.color],
         transform: identity(),
-        faceIds: new Uint32Array(mesh.faceID),
+        faceIds: isExclusiveView(mesh.faceID, mesh.faceID.length) ? mesh.faceID : new Uint32Array(mesh.faceID),
         provenance,
         topology: semanticEdges.diagnostics,
       })

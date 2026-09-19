@@ -264,10 +264,12 @@ fn rejects_crossing_shells_and_incorrect_component_orientation() {
         )
         .is_err()
     );
+    // The output cap bounds clipped results; identical or separated operands
+    // return whole input surfaces and are bounded by the inputs instead.
     assert_eq!(
         boolean(
             &outer,
-            &outer,
+            &cube([1.; 3], [4.; 3]),
             Operation::Union,
             &Options {
                 max_output_triangles: 1,
@@ -277,6 +279,18 @@ fn rejects_crossing_shells_and_incorrect_component_orientation() {
         .unwrap_err()
         .code,
         "POLYGON_BOOLEAN_RESOURCE_LIMIT"
+    );
+    assert!(
+        boolean(
+            &outer,
+            &outer,
+            Operation::Union,
+            &Options {
+                max_output_triangles: 1,
+                ..Options::default()
+            }
+        )
+        .is_ok()
     );
 }
 
@@ -288,4 +302,124 @@ fn coincident_solids_with_different_triangulations() {
     run(&a, &b, Operation::Union, 8.);
     run(&a, &b, Operation::Intersection, 8.);
     run(&a, &b, Operation::Difference, 0.);
+}
+
+fn translated(mesh: &Mesh, offset: [f64; 3]) -> Mesh {
+    mesh.transform([
+        [1., 0., 0., offset[0]],
+        [0., 1., 0., offset[1]],
+        [0., 0., 1., offset[2]],
+        [0., 0., 0., 1.],
+    ])
+    .unwrap()
+}
+
+#[test]
+fn separated_operands_above_the_bsp_cap_take_the_exact_fast_path() {
+    let a = crate::solid::primitives::sphere(10., 96).unwrap();
+    let far = translated(&a, [30., 0., 0.]);
+    assert!(
+        a.indices.len() / 3 + far.indices.len() / 3 > BSP_INPUT_TRIANGLES,
+        "fixture must exceed the BSP admission cap"
+    );
+    let out = boolean(&a, &far, Operation::Union, &Options::default()).unwrap();
+    assert_eq!(out.mesh.indices.len(), a.indices.len() + far.indices.len());
+    assert!(out.report.closed);
+    assert_eq!(out.report.self_intersection_status, "not_checked");
+    let kept = boolean(&a, &far, Operation::Difference, &Options::default()).unwrap();
+    assert_eq!(kept.mesh.indices.len(), a.indices.len());
+    let none = boolean(&a, &far, Operation::Intersection, &Options::default()).unwrap();
+    assert!(none.mesh.indices.is_empty());
+    // Overlapping operands above the cap still need BSP clipping and are refused.
+    let near = translated(&a, [5., 0., 0.]);
+    assert_eq!(
+        boolean(&a, &near, Operation::Union, &Options::default())
+            .unwrap_err()
+            .code,
+        "POLYGON_BOOLEAN_RESOURCE_LIMIT"
+    );
+    // Below the cap the fast path is still audited, as before.
+    let small = cube([0.; 3], [1.; 3]);
+    let apart = cube([3.; 3], [4.; 3]);
+    let audited = boolean(&small, &apart, Operation::Union, &Options::default()).unwrap();
+    assert_eq!(audited.report.self_intersection_status, "checked_with_tolerance");
+}
+
+#[test]
+fn union_many_joins_separated_groups_and_folds_touching_ones() {
+    let a = cube([0.; 3], [1.; 3]);
+    let overlapping = cube([0.5, 0., 0.], [1.5, 1., 1.]);
+    let apart = cube([5.; 3], [6.; 3]);
+    let calls = std::cell::Cell::new(0);
+    let mut pairwise = |x: &Mesh, y: &Mesh| {
+        calls.set(calls.get() + 1);
+        Ok(boolean(x, y, Operation::Union, &Options::default())?.mesh)
+    };
+    let out = union_many(&[a.clone(), apart.clone(), overlapping.clone()], &mut pairwise).unwrap();
+    assert_eq!(calls.get(), 1, "only the overlapping pair needs CSG");
+    let report = out.inspect().unwrap();
+    assert!(report.closed);
+    assert!((report.signed_volume_mm3 - 2.5).abs() < 1e-8);
+    vertex_manifold(&out).unwrap();
+
+    // Face contact is connectivity, never separation.
+    let touching = cube([1., 0., 0.], [2., 1., 1.]);
+    calls.set(0);
+    let fused = union_many(&[a.clone(), touching], &mut pairwise).unwrap();
+    assert_eq!(calls.get(), 1);
+    assert!((fused.inspect().unwrap().signed_volume_mm3 - 2.).abs() < 1e-8);
+
+    calls.set(0);
+    assert_eq!(union_many(&[a.clone()], &mut pairwise).unwrap().indices, a.indices);
+    assert!(union_many(&[], &mut pairwise).unwrap().indices.is_empty());
+    assert_eq!(calls.get(), 0);
+}
+
+#[test]
+fn difference_many_subtracts_separated_cutters_in_batches() {
+    let plate = cube([0., 0., 0.], [8., 8., 1.]);
+    let mut cutters: Vec<Mesh> = (0..4)
+        .flat_map(|i| {
+            (0..4).map(move |j| {
+                let (x, y) = (1. + 2. * i as f64, 1. + 2. * j as f64);
+                cube([x, y, -1.], [x + 1., y + 1., 2.])
+            })
+        })
+        .collect();
+    cutters.push(cube([20.; 3], [21.; 3]));
+    let calls = std::cell::Cell::new(0);
+    let mut pairwise = |x: &Mesh, y: &Mesh| {
+        calls.set(calls.get() + 1);
+        Ok(boolean(x, y, Operation::Difference, &Options::default())?.mesh)
+    };
+    let out = difference_many(&plate, &cutters, &mut pairwise, 8).unwrap();
+    assert_eq!(calls.get(), 2, "16 separated cutters in batches of 8; the far cube is skipped");
+    let report = out.inspect().unwrap();
+    assert!(report.closed);
+    assert!((report.signed_volume_mm3 - 48.).abs() < 1e-8);
+    vertex_manifold(&out).unwrap();
+
+    // One cutter per step gives the same volume. It is kept short on purpose:
+    // BSP clipping planes are infinite, so every step re-splits the whole cap
+    // and the intermediate triangle count grows quadratically when coplanar
+    // simplification cannot retriangulate a multi-hole cap (measured: 14,700
+    // triangles after 14 single-cutter steps on this plate). Batching is the
+    // mitigation until simplification handles such caps.
+    calls.set(0);
+    let sequential = difference_many(&plate, &cutters[..8], &mut pairwise, 1).unwrap();
+    assert_eq!(calls.get(), 8);
+    assert!((sequential.inspect().unwrap().signed_volume_mm3 - 56.).abs() < 1e-8);
+
+    // Overlapping cutters never share a batch, so the join stays exact.
+    let stacked = [cube([1., 1., -1.], [3., 3., 2.]), cube([2., 2., -1.], [4., 4., 2.])];
+    calls.set(0);
+    let pocketed = difference_many(&plate, &stacked, &mut pairwise, 8).unwrap();
+    assert_eq!(calls.get(), 2);
+    assert!((pocketed.inspect().unwrap().signed_volume_mm3 - 57.).abs() < 1e-8);
+
+    assert!(difference_many(&crate::solid::primitives::empty(), &cutters, &mut pairwise, 8)
+        .unwrap()
+        .indices
+        .is_empty());
+    assert_eq!(difference_many(&plate, &[], &mut pairwise, 8).unwrap().indices, plate.indices);
 }

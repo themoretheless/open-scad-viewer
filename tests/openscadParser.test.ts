@@ -129,6 +129,41 @@ assert(2 + 2 == 5, "dimension contract failed") unsupported_child();`
     expect(result.meshes[0].color[3]).toBe(1)
   })
 
+  it('subtracts many separated cutters that are taller than the base', async () => {
+    // The drilled-plate idiom: a 6x6 grid of holes at $fn=32 with cutters
+    // longer than the plate. 36 holes take the exact prism arrangement; the
+    // planar triangulation still refuses 64 (docs/design/csg-scaling-2026-09-19.md).
+    const step = 80 / 6
+    const holes = Array.from({ length: 36 }, (_, i) =>
+      `translate([${-40 + step / 2 + (i % 6) * step}, ${-40 + step / 2 + Math.floor(i / 6) * step}, 0]) cylinder(h = 12, r = 3, center = true);`)
+    const result = await parseOpenSCAD(`$fn = 32;\ndifference() {\n  cube([86, 86, 8], center = true);\n  ${holes.join('\n  ')}\n}`)
+    const holeArea = 16 * 9 * Math.sin(Math.PI / 16)
+    expect(result.meshes).toHaveLength(1)
+    expect(result.volume).toBeCloseTo(86 * 86 * 8 - 36 * holeArea * 8, 3)
+    expect(result.meshes[0].topology).toMatchObject({ boundary: 0, nonManifold: 0 })
+    expect(bounds(result.meshes)).toEqual({ min: [-43, -43, -4], max: [43, 43, 4] })
+  })
+
+  it('subtracts many separated pockets that need real clipping', async () => {
+    const pockets = Array.from({ length: 16 }, (_, i) =>
+      `translate([${-30 + (i % 4) * 20}, ${-30 + Math.floor(i / 4) * 20}, 4]) sphere(r = 3);`)
+    const result = await parseOpenSCAD(`$fn = 16;\ndifference() {\n  cube([86, 86, 8], center = true);\n  ${pockets.join('\n  ')}\n}`)
+    expect(result.meshes).toHaveLength(1)
+    // Each pocket removes half of a polyhedral sphere of radius 3 (about 50 mm³).
+    expect(result.volume).toBeLessThan(86 * 86 * 8 - 16 * 40)
+    expect(result.volume).toBeGreaterThan(86 * 86 * 8 - 16 * 60)
+    expect(result.meshes[0].topology).toMatchObject({ boundary: 0, nonManifold: 0 })
+  })
+
+  it('unions separated dense bodies above the BSP admission cap without clipping', async () => {
+    const result = await parseOpenSCAD('$fn = 128; union() { sphere(r = 30); translate([70, 0, 0]) sphere(r = 30); translate([140, 0, 0]) sphere(r = 30); }')
+    const single = await parseOpenSCAD('$fn = 128; sphere(r = 30);')
+    expect(result.meshes).toHaveLength(1)
+    expect(result.meshes[0].indices.length).toBe(3 * single.meshes[0].indices.length)
+    expect(result.volume).toBeCloseTo(3 * single.volume, 6)
+    expect(result.meshes[0].topology).toMatchObject({ boundary: 0, nonManifold: 0 })
+  })
+
   it('composes nested transforms as parent * local', async () => {
     const result = await parseOpenSCAD('translate([10, 0, 0]) rotate([0, 0, 90]) cube([2, 4, 6]);')
     const box = bounds(result.meshes)

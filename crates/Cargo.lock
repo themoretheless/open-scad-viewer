@@ -1037,6 +1037,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "languages-bridge"
+version = "0.1.0"
+dependencies = [
+ "modelgraph-runtime",
+ "modelgraph-text",
+ "openscad-core",
+ "value-codec",
+]
+
+[[package]]
+name = "languages-wasm"
+version = "0.1.0"
+dependencies = [
+ "languages-bridge",
+]
+
+[[package]]
 name = "lazy-regex"
 version = "3.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"

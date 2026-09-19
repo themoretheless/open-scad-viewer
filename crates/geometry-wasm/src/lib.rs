@@ -173,9 +173,15 @@ pub unsafe extern "C" fn abi_semantic_edges(
     }
 }
 
+/// Display mesh with crease-split normals for a retained solid handle.
+#[unsafe(no_mangle)]
+pub extern "C" fn abi_render_mesh(id: u32, crease_cosine: f64) -> u64 {
+    geometry_bridge::abi::abi_render_mesh(id, crease_cosine)
+}
+
 /// # Safety
-/// The handle must reference a live result from `abi_bvh_build` or
-/// `abi_semantic_edges`.
+/// The handle must reference a live result from `abi_bvh_build`,
+/// `abi_semantic_edges` or `abi_render_mesh`.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn abi_array_field(handle: usize, slot: u32) -> usize {
     unsafe { geometry_bridge::abi::abi_array_field(handle, slot) }

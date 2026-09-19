@@ -332,20 +332,36 @@ No wall-clock pass/fail thresholds. Invalid or changed outputs fail the run.`)
   }
   await writeFile(path.join(options.out, 'manifest.json'), `${JSON.stringify(manifest, null, 2)}\n`)
   const results = []
+  // A fixture the kernel refuses (resource budget, unsupported size) is a
+  // finding, not a reason to lose the other fixtures: it is recorded in the
+  // report and fails the exit code at the end.
+  const refused = []
   try {
     for (const id of options.fixtures) {
       const fixture = cpuFixtures.find(item => item.id === id)
       console.log(`Benchmarking ${id} (${options.iterations} samples, ${options.warmups} warmups)...`)
-      const result = await runChild(fixture, options)
+      let result
+      try {
+        result = await runChild(fixture, options)
+      } catch (error) {
+        refused.push({ fixture: id, message: error.message })
+        console.log(`  refused: ${error.message.split('\n')[0]}`)
+        continue
+      }
       assert.equal(result.source.inputSha256, source.inputSha256, 'Source changed between fixtures; discard and rerun')
       results.push(result)
       console.log(`  ${result.geometry.triangles.toLocaleString()} triangles; build p50 ${result.stageSummaries.build.wallMs.p50.toFixed(2)} ms, analyze ${result.stageSummaries.build.phases.analyzeMs.p50.toFixed(2)} ms, STL ${result.stageSummaries.stl.wallMs.p50.toFixed(2)} ms`)
     }
     assert.equal((await sourceSnapshot()).inputSha256, source.inputSha256, 'Source changed during the benchmark suite')
-    await writeFile(path.join(options.out, 'report.json'), `${JSON.stringify({ ...manifest, completedAt: new Date().toISOString(), status: 'complete', results }, null, 2)}\n`)
+    const status = refused.length ? 'partial' : 'complete'
+    await writeFile(path.join(options.out, 'report.json'), `${JSON.stringify({ ...manifest, completedAt: new Date().toISOString(), status, refused, results }, null, 2)}\n`)
     console.log(`Report: ${path.join(options.out, 'report.json')}`)
+    if (refused.length) {
+      console.error(`${refused.length} fixture(s) refused by the kernel: ${refused.map(item => item.fixture).join(', ')}`)
+      process.exitCode = 1
+    }
   } catch (error) {
-    await writeFile(path.join(options.out, 'failure.json'), `${JSON.stringify({ status: 'failed', message: error.message, completedFixtures: results.map(r => r.fixture.id) }, null, 2)}\n`)
+    await writeFile(path.join(options.out, 'failure.json'), `${JSON.stringify({ status: 'failed', message: error.message, completedFixtures: results.map(r => r.fixture.id), refused }, null, 2)}\n`)
     throw error
   }
 }

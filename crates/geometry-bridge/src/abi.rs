@@ -409,6 +409,21 @@ pub unsafe fn abi_semantic_edges(
     packed(geometry(encode(handle)))
 }
 
+/// Build the display mesh of a retained solid (crease-split normals, merge
+/// pairs, face ids) inside the kernel and return a result handle for
+/// `abi_array_field`. Reads no host memory; the handle is validated by the
+/// solid store.
+pub fn abi_render_mesh(id: u32, crease_cosine: f64) -> u64 {
+    if !crease_cosine.is_finite() {
+        return packed(geometry(Err(input("Invalid crease cosine"))));
+    }
+    packed(geometry(
+        mesh::render_buffers(id, crease_cosine)
+            .map(|mesh| mesh_analysis::store(mesh_analysis::AnalysisBuffers::Render(mesh)))
+            .and_then(encode),
+    ))
+}
+
 /// Read one pointer/length/diagnostic slot of a stored analysis result.
 /// # Safety
 /// The handle must reference a live array result (BVH, edges, placement, or export).

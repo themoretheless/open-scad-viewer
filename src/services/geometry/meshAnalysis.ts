@@ -135,6 +135,47 @@ export function buildBvhInKernel(
   }
 }
 
+export interface KernelRenderMesh {
+  /** Stride-6 position/normal vertices with crease-split normals. */
+  readonly vertices: Float32Array<ArrayBuffer>
+  readonly indices: Uint32Array<ArrayBuffer>
+  /** Property vertices that share a source vertex, for edge extraction. */
+  readonly mergeFrom: Uint32Array<ArrayBuffer>
+  readonly mergeTo: Uint32Array<ArrayBuffer>
+  /** One planar face id per triangle. */
+  readonly faceIds: Uint32Array<ArrayBuffer>
+}
+
+/**
+ * Build the display mesh of a retained solid inside the kernel: crease-split
+ * vertex normals, merge pairs and face ids in one call, copied out once. No
+ * host memory crosses into the kernel; `creaseCosine` is the caller's
+ * `Math.cos(angle)` so the classification constant is bit-identical.
+ */
+export function renderMeshInKernel(id: number, creaseCosine: number): KernelRenderMesh {
+  const {exports: wasm, memory, takeResponse} = kernelRuntime()
+  if (!Number.isInteger(id) || id < 1 || id > 0xffffffff) throw new GeometryKernelError('GEOMETRY_INVALID_INPUT', 'Invalid CAD handle')
+  if (!Number.isFinite(creaseCosine)) throw new GeometryKernelError('GEOMETRY_INVALID_INPUT', 'Invalid crease cosine')
+  let handle = 0
+  try {
+    handle = decodeNurbsResult<number>(takeResponse(wasm.abi_render_mesh(id, creaseCosine)))
+    // The result allocation may grow memory. Never cache memory.buffer between calls.
+    // Constructing from the linear-memory view copies into a fresh exclusive
+    // ArrayBuffer, which the Worker protocol requires for transfer.
+    const buffer = memory.buffer
+    const u32 = (slot: number) => new Uint32Array(new Uint32Array(buffer, wasm.abi_array_field(handle, slot), wasm.abi_array_field(handle, slot + 1)))
+    return {
+      vertices: new Float32Array(new Float32Array(buffer, wasm.abi_array_field(handle, 0), wasm.abi_array_field(handle, 1))),
+      indices: u32(2),
+      mergeFrom: u32(4),
+      mergeTo: u32(6),
+      faceIds: u32(8),
+    }
+  } finally {
+    if (handle) wasm.abi_array_free(handle)
+  }
+}
+
 /**
  * Extract semantic edges in the Rust kernel. `creaseDotThreshold` is computed
  * by the caller (Math.cos of the clamped angle) so the classification
