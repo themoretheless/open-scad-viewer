@@ -1,5 +1,6 @@
 use math_core::{Acceleration, V3, nearest_two_accelerated};
 use rbench::{DropPolicy, Suite};
+use std::sync::Arc;
 
 fn points(count: usize, phase: f64) -> Vec<V3> {
     (0..count)
@@ -22,6 +23,9 @@ fn add_case(
 ) {
     let queries = points(query_count, 0.25);
     let targets = points(target_count, -0.75);
+    let reference = nearest_two_accelerated(&queries, &targets, Acceleration::Cpu);
+    let queries = Arc::new(queries);
+    let targets = Arc::new(targets);
     suite
         .bench_with_input(
             Box::leak(
@@ -31,9 +35,19 @@ fn add_case(
                 )
                 .into_boxed_str(),
             ),
-            move || (queries.clone(), targets.clone()),
+            move || (Arc::clone(&queries), Arc::clone(&targets)),
             move |(queries, targets)| {
                 let values = nearest_two_accelerated(queries, targets, acceleration);
+                assert_eq!(
+                    values
+                        .iter()
+                        .map(|pair| [pair[0].0, pair[1].0])
+                        .collect::<Vec<_>>(),
+                    reference
+                        .iter()
+                        .map(|pair| [pair[0].0, pair[1].0])
+                        .collect::<Vec<_>>()
+                );
                 values
                     .iter()
                     .take(1024)

@@ -2,6 +2,7 @@
 //! `cargo run --release -p osv-math --features cuda --example bench_chamfer`.
 use math_core::{Acceleration, V3, chamfer_distance};
 use rbench::{DropPolicy, Suite};
+use std::sync::Arc;
 
 fn modes() -> Vec<Acceleration> {
     let mut modes = vec![Acceleration::Cpu, Acceleration::Auto, Acceleration::Gpu];
@@ -32,14 +33,14 @@ fn add_cases(suite: &mut Suite, a: &[V3], b: &[V3]) {
     let modes = modes();
     let reference = chamfer_distance(a, b, Acceleration::Cpu).unwrap();
     for mode in modes {
-        let input_a = a.to_vec();
-        let input_b = b.to_vec();
+        let input_a = Arc::new(a.to_vec());
+        let input_b = Arc::new(b.to_vec());
         suite
             .bench_with_input(
                 Box::leak(
                     format!("chamfer/{}x{}/{}", a.len(), b.len(), mode.label()).into_boxed_str(),
                 ),
-                move || (input_a.clone(), input_b.clone()),
+                move || (Arc::clone(&input_a), Arc::clone(&input_b)),
                 move |(a, b)| {
                     let got = chamfer_distance(a, b, mode).unwrap();
                     let tol = if mode == Acceleration::Cpu {

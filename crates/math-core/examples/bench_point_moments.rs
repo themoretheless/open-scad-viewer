@@ -2,6 +2,7 @@
 //! `cargo run --release -p osv-math --features cuda --example bench_point_moments`.
 use math_core::{Acceleration, V3, point_moments_accelerated};
 use rbench::{DropPolicy, Suite};
+use std::sync::Arc;
 
 fn modes() -> Vec<Acceleration> {
     let mut modes = vec![Acceleration::Cpu, Acceleration::Auto, Acceleration::Gpu];
@@ -32,11 +33,11 @@ fn add_cases(suite: &mut Suite, points: &[V3], n: usize) {
     let modes = modes();
     let reference = point_moments_accelerated(points, Acceleration::Cpu).unwrap();
     for mode in modes {
-        let input = points.to_vec();
+        let input = Arc::new(points.to_vec());
         suite
             .bench_with_input(
                 Box::leak(format!("point_moments/{n}/{}", mode.label()).into_boxed_str()),
-                move || input.clone(),
+                move || Arc::clone(&input),
                 move |points| {
                     let got = point_moments_accelerated(points, mode).unwrap();
                     let tol = if mode.is_gpu() && mode != Acceleration::Auto {

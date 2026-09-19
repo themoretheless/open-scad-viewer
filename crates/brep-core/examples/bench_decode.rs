@@ -34,7 +34,7 @@ fn main() -> rbench::Result<()> {
             )
             .parameter("teeth", teeth as f64)
             .parameter("bytes", canonical.len() as f64)
-            .parameter("sha256_bytes", sha256.len() as f64);
+            .parameter("sha256_hex_chars", sha256.len() as f64);
     }
     suite.main()
 }

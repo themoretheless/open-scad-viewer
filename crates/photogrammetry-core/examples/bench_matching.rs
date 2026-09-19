@@ -3,6 +3,7 @@ use photogrammetry_core::features::{
     Feature, FeatureOptions, matches_with_options, recommended_for_descriptor_matching,
 };
 use rbench::{DropPolicy, Suite};
+use std::sync::Arc;
 
 fn descriptor(seed: &mut u64) -> [f32; 128] {
     let mut raw = [0f32; 128];
@@ -37,15 +38,22 @@ fn options(acceleration: Acceleration) -> FeatureOptions {
 fn add_case(suite: &mut Suite, a_count: usize, b_count: usize, acceleration: Acceleration) {
     let a = features(a_count, 0x5317_91ab);
     let b = features(b_count, 0x89ab_13df);
+    let reference = matches_with_options(&a, &b, &options(Acceleration::Cpu));
     let options = options(acceleration);
+    let a = Arc::new(a);
+    let b = Arc::new(b);
     suite
         .bench_with_input(
             Box::leak(
                 format!("matching/{a_count}x{b_count}/{}", acceleration.label()).into_boxed_str(),
             ),
-            move || (a.clone(), b.clone()),
+            move || (Arc::clone(&a), Arc::clone(&b)),
             move |(a, b)| {
                 let matches = matches_with_options(a, b, &options);
+                assert_eq!(
+                    matches.iter().map(|m| (m.a, m.b)).collect::<Vec<_>>(),
+                    reference.iter().map(|m| (m.a, m.b)).collect::<Vec<_>>()
+                );
                 matches
                     .iter()
                     .take(1024)
