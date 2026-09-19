@@ -18,7 +18,9 @@ publish = false
 rbench = { git = "https://github.com/themoretheless/rbench", branch = "release" }
 
 [profile.release]
-opt-level = "s"
+# Browser delivery is the primary constraint: keep the shared Rust kernels in the
+# smallest WASM footprint that still preserves the full geometry ABI.
+opt-level = "z"
 lto = true
 
 # Photogrammetry hot loops: measured against the size profile on native and WASM.
