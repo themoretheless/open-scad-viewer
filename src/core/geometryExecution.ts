@@ -268,13 +268,27 @@ const ownRustCadManifest: GeometryEngineStaticManifest = {
 }
 ownRustCadManifest.manifestDigest = computeGeometryManifestDigest(ownRustCadManifest)
 
+// Historical snapshots intentionally do not inherit the mutable current catalog.
 const ownRustCadManifestV1: GeometryEngineStaticManifest = {
-  ...ownRustCadManifest,
+  engineClass: 'mesh',
+  displayName: 'Own Rust CAD', permanent: true, maturity: 'production',
   engineKey: 'own-rust-cad-v1',
   kernelFingerprint: 'sha256:fde93f46f61330609eaab5c7470be0bb24a2ff14a64d0b83788c5c0051d82af6',
+  semanticProgramVersion: 'legacy-direct-evaluator-v1',
   capabilityManifestVersion: 'own-rust-node-v1',
+  languageContracts: ['legacy/current'], inputContract: 'legacy-source-direct',
+  capabilities: ['analysis.metrics', 'csg.boolean', 'export.obj', 'export.stl', 'geometry.mesh'],
+  plannedCapabilities: ['provenance.source-ranges'], qualities: ['preview', 'full'],
+  representations: ['mesh'], plannedRepresentations: [], exportFormats: ['stl', 'obj'], plannedExportFormats: [],
+  limits: {sourceCharacters: 250_000, triangles: 750_000}, isolation: 'in-process-serialized', deployment: 'node-mcp',
   qualification: {status: 'qualified', recordId: 'docs/qualification/own-rust-cad-v1.json', corpusVersion: 'own-rust-cad-v1', target: 'browser-worker/node-mcp'},
-  manifestDigest: '',
+  dependency: {
+    packageName: 'workspace:geometry-bridge', version: '0.1.0', licenseExpression: 'MIT', sbomRef: 'THIRD_PARTY_NOTICES.md',
+    sbomSha256: 'ff988c02c87aac5ee582a393378bb59ff40a024850dd377abd0cde7fdad231e6',
+    lockfileSha256: '70eb933b3607298caa00f7cdd96a953f313e6cc080a34f9b3c5c58694c765704',
+  },
+  rollbackCompatibility: {disableEngineCapability: true, sourceContractPreserved: true, crossEngineFallback: false, minimumCatalogSchema: 3},
+  manifestDigest: '', automaticFallback: false,
 }
 ownRustCadManifestV1.manifestDigest = computeGeometryManifestDigest(ownRustCadManifestV1)
 
@@ -335,17 +349,46 @@ const brepClosedManifest: GeometryEngineStaticManifest = {
 brepClosedManifest.manifestDigest = computeGeometryManifestDigest(brepClosedManifest)
 
 const brepClosedManifestV1: GeometryEngineStaticManifest = {
-  ...brepClosedManifest,
+  engineClass: 'brep',
+  displayName: 'Rust B-rep/NURBS kernel (closed analytic peer)',
+  permanent: true,
+  maturity: 'production',
   engineKey: 'rust-brep-closed-v1',
   kernelFingerprint: 'sha256:fde93f46f61330609eaab5c7470be0bb24a2ff14a64d0b83788c5c0051d82af6',
+  semanticProgramVersion: 'semantic-program-contract-v1',
   capabilityManifestVersion: 'brep-closed-v1',
+  languageContracts: ['openscad-viewer/brep-1'],
+  inputContract: 'semantic-program-required',
+  capabilities: [
+    'analysis.metrics', 'csg.boolean', 'export.obj', 'export.stl', 'export.step',
+    'geometry.brep', 'nurbs.curves', 'nurbs.surfaces', 'topology.stable-ids',
+  ],
+  plannedCapabilities: [],
+  qualities: ['preview', 'full'],
+  representations: ['brep', 'mesh'],
+  plannedRepresentations: [],
+  exportFormats: ['stl', 'obj', 'step'],
+  plannedExportFormats: [],
+  limits: { sourceCharacters: 250_000, triangles: 750_000 },
+  isolation: 'in-process-serialized',
+  deployment: 'node-mcp',
   qualification: {
     status: 'qualified',
     recordId: 'docs/qualification/brep-closed-matrix-v1.json',
     corpusVersion: 'brep-closed-matrix-v1',
     target: 'browser-worker/node-mcp',
   },
+  dependency: {
+    packageName: 'workspace:geometry-bridge', version: '0.1.0', licenseExpression: 'MIT', sbomRef: 'THIRD_PARTY_NOTICES.md',
+    sbomSha256: 'ff988c02c87aac5ee582a393378bb59ff40a024850dd377abd0cde7fdad231e6',
+    lockfileSha256: '70eb933b3607298caa00f7cdd96a953f313e6cc080a34f9b3c5c58694c765704',
+  },
+  rollbackCompatibility: {
+    disableEngineCapability: true, sourceContractPreserved: true,
+    crossEngineFallback: false, minimumCatalogSchema: 3,
+  },
   manifestDigest: '',
+  automaticFallback: false,
 }
 brepClosedManifestV1.manifestDigest = computeGeometryManifestDigest(brepClosedManifestV1)
 

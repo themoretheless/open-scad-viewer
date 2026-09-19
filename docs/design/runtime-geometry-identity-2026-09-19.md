@@ -42,3 +42,20 @@ Do not mark the pending manifest qualified to make tests green, overwrite v1/v9
 archives, or claim that changing CURRENT/ACTIVE version selection alone resolves
 this. The runtime needs a coherent artifact selection and admission contract;
 until then, published qualified descriptors do not certify the current binary.
+
+## Historical snapshot isolation
+
+A prerequisite defect is fixed separately: v1 mesh/B-rep manifests previously
+spread their corresponding current v2 objects. Updating current dependency hashes
+therefore silently changed historical manifests and their computed digests.
+The two v1 records now contain explicit historical values, with no dependency on
+current evidence. The duplication is deliberate: historical snapshots must not
+inherit later capabilities, limits or dependency metadata.
+
+The regression test first failed when mocked current SBOM/lockfile hashes changed
+the mesh v1 digest from `c2cf439e...` to `8055c2fe...`. After the fix it verifies
+whole-object equality for both v1 records, pins their pre-change digests, and
+checks that pending v2 entries still consume current evidence. All 29 focused
+archive, routing, runtime-audit and module-boundary tests passed, as did UI type
+checking. No historical JSON evidence was edited. The active binary mismatch
+above remains unresolved; snapshot isolation is not qualification.
