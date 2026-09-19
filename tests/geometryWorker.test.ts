@@ -122,6 +122,7 @@ function identityResult(options: {
 }
 
 afterEach(() => {
+  vi.restoreAllMocks()
   parseOpenSCADMock.mockReset()
   warmGeometryKernelMock.mockClear()
   vi.unstubAllGlobals()
@@ -423,17 +424,13 @@ describe('geometry Worker lifecycle', () => {
   })
 
   it('does not report a cold-initialization cancellation until runBuild reaches a checkpoint', async () => {
-    let finishInitialization!: (result: {
-      meshes: []
-      warnings: []
-      volume: number
-      surfaceArea: number
-      quality: 'preview'
-    }) => void
-    const pendingInitialization = new Promise<Parameters<typeof finishInitialization>[0]>(resolve => {
+    let finishInitialization!: () => void
+    const pendingInitialization = new Promise<void>(resolve => {
       finishInitialization = resolve
     })
-    parseOpenSCADMock.mockReturnValue(pendingInitialization)
+    const {defaultGeometryKernel} = await import('../src/services/cadGeometryKernel')
+    const warm = defaultGeometryKernel.warm.bind(defaultGeometryKernel)
+    vi.spyOn(defaultGeometryKernel, 'warm').mockImplementation(() => pendingInitialization.then(warm))
 
     const scope = new FakeWorkerScope()
     vi.stubGlobal('self', scope)
@@ -457,23 +454,18 @@ describe('geometry Worker lifecycle', () => {
       reason: 'superseded',
     })
 
-    expect(scope.events.map(event => event.status)).toEqual(['accepted', 'started', 'progress'])
+    expect(scope.events.map(event => event.status)).toEqual(['accepted', 'started'])
 
-    finishInitialization({
-      meshes: [],
-      warnings: [],
-      volume: 0,
-      surfaceArea: 0,
-      quality: 'preview',
-    })
+    finishInitialization()
     await vi.waitFor(() => {
-      expect(scope.events.map(event => event.status)).toEqual(['accepted', 'started', 'progress', 'cancelled'])
+      expect(scope.events.map(event => event.status)).toEqual(['accepted', 'started', 'cancelled'])
     })
     expect(scope.events.at(-1)).toMatchObject({
       status: 'cancelled',
-      phase: 'compiling',
+      phase: 'initializing',
       reason: 'superseded',
     })
+    expect(parseOpenSCADMock).not.toHaveBeenCalled()
   })
 
   it('stops a running parse cooperatively when a cancel message arrives mid-build', async () => {
@@ -504,6 +496,7 @@ describe('geometry Worker lifecycle', () => {
       sourceSha256: sha256Hex('cube(1);'),
       quality: 'full',
     })
+    await vi.waitFor(() => expect(parseOpenSCADMock).toHaveBeenCalledTimes(1))
     scope.dispatchMessage({
       protocolVersion: GEOMETRY_WORKER_PROTOCOL_VERSION,
       type: 'cancel',
@@ -680,6 +673,7 @@ describe('geometry Worker lifecycle', () => {
       sourceSha256: sha256Hex(source),
       quality: 'full',
     })
+    await vi.waitFor(() => expect(parseOpenSCADMock).toHaveBeenCalledTimes(1))
     scope.dispatchMessage({
       protocolVersion: GEOMETRY_WORKER_PROTOCOL_VERSION,
       type: 'cancel',

@@ -6,6 +6,7 @@ import {
   GeometryLanguageContractError,
 } from '../services/geometryBuildEngine'
 import { AbortedError, OpenSCADParseError } from '../services/openscadParser'
+import { defaultGeometryKernel } from '../services/cadGeometryKernel'
 import { isExactSolidRequest } from '../services/solid/exactSolidProtocol'
 import { meshTransferables } from '../core/mesh'
 import type { GeometryExecutionDescriptor } from '../core/geometryExecution'
@@ -152,6 +153,20 @@ function terminalState(
   return null
 }
 
+async function initializeKernel() {
+  let timer: ReturnType<typeof setTimeout> | undefined
+  try {
+    await Promise.race([
+      defaultGeometryKernel.warm(),
+      new Promise<never>((_, reject) => {
+        timer = setTimeout(() => reject(new Error('Geometry kernel initialization exceeded 5000 ms.')), 5_000)
+      }),
+    ])
+  } finally {
+    if (timer !== undefined) clearTimeout(timer)
+  }
+}
+
 async function runBuild(
   request: GeometryBuildRequest,
   planned: GeometryExecutionDescriptor,
@@ -172,11 +187,18 @@ async function runBuild(
   }
 
   postEvent(jobEvent(request, { status: 'started', phase: 'initializing' }))
-  postEvent(jobEvent(request, { status: 'progress', phase: 'compiling', progress: null }))
 
   let lastHeartbeat = performance.now()
   let completedExecution: GeometryExecutionDescriptor | undefined
+  let phase: 'initializing' | 'compiling' = 'initializing'
   try {
+    // Cold WASM compilation belongs to initialization, not provider readiness.
+    // The coordinator can still terminate this worker on cancellation.
+    await initializeKernel()
+    const initializationTerminal = terminalState(job, phase, planned)
+    if (initializationTerminal) { postEvent(initializationTerminal); return }
+    phase = 'compiling'
+    postEvent(jobEvent(request, { status: 'progress', phase, progress: null }))
     // The parser's top-level statement loop yields to the event loop
     // periodically, so queued cancel messages are delivered mid-parse and
     // shouldAbort stops a superseded/cancelled evaluation cooperatively — the
@@ -232,7 +254,7 @@ async function runBuild(
     postEvent(response, meshTransferables(result.meshes))
   } catch (error) {
     const attachedExecution = geometryExecutionForError(error) ?? completedExecution
-    const terminal = terminalState(job, 'compiling', attachedExecution ?? plannedExecution(request))
+    const terminal = terminalState(job, phase, attachedExecution ?? plannedExecution(request))
     if (terminal) {
       postEvent(terminal)
       return
@@ -243,7 +265,7 @@ async function runBuild(
       // race anyway: an aborted evaluation must never surface as a build error.
       postEvent(jobEvent(request, {
         status: 'cancelled',
-        phase: 'compiling',
+        phase,
         ...(attachedExecution ? { execution: attachedExecution } : {}),
         reason: 'superseded',
         durationMs: elapsed(job),
@@ -257,7 +279,7 @@ async function runBuild(
       : undefined)
     postEvent(jobEvent(request, {
       status: 'failed',
-      phase: 'compiling',
+      phase,
       ...(execution ? { execution } : {}),
       error: serializedBuildError(error),
       durationMs: elapsed(job),

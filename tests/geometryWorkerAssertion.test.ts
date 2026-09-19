@@ -31,14 +31,42 @@ class IntegrationWorkerScope {
 }
 
 afterEach(() => {
+  vi.useRealTimers()
+  vi.restoreAllMocks()
   vi.unstubAllGlobals()
   vi.resetModules()
 })
 
 describe('geometry Worker assertion integration', () => {
-  it('carries a real parser assertion failure through one correlated terminal event', async () => {
+  it('bounds hung initialization and ignores its late rejection', async () => {
     const scope = new IntegrationWorkerScope()
     vi.stubGlobal('self', scope)
+    const {defaultGeometryKernel} = await import('../src/services/cadGeometryKernel')
+    let rejectWarm!: (error: Error) => void
+    vi.spyOn(defaultGeometryKernel, 'warm').mockImplementation(() => new Promise((_resolve, reject) => { rejectWarm = reject }))
+    await import('../src/workers/geometry.worker')
+    vi.useFakeTimers()
+    const source = 'cube(1);'
+    scope.dispatchMessage({protocolVersion: GEOMETRY_WORKER_PROTOCOL_VERSION, type: 'build',
+      documentRevision: 1, jobId: 1, source, sourceSha256: sha256Hex(source), quality: 'full'})
+    await vi.advanceTimersByTimeAsync(4999)
+    expect(scope.events.map(event => event.status)).toEqual(['accepted', 'started'])
+    await vi.advanceTimersByTimeAsync(1)
+    expect(scope.events.at(-1)).toMatchObject({status: 'failed', phase: 'initializing',
+      error: {message: 'Geometry kernel initialization exceeded 5000 ms.'}})
+    rejectWarm(new Error('late initialization failure'))
+    await vi.advanceTimersByTimeAsync(0)
+    expect(scope.events.map(event => event.status)).toEqual(['accepted', 'started', 'failed'])
+    expect(vi.getTimerCount()).toBe(0)
+  })
+
+  it.each([0, 350])('carries a real parser assertion through one terminal event after %i ms cold startup', async delayMs => {
+    const scope = new IntegrationWorkerScope()
+    vi.stubGlobal('self', scope)
+    const {defaultGeometryKernel} = await import('../src/services/cadGeometryKernel')
+    const warm = defaultGeometryKernel.warm.bind(defaultGeometryKernel)
+    let pending: ReturnType<typeof warm> | undefined
+    vi.spyOn(defaultGeometryKernel, 'warm').mockImplementation(() => pending ??= new Promise<void>(resolve => setTimeout(resolve, delayMs)).then(warm))
     await import('../src/workers/geometry.worker')
 
     const source = 'cube(1);\nassert(false, "invalid model") sphere(1);'
