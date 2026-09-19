@@ -36,6 +36,8 @@ jobs:
           path: |
             ~/.cargo/registry
             ~/.cargo/bin/wasm-opt*
+            ~/.cargo/.crates.toml
+            ~/.cargo/.crates2.json
             crates/target
           key: rust-${{ runner.os }}-wasm-opt-0.116.1-${{ hashFiles('crates/Cargo.lock', 'rust-toolchain.toml') }}
       - run: npm ci
@@ -68,6 +70,8 @@ jobs:
           path: |
             ~/.cargo/registry
             ~/.cargo/bin/wasm-opt*
+            ~/.cargo/.crates.toml
+            ~/.cargo/.crates2.json
             crates/target
           key: rust-${{ runner.os }}-wasm-opt-0.116.1-${{ hashFiles('crates/Cargo.lock', 'rust-toolchain.toml') }}
       - run: npm ci
@@ -95,6 +99,8 @@ jobs:
           path: |
             ~/.cargo/registry
             ~/.cargo/bin/wasm-opt*
+            ~/.cargo/.crates.toml
+            ~/.cargo/.crates2.json
             crates/target
           key: rust-${{ runner.os }}-wasm-opt-0.116.1-${{ hashFiles('crates/Cargo.lock', 'rust-toolchain.toml') }}
       - run: npm ci
