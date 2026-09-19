@@ -70,7 +70,7 @@ work/fragment/output budget exceeded». Лестница `bench:csg` на HEAD:
 | Плита − 1 / 4 цилиндра | 111* / 25 мс | 1.2 / 3.1 мс | prism-путь; * холодный старт |
 | Плита − 16 | 90 мс | 98 мс | триангуляция профиля 4×4 отказала → BSP-fallback батчами по 8 |
 | Плита − 36 | 284 мс | 73 мс | prism-путь, объём совпадает с аналитическим до 1e-16 |
-| Плита − 64 / 100 | ошибка | ошибка | профиль > 2 048 вершин → fallback → рост фрагментов → stitch-бюджет |
+| Плита − 64 / 100 | ошибка | native prism succeeds for 64; WASM harness unavailable here | edge-interior bridges remove the aligned-grid failure; downstream stitch limits still apply to 100 |
 | Плита − 16 сферических карманов, `$fn=16` | не измерялось | 110 мс | BSP батчами по 8 |
 | Плита − 64 карманов | не измерялось | ошибка (stitch) | см. раздел 4 |
 | Union 3 разнесённых сфер `$fn=64` / `128` | ошибка | 17 / 72 мс | 11.9k / 48.4k треугольников |
@@ -87,7 +87,7 @@ work/fragment/output budget exceeded». Лестница `bench:csg` на HEAD:
 | | analyze | 3.3 мс | 0.8 мс |
 | `many-bodies` (256 кубов, без булеанов) | build | 23.2 мс | 17.3 мс |
 | | analyze | 16.5 мс | 11.1 мс |
-| `medium-csg` (64 отверстия) | | отказ | отказ (те же причины, что плита − 64) |
+| `medium-csg` (64 отверстия) | | отказ | native prism regression succeeds; JS harness is blocked by missing generated kernel bytes |
 | `dense-sphere` (3 сферы `$fn=256`) | | отказ | отказ (100k-предел на меш) |
 
 `analyze` включает нормали, BVH, рёбра и хэш; выигрыш в нём даёт перенос
@@ -113,15 +113,15 @@ work/fragment/output budget exceeded». Лестница `bench:csg` на HEAD:
 ## 4. Что осталось и почему
 
 1. **Триангуляция многоугольника с отверстиями** (`planar-geometry/src/triangulation.rs`):
-   ear clipping с эвристикой мостов и бюджетом 2 048 вершин. Воспроизведение:
-   тест `prism_difference_grid_of_holes_reports_triangulation_limits` в
-   `polygon-core/src/solid/primitives.rs` (сетка 4×4: «cannot be triangulated
-   without crossing its boundary»; 64 × 32 сегмента: «budget exceeded»). От
-   неё зависят prism-путь, `extrude_rings` (крышки `linear_extrude`) и
-   `simplify` (копланарная ретриангуляция после BSP). Замена на монотонное
-   разбиение sweep-line (O(n log n), без сдвига координат, `orient2d` из
-   `cad-predicates` для предикатов) снимает первые две строки отказов в
-   таблице 3.1 и делает последовательный BSP линейным.
+   закрыта минимальной правкой bridge path: детерминированный горизонтальный
+   ray рассматривает также пересечения с внутренностью boundary edge и
+   вставляет точку пересечения без координатного сдвига. Сетки 2×2 … 10×10
+   и native prism с 64 цилиндрами проходят; malformed/self-intersecting rings
+   завершаются явной ошибкой. Для этого пути введён отдельный cap 4 096
+   authored vertices: 64 отверстия по 32 сегмента плюс внешнее кольцо дают
+   2 052 вершины, а bridge split points требуют запаса. Профили выше cap
+   отбрасываются до quadratic visibility preflight; arrangement limit 65 536
+   не используется как замена triangulation budget.
 2. **Накопление фрагментов в последовательном BSP**: плоскости бесконечны,
    каждый шаг заново режет всю крышку; без работающего `simplify` рост
    квадратичный (14 700 треугольников после 14 шагов по одному квадратному

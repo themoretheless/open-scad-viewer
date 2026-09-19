@@ -1,7 +1,7 @@
 //! Mesh primitives: cube / cylinder / sphere, join, hull, clean.
 //! Closed-ring boolean lives in `planar_geometry::rings`.
-use crate::{Mesh, Result, check, cross, dot, norm, sub};
-use planar_geometry::rings::{Rings, area, cross2, inside, planar, sub2};
+use crate::{check, cross, dot, norm, sub, Mesh, Result};
+use planar_geometry::rings::{area, cross2, inside, planar, sub2, Rings};
 use std::collections::{BTreeSet, HashMap};
 
 pub fn empty() -> Mesh {
@@ -633,16 +633,24 @@ mod tests {
 
         // A cutter that stops inside the plate makes a pocket, not a prism.
         let pocket = cylinder(1., 1., 1., 32, false).unwrap();
-        assert!(prism_boolean(&plate, &pocket, "difference").unwrap().is_none());
+        assert!(prism_boolean(&plate, &pocket, "difference")
+            .unwrap()
+            .is_none());
         // Union still needs coincident end planes.
         assert!(prism_boolean(&plate, &hole, "union").unwrap().is_none());
         // Intersection uses the overlap of both ranges.
         let tall = cube([4., 4., 10.], false).unwrap();
-        let overlap = prism_boolean(&plate, &tall, "intersection").unwrap().unwrap();
+        let overlap = prism_boolean(&plate, &tall, "intersection")
+            .unwrap()
+            .unwrap();
         assert!((overlap.inspect().unwrap().signed_volume_mm3 - 16.).abs() < 1e-8);
         // A cutter covering the whole base leaves nothing.
         let everything = cube([20., 20., 4.], true).unwrap();
-        assert!(prism_boolean(&plate, &everything, "difference").unwrap().unwrap().indices.is_empty());
+        assert!(prism_boolean(&plate, &everything, "difference")
+            .unwrap()
+            .unwrap()
+            .indices
+            .is_empty());
     }
 
     /// Documents the current planar-triangulation limits the prism path
@@ -670,18 +678,21 @@ mod tests {
                 .collect();
             join(&holes).unwrap()
         };
-        let four = prism_boolean(&plate, &grid(4), "difference").unwrap().unwrap();
+        let four = prism_boolean(&plate, &grid(4), "difference")
+            .unwrap()
+            .unwrap();
         assert!(four.inspect().unwrap().closed);
-        // Hole bridging fails on this aligned 4x4 grid; 64 holes exceed the
-        // 2,048-vertex profile budget. Both are triangulation limits, not
-        // invalid geometry, so they surface as errors the caller may retry.
-        assert_eq!(
-            prism_boolean(&plate, &grid(16), "difference").unwrap_err().message,
-            "Profile cannot be triangulated without crossing its boundary"
-        );
-        assert_eq!(
-            prism_boolean(&plate, &grid(64), "difference").unwrap_err().message,
-            "Profile triangulation budget exceeded"
-        );
+        for count in [16, 64] {
+            let result = prism_boolean(&plate, &grid(count), "difference")
+                .unwrap()
+                .expect("grid subtraction remains a prism");
+            let report = result.inspect().unwrap();
+            assert!(report.closed);
+            let hole_area = 32. * 3. * 3. * (std::f64::consts::TAU / 32.).sin() / 2.;
+            assert!(
+                (report.signed_volume_mm3 - (86. * 86. * 8. - count as f64 * hole_area * 8.)).abs()
+                    < 1e-6
+            );
+        }
     }
 }
