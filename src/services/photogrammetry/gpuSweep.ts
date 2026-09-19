@@ -7,6 +7,9 @@
  */
 
 import { runGpuCompute } from '../webgpuCompute'
+import type { WgslVariant } from '../webgpuFeatures'
+
+export const SWEEP_LINEAR_INDEXING_VARIANT = 'photogrammetry-sweep-linear-indexing'
 
 export interface GpuSweepSource {
   image: number
@@ -99,7 +102,7 @@ export function parseSweepPayload(blob: Uint8Array): GpuSweepPayload {
 
 /** Scores every present view with the kernel's shader; views stay in image order.
  * One pass, one submit, concurrent readbacks; the shared gray raster uploads once. */
-export async function runGpuSweep(blob: Uint8Array, wgsl: string): Promise<Float32Array> {
+export async function runGpuSweep(blob: Uint8Array, wgsl: string, wgslVariants?: readonly WgslVariant[]): Promise<Float32Array> {
   const payload = parseSweepPayload(blob)
   const patchLen = (payload.patchRadius * 2 + 1) ** 2
   const dispatches = []
@@ -132,9 +135,12 @@ export async function runGpuSweep(blob: Uint8Array, wgsl: string): Promise<Float
       ],
       outputBytes: scoresFloats * 4,
       workgroups: [Math.ceil(view.mapWidth / 16), Math.ceil(view.mapHeight / 16), 1] as [number, number, number],
+      variantWorkgroups: {
+        [SWEEP_LINEAR_INDEXING_VARIANT]: [Math.ceil((view.mapWidth * view.mapHeight) / 256), 1, 1] as [number, number, number],
+      },
     })
   }
-  const parts = await runGpuCompute({ wgsl, entryPoint: 'sweep', dispatches })
+  const parts = await runGpuCompute({ wgsl, wgslVariants, entryPoint: 'sweep', dispatches })
   const total = parts.reduce((sum, scores) => sum + scores.length, 0)
   const flat = new Float32Array(total)
   let offset = 0

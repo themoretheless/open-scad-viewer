@@ -234,6 +234,18 @@ struct EdgeV { @builtin(position) p: vec4f, @location(0) w: vec3f }
 }
 `
 
+function immediateObjectShader(source: string) {
+  if (!source.includes('var<uniform> ob: Obj;')) throw new Error('Immediate shader contract changed: missing object uniform')
+  return `requires immediate_address_space;\nvar<immediate> im_style: vec4f;\nfn objectStyle() -> vec4f { return im_style; }\n`
+    + source.replaceAll('ob.style', 'objectStyle()')
+}
+
+function supportsImmediateAddressSpace() {
+  return typeof navigator !== 'undefined'
+    && !!navigator.gpu
+    && navigator.gpu.wgslLanguageFeatures?.has('immediate_address_space') === true
+}
+
 /* ── GPU mesh handle ──────────────────────────────── */
 
 interface GMesh {
@@ -319,11 +331,14 @@ export class WebGPURenderer {
 
   private meshPipe!: GPURenderPipeline
   private meshPipeT!: GPURenderPipeline
+  private meshImmediatePipeT: GPURenderPipeline | null = null
   private deepMeshPipe!: GPURenderPipeline
+  private deepMeshImmediatePipe: GPURenderPipeline | null = null
   private linePipe!: GPURenderPipeline
   private gridPipe!: GPURenderPipeline
   private edgePipe!: GPURenderPipeline
   private deepEdgePipe!: GPURenderPipeline
+  private deepEdgeImmediatePipe: GPURenderPipeline | null = null
   private selectionFacePipe!: GPURenderPipeline
   private selectionLinePipe!: GPURenderPipeline
   private deepSelectionLinePipe!: GPURenderPipeline
@@ -398,6 +413,7 @@ export class WebGPURenderer {
   private edgeWarmQueue: GMesh[] = []
   private edgeWarmHandle: number | ReturnType<typeof setTimeout> | null = null
   private edgeWarmIsIdle = false
+  private immediateObjectStyle = false
 
   private pendingFrameToken: number | null = null
   private uploadMetrics: SceneUploadMetrics = { geometryUploadBytes: 0, geometryBuffersCreated: 0, reusedEntities: 0 }
@@ -545,6 +561,7 @@ export class WebGPURenderer {
 
   private buildPipelines() {
     const dev = this.dev!
+    this.immediateObjectStyle = supportsImmediateAddressSpace()
     this.sceneBGL = dev.createBindGroupLayout({ entries: [
       { binding: 0, visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT, buffer: { type: 'uniform' } },
     ] })
@@ -554,6 +571,9 @@ export class WebGPURenderer {
 
     const meshMod = dev.createShaderModule({ code: MESH_WGSL })
     const meshLayout = dev.createPipelineLayout({ bindGroupLayouts: [this.sceneBGL, this.objBGL] })
+    const immediateMeshLayout = this.immediateObjectStyle
+      ? dev.createPipelineLayout({ bindGroupLayouts: [this.sceneBGL, this.objBGL], immediateSize: 16 })
+      : null
 
     const vbl: GPUVertexBufferLayout = {
       arrayStride: 24,
@@ -587,6 +607,17 @@ export class WebGPURenderer {
       depthStencil: { ...ds, depthWriteEnabled: false },
     }
     this.meshPipeT = dev.createRenderPipeline(meshPipeTDescriptor)
+    if (immediateMeshLayout) {
+      const immediateMeshMod = dev.createShaderModule({ code: immediateObjectShader(MESH_WGSL) })
+      this.meshImmediatePipeT = dev.createRenderPipeline({
+        ...meshPipeTDescriptor,
+        layout: immediateMeshLayout,
+        vertex: { ...meshPipeTDescriptor.vertex, module: immediateMeshMod },
+        fragment: { ...meshPipeTDescriptor.fragment!, module: immediateMeshMod },
+      })
+    } else {
+      this.meshImmediatePipeT = null
+    }
 
     const deepMeshMod = dev.createShaderModule({ code: DEEP_MESH_WGSL })
     this.deepMeshPipe = dev.createRenderPipeline({
@@ -602,6 +633,24 @@ export class WebGPURenderer {
       primitive: { topology: 'triangle-list', cullMode: 'none' },
       depthStencil: { ...ds, depthWriteEnabled: false, depthCompare: 'always' },
     })
+    if (immediateMeshLayout) {
+      const deepImmediateMeshMod = dev.createShaderModule({ code: immediateObjectShader(DEEP_MESH_WGSL) })
+      this.deepMeshImmediatePipe = dev.createRenderPipeline({
+        layout: immediateMeshLayout,
+        vertex: { module: deepImmediateMeshMod, entryPoint: 'vs', buffers: [vbl] },
+        fragment: { module: deepImmediateMeshMod, entryPoint: 'fs', targets: [{
+          format: this.fmt,
+          blend: {
+            color: { srcFactor: 'src-alpha', dstFactor: 'one-minus-src-alpha', operation: 'add' },
+            alpha: { srcFactor: 'one', dstFactor: 'one-minus-src-alpha', operation: 'add' },
+          },
+        }] },
+        primitive: { topology: 'triangle-list', cullMode: 'none' },
+        depthStencil: { ...ds, depthWriteEnabled: false, depthCompare: 'always' },
+      })
+    } else {
+      this.deepMeshImmediatePipe = null
+    }
 
     const lineMod = dev.createShaderModule({ code: LINE_WGSL })
     const lineLayout = dev.createPipelineLayout({ bindGroupLayouts: [this.sceneBGL] })
@@ -709,6 +758,35 @@ export class WebGPURenderer {
       primitive: { topology: 'line-list' },
       depthStencil: { ...ds, depthWriteEnabled: false, depthCompare: 'always' },
     })
+    if (immediateMeshLayout) {
+      const immediateEdgeMod = dev.createShaderModule({ code: immediateObjectShader(EDGE_WGSL) })
+      this.deepEdgeImmediatePipe = dev.createRenderPipeline({
+        layout: immediateMeshLayout,
+        vertex: {
+          module: immediateEdgeMod,
+          entryPoint: 'vs',
+          buffers: [{
+            arrayStride: 24,
+            attributes: [{ shaderLocation: 0, offset: 0, format: 'float32x3' }],
+          }],
+        },
+        fragment: {
+          module: immediateEdgeMod,
+          entryPoint: 'fs',
+          targets: [{
+            format: this.fmt,
+            blend: {
+              color: { srcFactor: 'src-alpha', dstFactor: 'one-minus-src-alpha', operation: 'add' },
+              alpha: { srcFactor: 'one', dstFactor: 'one-minus-src-alpha', operation: 'add' },
+            },
+          }],
+        },
+        primitive: { topology: 'line-list' },
+        depthStencil: { ...ds, depthWriteEnabled: false, depthCompare: 'always' },
+      })
+    } else {
+      this.deepEdgeImmediatePipe = null
+    }
 
     const selectionMod = dev.createShaderModule({ code: SELECTION_OVERLAY_WGSL })
     const selectionLayout = dev.createPipelineLayout({ bindGroupLayouts: [this.sceneBGL] })
@@ -1763,7 +1841,7 @@ export class WebGPURenderer {
       this.opaqueBundle.draw(pass, dev, this.fmt, this.meshPipe, this.sceneBG, this.opaqueDraws)
     }
 
-    pass.setPipeline(this.meshPipeT)
+    pass.setPipeline(this.meshImmediatePipeT ?? this.meshPipeT)
     pass.setBindGroup(0, this.sceneBG)
     const ghostMeshes = this.geometryGhosts.flatMap(ghost => ghost.meshes).filter(mesh => mesh.alpha > 0)
     ghostMeshes.forEach((mesh, index) => this.transparentSort.add(this.meshes.length + index, mesh.worldBounds.center))
@@ -1773,6 +1851,7 @@ export class WebGPURenderer {
     if (transitioning || !this.transparentInstances.draw(pass, dev, this.instanceBGL, this.instanceMeshPipeT, this.sceneBG, this.transparentDraws)) {
       for (const g of this.transparentDraws) {
         pass.setBindGroup(1, g.bg)
+        this.setObjectStyleImmediate(pass, g)
         pass.setVertexBuffer(0, g.vb)
         pass.setIndexBuffer(g.ib, 'uint32')
         pass.drawIndexed(g.ic)
@@ -1786,9 +1865,10 @@ export class WebGPURenderer {
     if (deepSelectedIndex !== null) {
       const selectedMesh = this.meshes[deepSelectedIndex]
       if (this.isMeshVisible(deepSelectedIndex) && selectedMesh) {
-        pass.setPipeline(this.deepMeshPipe)
+        pass.setPipeline(this.deepMeshImmediatePipe ?? this.deepMeshPipe)
         pass.setBindGroup(0, this.sceneBG)
         pass.setBindGroup(1, selectedMesh.bg)
+        this.setObjectStyleImmediate(pass, selectedMesh)
         pass.setVertexBuffer(0, selectedMesh.vb)
         pass.setIndexBuffer(selectedMesh.ib, 'uint32')
         pass.drawIndexed(selectedMesh.ic)
@@ -1816,9 +1896,10 @@ export class WebGPURenderer {
     if (deepSelectedIndex !== null) {
       const selectedMesh = this.meshes[deepSelectedIndex]
       if (this.isMeshVisible(deepSelectedIndex) && selectedMesh?.edgeIB) {
-        pass.setPipeline(this.deepEdgePipe)
+        pass.setPipeline(this.deepEdgeImmediatePipe ?? this.deepEdgePipe)
         pass.setBindGroup(0, this.sceneBG)
         pass.setBindGroup(1, selectedMesh.bg)
+        this.setObjectStyleImmediate(pass, selectedMesh)
         pass.setVertexBuffer(0, selectedMesh.vb)
         pass.setIndexBuffer(selectedMesh.edgeIB, 'uint32')
         pass.drawIndexed(selectedMesh.edgeIC)
@@ -1906,6 +1987,15 @@ export class WebGPURenderer {
       }
     }
     return active
+  }
+
+  private setObjectStyleImmediate(pass: GPURenderPassEncoder, mesh: GMesh) {
+    if (!this.immediateObjectStyle) return
+    this.styleScratch[0] = mesh.styleAlpha
+    this.styleScratch[1] = mesh.styleSelected
+    this.styleScratch[2] = mesh.styleEdge
+    this.styleScratch[3] = mesh.styleHovered
+    pass.setImmediates(0, this.styleScratch)
   }
 
   private drawFrame = () => {

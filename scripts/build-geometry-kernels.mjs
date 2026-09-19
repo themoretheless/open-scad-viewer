@@ -1,12 +1,13 @@
 import {brotliCompressSync, constants} from 'node:zlib'
 import {spawnSync} from 'node:child_process'
-import {mkdirSync,readFileSync,writeFileSync,rmSync} from 'node:fs'
+import {mkdirSync,writeFileSync,rmSync} from 'node:fs'
 import {fileURLToPath} from 'node:url'
 import {resolve} from 'node:path'
 import {buildWasmBrotli} from './build-wasm-brotli.mjs'
 import {encodeBase85} from './wasm-base85.mjs'
 import {optimizeWasm} from './wasm-optimize.mjs'
 const root=fileURLToPath(new URL('../',import.meta.url)),output=resolve(root,'src/generated/geometry-kernels')
+const publicWasm=resolve(root,'public/wasm')
 const cargoTarget=resolve(root,'crates/target')
 buildWasmBrotli(root,cargoTarget)
 // Debug symbol names are not used by the browser bridge. Keep the existing
@@ -15,13 +16,14 @@ buildWasmBrotli(root,cargoTarget)
 const result=spawnSync('cargo',['build','--locked','--release','--config','profile.release.strip="symbols"','--target','wasm32-unknown-unknown','--manifest-path','crates/geometry-wasm/Cargo.toml'],{cwd:root,stdio:'inherit',env:{...process.env,CARGO_TARGET_DIR:cargoTarget}})
 if(result.error)throw result.error;if(result.status!==0)process.exit(result.status??1)
 mkdirSync(output,{recursive:true})
+mkdirSync(publicWasm,{recursive:true})
 for(const file of ['kernel.js','kernel.d.ts','kernel_bg.wasm.d.ts'])rmSync(resolve(output,file),{force:true})
 const built=resolve(cargoTarget,'wasm32-unknown-unknown/release/geometry_wasm.wasm')
-optimizeWasm(built)
-const wasm=readFileSync(built)
+const wasm=optimizeWasm(built)
 const module=new WebAssembly.Module(wasm)
 if(WebAssembly.Module.imports(module).length)throw new Error('Geometry WASM must not import external functions')
 writeFileSync(resolve(output,'kernel_bg.wasm'),wasm)
+writeFileSync(resolve(publicWasm,'geometry-kernel.wasm'),wasm)
 // A separate bounded synchronous decoder preserves the public host call contract.
 if(wasm.length>16*1024*1024)throw new Error('Geometry WASM exceeds decompression output limit')
 // The kernel exceeds the default 4 MiB history window. A standard 16 MiB

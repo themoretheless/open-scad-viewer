@@ -234,6 +234,29 @@ fn sweep_select(@builtin(global_invocation_id) id: vec3<u32>) {
 }
 "#;
 
+const SWEEP_ENTRY_PREFIX: &str = r#"@compute @workgroup_size(16, 16)
+fn sweep(@builtin(global_invocation_id) id: vec3<u32>) {
+    let x = id.x;
+    let y = id.y;"#;
+
+const SWEEP_LINEAR_ENTRY_PREFIX: &str = r#"@compute @workgroup_size(256)
+fn sweep(@builtin(global_invocation_index) index: u32) {
+    let total = params.width * params.height;
+    if (index >= total) {
+        return;
+    }
+    let x = index % params.width;
+    let y = index / params.width;"#;
+
+pub const HOST_SWEEP_LINEAR_INDEXING_VARIANT_LABEL: &str = "photogrammetry-sweep-linear-indexing";
+
+pub fn host_sweep_linear_indexing_wgsl() -> String {
+    format!(
+        "requires linear_indexing;\n{}",
+        SWEEP_WGSL.replace(SWEEP_ENTRY_PREFIX, SWEEP_LINEAR_ENTRY_PREFIX)
+    )
+}
+
 pub(super) struct GrayImage {
     width: usize,
     height: usize,
@@ -1721,6 +1744,18 @@ fn sweep_depth(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn host_sweep_linear_indexing_variant_rewrites_entry_dispatch_shape() {
+        let wgsl = host_sweep_linear_indexing_wgsl();
+        assert!(wgsl.starts_with("requires linear_indexing;"));
+        assert!(wgsl.contains("@compute @workgroup_size(256)"));
+        assert!(wgsl.contains("fn sweep(@builtin(global_invocation_index) index: u32)"));
+        assert!(wgsl.contains("let total = params.width * params.height;"));
+        assert!(wgsl.contains("let x = index % params.width;"));
+        assert!(wgsl.contains("let y = index / params.width;"));
+        assert!(!wgsl.contains("fn sweep(@builtin(global_invocation_id) id: vec3<u32>)"));
+    }
 
     #[cfg(feature = "gpu")]
     #[test]

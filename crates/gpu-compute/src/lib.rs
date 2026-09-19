@@ -59,6 +59,9 @@ pub struct GpuContext {
     /// that template their workgroup size read this to pick a per-backend
     /// tuning.
     pub backend: wgpu::Backend,
+    pub features: wgpu::Features,
+    pub subgroup_min_size: u32,
+    pub subgroup_max_size: u32,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -78,6 +81,13 @@ pub struct BackendReport {
     pub native_api: bool,
     pub browser_api: bool,
     pub metal: bool,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct SubgroupReport {
+    pub supported: bool,
+    pub min_size: u32,
+    pub max_size: u32,
 }
 
 impl BackendReport {
@@ -143,7 +153,9 @@ impl GpuContext {
             ..Default::default()
         }))
         .ok()?;
-        let backend = adapter.get_info().backend;
+        let info = adapter.get_info();
+        let backend = info.backend;
+        let features = adapter.features();
         let (device, queue) = block_on(adapter.request_device(&wgpu::DeviceDescriptor {
             label: Some("gpu-compute"),
             required_features: wgpu::Features::empty(),
@@ -157,6 +169,9 @@ impl GpuContext {
             device,
             queue,
             backend,
+            features,
+            subgroup_min_size: info.subgroup_min_size,
+            subgroup_max_size: info.subgroup_max_size,
         })
     }
 
@@ -166,6 +181,14 @@ impl GpuContext {
 
     pub fn backend_report(&self) -> BackendReport {
         BackendReport::from_wgpu(self.backend)
+    }
+
+    pub fn subgroup_report(&self) -> SubgroupReport {
+        SubgroupReport {
+            supported: self.features.contains(wgpu::Features::SUBGROUP),
+            min_size: self.subgroup_min_size,
+            max_size: self.subgroup_max_size,
+        }
     }
 }
 
@@ -177,6 +200,12 @@ pub const fn backend_label(backend: wgpu::Backend) -> &'static str {
 /// domain-specific kernel pipeline.
 pub fn available_backend_report() -> Option<BackendReport> {
     GpuContext::new().map(|context| context.backend_report())
+}
+
+/// Reports native WGSL subgroup support for future kernels that can preserve
+/// their tie-breaking semantics with subgroup reductions.
+pub fn available_subgroup_report() -> Option<SubgroupReport> {
+    GpuContext::new().map(|context| context.subgroup_report())
 }
 
 /// Per-backend workgroup-size tuning for compute kernels that template their
@@ -248,6 +277,16 @@ mod tests {
                     BackendKind::WebGpu => wgpu::Backend::BrowserWebGpu,
                 })
             );
+        }
+    }
+
+    #[test]
+    fn available_subgroup_report_is_well_formed_when_present() {
+        if let Some(report) = available_subgroup_report() {
+            assert!(report.min_size <= report.max_size);
+            if report.supported {
+                assert!(report.min_size > 0);
+            }
         }
     }
 }

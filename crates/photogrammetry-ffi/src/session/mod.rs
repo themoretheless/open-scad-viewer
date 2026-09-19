@@ -4,8 +4,8 @@ use photogrammetry_core::{
     Image, Reconstruction, ReconstructionOptions,
     calibration::{Calibration, RectificationOptions, RectificationReport, RectifiedImage},
     dense::{
-        DenseDiagnostics, DenseEstimator, DenseOptions, HostSweepView, PreparedView, SWEEP_WGSL,
-        Surface,
+        DenseDiagnostics, DenseEstimator, DenseOptions, HOST_SWEEP_LINEAR_INDEXING_VARIANT_LABEL,
+        HostSweepView, PreparedView, SWEEP_WGSL, Surface, host_sweep_linear_indexing_wgsl,
     },
     diagnostics::ReconstructionReport,
 };

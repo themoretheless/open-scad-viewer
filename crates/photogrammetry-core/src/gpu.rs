@@ -27,6 +27,10 @@ pub fn backend_report() -> Option<BackendReport> {
     GpuContext::new().map(|context| context.backend_report())
 }
 
+pub fn subgroup_report() -> Option<gpu_compute::SubgroupReport> {
+    GpuContext::new().map(|context| context.subgroup_report())
+}
+
 #[cfg(feature = "cuda")]
 pub fn cuda_device_report() -> Option<CudaDeviceReport> {
     gpu_compute::cuda::available_device_report()

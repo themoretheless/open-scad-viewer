@@ -1,3 +1,5 @@
+import {compileStreamingWasm} from '../wasmStreaming'
+
 let sharedModule: Promise<WebAssembly.Module> | null = null
 
 /**
@@ -6,10 +8,14 @@ let sharedModule: Promise<WebAssembly.Module> | null = null
  */
 export function compilePhotogrammetryKernel(): Promise<WebAssembly.Module> {
   if (!sharedModule) {
-    sharedModule = Promise.all([
-      import('../../generated/photogrammetry/bytes'),
-      import('../wasmBrotliPacking'),
-    ]).then(([{default: wasmBase64}, {unpackBrotliWasmBase64}]) => WebAssembly.compile(unpackBrotliWasmBase64(wasmBase64)))
+    sharedModule = compileStreamingWasm('/wasm/photogrammetry.wasm').then(async module => {
+      if (module) return module
+      const [{default: wasmBase64}, {unpackBrotliWasmBase64}] = await Promise.all([
+        import('../../generated/photogrammetry/bytes'),
+        import('../wasmBrotliPacking'),
+      ])
+      return WebAssembly.compile(unpackBrotliWasmBase64(wasmBase64))
+    })
     sharedModule.catch(() => { sharedModule = null })
   }
   return sharedModule

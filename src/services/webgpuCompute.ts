@@ -3,6 +3,14 @@
  * sweep, SDF grid sampling). The kernels ship their own qualified WGSL; this
  * module only owns device/buffer/dispatch plumbing — no algorithm lives here.
  */
+import {
+  requiredWebGpuFeaturesForWgsl,
+  requiredWgslLanguageFeatures,
+  selectSupportedWgslVariant,
+  unsupportedWebGpuFeatures,
+  unsupportedWgslLanguageFeatures,
+  type WgslVariant,
+} from './webgpuFeatures'
 
 export interface GpuDispatchBuffers {
   /** Bound by index; `uniform` marks the params buffer, `output` the scores. */
@@ -13,20 +21,37 @@ export interface GpuDispatchBuffers {
 }
 export interface GpuComputeJob {
   wgsl: string
+  /** Ordered from newest/fastest to most compatible. The first supported variant wins. */
+  wgslVariants?: readonly WgslVariant[]
   entryPoint: string
   /** One entry per compute dispatch sharing the pipeline; each writes its own
    * output buffer. All dispatches go into one pass and one submit. */
-  dispatches: { buffers: GpuDispatchBuffers[]; outputBytes: number; workgroups: [number, number, number] }[]
+  dispatches: {
+    buffers: GpuDispatchBuffers[]
+    outputBytes: number
+    workgroups: [number, number, number]
+    variantWorkgroups?: Record<string, [number, number, number]>
+  }[]
 }
 
 /** Runs the job; returns one Float32Array per dispatch, in order. */
 export async function runGpuCompute(job: GpuComputeJob): Promise<Float32Array[]> {
   const adapter = await navigator.gpu?.requestAdapter({ powerPreference: 'high-performance' })
   if (!adapter) throw new Error('WebGPU adapter unavailable')
-  const device = await adapter.requestDevice()
+  const selectedVariant = job.wgslVariants?.length
+    ? selectSupportedWgslVariant(adapter, job.wgslVariants)
+    : { label: 'baseline', wgsl: job.wgsl }
+  const wgsl = selectedVariant.wgsl
+  const requiredLanguageFeatures = requiredWgslLanguageFeatures(wgsl)
+  const unsupportedLanguage = unsupportedWgslLanguageFeatures(requiredLanguageFeatures)
+  if (unsupportedLanguage.length) throw new Error(`WebGPU WGSL lacks required feature(s): ${unsupportedLanguage.join(', ')}`)
+  const requiredFeatures = requiredWebGpuFeaturesForWgsl(wgsl)
+  const unsupported = unsupportedWebGpuFeatures(adapter, requiredFeatures)
+  if (unsupported.length) throw new Error(`WebGPU adapter lacks required feature(s): ${unsupported.join(', ')}`)
+  const device = await adapter.requestDevice({ requiredFeatures: requiredFeatures as GPUFeatureName[] })
   const scratch: GPUBuffer[] = []
   try {
-    const module = device.createShaderModule({ code: job.wgsl })
+    const module = device.createShaderModule({ code: wgsl })
     const layout = device.createBindGroupLayout({
       entries: job.dispatches[0]!.buffers.map(buffer => ({
         binding: buffer.binding,
@@ -79,7 +104,7 @@ export async function runGpuCompute(job: GpuComputeJob): Promise<Float32Array[]>
       })
       scratch.push(read)
       pass.setBindGroup(0, device.createBindGroup({ layout, entries }))
-      pass.dispatchWorkgroups(...dispatch.workgroups)
+      pass.dispatchWorkgroups(...(dispatch.variantWorkgroups?.[selectedVariant.label] ?? dispatch.workgroups))
       reads.push({ from: output!, read, bytes: dispatch.outputBytes })
     }
     pass.end()

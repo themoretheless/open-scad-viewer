@@ -10,7 +10,10 @@ mod plane;
 mod selection;
 mod simplify;
 mod volume;
-pub use estimation::{HostSweepSource, HostSweepView, PreparedView, SWEEP_WGSL};
+pub use estimation::{
+    HOST_SWEEP_LINEAR_INDEXING_VARIANT_LABEL, HostSweepSource, HostSweepView, PreparedView,
+    SWEEP_WGSL, host_sweep_linear_indexing_wgsl,
+};
 pub use simplify::{simplify, simplify_with_progress};
 #[cfg(test)]
 mod quality_tests;

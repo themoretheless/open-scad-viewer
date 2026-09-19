@@ -1,6 +1,6 @@
 import {brotliCompressSync, constants} from 'node:zlib'
 import {spawnSync} from 'node:child_process'
-import {mkdirSync,readFileSync,writeFileSync} from 'node:fs'
+import {mkdirSync,writeFileSync} from 'node:fs'
 import {fileURLToPath} from 'node:url'
 import {resolve} from 'node:path'
 import {encodeBase85} from './wasm-base85.mjs'
@@ -9,16 +9,18 @@ import {optimizeWasm} from './wasm-optimize.mjs'
 // builds source never downloads them, and the geometry module stays under the browsers' main-thread
 // instantiation ceiling. Same transport and symbol policy as build-geometry-kernels.mjs.
 const root=fileURLToPath(new URL('../',import.meta.url)),output=resolve(root,'src/generated/language-kernel')
+const publicWasm=resolve(root,'public/wasm')
 const cargoTarget=resolve(root,'crates/target')
 const result=spawnSync('cargo',['build','--locked','--release','--config','profile.release.strip="symbols"','--target','wasm32-unknown-unknown','--manifest-path','crates/languages-wasm/Cargo.toml'],{cwd:root,stdio:'inherit',env:{...process.env,CARGO_TARGET_DIR:cargoTarget}})
 if(result.error)throw result.error;if(result.status!==0)process.exit(result.status??1)
 mkdirSync(output,{recursive:true})
+mkdirSync(publicWasm,{recursive:true})
 const built=resolve(cargoTarget,'wasm32-unknown-unknown/release/languages_wasm.wasm')
-optimizeWasm(built)
-const wasm=readFileSync(built)
+const wasm=optimizeWasm(built)
 const module=new WebAssembly.Module(wasm)
 if(WebAssembly.Module.imports(module).length)throw new Error('Language WASM must not import external functions')
 writeFileSync(resolve(output,'kernel_bg.wasm'),wasm)
+writeFileSync(resolve(publicWasm,'language-kernel.wasm'),wasm)
 if(wasm.length>16*1024*1024)throw new Error('Language WASM exceeds decompression output limit')
 const compressed=brotliCompressSync(wasm,{params:{[constants.BROTLI_PARAM_QUALITY]:11,[constants.BROTLI_PARAM_LGWIN]:24}})
 if(compressed.length>4*1024*1024)throw new Error('Language WASM exceeds compressed input limit')

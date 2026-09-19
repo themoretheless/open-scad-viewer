@@ -6,6 +6,7 @@
  * Dispatch plumbing lives in webgpuCompute.ts.
  */
 import { runGpuCompute } from './webgpuCompute'
+import type { WgslVariant } from './webgpuFeatures'
 
 export interface SdfGpuPayload {
   id: number
@@ -17,6 +18,21 @@ export interface SdfGpuPayload {
   max: number[]
   cells: number[]
   wgsl: string
+  wgslVariants?: WgslVariant[]
+}
+
+const SDF_LINEAR_INDEX_SIGNATURE = 'fn main(@builtin(global_invocation_id) id: vec3<u32>)'
+
+export function sdfWgslVariants(wgsl: string): WgslVariant[] {
+  const linear = wgsl.includes(SDF_LINEAR_INDEX_SIGNATURE) && !/\bid\.(y|z)\b/.test(wgsl)
+    ? `requires linear_indexing;\n${wgsl
+      .replace(SDF_LINEAR_INDEX_SIGNATURE, 'fn main(@builtin(global_invocation_index) index: u32)')
+      .replace(/\bid\.x\b/g, 'index')}`
+    : null
+  return [
+    ...(linear ? [{ label: 'sdf-linear-indexing', wgsl: linear }] : []),
+    { label: 'sdf-baseline', wgsl },
+  ]
 }
 
 /** Samples the whole grid with the kernel's SDF shader; returns f32 values. */
@@ -32,6 +48,10 @@ export async function runSdfSweep(payload: SdfGpuPayload): Promise<Float32Array>
   }
   const [values] = await runGpuCompute({
     wgsl: payload.wgsl,
+    wgslVariants: [
+      ...(payload.wgslVariants ?? []),
+      ...sdfWgslVariants(payload.wgsl),
+    ],
     entryPoint: 'main',
     dispatches: [{
       buffers: [

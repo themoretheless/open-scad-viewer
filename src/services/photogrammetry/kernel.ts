@@ -1,6 +1,7 @@
 import type {PhotoCalibrationGroup, PhotoMeasuredInput} from './calibration'
 import {encodeBinary, type BinaryTripleHints} from '../valueBinaryCodec'
 import {decodePacked, writeLinear} from '../wasmHost'
+import type {WgslVariant} from '../webgpuFeatures'
 
 /** Geometry fields written by the Rust adapter as numeric triples decode into flat typed arrays. */
 const SURFACE_TRIPLES: BinaryTripleHints = {positions: 'f64', colors: 'u8', triangles: 'u32'}
@@ -205,8 +206,8 @@ export class PhotogrammetryKernel {
    * Browser WebGPU sweep, stage 1: returns the packed shader payload and WGSL
    * text, or null when the request is ineligible for the GPU path.
    */
-  densePrepare(resolution: number): {payload: Uint8Array, wgsl: string} | null {
-    const decoded = decodePacked<Response<{ptr: number, len: number, wgsl: string} | null>>(
+  densePrepare(resolution: number): {payload: Uint8Array, wgsl: string, wgslVariants?: WgslVariant[]} | null {
+    const decoded = decodePacked<Response<{ptr: number, len: number, wgsl: string, wgslVariants?: WgslVariant[]} | null>>(
       this.wasm.memory,
       (pointer, size) => this.wasm.photo_free(pointer, size),
       this.wasm.photo_dense_prepare(resolution, 0),
@@ -219,7 +220,7 @@ export class PhotogrammetryKernel {
     const payload = new Uint8Array(payloadSize)
     payload.set(new Uint8Array(this.wasm.memory.buffer, payloadPointer, payloadSize))
     this.wasm.photo_free(payloadPointer, payloadSize)
-    return {payload, wgsl: decoded.value.wgsl}
+    return {payload, wgsl: decoded.value.wgsl, wgslVariants: decoded.value.wgslVariants}
   }
 
   /** Stage 2: uploads host-computed scores (ownership moves to the kernel). */

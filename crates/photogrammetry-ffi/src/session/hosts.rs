@@ -153,6 +153,10 @@ impl Session {
             "ptr": ptr as f64,
             "len": len as f64,
             "wgsl": SWEEP_WGSL,
+            "wgslVariants": [{
+                "label": HOST_SWEEP_LINEAR_INDEXING_VARIANT_LABEL,
+                "wgsl": host_sweep_linear_indexing_wgsl(),
+            }],
         }))
     }
 

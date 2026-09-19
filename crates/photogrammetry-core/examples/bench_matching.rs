@@ -66,6 +66,14 @@ fn main() {
         "wgpu backend: {}",
         photogrammetry_core::gpu::backend_label().unwrap_or("none (falls back to cpu)")
     );
+    #[cfg(feature = "gpu")]
+    match photogrammetry_core::gpu::subgroup_report() {
+        Some(report) => println!(
+            "wgpu subgroups: {}, size_range={}..{}",
+            report.supported, report.min_size, report.max_size
+        ),
+        None => println!("wgpu subgroups: false, size_range=0..0"),
+    }
     #[cfg(feature = "cuda")]
     println!(
         "cuda device: {}",

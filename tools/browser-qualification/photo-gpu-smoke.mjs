@@ -1,76 +1,131 @@
-// Browser smoke for the WebGPU dense sweep: upload shell6 photos, run the
-// reconstruction, read the surface vertex count. GPU path: 10,499 vertices;
-// CPU fallback: 10,507 (both measured natively on the same inputs).
+// Direct browser benchmark for the photogrammetry WebGPU dense sweep. This
+// avoids the app UI and measures the production kernel/worker-adjacent path:
+// decode shell6 PNGs, build sparse state, densePrepare(), then runGpuSweep()
+// with baseline WGSL and the kernel-provided linear_indexing variant.
 import { chromium } from 'playwright'
-import { createServer } from 'node:http'
-import { readFile } from 'node:fs/promises'
-import { extname, join } from 'node:path'
+import { createServer } from 'vite'
+import { access, mkdir, writeFile } from 'node:fs/promises'
+import { join } from 'node:path'
 
 const REPO = new URL('../..', import.meta.url).pathname
-const DIST = process.env.PHOTO_SMOKE_DIST ?? `${REPO}/dist`
-// Frozen shell6 inputs converted to PNG (sips -s format png). Not committed.
+const ROOT = join(REPO, 'tmp', 'photo-gpu-bench')
 const PHOTOS = process.env.PHOTO_SMOKE_INPUTS ?? `${REPO}/tmp/browser-gpu/shell6`
+const PORT = Number(process.env.PHOTO_GPU_BENCH_PORT ?? 5299)
+const ITERATIONS = Number(process.env.PHOTO_GPU_BENCH_ITERATIONS ?? 5)
+const WARMUP = Number(process.env.PHOTO_GPU_BENCH_WARMUP ?? 1)
+const RESOLUTION = Number(process.env.PHOTO_GPU_BENCH_RESOLUTION ?? 128)
+const CHROME_EXECUTABLE = process.env.CHROME_EXECUTABLE
+const PHOTO_NAMES = ['M97A2474.png', 'M97A2475.png', 'M97A2476.png', 'M97A2477.png', 'M97A2478.png', 'M97A2479.png']
 
-const mime = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.wasm': 'application/wasm', '.svg': 'image/svg+xml' }
-const server = createServer(async (req, res) => {
-  try {
-    const path = join(DIST, req.url === '/' ? 'index.html' : req.url.split('?')[0])
-    const body = await readFile(path)
-    res.writeHead(200, { 'content-type': mime[extname(path)] ?? 'application/octet-stream' })
-    res.end(body)
-  } catch {
-    res.writeHead(404); res.end()
+for (const name of PHOTO_NAMES) await access(join(PHOTOS, name))
+
+await mkdir(ROOT, { recursive: true })
+await writeFile(join(ROOT, 'index.html'), '<div id="log">running</div><script type="module" src="/tmp/photo-gpu-bench/main.ts"></script>\n')
+await writeFile(join(ROOT, 'main.ts'), `
+import { compilePhotogrammetryKernel } from '/src/services/photogrammetry/module.ts'
+import { PhotogrammetryKernel } from '/src/services/photogrammetry/kernel.ts'
+import { decodePhoto } from '/src/services/photogrammetry/input.ts'
+import { runGpuSweep, SWEEP_LINEAR_INDEXING_VARIANT } from '/src/services/photogrammetry/gpuSweep.ts'
+
+const photoNames = ${JSON.stringify(PHOTO_NAMES)}
+const iterations = ${JSON.stringify(ITERATIONS)}
+const warmup = ${JSON.stringify(WARMUP)}
+const resolution = ${JSON.stringify(RESOLUTION)}
+
+async function loadPhoto(name: string) {
+  const blob = await (await fetch('/tmp/browser-gpu/shell6/' + name)).blob()
+  const file = new File([blob], name, { type: 'image/png' })
+  return decodePhoto(file, 85, 960)
+}
+
+async function measure(label: string, run: () => Promise<Float32Array>) {
+  for (let i = 0; i < warmup; i++) await run()
+  const samples = []
+  let outputLength = 0
+  for (let i = 0; i < iterations; i++) {
+    const start = performance.now()
+    const scores = await run()
+    samples.push(performance.now() - start)
+    outputLength = scores.length
   }
-})
-await new Promise(resolve => server.listen(5299, resolve))
+  samples.sort((a, b) => a - b)
+  return {
+    label,
+    outputLength,
+    minMs: samples[0],
+    medianMs: samples[Math.floor(samples.length / 2)],
+    maxMs: samples[samples.length - 1],
+  }
+}
 
-const HOME = process.env.HOME
-const browser = await chromium.launch({
-  headless: true,
-  executablePath: `${HOME}/Library/Caches/ms-playwright/chromium_headless_shell-1228/chrome-headless-shell-mac-arm64/chrome-headless-shell`,
-  args: ['--enable-unsafe-webgpu', '--enable-features=Vulkan', '--headless=new'],
-})
-const page = await browser.newPage()
-const errors = []
-page.on('pageerror', e => errors.push(`pageerror: ${e.message}`))
-page.on('console', m => { if (m.type() === 'error') errors.push(`console: ${m.text()}`) })
-
+const module = await compilePhotogrammetryKernel()
+const kernel = new PhotogrammetryKernel(module)
 try {
-  await page.goto('http://127.0.0.1:5299/')
-  // WebGPU in a Worker context check.
+  const decodeStart = performance.now()
+  const photos = await Promise.all(photoNames.map(loadPhoto))
+  const decodeMs = performance.now() - decodeStart
+  for (const photo of photos) kernel.add(photo)
+  const sparseStart = performance.now()
+  const sparse = kernel.sparse()
+  const sparseMs = performance.now() - sparseStart
+  const prepared = kernel.densePrepare(resolution)
+  if (!prepared) throw new Error('densePrepare returned null')
+  const linear = prepared.wgslVariants?.find(variant => variant.label === SWEEP_LINEAR_INDEXING_VARIANT)
+  const baseline = await measure('photo-baseline', () => runGpuSweep(prepared.payload, prepared.wgsl))
+  const linearIndexing = linear
+    ? await measure('photo-linear-indexing', () => runGpuSweep(prepared.payload, prepared.wgsl, [linear]))
+    : null
+  document.getElementById('log')!.textContent = 'RESULT ' + JSON.stringify({
+    iterations,
+    warmup,
+    resolution,
+    decodeMs,
+    sparseMs,
+    cameras: sparse.cameras.length,
+    points: sparse.positions.length / 3,
+    wgslLanguageFeatures: [...(navigator.gpu?.wgslLanguageFeatures ?? [])].sort(),
+    variants: prepared.wgslVariants?.map(variant => variant.label) ?? [],
+    baseline,
+    linearIndexing,
+    linearMedianRatio: linearIndexing ? linearIndexing.medianMs / baseline.medianMs : null,
+  })
+} finally {
+  kernel.clear()
+}
+`)
+
+const server = await createServer({
+  root: REPO,
+  server: { host: '127.0.0.1', port: PORT, strictPort: true },
+  logLevel: 'silent',
+})
+await server.listen()
+
+const launchOptions = {
+  headless: true,
+  args: ['--enable-unsafe-webgpu', '--enable-features=Vulkan', '--headless=new'],
+}
+if (CHROME_EXECUTABLE) launchOptions.executablePath = CHROME_EXECUTABLE
+
+const browser = await chromium.launch(launchOptions)
+try {
+  const page = await browser.newPage()
+  page.on('console', message => console.log('console:', message.text()))
+  page.on('pageerror', error => console.log('pageerror:', error.message))
+  await page.goto(`http://127.0.0.1:${PORT}/tmp/photo-gpu-bench/index.html`)
   const workerGpu = await page.evaluate(() => new Promise(resolve => {
     const probe = new Worker(URL.createObjectURL(new Blob([
       'onmessage=()=>{postMessage(!!navigator.gpu)}',
     ], { type: 'text/javascript' })))
-    probe.onmessage = e => resolve(e.data)
+    probe.onmessage = event => resolve(event.data)
     probe.onerror = () => resolve(false)
     probe.postMessage(null)
     setTimeout(() => resolve('timeout'), 5000)
   }))
   console.log('webgpu-in-worker:', workerGpu)
-
-  await page.locator('details#photogrammetry summary').click()
-  const files = ['M97A2474.png','M97A2475.png','M97A2476.png','M97A2477.png','M97A2478.png','M97A2479.png']
-    .map(name => join(PHOTOS, name))
-  await page.setInputFiles('input[accept="image/jpeg,image/png,image/webp"]', files)
-  await page.waitForSelector('.photo-list article', { timeout: 60000 })
-  // Focal equivalent 85 mm reproduces the frozen focal of 2266.67 px at 960 px wide.
-  const focals = page.locator('.photo-list article input[type=number]')
-  for (let i = 0; i < 6; i++) {
-    await focals.nth(i).fill('85')
-    await focals.nth(i).dispatchEvent('change')
-  }
-  await page.locator('button', { hasText: /Reconstruct 3D|Восстановить 3D/ }).click()
-  // Busy ends when the run completes (button returns); then read the outcome.
-  await page.waitForSelector('.photo-stats', { timeout: 240000 })
-  await page.waitForSelector('button:not([disabled]) >> text=/Reconstruct 3D|Восстановить 3D/', { timeout: 240000 })
-  const stats = await page.locator('.photo-stats').textContent()
-  console.log('stats:', stats)
-  const message = await page.locator('.photo-error').textContent().catch(() => null)
-  const warnings = await page.locator('p[role=status]').allTextContents().catch(() => [])
-  console.log('message:', message, '| warnings:', warnings)
-  console.log('errors:', errors.length ? errors : 'none')
+  await page.waitForFunction(() => document.getElementById('log')?.textContent?.startsWith('RESULT '), { timeout: 240000 })
+  console.log(await page.locator('#log').textContent())
 } finally {
   await browser.close()
-  server.close()
+  await server.close()
 }

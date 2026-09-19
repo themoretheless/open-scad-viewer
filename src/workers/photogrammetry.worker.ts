@@ -40,7 +40,7 @@ function reconstructSurface(kernel: PhotogrammetryKernel, resolution: number, pr
 async function reconstructSurfaceGpu(kernel: PhotogrammetryKernel, resolution: number): Promise<boolean> {
   const prepared = kernel.densePrepare(resolution)
   if (!prepared) return false
-  const scores = await runGpuSweep(prepared.payload, prepared.wgsl)
+  const scores = await runGpuSweep(prepared.payload, prepared.wgsl, prepared.wgslVariants)
   publishSurface(kernel, kernel.denseFinish(scores))
   return true
 }

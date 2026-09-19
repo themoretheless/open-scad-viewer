@@ -8,6 +8,7 @@
 import {encodeBinary} from '../valueBinaryCodec'
 import {decodePacked, writeLinear} from '../wasmHost'
 import {unpackBrotliWasmBase64} from '../wasmBrotliPacking'
+import {compileStreamingWasm} from '../wasmStreaming'
 import wasmBase64 from '../../generated/language-kernel/bytes'
 
 interface LanguageKernelExports {
@@ -29,7 +30,8 @@ export function isLanguageKernelReady(): boolean { return initialized }
 export function warmLanguageKernel(): Promise<void> {
   if (initialized) return Promise.resolve()
   warming ??= (async () => {
-    const module = await WebAssembly.compile(unpackBrotliWasmBase64(wasmBase64))
+    const module = await compileStreamingWasm('/wasm/language-kernel.wasm')
+      ?? await WebAssembly.compile(unpackBrotliWasmBase64(wasmBase64))
     const instance = await WebAssembly.instantiate(module)
     if (!initialized) {
       wasm = instance.exports as unknown as LanguageKernelExports

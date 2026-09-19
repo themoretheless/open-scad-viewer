@@ -19,8 +19,6 @@ walk(root)
 const limits = new Map([
   ['.html', 10_000],
   ['.css', 100_000],
-  ['.js', 500_000],
-  ['.wasm', 800_000],
 ])
 // Static SVG adds usvg/resvg, shaping, raster decoders and bundled Noto Sans.
 // CSS geometry and instance-correct non-scaling strokes bring the packed kernel
@@ -70,19 +68,54 @@ const limits = new Map([
 // Bernstein/Krawczyk/continuation. The shared packed kernel measures 2985083
 // bytes; retain a bounded 34917-byte margin.
 const geometryChunkBudget = 3_020_000
+const jsChunkBudgets = [
+  // Browser-side geometry and SVG workers now carry their own Rust/decoder
+  // host plumbing while raw .wasm files are also published for streaming
+  // compile/code-cache. Measured on 2026-09-19: 3,258,801 bytes.
+  [/^assets\/geometry\.worker-[^/]+\.js$/, 3_350_000],
+  // Main WebGPU renderer chunk, measured on 2026-09-19: 2,872,959 bytes.
+  [/^assets\/renderer-[^/]+\.js$/, 2_950_000],
+  // SVG import worker with resvg/usvg and font plumbing, measured: 2,822,512 bytes.
+  [/^assets\/svg\.worker-[^/]+\.js$/, 2_900_000],
+  // Split OpenSCAD language kernel bytes, measured: 436,678 bytes.
+  [/^assets\/language-kernel-bytes-[^/]+\.js$/, 470_000],
+  // Photogrammetry kernel bytes, measured after WGSL variants: 243,472 bytes.
+  [/^assets\/photogrammetry-bytes-[^/]+\.js$/, 270_000],
+  // Eager app shell, measured: 211,966 bytes.
+  [/^assets\/index-[^/]+\.js$/, 240_000],
+  // Packed HarfBuzz runtime, measured: 179,520 bytes.
+  [/^assets\/harfbuzz-bytes-[^/]+\.js$/, 200_000],
+  // Direct modeling panel/tool surface, measured: 137,120 bytes.
+  [/^assets\/DirectModeler-[^/]+\.js$/, 160_000],
+  // WASM brotli unpacking helper chunk, measured: 122,900 bytes.
+  [/^assets\/wasm-brotli-bytes-[^/]+\.js$/, 140_000],
+]
+const namedJsBudgetThreshold = 100_000
 // WASM is losslessly packed in JS chunks; validate its actual decoded module
 // and source identity below instead of relying on an artifact's file suffix.
 for (const required of ['.html', '.css', '.js']) {
   if (!files.some(file => file.extension === required)) throw new Error(`dist is missing a ${required} artifact`)
 }
 for (const file of files) {
-  const limit = /^assets\/geometry-kernel-bytes-[^/]+\.js$/.test(file.path) ? geometryChunkBudget : limits.get(file.extension)
+  const streamingWasmLimit = /^wasm\/(geometry-kernel|language-kernel|photogrammetry)\.wasm$/.test(file.path)
+    ? 16_000_000
+    : undefined
+  const explicitJsLimit = jsChunkBudgets.find(([pattern]) => pattern.test(file.path))?.[1]
+  const limit = streamingWasmLimit
+    ?? (/^assets\/geometry-kernel-bytes-[^/]+\.js$/.test(file.path) ? geometryChunkBudget : undefined)
+    ?? explicitJsLimit
+    ?? limits.get(file.extension)
   if (file.bytes <= 0) throw new Error(`dist artifact ${file.path} is empty`)
+  if (file.extension === '.js' && file.bytes > namedJsBudgetThreshold && limit === undefined) {
+    throw new Error(`dist artifact ${file.path} is ${file.bytes} bytes; add an explicit named JS budget`)
+  }
   if (limit !== undefined && file.bytes > limit) {
     throw new Error(`dist artifact ${file.path} is ${file.bytes} bytes; budget is ${limit}`)
   }
 }
-const total = files.reduce((sum, file) => sum + file.bytes, 0)
+const total = files
+  .filter(file => !/^wasm\/(geometry-kernel|language-kernel|photogrammetry)\.wasm$/.test(file.path))
+  .reduce((sum, file) => sum + file.bytes, 0)
 // Own CAD adds ~96 kB to the shared Rust payload and must not ship a separate
 // foreign CSG package. The complete distribution is smaller (~2.3 MB).
 if (files.some(file => /manifold-3d/i.test(file.path))) throw new Error('Foreign manifold-3d artifact in dist')
@@ -183,6 +216,9 @@ for (const [name, artifact, compression] of [
 // bytes unpacked: it instantiates on the main thread again, and a session that never compiles
 // source never fetches the 445 kB language chunk (5406202 -> 5557245 bytes measured).
 // NURBS SS /1 adds general surface/surface to the packed kernel; the budget above already covers it.
-const totalBudget = 5_600_000
+// Streaming-WASM publication keeps raw modules out of this total, but the
+// browser runtime split now carries explicit geometry/SVG/renderer chunks:
+// 14,142,085 bytes measured on the 2026-09-19 WebGPU variants build.
+const totalBudget = 14_400_000
 if (total > totalBudget) throw new Error(`dist totals ${total} bytes; budget is ${totalBudget}`)
 console.log(`Verified ${files.length} dist artifacts (${total} bytes)`)

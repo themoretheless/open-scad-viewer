@@ -169,11 +169,14 @@ describe('photogrammetry Worker failure isolation', () => {
 
 
   it('prefers the WebGPU sweep for baseline dense and skips the CPU dense call', async () => {
-    kernel.densePrepare.mockReturnValue({payload: new Uint8Array(4), wgsl: 'shader'})
+    const wgslVariants = [{label: 'fast', wgsl: 'fast shader'}]
+    const payload = new Uint8Array(4)
+    kernel.densePrepare.mockReturnValue({payload, wgsl: 'shader', wgslVariants})
     kernel.compact.mockImplementation(() => { throw new Error('skip compact') })
     gpuSweep.mockResolvedValue(new Float32Array(8))
     await run({...request, gpu: true})
     expect(kernel.densePrepare).toHaveBeenCalledWith(128)
+    expect(gpuSweep).toHaveBeenCalledWith(payload, 'shader', wgslVariants)
     expect(kernel.denseFinish).toHaveBeenCalledOnce()
     expect(kernel.dense).not.toHaveBeenCalled()
     expect(events).toContainEqual({type: 'surface', result: surface})
