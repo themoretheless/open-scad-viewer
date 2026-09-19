@@ -40,7 +40,12 @@ Every native sparse/surface PLY and all three dense work counters match exactly 
 
 ## Separate compiler profile contribution
 
-The workspace retains opt-level="s" and LTO. Only photogrammetry-kernel and photogrammetry-ffi use opt-level=3. The following comparison isolates the release profile: combined-size has all accepted source changes but retains the old size profile.
+These measurements were captured before the workspace switched to the current
+opt-level="z" delivery profile. At that time, the workspace retained
+opt-level="s" and LTO, and only photogrammetry-kernel and photogrammetry-ffi
+used opt-level=3. The following comparison isolates that historical release
+profile: combined-size has all accepted source changes but retains the old size
+profile.
 
 | Node WASM default / input | Original, s | Source changes only, s | Source changes + opt3, s |
 | --- | ---: | ---: | ---: |
@@ -78,7 +83,7 @@ RSS includes the process and harness; Node RSS also includes V8. Linear memory i
 
 ## Optimization rationale
 
-The changes reduce repeated arithmetic, temporary geometry objects and small heap allocations while retaining the existing reconstruction policy. They reuse the repository's Rust kernel, WASM adapter and MGV1 codec; no dependency or runtime import was added. Source-level comparisons used the frozen production size profile (`opt-level="s"`, LTO). The integrated build additionally selects `opt-level=3` for the two photogrammetry packages; other geometry packages retain their existing profile. The controlled measurements above separate source improvements from this compiler change.
+The changes reduce repeated arithmetic, temporary geometry objects and small heap allocations while retaining the existing reconstruction policy. They reuse the repository's Rust kernel, WASM adapter and MGV1 codec; no dependency or runtime import was added. Source-level comparisons used the then-production size profile (`opt-level="s"`, LTO). The historical integrated build additionally selected `opt-level=3` for the two photogrammetry packages; other geometry packages retained the workspace profile at that time. The controlled measurements above separate source improvements from this compiler change. Current release builds use `opt-level="z"` for smaller browser WASM delivery.
 
 ### Accepted changes and architectural boundaries
 
