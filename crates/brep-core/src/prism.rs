@@ -334,11 +334,25 @@ pub fn extrude(loops: &[Vec<Curve>], z_min: f64, z_max: f64) -> Result<Model> {
 }
 
 fn roundoff_equal(a: f64, b: f64) -> bool {
-    (a - b).abs() <= 32. * f64::EPSILON * a.abs().max(b.abs()).max(1.)
+    roundoff_equal_at(a, b, a.abs().max(b.abs()))
+}
+/// Roundoff-level equality where the error budget follows `scale`, the
+/// magnitude of the quantities the compared values were derived from.
+fn roundoff_equal_at(a: f64, b: f64, scale: f64) -> bool {
+    (a - b).abs() <= 32. * f64::EPSILON * scale.max(1.)
 }
 fn same_curve(a: &Curve, b: &Curve) -> bool {
     let a = normalized(a);
     let b = normalized(b);
+    // Control points are the outcome of rigid placements of the whole curve;
+    // each coordinate carries roundoff proportional to the curve's extent,
+    // not to its own possibly near-zero magnitude.
+    let extent = a
+        .control_points
+        .iter()
+        .chain(&b.control_points)
+        .flatten()
+        .fold(0., |m: f64, x| m.max(x.abs()));
     a.degree == b.degree
         && a.periodic == b.periodic
         && a.knots.len() == b.knots.len()
@@ -355,7 +369,10 @@ fn same_curve(a: &Curve, b: &Curve) -> bool {
             .iter()
             .zip(&b.control_points)
             .all(|(p, q)| {
-                p.len() == q.len() && p.iter().zip(q).all(|(x, y)| roundoff_equal(*x, *y))
+                p.len() == q.len()
+                    && p.iter()
+                        .zip(q)
+                        .all(|(x, y)| roundoff_equal_at(*x, *y, extent))
             })
 }
 pub(crate) fn directed_edge(model: &Model, c: &Coedge) -> Result<Curve> {
