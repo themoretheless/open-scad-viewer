@@ -213,8 +213,9 @@ function handleKeydown(event: KeyboardEvent) {
   align-items: flex-start;
   justify-content: center;
   padding: min(14vh, 120px) 16px 24px;
-  background: rgba(4, 6, 10, 0.58);
-  backdrop-filter: blur(3px);
+  /* A light veil: the scene stays readable behind the palette. */
+  background: rgba(4, 6, 10, 0.42);
+  backdrop-filter: blur(1.5px);
 }
 
 .palette {

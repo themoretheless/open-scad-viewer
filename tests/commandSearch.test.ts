@@ -5,6 +5,7 @@ import {
   nextPaletteCommandIndex,
   normalizeCommandText,
   rankPaletteCommands,
+  swapKeyboardLayout,
   type PaletteCommand,
 } from '../src/services/commandSearch'
 
@@ -124,5 +125,33 @@ describe('command search', () => {
 
   it('normalizes accents, punctuation and case consistently', () => {
     expect(normalizeCommandText('  RÉNDER_scene / Ёлка  ')).toBe('render scene елка')
+  })
+})
+
+describe('wrong keyboard layout', () => {
+  const commands = [
+    command('union', 'Объединить тела', { aliases: ['Union bodies'] }),
+    command('subtract', 'Вычесть: A − B', { aliases: ['Subtract: A − B'] }),
+    command('fit', 'Вписать вид', { aliases: ['Fit view'] }),
+  ]
+
+  it('maps keys between the Latin and Cyrillic layouts both ways', () => {
+    expect(swapKeyboardLayout('dsxtcnm')).toBe('вычесть')
+    expect(swapKeyboardLayout('вычесть')).toBe('dsxtcnm')
+    expect(swapKeyboardLayout('Union 2')).toBe('Гтшщт 2')
+  })
+
+  it('finds a Russian command typed on the Latin layout', () => {
+    expect(rankPaletteCommands(commands, 'dsx')[0]?.id).toBe('subtract')
+    expect(rankPaletteCommands(commands, 'dsxtcnm')[0]?.id).toBe('subtract')
+  })
+
+  it('finds an English alias typed on the Cyrillic layout', () => {
+    expect(rankPaletteCommands(commands, 'гтшщт')[0]?.id).toBe('union')
+  })
+
+  it('prefers the spelling that was actually typed when both match', () => {
+    // "fit" typed as-is matches the English alias; its swapped form "аше" matches nothing.
+    expect(rankPaletteCommands(commands, 'fit')[0]?.id).toBe('fit')
   })
 })

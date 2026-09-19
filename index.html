@@ -14,8 +14,16 @@
   <div id="app"></div>
   <script type="module" src="/src/main.ts"></script>
   <script>
+    // The offline shell is a production concern. In development it would serve stale
+    // modules from its cache, so any registration left over from a build is removed.
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
+        if ('%DEV%' === 'true') {
+          navigator.serviceWorker.getRegistrations()
+            .then(registrations => registrations.forEach(registration => registration.unregister()))
+            .catch(() => {})
+          return
+        }
         navigator.serviceWorker.register('/sw.js').catch(() => {})
       })
     }

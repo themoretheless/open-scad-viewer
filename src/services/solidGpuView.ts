@@ -8,6 +8,8 @@
 import type { OrbitCamera } from './directModelingTools'
 
 export interface SolidGpuBody {
+  /** Identifies this body so a drag can move it without re-uploading the scene. */
+  id: string
   /** Flat, non-indexed triangle list: xyz per vertex. */
   positions: Float32Array
   /** Smoothed vertex normals matching `positions`. */
@@ -102,6 +104,11 @@ export class SolidGpuLayer {
   private bindGroup: GPUBindGroup | null = null
   private vertexBuffer: GPUBuffer | null = null
   private vertexCount = 0
+  private packed: Float32Array | null = null
+  /** Wall time of the last completed GPU submission, for the viewport's frame readout. */
+  private lastDrawMs = 0
+  get drawMs(): number { return this.lastDrawMs }
+  private ranges = new Map<string, { start: number; count: number }>()
   private depth: GPUTexture | null = null
   private format: GPUTextureFormat = 'bgra8unorm'
   private view: SolidGpuView = { camera: { yaw: 0, pitch: 0 }, viewBox: [-80, -80, 160] }
@@ -161,9 +168,11 @@ export class SolidGpuLayer {
     let total = 0
     for (const body of bodies) total += body.positions.length / 3
     const data = new Float32Array(total * 7)
+    this.ranges = new Map()
     let offset = 0
     for (const body of bodies) {
       const count = body.positions.length / 3
+      this.ranges.set(body.id, { start: offset / 7, count })
       for (let i = 0; i < count; i++) {
         data[offset++] = body.positions[i * 3]
         data[offset++] = body.positions[i * 3 + 1]
@@ -177,9 +186,36 @@ export class SolidGpuLayer {
     this.vertexBuffer?.destroy()
     this.vertexBuffer = null
     this.vertexCount = total
+    this.packed = data
     if (total === 0) { this.requestFrame(); return }
     this.vertexBuffer = device.createBuffer({ size: Math.max(28, data.byteLength), usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST })
     device.queue.writeBuffer(this.vertexBuffer, 0, data)
+    this.requestFrame()
+  }
+
+  /**
+   * Translates already-uploaded bodies without rebuilding the scene.
+   *
+   * A drag would otherwise re-derive smoothed normals for every body and recreate the
+   * whole vertex buffer each frame. Translation leaves normals untouched, so only the
+   * dragged body's positions are rewritten, in place. Call with a zero delta to restore.
+   */
+  setDragOffset(ids: readonly string[], delta: readonly [number, number, number]): void {
+    const device = this.device, buffer = this.vertexBuffer, packed = this.packed
+    if (!device || !buffer || !packed) return
+    for (const id of ids) {
+      const range = this.ranges.get(id)
+      if (!range) continue
+      const slice = new Float32Array(range.count * 7)
+      for (let i = 0; i < range.count; i++) {
+        const from = (range.start + i) * 7, to = i * 7
+        slice[to] = packed[from] + delta[0]
+        slice[to + 1] = packed[from + 1] + delta[1]
+        slice[to + 2] = packed[from + 2] + delta[2]
+        for (let k = 3; k < 7; k++) slice[to + k] = packed[from + k]
+      }
+      device.queue.writeBuffer(buffer, range.start * 7 * 4, slice)
+    }
     this.requestFrame()
   }
 
@@ -229,7 +265,10 @@ export class SolidGpuLayer {
       pass.draw(this.vertexCount)
     }
     pass.end()
+    const drawStarted = performance.now()
     device.queue.submit([encoder.finish()])
+    // Resolves once the GPU has finished; measured even when frame callbacks are throttled.
+    void device.queue.onSubmittedWorkDone().then(() => { this.lastDrawMs = performance.now() - drawStarted })
   }
 
   destroy(): void {

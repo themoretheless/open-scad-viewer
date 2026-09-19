@@ -392,7 +392,15 @@ const workspaceMode = computed<WorkspaceMode>(() => (meshModelerOpen.value ? 'me
 /** Source is no longer a workspace of its own; it opens as a drawer over either one. */
 const editorOpen = ref(false)
 const solidBuilding = ref(false)
-const solidAppendBodies = ref<{ bodies: DirectBody[]; token: number; group?: { name: string; source: string } } | null>(null)
+const solidAppendBodies = ref<{ bodies: DirectBody[]; token: number; group?: { name: string; source: string; replaces: string | null } } | null>(null)
+/** Set while the left panel edits one scene group's source instead of the document. */
+const groupEdit = ref<{ name: string; source: string; replaces: string | null } | null>(null)
+const groupHighlight = computed(() => (groupEdit.value ? highlightCode(groupEdit.value.source, 'group.scad') : ''))
+
+function openGroupEditor(request: { name: string; source: string; replaces: string | null }) {
+  groupEdit.value = { ...request }
+  editorOpen.value = true
+}
 
 function openWorkspaceMode(mode: WorkspaceMode) {
   if (mode === 'solid') {
@@ -415,16 +423,16 @@ if (!directModelerOpen.value && !meshModelerOpen.value) directModelerOpen.value 
  * will therefore block the interface until that protocol carries the graph too.
  */
 /** Builds one group's own source and hands the bodies back tagged with its name. */
-async function buildSolidGroup(request: { name: string; source: string }) {
+async function buildSolidGroup(request: { name: string; source: string; replaces: string | null }) {
   if (solidBuilding.value) return
   solidBuilding.value = true
   error.value = ''
   try {
-    const [{ parseOpenSCAD }, { buildExactSolidBodies }] = await Promise.all([
-      import('./services/openscadParser'),
+    const [{ evaluateExactSolidsOnMainThread }, { buildExactSolidBodies }] = await Promise.all([
+      import('./services/geometryBuildEngine'),
       import('./services/solid/brepBuild'),
     ])
-    const evaluated = await parseOpenSCAD(request.source, { recordExactSolids: true })
+    const evaluated = await evaluateExactSolidsOnMainThread(request.source)
     const plan = evaluated.exactSolids
     if (!plan || plan.roots.length === 0) {
       error.value = lang.value === 'ru'
@@ -436,9 +444,10 @@ async function buildSolidGroup(request: { name: string; source: string }) {
       .map(body => ({ ...body, group: request.name }))
     solidAppendBodies.value = {
       bodies,
-      group: { name: request.name, source: request.source },
+      group: { name: request.name, source: request.source, replaces: request.replaces },
       token: (solidAppendBodies.value?.token ?? 0) + 1,
     }
+    groupEdit.value = null
   } catch (caught) {
     error.value = caught instanceof Error ? caught.message : String(caught)
   } finally {
@@ -451,11 +460,11 @@ async function buildSolidFromSource(asGroup = false) {
   solidBuilding.value = true
   error.value = ''
   try {
-    const [{ parseOpenSCAD }, { buildExactSolidBodies }] = await Promise.all([
-      import('./services/openscadParser'),
+    const [{ evaluateExactSolidsOnMainThread }, { buildExactSolidBodies }] = await Promise.all([
+      import('./services/geometryBuildEngine'),
       import('./services/solid/brepBuild'),
     ])
-    const evaluated = await parseOpenSCAD(code.value, { recordExactSolids: true })
+    const evaluated = await evaluateExactSolidsOnMainThread(code.value)
     const plan = evaluated.exactSolids
     if (!plan || plan.roots.length === 0) {
       error.value = lang.value === 'ru'
@@ -2620,7 +2629,46 @@ function sanitizeFileName(name: string) { return (name.replace(/[^\w.() -]+/g, '
       :class="{ 'editor-drawer': editorOpen }"
       :inert="!editorOpen && (directModelerOpen || meshModelerOpen || functionReferenceOpen)"
     >
-      <section class="editor-panel" :style="{ width: `${editorWidth}px` }" :aria-label="t('editor')">
+      <section
+        v-if="groupEdit"
+        class="editor-panel group-editor"
+        :style="{ width: `${editorWidth}px` }"
+        :aria-label="lang === 'ru' ? 'Код группы' : 'Group source'"
+      >
+        <div class="toolbar editor-toolbar">
+          <input
+            v-model="groupEdit.name"
+            class="group-name-input"
+            type="text"
+            maxlength="100"
+            :aria-label="lang === 'ru' ? 'Имя группы' : 'Group name'"
+          >
+          <span class="toolbar-spacer" aria-hidden="true" />
+          <button class="btn" type="button" @click="groupEdit = null">{{ lang === 'ru' ? 'Отмена' : 'Cancel' }}</button>
+          <button
+            class="btn btn-primary"
+            type="button"
+            :disabled="solidBuilding || !groupEdit.name.trim() || !groupEdit.source.trim()"
+            @click="buildSolidGroup({ ...groupEdit })"
+          >{{ solidBuilding ? '…' : (lang === 'ru' ? 'Построить' : 'Build') }}</button>
+        </div>
+        <div class="code-area group-code">
+          <pre class="code code-highlight" aria-hidden="true"><span class="highlight-content" v-html="groupHighlight" /></pre>
+          <textarea
+            v-model="groupEdit.source"
+            class="code code-input"
+            wrap="off"
+            spellcheck="false"
+            autocomplete="off"
+            :aria-label="lang === 'ru' ? 'Код группы' : 'Group source'"
+            :maxlength="100000"
+          />
+        </div>
+        <p class="group-hint">{{ lang === 'ru'
+          ? 'Строится как точные тела. hull, projection, offset и polyhedron точной формы не имеют и будут отклонены.'
+          : 'Built as exact solids. hull, projection, offset and polyhedron have no exact form and are refused.' }}</p>
+      </section>
+      <section v-else class="editor-panel" :style="{ width: `${editorWidth}px` }" :aria-label="t('editor')">
         <div class="toolbar editor-toolbar">
           <button class="btn btn-primary" type="button" title="Ctrl/⌘+Enter" :disabled="rendering" @click="doRender('full')">
             <svg class="play" width="11" height="11" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6 4v16l14-8z"/></svg>
@@ -3062,8 +3110,7 @@ function sanitizeFileName(name: string) { return (name.replace(/[^\w.() -]+/g, '
       :remaining-source="MAX_WORKSPACE_SOURCE_LENGTH - code.length - 2"
       :seed-document="solidSeedDocument"
       :append-bodies="solidAppendBodies"
-      :group-building="solidBuilding"
-      @build-group="buildSolidGroup"
+      @edit-group="openGroupEditor"
       :palette-request="solidPaletteRequest"
       @close="directModelerOpen = false; solidSeedDocument = null"
       @to-mesh="openMeshFromSolid"
@@ -3293,6 +3340,12 @@ button, select { color: inherit; }
 }
 .main.editor-drawer .editor-panel { width: 100% !important; max-width: none; }
 .source-toggle.active { color: var(--accent); border-color: var(--accent); }
+.group-editor { display: flex; flex-direction: column; min-height: 0; }
+.group-name-input { flex: 1; min-width: 0; padding: 5px 8px; background: var(--surface-raised); color: var(--text); border: 1px solid var(--border); border-radius: 5px; font: inherit; }
+.group-editor .code-area { position: relative; flex: 1; min-height: 0; overflow: auto; }
+.group-editor .code-highlight { position: absolute; inset: 0; margin: 0; pointer-events: none; }
+.group-editor .code-input { position: relative; width: 100%; height: 100%; background: transparent; color: transparent; caret-color: var(--text); border: 0; resize: none; outline: none; }
+.group-hint { margin: 0; padding: 8px 12px; color: var(--text-dim); font-size: 11.5px; line-height: 1.5; border-top: 1px solid var(--border); }
 
 .editor-panel {
   min-width: 300px; min-height: 0; max-width: calc(100vw - 320px); display: flex; flex-direction: column;
@@ -3387,7 +3440,7 @@ button, select { color: inherit; }
   position: absolute; z-index: 3; top: 12px; left: 50%; transform: translateX(-50%);
   display: flex; align-items: center; gap: 2px; max-width: calc(100% - 24px); padding: 4px;
   border: 1px solid var(--border); border-radius: 12px;
-  background: color-mix(in srgb, var(--surface) 86%, transparent); backdrop-filter: blur(10px); color: var(--text);
+  background: color-mix(in srgb, var(--surface) 86%, transparent); backdrop-filter: blur(6px); color: var(--text);
 }
 .viewer-toolbar.with-dock { left: calc((100% - 344px) / 2); max-width: calc(100% - 368px); }
 .view-btn { min-height: 32px; padding: 0 11px; border-color: transparent; color: var(--text-dim); font-size: 13px; font-weight: 500; }
@@ -3404,7 +3457,7 @@ button, select { color: inherit; }
 .selection-modes {
   position: absolute; z-index: 3; top: 60px; left: 14px; display: flex; flex-direction: column; gap: 2px; padding: 3px;
   border: 1px solid var(--border); border-radius: 9px; background: color-mix(in srgb, var(--surface) 86%, transparent);
-  color: var(--text); backdrop-filter: blur(8px);
+  color: var(--text); backdrop-filter: blur(5px);
 }
 .selection-modes button {
   min-height: 34px; min-width: 34px; display: flex; align-items: center; justify-content: center; gap: 6px; padding: 0 8px; border: 0;
@@ -3447,7 +3500,7 @@ button, select { color: inherit; }
 .dock-scroll > .performance-panel .performance-content { max-height: none; padding: 12px; }
 .canvas-panel :deep(.main-model-tools) {
   left: 14px; right: auto; bottom: 34px; max-width: calc(100% - 28px); padding: 6px 8px; border-radius: 12px;
-  background: color-mix(in srgb, var(--surface) 90%, transparent); backdrop-filter: blur(10px);
+  background: color-mix(in srgb, var(--surface) 90%, transparent); backdrop-filter: blur(6px);
 }
 .canvas-panel.with-dock :deep(.main-model-tools) { max-width: calc(100% - 372px); }
 
@@ -3457,7 +3510,7 @@ button, select { color: inherit; }
   position: absolute; z-index: 3; top: 12px; left: 14px; display: flex; align-items: center; gap: 8px;
   min-height: 30px; padding: 0 6px 0 10px; border: 1px solid var(--border);
   border-radius: var(--radius); background: color-mix(in srgb, var(--surface) 86%, transparent); color: var(--text);
-  backdrop-filter: blur(8px); font-size: 12.5px;
+  backdrop-filter: blur(5px); font-size: 12.5px;
 }
 .selection-hud > span { display: flex; align-items: center; gap: 6px; }
 .selection-dot { width: 8px; height: 8px; border-radius: 2px; background: var(--accent); }
@@ -3470,7 +3523,7 @@ button, select { color: inherit; }
   position: absolute; z-index: 2; top: 58px; left: 50%; transform: translateX(-50%);
   display: flex; align-items: center; gap: 7px; padding: 6px 12px; border-radius: 999px;
   background: color-mix(in srgb, var(--surface) 86%, transparent); color: var(--text); border: 1px solid var(--border);
-  backdrop-filter: blur(8px); font-size: 12px; pointer-events: none;
+  backdrop-filter: blur(5px); font-size: 12px; pointer-events: none;
 }
 .stale-badge { color: var(--warning); }
 .spinner { width: 11px; height: 11px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin .7s linear infinite; }

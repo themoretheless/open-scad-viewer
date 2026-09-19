@@ -32,11 +32,36 @@ const NO_MATCH = Number.POSITIVE_INFINITY
  * Match tiers, in order, are exact, phrase prefix, token, substring,
  * subsequence and bounded edit-distance typo matching.
  */
+/**
+ * Maps a string typed on one of the QWERTY / ЙЦУКЕН layouts onto the other, key for key.
+ * Characters outside either layout pass through unchanged.
+ */
+const LATIN_KEYS = "qwertyuiop[]asdfghjkl;'zxcvbnm,.`"
+const CYRILLIC_KEYS = 'йцукенгшщзхъфывапролджэячсмитьбюё'
+const LAYOUT_SWAP = new Map<string, string>()
+for (let i = 0; i < LATIN_KEYS.length; i++) {
+  LAYOUT_SWAP.set(LATIN_KEYS[i], CYRILLIC_KEYS[i])
+  LAYOUT_SWAP.set(CYRILLIC_KEYS[i], LATIN_KEYS[i])
+}
+export function swapKeyboardLayout(text: string): string {
+  let out = ''
+  for (const char of text) {
+    const lower = char.toLowerCase()
+    const mapped = LAYOUT_SWAP.get(lower)
+    out += mapped === undefined ? char : (char === lower ? mapped : mapped.toUpperCase())
+  }
+  return out
+}
+
 export function rankPaletteCommands(
   commands: readonly PaletteCommand[],
   rawQuery: string,
 ): PaletteCommand[] {
   const query = normalizeCommandText(rawQuery)
+  // The same keys on the other layout: "dsxtcnm" typed on Latin is "вычесть" on Cyrillic.
+  // The swapped spelling competes with the typed one and ranks a hair lower on a tie.
+  const swapped = normalizeCommandText(swapKeyboardLayout(rawQuery))
+  const alternate = swapped && swapped !== query ? swapped : null
   if (!query) {
     return commands
       .map((command, order) => ({ command, order }))
@@ -54,7 +79,9 @@ export function rankPaletteCommands(
     .map((command, order): ScoredCommand => ({
       command,
       order,
-      score: scoreCommand(command, query),
+      score: alternate
+        ? Math.min(scoreCommand(command, query), scoreCommand(command, alternate) + 1)
+        : scoreCommand(command, query),
     }))
     .filter(item => Number.isFinite(item.score))
     .sort((a, b) => (

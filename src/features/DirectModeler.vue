@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onUnmounted, ref, shallowRef, watch, watchEffect, type ComponentPublicInstance } from 'vue'
 import { SolidGpuLayer, isSolidGpuSupported, smoothTriangleList, type SolidGpuBody } from '../services/solidGpuView'
+import { rayTriangleDistance } from '../services/math3d'
 import CommandPalette from '../components/CommandPalette.vue'
 import type { PaletteCommand } from '../services/commandSearch'
 import { bodyPoints, DirectHistory, directBodiesScad, emptyDirectDocument, extrudeDirectSketch, extrudeSketchBrep, parseDirectDocument, type DirectBody, type DirectDocument, type Point2 } from '../services/directModeling'
@@ -22,8 +23,8 @@ import { elevateNurbsSurface, insertNurbsSurfaceKnot, isoNurbsCurve, trimNurbsSu
 import { extrudeNurbsCurve } from '../services/nurbsConstructors'
 import { isGeometryKernelReady, warmGeometryKernel } from '../services/geometry/kernel'
 import { createRuledSketchLoft, createBrepSphere, createBrepTorus, analyzeNurbsBrep, type BrepMassProperties, booleanNurbsBrep, createBrepBox, revolveBrepProfile, createBrepCylinder, createBrepFrustum, createBrepTube, createFacetedBrepCylinder, createFacetedBrepRevolve, createFacetedBrepSphere, extrudeBrepPolygon, tessellateNurbsBrep, type BrepBooleanOperation, type NurbsBrep } from '../services/geometry/brep'
-const props = defineProps<{ open: boolean; locale: string; canAppend: boolean; remainingSource: number; embedded?: boolean; initialDocument?: DirectDocument; initialSelection?: string; seedDocument?: DirectDocument | null; appendBodies?: { bodies: DirectBody[]; token: number; group?: { name: string; source: string } } | null; groupBuilding?: boolean; paletteRequest?: number }>()
-const emit = defineEmits<{ close: []; append: [source: string]; toMesh: []; 'build-group': [request: { name: string; source: string }] }>()
+const props = defineProps<{ open: boolean; locale: string; canAppend: boolean; remainingSource: number; embedded?: boolean; initialDocument?: DirectDocument; initialSelection?: string; seedDocument?: DirectDocument | null; appendBodies?: { bodies: DirectBody[]; token: number; group?: { name: string; source: string; replaces: string | null } } | null; paletteRequest?: number }>()
+const emit = defineEmits<{ close: []; append: [source: string]; toMesh: []; 'edit-group': [request: { name: string; source: string; replaces: string | null }] }>()
 const ru = computed(() => props.locale === 'ru')
 const label = (a: string, b: string) => ru.value ? a : b
 const key = props.embedded ? 'scad-main-modeler-v1' : 'scad-solid-modeler-v1'
@@ -54,6 +55,14 @@ function toggleSketchPane(open = !sketchPaneOpen.value) {
 // Picking a sketch tool reveals the pane for this session without changing the saved preference.
 watch([mode, tool], ([value]) => { if (value === '2d') sketchPaneOpen.value = true })
 const camera = ref(defaultDirectCamera()), hovered = ref(''), snap = ref(true), grid = ref(1)
+/**
+ * True while a rotate or scale gizmo drag is in flight.
+ *
+ * Every preview step commits a new document, and the exact display path would
+ * re-tessellate the moved B-rep through the kernel on each one. The working mesh is
+ * shown for the moved bodies instead until the pointer is released.
+ */
+const previewingTransform = ref(false)
 const snapMarker = ref<Point2 | null>(null)
 const drawMeasure = ref(''), operation = ref<'extrude' | 'revolve' | 'fillet' | 'dogear' | 'array' | null>(null)
 const cornerVertex = ref(0), cornerRadius = ref(2)
@@ -84,7 +93,73 @@ let orbitDrag: { x: number; y: number; yaw: number; pitch: number; pointer: numb
 // While the camera is being dragged the view falls back to the working mesh so orbiting stays responsive.
 const cameraDragging = ref(false)
 let heightDrag: { y: number; height: number; pointer: number; svg: SVGSVGElement } | null = null
-let gesture: { start: Point2; document: DirectDocument; vertex: number | null; id: string; pointer: number; pane: Pane; svg: SVGSVGElement; pan: boolean; center: Point2 } | null = null
+let gesture: { start: Point2; document: DirectDocument; vertex: number | null; id: string; pointer: number; pane: Pane; svg: SVGSVGElement; pan: boolean; center: Point2; bodyDrag?: { ids: string[]; delta: Vec3 } | null } | null = null
+
+/**
+ * Elements offset directly while a body drag is in flight.
+ *
+ * The 3D view renders one SVG polygon per triangle, and this scene has thousands. Both
+ * re-deriving the projection and re-rendering the list through Vue cost tens of
+ * milliseconds per pointer move. An orthographic projection is affine, so translating a
+ * body in the world is a constant screen offset: the drag sets that offset straight on
+ * the dragged body's existing elements, leaving the reactive scene untouched until the
+ * pointer is released.
+ */
+/**
+ * Elements that must travel with dragged bodies: their hit polygons (when rendered) and
+ * the SVG overlays drawn for the selection, such as vertex handles, feature edges and
+ * the gizmo. Overlays are keyed by whitespace-separated body ids, so a gizmo shared by a
+ * multi-selection matches any of its bodies. Without this the GPU surface moved while
+ * the handles stayed behind, which reads as lag.
+ */
+function collectDragNodes(svg: SVGSVGElement | undefined, ids: readonly string[]): SVGElement[] {
+  if (typeof svg?.querySelectorAll !== 'function') return []
+  const seen = new Set<SVGElement>()
+  for (const id of ids) {
+    const escaped = id.replace(/["\\]/g, '\\$&')
+    for (const node of svg.querySelectorAll<SVGElement>(`[data-body="${escaped}"], [data-body-overlay~="${escaped}"]`)) seen.add(node)
+  }
+  return [...seen]
+}
+
+let dragNodes: SVGElement[] = []
+/**
+ * Frame rate of the viewport, sampled over half-second windows.
+ *
+ * Measured from the browser's own frame callbacks, so it reflects what the eye sees
+ * rather than the cost of any one handler.
+ */
+const fps = ref(0)
+/** Median frame interval of the last window. A steady 33.3 ms means the frames are
+ * being paced externally; uneven, longer intervals mean the work itself is too slow. */
+const frameMs = ref(0)
+/** GPU time of the latest draw, sampled alongside the frame rate. */
+const drawMs = ref(0)
+let fpsHandle = 0, fpsSince = 0, fpsPrevious = 0
+let fpsIntervals: number[] = []
+function fpsTick(now: number) {
+  if (fpsPrevious) fpsIntervals.push(now - fpsPrevious)
+  fpsPrevious = now
+  const elapsed = now - fpsSince
+  if (elapsed >= 500 && fpsIntervals.length) {
+    fps.value = Math.round((fpsIntervals.length * 1000) / elapsed)
+    const sorted = [...fpsIntervals].sort((a, b) => a - b)
+    frameMs.value = Math.round(sorted[sorted.length >> 1] * 10) / 10
+    drawMs.value = Math.round((gpuLayer?.drawMs ?? 0) * 10) / 10
+    fpsIntervals = []
+    fpsSince = now
+  }
+  fpsHandle = requestAnimationFrame(fpsTick)
+}
+
+let dragOffsetIds: string[] = []
+function clearDragPreview() {
+  for (const node of dragNodes) node.removeAttribute?.('transform')
+  dragNodes = []
+  if (dragOffsetIds.length) { gpuLayer?.setDragOffset(dragOffsetIds, [0, 0, 0]); dragOffsetIds = [] }
+}
+
+
 const extraSelection=ref<string[]>([]),pickMode=ref<'body'|'face'|'edge'|'vertex'>('body'),vertexIndexes=ref<number[]>([]),faceIndex=ref(-1),edgeIndex=ref(-1),edgeIndexes=ref<number[]>([]),openingFaces=ref<number[]>([])
 const workplaneOutline=ref<Point2[][]>([])
 const activePlane=ref<SketchPlane>(xyPlane()),advancedOp=ref<'push'|'chamfer'|'edge-fillet'|'shell'|'split'|'offset'|'extend'|'curve'|'transform'|'loft'|null>(null)
@@ -120,7 +195,7 @@ function startVertexDrag(e:PointerEvent,index:number){
  vertexDrag={svg,pointer:e.pointerId,start:position(e),ids,before:history.document,moved:false}
  svg.setPointerCapture(e.pointerId)
 }
-let manipulatorDrag:{svg:SVGSVGElement;pointer:number;x:number;y:number;kind:'move'|'rotate'|'scale'|'push'|'split';axis:'x'|'y'|'z';direction:Point2;before:DirectDocument;initial:number;startPoint:Point2;center:Point2}|null=null
+let manipulatorDrag:{svg:SVGSVGElement;pointer:number;x:number;y:number;kind:'move'|'rotate'|'scale'|'push'|'split';axis:'x'|'y'|'z';direction:Point2;before:DirectDocument;initial:number;startPoint:Point2;center:Point2;delta?:Vec3}|null=null
 
 let curveDrag:{id:string;kind:'center'|'radius'|'start'|'end';before:DirectDocument;pointer:number}|null=null
 let cvDrag:{id:string;u:number;v:number;before:DirectDocument;point:number[];start:Point2;pointer:number;svg:SVGSVGElement}|null=null
@@ -165,6 +240,7 @@ const selectedFaceTriangles=computed(()=>new Set((openingFaces.value.length?open
 const samePlane = (a?:SketchPlane,b?:SketchPlane) => JSON.stringify(a??xyPlane())===JSON.stringify(b??xyPlane())
 const visibleSketches = computed(() => document.value.sketches.filter(s=>samePlane(s.plane,activePlane.value)))
 function pickObject(id:string,pane:Pane,add=false) {
+ if(subtract.value&&id&&document.value.bodies.some(b=>b.id===id)){subtractPick(id,add);mode.value=pane;return}
  if(id!==selection.value){faceIndex.value=edgeIndex.value=-1;edgeIndexes.value=[];openingFaces.value=[]}
  if(add){const ids=new Set(selectedIds.value);ids.has(id)?ids.delete(id):ids.add(id);const all=[...ids];selection.value=all[0]??'';extraSelection.value=all.slice(1)}
  else { selection.value=id;extraSelection.value=[] }
@@ -215,34 +291,89 @@ function retessellateSelectedBrep() { run(() => {
  body.mesh={positions:[...built.positions],indices:[...built.indices]}
  commit(next)
 }) }
+/**
+ * One boolean between two bodies.
+ *
+ * Two exact bodies are combined exactly or not at all: the Solid workspace promises B-rep
+ * results, so a kernel refusal is reported with the kernel's reason instead of being
+ * papered over with a polygon boolean that would quietly demote the result to a mesh.
+ * The welded mesh boolean remains only for bodies that never had exact topology.
+ */
+function booleanPair(a:DirectBody,b:DirectBody,operation:BrepBooleanOperation):{body:DirectBody|null;exact:boolean}{
+ if(a.brep&&b.brep){
+  try{
+   const result=bodyFromBrep(a,booleanNurbsBrep(a.brep,b.brep,operation))
+   return {body:result.brep.bodies.length?result:null,exact:true}
+  }catch(refusal){
+   // The kernel certifies each surface pairing it walks; an uncertified pairing is a
+   // capability limit of the exact kernel, not a defect in the model, and the bodies are
+   // left untouched rather than rebuilt from polygons.
+   const reason=refusal instanceof Error?refusal.message:String(refusal)
+   throw Error(label(`Ядро не может выполнить точную операцию для этой пары тел (${a.name} и ${b.name}), тела не изменены. Причина ядра: ${reason}`,`The kernel cannot perform the exact operation for this pair of bodies (${a.name} and ${b.name}); the bodies are unchanged. Kernel reason: ${reason}`))
+  }
+ }
+ if(operation==='xor')throw Error(label('XOR доступен только для двух точных тел B-rep.','XOR is available only for two exact B-rep bodies.'))
+ // Tessellated meshes can carry duplicated seam vertices, which the BSP boolean rejects as
+ // unstitched. Weld each input at a size-relative tolerance, then retry once coarser.
+ const extent=(mesh:{positions:number[]})=>{let span=0;for(let axis=0;axis<3;axis++){let min=Infinity,max=-Infinity;for(let i=axis;i<mesh.positions.length;i+=3){min=Math.min(min,mesh.positions[i]);max=Math.max(max,mesh.positions[i])}span=Math.max(span,max-min)}return span}
+ const scale=Math.max(extent(a.mesh),extent(b.mesh))
+ const weldedBoolean=(tolerance:number)=>booleanPolygonMeshes(mergeByDistance(a.mesh,tolerance),mergeByDistance(b.mesh,tolerance),operation as 'union'|'difference'|'intersection')
+ let built
+ try{built=weldedBoolean(scale*1e-6)}catch{built=weldedBoolean(scale*1e-4)}
+ if(built.indices.length===0)return {body:null,exact:false}
+ return {body:{...a,brep:undefined,mesh:{positions:[...built.positions],indices:[...built.indices]}},exact:false}
+}
+const FALLBACK_NOTICE=()=>label('Одно из тел не имело точной топологии, результат построен по сетке и не является точным B-rep.','A body had no exact topology; the result was built from the mesh and is not an exact B-rep.')
+const EMPTY_NOTICE=()=>label('Результат пуст: тела не пересекаются так, как требует операция.','The result is empty: the bodies do not overlap the way this operation needs.')
 function applyBrepBoolean(operation:BrepBooleanOperation){run(()=>{
  const bodies=selectedIds.value.map(id=>history.document.bodies.find(b=>b.id===id)).filter((b):b is NonNullable<typeof b>=>!!b)
  if(bodies.length!==2)throw Error(label('Выберите ровно два тела: первое выбранное — A.','Select exactly two bodies; the first selected body is A.'))
  const d=history.document
  notice.value=''
- // Exact path first. The kernel only handles parallel extrusions bounded by lines and circular arcs, so a
- // refusal (spheres, tori, lofts) falls through to the mesh boolean instead of failing the operation.
- if(bodies[0].brep&&bodies[1].brep){
-  try{
-   const result=bodyFromBrep(bodies[0],booleanNurbsBrep(bodies[0].brep,bodies[1].brep,operation))
-   d.bodies=d.bodies.filter(b=>b.id!==bodies[1].id).flatMap(b=>b.id===bodies[0].id?(result.brep.bodies.length?[result]:[]):[b]);commit(d);selection.value=result.brep.bodies.length?result.id:'';extraSelection.value=[]
-   return
-  }catch(exactFailure){
-   if(operation==='xor')throw exactFailure
-   notice.value=label('Ядро не поддерживает точную операцию для этих поверхностей. Результат построен по сетке, тело больше не точное B-rep.','The kernel does not support the exact operation for these surfaces. The result was built from meshes and is no longer an exact B-rep body.')
-  }
- } else if(operation==='xor')throw Error(label('XOR доступен только для двух точных тел B-rep.','XOR is available only for two exact B-rep bodies.'))
- // Tessellated B-rep meshes can carry duplicated seam vertices, which the BSP boolean rejects as unstitched.
- // Weld each input at a size-relative tolerance before the operation, then retry once at a coarser weld.
- const extent=(mesh:{positions:number[]})=>{let span=0;for(let axis=0;axis<3;axis++){let min=Infinity,max=-Infinity;for(let i=axis;i<mesh.positions.length;i+=3){min=Math.min(min,mesh.positions[i]);max=Math.max(max,mesh.positions[i])}span=Math.max(span,max-min)}return span||1}
- const scale=Math.max(extent(bodies[0].mesh),extent(bodies[1].mesh))
- const weldedBoolean=(tolerance:number)=>booleanPolygonMeshes(mergeByDistance(bodies[0].mesh,tolerance),mergeByDistance(bodies[1].mesh,tolerance),operation as 'union'|'difference'|'intersection')
- let built
- try{built=weldedBoolean(scale*1e-6)}catch{built=weldedBoolean(scale*1e-4)}
- const empty=built.indices.length===0
- const result={...bodies[0],brep:undefined,mesh:{positions:[...built.positions],indices:[...built.indices]}}
- d.bodies=d.bodies.filter(b=>b.id!==bodies[1].id).flatMap(b=>b.id===bodies[0].id?(empty?[]:[result]):[b]);commit(d);selection.value=empty?'':result.id;extraSelection.value=[]
- if(empty)notice.value=label('Результат пуст: тела не пересекаются так, как требует операция.','The result is empty: the bodies do not overlap the way this operation needs.')
+ const {body:result,exact}=booleanPair(bodies[0],bodies[1],operation)
+ if(!exact&&result)notice.value=FALLBACK_NOTICE()
+ d.bodies=d.bodies.filter(b=>b.id!==bodies[1].id).flatMap(b=>b.id===bodies[0].id?(result?[result]:[]):[b]);commit(d);selection.value=result?result.id:'';extraSelection.value=[]
+ if(!result)notice.value=EMPTY_NOTICE()
+})}
+
+/**
+ * Guided subtraction: field A collects the bodies to keep, field B the bodies to remove.
+ *
+ * Bodies clicked in the viewport or the scene list go into the active field, Shift adds
+ * or removes one. Each field is unioned first, then A minus B runs once, so several
+ * cutters can be removed from several parts in a single step.
+ */
+const subtract=ref<{a:string[];b:string[];active:'a'|'b'}|null>(null)
+function beginSubtract(){
+ cancelGesture();operation.value=null;advancedOp.value=null
+ const ids=selectedIds.value.filter(id=>history.document.bodies.some(b=>b.id===id))
+ subtract.value={a:ids.slice(0,1),b:ids.slice(1),active:ids.length?'b':'a'}
+}
+function subtractPick(id:string,add:boolean){
+ const s=subtract.value;if(!s)return
+ const field=s.active,other=field==='a'?'b':'a'
+ s[field]=add?(s[field].includes(id)?s[field].filter(x=>x!==id):[...s[field],id]):[id]
+ s[other]=s[other].filter(x=>!s[field].includes(x))
+ const all=[...s.a,...s.b];selection.value=all[0]??'';extraSelection.value=all.slice(1)
+}
+function subtractNames(ids:string[]){
+ const names=ids.map(id=>document.value.bodies.find(b=>b.id===id)?.name).filter((n):n is string=>!!n)
+ return names.length?names.join(', '):label('пусто','empty')
+}
+function applySubtract(){run(()=>{
+ const s=subtract.value;if(!s)return
+ if(!s.a.length||!s.b.length)throw Error(label('Заполните оба поля: A — из чего вычитаем, B — что вычитаем.','Fill both fields: A is what to subtract from, B is what to subtract.'))
+ const d=history.document,bodyOf=(id:string)=>{const b=d.bodies.find(x=>x.id===id);if(!b)throw Error(label('Тело больше не существует.','A body no longer exists.'));return b}
+ let exact=true
+ const fold=(ids:string[])=>ids.slice(1).reduce<DirectBody>((acc,id)=>{const r=booleanPair(acc,bodyOf(id),'union');exact&&=r.exact;if(!r.body)throw Error(EMPTY_NOTICE());return r.body},bodyOf(ids[0]))
+ const a=fold(s.a),b=fold(s.b)
+ const r=booleanPair(a,b,'difference');exact&&=r.exact
+ const removed=new Set([...s.a,...s.b]),anchor=s.a[0]
+ notice.value=''
+ d.bodies=d.bodies.flatMap(body=>body.id===anchor?(r.body?[r.body]:[]):removed.has(body.id)?[]:[body])
+ commit(d);selection.value=r.body?r.body.id:'';extraSelection.value=[]
+ if(!r.body)notice.value=EMPTY_NOTICE();else if(!exact)notice.value=FALLBACK_NOTICE()
+ subtract.value=null
 })}
 function resultAdvanced():DirectDocument {
  const d=history.document,p=advanced.value,id=selection.value,b=d.bodies.find(b=>b.id===id),s=d.sketches.find(s=>s.id===id)
@@ -282,17 +413,34 @@ const splitPlanePoints=computed(()=>{
  const n=axisVector(advanced.value.axis),u=unit3(cross3(n,n[0]?[0,1,0]:[1,0,0])),v=cross3(n,u),p=bodyPoints(selectedBody.value),size=Math.max(...p.map(p=>Math.hypot(...p)))+10
  return [[-size,-size],[size,-size],[size,size],[-size,size]].map(q=>project(worldPoint(q,{origin:n.map(x=>x*advanced.value.distance) as Vec3,u,v}),'3d').join(',')).join(' ')
 })
-const gizmoCenter=computed(()=>{
+/** Axis-aligned bounds of the selection: the gizmo is centred on them and sized by them. */
+const gizmoBounds=computed(()=>{
  const p=[...document.value.bodies.filter(b=>selectedIds.value.includes(b.id)).flatMap(bodyPoints),...document.value.sketches.filter(s=>selectedIds.value.includes(s.id)).flatMap(s=>s.points.map(p=>worldPoint(p,s.plane)))]
  if(!p.length)return null
- return [0,1,2].map(k=>(Math.min(...p.map(p=>p[k]))+Math.max(...p.map(p=>p[k])))/2) as Vec3
+ const min=[0,1,2].map(k=>Math.min(...p.map(q=>q[k]))),max=[0,1,2].map(k=>Math.max(...p.map(q=>q[k])))
+ return {center:[0,1,2].map(k=>(min[k]+max[k])/2) as Vec3, extent:Math.max(...[0,1,2].map(k=>max[k]-min[k]))}
+})
+const gizmoCenter=computed(()=>gizmoBounds.value?.center??null)
+/**
+ * Gizmo arm length in world units.
+ *
+ * Proportional to the selection so the gizmo reads as attached to the body and shrinks
+ * and grows with it under zoom, clamped to a screen-size band so it neither vanishes on
+ * a tiny part nor covers the viewport on a large one.
+ */
+const gizmoLength=computed(()=>{
+ // The floor only keeps the three tips from collapsing into each other; the tips
+ // themselves stay a fixed screen size, so the arms may get short before that.
+ const view=views.value['3d'],extent=gizmoBounds.value?.extent??0
+ return Math.min(view/3,Math.max(view/40,extent*.7))
 })
 const gizmoAxes=computed(()=>gizmoCenter.value?(['x','y','z'] as const).map((axis,i)=>{
- const n=axisVector(axis),c=gizmoCenter.value!,length=views.value['3d']/7
+ const n=axisVector(axis),c=gizmoCenter.value!,length=gizmoLength.value
  const u=unit3(cross3(n,n[0]?[0,1,0]:[1,0,0])),v=cross3(n,u)
  return {axis,color:['#ff7777','#77df9d','#77baff'][i],base:project(c,'3d'),tip:project(c.map((x,k)=>x+n[k]*length),'3d'),ring:Array.from({length:65},(_,i)=>{const a=i*Math.PI/32;return project(c.map((x,k)=>x+length*.7*(u[k]*Math.cos(a)+v[k]*Math.sin(a))),'3d').join(',')}).join(' ')}
 }):[])
 function startGizmo(e:PointerEvent,kind:'move'|'rotate'|'scale'|'push'|'split',axis:'x'|'y'|'z') {
+ if(kind==='rotate'||kind==='scale')previewingTransform.value=true
  e.preventDefault();e.stopPropagation();const svg=canvasOf(e),center=kind==='push'?selectedFace.value?.center:gizmoCenter.value;if(!center)return
  const n=kind==='push'?selectedFace.value!.normal:axisVector(axis),a=project(center,'3d'),b=project(center.map((x,i)=>x+n[i]),'3d')
  if(kind==='push'){advanced.value.distance=0;beginAdvanced('push')}
@@ -332,7 +480,100 @@ function persist() {
   saveError.value = !storageSet(key, text)
   if (!saveError.value) stored = text
 }
-function sync() { document.value = history.document; const s=document.value.sketches.find(s=>s.id===selection.value);if(s&&!samePlane(s.plane,activePlane.value)){activePlane.value=s.plane??xyPlane();workplaneOutline.value=[]} undoable.value = history.canUndo; redoable.value = history.canRedo; persist() }
+/**
+ * Rebuilding the thousands of hit-test polygons after a commit costs far more than a
+ * frame, and doing it the instant a drag ends is felt as a stall. The dragged elements
+ * already carry the exact translation that was committed, so they stay correct for both
+ * display and picking; the rebuild is deferred until the pointer has settled.
+ */
+const settling = ref(false)
+let settleHandle = 0
+function settleAfterDrag() {
+  // The committed document normally rebuilds the GPU buffer, but never rely on that: a
+  // commit that changes nothing leaves the buffer, and with it a stale offset, in place.
+  if (dragOffsetIds.length) { gpuLayer?.setDragOffset(dragOffsetIds, [0, 0, 0]); dragOffsetIds = [] }
+  if (typeof setTimeout !== 'function') { clearDragPreview(); return }
+  settling.value = true
+  clearTimeout(settleHandle)
+  settleHandle = setTimeout(() => { settling.value = false; clearDragPreview() }, 140) as unknown as number
+}
+
+/**
+ * Applies the exact kernel translation to whole bodies.
+ *
+ * `transformSelection` serializes the entire document across the WASM boundary; on a
+ * six-body B-rep scene that was 9 ms of a drag release, with 2 ms of it being the moved
+ * body. Only the moved bodies travel, and the result is merged back by id.
+ */
+function transformBodiesExact(before: DirectDocument, ids: readonly string[], delta: Vec3, axis: Vec3, angle: number, scale: number): DirectDocument {
+  const moving = new Set(ids)
+  const subset = before.bodies.filter(body => moving.has(body.id))
+  if (subset.length !== ids.length) return transformSelection(before, [...ids], delta, axis, angle, scale)
+  const trimmed: DirectDocument = { version: 1, sketches: [], bodies: subset, curves: [], surfaces: [] }
+  const moved = new Map(transformSelection(trimmed, [...ids], delta, axis, angle, scale).bodies.map(body => [body.id, body] as const))
+  if (moved.size !== subset.length) return transformSelection(before, [...ids], delta, axis, angle, scale)
+  return { ...before, bodies: before.bodies.map(body => moved.get(body.id) ?? body) }
+}
+function translateBodiesExact(before: DirectDocument, ids: readonly string[], delta: Vec3, axis: Vec3): DirectDocument {
+  return transformBodiesExact(before, ids, delta, axis, 0, 1)
+}
+
+/**
+ * Picks the body surface under a viewport point by casting a ray.
+ *
+ * While the GPU layer draws the scene, the per-triangle SVG polygons existed only as
+ * invisible hit targets, and thousands of them cost layout on every frame. The
+ * projection is orthographic, so its three rows give the screen axes and the direction
+ * toward the viewer directly; the ray starts far on the viewer's side and the first
+ * triangle it meets is the one the eye sees. Triangle indices refer to the working mesh,
+ * exactly as the polygons reported them.
+ */
+function pickBodyAt(p: Point2): { id: string; triangle: number } | null {
+  const { yaw, pitch } = camera.value
+  const cy = Math.cos(yaw), sy = Math.sin(yaw), cp = Math.cos(pitch), sp = Math.sin(pitch)
+  const right: Vec3 = [cy, -sy, 0], up: Vec3 = [sy * sp, cy * sp, -cp], toward: Vec3 = [sy * cp, cy * cp, sp]
+  const far = 1e6
+  const origin = [0, 1, 2].map(k => p[0] * right[k] + p[1] * up[k] + far * toward[k]) as Vec3
+  const ray = { origin, direction: [-toward[0], -toward[1], -toward[2]] as Vec3 }
+  let best: { id: string; triangle: number } | null = null, bestDistance = Infinity
+  for (const body of document.value.bodies) {
+    const pos = body.mesh.positions, idx = body.mesh.indices
+    for (let t = 0; t < idx.length / 3; t++) {
+      const a = idx[t * 3] * 3, b = idx[t * 3 + 1] * 3, c = idx[t * 3 + 2] * 3
+      const d = rayTriangleDistance(ray, [pos[a], pos[a + 1], pos[a + 2]], [pos[b], pos[b + 1], pos[b + 2]], [pos[c], pos[c + 1], pos[c + 2]])
+      if (d !== null && d < bestDistance) { bestDistance = d; best = { id: body.id, triangle: t } }
+    }
+  }
+  return best
+}
+
+/** Pointer down on the canvas itself: with the GPU layer active, resolve the surface by ray. */
+function downAt(e: PointerEvent, pane: Pane) {
+  // Shift stays in: with a body under the cursor `down` turns it into add-to-selection,
+  // and only without one does it fall back to panning.
+  if (pane === '3d' && gpuActive.value && e.button !== 1) {
+    try {
+      const hit = pickBodyAt(position(e))
+      if (hit) { down(e, pane, hit.id, null, hit.triangle); return }
+    } catch { /* canvas not ready: fall through to the plain handler */ }
+  }
+  down(e, pane)
+}
+
+let lastHoverPick = 0
+/** Pointer move: the drag logic first, then hover by ray while nothing is being dragged. */
+function moveAt(e: PointerEvent) {
+  move(e)
+  if (!gpuActive.value || gesture || orbitDrag || manipulatorDrag || vertexDrag || curveDrag || cvDrag || selectionBox.value) return
+  if (e.timeStamp - lastHoverPick < 16) return
+  lastHoverPick = e.timeStamp
+  try {
+    const id = pickBodyAt(position(e))?.id ?? ''
+    if (id !== hovered.value) hovered.value = id
+  } catch { /* canvas not ready */ }
+}
+
+function sync() { document.value = history.document; if (gpuActive.value) settleAfterDrag(); const s=document.value.sketches.find(s=>s.id===selection.value);if(s&&!samePlane(s.plane,activePlane.value)){activePlane.value=s.plane??xyPlane();workplaneOutline.value=[]} undoable.value = history.canUndo; redoable.value = history.canRedo; persist() }
 function commit(next: DirectDocument) { history.commit(next); sync() }
 function undo(redo = false) { operation.value = null; advancedOp.value=null; cancelGesture(); redo ? history.redo() : history.undo(); sync() }
 function addSketch(points: Point2[], closed: boolean, analytic?: import('../services/directSketchGeometry').AnalyticCurve) {
@@ -513,8 +754,29 @@ const kernelReady = ref(isGeometryKernelReady())
 if (!kernelReady.value) void warmGeometryKernel().then(() => { kernelReady.value = true }).catch(() => {})
 const DISPLAY_TRIANGLE_BUDGET = 4000
 const smoothDisplay = ref(true)
-interface DisplayMesh { mesh: { positions: number[]; indices: number[] }; map: number[] | null; normals: number[][] }
-const displayCache = new WeakMap<object, DisplayMesh>()
+interface DisplayMesh { mesh: { positions: number[]; indices: number[] }; map: number[] | null; normals: number[][]; /** Smoothed non-indexed list for the GPU layer, built once per display mesh. */ flat?: { positions: Float32Array; normals: Float32Array } }
+/**
+ * Display meshes keyed by mesh content, not object identity.
+ *
+ * Every commit clones the document, so identity keys missed for every body after any
+ * change and re-tessellated the whole scene through the kernel: over a hundred
+ * milliseconds felt as a stall at the end of each drag, undo or redo. Content keys make
+ * an unchanged body a hit, so only geometry that actually changed is rebuilt.
+ */
+const displayCache = new Map<string, DisplayMesh>()
+const DISPLAY_CACHE_LIMIT = 64
+function hashNumbers(values: readonly number[]): string {
+  const words = new Uint32Array(Float64Array.from(values).buffer)
+  let a = 0x811c9dc5, b = 0x01000193
+  for (let i = 0; i < words.length; i++) {
+    a = Math.imul(a ^ words[i], 0x01000193)
+    b = Math.imul(b + words[i], 0x9e3779b1) ^ (b >>> 15)
+  }
+  return (a >>> 0).toString(16) + (b >>> 0).toString(16)
+}
+function displayKey(b: { mesh: { positions: number[]; indices: number[] }; brep?: unknown }): string {
+  return `${b.brep ? 'b' : 'm'}:${b.mesh.positions.length}:${b.mesh.indices.length}:${hashNumbers(b.mesh.positions)}:${hashNumbers(b.mesh.indices)}`
+}
 function triangleCentroidsAndNormals(mesh: { positions: number[]; indices: number[] }) {
   const count = mesh.indices.length / 3, centroids: number[][] = [], normals: number[][] = []
   for (let t = 0; t < count; t++) {
@@ -541,7 +803,11 @@ function smoothTriangleNormals(mesh: { positions: number[]; indices: number[] },
   })
 }
 function displayMeshFor(b: ReturnType<typeof directExtrusionTool>): DisplayMesh {
-  const cached = displayCache.get(b.mesh)
+  if (previewingTransform.value && selectedIds.value.includes(b.id)) {
+    return { mesh: b.mesh, map: null, normals: triangleCentroidsAndNormals(b.mesh).normals }
+  }
+  const key = displayKey(b)
+  const cached = displayCache.get(key)
   if (cached) return cached
   let result: DisplayMesh
   const brep = (b as { brep?: NurbsBrep }).brep
@@ -566,7 +832,8 @@ function displayMeshFor(b: ReturnType<typeof directExtrusionTool>): DisplayMesh 
   } else {
     result = { mesh: b.mesh, map: null, normals: triangleCentroidsAndNormals(b.mesh).normals }
   }
-  displayCache.set(b.mesh, result)
+  if (displayCache.size >= DISPLAY_CACHE_LIMIT) displayCache.delete(displayCache.keys().next().value!)
+  displayCache.set(key, result)
   return result
 }
 function shadeFromNormal(n: number[]): number {
@@ -596,14 +863,21 @@ function mountGpuCanvas(el: Element | ComponentPublicInstance | null) {
     gpuActive.value = true
   })
 }
-onUnmounted(() => { gpuResize?.disconnect(); gpuLayer?.destroy(); gpuLayer = null })
+onUnmounted(() => { gpuResize?.disconnect(); gpuLayer?.destroy(); gpuLayer = null; if (fpsHandle) cancelAnimationFrame(fpsHandle); fpsHandle = 0; clearTimeout(settleHandle) })
+watch(() => props.open, open => {
+  // The DOM-less test renderer has no frame callbacks, and a hidden workspace need not count.
+  if (typeof requestAnimationFrame !== 'function') return
+  if (fpsHandle) { cancelAnimationFrame(fpsHandle); fpsHandle = 0 }
+  if (!open) { fps.value = 0; frameMs.value = 0; return }
+  fpsIntervals = []; fpsPrevious = 0; fpsSince = performance.now(); fpsHandle = requestAnimationFrame(fpsTick)
+}, { immediate: true })
 const gpuBodies = computed<SolidGpuBody[]>(() => {
   if (!gpuActive.value) return []
   const hideSelected = !!advancedPreview.value.document
   return document.value.bodies.flatMap(b => {
     if (hideSelected && selectedIds.value.includes(b.id)) return []
     const display = displayMeshFor(b)
-    const flat = smoothTriangleList(display.mesh.positions, display.mesh.indices)
+    const flat = display.flat ??= smoothTriangleList(display.mesh.positions, display.mesh.indices)
     const count = display.mesh.indices.length / 3
     const bodyHue = selectedIds.value.includes(b.id) ? 266 : hovered.value === b.id ? 190 : 220
     const faceHighlight = selectedBody.value?.id === b.id && pickMode.value === 'face'
@@ -612,7 +886,7 @@ const gpuBodies = computed<SolidGpuBody[]>(() => {
       const working = display.map ? display.map[i] : i
       hues[i] = faceHighlight && selectedFaceTriangles.value.has(working) ? 40 : bodyHue
     }
-    return [{ positions: flat.positions, normals: flat.normals, hues }]
+    return [{ id: b.id, positions: flat.positions, normals: flat.normals, hues }]
   })
 })
 watch(gpuBodies, bodies => gpuLayer?.setBodies(bodies), { flush: 'post' })
@@ -631,12 +905,28 @@ function meshPolygons(b: ReturnType<typeof directExtrusionTool>) {
     return { id: b.id, triangle, key: b.id + ':' + i, points: face.map(p => project(p, '3d').join(',')).join(' '), shade: display.map ? shadeFromNormal(display.normals[i]) : directFaceShade(mesh, i, camera.value), depth: face.reduce((n,p) => n + projectDirectPoint(p,camera.value)[2], 0) }
   })
 }
-watch([smoothDisplay, kernelReady], () => { for (const body of document.value.bodies) displayCache.delete(body.mesh) })
-const polygons = computed(() => document.value.bodies.flatMap(meshPolygons).sort((a,b)=>a.depth-b.depth))
-const nurbsSurfacePolygons = computed(() => !kernelReady.value ? [] : (document.value.surfaces ?? []).flatMap(item => {
-  try { return meshPolygons({ id: item.id, name: item.name, mesh: tessellateSolidNurbsSurface(item) }).sort((a,b)=>a.depth-b.depth) }
-  catch { return [] }
-}))
+watch([smoothDisplay, kernelReady], () => displayCache.clear())
+/**
+ * While the GPU layer draws the scene, these thousands of polygons are transparent hit
+ * targets and nothing more. Re-projecting and re-rendering them mid-orbit costs more
+ * than a frame and changes nothing anyone can see, so they are held still until the
+ * camera settles, then rebuilt once for picking.
+ */
+let restingPolygons: ReturnType<typeof meshPolygons> = []
+const polygons = computed(() => {
+  if (gpuActive.value && (cameraDragging.value || settling.value) && restingPolygons.length) return restingPolygons
+  restingPolygons = document.value.bodies.flatMap(meshPolygons).sort((a, b) => a.depth - b.depth)
+  return restingPolygons
+})
+let restingSurfacePolygons: ReturnType<typeof meshPolygons> = []
+const nurbsSurfacePolygons = computed(() => {
+  if (gpuActive.value && cameraDragging.value && restingSurfacePolygons.length) return restingSurfacePolygons
+  restingSurfacePolygons = !kernelReady.value ? [] : (document.value.surfaces ?? []).flatMap(item => {
+    try { return meshPolygons({ id: item.id, name: item.name, mesh: tessellateSolidNurbsSurface(item) }).sort((a, b) => a.depth - b.depth) }
+    catch { return [] }
+  })
+  return restingSurfacePolygons
+})
 const nurbsCurvePaths = computed(() => (document.value.curves ?? []).map(item => ({
   id: item.id,
   points: sampleSolidNurbsCurve(item.curve).map(point => project([point[0], point[1], point[2] ?? 0], '3d').join(',')).join(' '),
@@ -646,9 +936,25 @@ const nativeCage = computed(() => {
   if (selectedNurbsSurface.value) return selectedNurbsSurface.value.surface.controlPoints.flatMap((row, u) => row.map((point, v) => ({ point, u, v })))
   return []
 })
+/**
+ * Floor grid at two decades with a continuous cross-fade.
+ *
+ * A single step chosen as a power of ten snaps to a tenfold different spacing the moment
+ * the zoom crosses a decade, which reads as the grid changing under the cursor. Instead
+ * the fine step fades out as the view grows toward the next decade while the coarse step
+ * stays, so the visible density is constant and nothing jumps.
+ */
 const floorLines = computed(() => {
-  const step = Math.pow(10, Math.floor(Math.log10(views.value['3d'] / 8))), extent = step * 20
-  return Array.from({length:41},(_,i) => (i-20)*step).flatMap(n => [[[-extent,n,0],[extent,n,0]],[[n,-extent,0],[n,extent,0]]]).map(line => line.map(p=>project(p,'3d').join(',')).join(' '))
+  const magnitude = Math.log10(views.value['3d'] / 8)
+  const fine = Math.pow(10, Math.floor(magnitude)), coarse = fine * 10
+  const fineOpacity = 1 - (magnitude - Math.floor(magnitude))
+  const lines = (step: number, opacity: number) => {
+    const extent = step * 20
+    return Array.from({ length: 41 }, (_, i) => (i - 20) * step)
+      .flatMap(n => [[[-extent, n, 0], [extent, n, 0]], [[n, -extent, 0], [n, extent, 0]]])
+      .map(line => ({ points: line.map(p => project(p, '3d').join(',')).join(' '), opacity }))
+  }
+  return [...lines(coarse, 1), ...lines(fine, fineOpacity)]
 })
 const ghostPolygons = computed(() => previewBody.value ? meshPolygons(previewBody.value).sort((a,b)=>a.depth-b.depth) : [])
 const extrusionHandle = computed(() => {
@@ -677,7 +983,7 @@ function position(e: PointerEvent): Point2 {
   return [point.x, point.y]
 }
 function plane(p: Point2, pane: Pane): Point2 { return pane === '2d' ? [p[0], -p[1]] : unprojectDirectXY(p,camera.value) }
-function cancelGesture() { if(vertexDrag){document.value=vertexDrag.before;vertexDrag=null} if(cvDrag){document.value=cvDrag.before;cvDrag=null} if(curveDrag){document.value=curveDrag.before;curveDrag=null} if(manipulatorDrag){document.value=manipulatorDrag.before;if(manipulatorDrag.kind==='push')advancedOp.value=null;if(manipulatorDrag.kind==='split')advanced.value.distance=manipulatorDrag.initial;manipulatorDrag=null}selectionBox.value=null; if (gesture) { document.value = gesture.document; gesture = null } if (heightDrag) height.value = heightDrag.height; heightDrag = null; orbitDrag = null; draft.value = []; drawMeasure.value = ''; snapMarker.value = null; cameraDragging.value = false }
+function cancelGesture() { clearDragPreview(); previewingTransform.value=false; if(vertexDrag){document.value=vertexDrag.before;vertexDrag=null} if(cvDrag){document.value=cvDrag.before;cvDrag=null} if(curveDrag){document.value=curveDrag.before;curveDrag=null} if(manipulatorDrag){document.value=manipulatorDrag.before;if(manipulatorDrag.kind==='push')advancedOp.value=null;if(manipulatorDrag.kind==='split')advanced.value.distance=manipulatorDrag.initial;manipulatorDrag=null}selectionBox.value=null; if (gesture) { document.value = gesture.document; gesture = null } if (heightDrag) height.value = heightDrag.height; heightDrag = null; orbitDrag = null; draft.value = []; drawMeasure.value = ''; snapMarker.value = null; cameraDragging.value = false }
 function down(e: PointerEvent, pane: Pane, id = '', vertex: number | null = null, triangle = -1) {
   if (![0, 1, 2].includes(e.button) || gesture) return
   if(e.button===0&&id&&e.shiftKey&&pickMode.value==='body'){pickObject(id,pane,true);return}
@@ -735,7 +1041,20 @@ function move(e: PointerEvent) {
     const distance=l>.001?(x*g.direction[0]+y*g.direction[1])/l:-y
     if(g.kind==='push'||g.kind==='split'){advanced.value.distance=Math.round((distance+(g.kind==='split'?g.initial:0))*100)/100;return}
     const p=position(e),rotation=(Math.atan2(p[1]-g.center[1],p[0]-g.center[0])-Math.atan2(g.startPoint[1]-g.center[1],g.startPoint[0]-g.center[0]))*180/Math.PI*(projectDirectPoint(axisVector(g.axis),camera.value)[2]>=0?-1:1)
-    run(()=>{document.value=transformSelection(g.before,selectedIds.value,g.kind==='move'?axisVector(g.axis).map(v=>v*distance) as Vec3:[0,0,0],axisVector(g.axis),g.kind==='rotate'?rotation:0,g.kind==='scale'?Math.max(.01,1+distance/(views.value['3d']/7)):1)});return
+    if(g.kind==='move'){
+      // Pure translation along an axis previews as a constant screen offset, so it skips
+      // both the kernel round trip and the reactive re-render of every polygon.
+      const worldDelta=axisVector(g.axis).map(v=>v*distance) as Vec3
+      g.delta=worldDelta
+      if(!dragNodes.length)dragNodes=collectDragNodes(g.svg,selectedIds.value)
+      const origin=project([0,0,0],'3d'),shifted=project(worldDelta,'3d')
+      const offset=`translate(${shifted[0]-origin[0]},${shifted[1]-origin[1]})`
+      for(const node of dragNodes)node.setAttribute('transform',offset)
+      dragOffsetIds=[...selectedIds.value]
+      gpuLayer?.setDragOffset(dragOffsetIds,worldDelta as [number,number,number])
+      return
+    }
+    run(()=>{document.value=transformBodiesExact(g.before,selectedIds.value,[0,0,0],axisVector(g.axis),g.kind==='rotate'?rotation:0,g.kind==='scale'?Math.max(.01,1+distance/(views.value['3d']/7)):1)});return
   }
   if (heightDrag && heightDrag.pointer === e.pointerId) {
     const n=cross3((selectedSketch.value?.plane??xyPlane()).u,(selectedSketch.value?.plane??xyPlane()).v), projected=projectDirectPoint(n,camera.value)
@@ -759,11 +1078,31 @@ function move(e: PointerEvent) {
     drawMeasure.value = tool.value === 'circle' ? `R ${Math.hypot(p[0]-start[0],p[1]-start[1]).toFixed(2)} mm` : `${Math.abs(p[0]-start[0]).toFixed(2)} × ${Math.abs(p[1]-start[1]).toFixed(2)} mm`
     return
   }
-  const d: DirectDocument = JSON.parse(JSON.stringify(gesture.document)), delta = [p[0] - start[0], p[1] - start[1], 0]
-  const sketch = d.sketches.find(s => s.id === gesture!.id), body = d.bodies.find(b => b.id === gesture!.id)
+  const delta = [p[0] - start[0], p[1] - start[1], 0]
+  // Body translation previews in JS. Routing it through the kernel would send the whole
+  // document, B-rep included, across the WASM boundary on every pointer move.
+  const draggingBodies = gesture.document.bodies.some(b => b.id === gesture!.id)
+  if (draggingBodies || (selectedIds.value.length > 1 && !gesture.document.sketches.some(s => selectedIds.value.includes(s.id)))) {
+    const ids = selectedIds.value.length > 1 ? [...selectedIds.value] : [gesture.id]
+    const plane = gesture.pane === '2d' ? activePlane.value : xyPlane()
+    const worldDelta = (selectedIds.value.length > 1
+      ? worldPoint(delta, { ...plane, origin: [0, 0, 0] })
+      : delta) as Vec3
+    gesture.bodyDrag = { ids, delta: worldDelta }
+    // The DOM-less test renderer has no query API; the drag still commits on release.
+    if (!dragNodes.length) dragNodes = collectDragNodes(gesture.svg, ids)
+    const origin = project([0, 0, 0], '3d'), shifted = project(worldDelta as unknown as Vec3, '3d')
+    const offset = `translate(${shifted[0] - origin[0]},${shifted[1] - origin[1]})`
+    for (const node of dragNodes) node.setAttribute('transform', offset)
+    // The visible surface comes from the GPU layer; move it in place, not by rebuilding.
+    dragOffsetIds = ids
+    gpuLayer?.setDragOffset(ids, worldDelta as [number, number, number])
+    return
+  }
+  const d: DirectDocument = JSON.parse(JSON.stringify(gesture.document))
+  const sketch = d.sketches.find(s => s.id === gesture!.id)
   if (sketch) { if (gesture.vertex !== null) {delete sketch.analytic; sketch.points[gesture.vertex] = p} else { const moved=transformSketch(sketch,[delta[0],delta[1]],0,1);Object.assign(sketch,moved) } }
   if(selectedIds.value.length>1){const plane=gesture.pane==='2d'?activePlane.value:xyPlane(),worldDelta=worldPoint(delta,{...plane,origin:[0,0,0]});document.value=transformSelection(gesture.document,selectedIds.value,worldDelta,[0,0,1],0,1);return}
-  if (body) { document.value=transformSelection(gesture.document,[body.id],delta as Vec3,[0,0,1],0,1); return }
   document.value = d
 }
 function up(e: PointerEvent) {
@@ -775,16 +1114,21 @@ function up(e: PointerEvent) {
     const items=box.pane==='2d'?visibleSketches.value.map(s=>({id:s.id,points:s.points.map(p=>project(p,'2d'))})):document.value.bodies.map(b=>({id:b.id,points:bodyPoints(b).map(p=>project(p,'3d'))}))
     const ids=items.filter(o=>o.points.every(p=>p[0]>=min[0]&&p[0]<=max[0]&&p[1]>=min[1]&&p[1]<=max[1])).map(o=>o.id);selection.value=ids[0]??'';extraSelection.value=ids.slice(1);selectionBox.value=null;return
   }
-  if(manipulatorDrag){const g=manipulatorDrag;move(e);manipulatorDrag=null;if(g.kind==='push')applyAdvanced();else if(g.kind!=='split')run(()=>commit(document.value));return}
+  if(manipulatorDrag){const g=manipulatorDrag;move(e);manipulatorDrag=null;previewingTransform.value=false
+    if(g.kind==='push'){clearDragPreview();applyAdvanced();return}
+    if(g.kind==='move'){if(g.delta)run(()=>commit(translateBodiesExact(g.before,selectedIds.value,g.delta!,axisVector(g.axis))));settleAfterDrag();return}
+    if(g.kind!=='split')run(()=>commit(document.value));return}
 
   if (heightDrag) { heightDrag = null; return }
   if (orbitDrag) { orbitDrag = null; return }
   drawMeasure.value = ''; snapMarker.value = null
   if (!gesture || gesture.pointer !== e.pointerId) return
   move(e)
-  const start=gesture.start, before = gesture.document, pane = gesture.pane, pan = gesture.pan; gesture = null
+  const start=gesture.start, before = gesture.document, pane = gesture.pane, pan = gesture.pan, bodyDrag = gesture.bodyDrag; gesture = null
   if (pan) return
   run(() => {
+    // The exact translation, including B-rep, is applied once here rather than per move.
+    if (bodyDrag) { commit(translateBodiesExact(before, bodyDrag.ids, bodyDrag.delta, [0, 0, 1])); settleAfterDrag(); return }
     if (pane === '2d' && tool.value !== 'select') {
       const points = draft.value
       if(tool.value==='circle'||tool.value==='arc'){const radius=Math.hypot(points[0][0]-start[0],points[0][1]-start[1]);if(radius>=.01){const analytic={kind:tool.value,center:start,radius,start:0,sweep:tool.value==='circle'?360:180} as const;addSketch(sampleCurve(analytic),tool.value==='circle',analytic)}}
@@ -812,6 +1156,7 @@ const solidCommands = computed<SolidCommand[]>(() => {
   const needFace = label('Выберите грань тела', 'Select a body face')
   const needEdge = label('Выберите ребро тела', 'Select a body edge')
   const twoBodies = twoSelectedBodies.value
+  const anyBody = document.value.bodies.length > 0
   const twoBrep = selectedBrepBodies.value.length === 2 && selectedIds.value.length === 2
   const booleanDetail = twoBrep ? label('Точный B-rep', 'Exact B-rep') : label('По сетке', 'Mesh boolean')
   const needTwo = label('Выберите два тела: Shift + клик', 'Select two bodies: Shift + click')
@@ -843,7 +1188,7 @@ const solidCommands = computed<SolidCommand[]>(() => {
     cmd('undo', 'Отменить', 'Undo', () => undo(), { shortcut: 'Ctrl Z', enabled: undoable.value, disabledReason: label('Нечего отменять', 'Nothing to undo') }),
     cmd('redo', 'Повторить', 'Redo', () => undo(true), { shortcut: 'Ctrl Shift Z', enabled: redoable.value, disabledReason: label('Нечего повторять', 'Nothing to redo') }),
     cmd('brep-union', 'Объединить тела', 'Union bodies', () => applyBrepBoolean('union'), { detail: booleanDetail, aliases: ['Объединить тела', 'Union bodies', 'B-rep объединить', 'B-rep Union'], keywords: ['boolean', 'булев', 'union', 'merge', 'слить'], enabled: twoBodies, disabledReason: needTwo }),
-    cmd('brep-difference', 'Вычесть: A − B', 'Subtract: A − B', () => applyBrepBoolean('difference'), { detail: booleanDetail, aliases: ['Вычесть: A − B', 'Subtract: A − B', 'B-rep A − B'], keywords: ['boolean', 'булев', 'union', 'merge', 'слить'], enabled: twoBodies, disabledReason: needTwo }),
+    cmd('brep-difference', 'Вычесть: A − B', 'Subtract: A − B', () => beginSubtract(), { detail: label('Панель: A − B, тела кликом, Shift добавляет', 'Panel: A − B, click bodies, Shift adds'), aliases: ['Вычесть: A − B', 'Subtract: A − B', 'B-rep A − B'], keywords: ['boolean', 'булев', 'union', 'merge', 'слить'], enabled: anyBody, disabledReason: needSelection }),
     cmd('brep-intersection', 'Пересечение тел', 'Intersect bodies', () => applyBrepBoolean('intersection'), { detail: booleanDetail, aliases: ['Пересечение тел', 'Intersect bodies', 'B-rep пересечение', 'B-rep Intersection'], keywords: ['boolean', 'булев', 'union', 'merge', 'слить'], enabled: twoBodies, disabledReason: needTwo }),
     cmd('brep-xor', 'B-rep XOR', 'B-rep XOR', () => applyBrepBoolean('xor'), { detail: label('Два точных тела B-rep', 'Two exact B-rep bodies'), enabled: twoBrep, disabledReason: label('Нужны два точных тела B-rep', 'Two exact B-rep bodies are required') }),
     cmd('push', 'Push / Pull', 'Push / Pull', () => beginAdvanced('push'), { detail: label('Грань', 'Face'), enabled: !!(body && selectedFace.value), disabledReason: needFace }),
@@ -887,6 +1232,11 @@ defineExpose({ solidCommands, executeSolidCommand })
 function keydown(e: KeyboardEvent) {
   if (paletteOpen.value) return
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); paletteOpen.value = true; return }
+  if (subtract.value) {
+    if ((e.target as HTMLElement).closest?.('.subtract-card')) return
+    if (e.key === 'Escape') { e.preventDefault(); subtract.value = null; return }
+    if (e.key === 'Enter') { e.preventDefault(); applySubtract(); return }
+  }
   if (e.key === 'Escape') { e.preventDefault(); exactCardOpen.value = false; cancelGesture(); operation.value = null; advancedOp.value=null; return }
   if(e.key==='Enter'&&advancedOp.value){e.preventDefault();applyAdvanced();return}
   if (e.key === 'Enter' && operation.value) { e.preventDefault(); solidActive.value ? extrude() : cornerActive.value ? applyCorner() : applyCopies(); return }
@@ -1069,34 +1419,19 @@ function removeGroup(name: string) {
   })
 }
 
-const groupDialogOpen = ref(false)
-const groupDialogName = ref('')
-const groupDialogSource = ref('')
-/** Set while editing an existing group, so a rename can move its bodies with it. */
-const groupDialogOriginal = ref<string | null>(null)
-
 const DEFAULT_GROUP_SOURCE = 'cube([20, 20, 20], center = true);\n'
 
+/** The source lives in the host's left panel; this only chooses what to open there. */
 function openGroupDialog(name: string | null) {
-  groupDialogOriginal.value = name
   if (name === null) {
-    let candidate = label('Группа', 'Group')
-    let index = 1
     const taken = new Set(document.value.groups?.map(group => group.name) ?? [])
-    while (taken.has(candidate + ' ' + index)) index++
-    groupDialogName.value = candidate + ' ' + index
-    groupDialogSource.value = DEFAULT_GROUP_SOURCE
-  } else {
-    groupDialogName.value = name
-    groupDialogSource.value = document.value.groups?.find(group => group.name === name)?.source ?? ''
+    let index = 1
+    while (taken.has(label('Группа ', 'Group ') + index)) index++
+    emit('edit-group', { name: label('Группа ', 'Group ') + index, source: DEFAULT_GROUP_SOURCE, replaces: null })
+    return
   }
-  groupDialogOpen.value = true
-}
-
-function submitGroupDialog() {
-  const name = groupDialogName.value.trim()
-  if (!name || !groupDialogSource.value.trim()) return
-  emit('build-group', { name, source: groupDialogSource.value })
+  const source = document.value.groups?.find(group => group.name === name)?.source ?? ''
+  emit('edit-group', { name, source, replaces: name })
 }
 
 /** A rebuild replaces the group of the same name, so repeated builds do not pile up. */
@@ -1106,7 +1441,7 @@ watch(() => props.appendBodies, request => {
     const built = request.group
     const replaced = new Set<string>(built ? [built.name] : [])
     // An edit that renamed the group must also drop the bodies filed under the old name.
-    if (built && groupDialogOriginal.value) replaced.add(groupDialogOriginal.value)
+    if (built?.replaces) replaced.add(built.replaces)
     const next = { ...history.document }
     next.bodies = [
       ...next.bodies.filter(body => body.group === undefined || !replaced.has(body.group)),
@@ -1121,8 +1456,6 @@ watch(() => props.appendBodies, request => {
     selection.value = request.bodies[0]?.id ?? ''
     sync()
   })
-  groupDialogOpen.value = false
-  groupDialogOriginal.value = null
 })
 
 watch([() => props.open, () => props.seedDocument], ([open, seed]) => {
@@ -1141,7 +1474,7 @@ watch([() => props.open, () => props.seedDocument], ([open, seed]) => {
 }, {immediate: true})
 </script>
 <template>
-  <section v-show="open" ref="workspace" class="direct-workspace" :class="{ embedded }" tabindex="-1" :aria-label="label('Solid — CAD-лепка', 'Solid — CAD sculpt')" @keydown.stop="keydown">
+  <section v-show="open" ref="workspace" class="direct-workspace" :class="{ embedded }" tabindex="-1" :aria-label="label('Solid — CAD-лепка', 'Solid — CAD sculpt')" @keydown.stop="keydown" @dragstart.prevent>
     <header class="workspace-bar">
       <button v-if="embedded" class="back" @click="emit('close')">← {{ label('Code', 'Code') }}</button>
       <strong>{{ label('Solid', 'Solid') }}</strong>
@@ -1199,11 +1532,11 @@ watch([() => props.open, () => props.seedDocument], ([open, seed]) => {
               <button class="tool-icon" :title="label('Вершины','Vertices')" :aria-label="label('Вершины','Vertices')" :aria-pressed="pickMode==='vertex'" @click="pickMode='vertex';advancedOp=null;boxSelect=false"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M4 7l8-4 8 4-8 4zM4 7v10l8 4 8-4V7"/><path d="M4 4.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5zM20 4.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5zM12 8.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5z" fill="currentColor"/></svg></button>
               <button class="tool-icon" :title="label('Рёбра','Edges')" :aria-label="label('Рёбра','Edges')" :aria-pressed="pickMode==='edge'" @click="pickMode='edge';advancedOp=null;boxSelect=false"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path :d="TOOL_ICONS.edge" /><path d="M12 11v10" stroke-width="3.5" /></svg></button>
               <button class="tool-icon" :title="label('Рамка','Box select')" :aria-label="label('Рамка','Box select')" :aria-pressed="boxSelect" @click="boxSelect=!boxSelect"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><path :d="TOOL_ICONS.box" /></svg></button>
-              <span v-if="twoSelectedBodies" class="tool-divider" aria-hidden="true"></span>
-              <div v-if="twoSelectedBodies" class="tool-group" role="group" :aria-label="label('Булевы операции','Boolean operations')">
-                <button class="tool-icon" :title="label('Объединить тела','Union bodies')" :aria-label="label('Объединить тела','Union bodies')" @click="applyBrepBoolean('union')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M9 8a5 5 0 1 0 0 10 5 5 0 0 0 0-10zM15 8a5 5 0 1 0 0 10 5 5 0 0 0 0-10z" fill="currentColor" fill-opacity=".3"/></svg></button>
-                <button class="tool-icon" :title="label('Вычесть: A − B','Subtract: A − B')" :aria-label="label('Вычесть: A − B','Subtract: A − B')" @click="applyBrepBoolean('difference')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M9 8a5 5 0 1 0 0 10 5 5 0 0 0 0-10z" fill="currentColor" fill-opacity=".3"/><path d="M15 8a5 5 0 1 0 0 10 5 5 0 0 0 0-10z" stroke-dasharray="3 2"/></svg></button>
-                <button class="tool-icon" :title="label('Пересечение тел','Intersect bodies')" :aria-label="label('Пересечение тел','Intersect bodies')" @click="applyBrepBoolean('intersection')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M9 8a5 5 0 1 0 0 10 5 5 0 0 0 0-10zM15 8a5 5 0 1 0 0 10 5 5 0 0 0 0-10z"/><path d="M12 8.8a5 5 0 0 0 0 8.4 5 5 0 0 0 0-8.4z" fill="currentColor" fill-opacity=".45" stroke="none"/></svg></button>
+              <span v-if="selectedBody || twoSelectedBodies" class="tool-divider" aria-hidden="true"></span>
+              <div v-if="selectedBody || twoSelectedBodies" class="tool-group" role="group" :aria-label="label('Булевы операции','Boolean operations')">
+                <button class="tool-icon" :title="label('Объединить тела','Union bodies')" :aria-label="label('Объединить тела','Union bodies')" :disabled="!twoSelectedBodies" @click="applyBrepBoolean('union')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M9 8a5 5 0 1 0 0 10 5 5 0 0 0 0-10zM15 8a5 5 0 1 0 0 10 5 5 0 0 0 0-10z" fill="currentColor" fill-opacity=".3"/></svg></button>
+                <button class="tool-icon" :title="label('Вычесть: A − B','Subtract: A − B')" :aria-label="label('Вычесть: A − B','Subtract: A − B')" @click="beginSubtract()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M9 8a5 5 0 1 0 0 10 5 5 0 0 0 0-10z" fill="currentColor" fill-opacity=".3"/><path d="M15 8a5 5 0 1 0 0 10 5 5 0 0 0 0-10z" stroke-dasharray="3 2"/></svg></button>
+                <button class="tool-icon" :title="label('Пересечение тел','Intersect bodies')" :aria-label="label('Пересечение тел','Intersect bodies')" :disabled="!twoSelectedBodies" @click="applyBrepBoolean('intersection')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M9 8a5 5 0 1 0 0 10 5 5 0 0 0 0-10zM15 8a5 5 0 1 0 0 10 5 5 0 0 0 0-10z"/><path d="M12 8.8a5 5 0 0 0 0 8.4 5 5 0 0 0 0-8.4z" fill="currentColor" fill-opacity=".45" stroke="none"/></svg></button>
               </div>
               <span class="tool-divider" aria-hidden="true"></span>
               <div class="tool-group" role="group" :aria-label="label('Манипулятор','Manipulator')">
@@ -1224,10 +1557,10 @@ watch([() => props.open, () => props.seedDocument], ([open, seed]) => {
           </div>
           <div class="canvas-wrap">
             <canvas v-if="pane === '3d'" :ref="mountGpuCanvas" class="gpu-layer" aria-hidden="true"></canvas>
-            <svg :viewBox="viewBox(pane)" tabindex="0" :aria-label="pane === '2d' ? label('Холст эскизов 2D', '2D sketch canvas') : label('Холст тел 3D', '3D body canvas')" @contextmenu.prevent @wheel.prevent="zoom(pane, $event.deltaY > 0 ? 1.1 : 1/1.1)" @pointerdown="down($event, pane)" @pointermove="move" @pointerup="up" @pointercancel="cancelGesture" @lostpointercapture="cancelGesture">
+            <svg :viewBox="viewBox(pane)" tabindex="0" :aria-label="pane === '2d' ? label('Холст эскизов 2D', '2D sketch canvas') : label('Холст тел 3D', '3D body canvas')" @contextmenu.prevent @wheel.prevent="zoom(pane, $event.deltaY > 0 ? 1.1 : 1/1.1)" @pointerdown="downAt($event, pane)" @pointermove="moveAt" @pointerleave="gpuActive && (hovered = '')" @pointerup="up" @pointercancel="cancelGesture" @lostpointercapture="cancelGesture" @dragstart.prevent @selectstart.prevent @mousedown.prevent draggable="false">
               <defs><pattern :id="'direct-grid-' + pane" width="10" height="10" patternUnits="userSpaceOnUse"><path d="M 10 0 L 0 0 0 10" fill="none" stroke="var(--border)" stroke-opacity=".45" stroke-width=".5" vector-effect="non-scaling-stroke" /></pattern></defs>
               <rect v-if="pane === '2d'" x="-2000000" y="-2000000" width="4000000" height="4000000" :fill="'url(#direct-grid-' + pane + ')'" />
-              <g v-if="pane === '3d' && floorVisible" pointer-events="none"><polyline v-for="(line,i) in floorLines" :key="i" :points="line" fill="none" stroke="var(--border)" stroke-opacity=".45" stroke-width=".5" vector-effect="non-scaling-stroke" /></g>
+              <g v-if="pane === '3d' && floorVisible" pointer-events="none"><polyline v-for="(line,i) in floorLines" :key="i" :points="line.points" fill="none" stroke="var(--border)" :stroke-opacity="(line.opacity * .45).toFixed(3)" stroke-width=".5" vector-effect="non-scaling-stroke" /></g>
               <path v-if="pane === '2d'" d="M -2000000 0 H 2000000 M 0 -2000000 V 2000000" stroke="var(--border)" vector-effect="non-scaling-stroke" />
               <g v-if="pane === '2d'">
                 <path v-for="(loop,i) in workplaneOutline" :key="'workplane-'+i" :d="'M '+loop.map(p=>project(p,'2d').join(',')).join(' L ')+' Z'" fill="var(--border)" fill-opacity=".2" stroke="var(--text-dim)" stroke-dasharray="3 3" vector-effect="non-scaling-stroke" pointer-events="none" />
@@ -1250,7 +1583,7 @@ watch([() => props.open, () => props.seedDocument], ([open, seed]) => {
  :points="draft.map(p => project(p, '2d').join(',')).join(' ')" fill="none" stroke="var(--accent)" stroke-dasharray="4 3" vector-effect="non-scaling-stroke" pointer-events="none" />
               </g>
               <g v-else>
-                <polygon v-for="p in polygons" v-show="!advancedPreview.document || !selectedIds.includes(p.id)" :key="p.key" :points="p.points" :fill="gpuActive ? 'transparent' : `hsl(${selectedBody?.id===p.id && selectedFaceTriangles.has(p.triangle) && pickMode==='face' ? 40 : selectedIds.includes(p.id) ? 266 : hovered === p.id ? 190 : 220} 45% ${p.shade}%)`" :stroke="gpuActive ? 'none' : `hsl(${selectedIds.includes(p.id) ? 266 : 220} 45% ${p.shade}%)`" :pointer-events="gpuActive ? 'fill' : undefined" stroke-width=".6" @pointerenter="hovered = p.id" @pointerleave="hovered = ''" vector-effect="non-scaling-stroke" @pointerdown.stop="down($event, pane, p.id, null, p.triangle)" />
+                <template v-if="!gpuActive"><polygon v-for="p in polygons" :data-body="p.id" v-show="!advancedPreview.document || !selectedIds.includes(p.id)" :key="p.key" :points="p.points" :fill="gpuActive ? 'transparent' : `hsl(${selectedBody?.id===p.id && selectedFaceTriangles.has(p.triangle) && pickMode==='face' ? 40 : selectedIds.includes(p.id) ? 266 : hovered === p.id ? 190 : 220} 45% ${p.shade}%)`" :stroke="gpuActive ? 'none' : `hsl(${selectedIds.includes(p.id) ? 266 : 220} 45% ${p.shade}%)`" :pointer-events="gpuActive ? 'fill' : undefined" stroke-width=".6" @pointerenter="gpuActive || (hovered = p.id)" @pointerleave="gpuActive || (hovered = '')" vector-effect="non-scaling-stroke" @pointerdown.stop="down($event, pane, p.id, null, p.triangle)" /></template>
                 <polygon v-for="p in nurbsSurfacePolygons" :key="'surface-'+p.key" :points="p.points" :fill="selectedIds.includes(p.id)?'#8061bd':'#315f72'" fill-opacity=".72" stroke="#77eac5" stroke-opacity=".35" stroke-width=".5" vector-effect="non-scaling-stroke" @pointerdown.stop="pickObject(p.id,'3d')" />
                 <polyline v-for="curve in nurbsCurvePaths" :key="'curve-'+curve.id" :points="curve.points" fill="none" :stroke="selectedIds.includes(curve.id)?'#ffc977':'#77eac5'" stroke-width="3" vector-effect="non-scaling-stroke" @pointerdown.stop="pickObject(curve.id,'3d')" />
                 <g v-if="selectedNurbs" class="nurbs-cage">
@@ -1266,7 +1599,7 @@ watch([() => props.open, () => props.seedDocument], ([open, seed]) => {
               <g v-if="pane === '3d' && extrusionHandle" class="height-handle" @pointerdown.stop="dragHeight">
                 <line :x1="extrusionHandle.base[0]" :y1="extrusionHandle.base[1]" :x2="extrusionHandle.top[0]" :y2="extrusionHandle.top[1]" stroke="#77eac5" stroke-width="3" vector-effect="non-scaling-stroke" />
                 <circle :cx="extrusionHandle.top[0]" :cy="extrusionHandle.top[1]" :r="views['3d']/55" fill="#77eac5" stroke="#18332d" stroke-width="2" vector-effect="non-scaling-stroke" />
-                <text :x="extrusionHandle.top[0]+views['3d']/35" :y="extrusionHandle.top[1]" :font-size="views['3d']/45" fill="#77eac5">{{ height.toFixed(2) }} mm</text>
+                <text :x="extrusionHandle.top[0]+views['3d']/35" :y="extrusionHandle.top[1]" :font-size="views['3d']/45" fill="#77eac5" pointer-events="none" style="user-select:none">{{ height.toFixed(2) }} mm</text>
               </g>
               <g v-if="pane==='3d'" pointer-events="none">
                 <path v-for="s in document.sketches" :key="'plane-'+s.id" :d="'M '+s.points.map(p=>project(worldPoint(p,s.plane),'3d').join(',')).join(' L ')+(s.closed?' Z':'')" fill="none" stroke="#77eac5" stroke-opacity=".6" vector-effect="non-scaling-stroke" />
@@ -1274,19 +1607,19 @@ watch([() => props.open, () => props.seedDocument], ([open, seed]) => {
                 <polygon v-if="splitPlanePoints" :points="splitPlanePoints" fill="#ffc977" fill-opacity=".12" stroke="#ffc977" stroke-dasharray="5 3" vector-effect="non-scaling-stroke" />
               </g>
               <circle v-if="pane==='3d' && advancedOp==='split' && gizmoCenter" :cx="project(gizmoCenter.map((x,i)=>axisVector(advanced.axis)[i]?advanced.distance:x),'3d')[0]" :cy="project(gizmoCenter.map((x,i)=>axisVector(advanced.axis)[i]?advanced.distance:x),'3d')[1]" :r="views['3d']/65" fill="#ffc977" style="cursor:grab" @pointerdown.stop="startGizmo($event,'split',advanced.axis)" />
-              <g v-if="pane==='3d' && pickMode==='vertex'">
+              <g v-if="pane==='3d' && pickMode==='vertex'" :data-body-overlay="selectedBody?.id">
                 <circle v-for="v in bodyVertices" :key="'vertex-'+v.i" :cx="v.x" :cy="v.y" :r="views['3d']/(vertexIndexes.includes(v.i)?90:130)" :fill="vertexIndexes.includes(v.i)?'#ffc977':'#89baff'" stroke="#14120f" stroke-width=".5" vector-effect="non-scaling-stroke" style="cursor:grab" @pointerdown="startVertexDrag($event,v.i)" />
               </g>
-              <g v-if="pane==='3d' && pickMode==='edge'">
+              <g v-if="pane==='3d' && pickMode==='edge'" :data-body-overlay="selectedBody?.id">
                 <polyline v-for="edge in featureEdges" :key="edge.i" :points="edge.points" fill="none" :stroke="edgeIndexes.includes(edge.i)?'#ffc977':'#89baff'" :stroke-width="edgeIndexes.includes(edge.i)?5:3" vector-effect="non-scaling-stroke" @pointerdown.stop="pickEdge($event,edge.i)" />
               </g>
-              <g v-if="pane==='3d' && !advancedOp && pickMode==='body'">
+              <g v-if="pane==='3d' && !advancedOp && pickMode==='body'" :data-body-overlay="selectedIds.join(' ')">
                 <g v-for="axis in gizmoAxes" :key="axis.axis">
                   <polyline v-if="gizmoMode==='rotate'" :points="axis.ring" fill="none" :stroke="axis.color" stroke-width="3" vector-effect="non-scaling-stroke" style="cursor:grab" @pointerdown.stop="startGizmo($event,'rotate',axis.axis)" />
                   <g v-else style="cursor:grab" @pointerdown.stop="startGizmo($event,gizmoMode,axis.axis)">
                     <line :x1="axis.base[0]" :y1="axis.base[1]" :x2="axis.tip[0]" :y2="axis.tip[1]" :stroke="axis.color" stroke-width="3" vector-effect="non-scaling-stroke" />
                     <circle :cx="axis.tip[0]" :cy="axis.tip[1]" :r="views['3d']/95" :fill="axis.color" />
-                    <text :x="axis.tip[0]" :y="axis.tip[1]-views['3d']/65" :font-size="views['3d']/55" :fill="axis.color">{{ axis.axis.toUpperCase() }}</text>
+                    <text :x="axis.tip[0]" :y="axis.tip[1]-views['3d']/65" :font-size="views['3d']/55" :fill="axis.color" pointer-events="none" style="user-select:none">{{ axis.axis.toUpperCase() }}</text>
                   </g>
                 </g>
               </g>
@@ -1384,6 +1717,23 @@ watch([() => props.open, () => props.seedDocument], ([open, seed]) => {
             </div>
             <div v-if="pane === '2d' && !document.sketches.length && !draft.length" class="empty-hint"><strong>{{ label('Начните с контура', 'Start with a contour') }}</strong><span>{{ label('Выберите фигуру сверху и нарисуйте её мышью', 'Choose a tool above and draw with the mouse') }}</span></div>
             <div v-if="pane === '3d' && !document.bodies.length && !solidActive" class="empty-hint"><strong>{{ label('Здесь появится объём', 'Your solid appears here') }}</strong><span>{{ label('Выберите эскиз слева и нажмите «Выдавить»', 'Select a sketch on the left and press Extrude') }}</span></div>
+            <div v-if="pane === '3d' && subtract" class="operation-card subtract-card" role="dialog" :aria-label="label('Вычитание', 'Subtraction')">
+              <strong>{{ label('Вычесть: A − B', 'Subtract: A − B') }}</strong>
+              <button type="button" class="subtract-field" :aria-pressed="subtract.active === 'a'" @click="subtract.active = 'a'">
+                <span>{{ label('A · из чего вычитаем', 'A · subtract from') }}</span>
+                <small>{{ subtractNames(subtract.a) }}</small>
+              </button>
+              <button type="button" class="subtract-field" :aria-pressed="subtract.active === 'b'" @click="subtract.active = 'b'">
+                <span>{{ label('B · что вычитаем', 'B · subtract') }}</span>
+                <small>{{ subtractNames(subtract.b) }}</small>
+              </button>
+              <small>{{ label('Кликайте по телам, Shift добавляет. Enter выполняет, Esc отменяет.', 'Click bodies, Shift adds. Enter runs, Esc cancels.') }}</small>
+              <div>
+                <button type="button" @click="subtract = null">{{ label('Отмена', 'Cancel') }}</button>
+                <button class="primary" type="button" :disabled="!subtract.a.length || !subtract.b.length" @click="applySubtract">OK</button>
+              </div>
+            </div>
+            <div v-if="pane === '3d'" class="fps-badge" :class="{ low: fps > 0 && fps < 30 }" role="status" :aria-label="label('Кадров в секунду', 'Frames per second')">{{ fps }} FPS · {{ frameMs }} ms<template v-if="gpuActive"> · draw {{ drawMs }} ms</template></div>
             <div class="zoom-tools"><button :aria-label="label('Приблизить ', 'Zoom in ') + pane" @click="zoom(pane, .8)">+</button><button :aria-label="label('Отдалить ', 'Zoom out ') + pane" @click="zoom(pane, 1.25)">−</button></div>
           </div>
         </section>
@@ -1462,48 +1812,12 @@ watch([() => props.open, () => props.seedDocument], ([open, seed]) => {
     </footer>
     <CommandPalette v-if="paletteOpen" :open="paletteOpen" :commands="solidCommands.filter(command => command.enabled !== false)" @close="paletteOpen = false" @execute="executeSolidCommand" />
     <div v-if="showHelp" class="help-card"><p>{{ label('Грани: выберите поверхность, затем тяните её или жёлтую ручку. Ctrl/⌘ + клик выбирает несколько открытых граней для Shell. Для фаски и скругления включите «Рёбра».','Faces: select a surface, then drag it or its yellow handle. Ctrl/⌘ click selects multiple Shell openings. Switch to Edges for chamfers and fillets.') }}</p><p>{{ label('Shift + клик и «Рамка» выделяют несколько объектов. Манипулятор двигает, вращает и масштабирует весь выбор. У окружностей и дуг есть ручки центра, радиуса и концов дуги.','Shift click and Box select select multiple objects. The gizmo moves, rotates and scales the whole selection. Circles and arcs have center, radius and arc endpoint handles.') }}</p><strong>{{ label('Управление', 'Controls') }}</strong><p>{{ label('2D: тяните фигуру или вершину. Alt временно отключает привязку. Ломаная замыкается кликом по первой точке.', '2D: drag shapes or vertices. Alt bypasses snapping. Close a polyline by clicking its first point.') }}</p><p>{{ label('3D: тяните для вращения; G включает перемещение тела. ПКМ всегда вращает. Shift или средняя кнопка — панорама. Колесо — масштаб.', '3D: drag to orbit; G enables body movement. Right drag always orbits. Shift or middle drag pans. Wheel zooms.') }}</p><p>{{ label('E — предпросмотр выдавливания; зелёная ручка меняет высоту. Enter подтверждает, Escape отменяет. Ctrl/⌘ Z — отмена, Ctrl/⌘ Shift Z — повтор.', 'E previews extrusion; the green handle changes height. Enter applies, Escape cancels. Ctrl/⌘ Z undoes; Ctrl/⌘ Shift Z redoes.') }}</p><button @click="showHelp = false">{{ label('Понятно', 'Got it') }}</button></div>
-    <div
-      v-if="groupDialogOpen"
-      class="group-dialog-backdrop"
-      role="dialog"
-      aria-modal="true"
-      :aria-label="label('Группа из кода', 'Group from source')"
-      @keydown.esc="groupDialogOpen = false"
-    >
-      <div class="group-dialog">
-        <div class="group-dialog-head">
-          <strong>{{ groupDialogOriginal ? label('Код группы', 'Group source') : label('Новая группа из кода', 'New group from source') }}</strong>
-          <button type="button" :aria-label="label('Закрыть', 'Close')" @click="groupDialogOpen = false">×</button>
-        </div>
-        <label class="group-dialog-name">
-          {{ label('Имя', 'Name') }}
-          <input v-model="groupDialogName" type="text" maxlength="100" :aria-label="label('Имя группы', 'Group name')">
-        </label>
-        <textarea
-          v-model="groupDialogSource"
-          class="group-dialog-source"
-          spellcheck="false"
-          :aria-label="label('Код группы', 'Group source')"
-          :placeholder="label('OpenSCAD или ModelGraph Text', 'OpenSCAD or ModelGraph Text')"
-        ></textarea>
-        <small>{{ label('Строится как точные тела. hull, projection, offset и polyhedron точной формы не имеют и будут отклонены.', 'Built as exact solids. hull, projection, offset and polyhedron have no exact form and are refused.') }}</small>
-        <div class="group-dialog-actions">
-          <button type="button" @click="groupDialogOpen = false">{{ label('Отмена', 'Cancel') }}</button>
-          <button
-            class="primary"
-            type="button"
-            :disabled="groupBuilding || !groupDialogName.trim() || !groupDialogSource.trim()"
-            @click="submitGroupDialog"
-          >{{ groupBuilding ? '…' : label('Построить', 'Build') }}</button>
-        </div>
-      </div>
-    </div>
     <div v-if="error" class="error-bar" role="alert">{{ error }} <button @click="error = ''">×</button></div>
     <div v-else-if="notice" class="notice-bar" role="status">{{ notice }} <button @click="notice = ''">×</button></div>
   </section>
 </template>
 <style scoped>
-.direct-workspace{position:fixed;inset:46px 0 28px;z-index:20;display:flex;flex-direction:column;min-height:0;background:var(--bg);color:var(--text);outline:none;font-size:13px}.workspace-bar{display:flex;align-items:center;gap:16px;padding:10px 16px;border-bottom:1px solid var(--border);background:var(--surface)}button,input,summary,.file-open{color:var(--text);background:var(--surface-raised);border:1px solid var(--border);border-radius:5px;padding:7px 10px;font:inherit}button,summary{cursor:pointer}button:disabled{opacity:.4;cursor:default}button:hover:not(:disabled){background:var(--hover)}button:focus-visible,summary:focus-visible{outline:2px solid var(--accent)}[aria-pressed=true]{border-color:var(--accent);color:var(--accent)}.back{background:transparent}.command-search{display:inline-flex;align-items:center;gap:8px;min-width:190px;padding:6px 10px;background:var(--bg);color:var(--text-dim);border-radius:8px}.command-search span{flex:1;text-align:left}.command-search kbd{font:11px var(--font-mono,monospace);padding:1px 5px;border:1px solid var(--border);border-radius:4px}.history-tools{display:flex;gap:4px}.history-tools button{font-size:20px;padding:2px 12px}.save-status{margin-left:auto;display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;color:var(--text-dim)}.save-status.error{color:var(--danger)}.file-menu>summary{display:inline-flex;align-items:center;gap:6px;list-style:none}.file-menu>summary::-webkit-details-marker{display:none}.file-menu{position:relative}.file-menu>div{position:absolute;right:0;top:40px;z-index:5;width:250px;display:grid;gap:6px;padding:10px;background:var(--surface);border:1px solid var(--border);box-shadow:0 8px 30px #0004}.file-open input{display:block;width:100%;padding:4px;font-size:11px}.split-workspace{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,var(--split)) 7px minmax(0,1fr)}.split-workspace.sketch-hidden{grid-template-columns:minmax(0,1fr)}.pane-heading .pane-toggle{margin-left:auto;padding:4px 8px}.pane-heading .pane-toggle+button{margin-left:0}.pane{display:flex;flex-direction:column;min-width:0;min-height:0}.pane-heading{display:flex;align-items:center;gap:12px;padding:10px 14px;background:var(--surface);border-bottom:1px solid var(--border)}.pane-heading strong{font-size:14px}.pane-heading span{font-size:11px;color:var(--text-dim)}.pane-heading button{margin-left:auto;padding:4px 9px}.pane-tools{min-height:46px;padding:7px 12px;display:flex;gap:5px;align-items:center;flex-wrap:wrap;border-bottom:1px solid var(--border)}.pane-tools .subtle{flex:1}.pane-tools button{font-size:12px}.canvas-wrap{flex:1;min-height:120px;position:relative;overflow:hidden}.canvas-wrap svg{position:relative;width:100%;height:100%;display:block;touch-action:none;outline:none}.gpu-layer{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}.canvas-wrap svg:focus-visible{box-shadow:inset 0 0 0 2px var(--accent)}.selected{stroke-width:3}.splitter{background:var(--surface-raised);cursor:col-resize;touch-action:none;display:flex;align-items:center;justify-content:center;border-inline:1px solid var(--border)}.splitter:hover,.splitter:focus-visible{background:var(--accent)}.splitter span{height:35px;width:2px;background:var(--text-dim);border-radius:2px}.context-bar{min-height:60px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:10px 16px;border-top:1px solid var(--border);background:var(--surface)}.context-bar label{display:flex;align-items:center;gap:5px;color:var(--text-dim)}.context-bar input{width:65px;padding:6px}.primary{background:var(--accent);color:var(--bg);font-weight:600}.delete{margin-left:auto}.subtle{color:var(--text-dim);font-size:12px}.empty-hint{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;text-align:center;pointer-events:none;color:var(--text-dim);padding:25px}.empty-hint strong{font-size:18px;font-weight:500}.empty-hint span{font-size:12px;max-width:280px}.zoom-tools{position:absolute;right:14px;bottom:14px;display:flex;gap:4px}.zoom-tools button{font-size:18px}.workspace-row{flex:1;min-height:0;display:flex}.side-dock{flex:0 0 344px;display:flex;min-height:0;border-left:1px solid var(--border);background:var(--bg)}.side-dock.collapsed{flex-basis:46px}.dock-rail{flex:0 0 46px;display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px 0;border-right:1px solid var(--border)}.dock-rail button{width:34px;height:34px;padding:0;border:0;border-radius:8px;background:transparent;color:var(--text-dim);display:flex;align-items:center;justify-content:center}.dock-rail button:hover{color:var(--text);background:var(--hover)}.dock-rail button[aria-selected=true]{color:var(--text);background:var(--surface-raised)}.dock-rail-spacer{flex:1}.dock-body{flex:1;min-width:0;min-height:0;display:flex;flex-direction:column;overflow:auto}.dock-heading{height:42px;flex-shrink:0;display:flex;align-items:center;gap:8px;padding:0 12px;border-bottom:1px solid var(--border);font-weight:600}.dock-heading span{color:var(--text-dim);font-weight:400}.scene-list{list-style:none;margin:0;padding:6px;display:flex;flex-direction:column;gap:1px}.scene-group{display:flex;align-items:center;gap:4px;padding:8px 8px 4px;font-size:11px;font-weight:600;color:var(--text-dim);text-transform:uppercase;letter-spacing:.06em}.scene-group .group-name{flex:1;overflow:hidden;text-overflow:ellipsis}.scene-group .group-remove{padding:0 6px;border:0;background:transparent;color:var(--text-dim);font-size:14px;line-height:1}.scene-group .group-remove:hover{color:var(--danger);background:transparent}.dock-heading .dock-action{margin-left:auto;width:28px;height:28px;padding:0;display:inline-flex;align-items:center;justify-content:center;border-radius:7px}.scene-list li>button{width:100%;display:flex;align-items:center;gap:8px;height:32px;padding:0 8px;border:0;border-radius:7px;background:transparent;color:var(--text);text-align:left;font-family:var(--font-mono,monospace);font-size:12.5px}.scene-list li>button:hover{background:var(--hover)}.scene-list li>button[aria-pressed=true]{background:color-mix(in srgb,var(--accent) 16%,var(--bg));outline:1px solid var(--accent);outline-offset:-1px;color:var(--text)}.scene-list small{margin-left:auto;font-size:11px;color:var(--text-dim);font-family:var(--font-ui,sans-serif)}.dot{width:8px;height:8px;border-radius:2px;background:#c3b7a3}.dot.sketch{background:var(--accent)}.dot.nurbs{background:#77eac5}.scene-empty{padding:16px 12px;color:var(--text-dim);font-size:12px;line-height:1.5}.dock-props{display:grid;gap:10px;padding:12px 14px}.exact-grid{display:flex;flex-wrap:wrap;gap:8px}.exact-grid label,.exact-detail{display:flex;align-items:center;gap:5px;color:var(--text-dim)}.exact-grid input,.exact-detail input{width:64px;padding:6px}.exact-actions{display:flex;gap:6px;flex-wrap:wrap}.dock-props small{color:var(--text-dim);line-height:1.5}.group-dialog-backdrop{position:absolute;inset:0;z-index:30;display:flex;align-items:center;justify-content:center;background:#0008}.group-dialog{width:min(560px,92vw);max-height:82%;display:flex;flex-direction:column;gap:10px;padding:16px;background:var(--surface);border:1px solid var(--border);border-radius:10px;box-shadow:0 12px 40px #0006}.group-dialog-head{display:flex;align-items:center}.group-dialog-head strong{flex:1;font-size:14px}.group-dialog-head button{padding:2px 9px;background:transparent;border:0;font-size:16px}.group-dialog-name{display:flex;align-items:center;gap:8px;color:var(--text-dim)}.group-dialog-name input{flex:1;padding:7px}.group-dialog-source{flex:1;min-height:200px;padding:10px;resize:vertical;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:6px;font:12.5px/1.5 var(--font-mono,monospace)}.group-dialog small{color:var(--text-dim);line-height:1.5}.group-dialog-actions{display:flex;justify-content:flex-end;gap:8px}.error-bar{padding:10px 16px;color:var(--danger);background:var(--surface);display:flex;justify-content:space-between}.notice-bar{padding:10px 16px;color:var(--text-dim);background:var(--surface);display:flex;justify-content:space-between;gap:12px}@media(max-width:750px){.direct-workspace{inset:0}.side-dock{display:none}.workspace-bar{gap:8px;padding:8px}.workspace-bar>strong{font-size:12px}.save-status{display:none}.pane-heading{padding:8px;gap:5px}.pane-heading span{display:none}.pane-tools{padding:5px}.pane-tools button{padding:5px;font-size:11px}.context-bar{gap:7px;padding:8px}.context-bar input{width:52px}.empty-hint strong{font-size:14px}}
+.direct-workspace{position:fixed;inset:46px 0 28px;z-index:20;display:flex;flex-direction:column;min-height:0;background:var(--bg);color:var(--text);outline:none;font-size:13px}.workspace-bar{display:flex;align-items:center;gap:16px;padding:10px 16px;border-bottom:1px solid var(--border);background:var(--surface)}button,input,summary,.file-open{color:var(--text);background:var(--surface-raised);border:1px solid var(--border);border-radius:5px;padding:7px 10px;font:inherit}button,summary{cursor:pointer}button:disabled{opacity:.4;cursor:default}button:hover:not(:disabled){background:var(--hover)}button:focus-visible,summary:focus-visible{outline:2px solid var(--accent)}[aria-pressed=true]{border-color:var(--accent);color:var(--accent)}.back{background:transparent}.command-search{display:inline-flex;align-items:center;gap:8px;min-width:190px;padding:6px 10px;background:var(--bg);color:var(--text-dim);border-radius:8px}.command-search span{flex:1;text-align:left}.command-search kbd{font:11px var(--font-mono,monospace);padding:1px 5px;border:1px solid var(--border);border-radius:4px}.history-tools{display:flex;gap:4px}.history-tools button{font-size:20px;padding:2px 12px}.save-status{margin-left:auto;display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;color:var(--text-dim)}.save-status.error{color:var(--danger)}.file-menu>summary{display:inline-flex;align-items:center;gap:6px;list-style:none}.file-menu>summary::-webkit-details-marker{display:none}.file-menu{position:relative}.file-menu>div{position:absolute;right:0;top:40px;z-index:5;width:250px;display:grid;gap:6px;padding:10px;background:var(--surface);border:1px solid var(--border);box-shadow:0 8px 30px #0004}.file-open input{display:block;width:100%;padding:4px;font-size:11px}.split-workspace{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,var(--split)) 7px minmax(0,1fr)}.split-workspace.sketch-hidden{grid-template-columns:minmax(0,1fr)}.pane-heading .pane-toggle{margin-left:auto;padding:4px 8px}.pane-heading .pane-toggle+button{margin-left:0}.pane{display:flex;flex-direction:column;min-width:0;min-height:0}.pane-heading{display:flex;align-items:center;gap:12px;padding:10px 14px;background:var(--surface);border-bottom:1px solid var(--border)}.pane-heading strong{font-size:14px}.pane-heading span{font-size:11px;color:var(--text-dim)}.pane-heading button{margin-left:auto;padding:4px 9px}.pane-tools{min-height:46px;padding:7px 12px;display:flex;gap:5px;align-items:center;flex-wrap:wrap;border-bottom:1px solid var(--border)}.pane-tools .subtle{flex:1}.pane-tools button{font-size:12px}.canvas-wrap{flex:1;min-height:120px;position:relative;overflow:hidden}.canvas-wrap svg{position:relative;width:100%;height:100%;display:block;touch-action:none;outline:none;user-select:none;-webkit-user-select:none;-webkit-user-drag:none}.canvas-wrap svg text{user-select:none;-webkit-user-select:none}.gpu-layer{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}.canvas-wrap svg:focus-visible{box-shadow:inset 0 0 0 2px var(--accent)}.selected{stroke-width:3}.splitter{background:var(--surface-raised);cursor:col-resize;touch-action:none;display:flex;align-items:center;justify-content:center;border-inline:1px solid var(--border)}.splitter:hover,.splitter:focus-visible{background:var(--accent)}.splitter span{height:35px;width:2px;background:var(--text-dim);border-radius:2px}.context-bar{min-height:60px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:10px 16px;border-top:1px solid var(--border);background:var(--surface)}.context-bar label{display:flex;align-items:center;gap:5px;color:var(--text-dim)}.context-bar input{width:65px;padding:6px}.primary{background:var(--accent);color:var(--bg);font-weight:600}.delete{margin-left:auto}.subtle{color:var(--text-dim);font-size:12px}.empty-hint{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;text-align:center;pointer-events:none;color:var(--text-dim);padding:25px}.empty-hint strong{font-size:18px;font-weight:500}.empty-hint span{font-size:12px;max-width:280px}.subtract-card{display:grid;gap:8px}.subtract-field{display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left;padding:8px 10px}.subtract-field[aria-pressed=true]{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}.subtract-field small{color:var(--text-dim);font:11px var(--font-mono,monospace);white-space:normal}.subtract-card>div{display:flex;justify-content:flex-end;gap:6px}.fps-badge{position:absolute;left:14px;bottom:14px;padding:3px 8px;border-radius:5px;background:var(--surface);color:var(--text-dim);font:11px var(--font-mono,monospace);pointer-events:none;opacity:.85}.fps-badge.low{color:var(--danger)}.zoom-tools{position:absolute;right:14px;bottom:14px;display:flex;gap:4px}.zoom-tools button{font-size:18px}.workspace-row{flex:1;min-height:0;display:flex}.side-dock{flex:0 0 344px;display:flex;min-height:0;border-left:1px solid var(--border);background:var(--bg)}.side-dock.collapsed{flex-basis:46px}.dock-rail{flex:0 0 46px;display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px 0;border-right:1px solid var(--border)}.dock-rail button{width:34px;height:34px;padding:0;border:0;border-radius:8px;background:transparent;color:var(--text-dim);display:flex;align-items:center;justify-content:center}.dock-rail button:hover{color:var(--text);background:var(--hover)}.dock-rail button[aria-selected=true]{color:var(--text);background:var(--surface-raised)}.dock-rail-spacer{flex:1}.dock-body{flex:1;min-width:0;min-height:0;display:flex;flex-direction:column;overflow:auto}.dock-heading{height:42px;flex-shrink:0;display:flex;align-items:center;gap:8px;padding:0 12px;border-bottom:1px solid var(--border);font-weight:600}.dock-heading span{color:var(--text-dim);font-weight:400}.scene-list{list-style:none;margin:0;padding:6px;display:flex;flex-direction:column;gap:1px}.scene-group{display:flex;align-items:center;gap:4px;padding:8px 8px 4px;font-size:11px;font-weight:600;color:var(--text-dim);text-transform:uppercase;letter-spacing:.06em}.scene-group .group-name{flex:1;overflow:hidden;text-overflow:ellipsis}.scene-group .group-remove{padding:0 6px;border:0;background:transparent;color:var(--text-dim);font-size:14px;line-height:1}.scene-group .group-remove:hover{color:var(--danger);background:transparent}.dock-heading .dock-action{margin-left:auto;width:28px;height:28px;padding:0;display:inline-flex;align-items:center;justify-content:center;border-radius:7px}.scene-list li>button{width:100%;display:flex;align-items:center;gap:8px;height:32px;padding:0 8px;border:0;border-radius:7px;background:transparent;color:var(--text);text-align:left;font-family:var(--font-mono,monospace);font-size:12.5px}.scene-list li>button:hover{background:var(--hover)}.scene-list li>button[aria-pressed=true]{background:color-mix(in srgb,var(--accent) 16%,var(--bg));outline:1px solid var(--accent);outline-offset:-1px;color:var(--text)}.scene-list small{margin-left:auto;font-size:11px;color:var(--text-dim);font-family:var(--font-ui,sans-serif)}.dot{width:8px;height:8px;border-radius:2px;background:#c3b7a3}.dot.sketch{background:var(--accent)}.dot.nurbs{background:#77eac5}.scene-empty{padding:16px 12px;color:var(--text-dim);font-size:12px;line-height:1.5}.dock-props{display:grid;gap:10px;padding:12px 14px}.exact-grid{display:flex;flex-wrap:wrap;gap:8px}.exact-grid label,.exact-detail{display:flex;align-items:center;gap:5px;color:var(--text-dim)}.exact-grid input,.exact-detail input{width:64px;padding:6px}.exact-actions{display:flex;gap:6px;flex-wrap:wrap}.dock-props small{color:var(--text-dim);line-height:1.5}.group-dialog-backdrop{position:absolute;inset:0;z-index:30;display:flex;align-items:center;justify-content:center;background:#0008}.group-dialog{width:min(560px,92vw);max-height:82%;display:flex;flex-direction:column;gap:10px;padding:16px;background:var(--surface);border:1px solid var(--border);border-radius:10px;box-shadow:0 12px 40px #0006}.group-dialog-head{display:flex;align-items:center}.group-dialog-head strong{flex:1;font-size:14px}.group-dialog-head button{padding:2px 9px;background:transparent;border:0;font-size:16px}.group-dialog-name{display:flex;align-items:center;gap:8px;color:var(--text-dim)}.group-dialog-name input{flex:1;padding:7px}.group-dialog-source{flex:1;min-height:200px;padding:10px;resize:vertical;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:6px;font:12.5px/1.5 var(--font-mono,monospace)}.group-dialog small{color:var(--text-dim);line-height:1.5}.group-dialog-actions{display:flex;justify-content:flex-end;gap:8px}.error-bar{padding:10px 16px;color:var(--danger);background:var(--surface);display:flex;justify-content:space-between}.notice-bar{padding:10px 16px;color:var(--text-dim);background:var(--surface);display:flex;justify-content:space-between;gap:12px}@media(max-width:750px){.direct-workspace{inset:0}.side-dock{display:none}.workspace-bar{gap:8px;padding:8px}.workspace-bar>strong{font-size:12px}.save-status{display:none}.pane-heading{padding:8px;gap:5px}.pane-heading span{display:none}.pane-tools{padding:5px}.pane-tools button{padding:5px;font-size:11px}.context-bar{gap:7px;padding:8px}.context-bar input{width:52px}.empty-hint strong{font-size:14px}}
 .hovered{stroke:#e1d4ff;stroke-width:3}.operation-card{position:absolute;right:14px;top:14px;width:245px;display:grid;gap:10px;padding:15px;background:var(--surface);border:1px solid var(--border);border-radius:9px;box-shadow:0 8px 24px #0003}.operation-card small{font-size:11px;color:var(--text-dim);line-height:1.5}.operation-card label{display:flex;justify-content:space-between;align-items:center;gap:8px}.operation-card input{width:90px}.operation-card select{max-width:145px;background:var(--surface-raised);color:var(--text);padding:5px;border:1px solid var(--border)}.operation-card>div{display:flex;gap:5px}.segmented button{padding:5px 8px;font-size:12px}.live-measure{position:absolute;left:14px;top:14px;padding:8px 12px;border-radius:5px;background:var(--surface);color:var(--accent);font:14px monospace;pointer-events:none}.height-handle{cursor:ns-resize}.snap-toggle{display:flex;align-items:center;gap:4px;font-size:11px;margin-left:auto}.grid-input{width:50px;padding:4px}.transform-menu{position:relative}.transform-menu>div{position:absolute;bottom:40px;left:0;width:270px;display:flex;flex-wrap:wrap;gap:10px;padding:14px;border:1px solid var(--border);background:var(--surface);border-radius:8px;box-shadow:0 8px 24px #0003}.help-card{max-height:75vh;overflow:auto;position:absolute;right:18px;bottom:76px;width:min(360px,85vw);padding:20px;background:var(--surface);border:1px solid var(--border);border-radius:10px;box-shadow:0 8px 30px #0004;font-size:13px;line-height:1.6;z-index:5}@media(max-width:750px){.operation-card{width:195px;padding:10px;right:8px;top:8px}.pane-tools .subtle{display:none}.snap-toggle{margin-left:0}}
 .nurbs-card{max-height:calc(100% - 28px);overflow:auto}.nurbs-cage circle{cursor:move}.trim-grid{display:grid!important;grid-template-columns:1fr 1fr;gap:5px!important}.trim-grid label{display:grid!important;gap:2px!important;font-size:11px}.trim-grid input{width:100%!important;box-sizing:border-box}
 </style>

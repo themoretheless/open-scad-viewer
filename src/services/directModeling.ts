@@ -18,6 +18,24 @@ export const emptyDirectDocument = (): DirectDocument => ({ version: 1, sketches
 const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value))
 const finite = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v) && Math.abs(v) <= 1e6
 
+/**
+ * B-rep inspection memoized by content.
+ *
+ * Every commit re-validates the whole document, and inspecting the topology of each
+ * B-rep body took ~11 ms of a ~12 ms validation on a six-body scene, felt as a hitch
+ * after each drag, undo or redo. Bodies are cloned on every commit, so identity cannot
+ * serve as the key; the serialized topology can, and hashing it costs well under 1 ms.
+ */
+const inspectedBreps = new Map<string, true>()
+const INSPECTED_BREP_LIMIT = 128
+function inspectBrepOnce(brep: NurbsBrep): void {
+  const key = JSON.stringify(brep)
+  if (inspectedBreps.has(key)) return
+  inspectNurbsBrep(brep)
+  if (inspectedBreps.size >= INSPECTED_BREP_LIMIT) inspectedBreps.delete(inspectedBreps.keys().next().value!)
+  inspectedBreps.set(key, true)
+}
+
 export function parseDirectDocument(text: string): DirectDocument {
   if (text.length > 4_000_000) throw new Error('Document exceeds 4 MB.')
   const d = JSON.parse(text) as DirectDocument
@@ -54,7 +72,7 @@ export function parseDirectDocument(text: string): DirectDocument {
     const m = b.mesh
     if (!m || !Array.isArray(m.positions) || !Array.isArray(m.indices) || m.positions.length < 9 || m.positions.length > 150_000 || m.positions.length % 3 || m.indices.length < 3 || m.indices.length > 150_000 || m.indices.length % 3 || !m.positions.every(finite) || !m.indices.every(i => Number.isInteger(i) && i >= 0 && i < m.positions.length / 3)) throw new Error('Invalid body mesh.')
     if (b.brep) {
-      inspectNurbsBrep(b.brep)
+      inspectBrepOnce(b.brep)
       if ([b.brep.vertices,b.brep.edges,b.brep.loops,b.brep.faces,b.brep.shells,b.brep.bodies].every(items=>items.length===0)) throw new Error('An empty B-rep cannot be stored as a displayed body; remove the body entry.')
       if (b.brep.faces.length === 0) throw new Error('Displayed body B-rep must include at least one face.')
       const meshAabb = aabbFromPositions(m.positions)
@@ -111,20 +129,44 @@ export class DirectHistory {
   private past: DirectDocument[] = []
   private future: DirectDocument[] = []
   private current: DirectDocument
-  constructor(document = emptyDirectDocument()) { this.current = parseDirectDocument(JSON.stringify(document)) }
+  /** Serialized size of `current`, kept so the byte bound never re-serializes the stack. */
+  private currentBytes: number
+  private pastBytes: number[] = []
+  constructor(document = emptyDirectDocument()) {
+    const text = JSON.stringify(document)
+    this.current = parseDirectDocument(text)
+    this.currentBytes = JSON.stringify(this.current).length
+  }
   get document() { return clone(this.current) }
   get canUndo() { return this.past.length > 0 }
   get canRedo() { return this.future.length > 0 }
   commit(document: DirectDocument) {
-    const next = parseDirectDocument(JSON.stringify(document))
-    if (JSON.stringify(next) === JSON.stringify(this.current)) return
+    const text = JSON.stringify(document)
+    const next = parseDirectDocument(text)
+    const nextText = JSON.stringify(next)
+    if (nextText.length === this.currentBytes && nextText === JSON.stringify(this.current)) return
     this.past.push(this.current)
-    // Bound retained snapshots by both count and bytes.
-    while (this.past.length > 80 || (this.past.length > 1 && JSON.stringify(this.past).length > 16_000_000)) this.past.shift()
-    this.current = next; this.future = []
+    this.pastBytes.push(this.currentBytes)
+    // Bound retained snapshots by both count and bytes. Sizes are tracked as snapshots are
+    // pushed: measuring by serializing the whole stack made every commit cost O(history),
+    // which is heavy once bodies carry B-rep topology.
+    let retained = this.pastBytes.reduce((sum, bytes) => sum + bytes, 0)
+    while (this.past.length > 80 || (this.past.length > 1 && retained > 16_000_000)) {
+      this.past.shift()
+      retained -= this.pastBytes.shift() ?? 0
+    }
+    this.current = next; this.currentBytes = nextText.length; this.future = []
   }
-  undo() { const d = this.past.pop(); if (d) { this.future.push(this.current); this.current = d } return this.document }
-  redo() { const d = this.future.pop(); if (d) { this.past.push(this.current); this.current = d } return this.document }
+  undo() {
+    const d = this.past.pop()
+    if (d) { this.pastBytes.pop(); this.future.push(this.current); this.current = d; this.currentBytes = JSON.stringify(d).length }
+    return this.document
+  }
+  redo() {
+    const d = this.future.pop()
+    if (d) { this.past.push(this.current); this.pastBytes.push(this.currentBytes); this.current = d; this.currentBytes = JSON.stringify(d).length }
+    return this.document
+  }
 }
 
 export function extrudeDirectSketch(sketch: DirectSketch, height: number, id: string): DirectBody {
