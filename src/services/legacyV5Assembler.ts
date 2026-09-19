@@ -328,6 +328,7 @@ export async function assembleLegacyV5Result(
       color: [...output.color],
       transform: identity(),
       faceIds: new Uint32Array(kernelMesh.faceID),
+      faceIdsSurfaceGroups: true,
       provenance,
       topology: semanticEdges.diagnostics,
     })

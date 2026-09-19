@@ -3935,6 +3935,7 @@ async function parseInternal(
         color: [...shape.color],
         transform: identity(),
         faceIds: isExclusiveView(mesh.faceID, mesh.faceID.length) ? mesh.faceID : new Uint32Array(mesh.faceID),
+        faceIdsSurfaceGroups: true,
         provenance,
         topology: semanticEdges.diagnostics,
       })

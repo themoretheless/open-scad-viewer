@@ -176,6 +176,32 @@ export function renderMeshInKernel(id: number, creaseCosine: number): KernelRend
   }
 }
 
+/** Compute selection surface ids in the Rust geometry kernel. */
+export function surfaceGroupsInKernel(
+  vertices: Float32Array,
+  indices: Uint32Array,
+  vertexStride: number,
+  angleDegrees: number,
+): Uint32Array<ArrayBuffer> {
+  const {exports: wasm, memory, takeResponse} = kernelRuntime()
+  let vp = 0
+  let ip = 0
+  let handle = 0
+  try {
+    vp = copyBuffer(wasm, new Uint8Array(vertices.buffer, vertices.byteOffset, vertices.byteLength))
+    ip = copyBuffer(wasm, new Uint8Array(indices.buffer, indices.byteOffset, indices.byteLength))
+    handle = decodeNurbsResult<number>(
+      takeResponse(wasm.abi_surface_groups(vertexStride, vp, vertices.length, ip, indices.length, angleDegrees)),
+    )
+    const buffer = memory.buffer
+    return new Uint32Array(buffer, wasm.abi_array_field(handle, 0), wasm.abi_array_field(handle, 1)).slice()
+  } finally {
+    if (handle) wasm.abi_array_free(handle)
+    if (ip) wasm.abi_free(ip, indices.byteLength)
+    if (vp) wasm.abi_free(vp, vertices.byteLength)
+  }
+}
+
 /**
  * Extract semantic edges in the Rust kernel. `creaseDotThreshold` is computed
  * by the caller (Math.cos of the clamped angle) so the classification

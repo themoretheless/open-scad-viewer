@@ -173,6 +173,20 @@ pub unsafe extern "C" fn abi_semantic_edges(
     }
 }
 
+/// # Safety
+/// Buffer ranges must be live caller-owned buffers allocated by this module.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn abi_surface_groups(
+    stride: usize,
+    vp: usize,
+    vl: usize,
+    ip: usize,
+    il: usize,
+    angle_degrees: f64,
+) -> u64 {
+    unsafe { geometry_bridge::abi::abi_surface_groups(stride, vp, vl, ip, il, angle_degrees) }
+}
+
 /// Display mesh with crease-split normals for a retained solid handle.
 #[unsafe(no_mangle)]
 pub extern "C" fn abi_render_mesh(id: u32, crease_cosine: f64) -> u64 {

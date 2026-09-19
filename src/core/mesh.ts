@@ -61,6 +61,8 @@ export interface MeshData {
   transform: Float32Array
   /** Manifold coplanar-face identifier for every triangle. */
   faceIds: Uint32Array
+  /** True when non-authoritative IDs are already connected smooth surface groups from the geometry kernel. */
+  faceIdsSurfaceGroups?: boolean
   /** True when IDs refer to authored surfaces/B-rep faces rather than mesh facets. */
   faceIdsAuthoritative?: boolean
   /** Compact triangle runs mapped back to the source operation that created them. */
