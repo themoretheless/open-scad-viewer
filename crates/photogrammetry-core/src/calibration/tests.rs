@@ -128,6 +128,7 @@ fn invalid_calibration_and_no_valid_rectangle_are_rejected() {
         };
         assert!(rectify(&input, &c, [320, 240], &Default::default(), |_, _| true).is_err());
     }
+
     let c = Calibration {
         cx: 0.,
         k1: 0.,
@@ -152,6 +153,57 @@ fn invalid_calibration_and_no_valid_rectangle_are_rejected() {
         .project_ray([0.5, 0.])
         .is_none()
     );
+}
+
+#[cfg(feature = "gpu")]
+fn assert_accelerated_parity(acceleration: crate::Acceleration) {
+    if crate::gpu::backend_report().is_none() {
+        return;
+    }
+    let cpu = rectify(
+        &image(),
+        &calibration(),
+        [320, 240],
+        &Default::default(),
+        |_, _| true,
+    )
+    .unwrap();
+    let gpu = rectify(
+        &image(),
+        &calibration(),
+        [320, 240],
+        &RectificationOptions {
+            acceleration,
+            ..Default::default()
+        },
+        |_, _| true,
+    )
+    .unwrap();
+    assert_eq!(gpu.report, cpu.report);
+    let largest_channel_error = gpu
+        .image
+        .rgb
+        .iter()
+        .zip(&cpu.image.rgb)
+        .map(|(a, b)| a.abs_diff(*b))
+        .max()
+        .unwrap_or(0);
+    assert!(
+        largest_channel_error <= 2,
+        "{acceleration:?} rectification differed by {largest_channel_error} RGB levels"
+    );
+}
+
+#[cfg(feature = "gpu")]
+#[test]
+fn gpu_rectification_matches_cpu_within_f32_sampling_tolerance() {
+    assert_accelerated_parity(crate::Acceleration::Gpu);
+}
+
+#[cfg(feature = "cuda")]
+#[test]
+fn cuda_rectification_matches_cpu_or_portable_fallback() {
+    assert_accelerated_parity(crate::Acceleration::Cuda);
 }
 
 // Independent forward renderer: known non-coplanar 3D landmarks are rendered as

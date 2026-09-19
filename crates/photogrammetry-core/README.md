@@ -9,6 +9,13 @@ Outputs are relative-scale, partial observations. Unregistered views are explici
 
 `calibration::rectify` accepts measured Brown–Conrady intrinsics of the EXIF-oriented original raster and returns corrected RGB plus applied-camera provenance. No automatic fitting is performed. Both sparse and dense consume that same corrected image. Details: [calibration guide](../../docs/photogrammetry-calibration.md).
 
+`RectificationOptions::acceleration` defaults to `Cpu`, the deterministic
+reference. Explicit `Gpu` maps and bilinearly samples independent output
+pixels through portable WGSL (Metal/Vulkan/DX12); `Cuda` tries its native PTX
+kernel, then WGSL, then CPU. `Auto` chooses WGSL from 256×256 output pixels
+upward. Validation, focal/zoom search, cancellation, invalid-pixel retry, and
+report construction always remain on the CPU.
+
 `FeatureOptions::ROOT` and `GeometryOptions::CONSENSUS` are the tested defaults; `BASELINE` variants preserve algorithm comparisons. Relative-pose estimation requires an identity first-camera pose (finite elements, tolerance 1e-12). Experimental ROBUST/PHYSICAL variants have documented regressions and are not defaults.
 
 `DenseOptions` retains 3×3 frontoparallel sweep by default. `DenseEstimator::SlantedPlane` with patch radius 2 is experimental; it improves some sloped scenes and can lose thin geometry. Source-sample counters quantify work separately from hypothesis count.
@@ -46,18 +53,22 @@ PHOTO_ACCURACY=on       # qualified accuracy bundle; with PHOTO_DENSE also
                         # DenseOptions::accurate() (5x5 patches, dual scale,
                         # sparse depth prior: -27% surface error on analytic scenes)
 PHOTO_ACCELERATION=gpu   # requires building with --features gpu (wgpu)
-PHOTO_ACCELERATION=cuda  # native descriptor PTX, wgpu fallback for other kernels
+PHOTO_ACCELERATION=cuda  # native descriptor + dense sweep PTX, wgpu fallback otherwise
 ```
 
 The optional `gpu` feature adds `wgpu` and accelerates descriptor matching
 (3.2-47x on the synthetic descriptor benchmark) and the frontoparallel NCC
 depth sweep (batched, selection on the GPU: ~10x of the dense stage, 31-68 ms
 on the frozen sets) via Metal on macOS and Vulkan/DX12 on Linux/Windows.
-The optional `cuda` feature adds native PTX descriptor matching on NVIDIA, with
-the wgpu path as fallback for kernels that do not have a CUDA port. CPU
-defaults stay bit-identical with or without the feature. Browser builds keep
-the feature off; there the same WGSL sweep runs through WebGPU from the
-viewer's worker.
+The optional `cuda` feature adds native PTX descriptor matching and a native
+PTX frontoparallel sweep-and-select kernel on NVIDIA (RTX 5090, 256-px synthetic
+scene: depth stage 5614 ms CPU, 14.9 ms wgpu, 9.2 ms CUDA, identical surface
+accuracy), with the wgpu path as fallback for kernels that do not have a CUDA
+port or for internally constructed sweep jobs outside the native kernel's
+contract (more than 128 hypotheses or patches wider than 5x5). Public
+`DenseOptions` already restricts those limits. CPU defaults stay bit-identical
+with or without the feature. Browser builds keep the feature off; there the
+same WGSL sweep runs through WebGPU from the viewer's worker.
 Qualification and measured numbers: [gpu-matching-2026-09-09](../../docs/qualification/photogrammetry/gpu-matching-2026-09-09.md).
 
 `FeatureOptions { acceleration: Acceleration::Auto, .. }` now resolves

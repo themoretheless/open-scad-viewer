@@ -10,6 +10,11 @@
 //! Grayscale rasters upload once per estimation pass (`GrayAtlas`) and every
 //! view of the pass is encoded into one command buffer (`SweepBatch`): one
 //! submit and one GPU wait per pass instead of one per view.
+//!
+//! With the `cuda` feature, [`cuda::CudaSweep`] runs the same sweep-and-select
+//! kernel as native PTX (`sweep.cu`) and `Acceleration::Cuda` prefers it; it
+//! declines (returns `None`) for option sets it does not cover, leaving the
+//! wgpu sweep and then the CPU sweep in charge.
 
 use super::wgpu;
 use super::wgpu::util::DeviceExt;
@@ -399,6 +404,194 @@ pub fn shared() -> Option<&'static GpuSweep> {
     })
 }
 
+/// Native CUDA port of the sweep-and-select kernel (feature `cuda`). Mirrors
+/// the WGSL `sweep_select` entry line by line and consumes the same
+/// [`SweepJob`] payloads, so `Acceleration::Cuda` can skip the wgpu layer on
+/// NVIDIA hardware. Every entry point returns `None` when the driver, a
+/// device, the module or an unsupported option set makes the native path
+/// unavailable; callers then fall back to the wgpu sweep and finally the CPU.
+#[cfg(feature = "cuda")]
+pub mod cuda {
+    use super::{Selection, SweepJob};
+    use gpu_compute::cuda::{CudaDevice, CudaFunction, CudaSlice, LaunchConfig, PushKernelArg};
+
+    const SWEEP_PTX: &str = include_str!("sweep.ptx");
+    /// 16x16 threads per block, matching the shader's workgroup shape.
+    const BLOCK: u32 = 16;
+    /// Kernel-side `sc` / `centered` capacities; larger jobs fall back.
+    const MAX_HYPOTHESES: usize = 128;
+    const MAX_TAPS: usize = 25;
+
+    /// All grayscale rasters of a pass in one device buffer, laid out exactly
+    /// like the wgpu [`super::GrayAtlas`].
+    pub struct GrayAtlas {
+        buffer: CudaSlice<f32>,
+        /// (offset in floats, width, height) per image index; None for absent images.
+        meta: Vec<Option<(u32, u32, u32)>>,
+    }
+
+    pub struct CudaSweep {
+        device: CudaDevice,
+        kernel: CudaFunction,
+    }
+
+    impl CudaSweep {
+        fn new() -> Option<Self> {
+            let device = CudaDevice::new()?;
+            let module = device.load_ptx(SWEEP_PTX)?;
+            let kernel = module.load_function("sweep_select").ok()?;
+            Some(Self { device, kernel })
+        }
+
+        pub fn device_name(&self) -> &str {
+            &self.device.name
+        }
+
+        /// Uploads every present raster once; `images[i] = Some((values, width, height))`.
+        pub fn upload_grays(&self, images: &[Option<(&[f32], usize, usize)>]) -> Option<GrayAtlas> {
+            let total: usize = images
+                .iter()
+                .flatten()
+                .map(|(values, _, _)| values.len())
+                .sum();
+            let mut values: Vec<f32> = Vec::with_capacity(total);
+            let mut meta = Vec::with_capacity(images.len());
+            for image in images {
+                meta.push(image.map(|(raster, width, height)| {
+                    let offset = values.len() as u32;
+                    values.extend_from_slice(raster);
+                    (offset, width as u32, height as u32)
+                }));
+            }
+            let buffer = self.device.upload(&values).ok()?;
+            Some(GrayAtlas { buffer, meta })
+        }
+
+        /// True when the native kernel covers this job exactly; unsupported
+        /// option sets (oversized hypothesis grid or patch, missing raster)
+        /// keep the wgpu/CPU path instead of approximating it.
+        fn supported(&self, atlas: &GrayAtlas, job: &SweepJob) -> bool {
+            let taps = (job.patch_radius * 2 + 1).pow(2);
+            let present = |image: usize| atlas.meta.get(image).copied().flatten().is_some();
+            (2..=MAX_HYPOTHESES).contains(&job.hypotheses.len())
+                && taps <= MAX_TAPS
+                && job.bins.len() == job.width * job.height * 2
+                && present(job.ref_image)
+                && job.sources.iter().all(|source| present(source.image))
+        }
+
+        /// Runs one view; `None` when the job is unsupported or any driver call
+        /// fails. Selections are laid out per pixel in row-major map order.
+        pub fn run(&self, atlas: &GrayAtlas, job: &SweepJob) -> Option<Vec<Option<Selection>>> {
+            if !self.supported(atlas, job) {
+                return None;
+            }
+            let pixels = job.width * job.height;
+            if pixels == 0 {
+                return Some(Vec::new());
+            }
+            let (ref_offset, ref_width, ref_height) = atlas.meta[job.ref_image]?;
+            let mut srcf: Vec<f32> = Vec::with_capacity(job.sources.len() * 16);
+            let mut srcm: Vec<u32> = Vec::with_capacity(job.sources.len() * 4);
+            for source in &job.sources {
+                srcf.extend(source.rotation.iter().flatten().copied());
+                srcf.extend_from_slice(&source.translation);
+                srcf.extend_from_slice(&[source.focal, source.cx, source.cy, 0.]);
+                let (offset, width, height) = atlas.meta[source.image]?;
+                srcm.extend_from_slice(&[offset, width, height, 0]);
+            }
+            let stream = &self.device.stream;
+            let hyps = self.device.upload(&job.hypotheses).ok()?;
+            let srcf = self.device.upload(&srcf).ok()?;
+            let srcm = self.device.upload(&srcm).ok()?;
+            let bins = self.device.upload(&job.bins).ok()?;
+            let mut results = stream.alloc_zeros::<f32>(pixels * 4).ok()?;
+            let width = job.width as u32;
+            let height = job.height as u32;
+            let n_hyp = job.hypotheses.len() as u32;
+            let n_src = job.sources.len() as u32;
+            let plen = ((job.patch_radius * 2 + 1).pow(2)) as u32;
+            let radius = job.patch_radius as u32;
+            let needed = job.needed as u32;
+            let mut launch = stream.launch_builder(&self.kernel);
+            launch
+                .arg(&width)
+                .arg(&height)
+                .arg(&n_hyp)
+                .arg(&n_src)
+                .arg(&plen)
+                .arg(&radius)
+                .arg(&needed)
+                .arg(&ref_width)
+                .arg(&ref_height)
+                .arg(&ref_offset)
+                .arg(&job.min_correlation)
+                .arg(&job.uniqueness_margin)
+                .arg(&job.step)
+                .arg(&job.ref_focal)
+                .arg(&job.ref_cx)
+                .arg(&job.ref_cy)
+                .arg(&hyps)
+                .arg(&srcf)
+                .arg(&srcm)
+                .arg(&atlas.buffer)
+                .arg(&bins)
+                .arg(&mut results);
+            let config = LaunchConfig {
+                grid_dim: (
+                    width.div_ceil(BLOCK).max(1),
+                    height.div_ceil(BLOCK).max(1),
+                    1,
+                ),
+                block_dim: (BLOCK, BLOCK, 1),
+                shared_mem_bytes: 0,
+            };
+            unsafe { launch.launch(config) }.ok()?;
+            let mut host = vec![0f32; pixels * 4];
+            stream.memcpy_dtoh(&results, &mut host).ok()?;
+            stream.synchronize().ok()?;
+            Some(
+                host.chunks_exact(4)
+                    .map(|chunk| {
+                        (chunk[0] > 0.).then(|| Selection {
+                            bin: chunk[1] as u32,
+                            offset: chunk[2],
+                            score: chunk[3],
+                        })
+                    })
+                    .collect(),
+            )
+        }
+
+        /// Runs every view of a pass against one uploaded atlas. `None` as soon
+        /// as a single job is unsupported, so the caller keeps one consistent
+        /// backend for the whole pass.
+        pub fn run_batch(
+            &self,
+            atlas: &GrayAtlas,
+            jobs: &[SweepJob],
+        ) -> Option<Vec<Vec<Option<Selection>>>> {
+            jobs.iter().map(|job| self.run(atlas, job)).collect()
+        }
+    }
+
+    thread_local! {
+        // Process-lifetime device and module; see gpu::matching for the leak note.
+        static SHARED: std::cell::LazyCell<Option<&'static CudaSweep>> =
+            std::cell::LazyCell::new(|| {
+                CudaSweep::new().map(|sweep| Box::leak(Box::new(sweep)) as &'static CudaSweep)
+            });
+    }
+
+    /// Thread-shared native CUDA sweep; `None` without a CUDA device, letting
+    /// the caller fall back to the wgpu sweep and then the CPU.
+    pub fn shared() -> Option<&'static CudaSweep> {
+        SHARED.with(|cell| {
+            let shared: &Option<&CudaSweep> = cell;
+            *shared
+        })
+    }
+}
 #[cfg(test)]
 mod tests {
     use super::*;

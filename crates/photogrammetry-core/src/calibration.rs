@@ -133,6 +133,10 @@ pub struct RectificationOptions {
     pub max_zoom: f64,
     pub max_output_bytes: usize,
     pub max_pixel_evaluations: usize,
+    /// Placement for independent output-pixel mapping and sampling. `Cpu`
+    /// remains the bit-exact reference. `Auto` uses a GPU only when the
+    /// upload/readback cost is amortized by a sufficiently large raster.
+    pub acceleration: crate::Acceleration,
 }
 impl Default for RectificationOptions {
     fn default() -> Self {
@@ -140,6 +144,7 @@ impl Default for RectificationOptions {
             max_zoom: 4.,
             max_output_bytes: 3 * 2048 * 2048,
             max_pixel_evaluations: 40_000_000,
+            acceleration: crate::Acceleration::Cpu,
         }
     }
 }
@@ -311,9 +316,25 @@ pub fn rectify(
     let max_u = (image.width - 1) as f64;
     let max_v = (image.height - 1) as f64;
     for _ in 0..RENDER_ATTEMPTS {
+        // Preserve row-level cancellation and accounting before a device
+        // submission; search, validation, retries, and reporting stay CPU.
+        for _ in 0..image.height {
+            checkpoint(image.width)?;
+        }
+        if let Some(device_rgb) = accelerated_render(image, &cal, high, options.acceleration) {
+            checkpoint(0)?;
+            return Ok(RectifiedImage {
+                image: Image {
+                    width: image.width,
+                    height: image.height,
+                    focal: high,
+                    rgb: device_rgb,
+                },
+                report: report(high, true),
+            });
+        }
         let mut valid = true;
         'rows: for y in 0..image.height {
-            checkpoint(image.width)?;
             // Row-invariant normalized coordinate; same expression source_pixel
             // would compute, evaluated once per row instead of per pixel.
             let v = (y as f64 - half_height) / high;
@@ -349,6 +370,43 @@ pub fn rectify(
     Err(crate::error(
         "Calibration contains invalid or folded pixels; no border-filled image was produced",
     ))
+}
+
+const GPU_RENDER_PIXELS: usize = 256 * 256;
+
+fn accelerated_render(
+    image: &Image,
+    calibration: &Calibration,
+    focal: f64,
+    acceleration: crate::Acceleration,
+) -> Option<Vec<u8>> {
+    let resolved = match acceleration {
+        crate::Acceleration::Auto
+            if image.width.saturating_mul(image.height) < GPU_RENDER_PIXELS =>
+        {
+            crate::Acceleration::Cpu
+        }
+        crate::Acceleration::Auto => crate::Acceleration::Gpu,
+        explicit => explicit,
+    };
+    if !resolved.is_gpu() {
+        return None;
+    }
+    #[cfg(feature = "gpu")]
+    {
+        #[cfg(feature = "cuda")]
+        if resolved == crate::Acceleration::Cuda
+            && let Some(rgb) = crate::gpu::rectification::render_cuda(image, calibration, focal)
+        {
+            return Some(rgb);
+        }
+        crate::gpu::rectification::render(image, calibration, focal)
+    }
+    #[cfg(not(feature = "gpu"))]
+    {
+        let _ = (image, calibration, focal);
+        None
+    }
 }
 
 #[cfg(test)]

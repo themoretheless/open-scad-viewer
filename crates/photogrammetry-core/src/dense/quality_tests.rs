@@ -109,6 +109,63 @@ fn all_valid_hypothesis_budgets_remain_bounded_and_deterministic() {
     }
 }
 
+/// The batched frontoparallel pass (one gray upload, every view in one launch)
+/// must produce the same depth maps through the native CUDA kernel as through
+/// the CPU sweep, sparse per-pixel ranges included.
+#[cfg(feature = "cuda")]
+#[test]
+fn cuda_batched_sweep_matches_cpu_depth_maps() {
+    let (images, sparse, _) = fixture(Scene {
+        angle: 30.,
+        thin: false,
+    });
+    let options = |acceleration| DenseOptions {
+        max_side: 64,
+        sparse_depth_prior: true,
+        acceleration,
+        ..Default::default()
+    };
+    let (cpu, _) = estimation::estimate(
+        &images,
+        &sparse,
+        &options(crate::Acceleration::Cpu),
+        &mut |_, _, _| true,
+    )
+    .unwrap();
+    if crate::gpu::sweep::cuda::shared().is_none() {
+        eprintln!("no CUDA device; skipping");
+        return;
+    }
+    let (cuda, diagnostics) = estimation::estimate(
+        &images,
+        &sparse,
+        &options(crate::Acceleration::Cuda),
+        &mut |_, _, _| true,
+    )
+    .unwrap();
+    assert_eq!(cpu.len(), cuda.len());
+    assert!(diagnostics.evaluated_hypotheses > 0);
+    let mut valid = 0;
+    let mut agree = 0;
+    for (cpu_map, cuda_map) in cpu.iter().zip(&cuda) {
+        assert_eq!(cpu_map.image, cuda_map.image);
+        assert_eq!(cpu_map.depth.len(), cuda_map.depth.len());
+        for (&a, &b) in cpu_map.depth.iter().zip(&cuda_map.depth) {
+            if a > 0. {
+                valid += 1;
+                if (a - b).abs() <= 0.05 * a {
+                    agree += 1;
+                }
+            }
+        }
+    }
+    assert!(valid > 500, "fixture should produce depth: {valid}");
+    assert!(
+        agree as f64 >= 0.95 * valid as f64,
+        "CUDA batched depth disagrees with CPU: {agree}/{valid}"
+    );
+}
+
 #[test]
 fn planning_budget_accounts_for_temporary_plane_states() {
     let image = Image {

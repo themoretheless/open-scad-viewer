@@ -2,8 +2,8 @@
 //! deterministic reference; GPU modes are opt-in and qualified separately.
 //!
 //! wgpu drives Metal on macOS and Vulkan/DX12 on Linux/Windows (NVIDIA
-//! included). `matching` also has a native CUDA PTX port when the `cuda`
-//! feature is enabled; other kernels use the portable shader fallback.
+//! included). `matching` and `sweep` also have native CUDA PTX ports when the
+//! `cuda` feature is enabled; other kernels use the portable shader fallback.
 //! `matching`'s descriptor kernel templates its workgroup size per backend via
 //! `gpu_compute::tuned_workgroup_size` — smaller on Metal's tile-based
 //! deferred renderers, larger on the warp-scheduled hardware (NVIDIA/CUDA-
@@ -16,6 +16,7 @@ pub(crate) use gpu_compute::{
 };
 
 pub mod matching;
+pub mod rectification;
 pub mod sweep;
 
 pub fn backend_label() -> Option<&'static str> {

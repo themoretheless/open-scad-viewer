@@ -31,6 +31,8 @@ const kernels = [
   {cu: 'crates/math-core/src/point_moments.cu', ptx: 'crates/math-core/src/point_moments.ptx'},
   {cu: 'crates/math-core/src/point_cloud_stats.cu', ptx: 'crates/math-core/src/point_cloud_stats.ptx'},
   {cu: 'crates/photogrammetry-core/src/gpu/matching.cu', ptx: 'crates/photogrammetry-core/src/gpu/matching.ptx'},
+  {cu: 'crates/photogrammetry-core/src/gpu/sweep.cu', ptx: 'crates/photogrammetry-core/src/gpu/sweep.ptx'},
+  {cu: 'crates/photogrammetry-core/src/gpu/rectification.cu', ptx: 'crates/photogrammetry-core/src/gpu/rectification.ptx'},
 ]
 const args = process.argv.slice(2)
 const check = args.includes('--check')
@@ -68,7 +70,10 @@ function hostCompilerArgs() {
 // Strip the toolkit/build banner so the committed text only changes when the
 // kernel or nvcc version changes, not per machine.
 function normalize(ptx) {
-  return ptx.replace(/\r\n/g, '\n').replace(/^\/\/ Based on .*\n/gm, '')
+  return ptx
+    .replace(/\r\n/g, '\n')
+    .replace(/^\/\/ Based on .*\n/gm, '')
+    .replace(/\n+$/, '\n')
 }
 
 const out = mkdtempSync(join(tmpdir(), 'osv-cuda-'))
