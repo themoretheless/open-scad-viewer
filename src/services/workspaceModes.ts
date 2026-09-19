@@ -1,27 +1,24 @@
-/** Product workspace: Code · Solid · Mesh. */
+/** Product workspace: Solid · Mesh. Source is an editor drawer inside both. */
 
-export type WorkspaceMode = 'code' | 'solid' | 'mesh'
+export type WorkspaceMode = 'solid' | 'mesh'
 
-export const WORKSPACE_MODES: readonly WorkspaceMode[] = Object.freeze(['code', 'solid', 'mesh'])
+export const WORKSPACE_MODES: readonly WorkspaceMode[] = Object.freeze(['solid', 'mesh'])
 
-export function workspaceModeLabel(mode: WorkspaceMode, locale: 'ru' | 'en' = 'en'): string {
-  if (locale === 'ru') {
-    return mode === 'code' ? 'Code' : mode === 'solid' ? 'Solid' : 'Mesh'
-  }
-  return mode === 'code' ? 'Code' : mode === 'solid' ? 'Solid' : 'Mesh'
+export function workspaceModeLabel(mode: WorkspaceMode, _locale: 'ru' | 'en' = 'en'): string {
+  return mode === 'solid' ? 'Solid' : 'Mesh'
 }
 
 export function workspaceModeHint(mode: WorkspaceMode, locale: 'ru' | 'en' = 'en'): string {
   if (locale === 'ru') {
-    if (mode === 'code') return 'Параметрическая программа (.scad)'
-    if (mode === 'solid') return 'CAD-лепка: эскиз, push/pull, fillet (Plasticity-like)'
-    return 'Полигоны: вершины/рёбра/грани (Blender-like)'
+    return mode === 'solid'
+      ? 'Точные тела: NURBS и B-rep (Plasticity-like)'
+      : 'Полигоны: вершины/рёбра/грани (Blender-like)'
   }
-  if (mode === 'code') return 'Parametric program (.scad)'
-  if (mode === 'solid') return 'CAD sculpt: sketch, push/pull, fillet (Plasticity-like)'
-  return 'Polygons: vertices/edges/faces (Blender-like)'
+  return mode === 'solid'
+    ? 'Exact solids: NURBS and B-rep (Plasticity-like)'
+    : 'Polygons: vertices/edges/faces (Blender-like)'
 }
 
 export function isWorkspaceMode(value: unknown): value is WorkspaceMode {
-  return value === 'code' || value === 'solid' || value === 'mesh'
+  return value === 'solid' || value === 'mesh'
 }

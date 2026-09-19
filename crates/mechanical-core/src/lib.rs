@@ -48,7 +48,10 @@ pub struct Generated {
     pub parts: Vec<Value>,
 }
 fn err(path: &str, message: impl Into<String>) -> Error {
-    Error { path: path.into(), message: message.into() }
+    Error {
+        path: path.into(),
+        message: message.into(),
+    }
 }
 fn n(o: &Value, key: &str) -> f64 {
     o[key].as_f64().unwrap()
@@ -141,8 +144,8 @@ fn gear_profile(o: &Value, path: &str) -> Result<(Vec<Vec<Point>>, Value)> {
     let bore = n(o, "bore");
     let rim = n(o, "rim_width");
     let internal = flag(o, "internal");
-    if teeth.fract() != 0. || !(8.0..=128.).contains(&teeth) {
-        return Err(e("Gear teeth must be an integer from 8 to 128."));
+    if teeth.fract() != 0. || !(3.0..=256.).contains(&teeth) {
+        return Err(e("Gear teeth must be an integer from 3 to 256."));
     }
     if flank.fract() != 0. || !(3.0..=12.).contains(&flank) {
         return Err(e("Gear flank_segments must be an integer from 3 to 12."));
@@ -170,16 +173,9 @@ fn gear_profile(o: &Value, path: &str) -> Result<(Vec<Vec<Point>>, Value)> {
         ));
     }
     let alpha = pressure * PI / 180.;
+    // Reported only: brep_gear draws a radial flank below the base circle, so
+    // small tooth counts build without undercut or profile shift.
     let minimum = (2. / alpha.sin().powi(2) - 1e-12).ceil();
-    if !internal && teeth < minimum {
-        return Err(err(
-            path,
-            format!(
-                "Gear requires at least {} teeth at this pressure angle; undercut and profile shift are not implemented.",
-                number(minimum)
-            ),
-        ));
-    }
     let pitch = module * teeth / 2.;
     let base = pitch * alpha.cos();
     let tip = pitch + if internal { -module } else { module };
@@ -305,10 +301,47 @@ fn gear_profile(o: &Value, path: &str) -> Result<(Vec<Vec<Point>>, Value)> {
     let report = json!({"kind":if internal{"internal_spur_gear"}else{"external_spur_gear"},"teeth":teeth,"module_mm":module,"pressure_angle_deg":pressure,"pitch_radius_mm":pitch,"base_radius_mm":base,"tip_radius_mm":tip,"root_radius_mm":root,"outside_radius_mm":outside,"pitch_diameter_mm":2.*pitch,"outside_diameter_mm":2.*outside,"thickness_mm":thickness,"bore_diameter_mm":bore,"tooth_thickness_at_pitch_mm":PI*module/2.-backlash,"backlash_per_gear_mm":backlash,"clearance_mm":clearance,"tooth_center_angle_deg":0,"profile_vertices":vertices,"profile_area_mm2":profile_area,"expected_volume_mm3":profile_area*thickness,"minimum_external_teeth_without_undercut":minimum,"root_transition":if low<base{"radial_below_base_circle"}else{"involute_to_root_circle"},"warnings":["Flanks and circles are sampled; tooth roots have no generated trochoidal fillet. Mating interference, strength and printer tolerances require separate validation."]});
     Ok((loops, report))
 }
+/// The gear as the `brep_gear(...)` builtin: an exact involute NURBS solid
+/// in both workspaces (the Mesh track tessellates it). The sampled profile
+/// is still computed for validation and for the report.
+fn brep_gear_source(o: &Value, prefix: &str) -> String {
+    let mut out = String::from(prefix);
+    out.push_str("brep_gear(module=");
+    append_number(&mut out, n(o, "module"));
+    out.push_str(",teeth=");
+    append_number(&mut out, n(o, "teeth"));
+    out.push_str(",height=");
+    append_number(&mut out, n(o, "thickness"));
+    out.push_str(",pressure_angle=");
+    append_number(&mut out, n(o, "pressure_angle"));
+    out.push_str(",bore=");
+    append_number(&mut out, n(o, "bore"));
+    out.push_str(",internal=");
+    out.push_str(if flag(o, "internal") { "true" } else { "false" });
+    out.push_str(",rim_width=");
+    append_number(&mut out, n(o, "rim_width"));
+    out.push_str(",clearance=");
+    append_number(&mut out, n(o, "clearance"));
+    out.push_str(",backlash=");
+    append_number(&mut out, n(o, "backlash"));
+    out.push_str(",helix=");
+    append_number(
+        &mut out,
+        o.get("helix_angle").and_then(Value::as_f64).unwrap_or(0.),
+    );
+    out.push_str(",herringbone=");
+    out.push_str(if flag(o, "herringbone") {
+        "true"
+    } else {
+        "false"
+    });
+    out.push_str(");");
+    out
+}
 pub fn gear(o: &Value, path: &str) -> Result<Generated> {
-    let (loops, report) = gear_profile(o, path)?;
+    let (_loops, report) = gear_profile(o, path)?;
     Ok(Generated {
-        source: extrude(&loops, n(o, "thickness")),
+        source: brep_gear_source(o, ""),
         report,
         parts: vec![],
     })
@@ -401,12 +434,19 @@ pub fn planetary(o: &Value, path: &str) -> Result<Generated> {
         "clearance",
         "rim_width",
         "flank_segments",
+        "helix_angle",
+        "herringbone",
     ] {
         common[k] = o[k].clone();
     }
     let mut sun_o = common.clone();
     sun_o["teeth"] = json!(sun_teeth);
     sun_o["internal"] = json!(false);
+    // Mating external gears take opposite hands; the planet and the
+    // internal ring share one.
+    if let Some(helix) = o.get("helix_angle").and_then(Value::as_f64) {
+        sun_o["helix_angle"] = json!(-helix);
+    }
     let mut planet_o = common.clone();
     planet_o["teeth"] = json!(planet_teeth);
     planet_o["internal"] = json!(false);
@@ -451,20 +491,21 @@ pub fn planetary(o: &Value, path: &str) -> Result<Generated> {
         let origin = [rounded10(x), rounded10(y), 0.];
         let c = rounded10((rotation_angle * PI / 180.).cos());
         let s = rounded10((rotation_angle * PI / 180.).sin());
-        let transformed: Vec<Vec<Point>> = loops
+        let _ = loops;
+        let mut prefix = String::from("multmatrix([[");
+        for (i, value) in [c, -s, 0., origin[0], s, c, 0., origin[1]]
             .iter()
-            .map(|l| {
-                l.iter()
-                    .map(|[x, y]| {
-                        [
-                            rounded10(c * x - s * y + origin[0]),
-                            rounded10(s * x + c * y + origin[1]),
-                        ]
-                    })
-                    .collect()
-            })
-            .collect();
-        sources.push(extrude(&transformed, thickness));
+            .enumerate()
+        {
+            if i == 4 {
+                prefix.push_str("],[");
+            } else if i != 0 {
+                prefix.push(',');
+            }
+            append_number(&mut prefix, *value);
+        }
+        prefix.push_str("],[0,0,1,0],[0,0,0,1]])");
+        sources.push(brep_gear_source(options, &prefix));
         let pose = json!({"origin":origin,"rotation":[0,0,rounded10(rotation_angle)]});
         report_parts.push(json!({"id":id,"role":role,"pose":pose}));
         parts
@@ -908,6 +949,13 @@ mod tests {
             }
             let actual = actual.unwrap_or_else(|e| panic!("{name}: {:?}", e));
             close(&actual.report, &case["report"], name);
+            if matches!(case["kind"].as_str().unwrap(), "gear" | "planetary") {
+                // Gears are emitted as the exact `brep_gear(...)` builtin now;
+                // the sampled profile survives only in the report.
+                assert!(actual.source.contains("brep_gear("), "{name}");
+                assert!(!actual.source.contains("polygon("), "{name}");
+                continue;
+            }
             let arrays = source_arrays(&actual.source);
             assert_eq!(
                 arrays.len(),

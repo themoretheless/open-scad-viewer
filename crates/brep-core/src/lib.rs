@@ -12,12 +12,22 @@
 use nurbs_core::{Error, Result, curve::Curve, surface::Surface};
 use std::collections::{BTreeMap, BTreeSet};
 
+pub use brep_topology::{MAX_COEDGES, MAX_ENTITIES, MAX_FACES};
+
 pub mod analysis;
 pub mod analytic;
 pub mod analytic_boolean;
 pub mod analytic_features;
 pub mod analytic_ss;
 mod boolean_support;
+mod box_sphere_boolean;
+mod sphere_mate;
+mod imprint_assembly;
+pub mod tolerant_boolean;
+pub mod gear;
+pub use gear::{GearGeometry, GearSpec, gear, gear_with_report};
+mod uv_regions;
+mod cylinder_sphere_boolean;
 pub mod coverage_verifier;
 pub mod imprint_pipeline;
 pub mod intersections;
@@ -899,7 +909,11 @@ impl Model {
                     face_owners[use_.face].insert(key.clone());
                     let face = &self.faces[use_.face];
                     for &wire in std::iter::once(&face.outer).chain(&face.holes) {
-                        loop_owners[wire].insert(key.clone());
+                        // Two faces on different surfaces may bound the same
+                        // curve loop in the same UV sense (a ring hole on a
+                        // plane and on a reversed sphere patch): qualify the
+                        // loop by its face, which carries the surface.
+                        loop_owners[wire].insert(faces[use_.face].clone());
                         for coedge in &self.loops[wire].coedges {
                             edge_owners[coedge.edge].insert(key.clone());
                             for &vertex in &self.edges[coedge.edge].vertices {
@@ -1312,10 +1326,15 @@ impl Model {
             + self.shells.len()
             + self.bodies.len();
         let uses = self.loops.iter().map(|l| l.coedges.len()).sum::<usize>();
-        if count > 4096 || uses > 8192 || self.faces.len() > 256 {
+        // Gear bodies carry a few hundred faces (six per tooth, twice for a
+        // herringbone); the ceiling stays a hard guard against runaway
+        // authoring, not a modelling limit.
+        if count > MAX_ENTITIES || uses > MAX_COEDGES || self.faces.len() > MAX_FACES {
             return Err(Error {
                 code: "BREP_RESOURCE_LIMIT",
-                message: "B-rep exceeds 4096 entities, 256 faces or 8192 coedges".into(),
+                message: format!(
+                    "B-rep exceeds {MAX_ENTITIES} entities, {MAX_FACES} faces or {MAX_COEDGES} coedges"
+                ),
             });
         }
         require(

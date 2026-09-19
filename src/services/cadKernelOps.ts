@@ -1,3 +1,4 @@
+import { tessellateBrepGear, type BrepGearSpec } from './geometry/brep'
 import Module, {
   type CrossSection,
   type ErrorStatus,
@@ -67,6 +68,8 @@ export interface CadKernelOps {
     fillRule?: 'EvenOdd' | 'NonZero',
   ): CadKernelHandle
   ofMesh(vertProperties: Float32Array, triVerts: Uint32Array): CadKernelHandle
+  /** Involute gear: the exact NURBS body tessellated at `segments` per edge. */
+  gear(spec: BrepGearSpec, segments: number): CadKernelHandle
   translate(input: CadKernelHandle, offset: readonly number[]): CadKernelHandle
   scale(input: CadKernelHandle, factors: readonly number[]): CadKernelHandle
   rotate(input: CadKernelHandle, angles: number | readonly number[]): CadKernelHandle
@@ -266,6 +269,10 @@ export function createCadKernelOps(
     polygon(rings, fillRule = 'EvenOdd') {
       const polygons = rings.map(ring => ring.map(point => vec2(point))) as Polygons
       return handle(2, wasm.CrossSection.ofPolygons(polygons, fillRule))
+    },
+    gear(spec, segments) {
+      const built = tessellateBrepGear(spec, Math.min(32, Math.max(1, Math.round(segments))))
+      return ops.ofMesh(new Float32Array(built.positions), new Uint32Array(built.indices))
     },
     ofMesh(vertProperties, triVerts) {
       const mesh = new wasm.Mesh({

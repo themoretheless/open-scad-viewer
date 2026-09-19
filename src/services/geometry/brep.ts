@@ -41,6 +41,43 @@ export const createBrepCylinder=(radius:number,height:number):NurbsBrep=>callGeo
 export const createBrepFrustum=(bottomRadius:number,topRadius:number,height:number):NurbsBrep=>callGeometryRust('brep_nurbs_frustum',{bottomRadius,topRadius,height})
 export const createBrepSphere=(radius:number):NurbsBrep=>callGeometryRust('brep_nurbs_sphere',{radius})
 export const createBrepTorus=(majorRadius:number,minorRadius:number):NurbsBrep=>callGeometryRust('brep_nurbs_torus',{majorRadius,minorRadius})
+/** Involute gear as a trimmed NURBS solid: spur, helical or herringbone, external with a bore or internal with a rim. */
+export interface BrepGearSpec{module:number;teeth:number;height:number;pressureAngle?:number;helixAngle?:number;herringbone?:boolean;bore?:number;internal?:boolean;rimWidth?:number;clearance?:number;backlash?:number}
+/**
+ * Faces of a gear body before it is built: six outline curves per tooth, the
+ * bore or the rim circle as one arc per two teeth (4..64), twice for a
+ * herringbone, plus two caps. Mirrors `circle_arcs` in gear.rs, so display
+ * detail can be chosen against the triangle budget without building first.
+ */
+export function brepGearFaceCount(spec: Pick<BrepGearSpec, 'teeth' | 'herringbone' | 'bore' | 'internal'>): number {
+  const arcs = Math.min(64, Math.max(4, Math.floor(spec.teeth / 2)))
+  const circle = spec.internal || (spec.bore ?? 0) > 0 ? arcs : 0
+  return (spec.teeth * 6 + circle) * (spec.herringbone ? 2 : 1) + 2
+}
+/**
+ * Gears are built once per specification and then copied: the eighteen planets of
+ * a spinner share one involute fit and one helical sweep, and only their placement
+ * differs. The key normalises defaults so equal gears written differently still hit.
+ */
+const GEAR_CACHE_LIMIT = 16
+const gearBodies = new Map<string, NurbsBrep>()
+const gearMeshes = new Map<string, BrepMesh>()
+function gearKey(spec: BrepGearSpec): string {
+  return JSON.stringify([spec.module, spec.teeth, spec.height, spec.pressureAngle ?? 20, spec.helixAngle ?? 0, spec.herringbone === true, spec.bore ?? 0, spec.internal === true, spec.rimWidth ?? 2, spec.clearance ?? 0.25, spec.backlash ?? 0])
+}
+function remember<T>(cache: Map<string, T>, key: string, build: () => T): T {
+  const hit = cache.get(key)
+  if (hit !== undefined) return hit
+  const value = build()
+  if (cache.size >= GEAR_CACHE_LIMIT) cache.delete(cache.keys().next().value!)
+  cache.set(key, value)
+  return value
+}
+const buildBrepGear=(spec:BrepGearSpec):NurbsBrep=>callGeometryRust('brep_nurbs_gear',{...spec})
+/** A fresh copy of the gear body for this specification; the kernel builds it once. */
+export const createBrepGear=(spec:BrepGearSpec):NurbsBrep=>structuredClone(remember(gearBodies,gearKey(spec),()=>buildBrepGear(spec)))
+/** A fresh copy of the gear's display mesh at `segments`; tessellated once per (gear, detail). */
+export const tessellateBrepGear=(spec:BrepGearSpec,segments:number):BrepMesh=>structuredClone(remember(gearMeshes,gearKey(spec)+':'+segments,()=>tessellateNurbsBrep(remember(gearBodies,gearKey(spec),()=>buildBrepGear(spec)),segments)))
 export interface BrepMassProperties {
  surfaceAreaMm2:number
  signedVolumeMm3:number

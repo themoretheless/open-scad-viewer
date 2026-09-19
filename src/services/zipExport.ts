@@ -1,3 +1,4 @@
+import { isModelGraphText } from './modelGraphTextDetect'
 /**
  * ZIP export utilities.
  * Reuses the same manual ZIP construction approach as threemfExport.ts.
@@ -121,7 +122,7 @@ export interface TabData {
 export function exportAllTabsAsZip(tabs: TabData[], zipFileName: string = 'openscad-project.zip'): void {
   const files = tabs.map(tab => {
     let fileName = tab.name.replace(/[^a-zA-Z0-9_\-. ]/g, '_')
-    if (!fileName.endsWith('.scad')) fileName += '.scad'
+    if (!/\.(scad|mg)$/i.test(fileName)) fileName += isModelGraphText(tab.code) ? '.mg' : '.scad'
     return { name: fileName, data: tab.code }
   })
 

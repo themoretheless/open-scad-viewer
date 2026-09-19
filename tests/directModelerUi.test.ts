@@ -4,7 +4,7 @@ import DirectModeler from '../src/features/DirectModeler.vue'
 import {extrudeDirectSketch,type DirectDocument} from '../src/services/directModeling'
 import {sampleCurve} from '../src/services/directSketchGeometry'
 import {inspectPolygonMesh} from '../src/services/geometry/polygon'
-import {createBrepBox,analyzeNurbsBrep,createBrepCylinder,tessellateNurbsBrep} from '../src/services/geometry/brep'
+import {createBrepBox,analyzeNurbsBrep,createBrepCylinder,createBrepSphere,transformNurbsBrep,tessellateNurbsBrep} from '../src/services/geometry/brep'
 class Node {
  parent:Node|null=null;children:Node[]=[];props:Record<string,any>={};style:Record<string,any>={};text='';value:any='';selected=false
  constructor(public tag:string){}
@@ -106,9 +106,29 @@ it('removes a fully subtracted B-rep body and restores it with Undo',async()=>{
  const brep=createBrepCylinder(3,5),built=tessellateNurbsBrep(brep,4)
  const body=(id:string)=>({id,name:id,brep:structuredClone(brep),mesh:{positions:built.positions,indices:built.indices}})
  const ui=await mount({initialDocument:{version:1,sketches:[],bodies:[body('Stock'),body('Cutter')]}})
- await ui.click('Stock');await ui.click('Cutter',true);await ui.click('B-rep A − B')
+ // The command opens the guided panel with A and B prefilled from the selection; OK runs it.
+ await ui.click('Stock');await ui.click('Cutter',true);await ui.click('B-rep A − B');await ui.click('OK')
  expect(ui.doc().bodies).toEqual([])
  await ui.click('↶');expect(ui.doc().bodies.map(b=>b.id)).toEqual(['Stock','Cutter'])
+})
+it('reports the stated tolerance when a subtraction falls back to the numerical trace',async()=>{
+ // An off-axis sphere in a cylinder wall has no exact family: the kernel traces the
+ // intersection numerically, the body carries its tolerance and the notice says so.
+ const stock=createBrepCylinder(3,5),cutter=transformNurbsBrep(createBrepSphere(2),[[1,0,0,2.5],[0,1,0,0.4],[0,0,1,2.5],[0,0,0,1]])
+ const body=(id:string,brep:ReturnType<typeof createBrepCylinder>)=>{const built=tessellateNurbsBrep(brep,4);return {id,name:id,brep,mesh:{positions:built.positions,indices:built.indices}}}
+ const ui=await mount({initialDocument:{version:1,sketches:[],bodies:[body('Stock',stock),body('Cutter',cutter)]}})
+ await ui.click('Stock');await ui.click('Cutter',true);await ui.click('B-rep A − B');await ui.click('OK')
+ expect(ui.doc().bodies).toHaveLength(1)
+ expect(ui.doc().bodies[0].brep!.toleranceMm).toBeGreaterThan(1e-6)
+ expect(ui.text(ui.all()[0])).toContain('traced numerically within')
+ // An exact pair (a sphere on the axis, fully inside: a cavity) keeps the kernel
+ // tolerance and shows no such notice.
+ await ui.click('↶')
+ const axial=transformNurbsBrep(createBrepSphere(1.5),[[1,0,0,0],[0,1,0,0],[0,0,1,2.5],[0,0,0,1]])
+ const exact=await mount({initialDocument:{version:1,sketches:[],bodies:[body('Stock',stock),body('Cutter',axial)]}})
+ await exact.click('Stock');await exact.click('Cutter',true);await exact.click('B-rep A − B');await exact.click('OK')
+ expect(exact.doc().bodies[0].brep!.toleranceMm).toBeLessThan(1e-6)
+ expect(exact.text(exact.all()[0])).not.toContain('traced numerically')
 })
 it('binds an edge selection to chamfer and creates a shell with the selected opening',async()=>{
  const ui=await mount();await ui.click('Cube');await ui.click('Edges');const edge=ui.all(ui.svg()).find(n=>n.tag==='polyline'&&n.props.onPointerdown)!;await ui.pointer(edge)
@@ -183,6 +203,36 @@ it('commits a gizmo drag once and undoes it',async()=>{
  const ui=await mount();await ui.click('Cube');const svg=ui.svg(),gizmo=ui.all(svg).find(n=>n.tag==='g'&&n.props.onPointerdown&&n.children.some(c=>c.tag==='line'))!
  const before=ui.doc();await ui.pointer(gizmo,0,0);svg.props.onPointermove(ui.event(svg,20,0));svg.props.onPointerup(ui.event(svg,20,0));await nextTick()
  expect(ui.doc().bodies[0].mesh.positions).not.toEqual(before.bodies[0].mesh.positions);await ui.click('↶');expect(ui.doc()).toEqual(before)
+})
+it('drags a body itself, previewing in place and committing the exact move once',async()=>{
+ const ui=await mount();await ui.click('Cube');const svg=ui.svg()
+ // In 3D a plain drag orbits the camera; moving a body is its own mode.
+ await ui.click('Move · G')
+ const before=ui.doc(),face=ui.all(svg).find(n=>n.tag==='polygon'&&n.props.onPointerdown)!
+ await ui.pointer(face,0,0)
+ svg.props.onPointermove(ui.event(svg,30,0));await nextTick()
+ // The preview must not have been committed yet: the kernel runs once, on release.
+ expect(ui.doc().bodies[0].mesh.positions).toEqual(before.bodies[0].mesh.positions)
+ svg.props.onPointerup(ui.event(svg,30,0));await nextTick()
+ const moved=ui.doc().bodies[0]
+ expect(moved.mesh.positions).not.toEqual(before.bodies[0].mesh.positions)
+ // The exact translation keeps the body's B-rep rather than dropping it to a mesh.
+ expect(Boolean(moved.brep)).toBe(Boolean(before.bodies[0].brep))
+ await ui.click('↶');expect(ui.doc()).toEqual(before)
+})
+it('keeps gizmo labels and the canvas out of native text drag',async()=>{
+ // A press on an axis label used to start a native text drag: macOS showed the copy badge
+ // and a ghost of the label while the gizmo gesture underneath was cancelled.
+ const ui=await mount();await ui.click('Cube');const svg=ui.svg()
+ expect(svg.props.draggable).toBe('false')
+ expect(typeof svg.props.onDragstart).toBe('function')
+ expect(typeof svg.props.onSelectstart).toBe('function')
+ // Axis labels live in the gizmo groups next to the axis line; every one must be inert.
+ const gizmoGroups=ui.all(svg).filter(n=>n.tag==='g'&&n.children?.some((c:any)=>c.tag==='line'))
+ expect(gizmoGroups.length).toBeGreaterThan(0)
+ const labels=gizmoGroups.flatMap(g=>ui.all(g).filter(n=>n.tag==='text'))
+ expect(labels.length).toBe(gizmoGroups.length)
+ for(const label of labels)expect(label.props['pointer-events']).toBe('none')
 })
 it('box-selects multiple sketches and deletes the selection atomically',async()=>{
  const ui=await mount(),svg=ui.all().find(n=>n.tag==='svg'&&n.props['aria-label']==='2D sketch canvas')!

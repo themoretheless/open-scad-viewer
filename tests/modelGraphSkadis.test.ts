@@ -6,7 +6,7 @@ import { setModelGraphParameters } from '../src/services/modelGraph'
 import type { MeshData } from '../src/core/mesh'
 
 const original = readFileSync('examples/skadis-box/skadis-dovetail.scad', 'utf8')
-const compact = readFileSync('examples/skadis-box/skadis-dovetail.modelgraph.scad', 'utf8')
+const compact = readFileSync('examples/skadis-box/skadis-dovetail.mg', 'utf8')
 
 function bounds(mesh: MeshData) {
   const min = [Infinity, Infinity, Infinity], max = [-Infinity, -Infinity, -Infinity]

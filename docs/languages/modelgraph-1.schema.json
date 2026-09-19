@@ -200,6 +200,14 @@
               "flank_segments": {
                 "default": 6,
                 "$ref": "#/$defs/__schema1"
+              },
+              "helix_angle": {
+                "default": 0,
+                "$ref": "#/$defs/__schema1"
+              },
+              "herringbone": {
+                "default": false,
+                "type": "boolean"
               }
             },
             "required": [
@@ -214,7 +222,9 @@
               "clearance",
               "internal",
               "rim_width",
-              "flank_segments"
+              "flank_segments",
+              "helix_angle",
+              "herringbone"
             ],
             "additionalProperties": false
           },
@@ -313,6 +323,14 @@
               "carrier_angle": {
                 "default": 0,
                 "$ref": "#/$defs/__schema1"
+              },
+              "helix_angle": {
+                "default": 0,
+                "$ref": "#/$defs/__schema1"
+              },
+              "herringbone": {
+                "default": false,
+                "type": "boolean"
               }
             },
             "required": [
@@ -329,7 +347,9 @@
               "clearance",
               "rim_width",
               "flank_segments",
-              "carrier_angle"
+              "carrier_angle",
+              "helix_angle",
+              "herringbone"
             ],
             "additionalProperties": false
           },
@@ -2270,6 +2290,14 @@
                         "flank_segments": {
                           "default": 6,
                           "$ref": "#/$defs/__schema1"
+                        },
+                        "helix_angle": {
+                          "default": 0,
+                          "$ref": "#/$defs/__schema1"
+                        },
+                        "herringbone": {
+                          "default": false,
+                          "type": "boolean"
                         }
                       },
                       "required": [
@@ -2284,7 +2312,9 @@
                         "clearance",
                         "internal",
                         "rim_width",
-                        "flank_segments"
+                        "flank_segments",
+                        "helix_angle",
+                        "herringbone"
                       ],
                       "additionalProperties": false
                     },
@@ -2383,6 +2413,14 @@
                         "carrier_angle": {
                           "default": 0,
                           "$ref": "#/$defs/__schema1"
+                        },
+                        "helix_angle": {
+                          "default": 0,
+                          "$ref": "#/$defs/__schema1"
+                        },
+                        "herringbone": {
+                          "default": false,
+                          "type": "boolean"
                         }
                       },
                       "required": [
@@ -2399,7 +2437,9 @@
                         "clearance",
                         "rim_width",
                         "flank_segments",
-                        "carrier_angle"
+                        "carrier_angle",
+                        "helix_angle",
+                        "herringbone"
                       ],
                       "additionalProperties": false
                     },

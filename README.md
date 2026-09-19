@@ -82,7 +82,7 @@ The same constructors, supported booleans, chamfers, and faceted fillets are ava
 through ModelGraph Text and the NURBS MCP tools. See the precise
 [operation envelope](crates/brep-core/README.md) and the full
 [completion audit](docs/design/brep-completion-status.md).
-Try the [curved Boolean example](examples/brep/curved-boolean.modelgraph.scad)
+Try the [curved Boolean example](examples/brep/curved-boolean.mg)
 in the viewer's Code mode, or choose **B-rep pocket enclosure** in the example
 gallery for a raised boss and blind pocket with a 2 mm floor.
 

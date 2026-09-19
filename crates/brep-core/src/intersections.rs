@@ -37,7 +37,7 @@ pub use torus_torus::{TorusTorusComponent, intersect_torus_torus};
 
 pub(crate) use plane_cone::recognize_cone;
 pub(crate) use plane_torus::recognize_torus;
-pub(crate) use sphere_cylinder::recognize_cylinder;
+pub(crate) use sphere_cylinder::{CanonicalCylinder, recognize_cylinder};
 pub(crate) use sphere_sphere::recognize as recognize_sphere;
 
 #[derive(Clone, Copy, Debug)]

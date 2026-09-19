@@ -635,6 +635,27 @@ pub fn dispatch(v: Value) -> Result<Value> {
                 .unwrap_or(360.),
         )?),
         "brep_nurbs_sphere" => encode(brep_core::sphere(field(&v, "radius")?)?),
+        "brep_nurbs_gear" => {
+            let number = |name: &str, default: f64| -> f64 {
+                v.get(name).and_then(Value::as_f64).unwrap_or(default)
+            };
+            let flag = |name: &str| v.get(name).and_then(Value::as_bool).unwrap_or(false);
+            let teeth: f64 = field(&v, "teeth")?;
+            let spec = brep_core::GearSpec {
+                module: field(&v, "module")?,
+                teeth: teeth.round().max(0.) as usize,
+                pressure_angle_deg: number("pressureAngle", 20.),
+                height: field(&v, "height")?,
+                helix_angle_deg: number("helixAngle", 0.),
+                herringbone: flag("herringbone"),
+                bore: number("bore", 0.),
+                internal: flag("internal"),
+                rim_width: number("rimWidth", 2.),
+                clearance: number("clearance", 0.25),
+                backlash: number("backlash", 0.),
+            };
+            encode(brep_core::gear(&spec)?)
+        }
         "brep_nurbs_torus" => encode(brep_core::torus(
             field(&v, "majorRadius")?,
             field(&v, "minorRadius")?,

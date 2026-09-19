@@ -34,7 +34,7 @@ it.each(['param x = 2mm range 3mm..4mm\na = sphere(x)','a = unknown(2)','a = sph
 })
 it('builds the documented ring pattern with parameter editing',async()=>{
  const {readFileSync}=await import('node:fs')
- const text=readFileSync('examples/modelgraph-text/ring-pattern.scad','utf8')
+ const text=readFileSync('examples/modelgraph-text/ring-pattern.mg','utf8')
  const compiled=compileModelGraphText(text)
  const p=compiled.customizer.find(p=>p.name==='height')!
  const edited=text.slice(0,p.valueStart)+'10'+text.slice(p.valueEnd)

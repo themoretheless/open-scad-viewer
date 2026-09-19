@@ -1,6 +1,6 @@
 import {it,expect} from 'vitest'
 import {cadOperation,type CadOptions} from '../src/services/cadWorkbench'
-import {createBrepBox,createBrepSphere,tessellateNurbsBrep,analyzeNurbsBrep} from '../src/services/geometry/brep'
+import {createBrepBox,tessellateNurbsBrep,analyzeNurbsBrep,createBrepTorus,transformNurbsBrep} from '../src/services/geometry/brep'
 import {inspectPolygonMesh} from '../src/services/geometry/polygon'
 const options:CadOptions={action:'union',ids:['a','b'],sketches:[],axis:[0,0,1],origin:[0,0,0],amount:0,count:3,width:1,height:1,depth:1,pitch:1,secondary:1,mode:'min',pathId:'',profileIds:[]}
 const body=(id:string,min:number[],max:number[])=>{const brep=createBrepBox(min,max);return {id,name:id,brep,mesh:tessellateNurbsBrep(brep,1)}}
@@ -36,8 +36,14 @@ it('refuses invalid later operands, mixed representations and unsupported curved
  expect(()=>cadOperation(input,{...options,ids:['a','b','unselected']})).toThrow();expect(JSON.stringify(input)).toBe(before)
  const mixed=stock();delete (mixed.bodies[1] as {brep?:unknown}).brep
  expect(()=>cadOperation(mixed,options)).toThrow('all retain B-rep')
- const brep=createBrepSphere(4),sphere={id:'b',name:'sphere',brep,mesh:tessellateNurbsBrep(brep,4)},curved={...stock(),bodies:[stock().bodies[0],sphere]},snapshot=JSON.stringify(curved)
- expect(()=>cadOperation(curved,options)).toThrow();expect(JSON.stringify(curved)).toBe(snapshot)
+ // A curved pair outside the exact matrix no longer refuses: the kernel traces the
+ // intersection numerically and the result says so through its tolerance.
+ // (A torus at the origin would meet the box exactly along its seam circles, which the
+ // numerical path refuses; move it off the symmetry planes.)
+ const brep=transformNurbsBrep(createBrepTorus(4,1),[[1,0,0,0.3],[0,1,0,0.7],[0,0,1,0.4],[0,0,0,1]]),torus={id:'b',name:'torus',brep,mesh:tessellateNurbsBrep(brep,4)},curved={...stock(),bodies:[stock().bodies[0],torus]},snapshot=JSON.stringify(curved)
+ const tolerant=cadOperation(curved,options)
+ expect(JSON.stringify(curved)).toBe(snapshot)
+ expect(tolerant.bodies).toHaveLength(1);expect(tolerant.bodies[0].brep.toleranceMm).toBeGreaterThan(1e-6)
 })
 it('retains rational cylindrical walls after an admitted curved Boolean',async()=>{
  const {createBrepCylinder}=await import('../src/services/geometry/brep')

@@ -1,3 +1,4 @@
+import { isModelGraphText } from './modelGraphTextDetect'
 import { parseParameterPresets, type ParameterPreset } from './parameterPresets'
 
 /**
@@ -300,9 +301,9 @@ export function loadLegacyTabsWorkspaceDocument(storage: WorkspaceStorage): Work
     const selected = tabs.find(tab => tab.id === activeId) ?? tabs[0]
     const rawName = selected.name.trim()
     const fileName = rawName.length > 0 && rawName.length <= MAX_WORKSPACE_FILE_NAME_LENGTH
-      ? (rawName.toLocaleLowerCase().endsWith('.scad')
+      ? (/\.(scad|mg)$/i.test(rawName)
           ? rawName
-          : `${rawName.slice(0, MAX_WORKSPACE_FILE_NAME_LENGTH - 5)}.scad`)
+          : `${rawName.slice(0, MAX_WORKSPACE_FILE_NAME_LENGTH - 5)}${isModelGraphText(selected.code) ? '.mg' : '.scad'}`)
       : 'model.scad'
     return createWorkspaceDocument(selected.code, { fileName })
   } catch {

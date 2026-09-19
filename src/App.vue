@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { isModelGraphText } from './services/modelGraphTextDetect'
+import { isModelGraphText, SOURCE_FILE_ACCEPT, SOURCE_FILE_EXTENSION, sourceFileExtension, withSourceExtension } from './services/modelGraphTextDetect'
 import { editorBlocks, indentSelection, guideFitsIndent } from './services/editorBlocks'
 import { formatCode } from './services/codeFormat'
 import { highlightCode } from './services/codeHighlight'
@@ -11,8 +11,10 @@ import ExampleGallery from './components/ExampleGallery.vue'
 const MechanicalGenerator = defineAsyncComponent(() => import('./features/MechanicalGenerator.vue'))
 import {restoreSourceHistory,boundedSourceHistory} from './services/mainSourceEditing'
 import type { DirectDocument } from './services/directModeling'
+import { emptyDirectDocument } from './services/directModeling'
+import type { DirectBody } from './services/directModeling'
 import type { WorkspaceMode } from './services/workspaceModes'
-import { workspaceModeHint } from './services/workspaceModes'
+import { WORKSPACE_MODES, workspaceModeHint, workspaceModeLabel } from './services/workspaceModes'
 import { sceneMeshesToSolidDocument, meshDocumentToSolidDocument, meshDataToPolygon, polygonToMeshObject } from './services/solidBridge'
 import { emptyMeshDocument, type MeshWorkspaceDocument } from './services/meshEditing'
 const DirectModeler = defineAsyncComponent(() => import('./features/DirectModeler.vue'))
@@ -385,30 +387,86 @@ function sceneMeshesToMeshDocument(): MeshWorkspaceDocument {
   return doc
 }
 
-const workspaceMode = computed<WorkspaceMode>(() => {
-  if (meshModelerOpen.value) return 'mesh'
-  if (directModelerOpen.value) return 'solid'
-  return 'code'
-})
+const workspaceMode = computed<WorkspaceMode>(() => (meshModelerOpen.value ? 'mesh' : 'solid'))
+
+/** Source is no longer a workspace of its own; it opens as a drawer over either one. */
+const editorOpen = ref(false)
+const solidBuilding = ref(false)
+const solidAppendBodies = ref<{ bodies: DirectBody[]; token: number; group?: { name: string; source: string; replaces: string | null } } | null>(null)
+/** Set while the left panel edits one scene group's source instead of the document. */
+const groupEdit = ref<{ name: string; source: string; replaces: string | null } | null>(null)
+const groupHighlight = computed(() => (groupEdit.value ? highlightCode(groupEdit.value.source, 'group.scad') : ''))
+
+function openGroupEditor(request: { name: string; source: string; replaces: string | null }) {
+  groupEdit.value = { ...request }
+  editorOpen.value = true
+}
 
 function openWorkspaceMode(mode: WorkspaceMode) {
-  if (mode === 'code') {
-    directModelerOpen.value = false
-    meshModelerOpen.value = false
-    solidSeedDocument.value = null
-    return
-  }
-  // Switching away from Code carries the built scene along, like the explicit "bring scene" actions.
-  const fromCode = workspaceMode.value === 'code' && sceneMeshes.value.length > 0 && !rendering.value
   if (mode === 'solid') {
-    if (fromCode) { bringCodeToSolid(); return }
     meshModelerOpen.value = false
     directModelerOpen.value = true
     return
   }
-  if (fromCode) { bringCodeToMesh(); return }
   directModelerOpen.value = false
   meshModelerOpen.value = true
+}
+
+// Solid is the resting workspace: with no Code tab there is nothing else to show.
+if (!directModelerOpen.value && !meshModelerOpen.value) directModelerOpen.value = true
+
+/**
+ * Builds the source as exact solids and hands them to the Solid workspace.
+ *
+ * This runs on the main thread: the bounded worker protocol accepts an exact set of
+ * result keys, so the exact graph cannot ride the display route yet. A large model
+ * will therefore block the interface until that protocol carries the graph too.
+ */
+/** Builds one group's own source and hands the bodies back tagged with its name. */
+async function buildSolidGroup(request: { name: string; source: string; replaces: string | null }) {
+  if (solidBuilding.value) return
+  solidBuilding.value = true
+  error.value = ''
+  try {
+    const [{ evaluateExactSolidsOnMainThread }, { buildExactSolidBodies }] = await Promise.all([
+      import('./services/geometryBuildEngine'),
+      import('./services/solid/brepBuild'),
+    ])
+    const evaluated = await evaluateExactSolidsOnMainThread(request.source)
+    const plan = evaluated.exactSolids
+    if (!plan || plan.roots.length === 0) {
+      error.value = lang.value === 'ru'
+        ? 'Код группы не описывает ни одного тела.'
+        : 'The group source describes no solids.'
+      return
+    }
+    const bodies = buildExactSolidBodies(plan.nodes, plan.roots)
+      .map(body => ({ ...body, group: request.name }))
+    solidAppendBodies.value = {
+      bodies,
+      group: { name: request.name, source: request.source, replaces: request.replaces },
+      token: (solidAppendBodies.value?.token ?? 0) + 1,
+    }
+    groupEdit.value = null
+  } catch (caught) {
+    error.value = caught instanceof Error ? caught.message : String(caught)
+  } finally {
+    solidBuilding.value = false
+  }
+}
+
+/**
+ * The editor's document becomes one group in the Solid scene, named after the file
+ * and carrying its source, so the dock lists it as code that can be edited and
+ * rebuilt; building again replaces the group instead of stacking copies.
+ */
+async function buildSolidFromSource() {
+  const name = fileName.value.replace(SOURCE_FILE_EXTENSION, '') || 'source'
+  await buildSolidGroup({ name, source: code.value, replaces: name })
+  if (error.value) return
+  meshModelerOpen.value = false
+  directModelerOpen.value = true
+  editorOpen.value = false
 }
 
 function bringCodeToMesh() {
@@ -568,7 +626,8 @@ const mainToolsRef = ref<InstanceType<typeof MainModelingTools> | null>(null)
 const MAIN_COMMAND_PREFIX = 'main:'
 const visiblePaletteCommands = computed<PaletteCommand[]>(() => {
   const base = paletteCommands.value.filter(isPaletteCommandEnabled)
-  if (workspaceMode.value !== 'code') return base
+  // The source tools only make sense while the editor drawer is showing.
+  if (!editorOpen.value) return base
   const tools = (mainToolsRef.value?.commands ?? []) as readonly PaletteCommand[]
   return [...base, ...tools.filter(command => command.enabled !== false).map(command => ({ ...command, id: MAIN_COMMAND_PREFIX + command.id }))]
 })
@@ -1721,7 +1780,7 @@ async function loadEditorDocument(example: string, nextFileName: string) {
 
 async function loadExample(id: string) {
   const example = EXAMPLES[id]
-  if (example) await loadEditorDocument(example, `${id}.scad`)
+  if (example) await loadEditorDocument(example, `${id}${sourceFileExtension(example)}`)
 }
 
 async function loadMechanicalModel(source: string, name: string) {
@@ -1775,7 +1834,7 @@ async function openFile(file: File) {
     return
   }
   code.value = source
-  const requestedName = file.name.endsWith('.scad') ? file.name : `${file.name}.scad`
+  const requestedName = withSourceExtension(file.name, source)
   fileName.value = requestedName.slice(0, MAX_WORKSPACE_FILE_NAME_LENGTH)
   fitNextRender = true
   showNotice(t('opened'))
@@ -1822,7 +1881,7 @@ function exportStl() {
   const bytes = buildBinaryStl(sceneMeshes.value, fileName.value)
   const buffer = new ArrayBuffer(bytes.byteLength)
   new Uint8Array(buffer).set(bytes)
-  downloadBlob(new Blob([buffer], { type: 'model/stl' }), sanitizeFileName(fileName.value).replace(/\.scad$/i, '.stl'))
+  downloadBlob(new Blob([buffer], { type: 'model/stl' }), sanitizeFileName(fileName.value).replace(SOURCE_FILE_EXTENSION, '.stl'))
   showNotice(t('exported'))
 }
 
@@ -2450,7 +2509,7 @@ function readCommandMru(): string[] {
   return [...new Set(value.filter((item): item is string => typeof item === 'string' && item.length > 0))].slice(0, 12)
 }
 function clamp(value: number, min: number, max: number) { return Math.max(min, Math.min(max, value)) }
-function sanitizeFileName(name: string) { return (name.replace(/[^\w.() -]+/g, '_') || 'model.scad').replace(/\.scad.*$/i, '.scad') }
+function sanitizeFileName(name: string) { return (name.replace(/[^\w.() -]+/g, '_') || 'model.scad').replace(/\.mg.*$/i, '.mg').replace(/\.scad.*$/i, '.scad') }
 
 </script>
 
@@ -2479,20 +2538,31 @@ function sanitizeFileName(name: string) { return (name.replace(/[^\w.() -]+/g, '
             <span class="menu-status" role="status">{{ persistenceLabel }}</span>
           </div>
         </details>
-        <input ref="fileInputRef" class="sr-only" type="file" accept=".scad,text/plain" @change="openSelectedFile">
+        <input ref="fileInputRef" class="sr-only" type="file" :accept="SOURCE_FILE_ACCEPT" @change="openSelectedFile">
         <input ref="convertInputRef" class="sr-only" type="file" :accept="MESH_IMPORT_ACCEPT" @change="convertSelectedFile">
       </div>
       <div class="mode-switch" role="group" :aria-label="lang === 'ru' ? 'Режим работы' : 'Workspace mode'">
         <button
-          v-for="mode in (['code', 'solid', 'mesh'] as const)"
+          v-for="mode in WORKSPACE_MODES"
           :key="mode"
           type="button"
           :class="{ active: workspaceMode === mode }"
           :aria-pressed="workspaceMode === mode"
           :title="workspaceModeHint(mode, lang)"
           @click="openWorkspaceMode(mode)"
-        >{{ mode === 'code' ? 'Code' : mode === 'solid' ? 'Solid' : 'Mesh' }}</button>
+        >{{ workspaceModeLabel(mode, lang) }}</button>
       </div>
+      <button
+        class="icon-btn source-toggle"
+        type="button"
+        :class="{ active: editorOpen }"
+        :aria-pressed="editorOpen"
+        :aria-label="lang === 'ru' ? 'Исходный код' : 'Source'"
+        :title="lang === 'ru' ? 'Исходный код' : 'Source'"
+        @click="editorOpen = !editorOpen"
+      >
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M8 6 3 12l5 6M16 6l5 6-5 6"/></svg>
+      </button>
       <div class="topbar-right">
         <div v-if="workspaceConflict" class="persistence-conflict" role="alert">
           <span>⚠ {{ t('storageConflict') }}</span>
@@ -2547,14 +2617,65 @@ function sanitizeFileName(name: string) { return (name.replace(/[^\w.() -]+/g, '
       </div>
     </nav>
 
-    <main ref="mainRef" class="main" :inert="directModelerOpen || meshModelerOpen || functionReferenceOpen">
-      <section class="editor-panel" :style="{ width: `${editorWidth}px` }" :aria-label="t('editor')">
+    <main
+      ref="mainRef"
+      class="main"
+      :class="{ 'editor-drawer': editorOpen }"
+      :inert="!editorOpen && (directModelerOpen || meshModelerOpen || functionReferenceOpen)"
+    >
+      <section
+        v-if="groupEdit"
+        class="editor-panel group-editor"
+        :style="{ width: `${editorWidth}px` }"
+        :aria-label="lang === 'ru' ? 'Код группы' : 'Group source'"
+      >
+        <div class="toolbar editor-toolbar">
+          <input
+            v-model="groupEdit.name"
+            class="group-name-input"
+            type="text"
+            maxlength="100"
+            :aria-label="lang === 'ru' ? 'Имя группы' : 'Group name'"
+          >
+          <span class="toolbar-spacer" aria-hidden="true" />
+          <button class="btn" type="button" @click="groupEdit = null">{{ lang === 'ru' ? 'Отмена' : 'Cancel' }}</button>
+          <button
+            class="btn btn-primary"
+            type="button"
+            :disabled="solidBuilding || !groupEdit.name.trim() || !groupEdit.source.trim()"
+            @click="buildSolidGroup({ ...groupEdit })"
+          >{{ solidBuilding ? '…' : (lang === 'ru' ? 'Построить' : 'Build') }}</button>
+        </div>
+        <div class="code-area group-code">
+          <pre class="code code-highlight" aria-hidden="true"><span class="highlight-content" v-html="groupHighlight" /></pre>
+          <textarea
+            v-model="groupEdit.source"
+            class="code code-input"
+            wrap="off"
+            spellcheck="false"
+            autocomplete="off"
+            :aria-label="lang === 'ru' ? 'Код группы' : 'Group source'"
+            :maxlength="100000"
+          />
+        </div>
+        <p class="group-hint">{{ lang === 'ru'
+          ? 'Строится как точные тела. hull, projection, offset и polyhedron точной формы не имеют и будут отклонены.'
+          : 'Built as exact solids. hull, projection, offset and polyhedron have no exact form and are refused.' }}</p>
+      </section>
+      <section v-else class="editor-panel" :style="{ width: `${editorWidth}px` }" :aria-label="t('editor')">
         <div class="toolbar editor-toolbar">
           <button class="btn btn-primary" type="button" title="Ctrl/⌘+Enter" :disabled="rendering" @click="doRender('full')">
             <svg class="play" width="11" height="11" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6 4v16l14-8z"/></svg>
             {{ t('render') }}
           </button>
           <label class="auto-check"><input v-model="autoRender" type="checkbox"> {{ t('auto') }}</label>
+          <button
+            class="btn"
+            type="button"
+            :disabled="solidBuilding"
+            :title="lang === 'ru' ? 'Собрать точные тела (NURBS) и открыть в Solid' : 'Build exact NURBS solids and open them in Solid'"
+            @click="buildSolidFromSource()"
+          >{{ solidBuilding ? '…' : (lang === 'ru' ? 'В Solid' : 'To Solid') }}</button>
           <span class="toolbar-spacer" aria-hidden="true" />
           <button class="btn" type="button" @click="exampleGalleryOpen = true">{{ t('examples') }}</button>
           <button class="btn" type="button" @click="mechanicalGeneratorOpen = true">{{ t('generators') }}</button>
@@ -2988,6 +3109,8 @@ function sanitizeFileName(name: string) { return (name.replace(/[^\w.() -]+/g, '
       :can-append="!isModelGraphText(code)"
       :remaining-source="MAX_WORKSPACE_SOURCE_LENGTH - code.length - 2"
       :seed-document="solidSeedDocument"
+      :append-bodies="solidAppendBodies"
+      @edit-group="openGroupEditor"
       :palette-request="solidPaletteRequest"
       @close="directModelerOpen = false; solidSeedDocument = null"
       @to-mesh="openMeshFromSolid"
@@ -3197,6 +3320,33 @@ button, select { color: inherit; }
 /* Layout */
 .no-gpu { position: absolute; z-index: 8; inset: 0; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 14px; color: var(--danger); background: var(--canvas-bg); font-size: 1rem; padding: 40px; text-align: center; }
 .main { flex: 1; min-height: 0; display: flex; overflow: hidden; }
+/* With no Code workspace the source opens over the active one. The viewport stays
+   laid out off to the side: hiding it would resize its canvas to zero. */
+.main.editor-drawer {
+  position: fixed;
+  inset: 46px auto 28px 0;
+  z-index: 30;
+  width: min(560px, 82vw);
+  border-right: 1px solid var(--border);
+  box-shadow: 0 0 40px #0006;
+}
+.main.editor-drawer > .splitter { display: none; }
+.main.editor-drawer > section:not(.editor-panel) {
+  position: absolute;
+  inset: 0 auto 0 100%;
+  width: 60vw;
+  visibility: hidden;
+  pointer-events: none;
+}
+.main.editor-drawer .editor-panel { width: 100% !important; max-width: none; }
+.source-toggle.active { color: var(--accent); border-color: var(--accent); }
+.group-editor { display: flex; flex-direction: column; min-height: 0; }
+.group-name-input { flex: 1; min-width: 0; padding: 5px 8px; background: var(--surface-raised); color: var(--text); border: 1px solid var(--border); border-radius: 5px; font: inherit; }
+.group-editor .code-area { position: relative; flex: 1; min-height: 0; overflow: auto; }
+.group-editor .code-highlight { position: absolute; inset: 0; margin: 0; pointer-events: none; }
+.group-editor .code-input { position: relative; width: 100%; height: 100%; background: transparent; color: transparent; caret-color: var(--text); border: 0; resize: none; outline: none; }
+.group-hint { margin: 0; padding: 8px 12px; color: var(--text-dim); font-size: 11.5px; line-height: 1.5; border-top: 1px solid var(--border); }
+
 .editor-panel {
   min-width: 300px; min-height: 0; max-width: calc(100vw - 320px); display: flex; flex-direction: column;
   background: var(--bg); border-right: 1px solid var(--border); overflow-x: hidden; overflow-y: auto;
@@ -3290,7 +3440,7 @@ button, select { color: inherit; }
   position: absolute; z-index: 3; top: 12px; left: 50%; transform: translateX(-50%);
   display: flex; align-items: center; gap: 2px; max-width: calc(100% - 24px); padding: 4px;
   border: 1px solid var(--border); border-radius: 12px;
-  background: color-mix(in srgb, var(--surface) 86%, transparent); backdrop-filter: blur(10px); color: var(--text);
+  background: color-mix(in srgb, var(--surface) 86%, transparent); backdrop-filter: blur(6px); color: var(--text);
 }
 .viewer-toolbar.with-dock { left: calc((100% - 344px) / 2); max-width: calc(100% - 368px); }
 .view-btn { min-height: 32px; padding: 0 11px; border-color: transparent; color: var(--text-dim); font-size: 13px; font-weight: 500; }
@@ -3307,7 +3457,7 @@ button, select { color: inherit; }
 .selection-modes {
   position: absolute; z-index: 3; top: 60px; left: 14px; display: flex; flex-direction: column; gap: 2px; padding: 3px;
   border: 1px solid var(--border); border-radius: 9px; background: color-mix(in srgb, var(--surface) 86%, transparent);
-  color: var(--text); backdrop-filter: blur(8px);
+  color: var(--text); backdrop-filter: blur(5px);
 }
 .selection-modes button {
   min-height: 34px; min-width: 34px; display: flex; align-items: center; justify-content: center; gap: 6px; padding: 0 8px; border: 0;
@@ -3350,7 +3500,7 @@ button, select { color: inherit; }
 .dock-scroll > .performance-panel .performance-content { max-height: none; padding: 12px; }
 .canvas-panel :deep(.main-model-tools) {
   left: 14px; right: auto; bottom: 34px; max-width: calc(100% - 28px); padding: 6px 8px; border-radius: 12px;
-  background: color-mix(in srgb, var(--surface) 90%, transparent); backdrop-filter: blur(10px);
+  background: color-mix(in srgb, var(--surface) 90%, transparent); backdrop-filter: blur(6px);
 }
 .canvas-panel.with-dock :deep(.main-model-tools) { max-width: calc(100% - 372px); }
 
@@ -3360,7 +3510,7 @@ button, select { color: inherit; }
   position: absolute; z-index: 3; top: 12px; left: 14px; display: flex; align-items: center; gap: 8px;
   min-height: 30px; padding: 0 6px 0 10px; border: 1px solid var(--border);
   border-radius: var(--radius); background: color-mix(in srgb, var(--surface) 86%, transparent); color: var(--text);
-  backdrop-filter: blur(8px); font-size: 12.5px;
+  backdrop-filter: blur(5px); font-size: 12.5px;
 }
 .selection-hud > span { display: flex; align-items: center; gap: 6px; }
 .selection-dot { width: 8px; height: 8px; border-radius: 2px; background: var(--accent); }
@@ -3373,7 +3523,7 @@ button, select { color: inherit; }
   position: absolute; z-index: 2; top: 58px; left: 50%; transform: translateX(-50%);
   display: flex; align-items: center; gap: 7px; padding: 6px 12px; border-radius: 999px;
   background: color-mix(in srgb, var(--surface) 86%, transparent); color: var(--text); border: 1px solid var(--border);
-  backdrop-filter: blur(8px); font-size: 12px; pointer-events: none;
+  backdrop-filter: blur(5px); font-size: 12px; pointer-events: none;
 }
 .stale-badge { color: var(--warning); }
 .spinner { width: 11px; height: 11px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin .7s linear infinite; }

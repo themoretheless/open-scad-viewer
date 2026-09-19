@@ -93,6 +93,84 @@ pub(crate) fn assemble_imprint_solid(
     Ok(model)
 }
 
+/// Like `assemble_imprint_solid`, but the authored faces may form several
+/// edge-connected components; each becomes its own closed outer shell and
+/// body. Used when a regularized difference splits an operand into pieces.
+/// Nested (cavity) components are not produced by imprint families, since
+/// every component touches the shared intersection network.
+pub(crate) fn assemble_imprint_components(
+    vertices: Vec<Vertex>,
+    edges: Vec<Edge>,
+    loops: Vec<Loop>,
+    faces: Vec<Face>,
+    shell_faces: Vec<FaceUse>,
+    tolerance: f64,
+    sources: &[&Model],
+) -> Result<Model> {
+    let mut parent: Vec<usize> = (0..shell_faces.len()).collect();
+    fn find(parent: &mut [usize], i: usize) -> usize {
+        let mut i = i;
+        while parent[i] != i {
+            parent[i] = parent[parent[i]];
+            i = parent[i];
+        }
+        i
+    }
+    let mut owner_of_edge: BTreeMap<usize, usize> = BTreeMap::new();
+    for (use_index, face_use) in shell_faces.iter().enumerate() {
+        let face = &faces[face_use.face];
+        for loop_id in std::iter::once(face.outer).chain(face.holes.iter().copied()) {
+            for coedge in &loops[loop_id].coedges {
+                match owner_of_edge.get(&coedge.edge) {
+                    Some(&other) => {
+                        let a = find(&mut parent, other);
+                        let b = find(&mut parent, use_index);
+                        parent[a] = b;
+                    }
+                    None => {
+                        owner_of_edge.insert(coedge.edge, use_index);
+                    }
+                }
+            }
+        }
+    }
+    let mut groups: BTreeMap<usize, Vec<FaceUse>> = BTreeMap::new();
+    for (use_index, face_use) in shell_faces.iter().enumerate() {
+        let root = find(&mut parent, use_index);
+        groups.entry(root).or_default().push(face_use.clone());
+    }
+    if groups.len() == 1 {
+        return assemble_imprint_solid(vertices, edges, loops, faces, shell_faces, tolerance, sources);
+    }
+    let mut shells = Vec::with_capacity(groups.len());
+    let mut bodies = Vec::with_capacity(groups.len());
+    for (_, group) in groups {
+        bodies.push(Body {
+            outer_shell: shells.len(),
+            inner_shells: vec![],
+        });
+        shells.push(Shell {
+            faces: group,
+            closed: true,
+        });
+    }
+    let mut model = Model(
+        brep_topology::Model {
+            vertices,
+            edges,
+            loops,
+            faces,
+            shells,
+            bodies,
+            tolerance_mm: tolerance,
+        },
+        TopologyIds::default(),
+    );
+    model.inherit_topology_ids(sources);
+    model.validate()?;
+    Ok(model)
+}
+
 /// Validate imprint events and build an ordered plan skeleton.
 /// Pair families supply Complete SS-derived events; this refuses empty /
 /// non-finite / duplicate-parameter strata without a stratum label.

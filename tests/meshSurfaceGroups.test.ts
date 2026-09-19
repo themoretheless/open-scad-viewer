@@ -19,7 +19,7 @@ it('does not cross cube creases or join disconnected coplanar triangles',async()
 })
 it('groups the original spinner bore around the complete ring',async()=>{
  const {readFileSync}=await import('node:fs')
- const {meshes}=await parseOpenSCAD(readFileSync('examples/modelgraph-text/planetary-spinner.scad','utf8'))
+ const {meshes}=await parseOpenSCAD(readFileSync('examples/modelgraph-text/planetary-spinner.mg','utf8'))
  let found=false
  for(const raw of meshes){const mesh=withSelectionSurfaces(raw);for(let t=0;t<mesh.indices.length/3;t++){
   const points=Array.from(mesh.indices.subarray(t*3,t*3+3),i=>Array.from(mesh.vertices.subarray(i*6,i*6+3)))

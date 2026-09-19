@@ -887,6 +887,14 @@ impl Compiler {
                         self.geometry(curve).map(J::String)
                     }).collect::<R<Vec<_>>>().map(J::Array)
                 }).collect::<R<_>>()?)
+            } else if ["herringbone", "internal", "left_handed"].contains(&key) {
+                // Text has no boolean literal: true/false lower to 1/0, and the
+                // canonical schema wants a JSON boolean for these flags.
+                match raw(v)? {
+                    J::Bool(b) => J::Bool(b),
+                    J::Number(n) => J::Bool(n.as_f64().is_some_and(|x| x != 0.)),
+                    _ => return Err(crate::error(format!("{key} expects true or false"))),
+                }
             } else {
                 raw(v)?
             }
@@ -2014,6 +2022,19 @@ fn signature(name: &str) -> Option<&'static [&'static str]> {
         "brep_cylinder" => &["radius", "height"],
         "brep_frustum" => &["bottom_radius", "top_radius", "height"],
         "brep_tube" => &["outer_radius", "inner_radius", "height"],
+        "brep_gear" => &[
+            "module",
+            "teeth",
+            "height",
+            "pressure_angle",
+            "helix_angle",
+            "herringbone",
+            "bore",
+            "internal",
+            "rim_width",
+            "clearance",
+            "backlash",
+        ],
         "brep_revolve" => &["angle"],
         "brep_extrude" => &["height"],
         "brep_extrude_curves" => &["loops", "z_min", "z_max"],
@@ -2034,6 +2055,36 @@ fn signature(name: &str) -> Option<&'static [&'static str]> {
         "tessellate" => &["segments_u", "segments_v"],
         "thicken" => &["vector"],
         "transform" => &["matrix"],
+        "gear" => &[
+            "teeth",
+            "module",
+            "thickness",
+            "pressure_angle",
+            "bore",
+            "backlash",
+            "clearance",
+            "internal",
+            "rim_width",
+            "flank_segments",
+            "helix_angle",
+            "herringbone",
+        ],
+        "planetary_gears" => &[
+            "sun_teeth",
+            "planet_teeth",
+            "planet_count",
+            "module",
+            "thickness",
+            "pressure_angle",
+            "bore",
+            "backlash",
+            "clearance",
+            "rim_width",
+            "flank_segments",
+            "carrier_angle",
+            "helix_angle",
+            "herringbone",
+        ],
         "planetary_spinner" => &[
             "inner_radius",
             "outer_radius",

@@ -46,7 +46,7 @@ describe('own Rust CAD qualification v1', () => {
         expect(() => mesh.volume()).toThrow(/deleted/i);
     });
     it('builds the complete SKADIS box without open boundaries', async () => {
-        const source = readFileSync(new URL('../examples/skadis-box/skadis-dovetail.modelgraph.scad', import.meta.url), 'utf8');
+        const source = readFileSync(new URL('../examples/skadis-box/skadis-dovetail.mg', import.meta.url), 'utf8');
         const result = await parseOpenSCAD(compileModelGraphText(source).source);
         expect(result.meshes).toHaveLength(3);
         // Manufacturing-scale tolerance against the previous independently recorded box.

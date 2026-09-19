@@ -1,4 +1,5 @@
 import { boundedSceneEntityId } from '../core/boundedSceneEntityId'
+import { brepGearFaceCount } from './geometry/brep'
 import { evaluateModelGraphGeometry, requireModelGraphChecks } from './modelGraphChecks'
 /**
  * Strict, intentionally documented OpenSCAD subset backed by the official geometry kernel.
@@ -23,6 +24,7 @@ import { identity, type Mat4 } from './math3d'
 import { buildMeshBvh } from './meshBvh'
 import { extractSemanticEdges } from './meshTopology'
 import { AbortedError, OpenSCADParseError, positionKernelError } from './openscadErrors'
+import { createBrepRecordingKernelOps } from './solid/brepRecorder'
 import { bindOpenScad, prepareOpenScadFrontEnd } from './openscadBinder'
 import {
   createDeferredOpenScadBuiltinArguments,
@@ -133,6 +135,12 @@ import { CSS_COLORS, clamp01, nextColor, resetPalette, type RGBA } from './opens
 export { AbortedError, OpenSCADParseError } from './openscadErrors'
 
 export interface ParseOptions {
+  /**
+   * Record the exact solid graph beside the polygon evaluation, for the Solid
+   * workspace. Off by default: the bounded worker protocol accepts an exact set of
+   * result keys, so the field must not appear on the ordinary display route.
+   */
+  recordExactSolids?: boolean
   /** Versioned frontend profile. The legacy public route remains subset@1. */
   languageProfile?: OpenScadLanguageProfile
   quality?: GeometryQuality
@@ -1566,6 +1574,33 @@ async function evalNode(node: CallNode, parent: EvalContext): Promise<Shape[]> {
       const r = finiteNumber(radius, ctx, node.p, 'sphere radius')
       if (r <= 0) evaluationError(ctx, node.p, 'Sphere radius must be positive')
       return [trackedSolid(kernelCall(ctx, node.p, () => ctx.kernel.sphere(r, segments(node, ctx, 32, 4, r))), nextColor(), node, ctx)]
+    }
+    case 'brep_gear': {
+      // Involute gear as an exact NURBS body (spur, helical, herringbone; external
+      // with a bore or internal with a rim). Mesh gets the tessellation, Solid the body.
+      const num = (name: string, position: number, fallback: number) =>
+        finiteNumber(arg(node, name, position, fallback, ctx), ctx, node.p, `brep_gear ${name}`)
+      const spec = {
+        module: num('module', 0, 1),
+        teeth: Math.round(num('teeth', 1, 20)),
+        height: num('height', 2, 5),
+        pressureAngle: num('pressure_angle', -1, 20),
+        helixAngle: num('helix', -1, 0),
+        herringbone: arg(node, 'herringbone', -1, false, ctx) === true,
+        bore: num('bore', -1, 0),
+        internal: arg(node, 'internal', -1, false, ctx) === true,
+        rimWidth: num('rim_width', -1, 2),
+        clearance: num('clearance', -1, 0.25),
+        backlash: num('backlash', -1, 0),
+      }
+      if (spec.module <= 0 || spec.teeth < 3 || spec.height <= 0) evaluationError(ctx, node.p, 'brep_gear needs a positive module and height and at least 3 teeth')
+      // Six wall faces per tooth (twice for a herringbone), each tessellated into
+      // about 2*detail^2 triangles: keep every gear under the bridge's display
+      // budget instead of letting a large ring gear fail at the user's $fn.
+      const faces = brepGearFaceCount(spec)
+      let detail = Math.max(1, Math.min(32, Math.round(segments(node, ctx, 32, 8, spec.module * spec.teeth / 2) / 8)))
+      while (detail > 1 && 2 * faces * detail * detail > 16000) detail--
+      return [trackedSolid(kernelCall(ctx, node.p, () => ctx.kernel.gear(spec, detail)), nextColor(), node, ctx)]
     }
     case 'cylinder': return isStableProfile(ctx) ? makeStableCylinder(node, ctx) : makeCylinder(node, ctx)
     case 'polyhedron': return isStableProfile(ctx) ? makeStablePolyhedron(node, ctx) : makePolyhedron(node, ctx)
@@ -3744,6 +3779,11 @@ async function parseInternal(
       ])
   const parsedAt = now()
   const kernelSession = await defaultGeometryKernel.openEvalSession()
+  // Recording costs only a small JSON graph, but it is opt-in because the result
+  // crosses a protocol that validates an exact set of keys.
+  const exactRecorder = options.recordExactSolids === true
+    ? createBrepRecordingKernelOps(kernelSession.kernel)
+    : null
   const warnings: string[] = []
   const modules = new Map(bound.modules)
   const functions = new Map(bound.functions)
@@ -3757,7 +3797,7 @@ async function parseInternal(
   const sourceReferences = new Map<number, MeshSourceReference>()
   const reduced = { value: false }
   let ctx: EvalContext = {
-    kernel: kernelSession.kernel,
+    kernel: exactRecorder?.ops ?? kernelSession.kernel,
     source,
     project,
     importAssets,
@@ -3802,8 +3842,15 @@ async function parseInternal(
     let volume = 0
     let surfaceArea = 0
     let triangleCount = 0
-    for (const shape of solids) {
+    const exactRoots: NonNullable<ParseResult['exactSolids']>['roots'][number][] = []
+    for (const [index, shape] of solids.entries()) {
       if (options.shouldAbort?.()) throw new AbortedError()
+      // Resolved here, while the handle is still alive and before its mesh is extracted.
+      if (exactRecorder) {
+        const name = `Body ${index + 1}`
+        const resolved = exactRecorder.recording.resolve(shape.geometry)
+        exactRoots.push('id' in resolved ? { name, id: resolved.id } : { name, inexact: resolved.inexact })
+      }
       const analysis = ctx.kernel.analyzeSolid(shape.geometry)
       volume += analysis.volume
       surfaceArea += analysis.surfaceArea
@@ -3868,6 +3915,7 @@ async function parseInternal(
     const analyzedAt = now()
     return {
       meshes, warnings, volume, surfaceArea, quality, reduced: reduced.value,
+      ...(exactRecorder ? { exactSolids: { nodes: exactRecorder.recording.nodes, roots: exactRoots } } : {}),
       timings: {
         parseMs,
         bindMs,

@@ -4,7 +4,7 @@ import {meshToNurbsBrep,meshToSdf,meshToSubdivision,meshToNurbs,tessellateNurbsP
 import type {SubdivisionCage} from './geometry/subdivision';
 import {tessellateSubdivision} from './geometry/subdivision';
 import {tessellateSdfGpuAware as tessellateSdf,evaluateSdf,type SdfField} from './geometry/sdf';
-import {transformNurbsBrep,createBrepSphere,createBrepTorus,createBrepBox,revolveBrepProfile,createBrepCylinder,createBrepFrustum,createBrepTube,extrudeBrepCurves,extrudeBrepPolygon,booleanNurbsBrep,chamferNurbsBrepEdges,filletNurbsBrepEdges,tessellateNurbsBrep,type NurbsBrep} from './geometry/brep';
+import {transformNurbsBrep,createBrepSphere,createBrepGear,createBrepTorus,createBrepBox,revolveBrepProfile,createBrepCylinder,createBrepFrustum,createBrepTube,extrudeBrepCurves,extrudeBrepPolygon,booleanNurbsBrep,chamferNurbsBrepEdges,filletNurbsBrepEdges,tessellateNurbsBrep,type NurbsBrep} from './geometry/brep';
 import { inspectPolygonMesh,booleanPolygonMeshes } from './geometry/polygon';
 import { exportMeshFormat, meshExportBase64, type MeshExportFormat } from './meshExportFormats';
 import { compileModelGraphNurbs } from './modelGraphNurbs';
@@ -198,6 +198,7 @@ export function buildOwnNurbs(document: unknown, request: OwnNurbsRequest) {
                     result={kind:'brep',data:createBrepBox(n.min,n.max)};
                     break;
                 case 'brep_sphere': result={kind:'brep',data:createBrepSphere(n.radius)};break;
+                case 'brep_gear': result={kind:'brep',data:createBrepGear({module:n.module,teeth:n.teeth,height:n.height,pressureAngle:n.pressure_angle,helixAngle:n.helix_angle,herringbone:n.herringbone,bore:n.bore,internal:n.internal,rimWidth:n.rim_width,clearance:n.clearance,backlash:n.backlash})};break;
                 case 'brep_torus': result={kind:'brep',data:createBrepTorus(n.major_radius,n.minor_radius)};break;
                 case 'brep_cylinder': result={kind:'brep',data:createBrepCylinder(n.radius,n.height)};break;
                 case 'brep_frustum': result={kind:'brep',data:createBrepFrustum(n.bottom_radius,n.top_radius,n.height)};break;

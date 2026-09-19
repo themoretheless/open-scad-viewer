@@ -3,7 +3,7 @@ import { expect,it } from 'vitest'
 import {compileModelGraphText} from '../src/services/modelGraphText'
 import {parseOpenSCAD} from '../src/services/openscadParser'
 import {buildOwnNurbs} from '../src/services/modelGraphNurbsKernel'
-const source=readFileSync('examples/modelgraph-text/nurbs-boolean.scad','utf8')
+const source=readFileSync('examples/modelgraph-text/nurbs-boolean.mg','utf8')
 it('lowers compact parameters and mesh booleans to own Rust and renders directly',async()=>{
  const compiled=compileModelGraphText(source)
  expect(compiled.execution_target).toBe('own-nurbs')

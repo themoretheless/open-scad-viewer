@@ -21,9 +21,10 @@ import { meshDocumentToSolidDocument, solidDocumentToMeshDocument } from '../src
 import { emptyDirectDocument } from '../src/services/directModeling'
 
 describe('workspace modes', () => {
-  it('exposes Code · Solid · Mesh', () => {
-    expect(WORKSPACE_MODES).toEqual(['code', 'solid', 'mesh'])
+  it('exposes Solid · Mesh, source being a drawer rather than a workspace', () => {
+    expect(WORKSPACE_MODES).toEqual(['solid', 'mesh'])
     expect(isWorkspaceMode('solid')).toBe(true)
+    expect(isWorkspaceMode('code')).toBe(false)
     expect(isWorkspaceMode('assembly')).toBe(false)
   })
 })

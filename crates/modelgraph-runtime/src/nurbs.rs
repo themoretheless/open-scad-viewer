@@ -587,6 +587,7 @@ pub fn compile_text(nodes: Vec<J>, parameters: &[J], mut root: String) -> Result
             "brep_cylinder",
             "brep_frustum",
             "brep_tube",
+            "brep_gear",
             "brep_extrude",
             "brep_extrude_curves",
             "brep_revolve",
@@ -658,6 +659,11 @@ pub fn compile_text(nodes: Vec<J>, parameters: &[J], mut root: String) -> Result
                     "top_radius",
                     "inner_radius",
                     "outer_radius",
+                    "module",
+                    "bore",
+                    "rim_width",
+                    "clearance",
+                    "backlash",
                     "size",
                     "major_radius",
                     "minor_radius",
@@ -671,7 +677,7 @@ pub fn compile_text(nodes: Vec<J>, parameters: &[J], mut root: String) -> Result
                 .contains(&key.as_str())
                 {
                     LENGTH
-                } else if key == "angle" {
+                } else if ["angle", "pressure_angle", "helix_angle"].contains(&key.as_str()) {
                     ANGLE
                 } else {
                     SCALAR

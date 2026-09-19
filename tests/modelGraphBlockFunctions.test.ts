@@ -5,7 +5,7 @@ import { compileModelGraph } from '../src/services/modelGraph'
 import { parseOpenSCAD } from '../src/services/openscadParser'
 const header='// @modelgraph-text/1\n'
 const compile=(text:string)=>compileModelGraphText(header+text)
-const source=readFileSync('examples/modelgraph-text/generic-functions.scad','utf8')
+const source=readFileSync('examples/modelgraph-text/generic-functions.mg','utf8')
 
 it('builds the agreed generic column syntax and preserves parameter dependencies',async()=>{
  const c=compileModelGraphText(source)
@@ -172,7 +172,7 @@ it.each([
  expect(()=>compile(text+'\nshow sphere(1)')).toThrow()
 })
 it('builds the indented functions example as a solid',async()=>{
- const text=readFileSync('examples/modelgraph-text/indented-functions.scad','utf8')
+ const text=readFileSync('examples/modelgraph-text/indented-functions.mg','utf8')
  const built=await parseOpenSCAD(text)
  expect(built.volume).toBeCloseTo(2400)
 })
