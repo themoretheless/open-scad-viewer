@@ -317,6 +317,34 @@ Reopen these only for a demonstrated regression.
   renderer edge/control-point picking; persist snapshots beside native
   geometry artifacts.
 
+### Native P0 — CSG kernel scaling
+
+- **Priority/status:** P0 / In progress
+- **Evidence:** the own BSP Boolean refused ordinary OpenSCAD workloads on
+  HEAD `fdf7b1a`: a plate minus 49 cylinders at `$fn=32`, a union of three
+  separated spheres at `$fn=64`, two overlapping spheres at `$fn=48`; both
+  `bench:cpu` CSG fixtures failed. Three causes were fixed on 2026-09-19:
+  the 10k-triangle admission cap now applies only to BSP clipping, so
+  separated/nested operands take exact fast paths (three `$fn=128` spheres
+  build in ~70 ms); `union_many`/`difference_many` fold n-ary operations by
+  bound connectivity instead of sequentially, and `difference()` passes each
+  child as its own operand; `prism_boolean` accepts a cutter that spans the
+  base, so a 36-hole plate builds in 73 ms instead of 284 ms. Measurements,
+  baselines and the reproducible ladder live in
+  [`csg-scaling-2026-09-19.md`](design/csg-scaling-2026-09-19.md),
+  `node --import tsx benchmarks/own-cad/bench-csg-scaling.mts` and `bench_boolean`.
+- **Risk:** BSP construction is quadratic on curved bodies (two 2,300-triangle
+  spheres exhaust the work budget); the planar triangulation with holes fails
+  on an aligned 4×4 hole grid and caps profiles at 2,048 vertices, which blocks
+  the prism path and coplanar simplification for 64-hole plates; sequential
+  BSP steps then re-fragment whole caps (14,700 triangles after 14 steps).
+- **Acceptance remaining:** robust polygon-with-holes triangulation (monotone
+  sweep, no coordinate nudging) behind the prism path, `extrude_rings` and
+  `simplify`; an ADR choosing between an arrangement-based Boolean on
+  `cad-predicates` and `manifold-rust`; `bench:cpu` `medium-csg` and
+  `dense-sphere` fixtures passing or explicitly re-scoped to the kernel's
+  documented per-mesh budget.
+
 ### Print P2 — mesh sections to G-code preview
 
 - **Priority/status:** P2 / Preview pipeline implemented; machine-specific output pending.

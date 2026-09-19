@@ -1,0 +1,141 @@
+{
+  "kind": "csg-scaling",
+  "node": "v22.23.2",
+  "recordedAt": "2026-09-19T14:06:22.083Z",
+  "rows": [
+    {
+      "id": "difference/plate-1-holes-fn32",
+      "status": "ok",
+      "medianMs": 1.2,
+      "triangles": 144,
+      "meshes": 1,
+      "evaluateMs": 1,
+      "analyzeMs": 1,
+      "volume": 58943.25594903742,
+      "expectedVolume": 58943.25594903742,
+      "volumeError": 0
+    },
+    {
+      "id": "difference/plate-4-holes-fn32",
+      "status": "ok",
+      "medianMs": 3.1,
+      "triangles": 540,
+      "meshes": 1,
+      "evaluateMs": 2,
+      "analyzeMs": 1,
+      "volume": 58269.023796149675,
+      "expectedVolume": 58269.02379614968,
+      "volumeError": 1.248683629854154e-16
+    },
+    {
+      "id": "difference/plate-16-holes-fn32",
+      "status": "ok",
+      "medianMs": 97.6,
+      "triangles": 2124,
+      "meshes": 1,
+      "evaluateMs": 94,
+      "analyzeMs": 3,
+      "volume": 55572.09518459874,
+      "expectedVolume": 55572.09518459872,
+      "volumeError": 2.6185651593715287e-16
+    },
+    {
+      "id": "difference/plate-36-holes-fn32",
+      "status": "ok",
+      "medianMs": 72.9,
+      "triangles": 4764,
+      "meshes": 1,
+      "evaluateMs": 67,
+      "analyzeMs": 5,
+      "volume": 51077.214165347126,
+      "expectedVolume": 51077.21416534713,
+      "volumeError": 1.4245016555972883e-16
+    },
+    {
+      "id": "difference/plate-64-holes-fn32",
+      "status": "error",
+      "ms": 281.8,
+      "message": "Line 2, column 1: Geometry kernel: Stitch: Boolean work/fragment/output budget exceeded; reduce mesh complexity"
+    },
+    {
+      "id": "difference/plate-100-holes-fn32",
+      "status": "error",
+      "ms": 272.8,
+      "message": "Line 2, column 1: Geometry kernel: Stitch: Boolean work/fragment/output budget exceeded; reduce mesh complexity"
+    },
+    {
+      "id": "difference/plate-16-spherical-pockets-fn16",
+      "status": "ok",
+      "medianMs": 110,
+      "triangles": 2092,
+      "meshes": 1,
+      "evaluateMs": 107,
+      "analyzeMs": 2,
+      "volume": 58319.85517995197
+    },
+    {
+      "id": "difference/plate-64-spherical-pockets-fn16",
+      "status": "error",
+      "ms": 300.7,
+      "message": "Line 2, column 1: Geometry kernel: Stitch: Boolean work/fragment/output budget exceeded; reduce mesh complexity"
+    },
+    {
+      "id": "union/3-separated-spheres-fn32",
+      "status": "ok",
+      "medianMs": 4.1,
+      "triangles": 2880,
+      "meshes": 1,
+      "evaluateMs": 1,
+      "analyzeMs": 3,
+      "volume": 333877.28100365365
+    },
+    {
+      "id": "union/3-separated-spheres-fn64",
+      "status": "ok",
+      "medianMs": 17,
+      "triangles": 11904,
+      "meshes": 1,
+      "evaluateMs": 4,
+      "analyzeMs": 13,
+      "volume": 337931.65671141556
+    },
+    {
+      "id": "union/3-separated-spheres-fn128",
+      "status": "ok",
+      "medianMs": 71.6,
+      "triangles": 48384,
+      "meshes": 1,
+      "evaluateMs": 18,
+      "analyzeMs": 53,
+      "volume": 338951.5009650375
+    },
+    {
+      "id": "union/3-separated-spheres-fn192",
+      "status": "error",
+      "ms": 43.6,
+      "message": "Line 1, column 10: Geometry kernel: Mesh exceeds the polygon resource budget."
+    },
+    {
+      "id": "union/2-overlapping-spheres-fn32",
+      "status": "ok",
+      "medianMs": 59.5,
+      "triangles": 1600,
+      "meshes": 1,
+      "evaluateMs": 58,
+      "analyzeMs": 2,
+      "volume": 188203.38327274573
+    },
+    {
+      "id": "union/2-overlapping-spheres-fn48",
+      "status": "error",
+      "ms": 30.8,
+      "message": "Line 1, column 9: Geometry kernel: Build B: Boolean work budget exceeded during BSP construction"
+    },
+    {
+      "id": "union/2-overlapping-spheres-fn64",
+      "status": "error",
+      "ms": 41.1,
+      "message": "Line 1, column 9: Geometry kernel: Build A: Boolean work budget exceeded during BSP construction"
+    }
+  ]
+}

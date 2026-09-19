@@ -39,6 +39,9 @@ pub struct Options {
     pub relative_tolerance: f64,
     pub max_work: usize,
     pub max_fragments: usize,
+    /// Cap on clipped (BSP) output. Separated, nested, identical or empty
+    /// operands return whole input surfaces, which are bounded by the inputs
+    /// and by `Mesh::validate` instead.
     pub max_output_triangles: usize,
 }
 impl value_codec::Serialize for Options {
@@ -100,6 +103,9 @@ impl<'de> value_codec::Deserialize<'de> for Options {
         })
     }
 }
+/// Largest combined input the BSP clipping path admits. Exact fast paths for
+/// separated, nested, identical or empty operands are not limited by it.
+pub const BSP_INPUT_TRIANGLES: usize = 10_000;
 fn default_tolerance() -> f64 {
     1e-9
 }
@@ -877,9 +883,12 @@ pub fn boolean(a: &Mesh, b: &Mesh, operation: Operation, options: &Options) -> R
         ));
     }
     let input_triangles = [a.indices.len() / 3, b.indices.len() / 3];
-    if input_triangles.iter().sum::<usize>() > 10_000 {
-        return Err(limit());
-    }
+    // Inputs above the BSP admission cap can still take an exact fast path
+    // (separated, nested, identical or empty operands). Those results are
+    // bounded by their inputs, so only the BSP path keeps the cap; the
+    // tolerance-budgeted intersection audits are skipped above it and the
+    // report says so through `self_intersection_status`.
+    let audited = input_triangles.iter().sum::<usize>() <= BSP_INPUT_TRIANGLES;
     let mut min = [f64::INFINITY; 3];
     let mut max = [f64::NEG_INFINITY; 3];
     for mesh in [a, b] {
@@ -916,10 +925,12 @@ pub fn boolean(a: &Mesh, b: &Mesh, operation: Operation, options: &Options) -> R
         fragments: 0,
         options: options.clone(),
     };
-    for (index, mesh) in [&a, &b].into_iter().enumerate() {
-        validation::geometry(mesh, eps, &mut budget)
-            .map_err(|e| error(e.code, format!("Input {index}: {}", e.message)))?;
-        validation::orientation(mesh, eps, &mut budget)?;
+    if audited {
+        for (index, mesh) in [&a, &b].into_iter().enumerate() {
+            validation::geometry(mesh, eps, &mut budget)
+                .map_err(|e| error(e.code, format!("Input {index}: {}", e.message)))?;
+            validation::orientation(mesh, eps, &mut budget)?;
+        }
     }
     // Exact mesh identity avoids unnecessary splitting of densely sampled surfaces.
     // Validation above still applies: identity cannot admit malformed solids.
@@ -982,6 +993,10 @@ pub fn boolean(a: &Mesh, b: &Mesh, operation: Operation, options: &Options) -> R
                 .iter()
                 .map(|p| dot(axis, [p[0], p[1], p[2]]))
                 .fold(f64::INFINITY, f64::min);
+    // `fast` marks results assembled from whole input surfaces without BSP
+    // clipping; their size is bounded by the inputs and they carry no new
+    // seams, so the output cap and coplanar simplification do not apply.
+    let mut fast = true;
     let mut result = if separated {
         match operation {
             Operation::Union => crate::solid::primitives::join(&[a, b])?,
@@ -1031,6 +1046,10 @@ pub fn boolean(a: &Mesh, b: &Mesh, operation: Operation, options: &Options) -> R
             },
         }
     } else {
+        if !audited {
+            return Err(limit());
+        }
+        fast = false;
         budget.stage = "BSP construction";
         let mut a = Bsp::build(polygons(&a, eps, &mut budget)?, eps, &mut budget)
             .map_err(|e| error(e.code, format!("Build A: {}", e.message)))?;
@@ -1072,12 +1091,15 @@ pub fn boolean(a: &Mesh, b: &Mesh, operation: Operation, options: &Options) -> R
         stitch(polys, eps, &mut budget)
             .map_err(|e| error(e.code, format!("Stitch: {}", e.message)))?
     };
-    if result.indices.len() / 3 > options.max_output_triangles {
+    if !fast && result.indices.len() / 3 > options.max_output_triangles {
         return Err(limit());
     }
     // Remove internal triangulation seams before the expensive intersection
     // audit. The audit still checks the final surface, including its topology.
-    if !result.indices.is_empty() {
+    // Audited fast-path results keep the simplification so their bytes match
+    // the pre-fast-path output; above the cap it is skipped because it groups
+    // faces per plane and a large curved surface has one plane per triangle.
+    if (!fast || audited) && !result.indices.is_empty() {
         // Coplanar retriangulation is an optimization; difficult multi-hole caps
         // may fail its polygon bridge heuristic. Keep the stitched triangles in
         // that case and run the same topology/intersection/orientation audits.
@@ -1094,15 +1116,17 @@ pub fn boolean(a: &Mesh, b: &Mesh, operation: Operation, options: &Options) -> R
             ),
         )
     })?;
-    budget.stage = "result validation";
-    validation::geometry(&result, eps, &mut budget).map_err(|e| {
-        if e.code == "POLYGON_BOOLEAN_RESOURCE_LIMIT" {
-            e
-        } else {
-            error("POLYGON_BOOLEAN_NON_MANIFOLD_RESULT", e.message)
-        }
-    })?;
-    validation::orientation(&result, eps, &mut budget)?;
+    if audited {
+        budget.stage = "result validation";
+        validation::geometry(&result, eps, &mut budget).map_err(|e| {
+            if e.code == "POLYGON_BOOLEAN_RESOURCE_LIMIT" {
+                e
+            } else {
+                error("POLYGON_BOOLEAN_NON_MANIFOLD_RESULT", e.message)
+            }
+        })?;
+        validation::orientation(&result, eps, &mut budget)?;
+    }
     for p in result.positions.as_chunks_mut::<3>().0 {
         for axis in 0..3 {
             p[axis] = origin[axis] + p[axis] * extent;
@@ -1115,7 +1139,11 @@ pub fn boolean(a: &Mesh, b: &Mesh, operation: Operation, options: &Options) -> R
         ));
     }
     report.construction = Construction::Boolean;
-    report.self_intersection_status = "checked_with_tolerance".into();
+    report.self_intersection_status = if audited {
+        "checked_with_tolerance".into()
+    } else {
+        "not_checked".into()
+    };
     report.boolean = Some(BooleanReport {
         operation,
         tolerance_mm: eps * extent,
@@ -1130,6 +1158,148 @@ pub fn boolean(a: &Mesh, b: &Mesh, operation: Operation, options: &Options) -> R
 }
 #[cfg(test)]
 mod tests;
+
+/// Axis-aligned bounds of the vertices a mesh's triangles reference.
+pub fn bounds(mesh: &Mesh) -> Option<(Point, Point)> {
+    let mut min = [f64::INFINITY; 3];
+    let mut max = [f64::NEG_INFINITY; 3];
+    for &i in &mesh.indices {
+        let p = mesh.point(i).ok()?;
+        for axis in 0..3 {
+            min[axis] = min[axis].min(p[axis]);
+            max[axis] = max[axis].max(p[axis]);
+        }
+    }
+    (!mesh.indices.is_empty()).then_some((min, max))
+}
+/// Bounds that touch or overlap within `pad` are treated as connected, so face
+/// contact is never mistaken for separation.
+fn bounds_touch(a: Option<(Point, Point)>, b: Option<(Point, Point)>, pad: f64) -> bool {
+    match (a, b) {
+        (Some((alo, ahi)), Some((blo, bhi))) => {
+            (0..3).all(|k| alo[k] <= bhi[k] + pad && blo[k] <= ahi[k] + pad)
+        }
+        _ => false,
+    }
+}
+/// Connectivity tolerance for operand bounds: relative to the overall extent
+/// like the BSP tolerance, so a scaled model behaves like the original.
+fn bounds_pad(boxes: &[Option<(Point, Point)>]) -> f64 {
+    let extent = boxes
+        .iter()
+        .flatten()
+        .flat_map(|(lo, hi)| (0..3).map(move |k| hi[k] - lo[k]))
+        .fold(0., f64::max);
+    default_tolerance() * 8. * extent.max(1.)
+}
+/// Groups of operands whose bounds are transitively connected, in first-index
+/// order; every operand appears in exactly one group.
+fn connected_groups(boxes: &[Option<(Point, Point)>], pad: f64) -> Vec<Vec<usize>> {
+    let mut parent: Vec<usize> = (0..boxes.len()).collect();
+    fn root(parent: &mut [usize], mut i: usize) -> usize {
+        while parent[i] != i {
+            parent[i] = parent[parent[i]];
+            i = parent[i];
+        }
+        i
+    }
+    for i in 0..boxes.len() {
+        for j in i + 1..boxes.len() {
+            if bounds_touch(boxes[i], boxes[j], pad) {
+                let (ri, rj) = (root(&mut parent, i), root(&mut parent, j));
+                if ri != rj {
+                    parent[rj.max(ri)] = rj.min(ri);
+                }
+            }
+        }
+    }
+    let mut groups: Vec<Vec<usize>> = Vec::new();
+    let mut slot = vec![usize::MAX; boxes.len()];
+    for i in 0..boxes.len() {
+        let r = root(&mut parent, i);
+        if slot[r] == usize::MAX {
+            slot[r] = groups.len();
+            groups.push(Vec::new());
+        }
+        groups[slot[r]].push(i);
+    }
+    groups
+}
+/// Union of many solids. Operands whose bounds are separated never meet in
+/// CSG: each bound-connected group is folded through `pairwise` in operand
+/// order and the group results are joined, which is exact for disjoint
+/// surfaces. A single operand is returned unchanged.
+pub fn union_many(
+    meshes: &[Mesh],
+    pairwise: &mut dyn FnMut(&Mesh, &Mesh) -> Result<Mesh>,
+) -> Result<Mesh> {
+    let boxes: Vec<_> = meshes.iter().map(bounds).collect();
+    let pad = bounds_pad(&boxes);
+    let mut parts = Vec::new();
+    for group in connected_groups(&boxes, pad) {
+        let mut folded: Option<Mesh> = None;
+        for i in group {
+            folded = Some(match folded {
+                None => meshes[i].clone(),
+                Some(m) => pairwise(&m, &meshes[i])?,
+            });
+        }
+        if let Some(m) = folded {
+            parts.push(m);
+        }
+    }
+    match parts.len() {
+        0 => Ok(crate::solid::primitives::empty()),
+        1 => Ok(parts.pop().unwrap()),
+        _ => crate::solid::primitives::join(&parts),
+    }
+}
+/// `base` minus every cutter, as A \ (B1 ∪ B2 …) = ((A \ B1) \ B2) …. Cutters
+/// whose bounds miss the base are skipped; the rest are subtracted in batches
+/// of at most `batch` mutually separated cutters, joined without CSG. Small
+/// batches keep every BSP step local instead of clipping the whole base
+/// against one large joined cutter.
+pub fn difference_many(
+    base: &Mesh,
+    cutters: &[Mesh],
+    pairwise: &mut dyn FnMut(&Mesh, &Mesh) -> Result<Mesh>,
+    batch: usize,
+) -> Result<Mesh> {
+    let batch = batch.max(1);
+    let base_box = bounds(base);
+    if base_box.is_none() {
+        return Ok(crate::solid::primitives::empty());
+    }
+    let boxes: Vec<_> = cutters.iter().map(bounds).collect();
+    let pad = bounds_pad(&[&[base_box][..], &boxes[..]].concat());
+    let mut batches: Vec<Vec<usize>> = Vec::new();
+    for (i, cutter_box) in boxes.iter().enumerate() {
+        if !bounds_touch(base_box, *cutter_box, pad) {
+            continue;
+        }
+        let open = batches.iter_mut().find(|members| {
+            members.len() < batch && members.iter().all(|&j| !bounds_touch(boxes[j], *cutter_box, pad))
+        });
+        match open {
+            Some(members) => members.push(i),
+            None => batches.push(vec![i]),
+        }
+    }
+    let mut result = base.clone();
+    for members in batches {
+        let cutter = if members.len() == 1 {
+            cutters[members[0]].clone()
+        } else {
+            let parts: Vec<Mesh> = members.iter().map(|&j| cutters[j].clone()).collect();
+            crate::solid::primitives::join(&parts)?
+        };
+        result = pairwise(&result, &cutter)?;
+        if result.indices.is_empty() {
+            break;
+        }
+    }
+    Ok(result)
+}
 
 /// Reconnect triangulated planar face boundaries after exact planar remeshing.
 pub(crate) fn stitch_mesh(mesh: &Mesh, eps: f64) -> Result<Mesh> {

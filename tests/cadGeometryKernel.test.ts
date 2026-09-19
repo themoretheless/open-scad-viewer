@@ -8,6 +8,48 @@ function deleted(value: object): boolean {
   return (value as { isDeleted(): boolean }).isDeleted()
 }
 
+describe('kernel-built display meshes', () => {
+  it('splits vertex normals at creases inside the kernel and reports merge pairs', async () => {
+    const kernel = new CadGeometryKernel()
+    const session = await kernel.openSession()
+    try {
+      const cube = session.module.CadSolid.cube([2, 2, 2], true)
+      const mesh = cube.calculateNormals(0, 52.5).getMesh()
+      expect(mesh.numProp).toBe(6)
+      expect(mesh.numTri).toBe(12)
+      // Every corner meets three faces at 90°, so it becomes three property vertices.
+      expect(mesh.numVert).toBe(24)
+      expect(mesh.mergeFromVert.length).toBe(24 - 8)
+      expect(mesh.mergeToVert.length).toBe(mesh.mergeFromVert.length)
+      for (let vertex = 0; vertex < mesh.numVert; vertex++) {
+        const [x, y, z, nx, ny, nz] = mesh.vertProperties.subarray(vertex * 6, vertex * 6 + 6)
+        expect(Math.hypot(nx, ny, nz)).toBeCloseTo(1, 6)
+        // On an axis-aligned cube the normal points along exactly one axis, outward.
+        expect([Math.abs(nx), Math.abs(ny), Math.abs(nz)].sort()).toEqual([0, 0, 1])
+        expect(nx * x + ny * y + nz * z).toBeCloseTo(1, 6)
+      }
+      for (let pair = 0; pair < mesh.mergeFromVert.length; pair++) {
+        const from = mesh.mergeFromVert[pair] * 6
+        const to = mesh.mergeToVert[pair] * 6
+        expect([...mesh.vertProperties.subarray(from, from + 3)]).toEqual([...mesh.vertProperties.subarray(to, to + 3)])
+        expect(mesh.mergeToVert[pair]).toBeLessThan(mesh.mergeFromVert[pair])
+      }
+      expect(mesh.faceID).toHaveLength(12)
+      expect(new Set(mesh.faceID).size).toBe(6)
+      // The arrays are owned copies: the kernel may be called again freely.
+      const again = cube.calculateNormals(0, 52.5).getMesh()
+      expect(again.vertProperties).toEqual(mesh.vertProperties)
+      expect(again.vertProperties).not.toBe(mesh.vertProperties)
+      // A crease angle wider than the dihedral angle smooths the corners instead.
+      const smooth = cube.calculateNormals(0, 120).getMesh()
+      expect(smooth.numVert).toBe(8)
+      expect(smooth.mergeFromVert).toHaveLength(0)
+    } finally {
+      session.dispose()
+    }
+  })
+})
+
 describe('CadGeometryKernel lifecycle', () => {
   it('warms once and disposes each serialized lease exactly once', async () => {
     const module = {} as CadToplevel

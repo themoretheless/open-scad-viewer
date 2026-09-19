@@ -77,6 +77,8 @@ npm run test:geometry
 
 `boolean(a, b, Operation::Difference, &Options::default())` is A minus B. Inputs must be closed, consistently oriented solids. Host: `booleanPolygonMeshes`; ModelGraph: `mesh_boolean`.
 
+Separated, nested, identical or empty operands take exact fast paths that are not subject to the 10,000-triangle BSP admission cap (`BSP_INPUT_TRIANGLES`); above the cap their result is bounded by the inputs and reported as `self_intersection_status: "not_checked"`. N-ary operations go through `union_many` (bound-connected groups are folded, separated groups are joined without CSG) and `difference_many` (cutters subtracted in batches of mutually separated bodies). The bridge tries `prism_boolean` first: for a difference it now also accepts a vertical cutter that spans the base, the usual drilled-hole idiom. Scaling measurements and the remaining limits (BSP on curved bodies, multi-hole cap triangulation) are in `docs/design/csg-scaling-2026-09-19.md`; `cargo run --release -p polygon-core --example bench_boolean` reproduces them natively.
+
 ### B-rep
 
 `brep-topology` is shared incidence. `brep-core` binds NURBS geometry; `polygon-core::solid::brep` binds triangle patches. Bridge tessellates both and preserves face IDs. Host: `src/services/geometry/brep.ts`.

@@ -24,6 +24,7 @@ pub enum AnalysisBuffers {
         indices: Vec<u32>,
         diagnostics: [u32; 4],
     },
+    Render(crate::mesh::RenderMesh),
 }
 
 thread_local! {
@@ -53,6 +54,8 @@ pub fn store(result: AnalysisBuffers) -> usize {
 /// Placement: 0/1 positions (f64), 2/3 indices (u32).
 /// Edges: 0/1 indices (u32); slots 2..=5 return the diagnostic counters
 /// (boundary, crease, non-manifold, degenerate) directly.
+/// Render: 0/1 vertices (f32, stride 6), 2/3 indices, 4/5 merge-from,
+/// 6/7 merge-to, 8/9 face ids (all u32).
 pub fn field(handle: usize, slot: u32) -> usize {
     RESULTS.with(|results| {
         let results = results.borrow();
@@ -105,6 +108,19 @@ pub fn field(handle: usize, slot: u32) -> usize {
                 0 => indices.as_ptr() as usize,
                 1 => indices.len(),
                 2..=5 => diagnostics[slot as usize - 2] as usize,
+                _ => 0,
+            },
+            AnalysisBuffers::Render(mesh) => match slot {
+                0 => mesh.vertices.as_ptr() as usize,
+                1 => mesh.vertices.len(),
+                2 => mesh.indices.as_ptr() as usize,
+                3 => mesh.indices.len(),
+                4 => mesh.merge_from.as_ptr() as usize,
+                5 => mesh.merge_from.len(),
+                6 => mesh.merge_to.as_ptr() as usize,
+                7 => mesh.merge_to.len(),
+                8 => mesh.face_ids.as_ptr() as usize,
+                9 => mesh.face_ids.len(),
                 _ => 0,
             },
         }

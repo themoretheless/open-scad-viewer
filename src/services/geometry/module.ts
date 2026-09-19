@@ -1,5 +1,6 @@
 /** Legacy-call adapter to our handle-based Rust CAD kernel. No foreign CAD runtime. */
 import { callGeometryRust, withCadMesh, importCadMesh } from './kernel';
+import { renderMeshInKernel } from './meshAnalysis';
 export type Vec2 = [number, number];
 export type Vec3 = [number, number, number];
 export type Mat3 = [number, number, number, number, number, number, number, number, number];
@@ -94,62 +95,29 @@ export class CadSolid extends Handle {
     surfaceArea() { return this.inspect().area; }
     boundingBox() { const r = this.inspect(); return { min: r.min as Vec3, max: r.max as Vec3 }; }
     calculateNormals(_index = 0, _angle = 52.5) { const m = new CadSolid(call('copy', { id: this.handle })); m.original = this.original; m.normals = true; m.normalAngle = _angle; return m; }
+    /** Owned arrays: the kernel copies out once and the caller may transfer them. */
     getMesh() {
-        return withCadMesh(this.handle, raw => {
         let mesh: Mesh;
         if (this.normals) {
-            const normals: number[][] = [], adjacent: number[][] = Array.from({ length: raw.positions.length / 3 }, () => []);
-            for (let t = 0; t < raw.indices.length; t += 3) {
-                const p = Array.from(raw.indices.subarray(t, t + 3), i => raw.positions.subarray(i * 3, i * 3 + 3));
-                const a = p[1]!.map((v, k) => v - p[0]![k]!), b = p[2]!.map((v, k) => v - p[0]![k]!);
-                const n = [a[1]! * b[2]! - a[2]! * b[1]!, a[2]! * b[0]! - a[0]! * b[2]!, a[0]! * b[1]! - a[1]! * b[0]!];
-                const length = Math.hypot(...n);
-                normals.push(n.map(v => length ? v / length : 0));
-                for (const i of raw.indices.subarray(t, t + 3))
-                    adjacent[i]!.push(t / 3);
-            }
-            const vertices: number[] = [], indices: number[] = [], rawIds: number[] = [], unique = new Map<string, number>();
-            const cosine = Math.cos(this.normalAngle * Math.PI / 180);
-            for (let i = 0; i < raw.indices.length; i++) {
-                const id = raw.indices[i]!, face = normals[Math.floor(i / 3)]!, normal = [0, 0, 0];
-                for (const t of adjacent[id]!) {
-                    const n = normals[t]!;
-                    if (n.reduce((s, v, k) => s + v * face[k]!, 0) >= cosine - 1e-10)
-                        for (let k = 0; k < 3; k++)
-                            normal[k]! += n[k]!;
-                }
-                const length = Math.hypot(...normal);
-                for (let k = 0; k < 3; k++)
-                    normal[k] = length ? normal[k]! / length : 0;
-                const key = id + ':' + normal.map(v => Math.round(v * 1e7)).join(',');
-                let index = unique.get(key);
-                if (index === undefined) {
-                    index = vertices.length / 6;
-                    unique.set(key, index);
-                    vertices.push(...raw.positions.subarray(id * 3, id * 3 + 3), ...normal);
-                    rawIds.push(id);
-                }
-                indices.push(index);
-            }
-            mesh = new Mesh({ numProp: 6, vertProperties: new Float32Array(vertices), triVerts: new Uint32Array(indices) });
-            const first = new Map<number, number>(), from: number[] = [], to: number[] = [];
-            rawIds.forEach((id, i) => { const previous = first.get(id); if (previous === undefined)
-                first.set(id, i);
-            else {
-                from.push(i);
-                to.push(previous);
-            } });
-            mesh.mergeFromVert = new Uint32Array(from);
-            mesh.mergeToVert = new Uint32Array(to);
+            // Crease-split normals, merge pairs and face ids are built in Rust
+            // (geometry-bridge mesh::render_buffers) from the same snapshot.
+            const built = renderMeshInKernel(this.handle, Math.cos(this.normalAngle * Math.PI / 180));
+            mesh = new Mesh({ numProp: 6, vertProperties: built.vertices, triVerts: built.indices });
+            mesh.mergeFromVert = built.mergeFrom;
+            mesh.mergeToVert = built.mergeTo;
+            mesh.faceID = built.faceIds;
         }
-        else
-            mesh = new Mesh({ numProp: 3, vertProperties: new Float32Array(raw.positions), triVerts: new Uint32Array(raw.indices) });
+        else {
+            mesh = withCadMesh(this.handle, raw => {
+                const flat = new Mesh({ numProp: 3, vertProperties: new Float32Array(raw.positions), triVerts: new Uint32Array(raw.indices) });
+                flat.faceID = new Uint32Array(raw.faceIds);
+                return flat;
+            });
+        }
         mesh.runIndex = new Uint32Array([0, mesh.triVerts.length]);
         mesh.runOriginalID = new Uint32Array([this.original]);
         mesh.runFlags = new Uint8Array([0]);
-        mesh.faceID = new Uint32Array(raw.faceIds);
         return mesh;
-        });
     }
     project(): CrossSection { return new CrossSection(call<number>('project', { id: this.handle })); }
     slice(height: number): CrossSection { return new CrossSection(call<number>('slice', { id: this.handle, height })); }

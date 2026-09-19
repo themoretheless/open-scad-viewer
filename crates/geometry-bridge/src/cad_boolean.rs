@@ -45,7 +45,7 @@ pub fn boolean(v: Value) -> Result<Value> {
 fn mesh_boolean(bodies: Vec<Value>, operation: &str) -> Result<Value> {
     use polygon_core::{
         Mesh,
-        solid::boolean::{Operation, Options, boolean},
+        solid::boolean::{Operation, Options, boolean, difference_many, union_many},
     };
     let op = match operation {
         "union" => Operation::Union,
@@ -57,6 +57,8 @@ fn mesh_boolean(bodies: Vec<Value>, operation: &str) -> Result<Value> {
             ));
         }
     };
+    // Every operand is admitted before any fold, including operands that would
+    // follow an empty intermediate result.
     let meshes = bodies
         .iter()
         .map(|b| {
@@ -65,12 +67,20 @@ fn mesh_boolean(bodies: Vec<Value>, operation: &str) -> Result<Value> {
             Ok(m)
         })
         .collect::<Result<Vec<_>>>()?;
-    let mut mesh = meshes[0].clone();
-    // Do not skip later operands after an empty intermediate: they still require
-    // native admission and can contribute to a subsequent union.
-    for next in &meshes[1..] {
-        mesh = boolean(&mesh, next, op, &Options::default())?.mesh;
-    }
+    let mut pairwise = |a: &Mesh, b: &Mesh| Ok(boolean(a, b, op, &Options::default())?.mesh);
+    let mesh = match op {
+        Operation::Union => union_many(&meshes, &mut pairwise)?,
+        Operation::Difference => {
+            difference_many(&meshes[0], &meshes[1..], &mut pairwise, super::mesh::DIFFERENCE_BATCH)?
+        }
+        Operation::Intersection => {
+            let mut m = meshes[0].clone();
+            for next in &meshes[1..] {
+                m = pairwise(&m, next)?;
+            }
+            m
+        }
+    };
     if mesh.indices.is_empty() {
         return encode(Vec::<Value>::new());
     }
