@@ -1,6 +1,7 @@
 name: STEP interchange V10
 on:
   push:
+    branches: [main]
     paths:
       - 'crates/brep-core/src/step_interchange_v3.rs'
       - 'crates/geometry-bridge/src/**'
