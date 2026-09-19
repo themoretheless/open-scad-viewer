@@ -149,6 +149,50 @@ struct V { @builtin(position) p: vec4f, @location(0) c: vec4f }
 @fragment fn fs(v: V) -> @location(0) vec4f { return v.c; }
 `
 
+/**
+ * Screen-space anti-aliased work-plane grid. A single quad centred under the
+ * eye covers the whole visible field; the fragment shader draws minor lines
+ * every step, major lines every ten steps and the X/Y axes, fading lines out
+ * once they get denser than the pixel grid and with distance from the eye.
+ * options = (section enabled, grid step, plane half-extent, fade distance).
+ */
+const GRID_WGSL = /* wgsl */`
+struct Scene { vp: mat4x4f, eye: vec4f, light: vec4f, ambient: vec4f, section: vec4f, options: vec4f }
+@group(0) @binding(0) var<uniform> sc: Scene;
+
+struct V { @builtin(position) p: vec4f, @location(0) w: vec2f }
+
+@vertex fn vs(@location(0) corner: vec2f) -> V {
+  let w = sc.eye.xy + corner * sc.options.z;
+  return V(sc.vp * vec4f(w, 0.0, 1.0), w);
+}
+
+fn lineMask(coord: vec2f, width: vec2f) -> f32 {
+  let g = abs(fract(coord - 0.5) - 0.5) / width;
+  return 1.0 - min(min(g.x, g.y), 1.0);
+}
+
+@fragment fn fs(v: V) -> @location(0) vec4f {
+  let step = sc.options.y;
+  let minor = v.w / step;
+  let minorW = fwidth(minor);
+  let major = minor * 0.1;
+  let majorW = minorW * 0.1;
+  // Hide a level once its spacing drops below roughly three pixels.
+  let minorVis = 1.0 - smoothstep(0.2, 0.4, max(minorW.x, minorW.y));
+  let majorVis = 1.0 - smoothstep(0.2, 0.4, max(majorW.x, majorW.y));
+  var alpha = max(lineMask(minor, minorW) * 0.28 * minorVis, lineMask(major, majorW) * 0.55 * majorVis);
+  var color = vec3f(0.42, 0.42, 0.42);
+  let axisW = fwidth(v.w) * 1.2;
+  if (abs(v.w.y) < axisW.y) { color = vec3f(0.95, 0.18, 0.16); alpha = max(alpha, 0.9 * majorVis); }
+  if (abs(v.w.x) < axisW.x) { color = vec3f(0.2, 0.85, 0.25); alpha = max(alpha, 0.9 * majorVis); }
+  let dist = length(vec3f(v.w, 0.0) - sc.eye.xyz);
+  alpha *= 1.0 - smoothstep(sc.options.w * 0.35, sc.options.w, dist);
+  if (alpha < 0.004) { discard; }
+  return vec4f(color, alpha);
+}
+`
+
 const SELECTION_OVERLAY_WGSL = /* wgsl */`
 struct Scene { vp: mat4x4f, eye: vec4f, light: vec4f, ambient: vec4f, section: vec4f, options: vec4f }
 @group(0) @binding(0) var<uniform> sc: Scene;
@@ -247,8 +291,11 @@ const FOV_Y = Math.PI / 4
 const DEFAULT_DISTANCE = 50
 const MAX_ORBIT_PITCH = Math.PI / 2 - 0.001
 const MAX_DPR = 2
-const GRID_SIZE = 200
-const GRID_STEP = 10
+const DEFAULT_GRID_STEP = 10
+/** Minimum plane half-extent and Z-axis length in model units. */
+const GRID_MIN_EXTENT = 200
+/** Grid lines fade out this many orbit distances away from the eye. */
+const GRID_FADE_DISTANCES = 6
 const CLICK_MOVE_THRESHOLD = 3
 const MAX_EDGE_BUFFER_BYTES = 32 * 1024 * 1024
 const MAX_OVERLAY_BUFFER_BYTES = 16 * 1024 * 1024
@@ -274,6 +321,7 @@ export class WebGPURenderer {
   private meshPipeT!: GPURenderPipeline
   private deepMeshPipe!: GPURenderPipeline
   private linePipe!: GPURenderPipeline
+  private gridPipe!: GPURenderPipeline
   private edgePipe!: GPURenderPipeline
   private deepEdgePipe!: GPURenderPipeline
   private selectionFacePipe!: GPURenderPipeline
@@ -292,13 +340,16 @@ export class WebGPURenderer {
   private geometryGhosts: Array<{ meshes: GMesh[]; started: number; alphas: number[] }> = []
   private sceneAabbIndex: SceneAabbIndex = buildSceneAabbIndex([])
   private sceneAabbIndexDirty = false
+  /** Z axis as a line list; the XY plane itself is the shader quad in gridQuadVB. */
   private gridVB: GPUBuffer | null = null
   private gridVC = 0
+  private gridQuadVB: GPUBuffer | null = null
   private bounds: Bounds | null = null
   private initialFitDone = false
   private projection: ProjectionMode = 'perspective'
   private perspectiveFovY = FOV_Y
   private gridVisible = true
+  private gridStep = DEFAULT_GRID_STEP
   private displayMode: DisplayMode = 'shaded'
   private selected: number | null = null
   private selectedHit: PickHit | null = null
@@ -575,6 +626,24 @@ export class WebGPURenderer {
       depthStencil: ds,
     })
 
+    const gridMod = dev.createShaderModule({ code: GRID_WGSL })
+    this.gridPipe = dev.createRenderPipeline({
+      layout: lineLayout,
+      vertex: { module: gridMod, entryPoint: 'vs', buffers: [{
+        arrayStride: 8,
+        attributes: [{ shaderLocation: 0, offset: 0, format: 'float32x2' }],
+      }] },
+      fragment: { module: gridMod, entryPoint: 'fs', targets: [{
+        format: this.fmt,
+        blend: {
+          color: { srcFactor: 'src-alpha', dstFactor: 'one-minus-src-alpha', operation: 'add' },
+          alpha: { srcFactor: 'one', dstFactor: 'one-minus-src-alpha', operation: 'add' },
+        },
+      }] },
+      primitive: { topology: 'triangle-list', cullMode: 'none' },
+      depthStencil: ds,
+    })
+
     const edgeMod = dev.createShaderModule({ code: EDGE_WGSL })
     const edgePipeDescriptor: GPURenderPipelineDescriptor = {
       layout: meshLayout,
@@ -694,27 +763,32 @@ export class WebGPURenderer {
     })
   }
 
+  /** Distance from the eye at which grid lines have fully faded out. */
+  private gridFadeDistance() {
+    return Math.max(GRID_MIN_EXTENT, this.dist * GRID_FADE_DISTANCES)
+  }
+
+  /** Half-extent of the plane quad and the Z axis: covers everything up to the fade. */
+  private gridExtent() {
+    return this.gridFadeDistance() + Math.hypot(this.tx, this.ty, this.tz)
+  }
+
   private buildGrid() {
     const dev = this.dev!
-    const d: number[] = []
-    const gc = [0.35, 0.35, 0.35, 0.4]
-    const xc = [0.95, 0.18, 0.16, 0.9]
-    const yc = [0.2, 0.85, 0.25, 0.9]
+    this.gridVB?.destroy()
+    this.gridQuadVB?.destroy()
+    // OpenSCAD is Z-up: the work plane is XY, drawn by GRID_WGSL on a unit
+    // quad that the vertex shader scales per frame. Only the Z axis needs
+    // real geometry.
+    const quad = new Float32Array([-1, -1, 1, -1, 1, 1, -1, -1, 1, 1, -1, 1])
+    this.gridQuadVB = dev.createBuffer({ size: quad.byteLength, usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST })
+    dev.queue.writeBuffer(this.gridQuadVB, 0, quad)
+
     const zc = [0.2, 0.45, 1, 0.95]
-
-    // OpenSCAD is Z-up: its work plane is XY.
-    for (let i = -GRID_SIZE; i <= GRID_SIZE; i += GRID_STEP) {
-      if (i === 0) continue
-      d.push(i,-GRID_SIZE,0,...gc, i,GRID_SIZE,0,...gc)
-      d.push(-GRID_SIZE,i,0,...gc, GRID_SIZE,i,0,...gc)
-    }
-    d.push(-GRID_SIZE,0,0,...xc, GRID_SIZE,0,0,...xc)
-    d.push(0,-GRID_SIZE,0,...yc, 0,GRID_SIZE,0,...yc)
-    d.push(0,0,-GRID_SIZE,...zc, 0,0,GRID_SIZE,...zc)
-
-    this.gridVC = d.length / 7
-    this.gridVB = dev.createBuffer({ size: d.length * 4, usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST })
-    dev.queue.writeBuffer(this.gridVB, 0, new Float32Array(d))
+    const axis = new Float32Array([0, 0, -GRID_MIN_EXTENT, ...zc, 0, 0, GRID_MIN_EXTENT, ...zc])
+    this.gridVC = axis.length / 7
+    this.gridVB = dev.createBuffer({ size: axis.byteLength, usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST })
+    dev.queue.writeBuffer(this.gridVB, 0, axis)
   }
 
   setMeshes(meshes: MeshData[], options: SetMeshesOptions = {}) {
@@ -1149,6 +1223,13 @@ export class WebGPURenderer {
   setGridVisible(visible: boolean) {
     if (this.gridVisible === visible) return
     this.gridVisible = visible
+    this.requestRender()
+  }
+
+  /** Spacing between grid lines in model units (OpenSCAD millimetres). */
+  setGridStep(step: number) {
+    if (!Number.isFinite(step) || step <= 0 || this.gridStep === step) return
+    this.gridStep = step
     this.requestRender()
   }
 
@@ -1590,7 +1671,7 @@ export class WebGPURenderer {
       fovY: this.perspectiveFovY,
       projection: this.projection,
       bounds: activeBounds ?? null,
-      backgroundRadius: this.gridVisible ? Math.hypot(GRID_SIZE, GRID_SIZE, GRID_SIZE) : 1,
+      backgroundRadius: this.gridVisible ? Math.hypot(this.gridExtent(), this.gridExtent(), this.gridExtent()) : 1,
     })
   }
 
@@ -1621,6 +1702,9 @@ export class WebGPURenderer {
     sd[28] = this.sectionNormal[0]; sd[29] = this.sectionNormal[1]
     sd[30] = this.sectionNormal[2]; sd[31] = this.sectionOffset
     sd[32] = this.sectionEnabled ? 1 : 0
+    sd[33] = this.gridStep
+    sd[34] = this.gridExtent()
+    sd[35] = this.gridFadeDistance()
     dev.queue.writeBuffer(sceneUB, 0, sd)
 
     const enc = dev.createCommandEncoder()
@@ -1644,6 +1728,12 @@ export class WebGPURenderer {
       },
     })
 
+    if (this.gridVisible && this.gridQuadVB) {
+      pass.setPipeline(this.gridPipe)
+      pass.setBindGroup(0, this.sceneBG)
+      pass.setVertexBuffer(0, this.gridQuadVB)
+      pass.draw(6)
+    }
     if (this.gridVisible && this.gridVB) {
       pass.setPipeline(this.linePipe)
       pass.setBindGroup(0, this.sceneBG)
@@ -2601,6 +2691,8 @@ export class WebGPURenderer {
     this.sceneAabbIndexDirty = false
     this.gridVB?.destroy()
     this.gridVB = null
+    this.gridQuadVB?.destroy()
+    this.gridQuadVB = null
     this.measurementVB?.destroy()
     this.measurementVB = null
     this.measurementVC = 0

@@ -148,7 +148,7 @@ const L: Record<Language, Record<string, string>> = {
     theme: 'Тема', systemTheme: 'Как в системе', darkTheme: 'Включить тёмную тему', lightTheme: 'Включить светлую тему',
     language: 'Переключить язык', editor: 'Редактор OpenSCAD', viewport: 'Трёхмерная сцена',
     fit: 'Вписать', reset: 'Сбросить вид', previousView: 'Предыдущий вид', perspective: 'Перспектива', orthographic: 'Ортографическая',
-    grid: 'Сетка', view: 'Вид', iso: 'Изометрия', front: 'Спереди', back: 'Сзади',
+    grid: 'Сетка', gridStep: 'Шаг сетки', view: 'Вид', iso: 'Изометрия', front: 'Спереди', back: 'Сзади',
     left: 'Слева', right: 'Справа', top: 'Сверху', bottom: 'Снизу',
     compiling: 'Собираем геометрию…', stale: 'Показан предыдущий результат', ready: 'Готово',
     failed: 'Ошибка сборки',
@@ -200,7 +200,7 @@ const L: Record<Language, Record<string, string>> = {
     theme: 'Theme', systemTheme: 'System', darkTheme: 'Use dark theme', lightTheme: 'Use light theme',
     language: 'Switch language', editor: 'OpenSCAD editor', viewport: '3D viewport',
     fit: 'Fit', reset: 'Reset view', previousView: 'Previous view', perspective: 'Perspective', orthographic: 'Orthographic',
-    grid: 'Grid', view: 'View', iso: 'Isometric', front: 'Front', back: 'Back',
+    grid: 'Grid', gridStep: 'Grid step', view: 'View', iso: 'Isometric', front: 'Front', back: 'Back',
     left: 'Left', right: 'Right', top: 'Top', bottom: 'Bottom',
     compiling: 'Building geometry…', stale: 'Showing the previous result', ready: 'Ready',
     failed: 'Build failed',
@@ -500,6 +500,22 @@ const viewportState = shallowRef(viewportController.state)
 viewportController.subscribe(state => { viewportState.value = state })
 const projection = computed(() => viewportState.value.camera.projection)
 const gridVisible = ref(true)
+/** Grid spacing presets in model units (OpenSCAD millimetres); 25.4 is one inch. */
+const GRID_STEP_OPTIONS = [1, 2, 5, 10, 25, 25.4, 50, 100] as const
+type GridStep = typeof GRID_STEP_OPTIONS[number]
+function restoreGridStep(): GridStep {
+  const stored = Number(storageGet('scad-grid-step'))
+  return GRID_STEP_OPTIONS.find(step => step === stored) ?? 10
+}
+const gridStep = ref<GridStep>(restoreGridStep())
+function gridStepLabel(step: GridStep) {
+  if (step === 25.4) return '1 in'
+  return step >= 10 && step % 10 === 0 ? `${step / 10} cm` : `${step} mm`
+}
+function changeGridStep() {
+  renderer?.setGridStep(gridStep.value)
+  storageSet('scad-grid-step', String(gridStep.value))
+}
 const standardView = computed({
   get: () => viewportState.value.standardView,
   set: (view: StandardView) => { viewportController.setStandardView(view) },
@@ -963,6 +979,7 @@ async function initializeViewportRenderer() {
   nextRenderer.setBackgroundColor(themeCanvasColor(resolveTheme(themeSelection.value, systemPrefersDark.value)))
   nextRenderer.setSelectionMode(selectionMode.value)
   nextRenderer.setGridVisible(gridVisible.value)
+  nextRenderer.setGridStep(gridStep.value)
   if (sceneMeshes.value.length) {
     nextRenderer.setMeshes(sceneMeshes.value)
     nextRenderer.setMeshVisibilityBatch(meshVisibility.value)
@@ -1093,6 +1110,7 @@ async function recoverRenderer(
     instance.setBackgroundColor(themeCanvasColor(resolveTheme(themeSelection.value, systemPrefersDark.value)))
     instance.setSelectionMode(selectionMode.value)
     instance.setGridVisible(gridVisible.value)
+    instance.setGridStep(gridStep.value)
     // Builds can complete while adapter/device acquisition is pending. The CPU
     // scene and Vue state are authoritative, so re-read them after the await.
     const currentVisibility = [...meshVisibility.value]
@@ -2690,6 +2708,12 @@ function sanitizeFileName(name: string) { return (name.replace(/[^\w.() -]+/g, '
           <button class="view-btn icon-only" type="button" :aria-pressed="gridVisible" :aria-label="t('grid')" :title="t('grid')" @click="toggleGrid">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 9h18M3 15h18M9 3v18M15 3v18"/><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
           </button>
+          <label class="view-select-label">
+            <span class="sr-only">{{ t('gridStep') }}</span>
+            <select v-model="gridStep" class="view-select grid-step-select" :aria-label="t('gridStep')" :title="t('gridStep')" :disabled="!gridVisible" @change="changeGridStep">
+              <option v-for="step in GRID_STEP_OPTIONS" :key="step" :value="step">{{ gridStepLabel(step) }}</option>
+            </select>
+          </label>
           <button
             ref="scanToggleRef" class="view-btn icon-only scan-toggle" type="button"
             :class="{ active: sectionEnabled }" :aria-label="t('section')" :title="t('scanPlane')"
