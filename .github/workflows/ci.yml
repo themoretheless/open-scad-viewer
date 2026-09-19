@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: ['**']
+    branches: [main]
   pull_request:
 
 permissions:
@@ -15,7 +15,7 @@ concurrency:
 jobs:
   check:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 40
     strategy:
       fail-fast: false
       matrix:
@@ -28,7 +28,7 @@ jobs:
           cache: npm
       - uses: dtolnay/rust-toolchain@master
         with:
-          toolchain: nightly
+          toolchain: nightly-2026-09-16
           targets: wasm32-unknown-unknown
           components: rustfmt, clippy
       - uses: actions/cache@v4
@@ -40,11 +40,12 @@ jobs:
       - run: npm ci
       - run: npm run build:geometry
       - run: cargo test --locked --manifest-path crates/Cargo.toml --workspace
+      - run: cargo clippy --locked --manifest-path crates/Cargo.toml -p osv-math --all-targets -- -D warnings
       - run: npm run check
 
   native-smoke:
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 20
+    timeout-minutes: 40
     strategy:
       fail-fast: false
       matrix:
@@ -57,7 +58,7 @@ jobs:
           cache: npm
       - uses: dtolnay/rust-toolchain@master
         with:
-          toolchain: nightly
+          toolchain: nightly-2026-09-16
           targets: wasm32-unknown-unknown
           components: rustfmt, clippy
       - uses: actions/cache@v4
@@ -73,7 +74,7 @@ jobs:
 
   official-openscad-mcp:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
@@ -82,7 +83,7 @@ jobs:
           cache: npm
       - uses: dtolnay/rust-toolchain@master
         with:
-          toolchain: nightly
+          toolchain: nightly-2026-09-16
           targets: wasm32-unknown-unknown
           components: rustfmt, clippy
       - uses: actions/cache@v4

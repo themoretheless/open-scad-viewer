@@ -112,17 +112,17 @@ pub fn rotation(v: V3) -> M3 {
 pub fn eigen<const N: usize>(mut a: [[f64; N]; N]) -> ([f64; N], [[f64; N]; N]) {
     let n = N;
     let mut v = [[0.; N]; N];
-    for i in 0..n {
-        v[i][i] = 1.;
+    for (i, row) in v.iter_mut().enumerate() {
+        row[i] = 1.;
     }
     for _ in 0..(80 * n * n) {
         let mut p = 0;
         let mut q = 1;
         let mut largest = 0.;
-        for i in 0..n {
-            for j in i + 1..n {
-                if a[i][j].abs() > largest {
-                    largest = a[i][j].abs();
+        for (i, row) in a.iter().enumerate() {
+            for (j, value) in row.iter().enumerate().skip(i + 1) {
+                if value.abs() > largest {
+                    largest = value.abs();
                     p = i;
                     q = j;
                 }
@@ -148,10 +148,10 @@ pub fn eigen<const N: usize>(mut a: [[f64; N]; N]) -> ([f64; N], [[f64; N]; N]) 
         a[q][q] = s * s * app + 2. * s * c * apq + c * c * aqq;
         a[p][q] = 0.;
         a[q][p] = 0.;
-        for k in 0..n {
-            let (kp, kq) = (v[k][p], v[k][q]);
-            v[k][p] = c * kp - s * kq;
-            v[k][q] = s * kp + c * kq;
+        for row in &mut v {
+            let (kp, kq) = (row[p], row[q]);
+            row[p] = c * kp - s * kq;
+            row[q] = s * kp + c * kq;
         }
     }
     (std::array::from_fn(|i| a[i][i]), v)
@@ -196,17 +196,18 @@ pub fn solve<const N: usize>(mut a: [[f64; N]; N], mut b: [f64; N]) -> Option<[f
         a.swap(k, p);
         b.swap(k, p);
         let pivot = a[k][k];
-        for j in k..n {
-            a[k][j] /= pivot;
+        for value in a[k].iter_mut().skip(k) {
+            *value /= pivot;
         }
         b[k] /= pivot;
+        let pivot_row = a[k];
         for i in 0..n {
             if i == k {
                 continue;
             }
             let f = a[i][k];
-            for j in k..n {
-                a[i][j] -= f * a[k][j];
+            for (value, pivot_value) in a[i].iter_mut().zip(pivot_row).skip(k) {
+                *value -= f * pivot_value;
             }
             b[i] -= f * b[k];
         }
