@@ -423,6 +423,8 @@ export function createCadKernelOps(
       const surfaceArea = solid.surfaceArea()
       const normalized = handle(3, solid.calculateNormals(0, 52.5))
       try {
+        // getMesh() returns arrays the kernel copied out for this call only;
+        // they are owned here and may be published or transferred as they are.
         const mesh = geometry3(normalized).getMesh()
         return Object.freeze({
           volume,
@@ -431,14 +433,14 @@ export function createCadKernelOps(
             numProp: mesh.numProp,
             numTri: mesh.numTri,
             numVert: mesh.numVert,
-            vertProperties: new Float32Array(mesh.vertProperties),
-            triVerts: new Uint32Array(mesh.triVerts),
-            mergeFromVert: new Uint32Array(mesh.mergeFromVert),
-            mergeToVert: new Uint32Array(mesh.mergeToVert),
-            runIndex: new Uint32Array(mesh.runIndex),
-            runOriginalID: new Uint32Array(mesh.runOriginalID),
-            runFlags: new Uint8Array(mesh.runFlags),
-            faceID: new Uint32Array(mesh.faceID),
+            vertProperties: mesh.vertProperties,
+            triVerts: mesh.triVerts,
+            mergeFromVert: mesh.mergeFromVert,
+            mergeToVert: mesh.mergeToVert,
+            runIndex: mesh.runIndex,
+            runOriginalID: mesh.runOriginalID,
+            runFlags: mesh.runFlags,
+            faceID: mesh.faceID,
           }),
         })
       } finally {

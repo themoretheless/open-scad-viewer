@@ -1,5 +1,15 @@
 # Top 50 Worst Issues
 
+> **Stale (verified 2026-09-19).** This list describes the donor-era 15,000-line
+> `App.vue`. The current `src/App.vue` is ~3,700 lines and none of the symbols
+> named in the top-10 rows (`flushSaveTabs`, `activeTabId`, `shortcutPreset`,
+> `uiDensity`, `saveRecentFiles`, `saveBookmarksToStorage`, `saveSessionBackup`,
+> `reinitializeWebGPU`, `printShortcuts`, `customThemes`) exist in it; all
+> `localStorage` access now goes through `safeStorage.ts`. Use
+> [recommendation.md](./recommendation.md) as the live register and
+> [design/optimization-audit-2026-09-19.md](./design/optimization-audit-2026-09-19.md)
+> for the current findings. Kept for history only.
+
 A severity-ranked shortlist curated from the full [ISSUES.md](./ISSUES.md) (500 items) plus a second, independent audit pass. These are the ones to fix first — highest blast radius for correctness, security, data loss, performance, and architecture.
 
 Synced with: [README.md](../README.md) · [architecture.md](../architecture.md) · [RECOMMENDATIONS.md](./RECOMMENDATIONS.md) · [ISSUES.md](./ISSUES.md)

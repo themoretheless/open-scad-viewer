@@ -424,8 +424,14 @@ pub fn halfspace(mesh: &Mesh, normal: [f64; 3], offset: f64) -> Result<Mesh> {
     Ok(box_mesh)
 }
 
-/// Exact specialization for vertical prisms with coincident end planes. Reduces
-/// repeated drilled-hole CSG to a planar arrangement and one triangulation.
+/// Exact specialization for vertical prisms. Reduces repeated drilled-hole
+/// CSG to a planar arrangement and one triangulation.
+///
+/// The result is a prism only when its z-range is known up front: union needs
+/// coincident end planes; difference accepts a cutter that spans the base
+/// (the OpenSCAD idiom of a slightly taller hole cutter); intersection uses
+/// the overlap of both ranges. Anything else returns `None` for the general
+/// Boolean.
 pub fn prism_boolean(a: &Mesh, b: &Mesh, operation: &str) -> Result<Option<Mesh>> {
     fn bounds(m: &Mesh) -> Option<(f64, f64)> {
         if m.indices.is_empty() {
@@ -463,15 +469,30 @@ pub fn prism_boolean(a: &Mesh, b: &Mesh, operation: &str) -> Result<Option<Mesh>
         }
         Some((lo, hi))
     }
-    let (Some((lo, hi)), Some((other_lo, other_hi))) = (bounds(a), bounds(b)) else {
+    let (Some((a_lo, a_hi)), Some((b_lo, b_hi))) = (bounds(a), bounds(b)) else {
         return Ok(None);
     };
-    if (lo - other_lo).abs() > 1e-9 || (hi - other_hi).abs() > 1e-9 {
-        return Ok(None);
-    }
+    let tolerance = 1e-9;
+    let same_range = (a_lo - b_lo).abs() <= tolerance && (a_hi - b_hi).abs() <= tolerance;
+    let (lo, hi) = match operation {
+        "union" if same_range => (a_lo, a_hi),
+        "difference" if b_lo <= a_lo + tolerance && b_hi >= a_hi - tolerance => (a_lo, a_hi),
+        "intersection" => {
+            let lo = a_lo.max(b_lo);
+            let hi = a_hi.min(b_hi);
+            if hi - lo <= tolerance * (a_hi - a_lo).max(b_hi - b_lo).max(1.) {
+                return Ok(Some(empty()));
+            }
+            (lo, hi)
+        }
+        _ => return Ok(None),
+    };
     let pa = crate::solid::section::slice(a, (lo + hi) / 2.)?;
     let pb = crate::solid::section::slice(b, (lo + hi) / 2.)?;
     let p = planar(&pa, &pb, operation)?;
+    if p.is_empty() {
+        return Ok(Some(empty()));
+    }
     let mut result = crate::solid::modeling::extrude_rings(&p, hi - lo, 1, 0., [1., 1.], false)?;
     for v in result.positions.as_chunks_mut::<3>().0 {
         v[2] += lo
@@ -596,5 +617,71 @@ mod tests {
         let r = h.inspect().unwrap();
         assert!(r.closed);
         assert!((r.signed_volume_mm3 - 24.).abs() < 1e-8)
+    }
+
+    #[test]
+    fn prism_difference_accepts_a_cutter_that_spans_the_base() {
+        let plate = cube([10., 10., 2.], true).unwrap();
+        let hole = cylinder(4., 1., 1., 32, true).unwrap();
+        let drilled = prism_boolean(&plate, &hole, "difference")
+            .unwrap()
+            .expect("a spanning vertical cutter keeps the result a prism");
+        let report = drilled.inspect().unwrap();
+        assert!(report.closed);
+        let hole_area = 16. * (std::f64::consts::PI / 16.).sin();
+        assert!((report.signed_volume_mm3 - (200. - 2. * hole_area)).abs() < 1e-6);
+
+        // A cutter that stops inside the plate makes a pocket, not a prism.
+        let pocket = cylinder(1., 1., 1., 32, false).unwrap();
+        assert!(prism_boolean(&plate, &pocket, "difference").unwrap().is_none());
+        // Union still needs coincident end planes.
+        assert!(prism_boolean(&plate, &hole, "union").unwrap().is_none());
+        // Intersection uses the overlap of both ranges.
+        let tall = cube([4., 4., 10.], false).unwrap();
+        let overlap = prism_boolean(&plate, &tall, "intersection").unwrap().unwrap();
+        assert!((overlap.inspect().unwrap().signed_volume_mm3 - 16.).abs() < 1e-8);
+        // A cutter covering the whole base leaves nothing.
+        let everything = cube([20., 20., 4.], true).unwrap();
+        assert!(prism_boolean(&plate, &everything, "difference").unwrap().unwrap().indices.is_empty());
+    }
+
+    /// Documents the current planar-triangulation limits the prism path
+    /// inherits (docs/design/csg-scaling-2026-09-19.md). Callers fall back to
+    /// the general Boolean on these errors; the grid itself is valid input.
+    #[test]
+    fn prism_difference_grid_of_holes_reports_triangulation_limits() {
+        let plate = cube([86., 86., 8.], true).unwrap();
+        let hole = cylinder(12., 3., 3., 32, true).unwrap();
+        let grid = |count: usize| -> Mesh {
+            let side = (count as f64).sqrt().ceil() as usize;
+            let step = 80. / side as f64;
+            let holes: Vec<Mesh> = (0..count)
+                .map(|i| {
+                    let x = -40. + step / 2. + (i % side) as f64 * step;
+                    let y = -40. + step / 2. + (i / side) as f64 * step;
+                    hole.transform([
+                        [1., 0., 0., x],
+                        [0., 1., 0., y],
+                        [0., 0., 1., 0.],
+                        [0., 0., 0., 1.],
+                    ])
+                    .unwrap()
+                })
+                .collect();
+            join(&holes).unwrap()
+        };
+        let four = prism_boolean(&plate, &grid(4), "difference").unwrap().unwrap();
+        assert!(four.inspect().unwrap().closed);
+        // Hole bridging fails on this aligned 4x4 grid; 64 holes exceed the
+        // 2,048-vertex profile budget. Both are triangulation limits, not
+        // invalid geometry, so they surface as errors the caller may retry.
+        assert_eq!(
+            prism_boolean(&plate, &grid(16), "difference").unwrap_err().message,
+            "Profile cannot be triangulated without crossing its boundary"
+        );
+        assert_eq!(
+            prism_boolean(&plate, &grid(64), "difference").unwrap_err().message,
+            "Profile triangulation budget exceeded"
+        );
     }
 }
