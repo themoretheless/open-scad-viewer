@@ -9,6 +9,8 @@ import vue from '@vitejs/plugin-vue'
 export default defineConfig({
   plugins: [vue()],
   worker: { format: 'es', rollupOptions: { output: { manualChunks(id) {
+    // Share decoder code on disk; each worker still owns its runtime state.
+    if (/src[\\/]services[\\/]wasmPacking\.ts$/.test(id)) return 'worker-wasm-packing'
     if (id.includes('/src/generated/geometry-kernels/bytes')) return 'geometry-kernel-bytes'
     if (id.includes('/src/generated/language-kernel/bytes')) return 'language-kernel-bytes'
     if (id.includes('/src/generated/harfbuzz/bytes')) return 'harfbuzz-bytes'

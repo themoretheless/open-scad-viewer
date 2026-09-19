@@ -1,6 +1,6 @@
 import {brotliCompressSync, constants} from 'node:zlib'
 import {spawnSync} from 'node:child_process'
-import {mkdirSync,readFileSync,writeFileSync,rmSync} from 'node:fs'
+import {mkdirSync,writeFileSync,rmSync} from 'node:fs'
 import {fileURLToPath} from 'node:url'
 import {resolve} from 'node:path'
 import {buildWasmBrotli} from './build-wasm-brotli.mjs'
@@ -17,8 +17,7 @@ if(result.error)throw result.error;if(result.status!==0)process.exit(result.stat
 mkdirSync(output,{recursive:true})
 for(const file of ['kernel.js','kernel.d.ts','kernel_bg.wasm.d.ts'])rmSync(resolve(output,file),{force:true})
 const built=resolve(cargoTarget,'wasm32-unknown-unknown/release/geometry_wasm.wasm')
-optimizeWasm(built)
-const wasm=readFileSync(built)
+const wasm=optimizeWasm(built)
 const module=new WebAssembly.Module(wasm)
 if(WebAssembly.Module.imports(module).length)throw new Error('Geometry WASM must not import external functions')
 writeFileSync(resolve(output,'kernel_bg.wasm'),wasm)

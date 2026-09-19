@@ -5,6 +5,7 @@ use crate::{
     emit, emit_job, invalid, parse, parse_job, JobProfile, MachineProfile, PlannedLayer, Result,
     MAX_OUTPUT_BYTES,
 };
+use crc32fast::hash as crc32;
 use std::fmt::Write as _;
 use std::io::{self, Write};
 
@@ -53,17 +54,6 @@ fn u16_at(bytes: &mut [u8], offset: usize, value: u16) {
 
 fn u32_at(bytes: &mut [u8], offset: usize, value: usize) {
     bytes[offset..offset + 4].copy_from_slice(&(value as u32).to_le_bytes());
-}
-
-fn crc32(data: &[u8]) -> u32 {
-    let mut crc = !0u32;
-    for &b in data {
-        crc ^= b as u32;
-        for _ in 0..8 {
-            crc = (crc >> 1) ^ if crc & 1 != 0 { 0xedb88320 } else { 0 };
-        }
-    }
-    !crc
 }
 
 /// RFC 1321 MD5 for plate metadata. Not a security boundary.

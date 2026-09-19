@@ -234,6 +234,36 @@ describe('GeometryBuildEngine', () => {
     expect(warm).toHaveBeenCalledTimes(1)
   })
 
+  it('recovers after late readiness without starting another warmup', async () => {
+    vi.useFakeTimers()
+    try {
+      let ready!: () => void
+      const warm = vi.fn(() => new Promise<void>(resolve => { ready = resolve }))
+      const engine = new GeometryBuildEngine([{
+        engineClass: 'mesh',
+        engineKey: CAD_MANIFESTS['own-rust-node-v1'].engineKey,
+        kernelFingerprint: CAD_MANIFESTS['own-rust-node-v1'].kernelFingerprint,
+        capabilityManifestVersion: 'own-rust-node-v1',
+        warm,
+        build: vi.fn(),
+      }])
+      const first = engine.capabilities()
+      await vi.advanceTimersByTimeAsync(251)
+      expect((await first).engines[0]).toMatchObject({
+        availability: 'unavailable', unavailableReason: expect.stringContaining('exceeded 250 ms'),
+      })
+      expect((await engine.capabilities()).engines[0].availability).toBe('unavailable')
+      expect(warm).toHaveBeenCalledTimes(1)
+      ready()
+      await vi.advanceTimersByTimeAsync(0)
+      expect((await engine.capabilities()).engines[0]).toMatchObject({
+        availability: 'available', unavailableReason: null,
+      })
+      expect(warm).toHaveBeenCalledTimes(1)
+      expect(vi.getTimerCount()).toBe(0)
+    } finally { vi.useRealTimers() }
+  })
+
   it('never warms the mesh kernel when a B-rep source selects an unavailable runtime', async () => {
     const build = vi.fn()
     const provider: GeometryBackendProvider = {

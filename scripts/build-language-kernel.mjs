@@ -1,6 +1,6 @@
 import {brotliCompressSync, constants} from 'node:zlib'
 import {spawnSync} from 'node:child_process'
-import {mkdirSync,readFileSync,writeFileSync} from 'node:fs'
+import {mkdirSync,writeFileSync} from 'node:fs'
 import {fileURLToPath} from 'node:url'
 import {resolve} from 'node:path'
 import {encodeBase85} from './wasm-base85.mjs'
@@ -14,8 +14,7 @@ const result=spawnSync('cargo',['build','--locked','--release','--config','profi
 if(result.error)throw result.error;if(result.status!==0)process.exit(result.status??1)
 mkdirSync(output,{recursive:true})
 const built=resolve(cargoTarget,'wasm32-unknown-unknown/release/languages_wasm.wasm')
-optimizeWasm(built)
-const wasm=readFileSync(built)
+const wasm=optimizeWasm(built)
 const module=new WebAssembly.Module(wasm)
 if(WebAssembly.Module.imports(module).length)throw new Error('Language WASM must not import external functions')
 writeFileSync(resolve(output,'kernel_bg.wasm'),wasm)

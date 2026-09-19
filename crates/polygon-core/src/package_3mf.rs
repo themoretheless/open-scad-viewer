@@ -1,6 +1,7 @@
 //! Deterministic OPC ZIP with native CRC32 and raw DEFLATE. Fixed trusted paths.
 use crate::mesh_export::MAX_BYTES;
 use crate::{Mesh, Result, check, error};
+use crc32fast::hash as crc32;
 use std::io::{self, Write};
 const TYPES: &[u8] = b"<?xml version=\"1.0\" encoding=\"UTF-8\"?><Types xmlns=\"http://schemas.openxmlformats.org/package/2006/content-types\"><Default Extension=\"rels\" ContentType=\"application/vnd.openxmlformats-package.relationships+xml\"/><Default Extension=\"model\" ContentType=\"application/vnd.ms-package.3dmanufacturing-3dmodel+xml\"/></Types>";
 const RELS: &[u8] = b"<?xml version=\"1.0\" encoding=\"UTF-8\"?><Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Target=\"/3D/3dmodel.model\" Id=\"rel0\" Type=\"http://schemas.microsoft.com/3dmanufacturing/2013/01/3dmodel\"/></Relationships>";
@@ -29,16 +30,6 @@ fn u16_at(bytes: &mut [u8], offset: usize, value: u16) {
 }
 fn u32_at(bytes: &mut [u8], offset: usize, value: usize) {
     bytes[offset..offset + 4].copy_from_slice(&(value as u32).to_le_bytes());
-}
-fn crc32(data: &[u8]) -> u32 {
-    let mut crc = !0u32;
-    for &b in data {
-        crc ^= b as u32;
-        for _ in 0..8 {
-            crc = (crc >> 1) ^ if crc & 1 != 0 { 0xedb88320 } else { 0 };
-        }
-    }
-    !crc
 }
 pub fn export(mesh: &Mesh, parts: &[Mesh], compressed: bool) -> Result<Vec<u8>> {
     let model = crate::model_3mf::export(mesh, parts)?;
