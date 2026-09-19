@@ -1,0 +1,94 @@
+// Zed run configurations (cmd-shift-r / task: spawn).
+// Scripts with a pre* hook (dev, test, typecheck, build) rebuild the wasm kernels first.
+[
+  {
+    "label": "dev server",
+    "command": "npm",
+    "args": ["run", "dev", "--", "--port", "5173", "--strictPort"],
+    "cwd": "$ZED_WORKTREE_ROOT",
+    "use_new_terminal": false,
+    "allow_concurrent_runs": false,
+    "reveal": "always"
+  },
+  {
+    "label": "dev server (skip kernel rebuild)",
+    "command": "npx",
+    "args": ["vite", "--port", "5173", "--strictPort"],
+    "cwd": "$ZED_WORKTREE_ROOT",
+    "allow_concurrent_runs": false,
+    "reveal": "always"
+  },
+  {
+    "label": "typecheck",
+    "command": "npm",
+    "args": ["run", "typecheck"],
+    "cwd": "$ZED_WORKTREE_ROOT",
+    "reveal": "always"
+  },
+  {
+    "label": "test: all",
+    "command": "npm",
+    "args": ["test"],
+    "cwd": "$ZED_WORKTREE_ROOT",
+    "reveal": "always"
+  },
+  {
+    "label": "test: current file",
+    "command": "npx",
+    "args": ["vitest", "run", "$ZED_RELATIVE_FILE"],
+    "cwd": "$ZED_WORKTREE_ROOT",
+    "reveal": "always",
+    "tags": ["ts-test", "js-test"]
+  },
+  {
+    "label": "test: renderer",
+    "command": "npx",
+    "args": ["vitest", "run", "webgpuRenderer", "nativeViewport"],
+    "cwd": "$ZED_WORKTREE_ROOT",
+    "reveal": "always"
+  },
+  {
+    "label": "test: rust crates",
+    "command": "cargo",
+    "args": ["test", "--locked", "--manifest-path", "crates/Cargo.toml"],
+    "cwd": "$ZED_WORKTREE_ROOT",
+    "reveal": "always"
+  },
+  {
+    "label": "build kernels (wasm)",
+    "command": "npm",
+    "args": ["run", "build:geometry"],
+    "cwd": "$ZED_WORKTREE_ROOT",
+    "reveal": "always"
+  },
+  {
+    "label": "check (typecheck + test + build)",
+    "command": "npm",
+    "args": ["run", "check"],
+    "cwd": "$ZED_WORKTREE_ROOT",
+    "reveal": "always"
+  },
+  {
+    "label": "build dist",
+    "command": "npm",
+    "args": ["run", "build"],
+    "cwd": "$ZED_WORKTREE_ROOT",
+    "reveal": "always"
+  },
+  {
+    "label": "preview dist",
+    "command": "npm",
+    "args": ["run", "preview"],
+    "cwd": "$ZED_WORKTREE_ROOT",
+    "allow_concurrent_runs": false,
+    "reveal": "always"
+  },
+  {
+    "label": "mcp server",
+    "command": "npm",
+    "args": ["run", "mcp"],
+    "cwd": "$ZED_WORKTREE_ROOT",
+    "allow_concurrent_runs": false,
+    "reveal": "always"
+  }
+]
