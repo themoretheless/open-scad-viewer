@@ -19,15 +19,5 @@ jobs:
         with:
           toolchain: nightly-2026-09-16
           targets: wasm32-unknown-unknown
-      - uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/bin/wasm-opt*
-            ~/.cargo/.crates.toml
-            ~/.cargo/.crates2.json
-            crates/target
-          key: rust-${{ runner.os }}-wasm-opt-0.116.1-${{ hashFiles('crates/Cargo.lock', 'rust-toolchain.toml') }}
       - run: npm ci
-      - run: cargo install wasm-opt --version 0.116.1 --locked
       - run: node scripts/qualify-step-interchange-v10.mjs

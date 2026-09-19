@@ -35,13 +35,9 @@ jobs:
         with:
           path: |
             ~/.cargo/registry
-            ~/.cargo/bin/wasm-opt*
-            ~/.cargo/.crates.toml
-            ~/.cargo/.crates2.json
             crates/target
-          key: rust-${{ runner.os }}-wasm-opt-0.116.1-${{ hashFiles('crates/Cargo.lock', 'rust-toolchain.toml') }}
+          key: rust-${{ runner.os }}-${{ hashFiles('crates/Cargo.lock', 'rust-toolchain.toml') }}
       - run: npm ci
-      - run: cargo install wasm-opt --version 0.116.1 --locked
       - run: npm run build:geometry
       - run: cargo test --locked --manifest-path crates/Cargo.toml --workspace
       - run: cargo clippy --locked --manifest-path crates/Cargo.toml -p osv-math --all-targets -- -D warnings
@@ -69,13 +65,9 @@ jobs:
         with:
           path: |
             ~/.cargo/registry
-            ~/.cargo/bin/wasm-opt*
-            ~/.cargo/.crates.toml
-            ~/.cargo/.crates2.json
             crates/target
-          key: rust-${{ runner.os }}-wasm-opt-0.116.1-${{ hashFiles('crates/Cargo.lock', 'rust-toolchain.toml') }}
+          key: rust-${{ runner.os }}-${{ hashFiles('crates/Cargo.lock', 'rust-toolchain.toml') }}
       - run: npm ci
-      - run: cargo install wasm-opt --version 0.116.1 --locked
       - run: npm run build:geometry
       - run: cargo test --locked --manifest-path crates/Cargo.toml --workspace
       - run: npm test -- tests/duckdbModelStore.test.ts tests/mcpCli.test.ts
@@ -98,13 +90,9 @@ jobs:
         with:
           path: |
             ~/.cargo/registry
-            ~/.cargo/bin/wasm-opt*
-            ~/.cargo/.crates.toml
-            ~/.cargo/.crates2.json
             crates/target
-          key: rust-${{ runner.os }}-wasm-opt-0.116.1-${{ hashFiles('crates/Cargo.lock', 'rust-toolchain.toml') }}
+          key: rust-${{ runner.os }}-${{ hashFiles('crates/Cargo.lock', 'rust-toolchain.toml') }}
       - run: npm ci
-      - run: cargo install wasm-opt --version 0.116.1 --locked
       - run: npm run build:geometry
       - run: cargo test --locked --manifest-path crates/Cargo.toml --workspace
       - run: npm run setup:openscad

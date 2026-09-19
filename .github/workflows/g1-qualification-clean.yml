@@ -194,7 +194,6 @@ jobs:
             --registry=https://registry.npmjs.org/ --audit=false --fund=false
           tools/browser-qualification/node_modules/.bin/playwright install --with-deps '${{ matrix.browser }}'
           export RUSTUP_TOOLCHAIN=nightly-2026-09-10
-          cargo install wasm-opt --version 0.116.1 --locked
           npm run build:geometry
       - name: Verify and run frozen browser fragment
         shell: bash
