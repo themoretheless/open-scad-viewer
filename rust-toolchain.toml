@@ -1,5 +1,5 @@
 [toolchain]
-# 1.100.0-nightly (67eda617e 2026-09-10). Dated pin, not floating nightly.
-channel = "nightly-2026-09-10"
+# Floating nightly: always the latest nightly features.
+channel = "nightly"
 targets = ["wasm32-unknown-unknown"]
 components = ["rustfmt", "clippy"]

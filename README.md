@@ -48,7 +48,7 @@ npm run test:geometry
 `wasm-opt` is required: every kernel is size-optimized after cargo, and the qualification evidence
 records the exact bytes it produces. The build fails with an explicit message when it is missing.
 
-The standard npm dev/build/test/typecheck/mcp commands build the WASM bridge automatically. Direct `tsx` or `vitest` invocation requires `npm run build:geometry` first. Generated binaries are ignored. CAD topology and geometry operations live in repository-owned Rust crates; SVG rendering and lossless compression use the dependencies listed in [third-party notices](THIRD_PARTY_NOTICES.md). Two kernels ship: the geometry kernel, and a language kernel with the OpenSCAD and ModelGraph frontends that loads only when source is compiled. The geometry WASM boundary uses the MGV1 binary protocol and direct exports. See [the library contract](crates/README.md) for native and host APIs. Rust is pinned in `rust-toolchain.toml` (`nightly-2026-09-10`, rustc 1.100).
+The standard npm dev/build/test/typecheck/mcp commands build the WASM bridge automatically. Direct `tsx` or `vitest` invocation requires `npm run build:geometry` first. Generated binaries are ignored. CAD topology and geometry operations live in repository-owned Rust crates; SVG rendering and lossless compression use the dependencies listed in [third-party notices](THIRD_PARTY_NOTICES.md). Two kernels ship: the geometry kernel, and a language kernel with the OpenSCAD and ModelGraph frontends that loads only when source is compiled. The geometry WASM boundary uses the MGV1 binary protocol and direct exports. See [the library contract](crates/README.md) for native and host APIs. Rust uses floating `nightly` via `rust-toolchain.toml`.
 
 ## Authored B-rep modeling
 

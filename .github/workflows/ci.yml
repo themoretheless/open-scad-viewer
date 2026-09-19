@@ -28,7 +28,7 @@ jobs:
           cache: npm
       - uses: dtolnay/rust-toolchain@master
         with:
-          toolchain: nightly-2026-09-10
+          toolchain: nightly
           targets: wasm32-unknown-unknown
           components: rustfmt, clippy
       - uses: actions/cache@v4
@@ -57,7 +57,7 @@ jobs:
           cache: npm
       - uses: dtolnay/rust-toolchain@master
         with:
-          toolchain: nightly-2026-09-10
+          toolchain: nightly
           targets: wasm32-unknown-unknown
           components: rustfmt, clippy
       - uses: actions/cache@v4
@@ -82,7 +82,7 @@ jobs:
           cache: npm
       - uses: dtolnay/rust-toolchain@master
         with:
-          toolchain: nightly-2026-09-10
+          toolchain: nightly
           targets: wasm32-unknown-unknown
           components: rustfmt, clippy
       - uses: actions/cache@v4
