@@ -12,8 +12,14 @@ fn closed(model: &brep_core::Model, what: &str) -> f64 {
     for segments in [2usize, 4] {
         let t = nurbs(model, segments).unwrap_or_else(|e| panic!("{what} lod {segments}: {e:?}"));
         assert!(t.built.report.closed, "{what} lod {segments} closed");
-        assert_eq!(t.built.report.non_manifold_edges, 0, "{what} lod {segments}");
-        assert!(t.built.report.signed_volume_mm3 > 0., "{what} lod {segments}");
+        assert_eq!(
+            t.built.report.non_manifold_edges, 0,
+            "{what} lod {segments}"
+        );
+        assert!(
+            t.built.report.signed_volume_mm3 > 0.,
+            "{what} lod {segments}"
+        );
         volume = t.built.report.signed_volume_mm3;
     }
     volume
@@ -81,7 +87,10 @@ fn gear_bodies_tessellate_closed() {
     })
     .unwrap();
     let pitch = std::f64::consts::PI * geometry.pitch_radius.powi(2) * 6.;
-    assert!((v_spur - pitch).abs() < 0.1 * pitch, "spur {v_spur} vs pitch {pitch}");
+    assert!(
+        (v_spur - pitch).abs() < 0.1 * pitch,
+        "spur {v_spur} vs pitch {pitch}"
+    );
 }
 
 #[test]

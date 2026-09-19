@@ -669,6 +669,7 @@ dependencies = [
 name = "gcode-core"
 version = "0.1.0"
 dependencies = [
+ "crc32fast",
  "osv-math",
  "rbench",
 ]
@@ -1499,6 +1500,7 @@ name = "polygon-core"
 version = "0.1.0"
 dependencies = [
  "brep-topology",
+ "crc32fast",
  "flate2",
  "geometry-ops",
  "osv-math",

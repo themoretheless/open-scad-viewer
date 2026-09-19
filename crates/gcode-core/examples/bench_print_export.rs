@@ -6,7 +6,7 @@
 //!   --repetitions 8 -o .rbench/print-export -- --profile quick --json
 //! ```
 use gcode_core::{
-    emit_gcode_3mf_job, emit_job, parse_job, JobProfile, MeshBody, PlannedLayer, PlannedPath,
+    JobProfile, MeshBody, PlannedLayer, PlannedPath, emit_gcode_3mf_job, emit_job, parse_job,
 };
 use rbench::{DropPolicy, Suite};
 

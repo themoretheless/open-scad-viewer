@@ -1,6 +1,6 @@
 //! Temporary lattice benchmark (may be removed after qualification).
-use geometry_bridge::mesh_shell;
 use geometry_bridge::Acceleration;
+use geometry_bridge::mesh_shell;
 use polygon_core::solid::primitives::cube;
 use std::time::Instant;
 

@@ -1,4 +1,4 @@
-use crate::{invalid, Result};
+use crate::{Result, invalid};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct BambuLanConfig {
@@ -10,7 +10,11 @@ pub struct BambuLanConfig {
 }
 
 impl BambuLanConfig {
-    pub fn new(host: impl Into<String>, access_code: impl Into<String>, serial: impl Into<String>) -> Self {
+    pub fn new(
+        host: impl Into<String>,
+        access_code: impl Into<String>,
+        serial: impl Into<String>,
+    ) -> Self {
         Self {
             host: host.into(),
             access_code: access_code.into(),
@@ -40,7 +44,10 @@ impl BambuLanConfig {
             return Err(invalid("PRINTER_HOST", "Bambu LAN host must be non-empty"));
         }
         if self.host.contains('\0') || self.host.contains('/') {
-            return Err(invalid("PRINTER_HOST", "Bambu LAN host is not a hostname/IP"));
+            return Err(invalid(
+                "PRINTER_HOST",
+                "Bambu LAN host is not a hostname/IP",
+            ));
         }
         if self.access_code.is_empty() || self.access_code.len() > 32 {
             return Err(invalid(

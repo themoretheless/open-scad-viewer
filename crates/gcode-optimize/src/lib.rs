@@ -30,8 +30,8 @@ pub use pipeline::{
 pub use travel::{path_end, path_start, travel_after_path_mm, travel_mm};
 
 pub use gcode_core::{
-    emit, emit_3mf, emit_gcode_3mf_job, emit_job, parse, parse_job, Flavor, JobProfile,
-    MachineProfile, MeshBody, PlannedLayer, PlannedPath, JOB_DIALECT, MAX_LAYERS, MAX_MOVES,
+    Flavor, JOB_DIALECT, JobProfile, MAX_LAYERS, MAX_MOVES, MachineProfile, MeshBody, PlannedLayer,
+    PlannedPath, emit, emit_3mf, emit_gcode_3mf_job, emit_job, parse, parse_job,
 };
 pub use math_core::{Error, Result};
 
@@ -129,10 +129,7 @@ impl Budget {
     }
 
     fn add(&mut self, count: usize) -> Result<()> {
-        self.work = self
-            .work
-            .checked_add(count)
-            .ok_or_else(work_limit)?;
+        self.work = self.work.checked_add(count).ok_or_else(work_limit)?;
         if self.work > MAX_PLAN_WORK {
             return Err(work_limit());
         }

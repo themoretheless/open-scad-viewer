@@ -1,7 +1,7 @@
 use gcode_core::{GcodePreview, PlannedLayer, PlannedPath};
 
 use crate::travel::dist;
-use crate::{invalid, Result};
+use crate::{Result, invalid};
 
 pub fn from_gcode(gcode: &str) -> Result<Vec<PlannedLayer>> {
     from_preview(&gcode_core::parse(gcode)?)

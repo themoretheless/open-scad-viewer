@@ -446,7 +446,9 @@ impl<'a> Emitter<'a> {
                     .contains(&k.as_str())
                     {
                         LENGTH
-                    } else if ["pressure_angle", "carrier_angle", "helix_angle"].contains(&k.as_str()) {
+                    } else if ["pressure_angle", "carrier_angle", "helix_angle"]
+                        .contains(&k.as_str())
+                    {
                         ANGLE
                     } else {
                         SCALAR

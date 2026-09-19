@@ -1,6 +1,6 @@
 //! Minimal HTTP request seam for Moonraker / OctoPrint (mockable without sockets).
 
-use crate::{invalid, Result};
+use crate::{Result, invalid};
 use std::collections::VecDeque;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -40,12 +40,9 @@ impl MockHttpTransport {
 impl HttpTransport for MockHttpTransport {
     fn request(&mut self, req: &HttpRequest) -> Result<HttpResponse> {
         self.calls.push(req.clone());
-        self.responses.pop_front().ok_or_else(|| {
-            invalid(
-                "PRINTER_HTTP",
-                "Mock HTTP transport has no queued response",
-            )
-        })
+        self.responses
+            .pop_front()
+            .ok_or_else(|| invalid("PRINTER_HTTP", "Mock HTTP transport has no queued response"))
     }
 }
 
@@ -75,10 +72,7 @@ pub fn multipart_form(fields: &[(&str, Option<&str>, &[u8])]) -> (String, Vec<u8
         body.extend_from_slice(b"\r\n");
     }
     body.extend_from_slice(format!("--{boundary}--\r\n").as_bytes());
-    (
-        format!("multipart/form-data; boundary={boundary}"),
-        body,
-    )
+    (format!("multipart/form-data; boundary={boundary}"), body)
 }
 
 /// Escape a string for embedding in a JSON string value.
@@ -143,7 +137,9 @@ pub fn find_number_field(json: &str, key: &str) -> Option<f64> {
     let rest = json[start..].trim_start();
     let rest = rest.strip_prefix(':')?.trim_start();
     let end = rest
-        .find(|c: char| !(c.is_ascii_digit() || c == '.' || c == '-' || c == '+' || c == 'e' || c == 'E'))
+        .find(|c: char| {
+            !(c.is_ascii_digit() || c == '.' || c == '-' || c == '+' || c == 'e' || c == 'E')
+        })
         .unwrap_or(rest.len());
     rest[..end].parse().ok()
 }
@@ -152,7 +148,7 @@ pub fn find_number_field(json: &str, key: &str) -> Option<f64> {
 pub mod live {
     use super::{HttpRequest, HttpResponse, HttpTransport};
     use crate::scrub::scrub_secrets;
-    use crate::{invalid, Result};
+    use crate::{Result, invalid};
     use std::io::Read;
     use std::time::Duration;
 
@@ -221,10 +217,7 @@ pub mod live {
                         .take(64 * 1024 * 1024)
                         .read_to_end(&mut body)
                         .map_err(|e| {
-                            invalid(
-                                "PRINTER_HTTP",
-                                &scrub_secrets(&e.to_string(), &secrets),
-                            )
+                            invalid("PRINTER_HTTP", &scrub_secrets(&e.to_string(), &secrets))
                         })?;
                     Ok(HttpResponse { status, body })
                 }

@@ -2,10 +2,10 @@
 
 use crate::flavor::{ShutdownStep, StartupStep};
 use crate::{
-    invalid, number, output_limit, require_layers, rounded_coordinate, valid_coordinate,
-    valid_dimension, words, BoundedOutput, Flavor, GcodeBounds, GcodeMove, GcodePreview,
-    MachineProfile, PlannedLayer, Result, MAX_COORDINATE_MM, MAX_LAYERS, MAX_LINE_BYTES,
-    MAX_MOVES, MAX_OUTPUT_BYTES,
+    BoundedOutput, Flavor, GcodeBounds, GcodeMove, GcodePreview, MAX_COORDINATE_MM, MAX_LAYERS,
+    MAX_LINE_BYTES, MAX_MOVES, MAX_OUTPUT_BYTES, MachineProfile, PlannedLayer, Result, invalid,
+    number, output_limit, require_layers, rounded_coordinate, valid_coordinate, valid_dimension,
+    words,
 };
 use std::fmt::Write;
 
@@ -49,10 +49,7 @@ impl Default for JobProfile {
 impl JobProfile {
     pub fn validate(&self) -> Result<()> {
         self.machine.validate()?;
-        for (label, value) in [
-            ("nozzle", self.nozzle_temp_c),
-            ("bed", self.bed_temp_c),
-        ] {
+        for (label, value) in [("nozzle", self.nozzle_temp_c), ("bed", self.bed_temp_c)] {
             if !value.is_finite() || !(0.0..=500.0).contains(&value) {
                 return Err(invalid(
                     "GCODE_INVALID_SETTINGS",
@@ -66,10 +63,7 @@ impl JobProfile {
                 "retract_length_mm must be 0.00001..1000000 mm",
             ));
         }
-        for speed in [
-            self.retract_feedrate_mm_s,
-            self.unretract_feedrate_mm_s,
-        ] {
+        for speed in [self.retract_feedrate_mm_s, self.unretract_feedrate_mm_s] {
             if !speed.is_finite() || !(MIN_FEEDRATE_MM_S..=MAX_COORDINATE_MM).contains(&speed) {
                 return Err(invalid(
                     "GCODE_INVALID_SETTINGS",
@@ -256,10 +250,7 @@ pub fn job_flavor(gcode: &str) -> Result<Flavor> {
 /// Strict parser for `print-job 1` in any supported flavor. Returns preview totals.
 pub fn parse_job(gcode: &str) -> Result<GcodePreview> {
     if gcode.len() > MAX_OUTPUT_BYTES {
-        return Err(invalid(
-            "GCODE_OUTPUT_LIMIT",
-            "G-code job exceeds 4 MiB",
-        ));
+        return Err(invalid("GCODE_OUTPUT_LIMIT", "G-code job exceeds 4 MiB"));
     }
     if gcode.lines().next() != Some(format!("; {JOB_DIALECT}").as_str()) {
         return Err(invalid(
@@ -451,12 +442,13 @@ pub fn parse_job(gcode: &str) -> Result<GcodePreview> {
                         .map_err(|_| invalid("GCODE_SYNTAX", "Layer counts must be integers"))?;
                     match key {
                         "CURRENT_LAYER" if value == result.layers => {}
-                        "TOTAL_LAYER" if result.layers == 1 && (1..=MAX_LAYERS).contains(&value) => {}
+                        "TOTAL_LAYER"
+                            if result.layers == 1 && (1..=MAX_LAYERS).contains(&value) => {}
                         _ => {
                             return Err(invalid(
                                 "GCODE_LAYER",
                                 "Print stats layer numbers must match the layer markers",
-                            ))
+                            ));
                         }
                     }
                 }
@@ -589,10 +581,7 @@ pub fn parse_job(gcode: &str) -> Result<GcodePreview> {
             let extruded = e > result.extrusion_mm;
             let retracted = e < result.extrusion_mm;
             if retracted
-                && (command != "G1"
-                    || words.x.is_some()
-                    || words.y.is_some()
-                    || words.z.is_some())
+                && (command != "G1" || words.x.is_some() || words.y.is_some() || words.z.is_some())
             {
                 return Err(invalid(
                     "GCODE_UNSUPPORTED_EXTRUSION",
@@ -607,11 +596,7 @@ pub fn parse_job(gcode: &str) -> Result<GcodePreview> {
             } else {
                 0.0
             };
-            if extruded
-                && words.x.is_none()
-                && words.y.is_none()
-                && words.z.is_none()
-            {
+            if extruded && words.x.is_none() && words.y.is_none() && words.z.is_none() {
                 // Unretract: E-only advance.
                 result.extrusion_mm = e;
                 peak_e = peak_e.max(e);
@@ -768,7 +753,10 @@ mod tests {
     #[test]
     fn every_flavor_round_trips_and_rejects_other_flavors_prologue() {
         for flavor in Flavor::ALL {
-            let job = JobProfile { flavor, ..JobProfile::default() };
+            let job = JobProfile {
+                flavor,
+                ..JobProfile::default()
+            };
             let gcode = emit_job(&[square()], &job).unwrap();
             assert!(gcode.contains(&format!(";FLAVOR:{}\n", flavor.header_label())));
             assert_eq!(job_flavor(&gcode).unwrap(), flavor);
@@ -788,7 +776,10 @@ mod tests {
 
     #[test]
     fn klipper_flavor_omits_m200_and_uses_native_heaters() {
-        let job = JobProfile { flavor: Flavor::Klipper, ..JobProfile::default() };
+        let job = JobProfile {
+            flavor: Flavor::Klipper,
+            ..JobProfile::default()
+        };
         let gcode = emit_job(&[square()], &job).unwrap();
         assert!(!gcode.contains("M200"));
         assert!(!gcode.contains("M109"));
@@ -800,7 +791,10 @@ mod tests {
 
     #[test]
     fn reprapfirmware_flavor_uses_g10_tool_temperatures() {
-        let job = JobProfile { flavor: Flavor::RepRapFirmware, ..JobProfile::default() };
+        let job = JobProfile {
+            flavor: Flavor::RepRapFirmware,
+            ..JobProfile::default()
+        };
         let gcode = emit_job(&[square()], &job).unwrap();
         assert!(gcode.contains("G10 P0 S210 R210\nT0\nM190 S60\nM116\n"));
         assert!(gcode.contains("M200 D0"));

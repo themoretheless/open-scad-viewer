@@ -70,9 +70,12 @@ fn mesh_boolean(bodies: Vec<Value>, operation: &str) -> Result<Value> {
     let mut pairwise = |a: &Mesh, b: &Mesh| Ok(boolean(a, b, op, &Options::default())?.mesh);
     let mesh = match op {
         Operation::Union => union_many(&meshes, &mut pairwise)?,
-        Operation::Difference => {
-            difference_many(&meshes[0], &meshes[1..], &mut pairwise, super::mesh::DIFFERENCE_BATCH)?
-        }
+        Operation::Difference => difference_many(
+            &meshes[0],
+            &meshes[1..],
+            &mut pairwise,
+            super::mesh::DIFFERENCE_BATCH,
+        )?,
         Operation::Intersection => {
             let mut m = meshes[0].clone();
             for next in &meshes[1..] {

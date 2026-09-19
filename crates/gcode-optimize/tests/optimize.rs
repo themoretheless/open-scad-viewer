@@ -1,7 +1,7 @@
 use gcode_core::{MachineProfile, PlannedLayer, PlannedPath};
 use gcode_optimize::{
-    emit_optimized, from_gcode, from_planned, from_toolpaths, optimize, travel_mm,
-    OptimizeSettings, SeamPrefer,
+    OptimizeSettings, SeamPrefer, emit_optimized, from_gcode, from_planned, from_toolpaths,
+    optimize, travel_mm,
 };
 
 fn machine() -> MachineProfile {
@@ -45,7 +45,12 @@ fn simplify_keeps_endpoints_and_drops_colinear() {
 fn seam_min_x_rotates_closed_loop() {
     let input = from_planned(&[layer(
         0.2,
-        vec![closed(vec![[10.0, 0.0], [10.0, 10.0], [0.0, 10.0], [0.0, 0.0]])],
+        vec![closed(vec![
+            [10.0, 0.0],
+            [10.0, 10.0],
+            [0.0, 10.0],
+            [0.0, 0.0],
+        ])],
     )]);
     let settings = OptimizeSettings {
         seam: SeamPrefer::MinX,
@@ -74,12 +79,7 @@ fn order_reduces_travel_on_scattered_segments() {
 
 #[test]
 fn combing_walks_around_a_hole() {
-    let hole = vec![
-        [8.0, 8.0],
-        [12.0, 8.0],
-        [12.0, 12.0],
-        [8.0, 12.0],
-    ];
+    let hole = vec![[8.0, 8.0], [12.0, 8.0], [12.0, 12.0], [8.0, 12.0]];
     let input = from_planned(&[layer(
         0.2,
         vec![
@@ -110,7 +110,12 @@ fn long_gap_counts_as_virtual_retract() {
 fn emit_optimized_round_trips_volume_without_simplify() {
     let square = layer(
         0.2,
-        vec![closed(vec![[0.0, 0.0], [10.0, 0.0], [10.0, 10.0], [0.0, 10.0]])],
+        vec![closed(vec![
+            [0.0, 0.0],
+            [10.0, 0.0],
+            [10.0, 10.0],
+            [0.0, 10.0],
+        ])],
     );
     let gcode = emit_optimized(
         from_planned(std::slice::from_ref(&square)),
@@ -120,7 +125,12 @@ fn emit_optimized_round_trips_volume_without_simplify() {
     .unwrap();
     let preview = gcode_core::parse(&gcode).unwrap();
     let rebuilt = from_gcode(&gcode).unwrap();
-    let again = emit_optimized(from_planned(&rebuilt), &machine(), &OptimizeSettings::default()).unwrap();
+    let again = emit_optimized(
+        from_planned(&rebuilt),
+        &machine(),
+        &OptimizeSettings::default(),
+    )
+    .unwrap();
     let second = gcode_core::parse(&again).unwrap();
     let volume = gcode_core::deposited_volume_mm3(std::slice::from_ref(&square), &machine());
     assert!((preview.deposited_volume_mm3 - volume).abs() / volume < 1e-6);
@@ -181,8 +191,8 @@ fn simplify_volume_stays_within_tolerance_on_a_square() {
 
 #[test]
 fn emit_optimized_job_uses_print_job_dialect() {
-    use gcode_core::{parse_job, JobProfile, JOB_DIALECT};
-    use gcode_optimize::{emit_optimized_gcode_3mf_job, emit_optimized_job, MeshBody};
+    use gcode_core::{JOB_DIALECT, JobProfile, parse_job};
+    use gcode_optimize::{MeshBody, emit_optimized_gcode_3mf_job, emit_optimized_job};
 
     let input = from_planned(&[layer(
         0.2,
@@ -211,7 +221,9 @@ fn emit_optimized_job_uses_print_job_dialect() {
         emit_optimized_gcode_3mf_job(input, &job, &OptimizeSettings::default(), Some(&mesh))
             .unwrap();
     assert!(packaged.starts_with(b"PK"));
-    assert!(gcode_core::extract_member_3mf(&packaged, "3D/3dmodel.model")
-        .unwrap()
-        .contains("<triangle"));
+    assert!(
+        gcode_core::extract_member_3mf(&packaged, "3D/3dmodel.model")
+            .unwrap()
+            .contains("<triangle")
+    );
 }

@@ -372,7 +372,9 @@ impl EdgeSamplingRegistry {
     fn verify_boundary_uses(&self, model: &brep_core::Model, face_ids: &[usize]) -> Result<()> {
         let mut actual = BTreeMap::<(usize, usize, usize), i32>::new();
         let add = |map: &mut BTreeMap<(usize, usize, usize), i32>, face, a: usize, b: usize| {
-            if a==b{return}
+            if a == b {
+                return;
+            }
             *map.entry((face, a.min(b), a.max(b))).or_default() += if a < b { 1 } else { -1 };
         };
         for (triangle, &face) in self.mesh.indices.as_chunks::<3>().0.iter().zip(face_ids) {
@@ -411,12 +413,24 @@ impl EdgeSamplingRegistry {
         actual.retain(|_, count| *count != 0);
         expected.retain(|_, count| *count != 0);
         if actual != expected {
-            let first=actual.iter().find(|(key,value)|expected.get(key)!=Some(value))
-                .map(|(key,value)|format!("actual {key:?}={value}, expected {:?}",expected.get(key)))
-                .or_else(||expected.iter().find(|(key,value)|actual.get(key)!=Some(value))
-                    .map(|(key,value)|format!("expected {key:?}={value}, actual {:?}",actual.get(key))))
+            let first = actual
+                .iter()
+                .find(|(key, value)| expected.get(key) != Some(value))
+                .map(|(key, value)| {
+                    format!("actual {key:?}={value}, expected {:?}", expected.get(key))
+                })
+                .or_else(|| {
+                    expected
+                        .iter()
+                        .find(|(key, value)| actual.get(key) != Some(value))
+                        .map(|(key, value)| {
+                            format!("expected {key:?}={value}, actual {:?}", actual.get(key))
+                        })
+                })
                 .unwrap_or_default();
-            return Err(input(format!("Tessellation face boundaries do not match the authored edge sample registry: {first}")));
+            return Err(input(format!(
+                "Tessellation face boundaries do not match the authored edge sample registry: {first}"
+            )));
         }
         Ok(())
     }
@@ -529,15 +543,16 @@ fn triangulate_boundary(
 /// straight edge are collinear and never chorded, so planar faces keep
 /// their boundary-only triangulation.
 fn split_boundary_chords(mesh: &mut FaceMesh, edges_of: &[[usize; 2]]) {
-    let same_edge = |p: usize, q: usize| {
-        edges_of[p].iter().any(|e| edges_of[q].contains(e))
-    };
+    let same_edge = |p: usize, q: usize| edges_of[p].iter().any(|e| edges_of[q].contains(e));
     loop {
         let mut incidence = BTreeMap::<[usize; 2], Vec<usize>>::new();
         for (index, t) in mesh.triangles.iter().enumerate() {
             for k in 0..3 {
                 let (p, q) = (t[k], t[(k + 1) % 3]);
-                incidence.entry([p.min(q), p.max(q)]).or_default().push(index);
+                incidence
+                    .entry([p.min(q), p.max(q)])
+                    .or_default()
+                    .push(index);
             }
         }
         let chord = incidence.iter().find(|([p, q], tris)| {
@@ -822,51 +837,92 @@ fn rectangular_face(
 ) -> Result<Option<FaceMesh>> {
     let coedges = &model.loops[face.outer].coedges;
     let corners = model.loop_uv(face.outer, 1)?;
-    let min_u=corners.iter().map(|point|point[0]).fold(f64::INFINITY,f64::min);
-    let max_u=corners.iter().map(|point|point[0]).fold(f64::NEG_INFINITY,f64::max);
-    let min_v=corners.iter().map(|point|point[1]).fold(f64::INFINITY,f64::min);
-    let max_v=corners.iter().map(|point|point[1]).fold(f64::NEG_INFINITY,f64::max);
+    let min_u = corners
+        .iter()
+        .map(|point| point[0])
+        .fold(f64::INFINITY, f64::min);
+    let max_u = corners
+        .iter()
+        .map(|point| point[0])
+        .fold(f64::NEG_INFINITY, f64::max);
+    let min_v = corners
+        .iter()
+        .map(|point| point[1])
+        .fold(f64::INFINITY, f64::min);
+    let max_v = corners
+        .iter()
+        .map(|point| point[1])
+        .fold(f64::NEG_INFINITY, f64::max);
     let rectangular = face.holes.is_empty()
-        && corners.len()>=4
+        && corners.len() >= 4
         && coedges.iter().all(|c| {
             c.pcurve.degree == 1
                 && c.pcurve.control_points.len() == 2
                 && c.pcurve.weights.iter().all(|w| *w == c.pcurve.weights[0])
                 && {
-                    let a=&c.pcurve.control_points[0];let b=&c.pcurve.control_points[1];
-                    (a[0]==b[0]||a[1]==b[1])
-                        && [a,b].iter().all(|p|p[0]==min_u||p[0]==max_u||p[1]==min_v||p[1]==max_v)
+                    let a = &c.pcurve.control_points[0];
+                    let b = &c.pcurve.control_points[1];
+                    (a[0] == b[0] || a[1] == b[1])
+                        && [a, b].iter().all(|p| {
+                            p[0] == min_u || p[0] == max_u || p[1] == min_v || p[1] == max_v
+                        })
                 }
-        })&&max_u>min_u&&max_v>min_v;
+        })
+        && max_u > min_u
+        && max_v > min_v;
     if !rectangular {
         return Ok(None);
     }
-    let horizontal=|v:f64|coedges.iter().filter(|coedge|{
-        let points=&coedge.pcurve.control_points;points[0][1]==v&&points[1][1]==v&&!model.edges[coedge.edge].degenerate
-    }).map(|coedge|registry.divisions(coedge)).sum::<usize>();
-    let vertical=|u:f64|coedges.iter().filter(|coedge|{
-        let points=&coedge.pcurve.control_points;points[0][0]==u&&points[1][0]==u&&!model.edges[coedge.edge].degenerate
-    }).map(|coedge|registry.divisions(coedge)).sum::<usize>();
-    let segments_u=horizontal(min_v).max(horizontal(max_v));
-    let segments_v=vertical(min_u).max(vertical(max_u));
-    if segments_u==0||segments_v==0{return Err(input("Rectangular patch has no ordinary boundary schedule"))}
+    let horizontal = |v: f64| {
+        coedges
+            .iter()
+            .filter(|coedge| {
+                let points = &coedge.pcurve.control_points;
+                points[0][1] == v && points[1][1] == v && !model.edges[coedge.edge].degenerate
+            })
+            .map(|coedge| registry.divisions(coedge))
+            .sum::<usize>()
+    };
+    let vertical = |u: f64| {
+        coedges
+            .iter()
+            .filter(|coedge| {
+                let points = &coedge.pcurve.control_points;
+                points[0][0] == u && points[1][0] == u && !model.edges[coedge.edge].degenerate
+            })
+            .map(|coedge| registry.divisions(coedge))
+            .sum::<usize>()
+    };
+    let segments_u = horizontal(min_v).max(horizontal(max_v));
+    let segments_v = vertical(min_u).max(vertical(max_u));
+    if segments_u == 0 || segments_v == 0 {
+        return Err(input("Rectangular patch has no ordinary boundary schedule"));
+    }
     let poles: Vec<_> = coedges
         .iter()
         .filter(|c| model.edges[c.edge].degenerate)
         .map(|c| model.edges[c.edge].vertices[0])
         .collect();
-    let mut boundary=BTreeMap::<(usize,usize),usize>::new();
-    let mut pole_rows=BTreeMap::<usize,usize>::new();
-    for coedge in coedges{
-        let divisions=registry.divisions(coedge);let domain=coedge.pcurve.domain();
-        for sample in 0..=divisions{
-            let t=sample as f64/divisions as f64;
-            let uv=coedge.pcurve.evaluate(domain[0]+t*(domain[1]-domain[0]))?.point;
-            let key=(((uv[0]-min_u)/(max_u-min_u)*segments_u as f64).round() as usize,
-                ((uv[1]-min_v)/(max_v-min_v)*segments_v as f64).round() as usize);
-            let position=registry.position(coedge,sample)?;
-            boundary.insert(key,position);
-            if model.edges[coedge.edge].degenerate{pole_rows.insert(key.1,position);}
+    let mut boundary = BTreeMap::<(usize, usize), usize>::new();
+    let mut pole_rows = BTreeMap::<usize, usize>::new();
+    for coedge in coedges {
+        let divisions = registry.divisions(coedge);
+        let domain = coedge.pcurve.domain();
+        for sample in 0..=divisions {
+            let t = sample as f64 / divisions as f64;
+            let uv = coedge
+                .pcurve
+                .evaluate(domain[0] + t * (domain[1] - domain[0]))?
+                .point;
+            let key = (
+                ((uv[0] - min_u) / (max_u - min_u) * segments_u as f64).round() as usize,
+                ((uv[1] - min_v) / (max_v - min_v) * segments_v as f64).round() as usize,
+            );
+            let position = registry.position(coedge, sample)?;
+            boundary.insert(key, position);
+            if model.edges[coedge.edge].degenerate {
+                pole_rows.insert(key.1, position);
+            }
         }
     }
     let mut out = FaceMesh {
@@ -876,10 +932,13 @@ fn rectangular_face(
     };
     for y in 0..=segments_v {
         for x in 0..=segments_u {
-            let shared=boundary.get(&(x,y)).copied().or_else(||pole_rows.get(&y).copied());
+            let shared = boundary
+                .get(&(x, y))
+                .copied()
+                .or_else(|| pole_rows.get(&y).copied());
             out.uv.push([
-                min_u+(max_u-min_u)*x as f64/segments_u as f64,
-                min_v+(max_v-min_v)*y as f64/segments_v as f64,
+                min_u + (max_u - min_u) * x as f64 / segments_u as f64,
+                min_v + (max_v - min_v) * y as f64 / segments_v as f64,
             ]);
             out.shared.push(shared);
         }
@@ -1177,11 +1236,11 @@ mod registry_tests {
         )
     }
     #[test]
-    fn periodic_step_sphere_tessellates_with_shared_seam_and_poles(){
-        let source=brep_core::sphere(2.).unwrap();
-        let text=brep_core::export_step_v6(&source).unwrap().0;
-        let model=brep_core::import_step_v6(&text).unwrap().0;
-        nurbs(&model,8).unwrap();
+    fn periodic_step_sphere_tessellates_with_shared_seam_and_poles() {
+        let source = brep_core::sphere(2.).unwrap();
+        let text = brep_core::export_step_v6(&source).unwrap().0;
+        let model = brep_core::import_step_v6(&text).unwrap().0;
+        nurbs(&model, 8).unwrap();
     }
     fn append_model(target: &mut brep_core::Model, mut source: brep_core::Model) {
         let (vertices, edges, loops, faces, shells) = (

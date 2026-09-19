@@ -55,15 +55,15 @@ mod cad_thread;
 mod camera_gestures;
 mod gcode;
 pub mod intersections;
-#[cfg(feature = "gpu")]
-pub mod lattice_gpu;
 #[cfg(feature = "cuda")]
 mod lattice_cuda;
+#[cfg(feature = "gpu")]
+pub mod lattice_gpu;
 mod mesh;
-mod mesh_render;
 pub mod mesh_analysis;
 mod mesh_export_file;
 pub mod mesh_picking;
+mod mesh_render;
 pub mod mesh_shell;
 mod scene_picking;
 mod viewport;
@@ -119,7 +119,10 @@ fn field<T: for<'a> Deserialize<'a>>(v: &Value, k: &str) -> Result<T> {
 }
 /// Consume a single-use field from an owned request; preserve `field`'s missing-value errors.
 fn take_field<T: for<'a> Deserialize<'a>>(v: &mut Value, k: &str) -> Result<T> {
-    let value = v.as_object_mut().and_then(|object| object.remove(k)).unwrap_or(Value::Null);
+    let value = v
+        .as_object_mut()
+        .and_then(|object| object.remove(k))
+        .unwrap_or(Value::Null);
     value_codec::from_value(value).map_err(|e| input(format!("Invalid {k}: {e}")))
 }
 fn encode(v: impl Serialize) -> Result<Value> {
@@ -155,64 +158,104 @@ fn close_topology_audit_value(value: &Value) -> Result<Value> {
         &["op", "parts", "sharedFaces", "radialRings", "vertexFans"],
         "close topology request",
     )?;
-    let parts_value = value["parts"].as_array().ok_or_else(|| input("parts must be an array"))?;
+    let parts_value = value["parts"]
+        .as_array()
+        .ok_or_else(|| input("parts must be an array"))?;
     let mut parts = Vec::with_capacity(parts_value.len());
     for part in parts_value {
         require_exact_fields(part, &["role", "model"], "close topology part")?;
         parts.push(brep_core::ComplexPart {
-            role: close_topology_role(part["role"].as_str().ok_or_else(|| input("part role must be a string"))?)?,
-            model: value_codec::from_value(part["model"].clone()).map_err(|e| input(e.to_string()))?,
+            role: close_topology_role(
+                part["role"]
+                    .as_str()
+                    .ok_or_else(|| input("part role must be a string"))?,
+            )?,
+            model: value_codec::from_value(part["model"].clone())
+                .map_err(|e| input(e.to_string()))?,
         });
     }
     let mut shared_faces = Vec::new();
-    for relation in value["sharedFaces"].as_array().ok_or_else(|| input("sharedFaces must be an array"))? {
-        let uses = relation.as_array().ok_or_else(|| input("shared face must be an array"))?;
+    for relation in value["sharedFaces"]
+        .as_array()
+        .ok_or_else(|| input("sharedFaces must be an array"))?
+    {
+        let uses = relation
+            .as_array()
+            .ok_or_else(|| input("shared face must be an array"))?;
         shared_faces.push(brep_core::SharedFace {
-            uses: uses.iter().map(|use_| {
-                require_exact_fields(use_, &["part", "face", "reversed"], "shared face use")?;
-                Ok(brep_core::FaceRef {
-                    part: field(use_, "part")?,
-                    face: field(use_, "face")?,
-                    reversed: field(use_, "reversed")?,
+            uses: uses
+                .iter()
+                .map(|use_| {
+                    require_exact_fields(use_, &["part", "face", "reversed"], "shared face use")?;
+                    Ok(brep_core::FaceRef {
+                        part: field(use_, "part")?,
+                        face: field(use_, "face")?,
+                        reversed: field(use_, "reversed")?,
+                    })
                 })
-            }).collect::<Result<Vec<_>>>()?,
+                .collect::<Result<Vec<_>>>()?,
         });
     }
     let mut radial_rings = Vec::new();
-    for relation in value["radialRings"].as_array().ok_or_else(|| input("radialRings must be an array"))? {
-        let uses = relation.as_array().ok_or_else(|| input("radial ring must be an array"))?;
+    for relation in value["radialRings"]
+        .as_array()
+        .ok_or_else(|| input("radialRings must be an array"))?
+    {
+        let uses = relation
+            .as_array()
+            .ok_or_else(|| input("radial ring must be an array"))?;
         radial_rings.push(brep_core::EdgeRadialRing {
-            uses: uses.iter().map(|use_| {
-                require_exact_fields(use_, &["part", "face", "edge", "reversed"], "radial use")?;
-                Ok(brep_core::EdgeUseRef {
-                    part: field(use_, "part")?,
-                    face: field(use_, "face")?,
-                    edge: field(use_, "edge")?,
-                    reversed: field(use_, "reversed")?,
+            uses: uses
+                .iter()
+                .map(|use_| {
+                    require_exact_fields(
+                        use_,
+                        &["part", "face", "edge", "reversed"],
+                        "radial use",
+                    )?;
+                    Ok(brep_core::EdgeUseRef {
+                        part: field(use_, "part")?,
+                        face: field(use_, "face")?,
+                        edge: field(use_, "edge")?,
+                        reversed: field(use_, "reversed")?,
+                    })
                 })
-            }).collect::<Result<Vec<_>>>()?,
+                .collect::<Result<Vec<_>>>()?,
         });
     }
     let mut vertex_fans = Vec::new();
-    for fan in value["vertexFans"].as_array().ok_or_else(|| input("vertexFans must be an array"))? {
+    for fan in value["vertexFans"]
+        .as_array()
+        .ok_or_else(|| input("vertexFans must be an array"))?
+    {
         require_exact_fields(fan, &["part", "vertex", "closed", "uses"], "vertex fan")?;
-        let uses = fan["uses"].as_array().ok_or_else(|| input("fan uses must be an array"))?;
+        let uses = fan["uses"]
+            .as_array()
+            .ok_or_else(|| input("fan uses must be an array"))?;
         vertex_fans.push(brep_core::VertexFan {
             vertex: (field(fan, "part")?, field(fan, "vertex")?),
             closed: field(fan, "closed")?,
-            uses: uses.iter().map(|use_| {
-                require_exact_fields(use_, &["part", "face", "vertex"], "vertex fan use")?;
-                Ok(brep_core::VertexUseRef {
-                    part: field(use_, "part")?,
-                    face: field(use_, "face")?,
-                    vertex: field(use_, "vertex")?,
+            uses: uses
+                .iter()
+                .map(|use_| {
+                    require_exact_fields(use_, &["part", "face", "vertex"], "vertex fan use")?;
+                    Ok(brep_core::VertexUseRef {
+                        part: field(use_, "part")?,
+                        face: field(use_, "face")?,
+                        vertex: field(use_, "vertex")?,
+                    })
                 })
-            }).collect::<Result<Vec<_>>>()?,
+                .collect::<Result<Vec<_>>>()?,
         });
     }
     let audited = brep_core::MixedDimensionalBrep::new(
-        parts, shared_faces, radial_rings, vertex_fans, vec![],
-    )?.audit()?;
+        parts,
+        shared_faces,
+        radial_rings,
+        vertex_fans,
+        vec![],
+    )?
+    .audit()?;
     let certificate = audited.certificate();
     let boundary_faces = audited.boundary_faces();
     Ok(json!({
@@ -829,7 +872,9 @@ pub fn dispatch(mut v: Value) -> Result<Value> {
         }
         "brep_nurbs_certified_freeform_mass_properties" => {
             let model: brep_core::Model = field(&v, "model")?;
-            encode(brep_core::analysis::certified_freeform_mass_properties(&model)?)
+            encode(brep_core::analysis::certified_freeform_mass_properties(
+                &model,
+            )?)
         }
         "brep_nurbs_authorized_heal_v2" => {
             require_exact_fields(&v, &["op", "model", "operation"], "heal request")?;
@@ -1052,7 +1097,11 @@ pub fn dispatch(mut v: Value) -> Result<Value> {
             )?)
         }
         "brep_nurbs_exact_convex_chamfer" => {
-            require_exact_fields(&v, &["op", "model", "edges", "distance"], "exact chamfer request")?;
+            require_exact_fields(
+                &v,
+                &["op", "model", "edges", "distance"],
+                "exact chamfer request",
+            )?;
             encode(brep_core::exact_convex_chamfer(
                 &field(&v, "model")?,
                 &field::<Vec<usize>>(&v, "edges")?,
@@ -1060,7 +1109,11 @@ pub fn dispatch(mut v: Value) -> Result<Value> {
             )?)
         }
         "brep_nurbs_exact_convex_prism_fillet" => {
-            require_exact_fields(&v, &["op", "model", "edges", "radius"], "exact fillet request")?;
+            require_exact_fields(
+                &v,
+                &["op", "model", "edges", "radius"],
+                "exact fillet request",
+            )?;
             encode(brep_core::exact_convex_prism_fillet(
                 &field(&v, "model")?,
                 &field::<Vec<usize>>(&v, "edges")?,
@@ -1068,7 +1121,11 @@ pub fn dispatch(mut v: Value) -> Result<Value> {
             )?)
         }
         "brep_nurbs_exact_variable_radius_fillet" => {
-            require_exact_fields(&v, &["op", "model", "edges", "radii"], "variable-radius fillet request")?;
+            require_exact_fields(
+                &v,
+                &["op", "model", "edges", "radii"],
+                "variable-radius fillet request",
+            )?;
             encode(brep_core::exact_variable_radius_fillet(
                 &field(&v, "model")?,
                 &field::<Vec<usize>>(&v, "edges")?,
@@ -1076,7 +1133,11 @@ pub fn dispatch(mut v: Value) -> Result<Value> {
             )?)
         }
         "brep_nurbs_exact_valence3_corner_blend" => {
-            require_exact_fields(&v, &["op", "model", "edges", "radius"], "valence-3 corner blend request")?;
+            require_exact_fields(
+                &v,
+                &["op", "model", "edges", "radius"],
+                "valence-3 corner blend request",
+            )?;
             encode(brep_core::exact_valence3_corner_blend(
                 &field(&v, "model")?,
                 &field::<Vec<usize>>(&v, "edges")?,
@@ -1093,9 +1154,11 @@ pub fn dispatch(mut v: Value) -> Result<Value> {
         }
         "brep_nurbs_audited_multi_section_loft_v2" => {
             require_exact_fields(&v, &["op", "sections"], "multi-section loft request")?;
-            encode(brep_core::audited_multi_section_loft(
-                &field::<Vec<Vec<[f64; 3]>>>(&v, "sections")?,
-            )?)
+            encode(brep_core::audited_multi_section_loft(&field::<
+                Vec<Vec<[f64; 3]>>,
+            >(
+                &v, "sections"
+            )?)?)
         }
         "brep_nurbs_audited_bent_rmf_sweep_v2" => {
             require_exact_fields(
@@ -1110,7 +1173,9 @@ pub fn dispatch(mut v: Value) -> Result<Value> {
                 &field::<Vec<f64>>(&v, "scales")?,
             )?)
         }
-        "brep_nurbs_inspect" => encode(take_field::<brep_core::Model>(&mut v, "model")?.validate()?),
+        "brep_nurbs_inspect" => {
+            encode(take_field::<brep_core::Model>(&mut v, "model")?.validate()?)
+        }
         "brep_nurbs_export_step" => {
             let (text, cert) = brep_core::export_step(&field(&v, "model")?)?;
             encode(json!({
@@ -1250,7 +1315,7 @@ pub fn dispatch(mut v: Value) -> Result<Value> {
             }))
         }
         "brep_nurbs_export_step_v6" => {
-            let (text,cert,report)=brep_core::export_step_v6(&field(&v,"model")?)?;
+            let (text, cert, report) = brep_core::export_step_v6(&field(&v, "model")?)?;
             encode(json!({
                 "text":text,"certificate":{"capability":cert.capability,"complete":cert.complete,"notes":cert.notes},
                 "identity":{"preserved":report.identity.preserved,"source":report.identity.source,
@@ -1262,7 +1327,7 @@ pub fn dispatch(mut v: Value) -> Result<Value> {
             }))
         }
         "brep_nurbs_import_step_v6" => {
-            let (model,cert,report)=brep_core::import_step_v6(&field::<String>(&v,"text")?)?;
+            let (model, cert, report) = brep_core::import_step_v6(&field::<String>(&v, "text")?)?;
             encode(json!({
                 "model":model,"certificate":{"capability":cert.capability,"complete":cert.complete,"notes":cert.notes},
                 "identity":{"preserved":report.identity.preserved,"source":report.identity.source,
@@ -1274,7 +1339,7 @@ pub fn dispatch(mut v: Value) -> Result<Value> {
             }))
         }
         "brep_nurbs_export_step_v7" => {
-            let (text,cert,report)=brep_core::export_step_v7(&field(&v,"model")?)?;
+            let (text, cert, report) = brep_core::export_step_v7(&field(&v, "model")?)?;
             encode(json!({
                 "text":text,"certificate":{"capability":cert.capability,"complete":cert.complete,"notes":cert.notes},
                 "identity":{"preserved":report.identity.preserved,"source":report.identity.source,
@@ -1286,7 +1351,7 @@ pub fn dispatch(mut v: Value) -> Result<Value> {
             }))
         }
         "brep_nurbs_import_step_v7" => {
-            let (model,cert,report)=brep_core::import_step_v7(&field::<String>(&v,"text")?)?;
+            let (model, cert, report) = brep_core::import_step_v7(&field::<String>(&v, "text")?)?;
             encode(json!({
                 "model":model,"certificate":{"capability":cert.capability,"complete":cert.complete,"notes":cert.notes},
                 "identity":{"preserved":report.identity.preserved,"source":report.identity.source,
@@ -1298,7 +1363,7 @@ pub fn dispatch(mut v: Value) -> Result<Value> {
             }))
         }
         "brep_nurbs_export_step_v8" => {
-            let (text,cert,report)=brep_core::export_step_v8(&field(&v,"model")?)?;
+            let (text, cert, report) = brep_core::export_step_v8(&field(&v, "model")?)?;
             let regularity=cert.regularity.iter().map(|row|json!({
                 "carrier":row.carrier,"parameterU":row.parameter_u,"parameterV":row.parameter_v,
                 "liftedPeriods":row.lifted_periods,"denominatorLowerBound":row.denominator_lower_bound,
@@ -1318,7 +1383,7 @@ pub fn dispatch(mut v: Value) -> Result<Value> {
             }))
         }
         "brep_nurbs_import_step_v8" => {
-            let (model,cert,report)=brep_core::import_step_v8(&field::<String>(&v,"text")?)?;
+            let (model, cert, report) = brep_core::import_step_v8(&field::<String>(&v, "text")?)?;
             let regularity=cert.regularity.iter().map(|row|json!({
                 "carrier":row.carrier,"parameterU":row.parameter_u,"parameterV":row.parameter_v,
                 "liftedPeriods":row.lifted_periods,"denominatorLowerBound":row.denominator_lower_bound,
@@ -1338,7 +1403,7 @@ pub fn dispatch(mut v: Value) -> Result<Value> {
             }))
         }
         "brep_nurbs_export_step_v9" => {
-            let (text,cert,report)=brep_core::export_step_v9(&field(&v,"model")?)?;
+            let (text, cert, report) = brep_core::export_step_v9(&field(&v, "model")?)?;
             let regularity=cert.regularity.iter().map(|row|json!({
                 "carrier":row.carrier,"parameterU":row.parameter_u,"parameterV":row.parameter_v,
                 "liftedPeriods":row.lifted_periods,"denominatorLowerBound":row.denominator_lower_bound,
@@ -1358,7 +1423,7 @@ pub fn dispatch(mut v: Value) -> Result<Value> {
             }))
         }
         "brep_nurbs_import_step_v9" => {
-            let (model,cert,report)=brep_core::import_step_v9(&field::<String>(&v,"text")?)?;
+            let (model, cert, report) = brep_core::import_step_v9(&field::<String>(&v, "text")?)?;
             let regularity=cert.regularity.iter().map(|row|json!({
                 "carrier":row.carrier,"parameterU":row.parameter_u,"parameterV":row.parameter_v,
                 "liftedPeriods":row.lifted_periods,"denominatorLowerBound":row.denominator_lower_bound,
@@ -1378,7 +1443,8 @@ pub fn dispatch(mut v: Value) -> Result<Value> {
             }))
         }
         "brep_nurbs_import_step_v10" => {
-            let (model,cert,document)=brep_core::import_step_v10(&field::<String>(&v,"text")?)?;
+            let (model, cert, document) =
+                brep_core::import_step_v10(&field::<String>(&v, "text")?)?;
             encode(json!({
                 "model":model,
                 "certificate":{"capability":cert.capability,"complete":cert.complete,"notes":cert.notes},
@@ -1393,25 +1459,29 @@ pub fn dispatch(mut v: Value) -> Result<Value> {
             }))
         }
         "brep_nurbs_export_step_v10" => {
-            let document=brep_core::StepV10Document{
-                source:field(&v,"source")?,graph_identity:field(&v,"graphIdentity")?,
-                definition_identities:Vec::new(),occurrence_identities:Vec::new(),
-                product_hierarchy:Vec::new(),operator_identities:Vec::new(),metadata_loss:Vec::new(),
+            let document = brep_core::StepV10Document {
+                source: field(&v, "source")?,
+                graph_identity: field(&v, "graphIdentity")?,
+                definition_identities: Vec::new(),
+                occurrence_identities: Vec::new(),
+                product_hierarchy: Vec::new(),
+                operator_identities: Vec::new(),
+                metadata_loss: Vec::new(),
             };
             encode(json!({"text":brep_core::export_step_v10(&document)?,
                 "certificate":{"capability":"step-interchange/10","complete":true,
                     "notes":["retained_affine_occurrence_graph","exact_graph_isomorphism_identity"]}}))
         }
         "brep_nurbs_compose_step_v7" => {
-            let models=field::<Vec<brep_core::Model>>(&v,"models")?;
+            let models = field::<Vec<brep_core::Model>>(&v, "models")?;
             encode(brep_core::compose_step_v7_occurrences(&models)?)
         }
         "brep_nurbs_compose_step_v8" => {
-            let models=field::<Vec<brep_core::Model>>(&v,"models")?;
+            let models = field::<Vec<brep_core::Model>>(&v, "models")?;
             encode(brep_core::compose_step_v8_occurrences(&models)?)
         }
         "brep_nurbs_compose_step_v9" => {
-            let models=field::<Vec<brep_core::Model>>(&v,"models")?;
+            let models = field::<Vec<brep_core::Model>>(&v, "models")?;
             encode(brep_core::compose_step_v9_occurrences(&models)?)
         }
         "brep_nurbs_export_iges_v2" => {
@@ -1549,9 +1619,10 @@ pub fn dispatch(mut v: Value) -> Result<Value> {
                 }
             }))
         }
-        "brep_nurbs_tessellate" => {
-            encode(brep::nurbs(&take_field(&mut v, "model")?, field(&v, "segments")?)?)
-        }
+        "brep_nurbs_tessellate" => encode(brep::nurbs(
+            &take_field(&mut v, "model")?,
+            field(&v, "segments")?,
+        )?),
         "brep_nurbs_certified_tessellate" => encode(brep::certified_nurbs(
             &take_field(&mut v, "model")?,
             field(&v, "chordToleranceMm")?,
@@ -1617,10 +1688,8 @@ pub fn dispatch(mut v: Value) -> Result<Value> {
         "cad_build_sections" => cad_sections::build(v),
         "cad_path_points" => cad_path::sample(v),
         "cad_thread_body" => cad_thread::apply(v),
-        "cad_thread_geometry" => {
-            mechanical_core::thread_geometry(&field::<Value>(&v, "options")?)
-                .map_err(|e| input(e.message))
-        }
+        "cad_thread_geometry" => mechanical_core::thread_geometry(&field::<Value>(&v, "options")?)
+            .map_err(|e| input(e.message)),
         "cad_thread_radius" => encode(
             mechanical_core::thread_radius(
                 &field::<Value>(&v, "options")?,

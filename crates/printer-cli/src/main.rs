@@ -1,14 +1,17 @@
 use clap::{Parser, Subcommand, ValueEnum};
 use printer_cli::{
-    control, discover, run_serve, send_path, ConnectionArgs, ControlAction, ServeOptions,
-    VendorKind,
+    ConnectionArgs, ControlAction, ServeOptions, VendorKind, control, discover, run_serve,
+    send_path,
 };
 use printer_core::{DiscoveryVendor, scrub_secrets};
 use std::path::PathBuf;
 use std::time::Duration;
 
 #[derive(Parser, Debug)]
-#[command(name = "printer-cli", about = "LAN printer discover / send / control companion")]
+#[command(
+    name = "printer-cli",
+    about = "LAN printer discover / send / control companion"
+)]
 struct Cli {
     #[command(subcommand)]
     command: Commands,
@@ -149,8 +152,8 @@ fn run(cli: Cli) -> Result<(), String> {
             vendor,
         } => {
             let vendors: Vec<_> = vendor.into_iter().map(DiscoveryVendor::from).collect();
-            let found = discover(Duration::from_secs(timeout_secs), &vendors)
-                .map_err(|e| e.message)?;
+            let found =
+                discover(Duration::from_secs(timeout_secs), &vendors).map_err(|e| e.message)?;
             match format {
                 OutputFormat::Json => {
                     let rows: Vec<_> = found

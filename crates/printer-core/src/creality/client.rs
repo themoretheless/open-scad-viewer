@@ -1,9 +1,9 @@
+use crate::Result;
 use crate::backend::{PrinterBackend, SubmitOutcome};
 use crate::creality::CrealityConfig;
 use crate::http::HttpTransport;
 use crate::job::{JobStatus, PrintJob, PrinterId};
 use crate::moonraker::MoonrakerBackend;
-use crate::Result;
 
 /// Creality LAN host speaking Moonraker (rooted Klipper Creality printers).
 pub struct CrealityBackend<T> {

@@ -5,9 +5,7 @@ use crate::retract::virtual_retracts;
 use crate::seam::rotate_seam;
 use crate::simplify::simplify_path;
 use crate::travel::{count_paths, path_end, travel_layers_mm};
-use crate::{
-    invalid, Budget, OptimizeInput, OptimizeReport, OptimizeSettings, Result, MAX_LAYERS,
-};
+use crate::{Budget, MAX_LAYERS, OptimizeInput, OptimizeReport, OptimizeSettings, Result, invalid};
 
 pub fn from_planned(layers: &[PlannedLayer]) -> OptimizeInput {
     OptimizeInput {

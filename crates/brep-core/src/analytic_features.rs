@@ -250,7 +250,10 @@ pub fn exact_convex_chamfer(
     let result = crate::operations::chamfer_edges(model, edges, distance).map_err(|error| {
         refuse(
             "BREP_EXACT_CHAMFER_REFUSED",
-            &format!("Exact convex chamfer feasibility refused: {}", error.message),
+            &format!(
+                "Exact convex chamfer feasibility refused: {}",
+                error.message
+            ),
         )
     })?;
     certify_blend_result(
@@ -319,7 +322,11 @@ pub fn exact_convex_prism_fillet(
     let u = unit3(cross3(helper, w)).unwrap();
     let v = cross3(w, u);
     let local = |p: [f64; 3]| [dot3(p, u), dot3(p, v), dot3(p, w)];
-    let local_vertices: Vec<_> = model.vertices.iter().map(|vertex| local(vertex.point)).collect();
+    let local_vertices: Vec<_> = model
+        .vertices
+        .iter()
+        .map(|vertex| local(vertex.point))
+        .collect();
     let z0 = local_vertices
         .iter()
         .map(|point| point[2])
@@ -371,8 +378,7 @@ pub fn exact_convex_prism_fillet(
         let [a, b] = edge.vertices.map(|vertex| local_vertices[vertex]);
         let spans_caps = ((a[2] - z0).abs() <= tol && (b[2] - z1).abs() <= tol)
             || ((b[2] - z0).abs() <= tol && (a[2] - z1).abs() <= tol);
-        if (a[0] - b[0]).hypot(a[1] - b[1]) > tol || !spans_caps
-        {
+        if (a[0] - b[0]).hypot(a[1] - b[1]) > tol || !spans_caps {
             continue;
         }
         let index = profile
@@ -387,9 +393,11 @@ pub fn exact_convex_prism_fillet(
         longitudinal[index] = Some(edge_id);
     }
     if longitudinal.iter().any(Option::is_none)
-        || selected
-            .iter()
-            .any(|edge| !longitudinal.iter().any(|candidate| candidate == &Some(*edge)))
+        || selected.iter().any(|edge| {
+            !longitudinal
+                .iter()
+                .any(|candidate| candidate == &Some(*edge))
+        })
     {
         return Err(refuse(
             "BREP_EXACT_FILLET_REFUSED",
@@ -539,11 +547,7 @@ pub fn exact_variable_radius_fillet(
     let mut rounded = [false; 4];
     rounded[corner] = true;
     // radii[0] applies at vertices[0], radii[1] at vertices[1]; map to z-order.
-    let (radius_bottom, radius_top) = if a[2] <= b[2] {
-        (r0, r1)
-    } else {
-        (r1, r0)
-    };
+    let (radius_bottom, radius_top) = if a[2] <= b[2] { (r0, r1) } else { (r1, r0) };
     let result = crate::imprint_pipeline::variable_radius_cuboid_vertical_edges(
         model,
         min,
@@ -555,7 +559,10 @@ pub fn exact_variable_radius_fillet(
     .map_err(|error| {
         refuse(
             "BREP_VARIABLE_RADIUS_FILLET_REFUSED",
-            &format!("Variable-radius fillet authorship refused: {}", error.message),
+            &format!(
+                "Variable-radius fillet authorship refused: {}",
+                error.message
+            ),
         )
     })?;
     let has_cone = result.faces.iter().any(|face| {
@@ -640,10 +647,7 @@ pub fn exact_valence3_corner_blend(
         }
     }
     // Three edges must share exactly one common vertex, and that vertex must be the max corner.
-    let sets: Vec<[usize; 2]> = edges
-        .iter()
-        .map(|&e| model.edges[e].vertices)
-        .collect();
+    let sets: Vec<[usize; 2]> = edges.iter().map(|&e| model.edges[e].vertices).collect();
     for &v in &sets[0] {
         if sets[1].contains(&v) && sets[2].contains(&v) {
             corner_vertex = Some(v);
@@ -1330,7 +1334,10 @@ fn certify_loft_sweep(
     let audit = audit_solid(&result).map_err(|error| {
         refuse(
             "BREP_LOFT_SWEEP_AUDIT_REFUSED",
-            &format!("Closed loft/sweep failed sew, orientation, or self-intersection audit: {}", error.message),
+            &format!(
+                "Closed loft/sweep failed sew, orientation, or self-intersection audit: {}",
+                error.message
+            ),
         )
     })?;
     if !naming_complete {
@@ -1414,9 +1421,7 @@ fn convex_section_area(section: &[[f64; 3]]) -> Result<f64> {
 /// Qualified exact finite successor for 2..16 explicitly corresponding,
 /// simple convex degree-1 rational NURBS sections. Each adjacent pair authors
 /// one rational bilinear Bezier side per edge; endpoint sections are capped.
-pub fn audited_multi_section_loft(
-    sections: &[Vec<[f64; 3]>],
-) -> Result<AuditedFeatureResult> {
+pub fn audited_multi_section_loft(sections: &[Vec<[f64; 3]>]) -> Result<AuditedFeatureResult> {
     if sections.len() < 3 || sections.len() > 16 {
         return Err(refuse(
             "BREP_LOFT_RESOURCE_REFUSED",
@@ -1436,11 +1441,13 @@ pub fn audited_multi_section_loft(
         .collect::<Result<Vec<_>>>()?;
     let first = &sections[0];
     let origin = first[0];
-    let normal = unit3(cross3(
-        sub3(first[1], origin),
-        sub3(first[2], origin),
-    ))
-    .ok_or_else(|| refuse("BREP_LOFT_SECTION_COLLAPSE_REFUSED", "First section plane is singular"))?;
+    let normal =
+        unit3(cross3(sub3(first[1], origin), sub3(first[2], origin))).ok_or_else(|| {
+            refuse(
+                "BREP_LOFT_SECTION_COLLAPSE_REFUSED",
+                "First section plane is singular",
+            )
+        })?;
     let mut prior = f64::NEG_INFINITY;
     for section in sections {
         let height = dot3(sub3(section[0], origin), normal);
@@ -1518,18 +1525,31 @@ pub fn audited_bent_rmf_sweep(
             "Twist and scale laws require one exact value per path station",
         ));
     }
-    if path.iter().flatten().chain(profile.iter().flatten()).any(|x| !x.is_finite()) {
-        return Err(refuse("BREP_SWEEP_PATH_REFUSED", "Path and profile coefficients must be finite"));
+    if path
+        .iter()
+        .flatten()
+        .chain(profile.iter().flatten())
+        .any(|x| !x.is_finite())
+    {
+        return Err(refuse(
+            "BREP_SWEEP_PATH_REFUSED",
+            "Path and profile coefficients must be finite",
+        ));
     }
     let profile3 = profile.iter().map(|p| [p[0], p[1], 0.]).collect::<Vec<_>>();
     convex_section_area(&profile3)?;
-    if scales.iter().any(|scale| !scale.is_finite() || *scale < 0.125 || *scale > 8.) {
+    if scales
+        .iter()
+        .any(|scale| !scale.is_finite() || *scale < 0.125 || *scale > 8.)
+    {
         return Err(refuse(
             "BREP_SWEEP_SCALE_REFUSED",
             "Scale Bernstein bounds must stay positive in 0.125..8",
         ));
     }
-    if twist_radians.iter().any(|twist| !twist.is_finite() || twist.abs() > std::f64::consts::PI)
+    if twist_radians
+        .iter()
+        .any(|twist| !twist.is_finite() || twist.abs() > std::f64::consts::PI)
         || twist_radians
             .windows(2)
             .any(|law| (law[1] - law[0]).abs() > std::f64::consts::FRAC_PI_2)
@@ -1550,7 +1570,12 @@ pub fn audited_bent_rmf_sweep(
             })
         })
         .collect::<Result<Vec<_>>>()?;
-    if sub3(path[0], *path.last().unwrap()).iter().map(|x| x * x).sum::<f64>() <= 1e-12 {
+    if sub3(path[0], *path.last().unwrap())
+        .iter()
+        .map(|x| x * x)
+        .sum::<f64>()
+        <= 1e-12
+    {
         return Err(refuse(
             "BREP_SWEEP_CLOSED_LOOP_REFUSED",
             "Closed path holonomy is outside this finite RMF successor",
@@ -1601,14 +1626,24 @@ pub fn audited_bent_rmf_sweep(
                 tangents[i - 1][1] + tangents[i][1],
                 tangents[i - 1][2] + tangents[i][2],
             ])
-            .ok_or_else(|| refuse("BREP_SWEEP_FRAME_REFUSED", "RMF tangent bisector is singular"))?
+            .ok_or_else(|| {
+                refuse(
+                    "BREP_SWEEP_FRAME_REFUSED",
+                    "RMF tangent bisector is singular",
+                )
+            })?
         };
         normal = unit3([
             normal[0] - dot3(normal, tangent) * tangent[0],
             normal[1] - dot3(normal, tangent) * tangent[1],
             normal[2] - dot3(normal, tangent) * tangent[2],
         ])
-        .ok_or_else(|| refuse("BREP_SWEEP_FRAME_REFUSED", "RMF projection denominator bound reached zero"))?;
+        .ok_or_else(|| {
+            refuse(
+                "BREP_SWEEP_FRAME_REFUSED",
+                "RMF projection denominator bound reached zero",
+            )
+        })?;
         let binormal = unit3(cross3(tangent, normal))
             .ok_or_else(|| refuse("BREP_SWEEP_FRAME_REFUSED", "RMF binormal is singular"))?;
         let (sin, cos) = twist_radians[i].sin_cos();
@@ -1775,7 +1810,12 @@ fn selected_faces_are_nonadjacent(model: &Model, openings: &[usize]) -> bool {
     true
 }
 
-fn place_axial(model: &Model, frame: [[f64; 3]; 2], axis: [f64; 3], origin: [f64; 3]) -> Result<Model> {
+fn place_axial(
+    model: &Model,
+    frame: [[f64; 3]; 2],
+    axis: [f64; 3],
+    origin: [f64; 3],
+) -> Result<Model> {
     crate::transform::affine(
         model,
         [
@@ -1801,9 +1841,7 @@ fn recognize_analytic_tube(
         .faces
         .iter()
         .filter(|face| {
-            face.surface.degree_u == 1
-                && face.surface.degree_v == 1
-                && !face.holes.is_empty()
+            face.surface.degree_u == 1 && face.surface.degree_v == 1 && !face.holes.is_empty()
         })
         .collect::<Vec<_>>();
     if caps.len() != 2
@@ -1818,14 +1856,8 @@ fn recognize_analytic_tube(
     }
     let cp = &caps[0].surface.control_points;
     let a = cp[0][0].as_slice();
-    let u = sub3(
-        [cp[1][0][0], cp[1][0][1], cp[1][0][2]],
-        [a[0], a[1], a[2]],
-    );
-    let v = sub3(
-        [cp[0][1][0], cp[0][1][1], cp[0][1][2]],
-        [a[0], a[1], a[2]],
-    );
+    let u = sub3([cp[1][0][0], cp[1][0][1], cp[1][0][2]], [a[0], a[1], a[2]]);
+    let v = sub3([cp[0][1][0], cp[0][1][1], cp[0][1][2]], [a[0], a[1], a[2]]);
     let axis = unit3(cross3(u, v))?;
     let mut centroid = [0.; 3];
     for vertex in &model.vertices {
@@ -1911,183 +1943,193 @@ pub fn exact_analytic_shell(
         ));
     }
 
-    let (result, scale, notes) =
-        if let Some(cylinder) = crate::intersections::recognize_cylinder(model)? {
-            let caps = model
-                .faces
-                .iter()
-                .enumerate()
-                .filter_map(|(index, face)| {
-                    (face.surface.degree_u == 1 && face.surface.degree_v == 1).then_some(index)
-                })
-                .collect::<Vec<_>>();
-            if caps.len() != 2 || unique.iter().any(|face| !caps.contains(face)) {
-                return Err(refuse(
-                    "BREP_ANALYTIC_SHELL_REFUSED",
-                    "Cylinder openings must select planar cap faces",
-                ));
-            }
-            if unique.len() == 1 {
-                return Err(refuse(
-                    "BREP_ANALYTIC_SHELL_TRANSITION_REFUSED",
-                    "Single-cap cylinder shell awaits exact annular rim and axial corner ownership",
-                ));
-            }
-            let height = cylinder.half_height * 2.;
-            let source_origin = [
-                cylinder.center[0] - cylinder.axis[0] * cylinder.half_height,
-                cylinder.center[1] - cylinder.axis[1] * cylinder.half_height,
-                cylinder.center[2] - cylinder.axis[2] * cylinder.half_height,
-            ];
-            if unique.len() == 2 {
-                let (outer, inner) = if direction == "inward" {
-                    if cylinder.radius <= thickness + 1e-5 {
-                        return Err(refuse(
-                            "BREP_ANALYTIC_SHELL_COLLAPSE_REFUSED",
-                            "Inward radial offset collapses the cylinder wall",
-                        ));
-                    }
-                    (cylinder.radius, cylinder.radius - thickness)
-                } else {
-                    (cylinder.radius + thickness, cylinder.radius)
-                };
-                let local = tube(outer, inner, height)?;
-                (
-                    place_axial(&local, cylinder.frame, cylinder.axis, source_origin)?,
-                    outer.max(height),
-                    vec![
-                        "exact_cylinder_dual_cap_opening",
-                        "exact_radial_offset",
-                        "inner_outer_orientation_and_cavity_owned",
-                    ],
-                )
-            } else {
-                if direction == "inward" {
-                    if cylinder.radius <= thickness + 1e-5 || height <= 2. * thickness + 1e-5 {
-                        return Err(refuse(
-                            "BREP_ANALYTIC_SHELL_COLLAPSE_REFUSED",
-                            "Inward radial or axial offset collapses the closed cylinder cavity",
-                        ));
-                    }
-                    let inner = crate::cylinder(cylinder.radius - thickness, height - 2. * thickness)?;
-                    let inner_origin = [
-                        source_origin[0] + cylinder.axis[0] * thickness,
-                        source_origin[1] + cylinder.axis[1] * thickness,
-                        source_origin[2] + cylinder.axis[2] * thickness,
-                    ];
-                    let inner = place_axial(&inner, cylinder.frame, cylinder.axis, inner_origin)?;
-                    (
-                        crate::imprint_pipeline::cavity(model, &inner, model.tolerance_mm)?,
-                        cylinder.radius.max(height),
-                        vec![
-                            "exact_cylinder_closed_inward_shell",
-                            "exact_radial_axial_offset",
-                            "inner_shell_reversed_and_cavity_owned",
-                        ],
-                    )
-                } else {
-                    let local = crate::cylinder(cylinder.radius + thickness, height + 2. * thickness)?;
-                    let outer_origin = [
-                        source_origin[0] - cylinder.axis[0] * thickness,
-                        source_origin[1] - cylinder.axis[1] * thickness,
-                        source_origin[2] - cylinder.axis[2] * thickness,
-                    ];
-                    let outer = place_axial(&local, cylinder.frame, cylinder.axis, outer_origin)?;
-                    (
-                        crate::imprint_pipeline::cavity(&outer, model, model.tolerance_mm)?,
-                        (cylinder.radius + thickness).max(height + 2. * thickness),
-                        vec![
-                            "exact_cylinder_closed_outward_shell",
-                            "exact_radial_axial_offset",
-                            "inner_shell_reversed_and_cavity_owned",
-                        ],
-                    )
-                }
-            }
-        } else if let Some((outer, inner, height, origin, axis, frame)) =
-            recognize_analytic_tube(model)
-        {
-            if !unique.is_empty() {
-                return Err(refuse(
-                    "BREP_ANALYTIC_SHELL_MIXED_OPENING_REFUSED",
-                    "Tube face openings require exact four-way annular rim ownership",
-                ));
-            }
-            let (new_outer, new_inner, new_height, shift) = if direction == "inward" {
-                if outer - inner <= 2. * thickness + 1e-5
-                    || height <= 2. * thickness + 1e-5
-                {
+    let (result, scale, notes) = if let Some(cylinder) =
+        crate::intersections::recognize_cylinder(model)?
+    {
+        let caps = model
+            .faces
+            .iter()
+            .enumerate()
+            .filter_map(|(index, face)| {
+                (face.surface.degree_u == 1 && face.surface.degree_v == 1).then_some(index)
+            })
+            .collect::<Vec<_>>();
+        if caps.len() != 2 || unique.iter().any(|face| !caps.contains(face)) {
+            return Err(refuse(
+                "BREP_ANALYTIC_SHELL_REFUSED",
+                "Cylinder openings must select planar cap faces",
+            ));
+        }
+        if unique.len() == 1 {
+            return Err(refuse(
+                "BREP_ANALYTIC_SHELL_TRANSITION_REFUSED",
+                "Single-cap cylinder shell awaits exact annular rim and axial corner ownership",
+            ));
+        }
+        let height = cylinder.half_height * 2.;
+        let source_origin = [
+            cylinder.center[0] - cylinder.axis[0] * cylinder.half_height,
+            cylinder.center[1] - cylinder.axis[1] * cylinder.half_height,
+            cylinder.center[2] - cylinder.axis[2] * cylinder.half_height,
+        ];
+        if unique.len() == 2 {
+            let (outer, inner) = if direction == "inward" {
+                if cylinder.radius <= thickness + 1e-5 {
                     return Err(refuse(
                         "BREP_ANALYTIC_SHELL_COLLAPSE_REFUSED",
-                        "Inward tube radial or axial offset collapses the material wall",
+                        "Inward radial offset collapses the cylinder wall",
                     ));
                 }
-                (outer - thickness, inner + thickness, height - 2. * thickness, thickness)
+                (cylinder.radius, cylinder.radius - thickness)
             } else {
-                if inner <= thickness + 1e-5 {
-                    return Err(refuse(
-                        "BREP_ANALYTIC_SHELL_COLLAPSE_REFUSED",
-                        "Outward tube offset collapses the inner radial boundary",
-                    ));
-                }
-                (outer + thickness, inner - thickness, height + 2. * thickness, -thickness)
+                (cylinder.radius + thickness, cylinder.radius)
             };
-            let local = tube(new_outer, new_inner, new_height)?;
-            let shifted = [
-                origin[0] + shift * axis[0],
-                origin[1] + shift * axis[1],
-                origin[2] + shift * axis[2],
-            ];
+            let local = tube(outer, inner, height)?;
             (
-                place_axial(&local, frame, axis, shifted)?,
-                new_outer.max(new_height),
+                place_axial(&local, cylinder.frame, cylinder.axis, source_origin)?,
+                outer.max(height),
                 vec![
-                    "exact_analytic_tube_body_offset",
-                    "exact_inner_outer_radial_axial_supports",
-                    "tube_material_orientation_owned",
+                    "exact_cylinder_dual_cap_opening",
+                    "exact_radial_offset",
+                    "inner_outer_orientation_and_cavity_owned",
                 ],
             )
         } else {
-            if model.faces.iter().any(|face| {
-                face.surface.degree_u != 1 || face.surface.degree_v != 1
-            }) {
-                return Err(refuse(
-                    "BREP_ANALYTIC_SHELL_MIXED_OPENING_REFUSED",
-                    "Mixed curved-planar and unsupported analytic tube shell topology is not authored",
-                ));
-            }
-            if !selected_faces_are_nonadjacent(model, &unique) {
-                return Err(refuse(
-                    "BREP_ANALYTIC_SHELL_TRANSITION_REFUSED",
-                    "Adjacent planar openings await exact corner-transition ownership",
-                ));
-            }
-            let result = if direction == "inward" {
-                crate::operations::shell_planar(model, &unique, thickness)
-            } else {
-                crate::operations::shell_planar_outward(model, &unique, thickness)
-            }
-            .map_err(|error| {
-                refuse(
-                    if error.code == "BREP_INVALID_SELECTION" {
-                        "BREP_ANALYTIC_SHELL_SELECTION_REFUSED"
-                    } else {
-                        "BREP_ANALYTIC_SHELL_FEASIBILITY_REFUSED"
-                    },
-                    &error.message,
+            if direction == "inward" {
+                if cylinder.radius <= thickness + 1e-5 || height <= 2. * thickness + 1e-5 {
+                    return Err(refuse(
+                        "BREP_ANALYTIC_SHELL_COLLAPSE_REFUSED",
+                        "Inward radial or axial offset collapses the closed cylinder cavity",
+                    ));
+                }
+                let inner = crate::cylinder(cylinder.radius - thickness, height - 2. * thickness)?;
+                let inner_origin = [
+                    source_origin[0] + cylinder.axis[0] * thickness,
+                    source_origin[1] + cylinder.axis[1] * thickness,
+                    source_origin[2] + cylinder.axis[2] * thickness,
+                ];
+                let inner = place_axial(&inner, cylinder.frame, cylinder.axis, inner_origin)?;
+                (
+                    crate::imprint_pipeline::cavity(model, &inner, model.tolerance_mm)?,
+                    cylinder.radius.max(height),
+                    vec![
+                        "exact_cylinder_closed_inward_shell",
+                        "exact_radial_axial_offset",
+                        "inner_shell_reversed_and_cavity_owned",
+                    ],
                 )
-            })?;
-            let (min, max) = model_bounds(model);
+            } else {
+                let local = crate::cylinder(cylinder.radius + thickness, height + 2. * thickness)?;
+                let outer_origin = [
+                    source_origin[0] - cylinder.axis[0] * thickness,
+                    source_origin[1] - cylinder.axis[1] * thickness,
+                    source_origin[2] - cylinder.axis[2] * thickness,
+                ];
+                let outer = place_axial(&local, cylinder.frame, cylinder.axis, outer_origin)?;
+                (
+                    crate::imprint_pipeline::cavity(&outer, model, model.tolerance_mm)?,
+                    (cylinder.radius + thickness).max(height + 2. * thickness),
+                    vec![
+                        "exact_cylinder_closed_outward_shell",
+                        "exact_radial_axial_offset",
+                        "inner_shell_reversed_and_cavity_owned",
+                    ],
+                )
+            }
+        }
+    } else if let Some((outer, inner, height, origin, axis, frame)) = recognize_analytic_tube(model)
+    {
+        if !unique.is_empty() {
+            return Err(refuse(
+                "BREP_ANALYTIC_SHELL_MIXED_OPENING_REFUSED",
+                "Tube face openings require exact four-way annular rim ownership",
+            ));
+        }
+        let (new_outer, new_inner, new_height, shift) = if direction == "inward" {
+            if outer - inner <= 2. * thickness + 1e-5 || height <= 2. * thickness + 1e-5 {
+                return Err(refuse(
+                    "BREP_ANALYTIC_SHELL_COLLAPSE_REFUSED",
+                    "Inward tube radial or axial offset collapses the material wall",
+                ));
+            }
             (
-                result,
-                (0..3).map(|axis| max[axis] - min[axis]).fold(0., f64::max),
-                vec![
-                    "exact_convex_support_plane_offset",
-                    "bounded_halfspace_collision_and_collapse_proof",
-                    "exact_nonadjacent_opening_rims",
-                ],
+                outer - thickness,
+                inner + thickness,
+                height - 2. * thickness,
+                thickness,
+            )
+        } else {
+            if inner <= thickness + 1e-5 {
+                return Err(refuse(
+                    "BREP_ANALYTIC_SHELL_COLLAPSE_REFUSED",
+                    "Outward tube offset collapses the inner radial boundary",
+                ));
+            }
+            (
+                outer + thickness,
+                inner - thickness,
+                height + 2. * thickness,
+                -thickness,
             )
         };
+        let local = tube(new_outer, new_inner, new_height)?;
+        let shifted = [
+            origin[0] + shift * axis[0],
+            origin[1] + shift * axis[1],
+            origin[2] + shift * axis[2],
+        ];
+        (
+            place_axial(&local, frame, axis, shifted)?,
+            new_outer.max(new_height),
+            vec![
+                "exact_analytic_tube_body_offset",
+                "exact_inner_outer_radial_axial_supports",
+                "tube_material_orientation_owned",
+            ],
+        )
+    } else {
+        if model
+            .faces
+            .iter()
+            .any(|face| face.surface.degree_u != 1 || face.surface.degree_v != 1)
+        {
+            return Err(refuse(
+                "BREP_ANALYTIC_SHELL_MIXED_OPENING_REFUSED",
+                "Mixed curved-planar and unsupported analytic tube shell topology is not authored",
+            ));
+        }
+        if !selected_faces_are_nonadjacent(model, &unique) {
+            return Err(refuse(
+                "BREP_ANALYTIC_SHELL_TRANSITION_REFUSED",
+                "Adjacent planar openings await exact corner-transition ownership",
+            ));
+        }
+        let result = if direction == "inward" {
+            crate::operations::shell_planar(model, &unique, thickness)
+        } else {
+            crate::operations::shell_planar_outward(model, &unique, thickness)
+        }
+        .map_err(|error| {
+            refuse(
+                if error.code == "BREP_INVALID_SELECTION" {
+                    "BREP_ANALYTIC_SHELL_SELECTION_REFUSED"
+                } else {
+                    "BREP_ANALYTIC_SHELL_FEASIBILITY_REFUSED"
+                },
+                &error.message,
+            )
+        })?;
+        let (min, max) = model_bounds(model);
+        (
+            result,
+            (0..3).map(|axis| max[axis] - min[axis]).fold(0., f64::max),
+            vec![
+                "exact_convex_support_plane_offset",
+                "bounded_halfspace_collision_and_collapse_proof",
+                "exact_nonadjacent_opening_rims",
+            ],
+        )
+    };
     certify_blend_result(
         result,
         EXACT_ANALYTIC_SHELL_CAPABILITY,
@@ -2449,8 +2491,8 @@ mod tests {
             .model;
         let properties = crate::analysis::mass_properties(&inward, 1e-10, 300_000).unwrap();
         let expected_volume = 10. * 8. * 6. - 9. * 7. * 5.;
-        let expected_area = 2. * (10. * 8. + 10. * 6. + 8. * 6.)
-            + 2. * (9. * 7. + 9. * 5. + 7. * 5.);
+        let expected_area =
+            2. * (10. * 8. + 10. * 6. + 8. * 6.) + 2. * (9. * 7. + 9. * 5. + 7. * 5.);
         assert!((properties.signed_volume_mm3 - expected_volume).abs() < 1e-6);
         assert!((properties.surface_area_mm2 - expected_area).abs() < 1e-6);
         let xs = inward
@@ -2619,12 +2661,8 @@ mod tests {
             })
             .collect();
         assert_eq!(longitudinal.len(), 5);
-        let mixed = exact_convex_prism_fillet(
-            &placed,
-            &[longitudinal[0], longitudinal[2]],
-            0.25,
-        )
-        .unwrap();
+        let mixed =
+            exact_convex_prism_fillet(&placed, &[longitudinal[0], longitudinal[2]], 0.25).unwrap();
         assert_eq!(
             mixed.feature.capability,
             EXACT_CONVEX_PRISM_FILLET_CAPABILITY
@@ -2639,8 +2677,7 @@ mod tests {
                 .count(),
             2
         );
-        let closed =
-            exact_convex_prism_fillet(&placed, &longitudinal, 0.2).unwrap();
+        let closed = exact_convex_prism_fillet(&placed, &longitudinal, 0.2).unwrap();
         assert_eq!(
             closed
                 .model
@@ -2674,8 +2711,7 @@ mod tests {
         let volume = crate::analysis::mass_properties(&out, 1e-9, 300_000)
             .unwrap()
             .signed_volume_mm3;
-        let expected =
-            (80. - 4. * radius * radius * (1. - std::f64::consts::PI / 4.)) * 6.;
+        let expected = (80. - 4. * radius * radius * (1. - std::f64::consts::PI / 4.)) * 6.;
         assert!((volume - expected).abs() < 2e-5, "{volume} != {expected}");
         for face in out
             .faces
@@ -2698,16 +2734,23 @@ mod tests {
             .vertices
             .iter()
             .find_map(|vertex| {
-                (1..source.edges.len())
-                    .find(|edge| source.edges[*edge].vertices.contains(vertex))
+                (1..source.edges.len()).find(|edge| source.edges[*edge].vertices.contains(vertex))
             })
             .unwrap();
         let before = value_codec::to_string(&source).unwrap();
         let a = exact_convex_chamfer(&source, &[0, connected], 0.75).unwrap();
         let b = exact_convex_chamfer(&source, &[connected, 0], 0.75).unwrap();
         assert_eq!(
-            (a.model.vertices.len(), a.model.edges.len(), a.model.faces.len()),
-            (b.model.vertices.len(), b.model.edges.len(), b.model.faces.len())
+            (
+                a.model.vertices.len(),
+                a.model.edges.len(),
+                a.model.faces.len()
+            ),
+            (
+                b.model.vertices.len(),
+                b.model.edges.len(),
+                b.model.faces.len()
+            )
         );
         assert!(a.audit.ok && a.naming_complete);
         assert_eq!(before, value_codec::to_string(&source).unwrap());
@@ -2727,8 +2770,7 @@ mod tests {
             .vertices
             .iter()
             .find_map(|vertex| {
-                (1..source.edges.len())
-                    .find(|edge| source.edges[*edge].vertices.contains(vertex))
+                (1..source.edges.len()).find(|edge| source.edges[*edge].vertices.contains(vertex))
             })
             .unwrap();
         assert_eq!(
@@ -2762,11 +2804,18 @@ mod tests {
             })
             .expect("vertical +X/+Y edge");
         let out = exact_variable_radius_fillet(&source, &[edge], &[[0.5, 1.5]]).unwrap();
-        assert_eq!(out.feature.capability, EXACT_VARIABLE_RADIUS_FILLET_CAPABILITY);
+        assert_eq!(
+            out.feature.capability,
+            EXACT_VARIABLE_RADIUS_FILLET_CAPABILITY
+        );
         assert!(out.feature.complete);
         assert!(out.naming_complete);
         assert!(out.feature.notes.contains(&"exact_linear_radius_law"));
-        assert!(out.feature.notes.contains(&"no_constant_radius_substitution"));
+        assert!(
+            out.feature
+                .notes
+                .contains(&"no_constant_radius_substitution")
+        );
         out.model.validate().unwrap();
     }
 
@@ -2793,18 +2842,28 @@ mod tests {
                     let p = source.vertices[v].point;
                     (0..3).all(|i| (p[i] - max[i]).abs() <= 1e-9)
                 });
-                let axis_edge = (on_max_x && on_max_y)
-                    || (on_max_x && on_max_z)
-                    || (on_max_y && on_max_z);
+                let axis_edge =
+                    (on_max_x && on_max_y) || (on_max_x && on_max_z) || (on_max_y && on_max_z);
                 (touches_corner && axis_edge).then_some(index)
             })
             .collect();
-        assert_eq!(edges.len(), 3, "expected three max-corner edges, got {edges:?}");
+        assert_eq!(
+            edges.len(),
+            3,
+            "expected three max-corner edges, got {edges:?}"
+        );
         let _ = min;
         let out = exact_valence3_corner_blend(&source, &edges, 1.).unwrap();
-        assert_eq!(out.feature.capability, EXACT_VALENCE3_CORNER_BLEND_CAPABILITY);
+        assert_eq!(
+            out.feature.capability,
+            EXACT_VALENCE3_CORNER_BLEND_CAPABILITY
+        );
         assert!(out.feature.complete && out.naming_complete && out.audit.ok);
-        assert!(out.feature.notes.contains(&"exact_equal_radius_sphere_octant"));
+        assert!(
+            out.feature
+                .notes
+                .contains(&"exact_equal_radius_sphere_octant")
+        );
         let spheres = out
             .model
             .faces
@@ -2969,21 +3028,45 @@ mod tests {
     fn exact_multi_section_loft_has_correspondence_topology_and_audit_oracles() {
         let sections = vec![
             vec![[-1., -1., 0.], [1., -1., 0.], [1., 1., 0.], [-1., 1., 0.]],
-            vec![[-1.5, -1., 2.], [1.5, -1., 2.], [1.5, 1., 2.], [-1.5, 1., 2.]],
-            vec![[-1., -0.75, 5.], [1., -0.75, 5.], [1., 0.75, 5.], [-1., 0.75, 5.]],
+            vec![
+                [-1.5, -1., 2.],
+                [1.5, -1., 2.],
+                [1.5, 1., 2.],
+                [-1.5, 1., 2.],
+            ],
+            vec![
+                [-1., -0.75, 5.],
+                [1., -0.75, 5.],
+                [1., 0.75, 5.],
+                [-1., 0.75, 5.],
+            ],
         ];
         let result = audited_multi_section_loft(&sections).unwrap();
-        assert_eq!(result.feature.capability, EXACT_MULTI_SECTION_LOFT_CAPABILITY);
+        assert_eq!(
+            result.feature.capability,
+            EXACT_MULTI_SECTION_LOFT_CAPABILITY
+        );
         assert!(result.audit.ok && result.naming_complete);
         assert_eq!(
-            (result.model.vertices.len(), result.model.edges.len(), result.model.faces.len()),
+            (
+                result.model.vertices.len(),
+                result.model.edges.len(),
+                result.model.faces.len()
+            ),
             (12, 20, 10)
         );
-        assert_eq!(result.model.faces.iter().filter(|face| face.surface.degree_u == 1 && face.surface.degree_v == 1).count(), 10);
+        assert_eq!(
+            result
+                .model
+                .faces
+                .iter()
+                .filter(|face| face.surface.degree_u == 1 && face.surface.degree_v == 1)
+                .count(),
+            10
+        );
         assert!(result.audit.self_intersection_pairs_checked > 0);
         // Independent Simpson integration of the quadratic section-area law.
-        let expected_volume = (4. + 4. * 5. + 6.) * 2. / 6.
-            + (6. + 4. * 4.375 + 3.) * 3. / 6.;
+        let expected_volume = (4. + 4. * 5. + 6.) * 2. / 6. + (6. + 4. * 4.375 + 3.) * 3. / 6.;
         let mass = crate::analysis::mass_properties(&result.model, 1e-6, 10_000).unwrap();
         assert!((mass.signed_volume_mm3.abs() - expected_volume).abs() < 1e-5);
         let prism = audited_multi_section_loft(&[
@@ -3007,7 +3090,11 @@ mod tests {
         assert_eq!(result.feature.capability, EXACT_BENT_RMF_SWEEP_CAPABILITY);
         assert!(result.audit.ok && result.naming_complete);
         assert_eq!(
-            (result.model.vertices.len(), result.model.edges.len(), result.model.faces.len()),
+            (
+                result.model.vertices.len(),
+                result.model.edges.len(),
+                result.model.faces.len()
+            ),
             (16, 28, 14)
         );
         let independent_path_length = path
@@ -3018,9 +3105,18 @@ mod tests {
             })
             .sum::<f64>();
         assert!((independent_path_length - (3. + 10_f64.sqrt() + 13_f64.sqrt())).abs() < 1e-12);
-        for (station, vertices) in path.iter().zip(result.model.vertices.chunks_exact(profile.len())) {
+        for (station, vertices) in path
+            .iter()
+            .zip(result.model.vertices.chunks_exact(profile.len()))
+        {
             let centroid = (0..3)
-                .map(|axis| vertices.iter().map(|vertex| vertex.point[axis]).sum::<f64>() / vertices.len() as f64)
+                .map(|axis| {
+                    vertices
+                        .iter()
+                        .map(|vertex| vertex.point[axis])
+                        .sum::<f64>()
+                        / vertices.len() as f64
+                })
                 .collect::<Vec<_>>();
             assert!((0..3).all(|axis| (centroid[axis] - station[axis]).abs() < 1e-9));
             let section_u = sub3(vertices[1].point, vertices[0].point);
@@ -3029,7 +3125,10 @@ mod tests {
         }
         // Four shared section edges per interior station prove exact C0
         // adjacency rather than duplicated, tolerance-sewn span boundaries.
-        assert_eq!(result.model.edges.len(), path.len() * profile.len() + (path.len() - 1) * profile.len());
+        assert_eq!(
+            result.model.edges.len(),
+            path.len() * profile.len() + (path.len() - 1) * profile.len()
+        );
         let mut reverse_path = path;
         reverse_path.reverse();
         let mut reverse_twist = twist;
@@ -3037,9 +3136,14 @@ mod tests {
         let mut reverse_scale = scale;
         reverse_scale.reverse();
         let reversed =
-            audited_bent_rmf_sweep(&profile, &reverse_path, &reverse_twist, &reverse_scale).unwrap();
+            audited_bent_rmf_sweep(&profile, &reverse_path, &reverse_twist, &reverse_scale)
+                .unwrap();
         assert_eq!(
-            (reversed.model.vertices.len(), reversed.model.edges.len(), reversed.model.faces.len()),
+            (
+                reversed.model.vertices.len(),
+                reversed.model.edges.len(),
+                reversed.model.faces.len()
+            ),
             (16, 28, 14)
         );
     }

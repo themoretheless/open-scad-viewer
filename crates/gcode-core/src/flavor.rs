@@ -1,7 +1,7 @@
 //! Firmware flavors for the job dialect. A flavor selects the startup, prologue,
 //! layer and shutdown commands a firmware family understands; motion is shared.
 
-use crate::{invalid, number, JobProfile, Result};
+use crate::{JobProfile, Result, invalid, number};
 
 /// Target firmware family for `emit_job`. Names follow PrusaSlicer/Cura `gcode_flavor`.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -186,7 +186,11 @@ impl Flavor {
     }
 
     /// Classifies a shutdown command for the strict job parser.
-    pub(crate) fn shutdown_step(self, command: &str, rest: &[&str]) -> Result<Option<ShutdownStep>> {
+    pub(crate) fn shutdown_step(
+        self,
+        command: &str,
+        rest: &[&str],
+    ) -> Result<Option<ShutdownStep>> {
         Ok(Some(match (self, command) {
             (Flavor::Marlin | Flavor::RepRapFirmware, "M104") => {
                 zero_temp(rest)?;
@@ -246,7 +250,10 @@ fn temp_word(command: &str, rest: &[&str]) -> Result<()> {
         ));
     };
     let Some(value) = word.strip_prefix('S') else {
-        return Err(invalid("GCODE_SYNTAX", &format!("{command} needs an S word")));
+        return Err(invalid(
+            "GCODE_SYNTAX",
+            &format!("{command} needs an S word"),
+        ));
     };
     admit_temperature(number(value)?)
 }

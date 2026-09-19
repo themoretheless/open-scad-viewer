@@ -8,13 +8,13 @@ use crate::Model;
 use crate::analytic_ss::{
     AnalyticSsComponent, cone_cone, cylinder_cylinder, cylinder_sphere, plane_cylinder, torus_torus,
 };
+use crate::box_sphere_boolean;
 use crate::coverage_verifier::verify_complete_report;
+use crate::cylinder_sphere_boolean;
 use crate::imprint_pipeline::{self, SpatialRelation};
 use crate::intersections::{Coverage, Options, Plane, Report};
 use crate::solid_audit::audit_solid;
 use crate::sphere_boolean;
-use crate::box_sphere_boolean;
-use crate::cylinder_sphere_boolean;
 use crate::trim_sew::{
     CellLabel, ChartEvent, ChartKind, ClassificationCertificate, SewCertificate,
     classify_chart_events, classify_face_outer_loop, classify_imprint_circle_events,
@@ -457,7 +457,9 @@ fn box_sphere_pair_boolean(
     operation: &str,
 ) -> Result<(Model, BooleanCertificate)> {
     let Some(result) = box_sphere_boolean::boolean(a, b, operation)? else {
-        return Err(unsupported("Box/sphere Boolean did not admit these operands"));
+        return Err(unsupported(
+            "Box/sphere Boolean did not admit these operands",
+        ));
     };
     result.validate()?;
     let classification = classify_chart_events(

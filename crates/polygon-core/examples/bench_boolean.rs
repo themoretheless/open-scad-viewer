@@ -76,7 +76,9 @@ fn main() -> rbench::Result<()> {
     let hole_area = 16. * (std::f64::consts::PI / 16.).sin() * 9.;
     let drilled_volume = 86. * 86. * 8. - 36. * hole_area * 8.;
     let ball = sphere(30., 128).unwrap();
-    let balls: Vec<Mesh> = (0..3).map(|i| translated(&ball, [70. * i as f64, 0., 0.])).collect();
+    let balls: Vec<Mesh> = (0..3)
+        .map(|i| translated(&ball, [70. * i as f64, 0., 0.]))
+        .collect();
     let ball_volume = volume(&ball);
     let a = cube([2., 2., 2.], false).unwrap();
     let b = translated(&a, [1., 1., 1.]);

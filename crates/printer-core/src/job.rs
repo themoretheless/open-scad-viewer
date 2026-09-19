@@ -1,4 +1,4 @@
-use crate::{invalid, Result, MAX_ARTIFACT_BYTES, MAX_REMOTE_NAME_BYTES};
+use crate::{MAX_ARTIFACT_BYTES, MAX_REMOTE_NAME_BYTES, Result, invalid};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct PrinterId {
@@ -37,7 +37,8 @@ impl PrintArtifact {
                 "G-code artifact file_name must end with .gcode",
             )),
             ArtifactKind::Gcode3mf
-                if !(self.file_name.ends_with(".gcode.3mf") || self.file_name.ends_with(".3mf")) =>
+                if !(self.file_name.ends_with(".gcode.3mf")
+                    || self.file_name.ends_with(".3mf")) =>
             {
                 Err(invalid(
                     "PRINTER_ARTIFACT_NAME",
@@ -143,7 +144,11 @@ pub fn admit_remote_name(name: &str) -> Result<()> {
             "Remote file name is empty or longer than 255 bytes",
         ));
     }
-    if name.contains('/') || name.contains('\\') || name.contains('\0') || name == "." || name == ".."
+    if name.contains('/')
+        || name.contains('\\')
+        || name.contains('\0')
+        || name == "."
+        || name == ".."
     {
         return Err(invalid(
             "PRINTER_ARTIFACT_NAME",

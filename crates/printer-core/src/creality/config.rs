@@ -1,5 +1,5 @@
 use crate::moonraker::MoonrakerConfig;
-use crate::{invalid, Result};
+use crate::{Result, invalid};
 use std::time::Duration;
 
 /// Creality LAN config. Wire protocol is Moonraker HTTP.

@@ -43,10 +43,12 @@ impl GeneralBranchGraph {
             && self.complete
             && self.missed_branch_proof
             && !self.boolean_mutation_authority
-            && self
-                .components
-                .iter()
-                .all(|c| matches!(c.contact_class.as_str(), "transverse" | "coincident" | "odd_tangency" | "even_tangency" | "boundary"))
+            && self.components.iter().all(|c| {
+                matches!(
+                    c.contact_class.as_str(),
+                    "transverse" | "coincident" | "odd_tangency" | "even_tangency" | "boundary"
+                )
+            })
     }
 }
 
@@ -59,7 +61,9 @@ pub fn branch_graph_from_ss_report(
         return Err(refuse("Expected nurbs-ss/1 surface_surface report"));
     }
     let complete = report["coverage"]["complete"].as_bool().unwrap_or(false);
-    let missed = report["coverage"]["missedBranchProof"].as_bool().unwrap_or(false);
+    let missed = report["coverage"]["missedBranchProof"]
+        .as_bool()
+        .unwrap_or(false);
     let mut components = Vec::new();
     for (id, component) in report["components"]
         .as_array()
@@ -100,10 +104,7 @@ pub fn branch_graph_from_ss_report(
                 .unwrap_or(false),
             material_sides: sides,
             coedge_trim: component.get("coedgeTrim").cloned(),
-            pcurve_first: component
-                .get("pcurveFirst")
-                .cloned()
-                .unwrap_or(Value::Null),
+            pcurve_first: component.get("pcurveFirst").cloned().unwrap_or(Value::Null),
             pcurve_second: component
                 .get("pcurveSecond")
                 .cloned()
@@ -165,7 +166,9 @@ pub fn verify_general_ss_branch_graph(
 }
 
 /// Arrange rational curved traces from an SS report into LiftedUv primitives.
-pub fn rational_traces_from_ss_report(report: &Value) -> Result<Vec<crate::uv_arrangement::LiftedUvPrimitive>> {
+pub fn rational_traces_from_ss_report(
+    report: &Value,
+) -> Result<Vec<crate::uv_arrangement::LiftedUvPrimitive>> {
     use crate::uv_arrangement::{LiftedUvGeometry, LiftedUvPrimitive};
     let mut out = Vec::new();
     for (id, component) in report["components"]
@@ -183,10 +186,7 @@ pub fn rational_traces_from_ss_report(report: &Value) -> Result<Vec<crate::uv_ar
                         let uv = sample
                             .get(if support == 0 { "uvFirst" } else { "uvSecond" })?
                             .as_array()?;
-                        Some([
-                            uv.first()?.as_f64()?,
-                            uv.get(1)?.as_f64()?,
-                        ])
+                        Some([uv.first()?.as_f64()?, uv.get(1)?.as_f64()?])
                     })
                     .collect::<Vec<_>>()
             } else if pcurve["kind"] == "line" {
@@ -264,7 +264,8 @@ mod tests {
             periodic_u: false,
             periodic_v: false,
         };
-        let report = nurbs_core::ss_intersection::intersect_surface_surface(&xy, &xz, None).unwrap();
+        let report =
+            nurbs_core::ss_intersection::intersect_surface_surface(&xy, &xz, None).unwrap();
         let context = ToleranceContext::default_valid();
         let graph = branch_graph_from_ss_report(&report, &context).unwrap();
         assert!(graph.complete);

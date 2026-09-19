@@ -6,6 +6,7 @@ rust-version.workspace = true
 publish.workspace = true
 
 [dependencies]
+crc32fast = "=1.5.2"
 math-core = { package = "osv-math", path = "../math-core" }
 value-codec = { path = "../value-codec" }
 geometry-ops = { path = "../geometry-ops" }

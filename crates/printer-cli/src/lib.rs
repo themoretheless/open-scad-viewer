@@ -14,8 +14,8 @@ pub mod artifact;
 pub mod connect;
 pub mod serve;
 
-pub use artifact::{infer_artifact_kind, load_artifact, PrintArtifactBytes};
+pub use artifact::{PrintArtifactBytes, infer_artifact_kind, load_artifact};
 pub use connect::{
-    control, discover, send_bytes, send_path, ConnectionArgs, ControlAction, VendorKind,
+    ConnectionArgs, ControlAction, VendorKind, control, discover, send_bytes, send_path,
 };
-pub use serve::{run_serve, ServeOptions};
+pub use serve::{ServeOptions, run_serve};

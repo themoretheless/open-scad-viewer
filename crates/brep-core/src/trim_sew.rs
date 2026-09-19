@@ -576,9 +576,7 @@ impl HealOperation {
                 .iter()
                 .enumerate()
                 .filter(|(_, edge)| edge.vertices.contains(vertex))
-                .filter_map(|(edge, _)| {
-                    prove_model_edge_correspondence(model, context, edge).ok()
-                })
+                .filter_map(|(edge, _)| prove_model_edge_correspondence(model, context, edge).ok())
                 .any(|proof| matches(correspondence, &proof)),
             Self::CurveRefit {
                 edge,
@@ -938,7 +936,10 @@ fn point_bits(point: [f64; 3]) -> Result<[u64; 3]> {
     Ok(point.map(f64::to_bits))
 }
 
-fn exact_iso_pcurve(surface: &Surface, pcurve: &Curve) -> Result<Option<(Curve, CurvePcurveSupport)>> {
+fn exact_iso_pcurve(
+    surface: &Surface,
+    pcurve: &Curve,
+) -> Result<Option<(Curve, CurvePcurveSupport)>> {
     let u = [
         surface.knots_u[surface.degree_u],
         surface.knots_u[surface.control_points.len()],
@@ -987,10 +988,12 @@ fn affine_planar_lift(
     pcurve: &Curve,
     context: &ToleranceContext,
 ) -> Result<Option<Curve>> {
-    let o = surface.evaluate(
-        surface.knots_u[surface.degree_u],
-        surface.knots_v[surface.degree_v],
-    )?.point;
+    let o = surface
+        .evaluate(
+            surface.knots_u[surface.degree_u],
+            surface.knots_v[surface.degree_v],
+        )?
+        .point;
     let u_domain = [
         surface.knots_u[surface.degree_u],
         surface.knots_u[surface.control_points.len()],
@@ -1008,13 +1011,11 @@ fn affine_planar_lift(
     let tol = context.spatial_bounds().on_mm;
     for i in 0..=surface.degree_u {
         for j in 0..=surface.degree_v {
-            let u = u_domain[0]
-                + (u_domain[1] - u_domain[0]) * i as f64 / surface.degree_u as f64;
-            let v = v_domain[0]
-                + (v_domain[1] - v_domain[0]) * j as f64 / surface.degree_v as f64;
-            let expected: [f64; 3] =
-                std::array::from_fn(|axis| o[axis] + (u - u_domain[0]) * eu[axis]
-                    + (v - v_domain[0]) * ev[axis]);
+            let u = u_domain[0] + (u_domain[1] - u_domain[0]) * i as f64 / surface.degree_u as f64;
+            let v = v_domain[0] + (v_domain[1] - v_domain[0]) * j as f64 / surface.degree_v as f64;
+            let expected: [f64; 3] = std::array::from_fn(|axis| {
+                o[axis] + (u - u_domain[0]) * eu[axis] + (v - v_domain[0]) * ev[axis]
+            });
             let residual = surface.control_points[i][j]
                 .iter()
                 .zip(expected)
@@ -1286,7 +1287,10 @@ pub fn prove_model_edge_correspondence(
     edge_index: usize,
 ) -> Result<BoundaryCorrespondence> {
     let edge = model.edges.get(edge_index).ok_or_else(|| {
-        refuse("BREP_HEAL_RECIPE_INVALID", "Heal edge index is out of range")
+        refuse(
+            "BREP_HEAL_RECIPE_INVALID",
+            "Heal edge index is out of range",
+        )
     })?;
     let mut uses = Vec::new();
     for (face_index, face) in model.faces.iter().enumerate() {
@@ -1324,7 +1328,12 @@ pub fn prove_model_edge_correspondence(
         .shells
         .iter()
         .position(|shell| shell.faces.iter().any(|use_| use_.face == uses[0].face))
-        .ok_or_else(|| refuse("BREP_HEAL_PROOF_REQUIRED", "Boundary face has no shell owner"))?;
+        .ok_or_else(|| {
+            refuse(
+                "BREP_HEAL_PROOF_REQUIRED",
+                "Boundary face has no shell owner",
+            )
+        })?;
     prove_boundary_correspondence(
         context,
         &edge.curve,
@@ -1912,11 +1921,7 @@ mod tests {
             knots_u: vec![0., 0., 0., 1., 1., 1.],
             knots_v: vec![0., 0., 0., 0., 1., 1., 1., 1.],
             control_points: (0..3)
-                .map(|i| {
-                    (0..4)
-                        .map(|j| vec![i as f64 * 1.5, j as f64, 0.])
-                        .collect()
-                })
+                .map(|i| (0..4).map(|j| vec![i as f64 * 1.5, j as f64, 0.]).collect())
                 .collect(),
             weights: vec![vec![1.; 4]; 3],
             periodic_u: false,
@@ -1931,13 +1936,7 @@ mod tests {
             control_points: (0..4)
                 .map(|i| {
                     (0..4)
-                        .map(|j| {
-                            vec![
-                                1.5,
-                                -1. + j as f64 * 5. / 3.,
-                                -1. + i as f64 * 5. / 3.,
-                            ]
-                        })
+                        .map(|j| vec![1.5, -1. + j as f64 * 5. / 3., -1. + i as f64 * 5. / 3.])
                         .collect()
                 })
                 .collect(),
@@ -1998,15 +1997,17 @@ mod tests {
             cyclic_index: 1,
             reversed: false,
         };
-        assert!(prove_curve_pcurve_correspondence(
-            &context,
-            &seam.curve,
-            &graph,
-            &seam.uv_traces[0],
-            ParameterOrientation::Reversed,
-            owner.clone()
-        )
-        .is_err());
+        assert!(
+            prove_curve_pcurve_correspondence(
+                &context,
+                &seam.curve,
+                &graph,
+                &seam.uv_traces[0],
+                ParameterOrientation::Reversed,
+                owner.clone()
+            )
+            .is_err()
+        );
         let mut foreign_spec = context.specification().clone();
         foreign_spec.policy = "foreign-pcurve-context".into();
         let foreign = ToleranceContext::new(foreign_spec).unwrap();
@@ -2037,15 +2038,17 @@ mod tests {
 
         let mut periodic = seam.uv_traces[1].clone();
         periodic.periodic = true;
-        assert!(prove_curve_pcurve_correspondence(
-            &context,
-            &seam.curve,
-            &plane,
-            &periodic,
-            ParameterOrientation::Same,
-            certificate.owner
-        )
-        .is_err());
+        assert!(
+            prove_curve_pcurve_correspondence(
+                &context,
+                &seam.curve,
+                &plane,
+                &periodic,
+                ParameterOrientation::Same,
+                certificate.owner
+            )
+            .is_err()
+        );
     }
 
     #[test]
@@ -2218,13 +2221,15 @@ mod tests {
         let plan = AuthorizedHealPlan::new(
             &model,
             &context,
-            vec![HealOperation::EndpointSnap {
-                vertex,
-                expected_id: model.1.vertices[vertex],
-                to,
-                correspondence: proof,
-            }
-            .bind_native_proof()],
+            vec![
+                HealOperation::EndpointSnap {
+                    vertex,
+                    expected_id: model.1.vertices[vertex],
+                    to,
+                    correspondence: proof,
+                }
+                .bind_native_proof(),
+            ],
             context.spatial_bounds().absolute_mm,
             context.spatial_bounds().absolute_mm,
         )
@@ -2262,19 +2267,24 @@ mod tests {
         let vertex = model.edges[0].vertices[0];
         let mut to = model.vertices[vertex].point;
         to[0] += context.spatial_bounds().absolute_mm
-            / (1 + model.edges.iter().filter(|edge| edge.vertices.contains(&vertex)).count())
-                as f64
+            / (1 + model
+                .edges
+                .iter()
+                .filter(|edge| edge.vertices.contains(&vertex))
+                .count()) as f64
             * 0.25;
         let plan = AuthorizedHealPlan::new(
             &model,
             &context,
-            vec![HealOperation::EndpointSnap {
-                vertex,
-                expected_id: model.1.vertices[vertex],
-                to,
-                correspondence: proof,
-            }
-            .bind_native_proof()],
+            vec![
+                HealOperation::EndpointSnap {
+                    vertex,
+                    expected_id: model.1.vertices[vertex],
+                    to,
+                    correspondence: proof,
+                }
+                .bind_native_proof(),
+            ],
             context.spatial_bounds().absolute_mm,
             context.spatial_bounds().absolute_mm,
         )
@@ -2299,8 +2309,11 @@ mod tests {
     fn heal_budget_exact_boundary_accepts_and_boundary_ulp_refuses() {
         let (model, context, proof) = heal_fixture();
         let vertex = model.edges[0].vertices[0];
-        let writes =
-            1 + model.edges.iter().filter(|edge| edge.vertices.contains(&vertex)).count();
+        let writes = 1 + model
+            .edges
+            .iter()
+            .filter(|edge| edge.vertices.contains(&vertex))
+            .count();
         let exact = context.spatial_bounds().absolute_mm / writes as f64;
         let operation = |delta: f64| {
             let mut to = model.vertices[vertex].point;
@@ -2345,13 +2358,15 @@ mod tests {
         let plan = AuthorizedHealPlan::new(
             &model,
             &context,
-            vec![HealOperation::CurveRefit {
-                edge: edge_index,
-                expected_id: model.1.edges[edge_index],
-                replacement,
-                correspondence: proof,
-            }
-            .bind_native_proof()],
+            vec![
+                HealOperation::CurveRefit {
+                    edge: edge_index,
+                    expected_id: model.1.edges[edge_index],
+                    replacement,
+                    correspondence: proof,
+                }
+                .bind_native_proof(),
+            ],
             context.spatial_bounds().absolute_mm,
             context.spatial_bounds().absolute_mm,
         )
@@ -2465,13 +2480,15 @@ mod tests {
             AuthorizedHealPlan::new(
                 &model,
                 &context,
-                vec![HealOperation::CurveRefit {
-                    edge: 0,
-                    expected_id: model.1.edges[0],
-                    replacement,
-                    correspondence: proof.clone(),
-                }
-                .bind_native_proof()],
+                vec![
+                    HealOperation::CurveRefit {
+                        edge: 0,
+                        expected_id: model.1.edges[0],
+                        replacement,
+                        correspondence: proof.clone(),
+                    }
+                    .bind_native_proof(),
+                ],
                 context.spatial_bounds().absolute_mm,
                 context.spatial_bounds().absolute_mm,
             )
@@ -2479,7 +2496,9 @@ mod tests {
             .code
         };
         let mut cardinality = model.edges[0].curve.clone();
-        cardinality.control_points.push(cardinality.control_points[0].clone());
+        cardinality
+            .control_points
+            .push(cardinality.control_points[0].clone());
         cardinality.weights.push(1.);
         let code = assert_refused(cardinality);
         assert!(code.starts_with("NURBS_") || code == "BREP_HEAL_REFIT_REFUSED");

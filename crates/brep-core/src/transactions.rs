@@ -1,12 +1,12 @@
 //! Native transactions retaining complete geometry and topology identity tables.
 //! Admission uses the existing kernel validator, not a certified solid proof.
+use crate::ChangeSet;
 use crate::Model;
-use crate::solid_audit::{SolidAuditCertificate, LocallyValidatedModel};
+use crate::solid_audit::{LocallyValidatedModel, SolidAuditCertificate};
 use crate::trim_sew::{
     AuthorizedHealPlan, HealOperation, SewCertificate, apply_authorized_heal,
     apply_authorized_heal_checked, prove_model_edge_correspondence,
 };
-use crate::ChangeSet;
 use brep_topology::RevisionState;
 use cad_predicates::ToleranceSpecIdentity;
 use nurbs_core::{Error, Result};
@@ -153,10 +153,9 @@ impl AuthorizedHealTransaction {
             .staged
             .take()
             .ok_or_else(|| Error::new("BREP_HEAL_NOT_APPLIED", "No authorized heal is staged"))?;
-        let plan = self
-            .staged_plan
-            .take()
-            .ok_or_else(|| Error::new("BREP_HEAL_NOT_APPLIED", "No authorized heal plan is staged"))?;
+        let plan = self.staged_plan.take().ok_or_else(|| {
+            Error::new("BREP_HEAL_NOT_APPLIED", "No authorized heal plan is staged")
+        })?;
         let audited = LocallyValidatedModel::new(model)?.audit()?;
         let sew = audited.certificate().sew.clone();
         let audit = audited.certificate().clone();
@@ -177,7 +176,9 @@ impl AuthorizedHealTransaction {
         }
         let context = model.tolerance_context()?.spec_identity();
         let change_set = model.1.change_set.clone();
-        change_set.validate().map_err(|error| Error::new(error.code, error.message))?;
+        change_set
+            .validate()
+            .map_err(|error| Error::new(error.code, error.message))?;
         let cumulative_displacement_mm = self
             .displacement
             .last()
@@ -259,11 +260,10 @@ pub fn authorized_heal_endpoint(
     to: [f64; 3],
 ) -> Result<AuthorizedHealResult> {
     let context = model.tolerance_context()?;
-    let expected_id = *model
-        .1
-        .vertices
-        .get(vertex)
-        .ok_or_else(|| Error::new("BREP_HEAL_RECIPE_INVALID", "Vertex index is out of range"))?;
+    let expected_id =
+        *model.1.vertices.get(vertex).ok_or_else(|| {
+            Error::new("BREP_HEAL_RECIPE_INVALID", "Vertex index is out of range")
+        })?;
     let proof = model
         .edges
         .iter()
@@ -316,8 +316,7 @@ fn execute_native_plan(
     let cell = context.spatial_bounds().absolute_mm;
     let plan = AuthorizedHealPlan::new(model, context, operations, cell, cell)?;
     let snapshot = ModelSnapshot::new(model.clone())?;
-    let mut transaction =
-        AuthorizedHealTransaction::begin(snapshot, HealCancellation::default());
+    let mut transaction = AuthorizedHealTransaction::begin(snapshot, HealCancellation::default());
     transaction.apply(&plan)?;
     transaction.commit()
 }

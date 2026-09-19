@@ -1,10 +1,10 @@
-use crate::artifact::{load_artifact, PrintArtifactBytes};
+use crate::artifact::{PrintArtifactBytes, load_artifact};
 use printer_core::{
-    default_live_discovery, scrub_secrets, ArtifactKind, BambuLanBackend, BambuLanConfig,
-    BambuLanTransport, CrealityBackend, CrealityConfig, DiscoveredPrinter, DiscoveryOptions,
-    DiscoveryVendor, JobStatus, MoonrakerBackend, MoonrakerConfig, OctoPrintBackend,
-    OctoPrintConfig, PrintArtifact, PrintJob, PrinterBackend, PrinterDiscovery, PrusaLinkBackend,
-    PrusaLinkConfig, SnapmakerBackend, SnapmakerConfig, SubmitOutcome, UreqHttpTransport, Result,
+    ArtifactKind, BambuLanBackend, BambuLanConfig, BambuLanTransport, CrealityBackend,
+    CrealityConfig, DiscoveredPrinter, DiscoveryOptions, DiscoveryVendor, JobStatus,
+    MoonrakerBackend, MoonrakerConfig, OctoPrintBackend, OctoPrintConfig, PrintArtifact, PrintJob,
+    PrinterBackend, PrinterDiscovery, PrusaLinkBackend, PrusaLinkConfig, Result, SnapmakerBackend,
+    SnapmakerConfig, SubmitOutcome, UreqHttpTransport, default_live_discovery, scrub_secrets,
 };
 use std::path::Path;
 use std::str::FromStr;
@@ -109,11 +109,7 @@ pub fn discover(timeout: Duration, vendors: &[DiscoveryVendor]) -> Result<Vec<Di
     disc.discover(&opts)
 }
 
-pub fn send_path(
-    vendor: VendorKind,
-    args: &ConnectionArgs,
-    path: &Path,
-) -> Result<SubmitOutcome> {
+pub fn send_path(vendor: VendorKind, args: &ConnectionArgs, path: &Path) -> Result<SubmitOutcome> {
     let art = load_artifact(path)?;
     send_bytes(vendor, args, &art)
 }

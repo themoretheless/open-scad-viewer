@@ -1,9 +1,11 @@
 use crate::backend::{PrinterBackend, SubmitOutcome};
-use crate::http::{find_number_field, find_string_field, HttpRequest, HttpResponse, HttpTransport};
-use crate::job::{admit_remote_name, map_vendor_state, ArtifactKind, JobStatus, PrintJob, PrinterId};
+use crate::http::{HttpRequest, HttpResponse, HttpTransport, find_number_field, find_string_field};
+use crate::job::{
+    ArtifactKind, JobStatus, PrintJob, PrinterId, admit_remote_name, map_vendor_state,
+};
 use crate::prusa::PrusaLinkConfig;
 use crate::scrub::scrub_secrets;
-use crate::{invalid, Result};
+use crate::{Result, invalid};
 
 pub struct PrusaLinkBackend<T> {
     pub config: PrusaLinkConfig,
@@ -22,7 +24,9 @@ impl<T: HttpTransport> PrusaLinkBackend<T> {
     }
 
     #[cfg(feature = "network")]
-    pub fn connect(config: PrusaLinkConfig) -> Result<PrusaLinkBackend<crate::http::live::UreqHttpTransport>> {
+    pub fn connect(
+        config: PrusaLinkConfig,
+    ) -> Result<PrusaLinkBackend<crate::http::live::UreqHttpTransport>> {
         config.validate()?;
         let mut http = crate::http::live::UreqHttpTransport::new(config.base_url.clone());
         http.timeout = config.timeout;
@@ -67,7 +71,12 @@ impl<T: HttpTransport> PrusaLinkBackend<T> {
         })
     }
 
-    fn put_bytes(&mut self, path: &str, headers: Vec<(String, String)>, body: Vec<u8>) -> Result<HttpResponse> {
+    fn put_bytes(
+        &mut self,
+        path: &str,
+        headers: Vec<(String, String)>,
+        body: Vec<u8>,
+    ) -> Result<HttpResponse> {
         self.transport.request(&HttpRequest {
             method: "PUT".into(),
             path: path.into(),
@@ -217,7 +226,11 @@ impl<T: HttpTransport> PrinterBackend for PrusaLinkBackend<T> {
             .or_else(|| find_string_field(&raw, "status"))
             .unwrap_or_default();
         let percent = find_number_field(&raw, "progress").and_then(|v| {
-            let pct = if (0.0..=1.0).contains(&v) { v * 100.0 } else { v };
+            let pct = if (0.0..=1.0).contains(&v) {
+                v * 100.0
+            } else {
+                v
+            };
             if (0.0..=100.0).contains(&pct) {
                 Some(pct as u8)
             } else {

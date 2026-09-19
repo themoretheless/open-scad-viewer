@@ -1,7 +1,7 @@
 use crate::bambu::BambuPrintOptions;
 use crate::hash::md5_hex_upper;
 use crate::job::admit_remote_name;
-use crate::{invalid, Result};
+use crate::{Result, invalid};
 
 pub fn request_topic(serial: &str) -> String {
     format!("device/{serial}/request")
@@ -86,11 +86,7 @@ pub fn artifact_md5(bytes: &[u8]) -> String {
 }
 
 fn bool_json(value: bool) -> &'static str {
-    if value {
-        "true"
-    } else {
-        "false"
-    }
+    if value { "true" } else { "false" }
 }
 
 fn escape_json(value: &str) -> String {

@@ -1,6 +1,6 @@
 use crate::job::admit_remote_name;
 use crate::transport::{MqttMessage, Transport};
-use crate::{invalid, Result, MAX_ARTIFACT_BYTES};
+use crate::{MAX_ARTIFACT_BYTES, Result, invalid};
 use std::collections::{BTreeMap, VecDeque};
 
 #[derive(Clone, Debug, Default)]

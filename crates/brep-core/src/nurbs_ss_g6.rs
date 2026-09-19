@@ -118,9 +118,11 @@ impl ExactIsoIntersectionCertificate {
             && self.transverse_signed_distance_slope.is_finite()
             && self.transverse_signed_distance_slope != 0.
             && self.context == self.evidence.context
-            && self.evidence.claims.iter().any(
-                |claim| matches!(claim, EvidenceClaim::TangentNormal { .. }),
-            )
+            && self
+                .evidence
+                .claims
+                .iter()
+                .any(|claim| matches!(claim, EvidenceClaim::TangentNormal { .. }))
             && self.evidence.claims.iter().any(|claim| {
                 matches!(
                     claim,
@@ -435,7 +437,9 @@ fn uv_location(uv: [f64; 2], tol: f64) -> Result<IsoEndpointLocation> {
     ];
     let hits = on.iter().filter(|(matches, _)| *matches).count();
     if hits > 1 {
-        return Err(refuse("Iso branch endpoint hits an ambiguous domain corner"));
+        return Err(refuse(
+            "Iso branch endpoint hits an ambiguous domain corner",
+        ));
     }
     Ok(on
         .into_iter()
@@ -461,9 +465,8 @@ fn affine_graph_projection(surface: &Surface, tol: f64) -> bool {
                     let u = i as f64 / surface.degree_u as f64;
                     let v = j as f64 / surface.degree_v as f64;
                     for axis in [a, b] {
-                        let expected = p00[axis]
-                            + u * (pu[axis] - p00[axis])
-                            + v * (pv[axis] - p00[axis]);
+                        let expected =
+                            p00[axis] + u * (pu[axis] - p00[axis]) + v * (pv[axis] - p00[axis]);
                         if (surface.control_points[i][j][axis] - expected).abs() > tol {
                             exact_graph = false;
                         }
@@ -483,8 +486,10 @@ fn affine_uv_trace(surface: &Surface, curve: &Curve, tol: f64) -> Result<Option<
     let u = sub(surface.evaluate(1., 0.)?.point, o);
     let v = sub(surface.evaluate(0., 1.)?.point, o);
     let corner = surface.evaluate(1., 1.)?.point;
-    if norm(sub(corner, [o[0] + u[0] + v[0], o[1] + u[1] + v[1], o[2] + u[2] + v[2]]))
-        > tol
+    if norm(sub(
+        corner,
+        [o[0] + u[0] + v[0], o[1] + u[1] + v[1], o[2] + u[2] + v[2]],
+    )) > tol
     {
         return Ok(None);
     }
@@ -643,7 +648,11 @@ fn certify_exact_planar_iso_intersection_cell(
                     .enumerate()
                     .map(|(i, _)| {
                         let t = i as f64 / exact_curve.degree as f64;
-                        if fixed_u { vec![fixed, t] } else { vec![t, fixed] }
+                        if fixed_u {
+                            vec![fixed, t]
+                        } else {
+                            vec![t, fixed]
+                        }
                     })
                     .collect(),
                 weights: exact_curve.weights.clone(),
@@ -706,7 +715,11 @@ fn certify_exact_planar_iso_intersection_cell(
                 RationalCurveDefinition::from_curve(&first_trace)?,
                 RationalCurveDefinition::from_curve(&second_trace)?,
             ],
-            axis: if fixed_u { ExactIsoAxis::U } else { ExactIsoAxis::V },
+            axis: if fixed_u {
+                ExactIsoAxis::U
+            } else {
+                ExactIsoAxis::V
+            },
             fixed_parameter_bits: fixed.to_bits(),
             transverse_slope_bits: span.to_bits(),
             endpoints: endpoints.clone(),
@@ -802,21 +815,23 @@ impl RationalSurfaceBits {
         Ok(Self {
             degree: [surface.degree_u, surface.degree_v],
             knots: [
-                surface.knots_u.iter().map(|value| value.to_bits()).collect(),
-                surface.knots_v.iter().map(|value| value.to_bits()).collect(),
+                surface
+                    .knots_u
+                    .iter()
+                    .map(|value| value.to_bits())
+                    .collect(),
+                surface
+                    .knots_v
+                    .iter()
+                    .map(|value| value.to_bits())
+                    .collect(),
             ],
             controls: surface
                 .control_points
                 .iter()
                 .map(|row| {
                     row.iter()
-                        .map(|point| {
-                            [
-                                point[0].to_bits(),
-                                point[1].to_bits(),
-                                point[2].to_bits(),
-                            ]
-                        })
+                        .map(|point| [point[0].to_bits(), point[1].to_bits(), point[2].to_bits()])
                         .collect()
                 })
                 .collect(),
@@ -851,16 +866,11 @@ impl RationalBezierDecomposition {
                 .all(|(span, authority)| {
                     span.source_face == self.source_face
                         && span.denominator_lower_bound > 0.
-                        && RationalSurfaceBits::from_surface(&span.patch).as_ref()
-                            == Ok(authority)
-                        && span.domain[0] == [
-                            self.u_breaks[span.span.u],
-                            self.u_breaks[span.span.u + 1],
-                        ]
-                        && span.domain[1] == [
-                            self.v_breaks[span.span.v],
-                            self.v_breaks[span.span.v + 1],
-                        ]
+                        && RationalSurfaceBits::from_surface(&span.patch).as_ref() == Ok(authority)
+                        && span.domain[0]
+                            == [self.u_breaks[span.span.u], self.u_breaks[span.span.u + 1]]
+                        && span.domain[1]
+                            == [self.v_breaks[span.span.v], self.v_breaks[span.span.v + 1]]
                         && span.owns_upper
                             == [
                                 span.span.u + 2 == self.u_breaks.len(),
@@ -929,12 +939,8 @@ pub fn decompose_rational_bezier_spans(
     let mut global_lower = f64::INFINITY;
     for u in 0..u_breaks.len() - 1 {
         for v in 0..v_breaks.len() - 1 {
-            let patch = surface.trim([
-                u_breaks[u],
-                u_breaks[u + 1],
-                v_breaks[v],
-                v_breaks[v + 1],
-            ])?;
+            let patch =
+                surface.trim([u_breaks[u], u_breaks[u + 1], v_breaks[v], v_breaks[v + 1]])?;
             let lower = patch
                 .weights
                 .iter()
@@ -949,7 +955,9 @@ pub fn decompose_rational_bezier_spans(
             if patch.control_points.len() != patch.degree_u + 1
                 || patch.control_points[0].len() != patch.degree_v + 1
             {
-                return Err(refuse("Knot insertion did not isolate one Bezier tensor span"));
+                return Err(refuse(
+                    "Knot insertion did not isolate one Bezier tensor span",
+                ));
             }
             global_lower = global_lower.min(lower);
             authority.push(RationalSurfaceBits::from_surface(&patch)?);
@@ -1061,9 +1069,7 @@ pub struct BranchGraph {
     authority: BranchGraphAuthority,
 }
 
-fn fragment_authority(
-    fragment: &CertifiedBranchFragment,
-) -> Result<FragmentAuthority> {
+fn fragment_authority(fragment: &CertifiedBranchFragment) -> Result<FragmentAuthority> {
     Ok(FragmentAuthority {
         source_faces: fragment.source_faces,
         source_spans: fragment.source_spans,
@@ -1171,10 +1177,7 @@ pub fn join_certified_multispan_fragments(
             .unwrap()
             .cmp(&joined_endpoint_key(b, 0).unwrap())
             .then_with(|| a.source_spans.cmp(&b.source_spans))
-            .then_with(|| {
-                a.parameter_interval[0]
-                    .total_cmp(&b.parameter_interval[0])
-            })
+            .then_with(|| a.parameter_interval[0].total_cmp(&b.parameter_interval[0]))
     });
     let mut endpoints = BTreeMap::<(Vec<u64>, Vec<u64>, Vec<u64>), Vec<(usize, usize)>>::new();
     for (id, fragment) in fragments.iter().enumerate() {
@@ -1186,7 +1189,9 @@ pub fn join_certified_multispan_fragments(
         }
     }
     if endpoints.values().any(|uses| uses.len() > 2) {
-        return Err(refuse("Ambiguous branch fork or merge at an exact endpoint"));
+        return Err(refuse(
+            "Ambiguous branch fork or merge at an exact endpoint",
+        ));
     }
     let mut adjacency = vec![[None; 2]; fragments.len()];
     for uses in endpoints.values().filter(|uses| uses.len() == 2) {
@@ -1226,10 +1231,11 @@ pub fn join_certified_multispan_fragments(
                     fragment.pcurves[1].reverse()?,
                 ];
                 fragment.parameter_interval.reverse();
-                fragment.orientations = fragment.orientations.map(|orientation| match orientation {
-                    BranchOrientation::Increasing => BranchOrientation::Decreasing,
-                    BranchOrientation::Decreasing => BranchOrientation::Increasing,
-                });
+                fragment.orientations =
+                    fragment.orientations.map(|orientation| match orientation {
+                        BranchOrientation::Increasing => BranchOrientation::Decreasing,
+                        BranchOrientation::Decreasing => BranchOrientation::Increasing,
+                    });
             }
             ordered.push(fragment);
             let exit = usize::from(!entered_end);
@@ -1273,7 +1279,10 @@ pub fn join_certified_multispan_fragments(
         context: context.spec_identity(),
         fragment_definitions: definitions,
         component_ranges,
-        component_closed: components.iter().map(|component| component.closed).collect(),
+        component_closed: components
+            .iter()
+            .map(|component| component.closed)
+            .collect(),
         source_span_count,
         candidate_span_pairs,
         denominator_lower_bound_bits: denominator_lower_bound.to_bits(),
@@ -1296,7 +1305,9 @@ pub fn join_certified_multispan_fragments(
         authority,
     };
     if !graph.permits_topology_authorship() {
-        return Err(refuse("Joined branch graph failed its native authority check"));
+        return Err(refuse(
+            "Joined branch graph failed its native authority check",
+        ));
     }
     Ok(graph)
 }
@@ -1331,10 +1342,7 @@ fn affine_plane_uv_domain(
     }
     let a = (dot(rhs, eu) * vv - dot(rhs, ev) * uv) / determinant;
     let b = (dot(rhs, ev) * uu - dot(rhs, eu) * uv) / determinant;
-    let result = [
-        umin + a * (umax - umin),
-        vmin + b * (vmax - vmin),
-    ];
+    let result = [umin + a * (umax - umin), vmin + b * (vmax - vmin)];
     Ok(((result[0] >= umin - tolerance)
         && (result[0] <= umax + tolerance)
         && (result[1] >= vmin - tolerance)
@@ -1342,15 +1350,10 @@ fn affine_plane_uv_domain(
         .then_some(result))
 }
 
-fn affine_plane_trace(
-    plane: &Surface,
-    curve: &Curve,
-    tolerance: f64,
-) -> Result<Option<Curve>> {
+fn affine_plane_trace(plane: &Surface, curve: &Curve, tolerance: f64) -> Result<Option<Curve>> {
     let mut controls = Vec::with_capacity(curve.control_points.len());
     for point in &curve.control_points {
-        let Some(uv) =
-            affine_plane_uv_domain(plane, [point[0], point[1], point[2]], tolerance)?
+        let Some(uv) = affine_plane_uv_domain(plane, [point[0], point[1], point[2]], tolerance)?
         else {
             return Ok(None);
         };
@@ -1370,9 +1373,8 @@ fn affine_plane_trace(
 fn owning_span(breaks: &[f64], parameter: f64) -> Option<usize> {
     breaks.windows(2).enumerate().find_map(|(index, pair)| {
         (parameter >= pair[0]
-            && (parameter < pair[1]
-                || (index + 2 == breaks.len() && parameter == pair[1])))
-        .then_some(index)
+            && (parameter < pair[1] || (index + 2 == breaks.len() && parameter == pair[1])))
+            .then_some(index)
     })
 }
 
@@ -1394,7 +1396,9 @@ pub fn certify_multispan_ss(
     let (plane_origin, plane_normal) =
         planar_support(plane, tolerance).ok_or_else(|| refuse("Second support is not planar"))?;
     if !affine_graph_projection(plane, tolerance) {
-        return Err(refuse("Second support is not an affine planar parameterization"));
+        return Err(refuse(
+            "Second support is not an affine planar parameterization",
+        ));
     }
     let candidate_span_pairs = source_decomposition
         .spans
@@ -1435,9 +1439,7 @@ pub fn certify_multispan_ss(
                     if j == 0 {
                         coefficients[i] = coefficient;
                     } else if (coefficient - coefficients[i]).abs()
-                        > 32.
-                            * f64::EPSILON
-                            * coefficient.abs().max(coefficients[i].abs()).max(1.)
+                        > 32. * f64::EPSILON * coefficient.abs().max(coefficients[i].abs()).max(1.)
                     {
                         invariant = false;
                     }
@@ -1447,16 +1449,12 @@ pub fn certify_multispan_ss(
             let affine = invariant
                 && slope.abs() > context.spatial_bounds().clear_mm
                 && coefficients.iter().enumerate().all(|(i, value)| {
-                    let expected =
-                        coefficients[0] + slope * i as f64 / fixed_degree as f64;
+                    let expected = coefficients[0] + slope * i as f64 / fixed_degree as f64;
                     value.to_bits() == expected.to_bits()
                         || (value - expected).abs() <= 32. * f64::EPSILON * slope.abs().max(1.)
                 });
             if !affine {
-                let coefficient_min = coefficients
-                    .iter()
-                    .copied()
-                    .fold(f64::INFINITY, f64::min);
+                let coefficient_min = coefficients.iter().copied().fold(f64::INFINITY, f64::min);
                 let coefficient_max = coefficients
                     .iter()
                     .copied()
@@ -1479,24 +1477,19 @@ pub fn certify_multispan_ss(
                 source_decomposition.v_breaks.len() - 1
             };
             let owns = local_root >= 0.
-                && (local_root < 1.
-                    || (fixed_span + 1 == fixed_count && local_root == 1.));
+                && (local_root < 1. || (fixed_span + 1 == fixed_count && local_root == 1.));
             if !owns {
                 continue;
             }
             let fixed_domain = span.domain[usize::from(!fixed_u)];
             let fixed_parameter =
                 fixed_domain[0] + local_root * (fixed_domain[1] - fixed_domain[0]);
-            cell_candidates.push((
-                fixed_u,
-                fixed_parameter,
-                coefficients,
-                local_root,
-                slope,
-            ));
+            cell_candidates.push((fixed_u, fixed_parameter, coefficients, local_root, slope));
         }
         if cell_candidates.len() > 1 {
-            return Err(refuse("One tensor cell has ambiguous multiple branch families"));
+            return Err(refuse(
+                "One tensor cell has ambiguous multiple branch families",
+            ));
         }
         let Some((fixed_u, fixed, coefficients, local_root, slope)) = cell_candidates.pop() else {
             continue;
@@ -1530,23 +1523,25 @@ pub fn certify_multispan_ss(
         first_trace.validate()?;
         let second_trace = affine_plane_trace(plane, &curve, tolerance)?
             .ok_or_else(|| refuse("Intersection branch leaves the affine plane domain"))?;
-        let midpoint = second_trace.evaluate(
-            0.5 * (second_trace.domain()[0] + second_trace.domain()[1]),
-        )?;
+        let midpoint =
+            second_trace.evaluate(0.5 * (second_trace.domain()[0] + second_trace.domain()[1]))?;
         let plane_u = owning_span(&plane_decomposition.u_breaks, midpoint.point[0])
             .ok_or_else(|| refuse("Plane pcurve has no half-open U-span owner"))?;
         let plane_v = owning_span(&plane_decomposition.v_breaks, midpoint.point[1])
             .ok_or_else(|| refuse("Plane pcurve has no half-open V-span owner"))?;
         fragments.push(CertifiedBranchFragment {
             source_faces,
-            source_spans: [span.span, TensorSpanId { u: plane_u, v: plane_v }],
+            source_spans: [
+                span.span,
+                TensorSpanId {
+                    u: plane_u,
+                    v: plane_v,
+                },
+            ],
             parameter_interval: varying_domain,
             curve,
             pcurves: [first_trace, second_trace],
-            orientations: [
-                BranchOrientation::Increasing,
-                BranchOrientation::Increasing,
-            ],
+            orientations: [BranchOrientation::Increasing, BranchOrientation::Increasing],
             evidence: TransverseSpanEvidence {
                 homogeneous_distance_coefficients_bits: coefficients
                     .iter()
@@ -1781,11 +1776,8 @@ impl CurvedGraphBooleanCertificate {
     pub fn permits_topology_change(&self) -> bool {
         matches!(
             self.capability,
-            NURBS_BOOLEAN_CAPABILITY_V3
-                | NURBS_BOOLEAN_CAPABILITY_V4
-                | NURBS_BOOLEAN_CAPABILITY_V5
-        )
-            && self.status == "Complete"
+            NURBS_BOOLEAN_CAPABILITY_V3 | NURBS_BOOLEAN_CAPABILITY_V4 | NURBS_BOOLEAN_CAPABILITY_V5
+        ) && self.status == "Complete"
             && matches!(self.operation.as_str(), "intersection" | "difference")
             && self.fixed_parameter > 0.
             && self.fixed_parameter < 1.
@@ -2195,12 +2187,13 @@ pub fn canonical_rational_graph_solid(degree_u: usize, degree_v: usize) -> Resul
         })
         .collect();
     top.weights = (0..=degree_u).map(|_| weights.clone()).collect();
-    let model =
-        clipped_graph_solid(&base, &top, origin, u, v, floor_offset, [0., 1., 0., 1.])?;
+    let model = clipped_graph_solid(&base, &top, origin, u, v, floor_offset, [0., 1., 0., 1.])?;
     model.validate()?;
     let rational_face = canonical_graph_frame_cell(&model, true, false)?.0;
     if rational_weight_bounds(&model.faces[rational_face].surface).is_none() {
-        return Err(refuse("Canonical rational graph exceeded finite weight bounds"));
+        return Err(refuse(
+            "Canonical rational graph exceeded finite weight bounds",
+        ));
     }
     Ok(model)
 }
@@ -2216,7 +2209,9 @@ fn canonical_graph_frame_cell(
         || source.vertices.len() != 8
         || !source.bodies[0].inner_shells.is_empty()
     {
-        return Err(refuse("Graph source must be the canonical one-body graph solid"));
+        return Err(refuse(
+            "Graph source must be the canonical one-body graph solid",
+        ));
     }
     let tolerance = source.tolerance_mm.max(1e-9) * 8.;
     let nonplanar: Vec<_> = source
@@ -2226,7 +2221,9 @@ fn canonical_graph_frame_cell(
         .filter(|(_, face)| planar_support(&face.surface, tolerance).is_none())
         .collect();
     if nonplanar.len() != 1 {
-        return Err(refuse("Graph source must contain exactly one non-planar face"));
+        return Err(refuse(
+            "Graph source must contain exactly one non-planar face",
+        ));
     }
     let (face_id, top) = (nonplanar[0].0, &nonplanar[0].1.surface);
     let admitted_top = if multispan {
@@ -2241,7 +2238,9 @@ fn canonical_graph_frame_cell(
         || !admitted_top
         || !source.faces[face_id].holes.is_empty()
     {
-        return Err(refuse("Curved face is outside the admitted degree-2/3 graph cell"));
+        return Err(refuse(
+            "Curved face is outside the admitted degree-2/3 graph cell",
+        ));
     }
     let o = point3(top, 0., 0.)?;
     let pu = point3(top, 1., 0.)?;
@@ -2249,8 +2248,14 @@ fn canonical_graph_frame_cell(
     let p11 = point3(top, 1., 1.)?;
     let u = sub(pu, o);
     let v = sub(pv, o);
-    if !near_point(p11, [o[0] + u[0] + v[0], o[1] + u[1] + v[1], o[2] + u[2] + v[2]], tolerance) {
-        return Err(refuse("V3 graph corners do not define one affine projection"));
+    if !near_point(
+        p11,
+        [o[0] + u[0] + v[0], o[1] + u[1] + v[1], o[2] + u[2] + v[2]],
+        tolerance,
+    ) {
+        return Err(refuse(
+            "V3 graph corners do not define one affine projection",
+        ));
     }
     let mut normal = normalize(cross(u, v)).ok_or_else(|| refuse("V3 graph frame is singular"))?;
     let corners = [o, pu, p11, pv];
@@ -2261,7 +2266,9 @@ fn canonical_graph_frame_cell(
             if i == 0 || i == last_u || j == 0 || j == last_v {
                 let p = &top.control_points[i][j];
                 if dot(sub([p[0], p[1], p[2]], o), normal).abs() > tolerance {
-                    return Err(refuse("V3 graph boundary must remain on its affine corner plane"));
+                    return Err(refuse(
+                        "V3 graph boundary must remain on its affine corner plane",
+                    ));
                 }
             }
         }
@@ -2339,8 +2346,7 @@ fn edge_between(model: &Model, a: usize, b: usize) -> Result<usize> {
 
 fn ruled_side(bottom_a: [f64; 3], bottom_b: [f64; 3], top: Curve) -> Result<Surface> {
     let degree = top.degree;
-    let single_span = top.control_points.len() == degree + 1
-        && top.knots.len() == 2 * (degree + 1);
+    let single_span = top.control_points.len() == degree + 1 && top.knots.len() == 2 * (degree + 1);
     let (bottom_points, bottom_weights) = if single_span {
         let bottom = crate::line(bottom_a.to_vec(), bottom_b.to_vec()).elevate(degree)?;
         (bottom.control_points, bottom.weights)
@@ -2353,10 +2359,8 @@ fn ruled_side(bottom_a: [f64; 3], bottom_b: [f64; 3], top: Curve) -> Result<Surf
         let domain = top.domain();
         let points = (0..top.control_points.len())
             .map(|index| {
-                let parameter = top.knots[index + 1..=index + degree]
-                    .iter()
-                    .sum::<f64>()
-                    / degree as f64;
+                let parameter =
+                    top.knots[index + 1..=index + degree].iter().sum::<f64>() / degree as f64;
                 let t = (parameter - domain[0]) / (domain[1] - domain[0]);
                 bottom_a
                     .into_iter()
@@ -2427,12 +2431,7 @@ fn clipped_graph_solid(
         model.edges[edge].curve = curve.clone();
     }
     let top_loop = model.faces[1].outer;
-    let uv = [
-        [umin, vmin],
-        [umax, vmin],
-        [umax, vmax],
-        [umin, vmax],
-    ];
+    let uv = [[umin, vmin], [umax, vmin], [umax, vmax], [umin, vmax]];
     for (index, coedge) in model.loops[top_loop].coedges.iter_mut().enumerate() {
         coedge.pcurve = crate::line(uv[index].to_vec(), uv[(index + 1) % 4].to_vec());
     }
@@ -2473,10 +2472,14 @@ fn nurbs_boolean_graph_patch_transverse(
     a.validate()?;
     b.validate()?;
     if operation == "union" {
-        return Err(refuse("V3 union lacks a one-body closed-shell separation proof"));
+        return Err(refuse(
+            "V3 union lacks a one-body closed-shell separation proof",
+        ));
     }
     if !matches!(operation, "intersection" | "difference") {
-        return Err(refuse("V3 graph Boolean admits intersection or source-minus-cutter difference"));
+        return Err(refuse(
+            "V3 graph Boolean admits intersection or source-minus-cutter difference",
+        ));
     }
     let a_graph = canonical_graph_frame_cell(a, rational, false).ok();
     let b_graph = canonical_graph_frame_cell(b, rational, false).ok();
@@ -2486,11 +2489,16 @@ fn nurbs_boolean_graph_patch_transverse(
         _ => return Err(refuse("V3 requires exactly one canonical graph operand")),
     };
     if operation == "difference" && !source_is_a {
-        return Err(refuse("V3 cutter-minus-graph difference is outside the certified cell"));
+        return Err(refuse(
+            "V3 cutter-minus-graph difference is outside the certified cell",
+        ));
     }
     if cutter.bodies.len() != 1
         || cutter.shells.len() != 1
-        || cutter.faces.iter().any(|face| planar_support(&face.surface, cutter.tolerance_mm * 8.).is_none())
+        || cutter
+            .faces
+            .iter()
+            .any(|face| planar_support(&face.surface, cutter.tolerance_mm * 8.).is_none())
     {
         return Err(refuse("V3 cutter must be one affine-planar closed solid"));
     }
@@ -2506,12 +2514,15 @@ fn nurbs_boolean_graph_patch_transverse(
             certify_exact_planar_iso_intersection(top, &face.surface, &context)
         };
         if let Ok(certificate) = certificate {
-            let support = planar_support(&face.surface, cutter.tolerance_mm.max(1e-9) * 8.).unwrap();
+            let support =
+                planar_support(&face.surface, cutter.tolerance_mm.max(1e-9) * 8.).unwrap();
             matches.push((certificate, support));
         }
     }
     if matches.len() != 1 {
-        return Err(refuse("V3 cutter must expose exactly one strict-interior iso cutting face"));
+        return Err(refuse(
+            "V3 cutter must expose exactly one strict-interior iso cutting face",
+        ));
     }
     let (iso, (plane_origin, plane_normal)) = matches.remove(0);
     if !iso.permits_topology_authorship() {
@@ -2526,7 +2537,9 @@ fn nurbs_boolean_graph_patch_transverse(
     let positive = distances.iter().any(|distance| *distance > clear);
     let negative = distances.iter().any(|distance| *distance < -clear);
     if positive == negative {
-        return Err(refuse("V3 cutter does not occupy one strict side of its cutting face"));
+        return Err(refuse(
+            "V3 cutter does not occupy one strict side of its cutting face",
+        ));
     }
     let cutter_sign = if positive { 1. } else { -1. };
     let keep_cutter_side = operation == "intersection";
@@ -2620,7 +2633,9 @@ fn nurbs_boolean_graph_patch_transverse(
     let audited = LocallyValidatedModel::new(result)?.audit()?;
     let mut audit = audited.certificate().clone();
     audit.notes.push("v3_graph_patch_cell_separation_ok");
-    audit.notes.push("v3_graph_patch_self_intersection_exclusion_ok");
+    audit
+        .notes
+        .push("v3_graph_patch_self_intersection_exclusion_ok");
     let result = audited.into_model();
     let (denominator_lower_bound, denominator_upper_bound) =
         rational_weight_bounds(top).unwrap_or((1., 1.));
@@ -2632,8 +2647,13 @@ fn nurbs_boolean_graph_patch_transverse(
         fixed_parameter: fixed,
         source_face: source_id.to_string(),
         retained_face: result.1.faces[1].to_string(),
-        deleted_region: if keep_positive_parameter { "lower-parameter-cell" } else { "upper-parameter-cell" },
-        intersection_edge: result.1.edges[edge_between(&result, seam_vertices.0, seam_vertices.1)?].to_string(),
+        deleted_region: if keep_positive_parameter {
+            "lower-parameter-cell"
+        } else {
+            "upper-parameter-cell"
+        },
+        intersection_edge: result.1.edges[edge_between(&result, seam_vertices.0, seam_vertices.1)?]
+            .to_string(),
         tensor_cells: arrangement.cells.len(),
         exact_correspondence: correspondence.permits_exact_correspondence(),
         sew: audit.sew.clone(),
@@ -2658,13 +2678,7 @@ pub fn nurbs_boolean_graph_patch_v3(
     b: &Model,
     operation: &str,
 ) -> Result<(Model, CurvedGraphBooleanCertificate)> {
-    nurbs_boolean_graph_patch_transverse(
-        a,
-        b,
-        operation,
-        NURBS_BOOLEAN_CAPABILITY_V3,
-        false,
-    )
+    nurbs_boolean_graph_patch_transverse(a, b, operation, NURBS_BOOLEAN_CAPABILITY_V3, false)
 }
 
 pub fn nurbs_boolean_graph_patch_unequal_v4(
@@ -2677,7 +2691,9 @@ pub fn nurbs_boolean_graph_patch_unequal_v4(
     } else if canonical_graph_frame(b).is_ok() {
         (b, a)
     } else {
-        return Err(refuse("V4 unequal-span cell requires exactly one graph source"));
+        return Err(refuse(
+            "V4 unequal-span cell requires exactly one graph source",
+        ));
     };
     let (source_min, source_max) = model_aabb(source);
     let (cutter_min, cutter_max) = model_aabb(cutter);
@@ -2689,13 +2705,7 @@ pub fn nurbs_boolean_graph_patch_unequal_v4(
     if !unequal {
         return Err(refuse("V4 requires a certified unequal source/cutter span"));
     }
-    nurbs_boolean_graph_patch_transverse(
-        a,
-        b,
-        operation,
-        NURBS_BOOLEAN_CAPABILITY_V4,
-        false,
-    )
+    nurbs_boolean_graph_patch_transverse(a, b, operation, NURBS_BOOLEAN_CAPABILITY_V4, false)
 }
 
 pub fn nurbs_boolean_rational_graph_patch_v5(
@@ -2703,13 +2713,7 @@ pub fn nurbs_boolean_rational_graph_patch_v5(
     b: &Model,
     operation: &str,
 ) -> Result<(Model, CurvedGraphBooleanCertificate)> {
-    nurbs_boolean_graph_patch_transverse(
-        a,
-        b,
-        operation,
-        NURBS_BOOLEAN_CAPABILITY_V5,
-        true,
-    )
+    nurbs_boolean_graph_patch_transverse(a, b, operation, NURBS_BOOLEAN_CAPABILITY_V5, true)
 }
 
 #[derive(Clone, Debug)]
@@ -2757,10 +2761,15 @@ impl GeneralNurbsBooleanCertificate {
             && self.status == "Complete"
             && self.ss_reports_complete
             && self.ss_face_pairs > 0
-            && matches!(self.operation.as_str(), "union" | "intersection" | "difference")
+            && matches!(
+                self.operation.as_str(),
+                "union" | "intersection" | "difference"
+            )
             && matches!(self.operand_order, "source-tool" | "tool-source")
             && (self.operation != "union" || self.operand_order == "source-tool")
-            && (self.operation != "difference" || self.operand_order != "tool-source" || self.cavity_count == 0)
+            && (self.operation != "difference"
+                || self.operand_order != "tool-source"
+                || self.cavity_count == 0)
             && self.exact_region_membership
             && self.partition_cells > 0
             && self.branch_graph.permits_topology_authorship()
@@ -2768,7 +2777,11 @@ impl GeneralNurbsBooleanCertificate {
             && self.uv.permits_trim_classification()
             && self.uv.branch_count == self.branch_graph.components.len()
             && self.exact_curve_pcurve_count
-                == self.branch_graph.certificate.fragment_count.saturating_mul(2)
+                == self
+                    .branch_graph
+                    .certificate
+                    .fragment_count
+                    .saturating_mul(2)
             && self.sew.complete
             && self.audit.ok
             && self.naming.split > 0
@@ -2783,12 +2796,11 @@ impl GeneralNurbsBooleanCertificate {
     }
 }
 
-pub fn canonical_multispan_graph_solid(
-    spans_u: usize,
-    spans_v: usize,
-) -> Result<Model> {
+pub fn canonical_multispan_graph_solid(spans_u: usize, spans_v: usize) -> Result<Model> {
     if !(1..=2).contains(&spans_u) || !(1..=2).contains(&spans_v) {
-        return Err(refuse("General graph fixture admits one or two spans per axis"));
+        return Err(refuse(
+            "General graph fixture admits one or two spans per axis",
+        ));
     }
     let mut model = canonical_bezier_graph_solid(3, 3)?;
     let top = canonical_graph_frame_cell(&model, false, false)?.0;
@@ -2812,9 +2824,7 @@ pub(crate) fn is_general_nurbs_boolean_candidate(a: &Model, b: &Model) -> bool {
     let general = |model: &Model| {
         canonical_graph_frame_cell(model, true, true)
             .ok()
-            .and_then(|(face, surface, ..)| {
-                decompose_rational_bezier_spans(surface, face, 64).ok()
-            })
+            .and_then(|(face, surface, ..)| decompose_rational_bezier_spans(surface, face, 64).ok())
             .is_some_and(|decomposition| decomposition.spans.len() > 1)
     };
     general(a) ^ general(b)
@@ -2858,7 +2868,11 @@ fn author_general_operation_naming(
     result.1.lineage.clear();
 
     let mut change_set = ChangeSet::default();
-    for (kind, ids) in source.identity_groups().into_iter().chain(cutter.identity_groups()) {
+    for (kind, ids) in source
+        .identity_groups()
+        .into_iter()
+        .chain(cutter.identity_groups())
+    {
         change_set.nodes.extend(ids.iter().map(|id| (*id, kind)));
     }
     for (kind, ids) in result.identity_groups() {
@@ -2984,14 +2998,20 @@ pub fn author_general_nurbs_boolean(
     a.validate()?;
     b.validate()?;
     if !matches!(operation, "union" | "intersection" | "difference") {
-        return Err(refuse("General NURBS author admits union, intersection, or difference only"));
+        return Err(refuse(
+            "General NURBS author admits union, intersection, or difference only",
+        ));
     }
     let a_graph = canonical_graph_frame_cell(a, true, true).ok();
     let b_graph = canonical_graph_frame_cell(b, true, true).ok();
     let (source, cutter, source_is_a, frame) = match (a_graph, b_graph) {
         (Some(frame), None) => (a, b, true, frame),
         (None, Some(frame)) => (b, a, false, frame),
-        _ => return Err(refuse("Exactly one operand must be an admitted multispan graph solid")),
+        _ => {
+            return Err(refuse(
+                "Exactly one operand must be an admitted multispan graph solid",
+            ));
+        }
     };
     if cutter.bodies.len() != 1
         || cutter.shells.len() != 1
@@ -3002,7 +3022,9 @@ pub fn author_general_nurbs_boolean(
                 || face.surface.periodic_v
         })
     {
-        return Err(refuse("General NURBS cutter must be one bounded affine closed solid"));
+        return Err(refuse(
+            "General NURBS cutter must be one bounded affine closed solid",
+        ));
     }
     if cutter.faces.iter().any(|face| {
         face.surface
@@ -3037,7 +3059,12 @@ pub fn author_general_nurbs_boolean(
             .control_points
             .iter()
             .flatten()
-            .map(|point| dot(sub([point[0], point[1], point[2]], plane_origin), plane_normal))
+            .map(|point| {
+                dot(
+                    sub([point[0], point[1], point[2]], plane_origin),
+                    plane_normal,
+                )
+            })
             .collect::<Vec<_>>();
         let minimum = distances.iter().copied().fold(f64::INFINITY, f64::min);
         let maximum = distances.iter().copied().fold(f64::NEG_INFINITY, f64::max);
@@ -3071,10 +3098,7 @@ pub fn author_general_nurbs_boolean(
                 .ok_or_else(|| Error::new("BREP_SS_RESOURCE_LIMIT", "SS face-pair overflow"))?;
             for component in ss["components"].as_array().cloned().unwrap_or_default() {
                 if component["kind"] != "curve" || component["contactClass"] != "transverse" {
-                    if matches!(
-                        component["kind"].as_str(),
-                        Some("empty") | Some("overlap")
-                    ) {
+                    if matches!(component["kind"].as_str(), Some("empty") | Some("overlap")) {
                         continue;
                     }
                     if component["kind"] == "curve" {
@@ -3122,7 +3146,9 @@ pub fn author_general_nurbs_boolean(
             })?;
             candidate_pairs = candidate_pairs
                 .checked_add(graph.certificate.candidate_span_pairs)
-                .ok_or_else(|| Error::new("BREP_SS_RESOURCE_LIMIT", "Branch-pair count overflow"))?;
+                .ok_or_else(|| {
+                    Error::new("BREP_SS_RESOURCE_LIMIT", "Branch-pair count overflow")
+                })?;
             plane_span_count += graph.certificate.source_span_count[1];
             denominator_lower_bound =
                 denominator_lower_bound.min(graph.certificate.denominator_lower_bound);
@@ -3133,7 +3159,9 @@ pub fn author_general_nurbs_boolean(
                     .flat_map(|component| component.fragments),
             );
         } else if minimum <= clear && maximum >= -clear {
-            return Err(refuse("Tangent, coincident, or gray-band cutter face is ambiguous"));
+            return Err(refuse(
+                "Tangent, coincident, or gray-band cutter face is ambiguous",
+            ));
         }
     }
     let branch_graph = join_certified_multispan_fragments(
@@ -3145,7 +3173,9 @@ pub fn author_general_nurbs_boolean(
         64,
     )?;
     if branch_graph.components.len() < 2 {
-        return Err(refuse("General NURBS author requires multiple disjoint transverse branches"));
+        return Err(refuse(
+            "General NURBS author requires multiple disjoint transverse branches",
+        ));
     }
     let mut branch_axis = None;
     let mut roots = Vec::new();
@@ -3160,7 +3190,10 @@ pub fn author_general_nurbs_boolean(
         } else {
             return Err(refuse("Branch pcurve is not an exact source iso"));
         };
-        if branch_axis.replace(axis).is_some_and(|previous| previous != axis) {
+        if branch_axis
+            .replace(axis)
+            .is_some_and(|previous| previous != axis)
+        {
             return Err(refuse("Disjoint branch families cross"));
         }
         roots.push(fixed);
@@ -3168,7 +3201,9 @@ pub fn author_general_nurbs_boolean(
     roots.sort_by(f64::total_cmp);
     roots.dedup_by(|left, right| left.to_bits() == right.to_bits());
     if roots.len() != 2 || roots[0] <= 0. || roots[1] >= 1. {
-        return Err(refuse("Finite affine slab requires exactly two strict-interior branch roots"));
+        return Err(refuse(
+            "Finite affine slab requires exactly two strict-interior branch roots",
+        ));
     }
     ss_roots.sort_by(f64::total_cmp);
     ss_roots.dedup_by(|left, right| (*left - *right).abs() <= clear);
@@ -3183,12 +3218,17 @@ pub fn author_general_nurbs_boolean(
         ));
     }
     if ss_face_pairs == 0 {
-        return Err(refuse("nurbs-boolean/1 requires at least one complete nurbs-ss/1 face pair"));
+        return Err(refuse(
+            "nurbs-boolean/1 requires at least one complete nurbs-ss/1 face pair",
+        ));
     }
     let axis = branch_axis.unwrap();
     let uv = crate::uv_arrangement::arrange_multispan_branch_graph_uv(
         &context,
-        [&source_decomposition.u_breaks, &source_decomposition.v_breaks],
+        [
+            &source_decomposition.u_breaks,
+            &source_decomposition.v_breaks,
+        ],
         &branch_graph,
         0,
         64,
@@ -3248,7 +3288,9 @@ pub fn author_general_nurbs_boolean(
             })
         })
     {
-        return Err(refuse("Affine cutter is not an exact graph-frame parallelotope"));
+        return Err(refuse(
+            "Affine cutter is not an exact graph-frame parallelotope",
+        ));
     }
     if projected[0][varying] > -clear
         || projected[1][varying] < 1. + clear
@@ -3257,7 +3299,9 @@ pub fn author_general_nurbs_boolean(
         || (projected[0][fixed] - roots[0]).abs() > clear
         || (projected[1][fixed] - roots[1]).abs() > clear
     {
-        return Err(refuse("Affine cutter lacks complete varying/floor/roof slab coverage"));
+        return Err(refuse(
+            "Affine cutter lacks complete varying/floor/roof slab coverage",
+        ));
     }
     let source_bounds = match (operation, source_is_a, axis) {
         ("intersection", _, ExactIsoAxis::U) => vec![[roots[0], roots[1], 0., 1.]],
@@ -3314,7 +3358,11 @@ pub fn author_general_nurbs_boolean(
                 u,
                 v,
                 normal,
-                [u_bounds, [projected[0][1], projected[1][1]], [projected[0][2], floor_height]],
+                [
+                    u_bounds,
+                    [projected[0][1], projected[1][1]],
+                    [projected[0][2], floor_height],
+                ],
                 source.tolerance_mm.max(cutter.tolerance_mm),
             )?);
         }
@@ -3330,14 +3378,21 @@ pub fn author_general_nurbs_boolean(
                 )?);
             }
         }
-        for outside_u in [[projected[0][0], u_bounds[0]], [u_bounds[1], projected[1][0]]] {
+        for outside_u in [
+            [projected[0][0], u_bounds[0]],
+            [u_bounds[1], projected[1][0]],
+        ] {
             if outside_u[1] > outside_u[0] + clear {
                 pieces.push(graph_frame_box(
                     origin,
                     u,
                     v,
                     normal,
-                    [outside_u, [projected[0][1], projected[1][1]], [floor_height, projected[1][2]]],
+                    [
+                        outside_u,
+                        [projected[0][1], projected[1][1]],
+                        [floor_height, projected[1][2]],
+                    ],
                     source.tolerance_mm.max(cutter.tolerance_mm),
                 )?);
             }
@@ -3363,7 +3418,9 @@ pub fn author_general_nurbs_boolean(
     let audited = LocallyValidatedModel::new(result)?.audit()?;
     let mut audit = audited.certificate().clone();
     audit.notes.push("global_multispan_uv_classification_ok");
-    audit.notes.push("cell_specific_self_intersection_exclusion_ok");
+    audit
+        .notes
+        .push("cell_specific_self_intersection_exclusion_ok");
     audit.notes.push("cavity_and_component_separation_ok");
     let result = audited.into_model();
     let certificate = GeneralNurbsBooleanCertificate {
@@ -3371,7 +3428,11 @@ pub fn author_general_nurbs_boolean(
         authority: GENERAL_NURBS_BOOLEAN_AUTHORITY,
         status: "Complete",
         operation: operation.into(),
-        operand_order: if source_is_a { "source-tool" } else { "tool-source" },
+        operand_order: if source_is_a {
+            "source-tool"
+        } else {
+            "tool-source"
+        },
         exact_region_membership: true,
         partition_cells,
         cavity_count: 0,
@@ -3462,7 +3523,9 @@ pub fn nurbs_boolean_graph_containment_v4(
     graph.validate()?;
     cutter.validate()?;
     if !matches!(operation, "union" | "intersection" | "difference") {
-        return Err(refuse("V4 containment admits union, intersection, or difference"));
+        return Err(refuse(
+            "V4 containment admits union, intersection, or difference",
+        ));
     }
     let (_, top, origin, u, v, floor_offset) = canonical_graph_frame(graph)?;
     if cutter.bodies.len() != 1
@@ -3473,7 +3536,9 @@ pub fn nurbs_boolean_graph_containment_v4(
             .iter()
             .any(|face| planar_support(&face.surface, cutter.tolerance_mm.max(1e-9) * 8.).is_none())
     {
-        return Err(refuse("V4 containment cutter must be one affine-planar body"));
+        return Err(refuse(
+            "V4 containment cutter must be one affine-planar body",
+        ));
     }
     let normal =
         normalize(cross(u, v)).ok_or_else(|| refuse("V4 containment graph frame is singular"))?;
@@ -4306,18 +4371,18 @@ mod tests {
             .unwrap();
         assert!(certify_exact_planar_iso_intersection(&multispan, &cutter, &context).is_err());
 
-        assert!(certify_exact_planar_iso_intersection(
-            &graph_patch(3, 3),
-            &planar_yz_wide(0.),
-            &context
-        )
-        .is_err());
-        assert!(certify_exact_planar_iso_intersection(
-            &graph_patch(3, 3),
-            &planar_yz(1.5),
-            &context
-        )
-        .is_err());
+        assert!(
+            certify_exact_planar_iso_intersection(
+                &graph_patch(3, 3),
+                &planar_yz_wide(0.),
+                &context
+            )
+            .is_err()
+        );
+        assert!(
+            certify_exact_planar_iso_intersection(&graph_patch(3, 3), &planar_yz(1.5), &context)
+                .is_err()
+        );
 
         for coefficients in [[-1., 2., -2., 1.], [0., 0., 0., 0.], [1., 0., 0., 1.]] {
             let mut nonunique = graph_patch(3, 3);
@@ -4328,12 +4393,8 @@ mod tests {
                 }
             }
             assert!(
-                certify_exact_planar_iso_intersection(
-                    &nonunique,
-                    &planar_yz_wide(0.),
-                    &context
-                )
-                .is_err()
+                certify_exact_planar_iso_intersection(&nonunique, &planar_yz_wide(0.), &context)
+                    .is_err()
             );
         }
     }
@@ -4350,12 +4411,17 @@ mod tests {
             for operation in ["intersection", "difference"] {
                 let (result, certificate) =
                     nurbs_boolean_graph_patch_v3(&graph, &cutter, operation).unwrap();
-                assert!(certificate.permits_topology_change(), "{du}x{dv} {operation}");
+                assert!(
+                    certificate.permits_topology_change(),
+                    "{du}x{dv} {operation}"
+                );
                 assert_eq!(certificate.tensor_cells, 3);
-                assert!(certificate
-                    .audit
-                    .notes
-                    .contains(&"v3_graph_patch_self_intersection_exclusion_ok"));
+                assert!(
+                    certificate
+                        .audit
+                        .notes
+                        .contains(&"v3_graph_patch_self_intersection_exclusion_ok")
+                );
                 result.validate().unwrap();
                 assert_eq!(result.bodies.len(), 1);
                 assert_eq!(result.faces.len(), 6);
@@ -4365,8 +4431,7 @@ mod tests {
                     2
                 );
                 let expected_total =
-                    1. + 0.25 * ((du - 1) * (dv - 1)) as f64
-                        / ((du + 1) * (dv + 1)) as f64;
+                    1. + 0.25 * ((du - 1) * (dv - 1)) as f64 / ((du + 1) * (dv + 1)) as f64;
                 let mass = crate::analysis::mass_properties(&result, 1e-9, 300_000).unwrap();
                 assert!(
                     (mass.signed_volume_mm3.abs() - expected_total * 0.5).abs() < 1e-7,
@@ -4435,9 +4500,13 @@ mod tests {
                 nurbs_boolean_graph_patch_unequal_v4(&graph, &unequal, operation).unwrap();
             assert_eq!(certificate.capability, NURBS_BOOLEAN_CAPABILITY_V4);
             assert!(certificate.permits_topology_change());
-            assert!(certificate.change_set.changes.iter().any(|change| {
-                change.provenance.operation == NURBS_BOOLEAN_CAPABILITY_V4
-            }));
+            assert!(
+                certificate
+                    .change_set
+                    .changes
+                    .iter()
+                    .any(|change| { change.provenance.operation == NURBS_BOOLEAN_CAPABILITY_V4 })
+            );
             result.validate().unwrap();
         }
 
@@ -4490,12 +4559,14 @@ mod tests {
                 assert!(certificate.denominator_lower_bound >= 0.25);
                 assert!(certificate.weight_condition_number <= 8.);
                 assert!(certificate.resource_bound <= 16);
-                assert!(result.faces[1]
-                    .surface
-                    .weights
-                    .iter()
-                    .flatten()
-                    .any(|weight| (*weight - 1.).abs() > 1e-15));
+                assert!(
+                    result.faces[1]
+                        .surface
+                        .weights
+                        .iter()
+                        .flatten()
+                        .any(|weight| (*weight - 1.).abs() > 1e-15)
+                );
             }
         }
     }
@@ -4527,38 +4598,40 @@ mod tests {
         }
 
         let mut low_weight = graph.clone();
-        let face = canonical_graph_frame_cell(&low_weight, true, false).unwrap().0;
+        let face = canonical_graph_frame_cell(&low_weight, true, false)
+            .unwrap()
+            .0;
         low_weight.faces[face].surface.weights[0][1] = 0.125;
-        assert!(nurbs_boolean_rational_graph_patch_v5(
-            &low_weight,
-            &cutter,
-            "intersection"
-        )
-        .is_err());
+        assert!(
+            nurbs_boolean_rational_graph_patch_v5(&low_weight, &cutter, "intersection").is_err()
+        );
 
         let mut nonfactorable = graph;
-        let face = canonical_graph_frame_cell(&nonfactorable, true, false).unwrap().0;
+        let face = canonical_graph_frame_cell(&nonfactorable, true, false)
+            .unwrap()
+            .0;
         nonfactorable.faces[face].surface.weights[1][1] += 0.125;
-        assert!(nurbs_boolean_rational_graph_patch_v5(
-            &nonfactorable,
-            &cutter,
-            "intersection"
-        )
-        .is_err());
+        assert!(
+            nurbs_boolean_rational_graph_patch_v5(&nonfactorable, &cutter, "intersection").is_err()
+        );
 
         let tangent = crate::cuboid([0., -1., -1.], [2., 2., 3.]).unwrap();
-        assert!(nurbs_boolean_rational_graph_patch_v5(
-            &canonical_rational_graph_solid(3, 3).unwrap(),
-            &tangent,
-            "intersection"
-        )
-        .is_err());
-        assert!(nurbs_boolean_rational_graph_patch_v5(
-            &canonical_rational_graph_solid(3, 3).unwrap(),
-            &cutter,
-            "union"
-        )
-        .is_err());
+        assert!(
+            nurbs_boolean_rational_graph_patch_v5(
+                &canonical_rational_graph_solid(3, 3).unwrap(),
+                &tangent,
+                "intersection"
+            )
+            .is_err()
+        );
+        assert!(
+            nurbs_boolean_rational_graph_patch_v5(
+                &canonical_rational_graph_solid(3, 3).unwrap(),
+                &cutter,
+                "union"
+            )
+            .is_err()
+        );
     }
 
     fn multispan_wave(u_spans: usize, v_spans: usize, rational: bool, swap_uv: bool) -> Surface {
@@ -4648,10 +4721,12 @@ mod tests {
         assert!(graph.permits_topology_authorship());
         assert_eq!(graph.components.len(), 2);
         assert_eq!(graph.certificate.fragment_count, 4);
-        assert!(graph
-            .components
-            .iter()
-            .all(|component| component.fragments.len() == 2 && !component.closed));
+        assert!(
+            graph
+                .components
+                .iter()
+                .all(|component| component.fragments.len() == 2 && !component.closed)
+        );
     }
 
     #[test]
@@ -4667,10 +4742,12 @@ mod tests {
             certify_multispan_ss(&source, &multispan_plane(2.), [5, 6], &context, 32).unwrap();
         assert_eq!(graph.components.len(), 1);
         assert_eq!(graph.components[0].fragments.len(), 2);
-        assert!(graph.components[0]
-            .fragments
-            .iter()
-            .all(|fragment| fragment.source_spans[0].u == 1));
+        assert!(
+            graph.components[0]
+                .fragments
+                .iter()
+                .all(|fragment| fragment.source_spans[0].u == 1)
+        );
     }
 
     #[test]
@@ -4754,8 +4831,7 @@ mod tests {
                 .code,
             "BREP_SS_RESOURCE_LIMIT"
         );
-        let graph =
-            certify_multispan_ss(&source, &plane, [0, 1], &context, 32).unwrap();
+        let graph = certify_multispan_ss(&source, &plane, [0, 1], &context, 32).unwrap();
         let duplicate = graph
             .components
             .iter()
@@ -4767,15 +4843,17 @@ mod tests {
                     .flat_map(|component| component.fragments.clone()),
             )
             .collect();
-        assert!(join_certified_multispan_fragments(
-            duplicate,
-            &context,
-            graph.certificate.source_span_count,
-            graph.certificate.candidate_span_pairs,
-            graph.certificate.denominator_lower_bound,
-            32
-        )
-        .is_err());
+        assert!(
+            join_certified_multispan_fragments(
+                duplicate,
+                &context,
+                graph.certificate.source_span_count,
+                graph.certificate.candidate_span_pairs,
+                graph.certificate.denominator_lower_bound,
+                32
+            )
+            .is_err()
+        );
         let mut mutated = graph.clone();
         mutated.certificate.fragment_count -= 1;
         assert!(!mutated.permits_topology_authorship());
@@ -4793,14 +4871,7 @@ mod tests {
         for point in coincident.control_points.iter_mut().flatten() {
             point[0] = 0.;
         }
-        assert!(certify_multispan_ss(
-            &coincident,
-            &plane,
-            [0, 1],
-            &context,
-            32
-        )
-        .is_err());
+        assert!(certify_multispan_ss(&coincident, &plane, [0, 1], &context, 32).is_err());
         let tangent = Surface {
             degree_u: 2,
             degree_v: 1,
@@ -4819,19 +4890,13 @@ mod tests {
         let mut unresolved_multi_root = tangent.clone();
         unresolved_multi_root.degree_u = 3;
         unresolved_multi_root.knots_u = vec![0., 0., 0., 0., 1., 1., 1., 1.];
-        unresolved_multi_root.control_points.insert(
-            2,
-            vec![vec![-1., 1.5, 0.], vec![-1., 1.5, 2.]],
-        );
+        unresolved_multi_root
+            .control_points
+            .insert(2, vec![vec![-1., 1.5, 0.], vec![-1., 1.5, 2.]]);
         unresolved_multi_root.weights.insert(2, vec![1.; 2]);
-        assert!(certify_multispan_ss(
-            &unresolved_multi_root,
-            &plane,
-            [0, 1],
-            &context,
-            32
-        )
-        .is_err());
+        assert!(
+            certify_multispan_ss(&unresolved_multi_root, &plane, [0, 1], &context, 32).is_err()
+        );
         let mut periodic = source.clone();
         periodic.periodic_u = true;
         assert!(certify_multispan_ss(&periodic, &plane, [0, 1], &context, 32).is_err());
@@ -4839,14 +4904,7 @@ mod tests {
         high_degree = high_degree
             .edit_axis(Axis::U, |curve| curve.elevate(4))
             .unwrap();
-        assert!(certify_multispan_ss(
-            &high_degree,
-            &plane,
-            [0, 1],
-            &context,
-            32
-        )
-        .is_err());
+        assert!(certify_multispan_ss(&high_degree, &plane, [0, 1], &context, 32).is_err());
     }
 
     #[test]
@@ -4856,9 +4914,7 @@ mod tests {
             let cutter = crate::cuboid([0.25, -1., -1.], [0.75, 2., 3.]).unwrap();
             let graph_snapshot = value_codec::Serialize::to_value(&graph);
             let cutter_snapshot = value_codec::Serialize::to_value(&cutter);
-            for (operation, bodies, faces) in
-                [("intersection", 1, 6), ("difference", 2, 12)]
-            {
+            for (operation, bodies, faces) in [("intersection", 1, 6), ("difference", 2, 12)] {
                 let (result, certificate) =
                     author_general_nurbs_boolean(&graph, &cutter, operation).unwrap();
                 assert_eq!(certificate.capability, NURBS_BOOLEAN_SS_CAPABILITY);
@@ -4898,12 +4954,14 @@ mod tests {
                 (&graph, &cutter, "union", "source-tool"),
                 (&cutter, &graph, "difference", "tool-source"),
             ] {
-                let (result, certificate) =
-                    author_general_nurbs_boolean(a, b, operation).unwrap();
+                let (result, certificate) = author_general_nurbs_boolean(a, b, operation).unwrap();
                 assert_eq!(certificate.capability, NURBS_BOOLEAN_SS_CAPABILITY);
                 assert_eq!(certificate.operand_order, order);
                 assert!(certificate.exact_region_membership);
-                assert_eq!(certificate.partition_cells, if operation == "union" { 3 } else { 4 });
+                assert_eq!(
+                    certificate.partition_cells,
+                    if operation == "union" { 3 } else { 4 }
+                );
                 assert_eq!(certificate.result_components, certificate.partition_cells);
                 assert_eq!(certificate.result_faces, certificate.partition_cells * 6);
                 assert!(certificate.sew.complete && certificate.audit.ok);
@@ -4968,7 +5026,10 @@ mod tests {
             volume(&reversed),
         );
         for residual in [vg - vi - vd, vc - vi - vr, vu - vg - vc + vi] {
-            assert!(residual.abs() < 1e-7, "regularized volume residual {residual:e}");
+            assert!(
+                residual.abs() < 1e-7,
+                "regularized volume residual {residual:e}"
+            );
         }
     }
 }

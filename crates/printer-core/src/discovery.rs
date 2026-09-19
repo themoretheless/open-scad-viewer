@@ -1,6 +1,6 @@
 //! LAN printer discovery (mockable; live scanners behind `network`).
 
-use crate::{invalid, Result};
+use crate::{Result, invalid};
 use std::collections::VecDeque;
 use std::time::Duration;
 
@@ -53,12 +53,9 @@ impl MockDiscovery {
 
 impl PrinterDiscovery for MockDiscovery {
     fn discover(&mut self, _opts: &DiscoveryOptions) -> Result<Vec<DiscoveredPrinter>> {
-        self.results.pop_front().ok_or_else(|| {
-            invalid(
-                "PRINTER_DISCOVERY",
-                "Mock discovery has no queued results",
-            )
-        })
+        self.results
+            .pop_front()
+            .ok_or_else(|| invalid("PRINTER_DISCOVERY", "Mock discovery has no queued results"))
     }
 }
 
@@ -79,10 +76,8 @@ impl PrinterDiscovery for CompositeDiscovery {
 
 #[cfg(feature = "network")]
 pub mod live {
-    use super::{
-        DiscoveredPrinter, DiscoveryOptions, DiscoveryVendor, PrinterDiscovery,
-    };
-    use crate::{invalid, Result};
+    use super::{DiscoveredPrinter, DiscoveryOptions, DiscoveryVendor, PrinterDiscovery};
+    use crate::{Result, invalid};
     use std::collections::BTreeMap;
     use std::net::{Ipv4Addr, SocketAddr, UdpSocket};
     use std::time::{Duration, Instant};
@@ -170,12 +165,14 @@ pub mod live {
             match sock.recv_from(&mut buf) {
                 Ok((n, from)) => {
                     if let Some(printer) = parse(&buf[..n], from) {
-                        found.entry(format!("{}:{}", printer.vendor, printer.host))
+                        found
+                            .entry(format!("{}:{}", printer.vendor, printer.host))
                             .or_insert(printer);
                     }
                 }
-                Err(e) if e.kind() == std::io::ErrorKind::WouldBlock
-                    || e.kind() == std::io::ErrorKind::TimedOut => {}
+                Err(e)
+                    if e.kind() == std::io::ErrorKind::WouldBlock
+                        || e.kind() == std::io::ErrorKind::TimedOut => {}
                 Err(e) => return Err(invalid("PRINTER_DISCOVERY", &e.to_string())),
             }
         }
@@ -318,7 +315,10 @@ pub mod live {
         #[test]
         fn parses_snapmaker_json() {
             let msg = r#"{"name":"My Artisan","model":"Artisan","id":"SM123"}"#;
-            let from = SocketAddr::V4(SocketAddrV4::new(Ipv4Addr::new(10, 0, 0, 8), SNAPMAKER_PORT));
+            let from = SocketAddr::V4(SocketAddrV4::new(
+                Ipv4Addr::new(10, 0, 0, 8),
+                SNAPMAKER_PORT,
+            ));
             let p = parse_snapmaker_udp(msg.as_bytes(), from).unwrap();
             assert_eq!(p.vendor, "snapmaker");
             assert_eq!(p.display_name.as_deref(), Some("My Artisan"));

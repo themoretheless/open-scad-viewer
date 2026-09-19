@@ -1,14 +1,14 @@
 use crate::backend::{PrinterBackend, SubmitOutcome};
 use crate::bambu::config::{BambuLanConfig, BambuPrintOptions};
 use crate::bambu::messages::{
-    artifact_md5, pause_payload, project_file_payload, pushall_payload, report_topic, request_topic,
-    resume_payload, stop_payload,
+    artifact_md5, pause_payload, project_file_payload, pushall_payload, report_topic,
+    request_topic, resume_payload, stop_payload,
 };
 use crate::bambu::status::parse_bambu_report;
 use crate::job::{ArtifactKind, JobStatus, PrintJob, PrinterId};
 use crate::scrub::scrub_secrets;
 use crate::transport::{MqttMessage, Transport};
-use crate::{invalid, Result};
+use crate::{Result, invalid};
 
 /// Bambu Lab LAN backend over a pluggable FTPS/MQTT [`Transport`].
 pub struct BambuLanBackend<T> {
@@ -47,7 +47,9 @@ impl<T: Transport> BambuLanBackend<T> {
 
     /// Connect with the live FTPS/MQTT transport (`network` feature).
     #[cfg(feature = "network")]
-    pub fn connect_lan(config: BambuLanConfig) -> Result<BambuLanBackend<crate::bambu::BambuLanTransport>> {
+    pub fn connect_lan(
+        config: BambuLanConfig,
+    ) -> Result<BambuLanBackend<crate::bambu::BambuLanTransport>> {
         let transport = crate::bambu::BambuLanTransport::new(config.clone())?;
         BambuLanBackend::new(config, transport)
     }

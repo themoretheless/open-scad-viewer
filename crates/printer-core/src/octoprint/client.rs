@@ -1,11 +1,11 @@
 use crate::backend::{PrinterBackend, SubmitOutcome};
 use crate::http::{
-    find_number_field, find_string_field, multipart_form, HttpRequest, HttpResponse, HttpTransport,
+    HttpRequest, HttpResponse, HttpTransport, find_number_field, find_string_field, multipart_form,
 };
-use crate::job::{map_vendor_state, ArtifactKind, JobStatus, PrintJob, PrinterId};
+use crate::job::{ArtifactKind, JobStatus, PrintJob, PrinterId, map_vendor_state};
 use crate::octoprint::OctoPrintConfig;
 use crate::scrub::scrub_secrets;
-use crate::{invalid, Result};
+use crate::{Result, invalid};
 
 pub struct OctoPrintBackend<T> {
     pub config: OctoPrintConfig,
@@ -19,7 +19,9 @@ impl<T: HttpTransport> OctoPrintBackend<T> {
     }
 
     #[cfg(feature = "network")]
-    pub fn connect(config: OctoPrintConfig) -> Result<OctoPrintBackend<crate::http::live::UreqHttpTransport>> {
+    pub fn connect(
+        config: OctoPrintConfig,
+    ) -> Result<OctoPrintBackend<crate::http::live::UreqHttpTransport>> {
         config.validate()?;
         let mut http = crate::http::live::UreqHttpTransport::new(config.base_url.clone());
         http.timeout = config.timeout;

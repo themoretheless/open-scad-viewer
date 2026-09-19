@@ -86,8 +86,7 @@ fn certified_tessellation_has_typed_budget_mutation_and_sphere_successor() {
         Err(error) => error,
     };
     assert_eq!(error.code, "BREP_CERTIFIED_TESSELLATION_REFUSED");
-    let sphere =
-        geometry_bridge::brep::certified_nurbs(&sphere(2.).unwrap(), 0.1, 20_000).unwrap();
+    let sphere = geometry_bridge::brep::certified_nurbs(&sphere(2.).unwrap(), 0.1, 20_000).unwrap();
     assert_eq!(sphere.capability, "certified-brep-tessellation/2");
     assert!(sphere.surface_to_mesh_deviation_mm <= 0.1);
     assert!(sphere.tessellation.built.report.closed);

@@ -1,8 +1,6 @@
 use crate::artifact::PrintArtifactBytes;
-use crate::connect::{
-    control, discover, send_bytes, ConnectionArgs, ControlAction, VendorKind,
-};
-use base64::{engine::general_purpose::STANDARD as B64, Engine};
+use crate::connect::{ConnectionArgs, ControlAction, VendorKind, control, discover, send_bytes};
+use base64::{Engine, engine::general_purpose::STANDARD as B64};
 use printer_core::{ArtifactKind, DiscoveryVendor, scrub_secrets};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
@@ -111,8 +109,11 @@ pub fn run_serve(opts: ServeOptions) -> Result<(), String> {
 }
 
 fn handle_discover(timeout: Duration) -> std::result::Result<serde_json::Value, (u16, String)> {
-    let found = discover(timeout, &[DiscoveryVendor::Bambu, DiscoveryVendor::Snapmaker])
-        .map_err(|e| (502, e.message))?;
+    let found = discover(
+        timeout,
+        &[DiscoveryVendor::Bambu, DiscoveryVendor::Snapmaker],
+    )
+    .map_err(|e| (502, e.message))?;
     let printers: Vec<_> = found
         .into_iter()
         .map(|p| DiscoveredJson {
@@ -146,12 +147,8 @@ fn handle_send(request: &mut Request) -> std::result::Result<serde_json::Value, 
         bytes,
         file_name: body.file_name,
     };
-    let outcome = send_bytes(vendor, &args, &art).map_err(|e| {
-        (
-            502,
-            scrub_secrets(&e.message, &args.secrets()),
-        )
-    })?;
+    let outcome = send_bytes(vendor, &args, &art)
+        .map_err(|e| (502, scrub_secrets(&e.message, &args.secrets())))?;
     Ok(json!({
         "remoteName": outcome.remote_name,
         "verified": outcome.verified,
@@ -164,12 +161,8 @@ fn handle_control(request: &mut Request) -> std::result::Result<serde_json::Valu
     let vendor = VendorKind::from_str(&body.vendor).map_err(|e| (400, e))?;
     let action = ControlAction::from_str(&body.action).map_err(|e| (400, e))?;
     let args = body.config.into_args();
-    let status = control(vendor, &args, action).map_err(|e| {
-        (
-            502,
-            scrub_secrets(&e.message, &args.secrets()),
-        )
-    })?;
+    let status = control(vendor, &args, action)
+        .map_err(|e| (502, scrub_secrets(&e.message, &args.secrets())))?;
     match status {
         Some(s) => Ok(json!({
             "state": format!("{:?}", s.state).to_ascii_lowercase(),
@@ -194,8 +187,7 @@ fn read_json<T: for<'de> Deserialize<'de>>(
 
 fn respond(request: Request, result: std::result::Result<serde_json::Value, (u16, String)>) {
     let cors = Header::from_bytes("Access-Control-Allow-Origin", "*").unwrap();
-    let allow_headers =
-        Header::from_bytes("Access-Control-Allow-Headers", "Content-Type").unwrap();
+    let allow_headers = Header::from_bytes("Access-Control-Allow-Headers", "Content-Type").unwrap();
     let allow_methods =
         Header::from_bytes("Access-Control-Allow-Methods", "GET, POST, OPTIONS").unwrap();
     let (status, body) = match result {

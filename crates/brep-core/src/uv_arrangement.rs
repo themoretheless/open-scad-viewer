@@ -317,12 +317,9 @@ fn arrange_lifted_uv_impl(
     tensor_admitted: bool,
 ) -> Result<LiftedUvArrangement> {
     if chart == ChartKind::Freeform
-        && !primitives.iter().all(|p| {
-            matches!(
-                p.geometry,
-                LiftedUvGeometry::RationalCurvedTrace { .. }
-            )
-        })
+        && !primitives
+            .iter()
+            .all(|p| matches!(p.geometry, LiftedUvGeometry::RationalCurvedTrace { .. }))
     {
         return Err(refuse(
             "Generic Freeform curves are not admitted for Complete UV arrangement",
@@ -881,14 +878,11 @@ impl MultiSpanUvArrangement {
             && self.branch_count == self.authority.branch_keys.len()
             && self.tensor_cell_count == self.authority.tensor_cell_count
             && self.tensor_cell_count
-                == (self.authority.knot_bits[0].len() - 1)
-                    * (self.authority.knot_bits[1].len() - 1)
+                == (self.authority.knot_bits[0].len() - 1) * (self.authority.knot_bits[1].len() - 1)
     }
 }
 
-fn exact_line_trace(
-    curve: &nurbs_core::curve::Curve,
-) -> Result<(TensorAxis, f64, [f64; 2])> {
+fn exact_line_trace(curve: &nurbs_core::curve::Curve) -> Result<(TensorAxis, f64, [f64; 2])> {
     curve.validate()?;
     if curve.degree != 1 || curve.control_points.len() != 2 {
         return Err(refuse(
@@ -913,7 +907,9 @@ fn validate_breaks(breaks: &[f64]) -> Result<()> {
         || breaks.iter().any(|value| !value.is_finite())
         || breaks.windows(2).any(|pair| pair[0] >= pair[1])
     {
-        return Err(refuse("Tensor knot partition must be finite and strictly increasing"));
+        return Err(refuse(
+            "Tensor knot partition must be finite and strictly increasing",
+        ));
     }
     Ok(())
 }
@@ -1067,13 +1063,8 @@ pub fn arrange_multispan_branch_graph_uv(
         ));
     }
     let expected_iso = primitives.len() - 4;
-    let arrangement = arrange_tensor_bezier_graph_uv(
-        context,
-        domain,
-        &primitives,
-        expected_iso,
-        resource_limit,
-    )?;
+    let arrangement =
+        arrange_tensor_bezier_graph_uv(context, domain, &primitives, expected_iso, resource_limit)?;
     let material_cell_count = arrangement
         .cells
         .iter()
@@ -1103,7 +1094,9 @@ pub fn arrange_multispan_branch_graph_uv(
         authority,
     };
     if !result.permits_trim_classification() {
-        return Err(refuse("Global tensor arrangement failed its authority check"));
+        return Err(refuse(
+            "Global tensor arrangement failed its authority check",
+        ));
     }
     Ok(result)
 }
@@ -1459,28 +1452,19 @@ mod tests {
         let context = ToleranceContext::default_valid();
         let mut missed = tensor_primitives();
         missed.pop();
-        assert!(arrange_tensor_bezier_graph_uv(
-            &context,
-            [[0., 1.], [0., 1.]],
-            &missed,
-            1,
-            16
-        )
-        .is_err());
+        assert!(
+            arrange_tensor_bezier_graph_uv(&context, [[0., 1.], [0., 1.]], &missed, 1, 16).is_err()
+        );
         let mut partial = tensor_primitives();
         if let LiftedUvGeometry::TensorIsoLine { interval, .. } =
             &mut partial.last_mut().unwrap().geometry
         {
             *interval = [0.1, 0.9];
         }
-        assert!(arrange_tensor_bezier_graph_uv(
-            &context,
-            [[0., 1.], [0., 1.]],
-            &partial,
-            1,
-            16
-        )
-        .is_err());
+        assert!(
+            arrange_tensor_bezier_graph_uv(&context, [[0., 1.], [0., 1.]], &partial, 1, 16)
+                .is_err()
+        );
         assert_eq!(
             arrange_tensor_bezier_graph_uv(
                 &context,
@@ -1493,19 +1477,21 @@ mod tests {
             .code,
             "BREP_TRIM_RESOURCE_LIMIT"
         );
-        assert!(arrange_lifted_uv(
-            &context,
-            ChartKind::TensorBezierGraph,
-            &[LiftedUvPrimitive {
-                edge_id: 9,
-                geometry: LiftedUvGeometry::PlaneSegment {
-                    start: [0., 0.],
-                    end: [1., 1.]
-                }
-            }],
-            8
-        )
-        .is_err());
+        assert!(
+            arrange_lifted_uv(
+                &context,
+                ChartKind::TensorBezierGraph,
+                &[LiftedUvPrimitive {
+                    edge_id: 9,
+                    geometry: LiftedUvGeometry::PlaneSegment {
+                        start: [0., 0.],
+                        end: [1., 1.]
+                    }
+                }],
+                8
+            )
+            .is_err()
+        );
     }
 
     #[test]
@@ -1689,14 +1675,16 @@ mod tests {
         );
         let mut missed = graph.clone();
         missed.components[0].fragments.pop();
-        assert!(arrange_multispan_branch_graph_uv(
-            &context,
-            [&[0., 1., 2.], &[0., 1., 2.]],
-            &missed,
-            0,
-            32
-        )
-        .is_err());
+        assert!(
+            arrange_multispan_branch_graph_uv(
+                &context,
+                [&[0., 1., 2.], &[0., 1., 2.]],
+                &missed,
+                0,
+                32
+            )
+            .is_err()
+        );
 
         let vertical = crate::nurbs_ss_g6::certify_multispan_ss(
             &ss_wave(true),
@@ -1721,14 +1709,16 @@ mod tests {
             32,
         )
         .unwrap();
-        assert!(arrange_multispan_branch_graph_uv(
-            &context,
-            [&[0., 1., 2.], &[0., 1., 2.]],
-            &crossing,
-            0,
-            32
-        )
-        .is_err());
+        assert!(
+            arrange_multispan_branch_graph_uv(
+                &context,
+                [&[0., 1., 2.], &[0., 1., 2.]],
+                &crossing,
+                0,
+                32
+            )
+            .is_err()
+        );
 
         let arrangement = arrange_multispan_branch_graph_uv(
             &context,

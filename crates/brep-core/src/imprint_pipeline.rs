@@ -140,7 +140,15 @@ pub(crate) fn assemble_imprint_components(
         groups.entry(root).or_default().push(face_use.clone());
     }
     if groups.len() == 1 {
-        return assemble_imprint_solid(vertices, edges, loops, faces, shell_faces, tolerance, sources);
+        return assemble_imprint_solid(
+            vertices,
+            edges,
+            loops,
+            faces,
+            shell_faces,
+            tolerance,
+            sources,
+        );
     }
     let mut shells = Vec::with_capacity(groups.len());
     let mut bodies = Vec::with_capacity(groups.len());
@@ -729,10 +737,7 @@ pub(crate) fn variable_radius_cuboid_vertical_edges(
             let next = (i + 1) % 4;
             let a = effective_exit[i];
             let b = effective_entry[next];
-            curves.push(crate::line(
-                vec![a[0], a[1], z],
-                vec![b[0], b[1], z],
-            ));
+            curves.push(crate::line(vec![a[0], a[1], z], vec![b[0], b[1], z]));
         }
         Ok(curves)
     };
@@ -793,9 +798,7 @@ pub(crate) fn valence3_cuboid_max_corner(
     ];
     let vertices: Vec<Vertex> = pts.iter().map(|p| Vertex { point: *p }).collect();
 
-    let line3 = |a: usize, b: usize| -> Curve {
-        crate::line(pts[a].to_vec(), pts[b].to_vec())
-    };
+    let line3 = |a: usize, b: usize| -> Curve { crate::line(pts[a].to_vec(), pts[b].to_vec()) };
     let arc_xy = |c: [f64; 2], z: f64, start: f64, sweep: f64| -> Curve {
         arc_curve(
             CircleArc {
@@ -870,9 +873,21 @@ pub(crate) fn valence3_cuboid_max_corner(
 
     // Straight skeleton.
     for (a, b) in [
-        (0, 1), (1, 4), (5, 2), (2, 0), (0, 3),
-        (1, 9), (9, 6), (4, 6), (5, 7), (2, 11), (11, 7),
-        (3, 10), (10, 8), (3, 12), (12, 8),
+        (0, 1),
+        (1, 4),
+        (5, 2),
+        (2, 0),
+        (0, 3),
+        (1, 9),
+        (9, 6),
+        (4, 6),
+        (5, 7),
+        (2, 11),
+        (11, 7),
+        (3, 10),
+        (10, 8),
+        (3, 12),
+        (12, 8),
     ] {
         add(a, b, line3(a, b));
     }
@@ -884,9 +899,7 @@ pub(crate) fn valence3_cuboid_max_corner(
     add(9, 10, remote_y.clone());
     add(11, 12, remote_x.clone());
 
-    let eid = |a: usize, b: usize| -> usize {
-        *edge_of.get(&(a.min(b), a.max(b))).expect("edge")
-    };
+    let eid = |a: usize, b: usize| -> usize { *edge_of.get(&(a.min(b), a.max(b))).expect("edge") };
     let oriented_curve = |a: usize, b: usize| -> Curve {
         let edge = &edges[eid(a, b)];
         if a <= b {
@@ -973,7 +986,13 @@ pub(crate) fn valence3_cuboid_max_corner(
         &mut faces,
         &mut shell,
         planar([lx, ly, lz], [hx - lx, 0., 0.], [0., hy - ly, 0.]),
-        vec![pc(0, 1, &xy), pc(1, 4, &xy), pc(4, 5, &xy), pc(5, 2, &xy), pc(2, 0, &xy)],
+        vec![
+            pc(0, 1, &xy),
+            pc(1, 4, &xy),
+            pc(4, 5, &xy),
+            pc(5, 2, &xy),
+            pc(2, 0, &xy),
+        ],
         true,
     );
     // Top z=hz.
@@ -982,7 +1001,12 @@ pub(crate) fn valence3_cuboid_max_corner(
         &mut faces,
         &mut shell,
         planar([lx, ly, hz], [hx - lx, 0., 0.], [0., hy - ly, 0.]),
-        vec![pc(3, 10, &xy), pc(10, 8, &xy), pc(8, 12, &xy), pc(12, 3, &xy)],
+        vec![
+            pc(3, 10, &xy),
+            pc(10, 8, &xy),
+            pc(8, 12, &xy),
+            pc(12, 3, &xy),
+        ],
         false,
     );
     // Face x=lx (outward -X ⇒ reversed).
@@ -991,7 +1015,13 @@ pub(crate) fn valence3_cuboid_max_corner(
         &mut faces,
         &mut shell,
         planar([lx, ly, lz], [0., hy - ly, 0.], [0., 0., hz - lz]),
-        vec![pc(0, 2, &yz), pc(2, 11, &yz), pc(11, 12, &yz), pc(12, 3, &yz), pc(3, 0, &yz)],
+        vec![
+            pc(0, 2, &yz),
+            pc(2, 11, &yz),
+            pc(11, 12, &yz),
+            pc(12, 3, &yz),
+            pc(3, 0, &yz),
+        ],
         true,
     );
     // Face y=ly. CCW UV; FaceUse false so edge 0-1 opposes bottom (XOR).
@@ -1000,7 +1030,13 @@ pub(crate) fn valence3_cuboid_max_corner(
         &mut faces,
         &mut shell,
         planar([lx, ly, lz], [hx - lx, 0., 0.], [0., 0., hz - lz]),
-        vec![pc(0, 1, &xz), pc(1, 9, &xz), pc(9, 10, &xz), pc(10, 3, &xz), pc(3, 0, &xz)],
+        vec![
+            pc(0, 1, &xz),
+            pc(1, 9, &xz),
+            pc(9, 10, &xz),
+            pc(10, 3, &xz),
+            pc(3, 0, &xz),
+        ],
         false,
     );
     // Face x=hx.
@@ -1009,7 +1045,12 @@ pub(crate) fn valence3_cuboid_max_corner(
         &mut faces,
         &mut shell,
         planar([hx, ly, lz], [0., hy - ly, 0.], [0., 0., hz - lz]),
-        vec![pc(1, 4, &x_face), pc(4, 6, &x_face), pc(6, 9, &x_face), pc(9, 1, &x_face)],
+        vec![
+            pc(1, 4, &x_face),
+            pc(4, 6, &x_face),
+            pc(6, 9, &x_face),
+            pc(9, 1, &x_face),
+        ],
         false,
     );
     // Face y=hy — reverse prior winding to make UV CCW.
@@ -1018,7 +1059,12 @@ pub(crate) fn valence3_cuboid_max_corner(
         &mut faces,
         &mut shell,
         planar([lx, hy, lz], [hx - lx, 0., 0.], [0., 0., hz - lz]),
-        vec![pc(2, 5, &y_face), pc(5, 7, &y_face), pc(7, 11, &y_face), pc(11, 2, &y_face)],
+        vec![
+            pc(2, 5, &y_face),
+            pc(5, 7, &y_face),
+            pc(7, 11, &y_face),
+            pc(11, 2, &y_face),
+        ],
         true,
     );
 
@@ -1249,9 +1295,7 @@ pub(crate) fn rounded_convex_prism_edges(
         let length = (profile[(i + 1) % n][0] - profile[i][0])
             .hypot(profile[(i + 1) % n][1] - profile[i][1]);
         if tangent[i] + tangent[(i + 1) % n] >= length - source.tolerance_mm * 8. {
-            return Err(refuse(
-                "Fillet radius collides on an adjacent profile edge",
-            ));
+            return Err(refuse("Fillet radius collides on an adjacent profile edge"));
         }
     }
     let mut curves = Vec::with_capacity(n * 2);

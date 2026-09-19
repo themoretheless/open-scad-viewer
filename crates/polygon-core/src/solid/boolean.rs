@@ -1278,7 +1278,10 @@ pub fn difference_many(
             continue;
         }
         let open = batches.iter_mut().find(|members| {
-            members.len() < batch && members.iter().all(|&j| !bounds_touch(boxes[j], *cutter_box, pad))
+            members.len() < batch
+                && members
+                    .iter()
+                    .all(|&j| !bounds_touch(boxes[j], *cutter_box, pad))
         });
         match open {
             Some(members) => members.push(i),

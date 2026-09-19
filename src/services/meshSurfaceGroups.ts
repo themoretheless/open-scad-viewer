@@ -1,7 +1,8 @@
 import type {MeshData} from '../core/mesh'
+import {SurfaceGroupContentCache} from './surfaceGroupContentCache'
 const cache=new WeakMap<Float32Array,WeakMap<Uint32Array,Uint32Array>>()
 // Republished meshes carry fresh typed arrays; the content identity survives.
-const contentCache=new Map<string,Uint32Array>()
+const contentCache=new SurfaceGroupContentCache()
 /** Connected smooth patches, not a reconstruction or certificate of CAD surfaces.
  * Sharp (>30 degree), boundary, degenerate and non-manifold edges are barriers.
  * Welding uses identical coordinates only; nearby independent sheets never merge.
@@ -35,8 +36,7 @@ export function withSelectionSurfaces(mesh:MeshData):MeshData {
  // the fallback for meshes without a content id.
  const contentId=mesh.geometryAssetId
  if(contentId!==undefined){
-  let ids=contentCache.get(contentId)
-  if(!ids){ids=inferSurfaceIds(mesh.vertices,mesh.indices);contentCache.set(contentId,ids)}
+  const ids=contentCache.getOrCompute(contentId,()=>inferSurfaceIds(mesh.vertices,mesh.indices))
   return {...mesh,faceIds:ids,faceIdsAuthoritative:false}
  }
  let byIndices=cache.get(mesh.vertices);if(!byIndices){byIndices=new WeakMap();cache.set(mesh.vertices,byIndices)}

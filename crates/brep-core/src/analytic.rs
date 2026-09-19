@@ -2,8 +2,8 @@
 //! and preserve ordinary manifold incidence without collapsed pole edges.
 use super::*;
 mod loft;
-pub use loft::ruled_loft;
 pub(crate) use loft::piecewise_ruled_loft;
+pub use loft::ruled_loft;
 
 const QUADRANTS: [[f64; 2]; 4] = [[1., 0.], [0., 1.], [-1., 0.], [0., -1.]];
 const WEIGHT: f64 = std::f64::consts::FRAC_1_SQRT_2;

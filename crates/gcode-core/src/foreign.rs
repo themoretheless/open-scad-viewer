@@ -3,8 +3,8 @@
 //! a file for printing and never guesses volume without a filament diameter.
 
 use crate::{
-    invalid, number, valid_coordinate, GcodeBounds, GcodeMove, GcodePreview, Result,
-    MAX_COORDINATE_MM, MAX_LAYERS, MAX_LINE_BYTES, MAX_MOVES, MAX_OUTPUT_BYTES,
+    GcodeBounds, GcodeMove, GcodePreview, MAX_COORDINATE_MM, MAX_LAYERS, MAX_LINE_BYTES, MAX_MOVES,
+    MAX_OUTPUT_BYTES, Result, invalid, number, valid_coordinate,
 };
 
 /// Default filament diameter when a foreign file declares none.
@@ -168,11 +168,7 @@ struct Machine {
 
 impl Machine {
     fn scale(&self) -> f64 {
-        if self.inches {
-            25.4
-        } else {
-            1.0
-        }
+        if self.inches { 25.4 } else { 1.0 }
     }
 }
 
@@ -228,7 +224,11 @@ fn axis_words(rest: &[&str]) -> Result<Vec<(u8, f64)>> {
 }
 
 fn word(words: &[(u8, f64)], axis: u8) -> Option<f64> {
-    words.iter().rev().find(|(a, _)| *a == axis).map(|(_, v)| *v)
+    words
+        .iter()
+        .rev()
+        .find(|(a, _)| *a == axis)
+        .map(|(_, v)| *v)
 }
 
 /// Splits `G1X10Y5` style compact words and strips inline comments/checksums.
@@ -259,7 +259,9 @@ fn tokenize(command_text: &str) -> Vec<String> {
 fn strip_line_number_and_checksum(tokens: Vec<String>) -> Vec<String> {
     let mut tokens: Vec<String> = tokens
         .into_iter()
-        .filter(|t| !(t.starts_with('N') && t[1..].chars().all(|c| c.is_ascii_digit()) && t.len() > 1))
+        .filter(|t| {
+            !(t.starts_with('N') && t[1..].chars().all(|c| c.is_ascii_digit()) && t.len() > 1)
+        })
         .collect();
     if tokens.last().is_some_and(|last| last.starts_with('*')) {
         tokens.pop();
@@ -337,7 +339,10 @@ pub fn parse_foreign_with(gcode: &str, filament_diameter_mm: Option<f64>) -> Res
     for (line_index, raw) in gcode.lines().enumerate() {
         let line_result: Result<()> = (|| {
             if raw.len() > MAX_LINE_BYTES {
-                return Err(invalid("GCODE_LINE_LIMIT", "G-code line exceeds 1024 bytes"));
+                return Err(invalid(
+                    "GCODE_LINE_LIMIT",
+                    "G-code line exceeds 1024 bytes",
+                ));
             }
             let line = raw.trim();
             if line.is_empty() {
@@ -378,8 +383,13 @@ pub fn parse_foreign_with(gcode: &str, filament_diameter_mm: Option<f64>) -> Res
             let rest: Vec<&str> = tokens[1..].iter().map(String::as_str).collect();
             // Normalize G01 → G1 etc.
             let canonical = match command.as_bytes() {
-                [letter @ (b'G' | b'M'), digits @ ..] if !digits.is_empty() && digits.iter().all(u8::is_ascii_digit) => {
-                    let n: u32 = std::str::from_utf8(digits).unwrap_or("0").parse().unwrap_or(u32::MAX);
+                [letter @ (b'G' | b'M'), digits @ ..]
+                    if !digits.is_empty() && digits.iter().all(u8::is_ascii_digit) =>
+                {
+                    let n: u32 = std::str::from_utf8(digits)
+                        .unwrap_or("0")
+                        .parse()
+                        .unwrap_or(u32::MAX);
                     format!("{}{n}", *letter as char)
                 }
                 _ => command.clone(),
@@ -434,10 +444,7 @@ pub fn parse_foreign_with(gcode: &str, filament_diameter_mm: Option<f64>) -> Res
                 "G0" | "G1" | "G2" | "G3" => {
                     move_count += 1;
                     if move_count > MAX_MOVES {
-                        return Err(invalid(
-                            "GCODE_MOVE_LIMIT",
-                            "G-code exceeded 100000 moves",
-                        ));
+                        return Err(invalid("GCODE_MOVE_LIMIT", "G-code exceeded 100000 moves"));
                     }
                     let words = axis_words(&rest)?;
                     let scale = machine.scale();
@@ -563,7 +570,10 @@ pub fn parse_foreign_with(gcode: &str, filament_diameter_mm: Option<f64>) -> Res
                                     bounds.max[axis] = bounds.max[axis].max(*value);
                                 }
                             } else {
-                                result.bounds = Some(GcodeBounds { min: point, max: point });
+                                result.bounds = Some(GcodeBounds {
+                                    min: point,
+                                    max: point,
+                                });
                             }
                             result.moves.push(GcodeMove {
                                 x: point[0],
@@ -584,7 +594,10 @@ pub fn parse_foreign_with(gcode: &str, filament_diameter_mm: Option<f64>) -> Res
             Ok(())
         })();
         line_result.map_err(|error| {
-            invalid(error.code, &format!("Line {}: {}", line_index + 1, error.message))
+            invalid(
+                error.code,
+                &format!("Line {}: {}", line_index + 1, error.message),
+            )
         })?;
     }
     result.layers = if layers.explicit_markers {
@@ -637,13 +650,20 @@ fn arc_points(
             ));
         }
         let h = (r * r - (d / 2.0).powi(2)).max(0.0).sqrt();
-        let sign = if counter_clockwise == (r > 0.0) { 1.0 } else { -1.0 };
+        let sign = if counter_clockwise == (r > 0.0) {
+            1.0
+        } else {
+            -1.0
+        };
         (
             (start[0] + end[0]) / 2.0 - sign * h * dy / d,
             (start[1] + end[1]) / 2.0 + sign * h * dx / d,
         )
     } else {
-        return Err(invalid("GCODE_SYNTAX", "Arc needs I/J offsets or an R radius"));
+        return Err(invalid(
+            "GCODE_SYNTAX",
+            "Arc needs I/J offsets or an R radius",
+        ));
     };
     let radius = (start[0] - cx).hypot(start[1] - cy);
     if !radius.is_finite() || radius == 0.0 {
@@ -660,8 +680,8 @@ fn arc_points(
     } else if sweep >= -1e-9 {
         sweep -= full;
     }
-    let segments = ((radius * sweep.abs() / ARC_SEGMENT_MM).ceil() as usize)
-        .clamp(1, MAX_ARC_SEGMENTS);
+    let segments =
+        ((radius * sweep.abs() / ARC_SEGMENT_MM).ceil() as usize).clamp(1, MAX_ARC_SEGMENTS);
     let mut points = Vec::with_capacity(segments);
     for step in 1..=segments {
         let t = step as f64 / segments as f64;
@@ -715,9 +735,18 @@ M107\nM104 S0\nM140 S0\n; filament_diameter = 1.75\n; gcode_flavor = marlin2\n";
     fn prusa_relative_extrusion_and_layer_markers() {
         let preview = parse_foreign(PRUSA).unwrap();
         assert_eq!(preview.layers, 3, "startup + two marked layers");
-        assert!((preview.extrusion_mm - 10.5).abs() < 1e-9, "{}", preview.extrusion_mm);
+        assert!(
+            (preview.extrusion_mm - 10.5).abs() < 1e-9,
+            "{}",
+            preview.extrusion_mm
+        );
         assert!((preview.print_distance_mm - 30.0).abs() < 1e-9);
-        assert!(preview.moves.iter().any(|m| m.layer_index == 2 && m.extruded));
+        assert!(
+            preview
+                .moves
+                .iter()
+                .any(|m| m.layer_index == 2 && m.extruded)
+        );
         assert!(preview.deposited_volume_mm3 > 0.0);
     }
 
@@ -745,7 +774,11 @@ M107\nM104 S0\nM140 S0\n; filament_diameter = 1.75\n; gcode_flavor = marlin2\n";
         let raw = "G20\nG91\nG1Z0.01\nG1X1Y0E0.1F60\nG1X0Y1E0.1\n";
         let preview = parse_foreign(raw).unwrap();
         // First XY move from an unknown start establishes position; second is 25.4 mm.
-        assert!((preview.print_distance_mm - 25.4).abs() < 1e-9, "{}", preview.print_distance_mm);
+        assert!(
+            (preview.print_distance_mm - 25.4).abs() < 1e-9,
+            "{}",
+            preview.print_distance_mm
+        );
         assert!((preview.extrusion_mm - 2.54 * 2.0).abs() < 1e-9);
     }
 
@@ -754,12 +787,21 @@ M107\nM104 S0\nM140 S0\n; filament_diameter = 1.75\n; gcode_flavor = marlin2\n";
         let raw = "G90\nG1 X10 Y0 Z0.2 F600\nG2 X-10 Y0 I-10 J0 E1\n";
         let preview = parse_foreign(raw).unwrap();
         let half_circle = std::f64::consts::PI * 10.0;
-        assert!((preview.print_distance_mm - half_circle).abs() < 0.2, "{}", preview.print_distance_mm);
+        assert!(
+            (preview.print_distance_mm - half_circle).abs() < 0.2,
+            "{}",
+            preview.print_distance_mm
+        );
         assert!(preview.moves.len() > 10);
         let rraw = "G90\nG1 X10 Y0 Z0.2 F600\nG3 X-10 Y0 R10 E1\n";
         let rpreview = parse_foreign(rraw).unwrap();
         assert!((rpreview.print_distance_mm - half_circle).abs() < 0.2);
-        assert_eq!(parse_foreign("G90\nG18\nG1 X0 Y0 Z0 F600\nG2 X1 Y0 I1 J0\n").unwrap_err().code, "GCODE_UNSUPPORTED_COMMAND");
+        assert_eq!(
+            parse_foreign("G90\nG18\nG1 X0 Y0 Z0 F600\nG2 X1 Y0 I1 J0\n")
+                .unwrap_err()
+                .code,
+            "GCODE_UNSUPPORTED_COMMAND"
+        );
     }
 
     #[test]
@@ -781,9 +823,18 @@ M107\nM104 S0\nM140 S0\n; filament_diameter = 1.75\n; gcode_flavor = marlin2\n";
 
     #[test]
     fn empty_or_malformed_motion_fails() {
-        assert_eq!(parse_foreign("; nothing\nM117 hi\n").unwrap_err().code, "GCODE_EMPTY_PLAN");
-        assert_eq!(parse_foreign("G1 Xabc\n").unwrap_err().code, "GCODE_INVALID_NUMBER");
-        assert_eq!(parse_foreign("G1 X1000001 Y0 Z0\n").unwrap_err().code, "GCODE_INVALID_COORDINATE");
+        assert_eq!(
+            parse_foreign("; nothing\nM117 hi\n").unwrap_err().code,
+            "GCODE_EMPTY_PLAN"
+        );
+        assert_eq!(
+            parse_foreign("G1 Xabc\n").unwrap_err().code,
+            "GCODE_INVALID_NUMBER"
+        );
+        assert_eq!(
+            parse_foreign("G1 X1000001 Y0 Z0\n").unwrap_err().code,
+            "GCODE_INVALID_COORDINATE"
+        );
     }
 
     #[test]

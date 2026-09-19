@@ -312,64 +312,111 @@ fn direct_step_v3_bridge_preserves_exact_graph() {
 #[test]
 fn direct_step_v5_bridge_exposes_ap242_report() {
     let model = brep_core::freeform_cuboid_solid([0., 0., 0.], [2., 3., 4.]).unwrap();
-    let exported=dispatch(json!({"op":"brep_nurbs_export_step_v5","model":encode(model).unwrap()})).unwrap();
-    assert_eq!(exported["certificate"]["capability"],"step-interchange/5");
-    assert!(exported["text"].as_str().unwrap().contains("SHAPE_DEFINITION_REPRESENTATION"));
-    let imported=dispatch(json!({"op":"brep_nurbs_import_step_v5","text":exported["text"]})).unwrap();
-    assert_eq!(imported["identity"]["preserved"],true);
-    assert_eq!(imported["metadataLoss"].as_array().unwrap().len(),0);
+    let exported =
+        dispatch(json!({"op":"brep_nurbs_export_step_v5","model":encode(model).unwrap()})).unwrap();
+    assert_eq!(exported["certificate"]["capability"], "step-interchange/5");
+    assert!(
+        exported["text"]
+            .as_str()
+            .unwrap()
+            .contains("SHAPE_DEFINITION_REPRESENTATION")
+    );
+    let imported =
+        dispatch(json!({"op":"brep_nurbs_import_step_v5","text":exported["text"]})).unwrap();
+    assert_eq!(imported["identity"]["preserved"], true);
+    assert_eq!(imported["metadataLoss"].as_array().unwrap().len(), 0);
 }
 
 #[test]
-fn direct_step_v6_bridge_roundtrips_poles_and_reports_identities(){
-    let model=brep_core::frustum(2.,0.,3.).unwrap();
-    let exported=dispatch(json!({"op":"brep_nurbs_export_step_v6","model":encode(model).unwrap()})).unwrap();
-    assert_eq!(exported["certificate"]["capability"],"step-interchange/6");
-    let imported=dispatch(json!({"op":"brep_nurbs_import_step_v6","text":exported["text"]})).unwrap();
-    assert_eq!(imported["model"]["bodies"].as_array().unwrap().len(),1);
-    assert_eq!(imported["definitionIdentities"].as_array().unwrap().len(),1);
-    assert_eq!(imported["occurrenceIdentities"].as_array().unwrap().len(),1);
+fn direct_step_v6_bridge_roundtrips_poles_and_reports_identities() {
+    let model = brep_core::frustum(2., 0., 3.).unwrap();
+    let exported =
+        dispatch(json!({"op":"brep_nurbs_export_step_v6","model":encode(model).unwrap()})).unwrap();
+    assert_eq!(exported["certificate"]["capability"], "step-interchange/6");
+    let imported =
+        dispatch(json!({"op":"brep_nurbs_import_step_v6","text":exported["text"]})).unwrap();
+    assert_eq!(imported["model"]["bodies"].as_array().unwrap().len(), 1);
+    assert_eq!(
+        imported["definitionIdentities"].as_array().unwrap().len(),
+        1
+    );
+    assert_eq!(
+        imported["occurrenceIdentities"].as_array().unwrap().len(),
+        1
+    );
 }
 
 #[test]
-fn direct_step_v7_bridge_composes_occurrence_topology(){
-    let model=brep_core::freeform_cuboid_solid([0.,0.,0.],[1.,1.,1.]).unwrap();
-    let exported=dispatch(json!({"op":"brep_nurbs_export_step_v7","model":encode(model).unwrap()})).unwrap();
-    assert_eq!(exported["certificate"]["capability"],"step-interchange/7");
-    let imported=dispatch(json!({"op":"brep_nurbs_import_step_v7","text":exported["text"]})).unwrap();
+fn direct_step_v7_bridge_composes_occurrence_topology() {
+    let model = brep_core::freeform_cuboid_solid([0., 0., 0.], [1., 1., 1.]).unwrap();
+    let exported =
+        dispatch(json!({"op":"brep_nurbs_export_step_v7","model":encode(model).unwrap()})).unwrap();
+    assert_eq!(exported["certificate"]["capability"], "step-interchange/7");
+    let imported =
+        dispatch(json!({"op":"brep_nurbs_import_step_v7","text":exported["text"]})).unwrap();
     let composed=dispatch(json!({"op":"brep_nurbs_compose_step_v7","models":[imported["model"].clone(),imported["model"].clone()]})).unwrap();
-    assert_eq!(composed["bodies"].as_array().unwrap().len(),2);
-    let ids=composed["topologyIds"]["bodies"].as_array().unwrap();
-    assert_eq!(ids.len(),2);
-    assert_ne!(ids[0],ids[1]);
+    assert_eq!(composed["bodies"].as_array().unwrap().len(), 2);
+    let ids = composed["topologyIds"]["bodies"].as_array().unwrap();
+    assert_eq!(ids.len(), 2);
+    assert_ne!(ids[0], ids[1]);
 }
 
 #[test]
-fn direct_step_v8_bridge_exposes_whole_domain_certificate(){
-    let model=brep_core::sphere(2.).unwrap();
-    let exported=dispatch(json!({"op":"brep_nurbs_export_step_v8","model":encode(model).unwrap()})).unwrap();
-    assert_eq!(exported["certificate"]["capability"],"step-interchange/8");
-    assert_eq!(exported["certificate"]["coupledSenseCases"],128);
-    assert_eq!(exported["certificate"]["regularity"][0]["carrier"],"sphere");
-    let imported=dispatch(json!({"op":"brep_nurbs_import_step_v8","text":exported["text"]})).unwrap();
-    assert_eq!(imported["certificate"]["complete"],true);
-    assert_eq!(imported["certificate"]["regularity"][0]["collapsedBoundaries"].as_array().unwrap().len(),2);
+fn direct_step_v8_bridge_exposes_whole_domain_certificate() {
+    let model = brep_core::sphere(2.).unwrap();
+    let exported =
+        dispatch(json!({"op":"brep_nurbs_export_step_v8","model":encode(model).unwrap()})).unwrap();
+    assert_eq!(exported["certificate"]["capability"], "step-interchange/8");
+    assert_eq!(exported["certificate"]["coupledSenseCases"], 128);
+    assert_eq!(
+        exported["certificate"]["regularity"][0]["carrier"],
+        "sphere"
+    );
+    let imported =
+        dispatch(json!({"op":"brep_nurbs_import_step_v8","text":exported["text"]})).unwrap();
+    assert_eq!(imported["certificate"]["complete"], true);
+    assert_eq!(
+        imported["certificate"]["regularity"][0]["collapsedBoundaries"]
+            .as_array()
+            .unwrap()
+            .len(),
+        2
+    );
 }
 
 #[test]
-fn direct_step_v9_bridge_retains_open_shell(){
-    let control_points=(0..4).map(|u|(0..4).map(|v|
-        vec![u as f64/3.,v as f64/3.,(u*v) as f64/90.]).collect()).collect();
-    let surface=nurbs_core::surface::Surface{degree_u:3,degree_v:3,
-        knots_u:vec![0.,0.,0.,0.,1.,1.,1.,1.],knots_v:vec![0.,0.,0.,0.,1.,1.,1.,1.],
-        control_points,weights:vec![vec![1.;4];4],periodic_u:false,periodic_v:false};
-    let model=brep_core::bicubic_open_face(surface).unwrap();
-    let exported=dispatch(json!({"op":"brep_nurbs_export_step_v9","model":encode(model).unwrap()})).unwrap();
-    assert_eq!(exported["certificate"]["capability"],"step-interchange/9");
-    assert!(exported["text"].as_str().unwrap().contains("SHELL_BASED_SURFACE_MODEL"));
-    let imported=dispatch(json!({"op":"brep_nurbs_import_step_v9","text":exported["text"]})).unwrap();
-    assert_eq!(imported["model"]["bodies"].as_array().unwrap().len(),0);
-    assert_eq!(imported["model"]["shells"][0]["closed"],false);
+fn direct_step_v9_bridge_retains_open_shell() {
+    let control_points = (0..4)
+        .map(|u| {
+            (0..4)
+                .map(|v| vec![u as f64 / 3., v as f64 / 3., (u * v) as f64 / 90.])
+                .collect()
+        })
+        .collect();
+    let surface = nurbs_core::surface::Surface {
+        degree_u: 3,
+        degree_v: 3,
+        knots_u: vec![0., 0., 0., 0., 1., 1., 1., 1.],
+        knots_v: vec![0., 0., 0., 0., 1., 1., 1., 1.],
+        control_points,
+        weights: vec![vec![1.; 4]; 4],
+        periodic_u: false,
+        periodic_v: false,
+    };
+    let model = brep_core::bicubic_open_face(surface).unwrap();
+    let exported =
+        dispatch(json!({"op":"brep_nurbs_export_step_v9","model":encode(model).unwrap()})).unwrap();
+    assert_eq!(exported["certificate"]["capability"], "step-interchange/9");
+    assert!(
+        exported["text"]
+            .as_str()
+            .unwrap()
+            .contains("SHELL_BASED_SURFACE_MODEL")
+    );
+    let imported =
+        dispatch(json!({"op":"brep_nurbs_import_step_v9","text":exported["text"]})).unwrap();
+    assert_eq!(imported["model"]["bodies"].as_array().unwrap().len(), 0);
+    assert_eq!(imported["model"]["shells"][0]["closed"], false);
 }
 
 #[test]
@@ -378,15 +425,26 @@ fn direct_iges_v2_bridge_preserves_exact_graph() {
     let exported = dispatch(json!({
         "op":"brep_nurbs_export_iges_v2",
         "model":encode(model).unwrap(),
-    })).unwrap();
-    assert_eq!(exported["certificate"]["capability"].as_str(),Some("iges-interchange/2"));
-    assert_eq!(exported["identity"]["preserved"],true);
-    assert!(exported["text"].as_str().unwrap().lines().all(|line|line.len()==80));
-    let imported=dispatch(json!({"op":"brep_nurbs_import_iges_v2","text":exported["text"]})).unwrap();
-    assert_eq!(imported["identity"]["preserved"],true);
-    assert_eq!(imported["model"]["vertices"].as_array().unwrap().len(),8);
-    assert_eq!(imported["model"]["edges"].as_array().unwrap().len(),12);
-    assert_eq!(imported["model"]["faces"].as_array().unwrap().len(),6);
+    }))
+    .unwrap();
+    assert_eq!(
+        exported["certificate"]["capability"].as_str(),
+        Some("iges-interchange/2")
+    );
+    assert_eq!(exported["identity"]["preserved"], true);
+    assert!(
+        exported["text"]
+            .as_str()
+            .unwrap()
+            .lines()
+            .all(|line| line.len() == 80)
+    );
+    let imported =
+        dispatch(json!({"op":"brep_nurbs_import_iges_v2","text":exported["text"]})).unwrap();
+    assert_eq!(imported["identity"]["preserved"], true);
+    assert_eq!(imported["model"]["vertices"].as_array().unwrap().len(), 8);
+    assert_eq!(imported["model"]["edges"].as_array().unwrap().len(), 12);
+    assert_eq!(imported["model"]["faces"].as_array().unwrap().len(), 6);
 }
 
 #[test]
@@ -461,13 +519,15 @@ fn audited_feature_successors_cross_the_bridge_with_certificates() {
         Some("exact-variable-radius-fillet/1")
     );
     assert_eq!(variable["audit"]["ok"], true);
-    assert!(dispatch(json!({
-        "op":"brep_nurbs_exact_variable_radius_fillet",
-        "model":encode(model.clone()).unwrap(),
-        "edges":[vertical],
-        "radii":[[0.5,0.5]]
-    }))
-    .is_err());
+    assert!(
+        dispatch(json!({
+            "op":"brep_nurbs_exact_variable_radius_fillet",
+            "model":encode(model.clone()).unwrap(),
+            "edges":[vertical],
+            "radii":[[0.5,0.5]]
+        }))
+        .is_err()
+    );
     let max = [10., 8., 6.];
     let corner_edges: Vec<usize> = model
         .edges
@@ -550,14 +610,16 @@ fn exact_analytic_shell_crosses_bridge_with_audited_certificate() {
     assert_eq!(result["namingComplete"], true);
     assert!(result["changeSet"]["changes"].as_array().unwrap().len() > 0);
     assert_eq!(before, value_codec::to_string(&model).unwrap());
-    assert!(dispatch(json!({
-        "op":"brep_nurbs_exact_analytic_shell",
-        "model":encode(model).unwrap(),
-        "openings":[0,2],
-        "thickness":0.5,
-        "direction":"inward"
-    }))
-    .is_err());
+    assert!(
+        dispatch(json!({
+            "op":"brep_nurbs_exact_analytic_shell",
+            "model":encode(model).unwrap(),
+            "openings":[0,2],
+            "thickness":0.5,
+            "direction":"inward"
+        }))
+        .is_err()
+    );
 }
 
 #[test]
@@ -593,14 +655,16 @@ fn exact_loft_and_bent_rmf_successors_cross_bridge_atomically() {
     assert_eq!(sweep["audit"]["ok"], true);
     assert_eq!(sweep["namingComplete"], true);
     assert_eq!(sweep["model"]["faces"].as_array().unwrap().len(), 14);
-    assert!(dispatch(json!({
-        "op":"brep_nurbs_audited_bent_rmf_sweep_v2",
-        "profile":[[-0.2,-0.2],[0.2,-0.2],[0.2,0.2],[-0.2,0.2]],
-        "path":[[0.,0.,0.],[0.,0.,3.],[0.,0.,0.]],
-        "twistRadians":[0.,0.,0.],
-        "scales":[1.,1.,1.]
-    }))
-    .is_err());
+    assert!(
+        dispatch(json!({
+            "op":"brep_nurbs_audited_bent_rmf_sweep_v2",
+            "profile":[[-0.2,-0.2],[0.2,-0.2],[0.2,0.2],[-0.2,0.2]],
+            "path":[[0.,0.,0.],[0.,0.,3.],[0.,0.,0.]],
+            "twistRadians":[0.,0.,0.],
+            "scales":[1.,1.,1.]
+        }))
+        .is_err()
+    );
 }
 
 #[test]
@@ -902,11 +966,12 @@ fn general_multispan_boolean_bridge_is_strict_and_audited() {
             "spansV":v
         }))
         .unwrap();
-        let cutter = encode(brep_core::cuboid([0.25, -1., -1.], [0.75, 2., 3.]).unwrap())
-            .unwrap();
-        for (operation, components, faces) in
-            [("intersection", 1, 6), ("difference", 2, 12), ("union", 3, 18)]
-        {
+        let cutter = encode(brep_core::cuboid([0.25, -1., -1.], [0.75, 2., 3.]).unwrap()).unwrap();
+        for (operation, components, faces) in [
+            ("intersection", 1, 6),
+            ("difference", 2, 12),
+            ("union", 3, 18),
+        ] {
             let result = dispatch(json!({
                 "op":"brep_nurbs_boolean_general",
                 "a":graph,
@@ -923,14 +988,35 @@ fn general_multispan_boolean_bridge_is_strict_and_audited() {
                 Some("author-general-nurbs-boolean")
             );
             assert_eq!(result["certificate"]["status"].as_str(), Some("Complete"));
-            assert_eq!(result["certificate"]["operandOrder"].as_str(), Some("source-tool"));
-            assert_eq!(result["certificate"]["exactRegionMembership"].as_bool(), Some(true));
-            assert_eq!(result["certificate"]["ssReportsComplete"].as_bool(), Some(true));
+            assert_eq!(
+                result["certificate"]["operandOrder"].as_str(),
+                Some("source-tool")
+            );
+            assert_eq!(
+                result["certificate"]["exactRegionMembership"].as_bool(),
+                Some(true)
+            );
+            assert_eq!(
+                result["certificate"]["ssReportsComplete"].as_bool(),
+                Some(true)
+            );
             assert!(result["certificate"]["ssFacePairs"].as_u64().unwrap_or(0) > 0);
-            assert_eq!(result["certificate"]["branchGraph"]["components"].as_u64(), Some(2));
-            assert_eq!(result["certificate"]["branchGraph"]["complete"].as_bool(), Some(true));
-            assert_eq!(result["certificate"]["uv"]["complete"].as_bool(), Some(true));
-            assert_eq!(result["certificate"]["resultComponents"].as_u64(), Some(components));
+            assert_eq!(
+                result["certificate"]["branchGraph"]["components"].as_u64(),
+                Some(2)
+            );
+            assert_eq!(
+                result["certificate"]["branchGraph"]["complete"].as_bool(),
+                Some(true)
+            );
+            assert_eq!(
+                result["certificate"]["uv"]["complete"].as_bool(),
+                Some(true)
+            );
+            assert_eq!(
+                result["certificate"]["resultComponents"].as_u64(),
+                Some(components)
+            );
             assert_eq!(result["certificate"]["resultFaces"].as_u64(), Some(faces));
             assert_eq!(result["certificate"]["audit"]["ok"].as_bool(), Some(true));
             assert_eq!(result["certificate"]["noFallback"].as_bool(), Some(true));
@@ -942,30 +1028,37 @@ fn general_multispan_boolean_bridge_is_strict_and_audited() {
             "operation":"difference"
         }))
         .unwrap();
-        assert_eq!(reversed["certificate"]["operandOrder"].as_str(), Some("tool-source"));
+        assert_eq!(
+            reversed["certificate"]["operandOrder"].as_str(),
+            Some("tool-source")
+        );
         assert_eq!(reversed["certificate"]["partitionCells"].as_u64(), Some(4));
-        assert!(dispatch(json!({
-            "op":"brep_nurbs_boolean_general",
-            "a":graph,
-            "b":cutter,
-            "operation":"intersection",
-            "fallback":"mesh"
-        }))
-        .is_err());
+        assert!(
+            dispatch(json!({
+                "op":"brep_nurbs_boolean_general",
+                "a":graph,
+                "b":cutter,
+                "operation":"intersection",
+                "fallback":"mesh"
+            }))
+            .is_err()
+        );
     }
 }
 
 #[test]
 fn certified_freeform_tessellation_crosses_bridge() {
-    let planar = encode(brep_core::freeform_cuboid_solid([0., 0., 0.], [2., 3., 4.]).unwrap())
-        .unwrap();
-    assert!(dispatch(json!({
-        "op":"brep_nurbs_certified_tessellate",
-        "model":planar,
-        "chordToleranceMm":0.1,
-        "maxTriangles":20000
-    }))
-    .is_err());
+    let planar =
+        encode(brep_core::freeform_cuboid_solid([0., 0., 0.], [2., 3., 4.]).unwrap()).unwrap();
+    assert!(
+        dispatch(json!({
+            "op":"brep_nurbs_certified_tessellate",
+            "model":planar,
+            "chordToleranceMm":0.1,
+            "maxTriangles":20000
+        }))
+        .is_err()
+    );
     let planar_cert = dispatch(json!({
         "op":"brep_nurbs_certified_freeform_tessellate",
         "model":planar,
@@ -981,10 +1074,9 @@ fn certified_freeform_tessellation_crosses_bridge() {
     assert_eq!(planar_cert["namingComplete"], true);
     assert_eq!(planar_cert["audit"]["ok"], true);
 
-    let bump = encode(
-        brep_core::freeform_cuboid_with_bump_face([0., 0., 0.], [2., 2., 2.]).unwrap(),
-    )
-    .unwrap();
+    let bump =
+        encode(brep_core::freeform_cuboid_with_bump_face([0., 0., 0.], [2., 2., 2.]).unwrap())
+            .unwrap();
     let bump_cert = dispatch(json!({
         "op":"brep_nurbs_certified_freeform_tessellate",
         "model":bump,
@@ -997,18 +1089,25 @@ fn certified_freeform_tessellation_crosses_bridge() {
         Some("certified-generic-rational-freeform-tessellation/1")
     );
     assert!(bump_cert["surfaceToMeshDeviationMm"].as_f64().unwrap() <= 0.5);
-    assert!(bump_cert["resourceProof"]["subdivisionsPerPatch"].as_u64().unwrap() >= 1);
+    assert!(
+        bump_cert["resourceProof"]["subdivisionsPerPatch"]
+            .as_u64()
+            .unwrap()
+            >= 1
+    );
 }
 
 #[test]
 fn certified_freeform_mass_crosses_bridge() {
-    let planar = encode(brep_core::freeform_cuboid_solid([1., 2., 3.], [3., 6., 9.]).unwrap())
-        .unwrap();
-    assert!(dispatch(json!({
-        "op":"brep_nurbs_certified_mass_properties",
-        "model":planar
-    }))
-    .is_err());
+    let planar =
+        encode(brep_core::freeform_cuboid_solid([1., 2., 3.], [3., 6., 9.]).unwrap()).unwrap();
+    assert!(
+        dispatch(json!({
+            "op":"brep_nurbs_certified_mass_properties",
+            "model":planar
+        }))
+        .is_err()
+    );
     let mass = dispatch(json!({
         "op":"brep_nurbs_certified_freeform_mass_properties",
         "model":planar
@@ -1023,13 +1122,14 @@ fn certified_freeform_mass_crosses_bridge() {
     assert!(volume["upper"].as_f64().unwrap() >= 48.);
     assert_eq!(mass["namingComplete"], true);
 
-    let bump = encode(
-        brep_core::freeform_cuboid_with_bump_face([0., 0., 0.], [2., 2., 2.]).unwrap(),
-    )
-    .unwrap();
-    assert!(dispatch(json!({
-        "op":"brep_nurbs_certified_freeform_mass_properties",
-        "model":bump
-    }))
-    .is_err());
+    let bump =
+        encode(brep_core::freeform_cuboid_with_bump_face([0., 0., 0.], [2., 2., 2.]).unwrap())
+            .unwrap();
+    assert!(
+        dispatch(json!({
+            "op":"brep_nurbs_certified_freeform_mass_properties",
+            "model":bump
+        }))
+        .is_err()
+    );
 }

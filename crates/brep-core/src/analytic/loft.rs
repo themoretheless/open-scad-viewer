@@ -168,10 +168,7 @@ pub(crate) fn piecewise_ruled_loft(sections: &[Vec<P>]) -> Result<Model> {
                 cross(edge1, ruling0),
                 cross(edge1, ruling1),
             ];
-            if bounds
-                .iter()
-                .any(|normal| dot(*normal, *normal) <= 1e-16)
-            {
+            if bounds.iter().any(|normal| dot(*normal, *normal) <= 1e-16) {
                 return Err(Error::new(
                     "BREP_LOFT_SECTION_COLLAPSE_REFUSED",
                     "A ruled side has an unresolved zero-Jacobian Bernstein bound",

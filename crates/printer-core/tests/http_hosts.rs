@@ -37,9 +37,11 @@ fn moonraker_upload_then_start() {
     assert_eq!(outcome.remote_name, "part.gcode");
     assert_eq!(backend.transport.calls[0].path, "/server/files/upload");
     assert_eq!(backend.transport.calls[1].path, "/printer/print/start");
-    assert!(std::str::from_utf8(&backend.transport.calls[1].body)
-        .unwrap()
-        .contains("part.gcode"));
+    assert!(
+        std::str::from_utf8(&backend.transport.calls[1].body)
+            .unwrap()
+            .contains("part.gcode")
+    );
 }
 
 #[test]
@@ -90,9 +92,11 @@ fn octoprint_pause_resume_cancel_and_status() {
     let status = backend.status().unwrap();
     assert_eq!(status.vendor_state, "Printing");
     assert_eq!(status.percent, Some(42));
-    assert!(std::str::from_utf8(&backend.transport.calls[0].body)
-        .unwrap()
-        .contains(r#""action":"pause""#));
+    assert!(
+        std::str::from_utf8(&backend.transport.calls[0].body)
+            .unwrap()
+            .contains(r#""action":"pause""#)
+    );
 }
 
 #[test]
@@ -127,17 +131,17 @@ fn prusalink_put_upload_and_job_control() {
     job.printer = backend.id();
     let outcome = backend.submit_job(&job).unwrap();
     assert!(outcome.verified);
-    assert_eq!(
-        backend.transport.calls[0].method, "PUT"
-    );
+    assert_eq!(backend.transport.calls[0].method, "PUT");
     assert_eq!(
         backend.transport.calls[0].path,
         "/api/v1/files/local/part.gcode"
     );
-    assert!(backend.transport.calls[0]
-        .headers
-        .iter()
-        .any(|(k, v)| k == "Print-After-Upload" && v == "?1"));
+    assert!(
+        backend.transport.calls[0]
+            .headers
+            .iter()
+            .any(|(k, v)| k == "Print-After-Upload" && v == "?1")
+    );
     backend.pause().unwrap();
     assert_eq!(backend.transport.calls[1].path, "/api/v1/job");
     assert_eq!(backend.transport.calls[2].path, "/api/v1/job/42/pause");
@@ -189,12 +193,26 @@ fn snapmaker_connect_upload_start_and_control() {
     job.printer = backend.id();
     let outcome = backend.submit_job(&job).unwrap();
     assert!(outcome.verified);
-    assert!(backend.transport.calls[0].path.starts_with("/api/v1/connect?"));
-    assert!(backend.transport.calls[1].path.starts_with("/api/v1/upload?"));
-    assert!(backend.transport.calls[2].path.starts_with("/api/v1/start_print?"));
-    assert!(std::str::from_utf8(&backend.transport.calls[1].body)
-        .unwrap()
-        .contains("part.gcode"));
+    assert!(
+        backend.transport.calls[0]
+            .path
+            .starts_with("/api/v1/connect?")
+    );
+    assert!(
+        backend.transport.calls[1]
+            .path
+            .starts_with("/api/v1/upload?")
+    );
+    assert!(
+        backend.transport.calls[2]
+            .path
+            .starts_with("/api/v1/start_print?")
+    );
+    assert!(
+        std::str::from_utf8(&backend.transport.calls[1].body)
+            .unwrap()
+            .contains("part.gcode")
+    );
     backend.pause().unwrap();
     backend.resume().unwrap();
     backend.stop().unwrap();

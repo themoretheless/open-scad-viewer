@@ -31,20 +31,20 @@ pub mod transport;
 pub use backend::{PrinterBackend, SubmitOutcome};
 pub use bambu::{BambuLanBackend, BambuLanClient, BambuLanConfig, BambuPrintOptions};
 #[cfg(feature = "network")]
-pub use bambu::{lan_client_config, BambuLanTransport};
+pub use bambu::{BambuLanTransport, lan_client_config};
 pub use creality::{CrealityBackend, CrealityConfig};
+#[cfg(feature = "network")]
+pub use discovery::live::{
+    BambuSsdpDiscovery, SnapmakerUdpDiscovery, default_live_discovery, parse_bambu_ssdp,
+    parse_snapmaker_udp,
+};
 pub use discovery::{
     CompositeDiscovery, DiscoveredPrinter, DiscoveryOptions, DiscoveryVendor, MockDiscovery,
     PrinterDiscovery,
 };
 #[cfg(feature = "network")]
-pub use discovery::live::{
-    default_live_discovery, parse_bambu_ssdp, parse_snapmaker_udp, BambuSsdpDiscovery,
-    SnapmakerUdpDiscovery,
-};
-pub use http::{HttpRequest, HttpResponse, HttpTransport, MockHttpTransport};
-#[cfg(feature = "network")]
 pub use http::live::UreqHttpTransport;
+pub use http::{HttpRequest, HttpResponse, HttpTransport, MockHttpTransport};
 pub use job::{
     ArtifactKind, JobState, JobStatus, PrintArtifact, PrintJob, PrinterId, map_vendor_state,
 };

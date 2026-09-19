@@ -21,8 +21,8 @@ use planar_geometry::{
 };
 
 pub use gcode_core::{
-    DIALECT as GCODE_DIALECT, JOB_DIALECT as GCODE_JOB_DIALECT, DialectInfo, Flavor,
-    Generator, GcodeBounds, GcodeMove, GcodePreview, JobProfile, MeshBody,
+    DIALECT as GCODE_DIALECT, DialectInfo, Flavor, GcodeBounds, GcodeMove, GcodePreview, Generator,
+    JOB_DIALECT as GCODE_JOB_DIALECT, JobProfile, MeshBody,
 };
 pub use gcode_optimize::OptimizeSettings;
 pub use math_core::{Error, Result};

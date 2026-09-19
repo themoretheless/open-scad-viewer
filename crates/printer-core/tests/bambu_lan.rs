@@ -27,7 +27,11 @@ fn bambu_submit_uploads_then_publishes_project_file() {
     let published = &client.transport.published[0];
     assert_eq!(published.topic, "device/01P00A000000001/request");
     assert!(published.payload.contains(r#""command":"project_file""#));
-    assert!(published.payload.contains(r#""url":"ftp:///box.gcode.3mf""#));
+    assert!(
+        published
+            .payload
+            .contains(r#""url":"ftp:///box.gcode.3mf""#)
+    );
     assert!(published.payload.contains(r#""md5":""#) || published.payload.contains("md5"));
     let md5 = printer_core::bambu::artifact_md5(&bytes);
     assert!(published.payload.contains(&md5));

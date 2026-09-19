@@ -128,7 +128,10 @@ pub struct CoedgeTrim {
 impl CoedgeTrim {
     pub fn validate(self) -> Result<()> {
         require(
-            self.curve_parameter.iter().chain(&self.pcurve_parameter).all(|v| v.is_finite()),
+            self.curve_parameter
+                .iter()
+                .chain(&self.pcurve_parameter)
+                .all(|v| v.is_finite()),
             "Coedge trim parameters must be finite",
         )?;
         require(
@@ -684,7 +687,7 @@ impl<C, S, P, V> Model<C, S, P, V> {
                 }
             }
             let mut adjacency = BTreeMap::<usize, Vec<usize>>::new();
-            for (edge_index,edges) in &incidence {
+            for (edge_index, edges) in &incidence {
                 require(
                     edges.len() <= 2,
                     "Non-manifold edge has more than two face uses",
@@ -692,8 +695,13 @@ impl<C, S, P, V> Model<C, S, P, V> {
                 if edges.len() == 1 {
                     require(!s.closed, "Closed shell has a boundary edge")?;
                 } else {
-                    require(edges[0].1 != edges[1].1,&format!(
-                        "Adjacent face uses traverse edge {edge_index} in the same direction ({:?})",edges))?;
+                    require(
+                        edges[0].1 != edges[1].1,
+                        &format!(
+                            "Adjacent face uses traverse edge {edge_index} in the same direction ({:?})",
+                            edges
+                        ),
+                    )?;
                     adjacency.entry(edges[0].0).or_default().push(edges[1].0);
                     adjacency.entry(edges[1].0).or_default().push(edges[0].0);
                 }

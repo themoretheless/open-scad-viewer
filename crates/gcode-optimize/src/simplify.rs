@@ -3,7 +3,11 @@ use gcode_core::PlannedPath;
 use crate::travel::dist;
 use crate::{Budget, Result};
 
-pub fn simplify_path(path: &PlannedPath, tolerance: f64, budget: &mut Budget) -> Result<PlannedPath> {
+pub fn simplify_path(
+    path: &PlannedPath,
+    tolerance: f64,
+    budget: &mut Budget,
+) -> Result<PlannedPath> {
     if tolerance == 0.0 || path.points.len() < 3 {
         return Ok(path.clone());
     }
@@ -19,7 +23,11 @@ pub fn simplify_path(path: &PlannedPath, tolerance: f64, budget: &mut Budget) ->
     })
 }
 
-fn simplify_open(points: &[[f64; 2]], tolerance: f64, budget: &mut Budget) -> Result<Vec<[f64; 2]>> {
+fn simplify_open(
+    points: &[[f64; 2]],
+    tolerance: f64,
+    budget: &mut Budget,
+) -> Result<Vec<[f64; 2]>> {
     douglas_peucker(points, tolerance, budget)
 }
 
@@ -41,7 +49,11 @@ fn simplify_closed(
     }
 }
 
-fn douglas_peucker(points: &[[f64; 2]], tolerance: f64, budget: &mut Budget) -> Result<Vec<[f64; 2]>> {
+fn douglas_peucker(
+    points: &[[f64; 2]],
+    tolerance: f64,
+    budget: &mut Budget,
+) -> Result<Vec<[f64; 2]>> {
     if points.len() <= 2 {
         return Ok(points.to_vec());
     }
@@ -50,7 +62,12 @@ fn douglas_peucker(points: &[[f64; 2]], tolerance: f64, budget: &mut Budget) -> 
     let last = points[points.len() - 1];
     let mut max_d = 0.0;
     let mut index = 0;
-    for (i, point) in points.iter().enumerate().skip(1).take(points.len().saturating_sub(2)) {
+    for (i, point) in points
+        .iter()
+        .enumerate()
+        .skip(1)
+        .take(points.len().saturating_sub(2))
+    {
         let d = perpendicular_distance(*point, first, last);
         if d > max_d {
             max_d = d;

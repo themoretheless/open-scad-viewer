@@ -4,8 +4,8 @@
 //! cargo run --release -p printer-core --example bench_printer_lan --features network -- --profile quick
 //! ```
 use printer_core::{
-    parse_bambu_ssdp, parse_snapmaker_udp, scrub_secrets, DiscoveryOptions, MockDiscovery,
-    PrinterDiscovery,
+    DiscoveryOptions, MockDiscovery, PrinterDiscovery, parse_bambu_ssdp, parse_snapmaker_udp,
+    scrub_secrets,
 };
 use rbench::{DropPolicy, Suite};
 use std::net::{Ipv4Addr, SocketAddr, SocketAddrV4};
@@ -28,7 +28,11 @@ fn main() -> rbench::Result<()> {
         .bench_with_input(
             "discovery/parse_bambu_ssdp",
             || SSDP.to_owned(),
-            |msg| parse_bambu_ssdp(msg.as_bytes(), from_bambu).map(|p| p.host.len()).unwrap_or(0),
+            |msg| {
+                parse_bambu_ssdp(msg.as_bytes(), from_bambu)
+                    .map(|p| p.host.len())
+                    .unwrap_or(0)
+            },
             DropPolicy::InsideTiming,
         )
         .parameter("bytes", SSDP.len());

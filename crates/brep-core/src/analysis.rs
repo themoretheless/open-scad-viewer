@@ -19,9 +19,11 @@ fn affine_surface(surface: &Surface, tolerance: f64) -> bool {
         && surface.degree_v == 1
         && surface.control_points.len() == 2
         && surface.control_points.iter().all(|row| row.len() == 2)
-        && surface.weights.iter().flatten().all(|weight| {
-            (*weight - surface.weights[0][0]).abs() <= 16. * f64::EPSILON
-        })
+        && surface
+            .weights
+            .iter()
+            .flatten()
+            .all(|weight| (*weight - surface.weights[0][0]).abs() <= 16. * f64::EPSILON)
         && (0..3).all(|axis| {
             (surface.control_points[0][0][axis] + surface.control_points[1][1][axis]
                 - surface.control_points[0][1][axis]
@@ -46,8 +48,7 @@ pub fn certified_tessellation_deviation(model: &Model, segments: usize) -> Resul
         for (&shell, cavity) in std::iter::once((&body.outer_shell, false))
             .chain(body.inner_shells.iter().map(|shell| (shell, true)))
         {
-            let component =
-                crate::solid_audit::isolated_outward_shell(model, shell, cavity)?;
+            let component = crate::solid_audit::isolated_outward_shell(model, shell, cavity)?;
             let n = segments as f64;
             let bound = if component
                 .faces
@@ -62,14 +63,11 @@ pub fn certified_tessellation_deviation(model: &Model, segments: usize) -> Resul
                 let angle = (2. * (1. / n).atan()).hypot(std::f64::consts::FRAC_PI_2 / n);
                 sphere.radius * (1. - angle.cos())
             } else if let Some(cone) = crate::intersections::recognize_cone(&component)? {
-                cone.r_bottom.max(cone.r_top)
-                    * (1. - (std::f64::consts::FRAC_PI_4 / n).cos())
+                cone.r_bottom.max(cone.r_top) * (1. - (std::f64::consts::FRAC_PI_4 / n).cos())
             } else if let Some(torus) = crate::intersections::recognize_torus(&component)? {
                 let sagitta = 1. - (std::f64::consts::FRAC_PI_4 / n).cos();
                 (torus.major + 2. * torus.minor) * sagitta
-            } else if let Some(cylinder) =
-                crate::intersections::recognize_cylinder(&component)?
-            {
+            } else if let Some(cylinder) = crate::intersections::recognize_cylinder(&component)? {
                 cylinder.radius * (1. - (std::f64::consts::FRAC_PI_4 / n).cos())
             } else {
                 return Err(Error::new(
@@ -189,7 +187,11 @@ fn admitted_freeform_bezier_surface(surface: &Surface) -> bool {
             .iter()
             .zip(&surface.control_points)
             .all(|(w_row, p_row)| w_row.len() == p_row.len())
-        && bezier_clamped_knots(&surface.knots_u, surface.degree_u, surface.control_points.len())
+        && bezier_clamped_knots(
+            &surface.knots_u,
+            surface.degree_u,
+            surface.control_points.len(),
+        )
         && bezier_clamped_knots(
             &surface.knots_v,
             surface.degree_v,
@@ -220,7 +222,10 @@ fn bernstein_second_diff_coeff(surface: &Surface) -> Result<f64> {
     if rows >= 3 {
         for i in 0..rows - 2 {
             for j in 0..cols {
-                let d2 = point_sub(point_sub(pt(i + 2, j), pt(i + 1, j)), point_sub(pt(i + 1, j), pt(i, j)));
+                let d2 = point_sub(
+                    point_sub(pt(i + 2, j), pt(i + 1, j)),
+                    point_sub(pt(i + 1, j), pt(i, j)),
+                );
                 max_uu = max_uu.max(point_norm(d2));
             }
         }
@@ -229,7 +234,10 @@ fn bernstein_second_diff_coeff(surface: &Surface) -> Result<f64> {
     if cols >= 3 {
         for i in 0..rows {
             for j in 0..cols - 2 {
-                let d2 = point_sub(point_sub(pt(i, j + 2), pt(i, j + 1)), point_sub(pt(i, j + 1), pt(i, j)));
+                let d2 = point_sub(
+                    point_sub(pt(i, j + 2), pt(i, j + 1)),
+                    point_sub(pt(i, j + 1), pt(i, j)),
+                );
                 max_vv = max_vv.max(point_norm(d2));
             }
         }
@@ -254,10 +262,7 @@ fn bernstein_second_diff_coeff(surface: &Surface) -> Result<f64> {
 
 /// Two-sided freeform tessellation deviation for equal-weight Bezier solids.
 /// Bound: M / (8 n²) with M the Bernstein second-difference coefficient.
-pub fn certified_freeform_tessellation_deviation(
-    model: &Model,
-    segments: usize,
-) -> Result<f64> {
+pub fn certified_freeform_tessellation_deviation(model: &Model, segments: usize) -> Result<f64> {
     if !(1..=32).contains(&segments) {
         return Err(Error::new(
             "BREP_TESSELLATION_BUDGET_EXHAUSTED",
@@ -429,11 +434,7 @@ fn axis_inertia(mass: f64, radius2: f64, height: f64, axis: [f64; 3]) -> [[f64; 
         })
     })
 }
-fn revolution_inertia(
-    axial: f64,
-    transverse: f64,
-    axis: [f64; 3],
-) -> [[f64; 3]; 3] {
+fn revolution_inertia(axial: f64, transverse: f64, axis: [f64; 3]) -> [[f64; 3]; 3] {
     std::array::from_fn(|i| {
         std::array::from_fn(|j| {
             (if i == j { transverse } else { 0. }) + (axial - transverse) * axis[i] * axis[j]
@@ -461,7 +462,11 @@ fn polynomial_integral(coefficients: &[f64], height: f64) -> f64 {
 }
 
 fn conical_properties(cone: crate::intersections::CanonicalCone) -> ExactProperties {
-    let (a, b, h) = (cone.r_bottom, (cone.r_top - cone.r_bottom) / cone.height, cone.height);
+    let (a, b, h) = (
+        cone.r_bottom,
+        (cone.r_top - cone.r_bottom) / cone.height,
+        cone.height,
+    );
     let r2 = [a * a, 2. * a * b, b * b];
     let r4 = [
         a.powi(4),
@@ -471,8 +476,7 @@ fn conical_properties(cone: crate::intersections::CanonicalCone) -> ExactPropert
         b.powi(4),
     ];
     let volume = std::f64::consts::PI * polynomial_integral(&r2, h);
-    let first = std::f64::consts::PI
-        * polynomial_integral(&[0., r2[0], r2[1], r2[2]], h);
+    let first = std::f64::consts::PI * polynomial_integral(&[0., r2[0], r2[1], r2[2]], h);
     let z = first / volume;
     let axial = std::f64::consts::PI * polynomial_integral(&r4, h) / 2.;
     let shifted_r2 = [
@@ -514,7 +518,8 @@ fn exact_component_properties(model: &Model) -> Result<ExactProperties> {
     if let Some((outer, inner, height, centroid)) = canonical_tube(model) {
         let volume = std::f64::consts::PI * (outer * outer - inner * inner) * height;
         return Ok(ExactProperties {
-            area: 2. * std::f64::consts::PI
+            area: 2.
+                * std::f64::consts::PI
                 * ((outer + inner) * height + outer * outer - inner * inner),
             volume,
             centroid,
@@ -523,7 +528,13 @@ fn exact_component_properties(model: &Model) -> Result<ExactProperties> {
         });
     }
     if let Some((area, volume, centroid, inertia, scale)) = exact_vertical_prism(model) {
-        return Ok(ExactProperties { area, volume, centroid, inertia, scale });
+        return Ok(ExactProperties {
+            area,
+            volume,
+            centroid,
+            inertia,
+            scale,
+        });
     }
     if let Some(sphere) = crate::intersections::recognize_sphere(model)? {
         let volume = 4. * std::f64::consts::PI * sphere.radius.powi(3) / 3.;
@@ -542,8 +553,7 @@ fn exact_component_properties(model: &Model) -> Result<ExactProperties> {
     if let Some(torus) = crate::intersections::recognize_torus(model)? {
         let volume = 2. * std::f64::consts::PI.powi(2) * torus.major * torus.minor.powi(2);
         let axial = volume * (torus.major.powi(2) + 0.75 * torus.minor.powi(2));
-        let transverse =
-            volume * (0.5 * torus.major.powi(2) + 0.625 * torus.minor.powi(2));
+        let transverse = volume * (0.5 * torus.major.powi(2) + 0.625 * torus.minor.powi(2));
         return Ok(ExactProperties {
             area: 4. * std::f64::consts::PI.powi(2) * torus.major * torus.minor,
             volume,
@@ -712,25 +722,43 @@ pub fn certified_mass_properties(model: &Model) -> Result<CertifiedMassPropertie
     let context = model.tolerance_context()?;
     let mut parts = Vec::new();
     for body in &model.bodies {
-        parts.push((exact_component_properties(&crate::solid_audit::isolated_outward_shell(
-            model, body.outer_shell, false,
-        )?)?, 1.));
+        parts.push((
+            exact_component_properties(&crate::solid_audit::isolated_outward_shell(
+                model,
+                body.outer_shell,
+                false,
+            )?)?,
+            1.,
+        ));
         for &shell in &body.inner_shells {
-            parts.push((exact_component_properties(&crate::solid_audit::isolated_outward_shell(
-                model, shell, true,
-            )?)?, -1.));
+            parts.push((
+                exact_component_properties(&crate::solid_audit::isolated_outward_shell(
+                    model, shell, true,
+                )?)?,
+                -1.,
+            ));
         }
     }
     if parts.is_empty() {
-        return Err(Error::new("BREP_CERTIFIED_MASS_REFUSED", "Certified mass requires at least one body"));
+        return Err(Error::new(
+            "BREP_CERTIFIED_MASS_REFUSED",
+            "Certified mass requires at least one body",
+        ));
     }
     let area = parts.iter().map(|(p, _)| p.area).sum::<f64>();
     let volume = parts.iter().map(|(p, sign)| sign * p.volume).sum::<f64>();
     if volume <= 0. {
-        return Err(Error::new("BREP_CERTIFIED_MASS_REFUSED", "Signed analytic shell composition has non-positive volume"));
+        return Err(Error::new(
+            "BREP_CERTIFIED_MASS_REFUSED",
+            "Signed analytic shell composition has non-positive volume",
+        ));
     }
     let centroid = std::array::from_fn(|i| {
-        parts.iter().map(|(p, sign)| sign * p.volume * p.centroid[i]).sum::<f64>() / volume
+        parts
+            .iter()
+            .map(|(p, sign)| sign * p.volume * p.centroid[i])
+            .sum::<f64>()
+            / volume
     });
     let mut inertia = [[0.; 3]; 3];
     for (part, sign) in &parts {
@@ -738,8 +766,9 @@ pub fn certified_mass_properties(model: &Model) -> Result<CertifiedMassPropertie
         let d2 = d.iter().map(|x| x * x).sum::<f64>();
         for i in 0..3 {
             for j in 0..3 {
-                inertia[i][j] += sign * (part.inertia[i][j]
-                    + part.volume * ((if i == j { d2 } else { 0. }) - d[i] * d[j]));
+                inertia[i][j] += sign
+                    * (part.inertia[i][j]
+                        + part.volume * ((if i == j { d2 } else { 0. }) - d[i] * d[j]));
             }
         }
     }
@@ -776,7 +805,11 @@ pub fn certified_mass_properties(model: &Model) -> Result<CertifiedMassPropertie
         change_set: model.1.change_set.clone(),
         naming_complete,
         component_count: parts.len(),
-        cavity_count: model.bodies.iter().map(|body| body.inner_shells.len()).sum(),
+        cavity_count: model
+            .bodies
+            .iter()
+            .map(|body| body.inner_shells.len())
+            .sum(),
         proof: "closed_form_analytic_with_outward_rounded_binary64_enclosures",
     })
 }
@@ -784,8 +817,7 @@ pub fn certified_mass_properties(model: &Model) -> Result<CertifiedMassPropertie
 /// Append-only freeform mass finite cell for planar equal-weight Bezier AA
 /// cuboids (elevated freeform_cuboid_solid). Bump/varying-weight quadrature
 /// remains typed-refuse for a successor.
-pub const FREEFORM_MASS_CAPABILITY: &str =
-    "certified-generic-rational-freeform-mass-quadrature/1";
+pub const FREEFORM_MASS_CAPABILITY: &str = "certified-generic-rational-freeform-mass-quadrature/1";
 
 pub fn certified_freeform_mass_properties(model: &Model) -> Result<CertifiedMassProperties> {
     model.validate()?;
@@ -1570,22 +1602,21 @@ mod tests {
         contains(cone.inertia_mm5[2][2], 32.4 * std::f64::consts::PI);
         contains(cone.inertia_mm5[0][0], 23.4 * std::f64::consts::PI);
 
-        let frustum =
-            certified_mass_properties(&frustum(3., 1., 4.).unwrap()).expect("frustum");
+        let frustum = certified_mass_properties(&frustum(3., 1., 4.).unwrap()).expect("frustum");
         contains(frustum.volume_mm3, 52. * std::f64::consts::PI / 3.);
 
         let torus = certified_mass_properties(&torus(5., 2.).unwrap()).expect("torus");
         contains(torus.volume_mm3, 40. * std::f64::consts::PI.powi(2));
         contains(torus.surface_area_mm2, 40. * std::f64::consts::PI.powi(2));
-        contains(torus.inertia_mm5[2][2], 1120. * std::f64::consts::PI.powi(2));
+        contains(
+            torus.inertia_mm5[2][2],
+            1120. * std::f64::consts::PI.powi(2),
+        );
         contains(torus.inertia_mm5[0][0], 600. * std::f64::consts::PI.powi(2));
 
-        let cavity = crate::imprint_pipeline::cavity(
-            &sphere(3.).unwrap(),
-            &sphere(1.).unwrap(),
-            1e-7,
-        )
-        .unwrap();
+        let cavity =
+            crate::imprint_pipeline::cavity(&sphere(3.).unwrap(), &sphere(1.).unwrap(), 1e-7)
+                .unwrap();
         let hollow = certified_mass_properties(&cavity).expect("cavity");
         contains(hollow.volume_mm3, 104. * std::f64::consts::PI / 3.);
         assert_eq!(hollow.component_count, 2);
@@ -1596,11 +1627,16 @@ mod tests {
     fn freeform_tessellation_bounds_planar_cuboid_and_bump() {
         let planar = crate::freeform_cuboid_solid([0., 0., 0.], [2., 3., 4.]).unwrap();
         assert_eq!(
-            certified_tessellation_deviation(&planar, 4).unwrap_err().code,
+            certified_tessellation_deviation(&planar, 4)
+                .unwrap_err()
+                .code,
             "BREP_CERTIFIED_TESSELLATION_REFUSED"
         );
         let planar_dev = certified_freeform_tessellation_deviation(&planar, 1).unwrap();
-        assert!(planar_dev <= 1e-12, "planar elevated cuboid should be zero-bound");
+        assert!(
+            planar_dev <= 1e-12,
+            "planar elevated cuboid should be zero-bound"
+        );
 
         let bump = crate::freeform_cuboid_with_bump_face([0., 0., 0.], [2., 2., 2.]).unwrap();
         let coarse = certified_freeform_tessellation_deviation(&bump, 1).unwrap();

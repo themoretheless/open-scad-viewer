@@ -20,14 +20,14 @@ mod package_3mf;
 
 pub use flavor::Flavor;
 pub use foreign::{
-    detect, parse_any, parse_foreign, parse_foreign_with, DialectInfo, Generator,
-    ASSUMED_FILAMENT_DIAMETER_MM,
+    ASSUMED_FILAMENT_DIAMETER_MM, DialectInfo, Generator, detect, parse_any, parse_foreign,
+    parse_foreign_with,
 };
-pub use job::{emit_job, job_flavor, parse_job, JobProfile, JOB_DIALECT};
+pub use job::{JOB_DIALECT, JobProfile, emit_job, job_flavor, parse_job};
 pub use math_core::{Error, Result};
 pub use package_3mf::{
-    emit_3mf, emit_gcode_3mf_job, extract_gcode_3mf, extract_member_3mf, package_gcode_3mf,
-    package_job_3mf, parse_3mf, MeshBody, PLATE_JSON_PATH,
+    MeshBody, PLATE_JSON_PATH, emit_3mf, emit_gcode_3mf_job, extract_gcode_3mf, extract_member_3mf,
+    package_gcode_3mf, package_job_3mf, parse_3mf,
 };
 
 #[derive(Clone, Debug, PartialEq)]

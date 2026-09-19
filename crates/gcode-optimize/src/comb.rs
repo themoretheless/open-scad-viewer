@@ -1,7 +1,7 @@
 use gcode_core::PlannedPath;
 
 use crate::travel::{dist, path_end, path_start};
-use crate::{Budget, Result, MAX_COMB_WAYPOINTS};
+use crate::{Budget, MAX_COMB_WAYPOINTS, Result};
 
 pub struct CombOutcome {
     pub paths: Vec<PlannedPath>,

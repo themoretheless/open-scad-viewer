@@ -6,7 +6,10 @@ use std::io::Cursor;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Duration;
 
-use rumqttc::{AsyncClient, Event, EventLoop, MqttOptions, Packet, QoS, TlsConfiguration, Transport as MqttTransport};
+use rumqttc::{
+    AsyncClient, Event, EventLoop, MqttOptions, Packet, QoS, TlsConfiguration,
+    Transport as MqttTransport,
+};
 use suppaftp::{RustlsConnector, RustlsFtpStream};
 
 use crate::bambu::config::BambuLanConfig;
@@ -14,7 +17,7 @@ use crate::bambu::tls::lan_client_config;
 use crate::job::admit_remote_name;
 use crate::scrub::scrub_secrets;
 use crate::transport::{MqttMessage, Transport};
-use crate::{invalid, Result, MAX_ARTIFACT_BYTES};
+use crate::{MAX_ARTIFACT_BYTES, Result, invalid};
 
 const MQTT_USER: &str = "bblp";
 const DEFAULT_TIMEOUT: Duration = Duration::from_secs(15);
@@ -47,14 +50,19 @@ impl BambuLanTransport {
         use std::sync::Arc;
 
         config.validate_for_tls_serial()?;
-        let tls = lan_client_config().map_err(|e| network_err_scrubbed(config, "PRINTER_TLS", &e))?;
+        let tls =
+            lan_client_config().map_err(|e| network_err_scrubbed(config, "PRINTER_TLS", &e))?;
         let addr = format!("{}:{}", config.host, config.mqtt_port);
         let mut sock = TcpStream::connect(addr)
             .map_err(|e| network_err_scrubbed(config, "PRINTER_TLS", &e))?;
         let _ = sock.set_read_timeout(Some(Duration::from_secs(10)));
         let _ = sock.set_write_timeout(Some(Duration::from_secs(10)));
-        let server_name = ServerName::try_from(config.host.clone())
-            .map_err(|_| invalid("PRINTER_HOST", "Bambu LAN host is not a valid TLS server name"))?;
+        let server_name = ServerName::try_from(config.host.clone()).map_err(|_| {
+            invalid(
+                "PRINTER_HOST",
+                "Bambu LAN host is not a valid TLS server name",
+            )
+        })?;
         let mut conn = rustls::ClientConnection::new(Arc::clone(&tls), server_name)
             .map_err(|e| network_err_scrubbed(config, "PRINTER_TLS", &e))?;
         while conn.is_handshaking() {
@@ -77,11 +85,14 @@ impl BambuLanTransport {
             }
         }
         let certs = conn.peer_certificates().ok_or_else(|| {
-            invalid("PRINTER_TLS", "No peer certificate after Bambu TLS handshake")
+            invalid(
+                "PRINTER_TLS",
+                "No peer certificate after Bambu TLS handshake",
+            )
         })?;
-        let der = certs.first().ok_or_else(|| {
-            invalid("PRINTER_TLS", "Empty peer certificate chain from Bambu")
-        })?;
+        let der = certs
+            .first()
+            .ok_or_else(|| invalid("PRINTER_TLS", "Empty peer certificate chain from Bambu"))?;
         crate::bambu::tls::serial_from_certificate_der(der.as_ref()).ok_or_else(|| {
             invalid(
                 "PRINTER_SERIAL",
@@ -98,7 +109,8 @@ impl BambuLanTransport {
                 "Print artifact exceeds 64 MiB",
             ));
         }
-        let tls = lan_client_config().map_err(|e| network_err_scrubbed(&self.config, "PRINTER_TLS", &e))?;
+        let tls = lan_client_config()
+            .map_err(|e| network_err_scrubbed(&self.config, "PRINTER_TLS", &e))?;
         let mut ftp = RustlsFtpStream::connect_secure_implicit(
             (self.config.host.as_str(), self.config.ftps_port),
             RustlsConnector::from(tls),
@@ -135,7 +147,7 @@ impl BambuLanTransport {
                 let ev = match tokio::time::timeout_at(deadline, eventloop.poll()).await {
                     Ok(Ok(ev)) => ev,
                     Ok(Err(e)) => {
-                        return Err(network_err_scrubbed(&self.config, "PRINTER_MQTT", &e))
+                        return Err(network_err_scrubbed(&self.config, "PRINTER_MQTT", &e));
                     }
                     Err(_) => break,
                 };
@@ -177,7 +189,7 @@ impl BambuLanTransport {
                 let ev = match tokio::time::timeout_at(deadline, eventloop.poll()).await {
                     Ok(Ok(ev)) => ev,
                     Ok(Err(e)) => {
-                        return Err(network_err_scrubbed(&self.config, "PRINTER_MQTT", &e))
+                        return Err(network_err_scrubbed(&self.config, "PRINTER_MQTT", &e));
                     }
                     Err(_) => {
                         return Err(invalid(
@@ -252,10 +264,7 @@ async fn wait_suback(eventloop: &mut EventLoop, timeout: Duration) -> Result<()>
             Ok(Ok(ev)) => ev,
             Ok(Err(e)) => return Err(network_err("PRINTER_MQTT", &e)),
             Err(_) => {
-                return Err(invalid(
-                    "PRINTER_MQTT",
-                    "Timed out waiting for MQTT SUBACK",
-                ));
+                return Err(invalid("PRINTER_MQTT", "Timed out waiting for MQTT SUBACK"));
             }
         };
         if matches!(ev, Event::Incoming(Packet::SubAck(_))) {

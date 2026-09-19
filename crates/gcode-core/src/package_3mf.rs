@@ -2,9 +2,10 @@
 //! Stored compression only. Not Bambu LAN I/O.
 
 use crate::{
-    emit, emit_job, invalid, parse, parse_job, JobProfile, MachineProfile, PlannedLayer, Result,
-    MAX_OUTPUT_BYTES,
+    JobProfile, MAX_OUTPUT_BYTES, MachineProfile, PlannedLayer, Result, emit, emit_job, invalid,
+    parse, parse_job,
 };
+use crc32fast::hash as crc32;
 use std::fmt::Write as _;
 use std::io::{self, Write};
 
@@ -55,17 +56,6 @@ fn u32_at(bytes: &mut [u8], offset: usize, value: usize) {
     bytes[offset..offset + 4].copy_from_slice(&(value as u32).to_le_bytes());
 }
 
-fn crc32(data: &[u8]) -> u32 {
-    let mut crc = !0u32;
-    for &b in data {
-        crc ^= b as u32;
-        for _ in 0..8 {
-            crc = (crc >> 1) ^ if crc & 1 != 0 { 0xedb88320 } else { 0 };
-        }
-    }
-    !crc
-}
-
 /// RFC 1321 MD5 for plate metadata. Not a security boundary.
 fn md5_hex(data: &[u8]) -> String {
     fn f(x: u32, y: u32, z: u32) -> u32 {
@@ -95,9 +85,9 @@ fn md5_hex(data: &[u8]) -> String {
         }
         let (mut a, mut b, mut c, mut d) = (state[0], state[1], state[2], state[3]);
         const S: [u32; 64] = [
-            7, 12, 17, 22, 7, 12, 17, 22, 7, 12, 17, 22, 7, 12, 17, 22, 5, 9, 14, 20, 5, 9, 14,
-            20, 5, 9, 14, 20, 5, 9, 14, 20, 4, 11, 16, 23, 4, 11, 16, 23, 4, 11, 16, 23, 4, 11, 16,
-            23, 6, 10, 15, 21, 6, 10, 15, 21, 6, 10, 15, 21, 6, 10, 15, 21,
+            7, 12, 17, 22, 7, 12, 17, 22, 7, 12, 17, 22, 7, 12, 17, 22, 5, 9, 14, 20, 5, 9, 14, 20,
+            5, 9, 14, 20, 5, 9, 14, 20, 4, 11, 16, 23, 4, 11, 16, 23, 4, 11, 16, 23, 4, 11, 16, 23,
+            6, 10, 15, 21, 6, 10, 15, 21, 6, 10, 15, 21, 6, 10, 15, 21,
         ];
         const K: [u32; 64] = [
             0xd76aa478, 0xe8c7b756, 0x242070db, 0xc1bdceee, 0xf57c0faf, 0x4787c62a, 0xa8304613,
@@ -149,7 +139,9 @@ fn zip_error(message: &str) -> crate::Error {
 
 fn format_coord(value: f64) -> Result<String> {
     if !value.is_finite() || value.abs() > 1_000_000.0 {
-        return Err(zip_error("Mesh coordinates must be finite within +/-1000000 mm"));
+        return Err(zip_error(
+            "Mesh coordinates must be finite within +/-1000000 mm",
+        ));
     }
     Ok(format!("{value}"))
 }
@@ -164,7 +156,9 @@ fn model_xml_from_mesh(mesh: &MeshBody) -> Result<Vec<u8>> {
     let vertices = mesh.positions.len() / 3;
     let triangles = mesh.indices.len() / 3;
     if triangles > MAX_MESH_TRIANGLES || vertices > 300_000 {
-        return Err(zip_error("Mesh exceeds 100000 triangles or 300000 vertices"));
+        return Err(zip_error(
+            "Mesh exceeds 100000 triangles or 300000 vertices",
+        ));
     }
     if triangles == 0 {
         return Err(zip_error("Mesh body must contain at least one triangle"));
@@ -201,7 +195,9 @@ fn model_xml_from_mesh(mesh: &MeshBody) -> Result<Vec<u8>> {
             return Err(zip_error("Mesh model exceeds the byte budget"));
         }
     }
-    out.push_str("</triangles></mesh></object></resources><build><item objectid=\"1\"/></build></model>");
+    out.push_str(
+        "</triangles></mesh></object></resources><build><item objectid=\"1\"/></build></model>",
+    );
     Ok(out.into_bytes())
 }
 
@@ -237,10 +233,7 @@ pub fn package_gcode_3mf(gcode: &str) -> Result<Vec<u8>> {
 /// Package job G-code with plate metadata and an optional mesh model body.
 pub fn package_job_3mf(gcode: &str, job: &JobProfile, mesh: Option<&MeshBody>) -> Result<Vec<u8>> {
     if gcode.len() > MAX_OUTPUT_BYTES {
-        return Err(invalid(
-            "GCODE_OUTPUT_LIMIT",
-            "G-code job exceeds 4 MiB",
-        ));
+        return Err(invalid("GCODE_OUTPUT_LIMIT", "G-code job exceeds 4 MiB"));
     }
     if gcode.as_bytes().contains(&0) {
         return Err(zip_error("G-code for 3MF must be UTF-8 text without NUL"));
@@ -369,14 +362,14 @@ pub fn extract_member_3mf(bytes: &[u8], path: &str) -> Result<String> {
         }
         let method = u16::from_le_bytes(bytes[offset + 8..offset + 10].try_into().unwrap());
         let crc = u32::from_le_bytes(bytes[offset + 14..offset + 18].try_into().unwrap());
-        let compressed = u32::from_le_bytes(bytes[offset + 18..offset + 22].try_into().unwrap())
-            as usize;
-        let uncompressed = u32::from_le_bytes(bytes[offset + 22..offset + 26].try_into().unwrap())
-            as usize;
-        let name_len = u16::from_le_bytes(bytes[offset + 26..offset + 28].try_into().unwrap())
-            as usize;
-        let extra_len = u16::from_le_bytes(bytes[offset + 28..offset + 30].try_into().unwrap())
-            as usize;
+        let compressed =
+            u32::from_le_bytes(bytes[offset + 18..offset + 22].try_into().unwrap()) as usize;
+        let uncompressed =
+            u32::from_le_bytes(bytes[offset + 22..offset + 26].try_into().unwrap()) as usize;
+        let name_len =
+            u16::from_le_bytes(bytes[offset + 26..offset + 28].try_into().unwrap()) as usize;
+        let extra_len =
+            u16::from_le_bytes(bytes[offset + 28..offset + 30].try_into().unwrap()) as usize;
         let name_at = offset + 30;
         let data_at = name_at
             .checked_add(name_len)
@@ -393,7 +386,9 @@ pub fn extract_member_3mf(bytes: &[u8], path: &str) -> Result<String> {
         admit_path(name)?;
         if name == path {
             if found.is_some() {
-                return Err(zip_error("3MF contains duplicate members for the requested path"));
+                return Err(zip_error(
+                    "3MF contains duplicate members for the requested path",
+                ));
             }
             if method != 0 || compressed != uncompressed {
                 return Err(invalid(
@@ -402,10 +397,7 @@ pub fn extract_member_3mf(bytes: &[u8], path: &str) -> Result<String> {
                 ));
             }
             if uncompressed > MAX_OUTPUT_BYTES {
-                return Err(invalid(
-                    "GCODE_OUTPUT_LIMIT",
-                    "3MF member exceeds 4 MiB",
-                ));
+                return Err(invalid("GCODE_OUTPUT_LIMIT", "3MF member exceeds 4 MiB"));
             }
             let payload = &bytes[data_at..data_end];
             if crc32(payload) != crc {

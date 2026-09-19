@@ -1,11 +1,11 @@
 //! Handle-based application boundary for our Rust CAD algorithms.
+pub(crate) use crate::mesh_render::RenderMesh;
 use crate::{Result, encode, field, input};
 use planar_geometry::rings::{self as planar, Rings};
 use polygon_core::Mesh;
 use polygon_core::solid::{boolean, modeling, primitives as solid, section};
 use std::{cell::RefCell, collections::HashMap, rc::Rc};
 use value_codec::{Value, json};
-pub(crate) use crate::mesh_render::RenderMesh;
 #[derive(Clone)]
 enum Shape {
     Solid(Mesh),
@@ -561,7 +561,10 @@ pub(crate) fn export_buffers(id: u32) -> Result<crate::CadMeshBuffer> {
 }
 /// Detach the registry-owned solid before preparing its display buffers.
 pub(crate) fn render_buffers(id: u32, crease_cosine: f64) -> Result<RenderMesh> {
-    Ok(crate::mesh_render::render(export_buffers(id)?, crease_cosine))
+    Ok(crate::mesh_render::render(
+        export_buffers(id)?,
+        crease_cosine,
+    ))
 }
 pub(crate) fn import_buffers(stride: usize, vertices: &[f32], indices: &[u32]) -> Result<u32> {
     if !(3..=64).contains(&stride) || !vertices.len().is_multiple_of(stride) {

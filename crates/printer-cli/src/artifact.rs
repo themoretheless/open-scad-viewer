@@ -30,7 +30,10 @@ pub fn infer_artifact_kind(path: &Path) -> Result<ArtifactKind> {
 pub fn load_artifact(path: &Path) -> Result<PrintArtifactBytes> {
     let kind = infer_artifact_kind(path)?;
     let bytes = fs::read(path).map_err(|e| {
-        printer_core::Error::new("PRINTER_ARTIFACT_IO", &format!("Failed to read artifact: {e}"))
+        printer_core::Error::new(
+            "PRINTER_ARTIFACT_IO",
+            &format!("Failed to read artifact: {e}"),
+        )
     })?;
     let file_name = path
         .file_name()

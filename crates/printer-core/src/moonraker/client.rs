@@ -1,12 +1,12 @@
 use crate::backend::{PrinterBackend, SubmitOutcome};
 use crate::hash::sha256_hex;
 use crate::http::{
-    escape_json, find_string_field, multipart_form, HttpRequest, HttpResponse, HttpTransport,
+    HttpRequest, HttpResponse, HttpTransport, escape_json, find_string_field, multipart_form,
 };
-use crate::job::{map_vendor_state, ArtifactKind, JobStatus, PrintJob, PrinterId};
+use crate::job::{ArtifactKind, JobStatus, PrintJob, PrinterId, map_vendor_state};
 use crate::moonraker::MoonrakerConfig;
 use crate::scrub::scrub_secrets;
-use crate::{invalid, Result};
+use crate::{Result, invalid};
 
 pub struct MoonrakerBackend<T> {
     pub config: MoonrakerConfig,
@@ -20,7 +20,9 @@ impl<T: HttpTransport> MoonrakerBackend<T> {
     }
 
     #[cfg(feature = "network")]
-    pub fn connect(config: MoonrakerConfig) -> Result<MoonrakerBackend<crate::http::live::UreqHttpTransport>> {
+    pub fn connect(
+        config: MoonrakerConfig,
+    ) -> Result<MoonrakerBackend<crate::http::live::UreqHttpTransport>> {
         config.validate()?;
         let mut http = crate::http::live::UreqHttpTransport::new(config.base_url.clone());
         http.timeout = config.timeout;
@@ -42,11 +44,7 @@ impl<T: HttpTransport> MoonrakerBackend<T> {
     }
 
     fn secrets(&self) -> Vec<&str> {
-        self.config
-            .api_key
-            .as_deref()
-            .into_iter()
-            .collect()
+        self.config.api_key.as_deref().into_iter().collect()
     }
 
     fn wrap(&self, code: &'static str, message: &str) -> crate::Error {

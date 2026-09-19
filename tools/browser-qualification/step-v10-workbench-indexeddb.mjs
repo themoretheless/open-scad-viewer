@@ -31,7 +31,7 @@ try{
  assert.equal(importedScene.bodies.length,before.bodies.length+1)
  assert.deepEqual(importedScene.bodies.slice(0,before.bodies.length),before.bodies)
  assert.equal(importedScene.bodies.at(-1).brep.bodies.length,3)
- const result=await page.evaluate(async()=>{
+ const readRetained=target=>target.evaluate(async()=>{
   const row=await new Promise((resolve,reject)=>{
    const open=indexedDB.open('open-scad-viewer')
    open.onupgradeneeded=()=>{open.transaction.abort();reject(Error('Project database was not created'))}
@@ -49,6 +49,7 @@ try{
   return {graphIdentity:row.document.graphIdentity,occurrences:row.document.occurrenceIdentities.length,
    definitions:row.document.definitionIdentities.length,text:row.document.source}
  })
+ const result=await readRetained(page)
  const original=await readFile('tests/fixtures/step-v6/self-authored-ap242-assembly.step','utf8')
  if(result.text!==original||result.occurrences!==3||result.definitions!==1)throw Error('browser graph roundtrip mismatch')
  const exportOriginal=async()=>{
@@ -58,8 +59,9 @@ try{
   const download=await downloading
   assert.equal(await download.failure(),null)
   assert.equal(await readFile(await download.path(),'utf8'),original)
+  return await readFile(await download.path())
  }
- await exportOriginal()
+ const downloaded=await exportOriginal()
  const invalid=page.waitForEvent('filechooser')
  await fileMenu.getByRole('button',{name:'Import STEP',exact:true}).click()
  await (await invalid).setFiles({name:'invalid.step',mimeType:'application/step',buffer:Buffer.from('not STEP')})
@@ -80,8 +82,35 @@ try{
  await page.screenshot({path:resolve(output,'solid-step-mobile.png'),fullPage:true})
  const mobileButton=await fileMenu.getByRole('button',{name:'Import STEP',exact:true}).boundingBox()
  assert.ok(mobileButton&&mobileButton.x>=0&&mobileButton.x+mobileButton.width<=390)
+ // A fresh context has neither the saved scene nor the retained original.
+ // Import the actual download, not the fixture or an internal service result.
+ const freshContext=await browser.newContext()
+ try{
+  const freshPage=await freshContext.newPage()
+  freshPage.on('pageerror',error=>pageErrors.push(error.message))
+  await freshPage.addInitScript(()=>localStorage.setItem('scad-lang','en'))
+  await freshPage.goto(url,{waitUntil:'domcontentloaded',timeout:120000})
+  const freshWorkspace=freshPage.locator('.direct-workspace')
+  const freshMenu=freshWorkspace.locator('details.file-menu')
+  await freshMenu.locator('summary').click()
+  const choosing=freshPage.waitForEvent('filechooser')
+  await freshMenu.getByRole('button',{name:'Import STEP',exact:true}).click()
+  await (await choosing).setFiles({name:'downloaded.step',mimeType:'application/step',buffer:downloaded})
+  await freshWorkspace.getByText(/3 occurrence\(s\); original saved/).waitFor({timeout:120000})
+  const freshScene=await freshPage.evaluate(()=>JSON.parse(localStorage.getItem('scad-solid-modeler-v1')))
+  assert.equal(freshScene.bodies.length,1)
+  assert.deepEqual(freshScene.bodies[0].brep,importedScene.bodies.at(-1).brep)
+  assert.deepEqual(await readRetained(freshPage),result)
+  const downloading=freshPage.waitForEvent('download')
+  await freshMenu.getByRole('button',{name:'Export AP242 original',exact:true}).click()
+  const download=await downloading
+  assert.equal(await download.failure(),null)
+  assert.deepEqual(await readFile(await download.path()),downloaded)
+  assert.deepEqual(pageErrors,[])
+ }finally{await freshContext.close()}
  const evidence={capability:'step-interchange/10',route:'retained-affine-occurrence-graph',
   graphIdentity:result.graphIdentity,occurrences:result.occurrences,definitions:result.definitions,
+  reimported:true,reimportedInFreshContext:true,
   uiRoute:'solid-file-menu',productionBuild:true,existingBodiesPreserved:true,invalidImportPreservedScene:true,
   originalDownloadMatches:true,reloadPreservedSceneAndOriginal:true,
   userAgent:await page.evaluate(()=>navigator.userAgent)}

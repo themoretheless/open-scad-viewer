@@ -1,7 +1,7 @@
 //! Vendor-neutral printer LAN backend.
 
-use crate::job::{JobStatus, PrintJob, PrinterId};
 use crate::Result;
+use crate::job::{JobStatus, PrintJob, PrinterId};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct SubmitOutcome {

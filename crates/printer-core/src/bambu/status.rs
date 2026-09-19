@@ -1,7 +1,7 @@
 //! Parse Bambu MQTT report JSON (observed `push_status` shape).
 
 use crate::http::{find_number_field, find_string_field};
-use crate::job::{map_vendor_state, JobState, JobStatus};
+use crate::job::{JobState, JobStatus, map_vendor_state};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct BambuReport {

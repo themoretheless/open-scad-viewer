@@ -342,7 +342,10 @@ fn separated_operands_above_the_bsp_cap_take_the_exact_fast_path() {
     let small = cube([0.; 3], [1.; 3]);
     let apart = cube([3.; 3], [4.; 3]);
     let audited = boolean(&small, &apart, Operation::Union, &Options::default()).unwrap();
-    assert_eq!(audited.report.self_intersection_status, "checked_with_tolerance");
+    assert_eq!(
+        audited.report.self_intersection_status,
+        "checked_with_tolerance"
+    );
 }
 
 #[test]
@@ -355,7 +358,11 @@ fn union_many_joins_separated_groups_and_folds_touching_ones() {
         calls.set(calls.get() + 1);
         Ok(boolean(x, y, Operation::Union, &Options::default())?.mesh)
     };
-    let out = union_many(&[a.clone(), apart.clone(), overlapping.clone()], &mut pairwise).unwrap();
+    let out = union_many(
+        &[a.clone(), apart.clone(), overlapping.clone()],
+        &mut pairwise,
+    )
+    .unwrap();
     assert_eq!(calls.get(), 1, "only the overlapping pair needs CSG");
     let report = out.inspect().unwrap();
     assert!(report.closed);
@@ -370,7 +377,10 @@ fn union_many_joins_separated_groups_and_folds_touching_ones() {
     assert!((fused.inspect().unwrap().signed_volume_mm3 - 2.).abs() < 1e-8);
 
     calls.set(0);
-    assert_eq!(union_many(&[a.clone()], &mut pairwise).unwrap().indices, a.indices);
+    assert_eq!(
+        union_many(&[a.clone()], &mut pairwise).unwrap().indices,
+        a.indices
+    );
     assert!(union_many(&[], &mut pairwise).unwrap().indices.is_empty());
     assert_eq!(calls.get(), 0);
 }
@@ -393,7 +403,11 @@ fn difference_many_subtracts_separated_cutters_in_batches() {
         Ok(boolean(x, y, Operation::Difference, &Options::default())?.mesh)
     };
     let out = difference_many(&plate, &cutters, &mut pairwise, 8).unwrap();
-    assert_eq!(calls.get(), 2, "16 separated cutters in batches of 8; the far cube is skipped");
+    assert_eq!(
+        calls.get(),
+        2,
+        "16 separated cutters in batches of 8; the far cube is skipped"
+    );
     let report = out.inspect().unwrap();
     assert!(report.closed);
     assert!((report.signed_volume_mm3 - 48.).abs() < 1e-8);
@@ -411,15 +425,30 @@ fn difference_many_subtracts_separated_cutters_in_batches() {
     assert!((sequential.inspect().unwrap().signed_volume_mm3 - 56.).abs() < 1e-8);
 
     // Overlapping cutters never share a batch, so the join stays exact.
-    let stacked = [cube([1., 1., -1.], [3., 3., 2.]), cube([2., 2., -1.], [4., 4., 2.])];
+    let stacked = [
+        cube([1., 1., -1.], [3., 3., 2.]),
+        cube([2., 2., -1.], [4., 4., 2.]),
+    ];
     calls.set(0);
     let pocketed = difference_many(&plate, &stacked, &mut pairwise, 8).unwrap();
     assert_eq!(calls.get(), 2);
     assert!((pocketed.inspect().unwrap().signed_volume_mm3 - 57.).abs() < 1e-8);
 
-    assert!(difference_many(&crate::solid::primitives::empty(), &cutters, &mut pairwise, 8)
+    assert!(
+        difference_many(
+            &crate::solid::primitives::empty(),
+            &cutters,
+            &mut pairwise,
+            8
+        )
         .unwrap()
         .indices
-        .is_empty());
-    assert_eq!(difference_many(&plate, &[], &mut pairwise, 8).unwrap().indices, plate.indices);
+        .is_empty()
+    );
+    assert_eq!(
+        difference_many(&plate, &[], &mut pairwise, 8)
+            .unwrap()
+            .indices,
+        plate.indices
+    );
 }

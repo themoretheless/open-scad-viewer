@@ -1,4 +1,4 @@
-use crate::{invalid, Result};
+use crate::{Result, invalid};
 use std::time::Duration;
 
 #[derive(Clone, Debug, PartialEq, Eq)]

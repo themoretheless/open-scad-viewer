@@ -7,9 +7,9 @@
 //! revoke topology authority whenever unresolved/resource/conditioning bands
 //! remain. Does not use the graph-patch iso fixture.
 use crate::intersection::{
-    admit_surface, context, coedge_trim, cross3, distance, dot3, enclosure_of, homogeneous_grid,
-    hull_diagonal, next_down, next_up, norm3, point3, split_grid_u, split_grid_v, surface_spans,
-    tolerance_evidence, MAX_BOXES, MAX_SPANS,
+    MAX_BOXES, MAX_SPANS, admit_surface, coedge_trim, context, cross3, distance, dot3,
+    enclosure_of, homogeneous_grid, hull_diagonal, next_down, next_up, norm3, point3, split_grid_u,
+    split_grid_v, surface_spans, tolerance_evidence,
 };
 use crate::{Result, check, resource, surface::Surface};
 use cad_predicates::ToleranceContext;
@@ -181,8 +181,8 @@ fn surface_plane_iso_components(
             if a * b > 0. && a.abs() > floor && b.abs() > floor {
                 continue;
             }
-            let mut lo = greville(&surface.knots_u, surface.degree_u, i)
-                .clamp(domain[0][0], domain[0][1]);
+            let mut lo =
+                greville(&surface.knots_u, surface.degree_u, i).clamp(domain[0][0], domain[0][1]);
             let mut hi = greville(&surface.knots_u, surface.degree_u, i + 1)
                 .clamp(domain[0][0], domain[0][1]);
             if hi < lo {
@@ -268,8 +268,8 @@ fn surface_plane_iso_components(
             if a * b > 0. && a.abs() > floor && b.abs() > floor {
                 continue;
             }
-            let mut lo = greville(&surface.knots_v, surface.degree_v, j)
-                .clamp(domain[1][0], domain[1][1]);
+            let mut lo =
+                greville(&surface.knots_v, surface.degree_v, j).clamp(domain[1][0], domain[1][1]);
             let mut hi = greville(&surface.knots_v, surface.degree_v, j + 1)
                 .clamp(domain[1][0], domain[1][1]);
             if hi < lo {
@@ -376,11 +376,7 @@ fn surface_domain(surface: &Surface) -> [[f64; 2]; 2] {
     ]
 }
 
-fn plane_plane_line(
-    first: &Surface,
-    second: &Surface,
-    floor: f64,
-) -> Result<Option<Value>> {
+fn plane_plane_line(first: &Surface, second: &Surface, floor: f64) -> Result<Option<Value>> {
     let (Some((n1, o1, u1, v1)), Some((n2, o2, u2, v2))) =
         (affine_plane(first)?, affine_plane(second)?)
     else {
@@ -474,10 +470,7 @@ fn plane_plane_line(
     ];
     let project = |p: &[f64]| -> f64 {
         let q = point3(p).unwrap_or([0.; 3]);
-        dot3(
-            [q[0] - point[0], q[1] - point[1], q[2] - point[2]],
-            dir,
-        )
+        dot3([q[0] - point[0], q[1] - point[1], q[2] - point[2]], dir)
     };
     let mut r1 = [f64::INFINITY, f64::NEG_INFINITY];
     for c in &corners1 {
@@ -822,18 +815,8 @@ fn continue_branch(
             second,
             next_uv,
             next_st,
-            [
-                d1[0][0] - 1.,
-                d1[0][1] + 1.,
-                d1[1][0] - 1.,
-                d1[1][1] + 1.,
-            ],
-            [
-                d2[0][0] - 1.,
-                d2[0][1] + 1.,
-                d2[1][0] - 1.,
-                d2[1][1] + 1.,
-            ],
+            [d1[0][0] - 1., d1[0][1] + 1., d1[1][0] - 1., d1[1][1] + 1.],
+            [d2[0][0] - 1., d2[0][1] + 1., d2[1][0] - 1., d2[1][1] + 1.],
             floor,
         )? {
             // Closed loop detection.
@@ -984,12 +967,7 @@ fn continue_branch(
     }))
 }
 
-fn near_seed(
-    existing: &[( [f64; 2], [f64; 2] )],
-    uv: [f64; 2],
-    st: [f64; 2],
-    floor: f64,
-) -> bool {
+fn near_seed(existing: &[([f64; 2], [f64; 2])], uv: [f64; 2], st: [f64; 2], floor: f64) -> bool {
     existing.iter().any(|(a, b)| {
         (a[0] - uv[0]).abs() <= floor * 8.
             && (a[1] - uv[1]).abs() <= floor * 8.
@@ -1196,9 +1174,8 @@ pub fn intersect_surface_surface(
                             "tangentMultiplicity":if contact=="even_tangency"{2}else{1}
                         }));
                     } else {
-                        let branch = continue_branch(
-                            first, second, ruv, rst, point, contact, dist_floor,
-                        )?;
+                        let branch =
+                            continue_branch(first, second, ruv, rst, point, contact, dist_floor)?;
                         components.push(branch);
                     }
                 }
@@ -1231,25 +1208,49 @@ pub fn intersect_surface_surface(
             0 => {
                 let mid = (uv[0] + uv[1]) * 0.5;
                 let (l, r) = split_grid_u(&ha);
-                pending.push_back(([uv[0], mid, uv[2], uv[3]], st, Some(l), Some(hb.clone()), depth + 1));
+                pending.push_back((
+                    [uv[0], mid, uv[2], uv[3]],
+                    st,
+                    Some(l),
+                    Some(hb.clone()),
+                    depth + 1,
+                ));
                 pending.push_back(([mid, uv[1], uv[2], uv[3]], st, Some(r), Some(hb), depth + 1));
             }
             1 => {
                 let mid = (uv[2] + uv[3]) * 0.5;
                 let (l, r) = split_grid_v(&ha);
-                pending.push_back(([uv[0], uv[1], uv[2], mid], st, Some(l), Some(hb.clone()), depth + 1));
+                pending.push_back((
+                    [uv[0], uv[1], uv[2], mid],
+                    st,
+                    Some(l),
+                    Some(hb.clone()),
+                    depth + 1,
+                ));
                 pending.push_back(([uv[0], uv[1], mid, uv[3]], st, Some(r), Some(hb), depth + 1));
             }
             2 => {
                 let mid = (st[0] + st[1]) * 0.5;
                 let (l, r) = split_grid_u(&hb);
-                pending.push_back((uv, [st[0], mid, st[2], st[3]], Some(ha.clone()), Some(l), depth + 1));
+                pending.push_back((
+                    uv,
+                    [st[0], mid, st[2], st[3]],
+                    Some(ha.clone()),
+                    Some(l),
+                    depth + 1,
+                ));
                 pending.push_back((uv, [mid, st[1], st[2], st[3]], Some(ha), Some(r), depth + 1));
             }
             _ => {
                 let mid = (st[2] + st[3]) * 0.5;
                 let (l, r) = split_grid_v(&hb);
-                pending.push_back((uv, [st[0], st[1], st[2], mid], Some(ha.clone()), Some(l), depth + 1));
+                pending.push_back((
+                    uv,
+                    [st[0], st[1], st[2], mid],
+                    Some(ha.clone()),
+                    Some(l),
+                    depth + 1,
+                ));
                 pending.push_back((uv, [st[0], st[1], mid, st[3]], Some(ha), Some(r), depth + 1));
             }
         }
@@ -1360,7 +1361,11 @@ fn build_branch_graph(components: &[Value], complete: bool, tolerance: &Toleranc
     })
 }
 
-fn build_uv_arrangements(components: &[Value], complete: bool, tolerance: &ToleranceContext) -> Value {
+fn build_uv_arrangements(
+    components: &[Value],
+    complete: bool,
+    tolerance: &ToleranceContext,
+) -> Value {
     let mut traces = Vec::new();
     for (id, component) in components.iter().enumerate() {
         if component["kind"] == "curve" || component["kind"] == "overlap" {
@@ -1444,10 +1449,16 @@ fn encode_ss_report(
 /// Coverage verifier for SS reports: Complete requires empty unresolved and
 /// BranchGraph/UV coverage agreement under the same ToleranceContext.
 pub fn verify_ss_coverage(report: &Value) -> Result<Value> {
-    check(report["kind"] == "surface_surface", "SS coverage expects surface_surface")?;
+    check(
+        report["kind"] == "surface_surface",
+        "SS coverage expects surface_surface",
+    )?;
     check(report["version"] == VERSION, "SS coverage version mismatch")?;
     let complete = report["coverage"]["complete"].as_bool().unwrap_or(false);
-    let unresolved = report["unresolved"].as_array().map(|a| a.len()).unwrap_or(1);
+    let unresolved = report["unresolved"]
+        .as_array()
+        .map(|a| a.len())
+        .unwrap_or(1);
     if complete && unresolved != 0 {
         return Err(crate::input(
             "Complete SS report must not retain unresolved parameter boxes",
@@ -1456,8 +1467,8 @@ pub fn verify_ss_coverage(report: &Value) -> Result<Value> {
     if complete && report["coverage"]["missedBranchProof"] != true {
         return Err(crate::input("Complete SS report lacks missed-branch proof"));
     }
-    let context_ok = report["evidence"]["toleranceIdentity"]
-        == report["branchGraph"]["certificate"]["context"];
+    let context_ok =
+        report["evidence"]["toleranceIdentity"] == report["branchGraph"]["certificate"]["context"];
     check(context_ok, "SS ToleranceContext mismatch")?;
     if !complete {
         check(

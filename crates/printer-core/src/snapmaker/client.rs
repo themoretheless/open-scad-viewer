@@ -1,11 +1,13 @@
 use crate::backend::{PrinterBackend, SubmitOutcome};
 use crate::http::{
-    find_number_field, find_string_field, multipart_form, HttpRequest, HttpResponse, HttpTransport,
+    HttpRequest, HttpResponse, HttpTransport, find_number_field, find_string_field, multipart_form,
 };
-use crate::job::{admit_remote_name, map_vendor_state, ArtifactKind, JobStatus, PrintJob, PrinterId};
+use crate::job::{
+    ArtifactKind, JobStatus, PrintJob, PrinterId, admit_remote_name, map_vendor_state,
+};
 use crate::scrub::scrub_secrets;
 use crate::snapmaker::SnapmakerConfig;
-use crate::{invalid, Result};
+use crate::{Result, invalid};
 
 pub struct SnapmakerBackend<T> {
     pub config: SnapmakerConfig,
@@ -41,10 +43,7 @@ impl<T: HttpTransport> SnapmakerBackend<T> {
     }
 
     fn wrap(&self, code: &'static str, message: &str) -> crate::Error {
-        invalid(
-            code,
-            &scrub_secrets(message, &[self.config.token.as_str()]),
-        )
+        invalid(code, &scrub_secrets(message, &[self.config.token.as_str()]))
     }
 
     fn ensure_ok(&self, resp: &HttpResponse, context: &str) -> Result<()> {

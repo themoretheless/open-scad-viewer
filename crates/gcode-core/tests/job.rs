@@ -1,6 +1,6 @@
 use gcode_core::{
-    emit_gcode_3mf_job, emit_job, extract_gcode_3mf, extract_member_3mf, parse_job, JobProfile,
-    MeshBody, PlannedLayer, PlannedPath, JOB_DIALECT, PLATE_JSON_PATH,
+    JOB_DIALECT, JobProfile, MeshBody, PLATE_JSON_PATH, PlannedLayer, PlannedPath,
+    emit_gcode_3mf_job, emit_job, extract_gcode_3mf, extract_member_3mf, parse_job,
 };
 
 fn two_islands() -> PlannedLayer {

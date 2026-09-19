@@ -122,7 +122,7 @@ fn gcode_is_one_encoding_of_the_plan() {
 fn optimized_job_pipeline_emits_heat_and_package() {
     use slicer_core::{
         JobProfile, MeshBody, OptimizeSettings, emit_job_gcode, emit_job_gcode_3mf,
-        emit_optimized_gcode, parse_gcode_job, job_profile,
+        emit_optimized_gcode, job_profile, parse_gcode_job,
     };
     let mesh = cad::cube([20.0, 30.0, 10.0], false).unwrap();
     let index = MeshSectionIndex::new(&mesh).unwrap();

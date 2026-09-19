@@ -633,16 +633,28 @@ mod tests {
 
         // A cutter that stops inside the plate makes a pocket, not a prism.
         let pocket = cylinder(1., 1., 1., 32, false).unwrap();
-        assert!(prism_boolean(&plate, &pocket, "difference").unwrap().is_none());
+        assert!(
+            prism_boolean(&plate, &pocket, "difference")
+                .unwrap()
+                .is_none()
+        );
         // Union still needs coincident end planes.
         assert!(prism_boolean(&plate, &hole, "union").unwrap().is_none());
         // Intersection uses the overlap of both ranges.
         let tall = cube([4., 4., 10.], false).unwrap();
-        let overlap = prism_boolean(&plate, &tall, "intersection").unwrap().unwrap();
+        let overlap = prism_boolean(&plate, &tall, "intersection")
+            .unwrap()
+            .unwrap();
         assert!((overlap.inspect().unwrap().signed_volume_mm3 - 16.).abs() < 1e-8);
         // A cutter covering the whole base leaves nothing.
         let everything = cube([20., 20., 4.], true).unwrap();
-        assert!(prism_boolean(&plate, &everything, "difference").unwrap().unwrap().indices.is_empty());
+        assert!(
+            prism_boolean(&plate, &everything, "difference")
+                .unwrap()
+                .unwrap()
+                .indices
+                .is_empty()
+        );
     }
 
     /// Regression for the aligned 4x4 bridge failure and the former 2048-vertex
@@ -670,11 +682,17 @@ mod tests {
             join(&holes).unwrap()
         };
         for count in [4, 16, 36, 64, 100] {
-            let result = prism_boolean(&plate, &grid(count), "difference").unwrap().unwrap();
+            let result = prism_boolean(&plate, &grid(count), "difference")
+                .unwrap()
+                .unwrap();
             let report = result.inspect().unwrap();
             assert!(report.closed, "{count} holes");
-            let expected = 86. * 86. * 8. - count as f64 * 16. * 9. * (std::f64::consts::PI / 16.).sin() * 8.;
-            assert!((report.signed_volume_mm3 - expected).abs() < expected * 1e-10, "{count} holes");
+            let expected =
+                86. * 86. * 8. - count as f64 * 16. * 9. * (std::f64::consts::PI / 16.).sin() * 8.;
+            assert!(
+                (report.signed_volume_mm3 - expected).abs() < expected * 1e-10,
+                "{count} holes"
+            );
         }
     }
 }

@@ -69,7 +69,12 @@ import, preservation of existing bodies, exact original bytes, invalid-input
 refusal and persistence after reload. IndexedDB is read directly for evidence,
 without invoking internal page services. Desktop and 390x844 mobile screenshots
 were inspected; a narrow responsive header/menu fix keeps File accessible.
-This scenario does not reimport the downloaded file into a fresh scene.
+The subsequent fresh-context check imports the actual downloaded bytes through
+the file chooser in an isolated browser context. It asserts exactly one scene
+body, identical compound B-rep geometry, identical retained graph identity and
+definition/occurrence counts, and a byte-identical second download. It cannot
+succeed merely by reusing the first context's IndexedDB or localStorage.
+Evidence: `tmp/performance/solid-step-fresh-roundtrip/`.
 
 Local evidence: `tmp/performance/solid-step-browser-production-final/`.
 The production browser check passed without page errors. UI/MCP typechecks and
@@ -78,3 +83,9 @@ engine-manifest/G0/G1 fingerprint failures across 335 files. The delivery gate
 still rejects 5,776,821 bytes against its unchanged 5,600,000-byte budget.
 Frozen qualification evidence was not refreshed. These local checks do not
 establish a successful GitHub Actions run.
+
+GitHub follow-up: STEP V10 run
+[35467137887](https://github.com/themoretheless/open-scad-viewer/actions/runs/35467137887)
+completed successfully for `6f91aaa49737f0c6fb868696be1941552ad4ffef`.
+That run covers the committed UI restoration and diagnostic/provisioning changes,
+not the subsequent local fresh-context roundtrip or worker-packaging edits.
