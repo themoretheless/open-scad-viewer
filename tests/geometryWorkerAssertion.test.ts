@@ -53,7 +53,8 @@ describe('geometry Worker assertion integration', () => {
     expect(scope.events.map(event => event.status)).toEqual(['accepted', 'started'])
     await vi.advanceTimersByTimeAsync(1)
     expect(scope.events.at(-1)).toMatchObject({status: 'failed', phase: 'initializing',
-      error: {message: 'Geometry kernel initialization exceeded 5000 ms.'}})
+      error: {name: 'GeometryEngineUnavailableError', code: 'ENGINE_UNAVAILABLE',
+        message: expect.stringContaining('initialization check exceeded 5000 ms')}})
     rejectWarm(new Error('late initialization failure'))
     await vi.advanceTimersByTimeAsync(0)
     expect(scope.events.map(event => event.status)).toEqual(['accepted', 'started', 'failed'])

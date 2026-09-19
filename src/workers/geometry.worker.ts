@@ -6,7 +6,6 @@ import {
   GeometryLanguageContractError,
 } from '../services/geometryBuildEngine'
 import { AbortedError, OpenSCADParseError } from '../services/openscadParser'
-import { defaultGeometryKernel } from '../services/cadGeometryKernel'
 import { isExactSolidRequest } from '../services/solid/exactSolidProtocol'
 import { meshTransferables } from '../core/mesh'
 import type { GeometryExecutionDescriptor } from '../core/geometryExecution'
@@ -26,6 +25,7 @@ interface ActiveJob {
   request: GeometryBuildRequest
   startedAt: number
   cancelled: GeometryCancelReason | null
+  initialization: AbortController
 }
 
 const activeJobs = new Map<number, ActiveJob>()
@@ -153,20 +153,6 @@ function terminalState(
   return null
 }
 
-async function initializeKernel() {
-  let timer: ReturnType<typeof setTimeout> | undefined
-  try {
-    await Promise.race([
-      defaultGeometryKernel.warm(),
-      new Promise<never>((_, reject) => {
-        timer = setTimeout(() => reject(new Error('Geometry kernel initialization exceeded 5000 ms.')), 5_000)
-      }),
-    ])
-  } finally {
-    if (timer !== undefined) clearTimeout(timer)
-  }
-}
-
 async function runBuild(
   request: GeometryBuildRequest,
   planned: GeometryExecutionDescriptor,
@@ -175,6 +161,7 @@ async function runBuild(
     request,
     startedAt: performance.now(),
     cancelled: null,
+    initialization: new AbortController(),
   }
   activeJobs.set(request.jobId, job)
   postEvent(jobEvent(request, { status: 'accepted', phase: 'queued' }))
@@ -193,8 +180,11 @@ async function runBuild(
   let phase: 'initializing' | 'compiling' = 'initializing'
   try {
     // Cold WASM compilation belongs to initialization, not provider readiness.
-    // The coordinator can still terminate this worker on cancellation.
-    await initializeKernel()
+    // Cancel only this wait; shared warmup can serve the next admitted job.
+    await defaultGeometryBuildEngine.initializeSource(request.source, {
+      quality: request.quality,
+      purpose: request.quality,
+    }, job.initialization.signal)
     const initializationTerminal = terminalState(job, phase, planned)
     if (initializationTerminal) { postEvent(initializationTerminal); return }
     phase = 'compiling'
@@ -336,6 +326,7 @@ function cancelBuild(request: Extract<GeometryWorkerRequest, { type: 'cancel' }>
   // never yields, BuildCoordinator's grace timer replaces this worker and
   // establishes the hard cancellation boundary.
   job.cancelled = request.reason
+  job.initialization.abort()
 }
 
 self.addEventListener('message', (event: MessageEvent<unknown>) => {

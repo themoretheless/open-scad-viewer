@@ -124,7 +124,7 @@ function identityResult(options: {
 afterEach(() => {
   vi.restoreAllMocks()
   parseOpenSCADMock.mockReset()
-  warmGeometryKernelMock.mockClear()
+  warmGeometryKernelMock.mockReset().mockResolvedValue(undefined)
   vi.unstubAllGlobals()
   vi.resetModules()
 })
@@ -423,14 +423,13 @@ describe('geometry Worker lifecycle', () => {
     expect(scope.events.some(event => event.jobId === 1 && event.status === 'stale')).toBe(false)
   })
 
-  it('does not report a cold-initialization cancellation until runBuild reaches a checkpoint', async () => {
+  it('cancels initialization promptly and preserves shared warmup for the next build', async () => {
     let finishInitialization!: () => void
     const pendingInitialization = new Promise<void>(resolve => {
       finishInitialization = resolve
     })
-    const {defaultGeometryKernel} = await import('../src/services/cadGeometryKernel')
-    const warm = defaultGeometryKernel.warm.bind(defaultGeometryKernel)
-    vi.spyOn(defaultGeometryKernel, 'warm').mockImplementation(() => pendingInitialization.then(warm))
+    warmGeometryKernelMock.mockReturnValue(pendingInitialization)
+    parseOpenSCADMock.mockResolvedValue(identityResult({ entityId: 'entity:box', operationId: 'op:box', instanceId: 'entity:box' }))
 
     const scope = new FakeWorkerScope()
     vi.stubGlobal('self', scope)
@@ -456,7 +455,6 @@ describe('geometry Worker lifecycle', () => {
 
     expect(scope.events.map(event => event.status)).toEqual(['accepted', 'started'])
 
-    finishInitialization()
     await vi.waitFor(() => {
       expect(scope.events.map(event => event.status)).toEqual(['accepted', 'started', 'cancelled'])
     })
@@ -466,6 +464,12 @@ describe('geometry Worker lifecycle', () => {
       reason: 'superseded',
     })
     expect(parseOpenSCADMock).not.toHaveBeenCalled()
+    scope.dispatchMessage({...build, jobId: 2, quality: 'full'})
+    finishInitialization()
+    await vi.waitFor(() => expect(scope.events.at(-1)).toMatchObject({jobId: 2, status: 'succeeded'}))
+    expect(warmGeometryKernelMock).toHaveBeenCalledTimes(1)
+    expect(parseOpenSCADMock).toHaveBeenCalledTimes(1)
+    expect(scope.events.filter(event => event.jobId === 1 && ['failed', 'cancelled', 'stale', 'succeeded'].includes(event.status))).toHaveLength(1)
   })
 
   it('stops a running parse cooperatively when a cancel message arrives mid-build', async () => {
