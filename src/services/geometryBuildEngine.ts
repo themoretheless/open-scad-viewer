@@ -20,6 +20,7 @@ import { sha256Hex } from '../core/sha256'
 
 const EXECUTION_BY_ERROR = new WeakMap<object, GeometryExecutionDescriptor>()
 const PROVIDER_READINESS_TIMEOUT_MS = 250
+const PROVIDER_INITIALIZATION_TIMEOUT_MS = 5_000
 
 export { GeometryLanguageContractError } from '../core/geometryExecution'
 
@@ -306,6 +307,7 @@ export class GeometryBuildEngine {
     state: 'unknown' | 'available' | 'unavailable' | 'quarantined'
     reason: string | null
     cause: GeometryEngineAvailabilityCause | null
+    timeoutPhase?: 'readiness' | 'initialization'
   }>()
   private readonly readinessAttempts = new Map<GeometryEngineClass, Promise<boolean>>()
   private readonly revokedManifestDigests: ReadonlySet<string>
@@ -377,7 +379,10 @@ export class GeometryBuildEngine {
 
   private async ensureProviderReady(
     engineClass: GeometryEngineClass,
+    timeoutMs = PROVIDER_READINESS_TIMEOUT_MS,
+    signal?: AbortSignal,
   ): Promise<GeometryBackendProvider | null> {
+    if (signal?.aborted) throw new DOMException('Build cancelled', 'AbortError')
     if (this.isManifestRevoked(MANIFESTS[engineClass].manifestDigest)) {
       this.readiness.set(engineClass, {
         state: 'unavailable',
@@ -392,7 +397,9 @@ export class GeometryBuildEngine {
     if (readiness?.state === 'available') return provider
     if (readiness?.state === 'quarantined') return null
     const pending = this.readinessAttempts.get(engineClass)
-    if (readiness?.state === 'unavailable') return null
+    if (readiness?.state === 'unavailable'
+      && !(pending && timeoutMs === PROVIDER_INITIALIZATION_TIMEOUT_MS
+        && readiness.timeoutPhase === 'readiness')) return null
 
     let attempt = pending
     if (!attempt) {
@@ -422,21 +429,35 @@ export class GeometryBuildEngine {
     }
 
     let timeoutId: ReturnType<typeof setTimeout> | undefined
-    const outcome = await Promise.race([
-      attempt.then(available => available ? 'available' as const : 'unavailable' as const),
-      new Promise<'timeout'>(resolve => {
-        timeoutId = setTimeout(() => resolve('timeout'), PROVIDER_READINESS_TIMEOUT_MS)
-      }),
-    ])
-    if (timeoutId !== undefined) clearTimeout(timeoutId)
+    let onAbort: (() => void) | undefined
+    let outcome: 'available' | 'unavailable' | 'timeout'
+    try {
+      outcome = await Promise.race([
+        attempt.then(available => available ? 'available' as const : 'unavailable' as const),
+        new Promise<'timeout'>(resolve => {
+          timeoutId = setTimeout(() => resolve('timeout'), timeoutMs)
+        }),
+        new Promise<never>((_, reject) => {
+          if (!signal) return
+          onAbort = () => reject(new DOMException('Build cancelled', 'AbortError'))
+          signal.addEventListener('abort', onAbort, {once: true})
+          if (signal.aborted) onAbort()
+        }),
+      ])
+    } finally {
+      if (timeoutId !== undefined) clearTimeout(timeoutId)
+      if (onAbort) signal?.removeEventListener('abort', onAbort)
+    }
     if (outcome === 'available' && this.readiness.get(engineClass)?.state === 'available') {
       return provider
     }
-    if (outcome === 'timeout') {
+    // A later short probe must not reopen an exhausted startup deadline.
+    if (outcome === 'timeout' && this.readiness.get(engineClass)?.timeoutPhase !== 'initialization') {
       this.readiness.set(engineClass, {
         state: 'unavailable',
-        reason: `The qualified provider readiness check exceeded ${PROVIDER_READINESS_TIMEOUT_MS} ms.`,
+        reason: `The qualified provider ${timeoutMs === PROVIDER_INITIALIZATION_TIMEOUT_MS ? 'initialization' : 'readiness'} check exceeded ${timeoutMs} ms.`,
         cause: 'readiness-timeout',
+        timeoutPhase: timeoutMs === PROVIDER_INITIALIZATION_TIMEOUT_MS ? 'initialization' : 'readiness',
       })
     }
     return null
@@ -477,11 +498,10 @@ export class GeometryBuildEngine {
     return planGeometrySourceExecution(source, request)
   }
 
-  async buildSource(
+  private admitSource(
     source: string,
     request: GeometryBuildRequest,
-    control: GeometryBuildControl = {},
-  ): Promise<GeometryBuildResult> {
+  ): GeometryExecutionDescriptor {
     const execution = this.planSource(source, request)
     const manifest = MANIFESTS[execution.engineClass]
     const missingCapabilities = execution.requiredCapabilities.filter(capability => (
@@ -505,7 +525,15 @@ export class GeometryBuildEngine {
         manifest.availability !== 'available' ? 'not-deployed' : 'provider-missing',
       )
     }
-    const provider = await this.ensureProviderReady(execution.engineClass)
+    return execution
+  }
+
+  private async requireReadyProvider(
+    execution: GeometryExecutionDescriptor,
+    timeoutMs = PROVIDER_READINESS_TIMEOUT_MS,
+    signal?: AbortSignal,
+  ): Promise<GeometryBackendProvider> {
+    const provider = await this.ensureProviderReady(execution.engineClass, timeoutMs, signal)
     if (!provider) {
       throw new GeometryEngineUnavailableError(
         execution,
@@ -514,6 +542,30 @@ export class GeometryBuildEngine {
         this.readiness.get(execution.engineClass)?.cause ?? 'readiness-failed',
       )
     }
+    return provider
+  }
+
+  /** Explicit cold startup for in-process hosts; normal readiness stays at 250 ms. */
+  async initializeSource(source: string, request: GeometryBuildRequest, signal?: AbortSignal): Promise<void> {
+    const execution = this.admitSource(source, request)
+    try {
+      await this.requireReadyProvider(execution, PROVIDER_INITIALIZATION_TIMEOUT_MS, signal)
+      if (signal?.aborted) throw new DOMException('Build cancelled', 'AbortError')
+      this.admitSource(source, request)
+    } catch (error) {
+      attachGeometryExecutionToError(error, execution)
+      throw error
+    }
+  }
+
+  async buildSource(
+    source: string,
+    request: GeometryBuildRequest,
+    control: GeometryBuildControl = {},
+  ): Promise<GeometryBuildResult> {
+    const execution = this.admitSource(source, request)
+    const manifest = MANIFESTS[execution.engineClass]
+    const provider = await this.requireReadyProvider(execution)
     const policyEpoch = this.policyEpoch()
     if (this.isManifestRevoked(manifest.manifestDigest)) {
       throw new GeometryEngineUnavailableError(

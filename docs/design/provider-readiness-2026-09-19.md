@@ -114,3 +114,16 @@ Downloaded reports:
 Completed-job log: `/private/tmp/osv-ci-35475827899-node22-job.log`. The CLI run-log
 command waits for the entire run; the completed job's REST logs endpoint provides
 this evidence while other jobs are still running.
+
+Node 20 confirmation from the same run: v20.19.6 on AMD EPYC 9V74 passed all
+three sequential cold probes (216.962-218.887 ms), but all 12 four-process cold
+probes timed out (250.765-370.287 ms). Original warmup settled in
+436.765-532.312 ms; subsequent warm probes took 0.089-0.150 ms and were available.
+Reports are under `/private/tmp/osv-readiness-ci-35475827899-node20/`.
+Both runtime versions therefore reproduce contention locally within their own
+runner; the different CPU hosts do not support a Node-version speed comparison.
+
+Subsequent fixes are documented in
+[browser worker startup](browser-worker-cold-start-2026-09-19.md) and
+[in-process startup](inprocess-cold-start-2026-09-19.md). They are not present in
+the CI run whose measurements are reported above.

@@ -462,6 +462,7 @@ export class HeadlessGeometryService implements McpGeometryService {
       const startedAt = performance.now()
       let built: GeometryBuildResult
       try {
+        if (!this.runtime) await this.engine.initializeSource(source, { quality, purpose }, signal)
         built = this.runtime
           ? await this.runtime.build(source, quality, purpose, signal)
           : await this.engine.buildSource(
