@@ -2,7 +2,7 @@
 //! Results outlive the call that produced them so the host can copy typed
 //! views out of linear memory; `free` consumes the handle exactly once.
 
-pub enum AnalysisBuffers {
+pub(crate) enum AnalysisBuffers {
     Bytes {
         bytes: Vec<u8>,
     },
@@ -24,6 +24,9 @@ pub enum AnalysisBuffers {
         indices: Vec<u32>,
         diagnostics: [u32; 4],
     },
+    SurfaceGroups {
+        ids: Vec<u32>,
+    },
     Render(crate::mesh::RenderMesh),
 }
 
@@ -32,7 +35,7 @@ thread_local! {
         const { std::cell::RefCell::new(Vec::new()) };
 }
 
-pub fn store(result: AnalysisBuffers) -> usize {
+pub(crate) fn store(result: AnalysisBuffers) -> usize {
     RESULTS.with(|results| {
         let mut results = results.borrow_mut();
         let slot = results
@@ -54,9 +57,10 @@ pub fn store(result: AnalysisBuffers) -> usize {
 /// Placement: 0/1 positions (f64), 2/3 indices (u32).
 /// Edges: 0/1 indices (u32); slots 2..=5 return the diagnostic counters
 /// (boundary, crease, non-manifold, degenerate) directly.
+/// SurfaceGroups: 0/1 ids (u32).
 /// Render: 0/1 vertices (f32, stride 6), 2/3 indices, 4/5 merge-from,
 /// 6/7 merge-to, 8/9 face ids (all u32).
-pub fn field(handle: usize, slot: u32) -> usize {
+pub(crate) fn field(handle: usize, slot: u32) -> usize {
     RESULTS.with(|results| {
         let results = results.borrow();
         let Some(Some(result)) = handle.checked_sub(1).and_then(|i| results.get(i)) else {
@@ -110,6 +114,11 @@ pub fn field(handle: usize, slot: u32) -> usize {
                 2..=5 => diagnostics[slot as usize - 2] as usize,
                 _ => 0,
             },
+            AnalysisBuffers::SurfaceGroups { ids } => match slot {
+                0 => ids.as_ptr() as usize,
+                1 => ids.len(),
+                _ => 0,
+            },
             AnalysisBuffers::Render(mesh) => match slot {
                 0 => mesh.vertices.as_ptr() as usize,
                 1 => mesh.vertices.len(),
@@ -127,7 +136,7 @@ pub fn field(handle: usize, slot: u32) -> usize {
     })
 }
 
-pub fn free(handle: usize) {
+pub(crate) fn free(handle: usize) {
     RESULTS.with(|results| {
         let mut results = results.borrow_mut();
         if let Some(slot) = handle.checked_sub(1).and_then(|i| results.get_mut(i)) {

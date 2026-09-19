@@ -180,8 +180,27 @@ overlays и анимацию, хотя вспомогательные модул
 | `boolean3('difference', [base, union(cutters)])` | `[base, c1, …, cn]`, где каждый child-statement один операнд; ядро вычитает разнесённые резаки батчами по 8 (`difference_many`) | плита с отверстиями и подобные модели не строят один гигантский резак |
 | Последовательное сворачивание n-арного union | `union_many`: union-find по AABB, разнесённые группы `join`-ятся без CSG | union 64 цилиндров: 63 булеана → 0 |
 
-Что осталось в TS и просится в ядро следующим: `inferSurfaceIds`
-(`meshSurfaceGroups.ts`), `measureMeshBounds` в `setMeshes`
+Что оставалось в TS и теперь перенесено в ядро: `inferSurfaceIds`
+(`meshSurfaceGroups.ts`) больше не выполняет O(T) обход на главном потоке для
+обычных публикаций. `geometry-bridge::mesh::surface_group_ids` строит те же
+smooth connected patch ids за границей WASM, `render_buffers`/`export_buffers`
+публикуют их сразу, а TS-слой только принимает уже транспортированные `faceIds`
+или вызывает raw-buffer fallback для legacy-мешей без ids.
+
+Замер этой правки (`scripts/bench-surface-groups.mts`, Node 22.23.2,
+`--expose-gc`, синтетическая connected strip-сетка 64 000 треугольников):
+
+| Путь | Медиана |
+| --- | ---: |
+| До: `inferSurfaceIds` в TypeScript | 46.529 мс |
+| После: warmed raw-buffer Rust fallback для legacy-мешей без ids | 16.236 мс |
+| После: обычная публикация с уже транспортированными `faceIds` | 0.000250 мс |
+
+Первые два числа измеряют сам алгоритм группировки; третье — продуктовый путь
+`withSelectionSurfaces` для нормальных публикаций после переноса, где O(T)
+обход больше не выполняется.
+
+Что осталось в TS и просится в ядро следующим: `measureMeshBounds` в `setMeshes`
 (`webgpuRenderer.ts:981-1040`), три отдельные загрузки одного меша в WASM
 (BVH, рёбра, экспорт) вместо одного `analyze_solid`, глубокая валидация
 протокола на главном потоке.

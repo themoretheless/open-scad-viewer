@@ -240,6 +240,7 @@ interface GMesh {
   entityId?: MeshData['entityId']
   morph?: { from: Float32Array; current: Float32Array; started: number; matrix?: (t: number) => Mat4; currentMatrix?: Mat4 }
   nativeGeometry?: MeshData['nativeGeometry']
+  faceIdsSurfaceGroups?: boolean
   faceIdsAuthoritative?: boolean
   assetId?: GeometryAssetId
   vb: GPUBuffer; ib: GPUBuffer; ic: number
@@ -880,7 +881,7 @@ export class WebGPURenderer {
             entityId: m.entityId,
             morph: matrix && old?.morph && sameTypedArray(old.transform, transform) ? old.morph : morphFrom ? { from: morphFrom, current: new Float32Array(morphFrom), started, matrix: matrix ?? undefined, currentMatrix: matrix?.(0) } : undefined,
             assetId: animate ? undefined : m.geometryAssetId,
-            nativeGeometry:m.nativeGeometry,faceIdsAuthoritative:m.faceIdsAuthoritative,
+            nativeGeometry:m.nativeGeometry,faceIdsSurfaceGroups:m.faceIdsSurfaceGroups,faceIdsAuthoritative:m.faceIdsAuthoritative,
             vb, ib, ic: m.indices.length, ub, bg,
             edgeIB: reuseEdges ? reusable.edgeIB : null,
             edgeIC: reuseEdges ? reusable.edgeIC : 0,

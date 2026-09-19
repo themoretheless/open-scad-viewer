@@ -409,6 +409,29 @@ pub unsafe fn abi_semantic_edges(
     packed(geometry(encode(handle)))
 }
 
+/// Compute smooth connected surface ids and return a result handle for
+/// `abi_array_field`. This is the legacy selection grouping algorithm moved
+/// behind the raw-buffer geometry boundary; the host only uploads/copies views.
+/// # Safety
+/// vp/vl and ip/il must reference live caller-owned buffers.
+pub unsafe fn abi_surface_groups(
+    stride: usize,
+    vp: usize,
+    vl: usize,
+    ip: usize,
+    il: usize,
+    angle_degrees: f64,
+) -> u64 {
+    if vl > LIMIT / 4 || il > LIMIT / 4 {
+        return packed(geometry(Err(input("Mesh exceeds transport limit"))));
+    }
+    let vertices = unsafe { read_f32(vp, vl) };
+    let indices = unsafe { read_u32(ip, il) };
+    let handle = mesh::surface_group_ids(stride, &vertices, &indices, angle_degrees)
+        .map(|ids| mesh_analysis::store(mesh_analysis::AnalysisBuffers::SurfaceGroups { ids }));
+    packed(geometry(handle.and_then(encode)))
+}
+
 /// Build the display mesh of a retained solid (crease-split normals, merge
 /// pairs, face ids) inside the kernel and return a result handle for
 /// `abi_array_field`. Reads no host memory; the handle is validated by the

@@ -482,10 +482,11 @@ function isMeshData(value: unknown): value is MeshData {
   if (!hasExactKeys(value, [
     'vertices', 'indices', 'bvh', 'edgeIndices', 'color', 'transform',
     'faceIds', 'provenance', 'topology',
-  ], ['entityId', 'geometryAssetId', 'faceIdsAuthoritative', 'nativeGeometry'])
+  ], ['entityId', 'geometryAssetId', 'faceIdsSurfaceGroups', 'faceIdsAuthoritative', 'nativeGeometry'])
     || !isFloat32Payload(value.vertices)
     || !isUint32Payload(value.indices)
     || !isUint32Payload(value.edgeIndices)
+    || (value.faceIdsSurfaceGroups !== undefined && typeof value.faceIdsSurfaceGroups !== 'boolean')
     || (value.faceIdsAuthoritative !== undefined && typeof value.faceIdsAuthoritative !== 'boolean')
     || !isUint32Payload(value.faceIds)
     || !isFloat32Payload(value.transform)
@@ -549,10 +550,11 @@ function hasSafeSuccessPayload(value: Record<string, unknown>): boolean {
       || !hasExactKeys(candidate, [
         'vertices', 'indices', 'bvh', 'edgeIndices', 'color', 'transform',
         'faceIds', 'provenance', 'topology',
-      ], ['entityId', 'geometryAssetId', 'faceIdsAuthoritative', 'nativeGeometry'])
+      ], ['entityId', 'geometryAssetId', 'faceIdsSurfaceGroups', 'faceIdsAuthoritative', 'nativeGeometry'])
       || !isFloat32Payload(candidate.vertices)
       || !isUint32Payload(candidate.indices)
       || !isUint32Payload(candidate.edgeIndices)
+      || (candidate.faceIdsSurfaceGroups !== undefined && typeof candidate.faceIdsSurfaceGroups !== 'boolean')
       || (candidate.faceIdsAuthoritative !== undefined && typeof candidate.faceIdsAuthoritative !== 'boolean')
       || !isUint32Payload(candidate.faceIds)
       || !isFloat32Payload(candidate.transform)

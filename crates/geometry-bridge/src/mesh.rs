@@ -521,41 +521,23 @@ fn minkowski(a: &Mesh, b: &Mesh) -> Result<Mesh> {
 pub(crate) fn export_buffers(id: u32) -> Result<crate::CadMeshBuffer> {
     let shape = get(id)?;
     let m = solid(&shape)?;
-    let mut groups = std::collections::BTreeMap::new();
-    let mut ids = Vec::new();
     let scale = m.positions.iter().fold(1_f64, |a, b| a.max(b.abs()));
-    for t in m.indices.as_chunks::<3>().0 {
-        let a = m.point(t[0])?;
-        let b = m.point(t[1])?;
-        let c = m.point(t[2])?;
-        let u = [b[0] - a[0], b[1] - a[1], b[2] - a[2]];
-        let v = [c[0] - a[0], c[1] - a[1], c[2] - a[2]];
-        let n = [
-            u[1] * v[2] - u[2] * v[1],
-            u[2] * v[0] - u[0] * v[2],
-            u[0] * v[1] - u[1] * v[0],
-        ];
-        let length = n[0].hypot(n[1]).hypot(n[2]);
-        let n = n.map(|x| x / length);
-        let d = n[0] * a[0] + n[1] * a[1] + n[2] * a[2];
-        let key = [
-            (n[0] * 1e7).round() as i64,
-            (n[1] * 1e7).round() as i64,
-            (n[2] * 1e7).round() as i64,
-            (d / scale * 1e7).round() as i64,
-        ];
-        let next = groups.len();
-        ids.push(*groups.entry(key).or_insert(next));
-    }
+    let positions: Vec<f64> = m
+        .positions
+        .iter()
+        .map(|&v| if v.abs() < scale * 1e-14 { 0. } else { v })
+        .collect();
+    let indices: Vec<u32> = m.indices.iter().map(|&v| v as u32).collect();
+    let vertices: Vec<f32> = positions
+        .chunks_exact(3)
+        .flat_map(|p| [p[0] as f32, p[1] as f32, p[2] as f32, 0., 0., 0.])
+        .collect();
+    let face_ids = surface_group_ids(6, &vertices, &indices, 30.)?;
 
     Ok(crate::CadMeshBuffer {
-        positions: m
-            .positions
-            .iter()
-            .map(|&v| if v.abs() < scale * 1e-14 { 0. } else { v })
-            .collect(),
-        indices: m.indices.iter().map(|&v| v as u32).collect(),
-        face_ids: ids.into_iter().map(|v| v as u32).collect(),
+        positions,
+        indices,
+        face_ids,
     })
 }
 /// Display mesh of a retained solid: stride-6 `f32` position/normal vertices
@@ -697,11 +679,11 @@ pub(crate) fn render_buffers(id: u32, crease_cosine: f64) -> Result<RenderMesh> 
         }
     }
     Ok(RenderMesh {
+        face_ids: surface_group_ids(6, &vertices, &out_indices, 30.)?,
         vertices,
         indices: out_indices,
         merge_from,
         merge_to,
-        face_ids: snapshot.face_ids,
     })
 }
 pub(crate) fn import_buffers(stride: usize, vertices: &[f32], indices: &[u32]) -> Result<u32> {
@@ -718,4 +700,176 @@ pub(crate) fn import_buffers(stride: usize, vertices: &[f32], indices: &[u32]) -
     };
     let id = put(Shape::Solid(solid::clean(mesh)?))?;
     Ok(id.as_u64().unwrap() as u32)
+}
+
+#[derive(Clone, Copy)]
+struct GroupEdge {
+    triangle: u32,
+    from: u32,
+    to: u32,
+    other: i32,
+    count: u32,
+}
+
+fn point_key(x: f32, y: f32, z: f32) -> [u32; 3] {
+    let key = |v: f32| if v == 0. { 0 } else { v.to_bits() };
+    [key(x), key(y), key(z)]
+}
+
+fn find(parents: &mut [u32], mut i: u32) -> u32 {
+    while parents[i as usize] != i {
+        let parent = parents[i as usize];
+        parents[i as usize] = parents[parent as usize];
+        i = parents[i as usize];
+    }
+    i
+}
+
+/// Connected smooth patches, matching the legacy host `inferSurfaceIds`
+/// semantics: exact-coordinate welds, sharp/boundary/degenerate/non-manifold
+/// barriers, and first-seen compact ids.
+pub(crate) fn surface_group_ids(
+    stride: usize,
+    vertices: &[f32],
+    indices: &[u32],
+    angle_degrees: f64,
+) -> Result<Vec<u32>> {
+    let count = indices.len() / 3;
+    if !indices.len().is_multiple_of(3)
+        || !(3..=64).contains(&stride)
+        || !vertices.len().is_multiple_of(stride)
+        || count > 100_000
+        || !angle_degrees.is_finite()
+        || !(0. ..=60.).contains(&angle_degrees)
+    {
+        return Err(input("Invalid surface grouping input/budget"));
+    }
+
+    let mut parents: Vec<u32> = (0..count as u32).collect();
+    let mut normals = vec![[0_f64; 3]; count];
+    let vertex_count = vertices.len() / stride;
+    let mut canonical = vec![0_u32; vertex_count];
+    let mut points = HashMap::<[u32; 3], u32>::new();
+    for i in 0..vertex_count {
+        let offset = i * stride;
+        let x = vertices[offset];
+        let y = vertices[offset + 1];
+        let z = vertices[offset + 2];
+        if !x.is_finite() || !y.is_finite() || !z.is_finite() {
+            return Err(input("Nonfinite mesh position"));
+        }
+        let key = point_key(x, y, z);
+        let next = points.len() as u32;
+        canonical[i] = *points.entry(key).or_insert(next);
+    }
+
+    let mut edges = HashMap::<(u32, u32), GroupEdge>::new();
+    let mut edge_order = Vec::<(u32, u32)>::new();
+    for t in 0..count {
+        let v = [indices[t * 3], indices[t * 3 + 1], indices[t * 3 + 2]];
+        if v.iter().any(|&i| i as usize >= canonical.len()) {
+            return Err(input("Invalid triangle index"));
+        }
+        let p = |i: u32, k: usize| vertices[i as usize * stride + k] as f64;
+        let a = [
+            p(v[1], 0) - p(v[0], 0),
+            p(v[1], 1) - p(v[0], 1),
+            p(v[1], 2) - p(v[0], 2),
+        ];
+        let b = [
+            p(v[2], 0) - p(v[0], 0),
+            p(v[2], 1) - p(v[0], 1),
+            p(v[2], 2) - p(v[0], 2),
+        ];
+        let n = [
+            a[1] * b[2] - a[2] * b[1],
+            a[2] * b[0] - a[0] * b[2],
+            a[0] * b[1] - a[1] * b[0],
+        ];
+        let length = js_hypot3(n);
+        if length != 0. {
+            normals[t] = n.map(|x| x / length);
+        }
+        for i in 0..3 {
+            let from = canonical[v[i] as usize];
+            let to = canonical[v[(i + 1) % 3] as usize];
+            let key = (from.min(to), from.max(to));
+            if let Some(edge) = edges.get_mut(&key) {
+                edge.count += 1;
+                if edge.from == to && edge.to == from {
+                    edge.other = t as i32;
+                }
+            } else {
+                edge_order.push(key);
+                edges.insert(
+                    key,
+                    GroupEdge {
+                        triangle: t as u32,
+                        from,
+                        to,
+                        other: -1,
+                        count: 1,
+                    },
+                );
+            }
+        }
+    }
+
+    let threshold = (angle_degrees * std::f64::consts::PI / 180.).cos();
+    for key in edge_order {
+        let edge = &edges[&key];
+        if edge.count == 2 && edge.other >= 0 {
+            let a = edge.triangle;
+            let b = edge.other as u32;
+            let dot = normals[a as usize][0] * normals[b as usize][0]
+                + normals[a as usize][1] * normals[b as usize][1]
+                + normals[a as usize][2] * normals[b as usize][2];
+            if dot >= threshold - 1e-12 {
+                let x = find(&mut parents, a);
+                let y = find(&mut parents, b);
+                parents[x.max(y) as usize] = x.min(y);
+            }
+        }
+    }
+
+    let mut ids = HashMap::<u32, u32>::new();
+    let mut result = Vec::with_capacity(count);
+    for i in 0..count as u32 {
+        let root = find(&mut parents, i);
+        let next = ids.len() as u32;
+        result.push(*ids.entry(root).or_insert(next));
+    }
+    Ok(result)
+}
+
+#[cfg(test)]
+mod surface_group_tests {
+    use super::surface_group_ids;
+
+    fn stride6(points: &[[f32; 3]]) -> Vec<f32> {
+        points
+            .iter()
+            .flat_map(|p| [p[0], p[1], p[2], 0., 0., 1.])
+            .collect()
+    }
+
+    #[test]
+    fn groups_connected_smooth_strip() {
+        let vertices = stride6(&[[0., 0., 0.], [1., 0., 0.], [1., 1., 0.], [0., 1., 0.]]);
+        let ids = surface_group_ids(6, &vertices, &[0, 1, 2, 0, 2, 3], 30.).unwrap();
+        assert_eq!(ids, vec![0, 0]);
+    }
+
+    #[test]
+    fn keeps_disconnected_and_non_manifold_triangles_separate() {
+        let vertices = stride6(&[
+            [0., 0., 0.],
+            [1., 0., 0.],
+            [0., 1., 0.],
+            [0., -1., 0.],
+            [1., 1., 0.],
+        ]);
+        let ids = surface_group_ids(6, &vertices, &[0, 1, 2, 1, 0, 3, 0, 1, 4], 30.).unwrap();
+        assert_eq!(ids, vec![0, 1, 2]);
+    }
 }
