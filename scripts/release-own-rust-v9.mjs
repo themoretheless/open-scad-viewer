@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 import {createHash} from 'node:crypto'
-import {readFileSync,writeFileSync} from 'node:fs'
+import {existsSync,readFileSync,writeFileSync} from 'node:fs'
 import {resolve} from 'node:path'
 const root=resolve(import.meta.dirname,'..'),bytes=p=>readFileSync(resolve(root,p)),sha=v=>createHash('sha256').update(v).digest('hex')
+if(existsSync(resolve(root,'docs/qualification/own-rust-cad-v9.json')))throw new Error('Historical own-rust-cad-v9 evidence already exists; publish a new version instead of overwriting it')
 const previousPath='docs/qualification/own-rust-cad-v8.json',previous=JSON.parse(bytes(previousPath))
 const paths=[...new Set([...previous.sourceBundle.paths,
   'crates/brep-core/src/close_topology.rs','crates/brep-core/src/lib.rs',
