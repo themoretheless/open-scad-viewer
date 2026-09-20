@@ -2,6 +2,38 @@
 mod profile;
 use planar_geometry::triangulation::triangulate_profile;
 
+fn square(x: f64, y: f64, size: f64) -> Vec<[f64; 2]> {
+    vec![[x, y], [x + size, y], [x + size, y + size], [x, y + size]]
+}
+
+#[test]
+fn axis_aligned_square_grids_preserve_boundaries() {
+    for side in 2..=10 {
+        let outer = square(0., 0., side as f64 * 3.);
+        let holes: Vec<_> = (0..side * side)
+            .map(|i| square((i % side) as f64 * 3. + 1., (i / side) as f64 * 3. + 1., 1.))
+            .collect();
+        let mesh = triangulate_profile(&outer, &holes)
+            .unwrap_or_else(|error| panic!("{side}x{side}: {error}"));
+        profile::validate(&mesh, &outer, &holes);
+    }
+}
+
+#[test]
+fn rejects_bow_tie_boundary() {
+    let outer = [[0., 0.], [4., 4.], [0., 4.], [4., 0.]];
+    assert!(triangulate_profile(&outer, &[]).is_err());
+}
+
+#[test]
+fn oversized_square_grid_refuses_at_profile_budget() {
+    let holes: Vec<_> = (0..1024)
+        .map(|i| square((i % 32) as f64 * 2. + 1., (i / 32) as f64 * 2. + 1., 0.5))
+        .collect();
+    let error = triangulate_profile(&square(0., 0., 64.), &holes).unwrap_err();
+    assert_eq!(error.message, "Profile triangulation budget exceeded");
+}
+
 #[test]
 fn aligned_holes_have_conforming_boundaries() {
     for side in [1, 2, 4, 7, 10] {
