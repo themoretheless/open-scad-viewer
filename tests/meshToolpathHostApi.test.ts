@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import {callGeometryRust} from '../src/services/geometry/kernel'
 import {
   emitPolygonMeshGcode,
   emitPolygonMeshGcodeJob,
@@ -175,6 +176,16 @@ describe('mesh section / G-code host API', () => {
     for (const command of ['M220 S0', 'M220 S1.5', 'M220 S32768']) {
       expect(() => inspectGcode(`${gcode}${command}\n`)).toThrow(expect.objectContaining({code: 'GCODE_INVALID_FEEDRATE'}))
     }
+  })
+
+  it('preserves legacy object responses while public APIs use packed moves', () => {
+    const gcode='G1 X0 Y0 Z0.2 F600\nM83\nM220 S50\nG1 X10 E1\nG3 X0 Y10 I-10 J0 E2\n'
+    expect(parseGcodePreview(gcode)).toEqual(callGeometryRust('gcode_preview',{gcode}))
+    expect(inspectGcode(gcode)).toEqual(callGeometryRust('gcode_parse',{gcode}))
+    const args={mesh:boxMesh(),zMin:0,zMax:1,layerHeightMm:0.5}
+    expect(emitPolygonMeshGcode(args.mesh,0,1,{layerHeightMm:0.5})).toEqual(callGeometryRust('mesh_gcode',args))
+    expect(emitPolygonMeshGcodeJob(args.mesh,0,1,{layerHeightMm:0.5})).toEqual(callGeometryRust('mesh_gcode_job',args))
+    for(const op of ['gcode_preview','gcode_parse','mesh_gcode','mesh_gcode_job'])expect(()=>callGeometryRust(op,{packedMoves:'true'})).toThrow('packedMoves must be boolean')
   })
 
   it('rejects invalid extrusion modes and excessive tool state through WASM', () => {

@@ -196,8 +196,15 @@ pub(crate) fn toolpaths(v: &Value) -> Result<Value> {
     }))
 }
 
-fn preview_value(preview: GcodePreview) -> Value {
-    json!({
+fn packed_moves(v: &Value) -> Result<bool> {
+    match v.get("packedMoves") {
+        None => Ok(false),
+        Some(value) => value.as_bool().ok_or_else(|| input("packedMoves must be boolean")),
+    }
+}
+
+fn preview_value(preview: GcodePreview, packed: bool) -> Value {
+    let mut value = json!({
         "layers": preview.layers,
         "extrusionMm": preview.extrusion_mm,
         "depositedVolumeMm3": preview.deposited_volume_mm3,
@@ -205,12 +212,20 @@ fn preview_value(preview: GcodePreview) -> Value {
         "travelDistanceMm": preview.travel_distance_mm,
         "printDistanceMm": preview.print_distance_mm,
         "estimatedTimeS": preview.estimated_time_s,
-        "moves": preview.moves.iter().map(|m| json!({
+    });
+    if packed {
+        value["moveRows"] = json!(preview.moves.iter().flat_map(|m| [
+            m.x, m.y, m.z, m.e, m.feedrate_mm_s, m.layer_index as f64,
+            if m.extruded { 1.0 } else { 0.0 },
+        ]).collect::<Vec<_>>());
+    } else {
+        value["moves"] = json!(preview.moves.iter().map(|m| json!({
             "x": m.x, "y": m.y, "z": m.z, "e": m.e,
             "extruded": m.extruded, "feedrateMmS": m.feedrate_mm_s,
             "layerIndex": m.layer_index,
-        })).collect::<Vec<_>>(),
-    })
+        })).collect::<Vec<_>>());
+    }
+    value
 }
 
 fn require_positive_extrusion(preview: &GcodePreview) -> Result<()> {
@@ -225,6 +240,7 @@ fn require_positive_extrusion(preview: &GcodePreview) -> Result<()> {
 
 /// Preview dialect after `slicer-core` → `gcode-optimize` → `emit`.
 pub(crate) fn export(v: &Value) -> Result<Value> {
+    let packed = packed_moves(v)?;
     let (layers, settings, _) = plan(v)?;
     require_extrusion(&layers)?;
     let optimize = optimize_settings(v)?;
@@ -235,7 +251,7 @@ pub(crate) fn export(v: &Value) -> Result<Value> {
         "gcode": gcode,
         "dialect": slicer_core::GCODE_DIALECT,
         "layerCount": layers.len(),
-        "preview": preview_value(preview),
+        "preview": preview_value(preview, packed),
     }))
 }
 
@@ -248,6 +264,7 @@ fn mesh_body(mesh: &Mesh) -> MeshBody {
 
 /// Job dialect + thick `.gcode.3mf` after optimize.
 pub(crate) fn export_job(v: &Value) -> Result<Value> {
+    let packed = packed_moves(v)?;
     let (layers, settings, mesh) = plan(v)?;
     require_extrusion(&layers)?;
     let optimize = optimize_settings(v)?;
@@ -263,7 +280,7 @@ pub(crate) fn export_job(v: &Value) -> Result<Value> {
         "dialect": slicer_core::GCODE_JOB_DIALECT,
         "flavor": job.flavor.name(),
         "layerCount": layers.len(),
-        "preview": preview_value(preview),
+        "preview": preview_value(preview, packed),
     }))
 }
 
@@ -275,12 +292,14 @@ fn gcode_text(v: &Value) -> Result<&str> {
 
 /// Flat preview: strict for native dialects, tolerant for other slicers' files.
 pub(crate) fn parse(v: &Value) -> Result<Value> {
+    let packed = packed_moves(v)?;
     let (preview, _) = slicer_core::parse_gcode_any(gcode_text(v)?)?;
-    Ok(preview_value(preview))
+    Ok(preview_value(preview, packed))
 }
 
 /// Preview plus detected dialect, generator and flavor for opened files.
 pub(crate) fn inspect(v: &Value) -> Result<Value> {
+    let packed = packed_moves(v)?;
     let text = gcode_text(v)?;
     let (preview, info) = slicer_core::parse_gcode_any(text)?;
     let first = text.lines().next().unwrap_or("").trim();
@@ -292,7 +311,7 @@ pub(crate) fn inspect(v: &Value) -> Result<Value> {
         format!("{} G-code (tolerant preview)", info.generator.name())
     };
     Ok(json!({
-        "preview": preview_value(preview),
+        "preview": preview_value(preview, packed),
         "dialect": dialect,
         "native": info.native,
         "generator": info.generator.name(),

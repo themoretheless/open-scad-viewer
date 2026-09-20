@@ -190,7 +190,8 @@ export function emitPolygonMeshGcode(
   zMax: number,
   settings: ToolpathSettingsInput = {},
 ): GcodeExportResult {
-  return callGeometryRust('mesh_gcode', { mesh, zMin, zMax, ...toolpathArguments(settings) })
+  const result=callGeometryRust<Omit<GcodeExportResult,'preview'>&{preview:PackedGcodePreview}>('mesh_gcode', { mesh, zMin, zMax, ...toolpathArguments(settings), packedMoves:true })
+  return {...result,preview:unpackGcodePreview(result.preview)}
 }
 /** Machine job + thick `.gcode.3mf` after slicer → optimize → emit_job. */
 export function emitPolygonMeshGcodeJob(
@@ -199,17 +200,21 @@ export function emitPolygonMeshGcodeJob(
   zMax: number,
   settings: JobSettingsInput = {},
 ): GcodeJobExportResult {
-  return callGeometryRust('mesh_gcode_job', { mesh, zMin, zMax, ...jobArguments(settings) })
+  const result=callGeometryRust<Omit<GcodeJobExportResult,'preview'>&{preview:PackedGcodePreview}>('mesh_gcode_job', { mesh, zMin, zMax, ...jobArguments(settings), packedMoves:true })
+  return {...result,preview:unpackGcodePreview(result.preview)}
 }
 
 /** Native dialects parse strictly; other slicers' files use the tolerant reader. */
 export function parseGcodePreview(gcode: string): GcodePreviewResult {
-  return callGeometryRust('gcode_preview', { gcode })
+  return unpackGcodePreview(callGeometryRust<PackedGcodePreview>('gcode_preview', { gcode, packedMoves:true }))
 }
 /** Like `parseGcodePreview`, plus detected dialect, generator and firmware flavor. */
 export function inspectGcode(gcode: string): GcodeInspectResult {
-  return callGeometryRust('gcode_parse', { gcode })
+  const result=callGeometryRust<Omit<GcodeInspectResult,'preview'>&{preview:PackedGcodePreview}>('gcode_parse', { gcode, packedMoves:true })
+  return {...result,preview:unpackGcodePreview(result.preview)}
 }
+
+import {unpackGcodePreview,type PackedGcodePreview} from '../gcodePreviewTransport'
 
 export interface PolygonProfile {outer:number[][];holes?:number[][][]}
 export const extrudePolygonProfile=(profile:PolygonProfile,vector:number[]):PolygonBuild=>callGeometryRust('polygon_extrude',{profile,vector})
