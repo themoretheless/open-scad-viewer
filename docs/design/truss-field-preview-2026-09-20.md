@@ -23,3 +23,22 @@ inspected for layout. The harness observes emitted preview meshes; it does not
 render the application's CAD viewport. Actual viewport rendering/occlusion
 and complete-operation ownership checks remain to verify before calling the
 visual integration complete. No solver or WASM changes in this step.
+
+## Renderer Verification
+
+The harness now optionally initializes the real WebGPURenderer with
+`TRUSS_VIEWPORT=1`. It uses the same setMeshes replacement/restoration pattern
+as App.previewMainGeometry: this is an isolated marker preview, not an overlay
+on the original body's surfaces. Clearing restores the source mesh.
+
+Chrome runs passed at desktop and mobile sizes. Screenshot pixels contain
+both red and blue markers; a real pointer drag changes the rendered field;
+the restored scene differs and shows the original cube. Screenshots were
+visually inspected. Pixel checks decode browser PNG screenshots rather than
+copying the cleared WebGPU canvas backing store. Reports/screenshots are in
+`/private/tmp/osv-truss-renderer-browser.json` and
+`/private/tmp/osv-truss-viewport-{desktop,mobile}-{field,orbited,restored}.png`.
+
+This closes the real-renderer nonblank/framing/orbit check. It uses an isolated
+host for the actual CAD panel and renderer, not a complete App session; broader
+cross-tool preview ownership remains a separate integration check.

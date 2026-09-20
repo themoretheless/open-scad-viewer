@@ -12,6 +12,7 @@ const server=await createServer({logLevel:'silent',server:{host:'127.0.0.1',port
     import {warmGeometryKernel} from '/src/services/geometry/kernel.ts';
     import {extrudeDirectSketch} from '/src/services/directModeling.ts';
     import {previewMeshes} from '/src/services/mainModeling.ts';
+    import {WebGPURenderer} from '/src/services/webgpuRenderer.ts';
     const RealWorker=window.Worker;
     window.__trussProbe={hold:false,held:[],created:0,terminated:0};
     window.Worker=class {
@@ -31,18 +32,43 @@ const server=await createServer({logLevel:'silent',server:{host:'127.0.0.1',port
     await warmGeometryKernel();
     const body=extrudeDirectSketch({id:'s',name:'Box',closed:true,points:[[0,0],[10,0],[10,10],[0,10]]},10,'0');
     const props=reactive({meshes:previewMeshes({version:1,sketches:[],bodies:[body]}),selection:[0],hit:null,source:'cube(10);',ready:true,locale:'en',initialAction:'lighten'});
-    const app=createApp({render:()=>h(Panel,{...props,onPreview:meshes=>{window.__trussProbe.preview=meshes===null?null:meshes.map(mesh=>({color:mesh.color,triangles:mesh.indices.length/3,finite:mesh.vertices.every(Number.isFinite)}))}})});app.mount('#app');
-    window.__trussProbe.props=props;window.__trussProbe.unmount=()=>app.unmount();
+    let renderer;
+    if(${process.env.TRUSS_VIEWPORT==='1'}){
+      const canvas=document.createElement('canvas');canvas.id='field-viewport';canvas.style.cssText='width:min(640px,100vw);height:400px;position:fixed;right:0;top:0';document.body.append(canvas);
+      renderer=new WebGPURenderer();if(!await renderer.init(canvas))throw Error('WebGPU renderer unavailable');
+      renderer.setGridVisible(false);renderer.setBackgroundColor([0.9,0.9,0.9]);renderer.setMeshes(props.meshes);renderer.fitView();
+    }
+    const app=createApp({render:()=>h(Panel,{...props,onPreview:meshes=>{window.__trussProbe.preview=meshes===null?null:meshes.map(mesh=>({color:mesh.color,triangles:mesh.indices.length/3,finite:mesh.vertices.every(Number.isFinite)}));renderer?.setMeshes(meshes??props.meshes)}})});app.mount('#app');
+    window.__trussProbe.props=props;window.__trussProbe.unmount=()=>{app.unmount();renderer?.destroy()};
   `},
 }]})
 let browser
 try{
   await server.listen()
   const {playwright}=await loadQualificationPlaywrightPackage()
-  browser=await playwright.chromium.launch({headless:true,...(process.env.CHROMIUM_EXECUTABLE?{executablePath:process.env.CHROMIUM_EXECUTABLE}:{})})
+  browser=await playwright.chromium.launch({headless:true,args:process.env.TRUSS_VIEWPORT==='1'?['--enable-unsafe-webgpu']:[],...(process.env.CHROMIUM_EXECUTABLE?{executablePath:process.env.CHROMIUM_EXECUTABLE}:{})})
   const reports=[]
   for(const [name,viewport] of [['desktop',{width:1280,height:900}],['mobile',{width:390,height:844}]]){
     const page=await browser.newPage({viewport}),errors=[]
+    const viewportEvidence=[]
+    const captureViewport=async stage=>{
+      if(process.env.TRUSS_VIEWPORT!=='1')return
+      await page.locator('.cad-workbench').evaluate(element=>element.style.visibility='hidden')
+      const screenshot=`/private/tmp/osv-truss-viewport-${name}-${stage}.png`
+      const png=await page.locator('#field-viewport').screenshot({path:screenshot})
+      const pixels=await page.evaluate(async bytes=>{
+        const source=await createImageBitmap(new Blob([new Uint8Array(bytes)],{type:'image/png'})),copy=document.createElement('canvas');copy.width=source.width;copy.height=source.height;
+        const context=copy.getContext('2d');context.drawImage(source,0,0);
+        source.close();
+        const data=context.getImageData(0,0,copy.width,copy.height).data;
+        let blue=0,red=0,opaque=0;
+        for(let i=0;i<data.length;i+=4){if(data[i+3]>0)opaque++;if(data[i+2]>data[i]+35&&data[i+2]>data[i+1]+15)blue++;if(data[i]>data[i+2]+35&&data[i]>data[i+1]+15)red++}
+        return {blue,red,opaque,width:copy.width,height:copy.height}
+      },Array.from(png))
+      await page.locator('.cad-workbench').evaluate(element=>element.style.visibility='')
+      viewportEvidence.push({stage,pixels,screenshot})
+      return pixels
+    }
     page.on('pageerror',error=>{errors.push(error.message);console.error(error.stack)})
     const origin=server.resolvedUrls.local[0]
     await page.route(`${origin}__probe`,route=>route.fulfill({contentType:'text/html',body:`
@@ -95,8 +121,22 @@ try{
     assert.ok(markers.length>0&&markers.length<=3)
     assert.equal(markers.reduce((sum,mesh)=>sum+mesh.triangles,0),36*8)
     assert.ok(markers.every(mesh=>mesh.finite))
+    const fieldPixels=await captureViewport('field')
+    if(fieldPixels)assert.ok(fieldPixels.blue+fieldPixels.red>20,JSON.stringify(fieldPixels))
+    if(fieldPixels){
+      await page.locator('.cad-workbench').evaluate(element=>element.style.visibility='hidden')
+      const box=await page.locator('#field-viewport').boundingBox()
+      await page.mouse.move(box.x+box.width/2,box.y+box.height/2)
+      await page.mouse.down();await page.mouse.move(box.x+box.width/2+45,box.y+box.height/2+25,{steps:8});await page.mouse.up()
+      await page.locator('.cad-workbench').evaluate(element=>element.style.visibility='')
+      const orbited=await captureViewport('orbited')
+      assert.ok(orbited.blue+orbited.red>20)
+      assert.notDeepEqual(orbited,fieldPixels)
+    }
     await results.getByLabel('Marker size, mm',{exact:true}).fill('0')
     assert.equal(await page.evaluate(()=>window.__trussProbe.preview),null)
+    const restoredPixels=await captureViewport('restored')
+    if(restoredPixels)assert.notDeepEqual(restoredPixels,fieldPixels)
     assert.equal(await results.getByLabel('Preview axial force sign',{exact:true}).isChecked(),false)
     await results.getByLabel('Preview axial force sign',{exact:true}).click()
     assert.equal(await results.getByLabel('Preview axial force sign',{exact:true}).isChecked(),false)
@@ -160,7 +200,7 @@ try{
     assert.deepEqual(errors,[])
     reports.push({name,viewport,bounds,screenshot,controlsScreenshot,nominalNodes:14,nominalMembers:36,
       singleReactionN:100,combinedReactionN:95,singularRefusal:true,incompatibleSupportsRefusal:true,
-      staleReplyIgnored:true,meshReplacementInvalidated:true,sourceInvalidated:true,errors})
+      staleReplyIgnored:true,meshReplacementInvalidated:true,sourceInvalidated:true,viewportEvidence,errors})
     await page.close()
   }
   console.log(JSON.stringify({browser:browser.version(),scope:'Actual CAD panel, scenario API and real native worker on desktop/mobile; intercepted late replies test invalidation, not physical part strength or latency',reports},null,2))
