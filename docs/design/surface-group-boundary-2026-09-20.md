@@ -3,7 +3,8 @@
 The grouping implementation from `themoretheless-rust-surface-grouping` is
 isolated in `geometry-bridge/src/mesh_surface_groups.rs`. It preserves current
 host sparse-mesh behavior: validate every position, but only weld referenced
-positions when vertices outnumber indices. Rendering does not call it yet.
+positions when vertices outnumber indices. The visual client now requests it
+at worker publication; headless clients retain the default ungrouped path.
 
 ## Conformance
 
@@ -57,12 +58,47 @@ operations, refusal and recovery for SVG and G-code workers. Report:
 This is packaging compatibility evidence, not a replacement for qualification
 or a full application interaction test.
 
-## Remaining Integration
+## Browser Publication
+
+`tools/browser-qualification/surface-group-publication.mjs` uses two independent
+production workers and the current host selection code. Each fixture has three
+warmups and nine measured pairs, alternating order. Source dimensions vary for
+cache misses and repeat for hits. Exact IDs are compared outside timing.
+The measured interval includes worker build, transfer, packet validation and
+host selection, but excludes GPU upload and paint.
+
+| Fixture | Cache | Host TS p50 A/B, ms | Worker Rust p50 A/B, ms |
+| --- | --- | ---: | ---: |
+| Cube, 12 triangles | miss | 0.3 / 0.4 | 0.3 / 0.4 |
+| Cube, 12 triangles | hit | 0.2 / 0.2 | 0.2 / 0.1 |
+| Sphere, 16128 triangles | miss | 23.6 / 23.1 | 22.4 / 22.4 |
+| Sphere, 16128 triangles | hit | 18.2 / 18.2 | 18.3 / 18.3 |
+
+Sphere main-thread selection drops from 3.8 ms to below the browser timer's
+resolution. The complete measured miss path improves only 0.7-1.2 ms, not the
+41% of the isolated large-strip benchmark. Hits add about 0.1 ms here; smaller
+cases are timer-resolution limited. Reports are in
+`tmp/performance/surface-group-publication/report.json` and
+`tmp/performance/surface-group-publication-repeat/report.json`.
+
+The worker cache retains its own buffers and sends detached copies; authoritative
+CAD faces are untouched. Protocol v7 carries the opt-in request and inferred-ID
+metadata. The app requests grouping; other coordinators default to off. The
+host bypasses recomputation only for explicitly prepared or authoritative IDs.
+
+The real-app smoke verifies a requested grouped build, successful worker result,
+and four objects in the UI. It exposed a pre-existing startup bug: the initial
+`doRender` returned before viewport initialization. Removing the renderer guard
+allows computation before GPU readiness; viewport initialization already loads
+the retained scene. Report: `tmp/performance/surface-group-app-smoke/report.json`.
+
+## Remaining Optimization
 
 Do not copy the old branch's export-then-render grouping sequence: it computes
 groups twice. Group the final display coordinates once in the producer, carry
 an explicit distinction between inferred patches and authored CAD faces, and
 retain the host fallback/cache for other mesh producers. Compare full
-publication before switching that path. This commit exposes the measured raw
-buffer boundary but does not switch selection behavior or claim a full Rust
-migration.
+publication before switching that path. The enabled worker implementation groups
+once on a cache miss after building display buffers, using the measured upload
+boundary. It does not yet eliminate that upload by grouping inside the retained
+solid producer. Preserve cache-hit and nonvisual behavior in that next change.

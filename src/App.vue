@@ -1503,6 +1503,7 @@ async function restoreWorkspaceDocument(document: WorkspaceDocumentSnapshot) {
 function startBuildCoordinator() {
   if (buildCoordinator) return
   buildCoordinator = new BuildCoordinator({
+    selectionSurfaces: true,
     workerFactory: () => new Worker(new URL('./workers/geometry.worker.ts', import.meta.url), { type: 'module' }),
     // Real Worker events already own their buffers; skip the same-realm snapshot.
     snapshotEvents: false,
@@ -1519,7 +1520,6 @@ function startBuildCoordinator() {
 }
 
 function doRender(quality: GeometryQuality = 'full') {
-  if (!renderer) return
   autoBuildScheduler.cancelPending()
   try {
     startBuildCoordinator()
