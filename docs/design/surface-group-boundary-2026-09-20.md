@@ -137,6 +137,14 @@ The worker cap is retained; assertions and timeouts were not relaxed.
 Node 20 and native/Rust jobs were still running at this observation.
 Log: `/private/tmp/osv-ci-35482145042-node22.log`.
 
+The completed Node 20.19 job `106001779135` on that same run reports
+3311 passed, 11 failed, 5 skipped in 269.63 seconds. Ten failures match the
+qualification set above; one `legacyDirectEvaluatorOracle` fresh-process
+determinism test still hits its 5000 ms timeout. Thus the zero-timeout observation
+is specific to Node 22, not the whole matrix. Rust and official OpenSCAD MCP
+jobs have passed; Windows/macOS native jobs remain in progress at this follow-up.
+Node 20 log: `/private/tmp/osv-ci-35482145042-node20.log`.
+
 ## Edge Traversal Follow-Up
 
 The Rust implementation no longer retains an insertion-order vector of edge
