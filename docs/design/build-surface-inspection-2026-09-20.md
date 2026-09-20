@@ -33,3 +33,27 @@ The previous complete integration-test run is recorded separately; it was not
 repeated here. No JSON/WASM operation or UI is added yet, and the checked-in
 browser artifact is unchanged. Worker admission, artifact rebuild, UI report
 and workload measurements remain before this feature is user-accessible.
+
+## JSON And WASM Adapter
+
+`mesh_build_surfaces` now requires exactly op, mesh, buildDirection,
+coneDegrees, planeOffsetMm and planeToleranceMm. Mesh fields are restricted
+to positions/indices/optional uv; position/index array budgets are checked
+before typed mesh decoding. Unknown fields and missing settings fail rather
+than implying supported physics or inventing defaults. The result identifies
+`signed-triangle-build-surfaces-v1` and returns five geometric quantities.
+The TypeScript wrapper sends position/index geometry only.
+
+Two native dispatcher tests and 25 selected WASM/G-code/truss tests passed.
+The real-browser harness also asserts the 10 mm cube report (600 mm2 total,
+100 mm2 plane contact) before its parent-tools/native-worker/WebGPU workflow;
+desktop and mobile viewport runs pass. Vue and standalone adapter typechecks,
+Vite build and verify-dist pass: 95 artifacts, 15,754,019 total bytes.
+
+Rebuilt geometry WASM: 7,729,128 bytes, SHA256
+67f48c69ea63a99cf1e26d24ffe0e8310befc52ea5c841b9b738a741d64bd899.
+Raw size grew by 5,616 bytes. This rebuild also incorporates the previously
+native-tested writer refactors. Historical qualification archives remain
+unchanged; this is not qualification of the new binary. The full JS suite was
+not repeated in this step; its known nine identity/qualification failures are
+not resolved. Worker admission, user-facing report and timing remain pending.

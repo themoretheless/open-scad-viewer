@@ -1664,6 +1664,7 @@ pub fn dispatch(mut v: Value) -> Result<Value> {
         }
         "brep_polygon_tessellate" => encode(brep::polygons(&field(&v, "model")?)?),
         "mesh_inspect" => encode(field::<Mesh>(&v, "mesh")?.inspect()?),
+        "mesh_build_surfaces" => print_geometry::dispatch(v),
         "scene_flatten" => {
             let meshes = field::<Vec<Value>>(&v, "meshes")?
                 .into_iter()

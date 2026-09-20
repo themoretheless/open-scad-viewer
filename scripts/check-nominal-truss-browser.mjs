@@ -14,6 +14,7 @@ const server=await createServer({logLevel:'silent',server:{host:'127.0.0.1',port
     import {extrudeDirectSketch} from '/src/services/directModeling.ts';
     import {previewMeshes} from '/src/services/mainModeling.ts';
     import {WebGPURenderer} from '/src/services/webgpuRenderer.ts';
+    import {inspectBuildSurfaces} from '/src/services/buildSurfaceInspection.ts';
     const RealWorker=window.Worker;
     window.__trussProbe={hold:false,held:[],created:0,terminated:0};
     window.Worker=class {
@@ -32,6 +33,7 @@ const server=await createServer({logLevel:'silent',server:{host:'127.0.0.1',port
     };
     await warmGeometryKernel();
     const body=extrudeDirectSketch({id:'s',name:'Box',closed:true,points:[[0,0],[10,0],[10,10],[0,10]]},10,'0');
+    window.__trussProbe.buildSurfaces=inspectBuildSurfaces(body.mesh,{buildDirection:[0,0,1],coneDegrees:45,planeOffsetMm:0,planeToleranceMm:0});
     const props=reactive({meshes:previewMeshes({version:1,sketches:[],bodies:[body]}),selection:[0],hit:null,source:'cube(10);',ready:true,locale:'en',initialAction:'lighten'});
     let renderer;
     if(${process.env.TRUSS_VIEWPORT==='1'}){
@@ -87,6 +89,7 @@ try{
     await panel.locator('summary').first().click()
     await panel.getByRole('button',{name:'Generate graph',exact:true}).click()
     await panel.getByLabel('Young modulus, MPa',{exact:true}).waitFor()
+    assert.deepEqual(await page.evaluate(()=>window.__trussProbe.buildSurfaces),{modelKind:'signed-triangle-build-surfaces-v1',totalAreaMm2:600,downwardAreaMm2:0,downwardTriangles:0,contactAreaMm2:100,belowPlaneTriangles:0})
     assert.match(await panel.textContent(),/14 nodes.*36 members/s)
     assert.equal(await panel.locator('input[aria-label$="restrained"]:checked').count(),0)
     await panel.getByLabel('Young modulus, MPa',{exact:true}).fill('2000')

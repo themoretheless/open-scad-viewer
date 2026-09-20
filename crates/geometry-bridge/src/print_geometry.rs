@@ -3,6 +3,56 @@ use crate::{Error, Result};
 use math_core::{cross, dot, sub};
 use polygon_core::Mesh;
 
+pub(crate) fn dispatch(mut value: value_codec::Value) -> Result<value_codec::Value> {
+    use crate::{field, input, require_exact_fields, take_field};
+    use value_codec::json;
+    require_exact_fields(
+        &value,
+        &[
+            "op",
+            "mesh",
+            "buildDirection",
+            "coneDegrees",
+            "planeOffsetMm",
+            "planeToleranceMm",
+        ],
+        "Build surface request",
+    )?;
+    let mesh = value["mesh"]
+        .as_object()
+        .ok_or_else(|| input("Build surface mesh must be an object"))?;
+    if mesh
+        .keys()
+        .any(|key| !matches!(key.as_str(), "positions" | "indices" | "uv"))
+    {
+        return Err(input("Build surface mesh contains unauthorized fields"));
+    }
+    for (name, limit) in [("positions", 2_000_000), ("indices", 300_000)] {
+        let values = value["mesh"][name]
+            .as_array()
+            .ok_or_else(|| input(format!("Build surface {name} must be an array")))?;
+        if values.len() > limit {
+            return Err(input("Build surface mesh exceeds its buffer budget"));
+        }
+    }
+    let build_direction = field(&value, "buildDirection")?;
+    let cone_degrees = field(&value, "coneDegrees")?;
+    let plane_offset_mm = field(&value, "planeOffsetMm")?;
+    let plane_tolerance_mm = field(&value, "planeToleranceMm")?;
+    let mesh = take_field(&mut value, "mesh")?;
+    let report = inspect_build_surfaces(
+        &mesh,
+        build_direction,
+        cone_degrees,
+        plane_offset_mm,
+        plane_tolerance_mm,
+    )?;
+    Ok(json!({"modelKind":"signed-triangle-build-surfaces-v1",
+        "totalAreaMm2":report.total_area_mm2,"downwardAreaMm2":report.downward_area_mm2,
+        "downwardTriangles":report.downward_triangles,"contactAreaMm2":report.contact_area_mm2,
+        "belowPlaneTriangles":report.below_plane_triangles}))
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct BuildSurfaceReport {
     pub total_area_mm2: f64,
