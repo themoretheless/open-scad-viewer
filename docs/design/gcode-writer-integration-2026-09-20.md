@@ -22,3 +22,26 @@ It avoids requiring a full output String when the native caller uses a
 non-buffering writer; formatting still has small per-segment allocations.
 The checked-in browser WASM was not rebuilt and does not expose this API.
 The broader branch integration remains open.
+
+## Native Measurement
+
+Reproduce with a release build of the `bench_preview_writer` example, then run
+`crates/target/release/examples/bench_preview_writer` independently of builds
+and tests. It compares emit-String-then-FNV-hash with direct emit-to-FNV-writer.
+Five warmup pairs precede 31 measured pairs with alternating order. Exact byte
+equality is checked outside timing; each measured result verifies length/hash.
+
+Two independent process runs on the development machine:
+
+| Points | Output bytes | String median ms A/B | Writer median ms A/B | String allocated bytes | Writer allocated bytes |
+| ---: | ---: | ---: | ---: | ---: | ---: |
+| 100 | 4,505 | 0.03225 / 0.03004 | 0.02208 / 0.02392 | 18,039 | 2,376 |
+| 10,000 | 451,847 | 2.77417 / 2.73850 | 2.29454 / 2.25917 | 1,247,511 | 239,976 |
+| 60,000 | 2,756,780 | 16.65813 / 16.66142 | 13.89092 / 13.80571 | 9,500,823 | 1,439,976 |
+
+Allocation totals count requested alloc/realloc bytes, including replacement
+capacities, not peak live memory or RSS. Timing includes an atomic allocation
+counter and is specific to this instrumented native emit-and-hash workload.
+The largest fixture saves about 85% of requested allocation bytes and 17% of
+elapsed time here. No browser, filesystem, printer I/O or end-to-end speedup
+is established. The existing String API remains available and unchanged.
