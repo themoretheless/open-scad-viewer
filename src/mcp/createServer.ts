@@ -667,7 +667,11 @@ const engineRegistrySchema = z.object({
       fallback: z.literal('never'),
     }).strict(),
   ]),
-  engines: z.tuple([meshEngineManifestSchema, brepEngineManifestSchema]),
+  engines: z.tuple([
+    meshEngineManifestSchema,
+    // The archived manifest is static; runtime readiness may refuse this provider.
+    brepEngineManifestSchema.extend({availability: z.enum(['available', 'unavailable'])}),
+  ]),
 })
 const wireStringSchema = z.string().max(64 * 1024)
   .refine(isWellFormedUnicode, 'String must contain well-formed Unicode')

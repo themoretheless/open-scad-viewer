@@ -9,6 +9,7 @@ import { BoundedTransport, MAX_MCP_SUBSCRIPTIONS } from '../src/mcp/boundedTrans
 import { createOpenScadMcpServer } from '../src/mcp/createServer'
 import { DuckDbModelStore } from '../src/mcp/duckdbModelStore'
 import { HeadlessGeometryService } from '../src/mcp/geometryService'
+import { GeometryBuildEngine } from '../src/services/geometryBuildEngine'
 
 interface JsonRpcResponse {
   jsonrpc: '2.0'
@@ -151,6 +152,29 @@ class BlockingGeometryService extends HeadlessGeometryService {
 }
 
 describe('OpenSCAD MCP server, protocol 2026-07-28', () => {
+  it('returns schema-valid runtime unavailability without changing static manifest identity', async () => {
+    const engine = new GeometryBuildEngine([])
+    const expected = await engine.capabilities()
+    const {modernRequest} = await connectedModernServer({geometry: new HeadlessGeometryService(engine)})
+    const listing = await modernRequest('tools/list')
+    const tool = (listing.tools as Array<{name: string; outputSchema: Record<string, unknown>}>).find(t => t.name === 'openscad_list_engines')!
+    const result = await modernRequest('tools/call', {name: 'openscad_list_engines', arguments: {}})
+    expect(result.isError).not.toBe(true)
+    expect(await fromJsonSchema(tool.outputSchema)['~standard'].validate(result.structuredContent)).not.toHaveProperty('issues')
+    const content = result.structuredContent as {geometry_engines: {engines: Array<Record<string, unknown>>}}
+    expect(content.geometry_engines.engines).toHaveLength(2)
+    expect(content.geometry_engines.engines.map(item => item.manifest_digest))
+      .toEqual(expected.engines.map(item => item.manifestDigest))
+    for (const engine of content.geometry_engines.engines) {
+      expect(engine.availability).toBe('unavailable')
+      expect(engine.unavailable_reason).toEqual(expect.any(String))
+      expect(engine.manifest_digest).toMatch(/^[a-f0-9]{64}$/)
+    }
+    const invalid = structuredClone(content)
+    invalid.geometry_engines.engines[0].availability = 'pretend-ready'
+    expect(await fromJsonSchema(tool.outputSchema)['~standard'].validate(invalid)).toHaveProperty('issues')
+  })
+
   it('discovers with the required modern envelope and returns cacheable tool/resource listings', async () => {
     const { modernRequest, request } = await connectedModernServer()
 
