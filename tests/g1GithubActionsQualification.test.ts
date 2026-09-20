@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto'
-import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { execFileSync, spawnSync } from 'node:child_process'
@@ -157,11 +157,11 @@ function fixture(): { artifacts: string; first: string } {
   return { artifacts, first }
 }
 
-function aggregate(artifacts: string, suffix: string, sha = sourceSha) {
+function aggregate(artifacts: string, suffix: string, sha = sourceSha, githubSha = sha) {
   const output = resolve(dirname(artifacts), `result-${suffix}.json`)
   const child = spawnSync(process.execPath, [
     harness, 'aggregate', '--artifacts', artifacts, '--source-sha', sha, '--output', output,
-  ], { cwd: root, encoding: 'utf8' })
+  ], { cwd: root, encoding: 'utf8', env: {...process.env, GITHUB_SHA: githubSha} })
   return { process: child, output }
 }
 
@@ -237,5 +237,14 @@ describe('G1 V34 GitHub Actions evidence integrity', () => {
     const result = aggregate(artifacts, 'wrong-commit', '0'.repeat(40))
     expect(result.process.status).not.toBe(0)
     expect(result.process.stderr).toMatch(/checkout HEAD differs/u)
+    expect(existsSync(result.output)).toBe(false)
+  })
+
+  it('rejects a dispatched source SHA that differs from GITHUB_SHA', () => {
+    const { artifacts } = fixture()
+    const result = aggregate(artifacts, 'wrong-github-sha', sourceSha, '0'.repeat(40))
+    expect(result.process.status).not.toBe(0)
+    expect(result.process.stderr).toMatch(/source SHA differs from GITHUB_SHA/u)
+    expect(existsSync(result.output)).toBe(false)
   })
 })
