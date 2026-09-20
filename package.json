@@ -39,6 +39,7 @@
     "test:wasm-package": "node --test tests/auditWasmPackage.test.mjs",
     "test:wasm-optimize": "node --test tests/wasmOptimize.test.mjs tests/wasmOptCache.test.mjs",
     "audit:qualification-drift": "node scripts/audit-qualification-drift.mjs",
+    "audit:runtime-manifests": "node --import tsx scripts/audit-runtime-manifests.mts",
     "test:qualification-drift": "node --test tests/qualificationDriftAudit.test.mjs",
     "check": "npm run typecheck && npm run test && npm run build",
     "predev": "npm run build:geometry",
