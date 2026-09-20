@@ -8,6 +8,34 @@ fn machine() -> MachineProfile {
     MachineProfile::default()
 }
 
+#[test]
+fn writer_matches_preview_and_distinguishes_sink_failure() {
+    let layers = [square_layer()];
+    let expected = emit(&layers, &machine()).unwrap();
+    let mut output = String::from("prefix:");
+    gcode_core::emit_to(&layers, &machine(), &mut output).unwrap();
+    assert_eq!(output, format!("prefix:{expected}"));
+    struct Fails;
+    impl std::fmt::Write for Fails {
+        fn write_str(&mut self, _: &str) -> std::fmt::Result {
+            Err(std::fmt::Error)
+        }
+    }
+    assert_eq!(
+        gcode_core::emit_to(&layers, &machine(), &mut Fails)
+            .unwrap_err()
+            .code,
+        "GCODE_WRITE"
+    );
+    let invalid = [PlannedLayer {
+        z_mm: f64::NAN,
+        paths: vec![],
+    }];
+    let mut untouched = String::new();
+    assert!(gcode_core::emit_to(&invalid, &machine(), &mut untouched).is_err());
+    assert!(untouched.is_empty());
+}
+
 fn square_layer() -> PlannedLayer {
     PlannedLayer {
         z_mm: 0.2,
@@ -532,7 +560,18 @@ fn output_is_bounded_within_a_single_layer() {
         }],
     };
     assert_eq!(
-        emit(&[layer], &machine()).unwrap_err().code,
+        emit(std::slice::from_ref(&layer), &machine())
+            .unwrap_err()
+            .code,
         "GCODE_OUTPUT_LIMIT"
     );
+    let mut output = String::new();
+    assert_eq!(
+        gcode_core::emit_to(&[layer], &machine(), &mut output)
+            .unwrap_err()
+            .code,
+        "GCODE_OUTPUT_LIMIT"
+    );
+    assert!(output.len() <= MAX_OUTPUT_BYTES);
+    assert!(!output.is_empty());
 }

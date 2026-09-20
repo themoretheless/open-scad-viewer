@@ -20,6 +20,8 @@ mod foreign_feedrate;
 mod foreign_words;
 mod job;
 mod package_3mf;
+mod writer;
+pub use writer::emit_to;
 
 pub use flavor::Flavor;
 pub use foreign::{
@@ -271,12 +273,17 @@ pub(crate) fn output_limit(_: fmt::Error) -> Error {
 
 /// Serialize a preview plan. This contains no homing/heating or printer setup.
 pub fn emit(layers: &[PlannedLayer], machine: &MachineProfile) -> Result<String> {
+    let mut out = BoundedOutput(String::new());
+    emit_body(layers, machine, &mut out)?;
+    Ok(out.0)
+}
+
+fn emit_body(layers: &[PlannedLayer], machine: &MachineProfile, out: &mut impl Write) -> Result<()> {
     machine.validate()?;
     require_layers(layers)?;
     let ratio = machine.bead_area_mm2() / machine.filament_area_mm2();
     let print_f = machine.print_feedrate_mm_s * 60.0;
     let travel_f = machine.travel_feedrate_mm_s * 60.0;
-    let mut out = BoundedOutput(String::new());
     writeln!(out, "; {DIALECT}\n; Preview only: model coordinates, no printer startup or shutdown\n;FILAMENT_DIAMETER_MM:{}", machine.filament_diameter_mm).map_err(output_limit)?;
     for command in PROLOGUE {
         writeln!(out, "{command}").map_err(output_limit)?;
@@ -333,7 +340,7 @@ pub fn emit(layers: &[PlannedLayer], machine: &MachineProfile) -> Result<String>
             }
         }
     }
-    Ok(out.0)
+    Ok(())
 }
 
 #[derive(Default)]
