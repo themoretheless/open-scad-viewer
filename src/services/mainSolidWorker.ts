@@ -4,6 +4,7 @@ import type {PickHit} from './rendererContracts'
 import type {DirectDocument} from './directModeling'
 import type {MainOperation,MainParameters} from './mainModeling'
 import type {TrussInput} from './trussAnalysis'
+import {resolveTrussScenario, type TrussScenario} from './trussScenario'
 import {MainSolidWorkerClient,type MainSolidRunOptions} from './mainSolidWorkerClient'
 
 // One warm worker serves all main-solid/CAD operations; the geometry kernel is
@@ -27,4 +28,10 @@ export function computeCadInspection(bodies:import('./directModeling').DirectBod
 
 export function computeTrussAnalysis(model:TrussInput,options:MainSolidRunOptions={}){
  return shared.run({kind:'truss',model},{...options,timeoutMs:options.timeoutMs??30000})
+}
+
+export async function computeTrussScenario(scenario:TrussScenario,options:MainSolidRunOptions={}){
+ const resolved=resolveTrussScenario(scenario)
+ const result=await computeTrussAnalysis(resolved.model,options)
+ return {...resolved,result}
 }

@@ -1,8 +1,9 @@
 import {Worker} from 'node:worker_threads'
-import {afterEach, expect, it} from 'vitest'
+import {afterEach, expect, it, vi} from 'vitest'
 import {MainSolidWorkerClient, type MainSolidPort} from '../src/services/mainSolidWorkerClient'
 import type {MainSolidRequest} from '../src/services/mainSolidProtocol'
 import type {TrussModel} from '../src/services/trussAnalysis'
+import {resolveTrussScenario} from '../src/services/trussScenario'
 import {extrudeDirectSketch} from '../src/services/directModeling'
 import {previewMeshes} from '../src/services/mainModeling'
 
@@ -26,7 +27,7 @@ function realWorker(){
   })
   workers.push(worker);return new NodePort(worker)
 }
-afterEach(async()=>{clients.splice(0).forEach(c=>c.dispose());await Promise.all(workers.splice(0).map(w=>w.terminate()))})
+afterEach(async()=>{clients.splice(0).forEach(c=>c.dispose());await Promise.all(workers.splice(0).map(w=>w.terminate()));vi.unstubAllGlobals()})
 
 it('runs the shipped entry with real WASM, reuses it and preserves typed errors',async()=>{
   const client=new MainSolidWorkerClient(realWorker);clients.push(client)
@@ -66,8 +67,35 @@ it('runs the shipped entry with real WASM, reuses it and preserves typed errors'
     await expect(client.run({kind:'truss',model:{...structure,loads}})).rejects.toMatchObject({code:'TRUSS_LOAD_UNREALIZABLE'})
     loads[0].momentNmm=[0,0,0]
     expect((await client.run({kind:'truss',model:{...structure,loads}})).axialForcesN[0]).toBeCloseTo(100,10)
+    const scenario=resolveTrussScenario({nodesMm:structure.nodesMm,members:structure.members,cases:[
+      {id:'pull',restrained:structure.restrained,loads},
+      {id:'reverse',restrained:structure.restrained,loads},
+    ],combinations:[{id:'combined',terms:[{caseId:'pull',factor:1.2},{caseId:'reverse',factor:-0.5}]}],activeId:'combined'})
+    expect((await client.run({kind:'truss',model:scenario.model})).axialForcesN[0]).toBeCloseTo(70,10)
     expect(workers).toHaveLength(1)
   } finally {clearInterval(timer)}
+},30000)
+
+it('runs the public scenario API in the shared real worker and returns the exact input snapshot',async()=>{
+  vi.stubGlobal('Worker',class {constructor(){return realWorker()}})
+  const {computeTrussScenario}=await import('../src/services/mainSolidWorker')
+  const {forcesN:_,...structure}=bar()
+  const input={nodesMm:structure.nodesMm,members:structure.members,cases:[{id:'pull',restrained:structure.restrained,
+    loads:[{nodes:[1],originMm:[10,0,0] as [number,number,number],forceN:[100,0,0] as [number,number,number],momentNmm:[0,0,0] as [number,number,number]}]}],
+    combinations:[],activeId:'pull'}
+  const pending=computeTrussScenario(input)
+  await expect(computeTrussScenario({...input,activeId:'missing'})).rejects.toMatchObject({code:'TRUSS_SCENARIO_INVALID'})
+  input.nodesMm[1][0]=20;input.cases[0].loads[0].forceN[0]=200;input.activeId='missing'
+  const resolved=await pending
+  expect(resolved.result.displacementsMm[1][0]).toBeCloseTo(.25,12)
+  expect(resolved.model.nodesMm[1][0]).toBe(10)
+  expect(resolved.model.loads[0].forceN[0]).toBe(100)
+  expect(resolved.activeId).toBe('pull');expect(resolved.terms).toEqual([{caseId:'pull',factor:1}])
+  const controller=new AbortController();controller.abort()
+  input.activeId='pull'
+  await expect(computeTrussScenario(input,{signal:controller.signal})).rejects.toMatchObject({name:'AbortError'})
+  expect((await computeTrussScenario(input)).result.displacementsMm[1][0]).toBeCloseTo(1,12)
+  expect(workers).toHaveLength(1)
 },30000)
 
 it('terminates an entered noncooperative call and recovers with a real CAD worker',async()=>{

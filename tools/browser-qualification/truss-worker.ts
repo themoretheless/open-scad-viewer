@@ -1,5 +1,6 @@
 import {MainSolidWorkerClient} from '../../src/services/mainSolidWorkerClient'
 import type {TrussModel, TrussResponse} from '../../src/services/trussAnalysis'
+import {resolveTrussScenario, type TrussScenario} from '../../src/services/trussScenario'
 
 function fixture(freeNodes:number):TrussModel {
   const model:TrussModel={nodesMm:[[10,0,0],[0,10,0],[0,0,0]],members:[],
@@ -60,6 +61,16 @@ export async function run(workerUrl:string,warmups=200) {
     loads[0].momentNmm[2]-=1
     verify(small,await client.run({kind:'truss',model:{...structure,loads}}))
     if(created!==1)throw Error('Recoverable wrench refusal discarded the worker')
+    const scenario:TrussScenario={nodesMm:structure.nodesMm,members:structure.members,
+      cases:['first','second'].map(id=>({id,restrained:structuredClone(structure.restrained),loads:structuredClone(loads)})),
+      combinations:[{id:'combined',terms:[{caseId:'first',factor:1.5},{caseId:'second',factor:-0.5}]}],activeId:'combined'}
+    const resolved=resolveTrussScenario(scenario)
+    scenario.cases[0].loads[0].forceN[0]=99
+    verify(small,await client.run({kind:'truss',model:resolved.model}))
+    scenario.cases[1].restrained[3][0]=true
+    try {resolveTrussScenario(scenario);throw Error('Expected incompatible-support refusal')}
+    catch(error){if((error as {code?:string}).code!=='TRUSS_SCENARIO_SUPPORTS')throw error}
+    if(created!==1)throw Error('Scenario computation did not reuse the worker')
     const controller=new AbortController()
     const aborted=client.run({kind:'truss',model:fixture(122)},{signal:controller.signal}).then(
       ()=>{throw Error('Cancelled call succeeded')},error=>{if(error.name!=='AbortError')throw error},
@@ -70,6 +81,6 @@ export async function run(workerUrl:string,warmups=200) {
     return {scope:'production CAD worker round trip; includes clone, WASM and reply validation, not GPU upload or full UI',
       coldMs,warmups,samples:31,reports,animationFramesDuringWarmWork:frames,
       maxAnimationGapMs:Math.max(0,...frameTimes.slice(1).map((t,i)=>t-frameTimes[i])),
-      workersCreated:created,singularCode:'TRUSS_SINGULAR',wrenchRecovery:true,abortRecovery:true}
+      workersCreated:created,singularCode:'TRUSS_SINGULAR',wrenchRecovery:true,scenarioSnapshotAndSupportRefusal:true,abortRecovery:true}
   } finally {cancelAnimationFrame(frameHandle);client.dispose()}
 }

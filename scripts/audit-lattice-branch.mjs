@@ -50,6 +50,15 @@ assert.deepEqual(fullyFixed,[8])
 const implicit=legacy.restrain(nodes,[])
 assert.equal(implicit.filter(Boolean).length,12)
 
+const defaultScenario=scenario.defaultCompressionScenario(100)
+defaultScenario.activeId='uls'
+const combined=scenario.resolveActiveCase(defaultScenario)
+const combinationSupportUnion={caseIds:defaultScenario.combinations[0].terms.map(term=>term.caseId),
+  caseSupportNormals:defaultScenario.combinations[0].terms.map(term=>defaultScenario.cases.find(value=>value.id===term.caseId).supports.map(support=>support.normal)),
+  combinedSupportNormals:combined.supports.map(support=>support.normal)}
+assert.deepEqual(combinationSupportUnion.caseSupportNormals,[[[0,0,-1]],[[-1,0,0]]])
+assert.deepEqual(combinationSupportUnion.combinedSupportNormals,[[0,0,-1],[-1,0,0]])
+
 const print=evaluate(sources[2],name=>{
   assert.equal(name,'./solidLightening')
   return {isSpatialPattern:pattern=>['bone','spatial','bcc','octet'].includes(pattern)}
@@ -71,5 +80,6 @@ console.log(JSON.stringify({commit,sourceSha256:Object.fromEntries(paths.map((pa
 ])),scope:'read-only legacy scenario audit; no current solver or material-safety claims',
   moments,pointMoment,pinned:{selectedFace:'-Z',fullyFixedNodes:fullyFixed,coordinates:fullyFixed.map(i=>withInterior[i])},
   emptySupports:{implicitlyRestrainedDofs:implicit.filter(Boolean).length},
+  combinationSupportUnion,
   openingFit,
 },null,2))

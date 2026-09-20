@@ -4,6 +4,11 @@ Follow-up: [native nominal opening fit](lattice-opening-fit-2026-09-20.md)
 selectively replaces the legacy FDM opening optimizer. Other remaining
 strength/scenario features are still subject to the gates below.
 
+Follow-up: [explicit truss scenarios](truss-scenarios-2026-09-20.md) adds bounded
+case selection and signed combinations through the shared worker, refusing the
+legacy support-union behavior. Workbench controls and finished-solid model
+derivation remain outstanding.
+
 ## Scope
 
 Reviewed PR #7, `cursor/lattice-strength-analysis-274c`, at
