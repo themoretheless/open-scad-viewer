@@ -199,3 +199,73 @@ native lightening path and repair geometry semantics; these timings do not
 establish a complete lightening or UI performance improvement.
 Reports: `/private/tmp/osv-isogrid-final-{a,b}.json`.
 Full regression log: `/private/tmp/osv-isogrid-full-tests.log`.
+
+## Truss Numerical Foundation
+
+`mechanics-core::truss` now provides a bounded, typed native solver as the
+replacement foundation for the branch's unchecked dense elimination. It is
+not yet wired to the geometry ABI or workbench. The old TS strength module
+and its heuristic material, moment, support and ranking logic remain unmerged.
+
+The input separates explicit nodal forces, XYZ zero-displacement constraints,
+and per-member modulus/area from geometric graph generation. There is no
+implicit ground support, inferred face load, pseudoinverse fallback, epsilon
+length substitution or automatic stiffness regularization. Inputs are limited
+to 125 nodes and 400 unique members before dense matrices are allocated.
+
+The implementation uses pinned `nalgebra` 0.35.0 with default features off and
+`std` on. Its [checked Cholesky constructor](https://docs.rs/nalgebra/0.35.0/nalgebra/linalg/struct.Cholesky.html#method.new)
+returns no factor for a non-positive-definite matrix. The adapter additionally
+equilibrates by the stiffness diagonal, rejects normalized pivots at or below
+`1e-12`, and verifies free-DOF componentwise backward residuals at `1e-9`.
+The pivot threshold is a refusal heuristic, not a condition-number estimate
+or a bound on displacement forward error. Reactions come from restrained
+components of `K*u-F`, not a proxy based on member-force magnitudes.
+
+Failures return `TRUSS_INVALID_INPUT`, `TRUSS_NUMERIC_RANGE`, `TRUSS_SINGULAR`
+or `TRUSS_RESIDUAL`, without successful-looking displacement/stress values.
+Results are linear axial-bar responses only: no bending, moments, buckling,
+geometric nonlinearity, FDM qualification or strength recommendations.
+
+Verification:
+
+- Nine new solver tests and five existing section tests pass in both debug and
+  release profiles.
+- The exact two-node lateral-load regression now returns `TRUSS_SINGULAR`,
+  including when its load is zero; no unconstrained mode is silently dropped.
+- Analytical axial extension, stress, series-member force and signed support
+  reactions pass, as do fully restrained loads and rotated/translated tripods.
+- Uniform modulus/load scaling from `1e-100` to `1e100` preserves displacement.
+- Near-singular geometry, malformed inputs and numeric overflow fail closed.
+- A 125-node, 366-member fixture solves with 366 free DOFs and checked reactions.
+- `cargo check --locked --manifest-path crates/Cargo.toml -p mechanics-core
+  --target wasm32-unknown-unknown` passes. This is compilation evidence, not
+  browser execution, ABI integration or a shipped-WASM size measurement.
+- Targeted Clippy (`--all-targets --no-deps -- -D warnings`) passes. Including
+  dependency linting fails on 24 pre-existing `planar-geometry` lints; those
+  unrelated files and lint policy were not changed.
+
+`bench_truss` measures validation, assembly, Cholesky, residual checks and
+reaction/member recovery on independent supported-tripod fixtures. Construction
+is outside timing; each case has 20 warmups and 31 samples. Two separate native
+release runs on macOS/aarch64 gave:
+
+| Nodes / free DOFs | p50 run 1 / run 2, ms |
+| --- | ---: |
+| 4 / 3 | 0.00179 / 0.00083 |
+| 43 / 120 | 0.14346 / 0.17058 |
+| 125 / 366 | 2.78188 / 2.81983 |
+
+The maximum relative residual was `2.56e-16` or less for these fixtures. These
+are initial native costs, not a TS comparison, speedup claim, complete lattice
+analysis or a certified structural result. Reproduce with:
+
+```sh
+cargo build --locked --release --manifest-path crates/Cargo.toml -p mechanics-core --example bench_truss
+crates/target/release/examples/bench_truss
+```
+
+Reports: `/private/tmp/osv-truss-native-{a,b}.json`.
+Before UI integration, resolve the branch's support/load semantics against this
+explicit model, test moment resultants, preserve typed failures through the ABI,
+and measure the size/transport cost of linking the new numerical dependency.

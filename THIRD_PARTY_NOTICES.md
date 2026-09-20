@@ -57,6 +57,19 @@ imports. Its compressed bytes are separate from the geometry artifact; the
 ordinary repository-owned DEFLATE decoder loads this bootstrap. The complete
 license notice is copied into the browser distribution by Vite's public assets.
 
+## Linear truss numerical solver
+
+- Crate: `nalgebra` 0.35.0, pinned in `crates/Cargo.lock`
+- Source: <https://github.com/dimforge/nalgebra>
+- License: Apache-2.0; transitive dependencies carry their own licenses
+
+Used by the bounded axial-bar solver in `crates/mechanics-core`. Default
+features are disabled; only `std` is enabled. This numerical module is not yet
+linked into the shipped geometry WASM or exposed in the workbench. It does not
+replace the CAD kernel or certify material properties or structural safety.
+Complete dependency notices must accompany any future distributed binary
+that links this module; the current browser artifact does not contain it.
+
 ## wgpu
 
 - Crate: `wgpu`

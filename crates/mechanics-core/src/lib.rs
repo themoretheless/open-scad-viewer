@@ -1,9 +1,10 @@
 //! Strength-of-materials estimates from already-cut contours.
 //!
-//! Beam/section formulas only: area, centroid, second moments, section moduli,
+//! Section estimates: area, centroid, second moments, section moduli,
 //! a scanline wall-width probe, and σ = Mc/I (+ N/A). Not a surface kernel,
 //! not a subdivision cage, not gear/thread generation (those live in ModelGraph).
-//! Not FEA, not a print process, not a material certificate. The host (CAD)
+//! The separate `truss` module solves bounded linear pin-jointed bar systems.
+//! Neither module is a print process or a material certificate. The host (CAD)
 //! sections a mesh; this crate never holds CAD handles. Coordinates are
 //! millimeters, force is newtons, stress is MPa (N/mm²).
 #![feature(
@@ -17,6 +18,8 @@
 #![allow(unused_features)]
 
 pub const MAX_POINTS: usize = 16_384;
+
+pub mod truss;
 
 pub use math_core::{Error, Result};
 use math_core::{cross2, sub2};
