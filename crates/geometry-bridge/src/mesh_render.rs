@@ -11,7 +11,7 @@ pub struct RenderMesh {
 }
 
 /// `Math.hypot` as V8 evaluates it (scaled Kahan summation).
-fn js_hypot3(v: [f64; 3]) -> f64 {
+pub(crate) fn js_hypot3(v: [f64; 3]) -> f64 {
     let mut max = 0_f64;
     let mut has_nan = false;
     let mut magnitudes = [0_f64; 3];

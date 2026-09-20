@@ -64,6 +64,7 @@ pub mod mesh_analysis;
 mod mesh_export_file;
 pub mod mesh_picking;
 mod mesh_render;
+pub mod mesh_surface_groups;
 pub mod mesh_shell;
 mod scene_picking;
 mod viewport;
