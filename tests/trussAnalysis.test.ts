@@ -1,12 +1,52 @@
 import {expect, it} from 'vitest'
 import {GeometryKernelError, callGeometryRust} from '../src/services/geometry/kernel'
-import {solveTruss, type TrussModel} from '../src/services/trussAnalysis'
+import {solveTruss, type TrussModel, type TrussWrenchModel} from '../src/services/trussAnalysis'
 
 const bar = (): TrussModel => ({
   nodesMm: [[0,0,0],[10,0,0]],
   members: [{nodes:[0,1],youngMpa:2000,areaMm2:2}],
   restrained: [[true,true,true],[false,true,true]],
   forcesN: [[0,0,0],[100,0,0]],
+})
+function loadedBar():TrussWrenchModel {
+  const {forcesN:_,...model}=bar()
+  return {...model,loads:[{nodes:[1],originMm:[10,0,0],forceN:[100,0,0],momentNmm:[0,0,0]}]}
+}
+
+it('assembles explicit signed wrenches in WASM and preserves superposition',()=>{
+  const model=loadedBar()
+  expect(solveTruss(model)).toEqual(solveTruss(bar()))
+  model.loads.push({...model.loads[0],forceN:[-25,0,0]})
+  expect(solveTruss(model).axialForcesN[0]).toBeCloseTo(75,10)
+})
+
+it('does not turn an unrealizable moment into a force or accept ambiguous load input',()=>{
+  const model=loadedBar();model.loads[0].momentNmm=[0,0,100]
+  expect(()=>solveTruss(model)).toThrowError(expect.objectContaining({code:'TRUSS_LOAD_UNREALIZABLE'}))
+  for(const nodes of [[],[1,1],[2],[-1],[0.5]]) {
+    const invalid=loadedBar();invalid.loads[0].nodes=nodes
+    expect(()=>solveTruss(invalid)).toThrow(GeometryKernelError)
+  }
+  expect(()=>solveTruss({...loadedBar(),loads:[]})).toThrow(GeometryKernelError)
+  expect(()=>solveTruss({...loadedBar(),loads:Array(33).fill(loadedBar().loads[0])})).toThrow(GeometryKernelError)
+  expect(()=>solveTruss({...bar(),loads:loadedBar().loads})).toThrow(GeometryKernelError)
+  expect(solveTruss(loadedBar()).axialForcesN[0]).toBeCloseTo(100,10)
+})
+
+it('balances an actual force couple through two independently supported tripods',()=>{
+  const model:TrussWrenchModel={nodesMm:[[10,0,0],[0,10,0],[0,0,0],[1,2,10],[1,2,20]],
+    members:[3,4].flatMap(node=>[0,1,2].map(anchor=>({nodes:[anchor,node] as [number,number],youngMpa:2000,areaMm2:2}))),
+    restrained:[[true,true,true],[true,true,true],[true,true,true],[false,false,false],[false,false,false]],
+    loads:[{nodes:[3,4],originMm:[0,0,0],forceN:[0,0,0],momentNmm:[100,0,0]}]}
+  const result=solveTruss(model),force=[0,0,0],moment=[0,0,0]
+  for(let i=0;i<model.nodesMm.length;i++) {
+    const p=model.nodesMm[i],f=result.reactionsN[i]
+    for(let k=0;k<3;k++)force[k]+=f[k]
+    moment[0]+=p[1]*f[2]-p[2]*f[1];moment[1]+=p[2]*f[0]-p[0]*f[2];moment[2]+=p[0]*f[1]-p[1]*f[0]
+  }
+  force.forEach(v=>expect(v).toBeCloseTo(0,9))
+  moment.forEach((v,i)=>expect(v).toBeCloseTo(i===0?-100:0,9))
+  expect(result.maxDeflectionMm).toBeGreaterThan(0)
 })
 
 it('solves an analytical bar through real WASM without mutating the model', () => {

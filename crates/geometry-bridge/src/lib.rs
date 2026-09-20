@@ -519,7 +519,7 @@ pub fn boundary_curves(mesh: &Mesh) -> Result<Vec<Curve>> {
 }
 pub fn dispatch(mut v: Value) -> Result<Value> {
     match v["op"].as_str().unwrap_or("") {
-        "truss_solve" => truss::solve(v),
+        "truss_solve" | "truss_solve_wrenches" => truss::solve(v),
         "brep_intersect_surface_surface"
         | "brep_intersect_curve_segment"
         | "brep_intersect_curve_plane"

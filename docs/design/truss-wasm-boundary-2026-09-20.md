@@ -77,3 +77,8 @@ different execution boundaries and do not isolate transport versus arithmetic.
 Before UI integration, use a worker, resolve explicit load/support semantics,
 and profile arithmetic/compiler settings with before/after controls. Do not
 run repeated maximum-size solves on the viewport thread.
+
+Follow-up: `truss-wrench-loads-2026-09-20.md` documents explicit force/moment
+assembly and a V8 tiering control. The 20-warmup measurements above capture an
+earlier execution tier; they must not be treated as fully optimized steady-state
+throughput or used to attribute the full native/WASM difference to transport.

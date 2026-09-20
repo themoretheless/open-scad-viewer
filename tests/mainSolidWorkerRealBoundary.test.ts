@@ -61,6 +61,11 @@ it('runs the shipped entry with real WASM, reuses it and preserves typed errors'
     expect(removed.bodies).toHaveLength(0)
     const recovered=await client.run({kind:'truss',model:bar()})
     expect(recovered.axialForcesN[0]).toBeCloseTo(100,10)
+    const {forcesN:_,...structure}=bar()
+    const loads=[{nodes:[1],originMm:[10,0,0] as [number,number,number],forceN:[100,0,0] as [number,number,number],momentNmm:[0,0,100] as [number,number,number]}]
+    await expect(client.run({kind:'truss',model:{...structure,loads}})).rejects.toMatchObject({code:'TRUSS_LOAD_UNREALIZABLE'})
+    loads[0].momentNmm=[0,0,0]
+    expect((await client.run({kind:'truss',model:{...structure,loads}})).axialForcesN[0]).toBeCloseTo(100,10)
     expect(workers).toHaveLength(1)
   } finally {clearInterval(timer)}
 },30000)

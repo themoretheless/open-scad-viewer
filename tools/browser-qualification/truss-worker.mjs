@@ -23,7 +23,8 @@ try {
   await page.route('**/__truss-harness.js',route=>route.fulfill({contentType:'text/javascript',path:join(scratch,'harness.js')}))
   await page.route('**/__truss-bench',route=>route.fulfill({contentType:'text/html',body:'<!doctype html><title>Truss worker qualification</title>'}))
   await page.goto(new URL('__truss-bench',origin).href)
-  const result=await page.evaluate(async worker=>(await import('/__truss-harness.js')).run(`/assets/${worker}`),workers[0])
+  const result=await page.evaluate(async ({worker,warmups})=>(await import('/__truss-harness.js')).run(`/assets/${worker}`,warmups),
+    {worker:workers[0],warmups:Number(process.env.TRUSS_WARMUPS??200)})
   assert.deepEqual(errors,[])
   const hashes={}
   for(const file of [`dist/assets/${workers[0]}`,'public/wasm/geometry-kernel.wasm','tools/browser-qualification/truss-worker.ts'])

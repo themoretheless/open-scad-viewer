@@ -4,7 +4,8 @@ import {readFileSync} from 'node:fs'
 import {performance} from 'node:perf_hooks'
 import {warmGeometryKernel} from '../src/services/geometry/kernel'
 import {setOptionalWasmCompiler} from '../src/services/wasmCompilation'
-import {solveTruss, type TrussModel, type TrussResponse} from '../src/services/trussAnalysis'
+import {solveTruss, type TrussModel, type TrussResponse, type TrussWrenchModel, type TrussVector} from '../src/services/trussAnalysis'
+import {encodeBinary} from '../src/services/valueBinaryCodec'
 
 // Same supported-tripod workloads as mechanics-core/examples/bench_truss.rs.
 function fixture(freeNodes: number): TrussModel {
@@ -55,20 +56,37 @@ await warmGeometryKernel()
 const coldMs=performance.now()-coldStart
 assert.ok(loaded)
 const results=[]
+const warmups=Number(process.env.TRUSS_WARMUPS??200)
+assert.ok(Number.isSafeInteger(warmups)&&warmups>=0&&warmups<=1000,'TRUSS_WARMUPS must be 0-1000')
 for (const freeNodes of [1,40,122]) {
   const model=fixture(freeNodes)
-  for(let i=0;i<20;i++) verify(model,solveTruss(model))
-  const samplesMs=[]
+  const {forcesN:_,...structure}=model
+  const forceN:TrussVector=[0,0,0],momentNmm:TrussVector=[0,0,0]
+  for(let i=3;i<model.nodesMm.length;i++) {
+    const p=model.nodesMm[i],f=model.forcesN[i]
+    for(let k=0;k<3;k++)forceN[k]+=f[k]
+    momentNmm[0]+=p[1]*f[2]-p[2]*f[1];momentNmm[1]+=p[2]*f[0]-p[0]*f[2];momentNmm[2]+=p[0]*f[1]-p[1]*f[0]
+  }
+  const wrench:TrussWrenchModel={...structure,loads:[{nodes:Array.from({length:freeNodes},(_,i)=>i+3),originMm:[0,0,0],forceN,momentNmm}]}
+  for(let i=0;i<warmups;i++)for(const input of [model,wrench])verify(model,solveTruss(input))
+  const samplesMs:number[]=[],wrenchSamplesMs:number[]=[]
   for(let i=0;i<31;i++) {
-    const start=performance.now(), result=solveTruss(model)
-    samplesMs.push(performance.now()-start)
-    verify(model,result)
+    for(const mode of i%2?[1,0]:[0,1]) {
+      const input=mode?wrench:model,start=performance.now(),result=solveTruss(input)
+      ;(mode?wrenchSamplesMs:samplesMs).push(performance.now()-start)
+      verify(model,result)
+    }
   }
   const ordered=[...samplesMs].sort((a,b)=>a-b)
+  const wrenchOrdered=[...wrenchSamplesMs].sort((a,b)=>a-b)
   results.push({nodes:model.nodesMm.length,members:model.members.length,
-    freeDofs:freeNodes*3,p50Ms:ordered[15],p95Ms:ordered[29],samplesMs})
+    freeDofs:freeNodes*3,p50Ms:ordered[15],p95Ms:ordered[29],samplesMs,
+    wrenchP50Ms:wrenchOrdered[15],wrenchP95Ms:wrenchOrdered[29],wrenchSamplesMs,
+    inputBytes:{nodal:encodeBinary({op:'truss_solve',...model}).byteLength,
+      wrench:encodeBinary({op:'truss_solve_wrenches',...wrench}).byteLength}})
 }
 console.log(JSON.stringify({node:process.version,arch:process.arch,platform:process.platform,
+  execArgv:process.execArgv,
   artifactBytes:artifact.length,artifactSha256:createHash('sha256').update(artifact).digest('hex'),
-  scope:'complete warm WASM call: encode, validate, solve, decode; not UI or TS speedup',
-  coldCompileAndInstantiateMs:coldMs,warmups:20,samples:31,results},null,2))
+  scope:'alternating equivalent nodal/wrench models; complete warm WASM call, not UI or TS speedup',
+  coldCompileAndInstantiateMs:coldMs,warmups,samples:31,results},null,2))

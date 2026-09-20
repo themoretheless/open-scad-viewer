@@ -4,13 +4,13 @@ import type {CadPairReport} from './cadInspection'
 import type {DirectBody, DirectDocument} from './directModeling'
 import type {MainOperation, MainParameters} from './mainModeling'
 import type {PickHit} from './rendererContracts'
-import type {TrussModel, TrussResponse} from './trussAnalysis'
+import type {TrussInput, TrussResponse} from './trussAnalysis'
 
 export type MainSolidJob =
   | {kind:'main'; meshes:MeshData[]; selected:number; hit:PickHit|null; operation:MainOperation; parameters:MainParameters}
   | {kind:'cad'; document:DirectDocument; options:CadOptions}
   | {kind:'inspect'; bodies:DirectBody[]}
-  | {kind:'truss'; model:TrussModel}
+  | {kind:'truss'; model:TrussInput}
 export interface MainSolidResults {main:DirectDocument; cad:DirectDocument; inspect:CadPairReport[]; truss:TrussResponse}
 export type MainSolidRequest = {version:1; id:number; job:MainSolidJob}
 export type MainSolidResponse = {version:1; id:number; kind:MainSolidJob['kind']} & (

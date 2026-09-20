@@ -19,7 +19,8 @@ function verify(model:TrussModel,result:TrussResponse) {
   }
 }
 
-export async function run(workerUrl:string) {
+export async function run(workerUrl:string,warmups=200) {
+  if(!Number.isSafeInteger(warmups)||warmups<0||warmups>1000)throw Error('warmups must be 0-1000')
   let created=0,frames=0,frameHandle=0
   const frameTimes:number[]=[]
   const tick=(now:number)=>{frames++;frameTimes.push(now);frameHandle=requestAnimationFrame(tick)}
@@ -33,7 +34,7 @@ export async function run(workerUrl:string) {
     const reports=[]
     for(const freeNodes of [1,40,122]) {
       const model=fixture(freeNodes)
-      for(let i=0;i<20;i++)verify(model,await client.run({kind:'truss',model}))
+      for(let i=0;i<warmups;i++)verify(model,await client.run({kind:'truss',model}))
       const samplesMs=[]
       for(let i=0;i<31;i++) {
         const start=performance.now(),result=await client.run({kind:'truss',model})
@@ -50,6 +51,15 @@ export async function run(workerUrl:string) {
     try {await client.run({kind:'truss',model:unstable});throw Error('Expected singular refusal')}
     catch(error){if((error as {code?:string}).code!=='TRUSS_SINGULAR')throw error}
     if(created!==1)throw Error('Recoverable refusal discarded the worker')
+    const {forcesN:_,...structure}=small
+    const loads=[{nodes:[3],originMm:[0,0,0] as [number,number,number],forceN:[1,-2,-3] as [number,number,number],momentNmm:[14,13,-4] as [number,number,number]}]
+    verify(small,await client.run({kind:'truss',model:{...structure,loads}}))
+    loads[0].momentNmm[2]+=1
+    try {await client.run({kind:'truss',model:{...structure,loads}});throw Error('Expected unrealizable-load refusal')}
+    catch(error){if((error as {code?:string}).code!=='TRUSS_LOAD_UNREALIZABLE')throw error}
+    loads[0].momentNmm[2]-=1
+    verify(small,await client.run({kind:'truss',model:{...structure,loads}}))
+    if(created!==1)throw Error('Recoverable wrench refusal discarded the worker')
     const controller=new AbortController()
     const aborted=client.run({kind:'truss',model:fixture(122)},{signal:controller.signal}).then(
       ()=>{throw Error('Cancelled call succeeded')},error=>{if(error.name!=='AbortError')throw error},
@@ -58,8 +68,8 @@ export async function run(workerUrl:string) {
     verify(small,await client.run({kind:'truss',model:small}))
     if(Number(created)!==2)throw Error('Cancellation did not replace the worker')
     return {scope:'production CAD worker round trip; includes clone, WASM and reply validation, not GPU upload or full UI',
-      coldMs,warmups:20,samples:31,reports,animationFramesDuringWarmWork:frames,
+      coldMs,warmups,samples:31,reports,animationFramesDuringWarmWork:frames,
       maxAnimationGapMs:Math.max(0,...frameTimes.slice(1).map((t,i)=>t-frameTimes[i])),
-      workersCreated:created,singularCode:'TRUSS_SINGULAR',abortRecovery:true}
+      workersCreated:created,singularCode:'TRUSS_SINGULAR',wrenchRecovery:true,abortRecovery:true}
   } finally {cancelAnimationFrame(frameHandle);client.dispose()}
 }

@@ -66,7 +66,8 @@ license notice is copied into the browser distribution by Vite's public assets.
 
 Used by the bounded axial-bar solver in `crates/mechanics-core`. Default
 features are disabled; only `std` is enabled. The geometry WASM exposes this
-module through the strict `truss_solve` operation and a TypeScript adapter.
+module through the strict `truss_solve` and `truss_solve_wrenches` operations
+and a TypeScript adapter.
 It is not yet connected to workbench controls. It does not replace the CAD
 kernel or certify material properties or structural safety. The notice bundle
 contains the pinned normal wasm32 dependencies' complete license files and is
