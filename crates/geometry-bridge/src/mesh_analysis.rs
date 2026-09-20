@@ -30,6 +30,9 @@ pub fn analyze_solid(
 }
 
 pub enum AnalysisBuffers {
+    SurfaceGroups {
+        ids: Vec<u32>,
+    },
     Bytes {
         bytes: Vec<u8>,
     },
@@ -79,6 +82,7 @@ pub fn store(result: AnalysisBuffers) -> usize {
 
 /// Even slots return a buffer pointer, odd slots its element length.
 /// BVH: 0/1 bounds (f32), 2/3 nodes (u32), 4/5 triangles (u32).
+/// SurfaceGroups: 0/1 ids (u32).
 /// Placement: 0/1 positions (f64), 2/3 indices (u32).
 /// Edges: 0/1 indices (u32); slots 2..=5 return the diagnostic counters
 /// (boundary, crease, non-manifold, degenerate) directly.
@@ -93,6 +97,11 @@ pub fn field(handle: usize, slot: u32) -> usize {
             return 0;
         };
         match result {
+            AnalysisBuffers::SurfaceGroups { ids } => match slot {
+                0 => ids.as_ptr() as usize,
+                1 => ids.len(),
+                _ => 0,
+            },
             AnalysisBuffers::Bytes { bytes } => match slot {
                 0 => bytes.as_ptr() as usize,
                 1 => bytes.len(),

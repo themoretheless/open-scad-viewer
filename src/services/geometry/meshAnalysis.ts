@@ -15,6 +15,22 @@ export interface KernelBvhResult {
   readonly triangles: Uint32Array
 }
 
+/** Candidate grouping boundary; includes uploads, detached output and lease release. */
+export function surfaceGroupsInKernel(vertices: Float32Array, indices: Uint32Array, vertexStride = 6, angleDegrees = 30): Uint32Array<ArrayBuffer> {
+  const {exports: wasm, memory, takeResponse} = kernelRuntime()
+  let vp = 0, ip = 0, handle = 0
+  try {
+    vp = copyBuffer(wasm, new Uint8Array(vertices.buffer, vertices.byteOffset, vertices.byteLength))
+    ip = copyBuffer(wasm, new Uint8Array(indices.buffer, indices.byteOffset, indices.byteLength))
+    handle = decodeNurbsResult<number>(takeResponse(wasm.abi_surface_groups(vertexStride, vp, vertices.length, ip, indices.length, angleDegrees)))
+    return new Uint32Array(memory.buffer, wasm.abi_array_field(handle, 0), wasm.abi_array_field(handle, 1)).slice()
+  } finally {
+    if (handle) wasm.abi_array_free(handle)
+    if (ip) wasm.abi_free(ip, indices.byteLength)
+    if (vp) wasm.abi_free(vp, vertices.byteLength)
+  }
+}
+
 export interface KernelSemanticEdgesResult {
   readonly indices: Uint32Array
   readonly diagnostics: MeshTopologyDiagnostics
