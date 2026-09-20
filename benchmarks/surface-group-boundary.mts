@@ -5,8 +5,18 @@ import {performance} from 'node:perf_hooks'
 import {CadGeometryKernel} from '../src/services/cadGeometryKernel'
 import {surfaceGroupsInKernel} from '../src/services/geometry/meshAnalysis'
 import {inferSurfaceIds} from '../src/services/meshSurfaceGroups'
+import {setOptionalWasmCompiler} from '../src/services/wasmCompilation'
 
+const artifactPath = process.argv[2] ?? 'public/wasm/geometry-kernel.wasm'
+const artifact = readFileSync(artifactPath)
+let loaded = false
+setOptionalWasmCompiler(async url => {
+  if (url !== '/wasm/geometry-kernel.wasm') return null
+  loaded = true
+  return WebAssembly.compile(artifact)
+})
 const session = await new CadGeometryKernel().openSession()
+assert.equal(loaded, true, 'Benchmark did not load the selected WASM artifact')
 const results = []
 try {
   for (const triangles of [128, 8192, 65536]) {
@@ -31,9 +41,11 @@ try {
   }
 } finally { session.dispose() }
 const hashes = Object.fromEntries([
-  'public/wasm/geometry-kernel.wasm', 'src/services/meshSurfaceGroups.ts',
+  'src/services/meshSurfaceGroups.ts',
   'crates/geometry-bridge/src/mesh_surface_groups.rs', 'benchmarks/surface-group-boundary.mts',
 ].map(path => [path, createHash('sha256').update(readFileSync(path)).digest('hex')]))
 console.log(JSON.stringify({node: process.version, arch: process.arch, platform: process.platform,
+  artifactPath, artifactSha256: createHash('sha256').update(artifact).digest('hex'),
+  sourceHashesDescribe: 'working tree, not necessarily the selected historical artifact',
   scope: 'warm standalone grouping, including WASM uploads/copy/free; not complete scene publication or cache hits',
   warmups: 5, samples: 15, hashes, results}, null, 2))

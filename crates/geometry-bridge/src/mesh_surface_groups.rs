@@ -77,7 +77,6 @@ pub fn surface_group_ids(
     }
 
     let mut edges = HashMap::<(u32, u32), GroupEdge>::new();
-    let mut edge_order = Vec::<(u32, u32)>::new();
     for t in 0..count {
         let v = [indices[t * 3], indices[t * 3 + 1], indices[t * 3 + 2]];
         if v.iter().any(|&i| i as usize >= canonical.len()) {
@@ -113,7 +112,6 @@ pub fn surface_group_ids(
                     edge.other = t as i32;
                 }
             } else {
-                edge_order.push(key);
                 edges.insert(
                     key,
                     GroupEdge {
@@ -129,8 +127,9 @@ pub fn surface_group_ids(
     }
 
     let threshold = (angle_degrees * std::f64::consts::PI / 180.).cos();
-    for key in edge_order {
-        let edge = &edges[&key];
+    // Every union keeps the minimum triangle root. Edge traversal order cannot
+    // change components or the first-triangle numbering assigned below.
+    for edge in edges.values() {
         if edge.count == 2 && edge.other >= 0 {
             let a = edge.triangle;
             let b = edge.other as u32;

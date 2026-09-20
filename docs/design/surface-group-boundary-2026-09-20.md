@@ -122,6 +122,36 @@ uses `--maxWorkers 2`, matching local control; per-test timeouts and qualificati
 assertions are unchanged. Whether this removes remote timeout failures remains
 unverified until the next CI run. Log: `/private/tmp/osv-ci-35481315494-node22.log`.
 
+## Edge Traversal Follow-Up
+
+The Rust implementation no longer retains an insertion-order vector of edge
+keys or performs a second hash lookup per edge during union. Every union keeps
+the minimum triangle root; connected components and first-triangle compact IDs
+are independent of edge traversal order. The 838 shared native/TS fixtures
+still agree exactly after this change.
+
+The boundary benchmark now accepts an explicit WASM path, verifies that the
+optional compiler actually loaded it, and records its hash separately from
+working-tree source hashes. This allows A-B-B-A without changing host code or
+rebuilding the historical control. Each series retains five warmups, fifteen
+alternating host/Rust samples, and exact-ID checks outside timing.
+
+| Triangles | Old WASM A1/A2 p50, ms | New WASM B1/B2 p50, ms |
+| --- | ---: | ---: |
+| 128 | 0.06471 / 0.06533 | 0.06504 / 0.06675 |
+| 8192 | 1.94746 / 1.95975 | 1.82658 / 1.83971 |
+| 65536 | 16.38200 / 16.23463 | 14.71133 / 15.17675 |
+
+The medium strip improves about 6%, the large strip about 7-10%; the small
+strip does not improve. Host controls vary between 25.92 and 27.75 ms on the
+large case, so do not treat the precise percentage as universal. No complete
+scene speedup is inferred from this boundary-only experiment.
+
+Old artifact: `bb075a40cc24aa3127343c0ab7679fd068cef8d5b6cf638bb2b2f54845a39379`.
+New artifact: `4965b89d8c271b55cbd522331e17f8e2d79fc66c9c23ad5139ef0c51ed252bfe`,
+7,680,136 bytes (38 fewer). Reports:
+`/private/tmp/osv-surface-edge-order-{a1,b1,b2,a2}.json`.
+
 ## Remaining Optimization
 
 Do not copy the old branch's export-then-render grouping sequence: it computes
