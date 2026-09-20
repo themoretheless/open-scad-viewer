@@ -44,7 +44,7 @@ export function decodeBinary(data:Uint8Array,hints?:BinaryTripleHints):unknown {
  const get=(depth:number,hint?:'f64'|'u8'|'u32'):unknown=>{
   if(depth>128||++nodes>4_000_000)throw new Error('Binary nesting or item limit');need(1);const tag=data[offset++]
   if(tag===0)return null;if(tag===1)return false;if(tag===2)return true
-  if(tag===3||tag===7||tag===8){need(8);const n=tag===3?view.getFloat64(offset,true):Number(tag===7?view.getBigUint64(offset,true):view.getBigInt64(offset,true));offset+=8;if(!Number.isFinite(n)||(tag!==3&&!Number.isSafeInteger(n)))throw new Error('Invalid binary number');return n}
+  if(tag===3||tag===7||tag===8){need(8);const n=tag===3?view.getFloat64(offset,true):view.getUint32(offset,true)+(tag===7?view.getUint32(offset+4,true):view.getInt32(offset+4,true))*4294967296;offset+=8;if(!Number.isFinite(n)||(tag!==3&&!Number.isSafeInteger(n)))throw new Error('Invalid binary number');return n}
   if(tag===4){const n=count();need(n);const s=decoder.decode(data.subarray(offset,offset+n));offset+=n;return s}
   if(tag===5||tag===6){const n=count();if(n>data.length-offset||n>4_000_000-nodes)throw new Error('Binary item limit');if(tag===5){if(hint){const flat=triples(n,hint);if(flat)return flat}const out:unknown[]=[];for(let i=0;i<n;i++)out.push(get(depth+1));return out}const out:Record<string,unknown>={};for(let i=0;i<n;i++){const k=get(depth+1);if(typeof k!=='string'||Object.hasOwn(out,k))throw new Error('Invalid or duplicate binary object key');Object.defineProperty(out,k,{value:get(depth+1,hints?.[k]),enumerable:true,writable:true,configurable:true})}return out}
   throw new Error('Invalid binary tag')

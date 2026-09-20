@@ -6,6 +6,27 @@ import {callGeometryRust,createRustSurfaceEvaluator} from '../src/services/geome
 import {prepareGraphRust} from '../src/services/languages/kernel'
 
 describe('dependency-free WASM boundary',()=>{
+ it('preserves safe signed/unsigned 64-bit boundaries and refuses unsafe integers',()=>{
+  const bytes=new Uint8Array(13),view=new DataView(bytes.buffer)
+  bytes.set([77,71,86,49])
+  const values=[0n,1n,-1n,2147483647n,2147483648n,4294967295n,4294967296n,-4294967296n,-4294967297n,9007199254740991n,-9007199254740991n,9007199254740992n,-9007199254740992n,9223372036854775807n,-9223372036854775808n,18446744073709551615n]
+  let seed=19
+  for(let i=0;i<1000;i++){
+   seed=(Math.imul(seed,1664525)+1013904223)>>>0
+   const high=seed
+   seed=(Math.imul(seed,1664525)+1013904223)>>>0
+   values.push((BigInt(high)<<32n)|BigInt(seed))
+   const safe=(BigInt(high&0x1fffff)<<32n)|BigInt(seed)
+   values.push(safe,-safe)
+  }
+  for(const value of values)for(const tag of [7,8]){
+   bytes[4]=tag
+   view.setBigUint64(5,BigInt.asUintN(64,value),true)
+   const expected=Number(tag===7?view.getBigUint64(5,true):view.getBigInt64(5,true))
+   if(Number.isSafeInteger(expected))expect(decodeBinary(bytes)).toBe(expected)
+   else expect(()=>decodeBinary(bytes)).toThrow('Invalid binary number')
+  }
+ })
  it('round-trips Unicode, numbers, arrays and own prototype-like keys',()=>{
   const value={text:'Русский 😀\u0000',values:[null,true,false,-0,0,-1,1.5,Number.MAX_SAFE_INTEGER],['__proto__']:{safe:true}}
   const restored=decodeBinary(encodeBinary(value))
