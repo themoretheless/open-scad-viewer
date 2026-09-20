@@ -38,6 +38,7 @@ mod cad_draft;
 mod cad_edge_edit;
 mod cad_face_selection;
 mod cad_hole;
+mod cad_centered_lattice;
 mod cad_lattice;
 mod cad_mesh_planes;
 mod cad_mesh_topology;

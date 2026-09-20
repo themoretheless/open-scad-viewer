@@ -609,7 +609,7 @@ pub fn graph(v: Value) -> Result<Value> {
             "Spatial graph requires positive cell size, jitter between 0 and 1, and an integer seed.",
         ));
     }
-    if !["spatial", "bone"].contains(&pattern.as_str()) {
+    if !["spatial", "bone", "bcc", "octet"].contains(&pattern.as_str()) {
         return Err(input("Invalid spatial lattice pattern."));
     }
 
@@ -634,6 +634,10 @@ pub fn graph(v: Value) -> Result<Value> {
         return Err(input(
             "Spatial graph exceeds 125 nodes. Increase cell size.",
         ));
+    }
+
+    if matches!(pattern.as_str(), "bcc" | "octet") {
+        return crate::cad_centered_lattice::graph(min, max, cells, &pattern);
     }
 
     let mut seed = seed.trunc().rem_euclid(4294967296.) as u32;
@@ -746,7 +750,7 @@ pub fn lightening(v: Value) -> Result<Value> {
             "Rib is thinner than the requested number of extrusion lines. Increase rib width or change the print settings.",
         ));
     }
-    if pattern == "bone" || pattern == "spatial" {
+    if matches!(pattern.as_str(), "bone" | "spatial" | "bcc" | "octet") {
         let skin: f64 = if v.get("skin").is_some_and(|field| !field.is_null()) {
             field(&v, "skin")?
         } else {
@@ -1050,7 +1054,10 @@ pub fn print_fit(v: Value) -> Result<Value> {
         width,
     );
     let cell = required_lattice_option(&options, "cell")?.max(rib * 2. + width);
-    let spatial = matches!(options["pattern"].as_str(), Some("bone" | "spatial"));
+    let spatial = matches!(
+        options["pattern"].as_str(),
+        Some("bone" | "spatial" | "bcc" | "octet")
+    );
 
     let mut result = options;
     result["lineWidth"] = Value::from(width);

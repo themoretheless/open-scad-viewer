@@ -1,6 +1,9 @@
 import {callGeometryRust} from './geometry/kernel'
 import type {DirectBody} from './directModeling'
-export type LighteningPattern='bone'|'spatial'|'grid'|'triangles'|'honeycomb'|'web'
+export type LighteningPattern='bone'|'spatial'|'bcc'|'octet'|'grid'|'triangles'|'honeycomb'|'web'
+export function isSpatialPattern(pattern:LighteningPattern|undefined):boolean{
+ return pattern==='bone'||pattern==='spatial'||pattern==='bcc'||pattern==='octet'
+}
 export interface LighteningOptions {pattern:LighteningPattern;axis:'x'|'y'|'z';cell:number;rib:number;rim:number;bottom:number;top:number;seed:number;jitter:number;lineWidth:number;perimeters:number;skin?:number;step?:number;openTop?:boolean;diagonals?:boolean;wallDepth?:number;keepCore?:boolean}
 type P=[number,number]
 export function lighteningCells(min:P,max:P,o:LighteningOptions):P[][]{

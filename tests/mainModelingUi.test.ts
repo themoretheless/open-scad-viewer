@@ -2,6 +2,7 @@ import {createRenderer,nextTick} from 'vue'
 import {it,expect,vi,afterEach} from 'vitest'
 import MainModelingOverlay from '../src/features/MainModelingOverlay.vue'
 import MainSketchTools from '../src/features/MainSketchTools.vue'
+import CadWorkbenchPanel from '../src/features/CadWorkbenchPanel.vue'
 import {previewMeshes} from '../src/services/mainModeling'
 import {extrudeDirectSketch,type DirectDocument} from '../src/services/directModeling'
 import {sampleCurve} from '../src/services/directSketchGeometry'
@@ -39,6 +40,25 @@ async function mount(component:any,props:any){
 }
 const body=extrudeDirectSketch({id:'s',name:'Box',closed:true,points:[[0,0],[10,0],[10,10],[0,10]]},10,'0')
 const parameters={amount:2,x:0,y:0,z:0,axis:'z',edge:0,shape:'rectangle',width:2,height:2,cut:false}
+it('offers centered lattice patterns with spatial controls and no ineffective randomization',async()=>{
+ const ui=await mount(CadWorkbenchPanel,{meshes:[],selection:[],hit:null,source:'',ready:true,locale:'en',initialAction:'lighten'})
+ const select=ui.all().find(n=>n.tag==='select'&&n.options.some(o=>o.value==='bcc'))!
+ expect(select).toBeDefined()
+ expect(select.options.some(o=>o.value==='octet')).toBe(true)
+ for(const pattern of ['bcc','octet']){
+  select.props['onUpdate:modelValue'](pattern);await nextTick()
+  const labels=ui.all().filter(n=>n.tag==='label').map(ui.text)
+  expect(labels.some(s=>s.includes('Outer skin, mm'))).toBe(true)
+  expect(labels.some(s=>s.includes('Sampling step, mm'))).toBe(true)
+  expect(labels.some(s=>s.includes('Channel axis'))).toBe(false)
+  expect(labels.some(s=>s.includes('Randomness'))).toBe(false)
+  expect(ui.all().some(n=>n.tag==='button'&&ui.text(n)==='Next variation')).toBe(false)
+ }
+ select.props['onUpdate:modelValue']('spatial');await nextTick()
+ expect(ui.all().some(n=>n.tag==='label'&&ui.text(n).includes('Randomness'))).toBe(true)
+ select.props['onUpdate:modelValue']('grid');await nextTick()
+ expect(ui.all().some(n=>n.tag==='label'&&ui.text(n).includes('Channel axis'))).toBe(true)
+})
 it('drags a main viewport gizmo and commits once on release',async()=>{
  const values:any[]=[],preview=vi.fn(),apply=vi.fn()
  const ui=await mount(MainModelingOverlay,{meshes:previewMeshes({version:1,sketches:[],bodies:[body]}),selected:0,selection:[0],hit:null,operation:'move',parameters,project:(p:number[])=>[p[0]*10,p[1]*10],revision:0,box:false,onParameters:(p:any)=>values.push(p),onPreview:preview,onApply:apply})
