@@ -78,3 +78,27 @@ are synthetic signed values; this measures display preparation, not solving.
 Reports: `/private/tmp/osv-truss-field-bench-{a,b}.json`. The result supports
 batching but does not prove browser main-thread/frame latency; a browser
 timing check remains necessary before deciding on a worker migration.
+
+## Browser Preparation Timing
+
+Enable `TRUSS_FIELD_BENCH=1` alongside `TRUSS_TOOLS=1 TRUSS_VIEWPORT=1` in
+the browser harness. The 125-node/400-member fixture is created outside timing;
+20 warmups precede 31 measurements separated by animation frames. Each result
+is checked for three meshes and 3200 triangles outside its timed interval.
+Only mesh preparation is timed, not renderer upload, GPU work or presentation.
+
+Chrome 156.0.8063.3, two process runs:
+
+| Viewport | p50 ms A/B | p95 ms A/B |
+| --- | ---: | ---: |
+| 1280x900 | 5.5 / 5.5 | 6.6 / 6.4 |
+| 390x844 | 6.0 / 5.9 | 6.6 / 6.4 |
+
+Both viewports use the same development machine, not mobile hardware or CPU
+throttling. Reports: `/private/tmp/osv-truss-field-browser-bench-{a,b}.json`.
+The browser cost is materially higher than Node. Retain the bounded,
+user-triggered synchronous preparation for now; no continuous per-frame
+rebuild is performed. A larger graph budget, animated fields or measured
+slow-device stalls would require revisiting worker preparation. These results
+are not a universal frame-time guarantee or a browser batching speedup claim:
+the per-member control was measured only in Node.

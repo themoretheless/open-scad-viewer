@@ -133,6 +133,25 @@ try{
       await results.getByLabel('Preview axial force sign',{exact:true}).check()
     }
     const fieldPixels=await captureViewport('field')
+    let fieldPreparation=null
+    if(process.env.TRUSS_FIELD_BENCH==='1'){
+      fieldPreparation=await page.evaluate(async()=>{
+        const {trussFieldMeshes}=await import('/src/services/trussFieldMeshes.ts')
+        const nodesMm=Array.from({length:125},(_,i)=>[i%5*10,Math.floor(i/5)%5*10,Math.floor(i/25)*10]),members=[]
+        for(let a=0;a<125&&members.length<400;a++)for(let b=a+1;b<125&&members.length<400;b++)members.push({nodes:[a,b],youngMpa:2000,areaMm2:2})
+        const model={nodesMm,members,restrained:[],forcesN:[]},result={axialForcesN:members.map((_,i)=>i%3-1),axialStressesMpa:[],displacementsMm:[],reactionsN:[],maxDeflectionMm:0,maxRelativeResidual:0,freeDofs:0}
+        const prepare=()=>trussFieldMeshes(model,result,1)
+        for(let i=0;i<20;i++)prepare()
+        const samplesMs=[]
+        for(let i=0;i<31;i++){
+          await new Promise(resolve=>requestAnimationFrame(resolve))
+          const start=performance.now(),meshes=prepare();samplesMs.push(performance.now()-start)
+          if(meshes.length!==3||meshes.reduce((sum,mesh)=>sum+mesh.indices.length/3,0)!==3200)throw Error('Marker benchmark geometry changed')
+        }
+        const sorted=[...samplesMs].sort((a,b)=>a-b)
+        return {members:400,meshes:3,triangles:3200,warmups:20,samplesMs,p50Ms:sorted[15],p95Ms:sorted[29],scope:'Warm CPU mesh preparation only, no renderer upload or frame timing'}
+      })
+    }
     if(fieldPixels)assert.ok(fieldPixels.blue+fieldPixels.red>20,JSON.stringify(fieldPixels))
     if(fieldPixels){
       await page.locator('.cad-workbench').evaluate(element=>element.style.visibility='hidden')
@@ -211,7 +230,7 @@ try{
     assert.deepEqual(errors,[])
     reports.push({name,viewport,bounds,screenshot,controlsScreenshot,nominalNodes:14,nominalMembers:36,
       singleReactionN:100,combinedReactionN:95,singularRefusal:true,incompatibleSupportsRefusal:true,
-      staleReplyIgnored:true,meshReplacementInvalidated:true,sourceInvalidated:true,viewportEvidence,errors})
+      staleReplyIgnored:true,meshReplacementInvalidated:true,sourceInvalidated:true,fieldPreparation,viewportEvidence,errors})
     await page.close()
   }
   console.log(JSON.stringify({browser:browser.version(),scope:'Actual CAD panel, scenario API and real native worker on desktop/mobile; intercepted late replies test invalidation, not physical part strength or latency',reports},null,2))
