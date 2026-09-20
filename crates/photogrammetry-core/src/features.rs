@@ -488,7 +488,9 @@ pub fn matches_with_options(a: &[Feature], b: &[Feature], options: &FeatureOptio
     // Flatten descriptors to a dense 512-byte stride instead of the Feature layout.
     let da: Vec<[f32; 128]> = a.iter().map(|x| x.descriptor).collect();
     let db: Vec<[f32; 128]> = b.iter().map(|x| x.descriptor).collect();
-    let acceleration = resolve_for_descriptor_matching(options.acceleration, da.len(), db.len());
+    #[cfg(feature = "gpu")]
+    let acceleration =
+        resolve_for_descriptor_matching(options.acceleration, da.len(), db.len());
     #[cfg(feature = "gpu")]
     let gpu_done = acceleration.is_gpu()
         && match crate::gpu::matching::match_pair_accelerated(&da, &db, acceleration) {

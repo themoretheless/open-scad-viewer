@@ -53,8 +53,10 @@ use super::plane_torus::{
     CanonicalTorus, TorusPatchCurve, lift_parallel, recognize_torus, torus_residual,
 };
 use super::sphere_sphere::{
-    self, ARC_WEIGHT, CanonicalSphere, RECOGNITION, SpherePatchCircle, circle_curve, lift,
+    self, CanonicalSphere, RECOGNITION, SpherePatchCircle, circle_curve, lift,
 };
+#[cfg(test)]
+use super::sphere_sphere::ARC_WEIGHT;
 use super::*;
 use crate::Model;
 

@@ -190,10 +190,6 @@ fn recognize_box(model: &Model) -> Result<Option<CanonicalBox<'_>>> {
 }
 
 impl Mate for CanonicalBox<'_> {
-    fn model(&self) -> &Model {
-        self.model
-    }
-
     fn inside(&self, point: [f64; 3], band: f64) -> Result<bool> {
         let mut worst = f64::NEG_INFINITY;
         for face in &self.faces {

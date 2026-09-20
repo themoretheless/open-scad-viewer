@@ -832,7 +832,7 @@ pub fn certified_freeform_nurbs(
 fn rectangular_face(
     model: &brep_core::Model,
     face: &brep_core::Face,
-    segments: usize,
+    _segments: usize,
     registry: &EdgeSamplingRegistry,
 ) -> Result<Option<FaceMesh>> {
     let coedges = &model.loops[face.outer].coedges;

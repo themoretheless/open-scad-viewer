@@ -80,10 +80,6 @@ impl<'m> AxialCylinder<'m> {
 }
 
 impl Mate for AxialCylinder<'_> {
-    fn model(&self) -> &Model {
-        self.model
-    }
-
     fn inside(&self, point: [f64; 3], band: f64) -> Result<bool> {
         let (axial, perp) = self.local(point);
         let axial_excess = axial.abs() - self.canon.half_height;

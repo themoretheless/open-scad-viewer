@@ -267,7 +267,6 @@ pub(crate) struct Arc {
 
 /// The faceted analytic operand paired with the sphere.
 pub(crate) trait Mate: Sized {
-    fn model(&self) -> &Model;
     /// Strict solid classification with the shared error band; ambiguous
     /// samples are refusals.
     fn inside(&self, point: [f64; 3], band: f64) -> Result<bool>;
@@ -721,7 +720,7 @@ impl<'m, M: Mate> Imprint<'m, M> {
             // Stations: interval ends, then every sphere vertex on the circle
             // strictly inside the interval.
             let mut stations: Vec<(f64, VKey)> = Vec::new();
-            let mut end_station =
+            let end_station =
                 |phi: f64, id: Option<usize>, this: &mut Self| -> Result<Option<(f64, VKey)>> {
                     let Some(id) = id else { return Ok(None) };
                     // A hit at a sphere vertex takes that vertex's identity.

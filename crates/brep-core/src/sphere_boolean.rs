@@ -134,10 +134,6 @@ struct SphereMate<'m> {
 }
 
 impl Mate for SphereMate<'_> {
-    fn model(&self) -> &Model {
-        self.model
-    }
-
     fn inside(&self, point: [f64; 3], band: f64) -> Result<bool> {
         let d = dist(point, self.canon.center) - self.canon.radius;
         if d < -band {

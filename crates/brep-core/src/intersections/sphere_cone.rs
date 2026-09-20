@@ -46,9 +46,11 @@
 use super::plane_cone::{CanonicalCone, recognize_cone};
 use super::sphere_cylinder::CylinderPatchCurve;
 use super::sphere_sphere::{
-    self, ARC_WEIGHT, CanonicalSphere, RECOGNITION, SpherePatchCircle, circle_arcs, circle_curve,
+    self, CanonicalSphere, RECOGNITION, SpherePatchCircle, circle_arcs, circle_curve,
     lift,
 };
+#[cfg(test)]
+use super::sphere_sphere::ARC_WEIGHT;
 use super::*;
 use crate::Model;
 
