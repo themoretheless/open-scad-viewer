@@ -269,3 +269,42 @@ Reports: `/private/tmp/osv-truss-native-{a,b}.json`.
 Before UI integration, resolve the branch's support/load semantics against this
 explicit model, test moment resultants, preserve typed failures through the ABI,
 and measure the size/transport cost of linking the new numerical dependency.
+
+## Reproduced Scenario Defects
+
+`node scripts/audit-lattice-branch.mjs` reads pinned PR7 commit
+`7b3afccf379aead6151c7ceaf9b633e40eb62924` with `git show`, transpiles its two
+scenario modules and exposes private load/support helpers for observation only.
+Their bodies are unchanged; no legacy implementation is linked into production.
+The report includes source hashes and independently sums nodal forces and
+position-cross-force moments. Local report:
+`/private/tmp/osv-lattice-scenario-audit.json`.
+
+For a 10 mm cube with a requested 100 N mm couple on its +Z face:
+
+| Requested moment, N mm | Assembled moment, N mm | Total force, N |
+| --- | --- | --- |
+| [100, 0, 0] | [0, 0, 0] | [0, 0, 0] |
+| [0, 100, 0] | [0, 0, 100] | [0, 0, 0] |
+| [0, 0, 100] | [0, 0, 0] | [0, 0, 0] |
+
+The helper selects extremes along the same direction as the applied forces.
+On the face-normal case both extremes are the same node, so opposite forces
+cancel exactly; other axes can produce collinear pairs or a wrong moment axis.
+A point moment [0, 0, 100] at [10, 0, 10] instead yields force [0, 0, 40] N
+and moment [0, -400, 0] N mm about the origin, because a single selected node
+falls through to the scalar moment-to-force approximation.
+
+Adding an interior node at [5, 5, 2] makes the -Z pinned-support helper fully fix
+that interior node, outside the selected face. Its centroid-nearest-node search
+uses all graph nodes rather than the face subset. An empty support list also
+silently fixes 12 base DOFs on the cube. Both behaviors differ from the explicit
+zero-displacement masks required by the new native solver.
+
+Before porting scenarios, selected node sets must be explicit and nonempty;
+support selection must not escape the selected set. Any conversion of a force
+and moment into nodal forces must preserve both resultants about the declared
+origin. Collinear or single-node selections cannot represent arbitrary pure
+couples and must refuse unrealizable loads, not silently introduce a force.
+Pin-jointed axial bars still have no rotational DOFs: a nodal force couple is
+an explicit loading model, not an implementation of member bending.
