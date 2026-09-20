@@ -66,6 +66,7 @@ mod mesh_export_file;
 pub mod mesh_picking;
 mod mesh_render;
 pub mod mesh_surface_groups;
+mod truss;
 pub mod mesh_shell;
 mod scene_picking;
 mod viewport;
@@ -518,6 +519,7 @@ pub fn boundary_curves(mesh: &Mesh) -> Result<Vec<Curve>> {
 }
 pub fn dispatch(mut v: Value) -> Result<Value> {
     match v["op"].as_str().unwrap_or("") {
+        "truss_solve" => truss::solve(v),
         "brep_intersect_surface_surface"
         | "brep_intersect_curve_segment"
         | "brep_intersect_curve_plane"

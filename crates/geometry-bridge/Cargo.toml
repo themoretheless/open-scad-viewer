@@ -19,6 +19,7 @@ gpu-compute = { path = "../gpu-compute", optional = true }
 value-codec = { path = "../value-codec" }
 geometry-ops = { path = "../geometry-ops" }
 mechanical-core = { path = "../mechanical-core" }
+mechanics-core = { path = "../mechanics-core" }
 sketch-core = { path = "../sketch-core" }
 brep-topology = { path = "../brep-topology" }
 brep-core = { path = "../brep-core" }

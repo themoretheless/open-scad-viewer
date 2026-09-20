@@ -708,6 +708,7 @@ dependencies = [
  "image-webp",
  "imagesize",
  "mechanical-core",
+ "mechanics-core",
  "nurbs-core",
  "osv-math",
  "planar-geometry",
