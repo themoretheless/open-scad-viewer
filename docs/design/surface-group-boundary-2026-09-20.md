@@ -122,6 +122,21 @@ uses `--maxWorkers 2`, matching local control; per-test timeouts and qualificati
 assertions are unchanged. Whether this removes remote timeout failures remains
 unverified until the next CI run. Log: `/private/tmp/osv-ci-35481315494-node22.log`.
 
+### Remote Concurrency Control
+
+Node 22 job 106001779112, run 35482145042 on `bce3b408`, completed with
+3312 passed, 10 failed, five skipped in 163.74 s. All seven timeout failures
+seen in preceding job 105999565937 are absent, including CLI EOF shutdown,
+the fresh-process oracle, analytic B-rep, HTTP MCP, assembly overlap and both
+profile cases. The previous run took 245.98 s. This is an observed reduction
+of 33.4%, not an isolated same-commit A/B or a guarantee against future flakes.
+
+The remaining failures are qualification/fingerprint checks, including the
+ambient `GITHUB_SHA` test fixed locally in `fa775d76` after this CI commit.
+The worker cap is retained; assertions and timeouts were not relaxed.
+Node 20 and native/Rust jobs were still running at this observation.
+Log: `/private/tmp/osv-ci-35482145042-node22.log`.
+
 ## Edge Traversal Follow-Up
 
 The Rust implementation no longer retains an insertion-order vector of edge
