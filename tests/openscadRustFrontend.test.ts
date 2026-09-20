@@ -84,6 +84,7 @@ function expectRustMatchesTs(source: string, profile: OpenScadLanguageProfile) {
   expect(rust.ok, `Rust/TS acceptance mismatch for ${JSON.stringify(source)} (${profile})`).toBe(ts.ok)
   if (!ts.ok) {
     if (rust.ok) throw new Error('unreachable: ok mismatch asserted above')
+    if ('error' in rust) throw new Error(`Unexpected ABI failure: ${rust.error.message}`)
     const diagnostic = rust.diagnostics[0]
     expect(diagnostic).toBeDefined()
     expect({ ...diagnostic, code: diagnostic.code ?? undefined }).toEqual({
@@ -140,6 +141,7 @@ describe('openscad-core Rust frontend conformance gate (stage 1)', () => {
       const rust = scadCompileRust(testCase.source)
       expect(rust.ok).toBe(false)
       if (rust.ok) return
+      if ('error' in rust) throw new Error(`Unexpected ABI failure: ${rust.error.message}`)
       expect(rust.diagnostics[0]?.code).toBe(testCase.code)
       // Exact position/message parity with the TS parser under both profiles.
       for (const profile of PROFILES) expectRustMatchesTs(testCase.source, profile)
@@ -157,6 +159,21 @@ describe('openscad-core Rust frontend conformance gate (stage 1)', () => {
     const rust = scadCompileRust('cube;'.repeat(50_001))
     expect(rust.ok).toBe(false)
     if (rust.ok) return
+    if ('error' in rust) throw new Error(`Unexpected ABI failure: ${rust.error.message}`)
     expect(rust.diagnostics[0]).toMatchObject({ message: 'Source exceeds 250,000 characters', start: 0 })
+  })
+
+  it('distinguishes the AST transport depth limit from a source parse failure', () => {
+    for (const profile of PROFILES) {
+      const source = (terms: number) => `x=${Array(terms).fill('1').join('+')};`
+      expectRustMatchesTs(source(125), profile)
+      expect(compileTs(source(126), profile).ok).toBe(true)
+      const rust = scadCompileRust(source(126), profile)
+      expect(rust).toEqual({ok: false, error: {
+        code: 'LANGUAGE_TRANSPORT', message: 'Response exceeds transport limit',
+      }})
+      // A failed serialization must not poison the shared WASM instance.
+      expectRustMatchesTs('cube(1);', profile)
+    }
   })
 })

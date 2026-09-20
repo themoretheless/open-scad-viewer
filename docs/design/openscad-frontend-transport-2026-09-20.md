@@ -49,3 +49,14 @@ names, `undef` literals to null, nonfinite numbers to `$number` objects and
 omits undefined optional fields. These are representation conversions, not
 proof that the wire AST can directly enter the TS evaluator. No production
 adapter or routing change is made here.
+
+The corpus is not universal acceptance parity: an assignment containing 125
+literal terms joined by `+` passes full-tree comparison, but 126 terms still
+parse in TypeScript while the Rust endpoint returns `LANGUAGE_TRANSPORT` with
+`Response exceeds transport limit`. The MGV1 response nesting limit is 128;
+response wrappers add depth to the expression tree. A regression test covers
+both profiles and successful reuse of the kernel after the refusal. The host
+result types now include this boundary failure instead of promising source
+diagnostics for every refusal. This records, but does not remove, a blocker to
+using the complete-AST endpoint as the product compiler. Forty-four frontend
+and evaluator tests pass with this boundary test included.

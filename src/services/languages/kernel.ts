@@ -77,9 +77,17 @@ export interface ScadRustDiagnostic {
   readonly line: number
   readonly column: number
 }
+/** ABI/input failures have no source diagnostic; do not present them as parse errors. */
+export interface ScadRustBoundaryFailure {
+  readonly ok: false
+  readonly error: {readonly code: string; readonly message: string}
+  readonly diagnostics?: never
+  readonly aborted?: never
+}
 export type ScadRustCompileResult =
   | {readonly ok: true; readonly ast: readonly unknown[]}
   | {readonly ok: false; readonly diagnostics: readonly ScadRustDiagnostic[]}
+  | ScadRustBoundaryFailure
 export function scadCompileRust(source: string, profile: 'openscad-viewer-subset@1' | 'openscad/stable-2021.01' = 'openscad-viewer-subset@1'): ScadRustCompileResult {
   return languageRequest(10,{source,profile}) as ScadRustCompileResult
 }
@@ -92,6 +100,7 @@ export interface ScadRustShapeDescriptor {
 export type ScadRustEvalResult =
   | {readonly ok: true; readonly shapes: readonly ScadRustShapeDescriptor[]; readonly warnings: readonly string[]; readonly reduced: boolean}
   | {readonly ok: false; readonly diagnostics?: readonly ScadRustDiagnostic[]; readonly aborted?: boolean}
+  | ScadRustBoundaryFailure
 export function scadEvalRust(source: string, profile: 'openscad-viewer-subset@1' | 'openscad/stable-2021.01' = 'openscad-viewer-subset@1'): ScadRustEvalResult {
   return languageRequest(11,{source,profile}) as ScadRustEvalResult
 }
