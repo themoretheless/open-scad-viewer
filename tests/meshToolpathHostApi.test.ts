@@ -165,6 +165,18 @@ describe('mesh section / G-code host API', () => {
     expect(preview.printDistanceMm).toBe(20)
   })
 
+  it('applies modal feedrate overrides and backup/restore through WASM', () => {
+    const gcode = 'G1 X0 Y0 Z0 F600\nM83\nM220S50\nM220 B S200\nG1 X10 E1\nM220 R B\nG1 X20 E1\nM220 R\nG1 X30 E1\nM220 S100\nG1 X40 E1\n'
+    const preview = parseGcodePreview(gcode)
+    expect(inspectGcode(gcode).preview).toEqual(preview)
+    expect(preview.moves.map(move => move.feedrateMmS)).toEqual([10, 20, 5, 20, 10])
+    expect(preview.estimatedTimeS).toBe(4)
+    expect(preview.extrusionMm).toBe(4)
+    for (const command of ['M220 S0', 'M220 S1.5', 'M220 S32768']) {
+      expect(() => inspectGcode(`${gcode}${command}\n`)).toThrow(expect.objectContaining({code: 'GCODE_INVALID_FEEDRATE'}))
+    }
+  })
+
   it('rejects invalid extrusion modes and excessive tool state through WASM', () => {
     const initial = 'G1 X0 Y0 Z0\n'
     for (const setting of ['M200 S2', 'M221 S-1', 'M200 T-1 D2', 'T1.5']) {

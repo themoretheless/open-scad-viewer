@@ -3,12 +3,13 @@
 //! a file for printing; volume uses the supplied, declared or default filament diameter.
 
 use crate::foreign_extrusion::Extrusion;
+use crate::foreign_feedrate::Feedrate;
 use crate::foreign_words::{
     self,
     Command::{G, InvalidTool, M, T},
 };
 use crate::{
-    GcodeBounds, GcodeMove, GcodePreview, MAX_COORDINATE_MM, MAX_LAYERS, MAX_LINE_BYTES, MAX_MOVES,
+    GcodeBounds, GcodeMove, GcodePreview, MAX_LAYERS, MAX_LINE_BYTES, MAX_MOVES,
     MAX_OUTPUT_BYTES, Result, invalid, number, valid_coordinate,
 };
 use std::borrow::Cow;
@@ -165,7 +166,7 @@ struct Machine {
     /// Relative E (`M83` or `G91` without `M82`).
     relative_e: bool,
     inches: bool,
-    feedrate_mm_s: Option<f64>,
+    feedrate: Feedrate,
     plane: Plane,
 }
 
@@ -284,7 +285,7 @@ pub fn parse_foreign_with(gcode: &str, filament_diameter_mm: Option<f64>) -> Res
         relative: false,
         relative_e: false,
         inches: false,
-        feedrate_mm_s: None,
+        feedrate: Feedrate::default(),
         plane: Plane::Xy,
     };
     let mut layers = Layers {
@@ -341,6 +342,7 @@ pub fn parse_foreign_with(gcode: &str, filament_diameter_mm: Option<f64>) -> Res
                 }
                 M(82) => machine.relative_e = false,
                 M(83) => machine.relative_e = true,
+                M(220) => machine.feedrate.configure(rest)?,
                 M(200) => {
                     let words = axis_words(rest)?;
                     machine.extrusion.configure_volume(
@@ -408,14 +410,7 @@ pub fn parse_foreign_with(gcode: &str, filament_diameter_mm: Option<f64>) -> Res
                     let words = axis_words(rest)?;
                     let scale = machine.scale();
                     if let Some(f) = word(&words, b'F') {
-                        let f = f * scale;
-                        if !(f > 0.0 && f <= MAX_COORDINATE_MM * 60.0) {
-                            return Err(invalid(
-                                "GCODE_INVALID_FEEDRATE",
-                                "Feedrate F must be positive and within 60000000 mm/min",
-                            ));
-                        }
-                        machine.feedrate_mm_s = Some(f / 60.0);
+                        machine.feedrate.set(f * scale)?;
                     }
                     let old_position = machine.position;
                     let was_known = machine.known.iter().all(|v| *v);
@@ -448,7 +443,7 @@ pub fn parse_foreign_with(gcode: &str, filament_diameter_mm: Option<f64>) -> Res
                         return Ok(());
                     }
                     let is_known = machine.known.iter().all(|v| *v);
-                    let feedrate = machine.feedrate_mm_s;
+                    let feedrate = machine.feedrate.effective()?;
                     let layer_index = if layers.explicit_markers {
                         if layers.count == 0 {
                             // Motion before the first marker belongs to a synthetic startup layer.

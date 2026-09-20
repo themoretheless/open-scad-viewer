@@ -31,7 +31,7 @@ afterEach(async () => {
   clients.splice(0).forEach(client => client.dispose())
   await Promise.all(workers.splice(0).map(worker => worker.terminate()))
 })
-const parse: GcodePreviewJob = {kind: 'parse', gcode: 'G1 X0 Y0 Z0.2 F600\nM83\nM200 D2\nM221 S50\nG1 X10 E4\n'}
+const parse: GcodePreviewJob = {kind: 'parse', gcode: 'G1 X0 Y0 Z0.2 F600\nM83\nM200 D2\nM221 S50\nM220 S50\nG1 X10 E4\n'}
 
 it('uses the shipped worker, preserves material accounting and recovers after a parse error', async () => {
   const client = new GcodePreviewWorker(() => spawn())
@@ -40,6 +40,8 @@ it('uses the shipped worker, preserves material accounting and recovers after a 
   expect(result.preview.depositedVolumeMm3).toBeCloseTo(2, 12)
   expect(result.preview.extrusionMm).toBeCloseTo(2 / Math.PI, 12)
   expect(result.preview.printDistanceMm).toBe(10)
+  expect(result.preview.estimatedTimeS).toBe(2)
+  expect(result.preview.moves.at(-1)?.feedrateMmS).toBe(5)
   await expect(client.run({kind: 'parse', gcode: 'G1 X0 Y0 Z0\nM221 S-1\n'})).rejects.toThrow(/nonnegative/)
   expect(await client.run(parse)).toEqual(result)
   expect(workers).toHaveLength(1)

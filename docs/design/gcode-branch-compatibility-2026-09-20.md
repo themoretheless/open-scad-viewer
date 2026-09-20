@@ -51,3 +51,7 @@ records the first selective integration, native controls and a reproduced
 compact-extrusion defect in the old branch. The v2/job/3MF APIs remain intact;
 the branch's volumetric, thermal and firmware-retraction features are still
 pending adaptation rather than discarded or claimed as merged.
+
+[Feedrate overrides](gcode-feedrate-override-2026-09-20.md) implement the
+previously ignored M220 behavior in the current reader, with explicit modal
+state and preview bounds. This follow-up does not close the remaining branch.

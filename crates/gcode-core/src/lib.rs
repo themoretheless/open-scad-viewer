@@ -16,6 +16,7 @@ const PROLOGUE: [&str; 5] = ["G21", "G90", "M82", "M200 D0", "G92 E0"];
 mod flavor;
 mod foreign;
 mod foreign_extrusion;
+mod foreign_feedrate;
 mod foreign_words;
 mod job;
 mod package_3mf;

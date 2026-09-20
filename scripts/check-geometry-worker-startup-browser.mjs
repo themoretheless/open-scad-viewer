@@ -77,7 +77,7 @@ try {
     }
     const request = {version: 1, id: 1, job: kind === 'svg'
       ? {kind: 'preview', svg: '<svg xmlns="http://www.w3.org/2000/svg" width="20mm" height="10mm" viewBox="0 0 20 10"><rect width="20" height="10" fill="red"/></svg>'}
-      : {kind: 'parse', gcode: 'G1 X0 Y0 Z0.2 F600\nM83\nG1 X10 E1\n'}}
+      : {kind: 'parse', gcode: 'G1 X0 Y0 Z0.2 F600\nM83\nM220 S50\nG1 X10 E1\n'}}
     const run = async (worker, id) => {
       const pending = wait(worker, data => data.version === 1 && data.id === id)
       worker.postMessage({...request, id})
@@ -113,6 +113,8 @@ try {
       assert.ok(response.result.svg.includes('<path'))
     } else {
       assert.equal(response.result.preview.extrusionMm, 1)
+      assert.equal(response.result.preview.estimatedTimeS, 2)
+      assert.equal(response.result.preview.moves.at(-1).feedrateMmS, 5)
       assert.equal(response.result.preview.printDistanceMm, 10)
     }
   }
