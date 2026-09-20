@@ -1,11 +1,16 @@
 //! Tolerant reader for G-code produced by other slicers and firmware flavors.
 //! It recovers movements, layers and totals for preview; it does not validate
-//! a file for printing and never guesses volume without a filament diameter.
+//! a file for printing; volume uses the supplied, declared or default filament diameter.
 
+use crate::foreign_words::{
+    self,
+    Command::{G, M},
+};
 use crate::{
     GcodeBounds, GcodeMove, GcodePreview, MAX_COORDINATE_MM, MAX_LAYERS, MAX_LINE_BYTES, MAX_MOVES,
     MAX_OUTPUT_BYTES, Result, invalid, number, valid_coordinate,
 };
+use std::borrow::Cow;
 
 /// Default filament diameter when a foreign file declares none.
 pub const ASSUMED_FILAMENT_DIAMETER_MM: f64 = 1.75;
@@ -207,8 +212,8 @@ impl Layers {
     }
 }
 
-fn axis_words(rest: &[&str]) -> Result<Vec<(u8, f64)>> {
-    let mut out = Vec::with_capacity(rest.len());
+fn axis_words<'a>(rest: impl Iterator<Item = &'a str>) -> Result<Vec<(u8, f64)>> {
+    let mut out = Vec::new();
     for token in rest {
         if token.len() < 2 || !token.is_ascii() {
             return Err(invalid("GCODE_SYNTAX", "Expected axis/value words"));
@@ -229,44 +234,6 @@ fn word(words: &[(u8, f64)], axis: u8) -> Option<f64> {
         .rev()
         .find(|(a, _)| *a == axis)
         .map(|(_, v)| *v)
-}
-
-/// Splits `G1X10Y5` style compact words and strips inline comments/checksums.
-fn tokenize(command_text: &str) -> Vec<String> {
-    let mut tokens = Vec::new();
-    let mut current = String::new();
-    for ch in command_text.chars() {
-        if ch.is_whitespace() {
-            if !current.is_empty() {
-                tokens.push(std::mem::take(&mut current));
-            }
-            continue;
-        }
-        if ch.is_ascii_alphabetic() && !current.is_empty() {
-            let last = current.chars().last().unwrap_or(' ');
-            if last.is_ascii_digit() || last == '.' {
-                tokens.push(std::mem::take(&mut current));
-            }
-        }
-        current.push(ch);
-    }
-    if !current.is_empty() {
-        tokens.push(current);
-    }
-    tokens
-}
-
-fn strip_line_number_and_checksum(tokens: Vec<String>) -> Vec<String> {
-    let mut tokens: Vec<String> = tokens
-        .into_iter()
-        .filter(|t| {
-            !(t.starts_with('N') && t[1..].chars().all(|c| c.is_ascii_digit()) && t.len() > 1)
-        })
-        .collect();
-    if tokens.last().is_some_and(|last| last.starts_with('*')) {
-        tokens.pop();
-    }
-    tokens
 }
 
 /// Parses layer marker comments from common slicers. Returns true when a layer starts.
@@ -364,53 +331,29 @@ pub fn parse_foreign_with(gcode: &str, filament_diameter_mm: Option<f64>) -> Res
                 layers.current_z = None;
                 return Ok(());
             }
-            // Parenthesised comments (RS-274 / RepRapFirmware) are ignored.
-            let mut cleaned = String::with_capacity(command_text.len());
-            let mut depth = 0usize;
-            for ch in command_text.chars() {
-                match ch {
-                    '(' => depth += 1,
-                    ')' => depth = depth.saturating_sub(1),
-                    _ if depth == 0 => cleaned.push(ch),
-                    _ => {}
-                }
-            }
-            let tokens = strip_line_number_and_checksum(tokenize(cleaned.trim()));
-            let Some(command) = tokens.first() else {
+            let cleaned = foreign_words::code(line);
+            let mut rest = foreign_words::words(&cleaned).peekable();
+            let Some(command) = rest.next() else {
                 return Ok(());
             };
-            let command = command.to_ascii_uppercase();
-            let rest: Vec<&str> = tokens[1..].iter().map(String::as_str).collect();
-            // Normalize G01 → G1 etc.
-            let canonical = match command.as_bytes() {
-                [letter @ (b'G' | b'M'), digits @ ..]
-                    if !digits.is_empty() && digits.iter().all(u8::is_ascii_digit) =>
-                {
-                    let n: u32 = std::str::from_utf8(digits)
-                        .unwrap_or("0")
-                        .parse()
-                        .unwrap_or(u32::MAX);
-                    format!("{}{n}", *letter as char)
-                }
-                _ => command.clone(),
-            };
-            match canonical.as_str() {
-                "G20" => machine.inches = true,
-                "G21" => machine.inches = false,
-                "G90" => {
+            let canonical = foreign_words::command(command);
+            match canonical {
+                G(20) => machine.inches = true,
+                G(21) => machine.inches = false,
+                G(90) => {
                     machine.relative = false;
                     machine.relative_e = false;
                 }
-                "G91" => {
+                G(91) => {
                     machine.relative = true;
                     machine.relative_e = true;
                 }
-                "M82" => machine.relative_e = false,
-                "M83" => machine.relative_e = true,
-                "G17" => machine.plane = Plane::Xy,
-                "G18" | "G19" => machine.plane = Plane::Other,
-                "G92" => {
-                    let words = axis_words(&rest)?;
+                M(82) => machine.relative_e = false,
+                M(83) => machine.relative_e = true,
+                G(17) => machine.plane = Plane::Xy,
+                G(18) | G(19) => machine.plane = Plane::Other,
+                G(92) => {
+                    let words = axis_words(rest)?;
                     if words.is_empty() {
                         machine.e = 0.0;
                         machine.position = [0.0; 3];
@@ -426,27 +369,25 @@ pub fn parse_foreign_with(gcode: &str, filament_diameter_mm: Option<f64>) -> Res
                         }
                     }
                 }
-                "G28" => {
-                    let axes: Vec<u8> = if rest.is_empty() {
-                        vec![b'X', b'Y', b'Z']
+                G(28) => {
+                    if rest.peek().is_none() {
+                        machine.known = [false; 3];
                     } else {
-                        rest.iter()
-                            .filter_map(|t| t.as_bytes().first().map(u8::to_ascii_uppercase))
-                            .collect()
-                    };
-                    for axis in axes {
-                        if let Some(index) = b"XYZ".iter().position(|a| *a == axis) {
-                            // Homing establishes a machine origin; the preview treats it as unknown.
-                            machine.known[index] = false;
+                        for token in rest {
+                            let axis = token.as_bytes()[0].to_ascii_uppercase();
+                            if let Some(index) = b"XYZ".iter().position(|a| *a == axis) {
+                                // Homing origin depends on the machine, so it is unknown here.
+                                machine.known[index] = false;
+                            }
                         }
                     }
                 }
-                "G0" | "G1" | "G2" | "G3" => {
+                G(0..=3) => {
                     move_count += 1;
                     if move_count > MAX_MOVES {
                         return Err(invalid("GCODE_MOVE_LIMIT", "G-code exceeded 100000 moves"));
                     }
-                    let words = axis_words(&rest)?;
+                    let words = axis_words(rest)?;
                     let scale = machine.scale();
                     if let Some(f) = word(&words, b'F') {
                         let f = f * scale;
@@ -494,7 +435,9 @@ pub fn parse_foreign_with(gcode: &str, filament_diameter_mm: Option<f64>) -> Res
                     }
                     machine.e += delta_e;
                     let extruded = delta_e > 0.0;
-                    let has_axis = b"XYZ".iter().any(|axis| word(&words, *axis).is_some());
+                    let is_arc = matches!(canonical, G(2) | G(3));
+                    let has_axis =
+                        is_arc || b"XYZ".iter().any(|axis| word(&words, *axis).is_some());
                     if extruded {
                         machine.extruded_total += delta_e;
                     }
@@ -522,7 +465,7 @@ pub fn parse_foreign_with(gcode: &str, filament_diameter_mm: Option<f64>) -> Res
                         return Ok(());
                     }
                     // Arc: approximate with chords in the XY plane.
-                    let points: Vec<[f64; 3]> = if canonical == "G2" || canonical == "G3" {
+                    let points: Cow<'_, [[f64; 3]]> = if is_arc {
                         if machine.plane != Plane::Xy {
                             return Err(invalid(
                                 "GCODE_UNSUPPORTED_COMMAND",
@@ -535,19 +478,25 @@ pub fn parse_foreign_with(gcode: &str, filament_diameter_mm: Option<f64>) -> Res
                                 "Arcs require a known start position",
                             ));
                         }
-                        arc_points(
+                        Cow::Owned(arc_points(
                             old_position,
                             target,
                             word(&words, b'I').map(|v| v * scale),
                             word(&words, b'J').map(|v| v * scale),
                             word(&words, b'R').map(|v| v * scale),
-                            canonical == "G3",
-                        )?
+                            canonical == G(3),
+                        )?)
                     } else {
-                        vec![target]
+                        Cow::Borrowed(std::slice::from_ref(&target))
                     };
+                    if is_known && points.len() > MAX_MOVES - result.moves.len() {
+                        return Err(invalid(
+                            "GCODE_MOVE_LIMIT",
+                            "G-code exceeded 100000 preview moves",
+                        ));
+                    }
                     let mut previous = old_position;
-                    for point in points {
+                    for &point in points.iter() {
                         let distance = if was_known {
                             (point[0] - previous[0])
                                 .hypot(point[1] - previous[1])

@@ -43,3 +43,11 @@ cargo check --locked --manifest-path crates/Cargo.toml -p slicer-core
 The failed replacement probe does not establish that every branch feature is
 obsolete, or that a selectively resolved merge cannot work. It establishes that
 accepting the older crate wholesale is not a compatible integration.
+
+## Selective Parser Follow-up
+
+[Borrowed parser and bounded arc expansion](gcode-borrowed-parser-2026-09-20.md)
+records the first selective integration, native controls and a reproduced
+compact-extrusion defect in the old branch. The v2/job/3MF APIs remain intact;
+the branch's volumetric, thermal and firmware-retraction features are still
+pending adaptation rather than discarded or claimed as merged.

@@ -135,4 +135,23 @@ describe('mesh section / G-code host API', () => {
     expect(parseGcodePreview(prusa)).toEqual(inspected.preview)
     expect(() => inspectGcode('; nothing here\nM117 hello\n')).toThrow(/No movements/)
   })
+
+  it('preserves compact extrusion and full circles through both WASM preview routes', () => {
+    const initial = 'G90\nM83\nG1 X10 Y0 Z0.2 F600\n'
+    const plain = parseGcodePreview(`${initial}G3 I-10 J0 E1\nG1 X20 Y1 E2\n`)
+    const compact = inspectGcode(`${initial}n42g03i-10j0e1*0\nG1X20(a;b)Y1E2*255\n`)
+    expect(compact.native).toBe(false)
+    expect(compact.preview).toEqual(plain)
+    expect(plain.extrusionMm).toBe(3)
+    expect(plain.moves.length).toBeGreaterThan(50)
+    expect(plain.printDistanceMm).toBeCloseTo(2 * Math.PI * 10 + Math.hypot(10, 1), 0)
+    expect(plain.moves.at(-1)).toMatchObject({x: 20, y: 1, z: 0.2, e: 3, extruded: true})
+  })
+
+  it('refuses arc expansion past the preview move budget before WASM result serialization', () => {
+    const gcode = 'G90\nM83\nG1 X20 Y0 Z0.2 F600\n' + 'G2 X20 Y0 I-20 E0.001\n'.repeat(1563)
+    for (const parse of [parseGcodePreview, inspectGcode]) {
+      expect(() => parse(gcode)).toThrow(expect.objectContaining({code: 'GCODE_MOVE_LIMIT'}))
+    }
+  })
 })

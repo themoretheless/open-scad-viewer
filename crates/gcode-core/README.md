@@ -58,13 +58,20 @@ Slic3r, Simplify3D, ideaMaker, Kiri:Moto), the declared firmware flavor
 header or footer.
 
 Supported: `G0`/`G1` linear moves, `G2`/`G3` XY arcs with `I`/`J` or `R`
-(chorded at 1 mm, ≤64 segments), `G90`/`G91`, `M82`/`M83`, `G92` resets,
+(chorded at 1 mm, ≤64 segments, including I/J full circles without X/Y),
+`G90`/`G91`, `M82`/`M83`, `G92` resets,
 `G20`/`G21` units, `G17`–`G19` plane selection (non-XY arcs fail), `G28`
 (marks homed axes unknown), `N…` line numbers and `*` checksums, compact
 `G1X10Y5` words, `(…)` and `;` comments. Layers come from `;LAYER:`,
 `;LAYER_CHANGE`, `; layer N` or `;BEGIN_LAYER_OBJECT` markers when present;
 otherwise each Z level with extrusion is a layer. Motion before the first
 marker forms a startup layer. All other commands are skipped.
+
+Line numbers and checksum suffixes are discarded, not verified. `E`/`e` is
+an extruder word even in compact input (`G1X10E2`), not scientific notation.
+Ordinary lines use borrowed word slices; only embedded parenthesized comments
+need a cleaned string. Both input motion commands and expanded preview points
+are limited to 100,000, so arc expansion cannot bypass the output budget.
 
 Volume uses the header filament diameter or `ASSUMED_FILAMENT_DIAMETER_MM`
 (1.75) and reports total positive E delta; retractions are ignored. Foreign
