@@ -130,6 +130,31 @@ afterEach(() => {
   vi.resetModules()
 })
 
+it('delivers queued cancellation before publishing a long selection batch', async () => {
+  await (await import('../src/services/geometry/kernel')).warmGeometryKernel()
+  parseOpenSCADMock.mockResolvedValueOnce(identityResult({entityId: 'entity:a', operationId: 'op:a', instanceId: 'entity:a'}))
+  class CancelDuringSelection extends FakeWorkerScope {
+    override postMessage(event: GeometryWorkerEvent, options: {transfer?: Transferable[]} = {}) {
+      super.postMessage(event, options)
+      if (event.status === 'progress' && event.phase === 'serializing') {
+        let now = performance.now()
+        vi.spyOn(performance, 'now').mockImplementation(() => now += 20)
+        setTimeout(() => this.dispatchMessage({protocolVersion: GEOMETRY_WORKER_PROTOCOL_VERSION,
+          type: 'cancel', documentRevision: 1, jobId: 1, reason: 'user'}), 0)
+      }
+    }
+  }
+  const scope = new CancelDuringSelection()
+  vi.stubGlobal('self', scope)
+  await import('../src/workers/geometry.worker')
+  const source = 'cube(1);'
+  scope.dispatchMessage({protocolVersion: GEOMETRY_WORKER_PROTOCOL_VERSION, type: 'build',
+    documentRevision: 1, jobId: 1, source, sourceSha256: sha256Hex(source), quality: 'full', selectionSurfaces: true})
+  await vi.waitFor(() => expect(scope.events.at(-1)?.status).toBe('cancelled'))
+  expect(scope.events.filter(event => ['succeeded', 'failed', 'stale', 'cancelled'].includes(event.status))).toHaveLength(1)
+  expect(scope.transfers.every(transfer => transfer.length === 0)).toBe(true)
+})
+
 it('publishes requested selection patches through the real WASM boundary', async () => {
   parseOpenSCADMock.mockResolvedValueOnce(identityResult({entityId: 'entity:a', operationId: 'op:a', instanceId: 'entity:a'}))
   const scope = new FakeWorkerScope()

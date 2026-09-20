@@ -92,6 +92,22 @@ and four objects in the UI. It exposed a pre-existing startup bug: the initial
 allows computation before GPU readiness; viewport initialization already loads
 the retained scene. Report: `tmp/performance/surface-group-app-smoke/report.json`.
 
+## Integrated Test Follow-Up
+
+Full Vitest on `58083906` completed in 105.84 s: 3310 passed, 16 failed across
+347 files. Nine failures remain in historical qualification/fingerprint checks.
+Seven `modelGraphHttp` failures were `listen EPERM` from the sandbox; all seven
+pass when rerun with loopback permission. The full-suite log is
+`/private/tmp/osv-worker-selection-full-tests.log`. This is not a green full suite.
+
+A new deterministic cancellation test initially received `succeeded` after
+cancellation was queued during selection publication. The worker now yields to
+the event queue between mesh calls after a 16 ms work slice and rechecks its
+terminal state, including after the last mesh. This is not preemption inside
+a synchronous Rust call or a strict 16 ms wall-time bound. The regression and
+47 worker/coordinator/scene tests pass after the fix; application typecheck
+also passes. The full-suite result above predates this narrow lifecycle fix.
+
 ## Remaining Optimization
 
 Do not copy the old branch's export-then-render grouping sequence: it computes

@@ -229,7 +229,24 @@ async function runBuild(
       await warmGeometryKernel()
       const terminal = terminalState(job, 'serializing', built.execution)
       if (terminal) { postEvent(terminal); return }
-      result.meshes = result.meshes.map(publishSelectionSurfaces)
+      const meshes: typeof result.meshes = []
+      let sliceStarted = performance.now()
+      for (const mesh of result.meshes) {
+        meshes.push(publishSelectionSurfaces(mesh))
+        if (performance.now() - sliceStarted >= 16) {
+          // Deliver queued cancellation between bounded synchronous Rust calls,
+          // including after the final mesh, before publishing any buffers.
+          await new Promise<void>(resolve => setTimeout(resolve, 0))
+          const terminal = terminalState(job, 'serializing', built.execution)
+          if (terminal) { postEvent(terminal); return }
+          sliceStarted = performance.now()
+          if (sliceStarted - lastHeartbeat >= HEARTBEAT_THROTTLE_MS) {
+            lastHeartbeat = sliceStarted
+            postEvent(jobEvent(request, {status: 'progress', phase: 'serializing', progress: null}))
+          }
+        }
+      }
+      result.meshes = meshes
     }
     const response = jobEvent(request, {
       status: 'succeeded',
