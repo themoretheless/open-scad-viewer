@@ -26,6 +26,57 @@ fn rejects_bow_tie_boundary() {
 }
 
 #[test]
+fn rejects_self_intersection_with_nonzero_signed_area() {
+    let outer = [[0., 3.], [2., -3.], [-3., 1.], [3., 1.], [-2., -3.]];
+    assert!(triangulate_profile(&outer, &[]).is_err());
+}
+
+#[test]
+fn rejects_crossing_permutations_of_boundary_vertices() {
+    let points = [
+        [0., 0.],
+        [2., 0.],
+        [4., 0.],
+        [4., 2.],
+        [4., 4.],
+        [2., 4.],
+        [0., 4.],
+        [0., 2.],
+    ];
+    let orient = |a: [f64; 2], b: [f64; 2], c: [f64; 2]| {
+        (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0])
+    };
+    let mut state = 0x12345678_u32;
+    let mut checked = 0;
+    for _ in 0..500 {
+        let mut outer = points;
+        for i in (1..outer.len()).rev() {
+            state = state.wrapping_mul(1664525).wrapping_add(1013904223);
+            outer.swap(i, state as usize % (i + 1));
+        }
+        let crossing = (0..outer.len()).any(|i| {
+            (i + 1..outer.len()).any(|j| {
+                let (a, b, c, d) = (
+                    outer[i],
+                    outer[(i + 1) % outer.len()],
+                    outer[j],
+                    outer[(j + 1) % outer.len()],
+                );
+                orient(a, b, c) * orient(a, b, d) < 0. && orient(c, d, a) * orient(c, d, b) < 0.
+            })
+        });
+        if crossing {
+            checked += 1;
+            assert!(
+                triangulate_profile(&outer, &[]).is_err(),
+                "Accepted crossing profile: {outer:?}"
+            );
+        }
+    }
+    assert!(checked > 300, "Insufficient crossing fixtures: {checked}");
+}
+
+#[test]
 fn oversized_square_grid_refuses_at_profile_budget() {
     let holes: Vec<_> = (0..1024)
         .map(|i| square((i % 32) as f64 * 2. + 1., (i / 32) as f64 * 2. + 1., 0.5))
