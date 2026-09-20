@@ -58,3 +58,16 @@ was changed.
 
 This is local production-browser evidence, not a successful rerun of the
 complete remote STEP qualification or resolution of runtime-manifest drift.
+
+## Remote Follow-Up
+
+[Run 35495407612](https://github.com/themoretheless/open-scad-viewer/actions/runs/35495407612)
+subsequently completed successfully on exact commit
+`be0f0a36b2c84475ee9be97a2994dd36126c5bc6`. Its downloaded browser report
+confirms `delayedKernel: true`, all roundtrip/preservation assertions, three
+occurrences and one definition under Linux Chrome 151.0.7922.34. Diagnostics
+are retained in `/private/tmp/osv-step-v10-ci-be0f0a36`.
+This establishes the remote STEP V10 result for that commit, not qualification
+of later artifacts or resolution of the separate runtime-manifest mismatch.
+The same commit's Node 20 CI job still failed the nine known archive-binding
+tests (3403 passed, five skipped).

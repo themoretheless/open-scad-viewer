@@ -211,20 +211,50 @@ impl Layers {
     }
 }
 
-fn axis_words<'a>(rest: impl Iterator<Item = &'a str>) -> Result<Vec<(u8, f64)>> {
-    let mut out = Vec::new();
-    for token in rest {
-        if token.len() < 2 || !token.is_ascii() {
-            return Err(invalid("GCODE_SYNTAX", "Expected axis/value words"));
-        }
-        let axis = token.as_bytes()[0].to_ascii_uppercase();
-        if !axis.is_ascii_alphabetic() {
-            return Err(invalid("GCODE_SYNTAX", "Expected axis/value words"));
-        }
-        let value = number(&token[1..])?;
-        out.push((axis, value));
+fn axis_word(token: &str) -> Result<(u8, f64)> {
+    if token.len() < 2 || !token.is_ascii() {
+        return Err(invalid("GCODE_SYNTAX", "Expected axis/value words"));
     }
-    Ok(out)
+    let axis = token.as_bytes()[0].to_ascii_uppercase();
+    if !axis.is_ascii_alphabetic() {
+        return Err(invalid("GCODE_SYNTAX", "Expected axis/value words"));
+    }
+    Ok((axis, number(&token[1..])?))
+}
+
+fn axis_words<'a>(rest: impl Iterator<Item = &'a str>) -> Result<Vec<(u8, f64)>> {
+    rest.map(axis_word).collect()
+}
+
+#[derive(Default)]
+struct MotionWords {
+    xyz: [Option<f64>; 3],
+    e: Option<f64>,
+    f: Option<f64>,
+    i: Option<f64>,
+    j: Option<f64>,
+    r: Option<f64>,
+}
+
+impl MotionWords {
+    fn parse<'a>(rest: impl Iterator<Item = &'a str>) -> Result<Self> {
+        let mut out = Self::default();
+        for token in rest {
+            let (axis, value) = axis_word(token)?;
+            match axis {
+                b'X' => out.xyz[0] = Some(value),
+                b'Y' => out.xyz[1] = Some(value),
+                b'Z' => out.xyz[2] = Some(value),
+                b'E' => out.e = Some(value),
+                b'F' => out.f = Some(value),
+                b'I' => out.i = Some(value),
+                b'J' => out.j = Some(value),
+                b'R' => out.r = Some(value),
+                _ => {}
+            }
+        }
+        Ok(out)
+    }
 }
 
 fn word(words: &[(u8, f64)], axis: u8) -> Option<f64> {
@@ -407,16 +437,16 @@ pub fn parse_foreign_with(gcode: &str, filament_diameter_mm: Option<f64>) -> Res
                     if move_count > MAX_MOVES {
                         return Err(invalid("GCODE_MOVE_LIMIT", "G-code exceeded 100000 moves"));
                     }
-                    let words = axis_words(rest)?;
+                    let words = MotionWords::parse(rest)?;
                     let scale = machine.scale();
-                    if let Some(f) = word(&words, b'F') {
+                    if let Some(f) = words.f {
                         machine.feedrate.set(f * scale)?;
                     }
                     let old_position = machine.position;
                     let was_known = machine.known.iter().all(|v| *v);
                     let mut target = machine.position;
-                    for (index, axis) in b"XYZ".iter().enumerate() {
-                        if let Some(value) = word(&words, *axis) {
+                    for (index, value) in words.xyz.iter().enumerate() {
+                        if let Some(value) = value {
                             let value = value * scale;
                             target[index] = if machine.relative {
                                 machine.position[index] + value
@@ -435,11 +465,10 @@ pub fn parse_foreign_with(gcode: &str, filament_diameter_mm: Option<f64>) -> Res
                     let extruded =
                         machine
                             .extrusion
-                            .advance(word(&words, b'E'), machine.relative_e, scale)?;
+                            .advance(words.e, machine.relative_e, scale)?;
                     let is_arc = matches!(canonical, G(2) | G(3));
-                    let has_axis =
-                        is_arc || b"XYZ".iter().any(|axis| word(&words, *axis).is_some());
-                    if !has_axis && word(&words, b'E').is_none() {
+                    let has_axis = is_arc || words.xyz.iter().any(Option::is_some);
+                    if !has_axis && words.e.is_none() {
                         return Ok(());
                     }
                     let is_known = machine.known.iter().all(|v| *v);
@@ -479,9 +508,9 @@ pub fn parse_foreign_with(gcode: &str, filament_diameter_mm: Option<f64>) -> Res
                         Cow::Owned(arc_points(
                             old_position,
                             target,
-                            word(&words, b'I').map(|v| v * scale),
-                            word(&words, b'J').map(|v| v * scale),
-                            word(&words, b'R').map(|v| v * scale),
+                            words.i.map(|v| v * scale),
+                            words.j.map(|v| v * scale),
+                            words.r.map(|v| v * scale),
                             canonical == G(3),
                         )?)
                     } else {
@@ -789,5 +818,32 @@ M107\nM104 S0\nM140 S0\n; filament_diameter = 1.75\n; gcode_flavor = marlin2\n";
         let header = parse_foreign(raw).unwrap();
         let explicit = parse_foreign_with(raw, Some(1.75)).unwrap();
         assert!(header.deposited_volume_mm3 > explicit.deposited_volume_mm3);
+    }
+
+    #[test]
+    fn fixed_motion_words_match_ordered_reference() {
+        for shift in 0..26 {
+            let mut tokens = Vec::new();
+            for round in 0..4 {
+                for index in 0..26 {
+                    let axis = b'A' + ((index + shift) % 26) as u8;
+                    let axis = if round % 2 == 0 { axis } else { axis.to_ascii_lowercase() };
+                    tokens.push(format!("{}{:.3}", axis as char, (round * 26 + index) as f64 / 8.0));
+                }
+            }
+            let reference = axis_words(tokens.iter().map(String::as_str)).unwrap();
+            let actual = MotionWords::parse(tokens.iter().map(String::as_str)).unwrap();
+            for (axis, value) in b"XYZEFIJR".iter().zip([
+                actual.xyz[0], actual.xyz[1], actual.xyz[2], actual.e,
+                actual.f, actual.i, actual.j, actual.r,
+            ]) {
+                assert_eq!(value, word(&reference, *axis));
+            }
+        }
+        for token in ["X", "Q", "Qbad", "Xbad", "1", "XNaN", "Xinf", "X1e999", "é1"] {
+            let tokens = ["X1", token, "X2"];
+            assert_eq!(MotionWords::parse(tokens.into_iter()).err(), axis_words(tokens.into_iter()).err());
+            assert!(MotionWords::parse(tokens.into_iter()).is_err());
+        }
     }
 }
