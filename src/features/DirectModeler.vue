@@ -799,7 +799,7 @@ const DISPLAY_SEGMENTS = 12
 // Chrome refuses a synchronous WebAssembly.Module over 8 MB on the main thread, so the display
 // tessellation waits for the kernel's asynchronous warm-up and shows the working mesh until then.
 const kernelReady = ref(isGeometryKernelReady())
-if (!kernelReady.value) void warmGeometryKernel().then(() => { kernelReady.value = true }).catch(() => {})
+if (!kernelReady.value) void warmGeometryKernel().then(() => { kernelReady.value = true }).catch(e => { error.value = e instanceof Error ? e.message : String(e) })
 const DISPLAY_TRIANGLE_BUDGET = 4000
 const smoothDisplay = ref(true)
 interface DisplayMesh { mesh: { positions: number[]; indices: number[] }; map: number[] | null; normals: number[][]; /** Smoothed non-indexed list for the GPU layer, built once per display mesh. */ flat?: { positions: Float32Array; normals: Float32Array } }
@@ -1216,7 +1216,7 @@ const solidCommands = computed<SolidCommand[]>(() => {
     toolCmd('select', 'Выбор', 'Select', 'V'), toolCmd('rectangle', 'Прямоугольник', 'Rectangle', 'R'), toolCmd('circle', 'Круг', 'Circle', 'C'),
     toolCmd('arc', 'Дуга', 'Arc'), toolCmd('trim', 'Обрезать', 'Trim'), toolCmd('polyline', 'Ломаная', 'Polyline', 'L'),
     cmd('box-select', 'Рамка', 'Box select', () => { boxSelect.value = !boxSelect.value }, { detail: label('Выделение', 'Selection') }),
-    ...primitiveKinds.map(kind => cmd(`add-${kind}`, primitiveLabel(kind), primitiveLabel(kind), () => addPrimitive(kind), { detail: label('Добавить примитив', 'Add primitive'), keywords: ['primitive', 'примитив', kind] })),
+    ...primitiveKinds.map(kind => cmd(`add-${kind}`, primitiveLabel(kind), primitiveLabel(kind), () => addPrimitive(kind), { detail: label('Добавить примитив', 'Add primitive'), keywords: ['primitive', 'примитив', kind], enabled: kernelReady.value })),
     cmd('add-curve', 'NURBS-кривая', 'NURBS curve', () => addNurbs('curve'), { detail: label('Добавить', 'Add') }),
     cmd('add-surface', 'NURBS-поверхность', 'NURBS surface', () => addNurbs('surface'), { detail: label('Добавить', 'Add') }),
     cmd('pick-body', 'Выбирать тела', 'Pick bodies', () => { pickMode.value = 'body'; advancedOp.value = null; boxSelect.value = false }, { detail: label('Режим выбора 3D', '3D pick mode') }),
@@ -1549,7 +1549,7 @@ watch([() => props.open, () => props.seedDocument], ([open, seed]) => {
     </header>
     <div class="primitive-bar">
       <strong>{{ label('Примитивы','Primitives') }}</strong>
-      <button v-for="kind in primitiveKinds" :key="kind" class="primitive-icon" :title="primitiveLabel(kind)" :aria-label="primitiveLabel(kind)" @click="addPrimitive(kind)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><path :d="PRIMITIVE_ICONS[kind]" /></svg></button>
+      <button v-for="kind in primitiveKinds" :key="kind" class="primitive-icon" :disabled="!kernelReady" :title="primitiveLabel(kind)" :aria-label="primitiveLabel(kind)" @click="addPrimitive(kind)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><path :d="PRIMITIVE_ICONS[kind]" /></svg></button>
       <span class="primitive-divider" aria-hidden="true"></span>
       <button class="primitive-icon" :title="label('NURBS-кривая','NURBS curve')" :aria-label="label('NURBS-кривая','NURBS curve')" @click="addNurbs('curve')"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><path :d="PRIMITIVE_ICONS.curve" /></svg></button>
       <button class="primitive-icon" :title="label('NURBS-поверхность','NURBS surface')" :aria-label="label('NURBS-поверхность','NURBS surface')" @click="addNurbs('surface')"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><path :d="PRIMITIVE_ICONS.surface" /></svg></button>

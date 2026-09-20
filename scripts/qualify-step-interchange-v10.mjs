@@ -24,7 +24,7 @@ run('native-affine-operators','cargo',['test','--locked','--manifest-path','crat
 run('bridge-wasm-build','npm',['run','build:geometry'])
 run('browser-app-build',process.execPath,['node_modules/vite/bin/vite.js','build'])
 run('product-roundtrips','npx',['vitest','run','tests/brepStepV10Product.test.ts'])
-run('browser-workbench-indexeddb',process.execPath,['tools/browser-qualification/step-v10-workbench-indexeddb.mjs'])
+run('browser-workbench-indexeddb',process.execPath,['tools/browser-qualification/step-v10-workbench-indexeddb.mjs'],{env:{...process.env,STEP_V10_DELAY_KERNEL:'1'}})
 const result={schema:'open-scad-viewer/step-interchange-v10-oracle-run',status:'pass',
  validator:{name:manifest.name,version:manifest.version,sourceCommit:manifest.sourceCommit,
   executableSha256:sha256(validator),schema:manifest.schema},

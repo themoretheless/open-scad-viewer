@@ -16,11 +16,29 @@ try{
  page=await browser.newPage({acceptDownloads:true})
  page.on('pageerror',error=>pageErrors.push(error.message))
  await page.addInitScript(()=>localStorage.setItem('scad-lang','en'))
+ if(process.env.STEP_V10_DELAY_KERNEL==='1')await page.addInitScript(({kernelBytes})=>{
+  const original=crypto.subtle.digest.bind(crypto.subtle)
+  let release
+  const gate=new Promise(resolve=>{release=resolve})
+  globalThis.__releaseGeometryDigest=()=>release()
+  crypto.subtle.digest=async(algorithm,data)=>{
+   if(data.byteLength===kernelBytes){globalThis.__geometryDigestPending=true;await gate}
+   return original(algorithm,data)
+  }
+ },{kernelBytes:(await readFile('dist/wasm/geometry-kernel.wasm')).byteLength})
  await page.goto(url,{waitUntil:'domcontentloaded',timeout:120000})
  const workspace=page.locator('.direct-workspace')
+ if(process.env.STEP_V10_DELAY_KERNEL==='1'){
+  await page.waitForFunction(()=>globalThis.__geometryDigestPending===true)
+  const box=workspace.getByRole('button',{name:'Box',exact:true})
+  await box.waitFor()
+  assert.equal(await box.isDisabled(),true,'Box must wait for the geometry kernel')
+  await page.evaluate(()=>globalThis.__releaseGeometryDigest())
+ }
  await workspace.getByRole('spinbutton',{name:'Size, mm',exact:true}).fill('2')
  await workspace.getByRole('button',{name:'Box',exact:true}).click()
  const before=await page.evaluate(()=>JSON.parse(localStorage.getItem('scad-solid-modeler-v1')))
+ assert.equal(before?.bodies?.length,1,'Initial Box must be committed before STEP import')
  const fileMenu=workspace.locator('details.file-menu')
  await fileMenu.locator('summary').click()
  const choose=page.waitForEvent('filechooser')
@@ -56,6 +74,7 @@ try{
   if(!await fileMenu.evaluate(element=>element.open))await fileMenu.locator('summary').click()
   const downloading=page.waitForEvent('download')
   await fileMenu.getByRole('button',{name:'Export AP242 original',exact:true}).click()
+  if(process.env.STEP_V10_DELAY_KERNEL==='1')await page.evaluate(()=>globalThis.__releaseGeometryDigest())
   const download=await downloading
   assert.equal(await download.failure(),null)
   assert.equal(await readFile(await download.path(),'utf8'),original)
@@ -112,6 +131,7 @@ try{
   graphIdentity:result.graphIdentity,occurrences:result.occurrences,definitions:result.definitions,
   reimported:true,reimportedInFreshContext:true,
   uiRoute:'solid-file-menu',productionBuild:true,existingBodiesPreserved:true,invalidImportPreservedScene:true,
+  delayedKernel:process.env.STEP_V10_DELAY_KERNEL==='1',
   originalDownloadMatches:true,reloadPreservedSceneAndOriginal:true,
   userAgent:await page.evaluate(()=>navigator.userAgent)}
  await mkdir(output,{recursive:true})
@@ -121,6 +141,7 @@ try{
  await mkdir(output,{recursive:true})
  await writeFile(resolve(output,'browser-failure.json'),JSON.stringify({
   message:String(error),url:page?.url()??null,pageErrors,
+  alerts:page?await page.getByRole('alert').allTextContents().catch(()=>[]):[],
  },null,2)+'\n')
  if(page)await page.screenshot({path:resolve(output,'browser-failure.png'),fullPage:true}).catch(()=>{})
  throw error

@@ -4,6 +4,7 @@ import {afterEach, beforeEach, expect, it, vi} from 'vitest'
 import {emptyDirectDocument} from '../src/services/directModeling'
 import {prepareSolidStepImport, exportSolidStepOriginal} from '../src/services/solidStepExchange'
 import * as store from '../src/services/cadStepIndexedDb'
+import * as kernel from '../src/services/geometry/kernel'
 
 const source=readFileSync(new URL('./fixtures/step-v6/self-authored-ap242-assembly.step',import.meta.url),'utf8')
 beforeEach(()=>vi.stubGlobal('indexedDB',new IDBFactory()))
@@ -43,4 +44,38 @@ it('refuses an absent original and preserves the previous one after a bad import
  await prepareSolidStepImport(source,emptyDirectDocument())
  await expect(prepareSolidStepImport('not STEP',emptyDirectDocument())).rejects.toThrow()
  expect(await exportSolidStepOriginal()).toBe(source)
+})
+
+it('waits for kernel readiness and snapshots the import scene before yielding',async()=>{
+ await kernel.warmGeometryKernel()
+ let release!:()=>void
+ const pending=new Promise<void>(resolve=>{release=resolve})
+ vi.spyOn(kernel,'warmGeometryKernel').mockReturnValue(pending)
+ const save=vi.spyOn(store,'saveProjectStepModel')
+ const before=emptyDirectDocument()
+ const importing=prepareSolidStepImport(source,before)
+ before.sketches.push({id:'later',name:'Later',closed:true,points:[[0,0],[1,0],[0,1]]})
+ await Promise.resolve()
+ expect(save).not.toHaveBeenCalled()
+ release()
+ const imported=await importing
+ expect(imported.document.sketches).toHaveLength(0)
+ expect(before.sketches).toHaveLength(1)
+ expect(save).toHaveBeenCalledOnce()
+})
+
+it('does not access retained native data before warm-up and recovers after failure',async()=>{
+ await prepareSolidStepImport(source,emptyDirectDocument())
+ const load=vi.spyOn(store,'loadProjectStepModel')
+ const warm=vi.spyOn(kernel,'warmGeometryKernel').mockRejectedValueOnce(Error('warm failed'))
+ await expect(exportSolidStepOriginal()).rejects.toThrow('warm failed')
+ expect(load).not.toHaveBeenCalled()
+ let release!:()=>void
+ warm.mockReturnValueOnce(new Promise<void>(resolve=>{release=resolve}))
+ const exporting=exportSolidStepOriginal()
+ await Promise.resolve()
+ expect(load).not.toHaveBeenCalled()
+ release()
+ expect(await exporting).toBe(source)
+ expect(load).toHaveBeenCalledOnce()
 })
