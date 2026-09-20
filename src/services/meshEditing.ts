@@ -48,22 +48,30 @@ function validatePolygon(mesh: PolygonMesh) {
   }
 }
 
+interface MeshSnapshot { document: MeshWorkspaceDocument; characters: number }
 export class MeshHistory {
-  private past: MeshWorkspaceDocument[] = []
-  private future: MeshWorkspaceDocument[] = []
-  private current: MeshWorkspaceDocument
+  private past: MeshSnapshot[] = []
+  private future: MeshSnapshot[] = []
+  private current: MeshSnapshot
   constructor(document = emptyMeshDocument()) {
-    this.current = parseMeshDocument(JSON.stringify(document))
+    const validated = parseMeshDocument(JSON.stringify(document))
+    this.current = {document: validated, characters: JSON.stringify(validated).length}
   }
-  get document() { return clone(this.current) }
+  get document() { return clone(this.current.document) }
   get canUndo() { return this.past.length > 0 }
   get canRedo() { return this.future.length > 0 }
   commit(document: MeshWorkspaceDocument) {
     const next = parseMeshDocument(JSON.stringify(document))
-    if (JSON.stringify(next) === JSON.stringify(this.current)) return
+    const nextText = JSON.stringify(next)
+    if (nextText.length === this.current.characters && nextText === JSON.stringify(this.current.document)) return
     this.past.push(this.current)
-    while (this.past.length > 80 || (this.past.length > 1 && JSON.stringify(this.past).length > 24_000_000)) this.past.shift()
-    this.current = next
+    // Preserve the exact serialized-array character budget, including brackets
+    // and commas, without serializing retained geometry on every commit.
+    let retained = this.past.reduce((sum, snapshot) => sum + snapshot.characters, 0) + this.past.length + 1
+    while (this.past.length > 80 || (this.past.length > 1 && retained > 24_000_000)) {
+      retained -= this.past.shift()!.characters + 1
+    }
+    this.current = {document: next, characters: nextText.length}
     this.future = []
   }
   undo() {

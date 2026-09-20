@@ -13,6 +13,15 @@ release certification.
 
 ## Current verification
 
+Latest integrated control, completed 2026-09-20: 3289 tests passed and the same
+nine evidence gates failed (341 passing files, four failing; 110.89 seconds).
+This includes the isolated historical manifests, shared bounded initialization,
+cancellation-preserved warmup and [mesh history optimization](mesh-history-2026-09-20.md).
+Log: `/private/tmp/osv-mesh-history-integrated-tests.log`.
+Remote control run 35475827899 on fd03ebcf has completed: Rust, official OpenSCAD,
+macOS and Windows smoke passed; Node 20/22 checks failed. That older remote run
+does not contain the later startup corrections or the mesh-history change.
+
 A later uninterrupted full run on published `8f96044d` passed 3271 tests and
 failed 10 (336 passing files, five failing; 110.18 seconds). In addition to the
 nine evidence failures below, `coreMesh.test.ts` detected a new direct parser
