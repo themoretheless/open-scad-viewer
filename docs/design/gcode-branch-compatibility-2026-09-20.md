@@ -55,3 +55,7 @@ pending adaptation rather than discarded or claimed as merged.
 [Feedrate overrides](gcode-feedrate-override-2026-09-20.md) implement the
 previously ignored M220 behavior in the current reader, with explicit modal
 state and preview bounds. This follow-up does not close the remaining branch.
+
+[Firmware state audit](gcode-firmware-state-audit-2026-09-20.md) reproduces
+logical-E and temperature-target defects in the unchanged branch and records
+the required replacement contracts before thermal/retraction integration.
