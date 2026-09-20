@@ -73,3 +73,19 @@ it('still rejects nonfinite unused positions',()=>{
  vertices[18]=Infinity
  expect(()=>inferSurfaceIds(vertices,new Uint32Array([0,1,2]))).toThrow('Nonfinite mesh position')
 })
+it('does not trust legacy zero-filled non-authoritative ids by length alone', async()=>{
+ const {meshes}=await parseOpenSCAD('cube(5);')
+ const faceIds=new Uint32Array(meshes[0].indices.length/3)
+ const mesh={...meshes[0],faceIds,faceIdsAuthoritative:false,faceIdsInferred:false}
+ const grouped=withSelectionSurfaces(mesh)
+ expect(new Set(grouped.faceIds).size).toBe(6)
+ expect(grouped.faceIds).not.toBe(faceIds)
+ expect(faceIds.every(id=>id===0)).toBe(true)
+})
+it('preserves explicitly inferred ids without recomputing the groups', async()=>{
+ const {meshes}=await parseOpenSCAD('cube(5);')
+ const faceIds=new Uint32Array(meshes[0].indices.length/3).fill(7)
+ const mesh={...meshes[0],faceIds,faceIdsAuthoritative:false,faceIdsInferred:true}
+ expect(withSelectionSurfaces(mesh)).toBe(mesh)
+ expect(withSelectionSurfaces(mesh).faceIds).toBe(faceIds)
+})
