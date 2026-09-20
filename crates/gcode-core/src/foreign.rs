@@ -2,9 +2,10 @@
 //! It recovers movements, layers and totals for preview; it does not validate
 //! a file for printing; volume uses the supplied, declared or default filament diameter.
 
+use crate::foreign_extrusion::Extrusion;
 use crate::foreign_words::{
     self,
-    Command::{G, M},
+    Command::{G, InvalidTool, M, T},
 };
 use crate::{
     GcodeBounds, GcodeMove, GcodePreview, MAX_COORDINATE_MM, MAX_LAYERS, MAX_LINE_BYTES, MAX_MOVES,
@@ -158,10 +159,7 @@ enum Plane {
 struct Machine {
     position: [f64; 3],
     known: [bool; 3],
-    /// Absolute filament position in the file's own (possibly reset) frame.
-    e: f64,
-    /// Filament advanced by all positive extrusion deltas.
-    extruded_total: f64,
+    extrusion: Extrusion,
     /// Relative XYZ (`G91`).
     relative: bool,
     /// Relative E (`M83` or `G91` without `M82`).
@@ -269,12 +267,6 @@ pub fn parse_foreign_with(gcode: &str, filament_diameter_mm: Option<f64>) -> Res
     let diameter = filament_diameter_mm
         .or(info.filament_diameter_mm)
         .unwrap_or(ASSUMED_FILAMENT_DIAMETER_MM);
-    if !(diameter.is_finite() && diameter > 0.0 && diameter <= MAX_COORDINATE_MM) {
-        return Err(invalid(
-            "GCODE_INVALID_SETTINGS",
-            "Filament diameter must be a finite positive value",
-        ));
-    }
     let mut result = GcodePreview {
         layers: 0,
         extrusion_mm: 0.0,
@@ -288,8 +280,7 @@ pub fn parse_foreign_with(gcode: &str, filament_diameter_mm: Option<f64>) -> Res
     let mut machine = Machine {
         position: [0.0; 3],
         known: [false; 3],
-        e: 0.0,
-        extruded_total: 0.0,
+        extrusion: Extrusion::new(diameter)?,
         relative: false,
         relative_e: false,
         inches: false,
@@ -350,21 +341,48 @@ pub fn parse_foreign_with(gcode: &str, filament_diameter_mm: Option<f64>) -> Res
                 }
                 M(82) => machine.relative_e = false,
                 M(83) => machine.relative_e = true,
+                M(200) => {
+                    let words = axis_words(rest)?;
+                    machine.extrusion.configure_volume(
+                        word(&words, b'D'),
+                        word(&words, b'S'),
+                        word(&words, b'T'),
+                        machine.scale(),
+                    )?;
+                }
+                M(221) => {
+                    let words = axis_words(rest)?;
+                    if word(&words, b'D').is_some() {
+                        return Err(invalid(
+                            "GCODE_UNSUPPORTED_COMMAND",
+                            "M221 D extruder selectors are not supported; this preview uses Marlin-style T selectors",
+                        ));
+                    }
+                    machine
+                        .extrusion
+                        .configure_flow(word(&words, b'S'), word(&words, b'T'))?;
+                }
+                T(tool) => machine.extrusion.select_tool(tool)?,
+                InvalidTool => {
+                    return Err(invalid(
+                        "GCODE_INVALID_SETTINGS",
+                        "Extruder identifier must be an unsigned 32-bit integer",
+                    ));
+                }
                 G(17) => machine.plane = Plane::Xy,
                 G(18) | G(19) => machine.plane = Plane::Other,
                 G(92) => {
                     let words = axis_words(rest)?;
                     if words.is_empty() {
-                        machine.e = 0.0;
+                        machine.extrusion.reset(0.0, machine.scale())?;
                         machine.position = [0.0; 3];
                     }
                     for (axis, value) in words {
-                        let value = value * machine.scale();
                         match axis {
-                            b'X' => machine.position[0] = value,
-                            b'Y' => machine.position[1] = value,
-                            b'Z' => machine.position[2] = value,
-                            b'E' => machine.e = value,
+                            b'X' => machine.position[0] = value * machine.scale(),
+                            b'Y' => machine.position[1] = value * machine.scale(),
+                            b'Z' => machine.position[2] = value * machine.scale(),
+                            b'E' => machine.extrusion.reset(value, machine.scale())?,
                             _ => {}
                         }
                     }
@@ -419,28 +437,13 @@ pub fn parse_foreign_with(gcode: &str, filament_diameter_mm: Option<f64>) -> Res
                             machine.known[index] = true;
                         }
                     }
-                    let delta_e = match word(&words, b'E') {
-                        Some(value) => {
-                            let value = value * scale;
-                            if machine.relative_e {
-                                value
-                            } else {
-                                value - machine.e
-                            }
-                        }
-                        None => 0.0,
-                    };
-                    if !delta_e.is_finite() {
-                        return Err(invalid("GCODE_INVALID_NUMBER", "Extrusion is not finite"));
-                    }
-                    machine.e += delta_e;
-                    let extruded = delta_e > 0.0;
+                    let extruded =
+                        machine
+                            .extrusion
+                            .advance(word(&words, b'E'), machine.relative_e, scale)?;
                     let is_arc = matches!(canonical, G(2) | G(3));
                     let has_axis =
                         is_arc || b"XYZ".iter().any(|axis| word(&words, *axis).is_some());
-                    if extruded {
-                        machine.extruded_total += delta_e;
-                    }
                     if !has_axis && word(&words, b'E').is_none() {
                         return Ok(());
                     }
@@ -528,7 +531,7 @@ pub fn parse_foreign_with(gcode: &str, filament_diameter_mm: Option<f64>) -> Res
                                 x: point[0],
                                 y: point[1],
                                 z: point[2],
-                                e: machine.extruded_total,
+                                e: machine.extrusion.total_mm,
                                 feedrate_mm_s: feedrate.unwrap_or(0.0),
                                 layer_index,
                                 extruded,
@@ -560,9 +563,8 @@ pub fn parse_foreign_with(gcode: &str, filament_diameter_mm: Option<f64>) -> Res
             "No movements with a fully known position were found",
         ));
     }
-    result.extrusion_mm = machine.extruded_total;
-    result.deposited_volume_mm3 =
-        machine.extruded_total * std::f64::consts::PI * (diameter / 2.0).powi(2);
+    result.extrusion_mm = machine.extrusion.total_mm;
+    result.deposited_volume_mm3 = machine.extrusion.volume_mm3;
     if ![
         result.extrusion_mm,
         result.deposited_volume_mm3,
@@ -685,7 +687,7 @@ M107\nM104 S0\nM140 S0\n; filament_diameter = 1.75\n; gcode_flavor = marlin2\n";
         let preview = parse_foreign(PRUSA).unwrap();
         assert_eq!(preview.layers, 3, "startup + two marked layers");
         assert!(
-            (preview.extrusion_mm - 10.5).abs() < 1e-9,
+            (preview.extrusion_mm - (9.0 + 1.5 * 0.95)).abs() < 1e-9,
             "{}",
             preview.extrusion_mm
         );

@@ -58,7 +58,11 @@ file validation and filament/time statistics. The versioned preview dialect
 preserves model coordinates. Print jobs can target Marlin, Klipper or
 RepRapFirmware command sets, and G-code from other slicers (PrusaSlicer,
 Orca/Bambu Studio, Cura, …) opens in a tolerant preview mode that reports the
-detected generator and firmware flavor.
+detected generator and firmware flavor. Foreign preview accounts for Marlin-style
+`M200` volumetric extrusion and `M221` flow overrides with bounded per-tool
+parameters. Its material totals are positive filament advance, not net deposited
+material; firmware tool-change macros are not executed. See the
+[extrusion accounting contract](docs/design/gcode-extrusion-accounting-2026-09-20.md).
 
 Solid provides exact rational cylinders, apex cones, conical frustums, tubes,
 spheres and tori. Exact profile rotation supports signed partial turns and

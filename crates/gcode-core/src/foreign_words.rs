@@ -5,20 +5,35 @@ use std::borrow::Cow;
 pub(super) enum Command {
     G(u32),
     M(u32),
+    T(u32),
+    InvalidTool,
     Other,
 }
 
 pub(super) fn command(word: &str) -> Command {
     let bytes = word.as_bytes();
+    let numeric_tool = bytes.first().is_some_and(|b| b.eq_ignore_ascii_case(&b'T'))
+        && bytes[1..]
+            .iter()
+            .all(|b| b.is_ascii_digit() || matches!(b, b'+' | b'-' | b'.'));
     if bytes.len() < 2 || !bytes[1..].iter().all(u8::is_ascii_digit) {
-        return Command::Other;
+        return if numeric_tool {
+            Command::InvalidTool
+        } else {
+            Command::Other
+        };
     }
     let Ok(number) = word[1..].parse() else {
-        return Command::Other;
+        return if numeric_tool {
+            Command::InvalidTool
+        } else {
+            Command::Other
+        };
     };
     match bytes[0].to_ascii_uppercase() {
         b'G' => Command::G(number),
         b'M' => Command::M(number),
+        b'T' => Command::T(number),
         _ => Command::Other,
     }
 }
@@ -103,7 +118,15 @@ mod tests {
         assert_eq!(parsed, ["g01", "x10", "y1", "e2", "F600"]);
         assert_eq!(command(parsed[0]), Command::G(1));
         assert_eq!(command("m083"), Command::M(83));
-        for unknown in ["G", "G1.2", "G4294967296", "SET_PRESSURE_ADVANCE", "T1"] {
+        assert_eq!(command("t01"), Command::T(1));
+        for unknown in [
+            "G",
+            "G1.2",
+            "G4294967296",
+            "SET_PRESSURE_ADVANCE",
+            "TURN_OFF_HEATERS",
+            "T1000_RESET",
+        ] {
             assert_eq!(command(unknown), Command::Other);
         }
         assert_eq!(words("G1 Xabc").collect::<Vec<_>>(), ["G1", "Xabc"]);

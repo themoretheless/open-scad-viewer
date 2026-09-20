@@ -156,3 +156,7 @@ The old branch is still not fully integrated: volumetric/flow interpretation,
 thermal state and firmware-retraction semantics require explicit adaptation
 to current APIs. This change makes no new material-consumption accuracy claim
 for those unsupported modes. Historical qualification archives are unchanged.
+
+Follow-up: [bounded extrusion accounting](gcode-extrusion-accounting-2026-09-20.md)
+adapts volumetric/flow interpretation; thermal and firmware-retraction semantics
+remain outside that preview contract.

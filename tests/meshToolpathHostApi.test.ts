@@ -154,4 +154,24 @@ describe('mesh section / G-code host API', () => {
       expect(() => parse(gcode)).toThrow(expect.objectContaining({code: 'GCODE_MOVE_LIMIT'}))
     }
   })
+
+  it('accounts for volumetric extrusion, flow and diameter changes through WASM', () => {
+    const gcode = 'G90\nM82\nG1 X0 Y0 Z0.2 F600\nM200 T1000 D2 S1\nM221 T1000 S50\nT1000\nG92 E100\nG1 X10 E102\nM200 S0 D4\nG92 E0\nM221 S200\nG1 X20 E1\n'
+    const preview = parseGcodePreview(gcode)
+    expect(inspectGcode(gcode).preview).toEqual(preview)
+    expect(preview.extrusionMm).toBeCloseTo(2 + 1 / Math.PI, 12)
+    expect(preview.depositedVolumeMm3).toBeCloseTo(1 + 8 * Math.PI, 12)
+    expect(preview.moves.at(-1)?.e).toBe(preview.extrusionMm)
+    expect(preview.printDistanceMm).toBe(20)
+  })
+
+  it('rejects invalid extrusion modes and excessive tool state through WASM', () => {
+    const initial = 'G1 X0 Y0 Z0\n'
+    for (const setting of ['M200 S2', 'M221 S-1', 'M200 T-1 D2', 'T1.5']) {
+      expect(() => inspectGcode(initial + setting)).toThrow(expect.objectContaining({code: 'GCODE_INVALID_SETTINGS'}))
+    }
+    const tooMany = initial + Array.from({length: 256}, (_, i) => `T${(i + 1) * 1000}\n`).join('')
+    expect(() => inspectGcode(tooMany)).toThrow(expect.objectContaining({code: 'GCODE_TOOL_LIMIT'}))
+    expect(inspectGcode(initial + 'M83\nG1 X1 E1\n').preview.extrusionMm).toBe(1)
+  })
 })
