@@ -76,6 +76,10 @@ const SUCCESS_FIXTURES = Object.freeze([
   },
 ])
 
+const CAPTURE_PROCESS_TIMEOUT_MS = 60_000
+// Two bounded cold processes verify determinism, not a 5-second latency budget.
+const CAPTURE_TEST_TIMEOUT_MS = 2 * CAPTURE_PROCESS_TIMEOUT_MS + 5_000
+
 // The Manifold constants above and own-Rust v1 remain historical. V2 is created
 // explicitly by the reviewed generator, never by this test or a normal build.
 type OwnSnapshot = {
@@ -138,11 +142,11 @@ describe('independent pinned direct-evaluator differential oracle', () => {
   it('captures deterministic complete results in fresh Node processes without writing a baseline', () => {
     const capture = () => JSON.parse(execFileSync(process.execPath,
       ['--import', 'tsx', 'scripts/record-own-cad-oracle.mjs', '--capture'],
-      { cwd: fileURLToPath(new URL('../', import.meta.url)), encoding: 'utf8', timeout: 60_000, maxBuffer: 4 * 1024 * 1024 }))
+      { cwd: fileURLToPath(new URL('../', import.meta.url)), encoding: 'utf8', timeout: CAPTURE_PROCESS_TIMEOUT_MS, maxBuffer: 4 * 1024 * 1024 }))
     const first = capture(), second = capture()
     expect(first).toEqual(second)
     expect(Object.keys(first)).toEqual(SUCCESS_FIXTURES.map(fixture => fixture.id))
-  })
+  }, CAPTURE_TEST_TIMEOUT_MS)
 
   it('publishes complete new baselines exclusively and leaves no output when source stability fails', () => {
     const directory = mkdtempSync(join(tmpdir(), 'own-oracle-publish-'))
