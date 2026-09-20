@@ -149,47 +149,51 @@ struct V { @builtin(position) p: vec4f, @location(0) c: vec4f }
 @fragment fn fs(v: V) -> @location(0) vec4f { return v.c; }
 `
 
-/**
- * Screen-space anti-aliased work-plane grid. A single quad centred under the
- * eye covers the whole visible field; the fragment shader draws minor lines
- * every step, major lines every ten steps and the X/Y axes, fading lines out
- * once they get denser than the pixel grid and with distance from the eye.
- * options = (section enabled, grid step, plane half-extent, fade distance).
- */
+/** Full-viewport XY grid, reconstructed from camera rays with adaptive spacing. */
 const GRID_WGSL = /* wgsl */`
-struct Scene { vp: mat4x4f, eye: vec4f, light: vec4f, ambient: vec4f, section: vec4f, options: vec4f }
+struct Scene { vp: mat4x4f, eye: vec4f, light: vec4f, ambient: vec4f, section: vec4f, options: vec4f, inverseVP: mat4x4f }
 @group(0) @binding(0) var<uniform> sc: Scene;
 
-struct V { @builtin(position) p: vec4f, @location(0) w: vec2f }
+struct V { @builtin(position) p: vec4f, @location(0) near: vec4f, @location(1) far: vec4f }
+struct F { @location(0) color: vec4f, @builtin(frag_depth) depth: f32 }
 
 @vertex fn vs(@location(0) corner: vec2f) -> V {
-  let w = sc.eye.xy + corner * sc.options.z;
-  return V(sc.vp * vec4f(w, 0.0, 1.0), w);
+  return V(vec4f(corner, 0.0, 1.0),
+    sc.inverseVP * vec4f(corner, 0.0, 1.0),
+    sc.inverseVP * vec4f(corner, 1.0, 1.0));
 }
 
 fn lineMask(coord: vec2f, width: vec2f) -> f32 {
-  let g = abs(fract(coord - 0.5) - 0.5) / width;
+  let g = abs(fract(coord - 0.5) - 0.5) / max(width, vec2f(0.000001));
   return 1.0 - min(min(g.x, g.y), 1.0);
 }
 
-@fragment fn fs(v: V) -> @location(0) vec4f {
-  let step = sc.options.y;
-  let minor = v.w / step;
-  let minorW = fwidth(minor);
-  let major = minor * 0.1;
-  let majorW = minorW * 0.1;
-  // Hide a level once its spacing drops below roughly three pixels.
-  let minorVis = 1.0 - smoothstep(0.2, 0.4, max(minorW.x, minorW.y));
-  let majorVis = 1.0 - smoothstep(0.2, 0.4, max(majorW.x, majorW.y));
-  var alpha = max(lineMask(minor, minorW) * 0.28 * minorVis, lineMask(major, majorW) * 0.55 * majorVis);
+@fragment fn fs(v: V) -> F {
+  let near = v.near.xyz / v.near.w;
+  let far = v.far.xyz / v.far.w;
+  let ray = far - near;
+  let dz = select(-1.0, 1.0, ray.z >= 0.0) * max(abs(ray.z), 0.000001);
+  let t = -near.z / dz;
+  let world = near + t * ray;
+  let pixelWidth = max(fwidth(world.xy), vec2f(0.000001));
+  // Blend decade levels so distant areas retain a readable grid instead of
+  // losing both fixed levels. Derivatives precede all non-uniform discards.
+  let level = max(0.0, log2(max(pixelWidth.x, pixelWidth.y) * 8.0 / sc.options.y) / log2(10.0));
+  let step = sc.options.y * pow(10.0, floor(level));
+  let blend = fract(level);
+  let minor = lineMask(world.xy / step, pixelWidth / step);
+  let major = lineMask(world.xy / (step * 10.0), pixelWidth / (step * 10.0));
+  let coarse = lineMask(world.xy / (step * 100.0), pixelWidth / (step * 100.0));
+  var alpha = max(max(minor * 0.28 * (1.0 - blend), major * mix(0.55, 0.28, blend)), coarse * 0.55 * blend);
   var color = vec3f(0.42, 0.42, 0.42);
-  let axisW = fwidth(v.w) * 1.2;
-  if (abs(v.w.y) < axisW.y) { color = vec3f(0.95, 0.18, 0.16); alpha = max(alpha, 0.9 * majorVis); }
-  if (abs(v.w.x) < axisW.x) { color = vec3f(0.2, 0.85, 0.25); alpha = max(alpha, 0.9 * majorVis); }
-  let dist = length(vec3f(v.w, 0.0) - sc.eye.xyz);
-  alpha *= 1.0 - smoothstep(sc.options.w * 0.35, sc.options.w, dist);
-  if (alpha < 0.004) { discard; }
-  return vec4f(color, alpha);
+  let axisW = pixelWidth * 1.2;
+  if (abs(world.y) < axisW.y) { color = vec3f(0.95, 0.18, 0.16); alpha = max(alpha, 0.9); }
+  if (abs(world.x) < axisW.x) { color = vec3f(0.2, 0.85, 0.25); alpha = max(alpha, 0.9); }
+  let clip = sc.vp * vec4f(world.xy, 0.0, 1.0);
+  let depth = clip.z / clip.w;
+  if (abs(ray.z) < 0.000001 || t < 0.0 || depth < 0.0 || alpha < 0.004) { discard; }
+  // Keep the distant grid as background even beyond the model clipping range.
+  return F(vec4f(color, alpha), min(depth, 0.999999));
 }
 `
 
@@ -355,7 +359,7 @@ export class WebGPURenderer {
   private geometryGhosts: Array<{ meshes: GMesh[]; started: number; alphas: number[] }> = []
   private sceneAabbIndex: SceneAabbIndex = buildSceneAabbIndex([])
   private sceneAabbIndexDirty = false
-  /** Z axis as a line list; the XY plane itself is the shader quad in gridQuadVB. */
+  /** Z axis as a line list; gridQuadVB covers the viewport in clip space. */
   private gridVB: GPUBuffer | null = null
   private gridVC = 0
   private gridQuadVB: GPUBuffer | null = null
@@ -389,7 +393,7 @@ export class WebGPURenderer {
   private depthCycleState: DepthCycleState | null = null
   private styleScratch = new Float32Array(4)
   private objectUniformScratch = new Float32Array(40)
-  private sceneUniformScratch = new Float32Array(36)
+  private sceneUniformScratch = new Float32Array(52)
   // Keyed by geometryAssetId (content) so republished equal meshes hit; per
   // content id a small list of transform snapshots covers instance edits.
   private meshBoundsCache = new Map<string, {
@@ -834,7 +838,7 @@ export class WebGPURenderer {
 
   private buildSceneUB() {
     const dev = this.dev!
-    this.sceneUB = dev.createBuffer({ size: 144, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST })
+    this.sceneUB = dev.createBuffer({ size: 208, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST })
     this.sceneBG = dev.createBindGroup({
       layout: this.sceneBGL,
       entries: [{ binding: 0, resource: { buffer: this.sceneUB } }],
@@ -855,9 +859,7 @@ export class WebGPURenderer {
     const dev = this.dev!
     this.gridVB?.destroy()
     this.gridQuadVB?.destroy()
-    // OpenSCAD is Z-up: the work plane is XY, drawn by GRID_WGSL on a unit
-    // quad that the vertex shader scales per frame. Only the Z axis needs
-    // real geometry.
+    // The grid reconstructs the Z-up XY plane from this full-screen quad.
     const quad = new Float32Array([-1, -1, 1, -1, 1, 1, -1, -1, 1, 1, -1, 1])
     this.gridQuadVB = dev.createBuffer({ size: quad.byteLength, usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST })
     dev.queue.writeBuffer(this.gridQuadVB, 0, quad)
@@ -1771,8 +1773,12 @@ export class WebGPURenderer {
 
     const { eye, viewProjection } = this.cameraState()
     const sd = this.sceneUniformScratch
+    const inverseVP = invert(viewProjection)
     for (let row = 0; row < 4; row++) {
-      for (let column = 0; column < 4; column++) sd[column * 4 + row] = viewProjection[row * 4 + column]
+      for (let column = 0; column < 4; column++) {
+        sd[column * 4 + row] = viewProjection[row * 4 + column]
+        sd[36 + column * 4 + row] = inverseVP[row * 4 + column]
+      }
     }
     sd[16] = eye[0]; sd[17] = eye[1]; sd[18] = eye[2]; sd[19] = 1
     sd[20] = 0.55; sd[21] = 0.75; sd[22] = 0.45; sd[23] = 0
