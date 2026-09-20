@@ -137,13 +137,16 @@ CUDA-`launch` (11 в `math-core/src/cuda.rs`, по одному в `sdf-core`,
 | --- | ---: | --- |
 | `src/parser/geometry.ts` + `limits.ts` | 2 591 | «Extracted from the openscadParser monolith… later moved to a Web Worker»: переезд не состоялся, примитивы теперь в Rust |
 | `src/i18n/index.ts` | 1 623 | ru/en/de/zh; `App.vue` держит свой inline-словарь `L` (ru/en) на строках 132-238 |
-| `src/services/threemfExport.ts`, `zipExport.ts`, `stlExport.ts`, `objExport.ts` | 698 | вытеснены Rust-экспортом (`meshExport.ts`, `meshExportFormats.ts`); `vite.config.ts:51` до сих пор объявляет для них чанк `exporters` |
+| `src/services/threemfExport.ts`, `zipExport.ts`, `objExport.ts` | 517 | вытеснены Rust-экспортом (`meshExport.ts`, `meshExportFormats.ts`); удалены после повторной проверки импортов. `stlExport.ts` сохранён: его напрямую импортируют семь `examples/skadis-box/*.mts` |
 | `src/config/index.ts` | 151 | «Static configuration tables extracted from App.vue» |
 | `src/renderer/shaders.ts` | 139 | WGSL инлайнится в `webgpuRenderer.ts:91-265`; модуль сам предупреждает о тройном копипасте структуры |
 | `src/services/brepDiagnosticWorkerLane.ts`, `modelGraphTextNurbs.ts` | 29 | |
 
-Удаление безопасно по статическому анализу; перед удалением нужен `vite
-build` с анализом бандла (динамических `import()` по этим путям не найдено).
+Удаление подтверждено повторной проверкой статических и динамических импортов
+в `src`, `tests`, `scripts`, `benchmarks` и `tools`; динамических `import()` по
+этим путям не найдено. `stlExport.ts` намеренно не удалён из-за импортов в
+`examples/skadis-box/*.mts`. После удаления production-бандл проверяется
+повторным `vite build`.
 `docs/TOP-50-ISSUES.md` описывает `App.vue` на 15 000 строк и символы,
 которых в текущих 3 658 строках нет; документ помечен как устаревший.
 

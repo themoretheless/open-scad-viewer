@@ -50,7 +50,6 @@ export default defineConfig({
             { name: 'surface-selection', test: /src[\\/]services[\\/]meshSurfaceGroups/ },
             { name: 'parser', test: /src[\\/]services[\\/]openscadParser|src[\\/]parser[\\/]/ },
             { name: 'renderer', test: /src[\\/]services[\\/]webgpuRenderer|src[\\/]renderer[\\/]/ },
-            { name: 'exporters', test: /src[\\/]services[\\/](stlExport|objExport|threemfExport|zipExport|stlImport)/ },
             { name: 'vue', test: /node_modules[\\/](@vue|vue)/ },
           ],
         },
