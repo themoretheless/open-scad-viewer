@@ -5,14 +5,17 @@ import path from 'node:path'
 import {loadQualificationPlaywrightPackage} from './qualificationPlaywrightPackage.mjs'
 
 const root = path.resolve('dist')
-const entry = (await readdir(path.join(root, 'assets'))).find(name => /^gcodePreview\.worker-.*\.js$/.test(name))
+const kind = process.argv[2] ?? 'gcode'
+assert.ok(kind === 'gcode' || kind === 'svg', 'Expected gcode or svg')
+const entryPattern = kind === 'svg' ? /^svg\.worker-.*\.js$/ : /^gcodePreview\.worker-.*\.js$/
+const entry = (await readdir(path.join(root, 'assets'))).find(name => entryPattern.test(name))
 assert.ok(entry, 'Build the application before checking the production worker')
 const server = createServer(async (request, response) => {
   try {
     const url = new URL(request.url, 'http://localhost')
     if (url.pathname === '/__probe') {
       response.setHeader('Content-Type', 'text/html')
-      response.end('<!doctype html><title>G-code worker check</title>')
+      response.end('<!doctype html><title>Geometry worker startup check</title>')
       return
     }
     const file = path.resolve(root, `.${decodeURIComponent(url.pathname)}`)
@@ -30,7 +33,7 @@ try {
   const page = await browser.newPage()
   const origin = `http://127.0.0.1:${server.address().port}`
   await page.goto(`${origin}/__probe`)
-  const result = await page.evaluate(async ({entry, origin}) => {
+  const result = await page.evaluate(async ({entry, origin, kind}) => {
     const workers = [], urls = []
     const wait = (worker, accept) => new Promise((resolve, reject) => {
       const timer = setTimeout(() => { cleanup(); reject(new Error('Worker probe timeout')) }, 10000)
@@ -72,7 +75,9 @@ try {
       await wait(worker, data => data.__ready)
       return worker
     }
-    const request = {version: 1, id: 1, job: {kind: 'parse', gcode: 'G1 X0 Y0 Z0.2 F600\nM83\nG1 X10 E1\n'}}
+    const request = {version: 1, id: 1, job: kind === 'svg'
+      ? {kind: 'preview', svg: '<svg xmlns="http://www.w3.org/2000/svg" width="20mm" height="10mm" viewBox="0 0 20 10"><rect width="20" height="10" fill="red"/></svg>'}
+      : {kind: 'parse', gcode: 'G1 X0 Y0 Z0.2 F600\nM83\nG1 X10 E1\n'}}
     const run = async (worker, id) => {
       const pending = wait(worker, data => data.version === 1 && data.id === id)
       worker.postMessage({...request, id})
@@ -99,18 +104,24 @@ try {
       await new Promise(resolve => setTimeout(resolve, 50))
       return {cold, warm, first, second, recovered, late}
     } finally { workers.forEach(worker => worker.terminate()); urls.forEach(url => URL.revokeObjectURL(url)) }
-  }, {entry, origin})
+  }, {entry, origin, kind})
   for (const response of [result.cold, result.warm, result.recovered]) {
     assert.equal(response.ok, true)
-    assert.equal(response.result.preview.extrusionMm, 1)
-    assert.equal(response.result.preview.printDistanceMm, 10)
+    if (kind === 'svg') {
+      assert.ok(Math.abs(response.result.widthMm - 20) < 0.001)
+      assert.ok(Math.abs(response.result.heightMm - 10) < 0.001)
+      assert.ok(response.result.svg.includes('<path'))
+    } else {
+      assert.equal(response.result.preview.extrusionMm, 1)
+      assert.equal(response.result.preview.printDistanceMm, 10)
+    }
   }
   assert.deepEqual(result.cold.result, result.warm.result)
   assert.deepEqual(result.cold.result, result.recovered.result)
   assert.deepEqual(result.first, {__stats: true, digests: 1, synchronousLargeModules: 0})
   assert.deepEqual(result.second, result.first)
   assert.equal(result.late, 0)
-  console.log(JSON.stringify({browser: browser.version(), entry,
+  console.log(JSON.stringify({browser: browser.version(), kind, entry,
     scope: 'Production worker with real embedded WASM, instrumented WebCrypto and module construction; no latency claim',
     first: result.first, second: result.second, recovered: result.recovered.ok, lateResponsesAfterTermination: result.late}, null, 2))
 } finally { await browser?.close(); await new Promise(resolve => server.close(resolve)) }

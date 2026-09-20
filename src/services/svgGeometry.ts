@@ -1,4 +1,4 @@
-import { readSvgDocument, type SvgOptions } from './svgDocument'
+import { readSvgDocumentAsync, type SvgOptions } from './svgDocument'
 import type { MeshData } from '../core/mesh'
 import { defaultGeometryKernel } from './cadGeometryKernel'
 import { transformPoint } from './math3d'
@@ -22,7 +22,7 @@ function bounded(contours: SvgContours) {
 }
 /** Preserve the static artwork, including paint, masks, filters and outlined text. */
 export async function svgPreview(svg: string, options: SvgOptions = {}) {
-  const parsed = readSvgDocument(svg, options, 'preview')
+  const parsed = await readSvgDocumentAsync(svg, options, 'preview')
   return { svg: parsed.normalizedSvg, widthMm: parsed.widthMm, heightMm: parsed.heightMm, warnings: parsed.warnings }
 }
 
@@ -32,7 +32,7 @@ export async function svgContours(svg: string, options: SvgOptions = {}): Promis
 
 /** Geometry plus conversion diagnostics, shared by the panel and MCP. */
 export async function svgProfile(svg: string, options: SvgOptions = {}) {
-  const parsed = readSvgDocument(svg, options)
+  const parsed = await readSvgDocumentAsync(svg, options)
   const session = await defaultGeometryKernel.openEvalSession()
   try {
     const sections = parsed.regions.map(region => {

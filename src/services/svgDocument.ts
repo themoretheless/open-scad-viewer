@@ -1,4 +1,4 @@
-import { callGeometryRust } from './geometry/kernel'
+import { callGeometryRust, warmGeometryKernel } from './geometry/kernel'
 
 /** Shared browser/worker/Node SVG boundary. All document interpretation stays in Rust. */
 import { SVG_MAX_BYTES, SVG_MAX_FONT_BYTES, SVG_MAX_TOTAL_FONT_BYTES, SVG_MAX_FONTS } from './svgLimits'
@@ -32,12 +32,12 @@ function fontBase64(bytes: Uint8Array): string {
   return btoa(binary)
 }
 
-export function readSvgDocument(
+function prepareSvgDocument(
   source: string,
   options: SvgOptions = {},
   action: 'parse' | 'preview' = 'parse',
   legacyDpi = false,
-): SvgDocumentResult {
+) {
   if (new TextEncoder().encode(source).length > SVG_MAX_BYTES) throw new Error('SVG exceeds 4 MiB.')
   const dpi = options.dpi ?? 96
   const tolerance = options.tolerance ?? 0.02
@@ -52,9 +52,30 @@ export function readSvgDocument(
   if (fonts.length > SVG_MAX_FONTS) throw new Error('SVG supports at most 16 custom fonts.')
   if (fonts.some(font => !(font instanceof Uint8Array) || !font.length || font.length > SVG_MAX_FONT_BYTES)) throw new Error('Each SVG font must contain 1 byte to 4 MiB.')
   if (fonts.reduce((sum, font) => sum + font.length, 0) > SVG_MAX_TOTAL_FONT_BYTES) throw new Error('SVG fonts exceed 8 MiB in total.')
-  return callGeometryRust<SvgDocumentResult>('svg', {
+  return {
     action, source, dpi, tolerance, legacyDpi,
     geometryMode: options.geometryMode ?? 'vector', rasterSize, alphaThreshold,
     fonts: fonts.map(fontBase64),
-  })
+  }
+}
+
+export function readSvgDocument(
+  source: string,
+  options: SvgOptions = {},
+  action: 'parse' | 'preview' = 'parse',
+  legacyDpi = false,
+): SvgDocumentResult {
+  return callGeometryRust<SvgDocumentResult>('svg', prepareSvgDocument(source, options, action, legacyDpi))
+}
+
+export async function readSvgDocumentAsync(
+  source: string,
+  options: SvgOptions = {},
+  action: 'parse' | 'preview' = 'parse',
+  legacyDpi = false,
+): Promise<SvgDocumentResult> {
+  // Validate and capture mutable options/fonts before yielding to compilation.
+  const payload = prepareSvgDocument(source, options, action, legacyDpi)
+  await warmGeometryKernel()
+  return callGeometryRust<SvgDocumentResult>('svg', payload)
 }

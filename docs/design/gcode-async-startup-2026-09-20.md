@@ -59,7 +59,7 @@ deliberately pending compiler hook, then require the worker to exit and a
 replacement to return valid results. This establishes cancellation of active
 warmup, rather than cancellation before a worker has started.
 
-`scripts/check-gcode-worker-browser.mjs` loads the built production worker in
+`scripts/check-geometry-worker-startup-browser.mjs gcode` loads the built production worker in
 Chromium, with observation hooks around WebCrypto and module construction:
 one digest on the first request, still one on the second, and no synchronous
 module larger than 1 MiB. Termination during an entered digest yields no late
