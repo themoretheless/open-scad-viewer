@@ -8,6 +8,9 @@ import {
 import { AbortedError, OpenSCADParseError } from '../services/openscadParser'
 import { isExactSolidRequest } from '../services/solid/exactSolidProtocol'
 import { meshTransferables } from '../core/mesh'
+import {createSelectionSurfacePublisher} from '../services/selectionSurfacePublisher'
+import {surfaceGroupsInKernel} from '../services/geometry/meshAnalysis'
+import {warmGeometryKernel} from '../services/geometry/kernel'
 import type { GeometryExecutionDescriptor } from '../core/geometryExecution'
 import {
   GEOMETRY_WORKER_PROTOCOL_VERSION,
@@ -29,6 +32,7 @@ interface ActiveJob {
 }
 
 const activeJobs = new Map<number, ActiveJob>()
+const publishSelectionSurfaces = createSelectionSurfacePublisher(surfaceGroupsInKernel)
 const latestByQuality = new Map<GeometryBuildRequest['quality'], GeometryBuildRequest>()
 let latestDocumentRevision = -1
 // BuildCoordinator emits monotonically increasing ids over a FIFO MessagePort.
@@ -177,7 +181,7 @@ async function runBuild(
 
   let lastHeartbeat = performance.now()
   let completedExecution: GeometryExecutionDescriptor | undefined
-  let phase: 'initializing' | 'compiling' = 'initializing'
+  let phase: 'initializing' | 'compiling' | 'serializing' = 'initializing'
   try {
     // Cold WASM compilation belongs to initialization, not provider readiness.
     // Cancel only this wait; shared warmup can serve the next admitted job.
@@ -219,7 +223,14 @@ async function runBuild(
       return
     }
 
-    postEvent(jobEvent(request, { status: 'progress', phase: 'serializing', progress: 0.95 }))
+    phase = 'serializing'
+    postEvent(jobEvent(request, { status: 'progress', phase, progress: 0.95 }))
+    if (request.selectionSurfaces) {
+      await warmGeometryKernel()
+      const terminal = terminalState(job, 'serializing', built.execution)
+      if (terminal) { postEvent(terminal); return }
+      result.meshes = result.meshes.map(publishSelectionSurfaces)
+    }
     const response = jobEvent(request, {
       status: 'succeeded',
       phase: 'complete',

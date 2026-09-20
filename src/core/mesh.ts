@@ -63,6 +63,8 @@ export interface MeshData {
   faceIds: Uint32Array
   /** True when IDs refer to authored surfaces/B-rep faces rather than mesh facets. */
   faceIdsAuthoritative?: boolean
+  /** Connected selection patches have already been computed from display coordinates. */
+  faceIdsInferred?: boolean
   /** Compact triangle runs mapped back to the source operation that created them. */
   provenance: MeshProvenanceRun[]
   topology: MeshTopologyDiagnostics

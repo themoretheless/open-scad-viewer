@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { MeshData } from '../src/core/mesh'
+import {createSelectionSurfacePublisher} from '../src/services/selectionSurfacePublisher'
+import {withSelectionSurfaces} from '../src/services/meshSurfaceGroups'
 import {
   assertGeometryScene,
   geometrySceneFromMeshes,
@@ -25,6 +27,27 @@ function fixture(entityId: `entity:${string}`, transformX: number): MeshData {
 }
 
 describe('entity/geometry asset split', () => {
+  it('retains inferred selection metadata through scene publication', () => {
+    const mesh = {...fixture('entity:selection', 0), faceIdsInferred: true}
+    const restored = meshesFromGeometryScene(geometrySceneFromMeshes([mesh]))[0]
+    expect(restored.faceIdsInferred).toBe(true)
+    expect(withSelectionSurfaces(restored)).toBe(restored)
+  })
+
+  it('caches groups without transferring or mutating the retained cache entry', () => {
+    let calls = 0
+    const publish = createSelectionSurfacePublisher(() => { calls++; return new Uint32Array([7]) })
+    const mesh = {...fixture('entity:selection', 0), geometryAssetId: 'mesh:fixture'}
+    const first = publish(mesh)
+    const sent = structuredClone(first.faceIds, {transfer: [first.faceIds.buffer]})
+    expect(sent[0]).toBe(7)
+    const second = publish(mesh)
+    expect(second.faceIds[0]).toBe(7)
+    second.faceIds[0] = 99
+    expect(publish(mesh).faceIds[0]).toBe(7)
+    expect(calls).toBe(1)
+    expect(publish({...mesh, faceIdsAuthoritative: true}).faceIds).toBe(mesh.faceIds)
+  })
   it('deduplicates exact tessellation while preserving independent entity state', () => {
     const first = fixture('entity:first', 0)
     const second = fixture('entity:second', 10)

@@ -25,6 +25,7 @@ export interface ReadyGeometryInspectionArtifacts {
   readonly edgeIndices: Uint32Array
   readonly faceIds: Uint32Array
   readonly faceIdsAuthoritative?: boolean
+  readonly faceIdsInferred?: boolean
   readonly provenance: readonly MeshProvenanceRun[]
   readonly topology: MeshTopologyDiagnostics
 }
@@ -116,6 +117,7 @@ export function geometrySceneFromMeshes(meshes: readonly MeshData[]): GeometrySc
         bvh: mesh.bvh,
         edgeIndices: mesh.edgeIndices,
         faceIds: mesh.faceIds,
+        ...(mesh.faceIdsInferred === undefined ? {} : {faceIdsInferred:mesh.faceIdsInferred}),
         ...(mesh.faceIdsAuthoritative === undefined ? {} : {faceIdsAuthoritative:mesh.faceIdsAuthoritative}),
         provenance: mesh.provenance,
         topology: mesh.topology,
@@ -145,6 +147,7 @@ export function meshesFromGeometryScene(scene: GeometryScene): MeshData[] {
       color: [...entity.color],
       transform: entity.transform,
       faceIds: artifacts.faceIds,
+      ...(artifacts.faceIdsInferred === undefined ? {} : {faceIdsInferred:artifacts.faceIdsInferred}),
       ...(artifacts.faceIdsAuthoritative === undefined ? {} : {faceIdsAuthoritative:artifacts.faceIdsAuthoritative}),
       provenance: [...artifacts.provenance],
       topology: artifacts.topology,

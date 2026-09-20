@@ -59,6 +59,7 @@ export interface BuildCoordinatorState {
 }
 
 export interface BuildCoordinatorOptions {
+  selectionSurfaces?: boolean
   workerFactory: () => WorkerLike
   /**
    * Same-realm worker doubles share object identity with the host, so events
@@ -248,6 +249,7 @@ export class BuildCoordinator {
       jobId: this.nextJobId++,
       source: input.source,
       sourceSha256: sha256Hex(input.source),
+      ...(this.options.selectionSurfaces ? {selectionSurfaces: true} : {}),
       quality: input.quality,
     }
     const record: JobRecord = {

@@ -43,7 +43,7 @@ export function inferSurfaceIds(vertices:Float32Array,indices:Uint32Array,angleD
 }
 /** Preserve authored face IDs exactly; only legacy meshes use inferred patches. */
 export function withSelectionSurfaces(mesh:MeshData):MeshData {
- if(mesh.faceIdsAuthoritative)return mesh
+ if(mesh.faceIdsAuthoritative||mesh.faceIdsInferred)return mesh
  if(mesh.indices.length/3>100000)return mesh
  // Content-keyed cache survives republication; buffer-identity WeakMap remains
  // the fallback for meshes without a content id.

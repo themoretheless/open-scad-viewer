@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   GEOMETRY_WORKER_PROTOCOL_VERSION,
+  isGeometryWorkerEvent,
   type GeometryBuildRequest,
   type GeometryWorkerEvent,
   type GeometryWorkerRequest,
@@ -129,6 +130,24 @@ afterEach(() => {
   vi.resetModules()
 })
 
+it('publishes requested selection patches through the real WASM boundary', async () => {
+  parseOpenSCADMock.mockResolvedValueOnce(identityResult({entityId: 'entity:a', operationId: 'op:a', instanceId: 'entity:a'}))
+  const scope = new FakeWorkerScope()
+  vi.stubGlobal('self', scope)
+  await import('../src/workers/geometry.worker')
+  const source = 'cube(1);'
+  scope.dispatchMessage({protocolVersion: GEOMETRY_WORKER_PROTOCOL_VERSION, type: 'build',
+    documentRevision: 1, jobId: 1, source, sourceSha256: sha256Hex(source), quality: 'full', selectionSurfaces: true})
+  await vi.waitFor(() => expect(scope.events.at(-1)?.status).toBe('succeeded'))
+  const result = scope.events.at(-1)!
+  expect(isGeometryWorkerEvent(result)).toBe(true)
+  if (result.status !== 'succeeded') throw new Error('Expected success')
+  expect(result.meshes[0].faceIdsInferred).toBe(true)
+  expect(result.meshes[0].faceIdsAuthoritative).not.toBe(true)
+  expect(result.meshes[0].faceIds).toEqual(new Uint32Array([0]))
+  expect(scope.transfers.at(-1)).toContain(result.meshes[0].faceIds.buffer)
+})
+
 describe('geometry Worker lifecycle', () => {
   it('does not let a malformed exact-solid request consume a display worker', async () => {
     parseOpenSCADMock.mockResolvedValue(identityResult({ entityId: 'entity:box', operationId: 'op:box', instanceId: 'entity:box' }))
@@ -221,7 +240,7 @@ describe('geometry Worker lifecycle', () => {
       error: {
         name: 'GeometryWorkerProtocolError',
         code: 'WORKER_RESULT_UNPUBLISHABLE',
-        message: 'Geometry result cannot be published under protocol v6',
+        message: `Geometry result cannot be published under protocol v${GEOMETRY_WORKER_PROTOCOL_VERSION}`,
       },
     }))
     const firstJobEvents = scope.events.filter(event => event.jobId === 1)

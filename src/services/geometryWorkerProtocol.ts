@@ -14,7 +14,7 @@ import { sha256Hex } from '../core/sha256'
  * version in every message makes an old, cached worker fail visibly instead of
  * accidentally publishing data into a newer application state.
  */
-export const GEOMETRY_WORKER_PROTOCOL_VERSION = 6 as const
+export const GEOMETRY_WORKER_PROTOCOL_VERSION = 7 as const
 
 export type GeometryWorkerProtocolVersion = typeof GEOMETRY_WORKER_PROTOCOL_VERSION
 export type GeometryJobId = number
@@ -43,6 +43,7 @@ interface GeometryJobEnvelope {
 }
 
 export interface GeometryBuildRequest extends GeometryJobEnvelope {
+  selectionSurfaces?: boolean
   type: 'build'
   source: string
 }
@@ -482,10 +483,11 @@ function isMeshData(value: unknown): value is MeshData {
   if (!hasExactKeys(value, [
     'vertices', 'indices', 'bvh', 'edgeIndices', 'color', 'transform',
     'faceIds', 'provenance', 'topology',
-  ], ['entityId', 'geometryAssetId', 'faceIdsAuthoritative', 'nativeGeometry'])
+  ], ['entityId', 'geometryAssetId', 'faceIdsAuthoritative', 'faceIdsInferred', 'nativeGeometry'])
     || !isFloat32Payload(value.vertices)
     || !isUint32Payload(value.indices)
     || !isUint32Payload(value.edgeIndices)
+    || (value.faceIdsInferred !== undefined && typeof value.faceIdsInferred !== 'boolean')
     || (value.faceIdsAuthoritative !== undefined && typeof value.faceIdsAuthoritative !== 'boolean')
     || !isUint32Payload(value.faceIds)
     || !isFloat32Payload(value.transform)
@@ -549,10 +551,11 @@ function hasSafeSuccessPayload(value: Record<string, unknown>): boolean {
       || !hasExactKeys(candidate, [
         'vertices', 'indices', 'bvh', 'edgeIndices', 'color', 'transform',
         'faceIds', 'provenance', 'topology',
-      ], ['entityId', 'geometryAssetId', 'faceIdsAuthoritative', 'nativeGeometry'])
+      ], ['entityId', 'geometryAssetId', 'faceIdsAuthoritative', 'faceIdsInferred', 'nativeGeometry'])
       || !isFloat32Payload(candidate.vertices)
       || !isUint32Payload(candidate.indices)
       || !isUint32Payload(candidate.edgeIndices)
+      || (candidate.faceIdsInferred !== undefined && typeof candidate.faceIdsInferred !== 'boolean')
       || (candidate.faceIdsAuthoritative !== undefined && typeof candidate.faceIdsAuthoritative !== 'boolean')
       || !isUint32Payload(candidate.faceIds)
       || !isFloat32Payload(candidate.transform)
@@ -674,7 +677,8 @@ export function isGeometryWorkerRequest(value: unknown): value is GeometryWorker
       return hasExactKeys(value, [
         'protocolVersion', 'type', 'documentRevision', 'jobId', 'source',
         'sourceSha256', 'quality',
-      ])
+      ], ['selectionSurfaces'])
+        && (build.selectionSurfaces === undefined || typeof build.selectionSurfaces === 'boolean')
         && typeof build.source === 'string'
         && build.source.length <= MAX_GEOMETRY_SOURCE_CHARACTERS
         && isWellFormedUnicode(build.source)
