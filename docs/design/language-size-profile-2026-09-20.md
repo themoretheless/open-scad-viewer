@@ -1,5 +1,8 @@
 # Language WASM size profile control
 
+Follow-up: the [product ModelGraph control](modelgraph-size-profile-2026-09-20.md)
+measures the fused preparation path and records the final PR 21 disposition.
+
 Before integrating PR #21's workspace-wide `s` to `z` change, build both profiles
 from the same current language sources in an isolated checkout. Main's generated
 artifacts and Cargo profile were not changed. The snapshot starts at f8bf39ab
