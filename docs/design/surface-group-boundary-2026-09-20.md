@@ -44,6 +44,19 @@ Optimized WASM is 7,680,174 bytes, +10,580 versus the preceding local artifact;
 SHA-256 `bb075a40cc24aa3127343c0ab7679fd068cef8d5b6cf638bb2b2f54845a39379`.
 Historical qualification artifacts were not updated.
 
+## Packaging Check
+
+Production Vite build and `verify-dist` pass: 91 artifacts, 5,786,696 asset
+bytes plus 9,708,036 raw WASM bytes, 15,494,732 bytes total. The tracked
+`public/wasm/geometry-kernel.wasm` is included with this integration, not just
+the ignored generated embedded payload.
+
+The Chrome production worker packaging check passes cold initialization, warm
+operations, refusal and recovery for SVG and G-code workers. Report:
+`tmp/performance/surface-groups-worker-packaging/report.json`.
+This is packaging compatibility evidence, not a replacement for qualification
+or a full application interaction test.
+
 ## Remaining Integration
 
 Do not copy the old branch's export-then-render grouping sequence: it computes
