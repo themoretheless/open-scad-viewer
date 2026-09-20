@@ -87,6 +87,16 @@ fn travel_xy(a: [f64; 2], b: [f64; 2]) -> f64 {
 
 /// Serialize a machine job: heat, optional home, absolute E, retract on long travels.
 pub fn emit_job(layers: &[PlannedLayer], job: &JobProfile) -> Result<String> {
+    let mut out = BoundedOutput(String::new());
+    emit_job_body(layers, job, &mut out)?;
+    Ok(out.0)
+}
+
+pub(crate) fn emit_job_body(
+    layers: &[PlannedLayer],
+    job: &JobProfile,
+    out: &mut impl Write,
+) -> Result<()> {
     job.validate()?;
     require_layers(layers)?;
     let machine = &job.machine;
@@ -96,7 +106,6 @@ pub fn emit_job(layers: &[PlannedLayer], job: &JobProfile) -> Result<String> {
     let retract_f = job.retract_feedrate_mm_s * 60.0;
     let unretract_f = job.unretract_feedrate_mm_s * 60.0;
     let flavor = job.flavor;
-    let mut out = BoundedOutput(String::new());
     writeln!(
         out,
         "; {JOB_DIALECT}\n;FLAVOR:{}\n; Machine job: heating and retract enabled; not a LAN upload certificate\n;FILAMENT_DIAMETER_MM:{}\n;NOZZLE_TEMP_C:{}\n;BED_TEMP_C:{}\n;EST_TIME_S:0",
@@ -225,7 +234,7 @@ pub fn emit_job(layers: &[PlannedLayer], job: &JobProfile) -> Result<String> {
     for command in flavor.shutdown_commands() {
         writeln!(out, "{command}").map_err(output_limit)?;
     }
-    Ok(out.0)
+    Ok(())
 }
 
 #[derive(Default)]
@@ -731,6 +740,29 @@ mod tests {
                 },
             ],
         }
+    }
+
+    #[test]
+    fn writer_preserves_every_flavor_and_refuses_invalid_jobs_before_writing() {
+        for flavor in [Flavor::Marlin, Flavor::Klipper, Flavor::RepRapFirmware] {
+            let job = JobProfile {
+                flavor,
+                ..JobProfile::default()
+            };
+            let layers = [square()];
+            let expected = emit_job(&layers, &job).unwrap();
+            let mut actual = String::new();
+            crate::emit_job_to(&layers, &job, &mut actual).unwrap();
+            assert_eq!(actual, expected);
+            parse_job(&actual).unwrap();
+        }
+        let invalid = JobProfile {
+            nozzle_temp_c: f64::NAN,
+            ..JobProfile::default()
+        };
+        let mut output = String::new();
+        assert!(crate::emit_job_to(&[square()], &invalid, &mut output).is_err());
+        assert!(output.is_empty());
     }
 
     #[test]

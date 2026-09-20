@@ -21,7 +21,7 @@ mod foreign_words;
 mod job;
 mod package_3mf;
 mod writer;
-pub use writer::emit_to;
+pub use writer::{emit_job_to, emit_to};
 
 pub use flavor::Flavor;
 pub use foreign::{

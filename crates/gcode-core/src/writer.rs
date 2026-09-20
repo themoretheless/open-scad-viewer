@@ -1,6 +1,8 @@
 use std::fmt::{self, Write};
 
-use crate::{MAX_OUTPUT_BYTES, MachineProfile, PlannedLayer, Result, emit_body, invalid};
+use crate::{
+    JobProfile, MAX_OUTPUT_BYTES, MachineProfile, PlannedLayer, Result, emit_body, invalid,
+};
 
 struct LimitedWriter<'a, W> {
     target: &'a mut W,
@@ -30,12 +32,29 @@ pub fn emit_to(
     machine: &MachineProfile,
     target: &mut impl Write,
 ) -> Result<()> {
+    write_bounded(target, |out| emit_body(layers, machine, out))
+}
+
+/// Emit a machine job directly to a text writer under the same bounds as `emit_to`.
+/// On error discard partial output. This performs no printer I/O or readiness checks.
+pub fn emit_job_to(
+    layers: &[PlannedLayer],
+    job: &JobProfile,
+    target: &mut impl Write,
+) -> Result<()> {
+    write_bounded(target, |out| crate::job::emit_job_body(layers, job, out))
+}
+
+fn write_bounded<W: Write>(
+    target: &mut W,
+    emit: impl FnOnce(&mut LimitedWriter<'_, W>) -> Result<()>,
+) -> Result<()> {
     let mut out = LimitedWriter {
         target,
         written: 0,
         failed: false,
     };
-    let result = emit_body(layers, machine, &mut out);
+    let result = emit(&mut out);
     if out.failed {
         return Err(invalid(
             "GCODE_WRITE",
@@ -43,4 +62,44 @@ pub fn emit_to(
         ));
     }
     result
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn exact_budget_accepts_then_refuses_without_appending() {
+        let mut bytes = String::new();
+        let mut out = LimitedWriter {
+            target: &mut bytes,
+            written: 0,
+            failed: false,
+        };
+        out.write_str(&"x".repeat(MAX_OUTPUT_BYTES)).unwrap();
+        assert!(out.write_str("x").is_err());
+        assert!(!out.failed);
+        assert_eq!(bytes.len(), MAX_OUTPUT_BYTES);
+    }
+
+    #[test]
+    fn job_propagates_writer_failure_after_partial_progress() {
+        struct Partial {
+            calls: usize,
+        }
+        impl Write for Partial {
+            fn write_str(&mut self, _: &str) -> fmt::Result {
+                self.calls += 1;
+                if self.calls > 2 {
+                    Err(fmt::Error)
+                } else {
+                    Ok(())
+                }
+            }
+        }
+        let mut target = Partial { calls: 0 };
+        let error = emit_job_to(&[], &JobProfile::default(), &mut target).unwrap_err();
+        assert_eq!(error.code, "GCODE_WRITE");
+        assert_eq!(target.calls, 3);
+    }
 }

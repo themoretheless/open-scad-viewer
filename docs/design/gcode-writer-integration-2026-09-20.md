@@ -68,3 +68,17 @@ counter increments. The 100-point absolute timings vary substantially; do not
 treat its percentage as stable. A separate instrumented rebuild reproduced
 the allocation byte totals above. These measurements do not establish browser
 performance or filesystem throughput.
+
+## Machine Job Follow-up
+
+`emit_job_to` now exposes the same bounded destination path for machine jobs.
+The String-returning `emit_job` and direct writer use one job emission body;
+preview and job writers share budget/error handling. No firmware command,
+rounding, heating, retraction or shutdown semantics are changed.
+
+Native tests compare exact output for Marlin, Klipper and RepRapFirmware and
+parse each result through the job parser. Additional tests cover invalid job
+settings before output, writer failure after partial progress, and the exact
+4 MiB append boundary. gcode-core/gcode-optimize tests pass. Browser WASM and
+3MF callers remain on their existing API; preview benchmark percentages do
+not establish performance of this job API.
