@@ -9,6 +9,7 @@ const server=await createServer({logLevel:'silent',server:{host:'127.0.0.1',port
   load(id){if(id==='\0nominal-truss-probe')return `
     import {createApp,reactive,h} from 'vue';
     import Panel from '/src/features/CadWorkbenchPanel.vue';
+    import Tools from '/src/features/MainModelingTools.vue';
     import {warmGeometryKernel} from '/src/services/geometry/kernel.ts';
     import {extrudeDirectSketch} from '/src/services/directModeling.ts';
     import {previewMeshes} from '/src/services/mainModeling.ts';
@@ -38,7 +39,10 @@ const server=await createServer({logLevel:'silent',server:{host:'127.0.0.1',port
       renderer=new WebGPURenderer();if(!await renderer.init(canvas))throw Error('WebGPU renderer unavailable');
       renderer.setGridVisible(false);renderer.setBackgroundColor([0.9,0.9,0.9]);renderer.setMeshes(props.meshes);renderer.fitView();
     }
-    const app=createApp({render:()=>h(Panel,{...props,onPreview:meshes=>{window.__trussProbe.preview=meshes===null?null:meshes.map(mesh=>({color:mesh.color,triangles:mesh.indices.length/3,finite:mesh.vertices.every(Number.isFinite)}));renderer?.setMeshes(meshes??props.meshes)}})});app.mount('#app');
+    const onPreview=meshes=>{window.__trussProbe.preview=meshes===null?null:meshes.map(mesh=>({color:mesh.color,triangles:mesh.indices.length/3,finite:mesh.vertices.every(Number.isFinite)}));renderer?.setMeshes(meshes??props.meshes)};
+    let tools;
+    const app=createApp({render:()=>${process.env.TRUSS_TOOLS==='1'}?h(Tools,{...props,ref:value=>{tools=value},selected:0,selectedIndices:props.selection,canUndo:false,canRedo:false,project:()=>null,ray:()=>null,cameraRevision:0,onPreview}):h(Panel,{...props,onPreview})});app.mount('#app');
+    if(tools){tools.execute('lighten');window.__trussProbe.command=id=>tools.execute(id)}
     window.__trussProbe.props=props;window.__trussProbe.unmount=()=>{app.unmount();renderer?.destroy()};
   `},
 }]})
@@ -121,6 +125,13 @@ try{
     assert.ok(markers.length>0&&markers.length<=3)
     assert.equal(markers.reduce((sum,mesh)=>sum+mesh.triangles,0),36*8)
     assert.ok(markers.every(mesh=>mesh.finite))
+    if(process.env.TRUSS_TOOLS==='1'){
+      await page.evaluate(()=>window.__trussProbe.command('box-select'))
+      assert.equal(await page.evaluate(()=>window.__trussProbe.preview),null)
+      assert.equal(await results.getByLabel('Preview axial force sign',{exact:true}).isChecked(),false)
+      await page.evaluate(()=>window.__trussProbe.command('box-select'))
+      await results.getByLabel('Preview axial force sign',{exact:true}).check()
+    }
     const fieldPixels=await captureViewport('field')
     if(fieldPixels)assert.ok(fieldPixels.blue+fieldPixels.red>20,JSON.stringify(fieldPixels))
     if(fieldPixels){

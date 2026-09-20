@@ -42,3 +42,18 @@ copying the cleared WebGPU canvas backing store. Reports/screenshots are in
 This closes the real-renderer nonblank/framing/orbit check. It uses an isolated
 host for the actual CAD panel and renderer, not a complete App session; broader
 cross-tool preview ownership remains a separate integration check.
+
+## Parent Tool Reset
+
+The MainModelingTools cancel path now advances a preview epoch through
+CadWorkbenchPanel to the field controls. This fixes a retained CAD panel whose
+field checkbox stayed on after another parent command restored the scene.
+
+`TRUSS_TOOLS=1 TRUSS_VIEWPORT=1` runs the browser workflow through the real
+MainModelingTools parent, native worker and WebGPU renderer. It enables the
+field, invokes box-select (which leaves the CAD panel mounted), verifies null
+preview and an unchecked field control, disables box-select and re-enables the
+field. Desktop/mobile runs passed, including the existing solve/stale reply/
+restoration/orbit checks. Report: `/private/tmp/osv-truss-tools-browser.json`.
+Seven focused tests, Vue typecheck, production build and dist verification pass.
+This covers the concrete parent-command ownership defect, not all App workflows.

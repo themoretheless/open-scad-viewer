@@ -31,13 +31,14 @@ let solidGeneration=0
 onUnmounted(cancelMainSolid)
 const dimensionOpen=ref(false)
 const workbenchOpen=ref(false),workbenchAction=ref<import('../services/cadWorkbench').CadAction>('union')
+const previewEpoch=ref(0)
 const boxSelect=ref(false)
 const size=ref(20),op=ref<MainOperation|null>(null),error=ref(''),previewing=ref(false)
 const p=ref<MainParameters>({amount:2,x:0,y:0,z:0,axis:'z',edge:0,shape:'rectangle',width:10,height:10,cut:false})
 const kinds=[['box','Куб','Box'],['cylinder','Цилиндр','Cylinder'],['cone','Конус','Cone'],['sphere','Сфера','Sphere']]
 const ops:[MainOperation,string,string][]=[['push','Push/Pull','Push/Pull'],['fillet','Скругление','Fillet'],['chamfer','Фаска','Chamfer'],['shell','Оболочка','Shell'],['split','Разрез','Split'],['profile','Эскиз на грани','Face sketch'],['move','Двигать','Move'],['rotate','Вращать','Rotate'],['scale','Масштаб','Scale'],['duplicate','Копия','Duplicate'],['delete','Удалить','Delete']]
 const topology=computed(()=>{try{return props.selected===null?null:sceneFace(props.meshes[props.selected],props.hit)}catch{return null}})
-function cancel(){solidGeneration++;cancelMainSolid();working.value=false;emit('preview',null);previewing.value=false;op.value=null;error.value=''}
+function cancel(){solidGeneration++;previewEpoch.value++;cancelMainSolid();working.value=false;emit('preview',null);previewing.value=false;op.value=null;error.value=''}
 watch(()=>[props.source,props.selected,props.hit],()=>cancel())
 watch(p,()=>{solidGeneration++;cancelMainSolid();working.value=false;if(previewing.value){emit('preview',null);previewing.value=false}},{deep:true,flush:'sync'})
 async function run(fn:()=>void|Promise<void>){error.value='';try{await fn()}catch(e){if(e instanceof Error&&e.name==='AbortError')return;error.value=e instanceof Error?e.message:String(e)}}
@@ -104,7 +105,7 @@ function applySketch(body:DirectBody,cut:boolean){run(()=>{if(!props.ready)throw
 </script>
 <template>
  <CadDimensionsOverlay v-if="dimensionOpen" :meshes="meshes" :selection="selectedIndices" :project="project" :revision="cameraRevision" @resize="resizeDimensions" />
- <CadWorkbenchPanel v-if="workbenchOpen" :key="workbenchAction" :initial-action="workbenchAction" :meshes="meshes" :selection="selectedIndices" :hit="hit" :source="source" :ready="ready" :locale="locale" @apply="emit('apply',$event)" @preview="emit('preview',$event)" @close="workbenchOpen=false" />
+ <CadWorkbenchPanel v-if="workbenchOpen" :key="workbenchAction" :initial-action="workbenchAction" :meshes="meshes" :selection="selectedIndices" :hit="hit" :source="source" :ready="ready" :locale="locale" :external-preview-epoch="previewEpoch" @apply="emit('apply',$event)" @preview="emit('preview',$event)" @close="workbenchOpen=false" />
  <MainSketchTools v-if="sketchOpen" :key="sketchAnchor?JSON.stringify(sketchAnchor):JSON.stringify(sketchPlane)" :session-key="sketchAnchor?JSON.stringify(sketchAnchor):undefined" :snap-points="snapPoints" :plane="sketchPlane" :project="project" :ray="ray" :revision="cameraRevision" :locale="locale" @body="applySketch" @close="sketchOpen=false" />
  <MainModelingOverlay v-if="!sketchOpen" :meshes="meshes" :selected="selected" :selection="selectedIndices" :hit="hit" :operation="op" :parameters="p" :project="project" :revision="cameraRevision" :box="boxSelect" @parameters="p=$event" @preview="preview" @apply="apply" @cancel="cancel" @select="emit('selectMany',$event)" @box-done="boxSelect=false" />
  <div v-if="op||error||working" class="main-model-tools" @keydown.stop>

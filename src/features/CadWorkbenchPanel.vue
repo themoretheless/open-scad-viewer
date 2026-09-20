@@ -21,7 +21,7 @@ import {storageKeys,storageGet,storageSet} from '../services/safeStorage'
 import {parseDirectDocument,type DirectSketch,type DirectDocument} from '../services/directModeling'
 import type {CadOptions,CadAction} from '../services/cadWorkbench'
 const NominalTrussPanel=defineAsyncComponent(()=>import('./NominalTrussPanel.vue'))
-const props=defineProps<{meshes:MeshData[];selection:number[];hit:PickHit|null;source:string;ready:boolean;locale:string;initialAction?:CadAction}>()
+const props=defineProps<{meshes:MeshData[];selection:number[];hit:PickHit|null;source:string;ready:boolean;locale:string;initialAction?:CadAction;externalPreviewEpoch?:number}>()
 const emit=defineEmits<{apply:[source:string];preview:[meshes:MeshData[]|null];close:[]}>()
 const label=(a:string,b:string)=>props.locale==='ru'?a:b
 const actions:[CadAction,string,string][]=[['lighten','Облегчение / каркас','Lightening / lattice'],['texture','Текстура поверхности','Surface texture'],['union','Объединить','Union'],['difference','Вычесть','Difference'],['intersection','Пересечь','Intersection'],['loft','Loft — между профилями','Loft'],['sweep','Sweep — вдоль пути','Sweep'],['mirror','Зеркало','Mirror'],['pattern','Массив тел','Body pattern'],['align','Выровнять','Align'],['distribute','Распределить','Distribute'],['resize','Габариты','Dimensions'],['draft','Уклон','Draft'],['hole','Отверстие','Hole'],['thread','Резьба','Thread'],['joint','Соединение','Joint']]
@@ -52,6 +52,7 @@ function refresh(){const items=storageKeys('scad-main-sketches-v1:').flatMap(key
 refresh()
 const selectionLabel=computed(()=>props.selection.map(i=>i+1).join(' → '))
 function cancel(){version++;previewEpoch.value++;cancelMainSolid();busy.value=false;emit('preview',null)}
+watch(()=>props.externalPreviewEpoch,cancel,{flush:'sync'})
 watch(()=>o.value.action,a=>{o.value.mode=a==='mirror'?'copy':a==='hole'?'plain':a==='thread'?'internal':a==='joint'?'revolute':'min'});
 watch(()=>props.source,cancel);watch(()=>props.selection,cancel,{deep:true});watch([jointMin,jointMax],cancel);watch(o,()=>{cancel();error.value='';info.value=''},{deep:true});onUnmounted(cancel)
 function picked(){if(props.hit){o.value.origin=[...props.hit.point];o.value.axis=props.hit.normal.map(v=>-v) as [number,number,number]}}
