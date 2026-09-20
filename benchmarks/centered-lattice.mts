@@ -7,19 +7,20 @@ import ts from 'typescript'
 import {CadGeometryKernel} from '../src/services/cadGeometryKernel'
 import {setOptionalWasmCompiler} from '../src/services/wasmCompilation'
 import {extrudeDirectSketch, type DirectBody} from '../src/services/directModeling'
-import {spatialGraph, type LighteningOptions} from '../src/services/solidLightening'
+import {spatialGraph, lighteningCells, type LighteningOptions} from '../src/services/solidLightening'
 
-// Pin the pre-port implementation. Only its pure spatialGraph export is called;
+// Pin the pre-port implementation. Only its pure graph/cell exports are called;
 // external geometry imports are unavailable in the reference module. Evaluate
 // in the same JS realm so a VM context does not bias the host timing.
 const referenceCommit = '7b3afccf379aead6151c7ceaf9b633e40eb62924'
 const source = execFileSync('git', ['show', `${referenceCommit}:src/services/solidLightening.ts`], {encoding: 'utf8'})
-const referenceExports: {spatialGraph?: typeof spatialGraph} = {}
+const referenceExports: {spatialGraph?: typeof spatialGraph; lighteningCells?: typeof lighteningCells} = {}
 const evaluateReference = new Function('exports', 'require', ts.transpileModule(source, {compilerOptions: {
  target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS,
 }}).outputText)
 evaluateReference(referenceExports, () => ({}))
 assert.equal(typeof referenceExports.spatialGraph, 'function')
+assert.equal(typeof referenceExports.lighteningCells, 'function')
 const reference = (body: DirectBody, options: LighteningOptions) =>
  JSON.parse(JSON.stringify(referenceExports.spatialGraph!(body, options))) as ReturnType<typeof spatialGraph>
 const artifact = readFileSync('public/wasm/geometry-kernel.wasm')
@@ -37,7 +38,21 @@ const body = (size: number[], offset = 0) => extrudeDirectSketch({id: 's', name:
  points: [[offset, offset], [offset + size[0], offset],
   [offset + size[0], offset + size[1]], [offset, offset + size[1]]]}, size[2], '0')
 let accepted = 0, refused = 0
+let cellAccepted = 0, cellRefused = 0, maxCoordinateDifference = 0
 const results = []
+const cellResults = []
+const cellFailures: object[] = []
+function compareCells(actual: ReturnType<typeof lighteningCells>, expected: ReturnType<typeof lighteningCells>) {
+ assert.equal(actual.length, expected.length, 'Cell count differs')
+ for(let i=0;i<actual.length;i++){
+  assert.equal(actual[i].length, expected[i].length, 'Polygon size differs')
+  for(let j=0;j<actual[i].length;j++)for(let k=0;k<2;k++){
+   const delta=Math.abs(actual[i][j][k]-expected[i][j][k])
+   assert.ok(delta<1e-9, `Coordinate differs by ${delta}`)
+   maxCoordinateDifference=Math.max(maxCoordinateDifference,delta)
+  }
+ }
+}
 try {
  for (const pattern of ['bcc', 'octet'] as const) {
   for (let x = 1; x <= 4; x++) for (let y = 1; y <= 4; y++) for (let z = 1; z <= 4; z++) {
@@ -71,9 +86,39 @@ try {
     referenceMs: median(samples[0]), wasmBoundaryMs: median(samples[1]), samples})
   }
  }
+ for(const pattern of ['grid','triangles','honeycomb','web','isogrid'] as const){
+  for(const width of [1,5,15,40])for(const height of [1,9,20])for(const offset of [0,-7.125]){
+   for(const rib of [.2,1.2,4]){
+    const min:[number,number]=[offset,offset],max:[number,number]=[offset+width,offset+height]
+    const o={...options,pattern,cell:6,rib}
+    let expected:ReturnType<typeof lighteningCells>
+    try{expected=referenceExports.lighteningCells!(min,max,o)}
+    catch{assert.throws(()=>lighteningCells(min,max,o),/144/);cellRefused++;continue}
+    try{compareCells(lighteningCells(min,max,o),expected)}
+    catch(error){cellFailures.push({pattern,width,height,offset,rib,error:String(error)});continue}
+    cellAccepted++
+   }
+  }
+ }
+ assert.equal(cellFailures.length,0,JSON.stringify(cellFailures))
+ for(const size of [[16,12],[40,20]]){
+  const min:[number,number]=[0,0],max:[number,number]=[size[0],size[1]]
+  const o={...options,pattern:'isogrid' as const,cell:6,rib:1.2}
+  const expected=referenceExports.lighteningCells!(min,max,o)
+  const calls=[()=>referenceExports.lighteningCells!(min,max,o),()=>lighteningCells(min,max,o)]
+  for(let i=0;i<20;i++)for(const call of calls)compareCells(call(),expected)
+  const samples:number[][]=[[],[]]
+  for(let i=0;i<31;i++)for(const index of i%2?[1,0]:[0,1]){
+   const start=performance.now(),actual=calls[index]()
+   samples[index].push(performance.now()-start)
+   compareCells(actual,expected)
+  }
+  const median=(values:number[])=>[...values].sort((a,b)=>a-b)[15]
+  cellResults.push({size,cells:expected.length,referenceMs:median(samples[0]),wasmBoundaryMs:median(samples[1]),samples})
+ }
 } finally {session.dispose()}
 console.log(JSON.stringify({referenceCommit, accepted, refused, node: process.version,
  platform: process.platform, arch: process.arch,
  artifactSha256: createHash('sha256').update(artifact).digest('hex'),
- scope: 'Warm pure TS graph vs complete Rust graph ABI call; includes mesh transfer/validation. No full lightening or UI timing.',
- results}, null, 2))
+ scope: 'Warm pure TS graph/cells vs complete Rust ABI calls; graph includes mesh transfer/validation. No full lightening or UI timing.',
+ cellAccepted,cellRefused,maxCoordinateDifference,results,cellResults}, null, 2))

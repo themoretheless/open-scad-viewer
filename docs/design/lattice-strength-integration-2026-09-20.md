@@ -73,7 +73,8 @@ BCC and octet graph generation are selectively integrated in
 `crates/geometry-bridge/src/cad_centered_lattice.rs`, invoked by the existing
 Rust CAD lightening path. No strength estimates or rankings are imported.
 `bone` and `spatial` retain their existing generation logic and fixtures.
-Isogrid and the remaining print/strength changes are not integrated yet.
+Isogrid is covered by the follow-up below. The remaining print/strength changes
+are not integrated yet.
 
 The new module counts both nodes and edges before allocating or generating
 them, including body/face centers. The current limits remain 125 nodes and
@@ -130,7 +131,7 @@ were discarded because that setup biased the comparison.
 
 Reports: `/private/tmp/osv-centered-lattice-same-realm-{a,b}.json`.
 
-### Full Local Regression
+### Full Local Regression Before Isogrid
 
 `vitest run --maxWorkers 2` with local HTTP socket access completed in
 108.49 seconds: 3327 passed and 9 failed across 347 files (343 passed,
@@ -141,3 +142,60 @@ Reports: `/private/tmp/osv-centered-lattice-same-realm-{a,b}.json`.
 tests ran without sandbox socket failures. The suite is not green; immutable
 qualification archives were not rewritten to hide these failures.
 Log: `/private/tmp/osv-centered-lattice-full-tests.log`.
+
+## Isogrid Follow-Up
+
+The equilateral triangular isogrid pattern now uses the existing Rust planar
+cell generation, clipping, inset and channel boolean path. It is offered in
+the workbench with planar channel and print-fitting controls. No qualitative
+strength rankings from the old branch are introduced. The nominal padded
+grid admission rule (`columns * rows * 2 <= 144`) matches the TS implementation;
+finite increasing bounds are checked before the bounded construction loops.
+
+Extending conformance to all planar patterns exposed two existing Rust issues:
+
+- `inset_polygon` iterated indices from the initial polygon but read them from
+  the changing clipped result. Insetting the triangle `[[0,0],[1,0],[0,1]]`
+  by 2 panicked with `index out of bounds: len is 0 but index is 1`.
+  It now offsets original edges and stops when the result is empty. The
+  consumed-cell WASM test also calls the kernel again to check recovery.
+- Honeycomb disabled X jitter but still applied Y jitter. In a 1x9 domain
+  with cell 6, rib 0.2, seed 42 and jitter 0.5, the first clipped opening
+  differed from the TS reference by about 0.7726 mm. Honeycomb now disables
+  both components; only `web` applies randomization. The expanded corpus
+  reproduced 40 honeycomb mismatches before this fix and no mismatches in
+  the other planar patterns.
+
+Both issues have regression tests. The consumed-inset native test and the
+honeycomb public-WASM test were observed failing before their fixes.
+After the source fixes, all 260 `geometry-bridge` library tests passed.
+
+Final rebuilt-WASM verification:
+
+- All 40 targeted planar/spatial lattice, print-fitting and UI tests pass.
+- The same-realm reference harness matches 360 planar fixtures across grid,
+  triangles, honeycomb, web and isogrid; ordered polygon sizes match and the
+  maximum coordinate difference is `1.4210854715202004e-14` (tolerance `1e-9`).
+  The 196 admitted and 60 rejected centered graph cases still pass.
+- Full local Vitest with socket access: 3335 passed, 9 failed in 107.91 seconds,
+  across 347 files. The nine failures are the same qualification binding set
+  listed above. No timeout or new failure appeared in this run.
+- Vue, MCP and standalone benchmark typechecks pass. `verify-dist` verifies
+  91 artifacts: 5,789,948 asset bytes plus 9,713,121 raw WASM bytes.
+
+Final WASM SHA-256:
+`b4ad458cd84207f41e788ece11208b1018fa151552e8985512e844116e36a8bb`.
+
+The extended harness also times isogrid through the full cell ABI, using the
+same warmup/alternation protocol as the centered graph cases:
+
+| Domain / returned cells | TS p50 A/B, ms | Rust ABI p50 A/B, ms |
+| --- | ---: | ---: |
+| 16x12 / 15 | 0.02329 / 0.02317 | 0.02933 / 0.02942 |
+| 40x20 / 56 | 0.03942 / 0.04096 | 0.06271 / 0.06304 |
+
+Again, there is no standalone ABI speedup. The changes extend the existing
+native lightening path and repair geometry semantics; these timings do not
+establish a complete lightening or UI performance improvement.
+Reports: `/private/tmp/osv-isogrid-final-{a,b}.json`.
+Full regression log: `/private/tmp/osv-isogrid-full-tests.log`.

@@ -440,10 +440,14 @@ fn clip_polygon(poly: Vec<[f64; 2]>, n: [f64; 2], d: f64) -> Vec<[f64; 2]> {
 }
 
 fn inset_polygon(poly: Vec<[f64; 2]>, distance: f64) -> Vec<[f64; 2]> {
-    let mut result = poly;
-    for i in 0..result.len() {
-        let a = result[i];
-        let b = result[(i + 1) % result.len()];
+    let mut result = poly.clone();
+    // Clipping may remove vertices; offset the original edges, not the result.
+    for i in 0..poly.len() {
+        if result.is_empty() {
+            break;
+        }
+        let a = poly[i];
+        let b = poly[(i + 1) % poly.len()];
         let dx = b[0] - a[0];
         let dy = b[1] - a[1];
         let len = dx.hypot(dy);
@@ -463,6 +467,37 @@ fn area(poly: &[[f64; 2]]) -> f64 {
         acc + a[0] * b[1] - a[1] * b[0]
     });
     s.abs() * 0.5
+}
+
+#[cfg(test)]
+mod cell_tests {
+    use super::*;
+
+    #[test]
+    fn triangle_inset_offsets_each_original_edge_once() {
+        let polygon = vec![[0., 0.], [8., 0.], [4., 4. * 3f64.sqrt()]];
+        let inset = inset_polygon(polygon, 0.5);
+        assert_eq!(inset.len(), 3);
+        for i in 0..3 {
+            let a = inset[i];
+            let b = inset[(i + 1) % 3];
+            assert!(((a[0] - b[0]).hypot(a[1] - b[1]) - (8. - 3f64.sqrt())).abs() < 1e-10);
+        }
+    }
+
+    #[test]
+    fn oversized_inset_returns_empty_without_indexing_removed_vertices() {
+        assert!(inset_polygon(vec![[0., 0.], [1., 0.], [0., 1.]], 2.).is_empty());
+    }
+
+    #[test]
+    fn honeycomb_does_not_apply_web_jitter() {
+        let regular =
+            generate_lightening_cells([0., 0.], [1., 9.], "honeycomb", 6., 0.2, 42., 0.).unwrap();
+        let candidate =
+            generate_lightening_cells([0., 0.], [1., 9.], "honeycomb", 6., 0.2, 99., 1.).unwrap();
+        assert_eq!(candidate, regular);
+    }
 }
 
 pub fn lightening_cells(v: Value) -> Result<Value> {
@@ -534,6 +569,51 @@ fn generate_lightening_cells(
                 }
             }
         }
+    } else if pattern == "isogrid" {
+        let h = cell * 3f64.sqrt() / 2.;
+        if !min.iter().chain(max.iter()).all(|v| v.is_finite())
+            || width <= 0.
+            || height <= 0.
+            || !h.is_finite()
+            || h <= 0.
+        {
+            return Err(input("Isogrid requires finite increasing bounds."));
+        }
+        let cols = (width / cell).ceil() + 2.;
+        let rows = (height / h).ceil() + 2.;
+        if !cols.is_finite() || !rows.is_finite() || cols * rows * 2. > 144. {
+            return Err(input("More than 144 cells. Increase cell size."));
+        }
+        let at = |i: i32, j: i32| {
+            [
+                min[0] + (i as f64 + j as f64 * 0.5) * cell,
+                min[1] + j as f64 * h,
+            ]
+        };
+        for j in -1i32..rows as i32 {
+            for i in -j.div_euclid(2) - 2..cols as i32 {
+                for tri in [
+                    vec![at(i, j), at(i + 1, j), at(i, j + 1)],
+                    vec![at(i + 1, j), at(i + 1, j + 1), at(i, j + 1)],
+                ] {
+                    if tri.iter().flatten().any(|v| !v.is_finite()) {
+                        return Err(input("Isogrid exceeds finite numeric range."));
+                    }
+                    let mut polygon = tri;
+                    for (normal, bound) in [
+                        ([1., 0.], max[0]),
+                        ([-1., 0.], -min[0]),
+                        ([0., 1.], max[1]),
+                        ([0., -1.], -min[1]),
+                    ] {
+                        polygon = clip_polygon(polygon, normal, bound);
+                    }
+                    if polygon.len() >= 3 && area(&polygon) > rib * rib / 4. {
+                        cells.push(polygon);
+                    }
+                }
+            }
+        }
     } else if pattern == "honeycomb" || pattern == "web" {
         let mut seed = seed0.rem_euclid(4294967296.) as u32;
         let mut random = || {
@@ -550,7 +630,7 @@ fn generate_lightening_cells(
         for y in 0..rows {
             for x in 0..nx {
                 let jitter_x = if pattern == "web" { jitter } else { 0. };
-                let jitter_y = jitter;
+                let jitter_y = jitter_x;
                 let xx = min[0]
                     + (x as f64 + 0.25 + (y % 2) as f64 * 0.5 + (random() - 0.5) * jitter_x) * dx;
                 let yy = min[1]

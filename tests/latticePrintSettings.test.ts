@@ -4,7 +4,7 @@ import type {LighteningOptions} from '../src/services/solidLightening'
 const o:LighteningOptions={pattern:'web',axis:'x',cell:8,rib:1.35,rim:2,bottom:.1,top:.7,seed:42,jitter:.7,lineWidth:.45,perimeters:3}
 const p={nozzle:.6,layer:.25,lines:4,skinLayers:4,maxBridge:5,openTop:true}
 describe('print geometry fitting',()=>{
- it('fits walls and floor, opens top and preserves source options',()=>{const r=fitLatticeToPrint(o,p);expect(r.rib).toBe(2.7);expect(r.bottom).toBe(1);expect(r.top).toBe(0);expect(r.axis).toBe('z');expect(o.axis).toBe('x');expect(fitLatticeToPrint(r,p)).toEqual(r)})
+ it.each(['web','isogrid'] as const)('fits %s walls and floor, opens top and preserves source options',(pattern)=>{const r=fitLatticeToPrint({...o,pattern},p);expect(r.rib).toBe(2.7);expect(r.bottom).toBe(1);expect(r.top).toBe(0);expect(r.axis).toBe('z');expect(o.axis).toBe('x');expect(fitLatticeToPrint(r,p)).toEqual(r)})
  it.each(['spatial','bcc','octet'] as const)('resolves %s skin and sampling without removing diagonals',(pattern)=>{const r=fitLatticeToPrint({...o,pattern,skin:1,step:2,diagonals:true},p);expect(r.skin).toBe(2.7);expect(r.step).toBeLessThanOrEqual(r.rib/3);expect(r.diagonals).toBe(true);expect(r.axis).toBe('x');expect(r.bottom).toBe(o.bottom);expect(printBridgeWarning(r,p)).toBe(true)})
  it('rejects impossible layer heights and keeps optional shell absent',()=>{expect(()=>fitLatticeToPrint(o,{...p,layer:1})).toThrow();expect(fitLatticeToPrint({...o,pattern:'spatial',skin:0},p).skin).toBe(0)})
  it('is deterministic and rejects non-finite or out-of-range print settings',()=>{

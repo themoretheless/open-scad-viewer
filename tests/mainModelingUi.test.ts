@@ -45,6 +45,7 @@ it('offers centered lattice patterns with spatial controls and no ineffective ra
  const select=ui.all().find(n=>n.tag==='select'&&n.options.some(o=>o.value==='bcc'))!
  expect(select).toBeDefined()
  expect(select.options.some(o=>o.value==='octet')).toBe(true)
+ expect(select.options.some(o=>o.value==='isogrid')).toBe(true)
  for(const pattern of ['bcc','octet']){
   select.props['onUpdate:modelValue'](pattern);await nextTick()
   const labels=ui.all().filter(n=>n.tag==='label').map(ui.text)
@@ -58,6 +59,9 @@ it('offers centered lattice patterns with spatial controls and no ineffective ra
  expect(ui.all().some(n=>n.tag==='label'&&ui.text(n).includes('Randomness'))).toBe(true)
  select.props['onUpdate:modelValue']('grid');await nextTick()
  expect(ui.all().some(n=>n.tag==='label'&&ui.text(n).includes('Channel axis'))).toBe(true)
+ select.props['onUpdate:modelValue']('isogrid');await nextTick()
+ expect(ui.all().some(n=>n.tag==='label'&&ui.text(n).includes('Channel axis'))).toBe(true)
+ expect(ui.all().some(n=>n.tag==='label'&&ui.text(n).includes('Outer skin, mm'))).toBe(false)
 })
 it('drags a main viewport gizmo and commits once on release',async()=>{
  const values:any[]=[],preview=vi.fn(),apply=vi.fn()

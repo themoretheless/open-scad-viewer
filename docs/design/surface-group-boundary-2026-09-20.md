@@ -145,6 +145,11 @@ is specific to Node 22, not the whole matrix. Rust and official OpenSCAD MCP
 jobs have passed; Windows/macOS native jobs remain in progress at this follow-up.
 Node 20 log: `/private/tmp/osv-ci-35482145042-node20.log`.
 
+Final outcome for CI run `35482145042` on `bce3b408`: Rust, official OpenSCAD
+MCP, macOS native and Windows native jobs all completed successfully. Node
+20.19 and 22 retain the failures detailed above. This is evidence for that
+commit, not a CI pass for the subsequent centered/isogrid lattice changes.
+
 ## Edge Traversal Follow-Up
 
 The Rust implementation no longer retains an insertion-order vector of edge
