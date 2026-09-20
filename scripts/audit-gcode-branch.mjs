@@ -31,7 +31,7 @@ try {
   run('rustc', ['--edition=2024', fixture, '--extern', `gcode_core=${core}`, '-L', `dependency=${scratch}`, '-o', binary])
   const observed = JSON.parse(run(binary, []).toString())
   console.log(JSON.stringify({commit, rustc: run('rustc', ['--version']).toString().trim(),
-    scope: 'Pinned legacy interpreter defect reproduction, not production validation or firmware execution',
+    scope: 'Pinned legacy interpreter and emitter defect reproduction, not production validation or firmware execution',
     qualificationClaim: 'none', sources,
     fixtureSha256: createHash('sha256').update(readFileSync(fixture)).digest('hex'), observed}, null, 2))
 } finally { rmSync(scratch, {recursive: true, force: true}) }
