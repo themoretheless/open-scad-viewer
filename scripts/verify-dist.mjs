@@ -83,6 +83,8 @@ const jsChunkBudgets = [
   [/^assets\/harfbuzz-bytes-[^/]+\.js$/, 200_000],
   // Direct modeling panel/tool surface, measured: 137,120 bytes.
   [/^assets\/DirectModeler-[^/]+\.js$/, 160_000],
+  // Modeling tools with validated transferable G-code moves, measured: 100,285 bytes.
+  [/^assets\/MainModelingTools-[^/]+\.js$/, 102_000],
   // WASM brotli unpacking helper chunk, measured: 122,900 bytes.
   [/^assets\/wasm-brotli-bytes-[^/]+\.js$/, 140_000],
 ]

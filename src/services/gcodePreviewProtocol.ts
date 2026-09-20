@@ -20,7 +20,7 @@ export interface GcodePreviewDocument {
   /** Firmware flavor: the job's target, or the flavor declared in an opened file. */
   flavor?: string | null
 }
-export interface GcodePreviewRequest { version: 1; id: number; job: GcodePreviewJob }
+export interface GcodePreviewRequest { version: 1; id: number; job: GcodePreviewJob; responseFormat?: 'f64-moves-v1' }
 export type GcodePreviewResponse =
   | { version: 1; id: number; ok: true; result: GcodePreviewDocument }
   | { version: 1; id: number; ok: false; error: string }

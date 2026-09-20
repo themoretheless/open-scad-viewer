@@ -1,12 +1,14 @@
 import type {GcodePreviewResult} from './geometry/polygon'
 
 export type PackedGcodePreview = Omit<GcodePreviewResult,'moves'> & {moveRows:number[]}
+export const GCODE_MOVE_ROW_WIDTH = 7
+export const GCODE_MAX_MOVE_ROWS = 700_000
 
 /** Private fixed-field wire rows; public callers still receive ordinary move objects. */
-export function unpackGcodePreview({moveRows,...metadata}:PackedGcodePreview):GcodePreviewResult {
-  if(!Array.isArray(moveRows)||moveRows.length%7!==0||moveRows.length>700_000)throw new Error('Invalid packed G-code moves')
-  const moves:GcodePreviewResult['moves']=new Array(moveRows.length/7)
-  for(let i=0,j=0;i<moveRows.length;i+=7,j++) {
+export function unpackGcodePreview({moveRows,...metadata}:Omit<PackedGcodePreview,'moveRows'> & {moveRows:number[]|Float64Array}):GcodePreviewResult {
+  if((!Array.isArray(moveRows)&&!(moveRows instanceof Float64Array))||moveRows.length%GCODE_MOVE_ROW_WIDTH!==0||moveRows.length>GCODE_MAX_MOVE_ROWS)throw new Error('Invalid packed G-code moves')
+  const moves:GcodePreviewResult['moves']=new Array(moveRows.length/GCODE_MOVE_ROW_WIDTH)
+  for(let i=0,j=0;i<moveRows.length;i+=GCODE_MOVE_ROW_WIDTH,j++) {
     const x=moveRows[i],y=moveRows[i+1],z=moveRows[i+2],e=moveRows[i+3],feedrateMmS=moveRows[i+4],layerIndex=moveRows[i+5],flag=moveRows[i+6]
     if(!Number.isFinite(x)||!Number.isFinite(y)||!Number.isFinite(z)||!Number.isFinite(e)||!Number.isFinite(feedrateMmS)
       ||!Number.isInteger(layerIndex)||layerIndex<0||layerIndex>=2048||(flag!==0&&flag!==1))throw new Error('Invalid packed G-code move')

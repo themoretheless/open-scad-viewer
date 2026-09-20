@@ -14,12 +14,17 @@ assert.equal(sha256(artifact),identity.sha256)
 assert.equal(artifact.length,identity.byteLength)
 assert.equal(sha256(readFileSync('src/generated/geometry-kernels/kernel_bg.wasm')),identity.sha256)
 const terminations:Promise<number>[]=[]
+const transport=process.env.GCODE_WORKER_TRANSPORT??'transfer'
+assert.ok(transport==='transfer'||transport==='legacy')
 let created=0
 class NodePort implements GcodeWorkerPort {
   private callbacks=new Map<string,Map<EventListener,(data:unknown)=>void>>()
   private terminated=false
   constructor(private worker:Worker){}
-  postMessage(request:GcodePreviewRequest){this.worker.postMessage(request)}
+  postMessage(request:GcodePreviewRequest){
+    const {responseFormat,...legacy}=request
+    this.worker.postMessage(transport==='legacy'?legacy:request)
+  }
   terminate(){if(!this.terminated){this.terminated=true;terminations.push(this.worker.terminate())}}
   addEventListener(type:'message'|'error'|'messageerror',listener:EventListener){
     const callback=(data:unknown)=>listener({data} as MessageEvent)
@@ -76,7 +81,7 @@ try {
   }
   assert.equal(created,1,'Warm campaign must reuse a single worker')
   console.log(JSON.stringify({node:process.version,arch:process.arch,platform:process.platform,
-    artifactSha256:identity.sha256,workersCreated:created,warmups:10,samples:31,
+    artifactSha256:identity.sha256,transport,workersCreated:created,warmups:10,samples:31,
     workerSourceSha256:sha256(readFileSync('src/workers/gcodePreview.worker.ts')),
     scope:'Actual worker entrypoint and client through Node worker_threads; includes validation, message transport and result delivery, not browser rendering or cold startup',results},null,2))
 } finally {client.dispose();await Promise.all(terminations)}

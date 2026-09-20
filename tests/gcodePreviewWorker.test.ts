@@ -3,6 +3,7 @@ import { GcodePreviewWorker, type GcodeWorkerPort } from '../src/services/gcodeP
 import { checkGcodePreviewJob, GCODE_PREVIEW_MAX_BYTES, type GcodePreviewDocument, type GcodePreviewJob, type GcodePreviewRequest } from '../src/services/gcodePreviewProtocol'
 import { drawGcodeLayer, gcodeLayerRange, gcodeMeshBounds } from '../src/services/gcodePreviewGeometry'
 import { executeGcodePreview, executeGcodePreviewAsync } from '../src/services/gcodePreviewRuntime'
+import { prepareGcodePreviewTransfer } from '../src/services/gcodePreviewWorkerTransport'
 
 const geometry = vi.hoisted(() => ({ emit: vi.fn(), emitJob: vi.fn(), parse: vi.fn(), flatten: vi.fn(), warm: vi.fn() }))
 vi.mock('../src/services/geometry/kernel', () => ({ warmGeometryKernel: geometry.warm }))
@@ -113,6 +114,20 @@ describe('G-code worker lifecycle', () => {
     expect(workers[0].terminate).toHaveBeenCalledOnce()
   })
 
+  it('requests transferable moves, validates them and discards a malformed worker before retrying', async () => {
+    const {client, workers} = setup(), first = client.run(job())
+    expect(workers[0].posted[0].responseFormat).toBe('f64-moves-v1')
+    const packed = prepareGcodePreviewTransfer({version: 1, id: workers[0].posted[0].id, ok: true, result: result()})
+    workers[0].send('message', structuredClone(packed.response, {transfer: packed.transfer}))
+    await expect(first).resolves.toEqual(result())
+    const invalid = client.run(job())
+    workers[0].send('message', {version: 1, id: workers[0].posted[1].id, ok: true,
+      responseFormat: 'f64-moves-v1', result: {...result(), preview: {...result().preview, moves: undefined, moveRows: new Float64Array(1)}}})
+    await expect(invalid).rejects.toThrow('Invalid response')
+    expect(workers[0].terminate).toHaveBeenCalledOnce()
+    const retry = client.run(job()); workers[1].complete(); await retry
+  })
+
   it('times out unresponsive work and cleans up on owner disposal', async () => {
     const { client, workers } = setup(50), pending = client.run(job())
     const timedOut = expect(pending).rejects.toThrow('exceeded two minutes')
@@ -138,7 +153,8 @@ describe('G-code worker lifecycle', () => {
 describe('G-code worker boundary and scene geometry', () => {
   it('validates before async warming and waits before entering geometry', async () => {
     for (const invalid of [null, {version: 2, id: 1, job: {kind: 'parse', gcode: '; file'}},
-      {version: 1, id: 1, job: {kind: 'parse', gcode: ''}}]) {
+      {version: 1, id: 1, job: {kind: 'parse', gcode: ''}},
+      {version: 1, id: 1, responseFormat: 'unknown', job: {kind: 'parse', gcode: '; file'}}]) {
       expect((await executeGcodePreviewAsync(invalid as GcodePreviewRequest)).ok).toBe(false)
     }
     expect(geometry.warm).not.toHaveBeenCalled()

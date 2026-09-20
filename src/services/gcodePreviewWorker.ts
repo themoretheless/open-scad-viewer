@@ -1,4 +1,5 @@
-import { checkGcodePreviewJob, isGcodePreviewDocument, type GcodePreviewDocument, type GcodePreviewJob, type GcodePreviewRequest, type GcodePreviewResponse } from './gcodePreviewProtocol'
+import { checkGcodePreviewJob, type GcodePreviewDocument, type GcodePreviewJob, type GcodePreviewRequest } from './gcodePreviewProtocol'
+import { decodeGcodePreviewResponse, type GcodePreviewWireResponse } from './gcodePreviewWorkerTransport'
 
 export interface GcodeWorkerPort {
   postMessage(message: GcodePreviewRequest): void
@@ -48,11 +49,12 @@ export class GcodePreviewWorker {
       const cancel = () => finish(aborted(), undefined, true)
       const crash: EventListener = () => finish(new Error('G-code processing stopped unexpectedly. Try a simpler mesh or fewer layers.'), undefined, true)
       const message: EventListener = event => {
-        const data = (event as MessageEvent<unknown>).data as Partial<GcodePreviewResponse> | null
+        const data = (event as MessageEvent<unknown>).data as Partial<GcodePreviewWireResponse> | null
         if (!data || data.version !== 1 || data.id !== id) {
           finish(new Error('Invalid response from G-code processing.'), undefined, true)
-        } else if (data.ok === true && 'result' in data && isGcodePreviewDocument(data.result)) {
-          finish(undefined, data.result)
+        } else if (data.ok === true && 'result' in data) {
+          try { finish(undefined, decodeGcodePreviewResponse(data)) }
+          catch { finish(new Error('Invalid response from G-code processing.'), undefined, true) }
         } else if (data.ok === false && typeof data.error === 'string') {
           finish(new Error(data.error))
         } else finish(new Error('Invalid response from G-code processing.'), undefined, true)
@@ -62,7 +64,7 @@ export class GcodePreviewWorker {
       worker.addEventListener('error', crash)
       worker.addEventListener('messageerror', crash)
       timer = setTimeout(() => finish(new Error('G-code processing exceeded two minutes. Increase layer height, reduce the Z range, or simplify the mesh.'), undefined, true), this.timeoutMs)
-      try { worker.postMessage({ version: 1, id, job: input }) }
+      try { worker.postMessage({ version: 1, id, job: input, responseFormat: 'f64-moves-v1' }) }
       catch { finish(new Error('Could not send the G-code data for processing.'), undefined, true) }
     })
   }

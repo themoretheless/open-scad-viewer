@@ -35,3 +35,5 @@ responsiveness. The worker still protects the main thread from native parsing.
 Next experiment: transfer owned numeric move buffers while retaining the public
 document API, request identity, bounded validation, cancellation and worker reuse.
 Keep that change only after paired measurements and real browser verification.
+
+Implemented and measured in [transferable worker results](gcode-worker-transfer-2026-09-20.md).

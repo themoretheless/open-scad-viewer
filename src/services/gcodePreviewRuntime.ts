@@ -9,6 +9,7 @@ function requestId(request: GcodePreviewRequest): number {
 
 function checkedJob(request: GcodePreviewRequest): GcodePreviewJob {
   if (!request || request.version !== 1 || !Number.isSafeInteger(request.id) || request.id < 1) throw new Error('Invalid G-code worker request.')
+  if (request.responseFormat !== undefined && request.responseFormat !== 'f64-moves-v1') throw new Error('Invalid G-code response format.')
   return checkGcodePreviewJob(request.job)
 }
 
