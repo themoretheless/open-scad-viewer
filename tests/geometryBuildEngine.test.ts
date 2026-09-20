@@ -21,8 +21,12 @@ import {
 const request = { quality: 'full', purpose: 'analysis' } as const
 
 describe('GeometryBuildEngine', () => {
-  it('publishes both permanent source-routed engines with fallback disabled', async () => {
-    const registry = await new GeometryBuildEngine().capabilities()
+  it('publishes both initialized permanent source-routed engines with fallback disabled', async () => {
+    const engine = new GeometryBuildEngine()
+    // Cold compilation has a separate deadline; readiness still has its 250 ms bound.
+    await engine.initializeSource('cube(1);', request)
+    await engine.initializeSource('// @language openscad-viewer/brep-1\ncube(1);', request)
+    const registry = await engine.capabilities()
 
     expect(registry).toMatchObject({
       contractVersion: 1,
