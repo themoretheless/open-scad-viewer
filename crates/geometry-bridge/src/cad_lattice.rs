@@ -1099,6 +1099,10 @@ fn round_to_step(v: f64, s: f64) -> f64 {
 }
 
 pub fn print_fit(v: Value) -> Result<Value> {
+    let limit_opening = match v.get("limitOpening") {
+        None => false,
+        Some(value) => value.as_bool().ok_or_else(|| input("limitOpening must be boolean."))?,
+    };
     let options = field::<Value>(&v, "options")?;
     let settings = field::<Value>(&v, "settings")?;
     if !options.is_object() || !settings.is_object() {
@@ -1129,11 +1133,29 @@ pub fn print_fit(v: Value) -> Result<Value> {
     }
 
     let width = (nozzle * 1.125 * 1e6).round() / 1e6;
+    if !width.is_finite() || width <= 0. {
+        return Err(input("Extrusion width exceeds printable numeric range."));
+    }
     let rib = round_to_step(
         required_lattice_option(&options, "rib")?.max(width * lines),
         width,
     );
-    let cell = required_lattice_option(&options, "cell")?.max(rib * 2. + width);
+    let minimum_cell = rib * 2. + width;
+    let mut cell = required_lattice_option(&options, "cell")?.max(minimum_cell);
+    if !rib.is_finite() || !cell.is_finite() || rib <= 0. {
+        return Err(input("Lattice fit exceeds finite numeric range."));
+    }
+    if limit_opening && cell - rib > max_bridge {
+        // Increasing the rib would also increase the minimum cell and can
+        // worsen the opening. Preserve the fitted rib and bound the cell.
+        cell = max_bridge + rib;
+        if cell - rib > max_bridge {
+            cell = cell.next_down();
+        }
+        if !cell.is_finite() || cell < minimum_cell || cell - rib > max_bridge {
+            return Err(input("Opening limit is incompatible with the fitted rib and extrusion width."));
+        }
+    }
     let spatial = matches!(
         options["pattern"].as_str(),
         Some("bone" | "spatial" | "bcc" | "octet")
@@ -1195,4 +1217,72 @@ pub fn bridge_warning(v: Value) -> Result<Value> {
         _ => false,
     };
     Ok(Value::from(warn))
+}
+
+#[cfg(test)]
+mod print_tests {
+    use super::*;
+    use value_codec::json;
+
+    fn request(limit: f64) -> Value {
+        json!({"options":{"pattern":"grid","axis":"x","cell":20.,"rib":1.35,
+            "rim":2.,"bottom":0.1,"top":0.7},
+            "settings":{"nozzle":0.6,"layer":0.25,"lines":4,"skinLayers":4,
+            "maxBridge":limit,"openTop":true},"limitOpening":true})
+    }
+
+    #[test]
+    fn opening_fit_is_bounded_and_idempotent() {
+        let v = request(5.);
+        let fitted = print_fit(v.clone()).unwrap();
+        let rib = fitted["rib"].as_f64().unwrap();
+        let cell = fitted["cell"].as_f64().unwrap();
+        assert_eq!(rib, 2.7);
+        assert!(cell - rib <= 5.);
+        assert!(cell >= 2. * rib + fitted["lineWidth"].as_f64().unwrap());
+        let mut again = v;
+        again["options"] = fitted.clone();
+        assert_eq!(print_fit(again).unwrap(), fitted);
+    }
+
+    #[test]
+    fn opening_fit_refuses_impossible_and_malformed_constraints() {
+        assert!(print_fit(request(1.)).unwrap_err().message.contains("incompatible"));
+        let mut v = request(5.);
+        v["limitOpening"] = json!("true");
+        assert!(print_fit(v).unwrap_err().message.contains("boolean"));
+        for nozzle in [1e-20, f64::MAX] {
+            let mut v = request(5.);
+            v["settings"]["nozzle"] = json!(nozzle);
+            v["settings"]["layer"] = json!(nozzle);
+            assert!(print_fit(v).unwrap_err().message.contains("numeric range"));
+        }
+    }
+
+    #[test]
+    fn opening_fit_respects_representable_bounds() {
+        for nozzle in [0.25, 0.4, 0.6, 0.8] {
+            for lines in 1..=8 {
+                for limit in [2., 3., 5., 10.] {
+                    let mut v = request(limit);
+                    v["settings"]["nozzle"] = json!(nozzle);
+                    v["settings"]["layer"] = json!(0.2);
+                    v["settings"]["lines"] = json!(lines);
+                    let mut unlimited = v.clone();
+                    unlimited["limitOpening"] = json!(false);
+                    let base = print_fit(unlimited).unwrap();
+                    let rib = base["rib"].as_f64().unwrap();
+                    let minimum = 2. * rib + base["lineWidth"].as_f64().unwrap();
+                    match print_fit(v) {
+                        Ok(fit) => {
+                            let cell = fit["cell"].as_f64().unwrap();
+                            assert!(cell >= minimum && cell - rib <= limit);
+                            assert_eq!(fit["rib"], base["rib"]);
+                        }
+                        Err(_) => assert!(minimum - rib > limit),
+                    }
+                }
+            }
+        }
+    }
 }

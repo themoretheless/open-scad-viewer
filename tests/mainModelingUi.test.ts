@@ -40,6 +40,26 @@ async function mount(component:any,props:any){
 }
 const body=extrudeDirectSketch({id:'s',name:'Box',closed:true,points:[[0,0],[10,0],[10,10],[0,10]]},10,'0')
 const parameters={amount:2,x:0,y:0,z:0,axis:'z',edge:0,shape:'rectangle',width:2,height:2,cut:false}
+it('fits a bounded nominal opening and preserves geometry when print constraints conflict',async()=>{
+ const ui=await mount(CadWorkbenchPanel,{meshes:[],selection:[],hit:null,source:'',ready:true,locale:'en',initialAction:'lighten'})
+ const input=(label:string)=>ui.all().find(n=>n.tag==='label'&&ui.text(n).startsWith(label))!.children.find(n=>n.tag==='input')!
+ const set=async(label:string,value:unknown)=>{input(label).props['onUpdate:modelValue'](value);await nextTick()}
+ await set('Limit nominal opening',true)
+ await set('Bridge limit',5)
+ await ui.click('Fit geometry to print settings')
+ expect(input('Cell, mm').value).toBeCloseTo(6.35,12)
+ expect(input('Rib, mm').value).toBe(1.35)
+ await set('Bridge limit',1)
+ await ui.click('Fit geometry to print settings')
+ expect(ui.all().find(n=>n.props.role==='alert')?.text).toContain('incompatible')
+ expect(input('Cell, mm').value).toBeCloseTo(6.35,12)
+ await set('Bridge limit','')
+ expect(input('Cell, mm').value).toBeCloseTo(6.35,12)
+ await set('Bridge limit',4)
+ await ui.click('Fit geometry to print settings')
+ expect(input('Cell, mm').value).toBeCloseTo(5.35,12)
+ expect(ui.all().some(n=>n.props.role==='alert')).toBe(false)
+})
 it('offers centered lattice patterns with spatial controls and no ineffective randomization',async()=>{
  const ui=await mount(CadWorkbenchPanel,{meshes:[],selection:[],hit:null,source:'',ready:true,locale:'en',initialAction:'lighten'})
  const select=ui.all().find(n=>n.tag==='select'&&n.options.some(o=>o.value==='bcc'))!

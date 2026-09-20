@@ -1,5 +1,9 @@
 # Lattice Strength Integration Gate
 
+Follow-up: [native nominal opening fit](lattice-opening-fit-2026-09-20.md)
+selectively replaces the legacy FDM opening optimizer. Other remaining
+strength/scenario features are still subject to the gates below.
+
 ## Scope
 
 Reviewed PR #7, `cursor/lattice-strength-analysis-274c`, at

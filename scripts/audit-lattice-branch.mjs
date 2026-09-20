@@ -5,7 +5,7 @@ import {createHash} from 'node:crypto'
 import ts from 'typescript'
 
 const commit='7b3afccf379aead6151c7ceaf9b633e40eb62924'
-const paths=['src/services/latticeStrengthScenario.ts','src/services/latticeTrussFea.ts']
+const paths=['src/services/latticeStrengthScenario.ts','src/services/latticeTrussFea.ts','src/services/latticePrintSettings.ts']
 const sources=paths.map(path=>execFileSync('git',['show',`${commit}:${path}`],{encoding:'utf8'}))
 function evaluate(source,require) {
   const exports={}
@@ -50,9 +50,26 @@ assert.deepEqual(fullyFixed,[8])
 const implicit=legacy.restrain(nodes,[])
 assert.equal(implicit.filter(Boolean).length,12)
 
+const print=evaluate(sources[2],name=>{
+  assert.equal(name,'./solidLightening')
+  return {isSpatialPattern:pattern=>['bone','spatial','bcc','octet'].includes(pattern)}
+})
+const printOptions={pattern:'grid',axis:'z',cell:6,rib:1.35,rim:2,bottom:0.1,top:0.7,
+  seed:42,jitter:0,lineWidth:0.45,perimeters:3}
+const printSettings={nozzle:0.6,layer:0.25,lines:4,skinLayers:4,maxBridge:1,openTop:true}
+const beforePrint=print.fitLatticeToPrint(printOptions,printSettings)
+const afterPrint=print.optimizeLatticeForPrint(printOptions,printSettings)
+const openingFit={limitMm:printSettings.maxBridge,
+  fittedOpeningMm:beforePrint.cell-beforePrint.rib,
+  optimizedOpeningMm:afterPrint.options.cell-afterPrint.options.rib,
+  changed:afterPrint.changed}
+assert.ok(openingFit.optimizedOpeningMm>openingFit.fittedOpeningMm)
+assert.ok(openingFit.optimizedOpeningMm>openingFit.limitMm)
+
 console.log(JSON.stringify({commit,sourceSha256:Object.fromEntries(paths.map((path,i)=>[
   path,createHash('sha256').update(sources[i]).digest('hex'),
 ])),scope:'read-only legacy scenario audit; no current solver or material-safety claims',
   moments,pointMoment,pinned:{selectedFace:'-Z',fullyFixedNodes:fullyFixed,coordinates:fullyFixed.map(i=>withInterior[i])},
   emptySupports:{implicitlyRestrainedDofs:implicit.filter(Boolean).length},
+  openingFit,
 },null,2))
