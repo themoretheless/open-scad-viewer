@@ -13,7 +13,40 @@ release certification.
 
 ## Current verification
 
-Latest integrated control, completed 2026-09-20: 3289 tests passed and the same
+Latest integrated control on `a4025908`, completed 2026-09-20: **3312 passed,
+9 failed**, 346 files (342 passing, four failing), 110.56 seconds. No source
+edits or concurrent local builds ran during this control.
+Log: `/private/tmp/osv-prepush-availability-full-tests.log`.
+This includes binary integer decoding, complete frontend wire-AST comparisons,
+the explicit ABI failure contract/depth test, historical evidence writer guards,
+the initialized capability-registry test and runtime MCP B-rep availability fix.
+
+Production packaging verification before the final MCP-only change passed:
+89 artifacts, 5,782,767 asset bytes plus 9,697,456 raw WASM bytes. Chrome SVG and
+G-code worker cold/warm/refusal/recovery smoke also passed; report:
+`tmp/performance/codec-worker-packaging/report.json`. These are not full browser
+qualification or deployment claims.
+
+Remote CI 35478224703 tests published `3c3f4808`, not the later local fixes.
+Node 22: 3294 passed, 18 failed, 5 skipped; Node 20: 3293 passed, 19 failed,
+5 skipped. Both include ten evidence-related failures (the nine local gates
+plus a source-SHA validation-order expectation) and the cold registry assertion.
+Node 22 has seven further timeout failures. Node 20 has seven timeout failures
+and an MCP runtime output-schema failure: the B-rep registry schema incorrectly
+required available even when readiness returned unavailable. The latter is now
+reproduced and fixed by an explicit no-provider regression test; the original
+CI run cannot validate that later fix. MCP/browser initialization suites pass
+in the Node 22 control. As last inspected, Rust, macOS and official OpenSCAD
+jobs passed; Windows was still running. There is no green overall-CI claim.
+
+New measured boundaries: [frontend transport](openscad-frontend-transport-2026-09-20.md)
+is slower than TS for these full-AST workloads and rejects a depth that TS
+accepts; [integer decoding](binary-integer-decoding-2026-09-20.md) improves large
+integer arrays but does not establish a meaningful full-frontend speedup.
+[Product priorities](product-architecture-priorities-2026-09-20.md) revalidate
+selected competitor features and distinguish proposals from implementation.
+
+Previous integrated control, completed 2026-09-20: 3289 tests passed and the same
 nine evidence gates failed (341 passing files, four failing; 110.89 seconds).
 This includes the isolated historical manifests, shared bounded initialization,
 cancellation-preserved warmup and [mesh history optimization](mesh-history-2026-09-20.md).
