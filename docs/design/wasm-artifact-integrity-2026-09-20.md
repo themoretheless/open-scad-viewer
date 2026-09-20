@@ -94,6 +94,9 @@ admission still need the coordinated correction described in the earlier report.
 The synchronous digest cost is a measured candidate for avoiding sync startup
 in worker composition roots, not grounds to remove artifact verification.
 
+Follow-up: [G-code async startup](gcode-async-startup-2026-09-20.md) removes the
+synchronous startup path from the G-code worker while retaining verification.
+
 ## Verification
 
 The complete final Vitest run passes 3,383 tests and fails the same nine

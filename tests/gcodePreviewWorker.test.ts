@@ -2,9 +2,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { GcodePreviewWorker, type GcodeWorkerPort } from '../src/services/gcodePreviewWorker'
 import { checkGcodePreviewJob, GCODE_PREVIEW_MAX_BYTES, type GcodePreviewDocument, type GcodePreviewJob, type GcodePreviewRequest } from '../src/services/gcodePreviewProtocol'
 import { drawGcodeLayer, gcodeLayerRange, gcodeMeshBounds } from '../src/services/gcodePreviewGeometry'
-import { executeGcodePreview } from '../src/services/gcodePreviewRuntime'
+import { executeGcodePreview, executeGcodePreviewAsync } from '../src/services/gcodePreviewRuntime'
 
-const geometry = vi.hoisted(() => ({ emit: vi.fn(), emitJob: vi.fn(), parse: vi.fn(), flatten: vi.fn() }))
+const geometry = vi.hoisted(() => ({ emit: vi.fn(), emitJob: vi.fn(), parse: vi.fn(), flatten: vi.fn(), warm: vi.fn() }))
+vi.mock('../src/services/geometry/kernel', () => ({ warmGeometryKernel: geometry.warm }))
 vi.mock('../src/services/geometry/polygon', () => ({
   emitPolygonMeshGcode: geometry.emit,
   emitPolygonMeshGcodeJob: geometry.emitJob,
@@ -49,6 +50,7 @@ function setup(timeout = 120000) {
 beforeEach(() => {
   vi.useFakeTimers()
   vi.clearAllMocks()
+  geometry.warm.mockReset().mockResolvedValue(undefined)
   geometry.flatten.mockImplementation(() => ({ positions: [0, 0, 0, 5, 0, 0, 0, 5, 2], indices: [0, 1, 2] }))
 })
 afterEach(() => { clients.splice(0).forEach(client => client.dispose()); vi.useRealTimers() })
@@ -134,6 +136,46 @@ describe('G-code worker lifecycle', () => {
 })
 
 describe('G-code worker boundary and scene geometry', () => {
+  it('validates before async warming and waits before entering geometry', async () => {
+    for (const invalid of [null, {version: 2, id: 1, job: {kind: 'parse', gcode: '; file'}},
+      {version: 1, id: 1, job: {kind: 'parse', gcode: ''}}]) {
+      expect((await executeGcodePreviewAsync(invalid as GcodePreviewRequest)).ok).toBe(false)
+    }
+    expect(geometry.warm).not.toHaveBeenCalled()
+    let ready!: () => void
+    geometry.warm.mockImplementationOnce(() => new Promise<void>(resolve => {ready = resolve}))
+    geometry.parse.mockReturnValue({preview: result().preview, dialect: result().dialect, native: true})
+    const request: GcodePreviewRequest = {version: 1, id: 7, job: {kind: 'parse', gcode: '; original'}}
+    const pending = executeGcodePreviewAsync(request)
+    expect(geometry.parse).not.toHaveBeenCalled()
+    request.id = 8
+    request.job = {kind: 'parse', gcode: '; replaced'}
+    ready()
+    expect(await pending).toMatchObject({id: 7, ok: true, result: {gcode: '; original'}})
+    expect(geometry.parse).toHaveBeenCalledExactlyOnceWith('; original')
+  })
+
+  it('reports warmup failures through the existing envelope and supports a subsequent request', async () => {
+    const request: GcodePreviewRequest = {version: 1, id: 1, job: {kind: 'parse', gcode: '; file'}}
+    geometry.warm.mockRejectedValueOnce(new Error('WASM artifact mismatch'))
+    expect(await executeGcodePreviewAsync(request)).toEqual({version: 1, id: 1, ok: false, error: 'WASM artifact mismatch'})
+    expect(geometry.parse).not.toHaveBeenCalled()
+    geometry.parse.mockReturnValue({preview: result().preview, dialect: result().dialect, native: true})
+    expect((await executeGcodePreviewAsync({...request, id: 2})).ok).toBe(true)
+    expect(geometry.parse).toHaveBeenCalledOnce()
+  })
+
+  it('shares validated slice and job execution with the synchronous entry', async () => {
+    geometry.emit.mockReturnValue({...result(), layerCount: 2})
+    geometry.emitJob.mockReturnValue({...result(), flavor: 'marlin', gcode3mfBase64: 'UEsDBBQAAAA='})
+    const slice = job()
+    if (slice.kind !== 'slice') throw new Error('Expected slice')
+    for (const input of [slice, {...slice, kind: 'job' as const, settings: {flavor: 'marlin' as const}}]) {
+      const request: GcodePreviewRequest = {version: 1, id: 3, job: input}
+      expect(await executeGcodePreviewAsync(request)).toEqual(executeGcodePreview(request))
+    }
+  })
+
   it('rejects invalid ranges, fractional walls, blank numeric fields, and oversized UTF-8 files before launching a worker', async () => {
     const { client, workers } = setup(), input = job()
     if (input.kind !== 'slice') throw new Error('Expected slice')
