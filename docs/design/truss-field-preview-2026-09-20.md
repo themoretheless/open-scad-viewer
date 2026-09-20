@@ -57,3 +57,24 @@ field. Desktop/mobile runs passed, including the existing solve/stale reply/
 restoration/orbit checks. Report: `/private/tmp/osv-truss-tools-browser.json`.
 Seven focused tests, Vue typecheck, production build and dist verification pass.
 This covers the concrete parent-command ownership defect, not all App workflows.
+
+## Geometry Preparation Baseline
+
+`node --import tsx benchmarks/truss-field-meshes.mts` compares the current
+batched conversion against one identical marker mesh per member. It warms
+the verified geometry WASM, checks exact sorted position/normal/color tuples,
+then uses 20 warmup pairs and 31 alternating measured pairs. Builds/tests were
+not run alongside measurements. Two process runs:
+
+| Members | Batched p50 ms A/B | Batched p95 ms A/B | Separate p50 ms A/B |
+| ---: | ---: | ---: | ---: |
+| 36 | 0.56775 / 0.57762 | 0.60496 / 0.63404 | 4.90158 / 4.91592 |
+| 400 | 2.74850 / 2.77033 | 3.19842 / 3.17046 | 54.33846 / 54.14633 |
+
+The control is not a checkout of PR7: it uses the current identical marker
+conversion repeatedly, isolating per-mesh setup and batching. The maximum
+fixture has 125 nodes, 400 unique members and 3200 marker triangles. Fields
+are synthetic signed values; this measures display preparation, not solving.
+Reports: `/private/tmp/osv-truss-field-bench-{a,b}.json`. The result supports
+batching but does not prove browser main-thread/frame latency; a browser
+timing check remains necessary before deciding on a worker migration.
