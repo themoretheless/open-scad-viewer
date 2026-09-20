@@ -31,7 +31,7 @@ const server=await createServer({logLevel:'silent',server:{host:'127.0.0.1',port
     await warmGeometryKernel();
     const body=extrudeDirectSketch({id:'s',name:'Box',closed:true,points:[[0,0],[10,0],[10,10],[0,10]]},10,'0');
     const props=reactive({meshes:previewMeshes({version:1,sketches:[],bodies:[body]}),selection:[0],hit:null,source:'cube(10);',ready:true,locale:'en',initialAction:'lighten'});
-    const app=createApp({render:()=>h(Panel,props)});app.mount('#app');
+    const app=createApp({render:()=>h(Panel,{...props,onPreview:meshes=>{window.__trussProbe.preview=meshes===null?null:meshes.map(mesh=>({color:mesh.color,triangles:mesh.indices.length/3,finite:mesh.vertices.every(Number.isFinite)}))}})});app.mount('#app');
     window.__trussProbe.props=props;window.__trussProbe.unmount=()=>app.unmount();
   `},
 }]})
@@ -90,7 +90,20 @@ try{
     assert.ok(freeNode>=0)
     assert.ok(Math.abs(first.result.reactionsN.reduce((sum,force)=>sum+force[2],0)-100)<1e-8)
     assert.equal(await page.evaluate(()=>window.__trussProbe.created),1)
+    await results.getByLabel('Preview axial force sign',{exact:true}).check()
+    const markers=await page.evaluate(()=>window.__trussProbe.preview)
+    assert.ok(markers.length>0&&markers.length<=3)
+    assert.equal(markers.reduce((sum,mesh)=>sum+mesh.triangles,0),36*8)
+    assert.ok(markers.every(mesh=>mesh.finite))
+    await results.getByLabel('Marker size, mm',{exact:true}).fill('0')
+    assert.equal(await page.evaluate(()=>window.__trussProbe.preview),null)
+    assert.equal(await results.getByLabel('Preview axial force sign',{exact:true}).isChecked(),false)
+    await results.getByLabel('Preview axial force sign',{exact:true}).click()
+    assert.equal(await results.getByLabel('Preview axial force sign',{exact:true}).isChecked(),false)
+    await results.getByLabel('Marker size, mm',{exact:true}).fill('1')
+    await results.getByLabel('Preview axial force sign',{exact:true}).check()
     await panel.getByRole('button',{name:'Duplicate case',exact:true}).click()
+    assert.equal(await page.evaluate(()=>window.__trussProbe.preview),null)
     await panel.getByLabel('Force, N Z',{exact:true}).fill('-50')
     await panel.getByLabel('Result mode',{exact:true}).selectOption('combination')
     await panel.getByLabel('Factor case-1',{exact:true}).fill('1.2')
@@ -98,6 +111,8 @@ try{
     await panel.getByRole('button',{name:'Solve model',exact:true}).click()
     await results.waitFor()
     const combined=await downloadReport('combined')
+    // A new solve does not resurrect an invalid or previously cleared field.
+    assert.equal(await results.getByLabel('Preview axial force sign',{exact:true}).isChecked(),false)
     assert.deepEqual(combined.terms,[{caseId:'case-1',factor:1.2},{caseId:'case-2',factor:-.5}])
     assert.ok(Math.abs(combined.result.reactionsN.reduce((sum,force)=>sum+force[2],0)-95)<1e-8)
     await panel.getByLabel(`Node ${freeNode} X restrained`,{exact:true}).check()
@@ -115,6 +130,7 @@ try{
     await panel.getByRole('button',{name:'Solve model',exact:true}).click()
     await results.waitFor()
     const edited=await downloadReport('edited')
+    await results.getByLabel('Preview axial force sign',{exact:true}).check()
     assert.ok(Math.abs(edited.result.maxDeflectionMm*2-combined.result.maxDeflectionMm)<1e-10)
     assert.equal(await page.evaluate(()=>window.__trussProbe.created),2)
     await results.scrollIntoViewIfNeeded()
@@ -133,6 +149,7 @@ try{
       transform[3]+=1;props.meshes[0]={...mesh,transform}
     })
     await panel.getByLabel('Young modulus, MPa',{exact:true}).waitFor({state:'detached'})
+    assert.equal(await page.evaluate(()=>window.__trussProbe.preview),null)
     assert.equal(await results.count(),0)
     await panel.getByRole('button',{name:'Generate graph',exact:true}).click()
     await panel.getByLabel('Young modulus, MPa',{exact:true}).waitFor()

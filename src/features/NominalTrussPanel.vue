@@ -5,8 +5,19 @@ import type {LighteningOptions} from '../services/solidLightening'
 import type {NominalLatticeGraph} from '../services/latticeGraphProtocol'
 import type {TrussLoadCase,TrussScenario} from '../services/trussScenario'
 import {computeNominalLatticeGraph,computeTrussScenario} from '../services/mainSolidWorker'
+import {trussFieldMeshes} from '../services/trussFieldMeshes'
 
-const props=defineProps<{meshes:MeshData[];selection:number[];source:string;ready:boolean;locale:string;options:LighteningOptions}>()
+const props=defineProps<{meshes:MeshData[];selection:number[];source:string;ready:boolean;locale:string;options:LighteningOptions;previewEpoch?:number}>()
+const emit=defineEmits<{preview:[meshes:MeshData[]|null]}>()
+const showField=ref(false),markerMm=ref(1)
+function clearField(){if(showField.value){showField.value=false;emit('preview',null)}}
+function updateField(){
+  if(!showField.value){emit('preview',null);return}
+  if(!result.value){clearField();return}
+  try{emit('preview',trussFieldMeshes(result.value.model,result.value.result,markerMm.value));error.value=''}
+  catch(cause){clearField();error.value=String(cause)}
+}
+watch(()=>props.previewEpoch,clearField,{flush:'sync'})
 const label=(ru:string,en:string)=>props.locale==='ru'?ru:en
 const graph=shallowRef<NominalLatticeGraph|null>(null)
 const entries=ref<{loadCase:TrussLoadCase;factor:number}[]>([])
@@ -24,6 +35,7 @@ let revision=0,controller:AbortController|undefined,nextCase=1
 let binding:{sourceBodyIndex:number;graphOptions:LighteningOptions}|null=null
 
 function invalidateResult(){
+  clearField()
   revision++;controller?.abort();controller=undefined;phase.value=null;result.value=null;error.value=''
   if(reportUrl.value)URL.revokeObjectURL(reportUrl.value)
   reportUrl.value=''
@@ -131,6 +143,9 @@ const number=(value:number)=>value===0?'0':value.toPrecision(5)
         <h4>{{label('Номинальная осевая модель','Nominal axial model')}}</h4>
         <dl><dt>{{label('Максимальное перемещение, mm','Maximum displacement, mm')}}</dt><dd>{{number(result.result.maxDeflectionMm)}}</dd><dt>{{label('Относительная невязка','Relative residual')}}</dt><dd>{{number(result.result.maxRelativeResidual)}}</dd><dt>{{label('Свободные степени свободы','Free DOFs')}}</dt><dd>{{result.result.freeDofs}}</dd></dl>
         <a :href="reportUrl" download="nominal-truss.json">nominal-truss.json</a>
+        <label class="field-toggle"><input v-model="showField" type="checkbox" @change="updateField">{{label('Знак осевого усилия в предпросмотре','Preview axial force sign')}}</label>
+        <label>{{label('Размер маркера, mm','Marker size, mm')}}<input v-model.number="markerMm" type="number" min="0.001" step="0.1" @input="showField&&updateField()"></label>
+        <p v-if="showField" class="force-legend"><span><i class="compression"></i>{{label('Сжатие','Compression')}} (−N)</span><span><i class="zero"></i>0 N</span><span><i class="tension"></i>{{label('Растяжение','Tension')}} (+N)</span></p>
         <details><summary>{{label('Стержни','Members')}}</summary><div class="table-scroll"><table><thead><tr><th>{{label('Узлы','Nodes')}}</th><th>N</th><th>MPa</th></tr></thead><tbody><tr v-for="(member,i) in result.model.members" :key="i"><td>{{member.nodes.join(' - ')}}</td><td>{{number(result.result.axialForcesN[i])}}</td><td>{{number(result.result.axialStressesMpa[i])}}</td></tr></tbody></table></div></details>
         <details><summary>{{label('Перемещения и реакции','Displacements and reactions')}}</summary><div class="table-scroll"><table><thead><tr><th>{{label('Узел','Node')}}</th><th>XYZ, mm</th><th>XYZ, N</th></tr></thead><tbody><tr v-for="(point,i) in result.result.displacementsMm" :key="i"><th>{{i}}</th><td>{{point.map(number).join(', ')}}</td><td>{{result.result.reactionsN[i].map(number).join(', ')}}</td></tr></tbody></table></div></details>
       </section>
@@ -149,6 +164,7 @@ input,select,button{font:inherit;background:var(--surface-raised);color:var(--te
 input:not([type=checkbox]),select{width:100%}input[type=checkbox]{margin:0;accent-color:var(--accent)}button{cursor:pointer;white-space:normal}button:disabled{opacity:.5;cursor:default}
 .fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.vector{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
 .checks,.commands{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:6px 0}.checks label{flex-direction:row;align-items:center}
+.field-toggle{flex-direction:row;align-items:center}.force-legend{display:flex;flex-wrap:wrap;gap:8px}.force-legend span{display:flex;align-items:center;gap:4px}.force-legend i{width:10px;height:10px;display:inline-block}.compression{background:rgb(38,140,242)}.zero{background:rgb(153,153,153)}.tension{background:rgb(242,77,51)}
 fieldset{border:0;border-top:1px solid var(--border);padding:6px 0;margin:10px 0;min-width:0}legend{font-weight:600;padding:0 4px 0 0}
 .table-scroll{max-height:220px;overflow:auto;width:100%;margin:6px 0}table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}
 th,td{padding:5px 4px;border-bottom:1px solid var(--border);text-align:right;white-space:nowrap}th:first-child,td:first-child{text-align:left}thead{position:sticky;top:0;background:var(--surface)}
