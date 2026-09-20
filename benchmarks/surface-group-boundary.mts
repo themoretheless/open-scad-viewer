@@ -19,6 +19,7 @@ const session = await new CadGeometryKernel().openSession()
 assert.equal(loaded, true, 'Benchmark did not load the selected WASM artifact')
 const results = []
 try {
+  const fixtures: {name: string; vertices: Float32Array; indices: Uint32Array}[] = []
   for (const triangles of [128, 8192, 65536]) {
     const vertices = new Float32Array((triangles / 2 + 1) * 12)
     const indices = new Uint32Array(triangles * 3)
@@ -26,6 +27,18 @@ try {
       vertices.set([i, 0, 0, 0, 0, 1, i, 1, 0, 0, 0, 1], i * 12)
       if (i < triangles / 2) indices.set([i*2, i*2+2, i*2+1, i*2+1, i*2+2, i*2+3], i*6)
     }
+    fixtures.push({name: `strip-${triangles}`, vertices, indices})
+  }
+  const {CadSolid} = session.module
+  for (const [name, solid] of [
+    ['sphere-128', CadSolid.sphere(10, 128)],
+    ['cylinder-256', CadSolid.cylinder(10, 5, 5, 256)],
+  ] as const) {
+    const mesh = solid.calculateNormals(0, 52.5).getMesh()
+    fixtures.push({name, vertices: mesh.vertProperties, indices: mesh.triVerts})
+    solid.delete()
+  }
+  for (const {name, vertices, indices} of fixtures) {
     const expected = inferSurfaceIds(vertices, indices)
     const run = [() => inferSurfaceIds(vertices, indices), () => surfaceGroupsInKernel(vertices, indices)]
     for (let i = 0; i < 5; i++) for (const call of run) assert.deepEqual(call(), expected)
@@ -37,7 +50,10 @@ try {
       assert.deepEqual(actual, expected)
     }
     const p50 = (values: number[]) => [...values].sort((a,b) => a-b)[Math.floor(values.length / 2)]
-    results.push({triangles, hostMs: p50(samples[0]), wasmBoundaryMs: p50(samples[1]), samples})
+    const inputSha256 = createHash('sha256')
+      .update(new Uint8Array(vertices.buffer, vertices.byteOffset, vertices.byteLength))
+      .update(new Uint8Array(indices.buffer, indices.byteOffset, indices.byteLength)).digest('hex')
+    results.push({name, triangles: indices.length / 3, inputSha256, hostMs: p50(samples[0]), wasmBoundaryMs: p50(samples[1]), samples})
   }
 } finally { session.dispose() }
 const hashes = Object.fromEntries([

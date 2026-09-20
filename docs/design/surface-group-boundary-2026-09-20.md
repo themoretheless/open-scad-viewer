@@ -152,6 +152,21 @@ New artifact: `4965b89d8c271b55cbd522331e17f8e2d79fc66c9c23ad5139ef0c51ed252bfe`
 7,680,136 bytes (38 fewer). Reports:
 `/private/tmp/osv-surface-edge-order-{a1,b1,b2,a2}.json`.
 
+The boundary corpus now also includes the final stride-6 display buffers of
+a 16128-triangle sphere and a 1020-triangle cylinder, with generated normals
+and crease splits. Input SHA-256 values are checked equal across A-B-B-A;
+construction remains outside timing and each measured result matches TS IDs.
+
+| Fixture | Old A1/A2 p50, ms | New B1/B2 p50, ms |
+| --- | ---: | ---: |
+| Sphere, fn=128 | 2.89958 / 2.89242 | 2.69404 / 2.71917 |
+| Cylinder, fn=256 | 0.17450 / 0.17717 | 0.17088 / 0.17217 |
+
+The sphere improvement repeats at roughly 6-7%. Cylinder savings are only
+microseconds and are not a material end-to-end claim. The large strip in this
+same series remains 16.07-16.19 ms old versus 14.76-14.87 ms new. Reports:
+`/private/tmp/osv-surface-topology-{a,b,b2,a2}.json`.
+
 ## Remaining Optimization
 
 Do not copy the old branch's export-then-render grouping sequence: it computes
