@@ -62,6 +62,7 @@ mod lattice_cuda;
 pub mod lattice_gpu;
 mod mesh;
 pub mod mesh_analysis;
+pub mod print_geometry;
 mod mesh_export_file;
 pub mod mesh_picking;
 mod mesh_render;
