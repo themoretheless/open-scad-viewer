@@ -102,3 +102,19 @@ rebuild is performed. A larger graph budget, animated fields or measured
 slow-device stalls would require revisiting worker preparation. These results
 are not a universal frame-time guarantee or a browser batching speedup claim:
 the per-member control was measured only in Node.
+
+## Field Integrity At Display Precision
+
+Two regressions were reproduced before the guard fix: a sparse force array
+colored a missing member value as zero, and a 0.001 mm marker near X=1,000,000
+could collapse in Float32 while other markers in the same group survived.
+The STL display converter intentionally drops degenerate triangles, which is
+appropriate for imports but must not silently remove members from a result field.
+
+The field adapter now rejects sparse/nonfinite values, collapsed Float32 marker
+extents and any conversion that loses triangles. It publishes no partial field.
+A larger representable marker is accepted; the source model remains unchanged.
+Five field tests pass, along with the four focused CAD UI tests, Vue typecheck,
+production build/dist verification and the parent-tools/native-worker/WebGPU
+browser workflow on both viewports. Full-suite results above predate this fix;
+the qualification failures are unchanged and were not modified.

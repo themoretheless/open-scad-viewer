@@ -31,3 +31,16 @@ it('bounds a 400-member field to three meshes and 3200 triangles',()=>{
   expect(meshes.reduce((sum,mesh)=>sum+mesh.indices.length/3,0)).toBe(3200)
   expect(()=>trussFieldMeshes({...model,members:[...members,members[0]]},{...result,axialForcesN:[...axialForcesN,0]},1)).toThrow()
 })
+
+it('refuses sparse force fields rather than coloring missing values as zero',()=>{
+  const forces=[-1,0,1];delete forces[1]
+  expect(()=>trussFieldMeshes(model,{...result,axialForcesN:forces},1)).toThrow()
+})
+
+it('refuses partial fields when distant markers collapse at display precision',()=>{
+  const far:TrussModel={...model,nodesMm:[[0,0,0],[2,0,0],[1e6-2,0,0],[1e6,0,0]],members:[
+    {nodes:[0,1],youngMpa:1,areaMm2:1},{nodes:[2,3],youngMpa:1,areaMm2:1}]}
+  expect(()=>trussFieldMeshes(far,{...result,axialForcesN:[1,1]},0.001)).toThrow()
+  const large=trussFieldMeshes(far,{...result,axialForcesN:[1,1]},1)
+  expect(large[0].indices.length/3).toBe(16)
+})
