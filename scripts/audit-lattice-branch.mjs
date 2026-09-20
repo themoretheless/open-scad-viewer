@@ -75,6 +75,16 @@ const openingFit={limitMm:printSettings.maxBridge,
 assert.ok(openingFit.optimizedOpeningMm>openingFit.fittedOpeningMm)
 assert.ok(openingFit.optimizedOpeningMm>openingFit.limitMm)
 
+const invalidAdvice=legacy.latticeDesignAdvice({cell:6,rib:2,pattern:'octet',
+  utilization:NaN,bucklingRatio:NaN,maxBridgeMm:10,minWallMm:1,hasDiagonals:true})
+assert.equal(invalidAdvice.length,1)
+assert.match(invalidAdvice[0].en,/Margins OK/)
+const invalidRanking=legacy.compareLatticeVariants(
+  {label:'invalid',massProxy:1,stiffnessProxy:NaN,utilization:1,bucklingRatio:1},
+  {label:'control',massProxy:1,stiffnessProxy:1,utilization:1,bucklingRatio:1})
+assert.equal(invalidRanking.winner,'b')
+assert.ok(Number.isNaN(invalidRanking.rows.find(row=>row.metric==='stiffness').deltaPct))
+
 console.log(JSON.stringify({commit,sourceSha256:Object.fromEntries(paths.map((path,i)=>[
   path,createHash('sha256').update(sources[i]).digest('hex'),
 ])),scope:'read-only legacy scenario audit; no current solver or material-safety claims',
@@ -82,4 +92,6 @@ console.log(JSON.stringify({commit,sourceSha256:Object.fromEntries(paths.map((pa
   emptySupports:{implicitlyRestrainedDofs:implicit.filter(Boolean).length},
   combinationSupportUnion,
   openingFit,
+  invalidAdvice:{input:'NaN utilization and buckling ratio',observed:invalidAdvice},
+  invalidRanking:{input:'NaN stiffness for variant a',winner:invalidRanking.winner,invalidDeltaReturned:true},
 },null,2))
