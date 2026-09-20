@@ -1,6 +1,7 @@
 import type {MeshData} from '../core/mesh'
 import type {LighteningOptions} from './solidLightening'
 import type {TrussVector} from './trussAnalysis'
+import {fitsClonedBufferBudget} from './clonedBufferBudget'
 
 export type LatticeGraphMesh = Pick<MeshData, 'vertices' | 'indices' | 'transform'>
 export interface NominalLatticeGraph {
@@ -16,13 +17,7 @@ export function checkLatticeGraphInput(mesh: LatticeGraphMesh, options: Lighteni
     || mesh.indices.length > 300_000) {
     throw new Error(meshError)
   }
-  // Structured clone copies entire backing buffers, not only the visible views.
-  let bytes=0
-  for(const buffer of new Set([mesh.vertices.buffer,mesh.indices.buffer,mesh.transform.buffer])){
-    if(!(buffer instanceof ArrayBuffer))throw new Error(meshError)
-    bytes+=buffer.byteLength
-    if(bytes>16*1024*1024)throw new Error(meshError)
-  }
+  if (!fitsClonedBufferBudget([mesh.vertices, mesh.indices, mesh.transform], 16 * 1024 * 1024)) throw new Error(meshError)
   if (!options || !['spatial','bone','bcc','octet'].includes(options.pattern)) throw new Error('Select a spatial lattice pattern.')
   if (!Number.isFinite(options.cell) || options.cell <= 0 || !Number.isFinite(options.jitter) || options.jitter < 0 || options.jitter > 1
     || !Number.isFinite(options.seed) || !Number.isInteger(options.seed)

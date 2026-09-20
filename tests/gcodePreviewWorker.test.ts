@@ -57,6 +57,43 @@ beforeEach(() => {
 afterEach(() => { clients.splice(0).forEach(client => client.dispose()); vi.useRealTimers() })
 
 describe('G-code worker lifecycle', () => {
+  it('counts aliased mesh buffers once and preserves active work after refusal', async () => {
+    const { client, workers } = setup(), input = job()
+    if (input.kind !== 'slice') throw new Error('Expected slice')
+    const buffer = new ArrayBuffer(16 * 1024 * 1024)
+    const vertices = new Float32Array(buffer, 0, 18), indices = new Uint32Array(buffer, 72, 3)
+    const transform = new Float32Array(buffer, 84, 16)
+    vertices.set(input.mesh.vertices); indices.set(input.mesh.indices); transform.set(identity)
+    input.mesh = { vertices, indices, transform }
+    expect(checkGcodePreviewJob(input)).toMatchObject({ kind: 'slice' })
+    const pending = client.run(job())
+    input.mesh.vertices = new Float32Array(new ArrayBuffer(buffer.byteLength + 64), 0, 18)
+    await expect(client.run(input)).rejects.toThrow('16 MiB')
+    expect(workers).toHaveLength(1)
+    expect(workers[0].posted).toHaveLength(1)
+    expect(workers[0].terminate).not.toHaveBeenCalled()
+    workers[0].complete()
+    await expect(pending).resolves.toEqual(result())
+  })
+
+  it.each(['vertices', 'indices', 'transform'] as const)('rejects oversized or shared %s backing buffers before dispatch', async key => {
+    const { client, workers } = setup()
+    for (const buffer of [new ArrayBuffer(16 * 1024 * 1024 + 64), new SharedArrayBuffer(256)]) {
+      const input = job()
+      if (input.kind !== 'slice') throw new Error('Expected slice')
+      const original = input.mesh[key]
+      const view = key === 'indices' ? new Uint32Array(buffer, 0, original.length) : new Float32Array(buffer, 0, original.length)
+      view.set(original)
+      Object.assign(input.mesh, { [key]: view })
+      expect(() => checkGcodePreviewJob(input)).toThrow('16 MiB')
+      await expect(client.run(input)).rejects.toThrow('16 MiB')
+      expect(workers).toHaveLength(0)
+      const response = await executeGcodePreviewAsync({ version: 1, id: 1, job: input })
+      expect(response.ok).toBe(false)
+      expect(geometry.warm).not.toHaveBeenCalled()
+    }
+  })
+
   it('requires a finite positive timeout within the worker deadline', () => {
     const factory = vi.fn(() => new FakeWorker())
     for (const timeout of [0, -1, NaN, Infinity, 120001]) expect(() => new GcodePreviewWorker(factory, timeout)).toThrow('timeout must be between')

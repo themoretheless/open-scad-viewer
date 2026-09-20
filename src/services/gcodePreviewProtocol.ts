@@ -1,4 +1,5 @@
 import type { MeshData } from '../core/mesh'
+import { fitsClonedBufferBudget } from './clonedBufferBudget'
 import { GCODE_FLAVORS, type GcodePreviewResult, type JobSettingsInput, type ToolpathSettingsInput } from './geometry/polygon'
 
 export const GCODE_PREVIEW_MAX_BYTES = 4 * 1024 * 1024
@@ -30,8 +31,8 @@ function checkMesh(mesh: GcodeSceneMesh, zMin: number, zMax: number): GcodeScene
     || !(mesh.transform instanceof Float32Array) || !mesh.vertices.length || mesh.vertices.length % 6
     || !mesh.indices.length || mesh.indices.length % 3 || mesh.transform.length !== 16) throw new Error('Select a valid triangle mesh.')
   if (!mesh.transform.every(Number.isFinite) || mesh.transform[12] !== 0 || mesh.transform[13] !== 0 || mesh.transform[14] !== 0 || mesh.transform[15] !== 1) throw new Error('Mesh transform must be finite and affine.')
-  if (mesh.indices.length > 300000 || mesh.vertices.byteLength + mesh.indices.byteLength > GCODE_PREVIEW_MAX_MESH_BYTES) {
-    throw new Error('G-code slicing is limited to 100000 triangles and 16 MiB of mesh data.')
+  if (mesh.indices.length > 300000 || !fitsClonedBufferBudget([mesh.vertices, mesh.indices, mesh.transform], GCODE_PREVIEW_MAX_MESH_BYTES)) {
+    throw new Error('G-code slicing is limited to 100000 triangles and 16 MiB of owned mesh buffers.')
   }
   if (!Number.isFinite(zMin) || !Number.isFinite(zMax) || zMin >= zMax) throw new Error('Z max must be greater than Z min; both must be finite.')
   return { vertices: mesh.vertices, indices: mesh.indices, transform: mesh.transform }
