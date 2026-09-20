@@ -9,6 +9,11 @@ case selection and signed combinations through the shared worker, refusing the
 legacy support-union behavior. Workbench controls and finished-solid model
 derivation remain outstanding.
 
+Follow-up: the [nominal axial graph workbench](nominal-truss-workbench-2026-09-20.md)
+now exposes editable node restraints, wrenches, cases, combinations and reports.
+It explicitly distinguishes the bounding-box graph from finished-solid strength;
+automatic derivation of the latter remains outstanding.
+
 ## Scope
 
 Reviewed PR #7, `cursor/lattice-strength-analysis-274c`, at

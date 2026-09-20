@@ -5,6 +5,8 @@ import type {DirectDocument} from './directModeling'
 import type {MainOperation,MainParameters} from './mainModeling'
 import type {TrussInput} from './trussAnalysis'
 import {resolveTrussScenario, type TrussScenario} from './trussScenario'
+import {checkLatticeGraphInput, type LatticeGraphMesh} from './latticeGraphProtocol'
+import type {LighteningOptions} from './solidLightening'
 import {MainSolidWorkerClient,type MainSolidRunOptions} from './mainSolidWorkerClient'
 
 // One warm worker serves all main-solid/CAD operations; the geometry kernel is
@@ -34,4 +36,10 @@ export async function computeTrussScenario(scenario:TrussScenario,options:MainSo
  const resolved=resolveTrussScenario(scenario)
  const result=await computeTrussAnalysis(resolved.model,options)
  return {...resolved,result}
+}
+
+export async function computeNominalLatticeGraph(mesh:LatticeGraphMesh,options:LighteningOptions,runOptions:MainSolidRunOptions={}){
+ checkLatticeGraphInput(mesh,options)
+ return shared.run({kind:'latticeGraph',mesh:{vertices:mesh.vertices,indices:mesh.indices,transform:mesh.transform},options:{...options}},
+  {...runOptions,timeoutMs:runOptions.timeoutMs??30000})
 }

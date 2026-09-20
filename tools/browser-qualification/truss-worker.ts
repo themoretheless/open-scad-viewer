@@ -71,6 +71,15 @@ export async function run(workerUrl:string,warmups=200) {
     try {resolveTrussScenario(scenario);throw Error('Expected incompatible-support refusal')}
     catch(error){if((error as {code?:string}).code!=='TRUSS_SCENARIO_SUPPORTS')throw error}
     if(created!==1)throw Error('Scenario computation did not reuse the worker')
+    const mesh={vertices:new Float32Array(small.nodesMm.flatMap(point=>[...point,0,0,1])),
+      indices:new Uint32Array([0,2,1,0,1,3,0,3,2,1,2,3]),
+      transform:new Float32Array([1,0,0,20,0,1,0,30,0,0,1,40,0,0,0,1])}
+    const graph=await client.run({kind:'latticeGraph',mesh,options:{pattern:'octet',axis:'z',cell:10,rib:2,
+      rim:0,bottom:0,top:0,seed:42,jitter:0,lineWidth:.45,perimeters:3}})
+    if(graph.modelKind!=='nominal-bounding-box-axial'||graph.nodes.length!==14||graph.edges.length!==36)throw Error('Incorrect nominal graph')
+    for(let k=0;k<3;k++)if(Math.min(...graph.nodes.map(point=>point[k]))!==[20,30,40][k]
+      ||Math.max(...graph.nodes.map(point=>point[k]))!==[30,40,50][k])throw Error('Graph placement was not preserved')
+    if(!mesh.vertices.byteLength||created!==1)throw Error('Graph input detached or worker not reused')
     const controller=new AbortController()
     const aborted=client.run({kind:'truss',model:fixture(122)},{signal:controller.signal}).then(
       ()=>{throw Error('Cancelled call succeeded')},error=>{if(error.name!=='AbortError')throw error},
@@ -81,6 +90,7 @@ export async function run(workerUrl:string,warmups=200) {
     return {scope:'production CAD worker round trip; includes clone, WASM and reply validation, not GPU upload or full UI',
       coldMs,warmups,samples:31,reports,animationFramesDuringWarmWork:frames,
       maxAnimationGapMs:Math.max(0,...frameTimes.slice(1).map((t,i)=>t-frameTimes[i])),
-      workersCreated:created,singularCode:'TRUSS_SINGULAR',wrenchRecovery:true,scenarioSnapshotAndSupportRefusal:true,abortRecovery:true}
+      workersCreated:created,singularCode:'TRUSS_SINGULAR',wrenchRecovery:true,scenarioSnapshotAndSupportRefusal:true,
+      nominalGraphAndPlacement:true,abortRecovery:true}
   } finally {cancelAnimationFrame(frameHandle);client.dispose()}
 }

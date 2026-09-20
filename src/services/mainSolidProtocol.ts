@@ -5,13 +5,16 @@ import type {DirectBody, DirectDocument} from './directModeling'
 import type {MainOperation, MainParameters} from './mainModeling'
 import type {PickHit} from './rendererContracts'
 import type {TrussInput, TrussResponse} from './trussAnalysis'
+import {isNominalLatticeGraph, type LatticeGraphMesh, type NominalLatticeGraph} from './latticeGraphProtocol'
+import type {LighteningOptions} from './solidLightening'
 
 export type MainSolidJob =
   | {kind:'main'; meshes:MeshData[]; selected:number; hit:PickHit|null; operation:MainOperation; parameters:MainParameters}
   | {kind:'cad'; document:DirectDocument; options:CadOptions}
   | {kind:'inspect'; bodies:DirectBody[]}
   | {kind:'truss'; model:TrussInput}
-export interface MainSolidResults {main:DirectDocument; cad:DirectDocument; inspect:CadPairReport[]; truss:TrussResponse}
+  | {kind:'latticeGraph'; mesh:LatticeGraphMesh; options:LighteningOptions}
+export interface MainSolidResults {main:DirectDocument; cad:DirectDocument; inspect:CadPairReport[]; truss:TrussResponse; latticeGraph:NominalLatticeGraph}
 export type MainSolidRequest = {version:1; id:number; job:MainSolidJob}
 export type MainSolidResponse = {version:1; id:number; kind:MainSolidJob['kind']} & (
   | {ok:true; result:MainSolidResults[keyof MainSolidResults]}
@@ -34,6 +37,7 @@ export function mainSolidExpectation(job:MainSolidJob):MainSolidExpectation {
 /** Admit the result for this request, not merely any object with a result field. */
 export function mainSolidResult(job:MainSolidExpectation, value:unknown): boolean {
   if (!value || typeof value!=='object') return false
+  if (job.kind==='latticeGraph') return isNominalLatticeGraph(value)
   if (job.kind==='truss') {
     const v=value as TrussResponse, {nodes,members}=job
     return nodes>0 && nodes<=125 && members>0 && members<=400

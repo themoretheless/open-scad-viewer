@@ -1,5 +1,8 @@
 # Explicit truss load scenarios
 
+Follow-up: [nominal axial graph workbench](nominal-truss-workbench-2026-09-20.md)
+uses this API in the CAD UI while retaining an explicit nominal-model boundary.
+
 The pinned PR7 audit now also reproduces a support-union defect in its default
 `uls` combination. The compression case fixes the -Z face; the bending case
 uses the -X face. `resolveActiveCase` concatenates both support lists. A solve

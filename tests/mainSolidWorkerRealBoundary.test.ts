@@ -6,6 +6,7 @@ import type {TrussModel} from '../src/services/trussAnalysis'
 import {resolveTrussScenario} from '../src/services/trussScenario'
 import {extrudeDirectSketch} from '../src/services/directModeling'
 import {previewMeshes} from '../src/services/mainModeling'
+import type {LighteningOptions} from '../src/services/solidLightening'
 
 class NodePort implements MainSolidPort {
   onmessage:MainSolidPort['onmessage']=null
@@ -21,6 +22,7 @@ class NodePort implements MainSolidPort {
 }
 const clients:MainSolidWorkerClient[]=[], workers:Worker[]=[]
 const bar=():TrussModel=>({nodesMm:[[0,0,0],[10,0,0]],members:[{nodes:[0,1],youngMpa:2000,areaMm2:2}],restrained:[[true,true,true],[false,true,true]],forcesN:[[0,0,0],[100,0,0]]})
+const latticeOptions:LighteningOptions={pattern:'octet',axis:'z',cell:10,rib:2,rim:0,bottom:0,top:0,seed:42,jitter:0,lineWidth:.45,perimeters:3,skin:0,step:1,diagonals:true}
 function realWorker(){
   const worker=new Worker(new URL('./fixtures/web-worker-node-harness.mjs',import.meta.url),{
     workerData:{entryUrl:new URL('../src/workers/mainSolid.worker.ts',import.meta.url).href,announceReady:false},
@@ -114,4 +116,26 @@ it('terminates an entered noncooperative call and recovers with a real CAD worke
   const recovered=await client.run({kind:'truss',model:bar()})
   expect(recovered.axialForcesN[0]).toBeCloseTo(100,10)
   expect(workers).toHaveLength(2)
+},30000)
+
+it('generates nominal graphs off-thread and exposes, rather than hides, their bounding-box scope',async()=>{
+  const client=new MainSolidWorkerClient(realWorker);clients.push(client)
+  const mesh=(points:[number,number][])=>previewMeshes({version:1,sketches:[],bodies:[extrudeDirectSketch({id:'s',name:'Box',closed:true,points},10,'0')]})[0]
+  const box=mesh([[0,0],[10,0],[10,10],[0,10]]),triangle=mesh([[0,0],[10,0],[0,10]])
+  const graph=await client.run({kind:'latticeGraph',mesh:box,options:latticeOptions})
+  expect(graph.modelKind).toBe('nominal-bounding-box-axial')
+  expect(graph.nodes).toHaveLength(14);expect(graph.edges).toHaveLength(36)
+  expect(await client.run({kind:'latticeGraph',mesh:triangle,options:{...latticeOptions,skin:2,wallDepth:3,keepCore:true}})).toEqual(graph)
+  const restrained=graph.nodes.map(point=>point[2]===0?[true,true,true]:[false,false,false]) as [boolean,boolean,boolean][]
+  const top=graph.nodes.flatMap((point,i)=>point[2]===10?[i]:[])
+  const model={nodesMm:graph.nodes,members:graph.edges.map(nodes=>({nodes,youngMpa:2000,areaMm2:2})),restrained,
+    loads:[{nodes:top,originMm:[5,5,10] as [number,number,number],forceN:[0,0,-100] as [number,number,number],momentNmm:[0,0,0] as [number,number,number]}]}
+  const result=await client.run({kind:'truss',model})
+  expect(result.maxDeflectionMm).toBeGreaterThan(0)
+  expect(result.reactionsN.reduce((sum,force)=>sum+force[2],0)).toBeCloseTo(100,9)
+  expect(box.vertices.byteLength).toBeGreaterThan(0)
+  const flat={...box,vertices:box.vertices.map((value,i)=>i%6===2?0:value)}
+  await expect(client.run({kind:'latticeGraph',mesh:flat,options:latticeOptions})).rejects.toThrow('three-dimensional bounds')
+  expect(await client.run({kind:'latticeGraph',mesh:box,options:latticeOptions})).toEqual(graph)
+  expect(workers).toHaveLength(1)
 },30000)
