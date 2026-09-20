@@ -45,3 +45,26 @@ counter and is specific to this instrumented native emit-and-hash workload.
 The largest fixture saves about 85% of requested allocation bytes and 17% of
 elapsed time here. No browser, filesystem, printer I/O or end-to-end speedup
 is established. The existing String API remains available and unchanged.
+
+### Counter-Free Timing Control
+
+The benchmark now uses a compile-time allocation counter switch. Build with
+`env -u OSV_WRITER_COUNT_ALLOCATIONS cargo build --release --locked --manifest-path crates/Cargo.toml -p gcode-core --example bench_preview_writer`
+for timing, or set `OSV_WRITER_COUNT_ALLOCATIONS=1` on that build command for
+allocation accounting. Run the resulting executable separately after each
+build; changing the variable only when running it does not change instrumentation.
+JSON declares its mode and reports allocation fields as null when disabled.
+
+Two counter-free runs, same paired protocol:
+
+| Points | String median ms A/B | Writer median ms A/B |
+| ---: | ---: | ---: |
+| 100 | 0.06479 / 0.03013 | 0.05442 / 0.02392 |
+| 10,000 | 2.75171 / 2.72454 | 2.25121 / 2.20521 |
+| 60,000 | 16.50596 / 16.62267 | 13.79079 / 13.64679 |
+
+The large fixture retains a 16-18% elapsed-time reduction without allocation
+counter increments. The 100-point absolute timings vary substantially; do not
+treat its percentage as stable. A separate instrumented rebuild reproduced
+the allocation byte totals above. These measurements do not establish browser
+performance or filesystem throughput.

@@ -9,19 +9,25 @@ use std::{
 };
 
 struct Allocator;
+// Compile-time switch: release timing builds contain no allocation counter increments.
+const COUNT_ALLOCATIONS: bool = option_env!("OSV_WRITER_COUNT_ALLOCATIONS").is_some();
 static BYTES: AtomicUsize = AtomicUsize::new(0);
 #[global_allocator]
 static ALLOCATOR: Allocator = Allocator;
 unsafe impl GlobalAlloc for Allocator {
     unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
-        BYTES.fetch_add(layout.size(), Ordering::Relaxed);
+        if COUNT_ALLOCATIONS {
+            BYTES.fetch_add(layout.size(), Ordering::Relaxed);
+        }
         unsafe { System.alloc(layout) }
     }
     unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {
         unsafe { System.dealloc(ptr, layout) }
     }
     unsafe fn realloc(&self, ptr: *mut u8, layout: Layout, size: usize) -> *mut u8 {
-        BYTES.fetch_add(size, Ordering::Relaxed);
+        if COUNT_ALLOCATIONS {
+            BYTES.fetch_add(size, Ordering::Relaxed);
+        }
         unsafe { System.realloc(ptr, layout, size) }
     }
 }
@@ -86,11 +92,15 @@ fn main() {
         let mut allocation = [0; 2];
         for sample in 0..31 {
             for index in if sample % 2 == 0 { [0, 1] } else { [1, 0] } {
-                BYTES.store(0, Ordering::Relaxed);
+                if COUNT_ALLOCATIONS {
+                    BYTES.store(0, Ordering::Relaxed);
+                }
                 let start = Instant::now();
                 let result = run(&layers, index == 1);
                 let elapsed = start.elapsed().as_secs_f64() * 1000.0;
-                allocation[index] = BYTES.load(Ordering::Relaxed);
+                if COUNT_ALLOCATIONS {
+                    allocation[index] = BYTES.load(Ordering::Relaxed);
+                }
                 assert_eq!(result, expected);
                 if index == 0 {
                     string_ms.push(elapsed);
@@ -100,12 +110,20 @@ fn main() {
             }
         }
         println!(
-            "{{\"points\":{count},\"outputBytes\":{},\"stringMedianMs\":{},\"writerMedianMs\":{},\"stringAllocatedBytes\":{},\"writerAllocatedBytes\":{}}}",
+            "{{\"allocationInstrumentation\":{COUNT_ALLOCATIONS},\"points\":{count},\"outputBytes\":{},\"stringMedianMs\":{},\"writerMedianMs\":{},\"stringAllocatedBytes\":{},\"writerAllocatedBytes\":{}}}",
             expected.1,
             median(&mut string_ms),
             median(&mut writer_ms),
-            allocation[0],
-            allocation[1]
+            if COUNT_ALLOCATIONS {
+                allocation[0].to_string()
+            } else {
+                "null".into()
+            },
+            if COUNT_ALLOCATIONS {
+                allocation[1].to_string()
+            } else {
+                "null".into()
+            }
         );
     }
 }
