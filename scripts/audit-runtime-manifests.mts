@@ -42,15 +42,17 @@ export async function auditRuntimeManifests() {
   const {default: packed} = await import('../src/generated/geometry-kernels/bytes')
   const {unpackBrotliWasmBase64} = await import('../src/services/wasmBrotliPacking')
   const {setOptionalWasmCompiler} = await import('../src/services/wasmCompilation')
+  const {compileWasmArtifact} = await import('../src/services/wasmArtifact')
   const {GeometryBuildEngine} = await import('../src/services/geometryBuildEngine')
   const artifact = unpackBrotliWasmBase64(packed)
   const artifactSha256 = sha256(artifact)
   const publicArtifact = readFileSync(new URL('../public/wasm/geometry-kernel.wasm', import.meta.url))
   let compilerLoads = 0
-  setOptionalWasmCompiler(async url => {
+  setOptionalWasmCompiler(async (url, identity) => {
     if (url !== '/wasm/geometry-kernel.wasm') return null
     compilerLoads++
-    return WebAssembly.compile(artifact)
+    assert.ok(identity)
+    return compileWasmArtifact(artifact, identity)
   })
   try {
     const engine = new GeometryBuildEngine()

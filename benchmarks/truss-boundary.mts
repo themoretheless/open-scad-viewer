@@ -4,6 +4,7 @@ import {readFileSync} from 'node:fs'
 import {performance} from 'node:perf_hooks'
 import {warmGeometryKernel} from '../src/services/geometry/kernel'
 import {setOptionalWasmCompiler} from '../src/services/wasmCompilation'
+import {compileWasmArtifact} from '../src/services/wasmArtifact'
 import {solveTruss, type TrussModel, type TrussResponse, type TrussWrenchModel, type TrussVector} from '../src/services/trussAnalysis'
 import {encodeBinary} from '../src/services/valueBinaryCodec'
 
@@ -47,9 +48,10 @@ function verify(model: TrussModel, result: TrussResponse) {
 
 const artifact=readFileSync('public/wasm/geometry-kernel.wasm')
 let loaded=false
-setOptionalWasmCompiler(async url=>{
+setOptionalWasmCompiler(async (url,identity)=>{
   assert.equal(url,'/wasm/geometry-kernel.wasm'); loaded=true
-  return WebAssembly.compile(artifact)
+  assert.ok(identity)
+  return compileWasmArtifact(artifact,identity)
 })
 const coldStart=performance.now()
 await warmGeometryKernel()

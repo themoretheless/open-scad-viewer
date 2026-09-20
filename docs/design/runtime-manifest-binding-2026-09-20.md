@@ -79,3 +79,7 @@ code against the report without requiring the existing defect to remain.
 Strict TypeScript checking with the repository's HarfBuzz/WebGPU declarations
 passes. The existing read-only qualification drift audit test also passes.
 No qualification archive, runtime policy or production kernel was modified.
+
+Follow-up: [verified WASM compilation](wasm-artifact-integrity-2026-09-20.md)
+binds geometry/language loading to generated artifact identities. It does not
+yet repair archived runtime attribution or change qualification admission.

@@ -6,14 +6,16 @@ import {CadGeometryKernel} from '../src/services/cadGeometryKernel'
 import {surfaceGroupsInKernel} from '../src/services/geometry/meshAnalysis'
 import {inferSurfaceIds} from '../src/services/meshSurfaceGroups'
 import {setOptionalWasmCompiler} from '../src/services/wasmCompilation'
+import {compileWasmArtifact} from '../src/services/wasmArtifact'
 
 const artifactPath = process.argv[2] ?? 'public/wasm/geometry-kernel.wasm'
 const artifact = readFileSync(artifactPath)
 let loaded = false
-setOptionalWasmCompiler(async url => {
+setOptionalWasmCompiler(async (url, identity) => {
   if (url !== '/wasm/geometry-kernel.wasm') return null
   loaded = true
-  return WebAssembly.compile(artifact)
+  assert.ok(identity, 'Historical artifacts require their matching generated build identity')
+  return compileWasmArtifact(artifact, identity)
 })
 const session = await new CadGeometryKernel().openSession()
 assert.equal(loaded, true, 'Benchmark did not load the selected WASM artifact')

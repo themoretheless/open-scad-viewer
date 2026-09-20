@@ -5,6 +5,7 @@ import {fileURLToPath} from 'node:url'
 import {resolve} from 'node:path'
 import {encodeBase85} from './wasm-base85.mjs'
 import {optimizeWasm} from './wasm-optimize.mjs'
+import {wasmArtifactIdentityModule} from './wasm-artifact-identity.mjs'
 // The OpenSCAD and ModelGraph frontends ship separately from the geometry kernel: a session that never
 // builds source never downloads them, and the geometry module stays under the browsers' main-thread
 // instantiation ceiling. Same transport and symbol policy as build-geometry-kernels.mjs.
@@ -21,6 +22,7 @@ const module=new WebAssembly.Module(wasm)
 if(WebAssembly.Module.imports(module).length)throw new Error('Language WASM must not import external functions')
 writeFileSync(resolve(output,'kernel_bg.wasm'),wasm)
 writeFileSync(resolve(publicWasm,'language-kernel.wasm'),wasm)
+writeFileSync(resolve(output,'identity.ts'),wasmArtifactIdentityModule(wasm))
 if(wasm.length>16*1024*1024)throw new Error('Language WASM exceeds decompression output limit')
 const compressed=brotliCompressSync(wasm,{params:{[constants.BROTLI_PARAM_QUALITY]:11,[constants.BROTLI_PARAM_LGWIN]:24}})
 if(compressed.length>4*1024*1024)throw new Error('Language WASM exceeds compressed input limit')

@@ -5,13 +5,15 @@ import {performance} from 'node:perf_hooks'
 import {warmGeometryKernel} from '../src/services/geometry/kernel'
 import {parseGcodePreview, type GcodePreviewResult} from '../src/services/geometry/polygon'
 import {setOptionalWasmCompiler} from '../src/services/wasmCompilation'
+import {compileWasmArtifact} from '../src/services/wasmArtifact'
 
 const artifact = readFileSync(process.env.GCODE_WASM_PATH ?? 'public/wasm/geometry-kernel.wasm')
 let loaded = false
-setOptionalWasmCompiler(async url => {
+setOptionalWasmCompiler(async (url, identity) => {
   assert.equal(url, '/wasm/geometry-kernel.wasm')
   loaded = true
-  return WebAssembly.compile(artifact)
+  assert.ok(identity, 'Benchmark requires the build artifact identity; use its matching checkout for historical bytes')
+  return compileWasmArtifact(artifact, identity)
 })
 const start = performance.now()
 await warmGeometryKernel()

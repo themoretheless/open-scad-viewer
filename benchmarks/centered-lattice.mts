@@ -6,6 +6,7 @@ import {performance} from 'node:perf_hooks'
 import ts from 'typescript'
 import {CadGeometryKernel} from '../src/services/cadGeometryKernel'
 import {setOptionalWasmCompiler} from '../src/services/wasmCompilation'
+import {compileWasmArtifact} from '../src/services/wasmArtifact'
 import {extrudeDirectSketch, type DirectBody} from '../src/services/directModeling'
 import {spatialGraph, lighteningCells, type LighteningOptions} from '../src/services/solidLightening'
 
@@ -25,10 +26,11 @@ const reference = (body: DirectBody, options: LighteningOptions) =>
  JSON.parse(JSON.stringify(referenceExports.spatialGraph!(body, options))) as ReturnType<typeof spatialGraph>
 const artifact = readFileSync('public/wasm/geometry-kernel.wasm')
 let loaded = false
-setOptionalWasmCompiler(async url => {
+setOptionalWasmCompiler(async (url, identity) => {
  if (url !== '/wasm/geometry-kernel.wasm') return null
  loaded = true
- return WebAssembly.compile(artifact)
+ assert.ok(identity)
+ return compileWasmArtifact(artifact, identity)
 })
 const session = await new CadGeometryKernel().openSession()
 assert.equal(loaded, true)

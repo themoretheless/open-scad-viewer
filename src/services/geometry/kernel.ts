@@ -3,6 +3,8 @@ import {encodeBinary} from '../valueBinaryCodec'
 import {decodePacked, writeLinear} from '../wasmHost'
 import {unpackBrotliWasmBase64} from '../wasmBrotliPacking'
 import {compileOptionalWasm} from '../wasmCompilation'
+import {compileWasmArtifact, compileWasmArtifactSync} from '../wasmArtifact'
+import artifactIdentity from '../../generated/geometry-kernels/identity'
 import wasmBase64 from '../../generated/geometry-kernels/bytes'
 import {
   assertGeometryLeaseCurrent,
@@ -77,8 +79,8 @@ export function warmGeometryKernel(): Promise<void> {
   warming ??= (async () => {
     // Keep the large imported constant outside a logical expression: Rolldown
     // otherwise inlines a payload copy into every consumer of this fallback.
-    let module = await compileOptionalWasm('/wasm/geometry-kernel.wasm')
-    if (!module) module = await WebAssembly.compile(unpackBrotliWasmBase64(wasmBase64))
+    let module = await compileOptionalWasm('/wasm/geometry-kernel.wasm', artifactIdentity)
+    if (!module) module = await compileWasmArtifact(unpackBrotliWasmBase64(wasmBase64), artifactIdentity)
     // Instantiate asynchronously as well: browsers refuse a synchronous instantiation of a module over
     // 8 MB on the main thread, which is where the viewport and the Solid workspace warm the kernel.
     const instance = await WebAssembly.instantiate(module)
@@ -100,7 +102,7 @@ function initialize(): void {
   if (typeof window !== 'undefined') {
     throw new Error('Geometry kernel must be warmed with warmGeometryKernel() before use on the main thread')
   }
-  wasm = new WebAssembly.Instance(new WebAssembly.Module(unpackBrotliWasmBase64(wasmBase64))).exports as KernelExports
+  wasm = new WebAssembly.Instance(compileWasmArtifactSync(unpackBrotliWasmBase64(wasmBase64), artifactIdentity)).exports as KernelExports
   wasmMemory=wasm.memory
   initialized = true
 }

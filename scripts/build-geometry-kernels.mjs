@@ -6,6 +6,7 @@ import {resolve} from 'node:path'
 import {buildWasmBrotli} from './build-wasm-brotli.mjs'
 import {encodeBase85} from './wasm-base85.mjs'
 import {optimizeWasm} from './wasm-optimize.mjs'
+import {wasmArtifactIdentityModule} from './wasm-artifact-identity.mjs'
 const root=fileURLToPath(new URL('../',import.meta.url)),output=resolve(root,'src/generated/geometry-kernels')
 const publicWasm=resolve(root,'public/wasm')
 const cargoTarget=resolve(root,'crates/target')
@@ -24,6 +25,7 @@ const module=new WebAssembly.Module(wasm)
 if(WebAssembly.Module.imports(module).length)throw new Error('Geometry WASM must not import external functions')
 writeFileSync(resolve(output,'kernel_bg.wasm'),wasm)
 writeFileSync(resolve(publicWasm,'geometry-kernel.wasm'),wasm)
+writeFileSync(resolve(output,'identity.ts'),wasmArtifactIdentityModule(wasm))
 // A separate bounded synchronous decoder preserves the public host call contract.
 if(wasm.length>16*1024*1024)throw new Error('Geometry WASM exceeds decompression output limit')
 // The kernel exceeds the default 4 MiB history window. A standard 16 MiB

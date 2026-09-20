@@ -1,5 +1,7 @@
 import {afterEach, beforeEach, expect, it, vi} from 'vitest'
 import {compileStreamingWasm} from '../src/services/wasmStreaming'
+import {createHash} from 'node:crypto'
+import {assertVerifiedWasmModule} from '../src/services/wasmArtifact'
 
 beforeEach(() => {
   vi.useFakeTimers()
@@ -78,8 +80,7 @@ it('warms the real embedded language kernel after the streaming deadline', async
   const {setOptionalWasmCompiler} = await import('../src/services/wasmCompilation')
   setOptionalWasmCompiler(compileStreamingWasm)
   const {warmLanguageKernel, isLanguageKernelReady, scadCompileRust} = await import('../src/services/languages/kernel')
-  vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response()))
-  vi.spyOn(WebAssembly, 'compileStreaming').mockImplementation(() => new Promise(() => {}))
+  vi.stubGlobal('fetch', vi.fn().mockImplementation(() => new Promise(() => {})))
   expect(isLanguageKernelReady()).toBe(false)
   const warming = warmLanguageKernel()
   await vi.advanceTimersByTimeAsync(2_000)
@@ -90,5 +91,47 @@ it('warms the real embedded language kernel after the streaming deadline', async
   }
   expect(isLanguageKernelReady()).toBe(true)
   expect(scadCompileRust('cube([1,2,3]);').ok).toBe(true)
+  expect(vi.getTimerCount()).toBe(0)
+})
+
+const artifact = new Uint8Array([0,97,115,109,1,0,0,0])
+const identity = {byteLength: artifact.length, sha256: createHash('sha256').update(artifact).digest('hex')}
+
+it('returns only a verified module for a bound network artifact', async () => {
+  vi.useRealTimers()
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(artifact)))
+  const module = await compileStreamingWasm('/kernel', identity)
+  expect(module).toBeInstanceOf(WebAssembly.Module)
+  expect(() => assertVerifiedWasmModule(module!, identity)).not.toThrow()
+})
+
+it('falls back on wrong bytes, truncated or oversized bodies and HTTP errors', async () => {
+  vi.useRealTimers()
+  for (const response of [new Response(new Uint8Array(8)), new Response(artifact.slice(0, 7)),
+    new Response(new Uint8Array(9)), new Response(artifact, {status: 404})]) {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(response))
+    await expect(compileStreamingWasm('/kernel', identity)).resolves.toBeNull()
+    expect(response.body?.locked).toBe(false)
+  }
+})
+
+it('cancels a bound body that stalls and discards a response arriving after timeout', async () => {
+  const cancel = vi.fn()
+  const body = new ReadableStream({start(controller) { controller.enqueue(artifact.slice(0, 4)) }, cancel})
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(body)))
+  const pending = compileStreamingWasm('/kernel', identity)
+  await vi.advanceTimersByTimeAsync(2_000)
+  await expect(pending).resolves.toBeNull()
+  expect(cancel).toHaveBeenCalledTimes(1)
+  expect(body.locked).toBe(false)
+  let deliver!: (response: Response) => void
+  vi.stubGlobal('fetch', vi.fn().mockImplementation(() => new Promise<Response>(resolve => {deliver = resolve})))
+  const late = compileStreamingWasm('/kernel', identity)
+  await vi.advanceTimersByTimeAsync(2_000)
+  await expect(late).resolves.toBeNull()
+  const lateCancel = vi.fn()
+  deliver(new Response(new ReadableStream({cancel: lateCancel})))
+  await vi.advanceTimersByTimeAsync(0)
+  expect(lateCancel).toHaveBeenCalledTimes(1)
   expect(vi.getTimerCount()).toBe(0)
 })
