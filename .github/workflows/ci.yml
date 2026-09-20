@@ -67,7 +67,9 @@ jobs:
       # again before each command, despite Cargo's incremental cache.
       - run: node node_modules/vue-tsc/bin/vue-tsc.js --noEmit
       - run: node node_modules/typescript/bin/tsc --noEmit -p tsconfig.mcp.json
-      - run: node node_modules/vitest/vitest.mjs run
+      # Each test worker may initialize WASM and spawn geometry subprocesses.
+      # Match the bounded local control instead of multiplying cold runtimes.
+      - run: node node_modules/vitest/vitest.mjs run --maxWorkers 2
       - run: node node_modules/vite/bin/vite.js build
       - run: node scripts/verify-dist.mjs
       - uses: actions/upload-artifact@v4

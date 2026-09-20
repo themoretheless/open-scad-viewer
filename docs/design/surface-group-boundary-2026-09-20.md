@@ -108,6 +108,20 @@ a synchronous Rust call or a strict 16 ms wall-time bound. The regression and
 47 worker/coordinator/scene tests pass after the fix; application typecheck
 also passes. The full-suite result above predates this narrow lifecycle fix.
 
+Post-fix production browser control (`48a29408`) still passes startup with four
+visible UI mesh entries. Sphere miss p50 is 23.4 ms host versus 22.5 ms worker;
+hit p50 is 18.2 ms for both. Main-thread grouping is 3.9 ms versus below timer
+resolution. Report: `tmp/performance/surface-group-publication-cancellable/report.json`.
+`verify-dist` passes with 15,497,094 total bytes.
+
+Remote Node 22 job 105999565937 on `370d3be4` reports 3301 passed, 17 failed,
+five skipped: ten qualification checks and seven timeout failures. The separate
+STEP interchange V10 workflow passed, but the main CI was still running when
+inspected. These are different gates. The CI Vitest command now explicitly
+uses `--maxWorkers 2`, matching local control; per-test timeouts and qualification
+assertions are unchanged. Whether this removes remote timeout failures remains
+unverified until the next CI run. Log: `/private/tmp/osv-ci-35481315494-node22.log`.
+
 ## Remaining Optimization
 
 Do not copy the old branch's export-then-render grouping sequence: it computes
