@@ -288,7 +288,8 @@ do not add that package to the application lockfile.
 The remaining manual Rust examples are `bench_profile_triangulation`,
 `bench_point_cloud_stats`, `bench_distance_pairs`, `bench_local_planes`,
 `bench_nearest_four`, `bench_transformed_bounds`, `bench_transformed_stats`,
-`bench_transform_error`, `bench_point_plane`, `bench_gpu` (math and SDF),
+`bench_transform_error`, `bench_point_plane`, `math_backend_report`,
+`sdf_bench_gpu`,
 `bench_lattice`, and `bench_printer_lan`. The first nine retain bespoke
 multi-phase/diagnostic output and are not yet protocolized. GPU examples are
 left manual because timing includes real device queues and backend selection;
