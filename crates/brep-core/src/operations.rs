@@ -2208,11 +2208,8 @@ mod tests {
                 let z = v.point[2];
                 assert!(z.abs() < 1e-8 || (z - 10.).abs() < 1e-8);
                 let delta = if z.abs() < 1e-8 { 0. } else { growth };
-                for k in 0..2 {
-                    assert!(
-                        (v.point[k] + delta).abs() < 1e-8
-                            || (v.point[k] - 10. - delta).abs() < 1e-8
-                    );
+                for point in v.point.iter().take(2) {
+                    assert!((*point + delta).abs() < 1e-8 || (*point - 10. - delta).abs() < 1e-8);
                 }
             }
         }

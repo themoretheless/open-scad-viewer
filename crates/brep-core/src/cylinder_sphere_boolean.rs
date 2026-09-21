@@ -161,11 +161,11 @@ impl Mate for AxialCylinder<'_> {
         }
         // Caps.
         let mut contacts = [(PlaneContact::Inside, 0.); 2];
-        for k in 0..2 {
+        for (k, contact) in contacts.iter_mut().enumerate() {
             let sign = if k == 0 { -1. } else { 1. };
             let outward = c.axis.map(|x| x * sign);
             let origin: [f64; 3] = std::array::from_fn(|i| c.center[i] + sign * hh * c.axis[i]);
-            contacts[k] = plane_contact(origin, outward, &sphere, band);
+            *contact = plane_contact(origin, outward, &sphere, band);
         }
         if contacts
             .iter()

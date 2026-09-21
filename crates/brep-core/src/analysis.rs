@@ -1001,7 +1001,7 @@ fn conditioned_curve_breaks(curve: &Curve, budget: &mut Budget) -> Result<Vec<f6
 }
 fn conditioned_surface_grid(surface: &Surface, budget: &mut Budget) -> Result<[Vec<f64>; 2]> {
     let mut result: [Vec<f64>; 2] = [vec![], vec![]];
-    for axis in 0..2 {
+    for (axis, output) in result.iter_mut().enumerate() {
         let (knots, degree, periodic) = if axis == 0 {
             (&surface.knots_u, surface.degree_u, surface.periodic_u)
         } else {
@@ -1022,10 +1022,10 @@ fn conditioned_surface_grid(surface: &Surface, budget: &mut Budget) -> Result<[V
                 weights,
                 periodic,
             };
-            result[axis].extend(conditioned_curve_breaks(&curve, budget)?);
+            output.extend(conditioned_curve_breaks(&curve, budget)?);
         }
-        result[axis].sort_by(f64::total_cmp);
-        result[axis].dedup();
+        output.sort_by(f64::total_cmp);
+        output.dedup();
     }
     Ok(result)
 }
