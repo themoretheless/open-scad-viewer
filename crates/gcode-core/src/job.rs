@@ -546,7 +546,14 @@ pub fn parse_job(gcode: &str) -> Result<GcodePreview> {
                     known[index] = true;
                 }
             }
-            if current_layer_z.is_none() {
+            if let Some(layer_z) = current_layer_z {
+                if words.z.is_some() && position[2] != layer_z {
+                    return Err(invalid(
+                        "GCODE_LAYER",
+                        "Z changes require a new layer marker",
+                    ));
+                }
+            } else {
                 let z = words.z.ok_or_else(|| {
                     invalid("GCODE_LAYER", "The first move in each layer must set Z")
                 })?;
@@ -559,11 +566,6 @@ pub fn parse_job(gcode: &str) -> Result<GcodePreview> {
                     ));
                 }
                 current_layer_z = Some(z);
-            } else if words.z.is_some() && position[2] != current_layer_z.unwrap() {
-                return Err(invalid(
-                    "GCODE_LAYER",
-                    "Z changes require a new layer marker",
-                ));
             }
             if let Some(value) = words.f {
                 if value < 0.001 || value > MAX_COORDINATE_MM * 60.0 {

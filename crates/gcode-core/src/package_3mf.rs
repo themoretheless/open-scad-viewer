@@ -78,7 +78,7 @@ fn md5_hex(data: &[u8]) -> String {
     }
     msg.extend_from_slice(&bit_len.to_le_bytes());
     let mut state = [0x67452301u32, 0xefcdab89, 0x98badcfe, 0x10325476];
-    for chunk in msg.chunks_exact(64) {
+    for chunk in msg.as_chunks::<64>().0 {
         let mut x = [0u32; 16];
         for (i, word) in x.iter_mut().enumerate() {
             *word = u32::from_le_bytes(chunk[i * 4..i * 4 + 4].try_into().unwrap());
@@ -147,10 +147,10 @@ fn format_coord(value: f64) -> Result<String> {
 }
 
 fn model_xml_from_mesh(mesh: &MeshBody) -> Result<Vec<u8>> {
-    if mesh.positions.len() % 3 != 0 {
+    if !mesh.positions.len().is_multiple_of(3) {
         return Err(zip_error("Mesh positions must be XYZ triples"));
     }
-    if mesh.indices.len() % 3 != 0 {
+    if !mesh.indices.len().is_multiple_of(3) {
         return Err(zip_error("Mesh indices must be triangle triples"));
     }
     let vertices = mesh.positions.len() / 3;
@@ -170,7 +170,7 @@ fn model_xml_from_mesh(mesh: &MeshBody) -> Result<Vec<u8>> {
     }
     let mut out = String::new();
     out.push_str("<?xml version=\"1.0\" encoding=\"UTF-8\"?><model unit=\"millimeter\" xml:lang=\"en-US\" xmlns=\"http://schemas.microsoft.com/3dmanufacturing/core/2015/02\"><resources><object id=\"1\" name=\"Part 1\" type=\"model\"><mesh><vertices>");
-    for p in mesh.positions.chunks_exact(3) {
+    for p in mesh.positions.as_chunks::<3>().0 {
         write!(
             out,
             "<vertex x=\"{}\" y=\"{}\" z=\"{}\"/>",
@@ -184,7 +184,7 @@ fn model_xml_from_mesh(mesh: &MeshBody) -> Result<Vec<u8>> {
         }
     }
     out.push_str("</vertices><triangles>");
-    for t in mesh.indices.chunks_exact(3) {
+    for t in mesh.indices.as_chunks::<3>().0 {
         write!(
             out,
             "<triangle v1=\"{}\" v2=\"{}\" v3=\"{}\"/>",
