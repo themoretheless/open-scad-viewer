@@ -118,8 +118,12 @@ pub(crate) fn render(snapshot: CadMeshBuffer, crease_cosine: f64) -> RenderMesh 
     let mut properties = Vec::<PropertyVertex>::with_capacity(vertex_count);
     let mut head = vec![NONE; vertex_count];
     let mut first = vec![NONE; vertex_count];
-    let mut merge_from = Vec::new();
-    let mut merge_to = Vec::new();
+    // A source vertex can produce at most one merge record per incident
+    // triangle. Reserve that bounded upper shape once instead of growing both
+    // transport vectors through repeated reallocations on crease-heavy meshes.
+    let merge_capacity = indices.len() / 3;
+    let mut merge_from = Vec::with_capacity(merge_capacity);
+    let mut merge_to = Vec::with_capacity(merge_capacity);
     for (i, &id) in indices.iter().enumerate() {
         let source = id as usize;
         let face = face_normals[i / 3];

@@ -58,6 +58,15 @@ The candidate passed the geometry-bridge byte-parity tests and the full
 workspace clippy gate. The generated geometry WASM artifact was rebuilt from
 the candidate before publication.
 
+The follow-up reserves merge vectors to the bounded incident-triangle shape,
+avoiding repeated reallocations. A second five-sample run measured:
+
+| Fixture | Candidate render | Reserved render | Candidate combined | Reserved combined |
+|---|---:|---:|---:|---:|
+| sphere-128 | 6.621 ms | 6.254 ms | 11.439 ms | 11.048 ms |
+| three-spheres-128 | 20.551 ms | 19.348 ms | 34.536 ms | 33.907 ms |
+| cylinder-128 | 0.180 ms | 0.154 ms | 0.262 ms | 0.236 ms |
+
 ## Native Validation
 
 Command: `cargo run --release --locked --manifest-path crates/Cargo.toml -p
