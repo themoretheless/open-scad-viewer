@@ -633,15 +633,15 @@ fn merge_plane_points(report: &mut Report<CurvePlaneComponent>) {
     }
     let mut merged: Vec<Option<CurvePlaneComponent>> = (0..n).map(|_| None).collect();
     let mut order: Vec<usize> = Vec::new();
-    for i in 0..n {
-        let Some(iv) = interval(&report.components[i]) else {
+    for (i, component) in report.components.iter().take(n).enumerate() {
+        let Some(iv) = interval(component) else {
             continue;
         };
         let root = find(&mut parent, i);
         if merged[root].is_none() {
             order.push(root);
         }
-        let CurvePlaneComponent::Point(member) = &report.components[i] else {
+        let CurvePlaneComponent::Point(member) = component else {
             continue;
         };
         match &mut merged[root] {
@@ -3355,8 +3355,8 @@ fn merge_curve_points(report: &mut Report<CurveCurveComponent>) {
     }
     let mut merged: Vec<Option<CurveCurveComponent>> = (0..n).map(|_| None).collect();
     let mut order: Vec<usize> = Vec::new();
-    for i in 0..n {
-        let Some((fi, si)) = intervals(&report.components[i]) else {
+    for (i, component) in report.components.iter().take(n).enumerate() {
+        let Some((fi, si)) = intervals(component) else {
             continue;
         };
         let root = find(&mut parent, i);
@@ -3370,7 +3370,7 @@ fn merge_curve_points(report: &mut Report<CurveCurveComponent>) {
             residual,
             contact,
             ..
-        } = &report.components[i]
+        } = component
         else {
             continue;
         };
@@ -4728,8 +4728,8 @@ fn merge_cs_points(report: &mut Report<CurveRuledSurfaceComponent>) {
     }
     let mut merged: Vec<Option<CurveRuledSurfaceComponent>> = (0..n).map(|_| None).collect();
     let mut order: Vec<usize> = Vec::new();
-    for i in 0..n {
-        let Some((ti, ui)) = intervals(&report.components[i]) else {
+    for (i, component) in report.components.iter().take(n).enumerate() {
+        let Some((ti, ui)) = intervals(component) else {
             continue;
         };
         let root = find(&mut parent, i);
@@ -4744,7 +4744,7 @@ fn merge_cs_points(report: &mut Report<CurveRuledSurfaceComponent>) {
             residual,
             contact,
             ..
-        } = &report.components[i]
+        } = component
         else {
             continue;
         };
