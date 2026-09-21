@@ -280,13 +280,12 @@ pub(crate) fn recognize_cylinder(model: &Model) -> Result<Option<CanonicalCylind
             [qb[0], qb[1]],
         ];
         for (k, expected_xy) in pattern.iter().enumerate() {
-            for j in 0..2 {
+            for (j, actual) in surface.control_points[k].iter().take(2).enumerate() {
                 let expected: [f64; 3] = std::array::from_fn(|a| {
                     bottom[a]
                         + radius * (expected_xy[0] * x_dir[a] + expected_xy[1] * y_dir[a])
                         + height * j as f64 * axis[a]
                 });
-                let actual = &surface.control_points[k][j];
                 if actual.len() != 3 {
                     return Ok(None);
                 }
@@ -331,15 +330,14 @@ pub(crate) fn recognize_cylinder(model: &Model) -> Result<Option<CanonicalCylind
         }
         cap_assigned[slot] = true;
         cap_ids[slot] = index;
-        for i in 0..2 {
-            for j in 0..2 {
+        for (i, row) in surface.control_points.iter().take(2).enumerate() {
+            for (j, actual) in row.iter().take(2).enumerate() {
                 let expected: [f64; 3] = std::array::from_fn(|a| {
                     bottom[a]
                         + radius
                             * ((2. * i as f64 - 1.) * x_dir[a] + (2. * j as f64 - 1.) * y_dir[a])
                         + if slot == 1 { height * axis[a] } else { 0. }
                 });
-                let actual = &surface.control_points[i][j];
                 if actual.len() != 2 + 1 {
                     return Ok(None);
                 }
@@ -362,9 +360,9 @@ pub(crate) fn recognize_cylinder(model: &Model) -> Result<Option<CanonicalCylind
         let mut seen_quadrant = [false; 4];
         for coedge in &loop_.coedges {
             let mut hit = false;
-            for quadrant in 0..4 {
-                if !seen_quadrant[quadrant] && cap_quarter_arc(&coedge.pcurve, quadrant) {
-                    seen_quadrant[quadrant] = true;
+            for (quadrant, seen) in seen_quadrant.iter_mut().enumerate() {
+                if !*seen && cap_quarter_arc(&coedge.pcurve, quadrant) {
+                    *seen = true;
                     hit = true;
                     break;
                 }

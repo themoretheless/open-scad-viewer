@@ -508,14 +508,13 @@ pub(crate) fn recognize_cone(model: &Model) -> Result<Option<CanonicalCone>> {
         cap_assigned[slot] = true;
         cap_ids[slot] = Some(index);
         let ring_c = if slot == 0 { bottom } else { top };
-        for i in 0..2 {
-            for j in 0..2 {
+        for (i, row) in surface.control_points.iter().take(2).enumerate() {
+            for (j, actual) in row.iter().take(2).enumerate() {
                 let expected: [f64; 3] = std::array::from_fn(|a| {
                     ring_c[a]
                         + ring_r
                             * ((2. * i as f64 - 1.) * x_dir[a] + (2. * j as f64 - 1.) * y_dir[a])
                 });
-                let actual = &surface.control_points[i][j];
                 if actual.len() != 3 {
                     return Ok(None);
                 }
@@ -538,9 +537,9 @@ pub(crate) fn recognize_cone(model: &Model) -> Result<Option<CanonicalCone>> {
         let mut seen_quadrant = [false; 4];
         for coedge in &loop_.coedges {
             let mut hit = false;
-            for quadrant in 0..4 {
-                if !seen_quadrant[quadrant] && cap_quarter_arc(&coedge.pcurve, quadrant) {
-                    seen_quadrant[quadrant] = true;
+            for (quadrant, seen) in seen_quadrant.iter_mut().enumerate() {
+                if !*seen && cap_quarter_arc(&coedge.pcurve, quadrant) {
+                    *seen = true;
                     hit = true;
                     break;
                 }
@@ -677,7 +676,7 @@ fn lift_circle_side(
         } else {
             (tb, (ta - tb).rem_euclid(TAU))
         };
-        for quadrant in 0..4 {
+        for (quadrant, patch) in cone.sides.iter().enumerate() {
             let span = (quadrant as f64 * QUARTER, QUARTER);
             for (s0, sw) in ccw_intersect(span, image) {
                 let rel0 = s0 - quadrant as f64 * QUARTER;
@@ -687,7 +686,7 @@ fn lift_circle_side(
                     continue;
                 }
                 lifted.push(CylinderPatchCurve {
-                    patch: cone.sides[quadrant],
+                    patch: *patch,
                     arcs: vec![Curve {
                         degree: 1,
                         knots: vec![0., 0., 1., 1.],

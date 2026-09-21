@@ -216,7 +216,7 @@ fn lift_circle_side(
         } else {
             (tb, (ta - tb).rem_euclid(TAU))
         };
-        for quadrant in 0..4 {
+        for (quadrant, patch) in cylinder.sides.iter().enumerate() {
             let span = (quadrant as f64 * QUARTER, QUARTER);
             for (s0, sw) in ccw_intersect(span, image) {
                 let rel0 = s0 - quadrant as f64 * QUARTER;
@@ -226,7 +226,7 @@ fn lift_circle_side(
                     continue;
                 }
                 lifted.push(CylinderPatchCurve {
-                    patch: cylinder.sides[quadrant],
+                    patch: *patch,
                     arcs: vec![Curve {
                         degree: 1,
                         knots: vec![0., 0., 1., 1.],
