@@ -22,6 +22,7 @@
     "bench:profiles": "node scripts/bench-profile-triangulation.mjs",
     "bench:analysis": "node --import tsx benchmarks/solid-analysis.mts",
     "bench:surface-groups": "node --import tsx benchmarks/surface-group-boundary.mts",
+    "bench:render-native": "cargo test --release --locked --manifest-path crates/Cargo.toml -p geometry-bridge native_render_benchmark -- --ignored --nocapture",
     "bench:exact-solid-browser": "node benchmarks/exact-solid-browser.mjs",
     "bench:brep-validation": "cargo run --release --locked --manifest-path crates/Cargo.toml -p brep-core --example bench_validation",
     "bench:brep-decode": "cargo run --release --locked --manifest-path crates/Cargo.toml -p brep-core --example bench_decode",

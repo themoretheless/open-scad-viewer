@@ -96,6 +96,24 @@ the byte-parity implementation as the oracle. Do not move that work into a
 new module or Rust path until an isolated before/after measurement shows a
 repeatable win on both sphere fixtures without regressing the cylinder case.
 
+## Native Render Microbench
+
+Command: `npm run bench:render-native`
+
+This benchmark runs inside the `geometry-bridge` test module with no WASM ABI,
+linear-memory allocation, or host typed-array copies. It verifies the complete
+render snapshot signature for every sample and is intentionally ignored by the
+normal test suite:
+
+| Fixture | triangles | native render p50 |
+|---|---:|---:|
+| sphere-128 | 16,128 | 2.374 ms |
+| cylinder-128 | 508 | 0.096 ms |
+
+The native point is not directly comparable with the host boundary benchmark;
+the pair is useful for attributing future regressions to kernel work versus
+ABI/transport overhead.
+
 ## Surface Grouping Rust Migration
 
 The main-thread publication path now uses the existing Rust

@@ -204,6 +204,8 @@ pub(crate) fn render(snapshot: CadMeshBuffer, crease_cosine: f64) -> RenderMesh 
 mod tests {
     use super::*;
     use std::collections::HashMap;
+    use std::hint::black_box;
+    use std::time::Instant;
 
     // Original map-of-property-keys implementation, retained only as a byte oracle.
     fn reference(snapshot: CadMeshBuffer, cosine: f64) -> RenderMesh {
@@ -311,6 +313,72 @@ mod tests {
             vec![-0., 0., 0., 1., 0., 0., 0., 1., 0., 0., 0., 1., 9., 9., 9.],
             vec![0, 1, 2, 0, 2, 3, 0, 0, 1, 2, 2, 2, 0, 2, 1],
         );
+    }
+
+    #[test]
+    #[ignore = "explicit native benchmark; run with --ignored --nocapture"]
+    fn native_render_benchmark() {
+        use polygon_core::solid::primitives::{cylinder, sphere};
+
+        for (name, mesh) in [
+            ("sphere-128", sphere(30., 128).unwrap()),
+            ("cylinder-128", cylinder(8., 3., 3., 128, true).unwrap()),
+        ] {
+            let indices: Vec<u32> = mesh.indices.into_iter().map(|index| index as u32).collect();
+            let snapshot = CadMeshBuffer {
+                positions: mesh.positions,
+                face_ids: (0..indices.len() as u32 / 3).collect(),
+                indices,
+            };
+            let cosine = (52.5_f64.to_radians()).cos();
+            let expected = render(
+                CadMeshBuffer {
+                    positions: snapshot.positions.clone(),
+                    indices: snapshot.indices.clone(),
+                    face_ids: snapshot.face_ids.clone(),
+                },
+                cosine,
+            );
+            let signature = |mesh: &RenderMesh| {
+                (
+                    mesh.vertices.iter().map(|value| value.to_bits()).collect::<Vec<_>>(),
+                    mesh.indices.clone(),
+                    mesh.merge_from.clone(),
+                    mesh.merge_to.clone(),
+                )
+            };
+            let expected_signature = signature(&expected);
+            for _ in 0..2 {
+                let result = render(
+                    CadMeshBuffer {
+                        positions: snapshot.positions.clone(),
+                        indices: snapshot.indices.clone(),
+                        face_ids: snapshot.face_ids.clone(),
+                    },
+                    cosine,
+                );
+                assert_eq!(signature(&result), expected_signature);
+            }
+            let mut samples = Vec::with_capacity(9);
+            for _ in 0..9 {
+                let input = CadMeshBuffer {
+                    positions: snapshot.positions.clone(),
+                    indices: snapshot.indices.clone(),
+                    face_ids: snapshot.face_ids.clone(),
+                };
+                let started = Instant::now();
+                let result = black_box(render(black_box(input), cosine));
+                samples.push(started.elapsed().as_secs_f64() * 1000.);
+                assert_eq!(signature(&result), expected_signature);
+                black_box(result);
+            }
+            samples.sort_by(f64::total_cmp);
+            println!(
+                "native-render {name}: triangles={} p50_ms={:.3} samples_ms={samples:?}",
+                snapshot.indices.len() / 3,
+                samples[samples.len() / 2],
+            );
+        }
     }
 
     #[test]
