@@ -885,17 +885,17 @@ mod tests {
         )
         .unwrap()
     }
-    fn only_circle(
-        report: &Report<SphereSphereComponent>,
-    ) -> (
-        &Curve,
+    type SphereSphereCircle<'a> = (
+        &'a Curve,
         [f64; 3],
         f64,
         [f64; 3],
-        &[SpherePatchCircle],
-        &[SpherePatchCircle],
+        &'a [SpherePatchCircle],
+        &'a [SpherePatchCircle],
         f64,
-    ) {
+    );
+
+    fn only_circle(report: &Report<SphereSphereComponent>) -> SphereSphereCircle<'_> {
         assert_eq!(report.coverage, Coverage::NumericallyResolved, "{report:?}");
         assert!(report.unresolved.is_empty(), "{report:?}");
         assert!(!report.permits_topology_change());

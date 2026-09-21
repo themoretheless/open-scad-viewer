@@ -698,17 +698,17 @@ mod tests {
         assert_eq!(report.components.len(), count, "{report:?}");
         report
     }
-    fn circle_of(
-        component: &SphereCylinderComponent,
-    ) -> (
-        &Curve,
+    type SphereCylinderCircle<'a> = (
+        &'a Curve,
         [f64; 3],
         f64,
         [f64; 3],
-        &[SpherePatchCircle],
-        &[CylinderPatchCurve],
+        &'a [SpherePatchCircle],
+        &'a [CylinderPatchCurve],
         f64,
-    ) {
+    );
+
+    fn circle_of(component: &SphereCylinderComponent) -> SphereCylinderCircle<'_> {
         let SphereCylinderComponent::Circle {
             curve,
             center,
