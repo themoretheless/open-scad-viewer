@@ -2127,10 +2127,12 @@ pub fn surface_surface(
         // G6 narrow bicubic path (Complete-empty or Incomplete); never topology change.
         match crate::nurbs_ss_g6::narrow_transverse_bicubic(first, second, options) {
             Ok(g6) => {
-                let mut report = Report::default();
-                report.coverage = g6.coverage;
-                report.boxes_visited = g6.boxes_visited;
-                report.bernstein_excluded = g6.bernstein_excluded;
+                let mut report = Report {
+                    coverage: g6.coverage,
+                    boxes_visited: g6.boxes_visited,
+                    bernstein_excluded: g6.bernstein_excluded,
+                    ..Report::default()
+                };
                 for pending in g6.unresolved {
                     report.unresolved(pending.parameter_box, pending.reason);
                 }

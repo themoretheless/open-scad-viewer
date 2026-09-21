@@ -317,8 +317,10 @@ mod tests {
 
     #[test]
     fn complete_claim_with_unresolved_is_rejected() {
-        let mut report = Report::<()>::default();
-        report.coverage = Coverage::Complete;
+        let mut report = Report::<()> {
+            coverage: Coverage::Complete,
+            ..Report::default()
+        };
         report.unresolved.push(Unresolved {
             parameter_box: vec![0., 1.],
             reason: UnresolvedReason::NearCoincidence,

@@ -367,35 +367,39 @@ fn planar_support(surface: &Surface, tol: f64) -> Option<([f64; 3], [f64; 3])> {
 }
 
 fn complete_empty() -> Report<G6Component> {
-    let mut report = Report::default();
-    report.coverage = Coverage::Complete;
-    report.boxes_visited = 1;
-    report.components.push(G6Component::Empty);
-    report
+    Report {
+        components: vec![G6Component::Empty],
+        boxes_visited: 1,
+        coverage: Coverage::Complete,
+        ..Report::default()
+    }
 }
 
 fn complete_line(start: [f64; 3], end: [f64; 3]) -> Report<G6Component> {
-    let mut report = Report::default();
-    report.coverage = Coverage::Complete;
-    report.boxes_visited = 1;
-    report.components.push(G6Component::Line { start, end });
-    report
+    Report {
+        components: vec![G6Component::Line { start, end }],
+        boxes_visited: 1,
+        coverage: Coverage::Complete,
+        ..Report::default()
+    }
 }
 
 fn complete_curve(certificate: ExactIsoIntersectionCertificate) -> Report<G6Component> {
-    let mut report = Report::default();
-    report.coverage = Coverage::Complete;
-    report.boxes_visited = certificate.diagnostic_samples.len().max(1);
+    let boxes_visited = certificate.diagnostic_samples.len().max(1);
     let samples = certificate
         .diagnostic_samples
         .iter()
         .map(|sample| sample.0)
         .collect();
-    report.components.push(G6Component::Curve {
-        certificate,
-        samples,
-    });
-    report
+    Report {
+        components: vec![G6Component::Curve {
+            certificate,
+            samples,
+        }],
+        boxes_visited,
+        coverage: Coverage::Complete,
+        ..Report::default()
+    }
 }
 
 fn affine_plane_uv(surface: &Surface, p: [f64; 3], tol: f64) -> Result<Option<[f64; 2]>> {
