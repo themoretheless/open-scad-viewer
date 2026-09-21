@@ -1227,7 +1227,10 @@ const PRIOR_WINDOW: usize = 6;
 /// reference view (COLMAP-style geometric prior). Anchors are splatted to the
 /// map grid, then each pixel takes the padded min/max depth of anchors within
 /// a fixed square window. Returns None when the view has no usable anchors.
-#[expect(clippy::too_many_arguments, reason = "projection scalar inputs are kept explicit for the dense kernel; group into a context object in the next API pass")]
+#[expect(
+    clippy::too_many_arguments,
+    reason = "projection scalar inputs are kept explicit for the dense kernel; group into a context object in the next API pass"
+)]
 fn sparse_intervals(
     sparse: &Reconstruction,
     image: usize,

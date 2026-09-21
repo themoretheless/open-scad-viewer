@@ -77,9 +77,9 @@ use super::plane_torus::{
     CanonicalTorus, TorusPatchCurve, lift_parallel, recognize_torus, torus_residual,
 };
 use super::sphere_cylinder::CylinderPatchCurve;
-use super::sphere_sphere::{RECOGNITION, circle_arcs, circle_curve};
 #[cfg(test)]
 use super::sphere_sphere::ARC_WEIGHT;
+use super::sphere_sphere::{RECOGNITION, circle_arcs, circle_curve};
 use super::*;
 use crate::Model;
 

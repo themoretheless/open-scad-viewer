@@ -928,60 +928,56 @@ pub fn project_surface(
     })
     .collect::<Result<Vec<_>>>()?;
     let mut boxes = active;
-    let affine_uniqueness =
-        if surface.degree_u == 1
-            && surface.degree_v == 1
-            && nu == 2
-            && nv == 2
-            && surface
-                .weights
-                .iter()
-                .flatten()
-                .all(|weight| *weight == surface.weights[0][0])
-        {
-            let origin = &surface.control_points[0][0];
-            let du = surface.control_points[1][0]
-                .iter()
-                .zip(origin)
-                .map(|(x, o)| x - o)
-                .collect::<Vec<_>>();
-            let dv = surface.control_points[0][1]
-                .iter()
-                .zip(origin)
-                .map(|(x, o)| x - o)
-                .collect::<Vec<_>>();
-            let closure = surface.control_points[1][1]
-                .iter()
-                .zip(origin)
-                .zip(&du)
-                .zip(&dv)
-                .all(|(((x, o), u), v)| (*x - *o - *u - *v).abs() <= 64. * f64::EPSILON);
-            let a = du.iter().map(|x| x * x).sum::<f64>();
-            let b = du.iter().zip(&dv).map(|(x, y)| x * y).sum::<f64>();
-            let c = dv.iter().map(|x| x * x).sum::<f64>();
-            let determinant = a * c - b * b;
-            let rhsu = point
-                .iter()
-                .zip(origin)
-                .zip(&du)
-                .map(|((x, o), d)| (x - o) * d)
-                .sum::<f64>();
-            let rhsv = point
-                .iter()
-                .zip(origin)
-                .zip(&dv)
-                .map(|((x, o), d)| (x - o) * d)
-                .sum::<f64>();
-            let su = (rhsu * c - rhsv * b) / determinant;
-            let sv = (rhsv * a - rhsu * b) / determinant;
-            (closure
-                && determinant > 0.
-                && (0.0..=1.0).contains(&su)
-                && (0.0..=1.0).contains(&sv))
-                .then_some((su, sv, determinant))
-        } else {
-            None
-        };
+    let affine_uniqueness = if surface.degree_u == 1
+        && surface.degree_v == 1
+        && nu == 2
+        && nv == 2
+        && surface
+            .weights
+            .iter()
+            .flatten()
+            .all(|weight| *weight == surface.weights[0][0])
+    {
+        let origin = &surface.control_points[0][0];
+        let du = surface.control_points[1][0]
+            .iter()
+            .zip(origin)
+            .map(|(x, o)| x - o)
+            .collect::<Vec<_>>();
+        let dv = surface.control_points[0][1]
+            .iter()
+            .zip(origin)
+            .map(|(x, o)| x - o)
+            .collect::<Vec<_>>();
+        let closure = surface.control_points[1][1]
+            .iter()
+            .zip(origin)
+            .zip(&du)
+            .zip(&dv)
+            .all(|(((x, o), u), v)| (*x - *o - *u - *v).abs() <= 64. * f64::EPSILON);
+        let a = du.iter().map(|x| x * x).sum::<f64>();
+        let b = du.iter().zip(&dv).map(|(x, y)| x * y).sum::<f64>();
+        let c = dv.iter().map(|x| x * x).sum::<f64>();
+        let determinant = a * c - b * b;
+        let rhsu = point
+            .iter()
+            .zip(origin)
+            .zip(&du)
+            .map(|((x, o), d)| (x - o) * d)
+            .sum::<f64>();
+        let rhsv = point
+            .iter()
+            .zip(origin)
+            .zip(&dv)
+            .map(|((x, o), d)| (x - o) * d)
+            .sum::<f64>();
+        let su = (rhsu * c - rhsv * b) / determinant;
+        let sv = (rhsv * a - rhsu * b) / determinant;
+        (closure && determinant > 0. && (0.0..=1.0).contains(&su) && (0.0..=1.0).contains(&sv))
+            .then_some((su, sv, determinant))
+    } else {
+        None
+    };
     let mut uniqueness_proof = None;
     let mut status = if boxes.len() == 1 {
         "isolated_candidate"
@@ -2215,10 +2211,7 @@ fn interval_width(a: [f64; 2]) -> f64 {
 
 type SurfaceJetBounds = ([[f64; 2]; 3], [[f64; 2]; 3], [[f64; 2]; 3]);
 
-fn surface_jet_bounds(
-    surface: &Surface,
-    bounds: [f64; 4],
-) -> Result<SurfaceJetBounds> {
+fn surface_jet_bounds(surface: &Surface, bounds: [f64; 4]) -> Result<SurfaceJetBounds> {
     let samples = 5;
     let mut point = [[f64::INFINITY, f64::NEG_INFINITY]; 3];
     let mut du = [[f64::INFINITY, f64::NEG_INFINITY]; 3];

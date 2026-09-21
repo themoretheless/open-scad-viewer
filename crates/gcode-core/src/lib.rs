@@ -278,7 +278,11 @@ pub fn emit(layers: &[PlannedLayer], machine: &MachineProfile) -> Result<String>
     Ok(out.0)
 }
 
-fn emit_body(layers: &[PlannedLayer], machine: &MachineProfile, out: &mut impl Write) -> Result<()> {
+fn emit_body(
+    layers: &[PlannedLayer],
+    machine: &MachineProfile,
+    out: &mut impl Write,
+) -> Result<()> {
     machine.validate()?;
     require_layers(layers)?;
     let ratio = machine.bead_area_mm2() / machine.filament_area_mm2();

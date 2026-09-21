@@ -199,7 +199,9 @@ pub(crate) fn toolpaths(v: &Value) -> Result<Value> {
 fn packed_moves(v: &Value) -> Result<bool> {
     match v.get("packedMoves") {
         None => Ok(false),
-        Some(value) => value.as_bool().ok_or_else(|| input("packedMoves must be boolean")),
+        Some(value) => value
+            .as_bool()
+            .ok_or_else(|| input("packedMoves must be boolean")),
     }
 }
 
@@ -214,16 +216,33 @@ fn preview_value(preview: GcodePreview, packed: bool) -> Value {
         "estimatedTimeS": preview.estimated_time_s,
     });
     if packed {
-        value["moveRows"] = json!(preview.moves.iter().flat_map(|m| [
-            m.x, m.y, m.z, m.e, m.feedrate_mm_s, m.layer_index as f64,
-            if m.extruded { 1.0 } else { 0.0 },
-        ]).collect::<Vec<_>>());
+        value["moveRows"] = json!(
+            preview
+                .moves
+                .iter()
+                .flat_map(|m| [
+                    m.x,
+                    m.y,
+                    m.z,
+                    m.e,
+                    m.feedrate_mm_s,
+                    m.layer_index as f64,
+                    if m.extruded { 1.0 } else { 0.0 },
+                ])
+                .collect::<Vec<_>>()
+        );
     } else {
-        value["moves"] = json!(preview.moves.iter().map(|m| json!({
-            "x": m.x, "y": m.y, "z": m.z, "e": m.e,
-            "extruded": m.extruded, "feedrateMmS": m.feedrate_mm_s,
-            "layerIndex": m.layer_index,
-        })).collect::<Vec<_>>());
+        value["moves"] = json!(
+            preview
+                .moves
+                .iter()
+                .map(|m| json!({
+                    "x": m.x, "y": m.y, "z": m.z, "e": m.e,
+                    "extruded": m.extruded, "feedrateMmS": m.feedrate_mm_s,
+                    "layerIndex": m.layer_index,
+                }))
+                .collect::<Vec<_>>()
+        );
     }
     value
 }

@@ -1101,7 +1101,9 @@ fn round_to_step(v: f64, s: f64) -> f64 {
 pub fn print_fit(v: Value) -> Result<Value> {
     let limit_opening = match v.get("limitOpening") {
         None => false,
-        Some(value) => value.as_bool().ok_or_else(|| input("limitOpening must be boolean."))?,
+        Some(value) => value
+            .as_bool()
+            .ok_or_else(|| input("limitOpening must be boolean."))?,
     };
     let options = field::<Value>(&v, "options")?;
     let settings = field::<Value>(&v, "settings")?;
@@ -1153,7 +1155,9 @@ pub fn print_fit(v: Value) -> Result<Value> {
             cell = cell.next_down();
         }
         if !cell.is_finite() || cell < minimum_cell || cell - rib > max_bridge {
-            return Err(input("Opening limit is incompatible with the fitted rib and extrusion width."));
+            return Err(input(
+                "Opening limit is incompatible with the fitted rib and extrusion width.",
+            ));
         }
     }
     let spatial = matches!(
@@ -1247,7 +1251,12 @@ mod print_tests {
 
     #[test]
     fn opening_fit_refuses_impossible_and_malformed_constraints() {
-        assert!(print_fit(request(1.)).unwrap_err().message.contains("incompatible"));
+        assert!(
+            print_fit(request(1.))
+                .unwrap_err()
+                .message
+                .contains("incompatible")
+        );
         let mut v = request(5.);
         v["limitOpening"] = json!("true");
         assert!(print_fit(v).unwrap_err().message.contains("boolean"));

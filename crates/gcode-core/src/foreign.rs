@@ -9,8 +9,8 @@ use crate::foreign_words::{
     Command::{G, InvalidTool, M, T},
 };
 use crate::{
-    GcodeBounds, GcodeMove, GcodePreview, MAX_LAYERS, MAX_LINE_BYTES, MAX_MOVES,
-    MAX_OUTPUT_BYTES, Result, invalid, number, valid_coordinate,
+    GcodeBounds, GcodeMove, GcodePreview, MAX_LAYERS, MAX_LINE_BYTES, MAX_MOVES, MAX_OUTPUT_BYTES,
+    Result, invalid, number, valid_coordinate,
 };
 use std::borrow::Cow;
 
@@ -462,10 +462,9 @@ pub fn parse_foreign_with(gcode: &str, filament_diameter_mm: Option<f64>) -> Res
                             machine.known[index] = true;
                         }
                     }
-                    let extruded =
-                        machine
-                            .extrusion
-                            .advance(words.e, machine.relative_e, scale)?;
+                    let extruded = machine
+                        .extrusion
+                        .advance(words.e, machine.relative_e, scale)?;
                     let is_arc = matches!(canonical, G(2) | G(3));
                     let has_axis = is_arc || words.xyz.iter().any(Option::is_some);
                     if !has_axis && words.e.is_none() {
@@ -827,22 +826,41 @@ M107\nM104 S0\nM140 S0\n; filament_diameter = 1.75\n; gcode_flavor = marlin2\n";
             for round in 0..4 {
                 for index in 0..26 {
                     let axis = b'A' + ((index + shift) % 26) as u8;
-                    let axis = if round % 2 == 0 { axis } else { axis.to_ascii_lowercase() };
-                    tokens.push(format!("{}{:.3}", axis as char, (round * 26 + index) as f64 / 8.0));
+                    let axis = if round % 2 == 0 {
+                        axis
+                    } else {
+                        axis.to_ascii_lowercase()
+                    };
+                    tokens.push(format!(
+                        "{}{:.3}",
+                        axis as char,
+                        (round * 26 + index) as f64 / 8.0
+                    ));
                 }
             }
             let reference = axis_words(tokens.iter().map(String::as_str)).unwrap();
             let actual = MotionWords::parse(tokens.iter().map(String::as_str)).unwrap();
             for (axis, value) in b"XYZEFIJR".iter().zip([
-                actual.xyz[0], actual.xyz[1], actual.xyz[2], actual.e,
-                actual.f, actual.i, actual.j, actual.r,
+                actual.xyz[0],
+                actual.xyz[1],
+                actual.xyz[2],
+                actual.e,
+                actual.f,
+                actual.i,
+                actual.j,
+                actual.r,
             ]) {
                 assert_eq!(value, word(&reference, *axis));
             }
         }
-        for token in ["X", "Q", "Qbad", "Xbad", "1", "XNaN", "Xinf", "X1e999", "é1"] {
+        for token in [
+            "X", "Q", "Qbad", "Xbad", "1", "XNaN", "Xinf", "X1e999", "é1",
+        ] {
             let tokens = ["X1", token, "X2"];
-            assert_eq!(MotionWords::parse(tokens.into_iter()).err(), axis_words(tokens.into_iter()).err());
+            assert_eq!(
+                MotionWords::parse(tokens.into_iter()).err(),
+                axis_words(tokens.into_iter()).err()
+            );
             assert!(MotionWords::parse(tokens.into_iter()).is_err());
         }
     }

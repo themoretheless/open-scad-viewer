@@ -202,7 +202,7 @@ fn curve_tangents(curve: &Curve, t: f64) -> Result<Vec<[f64; 3]>> {
         && let Some(d1) = curve.trim(a, t)?.evaluate(t)?.d1
     {
         jets.push(point3(&d1)?);
-        }
+    }
     if t < domain[1]
         && let Some(b) = curve
             .knots
@@ -213,7 +213,7 @@ fn curve_tangents(curve: &Curve, t: f64) -> Result<Vec<[f64; 3]>> {
         && let Some(d1) = curve.trim(t, b)?.evaluate(t)?.d1
     {
         jets.push(point3(&d1)?);
-        }
+    }
     Ok(jets)
 }
 
@@ -514,7 +514,15 @@ fn krawczyk_cc(
 }
 
 fn admit_coincidence(input: &CurveIntersectionBox<'_>, report: &mut Report) -> Result<bool> {
-    let CurveIntersectionBox { first, second, ta, tb, ha, hb, floor } = *input;
+    let CurveIntersectionBox {
+        first,
+        second,
+        ta,
+        tb,
+        ha,
+        hb,
+        floor,
+    } = *input;
     if proportional_homogeneous(ha, hb, floor.max(1e-12)) {
         let pa = point3(&first.evaluate(ta[0])?.point)?;
         let pb = point3(&first.evaluate(ta[1])?.point)?;
@@ -621,7 +629,15 @@ fn admit_coincidence(input: &CurveIntersectionBox<'_>, report: &mut Report) -> R
 }
 
 fn resolve_cc_box(input: &CurveIntersectionBox<'_>, report: &mut Report) -> Result<()> {
-    let CurveIntersectionBox { first, second, ta, tb, ha, hb, floor } = *input;
+    let CurveIntersectionBox {
+        first,
+        second,
+        ta,
+        tb,
+        ha,
+        hb,
+        floor,
+    } = *input;
     let tm = (ta[0] + ta[1]) * 0.5;
     let um = (tb[0] + tb[1]) * 0.5;
     let diag = next_up(hull_diagonal(ha) + hull_diagonal(hb));
@@ -702,65 +718,65 @@ fn resolve_cc_box(input: &CurveIntersectionBox<'_>, report: &mut Report) -> Resu
     }
     if let Some((t, u)) = krawczyk_cc(first, second, ta, tb, floor)?
         && owns_parameter(ta[0], ta[1], first.domain()[1], t)
-            && owns_parameter(tb[0], tb[1], second.domain()[1], u)
+        && owns_parameter(tb[0], tb[1], second.domain()[1], u)
     {
-            report.krawczyk_isolated += 1;
-            let qa = point3(&first.evaluate(t)?.point)?;
-            let qb = point3(&second.evaluate(u)?.point)?;
-            let r = distance(&qa, &qb);
-            let contact = contact_class(first, second, t, u, floor)?;
-            if contact == "unresolved_conditioning" {
-                report.unresolved.push(json!({
-                    "parameterBox":[ta[0],ta[1],tb[0],tb[1]],
-                    "reason":"conditioning_boundary"
-                }));
-                return Ok(());
-            }
-            let multiplicity = match contact {
-                "even_tangency" => 2,
-                "higher_order_contact" => 3,
-                "pole_or_singular" => 0,
-                _ => 1,
-            };
-            let orientation = {
-                let sine = tangent_sine(first, second, t, u)?;
-                if sine > TRANSVERSE_SINE {
-                    let va = curve_tangents(first, t)?
-                        .into_iter()
-                        .next()
-                        .unwrap_or([1., 0., 0.]);
-                    let vb = curve_tangents(second, u)?
-                        .into_iter()
-                        .next()
-                        .unwrap_or([0., 1., 0.]);
-                    let c = cross3(va, vb);
-                    if c[2] >= 0. { 1 } else { -1 }
-                } else {
-                    0
-                }
-            };
-            push_point(
-                report,
-                CcComponent {
-                    kind: "point",
-                    first: t,
-                    second: u,
-                    first_interval: ta,
-                    second_interval: tb,
-                    point: std::array::from_fn(|i| (qa[i] + qb[i]) * 0.5),
-                    residual: r,
-                    contact,
-                    multiplicity,
-                    orientation,
-                    reversed: false,
-                    first_wrap: 0,
-                    second_wrap: 0,
-                    enclosure: enclosure_of(qa, next_up(r.max(floor))),
-                    coedge_trim: None,
-                },
-            );
+        report.krawczyk_isolated += 1;
+        let qa = point3(&first.evaluate(t)?.point)?;
+        let qb = point3(&second.evaluate(u)?.point)?;
+        let r = distance(&qa, &qb);
+        let contact = contact_class(first, second, t, u, floor)?;
+        if contact == "unresolved_conditioning" {
+            report.unresolved.push(json!({
+                "parameterBox":[ta[0],ta[1],tb[0],tb[1]],
+                "reason":"conditioning_boundary"
+            }));
             return Ok(());
         }
+        let multiplicity = match contact {
+            "even_tangency" => 2,
+            "higher_order_contact" => 3,
+            "pole_or_singular" => 0,
+            _ => 1,
+        };
+        let orientation = {
+            let sine = tangent_sine(first, second, t, u)?;
+            if sine > TRANSVERSE_SINE {
+                let va = curve_tangents(first, t)?
+                    .into_iter()
+                    .next()
+                    .unwrap_or([1., 0., 0.]);
+                let vb = curve_tangents(second, u)?
+                    .into_iter()
+                    .next()
+                    .unwrap_or([0., 1., 0.]);
+                let c = cross3(va, vb);
+                if c[2] >= 0. { 1 } else { -1 }
+            } else {
+                0
+            }
+        };
+        push_point(
+            report,
+            CcComponent {
+                kind: "point",
+                first: t,
+                second: u,
+                first_interval: ta,
+                second_interval: tb,
+                point: std::array::from_fn(|i| (qa[i] + qb[i]) * 0.5),
+                residual: r,
+                contact,
+                multiplicity,
+                orientation,
+                reversed: false,
+                first_wrap: 0,
+                second_wrap: 0,
+                enclosure: enclosure_of(qa, next_up(r.max(floor))),
+                coedge_trim: None,
+            },
+        );
+        return Ok(());
+    }
     let contact = contact_class(first, second, tm, um, floor)?;
     if matches!(
         contact,

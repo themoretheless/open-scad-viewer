@@ -1026,50 +1026,50 @@ pub fn intersect_surface_surface(
     if let Some((n, o, _, _)) = affine_plane(second)?
         && let Some(iso) = surface_plane_iso_components(first, n, o, second, dist_floor)?
     {
-            return Ok(encode_ss_report(
-                iso,
-                unresolved,
-                boxes_visited.max(1),
-                bernstein_excluded,
-                krawczyk_isolated,
-                true,
-                &tolerance,
-                first,
-                second,
-            ));
+        return Ok(encode_ss_report(
+            iso,
+            unresolved,
+            boxes_visited.max(1),
+            bernstein_excluded,
+            krawczyk_isolated,
+            true,
+            &tolerance,
+            first,
+            second,
+        ));
     }
     if let Some((n, o, _, _)) = affine_plane(first)?
         && let Some(mut iso) = surface_plane_iso_components(second, n, o, first, dist_floor)?
     {
-            for component in &mut iso {
-                if let Some(obj) = component.as_object_mut() {
-                    let a = obj.remove("pcurveFirst").unwrap_or(Value::Null);
-                    let b = obj.remove("pcurveSecond").unwrap_or(Value::Null);
-                    obj.insert("pcurveFirst".into(), b);
-                    obj.insert("pcurveSecond".into(), a);
-                    if let Some(samples) = obj.get_mut("samples").and_then(Value::as_array_mut) {
-                        for sample in samples {
-                            if let Some(s) = sample.as_object_mut() {
-                                let ua = s.remove("uvFirst").unwrap_or(Value::Null);
-                                let ub = s.remove("uvSecond").unwrap_or(Value::Null);
-                                s.insert("uvFirst".into(), ub);
-                                s.insert("uvSecond".into(), ua);
-                            }
+        for component in &mut iso {
+            if let Some(obj) = component.as_object_mut() {
+                let a = obj.remove("pcurveFirst").unwrap_or(Value::Null);
+                let b = obj.remove("pcurveSecond").unwrap_or(Value::Null);
+                obj.insert("pcurveFirst".into(), b);
+                obj.insert("pcurveSecond".into(), a);
+                if let Some(samples) = obj.get_mut("samples").and_then(Value::as_array_mut) {
+                    for sample in samples {
+                        if let Some(s) = sample.as_object_mut() {
+                            let ua = s.remove("uvFirst").unwrap_or(Value::Null);
+                            let ub = s.remove("uvSecond").unwrap_or(Value::Null);
+                            s.insert("uvFirst".into(), ub);
+                            s.insert("uvSecond".into(), ua);
                         }
                     }
                 }
             }
-            return Ok(encode_ss_report(
-                iso,
-                unresolved,
-                boxes_visited.max(1),
-                bernstein_excluded,
-                krawczyk_isolated,
-                true,
-                &tolerance,
-                first,
-                second,
-            ));
+        }
+        return Ok(encode_ss_report(
+            iso,
+            unresolved,
+            boxes_visited.max(1),
+            bernstein_excluded,
+            krawczyk_isolated,
+            true,
+            &tolerance,
+            first,
+            second,
+        ));
     }
 
     let cells_a = surface_spans(first)?;
@@ -1404,7 +1404,10 @@ fn build_uv_arrangements(
     })
 }
 
-#[expect(clippy::too_many_arguments, reason = "report serialization keeps source surfaces explicit for evidence fields")]
+#[expect(
+    clippy::too_many_arguments,
+    reason = "report serialization keeps source surfaces explicit for evidence fields"
+)]
 fn encode_ss_report(
     components: Vec<Value>,
     unresolved: Vec<Value>,

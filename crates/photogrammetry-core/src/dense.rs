@@ -463,9 +463,7 @@ pub fn prepare_host_sweep(
     sparse: &Reconstruction,
     options: &DenseOptions,
     progress: &mut impl FnMut(&str, usize, usize) -> bool,
-) -> Result<
-    Option<estimation::HostSweepPreparation>,
-> {
+) -> Result<Option<estimation::HostSweepPreparation>> {
     options.validate()?;
     if options.estimator != DenseEstimator::FrontoparallelSweep
         || options.coarse_to_fine
