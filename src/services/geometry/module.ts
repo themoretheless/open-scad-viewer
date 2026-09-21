@@ -89,6 +89,7 @@ export class CadSolid extends Handle {
         return CadSolid.union([]); const u = v.map(x => x / n); const m = identity(); for (let i = 0; i < 3; i++)
         for (let j = 0; j < 3; j++)
             m[i]![j] -= 2 * u[i]! * u[j]!; return this.matrix(m); }
+    delete() { super.delete(); this.meshSnapshot = undefined; }
     originalID() { return this.original; }
     asOriginal() { const m = new CadSolid(call('copy', { id: this.handle })); return m; }
     status(): ErrorStatus { return !this.invalidImport && (this.isEmpty() || this.inspect().report?.closed) ? 'NoError' : 'NotManifold'; }
