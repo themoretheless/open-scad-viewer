@@ -2999,7 +2999,7 @@ fn tangent_sine(first: &Curve, second: &Curve, t: f64, u: f64) -> Result<f64> {
         for vb in curve_tangents(second, u)? {
             let la = distance(va, [0.; 3]);
             let lb = distance(vb, [0.; 3]);
-            if !(la > 0.) || !(lb > 0.) || !la.is_finite() || !lb.is_finite() {
+            if !la.is_finite() || la <= 0. || !lb.is_finite() || lb <= 0. {
                 continue;
             }
             let c = cross(va.map(|x| x / la), vb.map(|x| x / lb));
@@ -3193,7 +3193,7 @@ fn refine_curve_root(
                 let lb = distance(*vb, [0.; 3]);
                 let c = cross(*va, *vb);
                 let dominant = c.map(|x| x.abs()).into_iter().fold(0., f64::max);
-                if !(dominant > TRANSVERSE_SINE * la * lb) || !dominant.is_finite() {
+                if !dominant.is_finite() || dominant <= TRANSVERSE_SINE * la * lb {
                     continue;
                 }
                 // Solve A(t)-B(u)=0 on the two axes with the best-conditioned minor.
@@ -3213,7 +3213,7 @@ fn refine_curve_root(
                 let (a, b, e0) = (va[keep[0]], -vb[keep[0]], -r[keep[0]]);
                 let (c2, d2, e1) = (va[keep[1]], -vb[keep[1]], -r[keep[1]]);
                 let det = a * d2 - b * c2;
-                if !(det.abs() > 0.) {
+                if !det.is_finite() || det.abs() <= 0. {
                     continue;
                 }
                 let dt = (e0 * d2 - b * e1) / det;
@@ -3505,7 +3505,7 @@ fn curve_coincidence(
     let a1 = point3(piece_a.control_points.last().unwrap());
     let d = sub(a1, a0);
     let length = d[0].hypot(d[1]).hypot(d[2]);
-    if !(length > 0.) {
+    if !length.is_finite() || length <= 0. {
         // Degenerate span: no support line; leave it to point isolation.
         return Ok(false);
     }
@@ -3916,7 +3916,7 @@ fn ruled_seam_state(surface: &Surface) -> RuledSeam {
     let anchor = (0..4)
         .max_by(|&a, &b| first[0][a].abs().total_cmp(&first[0][b].abs()))
         .unwrap();
-    if !(first[0][anchor].abs() > 0.) {
+    if !first[0][anchor].is_finite() || first[0][anchor].abs() <= 0. {
         return RuledSeam::Open;
     }
     let ratio = last[0][anchor] / first[0][anchor];
@@ -3957,7 +3957,13 @@ fn cs_transversality(curve: &Curve, surface: &Surface, t: f64, u: f64, v: f64) -
                     distance(*b, [0.; 3]),
                     distance(*c, [0.; 3]),
                 );
-                if !(la > 0.) || !(lb > 0.) || !(lc > 0.) || !(la * lb * lc).is_finite() {
+                if !la.is_finite()
+                    || la <= 0.
+                    || !lb.is_finite()
+                    || lb <= 0.
+                    || !lc.is_finite()
+                    || lc <= 0.
+                {
                     continue;
                 }
                 best = best.max(
@@ -3982,7 +3988,7 @@ fn solve3(a: [[f64; 3]; 3], b: [f64; 3]) -> Option<[f64; 3]> {
     let mut r = b;
     for col in 0..3 {
         let pivot = (col..3).max_by(|&i, &j| m[i][col].abs().total_cmp(&m[j][col].abs()))?;
-        if !(m[pivot][col].abs() > 1e-14 * scale) {
+        if !m[pivot][col].is_finite() || m[pivot][col].abs() <= 1e-14 * scale {
             return None;
         }
         m.swap(col, pivot);
@@ -4317,7 +4323,13 @@ fn ruled_coincidence(
                 let dd = dot(ruling, ruling);
                 let w0 = curve_weight_at(&b0, u)?;
                 let w1 = curve_weight_at(&b1, u)?;
-                if !(dd > 0.) || !(w0 > 0.) || !(w1 > 0.) {
+                if !dd.is_finite()
+                    || dd <= 0.
+                    || !w0.is_finite()
+                    || w0 <= 0.
+                    || !w1.is_finite()
+                    || w1 <= 0.
+                {
                     report.unresolved(box6(), UnresolvedReason::NearCoincidence);
                     return Ok(true);
                 }
@@ -4326,7 +4338,7 @@ fn ruled_coincidence(
                 let lift = |p: [f64; 3]| {
                     let s = dot(sub(p, r0), ruling) / dd;
                     let denominator = w1 - s * (w1 - w0);
-                    if !(denominator > 0.) {
+                    if !denominator.is_finite() || denominator <= 0. {
                         return None;
                     }
                     let lambda = s * w0 / denominator;
@@ -4418,7 +4430,7 @@ fn ruled_coincidence(
         // polygon row by 2x2 normal equations, then verify every row.
         let (aa, ad, dd) = (dot4(a, a), dot4(a, d), dot4(d, d));
         let determinant = aa * dd - ad * ad;
-        if !(determinant > 0.) {
+        if !determinant.is_finite() || determinant <= 0. {
             continue;
         }
         let alpha = (dd * dot4(a, c) - ad * dot4(d, c)) / determinant;
@@ -4436,7 +4448,7 @@ fn ruled_coincidence(
         for (i, c) in ec.iter().enumerate() {
             let (a, b) = (at(&e0, i), at(&e1, i));
             let h = std::array::from_fn::<_, 4, _>(|k| alpha * a[k] + beta * (b[k] - a[k]));
-            if !(h[3] > 0.) {
+            if !h[3].is_finite() || h[3] <= 0. {
                 valid = false;
                 break;
             }
