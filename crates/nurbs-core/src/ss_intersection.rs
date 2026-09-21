@@ -78,6 +78,13 @@ fn proportional_grids(a: &[Vec<[f64; 4]>], b: &[Vec<[f64; 4]>], tol: f64) -> boo
 
 type PlaneCarrier = ([f64; 3], f64, [f64; 3], [f64; 3]);
 type SeedRefinement = ([f64; 2], [f64; 2], [f64; 3], &'static str);
+type SurfaceCellPending = (
+    [f64; 4],
+    [f64; 4],
+    Option<Vec<Vec<[f64; 4]>>>,
+    Option<Vec<Vec<[f64; 4]>>>,
+    usize,
+);
 
 fn affine_plane(surface: &Surface) -> Result<Option<PlaneCarrier>> {
     // Any positive-weight coplanar chart is an affine plane carrier, not only deg 1×1.
@@ -867,7 +874,7 @@ fn continue_branch(
             };
             let dir = cross3(cross3(dua, dva), cross3(dub, dvb));
             let dn = norm3(dir);
-            if !(dn > 0.) {
+            if !dn.is_finite() || dn <= 0. {
                 break;
             }
             let dir = dir.map(|x| -x / dn);
@@ -876,7 +883,7 @@ fn continue_branch(
                 let guv = dot3(su, sv);
                 let gvv = dot3(sv, sv);
                 let det = guu * gvv - guv * guv;
-                if !(det.abs() > 0.) {
+                if !det.is_finite() || det.abs() <= 0. {
                     return None;
                 }
                 let ru = dot3(dir, su);
@@ -952,7 +959,7 @@ fn continue_branch(
         "kind":"curve",
         "closed":closed,
         "contactClass":contact,
-        "multiplicity":if contact=="even_tangency"{2}else if contact=="odd_tangency"{1}else{1},
+        "multiplicity":if contact=="even_tangency"{2}else{1},
         "orientation":1,
         "samples":samples,
         "pcurveFirst":{"kind":"rational_trace","start":first_uv,"end":last_uv,"correspondence":"interval_certified"},
@@ -1016,8 +1023,9 @@ pub fn intersect_surface_surface(
         ));
     }
     // Exact iso reduction for a freeform chart against an affine plane carrier.
-    if let Some((n, o, _, _)) = affine_plane(second)? {
-        if let Some(iso) = surface_plane_iso_components(first, n, o, second, dist_floor)? {
+    if let Some((n, o, _, _)) = affine_plane(second)?
+        && let Some(iso) = surface_plane_iso_components(first, n, o, second, dist_floor)?
+    {
             return Ok(encode_ss_report(
                 iso,
                 unresolved,
@@ -1029,10 +1037,10 @@ pub fn intersect_surface_surface(
                 first,
                 second,
             ));
-        }
     }
-    if let Some((n, o, _, _)) = affine_plane(first)? {
-        if let Some(mut iso) = surface_plane_iso_components(second, n, o, first, dist_floor)? {
+    if let Some((n, o, _, _)) = affine_plane(first)?
+        && let Some(mut iso) = surface_plane_iso_components(second, n, o, first, dist_floor)?
+    {
             for component in &mut iso {
                 if let Some(obj) = component.as_object_mut() {
                     let a = obj.remove("pcurveFirst").unwrap_or(Value::Null);
@@ -1062,7 +1070,6 @@ pub fn intersect_surface_surface(
                 first,
                 second,
             ));
-        }
     }
 
     let cells_a = surface_spans(first)?;
@@ -1072,13 +1079,7 @@ pub fn intersect_surface_surface(
         "Surface span-pair resource exceeded",
     )?;
 
-    let mut pending: std::collections::VecDeque<(
-        [f64; 4],
-        [f64; 4],
-        Option<Vec<Vec<[f64; 4]>>>,
-        Option<Vec<Vec<[f64; 4]>>>,
-        usize,
-    )> = cells_a
+    let mut pending: std::collections::VecDeque<SurfaceCellPending> = cells_a
         .into_iter()
         .flat_map(|a| {
             cells_b
@@ -1403,6 +1404,7 @@ fn build_uv_arrangements(
     })
 }
 
+#[expect(clippy::too_many_arguments, reason = "report serialization keeps source surfaces explicit for evidence fields")]
 fn encode_ss_report(
     components: Vec<Value>,
     unresolved: Vec<Value>,

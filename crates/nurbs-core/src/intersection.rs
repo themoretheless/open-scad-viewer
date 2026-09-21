@@ -397,6 +397,13 @@ type CurveSpanPending = (
     Option<Vec<[f64; 4]>>,
     usize,
 );
+type CurveSurfacePending = (
+    [f64; 2],
+    [f64; 4],
+    Option<Vec<[f64; 4]>>,
+    Option<HomogeneousGrid>,
+    usize,
+);
 
 struct CurveIntersectionBox<'a> {
     first: &'a Curve,
@@ -926,13 +933,12 @@ pub fn intersect_curve_curve(
             hb: &hb,
             floor: dist_floor,
         };
-        if let Some((pa, pb)) = &pieces {
-            if !hulls_excluded(&ha, &hb)
-                && admit_coincidence(&box_input, &mut report)?
-            {
-                let _ = (pa, pb);
-                continue;
-            }
+        if let Some((pa, pb)) = &pieces
+            && !hulls_excluded(&ha, &hb)
+            && admit_coincidence(&box_input, &mut report)?
+        {
+            let _ = (pa, pb);
+            continue;
         }
         if hulls_excluded(&ha, &hb) {
             report.bernstein_excluded += 1;
@@ -1370,13 +1376,7 @@ pub fn intersect_curve_surface(
         }
     } else {
         // General CS: hull subdivision in (t,u,v).
-        let mut pending: std::collections::VecDeque<(
-            [f64; 2],
-            [f64; 4],
-            Option<Vec<[f64; 4]>>,
-            Option<HomogeneousGrid>,
-            usize,
-        )> = spans(&curve_open)?
+        let mut pending: std::collections::VecDeque<CurveSurfacePending> = spans(&curve_open)?
             .into_iter()
             .flat_map(|ta| {
                 surface_spans(surface)
