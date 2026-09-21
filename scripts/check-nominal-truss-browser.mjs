@@ -92,7 +92,7 @@ try{
     assert.deepEqual(await page.evaluate(()=>window.__trussProbe.buildSurfaces),{modelKind:'signed-triangle-build-surfaces-v1',totalAreaMm2:600,downwardAreaMm2:0,downwardTriangles:0,contactAreaMm2:100,belowPlaneTriangles:0})
     assert.match(await panel.textContent(),/8 nodes.*13 members/s)
     assert.equal(await panel.locator('input[aria-label$="restrained"]:checked').count(),0)
-    await panel.getByLabel('Plastic type',{exact:true}).selectOption('PETG')
+    await panel.locator('label').filter({hasText:'Plastic type'}).locator('select').selectOption('PETG')
     await panel.getByLabel('Grade / manufacturer / composition',{exact:true}).fill('Test spool')
     await panel.getByLabel('Source of E and limits for these conditions',{exact:true}).fill('Synthetic regression fixture; not a material certificate')
     await panel.getByLabel('Nozzle temperature, °C',{exact:true}).fill('240')
