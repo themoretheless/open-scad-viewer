@@ -126,7 +126,7 @@ pub fn inspect_build_surfaces(
         contact_area_mm2: 0.,
         below_plane_triangles: 0,
     };
-    for triangle in mesh.indices.chunks_exact(3) {
+    for triangle in mesh.indices.as_chunks::<3>().0 {
         let point = |i: usize| {
             [
                 mesh.positions[i * 3],
@@ -200,7 +200,7 @@ mod tests {
         let x = inspect_build_surfaces(&mesh, [10., 0., 0.], 90., 0., 0.).unwrap();
         assert_eq!(x.contact_area_mm2, 12.);
         assert_eq!(x.downward_triangles, 0);
-        for p in mesh.positions.chunks_exact_mut(3) {
+        for p in mesh.positions.as_chunks_mut::<3>().0 {
             p[2] += 10.;
         }
         assert_eq!(
@@ -219,7 +219,7 @@ mod tests {
         for cone in [-1., 91., f64::NAN] {
             assert!(inspect_build_surfaces(&mesh, [0., 0., 1.], cone, 0., 0.).is_err());
         }
-        for tri in mesh.indices.chunks_exact_mut(3) {
+        for tri in mesh.indices.as_chunks_mut::<3>().0 {
             tri.swap(1, 2);
         }
         assert_eq!(

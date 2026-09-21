@@ -43,19 +43,6 @@ fn admit_expansion(group: &Value, count: usize) -> Result<()> {
     }
     Ok(())
 }
-#[cfg(test)]
-mod tests {
-    use super::*;
-    #[test]
-    fn footprint_matches_wire_and_counts_object_keys() {
-        let value = value_codec::json!({"name":"тело","data":[1.,true,Value::Null]});
-        let (bytes, nodes, depth) = footprint(&value);
-        assert_eq!(bytes + 4, value_codec::encode_binary(&value).unwrap().len());
-        assert_eq!(nodes, 8);
-        assert_eq!(depth, 2);
-        assert!(admit_expansion(&value, usize::MAX).is_err());
-    }
-}
 pub fn pattern(v: Value) -> Result<Value> {
     let bodies: Vec<Value> = field(&v, "bodies")?;
     let count: usize = field(&v, "count")?;
@@ -151,4 +138,17 @@ pub fn pattern(v: Value) -> Result<Value> {
         groups.push(group);
     }
     encode(groups)
+}
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn footprint_matches_wire_and_counts_object_keys() {
+        let value = value_codec::json!({"name":"тело","data":[1.,true,Value::Null]});
+        let (bytes, nodes, depth) = footprint(&value);
+        assert_eq!(bytes + 4, value_codec::encode_binary(&value).unwrap().len());
+        assert_eq!(nodes, 8);
+        assert_eq!(depth, 2);
+        assert!(admit_expansion(&value, usize::MAX).is_err());
+    }
 }

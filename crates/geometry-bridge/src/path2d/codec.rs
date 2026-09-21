@@ -165,8 +165,8 @@ pub(super) fn decode_region(value: &Value) -> Result<planar_geometry::rings::Rin
 }
 
 pub(super) fn decode_point(v: &Value) -> Result<[f64; 2]> {
-    if let Some(arr) = v.as_array() {
-        if arr.len() == 2 {
+    if let Some(arr) = v.as_array()
+        && arr.len() == 2 {
             let x = arr[0]
                 .as_f64()
                 .ok_or_else(|| input("point[0] must be a number"))?;
@@ -175,7 +175,6 @@ pub(super) fn decode_point(v: &Value) -> Result<[f64; 2]> {
                 .ok_or_else(|| input("point[1] must be a number"))?;
             return Ok([x, y]);
         }
-    }
     field(v, "xy").or_else(|_| Ok([field(v, "x")?, field(v, "y")?]))
 }
 

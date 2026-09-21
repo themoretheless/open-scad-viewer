@@ -100,8 +100,8 @@ fn put(values: &mut Values, name: &str, value: &str, important: bool) -> Result<
             )));
         }
     }
-    if let Some(normalized) = usvg::normalize_geometry_property(property, value) {
-        if values
+    if let Some(normalized) = usvg::normalize_geometry_property(property, value)
+        && values
             .get(property)
             .is_none_or(|old| important || !old.important)
         {
@@ -113,7 +113,6 @@ fn put(values: &mut Values, name: &str, value: &str, important: bool) -> Result<
                 },
             );
         }
-    }
     Ok(())
 }
 fn append_declaration(
@@ -245,8 +244,8 @@ pub(crate) fn analyze(source: &str) -> Result<Analysis> {
     for node in document.descendants().filter(|n| n.is_element()) {
         let mut values = Values::new();
         for property in PROPERTIES {
-            if usvg::geometry_property_applies(property, node.tag_name().name()) {
-                if let Some(value) = node.attribute(property) {
+            if usvg::geometry_property_applies(property, node.tag_name().name())
+                && let Some(value) = node.attribute(property) {
                     if property == "d" {
                         values.insert(
                             property,
@@ -259,7 +258,6 @@ pub(crate) fn analyze(source: &str) -> Result<Analysis> {
                         put(&mut values, property, value, false)?;
                     }
                 }
-            }
         }
         for rule in &sheet.rules {
             selectors += 1;

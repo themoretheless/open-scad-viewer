@@ -57,7 +57,7 @@ fn split_mesh(body: Value, n: [f64; 3], offset: f64) -> Result<Value> {
     let mut min = f64::INFINITY;
     let mut max = f64::NEG_INFINITY;
     let mut radius = 0_f64;
-    for p in mesh.positions.chunks_exact(3) {
+    for p in mesh.positions.as_chunks::<3>().0 {
         let projection = dot(n, [p[0], p[1], p[2]]);
         let distance = (p[0] - origin[0])
             .hypot(p[1] - origin[1])

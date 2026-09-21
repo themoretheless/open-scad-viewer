@@ -506,13 +506,12 @@ pub fn validate_operations(operations: &[Value]) -> Result<()> {
         {
             closed.insert(preorder_stack.pop().expect("non-empty stack"));
         }
-        if let Some(parent) = parent {
-            if closed.contains(&parent) || preorder_stack.last().copied() != Some(parent) {
+        if let Some(parent) = parent
+            && (closed.contains(&parent) || preorder_stack.last().copied() != Some(parent)) {
                 return Err(invalid(
                     "Semantic operations must be in deterministic parent-before-child preorder",
                 ));
             }
-        }
         let child_ordinal = bounded_integer(&operation["childOrdinal"], 1_000_000)?;
         let name = bounded_string(&operation["name"], 256)?;
         let category = operation["category"]
@@ -1086,6 +1085,7 @@ pub fn validate_occurrence_identity(
     let mut scene_ids: HashSet<String> = HashSet::new();
     let mut groups: HashMap<String, Vec<usize>> = HashMap::new();
     let mut group_order: Vec<String> = Vec::new();
+    #[allow(clippy::type_complexity)]
     let mut duplicate_slots: HashMap<
         (Option<usize>, usize, usize, String, String),
         Vec<(u64, String)>,
@@ -1093,6 +1093,7 @@ pub fn validate_occurrence_identity(
     let mut occurrence_ids: Vec<String> = Vec::with_capacity(occurrences.len());
     let mut rows: Vec<OccurrenceRow> = Vec::with_capacity(occurrences.len());
     let mut reparented_static_roots: Vec<usize> = Vec::new();
+    #[allow(clippy::type_complexity)]
     let mut pending_continuations: Vec<(usize, usize, Option<usize>, usize, Vec<Value>)> =
         Vec::new();
     let mut proof_budget: usize = 0;

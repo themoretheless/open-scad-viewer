@@ -46,7 +46,7 @@ mod tests {
         let points: Vec<[f64; 2]> = field(mesh, "positions").unwrap();
         let indices: Vec<usize> = field(mesh, "indices").unwrap();
         indices
-            .chunks_exact(3)
+            .as_chunks::<3>().0.iter()
             .map(|t| {
                 let [a, b, c] = [points[t[0]], points[t[1]], points[t[2]]];
                 ((b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0])).abs() * 0.5

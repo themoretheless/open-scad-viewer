@@ -233,7 +233,7 @@ pub(super) fn dispatch(action: &str, v: &Value) -> Result<Option<Value>> {
                     || v.get("holes").is_some_and(|h| !h.is_null())
                     || v["region"].as_bool() == Some(true)
                 {
-                    encode_paths(&offset_closed_path(&path, &optional_holes(&v)?, &opts)?)
+                    encode_paths(&offset_closed_path(&path, &optional_holes(v)?, &opts)?)
                 } else {
                     encode_paths(&path.offset(distance, join_name, opts.segments)?)
                 }

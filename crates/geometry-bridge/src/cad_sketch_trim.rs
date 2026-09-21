@@ -70,11 +70,10 @@ pub fn trim(v: Value) -> Result<Value> {
             if other == id && i == edge {
                 continue;
             }
-            if let Some((t, u)) = hit(a, b, q[i], q[(i + 1) % q.len()])? {
-                if t > 1e-8 && t < 1. - 1e-8 && (0. ..=1.).contains(&u) {
+            if let Some((t, u)) = hit(a, b, q[i], q[(i + 1) % q.len()])?
+                && t > 1e-8 && t < 1. - 1e-8 && (0. ..=1.).contains(&u) {
                     cuts.push(t);
                 }
-            }
         }
     }
     cuts.sort_by(f64::total_cmp);
@@ -155,11 +154,10 @@ pub fn extend(v: Value) -> Result<Value> {
             continue;
         }
         for k in 0..edges {
-            if let Some((t, u)) = hit(a, b, q[k], q[(k + 1) % q.len()])? {
-                if t > 1. + 1e-8 && t < best && (0. ..=1.).contains(&u) {
+            if let Some((t, u)) = hit(a, b, q[k], q[(k + 1) % q.len()])?
+                && t > 1. + 1e-8 && t < best && (0. ..=1.).contains(&u) {
                     best = t;
                 }
-            }
         }
     }
     if !best.is_finite() {

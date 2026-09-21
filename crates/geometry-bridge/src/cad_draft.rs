@@ -58,7 +58,7 @@ pub fn draft(v: Value) -> Result<Value> {
         if !span.is_finite() || span <= 0. {
             return Err(input("Draft requires a nonzero body extent."));
         }
-        for p in mesh.positions.chunks_exact_mut(3) {
+        for p in mesh.positions.as_chunks_mut::<3>().0 {
             let h: f64 = (0..3).map(|k| (p[k] - origin[k]) * n[k]).sum();
             let axial: f64 = (0..3).map(|k| (p[k] - center[k]) * n[k]).sum();
             let factor = 1. + h * tangent / span;

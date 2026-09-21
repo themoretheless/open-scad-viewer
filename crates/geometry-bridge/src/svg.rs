@@ -58,8 +58,8 @@ fn check_urls(value: &str) -> Result<()> {
     // in a stylesheet must not hide an unsupported value on another element.
     // Delimiters inside quoted strings/comments are not CSS declarations.
     let check_declaration = |declaration: &str| -> Result<()> {
-        if let Some((name, value)) = declaration.split_once(':') {
-            if name.trim() == "vector-effect"
+        if let Some((name, value)) = declaration.split_once(':')
+            && name.trim() == "vector-effect"
                 && !matches!(
                     value.trim().trim_end_matches("!important").trim(),
                     "none"
@@ -75,7 +75,6 @@ fn check_urls(value: &str) -> Result<()> {
                     "SVG vector-effect supports none and non-scaling-stroke",
                 ));
             }
-        }
         Ok(())
     };
     let mut declaration = String::new();
@@ -475,11 +474,10 @@ fn preflight_inner(
     // Reject cyclic and exponential use trees before normalization expands them.
     let mut ids = std::collections::HashMap::new();
     for node in doc.descendants() {
-        if let Some(id) = node.attribute("id") {
-            if ids.insert(id, node).is_some() {
+        if let Some(id) = node.attribute("id")
+            && ids.insert(id, node).is_some() {
                 return Err(invalid(format!("Duplicate SVG id {id}")));
             }
-        }
     }
     // Match marker declarations with the same selector implementation as usvg.
     // Union all possible declarations and inherited values instead of resolving
@@ -533,11 +531,10 @@ fn preflight_inner(
                 if declaration.name == "font-size" {
                     admit_length(declaration.value);
                 }
-                if declaration.name == "font" {
-                    if let Ok(font) = svgtypes::FontShorthand::from_str(declaration.value) {
+                if declaration.name == "font"
+                    && let Ok(font) = svgtypes::FontShorthand::from_str(declaration.value) {
                         admit_length(font.font_size);
                     }
-                }
             }
         }
     }
@@ -545,11 +542,10 @@ fn preflight_inner(
         if declaration.name == "font-size" {
             admit_length(declaration.value);
         }
-        if declaration.name == "font" {
-            if let Ok(font) = svgtypes::FontShorthand::from_str(declaration.value) {
+        if declaration.name == "font"
+            && let Ok(font) = svgtypes::FontShorthand::from_str(declaration.value) {
                 admit_length(font.font_size);
             }
-        }
     }
     let relative_bound = absolute * relative.powi(MAX_DEPTH as i32 + 1);
     let mut primitive_units = std::collections::HashMap::new();
@@ -594,8 +590,8 @@ fn preflight_inner(
     for node in doc.descendants().filter(|n| n.is_element()) {
         let mut refs = std::collections::HashMap::new();
         let mut add = |property: &str, value: &str| {
-            if let Ok(iri) = svgtypes::FuncIRI::from_str(value) {
-                if let Some(target) = ids.get(iri.0).filter(|n| n.has_tag_name("marker")) {
+            if let Ok(iri) = svgtypes::FuncIRI::from_str(value)
+                && let Some(target) = ids.get(iri.0).filter(|n| n.has_tag_name("marker")) {
                     let positions = match property {
                         "marker-start" => 1,
                         "marker-mid" => 2,
@@ -609,7 +605,6 @@ fn preflight_inner(
                         })
                         .positions |= positions;
                 }
-            }
         };
         for attr in node.attributes().filter(|a| marker_property(a.name())) {
             add(attr.name(), attr.value());
@@ -642,6 +637,7 @@ fn preflight_inner(
             local_markers.insert(node.id(), refs.into_values().collect::<Vec<_>>());
         }
     }
+    #[expect(clippy::too_many_arguments, reason = "SVG traversal carries explicit inherited rendering state")]
     fn cost<'a, 'input>(
         node: usvg::roxmltree::Node<'a, 'input>,
         ids: &std::collections::HashMap<&str, usvg::roxmltree::Node<'a, 'input>>,
@@ -860,13 +856,12 @@ fn legacy_source(source: &str, doc: &usvg::roxmltree::Document<'_>, dpi: f64) ->
                 {
                     i += 1;
                 }
-                if value[i..].starts_with("px") {
-                    if let Ok(n) = value[start..i].parse::<f64>() {
+                if value[i..].starts_with("px")
+                    && let Ok(n) = value[start..i].parse::<f64>() {
                         output.push_str(&format!("{}pt", n * 0.75));
                         i += 2;
                         continue;
                     }
-                }
                 output.push_str(&value[start..i]);
             } else {
                 let c = value[i..].chars().next().unwrap();
@@ -1529,12 +1524,12 @@ impl Geometry {
     fn flatten(&mut self, path: &Path, transform: Matrix) -> Result<Rings> {
         let map = |p: Point| -> [f64; 2] {
             [
-                transform.sx as f64 * p.x as f64
-                    + transform.kx as f64 * p.y as f64
-                    + transform.tx as f64,
-                transform.ky as f64 * p.x as f64
-                    + transform.sy as f64 * p.y as f64
-                    + transform.ty as f64,
+                transform.sx * p.x as f64
+                    + transform.kx * p.y as f64
+                    + transform.tx,
+                transform.ky * p.x as f64
+                    + transform.sy * p.y as f64
+                    + transform.ty,
             ]
         };
         let mut contours = Vec::new();
@@ -1602,8 +1597,8 @@ impl Geometry {
             return Ok(vec![]);
         }
         let mut out = Vec::new();
-        if let Some(fill) = path.fill() {
-            if clipping || fill.opacity().get() > 0. && Self::painted(fill.paint())? {
+        if let Some(fill) = path.fill()
+            && (clipping || fill.opacity().get() > 0. && Self::painted(fill.paint())?) {
                 let contours = self.flatten(path.data(), ts)?;
                 if !contours.is_empty() {
                     out.push(Region {
@@ -1615,10 +1610,9 @@ impl Geometry {
                     });
                 }
             }
-        }
-        if !clipping {
-            if let Some(stroke) = path.stroke() {
-                if stroke.opacity().get() > 0. && Self::painted(stroke.paint())? {
+        if !clipping
+            && let Some(stroke) = path.stroke()
+                && stroke.opacity().get() > 0. && Self::painted(stroke.paint())? {
                     if stroke.is_non_scaling() {
                         // Width, dashes and joins are defined in the outer SVG
                         // viewport; the result returns to local coordinates so
@@ -1643,8 +1637,8 @@ impl Geometry {
                         return Ok(out);
                     }
                     let style = stroke.to_tiny_skia();
-                    let scale = ((ts.sx as f64).hypot(ts.ky as f64)
-                        + (ts.kx as f64).hypot(ts.sy as f64))
+                    let scale = (ts.sx.hypot(ts.ky)
+                        + ts.kx.hypot(ts.sy))
                         / self.tolerance;
                     let resolution = scale.clamp(1., 100_000.) as f32;
                     let dashed;
@@ -1669,8 +1663,6 @@ impl Geometry {
                         });
                     }
                 }
-            }
-        }
         Ok(out)
     }
     fn union(regions: Vec<Region>) -> Result<Rings> {
@@ -2185,7 +2177,7 @@ mod tests {
                         .copy_from_slice(&(original + offset as u32).to_be_bytes());
                 }
                 out.extend_from_slice(&face);
-                while out.len() % 4 != 0 {
+                while !out.len().is_multiple_of(4) {
                     out.push(0);
                 }
             }
@@ -2376,13 +2368,13 @@ mod tests {
         {
             let mut encoder = gif::Encoder::new(&mut bytes, 4, 4, &[]).unwrap();
             encoder.set_repeat(gif::Repeat::Infinite).unwrap();
-            let mut red = vec![255, 0, 0, 255].repeat(4);
+            let mut red = [255, 0, 0, 255].repeat(4);
             let mut first = gif::Frame::from_rgba(2, 2, &mut red);
             first.left = 1;
             first.top = 1;
             first.delay = 10;
             encoder.write_frame(&first).unwrap();
-            let mut blue = vec![0, 0, 255, 255].repeat(16);
+            let mut blue = [0, 0, 255, 255].repeat(16);
             encoder
                 .write_frame(&gif::Frame::from_rgba(4, 4, &mut blue))
                 .unwrap();

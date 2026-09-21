@@ -295,10 +295,10 @@ impl Session {
 }
 pub(crate) fn references(node: &Value) -> Result<Vec<usize>> {
     Ok(match node["kind"].as_str() {
-        Some("boolean" | "hull") => field(&node, "inputs")?,
+        Some("boolean" | "hull") => field(node, "inputs")?,
         Some(
             "transform" | "linear-extrude" | "rotate-extrude-analytic" | "projection" | "offset",
-        ) => vec![field(&node, "input")?],
+        ) => vec![field(node, "input")?],
         Some(
             "box" | "sphere-analytic" | "cylinder-analytic" | "rectangle" | "circle-analytic"
             | "polygon",
@@ -394,7 +394,7 @@ mod tests {
         assert_eq!(a.snapshot(&x).unwrap()["kind"].as_str(), Some("solid"));
         let bytes = a.retained_bytes();
         assert!(bytes > 0);
-        let bundle = a.commit(&[x.clone()]).unwrap();
+        let bundle = a.commit(std::slice::from_ref(&x)).unwrap();
         assert_eq!(a.retained_bytes(), 0);
         assert_eq!(bundle.results().count(), 1);
         assert!(a.evaluate(cube(1), &[]).is_err());
@@ -429,7 +429,7 @@ mod tests {
         let mut s = Session::new(8, 1_000_000).unwrap();
         let a = s.evaluate(cube(0), &[]).unwrap();
         let node = json!({"id":1,"kind":"boolean","valueType":{"space":"d3","geometryKind":"solid","representation":"analytic-brep","evidence":{"tag":"representation-preserving"}},"operation":"union","inputs":[0]});
-        let b = s.evaluate(node, &[a.clone()]).unwrap();
+        let b = s.evaluate(node, std::slice::from_ref(&a)).unwrap();
         s.release(&a).unwrap();
         assert!(s.commit(&[b.clone(), b]).is_err());
         assert_eq!(s.retained_bytes(), 0);

@@ -181,7 +181,7 @@ fn mesh_section_and_toolpath_ops_cut_a_box() {
         "z": 1.0,
     }))
     .unwrap();
-    assert!(section["contours"].as_array().unwrap().len() >= 1);
+    assert!(!section["contours"].as_array().unwrap().is_empty());
 
     let toolpaths = dispatch(json!({
         "op": "mesh_toolpaths",
@@ -192,7 +192,7 @@ fn mesh_section_and_toolpath_ops_cut_a_box() {
         "wallCount": 1,
     }))
     .unwrap();
-    assert!(toolpaths["layers"].as_array().unwrap().len() >= 1);
+    assert!(!toolpaths["layers"].as_array().unwrap().is_empty());
 
     let gcode = dispatch(json!({
         "op": "mesh_gcode",
@@ -608,7 +608,7 @@ fn exact_analytic_shell_crosses_bridge_with_audited_certificate() {
     assert_eq!(result["certificate"]["complete"], true);
     assert_eq!(result["audit"]["ok"], true);
     assert_eq!(result["namingComplete"], true);
-    assert!(result["changeSet"]["changes"].as_array().unwrap().len() > 0);
+    assert!(!result["changeSet"]["changes"].as_array().unwrap().is_empty());
     assert_eq!(before, value_codec::to_string(&model).unwrap());
     assert!(
         dispatch(json!({

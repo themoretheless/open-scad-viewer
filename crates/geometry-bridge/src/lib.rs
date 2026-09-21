@@ -499,10 +499,10 @@ impl ParametricSurface for NurbsSurfaceAdapter {
 /// NURBS definitions remain owned by the caller. The result is a derived mesh
 /// with sampled UV correspondence; no exact/global error certificate is implied.
 pub fn tessellate_nurbs(surface: &Surface, options: &Options) -> Result<BuiltMesh> {
-    Ok(tessellation::tessellate(
+    tessellation::tessellate(
         &NurbsSurfaceAdapter::new(surface)?,
         options,
-    )?)
+    )
 }
 /// Exact piecewise-linear NURBS curves from ordered mesh boundary vertices.
 /// This transfers polygon data into the spline library; it does not infer the
@@ -515,7 +515,7 @@ pub fn boundary_curves(mesh: &Mesh) -> Result<Vec<Curve>> {
                 .iter()
                 .map(|i| mesh.point(*i).map(|p| p.to_vec()))
                 .collect::<polygon_core::Result<Vec<_>>>()?;
-            Ok(Curve::from_polyline(points)?)
+            Curve::from_polyline(points)
         })
         .collect()
 }

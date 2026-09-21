@@ -20,7 +20,7 @@ pub fn components(v: Value) -> Result<Value> {
 fn component_count(mesh: &Mesh, positive_only: bool) -> Result<usize> {
     mesh.validate()?;
     let mut parent = (0..mesh.positions.len() / 3).collect::<Vec<_>>();
-    for f in mesh.indices.chunks_exact(3) {
+    for f in mesh.indices.as_chunks::<3>().0 {
         let a = root(&mut parent, f[0]);
         let b = root(&mut parent, f[1]);
         let c = root(&mut parent, f[2]);
@@ -40,7 +40,7 @@ fn component_count(mesh: &Mesh, positive_only: bool) -> Result<usize> {
     // Give each indexed component its own origin to avoid cancellation between
     // distant disconnected pieces. The threshold retains the editor contract.
     let mut sums = BTreeMap::<usize, (f64, f64)>::new();
-    for f in mesh.indices.chunks_exact(3) {
+    for f in mesh.indices.as_chunks::<3>().0 {
         let r = root(&mut parent, f[0]);
         let origin = &mesh.positions[r * 3..r * 3 + 3];
         let p = f
@@ -67,7 +67,7 @@ fn component_count(mesh: &Mesh, positive_only: bool) -> Result<usize> {
 }
 
 fn ordered_contains(values: &[usize], x: usize) -> bool {
-    values.iter().any(|&v| v == x)
+    values.contains(&x)
 }
 
 fn ordered_push_unique(values: &mut Vec<usize>, x: usize) {
@@ -360,9 +360,9 @@ pub fn decimate(v: Value) -> Result<Value> {
                 }
             } else {
                 let f = &mut faces[i];
-                for k in 0..3 {
-                    if f[k] == b {
-                        f[k] = a;
+                for value in f.iter_mut().take(3) {
+                    if *value == b {
+                        *value = a;
                     }
                 }
                 for &w in f.iter() {
@@ -1183,11 +1183,10 @@ pub fn print_fit(v: Value) -> Result<Value> {
         if skin != 0. {
             step = step.min(skin / 2.);
         }
-        if let Some(wall) = lattice_option(&result, "wallDepth")? {
-            if wall != 0. {
+        if let Some(wall) = lattice_option(&result, "wallDepth")?
+            && wall != 0. {
                 step = step.min(wall / 2.);
             }
-        }
         result["step"] = Value::from(step);
     } else {
         result["axis"] = Value::from("z");

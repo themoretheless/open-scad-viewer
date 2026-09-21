@@ -49,24 +49,12 @@ fn seam_coordinate(x: f64) -> String {
         rounded % 10_000_000
     )
 }
-#[cfg(test)]
-mod tests {
-    use super::*;
-    #[test]
-    fn decimal_seam_ties_follow_legacy_rounding() {
-        assert_eq!(seam_coordinate(1. / 256.), "0.0039063");
-        assert_eq!(seam_coordinate(-1. / 256.), "-0.0039063");
-        assert_eq!(seam_coordinate(-0.), "0.0000000");
-        assert_eq!(seam_coordinate(-f64::from_bits(1)), "-0.0000000");
-        assert_eq!(seam_coordinate(123.5), "123.5000000");
-    }
-}
 pub fn topology(v: Value) -> Result<Value> {
     let mesh: Mesh = field(&v, "mesh")?;
     mesh.validate()?;
     let points = mesh
         .positions
-        .chunks_exact(3)
+        .as_chunks::<3>().0.iter()
         .map(|p| [p[0], p[1], p[2]])
         .collect::<Vec<_>>();
     let mut faces: Vec<Face> = Vec::new();
@@ -88,7 +76,7 @@ pub fn topology(v: Value) -> Result<Value> {
         ]
     };
     let mut grid: HashMap<[i64; 4], Vec<usize>> = HashMap::new();
-    for (i, ids) in mesh.indices.chunks_exact(3).enumerate() {
+    for (i, ids) in mesh.indices.as_chunks::<3>().0.iter().enumerate() {
         let a = points[ids[0]];
         let b = points[ids[1]];
         let c = points[ids[2]];
@@ -173,7 +161,7 @@ pub fn topology(v: Value) -> Result<Value> {
         .collect::<Vec<_>>();
     let mut lookup = BTreeMap::new();
     let mut edges: Vec<Edge> = Vec::new();
-    for (i, ids) in mesh.indices.chunks_exact(3).enumerate() {
+    for (i, ids) in mesh.indices.as_chunks::<3>().0.iter().enumerate() {
         let Some(face) = triangle_faces[i] else {
             continue;
         };
@@ -249,4 +237,16 @@ pub fn face_plane(v: Value) -> Result<Value> {
         }
     }
     encode(value_codec::json!({"origin":origin,"u":u,"v":w}))
+}
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn decimal_seam_ties_follow_legacy_rounding() {
+        assert_eq!(seam_coordinate(1. / 256.), "0.0039063");
+        assert_eq!(seam_coordinate(-1. / 256.), "-0.0039063");
+        assert_eq!(seam_coordinate(-0.), "0.0000000");
+        assert_eq!(seam_coordinate(-f64::from_bits(1)), "-0.0000000");
+        assert_eq!(seam_coordinate(123.5), "123.5000000");
+    }
 }

@@ -73,7 +73,7 @@ pub(super) fn dispatch(action: &str, v: &Value) -> Result<Option<Value>> {
             let angle = v["angle"].as_f64().unwrap_or(0.0);
             let cross = v["cross"].as_bool().unwrap_or(false);
             if v.get("path").is_some_and(|p| !p.is_null()) {
-                let holes = optional_holes(&v)?;
+                let holes = optional_holes(v)?;
                 encode_paths(&effects::hatch_path(
                     &decode_path(&v["path"])?,
                     &holes,
@@ -117,7 +117,7 @@ pub(super) fn dispatch(action: &str, v: &Value) -> Result<Option<Value>> {
                 fill_rule: fill_rule(v)?,
             };
             if v.get("path").is_some_and(|p| !p.is_null()) {
-                let holes = optional_holes(&v)?;
+                let holes = optional_holes(v)?;
                 encode_paths(&effects::stipple_path(
                     &decode_path(&v["path"])?,
                     &holes,

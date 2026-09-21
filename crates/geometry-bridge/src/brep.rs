@@ -189,7 +189,7 @@ fn finish_indexed_mode(
         || report.orientation_conflicts > 0
         || closed && !report.closed
     {
-        return Err(input(&format!(
+        return Err(input(format!(
             "B-rep tessellation does not preserve manifold seams at this resolution/tolerance \
              (degenerate {}, non-manifold {}, orientation conflicts {}, closed {})",
             report.degenerate_triangles,
@@ -1590,7 +1590,7 @@ mod registry_tests {
         let indices = &built.built.mesh.indices;
         let mut edge_uses: std::collections::BTreeMap<(usize, usize), usize> =
             std::collections::BTreeMap::new();
-        for tri in indices.chunks_exact(3) {
+        for tri in indices.as_chunks::<3>().0 {
             for [a, b] in [[tri[0], tri[1]], [tri[1], tri[2]], [tri[2], tri[0]]] {
                 let key = if a < b { (a, b) } else { (b, a) };
                 *edge_uses.entry(key).or_default() += 1;

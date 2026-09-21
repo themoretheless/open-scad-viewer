@@ -77,7 +77,7 @@ pub fn edge(v: Value) -> Result<Value> {
     if vertices[0] == vertices[1] || vertices.iter().any(|&i| i >= mesh.positions.len() / 3) {
         return Err(input("Invalid displayed edge vertices."));
     }
-    let exists = mesh.indices.chunks_exact(3).any(|t| {
+    let exists = mesh.indices.as_chunks::<3>().0.iter().any(|t| {
         (0..3).any(|i| {
             let a = t[i];
             let b = t[(i + 1) % 3];

@@ -41,15 +41,15 @@ fn load(name: &str) -> Fixture {
 /// layer admits the tampered rows and only the targeted later rule can fire.
 fn rederive_occurrence_digests(occurrences: &mut [Value], operations: &[Value]) {
     let mut ids: Vec<String> = Vec::with_capacity(occurrences.len());
-    for index in 0..occurrences.len() {
-        let operation = occurrences[index]["operation"].as_u64().unwrap() as usize;
-        let parent = occurrences[index]["parent"]
+    for occurrence in occurrences.iter_mut() {
+        let operation = occurrence["operation"].as_u64().unwrap() as usize;
+        let parent = occurrence["parent"]
             .as_u64()
             .map(|row| row as usize);
-        let static_parent = occurrences[index]["staticParent"]
+        let static_parent = occurrence["staticParent"]
             .as_u64()
             .map(|row| row as usize);
-        let slots = occurrences[index]["dynamicSlots"]
+        let slots = occurrence["dynamicSlots"]
             .as_array()
             .unwrap()
             .clone();
@@ -59,12 +59,12 @@ fn rederive_occurrence_digests(occurrences: &mut [Value], operations: &[Value]) 
             operations[operation]["operationId"].as_str().unwrap(),
             &slots,
         );
-        if let Some(ordinal) = occurrences[index]["outputOrdinal"].as_u64() {
-            occurrences[index]["sceneEntityId"] = json!(
+        if let Some(ordinal) = occurrence["outputOrdinal"].as_u64() {
+            occurrence["sceneEntityId"] = json!(
                 super::super::brep_identity::derive_scene_entity_id(&id, ordinal)
             );
         }
-        occurrences[index]["occurrenceId"] = json!(id.clone());
+        occurrence["occurrenceId"] = json!(id.clone());
         ids.push(id);
     }
 }

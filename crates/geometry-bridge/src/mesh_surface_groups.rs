@@ -60,7 +60,7 @@ pub fn surface_group_ids(
             *slot = 1;
         }
     }
-    for i in 0..vertex_count {
+    for (i, canonical_id) in canonical.iter_mut().enumerate().take(vertex_count) {
         let offset = i * stride;
         let x = vertices[offset];
         let y = vertices[offset + 1];
@@ -68,12 +68,12 @@ pub fn surface_group_ids(
         if !x.is_finite() || !y.is_finite() || !z.is_finite() {
             return Err(input("Nonfinite mesh position"));
         }
-        if sparse && canonical[i] == 0 {
+        if sparse && *canonical_id == 0 {
             continue;
         }
         let key = point_key(x, y, z);
         let next = points.len() as u32;
-        canonical[i] = *points.entry(key).or_insert(next);
+        *canonical_id = *points.entry(key).or_insert(next);
     }
 
     let mut edges = HashMap::<(u32, u32), GroupEdge>::new();

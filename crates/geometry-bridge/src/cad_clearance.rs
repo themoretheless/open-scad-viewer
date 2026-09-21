@@ -110,7 +110,7 @@ pub fn inspect(v: Value) -> Result<Value> {
         .iter()
         .map(|m| {
             m.indices
-                .chunks_exact(3)
+                .as_chunks::<3>().0.iter()
                 .map(|t| {
                     std::array::from_fn::<_, 3, _>(|i| {
                         std::array::from_fn::<_, 3, _>(|k| m.positions[t[i] * 3 + k])

@@ -62,14 +62,14 @@ impl PreparedGraph {
 }
 
 pub(crate) fn prepare(v: &Value) -> std::result::Result<PreparedGraph, GraphFailure> {
-    let nodes: Vec<Value> = field(&v, "nodes")?;
-    let max_nodes: usize = field(&v, "maxNodes")?;
+    let nodes: Vec<Value> = field(v, "nodes")?;
+    let max_nodes: usize = field(v, "maxNodes")?;
     if nodes.len() > max_nodes {
         return Err(input("Native graph node budget exceeded").into());
     }
-    let mut session = Session::new(max_nodes, field(&v, "maxBytes")?)?;
+    let mut session = Session::new(max_nodes, field(v, "maxBytes")?)?;
     if v.get("maxCharacters").is_some() {
-        session = session.with_character_limit(field(&v, "maxCharacters")?)?;
+        session = session.with_character_limit(field(v, "maxCharacters")?)?;
     }
     let selection = if let Some(result) = v.get("result") {
         if v.get("outputs").is_some() {
@@ -78,14 +78,14 @@ pub(crate) fn prepare(v: &Value) -> std::result::Result<PreparedGraph, GraphFail
         Some(super::brep_result::select(
             result,
             &nodes,
-            &field::<Vec<Value>>(&v, "occurrences")?,
+            &field::<Vec<Value>>(v, "occurrences")?,
         )?)
     } else {
         None
     };
     let outputs: Vec<usize> = match &selection {
         Some(selection) => selection.roots.clone(),
-        None => field(&v, "outputs")?,
+        None => field(v, "outputs")?,
     };
     if let Some(plan) = v.get("execution") {
         super::brep_execution_plan::validate(plan, nodes.len())?;

@@ -133,8 +133,8 @@ impl RenderBudget {
             if let usvg::Node::Group(child) = node {
                 self.group(child, sx, sy, depth + 1)?;
             }
-            if let usvg::Node::Image(image) = node {
-                if !matches!(image.kind(), usvg::ImageKind::SVG(_)) {
+            if let usvg::Node::Image(image) = node
+                && !matches!(image.kind(), usvg::ImageKind::SVG(_)) {
                     let size = image.size();
                     let pixels = f64::from(size.width()) * f64::from(size.height());
                     if pixels > MAX_LAYER_PIXELS {
@@ -144,7 +144,6 @@ impl RenderBudget {
                     }
                     self.work += pixels;
                 }
-            }
             if let usvg::Node::Path(path) = node {
                 self.geometry_work += path.data().segments().count();
                 if let Some(intervals) = path.stroke().and_then(|stroke| stroke.dasharray()) {

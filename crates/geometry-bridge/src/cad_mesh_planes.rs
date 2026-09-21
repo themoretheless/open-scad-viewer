@@ -69,7 +69,7 @@ fn admit(mesh: &Mesh) -> Result<Vec<Plane>> {
         })
         .collect::<Result<Vec<_>>>()?;
     for f in &planes {
-        for p in mesh.positions.chunks_exact(3) {
+        for p in mesh.positions.as_chunks::<3>().0 {
             let d = dot(f.normal, [p[0], p[1], p[2]]);
             if !d.is_finite() || d > f.offset + 1e-5 {
                 return Err(input(
@@ -208,7 +208,7 @@ pub fn planar(v: Value) -> Result<Value> {
             if open.len() >= planes.len() || open.iter().any(|&i| i >= planes.len()) {
                 return Err(input("Keep at least one closed face."));
             }
-            let (min, max) = polygon_core::scene_flatten::bounds(&[mesh.positions.clone()])?;
+            let (min, max) = polygon_core::scene_flatten::bounds(std::slice::from_ref(&mesh.positions))?;
             let span = (0..3).map(|k| max[k] - min[k]).fold(0., f64::max) * 3. + amount;
             if !span.is_finite() {
                 return Err(input("Shell extent exceeds finite numeric range."));

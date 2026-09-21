@@ -9,6 +9,7 @@ use std::collections::BTreeMap;
 use value_codec::{Value, json};
 
 thread_local! {
+    #[allow(clippy::type_complexity)]
     static PENDING: RefCell<(u64, BTreeMap<u64, (Field, Grid)>)> =
         const { RefCell::new((0, BTreeMap::new())) };
 }

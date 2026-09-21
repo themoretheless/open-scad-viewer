@@ -60,7 +60,7 @@ pub fn arrange(v: Value) -> Result<Value> {
     let keys = meshes
         .iter()
         .map(|m| {
-            let (min, max) = polygon_core::scene_flatten::bounds(&[m.positions.clone()])?;
+            let (min, max) = polygon_core::scene_flatten::bounds(std::slice::from_ref(&m.positions))?;
             Ok(match mode.as_str() {
                 "min" => min[axis],
                 "max" => max[axis],

@@ -622,6 +622,7 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>) {
 }
 "##;
 /// A bounded spatial graph of rounded struts, optionally blended into a skin.
+#[expect(clippy::too_many_arguments, reason = "public lattice API preserves the geometry bridge contract")]
 pub fn lattice(
     mesh: &Mesh,
     nodes: Vec<P>,
@@ -673,6 +674,7 @@ pub fn recommended_for_lattice(
 /// distance plus capsule graph) is evaluated on the GPU in f32; snap, boundary
 /// validation, marching-tetrahedra and the final mesh audit stay on the CPU.
 /// Anything ineligible or unavailable falls back to the CPU reference.
+#[expect(clippy::too_many_arguments, reason = "public accelerated lattice API preserves the geometry bridge contract")]
 pub fn lattice_accelerated(
     mesh: &Mesh,
     nodes: Vec<P>,
@@ -836,7 +838,7 @@ pub fn lattice_accelerated(
     let output = match output {
         Some(mesh) => mesh,
         None => crate::mesh_from_triangles(sdf_core::polygonize_with(
-            &field,
+            field,
             &sdf_core::Grid { min, max, cells },
         )?),
     };

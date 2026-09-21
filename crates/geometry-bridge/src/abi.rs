@@ -28,7 +28,6 @@ pub fn abi_export_alloc(len: usize) -> usize {
 /// # Safety
 /// Pointers must reference live buffers allocated by this module, with their exact lengths.
 /// Mesh pointers must come from operation 9; freeing consumes them exactly once.
-
 pub unsafe fn abi_free(ptr: usize, len: usize) {
     if ptr != 0 {
         unsafe {
@@ -64,7 +63,6 @@ fn geometry(result: Result<Value>) -> Value {
 /// # Safety
 /// Pointers must reference live buffers allocated by this module, with their exact lengths.
 /// Mesh pointers must come from operation 9; freeing consumes them exactly once.
-
 pub unsafe fn abi_request(op: u32, ptr: usize, len: usize) -> u64 {
     if len > LIMIT {
         return packed(geometry(Err(input("Request exceeds transport limit"))));
@@ -81,7 +79,7 @@ pub unsafe fn abi_request(op: u32, ptr: usize, len: usize) -> u64 {
             let result: Result<Value> = try {
                 let surface: Surface =
                     value_codec::from_value(value).map_err(|e| input(e.to_string()))?;
-                let sampler = SurfaceSampler::new(&surface).map_err(Error::from)?;
+                let sampler = SurfaceSampler::new(&surface)?;
                 SAMPLERS.with(|s| {
                     let mut s = s.borrow_mut();
                     let id = s.iter().position(Option::is_none).unwrap_or(s.len());
@@ -106,7 +104,7 @@ pub unsafe fn abi_request(op: u32, ptr: usize, len: usize) -> u64 {
                         .get(id)
                         .and_then(Option::as_ref)
                         .ok_or_else(|| input("Surface evaluator is disposed"))?;
-                    encode(sampler.evaluate(u, v).map_err(Error::from)?)
+                    encode(sampler.evaluate(u, v)?)
                 })?
             };
             geometry(result)
@@ -137,7 +135,6 @@ pub unsafe fn abi_request(op: u32, ptr: usize, len: usize) -> u64 {
 /// # Safety
 /// Pointers must reference live buffers allocated by this module, with their exact lengths.
 /// Mesh pointers must come from operation 9; freeing consumes them exactly once.
-
 pub unsafe fn abi_mesh_field(ptr: usize, field: u32) -> usize {
     let m = unsafe { &*(ptr as *const CadMeshBuffer) };
     match field {
@@ -153,7 +150,6 @@ pub unsafe fn abi_mesh_field(ptr: usize, field: u32) -> usize {
 /// # Safety
 /// Pointers must reference live buffers allocated by this module, with their exact lengths.
 /// Mesh pointers must come from operation 9; freeing consumes them exactly once.
-
 pub unsafe fn abi_mesh_free(ptr: usize) {
     if ptr != 0 {
         unsafe { drop(Box::from_raw(ptr as *mut CadMeshBuffer)) }
@@ -162,7 +158,6 @@ pub unsafe fn abi_mesh_free(ptr: usize) {
 /// # Safety
 /// Pointers must reference live buffers allocated by this module, with their exact lengths.
 /// Mesh pointers must come from operation 9; freeing consumes them exactly once.
-
 pub unsafe fn abi_import_mesh(stride: usize, vp: usize, vl: usize, ip: usize, il: usize) -> u64 {
     if vl > LIMIT / 4 || il > LIMIT / 4 {
         return packed(geometry(Err(input("Mesh exceeds transport limit"))));
