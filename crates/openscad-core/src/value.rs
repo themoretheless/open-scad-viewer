@@ -274,10 +274,13 @@ fn token(operator: TT) -> &'static str {
 
 /// Host callbacks required by the pure value operators (warnings and the
 /// vector-allocation budget accounting of the evaluator).
+type RegisterArray<'h, 'a> =
+    Box<dyn FnMut(Vec<Value<'a>>, &str) -> EvalResult<Vec<Value<'a>>> + 'h>;
+
 pub struct SemanticsContext<'h, 'a> {
     pub max_range_items: usize,
     pub warn: Box<dyn FnMut(String) + 'h>,
-    pub register_array: Box<dyn FnMut(Vec<Value<'a>>, &str) -> EvalResult<Vec<Value<'a>>> + 'h>,
+    pub register_array: RegisterArray<'h, 'a>,
 }
 
 impl<'h, 'a> SemanticsContext<'h, 'a> {
@@ -512,7 +515,7 @@ fn multiply<'a>(
         let mut out = Vec::with_capacity(left_rows.len());
         for row in &left_rows {
             let mut product_row = Vec::with_capacity(columns);
-            for column in 0..columns {
+            for (column, _) in right_rows[0].iter().enumerate().take(columns) {
                 let mut value = 0.0;
                 for index in 0..shared {
                     value += row[index] * right_rows[index][column];

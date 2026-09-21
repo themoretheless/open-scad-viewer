@@ -30,6 +30,8 @@ impl From<crate::value::EvalFailure> for BuiltinError {
 }
 
 type BResult<T> = Result<T, BuiltinError>;
+type RegisterArray<'h, 'a> =
+    &'h mut dyn FnMut(Vec<Value<'a>>, &str) -> crate::value::EvalResult<Vec<Value<'a>>>;
 
 fn fail<T>(name: &str, message: impl Into<String>) -> BResult<T> {
     Err(BuiltinError::Fail(format!("{name}() {}", message.into())))
@@ -38,8 +40,7 @@ fn fail<T>(name: &str, message: impl Into<String>) -> BResult<T> {
 /// Host effects available to the built-ins (TS `OpenScadBuiltinFunctionContext`).
 pub struct BuiltinContext<'h, 'a> {
     pub warn: &'h mut dyn FnMut(String),
-    pub register_array:
-        &'h mut dyn FnMut(Vec<Value<'a>>, &str) -> crate::value::EvalResult<Vec<Value<'a>>>,
+    pub register_array: RegisterArray<'h, 'a>,
     pub register_string: &'h mut dyn FnMut(String, &str) -> crate::value::EvalResult<String>,
     pub random: &'h mut dyn FnMut() -> f64,
     pub parent_module: &'h dyn Fn(usize) -> Option<String>,
@@ -743,7 +744,8 @@ fn character_string(value: &Value, ctx: &mut BuiltinContext) -> String {
     match value {
         Value::Number(v) => {
             let code_point = v.trunc();
-            if !(code_point > 0.0)
+            if !code_point.is_finite()
+                || code_point <= 0.0
                 || code_point > 0x10ffff as f64
                 || (code_point >= 0xd800 as f64 && code_point <= 0xdfff as f64)
             {
