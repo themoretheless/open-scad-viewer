@@ -68,9 +68,9 @@ mod mesh_render;
 pub mod mesh_shell;
 pub mod mesh_surface_groups;
 pub mod print_geometry;
+mod print_strength;
 mod scene_picking;
 mod truss;
-mod print_strength;
 mod viewport;
 
 #[cfg(feature = "gpu")]
