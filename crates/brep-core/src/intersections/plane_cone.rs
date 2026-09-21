@@ -417,7 +417,7 @@ pub(crate) fn recognize_cone(model: &Model) -> Result<Option<CanonicalCone>> {
     let start = point3_of(&model.faces[sides[0]].surface.evaluate(0., ring_v)?.point);
     let x_perp = radial(start, ring_center);
     let x_length = hypot3(x_perp);
-    if !(x_length > 0.) || !x_length.is_finite() {
+    if !x_length.is_finite() || x_length <= 0. {
         return Ok(None);
     }
     let x_dir = x_perp.map(|x| x / x_length);
@@ -1176,7 +1176,7 @@ pub fn intersect_plane_cone(
         if d0.abs() <= band {
             let e2 = cross(plane.normal, cone.axis);
             let e2_len = hypot3(e2);
-            if !(e2_len > 0.) || !e2_len.is_finite() {
+            if !e2_len.is_finite() || e2_len <= 0. {
                 report.unresolved(domain, UnresolvedReason::TangencyOrMultipleRoot);
                 return Ok(report);
             }
@@ -1282,7 +1282,7 @@ pub fn intersect_plane_cone(
     }
     let e1_raw = sub(cone.axis, plane.normal.map(|x| x * g));
     let e1_len = hypot3(e1_raw);
-    if !(e1_len > 0.) || !e1_len.is_finite() {
+    if !e1_len.is_finite() || e1_len <= 0. {
         report.unresolved(domain, UnresolvedReason::TangencyOrMultipleRoot);
         return Ok(report);
     }

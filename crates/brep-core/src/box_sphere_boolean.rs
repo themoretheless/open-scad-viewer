@@ -147,7 +147,7 @@ fn recognize_box(model: &Model) -> Result<Option<CanonicalBox<'_>>> {
         error = error.max(skew);
         let normal = cross(u, v);
         let n_len = norm(normal);
-        if !(n_len > 0.) || !n_len.is_finite() {
+        if !n_len.is_finite() || n_len <= 0. {
             return Ok(None);
         }
         let surface_normal = normal.map(|x| x / n_len);
@@ -251,7 +251,7 @@ impl Mate for CanonicalBox<'_> {
                 continue;
             }
             let rho2 = sphere.radius * sphere.radius - d * d;
-            if !(rho2 > 0.) || !rho2.is_finite() {
+            if !rho2.is_finite() || rho2 <= 0. {
                 return Err(unsupported(
                     "Box/sphere Boolean: section circle radius is not certifiable",
                 ));

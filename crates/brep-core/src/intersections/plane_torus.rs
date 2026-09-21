@@ -223,7 +223,7 @@ pub(crate) fn recognize_torus(model: &Model) -> Result<Option<CanonicalTorus>> {
     // center plane within the band.
     let axis_raw = cross(sub(outer[1], outer[0]), sub(outer[2], outer[0]));
     let axis_len = axis_raw[0].hypot(axis_raw[1]).hypot(axis_raw[2]);
-    if !(axis_len > 0.) || !axis_len.is_finite() {
+    if !axis_len.is_finite() || axis_len <= 0. {
         return Ok(None);
     }
     let axis = axis_raw.map(|x| x / axis_len);
@@ -775,7 +775,7 @@ pub fn intersect_plane_torus(
     }
     let m = cross(torus.axis, plane.normal);
     let m_len = m[0].hypot(m[1]).hypot(m[2]);
-    if !(m_len > 0.) || !m_len.is_finite() {
+    if !m_len.is_finite() || m_len <= 0. {
         report.unresolved(domain, UnresolvedReason::UnsupportedSurface);
         return Ok(report);
     }

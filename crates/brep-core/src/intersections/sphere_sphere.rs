@@ -346,7 +346,7 @@ fn in_quarter_disk(p: [f64; 2]) -> bool {
 /// Swept angle interval of a UV circle inside the quarter disk. The quarter
 /// disk is convex, so the inside set is one arc; tangent-touch splits merge.
 fn clip_circle(center: [f64; 2], rho: f64) -> Option<(f64, f64)> {
-    if !(rho > 0.) || !rho.is_finite() || !center.iter().all(|v| v.is_finite()) {
+    if !rho.is_finite() || rho <= 0. || !center.iter().all(|v| v.is_finite()) {
         return None;
     }
     let point = |phi: f64| [center[0] + rho * phi.cos(), center[1] + rho * phi.sin()];
@@ -428,7 +428,7 @@ fn clip_circle(center: [f64; 2], rho: f64) -> Option<(f64, f64)> {
 /// Segment of the UV line `normal.p + offset = 0` inside the quarter disk.
 fn clip_line(normal: [f64; 2], offset: f64) -> Option<([f64; 2], [f64; 2])> {
     let n2 = normal[0] * normal[0] + normal[1] * normal[1];
-    if !(n2 > 0.) || !n2.is_finite() || !offset.is_finite() {
+    if !n2.is_finite() || n2 <= 0. || !offset.is_finite() {
         return None;
     }
     let length = n2.sqrt();
@@ -802,7 +802,7 @@ pub fn intersect_sphere_sphere(
     let unit = std::array::from_fn(|i| (i == axis) as u8 as f64);
     let e1 = cross(normal, unit);
     let e1_length = dot(e1, e1).sqrt();
-    if !(e1_length > 0.) || !e1_length.is_finite() {
+    if !e1_length.is_finite() || e1_length <= 0. {
         report.unresolved(domain, UnresolvedReason::TangencyOrMultipleRoot);
         return Ok(report);
     }

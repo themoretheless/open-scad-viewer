@@ -3605,7 +3605,7 @@ fn curve_coincidence(
             let j = if reversed { degree - index } else { index };
             eb.weights[j] / ea.weights[index]
         };
-        if !(lambda > 0.) || !lambda.is_finite() {
+        if !lambda.is_finite() || lambda <= 0. {
             continue;
         }
         let weight_scale = eb.weights.iter().copied().fold(0., f64::max);
@@ -3909,7 +3909,7 @@ fn ruled_seam_state(surface: &Surface) -> RuledSeam {
         return RuledSeam::Open;
     }
     let ratio = last[0][anchor] / first[0][anchor];
-    if !(ratio > 0.) || !ratio.is_finite() {
+    if !ratio.is_finite() || ratio <= 0. {
         return RuledSeam::Open;
     }
     let scale = first
@@ -3964,7 +3964,7 @@ fn cs_transversality(curve: &Curve, surface: &Surface, t: f64, u: f64, v: f64) -
 /// 3x3 solve with partial pivoting; ill-conditioned systems return None.
 fn solve3(a: [[f64; 3]; 3], b: [f64; 3]) -> Option<[f64; 3]> {
     let scale = a.iter().flatten().fold(0_f64, |m, x| m.max(x.abs()));
-    if !(scale > 0.) || !scale.is_finite() {
+    if !scale.is_finite() || scale <= 0. {
         return None;
     }
     let mut m = a;
@@ -4410,7 +4410,7 @@ fn ruled_coincidence(
         }
         let alpha = (dd * dot4(a, c) - ad * dot4(d, c)) / determinant;
         let beta = (aa * dot4(d, c) - ad * dot4(a, c)) / determinant;
-        if !(alpha > 0.) || !alpha.is_finite() || !beta.is_finite() {
+        if !alpha.is_finite() || alpha <= 0. || !beta.is_finite() {
             continue;
         }
         let lambda = beta / alpha;

@@ -457,7 +457,7 @@ pub fn intersect_plane_cylinder(
         let h = h2.sqrt();
         let e = cross(cylinder.axis, plane.normal);
         let e_len = e[0].hypot(e[1]).hypot(e[2]);
-        if !(e_len > 0.) || !e_len.is_finite() {
+        if !e_len.is_finite() || e_len <= 0. {
             report.unresolved(domain, UnresolvedReason::TangencyOrMultipleRoot);
             return Ok(report);
         }
@@ -527,7 +527,7 @@ pub fn intersect_plane_cylinder(
     // exact eccentric-angle clip (every constraint is linear in plane UV).
     let m = sub(cylinder.axis, plane.normal.map(|x| x * g));
     let s = m[0].hypot(m[1]).hypot(m[2]);
-    if !(s > 0.) || !s.is_finite() {
+    if !s.is_finite() || s <= 0. {
         report.unresolved(domain, UnresolvedReason::TangencyOrMultipleRoot);
         return Ok(report);
     }

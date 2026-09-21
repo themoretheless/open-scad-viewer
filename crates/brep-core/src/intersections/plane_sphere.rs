@@ -167,7 +167,7 @@ pub(crate) fn recognize_plane(model: &Model) -> Result<Option<CanonicalPlane>> {
     error = error.max(skew_model);
     let normal = cross(u, v);
     let n_len = normal[0].hypot(normal[1]).hypot(normal[2]);
-    if !(n_len > 0.) || !n_len.is_finite() {
+    if !n_len.is_finite() || n_len <= 0. {
         return Ok(None);
     }
     let normal = normal.map(|x| x / n_len);
