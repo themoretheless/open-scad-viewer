@@ -2910,6 +2910,10 @@ fn representation_occurrences(
     for edges in outgoing.values_mut() {
         edges.sort_by_key(|edge| edge.0)
     }
+    #[expect(
+        clippy::too_many_arguments,
+        reason = "recursive STEP graph walk keeps traversal state explicit"
+    )]
     fn walk(
         rep: usize,
         matrix: [[f64; 4]; 4],
