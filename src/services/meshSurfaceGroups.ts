@@ -1,4 +1,5 @@
 import type {MeshData} from '../core/mesh'
+import {surfaceGroupsInKernel} from './geometry/meshAnalysis'
 import {SurfaceGroupContentCache} from './surfaceGroupContentCache'
 const cache=new WeakMap<Float32Array,WeakMap<Uint32Array,Uint32Array>>()
 // Republished meshes carry fresh typed arrays; the content identity survives.
@@ -49,10 +50,10 @@ export function withSelectionSurfaces(mesh:MeshData):MeshData {
  // the fallback for meshes without a content id.
  const contentId=mesh.geometryAssetId
  if(contentId!==undefined){
-  const ids=contentCache.getOrCompute(contentId,()=>inferSurfaceIds(mesh.vertices,mesh.indices))
+ const ids=contentCache.getOrCompute(contentId,()=>surfaceGroupsInKernel(mesh.vertices,mesh.indices,6))
   return {...mesh,faceIds:ids,faceIdsAuthoritative:false}
  }
  let byIndices=cache.get(mesh.vertices);if(!byIndices){byIndices=new WeakMap();cache.set(mesh.vertices,byIndices)}
- let ids=byIndices.get(mesh.indices);if(!ids){ids=inferSurfaceIds(mesh.vertices,mesh.indices);byIndices.set(mesh.indices,ids)}
+ let ids=byIndices.get(mesh.indices);if(!ids){ids=surfaceGroupsInKernel(mesh.vertices,mesh.indices,6);byIndices.set(mesh.indices,ids)}
  return {...mesh,faceIds:ids,faceIdsAuthoritative:false}
 }

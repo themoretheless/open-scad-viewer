@@ -96,6 +96,26 @@ the byte-parity implementation as the oracle. Do not move that work into a
 new module or Rust path until an isolated before/after measurement shows a
 repeatable win on both sphere fixtures without regressing the cylinder case.
 
+## Surface Grouping Rust Migration
+
+The main-thread publication path now uses the existing Rust
+`surface_group_ids` kernel. The TypeScript implementation remains as an
+independent parity oracle and for focused algorithm tests; the worker path was
+already using the kernel.
+
+Command: a five-sample warm retained-process comparison on
+`sphere(r=30,$fn=128)` (16,128 triangles), measuring each raw grouping call:
+
+| Path | p50 |
+|---|---:|
+| TypeScript oracle | 5.109 ms |
+| Rust-backed kernel | 2.940 ms |
+
+This is approximately 42.5% lower wall time, including WASM input upload and
+detached output copy. It is therefore a conservative host-visible result,
+not an isolated native-kernel claim. Cache ownership and output detachment are
+covered by the existing surface-group kernel tests.
+
 ## Next A/B Boundary
 
 Profile `mesh_render::render` in isolation. Compare a candidate that reuses
