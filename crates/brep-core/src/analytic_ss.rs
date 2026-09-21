@@ -69,6 +69,22 @@ pub enum AnalyticSsComponent {
     },
 }
 
+#[derive(Clone, Copy, Debug)]
+pub struct FiniteCylinder {
+    pub origin: [f64; 3],
+    pub direction: [f64; 3],
+    pub radius: f64,
+    pub height: [f64; 2],
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct FiniteCone {
+    pub apex: [f64; 3],
+    pub axis: [f64; 3],
+    pub radius: f64,
+    pub height: f64,
+}
+
 fn complete_report<T>(components: Vec<T>) -> Report<T> {
     Report {
         components,
@@ -402,16 +418,22 @@ pub fn plane_cone(
 /// Two finite parallel cylinders: empty, coincident walls (empty), or two
 /// generator `Line`s for transverse wall contact. Skew / non-parallel refuse.
 pub fn cylinder_cylinder(
-    a_origin: [f64; 3],
-    a_dir: [f64; 3],
-    a_radius: f64,
-    a_height: [f64; 2],
-    b_origin: [f64; 3],
-    b_dir: [f64; 3],
-    b_radius: f64,
-    b_height: [f64; 2],
+    a: FiniteCylinder,
+    b: FiniteCylinder,
     options: Options,
 ) -> Result<Report<AnalyticSsComponent>> {
+    let FiniteCylinder {
+        origin: a_origin,
+        direction: a_dir,
+        radius: a_radius,
+        height: a_height,
+    } = a;
+    let FiniteCylinder {
+        origin: b_origin,
+        direction: b_dir,
+        radius: b_radius,
+        height: b_height,
+    } = b;
     let options = options.validate()?;
     let a_axis = normalize(a_dir)?;
     let b_axis = normalize(b_dir)?;
@@ -646,16 +668,22 @@ pub fn cylinder_sphere(
 /// Coaxial / parallel finite cones (apex+axis+radii envelopes): Complete empty when
 /// clearly separated; coincident/intersecting walls Incomplete (frozen refuse).
 pub fn cone_cone(
-    a_apex: [f64; 3],
-    a_axis: [f64; 3],
-    a_radius: f64,
-    a_height: f64,
-    b_apex: [f64; 3],
-    b_axis: [f64; 3],
-    b_radius: f64,
-    b_height: f64,
+    a: FiniteCone,
+    b: FiniteCone,
     options: Options,
 ) -> Result<Report<AnalyticSsComponent>> {
+    let FiniteCone {
+        apex: a_apex,
+        axis: a_axis,
+        radius: a_radius,
+        height: a_height,
+    } = a;
+    let FiniteCone {
+        apex: b_apex,
+        axis: b_axis,
+        radius: b_radius,
+        height: b_height,
+    } = b;
     let options = options.validate()?;
     let a_dir = normalize(a_axis)?;
     let b_dir = normalize(b_axis)?;
@@ -819,14 +847,18 @@ mod tests {
     #[test]
     fn skewed_cylinders_refuse_out_of_matrix() {
         let report = cylinder_cylinder(
-            [0., 0., 0.],
-            [0., 0., 1.],
-            1.,
-            [0., 2.],
-            [0., 0., 0.],
-            [1., 0., 0.],
-            1.,
-            [0., 2.],
+            FiniteCylinder {
+                origin: [0., 0., 0.],
+                direction: [0., 0., 1.],
+                radius: 1.,
+                height: [0., 2.],
+            },
+            FiniteCylinder {
+                origin: [0., 0., 0.],
+                direction: [1., 0., 0.],
+                radius: 1.,
+                height: [0., 2.],
+            },
             Options::default(),
         )
         .unwrap();

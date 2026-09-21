@@ -6,7 +6,8 @@
 
 use crate::Model;
 use crate::analytic_ss::{
-    AnalyticSsComponent, cone_cone, cylinder_cylinder, cylinder_sphere, plane_cylinder, torus_torus,
+    AnalyticSsComponent, FiniteCone, FiniteCylinder, cone_cone, cylinder_cylinder, cylinder_sphere,
+    plane_cylinder, torus_torus,
 };
 use crate::box_sphere_boolean;
 use crate::coverage_verifier::verify_complete_report;
@@ -205,7 +206,21 @@ fn imprint_reports(a: &Model, b: &Model) -> Result<Vec<Report<AnalyticSsComponen
         verify_complete_report(&report, true)?;
         reports.push(report);
     }
-    let walls = cylinder_cylinder(ao, ad, ar, ah, bo, bd, br, bh, options)?;
+    let walls = cylinder_cylinder(
+        FiniteCylinder {
+            origin: ao,
+            direction: ad,
+            radius: ar,
+            height: ah,
+        },
+        FiniteCylinder {
+            origin: bo,
+            direction: bd,
+            radius: br,
+            height: bh,
+        },
+        options,
+    )?;
     if walls.coverage == Coverage::Complete {
         verify_complete_report(&walls, true)?;
         reports.push(walls);
@@ -643,7 +658,21 @@ pub fn analytic_boolean(
         (AnalyticClass::Cone, AnalyticClass::Cone) => {
             let (aa, ad, ar, ah) = cone_envelope(a)?;
             let (ba, bd, br, bh) = cone_envelope(b)?;
-            cone_cone(aa, ad, ar, ah, ba, bd, br, bh, options)?
+            cone_cone(
+                FiniteCone {
+                    apex: aa,
+                    axis: ad,
+                    radius: ar,
+                    height: ah,
+                },
+                FiniteCone {
+                    apex: ba,
+                    axis: bd,
+                    radius: br,
+                    height: bh,
+                },
+                options,
+            )?
         }
         (AnalyticClass::Torus, AnalyticClass::Torus) => {
             let (ac, amaj, amin) = torus_envelope(a)?;
@@ -1172,14 +1201,18 @@ mod tests {
     #[test]
     fn parallel_wall_ss_publishes_complete_generator_lines() {
         let report = crate::analytic_ss::cylinder_cylinder(
-            [0., 0., 0.],
-            [0., 0., 1.],
-            2.,
-            [0., 4.],
-            [3., 0., 0.],
-            [0., 0., 1.],
-            2.,
-            [0., 4.],
+            FiniteCylinder {
+                origin: [0., 0., 0.],
+                direction: [0., 0., 1.],
+                radius: 2.,
+                height: [0., 4.],
+            },
+            FiniteCylinder {
+                origin: [3., 0., 0.],
+                direction: [0., 0., 1.],
+                radius: 2.,
+                height: [0., 4.],
+            },
             Options::default(),
         )
         .unwrap();
