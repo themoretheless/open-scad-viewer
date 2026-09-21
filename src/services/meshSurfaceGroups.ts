@@ -1,9 +1,6 @@
 import type {MeshData} from '../core/mesh'
 import {surfaceGroupsInKernel} from './geometry/meshAnalysis'
-import {SurfaceGroupContentCache} from './surfaceGroupContentCache'
-const cache=new WeakMap<Float32Array,WeakMap<Uint32Array,Uint32Array>>()
-// Republished meshes carry fresh typed arrays; the content identity survives.
-const contentCache=new SurfaceGroupContentCache()
+import {createSelectionSurfacePublisher} from './selectionSurfacePublisher'
 function canonicalVertexIds(vertices:Float32Array,indices:Uint32Array):Uint32Array {
  const canonical=new Uint32Array(vertices.length/6),points=new Map<string,number>()
  // Above this ratio unused positions can exhaust the edge-key radix. Reuse
@@ -44,16 +41,10 @@ export function inferSurfaceIds(vertices:Float32Array,indices:Uint32Array,angleD
 }
 /** Preserve authored face IDs exactly; only legacy meshes use inferred patches. */
 export function withSelectionSurfaces(mesh:MeshData):MeshData {
- if(mesh.faceIdsAuthoritative||mesh.faceIdsInferred)return mesh
- if(mesh.indices.length/3>100000)return mesh
- // Content-keyed cache survives republication; buffer-identity WeakMap remains
- // the fallback for meshes without a content id.
- const contentId=mesh.geometryAssetId
- if(contentId!==undefined){
- const ids=contentCache.getOrCompute(contentId,()=>surfaceGroupsInKernel(mesh.vertices,mesh.indices,6))
-  return {...mesh,faceIds:ids,faceIdsAuthoritative:false}
- }
- let byIndices=cache.get(mesh.vertices);if(!byIndices){byIndices=new WeakMap();cache.set(mesh.vertices,byIndices)}
- let ids=byIndices.get(mesh.indices);if(!ids){ids=surfaceGroupsInKernel(mesh.vertices,mesh.indices,6);byIndices.set(mesh.indices,ids)}
- return {...mesh,faceIds:ids,faceIdsAuthoritative:false}
+ return publishSelectionSurfaces(mesh)
 }
+
+const publishSelectionSurfaces = createSelectionSurfacePublisher(
+ (vertices, indices) => surfaceGroupsInKernel(vertices, indices, 6),
+ { cloneResult: false },
+)
