@@ -110,6 +110,10 @@ normal test suite:
 | sphere-128 | 16,128 | 2.374 ms |
 | cylinder-128 | 508 | 0.096 ms |
 
+A repeat through the npm entry point measured `2.353 ms` and `0.097 ms`,
+respectively. The difference is within normal run-to-run noise; no
+optimization claim is attached to this control run.
+
 The native point is not directly comparable with the host boundary benchmark;
 the pair is useful for attributing future regressions to kernel work versus
 ABI/transport overhead.
