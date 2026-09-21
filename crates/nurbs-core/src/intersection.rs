@@ -568,7 +568,7 @@ fn admit_coincidence(
     b_params.sort_by(|a, b| a.1.total_cmp(&b.1));
     let lo = a_params[0].1.max(b_params[0].1);
     let hi = a_params[1].1.min(b_params[1].1);
-    if !(hi > lo + floor) {
+    if !hi.is_finite() || hi <= lo + floor {
         return Ok(false);
     }
     // Invert endpoints by linear blend in source parameter (degree-1 exact; higher monotone collinear).
@@ -1145,7 +1145,7 @@ fn curve_on_plane_exact(_curve: &Curve, surface: &Surface) -> Result<Option<Valu
     ];
     let n = cross3(a, b);
     let nn = norm3(n);
-    if !(nn > 0.) {
+    if !nn.is_finite() || nn <= 0. {
         return Ok(None);
     }
     let normal = n.map(|x| x / nn);
@@ -1209,7 +1209,7 @@ fn cs_contact(
     };
     let normal = cross3(du, dv);
     let nn = norm3(normal);
-    if !(nn > floor) {
+    if !nn.is_finite() || nn <= floor {
         return Ok("pole_or_singular");
     }
     let n = normal.map(|x| x / nn);
@@ -1478,7 +1478,7 @@ pub fn intersect_curve_surface(
                     let det = ata[0][0] * (ata[1][1] * ata[2][2] - ata[1][2] * ata[2][1])
                         - ata[0][1] * (ata[1][0] * ata[2][2] - ata[1][2] * ata[2][0])
                         + ata[0][2] * (ata[1][0] * ata[2][1] - ata[1][1] * ata[2][0]);
-                    if !(det.abs() > 64. * f64::EPSILON) {
+                    if !det.is_finite() || det.abs() <= 64. * f64::EPSILON {
                         ok = false;
                         break;
                     }
@@ -1553,7 +1553,7 @@ pub fn intersect_curve_surface(
                     "point":cp,
                     "residual":residual,
                     "contactClass":contact,
-                    "multiplicity":if contact=="even_tangency"{2}else if contact=="odd_tangency"{1}else{1},
+                    "multiplicity":if contact=="even_tangency"{2}else{1},
                     "orientation":1,
                     "seamWrap":0,
                     "curveWrap":wrap,
