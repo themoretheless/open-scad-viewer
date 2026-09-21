@@ -1,6 +1,6 @@
 /** Legacy-call adapter to our handle-based Rust CAD kernel. No foreign CAD runtime. */
 import { callGeometryRust, withCadMesh, importCadMesh } from './kernel';
-import { renderMeshInKernel } from './meshAnalysis';
+import { renderMeshInKernel, type KernelRenderMesh } from './meshAnalysis';
 export type Vec2 = [number, number];
 export type Vec3 = [number, number, number];
 export type Mat3 = [number, number, number, number, number, number, number, number, number];
@@ -57,6 +57,7 @@ export class CadSolid extends Handle {
     private normalAngle = 52.5;
     private invalidImport = false;
     private original = ++original;
+    private meshSnapshot?: { normals: boolean; normalAngle: number; mesh: KernelRenderMesh };
     constructor(value: number | Mesh) { super(typeof value === 'number' ? value : importCadMesh(value.numProp, value.vertProperties, value.triVerts)); if (typeof value !== 'number' && value.triVerts.length > 0 && this.isEmpty())
         this.invalidImport = true; }
     static cube(size: Vec3 | number, center = false) { return new CadSolid(call('cube', { size: typeof size === 'number' ? [size, size, size] : size, center })); }
@@ -97,23 +98,32 @@ export class CadSolid extends Handle {
     calculateNormals(_index = 0, _angle = 52.5) { const m = new CadSolid(call('copy', { id: this.handle })); m.original = this.original; m.normals = true; m.normalAngle = _angle; return m; }
     /** Owned arrays: the kernel copies out once and the caller may transfer them. */
     getMesh() {
-        let mesh: Mesh;
+        const angle = this.normals ? this.normalAngle : 0;
+        let snapshot = this.meshSnapshot;
+        if (!snapshot || snapshot.normals !== this.normals || snapshot.normalAngle !== angle) {
+            const built = this.normals
+                ? renderMeshInKernel(this.handle, Math.cos(angle * Math.PI / 180))
+                : withCadMesh(this.handle, raw => ({
+                    vertices: new Float32Array(raw.positions),
+                    indices: new Uint32Array(raw.indices),
+                    mergeFrom: new Uint32Array(),
+                    mergeTo: new Uint32Array(),
+                    faceIds: new Uint32Array(raw.faceIds),
+                }));
+            snapshot = { normals: this.normals, normalAngle: angle, mesh: built };
+            this.meshSnapshot = snapshot;
+        }
+        const built = snapshot.mesh;
+        const mesh = new Mesh({
+            numProp: this.normals ? 6 : 3,
+            vertProperties: built.vertices.slice(),
+            triVerts: built.indices.slice(),
+        });
         if (this.normals) {
-            // Crease-split normals, merge pairs and face ids are built in Rust
-            // (geometry-bridge mesh::render_buffers) from the same snapshot.
-            const built = renderMeshInKernel(this.handle, Math.cos(this.normalAngle * Math.PI / 180));
-            mesh = new Mesh({ numProp: 6, vertProperties: built.vertices, triVerts: built.indices });
-            mesh.mergeFromVert = built.mergeFrom;
-            mesh.mergeToVert = built.mergeTo;
-            mesh.faceID = built.faceIds;
+            mesh.mergeFromVert = built.mergeFrom.slice();
+            mesh.mergeToVert = built.mergeTo.slice();
         }
-        else {
-            mesh = withCadMesh(this.handle, raw => {
-                const flat = new Mesh({ numProp: 3, vertProperties: new Float32Array(raw.positions), triVerts: new Uint32Array(raw.indices) });
-                flat.faceID = new Uint32Array(raw.faceIds);
-                return flat;
-            });
-        }
+        mesh.faceID = built.faceIds.slice();
         mesh.runIndex = new Uint32Array([0, mesh.triVerts.length]);
         mesh.runOriginalID = new Uint32Array([this.original]);
         mesh.runFlags = new Uint8Array([0]);

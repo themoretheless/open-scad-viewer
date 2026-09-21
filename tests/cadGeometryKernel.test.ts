@@ -10,11 +10,12 @@ function deleted(value: object): boolean {
 
 describe('kernel-built display meshes', () => {
   it('splits vertex normals at creases inside the kernel and reports merge pairs', async () => {
-    const kernel = new CadGeometryKernel()
-    const session = await kernel.openSession()
+      const kernel = new CadGeometryKernel()
+      const session = await kernel.openSession()
     try {
       const cube = session.module.CadSolid.cube([2, 2, 2], true)
-      const mesh = cube.calculateNormals(0, 52.5).getMesh()
+      const normalCube = cube.calculateNormals(0, 52.5)
+      const mesh = normalCube.getMesh()
       expect(mesh.numProp).toBe(6)
       expect(mesh.numTri).toBe(12)
       // Every corner meets three faces at 90°, so it becomes three property vertices.
@@ -37,9 +38,11 @@ describe('kernel-built display meshes', () => {
       expect(mesh.faceID).toHaveLength(12)
       expect(new Set(mesh.faceID).size).toBe(6)
       // The arrays are owned copies: the kernel may be called again freely.
-      const again = cube.calculateNormals(0, 52.5).getMesh()
+      const again = normalCube.getMesh()
       expect(again.vertProperties).toEqual(mesh.vertProperties)
       expect(again.vertProperties).not.toBe(mesh.vertProperties)
+      mesh.vertProperties[0] = 999
+      expect(normalCube.getMesh().vertProperties[0]).not.toBe(999)
       // A crease angle wider than the dihedral angle smooths the corners instead.
       const smooth = cube.calculateNormals(0, 120).getMesh()
       expect(smooth.numVert).toBe(8)
