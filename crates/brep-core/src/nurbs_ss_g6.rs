@@ -7,6 +7,7 @@
 //! Complete. Non-planar pairs may publish a Complete curve only when a Hausdorff
 //! + parameter-correspondence certificate holds. Out-of-matrix pairs refuse.
 
+//!
 //! False Complete is a kill. Narrow Boolean imprint is Phase B (`bezier-le3`).
 
 use crate::coverage_verifier::verify_complete_report;
@@ -2266,12 +2267,12 @@ fn canonical_graph_frame_cell(
     let last_v = top.control_points[0].len() - 1;
     for (i, row) in top.control_points.iter().enumerate().take(last_u + 1) {
         for (j, p) in row.iter().enumerate().take(last_v + 1) {
-            if i == 0 || i == last_u || j == 0 || j == last_v {
-                if dot(sub([p[0], p[1], p[2]], o), normal).abs() > tolerance {
-                    return Err(refuse(
-                        "V3 graph boundary must remain on its affine corner plane",
-                    ));
-                }
+            if (i == 0 || i == last_u || j == 0 || j == last_v)
+                && dot(sub([p[0], p[1], p[2]], o), normal).abs() > tolerance
+            {
+                return Err(refuse(
+                    "V3 graph boundary must remain on its affine corner plane",
+                ));
             }
         }
     }
