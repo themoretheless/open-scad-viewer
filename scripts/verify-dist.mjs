@@ -81,8 +81,9 @@ const jsChunkBudgets = [
   [/^assets\/index-[^/]+\.js$/, 240_000],
   // Packed HarfBuzz runtime, measured: 179,520 bytes.
   [/^assets\/harfbuzz-bytes-[^/]+\.js$/, 200_000],
-  // Direct modeling panel/tool surface, measured: 137,120 bytes.
-  [/^assets\/DirectModeler-[^/]+\.js$/, 160_000],
+  // Direct modeling panel/tool surface with grid, snapping, and extrusion
+  // controls, measured: 162,692 bytes. Keep a bounded 7.3 kB margin.
+  [/^assets\/DirectModeler-[^/]+\.js$/, 170_000],
   // Modeling tools with validated transferable G-code moves, measured: 100,285 bytes.
   [/^assets\/MainModelingTools-[^/]+\.js$/, 102_000],
   // WASM brotli unpacking helper chunk, measured: 122,900 bytes.
@@ -240,6 +241,9 @@ for (const [name, artifact, compression] of [
 // NURBS SS /1 adds general surface/surface to the packed kernel; the budget above already covers it.
 // Raw streaming modules remain separately bounded above. Removing three inlined
 // geometry payload copies reduces the JS/assets total to 5,776,741 bytes.
-const totalBudget = 6_000_000
+// Direct modeling grid, snapping, solid geometry, and extrusion controls add
+// 254,082 bytes to the measured distribution (6,030,823 total); retain a
+// bounded margin for this feature family without removing the total-size gate.
+const totalBudget = 6_100_000
 if (total > totalBudget) throw new Error(`dist totals ${total} bytes; budget is ${totalBudget}`)
 console.log(`Verified ${files.length} dist artifacts (${total} asset bytes + ${rawWasmBytes} raw WASM bytes = ${total + rawWasmBytes} total bytes)`)
