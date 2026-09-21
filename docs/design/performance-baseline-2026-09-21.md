@@ -4,7 +4,7 @@
 
 - Apple M4 Max, macOS 25.6.0, arm64
 - Node v22.23.2, V8 12.4
-- Source: `8b267aecb4ea52a1aeb58f1a145e3828c48a79f5`
+- Source: `ac3b92b1`
 - Rust release profile, locked dependencies
 
 ## NURBS Process
@@ -76,6 +76,25 @@ Median wall times were 14.762 ms for 12 teeth, 40.342 ms for 32 teeth, and
 50.343 ms for 60 teeth over eight observations. These are native validation
 measurements and should not be compared directly with the disposable NURBS
 process timings.
+
+## Follow-up Control Run
+
+Command: `npm run bench:analysis -- --out /private/tmp/osv-solid-analysis-2026-09-21-followup.json --samples 5 --warmups 2`
+
+The retained-handle path remains in the same performance envelope after the
+merge-capacity change. This is a control run, not a new optimization claim:
+
+| Fixture | render p50 | combined p50 | asset hash p50 |
+|---|---:|---:|---:|
+| sphere-128 | 6.229 ms | 10.456 ms | 0.784 ms |
+| three-spheres-128 | 19.008 ms | 31.897 ms | 2.327 ms |
+| cylinder-128 | 0.142 ms | 0.225 ms | 0.036 ms |
+
+The next useful boundary is still the isolated `mesh_render::render` profile:
+separate reusable adjacency/normal work from publication assembly, then keep
+the byte-parity implementation as the oracle. Do not move that work into a
+new module or Rust path until an isolated before/after measurement shows a
+repeatable win on both sphere fixtures without regressing the cylinder case.
 
 ## Next A/B Boundary
 
