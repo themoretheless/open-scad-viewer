@@ -388,6 +388,16 @@ struct Report {
     krawczyk_isolated: usize,
 }
 
+type HomogeneousGrid = Vec<Vec<[f64; 4]>>;
+type HomogeneousGridPair = (HomogeneousGrid, HomogeneousGrid);
+type CurveSpanPending = (
+    [f64; 2],
+    [f64; 2],
+    Option<Vec<[f64; 4]>>,
+    Option<Vec<[f64; 4]>>,
+    usize,
+);
+
 fn push_point(report: &mut Report, component: CcComponent) {
     let duplicate = report.components.iter().any(|c| {
         c.kind == "point"
@@ -689,10 +699,10 @@ fn resolve_cc_box(
         }));
         return Ok(());
     }
-    if let Some((t, u)) = krawczyk_cc(first, second, ta, tb, floor)? {
-        if owns_parameter(ta[0], ta[1], first.domain()[1], t)
+    if let Some((t, u)) = krawczyk_cc(first, second, ta, tb, floor)?
+        && owns_parameter(ta[0], ta[1], first.domain()[1], t)
             && owns_parameter(tb[0], tb[1], second.domain()[1], u)
-        {
+    {
             report.krawczyk_isolated += 1;
             let qa = point3(&first.evaluate(t)?.point)?;
             let qb = point3(&second.evaluate(u)?.point)?;
@@ -750,7 +760,6 @@ fn resolve_cc_box(
             );
             return Ok(());
         }
-    }
     let contact = contact_class(first, second, tm, um, floor)?;
     if matches!(
         contact,
@@ -880,13 +889,7 @@ pub fn intersect_curve_curve(
         bernstein_excluded: 0,
         krawczyk_isolated: 0,
     };
-    let mut pending: std::collections::VecDeque<(
-        [f64; 2],
-        [f64; 2],
-        Option<Vec<[f64; 4]>>,
-        Option<Vec<[f64; 4]>>,
-        usize,
-    )> = spans(&first_open)?
+    let mut pending: std::collections::VecDeque<CurveSpanPending> = spans(&first_open)?
         .into_iter()
         .flat_map(|ta| {
             spans(&second_open)
@@ -1086,7 +1089,7 @@ pub(crate) fn grids_excluded(a: &[Vec<[f64; 4]>], curve_h: &[[f64; 4]]) -> bool 
     let rb = hull_ranges(curve_h);
     (0..3).any(|axis| ra[axis][1] < rb[axis][0] || rb[axis][1] < ra[axis][0])
 }
-pub(crate) fn split_grid_u(grid: &[Vec<[f64; 4]>]) -> (Vec<Vec<[f64; 4]>>, Vec<Vec<[f64; 4]>>) {
+pub(crate) fn split_grid_u(grid: &[Vec<[f64; 4]>]) -> HomogeneousGridPair {
     let mut left = Vec::new();
     let mut right = Vec::new();
     for row in grid {
@@ -1096,7 +1099,7 @@ pub(crate) fn split_grid_u(grid: &[Vec<[f64; 4]>]) -> (Vec<Vec<[f64; 4]>>, Vec<V
     }
     (left, right)
 }
-pub(crate) fn split_grid_v(grid: &[Vec<[f64; 4]>]) -> (Vec<Vec<[f64; 4]>>, Vec<Vec<[f64; 4]>>) {
+pub(crate) fn split_grid_v(grid: &[Vec<[f64; 4]>]) -> HomogeneousGridPair {
     let cols = grid[0].len();
     let columns: Vec<Vec<[f64; 4]>> = (0..cols)
         .map(|j| grid.iter().map(|row| row[j]).collect())
@@ -1386,7 +1389,7 @@ pub fn intersect_curve_surface(
             [f64; 2],
             [f64; 4],
             Option<Vec<[f64; 4]>>,
-            Option<Vec<Vec<[f64; 4]>>>,
+            Option<HomogeneousGrid>,
             usize,
         )> = spans(&curve_open)?
             .into_iter()
