@@ -51,7 +51,11 @@ fn js_round(x: f64) -> f64 {
         return x;
     }
     let floor = x.floor();
-    if x - floor >= 0.5 { floor + 1. } else { floor }
+    if x - floor >= 0.5 {
+        floor + 1.
+    } else {
+        floor
+    }
 }
 
 fn js_normalized(v: [f64; 3], length: f64) -> [f64; 3] {
@@ -87,11 +91,13 @@ struct PropertyVertex {
 }
 const NONE: u32 = u32::MAX;
 
-/// Inputs are validated export snapshots. Preserve triangle-order summation,
-/// first-occurrence property ids, and normals rounded to 1e-7 exactly.
-pub(crate) fn render(snapshot: CadMeshBuffer, crease_cosine: f64) -> RenderMesh {
-    let positions = &snapshot.positions;
-    let indices = &snapshot.indices;
+struct FaceAdjacency {
+    offsets: Vec<usize>,
+    faces: Vec<u32>,
+    normals: Vec<[f64; 3]>,
+}
+
+fn build_face_adjacency(positions: &[f64], indices: &[u32]) -> FaceAdjacency {
     let vertex_count = positions.len() / 3;
     let mut offsets = vec![0usize; vertex_count + 1];
     for &id in indices {
@@ -100,19 +106,34 @@ pub(crate) fn render(snapshot: CadMeshBuffer, crease_cosine: f64) -> RenderMesh 
     for i in 0..vertex_count {
         offsets[i + 1] += offsets[i];
     }
+
     // CSR adjacency retains repeated incidences and their original order.
-    let mut adjacent = vec![0u32; indices.len()];
+    let mut faces = vec![0u32; indices.len()];
     let mut cursors = offsets[..vertex_count].to_vec();
-    let mut face_normals = Vec::with_capacity(indices.len() / 3);
+    let mut normals = Vec::with_capacity(indices.len() / 3);
     for (t, tri) in indices.as_chunks::<3>().0.iter().enumerate() {
-        face_normals.push(face_normal(positions, tri));
+        normals.push(face_normal(positions, tri));
         for &id in tri {
             let cursor = &mut cursors[id as usize];
-            adjacent[*cursor] = t as u32;
+            faces[*cursor] = t as u32;
             *cursor += 1;
         }
     }
-    drop(cursors);
+
+    FaceAdjacency {
+        offsets,
+        faces,
+        normals,
+    }
+}
+
+/// Inputs are validated export snapshots. Preserve triangle-order summation,
+/// first-occurrence property ids, and normals rounded to 1e-7 exactly.
+pub(crate) fn render(snapshot: CadMeshBuffer, crease_cosine: f64) -> RenderMesh {
+    let positions = &snapshot.positions;
+    let indices = &snapshot.indices;
+    let vertex_count = positions.len() / 3;
+    let adjacency = build_face_adjacency(positions, indices);
     let mut vertices = Vec::<f32>::with_capacity(vertex_count * 6);
     let mut out_indices = Vec::with_capacity(indices.len());
     let mut properties = Vec::<PropertyVertex>::with_capacity(vertex_count);
@@ -126,10 +147,10 @@ pub(crate) fn render(snapshot: CadMeshBuffer, crease_cosine: f64) -> RenderMesh 
     let mut merge_to = Vec::with_capacity(merge_capacity);
     for (i, &id) in indices.iter().enumerate() {
         let source = id as usize;
-        let face = face_normals[i / 3];
+        let face = adjacency.normals[i / 3];
         let mut normal = [0_f64; 3];
-        for &t in &adjacent[offsets[source]..offsets[source + 1]] {
-            let n = face_normals[t as usize];
+        for &t in &adjacency.faces[adjacency.offsets[source]..adjacency.offsets[source + 1]] {
+            let n = adjacency.normals[t as usize];
             let alignment = n[0] * face[0] + n[1] * face[1] + n[2] * face[2];
             if alignment >= crease_cosine - 1e-10 {
                 normal[0] += n[0];
