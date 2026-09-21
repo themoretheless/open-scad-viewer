@@ -3689,20 +3689,22 @@ pub fn curve_curve(
     }
     let options = options.validate()?;
     let mut report = Report::default();
-    let mut pending: std::collections::VecDeque<(
+    type CurveCurvePending = (
         [f64; 2],
         [f64; 2],
         Option<Vec<[f64; 4]>>,
         Option<Vec<[f64; 4]>>,
         usize,
-    )> = spans(&first.knots, first.degree, first.control_points.len())
-        .into_iter()
-        .flat_map(|ta| {
-            spans(&second.knots, second.degree, second.control_points.len())
-                .into_iter()
-                .map(move |tb| (ta, tb, None, None, 0))
-        })
-        .collect();
+    );
+    let mut pending: std::collections::VecDeque<CurveCurvePending> =
+        spans(&first.knots, first.degree, first.control_points.len())
+            .into_iter()
+            .flat_map(|ta| {
+                spans(&second.knots, second.degree, second.control_points.len())
+                    .into_iter()
+                    .map(move |tb| (ta, tb, None, None, 0))
+            })
+            .collect();
     while let Some((ta, tb, ha, hb, depth)) = pending.pop_front() {
         if report.boxes_visited >= options.max_boxes {
             report.unresolved(
@@ -5075,24 +5077,26 @@ pub fn curve_ruled_surface(
             );
         }
     }
-    let mut pending: std::collections::VecDeque<(
+    type CurveSurfacePending = (
         [f64; 2],
         [f64; 2],
         Option<Vec<[f64; 4]>>,
         Option<HomogeneousGrid>,
         usize,
-    )> = spans(&curve.knots, curve.degree, curve.control_points.len())
-        .into_iter()
-        .flat_map(|ta| {
-            spans(
-                &canonical.knots_u,
-                canonical.degree_u,
-                canonical.control_points.len(),
-            )
+    );
+    let mut pending: std::collections::VecDeque<CurveSurfacePending> =
+        spans(&curve.knots, curve.degree, curve.control_points.len())
             .into_iter()
-            .map(move |ua| (ta, ua, None, None, 0))
-        })
-        .collect();
+            .flat_map(|ta| {
+                spans(
+                    &canonical.knots_u,
+                    canonical.degree_u,
+                    canonical.control_points.len(),
+                )
+                .into_iter()
+                .map(move |ua| (ta, ua, None, None, 0))
+            })
+            .collect();
     while let Some((ta, ua, hc, hs, depth)) = pending.pop_front() {
         if report.boxes_visited >= options.max_boxes {
             report.unresolved(
