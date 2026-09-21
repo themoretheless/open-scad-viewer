@@ -32,7 +32,7 @@ pub fn load_artifact(path: &Path) -> Result<PrintArtifactBytes> {
     let bytes = fs::read(path).map_err(|e| {
         printer_core::Error::new(
             "PRINTER_ARTIFACT_IO",
-            &format!("Failed to read artifact: {e}"),
+            format!("Failed to read artifact: {e}"),
         )
     })?;
     let file_name = path
@@ -88,7 +88,7 @@ mod tests {
         let path = std::env::temp_dir().join(format!("printer-cli-{stamp}.gcode"));
         {
             let mut f = fs::File::create(&path).unwrap();
-            write!(f, "; test\n").unwrap();
+            writeln!(f, "; test").unwrap();
         }
         let art = load_artifact(&path).unwrap();
         assert_eq!(art.kind, ArtifactKind::Gcode);

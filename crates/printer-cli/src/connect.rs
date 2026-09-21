@@ -343,9 +343,9 @@ fn snapmaker_config(args: &ConnectionArgs) -> Result<SnapmakerConfig> {
 }
 
 fn map_err(e: printer_core::Error, args: &ConnectionArgs) -> printer_core::Error {
-    printer_core::Error::new(e.code, &scrub_secrets(&e.message, &args.secrets()))
+    printer_core::Error::new(e.code, scrub_secrets(&e.message, &args.secrets()))
 }
 
 fn err(code: &'static str, message: &str, args: &ConnectionArgs) -> printer_core::Error {
-    printer_core::Error::new(code, &scrub_secrets(message, &args.secrets()))
+    printer_core::Error::new(code, scrub_secrets(message, &args.secrets()))
 }

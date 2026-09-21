@@ -173,8 +173,8 @@ fn run(cli: Cli) -> Result<(), String> {
                 }
                 OutputFormat::Table => {
                     println!(
-                        "{:<10} {:<16} {:<22} {:<18} {}",
-                        "VENDOR", "HOST", "SERIAL", "MODEL", "NAME"
+                        "{:<10} {:<16} {:<22} {:<18} NAME",
+                        "VENDOR", "HOST", "SERIAL", "MODEL"
                     );
                     for p in found {
                         println!(
