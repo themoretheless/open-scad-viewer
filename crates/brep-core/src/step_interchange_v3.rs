@@ -1145,7 +1145,7 @@ fn analytic_surface(
         x[0] * y[1] - x[1] * y[0],
     ];
     let radius = number(&a[2], "analytic surface radius")? * scale;
-    if !(radius > 0.) {
+    if !radius.is_finite() || radius <= 0. {
         return Err(refuse("Analytic surface radius must be positive"));
     }
     let angles = [
@@ -4313,7 +4313,7 @@ fn certify_periodic_surface(surface: &Surface) -> Result<Option<StepRegularityEv
         .weights
         .iter()
         .flatten()
-        .any(|weight| !(*weight > 0.) || !weight.is_finite())
+        .any(|weight| !weight.is_finite() || *weight <= 0.)
     {
         return Err(refuse(
             "STEP /8 rational denominator is not positive on the whole parameter domain",

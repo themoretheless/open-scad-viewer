@@ -28,6 +28,8 @@ use nurbs_core::surface::Axis;
 use nurbs_core::{Error, Result, curve::Curve, surface::Surface};
 use std::collections::{BTreeMap, BTreeSet};
 
+type GraphFrame<'a> = (usize, &'a Surface, [f64; 3], [f64; 3], [f64; 3], [f64; 3]);
+
 fn refuse(message: &str) -> Error {
     Error::new("BREP_NURBS_SS_REFUSED", message)
 }
@@ -2206,7 +2208,7 @@ fn canonical_graph_frame_cell(
     source: &Model,
     rational: bool,
     multispan: bool,
-) -> Result<(usize, &Surface, [f64; 3], [f64; 3], [f64; 3], [f64; 3])> {
+) -> Result<GraphFrame<'_>> {
     if source.bodies.len() != 1
         || source.shells.len() != 1
         || source.faces.len() != 6
@@ -2312,9 +2314,7 @@ fn canonical_graph_frame_cell(
     Ok((face_id, top, o, u, v, w))
 }
 
-fn canonical_graph_frame(
-    source: &Model,
-) -> Result<(usize, &Surface, [f64; 3], [f64; 3], [f64; 3], [f64; 3])> {
+fn canonical_graph_frame(source: &Model) -> Result<GraphFrame<'_>> {
     canonical_graph_frame_cell(source, false, false)
 }
 
