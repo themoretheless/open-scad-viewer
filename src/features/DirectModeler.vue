@@ -2,6 +2,11 @@
 import { computed, nextTick, onUnmounted, ref, shallowRef, watch, watchEffect, type ComponentPublicInstance } from 'vue'
 import { SolidGpuLayer, isSolidGpuSupported, smoothTriangleList, type SolidGpuBody } from '../services/solidGpuView'
 import { rayTriangleDistance } from '../services/math3d'
+import ModelingGridControls from '../components/ModelingGridControls.vue'
+import { applyDirectExtrusionProfile, buildDirectExtrusion, sameSketchPlane } from '../services/directExtrusion'
+import { useModelingGrid } from '../services/modelingGrid'
+import { bodySnapGeometry } from '../services/solidSnapGeometry'
+import { resolveModelingSnap, sketchSnapGeometry, type SnapKind, type SnapGeometry } from '../services/modelingSnaps'
 import CommandPalette from '../components/CommandPalette.vue'
 import type { PaletteCommand } from '../services/commandSearch'
 import { bodyPoints, DirectHistory, directBodiesScad, emptyDirectDocument, extrudeDirectSketch, extrudeSketchBrep, MAX_DOCUMENT_CHARACTERS, MAX_DRAFT_CHARACTERS, parseDirectDocument, type DirectBody, type DirectDocument, type Point2 } from '../services/directModeling'
@@ -11,7 +16,7 @@ import { solidTopology, facePlane, pushPullFace, bevelSolidEdge, bevelBrepBody, 
 import { storageGet, storageSet } from '../services/safeStorage'
 import { booleanPolygonMeshes, exportPolygonStl, polygonBoundaryLoops, revolvePolygonProfile } from '../services/geometry/polygon'
 import { mergeByDistance } from '../services/meshEditing'
-import { applyDirectExtrusion, circularDirectCopies, defaultDirectCamera, directExtrusionTool, directFaceShade, projectDirectPoint, snapDirectPoint, unprojectDirectXY } from '../services/directModelingTools'
+import { applyDirectExtrusion, circularDirectCopies, defaultDirectCamera, directExtrusionTool, directFaceShade, projectDirectPoint, unprojectDirectXY, unprojectDirectPlane } from '../services/directModelingTools'
 import { importMeshFromFile, MESH_IMPORT_ACCEPT, stripMeshExtension } from '../services/meshImport'
 import { polygonMeshToExportMesh, MESH_EXPORT_FORMATS, MESH_FORMAT_LABELS, type MeshExportFormat } from '../services/meshConvert'
 import { exportMeshFormatCompressed } from '../services/meshExportFormats'
@@ -30,15 +35,19 @@ const label = (a: string, b: string) => ru.value ? a : b
 const key = props.embedded ? 'scad-main-modeler-v1' : 'scad-solid-modeler-v1'
 const error = ref(''), saveError = ref(false)
 let stored = storageGet(key) ?? storageGet(props.embedded ? 'scad-main-modeler-v1' : 'scad-direct-modeler-v1')
+const restoringDraft=ref(!!stored&&!props.initialDocument&&!isGeometryKernelReady())
+let restoreDisposed=false
+onUnmounted(()=>{restoreDisposed=true})
 let initial = emptyDirectDocument()
-try { if (stored) initial = parseDirectDocument(stored) } catch { error.value = 'Saved solid document is invalid. Import a backup to recover.' }
+try { if (stored&&!restoringDraft.value) initial = parseDirectDocument(stored) } catch { error.value = 'Saved solid document is invalid. Import a backup to recover.' }
 if (props.initialDocument) initial = props.initialDocument
-const history = new DirectHistory(initial)
+let history = new DirectHistory(initial)
 const document = shallowRef(history.document)
 const stlInput = ref<HTMLInputElement>()
 const stepInput = ref<HTMLInputElement>(), stepBusy = ref(false)
 const undoable = ref(false), redoable = ref(false)
 const selection = ref(props.initialSelection ?? ''), mode = ref<'2d' | '3d'>('2d'), tool = ref<'select' | 'rectangle' | 'circle' | 'arc' | 'polyline' | 'trim'>('select')
+const draftCursor=ref<Point2|null>(null)
 const draft = ref<Point2[]>([]), height = ref(10), dx = ref(0), dy = ref(0), dz = ref(0), angle = ref(0), scale = ref(1)
 type Pane = '2d' | '3d'
 const workspace = ref<HTMLElement>(), splitArea = ref<HTMLElement>()
@@ -116,8 +125,8 @@ function touchEnd(e: PointerEvent) {
 }
 function cancelInputGesture() { resetInputGesture() }
 const panes: Pane[] = ['2d', '3d']
-// The 2D sketch pane is hidden by default; it opens on demand or when a sketch tool is picked.
-const sketchPaneOpen = ref(storageGet('scad-solid-sketch-pane') === 'true')
+const savedSketchPane = storageGet('scad-solid-sketch-pane')
+const sketchPaneOpen = ref(savedSketchPane === null ? document.value.bodies.length === 0 : savedSketchPane === 'true')
 function toggleSketchPane(open = !sketchPaneOpen.value) {
   sketchPaneOpen.value = open
   storageSet('scad-solid-sketch-pane', String(open))
@@ -125,7 +134,8 @@ function toggleSketchPane(open = !sketchPaneOpen.value) {
 }
 // Picking a sketch tool reveals the pane for this session without changing the saved preference.
 watch([mode, tool], ([value]) => { if (value === '2d') sketchPaneOpen.value = true })
-const camera = ref(defaultDirectCamera()), hovered = ref(''), snap = ref(true), grid = ref(1)
+const camera = ref(defaultDirectCamera()), hovered = ref('')
+const { step: grid, enabled: snap, grid: gridSnap, geometry: geometrySnap, guides: guideSnap, keypoints: keypointSnap, relations: relationSnap, radius: snapRadius } = useModelingGrid()
 /**
  * True while a rotate or scale gizmo drag is in flight.
  *
@@ -135,6 +145,9 @@ const camera = ref(defaultDirectCamera()), hovered = ref(''), snap = ref(true), 
  */
 const previewingTransform = ref(false)
 const snapMarker = ref<Point2 | null>(null)
+const snapPane = ref<Pane>('2d'), snapKind = ref<SnapKind | null>(null)
+const snapGuide = ref<[Point2, Point2] | null>(null)
+const snapLabel = computed(() => { const names: Record<SnapKind, [string,string]> = { vertex:['Вершина','Vertex'], midpoint:['Середина','Midpoint'], center:['Центр','Center'], edge:['Контур','Edge'], intersection:['Пересечение','Intersection'], axis:['Ось','Axis'], grid:['Сетка','Grid'], quadrant:['Четверть окружности','Quadrant'],tangent:['Касательная','Tangent'],perpendicular:['Перпендикуляр','Perpendicular'],origin:['Начало координат','Origin'],'bounds-center':['Центр габаритов','Bounds center'] }; return snapKind.value ? label(...names[snapKind.value]) : '' })
 const drawMeasure = ref(''), operation = ref<'extrude' | 'revolve' | 'fillet' | 'dogear' | 'array' | null>(null)
 const cornerVertex = ref(0), cornerRadius = ref(2)
 const revolveAxis = ref<'x'|'y'>('y'), revolveOffset = ref(0), revolveAngle = ref(360), revolveSegments = ref(48)
@@ -153,6 +166,7 @@ function applyCorner() { run(() => {
   if (index < 0) return
   d.sketches[index] = cornerPreview.value.sketch; commit(d); operation.value = null
 }) }
+const profileIds = ref<string[]>([]), previewEmpty = ref(false)
 const baseZ = ref(0), extrusionMode = ref<'new' | 'union' | 'difference'>('new'), targetBody = ref('')
 const copyCount = ref(8), copySweep = ref(360), copyX = ref(0), copyY = ref(0)
 const previewBody = shallowRef<ReturnType<typeof directExtrusionTool> | null>(null), previewError = ref('')
@@ -164,7 +178,7 @@ let orbitDrag: { x: number; y: number; yaw: number; pitch: number; pointer: numb
 // While the camera is being dragged the view falls back to the working mesh so orbiting stays responsive.
 const cameraDragging = ref(false)
 let heightDrag: { y: number; height: number; pointer: number; svg: SVGSVGElement } | null = null
-let gesture: { start: Point2; document: DirectDocument; vertex: number | null; id: string; pointer: number; pane: Pane; svg: SVGSVGElement; pan: boolean; center: Point2; bodyDrag?: { ids: string[]; delta: Vec3 } | null } | null = null
+let gesture: { start: Point2; document: DirectDocument; vertex: number | null; id: string; pointer: number; pane: Pane; svg: SVGSVGElement; pan: boolean; center: Point2; sketch?: boolean; anchor?: Point2; anchor3?: Vec3; bodyDrag?: { ids: string[]; delta: Vec3 } | null } | null = null
 
 /**
  * Elements offset directly while a body drag is in flight.
@@ -233,6 +247,8 @@ function clearDragPreview() {
 
 const extraSelection=ref<string[]>([]),pickMode=ref<'body'|'face'|'edge'|'vertex'>('body'),vertexIndexes=ref<number[]>([]),faceIndex=ref(-1),edgeIndex=ref(-1),edgeIndexes=ref<number[]>([]),openingFaces=ref<number[]>([])
 const workplaneOutline=ref<Point2[][]>([])
+const workplaneBodyId=ref(''), choosingSketchFace=ref(false)
+const faceDrawing = computed(()=>!!workplaneBodyId.value && tool.value!=='select' && tool.value!=='trim')
 const activePlane=ref<SketchPlane>(xyPlane()),advancedOp=ref<'push'|'chamfer'|'edge-fillet'|'shell'|'split'|'offset'|'extend'|'curve'|'transform'|'loft'|null>(null)
 const loftPreviewId=ref('')
 const advanced=ref({distance:2,radius:2,axis:'z' as 'x'|'y'|'z',x:0,y:0,z:0,angle:0,scale:1,cx:0,cy:0,start:0,sweep:180,end:'end' as 'start'|'end'})
@@ -308,7 +324,7 @@ const selectedSurfacePair = computed(() => selectedIds.value.length === 2 && sel
 const topology = computed(() => selectedBody.value ? solidTopology(selectedBody.value.mesh) : {faces:[],edges:[]})
 const selectedFace = computed(() => topology.value.faces[faceIndex.value])
 const selectedFaceTriangles=computed(()=>new Set((openingFaces.value.length?openingFaces.value:[faceIndex.value]).flatMap(i=>topology.value.faces[i]?.triangles??[])))
-const samePlane = (a?:SketchPlane,b?:SketchPlane) => JSON.stringify(a??xyPlane())===JSON.stringify(b??xyPlane())
+const samePlane = sameSketchPlane
 const visibleSketches = computed(() => document.value.sketches.filter(s=>samePlane(s.plane,activePlane.value)))
 function pickObject(id:string,pane:Pane,add=false) {
  if(subtract.value&&id&&document.value.bodies.some(b=>b.id===id)){subtractPick(id,add);mode.value=pane;return}
@@ -316,7 +332,7 @@ function pickObject(id:string,pane:Pane,add=false) {
  if(add){const ids=new Set(selectedIds.value);ids.has(id)?ids.delete(id):ids.add(id);const all=[...ids];selection.value=all[0]??'';extraSelection.value=all.slice(1)}
  else { selection.value=id;extraSelection.value=[] }
  mode.value=pane
- const sketch=document.value.sketches.find(s=>s.id===id);if(sketch){if(!samePlane(sketch.plane,activePlane.value))workplaneOutline.value=[];activePlane.value=sketch.plane??xyPlane()}
+ const sketch=document.value.sketches.find(s=>s.id===id);if(sketch){if(!samePlane(sketch.plane,activePlane.value))workplaneOutline.value=[];activePlane.value=sketch.plane??xyPlane();workplaneBodyId.value=sketch.supportBodyId??''}
 }
 function beginAdvanced(kind:typeof advancedOp.value) {
  boxSelect.value=false
@@ -326,10 +342,21 @@ function beginAdvanced(kind:typeof advancedOp.value) {
 }
 function faceSketch() {run(()=>{
  if(!selectedBody.value||!selectedFace.value)return
+ cancelGesture();operation.value=null
  const b=selectedBody.value,f=selectedFace.value,plane=facePlane(b,f),points=bodyPoints(b)
+ workplaneBodyId.value=b.id;choosingSketchFace.value=false
+ const projectedNormal=projectDirectPoint(f.normal,camera.value)
+ if(Math.abs(projectedNormal[2])<.08)camera.value={yaw:Math.atan2(f.normal[0],f.normal[1]),pitch:Math.asin(f.normal[2])}
  workplaneOutline.value=polygonBoundaryLoops({positions:b.mesh.positions,indices:f.triangles.flatMap(t=>b.mesh.indices.slice(t*3,t*3+3))}).map(loop=>loop.map(i=>{const q=points[i].map((v,k)=>v-plane.origin[k]);return [q.reduce((s,v,k)=>s+v*plane.u[k],0),q.reduce((s,v,k)=>s+v*plane.v[k],0)] as Point2}))
- activePlane.value=plane;extraSelection.value=[];selection.value='';tool.value='rectangle';mode.value='2d';sketchPaneOpen.value=true;centers.value['2d']=[0,0];views.value['2d']=100;advancedOp.value=null
+ activePlane.value=plane;extraSelection.value=[];selection.value='';tool.value='rectangle';mode.value='3d';sketchPaneOpen.value=true;advancedOp.value=null
+ const uv=workplaneOutline.value.flat(),xs=uv.map(p=>p[0]),ys=uv.map(p=>p[1]);centers.value['2d']=[(Math.min(...xs)+Math.max(...xs))/2,-(Math.min(...ys)+Math.max(...ys))/2];views.value['2d']=Math.max(10,Math.max(Math.max(...xs)-Math.min(...xs),Math.max(...ys)-Math.min(...ys))*1.4)
 })}
+function chooseSketchFace() {
+  if(selectedBody.value&&selectedFace.value){faceSketch();return}
+  cancelGesture();operation.value=null;advancedOp.value=null;tool.value='select'
+  choosingSketchFace.value=true;pickMode.value='face';mode.value='3d'
+}
+function resetWorkplane() { cancelGesture();activePlane.value=xyPlane();workplaneOutline.value=[];workplaneBodyId.value='';choosingSketchFace.value=false;selection.value='';extraSelection.value=[] }
 function bodyFromBrep(body:NonNullable<typeof selectedBody.value>,brep:NurbsBrep) {
  const built=tessellateNurbsBrep(brep,brepSegments.value)
  return {...body,brep,mesh:{positions:[...built.positions],indices:[...built.indices]}}
@@ -662,15 +689,31 @@ function commit(next: DirectDocument) { history.commit(next); sync() }
 function undo(redo = false) { operation.value = null; advancedOp.value=null; cancelGesture(); redo ? history.redo() : history.undo(); sync() }
 function addSketch(points: Point2[], closed: boolean, analytic?: import('../services/directSketchGeometry').AnalyticCurve) {
   const d = history.document, id = crypto.randomUUID()
-  d.sketches.push({ id, name: label('Эскиз ', 'Sketch ') + (d.sketches.length + 1), points, closed, analytic, plane: JSON.parse(JSON.stringify(activePlane.value)) })
+  d.sketches.push({ id, name: label('Эскиз ', 'Sketch ') + (d.sketches.length + 1), points, closed, analytic, plane: JSON.parse(JSON.stringify(activePlane.value)), ...(workplaneBodyId.value?{supportBodyId:workplaneBodyId.value}:{}) })
   commit(d); pickObject(id,'2d')
 }
-function finish(closed: boolean) { run(() => { if (draft.value.length < (closed ? 3 : 2)) return; addSketch(draft.value, closed); draft.value = []; tool.value = 'select' }) }
+function beginSketch(value: typeof tool.value) {
+  cancelGesture(); operation.value = null; advancedOp.value = null; boxSelect.value = false
+  choosingSketchFace.value=false;tool.value = value; mode.value = workplaneBodyId.value ? '3d' : '2d'; sketchPaneOpen.value = true
+}
+const canExtrudeSketch = computed(() => !!selectedSketch.value?.closed && tool.value === 'select' && !draft.value.length)
+function finish(closed: boolean) { run(() => { if (draft.value.length < (closed ? 3 : 2)) return; addSketch(draft.value, closed); draft.value = []; draftCursor.value=null; tool.value = 'select' }) }
 function beginExtrude(kind: 'extrude'|'revolve' = 'extrude') {
   boxSelect.value=false;advancedOp.value=null
-  if (!selectedSketch.value?.closed) return
+  if (!canExtrudeSketch.value) return
+  profileIds.value=selectedIds.value.filter(id=>document.value.sketches.some(s=>s.id===id&&s.closed&&samePlane(s.plane,selectedSketch.value!.plane)))
+  if(!profileIds.value.length)profileIds.value=[selectedSketch.value!.id]
+  const support=document.value.bodies.find(b=>b.id===selectedSketch.value!.supportBodyId)
+  if(support){targetBody.value=support.id;extrusionMode.value='union';height.value=Math.abs(height.value)||10;baseZ.value=0}
+  else if(!document.value.bodies.some(b=>b.id===targetBody.value))extrusionMode.value='new'
   fitNextPreview = true; operation.value = kind; mode.value = '3d'; previewError.value = ''
   if (!document.value.bodies.some(b => b.id === targetBody.value)) targetBody.value = document.value.bodies[0]?.id ?? ''
+}
+const profileChoices=computed(()=>document.value.sketches.filter(s=>s.closed&&samePlane(s.plane,selectedSketch.value?.plane)))
+function extrusionOptions(id='preview') { return {sketchIds:[...profileIds.value],height:height.value,offset:baseZ.value,operation:extrusionMode.value,targetId:targetBody.value,id,segments:brepSegments.value} }
+function setExtrusionMode(value: 'new'|'union'|'difference') {
+  extrusionMode.value=value
+  if(selectedSketch.value?.supportBodyId && value!=='new')height.value=Math.abs(height.value)*(value==='difference'?-1:1)
 }
 function authoredToolBrep() {
  if(operation.value==='extrude')return extrudeSketchBrep(selectedSketch.value!,height.value,baseZ.value)
@@ -678,10 +721,14 @@ function authoredToolBrep() {
  return facetedRevolveBrep()
 }
 function extrude() { run(() => {
-  if (!selectedSketch.value || previewError.value || !previewBody.value) return
+  if (!selectedSketch.value || previewError.value || (!previewBody.value&&!previewEmpty.value)) return
+  if(operation.value==='extrude'){
+    const id=crypto.randomUUID(),next=applyDirectExtrusionProfile(history.document,extrusionOptions(id));commit(next)
+    operation.value=null;mode.value='3d';selection.value=extrusionMode.value==='new'?id:next.bodies.some(b=>b.id===targetBody.value)?targetBody.value:'';fit('3d');return
+  }
   const id = crypto.randomUUID(),base=history.document,target=base.bodies.find(b=>b.id===targetBody.value)
   let next:DirectDocument
-  const nativeNew=extrusionMode.value==='new'&&(operation.value==='extrude'||revolveGeometry.value==='exact'||Math.abs(revolveAngle.value)===360)
+  const nativeNew=extrusionMode.value==='new'&&(revolveGeometry.value==='exact'||Math.abs(revolveAngle.value)===360)
   if(nativeNew){
     const name=selectedSketch.value.name+` · ${operation.value==='revolve'&&revolveGeometry.value==='faceted'?label('гранёный B-rep','faceted B-rep'):label('точный B-rep','exact B-rep')}`
     base.bodies.push(bodyFromBrep({id,name,mesh:{positions:[],indices:[]}},authoredToolBrep()));next=base
@@ -708,12 +755,13 @@ function duplicate() { run(() => {
  if(!ids.length)return
  commit(d);pickObject(ids[0],mode.value);extraSelection.value=ids.slice(1)
 }) }
-watch([operation, selectedSketch, height, baseZ, revolveAxis, revolveOffset, revolveAngle, revolveSegments, revolveGeometry, extrusionMode, targetBody], () => {
-  clearTimeout(previewTimer); previewBody.value = null; previewError.value = ''
+watch([operation, selectedSketch, profileIds, height, baseZ, revolveAxis, revolveOffset, revolveAngle, revolveSegments, revolveGeometry, extrusionMode, targetBody], () => {
+  clearTimeout(previewTimer); previewBody.value = null; previewEmpty.value=false; previewError.value = ''
   if (!solidActive.value || !selectedSketch.value) return
   previewTimer = setTimeout(() => {
     try {
-      const native=operation.value==='extrude'||revolveGeometry.value==='exact'||Math.abs(revolveAngle.value)===360
+      if(operation.value==='extrude'){previewBody.value=buildDirectExtrusion(document.value,extrusionOptions());previewEmpty.value=!previewBody.value;if(fitNextPreview){fit('3d');fitNextPreview=false}return}
+      const native=revolveGeometry.value==='exact'||Math.abs(revolveAngle.value)===360
       let body=native
         ? bodyFromBrep({id:'preview',name:'Preview',mesh:{positions:[],indices:[]}},authoredToolBrep())
         : directRevolveTool(selectedSketch.value!,revolveOptions())
@@ -879,7 +927,15 @@ const DISPLAY_SEGMENTS = 12
 // Chrome refuses a synchronous WebAssembly.Module over 8 MB on the main thread, so the display
 // tessellation waits for the kernel's asynchronous warm-up and shows the working mesh until then.
 const kernelReady = ref(isGeometryKernelReady())
-if (!kernelReady.value) void warmGeometryKernel().then(() => { kernelReady.value = true }).catch(e => { error.value = e instanceof Error ? e.message : String(e) })
+if (!kernelReady.value) void warmGeometryKernel().then(async () => {
+  if(restoreDisposed)return
+  kernelReady.value=true
+  if(restoringDraft.value&&stored&&!history.canUndo){
+    try { history=new DirectHistory(parseDirectDocument(stored));document.value=history.document;error.value='';await nextTick();fit('2d');fit('3d') }
+    catch(e){error.value=label('Не удалось восстановить сохранённый документ: ','Could not restore the saved document: ')+(e instanceof Error?e.message:String(e))}
+  }
+  restoringDraft.value=false
+}).catch(e => { if(!restoreDisposed){restoringDraft.value=false;error.value=e instanceof Error ? e.message : String(e)} })
 const DISPLAY_TRIANGLE_BUDGET = 4000
 const smoothDisplay = ref(true)
 interface DisplayMesh { mesh: { positions: number[]; indices: number[] }; map: number[] | null; normals: number[][]; /** Smoothed non-indexed list for the GPU layer, built once per display mesh. */ flat?: { positions: Float32Array; normals: Float32Array } }
@@ -999,10 +1055,12 @@ watch(() => props.open, open => {
   if (!open) { fps.value = 0; frameMs.value = 0; return }
   fpsIntervals = []; fpsPrevious = 0; fpsSince = performance.now(); fpsHandle = requestAnimationFrame(fpsTick)
 }, { immediate: true })
+const previewReplacesTarget=computed(()=>solidActive.value&&extrusionMode.value!=='new'&&(!!previewBody.value||previewEmpty.value))
+const renderBodies=computed(()=>previewReplacesTarget.value?document.value.bodies.flatMap(b=>b.id===targetBody.value?(previewBody.value?[previewBody.value]:[]):[b]):document.value.bodies)
 const gpuBodies = computed<SolidGpuBody[]>(() => {
   if (!gpuActive.value) return []
   const hideSelected = !!advancedPreview.value.document
-  return document.value.bodies.flatMap(b => {
+  return renderBodies.value.flatMap(b => {
     if (hideSelected && selectedIds.value.includes(b.id)) return []
     const display = displayMeshFor(b)
     const flat = display.flat ??= smoothTriangleList(display.mesh.positions, display.mesh.indices)
@@ -1043,7 +1101,7 @@ watch([smoothDisplay, kernelReady], () => displayCache.clear())
 let restingPolygons: ReturnType<typeof meshPolygons> = []
 const polygons = computed(() => {
   if (gpuActive.value && (cameraDragging.value || settling.value) && restingPolygons.length) return restingPolygons
-  restingPolygons = document.value.bodies.flatMap(meshPolygons).sort((a, b) => a.depth - b.depth)
+  restingPolygons = renderBodies.value.flatMap(meshPolygons).sort((a, b) => a.depth - b.depth)
   return restingPolygons
 })
 let restingSurfacePolygons: ReturnType<typeof meshPolygons> = []
@@ -1072,17 +1130,11 @@ const nativeCage = computed(() => {
  * the fine step fades out as the view grows toward the next decade while the coarse step
  * stays, so the visible density is constant and nothing jumps.
  */
-const floorLines = computed(() => {
-  const magnitude = Math.log10(views.value['3d'] / 8)
-  const fine = Math.pow(10, Math.floor(magnitude)), coarse = fine * 10
-  const fineOpacity = 1 - (magnitude - Math.floor(magnitude))
-  const lines = (step: number, opacity: number) => {
-    const extent = step * 20
-    return Array.from({ length: 41 }, (_, i) => (i - 20) * step)
-      .flatMap(n => [[[-extent, n, 0], [extent, n, 0]], [[n, -extent, 0], [n, extent, 0]]])
-      .map(line => ({ points: line.map(p => project(p, '3d').join(',')).join(' '), opacity }))
-  }
-  return [...lines(coarse, 1), ...lines(fine, fineOpacity)]
+const sketchGridStep = computed(() => grid.value * Math.pow(10, Math.max(0, Math.ceil(Math.log10(views.value['2d'] / (100 * grid.value))))))
+const floorGrid = computed(() => {
+  const level=Math.max(0,Math.log10(views.value['3d']/(8*grid.value))), fine=grid.value*10**Math.floor(level)
+  const a=projectDirectPoint([1,0,0],camera.value),b=projectDirectPoint([0,1,0],camera.value)
+  return { fine, opacity:1-(level-Math.floor(level)), transform:`matrix(${a[0]} ${a[1]} ${b[0]} ${b[1]} 0 0)` }
 })
 const ghostPolygons = computed(() => previewBody.value ? meshPolygons(previewBody.value).sort((a,b)=>a.depth-b.depth) : [])
 const extrusionHandle = computed(() => {
@@ -1095,13 +1147,75 @@ function dragHeight(e: PointerEvent) {
   heightDrag = { y: e.clientY, height: height.value, pointer: e.pointerId, svg }; svg.setPointerCapture(e.pointerId)
 }
 function canvasOf(e: PointerEvent): SVGSVGElement { const target = e.target as SVGElement; return (target instanceof SVGSVGElement ? target : target.ownerSVGElement)! }
-function snapped(p: Point2, e: PointerEvent): Point2 {
-  if (!snap.value || e.altKey) { snapMarker.value = null; return p }
-  const candidates = visibleSketches.value.filter(s=>s.id!==gesture?.id).flatMap(s=>s.points)
-  const result = snapDirectPoint(p,candidates,views.value['2d']/100,(Number.isFinite(grid.value) && grid.value > 0 && grid.value <= 1e6) ? grid.value : 0)
-  snapMarker.value = result.kind === 'vertex' ? result.point : null
-  return result.point
+function snapProjection(svg: SVGSVGElement, pane: Pane): (p: Vec3) => Point2 {
+  const matrix = svg.getScreenCTM()
+  const scale = Math.min(svg.clientWidth || 600, svg.clientHeight || 600) / views.value[pane]
+  return p => {
+    const projected = pane === '2d' ? [p[0], -p[1]] : project(p, '3d')
+    if (matrix && Number.isFinite(matrix.a)) return [matrix.a*projected[0]+matrix.c*projected[1]+matrix.e,matrix.b*projected[0]+matrix.d*projected[1]+matrix.f]
+    return [projected[0] * scale, projected[1] * scale]
+  }
 }
+function showSnap(result: ReturnType<typeof resolveModelingSnap>, pane: Pane) {
+  snapPane.value = pane; snapKind.value = result.kind
+  snapMarker.value = result.kind ? (pane === '2d' ? [result.point[0], result.point[1]] : project(result.point, '3d')) : null
+  snapGuide.value = result.guide ? result.guide.map(p => pane === '2d' ? [p[0], -p[1]] : project(p, '3d')) as [Point2,Point2] : null
+}
+function snapped(p: Point2, e: PointerEvent, anchor?: Point2, pane: Pane='2d'): Point2 {
+  if (!snap.value || e.altKey) { snapMarker.value = null; snapGuide.value = null; return p }
+  const excluded = curveDrag ? [curveDrag.id] : gesture?.id ? selectedIds.value : []
+  const geometry = sketchSnapGeometry([...visibleSketches.value.filter(s => !excluded.includes(s.id)),...workplaneOutline.value.map((points,i)=>({id:`support-${i}`,name:'Support',closed:true,points}))])
+  geometry.points.push({point:[0,0,0],kind:'origin'})
+  const screenProjection=snapProjection(canvasOf(e),pane)
+  const localProjection=(p:Vec3)=>screenProjection(pane==='3d'?worldPoint(p,activePlane.value):p)
+  for (const point of draft.value) if (tool.value === 'polyline') geometry.points.push({point:[...point,0],kind:'vertex'})
+  const result = resolveModelingSnap([...p,0], geometry, {
+    project: localProjection, grid: gridSnap.value ? grid.value : 0,
+    geometry: geometrySnap.value, keypoints:keypointSnap.value, relations:relationSnap.value,radius:snapRadius.value, guides: guideSnap.value, anchor: anchor ? [...anchor,0] : undefined, gridAxes:[0,1],
+  })
+  if(pane==='3d')showSnap({...result,point:worldPoint(result.point,activePlane.value),guide:result.guide?.map(p=>worldPoint(p,activePlane.value)) as [Vec3,Vec3]|undefined},pane)
+  else showSnap(result,pane)
+  return [result.point[0],result.point[1]]
+}
+let snapSceneCache: { document: DirectDocument; excluded: string; geometry: SnapGeometry } | undefined
+function solidSnapGeometry(source: DirectDocument, excluded: string[]): SnapGeometry {
+  const key = excluded.join('|')
+  if (snapSceneCache?.document === source && snapSceneCache.excluded === key) return snapSceneCache.geometry
+  const geometry: SnapGeometry = {points:[],segments:[]}
+  for (const body of source.bodies) if (!excluded.includes(body.id)) {
+    const bodyGeometry=bodySnapGeometry(body)
+    geometry.points.push(...bodyGeometry.points);geometry.segments.push(...bodyGeometry.segments)
+  }
+  for(const sketch of source.sketches)if(!excluded.includes(sketch.id)){
+    const targets=sketchSnapGeometry([sketch]),plane=sketch.plane??xyPlane()
+    const place=(p:Vec3)=>plane.origin.map((v,i)=>v+p[0]*plane.u[i]+p[1]*plane.v[i]) as Vec3
+    geometry.points.push(...targets.points.map(p=>({...p,point:place(p.point)})))
+    geometry.segments.push(...targets.segments.map(edge=>({a:place(edge.a),b:place(edge.b)})))
+    if(sketch.analytic){const a=sketch.analytic,count=64,evaluate=(t:number)=>place([a.center[0]+a.radius*Math.cos((a.start+a.sweep*t)*Math.PI/180),a.center[1]+a.radius*Math.sin((a.start+a.sweep*t)*Math.PI/180),0]);for(let i=0;i<count;i++)geometry.segments.push({a:evaluate(i/count),b:evaluate((i+1)/count),evaluate:t=>evaluate((i+t)/count)})}
+  }
+  geometry.points.push({point:[0,0,0],kind:'origin'})
+  snapSceneCache = {document:source,excluded:key,geometry}; return geometry
+}
+const visibleKeypoints = computed(() => {
+  if(!kernelReady.value||!snap.value||!geometrySnap.value||!keypointSnap.value||solidActive.value)return []
+  const points:{point:Vec3;local?:Point2;kind:SnapKind}[]=[]
+  for(const sketch of visibleSketches.value)if(selectedIds.value.includes(sketch.id)||hovered.value===sketch.id){
+    for(const target of sketchSnapGeometry([sketch]).points)if(['center','bounds-center','quadrant'].includes(target.kind))points.push({point:worldPoint(target.point,sketch.plane),local:[target.point[0],target.point[1]],kind:target.kind})
+  }
+  for(const body of document.value.bodies)if(selectedIds.value.includes(body.id)||hovered.value===body.id){
+    for(const target of bodySnapGeometry(body).points)if(['center','bounds-center','quadrant'].includes(target.kind))points.push(target)
+  }
+  return points
+})
+function snapped3(p: Vec3, e: PointerEvent, source: DirectDocument, excluded: string[], anchor?: Vec3, axis?: number, xyOnly=false): Vec3 {
+  if (!snap.value || e.altKey) { snapMarker.value=null; snapGuide.value=null; return p }
+  const result=resolveModelingSnap(p,solidSnapGeometry(source,excluded),{
+    project:snapProjection(canvasOf(e),'3d'), grid:gridSnap.value?grid.value:0, geometry:geometrySnap.value,keypoints:keypointSnap.value,relations:relationSnap.value,radius:snapRadius.value,
+    guides:guideSnap.value, anchor, gridAxes:axis!==undefined?[axis]:xyOnly?[0,1]:[0,1,2],
+    constrain:axis!==undefined&&anchor?target=>anchor.map((v,i)=>i===axis?target[i]:v) as Vec3:xyOnly?target=>[target[0],target[1],p[2]]:undefined,
+  });showSnap(result,'3d');return result.point
+}
+function snapDistance(value: number, e: PointerEvent) { return snap.value && gridSnap.value && !e.altKey ? Math.round(value/grid.value)*grid.value : value }
 function position(e: PointerEvent): Point2 {
   const target = e.target as SVGElement
   const svg = gesture?.svg ?? (target instanceof SVGSVGElement ? target : target.ownerSVGElement)!
@@ -1111,7 +1225,7 @@ function position(e: PointerEvent): Point2 {
   return [point.x, point.y]
 }
 function plane(p: Point2, pane: Pane): Point2 { return pane === '2d' ? [p[0], -p[1]] : unprojectDirectXY(p,camera.value) }
-function cancelGesture() { clearDragPreview(); previewingTransform.value=false; if(vertexDrag){document.value=vertexDrag.before;vertexDrag=null} if(cvDrag){document.value=cvDrag.before;cvDrag=null} if(curveDrag){document.value=curveDrag.before;curveDrag=null} if(manipulatorDrag){document.value=manipulatorDrag.before;if(manipulatorDrag.kind==='push')advancedOp.value=null;if(manipulatorDrag.kind==='split')advanced.value.distance=manipulatorDrag.initial;manipulatorDrag=null}selectionBox.value=null; if (gesture) { document.value = gesture.document; gesture = null } if (heightDrag) height.value = heightDrag.height; heightDrag = null; orbitDrag = null; draft.value = []; drawMeasure.value = ''; snapMarker.value = null; cameraDragging.value = false }
+function cancelGesture() { draftCursor.value=null;choosingSketchFace.value=false; clearDragPreview(); previewingTransform.value=false; if(vertexDrag){document.value=vertexDrag.before;vertexDrag=null} if(cvDrag){document.value=cvDrag.before;cvDrag=null} if(curveDrag){document.value=curveDrag.before;curveDrag=null} if(manipulatorDrag){document.value=manipulatorDrag.before;if(manipulatorDrag.kind==='push')advancedOp.value=null;if(manipulatorDrag.kind==='split')advanced.value.distance=manipulatorDrag.initial;manipulatorDrag=null}selectionBox.value=null; if (gesture) { document.value = gesture.document; gesture = null } if (heightDrag) height.value = heightDrag.height; heightDrag = null; orbitDrag = null; draft.value = []; drawMeasure.value = ''; snapMarker.value = null; cameraDragging.value = false }
 function down(e: PointerEvent, pane: Pane, id = '', vertex: number | null = null, triangle = -1) {
   if (![0, 1, 2].includes(e.button) || gesture) return
   if(e.button===0&&id&&e.shiftKey&&pickMode.value==='body'){pickObject(id,pane,true);return}
@@ -1119,9 +1233,10 @@ function down(e: PointerEvent, pane: Pane, id = '', vertex: number | null = null
   const target = e.target as SVGElement
   const svg = (target instanceof SVGSVGElement ? target : target.ownerSVGElement)!
   svg.focus(); mode.value = pane
-  if(pane==='3d'&&e.button===0&&!pan&&pickMode.value==='face'&&id&&triangle>=0){
+  if(pane==='3d'&&e.button===0&&!pan&&!faceDrawing.value&&pickMode.value==='face'&&id&&triangle>=0){
     extraSelection.value=[]
     const candidate=solidTopology(document.value.bodies.find(b=>b.id===id)!.mesh).faces.findIndex(f=>f.triangles.includes(triangle))
+    if(choosingSketchFace.value){pickObject(id,pane);faceIndex.value=candidate;faceSketch();return}
     if(selection.value===id&&faceIndex.value===candidate&&!e.ctrlKey&&!e.metaKey){startGizmo(e,'push','z');return}
     if(selection.value!==id)pickObject(id,pane)
     faceIndex.value=solidTopology(document.value.bodies.find(b=>b.id===id)!.mesh).faces.findIndex(f=>f.triangles.includes(triangle));edgeIndex.value=-1;edgeIndexes.value=[]
@@ -1129,21 +1244,27 @@ function down(e: PointerEvent, pane: Pane, id = '', vertex: number | null = null
     advancedOp.value=null;return
   }
   if(boxSelect.value&&e.button===0&&!pan){const p=position(e);selectionBox.value={start:p,end:p,pane};svg.setPointerCapture(e.pointerId);return}
-  if (pane === '3d' && !pan && (e.button === 2 || (!movingBody.value && e.button === 0))) {
+  if (pane === '3d' && !pan && (e.button === 2 || (!faceDrawing.value && !movingBody.value && e.button === 0))) {
     if (id && !operation.value && !advancedOp.value) {if(!selectedIds.value.includes(id))pickObject(id,pane)}
     orbitDrag = { x:e.clientX, y:e.clientY, yaw:camera.value.yaw, pitch:camera.value.pitch, pointer:e.pointerId, svg }; cameraDragging.value = true; svg.setPointerCapture(e.pointerId); return
   }
+  const drawing = pane==='2d'||(pane==='3d'&&faceDrawing.value)
   let p: Point2
-  try { p = plane(position(e), pane) } catch (e) { error.value = String(e); return }
-  if (pane === '2d' && !pan) p = snapped(p,e)
+  try { p = drawing&&pane==='3d'?unprojectDirectPlane(position(e),activePlane.value,camera.value):plane(position(e), pane) } catch (e) { error.value = String(e); return }
+  if (drawing && !pan && tool.value !== 'select') p = snapped(p,e,draft.value.at(-1),pane)
   if (pan) { gesture = { start: position(e), document: history.document, vertex: null, id: '', pointer: e.pointerId, pane, svg, pan: true, center: [...centers.value[pane]] }; cameraDragging.value = true; svg.setPointerCapture(e.pointerId); return }
   if(pane==='2d'&&tool.value==='trim'){if(id)trimAt(id,p);return}
   if (pane === '2d' && cornerActive.value) { if (id === selection.value && vertex !== null) cornerVertex.value = vertex; return }
   if (pane === '2d' && operation.value) operation.value = null
   if (pane === '2d' && vertex !== null) cornerVertex.value = vertex
-  if (pane === '2d' && tool.value === 'polyline') { if (draft.value.length >= 3 && Math.hypot(p[0]-draft.value[0][0],p[1]-draft.value[0][1]) < views.value['2d']/100) { finish(true); return } draft.value = [...draft.value, p]; return }
-  if (tool.value === 'select' || pane === '3d') { if(!selectedIds.value.includes(id))pickObject(id,pane); if (!id) return }
-  gesture = { start: p, document: history.document, vertex, id, pointer: e.pointerId, pane, svg, pan: false, center: [...centers.value[pane]] }
+  if (drawing && tool.value === 'polyline') { if (draft.value.length >= 3 && Math.hypot(p[0]-draft.value[0][0],p[1]-draft.value[0][1]) < views.value['2d']/100) { finish(true); return } draft.value = [...draft.value, p]; return }
+  if (tool.value === 'select' || (pane === '3d'&&!drawing)) { if(!selectedIds.value.includes(id))pickObject(id,pane); if (!id) return }
+  gesture = { start: p, document: history.document, vertex, id, sketch:drawing&&tool.value!=='select', pointer: e.pointerId, pane, svg, pan: false, center: [...centers.value[pane]] }
+  if (pane === '2d' && id && vertex === null) {
+    const sketch = visibleSketches.value.find(s=>s.id===id)
+    if(sketch?.points.length) gesture.anchor = [...sketch.points.reduce((best,q)=>Math.hypot(q[0]-p[0],q[1]-p[1])<Math.hypot(best[0]-p[0],best[1]-p[1])?q:best)]
+  }
+  if(pane==='3d'&&id&&!drawing){const body=gesture.document.bodies.find(b=>b.id===id);if(body){const mouse=[e.clientX,e.clientY],toScreen=snapProjection(svg,'3d');gesture.anchor3=(bodyPoints(body) as Vec3[]).reduce((best,q)=>{const a=toScreen(best),b=toScreen(q);return Math.hypot(b[0]-mouse[0],b[1]-mouse[1])<Math.hypot(a[0]-mouse[0],a[1]-mouse[1])?q:best})}}
   svg.setPointerCapture(e.pointerId)
 }
 function move(e: PointerEvent) {
@@ -1152,13 +1273,16 @@ function move(e: PointerEvent) {
     g.moved=true
     const cy=Math.cos(camera.value.yaw),sn=Math.sin(camera.value.yaw),sp=Math.sin(camera.value.pitch),cp=Math.cos(camera.value.pitch),horizontal=sy*sp,delta=[sx*cy+horizontal*sn,-sx*sn+horizontal*cy,-sy*cp]
     const d:DirectDocument=JSON.parse(JSON.stringify(g.before)),body=d.bodies.find(b=>b.id===selection.value);if(!body)return
-    for(const i of g.ids)for(let k=0;k<3;k++)body.mesh.positions[i*3+k]+=delta[k]
+    const anchor=body.mesh.positions.slice(g.ids[0]*3,g.ids[0]*3+3) as Vec3
+    const target=snapped3(anchor.map((v,i)=>v+delta[i]) as Vec3,e,g.before,[selection.value],anchor)
+    for(const i of g.ids)for(let k=0;k<3;k++)body.mesh.positions[i*3+k]+=target[k]-anchor[k]
     document.value=d;return}
   if(cvDrag&&cvDrag.pointer===e.pointerId){const g=cvDrag,p=position(e),sx=p[0]-g.start[0],sy=p[1]-g.start[1],cy=Math.cos(camera.value.yaw),sn=Math.sin(camera.value.yaw),sp=Math.sin(camera.value.pitch),cp=Math.cos(camera.value.pitch)
     const horizontal=sy*sp,delta=[sx*cy+horizontal*sn,-sx*sn+horizontal*cy,-sy*cp]
-    run(()=>{document.value=updateSolidNurbsControlPoint(g.before,g.id,g.u,g.v,g.point.map((value,i)=>value+delta[i]));const edited=document.value.curves?.find(c=>c.id===g.id)?.curve.controlPoints[g.u]??document.value.surfaces?.find(s=>s.id===g.id)?.surface.controlPoints[g.u]?.[g.v];if(edited)[cvX.value,cvY.value,cvZ.value]=edited as [number,number,number]});return
+    const target=snapped3(g.point.map((value,i)=>value+delta[i]) as Vec3,e,g.before,[g.id],g.point as Vec3)
+    run(()=>{document.value=updateSolidNurbsControlPoint(g.before,g.id,g.u,g.v,target);const edited=document.value.curves?.find(c=>c.id===g.id)?.curve.controlPoints[g.u]??document.value.surfaces?.find(s=>s.id===g.id)?.surface.controlPoints[g.u]?.[g.v];if(edited)[cvX.value,cvY.value,cvZ.value]=edited as [number,number,number]});return
   }
-  if(curveDrag){const g=curveDrag,p=plane(position(e),'2d'),d=JSON.parse(JSON.stringify(g.before)) as DirectDocument,s=d.sketches.find(s=>s.id===g.id)!,a=s.analytic!
+  if(curveDrag){const g=curveDrag,p=snapped(plane(position(e),'2d'),e),d=JSON.parse(JSON.stringify(g.before)) as DirectDocument,s=d.sketches.find(s=>s.id===g.id)!,a=s.analytic!
     if(g.kind==='center')a.center=p
     else if(g.kind==='radius')a.radius=Math.max(.01,Math.hypot(p[0]-a.center[0],p[1]-a.center[1]))
     else {const angle=Math.atan2(p[1]-a.center[1],p[0]-a.center[0])*180/Math.PI;if(g.kind==='start'){const end=a.start+a.sweep;a.start=angle;a.sweep=((end-angle)%360+360)%360||360}else a.sweep=((angle-a.start)%360+360)%360||360}
@@ -1166,7 +1290,9 @@ function move(e: PointerEvent) {
   }
   if(selectionBox.value){selectionBox.value.end=position(e);return}
   if(manipulatorDrag){const g=manipulatorDrag,f=views.value['3d']/Math.min(g.svg.clientWidth,g.svg.clientHeight),x=(e.clientX-g.x)*f,y=(e.clientY-g.y)*f,l=g.direction[0]**2+g.direction[1]**2
-    const distance=l>.001?(x*g.direction[0]+y*g.direction[1])/l:-y
+    let distance=l>.001?(x*g.direction[0]+y*g.direction[1])/l:-y
+    if(g.kind!=='move')distance=snapDistance(distance,e)
+    if(g.kind==='move'&&gizmoCenter.value){const anchor=gizmoCenter.value,axis=['x','y','z'].indexOf(g.axis),target=anchor.map((v,i)=>v+(i===axis?distance:0)) as Vec3;distance=snapped3(target,e,g.before,selectedIds.value,anchor,axis)[axis]-anchor[axis]}
     if(g.kind==='push'||g.kind==='split'){advanced.value.distance=Math.round((distance+(g.kind==='split'?g.initial:0))*100)/100;return}
     const p=position(e),rotation=(Math.atan2(p[1]-g.center[1],p[0]-g.center[0])-Math.atan2(g.startPoint[1]-g.center[1],g.startPoint[0]-g.center[0]))*180/Math.PI*(projectDirectPoint(axisVector(g.axis),camera.value)[2]>=0?-1:1)
     if(g.kind==='move'){
@@ -1187,21 +1313,31 @@ function move(e: PointerEvent) {
   if (heightDrag && heightDrag.pointer === e.pointerId) {
     const n=cross3((selectedSketch.value?.plane??xyPlane()).u,(selectedSketch.value?.plane??xyPlane()).v), projected=projectDirectPoint(n,camera.value)
     const factor = -views.value['3d'] / Math.min(heightDrag.svg.clientWidth,heightDrag.svg.clientHeight) / (Math.abs(projected[1])<.05 ? -.05 : projected[1])
-    const h = heightDrag.height - (e.clientY-heightDrag.y)*factor
+    const h = snapDistance(heightDrag.height - (e.clientY-heightDrag.y)*factor,e)
     height.value = Math.abs(h)<.01 ? .01 : Math.round(h*100)/100; return
   }
   if (orbitDrag && orbitDrag.pointer === e.pointerId) {
     camera.value = { yaw: orbitDrag.yaw + (e.clientX-orbitDrag.x)*.007, pitch: Math.max(-1.5,Math.min(1.5,orbitDrag.pitch+(e.clientY-orbitDrag.y)*.007)) }; return
   }
-  if (!gesture || gesture.pointer !== e.pointerId) return
+  if (!gesture || gesture.pointer !== e.pointerId) {
+    const in3d=canvasOf(e).getAttribute?.('aria-label')===label('Холст тел 3D','3D body canvas')
+    if(tool.value!=='select'&&(!in3d||faceDrawing.value)){
+      try{const pane:Pane=in3d?'3d':'2d',p=in3d?unprojectDirectPlane(position(e),activePlane.value,camera.value):plane(position(e),'2d');draftCursor.value=snapped(p,e,draft.value.at(-1),pane)}catch{snapMarker.value=null}
+    }
+    return
+  }
   if (gesture.pan) {
     const p = position(e), center = centers.value[gesture.pane]
     centers.value[gesture.pane] = [center[0] + gesture.start[0] - p[0], center[1] + gesture.start[1] - p[1]]
     return
   }
-  let p = plane(position(e), gesture.pane); const start = gesture.start
-  if (gesture.pane === '2d') p = snapped(p,e)
-  if (gesture.pane === '2d' && tool.value !== 'select') {
+  let p = gesture.sketch&&gesture.pane==='3d'?unprojectDirectPlane(position(e),activePlane.value,camera.value):plane(position(e), gesture.pane); const start = gesture.start
+  if (gesture.pane === '2d'||gesture.sketch) {
+    const anchor=gesture.anchor
+    if(anchor){const target=snapped([anchor[0]+p[0]-start[0],anchor[1]+p[1]-start[1]],e,anchor);p=[start[0]+target[0]-anchor[0],start[1]+target[1]-anchor[1]]}
+    else p = snapped(p,e,start,gesture.pane)
+  } else { const anchor=gesture.anchor3??[start[0],start[1],0],target=snapped3([anchor[0]+p[0]-start[0],anchor[1]+p[1]-start[1],anchor[2]],e,gesture.document,selectedIds.value,anchor,undefined,true);p=[start[0]+target[0]-anchor[0],start[1]+target[1]-anchor[1]] }
+  if (gesture.sketch) {
     draft.value = tool.value === 'rectangle' ? [start, [p[0], start[1]], p, [start[0], p[1]]] : Array.from({ length: tool.value==='arc'?33:64 }, (_, i) => { const r = Math.hypot(p[0] - start[0], p[1] - start[1]), a = i * Math.PI / 32; return [start[0] + r * Math.cos(a), start[1] + r * Math.sin(a)] as Point2 })
     drawMeasure.value = tool.value === 'circle' ? `R ${Math.hypot(p[0]-start[0],p[1]-start[1]).toFixed(2)} mm` : `${Math.abs(p[0]-start[0]).toFixed(2)} × ${Math.abs(p[1]-start[1]).toFixed(2)} mm`
     return
@@ -1234,6 +1370,7 @@ function move(e: PointerEvent) {
   document.value = d
 }
 function up(e: PointerEvent) {
+  void nextTick(()=>{snapMarker.value=null;snapGuide.value=null})
   cameraDragging.value = false
   if(vertexDrag&&vertexDrag.pointer===e.pointerId){const g=vertexDrag;move(e);vertexDrag=null;if(g.moved)run(()=>commit(document.value));return}
   if(cvDrag&&cvDrag.pointer===e.pointerId){move(e);cvDrag=null;run(()=>commit(document.value));return}
@@ -1252,16 +1389,16 @@ function up(e: PointerEvent) {
   drawMeasure.value = ''; snapMarker.value = null
   if (!gesture || gesture.pointer !== e.pointerId) return
   move(e)
-  const start=gesture.start, before = gesture.document, pane = gesture.pane, pan = gesture.pan, bodyDrag = gesture.bodyDrag; gesture = null
+  const start=gesture.start, before = gesture.document, pane = gesture.pane, drawing=gesture.sketch, pan = gesture.pan, bodyDrag = gesture.bodyDrag; gesture = null
   if (pan) return
   run(() => {
     // The exact translation, including B-rep, is applied once here rather than per move.
     if (bodyDrag) { commit(translateBodiesExact(before, bodyDrag.ids, bodyDrag.delta, [0, 0, 1])); settleAfterDrag(); return }
-    if (pane === '2d' && tool.value !== 'select') {
+    if (drawing) {
       const points = draft.value
-      if(tool.value==='circle'||tool.value==='arc'){const radius=Math.hypot(points[0][0]-start[0],points[0][1]-start[1]);if(radius>=.01){const analytic={kind:tool.value,center:start,radius,start:0,sweep:tool.value==='circle'?360:180} as const;addSketch(sampleCurve(analytic),tool.value==='circle',analytic)}}
+      if((tool.value==='circle'||tool.value==='arc')&&points.length){const radius=Math.hypot(points[0][0]-start[0],points[0][1]-start[1]);if(radius>=.01){const analytic={kind:tool.value,center:start,radius,start:0,sweep:tool.value==='circle'?360:180} as const;addSketch(sampleCurve(analytic),tool.value==='circle',analytic)}}
       else if (points.length >= 3 && Math.abs(points.reduce((sum, p, i) => { const q = points[(i + 1) % points.length]; return sum + p[0] * q[1] - q[0] * p[1] }, 0)) > 1e-6) addSketch(points, true)
-      draft.value = []; tool.value = 'select'
+      draft.value = []; draftCursor.value=null; tool.value = 'select'
     } else commit(document.value)
   })
   if (error.value && JSON.stringify(history.document) === JSON.stringify(before)) document.value = before
@@ -1291,7 +1428,7 @@ const solidCommands = computed<SolidCommand[]>(() => {
   const cmd = (id: string, ru: string, en: string, run: () => void, extra: Partial<PaletteCommand> = {}): SolidCommand =>
     ({ id, label: label(ru, en), aliases: [ru, en], run, ...extra })
   const toolCmd = (value: typeof tool.value, ru: string, en: string, shortcut?: string) =>
-    cmd(`tool-${value}`, ru, en, () => { cancelGesture(); operation.value = null; advancedOp.value = null; boxSelect.value = false; tool.value = value; mode.value = '2d'; sketchPaneOpen.value = true }, { detail: label('Инструмент 2D', '2D tool'), shortcut })
+    cmd(`tool-${value}`, ru, en, () => beginSketch(value), { detail: label('Инструмент 2D', '2D tool'), shortcut })
   const list: SolidCommand[] = [
     toolCmd('select', 'Выбор', 'Select', 'V'), toolCmd('rectangle', 'Прямоугольник', 'Rectangle', 'R'), toolCmd('circle', 'Круг', 'Circle', 'C'),
     toolCmd('arc', 'Дуга', 'Arc'), toolCmd('trim', 'Обрезать', 'Trim'), toolCmd('polyline', 'Ломаная', 'Polyline', 'L'),
@@ -1333,11 +1470,11 @@ const solidCommands = computed<SolidCommand[]>(() => {
     cmd('transform', 'Преобразовать выбор', 'Transform selection', () => beginAdvanced('transform'), { enabled: anySelection && !nurbs, disabledReason: needSelection }),
     cmd('exact-transform', 'Точные преобразования', 'Exact transforms', () => { exactCardOpen.value = true }, { detail: label('Числовой ввод', 'Numeric input'), enabled: !!(sketch || body), disabledReason: needSelection }),
     cmd('brep-detail', 'Детализация B-rep', 'B-rep detail', () => { exactCardOpen.value = true }, { detail: label('Числовой ввод', 'Numeric input'), enabled: !!body?.brep, disabledReason: label('Выберите тело B-rep', 'Select a B-rep body') }),
-    cmd('extrude', 'Выдавить', 'Extrude', () => beginExtrude(), { detail: label('Эскиз', 'Sketch'), shortcut: 'E', enabled: !!sketch?.closed, disabledReason: needClosed }),
-    cmd('revolve', 'Вращение', 'Revolve', () => beginExtrude('revolve'), { detail: label('Эскиз', 'Sketch'), enabled: !!sketch?.closed, disabledReason: needClosed }),
+    cmd('extrude', 'Выдавить', 'Extrude', () => beginExtrude(), { detail: label('Эскиз', 'Sketch'), shortcut: 'E', enabled: canExtrudeSketch.value, disabledReason: needClosed }),
+    cmd('revolve', 'Вращение', 'Revolve', () => beginExtrude('revolve'), { detail: label('Эскиз', 'Sketch'), enabled: canExtrudeSketch.value, disabledReason: needClosed }),
     cmd('loft', 'B-rep loft', 'B-rep loft', () => beginAdvanced('loft'), { detail: label('Эскиз', 'Sketch'), enabled: !!sketch && selectedIds.value.length >= 2, disabledReason: label('Выберите два и более эскиза', 'Select two or more sketches') }),
-    cmd('fillet', 'Скруглить', 'Fillet', () => beginCorner('fillet'), { detail: label('Эскиз', 'Sketch'), enabled: !!sketch?.closed, disabledReason: needClosed }),
-    cmd('dogear', 'DogEar', 'DogEar', () => beginCorner('dogear'), { detail: label('Эскиз', 'Sketch'), enabled: !!sketch?.closed, disabledReason: needClosed }),
+    cmd('fillet', 'Скруглить', 'Fillet', () => beginCorner('fillet'), { detail: label('Эскиз', 'Sketch'), enabled: canExtrudeSketch.value, disabledReason: needClosed }),
+    cmd('dogear', 'DogEar', 'DogEar', () => beginCorner('dogear'), { detail: label('Эскиз', 'Sketch'), enabled: canExtrudeSketch.value, disabledReason: needClosed }),
     cmd('array', 'Круговые копии', 'Circular copies', () => { advancedOp.value = null; operation.value = operation.value === 'array' ? null : 'array' }, { detail: label('Эскиз', 'Sketch'), enabled: !!sketch, disabledReason: label('Выберите эскиз', 'Select a sketch') }),
     cmd('duplicate', 'Копия', 'Duplicate', duplicate, { shortcut: 'Ctrl D', enabled: anySelection && !nurbs, disabledReason: needSelection }),
     cmd('delete', 'Удалить', 'Delete', remove, { shortcut: 'Del', enabled: anySelection, disabledReason: needSelection }),
@@ -1358,7 +1495,7 @@ function executeSolidCommand(id: string) {
 defineExpose({ solidCommands, executeSolidCommand })
 
 function keydown(e: KeyboardEvent) {
-  if (paletteOpen.value) return
+  if (restoringDraft.value || paletteOpen.value) return
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); paletteOpen.value = true; return }
   if (subtract.value) {
     if ((e.target as HTMLElement).closest?.('.subtract-card')) return
@@ -1372,7 +1509,7 @@ function keydown(e: KeyboardEvent) {
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'd') { e.preventDefault(); duplicate(); return }
   if (!e.ctrlKey && !e.metaKey && !e.altKey) {
     const k = e.key.toLowerCase(), tools = { v:'select', r:'rectangle', c:'circle', l:'polyline' } as const
-    if (k in tools) { cancelGesture(); operation.value = null; advancedOp.value=null; boxSelect.value=false; tool.value = tools[k as keyof typeof tools]; mode.value = '2d'; sketchPaneOpen.value = true }
+    if (k in tools) beginSketch(tools[k as keyof typeof tools])
     if (k === 'e') beginExtrude()
     if (k === 'f') fit(mode.value)
     if (k === 'g') movingBody.value = !movingBody.value
@@ -1603,6 +1740,7 @@ watch([() => props.open, () => props.seedDocument], ([open, seed]) => {
 </script>
 <template>
   <section v-show="open" ref="workspace" class="direct-workspace" :class="{ embedded, 'touch-mode': inputMode === 'touch' }" tabindex="-1" :aria-label="label('Solid — CAD-лепка', 'Solid — CAD sculpt')" @keydown.stop="keydown" @dragstart.prevent>
+    <div v-if="restoringDraft" class="restore-loading" role="status">{{ label('Восстанавливаю геометрию…', 'Restoring geometry…') }}</div>
     <header class="workspace-bar">
       <button v-if="embedded" class="back" @click="emit('close')">← {{ label('Code', 'Code') }}</button>
       <strong>{{ label('Solid', 'Solid') }}</strong>
@@ -1629,6 +1767,18 @@ watch([() => props.open, () => props.seedDocument], ([open, seed]) => {
         <button :disabled="!document.bodies.length" @click="sendToMesh">{{ label('Открыть в Mesh', 'Open in Mesh') }}</button>
       </div></details>
     </header>
+    <div class="sketch-start-bar" :aria-label="label('От плоской фигуры к объёму', 'From a flat shape to a solid')">
+      <strong>{{ label('Плоские фигуры', 'Flat shapes') }}</strong>
+      <button v-for="item in [{ tool: 'rectangle' as const, ru: 'Прямоугольник', en: 'Rectangle', key: 'R' }, { tool: 'circle' as const, ru: 'Круг', en: 'Circle', key: 'C' }, { tool: 'polyline' as const, ru: 'Контур', en: 'Contour', key: 'L' }]" :key="item.tool" type="button" :aria-pressed="tool === item.tool" :title="`${label(item.ru,item.en)} · ${item.key}`" @click="beginSketch(item.tool)">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path :d="TOOL_ICONS[item.tool]" /></svg>{{ label(item.ru,item.en) }} · {{ item.key }}
+      </button>
+      <button type="button" :disabled="!document.bodies.length" :aria-pressed="choosingSketchFace" @click="chooseSketchFace">{{ label('На грани', 'On face') }}</button>
+      <button v-if="workplaneBodyId" type="button" @click="resetWorkplane()">XY</button>
+      <span aria-hidden="true">→</span>
+      <button type="button" class="extrude-sketch" :disabled="!canExtrudeSketch" :title="canExtrudeSketch ? label('Задайте высоту или тяните ручку в 3D', 'Set a height or drag the handle in 3D') : label('Нарисуйте и выберите замкнутый контур', 'Draw and select a closed contour')" @click="beginExtrude()">{{ label('Выдавить · E', 'Extrude · E') }}</button>
+      <span class="subtle">{{ selectedSketch && !selectedSketch.closed ? label('Для объёма нужен замкнутый контур', 'Close the contour to create a solid') : label('Нарисуйте на плоскости → задайте высоту → Enter', 'Draw on a plane → set height → Enter') }}</span>
+    </div>
+    <div v-if="choosingSketchFace || (workplaneBodyId && tool!=='select')" class="workplane-hint" role="status">{{ choosingSketchFace ? label('Выберите плоскую грань тела в 3D. Esc — отмена.', 'Pick a planar body face in 3D. Esc cancels.') : label('Рисуйте на выделенной грани в 3D или в панели эскиза. Затем нажмите «Выдавить».', 'Draw on the highlighted face in 3D or in the sketch pane, then choose Extrude.') }}</div>
     <div class="primitive-bar">
       <strong>{{ label('Примитивы','Primitives') }}</strong>
       <button v-for="kind in primitiveKinds" :key="kind" class="primitive-icon" :disabled="!kernelReady" :title="primitiveLabel(kind)" :aria-label="primitiveLabel(kind)" @click="addPrimitive(kind)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><path :d="PRIMITIVE_ICONS[kind]" /></svg></button>
@@ -1652,10 +1802,10 @@ watch([() => props.open, () => props.seedDocument], ([open, seed]) => {
         <section v-show="pane === '3d' || sketchPaneOpen" class="pane" :class="{ active: mode === pane }" :aria-label="pane === '2d' ? label('2D — эскизы', '2D — sketches') : label('3D — тела', '3D — bodies')">
           <div class="pane-tools">
             <template v-if="pane === '2d'">
-              <button v-for="(name, value) in { select: label('Выбор · V', 'Select · V'), rectangle: label('Прямоугольник · R', 'Rectangle · R'), circle: label('Круг · C', 'Circle · C'), arc: label('Дуга', 'Arc'), trim: label('Обрезать','Trim'), polyline: label('Ломаная · L', 'Polyline · L') }" :key="value" class="tool-icon" :title="name" :aria-label="name" :aria-pressed="tool === value" @click="cancelGesture(); operation = null; advancedOp=null; boxSelect=false; tool = value; mode = '2d'"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><path :d="TOOL_ICONS[value]" /></svg></button>
+              <button v-for="(name, value) in { select: label('Выбор · V', 'Select · V'), rectangle: label('Прямоугольник · R', 'Rectangle · R'), circle: label('Круг · C', 'Circle · C'), arc: label('Дуга', 'Arc'), trim: label('Обрезать','Trim'), polyline: label('Ломаная · L', 'Polyline · L') }" :key="value" class="tool-icon" :title="name" :aria-label="name" :aria-pressed="tool === value" @click="beginSketch(value)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><path :d="TOOL_ICONS[value]" /></svg></button>
               <button class="tool-icon" :title="label('Рамка','Box select')" :aria-label="label('Рамка','Box select')" :aria-pressed="boxSelect" @click="boxSelect=!boxSelect"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><path :d="TOOL_ICONS.box" /></svg></button>
-              <button :title="label('Вернуться к плоскости XY','Back to the XY plane')" @click="activePlane=xyPlane();workplaneOutline=[];selection='';extraSelection=[]">XY</button>
-              <label class="snap-toggle"><input v-model="snap" type="checkbox">{{ label('Привязка', 'Snap') }}</label><input v-if="snap" class="grid-input" v-model.number="grid" type="number" min=".01" step=".5" :aria-label="label('Шаг сетки', 'Grid step')">
+              <button :title="label('Вернуться к плоскости XY','Back to the XY plane')" @click="resetWorkplane()">XY</button>
+
               <button class="tool-icon" :title="label('Вписать · F', 'Fit · F')" :aria-label="label('Вписать', 'Fit')" @click="fit('2d')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5"/></svg></button>
               <button class="tool-icon" :title="label('Скрыть панель эскизов', 'Hide sketch pane')" :aria-label="label('Скрыть панель эскизов', 'Hide sketch pane')" @click="toggleSketchPane(false)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
             </template>
@@ -1688,12 +1838,16 @@ watch([() => props.open, () => props.seedDocument], ([open, seed]) => {
               <select v-model="bodyExportFormat" :aria-label="label('Формат экспорта тела', 'Body export format')"><option v-for="format in MESH_EXPORT_FORMATS" :key="format" :value="format">{{ MESH_FORMAT_LABELS[format] }}</option></select>
               <button class="tool-icon" :disabled="!selectedBody" :title="label('Скачать выбранное тело в выбранном формате','Download the selected body in the chosen format')" :aria-label="label('Скачать', 'Download')" @click="downloadBody"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><path :d="TOOL_ICONS.download" /></svg></button></template>
           </div>
+          <ModelingGridControls :locale="locale" snapping />
           <div class="canvas-wrap">
             <canvas v-if="pane === '3d'" :ref="mountGpuCanvas" class="gpu-layer" aria-hidden="true"></canvas>
             <svg @pointerdown.capture="touchDown($event, pane)" @pointermove.capture="touchMove" @pointerup.capture="touchEnd" :viewBox="viewBox(pane)" tabindex="0" :aria-label="pane === '2d' ? label('Холст эскизов 2D', '2D sketch canvas') : label('Холст тел 3D', '3D body canvas')" @contextmenu.prevent @wheel.prevent="wheelZoom($event, pane)" @pointerdown="downAt($event, pane)" @pointermove="moveAt" @pointerleave="gpuActive && (hovered = '')" @pointerup="up" @pointercancel="cancelInputGesture" @lostpointercapture="touchPointers.has($event.pointerId) ? cancelInputGesture() : !multiTouch && cancelGesture()" @dragstart.prevent @selectstart.prevent @mousedown.prevent draggable="false">
-              <defs><pattern :id="'direct-grid-' + pane" width="10" height="10" patternUnits="userSpaceOnUse"><path d="M 10 0 L 0 0 0 10" fill="none" stroke="var(--border)" stroke-opacity=".45" stroke-width=".5" vector-effect="non-scaling-stroke" /></pattern></defs>
+              <defs><pattern :id="'direct-grid-' + pane" :width="sketchGridStep" :height="sketchGridStep" patternUnits="userSpaceOnUse"><path :d="`M ${sketchGridStep} 0 L 0 0 0 ${sketchGridStep}`" fill="none" stroke="var(--border)" stroke-opacity=".45" stroke-width=".5" vector-effect="non-scaling-stroke" /></pattern></defs>
               <rect v-if="pane === '2d'" x="-2000000" y="-2000000" width="4000000" height="4000000" :fill="'url(#direct-grid-' + pane + ')'" />
-              <g v-if="pane === '3d' && floorVisible" pointer-events="none"><polyline v-for="(line,i) in floorLines" :key="i" :points="line.points" fill="none" stroke="var(--border)" :stroke-opacity="(line.opacity * .45).toFixed(3)" stroke-width=".5" vector-effect="non-scaling-stroke" /></g>
+              <g v-if="pane === '3d' && floorVisible && Math.abs(Math.sin(camera.pitch)) > .001" pointer-events="none">
+                <defs><pattern v-for="(step,i) in [floorGrid.fine,floorGrid.fine*10]" :id="'solid-floor-'+i" :key="i" :width="step" :height="step" patternUnits="userSpaceOnUse" :patternTransform="floorGrid.transform"><path :d="`M ${step} 0 H 0 V ${step}`" fill="none" stroke="var(--border)" :stroke-opacity=".45*(i?1:floorGrid.opacity)" stroke-width=".5" vector-effect="non-scaling-stroke" /></pattern></defs>
+                <rect v-for="i in [0,1]" :key="i" :x="centers['3d'][0]-views['3d']*100" :y="centers['3d'][1]-views['3d']*100" :width="views['3d']*200" :height="views['3d']*200" :fill="`url(#solid-floor-${i})`" />
+              </g>
               <path v-if="pane === '2d'" d="M -2000000 0 H 2000000 M 0 -2000000 V 2000000" stroke="var(--border)" vector-effect="non-scaling-stroke" />
               <g v-if="pane === '2d'">
                 <path v-for="(loop,i) in workplaneOutline" :key="'workplane-'+i" :d="'M '+loop.map(p=>project(p,'2d').join(',')).join(' L ')+' Z'" fill="var(--border)" fill-opacity=".2" stroke="var(--text-dim)" stroke-dasharray="3 3" vector-effect="non-scaling-stroke" pointer-events="none" />
@@ -1711,9 +1865,9 @@ watch([() => props.open, () => props.seedDocument], ([open, seed]) => {
                   <path v-for="a in [selectedSketch.analytic.start,selectedSketch.analytic.start+selectedSketch.analytic.sweep]" :key="a" :d="'M '+[selectedSketch.analytic.center[0]+selectedSketch.analytic.radius*Math.cos(a*Math.PI/180),-(selectedSketch.analytic.center[1]+selectedSketch.analytic.radius*Math.sin(a*Math.PI/180))].join(',')+' l '+[-Math.sin(a*Math.PI/180)*views['2d']/12,-Math.cos(a*Math.PI/180)*views['2d']/12].join(',')" stroke="#ffc977" stroke-dasharray="3 2" vector-effect="non-scaling-stroke" />
                 </g>
                 <path v-for="s in copyPreview" :key="s.id" :d="'M '+s.points.map(p=>project(p,'2d').join(',')).join(' L ')+(s.closed?' Z':'')" fill="none" stroke="#b894ff" stroke-dasharray="4 3" vector-effect="non-scaling-stroke" pointer-events="none" />
-                <circle v-if="snapMarker" :cx="snapMarker[0]" :cy="-snapMarker[1]" :r="views['2d']/100" fill="none" stroke="#77eac5" vector-effect="non-scaling-stroke" pointer-events="none" />
+
                 <polyline v-if="draft.length"
- :points="draft.map(p => project(p, '2d').join(',')).join(' ')" fill="none" stroke="var(--accent)" stroke-dasharray="4 3" vector-effect="non-scaling-stroke" pointer-events="none" />
+ :points="(tool==='polyline'&&draftCursor?[...draft,draftCursor]:draft).map(p => project(p, '2d').join(',')).join(' ')" fill="none" stroke="var(--accent)" stroke-dasharray="4 3" vector-effect="non-scaling-stroke" pointer-events="none" />
               </g>
               <g v-else>
                 <template v-if="!gpuActive"><polygon v-for="p in polygons" :data-body="p.id" v-show="!advancedPreview.document || !selectedIds.includes(p.id)" :key="p.key" :points="p.points" :fill="gpuActive ? 'transparent' : `hsl(${selectedBody?.id===p.id && selectedFaceTriangles.has(p.triangle) && pickMode==='face' ? 40 : selectedIds.includes(p.id) ? 266 : hovered === p.id ? 190 : 220} 45% ${p.shade}%)`" :stroke="gpuActive ? 'none' : `hsl(${selectedIds.includes(p.id) ? 266 : 220} 45% ${p.shade}%)`" :pointer-events="gpuActive ? 'fill' : undefined" stroke-width=".6" @pointerenter="gpuActive || (hovered = p.id)" @pointerleave="gpuActive || (hovered = '')" vector-effect="non-scaling-stroke" @pointerdown.stop="down($event, pane, p.id, null, p.triangle)" /></template>
@@ -1728,7 +1882,11 @@ watch([() => props.open, () => props.seedDocument], ([open, seed]) => {
                   <circle v-for="cv in nativeCage" :key="cv.u+'-'+cv.v" :cx="project(cv.point,'3d')[0]" :cy="project(cv.point,'3d')[1]" :r="views['3d']/110" :fill="cvU===cv.u&&cvV===cv.v?'#ff8b77':'#ffc977'" stroke="#2a2114" vector-effect="non-scaling-stroke" @pointerdown.stop="startCv($event,cv.u,cv.v)" />
                 </g>
               </g>
-              <g v-if="pane === '3d' && solidActive" pointer-events="none"><polygon v-for="p in ghostPolygons" :key="p.key" :points="p.points" :fill="extrusionMode === 'difference' ? '#ff647c' : '#75e4b8'" fill-opacity=".28" :stroke="extrusionMode === 'difference' ? '#ff647c' : '#75e4b8'" stroke-width=".7" vector-effect="non-scaling-stroke" /></g>
+              <g v-if="pane==='3d' && workplaneBodyId" pointer-events="none" fill="none" stroke="#77eac5" vector-effect="non-scaling-stroke">
+                <path v-for="(loop,i) in workplaneOutline" :key="i" :d="'M '+loop.map(p=>project(worldPoint(p,activePlane),'3d').join(',')).join(' L ')+' Z'" stroke-dasharray="5 3" stroke-width="1" vector-effect="non-scaling-stroke" />
+                <polyline v-if="draft.length" :points="(tool==='polyline'&&draftCursor?[...draft,draftCursor]:draft).map(p=>project(worldPoint(p,activePlane),'3d').join(',')).join(' ')" stroke-width="2" />
+              </g>
+              <g v-if="pane === '3d' && solidActive && !previewReplacesTarget" pointer-events="none"><polygon v-for="p in ghostPolygons" :key="p.key" :points="p.points" :fill="extrusionMode === 'difference' ? '#ff647c' : '#75e4b8'" fill-opacity=".28" :stroke="extrusionMode === 'difference' ? '#ff647c' : '#75e4b8'" stroke-width=".7" vector-effect="non-scaling-stroke" /></g>
               <g v-if="pane === '3d' && extrusionHandle" class="height-handle" @pointerdown.stop="dragHeight">
                 <line :x1="extrusionHandle.base[0]" :y1="extrusionHandle.base[1]" :x2="extrusionHandle.top[0]" :y2="extrusionHandle.top[1]" stroke="#77eac5" stroke-width="3" vector-effect="non-scaling-stroke" />
                 <circle :cx="extrusionHandle.top[0]" :cy="extrusionHandle.top[1]" :r="views['3d']/55" fill="#77eac5" stroke="#18332d" stroke-width="2" vector-effect="non-scaling-stroke" />
@@ -1762,6 +1920,16 @@ watch([() => props.open, () => props.seedDocument], ([open, seed]) => {
               <g v-if="pane==='2d'" pointer-events="none"><path v-for="s in advancedSketches" :key="'adv-'+s.id" :d="'M '+s.points.map(p=>project(p,'2d').join(',')).join(' L ')+(s.closed?' Z':'')" fill="none" stroke="#77eac5" stroke-width="3" vector-effect="non-scaling-stroke" /></g>
               <rect v-if="selectionBox?.pane===pane" :x="Math.min(selectionBox.start[0],selectionBox.end[0])" :y="Math.min(selectionBox.start[1],selectionBox.end[1])" :width="Math.abs(selectionBox.end[0]-selectionBox.start[0])" :height="Math.abs(selectionBox.end[1]-selectionBox.start[1])" fill="#77baff" fill-opacity=".12" stroke="#77baff" stroke-dasharray="4 3" vector-effect="non-scaling-stroke" pointer-events="none" />
 
+              <g v-if="!gesture && !previewingTransform" pointer-events="none" stroke="#77eac5" fill="none" stroke-opacity=".65">
+                <template v-for="(target,i) in visibleKeypoints" :key="i">
+                  <path v-if="pane==='3d'||target.local" :d="(()=>{const p=pane==='2d'?project(target.local!,'2d'):project(target.point,'3d'),r=views[pane]/180;return `M ${p[0]-r} ${p[1]} H ${p[0]+r} M ${p[0]} ${p[1]-r} V ${p[1]+r}`})()" vector-effect="non-scaling-stroke" />
+                </template>
+              </g>
+              <g v-if="snapMarker && snapPane === pane" pointer-events="none" stroke="#77eac5" fill="none">
+                <polyline v-if="snapGuide" :points="snapGuide.map(p=>p.join(',')).join(' ')" stroke-dasharray="5 4" vector-effect="non-scaling-stroke" />
+                <circle :cx="snapMarker[0]" :cy="pane==='2d'?-snapMarker[1]:snapMarker[1]" :r="views[pane]/100" vector-effect="non-scaling-stroke" />
+                <text :x="snapMarker[0]+views[pane]/60" :y="(pane==='2d'?-snapMarker[1]:snapMarker[1])-views[pane]/60" :font-size="views[pane]/50" fill="#77eac5" stroke="none">{{ snapLabel }}</text>
+              </g>
             </svg>
             <div v-if="advancedOp && pane === (['offset','extend','curve'].includes(advancedOp) ? '2d' : '3d')" class="operation-card">
               <strong>{{ ({loft:label('Линейчатый B-rep loft','Ruled B-rep loft'),push:label('Сдвиг грани','Push / Pull'),chamfer:label('Фаска ребра','Edge chamfer'),'edge-fillet':label('Скругление ребра','Edge fillet'),shell:label('Полое тело','Shell'),split:label('Разрез плоскостью','Plane split'),offset:label('Отступ контура','Offset'),extend:label('Продлить линию','Extend'),curve:label('Окружность / дуга','Circle / arc'),transform:label('Преобразовать выбор','Transform selection')})[advancedOp] }}</strong>
@@ -1827,9 +1995,12 @@ watch([() => props.open, () => props.seedDocument], ([open, seed]) => {
             <div v-if="pane === '2d' && drawMeasure" class="live-measure">{{ drawMeasure }}</div>
             <div v-if="pane === '3d' && solidActive" class="operation-card">
               <strong>{{ operation === 'revolve' ? label('Вращение профиля', 'Revolve profile') : label('Выдавливание', 'Extrusion') }}</strong><small v-if="operation === 'extrude'">{{ label('Тяните зелёную ручку или введите размер', 'Drag the green handle or enter a dimension') }}</small>
-              <div class="segmented"><button v-for="(name,value) in {new:label('Новое','New'),union:label('Добавить','Add'),difference:label('Вычесть','Cut')}" :key="value" :aria-pressed="extrusionMode === value" @click="extrusionMode = value">{{ name }}</button></div>
+              <div class="segmented"><button v-for="(name,value) in {new:label('Новое','New'),union:label('Добавить','Add'),difference:label('Вычесть','Cut')}" :key="value" :aria-pressed="extrusionMode === value" @click="setExtrusionMode(value)">{{ name }}</button></div>
+              <fieldset v-if="operation==='extrude' && profileChoices.length>1" class="profile-choices"><legend>{{ label('Контуры профиля', 'Profile contours') }}</legend><label v-for="sketch in profileChoices" :key="sketch.id"><input v-model="profileIds" type="checkbox" :value="sketch.id">{{ sketch.name }}</label><small>{{ label('Внутренние контуры образуют отверстия; вложенные островки сохраняются.', 'Inner contours form holes; nested islands remain solid.') }}</small></fieldset>
+              <small v-if="selectedSketch?.supportBodyId">{{ label('Добавить — наружу от грани. Вычесть — внутрь тела.', 'Add extends outward from the face. Cut goes into the body.') }}</small>
+              <small v-if="previewEmpty">{{ label('Вырез полностью удалит выбранное тело.', 'The cut will remove the entire target body.') }}</small>
               <label v-if="operation === 'extrude'">{{ label('Высота, мм', 'Height, mm') }}<input v-model.number="height" type="number" step="1"></label>
-              <label v-if="operation === 'extrude'">{{ label('Начало Z, мм', 'Start Z, mm') }}<input v-model.number="baseZ" type="number" step="1"></label>
+              <label v-if="operation === 'extrude'">{{ label('Смещение от плоскости, мм', 'Plane offset, mm') }}<input v-model.number="baseZ" type="number" step="1"></label>
               <template v-if="operation === 'revolve'">
                 <label>{{ label('Ось в эскизе', 'Sketch axis') }}<select v-model="revolveAxis"><option value="y">Y · {{ label('вертикаль', 'vertical') }}</option><option value="x">X · {{ label('горизонталь', 'horizontal') }}</option></select></label>
                 <label>{{ label('Смещение оси, мм', 'Axis offset, mm') }}<input v-model.number="revolveOffset" type="number" step="1"></label>
@@ -1840,7 +2011,7 @@ watch([() => props.open, () => props.seedDocument], ([open, seed]) => {
               </template>
               <label v-if="extrusionMode !== 'new'">{{ label('Тело', 'Body') }}<select v-model="targetBody"><option v-for="b in document.bodies" :key="b.id" :value="b.id">{{ b.name }}</option></select></label>
               <small v-if="previewError" role="alert">{{ previewError }}</small>
-              <div><button class="primary" :disabled="!previewBody || !!previewError || (extrusionMode !== 'new' && !targetBody)" @click="extrude">{{ label('Готово · Enter', 'Apply · Enter') }}</button><button @click="operation = null">Esc</button></div>
+              <div><button class="primary" :disabled="(!previewBody && !previewEmpty) || !!previewError || (extrusionMode !== 'new' && !targetBody)" @click="extrude">{{ label('Готово · Enter', 'Apply · Enter') }}</button><button @click="operation = null">Esc</button></div>
             </div>
             <div v-if="pane === '2d' && operation === 'array'" class="operation-card">
               <strong>{{ label('Круговые копии', 'Circular copies') }}</strong><small>{{ label('Количество включает исходный эскиз', 'Count includes the original sketch') }}</small>
@@ -1849,7 +2020,7 @@ watch([() => props.open, () => props.seedDocument], ([open, seed]) => {
               <div><button class="primary" :disabled="!copyPreview.length" @click="applyCopies">{{ label('Готово · Enter', 'Apply · Enter') }}</button><button @click="operation = null">Esc</button></div>
             </div>
             <div v-if="pane === '2d' && !document.sketches.length && !draft.length" class="empty-hint"><strong>{{ label('Начните с контура', 'Start with a contour') }}</strong><span>{{ label('Выберите фигуру сверху и нарисуйте её мышью', 'Choose a tool above and draw with the mouse') }}</span></div>
-            <div v-if="pane === '3d' && !document.bodies.length && !solidActive" class="empty-hint"><strong>{{ label('Здесь появится объём', 'Your solid appears here') }}</strong><span>{{ label('Выберите эскиз слева и нажмите «Выдавить»', 'Select a sketch on the left and press Extrude') }}</span></div>
+            <div v-if="pane === '3d' && !document.bodies.length && !solidActive" class="empty-hint"><strong>{{ label('Из плоской фигуры — в объём', 'Turn a flat shape into a solid') }}</strong><span>{{ label('Выберите эскиз слева и нажмите «Выдавить»', 'Select a sketch on the left and press Extrude') }}</span></div>
             <div v-if="pane === '3d' && subtract" class="operation-card subtract-card" role="dialog" :aria-label="label('Вычитание', 'Subtraction')">
               <strong>{{ label('Вычесть: A − B', 'Subtract: A − B') }}</strong>
               <button type="button" class="subtract-field" :aria-pressed="subtract.active === 'a'" @click="subtract.active = 'a'">
@@ -1951,12 +2122,24 @@ watch([() => props.open, () => props.seedDocument], ([open, seed]) => {
   </section>
 </template>
 <style scoped>
+.restore-loading{position:absolute;inset:0;z-index:100;display:grid;place-items:center;background:var(--bg);color:var(--text-dim)}
+
+.workplane-hint{padding:7px 12px;color:var(--accent);background:var(--surface);border-bottom:1px solid var(--border)}.profile-choices{display:grid;gap:5px;max-height:160px;overflow:auto;border:1px solid var(--border);padding:8px}.profile-choices input[type=checkbox]{width:auto}
+
+.sketch-start-bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:8px 12px;border-bottom:1px solid var(--border);background:var(--surface)}.sketch-start-bar>button{display:inline-flex;align-items:center;gap:6px}.extrude-sketch:not(:disabled){border-color:var(--accent);color:var(--accent)}
+
 .direct-workspace{position:fixed;inset:46px 0 28px;z-index:20;display:flex;flex-direction:column;min-height:0;background:var(--bg);color:var(--text);outline:none;font-size:13px}.workspace-bar{display:flex;align-items:center;gap:16px;padding:10px 16px;border-bottom:1px solid var(--border);background:var(--surface)}button,input,summary,.file-open{color:var(--text);background:var(--surface-raised);border:1px solid var(--border);border-radius:5px;padding:7px 10px;font:inherit}button,summary{cursor:pointer}button:disabled{opacity:.4;cursor:default}button:hover:not(:disabled){background:var(--hover)}button:focus-visible,summary:focus-visible{outline:2px solid var(--accent)}[aria-pressed=true]{border-color:var(--accent);color:var(--accent)}.back{background:transparent}.command-search{display:inline-flex;align-items:center;gap:8px;min-width:190px;padding:6px 10px;background:var(--bg);color:var(--text-dim);border-radius:8px}.command-search span{flex:1;text-align:left}.command-search kbd{font:11px var(--font-mono,monospace);padding:1px 5px;border:1px solid var(--border);border-radius:4px}.history-tools{display:flex;gap:4px}.history-tools button{font-size:20px;padding:2px 12px}.save-status{margin-left:auto;display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;color:var(--text-dim)}.save-status.error{color:var(--danger)}.file-menu>summary{display:inline-flex;align-items:center;gap:6px;list-style:none}.file-menu>summary::-webkit-details-marker{display:none}.file-menu{position:relative}.file-menu>div{position:absolute;right:0;top:40px;z-index:5;width:250px;display:grid;gap:6px;padding:10px;background:var(--surface);border:1px solid var(--border);box-shadow:0 8px 30px #0004}.file-open input{display:block;width:100%;padding:4px;font-size:11px}.split-workspace{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,var(--split)) 7px minmax(0,1fr)}.split-workspace.sketch-hidden{grid-template-columns:minmax(0,1fr)}.pane-heading .pane-toggle{margin-left:auto;padding:4px 8px}.pane-heading .pane-toggle+button{margin-left:0}.pane{display:flex;flex-direction:column;min-width:0;min-height:0}.pane-heading{display:flex;align-items:center;gap:12px;padding:10px 14px;background:var(--surface);border-bottom:1px solid var(--border)}.pane-heading strong{font-size:14px}.pane-heading span{font-size:11px;color:var(--text-dim)}.pane-heading button{margin-left:auto;padding:4px 9px}.pane-tools{min-height:46px;padding:7px 12px;display:flex;gap:5px;align-items:center;flex-wrap:wrap;border-bottom:1px solid var(--border)}.pane-tools .subtle{flex:1}.pane-tools button{font-size:12px}.canvas-wrap{flex:1;min-height:120px;position:relative;overflow:hidden}.canvas-wrap svg{position:relative;width:100%;height:100%;display:block;touch-action:none;outline:none;user-select:none;-webkit-user-select:none;-webkit-user-drag:none}.canvas-wrap svg text{user-select:none;-webkit-user-select:none}.gpu-layer{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}.canvas-wrap svg:focus-visible{box-shadow:inset 0 0 0 2px var(--accent)}.selected{stroke-width:3}.splitter{background:var(--surface-raised);cursor:col-resize;touch-action:none;display:flex;align-items:center;justify-content:center;border-inline:1px solid var(--border)}.splitter:hover,.splitter:focus-visible{background:var(--accent)}.splitter span{height:35px;width:2px;background:var(--text-dim);border-radius:2px}.context-bar{min-height:60px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:10px 16px;border-top:1px solid var(--border);background:var(--surface)}.context-bar label{display:flex;align-items:center;gap:5px;color:var(--text-dim)}.context-bar input{width:65px;padding:6px}.primary{background:var(--accent);color:var(--bg);font-weight:600}.delete{margin-left:auto}.subtle{color:var(--text-dim);font-size:12px}.empty-hint{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;text-align:center;pointer-events:none;color:var(--text-dim);padding:25px}.empty-hint strong{font-size:18px;font-weight:500}.empty-hint span{font-size:12px;max-width:280px}.subtract-card{display:grid;gap:8px}.subtract-field{display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left;padding:8px 10px}.subtract-field[aria-pressed=true]{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}.subtract-field small{color:var(--text-dim);font:11px var(--font-mono,monospace);white-space:normal}.subtract-card>div{display:flex;justify-content:flex-end;gap:6px}.fps-badge{position:absolute;left:14px;bottom:14px;padding:3px 8px;border-radius:5px;background:var(--surface);color:var(--text-dim);font:11px var(--font-mono,monospace);pointer-events:none;opacity:.85}.fps-badge.low{color:var(--danger)}.zoom-tools{position:absolute;right:14px;bottom:14px;display:flex;gap:4px}.zoom-tools button{font-size:18px}.workspace-row{flex:1;min-height:0;display:flex}.side-dock{flex:0 0 344px;display:flex;min-height:0;border-left:1px solid var(--border);background:var(--bg)}.side-dock.collapsed{flex-basis:46px}.dock-rail{flex:0 0 46px;display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px 0;border-right:1px solid var(--border)}.dock-rail button{width:34px;height:34px;padding:0;border:0;border-radius:8px;background:transparent;color:var(--text-dim);display:flex;align-items:center;justify-content:center}.dock-rail button:hover{color:var(--text);background:var(--hover)}.dock-rail button[aria-selected=true]{color:var(--text);background:var(--surface-raised)}.dock-rail-spacer{flex:1}.dock-body{flex:1;min-width:0;min-height:0;display:flex;flex-direction:column;overflow:auto}.dock-heading{height:42px;flex-shrink:0;display:flex;align-items:center;gap:8px;padding:0 12px;border-bottom:1px solid var(--border);font-weight:600}.dock-heading span{color:var(--text-dim);font-weight:400}.scene-list{list-style:none;margin:0;padding:6px;display:flex;flex-direction:column;gap:1px}.scene-group{display:flex;align-items:center;gap:4px;padding:8px 8px 4px;font-size:11px;font-weight:600;color:var(--text-dim);text-transform:uppercase;letter-spacing:.06em}.scene-group .group-name{flex:1;overflow:hidden;text-overflow:ellipsis}.scene-group .group-remove{width:auto;flex:0 0 auto;padding:0 6px;border:0;background:transparent;color:var(--text-dim);font-size:14px;line-height:1}.scene-group .group-remove:hover{color:var(--danger);background:transparent}.dock-heading .dock-action{margin-left:auto;width:28px;height:28px;padding:0;display:inline-flex;align-items:center;justify-content:center;border-radius:7px}.scene-list li>button{width:100%;display:flex;align-items:center;gap:8px;height:32px;padding:0 8px;border:0;border-radius:7px;background:transparent;color:var(--text);text-align:left;font-family:var(--font-mono,monospace);font-size:12.5px}.scene-list li>button:hover{background:var(--hover)}.scene-list li>button[aria-pressed=true]{background:color-mix(in srgb,var(--accent) 16%,var(--bg));outline:1px solid var(--accent);outline-offset:-1px;color:var(--text)}.scene-list small{margin-left:auto;font-size:11px;color:var(--text-dim);font-family:var(--font-ui,sans-serif)}.dot{width:8px;height:8px;border-radius:2px;background:#c3b7a3}.dot.sketch{background:var(--accent)}.dot.nurbs{background:#77eac5}.scene-empty{padding:16px 12px;color:var(--text-dim);font-size:12px;line-height:1.5}.dock-props{display:grid;gap:10px;padding:12px 14px}.exact-grid{display:flex;flex-wrap:wrap;gap:8px}.exact-grid label,.exact-detail{display:flex;align-items:center;gap:5px;color:var(--text-dim)}.exact-grid input,.exact-detail input{width:64px;padding:6px}.exact-actions{display:flex;gap:6px;flex-wrap:wrap}.dock-props small{color:var(--text-dim);line-height:1.5}.group-dialog-backdrop{position:absolute;inset:0;z-index:30;display:flex;align-items:center;justify-content:center;background:#0008}.group-dialog{width:min(560px,92vw);max-height:82%;display:flex;flex-direction:column;gap:10px;padding:16px;background:var(--surface);border:1px solid var(--border);border-radius:10px;box-shadow:0 12px 40px #0006}.group-dialog-head{display:flex;align-items:center}.group-dialog-head strong{flex:1;font-size:14px}.group-dialog-head button{padding:2px 9px;background:transparent;border:0;font-size:16px}.group-dialog-name{display:flex;align-items:center;gap:8px;color:var(--text-dim)}.group-dialog-name input{flex:1;padding:7px}.group-dialog-source{flex:1;min-height:200px;padding:10px;resize:vertical;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:6px;font:12.5px/1.5 var(--font-mono,monospace)}.group-dialog small{color:var(--text-dim);line-height:1.5}.group-dialog-actions{display:flex;justify-content:flex-end;gap:8px}.error-bar{padding:10px 16px;color:var(--danger);background:var(--surface);display:flex;justify-content:space-between}.notice-bar{padding:10px 16px;color:var(--text-dim);background:var(--surface);display:flex;justify-content:space-between;gap:12px}@media(max-width:750px){.direct-workspace{inset:0}.side-dock{display:none}.workspace-bar{gap:8px;padding:8px}.workspace-bar>strong{font-size:12px}.save-status{display:none}.pane-heading{padding:8px;gap:5px}.pane-heading span{display:none}.pane-tools{padding:5px}.pane-tools button{padding:5px;font-size:11px}.context-bar{gap:7px;padding:8px}.context-bar input{width:52px}.empty-hint strong{font-size:14px}}
-.hovered{stroke:#e1d4ff;stroke-width:3}.operation-card{position:absolute;right:14px;top:14px;width:245px;display:grid;gap:10px;padding:15px;background:var(--surface);border:1px solid var(--border);border-radius:9px;box-shadow:0 8px 24px #0003}.operation-card small{font-size:11px;color:var(--text-dim);line-height:1.5}.operation-card label{display:flex;justify-content:space-between;align-items:center;gap:8px}.operation-card input{width:90px}.operation-card select{max-width:145px;background:var(--surface-raised);color:var(--text);padding:5px;border:1px solid var(--border)}.operation-card>div{display:flex;gap:5px}.segmented button{padding:5px 8px;font-size:12px}.live-measure{position:absolute;left:14px;top:14px;padding:8px 12px;border-radius:5px;background:var(--surface);color:var(--accent);font:14px monospace;pointer-events:none}.height-handle{cursor:ns-resize}.snap-toggle{display:flex;align-items:center;gap:4px;font-size:11px;margin-left:auto}.grid-input{width:50px;padding:4px}.transform-menu{position:relative}.transform-menu>div{position:absolute;bottom:40px;left:0;width:270px;display:flex;flex-wrap:wrap;gap:10px;padding:14px;border:1px solid var(--border);background:var(--surface);border-radius:8px;box-shadow:0 8px 24px #0003}.help-card{max-height:75vh;overflow:auto;position:absolute;right:18px;bottom:76px;width:min(360px,85vw);padding:20px;background:var(--surface);border:1px solid var(--border);border-radius:10px;box-shadow:0 8px 30px #0004;font-size:13px;line-height:1.6;z-index:5}@media(max-width:750px){.operation-card{width:195px;padding:10px;right:8px;top:8px}.pane-tools .subtle{display:none}.snap-toggle{margin-left:0}}
+.hovered{stroke:#e1d4ff;stroke-width:3}.operation-card{max-height:calc(100% - 28px);overflow-y:auto;position:absolute;right:14px;top:14px;width:245px;display:grid;gap:10px;padding:15px;background:var(--surface);border:1px solid var(--border);border-radius:9px;box-shadow:0 8px 24px #0003}.operation-card small{font-size:11px;color:var(--text-dim);line-height:1.5}.operation-card label{display:flex;justify-content:space-between;align-items:center;gap:8px}.operation-card input{width:90px}.operation-card select{max-width:145px;background:var(--surface-raised);color:var(--text);padding:5px;border:1px solid var(--border)}.operation-card>div{display:flex;gap:5px}.segmented button{padding:5px 8px;font-size:12px}.live-measure{position:absolute;left:14px;top:14px;padding:8px 12px;border-radius:5px;background:var(--surface);color:var(--accent);font:14px monospace;pointer-events:none}.height-handle{cursor:ns-resize}.snap-toggle{display:flex;align-items:center;gap:4px;font-size:11px;margin-left:auto}.grid-input{width:50px;padding:4px}.transform-menu{position:relative}.transform-menu>div{position:absolute;bottom:40px;left:0;width:270px;display:flex;flex-wrap:wrap;gap:10px;padding:14px;border:1px solid var(--border);background:var(--surface);border-radius:8px;box-shadow:0 8px 24px #0003}.help-card{max-height:75vh;overflow:auto;position:absolute;right:18px;bottom:76px;width:min(360px,85vw);padding:20px;background:var(--surface);border:1px solid var(--border);border-radius:10px;box-shadow:0 8px 30px #0004;font-size:13px;line-height:1.6;z-index:5}@media(max-width:750px){.operation-card{width:195px;padding:10px;right:8px;top:8px}.pane-tools .subtle{display:none}.snap-toggle{margin-left:0}}
 .nurbs-card{max-height:calc(100% - 28px);overflow:auto}.nurbs-cage circle{cursor:move}.trim-grid{display:grid!important;grid-template-columns:1fr 1fr;gap:5px!important}.trim-grid label{display:grid!important;gap:2px!important;font-size:11px}.trim-grid input{width:100%!important;box-sizing:border-box}
 </style>
 
 <style scoped>
+.restore-loading{position:absolute;inset:0;z-index:100;display:grid;place-items:center;background:var(--bg);color:var(--text-dim)}
+
+.workplane-hint{padding:7px 12px;color:var(--accent);background:var(--surface);border-bottom:1px solid var(--border)}.profile-choices{display:grid;gap:5px;max-height:160px;overflow:auto;border:1px solid var(--border);padding:8px}.profile-choices input[type=checkbox]{width:auto}
+
+.sketch-start-bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:8px 12px;border-bottom:1px solid var(--border);background:var(--surface)}.sketch-start-bar>button{display:inline-flex;align-items:center;gap:6px}.extrude-sketch:not(:disabled){border-color:var(--accent);color:var(--accent)}
+
 @media(max-width:750px){
   .workspace-bar{flex-wrap:wrap}
   .command-search{flex:1 1 160px;min-width:0}

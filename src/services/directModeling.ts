@@ -10,7 +10,7 @@ import type { NurbsBrep } from './geometry/brep'
 import { BrepInspectionCache } from './brepInspectionCache'
 
 export type Point2 = [number, number]
-export interface DirectSketch { id: string; name: string; points: Point2[]; closed: boolean; analytic?: AnalyticCurve; plane?: SketchPlane }
+export interface DirectSketch { id: string; name: string; points: Point2[]; closed: boolean; analytic?: AnalyticCurve; plane?: SketchPlane; supportBodyId?: string }
 /** `group` names a flat, optional grouping shown in the scene list. Bodies built from
  * source share one, so a rebuild can be recognised, replaced or deleted as a unit. */
 export interface DirectBody { id: string; name: string; mesh: PolygonMesh; brep?: NurbsBrep; group?: string }
@@ -74,6 +74,7 @@ function* directDocumentValidation(text: string): Generator<void, DirectDocument
     ids.add(item.id)
   }
   for (const s of d.sketches) {
+    if(s.supportBodyId!==undefined&&(typeof s.supportBodyId!=='string'||s.supportBodyId.length>200))throw new Error('Invalid sketch support body.')
     if (s.analytic) { s.points = sampleCurve(s.analytic); s.closed = s.analytic.kind === 'circle' }
     if (s.plane) {
       const {origin,u,v}=s.plane

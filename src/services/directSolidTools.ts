@@ -20,7 +20,13 @@ export function selectedBrepStraightEdge(body:DirectBody,vertices:[number,number
  return callGeometryRust<number>('cad_select_brep_edge',{body,vertices})
 }
 export function facePlane(body:DirectBody,face:SolidFace):SketchPlane {
- return callGeometryRust('cad_face_plane',{mesh:body.mesh,face})
+ const plane=callGeometryRust<SketchPlane>('cad_face_plane',{mesh:body.mesh,face})
+ if(body.brep){
+  const support=selectedBrepSupport(body,face.triangles),surface=body.brep.faces[support].surface
+  const normal=face.normal,tolerance=Math.max(body.brep.toleranceMm*10,1e-6)
+  if(surface.controlPoints.flat().some(p=>Math.abs(p.reduce((s,v,i)=>s+(v-plane.origin[i])*normal[i],0))>tolerance))throw Error('Choose a planar face for a sketch.')
+ }
+ return plane
 }
 export function pushPullFace(body:DirectBody,faceIndex:number,distance:number):DirectBody {
  return callGeometryRust('cad_planar_edit',{body,action:'push',faces:[faceIndex],amount:distance})

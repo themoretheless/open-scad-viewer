@@ -1,4 +1,4 @@
-import { cross3, xyPlane, transformSketch } from './directSketchGeometry'
+import { cross3, xyPlane, transformSketch, type SketchPlane } from './directSketchGeometry'
 import { booleanPolygonMeshes, type PolygonMesh } from './geometry/polygon'
 import { extrudeDirectSketch, parseDirectDocument, type DirectBody, type DirectDocument, type DirectSketch, type Point2 } from './directModeling'
 
@@ -14,6 +14,14 @@ export function unprojectDirectXY(p: Point2, camera: OrbitCamera): Point2 {
   if (Math.abs(sp) < .04) throw new Error('Rotate the view away from the horizon to move in XY.')
   const horizontal = p[1] / sp, cy = Math.cos(camera.yaw), sy = Math.sin(camera.yaw)
   return [p[0] * cy + horizontal * sy, -p[0] * sy + horizontal * cy]
+}
+/** Intersect an orthographic viewport ray with an arbitrary sketch plane. */
+export function unprojectDirectPlane(p: Point2, plane: SketchPlane, camera: OrbitCamera): Point2 {
+  const o=projectDirectPoint(plane.origin,camera),u=projectDirectPoint(plane.u,camera),v=projectDirectPoint(plane.v,camera)
+  const determinant=u[0]*v[1]-u[1]*v[0]
+  if(Math.abs(determinant)<1e-6)throw Error('Rotate the view away from the sketch plane edge.')
+  const x=p[0]-o[0],y=p[1]-o[1]
+  return [(x*v[1]-y*v[0])/determinant,(u[0]*y-u[1]*x)/determinant]
 }
 export function snapDirectPoint(p: Point2, candidates: Point2[], tolerance: number, grid: number): { point: Point2; kind: 'vertex' | 'grid' | null } {
   let nearest: Point2 | undefined, distance = tolerance

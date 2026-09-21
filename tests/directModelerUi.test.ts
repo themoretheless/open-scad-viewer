@@ -4,8 +4,12 @@ import {readFileSync} from 'node:fs'
 import {resolve} from 'node:path'
 import {IDBFactory} from 'fake-indexeddb'
 import * as stepStore from '../src/services/cadStepIndexedDb'
+import * as geometryKernel from '../src/services/geometry/kernel'
+import { useModelingGrid } from '../src/services/modelingGrid'
 import DirectModeler from '../src/features/DirectModeler.vue'
 import {extrudeDirectSketch,type DirectDocument} from '../src/services/directModeling'
+import {projectDirectPoint,defaultDirectCamera} from '../src/services/directModelingTools'
+import {solidTopology} from '../src/services/directSolidTools'
 import {sampleCurve} from '../src/services/directSketchGeometry'
 import {inspectPolygonMesh} from '../src/services/geometry/polygon'
 import {createBrepBox,analyzeNurbsBrep,createBrepCylinder,createBrepSphere,transformNurbsBrep,tessellateNurbsBrep} from '../src/services/geometry/brep'
@@ -29,7 +33,7 @@ const renderer=createRenderer<Node,Node>({
  remove:n=>{if(n.parent)n.parent.children=n.parent.children.filter(c=>c!==n)},setScopeId:()=>{},insertStaticContent:()=>{throw Error('Unexpected static content')}
 })
 const mounts:Array<()=>void>=[]
-afterEach(()=>{mounts.splice(0).forEach(f=>f());vi.unstubAllGlobals()})
+afterEach(()=>{mounts.splice(0).forEach(f=>f());const settings=useModelingGrid();settings.enabled.value=true;settings.grid.value=true;settings.geometry.value=true;settings.guides.value=true;settings.step.value=10;settings.unit.value='mm';vi.unstubAllGlobals()})
 async function mount(props: Record<string,unknown> = {}){
  const sketch={id:'s',name:'Profile',closed:true,points:[[0,0],[10,0],[10,10],[0,10]] as [number,number][]}
  let stored=JSON.stringify({version:1,sketches:[sketch,{id:'circle',name:'Circle',closed:true,analytic:{kind:'circle',center:[20,5],radius:3,start:0,sweep:360},points:sampleCurve({kind:'circle',center:[20,5],radius:3,start:0,sweep:360})},{id:'line',name:'Line',closed:false,points:[[0,-5],[2,-5]]},{id:'boundary',name:'Boundary',closed:false,points:[[5,-10],[5,0]]}],bodies:[{...extrudeDirectSketch(sketch,10,'b'),name:'Cube'}]})
@@ -249,14 +253,14 @@ it('binds extend and trim to the selected 2D edge',async()=>{
 it('creates a sketch on the selected face and preserves its plane through extrusion',async()=>{
  const ui=await mount();await ui.click('Cube');await ui.click('Faces');await ui.pointer(ui.all(ui.svg()).find(n=>n.tag==='polygon')!);await ui.click('Sketch on face')
  const svg=ui.all().find(n=>n.tag==='svg'&&n.props['aria-label']==='2D sketch canvas')!
- await ui.pointer(svg,1,-1);svg.props.onPointermove(ui.event(svg,3,-3));svg.props.onPointerup(ui.event(svg,3,-3));await nextTick()
+ svg.props.onPointerdown({...ui.event(svg,1,-1),altKey:true});svg.props.onPointermove({...ui.event(svg,3,-3),altKey:true});svg.props.onPointerup({...ui.event(svg,3,-3),altKey:true});await nextTick()
  const sketch=ui.doc().sketches.at(-1)!;expect(sketch.plane).toBeDefined();expect(sketch.points).toHaveLength(4)
- await ui.click('Extrude · E');await new Promise(resolve=>setTimeout(resolve,80));await nextTick();await ui.click('Apply · Enter')
+ await ui.click('Extrude · E');await ui.click('New');await new Promise(resolve=>setTimeout(resolve,80));await nextTick();await ui.click('Apply · Enter')
  expect(ui.doc().bodies).toHaveLength(2);expect(inspectPolygonMesh(ui.doc().bodies[1].mesh).signedVolumeMm3).toBeCloseTo(40)
 })
 it('commits a gizmo drag once and undoes it',async()=>{
  const ui=await mount();await ui.click('Cube');const svg=ui.svg(),gizmo=ui.all(svg).find(n=>n.tag==='g'&&n.props.onPointerdown&&n.children.some(c=>c.tag==='line'))!
- const before=ui.doc();await ui.pointer(gizmo,0,0);svg.props.onPointermove(ui.event(svg,20,0));svg.props.onPointerup(ui.event(svg,20,0));await nextTick()
+ const before=ui.doc();await ui.pointer(gizmo,0,0);svg.props.onPointermove({...ui.event(svg,20,0),altKey:true});svg.props.onPointerup({...ui.event(svg,20,0),altKey:true});await nextTick()
  expect(ui.doc().bodies[0].mesh.positions).not.toEqual(before.bodies[0].mesh.positions);await ui.click('↶');expect(ui.doc()).toEqual(before)
 })
 it('drags a body itself, previewing in place and committing the exact move once',async()=>{
@@ -394,9 +398,70 @@ it('previews, applies and undoes a retained ruled loft from ordered sketch selec
  expect(ui.doc()).toEqual(before)
 })
 
+it('shares cell units between panes and snaps drawn corners to the configured grid',async()=>{
+ const ui=await mount(),settings=useModelingGrid()
+ settings.geometry.value=false;settings.guides.value=false
+ const units=ui.all().find(n=>n.tag==='select'&&n.props['aria-label']==='Cell units')!
+ units.props.onChange({target:{value:'in'}});await nextTick()
+ const size=ui.all().find(n=>n.tag==='input'&&n.props['aria-label']==='Cell size')!
+ size.props.onChange({target:{valueAsNumber:1,value:'1'}});await nextTick()
+ expect(settings.step.value).toBe(25.4)
+ expect(ui.all().filter(n=>n.tag==='select'&&n.props['aria-label']==='Cell units').every(n=>n.props.value==='in')).toBe(true)
+ await ui.click('Rectangle · R')
+ const svg=ui.all().find(n=>n.tag==='svg'&&n.props['aria-label']==='2D sketch canvas')!
+ await ui.pointer(svg,2,-2);svg.props.onPointermove(ui.event(svg,28,-29));await nextTick()
+ expect(ui.all(svg).some(n=>n.tag==='text'&&ui.text(n)==='Grid')).toBe(true)
+ svg.props.onPointerup(ui.event(svg,28,-29));await nextTick()
+ expect(ui.doc().sketches.at(-1)!.points).toEqual([[0,0],[25.4,0],[25.4,25.4],[0,25.4]])
+ await ui.click('↶');expect(ui.doc().sketches).toHaveLength(4)
+})
+it('snaps a moved sketch by its grabbed corner, and Alt bypasses the same target',async()=>{
+ const ui=await mount(),settings=useModelingGrid();settings.grid.value=false;settings.guides.value=false
+ await ui.click('Profile')
+ const svg=ui.all().find(n=>n.tag==='svg'&&n.props['aria-label']==='2D sketch canvas')!
+ const path=()=>ui.all(svg).find(n=>n.tag==='path'&&n.props.d==='M 0,0 L 10,0 L 10,-10 L 0,-10 Z')!
+ await ui.pointer(path(),.1,-.1);svg.props.onPointermove(ui.event(svg,20.2,-5.2));svg.props.onPointerup(ui.event(svg,20.2,-5.2));await nextTick()
+ expect(ui.doc().sketches[0].points[0]).toEqual([20,5])
+ await ui.click('↶')
+ await ui.pointer(path(),.1,-.1);svg.props.onPointermove({...ui.event(svg,20.2,-5.2),altKey:true});svg.props.onPointerup({...ui.event(svg,20.2,-5.2),altKey:true});await nextTick()
+ expect(ui.doc().sketches[0].points[0][0]).toBeCloseTo(20.1)
+ expect(ui.doc().sketches[0].points[0][1]).toBeCloseTo(5.1)
+})
+
+it('snaps a 3D translation to the grid without unlocking the gizmo axis',async()=>{
+ const ui=await mount();await ui.click('Cube');const svg=ui.svg(),gizmo=ui.all(svg).find(n=>n.tag==='g'&&n.props.onPointerdown&&n.children.some(c=>c.tag==='line'))!
+ const before=ui.doc().bodies[0].mesh.positions
+ await ui.pointer(gizmo,0,0);svg.props.onPointermove(ui.event(svg,20,0));svg.props.onPointerup(ui.event(svg,20,0));await nextTick()
+ const after=ui.doc().bodies[0].mesh.positions
+ const delta=after[0]-before[0]
+ expect(delta).toBe(5)
+ for(let i=0;i<after.length;i++)expect(after[i]-before[i]).toBeCloseTo(i%3===0?delta:0)
+ await ui.click('↶');expect(ui.doc().bodies[0].mesh.positions).toEqual(before)
+})
+
+it('starts with a flat shape from the main toolbar and extrudes it into a separate solid',async()=>{
+ const ui=await mount({initialDocument:{version:1,sketches:[],bodies:[]}})
+ expect(ui.button('Extrude · E').props.disabled).toBe(true)
+ await ui.click('Rectangle · R')
+ const svg=ui.all().find(n=>n.tag==='svg'&&n.props['aria-label']==='2D sketch canvas')!
+ await ui.pointer(svg,0,0);svg.props.onPointermove(ui.event(svg,20,-20));svg.props.onPointerup(ui.event(svg,20,-20));await nextTick()
+ expect(ui.doc().sketches).toHaveLength(1)
+ expect(ui.doc().bodies).toHaveLength(0)
+ expect(ui.button('Extrude · E').props.disabled).toBe(false)
+ await ui.click('Extrude · E')
+ const heightLabel=ui.all().find(n=>n.tag==='label'&&ui.text(n)==='Height, mm')!
+ heightLabel.children.find(n=>n.tag==='input')!.props['onUpdate:modelValue'](15)
+ await nextTick();await new Promise(resolve=>setTimeout(resolve,100));await nextTick()
+ expect(ui.button('Apply · Enter').props.disabled).toBe(false)
+ await ui.click('Apply · Enter')
+ expect(ui.doc().bodies).toHaveLength(1)
+ expect(ui.doc().sketches).toHaveLength(1)
+ expect(inspectPolygonMesh(ui.doc().bodies[0].mesh).signedVolumeMm3).toBeCloseTo(6000)
+ await ui.click('↶');expect(ui.doc().bodies).toHaveLength(0);expect(ui.doc().sketches).toHaveLength(1)
+})
+
 it('switches touch controls live and cancels a sketch edit when a pinch takes over', async()=>{
  const ui=await mount()
- await ui.click('Rectangle · R')
  await ui.click('Mouse')
  expect(ui.button('Touch').props['aria-pressed']).toBe(true)
  expect(ui.button('Navigate')).toBeTruthy()
@@ -420,4 +485,52 @@ it('switches touch controls live and cancels a sketch edit when a pinch takes ov
  await ui.click('Touch')
  expect(ui.button('Mouse').props['aria-pressed']).toBe(false)
  expect(ui.doc()).toEqual(before)
+})
+
+it('draws on a picked 3D face, then adds and cuts material from its supporting body',async()=>{
+ const brep=createBrepBox([0,0,0],[10,10,10]),built=tessellateNurbsBrep(brep,2)
+ const body={id:'base',name:'Base',brep,mesh:{positions:built.positions,indices:built.indices}}
+ const ui=await mount({initialDocument:{version:1,sketches:[],bodies:[body]}}),svg=ui.svg(),camera=defaultDirectCamera()
+ const face=solidTopology(body.mesh).faces.find(f=>f.normal[2]>.99)!,triangle=face.triangles[0]
+ const expected=body.mesh.indices.slice(triangle*3,triangle*3+3).map(i=>projectDirectPoint(body.mesh.positions.slice(i*3,i*3+3),camera).slice(0,2).join(',')).join(' ')
+ await ui.click('On face')
+ await ui.pointer(ui.all(svg).find(n=>n.tag==='polygon'&&n.props.points===expected)!)
+ const a=projectDirectPoint([2,2,10],camera),b=projectDirectPoint([4,4,10],camera)
+ svg.props.onPointerdown({...ui.event(svg,a[0],a[1]),altKey:true});svg.props.onPointermove({...ui.event(svg,b[0],b[1]),altKey:true});svg.props.onPointerup({...ui.event(svg,b[0],b[1]),altKey:true});await nextTick()
+ const sketch=ui.doc().sketches[0]
+ expect(sketch.supportBodyId).toBe('base');expect(sketch.plane!.origin[2]).toBeCloseTo(10)
+ expect(ui.doc().bodies).toHaveLength(1)
+ const setHeight=async(value:number)=>{const input=ui.all().find(n=>n.tag==='label'&&ui.text(n)==='Height, mm')!.children.find(n=>n.tag==='input')!;input.props['onUpdate:modelValue'](value);await nextTick();await new Promise(resolve=>setTimeout(resolve,100));await nextTick()}
+ await ui.click('Extrude · E');expect(ui.button('Add').props['aria-pressed']).toBe(true);await setHeight(3)
+ expect(analyzeNurbsBrep(ui.doc().bodies[0].brep!).signedVolumeMm3).toBeCloseTo(1000)
+ await ui.click('Apply · Enter');expect(ui.doc().bodies).toHaveLength(1);expect(analyzeNurbsBrep(ui.doc().bodies[0].brep!).signedVolumeMm3).toBeCloseTo(1012)
+ await ui.click('↶');await ui.click(sketch.name);await ui.click('Extrude · E');await setHeight(2);await ui.click('Cut');await new Promise(resolve=>setTimeout(resolve,100));await nextTick()
+ expect(ui.all().find(n=>n.tag==='label'&&ui.text(n)==='Height, mm')!.children.find(n=>n.tag==='input')!.value).toBe(-2)
+ await ui.click('Apply · Enter');expect(analyzeNurbsBrep(ui.doc().bodies[0].brep!).signedVolumeMm3).toBeCloseTo(992)
+ await ui.click('↶');expect(analyzeNurbsBrep(ui.doc().bodies[0].brep!).signedVolumeMm3).toBeCloseTo(1000)
+})
+it('selects an inner contour as a hole in the extrusion profile',async()=>{
+ const sketch=(id:string,name:string,a:number,b:number)=>({id,name,closed:true,points:[[a,a],[b,a],[b,b],[a,b]]})
+ const ui=await mount({initialDocument:{version:1,bodies:[],sketches:[sketch('outer','Outer',0,10),sketch('hole','Hole',3,5)]},initialSelection:'outer'})
+ await ui.click('Extrude · E')
+ const check=ui.all().find(n=>n.tag==='label'&&ui.text(n)==='Hole')!.children.find(n=>n.tag==='input')!
+ check.props['onUpdate:modelValue'](['outer','hole']);await nextTick();await new Promise(resolve=>setTimeout(resolve,100));await nextTick()
+ await ui.click('Apply · Enter');expect(ui.doc().bodies).toHaveLength(1)
+ expect(analyzeNurbsBrep(ui.doc().bodies[0].brep!).signedVolumeMm3).toBeCloseTo(960)
+ expect(ui.doc().bodies[0].brep!.faces.filter(f=>f.holes.length)).toHaveLength(2)
+})
+
+it('restores a saved body after asynchronous kernel warm-up without recording an empty undo state',async()=>{
+ let release!:()=>void
+ const ready=vi.spyOn(geometryKernel,'isGeometryKernelReady').mockReturnValue(false)
+ const warm=vi.spyOn(geometryKernel,'warmGeometryKernel').mockImplementation(()=>new Promise<void>(resolve=>{release=resolve}))
+ try{
+  const ui=await mount()
+  expect(ui.all().some(n=>ui.text(n)==='Restoring geometry…')).toBe(true)
+  release();await new Promise(resolve=>setTimeout(resolve,0));await nextTick()
+  expect(ui.button('Cube')).toBeTruthy()
+  expect(ui.doc().bodies).toHaveLength(1)
+  expect(ui.button('↶').props.disabled).toBe(true)
+  expect(ui.all().some(n=>n.props.role==='alert')).toBe(false)
+ }finally{ready.mockRestore();warm.mockRestore()}
 })
