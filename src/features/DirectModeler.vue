@@ -45,6 +45,76 @@ const workspace = ref<HTMLElement>(), splitArea = ref<HTMLElement>()
 const split = ref(34)
 const views = ref<Record<Pane, number>>({ '2d': 160, '3d': 160 })
 const centers = ref<Record<Pane, Point2>>({ '2d': [0, 0], '3d': [0, 0] })
+const savedInputMode = storageGet('scad-input-mode')
+const inputMode = ref<'mouse' | 'touch'>(savedInputMode === 'touch' || (savedInputMode !== 'mouse' && typeof window !== 'undefined' && window.matchMedia?.('(pointer: coarse)').matches) ? 'touch' : 'mouse')
+const touchNavigate = ref(false)
+const touchPointers = new Map<number, { x: number; y: number; pane: Pane; svg: SVGSVGElement }>()
+let multiTouch = false
+function resetInputGesture() {
+  cancelGesture()
+  const captured = [...touchPointers.entries()]
+  touchPointers.clear(); multiTouch = false
+  for (const [id, point] of captured) if (point.svg.hasPointerCapture(id)) point.svg.releasePointerCapture(id)
+}
+function toggleInputMode() {
+  resetInputGesture()
+  inputMode.value = inputMode.value === 'mouse' ? 'touch' : 'mouse'
+  touchNavigate.value = false
+  storageSet('scad-input-mode', inputMode.value)
+}
+function toggleTouchNavigation() { resetInputGesture(); touchNavigate.value = !touchNavigate.value }
+function touchDown(e: PointerEvent, pane: Pane) {
+  if (e.pointerType !== 'touch' || inputMode.value !== 'touch') return
+  const svg = e.currentTarget as SVGSVGElement
+  const first = touchPointers.values().next().value
+  if (first && (first.pane !== pane || touchPointers.size >= 2)) { e.stopPropagation(); return }
+  touchPointers.set(e.pointerId, { x: e.clientX, y: e.clientY, pane, svg })
+  svg.setPointerCapture(e.pointerId)
+  if (touchPointers.size === 2) {
+    // A second finger cancels the edit preview before taking over the camera.
+    cancelGesture(); multiTouch = true; cameraDragging.value = true
+    e.stopPropagation(); e.preventDefault(); return
+  }
+  if (touchNavigate.value) {
+    e.stopPropagation(); e.preventDefault(); svg.focus(); mode.value = pane
+    cameraDragging.value = true
+    if (pane === '3d') orbitDrag = { x:e.clientX, y:e.clientY, yaw:camera.value.yaw, pitch:camera.value.pitch, pointer:e.pointerId, svg }
+    else gesture = { start:position(e), document:history.document, vertex:null, id:'', pointer:e.pointerId, pane, svg, pan:true, center:[...centers.value[pane]] }
+  }
+}
+function touchMove(e: PointerEvent) {
+  const point = touchPointers.get(e.pointerId)
+  if (!point) return
+  if (!multiTouch) { point.x = e.clientX; point.y = e.clientY; return }
+  e.stopPropagation(); e.preventDefault()
+  const other = [...touchPointers.entries()].find(([id]) => id !== e.pointerId)?.[1]
+  if (other) {
+    const distance = Math.hypot(point.x-other.x, point.y-other.y)
+    const nextDistance = Math.hypot(e.clientX-other.x, e.clientY-other.y)
+    const rect = point.svg.getBoundingClientRect()
+    const pixels = Math.max(1, Math.min(rect.width, rect.height))
+    const oldSize = views.value[point.pane]
+    const midX = (point.x+other.x)/2 - rect.left - rect.width/2
+    const midY = (point.y+other.y)/2 - rect.top - rect.height/2
+    if (distance > 2 && nextDistance > 2) zoom(point.pane, distance / nextDistance)
+    const size = views.value[point.pane], center = centers.value[point.pane]
+    centers.value[point.pane] = [
+      center[0] + midX*(oldSize-size)/pixels - (e.clientX-point.x)*size/(2*pixels),
+      center[1] + midY*(oldSize-size)/pixels - (e.clientY-point.y)*size/(2*pixels),
+    ]
+  }
+  point.x = e.clientX; point.y = e.clientY
+}
+function touchEnd(e: PointerEvent) {
+  if (!touchPointers.has(e.pointerId)) return
+  touchPointers.delete(e.pointerId)
+  if (multiTouch) {
+    e.stopPropagation()
+    // Keep the remaining finger inert until lifted to avoid an accidental edit.
+    if (!touchPointers.size) { multiTouch = false; cameraDragging.value = false }
+  }
+}
+function cancelInputGesture() { resetInputGesture() }
 const panes: Pane[] = ['2d', '3d']
 // The 2D sketch pane is hidden by default; it opens on demand or when a sketch tool is picked.
 const sketchPaneOpen = ref(storageGet('scad-solid-sketch-pane') === 'true')
@@ -578,7 +648,7 @@ let lastHoverPick = 0
 /** Pointer move: the drag logic first, then hover by ray while nothing is being dragged. */
 function moveAt(e: PointerEvent) {
   move(e)
-  if (!gpuActive.value || gesture || orbitDrag || manipulatorDrag || vertexDrag || curveDrag || cvDrag || selectionBox.value) return
+  if (e.pointerType === 'touch' || !gpuActive.value || gesture || orbitDrag || manipulatorDrag || vertexDrag || curveDrag || cvDrag || selectionBox.value) return
   if (e.timeStamp - lastHoverPick < 16) return
   lastHoverPick = e.timeStamp
   try {
@@ -765,6 +835,16 @@ async function exportStepOriginal() {
 function project(p: number[], pane: Pane): Point2 { return pane === '2d' ? [p[0], -p[1]] : projectDirectPoint([p[0],p[1],p[2]??0], camera.value).slice(0,2) as Point2 }
 function viewBox(pane: Pane) { const size = views.value[pane], center = centers.value[pane]; return `${center[0] - size / 2} ${center[1] - size / 2} ${size} ${size}` }
 function zoom(pane: Pane, factor: number) { views.value[pane] = Math.max(.1, Math.min(2e6, views.value[pane] * factor)) }
+function wheelZoom(e: WheelEvent, pane: Pane) {
+  if (!e.deltaY) return
+  const svg = e.currentTarget as SVGSVGElement, rect = svg.getBoundingClientRect()
+  const pixels = Math.max(1, Math.min(rect.width, rect.height))
+  const oldSize = views.value[pane]
+  const delta = e.deltaY * (e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? rect.height : 1)
+  zoom(pane, Math.exp(Math.max(-1, Math.min(1, delta * .0015))))
+  const change = (oldSize - views.value[pane]) / pixels
+  centers.value[pane] = [centers.value[pane][0] + (e.clientX-rect.left-rect.width/2)*change, centers.value[pane][1] + (e.clientY-rect.top-rect.height/2)*change]
+}
 function fit(pane: Pane) {
   const points = pane === '2d' ? visibleSketches.value.flatMap(s => s.points) : [
     ...[...document.value.bodies, ...(previewBody.value ? [previewBody.value] : [])].flatMap(bodyPoints),
@@ -1522,12 +1602,14 @@ watch([() => props.open, () => props.seedDocument], ([open, seed]) => {
 }, {immediate: true})
 </script>
 <template>
-  <section v-show="open" ref="workspace" class="direct-workspace" :class="{ embedded }" tabindex="-1" :aria-label="label('Solid — CAD-лепка', 'Solid — CAD sculpt')" @keydown.stop="keydown" @dragstart.prevent>
+  <section v-show="open" ref="workspace" class="direct-workspace" :class="{ embedded, 'touch-mode': inputMode === 'touch' }" tabindex="-1" :aria-label="label('Solid — CAD-лепка', 'Solid — CAD sculpt')" @keydown.stop="keydown" @dragstart.prevent>
     <header class="workspace-bar">
       <button v-if="embedded" class="back" @click="emit('close')">← {{ label('Code', 'Code') }}</button>
       <strong>{{ label('Solid', 'Solid') }}</strong>
       <span class="subtle">{{ label('Plasticity-like CAD', 'Plasticity-like CAD') }}</span>
       <div class="history-tools"><button :disabled="!undoable" @click="undo()" :title="label('Отменить · Ctrl/⌘ Z', 'Undo · Ctrl/⌘ Z')">↶</button><button :disabled="!redoable" @click="undo(true)" :title="label('Повторить · Ctrl/⌘ Shift Z', 'Redo · Ctrl/⌘ Shift Z')">↷</button></div>
+      <button class="input-mode-toggle" :aria-pressed="inputMode === 'touch'" :title="label('Переключить управление: тач / мышь', 'Switch controls: touch / mouse')" @click="toggleInputMode">{{ inputMode === 'touch' ? label('Тач', 'Touch') : label('Мышь', 'Mouse') }}</button>
+      <button v-if="inputMode === 'touch'" :aria-pressed="touchNavigate" @click="toggleTouchNavigation">{{ label('Навигация', 'Navigate') }}</button>
       <button @click="showHelp = !showHelp" title="Keyboard shortcuts">?</button>
       <button class="command-search" :title="label('Поиск команд · Ctrl/⌘ K', 'Search commands · Ctrl/⌘ K')" @click="paletteOpen = true"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><span>{{ label('Команда…', 'Command…') }}</span><kbd>Ctrl K</kbd></button>
       <span class="save-status" :class="{ error: saveError }" role="status" :title="saveError ? label('Не сохранено', 'Unsaved') : label('Сохранено в браузере', 'Saved in browser')" :aria-label="saveError ? label('Не сохранено', 'Unsaved') : label('Сохранено в браузере', 'Saved in browser')">
@@ -1608,7 +1690,7 @@ watch([() => props.open, () => props.seedDocument], ([open, seed]) => {
           </div>
           <div class="canvas-wrap">
             <canvas v-if="pane === '3d'" :ref="mountGpuCanvas" class="gpu-layer" aria-hidden="true"></canvas>
-            <svg :viewBox="viewBox(pane)" tabindex="0" :aria-label="pane === '2d' ? label('Холст эскизов 2D', '2D sketch canvas') : label('Холст тел 3D', '3D body canvas')" @contextmenu.prevent @wheel.prevent="zoom(pane, $event.deltaY > 0 ? 1.1 : 1/1.1)" @pointerdown="downAt($event, pane)" @pointermove="moveAt" @pointerleave="gpuActive && (hovered = '')" @pointerup="up" @pointercancel="cancelGesture" @lostpointercapture="cancelGesture" @dragstart.prevent @selectstart.prevent @mousedown.prevent draggable="false">
+            <svg @pointerdown.capture="touchDown($event, pane)" @pointermove.capture="touchMove" @pointerup.capture="touchEnd" :viewBox="viewBox(pane)" tabindex="0" :aria-label="pane === '2d' ? label('Холст эскизов 2D', '2D sketch canvas') : label('Холст тел 3D', '3D body canvas')" @contextmenu.prevent @wheel.prevent="wheelZoom($event, pane)" @pointerdown="downAt($event, pane)" @pointermove="moveAt" @pointerleave="gpuActive && (hovered = '')" @pointerup="up" @pointercancel="cancelInputGesture" @lostpointercapture="touchPointers.has($event.pointerId) ? cancelInputGesture() : !multiTouch && cancelGesture()" @dragstart.prevent @selectstart.prevent @mousedown.prevent draggable="false">
               <defs><pattern :id="'direct-grid-' + pane" width="10" height="10" patternUnits="userSpaceOnUse"><path d="M 10 0 L 0 0 0 10" fill="none" stroke="var(--border)" stroke-opacity=".45" stroke-width=".5" vector-effect="non-scaling-stroke" /></pattern></defs>
               <rect v-if="pane === '2d'" x="-2000000" y="-2000000" width="4000000" height="4000000" :fill="'url(#direct-grid-' + pane + ')'" />
               <g v-if="pane === '3d' && floorVisible" pointer-events="none"><polyline v-for="(line,i) in floorLines" :key="i" :points="line.points" fill="none" stroke="var(--border)" :stroke-opacity="(line.opacity * .45).toFixed(3)" stroke-width=".5" vector-effect="non-scaling-stroke" /></g>
@@ -1862,6 +1944,7 @@ watch([() => props.open, () => props.seedDocument], ([open, seed]) => {
       <template v-if="tool === 'polyline' && draft.length"><span>{{ draft.length }} {{ label('точек', 'points') }}</span><button :disabled="draft.length < 3" @click="finish(true)">{{ label('Замкнуть контур', 'Close contour') }}</button><button :disabled="draft.length < 2" @click="finish(false)">{{ label('Завершить линию', 'Finish line') }}</button><button @click="cancelGesture">Esc</button></template>
     </footer>
     <CommandPalette v-if="paletteOpen" :open="paletteOpen" :commands="solidCommands.filter(command => command.enabled !== false)" @close="paletteOpen = false" @execute="executeSolidCommand" />
+    <div class="input-hint" role="status">{{ inputMode === 'touch' ? label('Два пальца: масштаб и перенос · Навигация: одним пальцем вращать 3D / двигать 2D', 'Two fingers: zoom and pan · Navigate: one finger orbits 3D / pans 2D') : label('ЛКМ: выбор / вращение 3D · СКМ или Shift: перенос · Колесо: масштаб', 'Left drag: select / orbit 3D · Middle drag or Shift: pan · Wheel: zoom') }}</div>
     <div v-if="showHelp" class="help-card"><p>{{ label('Грани: выберите поверхность, затем тяните её или жёлтую ручку. Ctrl/⌘ + клик выбирает несколько открытых граней для Shell. Для фаски и скругления включите «Рёбра».','Faces: select a surface, then drag it or its yellow handle. Ctrl/⌘ click selects multiple Shell openings. Switch to Edges for chamfers and fillets.') }}</p><p>{{ label('Shift + клик и «Рамка» выделяют несколько объектов. Манипулятор двигает, вращает и масштабирует весь выбор. У окружностей и дуг есть ручки центра, радиуса и концов дуги.','Shift click and Box select select multiple objects. The gizmo moves, rotates and scales the whole selection. Circles and arcs have center, radius and arc endpoint handles.') }}</p><strong>{{ label('Управление', 'Controls') }}</strong><p>{{ label('2D: тяните фигуру или вершину. Alt временно отключает привязку. Ломаная замыкается кликом по первой точке.', '2D: drag shapes or vertices. Alt bypasses snapping. Close a polyline by clicking its first point.') }}</p><p>{{ label('3D: тяните для вращения; G включает перемещение тела. ПКМ всегда вращает. Shift или средняя кнопка — панорама. Колесо — масштаб.', '3D: drag to orbit; G enables body movement. Right drag always orbits. Shift or middle drag pans. Wheel zooms.') }}</p><p>{{ label('E — предпросмотр выдавливания; зелёная ручка меняет высоту. Enter подтверждает, Escape отменяет. Ctrl/⌘ Z — отмена, Ctrl/⌘ Shift Z — повтор.', 'E previews extrusion; the green handle changes height. Enter applies, Escape cancels. Ctrl/⌘ Z undoes; Ctrl/⌘ Shift Z redoes.') }}</p><button @click="showHelp = false">{{ label('Понятно', 'Got it') }}</button></div>
     <div v-if="error" class="error-bar" role="alert">{{ error }} <button @click="error = ''">×</button></div>
     <div v-else-if="notice" class="notice-bar" role="status">{{ notice }} <button @click="notice = ''">×</button></div>
@@ -1880,4 +1963,6 @@ watch([() => props.open, () => props.seedDocument], ([open, seed]) => {
   .file-menu>div{max-width:calc(100vw - 16px);max-height:calc(100dvh - 140px);overflow:auto;box-sizing:border-box}
 }
 .direct-workspace.embedded{position:absolute;inset:0;z-index:9}.embedded .workspace-bar{flex-wrap:wrap;gap:8px;padding:6px}.primitive-bar{display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:8px;border-bottom:1px solid var(--border)}.primitive-bar input{width:75px}.primitive-icon{width:36px;height:36px;padding:0;display:inline-flex;align-items:center;justify-content:center;border-radius:8px}.primitive-icon:hover{color:var(--accent)}.tool-icon{width:34px;height:34px;padding:0;display:inline-flex;align-items:center;justify-content:center;gap:3px;border-radius:7px}.tool-icon .tool-tag{font-size:9px;font-weight:700;letter-spacing:.04em}.tool-icon:has(.tool-tag){width:auto;padding:0 7px}.tool-group{display:inline-flex;gap:3px}.tool-divider{width:1px;height:22px;background:var(--border);margin:0 3px}.primitive-divider{width:1px;height:22px;background:var(--border);margin:0 4px}.embedded .pane-tools{padding:5px}.embedded .save-status{display:none}
+.input-hint{padding:5px 12px;color:var(--text-dim);font-size:11px;flex-shrink:0}
+.touch-mode .canvas-wrap>svg{touch-action:none}
 </style>

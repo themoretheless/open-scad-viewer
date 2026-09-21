@@ -33,7 +33,7 @@ afterEach(()=>{mounts.splice(0).forEach(f=>f());vi.unstubAllGlobals()})
 async function mount(props: Record<string,unknown> = {}){
  const sketch={id:'s',name:'Profile',closed:true,points:[[0,0],[10,0],[10,10],[0,10]] as [number,number][]}
  let stored=JSON.stringify({version:1,sketches:[sketch,{id:'circle',name:'Circle',closed:true,analytic:{kind:'circle',center:[20,5],radius:3,start:0,sweep:360},points:sampleCurve({kind:'circle',center:[20,5],radius:3,start:0,sweep:360})},{id:'line',name:'Line',closed:false,points:[[0,-5],[2,-5]]},{id:'boundary',name:'Boundary',closed:false,points:[[5,-10],[5,0]]}],bodies:[{...extrudeDirectSketch(sketch,10,'b'),name:'Cube'}]})
- vi.stubGlobal('localStorage',{getItem:()=>stored,setItem:(_k:string,v:string)=>{stored=v}})
+ vi.stubGlobal('localStorage',{getItem:(k:string)=>k.includes('modeler')?stored:null,setItem:(k:string,v:string)=>{if(k.includes('modeler'))stored=v}})
  vi.stubGlobal('Document',class {});vi.stubGlobal('ShadowRoot',class {});vi.stubGlobal('document',{activeElement:null});vi.stubGlobal('window',{document:{activeElement:null}});vi.stubGlobal('SVGSVGElement',Node)
  vi.stubGlobal('DOMPoint',class {constructor(public x:number,public y:number){}matrixTransform(){return this}})
  const currentProps=shallowReactive({open:true,locale:'en',canAppend:true,remainingSource:100000,...props})
@@ -391,5 +391,33 @@ it('previews, applies and undoes a retained ruled loft from ordered sketch selec
  await ui.click('↶');expect(ui.doc()).toEqual(before)
  await ui.click('Upper');await ui.click('Lower',true);await ui.click('B-rep loft')
  expect(ui.button('Apply · Enter').props.disabled).toBe(true)
+ expect(ui.doc()).toEqual(before)
+})
+
+it('switches touch controls live and cancels a sketch edit when a pinch takes over', async()=>{
+ const ui=await mount()
+ await ui.click('Rectangle · R')
+ await ui.click('Mouse')
+ expect(ui.button('Touch').props['aria-pressed']).toBe(true)
+ expect(ui.button('Navigate')).toBeTruthy()
+ const svg=ui.all().find(n=>n.tag==='svg'&&n.props['aria-label']==='2D sketch canvas')!
+ ;(svg as any).getBoundingClientRect=()=>({left:0,top:0,width:1000,height:1000})
+ const touch=(id:number,x:number,y:number)=>({...ui.event(svg,x,y),pointerId:id,pointerType:'touch'})
+ const before=ui.doc(), initial=svg.props.viewBox
+ svg.props.onPointerdownCapture(touch(1,400,500))
+ svg.props.onPointerdown(touch(1,400,500))
+ svg.props.onPointerdownCapture(touch(2,600,500))
+ svg.props.onPointermoveCapture(touch(2,800,500))
+ await nextTick()
+ expect(svg.props.viewBox).not.toBe(initial)
+ expect(Number(svg.props.viewBox.split(' ')[2])).toBeLessThan(Number(initial.split(' ')[2]))
+ expect(ui.doc()).toEqual(before)
+ svg.props.onPointerupCapture(touch(2,800,500))
+ const pinched=svg.props.viewBox
+ svg.props.onPointermoveCapture(touch(1,300,500))
+ await nextTick()
+ expect(svg.props.viewBox).toBe(pinched)
+ await ui.click('Touch')
+ expect(ui.button('Mouse').props['aria-pressed']).toBe(false)
  expect(ui.doc()).toEqual(before)
 })
