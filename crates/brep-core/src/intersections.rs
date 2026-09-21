@@ -3060,8 +3060,7 @@ fn plane_face_root(
 }
 /// Push a point event, deduplicating by exact parameter pair only — never by
 /// spatial proximity, so repeated visits to one location stay distinct.
-fn push_curve_point(
-    report: &mut Report<CurveCurveComponent>,
+struct CurvePointEvent {
     first: f64,
     first_interval: [f64; 2],
     second: f64,
@@ -3069,7 +3068,18 @@ fn push_curve_point(
     point: [f64; 3],
     residual: f64,
     contact: Contact,
-) {
+}
+
+fn push_curve_point(report: &mut Report<CurveCurveComponent>, event: CurvePointEvent) {
+    let CurvePointEvent {
+        first,
+        first_interval,
+        second,
+        second_interval,
+        point,
+        residual,
+        contact,
+    } = event;
     let duplicate = report.components.iter().any(|c| {
         matches!(c, CurveCurveComponent::Point { first: f, second: s, .. }
             if *f == first && *s == second)
@@ -3127,13 +3137,15 @@ fn admit_curve_corner(
     };
     push_curve_point(
         report,
-        t,
-        [t, t],
-        u,
-        [u, u],
-        std::array::from_fn(|i| (pa[i] + pb[i]) * 0.5),
-        residual,
-        contact,
+        CurvePointEvent {
+            first: t,
+            first_interval: [t, t],
+            second: u,
+            second_interval: [u, u],
+            point: std::array::from_fn(|i| (pa[i] + pb[i]) * 0.5),
+            residual,
+            contact,
+        },
     );
     Ok(true)
 }
@@ -3309,9 +3321,18 @@ fn resolve_curve_box(
         return Ok(());
     }
     match refine_curve_root(first, second, ta, tb, tm, um, options)? {
-        Refinement::Root(t, u, point, residual) => {
-            push_curve_point(report, t, ta, u, tb, point, residual, Contact::Transverse)
-        }
+        Refinement::Root(t, u, point, residual) => push_curve_point(
+            report,
+            CurvePointEvent {
+                first: t,
+                first_interval: ta,
+                second: u,
+                second_interval: tb,
+                point,
+                residual,
+                contact: Contact::Transverse,
+            },
+        ),
         Refinement::Outside => (),
         Refinement::Failed => report.unresolved(box4(), UnresolvedReason::TangencyOrMultipleRoot),
     }
@@ -4021,8 +4042,7 @@ fn cs_overlap_covers(report: &Report<CurveRuledSurfaceComponent>, t: f64, uv: [f
                 && uv_start[1].min(uv_end[1]) <= uv[1] && uv[1] <= uv_start[1].max(uv_end[1]))
     })
 }
-fn push_cs_point(
-    report: &mut Report<CurveRuledSurfaceComponent>,
+struct CurveSurfacePointEvent {
     t: f64,
     t_interval: [f64; 2],
     uv: [f64; 2],
@@ -4030,7 +4050,18 @@ fn push_cs_point(
     point: [f64; 3],
     residual: f64,
     contact: Contact,
-) {
+}
+
+fn push_cs_point(report: &mut Report<CurveRuledSurfaceComponent>, event: CurveSurfacePointEvent) {
+    let CurveSurfacePointEvent {
+        t,
+        t_interval,
+        uv,
+        uv_box,
+        point,
+        residual,
+        contact,
+    } = event;
     let duplicate = report.components.iter().any(|c| {
         matches!(c, CurveRuledSurfaceComponent::Point { t: et, uv: euv, .. }
             if *et == t && *euv == uv)
@@ -4102,13 +4133,15 @@ fn admit_cs_corner(
     }
     push_cs_point(
         report,
-        t,
-        [t, t],
-        [u, v],
-        [u, u, v, v],
-        std::array::from_fn(|i| (pc[i] + ps[i]) * 0.5),
-        residual,
-        Contact::Boundary,
+        CurveSurfacePointEvent {
+            t,
+            t_interval: [t, t],
+            uv: [u, v],
+            uv_box: [u, u, v, v],
+            point: std::array::from_fn(|i| (pc[i] + ps[i]) * 0.5),
+            residual,
+            contact: Contact::Boundary,
+        },
     );
     Ok(true)
 }
@@ -4678,16 +4711,18 @@ fn resolve_cs_box(
                 || uv[1] == sd[3];
             push_cs_point(
                 report,
-                t,
-                ta,
-                uv,
-                [ua[0], ua[1], vd[0], vd[1]],
-                point,
-                residual,
-                if boundary {
-                    Contact::Boundary
-                } else {
-                    Contact::Transverse
+                CurveSurfacePointEvent {
+                    t,
+                    t_interval: ta,
+                    uv,
+                    uv_box: [ua[0], ua[1], vd[0], vd[1]],
+                    point,
+                    residual,
+                    contact: if boundary {
+                        Contact::Boundary
+                    } else {
+                        Contact::Transverse
+                    },
                 },
             );
         }
