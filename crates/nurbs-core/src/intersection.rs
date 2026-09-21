@@ -398,6 +398,16 @@ type CurveSpanPending = (
     usize,
 );
 
+struct CurveIntersectionBox<'a> {
+    first: &'a Curve,
+    second: &'a Curve,
+    ta: [f64; 2],
+    tb: [f64; 2],
+    ha: &'a [[f64; 4]],
+    hb: &'a [[f64; 4]],
+    floor: f64,
+}
+
 fn push_point(report: &mut Report, component: CcComponent) {
     let duplicate = report.components.iter().any(|c| {
         c.kind == "point"
@@ -496,16 +506,8 @@ fn krawczyk_cc(
     }
 }
 
-fn admit_coincidence(
-    first: &Curve,
-    second: &Curve,
-    ta: [f64; 2],
-    tb: [f64; 2],
-    ha: &[[f64; 4]],
-    hb: &[[f64; 4]],
-    floor: f64,
-    report: &mut Report,
-) -> Result<bool> {
+fn admit_coincidence(input: &CurveIntersectionBox<'_>, report: &mut Report) -> Result<bool> {
+    let CurveIntersectionBox { first, second, ta, tb, ha, hb, floor } = *input;
     if proportional_homogeneous(ha, hb, floor.max(1e-12)) {
         let pa = point3(&first.evaluate(ta[0])?.point)?;
         let pb = point3(&first.evaluate(ta[1])?.point)?;
@@ -611,16 +613,8 @@ fn admit_coincidence(
     Ok(true)
 }
 
-fn resolve_cc_box(
-    first: &Curve,
-    second: &Curve,
-    ta: [f64; 2],
-    tb: [f64; 2],
-    ha: &[[f64; 4]],
-    hb: &[[f64; 4]],
-    floor: f64,
-    report: &mut Report,
-) -> Result<()> {
+fn resolve_cc_box(input: &CurveIntersectionBox<'_>, report: &mut Report) -> Result<()> {
+    let CurveIntersectionBox { first, second, ta, tb, ha, hb, floor } = *input;
     let tm = (ta[0] + ta[1]) * 0.5;
     let um = (tb[0] + tb[1]) * 0.5;
     let diag = next_up(hull_diagonal(ha) + hull_diagonal(hb));
@@ -923,18 +917,18 @@ pub fn intersect_curve_curve(
                 )
             }
         };
+        let box_input = CurveIntersectionBox {
+            first: &first_open,
+            second: &second_open,
+            ta,
+            tb,
+            ha: &ha,
+            hb: &hb,
+            floor: dist_floor,
+        };
         if let Some((pa, pb)) = &pieces {
             if !hulls_excluded(&ha, &hb)
-                && admit_coincidence(
-                    &first_open,
-                    &second_open,
-                    ta,
-                    tb,
-                    &ha,
-                    &hb,
-                    dist_floor,
-                    &mut report,
-                )?
+                && admit_coincidence(&box_input, &mut report)?
             {
                 let _ = (pa, pb);
                 continue;
@@ -951,16 +945,7 @@ pub fn intersect_curve_curve(
         let can_a = tm > ta[0] && tm < ta[1];
         let can_b = um > tb[0] && um < tb[1];
         if (width_a <= floor && width_b <= floor) || depth >= 48 || (!can_a && !can_b) {
-            resolve_cc_box(
-                &first_open,
-                &second_open,
-                ta,
-                tb,
-                &ha,
-                &hb,
-                dist_floor,
-                &mut report,
-            )?;
+            resolve_cc_box(&box_input, &mut report)?;
             continue;
         }
         let (al, ar) = split_homogeneous(&ha);
