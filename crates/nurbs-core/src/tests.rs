@@ -462,7 +462,7 @@ fn foundation_boundary_and_mutation_limits_are_deterministic() {
             .map(|i| vec![i as f64 / 25., (i % 3) as f64])
             .collect(),
         weights: (0..controls)
-            .map(|i| 10_f64.powi((i as i32 % 13) - 6))
+            .map(|i| 10_f64.powi((i % 13) - 6))
             .collect(),
         periodic: false,
     };
@@ -952,7 +952,7 @@ fn foundation_v5_adversarial_scales_seams_and_weights() {
         periodic: false,
     };
     let multi = intersection::intersect_curve_curve(&high, &x_axis, None).unwrap();
-    assert!(multi["components"].as_array().unwrap().len() >= 1);
+    assert!(!multi["components"].as_array().unwrap().is_empty());
 }
 
 #[test]
@@ -1001,13 +1001,12 @@ fn certified_general_surface_surface_intersection() {
     assert!(report["uvArrangement"]["traces"].is_array());
     let audit = ss_intersection::verify_ss_coverage(&report).unwrap();
     assert_eq!(audit["complete"], true);
-    assert_eq!(
+    assert!(
         audit["notes"]
             .as_array()
             .unwrap()
             .iter()
             .any(|n| n == "no_graph_patch_iso_fixture"),
-        true
     );
 
     let coincident = ss_intersection::intersect_surface_surface(&xy, &xy, None).unwrap();

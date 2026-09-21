@@ -25,21 +25,12 @@ pub use wgpu;
 pub mod cuda;
 
 use std::future::Future;
-use std::sync::Arc;
-use std::task::{Context, Poll, Wake, Waker};
+use std::task::{Context, Poll, Waker};
 use std::time::Duration;
 
-/// Minimal std-only block_on for one-time adapter/device requests. The waker
-/// never notifies; we re-poll on a 1 ms cadence, which is negligible for
-/// initialization-only futures.
-struct NopWaker;
-impl Wake for NopWaker {
-    fn wake(self: Arc<Self>) {}
-}
-
 pub fn block_on<F: Future>(future: F) -> F::Output {
-    let waker = Waker::from(Arc::new(NopWaker));
-    let mut context = Context::from_waker(&waker);
+    let waker = Waker::noop();
+    let mut context = Context::from_waker(waker);
     let mut future = Box::pin(future);
     loop {
         match future.as_mut().poll(&mut context) {
@@ -229,6 +220,7 @@ pub fn tuned_workgroup_size(backend: wgpu::Backend, metal_size: u32, default_siz
 }
 
 #[cfg(test)]
+#[allow(clippy::items_after_test_module)]
 mod tests {
     use super::*;
 
