@@ -228,7 +228,7 @@ pub(crate) fn recognize(model: &Model) -> Result<Option<CanonicalSphere>> {
         return Ok(None);
     }
     let axis_length = dot(axis, axis).sqrt();
-    if !(axis_length > 0.) {
+    if !axis_length.is_finite() || axis_length <= 0. {
         return Ok(None);
     }
     let axis = axis.map(|x| x / axis_length);
@@ -237,7 +237,7 @@ pub(crate) fn recognize(model: &Model) -> Result<Option<CanonicalSphere>> {
     let axial = dot(seed, axis);
     let x_dir = sub(seed, axis.map(|x| x * axial));
     let x_length = dot(x_dir, x_dir).sqrt();
-    if !(x_length > 0.) {
+    if !x_length.is_finite() || x_length <= 0. {
         return Ok(None);
     }
     let x_dir = x_dir.map(|x| x / x_length);
@@ -535,7 +535,7 @@ pub(crate) fn patch_sections(
         } else {
             let center = [bb / aa, cc / aa];
             let rho2 = (bb * bb + cc * cc + dd * aa) / (aa * aa);
-            if !(rho2 > 0.) {
+            if !rho2.is_finite() || rho2 <= 0. {
                 None
             } else {
                 clip_circle(center, rho2.sqrt()).map(|(start, end)| PatchUvSection::Circle {
@@ -589,7 +589,7 @@ pub(crate) fn lift(
 /// `(unwrapped_start, sweep)` pairs; a full-circle argument returns the
 /// other arc unchanged.
 pub(crate) fn ccw_intersect(a: (f64, f64), b: (f64, f64)) -> Vec<(f64, f64)> {
-    if !(a.1 > 0.) || !(b.1 > 0.) {
+    if !a.1.is_finite() || a.1 <= 0. || !b.1.is_finite() || b.1 <= 0. {
         return Vec::new();
     }
     if a.1 >= TAU {
@@ -617,7 +617,7 @@ pub(crate) fn ccw_intersect(a: (f64, f64), b: (f64, f64)) -> Vec<(f64, f64)> {
 fn invert_patch(sphere: &CanonicalSphere, frame: &PatchFrame, point: [f64; 3]) -> [f64; 2] {
     let d = sub(point, sphere.center);
     let denom = sphere.radius + dot(d, frame.pole);
-    if !(denom > UV_LINE * sphere.radius) {
+    if !denom.is_finite() || denom <= UV_LINE * sphere.radius {
         return [1e30, 1e30];
     }
     [dot(d, frame.a) / denom, dot(d, frame.b) / denom]
@@ -643,7 +643,7 @@ pub(crate) fn lift_clipped(
         let mut out: Vec<Curve> = Vec::new();
         for &(a, b) in arcs {
             let sweep = b - a;
-            if !(sweep > 0.) {
+            if !sweep.is_finite() || sweep <= 0. {
                 continue;
             }
             let qa = invert_patch(sphere, frame, point_at(a));
@@ -693,7 +693,7 @@ pub(crate) fn lift_clipped(
                 PatchUvSection::Line { start, end } => {
                     let d = [end[0] - start[0], end[1] - start[1]];
                     let dd = d[0] * d[0] + d[1] * d[1];
-                    if !(dd > 0.) {
+                    if !dd.is_finite() || dd <= 0. {
                         continue;
                     }
                     let t =

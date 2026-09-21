@@ -245,7 +245,7 @@ pub(crate) fn recognize_cylinder(model: &Model) -> Result<Option<CanonicalCylind
     let start = point_of(&model.faces[sides[0]].surface.evaluate(0., 0.)?.point);
     let x_perp = radial(start, bottom);
     let x_length = x_perp[0].hypot(x_perp[1]).hypot(x_perp[2]);
-    if !(x_length > 0.) {
+    if !x_length.is_finite() || x_length <= 0. {
         return Ok(None);
     }
     let x_dir = x_perp.map(|x| x / x_length);
