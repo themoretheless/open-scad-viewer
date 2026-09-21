@@ -118,6 +118,24 @@ The native point is not directly comparable with the host boundary benchmark;
 the pair is useful for attributing future regressions to kernel work versus
 ABI/transport overhead.
 
+## Render Attribution Control Run
+
+Command: `npm run bench:analysis -- --out /private/tmp/osv-solid-analysis-2026-09-21-attribution.json --samples 5 --warmups 2`
+
+Comparing the native microbench with the host-visible retained-handle phase
+identifies the next boundary:
+
+| Fixture | native render p50 | host render p50 | host export p50 |
+|---|---:|---:|---:|
+| sphere-128 | 2.353 ms | 6.563 ms | 3.091 ms |
+| three-spheres-128 | approximately 7.059 ms | 19.965 ms | 9.792 ms |
+| cylinder-128 | 0.097 ms | 0.160 ms | 0.041 ms |
+
+The native figure is not additive to the host figure. The gap is evidence
+that the next A/B should investigate fusing or reusing the export snapshot
+around `render_buffers` and its ABI-owned copies. The normal/property-vertex
+algorithm is not the first target until that boundary is measured separately.
+
 ## Surface Grouping Rust Migration
 
 The main-thread publication path now uses the existing Rust
