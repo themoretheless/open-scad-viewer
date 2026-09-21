@@ -1827,9 +1827,9 @@ fn place_axial(
     )
 }
 
-fn recognize_analytic_tube(
-    model: &Model,
-) -> Option<(f64, f64, f64, [f64; 3], [f64; 3], [[f64; 3]; 2])> {
+type AnalyticTube = (f64, f64, f64, [f64; 3], [f64; 3], [[f64; 3]; 2]);
+
+fn recognize_analytic_tube(model: &Model) -> Option<AnalyticTube> {
     if model.bodies.len() != 1
         || model.shells.len() != 1
         || model.faces.len() != 10

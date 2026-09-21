@@ -157,7 +157,9 @@ fn model_bounds(model: &Model) -> ([f64; 3], [f64; 3]) {
     (min, max)
 }
 
-fn cylinder_envelope(model: &Model) -> Result<([f64; 3], [f64; 3], f64, [f64; 2])> {
+type CylinderEnvelope = ([f64; 3], [f64; 3], f64, [f64; 2]);
+
+fn cylinder_envelope(model: &Model) -> Result<CylinderEnvelope> {
     let mut min = [f64::INFINITY; 3];
     let mut max = [f64::NEG_INFINITY; 3];
     for v in &model.vertices {

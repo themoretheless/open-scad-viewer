@@ -620,7 +620,9 @@ fn canonical_tube(model: &Model) -> Option<(f64, f64, f64, [f64; 3])> {
     Some((radii[1], radii[0], max[2] - min[2], center))
 }
 
-fn exact_vertical_prism(model: &Model) -> Option<(f64, f64, [f64; 3], [[f64; 3]; 3], f64)> {
+type VerticalPrismEnvelope = (f64, f64, [f64; 3], [[f64; 3]; 3], f64);
+
+fn exact_vertical_prism(model: &Model) -> Option<VerticalPrismEnvelope> {
     if model
         .faces
         .iter()
