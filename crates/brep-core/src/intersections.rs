@@ -2916,7 +2916,9 @@ fn curve_tangents(curve: &Curve, t: f64) -> Result<Vec<[f64; 3]>> {
 }
 /// Surface tangent vectors at (u,v): the two-sided jets when they exist,
 /// otherwise the available one-sided span jets across C0 knots in U and V.
-fn surface_tangents(surface: &Surface, u: f64, v: f64) -> Result<(Vec<[f64; 3]>, Vec<[f64; 3]>)> {
+type SurfaceTangentPair = (Vec<[f64; 3]>, Vec<[f64; 3]>);
+
+fn surface_tangents(surface: &Surface, u: f64, v: f64) -> Result<SurfaceTangentPair> {
     let jet = surface.evaluate(u, v)?;
     if let Some((du, dv)) = jet.first_derivatives() {
         return Ok((vec![du], vec![dv]));

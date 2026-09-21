@@ -80,6 +80,9 @@ struct Jet {
     dv: [f64; 3],
 }
 
+type CoedgeSamples = (Vec<[f64; 2]>, usize, bool);
+type CoedgeLoops = Vec<Vec<CoedgeSamples>>;
+
 /// Trimmed face with its UV domain, dense boundary polygons and per-coedge
 /// samples for locating boundary crossings.
 struct Chart<'m> {
@@ -90,7 +93,7 @@ struct Chart<'m> {
     polygons: Vec<Vec<[f64; 2]>>,
     /// For every loop, for every coedge: UV samples along the coedge
     /// (DENSE + 1 points) and the coedge's edge / reversed flag.
-    coedges: Vec<Vec<(Vec<[f64; 2]>, usize, bool)>>,
+    coedges: CoedgeLoops,
 }
 
 impl<'m> Chart<'m> {

@@ -86,6 +86,8 @@ pub(crate) struct CanonicalTorus {
     pub(crate) patches: [[usize; 4]; 4],
 }
 
+type TorusLift<'a> = dyn Fn(&CanonicalTorus, &[(f64, f64)]) -> Vec<TorusPatchCurve> + 'a;
+
 /// Degree-1 pcurve exactly from `from` to `to` with unit knots/weights.
 fn unit_edge(curve: &Curve, from: [f64; 2], to: [f64; 2]) -> bool {
     curve.degree == 1
@@ -603,7 +605,7 @@ fn circle_components(
     uv_center: [f64; 2],
     uv_w1: [f64; 2],
     uv_w2: [f64; 2],
-    lift: &dyn Fn(&CanonicalTorus, &[(f64, f64)]) -> Vec<TorusPatchCurve>,
+    lift: &TorusLift<'_>,
 ) -> Result<Vec<PlaneTorusComponent>> {
     let build = |start: f64, end: f64, full: bool| -> Result<PlaneTorusComponent> {
         let curve = if full {
