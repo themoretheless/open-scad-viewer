@@ -17,7 +17,7 @@
 //! surface/surface subdivision.
 //!
 //! Only axial plane placements are analytic here:
-//! - Plane perpendicular to the torus axis at axial height h from the center
+//! Plane perpendicular to the torus axis at axial height h from the center
 //!   plane: |h| > r (clear beyond the outward band) resolves empty; |h| == r
 //!   within the band is a tangency and stays `TangencyOrMultipleRoot`, never
 //!   a guessed point or circle; |h| < r yields the two exact circles of
@@ -29,14 +29,14 @@
 //!   band would be an inner-tangency/horn configuration and stays
 //!   unresolved (unreachable for a canonical strict ring torus, where
 //!   R - r >= 1e-5; kept as an honest guard, never guessed through).
-//! - Plane containing the axis (normal perpendicular to the axis, center in
+//! Plane containing the axis (normal perpendicular to the axis, center in
 //!   the plane at pure-rounding scale): the two exact meridian circles of
 //!   radius r centered at +-R along the in-plane line where the plane meets
 //!   the center plane, clipped the same way. A parallel-to-axis plane at a
 //!   certified nonzero distance cuts a Cassini oval, not a circle pair:
 //!   clearly offset planes are `UnsupportedSurface`, and an offset inside
 //!   the recognition-scale band reports `NearCoincidence` — never snapped.
-//! - Oblique planes are a quartic section with Villarceau degeneracies:
+//! Oblique planes are a quartic section with Villarceau degeneracies:
 //!   clearly oblique planes are `UnsupportedSurface`, tilts inside the
 //!   recognition-scale band off either axial configuration report
 //!   `NearCoincidence`.

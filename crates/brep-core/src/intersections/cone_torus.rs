@@ -30,13 +30,13 @@
 //! (1+m^2) t^2 + 2 B t + C = 0 whose discriminant is r^2 (1+m^2) - D^2 with
 //! D = (R - r_b) s + z_b m the signed line/circle-center cross — i.e. the
 //! side line passes the meridian circle center at distance |D|/sqrt(1+m^2):
-//! - A line provably missing the circle (|D|/sqrt(1+m^2) > r beyond the
+//! A line provably missing the circle (|D|/sqrt(1+m^2) > r beyond the
 //!   band) yields no side contact, certified by the interval signs.
-//! - A tangent line (distance == r within the band, a double root) whose
+//! A tangent line (distance == r within the band, a double root) whose
 //!   foot lands on the finite side segment stays `TangencyOrMultipleRoot`,
 //!   never a guessed circle; a tangency whose foot is provably beyond the
 //!   finite height belongs to the rim bands below.
-//! - Two distinct roots revolve into two exact circles (radius rho* =
+//! Two distinct roots revolve into two exact circles (radius rho* =
 //!   r_b + m t*, height z* = z_b + s t*). A root provably outside the
 //!   cone's finite height range is honestly absent (clipped), so the
 //!   resolved branch may yield one circle or two; a root within the band of
@@ -45,11 +45,11 @@
 //!   it is structurally unreachable for a canonical strict ring torus (the
 //!   meridian circle stays at rho >= R - r >= 1e-5, far beyond the band) and
 //!   is kept as an honest guard, never guessed through.
-//! - Ring/rim bands: a rim circle (rho = r_ring, z = z_b + s t_ring) lying
+//! Ring/rim bands: a rim circle (rho = r_ring, z = z_b + s t_ring) lying
 //!   on the torus within the band — (r_ring - R)^2 + h^2 == r^2 — is a
 //!   tangent boundary contact and stays unresolved independent of the side
 //!   classification (this also owns the apex ring when its radius is zero).
-//! - Cap-plane contacts: a ring plane at torus-axial height h_c crosses the
+//! Cap-plane contacts: a ring plane at torus-axial height h_c crosses the
 //!   tube at the circles of radii R +- sqrt(r^2 - h_c^2) when |h_c| < r is
 //!   provable (the plane/torus perpendicular branch, reduced here to the
 //!   ring disk): a circle provably inside the ring disk is a cap circle

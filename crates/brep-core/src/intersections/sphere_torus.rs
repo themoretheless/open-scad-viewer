@@ -23,20 +23,20 @@
 //! center height above the torus center plane. Circle/circle in the
 //! meridian plane gives zero, one (double) or two roots; each root (rho*,
 //! z*) revolves into the exact 3D circle of radius rho* at height z*:
-//! - two distinct roots give two exact circles (for a strict ring torus
+//! two distinct roots give two exact circles (for a strict ring torus
 //!   every root sits on the torus meridian circle, whose rho >= R - r_t
 //!   is clearly positive, so both roots always revolve — a one-circle
 //!   configuration would require rho* <= 0, i.e. a horn/spindle torus,
 //!   which the canonical constructor refuses);
-//! - a double root (the circles tangent in the meridian plane, d == r_t+r_s
+//! a double root (the circles tangent in the meridian plane, d == r_t+r_s
 //!   externally or d == |r_t - r_s| internally) stays
 //!   `TangencyOrMultipleRoot` — the tangent contact revolves into a circle
 //!   but is never a guessed circle;
-//! - a root whose radius rho* collapses into the band degenerates to a
+//! a root whose radius rho* collapses into the band degenerates to a
 //!   pole point on the axis — unresolved, never guessed (unreachable for a
 //!   canonical strict ring torus since rho* >= R - r_t >= 1e-5, kept as an
 //!   honest guard, never guessed through);
-//! - no roots (provably separate d > r_t + r_s, or provably contained
+//! no roots (provably separate d > r_t + r_s, or provably contained
 //!   d < |r_t - r_s|, beyond the band) resolves empty by the interval
 //!   signs.
 //! Resolved contacts are exact rational circles (four 90-degree arcs,

@@ -6,6 +6,7 @@
 //! Beyond Complete-empty: planar × planar may publish a transverse line as
 //! Complete. Non-planar pairs may publish a Complete curve only when a Hausdorff
 //! + parameter-correspondence certificate holds. Out-of-matrix pairs refuse.
+
 //! False Complete is a kill. Narrow Boolean imprint is Phase B (`bezier-le3`).
 
 use crate::coverage_verifier::verify_complete_report;

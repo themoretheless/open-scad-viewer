@@ -24,21 +24,21 @@
 //! the meridian center distance between (R_1, 0) and (R_2, h)) gives zero,
 //! one (double) or two roots; each root (rho*, z*) revolves into the exact
 //! 3D circle of radius rho* at height z*:
-//! - two distinct roots with rho* provably beyond the band revolve into two
+//! two distinct roots with rho* provably beyond the band revolve into two
 //!   exact circles; a one-circle resolved configuration is structurally
 //!   unreachable for a strict ring-torus pair (every meridian root keeps
 //!   rho* >= R - r >= 1e-5, far beyond the band) and is documented honestly
 //!   rather than tested;
-//! - a double root (the meridian circles tangent, d == r_1 + r_2 externally
+//! a double root (the meridian circles tangent, d == r_1 + r_2 externally
 //!   or d == |r_1 - r_2| internally) stays `TangencyOrMultipleRoot` — the
 //!   tangent contact revolves into a circle but is never a guessed circle;
-//! - a root whose radius rho* collapses into the band degenerates to a pole
+//! a root whose radius rho* collapses into the band degenerates to a pole
 //!   point on the axis — unresolved, never guessed (unreachable for a
 //!   canonical strict ring torus, kept as an honest guard);
-//! - equal meridian circles (R_1 == R_2, h == 0, r_1 == r_2 within the
+//! equal meridian circles (R_1 == R_2, h == 0, r_1 == r_2 within the
 //!   bands) are coincident surfaces and report `CoincidentTrim`, never a
 //!   guessed curve;
-//! - no roots (provably separate d > r_1 + r_2, or provably contained
+//! no roots (provably separate d > r_1 + r_2, or provably contained
 //!   d + min(r_1, r_2) < max(r_1, r_2), beyond the band) resolves empty by
 //!   the interval signs.
 //! Resolved contacts are exact rational circles (four 90-degree arcs,

@@ -14,7 +14,7 @@
 //! exactly. Classification uses outward binary64 bands widened by both
 //! recognition deviations.
 //!
-//! - Plane perpendicular to the axis: the section is a circle of the
+//! Plane perpendicular to the axis: the section is a circle of the
 //!   cylinder radius at the section height. Provably beyond both cap planes
 //!   resolves empty; a plane within the band of a cap plane is a coincident
 //!   cap/rim region (`CoincidentTrim`) — never a guessed circle; a clear
@@ -24,14 +24,14 @@
 //!   circle arcs on the side patches (full circle: all four patches; clipped
 //!   arcs: per-patch sub-u ranges with the exact rational-arc angle
 //!   parameter of `cylinder_cylinder::arc_parameter`).
-//! - Plane parallel to the axis: distance d from the axis. d > R resolves
+//! Plane parallel to the axis: distance d from the axis. d > R resolves
 //!   empty, d == R within the band stays `TangencyOrMultipleRoot` (a tangent
 //!   plane is never a guessed line), d < R yields two exact straight lines
 //!   (degree-1 NURBS) clipped by the finite height and by the patch
 //!   rectangle (band-thin clips and patch-corner touches stay unresolved),
 //!   lifted as iso-u rulings on the side patches (seam rulings duplicated on
 //!   both adjacent patches) and as degree-1 segments in the plane UV.
-//! - Oblique plane: the section is the exact ellipse with semi-minor R and
+//! Oblique plane: the section is the exact ellipse with semi-minor R and
 //!   semi-major R / |axis.n| — a rational quadratic NURBS with exact weights
 //!   — clipped by the finite height and the patch rectangle in one exact
 //!   eccentric-angle clip (all six constraints are linear in the plane UV);

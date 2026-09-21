@@ -18,7 +18,7 @@
 //! recognition deviations. With g = axis.normal, sigma = sin(alpha) and
 //! alpha = atan(|slope|) the cone half-angle (slope = (r_top - r_bottom) /
 //! height), the plane/axis angle beta satisfies sin(beta) = |g|:
-//! - |g| snapped to 1 (pure rounding): the section perpendicular to the
+//! |g| snapped to 1 (pure rounding): the section perpendicular to the
 //!   axis is the exact circle with the radius LINEARLY INTERPOLATED between
 //!   the rings at the section height, clipped by the patch rectangle
 //!   (closed-form eccentric-angle clip). Provably outside the finite height
@@ -27,14 +27,14 @@
 //!   circle); a section at the apex level (radius <= band, apex ring
 //!   included) stays `TangencyOrMultipleRoot`. Lifts are exact: iso-v lines
 //!   on the side patches and ellipse arcs in the plane UV.
-//! - |g| snapped to 0 (pure rounding): the plane is parallel to the axis.
+//! |g| snapped to 0 (pure rounding): the plane is parallel to the axis.
 //!   A plane through the axis (apex on the plane within the band) yields
 //!   the two exact straight ruling LINES through the apex (degree-1 NURBS,
 //!   exact), clipped by the finite height and the patch rectangle
 //!   (band-thin clips, boundary-coincident rulings and patch-corner touches
 //!   stay unresolved), lifted as iso-u rulings on the side patches. An
 //!   off-axis parallel plane yields the exact hyperbola below.
-//! - Oblique with ||g| - sigma| snapped to 0 (pure rounding — a plane built
+//! Oblique with ||g| - sigma| snapped to 0 (pure rounding — a plane built
 //!   exactly parallel to a ruling): the exact rational parabola (polynomial
 //!   quadratic Bezier arcs, all weights 1), clipped by the height rings,
 //!   the nappe half-plane and the patch rectangle in one closed-form
@@ -42,17 +42,17 @@
 //!   degenerate threshold: an angle within the RECOGNITION-scale band of
 //!   alpha but beyond the pure-rounding snap stays `TangencyOrMultipleRoot`
 //!   — never a guessed conic.
-//! - Oblique with |g| > sigma: the exact ellipse (rational quadratic sweep,
+//! Oblique with |g| > sigma: the exact ellipse (rational quadratic sweep,
 //!   exact weights), clipped by the height rings, the nappe half-plane and
 //!   the patch rectangle in one exact eccentric-angle clip (every
 //!   constraint is linear in the plane UV, reusing `clip_ellipse`).
-//! - Oblique with |g| < sigma (and the off-axis parallel plane): the exact
+//! Oblique with |g| < sigma (and the off-axis parallel plane): the exact
 //!   hyperbola. Each nappe arm is parameterized exactly as the rational
 //!   quadratic x = x_c +- a (1+t^2)/(1-t^2), y = 2 b t/(1-t^2) and clipped
 //!   by the height rings, the nappe half-plane and the patch rectangle —
 //!   every constraint is quadratic in t, solved in closed form. The mirror
 //!   arm of the double cone is clipped away by the nappe half-plane.
-//! - Any plane through the apex region (|d0| <= band, apex = the singular
+//! Any plane through the apex region (|d0| <= band, apex = the singular
 //!   point of the side surface) stays `TangencyOrMultipleRoot` outside the
 //!   exact through-axis ruling case; the apex is a multiple-root contact
 //!   and is never guessed.

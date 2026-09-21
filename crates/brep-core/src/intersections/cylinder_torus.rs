@@ -23,7 +23,7 @@
 //! section reduces to the meridian half-plane (rho >= 0, z): the cylinder
 //! side is the vertical line rho = R_c and the torus side is the circle
 //! (rho - R)^2 + z^2 = r^2.
-//! - The line provably missing the circle (|R_c - R| > r beyond the band)
+//! The line provably missing the circle (|R_c - R| > r beyond the band)
 //! yields no side contact; the tangent line (|R_c - R| == r within the
 //! band, contact at z == 0 — the one configuration where the two square
 //! roots would coincide) stays `TangencyOrMultipleRoot`, never a guessed
@@ -35,7 +35,7 @@
 //! finite height: a circle provably beyond a cap plane is absent, and a
 //! circle landing on a cap plane within the band is the rim tangency —
 //! unresolved, never guessed.
-//! - Cap-plane contacts: the cap plane at cylinder axial position q
+//! Cap-plane contacts: the cap plane at cylinder axial position q
 //! crosses the torus at torus-axial height h_c; when |h_c| < r is provable
 //! the plane cuts the two exact circles of radii R +- sqrt(r^2 - h_c^2)
 //! (the plane/torus perpendicular branch, reduced here to the cap disk):
