@@ -28,6 +28,15 @@ const MAX_OUTPUT_BYTES: usize = 16 * 1024 * 1024;
 
 type TopologyMapping = Vec<(TopoKind, usize, usize)>;
 
+struct DirectBuildOptions {
+    analytic_surfaces: bool,
+    ap242_composition: bool,
+    allow_degenerate: bool,
+    whole_domain_proofs: bool,
+    interior_point_selectors: bool,
+    allow_open_shells: bool,
+}
+
 fn refuse(message: impl Into<String>) -> Error {
     Error::new("BREP_STEP_V3_REFUSED", message)
 }
@@ -2671,13 +2680,16 @@ fn build_direct_roots(
     entities: &BTreeMap<usize, Entity>,
     roots: &[usize],
     scale: f64,
-    analytic_surfaces: bool,
-    ap242_composition: bool,
-    allow_degenerate: bool,
-    whole_domain_proofs: bool,
-    interior_point_selectors: bool,
-    allow_open_shells: bool,
+    options: DirectBuildOptions,
 ) -> Result<(Model, TopologyMapping)> {
+    let DirectBuildOptions {
+        analytic_surfaces,
+        ap242_composition,
+        allow_degenerate,
+        whole_domain_proofs,
+        interior_point_selectors,
+        allow_open_shells,
+    } = options;
     let mut builder = DirectBuilder {
         entities,
         scale,
@@ -3619,17 +3631,19 @@ fn import_step_direct(
                 &entities,
                 &occurrence.bodies,
                 scale,
-                analytic_surfaces,
-                true,
-                allow_degenerate,
-                matches!(
-                    capability,
-                    STEP_INTERCHANGE_V7_CAPABILITY
-                        | STEP_INTERCHANGE_V8_CAPABILITY
-                        | STEP_INTERCHANGE_V9_CAPABILITY
-                ),
-                capability == STEP_INTERCHANGE_V9_CAPABILITY,
-                allow_open_shells,
+                DirectBuildOptions {
+                    analytic_surfaces,
+                    ap242_composition: true,
+                    allow_degenerate,
+                    whole_domain_proofs: matches!(
+                        capability,
+                        STEP_INTERCHANGE_V7_CAPABILITY
+                            | STEP_INTERCHANGE_V8_CAPABILITY
+                            | STEP_INTERCHANGE_V9_CAPABILITY
+                    ),
+                    interior_point_selectors: capability == STEP_INTERCHANGE_V9_CAPABILITY,
+                    allow_open_shells,
+                },
             )?;
             let component = crate::transform::affine(&component, occurrence.transform)?;
             append_direct_model(&mut aggregate, component, &map, &mut aggregate_map);
@@ -3643,17 +3657,19 @@ fn import_step_direct(
             &entities,
             &roots,
             scale,
-            analytic_surfaces,
-            false,
-            allow_degenerate,
-            matches!(
-                capability,
-                STEP_INTERCHANGE_V7_CAPABILITY
-                    | STEP_INTERCHANGE_V8_CAPABILITY
-                    | STEP_INTERCHANGE_V9_CAPABILITY
-            ),
-            capability == STEP_INTERCHANGE_V9_CAPABILITY,
-            allow_open_shells,
+            DirectBuildOptions {
+                analytic_surfaces,
+                ap242_composition: false,
+                allow_degenerate,
+                whole_domain_proofs: matches!(
+                    capability,
+                    STEP_INTERCHANGE_V7_CAPABILITY
+                        | STEP_INTERCHANGE_V8_CAPABILITY
+                        | STEP_INTERCHANGE_V9_CAPABILITY
+                ),
+                interior_point_selectors: capability == STEP_INTERCHANGE_V9_CAPABILITY,
+                allow_open_shells,
+            },
         )?;
         if let Some(matrix) = placement {
             model = crate::transform::affine(&model, matrix)?
