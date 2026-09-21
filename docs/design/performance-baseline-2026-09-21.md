@@ -42,6 +42,22 @@ The render path must preserve face order, crease classification, property
 vertex merge records, and byte-parity tests. Any optimization should compare
 the existing reference implementation and deterministic output signatures.
 
+## Render A/B Candidate
+
+The first candidate replaces iterator overhead in the hot corner loop with
+explicit three-component accumulation and output writes. With five samples
+and two warmups, the same retained-handle benchmark measured:
+
+| Fixture | Before render | Candidate render | Change | Before combined | Candidate combined |
+|---|---:|---:|---:|---:|---:|
+| sphere-128 | 6.976 ms | 6.621 ms | -5.1% | 11.936 ms | 11.439 ms |
+| three-spheres-128 | 21.544 ms | 20.551 ms | -4.6% | 36.312 ms | 34.536 ms |
+| cylinder-128 | 0.231 ms | 0.180 ms | -22.1% | 0.320 ms | 0.262 ms |
+
+The candidate passed the geometry-bridge byte-parity tests and the full
+workspace clippy gate. The generated geometry WASM artifact was rebuilt from
+the candidate before publication.
+
 ## Native Validation
 
 Command: `cargo run --release --locked --manifest-path crates/Cargo.toml -p

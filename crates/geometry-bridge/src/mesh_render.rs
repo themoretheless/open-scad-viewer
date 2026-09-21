@@ -128,9 +128,9 @@ pub(crate) fn render(snapshot: CadMeshBuffer, crease_cosine: f64) -> RenderMesh 
             let n = face_normals[t as usize];
             let alignment = n[0] * face[0] + n[1] * face[1] + n[2] * face[2];
             if alignment >= crease_cosine - 1e-10 {
-                for k in 0..3 {
-                    normal[k] += n[k];
-                }
+                normal[0] += n[0];
+                normal[1] += n[1];
+                normal[2] += n[2];
             }
         }
         let normal = js_normalized(normal, js_hypot3(normal));
@@ -155,7 +155,14 @@ pub(crate) fn render(snapshot: CadMeshBuffer, crease_cosine: f64) -> RenderMesh 
                 merge_to.push(first[source]);
             }
             let p = point(positions, id);
-            vertices.extend(p.iter().chain(normal.iter()).map(|&v| v as f32));
+            vertices.extend([
+                p[0] as f32,
+                p[1] as f32,
+                p[2] as f32,
+                normal[0] as f32,
+                normal[1] as f32,
+                normal[2] as f32,
+            ]);
         }
         out_indices.push(index);
     }
