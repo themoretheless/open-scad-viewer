@@ -35,7 +35,7 @@ pub extern "C" fn prepare(size: usize) -> usize {
 /// Reserve bounded ASCII input; base85 decoding stays in the Rust bootstrap.
 #[unsafe(no_mangle)]
 pub extern "C" fn prepare_encoded(size: usize) -> usize {
-    if size < 5 || size > ENCODED_LIMIT {
+    if !(5..=ENCODED_LIMIT).contains(&size) {
         return 0;
     }
     let mut input = INPUT.lock().unwrap();
@@ -63,7 +63,7 @@ fn decode_base85(input: &[u8]) -> Option<Vec<u8>> {
     }
     let mut output = Vec::with_capacity(size);
     let full_end = 5 + (size / 4) * 5;
-    for group in input[5..full_end].chunks_exact(5) {
+    for group in input[5..full_end].as_chunks::<5>().0 {
         output.extend_from_slice(&word(group)?.to_be_bytes());
     }
     let tail = size % 4;
