@@ -1584,11 +1584,7 @@ mod tests {
                 } else {
                     1.
                 };
-                control_points[u][v] = if swap {
-                    vec![signed, u as f64, v as f64]
-                } else {
-                    vec![signed, u as f64, v as f64]
-                };
+                control_points[u][v] = vec![signed, u as f64, v as f64];
             }
         }
         nurbs_core::surface::Surface {

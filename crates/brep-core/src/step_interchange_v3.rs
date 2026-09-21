@@ -1123,9 +1123,7 @@ fn analytic_surface(
     a: &[Value],
     scale: f64,
 ) -> Result<Surface> {
-    let expected = if ty == "TOROIDAL_SURFACE" {
-        4
-    } else if ty == "CONICAL_SURFACE" {
+    let expected = if matches!(ty, "TOROIDAL_SURFACE" | "CONICAL_SURFACE") {
         4
     } else {
         3
