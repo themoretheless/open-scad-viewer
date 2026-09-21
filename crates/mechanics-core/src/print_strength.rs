@@ -87,6 +87,7 @@ pub fn screen(areas: &[f64], forces: &[Vec<f64>], limits: &Limits) -> Result<Vec
     Ok(rows)
 }
 
+#[derive(Clone, Debug)]
 pub struct PrintProfile {
     pub material: String,
     pub grade: String,

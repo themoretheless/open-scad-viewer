@@ -136,6 +136,26 @@ that the next A/B should investigate fusing or reusing the export snapshot
 around `render_buffers` and its ABI-owned copies. The normal/property-vertex
 algorithm is not the first target until that boundary is measured separately.
 
+## Fused Native Render Boundary A/B
+
+The retained-solid render path now sends the registry-owned mesh positions and
+`usize` indices directly to the render kernel. The detached export path remains
+available for the public ABI. Both paths must produce the same render signature;
+the benchmark asserts that parity for every sample.
+
+Command: `npm run bench:render-native` (release, 9 samples after warmup).
+
+| Fixture | detached p50 | fused p50 | delta |
+|---|---:|---:|---:|
+| sphere-128 | 2.862 ms | 2.778 ms | -2.9% |
+| cylinder-128 | 0.099 ms | 0.101 ms | +2.0% |
+
+This is a native boundary result, not a host-visible end-to-end claim. It is a
+small repeatability candidate: the large sphere avoids the two intermediate
+position/index allocations, while the small cylinder remains within normal
+measurement noise. The fused path is retained, and the next control run should
+measure the host retained-handle route after the generated WASM is rebuilt.
+
 ## Surface Grouping Rust Migration
 
 The main-thread publication path now uses the existing Rust
@@ -158,8 +178,8 @@ covered by the existing surface-group kernel tests.
 
 ## Next A/B Boundary
 
-Profile `mesh_render::render` in isolation. Compare a candidate that reuses
-per-source adjacency/normal work against the current CSR implementation.
-Keep the current implementation as the byte-parity oracle and retain only a
-repeatable win on `sphere-128` and `three-spheres-128` without changing
-`cylinder-128` or any render regression tests.
+Measure the host retained-handle route after the fused native path is rebuilt.
+If the host result preserves the native direction, profile reusable
+per-source adjacency/normal work next. Keep the detached implementation as the
+byte-parity oracle and retain only a repeatable win on `sphere-128` and
+`three-spheres-128` without changing `cylinder-128` or render regression tests.

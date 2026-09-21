@@ -1,4 +1,5 @@
 //! Detached display preparation. No handle registry or persistent scratch state.
+#[cfg(test)]
 use crate::CadMeshBuffer;
 
 /// Stride-6 display vertices, property-vertex merges and authored planar face ids.
@@ -51,11 +52,7 @@ fn js_round(x: f64) -> f64 {
         return x;
     }
     let floor = x.floor();
-    if x - floor >= 0.5 {
-        floor + 1.
-    } else {
-        floor
-    }
+    if x - floor >= 0.5 { floor + 1. } else { floor }
 }
 
 fn js_normalized(v: [f64; 3], length: f64) -> [f64; 3] {
@@ -66,12 +63,12 @@ fn js_normalized(v: [f64; 3], length: f64) -> [f64; 3] {
     }
 }
 
-fn point(positions: &[f64], id: u32) -> [f64; 3] {
-    let i = id as usize * 3;
+fn point<I: RenderIndex>(positions: &[f64], id: I) -> [f64; 3] {
+    let i = id.as_usize() * 3;
     [positions[i], positions[i + 1], positions[i + 2]]
 }
 
-fn face_normal(positions: &[f64], tri: &[u32; 3]) -> [f64; 3] {
+fn face_normal<I: RenderIndex>(positions: &[f64], tri: &[I; 3]) -> [f64; 3] {
     let p0 = point(positions, tri[0]);
     let p1 = point(positions, tri[1]);
     let p2 = point(positions, tri[2]);
@@ -97,17 +94,33 @@ struct FaceAdjacency {
     normals: Vec<[f64; 3]>,
 }
 
-struct RenderInput<'a> {
+pub(crate) trait RenderIndex: Copy {
+    fn as_usize(self) -> usize;
+}
+
+impl RenderIndex for u32 {
+    fn as_usize(self) -> usize {
+        self as usize
+    }
+}
+
+impl RenderIndex for usize {
+    fn as_usize(self) -> usize {
+        self
+    }
+}
+
+struct RenderInput<'a, I> {
     positions: &'a [f64],
-    indices: &'a [u32],
+    indices: &'a [I],
     face_ids: Vec<u32>,
 }
 
-fn build_face_adjacency(positions: &[f64], indices: &[u32]) -> FaceAdjacency {
+fn build_face_adjacency<I: RenderIndex>(positions: &[f64], indices: &[I]) -> FaceAdjacency {
     let vertex_count = positions.len() / 3;
     let mut offsets = vec![0usize; vertex_count + 1];
     for &id in indices {
-        offsets[id as usize + 1] += 1;
+        offsets[id.as_usize() + 1] += 1;
     }
     for i in 0..vertex_count {
         offsets[i + 1] += offsets[i];
@@ -120,7 +133,7 @@ fn build_face_adjacency(positions: &[f64], indices: &[u32]) -> FaceAdjacency {
     for (t, tri) in indices.as_chunks::<3>().0.iter().enumerate() {
         normals.push(face_normal(positions, tri));
         for &id in tri {
-            let cursor = &mut cursors[id as usize];
+            let cursor = &mut cursors[id.as_usize()];
             faces[*cursor] = t as u32;
             *cursor += 1;
         }
@@ -135,18 +148,33 @@ fn build_face_adjacency(positions: &[f64], indices: &[u32]) -> FaceAdjacency {
 
 /// Inputs are validated export snapshots. Preserve triangle-order summation,
 /// first-occurrence property ids, and normals rounded to 1e-7 exactly.
-pub(crate) fn render(snapshot: CadMeshBuffer, crease_cosine: f64) -> RenderMesh {
+#[cfg(test)]
+fn render(snapshot: CadMeshBuffer, crease_cosine: f64) -> RenderMesh {
+    render_parts(
+        &snapshot.positions,
+        &snapshot.indices,
+        snapshot.face_ids,
+        crease_cosine,
+    )
+}
+
+pub(crate) fn render_parts<I: RenderIndex>(
+    positions: &[f64],
+    indices: &[I],
+    face_ids: Vec<u32>,
+    crease_cosine: f64,
+) -> RenderMesh {
     render_input(
         RenderInput {
-            positions: &snapshot.positions,
-            indices: &snapshot.indices,
-            face_ids: snapshot.face_ids,
+            positions,
+            indices,
+            face_ids,
         },
         crease_cosine,
     )
 }
 
-fn render_input(input: RenderInput<'_>, crease_cosine: f64) -> RenderMesh {
+fn render_input<I: RenderIndex>(input: RenderInput<'_, I>, crease_cosine: f64) -> RenderMesh {
     let positions = input.positions;
     let indices = input.indices;
     let vertex_count = positions.len() / 3;
@@ -163,7 +191,7 @@ fn render_input(input: RenderInput<'_>, crease_cosine: f64) -> RenderMesh {
     let mut merge_from = Vec::with_capacity(merge_capacity);
     let mut merge_to = Vec::with_capacity(merge_capacity);
     for (i, &id) in indices.iter().enumerate() {
-        let source = id as usize;
+        let source = id.as_usize();
         let face = adjacency.normals[i / 3];
         let mut normal = [0_f64; 3];
         for &t in &adjacency.faces[adjacency.offsets[source]..adjacency.offsets[source + 1]] {
@@ -341,11 +369,13 @@ mod tests {
             ("sphere-128", sphere(30., 128).unwrap()),
             ("cylinder-128", cylinder(8., 3., 3., 128, true).unwrap()),
         ] {
-            let indices: Vec<u32> = mesh.indices.into_iter().map(|index| index as u32).collect();
+            let positions = mesh.positions;
+            let native_indices = mesh.indices;
+            let indices: Vec<u32> = native_indices.iter().map(|&index| index as u32).collect();
             let snapshot = CadMeshBuffer {
-                positions: mesh.positions,
+                positions: positions.clone(),
                 face_ids: (0..indices.len() as u32 / 3).collect(),
-                indices,
+                indices: indices.clone(),
             };
             let cosine = (52.5_f64.to_radians()).cos();
             let expected = render(
@@ -354,6 +384,12 @@ mod tests {
                     indices: snapshot.indices.clone(),
                     face_ids: snapshot.face_ids.clone(),
                 },
+                cosine,
+            );
+            let fused_expected = render_parts(
+                &positions,
+                &native_indices,
+                snapshot.face_ids.clone(),
                 cosine,
             );
             let signature = |mesh: &RenderMesh| {
@@ -368,6 +404,7 @@ mod tests {
                 )
             };
             let expected_signature = signature(&expected);
+            assert_eq!(signature(&fused_expected), expected_signature);
             for _ in 0..2 {
                 let result = render(
                     CadMeshBuffer {
@@ -379,7 +416,8 @@ mod tests {
                 );
                 assert_eq!(signature(&result), expected_signature);
             }
-            let mut samples = Vec::with_capacity(9);
+            let mut detached_samples = Vec::with_capacity(9);
+            let mut fused_samples = Vec::with_capacity(9);
             for _ in 0..9 {
                 let input = CadMeshBuffer {
                     positions: snapshot.positions.clone(),
@@ -388,15 +426,28 @@ mod tests {
                 };
                 let started = Instant::now();
                 let result = black_box(render(black_box(input), cosine));
-                samples.push(started.elapsed().as_secs_f64() * 1000.);
+                detached_samples.push(started.elapsed().as_secs_f64() * 1000.);
+                assert_eq!(signature(&result), expected_signature);
+                black_box(result);
+
+                let started = Instant::now();
+                let result = black_box(render_parts(
+                    black_box(&positions),
+                    black_box(&native_indices),
+                    black_box(snapshot.face_ids.clone()),
+                    cosine,
+                ));
+                fused_samples.push(started.elapsed().as_secs_f64() * 1000.);
                 assert_eq!(signature(&result), expected_signature);
                 black_box(result);
             }
-            samples.sort_by(f64::total_cmp);
+            detached_samples.sort_by(f64::total_cmp);
+            fused_samples.sort_by(f64::total_cmp);
             println!(
-                "native-render {name}: triangles={} p50_ms={:.3} samples_ms={samples:?}",
+                "native-render {name}: triangles={} detached_p50_ms={:.3} fused_p50_ms={:.3} detached_samples_ms={detached_samples:?} fused_samples_ms={fused_samples:?}",
                 snapshot.indices.len() / 3,
-                samples[samples.len() / 2],
+                detached_samples[detached_samples.len() / 2],
+                fused_samples[fused_samples.len() / 2],
             );
         }
     }

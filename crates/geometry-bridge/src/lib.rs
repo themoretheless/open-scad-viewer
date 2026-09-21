@@ -524,6 +524,7 @@ pub fn dispatch(mut v: Value) -> Result<Value> {
         "truss_solve" | "truss_solve_wrenches" => truss::solve(v),
         "truss_screen" => print_strength::screening(v),
         "print_strength_profile" => print_strength::profile(v),
+        "thermal_strength" => print_strength::thermal(v),
         "brep_intersect_surface_surface"
         | "brep_intersect_curve_segment"
         | "brep_intersect_curve_plane"

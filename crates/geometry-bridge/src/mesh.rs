@@ -519,9 +519,7 @@ fn minkowski(a: &Mesh, b: &Mesh) -> Result<Mesh> {
 
 /// A detached export snapshot. Its vectors remain valid until the JS lease is freed.
 /// Commands may delete the source solid without invalidating this snapshot.
-pub(crate) fn export_buffers(id: u32) -> Result<crate::CadMeshBuffer> {
-    let shape = get(id)?;
-    let m = solid(&shape)?;
+fn face_ids(m: &Mesh) -> Result<Vec<u32>> {
     let mut groups = std::collections::BTreeMap::new();
     let mut ids = Vec::new();
     let scale = m.positions.iter().fold(1_f64, |a, b| a.max(b.abs()));
@@ -548,6 +546,15 @@ pub(crate) fn export_buffers(id: u32) -> Result<crate::CadMeshBuffer> {
         let next = groups.len();
         ids.push(*groups.entry(key).or_insert(next));
     }
+    Ok(ids.into_iter().map(|v| v as u32).collect())
+}
+
+/// A detached export snapshot. Its vectors remain valid until the JS lease is freed.
+/// Commands may delete the source solid without invalidating this snapshot.
+pub(crate) fn export_buffers(id: u32) -> Result<crate::CadMeshBuffer> {
+    let shape = get(id)?;
+    let m = solid(&shape)?;
+    let scale = m.positions.iter().fold(1_f64, |a, b| a.max(b.abs()));
 
     Ok(crate::CadMeshBuffer {
         positions: m
@@ -556,13 +563,17 @@ pub(crate) fn export_buffers(id: u32) -> Result<crate::CadMeshBuffer> {
             .map(|&v| if v.abs() < scale * 1e-14 { 0. } else { v })
             .collect(),
         indices: m.indices.iter().map(|&v| v as u32).collect(),
-        face_ids: ids.into_iter().map(|v| v as u32).collect(),
+        face_ids: face_ids(m)?,
     })
 }
 /// Detach the registry-owned solid before preparing its display buffers.
 pub(crate) fn render_buffers(id: u32, crease_cosine: f64) -> Result<RenderMesh> {
-    Ok(crate::mesh_render::render(
-        export_buffers(id)?,
+    let shape = get(id)?;
+    let m = solid(&shape)?;
+    Ok(crate::mesh_render::render_parts(
+        &m.positions,
+        &m.indices,
+        face_ids(m)?,
         crease_cosine,
     ))
 }

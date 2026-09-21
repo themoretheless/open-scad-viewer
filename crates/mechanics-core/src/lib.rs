@@ -20,6 +20,7 @@
 pub const MAX_POINTS: usize = 16_384;
 
 pub mod print_strength;
+pub mod thermal_strength;
 pub mod truss;
 pub mod truss_loads;
 

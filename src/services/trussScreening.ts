@@ -41,3 +41,37 @@ export interface ValidatedPrintProfile {
 export function validatePrintStrengthProfile(profile: PrintStrengthProfile): ValidatedPrintProfile {
   return callGeometryRust('print_strength_profile', {profile})
 }
+
+export interface ThermalSample {
+  nozzleTempC: number
+  serviceTempC: number
+  youngMpa: number
+  tensionMpa: number
+  compressionMpa: number
+}
+export interface ThermalStrengthRequest {
+  profile: PrintStrengthProfile
+  calibrationProfile: PrintStrengthProfile
+  samples: ThermalSample[]
+  serviceTempC: number
+}
+export interface ThermalStrengthResult {
+  modelKind: 'measured-bilinear-isotropic-axial-v1'
+  youngMpa: number
+  tensionMpa: number
+  compressionMpa: number
+  nozzleBracketC: [number,number]
+  serviceBracketC: [number,number]
+}
+export function evaluateThermalStrength(request: ThermalStrengthRequest): ThermalStrengthResult {
+  return callGeometryRust('thermal_strength', request)
+}
+export interface ThermalEvaluation {
+  request: ThermalStrengthRequest
+  result: ThermalStrengthResult
+}
+export interface ThermalEditorState {
+  enabled: boolean
+  evaluation: ThermalEvaluation | null
+  error: string
+}

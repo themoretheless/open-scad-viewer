@@ -6,7 +6,8 @@ import type {NominalLatticeGraph} from '../services/latticeGraphProtocol'
 import type {TrussLoadCase,TrussScenario} from '../services/trussScenario'
 import {computeNominalLatticeGraph,computeTrussScenario} from '../services/mainSolidWorker'
 import {trussFieldMeshes} from '../services/trussFieldMeshes'
-import {screenTrussMembers,validatePrintStrengthProfile,type ValidatedPrintProfile} from '../services/trussScreening'
+import {screenTrussMembers,validatePrintStrengthProfile,type ValidatedPrintProfile,type ThermalEditorState,type ThermalEvaluation} from '../services/trussScreening'
+import ThermalStrengthEditor from './ThermalStrengthEditor.vue'
 import type {LatticePrintSettings} from '../services/latticePrintSettings'
 
 const props=defineProps<{meshes:MeshData[];selection:number[];source:string;ready:boolean;locale:string;options:LighteningOptions;printSettings:LatticePrintSettings;previewEpoch?:number}>()
@@ -31,13 +32,18 @@ const tensionMpa=ref<number|string>(''),compressionMpa=ref<number|string>(''),sa
 const material=ref(''),grade=ref(''),propertySource=ref('')
 const nozzleTempC=ref<number|string>(''),bedTempC=ref<number|string>('')
 const solvedPrintProfile=shallowRef<ValidatedPrintProfile|null>(null)
+const thermalState=shallowRef<ThermalEditorState>({enabled:false,evaluation:null,error:''})
+const solvedThermal=shallowRef<ThermalEvaluation|null>(null)
+const effectiveYoung=computed(()=>thermalState.value.enabled?thermalState.value.evaluation?.result.youngMpa:youngMpa.value)
+function updateThermal(value:ThermalEditorState){thermalState.value=value;invalidateResult()}
 const printProfile=computed(()=>({material:material.value,grade:grade.value,propertySource:propertySource.value,
   nozzleMm:props.printSettings.nozzle,lineWidthMm:props.options.lineWidth,layerHeightMm:props.printSettings.layer,
   nozzleTempC:Number(nozzleTempC.value),bedTempC:bedTempC.value===''?NaN:Number(bedTempC.value)}))
 const screening=computed(()=>{
-  if(!result.value||tensionMpa.value===''||compressionMpa.value==='')return {rows:[],error:''}
+  const thermal=solvedThermal.value?.result
+  if(!result.value||(!thermal&&(tensionMpa.value===''||compressionMpa.value==='')))return {rows:[],error:''}
   try{return {rows:screenTrussMembers(result.value.model,[result.value.result],{
-    tensionMpa:Number(tensionMpa.value),compressionMpa:Number(compressionMpa.value),safetyFactor:Number(safetyFactor.value)}),error:''}}
+    tensionMpa:thermal?.tensionMpa??Number(tensionMpa.value),compressionMpa:thermal?.compressionMpa??Number(compressionMpa.value),safetyFactor:Number(safetyFactor.value)}),error:''}}
   catch(cause){return {rows:[],error:String(cause)}}
 })
 const current=computed(()=>entries.value[active.value]?.loadCase??null)
@@ -51,7 +57,7 @@ let binding:{sourceBodyIndex:number;graphOptions:LighteningOptions}|null=null
 
 function invalidateResult(){
   clearField()
-  revision++;controller?.abort();controller=undefined;phase.value=null;result.value=null;solvedPrintProfile.value=null;error.value=''
+  revision++;controller?.abort();controller=undefined;phase.value=null;result.value=null;solvedPrintProfile.value=null;solvedThermal.value=null;error.value=''
   if(reportUrl.value)URL.revokeObjectURL(reportUrl.value)
   reportUrl.value=''
 }
@@ -65,8 +71,8 @@ watch([result,solvedPrintProfile,screening,tensionMpa,compressionMpa,safetyFacto
   if(reportUrl.value)URL.revokeObjectURL(reportUrl.value)
   reportUrl.value=''
   if(!result.value||!solvedPrintProfile.value||!graph.value||!binding)return
-  const assessment=screening.value.rows.length?{limits:{tensionMpa:tensionMpa.value,compressionMpa:compressionMpa.value,safetyFactor:safetyFactor.value},rows:screening.value.rows}:null
-  const report={version:2,modelKind:graph.value.modelKind,...binding,...result.value,printProfile:solvedPrintProfile.value,axialScreening:assessment}
+  const assessment=screening.value.rows.length?{limits:{tensionMpa:solvedThermal.value?.result.tensionMpa??tensionMpa.value,compressionMpa:solvedThermal.value?.result.compressionMpa??compressionMpa.value,safetyFactor:safetyFactor.value},rows:screening.value.rows}:null
+  const report={version:3,modelKind:graph.value.modelKind,...binding,...result.value,printProfile:solvedPrintProfile.value,thermal:solvedThermal.value,axialScreening:assessment}
   reportUrl.value=URL.createObjectURL(new Blob([JSON.stringify(report,null,2)],{type:'application/json'}))
 })
 onUnmounted(invalidateResult)
@@ -112,11 +118,14 @@ async function solve(){
   let profile:ValidatedPrintProfile
   try{profile=validatePrintStrengthProfile(printProfile.value)}
   catch(cause){error.value=String(cause);return}
-  if(typeof youngMpa.value!=='number'||!Number.isFinite(youngMpa.value)||youngMpa.value<=0
+  const thermal=thermalState.value.enabled?thermalState.value.evaluation:null
+  if(thermalState.value.enabled&&!thermal){error.value=thermalState.value.error;return}
+  const modulus=effectiveYoung.value
+  if(typeof modulus!=='number'||!Number.isFinite(modulus)||modulus<=0
     ||typeof areaMm2.value!=='number'||!Number.isFinite(areaMm2.value)||areaMm2.value<=0){
     error.value=label('Модуль E и площадь должны быть положительными конечными числами.','E and area must be positive finite numbers.');return
   }
-  const scenario:TrussScenario={nodesMm:graph.value.nodes,members:graph.value.edges.map(nodes=>({nodes,youngMpa:youngMpa.value as number,areaMm2:areaMm2.value as number})),
+  const scenario:TrussScenario={nodesMm:graph.value.nodes,members:graph.value.edges.map(nodes=>({nodes,youngMpa:modulus,areaMm2:areaMm2.value as number})),
     cases:entries.value.map(entry=>entry.loadCase),combinations:mode.value==='combination'?[{id:'combination',terms:entries.value.map(entry=>({caseId:entry.loadCase.id,factor:entry.factor}))}]:[],
     activeId:mode.value==='combination'?'combination':current.value.id}
   const ticket=revision,abort=new AbortController();controller=abort;phase.value='solve'
@@ -124,6 +133,7 @@ async function solve(){
     const value=await computeTrussScenario(scenario,{signal:abort.signal})
     if(ticket!==revision)return
     solvedPrintProfile.value=profile
+    solvedThermal.value=thermal
     result.value=value
   }catch(cause){if(ticket===revision&&!(cause instanceof Error&&cause.name==='AbortError'))error.value=String(cause)}
   finally{if(ticket===revision){phase.value=null;controller=undefined}}
@@ -148,10 +158,11 @@ const number=(value:number)=>value===0?'0':value.toPrecision(5)
           <label>{{label('Температура стола, °C','Bed temperature, °C')}}<input v-model.number="bedTempC" type="number" min="0"></label>
         </div>
         <p>{{label('Из настроек FDM и геометрии: сопло','From FDM and geometry settings: nozzle')}} {{printSettings.nozzle}} mm · {{label('ширина линии','line width')}} {{options.lineWidth}} mm · {{label('слой','layer')}} {{printSettings.layer}} mm.</p>
-        <p>{{label('При изменении пластика, температуры, сопла, линии или слоя введите E и пределы заново. Используйте значения для указанных условий. Влияние температуры и анизотропии автоматически не моделируется.','After changing plastic, temperature, nozzle, line or layer, re-enter E and limits for those conditions. Temperature effects and anisotropy are not automatically modeled.')}}</p>
+        <p>{{label('Ручные свойства сбрасываются при изменении условий. Температурная таблица пересчитывает E и пределы только в измеренном диапазоне; анизотропия не моделируется.','Manual properties reset when conditions change. The temperature table recalculates E and limits only within the measured range; anisotropy is not modeled.')}}</p>
       </fieldset>
+      <ThermalStrengthEditor :profile="printProfile" :locale="locale" @change="updateThermal"/>
       <div class="fields">
-        <label>{{label('Модуль E, MPa','Young modulus, MPa')}}<input v-model.number="youngMpa" type="number" min="0" step="100"></label>
+        <label>{{label('Модуль E, MPa','Young modulus, MPa')}}<input v-if="!thermalState.enabled" v-model.number="youngMpa" type="number" min="0" step="100"><input v-else :value="effectiveYoung??''" type="number" readonly></label>
         <label>{{label('Площадь стержня, mm²','Member area, mm²')}}<input v-model.number="areaMm2" type="number" min="0" step="0.1"></label>
       </div>
       <label>{{label('Редактируемый случай','Edit case')}}<select v-model.number="active" :aria-label="label('Редактируемый случай','Edit case')"><option v-for="(entry,i) in entries" :key="i" :value="i">{{entry.loadCase.id}}</option></select></label>
@@ -184,8 +195,8 @@ const number=(value:number)=>value===0?'0':value.toPrecision(5)
         <fieldset><legend>{{label('Поиск перегруженных стержней','Axial demand screening')}}</legend>
           <p>{{label('Только рассчитанный случай или комбинация. Допуски задаются для вашего материала и процесса печати; потеря устойчивости не проверяется.','Only the solved case or combination. Supply limits for your material and printing process; buckling is not checked.')}}</p>
           <div class="fields">
-            <label>{{label('Предел растяжения, MPa','Tensile limit, MPa')}}<input v-model.number="tensionMpa" type="number" min="0" step="0.1"></label>
-            <label>{{label('Предел сжатия, MPa','Compressive limit, MPa')}}<input v-model.number="compressionMpa" type="number" min="0" step="0.1"></label>
+            <label>{{label('Предел растяжения, MPa','Tensile limit, MPa')}}<input v-if="!solvedThermal" v-model.number="tensionMpa" type="number" min="0" step="0.1"><input v-else :value="solvedThermal.result.tensionMpa" type="number" readonly></label>
+            <label>{{label('Предел сжатия, MPa','Compressive limit, MPa')}}<input v-if="!solvedThermal" v-model.number="compressionMpa" type="number" min="0" step="0.1"><input v-else :value="solvedThermal.result.compressionMpa" type="number" readonly></label>
             <label>{{label('Коэффициент запаса','Safety factor')}}<input v-model.number="safetyFactor" type="number" min="1" step="0.1"></label>
           </div>
           <p v-if="screening.error" role="alert">{{screening.error}}</p>
