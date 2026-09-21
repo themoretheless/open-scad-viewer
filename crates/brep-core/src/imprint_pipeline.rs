@@ -1317,20 +1317,34 @@ pub(crate) fn rounded_convex_prism_edges(
 /// After a Complete imprint plan is certified, author the retained circular
 /// spans, shared crossing vertices, side patches, and cap loops exactly.
 /// Tangent, axial mismatch, or unsupported frame cases refuse.
+#[derive(Clone, Copy)]
+pub struct CylinderEnvelope {
+    pub origin: [f64; 3],
+    pub axis: [f64; 3],
+    pub radius: f64,
+    pub height: [f64; 2],
+}
+
 pub fn parallel_cylinder_wall_imprint(
     a: &Model,
     b: &Model,
     operation: &str,
     events: &[ImprintEvent],
-    a_origin: [f64; 3],
-    a_axis: [f64; 3],
-    a_radius: f64,
-    a_height: [f64; 2],
-    b_origin: [f64; 3],
-    b_axis: [f64; 3],
-    b_radius: f64,
-    b_height: [f64; 2],
+    a_cylinder: CylinderEnvelope,
+    b_cylinder: CylinderEnvelope,
 ) -> Result<Model> {
+    let CylinderEnvelope {
+        origin: a_origin,
+        axis: a_axis,
+        radius: a_radius,
+        height: a_height,
+    } = a_cylinder;
+    let CylinderEnvelope {
+        origin: b_origin,
+        axis: b_axis,
+        radius: b_radius,
+        height: b_height,
+    } = b_cylinder;
     a.validate()?;
     b.validate()?;
     if !matches!(operation, "union" | "difference" | "intersection") {

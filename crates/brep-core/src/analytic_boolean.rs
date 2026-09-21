@@ -797,7 +797,22 @@ fn cylinder_pair_boolean(
         let (bo, bd, br, bh) = cylinder_envelope(b)?;
         let events = wall_imprint_events(&reports)?;
         imprint_pipeline::parallel_cylinder_wall_imprint(
-            a, b, operation, &events, ao, ad, ar, ah, bo, bd, br, bh,
+            a,
+            b,
+            operation,
+            &events,
+            imprint_pipeline::CylinderEnvelope {
+                origin: ao,
+                axis: ad,
+                radius: ar,
+                height: ah,
+            },
+            imprint_pipeline::CylinderEnvelope {
+                origin: bo,
+                axis: bd,
+                radius: br,
+                height: bh,
+            },
         )?
     } else {
         imprint_pipeline::regularized_empty_algebra(a, b, operation, relation)?
