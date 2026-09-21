@@ -142,10 +142,10 @@ fn tessellate_stroke_points(
     opts: &StrokeOptions,
     tolerance: f64,
 ) -> Result<crate::tessellation::FillMesh> {
-    if opts.dash.as_ref().is_none_or(Vec::is_empty) {
-        if let Some(mesh) = simple::mesh(&pts, closed, opts, tolerance)? {
-            return Ok(mesh);
-        }
+    if opts.dash.as_ref().is_none_or(Vec::is_empty)
+        && let Some(mesh) = simple::mesh(&pts, closed, opts, tolerance)?
+    {
+        return Ok(mesh);
     }
     // A rejected ribbon must not repeat the bounded intersection certificate.
     let rings = outline_points(pts, closed, opts, tolerance, false)?;
@@ -182,15 +182,17 @@ fn outline_points(
     tolerance: f64,
     try_simple: bool,
 ) -> Result<crate::rings::Rings> {
-    if closed && opts.dash.as_ref().is_none_or(Vec::is_empty) {
-        if let Some(rings) = convex_closed_stroke(&pts, opts, tolerance)? {
-            return Ok(rings);
-        }
+    if closed
+        && opts.dash.as_ref().is_none_or(Vec::is_empty)
+        && let Some(rings) = convex_closed_stroke(&pts, opts, tolerance)?
+    {
+        return Ok(rings);
     }
-    if try_simple && opts.dash.as_ref().is_none_or(Vec::is_empty) {
-        if let Some(rings) = simple::outline(&pts, closed, opts, tolerance)? {
-            return Ok(rings);
-        }
+    if try_simple
+        && opts.dash.as_ref().is_none_or(Vec::is_empty)
+        && let Some(rings) = simple::outline(&pts, closed, opts, tolerance)?
+    {
+        return Ok(rings);
     }
     let polylines = match &opts.dash {
         Some(dash) if !dash.is_empty() => dash_polylines(&pts, closed, dash, opts.dash_offset)?,
@@ -269,11 +271,11 @@ fn convex_closed_stroke(
         inner.push(inside);
         match opts.join {
             LineJoin::Miter => {
-                if let Some(m) = line_intersect(r0, add2(r0, d0), r1, add2(r1, d1)) {
-                    if dist(m, p) <= half * opts.miter_limit {
-                        outer.push(m);
-                        continue;
-                    }
+                if let Some(m) = line_intersect(r0, add2(r0, d0), r1, add2(r1, d1))
+                    && dist(m, p) <= half * opts.miter_limit
+                {
+                    outer.push(m);
+                    continue;
                 }
                 outer.extend([r0, r1]);
             }
@@ -600,10 +602,10 @@ fn stroke_pieces(
                 wedge = arc_sector(p, half, angle, cross.atan2(dot), tolerance)?;
             }
             LineJoin::Miter => {
-                if let Some(m) = line_intersect(q0, add2(q0, d0), q1, add2(q1, d1)) {
-                    if dist(p, m) <= half * opts.miter_limit {
-                        wedge.push(m);
-                    }
+                if let Some(m) = line_intersect(q0, add2(q0, d0), q1, add2(q1, d1))
+                    && dist(p, m) <= half * opts.miter_limit
+                {
+                    wedge.push(m);
                 }
                 wedge.push(q1);
             }

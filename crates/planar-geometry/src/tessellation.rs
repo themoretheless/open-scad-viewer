@@ -52,13 +52,13 @@ pub fn tessellate_rings(input: &Rings, rule: FillRule) -> Result<FillMesh> {
         .into_iter()
         .filter(|ring| ring.len() >= 3)
         .collect();
-    if cleaned.len() == 1 {
-        if let Some(positions) = rings::convex_boundary(&cleaned[0]) {
-            let indices = (1..positions.len() - 1)
-                .flat_map(|i| [0, i as u32, i as u32 + 1])
-                .collect();
-            return Ok(FillMesh { positions, indices });
-        }
+    if cleaned.len() == 1
+        && let Some(positions) = rings::convex_boundary(&cleaned[0])
+    {
+        let indices = (1..positions.len() - 1)
+            .flat_map(|i| [0, i as u32, i as u32 + 1])
+            .collect();
+        return Ok(FillMesh { positions, indices });
     }
     let normalized = rings::normalize(&cleaned, rule)?;
     sweep_region(&normalized)
@@ -162,7 +162,7 @@ fn sweep_region(rings: &Rings) -> Result<FillMesh> {
         }));
         active.sort_by(|a, b| a.0.total_cmp(&b.0));
         check(active.len() % 2 == 0, "Unbalanced fill boundary")?;
-        for pair in active.chunks_exact(2) {
+        for pair in active.as_chunks::<2>().0 {
             let (_, a, b) = pair[0];
             let (_, c, d) = pair[1];
             let mut lb = [x_at(a, b, bottom), bottom];
@@ -244,7 +244,7 @@ mod tests {
 
     fn signed_area_mesh(mesh: &FillMesh) -> f64 {
         let mut a = 0.0;
-        for tri in mesh.indices.chunks_exact(3) {
+        for tri in mesh.indices.as_chunks::<3>().0 {
             let p0 = mesh.positions[tri[0] as usize];
             let p1 = mesh.positions[tri[1] as usize];
             let p2 = mesh.positions[tri[2] as usize];
@@ -266,7 +266,7 @@ mod tests {
                 let p = [-1. + ix as f64 * 0.317, -1. + iy as f64 * 0.293];
                 let mut count = 0;
                 let mut boundary = false;
-                for tri in mesh.indices.chunks_exact(3) {
+                for tri in mesh.indices.as_chunks::<3>().0 {
                     let points: Vec<_> = tri.iter().map(|&i| mesh.positions[i as usize]).collect();
                     let sides: Vec<_> = (0..3)
                         .map(|i| cross2(sub2(points[(i + 1) % 3], points[i]), sub2(p, points[i])))

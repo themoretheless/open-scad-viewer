@@ -36,7 +36,9 @@ fn compound_area(paths: &[BezierPath]) -> f64 {
     )
     .unwrap();
     mesh.indices
-        .chunks_exact(3)
+        .as_chunks::<3>()
+        .0
+        .iter()
         .map(|triangle| {
             let [a, b, c] = [0, 1, 2].map(|i| mesh.positions[triangle[i] as usize]);
             ((b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0])).abs() * 0.5

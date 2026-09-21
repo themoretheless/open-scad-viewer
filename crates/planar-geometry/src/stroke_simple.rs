@@ -367,7 +367,9 @@ mod tests {
                                 .expect("certified mesh");
                             let triangles: Vec<_> = mesh
                                 .indices
-                                .chunks_exact(3)
+                                .as_chunks::<3>()
+                                .0
+                                .iter()
                                 .map(|ids| {
                                     [
                                         mesh.positions[ids[0] as usize],
@@ -447,7 +449,9 @@ mod tests {
             assert_eq!(mesh.triangle_count(), n * 2);
             let actual: f64 = mesh
                 .indices
-                .chunks_exact(3)
+                .as_chunks::<3>()
+                .0
+                .iter()
                 .map(|ids| {
                     let a = mesh.positions[ids[0] as usize];
                     cross2(

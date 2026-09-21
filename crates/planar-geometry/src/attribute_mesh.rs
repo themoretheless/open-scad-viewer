@@ -60,7 +60,7 @@ pub fn sample_mesh_with_seams(
         "Invalid attribute seams",
     )?;
     check(
-        mesh.indices.len() % 3 == 0
+        mesh.indices.len().is_multiple_of(3)
             && mesh
                 .indices
                 .iter()
@@ -69,7 +69,7 @@ pub fn sample_mesh_with_seams(
         "Invalid attribute mesh",
     )?;
     let mut output = SampledMesh::default();
-    for ids in mesh.indices.chunks_exact(3) {
+    for ids in mesh.indices.as_chunks::<3>().0 {
         let mut pieces = vec![
             ids.iter()
                 .map(|&i| mesh.positions[i as usize])
@@ -172,7 +172,7 @@ pub fn sample_mesh(
         "Invalid attribute mesh sampling options",
     )?;
     check(
-        mesh.indices.len() % 3 == 0
+        mesh.indices.len().is_multiple_of(3)
             && mesh
                 .indices
                 .iter()
@@ -195,7 +195,7 @@ pub fn sample_mesh(
         .collect::<Result<Vec<_>>>()?;
     let mut output = SampledMesh::default();
     let mut stack = Vec::new();
-    for ids in mesh.indices.chunks_exact(3) {
+    for ids in mesh.indices.as_chunks::<3>().0 {
         stack.push((
             [
                 input[ids[0] as usize],
@@ -291,7 +291,7 @@ mod tests {
             assert!(m.positions.len() > 6);
             assert!(m.values.iter().any(|v| v[0] < 1.));
             let mut area = 0.;
-            for ids in m.indices.chunks_exact(3) {
+            for ids in m.indices.as_chunks::<3>().0 {
                 let [a, b, c] = [
                     m.positions[ids[0] as usize],
                     m.positions[ids[1] as usize],
@@ -345,7 +345,7 @@ mod tests {
         })
         .unwrap();
         assert!(mesh.indices.len() / 3 <= 16);
-        for ids in mesh.indices.chunks_exact(3) {
+        for ids in mesh.indices.as_chunks::<3>().0 {
             let x = ids
                 .iter()
                 .map(|&i| mesh.positions[i as usize][0] / 3.)

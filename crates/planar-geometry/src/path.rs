@@ -100,8 +100,8 @@ impl BezierPath {
             points.len() - 1
         };
         let mut segments = Vec::with_capacity(last);
-        for i in 1..points.len() {
-            segments.push(PathSegment::Line { to: points[i] });
+        for &to in points.iter().skip(1) {
+            segments.push(PathSegment::Line { to });
         }
         if closed {
             segments.push(PathSegment::Line { to: start });
@@ -357,7 +357,7 @@ impl BezierPath {
         }
         let new_start = if node == 0 { anchors[1] } else { self.start };
         let mut out = Vec::with_capacity(n - 1);
-        for j in 0..n {
+        for (j, segment) in self.segments.iter().enumerate().take(n) {
             let b = (j + 1) % n;
             if j == node {
                 continue;
@@ -367,7 +367,7 @@ impl BezierPath {
                 out.push(PathSegment::Line { to: anchors[dest] });
                 continue;
             }
-            out.push(self.segments[j]);
+            out.push(*segment);
         }
         Ok(Self {
             start: new_start,
@@ -602,7 +602,7 @@ impl BezierPath {
         Ok(path)
     }
 
-    pub fn anchor_handles(&self, node: usize) -> Result<(Option<[f64; 2]>, Option<[f64; 2]>)> {
+    pub fn anchor_handles(&self, node: usize) -> Result<AnchorHandles> {
         check(node < self.anchor_count(), "Anchor index out of range")?;
         let incoming = incoming_segment(self, node).and_then(|i| match self.segments[i] {
             PathSegment::Cubic { c2, .. } => Some(c2),
@@ -816,6 +816,8 @@ pub enum AverageAxis {
     Vertical,
     Both,
 }
+
+pub type AnchorHandles = (Option<[f64; 2]>, Option<[f64; 2]>);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum HandleSide {

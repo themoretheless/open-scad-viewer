@@ -431,7 +431,9 @@ mod tests {
 
     fn area(mesh: &VertexBuffers<Point, u32>) -> f64 {
         mesh.indices
-            .chunks_exact(3)
+            .as_chunks::<3>()
+            .0
+            .iter()
             .map(|tri| {
                 let [a, b, c] = [
                     mesh.vertices[tri[0] as usize],
@@ -479,7 +481,7 @@ mod tests {
             )
             .unwrap();
         assert!((area(&buffers) - 80.).abs() < 1e-5);
-        for tri in buffers.indices.chunks_exact(3) {
+        for tri in buffers.indices.as_chunks::<3>().0 {
             let points: Vec<_> = tri.iter().map(|&i| buffers.vertices[i as usize]).collect();
             let cx = points.iter().map(|p| p.x).sum::<f32>() / 3.;
             let cy = points.iter().map(|p| p.y).sum::<f32>() / 3.;
@@ -732,7 +734,7 @@ mod tests {
                         (edge[0].x as f64 + edge[1].x as f64) * 0.5,
                         (edge[0].y as f64 + edge[1].y as f64) * 0.5,
                     ];
-                    let covered = mesh.indices.chunks_exact(3).any(|tri| {
+                    let covered = mesh.indices.as_chunks::<3>().0.iter().any(|tri| {
                         (0..3).all(|i| {
                             let a = mesh.vertices[tri[i] as usize];
                             let b = mesh.vertices[tri[(i + 1) % 3] as usize];

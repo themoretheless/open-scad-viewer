@@ -52,7 +52,9 @@ fn assert_round_coverage(pts: &[[f64; 2]], width: f64, closed: bool, tolerance: 
             let expected = d < width * 0.5;
             let hits = mesh
                 .indices
-                .chunks_exact(3)
+                .as_chunks::<3>()
+                .0
+                .iter()
                 .filter(|t| {
                     let [a, b, c] = [
                         mesh.positions[t[0] as usize],

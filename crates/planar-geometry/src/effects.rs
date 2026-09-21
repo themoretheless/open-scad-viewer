@@ -419,31 +419,18 @@ pub fn hatch_rings(
 
     let mut out = Vec::new();
     let mut span_count = 0usize;
-    emit_hatch_family(
+    let family = HatchFamily {
         rings,
         fill_rule,
         spacing,
-        angle_rad,
         min,
         max,
         half_diag,
         lines_per,
-        &mut out,
-        &mut span_count,
-    )?;
+    };
+    emit_hatch_family(&family, angle_rad, &mut out, &mut span_count)?;
     if cross {
-        emit_hatch_family(
-            rings,
-            fill_rule,
-            spacing,
-            angle_rad + PI * 0.5,
-            min,
-            max,
-            half_diag,
-            lines_per,
-            &mut out,
-            &mut span_count,
-        )?;
+        emit_hatch_family(&family, angle_rad + PI * 0.5, &mut out, &mut span_count)?;
     }
     Ok(out)
 }
@@ -467,32 +454,39 @@ pub fn hatch_path(
     hatch_rings(&rings, fill_rule, spacing, angle_rad, cross)
 }
 
-fn emit_hatch_family(
-    rings: &[Vec<[f64; 2]>],
+struct HatchFamily<'a> {
+    rings: &'a [Vec<[f64; 2]>],
     fill_rule: crate::tessellation::FillRule,
     spacing: f64,
-    angle: f64,
     min: [f64; 2],
     max: [f64; 2],
     half_diag: f64,
     lines_per: usize,
+}
+
+fn emit_hatch_family(
+    family: &HatchFamily<'_>,
+    angle: f64,
     out: &mut Vec<BezierPath>,
     span_count: &mut usize,
 ) -> Result<()> {
     let (s, c) = angle.sin_cos();
     let dir = [c, s];
     let normal = [-s, c];
-    let center = [(min[0] + max[0]) * 0.5, (min[1] + max[1]) * 0.5];
-    for line_index in 1..lines_per {
-        let offset = -half_diag + spacing * line_index as f64;
-        if offset >= half_diag - 1e-9 {
+    let center = [
+        (family.min[0] + family.max[0]) * 0.5,
+        (family.min[1] + family.max[1]) * 0.5,
+    ];
+    for line_index in 1..family.lines_per {
+        let offset = -family.half_diag + family.spacing * line_index as f64;
+        if offset >= family.half_diag - 1e-9 {
             break;
         }
         let origin = [
             center[0] + normal[0] * offset,
             center[1] + normal[1] * offset,
         ];
-        let spans = hatch_clip_line(rings, origin, dir, fill_rule)?;
+        let spans = hatch_clip_line(family.rings, origin, dir, family.fill_rule)?;
         for (p0, p1) in spans {
             check(*span_count < HATCH_MAX_SPANS, "Hatch span budget exceeded")?;
             *span_count += 1;
@@ -1740,7 +1734,7 @@ mod tests {
             )
             .unwrap()
         );
-        for pair in result.chunks_exact(2) {
+        for pair in result.as_chunks::<2>().0 {
             let offset = sub2(pair[1].start, pair[0].start);
             assert!((norm2(offset) - 10.).abs() < 1e-9);
             assert!(offset[1].abs() > 0.1); // rotation really happened
@@ -1834,7 +1828,7 @@ mod tests {
         );
         assert!(
             scatter_paths(
-                &[line.clone()],
+                std::slice::from_ref(&line),
                 &ScatterOptions {
                     count: usize::MAX,
                     ..Default::default()

@@ -235,7 +235,8 @@ fn flat(c: CurveSegment, tolerance: f64) -> bool {
     let b = *p.last().unwrap();
     let d = sub(b, a);
     let length = len(d);
-    let chord_ok = p.iter().all(|&q| {
+
+    p.iter().all(|&q| {
         if length == 0. {
             q.distance(a) <= tolerance
         } else {
@@ -243,8 +244,7 @@ fn flat(c: CurveSegment, tolerance: f64) -> bool {
             let projection = (v[0] * d[0] + v[1] * d[1]) / (length * length);
             q.distance(at(a, b, projection.clamp(0., 1.))) <= tolerance
         }
-    });
-    chord_ok
+    })
 }
 fn has_monotone_axis(curve: CurveSegment) -> bool {
     (0..2).any(|axis| has_monotone_coordinate(curve, axis))
@@ -442,19 +442,20 @@ pub fn binary_op(
             if x.source != y.source && !possible_pairs.contains(&pair) {
                 continue;
             }
-            if x.source != y.source && checked_pairs.insert(pair) {
-                if let Some(((t0, u0), (t1, u1))) = coincident_interval(
+            if x.source != y.source
+                && checked_pairs.insert(pair)
+                && let Some(((t0, u0), (t1, u1))) = coincident_interval(
                     curves[pair.0],
                     curves[pair.1],
                     &chords[chord_ranges[pair.0].clone()],
                     &chords[chord_ranges[pair.1].clone()],
                     numeric,
                     chord_tol,
-                ) {
-                    parameters[pair.0].extend([t0, t1]);
-                    parameters[pair.1].extend([u0, u1]);
-                    coincident_pairs.insert(pair, ((t0, u0), (t1, u1)));
-                }
+                )
+            {
+                parameters[pair.0].extend([t0, t1]);
+                parameters[pair.1].extend([u0, u1]);
+                coincident_pairs.insert(pair, ((t0, u0), (t1, u1)));
             }
             // Coincident arcs have infinitely many intersections. Splitting at
             // every approximate chord crossing creates mismatched micro-spans.
@@ -479,23 +480,24 @@ pub fn binary_op(
                 let u = cross(delta, d) / det;
                 let margin_x = 2. * chord_tol / len(d).max(numeric);
                 let margin_y = 2. * chord_tol / len(e).max(numeric);
-                if t >= -margin_x && t <= 1. + margin_x && u >= -margin_y && u <= 1. + margin_y {
-                    if let Some((t, u)) = refine(
+                if t >= -margin_x
+                    && t <= 1. + margin_x
+                    && u >= -margin_y
+                    && u <= 1. + margin_y
+                    && let Some((t, u)) = refine(
                         curves[x.source],
                         curves[y.source],
                         x.t0 + (x.t1 - x.t0) * t.clamp(0., 1.),
                         y.t0 + (y.t1 - y.t0) * u.clamp(0., 1.),
                         numeric,
-                    ) {
-                        if t >= x.t0 - 1e-6
-                            && t <= x.t1 + 1e-6
-                            && u >= y.t0 - 1e-6
-                            && u <= y.t1 + 1e-6
-                        {
-                            parameters[x.source].push(t);
-                            parameters[y.source].push(u);
-                        }
-                    }
+                    )
+                    && t >= x.t0 - 1e-6
+                    && t <= x.t1 + 1e-6
+                    && u >= y.t0 - 1e-6
+                    && u <= y.t1 + 1e-6
+                {
+                    parameters[x.source].push(t);
+                    parameters[y.source].push(u);
                 }
             } else if len(d) > numeric
                 && len(e) > numeric

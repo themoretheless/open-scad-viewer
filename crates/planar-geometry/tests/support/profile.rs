@@ -40,7 +40,7 @@ pub fn validate(mesh: &FillMesh, outer: &[[f64; 2]], holes: &[Vec<[f64; 2]>]) {
         .collect();
     let mut edges = BTreeMap::<(usize, usize), usize>::new();
     let mut area = 0.;
-    for t in mesh.indices.chunks_exact(3) {
+    for t in mesh.indices.as_chunks::<3>().0 {
         let [a, b, c] = [
             mesh.positions[t[0] as usize],
             mesh.positions[t[1] as usize],

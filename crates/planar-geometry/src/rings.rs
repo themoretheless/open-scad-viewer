@@ -24,10 +24,8 @@ fn winding(p: [f64; 2], rings: &Rings) -> i32 {
                 if cross2(sub2(b, a), sub2(p, a)) > 0. {
                     winding += 1;
                 }
-            } else if a[1] > p[1] && b[1] <= p[1] {
-                if cross2(sub2(b, a), sub2(p, a)) < 0. {
-                    winding -= 1;
-                }
+            } else if a[1] > p[1] && b[1] <= p[1] && cross2(sub2(b, a), sub2(p, a)) < 0. {
+                winding -= 1;
             }
         }
     }
@@ -206,14 +204,16 @@ fn planar_rule(
         "Planar arrangement exceeds 65536 edges",
     )?;
     let (coordinate_scale, extent) = coordinate_metrics(a.iter().chain(b).flatten())?;
-    if b.is_empty() && a.len() == 1 && op == "union" {
-        if let Some(hull) = convex_boundary(&a[0]) {
-            return Ok(if rule_a.is_none() && area(&a[0]) < 0. {
-                vec![]
-            } else {
-                vec![hull]
-            });
-        }
+    if b.is_empty()
+        && a.len() == 1
+        && op == "union"
+        && let Some(hull) = convex_boundary(&a[0])
+    {
+        return Ok(if rule_a.is_none() && area(&a[0]) < 0. {
+            vec![]
+        } else {
+            vec![hull]
+        });
     }
     // Geometric tolerances follow local extent; translating a tiny contour far
     // from the origin must not erase it. Retain an ULP floor for coordinates.

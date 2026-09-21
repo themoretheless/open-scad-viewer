@@ -110,7 +110,7 @@ pub fn triangulate_profile(outer: &[[f64; 2]], holes: &[Vec<[f64; 2]>]) -> Resul
                     if den.abs() > 1e-14 {
                         let t = cross2(sub2(a, p), e) / den;
                         let u = cross2(sub2(a, p), d) / den;
-                        if t > 1e-10 && t < 1. - 1e-10 && u >= -1e-10 && u <= 1. + 1e-10 {
+                        if t > 1e-10 && t < 1. - 1e-10 && (-1e-10..=1. + 1e-10).contains(&u) {
                             return false;
                         }
                     } else if cross2(sub2(a, p), d).abs() <= 1e-14 {
@@ -252,7 +252,9 @@ mod tests {
                         .unwrap_or_else(|e| panic!("{swap} {sx} {sy}: {e:?}"));
                     let area = mesh
                         .indices
-                        .chunks_exact(3)
+                        .as_chunks::<3>()
+                        .0
+                        .iter()
                         .map(|t| {
                             let [a, b, c] = [
                                 mesh.positions[t[0] as usize],

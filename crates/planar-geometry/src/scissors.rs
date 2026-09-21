@@ -481,10 +481,11 @@ pub fn knife_hits(path: &BezierPath, k0: [f64; 2], k1: [f64; 2]) -> Result<Vec<C
     hits.retain(|h| h.t > T_EPS && h.t < 1.0 - T_EPS);
     let mut dedup: Vec<CutHit> = Vec::with_capacity(hits.len());
     for h in hits {
-        if let Some(last) = dedup.last() {
-            if last.segment_index == h.segment_index && (last.t - h.t).abs() < DUP_T {
-                continue;
-            }
+        if let Some(last) = dedup.last()
+            && last.segment_index == h.segment_index
+            && (last.t - h.t).abs() < DUP_T
+        {
+            continue;
         }
         dedup.push(h);
     }
@@ -568,20 +569,21 @@ fn extract_subpath_open(
         None => (segments.len(), None),
     };
 
-    if let (Some(a), Some(b)) = (start_hit, end_hit) {
-        if a.segment_index == b.segment_index && a.t < b.t {
-            let Some(after) = first_override else {
-                return Ok(None);
-            };
-            let local_t = ((b.t - a.t) / (1.0 - a.t)).clamp(T_EPS, 1.0 - T_EPS);
-            let local = [after];
-            let (head, _, _) = split_segment_at(chunk_start, &local, 0, local_t)?;
-            let mut out = Vec::new();
-            if let Some(h) = head {
-                out.push(h);
-            }
-            return Ok(Some((chunk_start, out)));
+    if let (Some(a), Some(b)) = (start_hit, end_hit)
+        && a.segment_index == b.segment_index
+        && a.t < b.t
+    {
+        let Some(after) = first_override else {
+            return Ok(None);
+        };
+        let local_t = ((b.t - a.t) / (1.0 - a.t)).clamp(T_EPS, 1.0 - T_EPS);
+        let local = [after];
+        let (head, _, _) = split_segment_at(chunk_start, &local, 0, local_t)?;
+        let mut out = Vec::new();
+        if let Some(h) = head {
+            out.push(h);
         }
+        return Ok(Some((chunk_start, out)));
     }
 
     let mut out = Vec::new();
