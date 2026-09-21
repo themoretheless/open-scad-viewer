@@ -974,7 +974,10 @@ pub fn project_surface(
                 .sum::<f64>();
             let su = (rhsu * c - rhsv * b) / determinant;
             let sv = (rhsv * a - rhsu * b) / determinant;
-            (closure && determinant > 0. && su >= 0. && su <= 1. && sv >= 0. && sv <= 1.)
+            (closure
+                && determinant > 0.
+                && (0.0..=1.0).contains(&su)
+                && (0.0..=1.0).contains(&sv))
                 .then_some((su, sv, determinant))
         } else {
             None
@@ -2210,10 +2213,12 @@ fn interval_width(a: [f64; 2]) -> f64 {
     a[1] - a[0]
 }
 
+type SurfaceJetBounds = ([[f64; 2]; 3], [[f64; 2]; 3], [[f64; 2]; 3]);
+
 fn surface_jet_bounds(
     surface: &Surface,
     bounds: [f64; 4],
-) -> Result<([[f64; 2]; 3], [[f64; 2]; 3], [[f64; 2]; 3])> {
+) -> Result<SurfaceJetBounds> {
     let samples = 5;
     let mut point = [[f64::INFINITY, f64::NEG_INFINITY]; 3];
     let mut du = [[f64::INFINITY, f64::NEG_INFINITY]; 3];
@@ -2305,7 +2310,7 @@ fn krawczyk_unique_surface_root(
     let b = su.iter().zip(sv).map(|(x, y)| x * y).sum::<f64>();
     let c = sv.iter().map(|x| x * x).sum::<f64>();
     let det = a * c - b * b;
-    if !(det > 64. * f64::EPSILON) {
+    if !det.is_finite() || det <= 64. * f64::EPSILON {
         return Ok(None);
     }
     let inv = [[c / det, -b / det], [-b / det, a / det]];
@@ -2735,9 +2740,9 @@ fn robust_solve(
     let mut column_perm: Vec<usize> = (0..n).collect();
     for column in 0..n {
         let mut pivot = None;
-        for row in rank..n {
-            for candidate in column..n {
-                let magnitude = matrix[row][candidate].abs();
+        for (row, row_values) in matrix.iter().enumerate().skip(rank) {
+            for (candidate, value) in row_values.iter().enumerate().skip(column) {
+                let magnitude = value.abs();
                 if pivot.map(|(_, _, m)| magnitude > m).unwrap_or(true) {
                     pivot = Some((row, candidate, magnitude));
                 }
@@ -2752,8 +2757,8 @@ fn robust_solve(
         pivot_min = pivot_min.min(magnitude);
         matrix.swap(rank, row);
         values.swap(rank, row);
-        for r in 0..n {
-            matrix[r].swap(column, candidate);
+        for row in &mut matrix {
+            row.swap(column, candidate);
         }
         column_perm.swap(column, candidate);
         let divisor = matrix[rank][column];
