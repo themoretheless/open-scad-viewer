@@ -864,19 +864,16 @@ fn write_cuboid_topology(w: &mut StepWriter, min: [f64; 3], max: [f64; 3]) {
 
 fn export_kind(kind: &AnalyticKind) -> Result<(String, FeatureCertificate)> {
     let mut w = StepWriter::new();
-    let mut preamble = Vec::new();
-    preamble.push("ISO-10303-21;".into());
-    preamble.push("HEADER;".into());
-    preamble.push("FILE_DESCRIPTION(('OpenSCAD Viewer analytic B-rep'),'2;1');".into());
-    preamble.push(
+    let preamble = vec![
+        "ISO-10303-21;".into(),
+        "HEADER;".into(),
+        "FILE_DESCRIPTION(('OpenSCAD Viewer analytic B-rep'),'2;1');".into(),
         "FILE_NAME('analytic-brep.step','2026-09-16',('open-scad-viewer'),(''),'analytic-features','','');"
             .into(),
-    );
-    preamble.push(
         "FILE_SCHEMA(('AUTOMOTIVE_DESIGN','AP242_MANAGED_MODEL_BASED_3D_ENGINEERING'));".into(),
-    );
-    preamble.push("ENDSEC;".into());
-    preamble.push("DATA;".into());
+        "ENDSEC;".into(),
+        "DATA;".into(),
+    ];
 
     let _unit = w.emit("(LENGTH_UNIT()NAMED_UNIT(*)SI_UNIT(.MILLI.,.METRE.))".into());
     let _ctx = w.emit("APPLICATION_CONTEXT('configuration controlled 3D design')".into());
