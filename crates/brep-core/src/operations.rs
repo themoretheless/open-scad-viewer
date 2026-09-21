@@ -1095,7 +1095,9 @@ fn partition_polygon(
     (outside, active)
 }
 
-fn convex_boundary(model: &Model) -> Result<(Vec<Plane>, Vec<Vec<[f64; 3]>>)> {
+type ConvexBoundary = (Vec<Plane>, Vec<Vec<[f64; 3]>>);
+
+fn convex_boundary(model: &Model) -> Result<ConvexBoundary> {
     let planes = convex_planes(model)?;
     let shell = &model.shells[model.bodies[0].outer_shell];
     let polygons = shell
