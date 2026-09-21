@@ -192,32 +192,28 @@ fn curve_tangents(curve: &Curve, t: f64) -> Result<Vec<[f64; 3]>> {
     }
     let domain = curve.domain();
     let mut jets = Vec::new();
-    if t > domain[0] {
-        if let Some(a) = curve
+    if t > domain[0]
+        && let Some(a) = curve
             .knots
             .iter()
             .copied()
             .filter(|&k| k < t)
             .max_by(f64::total_cmp)
-        {
-            if let Some(d1) = curve.trim(a, t)?.evaluate(t)?.d1 {
-                jets.push(point3(&d1)?);
-            }
+        && let Some(d1) = curve.trim(a, t)?.evaluate(t)?.d1
+    {
+        jets.push(point3(&d1)?);
         }
-    }
-    if t < domain[1] {
-        if let Some(b) = curve
+    if t < domain[1]
+        && let Some(b) = curve
             .knots
             .iter()
             .copied()
             .filter(|&k| k > t)
             .min_by(f64::total_cmp)
-        {
-            if let Some(d1) = curve.trim(t, b)?.evaluate(t)?.d1 {
-                jets.push(point3(&d1)?);
-            }
+        && let Some(d1) = curve.trim(t, b)?.evaluate(t)?.d1
+    {
+        jets.push(point3(&d1)?);
         }
-    }
     Ok(jets)
 }
 
@@ -227,7 +223,7 @@ fn tangent_sine(first: &Curve, second: &Curve, t: f64, u: f64) -> Result<f64> {
         for vb in curve_tangents(second, u)? {
             let la = norm3(va);
             let lb = norm3(vb);
-            if !(la > 0.) || !(lb > 0.) {
+            if !la.is_finite() || !lb.is_finite() || la <= 0. || lb <= 0. {
                 continue;
             }
             let c = cross3(va.map(|x| x / la), vb.map(|x| x / lb));
@@ -261,7 +257,7 @@ fn contact_class(
     let vb = point3(b1)?;
     let la = norm3(va);
     let lb = norm3(vb);
-    if !(la > floor) || !(lb > floor) {
+    if !la.is_finite() || !lb.is_finite() || la <= floor || lb <= floor {
         return Ok("pole_or_singular");
     }
     // Align second tangent to first; relative second derivative decides parity.
@@ -452,7 +448,7 @@ fn krawczyk_cc(
         let e1 = va;
         let e2 = cross3(n, va);
         let ne2 = norm3(e2);
-        if !(ne2 > 0.) {
+        if !ne2.is_finite() || ne2 <= 0. {
             return Ok(None);
         }
         let e2 = e2.map(|x| x / ne2);
@@ -464,7 +460,7 @@ fn krawczyk_cc(
         let j10 = dot3(va, e2);
         let j11 = -dot3(vb, e2);
         let det = j00 * j11 - j01 * j10;
-        if !(det.abs() > 64. * f64::EPSILON) {
+        if !det.is_finite() || det.abs() <= 64. * f64::EPSILON {
             return Ok(None);
         }
         let dt = (j11 * ft[0] - j01 * ft[1]) / det;
