@@ -1696,8 +1696,8 @@ pub fn narrow_transverse_bicubic(
                 return Ok(report);
             }
         }
-    } else if pb.is_none() {
-        if pa.is_some() {
+    } else if pb.is_none()
+        && pa.is_some() {
             let context = ToleranceContext::default_valid();
             if let Ok(certificate) =
                 certify_exact_planar_iso_intersection(source_b, source_a, &context)
@@ -1707,7 +1707,6 @@ pub fn narrow_transverse_bicubic(
                 return Ok(report);
             }
         }
-    }
     let mut report = Report::default();
     report.unresolved(
         vec![0., 1., 0., 1., 0., 1., 0., 1.],
@@ -4182,8 +4181,8 @@ mod tests {
 
     fn bumped_bezier_xy(du: usize, dv: usize) -> Surface {
         let mut s = bezier_le3_xy(du, dv, 0., 0.);
-        let iu = (du / 2).max(0).min(du);
-        let iv = (dv / 2).max(0).min(dv);
+        let iu = (du / 2).min(du);
+        let iv = (dv / 2).min(dv);
         s.control_points[iu][iv][2] = 0.02;
         s
     }

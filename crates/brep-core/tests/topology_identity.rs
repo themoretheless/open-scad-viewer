@@ -260,14 +260,14 @@ fn cone_apex_edge_and_vertex_ids_survive_reindex() {
             .iter()
             .zip(model.1.edges.iter())
             .filter(|(edge, _)| edge.degenerate)
-            .map(|(_, id)| id.clone())
+            .map(|(_, id)| *id)
             .collect();
         let reordered_apex: BTreeSet<_> = reordered
             .edges
             .iter()
             .zip(reordered.1.edges.iter())
             .filter(|(edge, _)| edge.degenerate)
-            .map(|(_, id)| id.clone())
+            .map(|(_, id)| *id)
             .collect();
         assert_eq!(apex_edges, reordered_apex);
         assert!(!apex_edges.is_empty());
@@ -283,7 +283,7 @@ fn sphere_ordinary_poles_survive_reindex_without_degenerate_edges() {
         .iter()
         .enumerate()
         .filter(|(_, v)| v.point[0].abs() < 1e-12 && v.point[1].abs() < 1e-12)
-        .map(|(i, v)| (source.1.vertices[i].clone(), v.point[2].signum()))
+        .map(|(i, v)| (source.1.vertices[i], v.point[2].signum()))
         .collect();
     assert_eq!(poles.len(), 2);
     let reordered = reindex_clone(&source);
@@ -310,7 +310,7 @@ fn degenerate_flag_participates_in_edge_identity() {
         .iter()
         .position(|edge| edge.degenerate)
         .expect("cone apex");
-    let before = model.1.edges[apex].clone();
+    let before = model.1.edges[apex];
     model.edges[apex].degenerate = false;
     model.rebuild_topology_ids();
     assert_ne!(model.1.edges[apex], before);
@@ -327,14 +327,14 @@ fn cone_apex_lineage_does_not_false_persist_across_height_change() {
         .iter()
         .zip(short.1.edges.iter())
         .filter(|(edge, _)| edge.degenerate)
-        .map(|(_, id)| id.clone())
+        .map(|(_, id)| *id)
         .collect();
     let tall_apex: BTreeSet<_> = tall
         .edges
         .iter()
         .zip(tall.1.edges.iter())
         .filter(|(edge, _)| edge.degenerate)
-        .map(|(_, id)| id.clone())
+        .map(|(_, id)| *id)
         .collect();
     assert!(short_apex.is_disjoint(&tall_apex));
 }
@@ -362,7 +362,7 @@ fn revolve_axis_touching_profile_poles_survive_reindex() {
         .iter()
         .enumerate()
         .filter(|(_, v)| v.point[0].abs() < 1e-12 && v.point[1].abs() < 1e-12)
-        .map(|(i, _)| source.1.vertices[i].clone())
+        .map(|(i, _)| source.1.vertices[i])
         .collect();
     assert!(!poles.is_empty(), "axis-touching revolve must author poles");
     let reordered = reindex_clone(&source);

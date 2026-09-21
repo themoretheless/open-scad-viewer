@@ -163,9 +163,7 @@ fn point_on_segment(point: [f64; 3], a: [f64; 3], b: [f64; 3], tolerance: f64) -
         return None;
     }
     let t = dot(sub(point, a), ab) / length_squared;
-    (t > tolerance && t < 1. - tolerance)
-        .then(|| norm(sub(point, add(a, mul(ab, t)))) <= tolerance)
-        .unwrap_or(false)
+    if t > tolerance && t < 1. - tolerance { norm(sub(point, add(a, mul(ab, t)))) <= tolerance } else { false }
         .then_some(t)
 }
 
@@ -730,7 +728,7 @@ pub(super) fn admit_loft_sections(sections: &[Vec<[f64; 3]>]) -> Result<()> {
         return Err(unsupported("Loft requires 2..64 sections"));
     }
     let count = sections[0].len();
-    if count < 3 || count > 128 || sections.iter().any(|section| section.len() != count) {
+    if !(3..=128).contains(&count) || sections.iter().any(|section| section.len() != count) {
         return Err(unsupported(
             "Loft sections must have the same 3..128 vertex count",
         ));
@@ -1219,7 +1217,7 @@ fn planar_boundary(model: &Model) -> Result<Vec<(Plane, Vec<[f64; 3]>)>> {
                         .map(|&wire| project(wire))
                         .collect::<Result<Vec<_>>>()?;
                     let fill = planar_geometry::triangulation::triangulate_profile(&outer, &holes)?;
-                    for triangle in fill.indices.chunks_exact(3) {
+                    for triangle in fill.indices.as_chunks::<3>().0 {
                         boundary.push((
                             plane,
                             triangle
@@ -1567,8 +1565,7 @@ pub fn boolean(a: &Model, b: &Model, operation: &str) -> Result<Model> {
         && a.bodies[0].inner_shells.is_empty()
         && b.bodies[0].inner_shells.is_empty()
         && (orthogonal(a).is_err() || orthogonal(b).is_err())
-    {
-        if convex_planes(a).is_ok() && convex_planes(b).is_ok() {
+        && convex_planes(a).is_ok() && convex_planes(b).is_ok() {
             return convex_boolean(a, b, operation).map_err(|e| {
                 if e.code == OPERATION_FAILED {
                     unsupported("Boolean result is empty or dimensionally collapsed")
@@ -1577,7 +1574,6 @@ pub fn boolean(a: &Model, b: &Model, operation: &str) -> Result<Model> {
                 }
             });
         }
-    }
     if orthogonal(a).is_err() || orthogonal(b).is_err() {
         return planar_boolean(a, b, operation);
     }
@@ -2089,7 +2085,7 @@ fn edge_operation(
                         .unwrap_or(false)
                 }
             })
-            .map(|(index, _)| result.1.edges[index].clone())
+            .map(|(index, _)| result.1.edges[index])
             .collect();
         if !children.is_empty() {
             result.1.lineage.push(TopologyLineageRecord {
@@ -2100,7 +2096,7 @@ fn edge_operation(
                 }
                 .into(),
                 entity_kind: "edge".into(),
-                parents: vec![model.1.edges[edge_id].clone()],
+                parents: vec![model.1.edges[edge_id]],
                 children,
             });
         }
@@ -2426,7 +2422,7 @@ mod tests {
         let result = fillet(&source, 0, 0.5, 4).unwrap();
         assert!(result.1.lineage.iter().any(|record| {
             record.entity_kind == "edge"
-                && record.parents == [source.1.edges[0].clone()]
+                && record.parents == [source.1.edges[0]]
                 && !record.children.is_empty()
         }));
     }

@@ -822,8 +822,8 @@ impl<'m, M: Mate> Imprint<'m, M> {
                     (if forward { t_lo } else { t_hi }, ka),
                     (if forward { t_hi } else { t_lo }, kb),
                 ] {
-                    if let VKey::Special(id) = key {
-                        if self.asm.specials[id].orig.is_none() && t > 0. && t < 1. {
+                    if let VKey::Special(id) = key
+                        && self.asm.specials[id].orig.is_none() && t > 0. && t < 1. {
                             let known = self
                                 .asm
                                 .splits
@@ -838,7 +838,6 @@ impl<'m, M: Mate> Imprint<'m, M> {
                                 self.asm.attach_edge(id, o, e, t);
                             }
                         }
-                    }
                 }
                 let whole = t_lo == 0. && t_hi == 1.;
                 let (key, curve) = if whole {

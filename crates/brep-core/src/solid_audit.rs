@@ -264,8 +264,8 @@ fn supported_cavity_containment(model: &Model, outer: usize, inner: usize) -> Re
     if crate::nurbs_ss_g6::graph_affine_strict_containment_bounds(&outer, &inner)?.is_some() {
         return Ok(true);
     }
-    if let Some((local_outer, local_inner, _)) = crate::prism_frame::localize(&outer, &inner)? {
-        if let (Some(outer_layers), Some(inner_layers)) = (
+    if let Some((local_outer, local_inner, _)) = crate::prism_frame::localize(&outer, &inner)?
+        && let (Some(outer_layers), Some(inner_layers)) = (
             crate::stepped_prism::recognize(&local_outer)?,
             crate::stepped_prism::recognize(&local_inner)?,
         ) {
@@ -341,7 +341,6 @@ fn supported_cavity_containment(model: &Model, outer: usize, inner: usize) -> Re
                 return Ok(true);
             }
         }
-    }
     if let (Some(a), Some(b)) = (
         crate::intersections::sphere_sphere::recognize(&outer)?,
         crate::intersections::sphere_sphere::recognize(&inner)?,
@@ -443,8 +442,8 @@ fn supported_body_separation(model: &Model, left: usize, right: usize) -> Result
 
     let left = isolated_outward_shell(model, model.bodies[left].outer_shell, false)?;
     let right = isolated_outward_shell(model, model.bodies[right].outer_shell, false)?;
-    if let Some((local_left, local_right, _)) = crate::prism_frame::localize(&left, &right)? {
-        if let (Some(left_layers), Some(right_layers)) = (
+    if let Some((local_left, local_right, _)) = crate::prism_frame::localize(&left, &right)?
+        && let (Some(left_layers), Some(right_layers)) = (
             crate::stepped_prism::recognize(&local_left)?,
             crate::stepped_prism::recognize(&local_right)?,
         ) {
@@ -473,7 +472,6 @@ fn supported_body_separation(model: &Model, left: usize, right: usize) -> Result
                 return Ok(true);
             }
         }
-    }
     if let (Some(a), Some(b)) = (
         crate::intersections::recognize_cylinder(&left)?,
         crate::intersections::recognize_cylinder(&right)?,
@@ -661,7 +659,7 @@ mod tests {
         let model = Model::empty(1e-6).unwrap();
         let cert = audit_solid(&model).unwrap();
         assert!(cert.ok);
-        assert!(cert.notes.iter().any(|n| *n == "empty_solid_admitted"));
+        assert!(cert.notes.contains(&"empty_solid_admitted"));
     }
 
     #[test]

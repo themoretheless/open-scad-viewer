@@ -1085,7 +1085,7 @@ impl Model {
             .map(|region| {
                 region
                     .indices
-                    .chunks_exact(3)
+                    .as_chunks::<3>().0.iter()
                     .map(|triangle| {
                         [
                             region.positions[triangle[0] as usize],
@@ -1194,32 +1194,31 @@ impl Model {
         for (geometry_ids, authored_ids) in sources {
             for (geometry, authored) in geometry_ids.iter().zip(authored_ids) {
                 matches
-                    .entry(geometry.clone())
+                    .entry(*geometry)
                     .or_default()
-                    .insert(authored.clone());
+                    .insert(*authored);
             }
         }
         let candidates: Vec<_> = target
             .iter()
             .map(|geometry| {
                 matches.get(geometry).and_then(|parents| {
-                    (parents.len() == 1).then(|| parents.first().unwrap().clone())
+                    (parents.len() == 1).then(|| *parents.first().unwrap())
                 })
             })
             .collect();
         let mut counts = BTreeMap::<TopoId, usize>::new();
         for id in candidates.iter().flatten() {
-            *counts.entry(id.clone()).or_default() += 1;
+            *counts.entry(*id).or_default() += 1;
         }
         let mut occupied = target.iter().copied().collect::<BTreeSet<_>>();
         for (id, candidate) in target.iter_mut().zip(candidates) {
-            if let Some(candidate) = candidate {
-                if counts[&candidate] == 1 && (candidate == *id || !occupied.contains(&candidate)) {
+            if let Some(candidate) = candidate
+                && counts[&candidate] == 1 && (candidate == *id || !occupied.contains(&candidate)) {
                     occupied.remove(id);
                     occupied.insert(candidate);
                     *id = candidate;
                 }
-            }
         }
     }
     pub fn inherit_topology_ids(&mut self, sources: &[&Model]) {
@@ -1276,7 +1275,7 @@ impl Model {
                 for (source_index, candidate) in source.vertices.iter().enumerate() {
                     if target.point == candidate.point {
                         vertex_parents[target_index]
-                            .insert(source.1.vertices[source_index].clone());
+                            .insert(source.1.vertices[source_index]);
                     }
                 }
             }
@@ -1285,14 +1284,14 @@ impl Model {
                     if target_edge_keys[target_index] == geometry.1.edges[source_index]
                         || self.edge_overlap(target, source, candidate)
                     {
-                        edge_parents[target_index].insert(source.1.edges[source_index].clone());
+                        edge_parents[target_index].insert(source.1.edges[source_index]);
                     }
                 }
             }
             for (target_index, target) in target_faces.iter().enumerate() {
                 for (source_index, candidate) in source_faces.iter().enumerate() {
                     if Self::face_relation(target, candidate) {
-                        face_parents[target_index].insert(source.1.faces[source_index].clone());
+                        face_parents[target_index].insert(source.1.faces[source_index]);
                     }
                 }
             }

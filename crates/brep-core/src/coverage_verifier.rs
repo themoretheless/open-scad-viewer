@@ -224,7 +224,7 @@ pub fn verify_incomplete_refusal<T>(report: &Report<T>) -> Result<CoverageAudit>
         ));
     }
     for pending in &report.unresolved {
-        let _ = match pending.reason {
+        match pending.reason {
             UnresolvedReason::BudgetExceeded
             | UnresolvedReason::TangencyOrMultipleRoot
             | UnresolvedReason::NearCoincidence

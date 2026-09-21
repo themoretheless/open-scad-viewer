@@ -264,7 +264,7 @@ fn hex_encode(bytes: &[u8]) -> String {
     out
 }
 fn hex_decode(text: &str) -> Result<Vec<u8>> {
-    if text.len() % 2 != 0 || text.len() > 32 * 1024 * 1024 {
+    if !text.len().is_multiple_of(2) || text.len() > 32 * 1024 * 1024 {
         return Err(refuse(
             "BREP_COMPLEX_INTERCHANGE_REFUSED",
             "Invalid or oversized payload encoding",
@@ -276,7 +276,7 @@ fn hex_decode(text: &str) -> Result<Vec<u8>> {
         _ => None,
     };
     text.as_bytes()
-        .chunks_exact(2)
+        .as_chunks::<2>().0.iter()
         .map(|pair| {
             Ok((nibble(pair[0]).ok_or_else(|| {
                 refuse("BREP_COMPLEX_INTERCHANGE_REFUSED", "Invalid payload hex")

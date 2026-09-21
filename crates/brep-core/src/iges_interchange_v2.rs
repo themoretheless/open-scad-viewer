@@ -215,11 +215,11 @@ fn parse(text: &str) -> Result<(BTreeMap<usize, Entity>, f64)> {
         .collect::<String>();
     let (pd, rd, scale) = parse_global(&global)?;
     let directory = &sections[&'D'];
-    if directory.len() % 2 != 0 {
+    if !directory.len().is_multiple_of(2) {
         return Err(refuse("IGES directory section must contain record pairs"));
     }
     let mut directories = BTreeMap::new();
-    for pair in directory.chunks_exact(2) {
+    for pair in directory.as_chunks::<2>().0 {
         let a = &pair[0].1;
         let b = &pair[1].1;
         let de = pair[0].0;
@@ -293,7 +293,7 @@ fn parse(text: &str) -> Result<(BTreeMap<usize, Entity>, f64)> {
     Ok((entities, scale))
 }
 
-fn entity<'a>(entities: &'a BTreeMap<usize, Entity>, de: usize, ty: usize) -> Result<&'a Entity> {
+fn entity(entities: &BTreeMap<usize, Entity>, de: usize, ty: usize) -> Result<&Entity> {
     let e = entities
         .get(&de)
         .ok_or_else(|| refuse(format!("Missing IGES directory entry {de}")))?;

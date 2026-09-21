@@ -568,7 +568,7 @@ mod tests {
         let mut roots = meridian_roots(1., 3., 1.2, 2.5, 0.7);
         roots.sort_by(|x, y| x.1.total_cmp(&y.1).then(x.0.total_cmp(&y.0)));
         for (component, (rho, z)) in report.components.iter().zip(roots) {
-            let (curve, center, radius, _, first_uv, second_uv, sampled) = circle_of(component);
+            let (_curve, center, radius, _, first_uv, second_uv, sampled) = circle_of(component);
             assert!((radius - rho).abs() <= 1e-12, "{radius} vs {rho}");
             assert!(
                 sub(center, [0., 0., z]).iter().all(|x| x.abs() <= 1e-12),
@@ -929,7 +929,7 @@ mod tests {
                     (radius - expected_rho).abs() <= 1e-12
                 })
                 .unwrap_or_else(|| panic!("no circle of radius {expected_rho}"));
-            let (curve, center, radius, normal, first_uv, second_uv, sampled) =
+            let (curve, center, _radius, normal, first_uv, second_uv, sampled) =
                 circle_of(component);
             let expected = placed([0., 0., 0.8]);
             assert!(

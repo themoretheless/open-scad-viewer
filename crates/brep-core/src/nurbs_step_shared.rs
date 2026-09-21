@@ -274,7 +274,7 @@ pub(crate) fn emit_b_spline_surface(w: &mut StepWriter, surface: &Surface) -> us
 
 pub(crate) fn parse_entities(text: &str) -> BTreeMap<usize, (String, String)> {
     let mut map = BTreeMap::new();
-    let flat = text.replace('\n', " ").replace('\r', " ");
+    let flat = text.replace(['\n', '\r'], " ");
     for chunk in flat.split(';') {
         let chunk = chunk.trim();
         if !chunk.starts_with('#') {

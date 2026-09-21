@@ -460,11 +460,10 @@ fn recognize_tube(model: &Model) -> Option<AnalyticKind> {
         Some([n[0] / len, n[1] / len, n[2] / len])
     };
     let mut axis = plane_normal(caps[0])?;
-    if let Some(n1) = plane_normal(caps[1]) {
-        if axis[0] * n1[0] + axis[1] * n1[1] + axis[2] * n1[2] < 0. {
+    if let Some(n1) = plane_normal(caps[1])
+        && axis[0] * n1[0] + axis[1] * n1[1] + axis[2] * n1[2] < 0. {
             axis = [-axis[0], -axis[1], -axis[2]];
         }
-    }
     let mut centroid = [0.; 3];
     for v in &model.vertices {
         for k in 0..3 {
@@ -1100,7 +1099,7 @@ fn parse_vec3(s: &str) -> Option<[f64; 3]> {
 /// Part21 entity index: id → (type, raw args interior).
 fn parse_entities(text: &str) -> BTreeMap<usize, (String, String)> {
     let mut map = BTreeMap::new();
-    let flat = text.replace('\n', " ").replace('\r', " ");
+    let flat = text.replace(['\n', '\r'], " ");
     for chunk in flat.split(';') {
         let chunk = chunk.trim();
         if !chunk.starts_with('#') {
@@ -1168,18 +1167,16 @@ fn resolve_axis2(
 
 fn plane_axis_origins(entities: &BTreeMap<usize, (String, String)>) -> Vec<[f64; 3]> {
     let mut out = Vec::new();
-    for (_id, (ty, args)) in entities {
+    for (ty, args) in entities.values() {
         if ty != "PLANE" {
             continue;
         }
         if let Some(axis_id) = args
             .split(',')
             .find_map(|t| t.trim().trim_start_matches('#').parse().ok())
-        {
-            if let Some((po, _, _)) = resolve_axis2(entities, axis_id) {
+            && let Some((po, _, _)) = resolve_axis2(entities, axis_id) {
                 out.push(po);
             }
-        }
     }
     out
 }
@@ -1215,19 +1212,18 @@ fn axial_height_from_points(
     axis: [f64; 3],
 ) -> Option<f64> {
     let mut zs = Vec::new();
-    for (_id, (ty, args)) in entities {
+    for (ty, args) in entities.values() {
         if ty != "CARTESIAN_POINT" {
             continue;
         }
-        if let Some(coords) = args.rsplit_once('(').map(|(_, c)| c.trim_end_matches(')')) {
-            if let Some(p) = parse_vec3(coords) {
+        if let Some(coords) = args.rsplit_once('(').map(|(_, c)| c.trim_end_matches(')'))
+            && let Some(p) = parse_vec3(coords) {
                 zs.push(
                     (p[0] - origin[0]) * axis[0]
                         + (p[1] - origin[1]) * axis[1]
                         + (p[2] - origin[2]) * axis[2],
                 );
             }
-        }
     }
     if zs.len() < 2 {
         return None;
@@ -1256,7 +1252,7 @@ fn kind_from_surfaces(entities: &BTreeMap<usize, (String, String)>) -> Option<An
     let mut cylindrical = Vec::new();
     let mut conical = None;
     let mut planes = 0usize;
-    for (_id, (ty, args)) in entities {
+    for (ty, args) in entities.values() {
         match ty.as_str() {
             "SPHERICAL_SURFACE" => {
                 let parts: Vec<&str> = args.split(',').collect();
@@ -1390,18 +1386,16 @@ fn kind_from_surfaces(entities: &BTreeMap<usize, (String, String)>) -> Option<An
         let mut min = [f64::INFINITY; 3];
         let mut max = [f64::NEG_INFINITY; 3];
         let mut n = 0usize;
-        for (_id, (ty, args)) in entities {
-            if ty == "CARTESIAN_POINT" {
-                if let Some(coords) = args.rsplit_once('(').map(|(_, c)| c.trim_end_matches(')')) {
-                    if let Some(p) = parse_vec3(coords) {
+        for (ty, args) in entities.values() {
+            if ty == "CARTESIAN_POINT"
+                && let Some(coords) = args.rsplit_once('(').map(|(_, c)| c.trim_end_matches(')'))
+                    && let Some(p) = parse_vec3(coords) {
                         for i in 0..3 {
                             min[i] = min[i].min(p[i]);
                             max[i] = max[i].max(p[i]);
                         }
                         n += 1;
                     }
-                }
-            }
         }
         if n >= 4 && min.iter().all(|v| v.is_finite()) && max.iter().all(|v| v.is_finite()) {
             return Some(AnalyticKind::Cuboid { min, max });
@@ -1457,11 +1451,10 @@ fn entity_refs(args: &str) -> Vec<usize> {
         while i < bytes.len() && bytes[i].is_ascii_digit() {
             i += 1;
         }
-        if start < i {
-            if let Ok(id) = args[start..i].parse() {
+        if start < i
+            && let Ok(id) = args[start..i].parse() {
                 refs.push(id);
             }
-        }
     }
     refs
 }

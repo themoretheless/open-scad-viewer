@@ -1488,10 +1488,7 @@ pub fn sew_atomic(
     base: SewSnapshot,
     pending: &[SewLedgerEntry],
 ) -> Result<(SewSnapshot, SewCertificate)> {
-    match exact_sew(&base, pending) {
-        Ok(done) => Ok(done),
-        Err(error) => Err(error),
-    }
+    exact_sew(&base, pending)
 }
 
 /// Classification from imprint circle strata on an AnalyticCircle chart.
@@ -1534,11 +1531,10 @@ pub fn classify_imprint_circle_events(
             samples.push((mid, CellLabel::Inside));
         }
     }
-    if let Some(first) = unique.first() {
-        if first.parameter > 0. {
+    if let Some(first) = unique.first()
+        && first.parameter > 0. {
             samples.insert(0, (first.parameter * 0.5, CellLabel::Outside));
         }
-    }
     classify_chart_events(ChartKind::AnalyticCircle, unique, &samples)
 }
 

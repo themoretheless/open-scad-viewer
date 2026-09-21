@@ -1922,7 +1922,7 @@ pub fn exact_analytic_shell(
             "Shell source must pass the global solid audit",
         )
     })?;
-    if !(thickness.is_finite() && thickness >= 1e-5 && thickness <= 1e6) {
+    if !(thickness.is_finite() && (1e-5..=1e6).contains(&thickness)) {
         return Err(refuse(
             "BREP_ANALYTIC_SHELL_REFUSED",
             "Shell thickness must be finite and within 0.00001..1000000 mm",
@@ -2381,7 +2381,7 @@ pub fn import_iges(text: &str) -> Result<(Model, FeatureCertificate)> {
         let trimmed = line.trim();
         if let Some(rest) = trimmed.strip_prefix("116,") {
             let nums: Vec<f64> = rest
-                .split(|c| c == ',' || c == ';')
+                .split([',', ';'])
                 .filter_map(|t| t.trim().parse().ok())
                 .collect();
             if nums.len() >= 3 && nums.iter().take(3).all(|x| x.is_finite()) {

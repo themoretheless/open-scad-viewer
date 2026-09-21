@@ -43,12 +43,11 @@ fn merge_intervals(mut intervals: Vec<[f64; 2]>) -> Vec<[f64; 2]> {
     intervals.sort_by(|a, b| a[0].total_cmp(&b[0]).then(a[1].total_cmp(&b[1])));
     let mut merged = Vec::<[f64; 2]>::new();
     for interval in intervals {
-        if let Some(last) = merged.last_mut() {
-            if interval[0] <= last[1] {
+        if let Some(last) = merged.last_mut()
+            && interval[0] <= last[1] {
                 last[1] = last[1].max(interval[1]);
                 continue;
             }
-        }
         merged.push(interval);
     }
     merged

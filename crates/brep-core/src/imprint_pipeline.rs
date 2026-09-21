@@ -238,7 +238,7 @@ pub fn classify_regions(plan: &mut ImprintPlan, want_inside: [bool; 2]) -> Resul
     if !plan.complete {
         return Err(refuse("Cannot classify an incomplete imprint plan"));
     }
-    for (&(operand, face), _segs) in plan.membership.iter() {
+    for &(operand, face) in plan.membership.keys() {
         let keep = match (operand, want_inside[operand.min(1)]) {
             (0, true) | (1, true) => RegionKeep::Whole,
             _ => RegionKeep::Drop,

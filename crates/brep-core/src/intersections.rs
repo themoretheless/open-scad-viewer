@@ -543,8 +543,8 @@ pub fn curve_plane(
                     });
                 }
             }
-            if let Some((face, face_residual)) = best_face {
-                if !midpoint_confirms || face_residual <= residual {
+            if let Some((face, face_residual)) = best_face
+                && (!midpoint_confirms || face_residual <= residual) {
                     match plane_face_root(curve, plane, interval, face, options)? {
                         FaceRoot::Root(mut point) => {
                             point.parameter_interval = interval;
@@ -564,7 +564,6 @@ pub fn curve_plane(
                     }
                     continue;
                 }
-            }
             if midpoint_confirms {
                 report
                     .components
@@ -741,8 +740,7 @@ impl SurfaceTrace {
             start,
             end,
         } = self
-        {
-            if start[0] != end[0] && start[1] != end[1] {
+            && start[0] != end[0] && start[1] != end[1] {
                 if surface.degree_u + surface.degree_v > 25 {
                     return Err(invalid(
                         "UV diagonal conversion requires result degree at most 25",
@@ -750,7 +748,6 @@ impl SurfaceTrace {
                 }
                 return diagonal_segments(surface, *plane, *start, *end);
             }
-        }
         let mut curve = self.to_curve()?;
         let [lo, hi] = curve.domain();
         for knot in &mut curve.knots {
@@ -2876,8 +2873,8 @@ fn distance(a: [f64; 3], b: [f64; 3]) -> f64 {
 fn one_sided_curve_d1(curve: &Curve, t: f64) -> Result<[Option<Vec<f64>>; 2]> {
     let domain = curve.domain();
     let mut jets = [None, None];
-    if t > domain[0] {
-        if let Some(a) = curve
+    if t > domain[0]
+        && let Some(a) = curve
             .knots
             .iter()
             .copied()
@@ -2886,9 +2883,8 @@ fn one_sided_curve_d1(curve: &Curve, t: f64) -> Result<[Option<Vec<f64>>; 2]> {
         {
             jets[0] = curve.trim(a, t)?.evaluate(t)?.d1;
         }
-    }
-    if t < domain[1] {
-        if let Some(b) = curve
+    if t < domain[1]
+        && let Some(b) = curve
             .knots
             .iter()
             .copied()
@@ -2897,7 +2893,6 @@ fn one_sided_curve_d1(curve: &Curve, t: f64) -> Result<[Option<Vec<f64>>; 2]> {
         {
             jets[1] = curve.trim(t, b)?.evaluate(t)?.d1;
         }
-    }
     Ok(jets)
 }
 /// Tangent vectors at t: the two-sided derivative when it exists, otherwise
@@ -2924,15 +2919,14 @@ fn surface_tangents(surface: &Surface, u: f64, v: f64) -> Result<(Vec<[f64; 3]>,
     let d = surface_domain(surface);
     let mut us = Vec::new();
     let mut vs = Vec::new();
-    if u > d[0] {
-        if let Some(a) = surface
+    if u > d[0]
+        && let Some(a) = surface
             .knots_u
             .iter()
             .copied()
             .filter(|&k| k < u)
             .max_by(f64::total_cmp)
-        {
-            if let Some((du, dv)) = surface
+            && let Some((du, dv)) = surface
                 .trim([a, u, d[2], d[3]])?
                 .evaluate(u, v)?
                 .first_derivatives()
@@ -2940,17 +2934,14 @@ fn surface_tangents(surface: &Surface, u: f64, v: f64) -> Result<(Vec<[f64; 3]>,
                 us.push(du);
                 vs.push(dv);
             }
-        }
-    }
-    if u < d[1] {
-        if let Some(b) = surface
+    if u < d[1]
+        && let Some(b) = surface
             .knots_u
             .iter()
             .copied()
             .filter(|&k| k > u)
             .min_by(f64::total_cmp)
-        {
-            if let Some((du, dv)) = surface
+            && let Some((du, dv)) = surface
                 .trim([u, b, d[2], d[3]])?
                 .evaluate(u, v)?
                 .first_derivatives()
@@ -2958,17 +2949,14 @@ fn surface_tangents(surface: &Surface, u: f64, v: f64) -> Result<(Vec<[f64; 3]>,
                 us.push(du);
                 vs.push(dv);
             }
-        }
-    }
-    if vs.is_empty() && v > d[2] {
-        if let Some(a) = surface
+    if vs.is_empty() && v > d[2]
+        && let Some(a) = surface
             .knots_v
             .iter()
             .copied()
             .filter(|&k| k < v)
             .max_by(f64::total_cmp)
-        {
-            if let Some((du, dv)) = surface
+            && let Some((du, dv)) = surface
                 .trim([d[0], d[1], a, v])?
                 .evaluate(u, v)?
                 .first_derivatives()
@@ -2976,17 +2964,14 @@ fn surface_tangents(surface: &Surface, u: f64, v: f64) -> Result<(Vec<[f64; 3]>,
                 us.push(du);
                 vs.push(dv);
             }
-        }
-    }
-    if vs.is_empty() && v < d[3] {
-        if let Some(b) = surface
+    if vs.is_empty() && v < d[3]
+        && let Some(b) = surface
             .knots_v
             .iter()
             .copied()
             .filter(|&k| k > v)
             .min_by(f64::total_cmp)
-        {
-            if let Some((du, dv)) = surface
+            && let Some((du, dv)) = surface
                 .trim([d[0], d[1], v, b])?
                 .evaluate(u, v)?
                 .first_derivatives()
@@ -2994,8 +2979,6 @@ fn surface_tangents(surface: &Surface, u: f64, v: f64) -> Result<(Vec<[f64; 3]>,
                 us.push(du);
                 vs.push(dv);
             }
-        }
-    }
     Ok((us, vs))
 }
 /// Unit-tangent sine at a parameter pair; zero/invalid tangents stay 0. At a
@@ -4298,11 +4281,10 @@ fn ruled_coincidence(
             // An exactly closed seam makes the u_min and u_max rulings the
             // same curve: fold the u_max candidate into the canonical u_min
             // representative (exact parameter correspondence only).
-            if let Some([s0, s1]) = seam_u {
-                if candidates.contains(&s0) && candidates.contains(&s1) {
+            if let Some([s0, s1]) = seam_u
+                && candidates.contains(&s0) && candidates.contains(&s1) {
                     candidates.retain(|&u| u != s1);
                 }
-            }
             if candidates.len() > 1 {
                 report.unresolved(box6(), UnresolvedReason::NearCoincidence);
                 return Ok(true);
@@ -4382,7 +4364,7 @@ fn ruled_coincidence(
                         }
                     }
                 }
-                let correspondence = sampled.then(|| OverlapCorrespondence {
+                let correspondence = sampled.then_some(OverlapCorrespondence {
                     kind: OverlapCorrespondenceKind::MobiusV,
                     samples,
                 });
@@ -4432,7 +4414,7 @@ fn ruled_coincidence(
             continue;
         }
         let lambda = beta / alpha;
-        if !(lambda >= -1e-9 && lambda <= 1. + 1e-9) {
+        if !(-1e-9..=1. + 1e-9).contains(&lambda) {
             continue;
         }
         let mut weight_residual = 0_f64;
@@ -7955,10 +7937,9 @@ mod tests {
             .is_err()
         );
         assert!(
-            curve_curve(&line, &line, Options::default())
+            !curve_curve(&line, &line, Options::default())
                 .unwrap()
                 .permits_topology_change()
-                == false
         );
     }
 
@@ -8191,7 +8172,7 @@ mod tests {
             control_points: (0..3)
                 .map(|i| vec![bottom[i].clone(), top[i].clone()])
                 .collect(),
-            weights: vec![[1., 1.], [w, w], [1., 1.]]
+            weights: [[1., 1.], [w, w], [1., 1.]]
                 .iter()
                 .map(|r| r.to_vec())
                 .collect(),
@@ -8367,7 +8348,7 @@ mod tests {
             control_points: (0..3)
                 .map(|i| vec![bottom[i].clone(), top[i].clone()])
                 .collect(),
-            weights: vec![[1., 1.], [w, w], [1., 1.]]
+            weights: [[1., 1.], [w, w], [1., 1.]]
                 .iter()
                 .map(|r| r.to_vec())
                 .collect(),

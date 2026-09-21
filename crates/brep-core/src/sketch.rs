@@ -166,7 +166,7 @@ mod profile_tests {
     #[test]
     fn authored_wires_retain_analytic_geometry_and_closure() {
         let wire = circle_wire(3.).unwrap();
-        crate::planar_trim::validate(&[wire.clone()], 1e-7).unwrap();
+        crate::planar_trim::validate(std::slice::from_ref(&wire), 1e-7).unwrap();
         for arc in wire {
             for i in 0..=16 {
                 let p = arc.evaluate(i as f64 / 16.).unwrap().point;
