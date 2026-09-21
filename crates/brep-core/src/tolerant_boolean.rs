@@ -1008,6 +1008,10 @@ impl<'m> Solid<'m> {
 
     /// Parity along three fixed directions; the verdicts must agree, which
     /// also rejects points lying on the boundary itself.
+    #[expect(
+        clippy::approx_constant,
+        reason = "ray directions intentionally use varied decimal fixtures"
+    )]
     fn contains(&self, p: [f64; 3]) -> Result<bool> {
         let directions = [
             [0.3141592, 0.7182818, 0.6180340],
