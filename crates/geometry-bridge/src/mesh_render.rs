@@ -97,6 +97,12 @@ struct FaceAdjacency {
     normals: Vec<[f64; 3]>,
 }
 
+struct RenderInput<'a> {
+    positions: &'a [f64],
+    indices: &'a [u32],
+    face_ids: Vec<u32>,
+}
+
 fn build_face_adjacency(positions: &[f64], indices: &[u32]) -> FaceAdjacency {
     let vertex_count = positions.len() / 3;
     let mut offsets = vec![0usize; vertex_count + 1];
@@ -130,8 +136,19 @@ fn build_face_adjacency(positions: &[f64], indices: &[u32]) -> FaceAdjacency {
 /// Inputs are validated export snapshots. Preserve triangle-order summation,
 /// first-occurrence property ids, and normals rounded to 1e-7 exactly.
 pub(crate) fn render(snapshot: CadMeshBuffer, crease_cosine: f64) -> RenderMesh {
-    let positions = &snapshot.positions;
-    let indices = &snapshot.indices;
+    render_input(
+        RenderInput {
+            positions: &snapshot.positions,
+            indices: &snapshot.indices,
+            face_ids: snapshot.face_ids,
+        },
+        crease_cosine,
+    )
+}
+
+fn render_input(input: RenderInput<'_>, crease_cosine: f64) -> RenderMesh {
+    let positions = input.positions;
+    let indices = input.indices;
     let vertex_count = positions.len() / 3;
     let adjacency = build_face_adjacency(positions, indices);
     let mut vertices = Vec::<f32>::with_capacity(vertex_count * 6);
@@ -196,7 +213,7 @@ pub(crate) fn render(snapshot: CadMeshBuffer, crease_cosine: f64) -> RenderMesh 
         indices: out_indices,
         merge_from,
         merge_to,
-        face_ids: snapshot.face_ids,
+        face_ids: input.face_ids,
     }
 }
 
@@ -341,7 +358,10 @@ mod tests {
             );
             let signature = |mesh: &RenderMesh| {
                 (
-                    mesh.vertices.iter().map(|value| value.to_bits()).collect::<Vec<_>>(),
+                    mesh.vertices
+                        .iter()
+                        .map(|value| value.to_bits())
+                        .collect::<Vec<_>>(),
                     mesh.indices.clone(),
                     mesh.merge_from.clone(),
                     mesh.merge_to.clone(),
