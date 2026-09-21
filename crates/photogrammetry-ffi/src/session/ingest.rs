@@ -335,15 +335,14 @@ fn add_image(
         {
             return Err(input("Photo session exceeds 24 images or 96 MiB"));
         }
-        if let Some(measured) = &measured {
-            if s.groups
+        if let Some(measured) = &measured
+            && s.groups
                 .get(&measured.id)
                 .is_some_and(|group| group != &measured.group)
-            {
-                return Err(input(
-                    "The same calibration group id has conflicting measurements",
-                ));
-            }
+        {
+            return Err(input(
+                "The same calibration group id has conflicting measurements",
+            ));
         }
         let raw = Image {
             width,

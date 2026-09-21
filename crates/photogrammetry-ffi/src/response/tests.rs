@@ -330,10 +330,10 @@ fn benchmark_surface_transport() {
             allocated,
             peak
         );
-        if iteration + 1 == iterations {
-            if let Ok(path) = std::env::var("PHOTO_TRANSPORT_OUTPUT") {
-                std::fs::write(path, &bytes).unwrap();
-            }
+        if iteration + 1 == iterations
+            && let Ok(path) = std::env::var("PHOTO_TRANSPORT_OUTPUT")
+        {
+            std::fs::write(path, &bytes).unwrap();
         }
         std::hint::black_box(bytes);
     }
