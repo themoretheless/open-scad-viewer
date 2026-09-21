@@ -276,7 +276,9 @@ fn hex_decode(text: &str) -> Result<Vec<u8>> {
         _ => None,
     };
     text.as_bytes()
-        .as_chunks::<2>().0.iter()
+        .as_chunks::<2>()
+        .0
+        .iter()
         .map(|pair| {
             Ok((nibble(pair[0]).ok_or_else(|| {
                 refuse("BREP_COMPLEX_INTERCHANGE_REFUSED", "Invalid payload hex")

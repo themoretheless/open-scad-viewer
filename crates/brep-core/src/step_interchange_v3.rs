@@ -120,12 +120,13 @@ fn render_value(v: &Value) -> String {
 }
 fn render_entity_value(v: &Value) -> String {
     if let Value::List(parts) = v
-        && parts.iter().all(|part| matches!(part, Value::Call(_, _))) {
-            return format!(
-                "({})",
-                parts.iter().map(render_value).collect::<Vec<_>>().join("")
-            );
-        }
+        && parts.iter().all(|part| matches!(part, Value::Call(_, _)))
+    {
+        return format!(
+            "({})",
+            parts.iter().map(render_value).collect::<Vec<_>>().join("")
+        );
+    }
     render_value(v)
 }
 
@@ -419,9 +420,10 @@ fn call(entities: &BTreeMap<usize, Entity>, id: usize) -> Result<(&str, &[Value]
                             | "CONVERSION_BASED_UNIT"
                             | "GLOBAL_UNIT_ASSIGNED_CONTEXT"
                             | "GEOMETRIC_REPRESENTATION_CONTEXT"
-                    ) {
-                        return Ok((name, args));
-                    }
+                    )
+                {
+                    return Ok((name, args));
+                }
             }
             Err(refuse(format!(
                 "Reachable complex instance #{id} has no admitted component"
@@ -430,10 +432,7 @@ fn call(entities: &BTreeMap<usize, Entity>, id: usize) -> Result<(&str, &[Value]
         _ => Err(refuse(format!("Reference #{id} is not an entity call"))),
     }
 }
-fn components(
-    entities: &BTreeMap<usize, Entity>,
-    id: usize,
-) -> Result<Vec<(&str, &[Value])>> {
+fn components(entities: &BTreeMap<usize, Entity>, id: usize) -> Result<Vec<(&str, &[Value])>> {
     let entity = entities
         .get(&id)
         .ok_or_else(|| refuse(format!("Missing reference #{id}")))?;
@@ -785,10 +784,11 @@ fn isolate_curve_point(base: &Curve, target: &[f64]) -> Result<f64> {
     let mut merged = Vec::<[f64; 2]>::new();
     for interval in isolated {
         if let Some(last) = merged.last_mut()
-            && interval[0] <= last[1] + PARAMETER_WIDTH {
-                last[1] = last[1].max(interval[1]);
-                continue;
-            }
+            && interval[0] <= last[1] + PARAMETER_WIDTH
+        {
+            last[1] = last[1].max(interval[1]);
+            continue;
+        }
         merged.push(interval)
     }
     if merged.len() != 1 {
@@ -1595,11 +1595,12 @@ fn length_scale(
             Value::List(parts) => {
                 for part in parts {
                     if let Value::Call(n, a) = part
-                        && n == "GLOBAL_UNIT_ASSIGNED_CONTEXT" {
-                            for v in a {
-                                refs(v, &mut unit_ids);
-                            }
+                        && n == "GLOBAL_UNIT_ASSIGNED_CONTEXT"
+                    {
+                        for v in a {
+                            refs(v, &mut unit_ids);
                         }
+                    }
                 }
             }
             _ => {}
@@ -3308,9 +3309,11 @@ fn import_step_direct(
         let mut selected = Vec::<usize>::new();
         for entity in entities.values() {
             if let Value::Call(name, args) = &entity.value
-                && name == "SHAPE_DEFINITION_REPRESENTATION" && args.len() == 2 {
-                    selected.push(one_ref(&args[1], "selected shape representation")?);
-                }
+                && name == "SHAPE_DEFINITION_REPRESENTATION"
+                && args.len() == 2
+            {
+                selected.push(one_ref(&args[1], "selected shape representation")?);
+            }
         }
         selected.sort_unstable();
         selected.dedup();
@@ -3332,7 +3335,9 @@ fn import_step_direct(
         }
         selected
     } else {
-        entities.keys().filter_map(|id| {
+        entities
+            .keys()
+            .filter_map(|id| {
                 call(&entities, *id)
                     .ok()
                     .and_then(|(ty, _)| (ty == "ADVANCED_BREP_SHAPE_REPRESENTATION").then_some(*id))
@@ -3340,7 +3345,9 @@ fn import_step_direct(
             .collect()
     };
     let allow_open_shells = capability == STEP_INTERCHANGE_V9_CAPABILITY;
-    let all_bodies: Vec<_> = entities.keys().filter_map(|id| {
+    let all_bodies: Vec<_> = entities
+        .keys()
+        .filter_map(|id| {
             call(&entities, *id).ok().and_then(|(ty, _)| {
                 (matches!(ty, "MANIFOLD_SOLID_BREP" | "BREP_WITH_VOIDS")
                     || allow_open_shells && ty == "SHELL_BASED_SURFACE_MODEL")
@@ -3395,7 +3402,9 @@ fn import_step_direct(
         }
     }
     let product_hierarchy = if allow_degenerate {
-        entities.keys().filter_map(|id| {
+        entities
+            .keys()
+            .filter_map(|id| {
                 call(&entities, *id).ok().and_then(|(ty, args)| {
                     if ty == "PRODUCT" && args.len() >= 3 {
                         Some(format!(
@@ -3447,7 +3456,9 @@ fn import_step_direct(
         Vec::new()
     };
     let external_references = if allow_degenerate {
-        entities.keys().filter_map(|id| {
+        entities
+            .keys()
+            .filter_map(|id| {
                 let (ty, args) = call(&entities, *id).ok()?;
                 if ty == "DOCUMENT_FILE" && !args.is_empty() {
                     Some(format!(
@@ -6498,7 +6509,9 @@ mod tests {
             .collect::<Vec<_>>()
             .join("\n");
         let entities = parse(data_payload(&base).unwrap()).unwrap();
-        let edge_ids = entities.keys().filter_map(|id| {
+        let edge_ids = entities
+            .keys()
+            .filter_map(|id| {
                 call(&entities, *id)
                     .ok()
                     .and_then(|(ty, _)| (ty == "EDGE_CURVE").then_some(*id))
@@ -6537,7 +6550,9 @@ mod tests {
                 "edge #{edge_id}"
             );
         }
-        let loop_ids = entities.keys().filter_map(|id| {
+        let loop_ids = entities
+            .keys()
+            .filter_map(|id| {
                 call(&entities, *id)
                     .ok()
                     .and_then(|(ty, _)| (ty == "EDGE_LOOP").then_some(*id))
@@ -6584,7 +6599,9 @@ mod tests {
                 panic!("loop mask {mask}: {}", error.message)
             }
         }
-        let face_ids = entities.keys().filter_map(|id| {
+        let face_ids = entities
+            .keys()
+            .filter_map(|id| {
                 call(&entities, *id)
                     .ok()
                     .and_then(|(ty, _)| (ty == "ADVANCED_FACE").then_some(*id))

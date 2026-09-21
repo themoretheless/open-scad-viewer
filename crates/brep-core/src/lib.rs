@@ -1085,7 +1085,9 @@ impl Model {
             .map(|region| {
                 region
                     .indices
-                    .as_chunks::<3>().0.iter()
+                    .as_chunks::<3>()
+                    .0
+                    .iter()
                     .map(|triangle| {
                         [
                             region.positions[triangle[0] as usize],
@@ -1193,18 +1195,15 @@ impl Model {
         let mut matches = BTreeMap::<TopoId, BTreeSet<TopoId>>::new();
         for (geometry_ids, authored_ids) in sources {
             for (geometry, authored) in geometry_ids.iter().zip(authored_ids) {
-                matches
-                    .entry(*geometry)
-                    .or_default()
-                    .insert(*authored);
+                matches.entry(*geometry).or_default().insert(*authored);
             }
         }
         let candidates: Vec<_> = target
             .iter()
             .map(|geometry| {
-                matches.get(geometry).and_then(|parents| {
-                    (parents.len() == 1).then(|| *parents.first().unwrap())
-                })
+                matches
+                    .get(geometry)
+                    .and_then(|parents| (parents.len() == 1).then(|| *parents.first().unwrap()))
             })
             .collect();
         let mut counts = BTreeMap::<TopoId, usize>::new();
@@ -1214,11 +1213,13 @@ impl Model {
         let mut occupied = target.iter().copied().collect::<BTreeSet<_>>();
         for (id, candidate) in target.iter_mut().zip(candidates) {
             if let Some(candidate) = candidate
-                && counts[&candidate] == 1 && (candidate == *id || !occupied.contains(&candidate)) {
-                    occupied.remove(id);
-                    occupied.insert(candidate);
-                    *id = candidate;
-                }
+                && counts[&candidate] == 1
+                && (candidate == *id || !occupied.contains(&candidate))
+            {
+                occupied.remove(id);
+                occupied.insert(candidate);
+                *id = candidate;
+            }
         }
     }
     pub fn inherit_topology_ids(&mut self, sources: &[&Model]) {
@@ -1274,8 +1275,7 @@ impl Model {
             for (target_index, target) in self.vertices.iter().enumerate() {
                 for (source_index, candidate) in source.vertices.iter().enumerate() {
                     if target.point == candidate.point {
-                        vertex_parents[target_index]
-                            .insert(source.1.vertices[source_index]);
+                        vertex_parents[target_index].insert(source.1.vertices[source_index]);
                     }
                 }
             }

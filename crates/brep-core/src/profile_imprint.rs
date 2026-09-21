@@ -44,10 +44,11 @@ fn merge_intervals(mut intervals: Vec<[f64; 2]>) -> Vec<[f64; 2]> {
     let mut merged = Vec::<[f64; 2]>::new();
     for interval in intervals {
         if let Some(last) = merged.last_mut()
-            && interval[0] <= last[1] {
-                last[1] = last[1].max(interval[1]);
-                continue;
-            }
+            && interval[0] <= last[1]
+        {
+            last[1] = last[1].max(interval[1]);
+            continue;
+        }
         merged.push(interval);
     }
     merged

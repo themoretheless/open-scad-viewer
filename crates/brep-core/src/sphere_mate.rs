@@ -823,21 +823,24 @@ impl<'m, M: Mate> Imprint<'m, M> {
                     (if forward { t_hi } else { t_lo }, kb),
                 ] {
                     if let VKey::Special(id) = key
-                        && self.asm.specials[id].orig.is_none() && t > 0. && t < 1. {
-                            let known = self
-                                .asm
-                                .splits
-                                .get(&(o, e))
-                                .map(|table| {
-                                    table
-                                        .iter()
-                                        .any(|(et, eid)| *eid == id && (et - t).abs() <= 1e-12)
-                                })
-                                .unwrap_or(false);
-                            if !known {
-                                self.asm.attach_edge(id, o, e, t);
-                            }
+                        && self.asm.specials[id].orig.is_none()
+                        && t > 0.
+                        && t < 1.
+                    {
+                        let known = self
+                            .asm
+                            .splits
+                            .get(&(o, e))
+                            .map(|table| {
+                                table
+                                    .iter()
+                                    .any(|(et, eid)| *eid == id && (et - t).abs() <= 1e-12)
+                            })
+                            .unwrap_or(false);
+                        if !known {
+                            self.asm.attach_edge(id, o, e, t);
                         }
+                    }
                 }
                 let whole = t_lo == 0. && t_hi == 1.;
                 let (key, curve) = if whole {

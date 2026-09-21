@@ -1697,17 +1697,15 @@ pub fn narrow_transverse_bicubic(
                 return Ok(report);
             }
         }
-    } else if pb.is_none()
-        && pa.is_some() {
-            let context = ToleranceContext::default_valid();
-            if let Ok(certificate) =
-                certify_exact_planar_iso_intersection(source_b, source_a, &context)
-            {
-                let report = complete_curve(certificate);
-                verify_complete_report(&report, false)?;
-                return Ok(report);
-            }
+    } else if pb.is_none() && pa.is_some() {
+        let context = ToleranceContext::default_valid();
+        if let Ok(certificate) = certify_exact_planar_iso_intersection(source_b, source_a, &context)
+        {
+            let report = complete_curve(certificate);
+            verify_complete_report(&report, false)?;
+            return Ok(report);
         }
+    }
     let mut report = Report::default();
     report.unresolved(
         vec![0., 1., 0., 1., 0., 1., 0., 1.],

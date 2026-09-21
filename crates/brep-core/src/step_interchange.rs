@@ -461,9 +461,10 @@ fn recognize_tube(model: &Model) -> Option<AnalyticKind> {
     };
     let mut axis = plane_normal(caps[0])?;
     if let Some(n1) = plane_normal(caps[1])
-        && axis[0] * n1[0] + axis[1] * n1[1] + axis[2] * n1[2] < 0. {
-            axis = [-axis[0], -axis[1], -axis[2]];
-        }
+        && axis[0] * n1[0] + axis[1] * n1[1] + axis[2] * n1[2] < 0.
+    {
+        axis = [-axis[0], -axis[1], -axis[2]];
+    }
     let mut centroid = [0.; 3];
     for v in &model.vertices {
         for k in 0..3 {
@@ -1174,9 +1175,10 @@ fn plane_axis_origins(entities: &BTreeMap<usize, (String, String)>) -> Vec<[f64;
         if let Some(axis_id) = args
             .split(',')
             .find_map(|t| t.trim().trim_start_matches('#').parse().ok())
-            && let Some((po, _, _)) = resolve_axis2(entities, axis_id) {
-                out.push(po);
-            }
+            && let Some((po, _, _)) = resolve_axis2(entities, axis_id)
+        {
+            out.push(po);
+        }
     }
     out
 }
@@ -1217,13 +1219,14 @@ fn axial_height_from_points(
             continue;
         }
         if let Some(coords) = args.rsplit_once('(').map(|(_, c)| c.trim_end_matches(')'))
-            && let Some(p) = parse_vec3(coords) {
-                zs.push(
-                    (p[0] - origin[0]) * axis[0]
-                        + (p[1] - origin[1]) * axis[1]
-                        + (p[2] - origin[2]) * axis[2],
-                );
-            }
+            && let Some(p) = parse_vec3(coords)
+        {
+            zs.push(
+                (p[0] - origin[0]) * axis[0]
+                    + (p[1] - origin[1]) * axis[1]
+                    + (p[2] - origin[2]) * axis[2],
+            );
+        }
     }
     if zs.len() < 2 {
         return None;
@@ -1389,13 +1392,14 @@ fn kind_from_surfaces(entities: &BTreeMap<usize, (String, String)>) -> Option<An
         for (ty, args) in entities.values() {
             if ty == "CARTESIAN_POINT"
                 && let Some(coords) = args.rsplit_once('(').map(|(_, c)| c.trim_end_matches(')'))
-                    && let Some(p) = parse_vec3(coords) {
-                        for i in 0..3 {
-                            min[i] = min[i].min(p[i]);
-                            max[i] = max[i].max(p[i]);
-                        }
-                        n += 1;
-                    }
+                && let Some(p) = parse_vec3(coords)
+            {
+                for i in 0..3 {
+                    min[i] = min[i].min(p[i]);
+                    max[i] = max[i].max(p[i]);
+                }
+                n += 1;
+            }
         }
         if n >= 4 && min.iter().all(|v| v.is_finite()) && max.iter().all(|v| v.is_finite()) {
             return Some(AnalyticKind::Cuboid { min, max });
@@ -1452,9 +1456,10 @@ fn entity_refs(args: &str) -> Vec<usize> {
             i += 1;
         }
         if start < i
-            && let Ok(id) = args[start..i].parse() {
-                refs.push(id);
-            }
+            && let Ok(id) = args[start..i].parse()
+        {
+            refs.push(id);
+        }
     }
     refs
 }

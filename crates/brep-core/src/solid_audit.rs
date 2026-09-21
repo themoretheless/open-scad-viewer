@@ -268,79 +268,80 @@ fn supported_cavity_containment(model: &Model, outer: usize, inner: usize) -> Re
         && let (Some(outer_layers), Some(inner_layers)) = (
             crate::stepped_prism::recognize(&local_outer)?,
             crate::stepped_prism::recognize(&local_inner)?,
-        ) {
-            let tolerance = model.tolerance_mm;
-            let outer_low = outer_layers
+        )
+    {
+        let tolerance = model.tolerance_mm;
+        let outer_low = outer_layers
+            .iter()
+            .map(|layer| layer.low)
+            .fold(f64::INFINITY, f64::min);
+        let outer_high = outer_layers
+            .iter()
+            .map(|layer| layer.high)
+            .fold(f64::NEG_INFINITY, f64::max);
+        let inner_low = inner_layers
+            .iter()
+            .map(|layer| layer.low)
+            .fold(f64::INFINITY, f64::min);
+        let inner_high = inner_layers
+            .iter()
+            .map(|layer| layer.high)
+            .fold(f64::NEG_INFINITY, f64::max);
+        let mut contained =
+            outer_low + tolerance < inner_low && inner_high + tolerance < outer_high;
+        for inner_layer in &inner_layers {
+            let covering: Vec<_> = outer_layers
                 .iter()
-                .map(|layer| layer.low)
-                .fold(f64::INFINITY, f64::min);
-            let outer_high = outer_layers
-                .iter()
-                .map(|layer| layer.high)
-                .fold(f64::NEG_INFINITY, f64::max);
-            let inner_low = inner_layers
-                .iter()
-                .map(|layer| layer.low)
-                .fold(f64::INFINITY, f64::min);
-            let inner_high = inner_layers
-                .iter()
-                .map(|layer| layer.high)
-                .fold(f64::NEG_INFINITY, f64::max);
-            let mut contained =
-                outer_low + tolerance < inner_low && inner_high + tolerance < outer_high;
-            for inner_layer in &inner_layers {
-                let covering: Vec<_> = outer_layers
+                .filter(|outer_layer| {
+                    outer_layer.high > inner_layer.low + tolerance
+                        && inner_layer.high > outer_layer.low + tolerance
+                })
+                .collect();
+            if covering.is_empty()
+                || covering
                     .iter()
-                    .filter(|outer_layer| {
-                        outer_layer.high > inner_layer.low + tolerance
-                            && inner_layer.high > outer_layer.low + tolerance
-                    })
-                    .collect();
-                if covering.is_empty()
-                    || covering
-                        .iter()
-                        .map(|layer| layer.low)
-                        .fold(f64::INFINITY, f64::min)
-                        > inner_layer.low + tolerance
-                    || covering
-                        .iter()
-                        .map(|layer| layer.high)
-                        .fold(f64::NEG_INFINITY, f64::max)
-                        < inner_layer.high - tolerance
+                    .map(|layer| layer.low)
+                    .fold(f64::INFINITY, f64::min)
+                    > inner_layer.low + tolerance
+                || covering
+                    .iter()
+                    .map(|layer| layer.high)
+                    .fold(f64::NEG_INFINITY, f64::max)
+                    < inner_layer.high - tolerance
+            {
+                contained = false;
+                break;
+            }
+            for outer_layer in covering {
+                if !crate::planar_trim::boolean(
+                    &inner_layer.profile,
+                    &outer_layer.profile,
+                    "difference",
+                    tolerance,
+                )?
+                .is_empty()
                 {
                     contained = false;
                     break;
                 }
-                for outer_layer in covering {
-                    if !crate::planar_trim::boolean(
-                        &inner_layer.profile,
+                for curve in inner_layer.profile.iter().flatten() {
+                    let point = curve.evaluate(curve.domain()[0])?.point;
+                    if crate::planar_trim::locate_point(
                         &outer_layer.profile,
-                        "difference",
+                        [point[0], point[1]],
                         tolerance,
-                    )?
-                    .is_empty()
+                    )? != crate::planar_trim::PointLocation::Inside
                     {
                         contained = false;
                         break;
                     }
-                    for curve in inner_layer.profile.iter().flatten() {
-                        let point = curve.evaluate(curve.domain()[0])?.point;
-                        if crate::planar_trim::locate_point(
-                            &outer_layer.profile,
-                            [point[0], point[1]],
-                            tolerance,
-                        )? != crate::planar_trim::PointLocation::Inside
-                        {
-                            contained = false;
-                            break;
-                        }
-                    }
                 }
             }
-            if contained && !inner_layers.is_empty() {
-                return Ok(true);
-            }
         }
+        if contained && !inner_layers.is_empty() {
+            return Ok(true);
+        }
+    }
     if let (Some(a), Some(b)) = (
         crate::intersections::sphere_sphere::recognize(&outer)?,
         crate::intersections::sphere_sphere::recognize(&inner)?,
@@ -446,32 +447,33 @@ fn supported_body_separation(model: &Model, left: usize, right: usize) -> Result
         && let (Some(left_layers), Some(right_layers)) = (
             crate::stepped_prism::recognize(&local_left)?,
             crate::stepped_prism::recognize(&local_right)?,
-        ) {
-            let mut disjoint = true;
-            for a in &left_layers {
-                for b in &right_layers {
-                    if a.high + model.tolerance_mm < b.low || b.high + model.tolerance_mm < a.low {
-                        continue;
-                    }
-                    if !crate::planar_trim::boolean(
-                        &a.profile,
-                        &b.profile,
-                        "intersection",
-                        model.tolerance_mm,
-                    )?
-                    .is_empty()
-                    {
-                        disjoint = false;
-                        break;
-                    }
+        )
+    {
+        let mut disjoint = true;
+        for a in &left_layers {
+            for b in &right_layers {
+                if a.high + model.tolerance_mm < b.low || b.high + model.tolerance_mm < a.low {
+                    continue;
+                }
+                if !crate::planar_trim::boolean(
+                    &a.profile,
+                    &b.profile,
+                    "intersection",
+                    model.tolerance_mm,
+                )?
+                .is_empty()
+                {
+                    disjoint = false;
+                    break;
                 }
             }
-            if disjoint {
-                // The common rigid frame plus retained analytic profiles prove
-                // that overlapping axial slabs have disjoint material.
-                return Ok(true);
-            }
         }
+        if disjoint {
+            // The common rigid frame plus retained analytic profiles prove
+            // that overlapping axial slabs have disjoint material.
+            return Ok(true);
+        }
+    }
     if let (Some(a), Some(b)) = (
         crate::intersections::recognize_cylinder(&left)?,
         crate::intersections::recognize_cylinder(&right)?,

@@ -994,10 +994,11 @@ fn clip_conic_t(
     let mut merged: Vec<(f64, f64)> = Vec::new();
     for arc in arcs {
         if let Some(last) = merged.last_mut()
-            && arc.0 - last.1 <= 1e-12 * (1. + last.1.abs()) {
-                last.1 = arc.1;
-                continue;
-            }
+            && arc.0 - last.1 <= 1e-12 * (1. + last.1.abs())
+        {
+            last.1 = arc.1;
+            continue;
+        }
         merged.push(arc);
     }
     let mut out = Vec::new();

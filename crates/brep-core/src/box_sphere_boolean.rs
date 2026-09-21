@@ -405,11 +405,12 @@ impl CanonicalBox<'_> {
                 let mid = circle.point_at((lo + hi) / 2.);
                 let inside = inside_rect(face.uv_of(mid))?;
                 if let Some(previous) = expected
-                    && previous == inside {
-                        return Err(unsupported(
-                            "Box/sphere Boolean: section arcs do not alternate at edge hits",
-                        ));
-                    }
+                    && previous == inside
+                {
+                    return Err(unsupported(
+                        "Box/sphere Boolean: section arcs do not alternate at edge hits",
+                    ));
+                }
                 expected = Some(inside);
                 if inside {
                     circle.push_interval(lo, hi, hits[k].1, hits[(k + 1) % n].1);

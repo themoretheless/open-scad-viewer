@@ -268,9 +268,10 @@ fn classification_from_imprint(
     }
     if !curves.is_empty() {
         if let Ok(arrangement) = arrange_imprint_curves(ChartKind::AnalyticCircle, &curves)
-            && assert_missed_branch_detected(&arrangement).is_ok() {
-                return Ok((arrangement.classification, true));
-            }
+            && assert_missed_branch_detected(&arrangement).is_ok()
+        {
+            return Ok((arrangement.classification, true));
+        }
         if !circle_events.is_empty() {
             return Ok((classify_imprint_circle_events(circle_events)?, true));
         }
@@ -283,9 +284,10 @@ fn classification_from_imprint(
         .iter()
         .position(|f| f.surface.degree_u == 1 && f.surface.degree_v == 1);
     if let Some(face) = cap
-        && let Ok(cert) = classify_face_outer_loop(a, face, ChartKind::AnalyticCircle) {
-            return Ok((cert, true));
-        }
+        && let Ok(cert) = classify_face_outer_loop(a, face, ChartKind::AnalyticCircle)
+    {
+        return Ok((cert, true));
+    }
     let events = match hint {
         "disjoint" | "empty" => vec![],
         _ => vec![
@@ -608,17 +610,18 @@ pub fn analytic_boolean(
         (AnalyticClass::FiniteCylinder, AnalyticClass::Sphere)
             | (AnalyticClass::Sphere, AnalyticClass::FiniteCylinder)
     ) && operation != "xor"
-        && let Some(result) = cylinder_sphere_boolean::boolean(a, b, operation)? {
-            result.validate()?;
-            let classification = classify_chart_events(
-                ChartKind::AnalyticCircle,
-                vec![],
-                &[(0.5, CellLabel::Outside)],
-            )?;
-            let coverages = vec![Coverage::Complete];
-            let cert = certificate_for(operation, coverages, classification, true, &result)?;
-            return Ok((result, cert));
-        }
+        && let Some(result) = cylinder_sphere_boolean::boolean(a, b, operation)?
+    {
+        result.validate()?;
+        let classification = classify_chart_events(
+            ChartKind::AnalyticCircle,
+            vec![],
+            &[(0.5, CellLabel::Outside)],
+        )?;
+        let coverages = vec![Coverage::Complete];
+        let cert = certificate_for(operation, coverages, classification, true, &result)?;
+        return Ok((result, cert));
+    }
 
     // Mixed cylinder/sphere: Complete empty → empty algebra; else frozen refuse.
     let options = Options::default();
@@ -700,16 +703,15 @@ pub fn analytic_boolean(
         (class_a, class_b),
         (AnalyticClass::FiniteCylinder, AnalyticClass::Sphere)
             | (AnalyticClass::Sphere, AnalyticClass::FiniteCylinder)
-    )
-        && report
-            .components
-            .iter()
-            .any(|c| matches!(c, AnalyticSsComponent::Circle { .. }))
-        {
-            return Err(refuse(
-                "Sphere×cylinder non-empty contact lacks a qualified shared imprint assembly",
-            ));
-        }
+    ) && report
+        .components
+        .iter()
+        .any(|c| matches!(c, AnalyticSsComponent::Circle { .. }))
+    {
+        return Err(refuse(
+            "Sphere×cylinder non-empty contact lacks a qualified shared imprint assembly",
+        ));
+    }
     Err(refuse(
         "Complete non-empty analytic section without certified imprint for this pair",
     ))

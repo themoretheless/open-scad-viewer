@@ -163,8 +163,12 @@ fn point_on_segment(point: [f64; 3], a: [f64; 3], b: [f64; 3], tolerance: f64) -
         return None;
     }
     let t = dot(sub(point, a), ab) / length_squared;
-    if t > tolerance && t < 1. - tolerance { norm(sub(point, add(a, mul(ab, t)))) <= tolerance } else { false }
-        .then_some(t)
+    if t > tolerance && t < 1. - tolerance {
+        norm(sub(point, add(a, mul(ab, t)))) <= tolerance
+    } else {
+        false
+    }
+    .then_some(t)
 }
 
 /// Split polygon edges at every collinear result vertex. Face clipping creates
@@ -1565,15 +1569,17 @@ pub fn boolean(a: &Model, b: &Model, operation: &str) -> Result<Model> {
         && a.bodies[0].inner_shells.is_empty()
         && b.bodies[0].inner_shells.is_empty()
         && (orthogonal(a).is_err() || orthogonal(b).is_err())
-        && convex_planes(a).is_ok() && convex_planes(b).is_ok() {
-            return convex_boolean(a, b, operation).map_err(|e| {
-                if e.code == OPERATION_FAILED {
-                    unsupported("Boolean result is empty or dimensionally collapsed")
-                } else {
-                    e
-                }
-            });
-        }
+        && convex_planes(a).is_ok()
+        && convex_planes(b).is_ok()
+    {
+        return convex_boolean(a, b, operation).map_err(|e| {
+            if e.code == OPERATION_FAILED {
+                unsupported("Boolean result is empty or dimensionally collapsed")
+            } else {
+                e
+            }
+        });
+    }
     if orthogonal(a).is_err() || orthogonal(b).is_err() {
         return planar_boolean(a, b, operation);
     }

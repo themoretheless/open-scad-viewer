@@ -1532,9 +1532,10 @@ pub fn classify_imprint_circle_events(
         }
     }
     if let Some(first) = unique.first()
-        && first.parameter > 0. {
-            samples.insert(0, (first.parameter * 0.5, CellLabel::Outside));
-        }
+        && first.parameter > 0.
+    {
+        samples.insert(0, (first.parameter * 0.5, CellLabel::Outside));
+    }
     classify_chart_events(ChartKind::AnalyticCircle, unique, &samples)
 }
 
