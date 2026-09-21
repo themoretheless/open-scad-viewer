@@ -17,6 +17,8 @@ fn refuse(code: &'static str, message: &str) -> Error {
     Error::new(code, message)
 }
 
+type EdgeUse = (usize, usize, usize, bool, usize);
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub enum ChartKind {
     PlanePoly,
@@ -1617,7 +1619,7 @@ pub fn sew_closed_model_edges(model: &crate::Model) -> Result<SewCertificate> {
             "Solid sew found a face not owned by a shell",
         ));
     }
-    let mut edge_uses: BTreeMap<usize, Vec<(usize, usize, usize, bool, usize)>> = BTreeMap::new();
+    let mut edge_uses: BTreeMap<usize, Vec<EdgeUse>> = BTreeMap::new();
     for (face_a, face) in model.faces.iter().enumerate() {
         for &wire_id in std::iter::once(&face.outer).chain(face.holes.iter()) {
             let wire = &model.loops[wire_id];
