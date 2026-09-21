@@ -1242,7 +1242,7 @@ pub fn boolean(a: &Model, b: &Model, operation: &str) -> Result<Model> {
         (1usize, b, &pieces_b, &solid_a),
     ] {
         let want = asm.want_inside[o];
-        for face in 0..model.faces.len() {
+        for (face, (_, face_pieces)) in model.faces.iter().zip(pieces.iter()).enumerate() {
             let reversed = face_reversed(model, face);
             let mut chart = ChartVertices::default();
             let mut list: Vec<Piece<EKey>> = Vec::new();
@@ -1260,7 +1260,7 @@ pub fn boolean(a: &Model, b: &Model, operation: &str) -> Result<Model> {
                     });
                 }
             }
-            for (k, pcurve) in &pieces[face] {
+            for (k, pcurve) in face_pieces {
                 let mut pcurve = pcurve.clone();
                 let ends = asm.net[*k].ends;
                 let n = pcurve.control_points.len();
