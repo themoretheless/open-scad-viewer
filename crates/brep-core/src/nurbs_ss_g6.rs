@@ -3678,10 +3678,9 @@ mod tests {
 
     fn planar_yz_wide(x: f64) -> Surface {
         let mut surface = planar_yz(x);
-        for i in 0..4 {
-            for j in 0..4 {
-                surface.control_points[i][j] =
-                    vec![x, -1. + j as f64 * 5. / 3., -1. + i as f64 * 5. / 3.];
+        for (i, row) in surface.control_points.iter_mut().take(4).enumerate() {
+            for (j, point) in row.iter_mut().take(4).enumerate() {
+                *point = vec![x, -1. + j as f64 * 5. / 3., -1. + i as f64 * 5. / 3.];
             }
         }
         surface
@@ -4276,10 +4275,9 @@ mod tests {
 
     fn planar_xz_wide(y: f64) -> Surface {
         let mut surface = planar_yz_wide(0.);
-        for i in 0..4 {
-            for j in 0..4 {
-                surface.control_points[i][j] =
-                    vec![-1. + j as f64 * 5. / 3., y, -1. + i as f64 * 5. / 3.];
+        for (i, row) in surface.control_points.iter_mut().take(4).enumerate() {
+            for (j, point) in row.iter_mut().take(4).enumerate() {
+                *point = vec![-1. + j as f64 * 5. / 3., y, -1. + i as f64 * 5. / 3.];
             }
         }
         surface

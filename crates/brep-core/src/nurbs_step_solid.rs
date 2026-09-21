@@ -50,9 +50,9 @@ fn bump_top_surface(min: [f64; 3], max: [f64; 3], bump: f64) -> Surface {
         periodic_v: false,
     };
     let mut s = as_uniform_bicubic(&bilinear).expect("bilinear elevates");
-    for i in 1..3 {
-        for j in 1..3 {
-            s.control_points[i][j][2] += bump;
+    for row in s.control_points.iter_mut().skip(1).take(2) {
+        for point in row.iter_mut().skip(1).take(2) {
+            point[2] += bump;
         }
     }
     s
