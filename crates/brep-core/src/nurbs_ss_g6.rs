@@ -1432,7 +1432,7 @@ pub fn certify_multispan_ss(
             };
             let mut coefficients = vec![0.; fixed_degree + 1];
             let mut invariant = true;
-            for i in 0..=fixed_degree {
+            for (i, coefficient_slot) in coefficients.iter_mut().enumerate() {
                 for j in 0..=varying_degree {
                     let (u, v) = if fixed_u { (i, j) } else { (j, i) };
                     let point = &span.patch.control_points[u][v];
@@ -1442,9 +1442,11 @@ pub fn certify_multispan_ss(
                             plane_normal,
                         );
                     if j == 0 {
-                        coefficients[i] = coefficient;
-                    } else if (coefficient - coefficients[i]).abs()
-                        > 32. * f64::EPSILON * coefficient.abs().max(coefficients[i].abs()).max(1.)
+                        *coefficient_slot = coefficient;
+                    } else if (coefficient - *coefficient_slot).abs()
+                        > 32.
+                            * f64::EPSILON
+                            * coefficient.abs().max((*coefficient_slot).abs()).max(1.)
                     {
                         invariant = false;
                     }
@@ -1982,8 +1984,8 @@ fn affine_planar_carrier(model: &Model) -> Result<Model> {
         let p10 = &surface.control_points[du][0];
         let p01 = &surface.control_points[0][dv];
         let p11 = &surface.control_points[du][dv];
-        for i in 0..=du {
-            for j in 0..=dv {
+        for (i, row) in surface.control_points.iter().enumerate().take(du + 1) {
+            for (j, actual) in row.iter().enumerate().take(dv + 1) {
                 let u = i as f64 / du as f64;
                 let v = j as f64 / dv as f64;
                 let expected = (0..3)
@@ -1994,7 +1996,6 @@ fn affine_planar_carrier(model: &Model) -> Result<Model> {
                             + u * v * p11[axis]
                     })
                     .collect::<Vec<_>>();
-                let actual = &surface.control_points[i][j];
                 let residual = (0..3)
                     .map(|axis| (actual[axis] - expected[axis]).powi(2))
                     .sum::<f64>()
@@ -2263,10 +2264,9 @@ fn canonical_graph_frame_cell(
     let corners = [o, pu, p11, pv];
     let last_u = top.control_points.len() - 1;
     let last_v = top.control_points[0].len() - 1;
-    for i in 0..=last_u {
-        for j in 0..=last_v {
+    for (i, row) in top.control_points.iter().enumerate().take(last_u + 1) {
+        for (j, p) in row.iter().enumerate().take(last_v + 1) {
             if i == 0 || i == last_u || j == 0 || j == last_v {
-                let p = &top.control_points[i][j];
                 if dot(sub([p[0], p[1], p[2]], o), normal).abs() > tolerance {
                     return Err(refuse(
                         "V3 graph boundary must remain on its affine corner plane",
@@ -4733,9 +4733,9 @@ mod tests {
     fn multispan_internal_knot_has_one_half_open_owner() {
         let context = ToleranceContext::default_valid();
         let mut source = multispan_wave(2, 2, false, false);
-        for u in 0..3 {
-            for v in 0..3 {
-                source.control_points[u][v][0] = u as f64 - 1.;
+        for (u, row) in source.control_points.iter_mut().enumerate().take(3) {
+            for point in row.iter_mut().take(3) {
+                point[0] = u as f64 - 1.;
             }
         }
         let graph =
