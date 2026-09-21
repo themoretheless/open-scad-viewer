@@ -76,7 +76,10 @@ fn proportional_grids(a: &[Vec<[f64; 4]>], b: &[Vec<[f64; 4]>], tol: f64) -> boo
     scale.is_some()
 }
 
-fn affine_plane(surface: &Surface) -> Result<Option<([f64; 3], f64, [f64; 3], [f64; 3])>> {
+type PlaneCarrier = ([f64; 3], f64, [f64; 3], [f64; 3]);
+type SeedRefinement = ([f64; 2], [f64; 2], [f64; 3], &'static str);
+
+fn affine_plane(surface: &Surface) -> Result<Option<PlaneCarrier>> {
     // Any positive-weight coplanar chart is an affine plane carrier, not only deg 1×1.
     let o = point3(&surface.control_points[0][0])?;
     let mut u_dir = None;
@@ -108,7 +111,7 @@ fn affine_plane(surface: &Surface) -> Result<Option<([f64; 3], f64, [f64; 3], [f
     };
     let n = cross3(u_dir, v_dir);
     let nn = norm3(n);
-    if !(nn > 0.) {
+    if !nn.is_finite() || nn <= 0. {
         return Ok(None);
     }
     let normal = n.map(|x| x / nn);
@@ -426,28 +429,28 @@ fn plane_plane_line(first: &Surface, second: &Surface, floor: f64) -> Result<Opt
     let mut row = 0;
     for (n, off) in [(n1, o1), (n2, o2)] {
         let mut col = 0;
-        for i in 0..3 {
+        for (i, value) in n.iter().enumerate() {
             if i == axis {
                 continue;
             }
-            a[row][col] = n[i];
+            a[row][col] = *value;
             col += 1;
         }
         b[row] = off;
         row += 1;
     }
     let det = a[0][0] * a[1][1] - a[0][1] * a[1][0];
-    if !(det.abs() > 0.) {
+    if !det.is_finite() || det.abs() <= 0. {
         return Ok(None);
     }
     let x0 = (b[0] * a[1][1] - a[0][1] * b[1]) / det;
     let x1 = (a[0][0] * b[1] - b[0] * a[1][0]) / det;
     let mut free = 0;
-    for i in 0..3 {
+    for (i, value) in point.iter_mut().enumerate() {
         if i == axis {
-            point[i] = 0.;
+            *value = 0.;
         } else {
-            point[i] = if free == 0 { x0 } else { x1 };
+            *value = if free == 0 { x0 } else { x1 };
             free += 1;
         }
     }
@@ -486,7 +489,7 @@ fn plane_plane_line(first: &Surface, second: &Surface, floor: f64) -> Result<Opt
     }
     let lo = r1[0].max(r2[0]);
     let hi = r1[1].min(r2[1]);
-    if !(hi > lo + floor) {
+    if !hi.is_finite() || hi <= lo + floor {
         return Ok(Some(json!({
             "kind":"empty",
             "contactClass":"transverse_no_overlap",
@@ -559,7 +562,7 @@ fn ss_contact(
     let nb = cross3(dub, dvb);
     let la = norm3(na);
     let lb = norm3(nb);
-    if !(la > floor) || !(lb > floor) {
+    if !la.is_finite() || !lb.is_finite() || la <= floor || lb <= floor {
         return Ok("pole_or_singular");
     }
     let na = na.map(|x| x / la);
@@ -582,7 +585,7 @@ fn refine_seed(
     uv_box: [f64; 4],
     st_box: [f64; 4],
     floor: f64,
-) -> Result<Option<([f64; 2], [f64; 2], [f64; 3], &'static str)>> {
+) -> Result<Option<SeedRefinement>> {
     let (mut u, mut v, mut s, mut t) = (uv[0], uv[1], st[0], st[1]);
     for _ in 0..16 {
         let ja = first.evaluate(u, v)?;
@@ -626,7 +629,7 @@ fn refine_seed(
         let det = ata[0][0] * (ata[1][1] * ata[2][2] - ata[1][2] * ata[2][1])
             - ata[0][1] * (ata[1][0] * ata[2][2] - ata[1][2] * ata[2][0])
             + ata[0][2] * (ata[1][0] * ata[2][1] - ata[1][1] * ata[2][0]);
-        if !(det.abs() > 64. * f64::EPSILON) {
+        if !det.is_finite() || det.abs() <= 64. * f64::EPSILON {
             return Ok(None);
         }
         let mut delta = [0.; 3];
@@ -704,7 +707,7 @@ fn continue_branch(
 ) -> Result<Value> {
     let d1 = surface_domain(first);
     let d2 = surface_domain(second);
-    let step = floor.max(1e-3).min(0.05);
+    let step = floor.clamp(1e-3, 0.05);
     let mut samples = vec![json!({
         "point":seed_point,
         "uvFirst":seed_uv,
@@ -728,7 +731,7 @@ fn continue_branch(
         let nb = cross3(dub, dvb);
         let dir = cross3(na, nb);
         let dn = norm3(dir);
-        if !(dn > TRANSVERSE_SINE * norm3(na) * norm3(nb)) {
+        if !dn.is_finite() || dn <= TRANSVERSE_SINE * norm3(na) * norm3(nb) {
             break;
         }
         let dir = dir.map(|x| x / dn);
@@ -738,7 +741,7 @@ fn continue_branch(
             let guv = dot3(su, sv);
             let gvv = dot3(sv, sv);
             let det = guu * gvv - guv * guv;
-            if !(det.abs() > 0.) {
+            if !det.is_finite() || det.abs() <= 0. {
                 return None;
             }
             let ru = dot3(dir, su);
