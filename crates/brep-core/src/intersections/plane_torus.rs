@@ -1218,8 +1218,9 @@ mod tests {
         let report = intersect_plane_torus(&plane, &torus, Options::default()).unwrap();
         let circles = only_circles(&report, 2);
         let s = (1_f64 - 0.16).sqrt();
-        for k in 0..2 {
-            let (curve, _, radius, full, plane_uv, torus_uv, sampled) = circles[k];
+        for (k, &(curve, _, radius, full, plane_uv, torus_uv, sampled)) in
+            circles.iter().take(2).enumerate()
+        {
             let rho = 3. + if k == 0 { s } else { -s };
             assert!((radius - rho).abs() <= 1e-12);
             assert!(!full);
@@ -1341,8 +1342,7 @@ mod tests {
                 -sin * (p[1] - offset[1]) + cos * (p[2] - offset[2]),
             ]
         };
-        for k in 0..2 {
-            let (curve, center, radius, _, _, _, sampled) = circles[k];
+        for (k, &(curve, center, radius, _, _, _, sampled)) in circles.iter().take(2).enumerate() {
             let rho = 3. + if k == 0 { s } else { -s };
             assert!((radius - rho).abs() <= 1e-12, "{radius}");
             assert!(

@@ -626,15 +626,15 @@ fn arrange_lifted_uv_impl(
                 .then_with(|| a.cmp(&b))
         });
     }
-    for id in 0..halfedges.len() {
-        let destination = halfedges[id].destination;
-        let twin = halfedges[id].twin;
+    for halfedge in halfedges.iter_mut() {
+        let destination = halfedge.destination;
+        let twin = halfedge.twin;
         let around = &outgoing[destination];
         let twin_position = around
             .iter()
             .position(|candidate| *candidate == twin)
             .ok_or_else(|| refuse("DCEL twin is absent from destination star"))?;
-        halfedges[id].next = around[(twin_position + around.len() - 1) % around.len()];
+        halfedge.next = around[(twin_position + around.len() - 1) % around.len()];
     }
     let mut cells = Vec::new();
     for start in 0..halfedges.len() {
@@ -1577,14 +1577,14 @@ mod tests {
 
     fn ss_wave(swap: bool) -> nurbs_core::surface::Surface {
         let mut control_points = vec![vec![vec![0.; 3]; 3]; 3];
-        for u in 0..3 {
-            for v in 0..3 {
+        for (u, row) in control_points.iter_mut().enumerate().take(3) {
+            for (v, point) in row.iter_mut().enumerate().take(3) {
                 let signed = if (if swap { v } else { u }) % 2 == 0 {
                     -1.
                 } else {
                     1.
                 };
-                control_points[u][v] = vec![signed, u as f64, v as f64];
+                *point = vec![signed, u as f64, v as f64];
             }
         }
         nurbs_core::surface::Surface {
