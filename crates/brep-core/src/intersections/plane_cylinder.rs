@@ -200,7 +200,7 @@ fn lift_circle_side(
     let mut lifted = Vec::new();
     for &(a, b) in arcs {
         let sweep = b - a;
-        if !(sweep > 0.) {
+        if !sweep.is_finite() || sweep <= 0. {
             continue;
         }
         let theta = |phi: f64| {

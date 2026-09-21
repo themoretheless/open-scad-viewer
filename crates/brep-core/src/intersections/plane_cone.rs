@@ -661,7 +661,7 @@ fn lift_circle_side(
     let mut lifted = Vec::new();
     for &(a, b) in arcs {
         let sweep = b - a;
-        if !(sweep > 0.) {
+        if !sweep.is_finite() || sweep <= 0. {
             continue;
         }
         let theta = |phi: f64| {
@@ -940,7 +940,7 @@ fn clip_conic_t(
             continue;
         }
         let disc = b * b - 4. * a * c;
-        if !(disc > 0.) {
+        if !disc.is_finite() || disc <= 0. {
             if f_ext > 0. {
                 return (Vec::new(), tangent);
             }
@@ -1299,7 +1299,7 @@ pub fn intersect_plane_cone(
     }
     match kind {
         Conic::Ellipse => {
-            if !(a2 > 0.) {
+            if a2 <= 0. {
                 report.unresolved(domain, UnresolvedReason::TangencyOrMultipleRoot);
                 return Ok(report);
             }
@@ -1441,7 +1441,7 @@ pub fn intersect_plane_cone(
             Ok(report)
         }
         Conic::Hyperbola => {
-            if !(a2 < 0.) {
+            if a2 >= 0. {
                 report.unresolved(domain, UnresolvedReason::TangencyOrMultipleRoot);
                 return Ok(report);
             }

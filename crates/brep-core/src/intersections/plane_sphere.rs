@@ -265,7 +265,7 @@ pub(crate) fn clip_ellipse(
         if !f0.is_finite() || !s.is_finite() {
             return (EllipseClip::Empty, true);
         }
-        if !(s > 0.) {
+        if s <= 0. {
             // The constraint is constant on the ellipse (degenerate input).
             if f0 > hp.band {
                 return (EllipseClip::Empty, tangent);
