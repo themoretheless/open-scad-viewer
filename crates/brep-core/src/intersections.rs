@@ -2105,8 +2105,8 @@ pub enum SurfaceSurfaceComponent {
     },
     /// Both retained traces use the same fraction in [0,1].
     Curve {
-        first: SurfaceTrace,
-        second: SurfaceTrace,
+        first: Box<SurfaceTrace>,
+        second: Box<SurfaceTrace>,
         max_sample_residual: f64,
     },
 }
@@ -2414,8 +2414,8 @@ pub fn surface_surface(
             });
         } else {
             report.components.push(SurfaceSurfaceComponent::Curve {
-                first: first_trace,
-                second: second_trace,
+                first: Box::new(first_trace),
+                second: Box::new(second_trace),
                 max_sample_residual: max_residual,
             });
         }

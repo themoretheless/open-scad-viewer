@@ -156,7 +156,7 @@ pub enum G6Component {
     },
     /// Exact retained iso branch. Samples are diagnostics and never authority.
     Curve {
-        certificate: ExactIsoIntersectionCertificate,
+        certificate: Box<ExactIsoIntersectionCertificate>,
         samples: Vec<[f64; 3]>,
     },
 }
@@ -396,7 +396,7 @@ fn complete_curve(certificate: ExactIsoIntersectionCertificate) -> Report<G6Comp
         .collect();
     Report {
         components: vec![G6Component::Curve {
-            certificate,
+            certificate: Box::new(certificate),
             samples,
         }],
         boxes_visited,
