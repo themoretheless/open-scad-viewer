@@ -144,6 +144,16 @@ pub(crate) struct StepWriter {
     pub lines: Vec<String>,
 }
 
+pub(crate) struct PcurveLineEdge {
+    pub va: usize,
+    pub vb: usize,
+    pub point: usize,
+    pub direction: [f64; 3],
+    pub surface: usize,
+    pub uv_a: [f64; 2],
+    pub uv_b: [f64; 2],
+}
+
 impl StepWriter {
     pub fn new() -> Self {
         Self {
@@ -194,19 +204,19 @@ impl StepWriter {
 
     /// Emit an EDGE_CURVE whose 3D LINE is explicitly associated with its
     /// surface-space LINE through PCURVE/SURFACE_CURVE.
-    pub fn pcurve_line_edge(
-        &mut self,
-        va: usize,
-        vb: usize,
-        pa: usize,
-        dir: [f64; 3],
-        surface: usize,
-        uv_a: [f64; 2],
-        uv_b: [f64; 2],
-    ) -> usize {
-        let d3 = self.direction(dir);
+    pub fn pcurve_line_edge(&mut self, edge: PcurveLineEdge) -> usize {
+        let PcurveLineEdge {
+            va,
+            vb,
+            point,
+            direction,
+            surface,
+            uv_a,
+            uv_b,
+        } = edge;
+        let d3 = self.direction(direction);
         let vec3 = self.emit(format!("VECTOR('',#{d3},1.)"));
-        let line3 = self.emit(format!("LINE('',#{pa},#{vec3})"));
+        let line3 = self.emit(format!("LINE('',#{point},#{vec3})"));
         let uvp = self.cartesian2(uv_a);
         let uvd = self.direction2([uv_b[0] - uv_a[0], uv_b[1] - uv_a[1]]);
         let uvvec = self.emit(format!("VECTOR('',#{uvd},1.)"));

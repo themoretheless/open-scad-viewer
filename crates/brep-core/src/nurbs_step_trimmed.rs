@@ -5,8 +5,8 @@
 
 use crate::analytic_features::FeatureCertificate;
 use crate::nurbs_step_shared::{
-    StepGraphRoot, StepWriter, corner_xyz, emit_b_spline_surface, fmt_refs, invert_uv,
-    is_uniform_bicubic_positive, parse_entities, refuse, refuse_mesh_payloads_common,
+    PcurveLineEdge, StepGraphRoot, StepWriter, corner_xyz, emit_b_spline_surface, fmt_refs,
+    invert_uv, is_uniform_bicubic_positive, parse_entities, refuse, refuse_mesh_payloads_common,
     resolve_cartesian, split_top_args, step_header, surface_from_b_spline_args,
     validate_linked_step_graph,
 };
@@ -188,7 +188,15 @@ pub fn export_nurbs_step_trimmed(model: &Model) -> Result<(String, FeatureCertif
                 coedge.pcurve.control_points[1][0],
                 coedge.pcurve.control_points[1][1],
             ];
-            edge_ids.push(w.pcurve_line_edge(vid[a], vid[b], pid[a], dir, surf_id, uv_a, uv_b));
+            edge_ids.push(w.pcurve_line_edge(PcurveLineEdge {
+                va: vid[a],
+                vb: vid[b],
+                point: pid[a],
+                direction: dir,
+                surface: surf_id,
+                uv_a,
+                uv_b,
+            }));
         }
         let oriented: Vec<usize> = edge_ids
             .iter()
