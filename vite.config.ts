@@ -18,8 +18,17 @@ export default defineConfig({
     if (id.includes('/src/generated/wasm-brotli/bytes')) return 'wasm-brotli-bytes'
   } } } },
   build: {
-    chunkSizeWarningLimit: 700,
+    // The distribution verifier below owns explicit budgets for every large
+    // chunk, including the packed geometry kernel.
+    chunkSizeWarningLimit: 3_020,
     rollupOptions: {
+      onwarn(warning, defaultWarn) {
+        // Emscripten's browser bundle contains a dead Node.js fs branch. The
+        // browser runtime supplies wasmBinary and never evaluates that path.
+        if (warning.message.includes('Module "fs" has been externalized')
+          && warning.message.includes('harfbuzzjs/hb.js')) return
+        defaultWarn(warning)
+      },
       output: {
         codeSplitting: {
           groups: [
