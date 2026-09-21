@@ -26,6 +26,8 @@ const MAX_GRAPH_DEPTH: usize = 64;
 const MAX_OCCURRENCES: usize = 256;
 const MAX_OUTPUT_BYTES: usize = 16 * 1024 * 1024;
 
+type TopologyMapping = Vec<(TopoKind, usize, usize)>;
+
 fn refuse(message: impl Into<String>) -> Error {
     Error::new("BREP_STEP_V3_REFUSED", message)
 }
@@ -2675,7 +2677,7 @@ fn build_direct_roots(
     whole_domain_proofs: bool,
     interior_point_selectors: bool,
     allow_open_shells: bool,
-) -> Result<(Model, Vec<(TopoKind, usize, usize)>)> {
+) -> Result<(Model, TopologyMapping)> {
     let mut builder = DirectBuilder {
         entities,
         scale,

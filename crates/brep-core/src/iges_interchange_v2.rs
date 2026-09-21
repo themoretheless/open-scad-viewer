@@ -18,6 +18,8 @@ const MAX_ENTITIES: usize = 65_536;
 const MAX_VALUES: usize = 1_000_000;
 const MAX_TOPOLOGY: usize = 32_768;
 
+type TopologyMapping = Vec<(TopoKind, usize, usize)>;
+
 fn refuse(message: impl Into<String>) -> Error {
     Error::new("BREP_IGES_V2_REFUSED", message)
 }
@@ -507,7 +509,7 @@ impl<'a> Builder<'a> {
         }
         Ok(out)
     }
-    fn build(mut self) -> Result<(Model, Vec<(TopoKind, usize, usize)>)> {
+    fn build(mut self) -> Result<(Model, TopologyMapping)> {
         let mut vertex_lists = BTreeMap::new();
         for (&de, e) in self.e {
             if e.directory.ty == 502 {
