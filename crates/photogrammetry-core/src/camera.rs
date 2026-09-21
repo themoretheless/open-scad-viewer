@@ -374,8 +374,8 @@ fn refine_epipolar(camera: &mut Camera, first: &Camera, pairs: &[(V3, V3)], anal
                 }
             }
         }
-        for i in 0..6 {
-            h[i][i] += damping * (h[i][i] + 1.);
+        for (i, row) in h.iter_mut().enumerate() {
+            row[i] += damping * (row[i] + 1.);
         }
         let Some(delta) = solve(h, g) else {
             break;
@@ -501,12 +501,12 @@ fn refine_joint(first: &Camera, camera: &mut Camera, observations: &[([f64; 2], 
                 }
             }
         }
-        for i in 0..6 {
-            u[i][i] += lambda * (u[i][i] + 1.);
+        for (i, row) in u.iter_mut().enumerate() {
+            row[i] += lambda * (row[i] + 1.);
         }
         for block in v_blocks.iter_mut() {
-            for i in 0..3 {
-                block[i][i] += lambda * (block[i][i] + 1.);
+            for (i, row) in block.iter_mut().enumerate() {
+                row[i] += lambda * (row[i] + 1.);
             }
         }
         // Schur complement of the point blocks: S = U - W V^-1 W^T.
@@ -885,9 +885,7 @@ pub fn relative_with_options(
             }
         }
     }
-    let Some(mut c) = result else {
-        return None;
-    };
+    let mut c = result?;
     let initial = kept;
     let mut triangulated: Vec<(V3, [f64; 2])> = Vec::with_capacity(initial.len());
     let mut previous_points: Vec<(V3, [f64; 2])> = Vec::new();
@@ -1065,8 +1063,8 @@ pub fn refine(c: &mut Camera, pairs: &[(V3, [f64; 2])]) {
                 }
             }
         }
-        for i in 0..6 {
-            a[i][i] += lambda * (a[i][i] + 1.);
+        for (i, row) in a.iter_mut().enumerate() {
+            row[i] += lambda * (row[i] + 1.);
         }
         let Some(delta) = solve(a, b) else {
             break;

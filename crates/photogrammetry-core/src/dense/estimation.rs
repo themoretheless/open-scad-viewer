@@ -1017,6 +1017,10 @@ pub struct PreparedView {
     neighbors: Vec<usize>,
 }
 
+/// Host-side payloads indexed by image slot. Keeping this relationship named
+/// avoids exposing a nested tuple through the dense pipeline API.
+pub type HostSweepPreparation = (Vec<Option<HostSweepView>>, Vec<Option<PreparedView>>);
+
 impl PreparedView {
     /// Score-buffer length per hypothesis count: map pixels (all, including
     /// boundary rows that the shader fills with -1).
@@ -1032,7 +1036,7 @@ pub fn prepare_host_views(
     sparse: &Reconstruction,
     options: &DenseOptions,
     progress: &mut impl FnMut(&str, usize, usize) -> bool,
-) -> Result<(Vec<Option<HostSweepView>>, Vec<Option<PreparedView>>)> {
+) -> Result<HostSweepPreparation> {
     let active: Vec<_> = sparse
         .cameras
         .iter()
@@ -1223,6 +1227,7 @@ const PRIOR_WINDOW: usize = 6;
 /// reference view (COLMAP-style geometric prior). Anchors are splatted to the
 /// map grid, then each pixel takes the padded min/max depth of anchors within
 /// a fixed square window. Returns None when the view has no usable anchors.
+#[expect(clippy::too_many_arguments, reason = "projection scalar inputs are kept explicit for the dense kernel; group into a context object in the next API pass")]
 fn sparse_intervals(
     sparse: &Reconstruction,
     image: usize,

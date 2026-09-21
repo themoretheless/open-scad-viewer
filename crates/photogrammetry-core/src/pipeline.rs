@@ -81,6 +81,7 @@ pub fn reconstruct_detailed(
         report,
     }
 }
+#[expect(clippy::too_many_arguments, reason = "pipeline state is passed explicitly across the solver boundary; a typed optimization context is the next modularization step")]
 fn optimize_geometry(
     cameras: &mut [Option<Camera>],
     points: &mut [Point],

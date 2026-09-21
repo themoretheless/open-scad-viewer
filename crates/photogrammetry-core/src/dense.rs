@@ -464,10 +464,7 @@ pub fn prepare_host_sweep(
     options: &DenseOptions,
     progress: &mut impl FnMut(&str, usize, usize) -> bool,
 ) -> Result<
-    Option<(
-        Vec<Option<estimation::HostSweepView>>,
-        Vec<Option<estimation::PreparedView>>,
-    )>,
+    Option<estimation::HostSweepPreparation>,
 > {
     options.validate()?;
     if options.estimator != DenseEstimator::FrontoparallelSweep

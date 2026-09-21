@@ -514,7 +514,7 @@ pub fn matches_with_options(a: &[Feature], b: &[Feature], options: &FeatureOptio
                 let cutoff = best_a[i].2.max(best_b[j].1);
                 // Partial sums never decrease, so checking the cutoff once per
                 // 16-component chunk rejects the same pairs as checking every k.
-                for (cx, cy) in x.as_chunks::<16>().0.iter().zip(y.chunks_exact(16)) {
+                for (cx, cy) in x.as_chunks::<16>().0.iter().zip(y.as_chunks::<16>().0) {
                     for k in 0..16 {
                         let v = cx[k] - cy[k];
                         d += v * v;

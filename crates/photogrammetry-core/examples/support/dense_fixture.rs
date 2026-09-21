@@ -41,6 +41,7 @@ impl Scene {
         }
         (p, object)
     }
+    #[expect(dead_code, reason = "shared by dense accuracy tests and standalone benchmark examples")]
     pub fn distance(self, p: V3) -> f64 {
         let n = [
             self.angle.to_radians().sin(),

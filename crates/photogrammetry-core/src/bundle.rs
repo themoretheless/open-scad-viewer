@@ -664,8 +664,8 @@ fn linearize(
 
 /// Scale before inverting the tiny SPD block to avoid world-unit overflow/underflow.
 fn inverse_point(mut h: M3, damping: f64) -> Option<M3> {
-    for i in 0..3 {
-        h[i][i] += damping * h[i][i].max(1e-9);
+    for (i, row) in h.iter_mut().enumerate() {
+        row[i] += damping * row[i].max(1e-9);
     }
     let size = (0..3).map(|i| h[i][i]).fold(0., f64::max);
     if !size.is_finite() || size <= 0. {
