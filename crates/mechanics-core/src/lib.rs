@@ -21,6 +21,7 @@ pub const MAX_POINTS: usize = 16_384;
 
 pub mod truss;
 pub mod truss_loads;
+pub mod print_strength;
 
 pub use math_core::{Error, Result};
 use math_core::{cross2, sub2};

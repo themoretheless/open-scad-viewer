@@ -6,8 +6,10 @@ import type {NominalLatticeGraph} from '../services/latticeGraphProtocol'
 import type {TrussLoadCase,TrussScenario} from '../services/trussScenario'
 import {computeNominalLatticeGraph,computeTrussScenario} from '../services/mainSolidWorker'
 import {trussFieldMeshes} from '../services/trussFieldMeshes'
+import {screenTrussMembers,validatePrintStrengthProfile,type ValidatedPrintProfile} from '../services/trussScreening'
+import type {LatticePrintSettings} from '../services/latticePrintSettings'
 
-const props=defineProps<{meshes:MeshData[];selection:number[];source:string;ready:boolean;locale:string;options:LighteningOptions;previewEpoch?:number}>()
+const props=defineProps<{meshes:MeshData[];selection:number[];source:string;ready:boolean;locale:string;options:LighteningOptions;printSettings:LatticePrintSettings;previewEpoch?:number}>()
 const emit=defineEmits<{preview:[meshes:MeshData[]|null]}>()
 const showField=ref(false),markerMm=ref(1)
 function clearField(){if(showField.value){showField.value=false;emit('preview',null)}}
@@ -25,6 +27,19 @@ const active=ref(0),mode=ref<'case'|'combination'>('case')
 const youngMpa=ref<number|string>(''),areaMm2=ref<number|string>('')
 const phase=ref<'graph'|'solve'|null>(null),error=ref(''),reportUrl=ref('')
 const result=shallowRef<Awaited<ReturnType<typeof computeTrussScenario>>|null>(null)
+const tensionMpa=ref<number|string>(''),compressionMpa=ref<number|string>(''),safetyFactor=ref(2)
+const material=ref(''),grade=ref(''),propertySource=ref('')
+const nozzleTempC=ref<number|string>(''),bedTempC=ref<number|string>('')
+const solvedPrintProfile=shallowRef<ValidatedPrintProfile|null>(null)
+const printProfile=computed(()=>({material:material.value,grade:grade.value,propertySource:propertySource.value,
+  nozzleMm:props.printSettings.nozzle,lineWidthMm:props.options.lineWidth,layerHeightMm:props.printSettings.layer,
+  nozzleTempC:Number(nozzleTempC.value),bedTempC:bedTempC.value===''?NaN:Number(bedTempC.value)}))
+const screening=computed(()=>{
+  if(!result.value||tensionMpa.value===''||compressionMpa.value==='')return {rows:[],error:''}
+  try{return {rows:screenTrussMembers(result.value.model,[result.value.result],{
+    tensionMpa:Number(tensionMpa.value),compressionMpa:Number(compressionMpa.value),safetyFactor:Number(safetyFactor.value)}),error:''}}
+  catch(cause){return {rows:[],error:String(cause)}}
+})
 const current=computed(()=>entries.value[active.value]?.loadCase??null)
 const load=computed(()=>current.value?.loads[0]??null)
 const selectedMesh=computed(()=>props.selection.length===1?props.meshes[props.selection[0]]??null:null)
@@ -36,7 +51,7 @@ let binding:{sourceBodyIndex:number;graphOptions:LighteningOptions}|null=null
 
 function invalidateResult(){
   clearField()
-  revision++;controller?.abort();controller=undefined;phase.value=null;result.value=null;error.value=''
+  revision++;controller?.abort();controller=undefined;phase.value=null;result.value=null;solvedPrintProfile.value=null;error.value=''
   if(reportUrl.value)URL.revokeObjectURL(reportUrl.value)
   reportUrl.value=''
 }
@@ -45,6 +60,15 @@ watch([()=>props.source,()=>props.ready,selectedMesh,()=>selectedMesh.value?.ver
   ()=>selectedMesh.value?.indices,()=>selectedMesh.value?.transform],invalidateGraph,{flush:'sync'})
 watch([()=>props.selection,()=>props.options],invalidateGraph,{deep:true,flush:'sync'})
 watch([entries,youngMpa,areaMm2,active,mode],invalidateResult,{deep:true,flush:'sync'})
+watch(printProfile,()=>{youngMpa.value='';tensionMpa.value='';compressionMpa.value='';invalidateResult()},{flush:'sync'})
+watch([result,solvedPrintProfile,screening,tensionMpa,compressionMpa,safetyFactor],()=>{
+  if(reportUrl.value)URL.revokeObjectURL(reportUrl.value)
+  reportUrl.value=''
+  if(!result.value||!solvedPrintProfile.value||!graph.value||!binding)return
+  const assessment=screening.value.rows.length?{limits:{tensionMpa:tensionMpa.value,compressionMpa:compressionMpa.value,safetyFactor:safetyFactor.value},rows:screening.value.rows}:null
+  const report={version:2,modelKind:graph.value.modelKind,...binding,...result.value,printProfile:solvedPrintProfile.value,axialScreening:assessment}
+  reportUrl.value=URL.createObjectURL(new Blob([JSON.stringify(report,null,2)],{type:'application/json'}))
+})
 onUnmounted(invalidateResult)
 
 async function generate(){
@@ -85,6 +109,9 @@ function remove(){if(entries.value.length>1){entries.value.splice(active.value,1
 async function solve(){
   invalidateResult()
   if(!graph.value||!binding||!current.value)return
+  let profile:ValidatedPrintProfile
+  try{profile=validatePrintStrengthProfile(printProfile.value)}
+  catch(cause){error.value=String(cause);return}
   if(typeof youngMpa.value!=='number'||!Number.isFinite(youngMpa.value)||youngMpa.value<=0
     ||typeof areaMm2.value!=='number'||!Number.isFinite(areaMm2.value)||areaMm2.value<=0){
     error.value=label('Модуль E и площадь должны быть положительными конечными числами.','E and area must be positive finite numbers.');return
@@ -96,8 +123,7 @@ async function solve(){
   try{
     const value=await computeTrussScenario(scenario,{signal:abort.signal})
     if(ticket!==revision)return
-    const report={version:1,modelKind:graph.value.modelKind,...binding,...value}
-    reportUrl.value=URL.createObjectURL(new Blob([JSON.stringify(report,null,2)],{type:'application/json'}))
+    solvedPrintProfile.value=profile
     result.value=value
   }catch(cause){if(ticket===revision&&!(cause instanceof Error&&cause.name==='AbortError'))error.value=String(cause)}
   finally{if(ticket===revision){phase.value=null;controller=undefined}}
@@ -113,6 +139,17 @@ const number=(value:number)=>value===0?'0':value.toPrecision(5)
     <span v-if="!available" role="status">{{label('Нужно одно тело и актуальная сборка.','One body and a current build are required.')}}</span>
     <template v-if="graph&&current&&load">
       <p>{{graph.nodes.length}} {{label('узлов','nodes')}} · {{graph.edges.length}} {{label('стержней','members')}}</p>
+      <fieldset><legend>{{label('Пластик и условия печати','Plastic and print conditions')}}</legend>
+        <label>{{label('Тип пластика','Plastic type')}}<select v-model="material" :aria-label="label('Тип пластика','Plastic type')"><option value="">{{label('Выберите пластик','Select plastic')}}</option><option v-for="kind in ['PLA','PETG','ABS','ASA','PA','PC','TPU','custom']" :key="kind" :value="kind">{{kind==='custom'?label('Другой / композит','Other / composite'):kind}}</option></select></label>
+        <label>{{label('Марка / производитель / состав','Grade / manufacturer / composition')}}<input v-model="grade" maxlength="512"></label>
+        <label>{{label('Источник E и пределов для этих условий','Source of E and limits for these conditions')}}<input v-model="propertySource" maxlength="512"></label>
+        <div class="fields">
+          <label>{{label('Температура сопла, °C','Nozzle temperature, °C')}}<input v-model.number="nozzleTempC" type="number" min="1"></label>
+          <label>{{label('Температура стола, °C','Bed temperature, °C')}}<input v-model.number="bedTempC" type="number" min="0"></label>
+        </div>
+        <p>{{label('Из настроек FDM и геометрии: сопло','From FDM and geometry settings: nozzle')}} {{printSettings.nozzle}} mm · {{label('ширина линии','line width')}} {{options.lineWidth}} mm · {{label('слой','layer')}} {{printSettings.layer}} mm.</p>
+        <p>{{label('При изменении пластика, температуры, сопла, линии или слоя введите E и пределы заново. Используйте значения для указанных условий. Влияние температуры и анизотропии автоматически не моделируется.','After changing plastic, temperature, nozzle, line or layer, re-enter E and limits for those conditions. Temperature effects and anisotropy are not automatically modeled.')}}</p>
+      </fieldset>
       <div class="fields">
         <label>{{label('Модуль E, MPa','Young modulus, MPa')}}<input v-model.number="youngMpa" type="number" min="0" step="100"></label>
         <label>{{label('Площадь стержня, mm²','Member area, mm²')}}<input v-model.number="areaMm2" type="number" min="0" step="0.1"></label>
@@ -141,8 +178,24 @@ const number=(value:number)=>value===0?'0':value.toPrecision(5)
       <div class="commands"><button :disabled="!!phase" @click="solve">{{label('Рассчитать модель','Solve model')}}</button><button v-if="phase" @click="invalidateResult">{{label('Отмена','Cancel')}}</button></div>
       <section v-if="result" class="results" aria-label="Axial graph results">
         <h4>{{label('Номинальная осевая модель','Nominal axial model')}}</h4>
+        <p v-for="warning in solvedPrintProfile?.warnings" :key="warning" role="status">{{warning==='layer-above-80-percent-nozzle'?label('Высота слоя превышает 80% диаметра сопла — проверьте профиль печати.','Layer height exceeds 80% of nozzle diameter; check the print profile.'):label('Ширина линии не больше высоты слоя — проверьте профиль печати.','Line width does not exceed layer height; check the print profile.')}}</p>
         <dl><dt>{{label('Максимальное перемещение, mm','Maximum displacement, mm')}}</dt><dd>{{number(result.result.maxDeflectionMm)}}</dd><dt>{{label('Относительная невязка','Relative residual')}}</dt><dd>{{number(result.result.maxRelativeResidual)}}</dd><dt>{{label('Свободные степени свободы','Free DOFs')}}</dt><dd>{{result.result.freeDofs}}</dd></dl>
         <a :href="reportUrl" download="nominal-truss.json">nominal-truss.json</a>
+        <fieldset><legend>{{label('Поиск перегруженных стержней','Axial demand screening')}}</legend>
+          <p>{{label('Только рассчитанный случай или комбинация. Допуски задаются для вашего материала и процесса печати; потеря устойчивости не проверяется.','Only the solved case or combination. Supply limits for your material and printing process; buckling is not checked.')}}</p>
+          <div class="fields">
+            <label>{{label('Предел растяжения, MPa','Tensile limit, MPa')}}<input v-model.number="tensionMpa" type="number" min="0" step="0.1"></label>
+            <label>{{label('Предел сжатия, MPa','Compressive limit, MPa')}}<input v-model.number="compressionMpa" type="number" min="0" step="0.1"></label>
+            <label>{{label('Коэффициент запаса','Safety factor')}}<input v-model.number="safetyFactor" type="number" min="1" step="0.1"></label>
+          </div>
+          <p v-if="screening.error" role="alert">{{screening.error}}</p>
+          <template v-if="screening.rows.length">
+            <p>{{label('Более 100% — превышение осевого допуска; менее 30% — малая осевая нагрузка. Уменьшение сечения требует повторного расчёта всех нагрузок, жёсткости и устойчивости.','Above 100% exceeds the axial limit; below 30% indicates low axial demand. Resizing requires rechecking all loads, stiffness and stability.')}}</p>
+            <div class="table-scroll"><table aria-label="Axial demand screening"><thead><tr><th>{{label('Стержень','Member')}}</th><th>{{label('Использование, %','Utilization, %')}}</th><th>{{label('Оценка','Screening')}}</th></tr></thead><tbody>
+              <tr v-for="row in screening.rows" :key="row.memberIndex"><td>{{result.model.members[row.memberIndex].nodes.join(' - ')}}</td><td>{{number(row.utilization*100)}}</td><td>{{row.status==='overloaded'?label('Перегружен','Overloaded'):row.status==='low-demand'?label('Малая нагрузка','Low demand'):label('В осевом допуске','Within axial limit')}}</td></tr>
+            </tbody></table></div>
+          </template>
+        </fieldset>
         <label class="field-toggle"><input v-model="showField" type="checkbox" @change="updateField">{{label('Знак осевого усилия в предпросмотре','Preview axial force sign')}}</label>
         <label>{{label('Размер маркера, mm','Marker size, mm')}}<input v-model.number="markerMm" type="number" min="0.001" step="0.1" @input="showField&&updateField()"></label>
         <p v-if="showField" class="force-legend"><span><i class="compression"></i>{{label('Сжатие','Compression')}} (−N)</span><span><i class="zero"></i>0 N</span><span><i class="tension"></i>{{label('Растяжение','Tension')}} (+N)</span></p>
