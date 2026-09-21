@@ -15,7 +15,7 @@ pub fn bounds(groups: &[Vec<f64>]) -> Result<([f64; 3], [f64; 3])> {
             positions.len() % 3 == 0,
             "Body bounds require complete coordinate triples.",
         )?;
-        for p in positions.chunks_exact(3) {
+        for p in positions.as_chunks::<3>().0 {
             check(
                 p.iter().all(|v| v.is_finite()),
                 "Body bounds require finite coordinates.",
@@ -59,7 +59,7 @@ pub fn flatten(meshes: &[Input]) -> Result<Mesh> {
             "Malformed scene mesh.",
         )?;
         let mut map = Vec::with_capacity(mesh.vertices.len() / 6);
-        for vertex in mesh.vertices.chunks_exact(6) {
+        for vertex in mesh.vertices.as_chunks::<6>().0 {
             // Keep the established translation-first binary64 evaluation order.
             let p: [f64; 3] = std::array::from_fn(|r| {
                 m[r * 4 + 3]
@@ -92,7 +92,7 @@ pub fn flatten(meshes: &[Input]) -> Result<Mesh> {
             determinant.is_finite(),
             "Nonfinite scene transform determinant.",
         )?;
-        for t in mesh.indices.chunks_exact(3) {
+        for t in mesh.indices.as_chunks::<3>().0 {
             let [a, b, c] = [map[t[0]], map[t[1]], map[t[2]]];
             result.indices.extend(if determinant < 0. {
                 [a, c, b]

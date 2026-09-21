@@ -26,11 +26,11 @@ fn sphere(rings: usize, segments: usize) -> (Vec<f32>, Vec<u32>) {
                 theta.cos(),
                 theta.sin() * phi.sin(),
             ];
-            for k in 0..3 {
-                vertices.push((n[k] * 10.) as f32);
+            for &value in &n {
+                vertices.push((value * 10.) as f32);
             }
-            for k in 0..3 {
-                vertices.push(n[k] as f32);
+            for &value in &n {
+                vertices.push(value as f32);
             }
         }
     }

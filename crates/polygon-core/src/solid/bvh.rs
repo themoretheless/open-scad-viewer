@@ -182,11 +182,11 @@ impl Builder<'_> {
             }
         }
 
-        for axis in 0..3 {
-            self.bounds.push(min[axis] as f32);
+        for &value in &min {
+            self.bounds.push(value as f32);
         }
-        for axis in 0..3 {
-            self.bounds.push(max[axis] as f32);
+        for &value in &max {
+            self.bounds.push(value as f32);
         }
 
         let count = end - start;
@@ -278,7 +278,7 @@ pub fn build_mesh_bvh(
         let ny = e1z * e2x - e1x * e2z;
         let nz = e1x * e2y - e1y * e2x;
         let area_squared = nx * nx + ny * ny + nz * nz;
-        if !(area_squared > 0.0) || !area_squared.is_finite() {
+        if area_squared <= 0.0 || !area_squared.is_finite() {
             continue;
         }
 

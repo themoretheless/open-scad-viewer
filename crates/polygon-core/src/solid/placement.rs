@@ -5,7 +5,7 @@ pub struct PlacedMesh {
     pub indices: Vec<u32>,
 }
 pub fn place(vertices: &[f32], indices: &[u32], matrix: &[f32]) -> Result<Option<PlacedMesh>> {
-    if vertices.len() % 6 != 0 || vertices.len() / 6 < 3 || indices.len() < 3 {
+    if !vertices.len().is_multiple_of(6) || vertices.len() / 6 < 3 || indices.len() < 3 {
         return Ok(None);
     }
     if matrix.len() != 16
@@ -24,13 +24,13 @@ pub fn place(vertices: &[f32], indices: &[u32], matrix: &[f32]) -> Result<Option
             "Solid conversion cannot apply a singular scene transform.",
         ));
     }
-    if indices.len() % 3 != 0 || indices.iter().any(|&i| i as usize >= vertices.len() / 6) {
+    if !indices.len().is_multiple_of(3) || indices.iter().any(|&i| i as usize >= vertices.len() / 6) {
         return Err(error(
             "Solid conversion requires complete triangles with valid vertex indices.",
         ));
     }
     let mut positions = Vec::with_capacity(vertices.len() / 2);
-    for vertex in vertices.chunks_exact(6) {
+    for vertex in vertices.as_chunks::<6>().0 {
         let [x, y, z] = [vertex[0] as f64, vertex[1] as f64, vertex[2] as f64];
         for row in 0..3 {
             let o = row * 4;
@@ -45,7 +45,7 @@ pub fn place(vertices: &[f32], indices: &[u32], matrix: &[f32]) -> Result<Option
     }
     let mut indices = indices.to_vec();
     if determinant < 0. {
-        for triangle in indices.chunks_exact_mut(3) {
+        for triangle in indices.as_chunks_mut::<3>().0 {
             triangle.swap(1, 2)
         }
     }

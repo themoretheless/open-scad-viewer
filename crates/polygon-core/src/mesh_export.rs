@@ -55,7 +55,7 @@ pub fn export(mesh: &Mesh, format: &str) -> Result<Vec<u8>> {
             "amf" => out.write_str("<?xml version=\"1.0\" encoding=\"UTF-8\"?><amf unit=\"millimeter\" version=\"1.1\"><object id=\"0\"><mesh><vertices>")?,
             _ => unreachable!(),
         }
-        for p in mesh.positions.chunks_exact(3) {
+        for p in mesh.positions.as_chunks::<3>().0 {
             let [x, y, z] = [Number(p[0]), Number(p[1]), Number(p[2])];
             match format {
                 "obj" => writeln!(out, "v {x} {y} {z}")?,
@@ -69,7 +69,7 @@ pub fn export(mesh: &Mesh, format: &str) -> Result<Vec<u8>> {
         if format == "amf" {
             out.write_str("</vertices><volume>")?;
         }
-        for t in mesh.indices.chunks_exact(3) {
+        for t in mesh.indices.as_chunks::<3>().0 {
             let [a, b, c] = [t[0], t[1], t[2]];
             match format {
                 "obj" => writeln!(out, "f {} {} {}", a + 1, b + 1, c + 1)?,
@@ -135,7 +135,7 @@ fn binary_stl(mesh: &Mesh) -> Result<Vec<u8>> {
     let header = b"ModelGraph mesh; coordinates in millimeters";
     bytes[..header.len()].copy_from_slice(header);
     bytes[80..84].copy_from_slice(&((mesh.indices.len() / 3) as u32).to_le_bytes());
-    for t in mesh.indices.chunks_exact(3) {
+    for t in mesh.indices.as_chunks::<3>().0 {
         let [a, b, c] = [mesh.point(t[0])?, mesh.point(t[1])?, mesh.point(t[2])?];
         let n = cross(sub(b, a), sub(c, a));
         let length = norm(n);
@@ -193,7 +193,7 @@ mod tests {
         assert_eq!(f32::from_le_bytes(data[92..96].try_into().unwrap()), -1.);
         assert_eq!(&data[132..134], &[0, 0]);
         let mut shifted = mesh.clone();
-        for p in shifted.positions.chunks_exact_mut(3) {
+        for p in shifted.positions.as_chunks_mut::<3>().0 {
             p[0] += 100_000_000.;
         }
         assert!(

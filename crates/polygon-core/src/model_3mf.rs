@@ -56,7 +56,7 @@ pub fn export(mesh: &Mesh, parts: &[Mesh]) -> Result<Vec<u8>> {
                 out,
                 "<object id=\"{id}\" name=\"Part {id}\" type=\"model\"><mesh><vertices>"
             )?;
-            for p in part.positions.chunks_exact(3) {
+            for p in part.positions.as_chunks::<3>().0 {
                 write!(
                     out,
                     "<vertex x=\"{}\" y=\"{}\" z=\"{}\"/>",
@@ -66,7 +66,7 @@ pub fn export(mesh: &Mesh, parts: &[Mesh]) -> Result<Vec<u8>> {
                 )?;
             }
             out.write_str("</vertices><triangles>")?;
-            for t in part.indices.chunks_exact(3) {
+            for t in part.indices.as_chunks::<3>().0 {
                 write!(
                     out,
                     "<triangle v1=\"{}\" v2=\"{}\" v3=\"{}\"/>",
@@ -103,7 +103,7 @@ mod tests {
     fn preserves_parts_and_rejects_invalid_part_without_partial_document() {
         let a = solid();
         let mut b = a.clone();
-        for p in b.positions.chunks_exact_mut(3) {
+        for p in b.positions.as_chunks_mut::<3>().0 {
             p[0] += 10.;
         }
         let xml = String::from_utf8(export(&a, &[a.clone(), b.clone()]).unwrap()).unwrap();

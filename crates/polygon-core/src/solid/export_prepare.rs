@@ -11,8 +11,8 @@ pub fn prepare(
     matrix: &[f32],
     float32: bool,
 ) -> Result<Prepared> {
-    if vertices.len() % 6 != 0
-        || indices.len() % 3 != 0
+    if !vertices.len().is_multiple_of(6)
+        || !indices.len().is_multiple_of(3)
         || matrix.len() != 16
         || !vertices.iter().chain(matrix).all(|v| v.is_finite())
         || matrix[12..] != [0., 0., 0., 1.]
@@ -31,7 +31,8 @@ pub fn prepare(
         + m[2] * (m[4] * m[9] - m[5] * m[8])
         < 0.;
     let points: Vec<[f64; 3]> = vertices
-        .chunks_exact(6)
+        .as_chunks::<6>().0
+        .iter()
         .map(|v| {
             std::array::from_fn(|row| {
                 let k = row * 4;
@@ -44,7 +45,7 @@ pub fn prepare(
     let mut valid = Vec::with_capacity(indices.len());
     let mut normals = Vec::with_capacity(indices.len());
     let mut used = vec![false; count];
-    for t in indices.chunks_exact(3) {
+    for t in indices.as_chunks::<3>().0 {
         let ids = if mirrored {
             [t[0], t[2], t[1]]
         } else {

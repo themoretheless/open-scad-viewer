@@ -378,7 +378,7 @@ fn union_many_joins_separated_groups_and_folds_touching_ones() {
 
     calls.set(0);
     assert_eq!(
-        union_many(&[a.clone()], &mut pairwise).unwrap().indices,
+        union_many(std::slice::from_ref(&a), &mut pairwise).unwrap().indices,
         a.indices
     );
     assert!(union_many(&[], &mut pairwise).unwrap().indices.is_empty());

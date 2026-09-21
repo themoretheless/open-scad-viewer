@@ -224,9 +224,7 @@ fn colorize_along(
 }
 
 fn arc_length_table(path: &BezierPath) -> Result<planar_geometry::measure::ArcLengthIndex> {
-    Ok(planar_geometry::measure::ArcLengthIndex::new(
-        &path.flatten()?,
-    )?)
+    planar_geometry::measure::ArcLengthIndex::new(&path.flatten()?)
 }
 
 /// Premultiply vertex colors by document opacity in `[0,1]`.
@@ -320,7 +318,7 @@ mod tests {
         )
         .unwrap();
         let mut area = 0.;
-        for ids in mesh.indices.chunks_exact(3) {
+        for ids in mesh.indices.as_chunks::<3>().0 {
             let [a, b, c] = [
                 mesh.positions[ids[0] as usize],
                 mesh.positions[ids[1] as usize],

@@ -88,6 +88,7 @@ fn near(bounds: &[f32], node: usize, o: V3, d: V3, mut lo: f64, mut hi: f64) -> 
     Some(lo)
 }
 
+#[expect(clippy::too_many_arguments, reason = "ray-triangle query keeps hot-path inputs explicit")]
 fn triangle(
     vertices: &[f32],
     indices: &[u32],
@@ -225,19 +226,17 @@ pub fn raycast(
             let end = first
                 .saturating_add((metadata & !LEAF_BIT) as usize)
                 .min(bvh.triangles.len());
-            for slot in first..end {
-                let id = bvh.triangles[slot];
+            for &id in &bvh.triangles[first..end] {
                 if query.excluded.contains(&id) {
                     continue;
                 }
-                if let Some(next) = triangle(vertices, indices, stride, id, o, d, lo, hi) {
-                    if hit
+                if let Some(next) = triangle(vertices, indices, stride, id, o, d, lo, hi)
+                    && hit
                         .as_ref()
                         .is_none_or(|old| next.t < old.t || (next.t == old.t && id < old.triangle))
-                    {
-                        hi = next.t;
-                        hit = Some(next);
-                    }
+                {
+                    hi = next.t;
+                    hit = Some(next);
                 }
             }
         } else {

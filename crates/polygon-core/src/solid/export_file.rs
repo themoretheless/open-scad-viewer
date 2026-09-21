@@ -43,6 +43,9 @@ impl Builder {
     pub fn len(&self) -> usize {
         self.bytes.len()
     }
+    pub fn is_empty(&self) -> bool {
+        self.bytes.is_empty()
+    }
     pub fn poison(&mut self) {
         self.failed = true;
         self.bytes = Vec::new()
@@ -86,7 +89,7 @@ impl Builder {
             self.bytes
                 .try_reserve(extra)
                 .map_err(|_| error("Export artifact allocation failed"))?;
-            for (triangle, t) in mesh.indices.chunks_exact(3).enumerate() {
+            for (triangle, t) in mesh.indices.as_chunks::<3>().0.iter().enumerate() {
                 for &n in &mesh.normals[triangle * 3..triangle * 3 + 3] {
                     self.bytes.extend((n as f32).to_le_bytes())
                 }
@@ -104,7 +107,7 @@ impl Builder {
             };
             let result = (|| -> fmt::Result {
                 writeln!(writer, "o result_{}", self.parts + 1)?;
-                for p in mesh.positions.chunks_exact(3) {
+                for p in mesh.positions.as_chunks::<3>().0 {
                     writeln!(
                         writer,
                         "v {} {} {}",
@@ -113,7 +116,7 @@ impl Builder {
                         Number(p[2])
                     )?;
                 }
-                for t in mesh.indices.chunks_exact(3) {
+                for t in mesh.indices.as_chunks::<3>().0 {
                     writeln!(
                         writer,
                         "f {} {} {}",
