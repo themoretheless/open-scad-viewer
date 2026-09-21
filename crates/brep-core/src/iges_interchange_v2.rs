@@ -356,7 +356,7 @@ fn curve126(
     let domain_at = cp_at + 3 * n;
     let a = f(v, domain_at, "curve domain start")?;
     let b = f(v, domain_at + 1, "curve domain end")?;
-    if !(a < b) {
+    if !a.is_finite() || !b.is_finite() || a >= b {
         return Err(refuse("IGES curve domain is not increasing"));
     }
     let old = [knots[degree], knots[knots.len() - degree - 1]];

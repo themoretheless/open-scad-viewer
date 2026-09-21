@@ -241,7 +241,8 @@ pub(crate) fn recognize_torus(model: &Model) -> Result<Option<CanonicalTorus>> {
         .map(|v| dot(sub(v.point, center), axis).abs())
         .fold(0., f64::max);
     let major = dmax - minor;
-    if !minor.is_finite() || !(1e-5..=1e6).contains(&minor) || !(major > minor) {
+    if !minor.is_finite() || !major.is_finite() || !(1e-5..=1e6).contains(&minor) || major <= minor
+    {
         return Ok(None);
     }
     // Ring frame: x from the first outer-ring vertex, y = axis x x.

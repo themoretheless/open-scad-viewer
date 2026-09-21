@@ -68,7 +68,7 @@ pub enum CylinderCylinderComponent {
 /// quadratic beta(m-1)u^2 + (2c + m(1-beta))u - m = 0 with beta = sqrt(2)-1;
 /// the root in [0,1] is taken in the cancellation-free form.
 pub(crate) fn arc_parameter(theta: f64) -> f64 {
-    if !(theta > 0.) {
+    if !theta.is_finite() || theta <= 0. {
         return 0.;
     }
     let m = theta.tan();

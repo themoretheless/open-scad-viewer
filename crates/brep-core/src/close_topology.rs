@@ -923,7 +923,7 @@ impl ExactParameterPartition {
         let mut cursor = parent_lo;
         for interval in &self.child_domain_bits {
             let [lo, hi] = interval.map(decode);
-            if lo.to_bits() != cursor.to_bits() || !hi.is_finite() || !(lo < hi) {
+            if lo.to_bits() != cursor.to_bits() || !lo.is_finite() || !hi.is_finite() || lo >= hi {
                 return Err(refuse(
                     "BREP_HEAL_PARTITION_REFUSED",
                     "Child intervals must exactly and contiguously partition parent",

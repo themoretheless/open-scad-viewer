@@ -494,7 +494,7 @@ impl<'m, M: Mate> Imprint<'m, M> {
                             } else {
                                 None
                             };
-                            if at_end.is_none() && !(local < span[1]) {
+                            if at_end.is_none() && (!local.is_finite() || local >= span[1]) {
                                 continue;
                             }
                             owner = Some((k, local, at_end));
@@ -599,7 +599,7 @@ impl<'m, M: Mate> Imprint<'m, M> {
                     let (phi1, v1) = refined[w + 1];
                     let gap = phi1 - phi0;
                     let weight = (gap / 2.).cos();
-                    if !(weight > 0.5) {
+                    if !weight.is_finite() || weight <= 0.5 {
                         return Err(unsupported(
                             "Sphere Boolean: arc piece exceeds a quadrant after refinement",
                         ));
@@ -1170,7 +1170,7 @@ pub(crate) fn sphere_arc_pcurve(
     let mut weights = Vec::with_capacity(3);
     for i in 0..3 {
         let den = bern((f0.2, f1.2, f2.2), i);
-        if !(den > 0.) {
+        if !den.is_finite() || den <= 0. {
             return Err(unsupported(
                 "Sphere Boolean: arc leaves the patch hemisphere",
             ));
