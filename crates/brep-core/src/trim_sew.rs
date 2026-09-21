@@ -299,6 +299,17 @@ pub struct BoundaryUse {
     pub reversed: bool,
 }
 
+pub struct BoundaryCorrespondenceInput<'a> {
+    pub curve_a: &'a Curve,
+    pub curve_b: &'a Curve,
+    pub endpoints_a: [[f64; 3]; 2],
+    pub endpoints_b: [[f64; 3]; 2],
+    pub orientation: ParameterOrientation,
+    pub seam_shift: i32,
+    pub shell: usize,
+    pub uses: [BoundaryUse; 2],
+}
+
 /// Proof that two complete boundary uses correspond. Every field is checked by
 /// exact sew; no endpoint/midpoint quantization is an authority.
 #[derive(Clone, Debug)]
@@ -1167,15 +1178,18 @@ pub fn prove_curve_pcurve_correspondence(
 /// The caller supplies explicit cyclic locations and shell ownership.
 pub fn prove_boundary_correspondence(
     context: &ToleranceContext,
-    curve_a: &Curve,
-    curve_b: &Curve,
-    endpoints_a: [[f64; 3]; 2],
-    endpoints_b: [[f64; 3]; 2],
-    orientation: ParameterOrientation,
-    seam_shift: i32,
-    shell: usize,
-    uses: [BoundaryUse; 2],
+    input: BoundaryCorrespondenceInput<'_>,
 ) -> Result<BoundaryCorrespondence> {
+    let BoundaryCorrespondenceInput {
+        curve_a,
+        curve_b,
+        endpoints_a,
+        endpoints_b,
+        orientation,
+        seam_shift,
+        shell,
+        uses,
+    } = input;
     let definition_a = RationalCurveDefinition::from_curve(curve_a)?;
     let definition_b = RationalCurveDefinition::from_curve(curve_b)?;
     if definition_a != definition_b {
@@ -1338,14 +1352,16 @@ pub fn prove_model_edge_correspondence(
         })?;
     prove_boundary_correspondence(
         context,
-        &edge.curve,
-        &edge.curve,
-        endpoints(&uses[0]),
-        endpoints(&uses[1]),
-        ParameterOrientation::Reversed,
-        0,
-        shell,
-        [uses[0].clone(), uses[1].clone()],
+        BoundaryCorrespondenceInput {
+            curve_a: &edge.curve,
+            curve_b: &edge.curve,
+            endpoints_a: endpoints(&uses[0]),
+            endpoints_b: endpoints(&uses[1]),
+            orientation: ParameterOrientation::Reversed,
+            seam_shift: 0,
+            shell,
+            uses: [uses[0].clone(), uses[1].clone()],
+        },
     )
 }
 
@@ -1679,27 +1695,29 @@ pub fn sew_closed_model_edges(model: &crate::Model) -> Result<SewCertificate> {
         };
         let correspondence = prove_boundary_correspondence(
             &context,
-            &edge.curve,
-            &edge.curve,
-            traversal(uses[0].3),
-            traversal(uses[1].3),
-            ParameterOrientation::Reversed,
-            seam_shift,
-            uses[0].4,
-            [
-                BoundaryUse {
-                    face: uses[0].0,
-                    wire: uses[0].1,
-                    cyclic_index: uses[0].2,
-                    reversed: uses[0].3,
-                },
-                BoundaryUse {
-                    face: uses[1].0,
-                    wire: uses[1].1,
-                    cyclic_index: uses[1].2,
-                    reversed: uses[1].3,
-                },
-            ],
+            BoundaryCorrespondenceInput {
+                curve_a: &edge.curve,
+                curve_b: &edge.curve,
+                endpoints_a: traversal(uses[0].3),
+                endpoints_b: traversal(uses[1].3),
+                orientation: ParameterOrientation::Reversed,
+                seam_shift,
+                shell: uses[0].4,
+                uses: [
+                    BoundaryUse {
+                        face: uses[0].0,
+                        wire: uses[0].1,
+                        cyclic_index: uses[0].2,
+                        reversed: uses[0].3,
+                    },
+                    BoundaryUse {
+                        face: uses[1].0,
+                        wire: uses[1].1,
+                        cyclic_index: uses[1].2,
+                        reversed: uses[1].3,
+                    },
+                ],
+            },
         )?;
         let mut key = sew_edge_key(endpoints[0], endpoints[1], scale)?;
         key.shell = Some(uses[0].4);
@@ -1808,14 +1826,16 @@ mod tests {
         ];
         let proof = prove_boundary_correspondence(
             &context,
-            &curve,
-            &curve,
-            [[0., 0., 0.], [1., 0., 0.]],
-            [[1., 0., 0.], [0., 0., 0.]],
-            ParameterOrientation::Reversed,
-            0,
-            7,
-            uses,
+            BoundaryCorrespondenceInput {
+                curve_a: &curve,
+                curve_b: &curve,
+                endpoints_a: [[0., 0., 0.], [1., 0., 0.]],
+                endpoints_b: [[1., 0., 0.], [0., 0., 0.]],
+                orientation: ParameterOrientation::Reversed,
+                seam_shift: 0,
+                shell: 7,
+                uses,
+            },
         )
         .unwrap();
         let mut key = sew_edge_key([0., 0., 0.], [1., 0., 0.], 1e-9).unwrap();
@@ -1872,14 +1892,16 @@ mod tests {
         assert!(
             prove_boundary_correspondence(
                 &context,
-                &curve,
-                &different,
-                [[0., 0., 0.], [1., 0., 0.]],
-                [[1., 0., 0.], [0., 0., 0.]],
-                ParameterOrientation::Reversed,
-                0,
-                7,
-                proof.uses.clone(),
+                BoundaryCorrespondenceInput {
+                    curve_a: &curve,
+                    curve_b: &different,
+                    endpoints_a: [[0., 0., 0.], [1., 0., 0.]],
+                    endpoints_b: [[1., 0., 0.], [0., 0., 0.]],
+                    orientation: ParameterOrientation::Reversed,
+                    seam_shift: 0,
+                    shell: 7,
+                    uses: proof.uses.clone(),
+                },
             )
             .is_err()
         );
