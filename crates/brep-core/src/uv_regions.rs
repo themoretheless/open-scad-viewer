@@ -90,7 +90,7 @@ fn tangent_angle(curve: &Curve, at_start: bool) -> Result<f64> {
     };
     let d = [q[0] - p[0], q[1] - p[1]];
     let len = d[0].hypot(d[1]);
-    if !(len > 1e-12) {
+    if !len.is_finite() || len <= 1e-12 {
         return Err(unsupported(
             "UV regions: degenerate pcurve tangent in the UV arrangement",
         ));
@@ -280,7 +280,7 @@ fn left_probe<K>(
         let q = pcurve_point(&piece.pcurve, t1)?;
         let d = [q[0] - m[0], q[1] - m[1]];
         let len = d[0].hypot(d[1]);
-        if !(len > 0.) {
+        if !len.is_finite() || len <= 0. {
             continue;
         }
         let left = [-d[1] / len, d[0] / len];

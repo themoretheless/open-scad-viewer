@@ -413,7 +413,8 @@ impl<'m> Assembler<'m> {
         let u1 = (hi[0] + margin).min(du[1]);
         let v0 = (lo[1] - margin).max(dv[0]);
         let v1 = (hi[1] + margin).min(dv[1]);
-        if !(u1 - u0 > 1e-9) || !(v1 - v0 > 1e-9) {
+        if !((u1 - u0).is_finite() && u1 - u0 > 1e-9) || !((v1 - v0).is_finite() && v1 - v0 > 1e-9)
+        {
             return Err(unsupported("Imprint: face region collapses in UV"));
         }
         if u0 == du[0] && u1 == du[1] && v0 == dv[0] && v1 == dv[1] {
