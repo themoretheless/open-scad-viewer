@@ -655,6 +655,7 @@ mod tests {
 
     /// Six known cameras and sixty points with mild noise and ~8% outlier
     /// observations; poses and points are returned distorted, truths aside.
+    #[expect(clippy::type_complexity, reason = "compact deterministic bundle-adjustment fixture")]
     fn outlier_scene() -> (
         Vec<Option<Camera>>,
         Vec<Point>,
@@ -736,8 +737,8 @@ mod tests {
     /// Two BA passes, as the pipeline runs one after each registration step;
     /// with the filter enabled the first pass prunes outliers for the second.
     fn optimize_twice(
-        cameras: &mut Vec<Option<Camera>>,
-        points: &mut Vec<Point>,
+        cameras: &mut [Option<Camera>],
+        points: &mut [Point],
         features: &[Vec<Feature>],
         options: &bundle::BundleOptions,
     ) -> ReconstructionReport {

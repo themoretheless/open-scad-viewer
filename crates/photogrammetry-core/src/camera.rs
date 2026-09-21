@@ -1217,6 +1217,7 @@ pub fn pnp_with_options(
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[expect(clippy::type_complexity, reason = "compact deterministic camera fixture")]
     fn scene() -> (Camera, Camera, Vec<(V3, [f64; 2], [f64; 2])>) {
         let a = Camera::identity(600., 320., 240.);
         let mut b = a.clone();
@@ -1464,6 +1465,7 @@ mod tests {
     /// Noisy non-planar synthetic scene with a known relative pose. Uniform
     /// pixel noise plus a fixed share of scrambled matches, all from the
     /// deterministic kernel Rng.
+    #[expect(clippy::type_complexity, reason = "compact deterministic camera fixture")]
     fn noisy_scene(
         fa: f64,
         fb: f64,

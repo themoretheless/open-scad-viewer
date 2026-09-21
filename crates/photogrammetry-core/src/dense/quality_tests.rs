@@ -1,8 +1,5 @@
 use super::*;
-use crate::{Point, camera::Camera};
-#[path = "../../examples/support/dense_fixture.rs"]
-mod fixture;
-use fixture::*;
+use super::fixture::*;
 
 #[test]
 fn inclined_surface_improves_depth_at_identical_hypothesis_budget() {
