@@ -393,6 +393,9 @@ pub fn extract_semantic_edges(
         degenerate,
     };
 
+    // Single classification pass: diagnostics and the emitted edge pairs are
+    // recorded together, so groups are never classified twice.
+    let mut emitted: Vec<(u32, u32)> = Vec::with_capacity(edge_count);
     let mut group_start = 0usize;
     while group_start < edge_count {
         let first_occurrence = sorted_occurrences[group_start] as usize;
@@ -414,42 +417,25 @@ pub fn extract_semantic_edges(
             crease_dot_threshold,
         ) {
             EdgeKind::Hidden => {}
-            EdgeKind::Boundary => diagnostics.boundary += 1,
-            EdgeKind::Crease => diagnostics.crease += 1,
-            EdgeKind::NonManifold => diagnostics.non_manifold += 1,
+            kind => {
+                match kind {
+                    EdgeKind::Boundary => diagnostics.boundary += 1,
+                    EdgeKind::Crease => diagnostics.crease += 1,
+                    EdgeKind::NonManifold => diagnostics.non_manifold += 1,
+                    EdgeKind::Hidden => unreachable!(),
+                }
+                emitted.push((a, b));
+            }
         }
         group_start = group_end;
     }
 
     let output_edge_count = diagnostics.boundary + diagnostics.crease + diagnostics.non_manifold;
-    let indices = Vec::from_iter(gen {
-        let mut group_start = 0usize;
-        while group_start < edge_count {
-            let first_occurrence = sorted_occurrences[group_start] as usize;
-            let a = edge_a[first_occurrence];
-            let b = edge_b[first_occurrence];
-            let mut group_end = group_start + 1;
-            while group_end < edge_count {
-                let occurrence = sorted_occurrences[group_end] as usize;
-                if edge_a[occurrence] != a || edge_b[occurrence] != b {
-                    break;
-                }
-                group_end += 1;
-            }
-            if classify_edge_group(
-                &sorted_occurrences,
-                group_start,
-                group_end,
-                &face_normals,
-                crease_dot_threshold,
-            ) != EdgeKind::Hidden
-            {
-                yield a;
-                yield b;
-            }
-            group_start = group_end;
-        }
-    });
+    let mut indices = Vec::with_capacity(emitted.len() * 2);
+    for (a, b) in emitted {
+        indices.push(a);
+        indices.push(b);
+    }
     debug_assert_eq!(indices.len(), output_edge_count as usize * 2);
 
     SemanticEdges {

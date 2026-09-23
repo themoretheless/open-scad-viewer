@@ -5,8 +5,11 @@
 use crate::{
     BuiltMesh, Construction, Error, MAX_TRIANGLES, Mesh, Result, cross, dot, norm, scale, sub,
 };
+use rustc_hash::FxHashMap;
 use std::collections::{BTreeMap, BTreeSet};
 mod validation;
+mod material_audit;
+pub use material_audit::{MaterialAudit, MaterialShell, audit_material};
 type Point = math_core::V3;
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Operation {
@@ -650,8 +653,11 @@ fn merge_coplanar(polygons: Vec<Polygon>, eps: f64, budget: &mut Budget) -> Resu
                 for offset in 2..q.vertices.len() {
                     v.push(q.vertices[(l + offset) % q.vertices.len()]);
                 }
-                budget.tick(v.len().saturating_mul(v.len()))?;
-                if (0..v.len()).all(|a| (a + 1..v.len()).all(|b| norm(sub(v[a], v[b])) > eps))
+                // Distinctness via the same quantization as `key` above:
+                // O(v log v) instead of the O(v^2) pairwise distance check.
+                budget.tick(v.len())?;
+                let mut seen = BTreeSet::new();
+                if v.iter().all(|p| seen.insert(p.map(|x| (x / eps).round() as i64)))
                     && (0..v.len()).all(|t| {
                         dot(
                             cross(
@@ -696,14 +702,16 @@ fn merge_coplanar(polygons: Vec<Polygon>, eps: f64, budget: &mut Budget) -> Resu
 
 struct Vertices {
     points: Vec<Point>,
-    cells: BTreeMap<[i64; 3], Vec<usize>>,
+    // Only point lookups/insertions by cell key; iteration order never leaks
+    // into the output, so hash ordering cannot affect determinism.
+    cells: FxHashMap<[i64; 3], Vec<usize>>,
     eps: f64,
 }
 impl Vertices {
     fn new(eps: f64) -> Self {
         Self {
             points: vec![],
-            cells: BTreeMap::new(),
+            cells: FxHashMap::default(),
             eps,
         }
     }
@@ -749,7 +757,9 @@ fn stitch(polys: Vec<Polygon>, eps: f64, budget: &mut Budget) -> Result<Mesh> {
         v.sort_by(|a, b| vertices.points[*a][axis].total_cmp(&vertices.points[*b][axis]));
         v
     });
-    let mut edges = BTreeMap::<(usize, usize), Vec<usize>>::new();
+    // Lookup-only map: output order is fixed by face/vertex traversal, so the
+    // hasher cannot affect determinism.
+    let mut edges = FxHashMap::<(usize, usize), Vec<usize>>::default();
     let mut indices = Vec::new();
     for face in faces {
         let mut boundary = Vec::new();
@@ -760,46 +770,48 @@ fn stitch(polys: Vec<Polygon>, eps: f64, budget: &mut Budget) -> Result<Mesh> {
                 continue;
             }
             let key = (a.min(b), a.max(b));
-            if let std::collections::btree_map::Entry::Vacant(entry) = edges.entry(key) {
-                let p = vertices.points[key.0];
-                let q = vertices.points[key.1];
-                let direction = sub(q, p);
-                let length = norm(direction);
-                if length <= eps {
-                    return Err(numeric("Collapsed Boolean edge"));
-                }
-                let axis = (0..3)
-                    .min_by_key(|&axis| {
-                        let low = p[axis].min(q[axis]) - eps;
-                        let high = p[axis].max(q[axis]) + eps;
-                        sorted[axis].partition_point(|i| vertices.points[*i][axis] <= high)
-                            - sorted[axis].partition_point(|i| vertices.points[*i][axis] < low)
-                    })
-                    .unwrap();
-                let sorted = &sorted[axis];
-                let low = p[axis].min(q[axis]) - eps;
-                let high = p[axis].max(q[axis]) + eps;
-                let start = sorted.partition_point(|i| vertices.points[*i][axis] < low);
-                let end = sorted.partition_point(|i| vertices.points[*i][axis] <= high);
-                let mut along = vec![(0., key.0), (1., key.1)];
-                for &id in &sorted[start..end] {
-                    budget.tick(1)?;
-                    if id == key.0 || id == key.1 {
-                        continue;
+            let sequence = match edges.entry(key) {
+                std::collections::hash_map::Entry::Occupied(entry) => entry.into_mut(),
+                std::collections::hash_map::Entry::Vacant(entry) => {
+                    let p = vertices.points[key.0];
+                    let q = vertices.points[key.1];
+                    let direction = sub(q, p);
+                    let length = norm(direction);
+                    if length <= eps {
+                        return Err(numeric("Collapsed Boolean edge"));
                     }
-                    let delta = sub(vertices.points[id], p);
-                    let t = dot(delta, direction) / (length * length);
-                    if t > eps / length
-                        && t < 1. - eps / length
-                        && norm(sub(delta, scale(direction, t))) <= eps
-                    {
-                        along.push((t, id));
+                    let axis = (0..3)
+                        .min_by_key(|&axis| {
+                            let low = p[axis].min(q[axis]) - eps;
+                            let high = p[axis].max(q[axis]) + eps;
+                            sorted[axis].partition_point(|i| vertices.points[*i][axis] <= high)
+                                - sorted[axis].partition_point(|i| vertices.points[*i][axis] < low)
+                        })
+                        .unwrap();
+                    let sorted = &sorted[axis];
+                    let low = p[axis].min(q[axis]) - eps;
+                    let high = p[axis].max(q[axis]) + eps;
+                    let start = sorted.partition_point(|i| vertices.points[*i][axis] < low);
+                    let end = sorted.partition_point(|i| vertices.points[*i][axis] <= high);
+                    let mut along = vec![(0., key.0), (1., key.1)];
+                    for &id in &sorted[start..end] {
+                        budget.tick(1)?;
+                        if id == key.0 || id == key.1 {
+                            continue;
+                        }
+                        let delta = sub(vertices.points[id], p);
+                        let t = dot(delta, direction) / (length * length);
+                        if t > eps / length
+                            && t < 1. - eps / length
+                            && norm(sub(delta, scale(direction, t))) <= eps
+                        {
+                            along.push((t, id));
+                        }
                     }
+                    along.sort_by(|a, b| a.0.total_cmp(&b.0));
+                    entry.insert(along.into_iter().map(|(_, i)| i).collect())
                 }
-                along.sort_by(|a, b| a.0.total_cmp(&b.0));
-                entry.insert(along.into_iter().map(|(_, i)| i).collect());
-            }
-            let sequence = &edges[&key];
+            };
             if a == key.0 {
                 boundary.extend_from_slice(&sequence[..sequence.len() - 1]);
             } else {

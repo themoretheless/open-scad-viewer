@@ -133,9 +133,31 @@ function deepFreezeWorkerSnapshot(value: unknown, seen = new WeakSet<object>()):
   Object.freeze(value)
 }
 
+function collectWorkerEventBuffers(value: unknown, buffers: Set<ArrayBuffer>, seen = new WeakSet<object>()): void {
+  if (value === null || typeof value !== 'object' || seen.has(value)) return
+  seen.add(value)
+  if (ArrayBuffer.isView(value)) {
+    const { buffer } = value
+    // SharedArrayBuffer is not transferable; it structured-clones by reference.
+    if (buffer instanceof ArrayBuffer) buffers.add(buffer)
+    return
+  }
+  for (const key of Reflect.ownKeys(value)) {
+    const descriptor = Object.getOwnPropertyDescriptor(value, key)
+    if (descriptor && Object.hasOwn(descriptor, 'value')) collectWorkerEventBuffers(descriptor.value, buffers, seen)
+  }
+}
+
 function freezeAttestedWorkerEvent(event: GeometryWorkerEvent, snapshot: boolean): GeometryWorkerEvent {
   if (!snapshot) return event
-  const cloned = structuredClone(event) as GeometryWorkerEvent
+  // Same-realm doubles share object identity with the host, so the snapshot
+  // must gain exclusive ownership of the attested mesh buffers. Move them
+  // instead of copying: `transfer` detaches the sender's buffers and hands the
+  // snapshot fresh ArrayBuffer identities over the same memory — exactly what
+  // a real Worker boundary does — instead of duplicating megabyte payloads.
+  const buffers = new Set<ArrayBuffer>()
+  collectWorkerEventBuffers(event, buffers)
+  const cloned = structuredClone(event, { transfer: [...buffers] }) as GeometryWorkerEvent
   deepFreezeWorkerSnapshot(cloned)
   return cloned
 }

@@ -258,8 +258,9 @@ const selectedEditorName = ref('')
 const blocks = computed(() => editorBlocks(code.value))
 const foldedLines = ref(new Set<number>())
 const blockColors = ['#7999e8', '#c792ea', '#d7a457', '#55bba4', '#d87d9d']
+const highlightedCode = computed(() => highlightCode(code.value, selectedEditorName.value))
 const editorRows = computed(() => {
-  const highlighted = highlightCode(code.value, selectedEditorName.value).replace(/\n$/, '').split('\n')
+  const highlighted = highlightedCode.value.replace(/\n$/, '').split('\n')
   const lines = code.value.split('\n')
   const guideEnds = new Map(blocks.value.map(b => {
     let end = b.end
@@ -295,7 +296,6 @@ async function editFoldedLine(line: number) {
   editor.scrollTop = Math.max(0,line * parseFloat(getComputedStyle(editor).lineHeight)-40)
   syncHighlightScroll()
 }
-const highlightedCode = computed(() => highlightCode(code.value, selectedEditorName.value))
 const lineNumbersRef = ref<HTMLDivElement | null>(null)
 const guidesRef = ref<HTMLDivElement | null>(null)
 const editorLineCount = computed(() => code.value.split('\n').length)

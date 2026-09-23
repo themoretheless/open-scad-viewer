@@ -2,6 +2,7 @@
 //! supports any surface implementation; this module knows nothing about NURBS.
 use crate::{BuiltMesh, Construction, MAX_TRIANGLES, Mesh, Result, Seams, check, error, norm, sub};
 use math_core::{cross2 as orient2, sub2};
+use rustc_hash::FxHashMap;
 use std::collections::BTreeMap;
 pub type UV = [f64; 2];
 #[derive(Clone, Debug)]
@@ -270,7 +271,7 @@ fn clip(poly: Vec<UV>, y: f64, above: bool) -> Vec<UV> {
 fn key(v: f64) -> i64 {
     (v / EPS).round() as i64
 }
-fn vertex(p: UV, uv: &mut Vec<f64>, map: &mut BTreeMap<(i64, i64), usize>) -> usize {
+fn vertex(p: UV, uv: &mut Vec<f64>, map: &mut FxHashMap<(i64, i64), usize>) -> usize {
     *map.entry((key(p[0]), key(p[1]))).or_insert_with(|| {
         let i = uv.len() / 2;
         uv.extend(p);
@@ -377,7 +378,7 @@ pub fn tessellate(surface: &impl ParametricSurface, options: &Options) -> Result
     }
     let mut uv = Vec::new();
     let mut indices = Vec::new();
-    let mut map = BTreeMap::new();
+    let mut map = FxHashMap::default();
     for cell in &cells {
         let mut boundary = Vec::new();
         for i in 0..cell.len() {

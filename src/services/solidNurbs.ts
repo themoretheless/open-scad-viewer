@@ -119,7 +119,7 @@ export function updateSolidNurbsControlPoint(
       (weight !== undefined && (!Number.isFinite(weight) || weight <= 0 || weight > 1e6))) {
     throw new Error('Invalid NURBS control point edit.')
   }
-  const next = JSON.parse(JSON.stringify(document)) as DirectDocument
+  const next = structuredClone(document)
   const curve = next.curves?.find(item => item.id === id)
   const surface = next.surfaces?.find(item => item.id === id)
   if (curve) {
@@ -161,7 +161,7 @@ export function matchSolidNurbsCurvesG1(
   editedEnd: NurbsCurveEnd = 'start',
 ): DirectDocument {
   if (referenceId === editedId) throw new Error('Select two different NURBS curves.')
-  const next = JSON.parse(JSON.stringify(document)) as DirectDocument
+  const next = structuredClone(document)
   const reference = next.curves?.find(item => item.id === referenceId)?.curve
   const edited = next.curves?.find(item => item.id === editedId)?.curve
   if (!reference || !edited) throw new Error('G1 matching requires two NURBS curves.')
@@ -239,7 +239,7 @@ export function matchSolidNurbsSurfacesG1(
   editedBoundary: NurbsSurfaceBoundary = 'uMin',
 ): DirectDocument {
   if (referenceId === editedId) throw new Error('Select two different NURBS surfaces.')
-  const next = JSON.parse(JSON.stringify(document)) as DirectDocument
+  const next = structuredClone(document)
   const reference = next.surfaces?.find(item => item.id === referenceId)?.surface
   const edited = next.surfaces?.find(item => item.id === editedId)?.surface
   if (!reference || !edited) throw new Error('G1 matching requires two NURBS surfaces.')

@@ -19,7 +19,7 @@ export interface MeshWorkspaceDocument {
 
 export const emptyMeshDocument = (): MeshWorkspaceDocument => ({ version: 1, objects: [] })
 
-const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value))
+const clone = <T>(value: T): T => structuredClone(value)
 const finite = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v) && Math.abs(v) <= 1e6
 
 export function parseMeshDocument(text: string): MeshWorkspaceDocument {
@@ -48,14 +48,15 @@ function validatePolygon(mesh: PolygonMesh) {
   }
 }
 
-interface MeshSnapshot { document: MeshWorkspaceDocument; characters: number }
+interface MeshSnapshot { document: MeshWorkspaceDocument; characters: number; text: string }
 export class MeshHistory {
   private past: MeshSnapshot[] = []
   private future: MeshSnapshot[] = []
   private current: MeshSnapshot
   constructor(document = emptyMeshDocument()) {
     const validated = parseMeshDocument(JSON.stringify(document))
-    this.current = {document: validated, characters: JSON.stringify(validated).length}
+    const validatedText = JSON.stringify(validated)
+    this.current = {document: validated, characters: validatedText.length, text: validatedText}
   }
   get document() { return clone(this.current.document) }
   get canUndo() { return this.past.length > 0 }
@@ -63,7 +64,7 @@ export class MeshHistory {
   commit(document: MeshWorkspaceDocument) {
     const next = parseMeshDocument(JSON.stringify(document))
     const nextText = JSON.stringify(next)
-    if (nextText.length === this.current.characters && nextText === JSON.stringify(this.current.document)) return
+    if (nextText.length === this.current.characters && nextText === this.current.text) return
     this.past.push(this.current)
     // Preserve the exact serialized-array character budget, including brackets
     // and commas, without serializing retained geometry on every commit.
@@ -71,7 +72,7 @@ export class MeshHistory {
     while (this.past.length > 80 || (this.past.length > 1 && retained > 24_000_000)) {
       retained -= this.past.shift()!.characters + 1
     }
-    this.current = {document: next, characters: nextText.length}
+    this.current = {document: next, characters: nextText.length, text: nextText}
     this.future = []
   }
   undo() {

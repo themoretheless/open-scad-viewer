@@ -22,7 +22,7 @@ export interface DirectInterchangeMetadata {
 }
 export interface DirectDocument { version: 1; sketches: DirectSketch[]; bodies: DirectBody[]; curves?: SolidNurbsCurve[]; surfaces?: SolidNurbsSurface[]; groups?: DirectGroup[]; interchange?: DirectInterchangeMetadata }
 export const emptyDirectDocument = (): DirectDocument => ({ version: 1, sketches: [], bodies: [], curves: [], surfaces: [] })
-const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value))
+const clone = <T>(value: T): T => structuredClone(value)
 const DEEP_JSON_NORMALIZATION = Symbol('deep JSON normalization')
 /** Only for a freshly parsed, exclusively owned JSON tree, never caller-owned objects. */
 function normalizeOwnedJson(value: unknown, depth = 0): unknown {
@@ -124,7 +124,8 @@ function* directDocumentValidation(text: string): Generator<void, DirectDocument
   catch (error) {
     if (error !== DEEP_JSON_NORMALIZATION) throw error
     // This is a fast-path depth threshold, not a new document admission limit.
-    return clone(d)
+    // Keep the JSON round trip here: it also normalizes numbers (e.g. -0 → 0).
+    return JSON.parse(JSON.stringify(d))
   }
 }
 
@@ -191,8 +192,9 @@ const aabbFromBrep = (brep: NurbsBrep): { inner: Aabb; outer: Aabb } => {
   return { inner, outer }
 }
 
-/** Snapshots contain independent geometry, never sketch references or a feature tree. */
-interface DirectSnapshot { document: DirectDocument; characters: number }
+/** Snapshots contain independent geometry, never sketch references or a feature tree.
+ * The serialized text travels with the snapshot so a commit never re-serializes it. */
+interface DirectSnapshot { document: DirectDocument; characters: number; text: string }
 export class DirectHistory {
   private past: DirectSnapshot[] = []
   private future: DirectSnapshot[] = []
@@ -200,7 +202,8 @@ export class DirectHistory {
   constructor(document = emptyDirectDocument()) {
     const text = JSON.stringify(document)
     const validated = parseDirectDocument(text)
-    this.current = { document: validated, characters: JSON.stringify(validated).length }
+    const validatedText = JSON.stringify(validated)
+    this.current = { document: validated, characters: validatedText.length, text: validatedText }
   }
   get document() { return clone(this.current.document) }
   get canUndo() { return this.past.length > 0 }
@@ -209,7 +212,7 @@ export class DirectHistory {
     const text = JSON.stringify(document)
     const next = parseDirectDocument(text)
     const nextText = JSON.stringify(next)
-    if (nextText.length === this.current.characters && nextText === JSON.stringify(this.current.document)) return
+    if (nextText.length === this.current.characters && nextText === this.current.text) return
     this.past.push(this.current)
     // The existing bound counts serialized characters, not actual heap bytes.
     // Size travels with its snapshot through undo/redo; neither needs to serialize it again.
@@ -217,7 +220,7 @@ export class DirectHistory {
     while (this.past.length > 80 || (this.past.length > 1 && retained > 16_000_000)) {
       retained -= this.past.shift()!.characters
     }
-    this.current = { document: next, characters: nextText.length }; this.future = []
+    this.current = { document: next, characters: nextText.length, text: nextText }; this.future = []
   }
   undo() {
     const d = this.past.pop()

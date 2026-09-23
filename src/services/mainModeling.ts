@@ -43,4 +43,7 @@ export function mainOperation(meshes:MeshData[],selected:number,hit:PickHit|null
  return d
 }
 export const mainSource=(d:DirectDocument)=>directBodiesScad(d)
-export function previewMeshes(d:DirectDocument):MeshData[]{return d.bodies.map(b=>importedStlToMeshData({triangleCount:b.mesh.indices.length/3,positions:new Float32Array(b.mesh.indices.flatMap(i=>b.mesh.positions.slice(i*3,i*3+3)))},[.35,.7,.95,1]))}
+export function previewMeshes(d:DirectDocument):MeshData[]{return d.bodies.map(b=>{
+ const indices=b.mesh.indices,source=b.mesh.positions,positions=new Float32Array(indices.length*3)
+ for(let k=0;k<indices.length;k++){const s=indices[k]*3,o=k*3;positions[o]=source[s];positions[o+1]=source[s+1];positions[o+2]=source[s+2]}
+ return importedStlToMeshData({triangleCount:indices.length/3,positions},[.35,.7,.95,1])})}

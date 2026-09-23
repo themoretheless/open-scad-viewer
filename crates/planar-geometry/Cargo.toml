@@ -13,3 +13,4 @@ publish = true
 
 [dependencies]
 math-core = { package = "osv-math", path = "../math-core", version = "0.1.0" }
+rustc-hash = "=2.1.1"

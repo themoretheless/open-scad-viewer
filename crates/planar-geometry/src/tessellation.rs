@@ -7,7 +7,8 @@ use crate::path::{BezierPath, FLATTEN_TOLERANCE};
 use crate::rings::{self, Rings};
 use crate::{Result, check};
 use math_core::{cross2, sub2};
-use std::collections::{BTreeSet, HashMap};
+use rustc_hash::FxHashMap;
+use std::collections::BTreeSet;
 
 use crate::limits::{MESH_TRIANGLES as MAX_TRIANGLES, MESH_VERTICES as MAX_VERTICES};
 
@@ -103,7 +104,7 @@ fn sweep_region(rings: &Rings) -> Result<FillMesh> {
         .filter(|(a, b)| a[1] != b[1])
         .collect();
     let mut mesh = FillMesh::default();
-    let mut vertex_ids = HashMap::new();
+    let mut vertex_ids = FxHashMap::default();
     let mut starts: Vec<_> = (0..edges.len()).collect();
     let mut ends = starts.clone();
     starts.sort_by(|&a, &b| {
@@ -200,7 +201,7 @@ pub(crate) fn tessellate_normalized_rings(rings: &Rings) -> Result<FillMesh> {
 
 fn append_triangle(
     mesh: &mut FillMesh,
-    vertex_ids: &mut HashMap<(u64, u64), u32>,
+    vertex_ids: &mut FxHashMap<(u64, u64), u32>,
     a: [f64; 2],
     b: [f64; 2],
     c: [f64; 2],

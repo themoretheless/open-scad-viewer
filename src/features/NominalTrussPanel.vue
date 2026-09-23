@@ -26,7 +26,7 @@ const graph=shallowRef<NominalLatticeGraph|null>(null)
 const entries=ref<{loadCase:TrussLoadCase;factor:number}[]>([])
 const active=ref(0),mode=ref<'case'|'combination'>('case')
 const youngMpa=ref<number|string>(''),areaMm2=ref<number|string>('')
-const phase=ref<'graph'|'solve'|null>(null),error=ref(''),reportUrl=ref('')
+const phase=ref<'graph'|'solve'|null>(null),error=ref('')
 const result=shallowRef<Awaited<ReturnType<typeof computeTrussScenario>>|null>(null)
 const tensionMpa=ref<number|string>(''),compressionMpa=ref<number|string>(''),safetyFactor=ref(2)
 const material=ref(''),grade=ref(''),propertySource=ref('')
@@ -58,8 +58,6 @@ let binding:{sourceBodyIndex:number;graphOptions:LighteningOptions}|null=null
 function invalidateResult(){
   clearField()
   revision++;controller?.abort();controller=undefined;phase.value=null;result.value=null;solvedPrintProfile.value=null;solvedThermal.value=null;error.value=''
-  if(reportUrl.value)URL.revokeObjectURL(reportUrl.value)
-  reportUrl.value=''
 }
 function invalidateGraph(){invalidateResult();graph.value=null;entries.value=[];binding=null;active.value=0}
 watch([()=>props.source,()=>props.ready,selectedMesh,()=>selectedMesh.value?.vertices,
@@ -67,14 +65,16 @@ watch([()=>props.source,()=>props.ready,selectedMesh,()=>selectedMesh.value?.ver
 watch([()=>props.selection,()=>props.options],invalidateGraph,{deep:true,flush:'sync'})
 watch([entries,youngMpa,areaMm2,active,mode],invalidateResult,{deep:true,flush:'sync'})
 watch(printProfile,()=>{youngMpa.value='';tensionMpa.value='';compressionMpa.value='';invalidateResult()},{flush:'sync'})
-watch([result,solvedPrintProfile,screening,tensionMpa,compressionMpa,safetyFactor],()=>{
-  if(reportUrl.value)URL.revokeObjectURL(reportUrl.value)
-  reportUrl.value=''
+// The report Blob and its object URL are built lazily on download click, not on
+// every keystroke; the URL is revoked immediately after the click is dispatched.
+function downloadReport(){
   if(!result.value||!solvedPrintProfile.value||!graph.value||!binding)return
   const assessment=screening.value.rows.length?{limits:{tensionMpa:solvedThermal.value?.result.tensionMpa??tensionMpa.value,compressionMpa:solvedThermal.value?.result.compressionMpa??compressionMpa.value,safetyFactor:safetyFactor.value},rows:screening.value.rows}:null
   const report={version:3,modelKind:graph.value.modelKind,...binding,...result.value,printProfile:solvedPrintProfile.value,thermal:solvedThermal.value,axialScreening:assessment}
-  reportUrl.value=URL.createObjectURL(new Blob([JSON.stringify(report,null,2)],{type:'application/json'}))
-})
+  const url=URL.createObjectURL(new Blob([JSON.stringify(report,null,2)],{type:'application/json'}))
+  const a=document.createElement('a');a.href=url;a.download='nominal-truss.json';a.click()
+  URL.revokeObjectURL(url)
+}
 onUnmounted(invalidateResult)
 
 async function generate(){
@@ -191,7 +191,7 @@ const number=(value:number)=>value===0?'0':value.toPrecision(5)
         <h4>{{label('Номинальная осевая модель','Nominal axial model')}}</h4>
         <p v-for="warning in solvedPrintProfile?.warnings" :key="warning" role="status">{{warning==='layer-above-80-percent-nozzle'?label('Высота слоя превышает 80% диаметра сопла — проверьте профиль печати.','Layer height exceeds 80% of nozzle diameter; check the print profile.'):label('Ширина линии не больше высоты слоя — проверьте профиль печати.','Line width does not exceed layer height; check the print profile.')}}</p>
         <dl><dt>{{label('Максимальное перемещение, mm','Maximum displacement, mm')}}</dt><dd>{{number(result.result.maxDeflectionMm)}}</dd><dt>{{label('Относительная невязка','Relative residual')}}</dt><dd>{{number(result.result.maxRelativeResidual)}}</dd><dt>{{label('Свободные степени свободы','Free DOFs')}}</dt><dd>{{result.result.freeDofs}}</dd></dl>
-        <a :href="reportUrl" download="nominal-truss.json">nominal-truss.json</a>
+        <a href="nominal-truss.json" download="nominal-truss.json" @click.prevent="downloadReport">nominal-truss.json</a>
         <fieldset><legend>{{label('Поиск перегруженных стержней','Axial demand screening')}}</legend>
           <p>{{label('Только рассчитанный случай или комбинация. Допуски задаются для вашего материала и процесса печати; потеря устойчивости не проверяется.','Only the solved case or combination. Supply limits for your material and printing process; buckling is not checked.')}}</p>
           <div class="fields">

@@ -20,6 +20,8 @@ rbench = { git = "https://github.com/themoretheless/rbench", branch = "release" 
 [profile.release]
 opt-level = "s"
 lto = true
+codegen-units = 1
+panic = "abort"
 
 # Photogrammetry hot loops: measured against the size profile on native and WASM.
 # Other geometry kernels retain the workspace size profile.
@@ -32,6 +34,21 @@ opt-level = 3
 # Hot geometry kernels: measured against the workspace size profile (same
 # precedent as photogrammetry-core above).
 [profile.release.package.polygon-core]
+opt-level = 3
+
+[profile.release.package.brep-core]
+opt-level = 3
+
+[profile.release.package.planar-geometry]
+opt-level = 3
+
+[profile.release.package.cad-predicates]
+opt-level = 3
+
+[profile.release.package.sdf-core]
+opt-level = 3
+
+[profile.release.package.subdivision-core]
 opt-level = 3
 
 # Separate compression bootstrap: opt-level 2 measured faster and smaller than

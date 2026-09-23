@@ -6,39 +6,27 @@
 import type { MeshData } from '../core/mesh'
 import type { Mat4 } from './math3d'
 
-/** Apply a row-major 4x4 transform to a 3D point. */
-function transformPoint(t: Mat4, x: number, y: number, z: number): [number, number, number] {
-  return [
-    t[0] * x + t[1] * y + t[2] * z + t[3],
-    t[4] * x + t[5] * y + t[6] * z + t[7],
-    t[8] * x + t[9] * y + t[10] * z + t[11],
-  ]
+/** Apply a row-major 4x4 transform to a 3D point, writing into scratch locals. */
+// The transform and degeneracy math is inlined into both passes below via these
+// scratch variables, so no per-triangle [x, y, z] arrays are allocated.
+let tx0 = 0, ty0 = 0, tz0 = 0, tx1 = 0, ty1 = 0, tz1 = 0, tx2 = 0, ty2 = 0, tz2 = 0
+
+function transformInto(t: Mat4, x0: number, y0: number, z0: number, x1: number, y1: number, z1: number, x2: number, y2: number, z2: number) {
+  tx0 = t[0] * x0 + t[1] * y0 + t[2] * z0 + t[3]
+  ty0 = t[4] * x0 + t[5] * y0 + t[6] * z0 + t[7]
+  tz0 = t[8] * x0 + t[9] * y0 + t[10] * z0 + t[11]
+  tx1 = t[0] * x1 + t[1] * y1 + t[2] * z1 + t[3]
+  ty1 = t[4] * x1 + t[5] * y1 + t[6] * z1 + t[7]
+  tz1 = t[8] * x1 + t[9] * y1 + t[10] * z1 + t[11]
+  tx2 = t[0] * x2 + t[1] * y2 + t[2] * z2 + t[3]
+  ty2 = t[4] * x2 + t[5] * y2 + t[6] * z2 + t[7]
+  tz2 = t[8] * x2 + t[9] * y2 + t[10] * z2 + t[11]
 }
 
-/** Compute the normal of a triangle given three vertices. */
-function triangleNormal(
-  ax: number, ay: number, az: number,
-  bx: number, by: number, bz: number,
-  cx: number, cy: number, cz: number,
-): [number, number, number] {
-  const ux = bx - ax, uy = by - ay, uz = bz - az
-  const vx = cx - ax, vy = cy - ay, vz = cz - az
-  let nx = uy * vz - uz * vy
-  let ny = uz * vx - ux * vz
-  let nz = ux * vy - uy * vx
-  const len = Math.sqrt(nx * nx + ny * ny + nz * nz)
-  if (len > 1e-10) { nx /= len; ny /= len; nz /= len }
-  return [nx, ny, nz]
-}
-
-/** True if the three (transformed) points form a zero-area triangle. */
-function isDegenerate(
-  p0: [number, number, number],
-  p1: [number, number, number],
-  p2: [number, number, number],
-): boolean {
-  const ux = p1[0] - p0[0], uy = p1[1] - p0[1], uz = p1[2] - p0[2]
-  const vx = p2[0] - p0[0], vy = p2[1] - p0[1], vz = p2[2] - p0[2]
+/** True if the three transformed scratch points form a zero-area triangle. */
+function scratchIsDegenerate(): boolean {
+  const ux = tx1 - tx0, uy = ty1 - ty0, uz = tz1 - tz0
+  const vx = tx2 - tx0, vy = ty2 - ty0, vz = tz2 - tz0
   const cx = uy * vz - uz * vy
   const cy = uz * vx - ux * vz
   const cz = ux * vy - uy * vx
@@ -80,10 +68,8 @@ export function buildSTLBuffer(meshes: MeshData[]): ArrayBuffer {
       const x0 = verts[i0 * 6], y0 = verts[i0 * 6 + 1], z0 = verts[i0 * 6 + 2]
       const x1 = verts[i1 * 6], y1 = verts[i1 * 6 + 1], z1 = verts[i1 * 6 + 2]
       const x2 = verts[i2 * 6], y2 = verts[i2 * 6 + 1], z2 = verts[i2 * 6 + 2]
-      const p0 = transformPoint(t, x0, y0, z0)
-      const p1 = transformPoint(t, x1, y1, z1)
-      const p2 = transformPoint(t, x2, y2, z2)
-      if (isDegenerate(p0, p1, p2)) continue
+      transformInto(t, x0, y0, z0, x1, y1, z1, x2, y2, z2)
+      if (scratchIsDegenerate()) continue
       totalTriangles++
     }
   }
@@ -125,36 +111,40 @@ export function buildSTLBuffer(meshes: MeshData[]): ArrayBuffer {
       const x1 = verts[i1 * 6], y1 = verts[i1 * 6 + 1], z1 = verts[i1 * 6 + 2]
       const x2 = verts[i2 * 6], y2 = verts[i2 * 6 + 1], z2 = verts[i2 * 6 + 2]
 
-      // Apply transform
-      const p0 = transformPoint(t, x0, y0, z0)
-      const p1 = transformPoint(t, x1, y1, z1)
-      const p2 = transformPoint(t, x2, y2, z2)
+      // Apply transform into scratch locals (no per-triangle allocations).
+      transformInto(t, x0, y0, z0, x1, y1, z1, x2, y2, z2)
 
       // Skip degenerate (zero-area) triangles rather than emitting a zero normal.
-      if (isDegenerate(p0, p1, p2)) continue
+      if (scratchIsDegenerate()) continue
 
       // Compute face normal from (possibly reversed) transformed vertices.
-      const n = triangleNormal(p0[0], p0[1], p0[2], p1[0], p1[1], p1[2], p2[0], p2[1], p2[2])
+      const ux = tx1 - tx0, uy = ty1 - ty0, uz = tz1 - tz0
+      const vx = tx2 - tx0, vy = ty2 - ty0, vz = tz2 - tz0
+      let nx = uy * vz - uz * vy
+      let ny = uz * vx - ux * vz
+      let nz = ux * vy - uy * vx
+      const len = Math.sqrt(nx * nx + ny * ny + nz * nz)
+      if (len > 1e-10) { nx /= len; ny /= len; nz /= len }
 
       // Write normal
-      view.setFloat32(offset, n[0], true); offset += 4
-      view.setFloat32(offset, n[1], true); offset += 4
-      view.setFloat32(offset, n[2], true); offset += 4
+      view.setFloat32(offset, nx, true); offset += 4
+      view.setFloat32(offset, ny, true); offset += 4
+      view.setFloat32(offset, nz, true); offset += 4
 
       // Write vertex 1
-      view.setFloat32(offset, p0[0], true); offset += 4
-      view.setFloat32(offset, p0[1], true); offset += 4
-      view.setFloat32(offset, p0[2], true); offset += 4
+      view.setFloat32(offset, tx0, true); offset += 4
+      view.setFloat32(offset, ty0, true); offset += 4
+      view.setFloat32(offset, tz0, true); offset += 4
 
       // Write vertex 2
-      view.setFloat32(offset, p1[0], true); offset += 4
-      view.setFloat32(offset, p1[1], true); offset += 4
-      view.setFloat32(offset, p1[2], true); offset += 4
+      view.setFloat32(offset, tx1, true); offset += 4
+      view.setFloat32(offset, ty1, true); offset += 4
+      view.setFloat32(offset, tz1, true); offset += 4
 
       // Write vertex 3
-      view.setFloat32(offset, p2[0], true); offset += 4
-      view.setFloat32(offset, p2[1], true); offset += 4
-      view.setFloat32(offset, p2[2], true); offset += 4
+      view.setFloat32(offset, tx2, true); offset += 4
+      view.setFloat32(offset, ty2, true); offset += 4
+      view.setFloat32(offset, tz2, true); offset += 4
 
       // Attribute byte count (unused, set to 0)
       view.setUint16(offset, 0, true); offset += 2
