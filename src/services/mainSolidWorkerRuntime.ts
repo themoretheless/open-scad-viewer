@@ -1,15 +1,23 @@
+import {solveBondedSolid} from './bondedSolid'
+import {inspectStructuralSections} from './structuralSections'
 import {inspectCadPairs} from './cadInspection'
 import {cadOperation} from './cadWorkbench'
 import {mainOperation} from './mainModeling'
 import {solveTruss} from './trussAnalysis'
 import {spatialGraph} from './solidLightening'
 import {flattenGroupGeometry} from './meshFlatten'
-import {checkLatticeGraphInput, isNominalLatticeGraph} from './latticeGraphProtocol'
+import {checkLatticeGraphInput, checkLatticeGraphMeshInput, isNominalLatticeGraph} from './latticeGraphProtocol'
 import {warmGeometryKernel} from './geometry/kernel'
+import {prepareMainSolidTransfer} from './mainSolidWorkerTransport'
 import type {MainSolidJob, MainSolidRequest, MainSolidResponse, MainSolidResults} from './mainSolidProtocol'
 
 function execute(job:MainSolidJob):MainSolidResults[keyof MainSolidResults] {
   switch(job.kind) {
+    case 'bondedSolid':return solveBondedSolid(job.inputJson)
+    case 'structuralSections': {
+      checkLatticeGraphMeshInput(job.mesh)
+      return inspectStructuralSections(flattenGroupGeometry([job.mesh]),job.axis,job.stations)
+    }
     case 'inspect':return inspectCadPairs(job.bodies)
     case 'cad':return cadOperation(job.document,job.options)
     case 'main':return mainOperation(job.meshes,job.selected,job.hit,job.operation,job.parameters)
@@ -23,18 +31,20 @@ function execute(job:MainSolidJob):MainSolidResults[keyof MainSolidResults] {
   }
 }
 
-export function createMainSolidWorkerHandler(post:(response:MainSolidResponse)=>void) {
+export function createMainSolidWorkerHandler(post:(response:MainSolidResponse,transfer?:ArrayBuffer[])=>void) {
   let active=false
   return async(value:unknown)=>{
     const request=value as Partial<MainSolidRequest>|null
     if(!request || request.version!==1 || !Number.isSafeInteger(request.id) || request.id!<1
-      || !request.job || !['main','cad','inspect','truss','latticeGraph'].includes(request.job.kind))return
+      || !request.job || !['main','cad','inspect','truss','latticeGraph','structuralSections','bondedSolid'].includes(request.job.kind))return
     const {job}=request, envelope={version:1 as const,id:request.id!,kind:job.kind}
     if(active){post({...envelope,ok:false,error:{name:'Error',code:'CAD_BUSY',message:'CAD worker is busy'}});return}
     active=true
     try {
       await warmGeometryKernel()
-      post({...envelope,ok:true,result:execute(job)})
+      // Transfer only the freshly created response buffers; never the request's scene-owned ones.
+      const prepared=prepareMainSolidTransfer({...envelope,ok:true,result:execute(job)})
+      post(prepared.response,prepared.transfer)
     } catch(cause) {
       const error=cause instanceof Error?cause:new Error(String(cause))
       post({...envelope,ok:false,error:{name:error.name,message:error.message,

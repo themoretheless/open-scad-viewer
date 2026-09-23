@@ -519,32 +519,94 @@ impl Bsp {
 }
 /// Reject disconnected vertex fans (edge counts alone miss pinched vertices).
 fn vertex_manifold(mesh: &Mesh) -> Result<()> {
-    let mut links = BTreeMap::<usize, Vec<(usize, usize)>>::new();
-    for t in mesh.indices.as_chunks::<3>().0 {
-        for i in 0..3 {
-            links
-                .entry(t[i])
-                .or_default()
-                .push((t[(i + 1) % 3], t[(i + 2) % 3]));
+    let vertex_count = mesh.positions.len() / 3;
+    let triangles = mesh.indices.as_chunks::<3>().0;
+    // CSR fan edges: fan[offsets[v]..offsets[v + 1]] holds the link edges
+    // (next, previous) of every triangle corner at v, in triangle order
+    // (same layout style as `build_face_adjacency` in mesh_render).
+    let mut offsets = vec![0usize; vertex_count + 1];
+    for t in triangles {
+        for &id in t {
+            offsets[id + 1] += 1;
         }
     }
-    for edges in links.values() {
-        let mut adjacent = BTreeMap::<usize, Vec<usize>>::new();
+    for v in 0..vertex_count {
+        offsets[v + 1] += offsets[v];
+    }
+    let mut fan = vec![(0usize, 0usize); offsets[vertex_count]];
+    let mut cursors = offsets[..vertex_count].to_vec();
+    for t in triangles {
+        for i in 0..3 {
+            let cursor = &mut cursors[t[i]];
+            fan[*cursor] = (t[(i + 1) % 3], t[(i + 2) % 3]);
+            *cursor += 1;
+        }
+    }
+    // Reused scratch buffers: generation-stamped membership, degree/cursor per
+    // link node and a DFS stack, so dense meshes do not allocate per vertex.
+    // The result is only Ok/Err with fixed messages, so traversal order
+    // cannot affect the output.
+    let mut link_mark = vec![usize::MAX; vertex_count];
+    let mut seen_mark = vec![usize::MAX; vertex_count];
+    let mut degree = vec![0usize; vertex_count];
+    let mut slot = vec![0usize; vertex_count];
+    let mut members: Vec<usize> = Vec::new();
+    let mut link_offsets: Vec<usize> = Vec::new();
+    let mut adjacent: Vec<usize> = Vec::new();
+    let mut stack: Vec<usize> = Vec::new();
+    for v in 0..vertex_count {
+        let range = offsets[v]..offsets[v + 1];
+        if range.is_empty() {
+            continue;
+        }
+        let edges = &fan[range];
+        members.clear();
         for &(a, b) in edges {
-            adjacent.entry(a).or_default().push(b);
-            adjacent.entry(b).or_default().push(a);
-        }
-        if adjacent.values().any(|v| v.len() != 2) {
-            return Err(invalid("Boolean solid has a nonmanifold vertex link"));
-        }
-        let mut seen = BTreeSet::new();
-        let mut pending = vec![*adjacent.first_key_value().unwrap().0];
-        while let Some(v) = pending.pop() {
-            if seen.insert(v) {
-                pending.extend(&adjacent[&v]);
+            for id in [a, b] {
+                if link_mark[id] != v {
+                    link_mark[id] = v;
+                    degree[id] = 0;
+                    slot[id] = members.len();
+                    members.push(id);
+                }
+                degree[id] += 1;
             }
         }
-        if seen.len() != adjacent.len() {
+        // Repeated incidences count, as in the previous map-based version.
+        if members.iter().any(|&id| degree[id] != 2) {
+            return Err(invalid("Boolean solid has a nonmanifold vertex link"));
+        }
+        // Flat per-link adjacency (CSR over `members`) for the DFS below.
+        link_offsets.clear();
+        link_offsets.push(0);
+        for &id in &members {
+            link_offsets.push(link_offsets.last().unwrap() + degree[id]);
+        }
+        adjacent.clear();
+        adjacent.resize(*link_offsets.last().unwrap(), 0);
+        for &id in &members {
+            degree[id] = link_offsets[slot[id]];
+        }
+        for &(a, b) in edges {
+            adjacent[degree[a]] = b;
+            degree[a] += 1;
+            adjacent[degree[b]] = a;
+            degree[b] += 1;
+        }
+        stack.clear();
+        stack.push(members[0]);
+        seen_mark[members[0]] = v;
+        let mut seen = 1usize;
+        while let Some(w) = stack.pop() {
+            for &n in &adjacent[link_offsets[slot[w]]..link_offsets[slot[w] + 1]] {
+                if seen_mark[n] != v {
+                    seen_mark[n] = v;
+                    seen += 1;
+                    stack.push(n);
+                }
+            }
+        }
+        if seen != members.len() {
             return Err(invalid("Boolean solid has a disconnected vertex fan"));
         }
     }
@@ -752,11 +814,35 @@ fn stitch(polys: Vec<Polygon>, eps: f64, budget: &mut Budget) -> Result<Mesh> {
     }
     // All fragment vertices participate in edge splitting, including those
     // introduced by an adjacent face. This removes BSP T junctions.
-    let sorted: [Vec<usize>; 3] = std::array::from_fn(|axis| {
-        let mut v: Vec<_> = (0..vertices.points.len()).collect();
-        v.sort_by(|a, b| vertices.points[*a][axis].total_cmp(&vertices.points[*b][axis]));
-        v
-    });
+    // Split candidates must lie within the eps-expanded bbox of the edge
+    // (projection inside the segment plus perpendicular distance <= eps
+    // implies per-axis containment), so a uniform grid with cells no smaller
+    // than the longest edge span finds them in O(1) cell lookups per edge.
+    // This replaces three sorted sweeps over all vertices (3 * O(n log n)
+    // plus three index arrays). The eps-sized `Vertices.cells` cannot serve
+    // here: walking it along an edge costs O((length / eps)^3) cell visits.
+    let mut span = eps;
+    for face in &faces {
+        for i in 0..face.len() {
+            let (a, b) = (face[i], face[(i + 1) % face.len()]);
+            if a == b {
+                continue;
+            }
+            let (p, q) = (vertices.points[a], vertices.points[b]);
+            for axis in 0..3 {
+                span = span.max((p[axis] - q[axis]).abs());
+            }
+        }
+    }
+    // Buckets are filled in ascending vertex order, but the per-edge sequence
+    // is fixed by the explicit sort below, so neither hash ordering nor cell
+    // traversal order can affect the output.
+    let mut grid = FxHashMap::<[i64; 3], Vec<usize>>::default();
+    for (id, p) in vertices.points.iter().enumerate() {
+        grid.entry(p.map(|v| (v / span).floor() as i64))
+            .or_default()
+            .push(id);
+    }
     // Lookup-only map: output order is fixed by face/vertex traversal, so the
     // hasher cannot affect determinism.
     let mut edges = FxHashMap::<(usize, usize), Vec<usize>>::default();
@@ -780,35 +866,42 @@ fn stitch(polys: Vec<Polygon>, eps: f64, budget: &mut Budget) -> Result<Mesh> {
                     if length <= eps {
                         return Err(numeric("Collapsed Boolean edge"));
                     }
-                    let axis = (0..3)
-                        .min_by_key(|&axis| {
-                            let low = p[axis].min(q[axis]) - eps;
-                            let high = p[axis].max(q[axis]) + eps;
-                            sorted[axis].partition_point(|i| vertices.points[*i][axis] <= high)
-                                - sorted[axis].partition_point(|i| vertices.points[*i][axis] < low)
-                        })
-                        .unwrap();
-                    let sorted = &sorted[axis];
-                    let low = p[axis].min(q[axis]) - eps;
-                    let high = p[axis].max(q[axis]) + eps;
-                    let start = sorted.partition_point(|i| vertices.points[*i][axis] < low);
-                    let end = sorted.partition_point(|i| vertices.points[*i][axis] <= high);
                     let mut along = vec![(0., key.0), (1., key.1)];
-                    for &id in &sorted[start..end] {
-                        budget.tick(1)?;
-                        if id == key.0 || id == key.1 {
-                            continue;
-                        }
-                        let delta = sub(vertices.points[id], p);
-                        let t = dot(delta, direction) / (length * length);
-                        if t > eps / length
-                            && t < 1. - eps / length
-                            && norm(sub(delta, scale(direction, t))) <= eps
-                        {
-                            along.push((t, id));
+                    // Cells overlapping the eps-expanded edge bbox: with a
+                    // cell size of at least the longest edge span this is a
+                    // constant number of cells per axis. Every point passing
+                    // the precise filter below lies in one of these cells.
+                    let low: [f64; 3] =
+                        std::array::from_fn(|axis| (p[axis].min(q[axis]) - eps) / span);
+                    let high: [f64; 3] =
+                        std::array::from_fn(|axis| (p[axis].max(q[axis]) + eps) / span);
+                    for cx in low[0].floor() as i64..=high[0].floor() as i64 {
+                        for cy in low[1].floor() as i64..=high[1].floor() as i64 {
+                            for cz in low[2].floor() as i64..=high[2].floor() as i64 {
+                                let Some(cell) = grid.get(&[cx, cy, cz]) else {
+                                    continue;
+                                };
+                                for &id in cell {
+                                    budget.tick(1)?;
+                                    if id == key.0 || id == key.1 {
+                                        continue;
+                                    }
+                                    let delta = sub(vertices.points[id], p);
+                                    let t = dot(delta, direction) / (length * length);
+                                    if t > eps / length
+                                        && t < 1. - eps / length
+                                        && norm(sub(delta, scale(direction, t))) <= eps
+                                    {
+                                        along.push((t, id));
+                                    }
+                                }
+                            }
                         }
                     }
-                    along.sort_by(|a, b| a.0.total_cmp(&b.0));
+                    // Parameter order along the edge; the index tiebreak keeps
+                    // the sequence deterministic when two candidates share a
+                    // bitwise-equal parameter.
+                    along.sort_by(|a, b| a.0.total_cmp(&b.0).then(a.1.cmp(&b.1)));
                     entry.insert(along.into_iter().map(|(_, i)| i).collect())
                 }
             };

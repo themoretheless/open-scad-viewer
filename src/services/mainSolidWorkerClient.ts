@@ -1,4 +1,5 @@
 import {mainSolidExpectation, mainSolidResult, type MainSolidExpectation, type MainSolidJob, type MainSolidRequest, type MainSolidResponse, type MainSolidResults} from './mainSolidProtocol'
+import {decodeMainSolidResult} from './mainSolidWorkerTransport'
 
 export interface MainSolidPort {
   onmessage: ((event:MessageEvent) => void)|null
@@ -58,8 +59,11 @@ export class MainSolidWorkerClient {
         if(!data || data.version!==1 || data.id!==id || data.kind!==expected.kind){
           fail(new MainSolidWorkerError('CAD_PROTOCOL','Invalid CAD worker response'),true);return
         }
-        if(data.ok===true && 'result' in data && mainSolidResult(expected,data.result)) {
-          finish(undefined,data.result as MainSolidResults[K])
+        if(data.ok===true && 'result' in data) {
+          // Unpack transferred typed-array payloads before the plain-array protocol checks.
+          const result=decodeMainSolidResult(expected.kind,data.result)
+          if(mainSolidResult(expected,result))finish(undefined,result as MainSolidResults[K])
+          else fail(new MainSolidWorkerError('CAD_PROTOCOL','Invalid CAD worker response'),true)
         } else if(data.ok===false && 'error' in data && data.error
           && typeof data.error.name==='string' && typeof data.error.message==='string'
           && (data.error.code===undefined || typeof data.error.code==='string')) {

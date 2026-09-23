@@ -1,5 +1,10 @@
 /** MGV1: bounded, versioned, little-endian values. No JSON text at the WASM boundary. */
 const LIMIT=32*1024*1024, encoder=new TextEncoder(),decoder=new TextDecoder('utf-8',{fatal:true})
+/** Typed numeric arrays encode exactly like the equivalent plain array (tag 5, per-element
+ * numbers), so callers can hand scene-owned Float32Array/Uint32Array views straight to the
+ * kernel boundary without a temporary number[] copy. DataView and BigInt views are rejected. */
+const isFlatNumberView=(v:unknown):v is ArrayBufferView&{length:number}=>
+  ArrayBuffer.isView(v)&&!(v instanceof DataView)&&!(v instanceof BigInt64Array)&&!(v instanceof BigUint64Array)
 /** Per-key hints: arrays of numeric triples decode directly into flat typed arrays. */
 export type BinaryTripleHints=Readonly<Record<string,'f64'|'u8'|'u32'>>
 export function encodeBinary(value:unknown):Uint8Array {
@@ -13,7 +18,7 @@ export function encodeBinary(value:unknown):Uint8Array {
   if(v===null){byte(0);return}if(v===false){byte(1);return}if(v===true){byte(2);return}
   if(typeof v==='number'){if(!Number.isFinite(v))throw new Error('Nonfinite binary number');const integer=Number.isSafeInteger(v)&&!Object.is(v,-0);byte(integer?(v>=0?7:8):3);reserve(8);if(integer){if(v>=0)view.setBigUint64(offset,BigInt(v),true);else view.setBigInt64(offset,BigInt(v),true)}else view.setFloat64(offset,v,true);offset+=8;return}
   if(typeof v==='string'){const bytes=encoder.encode(v);byte(4);count(bytes.length);reserve(bytes.length);data.set(bytes,offset);offset+=bytes.length;return}
-  if(Array.isArray(v)){byte(5);count(v.length);for(const item of v)put(item,depth+1);return}
+  if(Array.isArray(v)||isFlatNumberView(v)){byte(5);count(v.length);const items=v as ArrayLike<unknown>;for(let i=0;i<items.length;i++)put(items[i],depth+1);return}
   if(typeof v==='object'&&v){byte(6);const entries=Object.entries(v).filter(([,v])=>v!==undefined);count(entries.length);for(const[k,item]of entries){put(k,depth+1);put(item,depth+1)}return}
   throw new Error('Unsupported binary value')
  }
