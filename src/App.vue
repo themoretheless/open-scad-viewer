@@ -2,7 +2,7 @@
 import ModelingGridControls from './components/ModelingGridControls.vue'
 import { useModelingGrid } from './services/modelingGrid'
 import { isModelGraphText, SOURCE_FILE_ACCEPT, SOURCE_FILE_EXTENSION, sourceFileExtension, withSourceExtension } from './services/modelGraphTextDetect'
-import { editorBlocks, indentSelection, guideFitsIndent } from './services/editorBlocks'
+import { editorBlocks, indentSelection, guideFitsIndent, type EditorBlock } from './services/editorBlocks'
 import { formatCode } from './services/codeFormat'
 import { highlightCode } from './services/codeHighlight'
 import { computed, defineAsyncComponent, nextTick, onMounted, onUnmounted, ref, shallowRef, watch, watchEffect, type ComponentPublicInstance } from 'vue'
@@ -260,20 +260,44 @@ const foldedLines = ref(new Set<number>())
 const blockColors = ['#7999e8', '#c792ea', '#d7a457', '#55bba4', '#d87d9d']
 const highlightedCode = computed(() => highlightCode(code.value, selectedEditorName.value))
 const editorRows = computed(() => {
-  const highlighted = highlightedCode.value.replace(/\n$/, '').split('\n')
   const lines = code.value.split('\n')
-  const guideEnds = new Map(blocks.value.map(b => {
-    let end = b.end
-    while(end > b.start && !guideFitsIndent(lines[end] ?? '', b.column)) end--
-    return [b.start, end]
-  }))
-  const byStart = new Map(blocks.value.map(b=>[b.start,b]))
-  let active: typeof blocks.value = []
+  const currentBlocks = blocks.value
+  const byStart = new Map<number, EditorBlock>()
+  for (const b of currentBlocks) byStart.set(b.start, b)
+  // Highlighted lines and guides are needed only by the folded view and the
+  // virtualized guide window — compute them lazily, not for every keystroke.
+  let highlightedLines: string[] | null = null
+  const highlighted = () => highlightedLines ??= highlightedCode.value.replace(/\n$/, '').split('\n')
+  const guideEnds = new Map<number, number>()
+  const guideEnd = (b: EditorBlock) => {
+    let end = guideEnds.get(b.start)
+    if (end === undefined) {
+      end = b.end
+      while (end > b.start && !guideFitsIndent(lines[end] ?? '', b.column)) end--
+      guideEnds.set(b.start, end)
+    }
+    return end
+  }
+  type Guide = EditorBlock & { last: boolean }
   return lines.map((text, line) => {
-    active = active.filter(b=>b.end>=line)
-    const row={line,text,html:highlighted[line]??'',block:byStart.get(line),guides:active.filter(b=>guideFitsIndent(text,b.column)).map(b=>({...b,last:line===guideEnds.get(b.start)}))}
-    if(row.block)active.push(row.block)
-    return row
+    let html: string | undefined
+    let guides: Guide[] | undefined
+    return {
+      line,
+      text,
+      block: byStart.get(line),
+      get html() { return html ??= highlighted()[line] ?? '' },
+      get guides() {
+        if (!guides) {
+          guides = []
+          for (const b of currentBlocks) {
+            if (b.start >= line) break
+            if (b.end >= line && guideFitsIndent(text, b.column)) guides.push({ ...b, last: line === guideEnd(b) })
+          }
+        }
+        return guides
+      },
+    }
   })
 })
 const foldedRows = computed(() => {
@@ -298,7 +322,7 @@ async function editFoldedLine(line: number) {
 }
 const lineNumbersRef = ref<HTMLDivElement | null>(null)
 const guidesRef = ref<HTMLDivElement | null>(null)
-const editorLineCount = computed(() => code.value.split('\n').length)
+const editorLineCount = computed(() => editorRows.value.length)
 // Virtualized gutter: only the visible window of rows (± overscan) is rendered.
 // Row heights must match the CSS: .gutter-row is 1.58em at 12.5px, .guide-row is 1.58em at .82rem.
 const GUTTER_OVERSCAN_ROWS = 12

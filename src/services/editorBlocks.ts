@@ -1,38 +1,104 @@
 export interface EditorBlock { start: number; end: number; column: number; depth: number }
+
+/**
+ * Mask strings/comments while keeping columns and line breaks.
+ * Single manual scan — equivalent to the previous
+ * /\/\*[\s\S]*?(?:\*\/|$)|\/\/[^\n]*|"(?:\\[\s\S]|[^"\\])*(?:"|$)/g pass, but
+ * without regex-callback allocations per match. Returns the source unchanged
+ * when there is nothing to mask.
+ */
+function maskStringsAndComments(source: string): string {
+  if (!/\/\/|\/\*|"/.test(source)) return source
+  const chars = source.split(''), n = source.length
+  let masked = false, i = 0
+  while (i < n) {
+    const char = source[i]
+    if (char === '/' && source[i + 1] === '/') {
+      while (i < n && source[i] !== '\n') { chars[i] = ' '; i++ }
+      masked = true
+    } else if (char === '/' && source[i + 1] === '*') {
+      chars[i] = ' '; chars[i + 1] = ' '
+      let j = i + 2
+      while (j < n && !(source[j] === '*' && source[j + 1] === '/')) {
+        if (source[j] !== '\n') chars[j] = ' '
+        j++
+      }
+      if (j < n) { chars[j] = ' '; chars[j + 1] = ' '; j += 2 }
+      masked = true; i = j
+    } else if (char === '"') {
+      // A string ending in a lone backslash at EOF does not match the regex
+      // (the escape needs a second char), so leave such a quote untouched.
+      let j = i + 1, terminated = false, valid = true
+      while (j < n) {
+        const inner = source[j]
+        if (inner === '\\') {
+          if (j + 1 >= n) { valid = false; break }
+          j += 2
+        } else if (inner === '"') { terminated = true; j++; break }
+        else j++
+      }
+      if (!valid) { i++; continue }
+      for (let k = i; k < j; k++) if (source[k] !== '\n') chars[k] = ' '
+      masked = true; i = terminated ? j : n
+    } else i++
+  }
+  return masked ? chars.join('') : source
+}
+
+// Identity cache: Vue may re-evaluate callers with an unchanged string.
+let cachedSource: string | null = null
+let cachedBlocks: EditorBlock[] = []
+
 export function editorBlocks(source: string): EditorBlock[] {
-  // Mask strings/comments while keeping columns and line breaks.
-  const masked = source.replace(/\/\*[\s\S]*?(?:\*\/|$)|\/\/[^\n]*|"(?:\\[\s\S]|[^"\\])*(?:"|$)/g, s => s.replace(/[^\n]/g, ' '))
-  const lines = masked.split('\n'), blocks: EditorBlock[] = [], stack: {line:number; column:number; char:string}[] = []
-  const indent = (s:string) => s.match(/^[ \t]*/)![0].replace(/\t/g, '  ').length
-  lines.forEach((line, i) => {
+  if (source === cachedSource) return cachedBlocks
+  const lines = maskStringsAndComments(source).split('\n'), count = lines.length
+  // Indents and emptiness once per line instead of repeated regex matches.
+  const indents = new Array<number>(count), nonEmpty = new Array<boolean>(count)
+  for (let i = 0; i < count; i++) {
+    const line = lines[i]!
+    let width = 0, k = 0
+    for (; k < line.length; k++) {
+      const code = line.charCodeAt(k)
+      if (code === 32) width++
+      else if (code === 9) width += 2
+      else break
+    }
+    indents[i] = width
+    nonEmpty[i] = /\S/.test(line)
+  }
+  const blocks: EditorBlock[] = [], stack: {line:number; column:number; char:number}[] = []
+  for (let i = 0; i < count; i++) {
+    const line = lines[i]!
     for (let col=0; col<line.length; col++) {
-      const char=line[col]!
-      if ('([{'.includes(char)) stack.push({line:i,column:indent(line),char})
-      else if (')]}'.includes(char)) {
+      const char=line.charCodeAt(col)
+      if (char===40||char===91||char===123) stack.push({line:i,column:indents[i]!,char})
+      else if (char===41||char===93||char===125) {
         const open=stack.at(-1)
-        if (open && '([{'.indexOf(open.char)===')]}'.indexOf(char)) {
+        if (open && ((open.char===40&&char===41)||(open.char===91&&char===93)||(open.char===123&&char===125))) {
           stack.pop(); if(i>open.line) blocks.push({start:open.line,end:i,column:open.column,depth:0})
         }
       }
     }
-  })
+  }
   const indentStack: {line:number;column:number}[]=[]
   let previous=-1
-  lines.forEach((line,i)=>{
-    if(!line.trim())return
-    const column=indent(line)
+  for(let i=0;i<count;i++){
+    if(!nonEmpty[i])continue
+    const column=indents[i]!
     while(indentStack.length && column<=indentStack.at(-1)!.column){
       const open=indentStack.pop()!; blocks.push({start:open.line,end:previous,column:open.column,depth:0})
     }
-    if(previous>=0 && column>indent(lines[previous]!))indentStack.push({line:previous,column:indent(lines[previous]!)})
+    if(previous>=0 && column>indents[previous]!)indentStack.push({line:previous,column:indents[previous]!})
     previous=i
-  })
+  }
   for(const open of indentStack)blocks.push({start:open.line,end:previous,column:open.column,depth:0})
   const unique = new Map<number,EditorBlock>()
   for(const b of blocks)if(!unique.has(b.start)||unique.get(b.start)!.end<b.end)unique.set(b.start,b)
   const sorted=[...unique.values()].sort((a,b)=>a.start-b.start||b.end-a.end)
   const parents:EditorBlock[]=[]
   for(const b of sorted){while(parents.length&&parents.at(-1)!.end<=b.start)parents.pop();b.depth=parents.length;parents.push(b)}
+  cachedSource = source
+  cachedBlocks = sorted
   return sorted
 }
 export function indentSelection(source:string,start:number,end:number,outdent=false) {

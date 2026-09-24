@@ -100,6 +100,20 @@ export function createWorkspaceDocument(
  * update the durable snapshot, but must not invalidate an in-flight build of
  * the identical source.
  */
+/**
+ * Preset lists are immutable — every update replaces the array (`[...]`,
+ * `.filter`), and `parseParameterPresets` rebuilds it — so the serialization
+ * can be memoized by array identity without invalidation risk.
+ */
+const parameterPresetsJsonCache = new WeakMap<readonly ParameterPreset[], string>()
+function parameterPresetsJson(presets: readonly ParameterPreset[]): string {
+  const cached = parameterPresetsJsonCache.get(presets)
+  if (cached !== undefined) return cached
+  const serialized = JSON.stringify(presets)
+  parameterPresetsJsonCache.set(presets, serialized)
+  return serialized
+}
+
 export function updateWorkspaceDocument(
   previous: WorkspaceDocumentSnapshot,
   update: { source?: string; fileName?: string; parameterPresets?: readonly ParameterPreset[] },
@@ -109,7 +123,8 @@ export function updateWorkspaceDocument(
   const fileName = update.fileName ?? previous.fileName
   const parameterPresets = update.parameterPresets ?? previous.parameterPresets
   if (source === previous.source && fileName === previous.fileName
-    && JSON.stringify(parameterPresets) === JSON.stringify(previous.parameterPresets)) return previous
+    && (parameterPresets === previous.parameterPresets
+      || parameterPresetsJson(parameterPresets) === parameterPresetsJson(previous.parameterPresets))) return previous
   return requireValidWorkspaceDocument({
     ...previous,
     source,
@@ -235,7 +250,7 @@ export function workspaceDocumentsEqual(
     && left.documentId === right.documentId
     && left.fileName === right.fileName
     && left.source === right.source
-    && JSON.stringify(left.parameterPresets) === JSON.stringify(right.parameterPresets)
+    && parameterPresetsJson(left.parameterPresets) === parameterPresetsJson(right.parameterPresets)
     && left.mutation === right.mutation
     && left.revision === right.revision
     && left.updatedAt === right.updatedAt
