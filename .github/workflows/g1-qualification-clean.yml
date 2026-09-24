@@ -1,4 +1,4 @@
-name: G1 v35 exact clean matrix
+name: G1 v36 exact clean matrix
 
 # Manual-only: each matrix cell is one fresh hosted job and one frozen clean run.
 # A green aggregate establishes complete matrix evidence, not qualification,
@@ -17,12 +17,12 @@ permissions:
   actions: read
 
 concurrency:
-  group: g1-v35-exact-${{ github.ref }}
+  group: g1-v36-exact-${{ github.ref }}
   cancel-in-progress: false
 
 env:
-  PLAN_ID: semantic-manifold-g1-plan-v35
-  CANDIDATE_ID: semantic-manifold-g1-candidate-run-v35
+  PLAN_ID: semantic-manifold-g1-plan-v36
+  CANDIDATE_ID: semantic-manifold-g1-candidate-run-v36
   NPM_VERSION: 10.9.8
 
 jobs:
@@ -81,7 +81,7 @@ jobs:
         run: |
           $ErrorActionPreference = 'Stop'
           @('node_modules','tools/browser-qualification/node_modules','dist','.vite','.vitest',
-            'output/qualification/semantic-manifold-g1-candidate-run-v35',
+            'output/qualification/semantic-manifold-g1-candidate-run-v36',
             "$HOME/.cache/ms-playwright","$HOME/Library/Caches/ms-playwright") |
             ForEach-Object { Remove-Item -Recurse -Force -ErrorAction SilentlyContinue $_ }
           Get-ChildItem -Recurse -Force -Include '*.duckdb','*.duckdb.wal' |
@@ -136,8 +136,8 @@ jobs:
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: always()
         with:
-          name: g1-v35-${{ matrix.row }}--${{ matrix.environment }}--run-${{ matrix.run_index }}
-          path: output/qualification/semantic-manifold-g1-candidate-run-v35/github-actions/
+          name: g1-v36-${{ matrix.row }}--${{ matrix.environment }}--run-${{ matrix.run_index }}
+          path: output/qualification/semantic-manifold-g1-candidate-run-v36/github-actions/
           if-no-files-found: error
           retention-days: 30
           compression-level: 6
@@ -169,7 +169,7 @@ jobs:
         run: |
           set -euo pipefail
           rm -rf node_modules tools/browser-qualification/node_modules dist .vite .vitest \
-            output/qualification/semantic-manifold-g1-candidate-run-v35 \
+            output/qualification/semantic-manifold-g1-candidate-run-v36 \
             "$HOME/.cache/ms-playwright"
           rm -f ./*.duckdb ./*.duckdb.wal
       - name: Fetch and install exact toolchains
@@ -219,8 +219,8 @@ jobs:
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: always()
         with:
-          name: g1-v35-${{ matrix.row }}--${{ matrix.environment }}--run-${{ matrix.run_index }}
-          path: output/qualification/semantic-manifold-g1-candidate-run-v35/github-actions/
+          name: g1-v36-${{ matrix.row }}--${{ matrix.environment }}--run-${{ matrix.run_index }}
+          path: output/qualification/semantic-manifold-g1-candidate-run-v36/github-actions/
           if-no-files-found: error
           retention-days: 30
           compression-level: 6
@@ -235,22 +235,22 @@ jobs:
         with:
           ref: ${{ inputs.source_sha }}
           clean: true
-      - run: mkdir -p downloaded-g1-v35
+      - run: mkdir -p downloaded-g1-v36
       - uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5
         continue-on-error: true
         with:
-          pattern: g1-v35-*
-          path: downloaded-g1-v35
+          pattern: g1-v36-*
+          path: downloaded-g1-v36
       - name: Verify complete artifact set
         run: |
           node scripts/g1-github-actions.mjs aggregate \
-            --artifacts downloaded-g1-v35 \
+            --artifacts downloaded-g1-v36 \
             --source-sha '${{ inputs.source_sha }}' \
-            --output output/qualification/semantic-manifold-g1-candidate-run-v35/github-actions/aggregate/result.json
+            --output output/qualification/semantic-manifold-g1-candidate-run-v36/github-actions/aggregate/result.json
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: always()
         with:
-          name: g1-v35-aggregate
-          path: output/qualification/semantic-manifold-g1-candidate-run-v35/github-actions/aggregate/
+          name: g1-v36-aggregate
+          path: output/qualification/semantic-manifold-g1-candidate-run-v36/github-actions/aggregate/
           if-no-files-found: error
           retention-days: 90
