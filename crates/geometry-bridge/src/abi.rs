@@ -12,6 +12,9 @@ thread_local! {static SAMPLERS:RefCell<Vec<Option<SurfaceSampler>>>=const{RefCel
 const LIMIT: usize = 32 * 1024 * 1024;
 /// Byte ceiling of the export staging allocator (`abi_export_alloc`).
 const EXPORT_LIMIT: usize = 128 * 1024 * 1024;
+/// Element ceiling for export vertex buffers: 16M f32 = 64 MiB (legacy),
+/// 16M f64 = 128 MiB — the dual-format widening doubles bytes, not vertices.
+const EXPORT_VERTEX_LIMIT: usize = EXPORT_LIMIT / 8;
 
 pub fn abi_alloc(len: usize) -> usize {
     if len > LIMIT {
@@ -323,7 +326,7 @@ pub unsafe fn abi_export_prepare(
     float32: u32,
     fmt: u32,
 ) -> u64 {
-    if fmt > FMT_F64 || vl > vertex_limit(fmt, EXPORT_LIMIT) || il > 2_250_000 || ml > 16 || float32 > 1 {
+    if fmt > FMT_F64 || vl > EXPORT_VERTEX_LIMIT || il > 2_250_000 || ml > 16 || float32 > 1 {
         return packed(geometry(Err(input("Mesh export exceeds transport limit"))));
     }
     let (vertices, matrix) = match (
@@ -369,7 +372,7 @@ pub unsafe fn abi_export_append(
             "Export exceeds 750000 triangles",
         ))));
     }
-    if fmt > FMT_F64 || vl > vertex_limit(fmt, EXPORT_LIMIT) || ml > 16 {
+    if fmt > FMT_F64 || vl > EXPORT_VERTEX_LIMIT || ml > 16 {
         mesh_export_file::poison(handle);
         return packed(geometry(Err(input("Mesh export exceeds transport limit"))));
     }
