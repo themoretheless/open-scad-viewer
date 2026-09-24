@@ -1,11 +1,13 @@
 /** Scene export transport. Rust owns preparation, serialization and commit. */
 import type { MeshData } from '../../core/mesh'
-import { callGeometryRust, decodeNurbsResult, GeometryKernelError, kernelRuntime } from './kernel'
+import { callGeometryRust, decodeNurbsResult, GeometryKernelError, kernelRuntime, kernelVertexFormat } from './kernel'
 
 function append(handle: number, mesh: MeshData): void {
   const { exports: wasm, takeResponse } = kernelRuntime()
+  const fmt = kernelVertexFormat(mesh.vertices)
+  const matrixView = kernelVertexFormat(mesh.transform) === fmt ? mesh.transform : fmt === 1 ? new Float64Array(mesh.transform) : new Float32Array(mesh.transform)
   const allocations: Array<[number, number]> = []
-  const upload = (view: Float32Array | Uint32Array) => {
+  const upload = (view: Float32Array | Float64Array | Uint32Array) => {
     if (!view.byteLength) return 0
     const ptr = wasm.abi_export_alloc(view.byteLength)
     if (!ptr) throw new GeometryKernelError('GEOMETRY_RESOURCE_LIMIT', 'Mesh export exceeds transport limit')
@@ -14,8 +16,8 @@ function append(handle: number, mesh: MeshData): void {
     return ptr
   }
   try {
-    const vp = upload(mesh.vertices), ip = upload(mesh.indices), mp = upload(mesh.transform)
-    decodeNurbsResult(takeResponse(wasm.abi_export_append(handle,vp,mesh.vertices.length,ip,mesh.indices.length,mp,mesh.transform.length)))
+    const vp = upload(mesh.vertices), ip = upload(mesh.indices), mp = upload(matrixView)
+    decodeNurbsResult(takeResponse(wasm.abi_export_append(handle,vp,mesh.vertices.length,ip,mesh.indices.length,mp,matrixView.length,fmt)))
   } finally { for (const [ptr, length] of allocations) wasm.abi_free(ptr,length) }
 }
 

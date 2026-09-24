@@ -54,13 +54,13 @@ interface KernelExports extends WebAssembly.Exports {
  abi_request(op:number,ptr:number,len:number):bigint
  abi_mesh_field(ptr:number,field:number):number
  abi_mesh_free(ptr:number):void
- abi_import_mesh(stride:number,vp:number,vl:number,ip:number,il:number):bigint
+ abi_import_mesh(stride:number,vp:number,vl:number,ip:number,il:number,fmt:number):bigint
  abi_bvh_build(stride:number,leaf:number,vp:number,vl:number,ip:number,il:number):bigint
  abi_picking_create(stride:number,leaf:number,vp:number,vl:number,ip:number,il:number):bigint
- abi_solid_placement(vp:number,vl:number,ip:number,il:number,mp:number,ml:number):bigint
+ abi_solid_placement(vp:number,vl:number,ip:number,il:number,mp:number,ml:number,fmt:number):bigint
  abi_export_alloc(len:number):number
- abi_export_prepare(vp:number,vl:number,ip:number,il:number,mp:number,ml:number,float32:number):bigint
- abi_export_append(handle:number,vp:number,vl:number,ip:number,il:number,mp:number,ml:number):bigint
+ abi_export_prepare(vp:number,vl:number,ip:number,il:number,mp:number,ml:number,float32:number,fmt:number):bigint
+ abi_export_append(handle:number,vp:number,vl:number,ip:number,il:number,mp:number,ml:number,fmt:number):bigint
  abi_semantic_edges(vp:number,vl:number,ip:number,il:number,mfp:number,mfl:number,mtp:number,mtl:number,weld:number,creaseDotThreshold:number):bigint
  abi_render_mesh(id:number,creaseCosine:number):bigint
  abi_surface_groups(stride:number,vp:number,vl:number,ip:number,il:number,angleDegrees:number):bigint
@@ -164,8 +164,17 @@ export function withCadMesh<T>(id:number, read:(mesh:CadMeshViews)=>T):T {
     wasm.abi_mesh_free(snapshot)
   }
 }
-/** Packed input is copied into temporary linear-memory buffers and validated by Rust. */
-export function importCadMesh(stride:number,vertices:Float32Array,indices:Uint32Array):number {
+/** Vertex transport formats for the dual-format ingestion ABI (abi.rs). */
+export const KERNEL_FMT_F32 = 0
+export const KERNEL_FMT_F64 = 1
+/** Transport format tag for an uploaded vertex/matrix buffer. */
+export function kernelVertexFormat(view: Float32Array | Float64Array): number {
+  return view.BYTES_PER_ELEMENT === 8 ? KERNEL_FMT_F64 : KERNEL_FMT_F32
+}
+
+/** Packed input is copied into temporary linear-memory buffers and validated by Rust.
+ * f64 buffers are ingested without an f32 round-trip; f32 stays the legacy path. */
+export function importCadMesh(stride:number,vertices:Float32Array|Float64Array,indices:Uint32Array):number {
  initialize()
  if(!Number.isInteger(stride)||stride<3||stride>64)throw new GeometryKernelError('GEOMETRY_INVALID_INPUT','Invalid mesh vertex stride')
  let vp=0,ip=0
@@ -174,7 +183,7 @@ export function importCadMesh(stride:number,vertices:Float32Array,indices:Uint32
   if(!vp||!ip)throw new GeometryKernelError('GEOMETRY_RESOURCE_LIMIT','Mesh exceeds transport limit')
   new Uint8Array(wasmMemory.buffer,vp,vertices.byteLength).set(new Uint8Array(vertices.buffer,vertices.byteOffset,vertices.byteLength))
   new Uint8Array(wasmMemory.buffer,ip,indices.byteLength).set(new Uint8Array(indices.buffer,indices.byteOffset,indices.byteLength))
-  return decodeNurbsResult<number>(takeResponse(wasm.abi_import_mesh(stride,vp,vertices.length,ip,indices.length)))
+  return decodeNurbsResult<number>(takeResponse(wasm.abi_import_mesh(stride,vp,vertices.length,ip,indices.length,kernelVertexFormat(vertices))))
  }finally{if(ip)wasm.abi_free(ip,indices.byteLength);if(vp)wasm.abi_free(vp,vertices.byteLength)}
 }
 

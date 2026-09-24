@@ -6,7 +6,7 @@
  * handle is released. Validation and error contracts stay with the callers.
  */
 import type {MeshBvh, MeshTopologyDiagnostics} from '../../core/mesh'
-import {GeometryKernelError, decodeNurbsResult, kernelRuntime} from './kernel'
+import {GeometryKernelError, decodeNurbsResult, kernelRuntime, kernelVertexFormat} from './kernel'
 
 export interface KernelBvhResult {
   readonly nodeCount: number
@@ -43,20 +43,24 @@ function copyBuffer(wasm: ReturnType<typeof kernelRuntime>['exports'], bytes: Ui
   return ptr
 }
 
-/** One upload per mesh; retain f64 placed coordinates without numeric JSON encoding. */
-export function placeSolidMeshInKernel(vertices: Float32Array, indices: Uint32Array, matrix: Float32Array): { positions: number[]; indices: number[] } | null {
+/** One upload per mesh; retain f64 placed coordinates without numeric JSON encoding.
+ * Vertices and matrix may be f32 (legacy display path) or f64 (lossless); the ABI
+ * format tag follows the vertex buffer, and a mismatched matrix is converted. */
+export function placeSolidMeshInKernel(vertices: Float32Array | Float64Array, indices: Uint32Array, matrix: Float32Array | Float64Array): { positions: number[]; indices: number[] } | null {
   const {exports: wasm, takeResponse} = kernelRuntime()
+  const fmt = kernelVertexFormat(vertices)
+  const matrixView = kernelVertexFormat(matrix) === fmt ? matrix : fmt === 1 ? new Float64Array(matrix) : new Float32Array(matrix)
   const allocations: Array<[number, number]> = []
   let handle = 0
-  const upload = (view: Float32Array | Uint32Array) => {
+  const upload = (view: Float32Array | Float64Array | Uint32Array) => {
     if (!view.byteLength) return 0
     const ptr = copyBuffer(wasm, new Uint8Array(view.buffer, view.byteOffset, view.byteLength))
     allocations.push([ptr, view.byteLength])
     return ptr
   }
   try {
-    const vp = upload(vertices), ip = upload(indices), mp = upload(matrix)
-    handle = decodeNurbsResult<number>(takeResponse(wasm.abi_solid_placement(vp, vertices.length, ip, indices.length, mp, matrix.length)))
+    const vp = upload(vertices), ip = upload(indices), mp = upload(matrixView)
+    handle = decodeNurbsResult<number>(takeResponse(wasm.abi_solid_placement(vp, vertices.length, ip, indices.length, mp, matrixView.length, fmt)))
     if (!handle) return null
     const positionsPtr = wasm.abi_array_field(handle, 0), positionsLen = wasm.abi_array_field(handle, 1)
     const indicesPtr = wasm.abi_array_field(handle, 2), indicesLen = wasm.abi_array_field(handle, 3)
@@ -72,12 +76,16 @@ export function placeSolidMeshInKernel(vertices: Float32Array, indices: Uint32Ar
 }
 
 export interface PreparedExportMesh { positions: Float64Array; indices: Uint32Array; normals: Float64Array }
-/** Batched export geometry, copied out before releasing all native buffers. */
-export function prepareExportMeshInKernel(vertices: Float32Array, indices: Uint32Array, matrix: Float32Array, float32: boolean): PreparedExportMesh {
+/** Batched export geometry, copied out before releasing all native buffers.
+ * f64 vertices/matrices are transformed in f64; `float32` still rounds the
+ * placed result for binary STL on the Rust side. */
+export function prepareExportMeshInKernel(vertices: Float32Array | Float64Array, indices: Uint32Array, matrix: Float32Array | Float64Array, float32: boolean): PreparedExportMesh {
   const {exports: wasm, takeResponse} = kernelRuntime()
+  const fmt = kernelVertexFormat(vertices)
+  const matrixView = kernelVertexFormat(matrix) === fmt ? matrix : fmt === 1 ? new Float64Array(matrix) : new Float32Array(matrix)
   const allocations: Array<[number, number]> = []
   let handle = 0
-  const upload = (view: Float32Array | Uint32Array) => {
+  const upload = (view: Float32Array | Float64Array | Uint32Array) => {
     if (!view.byteLength) return 0
     const ptr = wasm.abi_export_alloc(view.byteLength)
     if (!ptr) throw new GeometryKernelError('GEOMETRY_RESOURCE_LIMIT', 'Mesh export exceeds transport limit')
@@ -86,8 +94,8 @@ export function prepareExportMeshInKernel(vertices: Float32Array, indices: Uint3
     return ptr
   }
   try {
-    const vp = upload(vertices), ip = upload(indices), mp = upload(matrix)
-    handle = decodeNurbsResult<number>(takeResponse(wasm.abi_export_prepare(vp, vertices.length, ip, indices.length, mp, matrix.length, Number(float32))))
+    const vp = upload(vertices), ip = upload(indices), mp = upload(matrixView)
+    handle = decodeNurbsResult<number>(takeResponse(wasm.abi_export_prepare(vp, vertices.length, ip, indices.length, mp, matrixView.length, Number(float32), fmt)))
     const p = wasm.abi_array_field(handle, 0), pl = wasm.abi_array_field(handle, 1)
     const i = wasm.abi_array_field(handle, 2), il = wasm.abi_array_field(handle, 3)
     const n = wasm.abi_array_field(handle, 4), nl = wasm.abi_array_field(handle, 5)

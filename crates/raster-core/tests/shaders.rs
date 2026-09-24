@@ -104,3 +104,18 @@ fn immediate_variant_panics_without_object_uniform() {
 fn instanced_variant_panics_on_drifted_source() {
     instanced_object_shader("fn nope() {}", VertexOutput::V);
 }
+
+#[test]
+fn generated_ts_matches_the_wgsl_sources() {
+    // The browser shader library must consume exactly these WGSL texts; run
+    // the `wgsl_export` bin to regenerate after editing any .wgsl file.
+    let path = raster_core::codegen::generated_ts_path();
+    let on_disk = std::fs::read_to_string(&path)
+        .unwrap_or_else(|error| panic!("generated sources missing at {}: {error}", path.display()));
+    assert_eq!(
+        on_disk,
+        raster_core::codegen::generate_ts_sources(),
+        "{} is stale; regenerate with the `wgsl_export` bin",
+        path.display()
+    );
+}

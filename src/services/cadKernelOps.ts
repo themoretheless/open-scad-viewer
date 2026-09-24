@@ -29,7 +29,7 @@ export interface CadKernelMesh {
   readonly numProp: number
   readonly numTri: number
   readonly numVert: number
-  readonly vertProperties: Float32Array
+  readonly vertProperties: Float32Array | Float64Array
   readonly triVerts: Uint32Array
   readonly mergeFromVert: Uint32Array
   readonly mergeToVert: Uint32Array
@@ -70,7 +70,7 @@ export interface CadKernelOps {
     rings: readonly (readonly (readonly [number, number])[])[],
     fillRule?: 'EvenOdd' | 'NonZero',
   ): CadKernelHandle
-  ofMesh(vertProperties: Float32Array, triVerts: Uint32Array): CadKernelHandle
+  ofMesh(vertProperties: Float32Array | Float64Array, triVerts: Uint32Array): CadKernelHandle
   /** Involute gear: the exact NURBS body tessellated at `segments` per edge. */
   gear(spec: BrepGearSpec, segments: number): CadKernelHandle
   translate(input: CadKernelHandle, offset: readonly number[]): CadKernelHandle
@@ -220,7 +220,7 @@ export function createCadKernelOps(
       ))
     },
     polyhedron(vertices, triangles) {
-      const vertexData = new Float32Array(vertices.length * 3)
+      const vertexData = new Float64Array(vertices.length * 3)
       vertices.forEach((vertex, index) => vertexData.set(vertex, index * 3))
       const triangleData = new Uint32Array(triangles.length * 3)
       triangles.forEach((triangle, index) => triangleData.set(triangle, index * 3))
@@ -275,7 +275,7 @@ export function createCadKernelOps(
     },
     gear(spec, segments) {
       const built = tessellateBrepGear(spec, Math.min(32, Math.max(1, Math.round(segments))))
-      return ops.ofMesh(new Float32Array(built.positions), new Uint32Array(built.indices))
+      return ops.ofMesh(new Float64Array(built.positions), new Uint32Array(built.indices))
     },
     ofMesh(vertProperties, triVerts) {
       const mesh = new wasm.Mesh({

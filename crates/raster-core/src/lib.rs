@@ -15,6 +15,7 @@
 pub use gpu_compute;
 pub use wgpu;
 
+pub mod codegen;
 pub mod pipeline;
 pub mod rasterizer;
 pub mod shaders;

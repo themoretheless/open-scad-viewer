@@ -8,9 +8,10 @@ via `wgpu` — for offscreen rendering, snapshot tests, and native embedding.
 
 - **`shaders/`** — the six WGSL sources of truth (`mesh`, `deep_mesh`, `edge`,
   `line`, `grid`, `selection_overlay`), embedded with `include_str!`. The
-  TypeScript library in `src/services/shaders/` mirrors these texts; drift is
-  caught by naga validation and the layout contract tests, and the planned
-  codegen step will generate the TS layer from this directory.
+  browser shader library in `src/services/shaders/` consumes texts generated
+  from this directory by the `wgsl_export` codegen (bin target), and the
+  `generated_ts_matches_the_wgsl_sources` test plus `wgsl_export --check`
+  fail on drift.
 - **`src/variants.rs`** — textual shader variants matching the browser
   renderer: immediate-style (per-draw style without a uniform rewrite) and
   instanced (per-instance `Obj` records from a read-only storage buffer).

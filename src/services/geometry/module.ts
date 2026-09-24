@@ -33,7 +33,8 @@ class Handle {
 }
 export class Mesh {
     numProp: number;
-    vertProperties: Float32Array;
+    /** Authored positions; f64 keeps full precision through `importCadMesh`. */
+    vertProperties: Float32Array | Float64Array;
     triVerts: Uint32Array;
     mergeFromVert = new Uint32Array();
     mergeToVert = new Uint32Array();
@@ -43,7 +44,7 @@ export class Mesh {
     faceID = new Uint32Array();
     constructor(v: {
         numProp: number;
-        vertProperties: Float32Array;
+        vertProperties: Float32Array | Float64Array;
         triVerts: Uint32Array;
         [key: string]: unknown;
     }) { this.numProp = v.numProp; this.vertProperties = v.vertProperties; this.triVerts = v.triVerts; }
@@ -57,7 +58,7 @@ export class CadSolid extends Handle {
     private normalAngle = 52.5;
     private invalidImport = false;
     private original = ++original;
-    private meshSnapshot?: { normals: boolean; normalAngle: number; mesh: KernelRenderMesh };
+    private meshSnapshot?: { normals: boolean; normalAngle: number; mesh: Omit<KernelRenderMesh, 'vertices'> & { vertices: Float32Array | Float64Array } };
     constructor(value: number | Mesh) { super(typeof value === 'number' ? value : importCadMesh(value.numProp, value.vertProperties, value.triVerts)); if (typeof value !== 'number' && value.triVerts.length > 0 && this.isEmpty())
         this.invalidImport = true; }
     static cube(size: Vec3 | number, center = false) { return new CadSolid(call('cube', { size: typeof size === 'number' ? [size, size, size] : size, center })); }
@@ -105,7 +106,8 @@ export class CadSolid extends Handle {
             const built = this.normals
                 ? renderMeshInKernel(this.handle, Math.cos(angle * Math.PI / 180))
                 : withCadMesh(this.handle, raw => ({
-                    vertices: new Float32Array(raw.positions),
+                    // Lossless f64 copy; GPU narrowing happens in the renderer, not here.
+                    vertices: new Float64Array(raw.positions),
                     indices: new Uint32Array(raw.indices),
                     mergeFrom: new Uint32Array(),
                     mergeTo: new Uint32Array(),
