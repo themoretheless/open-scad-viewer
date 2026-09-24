@@ -119,8 +119,9 @@ export class MeshInstances {
         this.data.set(mesh.color, offset + 32)
         this.data[offset + STYLE_FLOAT_OFFSET] = mesh.styleAlpha; this.data[offset + STYLE_FLOAT_OFFSET + 1] = mesh.styleSelected
         this.data[offset + STYLE_FLOAT_OFFSET + 2] = mesh.styleEdge; this.data[offset + STYLE_FLOAT_OFFSET + 3] = mesh.styleHovered
-        // Instances never morph; keep the blend weight at rest.
-        this.data[offset + MORPH_FLOAT_OFFSET] = 0; this.data[offset + MORPH_FLOAT_OFFSET + 1] = 0
+        // Instances never morph; keep the blend weight at rest (1) so the zero
+        // slot-1 dummy is inert: mix(dummy, pos, 1) = pos.
+        this.data[offset + MORPH_FLOAT_OFFSET] = 1; this.data[offset + MORPH_FLOAT_OFFSET + 1] = 0
         this.data[offset + MORPH_FLOAT_OFFSET + 2] = 0; this.data[offset + MORPH_FLOAT_OFFSET + 3] = 0
       }
       device.queue.writeBuffer(this.buffer!, 0, this.data, 0, floats)

@@ -52,9 +52,9 @@ impl Builder {
     }
     pub fn append(
         &mut self,
-        vertices: &[f32],
+        vertices: &[f64],
         indices: &[u32],
-        matrix: &[f32],
+        matrix: &[f64],
         limit: usize,
     ) -> Result<()> {
         if self.failed {
@@ -68,9 +68,9 @@ impl Builder {
     }
     fn append_inner(
         &mut self,
-        vertices: &[f32],
+        vertices: &[f64],
         indices: &[u32],
-        matrix: &[f32],
+        matrix: &[f64],
         limit: usize,
     ) -> Result<()> {
         let count = indices.len() / 3;
@@ -183,10 +183,10 @@ impl fmt::Display for Number {
 #[cfg(test)]
 mod tests {
     use super::*;
-    const ID: [f32; 16] = [
+    const ID: [f64; 16] = [
         1., 0., 0., 0., 0., 1., 0., 0., 0., 0., 1., 0., 0., 0., 0., 1.,
     ];
-    const V: [f32; 18] = [
+    const V: [f64; 18] = [
         0., 0., 0., 0., 0., 1., 1., 0., 0., 0., 0., 1., 0., 1., 0., 0., 0., 1.,
     ];
     #[test]

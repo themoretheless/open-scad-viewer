@@ -4,7 +4,10 @@ pub struct PlacedMesh {
     pub positions: Vec<f64>,
     pub indices: Vec<u32>,
 }
-pub fn place(vertices: &[f32], indices: &[u32], matrix: &[f32]) -> Result<Option<PlacedMesh>> {
+/// Numeric contract: positions and the matrix arrive as f64 (the ABI widens
+/// legacy f32 uploads before this call), so authored coordinates keep their
+/// full precision through the transform.
+pub fn place(vertices: &[f64], indices: &[u32], matrix: &[f64]) -> Result<Option<PlacedMesh>> {
     if !vertices.len().is_multiple_of(6) || vertices.len() / 6 < 3 || indices.len() < 3 {
         return Ok(None);
     }
@@ -16,7 +19,7 @@ pub fn place(vertices: &[f32], indices: &[u32], matrix: &[f32]) -> Result<Option
             "Solid conversion requires a finite affine scene transform.",
         ));
     }
-    let m: Vec<f64> = matrix.iter().map(|&v| v as f64).collect();
+    let m: &[f64] = matrix;
     let determinant = m[0] * (m[5] * m[10] - m[6] * m[9]) - m[1] * (m[4] * m[10] - m[6] * m[8])
         + m[2] * (m[4] * m[9] - m[5] * m[8]);
     if !determinant.is_finite() || determinant == 0. {
@@ -31,7 +34,7 @@ pub fn place(vertices: &[f32], indices: &[u32], matrix: &[f32]) -> Result<Option
     }
     let mut positions = Vec::with_capacity(vertices.len() / 2);
     for vertex in vertices.as_chunks::<6>().0 {
-        let [x, y, z] = [vertex[0] as f64, vertex[1] as f64, vertex[2] as f64];
+        let [x, y, z] = [vertex[0], vertex[1], vertex[2]];
         for row in 0..3 {
             let o = row * 4;
             let p = m[o] * x + m[o + 1] * y + m[o + 2] * z + m[o + 3];
@@ -54,10 +57,10 @@ pub fn place(vertices: &[f32], indices: &[u32], matrix: &[f32]) -> Result<Option
 #[cfg(test)]
 mod tests {
     use super::*;
-    const ID: [f32; 16] = [
+    const ID: [f64; 16] = [
         1., 0., 0., 0., 0., 1., 0., 0., 0., 0., 1., 0., 0., 0., 0., 1.,
     ];
-    fn vertices() -> [f32; 18] {
+    fn vertices() -> [f64; 18] {
         [
             0., 0., 0., 0., 0., 1., 1., 0., 0., 0., 0., 1., 0., 1., 0., 0., 0., 1.,
         ]
@@ -69,7 +72,7 @@ mod tests {
         m[3] = 0.1;
         let out = place(&vertices(), &[0, 1, 2], &m).unwrap().unwrap();
         assert_eq!(out.indices, [0, 2, 1]);
-        assert_eq!(out.positions[3], -2. + 0.1_f32 as f64);
+        assert_eq!(out.positions[3], -2. + 0.1_f64);
         assert_ne!(out.positions[3], out.positions[3] as f32 as f64);
     }
     #[test]

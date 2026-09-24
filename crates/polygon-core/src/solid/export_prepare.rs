@@ -5,10 +5,13 @@ pub struct Prepared {
     pub indices: Vec<u32>,
     pub normals: Vec<f64>,
 }
+/// Numeric contract: positions and the matrix arrive as f64 (the ABI widens
+/// legacy f32 uploads before this call). `float32` still rounds the placed
+/// result through f32 for binary STL output, after the f64 transform.
 pub fn prepare(
-    vertices: &[f32],
+    vertices: &[f64],
     indices: &[u32],
-    matrix: &[f32],
+    matrix: &[f64],
     float32: bool,
 ) -> Result<Prepared> {
     if !vertices.len().is_multiple_of(6)
@@ -26,7 +29,7 @@ pub fn prepare(
     if indices.len() / 3 > 750_000 {
         return Err(error("Export exceeds 750000 triangles"));
     }
-    let m: Vec<f64> = matrix.iter().map(|&v| v as f64).collect();
+    let m: &[f64] = matrix;
     let mirrored = m[0] * (m[5] * m[10] - m[6] * m[9]) - m[1] * (m[4] * m[10] - m[6] * m[8])
         + m[2] * (m[4] * m[9] - m[5] * m[8])
         < 0.;
@@ -37,7 +40,7 @@ pub fn prepare(
             std::array::from_fn(|row| {
                 let k = row * 4;
                 let value =
-                    m[k] * v[0] as f64 + m[k + 1] * v[1] as f64 + m[k + 2] * v[2] as f64 + m[k + 3];
+                    m[k] * v[0] + m[k + 1] * v[1] + m[k + 2] * v[2] + m[k + 3];
                 if float32 { value as f32 as f64 } else { value }
             })
         })
@@ -92,10 +95,10 @@ pub fn prepare(
 #[cfg(test)]
 mod tests {
     use super::*;
-    const ID: [f32; 16] = [
+    const ID: [f64; 16] = [
         1., 0., 0., 0., 0., 1., 0., 0., 0., 0., 1., 0., 0., 0., 0., 1.,
     ];
-    fn vertices() -> Vec<f32> {
+    fn vertices() -> Vec<f64> {
         vec![
             0., 0., 0., 0., 0., 1., 1., 0., 0., 0., 0., 1., 0., 1., 0., 0., 0., 1., 999., 999.,
             999., 0., 0., 1.,
@@ -133,7 +136,7 @@ mod tests {
     fn malformed_mesh_is_not_silently_filtered() {
         assert!(prepare(&vertices(), &[0, 1, 99], &ID, false).is_err());
         let mut v = vertices();
-        v[3] = f32::NAN;
+        v[3] = f64::NAN;
         assert!(prepare(&v, &[0, 1, 2], &ID, false).is_err());
     }
 }

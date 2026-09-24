@@ -1839,7 +1839,7 @@ impl CadMeshBuffer {
     }
 }
 /// Typed native entry point shared with the WASM import adapter.
-pub fn import_cad_mesh(stride: usize, vertices: &[f32], indices: &[u32]) -> Result<u32> {
+pub fn import_cad_mesh(stride: usize, vertices: &[f64], indices: &[u32]) -> Result<u32> {
     mesh::import_buffers(stride, vertices, indices)
 }
 

@@ -404,7 +404,7 @@ describe('parameter geometry animation', () => {
     expect(state.advanceGeometryAnimation(start + 1000)).toBe(false)
     expect(state.meshes[0].morph).toBeUndefined()
     expect(state.meshes[0].morphSlot).toBeNull()
-    expect(new Float32Array(state.meshes[0].ub.contents.buffer)[40]).toBe(0)
+    expect(new Float32Array(state.meshes[0].ub.contents.buffer)[40]).toBe(1)
   })
 })
 

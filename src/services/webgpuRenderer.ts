@@ -864,8 +864,9 @@ export class WebGPURenderer {
           uniform.set(m.color, 32)
           uniform[36] = initialAlpha; uniform[37] = 0
           uniform[38] = initialEdge; uniform[39] = 0
-          // morph.x drives the GPU vertex blend; fresh uploads start at rest.
-          uniform[40] = 0; uniform[41] = 0; uniform[42] = 0; uniform[43] = 0
+          // morph.x drives the GPU vertex blend; rest is 1 (target vertices),
+          // which keeps the zero slot-1 dummy inert: mix(dummy, pos, 1) = pos.
+          uniform[40] = 1; uniform[41] = 0; uniform[42] = 0; uniform[43] = 0
           dev.queue.writeBuffer(ub, 0, uniform)
           const bg = dev.createBindGroup({
             layout: this.objBGL,
@@ -1916,10 +1917,11 @@ export class WebGPURenderer {
       }
       if (t === 1) {
         // The vertex buffer already holds the destination; retire the morph
-        // and restore the slot-1 dummy so the stale blend weight is inert.
+        // and restore the slot-1 dummy with the weight back at rest (1), so
+        // the stale blend state is inert: mix(dummy, pos, 1) = pos.
         mesh.morph = undefined
         mesh.morphSlot = this.morphDummyVB
-        this.morphScratch[0] = 0; this.morphScratch[1] = 0; this.morphScratch[2] = 0; this.morphScratch[3] = 0
+        this.morphScratch[0] = 1; this.morphScratch[1] = 0; this.morphScratch[2] = 0; this.morphScratch[3] = 0
         this.dev?.queue.writeBuffer(mesh.ub, OBJECT_UNIFORM_LAYOUT.morphByteOffset, this.morphScratch)
         morphFinished = true
       } else {

@@ -27,7 +27,7 @@ pub const MORPH_BYTE_OFFSET: u64 = 160;
 
 impl ObjectUniform {
     pub const fn new(model: [f32; 16], nmat: [f32; 16], color: [f32; 4]) -> Self {
-        Self { model, nmat, color, style: [1.0, 0.0, 0.0, 0.0], morph: [0.0; 4] }
+        Self { model, nmat, color, style: [1.0, 0.0, 0.0, 0.0], morph: [1.0, 0.0, 0.0, 0.0] }
     }
 
     /// Writes the full 44-float record into `out`.
@@ -42,6 +42,9 @@ impl ObjectUniform {
 
 impl Default for ObjectUniform {
     fn default() -> Self {
+        // Rest state: weight 1 renders the vertex-buffer target positions and
+        // keeps the zero slot-1 morph dummy inert (mix(dummy, pos, 1) = pos),
+        // matching the browser renderer's convention.
         Self::new(
             [1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0],
             [1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0],

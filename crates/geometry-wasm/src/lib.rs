@@ -59,8 +59,9 @@ pub unsafe extern "C" fn abi_import_mesh(
     vl: usize,
     ip: usize,
     il: usize,
+    fmt: u32,
 ) -> u64 {
-    unsafe { geometry_bridge::abi::abi_import_mesh(stride, vp, vl, ip, il) }
+    unsafe { geometry_bridge::abi::abi_import_mesh(stride, vp, vl, ip, il, fmt) }
 }
 
 /// # Safety
@@ -102,8 +103,9 @@ pub unsafe extern "C" fn abi_solid_placement(
     il: usize,
     mp: usize,
     ml: usize,
+    fmt: u32,
 ) -> u64 {
-    unsafe { geometry_bridge::abi::abi_solid_placement(vp, vl, ip, il, mp, ml) }
+    unsafe { geometry_bridge::abi::abi_solid_placement(vp, vl, ip, il, mp, ml, fmt) }
 }
 
 /// # Safety
@@ -117,8 +119,9 @@ pub unsafe extern "C" fn abi_export_prepare(
     mp: usize,
     ml: usize,
     float32: u32,
+    fmt: u32,
 ) -> u64 {
-    unsafe { geometry_bridge::abi::abi_export_prepare(vp, vl, ip, il, mp, ml, float32) }
+    unsafe { geometry_bridge::abi::abi_export_prepare(vp, vl, ip, il, mp, ml, float32, fmt) }
 }
 #[unsafe(no_mangle)]
 pub extern "C" fn abi_export_alloc(len: usize) -> usize {
@@ -136,8 +139,9 @@ pub unsafe extern "C" fn abi_export_append(
     il: usize,
     mp: usize,
     ml: usize,
+    fmt: u32,
 ) -> u64 {
-    unsafe { geometry_bridge::abi::abi_export_append(handle, vp, vl, ip, il, mp, ml) }
+    unsafe { geometry_bridge::abi::abi_export_append(handle, vp, vl, ip, il, mp, ml, fmt) }
 }
 
 /// # Safety

@@ -41,8 +41,8 @@ describe('instanced geometry commands', () => {
     expect(second[12]).toBe(3)
     expect(second[16 + 3]).toBe(-3)
     expect([...second.slice(32, 40)]).toEqual([...new Float32Array([1 / 32, 0.2, 0.3, 1, 1, 0, 0.7, 0])])
-    // The morph weight stays at rest for instances.
-    expect([...second.slice(40, 44)]).toEqual([0, 0, 0, 0])
+    // The morph weight stays at rest (1) for instances.
+    expect([...second.slice(40, 44)]).toEqual([1, 0, 0, 0])
     // The instanced pipeline declares a second vertex buffer for morph sources.
     expect(h.pass.setVertexBuffer.mock.calls).toContainEqual([1, h.buffers[1]])
     h.draw()

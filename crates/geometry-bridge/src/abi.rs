@@ -10,6 +10,8 @@ fn language_abi(_op: u32, _value: Value) -> Value {
 }
 thread_local! {static SAMPLERS:RefCell<Vec<Option<SurfaceSampler>>>=const{RefCell::new(Vec::new())};}
 const LIMIT: usize = 32 * 1024 * 1024;
+/// Byte ceiling of the export staging allocator (`abi_export_alloc`).
+const EXPORT_LIMIT: usize = 128 * 1024 * 1024;
 
 pub fn abi_alloc(len: usize) -> usize {
     if len > LIMIT {
@@ -17,10 +19,11 @@ pub fn abi_alloc(len: usize) -> usize {
     }
     Box::into_raw(vec![0u8; len].into_boxed_slice()) as *mut u8 as usize
 }
-/// Export-only staging: 750,000 expanded triangles need 54 MB of stride-6 input.
+/// Export-only staging: 750,000 expanded triangles need 108 MB of stride-6
+/// f64 input (54 MB in the legacy f32 format).
 /// Keeps the general request allocator's 32 MiB ceiling unchanged.
 pub fn abi_export_alloc(len: usize) -> usize {
-    if len > 64 * 1024 * 1024 {
+    if len > EXPORT_LIMIT {
         return 0;
     }
     Box::into_raw(vec![0u8; len].into_boxed_slice()) as *mut u8 as usize
@@ -175,14 +178,49 @@ pub unsafe fn abi_mesh_free(ptr: usize) {
         unsafe { drop(Box::from_raw(ptr as *mut CadMeshBuffer)) }
     }
 }
+/// Vertex transport formats for the dual-format ingestion ABI: `0` is the
+/// legacy f32 layout, `1` passes f64 coordinates without an f32 round-trip.
+const FMT_F32: u32 = 0;
+const FMT_F64: u32 = 1;
+
+/// Per-format element ceiling for a vertex buffer that must fit the general
+/// request allocator (`LIMIT` bytes).
+const fn vertex_limit(fmt: u32, bytes_limit: usize) -> usize {
+    if fmt == FMT_F64 { bytes_limit / 8 } else { bytes_limit / 4 }
+}
+
+/// Copy an uploaded vertex/matrix buffer into an owned f64 Vec. Legacy f32
+/// uploads are widened element-by-element (exact); f64 uploads are copied
+/// without rounding. Rejects unknown format tags.
+unsafe fn read_vertices_f64(fmt: u32, ptr: usize, len: usize) -> Result<Vec<f64>> {
+    match fmt {
+        FMT_F32 => Ok(unsafe { read_f32(ptr, len) }
+            .into_iter()
+            .map(|v| v as f64)
+            .collect()),
+        FMT_F64 => Ok(unsafe { read_pod(ptr, len) }),
+        _ => Err(input("Unknown vertex transport format")),
+    }
+}
+
 /// # Safety
 /// Pointers must reference live buffers allocated by this module, with their exact lengths.
 /// Mesh pointers must come from operation 9; freeing consumes them exactly once.
-pub unsafe fn abi_import_mesh(stride: usize, vp: usize, vl: usize, ip: usize, il: usize) -> u64 {
-    if vl > LIMIT / 4 || il > LIMIT / 4 {
+pub unsafe fn abi_import_mesh(
+    stride: usize,
+    vp: usize,
+    vl: usize,
+    ip: usize,
+    il: usize,
+    fmt: u32,
+) -> u64 {
+    if fmt > FMT_F64 || vl > vertex_limit(fmt, LIMIT) || il > LIMIT / 4 {
         return packed(geometry(Err(input("Mesh exceeds transport limit"))));
     }
-    let vertices = unsafe { read_f32(vp, vl) };
+    let vertices = match unsafe { read_vertices_f64(fmt, vp, vl) } {
+        Ok(v) => v,
+        Err(e) => return packed(geometry(Err(e))),
+    };
     let indices = unsafe { read_u32(ip, il) };
     packed(geometry(
         import_cad_mesh(stride, &vertices, &indices).and_then(encode),
@@ -192,7 +230,7 @@ pub unsafe fn abi_import_mesh(stride: usize, vp: usize, vl: usize, ip: usize, il
 /// Copy a caller-owned typed buffer into an owned `Vec` with one bulk memcpy.
 /// Request buffers are byte-aligned, so the copy goes through `u8` pointers and
 /// never assumes `T` alignment; `T` must be a plain-old-data type where every
-/// bit pattern is a valid value (`f32`, `u32`).
+/// bit pattern is a valid value (`f32`, `f64`, `u32`).
 ///
 /// # Safety
 /// `ptr` must be readable for `len * size_of::<T>()` bytes for the duration of
@@ -234,8 +272,10 @@ pub unsafe fn abi_solid_placement(
     il: usize,
     mp: usize,
     ml: usize,
+    fmt: u32,
 ) -> u64 {
-    if vl > LIMIT / 4
+    if fmt > FMT_F64
+        || vl > vertex_limit(fmt, LIMIT)
         || il > LIMIT / 4
         || ml > 16
         || (vl / 6)
@@ -247,10 +287,17 @@ pub unsafe fn abi_solid_placement(
             "Solid placement exceeds transport limit",
         ))));
     }
+    let (vertices, matrix) = match (
+        unsafe { read_vertices_f64(fmt, vp, vl) },
+        unsafe { read_vertices_f64(fmt, mp, ml) },
+    ) {
+        (Ok(v), Ok(m)) => (v, m),
+        (Err(e), _) | (_, Err(e)) => return packed(geometry(Err(e))),
+    };
     let result = polygon_core::solid::placement::place(
-        &unsafe { read_f32(vp, vl) },
+        &vertices,
         &unsafe { read_u32(ip, il) },
-        &unsafe { read_f32(mp, ml) },
+        &matrix,
     )
     .map(|result| {
         result.map_or(0, |mesh| {
@@ -274,14 +321,22 @@ pub unsafe fn abi_export_prepare(
     mp: usize,
     ml: usize,
     float32: u32,
+    fmt: u32,
 ) -> u64 {
-    if vl > 64 * 1024 * 1024 / 4 || il > 2_250_000 || ml > 16 || float32 > 1 {
+    if fmt > FMT_F64 || vl > vertex_limit(fmt, EXPORT_LIMIT) || il > 2_250_000 || ml > 16 || float32 > 1 {
         return packed(geometry(Err(input("Mesh export exceeds transport limit"))));
     }
+    let (vertices, matrix) = match (
+        unsafe { read_vertices_f64(fmt, vp, vl) },
+        unsafe { read_vertices_f64(fmt, mp, ml) },
+    ) {
+        (Ok(v), Ok(m)) => (v, m),
+        (Err(e), _) | (_, Err(e)) => return packed(geometry(Err(e))),
+    };
     let result = polygon_core::solid::export_prepare::prepare(
-        &unsafe { read_f32(vp, vl) },
+        &vertices,
         &unsafe { read_u32(ip, il) },
-        &unsafe { read_f32(mp, ml) },
+        &matrix,
         float32 == 1,
     )
     .map(|mesh| {
@@ -305,6 +360,7 @@ pub unsafe fn abi_export_append(
     il: usize,
     mp: usize,
     ml: usize,
+    fmt: u32,
 ) -> u64 {
     if il > 2_250_000 {
         mesh_export_file::poison(handle);
@@ -313,15 +369,25 @@ pub unsafe fn abi_export_append(
             "Export exceeds 750000 triangles",
         ))));
     }
-    if vl > 64 * 1024 * 1024 / 4 || ml > 16 {
+    if fmt > FMT_F64 || vl > vertex_limit(fmt, EXPORT_LIMIT) || ml > 16 {
         mesh_export_file::poison(handle);
         return packed(geometry(Err(input("Mesh export exceeds transport limit"))));
     }
+    let (vertices, matrix) = match (
+        unsafe { read_vertices_f64(fmt, vp, vl) },
+        unsafe { read_vertices_f64(fmt, mp, ml) },
+    ) {
+        (Ok(v), Ok(m)) => (v, m),
+        (Err(e), _) | (_, Err(e)) => {
+            mesh_export_file::poison(handle);
+            return packed(geometry(Err(e)));
+        }
+    };
     let result = mesh_export_file::append(
         handle,
-        &unsafe { read_f32(vp, vl) },
+        &vertices,
         &unsafe { read_u32(ip, il) },
-        &unsafe { read_f32(mp, ml) },
+        &matrix,
     )
     .map(|()| Value::Null);
     packed(geometry(result))

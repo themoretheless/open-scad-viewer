@@ -16,7 +16,7 @@ pub fn poison(id: u32) {
         }
     })
 }
-pub fn append(id: u32, vertices: &[f32], indices: &[u32], matrix: &[f32]) -> Result<()> {
+pub fn append(id: u32, vertices: &[f64], indices: &[u32], matrix: &[f64]) -> Result<()> {
     REGISTRY.with(|registry| {
         let mut r = registry.borrow_mut();
         let others: usize = r

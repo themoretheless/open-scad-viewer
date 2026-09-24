@@ -678,14 +678,17 @@ pub(crate) fn render_buffers(id: u32, crease_cosine: f64) -> Result<RenderMesh> 
         crease_cosine,
     ))
 }
-pub(crate) fn import_buffers(stride: usize, vertices: &[f32], indices: &[u32]) -> Result<u32> {
+/// Numeric contract: positions arrive as f64 (legacy f32 uploads are widened
+/// by the ABI before this call), so authored coordinates enter the kernel
+/// without an f32 round-trip.
+pub(crate) fn import_buffers(stride: usize, vertices: &[f64], indices: &[u32]) -> Result<u32> {
     if !(3..=64).contains(&stride) || !vertices.len().is_multiple_of(stride) {
         return Err(input("Invalid mesh vertex stride"));
     }
     let mesh = Mesh {
         positions: vertices
             .chunks_exact(stride)
-            .flat_map(|p| p[..3].iter().map(|&v| v as f64))
+            .flat_map(|p| p[..3].iter().copied())
             .collect(),
         indices: indices.iter().map(|&i| i as usize).collect(),
         uv: None,
