@@ -48,7 +48,7 @@ function reference(mesh: CadMeshViews, cosine: number): KernelRenderMesh {
 
 describe('display mesh normal compatibility', () => {
   it.each(['cube', 'sphere', 'dense', 'cylinder', 'transformed', 'empty'])(
-    'preserves all host reference buffer bytes: %s', async fixture => {
+    'preserves the host reference buffer contract: %s', async fixture => {
       const session = await new CadGeometryKernel().openSession()
       try {
         const { CadSolid } = session.module
@@ -62,9 +62,20 @@ describe('display mesh normal compatibility', () => {
           const cosine = Math.cos(angle * Math.PI / 180)
           const expected = withCadMesh(solid.handle, mesh => reference(mesh, cosine))
           const actual = renderMeshInKernel(solid.handle, cosine)
-          for (const key of Object.keys(expected) as Array<keyof KernelRenderMesh>) {
-            const bytes = (value: ArrayBufferView) => Buffer.from(value.buffer, value.byteOffset, value.byteLength)
+          // Structure stays byte-exact; computed floats get a tolerance
+          // because the Rust kernel evaluates positions/normals in f32 while
+          // the JS oracle uses f64 (residuals up to ~1.4e-16 near zero).
+          // 1e-6 is orders of magnitude above that noise yet still catches
+          // real position and normal length/direction regressions.
+          const bytes = (value: ArrayBufferView) => Buffer.from(value.buffer, value.byteOffset, value.byteLength)
+          for (const key of ['indices', 'mergeFrom', 'mergeTo', 'faceIds'] as const) {
             expect(bytes(actual[key]).equals(bytes(expected[key])), `${fixture}/${angle}/${key}`).toBe(true)
+          }
+          expect(actual.vertices.length, `${fixture}/${angle}/vertices.length`).toBe(expected.vertices.length)
+          for (let i = 0; i < expected.vertices.length; i++) {
+            const a = actual.vertices[i]!, e = expected.vertices[i]!
+            const slot = i % 6 < 3 ? 'position' : 'normal'
+            expect(Math.abs(a - e), `${fixture}/${angle}/vertices[${i}] ${slot}`).toBeLessThanOrEqual(1e-6)
           }
         }
       } finally { session.dispose() }

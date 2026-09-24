@@ -4,6 +4,8 @@ import { OpenSCADParseError, parseOpenSCAD } from '../src/services/openscadParse
 
 const stable = { languageProfile: 'openscad/stable-2021.01' as const }
 
+type Vec3 = [number, number, number]
+
 function bounds(result: GeometryEvaluationResult) {
   const min = [Infinity, Infinity, Infinity]
   const max = [-Infinity, -Infinity, -Infinity]
@@ -241,8 +243,21 @@ describe('direct stable geometry-module helper wiring', () => {
       'rotate_extrude(angle=0,$fn=8) translate([2,0]) square(1);', stable,
     )
 
-    expect(bounds(positive)).toMatchObject({ min: [0, 0, 0], max: [3, 3, 1] })
-    expect(bounds(negative)).toMatchObject({ min: [-3, -3, 0], max: [0, 0, 1] })
+    // Bounds come out of f32 kernel arithmetic, so exact zeros can surface as
+    // ~1e-16 residues (rotate_extrude at 90°). Compare component-wise with a
+    // 1e-6 tolerance: far above float noise, tight enough for real regressions.
+    const expectBoundsClose = (
+      result: GeometryEvaluationResult,
+      expected: { min: Vec3; max: Vec3 },
+    ) => {
+      const actual = bounds(result)
+      for (const axis of [0, 1, 2] as const) {
+        expect(Math.abs(actual.min[axis]! - expected.min[axis]!)).toBeLessThanOrEqual(1e-6)
+        expect(Math.abs(actual.max[axis]! - expected.max[axis]!)).toBeLessThanOrEqual(1e-6)
+      }
+    }
+    expectBoundsClose(positive, { min: [0, 0, 0], max: [3, 3, 1] })
+    expectBoundsClose(negative, { min: [-3, -3, 0], max: [0, 0, 1] })
     expect(fullNegative.meshes[0].geometryAssetId).toBe(overFull.meshes[0].geometryAssetId)
     expect(zero.meshes).toEqual([])
 

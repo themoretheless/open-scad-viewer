@@ -299,6 +299,7 @@ describe('SemanticProgram to Manifold qualification adapter', () => {
       'components/FunctionReference.vue',
       'components/InspectPanel.vue',
       'components/KeyboardShortcuts.vue',
+      'components/ModelingGridControls.vue',
       'components/SceneOutliner.vue',
       'components/ViewCube.vue',
       'components/cadPanels.types.ts',
