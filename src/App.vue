@@ -299,6 +299,23 @@ async function editFoldedLine(line: number) {
 const lineNumbersRef = ref<HTMLDivElement | null>(null)
 const guidesRef = ref<HTMLDivElement | null>(null)
 const editorLineCount = computed(() => code.value.split('\n').length)
+// Virtualized gutter: only the visible window of rows (± overscan) is rendered.
+// Row heights must match the CSS: .gutter-row is 1.58em at 12.5px, .guide-row is 1.58em at .82rem.
+const GUTTER_OVERSCAN_ROWS = 12
+const GUTTER_CONTENT_PADDING_PX = 14
+const gutterRowPx = 1.58 * 12.5
+const guideRowPx = ref(1.58 * 0.82 * 16)
+const gutterScrollTop = ref(0)
+const gutterViewportHeight = ref(600)
+function visibleRowSlice(rowPx: number) {
+  const rows = editorRows.value
+  const first = Math.max(0, Math.floor((gutterScrollTop.value - GUTTER_CONTENT_PADDING_PX) / rowPx) - GUTTER_OVERSCAN_ROWS)
+  const last = Math.min(rows.length, Math.ceil((gutterScrollTop.value + gutterViewportHeight.value - GUTTER_CONTENT_PADDING_PX) / rowPx) + GUTTER_OVERSCAN_ROWS)
+  return rows.slice(first, last)
+}
+const visibleGutterRows = computed(() => visibleRowSlice(gutterRowPx))
+const visibleGuideRows = computed(() => visibleRowSlice(guideRowPx.value))
+const gutterLinesHeight = computed(() => `${editorRows.value.length * 1.58}em`)
 watch(code, () => { foldedLines.value = new Set(); void nextTick(syncHighlightScroll) }, { flush: 'post' })
 function syncHighlightScroll() {
   if (!editorRef.value || !highlightRef.value) return
@@ -306,6 +323,8 @@ function syncHighlightScroll() {
   if(layer) layer.style.transform = `translate(${-editorRef.value.scrollLeft}px, ${-editorRef.value.scrollTop}px)`
   if (guidesRef.value) guidesRef.value.style.transform = `translate(${-editorRef.value.scrollLeft}px, ${-editorRef.value.scrollTop}px)`
   if (lineNumbersRef.value) lineNumbersRef.value.style.transform = `translateY(${-editorRef.value.scrollTop}px)`
+  gutterScrollTop.value = editorRef.value.scrollTop
+  gutterViewportHeight.value = editorRef.value.clientHeight
 }
 const findInputRef = ref<HTMLInputElement | null>(null)
 const fileInputRef = ref<HTMLInputElement | null>(null)
@@ -962,6 +981,7 @@ const rendererRecoveryGate = new RendererRecoveryGate()
 let rendererErrorMessage = ''
 let resizing = false
 let layoutResizeObserver: ResizeObserver | null = null
+let editorResizeObserver: ResizeObserver | null = null
 let fitNextRender = false
 const buildSources = new Map<number, string>()
 
@@ -988,6 +1008,11 @@ onMounted(async () => {
     syncEditorBounds()
     layoutResizeObserver = new ResizeObserver(syncEditorBounds)
     layoutResizeObserver.observe(mainRef.value)
+  }
+  guideRowPx.value = 1.58 * 0.82 * (parseFloat(getComputedStyle(document.documentElement).fontSize) || 16)
+  if (editorRef.value) {
+    editorResizeObserver = new ResizeObserver(syncHighlightScroll)
+    editorResizeObserver.observe(editorRef.value)
   }
   window.addEventListener('keydown', handleGlobalKey)
   try {
@@ -1074,6 +1099,8 @@ onUnmounted(() => {
   cancelGeometryAnalysis()
   layoutResizeObserver?.disconnect()
   layoutResizeObserver = null
+  editorResizeObserver?.disconnect()
+  editorResizeObserver = null
   viewportController.invalidateRecovery()
   rendererRecoveryGate.reset()
   autoBuildScheduler.cancel()
@@ -2775,9 +2802,9 @@ function sanitizeFileName(name: string) { return (name.replace(/[^\w.() -]+/g, '
           </div>
           <button class="unfold-all" @click="editFoldedLine(0)">Развернуть всё для редактирования</button>
         </div>
-        <div v-show="!foldedLines.size" class="code-gutter"><div ref="lineNumbersRef" class="gutter-lines"><div v-for="row in editorRows" :key="row.line" class="gutter-row"><span aria-hidden="true">{{ row.line + 1 }}</span><button v-if="row.block" class="fold-toggle" :aria-label="`Свернуть блок, строка ${row.line + 1}`" aria-expanded="true" @click="toggleFold(row.line)">▾</button><span v-else class="fold-spacer" /></div></div></div>
+        <div v-show="!foldedLines.size" class="code-gutter"><div ref="lineNumbersRef" class="gutter-lines" :style="{ height: gutterLinesHeight }"><div v-for="row in visibleGutterRows" :key="row.line" class="gutter-row" :style="{ top: `${row.line * 1.58}em` }"><span aria-hidden="true">{{ row.line + 1 }}</span><button v-if="row.block" class="fold-toggle" :aria-label="`Свернуть блок, строка ${row.line + 1}`" aria-expanded="true" @click="toggleFold(row.line)">▾</button><span v-else class="fold-spacer" /></div></div></div>
         <div v-show="!foldedLines.size" class="code-content">
-        <div class="code-guides" aria-hidden="true"><div ref="guidesRef" class="guide-lines"><div v-for="row in editorRows" :key="row.line" class="guide-row"><i v-for="guide in row.guides" :key="guide.start" :style="{ left: `${guide.column}ch`, background: guide.last ? `linear-gradient(to bottom, ${blockColors[guide.depth % blockColors.length]} 75%, transparent 100%)` : blockColors[guide.depth % blockColors.length], bottom: '0' }" /></div></div></div>
+        <div class="code-guides" aria-hidden="true"><div ref="guidesRef" class="guide-lines" :style="{ height: gutterLinesHeight }"><div v-for="row in visibleGuideRows" :key="row.line" class="guide-row" :style="{ top: `${row.line * 1.58}em` }"><i v-for="guide in row.guides" :key="guide.start" :style="{ left: `${guide.column}ch`, background: guide.last ? `linear-gradient(to bottom, ${blockColors[guide.depth % blockColors.length]} 75%, transparent 100%)` : blockColors[guide.depth % blockColors.length], bottom: '0' }" /></div></div></div>
         <pre ref="highlightRef" class="code code-highlight" aria-hidden="true"><span class="highlight-content" v-html="highlightedCode" /></pre>
         <textarea
           ref="editorRef"
@@ -3657,14 +3684,14 @@ button, select { color: inherit; }
 </style>
 
 <style scoped>
-.gutter-lines { padding: 14px 4px 14px 8px; }
-.gutter-row { display: flex; justify-content: flex-end; height: 1.58em; align-items: center; }
+.gutter-lines { position: relative; padding: 14px 4px 14px 8px; }
+.gutter-row { position: absolute; left: 0; right: 0; display: flex; justify-content: flex-end; height: 1.58em; align-items: center; }
 .fold-toggle, .fold-spacer { display: inline-block; flex: 0 0 20px; width: 20px; }
 .fold-toggle { padding: 0; border: 0; color: var(--text-dim); background: transparent; cursor: pointer; font: inherit; line-height: inherit; }
 .fold-toggle:hover, .fold-toggle:focus-visible { color: var(--accent); background: var(--surface-raised); }
 .code-guides { position: absolute; inset: 0; overflow: hidden; pointer-events: none; z-index: 1; font: .82rem/1.58 "JetBrains Mono", "SFMono-Regular", Consolas, monospace; }
-.guide-lines { padding: 14px 15px; }
-.guide-row { position: relative; height: 1.58em; }
+.guide-lines { position: relative; padding: 14px 15px; }
+.guide-row { position: absolute; left: 0; right: 0; height: 1.58em; }
 .guide-row i { position: absolute; top: 0; bottom: 0; width: 1px; opacity: .5; }
 .folded-editor { z-index: 3; }
 .folded-row { display: flex; min-height: 1.58em; }

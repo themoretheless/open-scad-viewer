@@ -170,9 +170,17 @@ pub(super) fn geometry(mesh: &Mesh, eps: f64, budget: &mut Budget) -> Result<()>
                 candidates.extend(node.triangles.iter().copied().filter(|&b| b > a))
             }
         }
-        candidates.sort_unstable();
+        // Candidates arrive filtered (b > a) but unordered from the leaf
+        // traversal. The first reported error must stay the smallest failing
+        // b with that b's first disallowed point, exactly as the former
+        // `sort_unstable` iteration produced; track the minimum instead of
+        // sorting every triangle's list.
+        let mut failure: Option<(usize, Point, usize)> = None;
         for b in candidates {
             budget.tick(1)?;
+            if failure.as_ref().is_some_and(|(fb, _, _)| b >= *fb) {
+                continue;
+            }
             if (0..3).any(|i| {
                 bounds[a].0[i] > bounds[b].1[i] + eps || bounds[b].0[i] > bounds[a].1[i] + eps
             }) {
@@ -192,29 +200,46 @@ pub(super) fn geometry(mesh: &Mesh, eps: f64, budget: &mut Budget) -> Result<()>
                     _ => false,
                 };
                 if !allowed {
-                    return Err(invalid(&format!(
-                        "Solid contains intersecting, overlapping or unstitched triangles at the Boolean tolerance: triangles {a}/{b}, shared={}, point={p:?}",
-                        shared.len()
-                    )));
+                    failure = Some((b, p, shared.len()));
+                    break;
                 }
             }
+        }
+        if let Some((b, p, shared)) = failure {
+            return Err(invalid(&format!(
+                "Solid contains intersecting, overlapping or unstitched triangles at the Boolean tolerance: triangles {a}/{b}, shared={shared}, point={p:?}"
+            )));
         }
     }
     Ok(())
 }
 fn winding(mesh: &Mesh, p: Point, budget: &mut Budget) -> Result<f64> {
+    winding_triangles(mesh, p, 0..mesh.indices.len() / 3, budget)
+}
+pub(super) fn winding_triangles(
+    mesh: &Mesh,
+    p: Point,
+    ids: impl Iterator<Item = usize>,
+    budget: &mut Budget,
+) -> Result<f64> {
     let mut angle = 0.;
-    for t in mesh.indices.as_chunks::<3>().0 {
+    let mut correction = 0.;
+    for i in ids {
         budget.tick(1)?;
+        let t = &mesh.indices[3 * i..3 * i + 3];
         let a = sub(mesh.point(t[0])?, p);
         let b = sub(mesh.point(t[1])?, p);
         let c = sub(mesh.point(t[2])?, p);
         let aa = norm(a);
         let bb = norm(b);
         let cc = norm(c);
-        angle += 2.
+        let term = 2.
             * dot(a, cross(b, c))
-                .atan2(aa * bb * cc + dot(a, b) * cc + dot(b, c) * aa + dot(c, a) * bb);
+                .atan2(aa * bb * cc + dot(a, b) * cc + dot(b, c) * aa + dot(c, a) * bb)
+            - correction;
+        let next = angle + term;
+        correction = (next - angle) - term;
+        angle = next;
     }
     Ok(angle / (4. * std::f64::consts::PI))
 }

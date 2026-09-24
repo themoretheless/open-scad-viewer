@@ -12,6 +12,11 @@ pub fn empty() -> Mesh {
     }
 }
 pub fn join(meshes: &[Mesh]) -> Result<Mesh> {
+    join_refs(&meshes.iter().collect::<Vec<_>>())
+}
+/// Borrowing variant of [`join`]: avoids deep-cloning operands at call sites
+/// that only hold references.
+pub fn join_refs(meshes: &[&Mesh]) -> Result<Mesh> {
     let mut out = empty();
     for m in meshes {
         m.validate()?;
@@ -119,6 +124,11 @@ pub fn clean(mut m: Mesh) -> Result<Mesh> {
     Ok(m)
 }
 pub fn hull3(meshes: &[Mesh]) -> Result<Mesh> {
+    hull3_refs(&meshes.iter().collect::<Vec<_>>())
+}
+/// Borrowing variant of [`hull3`]: avoids deep-cloning operands at call sites
+/// that only hold references.
+pub fn hull3_refs(meshes: &[&Mesh]) -> Result<Mesh> {
     let mut p: Vec<[f64; 3]> = meshes
         .iter()
         .flat_map(|m| {

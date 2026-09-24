@@ -84,21 +84,26 @@ pub(crate) const DIFFERENCE_BATCH: usize = 8;
 /// Ordered n-ary Boolean over solid operands. Union and difference route
 /// through the bound-aware folds in `polygon_core::solid::boolean`, so
 /// separated operands are joined without CSG; intersection folds pairwise.
-pub(crate) fn combine_solids(meshes: &[Mesh], op: &str) -> Result<Mesh> {
+pub(crate) fn combine_solids(meshes: &[&Mesh], op: &str) -> Result<Mesh> {
     let mut pairwise = |a: &Mesh, b: &Mesh| boolean(a, b, op);
     match (op, meshes.split_first()) {
         (_, None) => Ok(solid::empty()),
-        ("union", _) => boolean::union_many(meshes, &mut pairwise),
+        ("union", _) => boolean::union_many_refs(meshes, &mut pairwise),
         ("difference", Some((base, cutters))) => {
-            boolean::difference_many(base, cutters, &mut pairwise, DIFFERENCE_BATCH)
+            boolean::difference_many_refs(base, cutters, &mut pairwise, DIFFERENCE_BATCH)
         }
-        (_, Some((first, rest))) => {
-            let mut m = first.clone();
-            for b in rest {
-                m = pairwise(&m, b)?;
+        // Intersection folds pairwise. The first pair's result seeds the fold,
+        // so a single operand is the only case that needs an owned copy.
+        (_, Some((first, rest))) => match rest.split_first() {
+            None => Ok((*first).clone()),
+            Some((second, tail)) => {
+                let mut m = pairwise(first, second)?;
+                for b in tail {
+                    m = pairwise(&m, b)?;
+                }
+                Ok(m)
             }
-            Ok(m)
-        }
+        },
     }
 }
 pub fn dispatch(v: Value) -> Result<Value> {
@@ -213,16 +218,13 @@ pub fn dispatch(v: Value) -> Result<Value> {
             }
             return put(Shape::Profile(rings));
         }
-        let meshes = shapes
-            .iter()
-            .map(|s| solid(s).cloned())
-            .collect::<Result<Vec<_>>>()?;
+        let solids = shapes.iter().map(|s| solid(s)).collect::<Result<Vec<_>>>()?;
         let m = if action == "hull" {
-            solid::hull3(&meshes)?
+            solid::hull3_refs(&solids)?
         } else if op == "compose" {
-            solid::join(&meshes)?
+            solid::join_refs(&solids)?
         } else {
-            combine_solids(&meshes, op)?
+            combine_solids(&solids, op)?
         };
         return put(Shape::Solid(m));
     }
@@ -449,6 +451,109 @@ pub fn dispatch(v: Value) -> Result<Value> {
     }
 }
 
+/// Vertex AABB hierarchy for the convex-decomposition plane scan. The exact
+/// linear scan it replaces costs O(vertices) per triangle; a support query
+/// against this tree is O(log n) on separated geometry and never prunes a node
+/// that could contain a violating vertex (the AABB support is an upper bound
+/// on every vertex dot inside it, minus a rounding guard), so the chosen split
+/// plane — and therefore the decomposition — is unchanged.
+struct VertexTree {
+    nodes: Vec<VertexNode>,
+    order: Vec<u32>,
+}
+struct VertexNode {
+    lo: [f64; 3],
+    hi: [f64; 3],
+    children: Option<(u32, u32)>,
+    start: u32,
+    end: u32,
+}
+impl VertexTree {
+    const LEAF: usize = 8;
+    fn build(vertices: &[[f64; 3]]) -> VertexTree {
+        let mut order: Vec<u32> = (0..vertices.len() as u32).collect();
+        let mut nodes = Vec::new();
+        if !order.is_empty() {
+            let len = order.len();
+            Self::build_node(vertices, &mut order, 0, len, &mut nodes);
+        }
+        VertexTree { nodes, order }
+    }
+    fn build_node(
+        vertices: &[[f64; 3]],
+        order: &mut [u32],
+        start: usize,
+        end: usize,
+        nodes: &mut Vec<VertexNode>,
+    ) -> u32 {
+        let ids = &mut order[start..end];
+        let mut lo = [f64::INFINITY; 3];
+        let mut hi = [f64::NEG_INFINITY; 3];
+        for &i in ids.iter() {
+            let p = &vertices[i as usize];
+            for k in 0..3 {
+                lo[k] = lo[k].min(p[k]);
+                hi[k] = hi[k].max(p[k]);
+            }
+        }
+        let at = nodes.len() as u32;
+        nodes.push(VertexNode {
+            lo,
+            hi,
+            children: None,
+            start: start as u32,
+            end: end as u32,
+        });
+        if ids.len() > Self::LEAF {
+            let axis = (0..3)
+                .max_by(|&a, &b| (hi[a] - lo[a]).total_cmp(&(hi[b] - lo[b])))
+                .unwrap();
+            let mid = ids.len() / 2;
+            ids.select_nth_unstable_by(mid, |&a, &b| {
+                vertices[a as usize][axis].total_cmp(&vertices[b as usize][axis])
+            });
+            let l = Self::build_node(vertices, order, start, start + mid, nodes);
+            let r = Self::build_node(vertices, order, start + mid, end, nodes);
+            nodes[at as usize].children = Some((l, r));
+        }
+        at
+    }
+    /// True iff some vertex has `dot(n, p) - d > eps`. Leaves are tested
+    /// exactly; internal nodes are pruned only when the AABB support — an
+    /// upper bound on every contained dot, minus a rounding guard — stays
+    /// within the threshold, so the answer matches the linear scan.
+    fn any_above(&self, vertices: &[[f64; 3]], n: [f64; 3], d: f64, eps: f64) -> bool {
+        if self.nodes.is_empty() {
+            return false;
+        }
+        let mut stack = vec![0u32];
+        while let Some(i) = stack.pop() {
+            let node = &self.nodes[i as usize];
+            let support: f64 = (0..3)
+                .map(|k| if n[k] >= 0. { n[k] * node.hi[k] } else { n[k] * node.lo[k] })
+                .sum();
+            let guard = 1e-12 * (support.abs() + d.abs() + 1.);
+            if support - d <= eps - guard {
+                continue;
+            }
+            match node.children {
+                Some((l, r)) => stack.extend([l, r]),
+                None => {
+                    if self.order[node.start as usize..node.end as usize]
+                        .iter()
+                        .any(|&i| {
+                            let p = &vertices[i as usize];
+                            n[0] * p[0] + n[1] * p[1] + n[2] * p[2] - d > eps
+                        })
+                    {
+                        return true;
+                    }
+                }
+            }
+        }
+        false
+    }
+}
 fn convex_parts(mesh: &Mesh, depth: usize, parts: &mut Vec<Mesh>) -> Result<()> {
     if mesh.indices.is_empty() {
         return Ok(());
@@ -457,6 +562,8 @@ fn convex_parts(mesh: &Mesh, depth: usize, parts: &mut Vec<Mesh>) -> Result<()> 
         return Err(input("Minkowski convex decomposition budget exceeded"));
     }
     let mut split = None;
+    let vertices = mesh.positions.as_chunks::<3>().0;
+    let tree = VertexTree::build(vertices);
     for t in mesh.indices.as_chunks::<3>().0 {
         let a = mesh.point(t[0])?;
         let b = mesh.point(t[1])?;
@@ -474,13 +581,7 @@ fn convex_parts(mesh: &Mesh, depth: usize, parts: &mut Vec<Mesh>) -> Result<()> 
         }
         let n = n.map(|x| x / l);
         let d = n[0] * a[0] + n[1] * a[1] + n[2] * a[2];
-        if mesh
-            .positions
-            .as_chunks::<3>()
-            .0
-            .iter()
-            .any(|p| n[0] * p[0] + n[1] * p[1] + n[2] * p[2] - d > 1e-8)
-        {
+        if tree.any_above(vertices, n, d, 1e-8) {
             split = Some((n, d));
             break;
         }

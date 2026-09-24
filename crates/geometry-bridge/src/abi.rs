@@ -30,15 +30,29 @@ pub fn abi_export_alloc(len: usize) -> usize {
 /// Mesh pointers must come from operation 9; freeing consumes them exactly once.
 pub unsafe fn abi_free(ptr: usize, len: usize) {
     if ptr != 0 {
-        unsafe {
-            drop(Box::from_raw(std::ptr::slice_from_raw_parts_mut(
-                ptr as *mut u8,
-                len,
-            )))
-        }
+        // A packed response Vec may have capacity > length (amortized growth);
+        // its true capacity is recorded by `packed`. Everything else allocated
+        // here (`abi_alloc`, `abi_export_alloc`, boxed slices) has
+        // capacity == length, which is the fallback.
+        let cap = LAST_RESPONSE_CAP.with(|c| {
+            let (p, cap) = c.get();
+            if p == ptr {
+                c.set((0, 0));
+                cap
+            } else {
+                len
+            }
+        });
+        unsafe { drop(Vec::from_raw_parts(ptr as *mut u8, len, cap)) }
     }
 }
 thread_local! {static LAST_RESPONSE: std::cell::Cell<(usize, usize)> = const { std::cell::Cell::new((0, 0)) };}
+/// Capacity of the last packed response allocation. `encode_binary` grows its
+/// Vec amortized, so capacity usually exceeds length; the response is freed
+/// before the next request (see `decodePacked` on the host), so a single slot
+/// suffices. Buffers not matching the slot (request/staging allocations from
+/// `abi_alloc`, boxed slices) have capacity == length and take the fallback.
+thread_local! {static LAST_RESPONSE_CAP: std::cell::Cell<(usize, usize)> = const { std::cell::Cell::new((0, 0)) };}
 /// Native hosts fetch responses through these (the packed u64 return truncates
 /// the pointer to 32 bits, which only wasm32 linear memory can promise).
 pub fn abi_response_ptr() -> usize {
@@ -48,10 +62,16 @@ pub fn abi_response_len() -> usize {
     LAST_RESPONSE.with(|last| last.get().1)
 }
 fn packed(v: Value) -> u64 {
-    let bytes=value_codec::encode_binary(&v).unwrap_or_else(|_|value_codec::encode_binary(&json!({"ok":false,"error":{"code":"GEOMETRY_RESOURCE_LIMIT","message":"Response exceeds transport limit"}})).unwrap());
+    let mut bytes=value_codec::encode_binary(&v).unwrap_or_else(|_|value_codec::encode_binary(&json!({"ok":false,"error":{"code":"GEOMETRY_RESOURCE_LIMIT","message":"Response exceeds transport limit"}})).unwrap());
     let len = bytes.len();
-    let ptr = Box::into_raw(bytes.into_boxed_slice()) as *mut u8 as usize;
+    let cap = bytes.capacity();
+    let ptr = bytes.as_mut_ptr() as usize;
+    // Hand the Vec allocation over without the boxed-slice shrink (realloc +
+    // copy of the whole megabyte-sized response). `abi_free` reconstructs it
+    // via `Vec::from_raw_parts(ptr, len, cap)` using the recorded capacity.
+    std::mem::forget(bytes);
     LAST_RESPONSE.with(|last| last.set((ptr, len)));
+    LAST_RESPONSE_CAP.with(|last| last.set((ptr, cap)));
     ((len as u64) << 32) | ptr as u64
 }
 fn geometry(result: Result<Value>) -> Value {

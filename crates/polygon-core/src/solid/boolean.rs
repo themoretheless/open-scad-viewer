@@ -1338,15 +1338,23 @@ pub fn union_many(
     meshes: &[Mesh],
     pairwise: &mut dyn FnMut(&Mesh, &Mesh) -> Result<Mesh>,
 ) -> Result<Mesh> {
-    let boxes: Vec<_> = meshes.iter().map(bounds).collect();
+    union_many_refs(&meshes.iter().collect::<Vec<_>>(), pairwise)
+}
+/// Borrowing variant of [`union_many`]: call sites that only hold references
+/// avoid deep-cloning every operand's positions/indices at the boundary.
+pub fn union_many_refs(
+    meshes: &[&Mesh],
+    pairwise: &mut dyn FnMut(&Mesh, &Mesh) -> Result<Mesh>,
+) -> Result<Mesh> {
+    let boxes: Vec<_> = meshes.iter().map(|m| bounds(m)).collect();
     let pad = bounds_pad(&boxes);
     let mut parts = Vec::new();
     for group in connected_groups(&boxes, pad) {
         let mut folded: Option<Mesh> = None;
         for i in group {
             folded = Some(match folded {
-                None => meshes[i].clone(),
-                Some(m) => pairwise(&m, &meshes[i])?,
+                None => (*meshes[i]).clone(),
+                Some(m) => pairwise(&m, meshes[i])?,
             });
         }
         if let Some(m) = folded {
@@ -1370,12 +1378,22 @@ pub fn difference_many(
     pairwise: &mut dyn FnMut(&Mesh, &Mesh) -> Result<Mesh>,
     batch: usize,
 ) -> Result<Mesh> {
+    difference_many_refs(base, &cutters.iter().collect::<Vec<_>>(), pairwise, batch)
+}
+/// Borrowing variant of [`difference_many`]: avoids deep-cloning the cutters
+/// at call sites that only hold references.
+pub fn difference_many_refs(
+    base: &Mesh,
+    cutters: &[&Mesh],
+    pairwise: &mut dyn FnMut(&Mesh, &Mesh) -> Result<Mesh>,
+    batch: usize,
+) -> Result<Mesh> {
     let batch = batch.max(1);
     let base_box = bounds(base);
     if base_box.is_none() {
         return Ok(crate::solid::primitives::empty());
     }
-    let boxes: Vec<_> = cutters.iter().map(bounds).collect();
+    let boxes: Vec<_> = cutters.iter().map(|m| bounds(m)).collect();
     let pad = bounds_pad(&[&[base_box][..], &boxes[..]].concat());
     let mut batches: Vec<Vec<usize>> = Vec::new();
     for (i, cutter_box) in boxes.iter().enumerate() {
@@ -1396,9 +1414,9 @@ pub fn difference_many(
     let mut result = base.clone();
     for members in batches {
         let cutter = if members.len() == 1 {
-            cutters[members[0]].clone()
+            (*cutters[members[0]]).clone()
         } else {
-            let parts: Vec<Mesh> = members.iter().map(|&j| cutters[j].clone()).collect();
+            let parts: Vec<Mesh> = members.iter().map(|&j| (*cutters[j]).clone()).collect();
             crate::solid::primitives::join(&parts)?
         };
         result = pairwise(&result, &cutter)?;
