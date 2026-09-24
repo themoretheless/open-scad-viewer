@@ -69,8 +69,10 @@ pub mod mesh_shell;
 pub mod mesh_surface_groups;
 pub mod print_geometry;
 mod print_strength;
+mod structural_sections;
 mod scene_picking;
 mod truss;
+mod bonded_solid;
 mod viewport;
 
 #[cfg(feature = "gpu")]
@@ -522,9 +524,11 @@ pub fn boundary_curves(mesh: &Mesh) -> Result<Vec<Curve>> {
 pub fn dispatch(mut v: Value) -> Result<Value> {
     match v["op"].as_str().unwrap_or("") {
         "truss_solve" | "truss_solve_wrenches" => truss::solve(v),
+        "bonded_solid_solve" => bonded_solid::solve(v),
         "truss_screen" => print_strength::screening(v),
         "print_strength_profile" => print_strength::profile(v),
         "thermal_strength" => print_strength::thermal(v),
+        "structural_sections" => structural_sections::inspect(v),
         "brep_intersect_surface_surface"
         | "brep_intersect_curve_segment"
         | "brep_intersect_curve_plane"

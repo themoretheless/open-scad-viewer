@@ -35,6 +35,15 @@ const server=await createServer({logLevel:'silent',server:{host:'127.0.0.1',port
     const body=extrudeDirectSketch({id:'s',name:'Box',closed:true,points:[[0,0],[10,0],[10,10],[0,10]]},10,'0');
     window.__trussProbe.buildSurfaces=inspectBuildSurfaces(body.mesh,{buildDirection:[0,0,1],coneDegrees:45,planeOffsetMm:0,planeToleranceMm:0});
     const props=reactive({meshes:previewMeshes({version:1,sketches:[],bodies:[body]}),selection:[0],hit:null,source:'cube(10);',ready:true,locale:'en',initialAction:'lighten'});
+    const originalMeshes=props.meshes;
+    window.__trussProbe.sectionFixture=kind=>{
+      if(kind==='original'){props.meshes=originalMeshes;return}
+      const a=body.mesh,n=a.positions.length/3,inner=[...a.indices];
+      const cavity=kind==='cavity';
+      if(cavity)for(let i=0;i<inner.length;i+=3)[inner[i+1],inner[i+2]]=[inner[i+2],inner[i+1]];
+      const mesh={positions:[...a.positions,...a.positions.map(p=>cavity?p*.6+2:p+10)],indices:[...a.indices,...inner.map(i=>i+n)]};
+      props.meshes=previewMeshes({version:1,sketches:[],bodies:[{...body,mesh}]});
+    };
     let renderer;
     if(${process.env.TRUSS_VIEWPORT==='1'}){
       const canvas=document.createElement('canvas');canvas.id='field-viewport';canvas.style.cssText='width:min(640px,100vw);height:400px;position:fixed;right:0;top:0';document.body.append(canvas);
@@ -84,6 +93,81 @@ try{
       body{font-family:Arial,sans-serif;background:#e5e7e9;margin:0}</style>
       <div id="app"></div><script type="module" src="/__truss-host.js"></script>`}))
     await page.goto(`${origin}__probe`)
+    const bondedPanel=page.locator('.bonded-solid')
+    await bondedPanel.locator('summary').click()
+    await bondedPanel.getByRole('button',{name:'Synthetic example — not plastic properties',exact:true}).click()
+    await bondedPanel.getByRole('button',{name:'Solve connections',exact:true}).click()
+    await bondedPanel.getByRole('region',{name:'Bonded assembly results'}).waitFor()
+    const bondedDownload=page.waitForEvent('download')
+    await bondedPanel.getByRole('link',{name:'bonded-assembly.json'}).click()
+    const bondedFile=`/private/tmp/osv-bonded-${name}.json`
+    await (await bondedDownload).saveAs(bondedFile)
+    const bondedReport=JSON.parse(await readFile(bondedFile,'utf8'))
+    assert.ok(Math.abs(bondedReport.result.bonds[0].forceOnShellN[2]-3)<1e-9)
+    assert.ok(Math.abs(bondedReport.result.bonds[0].utilization-.6)<1e-9)
+    assert.equal(bondedReport.model.profile.grade,'Synthetic example')
+    await bondedPanel.getByRole('region',{name:'Bonded assembly results'}).scrollIntoViewIfNeeded()
+    await page.screenshot({path:`/private/tmp/osv-bonded-${name}.png`})
+    const overload=structuredClone(bondedReport.model);overload.safetyFactor=2
+    await bondedPanel.getByLabel('Assembly JSON',{exact:true}).fill(JSON.stringify(overload))
+    assert.equal(await bondedPanel.getByRole('region',{name:'Bonded assembly results'}).count(),0)
+    await bondedPanel.getByRole('button',{name:'Solve connections',exact:true}).click()
+    await bondedPanel.getByRole('region',{name:'Bonded assembly results'}).waitFor()
+    assert.match(await bondedPanel.textContent(),/A bond limit is reached/)
+    await bondedPanel.getByLabel('Assembly JSON',{exact:true}).fill('{}')
+    await bondedPanel.getByRole('button',{name:'Solve connections',exact:true}).click()
+    await bondedPanel.getByRole('alert').waitFor()
+    assert.equal(await bondedPanel.getByRole('region',{name:'Bonded assembly results'}).count(),0)
+    await bondedPanel.locator('summary').click()
+    const sectionPanel=page.locator('.structural-sections')
+    await sectionPanel.locator('summary').click()
+    await sectionPanel.getByLabel('Section positions, mm (increasing)',{exact:true}).fill('5')
+    await sectionPanel.getByRole('button',{name:'Inspect sections',exact:true}).click()
+    await sectionPanel.getByRole('region',{name:'Finished-body section results'}).waitFor()
+    const sectionDownload=page.waitForEvent('download')
+    await sectionPanel.getByRole('link',{name:'structural-sections.json'}).click()
+    const sectionFile=`/private/tmp/osv-structural-sections-${name}.json`
+    await (await sectionDownload).saveAs(sectionFile)
+    const sectionReport=JSON.parse(await readFile(sectionFile,'utf8'))
+    assert.equal(sectionReport.modelKind,'finished-mesh-sections-v1')
+    assert.ok(Math.abs(sectionReport.sections[0].properties.areaMm2-100)<1e-9)
+    assert.equal(sectionReport.sourceMesh.indices.length/3,sectionReport.triangleCount)
+    assert.equal(sectionReport.connectivity.components.length,1)
+    assert.equal(sectionReport.connectivity.components[0].sourceTriangles.length,sectionReport.triangleCount)
+    assert.equal(sectionReport.connectivity.materialConnectivity,'classified-at-tolerance')
+    assert.equal(sectionReport.materialAudit.status,'classified')
+    assert.equal(sectionReport.materialAudit.materialRegions,1)
+    assert.equal(sectionReport.selfIntersections,'checked-at-tolerance')
+    assert.equal(sectionReport.connectivity.sharedVertices.length,0)
+    await sectionPanel.getByRole('region',{name:'Finished-body section results'}).scrollIntoViewIfNeeded()
+    await page.screenshot({path:`/private/tmp/osv-structural-sections-${name}.png`})
+    await sectionPanel.getByLabel('Section positions, mm (increasing)',{exact:true}).fill('6')
+    assert.equal(await sectionPanel.getByRole('region',{name:'Finished-body section results'}).count(),0)
+    for(const fixture of ['cavity','touching']){
+      await page.evaluate(kind=>window.__trussProbe.sectionFixture(kind),fixture)
+      await sectionPanel.getByLabel('Section positions, mm (increasing)',{exact:true}).fill(fixture==='cavity'?'5':'-1')
+      await sectionPanel.getByRole('button',{name:'Inspect sections',exact:true}).click()
+      await sectionPanel.getByRole('region',{name:'Finished-body section results'}).waitFor()
+      const download=page.waitForEvent('download')
+      await sectionPanel.getByRole('link',{name:'structural-sections.json'}).click()
+      const file=`/private/tmp/osv-material-${fixture}-${name}.json`
+      await (await download).saveAs(file)
+      const report=JSON.parse(await readFile(file,'utf8'))
+      if(fixture==='cavity'){
+        assert.equal(report.materialAudit.status,'classified')
+        assert.equal(report.materialAudit.materialRegions,1)
+        assert.deepEqual(report.materialAudit.shells.map(s=>[s.kind,s.parent]),[['material',null],['cavity',0]])
+        assert.match(await sectionPanel.textContent(),/Cavity/)
+      }else{
+        assert.equal(report.materialAudit.status,'unresolved')
+        assert.equal(report.connectivity.materialConnectivity,'not-established')
+        assert.match(await sectionPanel.textContent(),/Material connectivity unresolved/)
+      }
+      await sectionPanel.getByRole('region',{name:'Finished-body section results'}).scrollIntoViewIfNeeded()
+      await page.screenshot({path:`/private/tmp/osv-material-${fixture}-${name}.png`})
+    }
+    await page.evaluate(()=>window.__trussProbe.sectionFixture('original'))
+    await sectionPanel.locator('summary').click()
     await page.locator('select:has(option[value="spatial"])').selectOption('spatial')
     const panel=page.locator('.nominal-truss')
     await panel.locator('summary').first().click()

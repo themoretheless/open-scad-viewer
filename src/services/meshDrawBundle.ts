@@ -6,19 +6,26 @@ export interface BundleMesh {
   bg: GPUBindGroup
   edgeIB: GPUBuffer | null
   edgeIC: number
+  /**
+   * Vertex slot 1 binding: the morph source positions while the mesh morphs,
+   * otherwise the shared zero buffer. A start or finish of a morph changes
+   * this identity and forces a bundle rebuild.
+   */
+  morphSlot: GPUBuffer | null
 }
 
 export class MeshDrawBundle {
   private bundle: GPURenderBundle | null = null
   private meshes: BundleMesh[] = []
   private indices: Array<GPUBuffer | null> = []
+  private morphSlots: Array<GPUBuffer | null> = []
   private counts: number[] = []
   private pipeline: GPURenderPipeline | null = null
   private scene: GPUBindGroup | null = null
 
   clear() {
     this.bundle = null
-    this.meshes.length = this.indices.length = this.counts.length = 0
+    this.meshes.length = this.indices.length = this.morphSlots.length = this.counts.length = 0
     this.pipeline = null
     this.scene = null
   }
@@ -31,6 +38,7 @@ export class MeshDrawBundle {
       for (const mesh of meshes) {
         encoder.setBindGroup(1, mesh.bg)
         encoder.setVertexBuffer(0, mesh.vb)
+        encoder.setVertexBuffer(1, mesh.morphSlot!)
         encoder.setIndexBuffer(edges ? mesh.edgeIB! : mesh.ib, 'uint32')
         encoder.drawIndexed(edges ? mesh.edgeIC : mesh.ic)
       }
@@ -45,17 +53,19 @@ export class MeshDrawBundle {
     for (let i = 0; !changed && i < meshes.length; i++) {
       const mesh = meshes[i]
       changed = this.meshes[i] !== mesh || this.indices[i] !== (edges ? mesh.edgeIB : mesh.ib)
+        || this.morphSlots[i] !== mesh.morphSlot
         || this.counts[i] !== (edges ? mesh.edgeIC : mesh.ic)
     }
     if (changed) {
       const encoder = device.createRenderBundleEncoder({ colorFormats: [format], depthStencilFormat: 'depth24plus' })
       encode(encoder)
       const bundle = encoder.finish()
-      this.meshes.length = this.indices.length = this.counts.length = meshes.length
+      this.meshes.length = this.indices.length = this.morphSlots.length = this.counts.length = meshes.length
       for (let i = 0; i < meshes.length; i++) {
         const mesh = meshes[i]
         this.meshes[i] = mesh
         this.indices[i] = edges ? mesh.edgeIB : mesh.ib
+        this.morphSlots[i] = mesh.morphSlot
         this.counts[i] = edges ? mesh.edgeIC : mesh.ic
       }
       this.pipeline = pipeline

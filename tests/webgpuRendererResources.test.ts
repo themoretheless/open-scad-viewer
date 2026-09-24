@@ -161,7 +161,7 @@ describe('WebGPURenderer retained geometry resources', () => {
       0.125, 0.375, 0.75, 0.625,
       alpha, 0, edge, 0,
     ]
-    expect(uniform.size).toBe(160)
+    expect(uniform.size).toBe(176)
     expect(uniform.written.every(byte => byte === 1)).toBe(true)
     const values = new Float32Array(uniform.contents.buffer)
     expected.forEach((value, index) => expect(values[index]).toBeCloseTo(value, 6))
@@ -364,6 +364,47 @@ describe('parameter geometry animation', () => {
     const reduced = { ...fixture(20), entityId: first.entityId, indices: changed.indices }
     renderer.setMeshes([reduced], { animate: true })
     expect(new Float32Array(internal.meshes[0].vb.contents.buffer)).toEqual(reduced.vertices)
+  })
+
+  it('drives vertex morphs from a source buffer and blend uniform without rewriting vertices', () => {
+    vi.stubGlobal('GPUBufferUsage', { VERTEX: 1, INDEX: 2, UNIFORM: 4, COPY_DST: 8 })
+    const { renderer, internal } = harness()
+    const state = renderer as unknown as {
+      meshes: Array<{
+        morph?: { from: Float32Array; started: number }
+        morphVB: { contents: Uint8Array } | null
+        morphSlot: unknown
+        vb: { contents: Uint8Array }
+        ub: { contents: Uint8Array }
+      }>
+      advanceGeometryAnimation(now: number): boolean
+    }
+    const first = { ...fixture(), entityId: 'entity:part' as const }
+    renderer.setMeshes([first])
+    const moved = { ...fixture(), entityId: first.entityId }
+    moved.transform = new Float32Array(first.transform)
+    moved.transform[3] = 20
+    renderer.setMeshes([moved], { animate: true })
+
+    const mesh = state.meshes[0]
+    expect(mesh.morph).toBeDefined()
+    // The destination stays in the vertex buffer; the morph source (positions
+    // only, stride 3) lives in a dedicated slot-1 buffer.
+    expect(new Float32Array(mesh.vb.contents.buffer)).toEqual(moved.vertices)
+    expect(mesh.morphVB).not.toBeNull()
+    expect(new Float32Array(mesh.morphVB!.contents.buffer)).toEqual(new Float32Array([0, 0, 0, 1, 0, 0, 0, 1, 0]))
+    expect(mesh.morphSlot).toBe(mesh.morphVB)
+
+    const start = mesh.morph!.started
+    expect(state.advanceGeometryAnimation(start + 90)).toBe(true)
+    // Only the blend weight uniform changes per frame; vertex bytes are untouched.
+    expect(new Float32Array(mesh.vb.contents.buffer)).toEqual(moved.vertices)
+    expect(new Float32Array(mesh.ub.contents.buffer)[40]).toBeCloseTo(0.5, 6)
+
+    expect(state.advanceGeometryAnimation(start + 1000)).toBe(false)
+    expect(state.meshes[0].morph).toBeUndefined()
+    expect(state.meshes[0].morphSlot).toBeNull()
+    expect(new Float32Array(state.meshes[0].ub.contents.buffer)[40]).toBe(0)
   })
 })
 

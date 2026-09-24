@@ -19,6 +19,7 @@
 
 pub const MAX_POINTS: usize = 16_384;
 
+pub mod bonded_solid;
 pub mod print_strength;
 pub mod thermal_strength;
 pub mod truss;

@@ -135,6 +135,32 @@ pub fn solve(model: &Model) -> Result<Response> {
             }
         }
     }
+    let mut result = solve_stiffness(model, &stiffness)?;
+    let mut axial_forces_n = Vec::with_capacity(bars.len());
+    let mut axial_stresses_mpa = Vec::with_capacity(bars.len());
+    for bar in &bars {
+        let [a, b] = bar.nodes;
+        let extension = (0..3)
+            .map(|k| {
+                (result.displacements_mm[b][k] - result.displacements_mm[a][k]) * bar.direction[k]
+            })
+            .sum::<f64>();
+        let force = bar.stiffness * extension;
+        let stress = force / bar.area;
+        if !force.is_finite() || !stress.is_finite() {
+            return Err(numeric());
+        }
+        axial_forces_n.push(force);
+        axial_stresses_mpa.push(stress);
+    }
+    result.axial_forces_n = axial_forces_n;
+    result.axial_stresses_mpa = axial_stresses_mpa;
+    Ok(result)
+}
+
+/// Shared bounded linear solve. Callers validate their model and assembled matrix.
+pub(crate) fn solve_stiffness(model: &Model, stiffness: &DMatrix<f64>) -> Result<Response> {
+    let ndof = model.nodes_mm.len() * 3;
     if stiffness.iter().any(|v| !v.is_finite()) {
         return Err(numeric());
     }
@@ -183,6 +209,22 @@ pub fn solve(model: &Model) -> Result<Response> {
         }
     }
 
+    // Normwise backward-error scale also handles nominally zero rows whose
+    // tiny transverse displacement is only floating-point roundoff.
+    let matrix_norm = (0..ndof)
+        .map(|i| (0..ndof).map(|j| stiffness[(i, j)].abs()).sum::<f64>())
+        .fold(0., f64::max);
+    let displacement_norm = displacement.iter().map(|x| x.abs()).fold(0., f64::max);
+    let force_norm = model
+        .forces_n
+        .iter()
+        .flatten()
+        .map(|x| x.abs())
+        .fold(0., f64::max);
+    let system_scale = matrix_norm * displacement_norm + force_norm;
+    if !system_scale.is_finite() {
+        return Err(numeric());
+    }
     let mut reactions = vec![[0.; 3]; model.nodes_mm.len()];
     let mut max_relative_residual = 0f64;
     for i in 0..ndof {
@@ -200,10 +242,10 @@ pub fn solve(model: &Model) -> Result<Response> {
         if model.restrained[i / 3][i % 3] {
             reactions[i / 3][i % 3] = residual;
         } else {
-            let relative = if scale == 0. {
+            let relative = if system_scale == 0. {
                 0.
             } else {
-                residual.abs() / scale
+                residual.abs() / system_scale
             };
             max_relative_residual = max_relative_residual.max(relative);
         }
@@ -221,29 +263,14 @@ pub fn solve(model: &Model) -> Result<Response> {
         .iter()
         .map(|d| d[0].hypot(d[1]).hypot(d[2]))
         .fold(0., f64::max);
-    let mut axial_forces_n = Vec::with_capacity(bars.len());
-    let mut axial_stresses_mpa = Vec::with_capacity(bars.len());
-    for bar in &bars {
-        let [a, b] = bar.nodes;
-        let extension = (0..3)
-            .map(|k| (displacement[b * 3 + k] - displacement[a * 3 + k]) * bar.direction[k])
-            .sum::<f64>();
-        let force = bar.stiffness * extension;
-        let stress = force / bar.area;
-        if !force.is_finite() || !stress.is_finite() {
-            return Err(numeric());
-        }
-        axial_forces_n.push(force);
-        axial_stresses_mpa.push(stress);
-    }
     if !max_deflection_mm.is_finite() {
         return Err(numeric());
     }
     Ok(Response {
         displacements_mm,
         reactions_n: reactions,
-        axial_forces_n,
-        axial_stresses_mpa,
+        axial_forces_n: Vec::new(),
+        axial_stresses_mpa: Vec::new(),
         max_deflection_mm,
         max_relative_residual,
         free_dofs: free.len(),

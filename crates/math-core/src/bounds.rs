@@ -22,9 +22,9 @@ impl PointBounds {
             min,
             max,
             center: [
-                0.5 * (min[0] + max[0]),
-                0.5 * (min[1] + max[1]),
-                0.5 * (min[2] + max[2]),
+                min[0].midpoint(max[0]),
+                min[1].midpoint(max[1]),
+                min[2].midpoint(max[2]),
             ],
             extent: [max[0] - min[0], max[1] - min[1], max[2] - min[2]],
         }

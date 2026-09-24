@@ -16,7 +16,7 @@ function harness() {
   const pass = { ...encoder(), executeBundles: execute } as unknown as GPURenderPassEncoder
   const device = { createRenderBundleEncoder: create } as unknown as GPUDevice
   const pipeline = {} as GPURenderPipeline, scene = {} as GPUBindGroup
-  const meshes = Array.from({ length: 32 }, () => ({ vb: {}, ib: {}, ic: 3, bg: {}, edgeIB: {}, edgeIC: 6 } as BundleMesh))
+  const meshes = Array.from({ length: 32 }, () => ({ vb: {}, ib: {}, ic: 3, bg: {}, edgeIB: {}, edgeIC: 6, morphSlot: {} } as BundleMesh))
   const cache = new MeshDrawBundle()
   const draw = (list = meshes, edges = false) => cache.draw(pass, device, 'bgra8unorm', pipeline, scene, list, edges)
   return { cache, draw, meshes, create, execute, commands }
@@ -45,6 +45,22 @@ describe('retained draw commands', () => {
     expect(h.create).toHaveBeenCalledTimes(6)
     const last = h.execute.mock.calls.at(-1)![0][0]
     expect(last.commands.find((c: unknown[]) => c[0] === 'draw')).toEqual(['draw', 12])
+  })
+
+  it('rebuilds when a mesh starts or finishes a morph and binds the morph slot', () => {
+    const h = harness()
+    h.draw()
+    const bundle = h.execute.mock.calls[0][0][0]
+    expect(bundle.commands.filter((c: unknown[]) => c[0] === 'vertex' && c[1] === 1)).toHaveLength(32)
+    h.meshes[0] = { ...h.meshes[0], morphSlot: { morph: true } as GPUBuffer }
+    h.draw()
+    expect(h.create).toHaveBeenCalledTimes(2)
+    const morphed = h.execute.mock.calls[1][0][0]
+    expect(morphed.commands.filter((c: unknown[]) => c[0] === 'vertex' && c[1] === 1)).toHaveLength(32)
+    expect(morphed.commands.find((c: unknown[]) => c[0] === 'vertex' && c[1] === 1)[2]).toEqual(h.meshes[0].morphSlot)
+    h.meshes[0] = { ...h.meshes[0], morphSlot: bundle.commands.find((c: unknown[]) => c[0] === 'vertex' && c[1] === 1)[2] }
+    h.draw()
+    expect(h.create).toHaveBeenCalledTimes(3)
   })
 
   it('clears old references on empty lists and after scene/device teardown', () => {

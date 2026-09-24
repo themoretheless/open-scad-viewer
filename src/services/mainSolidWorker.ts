@@ -1,3 +1,4 @@
+import {parseBondedSolidInput} from './bondedSolidProtocol'
 import type {CadOptions} from './cadWorkbench'
 import type {MeshData} from '../core/mesh'
 import type {PickHit} from './rendererContracts'
@@ -5,7 +6,7 @@ import type {DirectDocument} from './directModeling'
 import type {MainOperation,MainParameters} from './mainModeling'
 import type {TrussInput} from './trussAnalysis'
 import {resolveTrussScenario, type TrussScenario} from './trussScenario'
-import {checkLatticeGraphInput, type LatticeGraphMesh} from './latticeGraphProtocol'
+import {checkLatticeGraphInput, checkLatticeGraphMeshInput, type LatticeGraphMesh} from './latticeGraphProtocol'
 import type {LighteningOptions} from './solidLightening'
 import {MainSolidWorkerClient,type MainSolidRunOptions} from './mainSolidWorkerClient'
 
@@ -42,4 +43,16 @@ export async function computeNominalLatticeGraph(mesh:LatticeGraphMesh,options:L
  checkLatticeGraphInput(mesh,options)
  return shared.run({kind:'latticeGraph',mesh:{vertices:mesh.vertices,indices:mesh.indices,transform:mesh.transform},options:{...options}},
   {...runOptions,timeoutMs:runOptions.timeoutMs??30000})
+}
+
+export function computeStructuralSections(mesh:LatticeGraphMesh,axis:'x'|'y'|'z',stations:number[],options:MainSolidRunOptions={}){
+ checkLatticeGraphMeshInput(mesh)
+ if(!Array.isArray(stations)||!stations.length||stations.length>64)throw new Error('Provide 1-64 section positions.')
+ return shared.run({kind:'structuralSections',mesh:{vertices:mesh.vertices,indices:mesh.indices,transform:mesh.transform},axis,stations:[...stations]},
+  {...options,timeoutMs:options.timeoutMs??30000})
+}
+
+export function computeBondedSolid(inputJson:string,options:MainSolidRunOptions={}){
+ parseBondedSolidInput(inputJson)
+ return shared.run({kind:'bondedSolid',inputJson},{...options,timeoutMs:options.timeoutMs??30000})
 }

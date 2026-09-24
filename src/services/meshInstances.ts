@@ -1,5 +1,6 @@
 import type { Mat4 } from './math3d'
 import type { BundleMesh } from './meshDrawBundle'
+import { OBJECT_UNIFORM_LAYOUT, instancedObjectShader } from './shaders'
 
 export interface InstanceMesh extends BundleMesh {
   readonly transform: Mat4
@@ -11,24 +12,13 @@ export interface InstanceMesh extends BundleMesh {
   readonly styleHovered: number
 }
 
-/** Derive the storage variant from the same shading expressions as single objects. */
-export function instancedObjectShader(source: string, output: 'V' | 'EdgeV') {
-  const replacements = [
-    ['var<uniform> ob: Obj;', 'var<storage, read> objects: array<Obj>;'],
-    [`struct ${output} {`, `struct ${output} { @location(2) @interpolate(flat) instance: u32,`],
-    ['@vertex fn vs(', '@vertex fn vs(@builtin(instance_index) instance: u32, '],
-    [` -> ${output} {`, ` -> ${output} {\n  let ob = objects[instance];`],
-    [`return ${output}(`, `return ${output}(instance, `],
-    [`@fragment fn fs(v: ${output}) -> @location(0) vec4f {`, `@fragment fn fs(v: ${output}) -> @location(0) vec4f {\n  let ob = objects[v.instance];`],
-  ]
-  for (const [from, to] of replacements) {
-    if (source.split(from).length !== 2) throw new Error(`Instanced shader contract changed: ${from}`)
-    source = source.replace(from, to)
-  }
-  return source
-}
-
 interface Group { mesh: InstanceMesh; start: number; count: number; ib: GPUBuffer; ic: number }
+
+/** Per-instance Obj record: model (16) + nmat (16) + color (4) + style (4) + morph (4) floats. */
+const INSTANCE_FLOATS = OBJECT_UNIFORM_LAYOUT.floats
+const INSTANCE_BYTES = OBJECT_UNIFORM_LAYOUT.bytes
+const STYLE_FLOAT_OFFSET = OBJECT_UNIFORM_LAYOUT.styleFloatOffset
+const MORPH_FLOAT_OFFSET = OBJECT_UNIFORM_LAYOUT.morphFloatOffset
 
 /** Consecutive equal geometry only: preserves source order and transparency order. */
 export class MeshInstances {
@@ -42,6 +32,7 @@ export class MeshInstances {
   private uploadPending = false
   private edgeBuffers: Array<GPUBuffer | null> = []
   private edgeCounts: number[] = []
+  private morphDummy: GPUBuffer | null = null
 
   clear() {
     this.buffer?.destroy()
@@ -56,7 +47,7 @@ export class MeshInstances {
 
   draw(pass: GPURenderPassEncoder, device: GPUDevice, layout: GPUBindGroupLayout,
     pipeline: GPURenderPipeline, scene: GPUBindGroup, meshes: readonly InstanceMesh[], edges = false): boolean {
-    if (meshes.length < 16 || meshes.length * 160 > device.limits.maxStorageBufferBindingSize) {
+    if (meshes.length < 16 || meshes.length * INSTANCE_BYTES > device.limits.maxStorageBufferBindingSize) {
       if (this.meshes.length) this.clear()
       return false
     }
@@ -85,7 +76,7 @@ export class MeshInstances {
       this.eligible = this.groups.length * 4 <= meshes.length
     }
     if (!this.eligible) return false
-    const floats = meshes.length * 40
+    const floats = meshes.length * INSTANCE_FLOATS
     if (this.data.length < floats) {
       const capacity = Math.min(device.limits.maxStorageBufferBindingSize, Math.max(floats * 4, this.data.byteLength * 2))
       const buffer = device.createBuffer({ size: capacity, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST })
@@ -102,15 +93,15 @@ export class MeshInstances {
       // Hover/selection touches only the 4 style floats of a few instances;
       // write those 16-byte slices instead of the whole buffer.
       for (let i = 0; i < meshes.length; i++) {
-        const mesh = meshes[i], offset = i * 40
+        const mesh = meshes[i], offset = i * INSTANCE_FLOATS
         const alpha = Math.fround(mesh.styleAlpha), selected = Math.fround(mesh.styleSelected)
         const edge = Math.fround(mesh.styleEdge), hovered = Math.fround(mesh.styleHovered)
-        if (this.data[offset + 36] !== alpha || this.data[offset + 37] !== selected
-          || this.data[offset + 38] !== edge || this.data[offset + 39] !== hovered) {
-          this.data[offset + 36] = alpha; this.data[offset + 37] = selected
-          this.data[offset + 38] = edge; this.data[offset + 39] = hovered
+        if (this.data[offset + STYLE_FLOAT_OFFSET] !== alpha || this.data[offset + STYLE_FLOAT_OFFSET + 1] !== selected
+          || this.data[offset + STYLE_FLOAT_OFFSET + 2] !== edge || this.data[offset + STYLE_FLOAT_OFFSET + 3] !== hovered) {
+          this.data[offset + STYLE_FLOAT_OFFSET] = alpha; this.data[offset + STYLE_FLOAT_OFFSET + 1] = selected
+          this.data[offset + STYLE_FLOAT_OFFSET + 2] = edge; this.data[offset + STYLE_FLOAT_OFFSET + 3] = hovered
           try {
-            device.queue.writeBuffer(this.buffer!, i * 160 + 144, this.data, offset + 36, 4)
+            device.queue.writeBuffer(this.buffer!, i * INSTANCE_BYTES + OBJECT_UNIFORM_LAYOUT.styleByteOffset, this.data, offset + STYLE_FLOAT_OFFSET, 4)
           } catch (error) {
             // Retry as a full upload on the next frame, matching the old contract.
             this.uploadPending = true
@@ -122,19 +113,26 @@ export class MeshInstances {
     if (changed) this.uploadPending = true
     if (this.uploadPending) {
       for (let i = 0; i < meshes.length; i++) {
-        const mesh = meshes[i], offset = i * 40
+        const mesh = meshes[i], offset = i * INSTANCE_FLOATS
         for (let row = 0; row < 4; row++) for (let column = 0; column < 4; column++) this.data[offset + column * 4 + row] = mesh.transform[row * 4 + column]
         this.data.set(mesh.inverseTransform, offset + 16)
         this.data.set(mesh.color, offset + 32)
-        this.data[offset + 36] = mesh.styleAlpha; this.data[offset + 37] = mesh.styleSelected
-        this.data[offset + 38] = mesh.styleEdge; this.data[offset + 39] = mesh.styleHovered
+        this.data[offset + STYLE_FLOAT_OFFSET] = mesh.styleAlpha; this.data[offset + STYLE_FLOAT_OFFSET + 1] = mesh.styleSelected
+        this.data[offset + STYLE_FLOAT_OFFSET + 2] = mesh.styleEdge; this.data[offset + STYLE_FLOAT_OFFSET + 3] = mesh.styleHovered
+        // Instances never morph; keep the blend weight at rest.
+        this.data[offset + MORPH_FLOAT_OFFSET] = 0; this.data[offset + MORPH_FLOAT_OFFSET + 1] = 0
+        this.data[offset + MORPH_FLOAT_OFFSET + 2] = 0; this.data[offset + MORPH_FLOAT_OFFSET + 3] = 0
       }
       device.queue.writeBuffer(this.buffer!, 0, this.data, 0, floats)
       this.uploadPending = false
     }
+    // Instanced pipelines declare a second vertex buffer (morph source);
+    // morphing meshes never reach this path, so a zero dummy always suffices.
+    if (!this.morphDummy) this.morphDummy = device.createBuffer({ size: 12, usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST })
     pass.setPipeline(pipeline)
     pass.setBindGroup(0, scene)
     pass.setBindGroup(1, this.group!)
+    pass.setVertexBuffer(1, this.morphDummy)
     for (const group of this.groups) {
       pass.setVertexBuffer(0, group.mesh.vb)
       pass.setIndexBuffer(group.ib, 'uint32')

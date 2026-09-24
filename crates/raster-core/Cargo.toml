@@ -1,0 +1,21 @@
+[package]
+name = "raster-core"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[dependencies]
+wgpu = { version = "30", default-features = false, features = ["metal", "vulkan", "wgsl", "std"] }
+gpu-compute = { path = "../gpu-compute" }
+
+# Windows also exposes NVIDIA/AMD/Intel through DX12; wgpu `Backends::PRIMARY`
+# keeps Vulkan first and DX12 as the second native option.
+[target.'cfg(windows)'.dependencies]
+wgpu = { version = "30", default-features = false, features = ["dx12"] }
+
+[dev-dependencies]
+# WGSL validation for the shipped shaders. The version tracks the wgpu 30 line
+# so `cargo test` compiles exactly what the browser's WebGPU and the native
+# wgpu backend will compile.
+naga = { version = "30", features = ["wgsl-in"] }

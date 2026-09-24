@@ -46,7 +46,7 @@ pub fn screening(v: Value) -> Result<Value> {
     ))
 }
 
-fn parse_profile(p: &Value) -> Result<PrintProfile> {
+pub(crate) fn parse_profile(p: &Value) -> Result<PrintProfile> {
     require_exact_fields(
         p,
         &[

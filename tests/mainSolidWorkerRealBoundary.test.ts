@@ -1,3 +1,4 @@
+import {bondedSolidExample} from '../src/features/bondedSolidExample'
 import {Worker} from 'node:worker_threads'
 import {afterEach, expect, it, vi} from 'vitest'
 import {MainSolidWorkerClient, type MainSolidPort} from '../src/services/mainSolidWorkerClient'
@@ -138,4 +139,13 @@ it('generates nominal graphs off-thread and exposes, rather than hides, their bo
   await expect(client.run({kind:'latticeGraph',mesh:flat,options:latticeOptions})).rejects.toThrow('three-dimensional bounds')
   expect(await client.run({kind:'latticeGraph',mesh:box,options:latticeOptions})).toEqual(graph)
   expect(workers).toHaveLength(1)
+},30000)
+
+it('transfers loads across explicit solid bonds in the real worker and preserves solver refusal',async()=>{
+  const client=new MainSolidWorkerClient(realWorker);clients.push(client)
+  const result=await client.run({kind:'bondedSolid',inputJson:JSON.stringify(bondedSolidExample)})
+  expect(result.bonds[0].forceOnShellN[2]).toBeCloseTo(3,10)
+  expect(result.bonds[0].utilization).toBeCloseTo(.6,10)
+  const unstable=structuredClone(bondedSolidExample);unstable.restrained.fill([false,false,false])
+  await expect(client.run({kind:'bondedSolid',inputJson:JSON.stringify(unstable)})).rejects.toMatchObject({code:'BONDED_SOLID_SOLVE'})
 },30000)

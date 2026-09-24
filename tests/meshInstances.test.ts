@@ -3,7 +3,7 @@ import { MeshInstances, type InstanceMesh } from '../src/services/meshInstances'
 import { identity } from '../src/services/math3d'
 
 function harness() {
-  vi.stubGlobal('GPUBufferUsage', { STORAGE: 1, COPY_DST: 2 })
+  vi.stubGlobal('GPUBufferUsage', { STORAGE: 1, COPY_DST: 2, VERTEX: 4 })
   const buffers: { destroy: ReturnType<typeof vi.fn> }[] = []
   const writes: Float32Array[] = []
   let failWrite = false
@@ -36,14 +36,18 @@ describe('instanced geometry commands', () => {
     const h = harness()
     expect(h.draw()).toBe(true)
     expect(h.pass.drawIndexed).toHaveBeenCalledExactlyOnceWith(3, 32, 0, 0, 0)
-    expect(h.writes[0]).toHaveLength(32 * 40)
-    const second = h.writes[0].slice(40, 80)
+    expect(h.writes[0]).toHaveLength(32 * 44)
+    const second = h.writes[0].slice(44, 88)
     expect(second[12]).toBe(3)
     expect(second[16 + 3]).toBe(-3)
-    expect([...second.slice(32)]).toEqual([...new Float32Array([1 / 32, 0.2, 0.3, 1, 1, 0, 0.7, 0])])
+    expect([...second.slice(32, 40)]).toEqual([...new Float32Array([1 / 32, 0.2, 0.3, 1, 1, 0, 0.7, 0])])
+    // The morph weight stays at rest for instances.
+    expect([...second.slice(40, 44)]).toEqual([0, 0, 0, 0])
+    // The instanced pipeline declares a second vertex buffer for morph sources.
+    expect(h.pass.setVertexBuffer.mock.calls).toContainEqual([1, h.buffers[1]])
     h.draw()
     expect(h.writes).toHaveLength(1)
-    expect(h.device.createBuffer).toHaveBeenCalledTimes(1)
+    expect(h.device.createBuffer).toHaveBeenCalledTimes(2)
   })
 
   it('preserves consecutive geometry groups and sorted object order', () => {
@@ -53,7 +57,7 @@ describe('instanced geometry commands', () => {
     h.draw(list)
     expect(h.pass.drawIndexed.mock.calls).toEqual([[3, 16, 0, 0, 0], [3, 8, 0, 0, 16], [3, 8, 0, 0, 24]])
     expect(h.writes[0][12]).toBe(31 * 3)
-    expect(h.writes[0][31 * 40 + 12]).toBe(0)
+    expect(h.writes[0][31 * 44 + 12]).toBe(0)
   })
 
   it('refreshes hover/selection uniforms and retries a failed upload', () => {
@@ -64,7 +68,7 @@ describe('instanced geometry commands', () => {
     expect(h.pass.drawIndexed).toHaveBeenCalledTimes(1)
     h.draw()
     expect(h.writes).toHaveLength(2)
-    expect([...h.writes[1].slice(3 * 40 + 36, 3 * 40 + 40)]).toEqual([...new Float32Array([0.24, 1, 0.7, 1])])
+    expect([...h.writes[1].slice(3 * 44 + 36, 3 * 44 + 40)]).toEqual([...new Float32Array([0.24, 1, 0.7, 1])])
     h.draw(); expect(h.writes).toHaveLength(2)
   })
 

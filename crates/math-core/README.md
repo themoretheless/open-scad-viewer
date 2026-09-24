@@ -318,6 +318,20 @@ bench_point_bounds` on the RTX 5090:
 
 ## Point-cloud moments
 
+`point_centroid(points)` returns the equally weighted center without computing
+squared coordinates. `weighted_point_centroid(points, weights)` accepts one finite,
+nonnegative mass per point; at least one mass must be positive. Zero masses are
+ignored, and normalization permits totals larger than `f64::MAX`. All point
+coordinates must be finite, including zero-mass points. These are discrete point
+centers, not volume centers inferred from mesh vertices.
+
+CPU moments use compensated sums and centered covariance to preserve small
+spreads at large coordinate offsets. Unrepresentable moments return
+`point_moments_overflow`; center-only callers should use `point_centroid`.
+Explicit GPU/CUDA moment paths still use f32 raw moments and do not provide the
+same numerical stability. The benchmark numbers below predate this CPU stability
+change and must be remeasured before making performance comparisons.
+
 `point_moments(points)` computes the centroid, mean outer product and central
 covariance matrix for a finite point cloud. `point_principal_axes(points,
 acceleration)` builds on that covariance to return PCA variances and unit axes

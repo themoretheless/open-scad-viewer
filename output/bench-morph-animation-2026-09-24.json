@@ -1,0 +1,73 @@
+{
+  "node": "v24.15.0",
+  "cpu": "Apple M4 Max",
+  "method": "Transform-only morph (worst case for the old path: it rewrote every vertex every frame even though from == target). 12 frames at 60 fps per rep, 9 alternating baseline/candidate samples, medians. FakeDevice models upload cost as a memcpy into the destination buffer.",
+  "samples": [
+    {
+      "vertices": 12321,
+      "triangles": 24200,
+      "framesPerRep": 12,
+      "parity": "finished vb bytes and morph state equal outside timing",
+      "setupMs": {
+        "baseline": 0.17966699999999491,
+        "candidate": 0.430499999999995
+      },
+      "msPerFrame": {
+        "baseline": 0.26620833333333377,
+        "candidate": 0.015395833333334016
+      },
+      "bytesPerFrame": {
+        "baseline": 271179.3333333333,
+        "candidate": 132
+      },
+      "writeCallsPerFrame": {
+        "baseline": 1.8333333333333333,
+        "candidate": 1.8333333333333333
+      }
+    },
+    {
+      "vertices": 103041,
+      "triangles": 204800,
+      "framesPerRep": 12,
+      "parity": "finished vb bytes and morph state equal outside timing",
+      "setupMs": {
+        "baseline": 1.1611670000000913,
+        "candidate": 1.090332999999987
+      },
+      "msPerFrame": {
+        "baseline": 0.5731770833333295,
+        "candidate": 0.017204833333333152
+      },
+      "bytesPerFrame": {
+        "baseline": 2267019.3333333335,
+        "candidate": 132
+      },
+      "writeCallsPerFrame": {
+        "baseline": 1.8333333333333333,
+        "candidate": 1.8333333333333333
+      }
+    },
+    {
+      "vertices": 1002001,
+      "triangles": 2000000,
+      "framesPerRep": 12,
+      "parity": "finished vb bytes and morph state equal outside timing",
+      "setupMs": {
+        "baseline": 11.61991599999999,
+        "candidate": 10.01883399999997
+      },
+      "msPerFrame": {
+        "baseline": 5.294100666666661,
+        "candidate": 0.016777749999998075
+      },
+      "bytesPerFrame": {
+        "baseline": 22044139.333333332,
+        "candidate": 132
+      },
+      "writeCallsPerFrame": {
+        "baseline": 1.8333333333333333,
+        "candidate": 1.8333333333333333
+      }
+    }
+  ]
+}

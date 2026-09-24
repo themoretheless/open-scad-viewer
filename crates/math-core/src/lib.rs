@@ -37,8 +37,9 @@ pub use linalg::{
 };
 pub use local_plane::{LocalPlane, local_point_planes};
 pub use moments::{
-    POINT_MOMENTS_WGSL_TEMPLATE, PointMoments, PointPlane, PointPrincipalAxes, point_fit_plane,
-    point_moments, point_moments_accelerated, point_principal_axes,
+    POINT_MOMENTS_WGSL_TEMPLATE, PointMoments, PointPlane, PointPrincipalAxes, point_centroid,
+    point_fit_plane, point_moments, point_moments_accelerated, point_principal_axes,
+    weighted_point_centroid,
 };
 pub use nearest_four::{
     FourNearest, NEAREST_FOUR_WGSL, nearest_four, nearest_four_accelerated, nearest_four_first_two,

@@ -82,179 +82,39 @@ import {
 import { TransparentSortBuffer } from './transparentOrdering'
 import { MeshDrawBundle } from './meshDrawBundle'
 import { ViewFrustum } from './viewFrustum'
-import { MeshInstances, instancedObjectShader } from './meshInstances'
+import { MeshInstances } from './meshInstances'
 import { effectiveDisplayAlpha, isTransparentAlpha } from './backendQuality'
 import { computeOrbitCameraFrame } from './orbitCameraProjection'
-
-/* ── WGSL shaders ─────────────────────────────────── */
-
-const MESH_WGSL = /* wgsl */`
-struct Scene { vp: mat4x4f, eye: vec4f, light: vec4f, ambient: vec4f, section: vec4f, options: vec4f }
-struct Obj   { model: mat4x4f, nmat: mat4x4f, color: vec4f, style: vec4f }
-
-@group(0) @binding(0) var<uniform> sc: Scene;
-@group(1) @binding(0) var<uniform> ob: Obj;
-
-struct V { @builtin(position) p: vec4f, @location(0) n: vec3f, @location(1) w: vec3f }
-
-@vertex fn vs(@location(0) pos: vec3f, @location(1) norm: vec3f) -> V {
-  let wp = (ob.model * vec4f(pos,1)).xyz;
-  let wn = normalize((ob.nmat * vec4f(norm,0)).xyz);
-  return V(sc.vp * vec4f(wp,1), wn, wp);
-}
-@fragment fn fs(v: V) -> @location(0) vec4f {
-  if (sc.options.x > 0.5 && dot(v.w, sc.section.xyz) < sc.section.w) { discard; }
-  let N = normalize(v.n);
-  let L = normalize(sc.light.xyz);
-  let V2 = normalize(sc.eye.xyz - v.w);
-  let H = normalize(L + V2);
-  let d = max(dot(N, L), 0.0);
-  let s = pow(max(dot(N, H), 0.0), 40.0);
-  let bd = max(dot(-N, L), 0.0) * 0.25;
-  let selected = mix(ob.color.rgb, vec3f(1.0, 0.52, 0.06), ob.style.y * 0.48);
-  let base = mix(selected, vec3f(0.12, 0.78, 1.0), ob.style.w * 0.38);
-  let c = sc.ambient.rgb * base + d * base + s * vec3f(0.25) + bd * base * 0.5;
-  return vec4f(c, ob.style.x);
-}
-`
-
-const DEEP_MESH_WGSL = /* wgsl */`
-struct Scene { vp: mat4x4f, eye: vec4f, light: vec4f, ambient: vec4f, section: vec4f, options: vec4f }
-struct Obj   { model: mat4x4f, nmat: mat4x4f, color: vec4f, style: vec4f }
-@group(0) @binding(0) var<uniform> sc: Scene;
-@group(1) @binding(0) var<uniform> ob: Obj;
-
-struct V { @builtin(position) p: vec4f, @location(0) w: vec3f }
-
-@vertex fn vs(@location(0) pos: vec3f) -> V {
-  let world = (ob.model * vec4f(pos, 1)).xyz;
-  return V(sc.vp * vec4f(world, 1), world);
-}
-
-@fragment fn fs(v: V) -> @location(0) vec4f {
-  if (sc.options.x > 0.5 && dot(v.w, sc.section.xyz) < sc.section.w) { discard; }
-  return vec4f(1.0, 0.42, 0.06, 0.14);
-}
-`
-
-const LINE_WGSL = /* wgsl */`
-struct Scene { vp: mat4x4f, eye: vec4f, light: vec4f, ambient: vec4f, section: vec4f, options: vec4f }
-@group(0) @binding(0) var<uniform> sc: Scene;
-
-struct V { @builtin(position) p: vec4f, @location(0) c: vec4f }
-
-@vertex fn vs(@location(0) pos: vec3f, @location(1) col: vec4f) -> V {
-  return V(sc.vp * vec4f(pos,1), col);
-}
-@fragment fn fs(v: V) -> @location(0) vec4f { return v.c; }
-`
-
-/** Full-viewport XY grid, reconstructed from camera rays with adaptive spacing. */
-const GRID_WGSL = /* wgsl */`
-struct Scene { vp: mat4x4f, eye: vec4f, light: vec4f, ambient: vec4f, section: vec4f, options: vec4f, inverseVP: mat4x4f }
-@group(0) @binding(0) var<uniform> sc: Scene;
-
-struct V { @builtin(position) p: vec4f, @location(0) near: vec4f, @location(1) far: vec4f }
-struct F { @location(0) color: vec4f, @builtin(frag_depth) depth: f32 }
-
-@vertex fn vs(@location(0) corner: vec2f) -> V {
-  return V(vec4f(corner, 0.0, 1.0),
-    sc.inverseVP * vec4f(corner, 0.0, 1.0),
-    sc.inverseVP * vec4f(corner, 1.0, 1.0));
-}
-
-fn lineMask(coord: vec2f, width: vec2f) -> f32 {
-  let g = abs(fract(coord - 0.5) - 0.5) / max(width, vec2f(0.000001));
-  return 1.0 - min(min(g.x, g.y), 1.0);
-}
-
-@fragment fn fs(v: V) -> F {
-  let near = v.near.xyz / v.near.w;
-  let far = v.far.xyz / v.far.w;
-  let ray = far - near;
-  let dz = select(-1.0, 1.0, ray.z >= 0.0) * max(abs(ray.z), 0.000001);
-  let t = -near.z / dz;
-  let world = near + t * ray;
-  let pixelWidth = max(fwidth(world.xy), vec2f(0.000001));
-  // Blend decade levels so distant areas retain a readable grid instead of
-  // losing both fixed levels. Derivatives precede all non-uniform discards.
-  let level = max(0.0, log2(max(pixelWidth.x, pixelWidth.y) * 8.0 / sc.options.y) / log2(10.0));
-  let step = sc.options.y * pow(10.0, floor(level));
-  let blend = fract(level);
-  let minor = lineMask(world.xy / step, pixelWidth / step);
-  let major = lineMask(world.xy / (step * 10.0), pixelWidth / (step * 10.0));
-  let coarse = lineMask(world.xy / (step * 100.0), pixelWidth / (step * 100.0));
-  var alpha = max(max(minor * 0.28 * (1.0 - blend), major * mix(0.55, 0.28, blend)), coarse * 0.55 * blend);
-  var color = vec3f(0.42, 0.42, 0.42);
-  let axisW = pixelWidth * 1.2;
-  if (abs(world.y) < axisW.y) { color = vec3f(0.95, 0.18, 0.16); alpha = max(alpha, 0.9); }
-  if (abs(world.x) < axisW.x) { color = vec3f(0.2, 0.85, 0.25); alpha = max(alpha, 0.9); }
-  let clip = sc.vp * vec4f(world.xy, 0.0, 1.0);
-  let depth = clip.z / clip.w;
-  if (abs(ray.z) < 0.000001 || t < 0.0 || depth < 0.0 || alpha < 0.004) { discard; }
-  // Keep the distant grid as background even beyond the model clipping range.
-  return F(vec4f(color, alpha), min(depth, 0.999999));
-}
-`
-
-const SELECTION_OVERLAY_WGSL = /* wgsl */`
-struct Scene { vp: mat4x4f, eye: vec4f, light: vec4f, ambient: vec4f, section: vec4f, options: vec4f }
-@group(0) @binding(0) var<uniform> sc: Scene;
-
-struct V { @builtin(position) p: vec4f, @location(0) c: vec4f, @location(1) w: vec3f }
-
-@vertex fn vs(@location(0) pos: vec3f, @location(1) col: vec4f) -> V {
-  var clip = sc.vp * vec4f(pos, 1);
-  clip.z -= 0.00018 * clip.w;
-  return V(clip, col, pos);
-}
-
-@fragment fn fs(v: V) -> @location(0) vec4f {
-  if (sc.options.x > 0.5 && dot(v.w, sc.section.xyz) < sc.section.w) { discard; }
-  return v.c;
-}
-`
-
-const EDGE_WGSL = /* wgsl */`
-struct Scene { vp: mat4x4f, eye: vec4f, light: vec4f, ambient: vec4f, section: vec4f, options: vec4f }
-struct Obj   { model: mat4x4f, nmat: mat4x4f, color: vec4f, style: vec4f }
-@group(0) @binding(0) var<uniform> sc: Scene;
-@group(1) @binding(0) var<uniform> ob: Obj;
-
-struct EdgeV { @builtin(position) p: vec4f, @location(0) w: vec3f }
-
-@vertex fn vs(@location(0) pos: vec3f) -> EdgeV {
-  let world = (ob.model * vec4f(pos, 1)).xyz;
-  var p = sc.vp * ob.model * vec4f(pos, 1);
-  p.z -= 0.00008 * p.w;
-  return EdgeV(p, world);
-}
-
-@fragment fn fs(v: EdgeV) -> @location(0) vec4f {
-  if (sc.options.x > 0.5 && dot(v.w, sc.section.xyz) < sc.section.w) { discard; }
-  let selected = mix(vec3f(0.025, 0.03, 0.04), vec3f(1.0, 0.55, 0.08), ob.style.y);
-  let color = mix(selected, vec3f(0.1, 0.82, 1.0), ob.style.w);
-  return vec4f(color, ob.style.z);
-}
-`
-
-function immediateObjectShader(source: string) {
-  if (!source.includes('var<uniform> ob: Obj;')) throw new Error('Immediate shader contract changed: missing object uniform')
-  return `requires immediate_address_space;\nvar<immediate> im_style: vec4f;\nfn objectStyle() -> vec4f { return im_style; }\n`
-    + source.replaceAll('ob.style', 'objectStyle()')
-}
-
-function supportsImmediateAddressSpace() {
-  return typeof navigator !== 'undefined'
-    && !!navigator.gpu
-    && navigator.gpu.wgslLanguageFeatures?.has('immediate_address_space') === true
-}
+import {
+  DEEP_MESH_WGSL,
+  EDGE_WGSL,
+  GRID_WGSL,
+  LINE_WGSL,
+  MESH_WGSL,
+  MESH_VERTEX_STRIDE,
+  MORPH_VERTEX_STRIDE,
+  OBJECT_UNIFORM_LAYOUT,
+  SELECTION_OVERLAY_WGSL,
+  immediateObjectShader,
+  instancedObjectShader,
+  supportsImmediateAddressSpace,
+} from './shaders'
 
 /* ── GPU mesh handle ──────────────────────────────── */
 
 interface GMesh {
   entityId?: MeshData['entityId']
-  morph?: { from: Float32Array; current: Float32Array; started: number; matrix?: (t: number) => Mat4; currentMatrix?: Mat4 }
+  /**
+   * Vertex morph state, blended on the GPU: the vertex shader mixes the
+   * position attribute toward `from` (vertex slot 1) by `ob.morph.x`, so the
+   * CPU never rewrites vertex buffers per frame.
+   */
+  morph?: { from: Float32Array; target: Float32Array; started: number; matrix?: (t: number) => Mat4; currentMatrix?: Mat4 }
+  /** GPU copy of `morph.from` (positions only, stride 3); capacity-grown. */
+  morphVB: GPUBuffer | null
+  morphVBCapacity: number
+  /** Buffer bound at vertex slot 1: morph source while morphing, else the shared dummy. */
+  morphSlot: GPUBuffer | null
   nativeGeometry?: MeshData['nativeGeometry']
   faceIdsAuthoritative?: boolean
   assetId?: GeometryAssetId
@@ -300,6 +160,31 @@ function sameTypedArray(left: Float32Array | Uint32Array, right: Float32Array | 
   if (left.constructor !== right.constructor || left.length !== right.length) return false
   for (let index = 0; index < left.length; index++) if (left[index] !== right[index]) return false
   return true
+}
+
+/** Positions-only (stride 3) copy of an interleaved position+normal vertex array. */
+function extractPositions(vertices: Float32Array): Float32Array {
+  const positions = new Float32Array(vertices.length / 2)
+  for (let source = 0, target = 0; source < vertices.length; source += 6, target += 3) {
+    positions[target] = vertices[source]
+    positions[target + 1] = vertices[source + 1]
+    positions[target + 2] = vertices[source + 2]
+  }
+  return positions
+}
+
+/** Local positions a morph displays at `now`, for chaining a new morph mid-flight. */
+function blendMorphPositions(morph: { from: Float32Array; target: Float32Array; started: number }, now: number): Float32Array {
+  const t = Math.min(1, Math.max(0, (now - morph.started) / 180))
+  const eased = t * t * (3 - 2 * t)
+  const target = morph.target
+  const out = new Float32Array(morph.from.length)
+  for (let index = 0, vertex = 0; index < out.length; index += 3, vertex += 6) {
+    out[index] = morph.from[index] + (target[vertex] - morph.from[index]) * eased
+    out[index + 1] = morph.from[index + 1] + (target[vertex + 1] - morph.from[index + 1]) * eased
+    out[index + 2] = morph.from[index + 2] + (target[vertex + 2] - morph.from[index + 2]) * eased
+  }
+  return out
 }
 
 
@@ -392,8 +277,11 @@ export class WebGPURenderer {
   private cameraHistory = new CameraHistory(32)
   private depthCycleState: DepthCycleState | null = null
   private styleScratch = new Float32Array(4)
-  private objectUniformScratch = new Float32Array(40)
+  private objectUniformScratch = new Float32Array(44)
+  private morphScratch = new Float32Array(4)
   private sceneUniformScratch = new Float32Array(52)
+  /** Zero positions bound at vertex slot 1 whenever a mesh is not morphing. */
+  private morphDummyVB: GPUBuffer | null = null
   // Keyed by geometryAssetId (content) so republished equal meshes hit; per
   // content id a small list of transform snapshots covers instance edits.
   private meshBoundsCache = new Map<string, {
@@ -572,6 +460,8 @@ export class WebGPURenderer {
     this.objBGL = dev.createBindGroupLayout({ entries: [
       { binding: 0, visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT, buffer: { type: 'uniform' } },
     ] })
+    this.morphDummyVB?.destroy()
+    this.morphDummyVB = dev.createBuffer({ size: 12, usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST })
 
     const meshMod = dev.createShaderModule({ code: MESH_WGSL })
     const meshLayout = dev.createPipelineLayout({ bindGroupLayouts: [this.sceneBGL, this.objBGL] })
@@ -580,17 +470,27 @@ export class WebGPURenderer {
       : null
 
     const vbl: GPUVertexBufferLayout = {
-      arrayStride: 24,
+      arrayStride: MESH_VERTEX_STRIDE,
       attributes: [
         { shaderLocation: 0, offset: 0, format: 'float32x3' },
         { shaderLocation: 1, offset: 12, format: 'float32x3' },
       ],
     }
+    // Slot 1 carries the morph source positions (stride 3); a shared zero
+    // buffer is bound while a mesh is not morphing.
+    const morphVBL: GPUVertexBufferLayout = {
+      arrayStride: MORPH_VERTEX_STRIDE,
+      attributes: [{ shaderLocation: 2, offset: 0, format: 'float32x3' }],
+    }
+    const edgeMorphVBL: GPUVertexBufferLayout = {
+      arrayStride: MORPH_VERTEX_STRIDE,
+      attributes: [{ shaderLocation: 1, offset: 0, format: 'float32x3' }],
+    }
     const ds: GPUDepthStencilState = { format: 'depth24plus', depthWriteEnabled: true, depthCompare: 'less' }
 
     const meshPipeDescriptor: GPURenderPipelineDescriptor = {
       layout: meshLayout,
-      vertex: { module: meshMod, entryPoint: 'vs', buffers: [vbl] },
+      vertex: { module: meshMod, entryPoint: 'vs', buffers: [vbl, morphVBL] },
       fragment: { module: meshMod, entryPoint: 'fs', targets: [{ format: this.fmt }] },
       primitive: { topology: 'triangle-list', cullMode: 'none' },
       depthStencil: ds,
@@ -599,7 +499,7 @@ export class WebGPURenderer {
 
     const meshPipeTDescriptor: GPURenderPipelineDescriptor = {
       layout: meshLayout,
-      vertex: { module: meshMod, entryPoint: 'vs', buffers: [vbl] },
+      vertex: { module: meshMod, entryPoint: 'vs', buffers: [vbl, morphVBL] },
       fragment: { module: meshMod, entryPoint: 'fs', targets: [{
         format: this.fmt,
         blend: {
@@ -626,7 +526,7 @@ export class WebGPURenderer {
     const deepMeshMod = dev.createShaderModule({ code: DEEP_MESH_WGSL })
     this.deepMeshPipe = dev.createRenderPipeline({
       layout: meshLayout,
-      vertex: { module: deepMeshMod, entryPoint: 'vs', buffers: [vbl] },
+      vertex: { module: deepMeshMod, entryPoint: 'vs', buffers: [vbl, morphVBL] },
       fragment: { module: deepMeshMod, entryPoint: 'fs', targets: [{
         format: this.fmt,
         blend: {
@@ -641,7 +541,7 @@ export class WebGPURenderer {
       const deepImmediateMeshMod = dev.createShaderModule({ code: immediateObjectShader(DEEP_MESH_WGSL) })
       this.deepMeshImmediatePipe = dev.createRenderPipeline({
         layout: immediateMeshLayout,
-        vertex: { module: deepImmediateMeshMod, entryPoint: 'vs', buffers: [vbl] },
+        vertex: { module: deepImmediateMeshMod, entryPoint: 'vs', buffers: [vbl, morphVBL] },
         fragment: { module: deepImmediateMeshMod, entryPoint: 'fs', targets: [{
           format: this.fmt,
           blend: {
@@ -703,10 +603,10 @@ export class WebGPURenderer {
       vertex: {
         module: edgeMod,
         entryPoint: 'vs',
-        buffers: [{
-          arrayStride: 24,
-          attributes: [{ shaderLocation: 0, offset: 0, format: 'float32x3' }],
-        }],
+        buffers: [
+          { arrayStride: MESH_VERTEX_STRIDE, attributes: [{ shaderLocation: 0, offset: 0, format: 'float32x3' }] },
+          edgeMorphVBL,
+        ],
       },
       fragment: {
         module: edgeMod,
@@ -743,10 +643,10 @@ export class WebGPURenderer {
       vertex: {
         module: edgeMod,
         entryPoint: 'vs',
-        buffers: [{
-          arrayStride: 24,
-          attributes: [{ shaderLocation: 0, offset: 0, format: 'float32x3' }],
-        }],
+        buffers: [
+          { arrayStride: MESH_VERTEX_STRIDE, attributes: [{ shaderLocation: 0, offset: 0, format: 'float32x3' }] },
+          edgeMorphVBL,
+        ],
       },
       fragment: {
         module: edgeMod,
@@ -769,10 +669,10 @@ export class WebGPURenderer {
         vertex: {
           module: immediateEdgeMod,
           entryPoint: 'vs',
-          buffers: [{
-            arrayStride: 24,
-            attributes: [{ shaderLocation: 0, offset: 0, format: 'float32x3' }],
-          }],
+          buffers: [
+            { arrayStride: MESH_VERTEX_STRIDE, attributes: [{ shaderLocation: 0, offset: 0, format: 'float32x3' }] },
+            edgeMorphVBL,
+          ],
         },
         fragment: {
           module: immediateEdgeMod,
@@ -911,8 +811,10 @@ export class WebGPURenderer {
         const matrix = animate && old && sameTypedArray(old.vertices, m.vertices)
           && sameTypedArray(old.indices, m.indices) ? geometryTransformTransition(old.morph?.currentMatrix ?? old.transform, transform) : null
         const morphFrom = animate && old && matrix
-          && (!sameTypedArray(old.morph?.current ?? old.vertices, m.vertices) || !sameTypedArray(old.morph?.currentMatrix ?? old.transform, transform))
-          ? new Float32Array(old.morph?.current ?? old.vertices) : null
+          && (!sameTypedArray(old.morph?.target ?? old.vertices, m.vertices) || !sameTypedArray(old.morph?.currentMatrix ?? old.transform, transform))
+          ? (old.morph ? blendMorphPositions(old.morph, started) : extractPositions(old.vertices))
+          : null
+        const retainedMorph = matrix && old?.morph && sameTypedArray(old.transform, transform) ? old.morph : null
         // Animated geometry must own its buffer: instances may have different start shapes.
         const candidates = !animate && m.geometryAssetId ? reusableByAsset.get(m.geometryAssetId) : undefined
         // Prefer the already verified views staged earlier in this publication.
@@ -925,18 +827,31 @@ export class WebGPURenderer {
         let vb: GPUBuffer | null = reusable?.vb ?? null
         let ib: GPUBuffer | null = reusable?.ib ?? null
         let ub: GPUBuffer | null = null
+        // The morph source buffer is capacity-grown and inherited across the
+        // publications of one entity, so repeated edits do not realloc it.
+        let morphVB = old?.morphVB ?? null
+        let morphVBCapacity = old?.morphVBCapacity ?? 0
         const ownsGeometryBuffers = !reusable
         try {
           if (!vb) vb = dev.createBuffer({ size: m.vertices.byteLength, usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST })
           if (!ib) ib = dev.createBuffer({ size: m.indices.byteLength, usage: GPUBufferUsage.INDEX | GPUBufferUsage.COPY_DST })
-          ub = dev.createBuffer({ size: 160, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST })
+          ub = dev.createBuffer({ size: OBJECT_UNIFORM_LAYOUT.bytes, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST })
           const initialAlpha = effectiveDisplayAlpha(m.color[3], this.displayMode)
           const initialEdge = this.displayMode === 'edges' ? 0.7 : 0
           if (ownsGeometryBuffers) {
             metrics.geometryBuffersCreated += 2
             metrics.geometryUploadBytes += m.vertices.byteLength + m.indices.byteLength
-            dev.queue.writeBuffer(vb, 0, morphFrom ?? m.vertices)
+            // The vertex buffer always holds the destination geometry; the
+            // shader blends the morph source from slot 1 toward it.
+            dev.queue.writeBuffer(vb, 0, m.vertices)
             dev.queue.writeBuffer(ib, 0, m.indices)
+          }
+          if (!retainedMorph && morphFrom) {
+            if (!morphVB || morphVBCapacity < morphFrom.byteLength) {
+              morphVB = dev.createBuffer({ size: morphFrom.byteLength, usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST })
+              morphVBCapacity = morphFrom.byteLength
+            }
+            dev.queue.writeBuffer(morphVB, 0, morphFrom)
           }
           // One contiguous upload per entity. writeBuffer snapshots the data,
           // so the same bounded scratch storage can serve the next entity.
@@ -949,6 +864,8 @@ export class WebGPURenderer {
           uniform.set(m.color, 32)
           uniform[36] = initialAlpha; uniform[37] = 0
           uniform[38] = initialEdge; uniform[39] = 0
+          // morph.x drives the GPU vertex blend; fresh uploads start at rest.
+          uniform[40] = 0; uniform[41] = 0; uniform[42] = 0; uniform[43] = 0
           dev.queue.writeBuffer(ub, 0, uniform)
           const bg = dev.createBindGroup({
             layout: this.objBGL,
@@ -956,9 +873,12 @@ export class WebGPURenderer {
           })
           if (reusable) metrics.reusedEntities++
           const reuseEdges = reusable && sameTypedArray(reusable.edgeIndices, m.edgeIndices)
+          const morph = retainedMorph ?? (morphFrom ? { from: morphFrom, target: m.vertices, started, matrix: matrix ?? undefined, currentMatrix: matrix?.(0) } : undefined)
           next.push({
             entityId: m.entityId,
-            morph: matrix && old?.morph && sameTypedArray(old.transform, transform) ? old.morph : morphFrom ? { from: morphFrom, current: new Float32Array(morphFrom), started, matrix: matrix ?? undefined, currentMatrix: matrix?.(0) } : undefined,
+            morph,
+            morphVB, morphVBCapacity,
+            morphSlot: morph ? morphVB : this.morphDummyVB,
             assetId: animate ? undefined : m.geometryAssetId,
             nativeGeometry:m.nativeGeometry,faceIdsAuthoritative:m.faceIdsAuthoritative,
             vb, ib, ic: m.indices.length, ub, bg,
@@ -989,8 +909,15 @@ export class WebGPURenderer {
             retainedGeometryBuffers.add(reusable.ib)
             if (reusable.edgeIB && added.edgeIB === reusable.edgeIB) retainedGeometryBuffers.add(reusable.edgeIB)
           }
+          if (old && previousSet.has(old) && old.morphVB && morphVB === old.morphVB) {
+            // The new mesh took over the morph source buffer.
+            retainedGeometryBuffers.add(old.morphVB)
+          }
         } catch (error) {
           if (ownsGeometryBuffers) { vb?.destroy(); ib?.destroy() }
+          // A morph buffer created for the failed staged mesh must not leak;
+          // an inherited one still belongs to the live previous mesh.
+          if (morphVB && morphVB !== old?.morphVB) morphVB.destroy()
           ub?.destroy()
           throw error
         }
@@ -1589,7 +1516,7 @@ export class WebGPURenderer {
       this.styleScratch[1] = selected
       this.styleScratch[2] = edgeOpacity
       this.styleScratch[3] = hovered
-      dev.queue.writeBuffer(mesh.ub, 144, this.styleScratch)
+      dev.queue.writeBuffer(mesh.ub, OBJECT_UNIFORM_LAYOUT.styleByteOffset, this.styleScratch)
       if (edgeOpacity > 0) this.ensureEdgeBuffer(mesh)
     }
   }
@@ -1859,6 +1786,7 @@ export class WebGPURenderer {
         pass.setBindGroup(1, g.bg)
         this.setObjectStyleImmediate(pass, g)
         pass.setVertexBuffer(0, g.vb)
+        pass.setVertexBuffer(1, g.morphSlot!)
         pass.setIndexBuffer(g.ib, 'uint32')
         pass.drawIndexed(g.ic)
       }
@@ -1876,6 +1804,7 @@ export class WebGPURenderer {
         pass.setBindGroup(1, selectedMesh.bg)
         this.setObjectStyleImmediate(pass, selectedMesh)
         pass.setVertexBuffer(0, selectedMesh.vb)
+        pass.setVertexBuffer(1, selectedMesh.morphSlot!)
         pass.setIndexBuffer(selectedMesh.ib, 'uint32')
         pass.drawIndexed(selectedMesh.ic)
       }
@@ -1907,6 +1836,7 @@ export class WebGPURenderer {
         pass.setBindGroup(1, selectedMesh.bg)
         this.setObjectStyleImmediate(pass, selectedMesh)
         pass.setVertexBuffer(0, selectedMesh.vb)
+        pass.setVertexBuffer(1, selectedMesh.morphSlot!)
         pass.setIndexBuffer(selectedMesh.edgeIB, 'uint32')
         pass.drawIndexed(selectedMesh.edgeIC)
       }
@@ -1966,11 +1896,12 @@ export class WebGPURenderer {
           this.styleScratch[1] = 0
           this.styleScratch[2] = 0
           this.styleScratch[3] = 0
-          this.dev?.queue.writeBuffer(mesh.ub, 144, this.styleScratch)
+          this.dev?.queue.writeBuffer(mesh.ub, OBJECT_UNIFORM_LAYOUT.styleByteOffset, this.styleScratch)
         })
       }
     }
     this.geometryGhosts = this.geometryGhosts.filter(ghost => !finish && now - ghost.started < 180)
+    let morphFinished = false
     for (const mesh of this.meshes) {
       const morph = mesh.morph
       if (!morph) continue
@@ -1984,14 +1915,24 @@ export class WebGPURenderer {
         this.dev?.queue.writeBuffer(mesh.ub, 0, uniform.subarray(0, 32))
       }
       if (t === 1) {
-        this.dev?.queue.writeBuffer(mesh.vb, 0, mesh.vertices)
+        // The vertex buffer already holds the destination; retire the morph
+        // and restore the slot-1 dummy so the stale blend weight is inert.
         mesh.morph = undefined
+        mesh.morphSlot = this.morphDummyVB
+        this.morphScratch[0] = 0; this.morphScratch[1] = 0; this.morphScratch[2] = 0; this.morphScratch[3] = 0
+        this.dev?.queue.writeBuffer(mesh.ub, OBJECT_UNIFORM_LAYOUT.morphByteOffset, this.morphScratch)
+        morphFinished = true
       } else {
-        for (let i = 0; i < morph.current.length; i++) morph.current[i] = morph.from[i] + (mesh.vertices[i] - morph.from[i]) * eased
-        this.dev?.queue.writeBuffer(mesh.vb, 0, morph.current)
+        // The vertex shader interpolates from the morph source; only the
+        // blend weight travels to the GPU each frame.
+        this.morphScratch[0] = eased; this.morphScratch[1] = 0; this.morphScratch[2] = 0; this.morphScratch[3] = 0
+        this.dev?.queue.writeBuffer(mesh.ub, OBJECT_UNIFORM_LAYOUT.morphByteOffset, this.morphScratch)
         active = true
       }
     }
+    // Finished morphs flip slot 1 back to the dummy; retained draw bundles and
+    // instance caches key on the binding and must be rebuilt.
+    if (morphFinished) this.clearDrawCaches()
     return active
   }
 
@@ -2726,7 +2667,7 @@ export class WebGPURenderer {
     for (const g of meshes) {
       if (!preserved.has(g.vb)) this.nativePicking.release(g.vb)
       destroy(g.edgeIB)
-      destroy(g.vb); destroy(g.ib); destroy(g.ub)
+      destroy(g.vb); destroy(g.ib); destroy(g.ub); destroy(g.morphVB)
     }
   }
 
@@ -2800,6 +2741,8 @@ export class WebGPURenderer {
     this.depthView = null
     this.sceneUB?.destroy()
     this.sceneUB = null
+    this.morphDummyVB?.destroy()
+    this.morphDummyVB = null
     try { this.ctx?.unconfigure() } catch { /* Context may already be lost. */ }
     const device = this.dev
     this.dev = null

@@ -9,7 +9,7 @@ export interface NominalLatticeGraph {
   nodes: TrussVector[]
   edges: [number, number][]
 }
-export function checkLatticeGraphInput(mesh: LatticeGraphMesh, options: LighteningOptions): void {
+export function checkLatticeGraphMeshInput(mesh: LatticeGraphMesh): void {
   const meshError='Nominal lattice analysis requires a triangle mesh within 100000 triangles and 16 MiB of owned buffers.'
   if (!mesh || !(mesh.vertices instanceof Float32Array) || !(mesh.indices instanceof Uint32Array)
     || !(mesh.transform instanceof Float32Array) || !mesh.vertices.length || mesh.vertices.length % 6
@@ -18,14 +18,17 @@ export function checkLatticeGraphInput(mesh: LatticeGraphMesh, options: Lighteni
     throw new Error(meshError)
   }
   if (!fitsClonedBufferBudget([mesh.vertices, mesh.indices, mesh.transform], 16 * 1024 * 1024)) throw new Error(meshError)
+  if (!mesh.transform.every(Number.isFinite) || mesh.transform[12] !== 0 || mesh.transform[13] !== 0 || mesh.transform[14] !== 0 || mesh.transform[15] !== 1) {
+    throw new Error('Nominal graph placement must be finite and affine.')
+  }
+}
+export function checkLatticeGraphInput(mesh: LatticeGraphMesh, options: LighteningOptions): void {
+  checkLatticeGraphMeshInput(mesh)
   if (!options || !['spatial','bone','bcc','octet'].includes(options.pattern)) throw new Error('Select a spatial lattice pattern.')
   if (!Number.isFinite(options.cell) || options.cell <= 0 || !Number.isFinite(options.jitter) || options.jitter < 0 || options.jitter > 1
     || !Number.isFinite(options.seed) || !Number.isInteger(options.seed)
     || (options.diagonals !== undefined && typeof options.diagonals !== 'boolean')) {
     throw new Error('Spatial graph requires positive cell size, jitter between 0 and 1, and an integer seed.')
-  }
-  if (!mesh.transform.every(Number.isFinite) || mesh.transform[12] !== 0 || mesh.transform[13] !== 0 || mesh.transform[14] !== 0 || mesh.transform[15] !== 1) {
-    throw new Error('Nominal graph placement must be finite and affine.')
   }
 }
 export function isNominalLatticeGraph(value: unknown): value is NominalLatticeGraph {

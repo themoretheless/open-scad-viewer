@@ -36,6 +36,7 @@ pub struct PointPlane {
 }
 
 impl PointMoments {
+    #[cfg(feature = "gpu")]
     pub(crate) fn from_sums(samples: usize, sum: V3, outer: [f64; 6]) -> Self {
         let n = samples as f64;
         let centroid = [sum[0] / n, sum[1] / n, sum[2] / n];
@@ -56,35 +57,125 @@ impl PointMoments {
     }
 }
 
-/// Exact CPU centroid, second moment and covariance for a finite point cloud.
-pub fn point_moments(points: &[V3]) -> Result<PointMoments> {
-    if points.is_empty() {
+/// Centroid of equally weighted finite points, without requiring representable moments.
+pub fn point_centroid(points: &[V3]) -> Result<V3> {
+    centroid_impl(points, None)
+}
+
+/// Centroid with finite, nonnegative weights and at least one positive weight.
+/// Weights are normalized before summation, so their total may exceed f64::MAX.
+pub fn weighted_point_centroid(points: &[V3], weights: &[f64]) -> Result<V3> {
+    centroid_impl(points, Some(weights))
+}
+
+#[derive(Default)]
+struct Sum {
+    value: f64,
+    correction: f64,
+}
+impl Sum {
+    fn add(&mut self, value: f64) {
+        let next = self.value + value;
+        self.correction += if self.value.abs() >= value.abs() {
+            (self.value - next) + value
+        } else {
+            (value - next) + self.value
+        };
+        self.value = next;
+    }
+    fn total(&self) -> f64 {
+        self.value + self.correction
+    }
+}
+
+fn centroid_impl(points: &[V3], weights: Option<&[f64]>) -> Result<V3> {
+    if points.is_empty() || points.iter().flatten().any(|v| !v.is_finite()) {
         return Err(Error::new(
             "invalid_point_moments_input",
-            "point_moments expects at least one point",
+            "Expected nonempty finite points",
         ));
     }
-    let mut sum = [0.; 3];
-    let mut outer = [0.; 6];
-    for &point in points {
-        if point.iter().any(|value| !value.is_finite()) {
+    let max_weight = if let Some(w) = weights {
+        if w.len() != points.len() || w.iter().any(|v| !v.is_finite() || *v < 0.) {
             return Err(Error::new(
-                "invalid_point_moments_input",
-                "point_moments expects finite point coordinates",
+                "invalid_point_weights",
+                "Expected one finite nonnegative weight per point",
             ));
         }
-        let [x, y, z] = point;
-        sum[0] += x;
-        sum[1] += y;
-        sum[2] += z;
-        outer[0] += x * x;
-        outer[1] += x * y;
-        outer[2] += x * z;
-        outer[3] += y * y;
-        outer[4] += y * z;
-        outer[5] += z * z;
+        let max = w.iter().copied().fold(0., f64::max);
+        if max == 0. {
+            return Err(Error::new(
+                "invalid_point_weights",
+                "At least one weight must be positive",
+            ));
+        }
+        max
+    } else {
+        1.
+    };
+    let mut total = Sum::default();
+    for i in 0..points.len() {
+        total.add(weights.map_or(1., |w| w[i] / max_weight));
     }
-    Ok(PointMoments::from_sums(points.len(), sum, outer))
+    let total = total.total();
+    let mut center = [0.; 3];
+    for axis in 0..3 {
+        let scale = points
+            .iter()
+            .enumerate()
+            .filter(|(i, _)| weights.is_none_or(|w| w[*i] > 0.))
+            .map(|(_, p)| p[axis].abs())
+            .fold(0., f64::max);
+        if scale == 0. {
+            continue;
+        }
+        let mut sum = Sum::default();
+        for (i, p) in points.iter().enumerate() {
+            let weight = weights.map_or(1., |w| w[i] / max_weight);
+            if weight > 0. {
+                sum.add((p[axis] / scale) * weight);
+            }
+        }
+        center[axis] = (sum.total() / total).clamp(-1., 1.) * scale;
+    }
+    Ok(center)
+}
+
+/// CPU population moments. Covariance is accumulated about the centroid to
+/// avoid cancellation from subtracting raw second moments at large offsets.
+/// Returns an error when any requested moment cannot be represented as f64.
+pub fn point_moments(points: &[V3]) -> Result<PointMoments> {
+    let centroid = point_centroid(points)?;
+    let n = points.len() as f64;
+    let mut second_moment = [[0.; 3]; 3];
+    let mut covariance = [[0.; 3]; 3];
+    for i in 0..3 {
+        for j in i..3 {
+            let mut raw = Sum::default();
+            let mut central = Sum::default();
+            for p in points {
+                raw.add((p[i] / n) * p[j]);
+                central.add(((p[i] - centroid[i]) / n) * (p[j] - centroid[j]));
+            }
+            let (r, c) = (raw.total(), central.total());
+            if !r.is_finite() || !c.is_finite() {
+                return Err(Error::new(
+                    "point_moments_overflow",
+                    "Requested moments exceed finite f64 range; use point_centroid for center only",
+                ));
+            }
+            second_moment[i][j] = r;
+            second_moment[j][i] = r;
+            covariance[i][j] = c;
+            covariance[j][i] = c;
+        }
+    }
+    Ok(PointMoments {
+        samples: points.len(),
+        centroid,
+        second_moment,
+        covariance,
+    })
 }
 
 /// [`point_moments`] with optional fused GPU/CUDA reductions. `Auto` currently
@@ -163,11 +254,17 @@ pub fn point_fit_plane(points: &[V3], acceleration: Acceleration) -> Result<Poin
     let axes = point_principal_axes(points, acceleration)?;
     let normal = orient_normal(axes.axes[2]);
     let offset = -dot(normal, axes.moments.centroid);
+    let mut residual = Sum::default();
+    for p in points {
+        let delta = std::array::from_fn(|i| p[i] - axes.moments.centroid[i]);
+        let distance = dot(normal, delta);
+        residual.add((distance / points.len() as f64) * distance);
+    }
     Ok(PointPlane {
         samples: points.len(),
         normal,
         offset,
-        rms_distance: axes.variances[2].sqrt(),
+        rms_distance: residual.total().sqrt(),
         axes,
     })
 }
@@ -175,6 +272,44 @@ pub fn point_fit_plane(points: &[V3], acceleration: Acceleration) -> Result<Poin
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn centers_handle_extreme_coordinates_and_weights() {
+        let m = f64::MAX;
+        assert_eq!(point_centroid(&[[m; 3], [m; 3]]).unwrap(), [m; 3]);
+        assert_eq!(point_centroid(&[[-m; 3], [m; 3]]).unwrap(), [0.; 3]);
+        assert_eq!(
+            weighted_point_centroid(&[[0.; 3], [8.; 3]], &[m / 2., m]).unwrap(),
+            [16. / 3.; 3]
+        );
+        assert_eq!(
+            weighted_point_centroid(&[[m; 3], [2.; 3]], &[0., 1.]).unwrap(),
+            [2.; 3]
+        );
+        assert!(point_moments(&[[m; 3]]).is_err());
+        assert_eq!(crate::point_bounds(&[[m; 3]]).unwrap().center, [m; 3]);
+    }
+
+    #[test]
+    fn weighted_center_rejects_invalid_inputs() {
+        for w in [
+            vec![],
+            vec![0., 0.],
+            vec![-1., 2.],
+            vec![f64::NAN, 1.],
+            vec![f64::INFINITY, 1.],
+        ] {
+            assert!(weighted_point_centroid(&[[0.; 3], [1.; 3]], &w).is_err());
+        }
+    }
+
+    #[test]
+    fn covariance_preserves_small_spread_at_large_offset() {
+        let offset = 1e12;
+        let moments = point_moments(&[[offset - 1.; 3], [offset + 1.; 3]]).unwrap();
+        assert_eq!(moments.centroid, [offset; 3]);
+        assert_eq!(moments.covariance, [[1.; 3]; 3]);
+    }
 
     fn points(n: usize) -> Vec<V3> {
         (0..n)

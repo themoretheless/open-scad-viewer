@@ -658,7 +658,8 @@ fn even_odd(p: [f64; 2], ring: &[[f64; 2]]) -> bool {
 }
 
 /// Profile contract used by SDF extrude/revolve: first ring is outer, rest are holes.
-pub fn validate_profile(rings: &Rings) -> Result<()> {
+/// Validate bounded, simple, mutually disjoint boundaries without imposing one outer ring.
+pub fn validate_contours(rings: &Rings) -> Result<()> {
     if rings.is_empty()
         || rings.len() > 17
         || work(rings) > 512
@@ -710,6 +711,11 @@ pub fn validate_profile(rings: &Rings) -> Result<()> {
             }
         }
     }
+    Ok(())
+}
+
+pub fn validate_profile(rings: &Rings) -> Result<()> {
+    validate_contours(rings)?;
     let outer = &rings[0];
     for (i, h) in rings[1..].iter().enumerate() {
         if !even_odd(h[0], outer)
