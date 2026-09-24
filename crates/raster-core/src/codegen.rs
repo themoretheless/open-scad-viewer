@@ -64,6 +64,60 @@ pub fn write_ts_sources() -> std::io::Result<std::path::PathBuf> {
     Ok(path)
 }
 
+/// (golden key, variant text) pairs covering both transforms over every
+/// object shader. The TypeScript `variants.ts` is hand-written; the checked-in
+/// golden pins it to the Rust implementations byte-for-byte. Transforms run
+/// over the canonical TS const value (`"\n" + trim(source)`, the template
+/// literal convention of the generated sources module) so both languages
+/// consume identical input text.
+pub fn variant_goldens() -> Vec<(String, String)> {
+    use crate::variants::{VertexOutput, immediate_object_shader, instanced_object_shader};
+    let mut goldens = Vec::new();
+    for (name, source) in crate::shaders::OBJECT_SHADERS {
+        let ts_source = format!("\n{}", source.trim());
+        goldens.push((format!("immediate:{name}"), immediate_object_shader(&ts_source)));
+        let output = if name == "edge" { VertexOutput::EdgeV } else { VertexOutput::V };
+        goldens.push((format!("instanced:{name}"), instanced_object_shader(&ts_source, output)));
+    }
+    goldens
+}
+
+const VARIANTS_HEADER: &str = "\
+// GENERATED FILE — do not edit.
+// Golden outputs of crates/raster-core/src/variants.rs (immediate/instanced
+// shader transforms), used by vitest to pin the hand-written TypeScript
+// variants.ts to the Rust implementations. Regenerate with `wgsl_export`.
+";
+
+/// Renders the variant golden TS module.
+pub fn generate_variant_goldens_ts() -> String {
+    let mut out = String::from(VARIANTS_HEADER);
+    out.push_str("\nexport const VARIANTS_GOLDEN: Record<string, string> = {\n");
+    for (key, text) in variant_goldens() {
+        out.push_str(&format!("  '{key}': /* wgsl */`"));
+        out.push_str(&ts_escape(&text));
+        out.push_str("`,\n");
+    }
+    out.push_str("}\n");
+    out
+}
+
+/// Repo-relative path of the generated variant golden module.
+pub fn variant_goldens_path() -> std::path::PathBuf {
+    std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../src/services/shaders/generated/variants.golden.ts")
+}
+
+/// Writes the variant golden module next to the generated sources.
+pub fn write_variant_goldens() -> std::io::Result<std::path::PathBuf> {
+    let path = variant_goldens_path();
+    if let Some(parent) = path.parent() {
+        std::fs::create_dir_all(parent)?;
+    }
+    std::fs::write(&path, generate_variant_goldens_ts())?;
+    Ok(path)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

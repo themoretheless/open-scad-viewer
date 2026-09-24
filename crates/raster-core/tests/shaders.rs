@@ -119,3 +119,18 @@ fn generated_ts_matches_the_wgsl_sources() {
         path.display()
     );
 }
+
+#[test]
+fn generated_variant_goldens_match_the_rust_variants() {
+    // The golden module pins the TypeScript variants.ts to these exact
+    // outputs of the Rust transforms.
+    let path = raster_core::codegen::variant_goldens_path();
+    let on_disk = std::fs::read_to_string(&path)
+        .unwrap_or_else(|error| panic!("variant goldens missing at {}: {error}", path.display()));
+    assert_eq!(
+        on_disk,
+        raster_core::codegen::generate_variant_goldens_ts(),
+        "{} is stale; regenerate with the `wgsl_export` bin",
+        path.display()
+    );
+}

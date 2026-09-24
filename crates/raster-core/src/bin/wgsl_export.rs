@@ -1,30 +1,54 @@
-//! Exports the WGSL sources to the TypeScript shader library.
+//! Exports the WGSL sources and variant goldens to the TypeScript shader
+//! library.
 //!
 //! Usage:
 //!   cargo run --manifest-path crates/Cargo.toml -p raster-core --bin wgsl_export
 //!   cargo run --manifest-path crates/Cargo.toml -p raster-core --bin wgsl_export -- --check
 
+use raster_core::codegen as codegen;
+
+const GENERATED: [(&str, fn() -> String, fn() -> std::path::PathBuf); 2] = [
+    ("sources", codegen::generate_ts_sources, codegen::generated_ts_path),
+    ("variant goldens", codegen::generate_variant_goldens_ts, codegen::variant_goldens_path),
+];
+
 fn main() {
     let check = std::env::args().any(|arg| arg == "--check");
-    if check {
-        let path = raster_core::codegen::generated_ts_path();
-        let on_disk = std::fs::read_to_string(&path).unwrap_or_else(|error| {
-            eprintln!("wgsl_export: cannot read {}: {error}", path.display());
-            std::process::exit(1);
-        });
-        let generated = raster_core::codegen::generate_ts_sources();
-        if on_disk != generated {
-            eprintln!("wgsl_export: {} is stale — regenerate with `wgsl_export`", path.display());
-            std::process::exit(1);
-        }
-        println!("wgsl_export: {} is up to date", path.display());
-    } else {
-        match raster_core::codegen::write_ts_sources() {
-            Ok(path) => println!("wgsl_export: wrote {}", path.display()),
-            Err(error) => {
-                eprintln!("wgsl_export: write failed: {error}");
-                std::process::exit(1);
+    let mut failed = false;
+    for (label, generate, path) in GENERATED {
+        let path = path();
+        if check {
+            match std::fs::read_to_string(&path) {
+                Ok(on_disk) if on_disk == generate() => {
+                    println!("wgsl_export: {label}: {} is up to date", path.display());
+                }
+                Ok(_) => {
+                    eprintln!("wgsl_export: {label}: {} is stale — regenerate", path.display());
+                    failed = true;
+                }
+                Err(error) => {
+                    eprintln!("wgsl_export: {label}: cannot read {}: {error}", path.display());
+                    failed = true;
+                }
+            }
+        } else {
+            let content = generate();
+            let result = (|| -> std::io::Result<()> {
+                if let Some(parent) = path.parent() {
+                    std::fs::create_dir_all(parent)?;
+                }
+                std::fs::write(&path, content)
+            })();
+            match result {
+                Ok(()) => println!("wgsl_export: {label}: wrote {}", path.display()),
+                Err(error) => {
+                    eprintln!("wgsl_export: {label}: write failed: {error}");
+                    failed = true;
+                }
             }
         }
+    }
+    if failed {
+        std::process::exit(1);
     }
 }
