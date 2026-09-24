@@ -2171,7 +2171,7 @@ function makeStablePolyhedron(node: CallNode, ctx: EvalContext): Shape[] {
   }
 
   try {
-    const geometry = ctx.kernel.ofMesh(new Float32Array(vertices), new Uint32Array(indices))
+    const geometry = ctx.kernel.ofMesh(new Float64Array(vertices), new Uint32Array(indices))
     if (ctx.kernel.isEmpty(geometry)) {
       warn(ctx, 'polyhedron() topology did not produce a manifold solid')
       return [stableEmptyShape(3, color, ctx)]
@@ -2307,7 +2307,7 @@ function makePolyhedron(node: CallNode, ctx: EvalContext): Shape[] {
   try {
     // Weld duplicated coordinates first: OpenSCAD accepts point lists with
     // repeated positions, but kernel halfedge pairing rejects them.
-    return [trackedSolid(ctx.kernel.ofMesh(new Float32Array(vertices), new Uint32Array(indices)), nextColor(), node, ctx)]
+    return [trackedSolid(ctx.kernel.ofMesh(new Float64Array(vertices), new Uint32Array(indices)), nextColor(), node, ctx)]
   } catch (error) {
     evaluationError(ctx, node.p, `Invalid manifold polyhedron: ${error instanceof Error ? error.message : String(error)}`)
   }
@@ -3884,7 +3884,7 @@ async function parseInternal(
       if (triangleCount > MAX_TRIANGLES) evaluationError(ctx, 0, `Rendered model exceeds ${MAX_TRIANGLES.toLocaleString()} triangles`)
       if (mesh.numProp < 6) evaluationError(ctx, 0, 'Geometry kernel did not produce normals')
       let vertices: Float32Array
-      if (mesh.numProp === 6 && isExclusiveView(mesh.vertProperties, mesh.numVert * 6)) {
+      if (mesh.numProp === 6 && mesh.vertProperties instanceof Float32Array && isExclusiveView(mesh.vertProperties, mesh.numVert * 6)) {
         // The kernel copied this array out for this analysis alone; publish it
         // without another copy. The Worker protocol requires exclusive buffers.
         vertices = mesh.vertProperties
