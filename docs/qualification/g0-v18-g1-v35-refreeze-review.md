@@ -1,0 +1,9 @@
+# G0 v18 / G1 v35 no-claim re-freeze
+
+This append-only amendment preserves G0 v17, G1 v34, and all earlier artifacts byte-for-byte. V34 cannot admit further evidence because its frozen bindings no longer match current source and dependency bytes.
+
+The drift is legitimate and reviewed: the committed optimization series (BVH convex-parts, grid-based edge split windows, release-profile tuning, editor hot-path allocation work) changed `package.json`, `package-lock.json`, `vitest.config.ts`, `THIRD_PARTY_NOTICES.md`, `rust-toolchain.toml`, the crates workspace manifests and lockfile, and own-Rust geometry sources. The geometry kernel WASM was rebuilt from current sources; its semantic output is unchanged (the own-Rust oracle re-capture preserves all volumes, areas, topology, provenance, and record sizes; only f32-kernel byte-level mesh/scene hashes moved, handled by the separate oracle v3 migration). The rebuilt kernel bytes additionally contain uncommitted work-in-progress modules (`bonded_solid`, `structural_sections`, `material_audit`) that are present in the working tree; this is recorded explicitly so the binding can be re-issued from a clean commit once that work lands.
+
+V35 recomputes every artifact and canonical bundle digest from current bytes, re-binds the exact GitHub Actions workflow, evidence-producing harness, fragment selectors (now selecting v35), and the unchanged hosted-runner identity freeze (`g1-github-actions-v34.json`, retained as the active environment freeze). Own-Rust evidence advances to `own-rust-cad-v10.json`, which re-pins the rebuilt kernel and current npm/Rust dependency files.
+
+The matrix remains 4740 planned work units. V35 starts with zero completed runs and zero completed units, imports no prior result, makes no qualification claim, and authorizes no production cutover.

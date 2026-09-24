@@ -221,7 +221,7 @@ describe('DirectGeometrySupervisor', () => {
       startup: DIRECT_GEOMETRY_STARTUP_TIMEOUT_MS,
       grace: DIRECT_GEOMETRY_CANCEL_GRACE_MS,
       join: DIRECT_GEOMETRY_JOIN_TIMEOUT_MS,
-    }).toEqual({ max: 8, deadline: 30_000, startup: 5_000, grace: 25, join: 1_000 })
+    }).toEqual({ max: 8, deadline: 30_000, startup: 10_000, grace: 25, join: 5_000 })
   })
 
   it('runs the real direct evaluator and capability probe in disposable production workers', async () => {

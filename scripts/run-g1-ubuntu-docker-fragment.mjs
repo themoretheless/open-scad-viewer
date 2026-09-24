@@ -18,9 +18,9 @@ import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const repositoryRoot = fileURLToPath(new URL('../', import.meta.url))
-const PLAN = resolve(repositoryRoot, 'docs/qualification/semantic-manifold-g1-plan-v34.json')
-const RESULT = resolve(repositoryRoot, 'output/qualification/semantic-manifold-g1-candidate-run-v34/result.json')
-const FRAGMENTS = resolve(repositoryRoot, 'output/qualification/semantic-manifold-g1-candidate-run-v34/fragments.jsonl')
+const PLAN = resolve(repositoryRoot, 'docs/qualification/semantic-manifold-g1-plan-v35.json')
+const RESULT = resolve(repositoryRoot, 'output/qualification/semantic-manifold-g1-candidate-run-v35/result.json')
+const FRAGMENTS = resolve(repositoryRoot, 'output/qualification/semantic-manifold-g1-candidate-run-v35/fragments.jsonl')
 const DOCKER_HOST = process.env.DOCKER_HOST ?? 'unix:///Users/themoretheless/.colima/default/docker.sock'
 
 const NODE_BY_ENV = {
@@ -116,7 +116,7 @@ fi
 cd /tmp/g1-work
 npm ci --ignore-scripts --include=dev --registry=https://registry.npmjs.org/ --audit=false --fund=false
 export QUALIFICATION_SEED=${seed}
-export QUALIFICATION_PLAN_ID=semantic-manifold-g1-plan-v34
+export QUALIFICATION_PLAN_ID=semantic-manifold-g1-plan-v35
 export CI=1
 ${harness}
 `

@@ -11,10 +11,10 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const pathFor = path => join(root, path)
 const digest = bytes => createHash('sha256').update(bytes).digest('hex')
 const hashFile = path => digest(readFileSync(pathFor(path)))
-export const PREVIOUS_ORACLE = 'tests/fixtures/own-rust-cad-oracle-v1.json'
-export const PREVIOUS_ORACLE_SHA256 = '4564124cc236974f353d66944cff953f4ae4fbd71f546d5c10310bf645c0a9c7'
-export const ORACLE_REVIEW = 'docs/qualification/own-rust-cad-oracle-v2-review.md'
-export const ORACLE_OUTPUT = 'tests/fixtures/own-rust-cad-oracle-v2.json'
+export const PREVIOUS_ORACLE = 'tests/fixtures/own-rust-cad-oracle-v2.json'
+export const PREVIOUS_ORACLE_SHA256 = 'd7dc4c69914449b5429c27c39adb566456621e0dbc92f0239eda46d36cf9ffae'
+export const ORACLE_REVIEW = 'docs/qualification/own-rust-cad-oracle-v3-review.md'
+export const ORACLE_OUTPUT = 'tests/fixtures/own-rust-cad-oracle-v3.json'
 export const ORACLE_CASES = Object.freeze([
   { id: 'colored-transform', source: 'color("#336699cc") translate([1,2,3]) cube([2,3,4]);', quality: 'full' },
   { id: 'boolean-difference', source: 'difference(){ cube([4,4,4], center=true); sphere(r=1,$fn=16); }', quality: 'full' },
@@ -22,7 +22,7 @@ export const ORACLE_CASES = Object.freeze([
   { id: 'reduced-preview', source: 'sphere(r=5,$fn=96);', quality: 'preview' },
   { id: 'reduced-preview-full-companion', source: 'sphere(r=5,$fn=96);', quality: 'full' },
 ])
-const MIGRATED_CASES = new Set(['colored-transform', 'boolean-difference'])
+const MIGRATED_CASES = new Set(['boolean-difference', 'repeated-loop-identities', 'reduced-preview', 'reduced-preview-full-companion'])
 const IDENTITY = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]
 const PALETTE = [[0.26, 0.52, 0.96, 1], [0.96, 0.52, 0.26, 1], [0.26, 0.86, 0.56, 1]]
 const cubeOperation = 'op:root/call%3Acolor%230/children/call%3Atranslate%230/children/call%3Acube%230'
@@ -31,8 +31,9 @@ const sphereOperation = 'op:root/call%3Asphere%230'
 const repeatedOperation = 'op:root/module%3Apeg%230/body/call%3Atranslate%230/children/call%3Asphere%230'
 
 function previousOracle() {
-  assert.equal(hashFile(PREVIOUS_ORACLE), PREVIOUS_ORACLE_SHA256, 'The v1 oracle must remain byte-immutable')
-  return JSON.parse(readFileSync(pathFor(PREVIOUS_ORACLE), 'utf8'))
+  assert.equal(hashFile(PREVIOUS_ORACLE), PREVIOUS_ORACLE_SHA256, 'The v2 oracle must remain byte-immutable')
+  const doc = JSON.parse(readFileSync(pathFor(PREVIOUS_ORACLE), 'utf8'))
+  return doc.cases ?? doc // v1 is a flat snapshot map; v2+ wrap snapshots under `cases`
 }
 
 function near(actual, expected, label, absolute = 1e-9, relative = 1e-9) {
@@ -255,10 +256,10 @@ function record() {
     assert.deepEqual(artifactFingerprint(), artifacts, 'WASM/decoder changed during capture; no oracle was written')
   }
   assert.deepEqual(outputs[0], outputs[1], 'Fresh-process captures were not deterministic; no oracle was written')
-  const artifact = { id: 'own-rust-cad-oracle-v2', generatedAt: new Date().toISOString(),
+  const artifact = { id: 'own-rust-cad-oracle-v3', generatedAt: new Date().toISOString(),
     previous: { path: PREVIOUS_ORACLE, sha256: PREVIOUS_ORACLE_SHA256 }, review: ORACLE_REVIEW,
     scope: 'Five fixed own-Rust direct evaluator cases; current LME1/LSE1 bytes, independently checked geometry and retained semantic metadata. Not Manifold binary compatibility or whole-application qualification.',
-    source, artifacts, verification: { freshProcesses: 2, deterministic: true, semanticContract: 'own-rust-cad-oracle-v2' },
+    source, artifacts, verification: { freshProcesses: 2, deterministic: true, semanticContract: 'own-rust-cad-oracle-v3' },
     environment: { platform: process.platform, architecture: process.arch, node: process.version, ...toolchain }, cases: outputs[0] }
   publishOracleExclusive(pathFor(ORACLE_OUTPUT), artifact, () => {
     assert.deepEqual(oracleSourceFingerprint(), source, 'Sources changed before publication; no oracle was written')
@@ -270,6 +271,6 @@ function record() {
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const args = process.argv.slice(2)
   if (args.length === 1 && args[0] === '--capture') console.log(JSON.stringify(await capture()))
-  else if (args.length === 2 && args[0] === '--version' && args[1] === '2') record()
-  else throw new Error('Usage: node scripts/record-own-cad-oracle.mjs --version 2')
+  else if (args.length === 2 && args[0] === '--version' && args[1] === '3') record()
+  else throw new Error('Usage: node scripts/record-own-cad-oracle.mjs --version 3')
 }

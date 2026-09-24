@@ -7,6 +7,7 @@ import {expect,it} from 'vitest'
 it.each([
  ['record-own-cad-evidence.mjs','v1'],
  ['release-own-rust-v9.mjs','v9'],
+ ['release-own-rust-v10.mjs','v10'],
 ])('refuses historical publication before any side effect: %s',(script,version)=>{
  const root=mkdtempSync(join(tmpdir(),'osv-historical-writer-'))
  try{

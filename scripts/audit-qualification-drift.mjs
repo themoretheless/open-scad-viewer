@@ -9,7 +9,7 @@ const sha256 = bytes => createHash('sha256').update(bytes).digest('hex')
 /** Read-only diagnostics: never refresh bindings or create qualification evidence. */
 export function auditQualificationDrift(root, {
   fingerprintPath = REFRESH_OUTPUTS.fingerprint,
-  evidencePath = 'docs/qualification/own-rust-cad-v9.json',
+  evidencePath = 'docs/qualification/own-rust-cad-v10.json',
   archives = FROZEN_ARCHIVES,
 } = {}) {
   const read = path => {

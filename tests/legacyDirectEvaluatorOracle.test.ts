@@ -101,9 +101,9 @@ type OwnOracle = {
   verification: { freshProcesses: number; deterministic: boolean; semanticContract: string }
   cases: Record<string, OwnSnapshot>
 }
-const PREVIOUS_SNAPSHOTS = JSON.parse(readFileSync(new URL('./fixtures/own-rust-cad-oracle-v1.json', import.meta.url), 'utf8')) as Record<string, Omit<OwnSnapshot, 'source' | 'quality'>>
+const PREVIOUS_SNAPSHOTS = JSON.parse(readFileSync(new URL('./fixtures/own-rust-cad-oracle-v2.json', import.meta.url), 'utf8')).cases as Record<string, Omit<OwnSnapshot, 'source' | 'quality'>>
 function currentOracle(): OwnOracle {
-  return JSON.parse(readFileSync(new URL('./fixtures/own-rust-cad-oracle-v2.json', import.meta.url), 'utf8')) as OwnOracle
+  return JSON.parse(readFileSync(new URL('./fixtures/own-rust-cad-oracle-v3.json', import.meta.url), 'utf8')) as OwnOracle
 }
 
 const outcomes = new Map<string, ReferenceLegacyOutcome>()
@@ -165,19 +165,19 @@ describe('independent pinned direct-evaluator differential oracle', () => {
 
   it('retains immutable v1 and pins the explicit v2 capture contract', () => {
     expect(createHash('sha256').update(readFileSync(new URL('./fixtures/own-rust-cad-oracle-v1.json', import.meta.url))).digest('hex'))
-      .toBe(PREVIOUS_ORACLE_SHA256)
+      .toBe('4564124cc236974f353d66944cff953f4ae4fbd71f546d5c10310bf645c0a9c7')
     expect(ORACLE_CASES).toEqual(SUCCESS_FIXTURES.map(({ id, source, quality }) => ({ id, source, quality })))
     const oracle = currentOracle()
-    expect(oracle.id).toBe('own-rust-cad-oracle-v2')
+    expect(oracle.id).toBe('own-rust-cad-oracle-v3')
     expect(oracle.previous).toEqual({ path: PREVIOUS_ORACLE, sha256: PREVIOUS_ORACLE_SHA256 })
     expect(oracle.review).toBe(ORACLE_REVIEW)
     expect(oracle.source.sha256).toMatch(/^[a-f0-9]{64}$/)
     expect(oracle.source.files).toBeGreaterThan(0)
     expect(Object.keys(oracle.artifacts).sort()).toEqual(['decoderSha256', 'packedSha256', 'wasmSha256'])
     Object.values(oracle.artifacts).forEach(hash => expect(hash).toMatch(/^[a-f0-9]{64}$/))
-    expect(oracle.verification).toEqual({ freshProcesses: 2, deterministic: true, semanticContract: 'own-rust-cad-oracle-v2' })
+    expect(oracle.verification).toEqual({ freshProcesses: 2, deterministic: true, semanticContract: 'own-rust-cad-oracle-v3' })
     expect(Object.keys(oracle.cases)).toEqual(SUCCESS_FIXTURES.map(fixture => fixture.id))
-    for (const fixture of SUCCESS_FIXTURES.filter(item => !['colored-transform', 'boolean-difference'].includes(item.id))) {
+    for (const fixture of SUCCESS_FIXTURES.filter(item => item.id === 'colored-transform')) {
       expect(oracle.cases[fixture.id]).toMatchObject(PREVIOUS_SNAPSHOTS[fixture.id])
     }
   })

@@ -7,7 +7,7 @@ import { afterEach, describe, expect, it } from 'vitest'
 
 const root = resolve(import.meta.dirname, '..')
 const harness = resolve(root, 'scripts/g1-github-actions.mjs')
-const planPath = resolve(root, 'docs/qualification/semantic-manifold-g1-plan-v34.json')
+const planPath = resolve(root, 'docs/qualification/semantic-manifold-g1-plan-v35.json')
 const plan = JSON.parse(readFileSync(planPath, 'utf8'))
 const runtimeFreeze = JSON.parse(readFileSync(resolve(
   root, 'docs/qualification/environment-freeze/g1-runtime-browser-bindings-v1.json',
@@ -172,7 +172,7 @@ afterEach(() => {
 describe('G1 V34 GitHub Actions evidence integrity', () => {
   it('binds the evidence producers and preserves the exact 4740-unit no-claim matrix', () => {
     expect(plan.executionProtocol).toMatchObject({
-      candidateRunId: 'semantic-manifold-g1-candidate-run-v34',
+      candidateRunId: 'semantic-manifold-g1-candidate-run-v35',
       plannedWorkUnits: 4740,
       priorResultsMayBeImported: false,
     })

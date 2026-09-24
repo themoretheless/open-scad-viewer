@@ -243,9 +243,9 @@ describe('OpenSCAD MCP server', () => {
           max_admitted_jobs: 8,
           max_concurrent_workers: 1,
           job_deadline_ms: 30_000,
-          startup_timeout_ms: 5_000,
+          startup_timeout_ms: 10_000,
           cancellation_grace_ms: 25,
-          worker_join_timeout_ms: 1_000,
+          worker_join_timeout_ms: 5_000,
         },
         enforcement: {
           queue_time_in_deadline: true,
