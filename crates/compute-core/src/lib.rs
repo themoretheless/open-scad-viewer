@@ -28,12 +28,17 @@ pub mod shaders {
     pub const SCALE_ADD_WGSL: &str = include_str!("../shaders/scale_add.wgsl");
     pub const ZIP_MUL_WGSL: &str = include_str!("../shaders/zip_mul.wgsl");
     pub const BLOCK_SUM_WGSL: &str = include_str!("../shaders/block_sum.wgsl");
+    /// vec4 variants: 16 bytes streamed per thread instead of 4.
+    pub const SCALE_ADD4_WGSL: &str = include_str!("../shaders/scale_add4.wgsl");
+    pub const ZIP_MUL4_WGSL: &str = include_str!("../shaders/zip_mul4.wgsl");
 
     /// Every shipped kernel (name, source), for validation tests.
-    pub const ALL: [(&str, &str); 3] = [
+    pub const ALL: [(&str, &str); 5] = [
         ("scale_add", SCALE_ADD_WGSL),
         ("zip_mul", ZIP_MUL_WGSL),
         ("block_sum", BLOCK_SUM_WGSL),
+        ("scale_add4", SCALE_ADD4_WGSL),
+        ("zip_mul4", ZIP_MUL4_WGSL),
     ];
 }
 
@@ -220,6 +225,20 @@ impl Kernel {
     /// Dispatches over `buffers` (one per declared [`Binding`], binding 0..n),
     /// covering `invocations` threads.
     pub fn dispatch(&self, device: &Device, queue: &Queue, buffers: &[&Buffer], invocations: u32) {
+        assert!(
+            invocations <= self.max_dispatch_invocations(),
+            "{}: {} invocations exceed the single-dispatch limit of {} (chunk the workload)",
+            self.label,
+            invocations,
+            self.max_dispatch_invocations()
+        );
+        self.dispatch_groups(device, queue, buffers, self.workgroup_count(invocations))
+    }
+
+    /// Dispatches exactly `groups` workgroups — for grid-strided kernels
+    /// (e.g. [`shaders::BLOCK_SUM_WGSL`]) that cover arbitrary lengths with a
+    /// fixed grid. `groups` must be within the 65535 per-dimension limit.
+    pub fn dispatch_groups(&self, device: &Device, queue: &Queue, buffers: &[&Buffer], groups: u32) {
         assert_eq!(
             buffers.len(),
             self.bindings.len(),
@@ -227,6 +246,12 @@ impl Kernel {
             self.label,
             self.bindings.len(),
             buffers.len()
+        );
+        assert!(
+            groups >= 1 && groups <= 65535,
+            "{}: workgroup count {} outside 1..=65535",
+            self.label,
+            groups
         );
         let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some(&self.label),
@@ -240,13 +265,6 @@ impl Kernel {
                 })
                 .collect::<Vec<_>>(),
         });
-        assert!(
-            invocations <= self.max_dispatch_invocations(),
-            "{}: {} invocations exceed the single-dispatch limit of {} (chunk the workload)",
-            self.label,
-            invocations,
-            self.max_dispatch_invocations()
-        );
         let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
             label: Some(&self.label),
         });
@@ -257,7 +275,7 @@ impl Kernel {
             });
             pass.set_pipeline(&self.pipeline);
             pass.set_bind_group(0, &bind_group, &[]);
-            pass.dispatch_workgroups(self.workgroup_count(invocations), 1, 1);
+            pass.dispatch_workgroups(groups, 1, 1);
         }
         queue.submit([encoder.finish()]);
     }
@@ -344,4 +362,31 @@ pub fn read_u32(device: &Device, queue: &Queue, buffer: &Buffer, count: usize) -
         .chunks_exact(4)
         .map(|chunk| u32::from_le_bytes(chunk.try_into().expect("u32 chunk")))
         .collect()
+}
+
+/// Full reduction of `input[0..count]` to a scalar via repeated
+/// [`shaders::BLOCK_SUM_WGSL`] passes: each pass runs a grid-strided dispatch
+/// (up to 65535 workgroups), feeding the partials back as the next pass's
+/// input until a single partial remains. Lengths are arbitrary — the 65535
+/// per-dispatch group limit only shapes the pass schedule, not the total.
+pub fn reduce_f32(device: &Device, queue: &Queue, sum: &Kernel, input: &Buffer, mut count: u32) -> f32 {
+    let params = uniform_f32(device, queue, &[0.0; 4]);
+    let mut source = input.clone();
+    loop {
+        let groups = count.div_ceil(sum.workgroup_size()).min(65535);
+        let mut floats = vec![0.0f32; 4];
+        floats[0] = f32::from_le_bytes(count.to_le_bytes());
+        floats[1] = f32::from_le_bytes(groups.to_le_bytes());
+        queue.write_buffer(&params, 0, &gpu_compute::pack_f32(&floats));
+        let partials = storage_f32_zeroed(device, queue, groups as usize);
+        sum.dispatch_groups(device, queue, &[&params, &source, &partials], groups);
+        if groups == 1 {
+            return read_f32(device, queue, &partials, 1)
+                .first()
+                .copied()
+                .unwrap_or(0.0);
+        }
+        source = partials;
+        count = groups;
+    }
 }

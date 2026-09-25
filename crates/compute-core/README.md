@@ -15,10 +15,15 @@ lives here.
   typed readbacks (`read_f32`, `read_u32`) through a MAP_READ staging copy
   (storage buffers cannot hold `MAP_READ` in wgpu).
 - **Generic kernels** in `shaders/` (`include_str!`-embedded):
-  - `scale_add` — elementwise affine map `output[i] = input[i] * scale + offset`
-  - `zip_mul` — elementwise product `output[i] = a[i] * b[i]`
-  - `block_sum` — workgroup-strided sum reduction into per-group partials;
-    chain dispatches (or a tiny CPU fold) to reduce arbitrary lengths
+  - `scale_add` / `scale_add4` — elementwise affine map
+    `output[i] = input[i] * scale + offset`, scalar and vec4 variants
+    (the vec4 variant streams 16 bytes per thread and runs ~3x faster
+    than scalar on Apple Silicon)
+  - `zip_mul` / `zip_mul4` — elementwise product `output[i] = a[i] * b[i]`
+  - `block_sum` — grid-strided sum reduction into per-group partials: a
+    fixed grid of workgroups strides over arbitrary lengths, so one
+    dispatch covers more than the 65535-workgroup limit; chain passes —
+    or call the [`reduce_f32`] helper — to fold down to a scalar
 
 ## The `WG` anchor convention
 
@@ -80,9 +85,12 @@ assert_eq!(result, vec![2.5f32, 4.5, 6.5, 8.5]);
 Binding order is sequential from `binding(0)` in declaration order
 (uniforms and storage interleaved as the shader declares them).
 
-A single dispatch covers at most `65535 * workgroup_size` invocations (the
-wgpu per-dimension workgroup-count limit); larger workloads are the caller's
-job to chunk (`Kernel::max_dispatch_invocations`).
+A single non-strided dispatch covers at most `65535 * workgroup_size`
+invocations (the wgpu per-dimension workgroup-count limit); larger workloads
+are the caller's job to chunk (`Kernel::max_dispatch_invocations`).
+Grid-strided kernels like `block_sum` sidestep this via
+`Kernel::dispatch_groups`, and `reduce_f32` schedules the whole multi-pass
+chain for arbitrary input lengths.
 
 ## Tests and bench
 
@@ -94,6 +102,8 @@ cargo run --release --offline --example bench -p compute-core
 GPU-backed tests skip cleanly on machines without an adapter.
 
 Measured on Apple M4 Max (Metal, release): scale_add ~47 GB/s at WG=128 and
-~67 GB/s at WG=256; the zip_mul + block_sum dot-product pair ~70–115 GB/s
-effective. The kernels stream one f32 per thread — vectorized access patterns
-are the obvious next step for domain kernels that need more.
+~67 GB/s at WG=256; the vec4 variant scale_add4 ~113 GB/s (16 bytes streamed
+per thread vs 4); the zip_mul + block_sum dot-product pair ~70–115 GB/s
+effective. Vectorized access is the single biggest lever for streaming
+kernels — domain kernels that need bandwidth should default to the vec4
+shapes or add their own multi-element-per-thread variants.

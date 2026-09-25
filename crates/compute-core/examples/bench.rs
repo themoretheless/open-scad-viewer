@@ -116,4 +116,36 @@ fn main() {
         red_bytes / elapsed / 1e9,
         elapsed * 1e3
     );
+
+    // --- Vectorized elementwise map: vec4 lanes, 16 bytes per thread ---
+    let kernel4 = Kernel::tuned(
+        &context,
+        "scale_add4",
+        compute_core::shaders::SCALE_ADD4_WGSL,
+        "main",
+        &[Binding::Uniform, Binding::StorageRead, Binding::StorageReadWrite],
+        128,
+        256,
+    )
+    .expect("scale_add4 builds");
+    let lanes = kernel4.max_dispatch_invocations() as usize;
+    let input4: Vec<f32> = (0..lanes * 4).map(|i| i as f32 * 1e-6).collect();
+    let params4 = uniform_f32(device, queue, &scale_add_params(lanes as u32, 2.5, -1.25));
+    let input4_buf = storage_f32(device, queue, &input4);
+    let output4_buf = storage_f32_zeroed(device, queue, lanes * 4);
+    for _ in 0..WARMUP {
+        kernel4.dispatch(device, queue, &[&params4, &input4_buf, &output4_buf], lanes as u32);
+    }
+    let bytes4 = (lanes * 16 * 2) as f64; // 16 bytes read + 16 written per lane
+    let start = Instant::now();
+    for _ in 0..ITERATIONS {
+        kernel4.dispatch(device, queue, &[&params4, &input4_buf, &output4_buf], lanes as u32);
+    }
+    let _ = read_f32(device, queue, &output4_buf, 1);
+    let elapsed = start.elapsed().as_secs_f64() / ITERATIONS as f64;
+    println!(
+        "scale_add4 (vec4 map):         {:7.2} GB/s sustained ({:.2} ms/iter)",
+        bytes4 / elapsed / 1e9,
+        elapsed * 1e3
+    );
 }

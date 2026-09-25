@@ -1,11 +1,13 @@
-// Workgroup-strided sum reduction: partials[wid] = sum of input[wid*WG .. wid*WG+WG).
-// Callers reduce the partials array (a second dispatch, or a tiny CPU fold)
-// to obtain the full sum; chaining dispatches scales to arbitrary lengths.
+// Workgroup-strided grid sum reduction: partials[wid] = sum of the elements
+// this workgroup covers, striding by groups * WG so a single dispatch reduces
+// arbitrary lengths (callers pick groups <= the 65535 dispatch limit). Chain
+// dispatches over the partials array — or use the compute-core `reduce_f32`
+// helper — to fold down to a scalar.
 struct Params {
     count: u32,
+    groups: u32,
     _pad0: u32,
     _pad1: u32,
-    _pad2: u32,
 };
 
 @group(0) @binding(0) var<uniform> params: Params;
@@ -22,16 +24,16 @@ fn main(
     @builtin(local_invocation_id) lid: vec3<u32>,
     @builtin(workgroup_id) wid: vec3<u32>,
 ) {
-    let i = wid.x * WG + lid.x;
+    let stride = params.groups * WG;
     var sum = 0.0;
-    if (i < params.count) {
-        sum = input[i];
+    for (var i = wid.x * WG + lid.x; i < params.count; i += stride) {
+        sum += input[i];
     }
     scratch[lid.x] = sum;
-    for (var stride = WG / 2u; stride > 0u; stride = stride >> 1u) {
+    for (var step = WG / 2u; step > 0u; step = step >> 1u) {
         workgroupBarrier();
-        if (lid.x < stride) {
-            scratch[lid.x] = scratch[lid.x] + scratch[lid.x + stride];
+        if (lid.x < step) {
+            scratch[lid.x] = scratch[lid.x] + scratch[lid.x + step];
         }
     }
     if (lid.x == 0u) {
