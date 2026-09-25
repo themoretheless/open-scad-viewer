@@ -52,7 +52,10 @@ export function primeSdfGpu(job:SdfGpuJob,id:number,values:Float32Array):void{
  gpuPending.set(sdfKey(job.field,job.grid),{id,values})
 }
 export const tessellateSdfGpuAware=(field:SdfField,grid:SdfGrid):PolygonBuild=>{
- const primed=gpuPending.get(sdfKey(field,grid))
- if(primed){gpuPending.delete(sdfKey(field,grid));return callGeometryRust('sdf_finish',{id:primed.id,values:Array.from(primed.values)})}
+ const key=sdfKey(field,grid)
+ const primed=gpuPending.get(key)
+ // encodeBinary reads typed numeric arrays elementwise exactly like the
+ // equivalent plain array, so the primed grid crosses without an Array.from copy.
+ if(primed){gpuPending.delete(key);return callGeometryRust('sdf_finish',{id:primed.id,values:primed.values})}
  return tessellateSdf(field,grid)
 }

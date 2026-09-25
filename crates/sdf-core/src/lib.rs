@@ -1109,8 +1109,9 @@ pub fn polygonize_tile(
     }
     let [nx, ny, nz] = grid.cells;
     let index = |x: usize, y: usize, z: usize| (z * (ny + 1) + y) * (nx + 1) + x;
-    let mut points = Vec::new();
-    let mut values = Vec::new();
+    let sample_count = (nx + 1) * (ny + 1) * (nz + 1);
+    let mut points = Vec::with_capacity(sample_count);
+    let mut values = Vec::with_capacity(sample_count);
     for z in 0..=nz {
         for y in 0..=ny {
             for x in 0..=nx {
@@ -1146,7 +1147,10 @@ pub fn polygonize_tile(
         positions: Vec::new(),
         indices: Vec::new(),
     };
-    let mut cache = BTreeMap::new();
+    // Edge cache is only ever probed by key (entry API); iteration order never
+    // reaches the mesh, so a hash map keeps the output bit-identical while
+    // avoiding per-entry tree comparisons.
+    let mut cache = rustc_hash::FxHashMap::default();
     for z in 0..nz {
         for y in 0..ny {
             for x in 0..nx {

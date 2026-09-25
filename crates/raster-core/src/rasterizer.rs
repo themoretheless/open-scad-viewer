@@ -528,8 +528,11 @@ pub fn write_ppm(path: &std::path::Path, width: u32, height: u32, rgba: &[u8]) -
     use std::io::Write;
     let mut file = std::fs::File::create(path)?;
     write!(file, "P6\n{} {}\n255\n", width, height)?;
+    // Pack RGB once and issue a single write instead of a 3-byte write per pixel.
+    let mut rgb = Vec::with_capacity(rgba.len() / 4 * 3);
     for px in rgba.chunks_exact(4) {
-        file.write_all(&[px[0], px[1], px[2]])?;
+        rgb.extend_from_slice(&px[..3]);
     }
+    file.write_all(&rgb)?;
     Ok(())
 }

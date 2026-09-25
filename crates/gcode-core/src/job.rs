@@ -3,9 +3,9 @@
 use crate::flavor::{ShutdownStep, StartupStep};
 use crate::{
     BoundedOutput, Flavor, GcodeBounds, GcodeMove, GcodePreview, MAX_COORDINATE_MM, MAX_LAYERS,
-    MAX_LINE_BYTES, MAX_MOVES, MAX_OUTPUT_BYTES, MachineProfile, PlannedLayer, Result, invalid,
-    number, output_limit, require_layers, rounded_coordinate, valid_coordinate, valid_dimension,
-    words,
+    MAX_LINE_BYTES, MAX_MOVES, MAX_OUTPUT_BYTES, MachineProfile, PlannedLayer, Result,
+    estimated_output_bytes, fixed7, invalid, number, output_limit, require_layers,
+    rounded_coordinate, valid_coordinate, valid_dimension, words,
 };
 use std::fmt::Write;
 
@@ -87,7 +87,7 @@ fn travel_xy(a: [f64; 2], b: [f64; 2]) -> f64 {
 
 /// Serialize a machine job: heat, optional home, absolute E, retract on long travels.
 pub fn emit_job(layers: &[PlannedLayer], job: &JobProfile) -> Result<String> {
-    let mut out = BoundedOutput(String::new());
+    let mut out = BoundedOutput(String::with_capacity(estimated_output_bytes(layers)));
     emit_job_body(layers, job, &mut out)?;
     Ok(out.0)
 }
@@ -125,7 +125,8 @@ pub(crate) fn emit_job_body(
         writeln!(out, "M106 S{}", job.fan_speed).map_err(output_limit)?;
     }
     let mut e = 0.0;
-    let mut written_e = 0.0;
+    let mut written_units = 0i64;
+    let mut ebuf = String::with_capacity(24);
     let mut last_xy: Option<[f64; 2]> = None;
     let mut filament_retracted = false;
     for (index, layer) in layers.iter().enumerate() {
@@ -150,17 +151,17 @@ pub(crate) fn emit_job_body(
                             "Retract would drive absolute E below zero",
                         ));
                     }
-                    let e_text = format!("{next_e:.7}");
-                    let next_written = number(&e_text)?;
-                    if next_written >= written_e {
+                    ebuf.clear();
+                    let next_units = fixed7::push_fixed7(&mut ebuf, next_e)?;
+                    if next_units >= written_units {
                         return Err(invalid(
                             "GCODE_NUMERIC",
                             "Retract E cannot be represented at export precision",
                         ));
                     }
                     e = next_e;
-                    written_e = next_written;
-                    writeln!(out, "G1 E{e_text} F{retract_f:.3}").map_err(output_limit)?;
+                    written_units = next_units;
+                    writeln!(out, "G1 E{ebuf} F{retract_f:.3}").map_err(output_limit)?;
                     filament_retracted = true;
                 }
             }
@@ -168,17 +169,17 @@ pub(crate) fn emit_job_body(
                 .map_err(output_limit)?;
             if filament_retracted {
                 let next_e = e + job.retract_length_mm;
-                let e_text = format!("{next_e:.7}");
-                let next_written = number(&e_text)?;
-                if !next_written.is_finite() || next_written <= written_e {
+                ebuf.clear();
+                let next_units = fixed7::push_fixed7(&mut ebuf, next_e)?;
+                if next_units <= written_units {
                     return Err(invalid(
                         "GCODE_NUMERIC",
                         "Unretract E cannot be represented at export precision",
                     ));
                 }
                 e = next_e;
-                written_e = next_written;
-                writeln!(out, "G1 E{e_text} F{unretract_f:.3}").map_err(output_limit)?;
+                written_units = next_units;
+                writeln!(out, "G1 E{ebuf} F{unretract_f:.3}").map_err(output_limit)?;
                 filament_retracted = false;
             }
             let mut previous = start;
@@ -200,19 +201,19 @@ pub(crate) fn emit_job_body(
                         "Extrusion accumulation exceeds numeric precision",
                     ));
                 }
-                let e_text = format!("{next_e:.7}");
-                let next_written_e = number(&e_text)?;
-                if !next_written_e.is_finite() || next_written_e <= written_e {
+                ebuf.clear();
+                let next_units = fixed7::push_fixed7(&mut ebuf, next_e)?;
+                if next_units <= written_units {
                     return Err(invalid(
                         "GCODE_NUMERIC",
                         "A segment's extrusion cannot be represented at 0.0000001 mm precision",
                     ));
                 }
                 e = next_e;
-                written_e = next_written_e;
+                written_units = next_units;
                 writeln!(
                     out,
-                    "G1 X{:.5} Y{:.5} E{e_text} F{print_f:.3}",
+                    "G1 X{:.5} Y{:.5} E{ebuf} F{print_f:.3}",
                     next[0], next[1]
                 )
                 .map_err(output_limit)?;
@@ -223,7 +224,9 @@ pub(crate) fn emit_job_body(
     }
     if filament_retracted {
         let next_e = e + job.retract_length_mm;
-        writeln!(out, "G1 E{next_e:.7} F{unretract_f:.3}").map_err(output_limit)?;
+        ebuf.clear();
+        fixed7::push_fixed7(&mut ebuf, next_e)?;
+        writeln!(out, "G1 E{ebuf} F{unretract_f:.3}").map_err(output_limit)?;
     }
     if job.fan_speed > 0 {
         writeln!(out, "M107").map_err(output_limit)?;

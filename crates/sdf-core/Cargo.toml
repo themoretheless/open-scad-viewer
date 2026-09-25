@@ -16,6 +16,7 @@ gpu-compute = { path = "../gpu-compute", optional = true }
 value-codec = { path = "../value-codec" }
 geometry-ops = { path = "../geometry-ops" }
 planar-geometry = { path = "../planar-geometry" }
+rustc-hash = "=2.1.1"
 
 [dev-dependencies]
 rbench = { workspace = true }

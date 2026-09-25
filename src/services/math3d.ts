@@ -1,5 +1,6 @@
 /** Row-major matrix transport and remaining vector helpers. */
 import { callGeometryRust } from './geometry/kernel'
+import { invertMatrixF64 } from './geometry/matrixInverse'
 
 export type Mat4 = Float32Array
 export type Vec3 = [number, number, number]
@@ -128,11 +129,26 @@ export function transpose(m: Mat4): Mat4 {
   return new Float32Array(callGeometryRust<number[]>('viewport', { action: 'transpose', matrix: Array.from(m) }))
 }
 
-/** Native inverse. Singular matrices refuse; output remains untouched on failure. */
+/**
+ * Inverse computed in pure TypeScript (see geometry/matrixInverse.ts), matching
+ * the native kernel's f64 partial-pivot elimination and its f32 GPU transport
+ * round trip bit-for-bit. Singular matrices refuse; output remains untouched on
+ * failure. This avoids a synchronous WASM round trip on the per-frame and
+ * per-mesh hot paths.
+ */
 export function invert(a: Mat4, out?: Mat4): Mat4 {
-  const values = callGeometryRust<number[]>('viewport', { action: 'inverse', matrix: Array.from(a) })
-  if (out) { out.set(values); return out }
-  return new Float32Array(values)
+  const values = invertMatrixF64(a)
+  if (!values) throw new Error('Singular or unrepresentable matrix inverse')
+  // The native boundary stores results as f32 and refuses non-finite storage.
+  const stored = new Array<number>(16)
+  for (let i = 0; i < 16; i++) {
+    const v = Math.fround(values[i])
+    if (!Number.isFinite(v)) throw new Error('Matrix result exceeds finite GPU storage')
+    stored[i] = v
+  }
+  const target = out ?? new Float32Array(16)
+  for (let i = 0; i < 16; i++) target[i] = stored[i]
+  return target
 }
 
 /** Transform a point by a row-major matrix, including homogeneous division. */

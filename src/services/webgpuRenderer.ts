@@ -139,6 +139,9 @@ interface GMesh {
   styleHovered: number
 }
 
+/** Shared empty list so render() never allocates when there are no ghosts. */
+const NO_GHOST_MESHES: GMesh[] = []
+
 /** Persistent capacity-grown vertex buffer for transient overlay geometry. */
 interface OverlaySlot {
   buffer: GPUBuffer | null
@@ -155,10 +158,49 @@ interface Bounds {
   max: [number, number, number]
 }
 
+/**
+ * Buffer equality for scene publication. Buffers handed to setMeshes are
+ * immutable snapshots: the reference fast path below already treats identity
+ * as equality, and nothing in the renderer mutates a published buffer.
+ *
+ * Cost model: a full elementwise scan over up to ~1M floats ran on every
+ * rebuild, even for a transform-only edit. Two cheap gates now avoid it:
+ *  1. Sampled-lane fingerprint (first/last plus 62 evenly spaced lanes) —
+ *     a mismatch proves inequality in O(64), so changed buffers are rejected
+ *     without scanning to the first differing element.
+ *  2. A verified-pair cache: once a full scan has proven two distinct buffer
+ *     instances equal, later comparisons of the same pair are O(1). This is
+ *     what makes repeated transform-only rebuilds cheap when the publisher
+ *     hands over fresh instances with identical content. Immutability of
+ *     published snapshots keeps cached verdicts valid.
+ * A fingerprint match without a cached verdict still falls through to the
+ * full scan, so a false "changed" answer is possible only as a cheap early
+ * rejection; a false "unchanged" answer is impossible.
+ */
+const verifiedEqualPairs = new WeakMap<object, WeakSet<object>>()
+
+function sampledLanesMatch(left: Float32Array | Uint32Array, right: Float32Array | Uint32Array) {
+  const length = left.length
+  if (left[0] !== right[0] || left[length - 1] !== right[length - 1]) return false
+  const lanes = Math.min(62, length)
+  const step = length / lanes
+  for (let lane = 0; lane < lanes; lane++) {
+    const index = Math.floor(lane * step)
+    if (left[index] !== right[index]) return false
+  }
+  return true
+}
+
 function sameTypedArray(left: Float32Array | Uint32Array, right: Float32Array | Uint32Array) {
   if (left === right) return true
   if (left.constructor !== right.constructor || left.length !== right.length) return false
+  if (left.length === 0) return true
+  if (!sampledLanesMatch(left, right)) return false
+  if (verifiedEqualPairs.get(left)?.has(right)) return true
   for (let index = 0; index < left.length; index++) if (left[index] !== right[index]) return false
+  let verified = verifiedEqualPairs.get(left)
+  if (!verified) verifiedEqualPairs.set(left, verified = new WeakSet())
+  verified.add(right)
   return true
 }
 
@@ -1700,6 +1742,8 @@ export class WebGPURenderer {
     if (!canvas || !dev || !ctx || !this.depth || !sceneUB || !this.drawable || !canvas.width || !canvas.height) return
 
     const { eye, viewProjection } = this.cameraState()
+    // Hoisted once per frame; the morph set cannot change mid-render.
+    const hasMorph = this.meshes.some(mesh => mesh.morph)
     const sd = this.sceneUniformScratch
     const inverseVP = invert(viewProjection)
     for (let row = 0; row < 4; row++) {
@@ -1759,7 +1803,7 @@ export class WebGPURenderer {
       pass.draw(this.measurementVC)
     }
 
-    const transitioning = this.geometryGhosts.length > 0 || this.meshes.some(mesh => mesh.morph)
+    const transitioning = this.geometryGhosts.length > 0 || hasMorph
     this.viewFrustum.update(viewProjection)
     this.opaqueDraws.length = this.edgeDraws.length = 0
     this.transparentSort.begin()
@@ -1777,7 +1821,9 @@ export class WebGPURenderer {
 
     pass.setPipeline(this.meshImmediatePipeT ?? this.meshPipeT)
     pass.setBindGroup(0, this.sceneBG)
-    const ghostMeshes = this.geometryGhosts.flatMap(ghost => ghost.meshes).filter(mesh => mesh.alpha > 0)
+    const ghostMeshes = this.geometryGhosts.length
+      ? this.geometryGhosts.flatMap(ghost => ghost.meshes).filter(mesh => mesh.alpha > 0)
+      : NO_GHOST_MESHES
     ghostMeshes.forEach((mesh, index) => this.transparentSort.add(this.meshes.length + index, mesh.worldBounds.center))
     const transparentOrder = this.transparentSort.sort(eye, this.tx, this.ty, this.tz)
     this.transparentDraws.length = 0
@@ -1811,14 +1857,14 @@ export class WebGPURenderer {
       }
     }
 
-    if (!this.geometryFade && !this.geometryGhosts.length && !this.meshes.some(mesh => mesh.morph) && this.sourceFaceSlot.buffer && this.sourceFaceSlot.count) {
+    if (!this.geometryFade && !this.geometryGhosts.length && !hasMorph && this.sourceFaceSlot.buffer && this.sourceFaceSlot.count) {
       pass.setPipeline(this.selectionFacePipe)
       pass.setBindGroup(0, this.sceneBG)
       pass.setVertexBuffer(0, this.sourceFaceSlot.buffer)
       pass.draw(this.sourceFaceSlot.count)
     }
 
-    if (!this.geometryFade && !this.geometryGhosts.length && !this.meshes.some(mesh => mesh.morph) && this.selectionFaceSlot.buffer && this.selectionFaceSlot.count) {
+    if (!this.geometryFade && !this.geometryGhosts.length && !hasMorph && this.selectionFaceSlot.buffer && this.selectionFaceSlot.count) {
       pass.setPipeline(this.selectionFacePipe)
       pass.setBindGroup(0, this.sceneBG)
       pass.setVertexBuffer(0, this.selectionFaceSlot.buffer)
@@ -1843,21 +1889,21 @@ export class WebGPURenderer {
       }
     }
 
-    if (!this.geometryFade && !this.geometryGhosts.length && !this.meshes.some(mesh => mesh.morph) && this.sourceLineSlot.buffer && this.sourceLineSlot.count) {
+    if (!this.geometryFade && !this.geometryGhosts.length && !hasMorph && this.sourceLineSlot.buffer && this.sourceLineSlot.count) {
       pass.setPipeline(this.selectionLinePipe)
       pass.setBindGroup(0, this.sceneBG)
       pass.setVertexBuffer(0, this.sourceLineSlot.buffer)
       pass.draw(this.sourceLineSlot.count)
     }
 
-    if (!this.geometryFade && !this.geometryGhosts.length && !this.meshes.some(mesh => mesh.morph) && this.selectionLineSlot.buffer && this.selectionLineSlot.count) {
+    if (!this.geometryFade && !this.geometryGhosts.length && !hasMorph && this.selectionLineSlot.buffer && this.selectionLineSlot.count) {
       pass.setPipeline(this.selectionLinePipe)
       pass.setBindGroup(0, this.sceneBG)
       pass.setVertexBuffer(0, this.selectionLineSlot.buffer)
       pass.draw(this.selectionLineSlot.count)
     }
 
-    if (!this.geometryFade && !this.geometryGhosts.length && !this.meshes.some(mesh => mesh.morph) && this.deepSelectionLineSlot.buffer && this.deepSelectionLineSlot.count) {
+    if (!this.geometryFade && !this.geometryGhosts.length && !hasMorph && this.deepSelectionLineSlot.buffer && this.deepSelectionLineSlot.count) {
       pass.setPipeline(this.deepSelectionLinePipe)
       pass.setBindGroup(0, this.sceneBG)
       pass.setVertexBuffer(0, this.deepSelectionLineSlot.buffer)

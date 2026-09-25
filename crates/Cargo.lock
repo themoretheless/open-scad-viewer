@@ -2017,6 +2017,7 @@ dependencies = [
  "osv-math",
  "planar-geometry",
  "rbench",
+ "rustc-hash 2.1.1",
  "value-codec",
 ]
 

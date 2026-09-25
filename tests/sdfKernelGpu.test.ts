@@ -19,7 +19,9 @@ describe('GPU-aware SDF tessellation dispatch', () => {
     expect(prepared?.id).toBe(7)
     primeSdfGpu({ field, grid }, 7, new Float32Array(4))
     tessellateSdfGpuAware(field, grid)
-    expect(calls.rust).toHaveBeenCalledWith('sdf_finish', { id: 7, values: expect.any(Array) })
+    // The primed Float32Array crosses the boundary as-is: encodeBinary reads
+    // typed numeric arrays elementwise exactly like the equivalent plain array.
+    expect(calls.rust).toHaveBeenCalledWith('sdf_finish', { id: 7, values: expect.any(Float32Array) })
   })
 
   it('falls back to sdf_tessellate when nothing was primed or prepared', () => {

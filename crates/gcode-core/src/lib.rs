@@ -13,6 +13,7 @@ pub const COORDINATE_RESOLUTION_MM: f64 = 0.00001;
 const MIN_FEEDRATE_MM_S: f64 = 0.001 / 60.0;
 const PROLOGUE: [&str; 5] = ["G21", "G90", "M82", "M200 D0", "G92 E0"];
 
+mod fixed7;
 mod flavor;
 mod foreign;
 mod foreign_extrusion;
@@ -273,9 +274,28 @@ pub(crate) fn output_limit(_: fmt::Error) -> Error {
 
 /// Serialize a preview plan. This contains no homing/heating or printer setup.
 pub fn emit(layers: &[PlannedLayer], machine: &MachineProfile) -> Result<String> {
-    let mut out = BoundedOutput(String::new());
+    let mut out = BoundedOutput(String::with_capacity(estimated_output_bytes(layers)));
     emit_body(layers, machine, &mut out)?;
     Ok(out.0)
+}
+
+/// Rough upper-bound sizing for the serialization buffer, capped at the limit.
+pub(crate) fn estimated_output_bytes(layers: &[PlannedLayer]) -> usize {
+    let moves: usize = layers
+        .iter()
+        .map(|layer| {
+            layer
+                .paths
+                .iter()
+                .map(|path| path.points.len() + 2)
+                .sum::<usize>()
+                + 2
+        })
+        .sum();
+    moves
+        .saturating_mul(64)
+        .saturating_add(1024)
+        .min(MAX_OUTPUT_BYTES)
 }
 
 fn emit_body(
@@ -293,7 +313,8 @@ fn emit_body(
         writeln!(out, "{command}").map_err(output_limit)?;
     }
     let mut e = 0.0;
-    let mut written_e = 0.0;
+    let mut written_units = 0i64;
+    let mut ebuf = String::with_capacity(24);
     for (index, layer) in layers.iter().enumerate() {
         let z = rounded_coordinate(layer.z_mm);
         writeln!(out, ";LAYER:{index}\n;Z:{z:.5}\nG1 Z{z:.5} F{travel_f:.3}")
@@ -324,19 +345,19 @@ fn emit_body(
                         "Extrusion accumulation exceeds numeric precision",
                     ));
                 }
-                let e_text = format!("{next_e:.7}");
-                let next_written_e = number(&e_text)?;
-                if !next_written_e.is_finite() || next_written_e <= written_e {
+                ebuf.clear();
+                let next_units = fixed7::push_fixed7(&mut ebuf, next_e)?;
+                if next_units <= written_units {
                     return Err(invalid(
                         "GCODE_NUMERIC",
                         "A segment's extrusion cannot be represented at 0.0000001 mm precision",
                     ));
                 }
                 e = next_e;
-                written_e = next_written_e;
+                written_units = next_units;
                 writeln!(
                     out,
-                    "G1 X{:.5} Y{:.5} E{e_text} F{print_f:.3}",
+                    "G1 X{:.5} Y{:.5} E{ebuf} F{print_f:.3}",
                     next[0], next[1]
                 )
                 .map_err(output_limit)?;

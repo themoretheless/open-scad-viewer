@@ -267,8 +267,29 @@ pub fn solve(model: &Model) -> Result<Response> {
         }
         elements.push(el);
     }
+    // AABB pre-filter: check_overlap's own first test is exactly this strict
+    // per-axis separation (no tolerance), so skipping on disjoint AABBs is a
+    // pure early-exit and cannot change which pairs reach the full SAT.
+    let aabbs: Vec<[[f64; 2]; 3]> = model
+        .tets
+        .iter()
+        .map(|tet| {
+            let mut bounds = [[f64::INFINITY, f64::NEG_INFINITY]; 3];
+            for &node in &tet.nodes {
+                for (k, axis) in bounds.iter_mut().enumerate() {
+                    axis[0] = axis[0].min(points[node][k]);
+                    axis[1] = axis[1].max(points[node][k]);
+                }
+            }
+            bounds
+        })
+        .collect();
     for i in 0..model.tets.len() {
         for j in 0..i {
+            let (a, b) = (&aabbs[i], &aabbs[j]);
+            if (0..3).any(|k| a[k][1] <= b[k][0] || b[k][1] <= a[k][0]) {
+                continue;
+            }
             check_overlap(
                 &model.tets[i].nodes.map(|k| points[k]),
                 &model.tets[j].nodes.map(|k| points[k]),
