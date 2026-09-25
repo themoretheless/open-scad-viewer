@@ -13,7 +13,9 @@ struct Params {
 @group(0) @binding(5) var<storage, read_write> out_index1: array<u32>;
 @group(0) @binding(6) var<storage, read_write> out_dist1: array<f32>;
 
-@compute @workgroup_size(256)
+const WG: u32 = 256;
+
+@compute @workgroup_size(WG)
 fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
     let i = gid.x;
     if (i >= params.query_count) {

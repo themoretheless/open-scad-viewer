@@ -1,4 +1,4 @@
-// Template placeholder `__WG__` is substituted per wgpu backend.
+// Template placeholder `WG` is substituted per wgpu backend.
 struct Params {
     query_count: u32,
     target_count: u32,
@@ -12,12 +12,12 @@ struct Params {
 @group(0) @binding(3) var<storage, read_write> out_sum: array<f32>;
 @group(0) @binding(4) var<storage, read_write> out_max: array<f32>;
 
-const WG: u32 = __WG__u;
+const WG: u32 = 256;
 
-var<workgroup> sums: array<f32, __WG__>;
-var<workgroup> maxes: array<f32, __WG__>;
+var<workgroup> sums: array<f32, WG>;
+var<workgroup> maxes: array<f32, WG>;
 
-@compute @workgroup_size(__WG__)
+@compute @workgroup_size(WG)
 fn main(
     @builtin(global_invocation_id) gid: vec3<u32>,
     @builtin(local_invocation_id) lid: vec3<u32>,

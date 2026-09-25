@@ -1,9 +1,9 @@
 use crate::{Acceleration, Error, M3, Result, V3, add, mv};
 
 /// WGSL template for point-cloud axis-aligned bounds reduction.
-pub const POINT_BOUNDS_WGSL_TEMPLATE: &str = include_str!("point_bounds.wgsl");
+pub const POINT_BOUNDS_WGSL: &str = include_str!("point_bounds.wgsl");
 /// WGSL template for transformed point-cloud axis-aligned bounds reduction.
-pub const TRANSFORMED_POINT_BOUNDS_WGSL_TEMPLATE: &str =
+pub const TRANSFORMED_POINT_BOUNDS_WGSL: &str =
     include_str!("transformed_point_bounds.wgsl");
 
 #[derive(Clone, Copy, Debug, PartialEq)]

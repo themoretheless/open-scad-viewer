@@ -1,7 +1,7 @@
 use crate::{Acceleration, Error, M3, Result, V3, dot, eigen, unit};
 
 /// WGSL template for point-cloud moment reduction.
-pub const POINT_MOMENTS_WGSL_TEMPLATE: &str = include_str!("point_moments.wgsl");
+pub const POINT_MOMENTS_WGSL: &str = include_str!("point_moments.wgsl");
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct PointMoments {

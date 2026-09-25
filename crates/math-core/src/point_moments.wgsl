@@ -1,4 +1,4 @@
-// Template placeholder `__WG__` is substituted per wgpu backend.
+// Template placeholder `WG` is substituted per wgpu backend.
 struct Params {
     point_count: u32,
     _pad0: u32,
@@ -10,19 +10,19 @@ struct Params {
 @group(0) @binding(1) var<storage, read> points: array<f32>;
 @group(0) @binding(2) var<storage, read_write> out: array<f32>;
 
-const WG: u32 = __WG__u;
+const WG: u32 = 256;
 
-var<workgroup> sx: array<f32, __WG__>;
-var<workgroup> sy: array<f32, __WG__>;
-var<workgroup> sz: array<f32, __WG__>;
-var<workgroup> sxx: array<f32, __WG__>;
-var<workgroup> sxy: array<f32, __WG__>;
-var<workgroup> sxz: array<f32, __WG__>;
-var<workgroup> syy: array<f32, __WG__>;
-var<workgroup> syz: array<f32, __WG__>;
-var<workgroup> szz: array<f32, __WG__>;
+var<workgroup> sx: array<f32, WG>;
+var<workgroup> sy: array<f32, WG>;
+var<workgroup> sz: array<f32, WG>;
+var<workgroup> sxx: array<f32, WG>;
+var<workgroup> sxy: array<f32, WG>;
+var<workgroup> sxz: array<f32, WG>;
+var<workgroup> syy: array<f32, WG>;
+var<workgroup> syz: array<f32, WG>;
+var<workgroup> szz: array<f32, WG>;
 
-@compute @workgroup_size(__WG__)
+@compute @workgroup_size(WG)
 fn main(
     @builtin(global_invocation_id) gid: vec3<u32>,
     @builtin(local_invocation_id) lid: vec3<u32>,

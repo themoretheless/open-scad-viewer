@@ -210,6 +210,13 @@ impl Kernel {
         &self.entry
     }
 
+    /// The bind group layout buffers must match to be dispatched — lets
+    /// callers cache bind groups alongside their grow-only buffer pools and
+    /// dispatch them via [`dispatch_bind_group`](Kernel::dispatch_bind_group).
+    pub fn bind_group_layout(&self) -> &BindGroupLayout {
+        &self.bgl
+    }
+
     /// Number of workgroups needed to cover `invocations` threads.
     pub fn workgroup_count(&self, invocations: u32) -> u32 {
         invocations.div_ceil(self.workgroup_size)
@@ -265,6 +272,19 @@ impl Kernel {
                 })
                 .collect::<Vec<_>>(),
         });
+        self.dispatch_bind_group(device, queue, &bind_group, groups);
+    }
+
+    /// Dispatches with a caller-cached bind group (built against
+    /// [`bind_group_layout`](Kernel::bind_group_layout)) — the fast path for
+    /// repeated dispatches over grow-only buffer pools.
+    pub fn dispatch_bind_group(
+        &self,
+        device: &Device,
+        queue: &Queue,
+        bind_group: &wgpu::BindGroup,
+        groups: u32,
+    ) {
         let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
             label: Some(&self.label),
         });
@@ -274,7 +294,7 @@ impl Kernel {
                 timestamp_writes: None,
             });
             pass.set_pipeline(&self.pipeline);
-            pass.set_bind_group(0, &bind_group, &[]);
+            pass.set_bind_group(0, bind_group, &[]);
             pass.dispatch_workgroups(groups, 1, 1);
         }
         queue.submit([encoder.finish()]);

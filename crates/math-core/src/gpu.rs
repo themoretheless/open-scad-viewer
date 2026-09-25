@@ -1,72 +1,109 @@
-//! GPU nearest-neighbor search (feature `gpu`): for every query point, finds
-//! the index and squared distance of the closest target point by brute
-//! force. f32 arithmetic — see [`crate::Acceleration`].
+//! GPU batch kernels (feature `gpu`) on top of the shared `compute-core`
+//! runtime: pipeline construction, workgroup-size tuning, dispatch and
+//! readback all go through `compute_core::Kernel`; this module keeps only
+//! the per-kernel grow-only buffer pools, the cached bind groups, and the
+//! CPU-side folds of partial reductions. f32 arithmetic — see
+//! [`crate::Acceleration`].
 //!
-//! Device buffers are cached per query/target capacity (grow-only) so
-//! repeated calls at a stable size amortize allocation; only the bytes
-//! actually written/read for the current call cross the wire.
+//! Device buffers are cached per input capacity (grow-only) so repeated calls
+//! at a stable size amortize allocation; only the bytes actually written/read
+//! for the current call cross the wire.
+
 use crate::{M3, V3};
-use gpu_compute::{BackendReport, GpuContext, read_buffer, storage_entry, uniform_entry, wgpu};
+use compute_core::gpu_compute::wgpu;
+use compute_core::gpu_compute::{BackendReport, GpuContext, pack_f32};
+use compute_core::{Binding, Kernel, read_f32, read_u32};
+use wgpu::{BindGroup, Buffer, BufferUsages, Device};
 
 const WG_METAL: u32 = 128;
 const WG_DEFAULT: u32 = 256;
 
-struct Buffers {
-    query_capacity: usize,
-    target_capacity: usize,
-    params: wgpu::Buffer,
-    queries: wgpu::Buffer,
-    targets: wgpu::Buffer,
-    out_index: wgpu::Buffer,
-    out_dist: wgpu::Buffer,
-    read_index: wgpu::Buffer,
-    read_dist: wgpu::Buffer,
-    bind: wgpu::BindGroup,
+fn mk(device: &Device, label: &str, size: u64, usage: BufferUsages) -> Buffer {
+    device.create_buffer(&wgpu::BufferDescriptor {
+        label: Some(label),
+        size: size.max(4),
+        usage,
+        mapped_at_creation: false,
+    })
 }
 
+/// Sequential bind group over the kernel's layout: binding 0..n in buffer
+/// order, matching each shader's declaration order.
+fn bind(device: &Device, kernel: &Kernel, label: &str, buffers: &[&Buffer]) -> BindGroup {
+    device.create_bind_group(&wgpu::BindGroupDescriptor {
+        label: Some(label),
+        layout: kernel.bind_group_layout(),
+        entries: &buffers
+            .iter()
+            .enumerate()
+            .map(|(index, buffer)| wgpu::BindGroupEntry {
+                binding: index as u32,
+                resource: buffer.as_entire_binding(),
+            })
+            .collect::<Vec<_>>(),
+    })
+}
+
+/// Little-endian uniform payload from u32 words (counts, pads).
+fn pack_params(words: &[u32]) -> Vec<u8> {
+    words.iter().flat_map(|word| word.to_le_bytes()).collect()
+}
+
+fn push_f32(bytes: &mut Vec<u8>, value: f32) {
+    bytes.extend_from_slice(&value.to_le_bytes());
+}
+
+/// Uniform + read storage + write storage bindings, the common shape.
+const UNIFORM_STORAGE2: [Binding; 4] = [
+    Binding::Uniform,
+    Binding::StorageRead,
+    Binding::StorageReadWrite,
+    Binding::StorageReadWrite,
+];
+
+/// Uniform + two read-only inputs + two read-write outputs (nearest-neighbor).
+const NN_BINDINGS: [Binding; 5] = [
+    Binding::Uniform,
+    Binding::StorageRead,
+    Binding::StorageRead,
+    Binding::StorageReadWrite,
+    Binding::StorageReadWrite,
+];
+
 struct GpuNearestNeighbor {
-    device: wgpu::Device,
+    device: Device,
     queue: wgpu::Queue,
-    layout: wgpu::BindGroupLayout,
-    pipeline: wgpu::ComputePipeline,
-    buffers: std::cell::RefCell<Option<Buffers>>,
+    kernel: Kernel,
+    buffers: std::cell::RefCell<Option<NearestNeighborBuffers>>,
+}
+
+struct NearestNeighborBuffers {
+    query_capacity: usize,
+    target_capacity: usize,
+    params: Buffer,
+    queries: Buffer,
+    targets: Buffer,
+    out_index: Buffer,
+    out_dist: Buffer,
+    bind: BindGroup,
 }
 
 impl GpuNearestNeighbor {
     fn new(context: &GpuContext) -> Self {
-        let device = &context.device;
-        let module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
-            label: Some("nearest_neighbor"),
-            source: wgpu::ShaderSource::Wgsl(crate::NEAREST_NEIGHBOR_WGSL.into()),
-        });
-        let layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-            label: Some("nearest_neighbor"),
-            entries: &[
-                uniform_entry(0),
-                storage_entry(1, true),
-                storage_entry(2, true),
-                storage_entry(3, false),
-                storage_entry(4, false),
-            ],
-        });
-        let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-            label: Some("nearest_neighbor"),
-            bind_group_layouts: &[Some(&layout)],
-            immediate_size: 0,
-        });
-        let pipeline = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-            label: Some("nearest_neighbor"),
-            layout: Some(&pipeline_layout),
-            module: &module,
-            entry_point: Some("main"),
-            compilation_options: Default::default(),
-            cache: None,
-        });
+        let kernel = Kernel::tuned(
+            context,
+            "nearest_neighbor",
+            crate::NEAREST_NEIGHBOR_WGSL,
+            "main",
+            &NN_BINDINGS,
+            WG_METAL,
+            WG_DEFAULT,
+        )
+        .expect("nearest_neighbor kernel builds");
         Self {
-            device: device.clone(),
+            device: context.device.clone(),
             queue: context.queue.clone(),
-            layout,
-            pipeline,
+            kernel,
             buffers: std::cell::RefCell::new(None),
         }
     }
@@ -85,75 +122,44 @@ impl GpuNearestNeighbor {
         let device = &self.device;
         let query_capacity = query_count.max(1);
         let target_capacity = target_count.max(1);
-        let params = device.create_buffer(&wgpu::BufferDescriptor {
-            label: Some("nn_params"),
-            size: 16,
-            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
-            mapped_at_creation: false,
-        });
-        let queries = device.create_buffer(&wgpu::BufferDescriptor {
-            label: Some("nn_queries"),
-            size: (query_capacity * 12) as u64,
-            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
-            mapped_at_creation: false,
-        });
-        let targets = device.create_buffer(&wgpu::BufferDescriptor {
-            label: Some("nn_targets"),
-            size: (target_capacity * 12) as u64,
-            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
-            mapped_at_creation: false,
-        });
-        let out_index = device.create_buffer(&wgpu::BufferDescriptor {
-            label: Some("nn_out_index"),
-            size: (query_capacity * 4) as u64,
-            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC,
-            mapped_at_creation: false,
-        });
-        let out_dist = device.create_buffer(&wgpu::BufferDescriptor {
-            label: Some("nn_out_dist"),
-            size: (query_capacity * 4) as u64,
-            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC,
-            mapped_at_creation: false,
-        });
-        let read_index = device.create_buffer(&wgpu::BufferDescriptor {
-            label: Some("nn_read_index"),
-            size: (query_capacity * 4) as u64,
-            usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
-            mapped_at_creation: false,
-        });
-        let read_dist = device.create_buffer(&wgpu::BufferDescriptor {
-            label: Some("nn_read_dist"),
-            size: (query_capacity * 4) as u64,
-            usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
-            mapped_at_creation: false,
-        });
-        let bind = device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("nearest_neighbor"),
-            layout: &self.layout,
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: params.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: queries.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 2,
-                    resource: targets.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 3,
-                    resource: out_index.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 4,
-                    resource: out_dist.as_entire_binding(),
-                },
-            ],
-        });
-        *self.buffers.borrow_mut() = Some(Buffers {
+        let params = mk(
+            device,
+            "nn_params",
+            16,
+            BufferUsages::UNIFORM | BufferUsages::COPY_DST,
+        );
+        let queries = mk(
+            device,
+            "nn_queries",
+            (query_capacity * 12) as u64,
+            BufferUsages::STORAGE | BufferUsages::COPY_DST,
+        );
+        let targets = mk(
+            device,
+            "nn_targets",
+            (target_capacity * 12) as u64,
+            BufferUsages::STORAGE | BufferUsages::COPY_DST,
+        );
+        let out_bytes = (query_capacity * 4) as u64;
+        let out_index = mk(
+            device,
+            "nn_out_index",
+            out_bytes,
+            BufferUsages::STORAGE | BufferUsages::COPY_SRC,
+        );
+        let out_dist = mk(
+            device,
+            "nn_out_dist",
+            out_bytes,
+            BufferUsages::STORAGE | BufferUsages::COPY_SRC,
+        );
+        let bind = bind(
+            device,
+            &self.kernel,
+            "nearest_neighbor",
+            &[&params, &queries, &targets, &out_index, &out_dist],
+        );
+        *self.buffers.borrow_mut() = Some(NearestNeighborBuffers {
             query_capacity,
             target_capacity,
             params,
@@ -161,8 +167,6 @@ impl GpuNearestNeighbor {
             targets,
             out_index,
             out_dist,
-            read_index,
-            read_dist,
             bind,
         });
     }
@@ -173,11 +177,12 @@ impl GpuNearestNeighbor {
         self.ensure_buffers(query_count, target_count);
         // Uniform layout matches nearest_neighbor.wgsl's `Params`: two counts
         // padded to a 16-byte uniform buffer.
-        let mut params = Vec::with_capacity(16);
-        params.extend_from_slice(&(query_count as u32).to_le_bytes());
-        params.extend_from_slice(&(target_count as u32).to_le_bytes());
-        params.extend_from_slice(&0u32.to_le_bytes());
-        params.extend_from_slice(&0u32.to_le_bytes());
+        let params = pack_params(&[
+            query_count as u32,
+            target_count as u32,
+            0,
+            0,
+        ]);
         let flat_q: Vec<f32> = queries.iter().flatten().map(|&v| v as f32).collect();
         let flat_t: Vec<f32> = targets.iter().flatten().map(|&v| v as f32).collect();
 
@@ -185,50 +190,28 @@ impl GpuNearestNeighbor {
         let b = buffers.as_ref().expect("ensure_buffers was just called");
         self.queue.write_buffer(&b.params, 0, &params);
         if !flat_q.is_empty() {
-            self.queue
-                .write_buffer(&b.queries, 0, &gpu_compute::pack_f32(&flat_q));
+            self.queue.write_buffer(&b.queries, 0, &pack_f32(&flat_q));
         }
         if !flat_t.is_empty() {
-            self.queue
-                .write_buffer(&b.targets, 0, &gpu_compute::pack_f32(&flat_t));
+            self.queue.write_buffer(&b.targets, 0, &pack_f32(&flat_t));
         }
-        let mut encoder = self
-            .device
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("nearest_neighbor"),
-            });
-        {
-            let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
-                label: Some("nearest_neighbor"),
-                timestamp_writes: None,
-            });
-            pass.set_pipeline(&self.pipeline);
-            pass.set_bind_group(0, &b.bind, &[]);
-            pass.dispatch_workgroups((query_count.max(1) as u32).div_ceil(256), 1, 1);
+        if query_count > 0 {
+            self.kernel.dispatch_bind_group(
+                &self.device,
+                &self.queue,
+                &b.bind,
+                self.kernel.workgroup_count(query_count as u32),
+            );
         }
-        let out_bytes = (query_count * 4) as u64;
-        if out_bytes > 0 {
-            encoder.copy_buffer_to_buffer(&b.out_index, 0, &b.read_index, 0, out_bytes);
-            encoder.copy_buffer_to_buffer(&b.out_dist, 0, &b.read_dist, 0, out_bytes);
-        }
-        self.queue.submit([encoder.finish()]);
         if query_count == 0 {
             return Vec::new();
         }
-        let raw_index = read_buffer(&self.device, &b.read_index, query_count * 4);
-        b.read_index.unmap();
-        let raw_dist = read_buffer(&self.device, &b.read_dist, query_count * 4);
-        b.read_dist.unmap();
+        let raw_index = read_u32(&self.device, &self.queue, &b.out_index, query_count);
+        let raw_dist = read_f32(&self.device, &self.queue, &b.out_dist, query_count);
         raw_index
-            .chunks_exact(4)
-            .zip(raw_dist.chunks_exact(4))
-            .take(query_count)
-            .map(|(i, d)| {
-                (
-                    u32::from_ne_bytes(i.try_into().unwrap()),
-                    f32::from_ne_bytes(d.try_into().unwrap()) as f64,
-                )
-            })
+            .iter()
+            .zip(raw_dist.iter())
+            .map(|(&index, &dist)| (index, dist as f64))
             .collect()
     }
 }
@@ -262,58 +245,46 @@ pub fn backend_report() -> Option<BackendReport> {
     })
 }
 
-struct DistancePairBuffers {
-    capacity: usize,
-    params: wgpu::Buffer,
-    a: wgpu::Buffer,
-    b: wgpu::Buffer,
-    out: wgpu::Buffer,
-    read: wgpu::Buffer,
-    bind: wgpu::BindGroup,
-}
+/// Uniform + two read storages + one write storage (pairwise kernels).
+const UNIFORM_PAIR: [Binding; 4] = [
+    Binding::Uniform,
+    Binding::StorageRead,
+    Binding::StorageRead,
+    Binding::StorageReadWrite,
+];
 
 struct GpuDistancePairs {
-    device: wgpu::Device,
+    device: Device,
     queue: wgpu::Queue,
-    layout: wgpu::BindGroupLayout,
-    pipeline: wgpu::ComputePipeline,
+    kernel: Kernel,
     buffers: std::cell::RefCell<Option<DistancePairBuffers>>,
+}
+
+struct DistancePairBuffers {
+    capacity: usize,
+    params: Buffer,
+    a: Buffer,
+    b: Buffer,
+    out: Buffer,
+    bind: BindGroup,
 }
 
 impl GpuDistancePairs {
     fn new(context: &GpuContext) -> Self {
-        let device = &context.device;
-        let module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
-            label: Some("distance_pairs"),
-            source: wgpu::ShaderSource::Wgsl(crate::DISTANCE_PAIRS_WGSL.into()),
-        });
-        let layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-            label: Some("distance_pairs"),
-            entries: &[
-                uniform_entry(0),
-                storage_entry(1, true),
-                storage_entry(2, true),
-                storage_entry(3, false),
-            ],
-        });
-        let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-            label: Some("distance_pairs"),
-            bind_group_layouts: &[Some(&layout)],
-            immediate_size: 0,
-        });
-        let pipeline = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-            label: Some("distance_pairs"),
-            layout: Some(&pipeline_layout),
-            module: &module,
-            entry_point: Some("main"),
-            compilation_options: Default::default(),
-            cache: None,
-        });
+        let kernel = Kernel::tuned(
+            context,
+            "distance_pairs",
+            crate::DISTANCE_PAIRS_WGSL,
+            "main",
+            &UNIFORM_PAIR,
+            WG_METAL,
+            WG_DEFAULT,
+        )
+        .expect("distance_pairs kernel builds");
         Self {
-            device: device.clone(),
+            device: context.device.clone(),
             queue: context.queue.clone(),
-            layout,
-            pipeline,
+            kernel,
             buffers: std::cell::RefCell::new(None),
         }
     }
@@ -326,70 +297,39 @@ impl GpuDistancePairs {
         if !stale {
             return;
         }
-        let capacity = pair_count.max(1);
         let device = &self.device;
-        let mk = |label: &str, size: u64, usage| {
-            device.create_buffer(&wgpu::BufferDescriptor {
-                label: Some(label),
-                size,
-                usage,
-                mapped_at_creation: false,
-            })
-        };
+        let capacity = pair_count.max(1);
         let params = mk(
+            device,
             "distance_pairs_params",
             16,
-            wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+            BufferUsages::UNIFORM | BufferUsages::COPY_DST,
         );
         let a = mk(
+            device,
             "distance_pairs_a",
             (capacity * 12) as u64,
-            wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+            BufferUsages::STORAGE | BufferUsages::COPY_DST,
         );
         let b = mk(
+            device,
             "distance_pairs_b",
             (capacity * 12) as u64,
-            wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+            BufferUsages::STORAGE | BufferUsages::COPY_DST,
         );
         let out = mk(
+            device,
             "distance_pairs_out",
             (capacity * 4) as u64,
-            wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC,
+            BufferUsages::STORAGE | BufferUsages::COPY_SRC,
         );
-        let read = mk(
-            "distance_pairs_read",
-            (capacity * 4) as u64,
-            wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
-        );
-        let bind = device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("distance_pairs"),
-            layout: &self.layout,
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: params.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: a.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 2,
-                    resource: b.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 3,
-                    resource: out.as_entire_binding(),
-                },
-            ],
-        });
+        let bind = bind(device, &self.kernel, "distance_pairs", &[&params, &a, &b, &out]);
         *self.buffers.borrow_mut() = Some(DistancePairBuffers {
             capacity,
             params,
             a,
             b,
             out,
-            read,
             bind,
         });
     }
@@ -399,38 +339,23 @@ impl GpuDistancePairs {
         self.ensure_buffers(pair_count);
         let flat_a: Vec<f32> = a.iter().flatten().map(|&v| v as f32).collect();
         let flat_b: Vec<f32> = b.iter().flatten().map(|&v| v as f32).collect();
-        let mut params = Vec::with_capacity(16);
-        params.extend_from_slice(&(pair_count as u32).to_le_bytes());
-        params.extend_from_slice(&0u32.to_le_bytes());
-        params.extend_from_slice(&0u32.to_le_bytes());
-        params.extend_from_slice(&0u32.to_le_bytes());
-        let device = &self.device;
+        let params = pack_params(&[pair_count as u32, 0, 0, 0]);
         let buffers = self.buffers.borrow();
         let buffers = buffers.as_ref().expect("ensure_buffers was just called");
         self.queue.write_buffer(&buffers.params, 0, &params);
         self.queue
-            .write_buffer(&buffers.a, 0, &gpu_compute::pack_f32(&flat_a));
+            .write_buffer(&buffers.a, 0, &pack_f32(&flat_a));
         self.queue
-            .write_buffer(&buffers.b, 0, &gpu_compute::pack_f32(&flat_b));
-        let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
-            label: Some("distance_pairs"),
-        });
-        {
-            let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
-                label: Some("distance_pairs"),
-                timestamp_writes: None,
-            });
-            pass.set_pipeline(&self.pipeline);
-            pass.set_bind_group(0, &buffers.bind, &[]);
-            pass.dispatch_workgroups((pair_count.max(1) as u32).div_ceil(256), 1, 1);
-        }
-        encoder.copy_buffer_to_buffer(&buffers.out, 0, &buffers.read, 0, (pair_count * 4) as u64);
-        self.queue.submit([encoder.finish()]);
-        let raw = read_buffer(device, &buffers.read, pair_count * 4);
-        buffers.read.unmap();
-        raw.chunks_exact(4)
-            .take(pair_count)
-            .map(|d| f32::from_ne_bytes(d.try_into().unwrap()) as f64)
+            .write_buffer(&buffers.b, 0, &pack_f32(&flat_b));
+        self.kernel.dispatch_bind_group(
+            &self.device,
+            &self.queue,
+            &buffers.bind,
+            self.kernel.workgroup_count(pair_count.max(1) as u32),
+        );
+        read_f32(&self.device, &self.queue, &buffers.out, pair_count)
+            .iter()
+            .map(|&dist| dist as f64)
             .collect()
     }
 }
@@ -455,58 +380,38 @@ pub fn squared_distance_pairs_gpu(a: &[V3], b: &[V3]) -> Option<Vec<f64>> {
 }
 
 struct GpuDistancePairSum {
-    device: wgpu::Device,
+    device: Device,
     queue: wgpu::Queue,
-    layout: wgpu::BindGroupLayout,
-    pipeline: wgpu::ComputePipeline,
+    kernel: Kernel,
     buffers: std::cell::RefCell<Option<DistancePairSumBuffers>>,
 }
 
 struct DistancePairSumBuffers {
     pair_capacity: usize,
     partial_capacity: usize,
-    params: wgpu::Buffer,
-    a: wgpu::Buffer,
-    b: wgpu::Buffer,
-    out: wgpu::Buffer,
-    read: wgpu::Buffer,
-    bind: wgpu::BindGroup,
+    params: Buffer,
+    a: Buffer,
+    b: Buffer,
+    out: Buffer,
+    bind: BindGroup,
 }
 
 impl GpuDistancePairSum {
     fn new(context: &GpuContext) -> Self {
-        let device = &context.device;
-        let module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
-            label: Some("distance_pair_sum"),
-            source: wgpu::ShaderSource::Wgsl(crate::DISTANCE_PAIR_SUM_WGSL.into()),
-        });
-        let layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-            label: Some("distance_pair_sum"),
-            entries: &[
-                uniform_entry(0),
-                storage_entry(1, true),
-                storage_entry(2, true),
-                storage_entry(3, false),
-            ],
-        });
-        let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-            label: Some("distance_pair_sum"),
-            bind_group_layouts: &[Some(&layout)],
-            immediate_size: 0,
-        });
-        let pipeline = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-            label: Some("distance_pair_sum"),
-            layout: Some(&pipeline_layout),
-            module: &module,
-            entry_point: Some("main"),
-            compilation_options: Default::default(),
-            cache: None,
-        });
+        let kernel = Kernel::tuned(
+            context,
+            "distance_pair_sum",
+            crate::DISTANCE_PAIR_SUM_WGSL,
+            "main",
+            &UNIFORM_PAIR,
+            WG_METAL,
+            WG_DEFAULT,
+        )
+        .expect("distance_pair_sum kernel builds");
         Self {
-            device: device.clone(),
+            device: context.device.clone(),
             queue: context.queue.clone(),
-            layout,
-            pipeline,
+            kernel,
             buffers: std::cell::RefCell::new(None),
         }
     }
@@ -519,64 +424,34 @@ impl GpuDistancePairSum {
         if !stale {
             return;
         }
+        let device = &self.device;
         let pair_capacity = pair_count.max(1);
         let partial_capacity = partial_count.max(1);
-        let device = &self.device;
-        let mk = |label: &str, size: u64, usage| {
-            device.create_buffer(&wgpu::BufferDescriptor {
-                label: Some(label),
-                size,
-                usage,
-                mapped_at_creation: false,
-            })
-        };
         let params = mk(
+            device,
             "distance_pair_sum_params",
             16,
-            wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+            BufferUsages::UNIFORM | BufferUsages::COPY_DST,
         );
         let a = mk(
+            device,
             "distance_pair_sum_a",
             (pair_capacity * 12) as u64,
-            wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+            BufferUsages::STORAGE | BufferUsages::COPY_DST,
         );
         let b = mk(
+            device,
             "distance_pair_sum_b",
             (pair_capacity * 12) as u64,
-            wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+            BufferUsages::STORAGE | BufferUsages::COPY_DST,
         );
         let out = mk(
+            device,
             "distance_pair_sum_out",
             (partial_capacity * 4) as u64,
-            wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC,
+            BufferUsages::STORAGE | BufferUsages::COPY_SRC,
         );
-        let read = mk(
-            "distance_pair_sum_read",
-            (partial_capacity * 4) as u64,
-            wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
-        );
-        let bind = device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("distance_pair_sum"),
-            layout: &self.layout,
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: params.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: a.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 2,
-                    resource: b.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 3,
-                    resource: out.as_entire_binding(),
-                },
-            ],
-        });
+        let bind = bind(device, &self.kernel, "distance_pair_sum", &[&params, &a, &b, &out]);
         *self.buffers.borrow_mut() = Some(DistancePairSumBuffers {
             pair_capacity,
             partial_capacity,
@@ -584,55 +459,29 @@ impl GpuDistancePairSum {
             a,
             b,
             out,
-            read,
             bind,
         });
     }
 
     fn run(&self, a: &[V3], b: &[V3]) -> f64 {
         let pair_count = a.len();
-        let partial_count = pair_count.div_ceil(256).max(1);
+        let partial_count = self.kernel.workgroup_count(pair_count.max(1) as u32) as usize;
         self.ensure_buffers(pair_count, partial_count);
         let flat_a: Vec<f32> = a.iter().flatten().map(|&v| v as f32).collect();
         let flat_b: Vec<f32> = b.iter().flatten().map(|&v| v as f32).collect();
-        let mut params = Vec::with_capacity(16);
-        params.extend_from_slice(&(pair_count as u32).to_le_bytes());
-        params.extend_from_slice(&0u32.to_le_bytes());
-        params.extend_from_slice(&0u32.to_le_bytes());
-        params.extend_from_slice(&0u32.to_le_bytes());
-        let device = &self.device;
+        let params = pack_params(&[pair_count as u32, 0, 0, 0]);
         let buffers = self.buffers.borrow();
         let buffers = buffers.as_ref().expect("ensure_buffers was just called");
         self.queue.write_buffer(&buffers.params, 0, &params);
         self.queue
-            .write_buffer(&buffers.a, 0, &gpu_compute::pack_f32(&flat_a));
+            .write_buffer(&buffers.a, 0, &pack_f32(&flat_a));
         self.queue
-            .write_buffer(&buffers.b, 0, &gpu_compute::pack_f32(&flat_b));
-        let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
-            label: Some("distance_pair_sum"),
-        });
-        {
-            let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
-                label: Some("distance_pair_sum"),
-                timestamp_writes: None,
-            });
-            pass.set_pipeline(&self.pipeline);
-            pass.set_bind_group(0, &buffers.bind, &[]);
-            pass.dispatch_workgroups(partial_count as u32, 1, 1);
-        }
-        encoder.copy_buffer_to_buffer(
-            &buffers.out,
-            0,
-            &buffers.read,
-            0,
-            (partial_count * 4) as u64,
-        );
-        self.queue.submit([encoder.finish()]);
-        let raw = read_buffer(device, &buffers.read, partial_count * 4);
-        buffers.read.unmap();
-        raw.chunks_exact(4)
-            .take(partial_count)
-            .map(|d| f32::from_ne_bytes(d.try_into().unwrap()) as f64)
+            .write_buffer(&buffers.b, 0, &pack_f32(&flat_b));
+        self.kernel
+            .dispatch_bind_group(&self.device, &self.queue, &buffers.bind, partial_count as u32);
+        read_f32(&self.device, &self.queue, &buffers.out, partial_count)
+            .iter()
+            .map(|&dist| dist as f64)
             .sum()
     }
 }
@@ -657,58 +506,38 @@ pub fn squared_distance_pair_sum_gpu(a: &[V3], b: &[V3]) -> Option<f64> {
 }
 
 struct GpuTransformedDistancePairSum {
-    device: wgpu::Device,
+    device: Device,
     queue: wgpu::Queue,
-    layout: wgpu::BindGroupLayout,
-    pipeline: wgpu::ComputePipeline,
+    kernel: Kernel,
     buffers: std::cell::RefCell<Option<TransformedDistancePairSumBuffers>>,
 }
 
 struct TransformedDistancePairSumBuffers {
     pair_capacity: usize,
     partial_capacity: usize,
-    params: wgpu::Buffer,
-    source: wgpu::Buffer,
-    target: wgpu::Buffer,
-    out: wgpu::Buffer,
-    read: wgpu::Buffer,
-    bind: wgpu::BindGroup,
+    params: Buffer,
+    source: Buffer,
+    target: Buffer,
+    out: Buffer,
+    bind: BindGroup,
 }
 
 impl GpuTransformedDistancePairSum {
     fn new(context: &GpuContext) -> Self {
-        let device = &context.device;
-        let module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
-            label: Some("transformed_distance_pair_sum"),
-            source: wgpu::ShaderSource::Wgsl(crate::TRANSFORMED_DISTANCE_PAIR_SUM_WGSL.into()),
-        });
-        let layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-            label: Some("transformed_distance_pair_sum"),
-            entries: &[
-                uniform_entry(0),
-                storage_entry(1, true),
-                storage_entry(2, true),
-                storage_entry(3, false),
-            ],
-        });
-        let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-            label: Some("transformed_distance_pair_sum"),
-            bind_group_layouts: &[Some(&layout)],
-            immediate_size: 0,
-        });
-        let pipeline = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-            label: Some("transformed_distance_pair_sum"),
-            layout: Some(&pipeline_layout),
-            module: &module,
-            entry_point: Some("main"),
-            compilation_options: Default::default(),
-            cache: None,
-        });
+        let kernel = Kernel::tuned(
+            context,
+            "transformed_distance_pair_sum",
+            crate::TRANSFORMED_DISTANCE_PAIR_SUM_WGSL,
+            "main",
+            &UNIFORM_PAIR,
+            WG_METAL,
+            WG_DEFAULT,
+        )
+        .expect("transformed_distance_pair_sum kernel builds");
         Self {
-            device: device.clone(),
+            device: context.device.clone(),
             queue: context.queue.clone(),
-            layout,
-            pipeline,
+            kernel,
             buffers: std::cell::RefCell::new(None),
         }
     }
@@ -721,64 +550,39 @@ impl GpuTransformedDistancePairSum {
         if !stale {
             return;
         }
+        let device = &self.device;
         let pair_capacity = pair_count.max(1);
         let partial_capacity = partial_count.max(1);
-        let device = &self.device;
-        let mk = |label: &str, size: u64, usage| {
-            device.create_buffer(&wgpu::BufferDescriptor {
-                label: Some(label),
-                size,
-                usage,
-                mapped_at_creation: false,
-            })
-        };
         let params = mk(
+            device,
             "transformed_distance_pair_sum_params",
             64,
-            wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+            BufferUsages::UNIFORM | BufferUsages::COPY_DST,
         );
         let source = mk(
+            device,
             "transformed_distance_pair_sum_source",
             (pair_capacity * 12) as u64,
-            wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+            BufferUsages::STORAGE | BufferUsages::COPY_DST,
         );
         let target = mk(
+            device,
             "transformed_distance_pair_sum_target",
             (pair_capacity * 12) as u64,
-            wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+            BufferUsages::STORAGE | BufferUsages::COPY_DST,
         );
         let out = mk(
+            device,
             "transformed_distance_pair_sum_out",
             (partial_capacity * 4) as u64,
-            wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC,
+            BufferUsages::STORAGE | BufferUsages::COPY_SRC,
         );
-        let read = mk(
-            "transformed_distance_pair_sum_read",
-            (partial_capacity * 4) as u64,
-            wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
+        let bind = bind(
+            device,
+            &self.kernel,
+            "transformed_distance_pair_sum",
+            &[&params, &source, &target, &out],
         );
-        let bind = device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("transformed_distance_pair_sum"),
-            layout: &self.layout,
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: params.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: source.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 2,
-                    resource: target.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 3,
-                    resource: out.as_entire_binding(),
-                },
-            ],
-        });
         *self.buffers.borrow_mut() = Some(TransformedDistancePairSumBuffers {
             pair_capacity,
             partial_capacity,
@@ -786,61 +590,36 @@ impl GpuTransformedDistancePairSum {
             source,
             target,
             out,
-            read,
             bind,
         });
     }
 
     fn run(&self, source: &[V3], target: &[V3], m: M3, t: V3) -> f64 {
         let pair_count = source.len();
-        let partial_count = pair_count.div_ceil(256).max(1);
+        let partial_count = self.kernel.workgroup_count(pair_count.max(1) as u32) as usize;
         self.ensure_buffers(pair_count, partial_count);
         let flat_source: Vec<f32> = source.iter().flatten().map(|&v| v as f32).collect();
         let flat_target: Vec<f32> = target.iter().flatten().map(|&v| v as f32).collect();
-        let mut params = Vec::with_capacity(64);
-        params.extend_from_slice(&(pair_count as u32).to_le_bytes());
-        params.extend_from_slice(&0u32.to_le_bytes());
-        params.extend_from_slice(&0u32.to_le_bytes());
-        params.extend_from_slice(&0u32.to_le_bytes());
+        // Params: count, pad x3, then 4 rows of (matrix row, translation comp).
+        let mut params = pack_params(&[pair_count as u32, 0, 0, 0]);
         for row in 0..3 {
             for col in 0..3 {
-                params.extend_from_slice(&(m[row][col] as f32).to_le_bytes());
+                push_f32(&mut params, m[row][col] as f32);
             }
-            params.extend_from_slice(&(t[row] as f32).to_le_bytes());
+            push_f32(&mut params, t[row] as f32);
         }
-        let device = &self.device;
         let buffers = self.buffers.borrow();
         let buffers = buffers.as_ref().expect("ensure_buffers was just called");
         self.queue.write_buffer(&buffers.params, 0, &params);
         self.queue
-            .write_buffer(&buffers.source, 0, &gpu_compute::pack_f32(&flat_source));
+            .write_buffer(&buffers.source, 0, &pack_f32(&flat_source));
         self.queue
-            .write_buffer(&buffers.target, 0, &gpu_compute::pack_f32(&flat_target));
-        let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
-            label: Some("transformed_distance_pair_sum"),
-        });
-        {
-            let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
-                label: Some("transformed_distance_pair_sum"),
-                timestamp_writes: None,
-            });
-            pass.set_pipeline(&self.pipeline);
-            pass.set_bind_group(0, &buffers.bind, &[]);
-            pass.dispatch_workgroups(partial_count as u32, 1, 1);
-        }
-        encoder.copy_buffer_to_buffer(
-            &buffers.out,
-            0,
-            &buffers.read,
-            0,
-            (partial_count * 4) as u64,
-        );
-        self.queue.submit([encoder.finish()]);
-        let raw = read_buffer(device, &buffers.read, partial_count * 4);
-        buffers.read.unmap();
-        raw.chunks_exact(4)
-            .take(partial_count)
-            .map(|d| f32::from_ne_bytes(d.try_into().unwrap()) as f64)
+            .write_buffer(&buffers.target, 0, &pack_f32(&flat_target));
+        self.kernel
+            .dispatch_bind_group(&self.device, &self.queue, &buffers.bind, partial_count as u32);
+        read_f32(&self.device, &self.queue, &buffers.out, partial_count)
+            .iter()
+            .map(|&dist| dist as f64)
             .sum()
     }
 }
@@ -870,67 +649,38 @@ pub fn transformed_squared_distance_pair_sum_gpu(
 }
 
 struct GpuPointBounds {
-    device: wgpu::Device,
+    device: Device,
     queue: wgpu::Queue,
-    layout: wgpu::BindGroupLayout,
-    pipeline: wgpu::ComputePipeline,
-    workgroup_size: u32,
+    kernel: Kernel,
     buffers: std::cell::RefCell<Option<PointBoundsBuffers>>,
 }
 
 struct PointBoundsBuffers {
     point_capacity: usize,
     partial_capacity: usize,
-    params: wgpu::Buffer,
-    points: wgpu::Buffer,
-    out_min: wgpu::Buffer,
-    out_max: wgpu::Buffer,
-    read_min: wgpu::Buffer,
-    read_max: wgpu::Buffer,
-    bind: wgpu::BindGroup,
+    params: Buffer,
+    points: Buffer,
+    out_min: Buffer,
+    out_max: Buffer,
+    bind: BindGroup,
 }
 
 impl GpuPointBounds {
     fn new(context: &GpuContext) -> Self {
-        let workgroup_size =
-            gpu_compute::tuned_workgroup_size(context.backend, WG_METAL, WG_DEFAULT);
-        let device = &context.device;
-        let module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
-            label: Some("point_bounds"),
-            source: wgpu::ShaderSource::Wgsl(
-                crate::POINT_BOUNDS_WGSL_TEMPLATE
-                    .replace("__WG__", &workgroup_size.to_string())
-                    .into(),
-            ),
-        });
-        let layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-            label: Some("point_bounds"),
-            entries: &[
-                uniform_entry(0),
-                storage_entry(1, true),
-                storage_entry(2, false),
-                storage_entry(3, false),
-            ],
-        });
-        let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-            label: Some("point_bounds"),
-            bind_group_layouts: &[Some(&layout)],
-            immediate_size: 0,
-        });
-        let pipeline = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-            label: Some("point_bounds"),
-            layout: Some(&pipeline_layout),
-            module: &module,
-            entry_point: Some("main"),
-            compilation_options: Default::default(),
-            cache: None,
-        });
+        let kernel = Kernel::tuned(
+            context,
+            "point_bounds",
+            crate::POINT_BOUNDS_WGSL,
+            "main",
+            &UNIFORM_STORAGE2,
+            WG_METAL,
+            WG_DEFAULT,
+        )
+        .expect("point_bounds kernel builds");
         Self {
-            device: device.clone(),
+            device: context.device.clone(),
             queue: context.queue.clone(),
-            layout,
-            pipeline,
-            workgroup_size,
+            kernel,
             buffers: std::cell::RefCell::new(None),
         }
     }
@@ -943,70 +693,40 @@ impl GpuPointBounds {
         if !stale {
             return;
         }
+        let device = &self.device;
         let point_capacity = point_count.max(1);
         let partial_capacity = partial_count.max(1);
-        let device = &self.device;
-        let mk = |label: &str, size: u64, usage| {
-            device.create_buffer(&wgpu::BufferDescriptor {
-                label: Some(label),
-                size,
-                usage,
-                mapped_at_creation: false,
-            })
-        };
         let params = mk(
+            device,
             "point_bounds_params",
             16,
-            wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+            BufferUsages::UNIFORM | BufferUsages::COPY_DST,
         );
         let points = mk(
+            device,
             "point_bounds_points",
             (point_capacity * 12) as u64,
-            wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+            BufferUsages::STORAGE | BufferUsages::COPY_DST,
         );
         let partial_bytes = (partial_capacity * 12) as u64;
         let out_min = mk(
+            device,
             "point_bounds_out_min",
             partial_bytes,
-            wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC,
+            BufferUsages::STORAGE | BufferUsages::COPY_SRC,
         );
         let out_max = mk(
+            device,
             "point_bounds_out_max",
             partial_bytes,
-            wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC,
+            BufferUsages::STORAGE | BufferUsages::COPY_SRC,
         );
-        let read_min = mk(
-            "point_bounds_read_min",
-            partial_bytes,
-            wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
+        let bind = bind(
+            device,
+            &self.kernel,
+            "point_bounds",
+            &[&params, &points, &out_min, &out_max],
         );
-        let read_max = mk(
-            "point_bounds_read_max",
-            partial_bytes,
-            wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
-        );
-        let bind = device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("point_bounds"),
-            layout: &self.layout,
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: params.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: points.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 2,
-                    resource: out_min.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 3,
-                    resource: out_max.as_entire_binding(),
-                },
-            ],
-        });
         *self.buffers.borrow_mut() = Some(PointBoundsBuffers {
             point_capacity,
             partial_capacity,
@@ -1014,62 +734,35 @@ impl GpuPointBounds {
             points,
             out_min,
             out_max,
-            read_min,
-            read_max,
             bind,
         });
     }
 
     fn run(&self, points: &[V3]) -> crate::PointBounds {
         let point_count = points.len();
-        let partial_count = point_count.div_ceil(self.workgroup_size as usize).max(1);
+        let partial_count = self.kernel.workgroup_count(point_count as u32) as usize;
         self.ensure_buffers(point_count, partial_count);
         let flat: Vec<f32> = points.iter().flatten().map(|&v| v as f32).collect();
-        let mut params = Vec::with_capacity(16);
-        params.extend_from_slice(&(point_count as u32).to_le_bytes());
-        params.extend_from_slice(&0u32.to_le_bytes());
-        params.extend_from_slice(&0u32.to_le_bytes());
-        params.extend_from_slice(&0u32.to_le_bytes());
-        let device = &self.device;
+        let params = pack_params(&[point_count as u32, 0, 0, 0]);
         let buffers = self.buffers.borrow();
         let buffers = buffers.as_ref().expect("ensure_buffers was just called");
         self.queue.write_buffer(&buffers.params, 0, &params);
         self.queue
-            .write_buffer(&buffers.points, 0, &gpu_compute::pack_f32(&flat));
-        let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
-            label: Some("point_bounds"),
-        });
-        {
-            let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
-                label: Some("point_bounds"),
-                timestamp_writes: None,
-            });
-            pass.set_pipeline(&self.pipeline);
-            pass.set_bind_group(0, &buffers.bind, &[]);
-            pass.dispatch_workgroups(partial_count as u32, 1, 1);
-        }
-        let partial_bytes = (partial_count * 12) as u64;
-        encoder.copy_buffer_to_buffer(&buffers.out_min, 0, &buffers.read_min, 0, partial_bytes);
-        encoder.copy_buffer_to_buffer(&buffers.out_max, 0, &buffers.read_max, 0, partial_bytes);
-        self.queue.submit([encoder.finish()]);
-        let raw_min = read_buffer(device, &buffers.read_min, partial_count * 12);
-        buffers.read_min.unmap();
-        let raw_max = read_buffer(device, &buffers.read_max, partial_count * 12);
-        buffers.read_max.unmap();
+            .write_buffer(&buffers.points, 0, &pack_f32(&flat));
+        self.kernel
+            .dispatch_bind_group(&self.device, &self.queue, &buffers.bind, partial_count as u32);
+        let raw_min = read_f32(&self.device, &self.queue, &buffers.out_min, partial_count * 3);
+        let raw_max = read_f32(&self.device, &self.queue, &buffers.out_max, partial_count * 3);
         let mut min = [f64::INFINITY; 3];
         let mut max = [f64::NEG_INFINITY; 3];
-        for chunk in raw_min.chunks_exact(12).take(partial_count) {
+        for chunk in raw_min.chunks_exact(3).take(partial_count) {
             for axis in 0..3 {
-                let start = axis * 4;
-                min[axis] = min[axis]
-                    .min(f32::from_ne_bytes(chunk[start..start + 4].try_into().unwrap()) as f64);
+                min[axis] = min[axis].min(chunk[axis] as f64);
             }
         }
-        for chunk in raw_max.chunks_exact(12).take(partial_count) {
+        for chunk in raw_max.chunks_exact(3).take(partial_count) {
             for axis in 0..3 {
-                let start = axis * 4;
-                max[axis] = max[axis]
-                    .max(f32::from_ne_bytes(chunk[start..start + 4].try_into().unwrap()) as f64);
+                max[axis] = max[axis].max(chunk[axis] as f64);
             }
         }
         crate::PointBounds {
@@ -1106,67 +799,38 @@ pub fn point_bounds_gpu(points: &[V3]) -> Option<crate::PointBounds> {
 }
 
 struct GpuTransformedPointBounds {
-    device: wgpu::Device,
+    device: Device,
     queue: wgpu::Queue,
-    layout: wgpu::BindGroupLayout,
-    pipeline: wgpu::ComputePipeline,
-    workgroup_size: u32,
+    kernel: Kernel,
     buffers: std::cell::RefCell<Option<TransformedPointBoundsBuffers>>,
 }
 
 struct TransformedPointBoundsBuffers {
     point_capacity: usize,
     partial_capacity: usize,
-    params: wgpu::Buffer,
-    points: wgpu::Buffer,
-    out_min: wgpu::Buffer,
-    out_max: wgpu::Buffer,
-    read_min: wgpu::Buffer,
-    read_max: wgpu::Buffer,
-    bind: wgpu::BindGroup,
+    params: Buffer,
+    points: Buffer,
+    out_min: Buffer,
+    out_max: Buffer,
+    bind: BindGroup,
 }
 
 impl GpuTransformedPointBounds {
     fn new(context: &GpuContext) -> Self {
-        let workgroup_size =
-            gpu_compute::tuned_workgroup_size(context.backend, WG_METAL, WG_DEFAULT);
-        let device = &context.device;
-        let module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
-            label: Some("transformed_point_bounds"),
-            source: wgpu::ShaderSource::Wgsl(
-                crate::TRANSFORMED_POINT_BOUNDS_WGSL_TEMPLATE
-                    .replace("__WG__", &workgroup_size.to_string())
-                    .into(),
-            ),
-        });
-        let layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-            label: Some("transformed_point_bounds"),
-            entries: &[
-                uniform_entry(0),
-                storage_entry(1, true),
-                storage_entry(2, false),
-                storage_entry(3, false),
-            ],
-        });
-        let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-            label: Some("transformed_point_bounds"),
-            bind_group_layouts: &[Some(&layout)],
-            immediate_size: 0,
-        });
-        let pipeline = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-            label: Some("transformed_point_bounds"),
-            layout: Some(&pipeline_layout),
-            module: &module,
-            entry_point: Some("main"),
-            compilation_options: Default::default(),
-            cache: None,
-        });
+        let kernel = Kernel::tuned(
+            context,
+            "transformed_point_bounds",
+            crate::TRANSFORMED_POINT_BOUNDS_WGSL,
+            "main",
+            &UNIFORM_STORAGE2,
+            WG_METAL,
+            WG_DEFAULT,
+        )
+        .expect("transformed_point_bounds kernel builds");
         Self {
-            device: device.clone(),
+            device: context.device.clone(),
             queue: context.queue.clone(),
-            layout,
-            pipeline,
-            workgroup_size,
+            kernel,
             buffers: std::cell::RefCell::new(None),
         }
     }
@@ -1179,70 +843,40 @@ impl GpuTransformedPointBounds {
         if !stale {
             return;
         }
+        let device = &self.device;
         let point_capacity = point_count.max(1);
         let partial_capacity = partial_count.max(1);
-        let device = &self.device;
-        let mk = |label: &str, size: u64, usage| {
-            device.create_buffer(&wgpu::BufferDescriptor {
-                label: Some(label),
-                size,
-                usage,
-                mapped_at_creation: false,
-            })
-        };
         let params = mk(
+            device,
             "transformed_point_bounds_params",
             64,
-            wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+            BufferUsages::UNIFORM | BufferUsages::COPY_DST,
         );
         let points = mk(
+            device,
             "transformed_point_bounds_points",
             (point_capacity * 12) as u64,
-            wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+            BufferUsages::STORAGE | BufferUsages::COPY_DST,
         );
         let partial_bytes = (partial_capacity * 12) as u64;
         let out_min = mk(
+            device,
             "transformed_point_bounds_out_min",
             partial_bytes,
-            wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC,
+            BufferUsages::STORAGE | BufferUsages::COPY_SRC,
         );
         let out_max = mk(
+            device,
             "transformed_point_bounds_out_max",
             partial_bytes,
-            wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC,
+            BufferUsages::STORAGE | BufferUsages::COPY_SRC,
         );
-        let read_min = mk(
-            "transformed_point_bounds_read_min",
-            partial_bytes,
-            wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
+        let bind = bind(
+            device,
+            &self.kernel,
+            "transformed_point_bounds",
+            &[&params, &points, &out_min, &out_max],
         );
-        let read_max = mk(
-            "transformed_point_bounds_read_max",
-            partial_bytes,
-            wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
-        );
-        let bind = device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("transformed_point_bounds"),
-            layout: &self.layout,
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: params.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: points.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 2,
-                    resource: out_min.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 3,
-                    resource: out_max.as_entire_binding(),
-                },
-            ],
-        });
         *self.buffers.borrow_mut() = Some(TransformedPointBoundsBuffers {
             point_capacity,
             partial_capacity,
@@ -1250,68 +884,41 @@ impl GpuTransformedPointBounds {
             points,
             out_min,
             out_max,
-            read_min,
-            read_max,
             bind,
         });
     }
 
     fn run(&self, points: &[V3], m: M3, t: V3) -> crate::PointBounds {
         let point_count = points.len();
-        let partial_count = point_count.div_ceil(self.workgroup_size as usize).max(1);
+        let partial_count = self.kernel.workgroup_count(point_count as u32) as usize;
         self.ensure_buffers(point_count, partial_count);
         let flat: Vec<f32> = points.iter().flatten().map(|&v| v as f32).collect();
-        let mut params = Vec::with_capacity(64);
-        params.extend_from_slice(&(point_count as u32).to_le_bytes());
-        params.extend_from_slice(&0u32.to_le_bytes());
-        params.extend_from_slice(&0u32.to_le_bytes());
-        params.extend_from_slice(&0u32.to_le_bytes());
+        let mut params = pack_params(&[point_count as u32, 0, 0, 0]);
         for row in 0..3 {
             for col in 0..3 {
-                params.extend_from_slice(&(m[row][col] as f32).to_le_bytes());
+                push_f32(&mut params, m[row][col] as f32);
             }
-            params.extend_from_slice(&(t[row] as f32).to_le_bytes());
+            push_f32(&mut params, t[row] as f32);
         }
-        let device = &self.device;
         let buffers = self.buffers.borrow();
         let buffers = buffers.as_ref().expect("ensure_buffers was just called");
         self.queue.write_buffer(&buffers.params, 0, &params);
         self.queue
-            .write_buffer(&buffers.points, 0, &gpu_compute::pack_f32(&flat));
-        let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
-            label: Some("transformed_point_bounds"),
-        });
-        {
-            let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
-                label: Some("transformed_point_bounds"),
-                timestamp_writes: None,
-            });
-            pass.set_pipeline(&self.pipeline);
-            pass.set_bind_group(0, &buffers.bind, &[]);
-            pass.dispatch_workgroups(partial_count as u32, 1, 1);
-        }
-        let partial_bytes = (partial_count * 12) as u64;
-        encoder.copy_buffer_to_buffer(&buffers.out_min, 0, &buffers.read_min, 0, partial_bytes);
-        encoder.copy_buffer_to_buffer(&buffers.out_max, 0, &buffers.read_max, 0, partial_bytes);
-        self.queue.submit([encoder.finish()]);
-        let raw_min = read_buffer(device, &buffers.read_min, partial_count * 12);
-        buffers.read_min.unmap();
-        let raw_max = read_buffer(device, &buffers.read_max, partial_count * 12);
-        buffers.read_max.unmap();
+            .write_buffer(&buffers.points, 0, &pack_f32(&flat));
+        self.kernel
+            .dispatch_bind_group(&self.device, &self.queue, &buffers.bind, partial_count as u32);
+        let raw_min = read_f32(&self.device, &self.queue, &buffers.out_min, partial_count * 3);
+        let raw_max = read_f32(&self.device, &self.queue, &buffers.out_max, partial_count * 3);
         let mut min = [f64::INFINITY; 3];
         let mut max = [f64::NEG_INFINITY; 3];
-        for chunk in raw_min.chunks_exact(12).take(partial_count) {
+        for chunk in raw_min.chunks_exact(3).take(partial_count) {
             for axis in 0..3 {
-                let start = axis * 4;
-                min[axis] = min[axis]
-                    .min(f32::from_ne_bytes(chunk[start..start + 4].try_into().unwrap()) as f64);
+                min[axis] = min[axis].min(chunk[axis] as f64);
             }
         }
-        for chunk in raw_max.chunks_exact(12).take(partial_count) {
+        for chunk in raw_max.chunks_exact(3).take(partial_count) {
             for axis in 0..3 {
-                let start = axis * 4;
-                max[axis] = max[axis]
-                    .max(f32::from_ne_bytes(chunk[start..start + 4].try_into().unwrap()) as f64);
+                max[axis] = max[axis].max(chunk[axis] as f64);
             }
         }
         crate::PointBounds::new(point_count, min, max)
@@ -1337,65 +944,45 @@ pub fn transformed_point_bounds_gpu(points: &[V3], m: M3, t: V3) -> Option<crate
     })
 }
 
+/// Uniform + read points + one partial-output reduction.
+const UNIFORM_REDUCE1: [Binding; 3] = [
+    Binding::Uniform,
+    Binding::StorageRead,
+    Binding::StorageReadWrite,
+];
+
 struct GpuPointMoments {
-    device: wgpu::Device,
+    device: Device,
     queue: wgpu::Queue,
-    layout: wgpu::BindGroupLayout,
-    pipeline: wgpu::ComputePipeline,
-    workgroup_size: u32,
+    kernel: Kernel,
     buffers: std::cell::RefCell<Option<PointMomentsBuffers>>,
 }
 
 struct PointMomentsBuffers {
     point_capacity: usize,
     partial_capacity: usize,
-    params: wgpu::Buffer,
-    points: wgpu::Buffer,
-    out: wgpu::Buffer,
-    read: wgpu::Buffer,
-    bind: wgpu::BindGroup,
+    params: Buffer,
+    points: Buffer,
+    out: Buffer,
+    bind: BindGroup,
 }
 
 impl GpuPointMoments {
     fn new(context: &GpuContext) -> Self {
-        let workgroup_size =
-            gpu_compute::tuned_workgroup_size(context.backend, WG_METAL, WG_DEFAULT);
-        let device = &context.device;
-        let module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
-            label: Some("point_moments"),
-            source: wgpu::ShaderSource::Wgsl(
-                crate::POINT_MOMENTS_WGSL_TEMPLATE
-                    .replace("__WG__", &workgroup_size.to_string())
-                    .into(),
-            ),
-        });
-        let layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-            label: Some("point_moments"),
-            entries: &[
-                uniform_entry(0),
-                storage_entry(1, true),
-                storage_entry(2, false),
-            ],
-        });
-        let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-            label: Some("point_moments"),
-            bind_group_layouts: &[Some(&layout)],
-            immediate_size: 0,
-        });
-        let pipeline = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-            label: Some("point_moments"),
-            layout: Some(&pipeline_layout),
-            module: &module,
-            entry_point: Some("main"),
-            compilation_options: Default::default(),
-            cache: None,
-        });
+        let kernel = Kernel::tuned(
+            context,
+            "point_moments",
+            crate::POINT_MOMENTS_WGSL,
+            "main",
+            &UNIFORM_REDUCE1,
+            WG_METAL,
+            WG_DEFAULT,
+        )
+        .expect("point_moments kernel builds");
         Self {
-            device: device.clone(),
+            device: context.device.clone(),
             queue: context.queue.clone(),
-            layout,
-            pipeline,
-            workgroup_size,
+            kernel,
             buffers: std::cell::RefCell::new(None),
         }
     }
@@ -1408,106 +995,57 @@ impl GpuPointMoments {
         if !stale {
             return;
         }
+        let device = &self.device;
         let point_capacity = point_count.max(1);
         let partial_capacity = partial_count.max(1);
-        let device = &self.device;
-        let mk = |label: &str, size: u64, usage| {
-            device.create_buffer(&wgpu::BufferDescriptor {
-                label: Some(label),
-                size,
-                usage,
-                mapped_at_creation: false,
-            })
-        };
         let params = mk(
+            device,
             "point_moments_params",
             16,
-            wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+            BufferUsages::UNIFORM | BufferUsages::COPY_DST,
         );
         let points = mk(
+            device,
             "point_moments_points",
             (point_capacity * 12) as u64,
-            wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+            BufferUsages::STORAGE | BufferUsages::COPY_DST,
         );
         let partial_bytes = (partial_capacity * 9 * 4) as u64;
         let out = mk(
+            device,
             "point_moments_out",
             partial_bytes,
-            wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC,
+            BufferUsages::STORAGE | BufferUsages::COPY_SRC,
         );
-        let read = mk(
-            "point_moments_read",
-            partial_bytes,
-            wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
-        );
-        let bind = device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("point_moments"),
-            layout: &self.layout,
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: params.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: points.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 2,
-                    resource: out.as_entire_binding(),
-                },
-            ],
-        });
+        let bind = bind(device, &self.kernel, "point_moments", &[&params, &points, &out]);
         *self.buffers.borrow_mut() = Some(PointMomentsBuffers {
             point_capacity,
             partial_capacity,
             params,
             points,
             out,
-            read,
             bind,
         });
     }
 
     fn run(&self, points: &[V3]) -> crate::PointMoments {
         let point_count = points.len();
-        let partial_count = point_count.div_ceil(self.workgroup_size as usize).max(1);
+        let partial_count = self.kernel.workgroup_count(point_count as u32) as usize;
         self.ensure_buffers(point_count, partial_count);
         let flat: Vec<f32> = points.iter().flatten().map(|&v| v as f32).collect();
-        let mut params = Vec::with_capacity(16);
-        params.extend_from_slice(&(point_count as u32).to_le_bytes());
-        params.extend_from_slice(&0u32.to_le_bytes());
-        params.extend_from_slice(&0u32.to_le_bytes());
-        params.extend_from_slice(&0u32.to_le_bytes());
-        let device = &self.device;
+        let params = pack_params(&[point_count as u32, 0, 0, 0]);
         let buffers = self.buffers.borrow();
         let buffers = buffers.as_ref().expect("ensure_buffers was just called");
         self.queue.write_buffer(&buffers.params, 0, &params);
         self.queue
-            .write_buffer(&buffers.points, 0, &gpu_compute::pack_f32(&flat));
-        let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
-            label: Some("point_moments"),
-        });
-        {
-            let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
-                label: Some("point_moments"),
-                timestamp_writes: None,
-            });
-            pass.set_pipeline(&self.pipeline);
-            pass.set_bind_group(0, &buffers.bind, &[]);
-            pass.dispatch_workgroups(partial_count as u32, 1, 1);
-        }
-        let partial_bytes = partial_count * 9 * 4;
-        encoder.copy_buffer_to_buffer(&buffers.out, 0, &buffers.read, 0, partial_bytes as u64);
-        self.queue.submit([encoder.finish()]);
-        let raw = read_buffer(device, &buffers.read, partial_bytes);
-        buffers.read.unmap();
+            .write_buffer(&buffers.points, 0, &pack_f32(&flat));
+        self.kernel
+            .dispatch_bind_group(&self.device, &self.queue, &buffers.bind, partial_count as u32);
+        let raw = read_f32(&self.device, &self.queue, &buffers.out, partial_count * 9);
         let mut accum = [0.; 9];
-        for chunk in raw.chunks_exact(36).take(partial_count) {
+        for chunk in raw.chunks_exact(9).take(partial_count) {
             for item in 0..9 {
-                let start = item * 4;
-                accum[item] +=
-                    f32::from_ne_bytes(chunk[start..start + 4].try_into().unwrap()) as f64;
+                accum[item] += chunk[item] as f64;
             }
         }
         crate::PointMoments::from_sums(
@@ -1538,64 +1076,37 @@ pub fn point_moments_gpu(points: &[V3]) -> Option<crate::PointMoments> {
 }
 
 struct GpuPointCloudStats {
-    device: wgpu::Device,
+    device: Device,
     queue: wgpu::Queue,
-    layout: wgpu::BindGroupLayout,
-    pipeline: wgpu::ComputePipeline,
-    workgroup_size: u32,
+    kernel: Kernel,
     buffers: std::cell::RefCell<Option<PointCloudStatsBuffers>>,
 }
 
 struct PointCloudStatsBuffers {
     point_capacity: usize,
     partial_capacity: usize,
-    params: wgpu::Buffer,
-    points: wgpu::Buffer,
-    out: wgpu::Buffer,
-    read: wgpu::Buffer,
-    bind: wgpu::BindGroup,
+    params: Buffer,
+    points: Buffer,
+    out: Buffer,
+    bind: BindGroup,
 }
 
 impl GpuPointCloudStats {
     fn new(context: &GpuContext) -> Self {
-        let workgroup_size =
-            gpu_compute::tuned_workgroup_size(context.backend, WG_METAL, WG_DEFAULT);
-        let device = &context.device;
-        let module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
-            label: Some("point_cloud_stats"),
-            source: wgpu::ShaderSource::Wgsl(
-                crate::POINT_CLOUD_STATS_WGSL_TEMPLATE
-                    .replace("__WG__", &workgroup_size.to_string())
-                    .into(),
-            ),
-        });
-        let layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-            label: Some("point_cloud_stats"),
-            entries: &[
-                uniform_entry(0),
-                storage_entry(1, true),
-                storage_entry(2, false),
-            ],
-        });
-        let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-            label: Some("point_cloud_stats"),
-            bind_group_layouts: &[Some(&layout)],
-            immediate_size: 0,
-        });
-        let pipeline = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-            label: Some("point_cloud_stats"),
-            layout: Some(&pipeline_layout),
-            module: &module,
-            entry_point: Some("main"),
-            compilation_options: Default::default(),
-            cache: None,
-        });
+        let kernel = Kernel::tuned(
+            context,
+            "point_cloud_stats",
+            crate::POINT_CLOUD_STATS_WGSL,
+            "main",
+            &UNIFORM_REDUCE1,
+            WG_METAL,
+            WG_DEFAULT,
+        )
+        .expect("point_cloud_stats kernel builds");
         Self {
-            device: device.clone(),
+            device: context.device.clone(),
             queue: context.queue.clone(),
-            layout,
-            pipeline,
-            workgroup_size,
+            kernel,
             buffers: std::cell::RefCell::new(None),
         }
     }
@@ -1608,117 +1119,68 @@ impl GpuPointCloudStats {
         if !stale {
             return;
         }
+        let device = &self.device;
         let point_capacity = point_count.max(1);
         let partial_capacity = partial_count.max(1);
-        let device = &self.device;
-        let mk = |label: &str, size: u64, usage| {
-            device.create_buffer(&wgpu::BufferDescriptor {
-                label: Some(label),
-                size,
-                usage,
-                mapped_at_creation: false,
-            })
-        };
         let params = mk(
+            device,
             "point_cloud_stats_params",
             16,
-            wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+            BufferUsages::UNIFORM | BufferUsages::COPY_DST,
         );
         let points = mk(
+            device,
             "point_cloud_stats_points",
             (point_capacity * 12) as u64,
-            wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+            BufferUsages::STORAGE | BufferUsages::COPY_DST,
         );
         let partial_bytes = (partial_capacity * 15 * 4) as u64;
         let out = mk(
+            device,
             "point_cloud_stats_out",
             partial_bytes,
-            wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC,
+            BufferUsages::STORAGE | BufferUsages::COPY_SRC,
         );
-        let read = mk(
-            "point_cloud_stats_read",
-            partial_bytes,
-            wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
+        let bind = bind(
+            device,
+            &self.kernel,
+            "point_cloud_stats",
+            &[&params, &points, &out],
         );
-        let bind = device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("point_cloud_stats"),
-            layout: &self.layout,
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: params.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: points.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 2,
-                    resource: out.as_entire_binding(),
-                },
-            ],
-        });
         *self.buffers.borrow_mut() = Some(PointCloudStatsBuffers {
             point_capacity,
             partial_capacity,
             params,
             points,
             out,
-            read,
             bind,
         });
     }
 
     fn run(&self, points: &[V3]) -> crate::PointCloudStats {
         let point_count = points.len();
-        let partial_count = point_count.div_ceil(self.workgroup_size as usize).max(1);
+        let partial_count = self.kernel.workgroup_count(point_count as u32) as usize;
         self.ensure_buffers(point_count, partial_count);
         let flat: Vec<f32> = points.iter().flatten().map(|&v| v as f32).collect();
-        let mut params = Vec::with_capacity(16);
-        params.extend_from_slice(&(point_count as u32).to_le_bytes());
-        params.extend_from_slice(&0u32.to_le_bytes());
-        params.extend_from_slice(&0u32.to_le_bytes());
-        params.extend_from_slice(&0u32.to_le_bytes());
-        let device = &self.device;
+        let params = pack_params(&[point_count as u32, 0, 0, 0]);
         let buffers = self.buffers.borrow();
         let buffers = buffers.as_ref().expect("ensure_buffers was just called");
         self.queue.write_buffer(&buffers.params, 0, &params);
         self.queue
-            .write_buffer(&buffers.points, 0, &gpu_compute::pack_f32(&flat));
-        let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
-            label: Some("point_cloud_stats"),
-        });
-        {
-            let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
-                label: Some("point_cloud_stats"),
-                timestamp_writes: None,
-            });
-            pass.set_pipeline(&self.pipeline);
-            pass.set_bind_group(0, &buffers.bind, &[]);
-            pass.dispatch_workgroups(partial_count as u32, 1, 1);
-        }
-        let partial_bytes = partial_count * 15 * 4;
-        encoder.copy_buffer_to_buffer(&buffers.out, 0, &buffers.read, 0, partial_bytes as u64);
-        self.queue.submit([encoder.finish()]);
-        let raw = read_buffer(device, &buffers.read, partial_bytes);
-        buffers.read.unmap();
+            .write_buffer(&buffers.points, 0, &pack_f32(&flat));
+        self.kernel
+            .dispatch_bind_group(&self.device, &self.queue, &buffers.bind, partial_count as u32);
+        let raw = read_f32(&self.device, &self.queue, &buffers.out, partial_count * 15);
         let mut min = [f64::INFINITY; 3];
         let mut max = [f64::NEG_INFINITY; 3];
         let mut accum = [0.; 9];
-        for chunk in raw.chunks_exact(60).take(partial_count) {
+        for chunk in raw.chunks_exact(15).take(partial_count) {
             for axis in 0..3 {
-                let start = axis * 4;
-                min[axis] = min[axis]
-                    .min(f32::from_ne_bytes(chunk[start..start + 4].try_into().unwrap()) as f64);
-                let max_start = (axis + 3) * 4;
-                max[axis] = max[axis].max(f32::from_ne_bytes(
-                    chunk[max_start..max_start + 4].try_into().unwrap(),
-                ) as f64);
+                min[axis] = min[axis].min(chunk[axis] as f64);
+                max[axis] = max[axis].max(chunk[axis + 3] as f64);
             }
             for item in 0..9 {
-                let start = (item + 6) * 4;
-                accum[item] +=
-                    f32::from_ne_bytes(chunk[start..start + 4].try_into().unwrap()) as f64;
+                accum[item] += chunk[item + 6] as f64;
             }
         }
         let bounds = crate::PointBounds::new(point_count, min, max);
@@ -1751,11 +1213,9 @@ pub fn point_cloud_stats_gpu(points: &[V3]) -> Option<crate::PointCloudStats> {
 }
 
 struct GpuChamfer {
-    device: wgpu::Device,
+    device: Device,
     queue: wgpu::Queue,
-    layout: wgpu::BindGroupLayout,
-    pipeline: wgpu::ComputePipeline,
-    workgroup_size: u32,
+    kernel: Kernel,
     buffers: std::cell::RefCell<Option<ChamferBuffers>>,
 }
 
@@ -1763,58 +1223,30 @@ struct ChamferBuffers {
     query_capacity: usize,
     target_capacity: usize,
     partial_capacity: usize,
-    params: wgpu::Buffer,
-    queries: wgpu::Buffer,
-    targets: wgpu::Buffer,
-    out_sum: wgpu::Buffer,
-    out_max: wgpu::Buffer,
-    read_sum: wgpu::Buffer,
-    read_max: wgpu::Buffer,
-    bind: wgpu::BindGroup,
+    params: Buffer,
+    queries: Buffer,
+    targets: Buffer,
+    out_sum: Buffer,
+    out_max: Buffer,
+    bind: BindGroup,
 }
 
 impl GpuChamfer {
     fn new(context: &GpuContext) -> Self {
-        let workgroup_size =
-            gpu_compute::tuned_workgroup_size(context.backend, WG_METAL, WG_DEFAULT);
-        let device = &context.device;
-        let module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
-            label: Some("chamfer"),
-            source: wgpu::ShaderSource::Wgsl(
-                crate::CHAMFER_WGSL_TEMPLATE
-                    .replace("__WG__", &workgroup_size.to_string())
-                    .into(),
-            ),
-        });
-        let layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-            label: Some("chamfer"),
-            entries: &[
-                uniform_entry(0),
-                storage_entry(1, true),
-                storage_entry(2, true),
-                storage_entry(3, false),
-                storage_entry(4, false),
-            ],
-        });
-        let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-            label: Some("chamfer"),
-            bind_group_layouts: &[Some(&layout)],
-            immediate_size: 0,
-        });
-        let pipeline = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-            label: Some("chamfer"),
-            layout: Some(&pipeline_layout),
-            module: &module,
-            entry_point: Some("main"),
-            compilation_options: Default::default(),
-            cache: None,
-        });
+        let kernel = Kernel::tuned(
+            context,
+            "chamfer",
+            crate::CHAMFER_WGSL,
+            "main",
+            &NN_BINDINGS,
+            WG_METAL,
+            WG_DEFAULT,
+        )
+        .expect("chamfer kernel builds");
         Self {
-            device: device.clone(),
+            device: context.device.clone(),
             queue: context.queue.clone(),
-            layout,
-            pipeline,
-            workgroup_size,
+            kernel,
             buffers: std::cell::RefCell::new(None),
         }
     }
@@ -1831,79 +1263,47 @@ impl GpuChamfer {
         if !stale {
             return;
         }
+        let device = &self.device;
         let query_capacity = query_count.max(1);
         let target_capacity = target_count.max(1);
         let partial_capacity = partial_count.max(1);
-        let device = &self.device;
-        let mk = |label: &str, size: u64, usage| {
-            device.create_buffer(&wgpu::BufferDescriptor {
-                label: Some(label),
-                size,
-                usage,
-                mapped_at_creation: false,
-            })
-        };
         let params = mk(
+            device,
             "chamfer_params",
             16,
-            wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+            BufferUsages::UNIFORM | BufferUsages::COPY_DST,
         );
         let queries = mk(
+            device,
             "chamfer_queries",
             (query_capacity * 12) as u64,
-            wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+            BufferUsages::STORAGE | BufferUsages::COPY_DST,
         );
         let targets = mk(
+            device,
             "chamfer_targets",
             (target_capacity * 12) as u64,
-            wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+            BufferUsages::STORAGE | BufferUsages::COPY_DST,
         );
+        let partial_bytes = (partial_capacity * 4) as u64;
         let out_sum = mk(
+            device,
             "chamfer_out_sum",
-            (partial_capacity * 4) as u64,
-            wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC,
+            partial_bytes,
+            BufferUsages::STORAGE | BufferUsages::COPY_SRC,
         );
         let out_max = mk(
+            device,
             "chamfer_out_max",
-            (partial_capacity * 4) as u64,
-            wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC,
+            partial_bytes,
+            BufferUsages::STORAGE | BufferUsages::COPY_SRC,
         );
-        let read_sum = mk(
-            "chamfer_read_sum",
-            (partial_capacity * 4) as u64,
-            wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
+        let bind = bind(
+            device,
+            &self.kernel,
+            "chamfer",
+            &[&params, &queries, &targets, &out_sum, &out_max],
         );
-        let read_max = mk(
-            "chamfer_read_max",
-            (partial_capacity * 4) as u64,
-            wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
-        );
-        let bind = device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("chamfer"),
-            layout: &self.layout,
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: params.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: queries.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 2,
-                    resource: targets.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 3,
-                    resource: out_sum.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 4,
-                    resource: out_max.as_entire_binding(),
-                },
-            ],
-        });
         *self.buffers.borrow_mut() = Some(ChamferBuffers {
             query_capacity,
             target_capacity,
@@ -1913,8 +1313,6 @@ impl GpuChamfer {
             targets,
             out_sum,
             out_max,
-            read_sum,
-            read_max,
             bind,
         });
     }
@@ -1922,52 +1320,26 @@ impl GpuChamfer {
     fn run(&self, queries: &[V3], targets: &[V3]) -> crate::DirectedChamfer {
         let query_count = queries.len();
         let target_count = targets.len();
-        let partial_count = query_count.div_ceil(self.workgroup_size as usize).max(1);
+        let partial_count = self.kernel.workgroup_count(query_count as u32) as usize;
         self.ensure_buffers(query_count, target_count, partial_count);
         let flat_q: Vec<f32> = queries.iter().flatten().map(|&v| v as f32).collect();
         let flat_t: Vec<f32> = targets.iter().flatten().map(|&v| v as f32).collect();
-        let mut params = Vec::with_capacity(16);
-        params.extend_from_slice(&(query_count as u32).to_le_bytes());
-        params.extend_from_slice(&(target_count as u32).to_le_bytes());
-        params.extend_from_slice(&0u32.to_le_bytes());
-        params.extend_from_slice(&0u32.to_le_bytes());
-        let device = &self.device;
+        let params = pack_params(&[query_count as u32, target_count as u32, 0, 0]);
         let buffers = self.buffers.borrow();
         let buffers = buffers.as_ref().expect("ensure_buffers was just called");
         self.queue.write_buffer(&buffers.params, 0, &params);
         self.queue
-            .write_buffer(&buffers.queries, 0, &gpu_compute::pack_f32(&flat_q));
+            .write_buffer(&buffers.queries, 0, &pack_f32(&flat_q));
         self.queue
-            .write_buffer(&buffers.targets, 0, &gpu_compute::pack_f32(&flat_t));
-        let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
-            label: Some("chamfer"),
-        });
-        {
-            let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
-                label: Some("chamfer"),
-                timestamp_writes: None,
-            });
-            pass.set_pipeline(&self.pipeline);
-            pass.set_bind_group(0, &buffers.bind, &[]);
-            pass.dispatch_workgroups(partial_count as u32, 1, 1);
-        }
-        let partial_bytes = (partial_count * 4) as u64;
-        encoder.copy_buffer_to_buffer(&buffers.out_sum, 0, &buffers.read_sum, 0, partial_bytes);
-        encoder.copy_buffer_to_buffer(&buffers.out_max, 0, &buffers.read_max, 0, partial_bytes);
-        self.queue.submit([encoder.finish()]);
-        let raw_sum = read_buffer(device, &buffers.read_sum, partial_count * 4);
-        buffers.read_sum.unmap();
-        let raw_max = read_buffer(device, &buffers.read_max, partial_count * 4);
-        buffers.read_max.unmap();
-        let sum: f64 = raw_sum
-            .chunks_exact(4)
-            .take(partial_count)
-            .map(|value| f32::from_ne_bytes(value.try_into().unwrap()) as f64)
-            .sum();
+            .write_buffer(&buffers.targets, 0, &pack_f32(&flat_t));
+        self.kernel
+            .dispatch_bind_group(&self.device, &self.queue, &buffers.bind, partial_count as u32);
+        let raw_sum = read_f32(&self.device, &self.queue, &buffers.out_sum, partial_count);
+        let raw_max = read_f32(&self.device, &self.queue, &buffers.out_max, partial_count);
+        let sum: f64 = raw_sum.iter().map(|&v| v as f64).sum();
         let max_squared_distance = raw_max
-            .chunks_exact(4)
-            .take(partial_count)
-            .map(|value| f32::from_ne_bytes(value.try_into().unwrap()) as f64)
+            .iter()
+            .map(|&v| v as f64)
             .fold(0., f64::max);
         let mean_squared_distance = sum / query_count as f64;
         crate::DirectedChamfer {
@@ -1999,67 +1371,49 @@ pub fn directed_chamfer_gpu(queries: &[V3], targets: &[V3]) -> Option<crate::Dir
 }
 
 struct GpuNearestTwo {
-    device: wgpu::Device,
+    device: Device,
     queue: wgpu::Queue,
-    layout: wgpu::BindGroupLayout,
-    pipeline: wgpu::ComputePipeline,
+    kernel: Kernel,
     buffers: std::cell::RefCell<Option<NearestTwoBuffers>>,
 }
 
 struct NearestTwoBuffers {
     query_capacity: usize,
     target_capacity: usize,
-    params: wgpu::Buffer,
-    queries: wgpu::Buffer,
-    targets: wgpu::Buffer,
-    out_i0: wgpu::Buffer,
-    out_d0: wgpu::Buffer,
-    out_i1: wgpu::Buffer,
-    out_d1: wgpu::Buffer,
-    read_i0: wgpu::Buffer,
-    read_d0: wgpu::Buffer,
-    read_i1: wgpu::Buffer,
-    read_d1: wgpu::Buffer,
-    bind: wgpu::BindGroup,
+    params: Buffer,
+    queries: Buffer,
+    targets: Buffer,
+    out_i0: Buffer,
+    out_d0: Buffer,
+    out_i1: Buffer,
+    out_d1: Buffer,
+    bind: BindGroup,
 }
 
 impl GpuNearestTwo {
     fn new(context: &GpuContext) -> Self {
-        let device = &context.device;
-        let module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
-            label: Some("nearest_two"),
-            source: wgpu::ShaderSource::Wgsl(crate::NEAREST_TWO_WGSL.into()),
-        });
-        let layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-            label: Some("nearest_two"),
-            entries: &[
-                uniform_entry(0),
-                storage_entry(1, true),
-                storage_entry(2, true),
-                storage_entry(3, false),
-                storage_entry(4, false),
-                storage_entry(5, false),
-                storage_entry(6, false),
+        let kernel = Kernel::tuned(
+            context,
+            "nearest_two",
+            crate::NEAREST_TWO_WGSL,
+            "main",
+            &[
+                Binding::Uniform,
+                Binding::StorageRead,
+                Binding::StorageRead,
+                Binding::StorageReadWrite,
+                Binding::StorageReadWrite,
+                Binding::StorageReadWrite,
+                Binding::StorageReadWrite,
             ],
-        });
-        let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-            label: Some("nearest_two"),
-            bind_group_layouts: &[Some(&layout)],
-            immediate_size: 0,
-        });
-        let pipeline = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-            label: Some("nearest_two"),
-            layout: Some(&pipeline_layout),
-            module: &module,
-            entry_point: Some("main"),
-            compilation_options: Default::default(),
-            cache: None,
-        });
+            WG_METAL,
+            WG_DEFAULT,
+        )
+        .expect("nearest_two kernel builds");
         Self {
-            device: device.clone(),
+            device: context.device.clone(),
             queue: context.queue.clone(),
-            layout,
-            pipeline,
+            kernel,
             buffers: std::cell::RefCell::new(None),
         }
     }
@@ -2072,121 +1426,60 @@ impl GpuNearestTwo {
         if !stale {
             return;
         }
+        let device = &self.device;
         let query_capacity = query_count.max(1);
         let target_capacity = target_count.max(1);
-        let device = &self.device;
-        let mk = |label: &str, size: u64, usage| {
-            device.create_buffer(&wgpu::BufferDescriptor {
-                label: Some(label),
-                size,
-                usage,
-                mapped_at_creation: false,
-            })
-        };
         let params = mk(
+            device,
             "nearest_two_params",
             16,
-            wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+            BufferUsages::UNIFORM | BufferUsages::COPY_DST,
         );
         let queries = mk(
+            device,
             "nearest_two_queries",
             (query_capacity * 12) as u64,
-            wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+            BufferUsages::STORAGE | BufferUsages::COPY_DST,
         );
         let targets = mk(
+            device,
             "nearest_two_targets",
             (target_capacity * 12) as u64,
-            wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+            BufferUsages::STORAGE | BufferUsages::COPY_DST,
         );
         let out_bytes = (query_capacity * 4) as u64;
-        let out_i0 = mk(
-            "nearest_two_i0",
-            out_bytes,
-            wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC,
-        );
-        let out_d0 = mk(
-            "nearest_two_d0",
-            out_bytes,
-            wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC,
-        );
-        let out_i1 = mk(
-            "nearest_two_i1",
-            out_bytes,
-            wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC,
-        );
-        let out_d1 = mk(
-            "nearest_two_d1",
-            out_bytes,
-            wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC,
-        );
-        let read_i0 = mk(
-            "nearest_two_read_i0",
-            out_bytes,
-            wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
-        );
-        let read_d0 = mk(
-            "nearest_two_read_d0",
-            out_bytes,
-            wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
-        );
-        let read_i1 = mk(
-            "nearest_two_read_i1",
-            out_bytes,
-            wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
-        );
-        let read_d1 = mk(
-            "nearest_two_read_d1",
-            out_bytes,
-            wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
-        );
-        let bind = device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("nearest_two"),
-            layout: &self.layout,
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: params.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: queries.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 2,
-                    resource: targets.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 3,
-                    resource: out_i0.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 4,
-                    resource: out_d0.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 5,
-                    resource: out_i1.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 6,
-                    resource: out_d1.as_entire_binding(),
-                },
-            ],
+        let outs: [Buffer; 4] = std::array::from_fn(|k| {
+            mk(
+                device,
+                &["nearest_two_i0", "nearest_two_d0", "nearest_two_i1", "nearest_two_d1"][k],
+                out_bytes,
+                BufferUsages::STORAGE | BufferUsages::COPY_SRC,
+            )
         });
+        let bind = bind(
+            device,
+            &self.kernel,
+            "nearest_two",
+            &[
+                &params,
+                &queries,
+                &targets,
+                &outs[0],
+                &outs[1],
+                &outs[2],
+                &outs[3],
+            ],
+        );
         *self.buffers.borrow_mut() = Some(NearestTwoBuffers {
             query_capacity,
             target_capacity,
             params,
             queries,
             targets,
-            out_i0,
-            out_d0,
-            out_i1,
-            out_d1,
-            read_i0,
-            read_d0,
-            read_i1,
-            read_d1,
+            out_i0: outs[0].clone(),
+            out_d0: outs[1].clone(),
+            out_i1: outs[2].clone(),
+            out_d1: outs[3].clone(),
             bind,
         });
     }
@@ -2199,56 +1492,27 @@ impl GpuNearestTwo {
         self.ensure_buffers(query_count, target_count);
         let buffers = self.buffers.borrow();
         let b = buffers.as_ref().expect("ensure_buffers was just called");
-        let mut params = Vec::with_capacity(16);
-        params.extend_from_slice(&(query_count as u32).to_le_bytes());
-        params.extend_from_slice(&(target_count as u32).to_le_bytes());
-        params.extend_from_slice(&0u32.to_le_bytes());
-        params.extend_from_slice(&0u32.to_le_bytes());
+        let params = pack_params(&[query_count as u32, target_count as u32, 0, 0]);
         self.queue.write_buffer(&b.params, 0, &params);
         self.queue
-            .write_buffer(&b.queries, 0, &gpu_compute::pack_f32(&flat_q));
+            .write_buffer(&b.queries, 0, &pack_f32(&flat_q));
         self.queue
-            .write_buffer(&b.targets, 0, &gpu_compute::pack_f32(&flat_t));
-        let mut encoder = self
-            .device
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("nearest_two"),
-            });
-        {
-            let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
-                label: Some("nearest_two"),
-                timestamp_writes: None,
-            });
-            pass.set_pipeline(&self.pipeline);
-            pass.set_bind_group(0, &b.bind, &[]);
-            pass.dispatch_workgroups((query_count.max(1) as u32).div_ceil(256), 1, 1);
-        }
-        let copy_bytes = (query_count * 4) as u64;
-        encoder.copy_buffer_to_buffer(&b.out_i0, 0, &b.read_i0, 0, copy_bytes);
-        encoder.copy_buffer_to_buffer(&b.out_d0, 0, &b.read_d0, 0, copy_bytes);
-        encoder.copy_buffer_to_buffer(&b.out_i1, 0, &b.read_i1, 0, copy_bytes);
-        encoder.copy_buffer_to_buffer(&b.out_d1, 0, &b.read_d1, 0, copy_bytes);
-        self.queue.submit([encoder.finish()]);
-        let i0 = read_buffer(&self.device, &b.read_i0, query_count * 4);
-        b.read_i0.unmap();
-        let d0 = read_buffer(&self.device, &b.read_d0, query_count * 4);
-        b.read_d0.unmap();
-        let i1 = read_buffer(&self.device, &b.read_i1, query_count * 4);
-        b.read_i1.unmap();
-        let d1 = read_buffer(&self.device, &b.read_d1, query_count * 4);
-        b.read_d1.unmap();
+            .write_buffer(&b.targets, 0, &pack_f32(&flat_t));
+        self.kernel.dispatch_bind_group(
+            &self.device,
+            &self.queue,
+            &b.bind,
+            self.kernel.workgroup_count(query_count.max(1) as u32),
+        );
+        let i0 = read_u32(&self.device, &self.queue, &b.out_i0, query_count);
+        let d0 = read_f32(&self.device, &self.queue, &b.out_d0, query_count);
+        let i1 = read_u32(&self.device, &self.queue, &b.out_i1, query_count);
+        let d1 = read_f32(&self.device, &self.queue, &b.out_d1, query_count);
         (0..query_count)
             .map(|idx| {
-                let off = idx * 4;
                 [
-                    (
-                        u32::from_ne_bytes(i0[off..off + 4].try_into().unwrap()),
-                        f32::from_ne_bytes(d0[off..off + 4].try_into().unwrap()) as f64,
-                    ),
-                    (
-                        u32::from_ne_bytes(i1[off..off + 4].try_into().unwrap()),
-                        f32::from_ne_bytes(d1[off..off + 4].try_into().unwrap()) as f64,
-                    ),
+                    (i0[idx], d0[idx] as f64),
+                    (i1[idx], d1[idx] as f64),
                 ]
             })
             .collect()
@@ -2271,61 +1535,39 @@ pub fn nearest_two_gpu(queries: &[V3], targets: &[V3]) -> Option<Vec<crate::TwoN
 }
 
 struct GpuNearestFour {
-    device: wgpu::Device,
+    device: Device,
     queue: wgpu::Queue,
-    layout: wgpu::BindGroupLayout,
-    pipeline: wgpu::ComputePipeline,
+    kernel: Kernel,
     buffers: std::cell::RefCell<Option<NearestFourBuffers>>,
 }
 
 struct NearestFourBuffers {
     query_capacity: usize,
     target_capacity: usize,
-    params: wgpu::Buffer,
-    queries: wgpu::Buffer,
-    targets: wgpu::Buffer,
-    out_indices: wgpu::Buffer,
-    out_distances: wgpu::Buffer,
-    read_indices: wgpu::Buffer,
-    read_distances: wgpu::Buffer,
-    bind: wgpu::BindGroup,
+    params: Buffer,
+    queries: Buffer,
+    targets: Buffer,
+    out_indices: Buffer,
+    out_distances: Buffer,
+    bind: BindGroup,
 }
 
 impl GpuNearestFour {
     fn new(context: &GpuContext) -> Self {
-        let device = &context.device;
-        let module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
-            label: Some("nearest_four"),
-            source: wgpu::ShaderSource::Wgsl(crate::NEAREST_FOUR_WGSL.into()),
-        });
-        let layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-            label: Some("nearest_four"),
-            entries: &[
-                uniform_entry(0),
-                storage_entry(1, true),
-                storage_entry(2, true),
-                storage_entry(3, false),
-                storage_entry(4, false),
-            ],
-        });
-        let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-            label: Some("nearest_four"),
-            bind_group_layouts: &[Some(&layout)],
-            immediate_size: 0,
-        });
-        let pipeline = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-            label: Some("nearest_four"),
-            layout: Some(&pipeline_layout),
-            module: &module,
-            entry_point: Some("main"),
-            compilation_options: Default::default(),
-            cache: None,
-        });
+        let kernel = Kernel::tuned(
+            context,
+            "nearest_four",
+            crate::NEAREST_FOUR_WGSL,
+            "main",
+            &NN_BINDINGS,
+            WG_METAL,
+            WG_DEFAULT,
+        )
+        .expect("nearest_four kernel builds");
         Self {
-            device: device.clone(),
+            device: context.device.clone(),
             queue: context.queue.clone(),
-            layout,
-            pipeline,
+            kernel,
             buffers: std::cell::RefCell::new(None),
         }
     }
@@ -2338,79 +1580,46 @@ impl GpuNearestFour {
         if !stale {
             return;
         }
+        let device = &self.device;
         let query_capacity = query_count.max(1);
         let target_capacity = target_count.max(1);
-        let device = &self.device;
-        let mk = |label: &str, size: u64, usage| {
-            device.create_buffer(&wgpu::BufferDescriptor {
-                label: Some(label),
-                size,
-                usage,
-                mapped_at_creation: false,
-            })
-        };
         let params = mk(
+            device,
             "nearest_four_params",
             16,
-            wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+            BufferUsages::UNIFORM | BufferUsages::COPY_DST,
         );
         let queries = mk(
+            device,
             "nearest_four_queries",
             (query_capacity * 12) as u64,
-            wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+            BufferUsages::STORAGE | BufferUsages::COPY_DST,
         );
         let targets = mk(
+            device,
             "nearest_four_targets",
             (target_capacity * 12) as u64,
-            wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+            BufferUsages::STORAGE | BufferUsages::COPY_DST,
         );
         let out_bytes = (query_capacity * 4 * 4) as u64;
         let out_indices = mk(
+            device,
             "nearest_four_indices",
             out_bytes,
-            wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC,
+            BufferUsages::STORAGE | BufferUsages::COPY_SRC,
         );
         let out_distances = mk(
+            device,
             "nearest_four_distances",
             out_bytes,
-            wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC,
+            BufferUsages::STORAGE | BufferUsages::COPY_SRC,
         );
-        let read_indices = mk(
-            "nearest_four_read_indices",
-            out_bytes,
-            wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
+        let bind = bind(
+            device,
+            &self.kernel,
+            "nearest_four",
+            &[&params, &queries, &targets, &out_indices, &out_distances],
         );
-        let read_distances = mk(
-            "nearest_four_read_distances",
-            out_bytes,
-            wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
-        );
-        let bind = device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("nearest_four"),
-            layout: &self.layout,
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: params.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: queries.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 2,
-                    resource: targets.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 3,
-                    resource: out_indices.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 4,
-                    resource: out_distances.as_entire_binding(),
-                },
-            ],
-        });
         *self.buffers.borrow_mut() = Some(NearestFourBuffers {
             query_capacity,
             target_capacity,
@@ -2419,8 +1628,6 @@ impl GpuNearestFour {
             targets,
             out_indices,
             out_distances,
-            read_indices,
-            read_distances,
             bind,
         });
     }
@@ -2433,46 +1640,25 @@ impl GpuNearestFour {
         self.ensure_buffers(query_count, target_count);
         let buffers = self.buffers.borrow();
         let b = buffers.as_ref().expect("ensure_buffers was just called");
-        let mut params = Vec::with_capacity(16);
-        params.extend_from_slice(&(query_count as u32).to_le_bytes());
-        params.extend_from_slice(&(target_count as u32).to_le_bytes());
-        params.extend_from_slice(&0u32.to_le_bytes());
-        params.extend_from_slice(&0u32.to_le_bytes());
+        let params = pack_params(&[query_count as u32, target_count as u32, 0, 0]);
         self.queue.write_buffer(&b.params, 0, &params);
         self.queue
-            .write_buffer(&b.queries, 0, &gpu_compute::pack_f32(&flat_q));
+            .write_buffer(&b.queries, 0, &pack_f32(&flat_q));
         self.queue
-            .write_buffer(&b.targets, 0, &gpu_compute::pack_f32(&flat_t));
-        let mut encoder = self
-            .device
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("nearest_four"),
-            });
-        {
-            let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
-                label: Some("nearest_four"),
-                timestamp_writes: None,
-            });
-            pass.set_pipeline(&self.pipeline);
-            pass.set_bind_group(0, &b.bind, &[]);
-            pass.dispatch_workgroups((query_count.max(1) as u32).div_ceil(256), 1, 1);
-        }
-        let copy_bytes = (query_count * 4 * 4) as u64;
-        encoder.copy_buffer_to_buffer(&b.out_indices, 0, &b.read_indices, 0, copy_bytes);
-        encoder.copy_buffer_to_buffer(&b.out_distances, 0, &b.read_distances, 0, copy_bytes);
-        self.queue.submit([encoder.finish()]);
-        let indices = read_buffer(&self.device, &b.read_indices, query_count * 4 * 4);
-        b.read_indices.unmap();
-        let distances = read_buffer(&self.device, &b.read_distances, query_count * 4 * 4);
-        b.read_distances.unmap();
+            .write_buffer(&b.targets, 0, &pack_f32(&flat_t));
+        self.kernel.dispatch_bind_group(
+            &self.device,
+            &self.queue,
+            &b.bind,
+            self.kernel.workgroup_count(query_count.max(1) as u32),
+        );
+        let indices = read_u32(&self.device, &self.queue, &b.out_indices, query_count * 4);
+        let distances = read_f32(&self.device, &self.queue, &b.out_distances, query_count * 4);
         (0..query_count)
             .map(|idx| {
                 std::array::from_fn(|k| {
-                    let off = (idx * 4 + k) * 4;
-                    (
-                        u32::from_ne_bytes(indices[off..off + 4].try_into().unwrap()),
-                        f32::from_ne_bytes(distances[off..off + 4].try_into().unwrap()) as f64,
-                    )
+                    let off = idx * 4 + k;
+                    (indices[off], distances[off] as f64)
                 })
             })
             .collect()

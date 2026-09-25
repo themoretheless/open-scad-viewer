@@ -18,11 +18,11 @@ mod types;
 
 pub use acceleration::Acceleration;
 pub use bounds::{
-    POINT_BOUNDS_WGSL_TEMPLATE, PointBounds, TRANSFORMED_POINT_BOUNDS_WGSL_TEMPLATE, point_bounds,
+    POINT_BOUNDS_WGSL, PointBounds, TRANSFORMED_POINT_BOUNDS_WGSL, point_bounds,
     point_bounds_accelerated, transformed_point_bounds, transformed_point_bounds_accelerated,
 };
 pub use chamfer::{
-    CHAMFER_WGSL_TEMPLATE, ChamferDistance, DirectedChamfer, chamfer_distance,
+    CHAMFER_WGSL, ChamferDistance, DirectedChamfer, chamfer_distance,
     directed_chamfer_distance, directed_hausdorff_distance, hausdorff_distance,
 };
 pub use distance_pairs::{
@@ -37,7 +37,7 @@ pub use linalg::{
 };
 pub use local_plane::{LocalPlane, local_point_planes};
 pub use moments::{
-    POINT_MOMENTS_WGSL_TEMPLATE, PointMoments, PointPlane, PointPrincipalAxes, point_centroid,
+    POINT_MOMENTS_WGSL, PointMoments, PointPlane, PointPrincipalAxes, point_centroid,
     point_fit_plane, point_moments, point_moments_accelerated, point_principal_axes,
     weighted_point_centroid,
 };
@@ -51,7 +51,7 @@ pub use nearest_two::{
 };
 pub use registration::{IcpOptions, IcpReport, RigidTransform, icp_register, rigid_transform};
 pub use stats::{
-    POINT_CLOUD_STATS_WGSL_TEMPLATE, PointCloudStats, point_cloud_stats,
+    POINT_CLOUD_STATS_WGSL, PointCloudStats, point_cloud_stats,
     point_cloud_stats_accelerated, transformed_point_cloud_stats,
     transformed_point_cloud_stats_accelerated,
 };

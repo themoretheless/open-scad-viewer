@@ -5,7 +5,7 @@ use crate::{
 };
 
 /// WGSL template for fused point-cloud bounds + moments reduction.
-pub const POINT_CLOUD_STATS_WGSL_TEMPLATE: &str = include_str!("point_cloud_stats.wgsl");
+pub const POINT_CLOUD_STATS_WGSL: &str = include_str!("point_cloud_stats.wgsl");
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct PointCloudStats {
