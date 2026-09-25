@@ -1,0 +1,422 @@
+{
+  "schema": "open-scad-viewer/g0-toolchain-fingerprints",
+  "schemaVersion": 1,
+  "fingerprintId": "g0-toolchain-fingerprints-v20",
+  "recordedAt": "2026-09-24",
+  "previousFingerprintId": "g0-toolchain-fingerprints-v19",
+  "purpose": "Re-freeze the committed perf series (gcode fixed7 emit, subdivision cascade, scanline hatch, brep/nurbs FxHash) plus in-flight math-core WGSL work present in the tree; rebind the rebuilt geometry kernel via own-rust-cad-v12; retarget GitHub executors to v37; preserve the finite G1 contract and reset all clean-run work.",
+  "claimBoundary": {
+    "includes": [
+      "Exact SHA-256 of listed lock/manifest/notices/toolchain files",
+      "Observed rustc version line",
+      "Exact SHA-256 of the Geometry Closure V3 own-Rust source bundle and rebuilt WASM",
+      "Exact SHA-256 of the V34 GitHub workflow, evidence harness, selectors, and hosted-runner identity freeze",
+      "Exact SHA-256 of the V35 GitHub workflow, evidence harness, selectors, and hosted-runner identity freeze",
+      "Exact SHA-256 of the V36 GitHub workflow, evidence harness, selectors, and hosted-runner identity freeze",
+      "Exact SHA-256 of the V37 GitHub workflow, evidence harness, selectors, and hosted-runner identity freeze"
+    ],
+    "excludes": [
+      "Full SPDX SBOM",
+      "Playwright qualification locks",
+      "Any rewrite of G0 v1-v19 or G1 v1 through v36",
+      "G0 closure, G1 qualification, completed clean work, or production cutover"
+    ]
+  },
+  "toolchain": {
+    "rustToolchainFile": "rust-toolchain.toml",
+    "rustChannel": "nightly-2026-09-16",
+    "observedRustcVersionLine": "rustc 1.100.0-nightly (215a8af4b 2026-09-15)",
+    "wasmTarget": "wasm32-unknown-unknown"
+  },
+  "artifacts": [
+    {
+      "id": "root-package-manifest",
+      "path": "package.json",
+      "sha256": "e95f65347d420ae210d7a8f98306ed3bbd29611a95e1e293b26b150572e2bdcf",
+      "byteLength": 5166
+    },
+    {
+      "id": "root-package-lockfile",
+      "path": "package-lock.json",
+      "sha256": "8fb1cab7fde2b4f8b9331cfdddbc9dc0909b1ccf2ca5d26fb0c6a47b976145d1",
+      "byteLength": 76455
+    },
+    {
+      "id": "root-npmrc",
+      "path": ".npmrc",
+      "sha256": "8d1c8cce74ec8034361b3c300fcc7103dd8458556de93cd60cb9dd29e633799d",
+      "byteLength": 59
+    },
+    {
+      "id": "third-party-notices",
+      "path": "THIRD_PARTY_NOTICES.md",
+      "sha256": "789499bf4bcbaacad6ead9d5e8f51e5ecbd3ec37bb9b9ef2d45bb7c115bd5c84",
+      "byteLength": 7475
+    },
+    {
+      "id": "rust-toolchain",
+      "path": "rust-toolchain.toml",
+      "sha256": "c88e50089cd3b2ea538735c9f5ff360cc3e8974a880c110bf7ce74af5021492a",
+      "byteLength": 191
+    },
+    {
+      "id": "crates-workspace-manifest",
+      "path": "crates/Cargo.toml",
+      "sha256": "7f5a7006ce131b9a307b295fabd38e7126cc27df2aa54147b83a6f45675e3af4",
+      "byteLength": 2257
+    },
+    {
+      "id": "crates-lockfile",
+      "path": "crates/Cargo.lock",
+      "sha256": "384b614dbd50afd0631d0e69bb6f6a3fb2d8444e2741ef2866ef8c42310cc807",
+      "byteLength": 77435
+    },
+    {
+      "id": "own-rust-cad-v2-evidence",
+      "path": "docs/qualification/own-rust-cad-v2.json",
+      "sha256": "ba6ad0bb6166bb2f54dba30fb3245d5074c78a032da23902bfc5768beff6e395",
+      "byteLength": 1874
+    },
+    {
+      "id": "geometry-v3-source-01",
+      "path": "crates/brep-core/src/lib.rs",
+      "sha256": "c8db9db57d8f5e594940b63093714212162b0f900b3d7d76aed404ce69077ed7",
+      "byteLength": 69266
+    },
+    {
+      "id": "geometry-v3-source-02",
+      "path": "crates/brep-core/src/nurbs_ss_g6.rs",
+      "sha256": "9aa3f5a36a6b65e3f853e3ef3bcdce9966725bf7e997dd50909b877def697100",
+      "byteLength": 184927
+    },
+    {
+      "id": "geometry-v3-source-03",
+      "path": "crates/brep-core/src/operations.rs",
+      "sha256": "3990fac3d8e660a3d8e568a33910ea4e1db81f58a02a792f83f8cda2a2071fd2",
+      "byteLength": 98972
+    },
+    {
+      "id": "geometry-v3-source-04",
+      "path": "crates/brep-core/src/solid_audit.rs",
+      "sha256": "cf12eaeff9f70689efd894fe18f8de3b12ebc8922ea1c661cb4e40e357b16db9",
+      "byteLength": 25344
+    },
+    {
+      "id": "geometry-v3-source-05",
+      "path": "crates/brep-core/src/step_interchange_v3.rs",
+      "sha256": "e5038c9428221b81a046235e6b634ced820a23b5818a6de09490b957395ed517",
+      "byteLength": 241209
+    },
+    {
+      "id": "geometry-v3-source-06",
+      "path": "crates/brep-core/src/transactions.rs",
+      "sha256": "31649aaa25d1c3482d31fb0a159acb57648b185d22eee28c676828df65012bc4",
+      "byteLength": 16902
+    },
+    {
+      "id": "geometry-v3-source-07",
+      "path": "crates/brep-core/src/trim_sew.rs",
+      "sha256": "aecf521fd3d32ebe09ecce22aa81142e08835b9931405e8efe2ed165fb1f7a91",
+      "byteLength": 90798
+    },
+    {
+      "id": "geometry-v3-source-08",
+      "path": "crates/brep-core/src/uv_arrangement.rs",
+      "sha256": "a58de9124e8c7ffe99b7cc6669de0cf2b97cfd9cff84f731b2d497acca132c68",
+      "byteLength": 60489
+    },
+    {
+      "id": "geometry-v3-source-09",
+      "path": "crates/brep-topology/src/lib.rs",
+      "sha256": "06eda84a96ad5cbc101086e62ebc2aba2a66f0d68ec3146b9a207e166a9c3687",
+      "byteLength": 45843
+    },
+    {
+      "id": "geometry-v3-source-10",
+      "path": "crates/geometry-bridge/src/lib.rs",
+      "sha256": "6ca0cd8b64ed29d472de4fab67aca1174f0fb258f46455af1e1201d4c88cb87c",
+      "byteLength": 81354
+    },
+    {
+      "id": "geometry-v3-source-11",
+      "path": "src/core/ownRustCadEvidence.ts",
+      "sha256": "d8ad6564620d2db98f1969c1575dacf8486f87dff299e2aa87c3b5b523ccfdbf",
+      "byteLength": 474
+    },
+    {
+      "id": "geometry-v3-source-12",
+      "path": "src/services/cadNurbsStep.ts",
+      "sha256": "b0d44be60adf9630e26c98129a8e85a7144147341b0e1e8b1b00d2655f373b10",
+      "byteLength": 12061
+    },
+    {
+      "id": "geometry-v3-source-13",
+      "path": "src/services/geometry/brep.ts",
+      "sha256": "1a7e8291f594aa61d97035a4aaee1a04f69c00215aa1bcf40ec109ee17cecffe",
+      "byteLength": 24198
+    },
+    {
+      "id": "geometry-v3-source-14",
+      "path": "src/services/geometry/brepCapability.ts",
+      "sha256": "9a1020ee751d70f2ff097ad1ba5c5125bffcdf6781bf58d9a8d1dca99c87454b",
+      "byteLength": 27508
+    },
+    {
+      "id": "own-rust-cad-v3-evidence",
+      "path": "docs/qualification/own-rust-cad-v3.json",
+      "sha256": "6ca6e8ea8a5b54be7711dc49a179b232a671ce17613d079ff12a087b12a12f7b",
+      "byteLength": 1894
+    },
+    {
+      "id": "own-rust-cad-v4-evidence",
+      "path": "docs/qualification/own-rust-cad-v4.json",
+      "sha256": "fa09bf87b3cd821b489475c19469646fa0e841f89f76251bd959d74c6e9842c6",
+      "byteLength": 2020
+    },
+    {
+      "id": "geometry-v3-source-15",
+      "path": "src/services/geometry/brep.ts",
+      "sha256": "1a7e8291f594aa61d97035a4aaee1a04f69c00215aa1bcf40ec109ee17cecffe",
+      "byteLength": 24198
+    },
+    {
+      "id": "geometry-v3-source-16",
+      "path": "src/services/geometry/brepCapability.ts",
+      "sha256": "9a1020ee751d70f2ff097ad1ba5c5125bffcdf6781bf58d9a8d1dca99c87454b",
+      "byteLength": 27508
+    },
+    {
+      "id": "own-rust-cad-v5-evidence",
+      "path": "docs/qualification/own-rust-cad-v5.json",
+      "sha256": "c6100705c560fc3008e379e20a48ff737ecbb8bbf280f2f1204c370f6c5fc504",
+      "byteLength": 2066
+    },
+    {
+      "id": "geometry-v3-source-17",
+      "path": "tests/brepQualificationV8.test.ts",
+      "sha256": "d2cc6b6fda3b2fd83411fe58280757de7ebce3ce8dd49b67cee3a2ba47c3a302",
+      "byteLength": 3170
+    },
+    {
+      "id": "own-rust-cad-v6-evidence",
+      "path": "docs/qualification/own-rust-cad-v6.json",
+      "sha256": "c08740e378a28d8794bb1d7237a6b696d89b4ca6dfb1725f52c4b39321dbe94d",
+      "byteLength": 2272
+    },
+    {
+      "id": "geometry-v3-source-18",
+      "path": "crates/brep-core/src/analytic.rs",
+      "sha256": "8974694125a98e2b54f8a2b3d600b23b17df3204cac94452e12820d82b5bfdae",
+      "byteLength": 52441
+    },
+    {
+      "id": "geometry-v3-source-19",
+      "path": "crates/brep-core/src/analytic/loft.rs",
+      "sha256": "a39fcdeafd9f58f8b9985d02bdb1074593ccd7c34ab4c7cfa933fd47e77c479b",
+      "byteLength": 15252
+    },
+    {
+      "id": "geometry-v3-source-20",
+      "path": "crates/brep-core/src/analytic_features.rs",
+      "sha256": "7c1ef5aba8cdd1340314aad15d59202789d611750b185684b9dbb0c7d0322721",
+      "byteLength": 116406
+    },
+    {
+      "id": "geometry-v3-source-21",
+      "path": "crates/brep-core/src/imprint_pipeline.rs",
+      "sha256": "fbdb50fc0d8fed7698229e4ddc0e99943c71b9aefeda6f06a54426c11fd1f961",
+      "byteLength": 49481
+    },
+    {
+      "id": "geometry-v3-source-22",
+      "path": "crates/geometry-bridge/src/tests.rs",
+      "sha256": "7eb620f1f178647968a0e3aea189a2149f0fdcf70d903ff6ee8e65290c3abf49",
+      "byteLength": 38171
+    },
+    {
+      "id": "geometry-v3-source-23",
+      "path": "tests/brepQualificationV9.test.ts",
+      "sha256": "c41a03978dc6824c4b0d79986e4a0dd69fc79d01b5cd397e7c8767d767cac9a5",
+      "byteLength": 4942
+    },
+    {
+      "id": "own-rust-cad-v7-evidence",
+      "path": "docs/qualification/own-rust-cad-v7.json",
+      "sha256": "9733e8d4b7f6be5634fd173aad2a4eb71d8e57d620b98234e3672d0851cff232",
+      "byteLength": 2553
+    },
+    {
+      "id": "geometry-v3-source-24",
+      "path": "crates/brep-core/src/analysis.rs",
+      "sha256": "4f56cc5392b92cec706c32a69b8d708f9160e382a2973593d198f3aac5a2ff9d",
+      "byteLength": 64058
+    },
+    {
+      "id": "geometry-v3-source-25",
+      "path": "crates/brep-core/src/intersections.rs",
+      "sha256": "1860382dead00db03cd166543d0e04948e6b4ccddc610b0b9835d6d8124285ed",
+      "byteLength": 342321
+    },
+    {
+      "id": "geometry-v3-source-26",
+      "path": "crates/geometry-bridge/src/brep.rs",
+      "sha256": "92b445886aa6e081cf9ae3cdc811cc191b2ce83b66b2426278599ef5cecfcb1e",
+      "byteLength": 61124
+    },
+    {
+      "id": "geometry-v3-source-27",
+      "path": "tests/brepQualificationV10.test.ts",
+      "sha256": "5d90fda128991f58bf46d5188c93eb790f012ea5325726d250eae95707041406",
+      "byteLength": 4792
+    },
+    {
+      "id": "own-rust-cad-v8-evidence",
+      "path": "docs/qualification/own-rust-cad-v8.json",
+      "sha256": "d3e6a09e69da39a1270a85c2aebd0f622ed058f92cdae776a0ce26ac7f14dc30",
+      "byteLength": 2631
+    },
+    {
+      "id": "geometry-v3-source-28",
+      "path": "crates/brep-core/src/iges_interchange_v2.rs",
+      "sha256": "4a0a45a4898fb7f70dae0ceaa3c80fb4e52340f47b9cf4c5c5775804a18b7d46",
+      "byteLength": 47650
+    },
+    {
+      "id": "geometry-v3-source-29",
+      "path": "src/services/cadIges.ts",
+      "sha256": "903e14ff2af3389f004699bb870ae8b10f15bcb8c873804bab147f0489cf4f6b",
+      "byteLength": 1087
+    },
+    {
+      "id": "geometry-v3-source-30",
+      "path": "tests/brepInterchangeV11.test.ts",
+      "sha256": "1e48fd8dd56e87887de90c8a294748cb436004d230ec6b3530f39e4a06c25324",
+      "byteLength": 1579
+    },
+    {
+      "id": "geometry-v3-source-31",
+      "path": "tests/brepQualificationV11.test.ts",
+      "sha256": "064dc7d0c6b4e3aabc915d41a3ba3fd02121b6ba864abf092d0dd020b30e8b3f",
+      "byteLength": 2030
+    },
+    {
+      "id": "own-rust-cad-v9-evidence",
+      "path": "docs/qualification/own-rust-cad-v9.json",
+      "sha256": "6da773063cf79d1027ece338d408a6593072e188b47d053b0965a5df9d473af0",
+      "byteLength": 2753
+    },
+    {
+      "id": "geometry-v3-source-32",
+      "path": "crates/brep-core/src/close_topology.rs",
+      "sha256": "f95d3e721444bb0816868b0c6a5db078235eb16f00a2c91854ad18f8b830f415",
+      "byteLength": 44443
+    },
+    {
+      "id": "geometry-v3-source-33",
+      "path": "tests/brepQualificationV12.test.ts",
+      "sha256": "69e4728d2674845e340f1e0670c5232dd7aad58f86c460aa466b2694f69ca008",
+      "byteLength": 2784
+    },
+    {
+      "id": "g1-v34-github-workflow",
+      "path": ".github/workflows/g1-qualification-clean.yml",
+      "sha256": "bc96dd3ca2bccfac5b93c0684007c6f8bd374c325a3bc3b8e083ce7a8f427563",
+      "byteLength": 12138
+    },
+    {
+      "id": "g1-v34-github-harness",
+      "path": "scripts/g1-github-actions.mjs",
+      "sha256": "dcf2c50ffe7761082cf2112c1621ade9af7a9e74d41908135aac526a59b89353",
+      "byteLength": 32655
+    },
+    {
+      "id": "g1-v34-clean-fragment-selector",
+      "path": "scripts/run-g1-candidate-clean-fragment.mjs",
+      "sha256": "6ad3a0a3e02167e59c4a76eae197651edb6a863fc3bcaad336e7c856be80ea2f",
+      "byteLength": 11403
+    },
+    {
+      "id": "g1-v34-ubuntu-selector",
+      "path": "scripts/run-g1-ubuntu-docker-fragment.mjs",
+      "sha256": "363b80443840fec6b0cbda8d65b843dde43aba5eb6d782f61a8a4629801188de",
+      "byteLength": 7667
+    },
+    {
+      "id": "g1-v34-github-environment",
+      "path": "docs/qualification/environment-freeze/g1-github-actions-v34.json",
+      "sha256": "c4896e1dab35ce3169770949220bed92501ea0c7d526840a93814b6e60afb2b7",
+      "byteLength": 3366
+    },
+    {
+      "id": "own-rust-cad-v10-evidence",
+      "path": "docs/qualification/own-rust-cad-v10.json",
+      "sha256": "0281cdf28d2ab1d6873140c76ec606d95bf3650fd29594fad978b4b4488b91cd",
+      "byteLength": 2886
+    },
+    {
+      "id": "own-rust-cad-v11-evidence",
+      "path": "docs/qualification/own-rust-cad-v11.json",
+      "sha256": "ba0158fd85641edd77286f5c4627ddaae934d9308f975ff53ef1a4aabdf919e4",
+      "byteLength": 2868
+    },
+    {
+      "id": "own-rust-cad-v12-evidence",
+      "path": "docs/qualification/own-rust-cad-v12.json",
+      "sha256": "a38f806ab5e09523b1267b32bd9798d9f909084815cf292bcf8390515c506957",
+      "byteLength": 2988
+    }
+  ],
+  "knownDrift": [
+    {
+      "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v19.json",
+      "bindingId": "crates-workspace-manifest",
+      "note": "Current bytes are newly bound in v20; v19 remains archived. Re-freeze the committed perf series (gcode fixed7 emit, subdivision cascade, scanline hatch, brep/nurbs FxHash) plus in-flight math-core WGSL work present in the tree; rebind the rebuilt geometry kernel via own-rust-cad-v12; retarget GitHub executors to v37; preserve the finite G1 contract and reset all clean-run work."
+    },
+    {
+      "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v19.json",
+      "bindingId": "crates-lockfile",
+      "note": "Current bytes are newly bound in v20; v19 remains archived. Re-freeze the committed perf series (gcode fixed7 emit, subdivision cascade, scanline hatch, brep/nurbs FxHash) plus in-flight math-core WGSL work present in the tree; rebind the rebuilt geometry kernel via own-rust-cad-v12; retarget GitHub executors to v37; preserve the finite G1 contract and reset all clean-run work."
+    },
+    {
+      "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v19.json",
+      "bindingId": "geometry-v3-source-07",
+      "note": "Current bytes are newly bound in v20; v19 remains archived. Re-freeze the committed perf series (gcode fixed7 emit, subdivision cascade, scanline hatch, brep/nurbs FxHash) plus in-flight math-core WGSL work present in the tree; rebind the rebuilt geometry kernel via own-rust-cad-v12; retarget GitHub executors to v37; preserve the finite G1 contract and reset all clean-run work."
+    },
+    {
+      "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v19.json",
+      "bindingId": "geometry-v3-source-08",
+      "note": "Current bytes are newly bound in v20; v19 remains archived. Re-freeze the committed perf series (gcode fixed7 emit, subdivision cascade, scanline hatch, brep/nurbs FxHash) plus in-flight math-core WGSL work present in the tree; rebind the rebuilt geometry kernel via own-rust-cad-v12; retarget GitHub executors to v37; preserve the finite G1 contract and reset all clean-run work."
+    },
+    {
+      "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v19.json",
+      "bindingId": "geometry-v3-source-09",
+      "note": "Current bytes are newly bound in v20; v19 remains archived. Re-freeze the committed perf series (gcode fixed7 emit, subdivision cascade, scanline hatch, brep/nurbs FxHash) plus in-flight math-core WGSL work present in the tree; rebind the rebuilt geometry kernel via own-rust-cad-v12; retarget GitHub executors to v37; preserve the finite G1 contract and reset all clean-run work."
+    },
+    {
+      "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v19.json",
+      "bindingId": "geometry-v3-source-11",
+      "note": "Current bytes are newly bound in v20; v19 remains archived. Re-freeze the committed perf series (gcode fixed7 emit, subdivision cascade, scanline hatch, brep/nurbs FxHash) plus in-flight math-core WGSL work present in the tree; rebind the rebuilt geometry kernel via own-rust-cad-v12; retarget GitHub executors to v37; preserve the finite G1 contract and reset all clean-run work."
+    },
+    {
+      "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v19.json",
+      "bindingId": "g1-v34-github-workflow",
+      "note": "Current bytes are newly bound in v20; v19 remains archived. Re-freeze the committed perf series (gcode fixed7 emit, subdivision cascade, scanline hatch, brep/nurbs FxHash) plus in-flight math-core WGSL work present in the tree; rebind the rebuilt geometry kernel via own-rust-cad-v12; retarget GitHub executors to v37; preserve the finite G1 contract and reset all clean-run work."
+    },
+    {
+      "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v19.json",
+      "bindingId": "g1-v34-github-harness",
+      "note": "Current bytes are newly bound in v20; v19 remains archived. Re-freeze the committed perf series (gcode fixed7 emit, subdivision cascade, scanline hatch, brep/nurbs FxHash) plus in-flight math-core WGSL work present in the tree; rebind the rebuilt geometry kernel via own-rust-cad-v12; retarget GitHub executors to v37; preserve the finite G1 contract and reset all clean-run work."
+    },
+    {
+      "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v19.json",
+      "bindingId": "g1-v34-clean-fragment-selector",
+      "note": "Current bytes are newly bound in v20; v19 remains archived. Re-freeze the committed perf series (gcode fixed7 emit, subdivision cascade, scanline hatch, brep/nurbs FxHash) plus in-flight math-core WGSL work present in the tree; rebind the rebuilt geometry kernel via own-rust-cad-v12; retarget GitHub executors to v37; preserve the finite G1 contract and reset all clean-run work."
+    },
+    {
+      "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v19.json",
+      "bindingId": "g1-v34-ubuntu-selector",
+      "note": "Current bytes are newly bound in v20; v19 remains archived. Re-freeze the committed perf series (gcode fixed7 emit, subdivision cascade, scanline hatch, brep/nurbs FxHash) plus in-flight math-core WGSL work present in the tree; rebind the rebuilt geometry kernel via own-rust-cad-v12; retarget GitHub executors to v37; preserve the finite G1 contract and reset all clean-run work."
+    }
+  ],
+  "previousFingerprintSha256": "b928af58435dfeada9a68de5c65e07f8d25c43c9af622e2b6c80b6db141419b5"
+}

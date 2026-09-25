@@ -9,6 +9,7 @@ it.each([
  ['release-own-rust-v9.mjs','v9'],
  ['release-own-rust-v10.mjs','v10'],
  ['release-own-rust-v11.mjs','v11'],
+ ['release-own-rust-v12.mjs','v12'],
 ])('refuses historical publication before any side effect: %s',(script,version)=>{
  const root=mkdtempSync(join(tmpdir(),'osv-historical-writer-'))
  try{
