@@ -2118,7 +2118,9 @@ export class WebGPURenderer {
       meshIndex: number
       mesh: GMesh
       hit: MeshBvhHit
-      excludedTriangles: Set<number>
+      /** Reusable growing buffer; only the first `excludedCount` entries are live. */
+      excludedTriangles: Uint32Array
+      excludedCount: number
     }
     const frontier: HitCursor[] = []
     const cursorBefore = (a: HitCursor, b: HitCursor) => a.hit.t < b.hit.t
@@ -2167,7 +2169,7 @@ export class WebGPURenderer {
       const hit = this.nativePicking.query(mesh.vb, mesh.vertices, mesh.indices, mesh.bvh.vertexStride, mesh.bvh.leafSize, ray, {
         localFromWorld: mesh.inverseTransform,
       })
-      if (hit) insertFrontier({ meshIndex: index, mesh, hit, excludedTriangles: new Set() })
+      if (hit) insertFrontier({ meshIndex: index, mesh, hit, excludedTriangles: new Uint32Array(8), excludedCount: 0 })
       return true
     }
 
@@ -2202,10 +2204,17 @@ export class WebGPURenderer {
       const needsContinuation = clipped || this.selectionMode !== 'object'
       if (!needsContinuation || continuations >= MAX_DEPTH_CONTINUATIONS || candidates.length >= limit) continue
       continuations++
-      cursor.excludedTriangles.add(cursor.hit.triangleIndex)
+      // Append-only exclusions: grow the buffer amortized instead of rebuilding
+      // an Array.from(Set) on every continuation query.
+      if (cursor.excludedCount === cursor.excludedTriangles.length) {
+        const grown = new Uint32Array(cursor.excludedTriangles.length * 2)
+        grown.set(cursor.excludedTriangles)
+        cursor.excludedTriangles = grown
+      }
+      cursor.excludedTriangles[cursor.excludedCount++] = cursor.hit.triangleIndex
       const next = this.nativePicking.query(cursor.mesh.vb, cursor.mesh.vertices, cursor.mesh.indices, cursor.mesh.bvh.vertexStride, cursor.mesh.bvh.leafSize, ray, {
         minT: cursor.hit.t,
-        excludedTriangles: cursor.excludedTriangles,
+        excludedTriangles: cursor.excludedTriangles.subarray(0, cursor.excludedCount),
         localFromWorld: cursor.mesh.inverseTransform,
       })
       if (next) insertFrontier({ ...cursor, hit: next })

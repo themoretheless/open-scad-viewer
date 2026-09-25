@@ -106,6 +106,48 @@ pub struct PlannedLayer {
     pub paths: Vec<PlannedPath>,
 }
 
+/// Borrowed counterpart of [`PlannedPath`]: zero-copy emitter input.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct PlannedPathRef<'a> {
+    pub points: &'a [[f64; 2]],
+    pub closed: bool,
+}
+
+/// Borrowed counterpart of [`PlannedLayer`]. Building one allocates only the
+/// small per-path views; the points themselves are never copied.
+#[derive(Clone, Debug, PartialEq)]
+pub struct PlannedLayerRef<'a> {
+    pub z_mm: f64,
+    pub paths: Vec<PlannedPathRef<'a>>,
+}
+
+pub(crate) trait LayerAccess {
+    fn z_mm(&self) -> f64;
+    fn for_each_path(&self, visit: &mut dyn FnMut(&[[f64; 2]], bool));
+}
+
+impl LayerAccess for PlannedLayer {
+    fn z_mm(&self) -> f64 {
+        self.z_mm
+    }
+    fn for_each_path(&self, visit: &mut dyn FnMut(&[[f64; 2]], bool)) {
+        for path in &self.paths {
+            visit(&path.points, path.closed);
+        }
+    }
+}
+
+impl LayerAccess for PlannedLayerRef<'_> {
+    fn z_mm(&self) -> f64 {
+        self.z_mm
+    }
+    fn for_each_path(&self, visit: &mut dyn FnMut(&[[f64; 2]], bool)) {
+        for path in &self.paths {
+            visit(path.points, path.closed);
+        }
+    }
+}
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct GcodeMove {
     pub x: f64,
@@ -162,7 +204,7 @@ pub(crate) fn rounded_coordinate(value: f64) -> f64 {
     (value * 100_000.0).round() / 100_000.0
 }
 
-pub(crate) fn require_layers(layers: &[PlannedLayer]) -> Result<()> {
+pub(crate) fn require_layers<L: LayerAccess>(layers: &[L]) -> Result<()> {
     if layers.len() > MAX_LAYERS {
         return Err(invalid(
             "GCODE_LAYER_LIMIT",
@@ -173,13 +215,13 @@ pub(crate) fn require_layers(layers: &[PlannedLayer]) -> Result<()> {
     let mut moves = 0usize;
     let mut paths = 0usize;
     for layer in layers {
-        if !valid_coordinate(layer.z_mm) {
+        if !valid_coordinate(layer.z_mm()) {
             return Err(invalid(
                 "GCODE_INVALID_HEIGHT",
                 "Layer Z must be finite and within +/-1000000 mm",
             ));
         }
-        let z = rounded_coordinate(layer.z_mm);
+        let z = rounded_coordinate(layer.z_mm());
         if previous_z.is_some_and(|previous| z <= previous) {
             return Err(invalid(
                 "GCODE_INVALID_HEIGHT",
@@ -191,34 +233,44 @@ pub(crate) fn require_layers(layers: &[PlannedLayer]) -> Result<()> {
         if moves > MAX_MOVES {
             return Err(move_limit());
         }
-        for path in &layer.paths {
+        let mut result = Ok(());
+        layer.for_each_path(&mut |points, closed| {
+            if result.is_err() {
+                return;
+            }
             paths += 1;
             // Bound work before visiting vertices or allocating output, even for one huge layer.
-            let additional = path.points.len().checked_add(usize::from(path.closed));
-            moves = additional
-                .and_then(|n| moves.checked_add(n))
-                .ok_or_else(move_limit)?;
+            let additional = points.len().checked_add(usize::from(closed));
+            moves = match additional.and_then(|n| moves.checked_add(n)) {
+                Some(m) => m,
+                None => {
+                    result = Err(move_limit());
+                    return;
+                }
+            };
             if paths > MAX_MOVES || moves > MAX_MOVES {
-                return Err(move_limit());
+                result = Err(move_limit());
+                return;
             }
-            if path.closed && path.points.len() < 3 {
-                return Err(invalid(
+            if closed && points.len() < 3 {
+                result = Err(invalid(
                     "GCODE_INVALID_PATH",
                     "A closed path needs at least three points",
                 ));
+                return;
             }
-            if path
-                .points
+            if points
                 .iter()
                 .flatten()
                 .any(|value| !valid_coordinate(*value))
             {
-                return Err(invalid(
+                result = Err(invalid(
                     "GCODE_INVALID_COORDINATE",
                     "Path coordinates must be finite and within +/-1000000 mm",
                 ));
             }
-        }
+        });
+        result?;
     }
     Ok(())
 }
@@ -230,29 +282,44 @@ fn move_limit() -> Error {
     )
 }
 
-pub fn path_length_mm(path: &PlannedPath) -> f64 {
-    let open: f64 = path
-        .points
+fn path_length(points: &[[f64; 2]], closed: bool) -> f64 {
+    let open: f64 = points
         .windows(2)
         .map(|pair| (pair[1][0] - pair[0][0]).hypot(pair[1][1] - pair[0][1]))
         .sum();
-    if path.closed && path.points.len() >= 3 {
-        let first = path.points[0];
-        let last = path.points[path.points.len() - 1];
+    if closed && points.len() >= 3 {
+        let first = points[0];
+        let last = points[points.len() - 1];
         open + (last[0] - first[0]).hypot(last[1] - first[1])
     } else {
         open
     }
 }
 
+pub fn path_length_mm(path: &PlannedPath) -> f64 {
+    path_length(&path.points, path.closed)
+}
+
 /// Analytic volume of an unquantized plan. Callers must validate their plan/profile.
 pub fn deposited_volume_mm3(layers: &[PlannedLayer], machine: &MachineProfile) -> f64 {
+    deposited_volume(layers, machine)
+}
+
+/// Borrowed-input variant of [`deposited_volume_mm3`]; same analytic sum
+/// without cloning any path points.
+pub fn deposited_volume_mm3_ref(layers: &[PlannedLayerRef], machine: &MachineProfile) -> f64 {
+    deposited_volume(layers, machine)
+}
+
+fn deposited_volume<L: LayerAccess>(layers: &[L], machine: &MachineProfile) -> f64 {
     let area = machine.bead_area_mm2();
-    layers
-        .iter()
-        .flat_map(|layer| &layer.paths)
-        .map(|path| path_length_mm(path) * area)
-        .sum()
+    let mut total = 0.0;
+    for layer in layers {
+        layer.for_each_path(&mut |points, closed| {
+            total += path_length(points, closed) * area;
+        });
+    }
+    total
 }
 
 /// Fails before an append would take the string length past the public output limit.
@@ -279,17 +346,23 @@ pub fn emit(layers: &[PlannedLayer], machine: &MachineProfile) -> Result<String>
     Ok(out.0)
 }
 
+/// Borrowed-input variant of [`emit`]: identical bytes, no point copies.
+pub fn emit_ref(layers: &[PlannedLayerRef], machine: &MachineProfile) -> Result<String> {
+    let mut out = BoundedOutput(String::with_capacity(estimated_output_bytes(layers)));
+    emit_body(layers, machine, &mut out)?;
+    Ok(out.0)
+}
+
 /// Rough upper-bound sizing for the serialization buffer, capped at the limit.
-pub(crate) fn estimated_output_bytes(layers: &[PlannedLayer]) -> usize {
+pub(crate) fn estimated_output_bytes<L: LayerAccess>(layers: &[L]) -> usize {
     let moves: usize = layers
         .iter()
         .map(|layer| {
-            layer
-                .paths
-                .iter()
-                .map(|path| path.points.len() + 2)
-                .sum::<usize>()
-                + 2
+            let mut sum = 2;
+            layer.for_each_path(&mut |points, _| {
+                sum += points.len() + 2;
+            });
+            sum
         })
         .sum();
     moves
@@ -298,8 +371,8 @@ pub(crate) fn estimated_output_bytes(layers: &[PlannedLayer]) -> usize {
         .min(MAX_OUTPUT_BYTES)
 }
 
-fn emit_body(
-    layers: &[PlannedLayer],
+fn emit_body<L: LayerAccess>(
+    layers: &[L],
     machine: &MachineProfile,
     out: &mut impl Write,
 ) -> Result<()> {
@@ -316,54 +389,80 @@ fn emit_body(
     let mut written_units = 0i64;
     let mut ebuf = String::with_capacity(24);
     for (index, layer) in layers.iter().enumerate() {
-        let z = rounded_coordinate(layer.z_mm);
+        let z = rounded_coordinate(layer.z_mm());
         writeln!(out, ";LAYER:{index}\n;Z:{z:.5}\nG1 Z{z:.5} F{travel_f:.3}")
             .map_err(output_limit)?;
-        for path in &layer.paths {
-            let Some(first) = path.points.first() else {
-                continue;
-            };
-            let start = first.map(rounded_coordinate);
-            writeln!(out, "G0 X{:.5} Y{:.5} F{travel_f:.3}", start[0], start[1])
-                .map_err(output_limit)?;
-            let mut previous = start;
-            for point in path
-                .points
-                .iter()
-                .skip(1)
-                .chain(path.closed.then_some(first))
-            {
-                let next = point.map(rounded_coordinate);
-                let length = (next[0] - previous[0]).hypot(next[1] - previous[1]);
-                if length == 0.0 {
-                    continue;
-                }
-                let next_e = e + length * ratio;
-                if !next_e.is_finite() || next_e <= e {
-                    return Err(invalid(
-                        "GCODE_NUMERIC",
-                        "Extrusion accumulation exceeds numeric precision",
-                    ));
-                }
-                ebuf.clear();
-                let next_units = fixed7::push_fixed7(&mut ebuf, next_e)?;
-                if next_units <= written_units {
-                    return Err(invalid(
-                        "GCODE_NUMERIC",
-                        "A segment's extrusion cannot be represented at 0.0000001 mm precision",
-                    ));
-                }
-                e = next_e;
-                written_units = next_units;
-                writeln!(
-                    out,
-                    "G1 X{:.5} Y{:.5} E{ebuf} F{print_f:.3}",
-                    next[0], next[1]
-                )
-                .map_err(output_limit)?;
-                previous = next;
+        let mut result = Ok(());
+        layer.for_each_path(&mut |points, closed| {
+            if result.is_err() {
+                return;
             }
+            result = emit_path(
+                out,
+                points,
+                closed,
+                ratio,
+                print_f,
+                travel_f,
+                &mut e,
+                &mut written_units,
+                &mut ebuf,
+            );
+        });
+        result?;
+    }
+    Ok(())
+}
+
+#[allow(clippy::too_many_arguments)]
+fn emit_path(
+    out: &mut impl Write,
+    points: &[[f64; 2]],
+    closed: bool,
+    ratio: f64,
+    print_f: f64,
+    travel_f: f64,
+    e: &mut f64,
+    written_units: &mut i64,
+    ebuf: &mut String,
+) -> Result<()> {
+    let Some(first) = points.first() else {
+        return Ok(());
+    };
+    let start = first.map(rounded_coordinate);
+    writeln!(out, "G0 X{:.5} Y{:.5} F{travel_f:.3}", start[0], start[1])
+        .map_err(output_limit)?;
+    let mut previous = start;
+    for point in points.iter().skip(1).chain(closed.then_some(first)) {
+        let next = point.map(rounded_coordinate);
+        let length = (next[0] - previous[0]).hypot(next[1] - previous[1]);
+        if length == 0.0 {
+            continue;
         }
+        let next_e = *e + length * ratio;
+        if !next_e.is_finite() || next_e <= *e {
+            return Err(invalid(
+                "GCODE_NUMERIC",
+                "Extrusion accumulation exceeds numeric precision",
+            ));
+        }
+        ebuf.clear();
+        let next_units = fixed7::push_fixed7(ebuf, next_e)?;
+        if next_units <= *written_units {
+            return Err(invalid(
+                "GCODE_NUMERIC",
+                "A segment's extrusion cannot be represented at 0.0000001 mm precision",
+            ));
+        }
+        *e = next_e;
+        *written_units = next_units;
+        writeln!(
+            out,
+            "G1 X{:.5} Y{:.5} E{ebuf} F{print_f:.3}",
+            next[0], next[1]
+        )
+        .map_err(output_limit)?;
+        previous = next;
     }
     Ok(())
 }

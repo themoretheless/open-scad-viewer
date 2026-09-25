@@ -9,3 +9,4 @@ publish.workspace = true
 math-core = { package = "osv-math", path = "../math-core" }
 value-codec = { path = "../value-codec" }
 geometry-ops = { path = "../geometry-ops" }
+rustc-hash = "=2.1.1"

@@ -4,6 +4,7 @@ import type { MeshData } from '../core/mesh'
 import { GCODE_FLAVORS, type GcodeFlavor, type JobSettingsInput, type ToolpathSettingsInput } from '../services/geometry/polygon'
 import { downloadCad } from '../services/cadDrawing'
 import { drawGcodeLayer, gcodeLayerRange, gcodeMeshBounds } from '../services/gcodePreviewGeometry'
+import { gcodePreviewMoveCount } from '../services/gcodePreviewTransport'
 import { GCODE_PREVIEW_MAX_BYTES, type GcodePreviewDocument } from '../services/gcodePreviewProtocol'
 import { createGcodePreviewWorker } from '../services/gcodePreviewWorker'
 import {
@@ -80,6 +81,7 @@ const unavailable = computed(() => !props.ready
   : !selectedBounds.value ? label('Нужна корректная сетка до 100000 треугольников.', 'A valid mesh with at most 100000 triangles is required.')
   : '')
 const preview = computed(() => result.value?.preview ?? null)
+const moveCount = computed(() => preview.value ? gcodePreviewMoveCount(preview.value) : 0)
 const isJob = computed(() => !!result.value?.gcode3mfBase64)
 const foreign = computed(() => result.value?.native === false)
 const detected = computed(() => {
@@ -282,7 +284,7 @@ const number = (value: number, digits = 2) => value.toLocaleString(props.locale 
     <section v-if="preview && result" class="gcode-result" :aria-label="label('Предпросмотр G-code', 'G-code preview')">
       <p class="gcode-filename">{{ filename }} · {{ result.dialect }}<template v-if="isJob && result.flavor"> · {{ result.flavor }}</template></p>
       <p v-if="foreign" class="gcode-hint" role="note">{{ label('Сторонний файл', 'Foreign file') }}: {{ detected }}. {{ label('Неизвестные команды пропущены; статистика приблизительная, объём — по диаметру филамента из заголовка или 1.75 мм.', 'Unknown commands were skipped; statistics are approximate and volume uses the header filament diameter or 1.75 mm.') }}</p>
-      <template v-if="preview.layers && preview.moves.length">
+      <template v-if="preview.layers && moveCount">
         <label>{{ label('Слой', 'Layer') }} {{ layer + 1 }} / {{ preview.layers }}
           <input v-model.number="layer" :aria-label="label('Слой предпросмотра', 'Preview layer')" type="range" min="0" :max="preview.layers - 1" step="1">
         </label>
@@ -293,7 +295,7 @@ const number = (value: number, digits = 2) => value.toLocaleString(props.locale 
       </template>
       <p v-else>{{ label('В указанном диапазоне нет траекторий.', 'No toolpaths in this range.') }}</p>
       <dl class="gcode-stats">
-        <dt>{{ label('Всего слоёв / перемещений', 'Total layers / moves') }}</dt><dd>{{ number(preview.layers, 0) }} / {{ number(preview.moves.length, 0) }}</dd>
+        <dt>{{ label('Всего слоёв / перемещений', 'Total layers / moves') }}</dt><dd>{{ number(preview.layers, 0) }} / {{ number(moveCount, 0) }}</dd>
         <dt>{{ label('Филамент, мм', 'Filament, mm') }}</dt><dd>{{ number(preview.extrusionMm) }}</dd>
         <dt>{{ label('Объём, мм³', 'Volume, mm³') }}</dt><dd>{{ number(preview.depositedVolumeMm3) }}</dd>
         <dt>{{ label('Путь печати, мм', 'Print distance, mm') }}</dt><dd>{{ number(preview.printDistanceMm) }}</dd>
@@ -302,7 +304,7 @@ const number = (value: number, digits = 2) => value.toLocaleString(props.locale 
       </dl>
       <small>{{ label('Время при постоянной скорости; без начального позиционирования, ускорений и операций принтера.', 'Time at constant speed; excludes initial positioning, acceleration, and printer operations.') }}</small>
       <div class="gcode-actions">
-        <button type="button" :disabled="busy || !preview.moves.length" @click="download">{{ isJob ? label('Скачать job .gcode', 'Download job .gcode') : foreign ? label('Скачать исходный G-code', 'Download original G-code') : label('Скачать G-code предпросмотра', 'Download preview G-code') }}</button>
+        <button type="button" :disabled="busy || !moveCount" @click="download">{{ isJob ? label('Скачать job .gcode', 'Download job .gcode') : foreign ? label('Скачать исходный G-code', 'Download original G-code') : label('Скачать G-code предпросмотра', 'Download preview G-code') }}</button>
         <button v-if="isJob" type="button" :disabled="busy" @click="download3mf">{{ label('Скачать .gcode.3mf', 'Download .gcode.3mf') }}</button>
       </div>
       <section class="gcode-printer" :aria-label="label('Принтер', 'Printer')">

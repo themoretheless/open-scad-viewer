@@ -226,6 +226,7 @@ version = "0.1.0"
 dependencies = [
  "cad-predicates",
  "osv-math",
+ "rustc-hash 2.1.1",
  "sha2",
  "value-codec",
 ]
@@ -2238,6 +2239,7 @@ version = "0.1.0"
 dependencies = [
  "geometry-ops",
  "osv-math",
+ "rustc-hash 2.1.1",
  "value-codec",
 ]
 

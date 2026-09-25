@@ -9,7 +9,7 @@
     yeet_expr
 )]
 #![allow(unused_features)]
-use std::collections::{BTreeMap, BTreeSet};
+use rustc_hash::{FxHashMap, FxHashSet};
 type Point = math_core::V3;
 pub use math_core::{Error, Result};
 const INVALID_INPUT: &str = "SUBDIVISION_INVALID_INPUT";
@@ -79,11 +79,26 @@ fn avg(p: impl Iterator<Item = Point>, n: usize) -> Point {
     }
     r
 }
-type Edges = BTreeMap<(usize, usize), Vec<(usize, bool)>>;
+type Edges = FxHashMap<(usize, usize), Vec<(usize, bool)>>;
 fn edge(a: usize, b: usize) -> (usize, usize) {
     (a.min(b), a.max(b))
 }
 impl Cage {
+    /// Edge map without any validation. Only for cages already proven valid:
+    /// malformed indices or nonmanifold edges are the caller's responsibility.
+    fn build_edges(&self) -> Edges {
+        let mut edges = Edges::default();
+        for (fi, f) in self.faces.iter().enumerate() {
+            for i in 0..f.len() {
+                let a = f[i];
+                let b = f[(i + 1) % f.len()];
+                edges.entry(edge(a, b)).or_default().push((fi, a < b));
+            }
+        }
+        edges
+    }
+    /// Full input validation plus the edge map: budgets, face sanity,
+    /// orientation/manifoldness, and per-vertex fan connectivity (BFS).
     fn topology(&self) -> Result<Edges> {
         if self.vertices.is_empty()
             || self.vertices.len() > 100_000
@@ -100,23 +115,20 @@ impl Cage {
         if self.faces.iter().map(Vec::len).sum::<usize>() > 100_000 {
             return Err(error("Control corner budget exceeded"));
         }
-        let mut edges: Edges = BTreeMap::new();
-        let mut incidence = vec![BTreeSet::new(); self.vertices.len()];
+        let mut incidence = vec![FxHashSet::default(); self.vertices.len()];
         for (fi, f) in self.faces.iter().enumerate() {
             if f.len() < 3
                 || f.len() > 64
                 || f.iter().any(|&i| i >= self.vertices.len())
-                || f.iter().collect::<BTreeSet<_>>().len() != f.len()
+                || f.iter().collect::<FxHashSet<_>>().len() != f.len()
             {
                 return Err(error("Invalid control face"));
             }
-            for i in 0..f.len() {
-                let a = f[i];
-                let b = f[(i + 1) % f.len()];
-                edges.entry(edge(a, b)).or_default().push((fi, a < b));
+            for &a in f {
                 incidence[a].insert(fi);
             }
         }
+        let edges = self.build_edges();
         if edges
             .values()
             .any(|uses| uses.len() > 2 || uses.len() == 2 && uses[0].1 == uses[1].1)
@@ -139,7 +151,8 @@ impl Cage {
             if boundary != 0 && boundary != 2 {
                 return Err(error("Nonmanifold vertex boundary"));
             }
-            let mut visited = BTreeSet::from([*faces.first().unwrap()]);
+            let mut visited = FxHashSet::default();
+            visited.insert(*faces.iter().next().unwrap());
             loop {
                 let before = visited.len();
                 for (_, u) in local {
@@ -164,7 +177,14 @@ impl Cage {
         if levels > 5 {
             return Err(error("Subdivision levels must be 0..5"));
         }
+        // Full input validation happens once, here at the public entry point.
         self.validate()?;
+        self.subdivide_validated(levels)
+    }
+    /// Refinement loop over an already-valid cage. Each Catmull–Clark step of
+    /// a valid cage yields a valid consistently oriented quad cage, so inner
+    /// iterations reuse the cheap edge map instead of revalidating topology.
+    fn subdivide_validated(&self, levels: usize) -> Result<Refined> {
         let mut c = self.clone();
         let mut ids: Vec<_> = (0..c.faces.len()).collect();
         for _ in 0..levels {
@@ -172,7 +192,7 @@ impl Cage {
             if count > 25_000 {
                 return Err(error("Subdivision face budget exceeded"));
             }
-            let edges = c.topology()?;
+            let edges = c.build_edges();
             let fp: Vec<_> = c
                 .faces
                 .iter()
@@ -194,7 +214,7 @@ impl Cage {
                 let q = if boundary.len() == 2 {
                     std::array::from_fn(|k| (6. * p[k] + boundary[0][k] + boundary[1][k]) / 8.)
                 } else {
-                    let faces: BTreeSet<_> = adjacent
+                    let faces: FxHashSet<_> = adjacent
                         .iter()
                         .flat_map(|(_, u)| u.iter().map(|(f, _)| *f))
                         .collect();
@@ -210,7 +230,7 @@ impl Cage {
                 };
                 vertices.push(q);
             }
-            let mut ei = BTreeMap::new();
+            let mut ei = FxHashMap::default();
             for (&(a, b), u) in &edges {
                 ei.insert((a, b), vertices.len());
                 let mut pts = vec![c.vertices[a], c.vertices[b]];
@@ -246,6 +266,8 @@ impl Cage {
 impl Refined {
     /// Fan triangulation of convex faces. Concave/folded faces are not certified.
     pub fn triangulate(&self) -> Result<(geometry_ops::Triangles, Vec<usize>)> {
+        // `Refined` fields are public, so callers may have mutated the cage:
+        // this is a public entry point and keeps the full input validation.
         self.cage.validate()?;
         let mut indices = Vec::new();
         let mut ids = Vec::new();
@@ -407,7 +429,7 @@ mod tests {
         assert_eq!(square().brush(&b).unwrap().vertices[0], [0., 0., 1.]);
     }
     fn boundary_edges(t: &geometry_ops::Triangles) -> usize {
-        let mut edges = BTreeMap::new();
+        let mut edges = std::collections::BTreeMap::new();
         for tri in t.indices.as_chunks::<3>().0 {
             for (a, b) in [(tri[0], tri[1]), (tri[1], tri[2]), (tri[2], tri[0])] {
                 let key = (a.min(b), a.max(b));
@@ -444,8 +466,16 @@ pub fn fit(cage: &Cage, iterations: usize) -> Result<Fit> {
     cage.validate()?;
     let mut cage = cage.clone();
     let target = cage.vertices.clone();
+    // Candidates share the input's faces, so topology stays valid; only the
+    // numeric coordinate budget can break. Check it cheaply per candidate.
+    let within_budget = |c: &Cage| {
+        c.vertices
+            .iter()
+            .flatten()
+            .all(|x| x.is_finite() && x.abs() <= 1e6)
+    };
     let residual = |c: &Cage| -> Result<(f64, Vec<Point>)> {
-        let r = c.subdivide(1)?;
+        let r = c.subdivide_validated(1)?;
         let delta: Vec<Point> = target
             .iter()
             .zip(&r.cage.vertices)
@@ -469,6 +499,9 @@ pub fn fit(cage: &Cage, iterations: usize) -> Result<Fit> {
                 for k in 0..3 {
                     p[k] += step * d[k];
                 }
+            }
+            if !within_budget(&candidate) {
+                continue;
             }
             let (error, next) = residual(&candidate)?;
             if error < after {

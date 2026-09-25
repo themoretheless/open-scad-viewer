@@ -249,8 +249,41 @@ fn hatch(source: &Rings, spacing: f64, budget: &mut Budget) -> Result<Vec<Toolpa
         .checked_mul(1 + edges.max(1).ilog2() as usize)
         .ok_or_else(budget_error)?;
     budget.work(line_count.checked_mul(row_work).ok_or_else(budget_error)?)?;
+    // Scanline active edge table: index every non-horizontal edge once by its
+    // lower endpoint, then rows only visit edges that can actually cross them.
+    // The eligibility rule `(a[1] <= y && y < b[1]) || (b[1] <= y && y < a[1])`
+    // is exactly `min_y <= y < max_y`, and the intersection formula, winding
+    // sign and grouping below are unchanged, so spans stay bit-identical to
+    // the naive per-row scan over all edges.
+    struct HatchEdge {
+        a: [f64; 2],
+        b: [f64; 2],
+        min_y: f64,
+        max_y: f64,
+        winding: i32,
+    }
+    let mut sorted_edges = Vec::new();
+    for ring in source {
+        for i in 0..ring.len() {
+            let a = ring[i];
+            let b = ring[(i + 1) % ring.len()];
+            if a[1] == b[1] {
+                continue;
+            }
+            sorted_edges.push(HatchEdge {
+                a,
+                b,
+                min_y: a[1].min(b[1]),
+                max_y: a[1].max(b[1]),
+                winding: if b[1] > a[1] { -1_i32 } else { 1_i32 },
+            });
+        }
+    }
+    sorted_edges.sort_by(|x, y| x.min_y.total_cmp(&y.min_y));
+    let mut active: Vec<usize> = Vec::new();
     let mut paths = Vec::new();
     let mut previous_y = None;
+    let mut next_edge = 0;
     for row in 0..line_count {
         // Index-based placement avoids accumulated roundoff and non-advancing
         // floating-point additions. The budget counts every attempted row.
@@ -265,23 +298,24 @@ fn hatch(source: &Rings, spacing: f64, budget: &mut Budget) -> Result<Vec<Toolpa
         if y > end {
             break;
         }
+        while next_edge < sorted_edges.len() && sorted_edges[next_edge].min_y <= y {
+            active.push(next_edge);
+            next_edge += 1;
+        }
+        active.retain(|&index| y < sorted_edges[index].max_y);
         let mut hits = Vec::new();
-        for ring in source {
-            for i in 0..ring.len() {
-                let a = ring[i];
-                let b = ring[(i + 1) % ring.len()];
-                if (a[1] <= y && y < b[1]) || (b[1] <= y && y < a[1]) {
-                    let t = (y - a[1]) / (b[1] - a[1]);
-                    let x = (b[0] - a[0]).mul_add(t, a[0]);
-                    if !valid_coordinate(x) {
-                        return Err(invalid(
-                            "TOOLPATH_INVALID_GEOMETRY",
-                            "Non-finite hatch intersection",
-                        ));
-                    }
-                    hits.push((x, if b[1] > a[1] { -1_i32 } else { 1_i32 }));
-                }
+        for &index in &active {
+            let edge = &sorted_edges[index];
+            let (a, b) = (edge.a, edge.b);
+            let t = (y - a[1]) / (b[1] - a[1]);
+            let x = (b[0] - a[0]).mul_add(t, a[0]);
+            if !valid_coordinate(x) {
+                return Err(invalid(
+                    "TOOLPATH_INVALID_GEOMETRY",
+                    "Non-finite hatch intersection",
+                ));
             }
+            hits.push((x, edge.winding));
         }
         hits.sort_by(|a, b| a.0.total_cmp(&b.0));
         // Sweep signed crossings so holes, disconnected islands and touching
@@ -440,15 +474,18 @@ fn machine_profile(settings: &ToolpathSettings) -> gcode_core::MachineProfile {
     }
 }
 
-fn planned_layers(layers: &[ToolpathLayer]) -> Result<Vec<gcode_core::PlannedLayer>> {
+fn planned_layers(layers: &[ToolpathLayer]) -> Result<Vec<gcode_core::PlannedLayerRef<'_>>> {
     if layers.len() > MAX_LAYERS {
         return Err(invalid(
             "TOOLPATH_LAYER_LIMIT",
             "Toolpath plan exceeded 2048 layers",
         ));
     }
-    // Public callers can supply their own plans. Bound the compatibility copy
+    // Public callers can supply their own plans. Bound the compatibility view
     // before allocating; gcode-core performs the complete numeric validation.
+    // The views borrow the toolpath points, so this no longer deep-copies
+    // the plan for emit/volume; the optimizer path still owns its copy
+    // because path optimization rewrites the geometry in place.
     let mut budget = Budget::default();
     for layer in layers {
         budget.points(layer.paths.len())?;
@@ -458,13 +495,13 @@ fn planned_layers(layers: &[ToolpathLayer]) -> Result<Vec<gcode_core::PlannedLay
     }
     Ok(layers
         .iter()
-        .map(|layer| gcode_core::PlannedLayer {
+        .map(|layer| gcode_core::PlannedLayerRef {
             z_mm: layer.z_mm,
             paths: layer
                 .paths
                 .iter()
-                .map(|path| gcode_core::PlannedPath {
-                    points: path.points.clone(),
+                .map(|path| gcode_core::PlannedPathRef {
+                    points: &path.points,
                     closed: path.closed,
                 })
                 .collect(),
@@ -479,7 +516,7 @@ fn gcode_error(error: gcode_core::Error) -> Error {
 /// One encoding of a planned toolpath. Not the only possible machine dialect.
 pub fn emit_gcode(layers: &[ToolpathLayer], settings: &ToolpathSettings) -> Result<String> {
     require_settings(settings)?;
-    gcode_core::emit(&planned_layers(layers)?, &machine_profile(settings)).map_err(gcode_error)
+    gcode_core::emit_ref(&planned_layers(layers)?, &machine_profile(settings)).map_err(gcode_error)
 }
 
 fn optimize_input(layers: &[ToolpathLayer]) -> Result<gcode_optimize::OptimizeInput> {
@@ -562,7 +599,191 @@ pub fn deposited_volume_mm3(layers: &[ToolpathLayer], settings: &ToolpathSetting
         return f64::NAN;
     }
     match planned_layers(layers) {
-        Ok(layers) => gcode_core::deposited_volume_mm3(&layers, &machine_profile(settings)),
+        Ok(layers) => gcode_core::deposited_volume_mm3_ref(&layers, &machine_profile(settings)),
         Err(_) => f64::NAN,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Pre-AET reference implementation: every row scans every edge.
+    /// Kept as the equivalence oracle for the active edge table in `hatch`.
+    fn hatch_naive(source: &Rings, spacing: f64, budget: &mut Budget) -> Result<Vec<Toolpath>> {
+        let mut min_y = f64::INFINITY;
+        let mut max_y = f64::NEG_INFINITY;
+        for point in source.iter().flatten() {
+            min_y = min_y.min(point[1]);
+            max_y = max_y.max(point[1]);
+        }
+        if source.is_empty() || max_y - min_y < spacing * 0.25 {
+            return Ok(Vec::new());
+        }
+        let start = min_y + spacing * 0.5;
+        let end = max_y - spacing * 0.25;
+        if start > end {
+            return Ok(Vec::new());
+        }
+        let intervals = ((end - start) / spacing).floor();
+        if !intervals.is_finite() || intervals >= MAX_HATCH_LINES as f64 {
+            return Err(invalid(
+                "TOOLPATH_HATCH_LIMIT",
+                "Toolpath hatch exceeds 65536 scan lines",
+            ));
+        }
+        let line_count = intervals as usize + 1;
+        let mut paths = Vec::new();
+        let mut previous_y = None;
+        for row in 0..line_count {
+            let y = spacing.mul_add(row as f64, start);
+            if !y.is_finite() || previous_y.is_some_and(|previous| y <= previous) {
+                return Err(invalid(
+                    "TOOLPATH_INVALID_SETTINGS",
+                    "Hatch spacing does not advance coordinates",
+                ));
+            }
+            previous_y = Some(y);
+            if y > end {
+                break;
+            }
+            let mut hits = Vec::new();
+            for ring in source {
+                for i in 0..ring.len() {
+                    let a = ring[i];
+                    let b = ring[(i + 1) % ring.len()];
+                    if (a[1] <= y && y < b[1]) || (b[1] <= y && y < a[1]) {
+                        let t = (y - a[1]) / (b[1] - a[1]);
+                        let x = (b[0] - a[0]).mul_add(t, a[0]);
+                        if !valid_coordinate(x) {
+                            return Err(invalid(
+                                "TOOLPATH_INVALID_GEOMETRY",
+                                "Non-finite hatch intersection",
+                            ));
+                        }
+                        hits.push((x, if b[1] > a[1] { -1_i32 } else { 1_i32 }));
+                    }
+                }
+            }
+            hits.sort_by(|a, b| a.0.total_cmp(&b.0));
+            let mut winding = 0_i32;
+            let mut span_start = 0.0;
+            let mut index = 0;
+            let row_start = paths.len();
+            while index < hits.len() {
+                let x = hits[index].0;
+                let old_winding = winding;
+                while index < hits.len() && hits[index].0 == x {
+                    winding += hits[index].1;
+                    index += 1;
+                }
+                if old_winding == 0 && winding != 0 {
+                    span_start = x;
+                } else if old_winding != 0 && winding == 0 && x > span_start {
+                    budget.points(2)?;
+                    paths.push(Toolpath {
+                        role: PathRole::Hatch,
+                        points: vec![[span_start, y], [x, y]],
+                        closed: false,
+                    });
+                }
+            }
+            if winding != 0 {
+                return Err(invalid(
+                    "TOOLPATH_INVALID_GEOMETRY",
+                    "Unbalanced hatch boundary",
+                ));
+            }
+            if row % 2 == 1 {
+                paths[row_start..].reverse();
+                for path in &mut paths[row_start..] {
+                    path.points.reverse();
+                }
+            }
+        }
+        Ok(paths)
+    }
+
+    /// Deterministic xorshift64* so the equivalence test needs no rand crate.
+    struct Rng(u64);
+    impl Rng {
+        fn next(&mut self) -> u64 {
+            self.0 ^= self.0 >> 12;
+            self.0 ^= self.0 << 25;
+            self.0 ^= self.0 >> 27;
+            self.0.wrapping_mul(0x2545_F491_4F6C_DD1D)
+        }
+        /// Coarse grid values make scan lines regularly hit exact vertex
+        /// heights, stressing the half-open `min_y <= y < max_y` rule.
+        fn coordinate(&mut self) -> f64 {
+            (self.next() % 41) as f64 * 0.25 - 5.0
+        }
+    }
+
+    /// Star-shaped (hence simple) ring: sorted angles, random radii, but with
+    /// y coordinates snapped to the coarse grid for vertex-height hits.
+    fn random_ring(rng: &mut Rng, center: [f64; 2], vertices: usize) -> Vec<[f64; 2]> {
+        let mut ring = Vec::with_capacity(vertices);
+        for i in 0..vertices {
+            let angle = 2.0 * std::f64::consts::PI * i as f64 / vertices as f64;
+            let radius = 0.5 + (rng.next() % 20) as f64 * 0.25;
+            let x = center[0] + radius * angle.cos();
+            // Snap y to the grid; keep x raw so crossings are non-degenerate.
+            let y = ((center[1] + radius * angle.sin()) * 4.0).round() / 4.0;
+            ring.push([x, y]);
+        }
+        ring
+    }
+
+    #[test]
+    fn hatch_active_edge_table_matches_naive_oracle() {
+        let mut rng = Rng(0x1234_5678_9ABC_DEF1);
+        for case in 0..200 {
+            let mut rings: Rings = Vec::new();
+            let ring_count = 1 + (rng.next() % 3) as usize;
+            for _ in 0..ring_count {
+                let center = [rng.coordinate(), rng.coordinate()];
+                let vertices = 3 + (rng.next() % 10) as usize;
+                rings.push(random_ring(&mut rng, center, vertices));
+            }
+            // Spacings that do and do not land on the 0.25 y grid.
+            for spacing in [0.25, 0.5, 0.75, 1.0, 0.3, 2.0] {
+                let expected = hatch_naive(&rings, spacing, &mut Budget::default());
+                let actual = hatch(&rings, spacing, &mut Budget::default());
+                match (expected, actual) {
+                    (Ok(expected), Ok(actual)) => assert_eq!(
+                        actual, expected,
+                        "case {case} spacing {spacing}: AET hatch diverged from naive scan"
+                    ),
+                    (expected, actual) => assert_eq!(
+                        actual.is_err(),
+                        expected.is_err(),
+                        "case {case} spacing {spacing}: error mismatch"
+                    ),
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn hatch_handles_hole_and_touching_rows() {
+        // Square with a square hole, spacing lands exactly on vertex heights.
+        let rings: Rings = vec![
+            vec![[0., 0.], [4., 0.], [4., 4.], [0., 4.]],
+            vec![[1., 1.], [1., 3.], [3., 3.], [3., 1.]],
+        ];
+        let expected = hatch_naive(&rings, 1.0, &mut Budget::default()).unwrap();
+        let actual = hatch(&rings, 1.0, &mut Budget::default()).unwrap();
+        assert_eq!(actual, expected);
+        assert!(!actual.is_empty());
+        // Degenerate inputs keep working: empty rings and flat rings.
+        assert!(hatch(&Rings::new(), 1.0, &mut Budget::default())
+            .unwrap()
+            .is_empty());
+        let flat: Rings = vec![vec![[0., 1.], [2., 1.], [1., 1.5]]];
+        assert_eq!(
+            hatch(&flat, 1.0, &mut Budget::default()).unwrap(),
+            hatch_naive(&flat, 1.0, &mut Budget::default()).unwrap()
+        );
     }
 }

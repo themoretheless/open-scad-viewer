@@ -12,13 +12,13 @@ it('uploads offset views once, returns f64 positions and reverses reflected wind
   const transform = storage.subarray(1,17)
   transform[0] = -2; transform[3] = 0.1
   const result = placeSolidMeshInKernel(points, indices, transform)!
-  expect(result.indices).toEqual([0,2,1])
+  expect([...result.indices]).toEqual([0,2,1])
   const expected = -2 + transform[3]
   expect(result.positions[3]).toBe(expected)
   expect(result.positions[3]).not.toBe(Math.fround(expected))
   points.fill(99); indices.fill(99); transform.fill(99)
   expect(result.positions[3]).toBe(expected)
-  expect(result.indices).toEqual([0,2,1])
+  expect([...result.indices]).toEqual([0,2,1])
 })
 
 it('frees raw inputs and the result on success, and raw inputs on native refusal', () => {

@@ -1598,47 +1598,94 @@ pub fn intersect_curve_surface(
     }
 
     // Deduplicate point events by exact or near parameter identity.
+    // Parse (t, u, v) once, sort, and sweep a dedup window: O(n log n) instead
+    // of rescanning and reparsing every accumulated event per component.
+    struct PointEvent {
+        t: f64,
+        u: f64,
+        v: f64,
+        residual: f64,
+        index: usize,
+    }
+    let parse_point = |component: &Value| -> Option<PointEvent> {
+        if component["kind"] != "point" {
+            return None;
+        }
+        let t = component["t"].as_f64().unwrap_or(0.);
+        let uv = component.get("uv").and_then(Value::as_array);
+        let u = uv
+            .and_then(|a| a.first())
+            .and_then(Value::as_f64)
+            .unwrap_or(0.);
+        let v = uv
+            .and_then(|a| a.get(1))
+            .and_then(Value::as_f64)
+            .unwrap_or(0.);
+        Some(PointEvent {
+            t,
+            u,
+            v,
+            residual: component["residual"].as_f64().unwrap_or(f64::INFINITY),
+            index: usize::MAX,
+        })
+    };
+    let mut events: Vec<PointEvent> = Vec::new();
+    for component in &components {
+        if let Some(mut event) = parse_point(component) {
+            event.index = events.len();
+            events.push(event);
+        }
+    }
+    let mut order: Vec<usize> = (0..events.len()).collect();
+    order.sort_by(|&a, &b| {
+        events[a]
+            .t
+            .total_cmp(&events[b].t)
+            .then_with(|| events[a].u.total_cmp(&events[b].u))
+            .then_with(|| events[a].v.total_cmp(&events[b].v))
+    });
+    // Windowed sweep: candidates for a near-duplicate share a t within `floor`.
+    // Keeps the lower-residual copy, like the original first/best rule.
+    let mut dropped = vec![false; events.len()];
+    let mut window: Vec<usize> = Vec::new();
+    for &i in &order {
+        while window
+            .first()
+            .is_some_and(|&j| events[j].t < events[i].t - floor)
+        {
+            window.remove(0);
+        }
+        let mut duplicate_of: Option<usize> = None;
+        for &j in &window {
+            if (events[j].t - events[i].t).abs() <= floor
+                && (events[j].u - events[i].u).abs() <= floor
+                && (events[j].v - events[i].v).abs() <= floor
+            {
+                duplicate_of = Some(j);
+                break;
+            }
+        }
+        if let Some(j) = duplicate_of {
+            // Keep the lower residual copy.
+            if events[i].residual < events[j].residual {
+                dropped[j] = true;
+                window.retain(|&k| k != j);
+                window.push(i);
+            } else {
+                dropped[i] = true;
+                continue;
+            }
+        } else {
+            window.push(i);
+        }
+    }
+    let mut event_cursor = 0usize;
     let mut dedup = Vec::new();
     for component in components {
         if component["kind"] == "point" {
-            let t = component["t"].as_f64().unwrap_or(0.);
-            let uv = component.get("uv").and_then(Value::as_array);
-            let u = uv
-                .and_then(|a| a.first())
-                .and_then(Value::as_f64)
-                .unwrap_or(0.);
-            let v = uv
-                .and_then(|a| a.get(1))
-                .and_then(Value::as_f64)
-                .unwrap_or(0.);
-            let duplicate = dedup.iter().any(|existing: &Value| {
-                if existing["kind"] != "point" {
-                    return false;
-                }
-                let et = existing["t"].as_f64().unwrap_or(0.);
-                let euv = existing.get("uv").and_then(Value::as_array);
-                let eu = euv
-                    .and_then(|a| a.first())
-                    .and_then(Value::as_f64)
-                    .unwrap_or(0.);
-                let ev = euv
-                    .and_then(|a| a.get(1))
-                    .and_then(Value::as_f64)
-                    .unwrap_or(0.);
-                (et - t).abs() <= floor && (eu - u).abs() <= floor && (ev - v).abs() <= floor
-            });
-            if duplicate {
-                // Keep the lower residual copy.
-                if let Some(index) = dedup.iter().position(|existing| {
-                    existing["kind"] == "point"
-                        && (existing["t"].as_f64().unwrap_or(0.) - t).abs() <= floor
-                }) {
-                    let old = dedup[index]["residual"].as_f64().unwrap_or(f64::INFINITY);
-                    let new = component["residual"].as_f64().unwrap_or(f64::INFINITY);
-                    if new < old {
-                        dedup[index] = component;
-                    }
-                }
+            let dropped_event = dropped[event_cursor];
+            event_cursor += 1;
+            if dropped_event {
                 continue;
             }
         }

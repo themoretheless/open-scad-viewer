@@ -31,9 +31,13 @@ export class NativePickingCache {
       }
     }
     this.handles.delete(key);this.handles.set(key,handle)
+    // Typed-array/list exclusions pass straight to the binary encoder; only a
+    // legacy Set needs materializing, so depth-cycling continuations can reuse
+    // one growing buffer instead of rebuilding an array per query.
+    const excluded=options.excludedTriangles
     return callGeometryRust<MeshBvhHit|null>('mesh_picking',{action:'query',handle,
       origin:ray.origin,direction:ray.direction,minT:options.minT??null,
-      excludedTriangles:Array.from(options.excludedTriangles??[]),
+      excludedTriangles:excluded===undefined?[]:typeof (excluded as ReadonlySet<number>).has==='function'?Array.from(excluded as ReadonlySet<number>):excluded,
       localFromWorld:options.localFromWorld?Array.from(options.localFromWorld):null})
   }
 }

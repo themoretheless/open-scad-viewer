@@ -17,6 +17,83 @@ fn refuse(code: &'static str, message: &str) -> Error {
     Error::new(code, message)
 }
 
+fn push_usize(bytes: &mut Vec<u8>, value: usize) {
+    bytes.extend_from_slice(&value.to_le_bytes());
+}
+
+/// Byte-exact NURBS curve signature for identity derivation; no Debug
+/// serialization of the whole curve into a String.
+fn curve_signature_bytes(curve: &Curve) -> Vec<u8> {
+    let mut bytes = Vec::new();
+    push_usize(&mut bytes, curve.degree);
+    push_usize(&mut bytes, curve.knots.len());
+    for knot in &curve.knots {
+        bytes.extend_from_slice(&knot.to_bits().to_le_bytes());
+    }
+    push_usize(&mut bytes, curve.control_points.len());
+    for point in &curve.control_points {
+        push_usize(&mut bytes, point.len());
+        for coordinate in point {
+            bytes.extend_from_slice(&coordinate.to_bits().to_le_bytes());
+        }
+    }
+    push_usize(&mut bytes, curve.weights.len());
+    for weight in &curve.weights {
+        bytes.extend_from_slice(&weight.to_bits().to_le_bytes());
+    }
+    bytes.push(u8::from(curve.periodic));
+    bytes
+}
+
+fn point_signature_bytes(point: &[f64; 3]) -> Vec<u8> {
+    let mut bytes = Vec::with_capacity(24);
+    for value in point {
+        bytes.extend_from_slice(&value.to_bits().to_le_bytes());
+    }
+    bytes
+}
+
+/// Deterministic sew-key authority discriminator hashed from definition bytes,
+/// not from a Debug dump of the rational definition.
+fn authority_key(authority: &CurveAuthority) -> String {
+    match authority {
+        CurveAuthority::Rational(definition) => {
+            let mut bytes = Vec::new();
+            push_usize(&mut bytes, definition.degree);
+            push_usize(&mut bytes, definition.knots.len());
+            for knot in &definition.knots {
+                bytes.extend_from_slice(&knot.to_le_bytes());
+            }
+            push_usize(&mut bytes, definition.control_points.len());
+            for point in &definition.control_points {
+                push_usize(&mut bytes, point.len());
+                for coordinate in point {
+                    bytes.extend_from_slice(&coordinate.to_le_bytes());
+                }
+            }
+            push_usize(&mut bytes, definition.weights.len());
+            for weight in &definition.weights {
+                bytes.extend_from_slice(&weight.to_le_bytes());
+            }
+            bytes.push(u8::from(definition.periodic));
+            TopoId::derive(TopoKind::Edge, "sew-key", "authority", "rational", &bytes).to_string()
+        }
+        CurveAuthority::CanonicalConstruction(identity) => identity.clone(),
+    }
+}
+
+/// O(E) vertex → incident edge indices; edge.vertices never mutate during a
+/// heal plan, so one build serves the whole plan application.
+fn vertex_edge_incidence(model: &Model) -> Vec<Vec<usize>> {
+    let mut incidence = vec![Vec::new(); model.vertices.len()];
+    for (index, edge) in model.edges.iter().enumerate() {
+        for vertex in edge.vertices {
+            incidence[vertex].push(index);
+        }
+    }
+    incidence
+}
+
 type EdgeUse = (usize, usize, usize, bool, usize);
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
@@ -463,9 +540,6 @@ impl HealOperation {
     }
 
     fn recipe_bytes(&self) -> Vec<u8> {
-        fn push_usize(bytes: &mut Vec<u8>, value: usize) {
-            bytes.extend_from_slice(&value.to_le_bytes());
-        }
         fn push_text(bytes: &mut Vec<u8>, value: &str) {
             push_usize(bytes, value.len());
             bytes.extend_from_slice(value.as_bytes());
@@ -494,23 +568,7 @@ impl HealOperation {
                 bytes.extend_from_slice(b"curve-refit\0");
                 push_usize(&mut bytes, *edge);
                 push_text(&mut bytes, &expected_id.to_string());
-                push_usize(&mut bytes, replacement.degree);
-                push_usize(&mut bytes, replacement.knots.len());
-                for knot in &replacement.knots {
-                    bytes.extend_from_slice(&knot.to_bits().to_le_bytes());
-                }
-                push_usize(&mut bytes, replacement.control_points.len());
-                for point in &replacement.control_points {
-                    push_usize(&mut bytes, point.len());
-                    for coordinate in point {
-                        bytes.extend_from_slice(&coordinate.to_bits().to_le_bytes());
-                    }
-                }
-                push_usize(&mut bytes, replacement.weights.len());
-                for weight in &replacement.weights {
-                    bytes.extend_from_slice(&weight.to_bits().to_le_bytes());
-                }
-                bytes.push(u8::from(replacement.periodic));
+                bytes.extend_from_slice(&curve_signature_bytes(replacement));
             }
             Self::EdgeSplit {
                 edge,
@@ -539,14 +597,16 @@ impl HealOperation {
     }
 
     pub(crate) fn write_set(&self, model: &Model) -> BTreeSet<(TopoKind, usize)> {
+        self.write_set_with(&vertex_edge_incidence(model))
+    }
+
+    fn write_set_with(&self, incidence: &[Vec<usize>]) -> BTreeSet<(TopoKind, usize)> {
         let mut writes = BTreeSet::new();
         match self {
             Self::EndpointSnap { vertex, .. } => {
                 writes.insert((TopoKind::Vertex, *vertex));
-                for (edge, value) in model.edges.iter().enumerate() {
-                    if value.vertices.contains(vertex) {
-                        writes.insert((TopoKind::Edge, edge));
-                    }
+                for &edge in incidence.get(*vertex).into_iter().flatten() {
+                    writes.insert((TopoKind::Edge, edge));
                 }
             }
             Self::CurveRefit { edge, .. } | Self::EdgeSplit { edge, .. } => {
@@ -568,7 +628,12 @@ impl HealOperation {
         self
     }
 
-    fn proof_matches_model(&self, model: &Model, context: &ToleranceContext) -> bool {
+    fn proof_matches_model_with(
+        &self,
+        model: &Model,
+        context: &ToleranceContext,
+        incidence: &[Vec<usize>],
+    ) -> bool {
         let matches = |left: &BoundaryCorrespondence, right: &BoundaryCorrespondence| {
             left.context == right.context
                 && left.authority == right.authority
@@ -584,12 +649,12 @@ impl HealOperation {
                 vertex,
                 correspondence,
                 ..
-            } => model
-                .edges
-                .iter()
-                .enumerate()
-                .filter(|(_, edge)| edge.vertices.contains(vertex))
-                .filter_map(|(edge, _)| prove_model_edge_correspondence(model, context, edge).ok())
+            } => incidence
+                .get(*vertex)
+                .into_iter()
+                .flatten()
+                .copied()
+                .filter_map(|edge| prove_model_edge_correspondence(model, context, edge).ok())
                 .any(|proof| matches(correspondence, &proof)),
             Self::CurveRefit {
                 edge,
@@ -644,6 +709,7 @@ impl AuthorizedHealPlan {
             ));
         }
         let context_id = context.spec_identity();
+        let incidence = vertex_edge_incidence(model);
         let mut cumulative = 0.;
         let mut signature = context_id.canonical.clone();
         let mut touched = BTreeSet::new();
@@ -677,7 +743,7 @@ impl AuthorizedHealPlan {
                     "Boundary proof is not bound to the complete endpoint/refit recipe",
                 ));
             }
-            if !operation.proof_matches_model(model, context) {
+            if !operation.proof_matches_model_with(model, context, &incidence) {
                 return Err(refuse(
                     "BREP_HEAL_PROOF_UNRELATED",
                     "Boundary proof is stale, foreign, or unrelated to the target entity",
@@ -690,7 +756,7 @@ impl AuthorizedHealPlan {
                     "Per-entity physical displacement budget exceeded",
                 ));
             }
-            let writes = operation.write_set(model);
+            let writes = operation.write_set_with(&incidence);
             cumulative += displacement * writes.len() as f64;
             if writes.iter().any(|write| touched.contains(write)) {
                 return Err(refuse(
@@ -774,6 +840,10 @@ pub(crate) fn apply_authorized_heal_checked(
         return Ok(model.clone());
     }
     let mut next = model.clone();
+    // edge.vertices never mutate during plan application (EndpointSnap moves
+    // points and endpoint control points, CurveRefit swaps the curve,
+    // EdgeSplit is refused), so one incidence build covers the whole loop.
+    let incidence = vertex_edge_incidence(&next);
     for (operation_index, operation) in plan.operations.iter().enumerate() {
         before_operation(operation_index)?;
         operation.displacement(&next)?;
@@ -785,7 +855,7 @@ pub(crate) fn apply_authorized_heal_checked(
                 "Boundary proof no longer matches the complete heal recipe",
             ));
         }
-        if !operation.proof_matches_model(&next, &context) {
+        if !operation.proof_matches_model_with(&next, &context, &incidence) {
             return Err(refuse(
                 "BREP_HEAL_PROOF_UNRELATED",
                 "Boundary proof is stale, foreign, or unrelated to the target entity",
@@ -799,11 +869,11 @@ pub(crate) fn apply_authorized_heal_checked(
                 ..
             } => {
                 next.vertices[*vertex].point = *to;
-                let affected_edges = next
-                    .edges
-                    .iter()
-                    .enumerate()
-                    .filter_map(|(index, edge)| edge.vertices.contains(vertex).then_some(index))
+                let affected_edges = incidence
+                    .get(*vertex)
+                    .into_iter()
+                    .flatten()
+                    .copied()
                     .collect::<Vec<_>>();
                 for &edge_index in &affected_edges {
                     let edge = &mut next.edges[edge_index];
@@ -820,13 +890,13 @@ pub(crate) fn apply_authorized_heal_checked(
                 }
                 for edge_index in affected_edges {
                     let parent = next.1.edges[edge_index];
-                    let signature = format!("{:?}", next.edges[edge_index].curve);
+                    let signature = curve_signature_bytes(&next.edges[edge_index].curve);
                     let child = TopoId::derive(
                         TopoKind::Edge,
                         &plan.identity,
                         &parent.to_string(),
                         "endpoint-snap-refit",
-                        signature.as_bytes(),
+                        &signature,
                     );
                     next.1.edges[edge_index] = child;
                     next.1.change_set.nodes.insert(child, TopoKind::Edge);
@@ -863,8 +933,8 @@ pub(crate) fn apply_authorized_heal_checked(
             }
         };
         let signature = match kind {
-            TopoKind::Vertex => format!("{:?}", next.vertices[index].point),
-            TopoKind::Edge => format!("{:?}", next.edges[index].curve),
+            TopoKind::Vertex => point_signature_bytes(&next.vertices[index].point),
+            TopoKind::Edge => curve_signature_bytes(&next.edges[index].curve),
             _ => unreachable!(),
         };
         let new_id = TopoId::derive(
@@ -872,7 +942,7 @@ pub(crate) fn apply_authorized_heal_checked(
             &plan.identity,
             &old_id.to_string(),
             "healed",
-            signature.as_bytes(),
+            &signature,
         );
         match kind {
             TopoKind::Vertex => next.1.vertices[index] = new_id,
@@ -1446,10 +1516,7 @@ pub fn exact_sew_correspondences(
                 false
             }
         };
-        let authority_key = match &proof.authority {
-            CurveAuthority::Rational(definition) => format!("{definition:?}"),
-            CurveAuthority::CanonicalConstruction(identity) => identity.clone(),
-        };
+        let authority_key = authority_key(&proof.authority);
         if key.definition.as_deref() != Some(authority_key.as_str()) {
             return Err(refuse(
                 "BREP_SEW_CURVE_MISMATCH",
@@ -1721,10 +1788,7 @@ pub fn sew_closed_model_edges(model: &crate::Model) -> Result<SewCertificate> {
         )?;
         let mut key = sew_edge_key(endpoints[0], endpoints[1], scale)?;
         key.shell = Some(uses[0].4);
-        key.definition = Some(match &correspondence.authority {
-            CurveAuthority::Rational(definition) => format!("{definition:?}"),
-            CurveAuthority::CanonicalConstruction(identity) => identity.clone(),
-        });
+        key.definition = Some(authority_key(&correspondence.authority));
         proven.push(CorrespondenceLedgerEntry {
             key,
             correspondence,
@@ -1840,10 +1904,7 @@ mod tests {
         .unwrap();
         let mut key = sew_edge_key([0., 0., 0.], [1., 0., 0.], 1e-9).unwrap();
         key.shell = Some(7);
-        key.definition = Some(match &proof.authority {
-            CurveAuthority::Rational(definition) => format!("{definition:?}"),
-            CurveAuthority::CanonicalConstruction(identity) => identity.clone(),
-        });
+        key.definition = Some(authority_key(&proof.authority));
         (context, key, proof, curve)
     }
 

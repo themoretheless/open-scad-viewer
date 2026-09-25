@@ -1,5 +1,6 @@
 import type { GcodePreviewResult } from './geometry/polygon'
 import type { GcodeSceneMesh } from './gcodePreviewProtocol'
+import { GCODE_MOVE_ROW_WIDTH, gcodePreviewMoveRows } from './gcodePreviewTransport'
 
 export interface GcodeMeshBounds { min: [number, number, number]; max: [number, number, number] }
 /** Exact bounds in scene coordinates, without materializing a second mesh. */
@@ -23,17 +24,19 @@ export function gcodeMeshBounds(mesh: GcodeSceneMesh): GcodeMeshBounds {
 
 /** Binary search avoids rescanning all moves each time the layer slider changes. */
 export function gcodeLayerRange(preview: GcodePreviewResult, layerIndex: number): { start: number; end: number; z: number | null } {
+  // Read packed rows directly: no per-move objects on the slider hot path.
+  const rows = gcodePreviewMoveRows(preview), moveCount = rows.length / GCODE_MOVE_ROW_WIDTH
   const lowerBound = (layer: number) => {
-    let left = 0, right = preview.moves.length
+    let left = 0, right = moveCount
     while (left < right) {
       const middle = Math.floor((left + right) / 2)
-      if (preview.moves[middle].layerIndex < layer) left = middle + 1
+      if (rows[middle * GCODE_MOVE_ROW_WIDTH + 5] < layer) left = middle + 1
       else right = middle
     }
     return left
   }
   const start = lowerBound(layerIndex), end = lowerBound(layerIndex + 1)
-  return { start, end, z: start < end ? preview.moves[start].z : null }
+  return { start, end, z: start < end ? rows[start * GCODE_MOVE_ROW_WIDTH + 2] : null }
 }
 
 export function drawGcodeLayer(canvas: HTMLCanvasElement, preview: GcodePreviewResult, layerIndex: number, showTravel: boolean) {
@@ -49,13 +52,14 @@ export function drawGcodeLayer(canvas: HTMLCanvasElement, preview: GcodePreviewR
   const x = (value: number) => offsetX + (value - bounds.min[0]) * scale
   const y = (value: number) => size - offsetY - (value - bounds.min[1]) * scale
   const range = gcodeLayerRange(preview, layerIndex)
+  const rows = gcodePreviewMoveRows(preview)
   for (const extrusion of [false, true]) {
     if (!extrusion && !showTravel) continue
     context.beginPath()
     for (let index = Math.max(1, range.start); index < range.end; index++) {
-      const move = preview.moves[index], previous = preview.moves[index - 1]
-      if (move.extruded !== extrusion) continue
-      context.moveTo(x(previous.x), y(previous.y)); context.lineTo(x(move.x), y(move.y))
+      const current = index * GCODE_MOVE_ROW_WIDTH, previous = current - GCODE_MOVE_ROW_WIDTH
+      if ((rows[current + 6] === 1) !== extrusion) continue
+      context.moveTo(x(rows[previous]), y(rows[previous + 1])); context.lineTo(x(rows[current]), y(rows[current + 1]))
     }
     context.strokeStyle = extrusion ? '#5bcbff' : '#e8ad61'
     context.lineWidth = extrusion ? 2 : 1.2

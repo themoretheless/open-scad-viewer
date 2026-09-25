@@ -45,8 +45,9 @@ function copyBuffer(wasm: ReturnType<typeof kernelRuntime>['exports'], bytes: Ui
 
 /** One upload per mesh; retain f64 placed coordinates without numeric JSON encoding.
  * Vertices and matrix may be f32 (legacy display path) or f64 (lossless); the ABI
- * format tag follows the vertex buffer, and a mismatched matrix is converted. */
-export function placeSolidMeshInKernel(vertices: Float32Array | Float64Array, indices: Uint32Array, matrix: Float32Array | Float64Array): { positions: number[]; indices: number[] } | null {
+ * format tag follows the vertex buffer, and a mismatched matrix is converted.
+ * Results are typed-array copies (`.slice()`), never boxed plain arrays. */
+export function placeSolidMeshInKernel(vertices: Float32Array | Float64Array, indices: Uint32Array, matrix: Float32Array | Float64Array): { positions: Float64Array; indices: Uint32Array } | null {
   const {exports: wasm, takeResponse} = kernelRuntime()
   const fmt = kernelVertexFormat(vertices)
   const matrixView = kernelVertexFormat(matrix) === fmt ? matrix : fmt === 1 ? new Float64Array(matrix) : new Float32Array(matrix)
@@ -66,8 +67,8 @@ export function placeSolidMeshInKernel(vertices: Float32Array | Float64Array, in
     const indicesPtr = wasm.abi_array_field(handle, 2), indicesLen = wasm.abi_array_field(handle, 3)
     const buffer = kernelRuntime().memory.buffer
     return {
-      positions: Array.from(new Float64Array(buffer, positionsPtr, positionsLen)),
-      indices: Array.from(new Uint32Array(buffer, indicesPtr, indicesLen)),
+      positions: new Float64Array(buffer, positionsPtr, positionsLen).slice(),
+      indices: new Uint32Array(buffer, indicesPtr, indicesLen).slice(),
     }
   } finally {
     if (handle) wasm.abi_array_free(handle)

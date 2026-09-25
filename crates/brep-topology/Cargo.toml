@@ -9,6 +9,7 @@ publish.workspace = true
 math-core = { package = "osv-math", path = "../math-core" }
 value-codec = { path = "../value-codec" }
 cad-predicates = { path = "../cad-predicates" }
+rustc-hash = "=2.1.1"
 sha2 = "0.11"
 
 [dev-dependencies]

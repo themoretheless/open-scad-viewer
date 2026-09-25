@@ -10,7 +10,8 @@
 )]
 #![allow(unused_features)]
 pub use math_core::{Error, Result};
-use std::collections::{BTreeMap, BTreeSet};
+use rustc_hash::{FxHashMap, FxHashSet};
+use std::collections::BTreeSet;
 pub mod persistent_naming;
 pub use persistent_naming::{
     ChangeKind, ChangeProvenance, ChangeSet, TopoId, TopoKind, TopologyChange,
@@ -646,9 +647,9 @@ impl<C, S, P, V> Model<C, S, P, V> {
         let mut face_owner = vec![None; self.faces.len()];
         for (si, s) in self.shells.iter().enumerate() {
             require(!s.faces.is_empty(), "Empty shell")?;
-            let mut incidence = BTreeMap::<usize, Vec<(usize, bool)>>::new();
-            let mut links = BTreeMap::<usize, Vec<(usize, usize)>>::new();
-            let mut pole_uses = BTreeMap::<usize, BTreeSet<usize>>::new();
+            let mut incidence = FxHashMap::<usize, Vec<(usize, bool)>>::default();
+            let mut links = FxHashMap::<usize, Vec<(usize, usize)>>::default();
+            let mut pole_uses = FxHashMap::<usize, FxHashSet<usize>>::default();
             for u in &s.faces {
                 let f = self
                     .faces
@@ -686,7 +687,7 @@ impl<C, S, P, V> Model<C, S, P, V> {
                     }
                 }
             }
-            let mut adjacency = BTreeMap::<usize, Vec<usize>>::new();
+            let mut adjacency = FxHashMap::<usize, Vec<usize>>::default();
             for (edge_index, edges) in &incidence {
                 require(
                     edges.len() <= 2,
@@ -706,7 +707,7 @@ impl<C, S, P, V> Model<C, S, P, V> {
                     adjacency.entry(edges[1].0).or_default().push(edges[0].0);
                 }
             }
-            let mut seen = BTreeSet::new();
+            let mut seen = FxHashSet::default();
             let mut queue = vec![s.faces[0].face];
             while let Some(f) = queue.pop() {
                 if seen.insert(f) {
@@ -718,7 +719,7 @@ impl<C, S, P, V> Model<C, S, P, V> {
                 "Shell has disconnected face components",
             )?;
             for fan in links.values() {
-                let mut graph = BTreeMap::<usize, Vec<usize>>::new();
+                let mut graph = FxHashMap::<usize, Vec<usize>>::default();
                 for (a, b) in fan {
                     graph.entry(*a).or_default().push(*b);
                     graph.entry(*b).or_default().push(*a);
@@ -729,7 +730,7 @@ impl<C, S, P, V> Model<C, S, P, V> {
                         .all(|n| n.len() <= 2 && (!s.closed || n.len() == 2)),
                     "Non-manifold vertex link",
                 )?;
-                let mut seen = BTreeSet::new();
+                let mut seen = FxHashSet::default();
                 let mut q = vec![*graph.keys().next().unwrap()];
                 while let Some(e) = q.pop() {
                     if seen.insert(e) {

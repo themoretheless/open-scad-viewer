@@ -64,7 +64,10 @@ export function meshDataToPolygonBody(mesh: MeshData, name: string, id: string):
 
 /** MeshData uses interleaved position+normal (stride 6). */
 export function meshDataToPolygon(mesh: MeshData): PolygonMesh | null {
-  return placeSolidMeshInKernel(mesh.vertices, mesh.indices, mesh.transform)
+  // Boundary: DirectBody documents round-trip through JSON (sceneMeshesToSolidDocument),
+  // which requires plain arrays — typed placements are boxed exactly once, here.
+  const placed = placeSolidMeshInKernel(mesh.vertices, mesh.indices, mesh.transform)
+  return placed ? { positions: Array.from(placed.positions), indices: Array.from(placed.indices) } : null
 }
 
 export function solidDocumentToMeshDocument(solid: DirectDocument): MeshWorkspaceDocument {

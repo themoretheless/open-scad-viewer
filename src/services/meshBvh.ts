@@ -42,8 +42,9 @@ export interface RaycastMeshBvhOptions {
   minT?: number
   /** Inclusive upper ray parameter. Defaults to Infinity. */
   maxT?: number
-  /** Triangle identities to skip, used by bounded same-depth hit traversal. */
-  excludedTriangles?: ReadonlySet<number>
+  /** Triangle identities to skip, used by bounded same-depth hit traversal.
+   * A growing typed-array view avoids rebuilding a plain array per continuation. */
+  excludedTriangles?: ReadonlySet<number> | ArrayLike<number>
   /**
    * Optional affine row-major matrix mapping the supplied world-space ray to
    * mesh-local space. Its direction is deliberately not normalised, so the

@@ -229,21 +229,42 @@ fn compute_monotone_nesting(curves: &[UvImprintCurve]) -> Result<Vec<NestingReco
             .reverse()
             .then_with(|| a.0.cmp(&b.0))
     });
-    let mut nesting = Vec::new();
-    for (i, (edge, span)) in intervals.iter().enumerate() {
-        let mut nested = Vec::new();
-        let mut depth = 0usize;
-        for (j, (other_edge, other)) in intervals.iter().enumerate() {
-            if i == j {
-                continue;
-            }
-            if interval_contains(*span, *other) {
-                nested.push(*other_edge);
-            }
-            if interval_contains(*other, *span) {
-                depth += 1;
+    // Laminar-family sweep: walk intervals by (lo asc, hi desc) with a stack of
+    // still-open candidate containers instead of comparing every pair. A stack
+    // entry is dropped only once it ends strictly before the current interval
+    // starts, so it can no longer contain the current or any later interval.
+    let n = intervals.len();
+    let mut order: Vec<usize> = (0..n).collect();
+    order.sort_by(|&a, &b| {
+        intervals[a]
+            .1[0]
+            .total_cmp(&intervals[b].1[0])
+            .then_with(|| intervals[b].1[1].total_cmp(&intervals[a].1[1]))
+            .then_with(|| a.cmp(&b))
+    });
+    let mut depth_of = vec![0usize; n];
+    let mut nested_of: Vec<Vec<usize>> = vec![Vec::new(); n];
+    let mut stack: Vec<usize> = Vec::new();
+    for &i in &order {
+        let span = intervals[i].1;
+        while stack
+            .last()
+            .is_some_and(|&top| intervals[top].1[1] < span[0] - 1e-15)
+        {
+            stack.pop();
+        }
+        for &container in &stack {
+            if interval_contains(intervals[container].1, span) {
+                depth_of[i] += 1;
+                nested_of[container].push(intervals[i].0);
             }
         }
+        stack.push(i);
+    }
+    let mut nesting = Vec::new();
+    for (i, (edge, _)) in intervals.iter().enumerate() {
+        let mut nested = std::mem::take(&mut nested_of[i]);
+        let depth = depth_of[i];
         if !nested.is_empty() || depth > 0 {
             nested.sort_unstable();
             nested.dedup();
