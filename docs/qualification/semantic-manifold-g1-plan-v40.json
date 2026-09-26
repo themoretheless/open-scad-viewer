@@ -1,0 +1,1631 @@
+{
+  "$schema": "./qualification-plan.schema.json",
+  "schema": "open-scad-viewer/qualification-plan",
+  "schemaVersion": 1,
+  "planId": "semantic-manifold-g1-plan-v40",
+  "gate": {
+    "id": "g1",
+    "name": "neutral-semantic-manifold-seam",
+    "capability": "semantic-program-to-manifold-plan",
+    "version": 1
+  },
+  "lifecycle": {
+    "status": "frozen-pending-execution",
+    "qualificationClaim": "none",
+    "executionAdmission": "ready-clean-rerun",
+    "frozenContent": [
+      "scope",
+      "matrix",
+      "oracle",
+      "comparator",
+      "budgets",
+      "seeds",
+      "work-units",
+      "clean-runs",
+      "reset-policy",
+      "claim-boundary"
+    ],
+    "resultsArtifactPolicy": "append-only-separate-artifact"
+  },
+  "processDeviation": {
+    "implementationTiming": "implementation-before-plan",
+    "priorEvidenceClassification": "discovery-only",
+    "priorEvidenceEligible": false,
+    "requiredRemediation": "clean-rerun-after-freeze",
+    "rationale": "The G1 seam, qualification Workers, MCP supervisor, and tests existed before this plan was frozen. Every earlier green test is discovery evidence only. No earlier invocation, log, cache, or result may satisfy a row below; the candidate requires a clean run after root resolves and freezes every binding."
+  },
+  "processAmendment": {
+    "kind": "post-freeze-harness-amendment",
+    "previousPlanId": "semantic-manifold-g1-plan-v39",
+    "previousPlanSha256": "ba3df337816f03e5ed921aea2afe53862eba472b30b544d15695fc6c4ad84072",
+    "reason": "Re-freeze after geometry kernel rebuild a93ba6e6 from committed b81fe7f9 (brep-core analytic surface intersections, gcode-core 3mf packaging/parser, stable expression eval); oracle 44/44 unchanged on new kernel, no migration; evidence own-rust-cad-v15, G0 fingerprint v23, G1 plan v40; executors retargeted to v40. Tree carries foreign WIP src/services/shaders/index.ts (not in frozen bundles) — recorded in review.",
+    "changes": [
+      "Recompute artifact and canonical bundle digests from current source bytes.",
+      "Bind the exact GitHub Actions workflow, evidence-producing harness, selectors, and hosted-runner image identities.",
+      "Start semantic-manifold-g1-candidate-run-v40 with zero completed clean runs and zero completed work units; no prior result is imported.",
+      "Retain G0 v1-v22 and G1 v1 through v39 byte-for-byte; G0 toolchain fingerprints advance separately to v23."
+    ],
+    "preserved": [
+      "All 65 oracle cases, 18 comparator mutations, boundary cases, matrix rows, environment IDs, seeds, budgets, required clean runs and all 4740 work units.",
+      "Scope, oracle and comparator bytes, claim boundary, reset rules, unresolved u07 and production cutover prohibition.",
+      "Prior evidence remains discovery-only; qualificationClaim stays none and qualificationApproval stays not-approved."
+    ],
+    "priorEvidenceTreatment": "discovery-only",
+    "qualificationClaim": "none"
+  },
+  "claimBoundary": {
+    "candidateClaim": "For the frozen legacy/current corpus and explicitly listed boundary/failure matrix only, the test-only SemanticProgram-to-Manifold plan path is observationally equivalent to the frozen direct evaluator and remains isolated from production routing.",
+    "successMeaning": "All rows pass all clean runs on every listed environment within the frozen budgets, with exactly the expected success or typed refusal and with no skipped or reused work unit.",
+    "forbiddenClaims": [
+      "The candidate is currently qualified or approved.",
+      "The candidate may be registered, routed to, or exposed in production.",
+      "The corpus proves equivalence for OpenSCAD programs outside the 65 frozen oracle cases and named boundary cases.",
+      "Browser Worker termination is a join or proof that browser process resources have already been reclaimed.",
+      "Node worker_threads hard-kill proves containment of process-level OOM, native crash, or operating-system failure.",
+      "Role-separated agents are organizationally independent reviewers.",
+      "G1 qualifies any B-rep, NURBS, protocol-v6, scene-v2, or product opt-in capability."
+    ]
+  },
+  "scope": {
+    "included": [
+      {
+        "id": "legacy-corpus-parity",
+        "statement": "All 65 cases in the frozen manifold-plan oracle, including success, typed error, preview reduction, warnings, identities, provenance, mesh/scene digests, and metrics.",
+        "enforcement": "Independent oracle capture and field-class comparator; every case is one work unit and no case may be filtered or retried.",
+        "evidenceRows": [
+          "oracle-differential"
+        ]
+      },
+      {
+        "id": "comparator-sensitivity",
+        "statement": "The comparator must detect each of the 18 predeclared one-field or one-invariant mutations without consulting candidate implementation code.",
+        "enforcement": "Each mutation is injected separately into a cloned frozen outcome and must produce the named field-class/path mismatch.",
+        "evidenceRows": [
+          "comparator-mutations"
+        ]
+      },
+      {
+        "id": "special-terminals",
+        "statement": "Cooperative cancellation, source limit refusal, preview/full policy, and backend cleanup failure remain distinct bounded terminal outcomes.",
+        "enforcement": "Four named terminal work units run in fresh sessions with exact error class/code and no partial success publication.",
+        "evidenceRows": [
+          "semantic-special-terminals"
+        ]
+      },
+      {
+        "id": "identity-boundaries",
+        "statement": "entityId, instanceId, and operationId each publish at 256 UTF-16 code units and refuse at 257 before success publication across Node Worker, actual Vite browser Worker, and MCP child boundaries.",
+        "enforcement": "Six independently controlled values are exercised on every listed transport; a 257 failure must be followed by a successful request in a fresh realm.",
+        "evidenceRows": [
+          "node-worker-identifiers",
+          "browser-chromium-actual-vite",
+          "browser-webkit-actual-vite",
+          "mcp-supervisor-hard-kill"
+        ]
+      },
+      {
+        "id": "browser-actual-vite",
+        "statement": "The qualification lane and Worker URL are transformed and executed by actual Vite in Playwright-managed Chromium and WebKit, not a Node WebWorker shim. Firefox is deferred out of this plan revision after CDN acquisition failure.",
+        "enforcement": "Each browser has its own blocking matrix row and frozen binary digest; success requires the emitted module Worker, started handshake, bounded 257 refusal, deadline termination request, and fresh-epoch recovery.",
+        "evidenceRows": [
+          "browser-chromium-actual-vite",
+          "browser-webkit-actual-vite"
+        ]
+      },
+      {
+        "id": "mcp-supervision",
+        "statement": "The MCP qualification child has a separate startup handshake/deadline, correlated terminal protocol, bounded cancellation, terminate-and-join hard kill, stdout/stderr containment, join quarantine, and fresh-epoch recovery.",
+        "enforcement": "The supervisor suite runs on Ubuntu Node 20/22, macOS Node 20, and Windows Node 20; all 13 predeclared scenarios pass without retry.",
+        "evidenceRows": [
+          "mcp-supervisor-hard-kill"
+        ]
+      },
+      {
+        "id": "mcp-stdio-store",
+        "statement": "Over actual newline-delimited MCP stdio with the real in-memory DuckDB store, a confirmed non-cooperative shadow cannot block ping or tools/list, emits exactly one terminal, writes no late record, and does not prevent the next direct request.",
+        "enforcement": "The child writes a private stdout sentinel and enters a non-cooperative loop before probes; only primary direct builds may appear in history and every server stdout line must remain valid JSON-RPC.",
+        "evidenceRows": [
+          "mcp-stdio-store-isolation"
+        ]
+      },
+      {
+        "id": "resource-bounds",
+        "statement": "Qualification IPC, deadlines, responsiveness, peak RSS, retained-memory deltas, and post-warmup RSS slopes stay within the exact budgets below.",
+        "enforcement": "Serial clean-process resource probes use fixed cycle counts, sample points, regression method, and per-run pass criteria; median-only acceptance is forbidden.",
+        "evidenceRows": [
+          "mcp-memory-slope",
+          "browser-memory-slope"
+        ]
+      },
+      {
+        "id": "dependency-isolation",
+        "statement": "Manifold imports remain confined to the narrow kernel adapter and qualification code does not enter the production registry or alter direct-v5 routing.",
+        "enforcement": "A source dependency audit and direct-route manifest assertion run from the frozen candidate bundle.",
+        "evidenceRows": [
+          "dependency-and-cutover-audit"
+        ]
+      }
+    ],
+    "excluded": [
+      {
+        "id": "production-cutover",
+        "statement": "Production provider registration, product routing, feature flags, UI exposure, rollout, or default behavior changes.",
+        "reason": "G1 qualifies a test-only neutral seam; activation belongs to a separately approved later gate.",
+        "enforcement": "No production registry/createServer import from the supervisor except explicit test injection; any observed product route change rejects this candidate."
+      },
+      {
+        "id": "brep-nurbs",
+        "statement": "B-rep topology, NURBS evaluation, intersections, trimming, Boolean certification, healing, STEP, or IGES.",
+        "reason": "These capabilities belong to G2 and later plans.",
+        "enforcement": "No capability claim or result from this plan may be attached to a brep-1 manifest."
+      },
+      {
+        "id": "language-expansion",
+        "statement": "New grammar or legacy/current behavior outside the frozen oracle and named boundary sources.",
+        "reason": "G1 is a seam-equivalence gate, not a language-conformance expansion.",
+        "enforcement": "Unexpected source cases are discovery-only and require a new plan version before becoming evidence."
+      },
+      {
+        "id": "protocol-v6-scene-v2",
+        "statement": "Geometry protocol v6, GeometrySceneV2, renderer migration, selection, export leases, or topology snapshots.",
+        "reason": "Those are G4a and later capabilities.",
+        "enforcement": "Only the frozen legacy LME1/LSE1 and direct-v5 observable boundary are compared."
+      },
+      {
+        "id": "process-fault-containment",
+        "statement": "Process-level OOM, native crash, host termination, hostile code sandboxing, or operating-system resource exhaustion.",
+        "reason": "Worker hard-kill covers non-cooperative JavaScript execution but shares the parent process failure domain.",
+        "enforcement": "No evidence row or approval may reinterpret Worker termination as process isolation."
+      },
+      {
+        "id": "unlisted-platforms",
+        "statement": "Branded Chrome/Safari, mobile browsers, non-Playwright browser builds, Linux distributions other than Ubuntu 24.04, or architectures other than those listed.",
+        "reason": "The target matrix is finite and hash-bound.",
+        "enforcement": "Results from unlisted environments are supplemental discovery evidence only."
+      },
+      {
+        "id": "organizational-independence",
+        "statement": "An assertion that collaborating review agents constitute organizationally independent approval.",
+        "reason": "They are role-separated within the same agent system and cannot supply the missing organizational review.",
+        "enforcement": "The independent reviewer and release authority remain explicitly pending and block qualification."
+      }
+    ]
+  },
+  "bindings": {
+    "artifacts": [
+      {
+        "id": "frozen-oracle-manifest",
+        "path": "tests/fixtures/manifold-plan-oracle-v1.json",
+        "purpose": "Frozen 65-case legacy direct-evaluator oracle and expected outcomes.",
+        "sha256": {
+          "state": "frozen",
+          "algorithm": "sha256",
+          "value": "a6b4d6025aa59081501d4c54bce921857512cd492714efda560a31b946184897",
+          "byteLength": 44525,
+          "verifiedBy": "shasum -a 256 and byte count before plan authoring"
+        }
+      },
+      {
+        "id": "frozen-reference-oracle",
+        "path": "tests/support/referenceFrozenLegacyOutcome.ts",
+        "purpose": "Independent manifest validator, capture model, canonical field classifier, and differential comparator with no production imports.",
+        "sha256": {
+          "state": "frozen",
+          "algorithm": "sha256",
+          "value": "3f1c898bb9a1ec0b2a500c432fc9c6d3d33023044f74cd04867ed63a73ade977",
+          "byteLength": 12329,
+          "verifiedBy": "shasum -a 256 and byte count before plan authoring"
+        }
+      },
+      {
+        "id": "frozen-reference-direct-evaluator",
+        "path": "tests/support/referenceLegacyDirectEvaluatorOracle.ts",
+        "purpose": "Independent legacy direct-evaluator capture used only to create and mutation-test the frozen oracle; production imports are forbidden.",
+        "sha256": {
+          "state": "frozen",
+          "algorithm": "sha256",
+          "value": "1933dad63321167de44d65cef75d85cb2cc7b3f2a4d84bccf21ac141e557dab8",
+          "byteLength": 33741,
+          "verifiedBy": "qualification artifact validator recomputes exact file bytes"
+        }
+      },
+      {
+        "id": "qualification-plan-schema",
+        "path": "docs/qualification/qualification-plan.schema.json",
+        "purpose": "Machine-strict QualificationPlan JSON Schema used for structural admission.",
+        "sha256": {
+          "state": "frozen",
+          "algorithm": "sha256",
+          "value": "bef7603ef5f9a05d5198882952041d87bb19cb0fec4c99ddc6083e88b392e12e",
+          "byteLength": 33862,
+          "verifiedBy": "qualification artifact validator recomputes exact file bytes"
+        }
+      },
+      {
+        "id": "root-package-manifest",
+        "path": "package.json",
+        "purpose": "Exact product and ordinary-test dependency manifest; Playwright is intentionally absent and isolated from this graph.",
+        "sha256": {
+          "state": "frozen",
+          "algorithm": "sha256",
+          "value": "e95f65347d420ae210d7a8f98306ed3bbd29611a95e1e293b26b150572e2bdcf",
+          "byteLength": 5166,
+          "verifiedBy": "qualification artifact validator recomputes bytes and asserts root Playwright absence"
+        }
+      },
+      {
+        "id": "root-package-lockfile",
+        "path": "package-lock.json",
+        "purpose": "Exact product and ordinary-test dependency graph; Playwright and playwright-core nodes are intentionally absent and must remain outside root npm ci.",
+        "sha256": {
+          "state": "frozen",
+          "algorithm": "sha256",
+          "value": "8fb1cab7fde2b4f8b9331cfdddbc9dc0909b1ccf2ca5d26fb0c6a47b976145d1",
+          "byteLength": 76455,
+          "verifiedBy": "qualification artifact validator recomputes bytes and asserts root Playwright-node absence"
+        }
+      },
+      {
+        "id": "root-npm-config",
+        "path": ".npmrc",
+        "purpose": "Repository npm configuration participating in both reproducible dependency installations.",
+        "sha256": {
+          "state": "frozen",
+          "algorithm": "sha256",
+          "value": "8d1c8cce74ec8034361b3c300fcc7103dd8458556de93cd60cb9dd29e633799d",
+          "byteLength": 59,
+          "verifiedBy": "qualification artifact validator recomputes exact file bytes"
+        }
+      },
+      {
+        "id": "vitest-config",
+        "path": "vitest.config.ts",
+        "purpose": "Exact ordinary qualification-test configuration.",
+        "sha256": {
+          "state": "frozen",
+          "algorithm": "sha256",
+          "value": "478cb84657a4fc0df43285b567af12d52fd262153b8db5941cbb440215325933",
+          "byteLength": 893,
+          "verifiedBy": "qualification artifact validator recomputes exact file bytes"
+        }
+      },
+      {
+        "id": "typescript-config",
+        "path": "tsconfig.json",
+        "purpose": "Exact TypeScript and tsx resolution configuration used by qualification sources and fixtures.",
+        "sha256": {
+          "state": "frozen",
+          "algorithm": "sha256",
+          "value": "19e835e265d2c4b4060c9ea60c87567b10c6298920d29f1e2211dcf1ae41d4fa",
+          "byteLength": 520,
+          "verifiedBy": "qualification artifact validator recomputes exact file bytes"
+        }
+      },
+      {
+        "id": "checkout-line-ending-policy",
+        "path": ".gitattributes",
+        "purpose": "LF checkout normalization for every bound text source, fixture, configuration, notice, manifest, and plan artifact.",
+        "sha256": {
+          "state": "frozen",
+          "algorithm": "sha256",
+          "value": "80917c2134b1fc140f8e1cc37864023ed74baab5bb659a858b9d818e9532fccf",
+          "byteLength": 154,
+          "verifiedBy": "qualification artifact validator recomputes bytes and checks every bound text file for CR"
+        }
+      },
+      {
+        "id": "root-third-party-notices",
+        "path": "THIRD_PARTY_NOTICES.md",
+        "purpose": "Root dependency notices for the product graph, explicitly separate from qualification-only Playwright notices.",
+        "sha256": {
+          "state": "frozen",
+          "algorithm": "sha256",
+          "value": "789499bf4bcbaacad6ead9d5e8f51e5ecbd3ec37bb9b9ef2d45bb7c115bd5c84",
+          "byteLength": 7475,
+          "verifiedBy": "qualification artifact validator recomputes exact file bytes"
+        }
+      },
+      {
+        "id": "qualification-playwright-manifest",
+        "path": "tools/browser-qualification/package.json",
+        "purpose": "Private qualification-only npm manifest pinning Playwright 1.62.1 outside the product dependency graph.",
+        "sha256": {
+          "state": "frozen",
+          "algorithm": "sha256",
+          "value": "639d9e0c47a413b3d87e86fc0ef6e6aae546034810d475c5f58ff9ce8835b0e4",
+          "byteLength": 230,
+          "verifiedBy": "qualification artifact validator and runtime package helper recompute exact bytes"
+        }
+      },
+      {
+        "id": "qualification-playwright-lockfile",
+        "path": "tools/browser-qualification/package-lock.json",
+        "purpose": "Exact qualification-only npm graph for Playwright, playwright-core, and platform-optional fsevents; browser distributions are not included and remain u03.",
+        "sha256": {
+          "state": "frozen",
+          "algorithm": "sha256",
+          "value": "0a2e7f09703398ff090367d55e1f39b88b363e5267126edf699a2e78fedc471f",
+          "byteLength": 1843,
+          "verifiedBy": "qualification artifact validator and runtime package helper recompute exact bytes"
+        }
+      },
+      {
+        "id": "qualification-playwright-notice",
+        "path": "docs/qualification/PLAYWRIGHT_THIRD_PARTY_NOTICE.md",
+        "purpose": "Qualification-only Playwright package notice and explicit statement of still-unresolved browser-distribution notices.",
+        "sha256": {
+          "state": "frozen",
+          "algorithm": "sha256",
+          "value": "0433c3f42241024d9ac8c0d53d5b9b112e8e3c2791fce713c3592664558a71b1",
+          "byteLength": 1708,
+          "verifiedBy": "qualification artifact validator recomputes exact file bytes"
+        }
+      },
+      {
+        "id": "qualification-playwright-license-manifest",
+        "path": "docs/qualification/playwright-license-manifest-v1.json",
+        "purpose": "Exact installed package license, notice, third-party notice, and bundle-license file digests; npm CLI and browser artifacts remain u02 and u03.",
+        "sha256": {
+          "state": "frozen",
+          "algorithm": "sha256",
+          "value": "ca6b12d581fdb7added7c5b7e144a8b5b20ae946417ec6e663a8bda348df1b6a",
+          "byteLength": 3846,
+          "verifiedBy": "qualification artifact validator and runtime package helper recompute manifest and installed license files"
+        }
+      },
+      {
+        "id": "g1-runtime-browser-bindings",
+        "path": "docs/qualification/environment-freeze/g1-runtime-browser-bindings-v1.json",
+        "purpose": "Official Node SHASUMS, npm/playwright package integrities, and Playwright Chromium/WebKit tree digests used to close u02/u03 for v18.",
+        "sha256": {
+          "state": "frozen",
+          "algorithm": "sha256",
+          "value": "8d32d1b27ea32aae931468be2f85fd526113bd9be960be4b841bb6c85a2432ff",
+          "byteLength": 6762,
+          "verifiedBy": "qualification artifact validator recomputes the exact file digest"
+        }
+      },
+      {
+        "id": "g1-github-actions-environment-v34",
+        "path": "docs/qualification/environment-freeze/g1-github-actions-v34.json",
+        "purpose": "Exact hosted runner labels/image versions, action commit pins, source-SHA protocol, and downloaded archive identity-only boundary for V34.",
+        "sha256": {
+          "state": "frozen",
+          "algorithm": "sha256",
+          "value": "c4896e1dab35ce3169770949220bed92501ea0c7d526840a93814b6e60afb2b7",
+          "byteLength": 3366,
+          "verifiedBy": "qualification validator and GitHub preflight recompute exact bytes and enforce every identity"
+        }
+      }
+    ],
+    "bundles": [
+      {
+        "id": "g1-candidate-bundle",
+        "paths": [
+          "src/core/build.ts",
+          "src/core/geometryExecution.ts",
+          "src/core/geometryRouting.ts",
+          "src/core/languageContract.ts",
+          "src/core/mesh.ts",
+          "src/core/nativeGeometry.ts",
+          "src/core/ownRustCadEvidence.ts",
+          "src/core/scene.ts",
+          "src/core/semanticProgram.ts",
+          "src/core/sha256.ts",
+          "src/mcp/manifoldPlanQualification.worker.ts",
+          "src/mcp/manifoldPlanQualificationSupervisor.ts",
+          "src/services/cadKernelOps.ts",
+          "src/services/geometryWorkerProtocol.ts",
+          "src/services/legacyV5Assembler.ts",
+          "src/services/manifoldPlanBackend.ts",
+          "src/services/manifoldPlanEvaluator.ts",
+          "src/services/manifoldPlanQualificationProtocol.ts",
+          "src/services/manifoldPlanQualificationWorkerLane.ts",
+          "src/services/math3d.ts",
+          "src/services/meshBvh.ts",
+          "src/services/meshTopology.ts",
+          "src/services/openscadCompiler.ts",
+          "src/services/openscadErrors.ts",
+          "src/services/openscadSemanticLowerer.ts",
+          "src/services/semanticProgramCodec.ts",
+          "src/services/semanticProgramExecutor.ts",
+          "src/services/semanticProgramLowerer.ts",
+          "src/services/semanticProgramTrust.ts",
+          "src/services/semanticProgramValidator.ts",
+          "src/workers/manifoldPlanQualification.worker.ts"
+        ],
+        "canonicalization": "UTF-8 records sorted by path: path + NUL + lowercase-file-sha256 + LF",
+        "sha256": {
+          "state": "frozen",
+          "algorithm": "sha256",
+          "value": "c199e4cf0442bc08086cbd9780389f0e4ee37d9c9b8aacfcac3d1270fd5ab617",
+          "byteLength": 3051,
+          "verifiedBy": "qualification artifact validator recomputes the canonical path-plus-file-digest stream"
+        }
+      },
+      {
+        "id": "g1-static-dependency-audit-bundle",
+        "paths": [
+          "src/components/CommandPalette.vue",
+          "src/components/CustomizerPanel.vue",
+          "src/components/ExampleGallery.vue",
+          "src/components/InspectPanel.vue",
+          "src/components/KeyboardShortcuts.vue",
+          "src/components/SceneOutliner.vue",
+          "src/components/ViewCube.vue",
+          "src/components/cadPanels.types.ts",
+          "src/core/openScad2021Contract.ts",
+          "src/core/qualityTargets.ts"
+        ],
+        "canonicalization": "UTF-8 records sorted by path: path + NUL + lowercase-file-sha256 + LF",
+        "sha256": {
+          "state": "frozen",
+          "algorithm": "sha256",
+          "value": "4cc9f34ab3231697ec320d837a1e50b9c6acfb698855f177053d77aaded8452b",
+          "byteLength": 977,
+          "verifiedBy": "qualification artifact validator recomputes the canonical path-plus-file-digest stream"
+        }
+      },
+      {
+        "id": "g1-qualification-harness-bundle",
+        "paths": [
+          ".github/workflows/g1-qualification-clean.yml",
+          "scripts/g1-github-actions.mjs",
+          "scripts/qualificationPlaywrightPackage.mjs",
+          "scripts/run-browser-qualification-supervisor.mjs",
+          "scripts/run-browser-qualification.mjs",
+          "scripts/run-g1-candidate-clean-fragment.mjs",
+          "scripts/run-g1-ubuntu-docker-fragment.mjs",
+          "scripts/run-manifold-g1-memory-qualification.mjs",
+          "tests/browserMemoryQualificationRunner.test.ts",
+          "tests/browserQualificationRunner.test.ts",
+          "tests/browserQualificationSupervisor.test.ts",
+          "tests/fixtures/browser-memory-qualification.html",
+          "tests/fixtures/browser-memory-qualification.ts",
+          "tests/fixtures/browser-qualification-supervisor-child.mjs",
+          "tests/fixtures/browser-qualification.html",
+          "tests/fixtures/browser-qualification.ts",
+          "tests/fixtures/browser-qualification.worker.ts",
+          "tests/fixtures/mcp-manifold-plan-memory-probe.ts",
+          "tests/fixtures/mcp-manifold-plan-qualification.worker.mjs",
+          "tests/fixtures/mcp-shadow-noncooperative.worker.mjs",
+          "tests/fixtures/mcp-shadow-stdio-server.ts",
+          "tests/fixtures/web-worker-node-harness.ts",
+          "tests/geometryWorkerRealBoundary.test.ts",
+          "tests/legacyDirectEvaluatorOracle.test.ts",
+          "tests/manifoldPlanBackend.test.ts",
+          "tests/manifoldPlanQualificationWorkerLane.test.ts",
+          "tests/mcpManifoldPlanMemorySlope.test.ts",
+          "tests/mcpManifoldPlanQualificationStdio.test.ts",
+          "tests/mcpManifoldPlanQualificationSupervisor.test.ts",
+          "vite.qualification.config.ts"
+        ],
+        "canonicalization": "UTF-8 records sorted by path: path + NUL + lowercase-file-sha256 + LF",
+        "sha256": {
+          "state": "frozen",
+          "algorithm": "sha256",
+          "value": "e55d4f85fc132a719d0ef310ae039f7210e34fa28d4c5c56f5078cba85f9cfb1",
+          "byteLength": 3287,
+          "verifiedBy": "qualification artifact validator recomputes the canonical path-plus-file-digest stream"
+        }
+      },
+      {
+        "id": "g1-mcp-support-bundle",
+        "paths": [
+          "src/mcp/boundedTransport.ts",
+          "src/mcp/createServer.ts",
+          "src/mcp/duckdbModelStore.ts",
+          "src/mcp/engineManifest.ts",
+          "src/mcp/errorContract.ts",
+          "src/mcp/geometryService.ts",
+          "src/mcp/modelStore.ts",
+          "src/mcp/publicError.ts"
+        ],
+        "canonicalization": "UTF-8 records sorted by path: path + NUL + lowercase-file-sha256 + LF",
+        "sha256": {
+          "state": "frozen",
+          "algorithm": "sha256",
+          "value": "a523cf13ab398270786550ac1e0e6901333e03d1dc3757e51692e66bbc6905b3",
+          "byteLength": 723,
+          "verifiedBy": "qualification artifact validator recomputes the canonical path-plus-file-digest stream"
+        }
+      },
+      {
+        "id": "g1-pinned-legacy-support-bundle",
+        "paths": [
+          "src/data/examples.ts",
+          "src/services/cadGeometryKernel.ts",
+          "src/services/geometryBuildEngine.ts",
+          "src/services/geometryKernel.ts",
+          "src/services/meshExport.ts",
+          "src/services/meshInspection.ts",
+          "src/services/openscadParser.ts",
+          "src/services/scadCustomizer.ts",
+          "src/workers/geometry.worker.ts"
+        ],
+        "canonicalization": "UTF-8 records sorted by path: path + NUL + lowercase-file-sha256 + LF",
+        "sha256": {
+          "state": "frozen",
+          "algorithm": "sha256",
+          "value": "e7ba75779e023e9789507f173801dc495f0cf17f415e4a4c1331216ea5402e04",
+          "byteLength": 858,
+          "verifiedBy": "qualification artifact validator recomputes the canonical path-plus-file-digest stream"
+        }
+      }
+    ],
+    "placeholderPolicy": {
+      "executionAdmission": "reject-if-any-unresolved-placeholder",
+      "qualificationClaim": "forbidden-if-any-unresolved-placeholder",
+      "replacementAuthority": "root-after-all-bound-files-settle"
+    }
+  },
+  "environments": [
+    {
+      "id": "ubuntu-node20",
+      "class": "node",
+      "os": "ubuntu-24.04",
+      "architecture": "x86_64",
+      "runtime": {
+        "name": "node",
+        "version": "20.19.0",
+        "sha256": {
+          "state": "frozen",
+          "algorithm": "sha256",
+          "value": "b4e336584d62abefad31baecff7af167268be9bb7dd11f1297112e6eed3ca0d5",
+          "byteLength": 25987932,
+          "verifiedBy": "Official Node.js SHASUMS256 for node-v20.19.0-linux-x64.tar.xz from nodejs.org; archive byteLength from HTTP HEAD"
+        }
+      },
+      "browser": null
+    },
+    {
+      "id": "ubuntu-node22",
+      "class": "node",
+      "os": "ubuntu-24.04",
+      "architecture": "x86_64",
+      "runtime": {
+        "name": "node",
+        "version": "22.23.2",
+        "sha256": {
+          "state": "frozen",
+          "algorithm": "sha256",
+          "value": "d60acfe00a2932254bb0ad20e01b0d74397a0875595de719654b214f4b03f307",
+          "byteLength": 31058332,
+          "verifiedBy": "Official Node.js SHASUMS256 for node-v22.23.2-linux-x64.tar.xz from nodejs.org; archive byteLength from HTTP HEAD"
+        }
+      },
+      "browser": null
+    },
+    {
+      "id": "macos-node20",
+      "class": "node",
+      "os": "macos-15",
+      "architecture": "aarch64",
+      "runtime": {
+        "name": "node",
+        "version": "20.19.0",
+        "sha256": {
+          "state": "frozen",
+          "algorithm": "sha256",
+          "value": "c016cd1975a264a29dc1b07c6fbe60d5df0a0c2beb4113c0450e3d998d1a0d9c",
+          "byteLength": 41487879,
+          "verifiedBy": "Official Node.js SHASUMS256 for node-v20.19.0-darwin-arm64.tar.gz from nodejs.org; archive byteLength from HTTP HEAD"
+        }
+      },
+      "browser": null
+    },
+    {
+      "id": "windows-node20",
+      "class": "node",
+      "os": "windows-2025",
+      "architecture": "x86_64",
+      "runtime": {
+        "name": "node",
+        "version": "20.19.0",
+        "sha256": {
+          "state": "frozen",
+          "algorithm": "sha256",
+          "value": "be72284c7bc62de07d5a9fd0ae196879842c085f11f7f2b60bf8864c0c9d6a4f",
+          "byteLength": 29871567,
+          "verifiedBy": "Official Node.js SHASUMS256 for node-v20.19.0-win-x64.zip from nodejs.org; archive byteLength from HTTP HEAD"
+        }
+      },
+      "browser": null
+    },
+    {
+      "id": "vite-chromium",
+      "class": "vite-browser",
+      "os": "ubuntu-24.04",
+      "architecture": "x86_64",
+      "runtime": {
+        "name": "node-vite-host",
+        "version": "22.23.2",
+        "sha256": {
+          "state": "frozen",
+          "algorithm": "sha256",
+          "value": "d60acfe00a2932254bb0ad20e01b0d74397a0875595de719654b214f4b03f307",
+          "byteLength": 31058332,
+          "verifiedBy": "Official Node.js SHASUMS256 for node-v22.23.2-linux-x64.tar.xz (vite host)"
+        }
+      },
+      "browser": {
+        "engine": "chromium",
+        "distribution": "playwright-managed",
+        "version": "bound-by-frozen-binary-sha256",
+        "sha256": {
+          "state": "frozen",
+          "algorithm": "sha256",
+          "value": "36ce22fd3236c8ab852654fd3284c472946a3c84dec6efaf9da03df5561d96a1",
+          "byteLength": 34394,
+          "verifiedBy": "V34 canonical Linux tree manifest for chromium_headless_shell-1234; every required supporting tree is checked by the frozen GitHub harness"
+        }
+      }
+    },
+    {
+      "id": "vite-webkit",
+      "class": "vite-browser",
+      "os": "ubuntu-24.04",
+      "architecture": "x86_64",
+      "runtime": {
+        "name": "node-vite-host",
+        "version": "22.23.2",
+        "sha256": {
+          "state": "frozen",
+          "algorithm": "sha256",
+          "value": "d60acfe00a2932254bb0ad20e01b0d74397a0875595de719654b214f4b03f307",
+          "byteLength": 31058332,
+          "verifiedBy": "Official Node.js SHASUMS256 for node-v22.23.2-linux-x64.tar.xz (vite host)"
+        }
+      },
+      "browser": {
+        "engine": "webkit",
+        "distribution": "playwright-managed",
+        "version": "bound-by-frozen-binary-sha256",
+        "sha256": {
+          "state": "frozen",
+          "algorithm": "sha256",
+          "value": "6f94bc13b4b6d303e55f3134604a7ca3dbc6bbd792593c0aaf20fd635b6dca5d",
+          "byteLength": 5229,
+          "verifiedBy": "V34 canonical Linux tree manifest for webkit-2336; every required supporting tree is checked by the frozen GitHub harness"
+        }
+      }
+    }
+  ],
+  "oracle": {
+    "manifestArtifactId": "frozen-oracle-manifest",
+    "referenceImplementationArtifactId": "frozen-reference-oracle",
+    "schema": "manifold-plan-oracle",
+    "version": 1,
+    "corpusSha256": "c58ff48a7f174cb547b4f8aad8ada72a30816d5009a87d046d4f78d634db7482",
+    "caseCount": 65,
+    "productionImportsAllowed": false,
+    "allowedInputs": [
+      "frozen JSON manifest bytes",
+      "candidate terminal outcome represented as plain data",
+      "Web-standard TextEncoder and crypto.subtle only"
+    ]
+  },
+  "comparator": {
+    "exactFields": [
+      "terminal outcome tag",
+      "error name, message, code, line, column, start, and end",
+      "warning sequence and text",
+      "quality and reduced flag",
+      "LME1 bytes and digest including identities and provenance",
+      "LSE1 bytes and digest including scene identities and inspection payload",
+      "mesh/scene counts and byte lengths",
+      "color, transforms, spans, topology counters, and first-seen identity partition"
+    ],
+    "normalizedFields": [
+      "process-local original IDs normalized only by first-seen equality partition"
+    ],
+    "validateOnlyFields": [
+      "finite non-negative timing values",
+      "structural mesh and scene schema validity"
+    ],
+    "metricTolerance": {
+      "volume": {
+        "absolute": 1e-9,
+        "relative": 1e-9
+      },
+      "surfaceArea": {
+        "absolute": 1e-9,
+        "relative": 1e-9
+      }
+    },
+    "mutations": [
+      {
+        "id": "outcome-tag",
+        "target": "$.tag",
+        "operation": "replace cancelled with error",
+        "expectedDetection": "outcome mismatch at $.tag"
+      },
+      {
+        "id": "warning-order-text",
+        "target": "$.success.warnings",
+        "operation": "append one forged warning",
+        "expectedDetection": "warnings mismatch at $.success.warnings"
+      },
+      {
+        "id": "quality",
+        "target": "$.success.quality",
+        "operation": "replace full with preview",
+        "expectedDetection": "quality mismatch at $.success.quality"
+      },
+      {
+        "id": "reduced-bit",
+        "target": "$.success.reduced",
+        "operation": "flip false to true",
+        "expectedDetection": "quality mismatch at $.success.reduced"
+      },
+      {
+        "id": "mesh-byte",
+        "target": "$.success.meshes[0].vertices.bytes[0]",
+        "operation": "xor one byte with 1",
+        "expectedDetection": "mesh-bytes mismatch"
+      },
+      {
+        "id": "scene-byte",
+        "target": "$.success.scene.assets[0].vertices.bytes[0]",
+        "operation": "xor one byte with 1",
+        "expectedDetection": "scene-bytes mismatch"
+      },
+      {
+        "id": "color-component",
+        "target": "$.success.meshes[0].color[0]",
+        "operation": "replace component with 0.75",
+        "expectedDetection": "color mismatch"
+      },
+      {
+        "id": "entity-identity",
+        "target": "$.success.meshes[0].entityId",
+        "operation": "replace with entity:forged",
+        "expectedDetection": "identity mismatch"
+      },
+      {
+        "id": "provenance-start",
+        "target": "$.success.meshes[0].provenance[0].source.start",
+        "operation": "increment by one",
+        "expectedDetection": "provenance mismatch"
+      },
+      {
+        "id": "volume-outside-tolerance",
+        "target": "$.success.volume",
+        "operation": "add 0.0001",
+        "expectedDetection": "metrics mismatch at $.success.volume"
+      },
+      {
+        "id": "surface-area-outside-tolerance",
+        "target": "$.success.surfaceArea",
+        "operation": "add 0.0001",
+        "expectedDetection": "metrics mismatch at $.success.surfaceArea"
+      },
+      {
+        "id": "error-message",
+        "target": "$.error.message",
+        "operation": "replace with forged",
+        "expectedDetection": "error mismatch at $.error.message"
+      },
+      {
+        "id": "error-start",
+        "target": "$.error.start",
+        "operation": "increment by one",
+        "expectedDetection": "error mismatch at $.error.start"
+      },
+      {
+        "id": "error-end",
+        "target": "$.error.end",
+        "operation": "increment by one",
+        "expectedDetection": "error mismatch at $.error.end"
+      },
+      {
+        "id": "negative-timing",
+        "target": "$.success.timings.analyzeMs",
+        "operation": "replace with -1",
+        "expectedDetection": "validate-only schema rejection"
+      },
+      {
+        "id": "missing-geometry-asset-id",
+        "target": "$.success.meshes[0].geometryAssetId",
+        "operation": "delete required field",
+        "expectedDetection": "validate-only schema rejection"
+      },
+      {
+        "id": "original-id-partition-collapse",
+        "target": "first-seen originalId equality partition",
+        "operation": "collapse two distinct producer IDs",
+        "expectedDetection": "identity mismatch in normalized partition"
+      },
+      {
+        "id": "manifest-case-digest",
+        "target": "$.cases[first-success].expected.lme1Sha256",
+        "operation": "replace digest with 64 zeroes",
+        "expectedDetection": "oracle manifest corpusSha256 mismatch before candidate execution"
+      }
+    ]
+  },
+  "identifierBoundaries": [
+    {
+      "id": "entity-id-256",
+      "field": "entityId",
+      "utf16CodeUnits": 256,
+      "expected": "publish-success",
+      "surfaces": [
+        "node-worker",
+        "vite-browser-worker",
+        "mcp-worker"
+      ],
+      "generation": "controlled fixture sets only entityId to exactly 256 well-formed UTF-16 code units; all other identifiers remain short"
+    },
+    {
+      "id": "entity-id-257",
+      "field": "entityId",
+      "utf16CodeUnits": 257,
+      "expected": "typed-bounded-refusal-before-success-publication",
+      "surfaces": [
+        "node-worker",
+        "vite-browser-worker",
+        "mcp-worker"
+      ],
+      "generation": "controlled fixture sets only entityId to exactly 257 well-formed UTF-16 code units; all other identifiers remain short"
+    },
+    {
+      "id": "instance-id-256",
+      "field": "instanceId",
+      "utf16CodeUnits": 256,
+      "expected": "publish-success",
+      "surfaces": [
+        "node-worker",
+        "vite-browser-worker",
+        "mcp-worker"
+      ],
+      "generation": "controlled fixture sets only provenance source instanceId to exactly 256 well-formed UTF-16 code units; all other identifiers remain short"
+    },
+    {
+      "id": "instance-id-257",
+      "field": "instanceId",
+      "utf16CodeUnits": 257,
+      "expected": "typed-bounded-refusal-before-success-publication",
+      "surfaces": [
+        "node-worker",
+        "vite-browser-worker",
+        "mcp-worker"
+      ],
+      "generation": "controlled fixture sets only provenance source instanceId to exactly 257 well-formed UTF-16 code units; all other identifiers remain short"
+    },
+    {
+      "id": "operation-id-256",
+      "field": "operationId",
+      "utf16CodeUnits": 256,
+      "expected": "publish-success",
+      "surfaces": [
+        "node-worker",
+        "vite-browser-worker",
+        "mcp-worker"
+      ],
+      "generation": "controlled fixture sets only provenance source operationId to exactly 256 well-formed UTF-16 code units; all other identifiers remain short"
+    },
+    {
+      "id": "operation-id-257",
+      "field": "operationId",
+      "utf16CodeUnits": 257,
+      "expected": "typed-bounded-refusal-before-success-publication",
+      "surfaces": [
+        "node-worker",
+        "vite-browser-worker",
+        "mcp-worker"
+      ],
+      "generation": "controlled fixture sets only provenance source operationId to exactly 257 well-formed UTF-16 code units; all other identifiers remain short"
+    }
+  ],
+  "matrix": [
+    {
+      "id": "oracle-differential",
+      "claim": "Every frozen oracle case has exactly the expected terminal outcome under the field-by-field comparator.",
+      "surface": "semantic-differential",
+      "executionEnvironmentIds": [
+        "ubuntu-node20",
+        "ubuntu-node22"
+      ],
+      "harness": {
+        "kind": "vitest",
+        "entrypoints": [
+          "tests/fixtures/manifold-plan-oracle-v1.json",
+          "tests/manifoldPlanBackend.test.ts",
+          "tests/support/referenceFrozenLegacyOutcome.ts"
+        ],
+        "command": "npm test -- --run tests/manifoldPlanBackend.test.ts -t frozen",
+        "isolation": "fresh Node process and fresh Manifold backend session for each clean run"
+      },
+      "work": {
+        "unit": "one frozen oracle case evaluated once and compared once",
+        "unitsPerCleanRun": 65,
+        "cleanRunsRequired": 5,
+        "seeds": [
+          "0x5eed000000000001",
+          "0x5eed000000000002",
+          "0x5eed000000000003",
+          "0x5eed000000000004",
+          "0x5eed000000000005"
+        ],
+        "plannedUnits": 650
+      },
+      "expected": {
+        "terminal": "pass",
+        "assertions": [
+          "65 of 65 cases compared; zero skip and zero retry",
+          "zero comparator differences",
+          "zero false success and zero false complete",
+          "oracle and reference hashes match frozen bindings before candidate import"
+        ],
+        "failureDisposition": "reset-and-block-g1"
+      },
+      "evidenceState": "not-executed-clean-post-freeze",
+      "blocksQualification": true
+    },
+    {
+      "id": "comparator-mutations",
+      "claim": "Each frozen comparator mutation is independently detected in its declared class or path.",
+      "surface": "comparator",
+      "executionEnvironmentIds": [
+        "ubuntu-node20",
+        "ubuntu-node22"
+      ],
+      "harness": {
+        "kind": "vitest",
+        "entrypoints": [
+          "tests/legacyDirectEvaluatorOracle.test.ts",
+          "tests/support/referenceFrozenLegacyOutcome.ts"
+        ],
+        "command": "npm test -- --run tests/legacyDirectEvaluatorOracle.test.ts -t mutation",
+        "isolation": "independent clone per mutation; candidate evaluator is not imported"
+      },
+      "work": {
+        "unit": "one declared mutation injected and checked once",
+        "unitsPerCleanRun": 18,
+        "cleanRunsRequired": 5,
+        "seeds": [
+          "0x5eed000000000001",
+          "0x5eed000000000002",
+          "0x5eed000000000003",
+          "0x5eed000000000004",
+          "0x5eed000000000005"
+        ],
+        "plannedUnits": 180
+      },
+      "expected": {
+        "terminal": "pass",
+        "assertions": [
+          "18 of 18 declared mutations detected",
+          "no mutation accepted within metric tolerance unless it is the separately declared within-tolerance control",
+          "oracle-integrity mutation fails before candidate execution"
+        ],
+        "failureDisposition": "reset-and-block-g1"
+      },
+      "evidenceState": "not-executed-clean-post-freeze",
+      "blocksQualification": true
+    },
+    {
+      "id": "semantic-special-terminals",
+      "claim": "Cancellation and boundary/cleanup failures cannot be converted into partial or successful geometry.",
+      "surface": "semantic-differential",
+      "executionEnvironmentIds": [
+        "ubuntu-node20",
+        "ubuntu-node22"
+      ],
+      "harness": {
+        "kind": "vitest",
+        "entrypoints": [
+          "tests/legacyDirectEvaluatorOracle.test.ts",
+          "tests/manifoldPlanBackend.test.ts"
+        ],
+        "command": "npm test -- --run tests/legacyDirectEvaluatorOracle.test.ts tests/manifoldPlanBackend.test.ts",
+        "isolation": "fresh evaluator/backend session per terminal source"
+      },
+      "work": {
+        "unit": "one of cooperative cancellation, source-limit refusal, preview/full equivalence, or cleanup-failure terminal",
+        "unitsPerCleanRun": 4,
+        "cleanRunsRequired": 5,
+        "seeds": [
+          "0x5eed000000000001",
+          "0x5eed000000000002",
+          "0x5eed000000000003",
+          "0x5eed000000000004",
+          "0x5eed000000000005"
+        ],
+        "plannedUnits": 40
+      },
+      "expected": {
+        "terminal": "mixed-success-and-typed-refusal",
+        "assertions": [
+          "cooperative cancellation remains a distinct cancelled terminal",
+          "source over 250000 UTF-16 code units refuses before backend session acquisition",
+          "preview/full comparison follows the separately frozen quality rules",
+          "cleanup failure never publishes a success and quarantines indeterminate ownership"
+        ],
+        "failureDisposition": "block-g1"
+      },
+      "evidenceState": "not-executed-clean-post-freeze",
+      "blocksQualification": true
+    },
+    {
+      "id": "node-worker-identifiers",
+      "claim": "The real Node worker_threads structured-clone boundary enforces 256/257 for each identity field independently and recovers afterward.",
+      "surface": "node-worker",
+      "executionEnvironmentIds": [
+        "ubuntu-node20",
+        "ubuntu-node22"
+      ],
+      "harness": {
+        "kind": "vitest",
+        "entrypoints": [
+          "tests/geometryWorkerRealBoundary.test.ts"
+        ],
+        "command": "npm test -- --run tests/geometryWorkerRealBoundary.test.ts",
+        "isolation": "fresh real worker_threads realm for every qualification request"
+      },
+      "work": {
+        "unit": "one independently controlled field/length pair from identifierBoundaries",
+        "unitsPerCleanRun": 6,
+        "cleanRunsRequired": 5,
+        "seeds": [
+          "0x5eed000000000001",
+          "0x5eed000000000002",
+          "0x5eed000000000003",
+          "0x5eed000000000004",
+          "0x5eed000000000005"
+        ],
+        "plannedUnits": 60
+      },
+      "expected": {
+        "terminal": "mixed-success-and-typed-refusal",
+        "assertions": [
+          "entityId 256 succeeds and entityId 257 refuses before transfer",
+          "instanceId 256 succeeds and instanceId 257 refuses before transfer",
+          "operationId 256 succeeds and operationId 257 refuses before transfer",
+          "every 257 refusal is followed by success in a fresh realm"
+        ],
+        "failureDisposition": "block-g1"
+      },
+      "evidenceState": "not-executed-clean-post-freeze",
+      "blocksQualification": true
+    },
+    {
+      "id": "browser-chromium-actual-vite",
+      "claim": "Actual Chromium executes the Vite-emitted qualification Worker and satisfies all six ID boundaries plus hang/recovery semantics.",
+      "surface": "vite-browser",
+      "executionEnvironmentIds": [
+        "vite-chromium"
+      ],
+      "harness": {
+        "kind": "vite-browser",
+        "entrypoints": [
+          "scripts/run-browser-qualification-supervisor.mjs",
+          "scripts/run-browser-qualification.mjs",
+          "tests/fixtures/browser-qualification.html",
+          "tests/fixtures/browser-qualification.ts",
+          "tests/fixtures/browser-qualification.worker.ts"
+        ],
+        "command": "node scripts/run-browser-qualification-supervisor.mjs --mode actual --browser chromium --run-index <1|2|3>",
+        "isolation": "one fresh Linux supervisor owns one detached POSIX process group containing one Vite build/preview, browser context, page, and disposable Worker sequence; it enforces a 150000 ms outer deadline, hard-kills and joins on timeout, and publishes only after the process group is empty"
+      },
+      "work": {
+        "unit": "one of six independent ID boundary requests, confirmed hang, main-thread responsiveness probe, fresh-realm recovery, or post-refusal recovery",
+        "unitsPerCleanRun": 10,
+        "cleanRunsRequired": 3,
+        "seeds": [
+          "0x5eed000000000001",
+          "0x5eed000000000002",
+          "0x5eed000000000003"
+        ],
+        "plannedUnits": 30
+      },
+      "expected": {
+        "terminal": "mixed-success-and-typed-refusal",
+        "assertions": [
+          "page is served through actual Vite and the emitted module Worker loads with correct MIME and same-origin policy",
+          "all six independently controlled 256/257 ID cases match identifierBoundaries",
+          "started handshake precedes the non-cooperative loop and the page remains responsive",
+          "termination is requested before deadline settlement; no join claim is made",
+          "the next request runs in a fresh Worker epoch",
+          "this invocation represents one clean-run fragment only; three-run aggregation is external and remains unexecuted"
+        ],
+        "failureDisposition": "block-g1"
+      },
+      "evidenceState": "not-executed-clean-post-freeze",
+      "blocksQualification": true
+    },
+    {
+      "id": "browser-webkit-actual-vite",
+      "claim": "Actual WebKit executes the Vite-emitted qualification Worker and satisfies all six ID boundaries plus hang/recovery semantics.",
+      "surface": "vite-browser",
+      "executionEnvironmentIds": [
+        "vite-webkit"
+      ],
+      "harness": {
+        "kind": "vite-browser",
+        "entrypoints": [
+          "scripts/run-browser-qualification-supervisor.mjs",
+          "scripts/run-browser-qualification.mjs",
+          "tests/fixtures/browser-qualification.html",
+          "tests/fixtures/browser-qualification.ts",
+          "tests/fixtures/browser-qualification.worker.ts"
+        ],
+        "command": "node scripts/run-browser-qualification-supervisor.mjs --mode actual --browser webkit --run-index <1|2|3>",
+        "isolation": "one fresh Linux supervisor owns one detached POSIX process group containing one Vite build/preview, browser context, page, and disposable Worker sequence; it enforces a 150000 ms outer deadline, hard-kills and joins on timeout, and publishes only after the process group is empty"
+      },
+      "work": {
+        "unit": "one of six independent ID boundary requests, confirmed hang, main-thread responsiveness probe, fresh-realm recovery, or post-refusal recovery",
+        "unitsPerCleanRun": 10,
+        "cleanRunsRequired": 3,
+        "seeds": [
+          "0x5eed000000000001",
+          "0x5eed000000000002",
+          "0x5eed000000000003"
+        ],
+        "plannedUnits": 30
+      },
+      "expected": {
+        "terminal": "mixed-success-and-typed-refusal",
+        "assertions": [
+          "page is served through actual Vite and the emitted module Worker loads with correct MIME and same-origin policy",
+          "all six independently controlled 256/257 ID cases match identifierBoundaries",
+          "started handshake precedes the non-cooperative loop and the page remains responsive",
+          "termination is requested before deadline settlement; no join claim is made",
+          "the next request runs in a fresh Worker epoch",
+          "this invocation represents one clean-run fragment only; three-run aggregation is external and remains unexecuted"
+        ],
+        "failureDisposition": "block-g1"
+      },
+      "evidenceState": "not-executed-clean-post-freeze",
+      "blocksQualification": true
+    },
+    {
+      "id": "mcp-supervisor-hard-kill",
+      "claim": "The MCP supervisor bounds startup/execution/cancellation/join, hard-kills non-cooperative children, contains output, and never reuses an uncertain realm.",
+      "surface": "mcp-supervisor",
+      "executionEnvironmentIds": [
+        "ubuntu-node20",
+        "ubuntu-node22",
+        "macos-node20",
+        "windows-node20"
+      ],
+      "harness": {
+        "kind": "vitest",
+        "entrypoints": [
+          "tests/fixtures/mcp-manifold-plan-qualification.worker.mjs",
+          "tests/mcpManifoldPlanQualificationSupervisor.test.ts"
+        ],
+        "command": "npm test -- --run tests/mcpManifoldPlanQualificationSupervisor.test.ts",
+        "isolation": "fresh parent process per clean run and a new worker_threads child per admitted job"
+      },
+      "work": {
+        "unit": "one of 13 predeclared supervisor scenarios, including controlled all-ID boundary requests",
+        "unitsPerCleanRun": 13,
+        "cleanRunsRequired": 5,
+        "seeds": [
+          "0x5eed000000000001",
+          "0x5eed000000000002",
+          "0x5eed000000000003",
+          "0x5eed000000000004",
+          "0x5eed000000000005"
+        ],
+        "plannedUnits": 260
+      },
+      "expected": {
+        "terminal": "mixed-success-and-typed-refusal",
+        "assertions": [
+          "startup timeout is distinct from execution deadline",
+          "non-cooperative child is terminated and its join resolves before admission reopens",
+          "join timeout permanently quarantines the supervisor",
+          "only one correlated terminal is accepted and late output is fenced",
+          "child stdout and stderr never reach MCP stdout",
+          "all six independent identity boundary cases match identifierBoundaries",
+          "a bounded refusal is followed by success in a fresh child"
+        ],
+        "failureDisposition": "block-g1"
+      },
+      "evidenceState": "not-executed-clean-post-freeze",
+      "blocksQualification": true
+    },
+    {
+      "id": "mcp-stdio-store-isolation",
+      "claim": "Actual MCP stdio and DuckDB persistence remain primary-only while a confirmed shadow child is non-cooperative and then hard-killed.",
+      "surface": "mcp-stdio-store",
+      "executionEnvironmentIds": [
+        "ubuntu-node20",
+        "ubuntu-node22",
+        "macos-node20",
+        "windows-node20"
+      ],
+      "harness": {
+        "kind": "node-stdio",
+        "entrypoints": [
+          "tests/fixtures/mcp-shadow-noncooperative.worker.mjs",
+          "tests/fixtures/mcp-shadow-stdio-server.ts",
+          "tests/mcpManifoldPlanQualificationStdio.test.ts"
+        ],
+        "command": "npm test -- --run tests/mcpManifoldPlanQualificationStdio.test.ts",
+        "isolation": "fresh MCP server process and fresh in-memory DuckDB database per clean run"
+      },
+      "work": {
+        "unit": "one protocol phase: initialize, first direct analyze/shadow entry, concurrent ping/tools-list, deadline settlement, history check, or second direct analyze/history check",
+        "unitsPerCleanRun": 6,
+        "cleanRunsRequired": 10,
+        "seeds": [
+          "0x5eed000000000001",
+          "0x5eed000000000002",
+          "0x5eed000000000003",
+          "0x5eed000000000004",
+          "0x5eed000000000005",
+          "0x5eed000000000006",
+          "0x5eed000000000007",
+          "0x5eed000000000008",
+          "0x5eed000000000009",
+          "0x5eed00000000000a"
+        ],
+        "plannedUnits": 240
+      },
+      "expected": {
+        "terminal": "pass",
+        "assertions": [
+          "the child started handshake and non-cooperative-loop latch occur before liveness probes",
+          "ping and tools/list each respond within the responsiveness budget before shadow settlement",
+          "exactly one deadline terminal is recorded and the child is joined",
+          "private child stdout is captured and every server stdout line is valid JSON-RPC",
+          "history contains exactly one primary direct build after the late-output window",
+          "the next direct analyze succeeds and history contains exactly two primary direct builds"
+        ],
+        "failureDisposition": "block-g1"
+      },
+      "evidenceState": "not-executed-clean-post-freeze",
+      "blocksQualification": true
+    },
+    {
+      "id": "dependency-and-cutover-audit",
+      "claim": "The candidate maintains the narrow Manifold import boundary and cannot alter production routing or registry state.",
+      "surface": "dependency-boundary",
+      "executionEnvironmentIds": [
+        "ubuntu-node20",
+        "ubuntu-node22"
+      ],
+      "harness": {
+        "kind": "static-audit",
+        "entrypoints": [
+          "src/services/manifoldPlanBackend.ts",
+          "tests/manifoldPlanBackend.test.ts",
+          "tests/mcpManifoldPlanQualificationStdio.test.ts"
+        ],
+        "command": "npm test -- --run tests/manifoldPlanBackend.test.ts tests/mcpManifoldPlanQualificationStdio.test.ts",
+        "isolation": "read-only source graph scan plus test-only injected MCP geometry service"
+      },
+      "work": {
+        "unit": "one complete dependency and production-route audit",
+        "unitsPerCleanRun": 1,
+        "cleanRunsRequired": 5,
+        "seeds": [
+          "0x5eed000000000001",
+          "0x5eed000000000002",
+          "0x5eed000000000003",
+          "0x5eed000000000004",
+          "0x5eed000000000005"
+        ],
+        "plannedUnits": 10
+      },
+      "expected": {
+        "terminal": "pass",
+        "assertions": [
+          "kernel imports are confined to the narrow KernelOps adapter",
+          "compiler, core, UI, and production MCP registry do not import qualification supervisor or child",
+          "legacy/current production route remains direct-v5 with automatic fallback false",
+          "MCP shadow receives no production ModelStore reference"
+        ],
+        "failureDisposition": "reset-and-block-g1"
+      },
+      "evidenceState": "not-executed-clean-post-freeze",
+      "blocksQualification": true
+    },
+    {
+      "id": "mcp-memory-slope",
+      "claim": "Repeated MCP child start/terminal/terminate/join jobs stay within the frozen RSS, heapUsed, external, and arrayBuffers slope and endpoint-drift budgets.",
+      "surface": "memory",
+      "executionEnvironmentIds": [
+        "ubuntu-node20",
+        "ubuntu-node22"
+      ],
+      "harness": {
+        "kind": "vitest",
+        "entrypoints": [
+          "tests/fixtures/mcp-manifold-plan-memory-probe.ts",
+          "tests/mcpManifoldPlanMemorySlope.test.ts"
+        ],
+        "command": "npm test -- --run tests/mcpManifoldPlanMemorySlope.test.ts",
+        "isolation": "the test spawns a fresh Node --expose-gc probe process; jobs are serial, each uses a new joined child, and every measured sample follows three GC/event-loop passes"
+      },
+      "work": {
+        "unit": "one measured MCP child lifecycle after four unmeasured warmup jobs",
+        "unitsPerCleanRun": 24,
+        "cleanRunsRequired": 5,
+        "seeds": [
+          "0x5eed000000000001",
+          "0x5eed000000000002",
+          "0x5eed000000000003",
+          "0x5eed000000000004",
+          "0x5eed000000000005"
+        ],
+        "plannedUnits": 240
+      },
+      "expected": {
+        "terminal": "pass",
+        "assertions": [
+          "each environment and each clean run independently meets all mcp-memory-job budgets",
+          "all 4 warmup plus 24 measured children join and no supervisor epoch remains active",
+          "RSS slope is at most 2097152 bytes/job; heapUsed and external slopes are each at most 131072 bytes/job; arrayBuffers slope is at most 65536 bytes/job",
+          "last-minus-first drift is at most 33554432 RSS bytes, 4194304 heapUsed bytes, 4194304 external bytes, and 2097152 arrayBuffers bytes",
+          "no median or aggregate may hide a failing clean run"
+        ],
+        "failureDisposition": "block-g1"
+      },
+      "evidenceState": "not-executed-clean-post-freeze",
+      "blocksQualification": true
+    },
+    {
+      "id": "browser-memory-slope",
+      "claim": "Repeated actual-browser Worker creation/termination jobs stay within the frozen browser process-tree RSS slope and endpoint-drift budgets.",
+      "surface": "memory",
+      "executionEnvironmentIds": [
+        "vite-chromium",
+        "vite-webkit"
+      ],
+      "harness": {
+        "kind": "resource-probe",
+        "entrypoints": [
+          "scripts/run-browser-qualification-supervisor.mjs",
+          "scripts/run-manifold-g1-memory-qualification.mjs",
+          "tests/fixtures/browser-memory-qualification.html",
+          "tests/fixtures/browser-memory-qualification.ts"
+        ],
+        "command": "node scripts/run-browser-qualification-supervisor.mjs --mode memory --browser <chromium|webkit> --run-index <1|2|3>",
+        "isolation": "one fresh Linux supervisor owns one detached POSIX process group for one actual browser engine and one clean-run fragment; it enforces a 30 minute outer deadline and empty-group publication while the child uses one new Worker per job and samples full browser process-tree RSS after bounded settlement"
+      },
+      "work": {
+        "unit": "one measured actual-browser Worker lifecycle after warmup",
+        "unitsPerCleanRun": 500,
+        "cleanRunsRequired": 3,
+        "seeds": [
+          "0x5eed000000000001",
+          "0x5eed000000000002",
+          "0x5eed000000000003"
+        ],
+        "plannedUnits": 3000
+      },
+      "expected": {
+        "terminal": "pass",
+        "assertions": [
+          "each browser and each clean run independently meets all browser-worker-job budgets",
+          "every job requests Worker termination before settlement and the next unit uses a new realm",
+          "one invocation represents exactly one of three required clean runs and makes no aggregate qualification claim",
+          "no Worker join or immediate-resource-reclamation claim is inferred",
+          "no median or aggregate may hide a failing browser run"
+        ],
+        "failureDisposition": "block-g1"
+      },
+      "evidenceState": "not-executed-clean-post-freeze",
+      "blocksQualification": true
+    }
+  ],
+  "resourceBudgets": {
+    "limits": {
+      "sourceUtf16CodeUnits": 250000,
+      "identityUtf16CodeUnits": 256,
+      "qualificationIpcBytes": 33554432,
+      "mcpStartupTimeoutMs": 2000,
+      "mcpExecutionDeadlineMs": 2500,
+      "mcpTerminationJoinTimeoutMs": 1000,
+      "browserStartupTimeoutMs": 10000,
+      "browserExecutionDeadlineMs": 10000,
+      "browserHangFixtureDeadlineMs": 80
+    },
+    "responsiveness": {
+      "probe": "concurrent MCP ping and tools/list while shadow child is confirmed executing",
+      "sampleCountPerCleanRun": 100,
+      "p99MaxMs": 250,
+      "maxSingleMs": 1000
+    },
+    "memoryExperiments": [
+      {
+        "id": "mcp-memory-job",
+        "environmentIds": [
+          "ubuntu-node20",
+          "ubuntu-node22"
+        ],
+        "warmupJobs": 4,
+        "measuredJobsPerEnvironment": 24,
+        "sampleEveryJobs": 1,
+        "cleanRuns": 5,
+        "samplingPoint": "after each measured child terminal and terminate/join resolution, with supervisor snapshot inactive, then after three global.gc plus setImmediate passes",
+        "gcPolicy": "Node runs with --expose-gc; each measured sample performs exactly three sequential global.gc calls, each followed by one setImmediate turn",
+        "gcPassesPerSample": 3,
+        "slopeMethod": "ordinary-least-squares over every measured sample indexed from zero; pass each metric and clean run independently",
+        "slopeBytesPerJobMax": {
+          "rss": 2097152,
+          "heapUsed": 131072,
+          "external": 131072,
+          "arrayBuffers": 65536
+        },
+        "endpointDriftBytesMax": {
+          "rss": 33554432,
+          "heapUsed": 4194304,
+          "external": 4194304,
+          "arrayBuffers": 2097152
+        }
+      },
+      {
+        "id": "browser-worker-cycle",
+        "environmentIds": [
+          "vite-chromium",
+          "vite-webkit"
+        ],
+        "warmupJobs": 50,
+        "measuredJobsPerEnvironment": 500,
+        "sampleEveryJobs": 25,
+        "cleanRuns": 3,
+        "samplingPoint": "after Worker termination request, terminal settlement, two requestAnimationFrame callbacks, event-loop drain, and host process-tree RSS collection",
+        "gcPolicy": "no forced browser GC; process-tree RSS is authoritative and each engine is evaluated separately",
+        "gcPassesPerSample": 0,
+        "slopeMethod": "ordinary-least-squares over recorded post-warmup samples using measured job ordinal as x; pass each metric and clean run independently",
+        "slopeBytesPerJobMax": {
+          "rss": 131072
+        },
+        "endpointDriftBytesMax": {
+          "rss": 67108864
+        }
+      }
+    ]
+  },
+  "executionProtocol": {
+    "candidateRunId": "semantic-manifold-g1-candidate-run-v40",
+    "priorResultsMayBeImported": false,
+    "cleanRunDefinition": [
+      "Start from exact v40 frozen artifact and disjoint bundle digests in a clean checkout; generated result files and this plan's validator test are outside every source bundle.",
+      "Before install, delete root and qualification-only node_modules, build outputs, Vite and Vitest caches, temporary browser profiles, DuckDB files, provisioned browser trees, and prior qualification results.",
+      "Construct a sanitized environment from the u02 frozen allowlist; reject NODE_OPTIONS, NODE_PATH, npm override variables, preload hooks, proxies, Playwright browser-path/download overrides, and every unlisted variable.",
+      "Verify the u02 exact Node binary, npm CLI 10.9.8 binary and package bytes, Ubuntu 24.04 image, architecture, platform-native DuckDB and esbuild artifacts, and registry identity before importing candidate code.",
+      "Install the root graph with npm ci --include=dev --registry=https://registry.npmjs.org/ --audit=false --fund=false and prove root package.json plus package-lock.json contain no Playwright or playwright-core dependency or package node.",
+      "Install the isolated browser graph with npm ci --prefix tools/browser-qualification --ignore-scripts --include=dev --registry=https://registry.npmjs.org/ --audit=false --fund=false; platform-optional fsevents remains lock-bound and is installed only where npm admits it.",
+      "Recompute every artifact and canonical bundle hash, verify all bound paths are ordinary non-symlink files with LF bytes, and verify all 13 installed Playwright package license files against the frozen license manifest.",
+      "Provision browsers only beneath the u03 canonical frozen provision root; before candidate import verify each engine revision, reported version, full archive or installed-tree manifest, executable, helpers, resources, ffmpeg, shared libraries, and all associated license and notice digests.",
+      "Use a fresh operating-system job for each clean run; browser rows invoke one outer Linux supervisor per engine and run index, while no warm Worker, Manifold instance, browser process group, database, or module cache crosses a boundary.",
+      "Record OS image, architecture, runtime, npm, native-package and browser-tree digests, sanitized-environment digest, seed, start/end timestamps, exact command, exit status, per-unit count, resource samples, and bounded stdout/stderr artifact digests.",
+      "Do not retry a failed work unit, filter a case, adjust a timeout/budget, or substitute a browser build inside the same candidate run."
+    ],
+    "globalSeeds": [
+      "0x5eed000000000001",
+      "0x5eed000000000002",
+      "0x5eed000000000003",
+      "0x5eed000000000004",
+      "0x5eed000000000005",
+      "0x5eed000000000006",
+      "0x5eed000000000007",
+      "0x5eed000000000008",
+      "0x5eed000000000009",
+      "0x5eed00000000000a"
+    ],
+    "plannedWorkUnits": 4740,
+    "concurrencyPolicy": "one qualification row per fresh process; memory rows serial; no shared worker realm between units",
+    "resultPath": "output/qualification/semantic-manifold-g1-candidate-run-v40/result.json",
+    "admissionRule": "all bindings frozen, no unresolved rows that block execution, and execution authorization recorded",
+    "passRule": "every matrix row passes every required clean run within frozen budgets; zero false-complete; no skipped unit; no result reuse"
+  },
+  "resetPolicy": {
+    "unitFailure": "reject-candidate; no rerun-to-green within the same candidate run",
+    "infrastructureFailure": "invalidate the entire clean run; one documented restart allowed only after proving candidate code did not execute",
+    "mutationsAfterFreeze": "any scoped source, oracle, comparator, harness, dependency, seed, threshold, or environment change requires a new plan version and resets all counters",
+    "triggers": [
+      {
+        "id": "scoped-byte-change",
+        "condition": "Any path in a frozen artifact or bundle changes bytes or membership.",
+        "action": "discard-entire-candidate-run-and-start-new-plan-version"
+      },
+      {
+        "id": "toolchain-change",
+        "condition": "Node, browser, operating-system image, package-lock, Vite, TypeScript, serializer, or Manifold dependency identity changes.",
+        "action": "discard-entire-candidate-run-and-start-new-plan-version"
+      },
+      {
+        "id": "plan-change",
+        "condition": "Scope, oracle, comparator, mutation, seed, work count, clean-run count, budget, timeout, reset rule, or pass rule changes.",
+        "action": "discard-entire-candidate-run-and-start-new-plan-version"
+      },
+      {
+        "id": "candidate-failure",
+        "condition": "Any planned unit has an unexpected terminal, mismatch, timeout, budget breach, stdout contamination, late persistence, skipped case, or retry.",
+        "action": "reject-candidate"
+      },
+      {
+        "id": "proven-infrastructure-before-import",
+        "condition": "A host/provisioning failure occurs and logs prove candidate code and browser Worker were never imported or executed.",
+        "action": "discard-entire-candidate-run-and-restart-same-frozen-plan"
+      },
+      {
+        "id": "unproven-infrastructure-failure",
+        "condition": "A failure is labelled infrastructure-related but candidate execution cannot be ruled out.",
+        "action": "reject-candidate"
+      }
+    ]
+  },
+  "approvals": {
+    "independenceClassification": "role-separated-agents-not-organizationally-independent",
+    "qualificationApproval": "not-approved",
+    "records": [
+      {
+        "role": "plan-owner",
+        "principal": "repository-owner",
+        "principalType": "human",
+        "organizationallyIndependent": false,
+        "status": "approved"
+      },
+      {
+        "role": "candidate-owner",
+        "principal": "repository-owner",
+        "principalType": "human",
+        "organizationallyIndependent": false,
+        "status": "approved"
+      },
+      {
+        "role": "oracle-reviewer",
+        "principal": "codex-oracle-critic-agent-role",
+        "principalType": "agent",
+        "organizationallyIndependent": false,
+        "status": "recorded-nonapproval"
+      },
+      {
+        "role": "internal-critic",
+        "principal": "codex-qualification-critic-agent-role",
+        "principalType": "agent",
+        "organizationallyIndependent": false,
+        "status": "recorded-nonapproval"
+      },
+      {
+        "role": "qualification-executor",
+        "principal": "repository-owner",
+        "principalType": "human",
+        "organizationallyIndependent": false,
+        "status": "pending"
+      },
+      {
+        "role": "organizationally-independent-reviewer",
+        "principal": "waived-solo-dual-role",
+        "principalType": "human",
+        "organizationallyIndependent": false,
+        "status": "recorded-nonapproval"
+      },
+      {
+        "role": "release-authority",
+        "principal": "repository-owner",
+        "principalType": "human",
+        "organizationallyIndependent": false,
+        "status": "approved"
+      }
+    ]
+  },
+  "cutoverPolicy": {
+    "productionCutoverAuthorized": false,
+    "productionRegistryMutationAllowed": false,
+    "productBehaviorChangeAllowed": false,
+    "automaticFallbackChangeAllowed": false,
+    "qualificationMayActivateProvider": false,
+    "nextAuthorization": "separate approved post-G1 plan"
+  },
+  "unresolvedRows": [
+    {
+      "id": "u07-clean-post-freeze-evidence",
+      "kind": "evidence",
+      "status": "open",
+      "blocksExecutionAdmission": false,
+      "blocksQualification": true,
+      "resolution": "Once execution admission is ready, execute all 4740 planned work units in the required clean runs and publish a separate append-only result artifact; no prior green result may be imported.",
+      "ownerRole": "qualification-executor"
+    }
+  ]
+}

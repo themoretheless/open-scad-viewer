@@ -1,0 +1,59 @@
+{
+  "id": "own-rust-cad-v15",
+  "successorOf": "docs/qualification/own-rust-cad-v14.json",
+  "previousSha256": "fe7896e45d2a520498aee4f4da0b7b0bfaa302c6dde5150c860bcc8d4967dd24",
+  "recordedAt": "2026-09-24",
+  "purpose": "Append-only current-byte fingerprint for the rebuilt geometry kernel after the committed brep-core analytic surface intersections, gcode-core 3mf packaging/parser and stable expression eval; the V12 bounded non-manifold and mixed-dimensional topology scope is unchanged.",
+  "qualificationClaim": "none",
+  "wasm": {
+    "path": "src/generated/geometry-kernels/kernel_bg.wasm",
+    "sha256": "a93ba6e67df2cd2534dcdc6b524a71506dc6f2092cbb4025b6597e654295d8f6",
+    "byteLength": 8656756
+  },
+  "sourceBundle": {
+    "canonicalization": "UTF-8 path sorted: path + NUL + exact file bytes + LF",
+    "sha256": "6e74b82752c0396196d8b12e318a614a793b422aca647394257de4a7b3e5b16b",
+    "paths": [
+      "crates/brep-core/src/analysis.rs",
+      "crates/brep-core/src/analytic.rs",
+      "crates/brep-core/src/analytic/loft.rs",
+      "crates/brep-core/src/analytic_features.rs",
+      "crates/brep-core/src/close_topology.rs",
+      "crates/brep-core/src/iges_interchange_v2.rs",
+      "crates/brep-core/src/imprint_pipeline.rs",
+      "crates/brep-core/src/intersections.rs",
+      "crates/brep-core/src/lib.rs",
+      "crates/brep-core/src/nurbs_ss_g6.rs",
+      "crates/brep-core/src/operations.rs",
+      "crates/brep-core/src/solid_audit.rs",
+      "crates/brep-core/src/step_interchange_v3.rs",
+      "crates/brep-core/src/transactions.rs",
+      "crates/brep-core/src/trim_sew.rs",
+      "crates/brep-core/src/uv_arrangement.rs",
+      "crates/brep-topology/src/lib.rs",
+      "crates/geometry-bridge/src/brep.rs",
+      "crates/geometry-bridge/src/lib.rs",
+      "crates/geometry-bridge/src/tests.rs",
+      "src/services/cadIges.ts",
+      "src/services/cadNurbsStep.ts",
+      "src/services/geometry/brep.ts",
+      "src/services/geometry/brepCapability.ts",
+      "tests/brepInterchangeV11.test.ts",
+      "tests/brepQualificationV10.test.ts",
+      "tests/brepQualificationV11.test.ts",
+      "tests/brepQualificationV12.test.ts",
+      "tests/brepQualificationV8.test.ts",
+      "tests/brepQualificationV9.test.ts"
+    ]
+  },
+  "dependencyFingerprints": {
+    "noticesSha256": "789499bf4bcbaacad6ead9d5e8f51e5ecbd3ec37bb9b9ef2d45bb7c115bd5c84",
+    "npmLockfileSha256": "8fb1cab7fde2b4f8b9331cfdddbc9dc0909b1ccf2ca5d26fb0c6a47b976145d1",
+    "rustLockfileSha256": "d43d416fe065b1221ff2c738d9da7d87690c2d0e0fc39dd9a4461e8aa5f2a9bd"
+  },
+  "claimBoundary": [
+    "This is a reproducible byte fingerprint, not an external clean qualification run.",
+    "It covers only the finite explicit topology, correspondence, direct-cell interchange and typed-refusal matrix.",
+    "It does not approve G0, G1, production cutover, silent healing, tolerance growth, arbitrary branching or singular topology."
+  ]
+}
