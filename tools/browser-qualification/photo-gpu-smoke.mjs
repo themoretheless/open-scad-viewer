@@ -1,6 +1,7 @@
-// Direct browser benchmark for the photogrammetry WebGPU dense sweep. This
+// Direct browser benchmark for the photogrammetry WebGPU stages. This
 // avoids the app UI and measures the production kernel/worker-adjacent path:
-// decode shell6 PNGs, build sparse state, densePrepare(), then runGpuSweep()
+// decode shell6 PNGs, sparse matching (browser WebGPU round trip vs the CPU
+// reference on the same session), densePrepare(), then runGpuSweep()
 // with baseline WGSL and the kernel-provided linear_indexing variant.
 import { chromium } from 'playwright'
 import { createServer } from 'vite'
@@ -24,8 +25,10 @@ await writeFile(join(ROOT, 'index.html'), '<div id="log">running</div><script ty
 await writeFile(join(ROOT, 'main.ts'), `
 import { compilePhotogrammetryKernel } from '/src/services/photogrammetry/module.ts'
 import { PhotogrammetryKernel } from '/src/services/photogrammetry/kernel.ts'
+import type {PhotoReconstruction} from '/src/services/photogrammetry/kernel.ts'
 import { decodePhoto } from '/src/services/photogrammetry/input.ts'
 import { runGpuSweep, SWEEP_LINEAR_INDEXING_VARIANT } from '/src/services/photogrammetry/gpuSweep.ts'
+import { runGpuMatching } from '/src/services/photogrammetry/gpuMatching.ts'
 
 const photoNames = ${JSON.stringify(PHOTO_NAMES)}
 const iterations = ${JSON.stringify(ITERATIONS)}
@@ -65,9 +68,37 @@ try {
   const photos = await Promise.all(photoNames.map(loadPhoto))
   const decodeMs = performance.now() - decodeStart
   for (const photo of photos) kernel.add(photo)
-  const sparseStart = performance.now()
-  const sparse = kernel.sparse()
-  const sparseMs = performance.now() - sparseStart
+  // Sparse: browser WebGPU matching round trip first (when eligible), then the
+  // CPU reference measured on the same session for a direct A/B.
+  const matchPrepareStart = performance.now()
+  const matchPrepared = kernel.sparsePrepare()
+  const sparseGpuPrepareMs = performance.now() - matchPrepareStart
+  let sparse: PhotoReconstruction | null = null
+  let sparseMatch = null
+  let sparseGpuFinishMs = null
+  let sparseGpuTotalMs = null
+  const gpuStart = performance.now()
+  if (matchPrepared) {
+    sparseMatch = await measure('photo-matching', () => runGpuMatching(matchPrepared.payload, matchPrepared.wgsl))
+    const matchBytes = await runGpuMatching(matchPrepared.payload, matchPrepared.wgsl)
+    const finishStart = performance.now()
+    sparse = kernel.sparseFinish(matchBytes)
+    sparseGpuFinishMs = performance.now() - finishStart
+    sparseGpuTotalMs = performance.now() - gpuStart
+  }
+  let sparseCpuMs: number
+  if (!sparse) {
+    const cpuStart = performance.now()
+    sparse = kernel.sparse()
+    sparseCpuMs = performance.now() - cpuStart
+  } else {
+    // The cameras came from the GPU round trip; measure the CPU reference
+    // separately on the same session for a direct A/B.
+    const cpuStart = performance.now()
+    kernel.sparse()
+    sparseCpuMs = performance.now() - cpuStart
+  }
+  const sparseMs = sparseGpuTotalMs ?? sparseCpuMs
   const prepared = kernel.densePrepare(resolution)
   if (!prepared) throw new Error('densePrepare returned null')
   const linear = prepared.wgslVariants?.find(variant => variant.label === SWEEP_LINEAR_INDEXING_VARIANT)
@@ -81,6 +112,12 @@ try {
     resolution,
     decodeMs,
     sparseMs,
+    sparsePath: matchPrepared ? 'gpu' : 'cpu',
+    sparseGpuPrepareMs: matchPrepared ? sparseGpuPrepareMs : null,
+    sparseGpuFinishMs,
+    sparseGpuTotalMs,
+    sparseCpuMs,
+    sparseMatch,
     cameras: sparse.cameras.length,
     points: sparse.positions.length / 3,
     wgslLanguageFeatures: [...(navigator.gpu?.wgslLanguageFeatures ?? [])].sort(),

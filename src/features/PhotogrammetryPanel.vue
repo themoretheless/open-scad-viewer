@@ -363,6 +363,7 @@ onBeforeUnmount(() => {
    <p v-if="surface?.denseDiagnostics?.evaluatedHypotheses!==undefined" class="muted">{{ru?'Проверено вариантов глубины':'Depth hypotheses evaluated'}}: {{surface.denseDiagnostics.evaluatedHypotheses.toLocaleString()}} · {{ru?'сопоставлений участков':'source patches'}}: {{surface.denseDiagnostics.evaluatedSourcePatches?.toLocaleString()}} · {{ru?'выборок пикселей':'pixel samples'}}: {{surface.denseDiagnostics.sampledSourcePixels?.toLocaleString()}}.</p>
    <p v-if="timings?.preparationMs!==undefined">{{ru?'Передача и исправление снимков':'Upload and photo correction'}}: {{(timings.preparationMs/1000).toFixed(2)}} s.</p>
    <p v-if="timings">{{ru?'Камеры':'Cameras'}}: {{(timings.sparseMs/1000).toFixed(2)}} s · {{ru?'Глубина и поверхность':'Depth and surface'}}: {{(timings.denseMs/1000).toFixed(2)}} s.</p>
+   <p v-if="timings?.sparsePath==='gpu'" class="muted">{{ru?'Сопоставление на GPU':'GPU matching'}}: {{(timings.sparsePrepareMs!/1000).toFixed(2)}} + {{(timings.sparseMatchMs!/1000).toFixed(2)}} + {{(timings.sparseFinishMs!/1000).toFixed(2)}} s ({{ru?'подготовка, GPU, сборка':'prepare, GPU, finish'}}).</p>
    <button type="button" @click="saveReport">{{ru?'Скачать отчёт JSON':'Download JSON report'}}</button>
   </details>
   <p class="muted">{{ru?'Экспериментальная реконструкция: возможны пропуски, фон и разрывы. Поддерживаются JPG, PNG и WebP; обработка остаётся на устройстве.':'Experimental reconstruction: gaps, background, and discontinuities are possible. JPG, PNG, and WebP; processing stays on device.'}}</p>

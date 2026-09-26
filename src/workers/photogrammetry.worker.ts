@@ -47,11 +47,18 @@ async function reconstructSurfaceGpu(kernel: PhotogrammetryKernel, resolution: n
 }
 
 /** Sparse matching via the browser WebGPU; any failure falls back to the CPU path. */
-async function reconstructSparseGpu(kernel: PhotogrammetryKernel): Promise<PhotoReconstruction | null> {
+async function reconstructSparseGpu(kernel: PhotogrammetryKernel, timings: PhotoTimings): Promise<PhotoReconstruction | null> {
+  const prepareStart = performance.now()
   const prepared = kernel.sparsePrepare()
+  timings.sparsePrepareMs = performance.now() - prepareStart
   if (!prepared) return null
+  const matchStart = performance.now()
   const matched = await runGpuMatching(prepared.payload, prepared.wgsl)
-  return kernel.sparseFinish(matched)
+  timings.sparseMatchMs = performance.now() - matchStart
+  const finishStart = performance.now()
+  const reconstruction = kernel.sparseFinish(matched)
+  timings.sparseFinishMs = performance.now() - finishStart
+  return reconstruction
 }
 
 // Returns the promise so tests (and careful hosts) can await the async GPU stretch.
@@ -71,13 +78,23 @@ async function run(data: PhotoWorkerRequest): Promise<void> {
 
     post({type: 'stage', stage: 'cameras'})
     const sparseStart = performance.now()
-    const result = data.gpu
-      ? await reconstructSparseGpu(kernel).catch(error => {
-          post({type: 'warning', message: `WebGPU matching unavailable: ${errorMessage(error)}`})
-          return null
-        })
-      : null
-    const sparse = result ?? kernel.sparse()
+    let sparse: PhotoReconstruction
+    if (data.gpu) {
+      const gpu = await reconstructSparseGpu(kernel, timings).catch(error => {
+        post({type: 'warning', message: `WebGPU matching unavailable: ${errorMessage(error)}`})
+        return null
+      })
+      if (gpu) {
+        timings.sparsePath = 'gpu'
+        sparse = gpu
+      } else {
+        timings.sparsePath = 'cpu'
+        sparse = kernel.sparse()
+      }
+    } else {
+      timings.sparsePath = 'cpu'
+      sparse = kernel.sparse()
+    }
     timings.sparseMs = performance.now() - sparseStart
     post({type: 'sparse', result: sparse}, transferList(sparse))
 

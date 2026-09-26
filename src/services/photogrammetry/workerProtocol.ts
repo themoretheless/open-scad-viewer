@@ -15,6 +15,12 @@ export interface PhotoWorkerRequest {
 export interface PhotoTimings {
   preparationMs?: number
   sparseMs: number
+  /** Which matcher produced the cameras: browser WebGPU round trip or host CPU. */
+  sparsePath?: 'gpu' | 'cpu'
+  /** Browser GPU matching stage breakdown (present when sparsePath is 'gpu'). */
+  sparsePrepareMs?: number
+  sparseMatchMs?: number
+  sparseFinishMs?: number
   denseMs: number
 }
 

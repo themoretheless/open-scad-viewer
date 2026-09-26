@@ -223,7 +223,16 @@ describe('photogrammetry Worker failure isolation', () => {
     expect(kernel.sparseFinish).toHaveBeenCalledWith(matched)
     expect(kernel.sparse).not.toHaveBeenCalled()
     expect(events).toContainEqual({type: 'sparse', result: sparse})
-    expect(terminalEvents()[0].type).toBe('done')
+    const done = terminalEvents()[0]
+    expect(done.type).toBe('done')
+    if (done.type === 'done') {
+      expect(done.timings.sparsePath).toBe('gpu')
+      expect(done.timings.sparsePrepareMs).toBeGreaterThanOrEqual(0)
+      expect(done.timings.sparseMatchMs).toBeGreaterThanOrEqual(0)
+      expect(done.timings.sparseFinishMs).toBeGreaterThanOrEqual(0)
+      expect(done.timings.sparseMs)
+        .toBeGreaterThanOrEqual(done.timings.sparsePrepareMs! + done.timings.sparseMatchMs!)
+    }
   })
 
   it('falls back to the CPU sparse path when GPU matching declines', async () => {
@@ -231,7 +240,9 @@ describe('photogrammetry Worker failure isolation', () => {
     await run({...request, gpu: true})
     expect(kernel.sparse).toHaveBeenCalledOnce()
     expect(kernel.sparseFinish).not.toHaveBeenCalled()
-    expect(terminalEvents()[0].type).toBe('done')
+    const done = terminalEvents()[0]
+    expect(done.type).toBe('done')
+    if (done.type === 'done') expect(done.timings.sparsePath).toBe('cpu')
   })
 
   it('falls back to the CPU sparse path when GPU matching rejects', async () => {
