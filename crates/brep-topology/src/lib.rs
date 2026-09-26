@@ -551,6 +551,175 @@ impl<
     }
 }
 
+/// Which indexed entities an edit may have changed, for incremental
+/// revalidation. Appended entities (indices at or beyond the pre-edit length)
+/// are always implied; shrinking any array forces full validation because
+/// indices shift. The scope must list every pre-existing index whose
+/// validation-relevant data changed: vertex payloads, edge vertex
+/// references/degenerate flags, coedge edge references/reversed flags, face
+/// loop references, shell face lists/closed flags. Pure curve/surface/pcurve
+/// payload edits need no entries; tolerance changes need none either.
+/// Under-reporting is a contract violation: the snapshot may then publish a
+/// candidate the full validator would reject.
+#[derive(Clone, Debug, Default)]
+pub struct EditScope {
+    full: bool,
+    vertices: Vec<usize>,
+    edges: Vec<usize>,
+    loops: Vec<usize>,
+    faces: Vec<usize>,
+    shells: Vec<usize>,
+}
+impl EditScope {
+    /// Full revalidation; equivalent to [`TopologySnapshot::try_edit`].
+    pub fn full() -> Self {
+        Self {
+            full: true,
+            ..Self::default()
+        }
+    }
+    /// Nothing topology-relevant changed (geometry payloads only).
+    pub fn none() -> Self {
+        Self::default()
+    }
+    pub fn vertex(mut self, index: usize) -> Self {
+        self.vertices.push(index);
+        self
+    }
+    pub fn edge(mut self, index: usize) -> Self {
+        self.edges.push(index);
+        self
+    }
+    pub fn loop_(mut self, index: usize) -> Self {
+        self.loops.push(index);
+        self
+    }
+    pub fn face(mut self, index: usize) -> Self {
+        self.faces.push(index);
+        self
+    }
+    pub fn shell(mut self, index: usize) -> Self {
+        self.shells.push(index);
+        self
+    }
+}
+/// Which vertices, faces and shells must be rechecked after an edit.
+/// Everything else in validation is cheap and always runs in full so that
+/// error selection and ordering match full validation exactly.
+struct ValidationPlan {
+    full: bool,
+    vertices: FxHashSet<usize>,
+    faces: FxHashSet<usize>,
+    shells: FxHashSet<usize>,
+}
+impl ValidationPlan {
+    fn full() -> Self {
+        Self {
+            full: true,
+            vertices: FxHashSet::default(),
+            faces: FxHashSet::default(),
+            shells: FxHashSet::default(),
+        }
+    }
+    /// Expand a declared scope to the closure of entities whose checks read
+    /// changed data. Any out-of-range reference or shrunk array means the
+    /// edit was structural beyond the scope's description: fall back to full.
+    fn for_edit<C, S, P, V>(
+        old: &Model<C, S, P, V>,
+        scope: &EditScope,
+        new: &Model<C, S, P, V>,
+    ) -> Self {
+        let shrunk = new.vertices.len() < old.vertices.len()
+            || new.edges.len() < old.edges.len()
+            || new.loops.len() < old.loops.len()
+            || new.faces.len() < old.faces.len()
+            || new.shells.len() < old.shells.len()
+            || new.bodies.len() < old.bodies.len();
+        let in_scope = scope
+            .vertices
+            .iter()
+            .all(|&i| i < old.vertices.len())
+            && scope.edges.iter().all(|&i| i < old.edges.len())
+            && scope.loops.iter().all(|&i| i < old.loops.len())
+            && scope.faces.iter().all(|&i| i < old.faces.len())
+            && scope.shells.iter().all(|&i| i < old.shells.len());
+        if scope.full || shrunk || !in_scope {
+            return Self::full();
+        }
+        let vertices: FxHashSet<usize> = scope
+            .vertices
+            .iter()
+            .copied()
+            .chain(old.vertices.len()..new.vertices.len())
+            .collect();
+        let edges: FxHashSet<usize> = scope
+            .edges
+            .iter()
+            .copied()
+            .chain(old.edges.len()..new.edges.len())
+            .collect();
+        // A loop's chain check reads its coedges and the referenced edges.
+        let mut loops: FxHashSet<usize> = scope
+            .loops
+            .iter()
+            .copied()
+            .chain(old.loops.len()..new.loops.len())
+            .collect();
+        for (li, l) in new.loops.iter().enumerate() {
+            if l.coedges.iter().any(|c| edges.contains(&c.edge)) {
+                loops.insert(li);
+            }
+        }
+        // A face's checks read its loops and their coedges/edges.
+        let mut faces: FxHashSet<usize> = scope
+            .faces
+            .iter()
+            .copied()
+            .chain(old.faces.len()..new.faces.len())
+            .collect();
+        for (fi, f) in new.faces.iter().enumerate() {
+            if std::iter::once(&f.outer)
+                .chain(&f.holes)
+                .any(|l| loops.contains(l))
+            {
+                faces.insert(fi);
+            }
+        }
+        // A shell's checks read its face uses, faces, loops, coedges and
+        // edges (including degenerate flags and vertex references).
+        let mut shells: FxHashSet<usize> = scope
+            .shells
+            .iter()
+            .copied()
+            .chain(old.shells.len()..new.shells.len())
+            .collect();
+        for (si, s) in new.shells.iter().enumerate() {
+            let hit = s.faces.iter().any(|u| {
+                if faces.contains(&u.face) {
+                    return true;
+                }
+                let Some(f) = new.faces.get(u.face) else {
+                    return true; // Unknown reference: revalidate this shell.
+                };
+                std::iter::once(&f.outer).chain(&f.holes).any(|l| {
+                    let Some(l) = new.loops.get(*l) else {
+                        return true;
+                    };
+                    l.coedges.iter().any(|c| edges.contains(&c.edge))
+                })
+            });
+            if hit {
+                shells.insert(si);
+            }
+        }
+        Self {
+            full: false,
+            vertices,
+            faces,
+            shells,
+        }
+    }
+}
 impl<C, S, P> Model<C, S, P> {
     pub fn validate_topology(&self) -> Result<()> {
         self.validate_topology_with_vertices(|point| {
@@ -574,7 +743,21 @@ impl<C, S, P, V> Model<C, S, P, V> {
     /// this method alone does not certify geometric or solid validity.
     pub fn validate_topology_with_vertices(
         &self,
+        validate_vertex: impl FnMut(&V) -> Result<()>,
+    ) -> Result<()> {
+        self.validate_topology_scoped(validate_vertex, &ValidationPlan::full())
+    }
+    /// Incremental revalidation: checks that only read unchanged entities are
+    /// skipped. Every skipped check is provably unchanged for a valid pre-edit
+    /// model and an honest [`EditScope`], so the accepted/rejected outcome and
+    /// the first error (code, message) match full validation exactly. All
+    /// cheap global invariants (resource ceilings, tolerance, edge/vertex
+    /// reference and usage bitmaps, loop reuse, face ownership, body checks)
+    /// always run in full and in the original order.
+    fn validate_topology_scoped(
+        &self,
         mut validate_vertex: impl FnMut(&V) -> Result<()>,
+        plan: &ValidationPlan,
     ) -> Result<()> {
         let count = self.vertices.len()
             + self.edges.len()
@@ -598,8 +781,19 @@ impl<C, S, P, V> Model<C, S, P, V> {
             "Invalid B-rep tolerance",
         )?;
         let mut vertices = vec![false; self.vertices.len()];
-        for v in &self.vertices {
-            validate_vertex(&v.point)?;
+        if plan.full {
+            for v in &self.vertices {
+                validate_vertex(&v.point)?;
+            }
+        } else {
+            // Unchanged vertices were admitted before the edit and cannot
+            // newly fail; check affected ones in ascending index order so the
+            // first failure matches the full pass.
+            let mut affected: Vec<usize> = plan.vertices.iter().copied().collect();
+            affected.sort_unstable();
+            for i in affected {
+                validate_vertex(&self.vertices[i].point)?;
+            }
         }
         for e in &self.edges {
             require(
@@ -614,7 +808,12 @@ impl<C, S, P, V> Model<C, S, P, V> {
         require(vertices.iter().all(|v| *v), "Unused vertex")?;
         let mut loops = vec![false; self.loops.len()];
         let mut edges = vec![false; self.edges.len()];
-        for f in &self.faces {
+        for (fi, f) in self.faces.iter().enumerate() {
+            // The chain check only reads this face's loops, their coedges and
+            // the referenced edges; skip it when none of those changed. The
+            // bounds/reuse/emptiness checks and usage marking stay global so
+            // error selection and the "Unused loop or edge" bitmap are exact.
+            let check_chain = plan.full || plan.faces.contains(&fi);
             for &l in std::iter::once(&f.outer).chain(&f.holes) {
                 require(l < loops.len(), "Unknown face loop")?;
                 require(!loops[l], "Loop reused by faces")?;
@@ -627,16 +826,18 @@ impl<C, S, P, V> Model<C, S, P, V> {
                         .get(c.edge)
                         .ok_or_else(|| invalid("Unknown coedge edge"))?;
                     edges[c.edge] = true;
-                    let next = &cs[(i + 1) % cs.len()];
-                    let next_edge = self
-                        .edges
-                        .get(next.edge)
-                        .ok_or_else(|| invalid("Unknown coedge edge"))?;
-                    require(
-                        e.vertices[usize::from(!c.reversed)]
-                            == next_edge.vertices[usize::from(next.reversed)],
-                        "Disconnected loop vertex chain",
-                    )?;
+                    if check_chain {
+                        let next = &cs[(i + 1) % cs.len()];
+                        let next_edge = self
+                            .edges
+                            .get(next.edge)
+                            .ok_or_else(|| invalid("Unknown coedge edge"))?;
+                        require(
+                            e.vertices[usize::from(!c.reversed)]
+                                == next_edge.vertices[usize::from(next.reversed)],
+                            "Disconnected loop vertex chain",
+                        )?;
+                    }
                 }
             }
         }
@@ -647,6 +848,23 @@ impl<C, S, P, V> Model<C, S, P, V> {
         let mut face_owner = vec![None; self.faces.len()];
         for (si, s) in self.shells.iter().enumerate() {
             require(!s.faces.is_empty(), "Empty shell")?;
+            if !plan.full && !plan.shells.contains(&si) {
+                // Unchanged shell: its pole/incidence/fan checks only read its
+                // own faces, loops, coedges and edges, none of which changed,
+                // so they cannot newly fail. Face ownership is global, though:
+                // keep the bounds and duplicate checks so a repeated face use
+                // still fails here, exactly where the full pass would fail.
+                for u in &s.faces {
+                    self.faces
+                        .get(u.face)
+                        .ok_or_else(|| invalid("Shell references unknown face"))?;
+                    require(
+                        face_owner[u.face].replace(si).is_none(),
+                        "Face belongs to multiple shells or is repeated",
+                    )?;
+                }
+                continue;
+            }
             let mut incidence = FxHashMap::<usize, Vec<(usize, bool)>>::default();
             let mut links = FxHashMap::<usize, Vec<(usize, usize)>>::default();
             let mut pole_uses = FxHashMap::<usize, FxHashSet<usize>>::default();
@@ -815,9 +1033,22 @@ impl<C: Clone, S: Clone, P: Clone, V: Clone> TopologySnapshot<'_, C, S, P, V> {
         &self,
         edit: impl FnOnce(&mut Model<C, S, P, V>) -> Result<()>,
     ) -> Result<Self> {
+        self.try_edit_scoped(|model| edit(model).map(|_| EditScope::full()))
+    }
+    /// Like [`Self::try_edit`], but the edit reports an [`EditScope`] and only
+    /// the provably affected checks rerun; cheap global invariants always run
+    /// in full. For a valid pre-edit model and an honest scope the outcome and
+    /// the first error (code and message) match full validation exactly.
+    /// The model clone remains: the snapshot is immutable, so the candidate is
+    /// always edited on an isolated copy; only validation is incremental.
+    pub fn try_edit_scoped(
+        &self,
+        edit: impl FnOnce(&mut Model<C, S, P, V>) -> Result<EditScope>,
+    ) -> Result<Self> {
         let mut candidate = (*self.model).clone();
-        edit(&mut candidate)?;
-        candidate.validate_topology_with_vertices(|v| (self.validate_vertex)(v))?;
+        let scope = edit(&mut candidate)?;
+        let plan = ValidationPlan::for_edit(&self.model, &scope, &candidate);
+        candidate.validate_topology_scoped(|v| (self.validate_vertex)(v), &plan)?;
         (self.validate_model)(&candidate)?;
         Ok(Self {
             model: std::sync::Arc::new(candidate),
