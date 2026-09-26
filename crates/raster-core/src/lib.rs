@@ -18,6 +18,8 @@ pub use wgpu;
 pub mod codegen;
 pub mod pipeline;
 pub mod rasterizer;
+pub mod readback;
+pub mod resources;
 pub mod shaders;
 pub mod uniform;
 pub mod variants;

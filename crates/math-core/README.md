@@ -1,5 +1,7 @@
 # osv-math
 
+Architecture and crate boundaries: [GPU library design](../../docs/design/gpu-library-architecture.md).
+
 Published name for the workspace `math-core` leaf: small dense `f64` vector
 helpers (`V2` / `V3`) and a shared typed `Error` / `Result`.
 
@@ -403,3 +405,34 @@ icp_registration` on the same RTX 5090:
 ## License
 
 MIT — see repository root `LICENSE`.
+
+### Recorded GPU pipeline
+
+`MathGpuSession::try_*` returns explicit errors and a `MathExecution<T>` report
+(backend and f32 arithmetic). Existing `Option` convenience methods retain CPU
+fallback compatibility. To keep intermediate results on the device:
+
+```rust,ignore
+let context = gpu_compute::GpuContext::new().expect("GPU");
+let runtime = compute_core::ComputeRuntime::new(&context)?;
+let session = math_core::gpu::MathGpuSession::new(&context);
+let points = runtime.upload(&[0.0f32, 0.0, 0.0, 1.0, 2.0, 3.0])?;
+let mut plan = session.program(&runtime)?;
+let moved = plan.transform(
+    math_core::gpu::PointCloudView::new(&points)?, math_core::ID, [1.0, 0.0, 0.0],
+)?;
+let distances = plan.squared_distances(
+    math_core::gpu::PointCloudView::new(&points)?,
+    math_core::gpu::PointCloudView::new(&moved)?,
+)?;
+let sum = plan.sum(&distances)?;
+let mut encoder = context.device.create_command_encoder(&Default::default());
+plan.record(&mut encoder);
+let mut read = runtime.record_read(&mut encoder, &sum)?;
+read.submitted(context.queue.submit([encoder.finish()]));
+assert_eq!(read.wait(std::time::Duration::from_secs(5))?, [2.0]);
+```
+
+Packed xyz f32 layout and context ownership are checked. Plans can be recorded
+again; their buffers remain alive through bind groups. Nearest-neighbor, bounds,
+moments and statistics still use synchronous adapters with specialized caches.

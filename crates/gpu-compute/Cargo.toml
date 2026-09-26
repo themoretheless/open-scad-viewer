@@ -14,10 +14,10 @@ publish.workspace = true
 cuda = ["dep:cudarc"]
 
 [dependencies]
-wgpu = { version = "30", default-features = false, features = ["metal", "vulkan", "wgsl", "std"] }
+wgpu = { workspace = true, features = ["metal", "vulkan"] }
 cudarc = { version = "0.19", default-features = false, features = ["std", "driver", "nvrtc", "dynamic-loading", "cuda-12080"], optional = true }
 
 # Windows also exposes NVIDIA/AMD/Intel through DX12; wgpu `Backends::PRIMARY`
 # keeps Vulkan first and DX12 as the second native option.
 [target.'cfg(windows)'.dependencies]
-wgpu = { version = "30", default-features = false, features = ["dx12"] }
+wgpu = { workspace = true, features = ["dx12"] }

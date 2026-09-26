@@ -121,3 +121,60 @@ fn mesh_without_morph_source_draws_its_target_vertices() {
     assert!(pixel(&first, 16, 40)[2] > 100, "target triangle covers the left area in blue");
     assert!(background_at(&first, 55, 40), "source-only area stays background");
 }
+
+#[test]
+fn caller_records_render_and_readback_in_one_submission() {
+    let Some(context) = GpuContext::new() else {
+        assert!(std::env::var_os("COMPUTE_REQUIRE_GPU").is_none(), "GPU adapter required");
+        return;
+    };
+    let mut rasterizer = Rasterizer::new(context.clone(), wgpu::TextureFormat::Rgba8Unorm);
+    assert_eq!(rasterizer.context.device, context.device);
+    rasterizer.set_scene(&test_scene());
+    let (vertices, indices, _) = triangle();
+    let mesh = rasterizer.create_mesh(&vertices, &indices, &colored_uniform(1.0, 0.0, 0.0), None);
+    let meshes = [&mesh];
+    let frame = morph_frame(&meshes);
+    let texture = context.device.create_texture(&wgpu::TextureDescriptor {
+        label: Some("recorded raster target"),
+        size: wgpu::Extent3d { width: WIDTH, height: HEIGHT, depth_or_array_layers: 1 },
+        mip_level_count: 1, sample_count: 1,
+        dimension: wgpu::TextureDimension::D2,
+        format: wgpu::TextureFormat::Rgba8Unorm,
+        usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::COPY_SRC,
+        view_formats: &[],
+    });
+    // WIDTH=64 gives the required 256-byte row alignment.
+    let bytes = (WIDTH * HEIGHT * 4) as usize;
+    let staging = context.device.create_buffer(&wgpu::BufferDescriptor {
+        label: Some("recorded raster readback"), size: bytes as u64,
+        usage: wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::MAP_READ,
+        mapped_at_creation: false,
+    });
+    let mut encoder = context.device.create_command_encoder(&Default::default());
+    rasterizer.record(&mut encoder, &texture.create_view(&Default::default()), WIDTH, HEIGHT, &frame);
+    encoder.copy_texture_to_buffer(
+        wgpu::TexelCopyTextureInfo { texture: &texture, mip_level: 0, origin: wgpu::Origin3d::ZERO, aspect: wgpu::TextureAspect::All },
+        wgpu::TexelCopyBufferInfo { buffer: &staging, layout: wgpu::TexelCopyBufferLayout { offset: 0, bytes_per_row: Some(WIDTH * 4), rows_per_image: Some(HEIGHT) } },
+        wgpu::Extent3d { width: WIDTH, height: HEIGHT, depth_or_array_layers: 1 },
+    );
+    context.queue.submit([encoder.finish()]);
+    let rgba = raster_core::gpu_compute::read_buffer(&context.device, &staging, bytes);
+    assert!(red_at(&rgba, WIDTH / 2, HEIGHT / 2));
+    assert!(background_at(&rgba, 0, 0));
+}
+
+#[test]
+fn rgba_readback_handles_padded_rows_and_rejects_invalid_sizes() {
+    let Some(context) = GpuContext::new() else { return };
+    let mut rasterizer = Rasterizer::new(context, wgpu::TextureFormat::Rgba8Unorm);
+    let frame = Frame { clear: wgpu::Color { r: 0.0, g: 1.0, b: 0.0, a: 1.0 }, ..Frame::default() };
+    for (width, height) in [(1, 3), (65, 2)] {
+        let rgba = rasterizer.render_rgba_async(width, height, &frame).unwrap()
+            .wait(std::time::Duration::from_secs(5)).unwrap();
+        assert_eq!(rgba.len(), (width * height * 4) as usize);
+        assert!(rgba.chunks_exact(4).all(|pixel| pixel == [0,255,0,255]));
+    }
+    assert!(rasterizer.try_render_to_rgba(0, 3, &frame).is_err());
+    assert!(rasterizer.try_render_to_rgba(u32::MAX, 3, &frame).is_err());
+}

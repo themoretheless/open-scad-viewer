@@ -1,9 +1,82 @@
 # compute-core
 
+Architecture and crate boundaries: [GPU library design](../../docs/design/gpu-library-architecture.md).
+
 Runtime library for WGSL compute kernels — the compute counterpart of
 `raster-core`. Domain kernels (math-core, photogrammetry-core, geometry-bridge)
 own their WGSL sources; what they share is the dispatch plumbing, and that
 lives here.
+
+## Typed array programs
+
+`ComputeRuntime` compiles reusable kernels and owns typed `GpuArray<f32>` and
+`GpuArray<u32>` storage. Arithmetic is currently f32; u32 arrays support storage,
+range updates and readback. `ComputeProgram` prepares an ordered chain once and
+can submit it repeatedly after inputs change.
+
+```rust
+use compute_core::{BinaryOp, ComputeRuntime, UnaryOp, gpu_compute::GpuContext};
+use std::time::Duration;
+
+let context = GpuContext::new().expect("GPU adapter");
+let runtime = ComputeRuntime::new(&context)?;
+let input = runtime.upload(&[3.0f32, -4.0])?;
+let mut program = runtime.program();
+let squared_norm = program.dot(&input, &input)?;
+let norm = program.unary(UnaryOp::Sqrt, &squared_norm)?;
+let normalized = program.binary(BinaryOp::Divide, &input, &norm)?;
+
+// All kernels and the final copy/map are submitted together. Intermediate
+// arrays, including the scalar norm, stay on the GPU.
+let ticket = program.submit_read(&normalized)?;
+// An event loop can call ticket.try_read()? until it returns Some(values).
+let values = ticket.wait(Duration::from_secs(10))?;
+// Approximately [0.6, -0.8].
+```
+
+Supported operations:
+
+- affine map (`input * scale + offset`);
+- add, subtract, multiply, divide, min and max, including a single-element GPU
+  array broadcast on either side;
+- negate, abs, square, sqrt, reciprocal, exp, log, sin and cos;
+- sum and dot product with all reduction passes on the GPU.
+
+### Memory and submission rules
+
+- New arrays are zero-initialized by wgpu without uploading a host zero vector.
+- Clones and `prefix(len)` views share storage. `write(array, offset, values)`
+  updates contents without changing prepared bindings.
+- `_into` variants reuse caller-allocated output arrays. Input/output aliasing,
+  length mismatches, foreign runtime arrays, invalid ranges and allocations over
+  device limits return `ComputeError` before recording GPU work.
+- Binary operations accept equal lengths or one scalar; dot requires equal
+  lengths. Empty sum/dot returns zero, empty elementwise output stays empty.
+- Programs retain their intermediate allocations. Repeated submissions reuse
+  kernels, parameters, bindings and storage; each readback ticket gets separate
+  staging memory so overlapping submissions cannot overwrite earlier results.
+- Queue writes apply before the next submission, not between program steps.
+  Use separate arrays for distinct per-step input values.
+- `submit_read` performs no GPU wait. `try_read` polls completion without waiting;
+  `wait(timeout)` is a native convenience. A ticket is consumed once. Dropping
+  one discards that result and does not block other submissions.
+- Arithmetic uses WGSL f32 semantics, including its function domains and
+  backend-dependent rounding. No portable NaN, infinity or division-by-zero
+  contract is promised. Compare reductions with tolerances against CPU references.
+
+Run the complete centering/normalization example and measured CPU comparison:
+
+```sh
+cargo run --release --offline -p compute-core --example array_pipeline
+COMPUTE_REQUIRE_GPU=1 cargo test --offline -p compute-core
+```
+
+The example reports median host-observed time for GPU compute plus full readback,
+upload plus compute plus full readback, and a CPU reference with f64 sum
+accumulation and f32 outputs (GPU arithmetic is f32 throughout). Preparation is
+outside timing, three warmups precede nine samples, and timing order rotates.
+These are workload-specific measurements, not GPU timestamp timings. The strict
+GPU environment flag prevents the runtime suite from passing via adapter skips.
 
 ## What it owns
 
@@ -132,4 +205,39 @@ change. Queue writes before submission apply to the entire batch, so use distinc
 uniform buffers for steps with different parameters. Empty sums produce zero;
 zero-length typed readbacks return an empty vector. Readback currently uses a
 separate copy submission and blocking map. Automatic graph scheduling, buffer
-lifetime pooling, kernel fusion and asynchronous readback are not implemented.
+lifetime pooling and kernel fusion are not implemented. The typed runtime above
+provides nonblocking readback within the compute submission.
+
+### Local measurement (2026-09-26)
+
+One release run on the local Metal backend, using the example above:
+
+| Elements | GPU resident + full readback | Upload + GPU + full readback | CPU with f64 sums |
+| --- | ---: | ---: | ---: |
+| 4,097 | 0.334 ms | 0.378 ms | 0.007 ms |
+| 1,000,003 | 3.014 ms | 2.783 ms | 1.807 ms |
+
+Maximum absolute difference from the reference was 1.863e-9 and 1.164e-10,
+respectively. The small reversal between the two large-array GPU measurements
+is run variation, not a benefit from uploading data. This full-readback workload
+shows no speedup over the CPU reference. CPU sums use f64 to avoid accumulated
+serial-f32 reference error; the GPU uses f32 throughout. Use these numbers as an
+example of end-to-end cost, not a hardware-independent performance claim.
+
+### Shared storage and scratch capacity
+
+`GpuArray::view()` exposes a borrowed `gpu_compute::GpuBufferView` for domain
+adapters. `GpuBuffer::new(&context, bytes, usage)` creates storage with trusted
+context ownership; `ComputeRuntime::import_buffer` checks owner, usage and scalar
+length. Context clones share identity; unrelated devices are rejected.
+
+`ScratchPool::new(&runtime, budget_bytes)` retains named allocations. A repeated
+`reserve::<f32>("input", len)` reuses sufficient capacity; growth replaces storage
+and increments `ScratchArray::generation`. Rebuild prepared bindings on a new
+generation. Old plans retain their original buffers. The budget covers capacity
+retained by the pool, excluding replaced buffers held by callers or GPU work.
+
+Readback delegates to `gpu_compute::ByteReadback`. Use `record_read` and mark the
+ticket `submitted` after submitting a caller-owned encoder. Mapping failures,
+cancellation and empty payloads are distinct. Legacy `read_f32`/`read_u32` panic on
+transport failure; use their `try_` variants for recoverable errors.

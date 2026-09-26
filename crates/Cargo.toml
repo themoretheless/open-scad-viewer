@@ -14,6 +14,8 @@ rust-version = "1.98"
 publish = false
 
 [workspace.dependencies]
+wgpu = { version = "30", default-features = false, features = ["wgsl", "std"] }
+naga = { version = "30", features = ["wgsl-in"] }
 # Always the latest released rbench (moving `release` branch). Pin with `tag = "v…"` when needed.
 rbench = { git = "https://github.com/themoretheless/rbench", branch = "release" }
 
