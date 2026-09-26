@@ -2,8 +2,8 @@
 //! renderer's pipeline set (blend, depth compare, vertex layouts).
 
 use crate::shaders::{
-    DEEP_MESH_WGSL, EDGE_WGSL, GRID_WGSL, LINE_WGSL, MESH_VERTEX_STRIDE, MORPH_VERTEX_STRIDE,
-    MESH_WGSL, SELECTION_OVERLAY_WGSL,
+    DEEP_MESH_WGSL, EDGE_WGSL, GRID_WGSL, LINE_WGSL, MESH_SECTION_CAP_WGSL, MESH_VERTEX_STRIDE,
+    MORPH_VERTEX_STRIDE, MESH_WGSL, SELECTION_OVERLAY_WGSL,
 };
 use crate::uniform::OBJECT_UNIFORM_BYTES;
 use crate::variants::{VertexOutput, instanced_object_shader};
@@ -100,6 +100,9 @@ pub struct RasterPipelines {
     pub instance_layout: PipelineLayout,
     pub mesh_opaque: RenderPipeline,
     pub mesh_transparent: RenderPipeline,
+    /// Stencil-free section cap: mesh_section_cap with front-face culling, so
+    /// clipped back faces of closed solids read as a filled cut surface.
+    pub section_cap: RenderPipeline,
     pub deep_mesh: RenderPipeline,
     pub edge: RenderPipeline,
     pub deep_edge: RenderPipeline,
@@ -188,6 +191,7 @@ impl RasterPipelines {
         };
 
         let mesh_mod = module(device, "mesh", MESH_WGSL);
+        let cap_mod = module(device, "mesh section cap", MESH_SECTION_CAP_WGSL);
         let deep_mod = module(device, "deep mesh", DEEP_MESH_WGSL);
         let edge_mod = module(device, "edge", EDGE_WGSL);
         let line_mod = module(device, "line", LINE_WGSL);
@@ -216,6 +220,29 @@ impl RasterPipelines {
                 targets: &[opaque_target()],
             }),
             primitive: mesh_primitive,
+            depth_stencil: Some(depth.clone()),
+            multisample: wgpu::MultisampleState::default(),
+            multiview_mask: None,
+            cache: None,
+        });
+        let section_cap = device.create_render_pipeline(&RenderPipelineDescriptor {
+            label: Some("mesh section cap"),
+            layout: Some(&object_layout),
+            vertex: VertexState {
+                module: &cap_mod,
+                entry_point: Some("vs"),
+                compilation_options: wgpu::PipelineCompilationOptions::default(),
+                buffers: &[Some(mesh_vbl()), Some(morph_vbl())],
+            },
+            fragment: Some(FragmentState {
+                module: &cap_mod,
+                entry_point: Some("fs"),
+                compilation_options: wgpu::PipelineCompilationOptions::default(),
+                targets: &[opaque_target()],
+            }),
+            // Front-face culling draws only the back faces: after the clipped
+            // surface pass, the surviving interior fragments form the cap.
+            primitive: PrimitiveState { cull_mode: Some(wgpu::Face::Front), ..PrimitiveState::default() },
             depth_stencil: Some(depth.clone()),
             multisample: wgpu::MultisampleState::default(),
             multiview_mask: None,
@@ -454,6 +481,7 @@ impl RasterPipelines {
             instance_layout,
             mesh_opaque,
             mesh_transparent,
+            section_cap,
             deep_mesh,
             edge,
             deep_edge,

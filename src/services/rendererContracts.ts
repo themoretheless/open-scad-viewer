@@ -51,8 +51,8 @@ export const MATERIAL_PRESETS: readonly MaterialDef[] = [
 export const DEFAULT_MATERIAL: MaterialDef = MATERIAL_PRESETS[0]
 
 /**
- * Render theme: the Scene-uniform theme tail (selection/hover/edge/xray/grid
- * colors, see SCENE_UNIFORM_LAYOUT) plus an optional background override.
+ * Render theme: the Scene-uniform theme tail (selection/hover/edge/xray/grid/
+ * cap colors, see SCENE_UNIFORM_LAYOUT) plus an optional background override.
  * `backgroundColor` is optional because the app UI theme already owns the
  * canvas clear color via setBackgroundColor; presets that omit it leave that
  * pathway untouched.
@@ -65,6 +65,8 @@ export interface RenderTheme {
   edgeColor: Vec3
   xrayColor: Vec3
   gridColor: Vec3
+  /** Section-cap fill color (true cap pass + epsilon accent band). */
+  capColor: Vec3
   backgroundColor?: Vec3
 }
 
@@ -73,9 +75,9 @@ export interface RenderTheme {
  * shader colors exactly, so the out-of-the-box look is unchanged.
  */
 export const THEME_PRESETS: readonly RenderTheme[] = [
-  { id: 'default', name: 'Default', selectionColor: [1, 0.52, 0.06], hoverColor: [0.12, 0.78, 1], edgeColor: [0.025, 0.03, 0.04], xrayColor: [1, 0.42, 0.06], gridColor: [0.42, 0.42, 0.42] },
-  { id: 'dark-contrast', name: 'Dark Contrast', selectionColor: [1, 0.6, 0], hoverColor: [0.3, 0.9, 1], edgeColor: [0, 0, 0.01], xrayColor: [1, 0.5, 0.1], gridColor: [0.55, 0.55, 0.6], backgroundColor: [0.05, 0.05, 0.07] },
-  { id: 'light', name: 'Light', selectionColor: [0.9, 0.35, 0], hoverColor: [0, 0.5, 0.9], edgeColor: [0.1, 0.1, 0.12], xrayColor: [0.85, 0.3, 0.05], gridColor: [0.6, 0.6, 0.62], backgroundColor: [0.92, 0.92, 0.94] },
+  { id: 'default', name: 'Default', selectionColor: [1, 0.52, 0.06], hoverColor: [0.12, 0.78, 1], edgeColor: [0.025, 0.03, 0.04], xrayColor: [1, 0.42, 0.06], gridColor: [0.42, 0.42, 0.42], capColor: [0.85, 0.87, 0.9] },
+  { id: 'dark-contrast', name: 'Dark Contrast', selectionColor: [1, 0.6, 0], hoverColor: [0.3, 0.9, 1], edgeColor: [0, 0, 0.01], xrayColor: [1, 0.5, 0.1], gridColor: [0.55, 0.55, 0.6], capColor: [0.8, 0.82, 0.88], backgroundColor: [0.05, 0.05, 0.07] },
+  { id: 'light', name: 'Light', selectionColor: [0.9, 0.35, 0], hoverColor: [0, 0.5, 0.9], edgeColor: [0.1, 0.1, 0.12], xrayColor: [0.85, 0.3, 0.05], gridColor: [0.6, 0.6, 0.62], capColor: [0.58, 0.6, 0.66], backgroundColor: [0.92, 0.92, 0.94] },
 ]
 export const DEFAULT_THEME: RenderTheme = THEME_PRESETS[0]
 

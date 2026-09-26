@@ -8,7 +8,7 @@
 
 const SCENE_HEAD = 'struct Scene { vp: mat4x4f, eye: vec4f, light: vec4f, ambient: vec4f, section: vec4f, options: vec4f'
 /** Theme tail: sits after inverseVP at float 52, each vec3f 16-byte aligned. */
-const SCENE_THEME_TAIL = 'selectionColor: vec3f, hoverColor: vec3f, edgeColor: vec3f, xrayColor: vec3f, gridColor: vec3f'
+const SCENE_THEME_TAIL = 'selectionColor: vec3f, hoverColor: vec3f, edgeColor: vec3f, xrayColor: vec3f, gridColor: vec3f, capColor: vec3f'
 
 /** Canonical themed Scene struct (object shaders and the grid share it). */
 export const SCENE_STRUCT = `${SCENE_HEAD}, inverseVP: mat4x4f, ${SCENE_THEME_TAIL} }`
@@ -23,20 +23,22 @@ export function sceneStruct(extraMembers = ''): string {
 
 /**
  * CPU-side mirror of Scene: vp (16 floats) + eye (4) + light (4) + ambient (4)
- * + section (4) + options (4) + inverseVP (16) + theme block (5 colors ×
- * vec3+pad = 20) = 72 floats = 288 bytes. The theme tail starts at float 52,
+ * + section (4) + options (4) + inverseVP (16) + theme block (6 colors ×
+ * vec3+pad = 24) = 76 floats = 304 bytes. The theme tail starts at float 52,
  * so legacy offsets are unchanged.
  */
 export const SCENE_UNIFORM_LAYOUT = {
-  floats: 72,
-  bytes: 288,
-  /** selectionColor at themeFloatOffset..+2, then hover/edge/xray/grid every 4 floats. */
+  floats: 76,
+  bytes: 304,
+  /** selectionColor at themeFloatOffset..+2, then hover/edge/xray/grid/cap every 4 floats. */
   themeFloatOffset: 52,
   themeByteOffset: 208,
   hoverFloatOffset: 56,
   edgeFloatOffset: 60,
   xrayFloatOffset: 64,
   gridFloatOffset: 68,
+  capFloatOffset: 72,
+  capByteOffset: 288,
 } as const
 
 export const SCENE_BINDING = `@group(0) @binding(0) var<uniform> sc: Scene;`
@@ -80,9 +82,10 @@ export const MORPH_VERTEX_STRIDE = 12
 export const SECTION_CLIP_WGSL = `if (sc.options.x > 0.5 && dot(v.w, sc.section.xyz) < sc.section.w) { discard; }`
 
 /**
- * Cheap section-cap approximation shared by the mesh-surface shaders:
- * fragments just inside the clip plane (within a fixed world-space epsilon)
- * shade flat and unlit with a distinct cap tint to suggest the cut surface.
- * Exact capping (filling the clipped solid) is intentionally not attempted.
+ * Epsilon accent shared by the mesh-surface shaders: fragments just inside
+ * the clip plane (within a fixed world-space epsilon) shade flat and unlit
+ * with a tint toward the theme cap color. The true section cap lives in
+ * mesh_section_cap.wgsl (inverted clip + front-face culling); this band stays
+ * as the cut cue for open surfaces, which the back-face cap cannot fill.
  */
-export const SECTION_CAP_WGSL = `if (sc.options.x > 0.5 && dot(v.w, sc.section.xyz) < sc.section.w + 0.02) { return vec4f(mix(ob.baseColor, vec3f(0.85, 0.87, 0.9), 0.6) + ob.emissive * 0.2, ob.style.x); }`
+export const SECTION_CAP_WGSL = `if (sc.options.x > 0.5 && dot(v.w, sc.section.xyz) < sc.section.w + 0.02) { return vec4f(mix(ob.baseColor, sc.capColor, 0.6) + ob.emissive * 0.2, ob.style.x); }`

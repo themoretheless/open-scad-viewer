@@ -7,6 +7,7 @@ pub const MESH_PBR_WGSL: &str = include_str!("../shaders/mesh_pbr.wgsl");
 pub const MESH_MATCAP_WGSL: &str = include_str!("../shaders/mesh_matcap.wgsl");
 pub const MESH_TOON_WGSL: &str = include_str!("../shaders/mesh_toon.wgsl");
 pub const MESH_UNLIT_WGSL: &str = include_str!("../shaders/mesh_unlit.wgsl");
+pub const MESH_SECTION_CAP_WGSL: &str = include_str!("../shaders/mesh_section_cap.wgsl");
 pub const DEEP_MESH_WGSL: &str = include_str!("../shaders/deep_mesh.wgsl");
 pub const EDGE_WGSL: &str = include_str!("../shaders/edge.wgsl");
 pub const LINE_WGSL: &str = include_str!("../shaders/line.wgsl");
@@ -15,12 +16,13 @@ pub const SELECTION_OVERLAY_WGSL: &str = include_str!("../shaders/selection_over
 
 /// Shaders that declare the shared `Obj` uniform and morph blend. The first
 /// element is a stable name used in diagnostics and tests.
-pub const OBJECT_SHADERS: [(&str, &str); 7] = [
+pub const OBJECT_SHADERS: [(&str, &str); 8] = [
     ("mesh", MESH_WGSL),
     ("mesh_pbr", MESH_PBR_WGSL),
     ("mesh_matcap", MESH_MATCAP_WGSL),
     ("mesh_toon", MESH_TOON_WGSL),
     ("mesh_unlit", MESH_UNLIT_WGSL),
+    ("mesh_section_cap", MESH_SECTION_CAP_WGSL),
     ("deep_mesh", DEEP_MESH_WGSL),
     ("edge", EDGE_WGSL),
 ];

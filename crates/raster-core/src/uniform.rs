@@ -86,8 +86,8 @@ impl Default for ObjectUniform {
 
 /// Scene uniform: view-projection (16) + eye (4) + light (4) + ambient (4)
 /// + section (4) + options (4) + inverse view-projection (16) + theme block
-/// (selection/hover/edge/xray/grid colors, 3 floats + pad each = 20) = 72
-/// floats = 288 bytes. The theme tail starts at float 52, so legacy field
+/// (selection/hover/edge/xray/grid/cap colors, 3 floats + pad each = 24) = 76
+/// floats = 304 bytes. The theme tail starts at float 52, so legacy field
 /// offsets are unchanged; shaders that do not read the theme simply bind a
 /// smaller struct view of the same buffer.
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -113,14 +113,19 @@ pub struct SceneUniform {
     pub xray_color: [f32; 3],
     /// Ground grid line color (axes stay fixed red/green).
     pub grid_color: [f32; 3],
+    /// Section-cap fill color (mesh_section_cap and the epsilon accent).
+    pub cap_color: [f32; 3],
 }
 
-pub const SCENE_UNIFORM_FLOATS: usize = 72;
-pub const SCENE_UNIFORM_BYTES: u64 = 288;
+pub const SCENE_UNIFORM_FLOATS: usize = 76;
+pub const SCENE_UNIFORM_BYTES: u64 = 304;
 /// Theme block: selectionColor at THEME_FLOAT_OFFSET..+2, then hover/edge/
-/// xray/grid colors every 4 floats (vec3 + pad, 16-byte aligned).
+/// xray/grid/cap colors every 4 floats (vec3 + pad, 16-byte aligned).
 pub const THEME_FLOAT_OFFSET: usize = 52;
 pub const THEME_BYTE_OFFSET: u64 = 208;
+/// capColor rgb at CAP_FLOAT_OFFSET..+2.
+pub const CAP_FLOAT_OFFSET: usize = 72;
+pub const CAP_BYTE_OFFSET: u64 = 288;
 
 impl SceneUniform {
     pub const fn new(view_projection: [f32; 16], eye: [f32; 4]) -> Self {
@@ -138,10 +143,11 @@ impl SceneUniform {
             edge_color: [0.025, 0.03, 0.04],
             xray_color: [1.0, 0.42, 0.06],
             grid_color: [0.42, 0.42, 0.42],
+            cap_color: [0.85, 0.87, 0.9],
         }
     }
 
-    /// Writes the full 72-float record into `out`.
+    /// Writes the full 76-float record into `out`.
     pub fn write_f32(&self, out: &mut [f32; SCENE_UNIFORM_FLOATS]) {
         out[..16].copy_from_slice(&self.view_projection);
         out[16..20].copy_from_slice(&self.eye);
@@ -155,10 +161,12 @@ impl SceneUniform {
         out[60..63].copy_from_slice(&self.edge_color);
         out[64..67].copy_from_slice(&self.xray_color);
         out[68..71].copy_from_slice(&self.grid_color);
+        out[72..75].copy_from_slice(&self.cap_color);
         out[55] = 0.0;
         out[59] = 0.0;
         out[63] = 0.0;
         out[67] = 0.0;
         out[71] = 0.0;
+        out[75] = 0.0;
     }
 }

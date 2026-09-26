@@ -273,6 +273,7 @@ export class WebGPURenderer {
   private meshPipe!: GPURenderPipeline
   private meshPipeT!: GPURenderPipeline
   private meshImmediatePipeT: GPURenderPipeline | null = null
+  private sectionCapPipe!: GPURenderPipeline
   private deepMeshPipe!: GPURenderPipeline
   private deepMeshImmediatePipe: GPURenderPipeline | null = null
   private linePipe!: GPURenderPipeline
@@ -369,6 +370,7 @@ export class WebGPURenderer {
   private instanceMeshPipeT!: GPURenderPipeline
   private instanceEdgePipe!: GPURenderPipeline
   private readonly opaqueBundle = new MeshDrawBundle()
+  private readonly sectionCapBundle = new MeshDrawBundle()
   private readonly edgeBundle = new MeshDrawBundle()
   private edgeBuffersByVertexBuffer = new Map<GPUBuffer, GMesh[]>()
   private edgeWarmQueue: GMesh[] = []
@@ -578,6 +580,7 @@ export class WebGPURenderer {
 
     const transparentDepth: ShaderDepthSpec = { writeEnabled: false, compare: 'less' }
     this.meshPipe = this.getRenderPipeline('mesh')
+    this.sectionCapPipe = this.getRenderPipeline('meshSectionCap')
     this.meshPipeT = this.getRenderPipeline('mesh', { blend: 'alpha', depth: transparentDepth })
     this.meshImmediatePipeT = this.immediateObjectLayout
       ? this.getRenderPipeline('mesh', { variant: 'immediate', blend: 'alpha', depth: transparentDepth })
@@ -1686,6 +1689,7 @@ export class WebGPURenderer {
     this.edgeInstances.clear()
     this.transparentDraws.length = 0
     this.opaqueBundle.clear()
+    this.sectionCapBundle.clear()
     this.edgeBundle.clear()
     this.opaqueDraws.length = this.edgeDraws.length = 0
     this.transparentSort.clear()
@@ -1723,6 +1727,7 @@ export class WebGPURenderer {
     sd.set(theme.edgeColor, SCENE_UNIFORM_LAYOUT.edgeFloatOffset)
     sd.set(theme.xrayColor, SCENE_UNIFORM_LAYOUT.xrayFloatOffset)
     sd.set(theme.gridColor, SCENE_UNIFORM_LAYOUT.gridFloatOffset)
+    sd.set(theme.capColor, SCENE_UNIFORM_LAYOUT.capFloatOffset)
     dev.queue.writeBuffer(sceneUB, 0, sd)
 
     const enc = dev.createCommandEncoder()
@@ -1786,6 +1791,16 @@ export class WebGPURenderer {
       for (const group of this.groupByShadingModel(this.opaqueDraws)) {
         this.opaqueBundle.draw(pass, dev, this.fmt, this.getRenderPipeline(resolveMeshShaderId(group[0].shadingModel)), this.sceneBG, group)
       }
+    }
+
+    // Section cap: redraw the opaque meshes with the inverted-clip cap shader
+    // (front-face culling, depth write on, compare less — same depth state as
+    // the surface pass). Only the clipped side's back faces survive, so a
+    // closed solid's interior reads as a filled, unlit cut surface. Runs only
+    // when the section plane clips and surfaces are on screen (opaque draws);
+    // xray routes everything through the transparent pass, so it skips caps.
+    if (this.sectionEnabled && this.displayMode !== 'xray' && this.opaqueDraws.length) {
+      this.sectionCapBundle.draw(pass, dev, this.fmt, this.sectionCapPipe, this.sceneBG, this.opaqueDraws)
     }
 
     pass.setPipeline(this.meshImmediatePipeT ?? this.meshPipeT)

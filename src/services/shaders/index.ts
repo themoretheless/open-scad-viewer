@@ -10,6 +10,7 @@ import { MESH_PBR_WGSL } from './meshPbr'
 import { MESH_MATCAP_WGSL } from './meshMatcap'
 import { MESH_TOON_WGSL } from './meshToon'
 import { MESH_UNLIT_WGSL } from './meshUnlit'
+import { MESH_SECTION_CAP_WGSL } from './meshSectionCap'
 import { DEEP_MESH_WGSL } from './deepMesh'
 import { EDGE_WGSL } from './edge'
 import { LINE_WGSL } from './line'
@@ -34,6 +35,7 @@ export { MESH_PBR_WGSL } from './meshPbr'
 export { MESH_MATCAP_WGSL } from './meshMatcap'
 export { MESH_TOON_WGSL } from './meshToon'
 export { MESH_UNLIT_WGSL } from './meshUnlit'
+export { MESH_SECTION_CAP_WGSL } from './meshSectionCap'
 export { DEEP_MESH_WGSL } from './deepMesh'
 export { EDGE_WGSL } from './edge'
 export { LINE_WGSL } from './line'
@@ -68,7 +70,7 @@ export interface ShaderSpec {
   /** Default depth state; individual pipelines may override per flavor. */
   readonly depth: ShaderDepthSpec
   readonly topology: 'triangle-list' | 'line-list'
-  readonly cullMode: 'none'
+  readonly cullMode: 'none' | 'front' | 'back'
   readonly vertexLayout: ShaderVertexLayout
   /** True when the immediate/instanced textual variants apply. */
   readonly supportsVariants: boolean
@@ -129,6 +131,19 @@ for (const [id, source] of [
     supportsVariants: true,
   })
 }
+registerShader({
+  id: 'meshSectionCap',
+  source: MESH_SECTION_CAP_WGSL,
+  kind: 'object',
+  blend: 'none',
+  depth: { writeEnabled: true, compare: 'less' },
+  topology: 'triangle-list',
+  // Front-face culling draws only back faces: with the inverted clip test,
+  // the interior of closed solids reads as a filled cap surface.
+  cullMode: 'front',
+  vertexLayout: 'mesh',
+  supportsVariants: true,
+})
 registerShader({
   id: 'deepMesh',
   source: DEEP_MESH_WGSL,

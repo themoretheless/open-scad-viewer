@@ -6,6 +6,7 @@ import {
   LINE_WGSL,
   MESH_MATCAP_WGSL,
   MESH_PBR_WGSL,
+  MESH_SECTION_CAP_WGSL,
   MESH_TOON_WGSL,
   MESH_UNLIT_WGSL,
   MESH_WGSL,
@@ -36,6 +37,7 @@ const OBJECT_SHADERS: Array<[string, string, 'V' | 'EdgeV']> = [
   ['edge', EDGE_WGSL, 'EdgeV'],
 ]
 const ALL_SHADERS = [...OBJECT_SHADERS.map(([name, code]) => [name, code] as const),
+  ['meshSectionCap', MESH_SECTION_CAP_WGSL],
   ['line', LINE_WGSL], ['grid', GRID_WGSL], ['selectionOverlay', SELECTION_OVERLAY_WGSL]] as const
 
 function balanced(code: string, open: string, close: string) {
@@ -75,11 +77,24 @@ describe('shader library modules', () => {
     }
   })
 
-  it('mesh-surface shaders shade a flat epsilon cap near the section plane', () => {
-    // The cheap section-cap approximation lives in the lit mesh family; the
-    // edge line shader and the x-ray overlay intentionally opt out.
+  it('the section-cap shader inverts the clip test and fills flat with the theme cap color', () => {
+    // Same vertex stage as mesh (layout, morph blend, transforms apply), but
+    // the fragment keeps only the clipped side and shades unlit; the renderer
+    // pairs it with front-face culling so interior back faces form the cap.
+    expect(MESH_SECTION_CAP_WGSL).toContain(SCENE_STRUCT)
+    expect(MESH_SECTION_CAP_WGSL).toContain(OBJ_STRUCT)
+    expect(MESH_SECTION_CAP_WGSL).toContain('mix(fromPos, pos, ob.morph.x)')
+    expect(MESH_SECTION_CAP_WGSL).toContain('if (sc.options.x > 0.5 && dot(v.w, sc.section.xyz) >= sc.section.w) { discard; }')
+    expect(MESH_SECTION_CAP_WGSL).toContain('return vec4f(sc.capColor, 1.0);')
+    expect(MESH_SECTION_CAP_WGSL).not.toContain(SECTION_CLIP_WGSL)
+  })
+
+  it('mesh-surface shaders shade a flat epsilon accent near the section plane', () => {
+    // The true cap lives in mesh_section_cap; the epsilon band stays as the
+    // cut cue for open surfaces, now tinted toward the theme cap color.
     for (const code of [MESH_WGSL, MESH_PBR_WGSL, MESH_MATCAP_WGSL, MESH_TOON_WGSL, MESH_UNLIT_WGSL]) {
       expect(code).toContain(SECTION_CAP_WGSL)
+      expect(code).toContain('sc.capColor')
     }
   })
 
@@ -95,6 +110,7 @@ describe('shader library modules', () => {
     expect(SCENE_STRUCT).toContain('edgeColor: vec3f')
     expect(SCENE_STRUCT).toContain('xrayColor: vec3f')
     expect(SCENE_STRUCT).toContain('gridColor: vec3f')
+    expect(SCENE_STRUCT).toContain('capColor: vec3f')
     for (const code of [MESH_WGSL, MESH_PBR_WGSL, MESH_MATCAP_WGSL, MESH_TOON_WGSL, MESH_UNLIT_WGSL]) {
       expect(code).toContain('sc.selectionColor')
       expect(code).toContain('sc.hoverColor')
@@ -109,15 +125,17 @@ describe('shader library modules', () => {
 
   it('scene uniform layout keeps legacy offsets and appends the theme tail', () => {
     // vp(16) + eye(4) + light(4) + ambient(4) + section(4) + options(4)
-    // + inverseVP(16) + 5 × (vec3 + pad) = 72 floats = 288 bytes.
-    expect(SCENE_UNIFORM_LAYOUT.floats).toBe(72)
-    expect(SCENE_UNIFORM_LAYOUT.bytes).toBe(288)
+    // + inverseVP(16) + 6 × (vec3 + pad) = 76 floats = 304 bytes.
+    expect(SCENE_UNIFORM_LAYOUT.floats).toBe(76)
+    expect(SCENE_UNIFORM_LAYOUT.bytes).toBe(304)
     expect(SCENE_UNIFORM_LAYOUT.themeFloatOffset).toBe(52)
     expect(SCENE_UNIFORM_LAYOUT.themeByteOffset).toBe(52 * 4)
     expect(SCENE_UNIFORM_LAYOUT.hoverFloatOffset).toBe(56)
     expect(SCENE_UNIFORM_LAYOUT.edgeFloatOffset).toBe(60)
     expect(SCENE_UNIFORM_LAYOUT.xrayFloatOffset).toBe(64)
     expect(SCENE_UNIFORM_LAYOUT.gridFloatOffset).toBe(68)
+    expect(SCENE_UNIFORM_LAYOUT.capFloatOffset).toBe(72)
+    expect(SCENE_UNIFORM_LAYOUT.capByteOffset).toBe(72 * 4)
   })
 
   it('morph blend reads ob.morph.x from the slot-1 attribute in object vertex shaders', () => {
@@ -151,13 +169,14 @@ describe('shader library modules', () => {
 })
 
 describe('shader registry', () => {
-  it('registers all ten shipped shaders with their canonical sources', () => {
+  it('registers all eleven shipped shaders with their canonical sources', () => {
     const expected: Array<[string, string, string, boolean]> = [
       ['mesh', MESH_WGSL, 'object', true],
       ['meshPbr', MESH_PBR_WGSL, 'object', true],
       ['meshMatcap', MESH_MATCAP_WGSL, 'object', true],
       ['meshToon', MESH_TOON_WGSL, 'object', true],
       ['meshUnlit', MESH_UNLIT_WGSL, 'object', true],
+      ['meshSectionCap', MESH_SECTION_CAP_WGSL, 'object', true],
       ['deepMesh', DEEP_MESH_WGSL, 'object', true],
       ['edge', EDGE_WGSL, 'object', true],
       ['line', LINE_WGSL, 'line', false],
@@ -184,6 +203,10 @@ describe('shader registry', () => {
       expect(getShader(id)).toMatchObject({ blend: 'none', topology: 'triangle-list', vertexLayout: 'mesh',
         depth: { writeEnabled: true, compare: 'less' } })
     }
+    // Section cap: same depth/blend as the opaque surface pass, but front-face
+    // culling so only clipped back faces fill the cut surface.
+    expect(getShader('meshSectionCap')).toMatchObject({ blend: 'none', topology: 'triangle-list', vertexLayout: 'mesh',
+      cullMode: 'front', depth: { writeEnabled: true, compare: 'less' } })
     expect(getShader('deepMesh')).toMatchObject({ blend: 'alpha', topology: 'triangle-list', vertexLayout: 'mesh',
       depth: { writeEnabled: false, compare: 'always' } })
     expect(getShader('edge')).toMatchObject({ blend: 'alpha', topology: 'line-list', vertexLayout: 'edge',

@@ -5,19 +5,18 @@ struct Obj { model: mat4x4f, nmat: mat4x4f, color: vec4f, style: vec4f, morph: v
 
 struct V { @builtin(position) p: vec4f, @location(0) n: vec3f, @location(1) w: vec3f }
 
+// Vertex stage identical to mesh.wgsl (same layout, morph blend, transforms).
 @vertex fn vs(@location(0) pos: vec3f, @location(1) norm: vec3f, @location(2) fromPos: vec3f) -> V {
   let local = mix(fromPos, pos, ob.morph.x);
   let wp = (ob.model * vec4f(local,1)).xyz;
   let wn = normalize((ob.nmat * vec4f(norm,0)).xyz);
   return V(sc.vp * vec4f(wp,1), wn, wp);
 }
-
 @fragment fn fs(v: V) -> @location(0) vec4f {
-  if (sc.options.x > 0.5 && dot(v.w, sc.section.xyz) < sc.section.w) { discard; }
-  // Cheap section-cap approximation (world-space epsilon highlight).
-  if (sc.options.x > 0.5 && dot(v.w, sc.section.xyz) < sc.section.w + 0.02) { return vec4f(mix(ob.baseColor, sc.capColor, 0.6) + ob.emissive * 0.2, ob.style.x); }
-  // Unlit: flat base color (with the standard selection/hover tints) plus emission.
-  let selected = mix(ob.color.rgb, sc.selectionColor, ob.style.y * 0.48);
-  let base = mix(selected, sc.hoverColor, ob.style.w * 0.38) * ob.baseColor;
-  return vec4f(base + ob.emissive, ob.style.x);
+  // Inverted clip test: the surface pass keeps dot(w, n) >= w, so this pass —
+  // drawn with front-face culling right after it — keeps only the clipped
+  // side's back faces. For a closed solid those interior back faces read as a
+  // filled, unlit cut surface (stencil-free section cap).
+  if (sc.options.x > 0.5 && dot(v.w, sc.section.xyz) >= sc.section.w) { discard; }
+  return vec4f(sc.capColor, 1.0);
 }

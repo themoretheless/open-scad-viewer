@@ -96,6 +96,8 @@ pub struct Rasterizer {
     morph_dummy: wgpu::Buffer,
     grid_quad: wgpu::Buffer,
     depth: Option<(wgpu::Texture, wgpu::TextureView, u32, u32)>,
+    /// Mirrors `SceneUniform.options.x`; gates the section-cap pass.
+    section_enabled: bool,
 }
 
 impl Rasterizer {
@@ -133,7 +135,7 @@ impl Rasterizer {
             0,
             &pack_f32(&[-1.0, -1.0, 1.0, -1.0, 1.0, 1.0, -1.0, -1.0, 1.0, 1.0, -1.0, 1.0]),
         );
-        Self { context, pipelines, scene_buffer, scene_bind_group, morph_dummy, grid_quad, depth: None }
+        Self { context, pipelines, scene_buffer, scene_bind_group, morph_dummy, grid_quad, depth: None, section_enabled: false }
     }
 
     pub fn device(&self) -> &wgpu::Device {
@@ -141,10 +143,11 @@ impl Rasterizer {
     }
 
     /// Uploads the full scene uniform.
-    pub fn set_scene(&self, scene: &SceneUniform) {
+    pub fn set_scene(&mut self, scene: &SceneUniform) {
         let mut floats = [0.0f32; SCENE_UNIFORM_FLOATS];
         scene.write_f32(&mut floats);
         self.context.queue.write_buffer(&self.scene_buffer, 0, &pack_f32(&floats));
+        self.section_enabled = scene.options[0] > 0.5;
     }
 
     /// Creates a mesh with its own object uniform buffer and bind group.
@@ -379,6 +382,16 @@ impl Rasterizer {
             for draw in frame.meshes.iter().filter(|d| !d.transparent) {
                 self.draw_mesh_with(&mut pass, &self.pipelines.mesh_opaque, &draw.vertex_buffer,
                     draw.index_count, &draw.bind_group, draw.morph_source.as_ref(), &draw.index_buffer);
+            }
+
+            if self.section_enabled {
+                // Section cap: redraw the opaque meshes with the inverted-clip,
+                // front-culled cap pipeline. The interior back faces of closed
+                // solids survive and read as a filled, unlit cut surface.
+                for draw in frame.meshes.iter().filter(|d| !d.transparent) {
+                    self.draw_mesh_with(&mut pass, &self.pipelines.section_cap, &draw.vertex_buffer,
+                        draw.index_count, &draw.bind_group, draw.morph_source.as_ref(), &draw.index_buffer);
+                }
             }
 
             for (geometry, pool, start, count, transparent) in frame.instances {

@@ -1,10 +1,10 @@
 use raster_core::shaders::{
-    DEEP_MESH_WGSL, EDGE_WGSL, GRID_WGSL, LINE_WGSL, MESH_MATCAP_WGSL, MESH_PBR_WGSL, MESH_TOON_WGSL,
-    MESH_UNLIT_WGSL, MESH_WGSL, SELECTION_OVERLAY_WGSL,
+    DEEP_MESH_WGSL, EDGE_WGSL, GRID_WGSL, LINE_WGSL, MESH_MATCAP_WGSL, MESH_PBR_WGSL,
+    MESH_SECTION_CAP_WGSL, MESH_TOON_WGSL, MESH_UNLIT_WGSL, MESH_WGSL, SELECTION_OVERLAY_WGSL,
 };
 use raster_core::uniform::{
-    MORPH_FLOAT_OFFSET, OBJECT_UNIFORM_BYTES, OBJECT_UNIFORM_FLOATS, SCENE_UNIFORM_BYTES,
-    SCENE_UNIFORM_FLOATS, STYLE_FLOAT_OFFSET, ObjectUniform, SceneUniform,
+    CAP_FLOAT_OFFSET, MORPH_FLOAT_OFFSET, OBJECT_UNIFORM_BYTES, OBJECT_UNIFORM_FLOATS,
+    SCENE_UNIFORM_BYTES, SCENE_UNIFORM_FLOATS, STYLE_FLOAT_OFFSET, ObjectUniform, SceneUniform,
 };
 use raster_core::variants::{VertexOutput, immediate_object_shader, instanced_object_shader};
 
@@ -26,6 +26,7 @@ fn shipped_shaders_validate_with_naga() {
         ("mesh_matcap", MESH_MATCAP_WGSL),
         ("mesh_toon", MESH_TOON_WGSL),
         ("mesh_unlit", MESH_UNLIT_WGSL),
+        ("mesh_section_cap", MESH_SECTION_CAP_WGSL),
         ("deep_mesh", DEEP_MESH_WGSL),
         ("edge", EDGE_WGSL),
         ("line", LINE_WGSL),
@@ -43,6 +44,7 @@ fn instanced_variants_validate_with_naga() {
     validate("instanced_mesh_matcap", &instanced_object_shader(MESH_MATCAP_WGSL, VertexOutput::V));
     validate("instanced_mesh_toon", &instanced_object_shader(MESH_TOON_WGSL, VertexOutput::V));
     validate("instanced_mesh_unlit", &instanced_object_shader(MESH_UNLIT_WGSL, VertexOutput::V));
+    validate("instanced_mesh_section_cap", &instanced_object_shader(MESH_SECTION_CAP_WGSL, VertexOutput::V));
     validate("instanced_deep_mesh", &instanced_object_shader(DEEP_MESH_WGSL, VertexOutput::V));
     validate("instanced_edge", &instanced_object_shader(EDGE_WGSL, VertexOutput::EdgeV));
 }
@@ -53,8 +55,9 @@ fn uniform_layout_matches_the_wgsl_contract() {
     assert_eq!(OBJECT_UNIFORM_BYTES, 224);
     assert_eq!(STYLE_FLOAT_OFFSET, 36);
     assert_eq!(MORPH_FLOAT_OFFSET, 40);
-    assert_eq!(SCENE_UNIFORM_FLOATS, 72);
-    assert_eq!(SCENE_UNIFORM_BYTES, 288);
+    assert_eq!(SCENE_UNIFORM_FLOATS, 76);
+    assert_eq!(SCENE_UNIFORM_BYTES, 304);
+    assert_eq!(CAP_FLOAT_OFFSET, 72);
 
     let object = ObjectUniform {
         model: [1.0; 16],
@@ -93,7 +96,7 @@ fn uniform_layout_matches_the_wgsl_contract() {
     assert_eq!(default_object.material_id, 0.0);
 
     let scene = SceneUniform::new([9.0; 16], [8.0; 4]);
-    let mut scene_floats = [0.0f32; 72];
+    let mut scene_floats = [0.0f32; 76];
     scene.write_f32(&mut scene_floats);
     assert_eq!(scene_floats[0], 9.0);
     assert_eq!(scene_floats[16], 8.0);
@@ -106,13 +109,15 @@ fn uniform_layout_matches_the_wgsl_contract() {
     assert_eq!(scene_floats[60..63], [0.025, 0.03, 0.04]); // edge
     assert_eq!(scene_floats[64..67], [1.0, 0.42, 0.06]); // xray
     assert_eq!(scene_floats[68..71], [0.42, 0.42, 0.42]); // grid
+    assert_eq!(scene_floats[72..75], [0.85, 0.87, 0.9]); // cap
     assert_eq!(scene_floats[55], 0.0); // padding
     assert_eq!(scene_floats[71], 0.0);
+    assert_eq!(scene_floats[75], 0.0);
 }
 
 #[test]
 fn immediate_variant_serves_style_from_immediate_address_space() {
-    for source in [MESH_WGSL, MESH_PBR_WGSL, MESH_MATCAP_WGSL, MESH_TOON_WGSL, MESH_UNLIT_WGSL, DEEP_MESH_WGSL, EDGE_WGSL] {
+    for source in [MESH_WGSL, MESH_PBR_WGSL, MESH_MATCAP_WGSL, MESH_TOON_WGSL, MESH_UNLIT_WGSL, MESH_SECTION_CAP_WGSL, DEEP_MESH_WGSL, EDGE_WGSL] {
         let variant = immediate_object_shader(source);
         assert!(variant.starts_with("requires immediate_address_space;"));
         assert!(variant.contains("var<immediate> im_style: vec4f;"));

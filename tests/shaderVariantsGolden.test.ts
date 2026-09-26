@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { DEEP_MESH_WGSL, EDGE_WGSL, MESH_MATCAP_WGSL, MESH_PBR_WGSL, MESH_TOON_WGSL, MESH_UNLIT_WGSL, MESH_WGSL } from '../src/services/shaders'
+import { DEEP_MESH_WGSL, EDGE_WGSL, MESH_MATCAP_WGSL, MESH_PBR_WGSL, MESH_SECTION_CAP_WGSL, MESH_TOON_WGSL, MESH_UNLIT_WGSL, MESH_WGSL } from '../src/services/shaders'
 import { immediateObjectShader, instancedObjectShader } from '../src/services/shaders/variants'
 import { VARIANTS_GOLDEN } from '../src/services/shaders/generated/variants.golden'
 
@@ -13,6 +13,7 @@ const OBJECT_SHADERS = [
   ['mesh_matcap', MESH_MATCAP_WGSL, 'V'],
   ['mesh_toon', MESH_TOON_WGSL, 'V'],
   ['mesh_unlit', MESH_UNLIT_WGSL, 'V'],
+  ['mesh_section_cap', MESH_SECTION_CAP_WGSL, 'V'],
   ['deep_mesh', DEEP_MESH_WGSL, 'V'],
   ['edge', EDGE_WGSL, 'EdgeV'],
 ] as const
