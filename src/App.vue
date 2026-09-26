@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import ModelingGridControls from './components/ModelingGridControls.vue'
+import MaterialControls from './features/MaterialControls.vue'
+import { stringifyMeshJson } from './services/meshJson'
 import { useModelingGrid } from './services/modelingGrid'
 import { isModelGraphText, SOURCE_FILE_ACCEPT, SOURCE_FILE_EXTENSION, sourceFileExtension, withSourceExtension } from './services/modelGraphTextDetect'
 import { editorBlocks, indentSelection, guideFitsIndent, type EditorBlock } from './services/editorBlocks'
@@ -116,6 +118,7 @@ import type {
   ProjectionMode,
   RendererLifecycleEvent,
   SelectionMode,
+  ShadingModel,
   StandardView,
 } from './services/rendererContracts'
 
@@ -168,6 +171,9 @@ const L: Record<Language, Record<string, string>> = {
     gpuRecoverFailed: 'Не удалось восстановить WebGPU после потери устройства', rendererError: 'Ошибка отрисовки',
     commands: 'Команды', commandHelp: 'Поиск действий', shortcuts: 'Горячие клавиши', display: 'Отображение',
     shaded: 'Заливка', edges: 'Рёбра', xray: 'Рентген',
+    shadingPhong: 'Затенение: Phong', shadingPbr: 'Затенение: PBR', shadingMatcap: 'Затенение: Matcap',
+    shadingToon: 'Затенение: Toon', shadingUnlit: 'Затенение: Unlit',
+    renderThemeDefault: 'Тема рендера: стандартная', renderThemeDarkContrast: 'Тема рендера: тёмный контраст', renderThemeLight: 'Тема рендера: светлая',
     selected: 'Выбран', object: 'Объект', focus: 'Фокус', isolate: 'Изолировать',
     unisolate: 'Показать всё', deselect: 'Снять выбор',
     scene: 'Сцена', inspect: 'Инспектор', point: 'Точка', face: 'Грань', body: 'Тело',
@@ -220,6 +226,9 @@ const L: Record<Language, Record<string, string>> = {
     gpuRecoverFailed: 'WebGPU could not recover after device loss', rendererError: 'Rendering failed',
     commands: 'Commands', commandHelp: 'Search actions', shortcuts: 'Keyboard shortcuts', display: 'Display',
     shaded: 'Shaded', edges: 'Edges', xray: 'X-ray',
+    shadingPhong: 'Shading: Phong', shadingPbr: 'Shading: PBR', shadingMatcap: 'Shading: Matcap',
+    shadingToon: 'Shading: Toon', shadingUnlit: 'Shading: Unlit',
+    renderThemeDefault: 'Render theme: Default', renderThemeDarkContrast: 'Render theme: Dark Contrast', renderThemeLight: 'Render theme: Light',
     selected: 'Selected', object: 'Object', focus: 'Focus', isolate: 'Isolate',
     unisolate: 'Show all', deselect: 'Deselect',
     scene: 'Scene', inspect: 'Inspect', point: 'Point', face: 'Face', body: 'Body',
@@ -550,14 +559,14 @@ function openMeshFromSolid() {
 
 function meshToSolid(doc: MeshWorkspaceDocument) {
   solidSeedDocument.value = meshDocumentToSolidDocument(doc)
-  storageSet('scad-solid-modeler-v1', JSON.stringify(solidSeedDocument.value))
+  storageSet('scad-solid-modeler-v1', stringifyMeshJson(solidSeedDocument.value))
   meshModelerOpen.value = false
   directModelerOpen.value = true
 }
 
 function continueMainEditInSolid(document: DirectDocument) {
   solidSeedDocument.value = document
-  storageSet('scad-solid-modeler-v1', JSON.stringify(document))
+  storageSet('scad-solid-modeler-v1', stringifyMeshJson(document))
   meshModelerOpen.value = false
   directModelerOpen.value = true
 }
@@ -616,6 +625,14 @@ const activeView = computed(() => viewportState.value.activeView)
 const cameraYaw = computed(() => viewportState.value.camera.yaw)
 const cameraPitch = computed(() => viewportState.value.camera.pitch)
 const displayMode = ref<DisplayMode>('shaded')
+/** Scene-level default shading model for entities without their own material. */
+const shadingModel = ref<ShadingModel>('phong')
+/** Active render theme preset id (Scene uniform theme tail). */
+const renderThemeId = ref<string>('default')
+/** Scene-level default material tail for entities without their own material. */
+const defaultBaseColor = ref('#ffffff')
+const defaultMetallic = ref(0)
+const defaultRoughness = ref(0.7)
 const sceneController = new SceneController<PickHit>()
 const sceneState = shallowRef(sceneController.state)
 sceneController.subscribe(state => { sceneState.value = state })
@@ -1075,7 +1092,11 @@ async function initializeViewportRenderer() {
   renderer = nextRenderer
   bindRendererCallbacks(nextRenderer)
   nextRenderer.setDisplayMode(displayMode.value)
+  nextRenderer.setDefaultShadingModel(shadingModel.value)
+  nextRenderer.setDefaultMaterial({ baseColor: hexToRgb(defaultBaseColor.value), metallic: defaultMetallic.value, roughness: defaultRoughness.value })
   nextRenderer.setBackgroundColor(themeCanvasColor(resolveTheme(themeSelection.value, systemPrefersDark.value)))
+  // Applied after the app-theme background so a theme backgroundColor wins.
+  nextRenderer.setTheme(renderThemeId.value)
   nextRenderer.setSelectionMode(selectionMode.value)
   nextRenderer.setGridVisible(gridVisible.value)
   nextRenderer.setGridStep(gridStep.value)
@@ -1209,7 +1230,10 @@ async function recoverRenderer(
     if (rendererRecoveryGate.mustDeferReady) return
 
     instance.setDisplayMode(displayMode.value)
+    instance.setDefaultShadingModel(shadingModel.value)
+    instance.setDefaultMaterial({ baseColor: hexToRgb(defaultBaseColor.value), metallic: defaultMetallic.value, roughness: defaultRoughness.value })
     instance.setBackgroundColor(themeCanvasColor(resolveTheme(themeSelection.value, systemPrefersDark.value)))
+    instance.setTheme(renderThemeId.value)
     instance.setSelectionMode(selectionMode.value)
     instance.setGridVisible(gridVisible.value)
     instance.setGridStep(gridStep.value)
@@ -1786,6 +1810,8 @@ function applyPreferences() {
     document.documentElement.style.setProperty(token, value)
   }
   renderer?.setBackgroundColor(themeCanvasColor(theme))
+  // Re-apply the render theme so its backgroundColor (when set) stays authoritative.
+  renderer?.setTheme(renderThemeId.value)
   storageSet('scad-theme-v1', themeSelection.value)
   storageSet('scad-theme', theme.scheme)
 }
@@ -2093,6 +2119,29 @@ function setDisplayMode(mode: DisplayMode) {
   renderer?.setDisplayMode(mode)
 }
 function changeDisplayMode() { renderer?.setDisplayMode(displayMode.value) }
+
+function hexToRgb(hex: string): [number, number, number] {
+  const value = /^#[0-9a-f]{6}$/i.test(hex) ? hex : '#ffffff'
+  return [1, 3, 5].map(offset => Number.parseInt(value.slice(offset, offset + 2), 16) / 255) as [number, number, number]
+}
+function setShadingModel(model: ShadingModel) {
+  shadingModel.value = model
+  renderer?.setDefaultShadingModel(model)
+}
+function setRenderTheme(themeId: string) {
+  renderThemeId.value = themeId
+  renderer?.setTheme(themeId)
+}
+function applyDefaultMaterial() {
+  renderer?.setDefaultMaterial({
+    baseColor: hexToRgb(defaultBaseColor.value),
+    metallic: defaultMetallic.value,
+    roughness: defaultRoughness.value,
+  })
+}
+function setDefaultBaseColor(hex: string) { defaultBaseColor.value = hex; applyDefaultMaterial() }
+function setDefaultMetallic(value: number) { defaultMetallic.value = value; applyDefaultMaterial() }
+function setDefaultRoughness(value: number) { defaultRoughness.value = value; applyDefaultMaterial() }
 
 function setSelectionMode(mode: SelectionMode) {
   selectionMode.value = mode
@@ -2459,6 +2508,14 @@ function executeCommand(id: string) {
     case 'shaded':
     case 'edges':
     case 'xray': setDisplayMode(id); break
+    case 'shading-phong': setShadingModel('phong'); break
+    case 'shading-pbr': setShadingModel('pbr'); break
+    case 'shading-matcap': setShadingModel('matcap'); break
+    case 'shading-toon': setShadingModel('toon'); break
+    case 'shading-unlit': setShadingModel('unlit'); break
+    case 'render-theme-default': setRenderTheme('default'); break
+    case 'render-theme-dark-contrast': setRenderTheme('dark-contrast'); break
+    case 'render-theme-light': setRenderTheme('light'); break
     case 'select-point': setSelectionMode('point'); break
     case 'select-face': setSelectionMode('face'); break
     case 'select-object': setSelectionMode('object'); break
@@ -2912,6 +2969,19 @@ function sanitizeFileName(name: string) { return (name.replace(/[^\w.() -]+/g, '
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 9h18M3 15h18M9 3v18M15 3v18"/><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
           </button>
           <ModelingGridControls :locale="lang" />
+          <MaterialControls
+            :locale="lang"
+            :shading-model="shadingModel"
+            :theme-id="renderThemeId"
+            :base-color="defaultBaseColor"
+            :metallic="defaultMetallic"
+            :roughness="defaultRoughness"
+            @update:shading-model="setShadingModel"
+            @update:theme-id="setRenderTheme"
+            @update:base-color="setDefaultBaseColor"
+            @update:metallic="setDefaultMetallic"
+            @update:roughness="setDefaultRoughness"
+          />
           <button
             ref="scanToggleRef" class="view-btn icon-only scan-toggle" type="button"
             :class="{ active: sectionEnabled }" :aria-label="t('section')" :title="t('scanPlane')"

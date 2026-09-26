@@ -14,11 +14,13 @@ export interface InstanceMesh extends BundleMesh {
 
 interface Group { mesh: InstanceMesh; start: number; count: number; ib: GPUBuffer; ic: number }
 
-/** Per-instance Obj record: model (16) + nmat (16) + color (4) + style (4) + morph (4) floats. */
+/** Per-instance Obj record: model (16) + nmat (16) + color (4) + style (4) + morph (4) + material tail (12) floats. */
 const INSTANCE_FLOATS = OBJECT_UNIFORM_LAYOUT.floats
 const INSTANCE_BYTES = OBJECT_UNIFORM_LAYOUT.bytes
 const STYLE_FLOAT_OFFSET = OBJECT_UNIFORM_LAYOUT.styleFloatOffset
 const MORPH_FLOAT_OFFSET = OBJECT_UNIFORM_LAYOUT.morphFloatOffset
+const MATERIAL_FLOAT_OFFSET = OBJECT_UNIFORM_LAYOUT.materialFloatOffset
+const EMISSIVE_FLOAT_OFFSET = OBJECT_UNIFORM_LAYOUT.emissiveFloatOffset
 
 /** Consecutive equal geometry only: preserves source order and transparency order. */
 export class MeshInstances {
@@ -123,6 +125,14 @@ export class MeshInstances {
         // slot-1 dummy is inert: mix(dummy, pos, 1) = pos.
         this.data[offset + MORPH_FLOAT_OFFSET] = 1; this.data[offset + MORPH_FLOAT_OFFSET + 1] = 0
         this.data[offset + MORPH_FLOAT_OFFSET + 2] = 0; this.data[offset + MORPH_FLOAT_OFFSET + 3] = 0
+        // Material defaults: white base color, non-metal, no emission,
+        // roughness 0.7, no material id — matches the uniform path.
+        this.data[offset + MATERIAL_FLOAT_OFFSET] = 1; this.data[offset + MATERIAL_FLOAT_OFFSET + 1] = 1
+        this.data[offset + MATERIAL_FLOAT_OFFSET + 2] = 1; this.data[offset + MATERIAL_FLOAT_OFFSET + 3] = 0
+        this.data[offset + EMISSIVE_FLOAT_OFFSET] = 0; this.data[offset + EMISSIVE_FLOAT_OFFSET + 1] = 0
+        this.data[offset + EMISSIVE_FLOAT_OFFSET + 2] = 0; this.data[offset + EMISSIVE_FLOAT_OFFSET + 3] = 0.7
+        this.data[offset + MATERIAL_FLOAT_OFFSET + 8] = 0; this.data[offset + MATERIAL_FLOAT_OFFSET + 9] = 0
+        this.data[offset + MATERIAL_FLOAT_OFFSET + 10] = 0; this.data[offset + MATERIAL_FLOAT_OFFSET + 11] = 0
       }
       device.queue.writeBuffer(this.buffer!, 0, this.data, 0, floats)
       this.uploadPending = false

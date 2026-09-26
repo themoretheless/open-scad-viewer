@@ -82,16 +82,16 @@ describe('CAD workbench geometry',()=>{
  })
  it('computes native group bounds in binary64 including unreferenced vertices',()=>{
   const b=box(),empty={...b,id:'empty',mesh:{positions:[],indices:[]}}
-  b.mesh.positions.push(-20.0000000001,30.0000000001,40.0000000001)
+  b.mesh.positions=Float64Array.from([...b.mesh.positions,-20.0000000001,30.0000000001,40.0000000001])
   const before=[...b.mesh.positions]
   expect(bounds([empty,b])).toEqual({min:[-20.0000000001,0,0],max:[10,30.0000000001,40.0000000001]})
-  expect(b.mesh.positions).toEqual(before)
+  expect(Array.from(b.mesh.positions)).toEqual(before)
  })
  it('refuses empty, malformed and nonfinite bounds inputs',()=>{
   expect(()=>bounds([])).toThrow('Select bodies')
-  const b=box();b.mesh.positions.push(1)
+  const b=box();b.mesh.positions=Float64Array.from([...b.mesh.positions,1])
   expect(()=>bounds([b])).toThrow('complete coordinate triples')
-  const nonfinite=box();nonfinite.mesh.positions.push(Infinity,0,0)
+  const nonfinite=box();nonfinite.mesh.positions=Float64Array.from([...nonfinite.mesh.positions,Infinity,0,0])
   expect(()=>bounds([nonfinite])).toThrow(/finite/i)
   expect(bounds([box()])).toEqual({min:[0,0,0],max:[10,10,10]})
  })

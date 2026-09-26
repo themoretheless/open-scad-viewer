@@ -28,7 +28,7 @@ export function photoPly(surface: PhotoSurface): string {
 export function photoCanAppend(surface: PhotoSurface): boolean {
   if (!surface.triangles.length) return false
   try {
-    const mesh = inspectPolygonMesh({positions: Array.from(surface.positions), indices: Array.from(surface.triangles)})
+    const mesh = inspectPolygonMesh({positions: Float64Array.from(surface.positions), indices: Uint32Array.from(surface.triangles)})
     return mesh.closed && mesh.signedVolumeMm3 > 0 && !mesh.degenerateTriangles
       && !mesh.nonManifoldEdges && !mesh.orientationConflicts
   } catch { return false }

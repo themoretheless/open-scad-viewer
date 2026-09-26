@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from 'vue'
+import { stringifyMeshJson } from '../services/meshJson'
 import { compileModelGraph } from '../services/modelGraphCompiler'
 import { createMechanicalDocument, GEAR_DEFAULTS, PLANETARY_DEFAULTS, THREAD_DEFAULTS } from '../services/mechanicalGeneratorContract'
 const props=defineProps<{open:boolean;locale:'ru'|'en'}>()
@@ -24,7 +25,7 @@ function generate(){
 }
 function download(){
   if(!generated.value)return
-  const url=URL.createObjectURL(new Blob([JSON.stringify(generated.value.document,null,2)],{type:'application/json'}))
+  const url=URL.createObjectURL(new Blob([stringifyMeshJson(generated.value.document, 2)],{type:'application/json'}))
   const a=document.createElement('a');a.href=url;a.download=`${kind.value}.modelgraph.json`;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)
 }
 function openEditor(save:boolean){

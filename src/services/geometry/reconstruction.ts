@@ -1,5 +1,6 @@
 /** Explicit reconstruction: source meshes remain available to callers. */
 import {callGeometryRust} from './kernel'
+import {normalizePolygonMesh} from './polygon'
 import type {PolygonMesh,PolygonBuild} from './polygon'
 import type {SubdivisionCage} from './subdivision'
 import type {SdfField} from './sdf'
@@ -17,6 +18,6 @@ export interface NurbsPatchSet {
 export const meshToSdf=(mesh:PolygonMesh,signed=true):SdfField=>callGeometryRust('mesh_to_sdf',{mesh,signed})
 export const meshToSubdivision=(mesh:PolygonMesh,iterations=8):SubdivisionReconstruction=>callGeometryRust('mesh_to_subdivision',{mesh,iterations})
 export const meshToNurbs=(mesh:PolygonMesh,mode:NurbsPatchSet['mode']='faceted',maxDeviationMm=0):NurbsPatchSet=>callGeometryRust('mesh_to_nurbs',{mesh,mode,maxDeviationMm})
-export const tessellateNurbsPatches=(patches:NurbsPatchSet,segments=2):PolygonBuild & {faceIds:number[]}=>callGeometryRust('nurbs_patches_tessellate',{patches,segments})
+export const tessellateNurbsPatches=(patches:NurbsPatchSet,segments=2):PolygonBuild & {faceIds:number[]}=>normalizePolygonMesh(callGeometryRust('nurbs_patches_tessellate',{patches,segments}))
 
 export const meshToNurbsBrep=(mesh:PolygonMesh):NurbsBrep=>callGeometryRust('mesh_to_nurbs_brep',{mesh})

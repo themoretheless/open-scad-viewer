@@ -1,9 +1,10 @@
 import {callGeometryRust} from './kernel'
+import {normalizePolygonMesh} from './polygon'
 import type {PolygonBuild} from './polygon'
 export interface SubdivisionCage {vertices:number[][];faces:number[][]}
 export interface SubdivisionRefined {cage:SubdivisionCage;faceIds:number[]}
 export const refineSubdivision=(cage:SubdivisionCage,levels=2):SubdivisionRefined=>callGeometryRust('subdivision_refine',{cage,levels})
-export const tessellateSubdivision=(cage:SubdivisionCage,levels=2):PolygonBuild & {faceIds:number[]}=>callGeometryRust('subdivision_tessellate',{cage,levels})
+export const tessellateSubdivision=(cage:SubdivisionCage,levels=2):PolygonBuild & {faceIds:number[]}=>normalizePolygonMesh(callGeometryRust('subdivision_tessellate',{cage,levels}))
 
 import {validateSculptBrush,type GeometryDeformation,type GeometryBrush,type SculptBrush} from '../geometryEditing'
 export const sculptSubdivision=(cage:SubdivisionCage,brush:SculptBrush):SubdivisionCage=>{validateSculptBrush(brush);return callGeometryRust('subdivision_sculpt',{cage,brush})}

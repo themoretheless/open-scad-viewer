@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, nextTick, onUnmounted, ref, shallowRef, watch, watchEffect, type ComponentPublicInstance } from 'vue'
+import { stringifyMeshJson } from '../services/meshJson'
 import { SolidGpuLayer, isSolidGpuSupported, smoothTriangleList, type SolidGpuBody } from '../services/solidGpuView'
 import { rayTriangleDistance } from '../services/math3d'
 import ModelingGridControls from '../components/ModelingGridControls.vue'
@@ -14,7 +15,7 @@ import { directCornerTool, directRevolveTool, applyDirectRevolve } from '../serv
 import { sampleCurve, transformSketch, bakeSketch, offsetSketch, trimSketch, extendSketch, worldPoint, xyPlane, unit3, cross3, type SketchPlane, type Vec3 } from '../services/directSketchGeometry'
 import { solidTopology, facePlane, pushPullFace, bevelSolidEdge, bevelBrepBody, shellSolid, splitSolid, transformSelection } from '../services/directSolidTools'
 import { storageGet, storageSet } from '../services/safeStorage'
-import { booleanPolygonMeshes, exportPolygonStl, polygonBoundaryLoops, revolvePolygonProfile } from '../services/geometry/polygon'
+import { booleanPolygonMeshes, exportPolygonStl, polygonBoundaryLoops, revolvePolygonProfile, type PolygonMesh } from '../services/geometry/polygon'
 import { mergeByDistance } from '../services/meshEditing'
 import { applyDirectExtrusion, circularDirectCopies, defaultDirectCamera, directExtrusionTool, directFaceShade, projectDirectPoint, unprojectDirectXY, unprojectDirectPlane } from '../services/directModelingTools'
 import { importMeshFromFile, MESH_IMPORT_ACCEPT, stripMeshExtension } from '../services/meshImport'
@@ -258,7 +259,7 @@ const boxSelect=ref(false),selectionBox=ref<{start:Point2;end:Point2;pane:Pane}|
 // Vertex editing of polygon bodies: drag selected vertices in the screen plane, one undo step on release.
 let vertexDrag:{svg:SVGSVGElement;pointer:number;start:Point2;ids:number[];before:DirectDocument;moved:boolean}|null=null
 // Tessellated bodies duplicate vertices per face; group indices by position so a drag moves the whole corner.
-function coincidentVertexGroups(positions:readonly number[]):Map<string,number[]>{
+function coincidentVertexGroups(positions:ArrayLike<number>):Map<string,number[]>{
  const groups=new Map<string,number[]>()
  for(let i=0;i<positions.length/3;i++){const key=`${positions[i*3].toFixed(5)},${positions[i*3+1].toFixed(5)},${positions[i*3+2].toFixed(5)}`;const list=groups.get(key);if(list)list.push(i);else groups.set(key,[i])}
  return groups
@@ -347,7 +348,7 @@ function faceSketch() {run(()=>{
  workplaneBodyId.value=b.id;choosingSketchFace.value=false
  const projectedNormal=projectDirectPoint(f.normal,camera.value)
  if(Math.abs(projectedNormal[2])<.08)camera.value={yaw:Math.atan2(f.normal[0],f.normal[1]),pitch:Math.asin(f.normal[2])}
- workplaneOutline.value=polygonBoundaryLoops({positions:b.mesh.positions,indices:f.triangles.flatMap(t=>b.mesh.indices.slice(t*3,t*3+3))}).map(loop=>loop.map(i=>{const q=points[i].map((v,k)=>v-plane.origin[k]);return [q.reduce((s,v,k)=>s+v*plane.u[k],0),q.reduce((s,v,k)=>s+v*plane.v[k],0)] as Point2}))
+ workplaneOutline.value=polygonBoundaryLoops({positions:b.mesh.positions,indices:Uint32Array.from(f.triangles.flatMap(t=>Array.from(b.mesh.indices.slice(t*3,t*3+3))))}).map(loop=>loop.map(i=>{const q=points[i].map((v,k)=>v-plane.origin[k]);return [q.reduce((s,v,k)=>s+v*plane.u[k],0),q.reduce((s,v,k)=>s+v*plane.v[k],0)] as Point2}))
  activePlane.value=plane;extraSelection.value=[];selection.value='';tool.value='rectangle';mode.value='3d';sketchPaneOpen.value=true;advancedOp.value=null
  const uv=workplaneOutline.value.flat(),xs=uv.map(p=>p[0]),ys=uv.map(p=>p[1]);centers.value['2d']=[(Math.min(...xs)+Math.max(...xs))/2,-(Math.min(...ys)+Math.max(...ys))/2];views.value['2d']=Math.max(10,Math.max(Math.max(...xs)-Math.min(...xs),Math.max(...ys)-Math.min(...ys))*1.4)
 })}
@@ -359,7 +360,7 @@ function chooseSketchFace() {
 function resetWorkplane() { cancelGesture();activePlane.value=xyPlane();workplaneOutline.value=[];workplaneBodyId.value='';choosingSketchFace.value=false;selection.value='';extraSelection.value=[] }
 function bodyFromBrep(body:NonNullable<typeof selectedBody.value>,brep:NurbsBrep) {
  const built=tessellateNurbsBrep(brep,brepSegments.value)
- return {...body,brep,mesh:{positions:[...built.positions],indices:[...built.indices]}}
+ return {...body,brep,mesh:{positions:built.positions.slice(),indices:built.indices.slice()}}
 }
 function facetedRevolveBrep() {
  const sketch=selectedSketch.value!
@@ -386,7 +387,7 @@ function retessellateSelectedBrep() { run(() => {
  const next=history.document,body=next.bodies.find(body=>body.id===selection.value)
  if(!body?.brep)throw Error('Select an authored B-rep body.')
  const built=tessellateNurbsBrep(body.brep,brepSegments.value)
- body.mesh={positions:[...built.positions],indices:[...built.indices]}
+ body.mesh={positions:built.positions.slice(),indices:built.indices.slice()}
  commit(next)
 }) }
 /**
@@ -417,13 +418,13 @@ function booleanPair(a:DirectBody,b:DirectBody,operation:BrepBooleanOperation):{
  if(operation==='xor')throw Error(label('XOR доступен только для двух точных тел B-rep.','XOR is available only for two exact B-rep bodies.'))
  // Tessellated meshes can carry duplicated seam vertices, which the BSP boolean rejects as
  // unstitched. Weld each input at a size-relative tolerance, then retry once coarser.
- const extent=(mesh:{positions:number[]})=>{let span=0;for(let axis=0;axis<3;axis++){let min=Infinity,max=-Infinity;for(let i=axis;i<mesh.positions.length;i+=3){min=Math.min(min,mesh.positions[i]);max=Math.max(max,mesh.positions[i])}span=Math.max(span,max-min)}return span}
+ const extent=(mesh:{positions:ArrayLike<number>})=>{let span=0;for(let axis=0;axis<3;axis++){let min=Infinity,max=-Infinity;for(let i=axis;i<mesh.positions.length;i+=3){min=Math.min(min,mesh.positions[i]);max=Math.max(max,mesh.positions[i])}span=Math.max(span,max-min)}return span}
  const scale=Math.max(extent(a.mesh),extent(b.mesh))
  const weldedBoolean=(tolerance:number)=>booleanPolygonMeshes(mergeByDistance(a.mesh,tolerance),mergeByDistance(b.mesh,tolerance),operation as 'union'|'difference'|'intersection')
  let built
  try{built=weldedBoolean(scale*1e-6)}catch{built=weldedBoolean(scale*1e-4)}
  if(built.indices.length===0)return {body:null,exact:false}
- return {body:{...a,brep:undefined,mesh:{positions:[...built.positions],indices:[...built.indices]}},exact:false}
+ return {body:{...a,brep:undefined,mesh:{positions:built.positions.slice(),indices:built.indices.slice()}},exact:false}
 }
 const FALLBACK_NOTICE=()=>label('Одно из тел не имело точной топологии, результат построен по сетке и не является точным B-rep.','A body had no exact topology; the result was built from the mesh and is not an exact B-rep.')
 const EMPTY_NOTICE=()=>label('Результат пуст: тела не пересекаются так, как требует операция.','The result is empty: the bodies do not overlap the way this operation needs.')
@@ -496,7 +497,7 @@ function resultAdvanced():DirectDocument {
   case 'curve': if(s?.analytic){s.analytic={...s.analytic,center:[p.cx,p.cy],radius:p.radius,start:p.start,sweep:p.sweep};s.points=sampleCurve(s.analytic)}break
   case 'transform': return transformSelection(d,selectedIds.value,[p.x,p.y,p.z],axisVector(p.axis),p.angle,p.scale)
  }
- return parseDirectDocument(JSON.stringify(d))
+ return parseDirectDocument(stringifyMeshJson(d))
 }
 const advancedPreview = computed(() => {
  if(!advancedOp.value)return {document:null,error:''}
@@ -581,7 +582,7 @@ function persist() {
   const persisted = structuredClone(document.value)
   if (!persisted.curves?.length) delete persisted.curves
   if (!persisted.surfaces?.length) delete persisted.surfaces
-  const text = JSON.stringify(persisted)
+  const text = stringifyMeshJson(persisted)
   if (text.length > MAX_DRAFT_CHARACTERS) {
     // The document stays valid in memory; only the browser draft is skipped.
     saveError.value = true
@@ -731,7 +732,7 @@ function extrude() { run(() => {
   const nativeNew=extrusionMode.value==='new'&&(revolveGeometry.value==='exact'||Math.abs(revolveAngle.value)===360)
   if(nativeNew){
     const name=selectedSketch.value.name+` · ${operation.value==='revolve'&&revolveGeometry.value==='faceted'?label('гранёный B-rep','faceted B-rep'):label('точный B-rep','exact B-rep')}`
-    base.bodies.push(bodyFromBrep({id,name,mesh:{positions:[],indices:[]}},authoredToolBrep()));next=base
+    base.bodies.push(bodyFromBrep({id,name,mesh:{positions:new Float64Array(0),indices:new Uint32Array(0)}},authoredToolBrep()));next=base
   }else if(extrusionMode.value!=='new'&&target?.brep){
     const result=bodyFromBrep(target,booleanNurbsBrep(target.brep,authoredToolBrep(),extrusionMode.value))
     base.bodies=base.bodies.flatMap(b=>b.id===target.id?(result.brep.bodies.length?[result]:[]):[b]);next=base
@@ -763,7 +764,7 @@ watch([operation, selectedSketch, profileIds, height, baseZ, revolveAxis, revolv
       if(operation.value==='extrude'){previewBody.value=buildDirectExtrusion(document.value,extrusionOptions());previewEmpty.value=!previewBody.value;if(fitNextPreview){fit('3d');fitNextPreview=false}return}
       const native=revolveGeometry.value==='exact'||Math.abs(revolveAngle.value)===360
       let body=native
-        ? bodyFromBrep({id:'preview',name:'Preview',mesh:{positions:[],indices:[]}},authoredToolBrep())
+        ? bodyFromBrep({id:'preview',name:'Preview',mesh:{positions:new Float64Array(0),indices:new Uint32Array(0)}},authoredToolBrep())
         : directRevolveTool(selectedSketch.value!,revolveOptions())
       const target=document.value.bodies.find(b=>b.id===targetBody.value)
       if(operation.value==='revolve'&&revolveGeometry.value==='exact'&&extrusionMode.value!=='new'&&!target?.brep)throw Error('Exact B-rep revolve combination requires an authored B-rep target.')
@@ -798,7 +799,7 @@ function appendBodies() {
 }
 function sendToMesh() {
   run(() => {
-    storageSet('scad-mesh-modeler-v1', JSON.stringify(solidDocumentToMeshDocument(document.value)))
+    storageSet('scad-mesh-modeler-v1', stringifyMeshJson(solidDocumentToMeshDocument(document.value)))
     emit('toMesh')
   })
 }
@@ -834,7 +835,7 @@ async function importStl(event: Event) {
   try {
     if (!file) return
     const imported = await importMeshFromFile(file, { weld: 1e-4 })
-    const mesh = { positions: [...imported.positions], indices: [...imported.indices] }
+    const mesh = { positions: imported.positions.slice(), indices: imported.indices.slice() }
     run(() => {
       const d = history.document
       const id = crypto.randomUUID()
@@ -880,7 +881,7 @@ async function exportStepOriginal() {
     download(await exportSolidStepOriginal(), 'retained-model.step')
   } catch (e) { error.value = e instanceof Error ? e.message : String(e) }
 }
-function project(p: number[], pane: Pane): Point2 { return pane === '2d' ? [p[0], -p[1]] : projectDirectPoint([p[0],p[1],p[2]??0], camera.value).slice(0,2) as Point2 }
+function project(p: ArrayLike<number>, pane: Pane): Point2 { return pane === '2d' ? [p[0], -p[1]] : projectDirectPoint([p[0],p[1],p[2]??0], camera.value).slice(0,2) as Point2 }
 function viewBox(pane: Pane) { const size = views.value[pane], center = centers.value[pane]; return `${center[0] - size / 2} ${center[1] - size / 2} ${size} ${size}` }
 function zoom(pane: Pane, factor: number) { views.value[pane] = Math.max(.1, Math.min(2e6, views.value[pane] * factor)) }
 function wheelZoom(e: WheelEvent, pane: Pane) {
@@ -938,7 +939,7 @@ if (!kernelReady.value) void warmGeometryKernel().then(async () => {
 }).catch(e => { if(!restoreDisposed){restoringDraft.value=false;error.value=e instanceof Error ? e.message : String(e)} })
 const DISPLAY_TRIANGLE_BUDGET = 4000
 const smoothDisplay = ref(true)
-interface DisplayMesh { mesh: { positions: number[]; indices: number[] }; map: number[] | null; normals: number[][]; /** Smoothed non-indexed list for the GPU layer, built once per display mesh. */ flat?: { positions: Float32Array; normals: Float32Array } }
+interface DisplayMesh { mesh: PolygonMesh; map: number[] | null; normals: number[][]; /** Smoothed non-indexed list for the GPU layer, built once per display mesh. */ flat?: { positions: Float32Array; normals: Float32Array } }
 /**
  * Display meshes keyed by mesh content, not object identity.
  *
@@ -949,7 +950,7 @@ interface DisplayMesh { mesh: { positions: number[]; indices: number[] }; map: n
  */
 const displayCache = new Map<string, DisplayMesh>()
 const DISPLAY_CACHE_LIMIT = 64
-function hashNumbers(values: readonly number[]): string {
+function hashNumbers(values: ArrayLike<number>): string {
   const words = new Uint32Array(Float64Array.from(values).buffer)
   let a = 0x811c9dc5, b = 0x01000193
   for (let i = 0; i < words.length; i++) {
@@ -958,10 +959,10 @@ function hashNumbers(values: readonly number[]): string {
   }
   return (a >>> 0).toString(16) + (b >>> 0).toString(16)
 }
-function displayKey(b: { mesh: { positions: number[]; indices: number[] }; brep?: unknown }): string {
+function displayKey(b: { mesh: PolygonMesh; brep?: unknown }): string {
   return `${b.brep ? 'b' : 'm'}:${b.mesh.positions.length}:${b.mesh.indices.length}:${hashNumbers(b.mesh.positions)}:${hashNumbers(b.mesh.indices)}`
 }
-function triangleCentroidsAndNormals(mesh: { positions: number[]; indices: number[] }) {
+function triangleCentroidsAndNormals(mesh: PolygonMesh) {
   const count = mesh.indices.length / 3, centroids: number[][] = [], normals: number[][] = []
   for (let t = 0; t < count; t++) {
     const [a, b, c] = [0, 1, 2].map(k => { const i = mesh.indices[t * 3 + k]; return mesh.positions.slice(i * 3, i * 3 + 3) })
@@ -972,10 +973,10 @@ function triangleCentroidsAndNormals(mesh: { positions: number[]; indices: numbe
   }
   return { centroids, normals }
 }
-function smoothTriangleNormals(mesh: { positions: number[]; indices: number[] }, flat: number[][]): number[][] {
+function smoothTriangleNormals(mesh: PolygonMesh, flat: number[][]): number[][] {
   // Vertices are shared by position (tessellation may duplicate them per face), so average by rounded coordinates.
   const byPosition = new Map<string, number[]>()
-  const key = (i: number) => mesh.positions.slice(i * 3, i * 3 + 3).map(v => v.toFixed(5)).join(',')
+  const key = (i: number) => Array.from(mesh.positions.slice(i * 3, i * 3 + 3), v => v.toFixed(5)).join(',')
   for (let t = 0; t < flat.length; t++) for (let k = 0; k < 3; k++) {
     const id = key(mesh.indices[t * 3 + k]), acc = byPosition.get(id) ?? [0, 0, 0]
     byPosition.set(id, acc.map((v, j) => v + flat[t][j]))
@@ -999,7 +1000,7 @@ function displayMeshFor(b: ReturnType<typeof directExtrusionTool>): DisplayMesh 
     try {
       const dense = tessellateNurbsBrep(brep, DISPLAY_SEGMENTS)
       if (dense.indices.length / 3 > DISPLAY_TRIANGLE_BUDGET) throw new Error('display budget')
-      const denseMesh = { positions: [...dense.positions], indices: [...dense.indices] }
+      const denseMesh = { positions: dense.positions.slice(), indices: dense.indices.slice() }
       const work = triangleCentroidsAndNormals(b.mesh), view = triangleCentroidsAndNormals(denseMesh)
       const map = view.centroids.map((c, t) => {
         let best = 0, bestScore = Infinity
@@ -1086,7 +1087,7 @@ function meshPolygons(b: ReturnType<typeof directExtrusionTool>) {
   const display: DisplayMesh = cameraDragging.value || gpuActive.value ? { ...COARSE_DISPLAY, mesh: b.mesh, normals: [] } : displayMeshFor(b)
   const mesh = display.mesh, points = bodyPoints({ ...b, mesh })
   return Array.from({ length: mesh.indices.length / 3 }, (_, i) => {
-    const face = mesh.indices.slice(i * 3, i * 3 + 3).map(j => points[j])
+    const face = Array.from(mesh.indices.slice(i * 3, i * 3 + 3), j => points[j])
     const triangle = display.map ? display.map[i] : i
     return { id: b.id, triangle, key: b.id + ':' + i, points: face.map(p => project(p, '3d').join(',')).join(' '), shade: display.map ? shadeFromNormal(display.normals[i]) : directFaceShade(mesh, i, camera.value), depth: face.reduce((n,p) => n + projectDirectPoint(p,camera.value)[2], 0) }
   })
@@ -1272,8 +1273,8 @@ function move(e: PointerEvent) {
     if(!g.moved&&Math.hypot(sx,sy)<.05)return
     g.moved=true
     const cy=Math.cos(camera.value.yaw),sn=Math.sin(camera.value.yaw),sp=Math.sin(camera.value.pitch),cp=Math.cos(camera.value.pitch),horizontal=sy*sp,delta=[sx*cy+horizontal*sn,-sx*sn+horizontal*cy,-sy*cp]
-    const d:DirectDocument=JSON.parse(JSON.stringify(g.before)),body=d.bodies.find(b=>b.id===selection.value);if(!body)return
-    const anchor=body.mesh.positions.slice(g.ids[0]*3,g.ids[0]*3+3) as Vec3
+    const d:DirectDocument=structuredClone(g.before),body=d.bodies.find(b=>b.id===selection.value);if(!body)return
+    const anchor=Array.from(body.mesh.positions.slice(g.ids[0]*3,g.ids[0]*3+3)) as Vec3
     const target=snapped3(anchor.map((v,i)=>v+delta[i]) as Vec3,e,g.before,[selection.value],anchor)
     for(const i of g.ids)for(let k=0;k<3;k++)body.mesh.positions[i*3+k]+=target[k]-anchor[k]
     document.value=d;return}
@@ -1282,7 +1283,7 @@ function move(e: PointerEvent) {
     const target=snapped3(g.point.map((value,i)=>value+delta[i]) as Vec3,e,g.before,[g.id],g.point as Vec3)
     run(()=>{document.value=updateSolidNurbsControlPoint(g.before,g.id,g.u,g.v,target);const edited=document.value.curves?.find(c=>c.id===g.id)?.curve.controlPoints[g.u]??document.value.surfaces?.find(s=>s.id===g.id)?.surface.controlPoints[g.u]?.[g.v];if(edited)[cvX.value,cvY.value,cvZ.value]=edited as [number,number,number]});return
   }
-  if(curveDrag){const g=curveDrag,p=snapped(plane(position(e),'2d'),e),d=JSON.parse(JSON.stringify(g.before)) as DirectDocument,s=d.sketches.find(s=>s.id===g.id)!,a=s.analytic!
+  if(curveDrag){const g=curveDrag,p=snapped(plane(position(e),'2d'),e),d=structuredClone(g.before) as DirectDocument,s=d.sketches.find(s=>s.id===g.id)!,a=s.analytic!
     if(g.kind==='center')a.center=p
     else if(g.kind==='radius')a.radius=Math.max(.01,Math.hypot(p[0]-a.center[0],p[1]-a.center[1]))
     else {const angle=Math.atan2(p[1]-a.center[1],p[0]-a.center[0])*180/Math.PI;if(g.kind==='start'){const end=a.start+a.sweep;a.start=angle;a.sweep=((end-angle)%360+360)%360||360}else a.sweep=((angle-a.start)%360+360)%360||360}
@@ -1363,7 +1364,7 @@ function move(e: PointerEvent) {
     gpuLayer?.setDragOffset(ids, worldDelta as [number, number, number])
     return
   }
-  const d: DirectDocument = JSON.parse(JSON.stringify(gesture.document))
+  const d: DirectDocument = structuredClone(gesture.document)
   const sketch = d.sketches.find(s => s.id === gesture!.id)
   if (sketch) { if (gesture.vertex !== null) {delete sketch.analytic; sketch.points[gesture.vertex] = p} else { const moved=transformSketch(sketch,[delta[0],delta[1]],0,1);Object.assign(sketch,moved) } }
   if(selectedIds.value.length>1){const plane=gesture.pane==='2d'?activePlane.value:xyPlane(),worldDelta=worldPoint(delta,{...plane,origin:[0,0,0]});document.value=transformSelection(gesture.document,selectedIds.value,worldDelta,[0,0,1],0,1);return}
@@ -1401,7 +1402,7 @@ function up(e: PointerEvent) {
       draft.value = []; draftCursor.value=null; tool.value = 'select'
     } else commit(document.value)
   })
-  if (error.value && JSON.stringify(history.document) === JSON.stringify(before)) document.value = before
+  if (error.value && stringifyMeshJson(history.document) === stringifyMeshJson(before)) document.value = before
 }
 
 // Command palette: every tool, primitive and context action of the workspace, searchable by its Russian or English name.
@@ -1480,7 +1481,7 @@ const solidCommands = computed<SolidCommand[]>(() => {
     cmd('delete', 'Удалить', 'Delete', remove, { shortcut: 'Del', enabled: anySelection, disabledReason: needSelection }),
     cmd('bake', 'Bake в Code', 'Bake into Code', appendBodies, { detail: label('Файл', 'File'), enabled: document.value.bodies.length > 0 && props.canAppend, disabledReason: label('Нет тел для переноса', 'No bodies to bake') }),
     cmd('to-mesh', 'Открыть в Mesh', 'Open in Mesh', sendToMesh, { detail: label('Файл', 'File'), enabled: document.value.bodies.length > 0, disabledReason: label('Нет тел', 'No bodies') }),
-    cmd('download-json', 'Скачать проект JSON', 'Download JSON project', () => download(JSON.stringify(document.value), 'solid-model.json'), { detail: label('Файл', 'File') }),
+    cmd('download-json', 'Скачать проект JSON', 'Download JSON project', () => download(stringifyMeshJson(document.value), 'solid-model.json'), { detail: label('Файл', 'File') }),
     cmd('download-scad', 'Экспорт SCAD', 'Export SCAD', () => download(directBodiesScad(document.value), 'solid-bodies.scad'), { detail: label('Файл', 'File'), enabled: document.value.bodies.length > 0, disabledReason: label('Нет тел', 'No bodies') }),
     cmd('help', 'Горячие клавиши', 'Keyboard shortcuts', () => { showHelp.value = !showHelp.value }, { shortcut: '?' }),
   ]
@@ -1577,7 +1578,7 @@ function addPrimitive(kind: typeof primitiveKinds[number]) { run(() => {
  } else {
   const profile=kind==='cone'?[[0,0],[r,0],[0,size]]:Array.from({length:25},(_,i)=>i===0?[0,-r]:i===24?[0,r]:[r*Math.sin(i*Math.PI/24),-r*Math.cos(i*Math.PI/24)])
   const mesh=revolvePolygonProfile(profile,360,48,true)
-  body={id,name,mesh:{positions:[...mesh.positions],indices:[...mesh.indices]}}
+  body={id,name,mesh:{positions:mesh.positions.slice(),indices:mesh.indices.slice()}}
   if(kind==='cone'&&roundGeometry.value==='exact'){body=bodyFromBrep(body,createBrepFrustum(r,0,size));body.name+=` · ${label('точный B-rep','exact B-rep')}`}
   if(kind==='sphere'){body=bodyFromBrep(body,roundGeometry.value==='exact'?createBrepSphere(r):createFacetedBrepSphere(r,16,8));body.name+=` · ${roundGeometry.value==='exact'?label('точный B-rep','exact B-rep'):label('гранёный B-rep','faceted B-rep')}`}
   if(kind==='torus'){body=bodyFromBrep(body,createBrepTorus(r,primitiveTopRadius.value));body.name+=` · ${label('точный B-rep','exact B-rep')}`}
@@ -1717,7 +1718,7 @@ watch(() => props.appendBodies, request => {
       next.groups = [...groups, { name: built.name, source: built.source }]
     }
     cancelGesture()
-    commit(parseDirectDocument(JSON.stringify(next)))
+    commit(parseDirectDocument(stringifyMeshJson(next)))
     selection.value = request.bodies[0]?.id ?? ''
     sync()
   })
@@ -1726,7 +1727,7 @@ watch(() => props.appendBodies, request => {
 watch([() => props.open, () => props.seedDocument], ([open, seed]) => {
   if (!open || !seed || appliedSeeds.has(seed)) return
   run(() => {
-    const next = parseDirectDocument(JSON.stringify(seed))
+    const next = parseDirectDocument(stringifyMeshJson(seed))
     cancelGesture()
     history.commit(next)
     selection.value = next.bodies[0]?.id ?? ''
@@ -1755,7 +1756,7 @@ watch([() => props.open, () => props.seedDocument], ([open, seed]) => {
         <svg v-else width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 18a4.5 4.5 0 0 1-.6-9A6 6 0 0 1 18 8.5 3.8 3.8 0 0 1 17.5 18z"/><path d="m9 13 2 2 4-4"/></svg>
       </span>
       <details class="file-menu"><summary :title="label('Файл', 'File')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6"/></svg><span>{{ label('Файл', 'File') }}</span><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></summary><div>
-        <button @click="download(JSON.stringify(document), 'solid-model.json')">{{ label('Скачать проект JSON', 'Download JSON project') }}</button>
+        <button @click="download(stringifyMeshJson(document), 'solid-model.json')">{{ label('Скачать проект JSON', 'Download JSON project') }}</button>
         <label class="file-open">{{ label('Открыть Solid / ModelGraph NURBS', 'Open Solid / ModelGraph NURBS') }}<input type="file" accept=".json,application/json" @change="importFile"></label>
         <button type="button" @click="stlInput?.click()">{{ label('Импорт STL / OBJ / PLY / OFF / AMF / 3MF как тело', 'Import STL / OBJ / PLY / OFF / AMF / 3MF as body') }}</button>
         <input ref="stlInput" type="file" :accept="MESH_IMPORT_ACCEPT" hidden @change="importStl" />

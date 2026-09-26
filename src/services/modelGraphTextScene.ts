@@ -1,7 +1,7 @@
 /** Publish an own-kernel mesh directly to the viewer, without a SCAD/Manifold pass. */
 import { buildOwnNurbs, collectSdfJobs } from './modelGraphNurbsKernel'
-import { prepareSdfGpu, primeSdfGpu } from './geometry/sdf'
-import { runSdfSweep } from './sdfGpu'
+import { prepareSdfGpuBatch, primeSdfGpuBatch } from './geometry/sdf'
+import { runSdfSweepBatch } from './sdfGpu'
 import type { GeometryEvaluationResult, GeometryQuality } from '../core/build'
 import { geometryAssetId } from '../core/scene'
 import { buildMeshBvh } from './meshBvh'
@@ -9,12 +9,14 @@ import { extractSemanticEdges } from './meshTopology'
 export async function buildTextNurbsScene(document: unknown, quality: GeometryQuality = 'full'): Promise<GeometryEvaluationResult> {
   const start=performance.now()
   // GPU prefetch: eligible SDF grids are sampled by WebGPU before the
-  // synchronous build; failures silently leave the CPU reference path.
+  // synchronous build — all grids in one session (one pipeline, one submit);
+  // failures silently leave the CPU reference path.
   if (typeof navigator !== 'undefined' && navigator.gpu) {
-    for (const job of collectSdfJobs(document)) {
+    const jobs = collectSdfJobs(document)
+    if (jobs.length) {
       try {
-        const prepared = prepareSdfGpu(job.field, job.grid)
-        if (prepared) primeSdfGpu(job, prepared.id, await runSdfSweep(prepared.payload))
+        const batch = prepareSdfGpuBatch(jobs)
+        if (batch) primeSdfGpuBatch(jobs, batch.ids, await runSdfSweepBatch(batch.payload))
       } catch { /* CPU path at tessellation time */ }
     }
   }
@@ -26,7 +28,7 @@ export async function buildTextNurbsScene(document: unknown, quality: GeometryQu
   const vertices=new Float32Array(mesh.indices.length*6),indices=new Uint32Array(mesh.indices.length)
   let surfaceArea=0
   for(let t=0;t<mesh.indices.length;t+=3) {
-    const points=mesh.indices.slice(t,t+3).map(i=>mesh.positions.slice(i*3,i*3+3))
+    const points=Array.from(mesh.indices.slice(t,t+3),i=>Array.from(mesh.positions.slice(i*3,i*3+3)))
     const a=points[1]!.map((x,i)=>x-points[0]![i]!),b=points[2]!.map((x,i)=>x-points[0]![i]!)
     const normal=[a[1]!*b[2]!-a[2]!*b[1]!,a[2]!*b[0]!-a[0]!*b[2]!,a[0]!*b[1]!-a[1]!*b[0]!],length=Math.hypot(...normal)
     surfaceArea+=length/2

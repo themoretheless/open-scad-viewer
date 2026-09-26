@@ -11,6 +11,7 @@ import {placeSolidMeshInKernel} from './geometry/meshAnalysis'
 import { createSelectionTransferService } from './geometry/selectionTransfer'
 import { isTopoId, type TopoId } from '../core/topologyLineage'
 
+import { stringifyMeshJson } from './meshJson'
 /** N1: transfer a Solid selection across a rebuild using durable lineage only. */
 export function transferSolidSelection(selection: string, lineageJson?: string): string | null {
   if (!isTopoId(selection)) return null
@@ -36,7 +37,7 @@ export function sceneMeshesToSolidDocument(meshes: readonly MeshData[], namePref
     const body = meshDataToPolygonBody(mesh, `${namePrefix} ${index + 1}`, `solid-${index + 1}-${Date.now().toString(36)}`)
     if (body) doc.bodies.push(body)
   })
-  return parseDirectDocument(JSON.stringify(doc))
+  return parseDirectDocument(stringifyMeshJson(doc))
 }
 
 export function meshDataToPolygonBody(mesh: MeshData, name: string, id: string): DirectBody | null {
@@ -64,10 +65,10 @@ export function meshDataToPolygonBody(mesh: MeshData, name: string, id: string):
 
 /** MeshData uses interleaved position+normal (stride 6). */
 export function meshDataToPolygon(mesh: MeshData): PolygonMesh | null {
-  // Boundary: DirectBody documents round-trip through JSON (sceneMeshesToSolidDocument),
-  // which requires plain arrays — typed placements are boxed exactly once, here.
+  // Kernel placement returns owned typed views; DirectBody.mesh keeps them as
+  // is, and parseDirectDocument revalidates without another copy.
   const placed = placeSolidMeshInKernel(mesh.vertices, mesh.indices, mesh.transform)
-  return placed ? { positions: Array.from(placed.positions), indices: Array.from(placed.indices) } : null
+  return placed ? { positions: placed.positions, indices: placed.indices } : null
 }
 
 export function solidDocumentToMeshDocument(solid: DirectDocument): MeshWorkspaceDocument {
@@ -87,7 +88,7 @@ export function meshDocumentToSolidDocument(meshDoc: MeshWorkspaceDocument): Dir
     doc.bodies.push({
       id: object.id,
       name: object.name,
-      mesh: { positions: [...object.mesh.positions], indices: [...object.mesh.indices] },
+      mesh: { positions: object.mesh.positions.slice(), indices: object.mesh.indices.slice() },
     })
   }
   return doc
@@ -97,7 +98,7 @@ export function polygonToMeshObject(mesh: PolygonMesh, name: string, id: string)
   return {
     id,
     name,
-    mesh: { positions: [...mesh.positions], indices: [...mesh.indices] },
+    mesh: { positions: mesh.positions.slice(), indices: mesh.indices.slice() },
     visible: true,
   }
 }

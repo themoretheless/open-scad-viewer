@@ -40,7 +40,7 @@ it('resolves straight box edges in either direction and refuses diagonals and no
  for(const e of edges){const id=selectedBrepStraightEdge(body,[e.a,e.b]);found.add(id);expect(selectedBrepStraightEdge(body,[e.b,e.a])).toBe(id)}
  expect(found.size).toBe(12)
  const edgePairs=new Set(edges.flatMap(e=>[`${e.a},${e.b}`,`${e.b},${e.a}`]))
- const diagonal=Array.from({length:mesh.indices.length/3},(_,i)=>mesh.indices.slice(i*3,i*3+3)).flatMap(t=>t.map((a,i)=>[a,t[(i+1)%3]] as [number,number])).find(pair=>!edgePairs.has(pair.join(',')))!
+ const diagonal=Array.from({length:mesh.indices.length/3},(_,i)=>mesh.indices.slice(i*3,i*3+3)).flatMap(t=>Array.from(t).map((a,i)=>[a,t[(i+1)%3]] as [number,number])).find(pair=>!edgePairs.has(pair.join(',')))!
  expect(()=>selectedBrepStraightEdge(body,diagonal)).toThrow('one straight authored')
  expect(()=>selectedBrepStraightEdge(body,[0,0])).toThrow('vertices')
  expect(()=>selectedBrepStraightEdge(body,[0,mesh.positions.length/3])).toThrow('vertices')

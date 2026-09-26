@@ -1,3 +1,4 @@
+import { stringifyMeshJson } from '../src/services/meshJson'
 import {readFileSync} from 'node:fs'
 import {IDBFactory} from 'fake-indexeddb'
 import {describe,expect,it} from 'vitest'
@@ -35,7 +36,7 @@ describe('STEP /6 retained product closure',()=>{
   it('preserves interchange metadata through an actual document edit',()=>{
     const routed=importStepForWorkbench(fixture('self-authored-ap242-periodic-cylinder.step'))
     const body=routed.bodies[0]
-    const document=parseDirectDocument(JSON.stringify({version:1,sketches:[],bodies:[body],interchange:{step:routed.report}}))
+    const document=parseDirectDocument(stringifyMeshJson({version:1,sketches:[],bodies:[body],interchange:{step:routed.report}}))
     const edited=cadOperation(document,{action:'resize',ids:[body.id],sketches:[],axis:[0,0,1],origin:[0,0,0],
       amount:0,count:1,width:5,height:6,depth:7,pitch:1,secondary:1,mode:'min',pathId:'',profileIds:[]})
     expect(edited.interchange?.step?.occurrenceIdentities).toEqual(routed.report.occurrenceIdentities)

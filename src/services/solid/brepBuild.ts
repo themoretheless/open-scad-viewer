@@ -9,6 +9,7 @@
  */
 import { buildOwnNurbs } from '../modelGraphNurbsKernel'
 import { brepGearFaceCount, type NurbsBrep } from '../geometry/brep'
+import { normalizePolygonMesh } from '../geometry/polygon'
 import type { DirectBody } from '../directModeling'
 import type { BrepNode } from './brepGraph'
 
@@ -74,7 +75,7 @@ function buildExactSolidBody(
     action: 'build',
     display: { segments: displaySegments(reachable), subdivisionLevels: 1 },
   })
-  const mesh = (built as { mesh?: { positions: number[]; indices: number[] } }).mesh
+  const mesh = (built as { mesh?: { positions: ArrayLike<number>; indices: ArrayLike<number> } }).mesh
   if (!mesh) throw new Error(`"${name}" produced no displayable geometry.`)
   const definitions = built.report.definitions as Record<string, { kind: string } & Record<string, unknown>>
   const definition = definitions[root]
@@ -85,7 +86,7 @@ function buildExactSolidBody(
   return {
     id: crypto.randomUUID(),
     name,
-    mesh: { positions: mesh.positions, indices: mesh.indices },
+    mesh: normalizePolygonMesh({ positions: mesh.positions, indices: mesh.indices }),
     brep: brep as unknown as NurbsBrep,
   }
 }

@@ -3,8 +3,8 @@ import {compileOpenSCAD} from './openscadCompiler'
 import {directBodiesScad} from './directBodiesScad'
 import type {DirectDocument} from './directModeling'
 import {sceneBody} from './meshFlatten'
-const sameNumbers=(a:number[],b:number[])=>a.length===b.length&&a.every((value,index)=>Object.is(value,b[index]))
-const sameMesh=(a:{positions:number[];indices:number[]},b:{positions:number[];indices:number[]}|undefined)=>
+const sameNumbers=(a:ArrayLike<number>,b:ArrayLike<number>)=>a.length===b.length&&Array.from(a).every((value,index)=>Object.is(value,b[index]))
+const sameMesh=(a:{positions:ArrayLike<number>;indices:ArrayLike<number>},b:{positions:ArrayLike<number>;indices:ArrayLike<number>}|undefined)=>
  !!b&&sameNumbers(a.positions,b.positions)&&sameNumbers(a.indices,b.indices)
 /** Replace only authored top-level calls owning changed bodies; keep declarations/comments intact. */
 export function patchMainSource(source:string,meshes:MeshData[],result:DirectDocument):string {

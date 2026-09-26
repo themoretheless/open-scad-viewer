@@ -1,3 +1,4 @@
+import { stringifyMeshJson } from '../src/services/meshJson'
 import {expect,it} from 'vitest'
 import {createBrepCylinder,createBrepFrustum,createBrepTube,createBrepTorus,inspectNurbsBrep,analyzeNurbsBrep,tessellateNurbsBrep,booleanNurbsBrep,createBrepBox,extrudeBrepPolygon} from '../src/services/geometry/brep'
 import {transformSelection} from '../src/services/directSolidTools'
@@ -82,7 +83,7 @@ it('authors circle and concave sketch extrusions on arbitrary workplanes',async(
  expect(Math.min(...model.vertices.map(v=>v.point[0]))).toBe(8)
  expect(Math.max(...model.vertices.map(v=>v.point[0]))).toBe(11)
  expect(Math.min(...model.vertices.map(v=>v.point[1]))).toBe(22)
- const doc=parseDirectDocument(JSON.stringify({version:1,sketches:[],bodies:[{id:'b',name:'Circle',brep:model,mesh:{positions:mesh.positions,indices:mesh.indices}}]}))
+ const doc=parseDirectDocument(stringifyMeshJson({version:1,sketches:[],bodies:[{id:'b',name:'Circle',brep:model,mesh:{positions:mesh.positions,indices:mesh.indices}}]}))
  expect(doc.bodies[0].brep?.topologyIds?.faces).toEqual(model.topologyIds!.faces)
 })
 

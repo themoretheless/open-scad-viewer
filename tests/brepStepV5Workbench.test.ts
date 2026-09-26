@@ -73,7 +73,7 @@ END-ISO-10303-21;`
     const routed=importStepForWorkbench(tessellated)
     expect(routed.report.route).toBe('tessellated-shape')
     expect(routed.report.retained).toBe(false)
-    expect(routed.bodies[0].mesh.indices).toEqual([0,1,2])
+    expect(Array.from(routed.bodies[0].mesh.indices)).toEqual([0,1,2])
     const csg=tessellated.replace(
       "#3=TESSELLATED_SHAPE_REPRESENTATION('',(#2),$);",
       "#3=CONSTRUCTIVE_SOLID_GEOMETRY_REPRESENTATION('',(#4),$);#4=CSG_SOLID('',#5);",

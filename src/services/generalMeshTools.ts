@@ -1,7 +1,7 @@
 import {bodyPoints,type DirectBody,type Point2} from './directModeling'
 import {solidTopology} from './directSolidTools'
 import {callGeometryRust} from './geometry/kernel'
-import {booleanPolygonMeshes,extrudePolygonProfile,loftPolygonSections,inspectPolygonMesh,type PolygonBuild} from './geometry/polygon'
+import {booleanPolygonMeshes,extrudePolygonProfile,loftPolygonSections,inspectPolygonMesh,normalizePolygonMesh,type PolygonBuild} from './geometry/polygon'
 import {cross3,dot3,unit3,worldPoint,type Vec3} from './directSketchGeometry'
 import {directCornerTool} from './directProfileTools'
 /** Sampled shell. step is the requested maximum grid spacing, never an exact B-rep tolerance. */
@@ -10,7 +10,7 @@ export function sampledShell(body:DirectBody,openings:number[],thickness:number,
  const topology=solidTopology(body.mesh),triangles=[...new Set(openings.flatMap(i=>{if(!topology.faces[i])throw Error('Invalid opening face.');return topology.faces[i].triangles}))]
  const p=bodyPoints(body),span=Math.max(...[0,1,2].map(k=>Math.max(...p.map(v=>v[k]))-Math.min(...p.map(v=>v[k]))))
  const step=requestedStep&&requestedStep>0?requestedStep:adaptive?thickness/4:Math.max(thickness/4,span/59)
- const mesh=callGeometryRust<PolygonBuild>(adaptive?'mesh_shell_adaptive':'mesh_shell_sampled',{mesh:body.mesh,openings:triangles,thickness,step})
+ const mesh=normalizePolygonMesh(callGeometryRust<PolygonBuild>(adaptive?'mesh_shell_adaptive':'mesh_shell_sampled',{mesh:body.mesh,openings:triangles,thickness,step}))
  return {...body,mesh:{positions:mesh.positions,indices:mesh.indices}}
 }
 /** Local circular edge cutter/filler; adjacent faces may belong to a nonconvex body. */

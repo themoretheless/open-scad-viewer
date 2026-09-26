@@ -160,8 +160,14 @@ describe('WebGPURenderer retained geometry resources', () => {
       0, -0.5, 0, -3.5, -1 / 3, 0, 0, 5 / 3, 0, 0, 0.25, -2.75, 0, 0, 0, 1,
       0.125, 0.375, 0.75, 0.625,
       alpha, 0, edge, 0,
+      // Morph at rest, then material defaults: white base color, metallic 0,
+      // black emissive, roughness 0.7, material id 0, padding.
+      1, 0, 0, 0,
+      1, 1, 1, 0,
+      0, 0, 0, 0.7,
+      0, 0, 0, 0,
     ]
-    expect(uniform.size).toBe(176)
+    expect(uniform.size).toBe(224)
     expect(uniform.written.every(byte => byte === 1)).toBe(true)
     const values = new Float32Array(uniform.contents.buffer)
     expected.forEach((value, index) => expect(values[index]).toBeCloseTo(value, 6))

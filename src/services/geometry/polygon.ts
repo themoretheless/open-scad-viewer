@@ -1,9 +1,38 @@
 /** Public polygon API. No spline representation or Manifold dependency. */
 import { callGeometryRust } from './kernel'
+/** Mesh buffers are typed arrays end to end: halved memory, O(1) structuredClone
+ * across worker postMessage, and no per-element boxing at the WASM binary codec
+ * (encodeBinary accepts numeric views verbatim). JSON boundaries convert
+ * explicitly: parse-side validators box plain arrays into views, stringify goes
+ * through `stringifyMeshJson` (services/meshJson). */
 export interface PolygonMesh {
-  positions: number[]
-  indices: number[]
-  uv?: number[]
+  positions: Float64Array
+  indices: Uint32Array
+  uv?: Float64Array
+}
+/** Indices are u32; positions are f64. Anything beyond 4G vertices is rejected
+ * instead of silently wrapping. */
+const MAX_MESH_VERTICES = 0xffffffff
+export function toPolygonPositions(values: ArrayLike<number>): Float64Array {
+  return values instanceof Float64Array ? values : Float64Array.from(values)
+}
+export function toPolygonIndices(values: ArrayLike<number>): Uint32Array {
+  if (values instanceof Uint32Array) return values
+  if (values.length > MAX_MESH_VERTICES * 3) throw new Error('Mesh index buffer exceeds u32 range.')
+  return Uint32Array.from(values)
+}
+/** Normalize an arbitrary mesh-like payload (freshly JSON/binary-decoded plain
+ * arrays, or already typed views) into the canonical typed PolygonMesh fields. */
+export function normalizePolygonMesh<T extends { positions: ArrayLike<number>; indices: ArrayLike<number>; uv?: ArrayLike<number> }>(mesh: T): T & PolygonMesh {
+  if (mesh.positions.length / 3 > MAX_MESH_VERTICES) throw new Error('Mesh exceeds u32 vertex range.')
+  mesh.positions = toPolygonPositions(mesh.positions)
+  mesh.indices = toPolygonIndices(mesh.indices)
+  if (mesh.uv !== undefined) mesh.uv = toPolygonPositions(mesh.uv)
+  return mesh as T & PolygonMesh
+}
+/** Kernel results decode as plain number[]; box them exactly once, here. */
+function typedBuild<T extends { positions: ArrayLike<number>; indices: ArrayLike<number>; uv?: ArrayLike<number> }>(build: T): T & PolygonMesh {
+  return normalizePolygonMesh(build)
 }
 export interface PolygonReport {
   triangleCount: number
@@ -26,8 +55,8 @@ export interface PolygonReport {
 export interface PolygonBuild extends PolygonMesh { report: PolygonReport }
 export function inspectPolygonMesh(mesh: PolygonMesh): PolygonReport { return callGeometryRust('mesh_inspect', { mesh }) }
 export function polygonBoundaryLoops(mesh: PolygonMesh): number[][] { return callGeometryRust('mesh_boundary_loops', { mesh }) }
-export function transformPolygonMesh(mesh: PolygonMesh, matrix: number[][]): PolygonBuild { return callGeometryRust('mesh_transform', { mesh, matrix }) }
-export function thickenPolygonMesh(mesh: PolygonMesh, vector: number[]): PolygonBuild { return callGeometryRust('mesh_thicken', { mesh, vector }) }
+export function transformPolygonMesh(mesh: PolygonMesh, matrix: number[][]): PolygonBuild { return typedBuild(callGeometryRust<PolygonBuild>('mesh_transform', { mesh, matrix })) }
+export function thickenPolygonMesh(mesh: PolygonMesh, vector: number[]): PolygonBuild { return typedBuild(callGeometryRust<PolygonBuild>('mesh_thicken', { mesh, vector })) }
 export function exportPolygonStl(mesh: PolygonMesh): string { return callGeometryRust('mesh_export_stl', { mesh }) }
 
 export type PolygonBooleanOperation = 'union' | 'intersection' | 'difference'
@@ -45,7 +74,7 @@ export interface PolygonBooleanReport {
   inputTriangles: [number, number]
 }
 export function booleanPolygonMeshes(a: PolygonMesh, b: PolygonMesh, operation: PolygonBooleanOperation, options: PolygonBooleanOptions = {}): PolygonBuild {
-  return callGeometryRust('mesh_boolean', { a, b, operation, options })
+  return typedBuild(callGeometryRust<PolygonBuild>('mesh_boolean', { a, b, operation, options }))
 }
 
 /** Horizontal mesh section at z (mm). Contours are not yet printable regions. */
@@ -217,13 +246,13 @@ export function inspectGcode(gcode: string): GcodeInspectResult {
 import {unpackGcodePreview,type PackedGcodePreview} from '../gcodePreviewTransport'
 
 export interface PolygonProfile {outer:number[][];holes?:number[][][]}
-export const extrudePolygonProfile=(profile:PolygonProfile,vector:number[]):PolygonBuild=>callGeometryRust('polygon_extrude',{profile,vector})
-export const revolvePolygonProfile=(profile:number[][],angle=360,segments=32,caps=true):PolygonBuild=>callGeometryRust('polygon_revolve',{profile,angle,segments,caps})
-export const loftPolygonSections=(sections:number[][][],caps=true):PolygonBuild=>callGeometryRust('polygon_loft',{sections,caps})
-export const sweepPolygonProfile=(profile:number[][],path:number[][],up=[1,0,0],caps=true):PolygonBuild=>callGeometryRust('polygon_sweep',{profile,path,up,caps})
+export const extrudePolygonProfile=(profile:PolygonProfile,vector:number[]):PolygonBuild=>typedBuild(callGeometryRust<PolygonBuild>('polygon_extrude',{profile,vector}))
+export const revolvePolygonProfile=(profile:number[][],angle=360,segments=32,caps=true):PolygonBuild=>typedBuild(callGeometryRust<PolygonBuild>('polygon_revolve',{profile,angle,segments,caps}))
+export const loftPolygonSections=(sections:number[][][],caps=true):PolygonBuild=>typedBuild(callGeometryRust<PolygonBuild>('polygon_loft',{sections,caps}))
+export const sweepPolygonProfile=(profile:number[][],path:number[][],up=[1,0,0],caps=true):PolygonBuild=>typedBuild(callGeometryRust<PolygonBuild>('polygon_sweep',{profile,path,up,caps}))
 
 import {validateSculptBrush,type GeometryDeformation,type GeometryBrush,type SculptBrush} from '../geometryEditing'
-export const sculptPolygonMesh=(mesh:PolygonMesh,brush:SculptBrush):PolygonBuild=>{validateSculptBrush(brush);return callGeometryRust('polygon_sculpt',{mesh,brush})}
-export const deformPolygonMesh=(mesh:PolygonMesh,deformation:GeometryDeformation):PolygonBuild=>callGeometryRust('polygon_deform',{mesh,deformation})
-export const brushPolygonMesh=(mesh:PolygonMesh,brush:GeometryBrush):PolygonBuild=>callGeometryRust('polygon_brush',{mesh,brush})
-export const extrudePolygonFaces=(mesh:PolygonMesh,triangles:number[],vector:number[]):PolygonBuild=>callGeometryRust('polygon_extrude_faces',{mesh,triangles,vector})
+export const sculptPolygonMesh=(mesh:PolygonMesh,brush:SculptBrush):PolygonBuild=>{validateSculptBrush(brush);return typedBuild(callGeometryRust<PolygonBuild>('polygon_sculpt',{mesh,brush}))}
+export const deformPolygonMesh=(mesh:PolygonMesh,deformation:GeometryDeformation):PolygonBuild=>typedBuild(callGeometryRust<PolygonBuild>('polygon_deform',{mesh,deformation}))
+export const brushPolygonMesh=(mesh:PolygonMesh,brush:GeometryBrush):PolygonBuild=>typedBuild(callGeometryRust<PolygonBuild>('polygon_brush',{mesh,brush}))
+export const extrudePolygonFaces=(mesh:PolygonMesh,triangles:number[],vector:number[]):PolygonBuild=>typedBuild(callGeometryRust<PolygonBuild>('polygon_extrude_faces',{mesh,triangles,vector}))

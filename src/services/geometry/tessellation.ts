@@ -1,7 +1,7 @@
 /** Compatibility API over the independent Rust polygon library and NURBS adapter. */
 import type { NurbsSurface } from '../nurbsSurface'
 import { callGeometryRust } from './kernel'
-import { inspectPolygonMesh, thickenPolygonMesh, exportPolygonStl, type PolygonBuild } from './polygon'
+import { inspectPolygonMesh, thickenPolygonMesh, exportPolygonStl, normalizePolygonMesh, type PolygonBuild } from './polygon'
 
 export type NurbsUV = number[]
 export type NurbsTrim = { outer: NurbsUV[]; holes?: NurbsUV[][] }
@@ -10,10 +10,10 @@ export type NurbsTessellationOptions = { segmentsU: number; segmentsV: number; t
 
 
 export function tessellateNurbsSurface(surface: NurbsSurface, options: NurbsTessellationOptions): NurbsMesh {
-  return callGeometryRust('surface_tessellate', { surface, options })
+  return normalizePolygonMesh(callGeometryRust('surface_tessellate', { surface, options }))
 }
-export function inspectNurbsMesh(positions: number[], indices: number[]): NurbsMesh['report'] {
-  return { ...inspectPolygonMesh({ positions, indices }), construction: 'sampled_surface' }
+export function inspectNurbsMesh(positions: ArrayLike<number>, indices: ArrayLike<number>): NurbsMesh['report'] {
+  return { ...inspectPolygonMesh(normalizePolygonMesh({ positions, indices })), construction: 'sampled_surface' }
 }
 export function thickenNurbsMesh(mesh: NurbsMesh, vector: number[]): NurbsMesh {
   const result = thickenPolygonMesh(mesh, vector)

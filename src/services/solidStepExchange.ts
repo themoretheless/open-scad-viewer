@@ -1,4 +1,5 @@
 import {importStepForWorkbench, exportRetainedStepForWorkbench} from './cadStepRouting'
+import { stringifyMeshJson } from './meshJson'
 import {loadProjectStepModel, saveProjectStepModel} from './cadStepIndexedDb'
 import {parseDirectDocument, type DirectDocument} from './directModeling'
 import {warmGeometryKernel} from './geometry/kernel'
@@ -8,7 +9,7 @@ export async function prepareSolidStepImport(text: string, current: DirectDocume
   const snapshot = structuredClone(current)
   await warmGeometryKernel()
   const imported = importStepForWorkbench(text)
-  const document = parseDirectDocument(JSON.stringify({
+  const document = parseDirectDocument(stringifyMeshJson({
     ...snapshot,
     bodies: [...snapshot.bodies, ...imported.bodies],
     interchange: {...snapshot.interchange, step: imported.report},

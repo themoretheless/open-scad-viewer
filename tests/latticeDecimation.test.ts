@@ -16,7 +16,7 @@ function gridBox(n:number,size=10,height=4):PolygonMesh{
   indices.push(t(0,i),t(0,i+1),b(0,i+1),t(0,i),b(0,i+1),b(0,i))
   indices.push(t(n,i),b(n,i+1),t(n,i+1),t(n,i),b(n,i),b(n,i+1))
  }
- return {positions,indices}
+ return {positions:Float64Array.from(positions),indices:Uint32Array.from(indices)}
 }
 describe('lattice decimation',()=>{
  const mesh=gridBox(28),target=1200,tolerance=1.5
@@ -52,7 +52,7 @@ describe('lattice decimation',()=>{
   expect(inspectPolygonMesh(tight).closed).toBe(true)
  })
  it('keeps an empty mesh empty',()=>{
-  expect(decimateLattice({positions:[],indices:[]},1)).toEqual({positions:[],indices:[]})
+  const out=decimateLattice({positions:new Float64Array(0),indices:new Uint32Array(0)},1);expect(Array.from(out.positions)).toEqual([]);expect(Array.from(out.indices)).toEqual([])
  })
  it('refuses malformed meshes and out-of-bounds admission',()=>{
   const m=gridBox(4),snapshot=JSON.stringify(m)

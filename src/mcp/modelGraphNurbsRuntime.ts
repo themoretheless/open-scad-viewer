@@ -1,4 +1,5 @@
 import { spawn } from 'node:child_process';
+import { stringifyMeshJson } from '../services/meshJson'
 import { fileURLToPath } from 'node:url';
 import { compileModelGraphNurbs } from '../services/modelGraphNurbs';
 import type { OwnNurbsRequest, buildOwnNurbs } from '../services/modelGraphNurbsKernel';
@@ -19,7 +20,7 @@ export async function runOwnNurbs(document: unknown, request: OwnNurbsRequest, s
         throw new Error('NURBS request cancelled.');
     if (active >= 2)
         throw new Error('Two NURBS jobs are already running; retry after completion.');
-    const data = JSON.stringify({ document, request });
+    const data = stringifyMeshJson({ document, request });
     if (Buffer.byteLength(data) > 262144)
         throw new Error('NURBS request exceeds 256 KiB.');
     active++;

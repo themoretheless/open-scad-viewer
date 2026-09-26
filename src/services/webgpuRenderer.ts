@@ -42,6 +42,7 @@ import type {
   DisplayMode,
   DistanceMeasurement,
   HoverChangeHandler,
+  MaterialDef,
   MeasurementChangeHandler,
   PickHit,
   RendererLifecycleEvent,
@@ -50,12 +51,15 @@ import type {
   SelectionMode,
   SetMeshesOptions,
   SceneUploadMetrics,
+  ShadingModel,
 } from './rendererContracts'
+import { resolveMeshShaderId, DEFAULT_THEME, getThemePreset, type RenderTheme } from './rendererContracts'
 export type {
   DisplayMode,
   DistanceMeasurement,
   PickHit,
   RendererLifecycleEvent,
+  RenderTheme,
   SelectionMode,
 } from './rendererContracts'
 import {
@@ -86,19 +90,16 @@ import { MeshInstances } from './meshInstances'
 import { effectiveDisplayAlpha, isTransparentAlpha } from './backendQuality'
 import { computeOrbitCameraFrame } from './orbitCameraProjection'
 import {
-  DEEP_MESH_WGSL,
-  EDGE_WGSL,
-  GRID_WGSL,
-  LINE_WGSL,
-  MESH_WGSL,
   MESH_VERTEX_STRIDE,
   MORPH_VERTEX_STRIDE,
   OBJECT_UNIFORM_LAYOUT,
-  SELECTION_OVERLAY_WGSL,
+  SCENE_UNIFORM_LAYOUT,
+  getShader,
   immediateObjectShader,
   instancedObjectShader,
   supportsImmediateAddressSpace,
 } from './shaders'
+import type { ShaderDepthSpec, ShaderVariant, ShaderVertexLayout } from './shaders'
 
 /* ── GPU mesh handle ──────────────────────────────── */
 
@@ -137,6 +138,10 @@ interface GMesh {
   styleSelected: number
   styleEdge: number
   styleHovered: number
+  /** Presentation material from MeshData; undefined = legacy Phong defaults. */
+  material?: MaterialDef
+  /** Resolved shading model; drives mesh pipeline selection at draw time. */
+  shadingModel: ShadingModel
 }
 
 /** Shared empty list so render() never allocates when there are no ghosts. */
@@ -239,6 +244,11 @@ const DEFAULT_GRID_STEP = 10
 const GRID_MIN_EXTENT = 200
 /** Grid lines fade out this many orbit distances away from the eye. */
 const GRID_FADE_DISTANCES = 6
+/** Premultiplied-alpha blend shared by every transparent pipeline target. */
+const ALPHA_BLEND: GPUBlendState = {
+  color: { srcFactor: 'src-alpha', dstFactor: 'one-minus-src-alpha', operation: 'add' },
+  alpha: { srcFactor: 'one', dstFactor: 'one-minus-src-alpha', operation: 'add' },
+}
 const CLICK_MOVE_THRESHOLD = 3
 const MAX_EDGE_BUFFER_BYTES = 32 * 1024 * 1024
 const MAX_OVERLAY_BUFFER_BYTES = 16 * 1024 * 1024
@@ -275,6 +285,12 @@ export class WebGPURenderer {
   private deepSelectionLinePipe!: GPURenderPipeline
   private sceneBGL!: GPUBindGroupLayout
   private objBGL!: GPUBindGroupLayout
+  private sceneLayout!: GPUPipelineLayout
+  private objectLayout!: GPUPipelineLayout
+  private immediateObjectLayout: GPUPipelineLayout | null = null
+  private vertexLayouts!: Record<ShaderVertexLayout, GPUVertexBufferLayout[]>
+  private readonly shaderModuleCache = new Map<string, GPUShaderModule>()
+  private readonly pipelineCache = new Map<string, GPURenderPipeline>()
   private sceneUB: GPUBuffer | null = null
   private sceneBG!: GPUBindGroup
   private depth: GPUTexture | null = null
@@ -319,9 +335,19 @@ export class WebGPURenderer {
   private cameraHistory = new CameraHistory(32)
   private depthCycleState: DepthCycleState | null = null
   private styleScratch = new Float32Array(4)
-  private objectUniformScratch = new Float32Array(44)
+  private objectUniformScratch = new Float32Array(OBJECT_UNIFORM_LAYOUT.floats)
   private morphScratch = new Float32Array(4)
-  private sceneUniformScratch = new Float32Array(52)
+  private materialTailScratch = new Float32Array(8)
+  private sceneUniformScratch = new Float32Array(SCENE_UNIFORM_LAYOUT.floats)
+  /** Active render theme; fills the Scene theme tail every frame. */
+  private theme: RenderTheme = DEFAULT_THEME
+  /** Scene-level default shading model for meshes without their own material. */
+  private defaultShadingModel: ShadingModel = 'phong'
+  /**
+   * Scene-level default material tail for meshes without their own material;
+   * identity defaults reproduce the legacy look.
+   */
+  private defaultMaterial = { baseColor: [1, 1, 1] as [number, number, number], metallic: 0, roughness: 0.7 }
   /** Zero positions bound at vertex slot 1 whenever a mesh is not morphing. */
   private morphDummyVB: GPUBuffer | null = null
   // Keyed by geometryAssetId (content) so republished equal meshes hit; per
@@ -338,6 +364,7 @@ export class WebGPURenderer {
   private readonly transparentInstances = new MeshInstances()
   private readonly edgeInstances = new MeshInstances()
   private instanceBGL!: GPUBindGroupLayout
+  private instanceLayout!: GPUPipelineLayout
   private instanceMeshPipe!: GPURenderPipeline
   private instanceMeshPipeT!: GPURenderPipeline
   private instanceEdgePipe!: GPURenderPipeline
@@ -502,16 +529,19 @@ export class WebGPURenderer {
     this.objBGL = dev.createBindGroupLayout({ entries: [
       { binding: 0, visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT, buffer: { type: 'uniform' } },
     ] })
+    this.instanceBGL = dev.createBindGroupLayout({ entries: [
+      { binding: 0, visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT, buffer: { type: 'read-only-storage' } },
+    ] })
+    this.sceneLayout = dev.createPipelineLayout({ bindGroupLayouts: [this.sceneBGL] })
+    this.objectLayout = dev.createPipelineLayout({ bindGroupLayouts: [this.sceneBGL, this.objBGL] })
+    this.immediateObjectLayout = this.immediateObjectStyle
+      ? dev.createPipelineLayout({ bindGroupLayouts: [this.sceneBGL, this.objBGL], immediateSize: 16 })
+      : null
+    this.instanceLayout = dev.createPipelineLayout({ bindGroupLayouts: [this.sceneBGL, this.instanceBGL] })
     this.morphDummyVB?.destroy()
     this.morphDummyVB = dev.createBuffer({ size: 12, usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST })
 
-    const meshMod = dev.createShaderModule({ code: MESH_WGSL })
-    const meshLayout = dev.createPipelineLayout({ bindGroupLayouts: [this.sceneBGL, this.objBGL] })
-    const immediateMeshLayout = this.immediateObjectStyle
-      ? dev.createPipelineLayout({ bindGroupLayouts: [this.sceneBGL, this.objBGL], immediateSize: 16 })
-      : null
-
-    const vbl: GPUVertexBufferLayout = {
+    const meshVBL: GPUVertexBufferLayout = {
       arrayStride: MESH_VERTEX_STRIDE,
       attributes: [
         { shaderLocation: 0, offset: 0, format: 'float32x3' },
@@ -524,82 +554,6 @@ export class WebGPURenderer {
       arrayStride: MORPH_VERTEX_STRIDE,
       attributes: [{ shaderLocation: 2, offset: 0, format: 'float32x3' }],
     }
-    const edgeMorphVBL: GPUVertexBufferLayout = {
-      arrayStride: MORPH_VERTEX_STRIDE,
-      attributes: [{ shaderLocation: 1, offset: 0, format: 'float32x3' }],
-    }
-    const ds: GPUDepthStencilState = { format: 'depth24plus', depthWriteEnabled: true, depthCompare: 'less' }
-
-    const meshPipeDescriptor: GPURenderPipelineDescriptor = {
-      layout: meshLayout,
-      vertex: { module: meshMod, entryPoint: 'vs', buffers: [vbl, morphVBL] },
-      fragment: { module: meshMod, entryPoint: 'fs', targets: [{ format: this.fmt }] },
-      primitive: { topology: 'triangle-list', cullMode: 'none' },
-      depthStencil: ds,
-    }
-    this.meshPipe = dev.createRenderPipeline(meshPipeDescriptor)
-
-    const meshPipeTDescriptor: GPURenderPipelineDescriptor = {
-      layout: meshLayout,
-      vertex: { module: meshMod, entryPoint: 'vs', buffers: [vbl, morphVBL] },
-      fragment: { module: meshMod, entryPoint: 'fs', targets: [{
-        format: this.fmt,
-        blend: {
-          color: { srcFactor: 'src-alpha', dstFactor: 'one-minus-src-alpha', operation: 'add' },
-          alpha: { srcFactor: 'one', dstFactor: 'one-minus-src-alpha', operation: 'add' },
-        },
-      }] },
-      primitive: { topology: 'triangle-list', cullMode: 'none' },
-      depthStencil: { ...ds, depthWriteEnabled: false },
-    }
-    this.meshPipeT = dev.createRenderPipeline(meshPipeTDescriptor)
-    if (immediateMeshLayout) {
-      const immediateMeshMod = dev.createShaderModule({ code: immediateObjectShader(MESH_WGSL) })
-      this.meshImmediatePipeT = dev.createRenderPipeline({
-        ...meshPipeTDescriptor,
-        layout: immediateMeshLayout,
-        vertex: { ...meshPipeTDescriptor.vertex, module: immediateMeshMod },
-        fragment: { ...meshPipeTDescriptor.fragment!, module: immediateMeshMod },
-      })
-    } else {
-      this.meshImmediatePipeT = null
-    }
-
-    const deepMeshMod = dev.createShaderModule({ code: DEEP_MESH_WGSL })
-    this.deepMeshPipe = dev.createRenderPipeline({
-      layout: meshLayout,
-      vertex: { module: deepMeshMod, entryPoint: 'vs', buffers: [vbl, morphVBL] },
-      fragment: { module: deepMeshMod, entryPoint: 'fs', targets: [{
-        format: this.fmt,
-        blend: {
-          color: { srcFactor: 'src-alpha', dstFactor: 'one-minus-src-alpha', operation: 'add' },
-          alpha: { srcFactor: 'one', dstFactor: 'one-minus-src-alpha', operation: 'add' },
-        },
-      }] },
-      primitive: { topology: 'triangle-list', cullMode: 'none' },
-      depthStencil: { ...ds, depthWriteEnabled: false, depthCompare: 'always' },
-    })
-    if (immediateMeshLayout) {
-      const deepImmediateMeshMod = dev.createShaderModule({ code: immediateObjectShader(DEEP_MESH_WGSL) })
-      this.deepMeshImmediatePipe = dev.createRenderPipeline({
-        layout: immediateMeshLayout,
-        vertex: { module: deepImmediateMeshMod, entryPoint: 'vs', buffers: [vbl, morphVBL] },
-        fragment: { module: deepImmediateMeshMod, entryPoint: 'fs', targets: [{
-          format: this.fmt,
-          blend: {
-            color: { srcFactor: 'src-alpha', dstFactor: 'one-minus-src-alpha', operation: 'add' },
-            alpha: { srcFactor: 'one', dstFactor: 'one-minus-src-alpha', operation: 'add' },
-          },
-        }] },
-        primitive: { topology: 'triangle-list', cullMode: 'none' },
-        depthStencil: { ...ds, depthWriteEnabled: false, depthCompare: 'always' },
-      })
-    } else {
-      this.deepMeshImmediatePipe = null
-    }
-
-    const lineMod = dev.createShaderModule({ code: LINE_WGSL })
-    const lineLayout = dev.createPipelineLayout({ bindGroupLayouts: [this.sceneBGL] })
     const lineVBL: GPUVertexBufferLayout = {
       arrayStride: 28,
       attributes: [
@@ -607,180 +561,109 @@ export class WebGPURenderer {
         { shaderLocation: 1, offset: 12, format: 'float32x4' },
       ],
     }
-    this.linePipe = dev.createRenderPipeline({
-      layout: lineLayout,
-      vertex: { module: lineMod, entryPoint: 'vs', buffers: [lineVBL] },
-      fragment: { module: lineMod, entryPoint: 'fs', targets: [{
-        format: this.fmt,
-        blend: {
-          color: { srcFactor: 'src-alpha', dstFactor: 'one-minus-src-alpha', operation: 'add' },
-          alpha: { srcFactor: 'one', dstFactor: 'one-minus-src-alpha', operation: 'add' },
-        },
-      }] },
-      primitive: { topology: 'line-list' },
-      depthStencil: ds,
-    })
-
-    const gridMod = dev.createShaderModule({ code: GRID_WGSL })
-    this.gridPipe = dev.createRenderPipeline({
-      layout: lineLayout,
-      vertex: { module: gridMod, entryPoint: 'vs', buffers: [{
+    this.vertexLayouts = {
+      mesh: [meshVBL, morphVBL],
+      edge: [
+        { arrayStride: MESH_VERTEX_STRIDE, attributes: [{ shaderLocation: 0, offset: 0, format: 'float32x3' }] },
+        { arrayStride: MORPH_VERTEX_STRIDE, attributes: [{ shaderLocation: 1, offset: 0, format: 'float32x3' }] },
+      ],
+      line: [lineVBL],
+      grid: [{
         arrayStride: 8,
         attributes: [{ shaderLocation: 0, offset: 0, format: 'float32x2' }],
-      }] },
-      fragment: { module: gridMod, entryPoint: 'fs', targets: [{
+      }],
+    }
+    this.shaderModuleCache.clear()
+    this.pipelineCache.clear()
+
+    const transparentDepth: ShaderDepthSpec = { writeEnabled: false, compare: 'less' }
+    this.meshPipe = this.getRenderPipeline('mesh')
+    this.meshPipeT = this.getRenderPipeline('mesh', { blend: 'alpha', depth: transparentDepth })
+    this.meshImmediatePipeT = this.immediateObjectLayout
+      ? this.getRenderPipeline('mesh', { variant: 'immediate', blend: 'alpha', depth: transparentDepth })
+      : null
+    this.deepMeshPipe = this.getRenderPipeline('deepMesh')
+    this.deepMeshImmediatePipe = this.immediateObjectLayout
+      ? this.getRenderPipeline('deepMesh', { variant: 'immediate' })
+      : null
+    this.linePipe = this.getRenderPipeline('line')
+    this.gridPipe = this.getRenderPipeline('grid')
+    this.edgePipe = this.getRenderPipeline('edge')
+    this.instanceMeshPipe = this.getRenderPipeline('mesh', { variant: 'instanced' })
+    this.instanceMeshPipeT = this.getRenderPipeline('mesh', { variant: 'instanced', blend: 'alpha', depth: transparentDepth })
+    this.instanceEdgePipe = this.getRenderPipeline('edge', { variant: 'instanced' })
+    this.deepEdgePipe = this.getRenderPipeline('edge', { depth: { writeEnabled: false, compare: 'always' } })
+    this.deepEdgeImmediatePipe = this.immediateObjectLayout
+      ? this.getRenderPipeline('edge', { variant: 'immediate', depth: { writeEnabled: false, compare: 'always' } })
+      : null
+    this.selectionFacePipe = this.getRenderPipeline('selectionOverlay')
+    this.selectionLinePipe = this.getRenderPipeline('selectionOverlay', { topology: 'line-list' })
+    this.deepSelectionLinePipe = this.getRenderPipeline('selectionOverlay', { topology: 'line-list', depth: { writeEnabled: false, compare: 'always' } })
+  }
+
+  /** Cached shader modules, one per (shader id, variant). */
+  private shaderModule(id: string, variant: ShaderVariant): GPUShaderModule {
+    const key = `${id}|${variant}`
+    let module = this.shaderModuleCache.get(key)
+    if (!module) {
+      const spec = getShader(id)
+      const source = variant === 'immediate' ? immediateObjectShader(spec.source)
+        : variant === 'instanced'
+          ? instancedObjectShader(spec.source, spec.vertexLayout === 'edge' ? 'EdgeV' : 'V')
+          : spec.source
+      module = this.dev!.createShaderModule({ code: source })
+      this.shaderModuleCache.set(key, module)
+    }
+    return module
+  }
+
+  /**
+   * Cached render-pipeline factory driven by the shader registry. The
+   * registry entry supplies the default blend/depth/topology/vertex layout;
+   * `flavor` overrides them for the transparent/deep/line flavors of a
+   * shader. Descriptors are identical to the hand-wired pipelines this
+   * replaces.
+   */
+  private getRenderPipeline(id: string, flavor: {
+    variant?: ShaderVariant
+    blend?: 'none' | 'alpha'
+    depth?: ShaderDepthSpec
+    topology?: 'triangle-list' | 'line-list'
+  } = {}): GPURenderPipeline {
+    const spec = getShader(id)
+    const variant = flavor.variant ?? 'uniform'
+    if (variant !== 'uniform' && !spec.supportsVariants) {
+      throw new Error(`Shader '${id}' does not support the '${variant}' variant`)
+    }
+    const blend = flavor.blend ?? spec.blend
+    const depth = flavor.depth ?? spec.depth
+    const topology = flavor.topology ?? spec.topology
+    const key = `${id}|${variant}|${blend}|${depth.writeEnabled ? 1 : 0}:${depth.compare}|${topology}`
+    const cached = this.pipelineCache.get(key)
+    if (cached) return cached
+    const module = this.shaderModule(id, variant)
+    const layout = spec.kind === 'object'
+      ? variant === 'instanced' ? this.instanceLayout
+        : variant === 'immediate' ? this.immediateObjectLayout!
+        : this.objectLayout
+      : this.sceneLayout
+    const pipeline = this.dev!.createRenderPipeline({
+      layout,
+      vertex: { module, entryPoint: 'vs', buffers: this.vertexLayouts[spec.vertexLayout] },
+      fragment: { module, entryPoint: 'fs', targets: [{
         format: this.fmt,
-        blend: {
-          color: { srcFactor: 'src-alpha', dstFactor: 'one-minus-src-alpha', operation: 'add' },
-          alpha: { srcFactor: 'one', dstFactor: 'one-minus-src-alpha', operation: 'add' },
-        },
+        ...(blend === 'alpha' ? { blend: ALPHA_BLEND } : {}),
       }] },
-      primitive: { topology: 'triangle-list', cullMode: 'none' },
-      depthStencil: ds,
+      primitive: { topology, cullMode: spec.cullMode },
+      depthStencil: { format: 'depth24plus', depthWriteEnabled: depth.writeEnabled, depthCompare: depth.compare },
     })
-
-    const edgeMod = dev.createShaderModule({ code: EDGE_WGSL })
-    const edgePipeDescriptor: GPURenderPipelineDescriptor = {
-      layout: meshLayout,
-      vertex: {
-        module: edgeMod,
-        entryPoint: 'vs',
-        buffers: [
-          { arrayStride: MESH_VERTEX_STRIDE, attributes: [{ shaderLocation: 0, offset: 0, format: 'float32x3' }] },
-          edgeMorphVBL,
-        ],
-      },
-      fragment: {
-        module: edgeMod,
-        entryPoint: 'fs',
-        targets: [{
-          format: this.fmt,
-          blend: {
-            color: { srcFactor: 'src-alpha', dstFactor: 'one-minus-src-alpha', operation: 'add' },
-            alpha: { srcFactor: 'one', dstFactor: 'one-minus-src-alpha', operation: 'add' },
-          },
-        }],
-      },
-      primitive: { topology: 'line-list' },
-      depthStencil: { ...ds, depthWriteEnabled: false, depthCompare: 'less-equal' },
-    }
-    this.edgePipe = dev.createRenderPipeline(edgePipeDescriptor)
-    this.instanceBGL = dev.createBindGroupLayout({ entries: [
-      { binding: 0, visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT, buffer: { type: 'read-only-storage' } },
-    ] })
-    const instanceLayout = dev.createPipelineLayout({ bindGroupLayouts: [this.sceneBGL, this.instanceBGL] })
-    const instanceMeshMod = dev.createShaderModule({ code: instancedObjectShader(MESH_WGSL, 'V') })
-    const instanceEdgeMod = dev.createShaderModule({ code: instancedObjectShader(EDGE_WGSL, 'EdgeV') })
-    const instanceDescriptor = (descriptor: GPURenderPipelineDescriptor, module: GPUShaderModule): GPURenderPipelineDescriptor => ({
-      ...descriptor, layout: instanceLayout,
-      vertex: { ...descriptor.vertex, module },
-      fragment: { ...descriptor.fragment!, module },
-    })
-    this.instanceMeshPipe = dev.createRenderPipeline(instanceDescriptor(meshPipeDescriptor, instanceMeshMod))
-    this.instanceMeshPipeT = dev.createRenderPipeline(instanceDescriptor(meshPipeTDescriptor, instanceMeshMod))
-    this.instanceEdgePipe = dev.createRenderPipeline(instanceDescriptor(edgePipeDescriptor, instanceEdgeMod))
-
-    this.deepEdgePipe = dev.createRenderPipeline({
-      layout: meshLayout,
-      vertex: {
-        module: edgeMod,
-        entryPoint: 'vs',
-        buffers: [
-          { arrayStride: MESH_VERTEX_STRIDE, attributes: [{ shaderLocation: 0, offset: 0, format: 'float32x3' }] },
-          edgeMorphVBL,
-        ],
-      },
-      fragment: {
-        module: edgeMod,
-        entryPoint: 'fs',
-        targets: [{
-          format: this.fmt,
-          blend: {
-            color: { srcFactor: 'src-alpha', dstFactor: 'one-minus-src-alpha', operation: 'add' },
-            alpha: { srcFactor: 'one', dstFactor: 'one-minus-src-alpha', operation: 'add' },
-          },
-        }],
-      },
-      primitive: { topology: 'line-list' },
-      depthStencil: { ...ds, depthWriteEnabled: false, depthCompare: 'always' },
-    })
-    if (immediateMeshLayout) {
-      const immediateEdgeMod = dev.createShaderModule({ code: immediateObjectShader(EDGE_WGSL) })
-      this.deepEdgeImmediatePipe = dev.createRenderPipeline({
-        layout: immediateMeshLayout,
-        vertex: {
-          module: immediateEdgeMod,
-          entryPoint: 'vs',
-          buffers: [
-            { arrayStride: MESH_VERTEX_STRIDE, attributes: [{ shaderLocation: 0, offset: 0, format: 'float32x3' }] },
-            edgeMorphVBL,
-          ],
-        },
-        fragment: {
-          module: immediateEdgeMod,
-          entryPoint: 'fs',
-          targets: [{
-            format: this.fmt,
-            blend: {
-              color: { srcFactor: 'src-alpha', dstFactor: 'one-minus-src-alpha', operation: 'add' },
-              alpha: { srcFactor: 'one', dstFactor: 'one-minus-src-alpha', operation: 'add' },
-            },
-          }],
-        },
-        primitive: { topology: 'line-list' },
-        depthStencil: { ...ds, depthWriteEnabled: false, depthCompare: 'always' },
-      })
-    } else {
-      this.deepEdgeImmediatePipe = null
-    }
-
-    const selectionMod = dev.createShaderModule({ code: SELECTION_OVERLAY_WGSL })
-    const selectionLayout = dev.createPipelineLayout({ bindGroupLayouts: [this.sceneBGL] })
-    const selectionVBL: GPUVertexBufferLayout = {
-      arrayStride: 28,
-      attributes: [
-        { shaderLocation: 0, offset: 0, format: 'float32x3' },
-        { shaderLocation: 1, offset: 12, format: 'float32x4' },
-      ],
-    }
-    const selectionTarget: GPUColorTargetState = {
-      format: this.fmt,
-      blend: {
-        color: { srcFactor: 'src-alpha', dstFactor: 'one-minus-src-alpha', operation: 'add' },
-        alpha: { srcFactor: 'one', dstFactor: 'one-minus-src-alpha', operation: 'add' },
-      },
-    }
-    const selectionDepth: GPUDepthStencilState = {
-      ...ds,
-      depthWriteEnabled: false,
-      depthCompare: 'less-equal',
-    }
-    this.selectionFacePipe = dev.createRenderPipeline({
-      layout: selectionLayout,
-      vertex: { module: selectionMod, entryPoint: 'vs', buffers: [selectionVBL] },
-      fragment: { module: selectionMod, entryPoint: 'fs', targets: [selectionTarget] },
-      primitive: { topology: 'triangle-list', cullMode: 'none' },
-      depthStencil: selectionDepth,
-    })
-    this.selectionLinePipe = dev.createRenderPipeline({
-      layout: selectionLayout,
-      vertex: { module: selectionMod, entryPoint: 'vs', buffers: [selectionVBL] },
-      fragment: { module: selectionMod, entryPoint: 'fs', targets: [selectionTarget] },
-      primitive: { topology: 'line-list' },
-      depthStencil: selectionDepth,
-    })
-    this.deepSelectionLinePipe = dev.createRenderPipeline({
-      layout: selectionLayout,
-      vertex: { module: selectionMod, entryPoint: 'vs', buffers: [selectionVBL] },
-      fragment: { module: selectionMod, entryPoint: 'fs', targets: [selectionTarget] },
-      primitive: { topology: 'line-list' },
-      depthStencil: { ...selectionDepth, depthCompare: 'always' },
-    })
+    this.pipelineCache.set(key, pipeline)
+    return pipeline
   }
 
   private buildSceneUB() {
     const dev = this.dev!
-    this.sceneUB = dev.createBuffer({ size: 208, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST })
+    this.sceneUB = dev.createBuffer({ size: SCENE_UNIFORM_LAYOUT.bytes, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST })
     this.sceneBG = dev.createBindGroup({
       layout: this.sceneBGL,
       entries: [{ binding: 0, resource: { buffer: this.sceneUB } }],
@@ -909,6 +792,24 @@ export class WebGPURenderer {
           // morph.x drives the GPU vertex blend; rest is 1 (target vertices),
           // which keeps the zero slot-1 dummy inert: mix(dummy, pos, 1) = pos.
           uniform[40] = 1; uniform[41] = 0; uniform[42] = 0; uniform[43] = 0
+          // Material tail: identity defaults (white base color, non-metal, no
+          // emission, roughness 0.7) reproduce the legacy shading look; a
+          // provided MaterialDef overrides them, and the scene-level default
+          // material applies to meshes without one.
+          const material = m.material
+          if (material) {
+            uniform[44] = material.baseColor[0]; uniform[45] = material.baseColor[1]; uniform[46] = material.baseColor[2]
+            uniform[47] = material.metallic
+            uniform[48] = material.emissive[0]; uniform[49] = material.emissive[1]; uniform[50] = material.emissive[2]
+            uniform[51] = material.roughness
+            uniform[52] = 0; uniform[53] = 0; uniform[54] = 0; uniform[55] = 0
+          } else {
+            const dm = this.defaultMaterial
+            uniform[44] = dm.baseColor[0]; uniform[45] = dm.baseColor[1]; uniform[46] = dm.baseColor[2]
+            uniform[47] = dm.metallic
+            uniform[48] = 0; uniform[49] = 0; uniform[50] = 0; uniform[51] = dm.roughness
+            uniform[52] = 0; uniform[53] = 0; uniform[54] = 0; uniform[55] = 0
+          }
           dev.queue.writeBuffer(ub, 0, uniform)
           const bg = dev.createBindGroup({
             layout: this.objBGL,
@@ -940,6 +841,8 @@ export class WebGPURenderer {
             styleSelected: 0,
             styleEdge: initialEdge,
             styleHovered: 0,
+            material,
+            shadingModel: material?.shadingModel ?? this.defaultShadingModel,
           })
           const added = next[next.length - 1]
           if (added.assetId) {
@@ -1214,6 +1117,58 @@ export class WebGPURenderer {
       throw new RangeError('Renderer background channels must be finite values in [0, 1]')
     }
     this.backgroundColor = [...color]
+    this.requestRender()
+  }
+
+  get currentTheme(): RenderTheme { return this.theme }
+
+  /**
+   * Applies a render theme preset to the Scene uniform theme tail. A preset
+   * with a backgroundColor also takes over the clear color; otherwise the
+   * app-driven background (setBackgroundColor) is left untouched.
+   */
+  setTheme(themeId: string) {
+    const theme = getThemePreset(themeId)
+    if (!theme) throw new Error(`Renderer: unknown theme '${themeId}'`)
+    this.theme = theme
+    if (theme.backgroundColor) this.backgroundColor = [...theme.backgroundColor]
+    this.requestRender()
+  }
+
+  get currentDefaultShadingModel(): ShadingModel { return this.defaultShadingModel }
+
+  /**
+   * Scene-level default shading model: applies to every mesh that does not
+   * carry its own material; per-entity materials always win.
+   */
+  setDefaultShadingModel(model: ShadingModel) {
+    if (this.defaultShadingModel === model) return
+    this.defaultShadingModel = model
+    for (const mesh of this.meshes) {
+      if (!mesh.material) mesh.shadingModel = model
+    }
+    this.requestRender()
+  }
+
+  /**
+   * Scene-level default material tail (baseColor/metallic/roughness) for
+   * meshes without their own material; rewrites their uniform tails in place.
+   */
+  setDefaultMaterial(defaults: { baseColor?: readonly [number, number, number]; metallic?: number; roughness?: number }) {
+    const current = this.defaultMaterial
+    if (defaults.baseColor) current.baseColor = [...defaults.baseColor]
+    if (defaults.metallic !== undefined) current.metallic = defaults.metallic
+    if (defaults.roughness !== undefined) current.roughness = defaults.roughness
+    if (!this.dev) return
+    const tail = this.materialTailScratch
+    for (const mesh of this.meshes) {
+      if (mesh.material) continue
+      tail[0] = current.baseColor[0]; tail[1] = current.baseColor[1]; tail[2] = current.baseColor[2]
+      tail[3] = current.metallic
+      tail[4] = 0; tail[5] = 0; tail[6] = 0
+      tail[7] = current.roughness
+      this.dev.queue.writeBuffer(mesh.ub, OBJECT_UNIFORM_LAYOUT.materialByteOffset, tail)
+    }
     this.requestRender()
   }
 
@@ -1761,6 +1716,13 @@ export class WebGPURenderer {
     sd[33] = this.gridStep
     sd[34] = this.gridExtent()
     sd[35] = this.gridFadeDistance()
+    // Theme tail (see SCENE_UNIFORM_LAYOUT): vec3 + pad per color.
+    const theme = this.theme
+    sd.set(theme.selectionColor, SCENE_UNIFORM_LAYOUT.themeFloatOffset)
+    sd.set(theme.hoverColor, SCENE_UNIFORM_LAYOUT.hoverFloatOffset)
+    sd.set(theme.edgeColor, SCENE_UNIFORM_LAYOUT.edgeFloatOffset)
+    sd.set(theme.xrayColor, SCENE_UNIFORM_LAYOUT.xrayFloatOffset)
+    sd.set(theme.gridColor, SCENE_UNIFORM_LAYOUT.gridFloatOffset)
     dev.queue.writeBuffer(sceneUB, 0, sd)
 
     const enc = dev.createCommandEncoder()
@@ -1815,8 +1777,15 @@ export class WebGPURenderer {
       const highlighted = this.usesObjectSelectionStyle(index) || this.usesObjectHoverStyle(index)
       if (mesh.edgeIB && (this.displayMode === 'edges' || highlighted)) this.edgeDraws.push(mesh)
     }
-    if (transitioning || !this.opaqueInstances.draw(pass, dev, this.instanceBGL, this.instanceMeshPipe, this.sceneBG, this.opaqueDraws)) {
+    const customOpaque = this.opaqueDraws.some(mesh => mesh.shadingModel !== 'phong')
+    if (!customOpaque && (transitioning || !this.opaqueInstances.draw(pass, dev, this.instanceBGL, this.instanceMeshPipe, this.sceneBG, this.opaqueDraws))) {
       this.opaqueBundle.draw(pass, dev, this.fmt, this.meshPipe, this.sceneBG, this.opaqueDraws)
+    } else if (customOpaque) {
+      // Mixed materials: draw each shading-model group with its resolved mesh
+      // pipeline (source order preserved); instancing serves the default path.
+      for (const group of this.groupByShadingModel(this.opaqueDraws)) {
+        this.opaqueBundle.draw(pass, dev, this.fmt, this.getRenderPipeline(resolveMeshShaderId(group[0].shadingModel)), this.sceneBG, group)
+      }
     }
 
     pass.setPipeline(this.meshImmediatePipeT ?? this.meshPipeT)
@@ -1828,10 +1797,29 @@ export class WebGPURenderer {
     const transparentOrder = this.transparentSort.sort(eye, this.tx, this.ty, this.tz)
     this.transparentDraws.length = 0
     for (const { index } of transparentOrder) this.transparentDraws.push(index < this.meshes.length ? this.meshes[index] : ghostMeshes[index - this.meshes.length])
-    if (transitioning || !this.transparentInstances.draw(pass, dev, this.instanceBGL, this.instanceMeshPipeT, this.sceneBG, this.transparentDraws)) {
+    const customTransparent = this.transparentDraws.some(mesh => mesh.shadingModel !== 'phong')
+    if (!customTransparent && (transitioning || !this.transparentInstances.draw(pass, dev, this.instanceBGL, this.instanceMeshPipeT, this.sceneBG, this.transparentDraws))) {
       for (const g of this.transparentDraws) {
         pass.setBindGroup(1, g.bg)
         this.setObjectStyleImmediate(pass, g)
+        pass.setVertexBuffer(0, g.vb)
+        pass.setVertexBuffer(1, g.morphSlot!)
+        pass.setIndexBuffer(g.ib, 'uint32')
+        pass.drawIndexed(g.ic)
+      }
+    } else if (customTransparent) {
+      // Mixed materials: per-entity pass with the resolved transparent pipeline
+      // for each shading model (uniform variant; immediates serve 'mesh' only).
+      let activeModel: ShadingModel | null = null
+      for (const g of this.transparentDraws) {
+        if (g.shadingModel !== activeModel) {
+          activeModel = g.shadingModel
+          pass.setPipeline(activeModel === 'phong'
+            ? this.meshImmediatePipeT ?? this.meshPipeT
+            : this.getRenderPipeline(resolveMeshShaderId(activeModel), { blend: 'alpha', depth: { writeEnabled: false, compare: 'less' } }))
+        }
+        pass.setBindGroup(1, g.bg)
+        if (activeModel === 'phong') this.setObjectStyleImmediate(pass, g)
         pass.setVertexBuffer(0, g.vb)
         pass.setVertexBuffer(1, g.morphSlot!)
         pass.setIndexBuffer(g.ib, 'uint32')
@@ -1982,6 +1970,20 @@ export class WebGPURenderer {
     // instance caches key on the binding and must be rebuilt.
     if (morphFinished) this.clearDrawCaches()
     return active
+  }
+
+  /**
+   * Groups draws by shading model, preserving first-seen order. Used only when
+   * a scene mixes materials; the all-default path skips the allocation.
+   */
+  private groupByShadingModel(draws: readonly GMesh[]): GMesh[][] {
+    const groups = new Map<ShadingModel, GMesh[]>()
+    for (const mesh of draws) {
+      const group = groups.get(mesh.shadingModel)
+      if (group) group.push(mesh)
+      else groups.set(mesh.shadingModel, [mesh])
+    }
+    return [...groups.values()]
   }
 
   private setObjectStyleImmediate(pass: GPURenderPassEncoder, mesh: GMesh) {

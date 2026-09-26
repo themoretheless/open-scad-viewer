@@ -36,8 +36,8 @@ describe('instanced geometry commands', () => {
     const h = harness()
     expect(h.draw()).toBe(true)
     expect(h.pass.drawIndexed).toHaveBeenCalledExactlyOnceWith(3, 32, 0, 0, 0)
-    expect(h.writes[0]).toHaveLength(32 * 44)
-    const second = h.writes[0].slice(44, 88)
+    expect(h.writes[0]).toHaveLength(32 * 56)
+    const second = h.writes[0].slice(56, 112)
     expect(second[12]).toBe(3)
     expect(second[16 + 3]).toBe(-3)
     expect([...second.slice(32, 40)]).toEqual([...new Float32Array([1 / 32, 0.2, 0.3, 1, 1, 0, 0.7, 0])])
@@ -57,7 +57,7 @@ describe('instanced geometry commands', () => {
     h.draw(list)
     expect(h.pass.drawIndexed.mock.calls).toEqual([[3, 16, 0, 0, 0], [3, 8, 0, 0, 16], [3, 8, 0, 0, 24]])
     expect(h.writes[0][12]).toBe(31 * 3)
-    expect(h.writes[0][31 * 44 + 12]).toBe(0)
+    expect(h.writes[0][31 * 56 + 12]).toBe(0)
   })
 
   it('refreshes hover/selection uniforms and retries a failed upload', () => {
@@ -68,7 +68,7 @@ describe('instanced geometry commands', () => {
     expect(h.pass.drawIndexed).toHaveBeenCalledTimes(1)
     h.draw()
     expect(h.writes).toHaveLength(2)
-    expect([...h.writes[1].slice(3 * 44 + 36, 3 * 44 + 40)]).toEqual([...new Float32Array([0.24, 1, 0.7, 1])])
+    expect([...h.writes[1].slice(3 * 56 + 36, 3 * 56 + 40)]).toEqual([...new Float32Array([0.24, 1, 0.7, 1])])
     h.draw(); expect(h.writes).toHaveLength(2)
   })
 

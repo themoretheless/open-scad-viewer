@@ -31,6 +31,14 @@ function arrayOf(value:unknown, length:number, check:(v:unknown)=>boolean):boole
   for(const item of value)if(!check(item))return false
   return true
 }
+/** Mesh buffers arrive as typed views after the worker transfer; plain arrays from JSON. */
+const isNumericSequence=(v:unknown):v is ArrayLike<number>=>
+  Array.isArray(v)||(ArrayBuffer.isView(v)&&!(v instanceof DataView))
+function numericSequenceOf(value:unknown, length:number, check:(v:unknown)=>boolean):boolean {
+  if(!isNumericSequence(value)||value.length!==length)return false
+  for(let i=0;i<length;i++)if(!check(value[i]))return false
+  return true
+}
 const vector = (v:unknown) => arrayOf(v,3,finite)
 export type MainSolidExpectation = {kind:'truss'; nodes:number; members:number}
   | {kind:'structuralSections';axis:'x'|'y'|'z';stations:number[]}
@@ -56,10 +64,10 @@ export function mainSolidResult(job:MainSolidExpectation, value:unknown): boolea
       &&arrayOf(v.planeAxes,2,n=>Number.isInteger(n)&&Number(n)>=0&&Number(n)<3)
       &&v.planeAxes.every((axis,i)=>axis===planeAxes[i])
       &&(v.selfIntersections==='not-checked'||v.selfIntersections==='checked-at-tolerance')
-      &&!!v.sourceMesh&&Array.isArray(v.sourceMesh.positions)&&v.sourceMesh.positions.length<=900000
-      &&v.sourceMesh.positions.length%3===0&&arrayOf(v.sourceMesh.positions,v.sourceMesh.positions.length,finite)
-      &&Array.isArray(v.sourceMesh.indices)&&v.sourceMesh.indices.length===v.triangleCount*3
-      &&arrayOf(v.sourceMesh.indices,v.sourceMesh.indices.length,n=>Number.isInteger(n)&&Number(n)>=0&&Number(n)<v.sourceMesh.positions.length/3)
+      &&!!v.sourceMesh&&isNumericSequence(v.sourceMesh.positions)&&v.sourceMesh.positions.length<=900000
+      &&v.sourceMesh.positions.length%3===0&&numericSequenceOf(v.sourceMesh.positions,v.sourceMesh.positions.length,finite)
+      &&isNumericSequence(v.sourceMesh.indices)&&v.sourceMesh.indices.length===v.triangleCount*3
+      &&numericSequenceOf(v.sourceMesh.indices,v.sourceMesh.indices.length,n=>Number.isInteger(n)&&Number(n)>=0&&Number(n)<v.sourceMesh.positions.length/3)
       &&finite(v.volumeMm3)&&v.volumeMm3>0&&Number.isInteger(v.triangleCount)&&v.triangleCount>0&&v.triangleCount<=100000
       &&isBoundaryConnectivity(v.connectivity,v.triangleCount,v.sourceMesh.positions.length/3)
       &&isMaterialAudit(v)

@@ -123,5 +123,5 @@ it('builds mesh CSG through the NURBS graph and handles empty intersections', as
     }
     const empty=buildOwnNurbs({language:'modelgraph/nurbs-1',units:'mm',nodes:[...nodes.slice(0,3),{id:'empty',op:'mesh_boolean',inputs:['a','a'],operation:'difference'}],root:'empty'},{action:'build'});
     expect(empty.report.bounds).toBeNull();
-    expect(empty.mesh?.indices).toEqual([]);
+    expect(empty.mesh?.indices.length).toBe(0);
 });

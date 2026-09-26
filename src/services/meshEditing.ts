@@ -1,5 +1,6 @@
 import type { SculptBrush } from './geometryEditing'
-import { booleanPolygonMeshes, brushPolygonMesh, sculptPolygonMesh, deformPolygonMesh, extrudePolygonFaces, extrudePolygonProfile, exportPolygonStl, inspectPolygonMesh, type PolygonMesh } from './geometry/polygon'
+import { booleanPolygonMeshes, brushPolygonMesh, sculptPolygonMesh, deformPolygonMesh, extrudePolygonFaces, extrudePolygonProfile, exportPolygonStl, inspectPolygonMesh, normalizePolygonMesh, type PolygonMesh } from './geometry/polygon'
+import { stringifyMeshJson } from './meshJson'
 import { parseBinaryStl } from './stlImport'
 
 export type MeshSelectMode = 'object' | 'vertex' | 'edge' | 'face'
@@ -46,6 +47,8 @@ function validatePolygon(mesh: PolygonMesh) {
     || !mesh.indices.every(i => Number.isInteger(i) && i >= 0 && i < mesh.positions.length / 3)) {
     throw new Error('Invalid mesh geometry.')
   }
+  // JSON boundary: plain parsed arrays are boxed into typed views exactly once.
+  normalizePolygonMesh(mesh)
 }
 
 interface MeshSnapshot { document: MeshWorkspaceDocument; characters: number; text: string }
@@ -54,16 +57,16 @@ export class MeshHistory {
   private future: MeshSnapshot[] = []
   private current: MeshSnapshot
   constructor(document = emptyMeshDocument()) {
-    const validated = parseMeshDocument(JSON.stringify(document))
-    const validatedText = JSON.stringify(validated)
+    const validated = parseMeshDocument(stringifyMeshJson(document))
+    const validatedText = stringifyMeshJson(validated)
     this.current = {document: validated, characters: validatedText.length, text: validatedText}
   }
   get document() { return clone(this.current.document) }
   get canUndo() { return this.past.length > 0 }
   get canRedo() { return this.future.length > 0 }
   commit(document: MeshWorkspaceDocument) {
-    const next = parseMeshDocument(JSON.stringify(document))
-    const nextText = JSON.stringify(next)
+    const next = parseMeshDocument(stringifyMeshJson(document))
+    const nextText = stringifyMeshJson(next)
     if (nextText.length === this.current.characters && nextText === this.current.text) return
     this.past.push(this.current)
     // Preserve the exact serialized-array character budget, including brackets
@@ -114,7 +117,7 @@ export function stlBufferToPolygonMesh(buffer: ArrayBuffer, weld = 1e-4): Polygo
     if (tri[0] !== tri[1] && tri[1] !== tri[2] && tri[2] !== tri[0]) indices.push(tri[0], tri[1], tri[2])
   }
   if (indices.length < 3) throw new Error('STL produced no usable triangles.')
-  return { positions, indices }
+  return { positions: Float64Array.from(positions), indices: Uint32Array.from(indices) }
 }
 
 export function createBoxMesh(size: [number, number, number] = [10, 10, 10]): PolygonMesh {
@@ -146,7 +149,7 @@ export function createUvSphereMesh(radius = 5, segments = 16, rings = 12): Polyg
       indices.push(a, b, a + 1, a + 1, b, b + 1)
     }
   }
-  return { positions, indices }
+  return { positions: Float64Array.from(positions), indices: Uint32Array.from(indices) }
 }
 
 export function transformMesh(mesh: PolygonMesh, delta: [number, number, number], angleDeg: number, scale: number): PolygonMesh {
@@ -170,7 +173,7 @@ export function transformMesh(mesh: PolygonMesh, delta: [number, number, number]
     positions[i * 3 + 1] = center[1] + ry + delta[1]
     positions[i * 3 + 2] = center[2] + z + delta[2]
   }
-  return { positions, indices: [...mesh.indices] }
+  return { positions, indices: mesh.indices.slice() }
 }
 
 export function moveVertices(mesh: PolygonMesh, vertexIds: number[], delta: [number, number, number]): PolygonMesh {
@@ -182,7 +185,7 @@ export function moveVertices(mesh: PolygonMesh, vertexIds: number[], delta: [num
     positions[id * 3 + 1] += delta[1]
     positions[id * 3 + 2] += delta[2]
   }
-  return { positions, indices: [...mesh.indices] }
+  return { positions, indices: mesh.indices.slice() }
 }
 
 /**
@@ -218,7 +221,7 @@ export function moveVerticesProportional(
     positions[id * 3 + 1] += delta[1] * weight
     positions[id * 3 + 2] += delta[2] * weight
   }
-  return { positions, indices: [...mesh.indices] }
+  return { positions, indices: mesh.indices.slice() }
 }
 
 export function deleteFaces(mesh: PolygonMesh, faceIds: number[]): PolygonMesh {
@@ -229,7 +232,7 @@ export function deleteFaces(mesh: PolygonMesh, faceIds: number[]): PolygonMesh {
     indices.push(mesh.indices[f * 3], mesh.indices[f * 3 + 1], mesh.indices[f * 3 + 2])
   }
   if (indices.length < 3) throw new Error('Cannot delete all faces.')
-  return compactMesh({ positions: [...mesh.positions], indices })
+  return compactMesh({ positions: mesh.positions.slice(), indices: Uint32Array.from(indices) })
 }
 
 export function flipFaces(mesh: PolygonMesh, faceIds?: number[]): PolygonMesh {
@@ -241,13 +244,15 @@ export function flipFaces(mesh: PolygonMesh, faceIds?: number[]): PolygonMesh {
     indices[o + 1] = indices[o + 2]
     indices[o + 2] = t
   }
-  return { positions: [...mesh.positions], indices }
+  return { positions: mesh.positions.slice(), indices }
 }
 
 /** One level of mid-edge subdivision for selected faces (or all). */
 export function subdivideFaces(mesh: PolygonMesh, faceIds?: number[]): PolygonMesh {
   const selected = new Set(faceIds ?? Array.from({ length: mesh.indices.length / 3 }, (_, i) => i))
-  const positions = mesh.positions.slice()
+  // Growable staging: typed arrays are fixed-length, so subdivision builds in a
+  // plain array and boxes once at return.
+  const positions: number[] = [...mesh.positions]
   const indices: number[] = []
   const midpoint = new Map<string, number>()
   const mid = (a: number, b: number) => {
@@ -273,7 +278,7 @@ export function subdivideFaces(mesh: PolygonMesh, faceIds?: number[]): PolygonMe
     indices.push(a, ab, ca, ab, b, bc, ca, bc, c, ab, bc, ca)
   }
   if (positions.length > 300_000 || indices.length > 300_000) throw new Error('Subdivision exceeds mesh budget.')
-  return { positions, indices }
+  return { positions: Float64Array.from(positions), indices: Uint32Array.from(indices) }
 }
 
 export function extrudeSelectedFaces(mesh: PolygonMesh, faceIds: number[], distance: number): PolygonMesh {
@@ -306,7 +311,7 @@ export function insetSelectedFaces(mesh: PolygonMesh, faceIds: number[], amount:
       positions[id * 3 + 2] -= vz * t
     }
   }
-  return { positions, indices: [...mesh.indices] }
+  return { positions, indices: mesh.indices.slice() }
 }
 
 export function mergeByDistance(mesh: PolygonMesh, distance = 1e-4): PolygonMesh {
@@ -332,7 +337,7 @@ export function mergeByDistance(mesh: PolygonMesh, distance = 1e-4): PolygonMesh
     if (a !== b && b !== c && c !== a) indices.push(a, b, c)
   }
   if (indices.length < 3) throw new Error('Merge removed all faces.')
-  return { positions, indices }
+  return { positions: Float64Array.from(positions), indices: Uint32Array.from(indices) }
 }
 
 export function booleanMeshObjects(a: PolygonMesh, b: PolygonMesh, operation: 'union' | 'difference' | 'intersection'): PolygonMesh {
@@ -388,8 +393,8 @@ export function knifeSplitEdges(mesh: PolygonMesh, edgeIds: number[]): PolygonMe
     if (!edge) throw new Error('Selected edge is out of range.')
     return edge
   })
-  let positions = mesh.positions.slice()
-  let indices = mesh.indices.slice()
+  let positions: number[] = [...mesh.positions]
+  let indices: number[] = [...mesh.indices]
   for (const [a, b] of selected) {
     const midpoint = positions.length / 3
     positions.push(
@@ -416,7 +421,7 @@ export function knifeSplitEdges(mesh: PolygonMesh, edgeIds: number[]): PolygonMe
     indices = next
   }
   if (positions.length > 300_000 || indices.length > 300_000) throw new Error('Knife cut exceeds mesh budget.')
-  return { positions, indices }
+  return { positions: Float64Array.from(positions), indices: Uint32Array.from(indices) }
 }
 
 function faceNormal(mesh: PolygonMesh, face: number): [number, number, number] {
@@ -441,8 +446,8 @@ export function separateFaces(mesh: PolygonMesh, faceIds: number[]): { kept: Pol
   }
   if (!keptIndices.length || !sepIndices.length) throw new Error('Separation must leave two non-empty meshes.')
   return {
-    kept: compactMesh({ positions: [...mesh.positions], indices: keptIndices }),
-    separated: compactMesh({ positions: [...mesh.positions], indices: sepIndices }),
+    kept: compactMesh({ positions: mesh.positions.slice(), indices: Uint32Array.from(keptIndices) }),
+    separated: compactMesh({ positions: mesh.positions.slice(), indices: Uint32Array.from(sepIndices) }),
   }
 }
 
@@ -456,13 +461,13 @@ export function joinMeshes(meshes: PolygonMesh[]): PolygonMesh {
     for (const i of mesh.indices) indices.push(i + base)
   }
   if (positions.length > 300_000 || indices.length > 300_000) throw new Error('Joined mesh exceeds budget.')
-  return mergeByDistance({ positions, indices }, 1e-5)
+  return mergeByDistance({ positions: Float64Array.from(positions), indices: Uint32Array.from(indices) }, 1e-5)
 }
 
 export function symmetrizeMesh(mesh: PolygonMesh, axis: 0 | 1 | 2 = 0): PolygonMesh {
   const mirrored = mesh.positions.slice()
   for (let i = 0; i < mirrored.length / 3; i++) mirrored[i * 3 + axis] *= -1
-  const flipped = flipFaces({ positions: mirrored, indices: [...mesh.indices] })
+  const flipped = flipFaces({ positions: mirrored, indices: mesh.indices.slice() })
   return joinMeshes([mesh, flipped])
 }
 
@@ -502,5 +507,5 @@ function compactMesh(mesh: PolygonMesh): PolygonMesh {
     remap.set(id, positions.length / 3)
     positions.push(mesh.positions[id * 3], mesh.positions[id * 3 + 1], mesh.positions[id * 3 + 2])
   }
-  return { positions, indices: mesh.indices.map(i => remap.get(i)!) }
+  return { positions: Float64Array.from(positions), indices: Uint32Array.from(mesh.indices.map(i => remap.get(i)!)) }
 }

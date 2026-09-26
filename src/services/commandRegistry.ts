@@ -154,6 +154,38 @@ export const COMMAND_REGISTRY = [
     bindings: [{ key: 'x', scope: 'viewport' }],
   },
   {
+    id: 'shading-phong', labelKey: 'shadingPhong', aliasKeys: ['shadingPhong'],
+    keywords: ['shader', 'display', 'shading', 'material'], scopes: ['viewport'], palette: true,
+  },
+  {
+    id: 'shading-pbr', labelKey: 'shadingPbr', aliasKeys: ['shadingPbr'],
+    keywords: ['shader', 'display', 'shading', 'material'], scopes: ['viewport'], palette: true,
+  },
+  {
+    id: 'shading-matcap', labelKey: 'shadingMatcap', aliasKeys: ['shadingMatcap'],
+    keywords: ['shader', 'display', 'shading', 'material'], scopes: ['viewport'], palette: true,
+  },
+  {
+    id: 'shading-toon', labelKey: 'shadingToon', aliasKeys: ['shadingToon'],
+    keywords: ['shader', 'display', 'shading', 'material'], scopes: ['viewport'], palette: true,
+  },
+  {
+    id: 'shading-unlit', labelKey: 'shadingUnlit', aliasKeys: ['shadingUnlit'],
+    keywords: ['shader', 'display', 'shading', 'material'], scopes: ['viewport'], palette: true,
+  },
+  {
+    id: 'render-theme-default', labelKey: 'renderThemeDefault', aliasKeys: ['renderThemeDefault'],
+    keywords: ['theme', 'display', 'colors'], scopes: ['viewport'], palette: true,
+  },
+  {
+    id: 'render-theme-dark-contrast', labelKey: 'renderThemeDarkContrast', aliasKeys: ['renderThemeDarkContrast'],
+    keywords: ['theme', 'display', 'colors'], scopes: ['viewport'], palette: true,
+  },
+  {
+    id: 'render-theme-light', labelKey: 'renderThemeLight', aliasKeys: ['renderThemeLight'],
+    keywords: ['theme', 'display', 'colors'], scopes: ['viewport'], palette: true,
+  },
+  {
     id: 'select-point', labelKey: 'point', aliasKeys: ['point'],
     shortcutDisplay: '1', keywords: ['selection', 'vertex', 'snap'],
     scopes: ['viewport'], palette: true,

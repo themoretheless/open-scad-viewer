@@ -117,7 +117,7 @@ export const retainedStepSession={
   body:(candidate:DirectBody):DirectBody=>{
     const record=retainedRecord
     if(!record)return candidate
-    const same=(a:number[],b:number[])=>a.length===b.length&&a.every((value,index)=>Object.is(value,b[index]))
+    const same=(a:ArrayLike<number>,b:ArrayLike<number>)=>a.length===b.length&&Array.from(a).every((value,index)=>Object.is(value,b[index]))
     return same(candidate.mesh.positions,record.preview.positions)&&same(candidate.mesh.indices,record.preview.indices)
       ?{...candidate,name:'Retained AP242 STEP',brep:record.model}:candidate
   },
@@ -125,7 +125,7 @@ export const retainedStepSession={
     if(!model){retainedRecord=undefined;storageRemove(RETAINED_STEP_KEY);return false}
     inspectNurbsBrep(model)
     const preview=tessellateNurbsBrep(model,8)
-    const record:RetainedStepRecord={version:2,model,document:document??retainedRecord?.document,preview:{positions:preview.positions,indices:preview.indices},
+    const record:RetainedStepRecord={version:2,model,document:document??retainedRecord?.document,preview:{positions:Array.from(preview.positions),indices:Array.from(preview.indices)},
       report:report??retainedRecord?.report??{route:'retained-ap242-brep',retained:true,refusalBoundary:[],identityLoss:[],metadataLoss:[],
         definitionIdentities:[],occurrenceIdentities:[],productHierarchy:[],externalReferences:[],
         semanticConformance:uncheckedStepConformance()}}

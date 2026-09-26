@@ -1,6 +1,7 @@
 import { bakeSketch, worldPoint } from './directSketchGeometry'
 import { revolvePolygonProfile, booleanPolygonMeshes } from './geometry/polygon'
 import { parseDirectDocument, type DirectSketch, type DirectBody, type DirectDocument, type Point2 } from './directModeling'
+import { stringifyMeshJson } from './meshJson'
 
 const cross = (a: Point2, b: Point2, c: Point2) => (b[0]-a[0])*(c[1]-a[1])-(b[1]-a[1])*(c[0]-a[0])
 function validateContour(points: Point2[]) {
@@ -59,12 +60,12 @@ export function directRevolveTool(sketch: DirectSketch, options: DirectRevolveOp
     const [r,t,h]=mesh.positions.slice(i,i+3)
     positions.push(...worldPoint(axis==='y'?[offset+side*r,h,-side*t]:[h,offset+side*r,side*t],sketch.plane))
   }
-  const body={id:'preview-revolve',name:(sketch.name+' · revolve').slice(0,100),mesh:{positions,indices:[...mesh.indices]}}
-  parseDirectDocument(JSON.stringify({version:1,sketches:[],bodies:[body]}))
+  const body={id:'preview-revolve',name:(sketch.name+' · revolve').slice(0,100),mesh:{positions:Float64Array.from(positions),indices:mesh.indices.slice()}}
+  parseDirectDocument(stringifyMeshJson({version:1,sketches:[],bodies:[body]}))
   return body
 }
 export function applyDirectRevolve(document: DirectDocument, sketchId:string, options:DirectRevolveOptions, operation:'new'|'union'|'difference', targetId:string, id:string):DirectDocument {
-  const next=parseDirectDocument(JSON.stringify(document)),sketch=next.sketches.find(s=>s.id===sketchId)
+  const next=parseDirectDocument(stringifyMeshJson(document)),sketch=next.sketches.find(s=>s.id===sketchId)
   if(!sketch) throw new Error('Select a sketch.')
   const tool=directRevolveTool(sketch,options)
   if(operation==='new') next.bodies.push({...tool,id})
@@ -75,5 +76,5 @@ export function applyDirectRevolve(document: DirectDocument, sketchId:string, op
     if(!mesh.indices.length) next.bodies=next.bodies.filter(b=>b.id!==targetId)
     else target.mesh={positions:mesh.positions,indices:mesh.indices}
   }
-  return parseDirectDocument(JSON.stringify(next))
+  return parseDirectDocument(stringifyMeshJson(next))
 }

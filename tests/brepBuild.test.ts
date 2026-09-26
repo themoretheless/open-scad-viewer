@@ -1,3 +1,4 @@
+import { stringifyMeshJson } from '../src/services/meshJson'
 import { describe, expect, it } from 'vitest'
 import {
   createBrepGraphBuilder,
@@ -72,7 +73,7 @@ describe('exact solid build', () => {
     // Round-tripping through the document parser runs the body validation, which
     // checks that the display mesh and the exact B-rep describe the same extent.
     const document = { ...emptyDirectDocument(), bodies: [body] }
-    expect(() => parseDirectDocument(JSON.stringify(document))).not.toThrow()
+    expect(() => parseDirectDocument(stringifyMeshJson(document))).not.toThrow()
   })
 
   it('keeps a group label through document validation, and rejects an empty one', () => {
@@ -81,10 +82,10 @@ describe('exact solid build', () => {
     const [body] = buildExactSolidBodies(graph.nodes, [{ name: 'Part', id: nodeId(solid) }])
 
     const grouped = { ...emptyDirectDocument(), bodies: [{ ...body, group: 'model' }] }
-    expect(parseDirectDocument(JSON.stringify(grouped)).bodies[0].group).toBe('model')
+    expect(parseDirectDocument(stringifyMeshJson(grouped)).bodies[0].group).toBe('model')
 
     const empty = { ...emptyDirectDocument(), bodies: [{ ...body, group: '' }] }
-    expect(() => parseDirectDocument(JSON.stringify(empty))).toThrow(/group/i)
+    expect(() => parseDirectDocument(stringifyMeshJson(empty))).toThrow(/group/i)
   })
 
   it('stores a group source in the document and rejects a duplicate group name', () => {
@@ -97,11 +98,11 @@ describe('exact solid build', () => {
       bodies: [{ ...body, group: 'rig' }],
       groups: [{ name: 'rig', source: 'cube([1,1,1]);' }],
     }
-    const parsed = parseDirectDocument(JSON.stringify(document))
+    const parsed = parseDirectDocument(stringifyMeshJson(document))
     expect(parsed.groups).toEqual([{ name: 'rig', source: 'cube([1,1,1]);' }])
 
     const duplicated = { ...document, groups: [...document.groups, { name: 'rig', source: '' }] }
-    expect(() => parseDirectDocument(JSON.stringify(duplicated))).toThrow(/group name/i)
+    expect(() => parseDirectDocument(stringifyMeshJson(duplicated))).toThrow(/group name/i)
   })
 
   it('refuses an inexact root by naming the operation responsible', () => {

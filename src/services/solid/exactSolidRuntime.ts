@@ -1,4 +1,5 @@
 import { evaluateExactSolids } from '../geometryBuildEngine'
+import { stringifyMeshJson } from '../meshJson'
 import { buildExactSolidBodies } from './brepBuild'
 import { EXACT_SOLID_MAX_DOCUMENT_CHARACTERS, isExactSolidRequest, type ExactSolidResponse } from './exactSolidProtocol'
 
@@ -10,7 +11,7 @@ export async function runExactSolidRequest(request: unknown): Promise<ExactSolid
     const plan = evaluated.exactSolids
     if (plan && plan.roots.length > 200) throw new Error('An exact-solid group is limited to 200 bodies.')
     const bodies = plan ? buildExactSolidBodies(plan.nodes, plan.roots) : []
-    const document = JSON.stringify({ version: 1, sketches: [], bodies })
+    const document = stringifyMeshJson({ version: 1, sketches: [], bodies })
     if (document.length > EXACT_SOLID_MAX_DOCUMENT_CHARACTERS) throw new Error('Document exceeds 64 MB.')
     return { kind: 'exact-solid', version: 1, ok: true, document }
   } catch (error) {

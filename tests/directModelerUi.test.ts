@@ -12,6 +12,7 @@ import {projectDirectPoint,defaultDirectCamera} from '../src/services/directMode
 import {solidTopology} from '../src/services/directSolidTools'
 import {sampleCurve} from '../src/services/directSketchGeometry'
 import {inspectPolygonMesh} from '../src/services/geometry/polygon'
+import {stringifyMeshJson} from '../src/services/meshJson'
 import {createBrepBox,analyzeNurbsBrep,createBrepCylinder,createBrepSphere,transformNurbsBrep,tessellateNurbsBrep} from '../src/services/geometry/brep'
 class Node {
  parent:Node|null=null;children:Node[]=[];props:Record<string,any>={};style:Record<string,any>={};text='';value:any='';selected=false
@@ -36,7 +37,7 @@ const mounts:Array<()=>void>=[]
 afterEach(()=>{mounts.splice(0).forEach(f=>f());const settings=useModelingGrid();settings.enabled.value=true;settings.grid.value=true;settings.geometry.value=true;settings.guides.value=true;settings.step.value=10;settings.unit.value='mm';vi.unstubAllGlobals()})
 async function mount(props: Record<string,unknown> = {}){
  const sketch={id:'s',name:'Profile',closed:true,points:[[0,0],[10,0],[10,10],[0,10]] as [number,number][]}
- let stored=JSON.stringify({version:1,sketches:[sketch,{id:'circle',name:'Circle',closed:true,analytic:{kind:'circle',center:[20,5],radius:3,start:0,sweep:360},points:sampleCurve({kind:'circle',center:[20,5],radius:3,start:0,sweep:360})},{id:'line',name:'Line',closed:false,points:[[0,-5],[2,-5]]},{id:'boundary',name:'Boundary',closed:false,points:[[5,-10],[5,0]]}],bodies:[{...extrudeDirectSketch(sketch,10,'b'),name:'Cube'}]})
+ let stored=stringifyMeshJson({version:1,sketches:[sketch,{id:'circle',name:'Circle',closed:true,analytic:{kind:'circle',center:[20,5],radius:3,start:0,sweep:360},points:sampleCurve({kind:'circle',center:[20,5],radius:3,start:0,sweep:360})},{id:'line',name:'Line',closed:false,points:[[0,-5],[2,-5]]},{id:'boundary',name:'Boundary',closed:false,points:[[5,-10],[5,0]]}],bodies:[{...extrudeDirectSketch(sketch,10,'b'),name:'Cube'}]})
  vi.stubGlobal('localStorage',{getItem:(k:string)=>k.includes('modeler')?stored:null,setItem:(k:string,v:string)=>{if(k.includes('modeler'))stored=v}})
  vi.stubGlobal('Document',class {});vi.stubGlobal('ShadowRoot',class {});vi.stubGlobal('document',{activeElement:null});vi.stubGlobal('window',{document:{activeElement:null}});vi.stubGlobal('SVGSVGElement',Node)
  vi.stubGlobal('DOMPoint',class {constructor(public x:number,public y:number){}matrixTransform(){return this}})
@@ -114,7 +115,7 @@ it('refuses oversized and malformed STEP files without changing the scene or lea
 })
 
 it('changes retained B-rep display detail and restores the previous mesh with Undo',async()=>{
- const seed=cylinderSeed(),before=structuredClone(seed.bodies[0])
+ const seed=cylinderSeed(),before=JSON.parse(stringifyMeshJson(seed.bodies[0]))
  const ui=await mount({seedDocument:seed})
  await ui.click('Imported cylinder');await ui.click('B-rep detail')
  const field=ui.all().find(n=>n.tag==='input'&&n.parent&&ui.text(n.parent).startsWith('B-rep detail'))!
@@ -124,7 +125,7 @@ it('changes retained B-rep display detail and restores the previous mesh with Un
  expect(ui.button('↶').props.disabled).toBe(false)
  await ui.click('↶')
  expect(ui.doc().bodies[0]).toEqual(before)
- expect(seed.bodies[0]).toEqual(before)
+ expect(JSON.parse(stringifyMeshJson(seed.bodies[0]))).toEqual(before)
 })
 
 it('applies a seed already present at mount and preserves Undo across reopening',async()=>{
@@ -368,7 +369,7 @@ it('preserves authored B-rep for movement and push while refusing retained shell
 it('previews and commits retained splits with positive-side identity and reversible history',async()=>{
  const brep=createBrepBox([0,0,0],[10,10,10]),mesh=tessellateNurbsBrep(brep,1)
  const seed:DirectDocument={version:1,sketches:[],bodies:[{id:'retained',name:'Retained stock',brep,mesh}]}
- const before=structuredClone(seed),ui=await mount({seedDocument:seed})
+ const before=JSON.parse(stringifyMeshJson(seed)),ui=await mount({seedDocument:seed})
  await ui.click('Retained stock');await ui.click('Split')
  expect(ui.doc()).toEqual(before)
  await ui.click('Apply · Enter')
@@ -379,7 +380,7 @@ it('previews and commits retained splits with positive-side identity and reversi
  expect(analyzeNurbsBrep(result.bodies[1].brep!).signedVolumeMm3).toBeCloseTo(200,7)
  for(const body of result.bodies)expect(inspectPolygonMesh(body.mesh).signedVolumeMm3).toBeCloseTo(analyzeNurbsBrep(body.brep!).signedVolumeMm3,7)
  await ui.click('↶');expect(ui.doc().bodies).toEqual(before.bodies)
- expect(seed).toEqual(before)
+ expect(JSON.parse(stringifyMeshJson(seed))).toEqual(before)
 })
 it('previews, applies and undoes a retained ruled loft from ordered sketch selection',async()=>{
  const c=Math.SQRT1_2,points:[number,number][]=[[-1,-1],[1,-1],[1,1],[-1,1]]
@@ -492,7 +493,7 @@ it('draws on a picked 3D face, then adds and cuts material from its supporting b
  const body={id:'base',name:'Base',brep,mesh:{positions:built.positions,indices:built.indices}}
  const ui=await mount({initialDocument:{version:1,sketches:[],bodies:[body]}}),svg=ui.svg(),camera=defaultDirectCamera()
  const face=solidTopology(body.mesh).faces.find(f=>f.normal[2]>.99)!,triangle=face.triangles[0]
- const expected=body.mesh.indices.slice(triangle*3,triangle*3+3).map(i=>projectDirectPoint(body.mesh.positions.slice(i*3,i*3+3),camera).slice(0,2).join(',')).join(' ')
+ const expected=Array.from(body.mesh.indices.slice(triangle*3,triangle*3+3),i=>projectDirectPoint(Array.from(body.mesh.positions.slice(i*3,i*3+3)),camera).slice(0,2).join(',')).join(' ')
  await ui.click('On face')
  await ui.pointer(ui.all(svg).find(n=>n.tag==='polygon'&&n.props.points===expected)!)
  const a=projectDirectPoint([2,2,10],camera),b=projectDirectPoint([4,4,10],camera)

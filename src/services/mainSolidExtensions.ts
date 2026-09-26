@@ -11,7 +11,7 @@ function prism(body:DirectBody,direction:Vec3){
  const bottom=topology.faces.findIndex(f=>dot3(f.normal,n)<-1+1e-6),top=topology.faces.findIndex(f=>dot3(f.normal,n)>1-1e-6)
  if(bottom<0||top<0)throw Error('The prism must have two planar end caps.')
  const f=topology.faces[top],plane=facePlane(body,f);plane.origin=plane.origin.map((v,k)=>v-n[k]*(max-min)) as Vec3
- const loops=polygonBoundaryLoops({positions:body.mesh.positions,indices:topology.faces[bottom].triangles.flatMap(t=>body.mesh.indices.slice(t*3,t*3+3))})
+ const loops=polygonBoundaryLoops({positions:body.mesh.positions,indices:Uint32Array.from(topology.faces[bottom].triangles.flatMap(t=>Array.from(body.mesh.indices.slice(t*3,t*3+3))))})
  if(loops.length!==1)throw Error('Prisms with holes require a topology-aware offset.')
  const local=(q:number[]):Point2=>{const v=q.map((x,k)=>x-plane.origin[k]);return [dot3(v,plane.u),dot3(v,plane.v)]}
  const points=loops[0].map(i=>local(p[i]))
@@ -20,7 +20,7 @@ function prism(body:DirectBody,direction:Vec3){
  if(points.some(a=>!topPoints.some(b=>Math.hypot(a[0]-b[0],a[1]-b[1])<1e-5)))throw Error('End profiles differ; this is not a straight prism.')
  return {points,plane,height:max-min,top,bottom,local}
 }
-function extrude(points:Point2[],plane:ReturnType<typeof prism>['plane'],height:number,base=0){const mesh=extrudePolygonProfile({outer:points},[0,0,height]);return {positions:Array.from({length:mesh.positions.length/3},(_,i)=>worldPoint([mesh.positions[i*3],mesh.positions[i*3+1],mesh.positions[i*3+2]+base],plane)).flat(),indices:mesh.indices}}
+function extrude(points:Point2[],plane:ReturnType<typeof prism>['plane'],height:number,base=0){const mesh=extrudePolygonProfile({outer:points},[0,0,height]);return {positions:Float64Array.from(Array.from({length:mesh.positions.length/3},(_,i)=>worldPoint([mesh.positions[i*3],mesh.positions[i*3+1],mesh.positions[i*3+2]+base],plane)).flat()),indices:mesh.indices}}
 function specializedShell(body:DirectBody,openings:number[],thickness:number):DirectBody{
  try{return shellSolid(body,openings,thickness)}catch(original){
   if(!Number.isFinite(thickness)||thickness<.01||!openings.length)throw original
@@ -62,7 +62,7 @@ function sphereShell(body:DirectBody,openings:number[],thickness:number):DirectB
   for(const [u,v] of [[a,b],[b,c],[c,a]]){const key=[u,v].sort((a,b)=>a-b).join(',');if(boundary.has(key))boundary.delete(key);else boundary.set(key,[u,v])}
  }
  for(const [a,b] of boundary.values())indices.push(b,a,a+count,b,a+count,b+count)
- const mesh={positions,indices},report=inspectPolygonMesh(mesh)
+ const mesh={positions:Float64Array.from(positions),indices:Uint32Array.from(indices)},report=inspectPolygonMesh(mesh)
  if(!report.closed||report.signedVolumeMm3<=0)throw Error('Sphere shell produced invalid topology.')
  return {...body,mesh}
 }

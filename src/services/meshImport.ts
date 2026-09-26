@@ -431,8 +431,8 @@ function finalize(format: MeshImportFormat, positions: ArrayLike<number>, indice
 
   return Object.freeze({
     format,
-    positions: outPositions,
-    indices: outIndices,
+    positions: Float64Array.from(outPositions),
+    indices: Uint32Array.from(outIndices),
     triangleCount: outIndices.length / 3,
     vertexCount: outPositions.length / 3,
     sourceVertexCount,

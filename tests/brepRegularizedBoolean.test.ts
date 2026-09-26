@@ -29,7 +29,7 @@ it('keeps empty CSG valid through transport, tessellation and later operations',
  expect(inspectNurbsBrep(empty).topologyValid).toBe(true)
  expect(empty.bodies).toEqual([]);expect(empty.faces).toEqual([])
  const mesh=tessellateNurbsBrep(empty,4)
- expect(mesh.indices).toEqual([]);expect(mesh.positions).toEqual([])
+ expect(mesh.indices.length).toBe(0);expect(mesh.positions.length).toBe(0)
  expect(mesh.report.closed).toBe(false)
  expect(mesh.faceIds).toEqual([])
  const polygons=nurbsBrepToPolygon(empty,4)
@@ -66,7 +66,7 @@ it('exposes curved Boolean and XOR through ModelGraph text and keeps empty bound
  expect(scene.meshes[0].faceIdsAuthoritative).toBe(true)
  const result=buildOwnNurbs({language:'modelgraph/nurbs-1',units:'mm',nodes:[{id:'a',op:'brep_cylinder',radius:3,height:5},{id:'zero',op:'brep_boolean',inputs:['a','a'],operation:'difference'},{id:'display',op:'brep_tessellate',input:'zero',segments:4}],root:'display'},{action:'build'})!
  expect(result.report.bounds).toBeNull()
- expect(result.mesh?.indices).toEqual([])
+ expect(result.mesh?.indices.length).toBe(0)
 })
 
 it('retains separate rational solids after cutting an axial interval at arbitrary orientation',()=>{

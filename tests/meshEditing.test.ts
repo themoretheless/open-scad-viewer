@@ -1,3 +1,4 @@
+import { stringifyMeshJson } from '../src/services/meshJson'
 import { describe, expect, it } from 'vitest'
 import {
   MeshHistory,
@@ -92,7 +93,7 @@ describe('mesh editing', () => {
     expect(solid.bodies).toHaveLength(1)
     const back = solidDocumentToMeshDocument(solid)
     expect(back.objects[0].mesh.indices).toEqual(meshDoc.objects[0].mesh.indices)
-    expect(parseMeshDocument(JSON.stringify(back)).version).toBe(1)
+    expect(parseMeshDocument(stringifyMeshJson(back)).version).toBe(1)
     expect(emptyDirectDocument().bodies).toEqual([])
   })
 

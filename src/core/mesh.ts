@@ -1,4 +1,19 @@
 import type {NativeGeometryArtifact} from './nativeGeometry'
+
+/**
+ * Presentation material payload carried by a mesh publication. Structurally
+ * compatible with the renderer's MaterialDef; defined here so core geometry
+ * types never import from the services layer (see the boundary test).
+ */
+export interface MeshMaterial {
+  id: string
+  name: string
+  baseColor: [number, number, number]
+  metallic: number
+  roughness: number
+  emissive: [number, number, number]
+  shadingModel: 'phong' | 'pbr' | 'matcap' | 'toon' | 'unlit'
+}
 /** Stable identity of a static geometry operation in the parsed source tree. */
 export type SourceOperationId = `op:${string}`
 
@@ -57,6 +72,12 @@ export interface MeshData {
   bvh: MeshBvh
   edgeIndices: Uint32Array
   color: [number, number, number, number]
+  /**
+   * Optional presentation material: selects the mesh shading model and fills
+   * the Obj material tail (baseColor/metallic/emissive/roughness). Absent
+   * means the legacy Phong look with identity material defaults.
+   */
+  material?: MeshMaterial
   /** Row-major affine transform. */
   transform: Float32Array
   /** Manifold coplanar-face identifier for every triangle. */

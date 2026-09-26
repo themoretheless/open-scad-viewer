@@ -1,3 +1,4 @@
+import { stringifyMeshJson } from '../src/services/meshJson'
 import {expect,it} from 'vitest'
 import {EXAMPLES} from '../src/data/examples'
 import {createNativeGeometryArtifact} from '../src/core/nativeGeometry'
@@ -24,7 +25,7 @@ it('retains the complete authored enclosure through the actual Code-to-Solid con
   expect(body.brep!.faces).toHaveLength(48)
   expect(body.brep!.edges.some(edge=>edge.curve.degree===2)).toBe(true)
   expect(analyzeNurbsBrep(body.brep!).signedVolumeMm3).toBeCloseTo(7619.809938003907,6)
-  expect(parseDirectDocument(JSON.stringify(solid)).bodies[0].brep).toEqual(expected)
+  expect(parseDirectDocument(stringifyMeshJson(solid)).bodies[0].brep).toEqual(expected)
   expect(tessellateNurbsBrep(body.brep!,4).report).toMatchObject({closed:true,boundaryEdges:0,nonManifoldEdges:0})
   expect(JSON.stringify(scene.meshes[0])).toBe(before)
 },15000)
@@ -43,7 +44,7 @@ it('applies reflected scene placement to both retained f64 surfaces and outward 
   let signedMeshVolume=0
   const points=(i:number)=>body.mesh.positions.slice(i*3,i*3+3)
   for(let i=0;i<body.mesh.indices.length;i+=3) {
-    const [a,b,c]=body.mesh.indices.slice(i,i+3).map(points)
+    const [a,b,c]=Array.from(body.mesh.indices.slice(i,i+3),points)
     signedMeshVolume+=(a[0]*(b[1]*c[2]-b[2]*c[1])+a[1]*(b[2]*c[0]-b[0]*c[2])+a[2]*(b[0]*c[1]-b[1]*c[0]))/6
   }
   expect(signedMeshVolume).toBeGreaterThan(0)

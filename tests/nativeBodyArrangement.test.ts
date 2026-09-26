@@ -87,7 +87,7 @@ it('rejects invalid pattern inputs and late body failures without changing the s
 it('refuses oversized pattern expansion before constructing the full group and recovers',()=>{
  const input=document()
  // Unreferenced positions are still transformed and retained in exchange meshes.
- for(let i=0;i<30000;i++)input.bodies[0].mesh.positions.push(i/1000,0,0)
+ const extra=Array.from({length:30000},(_,i)=>[i/1000,0,0]).flat();input.bodies[0].mesh.positions=Float64Array.from([...input.bodies[0].mesh.positions,...extra])
  const before=JSON.stringify(input)
  expect(()=>cadOperation(input,{...options,action:'pattern',ids:['0'],count:100})).toThrow('transport capacity')
  expect(JSON.stringify(input)).toBe(before)

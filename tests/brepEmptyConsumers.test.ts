@@ -1,3 +1,4 @@
+import { stringifyMeshJson } from '../src/services/meshJson'
 import {expect, it} from 'vitest'
 import {isNativeGeometryArtifact} from '../src/core/nativeGeometry'
 import {assertGeometryScene, geometrySceneFromMeshes, meshesFromGeometryScene} from '../src/core/scene'
@@ -34,7 +35,7 @@ it('publishes empty B-rep text as zero scene entities and zero Solid bodies', as
       expect(scene.entities).toEqual([])
       expect(meshesFromGeometryScene(scene)).toEqual([])
       const solid = sceneMeshesToSolidDocument(result.meshes)
-      expect(parseDirectDocument(JSON.stringify(solid)).bodies).toEqual([])
+      expect(parseDirectDocument(stringifyMeshJson(solid)).bodies).toEqual([])
       expect(directBodiesScad(solid)).toBe('')
     }
   }
@@ -48,8 +49,8 @@ it('retains a valid empty native snapshot independently of display resolution', 
       const result = buildOwnNurbs(document, {action: 'build', display: {segments, subdivisionLevels: 1}})
       if (!('nativeGeometry' in result) || !('mesh' in result) || !result.mesh) throw Error('Missing native display result')
       expect(result.report.bounds).toBeNull()
-      expect(result.mesh.positions).toEqual([])
-      expect(result.mesh.indices).toEqual([])
+      expect(result.mesh.positions.length).toBe(0)
+      expect(result.mesh.indices.length).toBe(0)
       expect(result.mesh.report.closed).toBe(false)
       expect(isNativeGeometryArtifact(result.nativeGeometry)).toBe(true)
       expect(result.nativeGeometry.kind).toBe('brep')
@@ -68,7 +69,7 @@ it('round-trips an empty Boolean program through native JSON export', () => {
   const restored = buildOwnNurbs(JSON.parse(result.artifact.text), {action: 'build'})
   expect(restored.document_sha256).toBe(result.document_sha256)
   expect(restored.report.bounds).toBeNull()
-  expect('mesh' in restored && restored.mesh?.indices).toEqual([])
+  expect('mesh' in restored && restored.mesh?.indices?.length).toBe(0)
 })
 
 it('exports zero-element open mesh formats and refuses printing formats for empty B-reps', () => {
@@ -93,7 +94,7 @@ it('rejects a saved phantom body with an empty authoritative B-rep and stale dis
   const empty = booleanNurbsBrep(box, box, 'difference')
   const display = tessellateNurbsBrep(box, 2)
   const stale = {version: 1 as const, sketches: [], bodies: [{id: 'stale', name: 'Stale body', brep: empty, mesh: {positions: display.positions, indices: display.indices}}]}
-  expect(() => parseDirectDocument(JSON.stringify(stale))).toThrow(/empty.*B-rep|B-rep.*empty/i)
+  expect(() => parseDirectDocument(stringifyMeshJson(stale))).toThrow(/empty.*B-rep|B-rep.*empty/i)
   expect(() => new DirectHistory(stale)).toThrow(/empty.*B-rep|B-rep.*empty/i)
   const history = new DirectHistory(emptyDirectDocument())
   expect(history.document.bodies).toEqual([])

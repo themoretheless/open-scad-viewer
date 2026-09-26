@@ -92,7 +92,7 @@ describe('meshImport', () => {
     expectCube(mesh)
     const negative = ['v 0 0 0', 'v 1 0 0', 'v 0 1 0', 'f -3 -2 -1'].join('\n')
     const tri = await importMeshFile('t.obj', encoder.encode(negative))
-    expect(tri.indices).toEqual([0, 1, 2])
+    expect(Array.from(tri.indices)).toEqual([0, 1, 2])
   })
 
   it('imports ASCII and both binary PLY layouts, skipping extra properties', async () => {

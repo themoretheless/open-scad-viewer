@@ -33,7 +33,7 @@ it('supports explicit reverse-conversion pipelines in compact text',async()=>{
  const direct=await parseOpenSCAD('// @modelgraph-text/1\nshow triangle_mesh([[0,0,0],[1,0,0],[0,1,0]],[[0,1,2]]).mesh_to_nurbs().nurbs_patches_tessellate(2)');expect(direct.meshes).toHaveLength(1)
 })
 it('welds duplicated triangle positions before reverse conversion and rejects degenerate sources',()=>{
- const mesh=cube();const positions=mesh.indices.flatMap(i=>mesh.positions.slice(i*3,i*3+3));const soup={positions,indices:mesh.indices.map((_,i)=>i)}
+ const mesh=cube();const positions=Float64Array.from(Array.from(mesh.indices).flatMap(i=>Array.from(mesh.positions.slice(i*3,i*3+3))));const soup={positions,indices:Uint32Array.from(mesh.indices.map((_,i)=>i))}
  expect(evaluateSdf(meshToSdf(soup),[0,0,0])).toBeCloseTo(-1,10)
  expect(()=>meshToNurbs({positions:[0,0,0,1,0,0,2,0,0],indices:[0,1,2]})).toThrow(/degenerate/)
 })

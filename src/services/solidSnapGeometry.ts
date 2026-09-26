@@ -62,7 +62,7 @@ export function bodySnapGeometry(body: DirectBody): SnapGeometry {
     if(body.brep&&!body.brep.faces.some(f=>f.surface.controlPoints.flat().every(p=>Math.abs(p.reduce((sum,v,i)=>sum+(v-face.center[i])*face.normal[i],0))<Math.max(1e-6,body.brep!.toleranceMm*10))))continue
     const center:Vec3=[0,0,0];let area=0
     for(const index of face.triangles){
-      const [a,b,c]=body.mesh.indices.slice(index*3,index*3+3).map(i=>points[i]),u=b.map((v,i)=>v-a[i]) as Vec3,v=c.map((x,i)=>x-a[i]) as Vec3,w=Math.hypot(...cross3(u,v))
+      const [a,b,c]=Array.from(body.mesh.indices.slice(index*3,index*3+3),i=>points[i]),u=b.map((v,i)=>v-a[i]) as Vec3,v=c.map((x,i)=>x-a[i]) as Vec3,w=Math.hypot(...cross3(u,v))
       area+=w;for(let i=0;i<3;i++)center[i]+=(a[i]+b[i]+c[i])*w/3
     }
     if(area>1e-12)add(center.map(v=>v/area) as Vec3,'center')

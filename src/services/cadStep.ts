@@ -11,7 +11,7 @@ export function exportFacetedStep(bodies:DirectBody[]):string{
  const solids=bodies.map(b=>{
   const r=inspectPolygonMesh(b.mesh);if(!r.closed||r.signedVolumeMm3<=0)throw Error('STEP export requires closed outward-oriented solids.')
   const p=bodyPoints(b),points=p.map(p=>add(`CARTESIAN_POINT('',${tuple(p)})`)),faces:string[]=[]
-  for(let i=0;i<b.mesh.indices.length;i+=3){const ids=b.mesh.indices.slice(i,i+3),a=p[ids[0]],u=unit3(p[ids[1]].map((v,k)=>v-a[k])),n=unit3(cross3(u,p[ids[2]].map((v,k)=>v-a[k]))),loop=add(`POLY_LOOP('',(${ids.map(i=>points[i]).join(',')}))`),bound=add(`FACE_OUTER_BOUND('',${loop},.T.)`),normal=add(`DIRECTION('',${tuple(n)})`),direction=add(`DIRECTION('',${tuple(u)})`),placement=add(`AXIS2_PLACEMENT_3D('',${points[ids[0]]},${normal},${direction})`),plane=add(`PLANE('',${placement})`);faces.push(add(`FACE_SURFACE('',(${bound}),${plane},.T.)`))}
+  for(let i=0;i<b.mesh.indices.length;i+=3){const ids=b.mesh.indices.slice(i,i+3),a=p[ids[0]],u=unit3(p[ids[1]].map((v,k)=>v-a[k])),n=unit3(cross3(u,p[ids[2]].map((v,k)=>v-a[k]))),loop=add(`POLY_LOOP('',(${Array.from(ids,i=>points[i]).join(',')}))`),bound=add(`FACE_OUTER_BOUND('',${loop},.T.)`),normal=add(`DIRECTION('',${tuple(n)})`),direction=add(`DIRECTION('',${tuple(u)})`),placement=add(`AXIS2_PLACEMENT_3D('',${points[ids[0]]},${normal},${direction})`),plane=add(`PLANE('',${placement})`);faces.push(add(`FACE_SURFACE('',(${bound}),${plane},.T.)`))}
   return add(`FACETED_BREP('${b.name.replace(/[^\x20-\x7e]/g,'_').replace(/'/g,"''")}',${add(`CLOSED_SHELL('',(${faces.join(',')}))`)})`)
  });const representation=add(`FACETED_BREP_SHAPE_REPRESENTATION('',(${solids.join(',')}),${context})`);add(`SHAPE_DEFINITION_REPRESENTATION(${shape},${representation})`)
  return `ISO-10303-21;\nHEADER;\nFILE_DESCRIPTION(('Faceted solids'),'2;1');\nFILE_NAME('model.step','${new Date().toISOString()}',(''),(''),'OpenSCAD Viewer','OpenSCAD Viewer','');\nFILE_SCHEMA(('AUTOMOTIVE_DESIGN'));\nENDSEC;\nDATA;\n${entities.join('\n')}\nENDSEC;\nEND-ISO-10303-21;\n`
@@ -28,7 +28,7 @@ export function importFacetedStep(text:string):DirectBody[]{
  const solids=[...entities.values()].filter(e=>e.type==='FACETED_BREP');if(!solids.length)throw Error('No FACETED_BREP solids found.')
  return solids.map((solid,index)=>{const positions:number[]=[],indices:number[]=[],weld=new Map<string,number>();const vertex=(p:number[])=>{const key=p.join(',');let i=weld.get(key);if(i===undefined){i=positions.length/3;weld.set(key,i);positions.push(...p)}return i};const shell=entity(refs(solid.args)[0],'CLOSED_SHELL')
   for(const faceId of refs(shell.args)){const face=entity(faceId);if(!['FACE_SURFACE','FACE'].includes(face.type))throw Error('Unsupported STEP face.');const fr=refs(face.args),boundsList=face.args.match(/\(([^()]*)\)/)?.[1];if(!boundsList||refs(boundsList).length!==1)throw Error('STEP faces with holes are not supported.');if(face.type==='FACE_SURFACE')entity(fr[1],'PLANE');const bound=entity(fr[0]);if(!['FACE_OUTER_BOUND','FACE_BOUND'].includes(bound.type))throw Error('Unsupported STEP face bound.');const loop=entity(refs(bound.args)[0],'POLY_LOOP'),p=refs(loop.args).map(point);if(p.length<3)throw Error('Invalid STEP polygon.');if(/\.F\.\s*$/.test(bound.args))p.reverse();const normal=unit3(cross3(p[1].map((v,k)=>v-p[0][k]),p[2].map((v,k)=>v-p[0][k])));for(let i=0;i<p.length;i++){if(Math.abs(dot3(p[i].map((v,k)=>v-p[0][k]),normal))>1e-6)throw Error('Nonplanar STEP polygon.');const a=p[i],b=p[(i+1)%p.length],c=p[(i+2)%p.length];if(dot3(cross3(b.map((v,k)=>v-a[k]),c.map((v,k)=>v-b[k])),normal)<-1e-8)throw Error('Concave STEP poly-loop is not supported.')}const ids=p.map(vertex);for(let i=1;i<ids.length-1;i++)indices.push(ids[0],ids[i],ids[i+1])}
-  const mesh={positions,indices},r=inspectPolygonMesh(mesh);if(!r.closed||r.signedVolumeMm3<=0)throw Error('STEP shell is not a closed outward-oriented solid.');return {id:crypto.randomUUID(),name:'STEP '+(index+1),mesh}
+  const mesh={positions:Float64Array.from(positions),indices:Uint32Array.from(indices)},r=inspectPolygonMesh(mesh);if(!r.closed||r.signedVolumeMm3<=0)throw Error('STEP shell is not a closed outward-oriented solid.');return {id:crypto.randomUUID(),name:'STEP '+(index+1),mesh}
  })
 }
 
@@ -98,7 +98,7 @@ export function importTessellatedStepV10(text:string):TessellatedStepImport{
   presentations.push({representationIdentity,itemIdentity:stepIdentity(entity.type+'('+entity.args+')'),primitive,
     normals,colors,layers,textureCoordinates,source:`#${id}=${entity.type}(${entity.args});`})
   return {id:crypto.randomUUID(),name:`STEP tessellated ${ordinal+1}`,
-    mesh:{positions:points.flat(),indices:triples.flatMap(triangle=>triangle.map(index=>index-1))}}
+    mesh:{positions:Float64Array.from(points.flat()),indices:Uint32Array.from(triples.flatMap(triangle=>triangle.map(index=>index-1)))}}
  })
  return {bodies,presentation:presentations,metadataLoss:[]}
 }

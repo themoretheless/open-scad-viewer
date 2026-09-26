@@ -11,11 +11,11 @@ const snapCandidates=computed(()=>props.operation==='move'?sceneSnapPoints(props
 const snapTarget=ref<number[]|null>(null)
 const svg=ref<SVGSVGElement>(),rectangle=ref<{a:number[];b:number[]}|null>(null)
 const bodies=computed(()=>props.meshes.map(sceneBody))
-const points=(i:number)=>{const b=bodies.value[i];return b?Array.from({length:b.mesh.positions.length/3},(_,j)=>b.mesh.positions.slice(j*3,j*3+3)):[]}
+const points=(i:number)=>{const b=bodies.value[i];return b?Array.from({length:b.mesh.positions.length/3},(_,j)=>Array.from(b.mesh.positions.slice(j*3,j*3+3))):[]}
 const selectedPoints=computed(()=>props.selection.flatMap(points))
 const center=computed(()=>[0,1,2].map(k=>{const a=selectedPoints.value.map(p=>p[k]);return a.length?(Math.min(...a)+Math.max(...a))/2:0}) as Vec3)
 const size=computed(()=>Math.max(5,...selectedPoints.value.map(p=>Math.hypot(...p.map((v,k)=>v-center.value[k]))))*.7)
-const project=(p:readonly number[])=>{void props.revision;return props.project(p)}
+const project=(p:ArrayLike<number>)=>{void props.revision;return props.project(Array.from(p))}
 const path=(points:number[][])=>points.map(project).filter((p):p is [number,number]=>p!==null).map(p=>p.join(',')).join(' ')
 const topology=computed(()=>{try{return props.selected===null?null:sceneFace(props.meshes[props.selected],props.hit)}catch{return null}})
 const axes:Vec3[]=[[1,0,0],[0,1,0],[0,0,1]],colors=['#ef665c','#60bd72','#599af0']
@@ -25,8 +25,8 @@ const planeCenter=computed(()=>add(center.value,normal.value,props.parameters.am
 const planePoints=computed(()=>{const n=normal.value,u=unit3(cross3(n,Math.abs(n[0])<.8?[1,0,0]:[0,1,0])),v=cross3(n,u);return [[-1,-1],[1,-1],[1,1],[-1,1],[-1,-1]].map(([a,b])=>add(add(planeCenter.value,u,a*size.value),v,b*size.value))})
 const rings=computed(()=>axes.map((axis,k)=>{const u=axes[(k+1)%3],v=axes[(k+2)%3];return Array.from({length:65},(_,i)=>add(add(center.value,u,Math.cos(i*Math.PI/32)*size.value),v,Math.sin(i*Math.PI/32)*size.value))}))
 const faceCenter=computed(()=>topology.value?.topology.faces[topology.value.face]?.center)
-function facePath(triangles:number[]){const t=topology.value;if(!t)return '';return triangles.map(i=>{const p=t.body.mesh.indices.slice(i*3,i*3+3).map(j=>project(t.body.mesh.positions.slice(j*3,j*3+3)));return p.every(Boolean)?'M '+p.map(v=>v!.join(',')).join(' L ')+' Z':''}).join(' ')}
-const edges=computed(()=>{const t=topology.value;if(!t)return [];return t.topology.edges.map(e=>[t.body.mesh.positions.slice(e.a*3,e.a*3+3),t.body.mesh.positions.slice(e.b*3,e.b*3+3)])})
+function facePath(triangles:number[]){const t=topology.value;if(!t)return '';return triangles.map(i=>{const p=Array.from(t.body.mesh.indices.slice(i*3,i*3+3),j=>project(t.body.mesh.positions.slice(j*3,j*3+3)));return p.every(Boolean)?'M '+p.map(v=>v!.join(',')).join(' L ')+' Z':''}).join(' ')}
+const edges=computed(()=>{const t=topology.value;if(!t)return [];return t.topology.edges.map(e=>[Array.from(t.body.mesh.positions.slice(e.a*3,e.a*3+3)),Array.from(t.body.mesh.positions.slice(e.b*3,e.b*3+3))])})
 let drag:{start:number[];direction:number[];factor:number;before:MainParameters;kind:string;axis:number;origin:number[];pointer:number;rotationSign:number;moved:boolean}|null=null
 function begin(e:PointerEvent,kind:string,axis:number,origin:Vec3,direction:Vec3){
  const a=project(origin),b=project(add(origin,direction,size.value));if(!a||!b)return

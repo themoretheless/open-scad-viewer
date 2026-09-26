@@ -12,7 +12,7 @@ describe('GPU-aware SDF tessellation dispatch', () => {
   it('uses sdf_finish with the primed scores', () => {
     calls.rust.mockImplementation((op: string) => {
       if (op === 'sdf_prepare') return { id: 7 }
-      if (op === 'sdf_finish') return { mesh: { indices: [0, 1, 2] } }
+      if (op === 'sdf_finish') return { positions: [0, 0, 0, 1, 0, 0, 0, 1, 0], indices: [0, 1, 2] }
       throw new Error(`unexpected ${op}`)
     })
     const prepared = prepareSdfGpu(field, grid)
@@ -27,7 +27,7 @@ describe('GPU-aware SDF tessellation dispatch', () => {
   it('falls back to sdf_tessellate when nothing was primed or prepared', () => {
     calls.rust.mockImplementation((op: string) => {
       if (op === 'sdf_prepare') return null
-      if (op === 'sdf_tessellate') return { mesh: { indices: [] } }
+      if (op === 'sdf_tessellate') return { positions: [], indices: [] }
       throw new Error(`unexpected ${op}`)
     })
     expect(prepareSdfGpu(field, grid)).toBeNull()

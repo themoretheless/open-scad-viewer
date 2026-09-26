@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, nextTick, ref, shallowRef, watch } from 'vue'
+import { stringifyMeshJson } from '../services/meshJson'
 import CommandPalette from '../components/CommandPalette.vue'
 import type { PaletteCommand } from '../services/commandSearch'
 import { SCULPT_FALLOFFS, SCULPT_KINDS, buildSculptBrush, isFractionalSculptKind, type SculptFalloff, type SculptKind } from '../services/geometryEditing'
@@ -101,7 +102,7 @@ watch(() => props.open, async open => {
 }, { immediate: true })
 
 watch(document, d => {
-  try { storageSet(storageKey, JSON.stringify(d)) } catch { /* ignore quota */ }
+  try { storageSet(storageKey, stringifyMeshJson(d)) } catch { /* ignore quota */ }
 }, { deep: true })
 
 // A seed (the Code scene or a Solid document) replaces the workspace once; later opens keep the user's edits.
@@ -109,7 +110,7 @@ const appliedSeeds = new WeakSet<MeshWorkspaceDocument>()
 watch([() => props.open, () => props.seedDocument], ([open, seed]) => {
   if (!open || !seed || appliedSeeds.has(seed)) return
   try {
-    commit(parseMeshDocument(JSON.stringify(seed)))
+    commit(parseMeshDocument(stringifyMeshJson(seed)))
     selection.value = history.document.objects[0]?.id ?? ''
     selectedVerts.value = []; selectedFaces.value = []; selectedEdges.value = []
     appliedSeeds.add(seed)
@@ -399,7 +400,7 @@ async function importMesh(event: Event) {
   if (!file) return
   try {
     const imported = await importMeshFromFile(file, { weld: 1e-4 })
-    const mesh: PolygonMesh = { positions: [...imported.positions], indices: [...imported.indices] }
+    const mesh: PolygonMesh = { positions: imported.positions.slice(), indices: imported.indices.slice() }
     const d = history.document
     const id = `${imported.format}-${Date.now().toString(36)}`
     d.objects.push({ id, name: stripMeshExtension(file.name) || imported.format.toUpperCase(), mesh, visible: true })
@@ -493,7 +494,7 @@ function onWorkspaceKey(event: KeyboardEvent) {
   if (event.key.toLowerCase() === 'f') resetView()
 }
 function downloadJson() {
-  const blob = new Blob([JSON.stringify(document.value)], { type: 'application/json' })
+  const blob = new Blob([stringifyMeshJson(document.value)], { type: 'application/json' })
   const url = URL.createObjectURL(blob)
   const a = window.document.createElement('a')
   a.href = url
@@ -570,7 +571,7 @@ function startElementDrag(event: PointerEvent, objectId: string, kind: 'vertex' 
   const keyOf = (i: number) => `${mesh.positions[i * 3].toFixed(5)},${mesh.positions[i * 3 + 1].toFixed(5)},${mesh.positions[i * 3 + 2].toFixed(5)}`
   for (let i = 0; i < mesh.positions.length / 3; i++) { const key = keyOf(i); const list = byPosition.get(key); if (list) list.push(i); else byPosition.set(key, [i]) }
   const expanded = [...new Set(vertexIds.flatMap(i => byPosition.get(keyOf(i)) ?? [i]))]
-  elementDrag = { objectId, vertexIds: expanded, base: { positions: [...mesh.positions], indices: [...mesh.indices] }, x: event.clientX, y: event.clientY, moved: false, svg }
+  elementDrag = { objectId, vertexIds: expanded, base: { positions: mesh.positions.slice(), indices: mesh.indices.slice() }, x: event.clientX, y: event.clientY, moved: false, svg }
   dragSwallowsClick = false
   ;(event.currentTarget as Element).setPointerCapture(event.pointerId)
 }

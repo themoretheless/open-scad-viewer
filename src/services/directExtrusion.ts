@@ -3,6 +3,7 @@ import { cross3, xyPlane, type SketchPlane } from './directSketchGeometry'
 import { booleanNurbsBrep, extrudeBrepCurves, tessellateNurbsBrep, transformNurbsBrep, type NurbsBrep } from './geometry/brep'
 import { authorBrepProfile, transformBrepProfile, validateBrepProfile } from './geometry/brepProfile'
 import { booleanPolygonMeshes } from './geometry/polygon'
+import { stringifyMeshJson } from './meshJson'
 
 export function sameSketchPlane(a: SketchPlane = xyPlane(), b: SketchPlane = xyPlane()) {
   return [a.origin,a.u,a.v].every((p,i)=>p.every((v,k)=>Math.abs(v-[b.origin,b.u,b.v][i][k])<1e-7))
@@ -41,7 +42,7 @@ export function buildDirectExtrusion(document: DirectDocument, options: DirectEx
   if(options.operation!=='new'&&target?.brep)brep=booleanNurbsBrep(target.brep,tool,options.operation)
   if(!brep.bodies.length)return null
   const mesh=tessellateNurbsBrep(brep,options.segments??8)
-  let positions=[...mesh.positions],indices=[...mesh.indices]
+  let positions:Float64Array=mesh.positions.slice(),indices:Uint32Array=mesh.indices.slice()
   if(options.operation!=='new'&&target&&!target.brep) {
     const result=booleanPolygonMeshes(target.mesh,{positions,indices},options.operation)
     positions=result.positions;indices=result.indices;brep=undefined
@@ -52,5 +53,5 @@ export function buildDirectExtrusion(document: DirectDocument, options: DirectEx
 export function applyDirectExtrusionProfile(document: DirectDocument, options: DirectExtrusionOptions): DirectDocument {
   const body=buildDirectExtrusion(document,options)
   const next={...document,bodies:options.operation==='new'?[...document.bodies,...(body?[body]:[])]:document.bodies.flatMap(b=>b.id===options.targetId?(body?[body]:[]):[b])}
-  return parseDirectDocument(JSON.stringify(next))
+  return parseDirectDocument(stringifyMeshJson(next))
 }

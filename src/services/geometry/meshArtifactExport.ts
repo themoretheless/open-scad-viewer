@@ -1,6 +1,6 @@
 /** Native mesh artifact transport. The host only copies the committed byte buffer. */
 import { callGeometryRust, kernelRuntime } from './kernel'
-type Mesh = { positions: number[]; indices: number[] }
+type Mesh = { positions: ArrayLike<number>; indices: ArrayLike<number> }
 
 function copyArtifact(result: number): Uint8Array {
   const { exports: wasm } = kernelRuntime()
@@ -25,7 +25,7 @@ export function export3mfInKernel(mesh: Mesh & { parts?: Mesh[] }, compressed: b
 }
 
 export function exportMeshArtifactInKernel(
-  mesh: { positions: number[]; indices: number[] },
+  mesh: { positions: ArrayLike<number>; indices: ArrayLike<number> },
   format: 'stl' | 'stl_binary' | 'obj' | 'ply' | 'off' | 'amf',
 ): Uint8Array {
   const result = callGeometryRust<number>('mesh_export_format', {

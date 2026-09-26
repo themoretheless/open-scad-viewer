@@ -87,7 +87,7 @@ it('builds text quarter-arc loops and a full-circle hole through the actual view
 it('supports native empty loops in both graph and text without phantom display geometry', async () => {
   const result = buildOwnNurbs(document([body([]),{id:'display',op:'brep_tessellate',input:'body',segments:1}],'display'),{action:'build'})
   expect(definition(result,'body').bodies).toEqual([])
-  expect(result.mesh?.indices).toEqual([])
+  expect(result.mesh?.indices.length).toBe(0)
   expect(result.report.bounds).toBeNull()
   const scene = await parseOpenSCAD('// @modelgraph-text/1\nshow brep_extrude_curves([],0mm,2mm).brep_tessellate(1)')
   expect(scene.meshes).toEqual([])

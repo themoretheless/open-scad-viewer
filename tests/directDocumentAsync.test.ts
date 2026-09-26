@@ -1,3 +1,4 @@
+import { stringifyMeshJson } from '../src/services/meshJson'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { emptyDirectDocument, parseDirectDocument, parseDirectDocumentAsync } from '../src/services/directModeling'
 import { createBrepBox, tessellateNurbsBrep } from '../src/services/geometry/brep'
@@ -16,7 +17,7 @@ describe('cooperative Solid document validation', () => {
     const document = emptyDirectDocument()
     document.bodies.push(exactBox())
     document.sketches.push({ id: 'sketch', name: 'Sketch', points: [[0, 0], [2, 0], [0, 2]], closed: true })
-    const text = JSON.stringify(document)
+    const text = stringifyMeshJson(document)
     const expected = parseDirectDocument(text)
     const actual = await parseDirectDocumentAsync(text)
     expect(actual).toEqual(expected)
@@ -34,7 +35,7 @@ describe('cooperative Solid document validation', () => {
     if (corruption === 'bad bounds') body.mesh.positions[0] = 999
     if (corruption === 'duplicate id') document.bodies.push(body)
     if (corruption === 'bad group') document.groups = [{ name: '', source: '' }]
-    const text = JSON.stringify(document)
+    const text = stringifyMeshJson(document)
     let expected: unknown
     try { parseDirectDocument(text) } catch (error) { expected = error }
     expect(expected).toBeInstanceOf(Error)
@@ -47,7 +48,7 @@ describe('cooperative Solid document validation', () => {
     const document = emptyDirectDocument()
     document.bodies = [exactBox(), { ...exactBox(), id: 'second' }]
     const yieldControl = vi.fn(async () => {})
-    const text = JSON.stringify(document)
+    const text = stringifyMeshJson(document)
     expect(await parseDirectDocumentAsync(text, { yieldControl })).toEqual(parseDirectDocument(text))
     expect(yieldControl).toHaveBeenCalledTimes(2)
   })
@@ -60,7 +61,7 @@ describe('cooperative Solid document validation', () => {
     document.bodies = [exactBox(), { ...exactBox(), id: 'second' }]
     document.bodies[1].mesh.indices[0] = -1
     const yieldControl = vi.fn(async () => { controller.abort() })
-    await expect(parseDirectDocumentAsync(JSON.stringify(document), { signal: controller.signal, yieldControl }))
+    await expect(parseDirectDocumentAsync(stringifyMeshJson(document), { signal: controller.signal, yieldControl }))
       .rejects.toMatchObject({ name: 'AbortError' })
     expect(yieldControl).toHaveBeenCalledOnce()
     await expect(parseDirectDocumentAsync('invalid json', { signal: controller.signal }))

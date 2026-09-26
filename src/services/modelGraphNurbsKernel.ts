@@ -1,4 +1,5 @@
 import {createNativeGeometryArtifact} from '../core/nativeGeometry';
+import { stringifyMeshJson } from './meshJson'
 import {extrudePolygonProfile,revolvePolygonProfile,loftPolygonSections,sweepPolygonProfile,type PolygonProfile} from './geometry/polygon';
 import {meshToNurbsBrep,meshToSdf,meshToSubdivision,meshToNurbs,tessellateNurbsPatches,type NurbsPatchSet} from './geometry/reconstruction';
 import type {SubdivisionCage} from './geometry/subdivision';
@@ -170,7 +171,7 @@ export function buildOwnNurbs(document: unknown, request: OwnNurbsRequest) {
                 case 'surface_sweep': result={kind:'surface',data:sweepNurbsCurve(needCurve(n.inputs[0]),needCurve(n.inputs[1]))};break;
                 case 'surface_loft': result={kind:'surface',data:loftAlignedNurbsCurves(n.inputs.map(needCurve))};break;
                 case 'triangle_mesh': {
-                    const mesh={positions:n.vertices.flat(),indices:n.triangles.flat()};
+                    const mesh={positions:Float64Array.from(n.vertices.flat()),indices:Uint32Array.from(n.triangles.flat())};
                     result={kind:'mesh',data:{...mesh,report:inspectPolygonMesh(mesh)}};break;
                 }
                 case 'mesh_to_nurbs_brep': result={kind:'brep',data:meshToNurbsBrep(needMesh(n.input))};break;
@@ -297,7 +298,7 @@ export function buildOwnNurbs(document: unknown, request: OwnNurbsRequest) {
     const base = { ok: true, document_sha256: compiled.document_sha256, execution_target: 'own-nurbs', automatic_fallback: false, report, evaluations };
     if (request.action === 'export') {
         if (request.format === 'json')
-            return { ...base, artifact: { format: 'json', mime_type: 'application/json', text: JSON.stringify(compiled.document, null, 2) } };
+            return { ...base, artifact: { format: 'json', mime_type: 'application/json', text: stringifyMeshJson(compiled.document, 2) } };
         if (!request.format || root.kind !== 'mesh')
             throw new Error('STL export requires a closed tessellated mesh. Export JSON to retain native NURBS definitions.');
         if (request.format !== 'stl') { const artifact = exportMeshFormat(root.data, request.format); return {...base, artifact: {format: request.format, mime_type: artifact.mimeType, extension: artifact.extension, base64: meshExportBase64(artifact.data)}}; }

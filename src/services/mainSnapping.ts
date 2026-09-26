@@ -7,7 +7,7 @@ export function sceneSnapPoints(meshes:MeshData[],exclude:number[]=[]):Vec3[]{
  const result:Vec3[]=[]
  for(let i=0;i<meshes.length;i++){
   if(exclude.includes(i))continue
-  const mesh=sceneBody(meshes[i],i).mesh,p=Array.from({length:mesh.positions.length/3},(_,j)=>mesh.positions.slice(j*3,j*3+3) as Vec3)
+  const mesh=sceneBody(meshes[i],i).mesh,p=Array.from({length:mesh.positions.length/3},(_,j)=>Array.from(mesh.positions.slice(j*3,j*3+3)) as Vec3)
   result.push(...p.slice(0,Math.max(0,5000-result.length)))
   if(p.length&&result.length<5000){const bb=bounds([{id:'',name:'',mesh}]);result.push(bb.min.map((v,k)=>(v+bb.max[k])/2) as Vec3)}
   const edges=new Map<string,{a:number;b:number;faces:number[]}>()

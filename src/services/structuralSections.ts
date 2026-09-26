@@ -1,5 +1,5 @@
 import {callGeometryRust} from './geometry/kernel'
-import type {PolygonMesh} from './geometry/polygon'
+import {normalizePolygonMesh,type PolygonMesh} from './geometry/polygon'
 
 export interface StructuralSection {
   positionMm:number
@@ -32,5 +32,8 @@ export interface StructuralSections {
   sections:StructuralSection[]
 }
 export function inspectStructuralSections(mesh:PolygonMesh,axis:'x'|'y'|'z',stations:number[]):StructuralSections {
-  return callGeometryRust('structural_sections',{mesh,axis,stations})
+  const result=callGeometryRust<StructuralSections>('structural_sections',{mesh,axis,stations})
+  // The echoed source mesh decodes as plain arrays; box it once, here.
+  if(result.sourceMesh)normalizePolygonMesh(result.sourceMesh)
+  return result
 }

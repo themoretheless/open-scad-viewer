@@ -11,7 +11,7 @@ const square = [[0, 0], [1, 0], [1, 1], [0, 1]]
 function uvArea(mesh: NurbsMesh) {
   let result = 0
   for (let i = 0; i < mesh.indices.length; i += 3) {
-    const [a, b, c] = mesh.indices.slice(i, i + 3).map(index => mesh.uv!.slice(2 * index, 2 * index + 2))
+    const [a, b, c] = Array.from(mesh.indices.slice(i, i + 3), index => mesh.uv!.slice(2 * index, 2 * index + 2))
     const triangle = ((b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0])) / 2
     expect(triangle).toBeGreaterThan(0)
     result += triangle

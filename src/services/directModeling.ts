@@ -2,7 +2,8 @@ import {callGeometryRust} from './geometry/kernel'
 import { MAX_DOCUMENT_CHARACTERS } from './directDocumentLimits'
 export { MAX_DOCUMENT_CHARACTERS } from './directDocumentLimits'
 import { sampleCurve, worldPoints, dot3, type AnalyticCurve, type SketchPlane } from './directSketchGeometry'
-import { extrudePolygonProfile, type PolygonMesh } from './geometry/polygon'
+import { extrudePolygonProfile, normalizePolygonMesh, type PolygonMesh } from './geometry/polygon'
+import { stringifyMeshJson } from './meshJson'
 import { validateNurbsCurve } from './nurbsCurve'
 import { validateNurbsSurface } from './nurbsSurface'
 import type { SolidNurbsCurve, SolidNurbsSurface } from './solidNurbs'
@@ -28,6 +29,7 @@ const DEEP_JSON_NORMALIZATION = Symbol('deep JSON normalization')
 function normalizeOwnedJson(value: unknown, depth = 0): unknown {
   if (depth > 64) throw DEEP_JSON_NORMALIZATION
   if (typeof value === 'number') return Number.isFinite(value) ? (value === 0 ? 0 : value) : null
+  if (ArrayBuffer.isView(value)) return value
   if (Array.isArray(value)) {
     for (let i = 0; i < value.length; i++) value[i] = normalizeOwnedJson(value[i], depth + 1)
   } else if (value !== null && typeof value === 'object') {
@@ -89,6 +91,8 @@ function* directDocumentValidation(text: string): Generator<void, DirectDocument
     }
     const m = b.mesh
     if (!m || !Array.isArray(m.positions) || !Array.isArray(m.indices) || m.positions.length < 9 || m.positions.length > 150_000 || m.positions.length % 3 || m.indices.length < 3 || m.indices.length > 150_000 || m.indices.length % 3 || !m.positions.every(finite) || !m.indices.every(i => Number.isInteger(i) && i >= 0 && i < m.positions.length / 3)) throw new Error('Invalid body mesh.')
+    // JSON boundary: plain parsed arrays are boxed into typed views exactly once.
+    normalizePolygonMesh(m)
     if (b.brep) {
       inspectedBreps.inspect(b.brep)
       if ([b.brep.vertices,b.brep.edges,b.brep.loops,b.brep.faces,b.brep.shells,b.brep.bodies].every(items=>items.length===0)) throw new Error('An empty B-rep cannot be stored as a displayed body; remove the body entry.')
@@ -162,7 +166,7 @@ export async function parseDirectDocumentAsync(text: string, options: {
   }
 }
 
-const aabbFromPositions = (positions: number[]): [number, number, number, number, number, number] => {
+const aabbFromPositions = (positions: ArrayLike<number>): [number, number, number, number, number, number] => {
   let minX = positions[0], maxX = positions[0], minY = positions[1], maxY = positions[1], minZ = positions[2], maxZ = positions[2]
   for (let i = 0; i < positions.length; i += 3) {
     const x = positions[i], y = positions[i + 1], z = positions[i + 2]
@@ -200,18 +204,18 @@ export class DirectHistory {
   private future: DirectSnapshot[] = []
   private current: DirectSnapshot
   constructor(document = emptyDirectDocument()) {
-    const text = JSON.stringify(document)
+    const text = stringifyMeshJson(document)
     const validated = parseDirectDocument(text)
-    const validatedText = JSON.stringify(validated)
+    const validatedText = stringifyMeshJson(validated)
     this.current = { document: validated, characters: validatedText.length, text: validatedText }
   }
   get document() { return clone(this.current.document) }
   get canUndo() { return this.past.length > 0 }
   get canRedo() { return this.future.length > 0 }
   commit(document: DirectDocument) {
-    const text = JSON.stringify(document)
+    const text = stringifyMeshJson(document)
     const next = parseDirectDocument(text)
-    const nextText = JSON.stringify(next)
+    const nextText = stringifyMeshJson(next)
     if (nextText.length === this.current.characters && nextText === this.current.text) return
     this.past.push(this.current)
     // The existing bound counts serialized characters, not actual heap bytes.
@@ -238,7 +242,7 @@ export function extrudeDirectSketch(sketch: DirectSketch, height: number, id: st
   if (!sketch.closed || sketch.points.length < 3) throw new Error('Close the contour before extrusion.')
   if (!finite(height) || height <= 0) throw new Error('Height must be positive.')
   const built = extrudePolygonProfile({ outer: sketch.points.map(p => [...p]) }, [0, 0, height])
-  return { id, name: sketch.name + ' · 3D', mesh: { positions: worldPoints(Array.from({length:built.positions.length/3},(_,i)=>built.positions.slice(i*3,i*3+3)),sketch.plane).flat(), indices: [...built.indices] } }
+  return { id, name: sketch.name + ' · 3D', mesh: { positions: Float64Array.from(worldPoints(Array.from({length:built.positions.length/3},(_,i)=>Array.from(built.positions.slice(i*3,i*3+3))),sketch.plane).flat()), indices: built.indices.slice() } }
 }
 
 /** Author the sketch extrusion before deriving a display mesh. */

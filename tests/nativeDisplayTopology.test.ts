@@ -17,7 +17,7 @@ it('groups a box into six oriented supports and twelve physical edges with stabl
 })
 it('joins duplicated display seams without changing the source mesh',()=>{
  const original=tessellateNurbsBrep(createBrepBox([0,0,0],[2,3,4]),1)
- const mesh={positions:original.indices.flatMap(i=>original.positions.slice(i*3,i*3+3)),indices:original.indices.map((_,i)=>i)}
+ const mesh={positions:Float64Array.from(Array.from(original.indices).flatMap(i=>Array.from(original.positions.slice(i*3,i*3+3)))),indices:Uint32Array.from(original.indices.map((_,i)=>i))}
  const before=JSON.stringify(mesh),topology=solidTopology(mesh)
  expect(topology.faces).toHaveLength(6);expect(topology.edges).toHaveLength(12)
  expect(JSON.stringify(mesh)).toBe(before)

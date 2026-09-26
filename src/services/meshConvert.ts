@@ -47,7 +47,7 @@ export interface MeshConvertResult {
 
 /** Build the export-ready mesh wrapper (Rust inspection report attached). */
 export function polygonMeshToExportMesh(mesh: PolygonMesh): NurbsMesh {
-  const positions = [...mesh.positions], indices = [...mesh.indices]
+  const positions = mesh.positions.slice(), indices = mesh.indices.slice()
   const report = inspectNurbsMesh(positions, indices)
   return { positions, indices, report: { ...report, errorBoundCertified: false, selfIntersectionStatus: 'not_checked' } }
 }

@@ -1,4 +1,4 @@
-import type { PolygonMesh } from './geometry/polygon'
+import { normalizePolygonMesh, type PolygonMesh } from './geometry/polygon'
 import type { DirectBody } from './directModeling'
 import type { Vec3, SketchPlane } from './directSketchGeometry'
 import { callGeometryRust } from './geometry/kernel'
@@ -9,6 +9,8 @@ export type DirectSolidCapabilityCode =
 export class DirectSolidCapabilityError extends Error {
  constructor(readonly code:DirectSolidCapabilityCode,message:string){super(message);this.name='DirectSolidCapabilityError'}
 }
+/** Kernel results decode mesh fields as plain arrays; box them once, here. */
+const typedBody=<T extends DirectBody>(body:T):T=>{normalizePolygonMesh(body.mesh);return body}
 export function solidTopology(mesh:PolygonMesh):{faces:SolidFace[];edges:SolidEdge[]} {
  return callGeometryRust('cad_mesh_topology',{mesh})
 }
@@ -29,7 +31,7 @@ export function facePlane(body:DirectBody,face:SolidFace):SketchPlane {
  return plane
 }
 export function pushPullFace(body:DirectBody,faceIndex:number,distance:number):DirectBody {
- return callGeometryRust('cad_planar_edit',{body,action:'push',faces:[faceIndex],amount:distance})
+ return typedBody(callGeometryRust('cad_planar_edit',{body,action:'push',faces:[faceIndex],amount:distance}))
 }
 /** Mesh edge authoring remains available only when no retained B-rep is present. */
 export function bevelBrepBody(body:DirectBody,edges:number[],size:number,kind:'chamfer'|'fillet',segments=16):DirectBody {
@@ -38,7 +40,7 @@ export function bevelBrepBody(body:DirectBody,edges:number[],size:number,kind:'c
    kind==='chamfer'?'BREP_ANALYTIC_CHAMFER_REFUSED':'BREP_ANALYTIC_FILLET_REFUSED',
    `Mesh ${kind} cannot be claimed as analytic-${kind} for B-rep bodies; refuse faceted fallback (openscad-viewer/brep-1 quarantine)`)
  }
- return callGeometryRust('cad_edge_edit',{body,edges,size,kind,segments})
+ return typedBody(callGeometryRust('cad_edge_edit',{body,edges,size,kind,segments}))
 }
 export function bevelSolidEdge(body:DirectBody,edgeIndex:number,size:number,kind:'chamfer'|'fillet'):DirectBody {
  return bevelBrepBody(body,[edgeIndex],size,kind)
@@ -49,17 +51,17 @@ export function shellSolid(body:DirectBody,openingFaces:number[],thickness:numbe
    'BREP_ANALYTIC_SHELL_REFUSED',
    'Mesh shell cannot be claimed as analytic-shell for B-rep bodies; refuse faceted fallback (openscad-viewer/brep-1 quarantine)')
  }
- return callGeometryRust('cad_planar_edit',{body,action:'shell',faces:openingFaces,amount:thickness})
+ return typedBody(callGeometryRust('cad_planar_edit',{body,action:'shell',faces:openingFaces,amount:thickness}))
 }
 export function splitSolid(body:DirectBody,normal:Vec3,offset:number):[DirectBody,DirectBody] {
- const [positive,negative]=callGeometryRust<[DirectBody,DirectBody]>('cad_split_body',{body,normal,offset})
+ const [positive,negative]=callGeometryRust<[DirectBody,DirectBody]>('cad_split_body',{body,normal,offset}).map(typedBody) as [DirectBody,DirectBody]
  return [{...positive,name:(body.name+' · +').slice(0,100)},{...negative,id:body.id+'-split',name:(body.name+' · −').slice(0,100)}]
 }
 export function transformBodies(bodies:DirectBody[],delta:Vec3,axis:Vec3,angle:number,scale:number):DirectBody[] {
- return callGeometryRust<DirectBody[]>('cad_transform_bodies',{bodies,delta,axis,angle,scale})
+ return callGeometryRust<DirectBody[]>('cad_transform_bodies',{bodies,delta,axis,angle,scale}).map(typedBody)
 }
 
 /** Transform the entire selection around one world-space pivot, preserving analytic sketches. */
 export function transformSelection(document: import('./directModeling').DirectDocument, ids:string[],delta:Vec3,axis:Vec3,angle:number,scale:number):import('./directModeling').DirectDocument {
- return callGeometryRust<import('./directModeling').DirectDocument>('cad_transform_selection',{document,ids,delta,axis,angle,scale})
+ const result=callGeometryRust<import('./directModeling').DirectDocument>('cad_transform_selection',{document,ids,delta,axis,angle,scale});result.bodies.forEach(typedBody);return result
 }

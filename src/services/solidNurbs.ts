@@ -61,7 +61,7 @@ export function sampleSolidNurbsCurve(curve: NurbsCurve, segments = 48): number[
 
 export function tessellateSolidNurbsSurface(item: SolidNurbsSurface): PolygonMesh {
   const mesh = tessellateNurbsSurface(item.surface, { segmentsU: item.segmentsU, segmentsV: item.segmentsV })
-  return { positions: [...mesh.positions], indices: [...mesh.indices] }
+  return { positions: mesh.positions.slice(), indices: mesh.indices.slice() }
 }
 
 export function nurbsCurveToSketch(item: SolidNurbsCurve): DirectSketch {

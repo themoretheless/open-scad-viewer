@@ -12,7 +12,7 @@ describe('two independent Rust libraries through the WASM bridge', () => {
     const loops = polygonBoundaryLoops(mesh), curves = polygonBoundaryNurbsCurves(mesh)
     expect(curves).toHaveLength(1)
     expect(curves[0]).toMatchObject({degree:1,periodic:false})
-    loops[0].forEach((vertex,index) => expect(evaluateNurbsCurve(curves[0],index).point).toEqual(mesh.positions.slice(3*vertex,3*vertex+3)))
+    loops[0].forEach((vertex,index) => expect(evaluateNurbsCurve(curves[0],index).point).toEqual(Array.from(mesh.positions.slice(3*vertex,3*vertex+3))))
     const solid = thickenPolygonMesh(mesh,[0,0,2])
     expect(solid.report.closed).toBe(true)
     expect(solid.report.signedVolumeMm3).toBeCloseTo(200,9)
@@ -43,7 +43,7 @@ it('performs own Rust CSG on tessellated NURBS solids through WASM', () => {
     expect(result.report.signedVolumeMm3).toBeCloseTo(volume,7)
     expect(exportPolygonStl(result)).toContain('facet normal')
   }
-  expect(booleanPolygonMeshes(a,a,'difference').indices).toEqual([])
+  expect(Array.from(booleanPolygonMeshes(a,a,'difference').indices)).toEqual([])
   expect(() => booleanPolygonMeshes(a,b,'union',{maxWork:1})).toThrow(/budget|work|limit/i)
 })
 it('clips a curved NURBS-derived solid and conserves its volume', () => {
@@ -80,7 +80,7 @@ it('keeps canonical boundary and thickening output order through WASM', () => {
   expect(polygonBoundaryLoops(mesh)).toEqual([[0,1,2,3,0]])
   expect(polygonBoundaryLoops({...mesh,indices:[0,2,3,0,1,2]})).toEqual([[0,1,2,3,0]])
   expect(polygonBoundaryLoops({...mesh,indices:[2,1,0,3,2,0]})).toEqual([[0,3,2,1,0]])
-  expect(thickenPolygonMesh(mesh,[0,0,4]).indices).toEqual([
+  expect(Array.from(thickenPolygonMesh(mesh,[0,0,4]).indices)).toEqual([
     0,2,1,4,5,6,0,3,2,4,6,7,
     0,1,5,0,5,4,3,0,4,3,4,7,
     1,2,6,1,6,5,2,3,7,2,7,6,

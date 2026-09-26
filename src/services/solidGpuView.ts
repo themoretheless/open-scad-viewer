@@ -288,7 +288,7 @@ export class SolidGpuLayer {
  * meeting at the same position are averaged only when they differ by less than `creaseDegrees`, so curved
  * faces shade smoothly while box edges stay sharp.
  */
-export function smoothTriangleList(positions: readonly number[], indices: readonly number[], creaseDegrees = 40): { positions: Float32Array; normals: Float32Array } {
+export function smoothTriangleList(positions: ArrayLike<number>, indices: ArrayLike<number>, creaseDegrees = 40): { positions: Float32Array; normals: Float32Array } {
   const triangleCount = Math.floor(indices.length / 3)
   const faceNormals: number[][] = []
   const byPosition = new Map<string, number[]>()

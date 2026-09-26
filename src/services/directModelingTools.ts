@@ -1,6 +1,7 @@
 import { cross3, xyPlane, transformSketch, type SketchPlane } from './directSketchGeometry'
 import { booleanPolygonMeshes, type PolygonMesh } from './geometry/polygon'
 import { extrudeDirectSketch, parseDirectDocument, type DirectBody, type DirectDocument, type DirectSketch, type Point2 } from './directModeling'
+import { stringifyMeshJson } from './meshJson'
 
 export interface OrbitCamera { yaw: number; pitch: number }
 export const defaultDirectCamera = (): OrbitCamera => ({ yaw: Math.PI / 4, pitch: Math.atan(1 / Math.sqrt(2)) })
@@ -38,7 +39,7 @@ export function directExtrusionTool(sketch: DirectSketch, height: number, baseZ:
   return body
 }
 export function applyDirectExtrusion(document: DirectDocument, sketchId: string, height: number, baseZ: number, operation: 'new' | 'union' | 'difference', targetId: string, id: string): DirectDocument {
-  const next = parseDirectDocument(JSON.stringify(document)), sketch = next.sketches.find(s => s.id === sketchId)
+  const next = parseDirectDocument(stringifyMeshJson(document)), sketch = next.sketches.find(s => s.id === sketchId)
   if (!sketch) throw new Error('Select a sketch.')
   const tool = directExtrusionTool(sketch, height, baseZ)
   if (operation === 'new') { tool.id = id; next.bodies.push(tool) }
@@ -49,7 +50,7 @@ export function applyDirectExtrusion(document: DirectDocument, sketchId: string,
     if (!mesh.indices.length) next.bodies = next.bodies.filter(b => b.id !== target.id)
     else target.mesh = { positions: mesh.positions, indices: mesh.indices }
   }
-  return parseDirectDocument(JSON.stringify(next))
+  return parseDirectDocument(stringifyMeshJson(next))
 }
 export function circularDirectCopies(sketch: DirectSketch, count: number, center: Point2, sweep: number, makeId: () => string): DirectSketch[] {
   if (!Number.isInteger(count) || count < 2 || count > 64 || !center.every(Number.isFinite) || !Number.isFinite(sweep) || Math.abs(sweep) < .01 || Math.abs(sweep) > 360) throw new Error('Use 2–64 instances and an angle up to 360 degrees.')
@@ -60,8 +61,11 @@ export function circularDirectCopies(sketch: DirectSketch, count: number, center
   })
 }
 export function directFaceShade(mesh: PolygonMesh, triangle: number, camera: OrbitCamera): number {
-  const points = mesh.indices.slice(triangle * 3, triangle * 3 + 3).map(i => mesh.positions.slice(i * 3, i * 3 + 3))
-  const a = points[1].map((v, i) => v - points[0][i]), b = points[2].map((v, i) => v - points[0][i])
+  const i0 = mesh.indices[triangle * 3], i1 = mesh.indices[triangle * 3 + 1], i2 = mesh.indices[triangle * 3 + 2]
+  const p0 = [mesh.positions[i0 * 3], mesh.positions[i0 * 3 + 1], mesh.positions[i0 * 3 + 2]]
+  const p1 = [mesh.positions[i1 * 3], mesh.positions[i1 * 3 + 1], mesh.positions[i1 * 3 + 2]]
+  const p2 = [mesh.positions[i2 * 3], mesh.positions[i2 * 3 + 1], mesh.positions[i2 * 3 + 2]]
+  const a = p1.map((v, i) => v - p0[i]), b = p2.map((v, i) => v - p0[i])
   const n = [a[1]*b[2]-a[2]*b[1], a[2]*b[0]-a[0]*b[2], a[0]*b[1]-a[1]*b[0]], length = Math.hypot(...n) || 1
   const light = projectDirectPoint(n.map(v=>v/length), camera)
   return Math.max(24, Math.min(78, 48 + 20 * light[2] - 15 * light[1] + 8 * light[0]))

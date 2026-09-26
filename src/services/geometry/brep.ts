@@ -2,6 +2,7 @@ import type {DirectSketch} from '../directModeling'
 import {callGeometryRust} from './kernel'
 import type {NurbsCurve} from '../nurbsCurve'
 import type {NurbsSurface} from '../nurbsSurface'
+import {normalizePolygonMesh} from './polygon'
 import type {PolygonMesh,PolygonBuild} from './polygon'
 import type {RustChangeSet,TopoId} from '../../core/topologyLineage'
 export interface BrepModel<C,S,P> {
@@ -201,7 +202,7 @@ export const extrudeBrepCurves=(loops:NurbsCurve[][],zMin:number,zMax:number):Nu
 export const extrudeBrepPolygon=(profile:[number,number][],zMin:number,zMax:number,holes:[number,number][][]=[]):NurbsBrep=>callGeometryRust('brep_nurbs_extrude_polygon',{profile,holes,zMin,zMax})
 /** Planar-triangulated construction, not a smooth NURBS loft. */
 /** Native bilinear side patches between admitted parallel convex sections. */
-export const createRuledSketchLoft=(sketches:DirectSketch[],ids:string[]):{brep:NurbsBrep;mesh:PolygonMesh}=>callGeometryRust('cad_ruled_sketch_loft',{sketches,ids})
+export const createRuledSketchLoft=(sketches:DirectSketch[],ids:string[]):{brep:NurbsBrep;mesh:PolygonMesh}=>{const r=callGeometryRust<{brep:NurbsBrep;mesh:PolygonMesh}>('cad_ruled_sketch_loft',{sketches,ids});normalizePolygonMesh(r.mesh);return r}
 export const createRuledBrepLoft=(sections:[number,number,number][][]):NurbsBrep=>callGeometryRust('brep_nurbs_ruled_loft',{sections})
 export const createFacetedBrepLoft=(sections:[number,number,number][][]):NurbsBrep=>callGeometryRust('brep_nurbs_faceted_loft',{sections})
 /** Planar-triangulated polyline sweep, not an analytic pipe. */
@@ -324,7 +325,7 @@ export const auditedMultiSectionLoft=(sections:[number,number,number][][]):Audit
 /** Exact open bent degree-1 Bezier path with bounded discrete RMF, twist, and positive scale laws. */
 export const auditedBentRmfSweep=(profile:[number,number][],path:[number,number,number][],twistRadians:number[],scales:number[]):AuditedBrepFeature=>callGeometryRust('brep_nurbs_audited_bent_rmf_sweep_v2',{profile,path,twistRadians,scales})
 export const inspectNurbsBrep=(model:NurbsBrep):BrepReport=>callGeometryRust('brep_nurbs_inspect',{model})
-export const tessellateNurbsBrep=(model:NurbsBrep,segments=4):BrepMesh=>callGeometryRust('brep_nurbs_tessellate',{model,segments})
+export const tessellateNurbsBrep=(model:NurbsBrep,segments=4):BrepMesh=>normalizePolygonMesh(callGeometryRust('brep_nurbs_tessellate',{model,segments}))
 export interface CertifiedBrepTessellation {
  capability:'certified-brep-tessellation/2'
  tessellation:BrepMesh
@@ -338,16 +339,19 @@ export interface CertifiedBrepTessellation {
  namingComplete:true
  resourceProof:{triangleBudget:number;subdivisionsPerPatch:number;adaptiveSelection:true}
 }
-export const tessellateCertifiedNurbsBrep=(model:NurbsBrep,chordToleranceMm:number,maxTriangles=20000):CertifiedBrepTessellation=>callGeometryRust('brep_nurbs_certified_tessellate',{model,chordToleranceMm,maxTriangles})
+export const tessellateCertifiedNurbsBrep=(model:NurbsBrep,chordToleranceMm:number,maxTriangles=20000):CertifiedBrepTessellation=>{const r=callGeometryRust<CertifiedBrepTessellation>('brep_nurbs_certified_tessellate',{model,chordToleranceMm,maxTriangles});normalizePolygonMesh(r.tessellation);return r}
 export interface CertifiedFreeformBrepTessellation extends Omit<CertifiedBrepTessellation,'capability'> {
  capability:'certified-generic-rational-freeform-tessellation/1'
 }
-export const tessellateCertifiedFreeformNurbsBrep=(model:NurbsBrep,chordToleranceMm:number,maxTriangles=20000):CertifiedFreeformBrepTessellation=>callGeometryRust('brep_nurbs_certified_freeform_tessellate',{model,chordToleranceMm,maxTriangles})
+export const tessellateCertifiedFreeformNurbsBrep=(model:NurbsBrep,chordToleranceMm:number,maxTriangles=20000):CertifiedFreeformBrepTessellation=>{const r=callGeometryRust<CertifiedFreeformBrepTessellation>('brep_nurbs_certified_freeform_tessellate',{model,chordToleranceMm,maxTriangles});normalizePolygonMesh(r.tessellation);return r}
 export const prepareBrepDisplay=(model:NurbsBrep,segments=4):Pick<BrepMesh,'report'|'faceIds'|'topologyFaceIds'>&{displayVertices:number[];displayIndices:number[];surfaceArea:number}=>callGeometryRust('brep_nurbs_display',{model,segments})
-export const nurbsBrepToPolygon=(model:NurbsBrep,segments=4):PolygonBrep=>callGeometryRust('brep_nurbs_to_polygon',{model,segments})
-export const polygonBrepFromMesh=(mesh:PolygonMesh,faceIds?:number[]):PolygonBrep=>callGeometryRust('brep_polygon_from_mesh',{mesh,...(faceIds?{faceIds}:{})})
+/** Polygon B-rep carriers embed one PolygonMesh per face; box the decoded plain
+ * arrays into typed views once, here at the kernel boundary. */
+const typedPolygonBrep=(brep:PolygonBrep):PolygonBrep=>{for(const face of brep.faces)normalizePolygonMesh(face.surface.mesh);return brep}
+export const nurbsBrepToPolygon=(model:NurbsBrep,segments=4):PolygonBrep=>typedPolygonBrep(callGeometryRust('brep_nurbs_to_polygon',{model,segments}))
+export const polygonBrepFromMesh=(mesh:PolygonMesh,faceIds?:number[]):PolygonBrep=>typedPolygonBrep(callGeometryRust('brep_polygon_from_mesh',{mesh,...(faceIds?{faceIds}:{})}))
 export const inspectPolygonBrep=(model:PolygonBrep):BrepReport=>callGeometryRust('brep_polygon_inspect',{model})
-export const tessellatePolygonBrep=(model:PolygonBrep):BrepMesh=>callGeometryRust('brep_polygon_tessellate',{model})
+export const tessellatePolygonBrep=(model:PolygonBrep):BrepMesh=>normalizePolygonMesh(callGeometryRust('brep_polygon_tessellate',{model}))
 /** Affine edit of authored carriers. Reflections also reverse shell face uses. */
 export const transformNurbsBrep=(model:NurbsBrep,matrix:number[][]):NurbsBrep=>callGeometryRust('brep_nurbs_transform',{model,matrix})
 /** `/7` document composition assigns fresh occurrence-local TopoIds in Rust. */
