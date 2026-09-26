@@ -1,0 +1,332 @@
+{
+  "startedAt": "2026-09-26T18:38:50.865Z",
+  "configs": [
+    {
+      "name": "model-phong",
+      "model": "phong",
+      "stats": {
+        "mean": 0,
+        "stddev": 0,
+        "nonBgFraction": 0
+      },
+      "screenshot": "output/shader-library-qualification/model-phong.png",
+      "pass": false
+    },
+    {
+      "name": "model-pbr",
+      "model": "pbr",
+      "stats": {
+        "mean": 0,
+        "stddev": 0,
+        "nonBgFraction": 0
+      },
+      "screenshot": "output/shader-library-qualification/model-pbr.png",
+      "pass": false
+    },
+    {
+      "name": "model-matcap",
+      "model": "matcap",
+      "stats": {
+        "mean": 0,
+        "stddev": 0,
+        "nonBgFraction": 0
+      },
+      "screenshot": "output/shader-library-qualification/model-matcap.png",
+      "pass": false
+    },
+    {
+      "name": "model-toon",
+      "model": "toon",
+      "stats": {
+        "mean": 0,
+        "stddev": 0,
+        "nonBgFraction": 0
+      },
+      "screenshot": "output/shader-library-qualification/model-toon.png",
+      "pass": false
+    },
+    {
+      "name": "model-unlit",
+      "model": "unlit",
+      "stats": {
+        "mean": 0,
+        "stddev": 0,
+        "nonBgFraction": 0
+      },
+      "screenshot": "output/shader-library-qualification/model-unlit.png",
+      "pass": false
+    },
+    {
+      "name": "model-pbr-metal",
+      "model": "pbr",
+      "material": {
+        "metallic": 1,
+        "roughness": 0.3
+      },
+      "stats": {
+        "mean": 0,
+        "stddev": 0,
+        "nonBgFraction": 0
+      },
+      "screenshot": "output/shader-library-qualification/model-pbr-metal.png",
+      "pass": false
+    },
+    {
+      "name": "matcap-procedural",
+      "model": "matcap",
+      "matcap": "procedural",
+      "stats": {
+        "mean": 0,
+        "stddev": 0,
+        "nonBgFraction": 0
+      },
+      "screenshot": "output/shader-library-qualification/matcap-procedural.png",
+      "pass": false
+    },
+    {
+      "name": "matcap-studio",
+      "model": "matcap",
+      "matcap": "studio",
+      "stats": {
+        "mean": 0,
+        "stddev": 0,
+        "nonBgFraction": 0
+      },
+      "screenshot": "output/shader-library-qualification/matcap-studio.png",
+      "pass": false
+    },
+    {
+      "name": "matcap-clay",
+      "model": "matcap",
+      "matcap": "clay",
+      "stats": {
+        "mean": 0,
+        "stddev": 0,
+        "nonBgFraction": 0
+      },
+      "screenshot": "output/shader-library-qualification/matcap-clay.png",
+      "pass": false
+    },
+    {
+      "name": "matcap-chrome",
+      "model": "matcap",
+      "matcap": "chrome",
+      "stats": {
+        "mean": 0,
+        "stddev": 0,
+        "nonBgFraction": 0
+      },
+      "screenshot": "output/shader-library-qualification/matcap-chrome.png",
+      "pass": false
+    },
+    {
+      "name": "matcap-pearl",
+      "model": "matcap",
+      "matcap": "pearl",
+      "stats": {
+        "mean": 0,
+        "stddev": 0,
+        "nonBgFraction": 0
+      },
+      "screenshot": "output/shader-library-qualification/matcap-pearl.png",
+      "pass": false
+    },
+    {
+      "name": "env-none",
+      "model": "pbr",
+      "env": "none",
+      "stats": {
+        "mean": 0,
+        "stddev": 0,
+        "nonBgFraction": 0
+      },
+      "screenshot": "output/shader-library-qualification/env-none.png",
+      "pass": false
+    },
+    {
+      "name": "env-studio-softbox",
+      "model": "pbr",
+      "env": "studio-softbox",
+      "stats": {
+        "mean": 0,
+        "stddev": 0,
+        "nonBgFraction": 0
+      },
+      "screenshot": "output/shader-library-qualification/env-studio-softbox.png",
+      "pass": false
+    },
+    {
+      "name": "env-outdoor-sky",
+      "model": "pbr",
+      "env": "outdoor-sky",
+      "stats": {
+        "mean": 0,
+        "stddev": 0,
+        "nonBgFraction": 0
+      },
+      "screenshot": "output/shader-library-qualification/env-outdoor-sky.png",
+      "pass": false
+    },
+    {
+      "name": "env-workshop",
+      "model": "pbr",
+      "env": "workshop",
+      "stats": {
+        "mean": 0,
+        "stddev": 0,
+        "nonBgFraction": 0
+      },
+      "screenshot": "output/shader-library-qualification/env-workshop.png",
+      "pass": false
+    },
+    {
+      "name": "shadows-off",
+      "model": "phong",
+      "stats": {
+        "mean": 0,
+        "stddev": 0,
+        "nonBgFraction": 0
+      },
+      "screenshot": "output/shader-library-qualification/shadows-off.png",
+      "pass": false
+    },
+    {
+      "name": "shadows-on",
+      "model": "phong",
+      "shadows": true,
+      "stats": {
+        "mean": 0,
+        "stddev": 0,
+        "nonBgFraction": 0
+      },
+      "screenshot": "output/shader-library-qualification/shadows-on.png",
+      "pass": false
+    },
+    {
+      "name": "shadows-on-pbr-env",
+      "model": "pbr",
+      "env": "studio-softbox",
+      "shadows": true,
+      "stats": {
+        "mean": 0,
+        "stddev": 0,
+        "nonBgFraction": 0
+      },
+      "screenshot": "output/shader-library-qualification/shadows-on-pbr-env.png",
+      "pass": false
+    },
+    {
+      "name": "theme-default",
+      "theme": "default",
+      "stats": {
+        "mean": 0,
+        "stddev": 0,
+        "nonBgFraction": 0
+      },
+      "screenshot": "output/shader-library-qualification/theme-default.png",
+      "pass": false
+    },
+    {
+      "name": "theme-dark-contrast",
+      "theme": "dark-contrast",
+      "stats": {
+        "mean": 0,
+        "stddev": 0,
+        "nonBgFraction": 0
+      },
+      "screenshot": "output/shader-library-qualification/theme-dark-contrast.png",
+      "pass": false
+    },
+    {
+      "name": "theme-light",
+      "theme": "light",
+      "stats": {
+        "mean": 0,
+        "stddev": 0,
+        "nonBgFraction": 0
+      },
+      "screenshot": "output/shader-library-qualification/theme-light.png",
+      "pass": false
+    },
+    {
+      "name": "section-off",
+      "model": "phong",
+      "stats": {
+        "mean": 0,
+        "stddev": 0,
+        "nonBgFraction": 0
+      },
+      "screenshot": "output/shader-library-qualification/section-off.png",
+      "pass": false
+    },
+    {
+      "name": "section-on",
+      "model": "phong",
+      "section": true,
+      "stats": {
+        "mean": 0,
+        "stddev": 0,
+        "nonBgFraction": 0
+      },
+      "screenshot": "output/shader-library-qualification/section-on.png",
+      "pass": false
+    },
+    {
+      "name": "section-on-toon",
+      "model": "toon",
+      "section": true,
+      "stats": {
+        "mean": 0,
+        "stddev": 0,
+        "nonBgFraction": 0
+      },
+      "screenshot": "output/shader-library-qualification/section-on-toon.png",
+      "pass": false
+    },
+    {
+      "name": "instanced-phong",
+      "model": "phong",
+      "instanced": true,
+      "stats": {
+        "mean": 0,
+        "stddev": 0,
+        "nonBgFraction": 0
+      },
+      "screenshot": "output/shader-library-qualification/instanced-phong.png",
+      "pass": false
+    },
+    {
+      "name": "instanced-toon",
+      "model": "toon",
+      "instanced": true,
+      "stats": {
+        "mean": 0,
+        "stddev": 0,
+        "nonBgFraction": 0
+      },
+      "screenshot": "output/shader-library-qualification/instanced-toon.png",
+      "pass": false
+    }
+  ],
+  "pipelines": {
+    "mesh/uniform": "ok",
+    "mesh/immediate": "ok",
+    "mesh/instanced": "ok",
+    "meshPbr/uniform": "ok",
+    "meshPbr/immediate": "ok",
+    "meshPbr/instanced": "ok",
+    "meshMatcap/uniform": "ok",
+    "meshMatcap/immediate": "ok",
+    "meshMatcap/instanced": "ok",
+    "meshToon/uniform": "ok",
+    "meshToon/immediate": "ok",
+    "meshToon/instanced": "ok",
+    "meshUnlit/uniform": "ok",
+    "meshUnlit/immediate": "ok",
+    "meshUnlit/instanced": "ok"
+  },
+  "adapterInfo": {},
+  "immediateActive": true,
+  "finishedAt": "2026-09-26T18:40:38.144Z",
+  "pass": false
+}
