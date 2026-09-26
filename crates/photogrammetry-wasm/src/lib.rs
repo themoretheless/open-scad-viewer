@@ -88,6 +88,23 @@ pub unsafe extern "C" fn photo_dense_finish(ptr: usize, len: usize) -> u64 {
     unsafe { photogrammetry_ffi::photo_dense_finish(ptr, len) }
 }
 
+/// Stage 1 of the browser WebGPU sparse matching; the response value carries
+/// the MAT1 payload pointer/length and the WGSL shader text, or null when the
+/// request is ineligible (caller then uses the plain sparse action).
+#[unsafe(no_mangle)]
+pub extern "C" fn photo_sparse_prepare() -> u64 {
+    photogrammetry_ffi::photo_sparse_prepare()
+}
+
+/// Stage 2: consumes the packed match response like photo_add consumes rgb.
+/// # Safety
+/// ptr/len must reference a live caller-owned photo_alloc buffer, which this
+/// call takes over and frees on any outcome.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn photo_sparse_finish(ptr: usize, len: usize) -> u64 {
+    unsafe { photogrammetry_ffi::photo_sparse_finish(ptr, len) }
+}
+
 /// Runs in a disposable Worker, so cancellation releases the whole session.
 #[unsafe(no_mangle)]
 pub extern "C" fn photo_run(action: u32, resolution: usize) -> u64 {

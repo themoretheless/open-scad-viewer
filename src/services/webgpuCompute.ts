@@ -18,6 +18,8 @@ export interface GpuDispatchBuffers {
   data: ArrayBufferView | ArrayBuffer
   uniform?: boolean
   output?: boolean
+  /** Byte size of this output buffer; defaults to the dispatch's `outputBytes`. */
+  outputBytes?: number
 }
 export interface GpuComputeJob {
   wgsl: string
@@ -25,16 +27,17 @@ export interface GpuComputeJob {
   wgslVariants?: readonly WgslVariant[]
   entryPoint: string
   /** One entry per compute dispatch sharing the pipeline; each writes its own
-   * output buffer. All dispatches go into one pass and one submit. */
+   * output buffer(s). All dispatches go into one pass and one submit. */
   dispatches: {
     buffers: GpuDispatchBuffers[]
+    /** Fallback byte size for output buffers without an explicit `outputBytes`. */
     outputBytes: number
     workgroups: [number, number, number]
     variantWorkgroups?: Record<string, [number, number, number]>
   }[]
 }
 
-/** Runs the job; returns one Float32Array per dispatch, in order. */
+/** Runs the job; returns one Float32Array per output buffer, in dispatch order. */
 export async function runGpuCompute(job: GpuComputeJob): Promise<Float32Array[]> {
   const adapter = await navigator.gpu?.requestAdapter({ powerPreference: 'high-performance' })
   if (!adapter) throw new Error('WebGPU adapter unavailable')
@@ -70,51 +73,56 @@ export async function runGpuCompute(job: GpuComputeJob): Promise<Float32Array[]>
     const encoder = device.createCommandEncoder()
     const pass = encoder.beginComputePass()
     pass.setPipeline(pipeline)
-    const reads: { from: GPUBuffer; read: GPUBuffer; bytes: number }[] = []
+    const reads: { from: GPUBuffer; read: GPUBuffer | null; bytes: number }[] = []
     for (const dispatch of job.dispatches) {
       const entries: GPUBindGroupEntry[] = []
-      let output: GPUBuffer | undefined
       for (const buffer of dispatch.buffers) {
         if (buffer.output) {
-          output = device.createBuffer({
-            size: dispatch.outputBytes,
+          const bytes = buffer.outputBytes ?? dispatch.outputBytes
+          const output = device.createBuffer({
+            size: Math.max(16, bytes),
             usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC,
           })
           scratch.push(output)
-        } else {
-          const bytes = buffer.data
-          let storage = sharedUploads.get(bytes)
-          if (!storage) {
-            storage = device.createBuffer({
-              size: Math.max(16, bytes.byteLength),
-              usage: (buffer.uniform ? GPUBufferUsage.UNIFORM : GPUBufferUsage.STORAGE) | GPUBufferUsage.COPY_DST,
-            })
-            device.queue.writeBuffer(storage, 0, bytes)
-            sharedUploads.set(bytes, storage)
-            scratch.push(storage)
+          entries.push({ binding: buffer.binding, resource: { buffer: output } })
+          if (bytes === 0) {
+            // Legal to have empty outputs (e.g. zero features); skip the copy.
+            reads.push({ from: output, read: null, bytes })
+            continue
           }
-          entries.push({ binding: buffer.binding, resource: { buffer: storage } })
+          const read = device.createBuffer({
+            size: bytes,
+            usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST,
+          })
+          scratch.push(read)
+          reads.push({ from: output, read, bytes })
           continue
         }
-        entries.push({ binding: buffer.binding, resource: { buffer: output! } })
+        const bytes = buffer.data
+        let storage = sharedUploads.get(bytes)
+        if (!storage) {
+          storage = device.createBuffer({
+            size: Math.max(16, bytes.byteLength),
+            usage: (buffer.uniform ? GPUBufferUsage.UNIFORM : GPUBufferUsage.STORAGE) | GPUBufferUsage.COPY_DST,
+          })
+          device.queue.writeBuffer(storage, 0, bytes)
+          sharedUploads.set(bytes, storage)
+          scratch.push(storage)
+        }
+        entries.push({ binding: buffer.binding, resource: { buffer: storage } })
       }
-      const read = device.createBuffer({
-        size: dispatch.outputBytes,
-        usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST,
-      })
-      scratch.push(read)
       pass.setBindGroup(0, device.createBindGroup({ layout, entries }))
       pass.dispatchWorkgroups(...(dispatch.variantWorkgroups?.[selectedVariant.label] ?? dispatch.workgroups))
-      reads.push({ from: output!, read, bytes: dispatch.outputBytes })
     }
     pass.end()
     for (const { from, read, bytes } of reads) {
-      encoder.copyBufferToBuffer(from, 0, read, 0, bytes)
+      if (read) encoder.copyBufferToBuffer(from, 0, read, 0, bytes)
     }
     device.queue.submit([encoder.finish()])
-    await Promise.all(reads.map(({ read }) => read.mapAsync(GPUMapMode.READ)))
-    return reads.map(({ read }) => {
-      const values = new Float32Array(read.getMappedRange().slice(0))
+    await Promise.all(reads.map(({ read }) => read?.mapAsync(GPUMapMode.READ)))
+    return reads.map(({ read, bytes }) => {
+      if (!read) return new Float32Array(0)
+      const values = new Float32Array(read.getMappedRange().slice(0, bytes))
       read.unmap()
       return values
     })

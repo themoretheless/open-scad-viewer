@@ -15,6 +15,7 @@ pub mod dense;
 pub mod diagnostics;
 pub mod evaluation;
 pub mod features;
+pub mod host_matching;
 mod matching;
 pub(crate) use math_core as math;
 #[cfg(feature = "gpu")]
@@ -28,6 +29,7 @@ pub use math_core::{Acceleration, Error, Result};
 pub use model::{Image, Point, Reconstruction};
 pub use pipeline::{
     ReconstructionOptions, ReconstructionOutcome, reconstruct, reconstruct_detailed,
+    reconstruct_detailed_with_matches,
 };
 pub use seeding::SeedOptions;
 pub const INVALID_INPUT: &str = "PHOTOGRAMMETRY_INVALID_INPUT";

@@ -20,130 +20,11 @@ use compute_core::{Binding, Kernel};
 const WG_METAL: u32 = 256;
 const WG_DEFAULT: u32 = 256;
 
-// `WG` anchor convention: the compute-core runtime substitutes a per-backend
-// tuned power of two (see `Kernel::with_workgroup_size`) before compilation.
-const SHADER_TEMPLATE: &str = r#"
-struct Params {
-    rows: u32,
-    cols: u32,
-}
-struct RowBest {
-    j: u32,
-    d1: f32,
-    d2: f32,
-}
-struct ColBest {
-    i: u32,
-    d1: f32,
-}
-
-@group(0) @binding(0) var<uniform> params: Params;
-@group(0) @binding(1) var<storage, read> da: array<f32>;
-@group(0) @binding(2) var<storage, read> db: array<f32>;
-@group(0) @binding(3) var<storage, read_write> rows_out: array<RowBest>;
-@group(0) @binding(4) var<storage, read_write> cols_out: array<ColBest>;
-
-const NONE: u32 = 0xFFFFFFFFu;
-const INF: f32 = 3.402823466e+38;
-const WG: u32 = 256;
-
-var<workgroup> sh_d: array<f32, WG>;
-var<workgroup> sh_i: array<u32, WG>;
-var<workgroup> sh_s: array<f32, WG>;
-
-// True when (a_d, a_i) outranks (b_d, b_i): smaller distance, then smaller index.
-fn better(a_d: f32, a_i: u32, b_d: f32, b_i: u32) -> bool {
-    return a_d < b_d || (a_d == b_d && a_i < b_i);
-}
-
-fn dist(row: u32, col: u32) -> f32 {
-    var d = 0.0;
-    let ra = row * 128u;
-    let rb = col * 128u;
-    for (var k = 0u; k < 128u; k++) {
-        let v = da[ra + k] - db[rb + k];
-        d += v * v;
-    }
-    return d;
-}
-
-@compute @workgroup_size(WG)
-fn match_rows(@builtin(workgroup_id) wg: vec3<u32>, @builtin(local_invocation_id) lid: vec3<u32>) {
-    let row = wg.x;
-    var best_d = INF;
-    var best_j = NONE;
-    var second_d = INF;
-    var col = lid.x;
-    while (col < params.cols) {
-        let d = dist(row, col);
-        if (d < best_d) {
-            second_d = best_d;
-            best_d = d;
-            best_j = col;
-        } else if (d < second_d) {
-            second_d = d;
-        }
-        col += WG;
-    }
-    sh_d[lid.x] = best_d;
-    sh_i[lid.x] = best_j;
-    sh_s[lid.x] = second_d;
-    workgroupBarrier();
-    var stride = WG / 2u;
-    while (stride > 0u) {
-        if (lid.x < stride) {
-            let other = lid.x + stride;
-            if (better(sh_d[other], sh_i[other], sh_d[lid.x], sh_i[lid.x])) {
-                // other becomes best; old best competes for second
-                sh_s[lid.x] = min(min(sh_s[lid.x], sh_s[other]), sh_d[lid.x]);
-                sh_d[lid.x] = sh_d[other];
-                sh_i[lid.x] = sh_i[other];
-            } else {
-                sh_s[lid.x] = min(min(sh_s[lid.x], sh_s[other]), sh_d[other]);
-            }
-        }
-        workgroupBarrier();
-        stride = stride / 2u;
-    }
-    if (lid.x == 0u) {
-        rows_out[row] = RowBest(sh_i[0], sh_d[0], sh_s[0]);
-    }
-}
-
-@compute @workgroup_size(WG)
-fn match_cols(@builtin(workgroup_id) wg: vec3<u32>, @builtin(local_invocation_id) lid: vec3<u32>) {
-    let col = wg.x;
-    var best_d = INF;
-    var best_i = NONE;
-    var row = lid.x;
-    while (row < params.rows) {
-        let d = dist(row, col);
-        if (d < best_d) {
-            best_d = d;
-            best_i = row;
-        }
-        row += WG;
-    }
-    sh_d[lid.x] = best_d;
-    sh_i[lid.x] = best_i;
-    workgroupBarrier();
-    var stride = WG / 2u;
-    while (stride > 0u) {
-        if (lid.x < stride) {
-            let other = lid.x + stride;
-            if (better(sh_d[other], sh_i[other], sh_d[lid.x], sh_i[lid.x])) {
-                sh_d[lid.x] = sh_d[other];
-                sh_i[lid.x] = sh_i[other];
-            }
-        }
-        workgroupBarrier();
-        stride = stride / 2u;
-    }
-    if (lid.x == 0u) {
-        cols_out[col] = ColBest(sh_i[0], sh_d[0]);
-    }
-}
-"#;
+/// The qualified matcher template lives in `host_matching` so the browser
+/// host-GPU path compiles exactly the shader the native `gpu` feature does
+/// (the native kernels use the `match_rows` / `match_cols` entries with zero
+/// descriptor offsets; the browser uses `match_pair` over a shared table).
+use crate::host_matching::MATCH_WGSL as SHADER_TEMPLATE;
 
 #[derive(Clone, Copy, Debug)]
 pub struct RowBest {
@@ -255,7 +136,13 @@ impl GpuMatcher {
         self.queue.write_buffer(
             &buffers.params,
             0,
-            &[rows.to_ne_bytes(), cols.to_ne_bytes()].concat(),
+            &[
+                rows.to_ne_bytes(),
+                cols.to_ne_bytes(),
+                0u32.to_ne_bytes(),
+                0u32.to_ne_bytes(),
+            ]
+            .concat(),
         );
         if !packed_a.is_empty() {
             self.queue
@@ -335,7 +222,7 @@ impl GpuMatcher {
         let col_capacity = col_count.max(1);
         let params = device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("match_params"),
-            size: 8,
+            size: 16,
             usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
             mapped_at_creation: false,
         });

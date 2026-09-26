@@ -66,6 +66,24 @@ pub(crate) fn propose(
         progress,
     )
 }
+/// Image-index pairs considered for seeding: every pair up to 24 photos (the
+/// browser project scale), an acquisition-order window of 9 successors beyond
+/// that. The browser host-GPU matching path pre-matches exactly this list.
+pub(crate) fn pair_candidates(image_count: usize) -> Vec<(usize, usize)> {
+    let mut pairs = Vec::new();
+    for a in 0..image_count {
+        let end = if image_count <= 24 {
+            image_count
+        } else {
+            (a + 9).min(image_count)
+        };
+        for b in a + 1..end {
+            pairs.push((a, b));
+        }
+    }
+    pairs
+}
+
 #[allow(clippy::too_many_arguments)]
 pub(crate) fn propose_with_options(
     images: &[Image],
@@ -80,27 +98,19 @@ pub(crate) fn propose_with_options(
     let mut candidates = Vec::new();
     let mut matches_by_pair = std::collections::BTreeMap::new();
     // All pairs for browser projects, acquisition-order window for larger native sets.
-    for a in 0..images.len() {
-        let end = if images.len() <= 24 {
-            images.len()
-        } else {
-            (a + 9).min(images.len())
-        };
-        for b in a + 1..end {
-            if !progress(
-                "matching",
-                cache.computed_pairs,
-                images.len() * (images.len() - 1) / 2,
-            ) {
-                return Err(crate::error("Cancelled"));
-            }
-            let matches = cache.between(features, a, b).collect::<Vec<_>>();
-            if matches.len() >= 12 {
-                let score =
-                    matches.len() as f64 * coverage(&matches, features, images, a, b).sqrt();
-                candidates.push((score, a, b));
-                matches_by_pair.insert((a, b), matches);
-            }
+    for (a, b) in pair_candidates(images.len()) {
+        if !progress(
+            "matching",
+            cache.computed_pairs,
+            images.len() * (images.len() - 1) / 2,
+        ) {
+            return Err(crate::error("Cancelled"));
+        }
+        let matches = cache.between(features, a, b).collect::<Vec<_>>();
+        if matches.len() >= 12 {
+            let score = matches.len() as f64 * coverage(&matches, features, images, a, b).sqrt();
+            candidates.push((score, a, b));
+            matches_by_pair.insert((a, b), matches);
         }
     }
     // Reserve a small part of the geometric budget for early acquisition pairs;

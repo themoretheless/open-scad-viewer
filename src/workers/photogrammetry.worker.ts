@@ -1,5 +1,6 @@
+import {runGpuMatching} from '../services/photogrammetry/gpuMatching'
 import {runGpuSweep} from '../services/photogrammetry/gpuSweep'
-import {PhotogrammetryKernel, type PhotoDensePreset, type PhotoDiagnostics, type PhotoSurface} from '../services/photogrammetry/kernel'
+import {PhotogrammetryKernel, type PhotoDensePreset, type PhotoDiagnostics, type PhotoReconstruction, type PhotoSurface} from '../services/photogrammetry/kernel'
 import type {PhotoTimings, PhotoWorkerEvent, PhotoWorkerRequest} from '../services/photogrammetry/workerProtocol'
 
 const scope = self as unknown as {postMessage: (event: PhotoWorkerEvent, transfer: Transferable[]) => void}
@@ -45,6 +46,14 @@ async function reconstructSurfaceGpu(kernel: PhotogrammetryKernel, resolution: n
   return true
 }
 
+/** Sparse matching via the browser WebGPU; any failure falls back to the CPU path. */
+async function reconstructSparseGpu(kernel: PhotogrammetryKernel): Promise<PhotoReconstruction | null> {
+  const prepared = kernel.sparsePrepare()
+  if (!prepared) return null
+  const matched = await runGpuMatching(prepared.payload, prepared.wgsl)
+  return kernel.sparseFinish(matched)
+}
+
 // Returns the promise so tests (and careful hosts) can await the async GPU stretch.
 self.onmessage = (event: MessageEvent<PhotoWorkerRequest>) => run(event.data)
 
@@ -62,9 +71,15 @@ async function run(data: PhotoWorkerRequest): Promise<void> {
 
     post({type: 'stage', stage: 'cameras'})
     const sparseStart = performance.now()
-    const result = kernel.sparse()
+    const result = data.gpu
+      ? await reconstructSparseGpu(kernel).catch(error => {
+          post({type: 'warning', message: `WebGPU matching unavailable: ${errorMessage(error)}`})
+          return null
+        })
+      : null
+    const sparse = result ?? kernel.sparse()
     timings.sparseMs = performance.now() - sparseStart
-    post({type: 'sparse', result}, transferList(result))
+    post({type: 'sparse', result: sparse}, transferList(sparse))
 
     if (data.dense) {
       post({type: 'stage', stage: 'depth'})

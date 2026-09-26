@@ -18,6 +18,15 @@ impl MatchGraph {
             ..Default::default()
         }
     }
+    /// Inserts externally computed matches (host-GPU round trip) so `between`
+    /// serves them from the cache without host-side descriptor matching.
+    /// Counts as a computed pair for progress and diagnostics.
+    pub(crate) fn precompute(&mut self, a: usize, b: usize, matches: Vec<Match>) {
+        self.pairs
+            .entry((a.min(b), a.max(b)))
+            .or_insert(matches);
+        self.computed_pairs += 1;
+    }
     pub fn between<'a>(
         &'a mut self,
         features: &[Vec<Feature>],

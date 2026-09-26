@@ -81,6 +81,60 @@ pub fn reconstruct_detailed(
         report,
     }
 }
+
+/// Sparse reconstruction with every seed-candidate pair pre-matched externally
+/// (browser WebGPU round trip, see `host_matching`). The match cache is filled
+/// before seeding, so no descriptor matching runs on the host; features come
+/// from the plan so extraction never runs twice. Eligibility (pair-grid
+/// coverage, no `second_chance`) is decided in `host_matching::prepare_host_matching`.
+pub fn reconstruct_detailed_with_matches(
+    images: &[Image],
+    options: &ReconstructionOptions,
+    plan: &crate::host_matching::HostMatchingPlan,
+    response: &[u8],
+    mut progress: impl FnMut(&str, usize, usize) -> bool,
+) -> ReconstructionOutcome {
+    let mut report = ReconstructionReport {
+        images: (0..images.len())
+            .map(|image| ImageReport {
+                image,
+                reason: "not_processed",
+                ..Default::default()
+            })
+            .collect(),
+        ..Default::default()
+    };
+    let reconstruction = try {
+        validate_inputs(images, options, &mut report)?;
+        let pair_matches =
+            crate::host_matching::matches_from_gpu_response(plan, response, &options.feature_options)?;
+        let mut cache = MatchGraph::with_options(options.feature_options);
+        for ((lo, hi), matches) in pair_matches {
+            cache.precompute(lo, hi, matches);
+        }
+        solve(
+            images,
+            &plan.features,
+            options,
+            cache,
+            &mut report,
+            &mut progress,
+        )?
+    };
+    if let Err(error) = &reconstruction {
+        for image in &mut report.images {
+            if error.message == "Cancelled" && !image.registered {
+                image.reason = "cancelled";
+            } else if image.reason == "features_ready" {
+                image.reason = "initialization_failed";
+            }
+        }
+    }
+    ReconstructionOutcome {
+        reconstruction,
+        report,
+    }
+}
 #[expect(
     clippy::too_many_arguments,
     reason = "pipeline state is passed explicitly across the solver boundary; a typed optimization context is the next modularization step"
@@ -185,6 +239,35 @@ fn run(
     report: &mut ReconstructionReport,
     progress: &mut impl FnMut(&str, usize, usize) -> bool,
 ) -> Result<Reconstruction> {
+    validate_inputs(images, options, report)?;
+    let mut features = Vec::new();
+    for (i, image) in images.iter().enumerate() {
+        if !progress("features", i, images.len()) {
+            do yeet crate::error("Cancelled");
+        }
+        features.push(features::extract_with_options(
+            image,
+            options.feature_limit,
+            &options.feature_options,
+        )?);
+        report.images[i].features = features[i].len();
+        report.images[i].reason = if features[i].len() < 12 {
+            "insufficient_features"
+        } else {
+            "features_ready"
+        };
+    }
+    let cache = MatchGraph::with_options(options.feature_options);
+    solve(images, &features, options, cache, report, progress)
+}
+
+/// Validates options and images before any stage runs (shared by the lazy
+/// matcher and the host-GPU pre-matched entries).
+fn validate_inputs(
+    images: &[Image],
+    options: &ReconstructionOptions,
+    report: &mut ReconstructionReport,
+) -> Result<()> {
     if !(32..=4000).contains(&options.feature_limit)
         || !(1..=128).contains(&options.max_seed_pairs)
         || !(1..=8).contains(&options.max_seed_attempts)
@@ -226,27 +309,22 @@ fn run(
             do yeet error;
         }
     }
-    let mut features = Vec::new();
-    for (i, image) in images.iter().enumerate() {
-        if !progress("features", i, images.len()) {
-            do yeet crate::error("Cancelled");
-        }
-        features.push(features::extract_with_options(
-            image,
-            options.feature_limit,
-            &options.feature_options,
-        )?);
-        report.images[i].features = features[i].len();
-        report.images[i].reason = if features[i].len() < 12 {
-            "insufficient_features"
-        } else {
-            "features_ready"
-        };
-    }
-    let mut cache = MatchGraph::with_options(options.feature_options);
+    Ok(())
+}
+
+/// Seeding and incremental registration over a (possibly pre-filled) match
+/// cache; descriptor extraction and cache construction happen in the caller.
+fn solve(
+    images: &[Image],
+    features: &[Vec<Feature>],
+    options: &ReconstructionOptions,
+    mut cache: MatchGraph,
+    report: &mut ReconstructionReport,
+    progress: &mut impl FnMut(&str, usize, usize) -> bool,
+) -> Result<Reconstruction> {
     let mut seeds = crate::seeding::propose_with_options(
         images,
-        &features,
+        features,
         &mut cache,
         options.max_seed_pairs,
         &options.geometry_options,
@@ -277,7 +355,7 @@ fn run(
         let mut trial_report = report.clone();
         let result = grow(
             images,
-            &features,
+            features,
             &mut cache,
             seed,
             options,

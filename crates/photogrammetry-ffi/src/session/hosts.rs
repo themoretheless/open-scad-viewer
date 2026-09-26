@@ -88,10 +88,66 @@ impl Session {
     pub(super) fn sparse(&mut self) -> Result<Vec<u8>> {
         self.sparse = None;
         self.dense = None;
+        self.pending_matching = None;
         let mut options = ReconstructionOptions::default();
         options.feature_options.acceleration = self.acceleration;
         let outcome =
             photogrammetry_core::reconstruct_detailed(&self.images, &options, |_, _, _| true);
+        let mut diagnostics = report_value(&outcome.report);
+        diagnostics["calibrations"] = Value::Array(self.calibrations.clone());
+        self.diagnostics = Some(diagnostics);
+        let reconstruction = outcome.reconstruction?;
+        self.sparse = Some(reconstruction);
+        response::sparse(
+            self.sparse.as_ref().unwrap(),
+            self.diagnostics.as_ref().unwrap(),
+        )
+    }
+
+    /// Stage 1 of the browser WebGPU sparse matching: validates eligibility,
+    /// extracts features once, and returns the MAT1 payload (ptr/len into a
+    /// freshly allocated buffer the caller must free) plus the WGSL text.
+    pub(super) fn sparse_prepare(&mut self) -> Result<Value> {
+        self.pending_matching = None;
+        self.sparse = None;
+        self.dense = None;
+        let mut options = ReconstructionOptions::default();
+        options.feature_options.acceleration = self.acceleration;
+        let Some(mut plan) =
+            photogrammetry_core::host_matching::prepare_host_matching(
+                &self.images,
+                options.feature_limit,
+                &options.feature_options,
+            )?
+        else {
+            return Ok(Value::Null);
+        };
+        let blob = std::mem::take(&mut plan.payload);
+        let len = blob.len();
+        let ptr = Box::into_raw(blob.into_boxed_slice()) as *mut u8 as usize;
+        self.pending_matching = Some((options, plan));
+        Ok(json!({
+            "ptr": ptr as f64,
+            "len": len as f64,
+            "wgsl": photogrammetry_core::host_matching::MATCH_WGSL,
+        }))
+    }
+
+    /// Stage 2: consumes the browser's packed match response (ownership moves
+    /// like in photo_add) and finishes the sparse pipeline with the shared CPU
+    /// logic — no host descriptor matching runs.
+    pub(super) fn sparse_finish(&mut self, bytes: Vec<u8>) -> Result<Vec<u8>> {
+        let (options, plan) = self
+            .pending_matching
+            .take()
+            .ok_or_else(|| input("Prepare the sparse match first"))?;
+        let outcome = photogrammetry_core::reconstruct_detailed_with_matches(
+            &self.images,
+            &options,
+            &plan,
+            &bytes,
+            |_, _, _| true,
+        );
         let mut diagnostics = report_value(&outcome.report);
         diagnostics["calibrations"] = Value::Array(self.calibrations.clone());
         self.diagnostics = Some(diagnostics);
@@ -295,4 +351,18 @@ pub fn dense_prepare_host(side: usize, preset: u32) -> Result<Value> {
 }
 pub fn dense_finish_host(scores: Vec<f32>) -> Result<Vec<u8>> {
     PHOTO.with(|session| session.borrow_mut().dense_finish(scores))
+}
+
+/// Browser WebGPU sparse matching entry points; the match response arrives as
+/// a raw buffer like the dense sweep scores.
+/// Stage 1: returns the MAT1 payload pointer/length and the WGSL shader text,
+/// or null when ineligible (caller then uses the plain sparse action).
+pub fn sparse_prepare_host() -> Result<Value> {
+    PHOTO.with(|session| session.borrow_mut().sparse_prepare())
+}
+
+/// Stage 2: consumes the packed match response buffer like photo_add
+/// consumes rgb.
+pub fn sparse_finish_host(bytes: Vec<u8>) -> Result<Vec<u8>> {
+    PHOTO.with(|session| session.borrow_mut().sparse_finish(bytes))
 }

@@ -429,7 +429,7 @@ fn describe(
     d
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Match {
     pub a: usize,
     pub b: usize,
@@ -535,6 +535,20 @@ pub fn matches_with_options(a: &[Feature], b: &[Feature], options: &FeatureOptio
             }
         }
     }
+    select_matches(a, b, &best_a, &best_b, options)
+}
+
+/// Applies the mutual-nearest ratio acceptance to precomputed per-row and
+/// per-column best distances. Shared by the CPU scan, the native GPU round
+/// trip, and the browser host-GPU path so every matcher keeps identical
+/// acceptance semantics (`second_chance` recomputes exact reverse seconds).
+pub fn select_matches(
+    a: &[Feature],
+    b: &[Feature],
+    best_a: &[(usize, f32, f32)],
+    best_b: &[(usize, f32)],
+    options: &FeatureOptions,
+) -> Vec<Match> {
     let strict = |(i, &(j, d, second)): (usize, &(usize, f32, f32))| {
         if j != usize::MAX && best_b[j].0 == i && d < 0.64 * second && d < 0.9 {
             Some(Match {
@@ -560,6 +574,8 @@ pub fn matches_with_options(a: &[Feature], b: &[Feature], options: &FeatureOptio
         // candidates, leaving the hot loop (and its early-break cutoff) on the
         // default path untouched.
         const RELAXED_RATIO_SQUARED: f32 = 0.81;
+        let da: Vec<&[f32; 128]> = a.iter().map(|feature| &feature.descriptor).collect();
+        let db: Vec<&[f32; 128]> = b.iter().map(|feature| &feature.descriptor).collect();
         let mut extra: Vec<Match> = best_a
             .iter()
             .enumerate()

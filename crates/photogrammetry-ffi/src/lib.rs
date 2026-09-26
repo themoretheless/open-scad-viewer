@@ -223,6 +223,29 @@ pub fn photo_dense_prepare(resolution: usize, preset: u32) -> u64 {
     packed(session::dense_prepare_host(resolution, preset))
 }
 
+/// Stage 1 of the browser WebGPU sparse matching; the response value carries
+/// the MAT1 payload pointer/length and the WGSL shader text, or null when the
+/// request is ineligible (caller then uses the plain sparse action).
+pub fn photo_sparse_prepare() -> u64 {
+    packed(session::sparse_prepare_host())
+}
+
+/// Stage 2 of the browser WebGPU sparse matching: consumes the packed match
+/// response like photo_add consumes rgb.
+/// # Safety
+/// ptr/len must reference a live caller-owned photo_alloc buffer, which this
+/// call takes over and frees on any outcome.
+pub unsafe fn photo_sparse_finish(ptr: usize, len: usize) -> u64 {
+    // Raw RowBest/ColBest bytes, not MGV1; the session validates the exact
+    // expected length against the prepared pair plan. 64 MiB caps a 24-photo
+    // run at the default feature limit.
+    if ptr == 0 || len == 0 || len > 64 * 1024 * 1024 {
+        return packed(Err(input("Invalid host match response buffer")));
+    }
+    let bytes = unsafe { Box::from_raw(std::ptr::slice_from_raw_parts_mut(ptr as *mut u8, len)) };
+    packed_bytes(session::sparse_finish_host(bytes.into_vec()))
+}
+
 /// Stage 2: consumes the score buffer like photo_add consumes rgb.
 /// # Safety
 /// ptr/len must reference a live caller-owned photo_alloc buffer, which this

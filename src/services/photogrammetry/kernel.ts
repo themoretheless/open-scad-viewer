@@ -125,6 +125,8 @@ interface Exports extends WebAssembly.Exports {
   photo_dense(resolution: number, preset: number): bigint
   photo_dense_prepare(resolution: number, preset: number): bigint
   photo_dense_finish(pointer: number, size: number): bigint
+  photo_sparse_prepare(): bigint
+  photo_sparse_finish(pointer: number, size: number): bigint
   photo_run(action: number, resolution: number): bigint
 }
 
@@ -230,6 +232,36 @@ export class PhotogrammetryKernel {
     if (!pointer) throw new Error('Score allocation failed')
     // photo_dense_finish consumes the buffer on any outcome; never freed here.
     return this.response<PhotoSurface>(this.wasm.photo_dense_finish(pointer, bytes.length))
+  }
+
+  /**
+   * Browser WebGPU sparse matching, stage 1: returns the packed MAT1 payload
+   * and WGSL text, or null when ineligible for the GPU path (caller then uses
+   * the plain sparse()).
+   */
+  sparsePrepare(): {payload: Uint8Array, wgsl: string} | null {
+    const decoded = decodePacked<Response<{ptr: number, len: number, wgsl: string} | null>>(
+      this.wasm.memory,
+      (pointer, size) => this.wasm.photo_free(pointer, size),
+      this.wasm.photo_sparse_prepare(),
+    )
+    if (!decoded.ok) throw new Error(decoded.message)
+    if (decoded.value === null) return null
+    const payloadPointer = decoded.value.ptr
+    const payloadSize = decoded.value.len
+    // Copy out before releasing the kernel buffer.
+    const payload = new Uint8Array(payloadSize)
+    payload.set(new Uint8Array(this.wasm.memory.buffer, payloadPointer, payloadSize))
+    this.wasm.photo_free(payloadPointer, payloadSize)
+    return {payload, wgsl: decoded.value.wgsl}
+  }
+
+  /** Stage 2: uploads the browser-matched pair bytes (ownership moves to the kernel). */
+  sparseFinish(matched: Uint8Array): PhotoReconstruction {
+    const pointer = writeLinear(this.wasm.memory, len => this.wasm.photo_alloc(len), matched)
+    if (!pointer) throw new Error('Match response allocation failed')
+    // photo_sparse_finish consumes the buffer on any outcome; never freed here.
+    return this.response<PhotoReconstruction>(this.wasm.photo_sparse_finish(pointer, matched.length))
   }
 
   clear(): void {

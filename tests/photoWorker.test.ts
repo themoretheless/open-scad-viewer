@@ -10,6 +10,8 @@ vi.mock('../src/services/photogrammetry/kernel', () => ({
 }))
 const gpuSweep = vi.hoisted(() => vi.fn())
 vi.mock('../src/services/photogrammetry/gpuSweep', () => ({runGpuSweep: gpuSweep}))
+const gpuMatching = vi.hoisted(() => vi.fn())
+vi.mock('../src/services/photogrammetry/gpuMatching', () => ({runGpuMatching: gpuMatching}))
 
 const sparse: PhotoReconstruction = {
   positions: new Float64Array([0, 0, 1]), colors: new Uint8Array([10, 20, 30]), triangles: new Uint32Array(),
@@ -35,6 +37,8 @@ function makeKernel() {
     add: vi.fn(() => 1),
     densePrepare: vi.fn(() => null),
     denseFinish: vi.fn(() => structuredClone(surface)),
+    sparsePrepare: vi.fn(() => null),
+    sparseFinish: vi.fn(() => structuredClone(sparse)),
     sparse: vi.fn(() => structuredClone(sparse)),
     dense: vi.fn(() => structuredClone(surface)),
     compact: vi.fn(() => structuredClone(surface)),
@@ -206,5 +210,36 @@ describe('photogrammetry Worker failure isolation', () => {
     await run({...request, gpu: true, densePreset: 'slanted-plane'})
     expect(kernel.densePrepare).not.toHaveBeenCalled()
     expect(kernel.dense).toHaveBeenCalledWith(128, 'slanted-plane')
+  })
+
+  it('prefers the WebGPU matching for sparse and skips the CPU sparse call', async () => {
+    const payload = new Uint8Array(8)
+    const matched = new Uint8Array([1, 2, 3])
+    kernel.sparsePrepare.mockReturnValue({payload, wgsl: 'match shader'})
+    gpuMatching.mockResolvedValue(matched)
+    await run({...request, gpu: true})
+    expect(kernel.sparsePrepare).toHaveBeenCalledOnce()
+    expect(gpuMatching).toHaveBeenCalledWith(payload, 'match shader')
+    expect(kernel.sparseFinish).toHaveBeenCalledWith(matched)
+    expect(kernel.sparse).not.toHaveBeenCalled()
+    expect(events).toContainEqual({type: 'sparse', result: sparse})
+    expect(terminalEvents()[0].type).toBe('done')
+  })
+
+  it('falls back to the CPU sparse path when GPU matching declines', async () => {
+    kernel.sparsePrepare.mockReturnValue(null)
+    await run({...request, gpu: true})
+    expect(kernel.sparse).toHaveBeenCalledOnce()
+    expect(kernel.sparseFinish).not.toHaveBeenCalled()
+    expect(terminalEvents()[0].type).toBe('done')
+  })
+
+  it('falls back to the CPU sparse path when GPU matching rejects', async () => {
+    kernel.sparsePrepare.mockReturnValue({payload: new Uint8Array(4), wgsl: 'shader'})
+    gpuMatching.mockRejectedValue(new Error('no adapter'))
+    await run({...request, gpu: true})
+    expect(kernel.sparse).toHaveBeenCalledOnce()
+    expect(events).toContainEqual({type: 'warning', message: 'WebGPU matching unavailable: no adapter'})
+    expect(terminalEvents()[0].type).toBe('done')
   })
 })

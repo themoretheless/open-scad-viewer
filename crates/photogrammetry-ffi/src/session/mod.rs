@@ -27,6 +27,12 @@ struct Session {
     /// Options and kernel bookkeeping between `dense_prepare` and
     /// `dense_finish` on the host-GPU (browser WebGPU) path.
     pending_sweep: Option<(DenseOptions, Vec<Option<PreparedView>>)>,
+    /// Bookkeeping between `sparse_prepare` and `sparse_finish`: the
+    /// reconstruction options, the extracted features, and the MAT1 pair plan.
+    pending_matching: Option<(
+        ReconstructionOptions,
+        photogrammetry_core::host_matching::HostMatchingPlan,
+    )>,
 }
 
 thread_local! {
@@ -38,6 +44,7 @@ mod ingest;
 #[cfg(test)]
 use hosts::{JS_MAX_SAFE_COUNTER, browser_dense_options, dense_report_value};
 pub use hosts::{dense_finish_host, dense_prepare_host, set_acceleration_host};
+pub use hosts::{sparse_finish_host, sparse_prepare_host};
 pub use ingest::{add, add_calibrated};
 fn report_value(report: &ReconstructionReport) -> Value {
     let images = report
