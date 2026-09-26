@@ -43,10 +43,8 @@ fn component_count(mesh: &Mesh, positive_only: bool) -> Result<usize> {
     for f in mesh.indices.as_chunks::<3>().0 {
         let r = root(&mut parent, f[0]);
         let origin = &mesh.positions[r * 3..r * 3 + 3];
-        let p = f
-            .iter()
-            .map(|&i| std::array::from_fn::<_, 3, _>(|k| mesh.positions[i * 3 + k] - origin[k]))
-            .collect::<Vec<_>>();
+        let p: [[f64; 3]; 3] =
+            std::array::from_fn(|i| std::array::from_fn(|k| mesh.positions[f[i] * 3 + k] - origin[k]));
         let volume = (p[0][0] * (p[1][1] * p[2][2] - p[1][2] * p[2][1])
             + p[0][1] * (p[1][2] * p[2][0] - p[1][0] * p[2][2])
             + p[0][2] * (p[1][0] * p[2][1] - p[1][1] * p[2][0]))
@@ -82,26 +80,24 @@ fn ordered_remove(values: &mut Vec<usize>, x: usize) {
     }
 }
 
-fn ordered_intersection(a: &[usize], b: &[usize]) -> Vec<usize> {
-    let mut out = Vec::new();
+fn ordered_intersection_into(a: &[usize], b: &[usize], out: &mut Vec<usize>) {
+    out.clear();
     for &x in a {
         if ordered_contains(b, x) {
             out.push(x);
         }
     }
-    out
 }
 
-fn neighbors(v: usize, faces: &[[usize; 3]], incident: &[Vec<usize>]) -> Vec<usize> {
-    let mut out = Vec::new();
+fn neighbors_into(v: usize, faces: &[[usize; 3]], incident: &[Vec<usize>], out: &mut Vec<usize>) {
+    out.clear();
     for &fi in &incident[v] {
         for &w in &faces[fi] {
             if w != v {
-                ordered_push_unique(&mut out, w);
+                ordered_push_unique(out, w);
             }
         }
     }
-    out
 }
 
 #[derive(Clone, Copy)]
@@ -266,6 +262,14 @@ pub fn decimate(v: Value) -> Result<Value> {
     let mut count = faces.len();
     let mut attempts = 0usize;
 
+    // Scratch buffers reused across decimation attempts to avoid a fresh
+    // allocation for every edge popped from the heap.
+    let mut shared = Vec::new();
+    let mut na = Vec::new();
+    let mut nb = Vec::new();
+    let mut common = Vec::new();
+    let mut nv = Vec::new();
+
     while count > target && !heap.data.is_empty() && attempts < 1_000_000 {
         attempts += 1;
         let e = match heap.pop() {
@@ -278,14 +282,14 @@ pub fn decimate(v: Value) -> Result<Value> {
             continue;
         }
 
-        let shared = ordered_intersection(&incident[a], &incident[b]);
+        ordered_intersection_into(&incident[a], &incident[b], &mut shared);
         if shared.len() != 2 {
             continue;
         }
 
-        let na = neighbors(a, &faces, &incident);
-        let nb = neighbors(b, &faces, &incident);
-        let common = ordered_intersection(&na, &nb);
+        neighbors_into(a, &faces, &incident, &mut na);
+        neighbors_into(b, &faces, &incident, &mut nb);
+        ordered_intersection_into(&na, &nb, &mut common);
         if common.len() != 2 {
             continue;
         }
@@ -378,8 +382,9 @@ pub fn decimate(v: Value) -> Result<Value> {
             if !active[v] {
                 continue;
             }
-            for n in neighbors(v, &faces, &incident) {
-                heap.push(v, n, &points, &version, &active);
+            neighbors_into(v, &faces, &incident, &mut nv);
+            for i in 0..nv.len() {
+                heap.push(v, nv[i], &points, &version, &active);
             }
         }
     }

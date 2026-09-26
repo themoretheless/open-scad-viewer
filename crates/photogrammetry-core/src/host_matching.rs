@@ -204,7 +204,11 @@ pub fn prepare_host_matching(
 /// feature counts, the concatenated descriptor block, then u32 (a, b) pairs.
 /// All integers little-endian u32, descriptors little-endian f32.
 pub fn pack_payload(features: &[Vec<Feature>], pairs: &[(usize, usize)]) -> Vec<u8> {
-    let mut out = Vec::new();
+    // Exact single reservation: u32 header (4 fields + one per-image count),
+    // the descriptor block, then one u32 pair per match pair.
+    let descriptor_count: usize = features.iter().map(|list| list.len()).sum();
+    let total = 4 * (4 + features.len()) + descriptor_count * MATCH_DESCRIPTOR_DIM * 4 + pairs.len() * 8;
+    let mut out = Vec::with_capacity(total);
     let u32s = |out: &mut Vec<u8>, v: u32| out.extend_from_slice(&v.to_le_bytes());
     u32s(&mut out, MATCH_PAYLOAD_MAGIC);
     u32s(&mut out, features.len() as u32);

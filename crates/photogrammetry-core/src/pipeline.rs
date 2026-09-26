@@ -503,25 +503,24 @@ fn grow(
                 .iter()
                 .map(|(&f, &p)| (points[p].position, pixel(&features[i][f])))
                 .collect();
+            // One pass over the candidate points: for each point, bump every
+            // camera that observes it (at most once per point, matching the
+            // previous `any(...)` semantics). Enumerate order and the stable
+            // reverse-count sort keep the selection, ties included, identical.
+            let mut overlap = vec![0usize; cameras.len()];
+            for &p in associations.values() {
+                let mut seen: Vec<usize> = Vec::new();
+                for &(camera, _) in &points[p].observations {
+                    if !seen.contains(&camera) {
+                        seen.push(camera);
+                        overlap[camera] += 1;
+                    }
+                }
+            }
             let mut guesses: Vec<_> = cameras
                 .iter()
                 .enumerate()
-                .filter_map(|(j, c)| {
-                    c.clone().map(|c| {
-                        (
-                            associations
-                                .values()
-                                .filter(|&&p| {
-                                    points[p]
-                                        .observations
-                                        .iter()
-                                        .any(|&(camera, _)| camera == j)
-                                })
-                                .count(),
-                            c,
-                        )
-                    })
-                })
+                .filter_map(|(j, c)| c.clone().map(|c| (overlap[j], c)))
                 .collect();
             guesses.sort_by_key(|a| std::cmp::Reverse(a.0));
             let mut recovered = None;
@@ -703,13 +702,22 @@ fn finalize(
             count += 1;
         }
     }
+    // One pass over the surviving points: for each point, bump every camera
+    // that observes it (at most once per point, matching `any(...)`).
+    let mut accepted = vec![0usize; cameras.len()];
+    for point in &points {
+        let mut seen: Vec<usize> = Vec::new();
+        for &(i, _) in &point.observations {
+            if !seen.contains(&i) {
+                seen.push(i);
+                accepted[i] += 1;
+            }
+        }
+    }
     for (i, camera) in cameras.iter().enumerate() {
         let r = &mut report.images[i];
         r.registered = camera.is_some();
-        r.accepted_observations = points
-            .iter()
-            .filter(|p| p.observations.iter().any(|&(j, _)| i == j))
-            .count();
+        r.accepted_observations = accepted[i];
         if r.registered {
             r.reason = "registered";
         } else if r.reason == "features_ready" {
