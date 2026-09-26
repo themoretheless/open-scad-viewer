@@ -1,5 +1,5 @@
 import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process'
-import { lstat, readFile, realpath } from 'node:fs/promises'
+import { lstat, readFile, realpath, stat } from 'node:fs/promises'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import {
@@ -423,8 +423,17 @@ async function verifyInstallation(
   }
 }
 
-function classifyUnavailable(error: unknown): OfficialOpenScadUnavailableReason {
-  if (error && typeof error === 'object' && 'code' in error
+/** Cheap change detector for already-verified installation files. */
+async function installationSignature(paths: readonly string[]): Promise<string | null> {
+  try {
+    const entries = await Promise.all(paths.map(path => stat(path)))
+    return entries.map(entry => `${entry.size}:${entry.mtimeMs}`).join('|')
+  } catch {
+    return null
+  }
+}
+
+function classifyUnavailable(error: unknown): OfficialOpenScadUnavailableReason {  if (error && typeof error === 'object' && 'code' in error
     && (error.code === 'ENOENT' || error.code === 'ENOTDIR')) return 'not-installed'
   if (error && typeof error === 'object' && 'verificationStage' in error
     && error.verificationStage === 'runtime') return 'runtime-integrity-failed'
@@ -574,6 +583,11 @@ export class OfficialOpenScadRuntimeSupervisor implements OfficialOpenScadRuntim
   private closing = false
   private closed = false
   private closePromise: Promise<void> | null = null
+  private verifiedInstallationCache: {
+    signature: string
+    paths: string[]
+    installation: VerifiedInstallation
+  } | null = null
 
   constructor(options: OfficialOpenScadRuntimeSupervisorOptions = {}) {
     this.cacheRoot = resolve(options.cacheRoot ?? defaultCacheRoot())
@@ -598,10 +612,36 @@ export class OfficialOpenScadRuntimeSupervisor implements OfficialOpenScadRuntim
     })
   }
 
+  /**
+   * Memoized installation verification. The expensive SHA-256 pass over the
+   * runtime and font files runs once per supervisor; later calls only re-stat
+   * the verified files and fall back to full verification when any of them
+   * changed (size/mtime) or disappeared. Failed verifications are never
+   * cached, and the cacheRoot is fixed per supervisor, so a cache can never
+   * outlive the installation it verified.
+   */
+  private async verifiedInstallationMemoized(): Promise<VerifiedInstallation> {
+    const cached = this.verifiedInstallationCache
+    if (cached && (await installationSignature(cached.paths)) === cached.signature) {
+      return cached.installation
+    }
+    this.verifiedInstallationCache = null
+    const installation = await verifyInstallation(this.cacheRoot, this.expectedIntegrity)
+    const paths = [
+      join(this.cacheRoot, OFFICIAL_OPENSCAD_RUNTIME_MANIFEST_FILENAME),
+      installation.runtimePath,
+      installation.fontPath,
+      join(this.cacheRoot, installation.manifest.fontLicenseFilename),
+    ]
+    const signature = await installationSignature(paths)
+    if (signature !== null) this.verifiedInstallationCache = { signature, paths, installation }
+    return installation
+  }
+
   async capabilities(): Promise<OfficialOpenScadCapabilities> {
     if (!permissionModelAvailable()) return unavailableCapabilities('permission-model-unavailable')
     try {
-      const installation = await verifyInstallation(this.cacheRoot, this.expectedIntegrity)
+      const installation = await this.verifiedInstallationMemoized()
       return capabilitiesShape(
         true,
         null,
@@ -720,7 +760,7 @@ export class OfficialOpenScadRuntimeSupervisor implements OfficialOpenScadRuntim
     }
     let installation: VerifiedInstallation
     try {
-      installation = await verifyInstallation(this.cacheRoot, this.expectedIntegrity)
+      installation = await this.verifiedInstallationMemoized()
     } catch (error) {
       throw new OfficialOpenScadSupervisorError(
         'E_OFFICIAL_OPENSCAD_UNAVAILABLE',

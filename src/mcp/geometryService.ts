@@ -13,7 +13,6 @@ import {
 } from '../services/geometryBuildEngine'
 import { buildBinaryStl, buildObj } from '../services/meshExport'
 import { inspectMesh } from '../services/meshInspection'
-import { transformPoint } from '../services/math3d'
 import {
   extractCustomizerParameters,
   replaceCustomizerValue,
@@ -172,17 +171,37 @@ function validateFiniteGeometry(result: GeometryBuildResult['result']): void {
     throw new InvalidGeometryError('Compiled geometry has a non-finite or negative surface area')
   }
   for (const [meshIndex, mesh] of result.meshes.entries()) {
-    if ([...mesh.transform, ...mesh.color].some(value => !Number.isFinite(value))) {
+    let transformColorFinite = true
+    for (let i = 0; i < mesh.transform.length; i++) {
+      if (!Number.isFinite(mesh.transform[i])) { transformColorFinite = false; break }
+    }
+    if (transformColorFinite) {
+      for (let i = 0; i < mesh.color.length; i++) {
+        if (!Number.isFinite(mesh.color[i])) { transformColorFinite = false; break }
+      }
+    }
+    if (!transformColorFinite) {
       throw new InvalidGeometryError(`Mesh ${meshIndex} has a non-finite transform or color`)
     }
     const vertexCount = Math.floor(mesh.vertices.length / 6)
-    for (let offset = 0; offset + 5 < mesh.vertices.length; offset += 6) {
-      const values = mesh.vertices.subarray(offset, offset + 6)
-      if ([...values].some(value => !Number.isFinite(value))) {
+    const vertices = mesh.vertices
+    const m = mesh.transform
+    for (let offset = 0; offset + 5 < vertices.length; offset += 6) {
+      const x = vertices[offset]
+      const y = vertices[offset + 1]
+      const z = vertices[offset + 2]
+      if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(z)
+        || !Number.isFinite(vertices[offset + 3]) || !Number.isFinite(vertices[offset + 4])
+        || !Number.isFinite(vertices[offset + 5])) {
         throw new InvalidGeometryError(`Mesh ${meshIndex} has a non-finite vertex`)
       }
-      const world = transformPoint(mesh.transform, [values[0], values[1], values[2]])
-      if (!world.every(Number.isFinite)) {
+      // Scalar equivalent of transformPoint(mesh.transform, [x, y, z]) with the
+      // same homogeneous-division fallback, checked without allocating Vec3.
+      const w = m[12] * x + m[13] * y + m[14] * z + m[15]
+      const iw = Number.isFinite(w) && Math.abs(w) > 1e-12 ? 1 / w : 1
+      if (!Number.isFinite((m[0] * x + m[1] * y + m[2] * z + m[3]) * iw)
+        || !Number.isFinite((m[4] * x + m[5] * y + m[6] * z + m[7]) * iw)
+        || !Number.isFinite((m[8] * x + m[9] * y + m[10] * z + m[11]) * iw)) {
         throw new InvalidGeometryError(`Mesh ${meshIndex} has a non-finite world-space vertex`)
       }
     }

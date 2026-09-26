@@ -5,7 +5,7 @@ export interface SnapPoint { point: Vec3; kind: SnapKind }
 export interface SnapSegment { a: Vec3; b: Vec3; evaluate?: (t:number)=>Vec3 }
 export interface SnapGeometry { points: SnapPoint[]; segments: SnapSegment[]; circles?: { center: Vec3; radius: number; start: number; sweep: number }[] }
 export interface SnapResult { point: Vec3; kind: SnapKind | null; guide?: [Vec3, Vec3] }
-const distance = (a: number[], b: number[]) => Math.hypot(...a.map((v, i) => v - b[i]))
+const distance2 = (a: readonly number[], b: readonly number[]) => { let sum = 0; for (let i = 0; i < a.length; i++) { const d = a[i] - b[i]; sum += d * d } return sum }
 const lerp = (a: Vec3, b: Vec3, t: number) => a.map((v, i) => v + (b[i] - v) * t) as Vec3
 const priority: Record<SnapKind, number> = { vertex: 0, intersection: 0, center: 0, midpoint: 0, edge: 2, axis: 3, grid: 4, quadrant:0, tangent:1, perpendicular:1, origin:0, 'bounds-center':0 }
 /** All hit distances are measured after projection, in CSS pixels. */
@@ -21,11 +21,13 @@ export function resolveModelingSnap(point: Vec3, geometry: SnapGeometry, options
     if(options.relations===false&&['tangent','perpendicular','intersection'].includes(kind))return
     const constrained = options.constrain?.(target) ?? target
     // A snap must actually reach its feature, not just look aligned in projection.
-    if (distance(target, constrained) > 1e-6) return
-    const d = distance(screen, options.project(target))
-    if (d > radius) return
+    if (distance2(target, constrained) > 1e-12) return
+    // Squared CSS-pixel distance: monotonic with distance, so nearest-choice
+    // ordering is unchanged while avoiding per-offer sqrt/allocations.
+    const d2 = distance2(screen, options.project(target))
+    if (d2 > radius * radius) return
     const rank = priority[kind]
-    if (!best || rank < best.priority || rank === best.priority && d < best.distance) best = { result: { point: [...target], kind, guide }, distance: d, priority: rank }
+    if (!best || rank < best.priority || rank === best.priority && d2 < best.distance) best = { result: { point: [...target], kind, guide }, distance: d2, priority: rank }
   }
   if (options.geometry) {
     for (const candidate of geometry.points) offer(candidate.point, candidate.kind)
@@ -34,13 +36,15 @@ export function resolveModelingSnap(point: Vec3, geometry: SnapGeometry, options
       const a = options.project(segment.a), b = options.project(segment.b), dx = b[0] - a[0], dy = b[1] - a[1]
       const t = Math.max(0, Math.min(1, ((screen[0] - a[0]) * dx + (screen[1] - a[1]) * dy) / (dx * dx + dy * dy || 1)))
       const target = lerp(segment.a, segment.b, t)
-      if(distance(screen,options.project(target))<=radius)offer(segment.evaluate?.(t)??target, 'edge')
+      const projected = options.project(target)
+      const near = distance2(screen, projected) <= radius * radius
+      if(near)offer(segment.evaluate?.(t)??target, 'edge')
       if(options.anchor&&options.relations!==false&&!segment.evaluate){
         const direction=segment.b.map((v,i)=>v-segment.a[i]),length2=direction.reduce((n,v)=>n+v*v,0)
         const parameter=direction.reduce((n,v,i)=>n+v*(options.anchor![i]-segment.a[i]),0)/(length2||1)
         if(parameter>=0&&parameter<=1){const foot=lerp(segment.a,segment.b,parameter);offer(foot,'perpendicular',[options.anchor,foot])}
       }
-      if (!segment.evaluate && nearby.length < 64 && distance(screen, options.project(target)) <= radius) nearby.push(segment)
+      if (!segment.evaluate && nearby.length < 64 && near) nearby.push(segment)
     }
     for (let i = 0; i < nearby.length; i++) for (let j = i + 1; j < nearby.length; j++) {
       const a = nearby[i], b = nearby[j], u = a.b.map((v,k)=>v-a.a[k]), v = b.b.map((x,k)=>x-b.a[k]), w=a.a.map((x,k)=>x-b.a[k])
@@ -49,7 +53,7 @@ export function resolveModelingSnap(point: Vec3, geometry: SnapGeometry, options
       const t=(uv*vw-vv*uw)/den,s=(uu*vw-uv*uw)/den
       if(t<0||t>1||s<0||s>1)continue
       const hit=lerp(a.a,a.b,t)
-      if(distance(hit,lerp(b.a,b.b,s))<1e-6)offer(hit,'intersection')
+      if(distance2(hit,lerp(b.a,b.b,s))<1e-12)offer(hit,'intersection')
     }
     const circles=geometry.circles??[]
     const onArc=(circle:NonNullable<SnapGeometry['circles']>[number],p:Vec3)=>{
@@ -119,7 +123,7 @@ export function sketchSnapGeometry(sketches: readonly DirectSketch[]): SnapGeome
       }
       if(Math.abs(area)>1e-12)geometry.points.push({point:[ox+cx/(3*area),oy+cy/(3*area),0],kind:'center'})
       const xs=sketch.points.map(p=>p[0]),ys=sketch.points.map(p=>p[1]),bounds:Vec3=[(Math.min(...xs)+Math.max(...xs))/2,(Math.min(...ys)+Math.max(...ys))/2,0]
-      if(!geometry.points.some(p=>p.kind==='center'&&distance(p.point,bounds)<1e-7))geometry.points.push({point:bounds,kind:'bounds-center'})
+      if(!geometry.points.some(p=>p.kind==='center'&&distance2(p.point,bounds)<1e-14))geometry.points.push({point:bounds,kind:'bounds-center'})
     }
     for(const point of sketch.points)geometry.points.push({point:p3(point),kind:'vertex'})
     for(let i=0;i<sketch.points.length-(sketch.closed?0:1);i++) {
