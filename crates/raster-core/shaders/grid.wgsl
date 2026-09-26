@@ -1,4 +1,4 @@
-struct Scene { vp: mat4x4f, eye: vec4f, light: vec4f, ambient: vec4f, section: vec4f, options: vec4f, inverseVP: mat4x4f }
+struct Scene { vp: mat4x4f, eye: vec4f, light: vec4f, ambient: vec4f, section: vec4f, options: vec4f, inverseVP: mat4x4f, selectionColor: vec3f, hoverColor: vec3f, edgeColor: vec3f, xrayColor: vec3f, gridColor: vec3f }
 @group(0) @binding(0) var<uniform> sc: Scene;
 
 struct V { @builtin(position) p: vec4f, @location(0) near: vec4f, @location(1) far: vec4f }
@@ -32,7 +32,7 @@ fn lineMask(coord: vec2f, width: vec2f) -> f32 {
   let major = lineMask(world.xy / (step * 10.0), pixelWidth / (step * 10.0));
   let coarse = lineMask(world.xy / (step * 100.0), pixelWidth / (step * 100.0));
   var alpha = max(max(minor * 0.28 * (1.0 - blend), major * mix(0.55, 0.28, blend)), coarse * 0.55 * blend);
-  var color = vec3f(0.42, 0.42, 0.42);
+  var color = sc.gridColor;
   let axisW = pixelWidth * 1.2;
   if (abs(world.y) < axisW.y) { color = vec3f(0.95, 0.18, 0.16); alpha = max(alpha, 0.9); }
   if (abs(world.x) < axisW.x) { color = vec3f(0.2, 0.85, 0.25); alpha = max(alpha, 0.9); }

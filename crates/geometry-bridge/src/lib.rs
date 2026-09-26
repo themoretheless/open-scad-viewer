@@ -722,6 +722,7 @@ pub fn dispatch(mut v: Value) -> Result<Value> {
             encode(BuiltMesh { mesh, report })
         }
         "sdf_prepare" => sdf_gpu::prepare(&v),
+        "sdf_prepare_batch" => sdf_gpu::prepare_batch(&v),
         "sdf_finish" => sdf_gpu::finish(&v),
         "surface_tessellate" => encode(tessellate_nurbs(
             &field(&v, "surface")?,

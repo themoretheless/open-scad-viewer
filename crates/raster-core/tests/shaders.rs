@@ -1,5 +1,6 @@
 use raster_core::shaders::{
-    DEEP_MESH_WGSL, EDGE_WGSL, GRID_WGSL, LINE_WGSL, MESH_WGSL, SELECTION_OVERLAY_WGSL,
+    DEEP_MESH_WGSL, EDGE_WGSL, GRID_WGSL, LINE_WGSL, MESH_MATCAP_WGSL, MESH_PBR_WGSL, MESH_TOON_WGSL,
+    MESH_UNLIT_WGSL, MESH_WGSL, SELECTION_OVERLAY_WGSL,
 };
 use raster_core::uniform::{
     MORPH_FLOAT_OFFSET, OBJECT_UNIFORM_BYTES, OBJECT_UNIFORM_FLOATS, SCENE_UNIFORM_BYTES,
@@ -21,6 +22,10 @@ fn validate(name: &str, source: &str) {
 fn shipped_shaders_validate_with_naga() {
     for (name, source) in [
         ("mesh", MESH_WGSL),
+        ("mesh_pbr", MESH_PBR_WGSL),
+        ("mesh_matcap", MESH_MATCAP_WGSL),
+        ("mesh_toon", MESH_TOON_WGSL),
+        ("mesh_unlit", MESH_UNLIT_WGSL),
         ("deep_mesh", DEEP_MESH_WGSL),
         ("edge", EDGE_WGSL),
         ("line", LINE_WGSL),
@@ -34,17 +39,22 @@ fn shipped_shaders_validate_with_naga() {
 #[test]
 fn instanced_variants_validate_with_naga() {
     validate("instanced_mesh", &instanced_object_shader(MESH_WGSL, VertexOutput::V));
+    validate("instanced_mesh_pbr", &instanced_object_shader(MESH_PBR_WGSL, VertexOutput::V));
+    validate("instanced_mesh_matcap", &instanced_object_shader(MESH_MATCAP_WGSL, VertexOutput::V));
+    validate("instanced_mesh_toon", &instanced_object_shader(MESH_TOON_WGSL, VertexOutput::V));
+    validate("instanced_mesh_unlit", &instanced_object_shader(MESH_UNLIT_WGSL, VertexOutput::V));
+    validate("instanced_deep_mesh", &instanced_object_shader(DEEP_MESH_WGSL, VertexOutput::V));
     validate("instanced_edge", &instanced_object_shader(EDGE_WGSL, VertexOutput::EdgeV));
 }
 
 #[test]
 fn uniform_layout_matches_the_wgsl_contract() {
-    assert_eq!(OBJECT_UNIFORM_FLOATS, 44);
-    assert_eq!(OBJECT_UNIFORM_BYTES, 176);
+    assert_eq!(OBJECT_UNIFORM_FLOATS, 56);
+    assert_eq!(OBJECT_UNIFORM_BYTES, 224);
     assert_eq!(STYLE_FLOAT_OFFSET, 36);
     assert_eq!(MORPH_FLOAT_OFFSET, 40);
-    assert_eq!(SCENE_UNIFORM_FLOATS, 52);
-    assert_eq!(SCENE_UNIFORM_BYTES, 208);
+    assert_eq!(SCENE_UNIFORM_FLOATS, 72);
+    assert_eq!(SCENE_UNIFORM_BYTES, 288);
 
     let object = ObjectUniform {
         model: [1.0; 16],
@@ -52,27 +62,57 @@ fn uniform_layout_matches_the_wgsl_contract() {
         color: [3.0; 4],
         style: [4.0; 4],
         morph: [5.0; 4],
+        base_color: [6.0; 3],
+        metallic: 0.25,
+        emissive: [7.0; 3],
+        roughness: 0.5,
+        material_id: 3.0,
     };
-    let mut floats = [0.0f32; 44];
+    let mut floats = [0.0f32; 56];
     object.write_f32(&mut floats);
     assert_eq!(floats[0], 1.0);
     assert_eq!(floats[16], 2.0);
     assert_eq!(floats[32], 3.0);
     assert_eq!(floats[STYLE_FLOAT_OFFSET], 4.0);
     assert_eq!(floats[MORPH_FLOAT_OFFSET], 5.0);
+    // Material tail starts at float 44; legacy offsets above are unchanged.
+    assert_eq!(floats[44], 6.0);
+    assert_eq!(floats[46], 6.0);
+    assert_eq!(floats[47], 0.25); // metallic
+    assert_eq!(floats[48], 7.0);
+    assert_eq!(floats[50], 7.0);
+    assert_eq!(floats[51], 0.5); // roughness
+    assert_eq!(floats[52], 3.0); // material_id
+    assert_eq!(floats[55], 0.0); // padding
+
+    let default_object = ObjectUniform::default();
+    assert_eq!(default_object.base_color, [1.0, 1.0, 1.0]);
+    assert_eq!(default_object.metallic, 0.0);
+    assert_eq!(default_object.emissive, [0.0, 0.0, 0.0]);
+    assert_eq!(default_object.roughness, 0.7);
+    assert_eq!(default_object.material_id, 0.0);
 
     let scene = SceneUniform::new([9.0; 16], [8.0; 4]);
-    let mut scene_floats = [0.0f32; 52];
+    let mut scene_floats = [0.0f32; 72];
     scene.write_f32(&mut scene_floats);
     assert_eq!(scene_floats[0], 9.0);
     assert_eq!(scene_floats[16], 8.0);
     assert_eq!(scene_floats[20], 0.55); // default light
     assert_eq!(scene_floats[36], 0.0); // inverse_vp starts at float 36
+    // Theme tail starts at float 52; defaults reproduce the previously
+    // hard-coded shader colors exactly.
+    assert_eq!(scene_floats[52..55], [1.0, 0.52, 0.06]); // selection
+    assert_eq!(scene_floats[56..59], [0.12, 0.78, 1.0]); // hover
+    assert_eq!(scene_floats[60..63], [0.025, 0.03, 0.04]); // edge
+    assert_eq!(scene_floats[64..67], [1.0, 0.42, 0.06]); // xray
+    assert_eq!(scene_floats[68..71], [0.42, 0.42, 0.42]); // grid
+    assert_eq!(scene_floats[55], 0.0); // padding
+    assert_eq!(scene_floats[71], 0.0);
 }
 
 #[test]
 fn immediate_variant_serves_style_from_immediate_address_space() {
-    for source in [MESH_WGSL, DEEP_MESH_WGSL, EDGE_WGSL] {
+    for source in [MESH_WGSL, MESH_PBR_WGSL, MESH_MATCAP_WGSL, MESH_TOON_WGSL, MESH_UNLIT_WGSL, DEEP_MESH_WGSL, EDGE_WGSL] {
         let variant = immediate_object_shader(source);
         assert!(variant.starts_with("requires immediate_address_space;"));
         assert!(variant.contains("var<immediate> im_style: vec4f;"));

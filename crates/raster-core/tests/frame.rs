@@ -53,7 +53,7 @@ fn triangle() -> (Vec<f32>, Vec<u32>) {
 }
 
 fn uniform(color: [f32; 3], style: [f32; 4], model: [f32; 16]) -> ObjectUniform {
-    ObjectUniform { model, nmat: identity(), color: [color[0], color[1], color[2], 1.0], style, morph: [1.0, 0.0, 0.0, 0.0] }
+    ObjectUniform { model, nmat: identity(), color: [color[0], color[1], color[2], 1.0], style, morph: [1.0, 0.0, 0.0, 0.0], ..ObjectUniform::default() }
 }
 
 fn pixel(bytes: &[u8], x: u32, y: u32) -> [u8; 4] {

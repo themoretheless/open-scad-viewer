@@ -65,13 +65,15 @@ const limits = new Map([
 // localization, exact map materialization and cloud Hausdorff fitting. The
 // shared packed kernel measures 2937483 bytes; retain a bounded 32517-byte margin.
 // NURBS SS /1 adds certified general surface/surface intersection with 4D
-// Bernstein/Krawczyk/continuation. The shared packed kernel measures 2985083
-// bytes; retain a bounded 34917-byte margin.
-const geometryChunkBudget = 3_020_000
+// Bernstein/Krawczyk/continuation; GPU SDF view bridging added more bridge
+// surface. The shared packed kernel measures 3060308 bytes; retain a bounded
+// 39692-byte margin.
+const geometryChunkBudget = 3_100_000
 const jsChunkBudgets = [
   // After removing logical-expression payload inlining: 470353 / 84511 / 34064 bytes.
   [/^assets\/geometry\.worker-[^/]+\.js$/, 500_000],
-  [/^assets\/renderer-[^/]+\.js$/, 100_000],
+  // Theme uniforms + default-material setters added ~0.8 kB; measured: 100,763 bytes.
+  [/^assets\/renderer-[^/]+\.js$/, 104_000],
   [/^assets\/svg\.worker-[^/]+\.js$/, 50_000],
   // Split OpenSCAD language kernel bytes, measured: 436,678 bytes.
   [/^assets\/language-kernel-bytes-[^/]+\.js$/, 470_000],
@@ -242,8 +244,9 @@ for (const [name, artifact, compression] of [
 // Raw streaming modules remain separately bounded above. Removing three inlined
 // geometry payload copies reduces the JS/assets total to 5,776,741 bytes.
 // Direct modeling grid, snapping, solid geometry, and extrusion controls add
-// 254,082 bytes to the measured distribution (6,030,823 total); retain a
-// bounded margin for this feature family without removing the total-size gate.
-const totalBudget = 6_100_000
+// 254,082 bytes to the measured distribution; scene theming/material controls
+// and the GPU SDF bridge grew it further (6,342,515 total). Retain a bounded
+// margin for this feature family without removing the total-size gate.
+const totalBudget = 6_400_000
 if (total > totalBudget) throw new Error(`dist totals ${total} bytes; budget is ${totalBudget}`)
 console.log(`Verified ${files.length} dist artifacts (${total} asset bytes + ${rawWasmBytes} raw WASM bytes = ${total + rawWasmBytes} total bytes)`)

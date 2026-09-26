@@ -8,13 +8,18 @@
 //! lockstep with the WGSL sources.
 
 use crate::shaders::{
-    DEEP_MESH_WGSL, EDGE_WGSL, GRID_WGSL, LINE_WGSL, MESH_WGSL, SELECTION_OVERLAY_WGSL,
+    DEEP_MESH_WGSL, EDGE_WGSL, GRID_WGSL, LINE_WGSL, MESH_MATCAP_WGSL, MESH_PBR_WGSL, MESH_TOON_WGSL,
+    MESH_UNLIT_WGSL, MESH_WGSL, SELECTION_OVERLAY_WGSL,
 };
 
 /// (export name, WGSL source, doc comment) in stable emission order.
-pub const TS_SOURCES: [(&str, &str, &str); 6] = [
+pub const TS_SOURCES: [(&str, &str, &str); 10] = [
     ("MESH_WGSL", MESH_WGSL, "Lit opaque/transparent mesh surface with per-object style and GPU morph blend."),
-    ("DEEP_MESH_WGSL", DEEP_MESH_WGSL, "X-ray deep-selection mesh (depth Always, translucent orange)."),
+    ("MESH_PBR_WGSL", MESH_PBR_WGSL, "Cook-Torrance PBR mesh surface (GGX/Smith/Schlick) driven by the Obj material tail."),
+    ("MESH_MATCAP_WGSL", MESH_MATCAP_WGSL, "Procedural texture-free matcap mesh surface (studio key + rim + specular blob)."),
+    ("MESH_TOON_WGSL", MESH_TOON_WGSL, "Toon/technical-illustration mesh surface (quantized diffuse + fresnel outline)."),
+    ("MESH_UNLIT_WGSL", MESH_UNLIT_WGSL, "Unlit mesh surface: tinted base color plus emission only."),
+    ("DEEP_MESH_WGSL", DEEP_MESH_WGSL, "X-ray deep-selection mesh (depth Always, fresnel-weighted translucency)."),
     ("EDGE_WGSL", EDGE_WGSL, "Per-mesh wireframe edges with selection/hover tinting."),
     ("LINE_WGSL", LINE_WGSL, "Plain colored line list (measurements, grid axes)."),
     ("GRID_WGSL", GRID_WGSL, "Full-viewport XY grid, reconstructed from camera rays with adaptive spacing."),

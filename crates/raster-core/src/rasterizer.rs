@@ -9,7 +9,7 @@ use crate::pipeline::RasterPipelines;
 use crate::shaders::MORPH_VERTEX_STRIDE;
 use crate::uniform::{
     MORPH_BYTE_OFFSET, OBJECT_UNIFORM_BYTES, OBJECT_UNIFORM_FLOATS, STYLE_BYTE_OFFSET,
-    ObjectUniform, SceneUniform, SCENE_UNIFORM_BYTES,
+    ObjectUniform, SceneUniform, SCENE_UNIFORM_BYTES, SCENE_UNIFORM_FLOATS,
 };
 use gpu_compute::{GpuContext, pack_f32, pack_u32, wgpu};
 
@@ -52,7 +52,7 @@ pub struct OverlayBatch {
     pub vertex_count: u32,
 }
 
-/// GPU instance records (44 floats per instance, [`ObjectUniform`] layout),
+/// GPU instance records (56 floats per instance, [`ObjectUniform`] layout),
 /// bound as a read-only storage buffer at group 1.
 pub struct InstancePool {
     pub buffer: wgpu::Buffer,
@@ -142,7 +142,7 @@ impl Rasterizer {
 
     /// Uploads the full scene uniform.
     pub fn set_scene(&self, scene: &SceneUniform) {
-        let mut floats = [0.0f32; 52];
+        let mut floats = [0.0f32; SCENE_UNIFORM_FLOATS];
         scene.write_f32(&mut floats);
         self.context.queue.write_buffer(&self.scene_buffer, 0, &pack_f32(&floats));
     }
