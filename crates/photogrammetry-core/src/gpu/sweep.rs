@@ -22,7 +22,7 @@ use super::wgpu::util::DeviceExt;
 use super::GpuContext;
 use compute_core::{Binding, Kernel};
 
-const WG_METAL: u32 = 128;
+const WG_METAL: u32 = 256;
 const WG_DEFAULT: u32 = 256;
 
 const SHADER: &str = crate::dense::SWEEP_WGSL;

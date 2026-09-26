@@ -9,7 +9,7 @@ use compute_core::gpu_compute::{BackendReport, GpuContext, pack_f32};
 use compute_core::{Binding, Kernel, read_f32};
 use wgpu::{BindGroup, Buffer, BufferUsages, Device};
 
-const WG_METAL: u32 = 128;
+const WG_METAL: u32 = 256;
 const WG_DEFAULT: u32 = 256;
 
 type Segments = [(P, P, f64, f64)];

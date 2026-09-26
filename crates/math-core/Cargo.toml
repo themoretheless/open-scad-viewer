@@ -49,3 +49,8 @@ path = "examples/bench_nearest_two.rs"
 [[example]]
 name = "bench_chamfer"
 path = "examples/bench_chamfer.rs"
+
+[[example]]
+name = "bench_workgroup_tuning"
+path = "examples/bench_workgroup_tuning.rs"
+required-features = ["gpu"]

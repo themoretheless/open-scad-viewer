@@ -11,11 +11,13 @@ use super::wgpu;
 use super::GpuContext;
 use compute_core::{Binding, Kernel};
 
-/// Metal (Apple GPUs) tunes toward a smaller, SIMD-group-aligned workgroup to
-/// keep more threadgroups resident; every other backend — including Vulkan on
-/// NVIDIA/"CUDA-class" hardware — keeps the larger default that hides memory
-/// latency with more warps in flight. See `gpu_compute::tuned_workgroup_size`.
-const WG_METAL: u32 = 128;
+/// Apple-silicon workgroup size, measured on an M4 Max (see
+/// `math-core/examples/bench_workgroup_tuning.rs`): streaming reductions such
+/// as point_bounds/chamfer scale with the workgroup size, and 256 matches or
+/// beats 128 at every size tested while 512 adds nothing beyond noise. Every
+/// other backend keeps the larger default anyway. See
+/// `gpu_compute::tuned_workgroup_size`.
+const WG_METAL: u32 = 256;
 const WG_DEFAULT: u32 = 256;
 
 // `WG` anchor convention: the compute-core runtime substitutes a per-backend

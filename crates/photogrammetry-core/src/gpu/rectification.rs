@@ -7,7 +7,7 @@ use super::{GpuContext, wgpu};
 use crate::{Image, calibration::Calibration};
 use compute_core::{Binding, Kernel, read_u32};
 
-const WG_METAL: u32 = 128;
+const WG_METAL: u32 = 256;
 const WG_DEFAULT: u32 = 256;
 
 const SHADER: &str = r#"
