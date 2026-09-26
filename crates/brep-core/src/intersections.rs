@@ -8,6 +8,8 @@
 //! fitted curves, snapping, or tessellation participate in these queries.
 use nurbs_core::{Error, Result, curve::Curve, surface::Surface};
 
+#[cfg(test)]
+mod test_utils;
 mod cone_cone;
 mod cone_torus;
 mod cylinder_cylinder;
@@ -16,6 +18,7 @@ mod plane_cone;
 mod plane_cylinder;
 mod plane_sphere;
 mod plane_torus;
+pub(crate) mod recognize;
 mod sphere_cone;
 mod sphere_cylinder;
 pub(crate) mod sphere_sphere;

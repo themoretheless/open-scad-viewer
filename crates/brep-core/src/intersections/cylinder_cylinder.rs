@@ -364,33 +364,9 @@ impl value_codec::Serialize for CylinderCylinderComponent {
 
 #[cfg(test)]
 mod tests {
+    use super::super::test_utils::{rotated_translated, translated};
     use super::*;
 
-    fn translated(model: &Model, offset: [f64; 3]) -> Model {
-        crate::transform::affine(
-            model,
-            [
-                [1., 0., 0., offset[0]],
-                [0., 1., 0., offset[1]],
-                [0., 0., 1., offset[2]],
-                [0., 0., 0., 1.],
-            ],
-        )
-        .unwrap()
-    }
-    fn rotated_translated(model: &Model, angle: f64, offset: [f64; 3]) -> Model {
-        let (sin, cos) = angle.sin_cos();
-        crate::transform::affine(
-            model,
-            [
-                [1., 0., 0., offset[0]],
-                [0., cos, -sin, offset[1]],
-                [0., sin, cos, offset[2]],
-                [0., 0., 0., 1.],
-            ],
-        )
-        .unwrap()
-    }
     fn only_lines(
         report: &Report<CylinderCylinderComponent>,
         count: usize,

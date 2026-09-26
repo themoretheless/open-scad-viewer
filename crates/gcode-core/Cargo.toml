@@ -8,6 +8,7 @@ publish.workspace = true
 [dependencies]
 crc32fast = "=1.5.2"
 math-core = { package = "osv-math", path = "../math-core" }
+printer-core = { path = "../printer-core" }
 
 [dev-dependencies]
 rbench = { workspace = true }

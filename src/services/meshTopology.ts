@@ -12,6 +12,7 @@
  */
 
 import type { MeshTopologyDiagnostics } from '../core/mesh'
+import { clamp } from './math3d'
 import { extractSemanticEdgesInKernel } from './geometry/meshAnalysis'
 
 export type { MeshTopologyDiagnostics } from '../core/mesh'
@@ -104,8 +105,4 @@ function validateVertexIndex(index: number, vertexCount: number, label: string) 
   if (!Number.isInteger(index) || index < 0 || index >= vertexCount) {
     throw new RangeError(`${label} contains out-of-range vertex index ${index}`)
   }
-}
-
-function clamp(value: number, min: number, max: number) {
-  return Math.min(max, Math.max(min, value))
 }

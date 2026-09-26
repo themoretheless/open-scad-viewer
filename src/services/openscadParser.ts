@@ -20,7 +20,7 @@ import type {
   SceneEntityId,
   SourceOperationId,
 } from '../core/mesh'
-import { identity, type Mat4 } from './math3d'
+import { clamp01, identity, type Mat4 } from './math3d'
 import { AbortedError, OpenSCADParseError, positionKernelError } from './openscadErrors'
 import { createBrepRecordingKernelOps } from './solid/brepRecorder'
 import { bindOpenScad, prepareOpenScadFrontEnd } from './openscadBinder'
@@ -38,7 +38,6 @@ import {
   type ExpressionArgument,
   type FunctionNode,
   type FunctionValue,
-  type ListComprehensionExpression,
   type ModuleNode,
   type OpenScadLanguageProfile,
   type Statement,
@@ -47,13 +46,10 @@ import {
 import {
   formatOpenScadValue,
   isOpenScadRange,
-  materializeOpenScadRange,
-  openScadBinary,
   openScadIndex,
   openScadMember,
   openScadTruthy,
   openScadUnary,
-  type OpenScadValueSemanticsContext,
 } from './openScadValueSemantics'
 import {
   resolveOpenScadColor,
@@ -92,6 +88,25 @@ import {
 } from './openScadStableGeometrySemantics'
 import { OpenScadStableScope } from './openScadStableScope'
 import {
+  MAX_EVAL_DEPTH,
+  MAX_EVAL_OPS,
+  MAX_EVALUATED_VALUE_UNITS,
+  MAX_EXPRESSION_DEPTH,
+  MAX_RANGE_ITEMS,
+  MAX_VALUE_ELEMENTS,
+  appendComprehensionValues,
+  compactDiagnosticText,
+  createStableExpressionEvaluators,
+  evaluationError,
+  isFunctionValue,
+  isListComprehensionExpression,
+  isStableProfile,
+  overlayDynamicVariables,
+  registerArrayValue,
+  stableOverlayContext,
+  type StableFunctionValue,
+} from './openScadStableExpressionEval'
+import {
   OpenScadProjectError,
   resolveOpenScadProjectPath,
   type OpenScadProject,
@@ -128,7 +143,7 @@ import {
 } from './openScadText'
 import { defaultGeometryKernel } from './cadGeometryKernel'
 import { createOpenScadStableRuntimeVariables } from './openScadStableRuntime'
-import { CSS_COLORS, clamp01, nextColor, resetPalette, type RGBA } from './openscadColors'
+import { CSS_COLORS, nextColor, resetPalette, type RGBA } from './openscadColors'
 
 export { AbortedError, OpenSCADParseError } from './openscadErrors'
 
@@ -172,20 +187,9 @@ export type ParseResult = GeometryEvaluationResult
 
 const MAX_SOURCE_LENGTH = 250_000
 const MAX_AST_NODES = 25_000
-const MAX_EXPRESSION_DEPTH = 256
-const MAX_EVAL_DEPTH = 128
-const MAX_EVALUATED_VALUE_UNITS = 500_000
-const MAX_RANGE_ITEMS = 10_000
 const MAX_SHAPES = 1_000
 const MAX_TRIANGLES = 750_000
 const MAX_FN = 256
-/** Total evaluation steps (expressions + statements + loop iterations) before aborting —
- * bounds nested loops whose bodies produce no shapes, which MAX_SHAPES
- * can never catch (`for(i=[0:9999]) for(j=[0:9999]) x = i+j;`). */
-const MAX_EVAL_OPS = 1_000_000
-/** Cap on evaluated vector/string length — `a = concat(a, a);` repeated
- * ~40 times otherwise materializes 2^40 elements and OOMs the worker. */
-const MAX_VALUE_ELEMENTS = 1_000_000
 /** Cap on linear_extrude slices — passed straight into the geometry kernel,
  * which allocates per-slice cross-sections before MAX_TRIANGLES can fire. */
 const MAX_EXTRUDE_SLICES = 512
@@ -245,10 +249,6 @@ interface PassedCallChildren {
   readonly continuation?: Statement[] | PassedCallChildren
 }
 
-interface StableFunctionValue extends FunctionValue {
-  readonly lexicalScope: OpenScadStableScope
-}
-
 interface Shape2D { dimension: 2; geometry: CadKernelHandle; color: RGBA; entityId: SceneEntityId }
 interface Shape3D { dimension: 3; geometry: CadKernelHandle; color: RGBA; entityId: SceneEntityId }
 type Shape = Shape2D | Shape3D
@@ -289,7 +289,6 @@ function trackedSolid(geometry: CadKernelHandle, color: RGBA, node: CallNode, ct
 }
 
 function warn(ctx: EvalContext, message: string) { if (!ctx.warnings.includes(message)) ctx.warnings.push(message) }
-function evaluationError(ctx: EvalContext, p: number, message: string): never { throw new OpenSCADParseError(ctx.source, p, message) }
 function kernelCall<T>(ctx: EvalContext, p: number, run: () => T): T {
   try {
     return run()
@@ -297,42 +296,6 @@ function kernelCall<T>(ctx: EvalContext, p: number, run: () => T): T {
     if (error instanceof OpenSCADParseError || error instanceof AbortedError) throw error
     throw positionKernelError(ctx.source, p, error)
   }
-}
-
-function valueWeight(value: Value, ctx: EvalContext): number {
-  if (Array.isArray(value)) return ctx.valueWeights.get(value) ?? value.length + 1
-  return typeof value === 'string' ? Math.max(1, value.length) : 1
-}
-
-function valueDepth(value: Value, ctx: EvalContext): number {
-  return Array.isArray(value) ? ctx.valueDepths.get(value) ?? 1 : 0
-}
-
-function registerArrayValue<T extends Value[]>(
-  value: T,
-  ctx: EvalContext,
-  p: number,
-  limitLabel = 'Evaluated value',
-): T {
-  let weight = 1
-  let depth = 1
-  for (const item of value) {
-    weight += valueWeight(item, ctx)
-    depth = Math.max(depth, valueDepth(item, ctx) + 1)
-    if (weight > MAX_EVALUATED_VALUE_UNITS) {
-      evaluationError(ctx, p, `${limitLabel} exceeds ${MAX_EVALUATED_VALUE_UNITS.toLocaleString()} units`)
-    }
-  }
-  if (depth > MAX_EXPRESSION_DEPTH) {
-    evaluationError(ctx, p, `Evaluated value exceeds ${MAX_EXPRESSION_DEPTH} nested levels`)
-  }
-  ctx.valueBudget.used += weight
-  if (ctx.valueBudget.used > MAX_EVALUATED_VALUE_UNITS) {
-    evaluationError(ctx, p, `${limitLabel} exceeds the ${MAX_EVALUATED_VALUE_UNITS.toLocaleString()} value-allocation budget`)
-  }
-  ctx.valueWeights.set(value, weight)
-  ctx.valueDepths.set(value, depth)
-  return value
 }
 
 function registerStringValue(value: string, ctx: EvalContext, p: number, limitLabel = 'Evaluation'): string {
@@ -348,10 +311,6 @@ class StableBuiltinValueError extends Error {
     super(message)
     this.name = 'StableBuiltinValueError'
   }
-}
-
-function isStableProfile(ctx: EvalContext): boolean {
-  return ctx.languageProfile === 'openscad/stable-2021.01'
 }
 
 function resolveStableVariable(name: string, ctx: EvalContext): { found: boolean; value: Value } {
@@ -383,213 +342,27 @@ function resolveStableVariable(name: string, ctx: EvalContext): { found: boolean
   return { found: false, value: undefined }
 }
 
-function stableOverlayContext(ctx: EvalContext, env: ReadonlyMap<string, Value>): EvalContext {
-  if (!isStableProfile(ctx)) return { ...ctx, env: new Map(env) }
-  const scope = new OpenScadStableScope([], ctx.stableScope ?? null, env)
-  return {
-    ...ctx,
-    env: scope.env,
-    stableScope: scope,
-    scopeVisibleBefore: Number.POSITIVE_INFINITY,
-  }
-}
-
-function enterStableStatementScope(statements: readonly Statement[], parent: EvalContext): EvalContext {
-  const scope = new OpenScadStableScope(statements, parent.stableScope ?? null, parent.env)
-  const ctx: EvalContext = {
-    ...parent,
-    env: scope.env,
-    stableScope: scope,
-    scopeVisibleBefore: Number.POSITIVE_INFINITY,
-  }
-  for (const name of scope.dynamicVariableNames()) {
-    const resolved = scope.resolveLocalVariable(
-      name,
-      Number.POSITIVE_INFINITY,
-      (expression, site) => evalExpression(expression, {
-        ...ctx,
-        env: site.env,
-        stableScope: site.scope,
-        scopeVisibleBefore: site.visibleBefore,
-      }),
-      message => warn(ctx, message),
-    )
-    if (resolved.found) scope.env.set(name, resolved.value)
-  }
-  return ctx
-}
-
-function overlayDynamicVariables(target: Map<string, Value>, source: ReadonlyMap<string, Value>): void {
-  for (const [name, value] of source) if (name.startsWith('$')) target.set(name, value)
-}
-
-function stableValueContext(ctx: EvalContext, position: number): OpenScadValueSemanticsContext {
-  return {
-    warn: message => warn(ctx, message),
-    maxRangeItems: MAX_RANGE_ITEMS,
-    registerArray: (values, label) => registerArrayValue(values, ctx, position, label),
-  }
-}
-
-function isListComprehensionExpression(expr: Expr): expr is ListComprehensionExpression {
-  return expr.kind === 'lc-for'
-    || expr.kind === 'lc-for-c'
-    || expr.kind === 'lc-if'
-    || expr.kind === 'lc-let'
-    || expr.kind === 'lc-each'
-}
-
-function evaluateSequentialBindings(
-  args: readonly ExpressionArgument[],
-  ctx: EvalContext,
-  depth: number,
-): Map<string, Value> {
-  const env = new Map(ctx.env)
-  const assigned = new Set<string>()
-  for (const argument of args) {
-    const value = evalExpression(argument.value, stableOverlayContext(ctx, env), depth + 1)
-    if (argument.name === undefined) {
-      warn(ctx, `Ignoring assignment without variable name ${formatOpenScadValue(value)}`)
-      continue
-    }
-    if (assigned.has(argument.name)) {
-      warn(ctx, `Ignoring duplicate variable assignment ${argument.name} = ${formatOpenScadValue(value)}`)
-      continue
-    }
-    assigned.add(argument.name)
-    env.set(argument.name, value)
-  }
-  return env
-}
-
-function stableIterable(value: Value, ctx: EvalContext, position: number): Value[] {
-  if (isOpenScadRange(value)) return materializeOpenScadRange(value, stableValueContext(ctx, position))
-  if (Array.isArray(value)) return value
-  if (typeof value === 'string') {
-    return registerArrayValue(Array.from(value), ctx, position, 'string iteration')
-  }
-  return value === undefined ? [] : [value]
-}
-
-function appendComprehensionValues(
-  output: Value[],
-  values: readonly Value[],
-  expr: Expr,
-  ctx: EvalContext,
-): void {
-  if (output.length + values.length > MAX_VALUE_ELEMENTS) {
-    evaluationError(ctx, expr.p, `List comprehension exceeds ${MAX_VALUE_ELEMENTS.toLocaleString()} elements`)
-  }
-  output.push(...values)
-}
-
-function evalComprehensionElement(expr: Expr, ctx: EvalContext, depth: number): Value[] {
-  const value = evalExpression(expr, ctx, depth + 1)
-  return isListComprehensionExpression(expr) && Array.isArray(value) ? value : [value]
-}
-
-function evalListComprehension(
-  expr: ListComprehensionExpression,
-  ctx: EvalContext,
-  depth: number,
-): Value[] {
-  const output: Value[] = []
-  switch (expr.kind) {
-    case 'lc-each':
-      return stableIterable(evalExpression(expr.value, ctx, depth + 1), ctx, expr.p)
-    case 'lc-if': {
-      const selected = openScadTruthy(evalExpression(expr.condition, ctx, depth + 1))
-        ? expr.yes
-        : expr.no
-      return selected === undefined ? output : evalComprehensionElement(selected, ctx, depth + 1)
-    }
-    case 'lc-let': {
-      const env = evaluateSequentialBindings(expr.args, ctx, depth + 1)
-      return evalListComprehension(expr.body, stableOverlayContext(ctx, env), depth + 1)
-    }
-    case 'lc-for': {
-      const visit = (bindingIndex: number, iterationContext: EvalContext): void => {
-        if (bindingIndex >= expr.args.length) {
-          appendComprehensionValues(
-            output,
-            evalComprehensionElement(expr.body, iterationContext, depth + 1),
-            expr,
-            ctx,
-          )
-          return
-        }
-        const binding = expr.args[bindingIndex]
-        const iterable = stableIterable(
-          evalExpression(binding.value, iterationContext, depth + 1),
-          iterationContext,
-          binding.p,
-        )
-        if (binding.name === undefined) {
-          warn(ctx, 'Ignoring for() iterator without variable name')
-          return
-        }
-        for (const value of iterable) {
-          if (++ctx.budget.ops > MAX_EVAL_OPS) {
-            evaluationError(ctx, expr.p, `Model exceeds the ${MAX_EVAL_OPS.toLocaleString()} evaluation step limit`)
-          }
-          const env = new Map(iterationContext.env)
-          env.set(binding.name, value)
-          visit(bindingIndex + 1, stableOverlayContext(iterationContext, env))
-        }
-      }
-      visit(0, ctx)
-      return output
-    }
-    case 'lc-for-c': {
-      let iterationContext: EvalContext = {
-        ...ctx,
-        env: evaluateSequentialBindings(expr.init, ctx, depth + 1),
-      }
-      iterationContext = stableOverlayContext(ctx, iterationContext.env)
-      while (openScadTruthy(evalExpression(expr.condition, iterationContext, depth + 1))) {
-        if (++ctx.budget.ops > MAX_EVAL_OPS) {
-          evaluationError(ctx, expr.p, `Model exceeds the ${MAX_EVAL_OPS.toLocaleString()} evaluation step limit`)
-        }
-        appendComprehensionValues(
-          output,
-          evalComprehensionElement(expr.body, iterationContext, depth + 1),
-          expr,
-          ctx,
-        )
-        iterationContext = stableOverlayContext(
-          iterationContext,
-          evaluateSequentialBindings(expr.update, iterationContext, depth + 1),
-        )
-      }
-      return output
-    }
-  }
-}
-
-function resolveStableExpressionArguments(
-  args: readonly ExpressionArgument[],
-  parameterNames: readonly string[],
-  ctx: EvalContext,
-): Map<string, ExpressionArgument> {
-  const resolved = new Map<string, ExpressionArgument>()
-  const parameters = new Set(parameterNames)
-  for (const argument of args) {
-    const name = argument.name ?? parameterNames.find(parameter => !resolved.has(parameter))
-    if (name === undefined) {
-      warn(ctx, 'Ignoring excess positional argument')
-      continue
-    }
-    if (!parameters.has(name)) {
-      warn(ctx, `Ignoring unknown argument ${name}`)
-      continue
-    }
-    if (argument.name !== undefined && resolved.has(name)) {
-      warn(ctx, `Argument ${name} was specified more than once`)
-    }
-    resolved.set(name, argument)
-  }
-  return resolved
-}
+const {
+  stableValueContext,
+  enterStableStatementScope,
+  evaluateSequentialBindings,
+  stableIterable,
+  evalListComprehension,
+  resolveStableExpressionArguments,
+  evalAssertExpression,
+  evalEchoExpression,
+  evalBinaryExpression,
+  evalFunctionCall,
+  invokeUserFunction,
+} = createStableExpressionEvaluators<EvalContext>({
+  evalExpression: (expr, ctx, depth) => evalExpression(expr, ctx, depth),
+  evalBuiltin: (expr, ctx, depth) => evalBuiltin(expr, ctx, depth),
+  resolveStableVariable: (name, ctx) => resolveStableVariable(name, ctx),
+  warn: (ctx, _position, message) => warn(ctx, message),
+  scopeWarn: (ctx, _position, message) => warn(ctx, message),
+  echoWarn: (ctx, _position, message) => { ctx.warnings.push(message) },
+  finiteNumber: (value, ctx, position, label) => finiteNumber(value, ctx, position, label),
+})
 
 /**
  * Bind a stable built-in module without re-evaluating argument expressions.
@@ -665,43 +438,6 @@ function evaluateStableCompatibilityArguments(
   }
 }
 
-function evalAssertExpression(
-  expr: Extract<Expr, { kind: 'assert' }>,
-  ctx: EvalContext,
-  depth: number,
-): Value {
-  const resolved = resolveStableExpressionArguments(expr.args, ['condition', 'message'], ctx)
-  const conditionArgument = resolved.get('condition')
-  const messageArgument = resolved.get('message')
-  const condition = conditionArgument
-    ? evalExpression(conditionArgument.value, ctx, depth + 1)
-    : undefined
-  const message = messageArgument
-    ? evalExpression(messageArgument.value, ctx, depth + 1)
-    : undefined
-  if (!openScadTruthy(condition)) {
-    const conditionText = conditionArgument
-      ? compactDiagnosticText(ctx.source.slice(conditionArgument.p, conditionArgument.end))
-      : 'undef'
-    const detail = messageArgument ? `: ${compactDiagnosticText(formatOpenScadValue(message))}` : ''
-    evaluationError(ctx, expr.p, `Assertion '${conditionText}' failed${detail}`)
-  }
-  return expr.body === undefined ? undefined : evalExpression(expr.body, ctx, depth + 1)
-}
-
-function evalEchoExpression(
-  expr: Extract<Expr, { kind: 'echo' }>,
-  ctx: EvalContext,
-  depth: number,
-): Value {
-  const values = expr.args.map(argument => {
-    const value = formatOpenScadValue(evalExpression(argument.value, ctx, depth + 1))
-    return argument.name === undefined ? value : `${argument.name} = ${value}`
-  })
-  ctx.warnings.push(`ECHO:${values.length ? ` ${values.join(', ')}` : ''}`)
-  return expr.body === undefined ? undefined : evalExpression(expr.body, ctx, depth + 1)
-}
-
 function evalExpression(expr: Expr, ctx: EvalContext, depth = 0): Value {
   if (++ctx.budget.ops > MAX_EVAL_OPS) {
     evaluationError(ctx, expr.p, `Model exceeds the ${MAX_EVAL_OPS.toLocaleString()} evaluation step limit`)
@@ -771,39 +507,7 @@ function evalExpression(expr: Expr, ctx: EvalContext, depth = 0): Value {
       const number = finiteNumber(value, ctx, expr.p, 'unary operand')
       return expr.op === TT.Minus ? -number : number
     }
-    case 'binary': {
-      if (isStableProfile(ctx)) {
-        const left = evaluate(expr.left)
-        if (expr.op === TT.And && !openScadTruthy(left)) return false
-        if (expr.op === TT.Or && openScadTruthy(left)) return true
-        return openScadBinary(expr.op, left, evaluate(expr.right), stableValueContext(ctx, expr.p))
-      }
-      if (expr.op === TT.And) return truthy(evaluate(expr.left)) && truthy(evaluate(expr.right))
-      if (expr.op === TT.Or) return truthy(evaluate(expr.left)) || truthy(evaluate(expr.right))
-      const left = evaluate(expr.left)
-      const right = evaluate(expr.right)
-      if (expr.op === TT.EqEq) return deepEqual(left, right)
-      if (expr.op === TT.NotEq) return !deepEqual(left, right)
-      if ([TT.Lt, TT.Gt, TT.LtEq, TT.GtEq].includes(expr.op)) {
-        const a = finiteNumber(left, ctx, expr.p, 'comparison operand')
-        const b = finiteNumber(right, ctx, expr.p, 'comparison operand')
-        if (expr.op === TT.Lt) return a < b
-        if (expr.op === TT.Gt) return a > b
-        if (expr.op === TT.LtEq) return a <= b
-        return a >= b
-      }
-      const a = finiteNumber(left, ctx, expr.p, 'arithmetic operand')
-      const b = finiteNumber(right, ctx, expr.p, 'arithmetic operand')
-      let result: number
-      if (expr.op === TT.Plus) result = a + b
-      else if (expr.op === TT.Minus) result = a - b
-      else if (expr.op === TT.Star) result = a * b
-      else if (expr.op === TT.Slash) result = a / b
-      else if (expr.op === TT.Percent) result = a % b
-      else result = a ** b
-      if (!Number.isFinite(result)) evaluationError(ctx, expr.p, 'Expression produced a non-finite number')
-      return result
-    }
+    case 'binary': return evalBinaryExpression(expr, ctx, depth)
     case 'ternary': return (isStableProfile(ctx) ? openScadTruthy(evaluate(expr.test)) : truthy(evaluate(expr.test)))
       ? evaluate(expr.yes)
       : evaluate(expr.no)
@@ -858,123 +562,6 @@ function evalExpression(expr: Expr, ctx: EvalContext, depth = 0): Value {
       if (!isStableProfile(ctx)) evaluationError(ctx, expr.p, 'list comprehension is not supported')
       return registerArrayValue(evalListComprehension(expr, ctx, depth), ctx, expr.p, 'list comprehension')
   }
-}
-
-function isFunctionValue(value: Value): value is FunctionValue {
-  return !Array.isArray(value) && typeof value === 'object' && value !== null
-    && value.kind === 'function-value'
-}
-
-function evalFunctionCall(expr: Extract<Expr, { kind: 'call' }>, ctx: EvalContext, depth: number): Value {
-  if (expr.name !== null) {
-    const declaration = isStableProfile(ctx)
-      ? ctx.stableScope?.functionDeclaration(expr.name)
-      : undefined
-    const definition = declaration?.node ?? ctx.functions.get(expr.name)
-    if (definition && (!isStableProfile(ctx) || declaration !== undefined)) {
-      const value: FunctionValue = {
-        kind: 'function-value',
-        name: definition.name,
-        params: definition.params,
-        body: definition.body,
-        closure: new Map(declaration?.scope.env ?? ctx.env),
-      }
-      return invokeUserFunction(
-        declaration === undefined
-          ? value
-          : { ...value, lexicalScope: declaration.scope } as StableFunctionValue,
-        expr.args,
-        ctx,
-        depth,
-      )
-    }
-    const resolved = isStableProfile(ctx)
-      ? resolveStableVariable(expr.name, ctx)
-      : { found: ctx.env.has(expr.name), value: ctx.env.get(expr.name) }
-    if (resolved.found && isFunctionValue(resolved.value)) {
-      return invokeUserFunction(resolved.value, expr.args, ctx, depth)
-    }
-    return evalBuiltin(expr, ctx, depth)
-  }
-  const callee = evalExpression(expr.callee, ctx, depth + 1)
-  if (!isFunctionValue(callee)) evaluationError(ctx, expr.p, 'Expression is not callable')
-  return invokeUserFunction(callee, expr.args, ctx, depth)
-}
-
-function invokeUserFunction(
-  fn: FunctionValue,
-  args: readonly ExpressionArgument[],
-  ctx: EvalContext,
-  depth: number,
-): Value {
-  if (ctx.functionStack.length >= MAX_EVAL_DEPTH) {
-    evaluationError(ctx, args[0]?.p ?? fn.body.p, `Evaluation exceeds ${MAX_EVAL_DEPTH} nested function calls`)
-  }
-  if (isStableProfile(ctx)) {
-    const lexicalScope = (fn as Partial<StableFunctionValue>).lexicalScope ?? ctx.stableScope
-    if (lexicalScope === undefined) {
-      evaluationError(ctx, args[0]?.p ?? fn.body.p, 'Stable function is missing its lexical scope')
-    }
-    const resolved = resolveStableExpressionArguments(
-      args,
-      fn.params.map(parameter => parameter.name),
-      ctx,
-    )
-    const callerValues = new Map<ExpressionArgument, Value>()
-    for (const argument of args) {
-      callerValues.set(argument, evalExpression(argument.value, ctx, depth + 1))
-    }
-    const definitionEnv = new Map(fn.closure)
-    overlayDynamicVariables(definitionEnv, ctx.env)
-    const definitionContext: EvalContext = {
-      ...ctx,
-      env: definitionEnv,
-      stableScope: lexicalScope,
-      scopeVisibleBefore: Number.POSITIVE_INFINITY,
-    }
-    const env = new Map(definitionEnv)
-    const parameterValues = new Map<string, Value>()
-    for (const parameter of fn.params) {
-      const supplied = resolved.get(parameter.name)
-      if (supplied !== undefined) parameterValues.set(parameter.name, callerValues.get(supplied))
-      else if (parameter.defaultValue !== undefined) {
-        parameterValues.set(parameter.name, evalExpression(
-          parameter.defaultValue,
-          { ...definitionContext, env: new Map(definitionEnv) },
-          depth + 1,
-        ))
-      } else parameterValues.set(parameter.name, undefined)
-    }
-    for (const [name, value] of parameterValues) env.set(name, value)
-    return evalExpression(fn.body, {
-      ...stableOverlayContext(definitionContext, env),
-      functionStack: [...ctx.functionStack, fn.name ?? '<anonymous>'],
-    }, depth + 1)
-  }
-  const positional = args.filter(argument => argument.name === undefined)
-  const named = new Map(args.filter(argument => argument.name !== undefined)
-    .map(argument => [argument.name!, argument] as const))
-  const parameterNames = new Set(fn.params.map(parameter => parameter.name))
-  for (const name of named.keys()) {
-    if (!parameterNames.has(name)) evaluationError(ctx, args.find(argument => argument.name === name)?.p ?? fn.body.p, `Unknown argument ${name}`)
-  }
-  if (positional.length > fn.params.length) evaluationError(ctx, positional[fn.params.length]?.p ?? fn.body.p, 'Too many function arguments')
-
-  const callerValues = new Map<ExpressionArgument, Value>()
-  for (const argument of args) callerValues.set(argument, evalExpression(argument.value, ctx, depth + 1))
-  const env = new Map(fn.closure)
-  for (let index = 0; index < fn.params.length; index++) {
-    const parameter = fn.params[index]
-    const supplied = named.get(parameter.name) ?? positional[index]
-    if (supplied) env.set(parameter.name, callerValues.get(supplied))
-    else if (parameter.defaultValue) env.set(parameter.name, evalExpression(parameter.defaultValue, { ...ctx, env }, depth + 1))
-    else env.set(parameter.name, undefined)
-  }
-  return evalExpression(fn.body, {
-    ...ctx,
-    env,
-    functionStack: [...ctx.functionStack, fn.name ?? '<anonymous>'],
-  }, depth + 1)
 }
 
 function compatibilityString(value: Value): string {
@@ -1182,11 +769,6 @@ function bindAssertArguments(node: CallNode, ctx: EvalContext): BoundAssertArgum
     conditionText: compactDiagnosticText(rawCondition),
     message: messageKey ? node.args[messageKey] : undefined,
   }
-}
-
-function compactDiagnosticText(value: string, limit = 240): string {
-  const compact = value.replace(/\s+/g, ' ').trim()
-  return compact.length <= limit ? compact : `${compact.slice(0, limit - 1)}…`
 }
 
 function collectModules(nodes: readonly Statement[], modules: Map<string, ModuleNode>) {

@@ -34,51 +34,26 @@ fn subtract_interval(a: [f64; 2], b: [f64; 2]) -> Vec<[f64; 2]> {
     }
     remaining
 }
-/// Closed interval endpoint contact is regularized: identical cross-sections
-/// meeting on a cap form one prism. Separated intervals retain distinct bodies.
-fn merge_intervals(mut intervals: Vec<[f64; 2]>) -> Vec<[f64; 2]> {
-    intervals.retain(|i| i[0] < i[1]);
-    intervals.sort_by(|a, b| a[0].total_cmp(&b[0]).then(a[1].total_cmp(&b[1])));
-    let mut merged = Vec::<[f64; 2]>::new();
-    for interval in intervals {
-        if let Some(last) = merged.last_mut() {
-            if interval[0] <= last[1] {
-                last[1] = last[1].max(interval[1]);
-                continue;
-            }
-        }
-        merged.push(interval);
-    }
-    merged
-}
 fn interval_result(
     loops: &[Vec<nurbs_core::curve::Curve>],
     intervals: Vec<[f64; 2]>,
     tolerance: f64,
     construct: impl Fn(&[Vec<nurbs_core::curve::Curve>], f64, f64) -> Result<Model>,
 ) -> Result<Model> {
-    let intervals = merge_intervals(intervals);
-    let mut result: Option<Model> = None;
-    let mut previous_high = f64::NEG_INFINITY;
-    for [low, high] in intervals {
-        let part = construct(loops, low, high)?;
-        result = Some(if let Some(existing) = result {
-            if !(previous_high < low) {
-                return Err(Error::new(
-                    "BREP_UNSUPPORTED_OPERATION",
-                    "Interval components require a strict Z gap before topology concatenation",
-                ));
-            }
-            // Complete surface control nets remain in these disjoint Z slabs.
-            // operations::boolean takes its conservative separation path; no
-            // curve intersections, fitting or tessellation join these bodies.
-            crate::operations::boolean(&existing, &part, "union")?
-        } else {
-            part
-        });
-        previous_high = high;
-    }
-    result.map_or_else(|| Model::empty(tolerance), Ok)
+    crate::boolean_support::extrude_merged_intervals(
+        loops,
+        intervals,
+        tolerance,
+        construct,
+        // Complete surface control nets remain in these disjoint Z slabs.
+        // operations::boolean takes its conservative separation path; no
+        // curve intersections, fitting or tessellation join these bodies.
+        |existing, part| crate::operations::boolean(existing, part, "union"),
+        (
+            "BREP_UNSUPPORTED_OPERATION",
+            "Interval components require a strict Z gap before topology concatenation",
+        ),
+    )
 }
 
 fn local_boolean(a: &Model, b: &Model, operation: &str) -> Result<Option<Model>> {

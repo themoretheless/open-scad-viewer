@@ -41,6 +41,54 @@ fn bounds(model: &Model) -> [[f64; 3]; 2] {
     result
 }
 
+/// Closed interval endpoint contact is regularized: identical cross-sections
+/// meeting on a cap form one prism. Separated intervals retain distinct bodies.
+pub(crate) fn merge_intervals(mut intervals: Vec<[f64; 2]>) -> Vec<[f64; 2]> {
+    intervals.retain(|i| i[0] < i[1]);
+    intervals.sort_by(|a, b| a[0].total_cmp(&b[0]).then(a[1].total_cmp(&b[1])));
+    let mut merged = Vec::<[f64; 2]>::new();
+    for interval in intervals {
+        if let Some(last) = merged.last_mut() {
+            if interval[0] <= last[1] {
+                last[1] = last[1].max(interval[1]);
+                continue;
+            }
+        }
+        merged.push(interval);
+    }
+    merged
+}
+
+/// Shared "extrude → merge disjoint slabs" loop for the prismatic Boolean
+/// cells: each merged interval is extruded through `construct`, then joined
+/// to the accumulated result through `join`. Merged intervals are disjoint,
+/// but a non-strict axial gap still refuses with `gap_error` instead of
+/// concatenating touching topology.
+pub(crate) fn extrude_merged_intervals(
+    loops: &[Vec<nurbs_core::curve::Curve>],
+    intervals: Vec<[f64; 2]>,
+    tolerance: f64,
+    construct: impl Fn(&[Vec<nurbs_core::curve::Curve>], f64, f64) -> Result<Model>,
+    join: impl Fn(&Model, &Model) -> Result<Model>,
+    gap_error: (&'static str, &'static str),
+) -> Result<Model> {
+    let mut result: Option<Model> = None;
+    let mut previous_high = f64::NEG_INFINITY;
+    for [low, high] in merge_intervals(intervals) {
+        let part = construct(loops, low, high)?;
+        result = Some(if let Some(existing) = result {
+            if !(previous_high < low) {
+                return Err(Error::new(gap_error.0, gap_error.1));
+            }
+            join(&existing, &part)?
+        } else {
+            part
+        });
+        previous_high = high;
+    }
+    result.map_or_else(|| Model::empty(tolerance), Ok)
+}
+
 /// Concatenate independently owned topology after proving spatial separation.
 /// No coordinate weld, surface fitting or mesh reconstruction is involved.
 pub(crate) fn separated_union(a: &Model, b: &Model) -> Result<Model> {

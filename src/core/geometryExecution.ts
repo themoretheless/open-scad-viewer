@@ -177,30 +177,12 @@ function assertExactObjectKeys(
 }
 
 /**
- * Browser-safe digest of every immutable static-manifest field except the
+ * Snake-case wire mapping of every immutable static-manifest field except the
  * digest itself and its derived MCP resource URI. Snake-case names preserve
  * the already-published v1 digest bytes.
  */
-export function computeGeometryManifestDigest(engine: GeometryEngineStaticManifest): string {
-  assertExactObjectKeys(engine, [
-    'engineClass', 'displayName', 'permanent', 'maturity', 'engineKey',
-    'kernelFingerprint', 'semanticProgramVersion', 'capabilityManifestVersion',
-    'languageContracts', 'inputContract', 'capabilities', 'plannedCapabilities',
-    'qualities', 'representations', 'plannedRepresentations', 'exportFormats',
-    'plannedExportFormats', 'limits', 'isolation', 'deployment', 'qualification',
-    'dependency', 'rollbackCompatibility', 'manifestDigest', 'automaticFallback',
-  ], 'Geometry manifest')
-  assertExactObjectKeys(engine.qualification, [
-    'status', 'recordId', 'corpusVersion', 'target',
-  ], 'Geometry manifest qualification')
-  assertExactObjectKeys(engine.dependency, [
-    'packageName', 'version', 'licenseExpression', 'sbomRef', 'sbomSha256', 'lockfileSha256',
-  ], 'Geometry manifest dependency evidence')
-  assertExactObjectKeys(engine.rollbackCompatibility, [
-    'disableEngineCapability', 'sourceContractPreserved', 'crossEngineFallback',
-    'minimumCatalogSchema',
-  ], 'Geometry manifest rollback compatibility')
-  const payload = {
+export function toWireManifest(engine: GeometryEngineStaticManifest) {
+  return {
     engine_class: engine.engineClass,
     display_name: engine.displayName,
     permanent: engine.permanent,
@@ -243,7 +225,32 @@ export function computeGeometryManifestDigest(engine: GeometryEngineStaticManife
     },
     automatic_fallback: engine.automaticFallback,
   }
-  return sha256Hex(canonicalJson(payload))
+}
+
+/**
+ * Browser-safe digest of every immutable static-manifest field except the
+ * digest itself and its derived MCP resource URI.
+ */
+export function computeGeometryManifestDigest(engine: GeometryEngineStaticManifest): string {
+  assertExactObjectKeys(engine, [
+    'engineClass', 'displayName', 'permanent', 'maturity', 'engineKey',
+    'kernelFingerprint', 'semanticProgramVersion', 'capabilityManifestVersion',
+    'languageContracts', 'inputContract', 'capabilities', 'plannedCapabilities',
+    'qualities', 'representations', 'plannedRepresentations', 'exportFormats',
+    'plannedExportFormats', 'limits', 'isolation', 'deployment', 'qualification',
+    'dependency', 'rollbackCompatibility', 'manifestDigest', 'automaticFallback',
+  ], 'Geometry manifest')
+  assertExactObjectKeys(engine.qualification, [
+    'status', 'recordId', 'corpusVersion', 'target',
+  ], 'Geometry manifest qualification')
+  assertExactObjectKeys(engine.dependency, [
+    'packageName', 'version', 'licenseExpression', 'sbomRef', 'sbomSha256', 'lockfileSha256',
+  ], 'Geometry manifest dependency evidence')
+  assertExactObjectKeys(engine.rollbackCompatibility, [
+    'disableEngineCapability', 'sourceContractPreserved', 'crossEngineFallback',
+    'minimumCatalogSchema',
+  ], 'Geometry manifest rollback compatibility')
+  return sha256Hex(canonicalJson(toWireManifest(engine)))
 }
 
 export interface GeometryEngineManifest extends GeometryEngineStaticManifest {

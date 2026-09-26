@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import ModelingGridControls from './components/ModelingGridControls.vue'
 import MaterialControls from './features/MaterialControls.vue'
+import { clamp } from './services/math3d'
 import { stringifyMeshJson } from './services/meshJson'
 import { useModelingGrid } from './services/modelingGrid'
 import { isModelGraphText, SOURCE_FILE_ACCEPT, SOURCE_FILE_EXTENSION, sourceFileExtension, withSourceExtension } from './services/modelGraphTextDetect'
@@ -2646,7 +2647,6 @@ function readCommandMru(): string[] {
   const value = storageGetJSON<unknown[]>('scad-command-mru', [], Array.isArray)
   return [...new Set(value.filter((item): item is string => typeof item === 'string' && item.length > 0))].slice(0, 12)
 }
-function clamp(value: number, min: number, max: number) { return Math.max(min, Math.min(max, value)) }
 function sanitizeFileName(name: string) { return (name.replace(/[^\w.() -]+/g, '_') || 'model.scad').replace(/\.mg.*$/i, '.mg').replace(/\.scad.*$/i, '.scad') }
 
 </script>

@@ -667,21 +667,9 @@ impl value_codec::Serialize for PlaneCylinderComponent {
 #[cfg(test)]
 mod tests {
     use super::super::plane_sphere::plane_patch;
+    use super::super::test_utils::rotated_translated;
     use super::*;
 
-    fn rotated_translated(model: &Model, angle: f64, offset: [f64; 3]) -> Model {
-        let (sin, cos) = angle.sin_cos();
-        crate::transform::affine(
-            model,
-            [
-                [1., 0., 0., offset[0]],
-                [0., cos, -sin, offset[1]],
-                [0., sin, cos, offset[2]],
-                [0., 0., 0., 1.],
-            ],
-        )
-        .unwrap()
-    }
 
     fn point_of(jet: &[f64]) -> [f64; 3] {
         [jet[0], jet[1], jet[2]]

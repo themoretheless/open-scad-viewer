@@ -39,16 +39,59 @@ export interface MaterialDef {
   roughness: number
   emissive: Vec3
   shadingModel: ShadingModel
+  /**
+   * Optional opacity multiplier routed through Obj.style.x; values below 1
+   * move the mesh into the object-sorted transparent draw pass.
+   */
+  alpha?: number
 }
 
-/** Built-in preset materials; `default` reproduces the legacy shading look. */
+/**
+ * Built-in preset materials; `default` reproduces the legacy shading look.
+ * Presets with a numeric id keep Obj.materialId at 0 — the field is a spare.
+ */
 export const MATERIAL_PRESETS: readonly MaterialDef[] = [
   { id: 'default', name: 'Default Plastic', baseColor: [1, 1, 1], metallic: 0, roughness: 0.7, emissive: [0, 0, 0], shadingModel: 'phong' },
   { id: 'brushed-metal', name: 'Brushed Metal', baseColor: [0.92, 0.93, 0.95], metallic: 1, roughness: 0.35, emissive: [0, 0, 0], shadingModel: 'pbr' },
   { id: 'matte', name: 'Matte', baseColor: [1, 1, 1], metallic: 0, roughness: 0.95, emissive: [0, 0, 0], shadingModel: 'pbr' },
   { id: 'emissive', name: 'Emissive', baseColor: [0.1, 0.1, 0.1], metallic: 0, roughness: 0.7, emissive: [1, 0.9, 0.6], shadingModel: 'unlit' },
+  { id: 'plastic', name: 'Plastic', baseColor: [0.85, 0.2, 0.15], metallic: 0, roughness: 0.45, emissive: [0, 0, 0], shadingModel: 'pbr' },
+  { id: 'rubber', name: 'Rubber', baseColor: [0.09, 0.09, 0.1], metallic: 0, roughness: 0.98, emissive: [0, 0, 0], shadingModel: 'pbr' },
+  { id: 'glass', name: 'Glass', baseColor: [0.75, 0.88, 0.95], metallic: 0, roughness: 0.08, emissive: [0, 0, 0], shadingModel: 'pbr', alpha: 0.35 },
+  { id: 'anodized-aluminum', name: 'Anodized Aluminum', baseColor: [0.25, 0.45, 0.85], metallic: 1, roughness: 0.45, emissive: [0, 0, 0], shadingModel: 'pbr' },
 ]
 export const DEFAULT_MATERIAL: MaterialDef = MATERIAL_PRESETS[0]
+
+/** Looks up a material preset by id; undefined when unknown. */
+export function getMaterialPreset(id: string): MaterialDef | undefined {
+  return MATERIAL_PRESETS.find(material => material.id === id)
+}
+
+/**
+ * Matcap capture preset for the meshMatcap shader. 'procedural' binds a 1×1
+ * dummy texture, which selects the shader's procedural fallback path exactly
+ * (the pre-texture look); every other preset fetches a PNG capture.
+ */
+export interface MatcapPreset {
+  id: string
+  name: string
+  /** Fetch URL of the capture PNG; undefined for the procedural fallback. */
+  url?: string
+}
+
+export const MATCAP_PRESETS: readonly MatcapPreset[] = [
+  { id: 'procedural', name: 'Procedural' },
+  { id: 'studio', name: 'Studio', url: 'matcaps/studio.png' },
+  { id: 'clay', name: 'Clay', url: 'matcaps/clay.png' },
+  { id: 'chrome', name: 'Chrome', url: 'matcaps/chrome.png' },
+  { id: 'pearl', name: 'Pearl', url: 'matcaps/pearl.png' },
+]
+export const DEFAULT_MATCAP: MatcapPreset = MATCAP_PRESETS[0]
+
+/** Looks up a matcap preset by id; undefined when unknown. */
+export function getMatcapPreset(id: string): MatcapPreset | undefined {
+  return MATCAP_PRESETS.find(matcap => matcap.id === id)
+}
 
 /**
  * Render theme: the Scene-uniform theme tail (selection/hover/edge/xray/grid/

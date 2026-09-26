@@ -15,6 +15,14 @@ export interface Aabb3 {
   max: Vec3
 }
 
+export function clamp(value: number, min: number, max: number): number {
+  return Math.max(min, Math.min(max, value))
+}
+
+export function clamp01(value: number): number {
+  return clamp(value, 0, 1)
+}
+
 export function identity(): Mat4 {
   const m = new Float32Array(16)
   m[0] = m[5] = m[10] = m[15] = 1

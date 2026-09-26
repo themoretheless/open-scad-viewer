@@ -208,14 +208,6 @@ pub(crate) struct CanonicalCone {
     pub(crate) caps: [Option<usize>; 2],
 }
 
-/// Degree-1 pcurve exactly from `from` to `to` with unit knots/weights.
-fn unit_edge(curve: &Curve, from: [f64; 2], to: [f64; 2]) -> bool {
-    curve.degree == 1
-        && curve.knots == [0., 0., 1., 1.]
-        && curve.control_points == [from.to_vec(), to.to_vec()]
-        && curve.weights == [1., 1.]
-}
-
 /// One quadrant's exact cap trim arc: the quarter circle of radius 1/2
 /// centered at [1/2, 1/2] in cap UV, weights cos(pi/4).
 fn cap_quarter_arc(curve: &Curve, quadrant: usize) -> bool {
@@ -262,73 +254,15 @@ pub(crate) fn recognize_cone(model: &Model) -> Result<Option<CanonicalCone>> {
     {
         return Ok(None);
     }
-    let mut sides: Vec<usize> = Vec::new();
-    let mut caps: Vec<usize> = Vec::new();
-    for (index, face) in model.faces.iter().enumerate() {
-        let surface = &face.surface;
-        if !face.holes.is_empty() {
-            return Ok(None);
-        }
-        let side = surface.degree_u == 2
-            && surface.degree_v == 1
-            && !surface.periodic_u
-            && !surface.periodic_v
-            && surface.knots_u == [0., 0., 0., 1., 1., 1.]
-            && surface.knots_v == [0., 0., 1., 1.]
-            && surface.control_points.len() == 3
-            && surface.control_points.iter().all(|row| row.len() == 2);
-        let cap = surface.degree_u == 1
-            && surface.degree_v == 1
-            && !surface.periodic_u
-            && !surface.periodic_v
-            && surface.knots_u == [0., 0., 1., 1.]
-            && surface.knots_v == [0., 0., 1., 1.]
-            && surface.control_points.len() == 2
-            && surface.control_points.iter().all(|row| row.len() == 2);
-        if side {
-            if surface.weights != [[1., 1.], [ARC_WEIGHT, ARC_WEIGHT], [1., 1.]] {
-                return Ok(None);
-            }
-            sides.push(index);
-        } else if cap {
-            if surface.weights != [[1., 1.], [1., 1.]] {
-                return Ok(None);
-            }
-            caps.push(index);
-        } else {
-            return Ok(None);
-        }
-    }
+    let Some((sides, caps)) = recognize::classify_analytic_faces(model) else {
+        return Ok(None);
+    };
     if sides.len() != 4 || caps.is_empty() || caps.len() > 2 {
         return Ok(None);
     }
     // Side trims: the unit-square boundary, each edge exactly once.
-    let boundary = [
-        ([0., 0.], [1., 0.]),
-        ([1., 0.], [1., 1.]),
-        ([1., 1.], [0., 1.]),
-        ([0., 1.], [0., 0.]),
-    ];
     for &index in &sides {
-        let loop_ = &model.loops[model.faces[index].outer];
-        if loop_.coedges.len() != 4 {
-            return Ok(None);
-        }
-        let mut seen = [false; 4];
-        for coedge in &loop_.coedges {
-            let mut hit = false;
-            for (k, &(a, b)) in boundary.iter().enumerate() {
-                if !seen[k] && unit_edge(&coedge.pcurve, a, b) {
-                    seen[k] = true;
-                    hit = true;
-                    break;
-                }
-            }
-            if !hit {
-                return Ok(None);
-            }
-        }
-        if seen.into_iter().any(|hit| !hit) {
+        if !recognize::unit_square_boundary(model, index) {
             return Ok(None);
         }
     }
@@ -1701,21 +1635,9 @@ impl value_codec::Serialize for PlaneConeComponent {
 #[cfg(test)]
 mod tests {
     use super::super::plane_sphere::plane_patch;
+    use super::super::test_utils::rotated_translated;
     use super::*;
 
-    fn rotated_translated(model: &Model, angle: f64, offset: [f64; 3]) -> Model {
-        let (sin, cos) = angle.sin_cos();
-        crate::transform::affine(
-            model,
-            [
-                [1., 0., 0., offset[0]],
-                [0., cos, -sin, offset[1]],
-                [0., sin, cos, offset[2]],
-                [0., 0., 0., 1.],
-            ],
-        )
-        .unwrap()
-    }
 
     fn point_of(jet: &[f64]) -> [f64; 3] {
         [jet[0], jet[1], jet[2]]

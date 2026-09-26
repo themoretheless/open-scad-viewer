@@ -16,7 +16,7 @@ use crate::shaders::{
 pub const TS_SOURCES: [(&str, &str, &str); 11] = [
     ("MESH_WGSL", MESH_WGSL, "Lit opaque/transparent mesh surface with per-object style and GPU morph blend."),
     ("MESH_PBR_WGSL", MESH_PBR_WGSL, "Cook-Torrance PBR mesh surface (GGX/Smith/Schlick) driven by the Obj material tail."),
-    ("MESH_MATCAP_WGSL", MESH_MATCAP_WGSL, "Procedural texture-free matcap mesh surface (studio key + rim + specular blob)."),
+    ("MESH_MATCAP_WGSL", MESH_MATCAP_WGSL, "Matcap mesh surface: samples a bound capture texture when present, else procedural studio key + rim + specular blob."),
     ("MESH_TOON_WGSL", MESH_TOON_WGSL, "Toon/technical-illustration mesh surface (quantized diffuse + fresnel outline)."),
     ("MESH_UNLIT_WGSL", MESH_UNLIT_WGSL, "Unlit mesh surface: tinted base color plus emission only."),
     ("MESH_SECTION_CAP_WGSL", MESH_SECTION_CAP_WGSL, "Stencil-free section cap: inverted clip + front-face culling fills the cut surface flat with the theme cap color."),

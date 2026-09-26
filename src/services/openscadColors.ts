@@ -27,5 +27,3 @@ export const CSS_COLORS: Record<string, RGBA> = {
   pink: [1, 0.75, 0.8, 1], purple: [0.5, 0, 0.5, 1], brown: [0.65, 0.16, 0.16, 1],
   lime: [0, 1, 0, 1], navy: [0, 0, 0.5, 1], teal: [0, 0.5, 0.5, 1],
 }
-
-export function clamp01(value: number): number { return Math.max(0, Math.min(1, value)) }

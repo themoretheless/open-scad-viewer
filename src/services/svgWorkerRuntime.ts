@@ -1,4 +1,5 @@
 import { svgPreview, svgProfile, contoursSvg, contoursExtrusion, meshSvgContours } from './svgGeometry'
+import { createWorkerHandler } from './workerHandlerRuntime'
 import type { SvgGeometryResult, SvgJob, SvgWorkerRequest, SvgWorkerResponse } from './svgWorkerProtocol'
 
 /** Shared operation composition for browser workers and Node callers. Core SVG semantics stay in svgGeometry. */
@@ -14,19 +15,15 @@ export async function executeSvgJob(job: SvgJob): Promise<SvgGeometryResult> {
 }
 
 export function createSvgWorkerHandler(post: (value: SvgWorkerResponse) => void) {
-  let active = false
-  return async (value: unknown) => {
-    const request = value as Partial<SvgWorkerRequest> | null
-    if (!request || request.version !== 1 || !Number.isSafeInteger(request.id) || !request.job) return
-    const id = request.id!
-    if (active) { post({ version: 1, id, ok: false, error: { name: 'Error', message: 'SVG worker is busy.' } }); return }
-    active = true
-    try {
-      const result = await executeSvgJob(request.job)
-      post({ version: 1, id, ok: true, result })
-    } catch (cause) {
-      const error = cause instanceof Error ? cause : new Error(String(cause))
-      post({ version: 1, id, ok: false, error: { name: error.name, message: error.message, ...('code' in error && typeof error.code === 'string' ? { code: error.code } : {}) } })
-    } finally { active = false }
-  }
+  return createWorkerHandler<SvgWorkerRequest, SvgWorkerResponse, SvgGeometryResult>(post, {
+    validate: (value) => {
+      const request = value as Partial<SvgWorkerRequest> | null
+      if (!request || request.version !== 1 || !Number.isSafeInteger(request.id) || !request.job) return null
+      return request as SvgWorkerRequest
+    },
+    busyError: { name: 'Error', message: 'SVG worker is busy.' },
+    execute: (request) => executeSvgJob(request.job),
+    success: (request, result) => ({ message: { version: 1, id: request.id, ok: true, result } }),
+    failure: (request, error) => ({ version: 1, id: request.id, ok: false, error }),
+  })
 }

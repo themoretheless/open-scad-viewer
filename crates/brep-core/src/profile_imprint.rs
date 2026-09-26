@@ -38,49 +38,29 @@ fn subtract_interval(a: [f64; 2], b: [f64; 2]) -> Vec<[f64; 2]> {
     remaining
 }
 
-fn merge_intervals(mut intervals: Vec<[f64; 2]>) -> Vec<[f64; 2]> {
-    intervals.retain(|i| i[0] < i[1]);
-    intervals.sort_by(|a, b| a[0].total_cmp(&b[0]).then(a[1].total_cmp(&b[1])));
-    let mut merged = Vec::<[f64; 2]>::new();
-    for interval in intervals {
-        if let Some(last) = merged.last_mut()
-            && interval[0] <= last[1]
-        {
-            last[1] = last[1].max(interval[1]);
-            continue;
-        }
-        merged.push(interval);
-    }
-    merged
-}
-
 fn interval_result(
     loops: &[Vec<nurbs_core::curve::Curve>],
     intervals: Vec<[f64; 2]>,
     tolerance: f64,
     sources: &[&Model],
 ) -> Result<Model> {
-    let mut result: Option<Model> = None;
-    let mut previous_high = f64::NEG_INFINITY;
-    for [low, high] in merge_intervals(intervals) {
-        let mut part = prism::extrude(loops, low, high)?;
-        part.tolerance_mm = tolerance;
-        part.inherit_topology_ids(sources);
-        part.validate()?;
-        result = Some(if let Some(existing) = result {
-            if previous_high >= low {
-                return Err(Error::new(
-                    "BREP_PROFILE_IMPRINT_REFUSED",
-                    "Profile interval components require a strict axial gap",
-                ));
-            }
-            crate::boolean_support::separated_union(&existing, &part)?
-        } else {
-            part
-        });
-        previous_high = high;
-    }
-    result.map_or_else(|| Model::empty(tolerance), Ok)
+    crate::boolean_support::extrude_merged_intervals(
+        loops,
+        intervals,
+        tolerance,
+        |loops, low, high| {
+            let mut part = prism::extrude(loops, low, high)?;
+            part.tolerance_mm = tolerance;
+            part.inherit_topology_ids(sources);
+            part.validate()?;
+            Ok(part)
+        },
+        crate::boolean_support::separated_union,
+        (
+            "BREP_PROFILE_IMPRINT_REFUSED",
+            "Profile interval components require a strict axial gap",
+        ),
+    )
 }
 
 fn local_boolean(a: &Model, b: &Model, operation: &str) -> Result<Option<Model>> {

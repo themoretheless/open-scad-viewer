@@ -88,14 +88,6 @@ pub(crate) struct CanonicalTorus {
 
 type TorusLift<'a> = dyn Fn(&CanonicalTorus, &[(f64, f64)]) -> Vec<TorusPatchCurve> + 'a;
 
-/// Degree-1 pcurve exactly from `from` to `to` with unit knots/weights.
-fn unit_edge(curve: &Curve, from: [f64; 2], to: [f64; 2]) -> bool {
-    curve.degree == 1
-        && curve.knots == [0., 0., 1., 1.]
-        && curve.control_points == [from.to_vec(), to.to_vec()]
-        && curve.weights == [1., 1.]
-}
-
 /// Profile-span control points (radial, axial) of the canonical torus
 /// profile circle of radius `minor` centered at radial `major`: four
 /// 90-degree arcs starting at the outer equator point, turning toward +axis.
@@ -138,13 +130,7 @@ pub(crate) fn recognize_torus(model: &Model) -> Result<Option<CanonicalTorus>> {
         [ARC_WEIGHT, w2, ARC_WEIGHT],
         [1., ARC_WEIGHT, 1.],
     ];
-    let boundary = [
-        ([0., 0.], [1., 0.]),
-        ([1., 0.], [1., 1.]),
-        ([1., 1.], [0., 1.]),
-        ([0., 1.], [0., 0.]),
-    ];
-    for face in &model.faces {
+    for (face_index, face) in model.faces.iter().enumerate() {
         let surface = &face.surface;
         if surface.degree_u != 2
             || surface.degree_v != 2
@@ -164,25 +150,7 @@ pub(crate) fn recognize_torus(model: &Model) -> Result<Option<CanonicalTorus>> {
         {
             return Ok(None);
         }
-        let loop_ = &model.loops[face.outer];
-        if loop_.coedges.len() != 4 {
-            return Ok(None);
-        }
-        let mut seen = [false; 4];
-        for coedge in &loop_.coedges {
-            let mut hit = false;
-            for (k, &(a, b)) in boundary.iter().enumerate() {
-                if !seen[k] && unit_edge(&coedge.pcurve, a, b) {
-                    seen[k] = true;
-                    hit = true;
-                    break;
-                }
-            }
-            if !hit {
-                return Ok(None);
-            }
-        }
-        if seen.into_iter().any(|hit| !hit) {
+        if !super::recognize::unit_square_boundary(model, face_index) {
             return Ok(None);
         }
     }
@@ -847,6 +815,7 @@ impl value_codec::Serialize for PlaneTorusComponent {
 #[cfg(test)]
 mod tests {
     use super::super::plane_sphere::plane_patch;
+    use super::super::test_utils::rotated_translated;
     use super::*;
 
     /// (curve, center, radius, full, plane_uv, torus_uv, sampled) — Copy view.
@@ -860,19 +829,6 @@ mod tests {
         f64,
     );
 
-    fn rotated_translated(model: &Model, angle: f64, offset: [f64; 3]) -> Model {
-        let (sin, cos) = angle.sin_cos();
-        crate::transform::affine(
-            model,
-            [
-                [1., 0., 0., offset[0]],
-                [0., cos, -sin, offset[1]],
-                [0., sin, cos, offset[2]],
-                [0., 0., 0., 1.],
-            ],
-        )
-        .unwrap()
-    }
     /// Torus implicit residual (unscaled quartic) in the canonical frame.
     fn implicit(point: [f64; 3], major: f64, minor: f64) -> f64 {
         let total = dot(point, point);

@@ -74,6 +74,11 @@ export interface ShaderSpec {
   readonly vertexLayout: ShaderVertexLayout
   /** True when the immediate/instanced textual variants apply. */
   readonly supportsVariants: boolean
+  /**
+   * True when the pipeline needs the renderer's matcap bind group at
+   * group(2) (texture + sampler); only meshMatcap sets this today.
+   */
+  readonly usesMatcapBinding?: boolean
 }
 
 const registry = new Map<string, ShaderSpec>()

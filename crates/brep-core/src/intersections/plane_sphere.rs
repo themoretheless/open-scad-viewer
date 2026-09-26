@@ -53,14 +53,6 @@ pub(crate) struct CanonicalPlane {
     pub(crate) error: f64,
 }
 
-/// Degree-1 pcurve exactly from `from` to `to` with unit knots/weights.
-fn unit_edge(curve: &Curve, from: [f64; 2], to: [f64; 2]) -> bool {
-    curve.degree == 1
-        && curve.knots == [0., 0., 1., 1.]
-        && curve.control_points == [from.to_vec(), to.to_vec()]
-        && curve.weights == [1., 1.]
-}
-
 /// Recognizes a canonical planar patch model: one body, one open shell, one
 /// bilinear affine face over the unit square with exact unit weights, the
 /// four unit-square boundary trims each exactly once, four corner vertices
@@ -104,31 +96,7 @@ pub(crate) fn recognize_plane(model: &Model) -> Result<Option<CanonicalPlane>> {
     {
         return Ok(None);
     }
-    let boundary = [
-        ([0., 0.], [1., 0.]),
-        ([1., 0.], [1., 1.]),
-        ([1., 1.], [0., 1.]),
-        ([0., 1.], [0., 0.]),
-    ];
-    let loop_ = &model.loops[face.outer];
-    if loop_.coedges.len() != 4 {
-        return Ok(None);
-    }
-    let mut seen = [false; 4];
-    for coedge in &loop_.coedges {
-        let mut hit = false;
-        for (k, &(a, b)) in boundary.iter().enumerate() {
-            if !seen[k] && unit_edge(&coedge.pcurve, a, b) {
-                seen[k] = true;
-                hit = true;
-                break;
-            }
-        }
-        if !hit {
-            return Ok(None);
-        }
-    }
-    if seen.into_iter().any(|hit| !hit) {
+    if !super::recognize::unit_square_boundary(model, 0) {
         return Ok(None);
     }
     let p = &surface.control_points;
@@ -709,21 +677,9 @@ pub(crate) fn plane_patch(origin: [f64; 3], u: [f64; 3], v: [f64; 3]) -> Model {
 #[cfg(test)]
 mod tests {
     use super::super::sphere_sphere::ARC_WEIGHT;
+    use super::super::test_utils::rotated_translated;
     use super::*;
 
-    fn rotated_translated(model: &Model, angle: f64, offset: [f64; 3]) -> Model {
-        let (sin, cos) = angle.sin_cos();
-        crate::transform::affine(
-            model,
-            [
-                [1., 0., 0., offset[0]],
-                [0., cos, -sin, offset[1]],
-                [0., sin, cos, offset[2]],
-                [0., 0., 0., 1.],
-            ],
-        )
-        .unwrap()
-    }
     #[allow(clippy::type_complexity)]
     fn only_circle(
         report: &Report<PlaneSphereComponent>,
