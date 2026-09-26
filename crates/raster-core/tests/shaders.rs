@@ -1,10 +1,12 @@
 use raster_core::shaders::{
     DEEP_MESH_WGSL, EDGE_WGSL, GRID_WGSL, LINE_WGSL, MESH_MATCAP_WGSL, MESH_PBR_WGSL,
-    MESH_SECTION_CAP_WGSL, MESH_TOON_WGSL, MESH_UNLIT_WGSL, MESH_WGSL, SELECTION_OVERLAY_WGSL,
+    MESH_SECTION_CAP_WGSL, MESH_SHADOW_WGSL, MESH_TOON_WGSL, MESH_UNLIT_WGSL, MESH_WGSL,
+    SELECTION_OVERLAY_WGSL,
 };
 use raster_core::uniform::{
     CAP_FLOAT_OFFSET, MORPH_FLOAT_OFFSET, OBJECT_UNIFORM_BYTES, OBJECT_UNIFORM_FLOATS,
-    SCENE_UNIFORM_BYTES, SCENE_UNIFORM_FLOATS, STYLE_FLOAT_OFFSET, ObjectUniform, SceneUniform,
+    LIGHT_VP_FLOAT_OFFSET, SCENE_UNIFORM_BYTES, SCENE_UNIFORM_FLOATS, SHADOW_FLOAT_OFFSET,
+    STYLE_FLOAT_OFFSET, ObjectUniform, SceneUniform,
 };
 use raster_core::variants::{VertexOutput, immediate_object_shader, instanced_object_shader};
 
@@ -32,6 +34,7 @@ fn shipped_shaders_validate_with_naga() {
         ("line", LINE_WGSL),
         ("grid", GRID_WGSL),
         ("selection_overlay", SELECTION_OVERLAY_WGSL),
+        ("mesh_shadow", MESH_SHADOW_WGSL),
     ] {
         validate(name, source);
     }
@@ -55,9 +58,12 @@ fn uniform_layout_matches_the_wgsl_contract() {
     assert_eq!(OBJECT_UNIFORM_BYTES, 224);
     assert_eq!(STYLE_FLOAT_OFFSET, 36);
     assert_eq!(MORPH_FLOAT_OFFSET, 40);
-    assert_eq!(SCENE_UNIFORM_FLOATS, 76);
-    assert_eq!(SCENE_UNIFORM_BYTES, 304);
+    assert_eq!(SCENE_UNIFORM_FLOATS, 96);
+    assert_eq!(SCENE_UNIFORM_BYTES, 384);
     assert_eq!(CAP_FLOAT_OFFSET, 72);
+    // Shadow block: appended after the theme tail, legacy offsets unchanged.
+    assert_eq!(LIGHT_VP_FLOAT_OFFSET, 76);
+    assert_eq!(SHADOW_FLOAT_OFFSET, 92);
 
     let object = ObjectUniform {
         model: [1.0; 16],
@@ -96,7 +102,7 @@ fn uniform_layout_matches_the_wgsl_contract() {
     assert_eq!(default_object.material_id, 0.0);
 
     let scene = SceneUniform::new([9.0; 16], [8.0; 4]);
-    let mut scene_floats = [0.0f32; 76];
+    let mut scene_floats = [0.0f32; 96];
     scene.write_f32(&mut scene_floats);
     assert_eq!(scene_floats[0], 9.0);
     assert_eq!(scene_floats[16], 8.0);
@@ -113,6 +119,12 @@ fn uniform_layout_matches_the_wgsl_contract() {
     assert_eq!(scene_floats[55], 0.0); // padding
     assert_eq!(scene_floats[71], 0.0);
     assert_eq!(scene_floats[75], 0.0);
+    // Shadow tail: disabled by default (enabled flag 0 keeps the unshadowed
+    // path pixel-identical); texel/bias/strength carry sane defaults.
+    assert_eq!(scene_floats[92], 0.0);
+    assert_eq!(scene_floats[93], 1.0 / 1024.0);
+    assert_eq!(scene_floats[94], 0.0015);
+    assert_eq!(scene_floats[95], 1.0);
 }
 
 #[test]

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { THEME_PRESETS, type ShadingModel } from '../services/rendererContracts'
+import { ENV_PRESETS, MATCAP_PRESETS, MATERIAL_PRESETS, THEME_PRESETS, type ShadingModel } from '../services/rendererContracts'
 
 const props = defineProps<{
   locale: string
@@ -8,6 +8,9 @@ const props = defineProps<{
   baseColor: string
   metallic: number
   roughness: number
+  matcapId: string
+  envId: string
+  shadowsEnabled: boolean
 }>()
 const emit = defineEmits<{
   'update:shadingModel': [value: ShadingModel]
@@ -15,6 +18,10 @@ const emit = defineEmits<{
   'update:baseColor': [value: string]
   'update:metallic': [value: number]
   'update:roughness': [value: number]
+  'update:matcapId': [value: string]
+  'update:envId': [value: string]
+  'update:shadowsEnabled': [value: boolean]
+  'applyPreset': [value: string]
 }>()
 
 const SHADING_MODELS: readonly ShadingModel[] = ['phong', 'pbr', 'matcap', 'toon', 'unlit']
@@ -31,6 +38,34 @@ const sliderValue = (event: Event) => (event.target as HTMLInputElement).valueAs
         @change="emit('update:shadingModel', ($event.target as HTMLSelectElement).value as ShadingModel)"
       >
         <option v-for="model in SHADING_MODELS" :key="model" :value="model">{{ model }}</option>
+      </select>
+    </label>
+    <label v-if="shadingModel === 'matcap'">{{ label('Маткап', 'Matcap') }}
+      <select
+        :value="matcapId"
+        :aria-label="label('Маткап-текстура', 'Matcap texture')"
+        @change="emit('update:matcapId', ($event.target as HTMLSelectElement).value)"
+      >
+        <option v-for="matcap in MATCAP_PRESETS" :key="matcap.id" :value="matcap.id">{{ matcap.name }}</option>
+      </select>
+    </label>
+    <label v-if="shadingModel === 'pbr'">{{ label('Окружение', 'Environment') }}
+      <select
+        :value="envId"
+        :aria-label="label('Карта окружения (IBL)', 'Environment map (IBL)')"
+        @change="emit('update:envId', ($event.target as HTMLSelectElement).value)"
+      >
+        <option v-for="env in ENV_PRESETS" :key="env.id" :value="env.id">{{ env.name }}</option>
+      </select>
+    </label>
+    <label :title="label('Применить готовый набор параметров материала', 'Apply a preset material parameter set')">{{ label('Пресет', 'Preset') }}
+      <select
+        value=""
+        :aria-label="label('Пресет материала', 'Material preset')"
+        @change="emit('applyPreset', ($event.target as HTMLSelectElement).value)"
+      >
+        <option value="" disabled>{{ label('— выбрать —', '— pick —') }}</option>
+        <option v-for="preset in MATERIAL_PRESETS" :key="preset.id" :value="preset.id">{{ preset.name }}</option>
       </select>
     </label>
     <label>{{ label('Тема', 'Theme') }}
@@ -64,6 +99,14 @@ const sliderValue = (event: Event) => (event.target as HTMLInputElement).valueAs
         :value="roughness"
         :aria-label="label('Шероховатость', 'Roughness')"
         @input="emit('update:roughness', sliderValue($event))"
+      >
+    </label>
+    <label :title="label('Контактные тени от ключевого света', 'Key-light contact shadows')">{{ label('Тени', 'Shadows') }}
+      <input
+        type="checkbox"
+        :checked="shadowsEnabled"
+        :aria-label="label('Контактные тени', 'Contact shadows')"
+        @change="emit('update:shadowsEnabled', ($event.target as HTMLInputElement).checked)"
       >
     </label>
   </div>

@@ -22,19 +22,24 @@ export class MeshDrawBundle {
   private counts: number[] = []
   private pipeline: GPURenderPipeline | null = null
   private scene: GPUBindGroup | null = null
+  /** Extra group (e.g. the matcap capture) bound at index 2, part of the key. */
+  private extraGroup: GPUBindGroup | null = null
 
   clear() {
     this.bundle = null
     this.meshes.length = this.indices.length = this.morphSlots.length = this.counts.length = 0
     this.pipeline = null
     this.scene = null
+    this.extraGroup = null
   }
 
   draw(pass: GPURenderPassEncoder, device: GPUDevice, format: GPUTextureFormat,
-    pipeline: GPURenderPipeline, scene: GPUBindGroup, meshes: readonly BundleMesh[], edges = false) {
+    pipeline: GPURenderPipeline, scene: GPUBindGroup, meshes: readonly BundleMesh[], edges = false,
+    extraGroup?: GPUBindGroup) {
     const encode = (encoder: GPURenderPassEncoder | GPURenderBundleEncoder) => {
       encoder.setPipeline(pipeline)
       encoder.setBindGroup(0, scene)
+      if (extraGroup) encoder.setBindGroup(2, extraGroup)
       for (const mesh of meshes) {
         encoder.setBindGroup(1, mesh.bg)
         encoder.setVertexBuffer(0, mesh.vb)
@@ -49,7 +54,8 @@ export class MeshDrawBundle {
       if (meshes.length) encode(pass)
       return
     }
-    let changed = !this.bundle || this.pipeline !== pipeline || this.scene !== scene || this.meshes.length !== meshes.length
+    let changed = !this.bundle || this.pipeline !== pipeline || this.scene !== scene
+      || this.extraGroup !== (extraGroup ?? null) || this.meshes.length !== meshes.length
     for (let i = 0; !changed && i < meshes.length; i++) {
       const mesh = meshes[i]
       changed = this.meshes[i] !== mesh || this.indices[i] !== (edges ? mesh.edgeIB : mesh.ib)
@@ -70,6 +76,7 @@ export class MeshDrawBundle {
       }
       this.pipeline = pipeline
       this.scene = scene
+      this.extraGroup = extraGroup ?? null
       this.bundle = bundle
     }
     pass.executeBundles([this.bundle!])

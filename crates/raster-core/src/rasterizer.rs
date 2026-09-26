@@ -96,6 +96,10 @@ pub struct Rasterizer {
     morph_dummy: wgpu::Buffer,
     grid_quad: wgpu::Buffer,
     depth: Option<(wgpu::Texture, wgpu::TextureView, u32, u32)>,
+    /// 1×1 dummy depth map + comparison sampler bound where mesh-surface and
+    /// grid shaders sample the key-light shadow map; `shadow_params` stays
+    /// disabled natively, so the dummy is never actually read.
+    shadow_bind_group: wgpu::BindGroup,
     /// Mirrors `SceneUniform.options.x`; gates the section-cap pass.
     section_enabled: bool,
 }
@@ -135,7 +139,32 @@ impl Rasterizer {
             0,
             &pack_f32(&[-1.0, -1.0, 1.0, -1.0, 1.0, 1.0, -1.0, -1.0, 1.0, 1.0, -1.0, 1.0]),
         );
-        Self { context, pipelines, scene_buffer, scene_bind_group, morph_dummy, grid_quad, depth: None, section_enabled: false }
+        // Shadow sampling shaders always have something bound: natively a 1×1
+        // depth dummy + comparison sampler, with shadow_params disabled.
+        let shadow_dummy = context.device.create_texture(&wgpu::TextureDescriptor {
+            label: Some("raster shadow dummy"),
+            size: wgpu::Extent3d { width: 1, height: 1, depth_or_array_layers: 1 },
+            mip_level_count: 1,
+            sample_count: 1,
+            dimension: wgpu::TextureDimension::D2,
+            format: wgpu::TextureFormat::Depth32Float,
+            usage: wgpu::TextureUsages::TEXTURE_BINDING,
+            view_formats: &[],
+        });
+        let shadow_sampler = context.device.create_sampler(&wgpu::SamplerDescriptor {
+            label: Some("raster shadow sampler"),
+            compare: Some(wgpu::CompareFunction::LessEqual),
+            ..Default::default()
+        });
+        let shadow_bind_group = context.device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("raster shadow bind group"),
+            layout: &pipelines.shadow_bgl,
+            entries: &[
+                wgpu::BindGroupEntry { binding: 0, resource: wgpu::BindingResource::TextureView(&shadow_dummy.create_view(&Default::default())) },
+                wgpu::BindGroupEntry { binding: 1, resource: wgpu::BindingResource::Sampler(&shadow_sampler) },
+            ],
+        });
+        Self { context, pipelines, scene_buffer, scene_bind_group, morph_dummy, grid_quad, depth: None, shadow_bind_group, section_enabled: false }
     }
 
     pub fn device(&self) -> &wgpu::Device {
@@ -375,6 +404,7 @@ impl Rasterizer {
 
             if frame.grid {
                 pass.set_pipeline(&self.pipelines.grid);
+                pass.set_bind_group(1, &self.shadow_bind_group, &[]);
                 pass.set_vertex_buffer(0, self.grid_quad.slice(..));
                 pass.draw(0..6, 0..1);
             }
@@ -402,6 +432,7 @@ impl Rasterizer {
                 };
                 pass.set_pipeline(pipeline);
                 pass.set_bind_group(1, &pool.bind_group, &[]);
+                pass.set_bind_group(2, &self.shadow_bind_group, &[]);
                 pass.set_vertex_buffer(0, geometry.vertex_buffer.slice(..));
                 match &geometry.morph_source {
                     Some(source) => pass.set_vertex_buffer(1, source.slice(..)),
@@ -432,12 +463,14 @@ impl Rasterizer {
 
             if let Some(lines) = frame.lines {
                 pass.set_pipeline(&self.pipelines.line);
+                pass.set_bind_group(1, &self.shadow_bind_group, &[]);
                 pass.set_vertex_buffer(0, lines.vertex_buffer.slice(..));
                 pass.draw(0..lines.vertex_count, 0..1);
             }
 
             if let Some(overlay) = frame.overlay {
                 pass.set_pipeline(&self.pipelines.selection_overlay);
+                pass.set_bind_group(1, &self.shadow_bind_group, &[]);
                 pass.set_vertex_buffer(0, overlay.vertex_buffer.slice(..));
                 pass.draw(0..overlay.vertex_count, 0..1);
             }
@@ -457,6 +490,10 @@ impl Rasterizer {
     ) {
         pass.set_pipeline(pipeline);
         pass.set_bind_group(1, bind_group, &[]);
+        // Mesh-surface shaders sample the shadow map at group(2); the dummy
+        // binding is inert while shadow_params stays disabled, and pipelines
+        // whose shader does not declare group(2) simply ignore it.
+        pass.set_bind_group(2, &self.shadow_bind_group, &[]);
         pass.set_vertex_buffer(0, vertex_buffer.slice(..));
         match morph_source {
             Some(source) => pass.set_vertex_buffer(1, source.slice(..)),
@@ -475,6 +512,7 @@ impl Rasterizer {
     ) {
         pass.set_pipeline(pipeline);
         pass.set_bind_group(1, &edges.bind_group, &[]);
+        pass.set_bind_group(2, &self.shadow_bind_group, &[]);
         pass.set_vertex_buffer(0, edges.vertex_buffer.slice(..));
         match &edges.morph_source {
             Some(source) => pass.set_vertex_buffer(1, source.slice(..)),

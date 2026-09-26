@@ -9,11 +9,12 @@
 
 use crate::shaders::{
     DEEP_MESH_WGSL, EDGE_WGSL, GRID_WGSL, LINE_WGSL, MESH_MATCAP_WGSL, MESH_PBR_WGSL,
-    MESH_SECTION_CAP_WGSL, MESH_TOON_WGSL, MESH_UNLIT_WGSL, MESH_WGSL, SELECTION_OVERLAY_WGSL,
+    MESH_SECTION_CAP_WGSL, MESH_SHADOW_WGSL, MESH_TOON_WGSL, MESH_UNLIT_WGSL, MESH_WGSL,
+    SELECTION_OVERLAY_WGSL,
 };
 
 /// (export name, WGSL source, doc comment) in stable emission order.
-pub const TS_SOURCES: [(&str, &str, &str); 11] = [
+pub const TS_SOURCES: [(&str, &str, &str); 12] = [
     ("MESH_WGSL", MESH_WGSL, "Lit opaque/transparent mesh surface with per-object style and GPU morph blend."),
     ("MESH_PBR_WGSL", MESH_PBR_WGSL, "Cook-Torrance PBR mesh surface (GGX/Smith/Schlick) driven by the Obj material tail."),
     ("MESH_MATCAP_WGSL", MESH_MATCAP_WGSL, "Matcap mesh surface: samples a bound capture texture when present, else procedural studio key + rim + specular blob."),
@@ -25,6 +26,7 @@ pub const TS_SOURCES: [(&str, &str, &str); 11] = [
     ("LINE_WGSL", LINE_WGSL, "Plain colored line list (measurements, grid axes)."),
     ("GRID_WGSL", GRID_WGSL, "Full-viewport XY grid, reconstructed from camera rays with adaptive spacing."),
     ("SELECTION_OVERLAY_WGSL", SELECTION_OVERLAY_WGSL, "Per-vertex colored overlay for source-face highlighting."),
+    ("MESH_SHADOW_WGSL", MESH_SHADOW_WGSL, "Depth-only key-light shadow pass: mesh vertex contract, no fragment stage, writes the shadow map."),
 ];
 
 const HEADER: &str = "\

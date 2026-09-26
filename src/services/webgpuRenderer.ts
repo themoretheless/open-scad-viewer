@@ -5,6 +5,8 @@ import {remapNativeFaceSelection} from './nativeFaceSelection'
  */
 import {
   invert,
+  lookAt,
+  orthographic,
   type Aabb3, type Mat4, type Vec3,
 } from './math3d'
 import {
@@ -53,7 +55,7 @@ import type {
   SceneUploadMetrics,
   ShadingModel,
 } from './rendererContracts'
-import { resolveMeshShaderId, DEFAULT_THEME, getThemePreset, type RenderTheme } from './rendererContracts'
+import { resolveMeshShaderId, DEFAULT_THEME, getThemePreset, getMatcapPreset, DEFAULT_MATCAP, getEnvPreset, DEFAULT_ENV, type RenderTheme } from './rendererContracts'
 export type {
   DisplayMode,
   DistanceMeasurement,
@@ -235,6 +237,22 @@ function blendMorphPositions(morph: { from: Float32Array; target: Float32Array; 
 }
 
 
+/**
+ * Row-major mat4 product (a · b), pure JS: the shadow light VP is rebuilt per
+ * frame only when shadows are on, and must not depend on the geometry kernel
+ * (math3d.multiply routes through WASM, which is unavailable in unit tests).
+ */
+function multiplyRowMajor(a: Mat4, b: Mat4): Mat4 {
+  const out = new Float32Array(16)
+  for (let row = 0; row < 4; row++) {
+    for (let column = 0; column < 4; column++) {
+      out[row * 4 + column] = a[row * 4] * b[column] + a[row * 4 + 1] * b[4 + column]
+        + a[row * 4 + 2] * b[8 + column] + a[row * 4 + 3] * b[12 + column]
+    }
+  }
+  return out
+}
+
 const FOV_Y = Math.PI / 4
 const DEFAULT_DISTANCE = 50
 const MAX_ORBIT_PITCH = Math.PI / 2 - 0.001
@@ -253,6 +271,8 @@ const CLICK_MOVE_THRESHOLD = 3
 const MAX_EDGE_BUFFER_BYTES = 32 * 1024 * 1024
 const MAX_OVERLAY_BUFFER_BYTES = 16 * 1024 * 1024
 const MAX_DEPTH_CANDIDATES = 32
+/** Key-light shadow map resolution (depth32float, depth-only pass). */
+const SHADOW_MAP_SIZE = 1024
 const MAX_DEPTH_CONTINUATIONS = 256
 const WHEEL_HISTORY_IDLE_MS = 250
 
@@ -286,8 +306,43 @@ export class WebGPURenderer {
   private deepSelectionLinePipe!: GPURenderPipeline
   private sceneBGL!: GPUBindGroupLayout
   private objBGL!: GPUBindGroupLayout
+  /** group(2): matcap capture texture + sampler, shared by all matcap draws. */
+  private matcapBGL!: GPUBindGroupLayout
+  private matcapBG: GPUBindGroup | null = null
+  private matcapSampler: GPUSampler | null = null
+  /** Currently bound capture; the 1×1 dummy selects the procedural path. */
+  private matcapTexture: GPUTexture | null = null
+  private matcapDummyTexture: GPUTexture | null = null
+  private matcapId = DEFAULT_MATCAP.id
+  /** Monotonic token so a slow fetch cannot overwrite a newer selection. */
+  private matcapLoadToken = 0
+  /** group(2): equirect environment map + sampler, shared by all PBR draws. */
+  private envBGL!: GPUBindGroupLayout
+  private envBG: GPUBindGroup | null = null
+  private envSampler: GPUSampler | null = null
+  /** Currently bound env map; the 1×1 dummy selects the analytic-light path. */
+  private envTexture: GPUTexture | null = null
+  private envDummyTexture: GPUTexture | null = null
+  private envId = DEFAULT_ENV.id
+  /** Monotonic token so a slow fetch cannot overwrite a newer selection. */
+  private envLoadToken = 0
+  /**
+   * Key-light contact shadow: depth map + comparison sampler. Bound by the
+   * mesh-surface shaders at group(2) (mesh/meshToon bindings 0/1; the matcap
+   * and env groups carry it at bindings 2/3) and by the grid at group(1).
+   * A 1×1 dummy plus shadowParams.enabled == 0 keeps the default look exact.
+   */
+  private shadowBGL!: GPUBindGroupLayout
+  private shadowBG: GPUBindGroup | null = null
+  private shadowSampler: GPUSampler | null = null
+  private shadowTexture: GPUTexture | null = null
+  private shadowDummyTexture: GPUTexture | null = null
+  private shadowsEnabled = false
+  private shadowPipe: GPURenderPipeline | null = null
   private sceneLayout!: GPUPipelineLayout
   private objectLayout!: GPUPipelineLayout
+  private matcapObjectLayout!: GPUPipelineLayout
+  private envObjectLayout!: GPUPipelineLayout
   private immediateObjectLayout: GPUPipelineLayout | null = null
   private vertexLayouts!: Record<ShaderVertexLayout, GPUVertexBufferLayout[]>
   private readonly shaderModuleCache = new Map<string, GPUShaderModule>()
@@ -348,7 +403,7 @@ export class WebGPURenderer {
    * Scene-level default material tail for meshes without their own material;
    * identity defaults reproduce the legacy look.
    */
-  private defaultMaterial = { baseColor: [1, 1, 1] as [number, number, number], metallic: 0, roughness: 0.7 }
+  private defaultMaterial = { baseColor: [1, 1, 1] as [number, number, number], metallic: 0, roughness: 0.7, alpha: 1 }
   /** Zero positions bound at vertex slot 1 whenever a mesh is not morphing. */
   private morphDummyVB: GPUBuffer | null = null
   // Keyed by geometryAssetId (content) so republished equal meshes hit; per
@@ -534,14 +589,62 @@ export class WebGPURenderer {
     this.instanceBGL = dev.createBindGroupLayout({ entries: [
       { binding: 0, visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT, buffer: { type: 'read-only-storage' } },
     ] })
-    this.sceneLayout = dev.createPipelineLayout({ bindGroupLayouts: [this.sceneBGL] })
-    this.objectLayout = dev.createPipelineLayout({ bindGroupLayouts: [this.sceneBGL, this.objBGL] })
+    this.matcapBGL = dev.createBindGroupLayout({ entries: [
+      { binding: 0, visibility: GPUShaderStage.FRAGMENT, texture: {} },
+      { binding: 1, visibility: GPUShaderStage.FRAGMENT, sampler: {} },
+      // Shadow map shares the group: bindings 2/3 (see mesh_matcap.wgsl).
+      { binding: 2, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'depth' } },
+      { binding: 3, visibility: GPUShaderStage.FRAGMENT, sampler: { type: 'comparison' } },
+    ] })
+    this.envBGL = dev.createBindGroupLayout({ entries: [
+      { binding: 0, visibility: GPUShaderStage.FRAGMENT, texture: {} },
+      { binding: 1, visibility: GPUShaderStage.FRAGMENT, sampler: {} },
+      // Shadow map shares the group: bindings 2/3 (see mesh_pbr.wgsl).
+      { binding: 2, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'depth' } },
+      { binding: 3, visibility: GPUShaderStage.FRAGMENT, sampler: { type: 'comparison' } },
+    ] })
+    this.shadowBGL = dev.createBindGroupLayout({ entries: [
+      { binding: 0, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'depth' } },
+      { binding: 1, visibility: GPUShaderStage.FRAGMENT, sampler: { type: 'comparison' } },
+    ] })
+    this.sceneLayout = dev.createPipelineLayout({ bindGroupLayouts: [this.sceneBGL, this.shadowBGL] })
+    this.objectLayout = dev.createPipelineLayout({ bindGroupLayouts: [this.sceneBGL, this.objBGL, this.shadowBGL] })
+    this.matcapObjectLayout = dev.createPipelineLayout({ bindGroupLayouts: [this.sceneBGL, this.objBGL, this.matcapBGL] })
+    this.envObjectLayout = dev.createPipelineLayout({ bindGroupLayouts: [this.sceneBGL, this.objBGL, this.envBGL] })
     this.immediateObjectLayout = this.immediateObjectStyle
-      ? dev.createPipelineLayout({ bindGroupLayouts: [this.sceneBGL, this.objBGL], immediateSize: 16 })
+      ? dev.createPipelineLayout({ bindGroupLayouts: [this.sceneBGL, this.objBGL, this.shadowBGL], immediateSize: 16 })
       : null
-    this.instanceLayout = dev.createPipelineLayout({ bindGroupLayouts: [this.sceneBGL, this.instanceBGL] })
+    this.instanceLayout = dev.createPipelineLayout({ bindGroupLayouts: [this.sceneBGL, this.instanceBGL, this.shadowBGL] })
     this.morphDummyVB?.destroy()
     this.morphDummyVB = dev.createBuffer({ size: 12, usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST })
+    // Shadow fallback: a 1×1 depth dummy plus shadowParams.enabled == 0 keeps
+    // the sampling shaders on their unshadowed path (default look exact). The
+    // matcap/env groups embed the shadow view at bindings 2/3, so the shadow
+    // resources must exist before those bind groups are created.
+    this.shadowTexture?.destroy()
+    this.shadowDummyTexture?.destroy()
+    this.shadowSampler = dev.createSampler({ compare: 'less-equal' })
+    this.shadowDummyTexture = dev.createTexture({ size: [1, 1], format: 'depth32float', usage: GPUTextureUsage.TEXTURE_BINDING })
+    this.shadowTexture = this.shadowDummyTexture
+    this.shadowBG = this.createShadowBindGroup(this.shadowTexture)
+    // Matcap fallback: a 1×1 white capture makes the shader take its
+    // procedural path (textureDimensions == 1), so the default look is exact.
+    this.matcapTexture?.destroy()
+    this.matcapDummyTexture?.destroy()
+    this.matcapSampler = dev.createSampler({ magFilter: 'linear', minFilter: 'linear' })
+    this.matcapDummyTexture = dev.createTexture({ size: [1, 1], format: 'rgba8unorm', usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST })
+    dev.queue.writeTexture({ texture: this.matcapDummyTexture }, new Uint8Array([255, 255, 255, 255]), {}, [1, 1])
+    this.matcapTexture = this.matcapDummyTexture
+    this.matcapBG = this.createMatcapBindGroup(this.matcapTexture)
+    // Env fallback: a 1×1 dummy makes mesh_pbr take its analytic-lighting path
+    // (textureDimensions == 1), so the default look is exact.
+    this.envTexture?.destroy()
+    this.envDummyTexture?.destroy()
+    this.envSampler = dev.createSampler({ magFilter: 'linear', minFilter: 'linear', addressModeU: 'repeat', addressModeV: 'clamp-to-edge' })
+    this.envDummyTexture = dev.createTexture({ size: [1, 1], format: 'rgba8unorm', usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST })
+    dev.queue.writeTexture({ texture: this.envDummyTexture }, new Uint8Array([255, 255, 255, 255]), {}, [1, 1])
+    this.envTexture = this.envDummyTexture
+    this.envBG = this.createEnvBindGroup(this.envTexture)
 
     const meshVBL: GPUVertexBufferLayout = {
       arrayStride: MESH_VERTEX_STRIDE,
@@ -591,6 +694,7 @@ export class WebGPURenderer {
       : null
     this.linePipe = this.getRenderPipeline('line')
     this.gridPipe = this.getRenderPipeline('grid')
+    this.shadowPipe = this.getRenderPipeline('meshShadow')
     this.edgePipe = this.getRenderPipeline('edge')
     this.instanceMeshPipe = this.getRenderPipeline('mesh', { variant: 'instanced' })
     this.instanceMeshPipeT = this.getRenderPipeline('mesh', { variant: 'instanced', blend: 'alpha', depth: transparentDepth })
@@ -641,16 +745,26 @@ export class WebGPURenderer {
     const blend = flavor.blend ?? spec.blend
     const depth = flavor.depth ?? spec.depth
     const topology = flavor.topology ?? spec.topology
-    const key = `${id}|${variant}|${blend}|${depth.writeEnabled ? 1 : 0}:${depth.compare}|${topology}`
+    const depthOnly = spec.depthOnly === true
+    const key = `${id}|${variant}|${blend}|${depth.writeEnabled ? 1 : 0}:${depth.compare}|${topology}${depthOnly ? '|shadow' : ''}`
     const cached = this.pipelineCache.get(key)
     if (cached) return cached
     const module = this.shaderModule(id, variant)
     const layout = spec.kind === 'object'
-      ? variant === 'instanced' ? this.instanceLayout
+      ? spec.usesMatcapBinding && variant === 'uniform' ? this.matcapObjectLayout
+        : spec.usesEnvBinding && variant === 'uniform' ? this.envObjectLayout
+        : variant === 'instanced' ? this.instanceLayout
         : variant === 'immediate' ? this.immediateObjectLayout!
         : this.objectLayout
       : this.sceneLayout
-    const pipeline = this.dev!.createRenderPipeline({
+    const pipeline = this.dev!.createRenderPipeline(depthOnly ? {
+      // Depth-only shadow-map pass: no color targets, no fragment stage;
+      // renders mesh depth from the key light into a depth32float texture.
+      layout,
+      vertex: { module, entryPoint: 'vs', buffers: this.vertexLayouts[spec.vertexLayout] },
+      primitive: { topology, cullMode: spec.cullMode },
+      depthStencil: { format: 'depth32float', depthWriteEnabled: true, depthCompare: depth.compare },
+    } : {
       layout,
       vertex: { module, entryPoint: 'vs', buffers: this.vertexLayouts[spec.vertexLayout] },
       fragment: { module, entryPoint: 'fs', targets: [{
@@ -764,7 +878,8 @@ export class WebGPURenderer {
           if (!vb) vb = dev.createBuffer({ size: m.vertices.byteLength, usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST })
           if (!ib) ib = dev.createBuffer({ size: m.indices.byteLength, usage: GPUBufferUsage.INDEX | GPUBufferUsage.COPY_DST })
           ub = dev.createBuffer({ size: OBJECT_UNIFORM_LAYOUT.bytes, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST })
-          const initialAlpha = effectiveDisplayAlpha(m.color[3], this.displayMode)
+          const materialAlpha = m.material ? m.material.alpha ?? 1 : this.defaultMaterial.alpha
+          const initialAlpha = effectiveDisplayAlpha(m.color[3] * materialAlpha, this.displayMode)
           const initialEdge = this.displayMode === 'edges' ? 0.7 : 0
           if (ownsGeometryBuffers) {
             metrics.geometryBuffersCreated += 2
@@ -1154,14 +1269,19 @@ export class WebGPURenderer {
   }
 
   /**
-   * Scene-level default material tail (baseColor/metallic/roughness) for
-   * meshes without their own material; rewrites their uniform tails in place.
+   * Scene-level default material tail (baseColor/metallic/roughness, plus an
+   * optional alpha multiplier) for meshes without their own material; rewrites
+   * their uniform tails in place. Alpha below 1 routes those meshes through
+   * the transparent pass via Obj.style.x.
    */
-  setDefaultMaterial(defaults: { baseColor?: readonly [number, number, number]; metallic?: number; roughness?: number }) {
+  setDefaultMaterial(defaults: { baseColor?: readonly [number, number, number]; metallic?: number; roughness?: number; alpha?: number }) {
     const current = this.defaultMaterial
     if (defaults.baseColor) current.baseColor = [...defaults.baseColor]
     if (defaults.metallic !== undefined) current.metallic = defaults.metallic
     if (defaults.roughness !== undefined) current.roughness = defaults.roughness
+    if (defaults.alpha !== undefined && Number.isFinite(defaults.alpha)) {
+      current.alpha = Math.min(1, Math.max(0, defaults.alpha))
+    }
     if (!this.dev) return
     const tail = this.materialTailScratch
     for (const mesh of this.meshes) {
@@ -1172,7 +1292,142 @@ export class WebGPURenderer {
       tail[7] = current.roughness
       this.dev.queue.writeBuffer(mesh.ub, OBJECT_UNIFORM_LAYOUT.materialByteOffset, tail)
     }
+    // Alpha lives in the style vector, not the material tail; restyle so the
+    // opaque/transparent draw split observes the new default opacity.
+    this.updateMeshStyles()
     this.requestRender()
+  }
+
+  /** Current matcap preset id ('procedural' = shader fallback path). */
+  get currentMatcap(): string { return this.matcapId }
+
+  private createMatcapBindGroup(texture: GPUTexture): GPUBindGroup {
+    return this.dev!.createBindGroup({
+      layout: this.matcapBGL,
+      entries: [
+        { binding: 0, resource: texture.createView() },
+        { binding: 1, resource: this.matcapSampler! },
+        { binding: 2, resource: this.shadowTexture!.createView() },
+        { binding: 3, resource: this.shadowSampler! },
+      ],
+    })
+  }
+
+  /**
+   * Selects the matcap capture for the meshMatcap shader. 'procedural' binds
+   * the 1×1 dummy (the shader's procedural fallback, pixel-identical to the
+   * pre-texture look); other presets fetch their PNG and upload it as a
+   * GPUTexture. Async: the frame is requested once the texture is bound.
+   */
+  setMatcapTexture(id: string): Promise<void> {
+    const preset = getMatcapPreset(id)
+    if (!preset) return Promise.reject(new Error(`Renderer: unknown matcap '${id}'`))
+    this.matcapId = id
+    const token = ++this.matcapLoadToken
+    const bind = (texture: GPUTexture) => {
+      if (!this.dev || token !== this.matcapLoadToken) { texture.destroy(); return }
+      const previous = this.matcapTexture
+      this.matcapTexture = texture
+      this.matcapBG = this.createMatcapBindGroup(texture)
+      if (previous && previous !== this.matcapDummyTexture) previous.destroy()
+      // Draw bundles bake bind group 2; force re-encoding with the new one.
+      this.clearDrawCaches()
+      this.requestRender()
+    }
+    if (!preset.url) {
+      if (this.matcapDummyTexture) bind(this.matcapDummyTexture)
+      return Promise.resolve()
+    }
+    const dev = this.dev
+    if (!dev || typeof fetch !== 'function' || typeof createImageBitmap !== 'function') return Promise.resolve()
+    return (async () => {
+      const response = await fetch(preset.url!)
+      if (!response.ok) throw new Error(`Renderer: matcap fetch failed (${response.status})`)
+      const bitmap = await createImageBitmap(await response.blob(), { imageOrientation: 'flipY' })
+      const texture = dev.createTexture({
+        size: [bitmap.width, bitmap.height],
+        format: 'rgba8unorm',
+        usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST | GPUTextureUsage.RENDER_ATTACHMENT,
+      })
+      dev.queue.copyExternalImageToTexture({ source: bitmap }, { texture }, [bitmap.width, bitmap.height])
+      bitmap.close()
+      bind(texture)
+    })().catch(error => {
+      // A missing capture must not break rendering: stay on the current matcap.
+      try { this.onStatusChange?.({ status: 'error', phase: 'frame', error }) } catch { /* UI callbacks must not break rendering. */ }
+    })
+  }
+
+  /** Current environment-map preset id ('none' = analytic-lighting path). */
+  get currentEnv(): string { return this.envId }
+
+  private createEnvBindGroup(texture: GPUTexture): GPUBindGroup {
+    return this.dev!.createBindGroup({
+      layout: this.envBGL,
+      entries: [
+        { binding: 0, resource: texture.createView() },
+        { binding: 1, resource: this.envSampler! },
+        { binding: 2, resource: this.shadowTexture!.createView() },
+        { binding: 3, resource: this.shadowSampler! },
+      ],
+    })
+  }
+
+  /** Shadow-map bind group: key-light depth view + comparison sampler. */
+  private createShadowBindGroup(texture: GPUTexture): GPUBindGroup {
+    return this.dev!.createBindGroup({
+      layout: this.shadowBGL,
+      entries: [
+        { binding: 0, resource: texture.createView() },
+        { binding: 1, resource: this.shadowSampler! },
+      ],
+    })
+  }
+
+  /**
+   * Selects the equirect environment map for the meshPbr shader (IBL).
+   * 'none' binds the 1×1 dummy (the shader's analytic-lighting fallback,
+   * pixel-identical to the pre-IBL look); other presets fetch their PNG and
+   * upload it as a GPUTexture. Async: the frame is requested once bound.
+   */
+  setEnvMap(id: string): Promise<void> {
+    const preset = getEnvPreset(id)
+    if (!preset) return Promise.reject(new Error(`Renderer: unknown environment map '${id}'`))
+    this.envId = id
+    const token = ++this.envLoadToken
+    const bind = (texture: GPUTexture) => {
+      if (!this.dev || token !== this.envLoadToken) { texture.destroy(); return }
+      const previous = this.envTexture
+      this.envTexture = texture
+      this.envBG = this.createEnvBindGroup(texture)
+      if (previous && previous !== this.envDummyTexture) previous.destroy()
+      // Draw bundles bake bind group 2; force re-encoding with the new one.
+      this.clearDrawCaches()
+      this.requestRender()
+    }
+    if (!preset.url) {
+      if (this.envDummyTexture) bind(this.envDummyTexture)
+      return Promise.resolve()
+    }
+    const dev = this.dev
+    if (!dev || typeof fetch !== 'function' || typeof createImageBitmap !== 'function') return Promise.resolve()
+    return (async () => {
+      const response = await fetch(preset.url!)
+      if (!response.ok) throw new Error(`Renderer: environment map fetch failed (${response.status})`)
+      // No flipY: equirect v=0 is the +Y pole, which is the PNG's top row.
+      const bitmap = await createImageBitmap(await response.blob())
+      const texture = dev.createTexture({
+        size: [bitmap.width, bitmap.height],
+        format: 'rgba8unorm',
+        usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST | GPUTextureUsage.RENDER_ATTACHMENT,
+      })
+      dev.queue.copyExternalImageToTexture({ source: bitmap }, { texture }, [bitmap.width, bitmap.height])
+      bitmap.close()
+      bind(texture)
+    })().catch(error => {
+      // A missing map must not break rendering: stay on the current env.
+      try { this.onStatusChange?.({ status: 'error', phase: 'frame', error }) } catch { /* UI callbacks must not break rendering. */ }
+    })
   }
 
   clearSelection() {
@@ -1232,6 +1487,68 @@ export class WebGPURenderer {
     if (this.gridVisible === visible) return
     this.gridVisible = visible
     this.requestRender()
+  }
+
+  /** Key-light contact shadows (mesh surfaces + grid floor). Default off. */
+  get shadowsOn(): boolean { return this.shadowsEnabled }
+
+  /**
+   * Toggles the contact-shadow pass. Enabling lazily allocates the real
+   * 1024² depth map and rebinds every group that embeds its view; disabling
+   * rebinds the 1×1 dummy and clears the enable flag, restoring the exact
+   * pre-shadow look.
+   */
+  setShadowsEnabled(enabled: boolean) {
+    if (this.shadowsEnabled === enabled) return
+    this.shadowsEnabled = enabled
+    const dev = this.dev
+    if (dev && this.shadowDummyTexture) {
+      if (enabled) {
+        if (this.shadowTexture && this.shadowTexture !== this.shadowDummyTexture) this.shadowTexture.destroy()
+        this.shadowTexture = dev.createTexture({
+          size: [SHADOW_MAP_SIZE, SHADOW_MAP_SIZE],
+          format: 'depth32float',
+          usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING,
+        })
+      } else {
+        if (this.shadowTexture && this.shadowTexture !== this.shadowDummyTexture) this.shadowTexture.destroy()
+        this.shadowTexture = this.shadowDummyTexture
+      }
+      this.shadowBG = this.createShadowBindGroup(this.shadowTexture!)
+      // The matcap/env groups embed the shadow view at bindings 2/3.
+      if (this.matcapTexture) this.matcapBG = this.createMatcapBindGroup(this.matcapTexture)
+      if (this.envTexture) this.envBG = this.createEnvBindGroup(this.envTexture)
+      // Draw bundles bake bind groups; force re-encoding with the new ones.
+      this.clearDrawCaches()
+    }
+    this.requestRender()
+  }
+
+  /**
+   * Orthographic key-light view-projection covering the scene bounds, written
+   * column-major into `out` at `offset`. Used by both the shadow-map depth
+   * pass and the surface/grid shaders sampling it.
+   */
+  private shadowLightVP(out: Float32Array, offset: number) {
+    const b = this.bounds
+    if (!b) {
+      out.fill(0, offset, offset + 16)
+      out[offset] = out[offset + 5] = out[offset + 10] = out[offset + 15] = 1
+      return
+    }
+    const light = [this.sceneUniformScratch[20], this.sceneUniformScratch[21], this.sceneUniformScratch[22]]
+    const len = Math.hypot(light[0], light[1], light[2]) || 1
+    const L: Vec3 = [light[0] / len, light[1] / len, light[2] / len]
+    const radius = Math.max(b.radius, 1e-3)
+    const extent = radius * 1.25
+    const center = b.center
+    const eye: Vec3 = [center[0] + L[0] * extent * 2, center[1] + L[1] * extent * 2, center[2] + L[2] * extent * 2]
+    const view = lookAt(eye, center, [0, 0, 1])
+    const proj = orthographic(-extent, extent, -extent, extent, 0, extent * 4)
+    const vp = multiplyRowMajor(proj, view)
+    for (let row = 0; row < 4; row++) {
+      for (let column = 0; column < 4; column++) out[offset + column * 4 + row] = vp[row * 4 + column]
+    }
   }
 
   /** Spacing between grid lines in model units (OpenSCAD millimetres). */
@@ -1504,7 +1821,8 @@ export class WebGPURenderer {
       const selected = this.usesObjectSelectionStyle(index) ? 1 : 0
       const hovered = this.usesObjectHoverStyle(index) && !selected ? 1 : 0
       const progress = this.geometryFade?.progress ?? 1
-      const alpha = effectiveDisplayAlpha(mesh.color[3], this.displayMode) * progress * progress * (3 - 2 * progress)
+      const materialAlpha = mesh.material ? mesh.material.alpha ?? 1 : this.defaultMaterial.alpha
+      const alpha = effectiveDisplayAlpha(mesh.color[3] * materialAlpha, this.displayMode) * progress * progress * (3 - 2 * progress)
       const edgeOpacity = (selected || hovered ? 1 : this.displayMode === 'edges' ? 0.7 : 0) * progress * progress * (3 - 2 * progress)
       mesh.alpha = alpha
       if (mesh.styleAlpha === alpha && mesh.styleSelected === selected
@@ -1728,9 +2046,57 @@ export class WebGPURenderer {
     sd.set(theme.xrayColor, SCENE_UNIFORM_LAYOUT.xrayFloatOffset)
     sd.set(theme.gridColor, SCENE_UNIFORM_LAYOUT.gridFloatOffset)
     sd.set(theme.capColor, SCENE_UNIFORM_LAYOUT.capFloatOffset)
+    // Shadow tail: light VP + (enabled, texel, bias, strength). Enabled 0 keeps
+    // every sampling shader on the pixel-identical unshadowed path.
+    const shadowActive = this.shadowsEnabled && !!this.bounds
+      && !!this.shadowTexture && this.shadowTexture !== this.shadowDummyTexture
+    if (shadowActive) this.shadowLightVP(sd, SCENE_UNIFORM_LAYOUT.lightVPFloatOffset)
+    else sd.fill(0, SCENE_UNIFORM_LAYOUT.lightVPFloatOffset, SCENE_UNIFORM_LAYOUT.lightVPFloatOffset + 16)
+    sd[SCENE_UNIFORM_LAYOUT.shadowFloatOffset] = shadowActive ? 1 : 0
+    sd[SCENE_UNIFORM_LAYOUT.shadowFloatOffset + 1] = 1 / SHADOW_MAP_SIZE
+    sd[SCENE_UNIFORM_LAYOUT.shadowFloatOffset + 2] = 0.0015
+    sd[SCENE_UNIFORM_LAYOUT.shadowFloatOffset + 3] = 1
     dev.queue.writeBuffer(sceneUB, 0, sd)
 
+    // Classify draws before encoding: the shadow depth pass runs ahead of the
+    // main pass and draws the same opaque set.
+    const transitioning = this.geometryGhosts.length > 0 || hasMorph
+    this.viewFrustum.update(viewProjection)
+    this.opaqueDraws.length = this.edgeDraws.length = 0
+    this.transparentSort.begin()
+    for (let index = 0; index < this.meshes.length; index++) {
+      const mesh = this.meshes[index]
+      if (!this.isMeshVisible(index) || (!mesh.morph && !this.viewFrustum.intersects(mesh.worldBounds.center, mesh.worldBounds.radius))) continue
+      if (isTransparentAlpha(mesh.alpha)) this.transparentSort.add(index, mesh.worldBounds.center)
+      else this.opaqueDraws.push(mesh)
+      const highlighted = this.usesObjectSelectionStyle(index) || this.usesObjectHoverStyle(index)
+      if (mesh.edgeIB && (this.displayMode === 'edges' || highlighted)) this.edgeDraws.push(mesh)
+    }
+
     const enc = dev.createCommandEncoder()
+
+    // Contact shadow: render opaque meshes' depth from the key light into the
+    // shadow map before the main pass samples it (surfaces + grid floor).
+    if (shadowActive && this.shadowPipe && this.opaqueDraws.length) {
+      const shadowPass = enc.beginRenderPass({
+        colorAttachments: [],
+        depthStencilAttachment: {
+          view: this.shadowTexture!.createView(),
+          depthClearValue: 1, depthLoadOp: 'clear', depthStoreOp: 'store',
+        },
+      })
+      shadowPass.setPipeline(this.shadowPipe)
+      shadowPass.setBindGroup(0, this.sceneBG)
+      for (const mesh of this.opaqueDraws) {
+        shadowPass.setBindGroup(1, mesh.bg)
+        shadowPass.setVertexBuffer(0, mesh.vb)
+        shadowPass.setVertexBuffer(1, mesh.morphSlot!)
+        shadowPass.setIndexBuffer(mesh.ib, 'uint32')
+        shadowPass.drawIndexed(mesh.ic)
+      }
+      shadowPass.end()
+    }
+
     // Cached in updateSize; the fallback covers depth textures the cache miss
     // predates (tests and external texture swaps) without per-frame allocation.
     const depthView = this.depthView ?? this.depth.createView()
@@ -1754,6 +2120,8 @@ export class WebGPURenderer {
     if (this.gridVisible && this.gridQuadVB) {
       pass.setPipeline(this.gridPipe)
       pass.setBindGroup(0, this.sceneBG)
+      // Ground contact shadow: the grid samples the key-light depth map.
+      if (this.shadowBG) pass.setBindGroup(1, this.shadowBG)
       pass.setVertexBuffer(0, this.gridQuadVB)
       pass.draw(6)
     }
@@ -1770,26 +2138,19 @@ export class WebGPURenderer {
       pass.draw(this.measurementVC)
     }
 
-    const transitioning = this.geometryGhosts.length > 0 || hasMorph
-    this.viewFrustum.update(viewProjection)
-    this.opaqueDraws.length = this.edgeDraws.length = 0
-    this.transparentSort.begin()
-    for (let index = 0; index < this.meshes.length; index++) {
-      const mesh = this.meshes[index]
-      if (!this.isMeshVisible(index) || (!mesh.morph && !this.viewFrustum.intersects(mesh.worldBounds.center, mesh.worldBounds.radius))) continue
-      if (isTransparentAlpha(mesh.alpha)) this.transparentSort.add(index, mesh.worldBounds.center)
-      else this.opaqueDraws.push(mesh)
-      const highlighted = this.usesObjectSelectionStyle(index) || this.usesObjectHoverStyle(index)
-      if (mesh.edgeIB && (this.displayMode === 'edges' || highlighted)) this.edgeDraws.push(mesh)
-    }
     const customOpaque = this.opaqueDraws.some(mesh => mesh.shadingModel !== 'phong')
-    if (!customOpaque && (transitioning || !this.opaqueInstances.draw(pass, dev, this.instanceBGL, this.instanceMeshPipe, this.sceneBG, this.opaqueDraws))) {
-      this.opaqueBundle.draw(pass, dev, this.fmt, this.meshPipe, this.sceneBG, this.opaqueDraws)
+    if (!customOpaque && (transitioning || !this.opaqueInstances.draw(pass, dev, this.instanceBGL, this.instanceMeshPipe, this.sceneBG, this.opaqueDraws, false, this.shadowBG ?? undefined))) {
+      this.opaqueBundle.draw(pass, dev, this.fmt, this.meshPipe, this.sceneBG, this.opaqueDraws, false, this.shadowBG ?? undefined)
     } else if (customOpaque) {
       // Mixed materials: draw each shading-model group with its resolved mesh
       // pipeline (source order preserved); instancing serves the default path.
       for (const group of this.groupByShadingModel(this.opaqueDraws)) {
-        this.opaqueBundle.draw(pass, dev, this.fmt, this.getRenderPipeline(resolveMeshShaderId(group[0].shadingModel)), this.sceneBG, group)
+        const shaderId = resolveMeshShaderId(group[0].shadingModel)
+        this.opaqueBundle.draw(pass, dev, this.fmt, this.getRenderPipeline(shaderId), this.sceneBG, group,
+          false, shaderId === 'meshMatcap' ? this.matcapBG ?? undefined
+            : shaderId === 'meshPbr' ? this.envBG ?? undefined
+              // mesh/meshToon sample the shadow map at group(2).
+              : this.shadowBG ?? undefined)
       }
     }
 
@@ -1805,6 +2166,8 @@ export class WebGPURenderer {
 
     pass.setPipeline(this.meshImmediatePipeT ?? this.meshPipeT)
     pass.setBindGroup(0, this.sceneBG)
+    // The mesh surface shader samples the shadow map at group(2).
+    if (this.shadowBG) pass.setBindGroup(2, this.shadowBG)
     const ghostMeshes = this.geometryGhosts.length
       ? this.geometryGhosts.flatMap(ghost => ghost.meshes).filter(mesh => mesh.alpha > 0)
       : NO_GHOST_MESHES
@@ -1813,7 +2176,7 @@ export class WebGPURenderer {
     this.transparentDraws.length = 0
     for (const { index } of transparentOrder) this.transparentDraws.push(index < this.meshes.length ? this.meshes[index] : ghostMeshes[index - this.meshes.length])
     const customTransparent = this.transparentDraws.some(mesh => mesh.shadingModel !== 'phong')
-    if (!customTransparent && (transitioning || !this.transparentInstances.draw(pass, dev, this.instanceBGL, this.instanceMeshPipeT, this.sceneBG, this.transparentDraws))) {
+    if (!customTransparent && (transitioning || !this.transparentInstances.draw(pass, dev, this.instanceBGL, this.instanceMeshPipeT, this.sceneBG, this.transparentDraws, false, this.shadowBG ?? undefined))) {
       for (const g of this.transparentDraws) {
         pass.setBindGroup(1, g.bg)
         this.setObjectStyleImmediate(pass, g)
@@ -1832,6 +2195,10 @@ export class WebGPURenderer {
           pass.setPipeline(activeModel === 'phong'
             ? this.meshImmediatePipeT ?? this.meshPipeT
             : this.getRenderPipeline(resolveMeshShaderId(activeModel), { blend: 'alpha', depth: { writeEnabled: false, compare: 'less' } }))
+          if (activeModel === 'matcap' && this.matcapBG) pass.setBindGroup(2, this.matcapBG)
+          if (activeModel === 'pbr' && this.envBG) pass.setBindGroup(2, this.envBG)
+          // mesh/meshToon sample the shadow map at group(2).
+          if ((activeModel === 'phong' || activeModel === 'toon') && this.shadowBG) pass.setBindGroup(2, this.shadowBG)
         }
         pass.setBindGroup(1, g.bg)
         if (activeModel === 'phong') this.setObjectStyleImmediate(pass, g)
@@ -2817,6 +3184,27 @@ export class WebGPURenderer {
     this.sceneUB = null
     this.morphDummyVB?.destroy()
     this.morphDummyVB = null
+    this.matcapLoadToken++
+    if (this.matcapTexture && this.matcapTexture !== this.matcapDummyTexture) this.matcapTexture.destroy()
+    this.matcapTexture = null
+    this.matcapDummyTexture?.destroy()
+    this.matcapDummyTexture = null
+    this.matcapBG = null
+    this.matcapSampler = null
+    this.envLoadToken++
+    if (this.envTexture && this.envTexture !== this.envDummyTexture) this.envTexture.destroy()
+    this.envTexture = null
+    this.envDummyTexture?.destroy()
+    this.envDummyTexture = null
+    this.envBG = null
+    this.envSampler = null
+    if (this.shadowTexture && this.shadowTexture !== this.shadowDummyTexture) this.shadowTexture.destroy()
+    this.shadowTexture = null
+    this.shadowDummyTexture?.destroy()
+    this.shadowDummyTexture = null
+    this.shadowBG = null
+    this.shadowSampler = null
+    this.shadowPipe = null
     try { this.ctx?.unconfigure() } catch { /* Context may already be lost. */ }
     const device = this.dev
     this.dev = null

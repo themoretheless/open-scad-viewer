@@ -115,6 +115,10 @@ pub struct RasterPipelines {
     pub scene_bgl: BindGroupLayout,
     pub object_bgl: BindGroupLayout,
     pub instance_bgl: BindGroupLayout,
+    /// Key-light shadow map (depth texture + comparison sampler). Bound by
+    /// mesh-surface shaders at group(2) and the grid at group(1); the native
+    /// rasterizer binds a 1×1 dummy and keeps `shadow_params` disabled.
+    pub shadow_bgl: BindGroupLayout,
     pub format: TextureFormat,
 }
 
@@ -166,19 +170,40 @@ impl RasterPipelines {
                 count: None,
             }],
         });
+        let shadow_bgl = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+            label: Some("raster shadow bgl"),
+            entries: &[
+                wgpu::BindGroupLayoutEntry {
+                    binding: 0,
+                    visibility: wgpu::ShaderStages::FRAGMENT,
+                    ty: wgpu::BindingType::Texture {
+                        sample_type: wgpu::TextureSampleType::Depth,
+                        view_dimension: wgpu::TextureViewDimension::D2,
+                        multisampled: false,
+                    },
+                    count: None,
+                },
+                wgpu::BindGroupLayoutEntry {
+                    binding: 1,
+                    visibility: wgpu::ShaderStages::FRAGMENT,
+                    ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Comparison),
+                    count: None,
+                },
+            ],
+        });
         let scene_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: Some("raster scene layout"),
-            bind_group_layouts: &[Some(&scene_bgl)],
+            bind_group_layouts: &[Some(&scene_bgl), Some(&shadow_bgl)],
             immediate_size: 0,
         });
         let object_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: Some("raster object layout"),
-            bind_group_layouts: &[Some(&scene_bgl), Some(&object_bgl)],
+            bind_group_layouts: &[Some(&scene_bgl), Some(&object_bgl), Some(&shadow_bgl)],
             immediate_size: 0,
         });
         let instance_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: Some("raster instance layout"),
-            bind_group_layouts: &[Some(&scene_bgl), Some(&instance_bgl)],
+            bind_group_layouts: &[Some(&scene_bgl), Some(&instance_bgl), Some(&shadow_bgl)],
             immediate_size: 0,
         });
 
@@ -494,6 +519,7 @@ impl RasterPipelines {
             scene_bgl,
             object_bgl,
             instance_bgl,
+            shadow_bgl,
             format,
         }
     }

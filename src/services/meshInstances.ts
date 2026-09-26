@@ -48,7 +48,8 @@ export class MeshInstances {
   }
 
   draw(pass: GPURenderPassEncoder, device: GPUDevice, layout: GPUBindGroupLayout,
-    pipeline: GPURenderPipeline, scene: GPUBindGroup, meshes: readonly InstanceMesh[], edges = false): boolean {
+    pipeline: GPURenderPipeline, scene: GPUBindGroup, meshes: readonly InstanceMesh[], edges = false,
+    extraGroup?: GPUBindGroup): boolean {
     if (meshes.length < 16 || meshes.length * INSTANCE_BYTES > device.limits.maxStorageBufferBindingSize) {
       if (this.meshes.length) this.clear()
       return false
@@ -143,6 +144,9 @@ export class MeshInstances {
     pass.setPipeline(pipeline)
     pass.setBindGroup(0, scene)
     pass.setBindGroup(1, this.group!)
+    // Renderer-wide extra group (e.g. the shadow map at index 2) when the
+    // pipeline's shader declares it.
+    if (extraGroup) pass.setBindGroup(2, extraGroup)
     pass.setVertexBuffer(1, this.morphDummy)
     for (const group of this.groups) {
       pass.setVertexBuffer(0, group.mesh.vb)

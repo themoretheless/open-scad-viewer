@@ -1,9 +1,32 @@
-struct Scene { vp: mat4x4f, eye: vec4f, light: vec4f, ambient: vec4f, section: vec4f, options: vec4f, inverseVP: mat4x4f, selectionColor: vec3f, hoverColor: vec3f, edgeColor: vec3f, xrayColor: vec3f, gridColor: vec3f, capColor: vec3f }
+struct Scene { vp: mat4x4f, eye: vec4f, light: vec4f, ambient: vec4f, section: vec4f, options: vec4f, inverseVP: mat4x4f, selectionColor: vec3f, hoverColor: vec3f, edgeColor: vec3f, xrayColor: vec3f, gridColor: vec3f, capColor: vec3f, lightVP: mat4x4f, shadowParams: vec4f }
 struct Obj { model: mat4x4f, nmat: mat4x4f, color: vec4f, style: vec4f, morph: vec4f, baseColor: vec3f, metallic: f32, emissive: vec3f, roughness: f32, materialId: f32 }
 @group(0) @binding(0) var<uniform> sc: Scene;
 @group(1) @binding(0) var<uniform> ob: Obj;
+// Contact shadow map (key-light depth), bound per renderer at group(2). With
+// shadowParams.x == 0 the factor below is 1: the default look is unchanged.
+@group(2) @binding(0) var shadowMap: texture_depth_2d;
+@group(2) @binding(1) var shadowSampler: sampler_comparison;
 
 struct V { @builtin(position) p: vec4f, @location(0) n: vec3f, @location(1) w: vec3f }
+
+// PCF 3x3 visibility of the key light at a world position; 1 when shadows
+// are disabled or the point lies outside the light frustum.
+fn shadowFactor(wp: vec3f) -> f32 {
+  if (sc.shadowParams.x < 0.5) { return 1.0; }
+  let lp = sc.lightVP * vec4f(wp, 1.0);
+  let ndc = lp.xyz / lp.w;
+  let uv = ndc.xy * vec2f(0.5, -0.5) + vec2f(0.5);
+  if (ndc.z < 0.0 || ndc.z > 1.0 || uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) { return 1.0; }
+  let texel = sc.shadowParams.y;
+  let depth = ndc.z - sc.shadowParams.z;
+  var sum = 0.0;
+  for (var dy = -1; dy <= 1; dy++) {
+    for (var dx = -1; dx <= 1; dx++) {
+      sum += textureSampleCompare(shadowMap, shadowSampler, uv + vec2f(f32(dx) * texel, f32(dy) * texel), depth);
+    }
+  }
+  return mix(1.0, sum / 9.0, sc.shadowParams.w);
+}
 
 @vertex fn vs(@location(0) pos: vec3f, @location(1) norm: vec3f, @location(2) fromPos: vec3f) -> V {
   let local = mix(fromPos, pos, ob.morph.x);
@@ -27,6 +50,8 @@ struct V { @builtin(position) p: vec4f, @location(0) n: vec3f, @location(1) w: v
   // Fresnel rim darkening suggests an outline without a second pass.
   let rim = pow(1.0 - clamp(abs(dot(N, V2)), 0.0, 1.0), 3.0);
   let outline = 1.0 - smoothstep(0.55, 0.95, rim) * 0.85;
-  let c = base * (sc.ambient.rgb * 0.6 + step) * outline + ob.emissive;
+  // Shadows darken the ambient (indirect) term only; the toon steps stay.
+  let shadow = shadowFactor(v.w);
+  let c = base * (sc.ambient.rgb * 0.6 * shadow + step) * outline + ob.emissive;
   return vec4f(c, ob.style.x);
 }

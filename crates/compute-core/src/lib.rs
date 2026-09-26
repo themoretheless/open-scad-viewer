@@ -246,21 +246,14 @@ impl Kernel {
     /// (e.g. [`shaders::BLOCK_SUM_WGSL`]) that cover arbitrary lengths with a
     /// fixed grid. `groups` must be within the 65535 per-dimension limit.
     pub fn dispatch_groups(&self, device: &Device, queue: &Queue, buffers: &[&Buffer], groups: u32) {
-        assert_eq!(
-            buffers.len(),
-            self.bindings.len(),
-            "{}: expected {} buffers, got {}",
-            self.label,
-            self.bindings.len(),
-            buffers.len()
-        );
-        assert!(
-            groups >= 1 && groups <= 65535,
-            "{}: workgroup count {} outside 1..=65535",
-            self.label,
-            groups
-        );
-        let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+        let bind_group = self.create_bind_group(device, buffers);
+        self.dispatch_bind_group(device, queue, &bind_group, groups);
+    }
+
+    /// Creates bindings once for repeated dispatches or recorded command chains.
+    pub fn create_bind_group(&self, device: &Device, buffers: &[&Buffer]) -> wgpu::BindGroup {
+        assert_eq!(buffers.len(), self.bindings.len(), "{}: wrong buffer count", self.label);
+        device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some(&self.label),
             layout: &self.bgl,
             entries: &buffers
@@ -271,8 +264,7 @@ impl Kernel {
                     resource: buffer.as_entire_binding(),
                 })
                 .collect::<Vec<_>>(),
-        });
-        self.dispatch_bind_group(device, queue, &bind_group, groups);
+        })
     }
 
     /// Dispatches with a caller-cached bind group (built against
@@ -314,6 +306,50 @@ impl Kernel {
         pass.set_pipeline(&self.pipeline);
         pass.set_bind_group(0, bind_group, &[]);
         pass.dispatch_workgroups(groups, 1, 1);
+    }
+}
+
+/// Reusable sequence of GPU dispatches. Binding groups and intermediate buffers
+/// are retained between runs; each submission creates only a command encoder.
+#[derive(Default)]
+pub struct ComputeBatch<'a> {
+    steps: Vec<(&'a Kernel, wgpu::BindGroup, u32)>,
+}
+
+impl<'a> ComputeBatch<'a> {
+    pub fn new() -> Self { Self::default() }
+
+    /// Adds a dispatch using a cached binding group. Zero groups are a no-op.
+    pub fn push(&mut self, kernel: &'a Kernel, bindings: &wgpu::BindGroup, groups: u32) {
+        assert!(groups <= 65535, "batch dispatch exceeds workgroup limit");
+        if groups != 0 {
+            self.steps.push((kernel, bindings.clone(), groups));
+        }
+    }
+
+    /// Adds every pass of a prepared reduction in dependency order.
+    pub fn push_reduction(&mut self, reduction: &Reduction<'a>) {
+        for (bindings, groups) in &reduction.passes {
+            self.push(reduction.kernel, bindings, *groups);
+        }
+    }
+
+    /// Appends the batch to an encoder, allowing copies or other work around it.
+    pub fn record(&self, encoder: &mut wgpu::CommandEncoder) {
+        for (kernel, bindings, groups) in &self.steps {
+            kernel.record_dispatch(encoder, bindings, *groups);
+        }
+    }
+
+    /// Submits all steps once. Read back only the final outputs when needed.
+    /// Queue writes made before this call are visible to all steps. Use distinct
+    /// uniform buffers when different steps require different parameters.
+    pub fn submit(&self, device: &Device, queue: &Queue) -> wgpu::SubmissionIndex {
+        let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
+            label: Some("compute batch"),
+        });
+        self.record(&mut encoder);
+        queue.submit([encoder.finish()])
     }
 }
 
@@ -367,7 +403,9 @@ pub fn uniform_f32(device: &Device, queue: &Queue, floats: &[f32]) -> Buffer {
 /// Storage buffers cannot hold MAP_READ (wgpu restricts it to COPY_DST
 /// companions), so readback goes through an explicit copy.
 fn readback(device: &Device, queue: &Queue, buffer: &Buffer, size: usize) -> Vec<u8> {
-    let size = size.max(4);
+    if size == 0 {
+        return Vec::new();
+    }
     let staging = device.create_buffer(&wgpu::BufferDescriptor {
         label: Some("compute readback staging"),
         size: size as u64,
@@ -405,24 +443,60 @@ pub fn read_u32(device: &Device, queue: &Queue, buffer: &Buffer, count: usize) -
 /// (up to 65535 workgroups), feeding the partials back as the next pass's
 /// input until a single partial remains. Lengths are arbitrary — the 65535
 /// per-dispatch group limit only shapes the pass schedule, not the total.
-pub fn reduce_f32(device: &Device, queue: &Queue, sum: &Kernel, input: &Buffer, mut count: u32) -> f32 {
-    let params = uniform_f32(device, queue, &[0.0; 4]);
-    let mut source = input.clone();
-    loop {
-        let groups = count.div_ceil(sum.workgroup_size()).min(65535);
-        let mut floats = vec![0.0f32; 4];
-        floats[0] = f32::from_le_bytes(count.to_le_bytes());
-        floats[1] = f32::from_le_bytes(groups.to_le_bytes());
-        queue.write_buffer(&params, 0, &gpu_compute::pack_f32(&floats));
-        let partials = storage_f32_zeroed(device, queue, groups as usize);
-        sum.dispatch_groups(device, queue, &[&params, &source, &partials], groups);
-        if groups == 1 {
-            return read_f32(device, queue, &partials, 1)
-                .first()
-                .copied()
-                .unwrap_or(0.0);
+pub fn reduce_f32(device: &Device, queue: &Queue, sum: &Kernel, input: &Buffer, count: u32) -> f32 {
+    let reduction = Reduction::new(device, queue, sum, input, count);
+    let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
+        label: Some("compute reduction"),
+    });
+    reduction.record(&mut encoder);
+    queue.submit([encoder.finish()]);
+    read_f32(device, queue, reduction.output(), 1)[0]
+}
+
+/// Reusable sum reduction for a fixed input buffer and element count.
+///
+/// Construct with a `BLOCK_SUM_WGSL` kernel. Each pass owns separate immutable
+/// parameters: queue writes to one shared uniform would make every pass in a
+/// single submission see the last parameters. Bind groups retain all buffers.
+/// Update the input contents and record again to reuse the allocations. Record
+/// producer kernels first and consumers of `output()` afterwards on the same
+/// encoder; no intermediate CPU readback or queue submission is needed.
+/// The input and output must not be destroyed while this plan is in use.
+pub struct Reduction<'a> {
+    kernel: &'a Kernel,
+    passes: Vec<(wgpu::BindGroup, u32)>,
+    output: Buffer,
+}
+
+impl<'a> Reduction<'a> {
+    pub fn new(device: &Device, queue: &Queue, kernel: &'a Kernel, input: &Buffer, mut count: u32) -> Self {
+        assert!(u64::from(count) * 4 <= input.size(), "reduction input is too small");
+        let mut source = input.clone();
+        let mut passes = Vec::new();
+        loop {
+            // At WG=1 each group must consume at least two elements to make
+            // progress. The grid-strided shader supports this schedule.
+            let groups = count.div_ceil(kernel.workgroup_size().max(2)).clamp(1, 65535);
+            let params = uniform_f32(device, queue, &[
+                f32::from_bits(count), f32::from_bits(groups), 0.0, 0.0,
+            ]);
+            let partials = storage_f32_zeroed(device, queue, groups as usize);
+            let bindings = kernel.create_bind_group(device, &[&params, &source, &partials]);
+            passes.push((bindings, groups));
+            source = partials;
+            if groups == 1 { break; }
+            count = groups;
         }
-        source = partials;
-        count = groups;
+        Self { kernel, passes, output: source }
     }
+
+    /// Appends all reduction passes without submitting or reading back.
+    pub fn record(&self, encoder: &mut wgpu::CommandEncoder) {
+        for (bindings, groups) in &self.passes {
+            self.kernel.record_dispatch(encoder, bindings, *groups);
+        }
+    }
+
+    /// Single-f32 storage buffer, ready after the recorded commands execute.
+    pub fn output(&self) -> &Buffer { &self.output }
 }

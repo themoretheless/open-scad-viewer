@@ -73,7 +73,13 @@ const jsChunkBudgets = [
   // After removing logical-expression payload inlining: 470353 / 84511 / 34064 bytes.
   [/^assets\/geometry\.worker-[^/]+\.js$/, 500_000],
   // Theme uniforms + default-material setters added ~0.8 kB; measured: 100,763 bytes.
-  [/^assets\/renderer-[^/]+\.js$/, 104_000],
+  // Textured matcap (group-2 capture binding, texture loading, material alpha)
+  // adds ~4 kB; measured: 107,981 bytes.
+  // PBR environment maps (group-2 equirect binding, setEnvMap loading)
+  // add ~6 kB; measured: 113,721 bytes.
+  // Key-light contact shadows (depth-only pass, shadow-map bindings, UI
+  // toggle) add ~13 kB; measured: 126,965 bytes.
+  [/^assets\/renderer-[^/]+\.js$/, 132_000],
   [/^assets\/svg\.worker-[^/]+\.js$/, 50_000],
   // Split OpenSCAD language kernel bytes, measured: 436,678 bytes.
   [/^assets\/language-kernel-bytes-[^/]+\.js$/, 470_000],
@@ -247,6 +253,10 @@ for (const [name, artifact, compression] of [
 // 254,082 bytes to the measured distribution; scene theming/material controls
 // and the GPU SDF bridge grew it further (6,342,515 total). Retain a bounded
 // margin for this feature family without removing the total-size gate.
-const totalBudget = 6_400_000
+// Textured matcap support adds four 256×256 capture PNGs (~89 kB) plus ~4 kB
+// of renderer code (6,449,885 bytes measured); the budget moves once.
+// PBR environment maps add three 512×256 equirect PNGs (~63 kB) plus ~6 kB of
+// renderer code (6,519,598 bytes measured); the budget moves once.
+const totalBudget = 6_560_000
 if (total > totalBudget) throw new Error(`dist totals ${total} bytes; budget is ${totalBudget}`)
 console.log(`Verified ${files.length} dist artifacts (${total} asset bytes + ${rawWasmBytes} raw WASM bytes = ${total + rawWasmBytes} total bytes)`)

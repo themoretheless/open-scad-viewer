@@ -107,3 +107,29 @@ per thread vs 4); the zip_mul + block_sum dot-product pair ~70–115 GB/s
 effective. Vectorized access is the single biggest lever for streaming
 kernels — domain kernels that need bandwidth should default to the vec4
 shapes or add their own multi-element-per-thread variants.
+
+## Reusable GPU chains
+
+`ComputeBatch` retains prepared bindings and records all steps into one queue
+submission. `Reduction` prepares all sum passes once, with separate uniforms
+and intermediate buffers for each pass. Its scalar output stays on the GPU and
+can feed another kernel. The synchronous `reduce_f32` convenience function uses
+this plan internally, then reads back the scalar.
+
+```rust,ignore
+let reduction = Reduction::new(device, queue, &sum, &products, count);
+let mut batch = ComputeBatch::new();
+batch.push(&multiply, &multiply_bindings, multiply.workgroup_count(count));
+batch.push_reduction(&reduction);
+// Bind reduction.output() as input to a downstream kernel if needed.
+// Update input buffer contents before each submission; reuse this batch.
+batch.submit(device, queue);
+let total = read_f32(device, queue, reduction.output(), 1)[0];
+```
+
+Plans have fixed buffer identities and element counts; rebuild them when those
+change. Queue writes before submission apply to the entire batch, so use distinct
+uniform buffers for steps with different parameters. Empty sums produce zero;
+zero-length typed readbacks return an empty vector. Readback currently uses a
+separate copy submission and blocking map. Automatic graph scheduling, buffer
+lifetime pooling, kernel fusion and asynchronous readback are not implemented.

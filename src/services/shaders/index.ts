@@ -16,6 +16,7 @@ import { EDGE_WGSL } from './edge'
 import { LINE_WGSL } from './line'
 import { GRID_WGSL } from './grid'
 import { SELECTION_OVERLAY_WGSL } from './selectionOverlay'
+import { MESH_SHADOW_WGSL } from './meshShadow'
 
 export {
   OBJECT_UNIFORM_LAYOUT,
@@ -28,6 +29,10 @@ export {
   SCENE_UNIFORM_LAYOUT,
   SECTION_CAP_WGSL,
   SECTION_CLIP_WGSL,
+  SHADOW_MAP_WGSL,
+  SHADOW_PCF_SAMPLE_WGSL,
+  SHADOW_PCF_WGSL,
+  SHADOW_SAMPLER_WGSL,
   sceneStruct,
 } from './chunks'
 export { MESH_WGSL } from './mesh'
@@ -41,6 +46,7 @@ export { EDGE_WGSL } from './edge'
 export { LINE_WGSL } from './line'
 export { GRID_WGSL } from './grid'
 export { SELECTION_OVERLAY_WGSL } from './selectionOverlay'
+export { MESH_SHADOW_WGSL } from './meshShadow'
 export { immediateObjectShader, instancedObjectShader, supportsImmediateAddressSpace } from './variants'
 
 /* ── Registry ─────────────────────────────────────── */
@@ -79,6 +85,23 @@ export interface ShaderSpec {
    * group(2) (texture + sampler); only meshMatcap sets this today.
    */
   readonly usesMatcapBinding?: boolean
+  /**
+   * True when the pipeline needs the renderer's environment-map bind group at
+   * group(2) (texture + sampler); only meshPbr sets this today.
+   */
+  readonly usesEnvBinding?: boolean
+  /**
+   * True when the pipeline needs the renderer's shadow-map bind group:
+   * mesh-surface shaders and the grid sample the key-light depth map with a
+   * comparison sampler (mesh/meshToon at group(2), meshPbr/meshMatcap share
+   * their group(2) at bindings 2/3, the grid at group(1)).
+   */
+  readonly usesShadowBinding?: boolean
+  /**
+   * Depth-only pipeline (meshShadow): no fragment stage, renders into the
+   * depth32float shadow map instead of the canvas depth24plus target.
+   */
+  readonly depthOnly?: boolean
 }
 
 const registry = new Map<string, ShaderSpec>()
@@ -115,14 +138,18 @@ registerShader({
   cullMode: 'none',
   vertexLayout: 'mesh',
   supportsVariants: true,
+  usesShadowBinding: true,
 })
 // Alternate mesh shading models share the mesh pipeline defaults (opaque,
 // depth write+less, triangle-list, mesh vertex layout); only the WGSL differs.
-for (const [id, source] of [
-  ['meshPbr', MESH_PBR_WGSL],
-  ['meshMatcap', MESH_MATCAP_WGSL],
-  ['meshToon', MESH_TOON_WGSL],
-  ['meshUnlit', MESH_UNLIT_WGSL],
+// meshMatcap additionally binds the renderer-wide capture texture at group(2);
+// meshPbr binds the renderer-wide environment map at group(2). All four surface
+// shaders sample the shadow map (meshUnlit stays unlit, shadow-free).
+for (const [id, source, usesMatcapBinding, usesEnvBinding] of [
+  ['meshPbr', MESH_PBR_WGSL, false, true],
+  ['meshMatcap', MESH_MATCAP_WGSL, true, false],
+  ['meshToon', MESH_TOON_WGSL, false, false],
+  ['meshUnlit', MESH_UNLIT_WGSL, false, false],
 ] as const) {
   registerShader({
     id,
@@ -134,6 +161,9 @@ for (const [id, source] of [
     cullMode: 'none',
     vertexLayout: 'mesh',
     supportsVariants: true,
+    usesMatcapBinding,
+    usesEnvBinding,
+    usesShadowBinding: id !== 'meshUnlit',
   })
 }
 registerShader({
@@ -192,6 +222,19 @@ registerShader({
   cullMode: 'none',
   vertexLayout: 'grid',
   supportsVariants: false,
+  usesShadowBinding: true,
+})
+registerShader({
+  id: 'meshShadow',
+  source: MESH_SHADOW_WGSL,
+  kind: 'object',
+  blend: 'none',
+  depth: { writeEnabled: true, compare: 'less' },
+  topology: 'triangle-list',
+  cullMode: 'none',
+  vertexLayout: 'mesh',
+  supportsVariants: false,
+  depthOnly: true,
 })
 registerShader({
   id: 'selectionOverlay',

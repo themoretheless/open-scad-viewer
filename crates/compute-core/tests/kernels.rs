@@ -319,3 +319,59 @@ fn reduce_f32_handles_lengths_beyond_the_dispatch_limit() {
     assert!((got - want).abs() < want.abs() * 1e-5,
         "multi-pass reduce mismatch: got {got}, want {want}");
 }
+
+#[test]
+fn recorded_chain_reuses_buffers_and_consumes_reduction_on_gpu() {
+    let Some(context) = GpuContext::new() else { return };
+    let device = &context.device;
+    let queue = &context.queue;
+    let bindings = [Binding::Uniform, Binding::StorageRead, Binding::StorageReadWrite];
+    let scale = Kernel::new(device, "scale", SCALE_ADD_WGSL, "main", &bindings).unwrap();
+    let mul = Kernel::new(device, "multiply", ZIP_MUL_WGSL, "main", &[
+        Binding::Uniform, Binding::StorageRead, Binding::StorageRead, Binding::StorageReadWrite,
+    ]).unwrap();
+    let sum = Kernel::with_workgroup_size(device, "sum", BLOCK_SUM_WGSL, "main", &bindings, 64).unwrap();
+    let n = 4097;
+    let input = storage_f32_zeroed(device, queue, n);
+    let scaled = storage_f32_zeroed(device, queue, n);
+    let products = storage_f32_zeroed(device, queue, n);
+    let result = storage_f32_zeroed(device, queue, 1);
+    let params = uniform_f32(device, queue, &scale_add_params(n as u32, 2.0, 1.0));
+    let tail_params = uniform_f32(device, queue, &scale_add_params(1, 0.5, -3.0));
+    let scale_bind = scale.create_bind_group(device, &[&params, &input, &scaled]);
+    let mul_bind = mul.create_bind_group(device, &[&params, &scaled, &input, &products]);
+    let reduction = compute_core::Reduction::new(device, queue, &sum, &products, n as u32);
+    let tail_bind = scale.create_bind_group(device, &[&tail_params, reduction.output(), &result]);
+    let mut batch = compute_core::ComputeBatch::new();
+    batch.push(&scale, &scale_bind, scale.workgroup_count(n as u32));
+    batch.push(&mul, &mul_bind, mul.workgroup_count(n as u32));
+    batch.push_reduction(&reduction);
+    batch.push(&scale, &tail_bind, 1);
+    drop(reduction); // The batch retains the reduction bindings and buffers.
+    for iteration in 0..3 {
+        let values: Vec<f32> = (0..n).map(|i| ((i + iteration) % 7) as f32).collect();
+        queue.write_buffer(&input, 0, &compute_core::gpu_compute::pack_f32(&values));
+        batch.submit(device, queue);
+        let want = values.iter().map(|x| (x * 2.0 + 1.0) * x).sum::<f32>() * 0.5 - 3.0;
+        assert_eq!(read_f32(device, queue, &result, 1), vec![want]);
+    }
+}
+
+#[test]
+fn reduction_handles_empty_singleton_and_workgroup_one() {
+    let Some(context) = GpuContext::new() else { return };
+    let device = &context.device;
+    let queue = &context.queue;
+    for size in [1, 64] {
+        let sum = Kernel::with_workgroup_size(device, "sum", BLOCK_SUM_WGSL, "main", &[
+            Binding::Uniform, Binding::StorageRead, Binding::StorageReadWrite,
+        ], size).unwrap();
+        for n in [0, 1, 3, 257] {
+            let values: Vec<f32> = (0..n).map(|i| i as f32 + 1.0).collect();
+            let input = storage_f32(device, queue, &values);
+            assert_eq!(reduce_f32(device, queue, &sum, &input, n), values.iter().sum::<f32>());
+            assert!(read_f32(device, queue, &input, 0).is_empty());
+            assert!(compute_core::read_u32(device, queue, &input, 0).is_empty());
+        }
+    }
+}

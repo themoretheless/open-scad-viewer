@@ -122,6 +122,7 @@ import type {
   ShadingModel,
   StandardView,
 } from './services/rendererContracts'
+import { DEFAULT_MATCAP, DEFAULT_ENV, getMaterialPreset } from './services/rendererContracts'
 
 type Language = 'ru' | 'en'
 
@@ -628,6 +629,12 @@ const cameraPitch = computed(() => viewportState.value.camera.pitch)
 const displayMode = ref<DisplayMode>('shaded')
 /** Scene-level default shading model for entities without their own material. */
 const shadingModel = ref<ShadingModel>('phong')
+/** Active matcap capture preset for the matcap shading model. */
+const matcapId = ref<string>(DEFAULT_MATCAP.id)
+/** Active environment-map preset for the PBR shading model (IBL). */
+const envId = ref<string>(DEFAULT_ENV.id)
+/** Key-light contact shadows (mesh surfaces + grid floor); default off. */
+const shadowsEnabled = ref(false)
 /** Active render theme preset id (Scene uniform theme tail). */
 const renderThemeId = ref<string>('default')
 /** Scene-level default material tail for entities without their own material. */
@@ -1095,6 +1102,9 @@ async function initializeViewportRenderer() {
   nextRenderer.setDisplayMode(displayMode.value)
   nextRenderer.setDefaultShadingModel(shadingModel.value)
   nextRenderer.setDefaultMaterial({ baseColor: hexToRgb(defaultBaseColor.value), metallic: defaultMetallic.value, roughness: defaultRoughness.value })
+  void nextRenderer.setMatcapTexture(matcapId.value).catch(() => {})
+  void nextRenderer.setEnvMap(envId.value).catch(() => {})
+  nextRenderer.setShadowsEnabled(shadowsEnabled.value)
   nextRenderer.setBackgroundColor(themeCanvasColor(resolveTheme(themeSelection.value, systemPrefersDark.value)))
   // Applied after the app-theme background so a theme backgroundColor wins.
   nextRenderer.setTheme(renderThemeId.value)
@@ -1233,6 +1243,9 @@ async function recoverRenderer(
     instance.setDisplayMode(displayMode.value)
     instance.setDefaultShadingModel(shadingModel.value)
     instance.setDefaultMaterial({ baseColor: hexToRgb(defaultBaseColor.value), metallic: defaultMetallic.value, roughness: defaultRoughness.value })
+    void instance.setMatcapTexture(matcapId.value).catch(() => {})
+    void instance.setEnvMap(envId.value).catch(() => {})
+    instance.setShadowsEnabled(shadowsEnabled.value)
     instance.setBackgroundColor(themeCanvasColor(resolveTheme(themeSelection.value, systemPrefersDark.value)))
     instance.setTheme(renderThemeId.value)
     instance.setSelectionMode(selectionMode.value)
@@ -2143,6 +2156,29 @@ function applyDefaultMaterial() {
 function setDefaultBaseColor(hex: string) { defaultBaseColor.value = hex; applyDefaultMaterial() }
 function setDefaultMetallic(value: number) { defaultMetallic.value = value; applyDefaultMaterial() }
 function setDefaultRoughness(value: number) { defaultRoughness.value = value; applyDefaultMaterial() }
+function setMatcap(id: string) {
+  matcapId.value = id
+  void renderer?.setMatcapTexture(id)?.catch(() => {})
+}
+function setEnv(id: string) {
+  envId.value = id
+  void renderer?.setEnvMap(id)?.catch(() => {})
+}
+function setShadows(enabled: boolean) {
+  shadowsEnabled.value = enabled
+  renderer?.setShadowsEnabled(enabled)
+}
+/** Applies a MATERIAL_PRESETS entry to the scene default material controls. */
+function applyMaterialPreset(id: string) {
+  const preset = getMaterialPreset(id)
+  if (!preset) return
+  defaultBaseColor.value = '#' + preset.baseColor.map(channel => Math.round(Math.min(1, Math.max(0, channel)) * 255).toString(16).padStart(2, '0')).join('')
+  defaultMetallic.value = preset.metallic
+  defaultRoughness.value = preset.roughness
+  setShadingModel(preset.shadingModel)
+  applyDefaultMaterial()
+  renderer?.setDefaultMaterial({ alpha: preset.alpha ?? 1 })
+}
 
 function setSelectionMode(mode: SelectionMode) {
   selectionMode.value = mode
@@ -2976,11 +3012,18 @@ function sanitizeFileName(name: string) { return (name.replace(/[^\w.() -]+/g, '
             :base-color="defaultBaseColor"
             :metallic="defaultMetallic"
             :roughness="defaultRoughness"
+            :matcap-id="matcapId"
+            :env-id="envId"
+            :shadows-enabled="shadowsEnabled"
             @update:shading-model="setShadingModel"
             @update:theme-id="setRenderTheme"
             @update:base-color="setDefaultBaseColor"
             @update:metallic="setDefaultMetallic"
             @update:roughness="setDefaultRoughness"
+            @update:matcap-id="setMatcap"
+            @update:env-id="setEnv"
+            @update:shadows-enabled="setShadows"
+            @apply-preset="applyMaterialPreset"
           />
           <button
             ref="scanToggleRef" class="view-btn icon-only scan-toggle" type="button"

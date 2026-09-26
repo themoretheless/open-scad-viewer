@@ -13,6 +13,8 @@ export interface MeshMaterial {
   roughness: number
   emissive: [number, number, number]
   shadingModel: 'phong' | 'pbr' | 'matcap' | 'toon' | 'unlit'
+  /** Optional opacity multiplier; below 1 routes the mesh to the transparent pass. */
+  alpha?: number
 }
 /** Stable identity of a static geometry operation in the parsed source tree. */
 export type SourceOperationId = `op:${string}`

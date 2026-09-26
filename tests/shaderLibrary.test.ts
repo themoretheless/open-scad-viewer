@@ -10,6 +10,7 @@ import {
   MESH_TOON_WGSL,
   MESH_UNLIT_WGSL,
   MESH_WGSL,
+  MESH_SHADOW_WGSL,
   MESH_VERTEX_STRIDE,
   MORPH_VERTEX_STRIDE,
   OBJECT_UNIFORM_LAYOUT,
@@ -89,6 +90,34 @@ describe('shader library modules', () => {
     expect(MESH_SECTION_CAP_WGSL).not.toContain(SECTION_CLIP_WGSL)
   })
 
+  it('the matcap shader binds a group(2) capture texture with a 1x1 procedural fallback', () => {
+    // One module serves both paths: a real capture switches to the textured
+    // branch, while the renderer's 1×1 dummy keeps the procedural branch —
+    // so the default matcap look is pixel-identical to the pre-texture one.
+    expect(MESH_MATCAP_WGSL).toContain('@group(2) @binding(0) var matcapTex: texture_2d<f32>;')
+    expect(MESH_MATCAP_WGSL).toContain('@group(2) @binding(1) var matcapSampler: sampler;')
+    expect(MESH_MATCAP_WGSL).toContain('textureDimensions(matcapTex).x > 1u')
+    expect(MESH_MATCAP_WGSL).toContain('textureSampleLevel(matcapTex, matcapSampler, uv, 0.0)')
+    // The textured path tints by the selection/hover-aware base color and
+    // keeps emission; alpha still flows through ob.style.x.
+    expect(MESH_MATCAP_WGSL).toContain('captured * base + ob.emissive, ob.style.x')
+  })
+
+  it('the PBR shader binds a group(2) environment map with a 1x1 analytic fallback', () => {
+    // One module serves both paths: a real equirect map switches to the IBL
+    // branch, while the renderer's 1×1 dummy keeps the analytic key-light
+    // branch — so the default PBR look is pixel-identical to the pre-IBL one.
+    expect(MESH_PBR_WGSL).toContain('@group(2) @binding(0) var envTex: texture_2d<f32>;')
+    expect(MESH_PBR_WGSL).toContain('@group(2) @binding(1) var envSampler: sampler;')
+    expect(MESH_PBR_WGSL).toContain('textureDimensions(envTex).x > 1u')
+    // IBL path: equirect lookup, cone-averaged diffuse irradiance, mip-aware
+    // specular fallback, fresnel weighting; analytic branch preserved verbatim.
+    expect(MESH_PBR_WGSL).toContain('fn envUv(dir: vec3f) -> vec2f {')
+    expect(MESH_PBR_WGSL).toContain('fn envIrradiance(N: vec3f) -> vec3f {')
+    expect(MESH_PBR_WGSL).toContain('textureNumLevels(envTex) > 1u')
+    expect(MESH_PBR_WGSL).toContain('(kd * albedo / 3.14159265 + specular) * ndl')
+  })
+
   it('mesh-surface shaders shade a flat epsilon accent near the section plane', () => {
     // The true cap lives in mesh_section_cap; the epsilon band stays as the
     // cut cue for open surfaces, now tinted toward the theme cap color.
@@ -123,11 +152,13 @@ describe('shader library modules', () => {
     expect(EDGE_WGSL).not.toContain('vec3f(0.025, 0.03, 0.04)')
   })
 
-  it('scene uniform layout keeps legacy offsets and appends the theme tail', () => {
+  it('scene uniform layout keeps legacy offsets and appends the theme and shadow tails', () => {
     // vp(16) + eye(4) + light(4) + ambient(4) + section(4) + options(4)
-    // + inverseVP(16) + 6 × (vec3 + pad) = 76 floats = 304 bytes.
-    expect(SCENE_UNIFORM_LAYOUT.floats).toBe(76)
-    expect(SCENE_UNIFORM_LAYOUT.bytes).toBe(304)
+    // + inverseVP(16) + 6 × (vec3 + pad) = 76 floats of legacy head+theme;
+    // the shadow tail appends lightVP(16) + shadowParams(4) = 96 floats
+    // = 384 bytes, so legacy theme offsets stay unchanged.
+    expect(SCENE_UNIFORM_LAYOUT.floats).toBe(96)
+    expect(SCENE_UNIFORM_LAYOUT.bytes).toBe(384)
     expect(SCENE_UNIFORM_LAYOUT.themeFloatOffset).toBe(52)
     expect(SCENE_UNIFORM_LAYOUT.themeByteOffset).toBe(52 * 4)
     expect(SCENE_UNIFORM_LAYOUT.hoverFloatOffset).toBe(56)
@@ -136,6 +167,11 @@ describe('shader library modules', () => {
     expect(SCENE_UNIFORM_LAYOUT.gridFloatOffset).toBe(68)
     expect(SCENE_UNIFORM_LAYOUT.capFloatOffset).toBe(72)
     expect(SCENE_UNIFORM_LAYOUT.capByteOffset).toBe(72 * 4)
+    // Shadow tail: lightVP (column-major mat4) then shadowParams.
+    expect(SCENE_UNIFORM_LAYOUT.lightVPFloatOffset).toBe(76)
+    expect(SCENE_UNIFORM_LAYOUT.lightVPByteOffset).toBe(76 * 4)
+    expect(SCENE_UNIFORM_LAYOUT.shadowFloatOffset).toBe(92)
+    expect(SCENE_UNIFORM_LAYOUT.shadowByteOffset).toBe(92 * 4)
   })
 
   it('morph blend reads ob.morph.x from the slot-1 attribute in object vertex shaders', () => {
@@ -169,7 +205,7 @@ describe('shader library modules', () => {
 })
 
 describe('shader registry', () => {
-  it('registers all eleven shipped shaders with their canonical sources', () => {
+  it('registers all twelve shipped shaders with their canonical sources', () => {
     const expected: Array<[string, string, string, boolean]> = [
       ['mesh', MESH_WGSL, 'object', true],
       ['meshPbr', MESH_PBR_WGSL, 'object', true],
@@ -177,6 +213,7 @@ describe('shader registry', () => {
       ['meshToon', MESH_TOON_WGSL, 'object', true],
       ['meshUnlit', MESH_UNLIT_WGSL, 'object', true],
       ['meshSectionCap', MESH_SECTION_CAP_WGSL, 'object', true],
+      ['meshShadow', MESH_SHADOW_WGSL, 'object', false],
       ['deepMesh', DEEP_MESH_WGSL, 'object', true],
       ['edge', EDGE_WGSL, 'object', true],
       ['line', LINE_WGSL, 'line', false],
@@ -203,6 +240,28 @@ describe('shader registry', () => {
       expect(getShader(id)).toMatchObject({ blend: 'none', topology: 'triangle-list', vertexLayout: 'mesh',
         depth: { writeEnabled: true, compare: 'less' } })
     }
+    // Only meshMatcap binds the renderer-wide capture texture at group(2).
+    expect(getShader('meshMatcap').usesMatcapBinding).toBe(true)
+    for (const id of ['mesh', 'meshPbr', 'meshToon', 'meshUnlit', 'meshSectionCap', 'deepMesh', 'edge']) {
+      expect(getShader(id).usesMatcapBinding ?? false).toBe(false)
+    }
+    // Only meshPbr binds the renderer-wide environment map at group(2).
+    expect(getShader('meshPbr').usesEnvBinding).toBe(true)
+    for (const id of ['mesh', 'meshMatcap', 'meshToon', 'meshUnlit', 'meshSectionCap', 'deepMesh', 'edge']) {
+      expect(getShader(id).usesEnvBinding ?? false).toBe(false)
+    }
+    // Shadow map: every lit surface shader samples the key-light depth map;
+    // meshUnlit stays shadow-free and grid participates from its group(1).
+    for (const id of ['mesh', 'meshPbr', 'meshMatcap', 'meshToon', 'grid']) {
+      expect(getShader(id).usesShadowBinding).toBe(true)
+    }
+    for (const id of ['meshUnlit', 'meshSectionCap', 'deepMesh', 'edge', 'line', 'selectionOverlay']) {
+      expect(getShader(id).usesShadowBinding ?? false).toBe(false)
+    }
+    // meshShadow is the depth-only pass into the shadow map: no fragment stage,
+    // no textual variants.
+    expect(getShader('meshShadow').depthOnly).toBe(true)
+    expect(getShader('meshShadow').supportsVariants).toBe(false)
     // Section cap: same depth/blend as the opaque surface pass, but front-face
     // culling so only clipped back faces fill the cut surface.
     expect(getShader('meshSectionCap')).toMatchObject({ blend: 'none', topology: 'triangle-list', vertexLayout: 'mesh',
@@ -214,6 +273,16 @@ describe('shader registry', () => {
     expect(getShader('line')).toMatchObject({ blend: 'alpha', topology: 'line-list', vertexLayout: 'line',
       depth: { writeEnabled: true, compare: 'less' } })
     expect(getShader('grid')).toMatchObject({ blend: 'alpha', topology: 'triangle-list', vertexLayout: 'grid',
+      depth: { writeEnabled: true, compare: 'less' } })
+    // Shadow binding flags: the four lit surface shaders + grid sample it;
+    // meshShadow is the depth-only writer (no fragment, depth32float target).
+    for (const id of ['mesh', 'meshPbr', 'meshMatcap', 'meshToon', 'grid']) {
+      expect(getShader(id).usesShadowBinding).toBe(true)
+    }
+    for (const id of ['meshUnlit', 'meshSectionCap', 'deepMesh', 'edge', 'line', 'selectionOverlay', 'meshShadow']) {
+      expect(getShader(id).usesShadowBinding ?? false).toBe(false)
+    }
+    expect(getShader('meshShadow')).toMatchObject({ depthOnly: true, vertexLayout: 'mesh',
       depth: { writeEnabled: true, compare: 'less' } })
     expect(getShader('selectionOverlay')).toMatchObject({ blend: 'alpha', topology: 'triangle-list', vertexLayout: 'line',
       depth: { writeEnabled: false, compare: 'less-equal' } })

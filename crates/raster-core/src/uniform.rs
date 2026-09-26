@@ -86,10 +86,14 @@ impl Default for ObjectUniform {
 
 /// Scene uniform: view-projection (16) + eye (4) + light (4) + ambient (4)
 /// + section (4) + options (4) + inverse view-projection (16) + theme block
-/// (selection/hover/edge/xray/grid/cap colors, 3 floats + pad each = 24) = 76
-/// floats = 304 bytes. The theme tail starts at float 52, so legacy field
-/// offsets are unchanged; shaders that do not read the theme simply bind a
-/// smaller struct view of the same buffer.
+/// (selection/hover/edge/xray/grid/cap colors, 3 floats + pad each = 24)
+/// + shadow block (light view-projection 16 + params 4) = 96 floats = 384
+/// bytes. The theme tail starts at float 52 and the shadow tail at float 76,
+/// so legacy field offsets are unchanged; shaders that do not read the theme
+/// simply bind a smaller struct view of the same buffer.
+///
+/// `shadow_params` = (enabled, 1/map size, depth bias, strength); enabled 0
+/// keeps every sampling shader on its unshadowed path.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct SceneUniform {
     /// Column-major view-projection matrix.
@@ -115,10 +119,14 @@ pub struct SceneUniform {
     pub grid_color: [f32; 3],
     /// Section-cap fill color (mesh_section_cap and the epsilon accent).
     pub cap_color: [f32; 3],
+    /// Column-major key-light orthographic view-projection (shadow map).
+    pub light_vp: [f32; 16],
+    /// (enabled, 1/map size, depth bias, strength).
+    pub shadow_params: [f32; 4],
 }
 
-pub const SCENE_UNIFORM_FLOATS: usize = 76;
-pub const SCENE_UNIFORM_BYTES: u64 = 304;
+pub const SCENE_UNIFORM_FLOATS: usize = 96;
+pub const SCENE_UNIFORM_BYTES: u64 = 384;
 /// Theme block: selectionColor at THEME_FLOAT_OFFSET..+2, then hover/edge/
 /// xray/grid/cap colors every 4 floats (vec3 + pad, 16-byte aligned).
 pub const THEME_FLOAT_OFFSET: usize = 52;
@@ -126,6 +134,12 @@ pub const THEME_BYTE_OFFSET: u64 = 208;
 /// capColor rgb at CAP_FLOAT_OFFSET..+2.
 pub const CAP_FLOAT_OFFSET: usize = 72;
 pub const CAP_BYTE_OFFSET: u64 = 288;
+/// Light view-projection (column-major mat4) at LIGHT_VP_FLOAT_OFFSET..+15.
+pub const LIGHT_VP_FLOAT_OFFSET: usize = 76;
+pub const LIGHT_VP_BYTE_OFFSET: u64 = 304;
+/// Shadow params (enabled, texel, bias, strength) at SHADOW_FLOAT_OFFSET..+3.
+pub const SHADOW_FLOAT_OFFSET: usize = 92;
+pub const SHADOW_BYTE_OFFSET: u64 = 368;
 
 impl SceneUniform {
     pub const fn new(view_projection: [f32; 16], eye: [f32; 4]) -> Self {
@@ -144,10 +158,13 @@ impl SceneUniform {
             xray_color: [1.0, 0.42, 0.06],
             grid_color: [0.42, 0.42, 0.42],
             cap_color: [0.85, 0.87, 0.9],
+            // Shadows off by default: enabled 0 keeps the unshadowed path.
+            light_vp: [0.0; 16],
+            shadow_params: [0.0, 1.0 / 1024.0, 0.0015, 1.0],
         }
     }
 
-    /// Writes the full 76-float record into `out`.
+    /// Writes the full 96-float record into `out`.
     pub fn write_f32(&self, out: &mut [f32; SCENE_UNIFORM_FLOATS]) {
         out[..16].copy_from_slice(&self.view_projection);
         out[16..20].copy_from_slice(&self.eye);
@@ -162,6 +179,8 @@ impl SceneUniform {
         out[64..67].copy_from_slice(&self.xray_color);
         out[68..71].copy_from_slice(&self.grid_color);
         out[72..75].copy_from_slice(&self.cap_color);
+        out[76..92].copy_from_slice(&self.light_vp);
+        out[92..96].copy_from_slice(&self.shadow_params);
         out[55] = 0.0;
         out[59] = 0.0;
         out[63] = 0.0;

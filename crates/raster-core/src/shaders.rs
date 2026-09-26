@@ -13,6 +13,7 @@ pub const EDGE_WGSL: &str = include_str!("../shaders/edge.wgsl");
 pub const LINE_WGSL: &str = include_str!("../shaders/line.wgsl");
 pub const GRID_WGSL: &str = include_str!("../shaders/grid.wgsl");
 pub const SELECTION_OVERLAY_WGSL: &str = include_str!("../shaders/selection_overlay.wgsl");
+pub const MESH_SHADOW_WGSL: &str = include_str!("../shaders/mesh_shadow.wgsl");
 
 /// Shaders that declare the shared `Obj` uniform and morph blend. The first
 /// element is a stable name used in diagnostics and tests.

@@ -9,27 +9,33 @@
 const SCENE_HEAD = 'struct Scene { vp: mat4x4f, eye: vec4f, light: vec4f, ambient: vec4f, section: vec4f, options: vec4f'
 /** Theme tail: sits after inverseVP at float 52, each vec3f 16-byte aligned. */
 const SCENE_THEME_TAIL = 'selectionColor: vec3f, hoverColor: vec3f, edgeColor: vec3f, xrayColor: vec3f, gridColor: vec3f, capColor: vec3f'
+/** Shadow tail: lightVP (floats 76..91) + shadowParams (floats 92..95). */
+const SCENE_SHADOW_TAIL = 'lightVP: mat4x4f, shadowParams: vec4f'
 
 /** Canonical themed Scene struct (object shaders and the grid share it). */
-export const SCENE_STRUCT = `${SCENE_HEAD}, inverseVP: mat4x4f, ${SCENE_THEME_TAIL} }`
+export const SCENE_STRUCT = `${SCENE_HEAD}, inverseVP: mat4x4f, ${SCENE_THEME_TAIL}, ${SCENE_SHADOW_TAIL} }`
 
 /**
  * Scene struct composer. `extraMembers` insert between the shared head and
  * the inverseVP + theme tail, so offsets of the themed fields stay fixed.
  */
 export function sceneStruct(extraMembers = ''): string {
-  return `${SCENE_HEAD}${extraMembers}, inverseVP: mat4x4f, ${SCENE_THEME_TAIL} }`
+  return `${SCENE_HEAD}${extraMembers}, inverseVP: mat4x4f, ${SCENE_THEME_TAIL}, ${SCENE_SHADOW_TAIL} }`
 }
 
 /**
  * CPU-side mirror of Scene: vp (16 floats) + eye (4) + light (4) + ambient (4)
  * + section (4) + options (4) + inverseVP (16) + theme block (6 colors ×
- * vec3+pad = 24) = 76 floats = 304 bytes. The theme tail starts at float 52,
- * so legacy offsets are unchanged.
+ * vec3+pad = 24) + shadow block (lightVP 16 + shadowParams 4) = 96 floats
+ * = 384 bytes. The theme tail starts at float 52 and the shadow tail at
+ * float 76, so legacy offsets are unchanged.
+ *
+ * shadowParams = (enabled, 1/mapSize, depth bias, strength); enabled 0 keeps
+ * every sampling shader on its pixel-identical unshadowed path.
  */
 export const SCENE_UNIFORM_LAYOUT = {
-  floats: 76,
-  bytes: 304,
+  floats: 96,
+  bytes: 384,
   /** selectionColor at themeFloatOffset..+2, then hover/edge/xray/grid/cap every 4 floats. */
   themeFloatOffset: 52,
   themeByteOffset: 208,
@@ -39,6 +45,12 @@ export const SCENE_UNIFORM_LAYOUT = {
   gridFloatOffset: 68,
   capFloatOffset: 72,
   capByteOffset: 288,
+  /** lightVP (column-major mat4) at lightVPFloatOffset..+15. */
+  lightVPFloatOffset: 76,
+  lightVPByteOffset: 304,
+  /** shadowParams (enabled, texel, bias, strength) at shadowFloatOffset..+3. */
+  shadowFloatOffset: 92,
+  shadowByteOffset: 368,
 } as const
 
 export const SCENE_BINDING = `@group(0) @binding(0) var<uniform> sc: Scene;`
@@ -80,6 +92,19 @@ export const MORPH_VERTEX_STRIDE = 12
 
 /** Section-plane discard shared by object fragment shaders. */
 export const SECTION_CLIP_WGSL = `if (sc.options.x > 0.5 && dot(v.w, sc.section.xyz) < sc.section.w) { discard; }`
+
+/**
+ * Shared shadow-sampling pins. The mesh-surface shaders (mesh, meshPbr,
+ * meshMatcap, meshToon) and the grid bind the key-light depth map plus a
+ * comparison sampler and evaluate this 3x3 PCF; `shadowParams.x == 0` keeps
+ * the unshadowed path pixel-identical. Binding slots differ per shader:
+ * mesh/meshToon at group(2) 0/1, meshPbr/meshMatcap share group(2) with the
+ * env/matcap at bindings 2/3, the grid uses group(1) 0/1.
+ */
+export const SHADOW_MAP_WGSL = 'var shadowMap: texture_depth_2d;'
+export const SHADOW_SAMPLER_WGSL = 'var shadowSampler: sampler_comparison;'
+export const SHADOW_PCF_WGSL = 'fn shadowFactor(wp: vec3f) -> f32 {'
+export const SHADOW_PCF_SAMPLE_WGSL = 'textureSampleCompare(shadowMap, shadowSampler'
 
 /**
  * Epsilon accent shared by the mesh-surface shaders: fragments just inside
