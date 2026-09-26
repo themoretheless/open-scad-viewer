@@ -1,14 +1,29 @@
 //! GPU grid sampler (feature `gpu`): runs the shared SDF_WGSL shader over the
-//! flattened field tree. f32 arithmetic — see `math_core::Acceleration`.
+//! flattened field tree, dispatched through the compute-core runtime. f32
+//! arithmetic — see `math_core::Acceleration`.
 use crate::Grid;
 use crate::flat::FlatField;
-use gpu_compute::{BackendReport, GpuContext, read_buffer, storage_entry, uniform_entry, wgpu};
+use compute_core::gpu_compute::wgpu;
+use compute_core::gpu_compute::{BackendReport, GpuContext, pack_f32, pack_u32};
+use compute_core::{Binding, Kernel, read_f32};
+use wgpu::{BindGroup, Buffer, BufferUsages, Device};
+
+const WG_METAL: u32 = 128;
+const WG_DEFAULT: u32 = 256;
+
+fn mk(device: &Device, label: &str, size: u64, usage: BufferUsages) -> Buffer {
+    device.create_buffer(&wgpu::BufferDescriptor {
+        label: Some(label),
+        size: size.max(4),
+        usage,
+        mapped_at_creation: false,
+    })
+}
 
 struct GpuSdf {
-    device: wgpu::Device,
+    device: Device,
     queue: wgpu::Queue,
-    layout: wgpu::BindGroupLayout,
-    pipeline: wgpu::ComputePipeline,
+    kernel: Kernel,
     buffers: std::cell::RefCell<Option<Buffers>>,
 }
 
@@ -18,52 +33,38 @@ struct Buffers {
     aux_capacity: usize,
     triangle_capacity: usize,
     value_capacity: usize,
-    params: wgpu::Buffer,
-    kinds: wgpu::Buffer,
-    node_params: wgpu::Buffer,
-    aux: wgpu::Buffer,
-    triangles: wgpu::Buffer,
-    values: wgpu::Buffer,
-    values_read: wgpu::Buffer,
-    bind: wgpu::BindGroup,
+    params: Buffer,
+    kinds: Buffer,
+    node_params: Buffer,
+    aux: Buffer,
+    triangles: Buffer,
+    values: Buffer,
+    bind: BindGroup,
 }
 
 impl GpuSdf {
     fn new(context: &GpuContext) -> Self {
-        let device = &context.device;
-        let module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
-            label: Some("sdf_grid"),
-            source: wgpu::ShaderSource::Wgsl(crate::SDF_WGSL.into()),
-        });
-        let layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-            label: Some("sdf_grid"),
-            entries: &[
-                uniform_entry(0),
-                storage_entry(1, true),
-                storage_entry(2, true),
-                storage_entry(3, true),
-                storage_entry(4, true),
-                storage_entry(5, false),
+        let kernel = Kernel::tuned(
+            context,
+            "sdf_grid",
+            crate::SDF_WGSL,
+            "main",
+            &[
+                Binding::Uniform,
+                Binding::StorageRead,
+                Binding::StorageRead,
+                Binding::StorageRead,
+                Binding::StorageRead,
+                Binding::StorageReadWrite,
             ],
-        });
-        let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-            label: Some("sdf_grid"),
-            bind_group_layouts: &[Some(&layout)],
-            immediate_size: 0,
-        });
-        let pipeline = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-            label: Some("sdf_grid"),
-            layout: Some(&pipeline_layout),
-            module: &module,
-            entry_point: Some("main"),
-            compilation_options: Default::default(),
-            cache: None,
-        });
+            WG_METAL,
+            WG_DEFAULT,
+        )
+        .expect("sdf_grid kernel builds");
         Self {
-            device: device.clone(),
+            device: context.device.clone(),
             queue: context.queue.clone(),
-            layout,
-            pipeline,
+            kernel,
             buffers: std::cell::RefCell::new(None),
         }
     }
@@ -95,52 +96,45 @@ impl GpuSdf {
         let aux_capacity = aux_count.max(1);
         let triangle_capacity = triangle_count.max(1);
         let value_capacity = value_count.max(1);
-        let mk = |label: &str, size: u64, usage| {
-            device.create_buffer(&wgpu::BufferDescriptor {
-                label: Some(label),
-                size,
-                usage,
-                mapped_at_creation: false,
-            })
-        };
         let params = mk(
+            device,
             "sdf_params",
             40,
-            wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+            BufferUsages::UNIFORM | BufferUsages::COPY_DST,
         );
         let kinds = mk(
+            device,
             "sdf_kinds",
             (kind_capacity * 4) as u64,
-            wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+            BufferUsages::STORAGE | BufferUsages::COPY_DST,
         );
         let node_params = mk(
+            device,
             "sdf_nodes",
             (param_capacity * 4) as u64,
-            wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+            BufferUsages::STORAGE | BufferUsages::COPY_DST,
         );
         let aux = mk(
+            device,
             "sdf_aux",
             (aux_capacity * 4) as u64,
-            wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+            BufferUsages::STORAGE | BufferUsages::COPY_DST,
         );
         let triangles = mk(
+            device,
             "sdf_tris",
             (triangle_capacity * 4) as u64,
-            wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+            BufferUsages::STORAGE | BufferUsages::COPY_DST,
         );
         let values = mk(
+            device,
             "sdf_values",
             (value_capacity * 4) as u64,
-            wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC,
-        );
-        let values_read = mk(
-            "sdf_values_read",
-            (value_capacity * 4) as u64,
-            wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
+            BufferUsages::STORAGE | BufferUsages::COPY_SRC,
         );
         let bind = device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("sdf_grid"),
-            layout: &self.layout,
+            layout: self.kernel.bind_group_layout(),
             entries: &[
                 wgpu::BindGroupEntry {
                     binding: 0,
@@ -180,16 +174,14 @@ impl GpuSdf {
             aux,
             triangles,
             values,
-            values_read,
             bind,
         });
     }
 
     fn run(&self, flat: &FlatField, grid: &Grid) -> Vec<f32> {
         let [nx, ny, nz] = grid.cells;
-        let total = (nx + 1) * (ny + 1) * (nz + 1);
-        let mut params =
-            gpu_compute::pack_u32(&[nx as u32, ny as u32, nz as u32, flat.kinds.len() as u32]);
+        let total = ((nx + 1) * (ny + 1) * (nz + 1)) as u32;
+        let mut params = pack_u32(&[nx as u32, ny as u32, nz as u32, flat.kinds.len() as u32]);
         for i in 0..3 {
             params.extend_from_slice(&(grid.min[i] as f32).to_le_bytes());
         }
@@ -197,16 +189,16 @@ impl GpuSdf {
             let step = (grid.max[i] - grid.min[i]) / grid.cells[i] as f64;
             params.extend_from_slice(&(step as f32).to_le_bytes());
         }
-        let kinds = gpu_compute::pack_u32(&flat.kinds);
-        let node_params = gpu_compute::pack_f32(&flat.params);
-        let aux = gpu_compute::pack_u32(&flat.aux);
-        let tris = gpu_compute::pack_f32(&flat.triangles);
+        let kinds = pack_u32(&flat.kinds);
+        let node_params = pack_f32(&flat.params);
+        let aux = pack_u32(&flat.aux);
+        let tris = pack_f32(&flat.triangles);
         self.ensure_buffers(
             flat.kinds.len(),
             flat.params.len(),
             flat.aux.len(),
             flat.triangles.len(),
-            total,
+            total as usize,
         );
         let buffers = self.buffers.borrow();
         let b = buffers.as_ref().expect("ensure_buffers was just called");
@@ -223,27 +215,13 @@ impl GpuSdf {
         if !tris.is_empty() {
             self.queue.write_buffer(&b.triangles, 0, &tris);
         }
-        let value_bytes = (total * 4) as u64;
-        let mut encoder = self
-            .device
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor { label: Some("sdf") });
-        {
-            let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
-                label: Some("sdf"),
-                timestamp_writes: None,
-            });
-            pass.set_pipeline(&self.pipeline);
-            pass.set_bind_group(0, &b.bind, &[]);
-            pass.dispatch_workgroups((total as u32).div_ceil(256), 1, 1);
-        }
-        encoder.copy_buffer_to_buffer(&b.values, 0, &b.values_read, 0, value_bytes);
-        self.queue.submit([encoder.finish()]);
-        let raw = read_buffer(&self.device, &b.values_read, total * 4);
-        b.values_read.unmap();
-        raw.chunks_exact(4)
-            .take(total)
-            .map(|c| f32::from_ne_bytes(c.try_into().unwrap()))
-            .collect()
+        self.kernel.dispatch_bind_group(
+            &self.device,
+            &self.queue,
+            &b.bind,
+            self.kernel.workgroup_count(total),
+        );
+        read_f32(&self.device, &self.queue, &b.values, total as usize)
     }
 }
 

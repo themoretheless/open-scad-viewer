@@ -288,16 +288,32 @@ impl Kernel {
         let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
             label: Some(&self.label),
         });
-        {
-            let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
-                label: Some(&self.label),
-                timestamp_writes: None,
-            });
-            pass.set_pipeline(&self.pipeline);
-            pass.set_bind_group(0, bind_group, &[]);
-            pass.dispatch_workgroups(groups, 1, 1);
-        }
+        self.record_dispatch(&mut encoder, bind_group, groups);
         queue.submit([encoder.finish()]);
+    }
+
+    /// Records a dispatch into a caller-owned encoder — the building block
+    /// for multi-kernel command buffers that submit once (batch pipelines),
+    /// where each dispatch may bind different buffers.
+    pub fn record_dispatch(
+        &self,
+        encoder: &mut wgpu::CommandEncoder,
+        bind_group: &wgpu::BindGroup,
+        groups: u32,
+    ) {
+        assert!(
+            groups >= 1 && groups <= 65535,
+            "{}: workgroup count {} outside 1..=65535",
+            self.label,
+            groups
+        );
+        let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
+            label: Some(&self.label),
+            timestamp_writes: None,
+        });
+        pass.set_pipeline(&self.pipeline);
+        pass.set_bind_group(0, bind_group, &[]);
+        pass.dispatch_workgroups(groups, 1, 1);
     }
 }
 

@@ -20,8 +20,60 @@ use super::wgpu;
 use super::wgpu::util::DeviceExt;
 
 use super::GpuContext;
+use compute_core::{Binding, Kernel};
+
+const WG_METAL: u32 = 128;
+const WG_DEFAULT: u32 = 256;
 
 const SHADER: &str = crate::dense::SWEEP_WGSL;
+
+// The browser-shared shader dispatches pixels as a 2D grid; the native path
+// linearizes both entry points to 1D (one thread per pixel, `index ->
+// (x, y)`) to fit the compute-core dispatch convention — the same rewrite the
+// host variant (`dense::host_sweep_linear_indexing_wgsl`) already ships for
+// browser hosts. The select entry introduces the shared `WG` anchor; the
+// scores entry reuses it, so it is declared exactly once.
+const SELECT_ENTRY_2D: &str = r#"@compute @workgroup_size(16, 16)
+fn sweep_select(@builtin(global_invocation_id) id: vec3<u32>) {
+    let x = id.x;
+    let y = id.y;"#;
+
+const SELECT_ENTRY_LINEAR: &str = r#"// `WG` is the workgroup-size anchor: the compute-core runtime may substitute
+// a per-backend tuned value (powers of two only) before compilation.
+const WG: u32 = 256;
+
+@compute @workgroup_size(WG)
+fn sweep_select(@builtin(global_invocation_id) id: vec3<u32>) {
+    let index = id.x;
+    let total = params.width * params.height;
+    if (index >= total) {
+        return;
+    }
+    let x = index % params.width;
+    let y = index / params.width;"#;
+
+const SCORES_ENTRY_2D: &str = r#"@compute @workgroup_size(16, 16)
+fn sweep(@builtin(global_invocation_id) id: vec3<u32>) {
+    let x = id.x;
+    let y = id.y;"#;
+
+const SCORES_ENTRY_LINEAR: &str = r#"@compute @workgroup_size(WG)
+fn sweep(@builtin(global_invocation_id) id: vec3<u32>) {
+    let index = id.x;
+    let total = params.width * params.height;
+    if (index >= total) {
+        return;
+    }
+    let x = index % params.width;
+    let y = index / params.width;"#;
+
+/// The native sweep shader: both entries linearized to the compute-core 1D
+/// convention with a tunable `WG` anchor.
+fn linear_shader() -> String {
+    SHADER
+        .replace(SELECT_ENTRY_2D, SELECT_ENTRY_LINEAR)
+        .replace(SCORES_ENTRY_2D, SCORES_ENTRY_LINEAR)
+}
 
 /// Per-source camera/geometry payload for the sweep shader.
 pub struct SourcePayload {
@@ -74,54 +126,56 @@ pub struct GrayAtlas {
 pub struct GpuSweep {
     device: wgpu::Device,
     queue: wgpu::Queue,
-    layout: wgpu::BindGroupLayout,
-    pipeline: wgpu::ComputePipeline,
+    /// Native `sweep_select` (linear-indexed, register-resident selection).
+    kernel: Kernel,
     /// The browser-shared `sweep` entry (raw scores), kept for qualification.
-    scores_pipeline: wgpu::ComputePipeline,
+    scores_kernel: Kernel,
 }
 
 impl GpuSweep {
     pub fn new(context: &GpuContext) -> Self {
-        let device = &context.device;
-        let module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
-            label: Some("ncc_sweep"),
-            source: wgpu::ShaderSource::Wgsl(SHADER.into()),
-        });
-        let entries = [
-            super::uniform_entry(0),
-            super::storage_entry(1, true),
-            super::storage_entry(2, true),
-            super::storage_entry(3, true),
-            super::storage_entry(4, true),
-            super::storage_entry(5, false),
-            super::storage_entry(6, true),
-            super::storage_entry(7, false),
-        ];
-        let layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-            label: Some("ncc_sweep"),
-            entries: &entries,
-        });
-        let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-            label: Some("ncc_sweep"),
-            bind_group_layouts: &[Some(&layout)],
-            immediate_size: 0,
-        });
-        let compute = |entry: &str| {
-            device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-                label: Some(entry),
-                layout: Some(&pipeline_layout),
-                module: &module,
-                entry_point: Some(entry),
-                compilation_options: Default::default(),
-                cache: None,
-            })
-        };
+        let source = linear_shader();
+        let kernel = Kernel::tuned(
+            context,
+            "ncc_sweep_select",
+            &source,
+            "sweep_select",
+            &[
+                Binding::Uniform,
+                Binding::StorageRead,
+                Binding::StorageRead,
+                Binding::StorageRead,
+                Binding::StorageRead,
+                Binding::StorageReadWrite,
+                Binding::StorageRead,
+                Binding::StorageReadWrite,
+            ],
+            WG_METAL,
+            WG_DEFAULT,
+        )
+        .expect("sweep_select kernel builds");
+        // The qualification pipeline binds only entries 0..=5 (the browser
+        // layout); the module's extra globals stay unused by this entry.
+        let scores_kernel = Kernel::new(
+            &context.device,
+            "ncc_sweep",
+            &source,
+            "sweep",
+            &[
+                Binding::Uniform,
+                Binding::StorageRead,
+                Binding::StorageRead,
+                Binding::StorageRead,
+                Binding::StorageRead,
+                Binding::StorageReadWrite,
+            ],
+        )
+        .expect("sweep kernel builds");
         Self {
-            device: device.clone(),
+            device: context.device.clone(),
             queue: context.queue.clone(),
-            layout,
-            pipeline: compute("sweep_select"),
-            scores_pipeline: compute("sweep"),
+            kernel,
+            scores_kernel,
         }
     }
 
@@ -292,39 +346,35 @@ impl SweepBatch<'_> {
                 resource: buffer.as_entire_binding(),
             }
         }
+        // The qualification `sweep` entry binds only 0..=5 (the browser
+        // layout); the native `sweep_select` entry adds bins and selection.
+        let kernel = if raw_scores {
+            &self.sweep.scores_kernel
+        } else {
+            &self.sweep.kernel
+        };
+        let mut entries = vec![
+            entry(0, &params_buf),
+            entry(1, &hyp_buf),
+            entry(2, &srcf_buf),
+            entry(3, &srcm_buf),
+            entry(4, &self.atlas.buffer),
+            entry(5, &scores_buf),
+        ];
+        if !raw_scores {
+            entries.push(entry(6, &bins_buf));
+            entries.push(entry(7, &out_buf));
+        }
         let bind = device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("ncc_sweep"),
-            layout: &self.sweep.layout,
-            entries: &[
-                entry(0, &params_buf),
-                entry(1, &hyp_buf),
-                entry(2, &srcf_buf),
-                entry(3, &srcm_buf),
-                entry(4, &self.atlas.buffer),
-                entry(5, &scores_buf),
-                entry(6, &bins_buf),
-                entry(7, &out_buf),
-            ],
+            layout: kernel.bind_group_layout(),
+            entries: &entries,
         });
-        {
-            let mut pass = self
-                .encoder
-                .begin_compute_pass(&wgpu::ComputePassDescriptor {
-                    label: Some("sweep_select"),
-                    timestamp_writes: None,
-                });
-            pass.set_pipeline(if raw_scores {
-                &self.sweep.scores_pipeline
-            } else {
-                &self.sweep.pipeline
-            });
-            pass.set_bind_group(0, &bind, &[]);
-            pass.dispatch_workgroups(
-                job.width.div_ceil(16) as u32,
-                job.height.div_ceil(16) as u32,
-                1,
-            );
-        }
+        kernel.record_dispatch(
+            &mut self.encoder,
+            &bind,
+            kernel.workgroup_count(pixels as u32),
+        );
         let copied = if raw_scores { &scores_buf } else { &out_buf };
         self.encoder
             .copy_buffer_to_buffer(copied, 0, &read_buf, 0, read_bytes);

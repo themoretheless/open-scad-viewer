@@ -1,10 +1,14 @@
 //! Portable output-pixel Brown--Conrady rectification. Candidate focal search
 //! and cancellation remain in `calibration`; this module only maps and samples
 //! an already accepted candidate, returning `None` if a pixel is invalid.
+//! Dispatched through the compute-core runtime (1D grid over output pixels).
 
-use super::wgpu::util::DeviceExt;
-use super::{GpuContext, read_buffer, storage_entry, uniform_entry, wgpu};
+use super::{GpuContext, wgpu};
 use crate::{Image, calibration::Calibration};
+use compute_core::{Binding, Kernel, read_u32};
+
+const WG_METAL: u32 = 128;
+const WG_DEFAULT: u32 = 256;
 
 const SHADER: &str = r#"
 struct Params {
@@ -20,11 +24,20 @@ struct Params {
 fn channel(pixel: u32, shift: u32) -> f32 {
     return f32((pixel >> shift) & 255u);
 }
-@compute @workgroup_size(16, 16)
+
+// `WG` is the workgroup-size anchor: the compute-core runtime may substitute
+// a per-backend tuned value (powers of two only) before compilation. The
+// pixel grid is flattened to 1D (id.x -> (x, y)) to fit that convention.
+const WG: u32 = 256;
+
+@compute @workgroup_size(WG)
 fn rectify(@builtin(global_invocation_id) id: vec3<u32>) {
-    if (id.x >= p.width || id.y >= p.height) { return; }
-    let x = f32(id.x) - f32(p.width) * 0.5;
-    let y = f32(id.y) - f32(p.height) * 0.5;
+    if (id.x >= p.width * p.height) { return; }
+    let id_x = id.x % p.width;
+    let id_y = id.x / p.width;
+    if (id_x >= p.width || id_y >= p.height) { return; }
+    let x = f32(id_x) - f32(p.width) * 0.5;
+    let y = f32(id_y) - f32(p.height) * 0.5;
     let xn = x / p.focal;
     let yn = y / p.focal;
     let r2 = xn * xn + yn * yn;
@@ -59,7 +72,7 @@ fn rectify(@builtin(global_invocation_id) id: vec3<u32>) {
                           b * ((1.0 - a) * channel(c01, shift) + a * channel(c11, shift)));
         packed |= u32(clamp(value, 0.0, 255.0)) << shift;
     }
-    output[id.y * p.width + id.x] = packed;
+    output[id.x] = packed;
 }
 "#;
 
@@ -70,48 +83,27 @@ pub fn render(image: &Image, calibration: &Calibration, focal: f64) -> Option<Ve
 }
 
 struct Renderer {
-    pipeline: wgpu::ComputePipeline,
-    layout: wgpu::BindGroupLayout,
+    kernel: Kernel,
 }
 
 impl Renderer {
     fn new(context: &GpuContext) -> Self {
-        let module = context
-            .device
-            .create_shader_module(wgpu::ShaderModuleDescriptor {
-                label: Some("calibration_rectification"),
-                source: wgpu::ShaderSource::Wgsl(SHADER.into()),
-            });
-        let layout = context
-            .device
-            .create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-                label: Some("calibration_rectification"),
-                entries: &[
-                    uniform_entry(0),
-                    storage_entry(1, true),
-                    storage_entry(2, false),
-                    storage_entry(3, false),
-                ],
-            });
-        let pipeline_layout =
-            context
-                .device
-                .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-                    label: Some("calibration_rectification"),
-                    bind_group_layouts: &[Some(&layout)],
-                    immediate_size: 0,
-                });
-        let pipeline = context
-            .device
-            .create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-                label: Some("calibration_rectification"),
-                layout: Some(&pipeline_layout),
-                module: &module,
-                entry_point: Some("rectify"),
-                compilation_options: Default::default(),
-                cache: None,
-            });
-        Self { pipeline, layout }
+        let kernel = Kernel::tuned(
+            context,
+            "calibration_rectification",
+            SHADER,
+            "rectify",
+            &[
+                Binding::Uniform,
+                Binding::StorageRead,
+                Binding::StorageReadWrite,
+                Binding::StorageReadWrite,
+            ],
+            WG_METAL,
+            WG_DEFAULT,
+        )
+        .expect("rectification kernel builds");
+        Self { kernel }
     }
 
     fn render(
@@ -127,7 +119,7 @@ impl Renderer {
             .chunks_exact(3)
             .map(|v| u32::from(v[0]) | u32::from(v[1]) << 8 | u32::from(v[2]) << 16)
             .collect();
-        let params = [
+        let params: Vec<u32> = [
             image.width as u32,
             image.height as u32,
             0,
@@ -142,106 +134,67 @@ impl Renderer {
             (c.k3 as f32).to_bits(),
             (c.p1 as f32).to_bits(),
             (c.p2 as f32).to_bits(),
-        ];
+        ]
+        .to_vec();
         let device = &context.device;
-        let source = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label: Some("rectification_source"),
-            contents: bytemuck_u32(&source),
-            usage: wgpu::BufferUsages::STORAGE,
-        });
-        let params = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+        let queue = &context.queue;
+        let params_buf = device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("rectification_params"),
-            contents: bytemuck_u32(&params),
-            usage: wgpu::BufferUsages::UNIFORM,
+            size: 64,
+            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
         });
+        queue.write_buffer(&params_buf, 0, &pack_u32_bytes(&params));
+        let source_buf = device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("rectification_source"),
+            size: (pixels * 4) as u64,
+            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        });
+        queue.write_buffer(&source_buf, 0, &pack_u32_bytes(&source));
         let output = device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("rectification_output"),
             size: (pixels * 4) as u64,
             usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC,
             mapped_at_creation: false,
         });
-        let valid = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+        let valid = device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("rectification_valid"),
-            contents: &1u32.to_ne_bytes(),
-            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC,
-        });
-        let read_output = device.create_buffer(&wgpu::BufferDescriptor {
-            label: Some("rectification_read_output"),
-            size: (pixels * 4) as u64,
-            usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
-            mapped_at_creation: false,
-        });
-        let read_valid = device.create_buffer(&wgpu::BufferDescriptor {
-            label: Some("rectification_read_valid"),
             size: 4,
-            usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
+            usage: wgpu::BufferUsages::STORAGE
+                | wgpu::BufferUsages::COPY_SRC
+                | wgpu::BufferUsages::COPY_DST,
             mapped_at_creation: false,
         });
-        let bind = device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("calibration_rectification"),
-            layout: &self.layout,
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: params.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: source.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 2,
-                    resource: output.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 3,
-                    resource: valid.as_entire_binding(),
-                },
-            ],
-        });
-        let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
-            label: Some("calibration_rectification"),
-        });
-        {
-            let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
-                label: Some("calibration_rectification"),
-                timestamp_writes: None,
-            });
-            pass.set_pipeline(&self.pipeline);
-            pass.set_bind_group(0, &bind, &[]);
-            pass.dispatch_workgroups(
-                (image.width as u32).div_ceil(16),
-                (image.height as u32).div_ceil(16),
-                1,
-            );
-        }
-        encoder.copy_buffer_to_buffer(&output, 0, &read_output, 0, (pixels * 4) as u64);
-        encoder.copy_buffer_to_buffer(&valid, 0, &read_valid, 0, 4);
-        context.queue.submit(Some(encoder.finish()));
-        let valid = read_buffer(device, &read_valid, 4);
-        if valid
-            .get(..4)
-            .and_then(|v| v.try_into().ok())
-            .map(u32::from_ne_bytes)
-            != Some(1)
-        {
+        queue.write_buffer(&valid, 0, &1u32.to_le_bytes());
+        self.kernel.dispatch(
+            device,
+            queue,
+            &[&params_buf, &source_buf, &output, &valid],
+            pixels as u32,
+        );
+        let valid = read_u32(device, queue, &valid, 1);
+        if valid.first() != Some(&1) {
             return None;
         }
-        let values = read_buffer(device, &read_output, pixels * 4);
-        if values.len() != pixels * 4 {
-            return None;
-        }
+        let values = read_u32(device, queue, &output, pixels);
         Some(
             values
-                .chunks_exact(4)
-                .flat_map(|v| [v[0], v[1], v[2]])
+                .iter()
+                .flat_map(|&v| {
+                    [
+                        (v & 255) as u8,
+                        ((v >> 8) & 255) as u8,
+                        ((v >> 16) & 255) as u8,
+                    ]
+                })
                 .collect(),
         )
     }
 }
 
-fn bytemuck_u32(values: &[u32]) -> &[u8] {
-    unsafe { std::slice::from_raw_parts(values.as_ptr().cast(), std::mem::size_of_val(values)) }
+fn pack_u32_bytes(values: &[u32]) -> Vec<u8> {
+    values.iter().flat_map(|v| v.to_le_bytes()).collect()
 }
 
 thread_local! {

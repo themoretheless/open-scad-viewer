@@ -91,9 +91,13 @@ fn closest_triangle(p: vec3f, a: vec3f, b: vec3f, c: vec3f) -> vec3f {
     return best;
 }
 
+// `WG` is the workgroup-size anchor: the compute-core runtime may substitute
+// a per-backend tuned value (powers of two only) before compilation.
+const WG: u32 = 256;
+
 // Flat postorder field tree: leaves push, CSG/offset ops combine with a value
 // stack. Node kinds match sdf-core/src/flat.rs.
-@compute @workgroup_size(256)
+@compute @workgroup_size(WG)
 fn main(@builtin(global_invocation_id) id: vec3<u32>) {
     let row = params.nx + 1u;
     let total = row * (params.ny + 1u) * (params.nz + 1u);

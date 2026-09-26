@@ -9,6 +9,7 @@
 use super::wgpu;
 
 use super::GpuContext;
+use compute_core::{Binding, Kernel};
 
 /// Metal (Apple GPUs) tunes toward a smaller, SIMD-group-aligned workgroup to
 /// keep more threadgroups resident; every other backend — including Vulkan on
@@ -17,9 +18,8 @@ use super::GpuContext;
 const WG_METAL: u32 = 128;
 const WG_DEFAULT: u32 = 256;
 
-// Template placeholders substituted per backend tuning (`__WG__`); plain
-// `String::replace` avoids escaping every brace in the WGSL body the way a
-// `format!` template would require.
+// `WG` anchor convention: the compute-core runtime substitutes a per-backend
+// tuned power of two (see `Kernel::with_workgroup_size`) before compilation.
 const SHADER_TEMPLATE: &str = r#"
 struct Params {
     rows: u32,
@@ -43,11 +43,11 @@ struct ColBest {
 
 const NONE: u32 = 0xFFFFFFFFu;
 const INF: f32 = 3.402823466e+38;
-const WG: u32 = __WG__u;
+const WG: u32 = 256;
 
-var<workgroup> sh_d: array<f32, __WG__>;
-var<workgroup> sh_i: array<u32, __WG__>;
-var<workgroup> sh_s: array<f32, __WG__>;
+var<workgroup> sh_d: array<f32, WG>;
+var<workgroup> sh_i: array<u32, WG>;
+var<workgroup> sh_s: array<f32, WG>;
 
 // True when (a_d, a_i) outranks (b_d, b_i): smaller distance, then smaller index.
 fn better(a_d: f32, a_i: u32, b_d: f32, b_i: u32) -> bool {
@@ -65,7 +65,7 @@ fn dist(row: u32, col: u32) -> f32 {
     return d;
 }
 
-@compute @workgroup_size(__WG__)
+@compute @workgroup_size(WG)
 fn match_rows(@builtin(workgroup_id) wg: vec3<u32>, @builtin(local_invocation_id) lid: vec3<u32>) {
     let row = wg.x;
     var best_d = INF;
@@ -108,7 +108,7 @@ fn match_rows(@builtin(workgroup_id) wg: vec3<u32>, @builtin(local_invocation_id
     }
 }
 
-@compute @workgroup_size(__WG__)
+@compute @workgroup_size(WG)
 fn match_cols(@builtin(workgroup_id) wg: vec3<u32>, @builtin(local_invocation_id) lid: vec3<u32>) {
     let col = wg.x;
     var best_d = INF;
@@ -143,10 +143,6 @@ fn match_cols(@builtin(workgroup_id) wg: vec3<u32>, @builtin(local_invocation_id
 }
 "#;
 
-fn shader_source(wg: u32) -> String {
-    SHADER_TEMPLATE.replace("__WG__", &wg.to_string())
-}
-
 #[derive(Clone, Copy, Debug)]
 pub struct RowBest {
     pub j: usize,
@@ -175,9 +171,8 @@ struct Buffers {
 pub struct GpuMatcher {
     device: wgpu::Device,
     queue: wgpu::Queue,
-    layout: wgpu::BindGroupLayout,
-    rows_pipeline: wgpu::ComputePipeline,
-    cols_pipeline: wgpu::ComputePipeline,
+    rows_kernel: Kernel,
+    cols_kernel: Kernel,
     /// The workgroup size baked into the compiled pipelines, chosen per
     /// backend by `gpu_compute::tuned_workgroup_size`. Exposed for tests
     /// (hence `allow(dead_code)` on non-test builds).
@@ -198,48 +193,36 @@ impl GpuMatcher {
     /// tests exercise both the Metal-tuned and default-tuned kernel variants
     /// on whatever adapter the test machine actually has.
     fn with_workgroup_size(context: &GpuContext, workgroup_size: u32) -> Self {
-        let device = &context.device;
-        let module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
-            label: Some("match_descriptors"),
-            source: wgpu::ShaderSource::Wgsl(shader_source(workgroup_size).into()),
-        });
-        let layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-            label: Some("match_descriptors"),
-            entries: &[
-                super::uniform_entry(0),
-                super::storage_entry(1, true),
-                super::storage_entry(2, true),
-                super::storage_entry(3, false),
-                super::storage_entry(4, false),
-            ],
-        });
-        let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-            label: Some("match_descriptors"),
-            bind_group_layouts: &[Some(&layout)],
-            immediate_size: 0,
-        });
-        let rows_pipeline = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-            label: Some("match_rows"),
-            layout: Some(&pipeline_layout),
-            module: &module,
-            entry_point: Some("match_rows"),
-            compilation_options: Default::default(),
-            cache: None,
-        });
-        let cols_pipeline = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-            label: Some("match_cols"),
-            layout: Some(&pipeline_layout),
-            module: &module,
-            entry_point: Some("match_cols"),
-            compilation_options: Default::default(),
-            cache: None,
-        });
+        let bindings = [
+            Binding::Uniform,
+            Binding::StorageRead,
+            Binding::StorageRead,
+            Binding::StorageReadWrite,
+            Binding::StorageReadWrite,
+        ];
+        let rows_kernel = Kernel::with_workgroup_size(
+            &context.device,
+            "match_rows",
+            SHADER_TEMPLATE,
+            "match_rows",
+            &bindings,
+            workgroup_size,
+        )
+        .expect("match_rows kernel builds");
+        let cols_kernel = Kernel::with_workgroup_size(
+            &context.device,
+            "match_cols",
+            SHADER_TEMPLATE,
+            "match_cols",
+            &bindings,
+            workgroup_size,
+        )
+        .expect("match_cols kernel builds");
         Self {
-            device: device.clone(),
+            device: context.device.clone(),
             queue: context.queue.clone(),
-            layout,
-            rows_pipeline,
-            cols_pipeline,
+            rows_kernel,
+            cols_kernel,
             workgroup_size,
             buffers: std::cell::RefCell::new(None),
         }
@@ -287,24 +270,10 @@ impl GpuMatcher {
                 label: Some("match"),
             });
         if rows > 0 && cols > 0 {
-            {
-                let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
-                    label: Some("match_rows"),
-                    timestamp_writes: None,
-                });
-                pass.set_pipeline(&self.rows_pipeline);
-                pass.set_bind_group(0, &buffers.bind, &[]);
-                pass.dispatch_workgroups(rows, 1, 1);
-            }
-            {
-                let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
-                    label: Some("match_cols"),
-                    timestamp_writes: None,
-                });
-                pass.set_pipeline(&self.cols_pipeline);
-                pass.set_bind_group(0, &buffers.bind, &[]);
-                pass.dispatch_workgroups(cols, 1, 1);
-            }
+            self.rows_kernel
+                .record_dispatch(&mut encoder, &buffers.bind, rows);
+            self.cols_kernel
+                .record_dispatch(&mut encoder, &buffers.bind, cols);
         }
         encoder.copy_buffer_to_buffer(
             &buffers.rows_out,
@@ -406,7 +375,7 @@ impl GpuMatcher {
         });
         let bind = device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("match_descriptors"),
-            layout: &self.layout,
+            layout: self.rows_kernel.bind_group_layout(),
             entries: &[
                 wgpu::BindGroupEntry {
                     binding: 0,

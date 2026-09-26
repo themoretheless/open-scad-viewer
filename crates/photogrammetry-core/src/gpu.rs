@@ -11,9 +11,7 @@
 
 #[cfg(feature = "cuda")]
 pub use gpu_compute::cuda::CudaDeviceReport;
-pub(crate) use gpu_compute::{
-    BackendReport, GpuContext, pack_f32, read_buffer, storage_entry, uniform_entry, wgpu,
-};
+pub(crate) use gpu_compute::{BackendReport, GpuContext, pack_f32, read_buffer, wgpu};
 
 pub mod matching;
 pub mod rectification;

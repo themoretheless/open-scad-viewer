@@ -565,7 +565,11 @@ fn signed_distance(p: vec3f) -> f32 {
     return distance;
 }
 
-@compute @workgroup_size(256)
+// `WG` is the workgroup-size anchor: the compute-core runtime may substitute
+// a per-backend tuned value (powers of two only) before compilation.
+const WG: u32 = 256;
+
+@compute @workgroup_size(WG)
 fn main(@builtin(global_invocation_id) id: vec3<u32>) {
     let row = params.nx + 1u;
     let total = row * (params.ny + 1u) * (params.nz + 1u);
