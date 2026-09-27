@@ -3,6 +3,30 @@
 use crate::{ComputeRuntime, GpuLowTensor, GpuTensor, TensorComputeError};
 use std::time::Duration;
 use tensor_core::{LowDtype, LowPrecisionSupport, Shape, TensorLowBackend};
+impl tensor_core::TensorLowConvBackend for ComputeRuntime {
+    fn conv_low_f32(
+        &self,
+        input: &GpuLowTensor,
+        weight: &GpuLowTensor,
+        options: &tensor_core::ConvOptions,
+    ) -> Result<GpuTensor, Self::Error> {
+        let mut program = self.program();
+        let output = program.tensor_conv_low_f32(input, weight, options)?;
+        program.submit();
+        Ok(output)
+    }
+    fn conv_low(
+        &self,
+        input: &GpuLowTensor,
+        weight: &GpuLowTensor,
+        options: &tensor_core::ConvOptions,
+    ) -> Result<GpuLowTensor, Self::Error> {
+        let mut program = self.program();
+        let output = program.tensor_conv_low(input, weight, options)?;
+        program.submit();
+        Ok(output)
+    }
+}
 impl TensorLowBackend for ComputeRuntime {
     type LowTensor = GpuLowTensor;
     fn low_precision_support(&self, dtype: LowDtype) -> LowPrecisionSupport {

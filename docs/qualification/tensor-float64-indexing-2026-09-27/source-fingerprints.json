@@ -1,0 +1,28 @@
+{
+  "base_commit": "66f95240d46877e4fd72739433688d9f2d876fd3",
+  "files": {
+    "crates/Cargo.lock": "7fc1ae10d289ae341360c9ae82671b2680408a5c6a3f7830cc7136119a27c5e3",
+    "crates/Cargo.toml": "53656921b3e687dd416984561c82d3da4676ed34c4894e1f886836e2a2621d39",
+    "crates/compute-cuda/README.md": "50df8e9ed727470cd898cb98f53e464460970752e7d593f3bee00a807635e8ca",
+    "crates/compute-cuda/qualification/compile_nvrtc.py": "9c98602dbc47bf1915219967a5420d090434f2012c3d7bb6dbd580081a4556cc",
+    "crates/compute-cuda/qualification/qualify-nvrtc.sh": "5f0b89421006df96daa1b1e96812e18a2e87d88e9cf41c285f794843b2e453ff",
+    "crates/compute-cuda/src/float64.rs": "34237987052c1e48e6b2ef5b7eeb5530f48d76e09717de15c6eb4d681a781d36",
+    "crates/compute-cuda/src/float64/indexing.rs": "7087875dc92229ab91454be62d2d47833edb485def217ebe920efe646e9c324f",
+    "crates/compute-cuda/src/float64_indexing.cu": "5a2de871d2c7d445758e5476695ce10a3208bf3b09f176c8981967abc6d07f3f",
+    "crates/compute-cuda/src/indexing/gather.rs": "7bf9d2769bd4e2ae95654e3f949a9ce763f547b234f241a12d726bc457b19f43",
+    "crates/compute-cuda/src/indexing/mod.rs": "f826a7c9f1cafd36c85534ee26bccad755b0d05e392d4635f4b35fd1dd08597f",
+    "crates/compute-cuda/src/indexing/scan.rs": "053c4726ee9d28a3c1df568d1a007c648380fde8bb1e92d3f5785b75d5d81a0f",
+    "crates/compute-cuda/src/indexing/scatter.rs": "6e6a475705df526ed9acabdb5ae848b684c745fa6f34a23ebad0fddef6861b46",
+    "crates/compute-cuda/src/indexing/selection.rs": "733205f606dde4ba8edaa2d2ddefc432a2065064aca618ffe621c1489dc08838",
+    "crates/compute-cuda/src/lib.rs": "46b0e3099d220fbcb6bd2236badf8c017184ad70c4a621d713dacf51c6a55de2",
+    "crates/compute-cuda/src/runtime.rs": "d2e913e4190542be82d2f76e84b231478cdd51ef4de372cd0eedacf63bcd3742",
+    "crates/compute-cuda/tests/float64_indexing.rs": "2c1322c8586648a86698713e15585331bb9752d71e4fb9384dece9cea7fb69da",
+    "crates/tensor-core/src/conformance.rs": "ccc682269cbf0ce43cb8636b8217730a91914c034a31a58c027143799dcf0c53",
+    "crates/tensor-core/src/conformance/float64.rs": "4fb90ce9c23151eb046c1831d9fb176208baab715326bd7102c8aeb28eec161b",
+    "crates/tensor-core/src/conformance/float64_indexing.rs": "ef3b1b72056677d777d86b8ecb50748688ecee5ca22eb7b18f0b97b1c9670c1c",
+    "crates/tensor-core/src/float64_indexing.rs": "7a2dbaaf192e1bf0416df7ea811e0ecf376dc00e9b334f8a60c8835bcc0c55b6",
+    "crates/tensor-core/src/lib.rs": "41649aca99ef8318b033cc802cc2394dd8c34947bf5b7bd86b80bf2f2add224f"
+  },
+  "nvrtc_source_parts_verified": 15,
+  "scope": "Changed CUDA/tensor code and scripts; frontend work excluded"
+}

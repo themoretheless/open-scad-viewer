@@ -2,12 +2,17 @@
 //! CPU folds; compute-core owns pipeline/binding/dispatch mechanics.
 //! Use MathGpuSession for explicit device ownership. Free functions preserve
 //! the legacy per-thread, process-lifetime convenience API.
+#[cfg(target_arch = "wasm32")]
 mod bounds;
+#[cfg(target_arch = "wasm32")]
 mod distance;
 mod error;
+#[cfg(not(target_arch = "wasm32"))]
+mod float64;
+#[cfg(target_arch = "wasm32")]
 mod moments;
-mod neighbors;
 mod nearest_dispatch;
+mod neighbors;
 mod plans;
 mod session;
 mod support;

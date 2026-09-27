@@ -137,7 +137,13 @@ fn borrowed_buffer_validation_and_execution_reports() {
         .unwrap();
     assert_eq!(report.value, 14.0);
     assert_eq!(report.backend, c.backend_report());
-    assert_eq!(report.arithmetic, GpuArithmetic::F32);
-    assert!(math.try_point_bounds(&[[f64::MAX, 0., 0.]]).is_err());
-    assert!(math.point_bounds(&[[f64::MAX, 0., 0.]]).is_none());
+    assert_eq!(report.arithmetic, GpuArithmetic::SoftwareBinary64);
+    assert_eq!(
+        math.try_point_bounds(&[[f64::MAX, 0., 0.]])
+            .unwrap()
+            .value
+            .min,
+        [f64::MAX, 0., 0.]
+    );
+    assert!(math.point_bounds(&[[f64::NAN, 0., 0.]]).is_none());
 }

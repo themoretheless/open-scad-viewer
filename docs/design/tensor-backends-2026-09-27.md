@@ -18,6 +18,11 @@ query heads and explicit causal alignment. `TensorLowAttentionBackend` accepts
 direct f16/BF16 Q/K/V with f32 output or one final low rounding.
 The remaining coverage below is part of the same objective.
 
+`TensorConvBackend` and `TensorLowConvBackend` add forward grouped 1D/2D/3D
+cross-correlation, including direct f16/BF16 operands with f32 accumulation.
+The shared `ConvPlan` owns checked geometry; each executor owns native layout
+traversal, allocation and execution.
+
 ## Structure
 
 | Crate | Responsibility |
@@ -464,6 +469,75 @@ ordinary workspace tests may skip optional runtimes. The normal CI workflow
 checks architecture, tensor contracts and strict Clippy for all three adapters.
 Those checks do not establish hardware execution on the CI machines.
 
+## Convolution coverage
+
+`conv` uses input `[N,C,*spatial]` and weights `[O,C/groups,*kernel]`.
+`ConvOptions` specifies positive stride/dilation, explicit before/after zero
+padding and a positive group count dividing both channel counts. Bias is a
+separate broadcast addition. Kernel coordinates are not reversed. Empty output
+axes are accepted; zero input channels and windows containing only padding
+produce zeros after ownership, dtype and geometry checks.
+
+Direct WGSL, CUDA and MLX Metal kernels read strided operands without an im2col
+allocation. Low methods read f16/BF16 directly and either return f32 or round
+once to the input dtype. Normal products of BF16 subnormals with large finite
+partners are retained. Other f32 underflow and reduction-order limits apply.
+WGSL supports reusable recording and checked `_into` output views, including
+odd packed output offsets. CUDA/MLX prepared convolution, backward convolution,
+transposed convolution and optimized convolution algorithm selection remain
+open. The [qualification](../qualification/tensor-convolution-2026-09-27.md)
+records numerical coverage and distinguishes compiler and hardware evidence.
+
+## Precision coverage, including f64
+
+Existing CPU geometry uses f64 for `V2`, `V3` and `M3`. `TensorF64Backend` now
+adds an explicit resident binary64 contract. CUDA implements upload/read, views,
+unary/binary arithmetic, sum/product/min/max/mean, batched/vector matrix products
+and evaluation. `TensorF64IndexBackend` adds comparisons, selection, scans,
+gather and compaction; `TensorF64ScatterBackend` adds all five scatter modes.
+`Float64Support` distinguishes native, software binary64 and
+unsupported arithmetic; WGSL and MLX currently report unsupported.
+
+`TensorMathF64` uploads the original f64 coordinates and provides resident
+transforms, pair distances, bounds and centered population covariance. The
+existing `TensorMath` remains explicitly f32: its `upload_points_f64` helper
+narrows. Widening that result cannot recover lost coordinate information.
+CUDA arithmetic and geometry fixtures are compiled, but NVIDIA numerical
+execution is still unqualified on this Apple host. See the
+[f64 qualification](../qualification/tensor-float64-2026-09-27.md).
+
+WGSL has concrete f32/f16 floating types, with no executable f64 type in the
+[language specification](https://www.w3.org/TR/WGSL/#floating-point-types).
+MLX exposes float64 for CPU operations only; its GPU rejects it according to the
+[dtype contract](https://ml-explore.github.io/mlx/build/html/python/data_types.html).
+These limits explain the existing portable f32 path; they do not make narrowing
+an acceptable implicit replacement for f64 domain calculations.
+
+The target domain API uses f64 coordinates and arithmetic by default. The
+separate `TensorMathF64` facade is a migration step, not a plan to duplicate all
+geometry algorithms for each scalar type. Lower-precision tensor operations
+remain explicit options for workloads that request them. A backend must honor
+the requested precision natively or through identified software arithmetic;
+availability of f32 alone does not permit narrowing the geometry contract.
+
+CUDA f64 indexing reuses the typed traversal and scan hierarchy, with binary64
+accumulators at every level. Scatter uses 64-bit integer CAS around double
+arithmetic and deterministic owner election for Replace. See the
+[indexing qualification](../qualification/tensor-float64-indexing-2026-09-27.md)
+for compiler/host evidence and the missing NVIDIA numerical gate.
+
+Required next work:
+
+- Execute the new CUDA binary64 conformance and geometry fixtures on NVIDIA.
+- Extend binary64 to stable statistics, attention,
+  convolution and prepared/graph execution. Existing internal f64 scratch in
+  prepared statistics does not expose those operations to public f64 tensors.
+- Provide explicitly identified software precision on backends lacking native
+  f64, or report unsupported precision. Double-single arithmetic has a different
+  precision/range contract and must not be labelled IEEE binary64.
+- Migrate remaining domain callers requiring f64 through that contract, never
+  through silent f32 conversion. Keep f32/low paths available for callers choosing their limits.
+
 ## Tensor Core policy
 
 `MatmulPrecision::F32` is the default. CUDA maps it to pedantic f32 cuBLAS
@@ -479,11 +553,13 @@ checks. Unsupported modes must not silently become a different arithmetic policy
 
 ## Remaining work toward full support
 
+The f64 requirements above are mandatory remaining work, alongside this list.
+
 1. Run strict CUDA conformance, invalid-input tests and precision comparisons on
    NVIDIA hardware. Preserve device/version/kernel evidence and establish actual
    Tensor Core usage. Qualify WGSL beyond Metal and MLX beyond this installed ABI.
 2. Expand numerical operation coverage beyond the current arithmetic, reductions,
-   scans, indexing, normalization and forward attention. Preserve empty,
+   scans, indexing, normalization, forward attention and forward convolution. Preserve empty,
    overflow and numerical contracts across
    all runtimes before promising general tensor parity.
 3. Qualify native WGSL f16 arithmetic. Broaden direct low-input/f32-output MLX

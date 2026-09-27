@@ -7,7 +7,7 @@ use gpu_compute::cuda::{CudaFunction, cudarc::driver::DeviceRepr};
 use tensor_core::ScanOptions;
 
 impl CudaRuntime {
-    pub(super) fn scan_typed<T: CudaScalar>(
+    pub(crate) fn scan_typed<T: CudaScalar>(
         &self,
         input: &CudaTensor<T>,
         axis: usize,

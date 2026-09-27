@@ -1,0 +1,21 @@
+{"command": ["cargo", "test", "--locked", "--manifest-path", "/Users/themoretheless/Documents/Sources/open-scad-viewer/crates/Cargo.toml", "--offline", "-p", "osv-math", "--features", "tensor-wgsl", "--test", "tensor_f64", "--", "--test-threads=1", "--nocapture"], "required_env": {"COMPUTE_REQUIRE_GPU": "1"}}
+warning: binary `wgsl_export` should have a kebab-case name
+  |
+1 | /Users/themoretheless/Documents/Sources/open-scad-viewer/crates/target/.../wgsl_export
+  |                                                                            ^^^^^^^^^^^
+  |
+  = note: `cargo::non_kebab_case_bins` is set to `warn` by default
+help: to change the binary name to `wgsl-export`, convert the file stem
+  |
+1 - src/bin/wgsl_export.rs
+1 + src/bin/wgsl-export.rs
+  |
+warning: `raster-core` (manifest) generated 1 warning
+   Compiling osv-math v0.1.0 (/Users/themoretheless/Documents/Sources/open-scad-viewer/crates/math-core)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.38s
+     Running tests/tensor_f64.rs (crates/target/debug/build/osv-math/6804a0482f8a1056/out/tensor_f64-6804a0482f8a1056)
+
+running 1 test
+test software_f64_geometry_preserves_local_differences_and_large_range ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.13s

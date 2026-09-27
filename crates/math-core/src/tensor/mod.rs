@@ -1,6 +1,7 @@
 //! Resident geometry expressed once through WGSL, CUDA and MLX tensor contracts.
 //!
-//! This API uses f32 point tensors with shape `[N, 3]`. It does not choose a
+//! `TensorMathF64` preserves the existing f64 coordinate domain on backends
+//! implementing `TensorF64Backend`. `TensorMath` uses f32 point tensors with shape `[N, 3]`. It does not choose a
 //! device, fall back to CPU, or change the existing f64 geometry API. Upload and
 //! read methods are explicit host boundaries; intermediate tensors remain on
 //! the backend. Arithmetic and reduction order follow that backend's f32
@@ -14,6 +15,8 @@
 //! growing across every tile, while backend allocator caches remain independent.
 
 use tensor_core::{BackendKind, HasShape, Shape, TensorBackend, TensorError};
+mod float64;
+pub use float64::{TensorCovariance, TensorMathF64};
 mod geometry;
 mod neighbors;
 mod statistics;
@@ -96,6 +99,7 @@ impl<'a, B: TensorBackend> TensorMath<'a, B> {
     }
     /// Explicitly round finite f64 coordinates to f32. Rejects overflow, but
     /// cannot preserve differences below f32 resolution or all subnormal values.
+    /// Use [`TensorMathF64::upload_points`] to retain binary64 coordinates.
     pub fn upload_points_f64(&self, points: &[crate::V3]) -> Result<B::Tensor, B::Error> {
         let mut values = Vec::with_capacity(points.len());
         for point in points {

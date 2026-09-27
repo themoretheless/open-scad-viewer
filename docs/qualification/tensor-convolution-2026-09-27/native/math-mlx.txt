@@ -1,0 +1,24 @@
+{"command": ["cargo", "test", "--locked", "--manifest-path", "/Users/themoretheless/Documents/Sources/open-scad-viewer/crates/Cargo.toml", "--offline", "-p", "osv-math", "--features", "tensor-mlx", "--test", "tensor_math", "--", "--test-threads=1", "--nocapture"], "required_env": {"COMPUTE_REQUIRE_MLX": "1"}}
+warning: binary `wgsl_export` should have a kebab-case name
+  |
+1 | /Users/themoretheless/Documents/Sources/open-scad-viewer/crates/target/.../wgsl_export
+  |                                                                            ^^^^^^^^^^^
+  |
+  = note: `cargo::non_kebab_case_bins` is set to `warn` by default
+help: to change the binary name to `wgsl-export`, convert the file stem
+  |
+1 - src/bin/wgsl_export.rs
+1 + src/bin/wgsl-export.rs
+  |
+warning: `raster-core` (manifest) generated 1 warning
+   Compiling compute-mlx v0.1.0 (/Users/themoretheless/Documents/Sources/open-scad-viewer/crates/compute-mlx)
+   Compiling osv-math v0.1.0 (/Users/themoretheless/Documents/Sources/open-scad-viewer/crates/math-core)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 1.41s
+     Running tests/tensor_math.rs (crates/target/debug/build/osv-math/870272669ddde102/out/tensor_math-870272669ddde102)
+
+running 2 tests
+test geometry::independent_reference_retains_shifted_covariance_and_finite_sparse_moments ... ok
+test mlx_resident_geometry_contract ... tensor geometry MLX: GPU runtime 0.32.1
+ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.41s

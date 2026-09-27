@@ -12,7 +12,7 @@ use gpu_compute::cuda::{
 use tensor_core::{Compacted, CompareOp, ScanOptions};
 
 impl CudaRuntime {
-    pub(super) fn compare_typed<T: CudaScalar>(
+    pub(crate) fn compare_typed<T: CudaScalar>(
         &self,
         op: CompareOp,
         a: &CudaTensor<T>,
@@ -50,7 +50,7 @@ impl CudaRuntime {
         Ok(out)
     }
 
-    pub(super) fn select_typed<T: CudaScalar>(
+    pub(crate) fn select_typed<T: CudaScalar>(
         &self,
         mask: &CudaTensor<u32>,
         yes: &CudaTensor<T>,
@@ -89,7 +89,7 @@ impl CudaRuntime {
         Ok(out)
     }
 
-    pub(super) fn compact_typed<T: CudaScalar>(
+    pub(crate) fn compact_typed<T: CudaScalar>(
         &self,
         input: &CudaTensor<T>,
         mask: &CudaTensor<u32>,

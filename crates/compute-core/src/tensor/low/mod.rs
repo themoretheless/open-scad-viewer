@@ -1,6 +1,7 @@
 mod arithmetic;
 mod attention;
 mod attention_source;
+mod convolution;
 mod index_sources;
 mod indexing;
 mod kernels;

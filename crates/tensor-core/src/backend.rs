@@ -36,6 +36,12 @@ pub trait TensorBackend {
     type Error: std::error::Error;
 
     fn kind(&self) -> BackendKind;
+    /// Reports the optional TensorF64Backend arithmetic implementation. This
+    /// does not promise availability of every external library or unlimited
+    /// storage. Unsupported backends never silently narrow f64 to f32.
+    fn f64_support(&self) -> crate::Float64Support {
+        crate::Float64Support::Unsupported
+    }
     fn upload_f32(&self, shape: Shape, values: &[f32]) -> Result<Self::Tensor, Self::Error>;
     fn read_f32(&self, tensor: &Self::Tensor) -> Result<Vec<f32>, Self::Error>;
     fn materialize(&self, tensor: &Self::Tensor) -> Result<Self::Tensor, Self::Error>;

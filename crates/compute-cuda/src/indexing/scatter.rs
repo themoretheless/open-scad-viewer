@@ -7,7 +7,7 @@ use gpu_compute::cuda::{CudaFunction, cudarc::driver::DeviceRepr};
 use tensor_core::{ScatterOp, Scattered, TensorScatterBackend, scatter_updates_shape};
 
 impl CudaRuntime {
-    fn scatter_typed<T: CudaScalar>(
+    pub(crate) fn scatter_typed<T: CudaScalar>(
         &self,
         op: ScatterOp,
         input: &CudaTensor<T>,

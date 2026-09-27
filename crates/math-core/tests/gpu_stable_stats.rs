@@ -220,7 +220,7 @@ fn centered_stats_validate_before_appending_and_accept_shared_context() {
 }
 
 #[test]
-fn stable_session_matches_uploaded_f32_reference_and_documents_quantization() {
+fn stable_session_preserves_binary64_coordinates() {
     let Some(context) = gpu_context() else { return };
     let session = MathGpuSession::new(&context);
     for n in [257, 1, 3] {
@@ -232,7 +232,7 @@ fn stable_session_matches_uploaded_f32_reference_and_documents_quantization() {
             .map(|p| p.map(f64::from))
             .collect();
         let got = session.try_point_cloud_stats_stable(&points).unwrap();
-        assert_eq!(got.arithmetic, GpuArithmetic::F32);
+        assert_eq!(got.arithmetic, GpuArithmetic::SoftwareBinary64);
         assert_eq!(got.value.samples, n);
         assert_eq!(got.value.bounds, reference(&flat).bounds);
         let expected = reference(&flat).moments;
@@ -262,6 +262,6 @@ fn stable_session_matches_uploaded_f32_reference_and_documents_quantization() {
             .value
             .moments
             .covariance,
-        [[0.; 3]; 3]
+        [[0.25; 3]; 3]
     );
 }

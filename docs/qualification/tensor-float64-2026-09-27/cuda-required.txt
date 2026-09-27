@@ -1,0 +1,35 @@
+warning: binary `wgsl_export` should have a kebab-case name
+  |
+1 | /Users/themoretheless/Documents/Sources/open-scad-viewer/crates/target/.../wgsl_export
+  |                                                                            ^^^^^^^^^^^
+  |
+  = note: `cargo::non_kebab_case_bins` is set to `warn` by default
+help: to change the binary name to `wgsl-export`, convert the file stem
+  |
+1 - src/bin/wgsl_export.rs
+1 + src/bin/wgsl-export.rs
+  |
+warning: `raster-core` (manifest) generated 1 warning
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.06s
+     Running tests/float64.rs (crates/target/debug/build/compute-cuda/348cc51e39d4c61e/out/float64-348cc51e39d4c61e)
+
+running 2 tests
+test native_binary64_owners_writes_and_scalar_abi ...
+thread 'native_binary64_owners_writes_and_scalar_abi' (31861465) panicked at compute-cuda/tests/float64.rs:12:13:
+required native CUDA f64 unavailable: CUDA unavailable: CUDA driver/device is absent or initialization failed
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+FAILED
+test native_binary64_shared_contract ...
+thread 'native_binary64_shared_contract' (31861466) panicked at compute-cuda/tests/float64.rs:12:13:
+required native CUDA f64 unavailable: CUDA unavailable: CUDA driver/device is absent or initialization failed
+FAILED
+
+failures:
+
+failures:
+    native_binary64_owners_writes_and_scalar_abi
+    native_binary64_shared_contract
+
+test result: FAILED. 0 passed; 2 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+error: test failed, to rerun pass `-p compute-cuda --test float64`

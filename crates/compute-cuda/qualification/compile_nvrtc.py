@@ -31,6 +31,8 @@ WHEELS = {
     ),
 }
 ABI = {
+    "conv_f32": ["u64"] * 5,
+    "conv_low": ["u64"] * 5 + ["u32"],
     "unary": ["u64"] * 4 + ["u32", "u64", "u32", "f32", "f32"],
     "binary": ["u64"] * 5 + ["u32", "u64", "u64", "u32"],
     "binary_u32": ["u64"] * 5 + ["u32", "u64", "u64", "u32"],
@@ -55,11 +57,17 @@ ABI = {
     "unary_low": ["u64"] * 4 + ["u32", "u64", "u32", "u32"],
     "binary_low": ["u64"] * 5 + ["u32", "u64", "u64", "u32", "u32"],
 }
+ABI["unary_f64"] = ["u64"] * 4 + ["u32", "u64", "u32", "f64", "f64"]
+ABI["binary_f64"] = ABI["binary"]
+ABI["reduce_axes_f64"] = ABI["reduce_axes"]
+ABI["reduce_all_f64"] = ABI["reduce_all"]
+ABI["copy_f64"] = ABI["copy_f32"]
+ABI["fill_f64"] = ["u64", "u64", "f64"]
 ABI["reduce_axes_u32"] = ABI["reduce_axes"]
 ABI["reduce_all_u32"] = ABI["reduce_all"]
 ABI["reduce_axes_low"] = ABI["reduce_axes"] + ["u32"]
 ABI["reduce_all_low"] = ABI["reduce_all"] + ["u32"]
-for _dtype in ["f32", "u32"]:
+for _dtype in ["f32", "u32", "f64"]:
     ABI[f"compare_{_dtype}"] = ABI["binary"]
     ABI[f"where_{_dtype}"] = ["u64"] * 6 + ["u32"] + ["u64"] * 3
     ABI[f"scan_{_dtype}"] = ["u64"] * 8 + ["u32", "u64", "u64", "u32", "u32"]
@@ -199,7 +207,7 @@ def production_source(crate):
     runtime = (crate / "src/runtime.rs").read_text()
     declaration = runtime.split("pub const CUDA_KERNEL_SOURCE:", 1)[1].split(";", 1)[0]
     parts = re.findall(r'include_str!\("([^"\\]+)"\)', declaration)
-    if parts != ["kernels.cu", "indexing.cu", "reductions.cu", "scatter.cu", "low_precision.cu", "statistics.cu", "attention.cu", "low_ops.cu", "low_indexing.cu", "low_scatter.cu", "low_statistics.cu", "low_attention.cu"]:
+    if parts != ["kernels.cu", "indexing.cu", "reductions.cu", "scatter.cu", "low_precision.cu", "statistics.cu", "attention.cu", "low_ops.cu", "low_indexing.cu", "low_scatter.cu", "low_statistics.cu", "low_attention.cu", "convolution.cu", "float64.cu", "float64_indexing.cu"]:
         raise RuntimeError(f"Review source concatenation before qualification: {parts}")
     contents = [(name, (crate / "src" / name).read_bytes()) for name in parts]
     options = []

@@ -36,7 +36,7 @@ pub struct PointPlane {
 }
 
 impl PointMoments {
-    #[cfg(feature = "gpu")]
+    #[cfg(any(feature = "cuda", all(feature = "gpu", target_arch = "wasm32")))]
     pub(crate) fn from_sums(samples: usize, sum: V3, outer: [f64; 6]) -> Self {
         let n = samples as f64;
         let centroid = [sum[0] / n, sum[1] / n, sum[2] / n];
@@ -179,8 +179,8 @@ pub fn point_moments(points: &[V3]) -> Result<PointMoments> {
 }
 
 /// [`point_moments`] with optional fused GPU/CUDA reductions. `Auto` currently
-/// preserves the exact CPU reference; explicit `Gpu`/`Cuda` force f32 device
-/// execution and fall back to CPU if no device is available.
+/// preserves the exact CPU reference; native `Gpu` uses binary64, while legacy
+/// `Cuda` and browser adapters use f32 device execution and fall back to CPU if no device is available.
 pub fn point_moments_accelerated(
     points: &[V3],
     #[allow(unused_variables)] acceleration: Acceleration,

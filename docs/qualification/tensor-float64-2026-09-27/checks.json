@@ -1,0 +1,226 @@
+[
+  {
+    "name": "native",
+    "command": [
+      "python3",
+      "scripts/qualify-tensor-backends.py",
+      "--backend",
+      "wgsl",
+      "--backend",
+      "mlx",
+      "--offline",
+      "--output",
+      "/Users/themoretheless/Documents/Sources/open-scad-viewer/docs/qualification/tensor-float64-2026-09-27/native"
+    ],
+    "env": {},
+    "execution": "host outside filesystem sandbox; native GPU requires Metal access",
+    "exit_code": 0,
+    "expected_exit_code": 0,
+    "elapsed_seconds": 62.488,
+    "log": "native.txt"
+  },
+  {
+    "name": "wgsl-unit",
+    "command": [
+      "cargo",
+      "test",
+      "--offline",
+      "--locked",
+      "--manifest-path",
+      "crates/Cargo.toml",
+      "-p",
+      "compute-core",
+      "--lib",
+      "--",
+      "--test-threads=1",
+      "--nocapture"
+    ],
+    "env": {
+      "COMPUTE_REQUIRE_GPU": "1"
+    },
+    "execution": "host outside filesystem sandbox; native GPU requires Metal access",
+    "exit_code": 0,
+    "expected_exit_code": 0,
+    "elapsed_seconds": 1.864,
+    "log": "wgsl-unit.txt"
+  },
+  {
+    "name": "math-f64-required",
+    "command": [
+      "cargo",
+      "test",
+      "--offline",
+      "--locked",
+      "--manifest-path",
+      "crates/Cargo.toml",
+      "-p",
+      "osv-math",
+      "--features",
+      "tensor-cuda",
+      "--test",
+      "tensor_f64",
+      "--",
+      "--test-threads=1",
+      "--nocapture"
+    ],
+    "env": {
+      "COMPUTE_REQUIRE_CUDA": "1"
+    },
+    "execution": "host outside filesystem sandbox; native GPU requires Metal access",
+    "exit_code": 101,
+    "expected_exit_code": 101,
+    "elapsed_seconds": 1.814,
+    "log": "math-f64-required.txt"
+  },
+  {
+    "name": "wasm-check",
+    "command": [
+      "cargo",
+      "check",
+      "--offline",
+      "--locked",
+      "--manifest-path",
+      "crates/Cargo.toml",
+      "-p",
+      "compute-core",
+      "--target",
+      "wasm32-unknown-unknown"
+    ],
+    "env": {},
+    "execution": "host outside filesystem sandbox; native GPU requires Metal access",
+    "exit_code": 0,
+    "expected_exit_code": 0,
+    "elapsed_seconds": 0.673,
+    "log": "wasm-check.txt"
+  },
+  {
+    "name": "cuda-host",
+    "command": [
+      "cargo",
+      "test",
+      "--offline",
+      "--locked",
+      "--manifest-path",
+      "crates/Cargo.toml",
+      "-p",
+      "compute-cuda",
+      "--",
+      "--test-threads=1",
+      "--nocapture"
+    ],
+    "env": {},
+    "execution": "host within filesystem sandbox; no native GPU execution in this command",
+    "exit_code": 0,
+    "expected_exit_code": 0,
+    "elapsed_seconds": 6.323,
+    "log": "cuda-host.txt"
+  },
+  {
+    "name": "cuda-required",
+    "command": [
+      "cargo",
+      "test",
+      "--offline",
+      "--locked",
+      "--manifest-path",
+      "crates/Cargo.toml",
+      "-p",
+      "compute-cuda",
+      "--test",
+      "float64",
+      "--",
+      "--test-threads=1",
+      "--nocapture"
+    ],
+    "env": {
+      "COMPUTE_REQUIRE_CUDA": "1"
+    },
+    "execution": "host within filesystem sandbox; no native GPU execution in this command",
+    "exit_code": 101,
+    "expected_exit_code": 101,
+    "elapsed_seconds": 0.116,
+    "log": "cuda-required.txt"
+  },
+  {
+    "name": "clippy",
+    "command": [
+      "cargo",
+      "clippy",
+      "--offline",
+      "--locked",
+      "--manifest-path",
+      "crates/Cargo.toml",
+      "-p",
+      "tensor-core",
+      "-p",
+      "compute-core",
+      "-p",
+      "compute-cuda",
+      "-p",
+      "compute-mlx",
+      "-p",
+      "gpu-compute",
+      "-p",
+      "osv-math",
+      "--features",
+      "osv-math/tensor-cuda",
+      "--all-targets",
+      "--",
+      "-D",
+      "warnings"
+    ],
+    "env": {},
+    "execution": "host within filesystem sandbox; no native GPU execution in this command",
+    "exit_code": 0,
+    "expected_exit_code": 0,
+    "elapsed_seconds": 1.493,
+    "log": "clippy.txt"
+  },
+  {
+    "name": "rustdoc",
+    "command": [
+      "cargo",
+      "doc",
+      "--offline",
+      "--locked",
+      "--manifest-path",
+      "crates/Cargo.toml",
+      "-p",
+      "tensor-core",
+      "-p",
+      "compute-core",
+      "-p",
+      "compute-cuda",
+      "-p",
+      "compute-mlx",
+      "-p",
+      "gpu-compute",
+      "-p",
+      "osv-math",
+      "--features",
+      "osv-math/tensor-cuda",
+      "--no-deps"
+    ],
+    "env": {
+      "RUSTDOCFLAGS": "-D warnings"
+    },
+    "execution": "host within filesystem sandbox; no native GPU execution in this command",
+    "exit_code": 0,
+    "expected_exit_code": 0,
+    "elapsed_seconds": 0.492,
+    "log": "rustdoc.txt"
+  },
+  {
+    "name": "architecture",
+    "command": [
+      "python3",
+      "scripts/check-gpu-architecture.py"
+    ],
+    "env": {},
+    "execution": "host within filesystem sandbox; no native GPU execution in this command",
+    "exit_code": 0,
+    "expected_exit_code": 0,
+    "elapsed_seconds": 0.371,
+    "log": "architecture.txt"
+  }
+]

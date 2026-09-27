@@ -1,4 +1,4 @@
-//! Resident f32/u32 tensors on an explicit CUDA stream.
+//! Resident f32/f64/u32 and low-precision tensors on an explicit CUDA stream.
 //!
 //! Custom kernels use NVRTC at initialization (or caller-supplied compatible
 //! PTX). Matrix multiplication uses cuBLAS with an explicit precision policy.
@@ -7,9 +7,11 @@
 #![doc = include_str!("../README.md")]
 mod attention;
 mod attention_dispatch;
+mod convolution;
 mod dispatch;
 mod error;
 mod evaluation;
+mod float64;
 mod indexing;
 mod libraries;
 mod low_attention;

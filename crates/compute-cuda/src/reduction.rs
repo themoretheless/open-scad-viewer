@@ -1,14 +1,12 @@
-use crate::{
-    CudaError, CudaRuntime, CudaTensor,
-    indexing::{CudaScalar, output},
-};
+use crate::{CudaError, CudaRuntime, CudaTensor, indexing::output};
 use gpu_compute::cuda::{
     CudaFunction, CudaModule, PushKernelArg,
     cudarc::driver::{DeviceRepr, ValidAsZeroBits},
 };
 use std::sync::Arc;
 use tensor_core::{
-    ReduceOp, Shape, TensorBackend, TensorReduceBackend, mean_shape, reduction_shape,
+    ReduceOp, Shape, TensorBackend, TensorF64Backend, TensorReduceBackend, mean_shape,
+    reduction_shape,
 };
 
 pub(crate) mod dispatch;
@@ -16,25 +14,69 @@ use dispatch::{LoadedReduction, ReductionPass};
 
 #[derive(Clone)]
 pub(crate) struct ReductionKernels {
-    pub(crate) axes: [CudaFunction; 2],
-    pub(crate) all: [CudaFunction; 2],
-    pub(crate) fill: [CudaFunction; 2],
+    pub(crate) axes: [CudaFunction; 3],
+    pub(crate) all: [CudaFunction; 3],
+    pub(crate) fill: [CudaFunction; 3],
 }
 impl ReductionKernels {
     pub(crate) fn load(module: &Arc<CudaModule>) -> Result<Self, CudaError> {
-        let pair = |f: &str, u: &str| -> Result<_, CudaError> {
-            Ok([module.load_function(f)?, module.load_function(u)?])
+        let triple = |f: &str, u: &str, d: &str| -> Result<_, CudaError> {
+            Ok([
+                module.load_function(f)?,
+                module.load_function(u)?,
+                module.load_function(d)?,
+            ])
         };
         Ok(Self {
-            axes: pair("reduce_axes", "reduce_axes_u32")?,
-            all: pair("reduce_all", "reduce_all_u32")?,
-            fill: pair("fill_f32", "fill_u32")?,
+            axes: triple("reduce_axes", "reduce_axes_u32", "reduce_axes_f64")?,
+            all: triple("reduce_all", "reduce_all_u32", "reduce_all_f64")?,
+            fill: triple("fill_f32", "fill_u32", "fill_f64")?,
         })
     }
 }
 
+// Reduction storage types are independent of indexing/scan kernel catalogs.
+pub(crate) trait ReductionScalar: DeviceRepr + ValidAsZeroBits + Copy {
+    const KIND: usize;
+    const ONE: Self;
+    fn materialize(
+        rt: &CudaRuntime,
+        input: &CudaTensor<Self>,
+    ) -> Result<CudaTensor<Self>, CudaError>;
+}
+impl ReductionScalar for f32 {
+    const KIND: usize = 0;
+    const ONE: Self = 1.;
+    fn materialize(
+        rt: &CudaRuntime,
+        input: &CudaTensor<Self>,
+    ) -> Result<CudaTensor<Self>, CudaError> {
+        <f32 as crate::indexing::CudaScalar>::materialize(rt, input)
+    }
+}
+impl ReductionScalar for u32 {
+    const KIND: usize = 1;
+    const ONE: Self = 1;
+    fn materialize(
+        rt: &CudaRuntime,
+        input: &CudaTensor<Self>,
+    ) -> Result<CudaTensor<Self>, CudaError> {
+        <u32 as crate::indexing::CudaScalar>::materialize(rt, input)
+    }
+}
+impl ReductionScalar for f64 {
+    const KIND: usize = 2;
+    const ONE: Self = 1.;
+    fn materialize(
+        rt: &CudaRuntime,
+        input: &CudaTensor<Self>,
+    ) -> Result<CudaTensor<Self>, CudaError> {
+        rt.materialize_f64(input)
+    }
+}
+
 impl CudaRuntime {
-    fn reduce_typed<T: CudaScalar>(
+    pub(crate) fn reduce_typed<T: ReductionScalar>(
         &self,
         op: ReduceOp,
         input: &CudaTensor<T>,
@@ -101,7 +143,7 @@ impl CudaRuntime {
         Ok(result)
     }
 
-    fn reduce_all_typed<T: CudaScalar>(
+    fn reduce_all_typed<T: ReductionScalar>(
         &self,
         op: ReduceOp,
         input: &CudaTensor<T>,

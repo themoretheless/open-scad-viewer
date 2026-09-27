@@ -1,0 +1,32 @@
+{
+  "base_commit": "b4616799c1fba9b7b1a63c1eb33f59da0cf25cf4",
+  "scope": "Changed tensor/CUDA/math sources and qualification scripts; unrelated concurrent frontend edits excluded",
+  "files": {
+    "crates/Cargo.lock": "7fc1ae10d289ae341360c9ae82671b2680408a5c6a3f7830cc7136119a27c5e3",
+    "crates/Cargo.toml": "53656921b3e687dd416984561c82d3da4676ed34c4894e1f886836e2a2621d39",
+    "crates/compute-cuda/README.md": "18b892557a80800f5e8fb6ca0ec392be99b2e4f7962c911df67705589f9c9d6d",
+    "crates/compute-cuda/qualification/compile_nvrtc.py": "7441bbada4199af6450e9d00379ba7d59f25df273ac79982b25cd6f7ef1f188a",
+    "crates/compute-cuda/qualification/qualify-nvrtc.sh": "5f0b89421006df96daa1b1e96812e18a2e87d88e9cf41c285f794843b2e453ff",
+    "crates/compute-cuda/src/dispatch.rs": "2bc81c0f906ed82f19ccdb8a2cbea2e4a5daf5c2a10cb7273bf142da1aa2d55e",
+    "crates/compute-cuda/src/float64.cu": "57792e9ee78e699f0aa91e6c072c55c0ebf6e6c24e4b7cfa23bb761bdaaf31c3",
+    "crates/compute-cuda/src/float64.rs": "07badf78404d7dc9f7a594decccd1ac8aced43837cd56df1b1911bba04539bc4",
+    "crates/compute-cuda/src/indexing/mod.rs": "8fb77fdee8925ccdd7ce11cc8e2de0723a37fa791f05168b8eccee90db57b3f0",
+    "crates/compute-cuda/src/lib.rs": "98b4cf4615429bf0572f6bcbdf58d0f5eaa46619cedd0131a9d8225ea2ed77fe",
+    "crates/compute-cuda/src/matmul.rs": "306b757593df05af9c480f28412d74828d4aabc2c8cb043061c6ee804c67ecba",
+    "crates/compute-cuda/src/matmul/plan.rs": "d5627e433565f27301868c80248bcd008e4932ef8fc33f7399daccdb00baaeea",
+    "crates/compute-cuda/src/reduction.rs": "e0e2812747960850247970576b270cd9bfad138a8882a0f8f6e443a7543e3827",
+    "crates/compute-cuda/src/runtime.rs": "4647adcd65e5cd1ddc1e7c5ead399467cc2256c17bf4423b52226ca99e1f687e",
+    "crates/compute-cuda/tests/float64.rs": "e609086dcd1125c8a84987cbb937a1841d28da652cade69d0d2107d3a6e9b396",
+    "crates/math-core/src/tensor/float64.rs": "e9a66f893a1d45cd8a6da2ef6d3c81b5e06005f5418025719a6aa068ccf5fd37",
+    "crates/math-core/src/tensor/mod.rs": "857229cd489513ae8f34453d010628dd15e7483a01718fe6705755ef217ddcd4",
+    "crates/math-core/tests/tensor_f64.rs": "49e754d065b5b5001f35df85a2210a23f98f2c403f00e5aab8a8cfe2df488ccd",
+    "crates/tensor-core/src/backend.rs": "449bb7ccccea697807a4769ded55b0a0534c294016dea51c6702b8313b186787",
+    "crates/tensor-core/src/conformance.rs": "56c4459b5236e8fde7e4653a8480222be6e84e42d97bdec2b198590b1b43b3c5",
+    "crates/tensor-core/src/conformance/float64.rs": "fa4501c0623cc8cc481cf5fe0c2d669f7a79d1fbabdabae90cc9be8c8c4b76a2",
+    "crates/tensor-core/src/float64.rs": "4773469de4013447b279e30ab21c0a7264654eed2a7e6f2b7f3eba6ff7e09c42",
+    "crates/tensor-core/src/lib.rs": "ba911ad6d961fb4c0875984acd4185341fc115e99014389d22c1b80859b456b1",
+    "scripts/qualify-tensor-backends.py": "2afc778609dfd475bbdf002859e0c1768d5eb45c29d59227180816e8982aa8bd"
+  },
+  "nvrtc_source_parts_verified": 14,
+  "metadata_note": "Final selected-check refresh completed all five checks; subsequent sysctl metadata refresh was denied by sandbox. host.json retains the successful initial outside-sandbox host measurement."
+}

@@ -1,0 +1,5 @@
+NVRTC [12, 8]; supported targets [50, 52, 53, 60, 61, 62, 70, 72, 75, 80, 86, 87, 89, 90, 100, 101, 120]
+{"architecture": 70, "status": 0, "compile_seconds": 0.8533623580005951, "ptx_bytes": 1023340, "ptx_sha256": "55765f83ca31490508458efc4889d70f2906c09668afa90fa1d8efbbff08ae6c", "entry_count": 54}
+{"architecture": 80, "status": 0, "compile_seconds": 0.8737699689809233, "ptx_bytes": 1023340, "ptx_sha256": "b6f727339f127ad0cd5ded03e125fb82ad19daa4bfb979694ac945da1992cdc0", "entry_count": 54}
+{"architecture": 90, "status": 0, "compile_seconds": 0.9193505789735354, "ptx_bytes": 1023404, "ptx_sha256": "c2e65f08b173fd7cd755e419d613faee2bddfa27c803758db9a62af9d4cd7d46", "entry_count": 54}
+{"architecture": 120, "status": 0, "compile_seconds": 1.9259689910104498, "ptx_bytes": 2131497, "ptx_sha256": "bb3dff6ae1a740ccdd178afc5fa592501674926780a03e368254d4f8b62ed616", "entry_count": 54}

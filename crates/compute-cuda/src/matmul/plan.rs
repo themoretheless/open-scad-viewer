@@ -32,6 +32,9 @@ pub(crate) struct GemmBatch {
 }
 impl GemmPlan {
     pub(crate) fn new(left: &Layout, right: &Layout) -> Result<Self, CudaError> {
+        Self::new_typed::<f32>(left, right)
+    }
+    pub(crate) fn new_typed<T>(left: &Layout, right: &Layout) -> Result<Self, CudaError> {
         if left.shape().rank() < 2 || right.shape().rank() < 2 {
             return Err(CudaError::InvalidInput(
                 "GEMM operands must have promoted matrix ranks",
@@ -41,7 +44,7 @@ impl GemmPlan {
         let output = matrix.matrix_output;
         output
             .numel()
-            .checked_mul(std::mem::size_of::<f32>())
+            .checked_mul(std::mem::size_of::<T>())
             .ok_or(CudaError::InvalidInput("GEMM output byte count overflows"))?;
         let rank = output.rank();
         let (rows, columns, inner) = (
@@ -272,6 +275,9 @@ mod tests {
             )
             .is_err()
         );
+        let only_f32 = usize::MAX / 8 + 1;
+        assert!(GemmPlan::new_typed::<f32>(&dense(&[only_f32, 0]), &dense(&[0, 1])).is_ok());
+        assert!(GemmPlan::new_typed::<f64>(&dense(&[only_f32, 0]), &dense(&[0, 1])).is_err());
         let huge = usize::MAX / 4 + 1;
         assert!(GemmPlan::new(&dense(&[huge, 0]), &dense(&[0, 1])).is_err());
     }
