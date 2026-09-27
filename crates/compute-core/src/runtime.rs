@@ -2,7 +2,7 @@ use crate::{
     Binding, ComputeBatch, ComputeError, ComputeProgram, GpuArray, GpuElement, Kernel, Readback,
     gpu_compute::GpuContext, shaders, wgpu,
 };
-use std::sync::Arc;
+use std::sync::{Arc, OnceLock};
 
 /// Typed array runtime sharing an existing GPU device and queue. Pipelines are
 /// compiled once. Arrays are tied to this runtime; cloned arrays share storage.
@@ -14,7 +14,12 @@ pub struct ComputeRuntime {
     pub(crate) affine: Kernel,
     pub(crate) unary: Kernel,
     pub(crate) binary: Kernel,
+    pub(crate) compare: Kernel,
+    pub(crate) matmul: crate::matrix::MatmulKernels,
     pub(crate) sum: Kernel,
+    dot: OnceLock<crate::FusedSumKernel>,
+    pub(crate) scan: crate::scan::ScanKernels,
+    pub(crate) selection: crate::selection::SelectionKernels,
 }
 
 impl ComputeRuntime {
@@ -44,7 +49,23 @@ impl ComputeRuntime {
                     Binding::StorageReadWrite,
                 ],
             )?,
+            compare: Kernel::new(
+                device,
+                "array compare",
+                shaders::COMPARE_WGSL,
+                "main",
+                &[
+                    Binding::Uniform,
+                    Binding::StorageRead,
+                    Binding::StorageRead,
+                    Binding::StorageReadWrite,
+                ],
+            )?,
+            matmul: crate::matrix::MatmulKernels::new(device)?,
             sum: Kernel::new(device, "array sum", shaders::BLOCK_SUM_WGSL, "main", &unary)?,
+            dot: OnceLock::new(),
+            scan: crate::scan::ScanKernels::new(device)?,
+            selection: crate::selection::SelectionKernels::new(device)?,
         })
     }
 
@@ -149,6 +170,17 @@ impl ComputeRuntime {
             runtime: self,
             batch: ComputeBatch::new(),
         }
+    }
+
+    pub(crate) fn dot_kernel(&self) -> Result<&crate::FusedSumKernel, ComputeError> {
+        if let Some(kernel) = self.dot.get() {
+            return Ok(kernel);
+        }
+        let kernel = crate::FusedSumKernel::dot(&self.context)?;
+        // Concurrent first calls may compile twice; retain the first successful
+        // pipeline without changing the runtime's Send/Sync properties.
+        let _ = self.dot.set(kernel);
+        Ok(self.dot.get().expect("dot pipeline was initialized"))
     }
 
     /// Read an existing array without running a program.

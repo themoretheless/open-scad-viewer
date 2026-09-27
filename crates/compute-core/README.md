@@ -1,6 +1,8 @@
 # compute-core
 
 Architecture and crate boundaries: [GPU library design](../../docs/design/gpu-library-architecture.md).
+Measured dot/sum improvements, subgroup experiments and covariance precision:
+[reduction qualification](../../docs/qualification/shader-compute-reductions-2026-09-27.md).
 
 Runtime library for WGSL compute kernels — the compute counterpart of
 `raster-core`. Domain kernels (math-core, photogrammetry-core, geometry-bridge)
@@ -10,8 +12,8 @@ lives here.
 ## Typed array programs
 
 `ComputeRuntime` compiles reusable kernels and owns typed `GpuArray<f32>` and
-`GpuArray<u32>` storage. Arithmetic is currently f32; u32 arrays support storage,
-range updates and readback. `ComputeProgram` prepares an ordered chain once and
+`GpuArray<u32>` storage. Arithmetic maps are f32; u32 arrays support storage, range updates, exclusive
+prefix sums and GPU-resident selection counts. `ComputeProgram` prepares an ordered chain once and
 can submit it repeatedly after inputs change.
 
 ```rust
@@ -40,7 +42,72 @@ Supported operations:
 - add, subtract, multiply, divide, min and max, including a single-element GPU
   array broadcast on either side;
 - negate, abs, square, sqrt, reciprocal, exp, log, sin and cos;
-- sum and dot product with all reduction passes on the GPU.
+- sum and fused dot product with all reduction passes on the GPU;
+- six f32 comparisons yielding zero/one u32 masks, with scalar broadcasting;
+- exclusive u32 prefix sum with wrapping addition;
+- stable f32 compaction by a nonzero u32 mask, with GPU-resident count and zero tail.
+
+`dot(a, b)` evaluates products in registers and reduces directly to workgroup
+partials. It no longer allocates an array of products. `dot_into(a, b, output)`
+reuses a distinct single-f32 output; both inputs must have equal length. Empty
+inputs reset the output to zero on every execution. Its pipeline is compiled
+lazily and retained by the runtime. The implementation uses the same graph
+lowering and execution path as `FusionGraph::compile_sum`; floating-point
+summation order and FMA contraction may differ from separate multiply and sum.
+
+`sum_into(input, output)` likewise reuses a distinct scalar output, including
+zeroing it for empty inputs. On Metal, `sum` above 65,536 elements uses a bounded
+grid of at most 256 workgroups to reduce intermediate storage and scheduling
+overhead. Smaller inputs and other backends keep the previous schedule. Raw
+`Reduction` constructors preserve their supplied-kernel scheduling contract;
+`record_in_pass` composes all its stages inside a caller-owned compute pass.
+
+### Prefix scans and stable selection
+
+```rust
+use compute_core::CompareOp;
+
+let input = runtime.upload(&[10.0f32, 20.0, 30.0, 40.0])?;
+let threshold = runtime.upload(&[25.0f32])?;
+let mut program = runtime.program();
+let keep = program.compare(CompareOp::Greater, &input, &threshold)?;
+let prefix = program.exclusive_scan(&keep)?; // [0, 0, 0, 1]
+let selected = program.compact(&input, &keep)?;
+let total = program.sum(selected.values())?;
+let value = program.submit_read(&total)?.wait(Duration::from_secs(10))?;
+// value == [70.0]; comparison, scan, selection and reduction use one submission.
+// selected.values() has capacity 4: [30.0, 40.0, 0.0, 0.0].
+// selected.count() is a one-element GPU u32 array containing 2.
+```
+
+`compare` and `compare_into` support `Equal`, `NotEqual`, `Less`, `LessEqual`,
+`Greater` and `GreaterEqual`. They compare equal-length f32 arrays or broadcast a
+one-element array on either side, producing exact zero/one masks on the GPU.
+Update the threshold scalar and resubmit the prepared program to change the
+selection. Comparisons follow WGSL semantics for finite inputs; arithmetic
+producers must also keep their intermediate f32 values finite. No portable NaN
+or infinity comparison contract is promised.
+
+`exclusive_scan` computes `output[i] = input[..i].sum()` modulo 2^32. Compaction
+normalizes its mask to zero/one before scanning; every nonzero mask keeps one
+value. Neither primitive reads intermediate results on the CPU. A hierarchy of
+workgroup scans and prefix additions supports lengths beyond a single dispatch
+grid. Prepared programs retain levels, bindings and allocations between runs.
+Use `exclusive_scan_into(input, output)` or
+`compact_into(input, keep, output, count)` to supply output storage; lengths must
+match the input and the count must contain exactly one u32. All output storage
+must be distinct from inputs and from the other output, including different
+scalar interpretations imported from the same buffer.
+
+`CompactedArray` exposes both capacity and logical count. After the producer
+executes, the prefix of `values()` identified by `count()[0]` is stable and the
+remaining capacity is zero. The tail is cleared every run, including after a
+larger previous selection. Summing the full capacity therefore gives the selected
+sum without reading count first. Operations that change zero, such as adding a
+constant, must respect the logical count separately. Mutating returned arrays
+invalidates the producer's invariant until it runs again. Empty selections have
+zero capacity and a GPU count of zero. Scan overflow wraps; selection counts do
+not overflow because runtime array lengths are bounded by u32.
 
 ### Memory and submission rules
 
@@ -177,9 +244,11 @@ GPU-backed tests skip cleanly on machines without an adapter.
 Measured on Apple M4 Max (Metal, release): scale_add ~47 GB/s at WG=128 and
 ~67 GB/s at WG=256; the vec4 variant scale_add4 ~113 GB/s (16 bytes streamed
 per thread vs 4); the zip_mul + block_sum dot-product pair ~70–115 GB/s
-effective. Vectorized access is the single biggest lever for streaming
-kernels — domain kernels that need bandwidth should default to the vec4
-shapes or add their own multi-element-per-thread variants.
+effective. These are measurements of the original streaming examples. For
+reductions, the number of dispatched groups also matters: the later bounded-grid
+study retained the scalar shader with a new schedule. A storage
+`array<vec4<f32>>` also requires explicit handling of unpadded tails. Benchmark
+vector access and dispatch shape against the operation's buffer contract.
 
 ## Reusable GPU chains
 
@@ -241,3 +310,233 @@ Readback delegates to `gpu_compute::ByteReadback`. Use `record_read` and mark th
 ticket `submitted` after submitting a caller-owned encoder. Mapping failures,
 cancellation and empty payloads are distinct. Legacy `read_f32`/`read_u32` panic on
 transport failure; use their `try_` variants for recoverable errors.
+
+### WGSL contracts and compiled pipeline reuse
+
+`Kernel::new` now derives the selected entry point's workgroup size and buffer
+requirements from WGSL. It supports fixed one-dimensional compute entry points;
+tuning rejects a textual anchor that does not control the selected entry point.
+Wrong entry names, buffer layout kinds and unsupported dimensionality fail before
+pipeline execution. `binding_info()` exposes minimum buffer sizes, including one
+element for trailing runtime arrays.
+
+Use `Kernel::from_context` or `KernelCache` for checked custom bindings:
+
+```rust,ignore
+let mut cache = compute_core::KernelCache::new(&context, 32);
+let kernel = cache.get("scale", compute_core::shaders::SCALE_ADD_WGSL, "main", &[
+    compute_core::Binding::Uniform,
+    compute_core::Binding::StorageRead,
+    compute_core::Binding::StorageReadWrite,
+])?;
+let bindings = kernel.bind(&context, &[
+    params.view(0..16)?, input.view(0..input.size())?, output.view(0..output.size())?,
+])?;
+kernel.record_dispatch(&mut encoder, &bindings, kernel.workgroup_count(count));
+```
+
+The checked API rejects foreign devices, wrong usage, unaligned/undersized
+ranges, and repeated buffers when a slot is writable. Raw-device constructors
+retain existing low-level APIs; `bind` requires tracked context ownership.
+
+`KernelCache` keys exact compiled source, entry and layout; diagnostic labels do
+not affect reuse. It evicts the least recently used entry at its configured
+capacity. Existing `Arc<Kernel>` handles survive eviction/clear, while failed
+compilations leave cached entries intact. `stats()` reports hits, compilation
+attempts and evictions. Capacity bounds retained entries rather than total VRAM.
+
+`Readback::wait_mut` allows retry after a timeout without consuming the ticket.
+The existing consuming `wait` remains available.
+
+A runnable example measures `compare → compact → sum` with one submission and
+only eight bytes of final readback:
+
+```sh
+cargo run --release --offline --manifest-path crates/Cargo.toml \
+  -p compute-core --example compact_reduce
+```
+
+It checks a CPU reference, separates plan preparation, resident execution and
+upload-inclusive execution, and rotates timing order. These host timings include
+submission and waiting; they are not GPU timestamp measurements.
+
+## Dense matrix multiplication
+
+`MatrixView` gives an existing f32 array an exact row-major shape. `matmul`
+records `(m × k) @ (k × n)` and returns a `GpuMatrix`; its `values()` can feed
+ordinary array operations, while `view()` can feed another matrix product.
+
+```rust
+use compute_core::MatrixView;
+
+let a = runtime.upload(&[1.0f32, 2.0, 3.0, 4.0, 5.0, 6.0])?;
+let b = runtime.upload(&[7.0f32, 8.0, 9.0, 10.0, 11.0, 12.0])?;
+let mut program = runtime.program();
+let product = program.matmul(MatrixView::new(&a, 2, 3)?, MatrixView::new(&b, 3, 2)?)?;
+let total = program.sum(product.values())?;
+// product has shape 2×2: [58, 64; 139, 154]. No intermediate CPU copy.
+let value = program.submit_read(&total)?.wait(Duration::from_secs(10))?;
+// value == [415.0]
+```
+
+`matmul_into(a, b, output)` writes a matching m×n view without allocating an
+output. Matrix dimensions and array length must match exactly, with checked
+multiplication and u32 dimension bounds. Input/output aliases, foreign runtime
+arrays, mismatched inner dimensions and incorrectly shaped outputs fail before
+recording. Shapes with zero m or n produce empty output. A zero k writes zeros
+to the entire output on every execution, including reused nonzero storage.
+
+The general kernel stages 32×32 A/B tiles in workgroup memory. A fixed 64-lane workgroup
+computes the corresponding output tile; each lane holds sixteen accumulators in
+registers. Odd dimensions are padded within shared memory and all global
+accesses are bounded. Workgroups stride over flattened tile IDs when the number
+of tiles exceeds the dispatch limit. These tile dimensions are fixed and do not
+use the generic `WG` tuning anchor. Arithmetic uses f32 fused multiply-add;
+inputs and intermediate sums must remain finite. Compare with a tolerance against
+a CPU reference because rounding can differ.
+
+On Metal, measured shape ranges select three additional kernels: aligned vec4
+tiles, direct small products, or a cooperative reduction across the inner axis.
+The cooperative path changes accumulation order. Other backends and unmeasured
+shapes retain the general tiled kernel. Exact selection bounds, rejected
+candidates and raw benchmark samples are recorded in
+[the matrix study](benchmarks/matmul-research.md).
+
+Run the measured baseline comparison:
+
+```sh
+cargo run --release --offline -p compute-core --example bench_matmul
+```
+
+It uses four warmups and seventeen interleaved samples per shape. Both GPU paths
+include submission, completion and full output readback, with inputs resident
+and preparation outside timing. The baseline GPU computes one output per thread
+without shared tiles. The CPU implementation is single-threaded cache-blocked
+Rust with contiguous inner loops; it is not a vendor BLAS baseline. Every output
+is checked against an independent f64 reference outside timing. The report
+includes maximum absolute errors and does not use GPU timestamps.
+
+## Fused expressions
+
+`FusionGraph` compiles a DAG of f32 arithmetic into one WGSL dispatch. Common
+expressions share shader locals, unreachable expressions disappear, and only
+final outputs allocate GPU arrays. A prepared kernel can run repeatedly at
+new lengths and on new buffers. `compile_cached` uses the bounded `KernelCache`.
+
+```rust,ignore
+use compute_core::{BinaryOp, FusionGraph, UnaryOp};
+
+let mut graph = FusionGraph::new(2);
+let x = graph.input(0)?;
+let bias = graph.input(1)?;
+let shifted = graph.binary(BinaryOp::Add, &x, &bias)?;
+let squared = graph.unary(UnaryOp::Square, &shifted)?;
+let kernel = graph.compile(&context, &[shifted, squared])?;
+
+let input = runtime.upload(&[1.0f32, 2.0, 3.0])?;
+let scalar = runtime.upload(&[0.5f32])?;
+let mut program = runtime.program();
+let outputs = program.fused(&kernel, &[&input, &scalar], input.len())?;
+let sum = program.sum(&outputs[1])?;
+// One fused dispatch writes both outputs. The reduction consumes the second
+// output on the GPU, in the same command submission.
+let result = program.submit_read(&sum)?.wait(Duration::from_secs(10))?;
+```
+
+`fused_into` reuses caller-owned output arrays. Each input must have the output
+length or one broadcast element; this applies to every declared input slot,
+including unused slots. Scalar broadcasting works on either side of binary
+operations. Explicit output length permits constant-only graphs and zero-length
+execution. Multiple outputs must have equal lengths and distinct allocations;
+output/input aliases and foreign arrays fail before appending work. Repeated
+read-only inputs are allowed. Graph expressions belong to their original graph.
+The generated shader is available through `FusedKernel::source()`.
+
+Operations preserve operand order and grouping. Host compilation performs no
+arithmetic reassociation or constant folding. WGSL f32 rounding, transcendental
+approximations and FMA contraction still apply, so fused and separate kernels
+are compared with tolerances. Constants must be finite; callers must keep GPU
+inputs and intermediate arithmetic within the supported operation domains.
+Compilation checks the device's storage binding limit against live input and
+output buffers. The executor uses grid-strided indexing above the dispatch limit.
+
+```sh
+cargo run --release --offline --manifest-path crates/Cargo.toml \
+  -p compute-core --example bench_fusion
+```
+
+This benchmark compares nine existing operations recorded in a shared compute
+pass with the same fused expression and a single-loop Rust CPU reference. It
+reports resident and upload-inclusive execution, including full output readback,
+with compilation and allocation outside the timed loop. There are three warmups
+and fifteen samples in rotated order. Intermediate array storage falls from
+`8 * len * sizeof(f32)` to zero; both paths retain one final output.
+
+Initial general-tile Metal run (2026-09-27), before shape selection, milliseconds.
+This earlier run used two warmups and seven samples:
+
+| Shape `(m, k, n)` | Tiled GPU + readback | Naive GPU + readback | CPU blocked f32 |
+| --- | ---: | ---: | ---: |
+| 64, 64, 64 | 0.293 | 0.259 | 0.073 |
+| 127, 259, 193 | 0.669 | 0.446 | 1.836 |
+| 512, 512, 512 | 1.179 | 2.365 | 37.736 |
+| 1024, 1024, 1024 | 4.969 | 6.520 | 301.425 |
+
+This run favors shared tiles for the two larger square matrices. The 64×64 case
+is faster on CPU, and the rectangular case is faster with the naive GPU kernel.
+No automatic crossover policy is inferred from these four shapes. The largest
+GPU error against the f64 reference was 3.160e-5; plan preparation took 0.021–0.042
+ms with kernels already compiled. These are local host timings subject to runtime
+variation, not universal hardware or BLAS performance claims.
+
+### Fusing a map with its sum
+
+`compile_sum` emits a first pass that evaluates the expression and reduces it
+inside each workgroup. `fused_sum` folds those partials to a scalar using the
+ordinary reduction machinery. The mapped array is never stored. The schedule targets
+eight elements per lane on large inputs; partial storage is
+approximately `ceil(len / 2048) * 4` bytes, capped by the dispatch limit.
+
+```rust,ignore
+let mut graph = compute_core::FusionGraph::new(2);
+let value = graph.input(0)?;
+let threshold = graph.input(1)?;
+let keep = graph.compare(compute_core::CompareOp::Greater, &value, &threshold)?;
+let zero = graph.constant(0.0)?;
+let selected = graph.select(&keep, &value, &zero)?;
+let kernel = graph.compile_sum(&context, &selected)?;
+let mut program = runtime.program();
+let sum = program.fused_sum(&kernel, &[&values, &threshold_scalar], values.len())?;
+let result = program.submit_read(&sum)?.wait(Duration::from_secs(10))?;
+```
+
+This conditional sum allocates neither a mask nor a compacted array. Use
+`compact` when subsequent work needs the selected sequence itself. Predicates
+are typed handles belonging to their graph; all six comparison operators work
+in both ordinary fused maps and sums. `select` evaluates both branches, following
+WGSL semantics, so each branch must stay within its arithmetic domain.
+
+`fused_sum_into` accepts a distinct, single-element destination. Empty input
+actively resets it to zero. Scalar broadcasts and constant-only sums are
+supported; logical length must fit u32. Recording retains its uniforms and
+buffers so input updates and repeated submissions need no reallocation.
+Summation order differs from separate map/reduce execution. Results use f32,
+with no compensated-summation guarantee; tolerance should account for scale and
+cancellation. A compiled sum has a distinct type and cannot accidentally be used
+as an elementwise-output kernel. `compile_sum_cached` shares the existing LRU.
+
+### Scan and stable compaction execution
+
+The scan processes four consecutive values per lane, then scans lane totals
+inside the workgroup. Compaction consumes local offsets plus scanned block
+offsets directly, combining scatter, count and zero-tail clearing in one final
+dispatch. These writes cover disjoint destination ranges, including reuse after
+a larger selection. The original public shader sources remain available; the
+four-element variant is `SCAN_BLOCKS4_WGSL`.
+
+Matched Metal measurements on M4 Max at 1M/4M elements and 0/50/100% masks show
+**1.25–1.43×** improvement including the full compacted output readback, and
+**1.38–1.60×** for the complete `compare → compact → sum` pipeline with the same
+final readback on both paths. The 4K cases are effectively unchanged, including
+one small regression; no small-input speedup is claimed. See
+[method, frozen baseline, all results and limitations](benchmarks/scan-compaction-metal.md).

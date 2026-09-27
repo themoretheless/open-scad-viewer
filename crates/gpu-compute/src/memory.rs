@@ -8,6 +8,7 @@ pub enum BufferError {
     ForeignDevice,
     TooLarge,
     UnalignedBinding,
+    Device(String),
 }
 impl std::fmt::Display for BufferError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -31,6 +32,10 @@ impl GpuBuffer {
     ) -> Result<Self, BufferError> {
         let device = &context.device;
         if usage.is_empty()
+            || (usage.intersects(wgpu::BufferUsages::BLAS_INPUT | wgpu::BufferUsages::TLAS_INPUT)
+                && !context
+                    .enabled_features()
+                    .contains(wgpu::Features::EXPERIMENTAL_RAY_QUERY))
             || (!context
                 .enabled_features()
                 .contains(wgpu::Features::MAPPABLE_PRIMARY_BUFFERS)
@@ -56,12 +61,15 @@ impl GpuBuffer {
         if !bytes.is_multiple_of(4) {
             return Err(BufferError::InvalidRange);
         }
-        let buffer = device.create_buffer(&wgpu::BufferDescriptor {
-            label: Some("owned GPU buffer"),
-            size: bytes,
-            usage,
-            mapped_at_creation: false,
-        });
+        let buffer = create_buffer_checked(
+            device,
+            &wgpu::BufferDescriptor {
+                label: Some("owned GPU buffer"),
+                size: bytes,
+                usage,
+                mapped_at_creation: false,
+            },
+        )?;
         Ok(Self {
             context: context.clone(),
             buffer,
@@ -90,6 +98,27 @@ impl GpuBuffer {
             bytes: range.end - range.start,
         })
     }
+}
+
+fn create_buffer_checked(
+    device: &wgpu::Device,
+    descriptor: &wgpu::BufferDescriptor<'_>,
+) -> Result<wgpu::Buffer, BufferError> {
+    let oom = device.push_error_scope(wgpu::ErrorFilter::OutOfMemory);
+    let internal = device.push_error_scope(wgpu::ErrorFilter::Internal);
+    let validation = device.push_error_scope(wgpu::ErrorFilter::Validation);
+    let buffer = device.create_buffer(descriptor);
+    // Pop every scope in reverse order before returning, including when an
+    // earlier scope captured an error. Invalid handles must never escape in Ok.
+    let errors = [
+        crate::block_on(validation.pop()),
+        crate::block_on(internal.pop()),
+        crate::block_on(oom.pop()),
+    ];
+    if let Some(error) = errors.into_iter().flatten().next() {
+        return Err(BufferError::Device(error.to_string()));
+    }
+    Ok(buffer)
 }
 
 #[derive(Clone, Copy)]
@@ -140,5 +169,35 @@ impl<'a> GpuBufferView<'a> {
             offset: self.offset,
             size: Some(size),
         }))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn backend_allocation_validation_is_recoverable_and_scopes_are_balanced() {
+        let Some(context) = crate::GpuContext::new() else {
+            assert!(std::env::var_os("COMPUTE_REQUIRE_GPU").is_none());
+            return;
+        };
+        let descriptor = wgpu::BufferDescriptor {
+            label: Some("allocation validation fixture"),
+            size: 16,
+            usage: wgpu::BufferUsages::empty(),
+            mapped_at_creation: false,
+        };
+        // Exercise the backend error path directly: public construction rejects
+        // this descriptor earlier, while OOM cannot be forced safely in a test.
+        let outer = context
+            .device
+            .push_error_scope(wgpu::ErrorFilter::Validation);
+        let result = create_buffer_checked(&context.device, &descriptor);
+        assert!(matches!(result, Err(BufferError::Device(message)) if !message.is_empty()));
+        assert!(crate::block_on(outer.pop()).is_none());
+
+        let valid = GpuBuffer::new(&context, 16, wgpu::BufferUsages::STORAGE).unwrap();
+        assert_eq!(valid.size(), 16);
     }
 }

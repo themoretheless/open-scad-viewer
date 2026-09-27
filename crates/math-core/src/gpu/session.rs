@@ -25,6 +25,7 @@ pub struct MathGpuSession {
         OnceCell<Result<GpuTransformedPointBounds, compute_core::KernelError>>,
     point_moments: OnceCell<Result<GpuPointMoments, compute_core::KernelError>>,
     point_cloud_stats: OnceCell<Result<GpuPointCloudStats, compute_core::KernelError>>,
+    stable_stats_runtime: OnceCell<compute_core::ComputeRuntime>,
     directed_chamfer: OnceCell<Result<GpuChamfer, compute_core::KernelError>>,
     nearest_two: OnceCell<Result<GpuNearestTwo, compute_core::KernelError>>,
     nearest_four: OnceCell<Result<GpuNearestFour, compute_core::KernelError>>,
@@ -43,6 +44,7 @@ impl MathGpuSession {
             transformed_point_bounds: OnceCell::new(),
             point_moments: OnceCell::new(),
             point_cloud_stats: OnceCell::new(),
+            stable_stats_runtime: OnceCell::new(),
             directed_chamfer: OnceCell::new(),
             nearest_two: OnceCell::new(),
             nearest_four: OnceCell::new(),
@@ -266,6 +268,65 @@ impl MathGpuSession {
                 .map_err(|e| GpuMathError::Kernel(e.clone()))?
                 .run(points)?;
             Ok(value)
+        })
+    }
+
+    /// Explicit f32 statistics with a second, centered covariance pass. Uses
+    /// the recorded stable plan and reads back only the final 24 scalars.
+    /// Kernels are cached; each call uploads the points and allocates its plan.
+    /// For repeated device-resident work, use
+    /// [`super::MathGpuProgram::point_cloud_stats_stable`] instead.
+    ///
+    /// Raw moments keep the original meaning `E[p*p^T]`. Centered arithmetic
+    /// improves covariance at large offsets but cannot recover differences
+    /// lost during f64-to-f32 input conversion, or handle overflowing f32 sums.
+    pub fn try_point_cloud_stats_stable(
+        &self,
+        points: &[V3],
+    ) -> Result<MathExecution<crate::PointCloudStats>, GpuMathError> {
+        if points.is_empty() {
+            return Err(GpuMathError::InvalidInput("empty or incompatible inputs"));
+        }
+        self.validate_points(points)?;
+        self.execute(|| {
+            if self.stable_stats_runtime.get().is_none() {
+                let runtime = compute_core::ComputeRuntime::new(&self.context)?;
+                let _ = self.stable_stats_runtime.set(runtime);
+            }
+            let runtime = self
+                .stable_stats_runtime
+                .get()
+                .expect("runtime initialized above");
+            let flat: Vec<f32> = points.iter().flatten().map(|&v| v as f32).collect();
+            let input = runtime.upload(&flat)?;
+            let mut plan = self.program(runtime)?;
+            let stats = plan.point_cloud_stats_stable(super::PointCloudView::new(&input)?)?;
+            let mut encoder = self
+                .context
+                .device
+                .create_command_encoder(&Default::default());
+            plan.record(&mut encoder);
+            let mut read = runtime.record_read(&mut encoder, &stats.values)?;
+            read.submitted(self.context.queue.submit([encoder.finish()]));
+            let packed = read.wait(std::time::Duration::from_secs(30))?;
+            let get = |i| f64::from(packed[i]);
+            let bounds = crate::PointBounds::new(
+                points.len(),
+                [get(0), get(1), get(2)],
+                [get(3), get(4), get(5)],
+            );
+            let mut moments = crate::PointMoments::from_sums(
+                points.len(),
+                [get(6), get(7), get(8)],
+                [get(9), get(10), get(11), get(12), get(13), get(14)],
+            );
+            moments.centroid = [get(15), get(16), get(17)];
+            moments.covariance = [
+                [get(18), get(19), get(20)],
+                [get(19), get(21), get(22)],
+                [get(20), get(22), get(23)],
+            ];
+            Ok(crate::PointCloudStats::from_parts(bounds, moments))
         })
     }
     pub fn directed_chamfer(

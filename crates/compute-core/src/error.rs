@@ -6,6 +6,7 @@ pub enum ComputeError {
     Buffer(gpu_compute::BufferError),
     TooLarge { bytes: u64, limit: u64 },
     LengthMismatch { expected: usize, actual: usize },
+    ShapeMismatch { expected: [usize; 2], actual: [usize; 2] },
     OutOfBounds,
     BudgetExceeded { requested: u64, budget: u64 },
     ForeignArray,
@@ -26,6 +27,9 @@ impl std::fmt::Display for ComputeError {
             Self::LengthMismatch { expected, actual } => {
                 write!(f, "array length {actual}; expected {expected}")
             }
+            Self::ShapeMismatch { expected, actual } => write!(
+                f, "matrix shape {}x{}; expected {}x{}", actual[0], actual[1], expected[0], expected[1]
+            ),
             Self::BudgetExceeded { requested, budget } => write!(
                 f,
                 "scratch pool needs {requested} bytes; budget is {budget}"

@@ -1,9 +1,12 @@
+mod contract;
+use contract::reflect;
+pub use contract::{BindingInfo, KernelBindingError};
 use gpu_compute::block_on;
 use wgpu::{BindGroupLayout, Buffer, ComputePipeline, Device, Queue};
 
 /// The binding a kernel expects at `group(0)`, sequential from binding 0:
 /// uniforms and read-only/read-write storage buffers in declaration order.
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
 pub enum Binding {
     Uniform,
     StorageRead,
@@ -38,10 +41,14 @@ pub struct Kernel {
     pipeline: ComputePipeline,
     bgl: BindGroupLayout,
     workgroup_size: u32,
+    max_groups: u32,
+    binding_info: Vec<BindingInfo>,
+    context: Option<gpu_compute::GpuContext>,
 }
 
 impl Kernel {
-    /// Compiles `wgsl` with the `WG` anchor at its default (256).
+    /// Compiles a one-dimensional compute entry point. Dispatch sizing follows
+    /// its actual WGSL workgroup size, including sources without a `WG` anchor.
     pub fn new(
         device: &Device,
         label: &str,
@@ -49,7 +56,7 @@ impl Kernel {
         entry: &str,
         bindings: &[Binding],
     ) -> Result<Self, KernelError> {
-        Self::with_workgroup_size(device, label, wgsl, entry, bindings, 256)
+        Self::compile(device, label, wgsl.to_owned(), entry, bindings, None)
     }
 
     /// Compiles `wgsl` after substituting the `WG` anchor with `workgroup_size`
@@ -62,36 +69,74 @@ impl Kernel {
         bindings: &[Binding],
         workgroup_size: u32,
     ) -> Result<Self, KernelError> {
-        if !workgroup_size.is_power_of_two() {
+        let (source, selected) = Self::tuned_source(device, wgsl, workgroup_size)?;
+        Self::compile(device, label, source, entry, bindings, Some(selected))
+    }
+
+    pub(crate) fn tuned_source(
+        device: &Device,
+        wgsl: &str,
+        requested: u32,
+    ) -> Result<(String, u32), KernelError> {
+        if !requested.is_power_of_two() {
             return Err(KernelError {
-                message: format!("workgroup size {workgroup_size} is not a power of two"),
+                message: format!("workgroup size {requested} is not a power of two"),
             });
         }
-        // Clamp to the device's per-workgroup limits so a tuner-picked size
-        // never fails pipeline validation on a tighter backend (default wgpu
-        // limits cap invocations per workgroup at 256). The size is a power
-        // of two, so halving preserves that.
         let limits = device.limits();
         let max_size = limits
             .max_compute_invocations_per_workgroup
             .min(limits.max_compute_workgroup_size_x)
             .max(1);
-        let mut workgroup_size = workgroup_size;
-        while workgroup_size > max_size {
-            workgroup_size /= 2;
+        let mut selected = requested;
+        while selected > max_size {
+            selected /= 2;
         }
-        let source = if workgroup_size == 256 {
-            wgsl.to_string()
+        let source = if selected == 256 {
+            wgsl.to_owned()
         } else {
-            let replaced =
-                wgsl.replacen(WG_ANCHOR, &format!("const WG: u32 = {workgroup_size};"), 1);
-            if replaced == wgsl {
+            if !wgsl.contains(WG_ANCHOR) {
                 return Err(KernelError {
                     message: format!("WG anchor ({WG_ANCHOR}) missing from kernel source"),
                 });
             }
-            replaced
+            wgsl.replacen(WG_ANCHOR, &format!("const WG: u32 = {selected};"), 1)
         };
+        Ok((source, selected))
+    }
+
+    /// Compiles on a tracked context, enabling checked borrowed-buffer bindings.
+    pub fn from_context(
+        context: &gpu_compute::GpuContext,
+        label: &str,
+        wgsl: &str,
+        entry: &str,
+        bindings: &[Binding],
+    ) -> Result<Self, KernelError> {
+        let mut kernel = Self::new(&context.device, label, wgsl, entry, bindings)?;
+        kernel.context = Some(context.clone());
+        Ok(kernel)
+    }
+
+    fn compile(
+        device: &Device,
+        label: &str,
+        source: String,
+        entry: &str,
+        bindings: &[Binding],
+        selected: Option<u32>,
+    ) -> Result<Self, KernelError> {
+        let (workgroup_size, binding_info) = reflect(&source, entry, bindings)?;
+        if selected.is_some_and(|selected| selected != workgroup_size) {
+            return Err(KernelError {
+                message: format!(
+                    "requested WG {} but entry {entry} declares {workgroup_size}; the tuning anchor must control the entry point",
+                    selected.unwrap()
+                ),
+            });
+        }
+        let oom = device.push_error_scope(wgpu::ErrorFilter::OutOfMemory);
+        let internal = device.push_error_scope(wgpu::ErrorFilter::Internal);
         let scope = device.push_error_scope(wgpu::ErrorFilter::Validation);
         let module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some(label),
@@ -100,6 +145,8 @@ impl Kernel {
         let entries: Vec<wgpu::BindGroupLayoutEntry> = bindings
             .iter()
             .enumerate()
+            // Entry points may share one group while using different subsets.
+            // Keep layouts structural; `bind` enforces reflected minimum sizes.
             .map(|(index, binding)| match binding {
                 Binding::Uniform => gpu_compute::uniform_entry(index as u32),
                 Binding::StorageRead => gpu_compute::storage_entry(index as u32, true),
@@ -123,7 +170,12 @@ impl Kernel {
             compilation_options: wgpu::PipelineCompilationOptions::default(),
             cache: None,
         });
-        if let Some(error) = block_on(scope.pop()) {
+        let errors = [
+            block_on(scope.pop()),
+            block_on(internal.pop()),
+            block_on(oom.pop()),
+        ];
+        if let Some(error) = errors.into_iter().flatten().next() {
             return Err(KernelError {
                 message: error.to_string(),
             });
@@ -136,6 +188,9 @@ impl Kernel {
             pipeline,
             bgl,
             workgroup_size,
+            max_groups: device.limits().max_compute_workgroups_per_dimension,
+            binding_info,
+            context: None,
         })
     }
 
@@ -181,11 +236,11 @@ impl Kernel {
         invocations.div_ceil(self.workgroup_size)
     }
 
-    /// Largest invocation count a single dispatch covers: the wgpu per-dimension
-    /// workgroup-count limit (65535) times this kernel's workgroup size.
+    /// Largest invocation count a single dispatch covers: the device's
+    /// workgroup-count limit times the actual WGSL workgroup size.
     /// Larger workloads are the caller's job to chunk.
     pub fn max_dispatch_invocations(&self) -> u32 {
-        65535 * self.workgroup_size
+        self.max_groups.saturating_mul(self.workgroup_size)
     }
 
     /// Dispatches over `buffers` (one per declared [`Binding`], binding 0..n),
@@ -217,18 +272,39 @@ impl Kernel {
 
     /// Creates bindings once for repeated dispatches or recorded command chains.
     pub fn create_bind_group(&self, device: &Device, buffers: &[&Buffer]) -> wgpu::BindGroup {
-        let resources: Vec<_> = buffers.iter().map(|buffer| buffer.as_entire_binding()).collect();
+        let resources: Vec<_> = buffers
+            .iter()
+            .map(|buffer| buffer.as_entire_binding())
+            .collect();
         self.create_bind_group_resources(device, &resources)
     }
 
     /// Binds validated subranges supplied by domain adapters. Resources must
     /// match the declared layout; use GpuBufferView to validate owners and usage.
-    pub fn create_bind_group_resources(&self, device: &Device, resources: &[wgpu::BindingResource<'_>]) -> wgpu::BindGroup {
-        assert_eq!(resources.len(), self.bindings.len(), "{}: wrong buffer count", self.label);
-        let entries: Vec<_> = resources.iter().enumerate().map(|(index, resource)| wgpu::BindGroupEntry {
-            binding: index as u32, resource: resource.clone(),
-        }).collect();
-        device.create_bind_group(&wgpu::BindGroupDescriptor { label: Some(&self.label), layout: &self.bgl, entries: &entries })
+    pub fn create_bind_group_resources(
+        &self,
+        device: &Device,
+        resources: &[wgpu::BindingResource<'_>],
+    ) -> wgpu::BindGroup {
+        assert_eq!(
+            resources.len(),
+            self.bindings.len(),
+            "{}: wrong buffer count",
+            self.label
+        );
+        let entries: Vec<_> = resources
+            .iter()
+            .enumerate()
+            .map(|(index, resource)| wgpu::BindGroupEntry {
+                binding: index as u32,
+                resource: resource.clone(),
+            })
+            .collect();
+        device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some(&self.label),
+            layout: &self.bgl,
+            entries: &entries,
+        })
     }
 
     /// Dispatches with a caller-cached bind group (built against
@@ -257,16 +333,29 @@ impl Kernel {
         bind_group: &wgpu::BindGroup,
         groups: u32,
     ) {
-        assert!(
-            (1..=65535).contains(&groups),
-            "{}: workgroup count {} outside 1..=65535",
-            self.label,
-            groups
-        );
         let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
             label: Some(&self.label),
             timestamp_writes: None,
         });
+        self.record_in_pass(&mut pass, bind_group, groups);
+    }
+
+    /// Appends a dispatch to an existing compute pass. wgpu tracks resource
+    /// usage per dispatch and inserts barriers between dependent dispatches,
+    /// including when a previous output becomes the next input.
+    pub fn record_in_pass(
+        &self,
+        pass: &mut wgpu::ComputePass<'_>,
+        bind_group: &wgpu::BindGroup,
+        groups: u32,
+    ) {
+        assert!(
+            (1..=self.max_groups).contains(&groups),
+            "{}: workgroup count {} outside 1..={}",
+            self.label,
+            groups,
+            self.max_groups
+        );
         pass.set_pipeline(&self.pipeline);
         pass.set_bind_group(0, bind_group, &[]);
         pass.dispatch_workgroups(groups, 1, 1);

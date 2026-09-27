@@ -115,7 +115,7 @@ impl<'a> ComputeProgram<'a> {
         Ok(())
     }
 
-    fn binary_length(&self, a: &GpuArray<f32>, b: &GpuArray<f32>) -> Result<usize, ComputeError> {
+    pub(crate) fn binary_length(&self, a: &GpuArray<f32>, b: &GpuArray<f32>) -> Result<usize, ComputeError> {
         self.runtime.check(a)?;
         self.runtime.check(b)?;
         if a.len() == b.len() || b.len() == 1 {
@@ -188,33 +188,85 @@ impl<'a> ComputeProgram<'a> {
         Ok(())
     }
 
+    /// Sum finite f32 values, with zero for an empty array. Parallel summation
+    /// can change rounding; all intermediate arithmetic must remain finite.
     pub fn sum(&mut self, input: &GpuArray<f32>) -> Result<GpuArray<f32>, ComputeError> {
         self.runtime.check(input)?;
         let output = self.runtime.zeros::<f32>(1)?;
-        let plan = Reduction::with_output(
-            &self.runtime.device,
-            &self.runtime.queue,
-            &self.runtime.sum,
+        self.sum_into(input, &output)?;
+        Ok(output)
+    }
+
+    /// Sum into a distinct single-f32 output, retaining allocations for reuse.
+    /// Empty input resets the output to zero on every execution. Invalid
+    /// arguments leave the prepared program unchanged.
+    pub fn sum_into(
+        &mut self,
+        input: &GpuArray<f32>,
+        output: &GpuArray<f32>,
+    ) -> Result<(), ComputeError> {
+        self.runtime.check(input)?;
+        self.runtime.check(output)?;
+        if output.len() != 1 {
+            return Err(ComputeError::LengthMismatch {
+                expected: 1,
+                actual: output.len(),
+            });
+        }
+        if input.aliases(output) {
+            return Err(ComputeError::AliasedOutput);
+        }
+        let plan = Reduction::for_runtime(
+            self.runtime,
             input.buffer(),
             input.len,
             output.buffer(),
         );
         self.batch.push_reduction(&plan);
-        Ok(output)
+        Ok(())
     }
 
+    /// Fused f32 dot product without a full-sized product array. Summation order
+    /// and FMA contraction may differ from separate multiplication and sum.
     pub fn dot(
         &mut self,
         a: &GpuArray<f32>,
         b: &GpuArray<f32>,
     ) -> Result<GpuArray<f32>, ComputeError> {
         self.same_length(a, b)?;
-        let products = self.binary(BinaryOp::Multiply, a, b)?;
-        self.sum(&products)
+        let output = self.runtime.zeros(1)?;
+        self.dot_into(a, b, &output)?;
+        Ok(output)
+    }
+
+    /// Reuses a distinct single-f32 output. Empty inputs actively reset it to
+    /// zero on every execution; invalid arguments leave the program unchanged.
+    pub fn dot_into(
+        &mut self,
+        a: &GpuArray<f32>,
+        b: &GpuArray<f32>,
+        output: &GpuArray<f32>,
+    ) -> Result<(), ComputeError> {
+        self.same_length(a, b)?;
+        self.fused_sum_into(self.runtime.dot_kernel()?, &[a, b], a.len(), output)
+            .map_err(|error| match error {
+                crate::FusionError::Compute(error) => error,
+                crate::FusionError::Kernel(error) => error.into(),
+                other => crate::KernelError {
+                    message: format!("built-in dot execution: {other}"),
+                }
+                .into(),
+            })
     }
 
     pub fn record(&self, encoder: &mut wgpu::CommandEncoder) {
         self.batch.record(encoder);
+    }
+
+    /// Records all steps inside an existing compute pass. The caller may supply
+    /// timestamp queries or append other dependent compute work in that pass.
+    pub fn record_in_pass(&self, pass: &mut wgpu::ComputePass<'_>) {
+        self.batch.record_in_pass(pass);
     }
 
     pub fn submit(&self) -> wgpu::SubmissionIndex {

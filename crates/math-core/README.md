@@ -434,5 +434,90 @@ assert_eq!(read.wait(std::time::Duration::from_secs(5))?, [2.0]);
 ```
 
 Packed xyz f32 layout and context ownership are checked. Plans can be recorded
-again; their buffers remain alive through bind groups. Nearest-neighbor, bounds,
-moments and statistics still use synchronous adapters with specialized caches.
+again; their buffers remain alive through bind groups. Queue writes update input
+data without rebuilding the plan. Recorded operations use f32 arithmetic and
+expect finite device data; recording validates layouts and ownership without
+reading coordinates back.
+
+#### Nearest neighbors and fused statistics
+
+`plan.nearest_neighbors(queries, targets)` returns `GpuNearestNeighbors` with
+public `indices: GpuArray<u32>` and `squared_distances: GpuArray<f32>` fields.
+The outputs can feed `plan.sum`, generic compute, or another custom shader in the
+same encoder. Equal distances pick the first target. Empty queries produce empty
+arrays; empty targets produce `u32::MAX` indices and `f32::MAX` distances. Distances
+that overflow f32 also keep the sentinel. The search is exhaustive, with
+O(query_count * target_count) work.
+
+`plan.point_cloud_stats(points)` returns `GpuPointCloudStats { values, samples }`.
+Bounds and raw moments are reduced in multiple GPU passes; centroid and
+population covariance are finalized on the GPU. Empty clouds are rejected.
+The packed `values` array has 24 f32 elements, with public associated constants:
+
+| Constant | Range | Values |
+| --- | --- | --- |
+| `MIN` | 0..3 | Minimum x, y, z |
+| `MAX` | 3..6 | Maximum x, y, z |
+| `SUM` | 6..9 | Coordinate sums x, y, z |
+| `OUTER_SUM` | 9..15 | Product sums xx, xy, xz, yy, yz, zz |
+| `CENTROID` | 15..18 | Mean x, y, z |
+| `COVARIANCE` | 18..24 | Population covariance xx, xy, xz, yy, yz, zz |
+
+Covariance uses `E[pp] - E[p]E[p]` in f32, so large coordinate offsets can lose
+precision. Input coordinates and intermediate sums/products must remain finite
+within f32 range; the recorded plan cannot inspect GPU input values on the host.
+The synchronous adapter retains its existing final f64 CPU fold.
+Neither recorded operation submits commands or reads intermediates back.
+
+`nearest_neighbors_into` and `point_cloud_stats_into` accept caller-owned output
+arrays, including scratch-pool allocations. Output lengths, device identity and
+allocation aliasing are checked before adding dispatches. Repeated `record`
+calls reuse bindings and retained intermediate buffers. A rejected operation
+leaves the prior plan intact.
+
+#### Centered GPU covariance
+
+`plan.point_cloud_stats_stable(points)` and `point_cloud_stats_stable_into`
+preserve that packed layout and the original bounds, raw product sums and
+centroid. They add a second traversal that reduces residuals `d = p - centroid`
+and computes `E[dd] - E[d]E[d]`. The correction matters when the centroid itself
+rounds to f32. This avoids cancellation between large raw second moments: for
+points at `1_000_000 ± 1`, the expected variance is one even though the raw
+f32 products cannot retain that unit difference.
+
+`MathGpuSession::try_point_cloud_stats_stable(points)` exposes the same plan as
+a synchronous operation and returns the existing `PointCloudStats` structure.
+It caches kernels, uploads the input, and reads only the final 24 scalars.
+Repeated resident workloads should keep a recorded plan to reuse allocations.
+The existing accelerated/default selection and CUDA paths keep their behavior.
+
+The extra traversal has a cost; this is an explicit precision option. All
+arithmetic remains f32, and tiny negative covariance eigenvalues can still
+result from rounding. Input conversion loses unit differences at magnitudes
+above `2^24`; centering cannot recover those differences. Coordinates, raw
+sums/products and centered intermediate sums/products must remain finite.
+Raw product fields keep their original meaning and precision, so recomputing
+covariance from `OUTER_SUM` discards the benefit of the centered result.
+
+On Apple M4 Max, a million-point cloud translated by `10^6` had maximum
+covariance error `146,124` with raw moments and `1.23e-7` with centered reduction.
+The retained vector implementation took 1.68–1.90× the legacy GPU time across
+three paired cases; it was 2.27–2.65× faster than the first centered prototype.
+See [method, costs, raw samples and limitations](benchmarks/stable-stats-metal.md).
+
+#### Measured nearest-neighbor dispatch
+
+Recorded and synchronous nearest-neighbor calls share a cooperative GPU kernel:
+one 64-lane workgroup scans targets for each query, then reduces distance/index
+pairs while preserving first-index ties. The original scalar WGSL remains the
+reference and fallback. `NearestNeighborAlgorithm::for_shape` exposes selection:
+Metal, 512..8192 targets and 256..(2 * targets) queries. Other shapes and backends
+use the original path. CPU/CUDA placement is unchanged.
+
+On the measured Apple M4 Max, actual recorded latency including both full
+readbacks improved **2.40× / 2.71× / 1.41×** at 256×512, 4096×4096 and
+16384×8192 points. The synchronous API now submits its kernel and both readbacks
+together; it improved **1.85× / 2.37× / 1.30×** against the old three-submission
+transport. CPU remains faster for the smallest case. See
+[method, limitations, medians and p90](benchmarks/nearest-neighbor-metal.md),
+including the initial noisy run and the longer production confirmation.

@@ -3,7 +3,7 @@ use super::support::*;
 pub(super) struct GpuNearestNeighbor {
     device: Device,
     queue: wgpu::Queue,
-    kernel: Kernel,
+    kernels: super::nearest_dispatch::NearestKernels,
     buffers: std::cell::RefCell<Option<NearestNeighborBuffers>>,
 }
 
@@ -15,24 +15,16 @@ struct NearestNeighborBuffers {
     targets: Buffer,
     out_index: Buffer,
     out_dist: Buffer,
-    bind: BindGroup,
+    binds: [BindGroup; 2],
 }
 
 impl GpuNearestNeighbor {
     pub(super) fn new(context: &GpuContext) -> Result<Self, compute_core::KernelError> {
-        let kernel = Kernel::tuned(
-            context,
-            "nearest_neighbor",
-            crate::NEAREST_NEIGHBOR_WGSL,
-            "main",
-            &NN_BINDINGS,
-            WG_METAL,
-            WG_DEFAULT,
-        )?;
+        let kernels = super::nearest_dispatch::NearestKernels::new(context)?;
         Ok(Self {
             device: context.device.clone(),
             queue: context.queue.clone(),
-            kernel,
+            kernels,
             buffers: std::cell::RefCell::new(None),
         })
     }
@@ -82,7 +74,7 @@ impl GpuNearestNeighbor {
             out_bytes,
             BufferUsages::STORAGE | BufferUsages::COPY_SRC,
         );
-        let bind = self.kernel.create_bind_group(
+        let binds = self.kernels.bind_groups(
             device,
             &[&params, &queries, &targets, &out_index, &out_dist],
         );
@@ -94,7 +86,7 @@ impl GpuNearestNeighbor {
             targets,
             out_index,
             out_dist,
-            bind,
+            binds,
         });
     }
 
@@ -122,23 +114,39 @@ impl GpuNearestNeighbor {
             if !flat_t.is_empty() {
                 self.queue.write_buffer(&b.targets, 0, &pack_f32(&flat_t));
             }
-            if query_count > 0 {
-                self.kernel.dispatch_bind_group(
-                    &self.device,
-                    &self.queue,
-                    &b.bind,
-                    self.kernel.workgroup_count(query_count as u32),
-                );
-            }
             if query_count == 0 {
                 return Ok(Vec::new());
             }
-            let raw_index = read_u32(&self.device, &self.queue, &b.out_index, query_count)?;
-            let raw_dist = read_f32(&self.device, &self.queue, &b.out_dist, query_count)?;
+            let (kernel, index, groups) = self.kernels.select(query_count, target_count);
+            let mut encoder = self.device.create_command_encoder(&Default::default());
+            kernel.record_dispatch(&mut encoder, &b.binds[index], groups);
+            let bytes = query_count as u64 * 4;
+            let mut indices = gpu_compute::ByteReadback::copy_buffer(
+                &self.device,
+                &mut encoder,
+                &b.out_index,
+                0,
+                bytes,
+            )?;
+            let mut distances = gpu_compute::ByteReadback::copy_buffer(
+                &self.device,
+                &mut encoder,
+                &b.out_dist,
+                0,
+                bytes,
+            )?;
+            let submission = self.queue.submit([encoder.finish()]);
+            indices.submitted(submission.clone());
+            distances.submitted(submission);
+            let timeout = std::time::Duration::from_secs(30);
+            let raw_index = indices.wait(timeout)?;
+            let raw_dist = distances.wait(timeout)?;
             raw_index
+                .as_chunks::<4>()
+                .0
                 .iter()
-                .zip(raw_dist.iter())
-                .map(|(&index, &dist)| (index, dist as f64))
+                .zip(raw_dist.as_chunks::<4>().0.iter())
+                .map(|(index, dist)| (u32::from_le_bytes(*index), f32::from_le_bytes(*dist) as f64))
                 .collect()
         })
     }

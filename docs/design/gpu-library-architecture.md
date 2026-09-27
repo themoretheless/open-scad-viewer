@@ -77,14 +77,23 @@ gpu-compute/src/
   buffer.rs      byte packing and compatibility helpers
   memory.rs      owned buffers and device-validated borrowed views
   readback.rs    fallible byte transport, mapping and cancellation
+  profiling.rs   optional GPU timestamp queries and asynchronous timing tickets
   executor.rs    native blocking initialization helper
   cuda.rs        optional CUDA driver adapter
   lib.rs         public facade
 
 compute-core/src/
-  kernel.rs      WGSL compilation and binding/dispatch contract
+  kernel.rs      WGSL compilation and dispatch
+  kernel/contract.rs reflected bindings, sizes and checked borrowed-buffer binding
+  kernel_cache.rs context-owned bounded compiled-pipeline reuse
   batch.rs       reusable ordered dispatches
+  fusion/        typed expression DAG, predicates, WGSL lowering and fused map/sum
+  matrix.rs      row-major shape contracts and tiled matrix multiplication
+  matrix/kernels.rs shape/backend kernel selection with portable fallback
   reduction.rs   prepared multipass sum
+  scan.rs        hierarchical u32 exclusive prefix sum
+  comparison.rs  f32 comparisons producing u32 GPU masks
+  selection.rs   stable compaction with GPU count and zero tail
   array.rs       typed storage identity and views
   buffer.rs      compatibility buffer upload/read helpers
   readback.rs    typed nonblocking readback ticket
@@ -101,9 +110,11 @@ math-core/src/
   acceleration.rs placement policy
   gpu/
     session.rs   explicit context, fallible execution and lazy caches
-    plans.rs     recorded transform, point distances and reduction
+    plans.rs     shared recorded-domain wiring
+    plans/       nearest neighbors and hierarchical cloud statistics
     error.rs     execution errors and backend/arithmetic reports
     neighbors.rs nearest-neighbor families and Chamfer
+    nearest_dispatch.rs shared scalar/cooperative nearest-neighbor selection
     distance.rs  pair distances and transformed error reductions
     bounds.rs    ordinary and transformed bounds
     moments.rs   moments and combined cloud statistics
@@ -199,29 +210,56 @@ would obscure those constraints before a common lifetime model is established.
 | Domain errors | All 11 WGSL executors initialize fallibly; `MathGpuSession::try_*` returns `MathExecution<T>` with backend and f32 arithmetic, preserving errors | CPU parity and explicit invalid-input/report tests |
 | Recorded domain work | `MathGpuProgram` records transform, squared point distances and sum; `PointCloudView` requires packed xyz | Transform → distance → sum → generic affine → final readback in one submission, repeated three times |
 | Device ownership | `GpuBuffer` is created from a context; borrowed views check identity, range, usage and binding alignment | Independent instances are rejected; cloned contexts are accepted |
-| Capabilities | `features` describes the adapter; `enabled_features()` describes the device | Default device reports no enabled subgroup support |
+| Capabilities | `features` describes the adapter; `enabled_features()` describes the device; `with_features` explicitly requests optional capabilities | Default device enables no optional features; missing requested features return an error |
 | Scratch | Caller/session-owned `ScratchPool` retains named allocations within a capacity budget; growth increments generation | Reuse, rejected over-budget growth, alias rejection, old plans and readbacks survive replacement |
 | Raster | Resource upload and RGBA readback moved out of frame recording; `render_rgba_async` submits once | Existing pixel, morph, instancing and shader-export contracts pass |
 | CUDA | Domain executors split into neighbors, distance, bounds and moments | Feature builds and tests on this host; NVIDIA execution remains unverified |
 
-The recordable math API currently covers transform, point distances and sum.
-Nearest-neighbor, bounds, moments and statistics convenience methods still own
-synchronous uploads/readbacks and their specialized caches. `ScratchPool` is an
-opt-in primitive for new sessions; it does not impose a global GPU-memory cap or
+The recordable math API covers transform, point distances, sum, nearest neighbors
+and fused bounds/moments/centroid/covariance. Recorded statistics uses f32 for all
+GPU folds; finite coordinates and intermediate sums/products must fit that range.
+The original covariance uses `E[pp] - E[p]E[p]`, which loses precision at large
+coordinate offsets. The explicit `point_cloud_stats_stable[_into]` API adds a
+centered residual pass and computes `E[dd] - E[d]E[d]`; the correction accounts
+for the rounded first-pass centroid. It preserves the 24-f32 layout and raw
+moment fields. `try_point_cloud_stats_stable` wraps that same recorded plan for
+synchronous callers. This improves covariance precision at the cost of another
+input traversal; it cannot recover information lost in f32 input conversion or
+guarantee positive semidefiniteness after rounding. Existing convenience methods
+retain their synchronous adapters and specialized caches.
+`ScratchPool` is an opt-in primitive for new sessions; it does not impose a global GPU-memory cap or
 replace those existing caches automatically.
 
 Compatibility math functions retain `Option` and CPU fallback. Legacy compute
 `read_f32`/`read_u32` now fail loudly on transport errors; recoverable callers use
 `try_read_f32`/`try_read_u32`. The platform `read_buffer` shim retains its old
-empty-on-error contract for external SDF/photogrammetry consumers; migrated
-compute, math and raster adapters use fallible transport directly. Moving those
-external consumers is separate scope.
+empty-on-error contract for compatibility; production compute, math, raster and
+photogrammetry adapters use fallible transport. Photogrammetry fallback routes
+transfer errors through `Option`/`Result`, and callers no longer unmap buffers
+that were already released by the shared transport.
 
 Native blocking readers return an explicit unsupported error on wasm; browser
 callers must use nonblocking tickets and yield to their event loop. This migration
 does not establish browser runtime support. Raw `Kernel`, `Reduction`, encoder
 and buffer APIs retain wgpu's caller-owned device and usage contracts. Typed
 arrays and domain views validate ownership before using those raw APIs.
+
+## Shader compute expansion (2026-09-27)
+
+- Generic comparisons produce u32 masks from f32 arrays with scalar broadcasting.
+  Hierarchical exclusive scan supports wrapping u32 sums beyond one dispatch grid.
+  Stable compaction returns GPU values plus count and clears the unused tail every
+  run. This allows compare → compact → sum without a CPU mask/count round-trip.
+- WGSL reflection establishes actual entry-point workgroup size, buffer kinds and
+  minimum sizes. Checked bindings require trusted context identity and validate
+  usage/alignment/aliases. Raw low-level bindings keep their caller-owned contract.
+- `KernelCache` owns a bounded per-context LRU of compiled pipelines keyed by
+  source/entry/layout. Failed builds do not evict valid entries, and live handles
+  survive eviction. It is an opt-in library facility, not a global cache.
+- Buffer creation now returns backend validation/allocation failures instead of
+  allowing an uncaptured error. Typed readback supports retrying a timeout through
+  `wait_mut`, without cancelling the pending result.
+
 
 Automatic graph scheduling, shader fusion and extra crates are not prerequisites
 for these boundaries. Introduce them only after measuring a workload where they
@@ -255,3 +293,58 @@ The readback timeout test controls callback completion rather than depending on
 GPU timing. `gpu-compute` and `compute-core` pass Clippy and rustdoc with warnings
 denied. Cargo retains the existing `wgsl_export` binary-name warning; combined
 example builds also report the existing shared `bench` output name.
+
+
+Validated after the 2026-09-27 expansion: 158 tests across the four crates on
+Metal, 68 CPU-only math tests, all-feature compilation of math/SDF/geometry-bridge/
+photogrammetry, strict Clippy for gpu-compute and compute-core, strict rustdoc for
+both plus math, and the dependency-direction check. The suite includes scan of
+16,777,233 elements and a repeated nearest-neighbors → compare → compact → sum
+pipeline with only count/sum readback. Raster/browser files contain independent
+work in the same checkout; this compute expansion preserves them.
+
+The downstream audit also passes eight native photogrammetry tests after removing
+redundant unmaps and routing fallible matching/sweep readback into CPU fallback.
+See [local qualification and timings](../qualification/shader-compute-2026-09-27.md)
+for coverage, the reproducible comparison/compaction example and numerical limits.
+
+## Execution improvements (2026-09-27)
+
+`ComputeBatch` records its ordered dispatches inside one compute pass. wgpu
+tracks storage dependencies per dispatch. The standalone `record_dispatch`
+method remains available, and `Kernel::record_in_pass` lets callers share an
+existing pass. Buffer reuse, scans and reductions retain the same ordering.
+
+`FusionGraph` owns scalar expression construction and WGSL generation. It interns
+identical nodes and prunes unreachable work without host arithmetic folding or
+reassociation. `FusedKernel` owns the compiled pipeline; `ComputeProgram` validates
+array ownership, shape and aliasing before binding it. One dispatch writes all
+requested outputs, so intermediate values remain shader locals. The explicit
+compiler is optional: ordinary array operations still support incremental
+recording and arbitrary custom kernels. Kernels can share the context-owned LRU.
+
+Dense matrix multiplication belongs to `compute-core`: `MatrixView` supplies an
+exact row-major shape, and `GpuMatrix` exposes its result as either a matrix or an
+ordinary array. The fixed 32×32 tile stages A/B in workgroup memory; each of 64
+lanes accumulates a 4×4 output region in registers. This tile geometry is an
+algorithm contract, so it is independent of the generic workgroup tuning anchor.
+
+Nearest-neighbor optimization stays in `math-core`. Both synchronous and recorded
+APIs use one dispatcher owning the scalar reference and a 64-lane cooperative
+target scan. The domain owns shape/backend selection and first-index tie rules.
+The synchronous adapter records both output copies with the kernel in one
+submission. Performance evidence and measured limits are recorded in
+`docs/qualification/shader-compute-performance-2026-09-27.md`.
+
+The second research round adds reduction-aware fusion. `FusedSumKernel` is a
+separate compiled type: its first pass emits workgroup partials and its remaining
+folds reuse `Reduction`. Typed predicates support conditional aggregates without
+mask/compaction allocations. This remains generic computation; domain math still
+owns its numerical conventions and CPU/GPU placement.
+
+Scan now handles four values per lane and compaction combines local/block
+offsets during its final scatter/count/tail pass. Matrix specialization stays in
+`matrix/kernels.rs`, with measured Metal substitutions and a general fallback.
+Raw experimental candidates stay in benchmark sources rather than the runtime
+catalog. See `docs/qualification/shader-compute-research-2026-09-27.md` for paired
+measurements, rejected candidates and profiling constraints.

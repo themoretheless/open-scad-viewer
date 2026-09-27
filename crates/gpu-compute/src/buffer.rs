@@ -27,6 +27,8 @@ pub fn uniform_entry(binding: u32) -> wgpu::BindGroupLayoutEntry {
 
 /// Blocking readback of a copy-destination buffer into a fresh Vec.
 /// Returns an empty Vec on map failure, letting callers treat it as unavailability.
+/// This function owns mapping and unmapping; callers must not unmap afterwards.
+/// Prefer `try_read_buffer` to distinguish transport failure from empty data.
 pub fn read_buffer(device: &wgpu::Device, buffer: &wgpu::Buffer, size: usize) -> Vec<u8> {
     crate::try_read_buffer(device, buffer, size).unwrap_or_default()
 }

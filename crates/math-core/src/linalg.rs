@@ -220,7 +220,7 @@ pub fn solve<const N: usize>(mut a: [[f64; N]; N], mut b: [f64; N]) -> Option<[f
 /// measured with `examples/bench_gpu.rs`, GPU and CUDA placements are slower
 /// than this reference at every size from 1K to 5M points, even with device
 /// buffers reused across calls. There is intentionally no
-/// `transform_points_accelerated`: see [`nearest_neighbor_accelerated`] for
+/// `transform_points_accelerated`: see [`crate::nearest_neighbor_accelerated`] for
 /// an operation from this crate whose GPU/CUDA placements do win.
 pub fn transform_points(points: &[V3], m: M3, t: V3) -> Vec<V3> {
     points.iter().map(|&p| add(mv(m, p), t)).collect()

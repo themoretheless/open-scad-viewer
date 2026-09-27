@@ -870,13 +870,13 @@ pub(super) fn estimate_prepared(
         #[cfg(not(feature = "cuda"))]
         let selections: Option<Vec<Vec<Option<crate::gpu::sweep::Selection>>>> = None;
         let selections = selections.or_else(|| {
-            wgpu_sweep.map(|sweep| {
+            wgpu_sweep.and_then(|sweep| {
                 let atlas = sweep.upload_grays(&rasters);
                 let mut batch = sweep.batch(&atlas);
                 for job in &gpu_jobs {
                     batch.push(job);
                 }
-                batch.finish()
+                batch.try_finish().ok()
             })
         });
         match selections {
@@ -907,8 +907,7 @@ pub(super) fn estimate_prepared(
                     });
                 }
             }
-            // Native CUDA was the only device backend and failed at run time;
-            // the pending views finish on the CPU instead of being dropped.
+            // Available GPU backends failed; finish pending views on the CPU.
             None => {
                 let cpu_options = DenseOptions {
                     acceleration: crate::Acceleration::Cpu,
@@ -1640,7 +1639,7 @@ fn gpu_sweep_single(
     let atlas = sweep.upload_grays(&rasters);
     let mut batch = sweep.batch(&atlas);
     batch.push(&job);
-    let selection = batch.finish().pop()?;
+    let selection = batch.try_finish().ok()?.pop()?;
     Some(maps_from_selection(&selection, near, far, options))
 }
 
@@ -2001,7 +2000,7 @@ mod tests {
             };
             let mut batch = sweep.batch(&atlas);
             batch.push_scores(&job);
-            batch.finish_scores().pop()
+            batch.try_finish_scores().ok()?.pop()
         };
         let scores: Vec<Option<Vec<f32>>> = views
             .iter()

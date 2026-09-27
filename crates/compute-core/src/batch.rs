@@ -26,10 +26,24 @@ impl<'a> ComputeBatch<'a> {
         reduction.append_to(self);
     }
 
-    /// Appends the batch to an encoder, allowing copies or other work around it.
+    /// Appends one compute pass, allowing copies or other work around it.
+    /// Dispatch order and wgpu's per-dispatch barriers preserve dependencies.
     pub fn record(&self, encoder: &mut wgpu::CommandEncoder) {
+        if self.steps.is_empty() {
+            return;
+        }
+        let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
+            label: Some("compute batch"),
+            timestamp_writes: None,
+        });
+        self.record_in_pass(&mut pass);
+    }
+
+    /// Appends ordered dispatches to a caller-owned compute pass, for example
+    /// one whose beginning/end timestamps are supplied by a GPU profiler.
+    pub fn record_in_pass(&self, pass: &mut wgpu::ComputePass<'_>) {
         for (kernel, bindings, groups) in &self.steps {
-            kernel.record_dispatch(encoder, bindings, *groups);
+            kernel.record_in_pass(pass, bindings, *groups);
         }
     }
 

@@ -2,6 +2,11 @@
 //! submits or readbacks occur while recording; the caller owns submission.
 use super::{GpuMathError, MathGpuSession};
 use crate::{M3, V3};
+mod aggregates;
+mod neighbors;
+pub use aggregates::GpuPointCloudStats;
+pub use neighbors::GpuNearestNeighbors;
+
 use compute_core::{
     Binding, ComputeBatch, ComputeRuntime, GpuArray, Kernel, KernelError, Reduction, uniform_f32,
 };
@@ -37,6 +42,12 @@ pub(super) struct PointKernels {
     transform: Kernel,
     distance: Kernel,
     sum: Kernel,
+    nearest: super::nearest_dispatch::NearestKernels,
+    stats_partial: Kernel,
+    stats_fold: Kernel,
+    stats_finalize: Kernel,
+    stats_centered: Kernel,
+    stats_covariance: Kernel,
 }
 impl PointKernels {
     pub(super) fn new(context: &GpuContext) -> Result<Self, KernelError> {
@@ -45,7 +56,54 @@ impl PointKernels {
             Binding::StorageRead,
             Binding::StorageReadWrite,
         ];
+        // The fused partial shader stores 17 scalar equivalents per lane.
+        let mut stats_size = 256;
+        while stats_size * 68 > context.device.limits().max_compute_workgroup_storage_size {
+            stats_size /= 2;
+        }
         Ok(Self {
+            nearest: super::nearest_dispatch::NearestKernels::new(context)?,
+            stats_partial: Kernel::with_workgroup_size(
+                &context.device,
+                "recorded statistics partials",
+                crate::POINT_CLOUD_STATS_WGSL,
+                "main",
+                &unary,
+                stats_size,
+            )?,
+            stats_fold: Kernel::new(
+                &context.device,
+                "recorded statistics fold",
+                include_str!("../stats_fold.wgsl"),
+                "main",
+                &unary,
+            )?,
+            stats_finalize: Kernel::new(
+                &context.device,
+                "recorded statistics finalize",
+                include_str!("../stats_finalize.wgsl"),
+                "main",
+                &unary,
+            )?,
+            stats_centered: Kernel::new(
+                &context.device,
+                "recorded centered statistics partials",
+                include_str!("../stats_centered.wgsl"),
+                "main",
+                &[
+                    Binding::Uniform,
+                    Binding::StorageRead,
+                    Binding::StorageRead,
+                    Binding::StorageReadWrite,
+                ],
+            )?,
+            stats_covariance: Kernel::new(
+                &context.device,
+                "recorded centered covariance finalize",
+                include_str!("../stats_covariance.wgsl"),
+                "main",
+                &unary,
+            )?,
             transform: Kernel::new(
                 &context.device,
                 "transform points",
@@ -112,6 +170,33 @@ impl<'a> MathGpuProgram<'a> {
             ));
         }
         Ok(())
+    }
+    fn check_output<T: compute_core::GpuElement>(
+        &self,
+        output: &GpuArray<T>,
+        len: usize,
+        inputs: &[GpuBufferView<'_>],
+    ) -> Result<(), GpuMathError> {
+        let view = output.view();
+        view.validate(self.runtime.context(), wgpu::BufferUsages::STORAGE)?;
+        if output.len() != len {
+            return Err(compute_core::ComputeError::LengthMismatch {
+                expected: len,
+                actual: output.len(),
+            }
+            .into());
+        }
+        if inputs.iter().any(|input| input.raw() == view.raw()) {
+            return Err(compute_core::ComputeError::AliasedOutput.into());
+        }
+        Ok(())
+    }
+    fn params(&self, count: u32, extra: u32) -> wgpu::Buffer {
+        uniform_f32(
+            self.runtime.device(),
+            self.runtime.queue(),
+            &[f32::from_bits(count), f32::from_bits(extra), 0.0, 0.0],
+        )
     }
     pub fn transform(
         &mut self,
@@ -206,5 +291,10 @@ impl<'a> MathGpuProgram<'a> {
     }
     pub fn record(&self, encoder: &mut wgpu::CommandEncoder) {
         self.batch.record(encoder);
+    }
+    /// Records the ordered domain operations into a caller-owned compute pass,
+    /// including a pass with GPU timestamps.
+    pub fn record_in_pass(&self, pass: &mut wgpu::ComputePass<'_>) {
+        self.batch.record_in_pass(pass);
     }
 }

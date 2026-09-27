@@ -8,6 +8,4 @@ publish.workspace = true
 [dependencies]
 wgpu.workspace = true
 gpu-compute = { path = "../gpu-compute" }
-
-[dev-dependencies]
 naga.workspace = true

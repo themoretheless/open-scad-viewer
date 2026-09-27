@@ -1,3 +1,5 @@
+#![recursion_limit = "256"]
+
 //! Compute-core: the runtime library for WGSL compute kernels — the compute
 //! counterpart of raster-core.
 //!
@@ -18,14 +20,20 @@
 mod array;
 mod batch;
 mod buffer;
+mod comparison;
 mod error;
+mod fusion;
 mod kernel;
+mod kernel_cache;
+mod matrix;
 mod ops;
 mod program;
 mod readback;
 mod reduction;
 mod runtime;
 mod scratch;
+mod scan;
+mod selection;
 pub mod shaders;
 
 pub use array::{GpuArray, GpuElement};
@@ -35,9 +43,18 @@ pub use error::ComputeError;
 pub use gpu_compute;
 pub use gpu_compute::wgpu;
 pub use kernel::{Binding, Kernel, KernelError};
-pub use ops::{BinaryOp, UnaryOp};
+pub use ops::{BinaryOp, CompareOp, UnaryOp};
 pub use program::ComputeProgram;
 pub use readback::Readback;
 pub use reduction::{Reduction, reduce_f32};
 pub use runtime::ComputeRuntime;
 pub use scratch::{ScratchPool, ScratchArray};
+
+pub use selection::CompactedArray;
+
+pub use kernel_cache::{KernelCache, KernelCacheStats};
+pub use kernel::{BindingInfo, KernelBindingError};
+
+pub use matrix::{GpuMatrix, MatrixView};
+
+pub use fusion::{FusionGraph, Expression, FusedKernel, FusedSumKernel, FusionError, Predicate};

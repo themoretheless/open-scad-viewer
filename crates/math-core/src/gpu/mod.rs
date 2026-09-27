@@ -7,6 +7,7 @@ mod distance;
 mod error;
 mod moments;
 mod neighbors;
+mod nearest_dispatch;
 mod plans;
 mod session;
 mod support;
@@ -14,7 +15,8 @@ mod support;
 use crate::{M3, V3};
 pub use error::{GpuArithmetic, GpuMathError, MathExecution};
 use gpu_compute::{BackendReport, GpuContext};
-pub use plans::{MathGpuProgram, PointCloudView};
+pub use nearest_dispatch::NearestNeighborAlgorithm;
+pub use plans::{GpuNearestNeighbors, GpuPointCloudStats, MathGpuProgram, PointCloudView};
 pub use session::MathGpuSession;
 
 thread_local! {
