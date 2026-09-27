@@ -1,0 +1,65 @@
+warning: binary `wgsl_export` should have a kebab-case name
+  |
+1 | /Users/themoretheless/Documents/Sources/open-scad-viewer/crates/target/.../wgsl_export
+  |                                                                            ^^^^^^^^^^^
+  |
+  = note: `cargo::non_kebab_case_bins` is set to `warn` by default
+help: to change the binary name to `wgsl-export`, convert the file stem
+  |
+1 - src/bin/wgsl_export.rs
+1 + src/bin/wgsl-export.rs
+  |
+warning: `raster-core` (manifest) generated 1 warning
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.08s
+     Running tests/float64.rs (crates/target/debug/build/compute-cuda/348cc51e39d4c61e/out/float64-348cc51e39d4c61e)
+
+running 2 tests
+test native_binary64_owners_writes_and_scalar_abi ...
+thread 'native_binary64_owners_writes_and_scalar_abi' (31898289) panicked at compute-cuda/tests/float64.rs:12:13:
+required native CUDA f64 unavailable: CUDA unavailable: CUDA driver/device is absent or initialization failed
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+FAILED
+test native_binary64_shared_contract ...
+thread 'native_binary64_shared_contract' (31898290) panicked at compute-cuda/tests/float64.rs:12:13:
+required native CUDA f64 unavailable: CUDA unavailable: CUDA driver/device is absent or initialization failed
+FAILED
+
+failures:
+
+failures:
+    native_binary64_owners_writes_and_scalar_abi
+    native_binary64_shared_contract
+
+test result: FAILED. 0 passed; 2 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+error: test failed, to rerun pass `-p compute-cuda --test float64`
+     Running tests/float64_indexing.rs (crates/target/debug/build/compute-cuda/a7908c70945bf517/out/float64_indexing-a7908c70945bf517)
+
+running 3 tests
+test native_f64_indexing_and_scatter_contracts ...
+thread 'native_f64_indexing_and_scatter_contracts' (31898292) panicked at compute-cuda/tests/float64_indexing.rs:13:13:
+required native CUDA f64 indexing unavailable: CUDA unavailable: CUDA driver/device is absent or initialization failed
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+FAILED
+test native_f64_indexing_rejects_foreign_inputs_even_for_empty_results ...
+thread 'native_f64_indexing_rejects_foreign_inputs_even_for_empty_results' (31898293) panicked at compute-cuda/tests/float64_indexing.rs:13:13:
+required native CUDA f64 indexing unavailable: CUDA unavailable: CUDA driver/device is absent or initialization failed
+FAILED
+test native_f64_indices_offsets_and_repeated_calls_keep_values_independent ...
+thread 'native_f64_indices_offsets_and_repeated_calls_keep_values_independent' (31898294) panicked at compute-cuda/tests/float64_indexing.rs:13:13:
+required native CUDA f64 indexing unavailable: CUDA unavailable: CUDA driver/device is absent or initialization failed
+FAILED
+
+failures:
+
+failures:
+    native_f64_indexing_and_scatter_contracts
+    native_f64_indexing_rejects_foreign_inputs_even_for_empty_results
+    native_f64_indices_offsets_and_repeated_calls_keep_values_independent
+
+test result: FAILED. 0 passed; 3 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+error: test failed, to rerun pass `-p compute-cuda --test float64_indexing`
+error: 2 targets failed:
+    `-p compute-cuda --test float64`
+    `-p compute-cuda --test float64_indexing`

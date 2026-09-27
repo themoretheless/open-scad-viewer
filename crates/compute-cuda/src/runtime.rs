@@ -25,7 +25,8 @@ pub const CUDA_KERNEL_SOURCE: &str = concat!(
     include_str!("low_statistics.cu"),
     include_str!("low_attention.cu"),
     include_str!("convolution.cu"),
-    include_str!("float64.cu")
+    include_str!("float64.cu"),
+    include_str!("float64_indexing.cu")
 );
 
 #[derive(Clone, Debug)]

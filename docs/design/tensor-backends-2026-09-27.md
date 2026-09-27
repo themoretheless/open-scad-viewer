@@ -493,7 +493,9 @@ records numerical coverage and distinguishes compiler and hardware evidence.
 Existing CPU geometry uses f64 for `V2`, `V3` and `M3`. `TensorF64Backend` now
 adds an explicit resident binary64 contract. CUDA implements upload/read, views,
 unary/binary arithmetic, sum/product/min/max/mean, batched/vector matrix products
-and evaluation. `Float64Support` distinguishes native, software binary64 and
+and evaluation. `TensorF64IndexBackend` adds comparisons, selection, scans,
+gather and compaction; `TensorF64ScatterBackend` adds all five scatter modes.
+`Float64Support` distinguishes native, software binary64 and
 unsupported arithmetic; WGSL and MLX currently report unsupported.
 
 `TensorMathF64` uploads the original f64 coordinates and provides resident
@@ -511,10 +513,23 @@ MLX exposes float64 for CPU operations only; its GPU rejects it according to the
 These limits explain the existing portable f32 path; they do not make narrowing
 an acceptable implicit replacement for f64 domain calculations.
 
+The target domain API uses f64 coordinates and arithmetic by default. The
+separate `TensorMathF64` facade is a migration step, not a plan to duplicate all
+geometry algorithms for each scalar type. Lower-precision tensor operations
+remain explicit options for workloads that request them. A backend must honor
+the requested precision natively or through identified software arithmetic;
+availability of f32 alone does not permit narrowing the geometry contract.
+
+CUDA f64 indexing reuses the typed traversal and scan hierarchy, with binary64
+accumulators at every level. Scatter uses 64-bit integer CAS around double
+arithmetic and deterministic owner election for Replace. See the
+[indexing qualification](../qualification/tensor-float64-indexing-2026-09-27.md)
+for compiler/host evidence and the missing NVIDIA numerical gate.
+
 Required next work:
 
 - Execute the new CUDA binary64 conformance and geometry fixtures on NVIDIA.
-- Extend binary64 to indexing, scans, scatter, stable statistics, attention,
+- Extend binary64 to stable statistics, attention,
   convolution and prepared/graph execution. Existing internal f64 scratch in
   prepared statistics does not expose those operations to public f64 tensors.
 - Provide explicitly identified software precision on backends lacking native

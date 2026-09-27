@@ -10,7 +10,7 @@ fn close(actual: &[f64], expected: &[f64]) {
         );
     }
 }
-fn bits(actual: &[f64], expected: &[f64]) {
+pub(super) fn bits(actual: &[f64], expected: &[f64]) {
     assert_eq!(
         actual.iter().map(|x| x.to_bits()).collect::<Vec<_>>(),
         expected.iter().map(|x| x.to_bits()).collect::<Vec<_>>()

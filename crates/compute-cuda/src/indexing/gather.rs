@@ -33,7 +33,7 @@ impl CudaRuntime {
         Ok(result)
     }
 
-    pub(super) fn gather_typed<T: CudaScalar>(
+    pub(crate) fn gather_typed<T: CudaScalar>(
         &self,
         input: &CudaTensor<T>,
         indices: &CudaTensor<u32>,

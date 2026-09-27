@@ -1,4 +1,5 @@
 //! Native binary64 tensors; storage and all arithmetic remain double precision.
+mod indexing;
 use crate::{
     CudaError, CudaRuntime, CudaTensor,
     dispatch::{BinaryDispatch, UnaryDispatch},
@@ -107,7 +108,7 @@ impl TensorF64Backend for CudaRuntime {
         if tensor.layout.is_contiguous() {
             Ok(tensor.clone())
         } else {
-            self.unary_op_f64(tensor, 10, 1., 0.)
+            self.copy_typed(tensor)
         }
     }
     fn reshape_f64(

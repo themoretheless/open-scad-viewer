@@ -886,8 +886,8 @@ assert_eq!(runtime.read_f64(&delta)?, [0., 1.]);
 
 `math_core::tensor::TensorMathF64` composes this contract for resident transforms,
 bounds, pair distances and centered covariance without narrowing coordinates.
-F64 indexing/scans/scatter, stable statistics, attention, convolution and
-prepared/graph APIs remain open. WGSL/MLX binary64 arithmetic remains unsupported.
+F64 stable statistics, attention, convolution and prepared/graph APIs remain
+open. WGSL/MLX binary64 arithmetic remains unsupported.
 
 Run the required hardware fixtures with:
 
@@ -898,3 +898,25 @@ COMPUTE_REQUIRE_CUDA=1 cargo test --manifest-path crates/Cargo.toml -p osv-math 
 
 The [qualification report](../../docs/qualification/tensor-float64-2026-09-27.md)
 records NVRTC/host evidence separately from the missing NVIDIA execution proof.
+
+
+### Binary64 indexing, scans and scatter
+
+`TensorF64IndexBackend` provides comparisons, selection with u32 masks, prefix
+sums, gather and stable compaction. `TensorF64ScatterBackend` adds Replace, Add,
+Multiply, Min and Max. All reuse the ordinary shape, broadcast, offset, count
+and ownership contracts. Gather/scatter return resident invalid-index counts;
+compaction returns full capacity with a selected prefix and resident count.
+
+The f64 specializations use the existing traversal kernels and scan tree;
+every scan total and carry is double precision. Scatter folds use 64-bit CAS,
+with double arithmetic and bitwise retry termination. Replace elects the last
+logical index deterministically. Arithmetic fold order may vary; inputs and
+intermediates must be finite. Min/max preserve `-0 < +0`. Copy, select, gather,
+compact and Replace preserve raw binary64 payloads, including NaN payloads.
+
+These APIs currently use eager CUDA execution; they do not add f64 slots to
+prepared programs or CUDA Graph. The
+[qualification](../../docs/qualification/tensor-float64-indexing-2026-09-27.md)
+contains the required-device command and distinguishes compile proof from GPU
+execution. Numerical qualification still requires NVIDIA hardware.
