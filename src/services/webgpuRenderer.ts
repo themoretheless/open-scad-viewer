@@ -289,8 +289,10 @@ export class WebGPURenderer {
       this.requestRender()
     },
     onLoadError: (error) => {
-      // A missing capture/map must not break rendering: stay on the current one.
-      try { this.onStatusChange?.({ status: 'error', phase: 'frame', error: error instanceof Error ? error : new Error(String(error)) }) } catch { /* UI callbacks must not break rendering. */ }
+      // A missing capture/map must not break rendering: stay on the current
+      // one. Reported through the lifecycle status (not a bare callback) so
+      // the next validated frame clears it instead of leaving it sticky.
+      this.reportError('frame', error)
     },
   })
   /**
@@ -362,7 +364,13 @@ export class WebGPURenderer {
    * Scene-level default material tail for meshes without their own material;
    * identity defaults reproduce the legacy look.
    */
-  private defaultMaterial = { baseColor: [1, 1, 1] as [number, number, number], metallic: 0, roughness: 0.7, alpha: 1 }
+  private defaultMaterial = {
+    baseColor: [1, 1, 1] as [number, number, number],
+    metallic: 0,
+    roughness: 0.7,
+    emissive: [0, 0, 0] as [number, number, number],
+    alpha: 1,
+  }
   /** Zero positions bound at vertex slot 1 whenever a mesh is not morphing. */
   private morphDummyVB: GPUBuffer | null = null
   // Keyed by geometryAssetId (content) so republished equal meshes hit; per
@@ -1057,9 +1065,16 @@ export class WebGPURenderer {
    * their uniform tails in place. Alpha below 1 routes those meshes through
    * the transparent pass via Obj.style.x.
    */
-  setDefaultMaterial(defaults: { baseColor?: readonly [number, number, number]; metallic?: number; roughness?: number; alpha?: number }) {
+  setDefaultMaterial(defaults: {
+    baseColor?: readonly [number, number, number]
+    metallic?: number
+    roughness?: number
+    emissive?: readonly [number, number, number]
+    alpha?: number
+  }) {
     const current = this.defaultMaterial
     if (defaults.baseColor) current.baseColor = [...defaults.baseColor]
+    if (defaults.emissive) current.emissive = [...defaults.emissive]
     if (defaults.metallic !== undefined) current.metallic = defaults.metallic
     if (defaults.roughness !== undefined) current.roughness = defaults.roughness
     if (defaults.alpha !== undefined && Number.isFinite(defaults.alpha)) {
@@ -1071,7 +1086,7 @@ export class WebGPURenderer {
       if (mesh.material) continue
       tail[0] = current.baseColor[0]; tail[1] = current.baseColor[1]; tail[2] = current.baseColor[2]
       tail[3] = current.metallic
-      tail[4] = 0; tail[5] = 0; tail[6] = 0
+      tail[4] = current.emissive[0]; tail[5] = current.emissive[1]; tail[6] = current.emissive[2]
       tail[7] = current.roughness
       this.dev.queue.writeBuffer(mesh.ub, OBJECT_UNIFORM_LAYOUT.materialByteOffset, tail)
     }

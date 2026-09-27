@@ -641,6 +641,9 @@ const renderThemeId = ref<string>('default')
 const defaultBaseColor = ref('#ffffff')
 const defaultMetallic = ref(0)
 const defaultRoughness = ref(0.7)
+/** Preset-only material channels (no slider): kept so re-init and recovery restore them. */
+const defaultEmissive = ref<[number, number, number]>([0, 0, 0])
+const defaultAlpha = ref(1)
 const sceneController = new SceneController<PickHit>()
 const sceneState = shallowRef(sceneController.state)
 sceneController.subscribe(state => { sceneState.value = state })
@@ -1101,7 +1104,7 @@ async function initializeViewportRenderer() {
   bindRendererCallbacks(nextRenderer)
   nextRenderer.setDisplayMode(displayMode.value)
   nextRenderer.setDefaultShadingModel(shadingModel.value)
-  nextRenderer.setDefaultMaterial({ baseColor: hexToRgb(defaultBaseColor.value), metallic: defaultMetallic.value, roughness: defaultRoughness.value })
+  nextRenderer.setDefaultMaterial(defaultMaterialState())
   void nextRenderer.setMatcapTexture(matcapId.value).catch(() => {})
   void nextRenderer.setEnvMap(envId.value).catch(() => {})
   nextRenderer.setShadowsEnabled(shadowsEnabled.value)
@@ -1242,7 +1245,7 @@ async function recoverRenderer(
 
     instance.setDisplayMode(displayMode.value)
     instance.setDefaultShadingModel(shadingModel.value)
-    instance.setDefaultMaterial({ baseColor: hexToRgb(defaultBaseColor.value), metallic: defaultMetallic.value, roughness: defaultRoughness.value })
+    instance.setDefaultMaterial(defaultMaterialState())
     void instance.setMatcapTexture(matcapId.value).catch(() => {})
     void instance.setEnvMap(envId.value).catch(() => {})
     instance.setShadowsEnabled(shadowsEnabled.value)
@@ -2146,12 +2149,18 @@ function setRenderTheme(themeId: string) {
   renderThemeId.value = themeId
   renderer?.setTheme(themeId)
 }
-function applyDefaultMaterial() {
-  renderer?.setDefaultMaterial({
+/** The full scene default material; renderer (re)initialization applies all of it. */
+function defaultMaterialState() {
+  return {
     baseColor: hexToRgb(defaultBaseColor.value),
     metallic: defaultMetallic.value,
     roughness: defaultRoughness.value,
-  })
+    emissive: defaultEmissive.value,
+    alpha: defaultAlpha.value,
+  }
+}
+function applyDefaultMaterial() {
+  renderer?.setDefaultMaterial(defaultMaterialState())
 }
 function setDefaultBaseColor(hex: string) { defaultBaseColor.value = hex; applyDefaultMaterial() }
 function setDefaultMetallic(value: number) { defaultMetallic.value = value; applyDefaultMaterial() }
@@ -2175,9 +2184,10 @@ function applyMaterialPreset(id: string) {
   defaultBaseColor.value = '#' + preset.baseColor.map(channel => Math.round(Math.min(1, Math.max(0, channel)) * 255).toString(16).padStart(2, '0')).join('')
   defaultMetallic.value = preset.metallic
   defaultRoughness.value = preset.roughness
+  defaultEmissive.value = [...preset.emissive]
+  defaultAlpha.value = preset.alpha ?? 1
   setShadingModel(preset.shadingModel)
   applyDefaultMaterial()
-  renderer?.setDefaultMaterial({ alpha: preset.alpha ?? 1 })
 }
 
 function setSelectionMode(mode: SelectionMode) {

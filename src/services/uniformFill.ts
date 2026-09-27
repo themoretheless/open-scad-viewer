@@ -128,6 +128,7 @@ export interface DefaultMaterial {
   baseColor: readonly [number, number, number]
   metallic: number
   roughness: number
+  emissive: readonly [number, number, number]
   alpha: number
 }
 
@@ -172,7 +173,7 @@ export function fillObjectUniform(
     const dm = defaultMaterial
     uniform[44] = dm.baseColor[0]; uniform[45] = dm.baseColor[1]; uniform[46] = dm.baseColor[2]
     uniform[47] = dm.metallic
-    uniform[48] = 0; uniform[49] = 0; uniform[50] = 0; uniform[51] = dm.roughness
+    uniform[48] = dm.emissive[0]; uniform[49] = dm.emissive[1]; uniform[50] = dm.emissive[2]; uniform[51] = dm.roughness
     uniform[52] = 0; uniform[53] = 0; uniform[54] = 0; uniform[55] = 0
   }
 }

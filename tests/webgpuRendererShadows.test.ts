@@ -42,7 +42,7 @@ function fakeDevice(record: {
   textures: Array<{ size: number[]; format: string; usage: number }>
   samplers: unknown[]
   bindGroups: Array<{ layout: unknown; entries: unknown[] }>
-  pipelines: Array<{ depthStencil?: { format: string }; fragment?: unknown; layout?: { groups: number } }>
+  pipelines: Array<{ depthStencil?: { format: string; depthBiasSlopeScale?: number }; fragment?: unknown; layout?: { groups: number } }>
   passes: Array<{ colors: number; depthFormat: string | null }>
   writes: Array<{ buffer: unknown; data: Float32Array }>
 }) {
@@ -89,7 +89,7 @@ function fakeDevice(record: {
       record.bindGroups.push(descriptor)
       return { bg: descriptor }
     },
-    createRenderPipeline: (descriptor: { depthStencil?: { format: string }; fragment?: unknown }) => {
+    createRenderPipeline: (descriptor: { depthStencil?: { format: string; depthBiasSlopeScale?: number }; fragment?: unknown }) => {
       record.pipelines.push(descriptor)
       return { pipe: descriptor }
     },
@@ -102,7 +102,7 @@ function recordShape() {
     textures: [] as Array<{ size: number[]; format: string; usage: number }>,
     samplers: [] as unknown[],
     bindGroups: [] as Array<{ layout: unknown; entries: unknown[] }>,
-    pipelines: [] as Array<{ depthStencil?: { format: string }; fragment?: unknown; layout?: { groups: number } }>,
+    pipelines: [] as Array<{ depthStencil?: { format: string; depthBiasSlopeScale?: number }; fragment?: unknown; layout?: { groups: number } }>,
     passes: [] as Array<{ colors: number; depthFormat: string | null }>,
     writes: [] as Array<{ buffer: unknown; data: Float32Array }>,
   }
@@ -164,6 +164,9 @@ describe('WebGPURenderer contact shadows', () => {
     // Its layout is scene+object only: the depth pass binds groups 0 and 1,
     // so a third (shadow) group would trip Dawn's "No bind group set" error.
     expect(shadowPipe!.layout!.groups).toBe(2)
+    // Slope-scaled rasterizer bias keeps grazing-angle surfaces off their own
+    // depth (ring-shaped self-shadowing "acne" on curved parts otherwise).
+    expect(shadowPipe!.depthStencil!.depthBiasSlopeScale).toBeGreaterThan(0)
     // The lit surface pipelines keep the 3-group layout (scene+object+shadow).
     expect(record.pipelines.some(pipeline => pipeline.layout?.groups === 3)).toBe(true)
     // No real shadow map until shadows are enabled.

@@ -41,6 +41,14 @@ export interface ExtraBindGroups {
   shadowBG: GPUBindGroup | null
 }
 
+/**
+ * Slope-scaled depth bias for the shadow-caster pass. The sampling shaders
+ * apply only a small constant bias, which cannot cover surfaces at grazing
+ * angles to the key light (curved parts showed ring-shaped self-shadowing,
+ * "acne"); rasterizer slope bias grows with the depth slope instead.
+ */
+export const SHADOW_CASTER_DEPTH_BIAS = { depthBias: 2, depthBiasSlopeScale: 2, depthBiasClamp: 0 } as const
+
 export class PipelineFactory {
   sceneBGL!: GPUBindGroupLayout
   objBGL!: GPUBindGroupLayout
@@ -208,7 +216,7 @@ export class PipelineFactory {
       layout,
       vertex: { module, entryPoint: 'vs', buffers: this.vertexLayouts[spec.vertexLayout] },
       primitive: { topology, cullMode: spec.cullMode },
-      depthStencil: { format: 'depth32float', depthWriteEnabled: true, depthCompare: depth.compare },
+      depthStencil: { format: 'depth32float', depthWriteEnabled: true, depthCompare: depth.compare, ...SHADOW_CASTER_DEPTH_BIAS },
     } : {
       layout,
       vertex: { module, entryPoint: 'vs', buffers: this.vertexLayouts[spec.vertexLayout] },
