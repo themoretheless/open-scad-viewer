@@ -48,6 +48,8 @@ mod cad_planar_edit;
 mod cad_sections;
 mod cad_selection;
 mod cad_sketch;
+mod cad_dimensions;
+mod cad_bridge_curve;
 mod cad_sketch_offset;
 mod cad_sketch_trim;
 mod cad_split;
@@ -1695,6 +1697,8 @@ pub fn dispatch(mut v: Value) -> Result<Value> {
         "cad_resize_bodies" => cad_body_affine::resize(v),
         "cad_draft_bodies" => cad_draft::draft(v),
         "cad_mirror_bodies" => cad_body_affine::mirror(v),
+        "cad_dimensions" => cad_dimensions::dimensions(v),
+        "cad_bridge_curve" => cad_bridge_curve::bridge(v),
         "cad_trim_sketch" => cad_sketch_trim::trim(v),
         "cad_extend_sketch" => cad_sketch_trim::extend(v),
         "cad_validate_sketch" => cad_sketch_offset::validate_request(v),

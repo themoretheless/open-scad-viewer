@@ -1,0 +1,27 @@
+{
+  "version": 1,
+  "sketches": [{
+    "id": "dimension-demo",
+    "name": "Dimensions demo",
+    "points": [[-30, -20], [10, -20], [30, 10]],
+    "closed": false,
+    "dimensions": [
+      {"kind": "length", "a": 0, "b": 1},
+      {"kind": "angle", "a": 0, "b": 1, "c": 2}
+    ]
+  }],
+  "bodies": [],
+  "curves": [
+    {"id": "bridge-a", "name": "Bridge A", "curve": {
+      "degree": 2, "knots": [0, 0, 0, 1, 1, 1],
+      "controlPoints": [[-40, 10, 0], [-30, -10, 0], [-15, 0, 0]],
+      "weights": [1, 1, 1]
+    }},
+    {"id": "bridge-b", "name": "Bridge B", "curve": {
+      "degree": 2, "knots": [0, 0, 0, 1, 1, 1],
+      "controlPoints": [[15, 10, 0], [30, 20, 0], [40, 0, 0]],
+      "weights": [1, 1, 1]
+    }}
+  ],
+  "surfaces": []
+}
