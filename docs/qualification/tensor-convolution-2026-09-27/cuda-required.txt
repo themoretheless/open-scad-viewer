@@ -1,0 +1,40 @@
+warning: binary `wgsl_export` should have a kebab-case name
+  |
+1 | /Users/themoretheless/Documents/Sources/open-scad-viewer/crates/target/.../wgsl_export
+  |                                                                            ^^^^^^^^^^^
+  |
+  = note: `cargo::non_kebab_case_bins` is set to `warn` by default
+help: to change the binary name to `wgsl-export`, convert the file stem
+  |
+1 - src/bin/wgsl_export.rs
+1 + src/bin/wgsl-export.rs
+  |
+warning: `raster-core` (manifest) generated 1 warning
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.06s
+     Running tests/convolution.rs (crates/target/debug/build/compute-cuda/6bb6d820cd9e20b2/out/convolution-6bb6d820cd9e20b2)
+
+running 3 tests
+test native_convolution_shared_contract ...
+thread 'native_convolution_shared_contract' (31763816) panicked at compute-cuda/tests/convolution.rs:14:13:
+required native CUDA convolution unavailable: CUDA unavailable: CUDA driver/device is absent or initialization failed
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+FAILED
+test native_offsets_changed_inputs_and_single_final_low_rounding ...
+thread 'native_offsets_changed_inputs_and_single_final_low_rounding' (31763817) panicked at compute-cuda/tests/convolution.rs:14:13:
+required native CUDA convolution unavailable: CUDA unavailable: CUDA driver/device is absent or initialization failed
+FAILED
+test native_preflight_validates_owners_and_low_dtype_for_empty_results ...
+thread 'native_preflight_validates_owners_and_low_dtype_for_empty_results' (31763818) panicked at compute-cuda/tests/convolution.rs:14:13:
+required native CUDA convolution unavailable: CUDA unavailable: CUDA driver/device is absent or initialization failed
+FAILED
+
+failures:
+
+failures:
+    native_convolution_shared_contract
+    native_offsets_changed_inputs_and_single_final_low_rounding
+    native_preflight_validates_owners_and_low_dtype_for_empty_results
+
+test result: FAILED. 0 passed; 3 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+error: test failed, to rerun pass `-p compute-cuda --test convolution`

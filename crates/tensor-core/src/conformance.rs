@@ -2,6 +2,7 @@
 use crate::{BinaryOp, HasShape, MatmulPrecision, Shape, TensorBackend, UnaryOp};
 
 mod attention;
+mod convolution;
 mod indexing;
 mod low_attention;
 mod low_index;
@@ -14,6 +15,7 @@ mod scatter;
 mod statistics;
 mod vectors;
 pub use attention::check_attention_backend;
+pub use convolution::{check_conv_backend, check_low_conv_backend};
 pub use indexing::check_index_backend;
 pub use low_attention::check_low_attention_backend;
 pub use low_index::check_low_index_backend;

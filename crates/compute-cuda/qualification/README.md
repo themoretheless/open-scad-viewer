@@ -20,7 +20,7 @@ is installed into the host or an existing container.
 
 Inputs are mounted read-only. Only the supplied output directory is writable.
 The container is removed at exit. Source concatenation and compiler options
-are read from `src/runtime.rs`: the twelve CUDA files, precise divide/sqrt,
+are read from `src/runtime.rs`: the thirteen CUDA files, precise divide/sqrt,
 `ftz=false`, and `fmad=false`. The script queries NVRTC's supported architectures
 and applies the runtime's highest-supported-target-not-newer-than-capability
 policy to the requested capabilities (default 70, 80, 90, 120). These numbers
@@ -33,7 +33,7 @@ Outputs:
 - `compute-*.log`: complete compiler diagnostic logs, including empty logs.
 - `compute-*.ptx`: generated PTX, without the API's terminating NUL byte.
 
-Every successful target must expose all 52 production kernel entry points with
+Every successful target must expose all 54 production kernel entry points with
 the expected scalar parameter widths. The report records those signatures;
 pointer validity and kernel semantics still require runtime qualification.
 Compilation is useful evidence for CUDA syntax, template instantiation and PTX
@@ -41,10 +41,20 @@ generation. Mandatory NVIDIA execution remains the separate
 `CUDA_REQUIRED=1 ... --test cuda_tensor` qualification described in the crate
 README.
 
-## Current typed-program snapshot: 2026-09-27
+## Current convolution snapshot: 2026-09-27
+
+The [convolution report](nvrtc-12.8.93-linux-aarch64-convolution/report.json)
+qualifies all thirteen production source parts for compute_70/80/90/120 with
+NVRTC 12.8.93. `conv_f32` and `conv_low` add direct grouped spatial convolution;
+the previous 52 entry signatures remain unchanged. Externally supplied modules
+used through `from_ptx` must be regenerated to expose the new entries.
+Reports and logs are tracked; generated PTX remains local and can be recreated
+with the command above. Recorded hashes identify its exact bytes.
+
+## Historical typed-program snapshot: 2026-09-27
 
 The [typed-program report](nvrtc-12.8.93-linux-aarch64-typed-programs/report.json)
-qualifies the current twelve-part CUDA source. The new `binary_u32` entry
+qualifies the earlier twelve-part CUDA source. The new `binary_u32` entry
 implements wrapping unsigned add/subtract/multiply and unsigned min/max with
 the same broadcast layout ABI as f32 binary arithmetic. Division is rejected
 by the host API. All 51 preceding entry signatures remain unchanged.

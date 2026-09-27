@@ -6,6 +6,20 @@ use tensor_core::{
     BackendKind, BinaryOp, MatmulPrecision, Shape, TensorBackend, TensorError, UnaryOp,
 };
 
+impl tensor_core::TensorConvBackend for ComputeRuntime {
+    fn conv(
+        &self,
+        input: &GpuTensor,
+        weight: &GpuTensor,
+        options: &tensor_core::ConvOptions,
+    ) -> Result<GpuTensor, Self::Error> {
+        let mut program = self.program();
+        let output = program.tensor_conv(input, weight, options)?;
+        program.submit();
+        Ok(output)
+    }
+}
+
 impl tensor_core::TensorAttentionBackend for ComputeRuntime {
     fn attention(
         &self,

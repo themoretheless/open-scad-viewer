@@ -13,7 +13,7 @@ import time
 ROOT = Path(__file__).resolve().parents[1]
 BACKENDS = {
     "wgsl": (
-        ["-p", "compute-core", "--test", "evaluation", "--test", "tensor", "--test", "tensor_backend", "--test", "tensor_index", "--test", "tensor_reduce", "--test", "tensor_scatter", "--test", "tensor_low", "--test", "tensor_low_ops", "--test", "tensor_low_index", "--test", "tensor_low_scatter", "--test", "tensor_low_normalization", "--test", "tensor_low_attention", "--test", "tensor_normalization", "--test", "tensor_attention"],
+        ["-p", "compute-core", "--test", "tensor_convolution", "--test", "evaluation", "--test", "tensor", "--test", "tensor_backend", "--test", "tensor_index", "--test", "tensor_reduce", "--test", "tensor_scatter", "--test", "tensor_low", "--test", "tensor_low_ops", "--test", "tensor_low_index", "--test", "tensor_low_scatter", "--test", "tensor_low_normalization", "--test", "tensor_low_attention", "--test", "tensor_normalization", "--test", "tensor_attention"],
         {"COMPUTE_REQUIRE_GPU": "1"},
     ),
     "cuda": (["-p", "compute-cuda"], {"CUDA_REQUIRED": "1", "COMPUTE_REQUIRE_CUDA": "1"}),

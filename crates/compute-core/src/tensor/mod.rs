@@ -3,6 +3,7 @@
 //! record shader work into the same reusable `ComputeProgram` as array kernels.
 
 mod attention;
+mod convolution;
 pub(crate) use attention::AttentionKernels;
 mod index_kernels;
 mod indexing;

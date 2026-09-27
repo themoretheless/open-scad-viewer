@@ -1,0 +1,1350 @@
+{
+  "checked_utc": "2026-09-27T12:26:00.349945+00:00",
+  "test_executables": {
+    "native/contracts": {
+      "Running unittests src/lib.rs": {
+        "passed_entries": 19,
+        "unavailable_skips": 0
+      },
+      "Running tests/attention.rs": {
+        "passed_entries": 3,
+        "unavailable_skips": 0
+      },
+      "Running tests/indexing.rs": {
+        "passed_entries": 4,
+        "unavailable_skips": 0
+      },
+      "Running tests/layout.rs": {
+        "passed_entries": 7,
+        "unavailable_skips": 0
+      },
+      "Running tests/low_attention.rs": {
+        "passed_entries": 2,
+        "unavailable_skips": 0
+      },
+      "Running tests/low_ops.rs": {
+        "passed_entries": 2,
+        "unavailable_skips": 0
+      },
+      "Running tests/low_scatter.rs": {
+        "passed_entries": 2,
+        "unavailable_skips": 0
+      },
+      "Running tests/reduction.rs": {
+        "passed_entries": 3,
+        "unavailable_skips": 0
+      },
+      "Running tests/scatter.rs": {
+        "passed_entries": 3,
+        "unavailable_skips": 0
+      },
+      "Running tests/statistics.rs": {
+        "passed_entries": 2,
+        "unavailable_skips": 0
+      },
+      "Doc-tests tensor_core": {
+        "passed_entries": 0,
+        "unavailable_skips": 0
+      }
+    },
+    "native/wgsl": {
+      "Running tests/evaluation.rs": {
+        "passed_entries": 1,
+        "unavailable_skips": 0
+      },
+      "Running tests/tensor.rs": {
+        "passed_entries": 10,
+        "unavailable_skips": 0
+      },
+      "Running tests/tensor_attention.rs": {
+        "passed_entries": 6,
+        "unavailable_skips": 0
+      },
+      "Running tests/tensor_backend.rs": {
+        "passed_entries": 2,
+        "unavailable_skips": 0
+      },
+      "Running tests/tensor_convolution.rs": {
+        "passed_entries": 4,
+        "unavailable_skips": 0
+      },
+      "Running tests/tensor_index.rs": {
+        "passed_entries": 5,
+        "unavailable_skips": 0
+      },
+      "Running tests/tensor_low.rs": {
+        "passed_entries": 4,
+        "unavailable_skips": 0
+      },
+      "Running tests/tensor_low_attention.rs": {
+        "passed_entries": 4,
+        "unavailable_skips": 0
+      },
+      "Running tests/tensor_low_index.rs": {
+        "passed_entries": 5,
+        "unavailable_skips": 0
+      },
+      "Running tests/tensor_low_normalization.rs": {
+        "passed_entries": 4,
+        "unavailable_skips": 0
+      },
+      "Running tests/tensor_low_ops.rs": {
+        "passed_entries": 6,
+        "unavailable_skips": 0
+      },
+      "Running tests/tensor_low_scatter.rs": {
+        "passed_entries": 5,
+        "unavailable_skips": 0
+      },
+      "Running tests/tensor_normalization.rs": {
+        "passed_entries": 5,
+        "unavailable_skips": 0
+      },
+      "Running tests/tensor_reduce.rs": {
+        "passed_entries": 6,
+        "unavailable_skips": 0
+      },
+      "Running tests/tensor_scatter.rs": {
+        "passed_entries": 4,
+        "unavailable_skips": 0
+      }
+    },
+    "native/mlx": {
+      "Running unittests src/lib.rs": {
+        "passed_entries": 10,
+        "unavailable_skips": 0
+      },
+      "Running tests/attention.rs": {
+        "passed_entries": 7,
+        "unavailable_skips": 0
+      },
+      "Running tests/compiled.rs": {
+        "passed_entries": 10,
+        "unavailable_skips": 0
+      },
+      "Running tests/compiled_attention.rs": {
+        "passed_entries": 6,
+        "unavailable_skips": 0
+      },
+      "Running tests/compiled_indexing.rs": {
+        "passed_entries": 6,
+        "unavailable_skips": 0
+      },
+      "Running tests/compiled_scan_compaction.rs": {
+        "passed_entries": 6,
+        "unavailable_skips": 0
+      },
+      "Running tests/compiled_scatter.rs": {
+        "passed_entries": 6,
+        "unavailable_skips": 0
+      },
+      "Running tests/compiled_statistics.rs": {
+        "passed_entries": 7,
+        "unavailable_skips": 0
+      },
+      "Running tests/compiled_typed.rs": {
+        "passed_entries": 19,
+        "unavailable_skips": 0
+      },
+      "Running tests/convolution.rs": {
+        "passed_entries": 5,
+        "unavailable_skips": 0
+      },
+      "Running tests/evaluation.rs": {
+        "passed_entries": 2,
+        "unavailable_skips": 0
+      },
+      "Running tests/index.rs": {
+        "passed_entries": 5,
+        "unavailable_skips": 0
+      },
+      "Running tests/low_attention.rs": {
+        "passed_entries": 4,
+        "unavailable_skips": 0
+      },
+      "Running tests/low_index.rs": {
+        "passed_entries": 4,
+        "unavailable_skips": 0
+      },
+      "Running tests/low_matmul.rs": {
+        "passed_entries": 8,
+        "unavailable_skips": 0
+      },
+      "Running tests/low_ops.rs": {
+        "passed_entries": 6,
+        "unavailable_skips": 0
+      },
+      "Running tests/low_precision.rs": {
+        "passed_entries": 5,
+        "unavailable_skips": 0
+      },
+      "Running tests/low_scatter.rs": {
+        "passed_entries": 3,
+        "unavailable_skips": 0
+      },
+      "Running tests/low_statistics.rs": {
+        "passed_entries": 4,
+        "unavailable_skips": 0
+      },
+      "Running tests/native.rs": {
+        "passed_entries": 6,
+        "unavailable_skips": 0
+      },
+      "Running tests/reduction.rs": {
+        "passed_entries": 6,
+        "unavailable_skips": 0
+      },
+      "Running tests/scatter.rs": {
+        "passed_entries": 5,
+        "unavailable_skips": 0
+      },
+      "Running tests/statistics.rs": {
+        "passed_entries": 6,
+        "unavailable_skips": 0
+      },
+      "Doc-tests compute_mlx": {
+        "passed_entries": 0,
+        "unavailable_skips": 0
+      }
+    },
+    "native/math-wgsl": {
+      "Running tests/tensor_math.rs": {
+        "passed_entries": 2,
+        "unavailable_skips": 0
+      }
+    },
+    "native/math-mlx": {
+      "Running tests/tensor_math.rs": {
+        "passed_entries": 2,
+        "unavailable_skips": 0
+      }
+    },
+    "wgsl-unit": {
+      "Running unittests src/lib.rs": {
+        "passed_entries": 14,
+        "unavailable_skips": 0
+      }
+    },
+    "cuda-host": {
+      "Running unittests src/lib.rs": {
+        "passed_entries": 154,
+        "unavailable_skips": 0
+      },
+      "Running tests/convolution.rs": {
+        "passed_entries": 3,
+        "unavailable_skips": 3
+      },
+      "Running tests/cuda_tensor.rs": {
+        "passed_entries": 1,
+        "unavailable_skips": 1
+      },
+      "Running tests/evaluation.rs": {
+        "passed_entries": 1,
+        "unavailable_skips": 1
+      },
+      "Running tests/graph.rs": {
+        "passed_entries": 2,
+        "unavailable_skips": 1
+      },
+      "Running tests/prepared.rs": {
+        "passed_entries": 1,
+        "unavailable_skips": 1
+      },
+      "Running tests/prepared_indexing.rs": {
+        "passed_entries": 1,
+        "unavailable_skips": 1
+      },
+      "Running tests/prepared_statistics.rs": {
+        "passed_entries": 2,
+        "unavailable_skips": 1
+      },
+      "Running tests/prepared_typed.rs": {
+        "passed_entries": 1,
+        "unavailable_skips": 1
+      },
+      "Doc-tests compute_cuda": {
+        "passed_entries": 6,
+        "unavailable_skips": 0
+      }
+    }
+  },
+  "source_files_verified": 592,
+  "changed_rust_files_formatted": 23,
+  "shader_files_fingerprinted": 149,
+  "cuda_compiled_source_parts": 13,
+  "cuda_execution_qualified": false,
+  "tensor_core_instruction_use_proven": false,
+  "browser_execution_qualified": false,
+  "device_peak_memory_measured": false,
+  "performance_claim": false,
+  "local_links": [
+    {
+      "document": "docs/qualification/tensor-convolution-2026-09-27.md",
+      "target": "crates/tensor-core/src/convolution.rs"
+    },
+    {
+      "document": "docs/qualification/tensor-convolution-2026-09-27.md",
+      "target": "crates/compute-core/src/tensor/convolution.rs"
+    },
+    {
+      "document": "docs/qualification/tensor-convolution-2026-09-27.md",
+      "target": "crates/compute-mlx/src/metal/convolution.metal"
+    },
+    {
+      "document": "docs/qualification/tensor-convolution-2026-09-27.md",
+      "target": "crates/compute-cuda/src/convolution.cu"
+    },
+    {
+      "document": "docs/qualification/tensor-convolution-2026-09-27.md",
+      "target": "docs/qualification/tensor-convolution-2026-09-27/checks.json"
+    },
+    {
+      "document": "docs/qualification/tensor-convolution-2026-09-27.md",
+      "target": "docs/qualification/tensor-convolution-2026-09-27/native/report.json"
+    },
+    {
+      "document": "docs/qualification/tensor-convolution-2026-09-27.md",
+      "target": "docs/qualification/tensor-convolution-2026-09-27/host.json"
+    },
+    {
+      "document": "docs/qualification/tensor-convolution-2026-09-27.md",
+      "target": "crates/tensor-core/src/conformance/convolution.rs"
+    },
+    {
+      "document": "docs/qualification/tensor-convolution-2026-09-27.md",
+      "target": "docs/qualification/tensor-convolution-2026-09-27/native/contracts.txt"
+    },
+    {
+      "document": "docs/qualification/tensor-convolution-2026-09-27.md",
+      "target": "docs/qualification/tensor-convolution-2026-09-27/native/wgsl.txt"
+    },
+    {
+      "document": "docs/qualification/tensor-convolution-2026-09-27.md",
+      "target": "docs/qualification/tensor-convolution-2026-09-27/wgsl-unit.txt"
+    },
+    {
+      "document": "docs/qualification/tensor-convolution-2026-09-27.md",
+      "target": "docs/qualification/tensor-convolution-2026-09-27/native/mlx.txt"
+    },
+    {
+      "document": "docs/qualification/tensor-convolution-2026-09-27.md",
+      "target": "docs/qualification/tensor-convolution-2026-09-27/cuda-host.txt"
+    },
+    {
+      "document": "docs/qualification/tensor-convolution-2026-09-27.md",
+      "target": "docs/qualification/tensor-convolution-2026-09-27/cuda-required.txt"
+    },
+    {
+      "document": "docs/qualification/tensor-convolution-2026-09-27.md",
+      "target": "docs/qualification/tensor-convolution-2026-09-27/clippy.txt"
+    },
+    {
+      "document": "docs/qualification/tensor-convolution-2026-09-27.md",
+      "target": "docs/qualification/tensor-convolution-2026-09-27/rustdoc.txt"
+    },
+    {
+      "document": "docs/qualification/tensor-convolution-2026-09-27.md",
+      "target": "docs/qualification/tensor-convolution-2026-09-27/wasm-check.txt"
+    },
+    {
+      "document": "docs/qualification/tensor-convolution-2026-09-27.md",
+      "target": "docs/qualification/tensor-convolution-2026-09-27/architecture.txt"
+    },
+    {
+      "document": "docs/qualification/tensor-convolution-2026-09-27.md",
+      "target": "docs/qualification/tensor-convolution-2026-09-27/diagnostics/mlx-initial-failure.txt"
+    },
+    {
+      "document": "docs/qualification/tensor-convolution-2026-09-27.md",
+      "target": "crates/compute-cuda/qualification/nvrtc-12.8.93-linux-aarch64-convolution/report.json"
+    },
+    {
+      "document": "docs/qualification/tensor-convolution-2026-09-27.md",
+      "target": "docs/qualification/tensor-convolution-2026-09-27/source-fingerprints.json"
+    },
+    {
+      "document": "docs/qualification/tensor-convolution-2026-09-27.md",
+      "target": "docs/qualification/tensor-convolution-2026-09-27/artifact-audit.json"
+    },
+    {
+      "document": "docs/qualification/tensor-convolution-2026-09-27.md",
+      "target": "docs/design/tensor-backends-2026-09-27.md"
+    },
+    {
+      "document": "crates/compute-core/README.md",
+      "target": "docs/design/gpu-library-architecture.md"
+    },
+    {
+      "document": "crates/compute-core/README.md",
+      "target": "docs/qualification/shader-compute-reductions-2026-09-27.md"
+    },
+    {
+      "document": "crates/compute-core/README.md",
+      "target": "crates/compute-core/examples/tensor_program.rs"
+    },
+    {
+      "document": "crates/compute-core/README.md",
+      "target": "crates/compute-core/benchmarks/tensor-scatter.md"
+    },
+    {
+      "document": "crates/compute-core/README.md",
+      "target": "crates/compute-core/benchmarks/tensor-reductions.md"
+    },
+    {
+      "document": "crates/compute-core/README.md",
+      "target": "docs/design/tensor-backends-2026-09-27.md"
+    },
+    {
+      "document": "crates/compute-core/README.md",
+      "target": "crates/compute-core/benchmarks/tensor-low-contracts.md"
+    },
+    {
+      "document": "crates/compute-core/README.md",
+      "target": "crates/compute-core/benchmarks/tensor-low.md"
+    },
+    {
+      "document": "crates/compute-core/README.md",
+      "target": "crates/compute-core/benchmarks/tensor-low-ops-contracts.md"
+    },
+    {
+      "document": "crates/compute-core/README.md",
+      "target": "crates/compute-core/benchmarks/tensor-low-ops.md"
+    },
+    {
+      "document": "crates/compute-core/README.md",
+      "target": "crates/compute-core/benchmarks/tensor-low-index-contracts.md"
+    },
+    {
+      "document": "crates/compute-core/README.md",
+      "target": "crates/compute-core/benchmarks/tensor-low-index.md"
+    },
+    {
+      "document": "crates/compute-core/README.md",
+      "target": "crates/compute-core/benchmarks/tensor-low-scatter-contracts.md"
+    },
+    {
+      "document": "crates/compute-core/README.md",
+      "target": "docs/qualification/tensor-low-statistics-2026-09-27.md"
+    },
+    {
+      "document": "crates/compute-core/README.md",
+      "target": "crates/compute-core/benchmarks/tensor-low-attention.md"
+    },
+    {
+      "document": "crates/compute-core/README.md",
+      "target": "docs/qualification/tensor-low-attention-2026-09-27.md"
+    },
+    {
+      "document": "crates/compute-core/README.md",
+      "target": "crates/compute-core/benchmarks/tensor-normalization-contracts.md"
+    },
+    {
+      "document": "crates/compute-core/README.md",
+      "target": "crates/compute-core/benchmarks/tensor-normalization.md"
+    },
+    {
+      "document": "crates/compute-core/README.md",
+      "target": "crates/compute-core/benchmarks/tensor-attention-contracts.md"
+    },
+    {
+      "document": "crates/compute-core/README.md",
+      "target": "crates/compute-core/benchmarks/tensor-attention.md"
+    },
+    {
+      "document": "crates/compute-core/README.md",
+      "target": "crates/compute-core/examples/bench_tensor_attention.rs"
+    },
+    {
+      "document": "crates/compute-core/README.md",
+      "target": "crates/compute-core/benchmarks/matmul-research.md"
+    },
+    {
+      "document": "crates/compute-core/README.md",
+      "target": "crates/compute-core/benchmarks/scan-compaction-metal.md"
+    },
+    {
+      "document": "crates/compute-cuda/README.md",
+      "target": "docs/qualification/tensor-convolution-2026-09-27.md"
+    },
+    {
+      "document": "crates/compute-cuda/README.md",
+      "target": "crates/compute-cuda/src/kernels.cu"
+    },
+    {
+      "document": "crates/compute-cuda/README.md",
+      "target": "crates/compute-cuda/src/indexing.cu"
+    },
+    {
+      "document": "crates/compute-cuda/README.md",
+      "target": "crates/compute-cuda/src/reductions.cu"
+    },
+    {
+      "document": "crates/compute-cuda/README.md",
+      "target": "crates/compute-cuda/src/scatter.cu"
+    },
+    {
+      "document": "crates/compute-cuda/README.md",
+      "target": "crates/compute-cuda/src/low_precision.cu"
+    },
+    {
+      "document": "crates/compute-cuda/README.md",
+      "target": "crates/compute-cuda/src/statistics.cu"
+    },
+    {
+      "document": "crates/compute-cuda/README.md",
+      "target": "crates/compute-cuda/src/attention.cu"
+    },
+    {
+      "document": "crates/compute-cuda/README.md",
+      "target": "crates/compute-cuda/src/low_ops.cu"
+    },
+    {
+      "document": "crates/compute-cuda/README.md",
+      "target": "crates/compute-cuda/src/low_indexing.cu"
+    },
+    {
+      "document": "crates/compute-cuda/README.md",
+      "target": "crates/compute-cuda/src/low_scatter.cu"
+    },
+    {
+      "document": "crates/compute-cuda/README.md",
+      "target": "crates/compute-cuda/src/low_statistics.cu"
+    },
+    {
+      "document": "crates/compute-cuda/README.md",
+      "target": "crates/compute-cuda/src/low_attention.cu"
+    },
+    {
+      "document": "crates/compute-cuda/README.md",
+      "target": "docs/qualification/tensor-cuda-index-programs-2026-09-27.md"
+    },
+    {
+      "document": "crates/compute-cuda/README.md",
+      "target": "docs/qualification/tensor-cuda-typed-programs-2026-09-27.md"
+    },
+    {
+      "document": "crates/compute-cuda/README.md",
+      "target": "docs/qualification/tensor-cuda-programs-2026-09-27.md"
+    },
+    {
+      "document": "crates/compute-cuda/README.md",
+      "target": "docs/qualification/tensor-cuda-graphs-2026-09-27.md"
+    },
+    {
+      "document": "crates/compute-cuda/README.md",
+      "target": "crates/compute-cuda/examples/graph.rs"
+    },
+    {
+      "document": "crates/compute-cuda/README.md",
+      "target": "docs/qualification/tensor-prepared-statistics-2026-09-27.md"
+    },
+    {
+      "document": "crates/compute-cuda/README.md",
+      "target": "crates/compute-cuda/qualification/nvrtc-12.8.93-linux-aarch64-typed-programs/report.json"
+    },
+    {
+      "document": "crates/compute-cuda/README.md",
+      "target": "crates/compute-cuda/qualification/README.md"
+    },
+    {
+      "document": "crates/compute-cuda/qualification/README.md",
+      "target": "crates/compute-cuda/qualification/nvrtc-12.8.93-linux-aarch64-convolution/report.json"
+    },
+    {
+      "document": "crates/compute-cuda/qualification/README.md",
+      "target": "crates/compute-cuda/qualification/nvrtc-12.8.93-linux-aarch64-typed-programs/report.json"
+    },
+    {
+      "document": "crates/compute-cuda/qualification/README.md",
+      "target": "crates/compute-cuda/qualification/nvrtc-12.8.93-linux-aarch64-typed-programs/compute-70.log"
+    },
+    {
+      "document": "crates/compute-cuda/qualification/README.md",
+      "target": "crates/compute-cuda/qualification/nvrtc-12.8.93-linux-aarch64-typed-programs/compute-80.log"
+    },
+    {
+      "document": "crates/compute-cuda/qualification/README.md",
+      "target": "crates/compute-cuda/qualification/nvrtc-12.8.93-linux-aarch64-typed-programs/compute-90.log"
+    },
+    {
+      "document": "crates/compute-cuda/qualification/README.md",
+      "target": "crates/compute-cuda/qualification/nvrtc-12.8.93-linux-aarch64-typed-programs/compute-120.log"
+    },
+    {
+      "document": "crates/compute-cuda/qualification/README.md",
+      "target": "docs/qualification/tensor-cuda-typed-programs-2026-09-27.md"
+    },
+    {
+      "document": "crates/compute-cuda/qualification/README.md",
+      "target": "crates/compute-cuda/qualification/nvrtc-12.8.93-linux-aarch64-low-attention/report.json"
+    },
+    {
+      "document": "crates/compute-cuda/qualification/README.md",
+      "target": "crates/compute-cuda/qualification/nvrtc-12.8.93-linux-aarch64-low-attention/compute-70.log"
+    },
+    {
+      "document": "crates/compute-cuda/qualification/README.md",
+      "target": "crates/compute-cuda/qualification/nvrtc-12.8.93-linux-aarch64-low-attention/compute-80.log"
+    },
+    {
+      "document": "crates/compute-cuda/qualification/README.md",
+      "target": "crates/compute-cuda/qualification/nvrtc-12.8.93-linux-aarch64-low-attention/compute-90.log"
+    },
+    {
+      "document": "crates/compute-cuda/qualification/README.md",
+      "target": "crates/compute-cuda/qualification/nvrtc-12.8.93-linux-aarch64-low-attention/compute-120.log"
+    },
+    {
+      "document": "crates/compute-cuda/qualification/README.md",
+      "target": "crates/compute-cuda/qualification/low-attention-source-audit.txt"
+    },
+    {
+      "document": "crates/compute-cuda/qualification/README.md",
+      "target": "crates/compute-cuda/qualification/low-attention-host-tests.txt"
+    },
+    {
+      "document": "crates/compute-cuda/qualification/README.md",
+      "target": "crates/compute-cuda/qualification/low-attention-cuda-required.txt"
+    },
+    {
+      "document": "crates/compute-cuda/qualification/README.md",
+      "target": "crates/compute-cuda/qualification/nvrtc-12.8.93-linux-aarch64-low-statistics/report.json"
+    },
+    {
+      "document": "crates/compute-cuda/qualification/README.md",
+      "target": "crates/compute-cuda/qualification/nvrtc-12.8.93-linux-aarch64-low-statistics/compute-70.log"
+    },
+    {
+      "document": "crates/compute-cuda/qualification/README.md",
+      "target": "crates/compute-cuda/qualification/nvrtc-12.8.93-linux-aarch64-low-statistics/compute-80.log"
+    },
+    {
+      "document": "crates/compute-cuda/qualification/README.md",
+      "target": "crates/compute-cuda/qualification/nvrtc-12.8.93-linux-aarch64-low-statistics/compute-90.log"
+    },
+    {
+      "document": "crates/compute-cuda/qualification/README.md",
+      "target": "crates/compute-cuda/qualification/nvrtc-12.8.93-linux-aarch64-low-statistics/compute-120.log"
+    },
+    {
+      "document": "crates/compute-cuda/qualification/README.md",
+      "target": "crates/compute-cuda/qualification/low-statistics-source-audit.txt"
+    },
+    {
+      "document": "crates/compute-cuda/qualification/README.md",
+      "target": "crates/compute-cuda/qualification/low-statistics-host-tests.txt"
+    },
+    {
+      "document": "crates/compute-cuda/qualification/README.md",
+      "target": "crates/compute-cuda/qualification/low-statistics-cuda-required.txt"
+    },
+    {
+      "document": "crates/compute-cuda/qualification/README.md",
+      "target": "crates/compute-cuda/qualification/nvrtc-12.8.93-linux-aarch64-low-scatter/report.json"
+    },
+    {
+      "document": "crates/compute-cuda/qualification/README.md",
+      "target": "crates/compute-cuda/qualification/nvrtc-12.8.93-linux-aarch64-low-scatter/compute-70.log"
+    },
+    {
+      "document": "crates/compute-cuda/qualification/README.md",
+      "target": "crates/compute-cuda/qualification/nvrtc-12.8.93-linux-aarch64-low-scatter/compute-80.log"
+    },
+    {
+      "document": "crates/compute-cuda/qualification/README.md",
+      "target": "crates/compute-cuda/qualification/nvrtc-12.8.93-linux-aarch64-low-scatter/compute-90.log"
+    },
+    {
+      "document": "crates/compute-cuda/qualification/README.md",
+      "target": "crates/compute-cuda/qualification/nvrtc-12.8.93-linux-aarch64-low-scatter/compute-120.log"
+    },
+    {
+      "document": "crates/compute-cuda/qualification/README.md",
+      "target": "crates/compute-cuda/qualification/low-scatter-host-tests.txt"
+    },
+    {
+      "document": "crates/compute-cuda/qualification/README.md",
+      "target": "crates/compute-cuda/qualification/low-scatter-cuda-required.txt"
+    },
+    {
+      "document": "crates/compute-cuda/qualification/README.md",
+      "target": "crates/compute-cuda/qualification/nvrtc-12.8.93-linux-aarch64-low-indexing/report.json"
+    },
+    {
+      "document": "crates/compute-cuda/qualification/README.md",
+      "target": "crates/compute-cuda/qualification/nvrtc-12.8.93-linux-aarch64-low-indexing/compute-70.log"
+    },
+    {
+      "document": "crates/compute-cuda/qualification/README.md",
+      "target": "crates/compute-cuda/qualification/nvrtc-12.8.93-linux-aarch64-low-indexing/compute-80.log"
+    },
+    {
+      "document": "crates/compute-cuda/qualification/README.md",
+      "target": "crates/compute-cuda/qualification/nvrtc-12.8.93-linux-aarch64-low-indexing/compute-90.log"
+    },
+    {
+      "document": "crates/compute-cuda/qualification/README.md",
+      "target": "crates/compute-cuda/qualification/nvrtc-12.8.93-linux-aarch64-low-indexing/compute-120.log"
+    },
+    {
+      "document": "crates/compute-cuda/qualification/README.md",
+      "target": "crates/compute-cuda/qualification/low-indexing-host-tests.txt"
+    },
+    {
+      "document": "crates/compute-cuda/qualification/README.md",
+      "target": "crates/compute-cuda/qualification/low-indexing-cuda-required.txt"
+    },
+    {
+      "document": "crates/compute-cuda/qualification/README.md",
+      "target": "crates/compute-cuda/qualification/nvrtc-12.8.93-linux-aarch64-low-ops/report.json"
+    },
+    {
+      "document": "crates/compute-cuda/qualification/README.md",
+      "target": "crates/compute-cuda/qualification/nvrtc-12.8.93-linux-aarch64-low-ops/compute-70.log"
+    },
+    {
+      "document": "crates/compute-cuda/qualification/README.md",
+      "target": "crates/compute-cuda/qualification/nvrtc-12.8.93-linux-aarch64-low-ops/compute-80.log"
+    },
+    {
+      "document": "crates/compute-cuda/qualification/README.md",
+      "target": "crates/compute-cuda/qualification/nvrtc-12.8.93-linux-aarch64-low-ops/compute-90.log"
+    },
+    {
+      "document": "crates/compute-cuda/qualification/README.md",
+      "target": "crates/compute-cuda/qualification/nvrtc-12.8.93-linux-aarch64-low-ops/compute-120.log"
+    },
+    {
+      "document": "crates/compute-cuda/qualification/README.md",
+      "target": "crates/compute-cuda/qualification/nvrtc-12.8.93-linux-aarch64-attention/report.json"
+    },
+    {
+      "document": "crates/compute-cuda/qualification/README.md",
+      "target": "crates/compute-cuda/qualification/nvrtc-12.8.93-linux-aarch64-attention/compute-70.log"
+    },
+    {
+      "document": "crates/compute-cuda/qualification/README.md",
+      "target": "crates/compute-cuda/qualification/nvrtc-12.8.93-linux-aarch64-attention/compute-80.log"
+    },
+    {
+      "document": "crates/compute-cuda/qualification/README.md",
+      "target": "crates/compute-cuda/qualification/nvrtc-12.8.93-linux-aarch64-attention/compute-90.log"
+    },
+    {
+      "document": "crates/compute-cuda/qualification/README.md",
+      "target": "crates/compute-cuda/qualification/nvrtc-12.8.93-linux-aarch64-attention/compute-120.log"
+    },
+    {
+      "document": "crates/compute-cuda/qualification/README.md",
+      "target": "crates/compute-cuda/qualification/nvrtc-12.8.93-linux-aarch64-statistics/report.json"
+    },
+    {
+      "document": "crates/compute-cuda/qualification/README.md",
+      "target": "crates/compute-cuda/qualification/nvrtc-12.8.93-linux-aarch64-statistics/compute-70.log"
+    },
+    {
+      "document": "crates/compute-cuda/qualification/README.md",
+      "target": "crates/compute-cuda/qualification/nvrtc-12.8.93-linux-aarch64-statistics/compute-80.log"
+    },
+    {
+      "document": "crates/compute-cuda/qualification/README.md",
+      "target": "crates/compute-cuda/qualification/nvrtc-12.8.93-linux-aarch64-statistics/compute-90.log"
+    },
+    {
+      "document": "crates/compute-cuda/qualification/README.md",
+      "target": "crates/compute-cuda/qualification/nvrtc-12.8.93-linux-aarch64-statistics/compute-120.log"
+    },
+    {
+      "document": "crates/compute-cuda/qualification/README.md",
+      "target": "crates/compute-cuda/qualification/nvrtc-12.8.93-linux-aarch64-low-precision/report.json"
+    },
+    {
+      "document": "crates/compute-cuda/qualification/README.md",
+      "target": "crates/compute-cuda/qualification/nvrtc-12.8.93-linux-aarch64-low-precision/compute-70.log"
+    },
+    {
+      "document": "crates/compute-cuda/qualification/README.md",
+      "target": "crates/compute-cuda/qualification/nvrtc-12.8.93-linux-aarch64-low-precision/compute-80.log"
+    },
+    {
+      "document": "crates/compute-cuda/qualification/README.md",
+      "target": "crates/compute-cuda/qualification/nvrtc-12.8.93-linux-aarch64-low-precision/compute-90.log"
+    },
+    {
+      "document": "crates/compute-cuda/qualification/README.md",
+      "target": "crates/compute-cuda/qualification/nvrtc-12.8.93-linux-aarch64-low-precision/compute-120.log"
+    },
+    {
+      "document": "crates/compute-cuda/qualification/README.md",
+      "target": "crates/compute-cuda/qualification/nvrtc-12.8.93-linux-aarch64-scatter/report.json"
+    },
+    {
+      "document": "crates/compute-cuda/qualification/README.md",
+      "target": "crates/compute-cuda/qualification/nvrtc-12.8.93-linux-aarch64-scatter/compute-70.log"
+    },
+    {
+      "document": "crates/compute-cuda/qualification/README.md",
+      "target": "crates/compute-cuda/qualification/nvrtc-12.8.93-linux-aarch64-scatter/compute-80.log"
+    },
+    {
+      "document": "crates/compute-cuda/qualification/README.md",
+      "target": "crates/compute-cuda/qualification/nvrtc-12.8.93-linux-aarch64-scatter/compute-90.log"
+    },
+    {
+      "document": "crates/compute-cuda/qualification/README.md",
+      "target": "crates/compute-cuda/qualification/nvrtc-12.8.93-linux-aarch64-scatter/compute-120.log"
+    },
+    {
+      "document": "crates/compute-cuda/qualification/README.md",
+      "target": "crates/compute-cuda/qualification/nvrtc-12.8.93-linux-aarch64-reductions/report.json"
+    },
+    {
+      "document": "crates/compute-cuda/qualification/README.md",
+      "target": "crates/compute-cuda/qualification/nvrtc-12.8.93-linux-aarch64-reductions/compute-70.log"
+    },
+    {
+      "document": "crates/compute-cuda/qualification/README.md",
+      "target": "crates/compute-cuda/qualification/nvrtc-12.8.93-linux-aarch64-reductions/compute-80.log"
+    },
+    {
+      "document": "crates/compute-cuda/qualification/README.md",
+      "target": "crates/compute-cuda/qualification/nvrtc-12.8.93-linux-aarch64-reductions/compute-90.log"
+    },
+    {
+      "document": "crates/compute-cuda/qualification/README.md",
+      "target": "crates/compute-cuda/qualification/nvrtc-12.8.93-linux-aarch64-reductions/compute-120.log"
+    },
+    {
+      "document": "crates/compute-cuda/qualification/README.md",
+      "target": "crates/compute-cuda/qualification/nvrtc-12.8.93-linux-aarch64/report.json"
+    },
+    {
+      "document": "crates/compute-cuda/qualification/README.md",
+      "target": "crates/compute-cuda/qualification/nvrtc-12.8.93-linux-aarch64/compute-70.log"
+    },
+    {
+      "document": "crates/compute-cuda/qualification/README.md",
+      "target": "crates/compute-cuda/qualification/nvrtc-12.8.93-linux-aarch64/compute-80.log"
+    },
+    {
+      "document": "crates/compute-cuda/qualification/README.md",
+      "target": "crates/compute-cuda/qualification/nvrtc-12.8.93-linux-aarch64/compute-90.log"
+    },
+    {
+      "document": "crates/compute-cuda/qualification/README.md",
+      "target": "crates/compute-cuda/qualification/nvrtc-12.8.93-linux-aarch64/compute-120.log"
+    },
+    {
+      "document": "crates/compute-mlx/README.md",
+      "target": "docs/qualification/tensor-convolution-2026-09-27.md"
+    },
+    {
+      "document": "crates/compute-mlx/README.md",
+      "target": "crates/compute-mlx/examples/linear.rs"
+    },
+    {
+      "document": "crates/compute-mlx/README.md",
+      "target": "crates/compute-mlx/qualification/compiled-initial-failure.txt"
+    },
+    {
+      "document": "crates/compute-mlx/README.md",
+      "target": "crates/compute-mlx/qualification/compiled-focused.txt"
+    },
+    {
+      "document": "crates/compute-mlx/README.md",
+      "target": "crates/compute-mlx/qualification/compiled-metal.txt"
+    },
+    {
+      "document": "crates/compute-mlx/README.md",
+      "target": "crates/compute-mlx/qualification/compiled-typed-focused.txt"
+    },
+    {
+      "document": "crates/compute-mlx/README.md",
+      "target": "crates/compute-mlx/qualification/compiled-typed-disabled.txt"
+    },
+    {
+      "document": "crates/compute-mlx/README.md",
+      "target": "crates/compute-mlx/qualification/compiled-typed-metal.txt"
+    },
+    {
+      "document": "crates/compute-mlx/README.md",
+      "target": "crates/compute-mlx/qualification/compiled-typed-source-manifest.json"
+    },
+    {
+      "document": "crates/compute-mlx/README.md",
+      "target": "crates/compute-mlx/qualification/compiled-typed-initial-failure.txt"
+    },
+    {
+      "document": "crates/compute-mlx/README.md",
+      "target": "crates/compute-mlx/examples/compiled_indexing.rs"
+    },
+    {
+      "document": "crates/compute-mlx/README.md",
+      "target": "docs/qualification/tensor-mlx-index-programs-2026-09-27.md"
+    },
+    {
+      "document": "crates/compute-mlx/README.md",
+      "target": "docs/qualification/tensor-prepared-statistics-2026-09-27.md"
+    },
+    {
+      "document": "crates/compute-mlx/README.md",
+      "target": "crates/compute-mlx/qualification/low-matmul-tiled-source-manifest.json"
+    },
+    {
+      "document": "crates/compute-mlx/README.md",
+      "target": "crates/compute-mlx/qualification/low-matmul-tiled-metal.txt"
+    },
+    {
+      "document": "crates/compute-mlx/README.md",
+      "target": "crates/compute-mlx/qualification/low-matmul-simd-source-manifest.json"
+    },
+    {
+      "document": "crates/compute-mlx/README.md",
+      "target": "crates/compute-mlx/qualification/low-matmul-simd-full-metal.txt"
+    },
+    {
+      "document": "crates/compute-mlx/README.md",
+      "target": "crates/compute-mlx/qualification/low-matmul-source-manifest.json"
+    },
+    {
+      "document": "crates/compute-mlx/README.md",
+      "target": "crates/compute-mlx/qualification/low-matmul-routed-focused.txt"
+    },
+    {
+      "document": "crates/compute-mlx/README.md",
+      "target": "crates/compute-mlx/qualification/low-matmul-routed-metal.txt"
+    },
+    {
+      "document": "crates/compute-mlx/README.md",
+      "target": "crates/compute-mlx/benchmarks/low-matmul.md"
+    },
+    {
+      "document": "crates/compute-mlx/README.md",
+      "target": "crates/compute-mlx/qualification/compiled-typed-tiny-multiply.txt"
+    },
+    {
+      "document": "crates/compute-mlx/README.md",
+      "target": "crates/compute-mlx/qualification/compiled-typed-tiny-multiply-corrected.txt"
+    },
+    {
+      "document": "crates/compute-mlx/README.md",
+      "target": "crates/compute-mlx/qualification/low-ops-native-probe.txt"
+    },
+    {
+      "document": "crates/compute-mlx/README.md",
+      "target": "crates/compute-mlx/qualification/low-ops-native-probe.c"
+    },
+    {
+      "document": "crates/compute-mlx/README.md",
+      "target": "crates/compute-mlx/qualification/low-ops-initial-failure.txt"
+    },
+    {
+      "document": "crates/compute-mlx/README.md",
+      "target": "crates/compute-mlx/qualification/low-ops-metal.txt"
+    },
+    {
+      "document": "crates/compute-mlx/README.md",
+      "target": "crates/compute-mlx/qualification/low-index-native-probe.c"
+    },
+    {
+      "document": "crates/compute-mlx/README.md",
+      "target": "crates/compute-mlx/qualification/low-index-native-probe.txt"
+    },
+    {
+      "document": "crates/compute-mlx/README.md",
+      "target": "crates/compute-mlx/qualification/low-index-initial-failure.txt"
+    },
+    {
+      "document": "crates/compute-mlx/README.md",
+      "target": "crates/compute-mlx/qualification/low-index-metal.txt"
+    },
+    {
+      "document": "crates/compute-mlx/README.md",
+      "target": "crates/compute-mlx/qualification/low-scatter-native-probe.txt"
+    },
+    {
+      "document": "crates/compute-mlx/README.md",
+      "target": "crates/compute-mlx/qualification/low-scatter-native-probe.c"
+    },
+    {
+      "document": "crates/compute-mlx/README.md",
+      "target": "crates/compute-mlx/qualification/low-scatter-metal.txt"
+    },
+    {
+      "document": "crates/compute-mlx/README.md",
+      "target": "crates/compute-mlx/qualification/low-statistics-metal.txt"
+    },
+    {
+      "document": "crates/compute-mlx/README.md",
+      "target": "crates/compute-mlx/qualification/low-statistics-initial-failure.txt"
+    },
+    {
+      "document": "crates/compute-mlx/README.md",
+      "target": "crates/compute-mlx/qualification/low-attention-initial.txt"
+    },
+    {
+      "document": "crates/compute-mlx/README.md",
+      "target": "crates/compute-mlx/qualification/low-attention-metal.txt"
+    },
+    {
+      "document": "crates/compute-mlx/README.md",
+      "target": "crates/compute-mlx/qualification/low-attention-focused.txt"
+    },
+    {
+      "document": "crates/compute-mlx/README.md",
+      "target": "crates/compute-mlx/qualification/low-attention-source-manifest.json"
+    },
+    {
+      "document": "crates/compute-mlx/README.md",
+      "target": "crates/compute-mlx/qualification/attention-native-probe.txt"
+    },
+    {
+      "document": "crates/compute-mlx/README.md",
+      "target": "crates/compute-mlx/qualification/attention-extreme-initial-failure.txt"
+    },
+    {
+      "document": "crates/compute-mlx/README.md",
+      "target": "crates/compute-mlx/qualification/attention-metal.txt"
+    },
+    {
+      "document": "crates/compute-mlx/README.md",
+      "target": "crates/compute-mlx/qualification/attention-native-probe.c"
+    },
+    {
+      "document": "crates/compute-mlx/README.md",
+      "target": "docs/qualification/tensor-mlx-index-programs-2026-09-27.md"
+    },
+    {
+      "document": "crates/compute-mlx/README.md",
+      "target": "crates/compute-mlx/qualification/native-metal.txt"
+    },
+    {
+      "document": "crates/compute-mlx/README.md",
+      "target": "crates/compute-mlx/qualification/index-metal.txt"
+    },
+    {
+      "document": "crates/compute-mlx/README.md",
+      "target": "crates/compute-mlx/qualification/reduction-metal.txt"
+    },
+    {
+      "document": "crates/compute-mlx/README.md",
+      "target": "crates/compute-mlx/qualification/scatter-metal.txt"
+    },
+    {
+      "document": "crates/compute-mlx/README.md",
+      "target": "crates/compute-mlx/qualification/low-metal.txt"
+    },
+    {
+      "document": "crates/compute-mlx/README.md",
+      "target": "crates/compute-mlx/qualification/statistics-metal.txt"
+    },
+    {
+      "document": "crates/compute-mlx/README.md",
+      "target": "crates/compute-mlx/qualification/attention-metal.txt"
+    },
+    {
+      "document": "crates/compute-mlx/README.md",
+      "target": "crates/compute-mlx/qualification/low-ops-metal.txt"
+    },
+    {
+      "document": "crates/compute-mlx/README.md",
+      "target": "crates/compute-mlx/qualification/low-index-metal.txt"
+    },
+    {
+      "document": "crates/compute-mlx/README.md",
+      "target": "crates/compute-mlx/qualification/low-scatter-metal.txt"
+    },
+    {
+      "document": "crates/compute-mlx/README.md",
+      "target": "crates/compute-mlx/qualification/low-statistics-metal.txt"
+    },
+    {
+      "document": "crates/compute-mlx/README.md",
+      "target": "crates/compute-mlx/qualification/low-attention-metal.txt"
+    },
+    {
+      "document": "crates/compute-mlx/README.md",
+      "target": "crates/compute-mlx/qualification/low-matmul-metal.txt"
+    },
+    {
+      "document": "crates/compute-mlx/README.md",
+      "target": "crates/compute-mlx/qualification/compiled-metal.txt"
+    },
+    {
+      "document": "crates/compute-mlx/README.md",
+      "target": "crates/compute-mlx/qualification/compiled-typed-metal.txt"
+    },
+    {
+      "document": "crates/compute-mlx/README.md",
+      "target": "crates/compute-mlx/qualification/index-empty-u32-initial-failure.txt"
+    },
+    {
+      "document": "crates/compute-mlx/README.md",
+      "target": "crates/compute-mlx/qualification/reduction-empty-batch-initial-failure.txt"
+    },
+    {
+      "document": "crates/compute-mlx/README.md",
+      "target": "crates/compute-mlx/qualification/low-bf16-initial-failure.txt"
+    },
+    {
+      "document": "docs/design/tensor-backends-2026-09-27.md",
+      "target": "docs/qualification/tensor-domain-math-2026-09-27.md"
+    },
+    {
+      "document": "docs/design/tensor-backends-2026-09-27.md",
+      "target": "crates/compute-core/benchmarks/tensor-low-scatter-contracts.md"
+    },
+    {
+      "document": "docs/design/tensor-backends-2026-09-27.md",
+      "target": "docs/qualification/tensor-low-scatter-2026-09-27.md"
+    },
+    {
+      "document": "docs/design/tensor-backends-2026-09-27.md",
+      "target": "docs/qualification/tensor-low-matmul-2026-09-27.md"
+    },
+    {
+      "document": "docs/design/tensor-backends-2026-09-27.md",
+      "target": "docs/qualification/tensor-low-statistics-2026-09-27.md"
+    },
+    {
+      "document": "docs/design/tensor-backends-2026-09-27.md",
+      "target": "docs/qualification/tensor-low-attention-2026-09-27.md"
+    },
+    {
+      "document": "docs/design/tensor-backends-2026-09-27.md",
+      "target": "crates/compute-mlx/README.md"
+    },
+    {
+      "document": "docs/design/tensor-backends-2026-09-27.md",
+      "target": "crates/compute-mlx/qualification/native-metal.txt"
+    },
+    {
+      "document": "docs/design/tensor-backends-2026-09-27.md",
+      "target": "crates/compute-cuda/qualification/nvrtc-12.8.93-linux-aarch64-typed-programs/report.json"
+    },
+    {
+      "document": "docs/design/tensor-backends-2026-09-27.md",
+      "target": "crates/compute-cuda/qualification/README.md"
+    },
+    {
+      "document": "docs/design/tensor-backends-2026-09-27.md",
+      "target": "docs/qualification/tensor-indexing-2026-09-27.md"
+    },
+    {
+      "document": "docs/design/tensor-backends-2026-09-27.md",
+      "target": "docs/qualification/tensor-reductions-2026-09-27.md"
+    },
+    {
+      "document": "docs/design/tensor-backends-2026-09-27.md",
+      "target": "docs/qualification/tensor-scatter-2026-09-27.md"
+    },
+    {
+      "document": "docs/design/tensor-backends-2026-09-27.md",
+      "target": "docs/qualification/tensor-low-precision-2026-09-27.md"
+    },
+    {
+      "document": "docs/design/tensor-backends-2026-09-27.md",
+      "target": "docs/qualification/tensor-statistics-2026-09-27.md"
+    },
+    {
+      "document": "docs/design/tensor-backends-2026-09-27.md",
+      "target": "docs/qualification/tensor-attention-2026-09-27.md"
+    },
+    {
+      "document": "docs/design/tensor-backends-2026-09-27.md",
+      "target": "docs/qualification/tensor-low-ops-2026-09-27.md"
+    },
+    {
+      "document": "docs/design/tensor-backends-2026-09-27.md",
+      "target": "docs/qualification/tensor-low-indexing-2026-09-27.md"
+    },
+    {
+      "document": "docs/design/tensor-backends-2026-09-27.md",
+      "target": "docs/qualification/tensor-convolution-2026-09-27.md"
+    },
+    {
+      "document": "docs/design/tensor-backends-2026-09-27.md",
+      "target": "docs/design/cuda-reusable-execution-2026-09-27.md"
+    },
+    {
+      "document": "docs/design/tensor-backends-2026-09-27.md",
+      "target": "docs/qualification/tensor-mlx-programs-2026-09-27.md"
+    },
+    {
+      "document": "docs/design/tensor-backends-2026-09-27.md",
+      "target": "docs/qualification/tensor-mlx-typed-programs-2026-09-27.md"
+    },
+    {
+      "document": "docs/design/tensor-backends-2026-09-27.md",
+      "target": "docs/qualification/tensor-mlx-index-programs-2026-09-27.md"
+    },
+    {
+      "document": "docs/design/tensor-backends-2026-09-27.md",
+      "target": "docs/qualification/tensor-cuda-index-programs-2026-09-27.md"
+    },
+    {
+      "document": "docs/design/tensor-backends-2026-09-27.md",
+      "target": "docs/qualification/tensor-cuda-typed-programs-2026-09-27.md"
+    },
+    {
+      "document": "docs/design/tensor-backends-2026-09-27.md",
+      "target": "docs/qualification/tensor-cuda-programs-2026-09-27.md"
+    },
+    {
+      "document": "docs/design/tensor-backends-2026-09-27.md",
+      "target": "docs/qualification/tensor-cuda-graphs-2026-09-27.md"
+    },
+    {
+      "document": "docs/design/tensor-backends-2026-09-27.md",
+      "target": "docs/qualification/tensor-prepared-statistics-2026-09-27.md"
+    }
+  ],
+  "local_generated_artifacts": {
+    "crates/compute-cuda/qualification/nvrtc-12.8.93-linux-aarch64-convolution/compute-120.ptx": {
+      "bytes": 2131497,
+      "sha256": "bb3dff6ae1a740ccdd178afc5fa592501674926780a03e368254d4f8b62ed616"
+    },
+    "crates/compute-cuda/qualification/nvrtc-12.8.93-linux-aarch64-convolution/compute-70.ptx": {
+      "bytes": 1023340,
+      "sha256": "55765f83ca31490508458efc4889d70f2906c09668afa90fa1d8efbbff08ae6c"
+    },
+    "crates/compute-cuda/qualification/nvrtc-12.8.93-linux-aarch64-convolution/compute-80.ptx": {
+      "bytes": 1023340,
+      "sha256": "b6f727339f127ad0cd5ded03e125fb82ad19daa4bfb979694ac945da1992cdc0"
+    },
+    "crates/compute-cuda/qualification/nvrtc-12.8.93-linux-aarch64-convolution/compute-90.ptx": {
+      "bytes": 1023404,
+      "sha256": "c2e65f08b173fd7cd755e419d613faee2bddfa27c803758db9a62af9d4cd7d46"
+    }
+  },
+  "artifacts": {
+    "crates/compute-core/README.md": {
+      "bytes": 38203,
+      "sha256": "10991176b2db557d35edea9535b7919189d1fc49da985035ac733d1bc58a5cf6"
+    },
+    "crates/compute-cuda/README.md": {
+      "bytes": 51807,
+      "sha256": "5e71fba9c5ff8a81dc8ab185ededc7b1fbb1a85929bd0a6a10eb2ad3306febc5"
+    },
+    "crates/compute-cuda/qualification/README.md": {
+      "bytes": 22620,
+      "sha256": "20c1fba4079fb97b9d71ff0a90d5da467af324549e22430371483dde4ed85005"
+    },
+    "crates/compute-cuda/qualification/nvrtc-12.8.93-linux-aarch64-convolution/compute-120.log": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "crates/compute-cuda/qualification/nvrtc-12.8.93-linux-aarch64-convolution/compute-70.log": {
+      "bytes": 111,
+      "sha256": "3d022b42741deecef093a2e1be45c5f5727310d3161137d2d77154d0310a8c84"
+    },
+    "crates/compute-cuda/qualification/nvrtc-12.8.93-linux-aarch64-convolution/compute-80.log": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "crates/compute-cuda/qualification/nvrtc-12.8.93-linux-aarch64-convolution/compute-90.log": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "crates/compute-cuda/qualification/nvrtc-12.8.93-linux-aarch64-convolution/report.json": {
+      "bytes": 52754,
+      "sha256": "a66de44e9b074a1e2e7f2b51dbfd1ab6c95e1aa389d8b8d12f41d831e4cd05e3"
+    },
+    "crates/compute-mlx/README.md": {
+      "bytes": 58997,
+      "sha256": "05751ba0d10223b729566a1f659056bdc7d23ff8a79b424a8e6bf85451d673ea"
+    },
+    "docs/design/tensor-backends-2026-09-27.md": {
+      "bytes": 40376,
+      "sha256": "b262290e7a1d23498a1135df661baf0b805bdb56bcbc02c0f208c7c376c00568"
+    },
+    "docs/qualification/tensor-convolution-2026-09-27/architecture.txt": {
+      "bytes": 72,
+      "sha256": "908d4930fdc094c7934bfd8873bf2aac41b3cbda16c3d7df1db468260215de2c"
+    },
+    "docs/qualification/tensor-convolution-2026-09-27/checks.json": {
+      "bytes": 6241,
+      "sha256": "166cc431216030d4780ed3d127705a154ff55f6bb02359ab7efedc8ca913a849"
+    },
+    "docs/qualification/tensor-convolution-2026-09-27/clippy.txt": {
+      "bytes": 687,
+      "sha256": "968d3fe550eae5e2783179c6e6b36ced36ca452cb9d2fd68076186aebd56576e"
+    },
+    "docs/qualification/tensor-convolution-2026-09-27/compiler-audit.json": {
+      "bytes": 2281,
+      "sha256": "1ef8948590b8867a9505d5b8c0614ee148f6d0729246a8fd9e1a7727e437aa36"
+    },
+    "docs/qualification/tensor-convolution-2026-09-27/cuda-host.txt": {
+      "bytes": 22106,
+      "sha256": "815901c1366abd34affad201da020eae50cb05eb06c89fc704aa0b0f8d16e927"
+    },
+    "docs/qualification/tensor-convolution-2026-09-27/cuda-required.txt": {
+      "bytes": 2107,
+      "sha256": "30b0a77adbab4a7e963c567d8bce7c1206364c5eafc01bfdc916f330845bf2dc"
+    },
+    "docs/qualification/tensor-convolution-2026-09-27/diagnostics/mlx-initial-failure.txt": {
+      "bytes": 4556,
+      "sha256": "7451f2994738cb77056c17c2bb3f32fb98be3689bc02bc2934cff300e752887c"
+    },
+    "docs/qualification/tensor-convolution-2026-09-27/diagnostics/nvrtc-command.txt": {
+      "bytes": 890,
+      "sha256": "d66af143b3f10ce2c36071ce597926d391820a2bbefa6a15a2877cc61e1c4aeb"
+    },
+    "docs/qualification/tensor-convolution-2026-09-27/format.txt": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "docs/qualification/tensor-convolution-2026-09-27/host.json": {
+      "bytes": 138,
+      "sha256": "ce6e795f9650fe4c0acb13cc1109b709d1d343cd783f4b429a8fa8d89a183a9b"
+    },
+    "docs/qualification/tensor-convolution-2026-09-27/native/contracts.txt": {
+      "bytes": 7221,
+      "sha256": "d939d4068bd3fb613e27c4876023c45a8014529fa93ac7646093c056960366d2"
+    },
+    "docs/qualification/tensor-convolution-2026-09-27/native/math-mlx.txt": {
+      "bytes": 1517,
+      "sha256": "910aed60b68424007b25af6aa118dffa54ab2193fa54000d7efcbd4e40a4eb1b"
+    },
+    "docs/qualification/tensor-convolution-2026-09-27/native/math-wgsl.txt": {
+      "bytes": 1600,
+      "sha256": "d6bb6fa29288f0a91a339ebd804142f0077ae069617f52ba3b77932bc656155f"
+    },
+    "docs/qualification/tensor-convolution-2026-09-27/native/mlx.txt": {
+      "bytes": 18512,
+      "sha256": "e3d42f9574ea088d70180a6e94f6d26c0dc5707e09509f3a85e6209f4bd9fbbb"
+    },
+    "docs/qualification/tensor-convolution-2026-09-27/native/report.json": {
+      "bytes": 3604,
+      "sha256": "4af4b55c1335381dcc9ff39f779992550a45acc685a0583a723fe09d7d83b8cf"
+    },
+    "docs/qualification/tensor-convolution-2026-09-27/native/wgsl.txt": {
+      "bytes": 11104,
+      "sha256": "adbe6752d1bf88d20f98c7292ec80c58fbc4394d467f94d10b408e4e7fd8fec1"
+    },
+    "docs/qualification/tensor-convolution-2026-09-27/native.txt": {
+      "bytes": 799,
+      "sha256": "22f36a16fd92740e262f05fe4458071c2d9027b4a2e51b10eb9b7e5adc68d6ad"
+    },
+    "docs/qualification/tensor-convolution-2026-09-27/rustdoc.txt": {
+      "bytes": 1151,
+      "sha256": "486533e3e0cdffb89d59602d93e7d73e53f318f00875c12fbd2d72f236abc725"
+    },
+    "docs/qualification/tensor-convolution-2026-09-27/source-fingerprints.json": {
+      "bytes": 97773,
+      "sha256": "5353f8d2a6e235e35a8b8b4f891e146ca0ac2258f817b2d55366beb5cd24cb49"
+    },
+    "docs/qualification/tensor-convolution-2026-09-27/wasm-check.txt": {
+      "bytes": 799,
+      "sha256": "3327250cf1ce9c31ef3f45d5fe16a9247f46f32530c7b209d823c06936b21f70"
+    },
+    "docs/qualification/tensor-convolution-2026-09-27/wgsl-unit.txt": {
+      "bytes": 2274,
+      "sha256": "924f4a8828e8ae266dbfd37b3202fb0e6d1bd024ab4ed1f5c15ee70d33cd651b"
+    },
+    "docs/qualification/tensor-convolution-2026-09-27.md": {
+      "bytes": 7039,
+      "sha256": "fac473451cd3b74f68f04f3c03168d1213d7a3f261f14da3b5f9c14467131b1c"
+    }
+  }
+}

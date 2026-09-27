@@ -23,7 +23,8 @@ pub const CUDA_KERNEL_SOURCE: &str = concat!(
     include_str!("low_indexing.cu"),
     include_str!("low_scatter.cu"),
     include_str!("low_statistics.cu"),
-    include_str!("low_attention.cu")
+    include_str!("low_attention.cu"),
+    include_str!("convolution.cu")
 );
 
 #[derive(Clone, Debug)]
@@ -73,6 +74,7 @@ pub struct CudaRuntime {
     pub(crate) low: crate::low_precision::LowKernels,
     pub(crate) statistics: crate::statistics::StatisticsKernels,
     pub(crate) attention: crate::attention::AttentionKernel,
+    pub(crate) convolution: crate::convolution::ConvKernels,
 }
 impl CudaRuntime {
     pub fn new() -> Result<Self, CudaError> {
@@ -122,6 +124,7 @@ impl CudaRuntime {
             low: self.low.clone(),
             statistics: self.statistics.clone(),
             attention: self.attention.clone(),
+            convolution: self.convolution.clone(),
         })
     }
     pub fn from_device(device: CudaDevice) -> Result<Self, CudaError> {
@@ -192,6 +195,7 @@ impl CudaRuntime {
             low: crate::low_precision::LowKernels::load(&module)?,
             statistics: crate::statistics::StatisticsKernels::load(&module)?,
             attention: crate::attention::AttentionKernel::load(&module)?,
+            convolution: crate::convolution::ConvKernels::load(&module)?,
             owner: Arc::new(()),
             device,
             capabilities,

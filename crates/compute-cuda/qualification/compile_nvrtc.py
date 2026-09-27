@@ -31,6 +31,8 @@ WHEELS = {
     ),
 }
 ABI = {
+    "conv_f32": ["u64"] * 5,
+    "conv_low": ["u64"] * 5 + ["u32"],
     "unary": ["u64"] * 4 + ["u32", "u64", "u32", "f32", "f32"],
     "binary": ["u64"] * 5 + ["u32", "u64", "u64", "u32"],
     "binary_u32": ["u64"] * 5 + ["u32", "u64", "u64", "u32"],
@@ -199,7 +201,7 @@ def production_source(crate):
     runtime = (crate / "src/runtime.rs").read_text()
     declaration = runtime.split("pub const CUDA_KERNEL_SOURCE:", 1)[1].split(";", 1)[0]
     parts = re.findall(r'include_str!\("([^"\\]+)"\)', declaration)
-    if parts != ["kernels.cu", "indexing.cu", "reductions.cu", "scatter.cu", "low_precision.cu", "statistics.cu", "attention.cu", "low_ops.cu", "low_indexing.cu", "low_scatter.cu", "low_statistics.cu", "low_attention.cu"]:
+    if parts != ["kernels.cu", "indexing.cu", "reductions.cu", "scatter.cu", "low_precision.cu", "statistics.cu", "attention.cu", "low_ops.cu", "low_indexing.cu", "low_scatter.cu", "low_statistics.cu", "low_attention.cu", "convolution.cu"]:
         raise RuntimeError(f"Review source concatenation before qualification: {parts}")
     contents = [(name, (crate / "src" / name).read_bytes()) for name in parts]
     options = []

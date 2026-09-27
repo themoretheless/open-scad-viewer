@@ -34,6 +34,7 @@ pub enum TensorError {
     InvalidEpsilon,
     InvalidAttention(&'static str),
     InvalidAttentionScale,
+    InvalidConvolution(&'static str),
     LowDtypeMismatch {
         left: crate::LowDtype,
         right: crate::LowDtype,
@@ -92,6 +93,7 @@ impl std::fmt::Display for TensorError {
             }
             Self::InvalidAttention(reason) => write!(f, "invalid attention: {reason}"),
             Self::InvalidAttentionScale => f.write_str("attention scale must be finite"),
+            Self::InvalidConvolution(reason) => write!(f, "invalid convolution: {reason}"),
             Self::LowDtypeMismatch { left, right } => {
                 write!(f, "low-precision dtypes must match: {left:?} and {right:?}")
             }

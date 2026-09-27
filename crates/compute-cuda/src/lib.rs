@@ -7,6 +7,7 @@
 #![doc = include_str!("../README.md")]
 mod attention;
 mod attention_dispatch;
+mod convolution;
 mod dispatch;
 mod error;
 mod evaluation;

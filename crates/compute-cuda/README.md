@@ -3,7 +3,7 @@
 CUDA implementation of the shared `tensor-core::TensorBackend` and
 `TensorIndexBackend`, `TensorReduceBackend`, `TensorScatterBackend` and
 `TensorLowBackend`, `TensorLowOpsBackend`, `TensorLowIndexBackend`, `TensorLowScatterBackend`, `TensorStatsBackend` and
-`TensorAttentionBackend` contracts.
+`TensorAttentionBackend`, `TensorConvBackend` and `TensorLowConvBackend` contracts.
 f32/u32 and native f16/bf16 storage, layouts and
 intermediate results stay on the selected NVIDIA device.
 Elementwise and reduction kernels use CUDA; matmul uses cuBLAS. There is no CPU
@@ -21,6 +21,20 @@ assert_eq!(cuda.read_f32(&c)?, [1., 7.]);
 ```
 
 ## Runtime requirements
+
+### Direct convolution
+
+`TensorConvBackend::conv` accepts channel-first `[N,C,*spatial]` input and
+`[O,C/groups,*kernel]` weights for one to three spatial axes. `ConvOptions`
+specifies stride, dilation, asymmetric zero padding and groups. The CUDA kernel
+reads strided operands directly and accumulates f32; it does not create an
+im2col tensor. `TensorLowConvBackend::conv_low_f32` reads native f16/BF16 operands
+directly, while `conv_low` adds one final low cast. Bias can be added with
+resident broadcasting. This path does not use cuDNN or claim Tensor Core use.
+Prepared programs and CUDA Graph recording do not yet expose convolution.
+See the [shared contract and qualification](../../docs/qualification/tensor-convolution-2026-09-27.md).
+
+### Libraries and device
 
 - An NVIDIA GPU and a compatible CUDA driver. `OSV_CUDA_DEVICE` selects its ordinal.
 - Compatible cuBLAS and NVRTC shared libraries, loadable by the process. The

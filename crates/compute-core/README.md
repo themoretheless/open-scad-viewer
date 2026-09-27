@@ -29,6 +29,7 @@ zero-length dimensions represent empty tensors.
 | Low scans | `tensor_scan_low_f32`, `tensor_scan_low`; direct packed loads, f32 prefix accumulation and optional final low rounding |
 | Low statistics | `tensor_softmax_low_f32`, `tensor_log_softmax_low_f32`, `tensor_logsumexp_low_f32`, `tensor_moments_low_f32`, `tensor_layer_norm_low_f32`; direct low inputs, plus final-rounded low results |
 | Matrix products | `tensor_matmul`; vectors, matrices and broadcast batches |
+| Convolution | `tensor_conv`, `tensor_conv_low_f32`, `tensor_conv_low` and `_into` variants; grouped channel-first 1D/2D/3D cross-correlation |
 | Reductions | `tensor_reduce` for f32/u32 sum, product, min, max; f32 `tensor_mean` |
 | Masks | `tensor_compare`, `tensor_select`; exact u32 masks and broadcast selection |
 | Scans | `tensor_scan`; any axis, inclusive/exclusive, forward/reverse |

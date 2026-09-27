@@ -1,0 +1,46 @@
+warning: binary `wgsl_export` should have a kebab-case name
+  |
+1 | /Users/themoretheless/Documents/Sources/open-scad-viewer/crates/target/.../wgsl_export
+  |                                                                            ^^^^^^^^^^^
+  |
+  = note: `cargo::non_kebab_case_bins` is set to `warn` by default
+help: to change the binary name to `wgsl-export`, convert the file stem
+  |
+1 - src/bin/wgsl_export.rs
+1 + src/bin/wgsl-export.rs
+  |
+warning: `raster-core` (manifest) generated 1 warning
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.04s
+     Running tests/convolution.rs (crates/target/debug/build/compute-mlx/156b81c3bfc3ca20/out/convolution-156b81c3bfc3ca20)
+
+running 5 tests
+test bounded_grid_reuses_shared_reduction_and_zero_stride_views ...
+thread 'bounded_grid_reuses_shared_reduction_and_zero_stride_views' (31732490) panicked at compute-mlx/tests/convolution.rs:106:40:
+called `Result::unwrap()` on an `Err` value: Native { operation: "read_f32", message: "[metal::Device] Unable to build metal library from source\nmlx/backend/metal/kernels/utils.h:535:14: error: expected unqualified-id\nulong kernel = ulong(params[8]) | (ulong(params[9]) << 32);\n             ^\nmlx/backend/metal/kernels/utils.h:560:39: error: expected expression\n        ulong local_channel = inner / kernel;\n                                      ^\nmlx/backend/metal/kernels/utils.h:561:34: error: expected expression\n        ulong location = inner kernel;\n                                 ^\n\n at mlx/c/array.cpp:352" }
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+FAILED
+test common_convolution_conformance ...
+thread 'common_convolution_conformance' (31732501) panicked at compute-mlx/tests/convolution.rs:32:54:
+called `Result::unwrap()` on an `Err` value: Native { operation: "read_f32", message: "[metal::Device] Unable to build metal library from source\nmlx/backend/metal/kernels/utils.h:535:14: error: expected unqualified-id\nulong kernel = ulong(params[8]) | (ulong(params[9]) << 32);\n             ^\nmlx/backend/metal/kernels/utils.h:560:39: error: expected expression\n        ulong local_channel = inner / kernel;\n                                      ^\nmlx/backend/metal/kernels/utils.h:561:34: error: expected expression\n        ulong location = inner kernel;\n                                 ^\n\n at mlx/c/array.cpp:352" }
+FAILED
+test direct_low_contraction_keeps_f32_bits_and_tiny_products ...
+thread 'direct_low_contraction_keeps_f32_bits_and_tiny_products' (31732503) panicked at compute-mlx/tests/convolution.rs:59:37:
+called `Result::unwrap()` on an `Err` value: Native { operation: "read_f32", message: "[metal::Device] Unable to build metal library from source\nmlx/backend/metal/kernels/utils.h:535:14: error: expected unqualified-id\nulong kernel = ulong(params[8]) | (ulong(params[9]) << 32);\n             ^\nmlx/backend/metal/kernels/utils.h:560:39: error: expected expression\n        ulong local_channel = inner / kernel;\n                                      ^\nmlx/backend/metal/kernels/utils.h:561:34: error: expected expression\n        ulong location = inner kernel;\n                                 ^\n\n at mlx/c/array.cpp:352" }
+FAILED
+test foreign_and_mixed_dtype_inputs_fail_before_empty_shortcuts ... ok
+test unsigned_geometry_and_empty_padding_windows_are_checked ...
+thread 'unsigned_geometry_and_empty_padding_windows_are_checked' (31732507) panicked at compute-mlx/tests/convolution.rs:119:36:
+called `Result::unwrap()` on an `Err` value: Native { operation: "read_f32", message: "[metal::Device] Unable to build metal library from source\nmlx/backend/metal/kernels/utils.h:535:14: error: expected unqualified-id\nulong kernel = ulong(params[8]) | (ulong(params[9]) << 32);\n             ^\nmlx/backend/metal/kernels/utils.h:560:39: error: expected expression\n        ulong local_channel = inner / kernel;\n                                      ^\nmlx/backend/metal/kernels/utils.h:561:34: error: expected expression\n        ulong location = inner kernel;\n                                 ^\n\n at mlx/c/array.cpp:352" }
+FAILED
+
+failures:
+
+failures:
+    bounded_grid_reuses_shared_reduction_and_zero_stride_views
+    common_convolution_conformance
+    direct_low_contraction_keeps_f32_bits_and_tiny_products
+    unsigned_geometry_and_empty_padding_windows_are_checked
+
+test result: FAILED. 1 passed; 4 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.19s
+
+error: test failed, to rerun pass `-p compute-mlx --test convolution`

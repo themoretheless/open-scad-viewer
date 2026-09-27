@@ -4,6 +4,20 @@ Native Rust tensor execution through the MLX-C shared library. The adapter build
 
 ## Runtime and loading
 
+### Direct convolution
+
+`tensor_core::{TensorConvBackend, TensorLowConvBackend}` provide grouped
+channel-first 1D/2D/3D cross-correlation through `conv`, `conv_low_f32` and
+`conv_low`. `ConvOptions` selects explicit asymmetric zero padding, stride,
+dilation and groups. A shared custom Metal kernel reads strided f32 or native
+f16/BF16 input and weights directly and reduces into f32. The low-result method
+casts that result once; no complete expanded operand or im2col tensor is built.
+The result remains lazy and resident. This requires the existing custom Metal
+ABI; reusable MLX programs do not yet expose convolution. See the
+[shared contract and qualification](../../docs/qualification/tensor-convolution-2026-09-27.md).
+
+### Libraries and device
+
 The current adapter requires MLX with its **Metal GPU backend**. It was executed on Apple M4 Max with Homebrew MLX-C **0.6.0_4** and MLX **0.32.1**. The binding follows the MLX-C 0.6 ABI. Builds need Rust and the cached `libloading` dependency; the C/C++ SDK is only needed to install or build the external runtime.
 
 `MlxBackend::new_gpu()` loads MLX-C at runtime. Set `COMPUTE_MLX_LIBRARY` to a trusted, ABI-compatible shared library before creating the first backend. Otherwise, macOS discovery checks the Homebrew ARM prefix, `/usr/local/lib`, then the system loader. Missing libraries, missing symbols, absent Metal support, and native errors return `MlxError`. The native module is excluded on `wasm32`; this is not a browser backend.
