@@ -368,7 +368,7 @@ fixture. See [qualification and matched measurements](../qualification/tensor-lo
 | Low statistics, f32/low outputs | Direct packed loads; Metal execution | Native u16 loads; numerical hardware qualification pending | Direct low Metal kernels; Metal execution |
 | Low attention, f32/low outputs | Streaming/split-key packed loads; Metal execution | Native u16 shared online body; numerical hardware qualification pending | Custom streaming Metal kernel; Metal execution |
 | Masked attention, grouped query heads, signed causal alignment | Streaming WGSL tiles; no score buffers | Online f64 device kernel; numerical hardware qualification pending | Native fast attention and resident GPU graph |
-| Recorded reuse | `ComputeProgram`, device-resident intermediates | Prepared f32/u32/f16/BF16 schedules; host/NVRTC qualified, NVIDIA execution and graph capture pending | Fixed-shape f32/u32/f16/BF16 programs; typed replay qualification below |
+| Recorded reuse | `ComputeProgram`, device-resident intermediates | Prepared f32/u32/f16/BF16 schedules including indexing/count composition; host/NVRTC qualified, NVIDIA execution pending | Fixed-shape f32/u32/f16/BF16 programs; typed replay qualification below |
 
 `tensor-core` tests check shape/layout contracts independently of any GPU. The
 optional `conformance` module runs identical deterministic scenarios against each
@@ -459,8 +459,8 @@ checks. Unsupported modes must not silently become a different arithmetic policy
    matrix measurements beyond the current Apple GPU and shapes. Preserve
    explicit rounding and numerical tolerances per operation and precision.
 4. Extend typed MLX programs to indexing, statistics and attention. Qualify
-   typed prepared CUDA execution on NVIDIA, extend operation recording and add
-   CUDA Graph capture. The [CUDA execution design](cuda-reusable-execution-2026-09-27.md)
+   typed prepared CUDA arithmetic/indexing on NVIDIA, add statistics/attention
+   recording and CUDA Graph capture. The [CUDA execution design](cuda-reusable-execution-2026-09-27.md)
    separates prepared buffers from later stream capture. Qualify allocation reuse,
    fusion, launch overhead and memory traffic before selecting defaults.
 5. Route domain math through the shared resident primitives where appropriate,
@@ -501,18 +501,24 @@ statistics and attention remain open.
 ### Prepared CUDA programs
 
 `CudaProgramBuilder` records fixed-layout f32/u32/f16/BF16 arithmetic, casts,
-comparisons/selection, views, reductions, mean and matmul. Native16 intermediates
+comparisons/selection, views, reductions, mean, matmul and scan/gather/compact/
+scatter. Scalar GPU counts compose with later nodes. Native16 intermediates
 remain two bytes per element; low reductions and GEMM can produce f32 directly.
 Low arithmetic nodes round individually, and low reduction/matmul outputs add
 one final cast. `run_typed_into` validates all bindings and current precision
 policies before reusing prepared scratch/metadata with caller-owned outputs.
 Legacy `run`/`run_into` require f32 input and output signatures. Shared launch
-helpers serve eager and prepared execution. Scan, gather, compaction, scatter,
-statistics and attention remain outside the prepared API.
+helpers serve eager and prepared execution. Every replay resets invalid counters,
+compaction tails/counts and Replace owners; raw low scatter scratch includes
+safe full-word padding. `stats().memset_calls` counts asynchronous clears
+separately from kernel launches. Statistics and attention remain outside the
+prepared API.
 
+The [prepared indexing qualification](../qualification/tensor-cuda-index-programs-2026-09-27.md)
+records the expanded planner, reset/budget checks and resident usage example.
 The [typed host/NVRTC qualification](../qualification/tensor-cuda-typed-programs-2026-09-27.md)
-records CPU contracts, compiled usage and all 52 kernel entries for four virtual
-architectures, with the required native test's unavailable-device failure.
+retains CPU contracts and all 52 unchanged kernel entries for four virtual
+architectures. Required native tests report unavailable hardware on this host.
 The [earlier f32 qualification](../qualification/tensor-cuda-programs-2026-09-27.md)
 is retained. CUDA numerical execution, performance, graph capture and Tensor
 Core instruction selection remain unverified.
