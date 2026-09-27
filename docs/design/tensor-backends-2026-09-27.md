@@ -458,8 +458,7 @@ checks. Unsupported modes must not silently become a different arithmetic policy
 3. Qualify native WGSL f16 arithmetic. Broaden direct low-input/f32-output MLX
    matrix measurements beyond the current Apple GPU and shapes. Preserve
    explicit rounding and numerical tolerances per operation and precision.
-4. Extend typed MLX programs to indexing. Qualify the prepared CUDA operation
-   set on NVIDIA and add CUDA Graph capture. The [CUDA execution design](cuda-reusable-execution-2026-09-27.md)
+4. Qualify the prepared CUDA operation set on NVIDIA and add CUDA Graph capture. The [CUDA execution design](cuda-reusable-execution-2026-09-27.md)
    separates prepared buffers from later stream capture. Qualify allocation reuse,
    fusion, launch overhead and memory traffic before selecting defaults.
 5. Route domain math through the shared resident primitives where appropriate,
@@ -494,8 +493,12 @@ remains a separate historical result. The
 [typed qualification](../qualification/tensor-mlx-typed-programs-2026-09-27.md)
 records the expanded contracts, tests and matched eager/compiled measurements.
 Compiled programs reuse tracing; fixed GPU allocations and general numerical
-equivalence under fusion require separate qualification. Recorded indexing remains open. Statistics/normalization and attention now
-share eager and compiled lowering for f32 and native low inputs.
+equivalence under fusion require separate qualification. Indexing, scans,
+compaction and scatter now share eager and compiled recipes for all four dtypes;
+statistics/normalization and attention share lowering for f32 and native low inputs.
+The [compiled indexing qualification](../qualification/tensor-mlx-index-programs-2026-09-27.md)
+covers changed masks/indices, resident count composition and fresh scatter state
+in both native compile modes.
 
 ### Prepared CUDA programs
 

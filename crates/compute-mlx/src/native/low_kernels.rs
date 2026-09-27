@@ -95,36 +95,3 @@ impl LowReductionGeometry {
         })
     }
 }
-
-impl MlxBackend {
-    pub(super) fn low_parameters(
-        &self,
-        count: usize,
-        rank: usize,
-        parts: usize,
-    ) -> Result<MlxTensor, MlxError> {
-        self.upload_u32(
-            Shape::new(vec![4])?,
-            &[
-                u32::try_from(rank).map_err(|_| MlxError::TooLarge)?,
-                count as u32,
-                (count as u64 >> 32) as u32,
-                u32::try_from(parts).map_err(|_| MlxError::TooLarge)?,
-            ],
-        )
-    }
-    /// MLX omits custom shape/stride arguments for scalar arrays. Promote only
-    /// their metadata to [1]; kernels still emit the requested scalar output.
-    pub(super) fn low_elementwise_view(
-        &self,
-        input: &MlxTensor,
-        shape: &Shape,
-    ) -> Result<MlxTensor, MlxError> {
-        let shape = if shape.rank() == 0 {
-            Shape::new(vec![1])?
-        } else {
-            shape.clone()
-        };
-        self.broadcast_to(input, shape)
-    }
-}

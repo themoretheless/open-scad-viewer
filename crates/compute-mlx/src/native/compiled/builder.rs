@@ -1,5 +1,5 @@
 use super::*;
-use tensor_core::{LowDtype, ReduceOp, mean_shape, reduction_shape, select_shape};
+use tensor_core::{LowDtype, ReduceOp, mean_shape, reduction_shape};
 
 impl MlxProgramBuilder {
     pub(super) fn require(&self, value: MlxValue, dtype: MlxDtype) -> Result<TensorSpec, MlxError> {
@@ -83,16 +83,9 @@ impl MlxProgramBuilder {
         right: MlxValue,
         op: CompareOp,
     ) -> Result<MlxValue, MlxError> {
-        let a = self.require(left, MlxDtype::U32)?;
-        let b = self.require(right, MlxDtype::U32)?;
-        self.native(
-            NativeOp::Compare(op),
-            &[left, right],
-            TensorSpec {
-                shape: a.shape.broadcast(&b.shape)?,
-                dtype: MlxDtype::U32,
-            },
-        )
+        self.require(left, MlxDtype::U32)?;
+        self.require(right, MlxDtype::U32)?;
+        self.transaction(|graph| lowering::indexing::compare(graph, left, right, op))
     }
     /// F32 comparisons produce exact u32 masks without implicit input casts.
     pub fn compare(
@@ -101,16 +94,9 @@ impl MlxProgramBuilder {
         right: MlxValue,
         op: CompareOp,
     ) -> Result<MlxValue, MlxError> {
-        let a = self.require(left, MlxDtype::F32)?;
-        let b = self.require(right, MlxDtype::F32)?;
-        self.native(
-            NativeOp::Compare(op),
-            &[left, right],
-            TensorSpec {
-                shape: a.shape.broadcast(&b.shape)?,
-                dtype: MlxDtype::U32,
-            },
-        )
+        self.require(left, MlxDtype::F32)?;
+        self.require(right, MlxDtype::F32)?;
+        self.transaction(|graph| lowering::indexing::compare(graph, left, right, op))
     }
     pub fn select_u32(
         &mut self,
@@ -118,17 +104,9 @@ impl MlxProgramBuilder {
         yes: MlxValue,
         no: MlxValue,
     ) -> Result<MlxValue, MlxError> {
-        let mask_shape = self.require(mask, MlxDtype::U32)?.shape;
-        let yes_shape = self.require(yes, MlxDtype::U32)?.shape;
-        let no_shape = self.require(no, MlxDtype::U32)?.shape;
-        self.native(
-            NativeOp::Select,
-            &[mask, yes, no],
-            TensorSpec {
-                shape: select_shape(&mask_shape, &yes_shape, &no_shape)?,
-                dtype: MlxDtype::U32,
-            },
-        )
+        self.require(yes, MlxDtype::U32)?;
+        self.require(no, MlxDtype::U32)?;
+        self.transaction(|graph| lowering::indexing::select(graph, mask, yes, no))
     }
     pub fn reshape(&mut self, value: MlxValue, shape: Shape) -> Result<MlxValue, MlxError> {
         let spec = self.spec(&value)?;
