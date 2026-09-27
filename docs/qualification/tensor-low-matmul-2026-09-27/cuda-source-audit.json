@@ -1,0 +1,15 @@
+{
+  "checked_utc": "2026-09-27T06:11:09.945587+00:00",
+  "report": "crates/compute-cuda/qualification/nvrtc-12.8.93-linux-aarch64-low-attention/report.json",
+  "report_sha256": "64500515087b31a5948092b4d7eca022550811c589b4997b5cef8e42fbb390a3",
+  "unchanged_source_parts": 12,
+  "combined_bytes": 48291,
+  "combined_sha256": "d8a6cb52807f369f03f23bc5f01f226027bbbed1e6cee38bb4859b5d21699327",
+  "requested_compute_capabilities": [
+    70,
+    80,
+    90,
+    120
+  ],
+  "qualification": "Reused source compilation evidence after checking ordered source hashes; no NVIDIA execution or new compilation in this matmul phase."
+}

@@ -1,0 +1,25 @@
+{
+  "stage": "WGSL BF16 Multiply normal-result protection; source frozen before native qualification",
+  "sources": [
+    {
+      "path": "crates/compute-core/shaders/tensor_low_arithmetic.wgsl",
+      "bytes": 3464,
+      "sha256": "253d88682d7c216420ca90816ef75cb728a7d737268db1b5213ca53bf53096b7"
+    },
+    {
+      "path": "crates/compute-core/shaders/float_power2.wgsl",
+      "bytes": 1501,
+      "sha256": "fafe1617acd6bb4f2de3f9e855967f3e2904993aefe05e0e958588efb815ff7d"
+    },
+    {
+      "path": "crates/compute-core/src/shaders.rs",
+      "bytes": 7742,
+      "sha256": "3022dd931dd5166a3693cb194b86c88757d2a40b7c93210d17984b04c3910043"
+    },
+    {
+      "path": "crates/compute-core/tests/tensor_low_ops.rs",
+      "bytes": 18227,
+      "sha256": "04b67a30824845eb25897ac758ae7b582dd26f1216ff0e9a6f23c593f9d48042"
+    }
+  ]
+}

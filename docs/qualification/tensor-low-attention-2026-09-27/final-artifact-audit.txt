@@ -1,0 +1,21 @@
+PASS docs/qualification/tensor-low-attention-2026-09-27/source-fingerprints.json: 305 current source hashes
+PASS crates/compute-core/benchmarks/tensor-low-attention-source-fingerprints.json: 223 current source hashes
+PASS crates/compute-core/benchmarks/tensor-low-attention-wgsl-source-fingerprints.json: 18 current source hashes
+PASS decoder probe: 10 source/document/log hashes; sandbox failure and native success retained separately.
+initial: PASS: 80 median/p90 pairs from 2480 samples
+specialized: PASS: 80 median/p90 pairs from 2480 samples
+query-cache: PASS: 80 median/p90 pairs from 2480 samples
+guarded-f16: PASS: 80 median/p90 pairs from 2480 samples
+final: PASS: 80 median/p90 pairs from 2480 samples
+PASS total historical/final audit: 400 median/p90 pairs, 12,400 retained samples; no samples removed.
+PASS relative links: docs/qualification/tensor-low-attention-2026-09-27.md
+PASS relative links: crates/compute-core/benchmarks/tensor-low-attention.md
+PASS relative links: crates/compute-core/benchmarks/tensor-low-attention-contracts.md
+PASS git diff --check after final report updates.
+Independent benchmark review: all five stages, 400 median/p90 pairs and 12,400 raw samples match summaries; every displayed GPU/host median and all 20 final ratios match.
+Independent benchmark review: final 3/7 classification, 0.690–1.112x range and 45.0% worst slowdown confirmed; historical stage counts and maxima confirmed.
+Independent log review: GPU 285 / 44 suites, CPU 36 / 11 suites, MLX 64 / 14 suites confirmed.
+Independent source audit: root 305, benchmark 223, WGSL 18 and MLX 76 current source records and both MLX log hashes match.
+Independent archive audit: initial 223, specialized 4, query-cache 3, guarded-F16 3 and F16-cache 1 files match; recursive base inheritance reconstructs the final 223-file snapshot exactly.
+Independent CUDA audit: 12 source parts / 48,291 bytes, aggregate SHA256 d8a6cb52807f369f03f23bc5f01f226027bbbed1e6cee38bb4859b5d21699327, four PTX hashes and 51 ordered entry ABIs match; all prior 50 entry ABIs preserved. Native numerical execution remains unverified.
+PASS final qualification, README and design local links, including this completed audit; final diff whitespace clean.

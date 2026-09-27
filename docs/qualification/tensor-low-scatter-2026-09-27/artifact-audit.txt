@@ -1,0 +1,6 @@
+docs/qualification/tensor-low-scatter-2026-09-27/source-fingerprints.json: 275 fingerprints verified
+crates/compute-core/benchmarks/tensor-low-scatter-source-fingerprints.json: 207 fingerprints verified
+docs/qualification/tensor-low-scatter-2026-09-27.md: 22 relative links verified
+crates/compute-core/benchmarks/tensor-low-scatter.md: 10 relative links verified
+crates/compute-core/benchmarks/tensor-low-scatter-contracts.md: 3 relative links verified
+git diff --check: pass

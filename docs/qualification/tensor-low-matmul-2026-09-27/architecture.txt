@@ -1,0 +1,2 @@
+{"command": ["python3", "scripts/check-gpu-architecture.py"], "required_env": {}}
+GPU dependency directions, backend isolation and CPU-only contracts: OK

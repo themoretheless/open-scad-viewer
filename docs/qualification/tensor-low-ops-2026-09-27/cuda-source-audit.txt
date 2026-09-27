@@ -1,0 +1,3 @@
+All 8 CUDA source parts, exact runtime concat and 4 retained PTX hashes match NVRTC report.
+40 entry points per architecture; status 0 on 70/80/90/120.
+No NVIDIA numerical execution on this host.

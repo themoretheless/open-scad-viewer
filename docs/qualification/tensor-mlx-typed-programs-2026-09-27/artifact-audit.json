@@ -1,0 +1,949 @@
+{
+  "checked_utc": "2026-09-27T07:24:49.545901+00:00",
+  "source_files_verified": 333,
+  "native_archive_files_verified": 106,
+  "changes_since_f32_phase": [
+    "crates/compute-core/shaders/tensor_low_arithmetic.wgsl",
+    "crates/compute-core/src/shaders.rs",
+    "crates/compute-core/tests/tensor_low_ops.rs",
+    "crates/compute-mlx/examples/bench_compiled_typed.rs",
+    "crates/compute-mlx/src/metal/low_binary.metal",
+    "crates/compute-mlx/src/native.rs",
+    "crates/compute-mlx/src/native/compiled.rs",
+    "crates/compute-mlx/src/native/compiled/builder.rs",
+    "crates/compute-mlx/src/native/compiled/callback.rs",
+    "crates/compute-mlx/src/native/compiled/low_builder.rs",
+    "crates/compute-mlx/src/native/compiled/typed.rs",
+    "crates/compute-mlx/src/native/custom_metal.rs",
+    "crates/compute-mlx/src/native/low_kernels.rs",
+    "crates/compute-mlx/src/native/low_matmul.rs",
+    "crates/compute-mlx/src/native/low_ops.rs",
+    "crates/compute-mlx/src/native/low_precision.rs",
+    "crates/compute-mlx/src/native/lowering.rs",
+    "crates/compute-mlx/src/native/lowering/casts.rs",
+    "crates/compute-mlx/src/native/lowering/ops.rs",
+    "crates/compute-mlx/src/native/lowering/ops/matmul.rs",
+    "crates/compute-mlx/src/native/lowering/raw.rs",
+    "crates/compute-mlx/src/native/reduction.rs",
+    "crates/compute-mlx/tests/compiled_typed.rs",
+    "crates/compute-mlx/tests/compiled_typed/arithmetic.rs",
+    "crates/compute-mlx/tests/compiled_typed/casts.rs",
+    "crates/compute-mlx/tests/compiled_typed/matmul.rs",
+    "crates/compute-mlx/tests/compiled_typed/reductions.rs",
+    "crates/compute-mlx/tests/compiled_typed/tiny.rs",
+    "crates/compute-mlx/tests/compiled_typed/unsigned.rs",
+    "crates/compute-mlx/tests/compiled_typed/validation.rs",
+    "crates/tensor-core/src/conformance/low_ops.rs",
+    "crates/tensor-core/src/low_ops.rs"
+  ],
+  "unchanged_cuda_sources": 34,
+  "cuda_native_executed": false,
+  "native_tests": {
+    "unit": 6,
+    "integration_entries": 98,
+    "total_top_level": 104,
+    "failed": 0,
+    "typed_integration_entries": 19,
+    "separate_disabled_typed_entries": 19,
+    "original_compiled_entries": 10,
+    "marker_only_child_entry": 1,
+    "additional_original_disabled_process_test": 1,
+    "original_disabled_process_executions": 3
+  },
+  "wgsl_tests": 286,
+  "cpu_tests": 40,
+  "checks_passed": true,
+  "format_files_checked": 176,
+  "benchmark": {
+    "runs": 2,
+    "individual_samples": 744,
+    "output_buffers": 1488,
+    "median_p90_pairs": 24,
+    "single_trace_programs": 12,
+    "recomputed_series": [
+      {
+        "run": "compiled-typed-metal.txt",
+        "case": "low_arithmetic_f16",
+        "path": "eager",
+        "samples": 31,
+        "median_ms": 0.438834,
+        "p90_ms": 0.457125
+      },
+      {
+        "run": "compiled-typed-metal.txt",
+        "case": "low_arithmetic_f16",
+        "path": "compiled",
+        "samples": 31,
+        "median_ms": 0.4165,
+        "p90_ms": 0.43
+      },
+      {
+        "run": "compiled-typed-metal.txt",
+        "case": "low_arithmetic_bf16",
+        "path": "eager",
+        "samples": 31,
+        "median_ms": 0.867542,
+        "p90_ms": 0.905292
+      },
+      {
+        "run": "compiled-typed-metal.txt",
+        "case": "low_arithmetic_bf16",
+        "path": "compiled",
+        "samples": 31,
+        "median_ms": 0.829042,
+        "p90_ms": 0.905792
+      },
+      {
+        "run": "compiled-typed-metal.txt",
+        "case": "low_matmul_f16",
+        "path": "eager",
+        "samples": 31,
+        "median_ms": 0.218916,
+        "p90_ms": 0.22125
+      },
+      {
+        "run": "compiled-typed-metal.txt",
+        "case": "low_matmul_f16",
+        "path": "compiled",
+        "samples": 31,
+        "median_ms": 0.21125000000000002,
+        "p90_ms": 0.214875
+      },
+      {
+        "run": "compiled-typed-metal.txt",
+        "case": "low_matmul_bf16",
+        "path": "eager",
+        "samples": 31,
+        "median_ms": 0.221,
+        "p90_ms": 0.223459
+      },
+      {
+        "run": "compiled-typed-metal.txt",
+        "case": "low_matmul_bf16",
+        "path": "compiled",
+        "samples": 31,
+        "median_ms": 0.212708,
+        "p90_ms": 0.216042
+      },
+      {
+        "run": "compiled-typed-metal.txt",
+        "case": "u32_select_sum_small",
+        "path": "eager",
+        "samples": 31,
+        "median_ms": 0.25025,
+        "p90_ms": 0.26175
+      },
+      {
+        "run": "compiled-typed-metal.txt",
+        "case": "u32_select_sum_small",
+        "path": "compiled",
+        "samples": 31,
+        "median_ms": 0.224625,
+        "p90_ms": 0.287667
+      },
+      {
+        "run": "compiled-typed-metal.txt",
+        "case": "u32_select_sum_large",
+        "path": "eager",
+        "samples": 31,
+        "median_ms": 0.265625,
+        "p90_ms": 0.27345800000000003
+      },
+      {
+        "run": "compiled-typed-metal.txt",
+        "case": "u32_select_sum_large",
+        "path": "compiled",
+        "samples": 31,
+        "median_ms": 0.236083,
+        "p90_ms": 0.253708
+      },
+      {
+        "run": "compiled-typed-metal-repeat.txt",
+        "case": "low_arithmetic_f16",
+        "path": "eager",
+        "samples": 31,
+        "median_ms": 0.37583300000000003,
+        "p90_ms": 0.379708
+      },
+      {
+        "run": "compiled-typed-metal-repeat.txt",
+        "case": "low_arithmetic_f16",
+        "path": "compiled",
+        "samples": 31,
+        "median_ms": 0.351833,
+        "p90_ms": 0.355667
+      },
+      {
+        "run": "compiled-typed-metal-repeat.txt",
+        "case": "low_arithmetic_bf16",
+        "path": "eager",
+        "samples": 31,
+        "median_ms": 0.375208,
+        "p90_ms": 0.381875
+      },
+      {
+        "run": "compiled-typed-metal-repeat.txt",
+        "case": "low_arithmetic_bf16",
+        "path": "compiled",
+        "samples": 31,
+        "median_ms": 0.35179200000000005,
+        "p90_ms": 0.354792
+      },
+      {
+        "run": "compiled-typed-metal-repeat.txt",
+        "case": "low_matmul_f16",
+        "path": "eager",
+        "samples": 31,
+        "median_ms": 0.24075,
+        "p90_ms": 0.25075
+      },
+      {
+        "run": "compiled-typed-metal-repeat.txt",
+        "case": "low_matmul_f16",
+        "path": "compiled",
+        "samples": 31,
+        "median_ms": 0.237291,
+        "p90_ms": 0.245208
+      },
+      {
+        "run": "compiled-typed-metal-repeat.txt",
+        "case": "low_matmul_bf16",
+        "path": "eager",
+        "samples": 31,
+        "median_ms": 0.242208,
+        "p90_ms": 0.257
+      },
+      {
+        "run": "compiled-typed-metal-repeat.txt",
+        "case": "low_matmul_bf16",
+        "path": "compiled",
+        "samples": 31,
+        "median_ms": 0.23658300000000002,
+        "p90_ms": 0.245417
+      },
+      {
+        "run": "compiled-typed-metal-repeat.txt",
+        "case": "u32_select_sum_small",
+        "path": "eager",
+        "samples": 31,
+        "median_ms": 0.21054099999999998,
+        "p90_ms": 0.233333
+      },
+      {
+        "run": "compiled-typed-metal-repeat.txt",
+        "case": "u32_select_sum_small",
+        "path": "compiled",
+        "samples": 31,
+        "median_ms": 0.20620799999999997,
+        "p90_ms": 0.21425
+      },
+      {
+        "run": "compiled-typed-metal-repeat.txt",
+        "case": "u32_select_sum_large",
+        "path": "eager",
+        "samples": 31,
+        "median_ms": 0.220834,
+        "p90_ms": 0.224417
+      },
+      {
+        "run": "compiled-typed-metal-repeat.txt",
+        "case": "u32_select_sum_large",
+        "path": "compiled",
+        "samples": 31,
+        "median_ms": 0.205791,
+        "p90_ms": 0.211625
+      }
+    ],
+    "ratios": [
+      {
+        "run": "compiled-typed-metal.txt",
+        "case": "low_arithmetic_f16",
+        "eager_over_compiled_median": 1.0536230492196879,
+        "compiled_p90_worse": false
+      },
+      {
+        "run": "compiled-typed-metal.txt",
+        "case": "low_arithmetic_bf16",
+        "eager_over_compiled_median": 1.0464391430108488,
+        "compiled_p90_worse": true
+      },
+      {
+        "run": "compiled-typed-metal.txt",
+        "case": "low_matmul_f16",
+        "eager_over_compiled_median": 1.0362887573964497,
+        "compiled_p90_worse": false
+      },
+      {
+        "run": "compiled-typed-metal.txt",
+        "case": "low_matmul_bf16",
+        "eager_over_compiled_median": 1.0389830189743685,
+        "compiled_p90_worse": false
+      },
+      {
+        "run": "compiled-typed-metal.txt",
+        "case": "u32_select_sum_small",
+        "eager_over_compiled_median": 1.1140790205898718,
+        "compiled_p90_worse": true
+      },
+      {
+        "run": "compiled-typed-metal.txt",
+        "case": "u32_select_sum_large",
+        "eager_over_compiled_median": 1.1251339571252483,
+        "compiled_p90_worse": false
+      },
+      {
+        "run": "compiled-typed-metal-repeat.txt",
+        "case": "low_arithmetic_f16",
+        "eager_over_compiled_median": 1.0682141811598116,
+        "compiled_p90_worse": false
+      },
+      {
+        "run": "compiled-typed-metal-repeat.txt",
+        "case": "low_arithmetic_bf16",
+        "eager_over_compiled_median": 1.0665620593987355,
+        "compiled_p90_worse": false
+      },
+      {
+        "run": "compiled-typed-metal-repeat.txt",
+        "case": "low_matmul_f16",
+        "eager_over_compiled_median": 1.0145770383200374,
+        "compiled_p90_worse": false
+      },
+      {
+        "run": "compiled-typed-metal-repeat.txt",
+        "case": "low_matmul_bf16",
+        "eager_over_compiled_median": 1.023776010955986,
+        "compiled_p90_worse": false
+      },
+      {
+        "run": "compiled-typed-metal-repeat.txt",
+        "case": "u32_select_sum_small",
+        "eager_over_compiled_median": 1.0210127638112974,
+        "compiled_p90_worse": false
+      },
+      {
+        "run": "compiled-typed-metal-repeat.txt",
+        "case": "u32_select_sum_large",
+        "eager_over_compiled_median": 1.073098434819793,
+        "compiled_p90_worse": false
+      }
+    ]
+  },
+  "artifacts": {
+    "crates/compute-mlx/README.md": {
+      "bytes": 54555,
+      "sha256": "f532a250ef35de14cc1901d78fa423b2217bdb1d2bee00d5509ed2302074f9fe"
+    },
+    "crates/compute-mlx/benchmarks/compiled-typed-audit.json": {
+      "bytes": 1412,
+      "sha256": "5fee9bc1c09b3bfa1622b9d5f23a1b0257f23c8a738986e26ad2d5fd7ac23b3f"
+    },
+    "crates/compute-mlx/benchmarks/compiled-typed-metal-repeat.txt": {
+      "bytes": 8088,
+      "sha256": "919654dc6fd53a4116ad1f78b38e6a7c871aa0d3ebdb6d0d1e514f8fdd0c4685"
+    },
+    "crates/compute-mlx/benchmarks/compiled-typed-metal.txt": {
+      "bytes": 8048,
+      "sha256": "2b03309ebb0309a609db470f43fae27e2544440003e3b3be4d99db981c7cb938"
+    },
+    "crates/compute-mlx/benchmarks/compiled-typed-source-fingerprints.json": {
+      "bytes": 21183,
+      "sha256": "00f196def8722e05bb6e8bd1deb4d797608a4f4be3bba84ea0e731d7acf0a35c"
+    },
+    "crates/compute-mlx/benchmarks/compiled-typed-summary.json": {
+      "bytes": 4395,
+      "sha256": "f7ae163f83f4cbcae53f9138edc72cd91b601b1c5ce3f5509c704ee34dd6344d"
+    },
+    "crates/compute-mlx/benchmarks/compiled-typed.md": {
+      "bytes": 8501,
+      "sha256": "679170a8cf6a15b103738781057f1274a77de10f88ef42a499d7a7dd00fb6c17"
+    },
+    "crates/compute-mlx/qualification/compiled-typed-clippy.txt": {
+      "bytes": 687,
+      "sha256": "c3037dc0066a5ecf4d67c689a2cd64191d9856088f945cfc720364e222acacca"
+    },
+    "crates/compute-mlx/qualification/compiled-typed-disabled.txt": {
+      "bytes": 2518,
+      "sha256": "2598520e2745b2b01ce9a408707bbc10a3ca71ea5dd1b6a5c9f24c2f82e53d01"
+    },
+    "crates/compute-mlx/qualification/compiled-typed-focused.txt": {
+      "bytes": 4979,
+      "sha256": "ed691c19c64967311434a6093ac11de5ad6bb7fc823a74d5ded11b1e43aa2917"
+    },
+    "crates/compute-mlx/qualification/compiled-typed-initial-failure.txt": {
+      "bytes": 5713,
+      "sha256": "95acae53ab8310a67e5aa2d5d689574263fc71f264db82bd49b873aa09b4a00a"
+    },
+    "crates/compute-mlx/qualification/compiled-typed-metal.txt": {
+      "bytes": 12347,
+      "sha256": "ecf4bd1f01850d4291cf5b0e20851b6300ce209642d5ebc4544ec51377810978"
+    },
+    "crates/compute-mlx/qualification/compiled-typed-rustdoc.txt": {
+      "bytes": 798,
+      "sha256": "419cb9ecb880746b3e5aae2e34e79c11431635ae42e6cdadcb9ffc4ab423fc5e"
+    },
+    "crates/compute-mlx/qualification/compiled-typed-source-manifest.json": {
+      "bytes": 23821,
+      "sha256": "518d29450035a316bb25b8fe0e98977ba98784ab0128469f7ef19b73b93ac6b0"
+    },
+    "crates/compute-mlx/qualification/compiled-typed-tiny-multiply-corrected.txt": {
+      "bytes": 689,
+      "sha256": "7e3d986d5a0a719a08b18afb9760ba5de739d6c3d037ffa725cf75aa977c82f1"
+    },
+    "crates/compute-mlx/qualification/compiled-typed-tiny-multiply-initial-shader.json": {
+      "bytes": 285,
+      "sha256": "b1cab23cc2fd77558b05243eb1712fe548c82b37bab9160f5352b41fdd806fba"
+    },
+    "crates/compute-mlx/qualification/compiled-typed-tiny-multiply.rs": {
+      "bytes": 1017,
+      "sha256": "6e37168def7d8cccb0184617bebbc51d525d6d2aaaa93a5ad845279c07da8db9"
+    },
+    "crates/compute-mlx/qualification/compiled-typed-tiny-multiply.txt": {
+      "bytes": 933,
+      "sha256": "d33dc9975407fb65a4ad909381b9cdf13133d538b89597fb2d97abe047782412"
+    },
+    "docs/design/cuda-reusable-execution-2026-09-27.md": {
+      "bytes": 17924,
+      "sha256": "b8f085a65dbe3075eec6c5e495ae055e6fc07793913eb8df733524125b341207"
+    },
+    "docs/design/tensor-backends-2026-09-27.md": {
+      "bytes": 32554,
+      "sha256": "5f4d33dd63c554862a2560684a6d17cc407f2376e5e2a37f7c660eaf8362065e"
+    },
+    "docs/qualification/tensor-mlx-typed-programs-2026-09-27/architecture.txt": {
+      "bytes": 72,
+      "sha256": "908d4930fdc094c7934bfd8873bf2aac41b3cbda16c3d7df1db468260215de2c"
+    },
+    "docs/qualification/tensor-mlx-typed-programs-2026-09-27/clippy.txt": {
+      "bytes": 911,
+      "sha256": "9f1023cb36910728580d29721b9639d6bb08cc58e8d11aad016dc89e11b4e69b"
+    },
+    "docs/qualification/tensor-mlx-typed-programs-2026-09-27/cpu-checks.json": {
+      "bytes": 1893,
+      "sha256": "bc3258ed26455f33e02a29552cda1cb07db7c8311938dbcd76231593d6264260"
+    },
+    "docs/qualification/tensor-mlx-typed-programs-2026-09-27/cpu-contracts.txt": {
+      "bytes": 6340,
+      "sha256": "13887cc13443e2712130d9e5d4f7edb434bb2ea0eb9d0a95a0618e63ee3f96ee"
+    },
+    "docs/qualification/tensor-mlx-typed-programs-2026-09-27/final-checks.json": {
+      "bytes": 12468,
+      "sha256": "5c4d8a96f28000159e27c37af9f6b06ef43c1f73ac8ae2449943de4914a9afe0"
+    },
+    "docs/qualification/tensor-mlx-typed-programs-2026-09-27/format-checks.json": {
+      "bytes": 9979,
+      "sha256": "2a7b91dddcef793e478dfff0522c99f9002e8f55ab37289d0afec4a9adcf37a6"
+    },
+    "docs/qualification/tensor-mlx-typed-programs-2026-09-27/format.txt": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "docs/qualification/tensor-mlx-typed-programs-2026-09-27/gpu-checks.json": {
+      "bytes": 602,
+      "sha256": "5b0086c4e21df9905ab07fa7d74fea22170a678ce6fff936a59472ac8a26da93"
+    },
+    "docs/qualification/tensor-mlx-typed-programs-2026-09-27/independent-benchmark-audit.json": {
+      "bytes": 15103,
+      "sha256": "78e0a72cc05811b022e238cef7b5ac21d2026cc270d0eb34d555d38aac1caa81"
+    },
+    "docs/qualification/tensor-mlx-typed-programs-2026-09-27/rustdoc.txt": {
+      "bytes": 1261,
+      "sha256": "fd9c65db9081af6e460a25bdabfc3a55d5d2ffc125ff8a9ae25be10dca8cc858"
+    },
+    "docs/qualification/tensor-mlx-typed-programs-2026-09-27/source-fingerprints.json": {
+      "bytes": 55143,
+      "sha256": "8c72b06feb296fbd7d8115e49b65ae27e1913f7e9468500d97bbbfc34f56eb91"
+    },
+    "docs/qualification/tensor-mlx-typed-programs-2026-09-27/wasm.txt": {
+      "bytes": 799,
+      "sha256": "4f69d0ffd111cd3aa249086e3b03ee372f116be4b86fb55e9d11fea0fabecf3d"
+    },
+    "docs/qualification/tensor-mlx-typed-programs-2026-09-27/wgsl-metal.txt": {
+      "bytes": 33647,
+      "sha256": "762b080c519d9f99a916f11b2900301360cb2ddd0b36ed839aa0ed179ef32a9f"
+    },
+    "docs/qualification/tensor-mlx-typed-programs-2026-09-27/wgsl-multiply-clippy.txt": {
+      "bytes": 689,
+      "sha256": "9dc6988f42259beb5e15afce9d4c669d103e1ae7b59fd3cd5cb4d6feeffcc6c3"
+    },
+    "docs/qualification/tensor-mlx-typed-programs-2026-09-27/wgsl-multiply-initial/crates/compute-core/shaders/float_power2.wgsl": {
+      "bytes": 1501,
+      "sha256": "fafe1617acd6bb4f2de3f9e855967f3e2904993aefe05e0e958588efb815ff7d"
+    },
+    "docs/qualification/tensor-mlx-typed-programs-2026-09-27/wgsl-multiply-initial/crates/compute-core/shaders/tensor_low_arithmetic.wgsl": {
+      "bytes": 2672,
+      "sha256": "1627f7eb60f579562f91fa62f165c6b77c389267af8e40c7eb48e93a437526fc"
+    },
+    "docs/qualification/tensor-mlx-typed-programs-2026-09-27/wgsl-multiply-initial/crates/compute-core/src/shaders.rs": {
+      "bytes": 7682,
+      "sha256": "1bf3e9263c0014eb7b2df788c86a3aa203bddba849139e76be9dcd8b34f8d0a3"
+    },
+    "docs/qualification/tensor-mlx-typed-programs-2026-09-27/wgsl-multiply-initial/source-fingerprints.json": {
+      "bytes": 719,
+      "sha256": "3c309755230b717d2502339d04057649f232b93465fb4ef1dc208a6ae35bc7cb"
+    },
+    "docs/qualification/tensor-mlx-typed-programs-2026-09-27/wgsl-multiply-naga.txt": {
+      "bytes": 967,
+      "sha256": "059c338372e5ad9b334f547a055c6e762308016acb5711f2201aed0f091837af"
+    },
+    "docs/qualification/tensor-mlx-typed-programs-2026-09-27/wgsl-multiply-source-fingerprints.json": {
+      "bytes": 840,
+      "sha256": "07bb7b6a1294ea099b753803500d9a7f38af1671981010579d93a9cace7b3423"
+    },
+    "docs/qualification/tensor-mlx-typed-programs-2026-09-27/whitespace.txt": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "docs/qualification/tensor-mlx-typed-programs-2026-09-27.md": {
+      "bytes": 10587,
+      "sha256": "fe3c9ee4b799deb4695b27a96a47098341108a1536017909f0fecb9b10a38d01"
+    }
+  },
+  "local_links_verified": 111,
+  "local_links": [
+    {
+      "document": "docs/qualification/tensor-mlx-typed-programs-2026-09-27.md",
+      "target": "docs/qualification/tensor-mlx-programs-2026-09-27.md"
+    },
+    {
+      "document": "docs/qualification/tensor-mlx-typed-programs-2026-09-27.md",
+      "target": "crates/compute-mlx/qualification/compiled-typed-metal.txt"
+    },
+    {
+      "document": "docs/qualification/tensor-mlx-typed-programs-2026-09-27.md",
+      "target": "crates/compute-mlx/qualification/compiled-typed-focused.txt"
+    },
+    {
+      "document": "docs/qualification/tensor-mlx-typed-programs-2026-09-27.md",
+      "target": "crates/compute-mlx/qualification/compiled-typed-disabled.txt"
+    },
+    {
+      "document": "docs/qualification/tensor-mlx-typed-programs-2026-09-27.md",
+      "target": "docs/qualification/tensor-mlx-typed-programs-2026-09-27/wgsl-metal.txt"
+    },
+    {
+      "document": "docs/qualification/tensor-mlx-typed-programs-2026-09-27.md",
+      "target": "docs/qualification/tensor-mlx-typed-programs-2026-09-27/cpu-contracts.txt"
+    },
+    {
+      "document": "docs/qualification/tensor-mlx-typed-programs-2026-09-27.md",
+      "target": "docs/qualification/tensor-mlx-typed-programs-2026-09-27/clippy.txt"
+    },
+    {
+      "document": "docs/qualification/tensor-mlx-typed-programs-2026-09-27.md",
+      "target": "docs/qualification/tensor-mlx-typed-programs-2026-09-27/rustdoc.txt"
+    },
+    {
+      "document": "docs/qualification/tensor-mlx-typed-programs-2026-09-27.md",
+      "target": "docs/qualification/tensor-mlx-typed-programs-2026-09-27/wasm.txt"
+    },
+    {
+      "document": "docs/qualification/tensor-mlx-typed-programs-2026-09-27.md",
+      "target": "docs/qualification/tensor-mlx-typed-programs-2026-09-27/final-checks.json"
+    },
+    {
+      "document": "docs/qualification/tensor-mlx-typed-programs-2026-09-27.md",
+      "target": "crates/compute-mlx/qualification/compiled-typed-source-manifest.json"
+    },
+    {
+      "document": "docs/qualification/tensor-mlx-typed-programs-2026-09-27.md",
+      "target": "docs/qualification/tensor-mlx-typed-programs-2026-09-27/source-fingerprints.json"
+    },
+    {
+      "document": "docs/qualification/tensor-mlx-typed-programs-2026-09-27.md",
+      "target": "docs/qualification/tensor-mlx-typed-programs-2026-09-27/artifact-audit.json"
+    },
+    {
+      "document": "docs/qualification/tensor-mlx-typed-programs-2026-09-27.md",
+      "target": "crates/compute-mlx/qualification/compiled-typed-initial-failure.txt"
+    },
+    {
+      "document": "docs/qualification/tensor-mlx-typed-programs-2026-09-27.md",
+      "target": "docs/design/cuda-reusable-execution-2026-09-27.md"
+    },
+    {
+      "document": "docs/qualification/tensor-mlx-typed-programs-2026-09-27.md",
+      "target": "crates/compute-mlx/qualification/compiled-typed-tiny-multiply.txt"
+    },
+    {
+      "document": "docs/qualification/tensor-mlx-typed-programs-2026-09-27.md",
+      "target": "crates/compute-mlx/qualification/compiled-typed-tiny-multiply-corrected.txt"
+    },
+    {
+      "document": "docs/qualification/tensor-mlx-typed-programs-2026-09-27.md",
+      "target": "crates/compute-mlx/benchmarks/compiled-typed.md"
+    },
+    {
+      "document": "docs/qualification/tensor-mlx-typed-programs-2026-09-27.md",
+      "target": "docs/qualification/tensor-mlx-typed-programs-2026-09-27/independent-benchmark-audit.json"
+    },
+    {
+      "document": "docs/design/tensor-backends-2026-09-27.md",
+      "target": "crates/compute-core/benchmarks/tensor-low-scatter-contracts.md"
+    },
+    {
+      "document": "docs/design/tensor-backends-2026-09-27.md",
+      "target": "docs/qualification/tensor-low-scatter-2026-09-27.md"
+    },
+    {
+      "document": "docs/design/tensor-backends-2026-09-27.md",
+      "target": "docs/qualification/tensor-low-matmul-2026-09-27.md"
+    },
+    {
+      "document": "docs/design/tensor-backends-2026-09-27.md",
+      "target": "docs/qualification/tensor-low-statistics-2026-09-27.md"
+    },
+    {
+      "document": "docs/design/tensor-backends-2026-09-27.md",
+      "target": "docs/qualification/tensor-low-attention-2026-09-27.md"
+    },
+    {
+      "document": "docs/design/tensor-backends-2026-09-27.md",
+      "target": "crates/compute-mlx/README.md"
+    },
+    {
+      "document": "docs/design/tensor-backends-2026-09-27.md",
+      "target": "crates/compute-mlx/qualification/native-metal.txt"
+    },
+    {
+      "document": "docs/design/tensor-backends-2026-09-27.md",
+      "target": "crates/compute-cuda/qualification/README.md"
+    },
+    {
+      "document": "docs/design/tensor-backends-2026-09-27.md",
+      "target": "docs/qualification/tensor-indexing-2026-09-27.md"
+    },
+    {
+      "document": "docs/design/tensor-backends-2026-09-27.md",
+      "target": "docs/qualification/tensor-reductions-2026-09-27.md"
+    },
+    {
+      "document": "docs/design/tensor-backends-2026-09-27.md",
+      "target": "docs/qualification/tensor-scatter-2026-09-27.md"
+    },
+    {
+      "document": "docs/design/tensor-backends-2026-09-27.md",
+      "target": "docs/qualification/tensor-low-precision-2026-09-27.md"
+    },
+    {
+      "document": "docs/design/tensor-backends-2026-09-27.md",
+      "target": "docs/qualification/tensor-statistics-2026-09-27.md"
+    },
+    {
+      "document": "docs/design/tensor-backends-2026-09-27.md",
+      "target": "docs/qualification/tensor-attention-2026-09-27.md"
+    },
+    {
+      "document": "docs/design/tensor-backends-2026-09-27.md",
+      "target": "docs/qualification/tensor-low-ops-2026-09-27.md"
+    },
+    {
+      "document": "docs/design/tensor-backends-2026-09-27.md",
+      "target": "docs/qualification/tensor-low-indexing-2026-09-27.md"
+    },
+    {
+      "document": "docs/design/tensor-backends-2026-09-27.md",
+      "target": "docs/design/cuda-reusable-execution-2026-09-27.md"
+    },
+    {
+      "document": "docs/design/tensor-backends-2026-09-27.md",
+      "target": "docs/qualification/tensor-mlx-programs-2026-09-27.md"
+    },
+    {
+      "document": "docs/design/tensor-backends-2026-09-27.md",
+      "target": "docs/qualification/tensor-mlx-typed-programs-2026-09-27.md"
+    },
+    {
+      "document": "docs/design/cuda-reusable-execution-2026-09-27.md",
+      "target": "crates/gpu-compute/src/cuda.rs"
+    },
+    {
+      "document": "docs/design/cuda-reusable-execution-2026-09-27.md",
+      "target": "crates/compute-cuda/src/runtime.rs"
+    },
+    {
+      "document": "docs/design/cuda-reusable-execution-2026-09-27.md",
+      "target": "crates/compute-cuda/src/reduction.rs"
+    },
+    {
+      "document": "docs/design/cuda-reusable-execution-2026-09-27.md",
+      "target": "crates/compute-cuda/src/matmul.rs"
+    },
+    {
+      "document": "docs/design/cuda-reusable-execution-2026-09-27.md",
+      "target": "crates/compute-cuda/src/libraries.rs"
+    },
+    {
+      "document": "docs/design/cuda-reusable-execution-2026-09-27.md",
+      "target": "crates/compute-cuda/src/policy.rs"
+    },
+    {
+      "document": "crates/compute-mlx/README.md",
+      "target": "crates/compute-mlx/examples/linear.rs"
+    },
+    {
+      "document": "crates/compute-mlx/README.md",
+      "target": "crates/compute-mlx/qualification/compiled-initial-failure.txt"
+    },
+    {
+      "document": "crates/compute-mlx/README.md",
+      "target": "crates/compute-mlx/qualification/compiled-focused.txt"
+    },
+    {
+      "document": "crates/compute-mlx/README.md",
+      "target": "crates/compute-mlx/qualification/compiled-metal.txt"
+    },
+    {
+      "document": "crates/compute-mlx/README.md",
+      "target": "crates/compute-mlx/qualification/compiled-typed-focused.txt"
+    },
+    {
+      "document": "crates/compute-mlx/README.md",
+      "target": "crates/compute-mlx/qualification/compiled-typed-disabled.txt"
+    },
+    {
+      "document": "crates/compute-mlx/README.md",
+      "target": "crates/compute-mlx/qualification/compiled-typed-metal.txt"
+    },
+    {
+      "document": "crates/compute-mlx/README.md",
+      "target": "crates/compute-mlx/qualification/compiled-typed-source-manifest.json"
+    },
+    {
+      "document": "crates/compute-mlx/README.md",
+      "target": "crates/compute-mlx/qualification/compiled-typed-initial-failure.txt"
+    },
+    {
+      "document": "crates/compute-mlx/README.md",
+      "target": "crates/compute-mlx/qualification/low-matmul-tiled-source-manifest.json"
+    },
+    {
+      "document": "crates/compute-mlx/README.md",
+      "target": "crates/compute-mlx/qualification/low-matmul-tiled-metal.txt"
+    },
+    {
+      "document": "crates/compute-mlx/README.md",
+      "target": "crates/compute-mlx/qualification/low-matmul-simd-source-manifest.json"
+    },
+    {
+      "document": "crates/compute-mlx/README.md",
+      "target": "crates/compute-mlx/qualification/low-matmul-simd-full-metal.txt"
+    },
+    {
+      "document": "crates/compute-mlx/README.md",
+      "target": "crates/compute-mlx/qualification/low-matmul-source-manifest.json"
+    },
+    {
+      "document": "crates/compute-mlx/README.md",
+      "target": "crates/compute-mlx/qualification/low-matmul-routed-focused.txt"
+    },
+    {
+      "document": "crates/compute-mlx/README.md",
+      "target": "crates/compute-mlx/qualification/low-matmul-routed-metal.txt"
+    },
+    {
+      "document": "crates/compute-mlx/README.md",
+      "target": "crates/compute-mlx/benchmarks/low-matmul.md"
+    },
+    {
+      "document": "crates/compute-mlx/README.md",
+      "target": "crates/compute-mlx/qualification/compiled-typed-tiny-multiply.txt"
+    },
+    {
+      "document": "crates/compute-mlx/README.md",
+      "target": "crates/compute-mlx/qualification/compiled-typed-tiny-multiply-corrected.txt"
+    },
+    {
+      "document": "crates/compute-mlx/README.md",
+      "target": "crates/compute-mlx/qualification/low-ops-native-probe.txt"
+    },
+    {
+      "document": "crates/compute-mlx/README.md",
+      "target": "crates/compute-mlx/qualification/low-ops-native-probe.c"
+    },
+    {
+      "document": "crates/compute-mlx/README.md",
+      "target": "crates/compute-mlx/qualification/low-ops-initial-failure.txt"
+    },
+    {
+      "document": "crates/compute-mlx/README.md",
+      "target": "crates/compute-mlx/qualification/low-ops-metal.txt"
+    },
+    {
+      "document": "crates/compute-mlx/README.md",
+      "target": "crates/compute-mlx/qualification/low-index-native-probe.c"
+    },
+    {
+      "document": "crates/compute-mlx/README.md",
+      "target": "crates/compute-mlx/qualification/low-index-native-probe.txt"
+    },
+    {
+      "document": "crates/compute-mlx/README.md",
+      "target": "crates/compute-mlx/qualification/low-index-initial-failure.txt"
+    },
+    {
+      "document": "crates/compute-mlx/README.md",
+      "target": "crates/compute-mlx/qualification/low-index-metal.txt"
+    },
+    {
+      "document": "crates/compute-mlx/README.md",
+      "target": "crates/compute-mlx/qualification/low-scatter-native-probe.txt"
+    },
+    {
+      "document": "crates/compute-mlx/README.md",
+      "target": "crates/compute-mlx/qualification/low-scatter-native-probe.c"
+    },
+    {
+      "document": "crates/compute-mlx/README.md",
+      "target": "crates/compute-mlx/qualification/low-scatter-metal.txt"
+    },
+    {
+      "document": "crates/compute-mlx/README.md",
+      "target": "crates/compute-mlx/qualification/low-statistics-metal.txt"
+    },
+    {
+      "document": "crates/compute-mlx/README.md",
+      "target": "crates/compute-mlx/qualification/low-statistics-initial-failure.txt"
+    },
+    {
+      "document": "crates/compute-mlx/README.md",
+      "target": "crates/compute-mlx/qualification/low-attention-initial.txt"
+    },
+    {
+      "document": "crates/compute-mlx/README.md",
+      "target": "crates/compute-mlx/qualification/low-attention-metal.txt"
+    },
+    {
+      "document": "crates/compute-mlx/README.md",
+      "target": "crates/compute-mlx/qualification/low-attention-focused.txt"
+    },
+    {
+      "document": "crates/compute-mlx/README.md",
+      "target": "crates/compute-mlx/qualification/low-attention-source-manifest.json"
+    },
+    {
+      "document": "crates/compute-mlx/README.md",
+      "target": "crates/compute-mlx/qualification/attention-native-probe.txt"
+    },
+    {
+      "document": "crates/compute-mlx/README.md",
+      "target": "crates/compute-mlx/qualification/attention-extreme-initial-failure.txt"
+    },
+    {
+      "document": "crates/compute-mlx/README.md",
+      "target": "crates/compute-mlx/qualification/attention-metal.txt"
+    },
+    {
+      "document": "crates/compute-mlx/README.md",
+      "target": "crates/compute-mlx/qualification/attention-native-probe.c"
+    },
+    {
+      "document": "crates/compute-mlx/README.md",
+      "target": "crates/compute-mlx/qualification/native-metal.txt"
+    },
+    {
+      "document": "crates/compute-mlx/README.md",
+      "target": "crates/compute-mlx/qualification/index-metal.txt"
+    },
+    {
+      "document": "crates/compute-mlx/README.md",
+      "target": "crates/compute-mlx/qualification/reduction-metal.txt"
+    },
+    {
+      "document": "crates/compute-mlx/README.md",
+      "target": "crates/compute-mlx/qualification/scatter-metal.txt"
+    },
+    {
+      "document": "crates/compute-mlx/README.md",
+      "target": "crates/compute-mlx/qualification/low-metal.txt"
+    },
+    {
+      "document": "crates/compute-mlx/README.md",
+      "target": "crates/compute-mlx/qualification/statistics-metal.txt"
+    },
+    {
+      "document": "crates/compute-mlx/README.md",
+      "target": "crates/compute-mlx/qualification/attention-metal.txt"
+    },
+    {
+      "document": "crates/compute-mlx/README.md",
+      "target": "crates/compute-mlx/qualification/low-ops-metal.txt"
+    },
+    {
+      "document": "crates/compute-mlx/README.md",
+      "target": "crates/compute-mlx/qualification/low-index-metal.txt"
+    },
+    {
+      "document": "crates/compute-mlx/README.md",
+      "target": "crates/compute-mlx/qualification/low-scatter-metal.txt"
+    },
+    {
+      "document": "crates/compute-mlx/README.md",
+      "target": "crates/compute-mlx/qualification/low-statistics-metal.txt"
+    },
+    {
+      "document": "crates/compute-mlx/README.md",
+      "target": "crates/compute-mlx/qualification/low-attention-metal.txt"
+    },
+    {
+      "document": "crates/compute-mlx/README.md",
+      "target": "crates/compute-mlx/qualification/low-matmul-metal.txt"
+    },
+    {
+      "document": "crates/compute-mlx/README.md",
+      "target": "crates/compute-mlx/qualification/compiled-metal.txt"
+    },
+    {
+      "document": "crates/compute-mlx/README.md",
+      "target": "crates/compute-mlx/qualification/compiled-typed-metal.txt"
+    },
+    {
+      "document": "crates/compute-mlx/README.md",
+      "target": "crates/compute-mlx/qualification/index-empty-u32-initial-failure.txt"
+    },
+    {
+      "document": "crates/compute-mlx/README.md",
+      "target": "crates/compute-mlx/qualification/reduction-empty-batch-initial-failure.txt"
+    },
+    {
+      "document": "crates/compute-mlx/README.md",
+      "target": "crates/compute-mlx/qualification/low-bf16-initial-failure.txt"
+    },
+    {
+      "document": "crates/compute-mlx/benchmarks/compiled-typed.md",
+      "target": "crates/compute-mlx/examples/bench_compiled_typed.rs"
+    },
+    {
+      "document": "crates/compute-mlx/benchmarks/compiled-typed.md",
+      "target": "crates/compute-mlx/benchmarks/compiled-typed-metal.txt"
+    },
+    {
+      "document": "crates/compute-mlx/benchmarks/compiled-typed.md",
+      "target": "crates/compute-mlx/benchmarks/compiled-typed-metal-repeat.txt"
+    },
+    {
+      "document": "crates/compute-mlx/benchmarks/compiled-typed.md",
+      "target": "crates/compute-mlx/benchmarks/compiled-typed-summary.json"
+    },
+    {
+      "document": "crates/compute-mlx/benchmarks/compiled-typed.md",
+      "target": "crates/compute-mlx/benchmarks/compiled-typed-audit.json"
+    },
+    {
+      "document": "crates/compute-mlx/benchmarks/compiled-typed.md",
+      "target": "docs/qualification/tensor-mlx-typed-programs-2026-09-27/independent-benchmark-audit.json"
+    },
+    {
+      "document": "crates/compute-mlx/benchmarks/compiled-typed.md",
+      "target": "crates/compute-mlx/benchmarks/compiled-typed-source-fingerprints.json"
+    },
+    {
+      "document": "crates/compute-mlx/benchmarks/compiled-typed.md",
+      "target": "crates/compute-mlx/qualification/compiled-typed-source-manifest.json"
+    },
+    {
+      "document": "crates/compute-mlx/benchmarks/compiled-typed.md",
+      "target": "crates/compute-mlx/benchmarks/compiled.md"
+    }
+  ]
+}

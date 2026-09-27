@@ -1,0 +1,119 @@
+warning: binary `wgsl_export` should have a kebab-case name
+  |
+1 | /Users/themoretheless/Documents/Sources/open-scad-viewer/crates/target/.../wgsl_export
+  |                                                                            ^^^^^^^^^^^
+  |
+  = note: `cargo::non_kebab_case_bins` is set to `warn` by default
+help: to change the binary name to `wgsl-export`, convert the file stem
+  |
+1 - src/bin/wgsl_export.rs
+1 + src/bin/wgsl-export.rs
+  |
+warning: `raster-core` (manifest) generated 1 warning
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.02s
+     Running unittests src/lib.rs (crates/target/debug/build/tensor-core/0cb4a2ecef31e15c/out/tensor_core-0cb4a2ecef31e15c)
+
+running 12 tests
+test conformance::low_index::tests::low_comparison_reference_distinguishes_ieee_and_total_order ... ok
+test conformance::attention::tests::reference_respects_bias_exclusion_and_signed_causal_rows ... ok
+test conformance::low_attention::tests::subnormal_operand_reference_requires_a_normal_nonzero_attention_result ... ok
+test conformance::attention::tests::reference_matches_hand_computed_uniform_grouped_attention ... ok
+test conformance::low_ops::tests::tiny_bf16_multiplication_oracle_has_exact_normal_f32_products ... ok
+test conformance::low_precision::matmul::tests::oracle_handles_vectors_broadcasts_and_permutations_without_planner ... ok
+test conformance::low_scatter::tests::low_scatter_reference_keeps_payloads_and_zero_ties ... ok
+test conformance::low_statistics::tests::tiny_low_norm_reference_requires_nonzero_normal_f32_outputs ... ok
+test conformance::low_precision::tests::mathematical_low_reference_covers_format_boundaries ... ok
+test conformance::low_precision::matmul::tests::tail_fixtures_distinguish_final_low_rounding_and_keep_f32_sums_exact ... ok
+test conformance::low_ops::tests::mathematical_rounding_reference_handles_ties_and_overflow ... ok
+test conformance::low_precision::matmul::accumulation::tests::bound_accepts_f32_orders_but_rejects_widened_low_results ... ok
+
+test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.07s
+
+     Running tests/attention.rs (crates/target/debug/build/tensor-core/54c4cf9ace9f1cc6/out/attention-54c4cf9ace9f1cc6)
+
+running 3 tests
+test matrix_attention_and_grouped_broadcast_geometry ... ok
+test empty_sequence_value_depth_and_batch_keep_checked_shapes ... ok
+test invalid_geometry_and_masks_fail_before_empty_execution ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/indexing.rs (crates/target/debug/build/tensor-core/53954974b3cc9c87/out/indexing-53954974b3cc9c87)
+
+running 4 tests
+test count_limits_are_checked_before_backend_allocation ... ok
+test gather_inserts_index_axes_and_scalar_indices_remove_an_axis ... ok
+test selection_checks_final_count_after_all_zero_axes_are_known ... ok
+test selection_broadcasts_all_operands_but_compaction_preserves_input_capacity ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/layout.rs (crates/target/debug/build/tensor-core/09fa65d924979f93/out/layout-09fa65d924979f93)
+
+running 7 tests
+test empty_slices_of_strided_views_keep_valid_storage_bounds ... ok
+test batched_matrix_shapes_broadcast_without_broadcasting_contraction ... ok
+test broadcasting_handles_zero_axes_and_leading_rank_expansion ... ok
+test axis_permutations_and_broadcasts_match_coordinate_reference ... ok
+test scalars_empty_shapes_and_overflows_are_distinct ... ok
+test reduction_axes_are_unique_and_keep_dimensions_when_requested ... ok
+test views_preserve_offsets_and_reject_out_of_bounds_storage ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/low_attention.rs (crates/target/debug/build/tensor-core/14f3086de4cadd1e/out/low_attention-14f3086de4cadd1e)
+
+running 2 tests
+test low_attention_preserves_grouped_broadcast_geometry_and_mask_precision ... ok
+test low_attention_checks_both_other_dtypes_before_empty_execution ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/low_ops.rs (crates/target/debug/build/tensor-core/3b2fd612271496c9/out/low_ops-3b2fd612271496c9)
+
+running 2 tests
+test low_binary_checks_dtype_and_broadcast_even_for_empty_outputs ... ok
+test low_selection_checks_types_and_broadcasts_all_three_shapes_together ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/low_scatter.rs (crates/target/debug/build/tensor-core/6edcc81540834a55/out/low_scatter-6edcc81540834a55)
+
+running 2 tests
+test low_scatter_rejects_unrepresentable_index_counts_before_execution ... ok
+test low_scatter_preserves_axis_expansion_and_checks_storage_even_when_empty ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/reduction.rs (crates/target/debug/build/tensor-core/dc514954b769a260/out/reduction-dc514954b769a260)
+
+running 3 tests
+test reduction_validation_rejects_axes_and_output_overflow ... ok
+test reductions_validate_empty_contractions_without_inventing_values ... ok
+test matmul_promotes_vectors_and_preserves_batch_axes ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/scatter.rs (crates/target/debug/build/tensor-core/76cbdd1dafdfa26f/out/scatter-76cbdd1dafdfa26f)
+
+running 3 tests
+test scatter_checks_count_and_expanded_update_overflow ... ok
+test scatter_preserves_empty_shapes_and_rejects_expansion ... ok
+test scatter_uses_gather_expansion_and_accepts_broadcast_updates ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/statistics.rs (crates/target/debug/build/tensor-core/2fe2c0cb690ff2fa/out/statistics-2fe2c0cb690ff2fa)
+
+running 2 tests
+test normalization_epsilon_accepts_every_finite_positive_scale ... ok
+test distribution_and_statistics_shapes_distinguish_empty_groups ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests tensor_core
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

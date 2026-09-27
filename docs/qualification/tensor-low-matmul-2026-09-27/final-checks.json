@@ -1,0 +1,120 @@
+[
+  {
+    "name": "wgsl-metal",
+    "command": [
+      "cargo",
+      "test",
+      "--offline",
+      "--locked",
+      "--manifest-path",
+      "crates/Cargo.toml",
+      "-p",
+      "gpu-compute",
+      "-p",
+      "compute-core",
+      "-p",
+      "raster-core",
+      "-p",
+      "osv-math",
+      "--features",
+      "osv-math/gpu",
+      "--",
+      "--test-threads=1"
+    ],
+    "env": {
+      "COMPUTE_REQUIRE_GPU": "1",
+      "COMPUTE_REQUIRE_TIMESTAMPS": "1",
+      "COMPUTE_REQUIRE_SUBGROUPS": "1"
+    },
+    "exit_code": 0,
+    "elapsed_seconds": 49.045,
+    "log": "wgsl-metal.txt"
+  },
+  {
+    "name": "clippy",
+    "command": [
+      "cargo",
+      "clippy",
+      "--offline",
+      "--locked",
+      "--manifest-path",
+      "crates/Cargo.toml",
+      "-p",
+      "tensor-core",
+      "-p",
+      "compute-core",
+      "-p",
+      "compute-cuda",
+      "-p",
+      "compute-mlx",
+      "--all-targets",
+      "--",
+      "-D",
+      "warnings"
+    ],
+    "env": {},
+    "exit_code": 0,
+    "elapsed_seconds": 0.406,
+    "log": "clippy.txt"
+  },
+  {
+    "name": "rustdoc",
+    "command": [
+      "cargo",
+      "doc",
+      "--offline",
+      "--locked",
+      "--manifest-path",
+      "crates/Cargo.toml",
+      "-p",
+      "tensor-core",
+      "-p",
+      "compute-core",
+      "-p",
+      "compute-cuda",
+      "-p",
+      "compute-mlx",
+      "--no-deps"
+    ],
+    "env": {
+      "RUSTDOCFLAGS": "-D warnings"
+    },
+    "exit_code": 0,
+    "elapsed_seconds": 0.404,
+    "log": "rustdoc.txt"
+  },
+  {
+    "name": "wasm",
+    "command": [
+      "cargo",
+      "check",
+      "--offline",
+      "--locked",
+      "--manifest-path",
+      "crates/Cargo.toml",
+      "-p",
+      "tensor-core",
+      "-p",
+      "compute-core",
+      "-p",
+      "compute-mlx",
+      "--target",
+      "wasm32-unknown-unknown"
+    ],
+    "env": {},
+    "exit_code": 0,
+    "elapsed_seconds": 0.134,
+    "log": "wasm.txt"
+  },
+  {
+    "name": "architecture",
+    "command": [
+      "python3",
+      "scripts/check-gpu-architecture.py"
+    ],
+    "env": {},
+    "exit_code": 0,
+    "elapsed_seconds": 0.206,
+    "log": "architecture.txt"
+  }
+]

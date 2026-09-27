@@ -1,12 +1,13 @@
 # GPU libraries: responsibility boundaries and migration
 
-Date: 2026-09-26. Scope: `gpu-compute`, `compute-core`, `raster-core`, and
-`math-core` (Cargo package `osv-math`).
+Date: 2026-09-26, extended 2026-09-27. Scope: GPU platform, shader compute,
+rendering, domain math, and native tensor backends.
 
 ## Decision
 
-Keep four crates. Their reasons to change differ: GPU platform support,
-computation execution, rendering, and mathematical behavior. Share device and
+Keep separate crates for GPU platform support, computation execution, rendering,
+and mathematical behavior. The tensor extension adds a dependency-free contract
+crate and independent CUDA/MLX adapters. Share device and
 queue ownership, command recording, and byte-level infrastructure. Keep
 numerical contracts, buffer layouts, render state, and placement decisions with
 the domain that defines them.
@@ -20,6 +21,9 @@ flowchart TD
     Compute[compute-core]
     Raster[raster-core]
     GPU[gpu-compute: GPU platform]
+    Tensor[tensor-core: shapes, layouts and operations]
+    CUDA[compute-cuda]
+    MLX[compute-mlx]
     App --> Math
     App --> Compute
     App --> Raster
@@ -27,6 +31,10 @@ flowchart TD
     Math -->|optional gpu feature| Compute
     Math -->|optional platform / CUDA access| GPU
     Compute --> GPU
+    Compute --> Tensor
+    CUDA --> GPU
+    CUDA --> Tensor
+    MLX --> Tensor
     Raster --> GPU
 ```
 
@@ -47,6 +55,9 @@ photogrammetry. Renaming it alone would not improve responsibility boundaries.
 | `compute-core` | WGSL kernel compilation, binding contracts, recording/batching, typed arrays, array operations, reduction scheduling | Point-cloud semantics, CPU reference geometry, rendering policy |
 | `math-core` | CPU f64 reference math, validation, numerical tolerances, domain WGSL/PTX, acceleration policy, domain GPU adapters | General pipeline plumbing, application device selection, material/shader variants |
 | `raster-core` | Render WGSL, uniform ABI, variants and browser code generation, render pipelines, frame recording, texture row layout | Generic numerical operations, point-cloud algorithms, independent device selection inside render calls |
+| `tensor-core` | Checked shapes and layouts, canonical operations, native tensor backend contract, shared conformance fixtures | GPU dependencies, allocations, shader code, domain placement |
+| `compute-cuda` | Resident CUDA tensors, CUDA kernels, cuBLAS execution and explicit Tensor Core precision policies | WGSL, MLX loading, CPU fallback, point-cloud semantics |
+| `compute-mlx` | Runtime-loaded MLX-C, lazy GPU arrays, native ownership and errors | wgpu/CUDA driver dependencies, CPU fallback, domain placement |
 
 `GpuContext::new` is a convenience factory. Application code should create one
 context and pass it to sessions. `GpuContext::clone` clones handles to the same
@@ -261,10 +272,12 @@ arrays and domain views validate ownership before using those raw APIs.
   `wait_mut`, without cancelling the pending result.
 
 
-Automatic graph scheduling, shader fusion and extra crates are not prerequisites
-for these boundaries. Introduce them only after measuring a workload where they
-remove a demonstrated bottleneck. The existing full-readback array example is
-slower than its CPU reference; structural refactoring is not a speedup claim.
+The tensor extension uses these boundaries to share shape and operation semantics
+across three runtimes. Each runtime retains its submission and scheduling model.
+The existing full-readback array example is slower than its CPU reference;
+structural refactoring is not a speedup claim. See
+[tensor backend coverage](tensor-backends-2026-09-27.md) for the current scope,
+hardware evidence, and remaining work.
 
 ## Verification
 
@@ -278,7 +291,7 @@ cargo check --offline --manifest-path crates/Cargo.toml -p osv-math --features c
 
 The dependency check rejects production edges that invert the diagram and
 verifies that CPU-only math has no GPU runtime/driver dependency. It is a local
-command; wiring it into CI is separate work. GPU tests cover explicit context
+command also run by the Rust CI job. GPU tests cover explicit context
 sharing, reused math caches, compute/raster command recording and existing
 numerical/pixel contracts. Metal execution does not validate CUDA, Vulkan or
 DX12 runtime behavior. Browser export tests check source parity; they do not
@@ -348,3 +361,13 @@ offsets during its final scatter/count/tail pass. Matrix specialization stays in
 Raw experimental candidates stay in benchmark sources rather than the runtime
 catalog. See `docs/qualification/shader-compute-research-2026-09-27.md` for paired
 measurements, rejected candidates and profiling constraints.
+
+The resident tensor layer also exposes packed f16/bf16 arithmetic, reductions,
+indexing, scans and scatter. Its storage-specific kernels reuse typed traversal,
+scan hierarchy, scatter owner selection and invalid-index counting. Low scatter
+loads packed updates directly: Replace/Min/Max can write packed halfwords, while
+Add/Multiply use an f32 result accumulator and one final low conversion. Shared
+shapes and backend contracts live in `tensor-core`; implementations stay in the
+executor crates. Low-storage statistics and attention remain open. Current
+backend coverage and hardware limits are tracked in
+[tensor backend design](tensor-backends-2026-09-27.md).

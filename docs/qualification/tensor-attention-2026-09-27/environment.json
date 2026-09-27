@@ -1,0 +1,18 @@
+{
+  "gpu": {
+    "SPDisplaysDataType": [
+      {
+        "_name": "Apple M4 Max",
+        "spdisplays_metal": "spdisplays_supported",
+        "spdisplays_vendor": "sppci_vendor_Apple",
+        "sppci_bus": "spdisplays_builtin",
+        "sppci_cores": "40",
+        "sppci_device_type": "spdisplays_gpu",
+        "sppci_model": "Apple M4 Max"
+      }
+    ]
+  },
+  "rustc": "rustc 1.100.0-nightly (215a8af4b 2026-09-15)",
+  "cargo": "cargo 1.100.0-nightly (7941be6fb 2026-09-11)",
+  "os": "ProductName:\t\tmacOS\nProductVersion:\t\t26.7\nBuildVersion:\t\t25G229"
+}

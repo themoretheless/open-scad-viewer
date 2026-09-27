@@ -1,0 +1,8 @@
+PASS docs/qualification/tensor-low-statistics-2026-09-27/source-fingerprints.json: 290 current source hashes
+PASS crates/compute-core/benchmarks/tensor-low-statistics-source-fingerprints.json: 214 current source hashes
+PASS crates/compute-mlx/qualification/low-statistics-source-manifest.json: 69 current source hashes and retained native log
+Independent read-only review: benchmark summary matches both raw logs, including every sample array and all 400 median/p90 pairs (12,400 samples).
+PASS: 50 table rows, 100 displayed ratios, 32/14/4 cross-run classifications and 11.1% maximum slowdown.
+PASS: five memory-accounting rows match recorded planner allocations, including the extra 16-byte dummy summary.
+PASS: all relative links in the qualification and benchmark reports exist.
+PASS: git diff --check after final documentation updates.

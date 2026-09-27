@@ -1,0 +1,439 @@
+{
+  "scope": "Independent CPU recomputation from raw sample arrays; no GPU execution or source edits. Timings are host wall time only.",
+  "method": {
+    "n": 31,
+    "median_sorted_zero_based_index": 15,
+    "p90_definition": "nearest rank ceil(0.90*n)-1",
+    "p90_sorted_zero_based_index": 27,
+    "printed_absolute_tolerance": 5.00001e-07,
+    "ratio_definition": "eager median / compiled median"
+  },
+  "runs": [
+    {
+      "path": "crates/compute-mlx/benchmarks/compiled-typed-metal.txt",
+      "sha256": "2b03309ebb0309a609db470f43fae27e2544440003e3b3be4d99db981c7cb938",
+      "bytes": 8048,
+      "statistics_pairs_checked": 12,
+      "ratio_checks": 6,
+      "cases": [
+        {
+          "case": "low_arithmetic_f16",
+          "eager": {
+            "case": "low_arithmetic_f16",
+            "path": "eager",
+            "n": 31,
+            "median_ms": 0.438834,
+            "p90_ms": 0.457125,
+            "min_ms": 0.389959,
+            "max_ms": 0.547916,
+            "printed_statistics_match": true
+          },
+          "compiled": {
+            "case": "low_arithmetic_f16",
+            "path": "compiled",
+            "n": 31,
+            "median_ms": 0.4165,
+            "p90_ms": 0.43,
+            "min_ms": 0.3725,
+            "max_ms": 0.46166700000000005,
+            "printed_statistics_match": true
+          },
+          "eager_over_compiled_median": 1.0536230492196879,
+          "compiled_median_change_percent": -5.089395990283352,
+          "compiled_p90_change_percent": -5.933825540060155,
+          "initial_trace_count": 0,
+          "final_trace_count": 1,
+          "measured_invocations": 62,
+          "validated_output_buffers": 124
+        },
+        {
+          "case": "low_arithmetic_bf16",
+          "eager": {
+            "case": "low_arithmetic_bf16",
+            "path": "eager",
+            "n": 31,
+            "median_ms": 0.867542,
+            "p90_ms": 0.905292,
+            "min_ms": 0.395,
+            "max_ms": 1.2205,
+            "printed_statistics_match": true
+          },
+          "compiled": {
+            "case": "low_arithmetic_bf16",
+            "path": "compiled",
+            "n": 31,
+            "median_ms": 0.829042,
+            "p90_ms": 0.905792,
+            "min_ms": 0.38345799999999997,
+            "max_ms": 1.144125,
+            "printed_statistics_match": true
+          },
+          "eager_over_compiled_median": 1.0464391430108488,
+          "compiled_median_change_percent": -4.4378254885642505,
+          "compiled_p90_change_percent": 0.05523079846061485,
+          "initial_trace_count": 0,
+          "final_trace_count": 1,
+          "measured_invocations": 62,
+          "validated_output_buffers": 124
+        },
+        {
+          "case": "low_matmul_f16",
+          "eager": {
+            "case": "low_matmul_f16",
+            "path": "eager",
+            "n": 31,
+            "median_ms": 0.218916,
+            "p90_ms": 0.22125,
+            "min_ms": 0.20916700000000002,
+            "max_ms": 0.22270800000000002,
+            "printed_statistics_match": true
+          },
+          "compiled": {
+            "case": "low_matmul_f16",
+            "path": "compiled",
+            "n": 31,
+            "median_ms": 0.21125000000000002,
+            "p90_ms": 0.214875,
+            "min_ms": 0.20516600000000002,
+            "max_ms": 0.294583,
+            "printed_statistics_match": true
+          },
+          "eager_over_compiled_median": 1.0362887573964497,
+          "compiled_median_change_percent": -3.5017997770834364,
+          "compiled_p90_change_percent": -2.881355932203389,
+          "initial_trace_count": 0,
+          "final_trace_count": 1,
+          "measured_invocations": 62,
+          "validated_output_buffers": 124
+        },
+        {
+          "case": "low_matmul_bf16",
+          "eager": {
+            "case": "low_matmul_bf16",
+            "path": "eager",
+            "n": 31,
+            "median_ms": 0.221,
+            "p90_ms": 0.223459,
+            "min_ms": 0.214875,
+            "max_ms": 0.312375,
+            "printed_statistics_match": true
+          },
+          "compiled": {
+            "case": "low_matmul_bf16",
+            "path": "compiled",
+            "n": 31,
+            "median_ms": 0.212708,
+            "p90_ms": 0.216042,
+            "min_ms": 0.208375,
+            "max_ms": 0.217416,
+            "printed_statistics_match": true
+          },
+          "eager_over_compiled_median": 1.0389830189743685,
+          "compiled_median_change_percent": -3.7520361990950213,
+          "compiled_p90_change_percent": -3.31917711974008,
+          "initial_trace_count": 0,
+          "final_trace_count": 1,
+          "measured_invocations": 62,
+          "validated_output_buffers": 124
+        },
+        {
+          "case": "u32_select_sum_small",
+          "eager": {
+            "case": "u32_select_sum_small",
+            "path": "eager",
+            "n": 31,
+            "median_ms": 0.25025,
+            "p90_ms": 0.26175,
+            "min_ms": 0.218375,
+            "max_ms": 0.343417,
+            "printed_statistics_match": true
+          },
+          "compiled": {
+            "case": "u32_select_sum_small",
+            "path": "compiled",
+            "n": 31,
+            "median_ms": 0.224625,
+            "p90_ms": 0.287667,
+            "min_ms": 0.19304200000000002,
+            "max_ms": 0.391625,
+            "printed_statistics_match": true
+          },
+          "eager_over_compiled_median": 1.1140790205898718,
+          "compiled_median_change_percent": -10.239760239760232,
+          "compiled_p90_change_percent": 9.901432664756449,
+          "initial_trace_count": 0,
+          "final_trace_count": 1,
+          "measured_invocations": 62,
+          "validated_output_buffers": 124
+        },
+        {
+          "case": "u32_select_sum_large",
+          "eager": {
+            "case": "u32_select_sum_large",
+            "path": "eager",
+            "n": 31,
+            "median_ms": 0.265625,
+            "p90_ms": 0.27345800000000003,
+            "min_ms": 0.225333,
+            "max_ms": 0.278375,
+            "printed_statistics_match": true
+          },
+          "compiled": {
+            "case": "u32_select_sum_large",
+            "path": "compiled",
+            "n": 31,
+            "median_ms": 0.236083,
+            "p90_ms": 0.253708,
+            "min_ms": 0.208292,
+            "max_ms": 0.354292,
+            "printed_statistics_match": true
+          },
+          "eager_over_compiled_median": 1.1251339571252483,
+          "compiled_median_change_percent": -11.121694117647063,
+          "compiled_p90_change_percent": -7.222315675533375,
+          "initial_trace_count": 0,
+          "final_trace_count": 1,
+          "measured_invocations": 62,
+          "validated_output_buffers": 124
+        }
+      ]
+    },
+    {
+      "path": "crates/compute-mlx/benchmarks/compiled-typed-metal-repeat.txt",
+      "sha256": "919654dc6fd53a4116ad1f78b38e6a7c871aa0d3ebdb6d0d1e514f8fdd0c4685",
+      "bytes": 8088,
+      "statistics_pairs_checked": 12,
+      "ratio_checks": 6,
+      "cases": [
+        {
+          "case": "low_arithmetic_f16",
+          "eager": {
+            "case": "low_arithmetic_f16",
+            "path": "eager",
+            "n": 31,
+            "median_ms": 0.37583300000000003,
+            "p90_ms": 0.379708,
+            "min_ms": 0.365917,
+            "max_ms": 0.434,
+            "printed_statistics_match": true
+          },
+          "compiled": {
+            "case": "low_arithmetic_f16",
+            "path": "compiled",
+            "n": 31,
+            "median_ms": 0.351833,
+            "p90_ms": 0.355667,
+            "min_ms": 0.342667,
+            "max_ms": 0.451833,
+            "printed_statistics_match": true
+          },
+          "eager_over_compiled_median": 1.0682141811598116,
+          "compiled_median_change_percent": -6.385814976332583,
+          "compiled_p90_change_percent": -6.331444162356337,
+          "initial_trace_count": 0,
+          "final_trace_count": 1,
+          "measured_invocations": 62,
+          "validated_output_buffers": 124
+        },
+        {
+          "case": "low_arithmetic_bf16",
+          "eager": {
+            "case": "low_arithmetic_bf16",
+            "path": "eager",
+            "n": 31,
+            "median_ms": 0.375208,
+            "p90_ms": 0.381875,
+            "min_ms": 0.363666,
+            "max_ms": 0.490958,
+            "printed_statistics_match": true
+          },
+          "compiled": {
+            "case": "low_arithmetic_bf16",
+            "path": "compiled",
+            "n": 31,
+            "median_ms": 0.35179200000000005,
+            "p90_ms": 0.354792,
+            "min_ms": 0.339458,
+            "max_ms": 0.409833,
+            "printed_statistics_match": true
+          },
+          "eager_over_compiled_median": 1.0665620593987355,
+          "compiled_median_change_percent": -6.240805100104463,
+          "compiled_p90_change_percent": -7.092111292962366,
+          "initial_trace_count": 0,
+          "final_trace_count": 1,
+          "measured_invocations": 62,
+          "validated_output_buffers": 124
+        },
+        {
+          "case": "low_matmul_f16",
+          "eager": {
+            "case": "low_matmul_f16",
+            "path": "eager",
+            "n": 31,
+            "median_ms": 0.24075,
+            "p90_ms": 0.25075,
+            "min_ms": 0.217084,
+            "max_ms": 0.253042,
+            "printed_statistics_match": true
+          },
+          "compiled": {
+            "case": "low_matmul_f16",
+            "path": "compiled",
+            "n": 31,
+            "median_ms": 0.237291,
+            "p90_ms": 0.245208,
+            "min_ms": 0.20650000000000002,
+            "max_ms": 0.35854199999999997,
+            "printed_statistics_match": true
+          },
+          "eager_over_compiled_median": 1.0145770383200374,
+          "compiled_median_change_percent": -1.436760124610592,
+          "compiled_p90_change_percent": -2.2101694915254044,
+          "initial_trace_count": 0,
+          "final_trace_count": 1,
+          "measured_invocations": 62,
+          "validated_output_buffers": 124
+        },
+        {
+          "case": "low_matmul_bf16",
+          "eager": {
+            "case": "low_matmul_bf16",
+            "path": "eager",
+            "n": 31,
+            "median_ms": 0.242208,
+            "p90_ms": 0.257,
+            "min_ms": 0.224833,
+            "max_ms": 0.369083,
+            "printed_statistics_match": true
+          },
+          "compiled": {
+            "case": "low_matmul_bf16",
+            "path": "compiled",
+            "n": 31,
+            "median_ms": 0.23658300000000002,
+            "p90_ms": 0.245417,
+            "min_ms": 0.21241700000000002,
+            "max_ms": 0.335,
+            "printed_statistics_match": true
+          },
+          "eager_over_compiled_median": 1.023776010955986,
+          "compiled_median_change_percent": -2.3223840665873907,
+          "compiled_p90_change_percent": -4.507003891050587,
+          "initial_trace_count": 0,
+          "final_trace_count": 1,
+          "measured_invocations": 62,
+          "validated_output_buffers": 124
+        },
+        {
+          "case": "u32_select_sum_small",
+          "eager": {
+            "case": "u32_select_sum_small",
+            "path": "eager",
+            "n": 31,
+            "median_ms": 0.21054099999999998,
+            "p90_ms": 0.233333,
+            "min_ms": 0.199167,
+            "max_ms": 0.280792,
+            "printed_statistics_match": true
+          },
+          "compiled": {
+            "case": "u32_select_sum_small",
+            "path": "compiled",
+            "n": 31,
+            "median_ms": 0.20620799999999997,
+            "p90_ms": 0.21425,
+            "min_ms": 0.194542,
+            "max_ms": 0.279708,
+            "printed_statistics_match": true
+          },
+          "eager_over_compiled_median": 1.0210127638112974,
+          "compiled_median_change_percent": -2.058031452306208,
+          "compiled_p90_change_percent": -8.178440254914655,
+          "initial_trace_count": 0,
+          "final_trace_count": 1,
+          "measured_invocations": 62,
+          "validated_output_buffers": 124
+        },
+        {
+          "case": "u32_select_sum_large",
+          "eager": {
+            "case": "u32_select_sum_large",
+            "path": "eager",
+            "n": 31,
+            "median_ms": 0.220834,
+            "p90_ms": 0.224417,
+            "min_ms": 0.215333,
+            "max_ms": 0.231791,
+            "printed_statistics_match": true
+          },
+          "compiled": {
+            "case": "u32_select_sum_large",
+            "path": "compiled",
+            "n": 31,
+            "median_ms": 0.205791,
+            "p90_ms": 0.211625,
+            "min_ms": 0.195833,
+            "max_ms": 0.348,
+            "printed_statistics_match": true
+          },
+          "eager_over_compiled_median": 1.073098434819793,
+          "compiled_median_change_percent": -6.811903964063504,
+          "compiled_p90_change_percent": -5.700102933378481,
+          "initial_trace_count": 0,
+          "final_trace_count": 1,
+          "measured_invocations": 62,
+          "validated_output_buffers": 124
+        }
+      ]
+    }
+  ],
+  "totals": {
+    "median_p90_pairs": 24,
+    "raw_samples": 744,
+    "measured_invocations": 744,
+    "validated_output_buffers": 1488,
+    "initial_zero_final_one_trace_pairs": 12,
+    "printed_statistic_mismatches": 0,
+    "printed_ratio_mismatches": 0,
+    "validation_failures_reported": 0
+  },
+  "run_variation": [
+    {
+      "case": "low_arithmetic_f16",
+      "eager_repeat_over_first_median": 0.8564354630680394,
+      "compiled_repeat_over_first_median": 0.8447370948379352
+    },
+    {
+      "case": "low_arithmetic_bf16",
+      "eager_repeat_over_first_median": 0.432495487250185,
+      "compiled_repeat_over_first_median": 0.4243355583914929
+    },
+    {
+      "case": "low_matmul_f16",
+      "eager_repeat_over_first_median": 1.099736885380694,
+      "compiled_repeat_over_first_median": 1.1232710059171596
+    },
+    {
+      "case": "low_matmul_bf16",
+      "eager_repeat_over_first_median": 1.0959638009049775,
+      "compiled_repeat_over_first_median": 1.1122430750136338
+    },
+    {
+      "case": "u32_select_sum_small",
+      "eager_repeat_over_first_median": 0.8413226773226773,
+      "compiled_repeat_over_first_median": 0.9180100166944908
+    },
+    {
+      "case": "u32_select_sum_large",
+      "eager_repeat_over_first_median": 0.8313750588235295,
+      "compiled_repeat_over_first_median": 0.8716891940546334
+    }
+  ],
+  "limitations": [
+    "No GPU timestamps: speed ratios include invocation, allocation, evaluation, two full readbacks, synchronization.",
+    "Reported validation and trace totals were checked structurally and against harness assertions; CPU audit does not rerun numerical GPU validation.",
+    "First-run BF16 arithmetic shows a shared absolute-latency transition in both paths; no causal attribution is made.",
+    "Twelve compiled medians are lower, but first-run BF16 arithmetic and small u32 p90 regress; measurements are not a universal speedup claim."
+  ]
+}
