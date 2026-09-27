@@ -3,6 +3,8 @@ use crate::{BinaryOp, HasShape, MatmulPrecision, Shape, TensorBackend, UnaryOp};
 
 mod attention;
 mod convolution;
+mod float64;
+pub use float64::check_f64_backend;
 mod indexing;
 mod low_attention;
 mod low_index;

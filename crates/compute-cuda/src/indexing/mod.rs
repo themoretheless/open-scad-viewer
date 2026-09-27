@@ -22,7 +22,6 @@ use tensor_core::{
 
 pub(crate) trait CudaScalar: DeviceRepr + ValidAsZeroBits + Copy + Default {
     const KIND: usize;
-    const ONE: Self;
     fn materialize(
         runtime: &CudaRuntime,
         input: &CudaTensor<Self>,
@@ -30,7 +29,6 @@ pub(crate) trait CudaScalar: DeviceRepr + ValidAsZeroBits + Copy + Default {
 }
 impl CudaScalar for f32 {
     const KIND: usize = 0;
-    const ONE: Self = 1.;
     fn materialize(
         runtime: &CudaRuntime,
         input: &CudaTensor<Self>,
@@ -40,7 +38,6 @@ impl CudaScalar for f32 {
 }
 impl CudaScalar for u32 {
     const KIND: usize = 1;
-    const ONE: Self = 1;
     fn materialize(
         runtime: &CudaRuntime,
         input: &CudaTensor<Self>,

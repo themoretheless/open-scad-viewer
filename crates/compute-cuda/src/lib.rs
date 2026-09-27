@@ -11,6 +11,7 @@ mod convolution;
 mod dispatch;
 mod error;
 mod evaluation;
+mod float64;
 mod indexing;
 mod libraries;
 mod low_attention;

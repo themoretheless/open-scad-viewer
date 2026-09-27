@@ -490,12 +490,19 @@ records numerical coverage and distinguishes compiler and hardware evidence.
 
 ## Precision coverage, including f64
 
-Existing CPU geometry uses f64 for `V2`, `V3` and `M3`. The resident tensor API
-currently accepts f32, u32 and explicit low-storage tensors. It does not provide
-an f64 execution path, and its f64 upload helper explicitly narrows to f32.
-Returning a widened f32 result does not restore lost coordinate information.
-Full precision support remains a requirement of this library, including domain
-computations that must preserve their existing f64 accuracy.
+Existing CPU geometry uses f64 for `V2`, `V3` and `M3`. `TensorF64Backend` now
+adds an explicit resident binary64 contract. CUDA implements upload/read, views,
+unary/binary arithmetic, sum/product/min/max/mean, batched/vector matrix products
+and evaluation. `Float64Support` distinguishes native, software binary64 and
+unsupported arithmetic; WGSL and MLX currently report unsupported.
+
+`TensorMathF64` uploads the original f64 coordinates and provides resident
+transforms, pair distances, bounds and centered population covariance. The
+existing `TensorMath` remains explicitly f32: its `upload_points_f64` helper
+narrows. Widening that result cannot recover lost coordinate information.
+CUDA arithmetic and geometry fixtures are compiled, but NVIDIA numerical
+execution is still unqualified on this Apple host. See the
+[f64 qualification](../qualification/tensor-float64-2026-09-27.md).
 
 WGSL has concrete f32/f16 floating types, with no executable f64 type in the
 [language specification](https://www.w3.org/TR/WGSL/#floating-point-types).
@@ -506,14 +513,15 @@ an acceptable implicit replacement for f64 domain calculations.
 
 Required next work:
 
-- Add an explicit f64 storage and arithmetic contract, with backend capabilities
-  distinguishing native execution, software emulation and unavailable support.
-- Implement native CUDA f64 tensors and operations with independent f64 tests.
+- Execute the new CUDA binary64 conformance and geometry fixtures on NVIDIA.
+- Extend binary64 to indexing, scans, scatter, stable statistics, attention,
+  convolution and prepared/graph execution. Existing internal f64 scratch in
+  prepared statistics does not expose those operations to public f64 tensors.
 - Provide explicitly identified software precision on backends lacking native
   f64, or report unsupported precision. Double-single arithmetic has a different
   precision/range contract and must not be labelled IEEE binary64.
-- Route geometry requiring f64 through that contract, never through silent
-  f32 conversion. Keep f32/low paths available for callers choosing their limits.
+- Migrate remaining domain callers requiring f64 through that contract, never
+  through silent f32 conversion. Keep f32/low paths available for callers choosing their limits.
 
 ## Tensor Core policy
 

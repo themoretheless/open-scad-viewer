@@ -24,7 +24,8 @@ pub const CUDA_KERNEL_SOURCE: &str = concat!(
     include_str!("low_scatter.cu"),
     include_str!("low_statistics.cu"),
     include_str!("low_attention.cu"),
-    include_str!("convolution.cu")
+    include_str!("convolution.cu"),
+    include_str!("float64.cu")
 );
 
 #[derive(Clone, Debug)]
@@ -75,6 +76,7 @@ pub struct CudaRuntime {
     pub(crate) statistics: crate::statistics::StatisticsKernels,
     pub(crate) attention: crate::attention::AttentionKernel,
     pub(crate) convolution: crate::convolution::ConvKernels,
+    pub(crate) float64: crate::float64::F64Kernels,
 }
 impl CudaRuntime {
     pub fn new() -> Result<Self, CudaError> {
@@ -125,6 +127,7 @@ impl CudaRuntime {
             statistics: self.statistics.clone(),
             attention: self.attention.clone(),
             convolution: self.convolution.clone(),
+            float64: self.float64.clone(),
         })
     }
     pub fn from_device(device: CudaDevice) -> Result<Self, CudaError> {
@@ -196,6 +199,7 @@ impl CudaRuntime {
             statistics: crate::statistics::StatisticsKernels::load(&module)?,
             attention: crate::attention::AttentionKernel::load(&module)?,
             convolution: crate::convolution::ConvKernels::load(&module)?,
+            float64: crate::float64::F64Kernels::load(&module)?,
             owner: Arc::new(()),
             device,
             capabilities,
@@ -374,6 +378,9 @@ impl TensorBackend for CudaRuntime {
     type Error = CudaError;
     fn kind(&self) -> BackendKind {
         BackendKind::Cuda
+    }
+    fn f64_support(&self) -> tensor_core::Float64Support {
+        tensor_core::Float64Support::Native
     }
     fn upload_f32(&self, shape: Shape, values: &[f32]) -> Result<CudaTensor, CudaError> {
         if shape.numel() != values.len() {

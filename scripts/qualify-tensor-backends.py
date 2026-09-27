@@ -47,6 +47,9 @@ def main():
         runs.append((name, packages, required_env))
         runs.append((f"math-{name}", ["-p", "osv-math", "--features", f"tensor-{name}",
                                      "--test", "tensor_math"], required_env))
+        if name == "cuda":
+            runs.append(("math-cuda-f64", ["-p", "osv-math", "--features", "tensor-cuda",
+                                           "--test", "tensor_f64"], required_env))
     for name, packages, required_env in runs:
         command = [*base, *packages, "--", "--test-threads=1", "--nocapture"]
         path = output / f"{name}.txt"

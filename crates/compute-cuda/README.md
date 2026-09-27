@@ -438,7 +438,8 @@ grouped query heads, broadcast batches and signed causal offsets.
 
 CUDA retains f64 row summaries/partials and the attention accumulator during
 preparation. All physical bytes count against the scratch limit; f64 is internal
-kernel state, not a public tensor dtype. Singleton and zero-key results are
+kernel state in prepared programs. Public eager f64 tensors use the separate
+`TensorF64Backend` contract below. Singleton and zero-key results are
 initialized on every replay. The ordinary eager API uses the same launch helpers.
 
 ```rust,no_run
@@ -853,3 +854,47 @@ all 52 entry points and their parameter widths were checked in the
 logs and reproduction. CUDA execution, cuBLAS results, numerical checks on
 NVIDIA and performance measurements still require the mandatory hardware run
 above. No CUDA speedup is claimed.
+
+
+## Native binary64 tensors
+
+`TensorF64Backend` exposes `CudaTensor<f64>` with double-precision unary/binary
+arithmetic, reductions and mean, views, matrix products and explicit evaluation.
+`f64_support()` reports `Float64Support::Native`. A missing CUDA/cuBLAS library
+returns an error; this path does not convert to f32 or run arithmetic on the CPU.
+
+The cuBLAS path uses `CUDA_R_64F` for both operands/output and double alpha/beta,
+with `CUBLAS_COMPUTE_64F_PEDANTIC`. This follows the
+[cuBLAS 12.8 compute/scale type contract](https://docs.nvidia.com/cuda/archive/12.8.0/cublas/index.html#cublasgemmex).
+The shared GEMM planner validates eight-byte output extents, and typed launch
+validation rejects mismatched output/compute modes. No Tensor Core speedup is
+claimed for this path. Parallel reductions and transcendental functions do not
+promise bit-identical CPU results. Finite intermediates and valid unary domains
+are required; sum and sum-based mean can overflow even for finite inputs.
+
+```rust,no_run
+use compute_cuda::CudaRuntime;
+use tensor_core::{BinaryOp, Shape, TensorF64Backend};
+# fn main() -> Result<(), Box<dyn std::error::Error>> {
+let runtime = CudaRuntime::new()?;
+let a = runtime.upload_f64(Shape::new(vec![2])?, &[100_000_000., 100_000_001.])?;
+let origin = runtime.upload_f64(Shape::new(vec![])?, &[100_000_000.])?;
+let delta = runtime.binary_f64(BinaryOp::Subtract, &a, &origin)?;
+assert_eq!(runtime.read_f64(&delta)?, [0., 1.]);
+# Ok(()) }
+```
+
+`math_core::tensor::TensorMathF64` composes this contract for resident transforms,
+bounds, pair distances and centered covariance without narrowing coordinates.
+F64 indexing/scans/scatter, stable statistics, attention, convolution and
+prepared/graph APIs remain open. WGSL/MLX binary64 arithmetic remains unsupported.
+
+Run the required hardware fixtures with:
+
+```sh
+COMPUTE_REQUIRE_CUDA=1 cargo test --manifest-path crates/Cargo.toml -p compute-cuda --test float64 -- --nocapture
+COMPUTE_REQUIRE_CUDA=1 cargo test --manifest-path crates/Cargo.toml -p osv-math --features tensor-cuda --test tensor_f64 -- --nocapture
+```
+
+The [qualification report](../../docs/qualification/tensor-float64-2026-09-27.md)
+records NVRTC/host evidence separately from the missing NVIDIA execution proof.
