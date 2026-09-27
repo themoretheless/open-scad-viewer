@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { computed, nextTick, ref, shallowRef, watch } from 'vue'
 import { stringifyMeshJson } from '../services/meshJson'
+import ModelingFloorGrid from '../components/ModelingFloorGrid.vue'
+import ModelingGridControls from '../components/ModelingGridControls.vue'
 import CommandPalette from '../components/CommandPalette.vue'
 import type { PaletteCommand } from '../services/commandSearch'
 import { SCULPT_FALLOFFS, SCULPT_KINDS, buildSculptBrush, isFractionalSculptKind, type SculptFalloff, type SculptKind } from '../services/geometryEditing'
@@ -117,21 +119,6 @@ watch([() => props.open, () => props.seedDocument], ([open, seed]) => {
   } catch (e) { error.value = e instanceof Error ? e.message : String(e) }
 }, { immediate: true })
 const floorVisible = ref(true)
-const floorLines = computed(() => {
-  const cam = camera.value
-  // The SVG shows roughly 10000 / view world units across; keep about 20 grid cells in view.
-  const step = Math.pow(10, Math.floor(Math.log10(Math.max(1, 10000 / view.value / 4))))
-  const extent = step * 20
-  const lines: string[] = []
-  for (let i = -20; i <= 20; i++) {
-    const n = i * step
-    for (const line of [[[-extent, n, 0], [extent, n, 0]], [[n, -extent, 0], [n, extent, 0]]] as const) {
-      lines.push(line.map(p => { const q = projectDirectPoint([p[0], p[1], p[2]], cam); return `${q[0]},${-q[1]}` }).join(' '))
-    }
-  }
-  return lines
-})
-
 const selected = computed(() => document.value.objects.find(o => o.id === selection.value))
 const stats = computed(() => {
   if (!selected.value) return null
@@ -686,6 +673,7 @@ const scene = computed(() => document.value.objects.filter(o => o.visible).map(o
         <span class="subtle">{{ stats ? `${stats.vertices}v · ${stats.edges}e · ${stats.faces}f · ${stats.closed ? label('замкнут', 'closed') : label('открыт', 'open')}` : label('ЛКМ: вращение · Shift: панорама · колесо: масштаб', 'LMB: orbit · Shift: pan · wheel: zoom') }}</span>
         <p v-if="error" class="error" role="alert">{{ error }}</p>
       </div>
+      <ModelingGridControls :locale="locale" />
       <div class="mesh-stage">
       <div class="mesh-stage-view">
       <div class="mesh-view-wrap">
@@ -702,7 +690,7 @@ const scene = computed(() => document.value.objects.filter(o => o.visible).map(o
         @wheel.prevent="onWheel"
       >
         <g :transform="`translate(${center[0]},${center[1]}) scale(${view / 100})`">
-          <g v-if="floorVisible" pointer-events="none"><polyline v-for="(line, i) in floorLines" :key="i" :points="line" fill="none" stroke="var(--border)" stroke-opacity=".45" stroke-width=".5" vector-effect="non-scaling-stroke" /></g>
+          <ModelingFloorGrid v-if="floorVisible" :camera="camera" :size="20000 / view" :center="[-center[0] * 100 / view, -center[1] * 100 / view]" flip-y />
           <g v-for="object in scene" :key="object.id" :opacity="object.id === selection ? 1 : 0.55">
             <polygon
               v-for="tri in object.tris"
