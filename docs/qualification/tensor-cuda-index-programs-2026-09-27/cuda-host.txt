@@ -1,0 +1,179 @@
+warning: binary `wgsl_export` should have a kebab-case name
+  |
+1 | /Users/themoretheless/Documents/Sources/open-scad-viewer/crates/target/.../wgsl_export
+  |                                                                            ^^^^^^^^^^^
+  |
+  = note: `cargo::non_kebab_case_bins` is set to `warn` by default
+help: to change the binary name to `wgsl-export`, convert the file stem
+  |
+1 - src/bin/wgsl_export.rs
+1 + src/bin/wgsl-export.rs
+  |
+warning: `raster-core` (manifest) generated 1 warning
+   Compiling compute-cuda v0.1.0 (/Users/themoretheless/Documents/Sources/open-scad-viewer/crates/compute-cuda)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 1.11s
+     Running unittests src/lib.rs (crates/target/debug/build/compute-cuda/e31d80fd51d43af8/out/compute_cuda-e31d80fd51d43af8)
+
+running 116 tests
+test attention::tests::matrix_promotion_is_a_view_even_with_transposed_strides ... ok
+test attention::tests::metadata_preserves_offsets_strides_broadcast_and_grouped_heads ... ok
+test dispatch::tests::shared_metadata_preserves_offsets_and_broadcast_strides ... ok
+test indexing::compact_dispatch::tests::broadcast_masks_and_strided_values_preserve_logical_order ... ok
+test indexing::compact_dispatch::tests::scalar_empty_and_u32_capacity_bound_have_checked_shapes ... ok
+test indexing::dispatch::tests::copy_preserves_offset_and_raw_low_width ... ok
+test indexing::dispatch::tests::dispatch_bounds_prevent_short_storage ... ok
+test indexing::dispatch::tests::select_broadcasts_three_distinct_offsets ... ok
+test indexing::gather::tests::gather_flat_addressing_preserves_prefix_indices_and_suffix_axes ... ok
+test indexing::gather_dispatch::tests::empty_outputs_do_not_suppress_original_index_count ... ok
+test indexing::gather_dispatch::tests::every_buffer_extent_is_checked ... ok
+test indexing::gather_dispatch::tests::scalar_and_empty_indices_keep_distinct_counts ... ok
+test indexing::gather_dispatch::tests::strided_gather_preserves_offsets_and_index_traversal ... ok
+test indexing::scan_dispatch::tests::chunks_and_accumulator_shapes_cover_boundary_and_multilevel_tails ... ok
+test indexing::scan_dispatch::tests::empty_geometry_avoids_zero_division_and_unused_suffix_overflow ... ok
+test indexing::scan_dispatch::tests::rows_and_carries_map_every_strided_axis_and_direction ... ok
+test indexing::scan_dispatch::tests::validation_rejects_invalid_axis_sizes_and_short_buffers_before_launch ... ok
+test indexing::scatter_dispatch::tests::empty_base_and_empty_indices_still_have_independent_count_geometry ... ok
+test indexing::scatter_dispatch::tests::invalid_axis_broadcast_and_position_token_overflow_are_rejected ... ok
+test indexing::scatter_dispatch::tests::raw_low_outputs_require_complete_cas_words ... ok
+test indexing::scatter_dispatch::tests::strided_broadcast_updates_and_indices_share_logical_addressing ... ok
+test libraries::tests::an_old_library_returns_its_missing_symbol_before_any_call ... ok
+test low_dispatch::tests::binary_broadcast_preserves_strides_offsets_and_unsigned_dtype_tag ... ok
+test low_dispatch::tests::empty_shapes_skip_work_and_casts_check_both_storage_widths ... ok
+test low_dispatch::tests::scalar_cast_and_strided_unary_keep_native_abi_metadata ... ok
+test low_precision::tests::native_low_gemm_support_is_explicit_and_storage_is_two_bytes ... ok
+test low_scatter::tests::low_scatter_cas_words_fit_padded_allocations ... ok
+test matmul::plan::tests::broadcast_batches_and_offsets_match_explicit_nested_loops ... ok
+test matmul::plan::tests::empty_and_zero_k_plans_skip_gemm_but_retain_output_requirements ... ok
+test matmul::plan::tests::invalid_geometry_is_rejected_before_launch ... ok
+test matmul::plan::tests::matrix_repeats_without_allocating_a_descriptor_per_batch ... ok
+test matmul::plan::tests::promotion_preserves_vector_results_and_original_nonzero_offsets ... ok
+test matmul::tests::gemm_storage_types_match_the_cublas_abi ... ok
+test policy::tests::precision_is_explicit_and_unsupported_modes_do_not_fall_back ... ok
+test policy::tests::rectangular_row_major_layout_and_integer_limits ... ok
+test program::builder::indexing_tests::compact_broadcast_mask_retains_raw_values_full_capacity_and_scalar_count ... ok
+test program::builder::indexing_tests::empty_results_keep_index_count_steps_and_scan_validates_scalar_axis ... ok
+test program::builder::indexing_tests::error_tests::expanded_updates_and_mask_must_fit_without_expanding_base_shape ... ok
+test program::builder::indexing_tests::error_tests::foreign_values_and_late_compound_errors_restore_both_results ... ok
+test program::builder::indexing_tests::error_tests::gather_expansion_and_low_accumulator_byte_limits_fail_without_partial_counts ... ok
+test program::builder::indexing_tests::error_tests::low_scatter_requires_matching_dtype_even_when_outputs_are_empty ... ok
+test program::builder::indexing_tests::error_tests::oversized_index_counts_are_checked_even_for_empty_values_outputs ... ok
+test program::builder::indexing_tests::error_tests::raw_low_scatter_rejects_word_padding_overflow_before_recording ... ok
+test program::builder::indexing_tests::error_tests::wrong_dtypes_indices_masks_and_axes_leave_every_slot_unchanged ... ok
+test program::builder::indexing_tests::gather_replaces_only_selected_axis_and_retains_once_per_index_count ... ok
+test program::builder::indexing_tests::scalar_compaction_preserves_source_offset_and_one_raw_slot ... ok
+test program::builder::indexing_tests::scans_preserve_axis_modes_and_strides_with_explicit_low_final_rounding ... ok
+test program::builder::indexing_tests::scatter_tests::count_outputs_compose_into_later_index_and_scan_nodes_with_aliasing_inputs ... ok
+test program::builder::indexing_tests::scatter_tests::every_low_scatter_mode_can_keep_f32_accumulator_without_rounding_to_low ... ok
+test program::builder::indexing_tests::scatter_tests::scalar_indices_and_empty_index_axes_use_shared_scatter_shape_rules ... ok
+test program::builder::indexing_tests::scatter_tests::scatter_modes_keep_base_shape_and_broadcast_updates_without_value_expansion ... ok
+test program::builder::indexing_tests::zero_target_axis_keeps_nonempty_gather_and_empty_scatter_count_work ... ok
+test program::builder::tests::all_unary_operations_and_affine_keep_the_shared_kernel_abi ... ok
+test program::builder::tests::binary_broadcast_preserves_offsets_and_records_every_operation ... ok
+test program::builder::tests::broadcast_matmul_output_overflow_rolls_back_materialization ... ok
+test program::builder::tests::compound_failure_rolls_back_new_inputs_values_scratch_and_steps ... ok
+test program::builder::tests::empty_axes_alias_and_empty_contractions_remain_explicit_per_replay ... ok
+test program::builder::tests::empty_matmul_retains_precision_and_skips_unused_materialization ... ok
+test program::builder::tests::invalid_records_and_foreign_values_preserve_all_slots ... ok
+test program::builder::tests::matmul_materializes_strides_and_preserves_broadcast_vector_shape ... ok
+test program::builder::tests::oversized_inputs_broadcasts_and_blas_dimensions_fail_before_recording ... ok
+test program::builder::tests::reduction_keeps_axis_order_broadcast_count_and_mean_policy ... ok
+test program::builder::tests::views_alias_and_strided_reshape_inserts_one_logical_copy ... ok
+test program::builder::typed_tests::broadcast_mask_does_not_impose_a_full_size_u32_allocation_on_low_selection ... ok
+test program::builder::typed_tests::casts_keep_each_explicit_rounding_boundary_and_dtype ... ok
+test program::builder::typed_tests::empty_axis_low_reductions_decode_but_unsigned_keeps_raw_identity ... ok
+test program::builder::typed_tests::empty_low_matmul_keeps_dtype_for_native_capability_preflight ... ok
+test program::builder::typed_tests::low_arithmetic_comparison_and_selection_record_direct_low_values ... ok
+test program::builder::typed_tests::low_matmul_preserves_native_inputs_and_applies_only_final_cast ... ok
+test program::builder::typed_tests::mixed_low_types_are_rejected_even_for_empty_results ... ok
+test program::builder::typed_tests::ordinary_f32_entry_points_reject_typed_inputs_before_recording ... ok
+test program::builder::typed_tests::raw_typed_views_keep_dtype_offsets_and_materialize_only_when_needed ... ok
+test program::builder::typed_tests::reductions_choose_accumulator_dtype_and_low_output_rounds_once ... ok
+test program::builder::typed_tests::three_way_select_allows_empty_mask_to_bound_oversized_value_broadcast ... ok
+test program::builder::typed_tests::typed_foreign_and_invalid_mask_values_leave_no_partial_graph ... ok
+test program::builder::typed_tests::unsigned_arithmetic_comparison_and_selection_never_record_float_storage ... ok
+test program::builder::typed_tests::widening_and_compare_output_limits_fail_without_recording ... ok
+test program::gate::tests::an_enqueue_error_permanently_blocks_future_validation_and_launches ... ok
+test program::gate::tests::late_dtype_failure_cannot_enqueue_or_poison_and_legacy_outputs_are_checked ... ok
+test program::gate::tests::late_invalid_output_cannot_enqueue_and_validation_errors_are_reusable ... ok
+test program::gate::tests::late_precision_failure_blocks_enqueue_without_poisoning ... ok
+test program::indexing_preparation_tests::compaction_resets_both_outputs_and_retains_u32_prefix_scratch ... ok
+test program::indexing_preparation_tests::complete_indexing_budget_checks_cas_padding_before_device_work ... ok
+test program::indexing_preparation_tests::empty_index_scatter_copies_base_without_allocating_owners_or_cas_padding ... ok
+test program::indexing_preparation_tests::invalid_counts_survive_empty_values_and_zero_axis_lengths ... ok
+test program::indexing_preparation_tests::low_scatter_add_widens_base_only_and_rounds_after_f32_accumulation ... ok
+test program::indexing_preparation_tests::raw_low_scatter_pads_only_its_private_cas_output_and_resets_owners ... ok
+test program::indexing_preparation_tests::scan_retains_full_hierarchy_and_uses_f32_after_native_low_first_pass ... ok
+test program::plan::tests::storage_byte_limits_apply_to_views_and_empty_sentinels ... ok
+test program::plan::tests::two_byte_storage_limits_and_empty_sentinels_are_type_specific ... ok
+test program::preparation_tests::budgets_include_expanded_scratch_and_scalar_metadata_before_resource_preparation ... ok
+test program::preparation_tests::empty_contractions_and_k_zero_have_explicit_repeatable_identity_writes ... ok
+test program::preparation_tests::empty_scratch_counts_sentinel_but_issues_no_dispatch_or_metadata ... ok
+test program::preparation_tests::full_reduction_expansion_and_mean_include_every_partial_and_division ... ok
+test program::preparation_tests::no_work_matmul_retains_precision_for_every_replay_validation ... ok
+test program::preparation_tests::scalar_metadata_sentinel_and_duplicate_terminal_copies_are_counted ... ok
+test program::preparation_tests::zero_work_matmul_still_validates_precision_before_preparing_resources ... ok
+test program::scratch::tests::bad_slots_do_not_take_storage_or_call_launch ... ok
+test program::scratch::tests::two_destinations_are_disjoint_and_restored_after_enqueue_failure ... ok
+test program::typed_preparation_tests::every_low_gemm_keeps_capability_checks_even_without_element_work ... ok
+test program::typed_preparation_tests::low_axes_identity_decodes_but_raw_view_outputs_only_copy ... ok
+test program::typed_preparation_tests::low_partial_hierarchy_uses_f32_and_never_a_full_converted_input ... ok
+test program::typed_preparation_tests::scratch_byte_counts_follow_all_four_storage_widths_including_sentinels ... ok
+test program::typed_preparation_tests::strided_low_gemm_materializes_only_native_storage_and_rounds_final_result ... ok
+test program::typed_preparation_tests::typed_byte_budgets_reject_one_byte_short_without_resource_preparation ... ok
+test program::typed_preparation_tests::unsigned_partial_hierarchy_stays_unsigned_and_empty_product_fills_one ... ok
+test program::validation::tests::all_outputs_are_validated_before_late_alias_or_layout_failure ... ok
+test program::validation::tests::every_dtype_mismatch_is_rejected_before_empty_layout_shortcuts ... ok
+test program::validation::tests::fixed_inputs_accept_new_storage_and_readonly_aliases_but_reject_changed_views ... ok
+test program::validation::tests::scalar_and_empty_dense_outputs_still_need_unique_storage_and_matching_shape ... ok
+test reduction::dispatch::tests::axes_preserve_broadcast_order_offset_and_kept_shape ... ok
+test reduction::dispatch::tests::descriptors_reject_invalid_axes_empty_contractions_and_device_limits ... ok
+test reduction::dispatch::tests::full_pass_hierarchy_bounds_and_strided_first_load ... ok
+test reduction::tests::reduction_metadata_keeps_axis_order_and_broadcast_strides ... ok
+test runtime::tests::logical_broadcast_count_is_bounded_without_allocating ... ok
+test statistics::tests::row_plan_preserves_strides_and_bounds_partial_storage ... ok
+
+test result: ok. 116 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+     Running tests/cuda_tensor.rs (crates/target/debug/build/compute-cuda/0bd32056ac749a4b/out/cuda_tensor-0bd32056ac749a4b)
+
+running 1 test
+test native_cuda_tensor_contract ... SKIP CUDA runtime qualification: CUDA unavailable: CUDA driver/device is absent or initialization failed
+ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/prepared.rs (crates/target/debug/build/compute-cuda/fbf2745e2d79caab/out/prepared-fbf2745e2d79caab)
+
+running 1 test
+test native_cuda_prepared_contract ... SKIP native prepared CUDA qualification: CUDA unavailable: CUDA driver/device is absent or initialization failed
+ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/prepared_indexing.rs (crates/target/debug/build/compute-cuda/39329e172afc4334/out/prepared_indexing-39329e172afc4334)
+
+running 1 test
+test native_cuda_prepared_indexing_contract ... SKIP native prepared CUDA indexing qualification: CUDA unavailable: CUDA driver/device is absent or initialization failed
+ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests/prepared_typed.rs (crates/target/debug/build/compute-cuda/6e1b10e95778f816/out/prepared_typed-6e1b10e95778f816)
+
+running 1 test
+test native_cuda_prepared_typed_contract ... SKIP native typed prepared CUDA qualification: CUDA unavailable: CUDA driver/device is absent or initialization failed
+ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests compute_cuda
+
+running 4 tests
+test compute-cuda/src/lib.rs - (line 103) - compile ... ok
+test compute-cuda/src/lib.rs - (line 133) - compile ... ok
+test compute-cuda/src/lib.rs - (line 18) - compile ... ok
+test compute-cuda/src/lib.rs - (line 220) - compile ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+all doctests ran in 0.59s; merged doctests compilation took 0.26s

@@ -1,7 +1,8 @@
 # Reusable CUDA tensor execution
 
 Date: 2026-09-27. Prepared f32/u32/f16/bf16 execution is implemented; host and
-NVRTC qualification are recorded [separately](../qualification/tensor-cuda-typed-programs-2026-09-27.md).
+indexing qualification is recorded [separately](../qualification/tensor-cuda-index-programs-2026-09-27.md),
+alongside the [typed/NVRTC evidence](../qualification/tensor-cuda-typed-programs-2026-09-27.md).
 NVIDIA execution and timing are pending. The CUDA Graph mode below remains a
 proposal based on source inspection and NVIDIA documentation.
 
@@ -11,7 +12,8 @@ A **prepared resident program** validates a fixed computation, uploads layout
 metadata and allocates intermediates once. Each execution binds the caller's
 current resident inputs and writes caller-owned outputs. Dtype and full input
 layout are fixed. The schedule supports typed views, arithmetic, comparisons,
-selection, explicit low casts, reductions, mean and cuBLAS matmul. f16/bf16
+selection, explicit low casts, reductions, mean, cuBLAS matmul and all four
+indexing families: scan, gather, compaction and scatter. f16/bf16
 intermediates use native two-byte storage; reductions and native low GEMM can
 produce f32 results directly without full-input conversion buffers.
 
@@ -89,7 +91,7 @@ CudaProgramBuilder::input(&mut self, layout: Layout) -> Result<CudaValue, CudaEr
 CudaProgramBuilder::input_u32(&mut self, layout: Layout) -> Result<CudaValue, CudaError>
 CudaProgramBuilder::input_low(&mut self, dtype: LowDtype, layout: Layout)
     -> Result<CudaValue, CudaError>
-// typed arithmetic, compare/select, casts, reductions/mean and dtype-preserving views
+// typed arithmetic, casts, reductions/mean, views and indexing with resident counts
 CudaProgramBuilder::matmul(&mut self, left: CudaValue, right: CudaValue,
                           precision: MatmulPrecision) -> Result<CudaValue, CudaError>
 CudaProgramBuilder::prepare(self, outputs: &[CudaValue], options: CudaPrepareOptions)
@@ -113,7 +115,8 @@ typed intermediates. `CudaProgramInput`/`CudaProgramOutputMut` borrow f32, u32 o
 checked accessors. F16/BF16 retain distinct dtype tags through the low wrapper.
 A prepared program borrows its runtime, owns metadata/intermediates, and retains
 no caller input/output clones between executions. The [crate README](../../crates/compute-cuda/README.md#prepared-resident-programs)
-contains compiled `no_run` examples for f32 and mixed typed signatures.
+contains compiled `no_run` examples for f32, mixed typed signatures and a
+gather → scan → compact → scatter pipeline with resident count composition.
 
 ### Typed operation boundary
 
@@ -124,16 +127,37 @@ contains compiled `no_run` examples for f32 and mixed typed signatures.
 - f16/bf16: nine unary/six binary operations, reductions, mean and native low
   matmul. Binary/select/matmul operands must have matching low dtypes.
 - All formats: materialize, reshape, permute, broadcast, six comparisons to u32,
-  and selection with nonzero u32 masks. Low copies/select retain raw bits.
+  selection, scan, gather, stable compaction and all five scatter modes. Low
+  copies/select/gather/compact and Replace retain raw payloads.
 - Cast nodes explicitly connect f32 and low storage. Each low arithmetic node
   evaluates in f32 then rounds to low once; subsequent nodes see that rounded
   value. Low reductions decode native u16 into an f32 hierarchy. `*_low_f32`
   reductions/mean/matmul retain the f32 result; low outputs add a single final
   cast. Strided copies keep the source dtype.
 
-Scan/gather/compaction/scatter, statistics/normalization and attention remain
-eager operations. There is no builder narrow node, graph capture, fusion or
-scratch pooling. A pre-existing narrow view can be a fixed-layout input.
+Statistics/normalization and attention remain eager operations. There is no
+builder narrow node, graph capture, fusion or scratch pooling. A pre-existing
+narrow view can be a fixed-layout input.
+
+### Resident indexing
+
+Scan retains the axis/mode contract and recursively prepared chunk carries;
+low inputs decode directly into f32 accumulators, with one optional final cast.
+Gather and scatter return a scalar u32 invalid count beside their values.
+Compaction returns fixed-capacity values and a scalar u32 selected count.
+Counts are ordinary recorded values usable by later nodes without a readback.
+Invalid indices count once per logical index even for empty values outputs.
+Scalar indices remove the gathered axis; masks and updates obey the shared
+broadcast rules.
+
+Before each replay's dependent passes, explicit asynchronous clears reset
+invalid counters, compaction values/count and Replace owner tables. Scatter
+copies or decodes the current base on every run. Replace is deterministic for
+duplicate indices. Low Add/Multiply use an f32 destination and direct u16 update
+loads; low output adds one final cast. Raw low Replace/Min/Max use even native16
+scratch capacity for aligned full-word CAS; terminal copies expose unpadded
+logical outputs. Scratch budgeting includes physical padding, scan totals,
+flags/prefixes and owner/count buffers.
 
 ### Fixed signatures and validation
 
@@ -180,9 +204,11 @@ Zero sizes still need a concrete schedule: empty outputs have no element work;
 K=0 matmul and empty sum/product contractions write their identities on every
 replay. No stale scratch or previous output may supply an implicit result.
 
-Expose planned kernel launches, GEMM calls, scratch bytes and metadata bytes in
-`CudaProgramStats`. These describe our schedule, not the number of kernels
-chosen internally by cuBLAS or measured peak device allocation.
+`CudaProgramStats` separates `kernel_launches`, `gemm_calls` and `memset_calls`.
+The last field counts explicit asynchronous replay clears, excluding preparation;
+it is not a kernel count. Scratch/metadata bytes describe retained adapter
+storage, including raw low padding. These are schedule counts, not cuBLAS's
+internal kernel count or measured peak device allocation.
 
 ## Graph mode: separate fixed-address contract
 
@@ -294,8 +320,8 @@ NVIDIA profiler on representative hardware before claiming it.
 ### Can be checked on the current CPU host
 
 - Pure planning tests: broadcast/view propagation, nonzero offsets, invalid node
-  identities, reductions, scalar/empty/K=0 shapes, GEMM batch offsets, overflow and
-  preparation budgets.
+  identities, reductions/scans, indexing shapes/counts, scalar/empty/K=0 shapes,
+  GEMM batch offsets, raw low padding, overflow and preparation budgets.
 - Mock execution boundary: all validation precedes enqueue; replay requests no
   device allocations, metadata uploads or recompilation; identities are written
   each replay; new input/output handles populate the launch arguments.
@@ -331,7 +357,8 @@ NVIDIA profiler on representative hardware before claiming it.
 ## Scope and rollout
 
 1. Implemented: shared CUDA launch preparation, typed builder/transport and
-   prepared `run_typed_into`, with compatible f32 methods. CPU planner, binding,
+   prepared `run_typed_into`, including typed indexing and compatible f32 methods.
+   CPU planner, binding,
    budget and poison-state tests pass; NVRTC compiled 52 current entries for
    compute_70/80/90/120. Required native fixtures are present, but numerical
    execution remains unverified on the current Apple host.
