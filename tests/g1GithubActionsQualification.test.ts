@@ -159,9 +159,15 @@ function fixture(): { artifacts: string; first: string } {
 
 function aggregate(artifacts: string, suffix: string, sha = sourceSha, githubSha = sha) {
   const output = resolve(dirname(artifacts), `result-${suffix}.json`)
+  // The harness checks the live hosted-runner image whenever one is present.
+  // These cases exercise evidence integrity, so they must not depend on the
+  // image of whichever GitHub runner happens to execute the test suite.
+  const env: NodeJS.ProcessEnv = { ...process.env, GITHUB_SHA: githubSha }
+  delete env.ImageOS
+  delete env.ImageVersion
   const child = spawnSync(process.execPath, [
     harness, 'aggregate', '--artifacts', artifacts, '--source-sha', sha, '--output', output,
-  ], { cwd: root, encoding: 'utf8', env: {...process.env, GITHUB_SHA: githubSha} })
+  ], { cwd: root, encoding: 'utf8', env })
   return { process: child, output }
 }
 

@@ -109,6 +109,7 @@ describe('environment map upload', () => {
 
 describe('renderer texture load errors', () => {
   it('surface through the lifecycle status so a later frame can clear them', () => {
+    const log = vi.spyOn(console, 'error').mockImplementation(() => undefined)
     const renderer = new WebGPURenderer()
     const events: string[] = []
     renderer.onStatusChange = event => { events.push(event.status) }
@@ -116,6 +117,8 @@ describe('renderer texture load errors', () => {
     hooks.onLoadError(new Error('Renderer: matcap fetch failed (404)'))
     expect(renderer.currentStatus.status).toBe('error')
     expect(events).toEqual(['error'])
+    expect(log).toHaveBeenCalledOnce()
+    log.mockRestore()
   })
 })
 
