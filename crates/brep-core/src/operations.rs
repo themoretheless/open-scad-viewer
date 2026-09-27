@@ -1767,6 +1767,42 @@ pub fn push_planar_face(model: &Model, face_id: usize, distance: f64) -> Result<
             "Face displacement must be finite and within ±1000000 mm",
         ));
     }
+    if let Some(cylinder) = crate::intersections::recognize_cylinder(model)? {
+        let cap = cylinder
+            .caps
+            .iter()
+            .position(|&id| id == face_id)
+            .ok_or_else(|| unsupported("Cylinder push/pull requires a planar end cap"))?;
+        let height = 2. * cylinder.half_height;
+        let next_height = height + distance;
+        if next_height <= model.tolerance_mm * 8. {
+            return Err(failed("Displacement consumes the cylinder"));
+        }
+        // Stretch only along the axis, fixing the opposite cap. Affine mapping
+        // preserves rational circles, trim curves, and retained topology IDs.
+        let fixed = add(
+            cylinder.center,
+            mul(
+                cylinder.axis,
+                if cap == 0 {
+                    cylinder.half_height
+                } else {
+                    -cylinder.half_height
+                },
+            ),
+        );
+        let delta = distance / height;
+        let mut matrix = [[0.; 4]; 4];
+        for i in 0..3 {
+            for j in 0..3 {
+                matrix[i][j] =
+                    if i == j { 1. } else { 0. } + delta * cylinder.axis[i] * cylinder.axis[j];
+            }
+            matrix[i][3] = -delta * cylinder.axis[i] * dot(cylinder.axis, fixed);
+        }
+        matrix[3][3] = 1.;
+        return crate::transform::affine(model, matrix);
+    }
     let mut planes = convex_planes(model)?;
     let faces = &model.shells[model.bodies[0].outer_shell].faces;
     let selected = faces
