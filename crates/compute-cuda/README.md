@@ -306,8 +306,7 @@ poisons the program. Outputs can be partially modified after such a failure;
 recovery requires a new program and appropriate runtime recovery. There is no
 rollback of GPU work.
 
-Statistics/normalization and attention remain available through eager APIs
-only. The builder has no narrow node, CUDA Graph capture, generated fusion,
+The builder has no narrow node, CUDA Graph capture, generated fusion,
 asynchronous readback or scratch pooling.
 Externally created narrow views can still supply fixed input layouts.
 
@@ -341,6 +340,41 @@ vector-matrix products remove the inserted row axis. Leading batches broadcast
 for either vector case. Zero-length vector dot products return scalar zero;
 scalar operands remain invalid. Precision policy and cuBLAS dimension limits
 are unchanged.
+
+### Reusable statistics and attention
+
+See the [CUDA/MLX statistics and attention qualification](../../docs/qualification/tensor-prepared-statistics-2026-09-27.md) for current checks and hardware limits.
+
+The builder records `softmax`, `log_softmax`, `logsumexp`, population `moments`,
+`layer_norm` and `attention`. Low inputs expose `_low_f32` results and `_low`
+results with one final cast. Attention keeps f32 additive/u32 keep masks,
+grouped query heads, broadcast batches and signed causal offsets.
+
+CUDA retains f64 row summaries/partials and the attention accumulator during
+preparation. All physical bytes count against the scratch limit; f64 is internal
+kernel state, not a public tensor dtype. Singleton and zero-key results are
+initialized on every replay. The ordinary eager API uses the same launch helpers.
+
+```rust,no_run
+use compute_cuda::{CudaPrepareOptions, CudaRuntime};
+use tensor_core::{AttentionMask, AttentionOptions, Layout, Shape, TensorBackend};
+
+let cuda = CudaRuntime::new()?;
+let shape = Shape::new(vec![2, 2])?;
+let mut graph = cuda.program();
+let x = graph.input(Layout::contiguous(shape.clone())?)?;
+let probabilities = graph.softmax(x, &[1])?;
+let attended = graph.attention(probabilities, probabilities, x,
+    AttentionMask::None, AttentionOptions::default())?;
+let normalized = graph.layer_norm(attended, &[1], 1e-5)?;
+let moments = graph.moments(attended, &[1], false)?;
+let mut program = graph.prepare(&[normalized, moments.mean, moments.variance],
+    CudaPrepareOptions::default())?;
+let input = cuda.upload_f32(shape, &[1., 2., 3., 4.])?;
+let outputs = program.run(&[&input])?;
+program.synchronize()?;
+# Ok::<(), Box<dyn std::error::Error>>(())
+```
 
 ### Stable statistics and normalization
 

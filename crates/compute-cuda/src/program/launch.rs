@@ -35,6 +35,14 @@ impl Instruction {
         let metadata = || self.metadata.as_ref().expect("prepared metadata exists");
         let input = |id| source(id, inputs, scratch);
         match &self.operation {
+            Operation::StatisticsPartial { .. }
+            | Operation::StatisticsMerge { .. }
+            | Operation::StatisticsEmit { .. }
+            | Operation::StatisticsLse { .. }
+            | Operation::StatisticsMoments { .. }
+            | Operation::Attention { .. } => {
+                self.launch_statistics(rt, inputs, scratch, output, auxiliary)
+            }
             Operation::InvalidIndices { .. }
             | Operation::Gather { .. }
             | Operation::ScatterOwners { .. }

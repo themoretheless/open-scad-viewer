@@ -6,6 +6,7 @@
 //! NVIDIA hardware; successful compilation on another platform is not GPU proof.
 #![doc = include_str!("../README.md")]
 mod attention;
+mod attention_dispatch;
 mod dispatch;
 mod error;
 mod indexing;
@@ -23,6 +24,7 @@ mod program;
 mod reduction;
 mod runtime;
 mod statistics;
+mod statistics_dispatch;
 
 pub use error::CudaError;
 pub use low_precision::CudaLowTensor;

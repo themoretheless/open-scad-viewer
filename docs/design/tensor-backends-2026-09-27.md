@@ -368,7 +368,7 @@ fixture. See [qualification and matched measurements](../qualification/tensor-lo
 | Low statistics, f32/low outputs | Direct packed loads; Metal execution | Native u16 loads; numerical hardware qualification pending | Direct low Metal kernels; Metal execution |
 | Low attention, f32/low outputs | Streaming/split-key packed loads; Metal execution | Native u16 shared online body; numerical hardware qualification pending | Custom streaming Metal kernel; Metal execution |
 | Masked attention, grouped query heads, signed causal alignment | Streaming WGSL tiles; no score buffers | Online f64 device kernel; numerical hardware qualification pending | Native fast attention and resident GPU graph |
-| Recorded reuse | `ComputeProgram`, device-resident intermediates | Prepared f32/u32/f16/BF16 schedules including indexing/count composition; host/NVRTC qualified, NVIDIA execution pending | Fixed-shape f32/u32/f16/BF16 programs; typed replay qualification below |
+| Recorded reuse | `ComputeProgram`, device-resident intermediates | Prepared f32/u32/f16/BF16 schedules including indexing/count composition, statistics and attention; NVIDIA execution pending | Fixed-shape f32/u32/f16/BF16 programs; typed replay qualification below |
 
 `tensor-core` tests check shape/layout contracts independently of any GPU. The
 optional `conformance` module runs identical deterministic scenarios against each
@@ -458,9 +458,8 @@ checks. Unsupported modes must not silently become a different arithmetic policy
 3. Qualify native WGSL f16 arithmetic. Broaden direct low-input/f32-output MLX
    matrix measurements beyond the current Apple GPU and shapes. Preserve
    explicit rounding and numerical tolerances per operation and precision.
-4. Extend typed MLX programs to indexing, statistics and attention. Qualify
-   typed prepared CUDA arithmetic/indexing on NVIDIA, add statistics/attention
-   recording and CUDA Graph capture. The [CUDA execution design](cuda-reusable-execution-2026-09-27.md)
+4. Extend typed MLX programs to indexing. Qualify the prepared CUDA operation
+   set on NVIDIA and add CUDA Graph capture. The [CUDA execution design](cuda-reusable-execution-2026-09-27.md)
    separates prepared buffers from later stream capture. Qualify allocation reuse,
    fusion, launch overhead and memory traffic before selecting defaults.
 5. Route domain math through the shared resident primitives where appropriate,
@@ -495,14 +494,14 @@ remains a separate historical result. The
 [typed qualification](../qualification/tensor-mlx-typed-programs-2026-09-27.md)
 records the expanded contracts, tests and matched eager/compiled measurements.
 Compiled programs reuse tracing; fixed GPU allocations and general numerical
-equivalence under fusion require separate qualification. Recorded low indexing,
-statistics and attention remain open.
+equivalence under fusion require separate qualification. Recorded indexing remains open. Statistics/normalization and attention now
+share eager and compiled lowering for f32 and native low inputs.
 
 ### Prepared CUDA programs
 
 `CudaProgramBuilder` records fixed-layout f32/u32/f16/BF16 arithmetic, casts,
 comparisons/selection, views, reductions, mean, matmul and scan/gather/compact/
-scatter. Scalar GPU counts compose with later nodes. Native16 intermediates
+scatter, statistics/normalization and attention. Scalar GPU counts compose with later nodes. Native16 intermediates
 remain two bytes per element; low reductions and GEMM can produce f32 directly.
 Low arithmetic nodes round individually, and low reduction/matmul outputs add
 one final cast. `run_typed_into` validates all bindings and current precision
@@ -511,8 +510,9 @@ Legacy `run`/`run_into` require f32 input and output signatures. Shared launch
 helpers serve eager and prepared execution. Every replay resets invalid counters,
 compaction tails/counts and Replace owners; raw low scatter scratch includes
 safe full-word padding. `stats().memset_calls` counts asynchronous clears
-separately from kernel launches. Statistics and attention remain outside the
-prepared API.
+separately from kernel launches. Stable statistics and attention retain private
+f64 state, included in preparation budgets. Singleton/zero-key identities are
+rewritten on every replay; eager and prepared calls use the same launch helpers.
 
 The [prepared indexing qualification](../qualification/tensor-cuda-index-programs-2026-09-27.md)
 records the expanded planner, reset/budget checks and resident usage example.
@@ -523,3 +523,6 @@ The [earlier f32 qualification](../qualification/tensor-cuda-programs-2026-09-27
 is retained. CUDA numerical execution, performance, graph capture and Tensor
 Core instruction selection remain unverified.
 
+
+The [statistics/attention qualification](../qualification/tensor-prepared-statistics-2026-09-27.md)
+records the current CUDA host checks and MLX native enabled/disabled results.

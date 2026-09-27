@@ -1,6 +1,7 @@
 //! Reusable scatter launches. Base copies, count resets and owner resets are
 //! explicit caller work, so replay never relies on prior allocation contents.
-use super::gather_dispatch::{InvalidIndicesDispatch, validate_storage};
+use super::gather_dispatch::InvalidIndicesDispatch;
+use crate::runtime::validate_storage;
 use crate::{
     CudaError, CudaRuntime,
     low_scatter::padded_slots,

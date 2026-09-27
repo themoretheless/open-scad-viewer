@@ -13,6 +13,7 @@ use crate::{
     matmul::{GemmPlan, PreparedGemm},
     reduction::dispatch::ReductionPass,
 };
+use crate::{attention_dispatch::AttentionDispatch, statistics_dispatch::RowPlan};
 use tensor_core::{LowDtype, MatmulPrecision};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -41,6 +42,44 @@ pub(super) enum Destination {
 }
 #[derive(Debug)]
 pub(super) enum Operation {
+    StatisticsPartial {
+        source: BufferRef,
+        center: BufferRef,
+        pass: RowPlan,
+        op: u32,
+    },
+    StatisticsMerge {
+        partials: BufferRef,
+        pass: RowPlan,
+        op: u32,
+    },
+    StatisticsEmit {
+        source: BufferRef,
+        first: BufferRef,
+        second: BufferRef,
+        pass: RowPlan,
+        mode: (u32, f32),
+    },
+    StatisticsLse {
+        first: BufferRef,
+        second: BufferRef,
+        pass: RowPlan,
+    },
+    StatisticsMoments {
+        source: BufferRef,
+        first: BufferRef,
+        second: BufferRef,
+        variance: usize,
+        pass: RowPlan,
+    },
+    Attention {
+        query: BufferRef,
+        key: BufferRef,
+        value: BufferRef,
+        mask: Option<(BufferRef, bool)>,
+        accumulator: usize,
+        pass: AttentionDispatch,
+    },
     Zero,
     InvalidIndices {
         indices: BufferRef,
@@ -137,6 +176,8 @@ pub(super) enum Operation {
 impl Operation {
     pub fn auxiliary_destination(&self) -> Option<usize> {
         match self {
+            Self::StatisticsMoments { variance, .. } => Some(*variance),
+            Self::Attention { accumulator, .. } => Some(*accumulator),
             Self::Scan { totals, .. } => Some(*totals),
             Self::Compact { count, .. } => Some(*count),
             _ => None,
@@ -144,6 +185,11 @@ impl Operation {
     }
     pub fn metadata(&self) -> Option<&[u64]> {
         match self {
+            Self::StatisticsPartial { pass, .. }
+            | Self::StatisticsEmit { pass, .. }
+            | Self::StatisticsMoments { pass, .. } => Some(&pass.metadata),
+            Self::StatisticsMerge { .. } | Self::StatisticsLse { .. } => None,
+            Self::Attention { pass, .. } => Some(&pass.metadata),
             Self::InvalidIndices { pass, .. } => Some(&pass.metadata),
             Self::Gather { pass, .. } => Some(&pass.metadata),
             Self::ScatterOwners { pass, .. } => Some(&pass.geometry.metadata),

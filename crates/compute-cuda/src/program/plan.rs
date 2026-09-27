@@ -1,6 +1,7 @@
 use crate::CudaError;
 use tensor_core::{
-    BinaryOp, CompareOp, Layout, LowDtype, MatmulPrecision, ReduceOp, ScanOptions, ScatterOp, Shape,
+    AttentionPlan, BinaryOp, CompareOp, Layout, LowDtype, MatmulPrecision, ReduceOp, ScanOptions,
+    ScatterOp, Shape,
 };
 
 /// Storage type of a prepared input, intermediate or output.
@@ -62,8 +63,31 @@ pub(crate) struct PlannedValue {
 
 /// Pure recording. Device-specific preparation expands reduction levels and
 /// GEMM calls, then checks the complete resource budget before allocation.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub(crate) enum StatisticsKind {
+    Softmax,
+    LogSoftmax,
+    Logsumexp,
+    Moments,
+    LayerNorm { epsilon: f32 },
+}
 #[derive(Clone, Debug)]
 pub(crate) enum Step {
+    Statistics {
+        source: PlannedValue,
+        output: usize,
+        variance: Option<usize>,
+        axes: Vec<usize>,
+        kind: StatisticsKind,
+    },
+    Attention {
+        query: PlannedValue,
+        key: PlannedValue,
+        value: PlannedValue,
+        mask: Option<(PlannedValue, bool)>,
+        output: usize,
+        plan: Box<AttentionPlan>,
+    },
     Unary {
         source: PlannedValue,
         output: usize,

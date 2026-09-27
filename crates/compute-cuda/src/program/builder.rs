@@ -384,3 +384,14 @@ mod typed_tests;
 #[cfg(test)]
 #[path = "builder_indexing_tests.rs"]
 mod indexing_tests;
+
+#[path = "builder_attention.rs"]
+mod attention;
+#[cfg(test)]
+#[path = "builder_attention_tests.rs"]
+mod attention_tests;
+#[path = "builder_statistics.rs"]
+mod statistics;
+#[cfg(test)]
+#[path = "builder_statistics_tests.rs"]
+mod statistics_tests;

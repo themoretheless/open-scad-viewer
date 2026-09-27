@@ -82,11 +82,11 @@ Every run accepts fresh resident tensors with the exact declared shapes, dtypes 
 
 The compiled operation set is explicit:
 
-- f32: all canonical unary/binary and comparison operations, sum/product/min/max, mean and matmul.
+- f32: all canonical unary/binary and comparison operations, sum/product/min/max, mean, matmul, statistics/normalization and attention.
 - u32: Add/Subtract/Multiply/Min/Max, comparisons, select, sum/product/min/max. Arithmetic wraps modulo 2^32; integer Divide and implicit promotion are rejected.
-- f16/bf16: exact device casts, all canonical unary/binary operations, arbitrary-axis f32 accumulation reductions/mean, and direct low-input matmul with f32 output. Low-result variants apply one final cast. Views preserve dtype and raw storage bits.
+- f16/bf16: exact device casts, all canonical unary/binary operations, arbitrary-axis f32 accumulation reductions/mean, and direct low-input matmul with f32 output. Low-result variants apply one final cast. Statistics/normalization and attention support direct low inputs with f32 or final low results. Views preserve dtype and raw storage bits.
 
-Low arithmetic, reductions and direct matmul share the eager lowering recipes and Metal sources. Each low arithmetic node writes its own rounded low result before later nodes read it; the compiler must retain that boundary. Compiled `matmul_low` uses the direct f32 result followed by one cast, while eager `matmul_low` keeps its native same-low route. These low arithmetic/reduction/matmul nodes do not allocate full f32 input copies; an explicit `cast_to_f32` still creates its requested f32 result. Casts retain their accessor-only ABI requirements; nonempty custom operations additionally require the complete optional Metal kernel API. Compiled low indexing, scan, scatter, statistics and attention are not exposed in this graph API.
+Low arithmetic, reductions and direct matmul share the eager lowering recipes and Metal sources. Each low arithmetic node writes its own rounded low result before later nodes read it; the compiler must retain that boundary. Compiled `matmul_low` uses the direct f32 result followed by one cast, while eager `matmul_low` keeps its native same-low route. These low arithmetic/reduction/matmul nodes do not allocate full f32 input copies; an explicit `cast_to_f32` still creates its requested f32 result. Casts retain their accessor-only ABI requirements; nonempty custom operations additionally require the complete optional Metal kernel API. Compiled indexing, scan and scatter are not exposed in this graph API.
 
 `compile_available()` means the complete optional public compile/closure/vector ABI is present. It does not prove that MLX compilation is enabled, a particular operation fused, or allocations are reused. `compile` constructs a native closure; its first valid `run` traces the graph. `trace_count()` counts callback invocations, not GPU executions. The adapter never changes MLX's global compile mode, default device or default stream. External settings such as `MLX_DISABLE_COMPILE`, native device eligibility or changes to MLX's default-device cache key can disable reuse or trigger another trace; the operations themselves keep this backend's explicit GPU stream. The qualified enabled-mode replay traces once, while an isolated disabled-mode process traces on each fresh run and still computes correct results.
 
@@ -96,7 +96,38 @@ The C callback executes declarative operations under the existing native-call lo
 
 The [typed enabled run](qualification/compiled-typed-focused.txt), [typed disabled run](qualification/compiled-typed-disabled.txt) and [full 104-test run](qualification/compiled-typed-metal.txt) qualify typed replay and shared eager lowering. The [source archive manifest](qualification/compiled-typed-source-manifest.json) records the exact inputs to qualification. The [first typed run](qualification/compiled-typed-initial-failure.txt) exposed two host-oracle errors: the matmul witness values did not distinguish f32 from low output, and an empty f64 sum produced negative zero. The corrected fixture supplies an exact half-ULP witness and the specified positive-zero contraction identity; bit comparisons and tolerances were retained. A separate tiny-BF16 Multiply diagnostic found a real pre-existing normal-product loss and led to the protected multiplication fix described below. No typed-program timing claim follows from correctness qualification.
 
-### Resident indexing
+#### Compiled statistics and attention
+
+See the [compiled statistics and attention qualification](../../docs/qualification/tensor-prepared-statistics-2026-09-27.md) for current checks and hardware limits.
+
+`softmax`, `log_softmax`, `logsumexp`, `moments`, `layer_norm` and `attention`
+share declarative lowering with the eager API. Their low variants retain native
+f16/BF16 inputs and apply any requested low cast only after the f32 result.
+The callback uses raw C operations under the existing native-call lock; prepared
+constants and custom kernels remain owned by the compiled program. Invalid
+compound operations roll back every recorded node, including both moments outputs.
+
+```rust,no_run
+use compute_mlx::MlxBackend;
+use tensor_core::{AttentionMask, AttentionOptions, Shape};
+
+let mlx = MlxBackend::new_gpu()?;
+let shape = Shape::new(vec![2, 2])?;
+let mut graph = mlx.program();
+let x = graph.input(shape.clone())?;
+let probabilities = graph.softmax(x, &[1])?;
+let attended = graph.attention(probabilities, probabilities, x,
+    AttentionMask::None, AttentionOptions::default())?;
+let normalized = graph.layer_norm(attended, &[1], 1e-5)?;
+let moments = graph.moments(attended, &[1], false)?;
+let program = graph.compile(&[normalized, moments.mean, moments.variance])?;
+let input = mlx.upload_f32(shape, &[1., 2., 3., 4.])?;
+let outputs = program.run(&[&input])?;
+mlx.read_f32(&outputs[0])?;
+# Ok::<(), Box<dyn std::error::Error>>(())
+```
+
+## Resident indexing
 
 Import `tensor_core::TensorIndexBackend` to call its typed methods. Both associated tensor types use `MlxTensor`, with dtype checks at every trait boundary. The inherent reshape, permute, broadcast, materialize, scan and sum methods also support both dtypes.
 
@@ -267,7 +298,7 @@ COMPUTE_REQUIRE_MLX=1 cargo test --offline --manifest-path crates/Cargo.toml \
 cargo run --offline --manifest-path crates/Cargo.toml -p compute-mlx --example linear
 ```
 
-Reduced multiplication policies for f32 storage, slicing, asynchronous readback/cancellation, cross-instance compiled-program caching, compiled indexing/statistics/attention, autodiff, convolution and training operators are not exposed yet. Linux/CUDA-backed MLX, Windows, and mobile packaging have not been validated by this adapter. A missing MLX installation is an unavailable backend, not a successful skipped computation.
+Reduced multiplication policies for f32 storage, slicing, asynchronous readback/cancellation, cross-instance compiled-program caching, compiled indexing, autodiff, convolution and training operators are not exposed yet. Linux/CUDA-backed MLX, Windows, and mobile packaging have not been validated by this adapter. A missing MLX installation is an unavailable backend, not a successful skipped computation.
 
 ## Primary references
 

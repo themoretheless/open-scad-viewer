@@ -2,7 +2,7 @@
 //! checked host metadata; callers upload it once and supply device storage.
 use crate::{
     CudaError, CudaRuntime,
-    runtime::{layout_metadata, rank, validate_logical_size},
+    runtime::{layout_metadata, rank, validate_logical_size, validate_storage},
 };
 use gpu_compute::cuda::{CudaFunction, CudaSlice, PushKernelArg, cudarc::driver::DeviceRepr};
 use tensor_core::{Layout, Shape, gather_shape, validate_index_count};
@@ -152,15 +152,6 @@ impl GatherDispatch {
         }
         Ok(())
     }
-}
-
-pub(super) fn validate_storage(lengths: &[(usize, usize)]) -> Result<(), CudaError> {
-    if lengths.iter().any(|&(actual, required)| actual < required) {
-        return Err(CudaError::InvalidInput(
-            "indexing dispatch storage is too small",
-        ));
-    }
-    Ok(())
 }
 
 #[cfg(test)]

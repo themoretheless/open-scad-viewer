@@ -6,9 +6,11 @@ use super::{
 };
 use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
 
+mod attention;
 mod builder;
 mod callback;
 mod low_builder;
+mod statistics;
 mod typed;
 pub use typed::{MlxProgramInput, MlxProgramOutput};
 
@@ -118,10 +120,10 @@ impl MlxProgramBuilder {
         self.nodes.push(Node { spec, operation });
         Ok(value)
     }
-    fn transaction(
+    fn transaction<T>(
         &mut self,
-        operation: impl FnOnce(&mut Self) -> Result<MlxValue, MlxError>,
-    ) -> Result<MlxValue, MlxError> {
+        operation: impl FnOnce(&mut Self) -> Result<T, MlxError>,
+    ) -> Result<T, MlxError> {
         let nodes = self.nodes.len();
         let inputs = self.inputs.len();
         let result = operation(self);
@@ -403,7 +405,7 @@ mod tests {
         let mut graph = backend.program();
         let input = graph.input(Shape::new(vec![1]).unwrap()).unwrap();
         let before = graph.nodes.len();
-        let result = graph.transaction(|graph| {
+        let result: Result<MlxValue, _> = graph.transaction(|graph| {
             graph.constant_u32(Shape::new(vec![])?, &[7])?;
             graph.unary(input, UnaryOp::Square)?;
             Err(MlxError::TooLarge)
