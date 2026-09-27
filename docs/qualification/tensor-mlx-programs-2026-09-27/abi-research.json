@@ -1,0 +1,40 @@
+{
+  "checked_utc": "2026-09-27T06:31:23.768667+00:00",
+  "pinned_mlx_c_sources": {
+    "closure.cpp": {
+      "url": "https://raw.githubusercontent.com/ml-explore/mlx-c/v0.6.0/mlx/c/closure.cpp",
+      "bytes": 25115,
+      "sha256": "31f76842eadab4ceea908f3c54ac7ca026f62efbebd8e75b9d7e696bea1f8890"
+    },
+    "compile.cpp": {
+      "url": "https://raw.githubusercontent.com/ml-explore/mlx-c/v0.6.0/mlx/c/compile.cpp",
+      "bytes": 2093,
+      "sha256": "2a23521800c3d1fbda15885867e5ebbd58bd94e592f0fff723c4122b361590e3"
+    },
+    "vector.cpp": {
+      "url": "https://raw.githubusercontent.com/ml-explore/mlx-c/v0.6.0/mlx/c/vector.cpp",
+      "bytes": 12359,
+      "sha256": "f8bb27b20a2f690f00bd37bb42e8db70c8b0ebc329098ee840acf4ef75e4c08e"
+    }
+  },
+  "installed_headers": {
+    "/opt/homebrew/opt/mlx-c/include/mlx/c/closure.h": {
+      "bytes": 5792,
+      "sha256": "b43a6d7c0e943a8df0f67377d49d92f4fa76eea79eed049adaff80e05ed854f7"
+    },
+    "/opt/homebrew/opt/mlx-c/include/mlx/c/compile.h": {
+      "bytes": 1319,
+      "sha256": "3f068621057ab97a557c2bdfa206b6bc3532eaf900ae0ebe39d24e6955c80971"
+    },
+    "/opt/homebrew/opt/mlx-c/include/mlx/c/vector.h": {
+      "bytes": 4270,
+      "sha256": "b75108edace10f99f01da0dcb08a146d1449dcfcaaa24aa7b66e48e9f227e2c7"
+    },
+    "/opt/homebrew/opt/mlx-c/include/mlx/c/array.h": {
+      "bytes": 10297,
+      "sha256": "d2205ba0ce146ff722f2ca97c170facb19b28784e7ffa47a07cdad69651c9801"
+    }
+  },
+  "mlx_compile_source": "https://github.com/ml-explore/mlx/blob/v0.32.1/mlx/compile.cpp",
+  "scope": "ABI, callback payload/vector ownership and trace-cache semantics; runtime behavior still requires native tests."
+}

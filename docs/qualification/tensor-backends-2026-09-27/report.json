@@ -1,0 +1,108 @@
+{
+  "started_utc": "2026-09-27T00:58:22.814134+00:00",
+  "platform": "macOS-26.7-arm64-arm-64bit-Mach-O",
+  "required_backends": [
+    "wgsl",
+    "mlx",
+    "cuda"
+  ],
+  "runs": [
+    {
+      "name": "contracts",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "/Users/themoretheless/Documents/Sources/open-scad-viewer/crates/Cargo.toml",
+        "--offline",
+        "-p",
+        "tensor-core",
+        "--features",
+        "conformance",
+        "--",
+        "--test-threads=1",
+        "--nocapture"
+      ],
+      "required_env": {},
+      "exit_code": 0,
+      "elapsed_seconds": 0.181,
+      "log": "contracts.txt"
+    },
+    {
+      "name": "wgsl",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "/Users/themoretheless/Documents/Sources/open-scad-viewer/crates/Cargo.toml",
+        "--offline",
+        "-p",
+        "compute-core",
+        "--test",
+        "tensor",
+        "--test",
+        "tensor_backend",
+        "--",
+        "--test-threads=1",
+        "--nocapture"
+      ],
+      "required_env": {
+        "COMPUTE_REQUIRE_GPU": "1"
+      },
+      "exit_code": 0,
+      "elapsed_seconds": 3.151,
+      "log": "wgsl.txt"
+    },
+    {
+      "name": "mlx",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "/Users/themoretheless/Documents/Sources/open-scad-viewer/crates/Cargo.toml",
+        "--offline",
+        "-p",
+        "compute-mlx",
+        "--",
+        "--test-threads=1",
+        "--nocapture"
+      ],
+      "required_env": {
+        "COMPUTE_REQUIRE_MLX": "1"
+      },
+      "exit_code": 0,
+      "elapsed_seconds": 1.187,
+      "log": "mlx.txt"
+    },
+    {
+      "name": "cuda",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "/Users/themoretheless/Documents/Sources/open-scad-viewer/crates/Cargo.toml",
+        "--offline",
+        "-p",
+        "compute-cuda",
+        "--",
+        "--test-threads=1",
+        "--nocapture"
+      ],
+      "required_env": {
+        "CUDA_REQUIRED": "1",
+        "COMPUTE_REQUIRE_CUDA": "1"
+      },
+      "exit_code": 101,
+      "elapsed_seconds": 1.208,
+      "log": "cuda.txt",
+      "rechecked_utc": "2026-09-27T01:01:02.822526+00:00",
+      "reason": "Rechecked after native library symbol preflight review"
+    }
+  ],
+  "passed": false,
+  "finished_utc": "2026-09-27T01:01:02.822526+00:00"
+}

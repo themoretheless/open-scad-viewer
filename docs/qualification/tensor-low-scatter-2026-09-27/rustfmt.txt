@@ -1,0 +1,1 @@
+Check 131 modified/untracked Rust files. Legacy formatting exclusions: ['crates/compute-core/examples/bench.rs', 'crates/compute-core/examples/chain.rs', 'crates/compute-core/src/error.rs', 'crates/compute-core/src/program.rs', 'crates/compute-core/tests/kernels.rs']

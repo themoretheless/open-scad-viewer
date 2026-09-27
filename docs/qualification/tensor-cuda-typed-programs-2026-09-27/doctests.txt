@@ -1,0 +1,27 @@
+COMMAND: cargo test --offline --locked --manifest-path crates/Cargo.toml -p compute-cuda --doc
+EXIT_STATUS: 0
+
+warning: binary `wgsl_export` should have a kebab-case name
+  |
+1 | /Users/themoretheless/Documents/Sources/open-scad-viewer/crates/target/.../wgsl_export
+  |                                                                            ^^^^^^^^^^^
+  |
+  = note: `cargo::non_kebab_case_bins` is set to `warn` by default
+help: to change the binary name to `wgsl-export`, convert the file stem
+  |
+1 - src/bin/wgsl_export.rs
+1 + src/bin/wgsl-export.rs
+  |
+warning: `raster-core` (manifest) generated 1 warning
+   Compiling compute-cuda v0.1.0 (/Users/themoretheless/Documents/Sources/open-scad-viewer/crates/compute-cuda)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.41s
+   Doc-tests compute_cuda
+
+running 3 tests
+test compute-cuda/src/lib.rs - (line 103) - compile ... ok
+test compute-cuda/src/lib.rs - (line 18) - compile ... ok
+test compute-cuda/src/lib.rs - (line 133) - compile ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+all doctests ran in 0.52s; merged doctests compilation took 0.21s

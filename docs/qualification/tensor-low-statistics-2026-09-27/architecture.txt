@@ -1,0 +1,3 @@
+COMMAND: python3 scripts/check-gpu-architecture.py
+ENV: {}
+GPU dependency directions, backend isolation and CPU-only contracts: OK

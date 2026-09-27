@@ -1,0 +1,237 @@
+{
+  "checked_utc": "2026-09-27T06:47:34.553209+00:00",
+  "native_tests": {
+    "unit": 5,
+    "integration_entries": 79,
+    "total_top_level": 84,
+    "failed": 0,
+    "compiled_integration_entries": 10,
+    "marker_only_child_entry": 1,
+    "additional_disabled_process_test": 1,
+    "disabled_process_executions": 3
+  },
+  "source_files_verified": 316,
+  "native_archive_files_verified": 89,
+  "changes_since_low_matmul_snapshot": [
+    "crates/compute-mlx/examples/bench_compiled.rs",
+    "crates/compute-mlx/src/ffi.rs",
+    "crates/compute-mlx/src/native.rs",
+    "crates/compute-mlx/src/native/compiled.rs",
+    "crates/compute-mlx/src/native/compiled/callback.rs",
+    "crates/compute-mlx/tests/compiled.rs"
+  ],
+  "unchanged_previous_sources": {
+    "crates/tensor-core/": 42,
+    "crates/compute-core/": 181,
+    "crates/compute-cuda/": 34
+  },
+  "prior_tests_reused": {
+    "wgsl_full_stack": 285,
+    "cpu_contracts": 39,
+    "cuda_host_unit": 13,
+    "cuda_doctests": 1,
+    "cuda_native": "not executed; NVIDIA unavailable"
+  },
+  "checks_passed": true,
+  "format_files_checked": 159,
+  "benchmark": {
+    "runs": 2,
+    "individual_samples": 372,
+    "output_buffers": 744,
+    "median_p90_pairs": 12,
+    "single_trace_programs": 6,
+    "recomputed_series": [
+      {
+        "run": "compiled-metal.txt",
+        "case": "small",
+        "path": "eager",
+        "median_ms": 0.182667,
+        "p90_ms": 0.18637499999999999,
+        "samples": 31
+      },
+      {
+        "run": "compiled-metal.txt",
+        "case": "small",
+        "path": "compiled",
+        "median_ms": 0.17929099999999998,
+        "p90_ms": 0.18241700000000002,
+        "samples": 31
+      },
+      {
+        "run": "compiled-metal.txt",
+        "case": "large",
+        "path": "eager",
+        "median_ms": 0.27954100000000004,
+        "p90_ms": 0.317625,
+        "samples": 31
+      },
+      {
+        "run": "compiled-metal.txt",
+        "case": "large",
+        "path": "compiled",
+        "median_ms": 0.259208,
+        "p90_ms": 0.292041,
+        "samples": 31
+      },
+      {
+        "run": "compiled-metal.txt",
+        "case": "changing_layout_broadcast",
+        "path": "eager",
+        "median_ms": 0.213792,
+        "p90_ms": 0.21754099999999998,
+        "samples": 31
+      },
+      {
+        "run": "compiled-metal.txt",
+        "case": "changing_layout_broadcast",
+        "path": "compiled",
+        "median_ms": 0.21025,
+        "p90_ms": 0.214958,
+        "samples": 31
+      },
+      {
+        "run": "compiled-metal-repeat.txt",
+        "case": "small",
+        "path": "eager",
+        "median_ms": 0.206292,
+        "p90_ms": 0.20975,
+        "samples": 31
+      },
+      {
+        "run": "compiled-metal-repeat.txt",
+        "case": "small",
+        "path": "compiled",
+        "median_ms": 0.20366599999999999,
+        "p90_ms": 0.21804199999999999,
+        "samples": 31
+      },
+      {
+        "run": "compiled-metal-repeat.txt",
+        "case": "large",
+        "path": "eager",
+        "median_ms": 0.24891699999999997,
+        "p90_ms": 0.27295899999999995,
+        "samples": 31
+      },
+      {
+        "run": "compiled-metal-repeat.txt",
+        "case": "large",
+        "path": "compiled",
+        "median_ms": 0.231666,
+        "p90_ms": 0.250166,
+        "samples": 31
+      },
+      {
+        "run": "compiled-metal-repeat.txt",
+        "case": "changing_layout_broadcast",
+        "path": "eager",
+        "median_ms": 0.227291,
+        "p90_ms": 0.25866700000000004,
+        "samples": 31
+      },
+      {
+        "run": "compiled-metal-repeat.txt",
+        "case": "changing_layout_broadcast",
+        "path": "compiled",
+        "median_ms": 0.210125,
+        "p90_ms": 0.24420799999999998,
+        "samples": 31
+      }
+    ]
+  },
+  "artifacts": {
+    "crates/compute-mlx/README.md": {
+      "bytes": 50568,
+      "sha256": "a2b52100242606613760aea85d115353335742d1f09bdbd1f6b488e05d3ab9e8"
+    },
+    "crates/compute-mlx/benchmarks/compiled-audit.json": {
+      "bytes": 1310,
+      "sha256": "96def72fd1b0d604b6f8c287976212b208fb748b3a653493cca008de94152c4c"
+    },
+    "crates/compute-mlx/benchmarks/compiled-build.txt": {
+      "bytes": 677,
+      "sha256": "010c0c69cd4a06ddb96dd0e51507d40fe4f62e909ee8d891276217d748904449"
+    },
+    "crates/compute-mlx/benchmarks/compiled-metal-repeat.txt": {
+      "bytes": 4370,
+      "sha256": "651c333b40bcdeea9278f72002fc61708f553bcbc172f6dfbf60e31e8581e1ca"
+    },
+    "crates/compute-mlx/benchmarks/compiled-metal.txt": {
+      "bytes": 4379,
+      "sha256": "076002de8edba4aaffcbe9b2aa699b81baa894a3ef314662919a32375ac5809a"
+    },
+    "crates/compute-mlx/benchmarks/compiled-source-fingerprints.json": {
+      "bytes": 17248,
+      "sha256": "7849a5d95297c0c62e06ff049a65b138e024fbe670607deb60c55574eb77b857"
+    },
+    "crates/compute-mlx/benchmarks/compiled-summary.json": {
+      "bytes": 3779,
+      "sha256": "8f411e596f98027588ef3dee2fb7370c8e56ad34b7f6dd56dd0030bf0014c1ce"
+    },
+    "crates/compute-mlx/benchmarks/compiled.md": {
+      "bytes": 6587,
+      "sha256": "0e50764ca1c5f070f3d25418ecf2c7a798e9dc973b99cbada60d8fbc39e93413"
+    },
+    "crates/compute-mlx/qualification/compiled-clippy.txt": {
+      "bytes": 687,
+      "sha256": "145c5880a6bcd249c7fd96c8c5da98299257bada412515474f70ad97e0414369"
+    },
+    "crates/compute-mlx/qualification/compiled-focused.txt": {
+      "bytes": 2939,
+      "sha256": "b1afe20a54e3a0cb0b68d4e5f0d45ec867446cd3964eb82ff98b284421d14c23"
+    },
+    "crates/compute-mlx/qualification/compiled-initial-failure.txt": {
+      "bytes": 2122,
+      "sha256": "7db0dadab87142b049acf5936a06c3a446a0ddeb1390eadf1c39d747eb5f82a2"
+    },
+    "crates/compute-mlx/qualification/compiled-metal.txt": {
+      "bytes": 10307,
+      "sha256": "f670cb07047f70fadf05a37f3c6209268475b87e6fba20c7691b3034d4a0fde8"
+    },
+    "crates/compute-mlx/qualification/compiled-rustdoc.txt": {
+      "bytes": 798,
+      "sha256": "3c7c6af2dd230fae3964f663274e5067f402f8b240589ebbc885616bdbed9fe7"
+    },
+    "crates/compute-mlx/qualification/compiled-source-manifest.json": {
+      "bytes": 18089,
+      "sha256": "69612c81caad53514e26f151a00e3438fbd97717401f71e31ff04f0f16e976a8"
+    },
+    "docs/design/tensor-backends-2026-09-27.md": {
+      "bytes": 32389,
+      "sha256": "62af8e4694c6a08e35c5b4e7747beb47d9e9aef43b79f50b9129ad900fae5e87"
+    },
+    "docs/qualification/tensor-mlx-programs-2026-09-27/abi-research.json": {
+      "bytes": 1675,
+      "sha256": "cf966167053086ae2740591d00ce50f23f629ef055eadedba774e0893b7f89f9"
+    },
+    "docs/qualification/tensor-mlx-programs-2026-09-27/architecture.txt": {
+      "bytes": 72,
+      "sha256": "908d4930fdc094c7934bfd8873bf2aac41b3cbda16c3d7df1db468260215de2c"
+    },
+    "docs/qualification/tensor-mlx-programs-2026-09-27/final-checks.json": {
+      "bytes": 9538,
+      "sha256": "8534452e24ed50a5dfad731c9eadbb3ac3b6bae589c04ae3ba8beb7196940e04"
+    },
+    "docs/qualification/tensor-mlx-programs-2026-09-27/format.txt": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "docs/qualification/tensor-mlx-programs-2026-09-27/source-fingerprints.json": {
+      "bytes": 52319,
+      "sha256": "d257bcaf696ea34db086794ad8d1a3e8b53cbddb1e32674df1143c9417d17200"
+    },
+    "docs/qualification/tensor-mlx-programs-2026-09-27/wasm.txt": {
+      "bytes": 577,
+      "sha256": "d2f05b806d423b7321d434eda5bc679482d0318eeffa22108921ab16031a0001"
+    },
+    "docs/qualification/tensor-mlx-programs-2026-09-27/whitespace.txt": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "docs/qualification/tensor-mlx-programs-2026-09-27.md": {
+      "bytes": 10383,
+      "sha256": "46172d23e03460c9d88ac6407fa418c547607bb3241fd1b0e71305a1fa667271"
+    }
+  },
+  "local_links_verified": 90
+}

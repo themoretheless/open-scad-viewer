@@ -1,0 +1,295 @@
+{
+  "checked_utc": "2026-09-27T06:25:24.455356+00:00",
+  "tests": {
+    "mlx_native": 72,
+    "wgsl_full_stack": 285,
+    "cpu_contracts": 39,
+    "cuda_host_unit": 13,
+    "cuda_doctests": 1,
+    "cuda_native": "explicitly skipped; NVIDIA unavailable"
+  },
+  "final_checks_passed": true,
+  "format_files_checked": 155,
+  "current_sources_verified": 312,
+  "mlx_current_sources_verified": 84,
+  "changes_since_low_attention_snapshot": [
+    "crates/compute-mlx/examples/bench_low_matmul.rs",
+    "crates/compute-mlx/src/metal/low_attention.metal",
+    "crates/compute-mlx/src/metal/low_attention_common.h",
+    "crates/compute-mlx/src/metal/low_common.h",
+    "crates/compute-mlx/src/metal/low_matmul.metal",
+    "crates/compute-mlx/src/metal/low_matvec.metal",
+    "crates/compute-mlx/src/native.rs",
+    "crates/compute-mlx/src/native/low_matmul.rs",
+    "crates/compute-mlx/src/native/low_precision.rs",
+    "crates/compute-mlx/tests/low_matmul.rs",
+    "crates/compute-mlx/tests/low_precision.rs",
+    "crates/tensor-core/src/conformance/low_precision.rs",
+    "crates/tensor-core/src/conformance/low_precision/matmul.rs",
+    "crates/tensor-core/src/conformance/low_precision/matmul/accumulation.rs"
+  ],
+  "benchmark_stages": [
+    {
+      "stage": "initial",
+      "archive_sources_verified": 83,
+      "raw_runs": 2,
+      "median_p90_pairs": 48,
+      "individual_samples": 1488,
+      "cases_with_lower_direct_median_in_both_runs": 0,
+      "minimum_baseline_over_direct": 0.35974965704944184,
+      "maximum_baseline_over_direct": 0.951888695652174
+    },
+    {
+      "stage": "simd",
+      "archive_sources_verified": 84,
+      "raw_runs": 2,
+      "median_p90_pairs": 48,
+      "individual_samples": 1488,
+      "cases_with_lower_direct_median_in_both_runs": 0,
+      "minimum_baseline_over_direct": 0.3933370131861392,
+      "maximum_baseline_over_direct": 0.9147421319305717
+    },
+    {
+      "stage": "routed",
+      "archive_sources_verified": 85,
+      "raw_runs": 2,
+      "median_p90_pairs": 48,
+      "individual_samples": 1488,
+      "cases_with_lower_direct_median_in_both_runs": 4,
+      "minimum_baseline_over_direct": 0.9080120000293399,
+      "maximum_baseline_over_direct": 1.1216795201371037
+    }
+  ],
+  "benchmark_totals": {
+    "raw_runs": 6,
+    "median_p90_pairs": 144,
+    "individual_samples": 4464,
+    "validation_failures": 0
+  },
+  "artifacts": {
+    "crates/compute-mlx/README.md": {
+      "bytes": 45918,
+      "sha256": "8f22a6f9273464e917bf273ed9c07c63ab3c9c38fb3d8d330f64730a8154df23"
+    },
+    "crates/compute-mlx/benchmarks/low-matmul-archive-audit.json": {
+      "bytes": 785,
+      "sha256": "ebdbfbe54fbf6a2042c10efd5687bff30fd158ec1826643cc282456b4b2eb735"
+    },
+    "crates/compute-mlx/benchmarks/low-matmul-initial-audit.json": {
+      "bytes": 993,
+      "sha256": "ffe8eb7d1e8f178935fecb1ed3aa78a799220dec3af058064a6caf494455f70b"
+    },
+    "crates/compute-mlx/benchmarks/low-matmul-initial-build.txt": {
+      "bytes": 567,
+      "sha256": "206550d22ceb6cfb718f4c350f22e42fa609b4533b944f9f6ab1926e1a13b733"
+    },
+    "crates/compute-mlx/benchmarks/low-matmul-initial-metal-repeat.txt": {
+      "bytes": 15558,
+      "sha256": "a3aea7efa18f8551347d57de1099904e8ac2689d2437f45619e18bd153f65830"
+    },
+    "crates/compute-mlx/benchmarks/low-matmul-initial-metal.txt": {
+      "bytes": 15796,
+      "sha256": "a9b2500a1466108020ba857f473006f1a35c56a8d73a957ecc18ef6c3c716b20"
+    },
+    "crates/compute-mlx/benchmarks/low-matmul-initial-source-fingerprints.json": {
+      "bytes": 16321,
+      "sha256": "94d60331004934c92a26c3ef3dc647d84597112831bdc431d7afe254e0738ad4"
+    },
+    "crates/compute-mlx/benchmarks/low-matmul-initial-summary.json": {
+      "bytes": 13110,
+      "sha256": "23825f0dfa8f0cf07a4c8c3afffe462f110585bfd711ac6d5a6e954ffc528249"
+    },
+    "crates/compute-mlx/benchmarks/low-matmul-routed-audit.json": {
+      "bytes": 1009,
+      "sha256": "4cf2596797bac49f84e7a379d5f6e7b06fa24a8e02b5123dd8d94db01cdc4c26"
+    },
+    "crates/compute-mlx/benchmarks/low-matmul-routed-build.txt": {
+      "bytes": 677,
+      "sha256": "5141114307c3ce180ab120ab15b31073a68ee1eeac8ff3288af68adadbb2d840"
+    },
+    "crates/compute-mlx/benchmarks/low-matmul-routed-metal-repeat.txt": {
+      "bytes": 16120,
+      "sha256": "602794fe7ec40305d88315425cdca7e3df18e58f84bb4299adfa26b861746020"
+    },
+    "crates/compute-mlx/benchmarks/low-matmul-routed-metal.txt": {
+      "bytes": 16128,
+      "sha256": "17c8b107b66e29e10e40d83e36b65f98e493184a115d694e3cf0b687344a3949"
+    },
+    "crates/compute-mlx/benchmarks/low-matmul-routed-source-fingerprints.json": {
+      "bytes": 17020,
+      "sha256": "86357d89694397bb4215273e15b23b7107cdd99fc111fd25fd2311316336d8f5"
+    },
+    "crates/compute-mlx/benchmarks/low-matmul-routed-summary.json": {
+      "bytes": 13246,
+      "sha256": "20b76dd143707aa03818b190b809b84cfd856cfff54f6134d69a5bd4153abe02"
+    },
+    "crates/compute-mlx/benchmarks/low-matmul-simd-audit.json": {
+      "bytes": 982,
+      "sha256": "3ba92b53c5c6120032ee4e0ceb5c05cb9f5a112b94e823854bfbc61a168a9c56"
+    },
+    "crates/compute-mlx/benchmarks/low-matmul-simd-build.txt": {
+      "bytes": 787,
+      "sha256": "ab68f0952b30ddecffb6fac648d6a2a214ff0f8bbc4c2d21cc79453273f55939"
+    },
+    "crates/compute-mlx/benchmarks/low-matmul-simd-metal-repeat.txt": {
+      "bytes": 15848,
+      "sha256": "b1f8e87e20152ad28f83132cab61f86f776893b3dbeb783b5ede14429d194bef"
+    },
+    "crates/compute-mlx/benchmarks/low-matmul-simd-metal.txt": {
+      "bytes": 15871,
+      "sha256": "943b3d4149aa1bc77857c7257d5e4b20cde0fe9a60699f2ca47c1fd9ccc7d1d6"
+    },
+    "crates/compute-mlx/benchmarks/low-matmul-simd-source-fingerprints.json": {
+      "bytes": 16534,
+      "sha256": "15090010fb5a67f365b67200a555f443acd9ea2ec16d8235d1b80bd27f9906b6"
+    },
+    "crates/compute-mlx/benchmarks/low-matmul-simd-summary.json": {
+      "bytes": 13079,
+      "sha256": "5dd03393daa8f52cc5201164c248f3f44f9636eeba828eafe0ac9b55bd38c617"
+    },
+    "crates/compute-mlx/benchmarks/low-matmul.md": {
+      "bytes": 12684,
+      "sha256": "80fac28e88cd3d950fb93075dc7af1c4afb268517967442fbe8fa33235ab6af9"
+    },
+    "crates/compute-mlx/qualification/low-matmul-clippy.txt": {
+      "bytes": 687,
+      "sha256": "cc1f71ebd9ca367fa9b361cad1489d5f0e977b96c3530da3e031b4d0faab7eeb"
+    },
+    "crates/compute-mlx/qualification/low-matmul-initial.txt": {
+      "bytes": 1749,
+      "sha256": "7ebc0a0835c2e77624b92d1fed1d18ece91fd0ef2064ddf89dabf5c9c419f2dd"
+    },
+    "crates/compute-mlx/qualification/low-matmul-metal.txt": {
+      "bytes": 9109,
+      "sha256": "bda9b12ce23f1d995757f1c9b4f4f34e1534258241ca00a5ec8dc2217d9d20f1"
+    },
+    "crates/compute-mlx/qualification/low-matmul-routed-clippy.txt": {
+      "bytes": 687,
+      "sha256": "062ab45f7e4e0cfde79138cbdefae97da04ae61a71c5f1b358ef7a6e9930855f"
+    },
+    "crates/compute-mlx/qualification/low-matmul-routed-focused.txt": {
+      "bytes": 2089,
+      "sha256": "a6efda96fc96e25fd27b3773dde48fe916bbbfa63ca171d32f9ea493d825e17b"
+    },
+    "crates/compute-mlx/qualification/low-matmul-routed-metal.txt": {
+      "bytes": 9109,
+      "sha256": "bda9b12ce23f1d995757f1c9b4f4f34e1534258241ca00a5ec8dc2217d9d20f1"
+    },
+    "crates/compute-mlx/qualification/low-matmul-routed-rustdoc.txt": {
+      "bytes": 798,
+      "sha256": "f7dc52915369d2671dca81ea100464f3241a0acbbdf923ff742c7a676a4e3110"
+    },
+    "crates/compute-mlx/qualification/low-matmul-routed-source-manifest.json": {
+      "bytes": 1846,
+      "sha256": "265c6f0dd6551ba5641f1e158895fdb7a80c347f954bf396d6bfef306bd545d3"
+    },
+    "crates/compute-mlx/qualification/low-matmul-rustdoc.txt": {
+      "bytes": 798,
+      "sha256": "d0b3f28a6171b340f537eca558625dba540b421e143a8cfdf038bb8941b56075"
+    },
+    "crates/compute-mlx/qualification/low-matmul-simd-clippy.txt": {
+      "bytes": 797,
+      "sha256": "a25e09978eb5cc1ef1ec2fa1b8e296c85a76e44e13bef693aa09971b3abdd408"
+    },
+    "crates/compute-mlx/qualification/low-matmul-simd-full-metal.txt": {
+      "bytes": 8961,
+      "sha256": "56f986fc29ea1a2c8234d5bc77e50392b20bc337a73fc31ef95387675c101e93"
+    },
+    "crates/compute-mlx/qualification/low-matmul-simd-metal.txt": {
+      "bytes": 2313,
+      "sha256": "91e579dfaf07b30e54a0ad308d45ec73735ce56bd6c608e59cc91ff1fc36d7ed"
+    },
+    "crates/compute-mlx/qualification/low-matmul-simd-source-manifest.json": {
+      "bytes": 2164,
+      "sha256": "01c4fd773460dc936618b929d22dead4f72f4cac980ccb34118fe0a39b3d557e"
+    },
+    "crates/compute-mlx/qualification/low-matmul-source-manifest.json": {
+      "bytes": 15466,
+      "sha256": "001b9745a3b25090bb02912c43e034a8187716941d5f296c3a3baba99631a4a8"
+    },
+    "crates/compute-mlx/qualification/low-matmul-tiled-metal.txt": {
+      "bytes": 8769,
+      "sha256": "015b54a2fe1bf2e07bcdaa87e6375eea9b31b253830ea25b17092193e9247a1f"
+    },
+    "crates/compute-mlx/qualification/low-matmul-tiled-source-manifest.json": {
+      "bytes": 15635,
+      "sha256": "2d3a16c6fd99f124c3b8a95f263a5540dc6f6bc6394785c2eef9d83c0fd4041d"
+    },
+    "docs/design/tensor-backends-2026-09-27.md": {
+      "bytes": 32451,
+      "sha256": "193e834a577b14277bd7f75a80a6f3aff39baba6986248f6dffdeb8da67334c8"
+    },
+    "docs/qualification/tensor-low-matmul-2026-09-27/architecture.txt": {
+      "bytes": 154,
+      "sha256": "47dcbb90d23e69f8c9085d7c7e93af4ab24982531ed87ed3533b44caaf10e7c5"
+    },
+    "docs/qualification/tensor-low-matmul-2026-09-27/clippy.txt": {
+      "bytes": 932,
+      "sha256": "b24593683b41847d0229471c108011d58649fb7a3cf19c8c177c9943ef90b869"
+    },
+    "docs/qualification/tensor-low-matmul-2026-09-27/contracts.txt": {
+      "bytes": 6342,
+      "sha256": "1238d8387a9339843f6616680a1a2f4e0a1cd39fa1c28e5328a215c29dcb25f1"
+    },
+    "docs/qualification/tensor-low-matmul-2026-09-27/cuda-host.txt": {
+      "bytes": 2813,
+      "sha256": "d00ef408489aa2d146471a504528d913aa6b59d18acd7521899cef4445fef48a"
+    },
+    "docs/qualification/tensor-low-matmul-2026-09-27/cuda-source-audit.json": {
+      "bytes": 625,
+      "sha256": "2022821ae1a6b9904996b836fafcc6fda71907a3392cb99b112b01be38460c18"
+    },
+    "docs/qualification/tensor-low-matmul-2026-09-27/final-checks.json": {
+      "bytes": 2143,
+      "sha256": "9365a95af3a69722e241c88c240825403f39315c50fc8f4282390f85f98420f9"
+    },
+    "docs/qualification/tensor-low-matmul-2026-09-27/format.txt": {
+      "bytes": 7518,
+      "sha256": "c0d27519c1bb765f9c1d86654596080eb2368dc5d9558a81a7dfc6cecc369ac3"
+    },
+    "docs/qualification/tensor-low-matmul-2026-09-27/rustdoc.txt": {
+      "bytes": 1060,
+      "sha256": "4acc48abe8b3bace2bcae2cdd440b6af3fcec045d2e943c10bb0b64f58ddc1ef"
+    },
+    "docs/qualification/tensor-low-matmul-2026-09-27/simdgroup-probe/README.md": {
+      "bytes": 2615,
+      "sha256": "39ae62e50a116007e42086cf2824ef44afce579fb2ca39e004f54905d8335b13"
+    },
+    "docs/qualification/tensor-low-matmul-2026-09-27/simdgroup-probe/artifact-hashes.json": {
+      "bytes": 337,
+      "sha256": "80be53832c45586401237dea472107bf7591a950e74ea8af58162d622078d224"
+    },
+    "docs/qualification/tensor-low-matmul-2026-09-27/simdgroup-probe/build.txt": {
+      "bytes": 221,
+      "sha256": "454b966874a6e6f15bfb09225f5bde6b5153f3f4a5ad065cb34a0a6a9de26ec5"
+    },
+    "docs/qualification/tensor-low-matmul-2026-09-27/simdgroup-probe/probe.c": {
+      "bytes": 5125,
+      "sha256": "9cb330a47f295c1274fe595601b165f0ab369049b4d33e1c765275dd71fa8172"
+    },
+    "docs/qualification/tensor-low-matmul-2026-09-27/simdgroup-probe/run-metal.txt": {
+      "bytes": 1627,
+      "sha256": "6558e521e291679e50df9e9e71ec2b5ef102f32645c5653f6b7be496a55dbd75"
+    },
+    "docs/qualification/tensor-low-matmul-2026-09-27/source-fingerprints.json": {
+      "bytes": 51615,
+      "sha256": "e196ff4494a17b22a4887eb2c052e7d5f4dfe069aeaa34d36f470a0b6c56d28e"
+    },
+    "docs/qualification/tensor-low-matmul-2026-09-27/wasm.txt": {
+      "bytes": 796,
+      "sha256": "b3e34f1ab8fd0c1f190a63b266a8771be39d9af3f0d0a0c1ed3e738ba3a3e4e8"
+    },
+    "docs/qualification/tensor-low-matmul-2026-09-27/wgsl-metal.txt": {
+      "bytes": 33914,
+      "sha256": "622cc722236d1890f31bfde9a11e7eb443e232a2436e3d79dbd0471f67799d72"
+    },
+    "docs/qualification/tensor-low-matmul-2026-09-27/whitespace.txt": {
+      "bytes": 56,
+      "sha256": "83f77ebd38f3384ad02bf8b22de95bdd69d7d6e2269633621abf1f39e213708e"
+    },
+    "docs/qualification/tensor-low-matmul-2026-09-27.md": {
+      "bytes": 14126,
+      "sha256": "6940f126e548e05608c4f8bc44eb623f9833b17523e1467f5f09cc534a821267"
+    }
+  }
+}

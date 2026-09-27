@@ -31,9 +31,119 @@ pub const MATMUL_WGSL: &str = include_str!("../shaders/matmul.wgsl");
 pub const MATMUL_ALIGNED_WGSL: &str = include_str!("../shaders/matmul_aligned.wgsl");
 pub const MATMUL_DIRECT_WGSL: &str = include_str!("../shaders/matmul_direct.wgsl");
 pub const MATMUL_DOT_WGSL: &str = include_str!("../shaders/matmul_dot.wgsl");
+pub const TENSOR_ELEMENTWISE_WGSL: &str = include_str!("../shaders/tensor_elementwise.wgsl");
+pub const TENSOR_SUM_WGSL: &str = include_str!("../shaders/tensor_sum.wgsl");
+pub const TENSOR_REDUCE_WGSL: &str = include_str!("../shaders/tensor_reduce.wgsl");
+pub const TENSOR_MATMUL_WGSL: &str = include_str!("../shaders/tensor_matmul.wgsl");
+
+pub const TENSOR_COPY_WGSL: &str = include_str!("../shaders/tensor_copy.wgsl");
+pub const TENSOR_COMPARE_WGSL: &str = include_str!("../shaders/tensor_compare.wgsl");
+pub const TENSOR_SELECT_WGSL: &str = include_str!("../shaders/tensor_select.wgsl");
+pub const TENSOR_SCAN_BLOCKS_WGSL: &str = include_str!("../shaders/tensor_scan_blocks.wgsl");
+pub const TENSOR_SCAN_ADD_WGSL: &str = include_str!("../shaders/tensor_scan_add.wgsl");
+pub const TENSOR_GATHER_WGSL: &str = include_str!("../shaders/tensor_gather.wgsl");
+pub const TENSOR_INDEX_COUNT_WGSL: &str = include_str!("../shaders/tensor_index_count.wgsl");
+pub const TENSOR_COUNT_RESET_WGSL: &str = include_str!("../shaders/tensor_count_reset.wgsl");
+pub const TENSOR_COMPACT_WGSL: &str = include_str!("../shaders/tensor_compact.wgsl");
+pub const TENSOR_SCATTER_WGSL: &str = include_str!("../shaders/tensor_scatter.wgsl");
+pub const TENSOR_SCATTER_RESET_WGSL: &str = include_str!("../shaders/tensor_scatter_reset.wgsl");
+pub const TENSOR_SCATTER_OWNERS_WGSL: &str = include_str!("../shaders/tensor_scatter_owners.wgsl");
+pub const TENSOR_LOW_PACK_WGSL: &str = concat!(
+    include_str!("../shaders/low_codec.wgsl"),
+    "\n",
+    include_str!("../shaders/tensor_low_pack.wgsl")
+);
+pub const TENSOR_LOW_UNPACK_WGSL: &str = concat!(
+    include_str!("../shaders/low_codec.wgsl"),
+    "\n",
+    include_str!("../shaders/tensor_low_unpack.wgsl")
+);
+pub const TENSOR_LOW_MATMUL_WGSL: &str = concat!(
+    include_str!("../shaders/low_codec.wgsl"),
+    "\n",
+    include_str!("../shaders/tensor_low_matmul.wgsl")
+);
+pub const TENSOR_LOW_ARITHMETIC_WGSL: &str = concat!(
+    include_str!("../shaders/low_codec.wgsl"),
+    "\n",
+    include_str!("../shaders/float_bits_order.wgsl"),
+    "\n",
+    include_str!("../shaders/float_power2.wgsl"),
+    "\n",
+    include_str!("../shaders/tensor_low_arithmetic.wgsl")
+);
+
+pub const TENSOR_STATS_REDUCE_WGSL: &str = concat!(
+    include_str!("../shaders/float_power2.wgsl"),
+    "\n",
+    include_str!("../shaders/tensor_stats_common.wgsl"),
+    "\n",
+    include_str!("../shaders/tensor_stats_reduce.wgsl")
+);
+pub const TENSOR_STATS_FINISH_WGSL: &str = concat!(
+    include_str!("../shaders/float_power2.wgsl"),
+    "\n",
+    include_str!("../shaders/tensor_stats_common.wgsl"),
+    "\n",
+    include_str!("../shaders/tensor_stats_finish.wgsl")
+);
+pub const TENSOR_STATS_OUTPUT_WGSL: &str = concat!(
+    include_str!("../shaders/float_power2.wgsl"),
+    "\n",
+    include_str!("../shaders/tensor_stats_common.wgsl"),
+    "\n",
+    include_str!("../shaders/tensor_stats_output.wgsl")
+);
+pub const TENSOR_STATS_SMALL_WGSL: &str = concat!(
+    include_str!("../shaders/float_power2.wgsl"),
+    "\n",
+    include_str!("../shaders/tensor_stats_common.wgsl"),
+    "\n",
+    include_str!("../shaders/tensor_stats_small.wgsl")
+);
+pub const TENSOR_ATTENTION_WGSL: &str = concat!(
+    include_str!("../shaders/float_power2.wgsl"),
+    "\n",
+    include_str!("../shaders/tensor_attention_common.wgsl"),
+    "\n",
+    include_str!("../shaders/tensor_attention.wgsl")
+);
+pub const TENSOR_ATTENTION_MERGE_WGSL: &str = concat!(
+    include_str!("../shaders/float_power2.wgsl"),
+    "\n",
+    include_str!("../shaders/tensor_attention_common.wgsl"),
+    "\n",
+    include_str!("../shaders/tensor_attention_merge.wgsl")
+);
 
 /// Every shipped kernel (name, source), for validation tests.
-pub const ALL: [(&str, &str); 19] = [
+pub const ALL: [(&str, &str); 45] = [
+    ("tensor_low_arithmetic", TENSOR_LOW_ARITHMETIC_WGSL),
+    ("tensor_attention_merge", TENSOR_ATTENTION_MERGE_WGSL),
+    ("tensor_attention", TENSOR_ATTENTION_WGSL),
+    ("tensor_stats_small", TENSOR_STATS_SMALL_WGSL),
+    ("tensor_stats_reduce", TENSOR_STATS_REDUCE_WGSL),
+    ("tensor_stats_finish", TENSOR_STATS_FINISH_WGSL),
+    ("tensor_stats_output", TENSOR_STATS_OUTPUT_WGSL),
+    ("tensor_low_pack", TENSOR_LOW_PACK_WGSL),
+    ("tensor_low_unpack", TENSOR_LOW_UNPACK_WGSL),
+    ("tensor_low_matmul", TENSOR_LOW_MATMUL_WGSL),
+    ("tensor_scatter", TENSOR_SCATTER_WGSL),
+    ("tensor_scatter_reset", TENSOR_SCATTER_RESET_WGSL),
+    ("tensor_scatter_owners", TENSOR_SCATTER_OWNERS_WGSL),
+    ("tensor_reduce", TENSOR_REDUCE_WGSL),
+    ("tensor_copy", TENSOR_COPY_WGSL),
+    ("tensor_compare", TENSOR_COMPARE_WGSL),
+    ("tensor_select", TENSOR_SELECT_WGSL),
+    ("tensor_scan_blocks", TENSOR_SCAN_BLOCKS_WGSL),
+    ("tensor_scan_add", TENSOR_SCAN_ADD_WGSL),
+    ("tensor_gather", TENSOR_GATHER_WGSL),
+    ("tensor_index_count", TENSOR_INDEX_COUNT_WGSL),
+    ("tensor_count_reset", TENSOR_COUNT_RESET_WGSL),
+    ("tensor_compact", TENSOR_COMPACT_WGSL),
+    ("tensor_elementwise", TENSOR_ELEMENTWISE_WGSL),
+    ("tensor_sum", TENSOR_SUM_WGSL),
+    ("tensor_matmul", TENSOR_MATMUL_WGSL),
     ("scan_blocks", SCAN_BLOCKS_WGSL),
     ("scan_blocks4", SCAN_BLOCKS4_WGSL),
     ("scan_add", SCAN_ADD_WGSL),

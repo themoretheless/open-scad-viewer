@@ -1,0 +1,45 @@
+{"command": ["cargo", "test", "--locked", "--manifest-path", "/Users/themoretheless/Documents/Sources/open-scad-viewer/crates/Cargo.toml", "--offline", "-p", "compute-cuda", "--", "--test-threads=1", "--nocapture"], "required_env": {"CUDA_REQUIRED": "1", "COMPUTE_REQUIRE_CUDA": "1"}}
+warning: binary `wgsl_export` should have a kebab-case name
+  |
+1 | /Users/themoretheless/Documents/Sources/open-scad-viewer/crates/target/.../wgsl_export
+  |                                                                            ^^^^^^^^^^^
+  |
+  = note: `cargo::non_kebab_case_bins` is set to `warn` by default
+help: to change the binary name to `wgsl-export`, convert the file stem
+  |
+1 - src/bin/wgsl_export.rs
+1 + src/bin/wgsl-export.rs
+  |
+warning: `raster-core` (manifest) generated 1 warning
+   Compiling compute-cuda v0.1.0 (/Users/themoretheless/Documents/Sources/open-scad-viewer/crates/compute-cuda)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.26s
+     Running unittests src/lib.rs (crates/target/debug/build/compute-cuda/e31d80fd51d43af8/out/compute_cuda-e31d80fd51d43af8)
+
+running 7 tests
+test indexing::gather::tests::gather_flat_addressing_preserves_prefix_indices_and_suffix_axes ... ok
+test indexing::scan::tests::scan_row_addressing_matches_strided_layout_for_every_axis ... ok
+test libraries::tests::an_old_library_returns_its_missing_symbol_before_any_call ... ok
+test matmul::tests::broadcast_batches_point_at_original_matrices ... ok
+test policy::tests::precision_is_explicit_and_unsupported_modes_do_not_fall_back ... ok
+test policy::tests::rectangular_row_major_layout_and_integer_limits ... ok
+test runtime::tests::logical_broadcast_count_is_bounded_without_allocating ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests/cuda_tensor.rs (crates/target/debug/build/compute-cuda/0bd32056ac749a4b/out/cuda_tensor-0bd32056ac749a4b)
+
+running 1 test
+test native_cuda_tensor_contract ... 
+thread 'native_cuda_tensor_contract' (28762607) panicked at compute-cuda/tests/cuda_tensor.rs:27:13:
+CUDA_REQUIRED / COMPUTE_REQUIRE_CUDA requires native hardware: CUDA unavailable: CUDA driver/device is absent or initialization failed
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+FAILED
+
+failures:
+
+failures:
+    native_cuda_tensor_contract
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+error: test failed, to rerun pass `-p compute-cuda --test cuda_tensor`

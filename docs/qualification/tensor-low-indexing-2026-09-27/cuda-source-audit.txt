@@ -1,0 +1,4 @@
+All 9 source parts, exact runtime concat and 4 PTX hashes match report.
+45 entry points per architecture; status 0 on70/80/90/120.
+Source 39613 bytes, SHA256 b0f42e12a9e1649900ab1a9a80be5e3fa55e38f8e60b214097e7c6a274abeff8.
+No NVIDIA numerical execution.
