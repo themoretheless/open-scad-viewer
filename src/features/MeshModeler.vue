@@ -844,7 +844,7 @@ const scene = computed(() => document.value.objects.filter(o => o.visible).map(o
 .mesh-workspace {
   user-select: none;
   position: fixed;
-  inset: 46px 0 28px;
+  inset: var(--topbar-h, 52px) 0 28px;
   z-index: 20;
   display: flex;
   flex-direction: column;

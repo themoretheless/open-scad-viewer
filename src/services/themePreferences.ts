@@ -8,12 +8,12 @@ export interface ThemeDefinition {
   readonly tokens: Readonly<Record<string, string>>
 }
 
-// Warm neutral ground with a clay accent; every value is checked by assertThemeCatalog.
+// Graphite ground with an amber accent; every value is checked by assertThemeCatalog.
 const darkTokens = {
-  '--bg': '#1c1a17', '--surface': '#221f1b', '--surface-raised': '#2a2622',
-  '--border': '#7a7266', '--text': '#f1ece3', '--text-dim': '#a8a094',
-  '--accent': '#d97757', '--accent-strong': '#b5533a', '--hover': '#33302a',
-  '--danger': '#ff8f80', '--warning': '#f0b458', '--canvas-bg': '#141210', '--focus': '#f0a488',
+  '--bg': '#111214', '--surface': '#16171a', '--surface-raised': '#1f2024',
+  '--border': '#6c6f77', '--text': '#e7e5df', '--text-dim': '#a9a69e',
+  '--accent': '#f0b35a', '--accent-strong': '#94601a', '--hover': '#26282d',
+  '--danger': '#f08a7e', '--warning': '#f0b35a', '--canvas-bg': '#1a1b1f', '--focus': '#ffd08a',
 } as const
 
 export const THEME_CATALOG: readonly ThemeDefinition[] = Object.freeze([
@@ -22,8 +22,8 @@ export const THEME_CATALOG: readonly ThemeDefinition[] = Object.freeze([
     id: 'light', name: { ru: 'Светлая', en: 'Light' }, scheme: 'light', tokens: {
       '--bg': '#f4f1ea', '--surface': '#fbfaf7', '--surface-raised': '#efebe2',
       '--border': '#8a8275', '--text': '#1f1c18', '--text-dim': '#5e574d',
-      '--accent': '#b8543a', '--accent-strong': '#a2472f', '--hover': '#ebe6db',
-      '--danger': '#b3261e', '--warning': '#8a5b00', '--canvas-bg': '#e9e4da', '--focus': '#a2472f',
+      '--accent': '#8a5200', '--accent-strong': '#6e4100', '--hover': '#ebe6db',
+      '--danger': '#b3261e', '--warning': '#8a5b00', '--canvas-bg': '#e9e4da', '--focus': '#6e4100',
     } },
   {
     id: 'nord', name: { ru: 'Nord', en: 'Nord' }, scheme: 'dark', tokens: {

@@ -3341,20 +3341,21 @@ function sanitizeFileName(name: string) { return (name.replace(/[^\w.() -]+/g, '
 
 <style>
 :root {
-  --bg: #1c1a17;
-  --surface: #221f1b;
-  --surface-raised: #2a2622;
-  --border: #3a352e;
-  --text: #f1ece3;
-  --text-dim: #a8a094;
-  --accent: #d97757;
-  --accent-strong: #b5533a;
-  --hover: #33302a;
-  --danger: #ff8f80;
-  --warning: #f0b458;
-  --canvas-bg: #141210;
-  --focus: #f0a488;
-  --font-ui: "Inter Tight", ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --bg: #111214;
+  --surface: #16171a;
+  --surface-raised: #1f2024;
+  --border: #2c2e33;
+  --text: #e7e5df;
+  --text-dim: #a9a69e;
+  --accent: #f0b35a;
+  --accent-strong: #94601a;
+  --hover: #26282d;
+  --danger: #f08a7e;
+  --warning: #f0b35a;
+  --canvas-bg: #1a1b1f;
+  --focus: #ffd08a;
+  --topbar-h: 52px;
+  --font-ui: "IBM Plex Sans", ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --font-mono: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
   --radius: 8px;
 }
@@ -3366,13 +3367,13 @@ function sanitizeFileName(name: string) { return (name.replace(/[^\w.() -]+/g, '
   --border: #d5cfc2;
   --text: #1f1c18;
   --text-dim: #5e574d;
-  --accent: #b8543a;
-  --accent-strong: #a2472f;
+  --accent: #8a5200;
+  --accent-strong: #6e4100;
   --hover: #ebe6db;
   --danger: #b3261e;
   --warning: #8a5b00;
   --canvas-bg: #e9e4da;
-  --focus: #a2472f;
+  --focus: #6e4100;
 }
 
 *, *::before, *::after { box-sizing: border-box; }
@@ -3422,7 +3423,7 @@ button, select { color: inherit; }
 
 /* Top bar */
 .topbar {
-  z-index: 10; height: 46px; display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 12px;
+  z-index: 10; height: var(--topbar-h); display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 12px;
   padding: 0 12px 0 14px; background: var(--surface); border-bottom: 1px solid var(--border); flex-shrink: 0;
 }
 .topbar-left, .topbar-right { display: flex; align-items: center; gap: 8px; min-width: 0; }
@@ -3433,11 +3434,11 @@ button, select { color: inherit; }
 .kernel-badge { font-family: var(--font-mono); }
 
 .icon-btn, .btn, .view-btn {
-  min-height: 30px; border: 1px solid var(--border); border-radius: var(--radius); background: transparent;
+  min-height: 36px; border: 1px solid var(--border); border-radius: var(--radius); background: transparent;
   color: var(--text); cursor: pointer; transition: background .12s, border-color .12s;
   display: inline-flex; align-items: center; justify-content: center; gap: 6px;
 }
-.icon-btn { min-width: 30px; padding: 0 7px; color: var(--text-dim); }
+.icon-btn { min-width: 36px; padding: 0 7px; color: var(--text-dim); }
 .icon-btn:hover, .btn:hover, .view-btn:hover { background: var(--hover); color: var(--text); }
 .icon-btn:focus-visible, .btn:focus-visible, .view-btn:focus-visible, .select:focus-visible, summary:focus-visible,
 .view-select:focus-visible, .splitter:focus-visible, .gpu-canvas:focus-visible, .code:focus-visible, .dock-rail button:focus-visible,
@@ -3450,7 +3451,7 @@ button, select { color: inherit; }
 .btn-primary:hover { background: var(--accent-strong); border-color: var(--accent-strong); color: #fff; }
 .btn-primary:disabled { cursor: progress; }
 .topbar-action span { display: inline; }
-.command-btn { min-width: 150px; justify-content: flex-start; padding-inline: 10px; background: var(--bg); color: var(--text-dim); font-weight: 400; }
+.command-btn { min-width: 300px; background: var(--surface-raised); justify-content: flex-start; padding-inline: 12px; color: var(--text-dim); font-weight: 400; }
 .command-btn span { flex: 1; text-align: left; }
 .command-btn kbd, .menu-list kbd, .status-hint kbd {
   padding: 1px 5px; border: 1px solid var(--border); border-radius: 4px; color: var(--text-dim);
@@ -3499,13 +3500,13 @@ button, select { color: inherit; }
 }
 
 /* Mode switch */
-.mode-switch { display: inline-flex; gap: 2px; padding: 3px; border: 1px solid var(--border); border-radius: 9px; justify-self: center; }
+.mode-switch { display: inline-flex; gap: 2px; padding: 3px; background: var(--surface-raised); border: 1px solid var(--border); border-radius: 9px; justify-self: center; }
 .mode-switch button {
-  min-width: 64px; height: 26px; padding: 0 14px; border: 0; border-radius: 6px; background: transparent;
+  min-width: 64px; height: 30px; padding: 0 14px; border: 0; border-radius: 6px; background: transparent;
   color: var(--text-dim); font-weight: 500; cursor: pointer;
 }
 .mode-switch button:hover { color: var(--text); background: var(--hover); }
-.mode-switch button.active { background: var(--text); color: var(--bg); font-weight: 600; }
+.mode-switch button.active { background: var(--hover); color: var(--text); box-shadow: inset 0 -2px 0 var(--accent); font-weight: 600; }
 
 /* Layout */
 .no-gpu { position: absolute; z-index: 8; inset: 0; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 14px; color: var(--danger); background: var(--canvas-bg); font-size: 1rem; padding: 40px; text-align: center; }
@@ -3514,7 +3515,7 @@ button, select { color: inherit; }
    laid out off to the side: hiding it would resize its canvas to zero. */
 .main.editor-drawer {
   position: fixed;
-  inset: 46px auto 28px 0;
+  inset: var(--topbar-h) auto 28px 0;
   z-index: 30;
   width: min(560px, 82vw);
   border-right: 1px solid var(--border);
