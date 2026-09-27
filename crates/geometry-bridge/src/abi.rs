@@ -543,6 +543,26 @@ pub fn abi_analyze_solid(id: u32, normal_cosine: f64, edge_cosine: f64, leaf: us
     ))
 }
 
+/// Start an owned cooperative solid analysis; BVH traversal resumes via step.
+pub fn abi_solid_analysis_start(id: u32, normal_cosine: f64, edge_cosine: f64, leaf: usize) -> u64 {
+    if !normal_cosine.is_finite() || !edge_cosine.is_finite() || !(1..=64).contains(&leaf) {
+        return packed(geometry(Err(input("Invalid solid analysis parameters"))));
+    }
+    packed(geometry(
+        mesh_analysis::start_solid_analysis(id, normal_cosine, edge_cosine, leaf).and_then(encode),
+    ))
+}
+
+pub fn abi_solid_analysis_step(job: u32) -> u64 {
+    packed(geometry(
+        mesh_analysis::step_solid_analysis(job).and_then(encode),
+    ))
+}
+
+pub fn abi_solid_analysis_cancel(job: u32) {
+    mesh_analysis::cancel_solid_analysis(job);
+}
+
 /// Read one pointer/length/diagnostic slot of a stored analysis result.
 /// # Safety
 /// The handle must reference a live array result (BVH, edges, placement, or export).

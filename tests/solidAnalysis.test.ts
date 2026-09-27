@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { CadGeometryKernel } from '../src/services/cadGeometryKernel'
 import { loadCadKernelOps } from '../src/services/cadKernelOps'
-import { analyzeSolidInKernel } from '../src/services/geometry/meshAnalysis'
+import { analyzeSolidCooperativelyInKernel, analyzeSolidInKernel } from '../src/services/geometry/meshAnalysis'
 import { decodeNurbsResult, kernelRuntime } from '../src/services/geometry/kernel'
 import { buildMeshBvh } from '../src/services/meshBvh'
 import { extractSemanticEdges } from '../src/services/meshTopology'
@@ -63,6 +63,82 @@ describe('retained solid analysis', () => {
       } finally { session.dispose() }
     },
   )
+
+  it.each(['cube', 'sphere', 'empty'])('cooperative analysis preserves exclusive result buffers: %s', async fixture => {
+    const session = await new CadGeometryKernel().openSession()
+    try {
+      const {CadSolid} = session.module
+      const solid = fixture === 'cube' ? CadSolid.cube([2,3,4], true)
+        : fixture === 'sphere' ? CadSolid.sphere(3, 128) : CadSolid.union([])
+      const expected = analyzeSolidInKernel(solid.handle)
+      let checkpoints = 0
+      const actual = await analyzeSolidCooperativelyInKernel(solid.handle, async () => { checkpoints++ })
+      expect(actual).toEqual(expected)
+      if (fixture === 'sphere') expect(checkpoints).toBeGreaterThan(10)
+      expect(actual.mesh.vertices.buffer).not.toBe(expected.mesh.vertices.buffer)
+      solid.delete()
+      kernelRuntime().memory.grow(1)
+      expect(actual).toEqual(expected)
+    } finally { session.dispose() }
+  })
+
+  it('cancels after multiple BVH and edge steps and releases capacity for later analyses', async () => {
+    const session = await new CadGeometryKernel().openSession()
+    try {
+      const solid = session.module.CadSolid.sphere(3, 128)
+      const cancellation = new Error('cancel during BVH')
+      for (let run = 0; run < 5; run++) {
+        let checkpoints = 0
+        await expect(analyzeSolidCooperativelyInKernel(solid.handle, async () => {
+          if (++checkpoints === [4, 80, 200, 240, 300][run]) throw cancellation
+        })).rejects.toBe(cancellation)
+        expect(checkpoints).toBe([4, 80, 200, 240, 300][run])
+      }
+      const result = await analyzeSolidCooperativelyInKernel(solid.handle, async () => {})
+      expect(result).toEqual(analyzeSolidInKernel(solid.handle))
+    } finally { session.dispose() }
+  })
+
+  it('cancels a completed analysis before copying and releases the result lease', async () => {
+    const session = await new CadGeometryKernel().openSession()
+    try {
+      const solid = session.module.CadSolid.cube(2)
+      let completionCheckpoints = 0
+      await analyzeSolidCooperativelyInKernel(solid.handle, async () => { completionCheckpoints++ })
+      const cancel = new Error('cancel before publication')
+      for (let run = 0; run < 5; run++) {
+        let checkpoints = 0
+        // The final checkpoint follows result completion but precedes copying.
+        await expect(analyzeSolidCooperativelyInKernel(solid.handle, async () => {
+          if (++checkpoints === completionCheckpoints) throw cancel
+        })).rejects.toBe(cancel)
+      }
+      const result = await analyzeSolidCooperativelyInKernel(solid.handle, async () => {})
+      expect(result.mesh.indices).toHaveLength(36)
+    } finally { session.dispose() }
+  })
+
+  it('resumable ABI rejects stale jobs without cancelling newer jobs', async () => {
+    const session = await new CadGeometryKernel().openSession()
+    try {
+      const solid = session.module.CadSolid.sphere(3, 128)
+      const {exports: wasm, takeResponse} = kernelRuntime()
+      const start = () => decodeNurbsResult<number>(takeResponse(wasm.abi_solid_analysis_start(solid.handle, .6, .8, 8)))
+      const a = start(), b = start()
+      try {
+        expect(start).toThrow('job budget')
+        expect(decodeNurbsResult(takeResponse(wasm.abi_solid_analysis_step(a)))).toBe(0)
+        wasm.abi_solid_analysis_cancel(a)
+        const c = start()
+        try {
+          expect(c).toBeGreaterThan(b)
+          wasm.abi_solid_analysis_cancel(a)
+          expect(() => decodeNurbsResult(takeResponse(wasm.abi_solid_analysis_step(a)))).toThrow('Unknown or completed')
+          expect(decodeNurbsResult(takeResponse(wasm.abi_solid_analysis_step(c)))).toBe(0)
+        } finally { wasm.abi_solid_analysis_cancel(c) }
+      } finally { wasm.abi_solid_analysis_cancel(a); wasm.abi_solid_analysis_cancel(b) }
+    } finally { session.dispose() }
+  })
 
   it('preserves metrics and provenance while producing independent analyses', async () => {
     const ops = await loadCadKernelOps()

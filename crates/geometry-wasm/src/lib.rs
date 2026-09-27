@@ -208,6 +208,25 @@ pub extern "C" fn abi_analyze_solid(
     geometry_bridge::abi::abi_analyze_solid(id, normal_cosine, edge_cosine, leaf)
 }
 
+/// Start/resume/cancel an owned analysis without exposing partial buffers.
+#[unsafe(no_mangle)]
+pub extern "C" fn abi_solid_analysis_start(
+    id: u32,
+    normal_cosine: f64,
+    edge_cosine: f64,
+    leaf: usize,
+) -> u64 {
+    geometry_bridge::abi::abi_solid_analysis_start(id, normal_cosine, edge_cosine, leaf)
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn abi_solid_analysis_step(job: u32) -> u64 {
+    geometry_bridge::abi::abi_solid_analysis_step(job)
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn abi_solid_analysis_cancel(job: u32) {
+    geometry_bridge::abi::abi_solid_analysis_cancel(job)
+}
+
 /// # Safety
 /// The handle must reference a live result from `abi_bvh_build`,
 /// `abi_semantic_edges`, `abi_render_mesh` or `abi_analyze_solid`.

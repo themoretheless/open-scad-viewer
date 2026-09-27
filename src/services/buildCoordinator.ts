@@ -75,10 +75,14 @@ export interface BuildCoordinatorOptions {
   timers?: CoordinatorTimers
   /**
    * Allows an already-finishing worker to stay warm. Once the grace expires,
-   * the worker is replaced because synchronous Manifold work cannot be
+   * the worker is replaced because synchronous WASM work cannot be
    * cooperatively interrupted. Defaults to immediate hard preemption.
    */
   supersedeGraceMs?: number
+  /** Maximum silence from a live Worker. Omit to disable automatic recovery. */
+  workerSilenceTimeoutMs?: number
+  /** Called when a silent Worker is replaced for one bounded retry. */
+  onWorkerRestart?: () => void
 }
 
 type JobLifecycle = 'queued' | 'posted' | 'accepted' | 'started' | 'superseded' | 'terminal'
@@ -88,6 +92,7 @@ interface JobRecord {
   lifecycle: JobLifecycle
   requestedAt: number
   workerGeneration: number | null
+  silenceRetries: number
 }
 
 interface WorkerBinding {
@@ -95,6 +100,7 @@ interface WorkerBinding {
   generation: number
   messageListener: EventListener
   errorListener: EventListener
+  messageErrorListener: EventListener
 }
 
 function sourceSpansFit(source: string, event: GeometryWorkerEvent): boolean {
@@ -211,6 +217,7 @@ export class BuildCoordinator {
   private readonly timers: CoordinatorTimers
   private readonly supersedeGraceMs: number
   private readonly snapshotEvents: boolean
+  private readonly workerSilenceTimeoutMs: number | undefined
   private readonly jobs = new Map<GeometryJobId, JobRecord>()
   private readonly latestJobByQuality = new Map<GeometryQuality, GeometryJobId>()
   private readonly pendingJobIds: GeometryJobId[] = []
@@ -218,6 +225,9 @@ export class BuildCoordinator {
 
   private binding: WorkerBinding | null = null
   private hardRestartTimer: unknown | null = null
+  private hardRestartToken = 0
+  private workerSilenceTimer: unknown | null = null
+  private workerSilenceToken = 0
   private nextJobId = 1
   private nextWorkerGeneration = 1
   private latestRevision: DocumentRevision | null = null
@@ -228,11 +238,16 @@ export class BuildCoordinator {
     if (typeof options.workerFactory !== 'function') throw new TypeError('workerFactory is required')
     const grace = options.supersedeGraceMs ?? 0
     if (!Number.isFinite(grace) || grace < 0) throw new RangeError('supersedeGraceMs must be non-negative')
+    const silence = options.workerSilenceTimeoutMs
+    if (silence !== undefined && (!Number.isFinite(silence) || silence <= 0)) {
+      throw new RangeError('workerSilenceTimeoutMs must be positive')
+    }
     this.options = options
     this.now = options.now ?? (() => performance.now())
     this.timers = options.timers ?? DEFAULT_TIMERS
     this.supersedeGraceMs = grace
     this.snapshotEvents = options.snapshotEvents ?? true
+    this.workerSilenceTimeoutMs = silence
   }
 
   private counters = { builds: 0, superseded: 0, workerStarts: 0, hardRestarts: 0 }
@@ -279,6 +294,7 @@ export class BuildCoordinator {
       lifecycle: 'queued',
       requestedAt,
       workerGeneration: null,
+      silenceRetries: 0,
     }
     this.counters.builds++
     this.jobs.set(request.jobId, record)
@@ -344,6 +360,7 @@ export class BuildCoordinator {
   }
 
   private beginRevision(revision: DocumentRevision, source: string) {
+    this.clearWorkerSilenceTimer()
     this.latestRevision = revision
     this.latestSource = source
     this.latestJobByQuality.clear()
@@ -386,7 +403,10 @@ export class BuildCoordinator {
       this.restartAndPostPending()
       return
     }
+    const token = ++this.hardRestartToken
+    const generation = this.binding?.generation
     this.hardRestartTimer = this.timers.setTimeout(() => {
+      if (token !== this.hardRestartToken || generation !== this.binding?.generation) return
       this.hardRestartTimer = null
       this.restartAndPostPending()
     }, this.supersedeGraceMs)
@@ -404,7 +424,8 @@ export class BuildCoordinator {
       })
     } catch {
       // Replacement below is the actual cancellation boundary. The cancel
-      // message is only a best-effort fast path for work not inside Manifold.
+      // message is only a best-effort fast path outside a synchronous kernel
+      // call.
     }
   }
 
@@ -416,6 +437,9 @@ export class BuildCoordinator {
     record.lifecycle = 'posted'
     try {
       binding.worker.postMessage(record.request)
+      // Posting another quality tier or coalescing a request is not evidence
+      // of Worker liveness. Start the clock only if no clock is running.
+      if (this.workerSilenceTimer === null) this.armWorkerSilenceTimer()
     } catch (error) {
       this.failForWorker(record, workerError('Could not post a geometry build to the Worker', error))
     }
@@ -452,9 +476,13 @@ export class BuildCoordinator {
         this.handleWorkerMessage((event as MessageEvent<unknown>).data, generation)
       }
       const errorListener: EventListener = event => this.handleWorkerError(event, generation)
+      const messageErrorListener: EventListener = () => this.handleWorkerError({
+        message: 'Could not deserialize a geometry Worker message',
+      } as ErrorEvent, generation)
       worker.addEventListener('message', messageListener)
       worker.addEventListener('error', errorListener)
-      this.binding = { worker, generation, messageListener, errorListener }
+      worker.addEventListener('messageerror', messageErrorListener)
+      this.binding = { worker, generation, messageListener, errorListener, messageErrorListener }
       return this.binding
     } catch (error) {
       this.failForWorker(record, workerError('Could not create the geometry Worker', error))
@@ -463,10 +491,12 @@ export class BuildCoordinator {
   }
 
   private destroyWorker() {
+    this.clearWorkerSilenceTimer()
     if (!this.binding) return
-    const { worker, messageListener, errorListener } = this.binding
+    const { worker, messageListener, errorListener, messageErrorListener } = this.binding
     worker.removeEventListener('message', messageListener)
     worker.removeEventListener('error', errorListener)
+    worker.removeEventListener('messageerror', messageErrorListener)
     worker.terminate()
     this.binding = null
   }
@@ -573,6 +603,9 @@ export class BuildCoordinator {
       }
     }
 
+    if (record.lifecycle !== 'terminal' && record.lifecycle !== 'superseded' && this.isCurrentLatest(record)) {
+      this.armWorkerSilenceTimer()
+    }
     if (event.status === 'succeeded' || event.status === 'failed' || event.status === 'cancelled' || event.status === 'stale') {
       if (record.lifecycle === 'superseded') {
         this.finishSupersededJob(event.jobId)
@@ -585,6 +618,7 @@ export class BuildCoordinator {
         else this.handleNonPublishedTerminal(record, event)
       } finally {
         this.jobs.delete(event.jobId)
+        if (!this.binding || !this.primaryActiveJob(this.binding.generation)) this.clearWorkerSilenceTimer()
       }
       return
     }
@@ -723,6 +757,7 @@ export class BuildCoordinator {
 
   private failForWorker(record: JobRecord, error: GeometryBuildError) {
     const effectiveRecord = this.primaryCurrentJob() ?? record
+    if (this.retireRedundantWork(effectiveRecord)) return
     const generation = record.workerGeneration
     let execution: GeometryBuildFailure['execution']
     try {
@@ -866,8 +901,88 @@ export class BuildCoordinator {
   }
 
   private clearHardRestartTimer() {
+    this.hardRestartToken++
     if (this.hardRestartTimer === null) return
     this.timers.clearTimeout(this.hardRestartTimer)
     this.hardRestartTimer = null
+  }
+
+  private clearWorkerSilenceTimer() {
+    this.workerSilenceToken++
+    if (this.workerSilenceTimer === null) return
+    this.timers.clearTimeout(this.workerSilenceTimer)
+    this.workerSilenceTimer = null
+  }
+
+  private armWorkerSilenceTimer() {
+    if (this.workerSilenceTimeoutMs === undefined || !this.binding
+      || !this.primaryActiveJob(this.binding.generation)) return
+    this.clearWorkerSilenceTimer()
+    const token = this.workerSilenceToken
+    const generation = this.binding.generation
+    this.workerSilenceTimer = this.timers.setTimeout(() => {
+      if (token !== this.workerSilenceToken || generation !== this.binding?.generation) return
+      this.workerSilenceTimer = null
+      this.handleWorkerSilence(generation)
+    }, this.workerSilenceTimeoutMs)
+  }
+
+  private handleWorkerSilence(generation: number) {
+    const primary = this.primaryActiveJob(generation)
+    if (!primary) return
+    if (this.retireRedundantWork(primary)) return
+    if (primary.silenceRetries > 0) {
+      this.failForWorker(primary, {
+        name: 'TimeoutError',
+        code: 'WORKER_TIMEOUT',
+        message: `Geometry Worker did not respond for ${this.workerSilenceTimeoutMs} ms after one retry`,
+      })
+      return
+    }
+    // A newly requested full build can still get its own retry after preview
+    // used its allowance. Never run that exhausted lower-quality job again.
+    const retry = this.currentActiveRecords().filter(record => record.workerGeneration === generation
+      && record.silenceRetries === 0)
+    this.clearHardRestartTimer()
+    this.counters.hardRestarts++
+    this.destroyWorker()
+    this.pendingJobIds.length = 0
+    this.supersededWorkerJobs.clear()
+    for (const [jobId, record] of this.jobs) {
+      if (!retry.includes(record)) this.jobs.delete(jobId)
+    }
+    for (const record of retry) {
+      record.silenceRetries++
+      record.workerGeneration = null
+      record.lifecycle = 'queued'
+    }
+    this.options.onWorkerRestart?.()
+    for (const record of retry) {
+      // A failed factory/post settles every job; do not resurrect its siblings.
+      if (this.jobs.get(record.request.jobId) === record) this.postJob(record)
+    }
+    if (this.activeJobIds().length > 0) this.updateBuildingState()
+  }
+
+  private retireRedundantWork(primary: JobRecord): boolean {
+    if (primary.request.documentRevision !== this.latestRevision
+      || qualityRank(primary.request.quality) >= qualityRank(this.snapshot.publishedQuality)) return false
+    // Full geometry already won. A failed or silent leftover preview cannot
+    // improve the document and must not replace that success with an error.
+    this.clearHardRestartTimer()
+    this.destroyWorker()
+    this.jobs.clear()
+    this.pendingJobIds.length = 0
+    this.supersededWorkerJobs.clear()
+    this.setState({
+      status: 'ready',
+      requestedQuality: this.snapshot.publishedQuality,
+      jobId: this.latestJobByQuality.get(this.snapshot.publishedQuality!) ?? null,
+      phase: 'complete',
+      progress: 1,
+      activeJobIds: [],
+      error: null,
+    })
+    return true
   }
 }

@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { computed, nextTick, ref, shallowRef, watch } from 'vue'
 import { stringifyMeshJson } from '../services/meshJson'
+import ModelingFloorGrid from '../components/ModelingFloorGrid.vue'
+import ModelingGridControls from '../components/ModelingGridControls.vue'
 import CommandPalette from '../components/CommandPalette.vue'
 import type { PaletteCommand } from '../services/commandSearch'
 import { SCULPT_FALLOFFS, SCULPT_KINDS, buildSculptBrush, isFractionalSculptKind, type SculptFalloff, type SculptKind } from '../services/geometryEditing'
@@ -117,21 +119,6 @@ watch([() => props.open, () => props.seedDocument], ([open, seed]) => {
   } catch (e) { error.value = e instanceof Error ? e.message : String(e) }
 }, { immediate: true })
 const floorVisible = ref(true)
-const floorLines = computed(() => {
-  const cam = camera.value
-  // The SVG shows roughly 10000 / view world units across; keep about 20 grid cells in view.
-  const step = Math.pow(10, Math.floor(Math.log10(Math.max(1, 10000 / view.value / 4))))
-  const extent = step * 20
-  const lines: string[] = []
-  for (let i = -20; i <= 20; i++) {
-    const n = i * step
-    for (const line of [[[-extent, n, 0], [extent, n, 0]], [[n, -extent, 0], [n, extent, 0]]] as const) {
-      lines.push(line.map(p => { const q = projectDirectPoint([p[0], p[1], p[2]], cam); return `${q[0]},${-q[1]}` }).join(' '))
-    }
-  }
-  return lines
-})
-
 const selected = computed(() => document.value.objects.find(o => o.id === selection.value))
 const stats = computed(() => {
   if (!selected.value) return null
@@ -512,15 +499,15 @@ function togglePick(kind: 'vertex' | 'face' | 'edge', id: number) {
 
 function projected(objectId: string) {
   const object = document.value.objects.find(o => o.id === objectId)
-  if (!object || !object.visible) return { tris: [] as Array<{ points: string; face: number }>, verts: [] as Array<{ x: number; y: number; id: number }>, edges: [] as Array<{ x1: number; y1: number; x2: number; y2: number; id: number }> }
+  if (!object || !object.visible) return { tris: [] as Array<{ points: string; face: number; depth: number }>, verts: [] as Array<{ x: number; y: number; id: number }>, edges: [] as Array<{ x1: number; y1: number; x2: number; y2: number; id: number }> }
   const cam = camera.value
-  const tris: Array<{ points: string; face: number }> = []
+  const tris: Array<{ points: string; face: number; depth: number }> = []
   for (let f = 0; f < object.mesh.indices.length / 3; f++) {
     const pts = [0, 1, 2].map(k => {
       const i = object.mesh.indices[f * 3 + k]
       return projectDirectPoint([object.mesh.positions[i * 3], object.mesh.positions[i * 3 + 1], object.mesh.positions[i * 3 + 2]], cam)
     })
-    tris.push({ points: pts.map(p => `${p[0]},${-p[1]}`).join(' '), face: f })
+    tris.push({ points: pts.map(p => `${p[0]},${-p[1]}`).join(' '), face: f, depth: pts.reduce((sum, p) => sum + p[2], 0) / 3 })
   }
   const verts: Array<{ x: number; y: number; id: number }> = []
   if (selectMode.value === 'vertex') {
@@ -647,6 +634,10 @@ function onWheel(event: WheelEvent) {
 }
 
 const scene = computed(() => document.value.objects.filter(o => o.visible).map(o => ({ id: o.id, ...projected(o.id) })))
+// SVG uses painter order: sort all faces together so nearer objects also cover farther ones.
+const sceneFaces = computed(() => scene.value.flatMap(object =>
+  object.tris.map(tri => ({ ...tri, objectId: object.id })),
+).sort((a, b) => a.depth - b.depth))
 </script>
 
 <template>
@@ -686,6 +677,7 @@ const scene = computed(() => document.value.objects.filter(o => o.visible).map(o
         <span class="subtle">{{ stats ? `${stats.vertices}v · ${stats.edges}e · ${stats.faces}f · ${stats.closed ? label('замкнут', 'closed') : label('открыт', 'open')}` : label('ЛКМ: вращение · Shift: панорама · колесо: масштаб', 'LMB: orbit · Shift: pan · wheel: zoom') }}</span>
         <p v-if="error" class="error" role="alert">{{ error }}</p>
       </div>
+      <ModelingGridControls :locale="locale" />
       <div class="mesh-stage">
       <div class="mesh-stage-view">
       <div class="mesh-view-wrap">
@@ -702,16 +694,18 @@ const scene = computed(() => document.value.objects.filter(o => o.visible).map(o
         @wheel.prevent="onWheel"
       >
         <g :transform="`translate(${center[0]},${center[1]}) scale(${view / 100})`">
-          <g v-if="floorVisible" pointer-events="none"><polyline v-for="(line, i) in floorLines" :key="i" :points="line" fill="none" stroke="var(--border)" stroke-opacity=".45" stroke-width=".5" vector-effect="non-scaling-stroke" /></g>
-          <g v-for="object in scene" :key="object.id" :opacity="object.id === selection ? 1 : 0.55">
+          <ModelingFloorGrid v-if="floorVisible" :camera="camera" :size="20000 / view" :center="[-center[0] * 100 / view, -center[1] * 100 / view]" flip-y />
+          <g>
             <polygon
-              v-for="tri in object.tris"
-              :key="`${object.id}-${tri.face}`"
+              v-for="tri in sceneFaces"
+              :key="`${tri.objectId}-${tri.face}`"
               :points="tri.points"
-              :class="{ face: true, selected: object.id === selection && selectedFaces.includes(tri.face) }"
-              @pointerdown="startElementDrag($event, object.id, 'face', tri.face)"
-              @click.stop="selection = object.id; selectMode === 'face' && togglePick('face', tri.face)"
+              :class="{ face: true, selected: tri.objectId === selection && selectedFaces.includes(tri.face) }"
+              @pointerdown="startElementDrag($event, tri.objectId, 'face', tri.face)"
+              @click.stop="selection = tri.objectId; selectMode === 'face' && togglePick('face', tri.face)"
             />
+          </g>
+          <g v-for="object in scene" :key="object.id">
             <line
               v-for="edge in object.edges"
               :key="`${object.id}-e-${edge.id}`"

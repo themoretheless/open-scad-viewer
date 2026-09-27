@@ -1,0 +1,932 @@
+{
+  "timestamp": "2026-09-27T12:32:10.060Z",
+  "browser": "151.0.7922.34",
+  "hashes": {
+    "dist/assets/geometry.worker-CLmlIvka.js": "9212a1d11101c7005626fb4e5ec49b1ed2fd7df73cf1a6cef2cb7ebbc87fd9cc",
+    "public/wasm/geometry-kernel.wasm": "a93ba6e67df2cd2534dcdc6b524a71506dc6f2092cbb4025b6597e654295d8f6",
+    "src/services/buildCoordinator.ts": "09f0a9a8210fa0e89b94f670d997b454b6ca2c17814856d4d0ecae428556303e",
+    "src/workers/geometry.worker.ts": "4fdcd2cdbe066b46af563a91ad854f3c143ec02eb80999a02106612ec2bb0a41",
+    "src/App.vue": "b07a48f6b74f68489c30242ca06432a4807f16f117912532e0d93a7a6f17bd33",
+    "tools/browser-qualification/build-recovery.ts": "6521f99bb1fce213a3160bd959d267f42bbbc06cb52fb54e8b9f5391561470d4",
+    "tools/browser-qualification/build-recovery.mjs": "4e0a4400a4119e4441a3c82bf83ce3916f2957ad858686272b412b5487f4e6c9"
+  },
+  "scope": "Real Chromium Worker transport, production geometry worker and BuildCoordinator. Cooperative cancellation is between statements; no claim of interruption inside a synchronous WASM kernel call.",
+  "scenarioTimeoutMs": 30000,
+  "faultSilenceTimeoutMs": 5000,
+  "fixtures": {
+    "multiStatement": "f3dff8737128a26576a48110b916fa4749ceca5b871cf21e324f0e8023a2b544",
+    "singleStatement": "5f38c823666d9b79a2985e3b1103a7c4b2d7ba86a069fea0be150f7a521e4081",
+    "faultRequest": "bf3cc55d195cac565c37ed00b9f303416ec94e0388afa74bd76e2b59224be39b"
+  },
+  "reports": [
+    {
+      "name": "warm-multi-statement-supersession",
+      "passed": true,
+      "elapsedMs": 316.30000001192093,
+      "faultInjection": "none",
+      "assertions": [
+        "real multi-statement build remained active for 50ms",
+        "obsolete build acknowledged without publication within the production 300ms grace",
+        "same warm worker retained",
+        "replacement cube volume = 125"
+      ],
+      "diagnostics": {
+        "builds": 3,
+        "superseded": 1,
+        "workerStarts": 1,
+        "hardRestarts": 0
+      },
+      "workerRestarts": [],
+      "events": [
+        {
+          "generation": 1,
+          "status": "accepted",
+          "phase": "queued",
+          "revision": 1,
+          "jobId": 1,
+          "ms": 102.09999996423721
+        },
+        {
+          "generation": 1,
+          "status": "started",
+          "phase": "initializing",
+          "revision": 1,
+          "jobId": 1,
+          "ms": 102.30000001192093
+        },
+        {
+          "generation": 1,
+          "status": "progress",
+          "phase": "compiling",
+          "revision": 1,
+          "jobId": 1,
+          "ms": 197.0999999642372
+        },
+        {
+          "generation": 1,
+          "status": "progress",
+          "phase": "serializing",
+          "revision": 1,
+          "jobId": 1,
+          "ms": 200.30000001192093
+        },
+        {
+          "generation": 1,
+          "status": "succeeded",
+          "phase": "complete",
+          "revision": 1,
+          "jobId": 1,
+          "ms": 201.0999999642372
+        },
+        {
+          "generation": 1,
+          "status": "accepted",
+          "phase": "queued",
+          "revision": 2,
+          "jobId": 2,
+          "ms": 206.19999998807907
+        },
+        {
+          "generation": 1,
+          "status": "started",
+          "phase": "initializing",
+          "revision": 2,
+          "jobId": 2,
+          "ms": 206.30000001192093
+        },
+        {
+          "generation": 1,
+          "status": "progress",
+          "phase": "compiling",
+          "revision": 2,
+          "jobId": 2,
+          "ms": 206.5999999642372
+        },
+        {
+          "generation": 1,
+          "status": "cancelled",
+          "phase": "compiling",
+          "revision": 2,
+          "jobId": 2,
+          "ms": 309.5
+        },
+        {
+          "generation": 1,
+          "status": "accepted",
+          "phase": "queued",
+          "revision": 3,
+          "jobId": 3,
+          "ms": 310.30000001192093
+        },
+        {
+          "generation": 1,
+          "status": "started",
+          "phase": "initializing",
+          "revision": 3,
+          "jobId": 3,
+          "ms": 310.39999997615814
+        },
+        {
+          "generation": 1,
+          "status": "progress",
+          "phase": "compiling",
+          "revision": 3,
+          "jobId": 3,
+          "ms": 310.5
+        },
+        {
+          "generation": 1,
+          "status": "progress",
+          "phase": "serializing",
+          "revision": 3,
+          "jobId": 3,
+          "ms": 310.89999997615814
+        },
+        {
+          "generation": 1,
+          "status": "succeeded",
+          "phase": "complete",
+          "revision": 3,
+          "jobId": 3,
+          "ms": 311
+        }
+      ],
+      "publications": [
+        {
+          "status": "succeeded",
+          "revision": 1,
+          "jobId": 1,
+          "sourceSha256": "a31ee19c8a470195185a94e635a19bf524794c2f8b7b5d3cfd88b2942c92283e",
+          "volume": 8,
+          "ms": 201.5999999642372
+        },
+        {
+          "status": "succeeded",
+          "revision": 3,
+          "jobId": 3,
+          "sourceSha256": "576f1dc5e4b32ce173d79d4488e4e95f5567704ef7cb2b99c8bdc5d3168d05eb",
+          "volume": 125,
+          "ms": 311.0999999642372
+        }
+      ]
+    },
+    {
+      "name": "busy-worker-hard-preemption",
+      "passed": true,
+      "elapsedMs": 529.5999999642372,
+      "faultInjection": "none",
+      "assertions": [
+        "real single-statement build remained active for 100ms",
+        "worker replaced once",
+        "obsolete build never published",
+        "replacement cube volume = 216"
+      ],
+      "diagnostics": {
+        "builds": 3,
+        "superseded": 1,
+        "workerStarts": 2,
+        "hardRestarts": 1
+      },
+      "workerRestarts": [],
+      "events": [
+        {
+          "generation": 1,
+          "status": "accepted",
+          "phase": "queued",
+          "revision": 1,
+          "jobId": 1,
+          "ms": 100.19999998807907
+        },
+        {
+          "generation": 1,
+          "status": "started",
+          "phase": "initializing",
+          "revision": 1,
+          "jobId": 1,
+          "ms": 100.30000001192093
+        },
+        {
+          "generation": 1,
+          "status": "progress",
+          "phase": "compiling",
+          "revision": 1,
+          "jobId": 1,
+          "ms": 196
+        },
+        {
+          "generation": 1,
+          "status": "progress",
+          "phase": "serializing",
+          "revision": 1,
+          "jobId": 1,
+          "ms": 200
+        },
+        {
+          "generation": 1,
+          "status": "succeeded",
+          "phase": "complete",
+          "revision": 1,
+          "jobId": 1,
+          "ms": 201.19999998807907
+        },
+        {
+          "generation": 1,
+          "status": "accepted",
+          "phase": "queued",
+          "revision": 2,
+          "jobId": 2,
+          "ms": 211.0999999642372
+        },
+        {
+          "generation": 1,
+          "status": "started",
+          "phase": "initializing",
+          "revision": 2,
+          "jobId": 2,
+          "ms": 211.0999999642372
+        },
+        {
+          "generation": 1,
+          "status": "progress",
+          "phase": "compiling",
+          "revision": 2,
+          "jobId": 2,
+          "ms": 211.0999999642372
+        },
+        {
+          "generation": 2,
+          "status": "accepted",
+          "phase": "queued",
+          "revision": 3,
+          "jobId": 3,
+          "ms": 425.5999999642372
+        },
+        {
+          "generation": 2,
+          "status": "started",
+          "phase": "initializing",
+          "revision": 3,
+          "jobId": 3,
+          "ms": 425.5999999642372
+        },
+        {
+          "generation": 2,
+          "status": "progress",
+          "phase": "compiling",
+          "revision": 3,
+          "jobId": 3,
+          "ms": 524
+        },
+        {
+          "generation": 2,
+          "status": "progress",
+          "phase": "serializing",
+          "revision": 3,
+          "jobId": 3,
+          "ms": 527.3999999761581
+        },
+        {
+          "generation": 2,
+          "status": "succeeded",
+          "phase": "complete",
+          "revision": 3,
+          "jobId": 3,
+          "ms": 528.0999999642372
+        }
+      ],
+      "publications": [
+        {
+          "status": "succeeded",
+          "revision": 1,
+          "jobId": 1,
+          "sourceSha256": "a31ee19c8a470195185a94e635a19bf524794c2f8b7b5d3cfd88b2942c92283e",
+          "volume": 8,
+          "ms": 201.30000001192093
+        },
+        {
+          "status": "succeeded",
+          "revision": 3,
+          "jobId": 3,
+          "sourceSha256": "7c09cfe7d916bb31be9c466d0a892df5e51a0d017491c0a90b59838beb0a62ab",
+          "volume": 216,
+          "ms": 528.3000000119209
+        }
+      ]
+    },
+    {
+      "name": "user-cancel-and-rebuild",
+      "passed": true,
+      "elapsedMs": 483.30000001192093,
+      "faultInjection": "none",
+      "assertions": [
+        "user cancel reached cancelled state",
+        "cancelled result never published",
+        "subsequent cube volume = 27"
+      ],
+      "diagnostics": {
+        "builds": 3,
+        "superseded": 0,
+        "workerStarts": 2,
+        "hardRestarts": 0
+      },
+      "workerRestarts": [],
+      "events": [
+        {
+          "generation": 1,
+          "status": "accepted",
+          "phase": "queued",
+          "revision": 1,
+          "jobId": 1,
+          "ms": 98.69999998807907
+        },
+        {
+          "generation": 1,
+          "status": "started",
+          "phase": "initializing",
+          "revision": 1,
+          "jobId": 1,
+          "ms": 98.69999998807907
+        },
+        {
+          "generation": 1,
+          "status": "progress",
+          "phase": "compiling",
+          "revision": 1,
+          "jobId": 1,
+          "ms": 198.5
+        },
+        {
+          "generation": 1,
+          "status": "progress",
+          "phase": "serializing",
+          "revision": 1,
+          "jobId": 1,
+          "ms": 201.80000001192093
+        },
+        {
+          "generation": 1,
+          "status": "succeeded",
+          "phase": "complete",
+          "revision": 1,
+          "jobId": 1,
+          "ms": 202.60000002384186
+        },
+        {
+          "generation": 1,
+          "status": "accepted",
+          "phase": "queued",
+          "revision": 2,
+          "jobId": 2,
+          "ms": 212.19999998807907
+        },
+        {
+          "generation": 1,
+          "status": "started",
+          "phase": "initializing",
+          "revision": 2,
+          "jobId": 2,
+          "ms": 212.19999998807907
+        },
+        {
+          "generation": 1,
+          "status": "progress",
+          "phase": "compiling",
+          "revision": 2,
+          "jobId": 2,
+          "ms": 212.5
+        },
+        {
+          "generation": 2,
+          "status": "accepted",
+          "phase": "queued",
+          "revision": 3,
+          "jobId": 3,
+          "ms": 374.30000001192093
+        },
+        {
+          "generation": 2,
+          "status": "started",
+          "phase": "initializing",
+          "revision": 3,
+          "jobId": 3,
+          "ms": 374.39999997615814
+        },
+        {
+          "generation": 2,
+          "status": "progress",
+          "phase": "compiling",
+          "revision": 3,
+          "jobId": 3,
+          "ms": 473.10000002384186
+        },
+        {
+          "generation": 2,
+          "status": "progress",
+          "phase": "serializing",
+          "revision": 3,
+          "jobId": 3,
+          "ms": 476.5
+        },
+        {
+          "generation": 2,
+          "status": "succeeded",
+          "phase": "complete",
+          "revision": 3,
+          "jobId": 3,
+          "ms": 477.30000001192093
+        }
+      ],
+      "publications": [
+        {
+          "status": "succeeded",
+          "revision": 1,
+          "jobId": 1,
+          "sourceSha256": "a31ee19c8a470195185a94e635a19bf524794c2f8b7b5d3cfd88b2942c92283e",
+          "volume": 8,
+          "ms": 202.69999998807907
+        },
+        {
+          "status": "succeeded",
+          "revision": 3,
+          "jobId": 3,
+          "sourceSha256": "4307ef810af6532c2ffc7139ba669db35d86fb55a097aebf29b7eba5e6c823fa",
+          "volume": 27,
+          "ms": 477.39999997615814
+        }
+      ]
+    },
+    {
+      "name": "silence-timeout-retry",
+      "passed": true,
+      "elapsedMs": 5366.099999964237,
+      "faultInjection": "first generation blocks its event loop on a marked request after a real warmup cube",
+      "assertions": [
+        "one retry on a new production worker",
+        "job/revision/source identity retained",
+        "single success volume = 343"
+      ],
+      "diagnostics": {
+        "builds": 2,
+        "superseded": 0,
+        "workerStarts": 2,
+        "hardRestarts": 1
+      },
+      "workerRestarts": [
+        {
+          "ms": 5203.300000011921
+        }
+      ],
+      "events": [
+        {
+          "generation": 1,
+          "status": "accepted",
+          "phase": "queued",
+          "revision": 1,
+          "jobId": 1,
+          "ms": 100
+        },
+        {
+          "generation": 1,
+          "status": "started",
+          "phase": "initializing",
+          "revision": 1,
+          "jobId": 1,
+          "ms": 100.09999996423721
+        },
+        {
+          "generation": 1,
+          "status": "progress",
+          "phase": "compiling",
+          "revision": 1,
+          "jobId": 1,
+          "ms": 195.39999997615814
+        },
+        {
+          "generation": 1,
+          "status": "progress",
+          "phase": "serializing",
+          "revision": 1,
+          "jobId": 1,
+          "ms": 198.89999997615814
+        },
+        {
+          "generation": 1,
+          "status": "succeeded",
+          "phase": "complete",
+          "revision": 1,
+          "jobId": 1,
+          "ms": 199.89999997615814
+        },
+        {
+          "generation": 2,
+          "status": "accepted",
+          "phase": "queued",
+          "revision": 2,
+          "jobId": 2,
+          "ms": 5301
+        },
+        {
+          "generation": 2,
+          "status": "started",
+          "phase": "initializing",
+          "revision": 2,
+          "jobId": 2,
+          "ms": 5301
+        },
+        {
+          "generation": 2,
+          "status": "progress",
+          "phase": "compiling",
+          "revision": 2,
+          "jobId": 2,
+          "ms": 5355.599999964237
+        },
+        {
+          "generation": 2,
+          "status": "progress",
+          "phase": "serializing",
+          "revision": 2,
+          "jobId": 2,
+          "ms": 5357.699999988079
+        },
+        {
+          "generation": 2,
+          "status": "succeeded",
+          "phase": "complete",
+          "revision": 2,
+          "jobId": 2,
+          "ms": 5358.399999976158
+        }
+      ],
+      "publications": [
+        {
+          "status": "succeeded",
+          "revision": 1,
+          "jobId": 1,
+          "sourceSha256": "a31ee19c8a470195185a94e635a19bf524794c2f8b7b5d3cfd88b2942c92283e",
+          "volume": 8,
+          "ms": 199.89999997615814
+        },
+        {
+          "status": "succeeded",
+          "revision": 2,
+          "jobId": 2,
+          "sourceSha256": "bf3cc55d195cac565c37ed00b9f303416ec94e0388afa74bd76e2b59224be39b",
+          "volume": 343,
+          "ms": 5358.5
+        }
+      ]
+    },
+    {
+      "name": "terminal-timeout-and-new-revision",
+      "passed": true,
+      "elapsedMs": 10391.199999988079,
+      "faultInjection": "first two generations block their event loops on marked requests",
+      "assertions": [
+        "retry budget stops at one",
+        "single WORKER_TIMEOUT publication",
+        "new revision recovers with cube volume = 64"
+      ],
+      "diagnostics": {
+        "builds": 3,
+        "superseded": 0,
+        "workerStarts": 3,
+        "hardRestarts": 1
+      },
+      "workerRestarts": [
+        {
+          "ms": 5171.699999988079
+        }
+      ],
+      "events": [
+        {
+          "generation": 1,
+          "status": "accepted",
+          "phase": "queued",
+          "revision": 1,
+          "jobId": 1,
+          "ms": 97
+        },
+        {
+          "generation": 1,
+          "status": "started",
+          "phase": "initializing",
+          "revision": 1,
+          "jobId": 1,
+          "ms": 97
+        },
+        {
+          "generation": 1,
+          "status": "progress",
+          "phase": "compiling",
+          "revision": 1,
+          "jobId": 1,
+          "ms": 151.5
+        },
+        {
+          "generation": 1,
+          "status": "progress",
+          "phase": "serializing",
+          "revision": 1,
+          "jobId": 1,
+          "ms": 153.60000002384186
+        },
+        {
+          "generation": 1,
+          "status": "succeeded",
+          "phase": "complete",
+          "revision": 1,
+          "jobId": 1,
+          "ms": 154.19999998807907
+        },
+        {
+          "generation": 3,
+          "status": "accepted",
+          "phase": "queued",
+          "revision": 3,
+          "jobId": 3,
+          "ms": 10290
+        },
+        {
+          "generation": 3,
+          "status": "started",
+          "phase": "initializing",
+          "revision": 3,
+          "jobId": 3,
+          "ms": 10290
+        },
+        {
+          "generation": 3,
+          "status": "progress",
+          "phase": "compiling",
+          "revision": 3,
+          "jobId": 3,
+          "ms": 10385.199999988079
+        },
+        {
+          "generation": 3,
+          "status": "progress",
+          "phase": "serializing",
+          "revision": 3,
+          "jobId": 3,
+          "ms": 10388.899999976158
+        },
+        {
+          "generation": 3,
+          "status": "succeeded",
+          "phase": "complete",
+          "revision": 3,
+          "jobId": 3,
+          "ms": 10389.800000011921
+        }
+      ],
+      "publications": [
+        {
+          "status": "succeeded",
+          "revision": 1,
+          "jobId": 1,
+          "sourceSha256": "a31ee19c8a470195185a94e635a19bf524794c2f8b7b5d3cfd88b2942c92283e",
+          "volume": 8,
+          "ms": 154.39999997615814
+        },
+        {
+          "status": "failed",
+          "revision": 2,
+          "jobId": 2,
+          "sourceSha256": "bf3cc55d195cac565c37ed00b9f303416ec94e0388afa74bd76e2b59224be39b",
+          "code": "WORKER_TIMEOUT",
+          "ms": 10175.300000011921
+        },
+        {
+          "status": "succeeded",
+          "revision": 3,
+          "jobId": 3,
+          "sourceSha256": "08a2aa110546f8e0b4232547b016a128070a2a0a03cb7de6dbd8ec8f1772d347",
+          "volume": 64,
+          "ms": 10390
+        }
+      ]
+    },
+    {
+      "name": "dispose-during-build",
+      "passed": true,
+      "elapsedMs": 425.80000001192093,
+      "faultInjection": "none",
+      "assertions": [
+        "active jobs cleared",
+        "no publication after disposal"
+      ],
+      "diagnostics": {
+        "builds": 2,
+        "superseded": 0,
+        "workerStarts": 1,
+        "hardRestarts": 0
+      },
+      "workerRestarts": [],
+      "events": [
+        {
+          "generation": 1,
+          "status": "accepted",
+          "phase": "queued",
+          "revision": 1,
+          "jobId": 1,
+          "ms": 97.09999996423721
+        },
+        {
+          "generation": 1,
+          "status": "started",
+          "phase": "initializing",
+          "revision": 1,
+          "jobId": 1,
+          "ms": 97.09999996423721
+        },
+        {
+          "generation": 1,
+          "status": "progress",
+          "phase": "compiling",
+          "revision": 1,
+          "jobId": 1,
+          "ms": 192.89999997615814
+        },
+        {
+          "generation": 1,
+          "status": "progress",
+          "phase": "serializing",
+          "revision": 1,
+          "jobId": 1,
+          "ms": 196.19999998807907
+        },
+        {
+          "generation": 1,
+          "status": "succeeded",
+          "phase": "complete",
+          "revision": 1,
+          "jobId": 1,
+          "ms": 197
+        },
+        {
+          "generation": 1,
+          "status": "accepted",
+          "phase": "queued",
+          "revision": 2,
+          "jobId": 2,
+          "ms": 210
+        },
+        {
+          "generation": 1,
+          "status": "started",
+          "phase": "initializing",
+          "revision": 2,
+          "jobId": 2,
+          "ms": 210.0999999642372
+        },
+        {
+          "generation": 1,
+          "status": "progress",
+          "phase": "compiling",
+          "revision": 2,
+          "jobId": 2,
+          "ms": 210.39999997615814
+        }
+      ],
+      "publications": [
+        {
+          "status": "succeeded",
+          "revision": 1,
+          "jobId": 1,
+          "sourceSha256": "a31ee19c8a470195185a94e635a19bf524794c2f8b7b5d3cfd88b2942c92283e",
+          "volume": 8,
+          "ms": 197.0999999642372
+        }
+      ]
+    }
+  ],
+  "appSmoke": {
+    "initialCubeVolume": 8,
+    "recoveredCubeVolume": 27,
+    "uiMeshCount": "1",
+    "cancelledJob": 3,
+    "cancelledJobPublished": false,
+    "terminations": 1,
+    "assertions": [
+      "Cancel build button terminates active work",
+      "last scene retained after cancel",
+      "Render re-enabled",
+      "next real cube succeeds with exact volume"
+    ],
+    "events": [
+      {
+        "status": "accepted",
+        "phase": "queued",
+        "jobId": 1,
+        "revision": 0
+      },
+      {
+        "status": "started",
+        "phase": "initializing",
+        "jobId": 1,
+        "revision": 0
+      },
+      {
+        "status": "progress",
+        "phase": "compiling",
+        "jobId": 1,
+        "revision": 0
+      },
+      {
+        "status": "progress",
+        "phase": "serializing",
+        "jobId": 1,
+        "revision": 0
+      },
+      {
+        "status": "succeeded",
+        "phase": "complete",
+        "jobId": 1,
+        "revision": 0,
+        "volume": 9375.629150581586
+      },
+      {
+        "status": "accepted",
+        "phase": "queued",
+        "jobId": 2,
+        "revision": 1
+      },
+      {
+        "status": "started",
+        "phase": "initializing",
+        "jobId": 2,
+        "revision": 1
+      },
+      {
+        "status": "progress",
+        "phase": "compiling",
+        "jobId": 2,
+        "revision": 1
+      },
+      {
+        "status": "progress",
+        "phase": "serializing",
+        "jobId": 2,
+        "revision": 1
+      },
+      {
+        "status": "succeeded",
+        "phase": "complete",
+        "jobId": 2,
+        "revision": 1,
+        "volume": 8
+      },
+      {
+        "status": "accepted",
+        "phase": "queued",
+        "jobId": 3,
+        "revision": 2
+      },
+      {
+        "status": "started",
+        "phase": "initializing",
+        "jobId": 3,
+        "revision": 2
+      },
+      {
+        "status": "progress",
+        "phase": "compiling",
+        "jobId": 3,
+        "revision": 2
+      },
+      {
+        "status": "accepted",
+        "phase": "queued",
+        "jobId": 4,
+        "revision": 3
+      },
+      {
+        "status": "started",
+        "phase": "initializing",
+        "jobId": 4,
+        "revision": 3
+      },
+      {
+        "status": "progress",
+        "phase": "compiling",
+        "jobId": 4,
+        "revision": 3
+      },
+      {
+        "status": "progress",
+        "phase": "serializing",
+        "jobId": 4,
+        "revision": 3
+      },
+      {
+        "status": "succeeded",
+        "phase": "complete",
+        "jobId": 4,
+        "revision": 3,
+        "volume": 27
+      }
+    ]
+  },
+  "pageErrors": []
+}

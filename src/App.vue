@@ -165,7 +165,9 @@ const L: Record<Language, Record<string, string>> = {
     copied: 'Ссылка скопирована', copyFailed: 'Ссылка добавлена в адресную строку',
     opened: 'Файл открыт', saved: 'Файл сохранён', fileTooLarge: 'Файл слишком большой (максимум 250 КБ)',
     workerError: 'Не удалось запустить геометрический Worker', resize: 'Изменить ширину редактора',
-    workerRestarted: 'Сборка не отвечала 30 секунд — Worker перезапущен',
+    workerRestarted: 'Сборка не отвечала 30 секунд — повторяем попытку',
+    cancelBuild: 'Отменить сборку', buildCancelled: 'Сборка отменена',
+    buildTimeout: 'Сборка повторно не ответила за 30 секунд. Измените модель или запустите сборку снова.',
     storageFailed: 'Не удалось сохранить данные: хранилище браузера недоступно или переполнено',
     format: 'Форматировать', saveBrowser: 'Сохранить в браузере', saveBrowserHelp: 'Сохранить текущий код в IndexedDB, заменив сохранённый черновик', savedBrowser: 'Сохранено в IndexedDB', failedBrowser: 'Не удалось сохранить в IndexedDB', unsavedDraft: 'Черновик не сохранён', retrySave: 'Повторить сохранение', savingDraft: 'Сохраняем…',
     storageConflict: 'Конфликт черновиков', useIndexed: 'Оставить версию IndexedDB', restoreDraft: 'Сохранить открытый черновик', exportDraft: 'Скачать открытый черновик',
@@ -220,7 +222,9 @@ const L: Record<Language, Record<string, string>> = {
     copied: 'Link copied', copyFailed: 'Link added to the address bar',
     opened: 'File opened', saved: 'File saved', fileTooLarge: 'File is too large (250 KB maximum)',
     workerError: 'Could not start the geometry Worker', resize: 'Resize editor',
-    workerRestarted: 'Build was unresponsive for 30 seconds — worker restarted',
+    workerRestarted: 'Build was unresponsive for 30 seconds — retrying',
+    cancelBuild: 'Cancel build', buildCancelled: 'Build cancelled',
+    buildTimeout: 'Build was unresponsive for another 30 seconds. Edit the model or build again.',
     storageFailed: 'Could not save data: browser storage is unavailable or full',
     format: 'Format', saveBrowser: 'Save in browser', saveBrowserHelp: 'Save current code to IndexedDB, replacing the saved draft', savedBrowser: 'Saved to IndexedDB', failedBrowser: 'Could not save to IndexedDB', unsavedDraft: 'Draft is not saved', retrySave: 'Retry save', savingDraft: 'Saving…',
     storageConflict: 'Draft conflict', useIndexed: 'Keep IndexedDB version', restoreDraft: 'Save current draft', exportDraft: 'Download open draft',
@@ -1000,18 +1004,11 @@ const paletteCommands = computed(() => {
 const shortcutPlatform = /Mac|iPhone|iPad/.test(navigator.platform) ? 'mac' : 'windows-linux'
 const shortcutHelpGroups = computed(() => buildShortcutHelpGroups(key => t(key), shortcutPlatform))
 
-/** Last-resort watchdog: a building coordinator that stays completely silent
- * (no state change, no progress heartbeat) for this long is assumed wedged
- * inside one statement; the worker is replaced and the build retried once. */
-const WATCHDOG_TIMEOUT_MS = 30_000
 /** Rate limit for the storage-write-failure notice. */
 const STORAGE_NOTICE_THROTTLE_MS = 10_000
 
 let renderer: WebGPURenderer | null = null
 let buildCoordinator: BuildCoordinator | null = null
-let watchdogTimer: ReturnType<typeof setTimeout> | null = null
-let watchdogToken = 0
-let watchdogRetried = false
 let lastStorageNotice = 0
 const autoBuildScheduler = new AutoBuildScheduler({ build: quality => { if (componentActive && autoRender.value) doRender(quality) } })
 let buildGeneration = 0
@@ -1166,7 +1163,6 @@ onUnmounted(() => {
   }
   componentActive = false
   if (noticeTimeout) clearTimeout(noticeTimeout)
-  disarmWatchdog()
   setStorageFailureHandler(null)
   buildCoordinator?.dispose()
   buildCoordinator = null
@@ -1586,12 +1582,13 @@ function startBuildCoordinator() {
     snapshotEvents: false,
     // The parser cancels cooperatively at its yield points (every ~50ms), so a
     // superseded build normally reports `cancelled` well inside this grace
-    // window and the warm worker — with its cached ~541 kB WASM — survives.
+    // window and the warm worker keeps its initialized WASM.
     // The grace timer stays as the hard boundary for statements that never
     // reach a yield point.
     supersedeGraceMs: 300,
     onPublish: handleGeometryResponse,
-    onProgress: armWatchdog,
+    workerSilenceTimeoutMs: 30_000,
+    onWorkerRestart: () => showNotice(t('workerRestarted')),
     onStateChange: handleBuildState,
   })
 }
@@ -1628,48 +1625,12 @@ function handleBuildState(state: BuildCoordinatorState) {
   autoBuildScheduler.setBuilding(rendering.value)
   if (state.requestedQuality) renderingQuality.value = state.requestedQuality
   if (!rendering.value && rendererErrorMessage && !error.value) error.value = rendererErrorMessage
-  // The watchdog observes coordinator liveness: every state change (including
-  // the worker's throttled mid-parse progress heartbeats) re-arms it, so it
-  // only fires on genuine silence — a build wedged inside one statement.
-  if (rendering.value) armWatchdog()
-  else disarmWatchdog()
 }
 
-function armWatchdog() {
-  if (watchdogTimer) clearTimeout(watchdogTimer)
-  const token = ++watchdogToken
-  watchdogTimer = setTimeout(() => handleWatchdogTimeout(token), WATCHDOG_TIMEOUT_MS)
-}
-
-function disarmWatchdog() {
-  watchdogToken++
-  if (watchdogTimer) { clearTimeout(watchdogTimer); watchdogTimer = null }
-}
-
-/**
- * Last-resort recovery. Cooperative cancellation is per-top-level-statement,
- * so a single wedged statement can hang the worker forever without ever
- * being superseded. If the coordinator reports no liveness within the
- * watchdog window, replace the worker through the coordinator's hard
- * cancellation boundary (accepting the cold-WASM reload) and retry the
- * current source once. A second consecutive timeout gives up with an error
- * instead of restarting in a loop.
- */
-function handleWatchdogTimeout(token: number) {
-  if (token !== watchdogToken) return
-  watchdogToken++
-  watchdogTimer = null
-  if (!rendering.value || !buildCoordinator) return
-  const quality = renderingQuality.value
-  buildCoordinator.cancel('worker-restart')
-  if (watchdogRetried) {
-    watchdogRetried = false
-    error.value = t('workerError')
-    return
-  }
-  watchdogRetried = true
-  showNotice(t('workerRestarted'))
-  doRender(quality)
+function cancelGeometryBuild() {
+  autoBuildScheduler.cancel()
+  buildCoordinator?.cancel('user')
+  showNotice(t('buildCancelled'))
 }
 
 function handleGeometryResponse(response: PublishedGeometryBuild) {
@@ -1678,7 +1639,6 @@ function handleGeometryResponse(response: PublishedGeometryBuild) {
   // Never publish an older build during that window, even if the coordinator
   // has not seen the replacement job yet.
   if (response.documentRevision !== buildGeneration) return
-  watchdogRetried = false
   renderDuration.value = response.durationMs
   const source = buildSources.get(response.documentRevision) ?? code.value
   for (const revision of buildSources.keys()) {
@@ -1686,7 +1646,7 @@ function handleGeometryResponse(response: PublishedGeometryBuild) {
   }
 
   if (response.status === 'failed') {
-    error.value = response.error.message
+    error.value = response.error.code === 'WORKER_TIMEOUT' ? t('buildTimeout') : response.error.message
     editorDiagnostic.value = diagnosticFromBuildError(source, response.error)
     return
   }
@@ -1791,7 +1751,6 @@ function handleGeometryResponse(response: PublishedGeometryBuild) {
 
 function handleWorkerError(caught?: unknown) {
   rendering.value = false
-  disarmWatchdog()
   buildCoordinator?.dispose()
   previousBuildCounters = { ...buildCounters.value }
   buildCoordinator = null
@@ -2842,6 +2801,7 @@ function sanitizeFileName(name: string) { return (name.replace(/[^\w.() -]+/g, '
             <svg class="play" width="11" height="11" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6 4v16l14-8z"/></svg>
             {{ t('render') }}
           </button>
+          <button v-if="rendering" class="btn" type="button" @click="cancelGeometryBuild()">{{ t('cancelBuild') }}</button>
           <label class="auto-check"><input v-model="autoRender" type="checkbox"> {{ t('auto') }}</label>
           <button
             class="btn"

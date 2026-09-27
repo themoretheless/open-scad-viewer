@@ -440,6 +440,7 @@ function fakeKernel(options: FakeKernelOptions = {}): {
       return create(handle.dimension, { original: true })
     },
     analyzeSolid: () => emptyAnalysis,
+    analyzeSolidCooperatively: async () => emptyAnalysis,
     delete(handle) {
       const owned = handle as FakeHandle
       if (options.failDelete) throw new Error(`fake delete failure ${owned.serial}`)

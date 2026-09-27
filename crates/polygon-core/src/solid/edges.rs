@@ -8,6 +8,10 @@
 //! algorithm rather than a hypot chain. Inputs are pre-validated by the host
 //! (stride, index ranges, merge-array pairing, crease-angle finiteness).
 
+#[path = "edges/cooperative.rs"]
+mod cooperative;
+pub use cooperative::extract_semantic_edges_cooperative;
+
 pub const VERTEX_STRIDE: usize = 6;
 const LARGE_WELD_VERTEX_THRESHOLD: usize = 65_536;
 const RADIX_BITS: u32 = 16;
@@ -447,6 +451,30 @@ pub fn extract_semantic_edges(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    // Every established fixture checks the resumable path as well.
+    fn extract_semantic_edges(
+        vertices: &[f32],
+        indices: &[u32],
+        from: &[u32],
+        to: &[u32],
+        weld: bool,
+        threshold: f64,
+    ) -> SemanticEdges {
+        use std::future::Future;
+        let expected = super::extract_semantic_edges(vertices, indices, from, to, weld, threshold);
+        let mut future = std::pin::pin!(extract_semantic_edges_cooperative(
+            vertices, indices, from, to, weld, threshold
+        ));
+        let mut cx = std::task::Context::from_waker(std::task::Waker::noop());
+        loop {
+            if let std::task::Poll::Ready(actual) = future.as_mut().poll(&mut cx) {
+                assert_eq!(actual.indices, expected.indices);
+                assert_eq!(actual.diagnostics, expected.diagnostics);
+                return actual;
+            }
+        }
+    }
 
     fn vertices(positions: &[[f32; 3]]) -> Vec<f32> {
         positions

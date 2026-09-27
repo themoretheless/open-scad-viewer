@@ -52,15 +52,27 @@ Reopen these only for a demonstrated regression.
   `if` / `let` bodies), yields between nested statements, polls immediately
   before kernel boolean/hull/difference, forces a macrotask checkpoint
   before extraction, polls cancellation through chunked publication work, and
-  reports required parse/bind/initialize/evaluate/analyze timings. A tokenized
-  watchdog prevents stale timers from cancelling newer work. Synchronous
-  kernel, BVH and topology WASM calls still cannot observe messages, so
-  Worker replacement remains the final cancellation boundary for those phases.
+  reports required parse/bind/initialize/evaluate/analyze timings. The coordinator
+  owns a generation-fenced silence watchdog: the application uses a 30-second
+  interval and one retry per logical job, preserving its source, revision and
+  quality. A new model or manual build has its own retry allowance. Valid live
+  Worker messages refresh liveness; repeated host requests do not. Message
+  deserialization failures terminate the Worker immediately. The editor exposes
+  **Cancel build**, which also clears pending auto-build work and keeps the last
+  published scene. The [recovery check](design/build-recovery-2026-09-27.md)
+  covers six production-Worker scenarios in Chromium and the actual App
+  cancel/rebuild controls. BVH construction and semantic-edge extraction now
+  resume in bounded Rust steps
+  through an owned analysis job; cancellation drops its scratch without replacing
+  the Worker. See [cooperative BVH](design/cooperative-bvh-2026-09-27.md) and
+  [cooperative edges](design/cooperative-edges-2026-09-27.md).
+  Boolean operations, render preparation and selection surface grouping remain synchronous,
+  so Worker replacement remains the final cancellation boundary for those phases.
 - **Risk:** rapid edits of heavy models repeatedly discard initialized WASM and
   completed intermediate work.
-- **Acceptance remaining:** cooperative/async kernel, BVH and topology phases
+- **Acceptance remaining:** cooperative/async Boolean, render and selection-grouping phases
   that yield *inside* WASM; real-browser tests for App↔Worker supersession,
-  watchdog recovery, crash and disposal.
+  watchdog recovery, crash and disposal beyond the shared coordinator scenarios.
 
 ### R3 — Split compiler and kernel phases
 
