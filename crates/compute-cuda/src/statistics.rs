@@ -9,6 +9,7 @@ use tensor_core::{
     validate_epsilon,
 };
 
+#[derive(Clone)]
 pub(crate) struct StatisticsKernels {
     pub(crate) partial: [CudaFunction; 2],
     pub(crate) merge: CudaFunction,

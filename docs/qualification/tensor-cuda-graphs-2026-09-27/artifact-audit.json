@@ -1,0 +1,406 @@
+{
+  "checked_utc": "2026-09-27T11:36:20.082017+00:00",
+  "cuda_test_executables": {
+    "Running unittests src/lib.rs": {
+      "passed_entries": 151,
+      "unavailable_skips": 0
+    },
+    "Running tests/cuda_tensor.rs": {
+      "passed_entries": 1,
+      "unavailable_skips": 1
+    },
+    "Running tests/graph.rs": {
+      "passed_entries": 2,
+      "unavailable_skips": 1
+    },
+    "Running tests/prepared.rs": {
+      "passed_entries": 1,
+      "unavailable_skips": 1
+    },
+    "Running tests/prepared_indexing.rs": {
+      "passed_entries": 1,
+      "unavailable_skips": 1
+    },
+    "Running tests/prepared_statistics.rs": {
+      "passed_entries": 2,
+      "unavailable_skips": 1
+    },
+    "Running tests/prepared_typed.rs": {
+      "passed_entries": 1,
+      "unavailable_skips": 1
+    },
+    "Doc-tests compute_cuda": {
+      "passed_entries": 6,
+      "unavailable_skips": 0
+    }
+  },
+  "platform_test_executables": {
+    "Running unittests src/lib.rs": {
+      "passed_entries": 15,
+      "unavailable_skips": 0
+    }
+  },
+  "source_files_verified": 460,
+  "changed_rust_files_formatted": 39,
+  "shared_tensor_wgsl_mlx_sources_unchanged": 327,
+  "cuda_kernel_source_parts_unchanged": 12,
+  "cuda_execution_qualified": false,
+  "tensor_core_instruction_use_proven": false,
+  "performance_claim": false,
+  "local_links": [
+    {
+      "document": "docs/qualification/tensor-cuda-graphs-2026-09-27.md",
+      "target": "crates/compute-cuda/src/program/graph.rs"
+    },
+    {
+      "document": "docs/qualification/tensor-cuda-graphs-2026-09-27.md",
+      "target": "crates/compute-cuda/src/program/graph_plan.rs"
+    },
+    {
+      "document": "docs/qualification/tensor-cuda-graphs-2026-09-27.md",
+      "target": "crates/compute-cuda/examples/graph.rs"
+    },
+    {
+      "document": "docs/qualification/tensor-cuda-graphs-2026-09-27.md",
+      "target": "crates/gpu-compute/src/cuda/graph.rs"
+    },
+    {
+      "document": "docs/qualification/tensor-cuda-graphs-2026-09-27.md",
+      "target": "docs/qualification/tensor-cuda-graphs-2026-09-27/checks.json"
+    },
+    {
+      "document": "docs/qualification/tensor-cuda-graphs-2026-09-27.md",
+      "target": "docs/qualification/tensor-cuda-graphs-2026-09-27/cuda-host.txt"
+    },
+    {
+      "document": "docs/qualification/tensor-cuda-graphs-2026-09-27.md",
+      "target": "docs/qualification/tensor-cuda-graphs-2026-09-27/platform-host.txt"
+    },
+    {
+      "document": "docs/qualification/tensor-cuda-graphs-2026-09-27.md",
+      "target": "docs/qualification/tensor-cuda-graphs-2026-09-27/cuda-required.txt"
+    },
+    {
+      "document": "docs/qualification/tensor-cuda-graphs-2026-09-27.md",
+      "target": "docs/qualification/tensor-cuda-graphs-2026-09-27/clippy.txt"
+    },
+    {
+      "document": "docs/qualification/tensor-cuda-graphs-2026-09-27.md",
+      "target": "docs/qualification/tensor-cuda-graphs-2026-09-27/rustdoc.txt"
+    },
+    {
+      "document": "docs/qualification/tensor-cuda-graphs-2026-09-27.md",
+      "target": "docs/qualification/tensor-cuda-graphs-2026-09-27/artifact-audit.json"
+    },
+    {
+      "document": "docs/qualification/tensor-cuda-graphs-2026-09-27.md",
+      "target": "crates/compute-cuda/tests/graph.rs"
+    },
+    {
+      "document": "docs/qualification/tensor-cuda-graphs-2026-09-27.md",
+      "target": "docs/qualification/tensor-cuda-graphs-2026-09-27/source-fingerprints.json"
+    },
+    {
+      "document": "docs/qualification/tensor-cuda-graphs-2026-09-27.md",
+      "target": "docs/qualification/tensor-cuda-graphs-2026-09-27/artifact-audit.json"
+    },
+    {
+      "document": "docs/qualification/tensor-cuda-graphs-2026-09-27.md",
+      "target": "docs/qualification/tensor-cuda-graphs-2026-09-27/kernel-source-reuse.json"
+    },
+    {
+      "document": "docs/qualification/tensor-cuda-graphs-2026-09-27.md",
+      "target": "crates/compute-cuda/qualification/nvrtc-12.8.93-linux-aarch64-typed-programs/report.json"
+    },
+    {
+      "document": "crates/compute-cuda/README.md",
+      "target": "crates/compute-cuda/src/kernels.cu"
+    },
+    {
+      "document": "crates/compute-cuda/README.md",
+      "target": "crates/compute-cuda/src/indexing.cu"
+    },
+    {
+      "document": "crates/compute-cuda/README.md",
+      "target": "crates/compute-cuda/src/reductions.cu"
+    },
+    {
+      "document": "crates/compute-cuda/README.md",
+      "target": "crates/compute-cuda/src/scatter.cu"
+    },
+    {
+      "document": "crates/compute-cuda/README.md",
+      "target": "crates/compute-cuda/src/low_precision.cu"
+    },
+    {
+      "document": "crates/compute-cuda/README.md",
+      "target": "crates/compute-cuda/src/statistics.cu"
+    },
+    {
+      "document": "crates/compute-cuda/README.md",
+      "target": "crates/compute-cuda/src/attention.cu"
+    },
+    {
+      "document": "crates/compute-cuda/README.md",
+      "target": "crates/compute-cuda/src/low_ops.cu"
+    },
+    {
+      "document": "crates/compute-cuda/README.md",
+      "target": "crates/compute-cuda/src/low_indexing.cu"
+    },
+    {
+      "document": "crates/compute-cuda/README.md",
+      "target": "crates/compute-cuda/src/low_scatter.cu"
+    },
+    {
+      "document": "crates/compute-cuda/README.md",
+      "target": "crates/compute-cuda/src/low_statistics.cu"
+    },
+    {
+      "document": "crates/compute-cuda/README.md",
+      "target": "crates/compute-cuda/src/low_attention.cu"
+    },
+    {
+      "document": "crates/compute-cuda/README.md",
+      "target": "docs/qualification/tensor-cuda-index-programs-2026-09-27.md"
+    },
+    {
+      "document": "crates/compute-cuda/README.md",
+      "target": "docs/qualification/tensor-cuda-typed-programs-2026-09-27.md"
+    },
+    {
+      "document": "crates/compute-cuda/README.md",
+      "target": "docs/qualification/tensor-cuda-programs-2026-09-27.md"
+    },
+    {
+      "document": "crates/compute-cuda/README.md",
+      "target": "docs/qualification/tensor-cuda-graphs-2026-09-27.md"
+    },
+    {
+      "document": "crates/compute-cuda/README.md",
+      "target": "crates/compute-cuda/examples/graph.rs"
+    },
+    {
+      "document": "crates/compute-cuda/README.md",
+      "target": "docs/qualification/tensor-prepared-statistics-2026-09-27.md"
+    },
+    {
+      "document": "crates/compute-cuda/README.md",
+      "target": "crates/compute-cuda/qualification/nvrtc-12.8.93-linux-aarch64-typed-programs/report.json"
+    },
+    {
+      "document": "crates/compute-cuda/README.md",
+      "target": "crates/compute-cuda/qualification/README.md"
+    },
+    {
+      "document": "docs/design/cuda-reusable-execution-2026-09-27.md",
+      "target": "docs/qualification/tensor-cuda-index-programs-2026-09-27.md"
+    },
+    {
+      "document": "docs/design/cuda-reusable-execution-2026-09-27.md",
+      "target": "docs/qualification/tensor-cuda-typed-programs-2026-09-27.md"
+    },
+    {
+      "document": "docs/design/cuda-reusable-execution-2026-09-27.md",
+      "target": "docs/qualification/tensor-cuda-graphs-2026-09-27.md"
+    },
+    {
+      "document": "docs/design/cuda-reusable-execution-2026-09-27.md",
+      "target": "crates/gpu-compute/src/cuda.rs"
+    },
+    {
+      "document": "docs/design/cuda-reusable-execution-2026-09-27.md",
+      "target": "crates/compute-cuda/src/runtime.rs"
+    },
+    {
+      "document": "docs/design/cuda-reusable-execution-2026-09-27.md",
+      "target": "crates/compute-cuda/src/reduction.rs"
+    },
+    {
+      "document": "docs/design/cuda-reusable-execution-2026-09-27.md",
+      "target": "crates/compute-cuda/src/matmul.rs"
+    },
+    {
+      "document": "docs/design/cuda-reusable-execution-2026-09-27.md",
+      "target": "crates/compute-cuda/src/libraries.rs"
+    },
+    {
+      "document": "docs/design/cuda-reusable-execution-2026-09-27.md",
+      "target": "crates/compute-cuda/README.md"
+    },
+    {
+      "document": "docs/design/cuda-reusable-execution-2026-09-27.md",
+      "target": "crates/compute-cuda/src/policy.rs"
+    },
+    {
+      "document": "docs/design/cuda-reusable-execution-2026-09-27.md",
+      "target": "docs/qualification/tensor-prepared-statistics-2026-09-27.md"
+    },
+    {
+      "document": "docs/design/tensor-backends-2026-09-27.md",
+      "target": "crates/compute-core/benchmarks/tensor-low-scatter-contracts.md"
+    },
+    {
+      "document": "docs/design/tensor-backends-2026-09-27.md",
+      "target": "docs/qualification/tensor-low-scatter-2026-09-27.md"
+    },
+    {
+      "document": "docs/design/tensor-backends-2026-09-27.md",
+      "target": "docs/qualification/tensor-low-matmul-2026-09-27.md"
+    },
+    {
+      "document": "docs/design/tensor-backends-2026-09-27.md",
+      "target": "docs/qualification/tensor-low-statistics-2026-09-27.md"
+    },
+    {
+      "document": "docs/design/tensor-backends-2026-09-27.md",
+      "target": "docs/qualification/tensor-low-attention-2026-09-27.md"
+    },
+    {
+      "document": "docs/design/tensor-backends-2026-09-27.md",
+      "target": "crates/compute-mlx/README.md"
+    },
+    {
+      "document": "docs/design/tensor-backends-2026-09-27.md",
+      "target": "crates/compute-mlx/qualification/native-metal.txt"
+    },
+    {
+      "document": "docs/design/tensor-backends-2026-09-27.md",
+      "target": "crates/compute-cuda/qualification/nvrtc-12.8.93-linux-aarch64-typed-programs/report.json"
+    },
+    {
+      "document": "docs/design/tensor-backends-2026-09-27.md",
+      "target": "crates/compute-cuda/qualification/README.md"
+    },
+    {
+      "document": "docs/design/tensor-backends-2026-09-27.md",
+      "target": "docs/qualification/tensor-indexing-2026-09-27.md"
+    },
+    {
+      "document": "docs/design/tensor-backends-2026-09-27.md",
+      "target": "docs/qualification/tensor-reductions-2026-09-27.md"
+    },
+    {
+      "document": "docs/design/tensor-backends-2026-09-27.md",
+      "target": "docs/qualification/tensor-scatter-2026-09-27.md"
+    },
+    {
+      "document": "docs/design/tensor-backends-2026-09-27.md",
+      "target": "docs/qualification/tensor-low-precision-2026-09-27.md"
+    },
+    {
+      "document": "docs/design/tensor-backends-2026-09-27.md",
+      "target": "docs/qualification/tensor-statistics-2026-09-27.md"
+    },
+    {
+      "document": "docs/design/tensor-backends-2026-09-27.md",
+      "target": "docs/qualification/tensor-attention-2026-09-27.md"
+    },
+    {
+      "document": "docs/design/tensor-backends-2026-09-27.md",
+      "target": "docs/qualification/tensor-low-ops-2026-09-27.md"
+    },
+    {
+      "document": "docs/design/tensor-backends-2026-09-27.md",
+      "target": "docs/qualification/tensor-low-indexing-2026-09-27.md"
+    },
+    {
+      "document": "docs/design/tensor-backends-2026-09-27.md",
+      "target": "docs/design/cuda-reusable-execution-2026-09-27.md"
+    },
+    {
+      "document": "docs/design/tensor-backends-2026-09-27.md",
+      "target": "docs/qualification/tensor-mlx-programs-2026-09-27.md"
+    },
+    {
+      "document": "docs/design/tensor-backends-2026-09-27.md",
+      "target": "docs/qualification/tensor-mlx-typed-programs-2026-09-27.md"
+    },
+    {
+      "document": "docs/design/tensor-backends-2026-09-27.md",
+      "target": "docs/qualification/tensor-mlx-index-programs-2026-09-27.md"
+    },
+    {
+      "document": "docs/design/tensor-backends-2026-09-27.md",
+      "target": "docs/qualification/tensor-cuda-index-programs-2026-09-27.md"
+    },
+    {
+      "document": "docs/design/tensor-backends-2026-09-27.md",
+      "target": "docs/qualification/tensor-cuda-typed-programs-2026-09-27.md"
+    },
+    {
+      "document": "docs/design/tensor-backends-2026-09-27.md",
+      "target": "docs/qualification/tensor-cuda-programs-2026-09-27.md"
+    },
+    {
+      "document": "docs/design/tensor-backends-2026-09-27.md",
+      "target": "docs/qualification/tensor-cuda-graphs-2026-09-27.md"
+    },
+    {
+      "document": "docs/design/tensor-backends-2026-09-27.md",
+      "target": "docs/qualification/tensor-prepared-statistics-2026-09-27.md"
+    }
+  ],
+  "artifacts": {
+    "crates/compute-cuda/README.md": {
+      "bytes": 50988,
+      "sha256": "e5a7c3125ad15a5e33d0fb9109e66cb1864693582689ca2a4616c4fab9f077d2"
+    },
+    "docs/design/cuda-reusable-execution-2026-09-27.md": {
+      "bytes": 24440,
+      "sha256": "d1e18098be703ee63f6a0d022f45f6c47d5f33f001affffc811ea7db0c3f57e8"
+    },
+    "docs/design/tensor-backends-2026-09-27.md": {
+      "bytes": 35285,
+      "sha256": "9d362221c4169860689bfb10dcd3b938fd24717b6a32e043a9db155cc1290931"
+    },
+    "docs/qualification/tensor-cuda-graphs-2026-09-27/architecture.txt": {
+      "bytes": 72,
+      "sha256": "908d4930fdc094c7934bfd8873bf2aac41b3cbda16c3d7df1db468260215de2c"
+    },
+    "docs/qualification/tensor-cuda-graphs-2026-09-27/checks.json": {
+      "bytes": 5670,
+      "sha256": "38792eefb735848c99d275ea60f3bea07cd73f0c7a120ebd56c707b45811cb61"
+    },
+    "docs/qualification/tensor-cuda-graphs-2026-09-27/clippy.txt": {
+      "bytes": 911,
+      "sha256": "ef76ebe613c4ab81b9aed1f8b8716fd6731e651c8f91af079ec85049b2de4881"
+    },
+    "docs/qualification/tensor-cuda-graphs-2026-09-27/cuda-host.txt": {
+      "bytes": 20643,
+      "sha256": "f090b5fcd0b07ba401fc4766159728dffcde55929971388f2e618878d977dbc4"
+    },
+    "docs/qualification/tensor-cuda-graphs-2026-09-27/cuda-required.txt": {
+      "bytes": 1348,
+      "sha256": "59de3e65f88d47ff1b9220a7405b8c88c94a6dfe81b992c63645fbfa99b9d55f"
+    },
+    "docs/qualification/tensor-cuda-graphs-2026-09-27/format.txt": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "docs/qualification/tensor-cuda-graphs-2026-09-27/kernel-source-reuse.json": {
+      "bytes": 2140,
+      "sha256": "f7fe9d413951ef2f75281a1a19d04c42e165a0550baca17b2e5aa75467385115"
+    },
+    "docs/qualification/tensor-cuda-graphs-2026-09-27/platform-host.txt": {
+      "bytes": 2426,
+      "sha256": "8f1ed84ecf3db590012e66be9fc47cdb1c6d70bcf0e37f802ffc6f5ce80c6a73"
+    },
+    "docs/qualification/tensor-cuda-graphs-2026-09-27/rustdoc.txt": {
+      "bytes": 818,
+      "sha256": "69c022a6853df0fd39fd3ad711cfb7d85dc7d73202a596e4903147677734c6dc"
+    },
+    "docs/qualification/tensor-cuda-graphs-2026-09-27/source-fingerprints.json": {
+      "bytes": 76417,
+      "sha256": "d7dbdf6ee508720e31d6ae96436da36d90bbc73407ec20f9c182fd75bd4f5a36"
+    },
+    "docs/qualification/tensor-cuda-graphs-2026-09-27/whitespace.txt": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "docs/qualification/tensor-cuda-graphs-2026-09-27.md": {
+      "bytes": 7971,
+      "sha256": "33b8e4b118347a5f25ba789f0fdae6f2ada634b0c92695ee4cd5cfb84652bb6b"
+    }
+  }
+}

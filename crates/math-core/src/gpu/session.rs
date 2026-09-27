@@ -25,6 +25,7 @@ pub struct MathGpuSession {
         OnceCell<Result<GpuTransformedPointBounds, compute_core::KernelError>>,
     point_moments: OnceCell<Result<GpuPointMoments, compute_core::KernelError>>,
     point_cloud_stats: OnceCell<Result<GpuPointCloudStats, compute_core::KernelError>>,
+    #[cfg(not(target_arch = "wasm32"))]
     stable_stats_runtime: OnceCell<compute_core::ComputeRuntime>,
     directed_chamfer: OnceCell<Result<GpuChamfer, compute_core::KernelError>>,
     nearest_two: OnceCell<Result<GpuNearestTwo, compute_core::KernelError>>,
@@ -44,6 +45,7 @@ impl MathGpuSession {
             transformed_point_bounds: OnceCell::new(),
             point_moments: OnceCell::new(),
             point_cloud_stats: OnceCell::new(),
+            #[cfg(not(target_arch = "wasm32"))]
             stable_stats_runtime: OnceCell::new(),
             directed_chamfer: OnceCell::new(),
             nearest_two: OnceCell::new(),
@@ -55,6 +57,25 @@ impl MathGpuSession {
     }
     pub fn backend_report(&self) -> BackendReport {
         self.context.backend_report()
+    }
+    /// Shared resident tensor geometry on this session's existing device/queue.
+    /// The returned recipes report backend errors and perform no CPU fallback.
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn tensor(
+        &self,
+    ) -> Result<crate::tensor::TensorMath<'_, compute_core::ComputeRuntime>, GpuMathError> {
+        Ok(crate::tensor::TensorMath::new(self.tensor_runtime()?))
+    }
+    #[cfg(not(target_arch = "wasm32"))]
+    fn tensor_runtime(&self) -> Result<&compute_core::ComputeRuntime, GpuMathError> {
+        if self.stable_stats_runtime.get().is_none() {
+            let runtime = compute_core::ComputeRuntime::new(&self.context)?;
+            let _ = self.stable_stats_runtime.set(runtime);
+        }
+        Ok(self
+            .stable_stats_runtime
+            .get()
+            .expect("runtime initialized above"))
     }
     pub fn nearest_neighbor(&self, queries: &[V3], targets: &[V3]) -> Option<Vec<(u32, f64)>> {
         self.try_nearest_neighbor(queries, targets)
@@ -280,6 +301,7 @@ impl MathGpuSession {
     /// Raw moments keep the original meaning `E[p*p^T]`. Centered arithmetic
     /// improves covariance at large offsets but cannot recover differences
     /// lost during f64-to-f32 input conversion, or handle overflowing f32 sums.
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn try_point_cloud_stats_stable(
         &self,
         points: &[V3],
@@ -289,14 +311,7 @@ impl MathGpuSession {
         }
         self.validate_points(points)?;
         self.execute(|| {
-            if self.stable_stats_runtime.get().is_none() {
-                let runtime = compute_core::ComputeRuntime::new(&self.context)?;
-                let _ = self.stable_stats_runtime.set(runtime);
-            }
-            let runtime = self
-                .stable_stats_runtime
-                .get()
-                .expect("runtime initialized above");
+            let runtime = self.tensor_runtime()?;
             let flat: Vec<f32> = points.iter().flatten().map(|&v| v as f32).collect();
             let input = runtime.upload(&flat)?;
             let mut plan = self.program(runtime)?;

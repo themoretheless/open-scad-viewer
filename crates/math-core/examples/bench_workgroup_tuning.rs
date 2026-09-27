@@ -104,13 +104,13 @@ fn main() {
         // Fold the last partials to prove the kernel still computes.
         let mut min = [f64::INFINITY; 3];
         let mut max = [f64::NEG_INFINITY; 3];
-        for chunk in raw_min.chunks_exact(3).take(groups as usize) {
+        for chunk in raw_min.as_chunks::<3>().0.iter().take(groups as usize) {
             for axis in 0..3 {
                 min[axis] = min[axis].min(chunk[axis] as f64);
             }
         }
         let raw_max = read_f32(device, queue, &out_max, partials);
-        for chunk in raw_max.chunks_exact(3).take(groups as usize) {
+        for chunk in raw_max.as_chunks::<3>().0.iter().take(groups as usize) {
             for axis in 0..3 {
                 max[axis] = max[axis].max(chunk[axis] as f64);
             }
@@ -141,18 +141,13 @@ fn main() {
     let queries = points(QUERIES, 0.);
     let targets = points(TARGETS, 1_000_000.);
     let cpu_start = Instant::now();
-    let cpu_directed = math_core::directed_chamfer_distance(
-        &queries,
-        &targets,
-        math_core::Acceleration::Cpu,
-    )
-    .expect("cpu directed chamfer");
+    let cpu_directed =
+        math_core::directed_chamfer_distance(&queries, &targets, math_core::Acceleration::Cpu)
+            .expect("cpu directed chamfer");
     let cpu_chamfer_ms = cpu_start.elapsed().as_secs_f64() * 1e3;
     println!(
         "\nchamfer {}x{}: cpu directed mean sq dist {:.4} ({cpu_chamfer_ms:.1} ms)",
-        QUERIES,
-        TARGETS,
-        cpu_directed.mean_squared_distance
+        QUERIES, TARGETS, cpu_directed.mean_squared_distance
     );
     let flat_q: Vec<f32> = queries.iter().flatten().map(|&v| v as f32).collect();
     let flat_t: Vec<f32> = targets.iter().flatten().map(|&v| v as f32).collect();

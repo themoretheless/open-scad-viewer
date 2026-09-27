@@ -15,14 +15,38 @@ pub(super) fn with_outputs<T, R>(
             "invalid prepared scratch destinations",
         ));
     }
-    let mut main = slots[primary].take().unwrap();
-    let mut extra = auxiliary.map(|i| slots[i].take().unwrap());
-    let result = launch(slots, &mut main, extra.as_mut());
-    slots[primary] = Some(main);
-    if let Some(i) = auxiliary {
-        slots[i] = extra;
+    let main = slots[primary].take();
+    let extra = auxiliary.and_then(|i| slots[i].take());
+    let mut taken = TakenOutputs {
+        slots,
+        primary,
+        auxiliary,
+        main,
+        extra,
+    };
+    launch(
+        taken.slots,
+        taken.main.as_mut().expect("validated primary destination"),
+        taken.extra.as_mut(),
+    )
+}
+
+/// Restores storage before unwinding reaches an outer CUDA capture guard. No
+/// device allocation may be dropped while that stream is still being captured.
+struct TakenOutputs<'a, T> {
+    slots: &'a mut [Option<T>],
+    primary: usize,
+    auxiliary: Option<usize>,
+    main: Option<T>,
+    extra: Option<T>,
+}
+impl<T> Drop for TakenOutputs<'_, T> {
+    fn drop(&mut self) {
+        self.slots[self.primary] = self.main.take();
+        if let Some(i) = self.auxiliary {
+            self.slots[i] = self.extra.take();
+        }
     }
-    result
 }
 
 #[cfg(test)]
@@ -56,6 +80,45 @@ mod tests {
             });
             assert!(result.is_err());
             assert_eq!(slots, [Some(3), None]);
+        }
+    }
+    #[test]
+    fn panic_restores_both_destinations_before_outer_capture_cleanup() {
+        use std::{cell::RefCell, rc::Rc};
+        struct Marker(&'static str, Rc<RefCell<Vec<&'static str>>>);
+        impl Drop for Marker {
+            fn drop(&mut self) {
+                self.1.borrow_mut().push(self.0);
+            }
+        }
+        for auxiliary in [None, Some(2)] {
+            let events = Rc::new(RefCell::new(Vec::new()));
+            let mut slots = vec![
+                Some(Marker("main dropped", events.clone())),
+                Some(Marker("source dropped", events.clone())),
+                Some(Marker("extra dropped", events.clone())),
+            ];
+            let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                let _capture = Marker("capture ended", events.clone());
+                let _: Result<(), CudaError> =
+                    with_outputs(&mut slots, 0, auxiliary, |sources, main, extra| {
+                        assert!(sources[0].is_none());
+                        assert_eq!(extra.is_some(), auxiliary.is_some());
+                        main.0 = "updated main dropped";
+                        if let Some(extra) = extra {
+                            extra.0 = "updated extra dropped";
+                        }
+                        events.borrow_mut().push("work enqueued");
+                        panic!("injected launch panic");
+                    });
+            }));
+            assert!(result.is_err());
+            assert!(slots.iter().all(Option::is_some));
+            assert_eq!(slots[0].as_ref().unwrap().0, "updated main dropped");
+            assert_eq!(&*events.borrow(), &["work enqueued", "capture ended"]);
+            drop(slots);
+            assert_eq!(&events.borrow()[..2], &["work enqueued", "capture ended"]);
+            assert_eq!(events.borrow().len(), 5);
         }
     }
 }

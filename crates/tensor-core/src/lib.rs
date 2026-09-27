@@ -3,6 +3,7 @@
 mod attention;
 mod backend;
 mod error;
+mod evaluation;
 mod indexing;
 mod layout;
 mod low_attention;
@@ -24,6 +25,7 @@ pub mod conformance;
 pub use attention::{AttentionMask, AttentionOptions, AttentionPlan, TensorAttentionBackend};
 pub use backend::{BackendKind, HasShape, MatmulPrecision, TensorBackend};
 pub use error::TensorError;
+pub use evaluation::TensorEvalBackend;
 pub use indexing::{
     Compacted, Gathered, ScanOptions, TensorIndexBackend, compact_shape, gather_shape,
     select_shape, validate_index_count,

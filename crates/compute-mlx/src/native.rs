@@ -9,6 +9,7 @@ use tensor_core::{BinaryOp, CompareOp, HasShape, MatmulPrecision, Shape, TensorE
 mod attention;
 mod compiled;
 mod custom_metal;
+mod evaluation;
 mod index;
 mod low_attention;
 mod low_index;
@@ -529,26 +530,12 @@ impl MlxBackend {
         left: &MlxTensor,
         right: &MlxTensor,
     ) -> Result<MlxTensor, MlxError> {
-        self.check(left, None)?;
-        self.check(right, Some(left.dtype))?;
-        let shape = left.shape.broadcast(&right.shape)?;
-        self.output("compare", shape, MlxDtype::U32, |a, out| unsafe {
-            let operation = compare_function(a, op);
-            let mut mask = (a.array_new)();
-            let code = operation(
-                &mut mask,
-                left.array.raw,
-                right.array.raw,
-                self.context.stream,
-            );
-            let code = if code == 0 {
-                (a.astype)(out, mask, ffi::U32, self.context.stream)
-            } else {
-                code
-            };
-            (a.array_free)(mask);
-            code
-        })
+        lowering::indexing::compare(
+            &mut lowering::NativeLowerer::new(self),
+            left.clone(),
+            right.clone(),
+            op,
+        )
     }
     /// Sum over checked axes. An empty axes list preserves the input.
     pub fn sum_axes(
@@ -589,19 +576,12 @@ impl MlxBackend {
         inclusive: bool,
         reverse: bool,
     ) -> Result<MlxTensor, MlxError> {
-        self.check(t, None)?;
-        t.shape.validate_axes(&[axis])?;
-        let axis = i32::try_from(axis).map_err(|_| MlxError::TooLarge)?;
-        self.output("scan", t.shape.clone(), t.dtype, |a, out| unsafe {
-            (a.cumsum)(
-                out,
-                t.array.raw,
-                axis,
-                reverse,
-                inclusive,
-                self.context.stream,
-            )
-        })
+        lowering::scan::scan(
+            &mut lowering::NativeLowerer::new(self),
+            t.clone(),
+            axis,
+            tensor_core::ScanOptions { inclusive, reverse },
+        )
     }
     /// Gather with host-provided indices. Values and the resulting gather stay
     /// on the GPU; bounds are checked before uploading the index vector.

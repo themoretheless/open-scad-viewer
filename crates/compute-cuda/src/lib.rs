@@ -9,6 +9,7 @@ mod attention;
 mod attention_dispatch;
 mod dispatch;
 mod error;
+mod evaluation;
 mod indexing;
 mod libraries;
 mod low_attention;
@@ -37,3 +38,6 @@ pub use program::{
 };
 
 pub use program::{CudaDtype, CudaProgramInput, CudaProgramOutput, CudaProgramOutputMut};
+
+pub use gpu_compute::cuda::CudaStreamMode;
+pub use program::{CudaCaptureOptions, CudaGraphProgram, CudaGraphStats};

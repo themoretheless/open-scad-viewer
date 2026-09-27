@@ -1,0 +1,229 @@
+[
+  {
+    "name": "mlx-metal",
+    "command": [
+      "cargo",
+      "test",
+      "--offline",
+      "--locked",
+      "--manifest-path",
+      "crates/Cargo.toml",
+      "-p",
+      "compute-mlx",
+      "--",
+      "--test-threads=1",
+      "--nocapture"
+    ],
+    "env": {
+      "COMPUTE_REQUIRE_MLX": "1"
+    },
+    "exit_code": 0,
+    "expected_exit_code": 0,
+    "elapsed_seconds": 16.405,
+    "log": "mlx-metal.txt",
+    "log_normalization": "Trailing whitespace removed; diagnostic text preserved."
+  },
+  {
+    "name": "mlx-disabled",
+    "command": [
+      "cargo",
+      "test",
+      "--offline",
+      "--locked",
+      "--manifest-path",
+      "crates/Cargo.toml",
+      "-p",
+      "compute-mlx",
+      "--test",
+      "compiled_indexing",
+      "--test",
+      "compiled_scan_compaction",
+      "--test",
+      "compiled_scatter",
+      "--",
+      "--test-threads=1",
+      "--nocapture"
+    ],
+    "env": {
+      "COMPUTE_REQUIRE_MLX": "1",
+      "MLX_DISABLE_COMPILE": "1"
+    },
+    "exit_code": 0,
+    "expected_exit_code": 0,
+    "elapsed_seconds": 1.634,
+    "log": "mlx-disabled.txt",
+    "log_normalization": "Trailing whitespace removed; diagnostic text preserved."
+  },
+  {
+    "name": "example",
+    "command": [
+      "cargo",
+      "run",
+      "--offline",
+      "--locked",
+      "--manifest-path",
+      "crates/Cargo.toml",
+      "-p",
+      "compute-mlx",
+      "--example",
+      "compiled_indexing"
+    ],
+    "env": {},
+    "exit_code": 0,
+    "expected_exit_code": 0,
+    "elapsed_seconds": 2.149,
+    "log": "example.txt",
+    "log_normalization": "Trailing whitespace removed; diagnostic text preserved."
+  },
+  {
+    "name": "example-disabled",
+    "command": [
+      "cargo",
+      "run",
+      "--offline",
+      "--locked",
+      "--manifest-path",
+      "crates/Cargo.toml",
+      "-p",
+      "compute-mlx",
+      "--example",
+      "compiled_indexing"
+    ],
+    "env": {
+      "MLX_DISABLE_COMPILE": "1"
+    },
+    "exit_code": 0,
+    "expected_exit_code": 0,
+    "elapsed_seconds": 0.345,
+    "log": "example-disabled.txt",
+    "log_normalization": "Trailing whitespace removed; diagnostic text preserved."
+  },
+  {
+    "name": "clippy",
+    "command": [
+      "cargo",
+      "clippy",
+      "--offline",
+      "--locked",
+      "--manifest-path",
+      "crates/Cargo.toml",
+      "-p",
+      "tensor-core",
+      "-p",
+      "compute-core",
+      "-p",
+      "compute-cuda",
+      "-p",
+      "compute-mlx",
+      "--all-targets",
+      "--",
+      "-D",
+      "warnings"
+    ],
+    "env": {},
+    "exit_code": 0,
+    "expected_exit_code": 0,
+    "elapsed_seconds": 0.784,
+    "log": "clippy.txt",
+    "log_normalization": "Trailing whitespace removed; diagnostic text preserved."
+  },
+  {
+    "name": "rustdoc",
+    "command": [
+      "cargo",
+      "doc",
+      "--offline",
+      "--locked",
+      "--manifest-path",
+      "crates/Cargo.toml",
+      "-p",
+      "compute-mlx",
+      "--no-deps"
+    ],
+    "env": {
+      "RUSTDOCFLAGS": "-D warnings"
+    },
+    "exit_code": 0,
+    "expected_exit_code": 0,
+    "elapsed_seconds": 0.535,
+    "log": "rustdoc.txt",
+    "log_normalization": "Trailing whitespace removed; diagnostic text preserved."
+  },
+  {
+    "name": "architecture",
+    "command": [
+      "python3",
+      "scripts/check-gpu-architecture.py"
+    ],
+    "env": {},
+    "exit_code": 0,
+    "expected_exit_code": 0,
+    "elapsed_seconds": 0.251,
+    "log": "architecture.txt",
+    "log_normalization": "Trailing whitespace removed; diagnostic text preserved."
+  },
+  {
+    "name": "whitespace",
+    "command": [
+      "git",
+      "-c",
+      "core.fsmonitor=false",
+      "diff",
+      "--check"
+    ],
+    "env": {},
+    "exit_code": 0,
+    "expected_exit_code": 0,
+    "elapsed_seconds": 0.02,
+    "log": "whitespace.txt",
+    "log_normalization": "Trailing whitespace removed; diagnostic text preserved."
+  },
+  {
+    "name": "format",
+    "command": [
+      "rustfmt",
+      "--check",
+      "--edition",
+      "2024",
+      "--config",
+      "skip_children=true",
+      "crates/compute-mlx/examples/compiled_indexing.rs",
+      "crates/compute-mlx/src/native.rs",
+      "crates/compute-mlx/src/native/compiled.rs",
+      "crates/compute-mlx/src/native/compiled/builder.rs",
+      "crates/compute-mlx/src/native/compiled/compaction.rs",
+      "crates/compute-mlx/src/native/compiled/indexing.rs",
+      "crates/compute-mlx/src/native/compiled/scan.rs",
+      "crates/compute-mlx/src/native/compiled/scatter.rs",
+      "crates/compute-mlx/src/native/index.rs",
+      "crates/compute-mlx/src/native/low_index.rs",
+      "crates/compute-mlx/src/native/low_kernels.rs",
+      "crates/compute-mlx/src/native/low_scatter.rs",
+      "crates/compute-mlx/src/native/lowering.rs",
+      "crates/compute-mlx/src/native/lowering/compaction.rs",
+      "crates/compute-mlx/src/native/lowering/indexing.rs",
+      "crates/compute-mlx/src/native/lowering/raw.rs",
+      "crates/compute-mlx/src/native/lowering/scan.rs",
+      "crates/compute-mlx/src/native/lowering/scatter.rs",
+      "crates/compute-mlx/src/native/lowering/scatter/low.rs",
+      "crates/compute-mlx/src/native/scatter.rs",
+      "crates/compute-mlx/tests/compiled_indexing.rs",
+      "crates/compute-mlx/tests/compiled_indexing/low.rs",
+      "crates/compute-mlx/tests/compiled_indexing/movement.rs",
+      "crates/compute-mlx/tests/compiled_indexing/validation.rs",
+      "crates/compute-mlx/tests/compiled_scan_compaction.rs",
+      "crates/compute-mlx/tests/compiled_scan_compaction/compaction.rs",
+      "crates/compute-mlx/tests/compiled_scan_compaction/scans.rs",
+      "crates/compute-mlx/tests/compiled_scan_compaction/validation.rs",
+      "crates/compute-mlx/tests/compiled_scatter.rs",
+      "crates/compute-mlx/tests/compiled_scatter/boundaries.rs",
+      "crates/compute-mlx/tests/compiled_scatter/replay.rs"
+    ],
+    "env": {},
+    "exit_code": 0,
+    "expected_exit_code": 0,
+    "elapsed_seconds": 0.071,
+    "log": "format.txt",
+    "file_count": 31
+  }
+]

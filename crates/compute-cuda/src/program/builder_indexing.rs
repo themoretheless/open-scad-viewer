@@ -140,7 +140,7 @@ impl CudaProgramPlanBuilder {
     ) -> Result<Compacted<CudaValue, CudaValue>, CudaError> {
         let mut mask = self.require(mask, CudaDtype::U32)?;
         let shape = compact_shape(source.layout.shape(), mask.layout.shape())?;
-        mask.layout = mask.layout.broadcast_to(source.layout.shape().clone())?;
+        mask.broadcast_to(source.layout.shape().clone())?;
         let (values, count) =
             self.output_with_count(shape, source.dtype, |output, count| Step::Compact {
                 source,
@@ -233,7 +233,7 @@ impl CudaProgramPlanBuilder {
             updates.layout.shape(),
             axis,
         )?;
-        updates.layout = updates.layout.broadcast_to(shape)?;
+        updates.broadcast_to(shape)?;
         validate_layout(&updates.layout, updates.dtype)?;
         let (values, invalid_count) = self.output_with_count(
             source.layout.shape().clone(),
@@ -279,11 +279,13 @@ impl CudaProgramPlanBuilder {
         ]);
         self.plan.steps.push(step(output, count));
         let values = self.push(PlannedValue {
+            input_views: Vec::new(),
             buffer: BufferRef::Scratch(output),
             layout,
             dtype,
         });
         let count = self.push(PlannedValue {
+            input_views: Vec::new(),
             buffer: BufferRef::Scratch(count),
             layout: count_layout,
             dtype: CudaDtype::U32,

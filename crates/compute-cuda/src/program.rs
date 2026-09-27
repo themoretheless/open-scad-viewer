@@ -1,5 +1,4 @@
-//! Prepared resident typed schedules. This submits ordinary kernel/cuBLAS calls;
-//! it does not capture a CUDA Graph or fuse arithmetic operations.
+//! Prepared resident typed schedules with opt-in CUDA Graph capture.
 use crate::{CudaError, CudaRuntime};
 use tensor_core::{BinaryOp, Layout, MatmulPrecision, ReduceOp, Shape, UnaryOp};
 mod api_typed;
@@ -8,6 +7,8 @@ mod builder;
 mod execution;
 mod expansion;
 mod gate;
+mod graph;
+mod graph_plan;
 mod indexing_api;
 mod indexing_launch;
 mod indexing_plan;
@@ -26,6 +27,7 @@ mod validation;
 use builder::CudaProgramPlanBuilder;
 pub use builder::CudaValue;
 pub use execution::CudaPreparedProgram;
+pub use graph::{CudaCaptureOptions, CudaGraphProgram, CudaGraphStats};
 pub use plan::CudaDtype;
 pub use typed::{CudaProgramInput, CudaProgramOutput, CudaProgramOutputMut};
 

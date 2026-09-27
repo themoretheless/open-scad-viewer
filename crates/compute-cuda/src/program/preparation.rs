@@ -116,11 +116,18 @@ pub(super) fn prepare(
     options: CudaPrepareOptions,
 ) -> Result<CudaPreparedProgram<'_>, CudaError> {
     let expanded = expand(
-        plan,
+        plan.clone(),
         runtime.capabilities.multiprocessors,
         options,
         |request| request.validate(runtime),
     )?;
+    prepare_expanded(runtime, plan, expanded)
+}
+pub(super) fn prepare_expanded(
+    runtime: &CudaRuntime,
+    plan: CudaProgramPlan,
+    expanded: Expanded,
+) -> Result<CudaPreparedProgram<'_>, CudaError> {
     // All dtype/layout/policy/budget checks precede device allocation and BLAS setup.
     let mut instructions = Vec::with_capacity(expanded.schedule.len());
     for step in expanded.schedule {
@@ -146,6 +153,7 @@ pub(super) fn prepare(
         .map(|spec| Storage::zeros(runtime, spec).map(Some))
         .collect::<Result<Vec<_>, _>>()?;
     Ok(CudaPreparedProgram {
+        logical: plan,
         runtime,
         input_layouts: expanded.inputs.iter().map(|s| s.layout.clone()).collect(),
         output_shapes: expanded.outputs.iter().map(|s| s.shape().clone()).collect(),

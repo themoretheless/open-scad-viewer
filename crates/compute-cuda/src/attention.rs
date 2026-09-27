@@ -6,6 +6,7 @@ use gpu_compute::cuda::{CudaFunction, CudaModule, cudarc::driver::DeviceRepr};
 use std::sync::Arc;
 use tensor_core::{AttentionMask, AttentionOptions, AttentionPlan, TensorAttentionBackend};
 
+#[derive(Clone)]
 pub(crate) struct AttentionKernel(pub(crate) [CudaFunction; 2]);
 impl AttentionKernel {
     pub(crate) fn load(module: &Arc<CudaModule>) -> Result<Self, CudaError> {

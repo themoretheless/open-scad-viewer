@@ -14,6 +14,7 @@ use tensor_core::{
 pub(crate) mod dispatch;
 use dispatch::{LoadedReduction, ReductionPass};
 
+#[derive(Clone)]
 pub(crate) struct ReductionKernels {
     pub(crate) axes: [CudaFunction; 2],
     pub(crate) all: [CudaFunction; 2],

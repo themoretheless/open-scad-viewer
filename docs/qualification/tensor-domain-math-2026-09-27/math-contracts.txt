@@ -1,0 +1,89 @@
+warning: binary `wgsl_export` should have a kebab-case name
+  |
+1 | /Users/themoretheless/Documents/Sources/open-scad-viewer/crates/target/.../wgsl_export
+  |                                                                            ^^^^^^^^^^^
+  |
+  = note: `cargo::non_kebab_case_bins` is set to `warn` by default
+help: to change the binary name to `wgsl-export`, convert the file stem
+  |
+1 - src/bin/wgsl_export.rs
+1 + src/bin/wgsl-export.rs
+  |
+warning: `raster-core` (manifest) generated 1 warning
+   Compiling osv-math v0.1.0 (/Users/themoretheless/Documents/Sources/open-scad-viewer/crates/math-core)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.35s
+     Running unittests src/lib.rs (crates/target/debug/build/osv-math/032c1ad3b6cf2410/out/math_core-032c1ad3b6cf2410)
+
+running 70 tests
+test acceleration::tests::acceleration_parse_and_placement ... ok
+test acceleration::tests::recommended_for_distance_pairs_keeps_small_batches_on_cpu ... ok
+test acceleration::tests::recommended_for_nearest_neighbor_scales_with_work ... ok
+test acceleration::tests::recommended_for_point_cloud_stats_uses_cuda_only_for_large_clouds ... ok
+test acceleration::tests::recommended_for_transformed_point_bounds_stays_on_cpu ... ok
+test bounds::tests::point_bounds_auto_matches_cpu_reference ... ok
+test bounds::tests::point_bounds_rejects_empty_and_nonfinite_points ... ok
+test bounds::tests::point_bounds_reports_min_max_center_and_extent ... ok
+test bounds::tests::transformed_point_bounds_auto_matches_cpu_reference ... ok
+test bounds::tests::transformed_point_bounds_matches_materialized_reference ... ok
+test bounds::tests::transformed_point_bounds_rejects_empty_and_nonfinite_points ... ok
+test camera_gestures::tests::collapsed_pinch_pans_without_spurious_zoom ... ok
+test camera_gestures::tests::distance_limits_and_nonfinite_fallback ... ok
+test camera_gestures::tests::orbit_wraps_and_pan_uses_camera_basis ... ok
+test chamfer::tests::chamfer_auto_matches_cpu_reference ... ok
+test chamfer::tests::chamfer_rejects_empty_clouds ... ok
+test chamfer::tests::directed_chamfer_reports_mean_rms_and_max ... ok
+test chamfer::tests::hausdorff_reports_worst_case_distance ... ok
+test chamfer::tests::symmetric_chamfer_averages_both_directions ... ok
+test distance_pairs::tests::squared_distance_pair_sum_matches_vector_sum ... ok
+test distance_pairs::tests::squared_distance_pairs_accelerated_cpu_matches_reference ... ok
+test distance_pairs::tests::squared_distance_pairs_matches_scalar_reference ... ok
+test distance_pairs::tests::squared_distance_pairs_rejects_mismatched_lengths ... ok
+test linalg::hotpath_bench::leaf_math_throughput ... ok
+test linalg::tests::eigen_reconstructs ... ok
+test linalg::tests::svd_rank_two ... ok
+test linalg::transform_tests::transform_points_matches_scalar_mv_add ... ok
+test local_plane::tests::local_point_planes_fit_query_neighborhoods ... ok
+test local_plane::tests::local_point_planes_reject_invalid_inputs ... ok
+test moments::tests::centers_handle_extreme_coordinates_and_weights ... ok
+test moments::tests::covariance_preserves_small_spread_at_large_offset ... ok
+test moments::tests::point_fit_plane_recovers_known_plane ... ok
+test moments::tests::point_fit_plane_rejects_too_few_points ... ok
+test moments::tests::point_moments_auto_matches_cpu_reference ... ok
+test moments::tests::point_moments_rejects_empty_and_nonfinite_points ... ok
+test moments::tests::point_moments_reports_centroid_second_moment_and_covariance ... ok
+test moments::tests::point_principal_axes_orders_variance_descending ... ok
+test moments::tests::weighted_center_rejects_invalid_inputs ... ok
+test nearest_four::tests::nearest_four_finds_sorted_neighbors ... ok
+test nearest_four::tests::nearest_four_handles_short_targets ... ok
+test nearest_neighbor::nearest_neighbor_tests::nearest_neighbor_accelerated_auto_matches_reference ... ok
+test nearest_neighbor::nearest_neighbor_tests::nearest_neighbor_accelerated_cpu_matches_reference ... ok
+test nearest_neighbor::nearest_neighbor_tests::nearest_neighbor_accelerated_empty_input ... ok
+test nearest_neighbor::nearest_neighbor_tests::nearest_neighbor_empty_queries_is_empty ... ok
+test nearest_neighbor::nearest_neighbor_tests::nearest_neighbor_empty_targets_is_infinite ... ok
+test nearest_neighbor::nearest_neighbor_tests::nearest_neighbor_finds_closest_by_brute_force ... ok
+test nearest_two::tests::nearest_two_finds_best_and_second_best ... ok
+test nearest_two::tests::nearest_two_first_only_matches_nearest_neighbor ... ok
+test nearest_two::tests::nearest_two_handles_empty_and_single_target ... ok
+test orbit_camera::tests::keeps_eye_outside_bounds_and_extends_far_plane ... ok
+test orbit_camera::tests::refuses_invalid_parameters ... ok
+test registration::registration_tests::icp_register_recovers_small_rigid_offset ... ok
+test registration::registration_tests::icp_rejects_invalid_inputs ... ok
+test registration::registration_tests::icp_reports_post_fit_error_for_iteration ... ok
+test registration::registration_tests::rigid_transform_recovers_known_correspondences ... ok
+test stats::tests::point_cloud_stats_auto_matches_cpu_reference ... ok
+test stats::tests::point_cloud_stats_matches_separate_cpu_summaries ... ok
+test stats::tests::point_cloud_stats_rejects_empty_and_nonfinite_points ... ok
+test stats::tests::transformed_point_cloud_stats_auto_matches_cpu_reference ... ok
+test stats::tests::transformed_point_cloud_stats_matches_materialized_reference ... ok
+test tensor::neighbors::tests::checked_limits_accept_missing_ranks_and_reject_each_budget ... ok
+test tensor::neighbors::tests::checked_limits_reject_overflow_and_excessive_rank_work ... ok
+test transform_error::tests::transformed_rmse_handles_empty_input ... ok
+test transform_error::tests::transformed_sum_auto_matches_cpu_reference ... ok
+test transform_error::tests::transformed_sum_matches_materialized_reference ... ok
+test transform_error::tests::transformed_sum_rejects_mismatched_lengths ... ok
+test viewport::tests::css_ray_and_projection_roundtrip ... ok
+test viewport::tests::inverse_residual_and_small_invertible_scale ... ok
+test viewport::tests::selected_corner_ties_and_transform ... ok
+test viewport::tests::singular_and_invalid_viewports_refuse ... ok
+
+test result: ok. 70 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.21s

@@ -14,6 +14,16 @@ pub use cudarc::driver::{
 
 use std::sync::Arc;
 
+pub mod graph;
+
+/// Stream selection is explicit because CUDA Graph capture excludes the legacy stream.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum CudaStreamMode {
+    #[default]
+    LegacyDefault,
+    NonBlocking,
+}
+
 /// Environment override for the device ordinal (`OSV_CUDA_DEVICE=1`); the
 /// default is device 0.
 pub const DEVICE_ENV: &str = "OSV_CUDA_DEVICE";
@@ -36,10 +46,31 @@ impl CudaDevice {
     /// Retains the primary context of the selected device. `None` when the
     /// driver library is absent, no device exists, or initialization fails.
     pub fn new() -> Option<Self> {
+        Self::new_with_stream(CudaStreamMode::LegacyDefault)
+    }
+
+    /// Retains the selected primary context and creates the requested stream.
+    /// `NonBlocking` owns a dedicated stream; it does not enable Graph capture
+    /// or disable cudarc event tracking. Returns `None` on driver failure.
+    pub fn new_with_stream(mode: CudaStreamMode) -> Option<Self> {
         // The generated bindings panic when the library is missing; probe first
         // so a CPU-only machine simply reports "no CUDA".
         if !unsafe { cudarc::driver::sys::is_culib_present() } {
             return None;
+        }
+        if mode == CudaStreamMode::NonBlocking {
+            // These additional entry points are used by new_stream and its Drop.
+            // Probe before cudarc's generated dynamic wrappers can panic.
+            let library = unsafe { cudarc::driver::sys::culib() };
+            for name in [
+                b"cuStreamCreate\0".as_slice(),
+                b"cuStreamDestroy_v2\0",
+                b"cuCtxSynchronize\0",
+            ] {
+                if unsafe { library.get::<*const std::ffi::c_void>(name) }.is_err() {
+                    return None;
+                }
+            }
         }
         let ordinal = std::env::var(DEVICE_ENV)
             .ok()
@@ -55,7 +86,10 @@ impl CudaDevice {
             )
             .ok()?
             .max(1) as u32;
-        let stream = context.default_stream();
+        let stream = match mode {
+            CudaStreamMode::LegacyDefault => context.default_stream(),
+            CudaStreamMode::NonBlocking => context.new_stream().ok()?,
+        };
         Some(Self {
             context,
             stream,
@@ -110,6 +144,12 @@ pub fn available_device_report() -> Option<CudaDeviceReport> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn stream_selection_defaults_to_legacy_without_enabling_capture() {
+        assert_eq!(CudaStreamMode::default(), CudaStreamMode::LegacyDefault);
+        assert_ne!(CudaStreamMode::NonBlocking, CudaStreamMode::LegacyDefault);
+    }
 
     #[test]
     fn launch_1d_rounds_up() {

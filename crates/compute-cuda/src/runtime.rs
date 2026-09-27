@@ -2,7 +2,9 @@ use crate::{
     CudaError,
     libraries::{require_cublas, require_nvrtc},
 };
-use gpu_compute::cuda::{CudaDevice, CudaFunction, CudaSlice, LaunchConfig, cudarc};
+use gpu_compute::cuda::{
+    CudaDevice, CudaFunction, CudaSlice, CudaStreamMode, LaunchConfig, cudarc,
+};
 use std::{cell::OnceCell, sync::Arc};
 use tensor_core::{
     BackendKind, BinaryOp, HasShape, Layout, MatmulPrecision, ReduceOp, Shape, TensorBackend,
@@ -78,6 +80,49 @@ impl CudaRuntime {
             "CUDA driver/device is absent or initialization failed",
         ))?;
         Self::from_device(device)
+    }
+    /// Opt in to an explicit nonblocking execution stream.
+    pub fn new_with_stream(mode: CudaStreamMode) -> Result<Self, CudaError> {
+        let device = CudaDevice::new_with_stream(mode).ok_or(CudaError::Unavailable(
+            "CUDA driver/device is absent or stream initialization failed",
+        ))?;
+        Self::from_device(device)
+    }
+    /// A private wrapper for the same primary CUDA context. Tracking is disabled
+    /// only on this fresh Rust wrapper, before any private allocation exists.
+    /// Graph storage never escapes; explicit event bridges order its use on the
+    /// caller stream, and graph destruction synchronizes both streams.
+    pub(crate) fn graph_runtime(&self) -> Result<Self, CudaError> {
+        crate::libraries::require_graph_runtime()?;
+        let context = cudarc::driver::CudaContext::new(self.capabilities.ordinal)?;
+        if context != self.device.context {
+            return Err(CudaError::InvalidInput(
+                "CUDA Graph requires a primary context",
+            ));
+        }
+        // SAFETY: no buffers/streams have been made with this private wrapper.
+        // It is never exported or used outside the graph's owned lifetime.
+        unsafe { context.disable_event_tracking() };
+        let stream = context.new_stream()?;
+        Ok(Self {
+            device: CudaDevice {
+                context,
+                stream,
+                name: self.device.name.clone(),
+                multiprocessors: self.device.multiprocessors,
+            },
+            capabilities: self.capabilities.clone(),
+            blas: OnceCell::new(),
+            owner: Arc::new(()),
+            unary: self.unary.clone(),
+            binary: self.binary.clone(),
+            binary_u32: self.binary_u32.clone(),
+            reduction: self.reduction.clone(),
+            indexing: self.indexing.clone(),
+            low: self.low.clone(),
+            statistics: self.statistics.clone(),
+            attention: self.attention.clone(),
+        })
     }
     pub fn from_device(device: CudaDevice) -> Result<Self, CudaError> {
         validate_device(&device)?;

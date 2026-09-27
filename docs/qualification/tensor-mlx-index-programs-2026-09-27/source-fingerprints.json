@@ -1,0 +1,1730 @@
+{
+  "captured_utc": "2026-09-27T11:10:36.959713+00:00",
+  "base_commit": "bd29dca9d72be31dfea5b300405f040e2c847dbd",
+  "files": {
+    "crates/Cargo.lock": {
+      "bytes": 77792,
+      "sha256": "845ecc2077260479526e05b7c88d9113c6c8bf7677caa51e033c73faef10f32c"
+    },
+    "crates/Cargo.toml": {
+      "bytes": 2433,
+      "sha256": "53656921b3e687dd416984561c82d3da4676ed34c4894e1f886836e2a2621d39"
+    },
+    "crates/compute-core/Cargo.toml": {
+      "bytes": 364,
+      "sha256": "ee114dd19bd82f68cdde178127f84134171c04098dc070694a1762ebc33a0c2f"
+    },
+    "crates/compute-core/examples/array_pipeline.rs": {
+      "bytes": 3510,
+      "sha256": "87070117900b9355be30c1490d3311d6c1e5ce84eafd576803e09fa6219e8a06"
+    },
+    "crates/compute-core/examples/batch_passes.rs": {
+      "bytes": 4463,
+      "sha256": "ef38a7766fe4860cc76850d27c8bdc22035281cb3f8ba98e8c4c394e7f4ad5b3"
+    },
+    "crates/compute-core/examples/bench.rs": {
+      "bytes": 6608,
+      "sha256": "5ff0f76dd2cec692425b8ab383200b1eadba82646364be590cf98f3ce082fd52"
+    },
+    "crates/compute-core/examples/bench_dot.rs": {
+      "bytes": 6845,
+      "sha256": "f3701a8b2b563d85458ba012d2f20e3f1dd6f51813d9ae4f08ba86b558af415f"
+    },
+    "crates/compute-core/examples/bench_fused_sum.rs": {
+      "bytes": 5919,
+      "sha256": "5066e135036ee8938ef23891bd256a18460e879f670c1b077360cb682e0a43ea"
+    },
+    "crates/compute-core/examples/bench_fusion.rs": {
+      "bytes": 4077,
+      "sha256": "d04a0e5ebff2213aef7cf23c022766b57ec5e8ddb8e5f4324696cc08ec03a051"
+    },
+    "crates/compute-core/examples/bench_matmul.rs": {
+      "bytes": 7455,
+      "sha256": "cc72352a8239eea7a4e3e7e988a01d6b97c458b6e18e3cc2ad4bc315db5df4e3"
+    },
+    "crates/compute-core/examples/bench_matmul_candidates.rs": {
+      "bytes": 8945,
+      "sha256": "4f522cebfa1b8e271d96908f5f1d245f5e2251b2662af85c442ad3659b5f34c1"
+    },
+    "crates/compute-core/examples/bench_reduction_candidates.rs": {
+      "bytes": 12266,
+      "sha256": "4dbcb6404ffb024795b12dde3d700f6b243d001dc61189a9cdb7d94fa79230f6"
+    },
+    "crates/compute-core/examples/bench_scan_compact.rs": {
+      "bytes": 12037,
+      "sha256": "37930df17bec01ffad16755c84f319778f95ae09dfee68815bb9529935bab82f"
+    },
+    "crates/compute-core/examples/bench_subgroup_reduction.rs": {
+      "bytes": 12369,
+      "sha256": "f6e94052e592852f2daaa89bdd97b82ad61a7e738151c569a48cd4c0f2363ef5"
+    },
+    "crates/compute-core/examples/bench_tensor_attention.rs": {
+      "bytes": 7320,
+      "sha256": "d5e63f5566878bc32869f109e3a874fe9b42b6af433ef47473f8a8c43ec6cc08"
+    },
+    "crates/compute-core/examples/bench_tensor_low.rs": {
+      "bytes": 6672,
+      "sha256": "e18f51d4862c232758d42d7bdf07c58d843d2ed9d71b4078bb267e5daac43d71"
+    },
+    "crates/compute-core/examples/bench_tensor_low_attention.rs": {
+      "bytes": 8017,
+      "sha256": "5ff5f83ad9637485ca1846da611d91a2d2d36557cfcae156723803fa004a020d"
+    },
+    "crates/compute-core/examples/bench_tensor_low_index.rs": {
+      "bytes": 7841,
+      "sha256": "e9ce9484a8366a6eac84dbb8f6a479528c062687af09d595558ab1b481e6f20a"
+    },
+    "crates/compute-core/examples/bench_tensor_low_ops.rs": {
+      "bytes": 5195,
+      "sha256": "f85a34880bead8b8e422ccda9cf691c559155ef6f6cd0799420235405e4150fe"
+    },
+    "crates/compute-core/examples/bench_tensor_low_scatter.rs": {
+      "bytes": 7327,
+      "sha256": "625cabd3988de12880c441338cc4079aaaccb579aa99bddcd608a3a611e3a13e"
+    },
+    "crates/compute-core/examples/bench_tensor_low_stats.rs": {
+      "bytes": 7617,
+      "sha256": "26867c23b06c71097369c999886d44cc14bbf23f79740e40beb72b56d59eff85"
+    },
+    "crates/compute-core/examples/bench_tensor_normalization.rs": {
+      "bytes": 5937,
+      "sha256": "2e9e320fb380837ec82fbda4780be566b8c6ece4d993c42f19f7b6d98d694646"
+    },
+    "crates/compute-core/examples/bench_tensor_reduction.rs": {
+      "bytes": 7932,
+      "sha256": "388b8890f3e14834da1d80b3d119935dd1a08cf2d3789ecda9299d0f92d56eb6"
+    },
+    "crates/compute-core/examples/bench_tensor_reduction_generic.rs": {
+      "bytes": 10644,
+      "sha256": "b5089b05f3c14842b0d96e601c83f1e986f72bd0626fd565d747a9a15c0ff20d"
+    },
+    "crates/compute-core/examples/chain.rs": {
+      "bytes": 2727,
+      "sha256": "c803b296abb66da543b93b3bf39433aec1a3267593969ea9438ebecb95e09fb1"
+    },
+    "crates/compute-core/examples/compact_reduce.rs": {
+      "bytes": 3756,
+      "sha256": "07cf31d6266bdc180c635c977fa5504104f2344b3cde11751874035843762558"
+    },
+    "crates/compute-core/examples/matmul_candidates/aligned32.wgsl": {
+      "bytes": 2829,
+      "sha256": "cf58655b768e46a4c2ffc0e664ae750971c7a46063672a5f470c0e8d5cf78c25"
+    },
+    "crates/compute-core/examples/matmul_candidates/baseline32.wgsl": {
+      "bytes": 3301,
+      "sha256": "606684c436dacbae7974b23d900d115389fef95758478cdda836fad58eb551c6"
+    },
+    "crates/compute-core/examples/matmul_candidates/cooperative_dot.wgsl": {
+      "bytes": 1160,
+      "sha256": "cad893fdf4ed2396d1f43901357ac566162607a282c50392aba3db72d30c5b53"
+    },
+    "crates/compute-core/examples/matmul_candidates/naive.wgsl": {
+      "bytes": 765,
+      "sha256": "e16e094c9df35b9e7cecf2be5838e83613e9675ff2a818a673acf900e4cabd26"
+    },
+    "crates/compute-core/examples/matmul_candidates/vector32.wgsl": {
+      "bytes": 2356,
+      "sha256": "844b96937777105dbe06abd62e790d7ef670cadd4f619bf025abaff9e385bc02"
+    },
+    "crates/compute-core/examples/matmul_candidates/vector_direct.wgsl": {
+      "bytes": 920,
+      "sha256": "654920e5ad1ebfc2a09254dd2259444557c86d05a40769d1df982f809a17702b"
+    },
+    "crates/compute-core/examples/profile_fused_sum.rs": {
+      "bytes": 3810,
+      "sha256": "1eede17b65a5465e6e84944dee357e1d275a99fa5b60e818a401f255be79c789"
+    },
+    "crates/compute-core/examples/reduction_candidates/baseline.wgsl": {
+      "bytes": 1341,
+      "sha256": "bcc060cd42d177fbcd882198fd847d83b16cdb14d2d0550b4f8175185c4503c1"
+    },
+    "crates/compute-core/examples/reduction_candidates/chunked.wgsl": {
+      "bytes": 1091,
+      "sha256": "76d227c5e39afe694b8e74acba5e194b388630bf99429ac9779b7adfcae9a60e"
+    },
+    "crates/compute-core/examples/reduction_candidates/scalar_vector.wgsl": {
+      "bytes": 1698,
+      "sha256": "b8933e70e9879d5ec1b09abbd840245745ad2b8d988ccc47e21490bbe0279f02"
+    },
+    "crates/compute-core/examples/reduction_candidates/vector.wgsl": {
+      "bytes": 1550,
+      "sha256": "1f24afcd9b46233428adefc27d5cad4a14082206688372e09891d76a2a8d9718"
+    },
+    "crates/compute-core/examples/scan_baseline/compact_finish.wgsl": {
+      "bytes": 1031,
+      "sha256": "a0ff935d2357563e03a0344d04fcf0ca66827aecbf17fcbcd79473bf00380dc5"
+    },
+    "crates/compute-core/examples/scan_baseline/compact_scatter.wgsl": {
+      "bytes": 649,
+      "sha256": "64fadb6d43ba8c829c8a4b2a17c47e627e5cc12f2b3542360b1f62aca42bd86c"
+    },
+    "crates/compute-core/examples/scan_baseline/scan_add.wgsl": {
+      "bytes": 517,
+      "sha256": "10be166e8fa19c2e67a1a78aa8dd2fff51484af313647f67ec90d5f54d192c88"
+    },
+    "crates/compute-core/examples/scan_baseline/scan_blocks.wgsl": {
+      "bytes": 1987,
+      "sha256": "26f435b876817c724ee6a385cee058739d575998fe371c1c0686f96820f47674"
+    },
+    "crates/compute-core/examples/subgroup_reduction/add.wgsl": {
+      "bytes": 405,
+      "sha256": "6767b400210edafa8db72eede962dd159b09ddf6d41b5f4969d132668e122e73"
+    },
+    "crates/compute-core/examples/subgroup_reduction/common.wgsl": {
+      "bytes": 1425,
+      "sha256": "18014a93c3162804a9aacaaf67b1865bcca11cf9c874ab37762310f412436c68"
+    },
+    "crates/compute-core/examples/subgroup_reduction/shuffle.wgsl": {
+      "bytes": 292,
+      "sha256": "93b8c05f8c5bcca01be08ac8d0e5122783ca10da1abe045faa5197e47689c3ba"
+    },
+    "crates/compute-core/examples/subgroup_reduction/shuffle_helpers.wgsl": {
+      "bytes": 781,
+      "sha256": "15b97185567c626e3f4eedf5833cbc9e79360b28c1947deec8301da3d753ecac"
+    },
+    "crates/compute-core/examples/subgroup_reduction/tree.wgsl": {
+      "bytes": 216,
+      "sha256": "7b1386788526cdf02ddc82f0e5ff587d5d31cefa79af5a239e36c2a904127d9f"
+    },
+    "crates/compute-core/examples/support/low_bench.rs": {
+      "bytes": 5357,
+      "sha256": "9bc26d4c616f4d483ec5bc03e7d9793bb9a499c970d3f69921ec3bc1fba0eb02"
+    },
+    "crates/compute-core/examples/tensor_program.rs": {
+      "bytes": 2768,
+      "sha256": "565326ebe9517425024400082cd1790d8a15c2a901f24aa0aa6af16331f15cd6"
+    },
+    "crates/compute-core/examples/tensor_reduction_candidates/baseline.wgsl": {
+      "bytes": 1655,
+      "sha256": "db7357f68bbc679aaf97145274c29759fe7bc0258fee57eb3a95a0fbd6e5eec8"
+    },
+    "crates/compute-core/examples/tensor_reduction_candidates/prior_hierarchical.wgsl": {
+      "bytes": 1849,
+      "sha256": "46c8fdb72daf32866a2666c559bec84684ece88ad35d87a23c20b74a3187e62b"
+    },
+    "crates/compute-core/shaders/affine.wgsl": {
+      "bytes": 553,
+      "sha256": "4821fd89580fd61a9a7afc752bd4b40ebc71292c532c4f0d3dae285214d3c1d8"
+    },
+    "crates/compute-core/shaders/binary.wgsl": {
+      "bytes": 1261,
+      "sha256": "110625baabd914528ddf7ebda60284a10e1bce9828875ccaf92944ba2f5f6180"
+    },
+    "crates/compute-core/shaders/block_sum.wgsl": {
+      "bytes": 1341,
+      "sha256": "bcc060cd42d177fbcd882198fd847d83b16cdb14d2d0550b4f8175185c4503c1"
+    },
+    "crates/compute-core/shaders/compact_finish.wgsl": {
+      "bytes": 1031,
+      "sha256": "a0ff935d2357563e03a0344d04fcf0ca66827aecbf17fcbcd79473bf00380dc5"
+    },
+    "crates/compute-core/shaders/compact_scatter.wgsl": {
+      "bytes": 649,
+      "sha256": "64fadb6d43ba8c829c8a4b2a17c47e627e5cc12f2b3542360b1f62aca42bd86c"
+    },
+    "crates/compute-core/shaders/compact_scatter_local.wgsl": {
+      "bytes": 1522,
+      "sha256": "909dbaf4156edbde78eee550f11bd70a177bb5a02097b6ac98c7db87ea275871"
+    },
+    "crates/compute-core/shaders/compare.wgsl": {
+      "bytes": 1075,
+      "sha256": "db38ad97389597c838f5b617ae7c39c41632d1d84a5ddf01ec50a14431f53f3f"
+    },
+    "crates/compute-core/shaders/float_bits_order.wgsl": {
+      "bytes": 489,
+      "sha256": "b626cd9926a7a5fbeeab7a50a860c3b06b978bfa811795dbf86001e164881649"
+    },
+    "crates/compute-core/shaders/float_power2.wgsl": {
+      "bytes": 1501,
+      "sha256": "fafe1617acd6bb4f2de3f9e855967f3e2904993aefe05e0e958588efb815ff7d"
+    },
+    "crates/compute-core/shaders/low_codec.wgsl": {
+      "bytes": 1763,
+      "sha256": "c0e55c02eedb1f245c440855d3d6c9a0cb12a5227a42ba464b17a9dc5eb43f4c"
+    },
+    "crates/compute-core/shaders/low_ieee_compare.wgsl": {
+      "bytes": 641,
+      "sha256": "5bb4bf03f87b169ca7fac90ee29a20d31c5a2ab9d966190fcc429ffa389bdc31"
+    },
+    "crates/compute-core/shaders/matmul.wgsl": {
+      "bytes": 3301,
+      "sha256": "606684c436dacbae7974b23d900d115389fef95758478cdda836fad58eb551c6"
+    },
+    "crates/compute-core/shaders/matmul_aligned.wgsl": {
+      "bytes": 2356,
+      "sha256": "844b96937777105dbe06abd62e790d7ef670cadd4f619bf025abaff9e385bc02"
+    },
+    "crates/compute-core/shaders/matmul_direct.wgsl": {
+      "bytes": 765,
+      "sha256": "e16e094c9df35b9e7cecf2be5838e83613e9675ff2a818a673acf900e4cabd26"
+    },
+    "crates/compute-core/shaders/matmul_dot.wgsl": {
+      "bytes": 1160,
+      "sha256": "cad893fdf4ed2396d1f43901357ac566162607a282c50392aba3db72d30c5b53"
+    },
+    "crates/compute-core/shaders/scale_add.wgsl": {
+      "bytes": 786,
+      "sha256": "5f460a1554a7cbdd797296be4379a2cd90967a277ecc02648b62f728a3ffb91c"
+    },
+    "crates/compute-core/shaders/scale_add4.wgsl": {
+      "bytes": 960,
+      "sha256": "e8968424cd0e7923ed20113da3c0fc7a08542f9fc366362cb9205dbc58416df9"
+    },
+    "crates/compute-core/shaders/scan_add.wgsl": {
+      "bytes": 517,
+      "sha256": "10be166e8fa19c2e67a1a78aa8dd2fff51484af313647f67ec90d5f54d192c88"
+    },
+    "crates/compute-core/shaders/scan_blocks.wgsl": {
+      "bytes": 1987,
+      "sha256": "26f435b876817c724ee6a385cee058739d575998fe371c1c0686f96820f47674"
+    },
+    "crates/compute-core/shaders/scan_blocks4.wgsl": {
+      "bytes": 2236,
+      "sha256": "e73e8841bf959f2229cdc29b2eac561d997eaa46ad8c805959803e27ff8cc5df"
+    },
+    "crates/compute-core/shaders/tensor_attention.wgsl": {
+      "bytes": 7579,
+      "sha256": "81d9b0d1a02ad21b07a7fdafe3eed4a5f739d33d49396cf43f6d6a0dd4fe7ec0"
+    },
+    "crates/compute-core/shaders/tensor_attention_common.wgsl": {
+      "bytes": 915,
+      "sha256": "001e87760c00069bd5e7a36d015f22521bf580710eead2cc49e3564cb17d2d22"
+    },
+    "crates/compute-core/shaders/tensor_attention_merge.wgsl": {
+      "bytes": 2776,
+      "sha256": "cf95c3b199397aeef61ddd4e960f59f6882306f3de19800e1de3f0b67cdb60fd"
+    },
+    "crates/compute-core/shaders/tensor_compact.wgsl": {
+      "bytes": 1220,
+      "sha256": "d06b24c934ac77f3da73e30e751beae0ec59ae5fc7131bf45506ecfb5e4ebafb"
+    },
+    "crates/compute-core/shaders/tensor_compare.wgsl": {
+      "bytes": 911,
+      "sha256": "387291f89e758e204e27b8047bd4be798425219dc5b0cd56cbaebc2136df34a1"
+    },
+    "crates/compute-core/shaders/tensor_copy.wgsl": {
+      "bytes": 640,
+      "sha256": "00476f43ae9e3b73f7cabecdfaa7a889de9feebbdef36d4ed82d1f4133ba6154"
+    },
+    "crates/compute-core/shaders/tensor_count_reset.wgsl": {
+      "bytes": 175,
+      "sha256": "c4b87c4626360e575524f194a7389fb58c0c1ecb23cfc0256afe45983a58b9de"
+    },
+    "crates/compute-core/shaders/tensor_elementwise.wgsl": {
+      "bytes": 2062,
+      "sha256": "64c58ad91b8c6e3bf6cde4e3b2a8d639208bbb0dd611cacd91b4e5e10fdfe434"
+    },
+    "crates/compute-core/shaders/tensor_gather.wgsl": {
+      "bytes": 930,
+      "sha256": "4af97ec10718d5b8348424d404361919c3c58e12e10abe8123d150bc6b71165a"
+    },
+    "crates/compute-core/shaders/tensor_index_count.wgsl": {
+      "bytes": 895,
+      "sha256": "e87bb49ba597082d6e06f845db5d2b12abd1309753efc16942cf334812ec88e9"
+    },
+    "crates/compute-core/shaders/tensor_low_arithmetic.wgsl": {
+      "bytes": 3464,
+      "sha256": "253d88682d7c216420ca90816ef75cb728a7d737268db1b5213ca53bf53096b7"
+    },
+    "crates/compute-core/shaders/tensor_low_attention_load.wgsl": {
+      "bytes": 1183,
+      "sha256": "64d38351f9864ddb23d6a33dfd2fe41440fb9ee1d6a1df97e2a60cf643400936"
+    },
+    "crates/compute-core/shaders/tensor_low_matmul.wgsl": {
+      "bytes": 2830,
+      "sha256": "748f1cd97d95e004d8c80e406a47b7d9d178a1e60cfe8e3b1468ba3d0b9bbdc4"
+    },
+    "crates/compute-core/shaders/tensor_low_pack.wgsl": {
+      "bytes": 1371,
+      "sha256": "70162df685db3723a8849c56e9a02f51b58cdd988bab0a2545d07298fb5cf9a6"
+    },
+    "crates/compute-core/shaders/tensor_low_reduce.wgsl": {
+      "bytes": 510,
+      "sha256": "fa62e58edb62070b8e71f3f5f6f7ffba209894958be8951724c3e4c201f14182"
+    },
+    "crates/compute-core/shaders/tensor_low_scan_load.wgsl": {
+      "bytes": 530,
+      "sha256": "376c6a1529f8488e93f5aee0f722d8204265357e9015c1284bdd64f23427f172"
+    },
+    "crates/compute-core/shaders/tensor_low_scatter_store.wgsl": {
+      "bytes": 2507,
+      "sha256": "74041a6bdfee6c9c3f24ed592b26de5f50be36602d644539c9383f5fe75a75a1"
+    },
+    "crates/compute-core/shaders/tensor_low_stats.wgsl": {
+      "bytes": 1885,
+      "sha256": "75d60f02821921464b280c93fad21912e1c1f7110432bd2b675cc4da9ba1093b"
+    },
+    "crates/compute-core/shaders/tensor_low_unpack.wgsl": {
+      "bytes": 920,
+      "sha256": "7f33b8cfa20a65b82a69389ddefab6dd13fd9d648f9b845b406ad8fcd7c42f98"
+    },
+    "crates/compute-core/shaders/tensor_matmul.wgsl": {
+      "bytes": 2503,
+      "sha256": "434477e4f3ba65b387e088582403ea0206e24242a816ce2be3f5fa883585eb54"
+    },
+    "crates/compute-core/shaders/tensor_packed_write.wgsl": {
+      "bytes": 819,
+      "sha256": "4637c7b665d21029ee1b6b799e7302216c68a78b778f4d4ce658b7d085bb824d"
+    },
+    "crates/compute-core/shaders/tensor_reduce.wgsl": {
+      "bytes": 2569,
+      "sha256": "98d13a373a4913f2e0d03d127c1d3617e8e1e8337ca3f4505900975da7bcf19c"
+    },
+    "crates/compute-core/shaders/tensor_scan_add.wgsl": {
+      "bytes": 519,
+      "sha256": "102313b7e7804cd394a697b7915211db345cc1321c5f2a5f69c287600f49fa83"
+    },
+    "crates/compute-core/shaders/tensor_scan_blocks.wgsl": {
+      "bytes": 1274,
+      "sha256": "06f36ecc575782aa4e779fb1d93c3c6fe5b629302ad04ba63652cf10976f8342"
+    },
+    "crates/compute-core/shaders/tensor_scatter.wgsl": {
+      "bytes": 2425,
+      "sha256": "722db4c0359d350ebd41d99f0f9246ae7aa9723024ba57b047bb2712767a9d18"
+    },
+    "crates/compute-core/shaders/tensor_scatter_owners.wgsl": {
+      "bytes": 833,
+      "sha256": "353d9fb986a598d3237fbb674d897de73da9928de02cdfc12fedb5c1f42ff0b6"
+    },
+    "crates/compute-core/shaders/tensor_scatter_reset.wgsl": {
+      "bytes": 429,
+      "sha256": "f536061e69655e85922b4f3a66bc5511de1cf937cbdb0fc013c97001deb162f9"
+    },
+    "crates/compute-core/shaders/tensor_select.wgsl": {
+      "bytes": 899,
+      "sha256": "06ba3a4160de7927447960477b0731976b270d3234094c5b3411c3f15145cc4a"
+    },
+    "crates/compute-core/shaders/tensor_stats_common.wgsl": {
+      "bytes": 2054,
+      "sha256": "7a7d598b4e9d8005bdcbb8109e15bb521a052736ce332c56f017b73023110851"
+    },
+    "crates/compute-core/shaders/tensor_stats_finish.wgsl": {
+      "bytes": 1712,
+      "sha256": "e310ae416836911e811f87de54550fda1a1a8a2c74b9d9d0a4e631fa8eafdbfa"
+    },
+    "crates/compute-core/shaders/tensor_stats_output.wgsl": {
+      "bytes": 3732,
+      "sha256": "de4073ed86a8d16b30ba47f43d028270f2a0e2caddd8c4c84deb5bf943aa0dfe"
+    },
+    "crates/compute-core/shaders/tensor_stats_reduce.wgsl": {
+      "bytes": 2925,
+      "sha256": "7f7a1aca54333b24b04b82bca7ca32d8bd6f6b65a8064466b4fb7367196b808b"
+    },
+    "crates/compute-core/shaders/tensor_stats_small.wgsl": {
+      "bytes": 5350,
+      "sha256": "ba9ab69c01b3b8e5e84bb365d6912dc7d8c82a2aae4eccd78b2918eae93e62d9"
+    },
+    "crates/compute-core/shaders/tensor_sum.wgsl": {
+      "bytes": 1849,
+      "sha256": "46c8fdb72daf32866a2666c559bec84684ece88ad35d87a23c20b74a3187e62b"
+    },
+    "crates/compute-core/shaders/unary.wgsl": {
+      "bytes": 996,
+      "sha256": "d90e4c703fb1f02c5e09dbc11a0cf030e5ebd96033ec5959a9dcdf7fb1d352d1"
+    },
+    "crates/compute-core/shaders/zip_mul.wgsl": {
+      "bytes": 658,
+      "sha256": "344a4c0e4af4aad7ea715997de99463b4d48ded7e9f7b9ac8752f2526a259e54"
+    },
+    "crates/compute-core/shaders/zip_mul4.wgsl": {
+      "bytes": 780,
+      "sha256": "c28f71c79253f02e8af05e5ee11e03b7d1d47d15e9945dd4dab60c486eb12422"
+    },
+    "crates/compute-core/src/array.rs": {
+      "bytes": 2517,
+      "sha256": "f208c8750e407e78cdd3d2acb97bac2ad4cb59b3ebfb0bb3396d996c2074e09e"
+    },
+    "crates/compute-core/src/batch.rs": {
+      "bytes": 2521,
+      "sha256": "5f55f447deed4fabf382bb92e08a6aa569e5168ced0eedcc3afa1ded7ec3493c"
+    },
+    "crates/compute-core/src/buffer.rs": {
+      "bytes": 4256,
+      "sha256": "7d524a1fe8a5c6aa7985c4f02e3e7377757f544815bc81159fddb9a6a1e0668a"
+    },
+    "crates/compute-core/src/comparison.rs": {
+      "bytes": 2157,
+      "sha256": "9d1a7ea986ca093bed6b5bb8ae4afe6fc33199eaa4576e0587b5d5b083a10777"
+    },
+    "crates/compute-core/src/error.rs": {
+      "bytes": 2582,
+      "sha256": "8568d067a1369ecaf8d9515c83011ebc8c7f64050cae96201d70307d69bfb83d"
+    },
+    "crates/compute-core/src/fusion.rs": {
+      "bytes": 4778,
+      "sha256": "a0d7893add7668b2dc48ad0d03fba65f696ba653f763580d45e5a9de3d66b7ae"
+    },
+    "crates/compute-core/src/fusion/graph.rs": {
+      "bytes": 12996,
+      "sha256": "934941d884def94983cd90a3cd529be00e97256a5a8c52519d174b112d0f0383"
+    },
+    "crates/compute-core/src/fusion/program.rs": {
+      "bytes": 7747,
+      "sha256": "8c79dc395abe2ce50bc4112798564fe023e1d3efb30c5dae40c6872a17c47abb"
+    },
+    "crates/compute-core/src/kernel.rs": {
+      "bytes": 13117,
+      "sha256": "1e9acd1ed3ad39b9b2dafb139ebc13d387668526d7bbbe5ff3a5eb175b5a802a"
+    },
+    "crates/compute-core/src/kernel/contract.rs": {
+      "bytes": 8248,
+      "sha256": "83659ad682a26236e7511ad54585712ffd9dcce72e1c05311b4e576cd509a2a7"
+    },
+    "crates/compute-core/src/kernel_cache.rs": {
+      "bytes": 4272,
+      "sha256": "7245ceb2fedd95c0ea14b1a2525079bcb60c864d46d639006a9f0db0bb01e42b"
+    },
+    "crates/compute-core/src/lib.rs": {
+      "bytes": 2197,
+      "sha256": "2f71b9feb8f80ebdeecff14c4c3613063fe6820fba7472c55c49e9f3f6efd9e8"
+    },
+    "crates/compute-core/src/matrix.rs": {
+      "bytes": 5551,
+      "sha256": "010b9ceeeb7b91d9826f82c01c31a457abc2cf1d6aa849d27199bd04549042a7"
+    },
+    "crates/compute-core/src/matrix/kernels.rs": {
+      "bytes": 3882,
+      "sha256": "30f696ee694a0c82ecf8ca7a77ce71f9b159ba222308738713737d41aa6b980a"
+    },
+    "crates/compute-core/src/ops.rs": {
+      "bytes": 74,
+      "sha256": "3f21bde87139cb27d14eda5b06a7f4536a5d0590bd71140fa3362045ec82c2a8"
+    },
+    "crates/compute-core/src/program.rs": {
+      "bytes": 9557,
+      "sha256": "25da84e925d75408f1368b77e5cdabfcd537d462a3af5cb8c5e3e8c5f6101196"
+    },
+    "crates/compute-core/src/readback.rs": {
+      "bytes": 4305,
+      "sha256": "49408615b991699e991ef16f995c80cb22af3272a16fdc1be5602cbbaa488ed7"
+    },
+    "crates/compute-core/src/reduction.rs": {
+      "bytes": 6636,
+      "sha256": "254cdce1678982d45b2e09620e56c8bf2f041bb67dd33b3a5a5ec6bd66d5180e"
+    },
+    "crates/compute-core/src/runtime.rs": {
+      "bytes": 8024,
+      "sha256": "3d1ef9b003fa8d23e0d77d0f5659274618dc2eaca1cf6a0336870756e706cf68"
+    },
+    "crates/compute-core/src/scan.rs": {
+      "bytes": 6353,
+      "sha256": "a1e19229d48d0026d932d1ec7542899734a5f3f04d468026b91edb94366fd528"
+    },
+    "crates/compute-core/src/scratch.rs": {
+      "bytes": 2590,
+      "sha256": "d823ac38a9bbbe3216781734e8cd294c80eeae05ac09b9ca576240e750dfac5c"
+    },
+    "crates/compute-core/src/selection.rs": {
+      "bytes": 5286,
+      "sha256": "88bd91071e4b3189a4852d02053e828eb110d28bb2937dbea0006257e4b976e2"
+    },
+    "crates/compute-core/src/shaders.rs": {
+      "bytes": 7742,
+      "sha256": "3022dd931dd5166a3693cb194b86c88757d2a40b7c93210d17984b04c3910043"
+    },
+    "crates/compute-core/src/tensor/attention.rs": {
+      "bytes": 12413,
+      "sha256": "17c2bbf473e8d5ca49c7bb12b6c4a1a134a64f5837ba1c1981f0f6e5ea84508a"
+    },
+    "crates/compute-core/src/tensor/index_kernels.rs": {
+      "bytes": 4055,
+      "sha256": "b2fde424d72f94e3a66376a2925dc88e8ccb01db3ce1787dfb9835ed0e5ab0a6"
+    },
+    "crates/compute-core/src/tensor/indexing.rs": {
+      "bytes": 11884,
+      "sha256": "b2859287a32466ed5267622be244859260dfd92a36fdeac87514b7296b430ded"
+    },
+    "crates/compute-core/src/tensor/indexing/gather_compact.rs": {
+      "bytes": 5889,
+      "sha256": "df9bfc304f3e313d7bcb8260a270e16d4463bfdd7dcb68182109575fdaaf5072"
+    },
+    "crates/compute-core/src/tensor/indexing/scan.rs": {
+      "bytes": 5597,
+      "sha256": "bd848f7ab2abc2e4a0fe256cf9be1c2b348a4369f8c5fbf6547b7db82ddc00d8"
+    },
+    "crates/compute-core/src/tensor/indexing/scatter.rs": {
+      "bytes": 7453,
+      "sha256": "3387349c99b34c4bc8528e390f35177cdd2e408fcd7f31407c3fafa39c1338e6"
+    },
+    "crates/compute-core/src/tensor/kernels.rs": {
+      "bytes": 2999,
+      "sha256": "792107b0213656d06fbc6e8f0b2c5c1657a29a43dd3f5a979e89d34b24b21369"
+    },
+    "crates/compute-core/src/tensor/low/arithmetic.rs": {
+      "bytes": 3888,
+      "sha256": "8a2471e4d98436b9d47cfe958cc41887b5c93dd0f2182edda4f1da756e161187"
+    },
+    "crates/compute-core/src/tensor/low/attention.rs": {
+      "bytes": 4968,
+      "sha256": "95cb2a4cf7910a00a844779c4b671695ebfcdd528240badc44c7a436a7b6368d"
+    },
+    "crates/compute-core/src/tensor/low/attention_source.rs": {
+      "bytes": 8962,
+      "sha256": "969d5de2b59d4b92be7da425720dae9909165e4618920871ea25736a8d9496a1"
+    },
+    "crates/compute-core/src/tensor/low/index_sources.rs": {
+      "bytes": 4271,
+      "sha256": "32788f1c713e10cb2663e15f726d39d7e4855384ca0692e7d77251fa16599b28"
+    },
+    "crates/compute-core/src/tensor/low/indexing.rs": {
+      "bytes": 9832,
+      "sha256": "40d50eafa647903845931fcfa3462357be51d4c6ab67aa71cd304404a3a7552e"
+    },
+    "crates/compute-core/src/tensor/low/kernels.rs": {
+      "bytes": 5638,
+      "sha256": "7bc0a8781d27d91bb14e9217807992c7af4378561c7966340f6f735469b1f046"
+    },
+    "crates/compute-core/src/tensor/low/mod.rs": {
+      "bytes": 6168,
+      "sha256": "28890285390ad9df230025d646b0fd5442010459e0f53451f6ddd5b2e4fe3f7f"
+    },
+    "crates/compute-core/src/tensor/low/program.rs": {
+      "bytes": 8455,
+      "sha256": "94a46c10dbcc16918c9149f6088ec529b8b64eead2753a66d61a7c87c1ba3282"
+    },
+    "crates/compute-core/src/tensor/low/reduction.rs": {
+      "bytes": 8109,
+      "sha256": "1909497d0f1c2517cd37107cf2867e50dd6b58f101507840718ce3079e7dfd4f"
+    },
+    "crates/compute-core/src/tensor/low/scan.rs": {
+      "bytes": 4028,
+      "sha256": "8018fb354a2e9af675f693ef30299b597bd9eee02caf2c9b3628e538874fd0a2"
+    },
+    "crates/compute-core/src/tensor/low/scatter.rs": {
+      "bytes": 7575,
+      "sha256": "5696cc22d53137862ca7c90334b97688bf3da6d6f8d53d40b8ae736383403282"
+    },
+    "crates/compute-core/src/tensor/low/scatter_source.rs": {
+      "bytes": 1813,
+      "sha256": "80f6923d11741f94c8651250802fe3ebd9723224fb05fa904a160a8fb7107983"
+    },
+    "crates/compute-core/src/tensor/low/statistics.rs": {
+      "bytes": 12542,
+      "sha256": "a3128a2ae8c31e077a45787ede11d23d99c02977b5786ed50c7a7fc92aca8d25"
+    },
+    "crates/compute-core/src/tensor/low/statistics_sources.rs": {
+      "bytes": 5964,
+      "sha256": "5f1f52fd45d01faa926da2b32bf00ade4cb76ae8a7d095b12a154d82d27491db"
+    },
+    "crates/compute-core/src/tensor/matmul.rs": {
+      "bytes": 2664,
+      "sha256": "714f9b5f4115f5b5b21022d58446df6b9c7b2af53065677688176c350f09e148"
+    },
+    "crates/compute-core/src/tensor/mod.rs": {
+      "bytes": 5591,
+      "sha256": "f481d6a80fc565400b81c2edf3398ca7e9128c128b106f61b5f8a5709fadb480"
+    },
+    "crates/compute-core/src/tensor/normalization.rs": {
+      "bytes": 13187,
+      "sha256": "e52c852c559a7dcd8ff9815b1154ef56b78d676c939255a826554e52009b4770"
+    },
+    "crates/compute-core/src/tensor/program.rs": {
+      "bytes": 7458,
+      "sha256": "09931302b171acd30f99b53150b8d448a55b8288eec18a673eed7d52107b8504"
+    },
+    "crates/compute-core/src/tensor/reduction.rs": {
+      "bytes": 7965,
+      "sha256": "f23ee6f358ec3ef432035f7f2ab033d0a9b2e5995cdbaddd70c5ac04c219f09d"
+    },
+    "crates/compute-core/src/tensor/scatter_kernels.rs": {
+      "bytes": 2611,
+      "sha256": "1ac8a7a07a061a7a3772fa7dc2236ff08bdb2bca5b7dfd8c48cc054bdc692a7f"
+    },
+    "crates/compute-core/src/tensor_backend.rs": {
+      "bytes": 13445,
+      "sha256": "00ad4c3e9153af2df90c41345eae868a8d8e779f70dadde4f913a691a08e0c30"
+    },
+    "crates/compute-core/src/tensor_low_backend.rs": {
+      "bytes": 12809,
+      "sha256": "9e63f1b405d9af41dca571ee3f94e2d174ac7e8380e25bf1dec707f5b44b6046"
+    },
+    "crates/compute-core/tests/batch.rs": {
+      "bytes": 3420,
+      "sha256": "7c75ee11e3903333afe81e2bccf8be3ac2c0df6c26f87f2d60c0e0c872aac766"
+    },
+    "crates/compute-core/tests/contracts.rs": {
+      "bytes": 7977,
+      "sha256": "4105cca48dd2161fd605762da6edd9cc5d66d277e2be29fbe87a336b0899eac3"
+    },
+    "crates/compute-core/tests/dot.rs": {
+      "bytes": 4678,
+      "sha256": "2018dbc8f9a541824c39430c02e655f262b2bcb324291cd3bc745d3f91a48bc2"
+    },
+    "crates/compute-core/tests/fused_sum.rs": {
+      "bytes": 7427,
+      "sha256": "5c9c4a5a57a20db2806197e03671c31821bcaf1c2c544601d12941cce4813f2a"
+    },
+    "crates/compute-core/tests/fusion.rs": {
+      "bytes": 9676,
+      "sha256": "d79c9b6fef442e5610c5068b994f90aff93ee30fcfc626c70431e759d89a39bb"
+    },
+    "crates/compute-core/tests/fusion_contract.rs": {
+      "bytes": 4884,
+      "sha256": "3912e6c6006d031f1de0026fe851139c3387e6fe57cfe37d9e8036e110e8fb46"
+    },
+    "crates/compute-core/tests/kernels.rs": {
+      "bytes": 15712,
+      "sha256": "59b2e1d16834cc7976309aaa511811be290fae1d99f83e5c8445c56d10fdfcaa"
+    },
+    "crates/compute-core/tests/matrix.rs": {
+      "bytes": 10402,
+      "sha256": "bff89a45acc668e411b0ae15d6227a7ca5e64ab77d1ec0e8b5dc03580eb544bb"
+    },
+    "crates/compute-core/tests/reduction.rs": {
+      "bytes": 7442,
+      "sha256": "4a002ff568ce1a8e5cac46a2bee51da215819758911e7f7c7ecd580e0e0e9f52"
+    },
+    "crates/compute-core/tests/runtime.rs": {
+      "bytes": 10332,
+      "sha256": "ae22459a34ca61466e43802a819febccdf12d55b1d488733e2f75cc0e1d94c6b"
+    },
+    "crates/compute-core/tests/selection.rs": {
+      "bytes": 19261,
+      "sha256": "6480e7c3d54e5fb6042e7b45e502aa68c716881c278410e405f3a81d0f24e3d8"
+    },
+    "crates/compute-core/tests/tensor.rs": {
+      "bytes": 16722,
+      "sha256": "b76876644368eb6762c7d4b6577e553c77fd47cb4c13ce90175c5bf5802967ce"
+    },
+    "crates/compute-core/tests/tensor_attention.rs": {
+      "bytes": 20916,
+      "sha256": "644f72d1384434c10e3ca354c295c322b720362b39cde3811d99a9db1684e42e"
+    },
+    "crates/compute-core/tests/tensor_backend.rs": {
+      "bytes": 1908,
+      "sha256": "2c05000488122677101aa780a05cf0752d8541ea7c4ba348ad1ba4f54a95f3e4"
+    },
+    "crates/compute-core/tests/tensor_index.rs": {
+      "bytes": 12112,
+      "sha256": "5b8172d6aeaf53fa63beeefcfed183c6205d3b0e0bd444f45bcb027832c821d9"
+    },
+    "crates/compute-core/tests/tensor_low.rs": {
+      "bytes": 10997,
+      "sha256": "06f0812c7724a86c9728be682384d8556fe091132e032acc84f394b88e2310bb"
+    },
+    "crates/compute-core/tests/tensor_low_attention.rs": {
+      "bytes": 18456,
+      "sha256": "6e99a5d74f8aa520f965f05f0a8fb23db25d77b93b92b6b13348797a98004ab7"
+    },
+    "crates/compute-core/tests/tensor_low_index.rs": {
+      "bytes": 16299,
+      "sha256": "c7584f6fa9098770392881ab71211575589c903f306c48e54614a18d4489b3ba"
+    },
+    "crates/compute-core/tests/tensor_low_normalization.rs": {
+      "bytes": 10074,
+      "sha256": "c2101fff9458ac15525fb43ac72c28ad7e9e3327cbcbb7d22ceac9a7bbffbc64"
+    },
+    "crates/compute-core/tests/tensor_low_ops.rs": {
+      "bytes": 18227,
+      "sha256": "04b67a30824845eb25897ac758ae7b582dd26f1216ff0e9a6f23c593f9d48042"
+    },
+    "crates/compute-core/tests/tensor_low_scatter.rs": {
+      "bytes": 17874,
+      "sha256": "0fc595b1b4fd866e348467430237d8319b3dd55cfb4026dcc4b5c1f3e9196dca"
+    },
+    "crates/compute-core/tests/tensor_normalization.rs": {
+      "bytes": 14909,
+      "sha256": "713554cfde9ff1c330ac66341b8374083501da4a21ac6a80a09bbb3159834f92"
+    },
+    "crates/compute-core/tests/tensor_reduce.rs": {
+      "bytes": 12328,
+      "sha256": "c87f1dace8decfa4b49343b6514de5425c7dc1e5a65c1a88c021aebb96f01193"
+    },
+    "crates/compute-core/tests/tensor_scatter.rs": {
+      "bytes": 12377,
+      "sha256": "9283659204cb4e6359c947efcc2dd3254536e9f8d2dc99bc256a08055471dad9"
+    },
+    "crates/compute-cuda/Cargo.toml": {
+      "bytes": 341,
+      "sha256": "72e5b65855e7043b7f14460c72455a1db648db458c0ef4d6a2b4df06111eb8c9"
+    },
+    "crates/compute-cuda/README.md": {
+      "bytes": 46894,
+      "sha256": "50d5d3c71e8e82dc04e294194a9013627e644b3d3474534cce05e76da5f9b85d"
+    },
+    "crates/compute-cuda/qualification/compile_nvrtc.py": {
+      "bytes": 13611,
+      "sha256": "052bbe3abf350787c73bfb1588ee6b747d2006ff6f1015bf0693a6458eb83470"
+    },
+    "crates/compute-cuda/qualification/qualify-nvrtc.sh": {
+      "bytes": 1243,
+      "sha256": "5f0b89421006df96daa1b1e96812e18a2e87d88e9cf41c285f794843b2e453ff"
+    },
+    "crates/compute-cuda/src/attention.cu": {
+      "bytes": 6708,
+      "sha256": "49a308bf71bec6e35049462777ea9ebe710e2109431f7e958ae2e53096565cb1"
+    },
+    "crates/compute-cuda/src/attention.rs": {
+      "bytes": 5413,
+      "sha256": "8a11faec6f2f9265443caf0961c9f507943753ed87c9d418126fb9ea18896512"
+    },
+    "crates/compute-cuda/src/attention_dispatch.rs": {
+      "bytes": 8879,
+      "sha256": "c5d387e818287ca6be7758a8e1c62fb665ea93d5cc8f96c5e8829c9ad4a15e2a"
+    },
+    "crates/compute-cuda/src/dispatch.rs": {
+      "bytes": 6778,
+      "sha256": "21dbe8d3b6fd408e5e815fd5dcc7683e77cd3a4cb2b39bd947b75b0b190f4722"
+    },
+    "crates/compute-cuda/src/error.rs": {
+      "bytes": 2494,
+      "sha256": "e1ce86bda8dd1e2b2f387e89df4af97c7e2c9ae389cb41fd844932bcb6c3119c"
+    },
+    "crates/compute-cuda/src/indexing.cu": {
+      "bytes": 9921,
+      "sha256": "745279f72e62e4b5592bd5a6a4f4179dbd87a66e4303ecf332af3194fccda493"
+    },
+    "crates/compute-cuda/src/indexing/compact_dispatch.rs": {
+      "bytes": 7283,
+      "sha256": "6b28918a207162d226af6af3838cd78c59c2f183b1989cb7f02610b0029c65a9"
+    },
+    "crates/compute-cuda/src/indexing/dispatch.rs": {
+      "bytes": 8721,
+      "sha256": "56f595bebd21b0655d59717c3d8b29a603f3451708ffbcad810d3d6766425cec"
+    },
+    "crates/compute-cuda/src/indexing/gather.rs": {
+      "bytes": 3432,
+      "sha256": "a10ce747852384f5fdce7092b4589105d395eba47e5ff1212d83a4d60b4fec0d"
+    },
+    "crates/compute-cuda/src/indexing/gather_dispatch.rs": {
+      "bytes": 7951,
+      "sha256": "7c153eb4744c9da38ae1d0a2cd24a2ea784fb1ff32343f8618ef14fed37646c8"
+    },
+    "crates/compute-cuda/src/indexing/mod.rs": {
+      "bytes": 9954,
+      "sha256": "b0e3d892b6182fd943f4ddf8c78452a0214b2220c02dc3ca10c70f03296b8d3d"
+    },
+    "crates/compute-cuda/src/indexing/scan.rs": {
+      "bytes": 2195,
+      "sha256": "78325758c7b8603eaad608c99ca50672fd6a14f9d0e0f011a2a0a35eaa6d2c00"
+    },
+    "crates/compute-cuda/src/indexing/scan_dispatch.rs": {
+      "bytes": 12826,
+      "sha256": "193018068baf41c77db18c018ee10f1866d6815cedd2318bd1b971a070897280"
+    },
+    "crates/compute-cuda/src/indexing/scatter.rs": {
+      "bytes": 4423,
+      "sha256": "44bc60259b8f9546f6108564329aa06f59f11b612de48222a62d2273a7014259"
+    },
+    "crates/compute-cuda/src/indexing/scatter_dispatch.rs": {
+      "bytes": 10566,
+      "sha256": "1c16c3e4a403e0e8df804fb475cdf54e0182fc5d17e1ab07960ddaf1a1008127"
+    },
+    "crates/compute-cuda/src/indexing/selection.rs": {
+      "bytes": 4803,
+      "sha256": "e903b4fb388fac68889bde0cfe77eea477b919b5f5cf75a734a82dc591e63995"
+    },
+    "crates/compute-cuda/src/kernels.cu": {
+      "bytes": 3278,
+      "sha256": "69f0e28d899594e8308ae1295fc09e29c17d3443c8938c55e8a74e5f8791a167"
+    },
+    "crates/compute-cuda/src/lib.rs": {
+      "bytes": 1147,
+      "sha256": "d973e6f569600a4e5b5fa055ad14e92bf04f6be11da5c8543f73abe956d862d9"
+    },
+    "crates/compute-cuda/src/libraries.rs": {
+      "bytes": 2618,
+      "sha256": "57ec9eddcceeae6477949321d52b75680b8229e0ff4d37613651113d91481721"
+    },
+    "crates/compute-cuda/src/low_attention.cu": {
+      "bytes": 1010,
+      "sha256": "a14005075dbd8d7b6b87708da389fac4d749f86259fbe4d394cb52e172d1eaeb"
+    },
+    "crates/compute-cuda/src/low_attention.rs": {
+      "bytes": 1034,
+      "sha256": "c22e52955418751f719b4e25e4deaaf894e2142fb99d2218de2b1083fe42308e"
+    },
+    "crates/compute-cuda/src/low_dispatch.rs": {
+      "bytes": 8294,
+      "sha256": "d7ee390a44388b770805291349e15efcb8950bf139c5e84add9725ee01877391"
+    },
+    "crates/compute-cuda/src/low_indexing.cu": {
+      "bytes": 2403,
+      "sha256": "80ef93191f0d26342f08e1926723985779a12b9b8b4ea14a207d973409b2db85"
+    },
+    "crates/compute-cuda/src/low_indexing.rs": {
+      "bytes": 2620,
+      "sha256": "389d6cab11ee80280c19515cd130d5c1189df8b5fb2edd9edca485335cae3b5e"
+    },
+    "crates/compute-cuda/src/low_ops.cu": {
+      "bytes": 2447,
+      "sha256": "616a9368c49749dae01f77167071fba0d55dbb742817140fb54637282cd2f90b"
+    },
+    "crates/compute-cuda/src/low_ops.rs": {
+      "bytes": 4620,
+      "sha256": "330489024172af1acb59b60372d8244e254b9291b55deb6eaf2eb688dc83befd"
+    },
+    "crates/compute-cuda/src/low_precision.cu": {
+      "bytes": 2161,
+      "sha256": "12e423142e04a0a897fd9dd63f947aa3d62a5ad919542ee381e2878875f01243"
+    },
+    "crates/compute-cuda/src/low_precision.rs": {
+      "bytes": 11089,
+      "sha256": "ce3083ed462f1ed41615a53cbcddcd6b615c0c861ec60dbf7dee7442d985088a"
+    },
+    "crates/compute-cuda/src/low_scatter.cu": {
+      "bytes": 3343,
+      "sha256": "90716ff76f5dc93745c7d7c3079b9dd26a0c7f57e18cc27e17a36d3db5c29c42"
+    },
+    "crates/compute-cuda/src/low_scatter.rs": {
+      "bytes": 4469,
+      "sha256": "0b8eb0c186aa4b7c9ebed1a35ea329654c4701ac519b6983833cf8e518ef3709"
+    },
+    "crates/compute-cuda/src/low_statistics.cu": {
+      "bytes": 1661,
+      "sha256": "d574ec9e18b438f2449fe59500d6eb5b964780ad988c97c5ff8593f397acbf55"
+    },
+    "crates/compute-cuda/src/low_statistics.rs": {
+      "bytes": 2651,
+      "sha256": "3212c0554f367a52853ec449427078d90019394c0a1d6472dd23c417a7f03219"
+    },
+    "crates/compute-cuda/src/matmul.rs": {
+      "bytes": 9974,
+      "sha256": "204a90760b89326ad0fcf9da0c474afe811e74f0656f50f78c4d23041c1efe44"
+    },
+    "crates/compute-cuda/src/matmul/plan.rs": {
+      "bytes": 10718,
+      "sha256": "b10240f83598da307d06c3dfa466488f5a0b0d0d1651bea6c3c594b0c86ccde9"
+    },
+    "crates/compute-cuda/src/policy.rs": {
+      "bytes": 4789,
+      "sha256": "9fb3716c9bab1f892f2a78f4dcee74f850fa44286e011dc15030097903a2f92c"
+    },
+    "crates/compute-cuda/src/program.rs": {
+      "bytes": 4908,
+      "sha256": "9be5def3e55a7d9ace80ff66792a56a6888f36ce6abbcfd9ad717833424ec691"
+    },
+    "crates/compute-cuda/src/program/api_typed.rs": {
+      "bytes": 4078,
+      "sha256": "30cd769bd855479e7d2b1b41966f6c1474fa41e93e86035330022980f844340e"
+    },
+    "crates/compute-cuda/src/program/attention_api.rs": {
+      "bytes": 647,
+      "sha256": "0e76f98653a293a4a366080ce4e806d55378a68dad92cf7a872199871ea18343"
+    },
+    "crates/compute-cuda/src/program/builder.rs": {
+      "bytes": 11986,
+      "sha256": "cf24fb6c45cc47619aee9bbc3569274ea8758b20ca2cef76428479b849164f43"
+    },
+    "crates/compute-cuda/src/program/builder_attention.rs": {
+      "bytes": 2706,
+      "sha256": "98adc4875898561698d777b6a7029fbc3997a520280418b3dee89f3fb9379b2e"
+    },
+    "crates/compute-cuda/src/program/builder_attention_tests.rs": {
+      "bytes": 6713,
+      "sha256": "8597224e2d908acb1a8a803d1ee6076fa29da9f5663cfaf99314f155c691eaf0"
+    },
+    "crates/compute-cuda/src/program/builder_indexing.rs": {
+      "bytes": 9701,
+      "sha256": "8b3dd98c296f6795adccc32792309f7167a7ba3a1c6e719ecc00cf39cc7f5e4e"
+    },
+    "crates/compute-cuda/src/program/builder_indexing_error_tests.rs": {
+      "bytes": 8106,
+      "sha256": "4efea53eb7f10a92734e8ac85e983bbcb17a1b3231b6cdb06be63de6e56be3c9"
+    },
+    "crates/compute-cuda/src/program/builder_indexing_scatter_tests.rs": {
+      "bytes": 5885,
+      "sha256": "d6253067b4e238622b9ed9c3972a1df82a9a3a036ebfd4db3e4f3c875a279927"
+    },
+    "crates/compute-cuda/src/program/builder_indexing_tests.rs": {
+      "bytes": 10418,
+      "sha256": "5fa117a1cdd5bdbc70f36ee3814ef46ce9e9671144601e10aead49269d93200c"
+    },
+    "crates/compute-cuda/src/program/builder_statistics.rs": {
+      "bytes": 7284,
+      "sha256": "a2b60a9d6cd732913a34651008465e9e41d611bc767142e5e45b78a2a3c2b584"
+    },
+    "crates/compute-cuda/src/program/builder_statistics_tests.rs": {
+      "bytes": 6647,
+      "sha256": "4a5f794aa0e74483881e14567c4cb7faf78fa6cd9084a13ea2def766fd903d60"
+    },
+    "crates/compute-cuda/src/program/builder_tests.rs": {
+      "bytes": 11608,
+      "sha256": "2beea2755a13a4094d7739f78fefa3a5bf1bef99b2a5ee78d6d5406e6bcd5591"
+    },
+    "crates/compute-cuda/src/program/builder_typed.rs": {
+      "bytes": 8548,
+      "sha256": "09567bd023c49610182dc3dcb2a422da6cbd90aceecff2fedb744655a21408df"
+    },
+    "crates/compute-cuda/src/program/builder_typed_tests.rs": {
+      "bytes": 15590,
+      "sha256": "c10293006b82553599cb7062fb29a07b968fa126b69d3dc47f9aa022ecfc3c91"
+    },
+    "crates/compute-cuda/src/program/execution.rs": {
+      "bytes": 6988,
+      "sha256": "752488e488ab98872e20de1b747500d336c87b038c8fd53a5ef4551157cec1e7"
+    },
+    "crates/compute-cuda/src/program/expansion.rs": {
+      "bytes": 9271,
+      "sha256": "a4581fe30501f5a22271a098ec542d6348d79723455c87c7b3d4868727abf783"
+    },
+    "crates/compute-cuda/src/program/gate.rs": {
+      "bytes": 6346,
+      "sha256": "37a074d49ddacf7e8a3c07a6f8319ad9af88cacbdce2d8c3b994eebcbd44d3da"
+    },
+    "crates/compute-cuda/src/program/indexing_api.rs": {
+      "bytes": 1857,
+      "sha256": "03b2d3674ee185b2c3ce1b8d591bea16d1b038686c6b26cae59f6dc8042e5d28"
+    },
+    "crates/compute-cuda/src/program/indexing_launch.rs": {
+      "bytes": 9500,
+      "sha256": "259887986cd7a4bef13ff02924e9b23fb2f15fa4f3f1217f89c74d1644874669"
+    },
+    "crates/compute-cuda/src/program/indexing_plan.rs": {
+      "bytes": 9081,
+      "sha256": "2309b71f65729d1e093fc3e073007053ac28a9a469b49b7fb91fcdf50707b731"
+    },
+    "crates/compute-cuda/src/program/indexing_preparation_tests.rs": {
+      "bytes": 8760,
+      "sha256": "3e1dc71db467418884c81e1a4a75714966bd0cbe9ec87d15cd8ec675f099265f"
+    },
+    "crates/compute-cuda/src/program/launch.rs": {
+      "bytes": 10250,
+      "sha256": "f931b4ba060c8cb3ed71a8a92ee261f28ea7117b0275fc55f849e3beb634324a"
+    },
+    "crates/compute-cuda/src/program/operation.rs": {
+      "bytes": 6348,
+      "sha256": "864c097f0c72fd9fa30f3369cf0ddc70484c24945dbaf04a7536cea4b1911696"
+    },
+    "crates/compute-cuda/src/program/plan.rs": {
+      "bytes": 6576,
+      "sha256": "2dd07ce9ea4cfa3a6a64aeacf9287f9f669f79c0f15d44cd21c2a1e024a0ee80"
+    },
+    "crates/compute-cuda/src/program/preparation.rs": {
+      "bytes": 5592,
+      "sha256": "d83d6eb67ebb9c9222bb2df2b3f45bfd9edbcbaa77a12aeda6796aad3ad9053d"
+    },
+    "crates/compute-cuda/src/program/preparation_tests.rs": {
+      "bytes": 6517,
+      "sha256": "985b2138fe6705770247470d42b6df607652ca04366bd2de9d7b576d1636828f"
+    },
+    "crates/compute-cuda/src/program/reduction_plan.rs": {
+      "bytes": 3500,
+      "sha256": "88d3c596142a6b80b15ec6972151d42d79183c32a25290e6affdc3ee083f3d7d"
+    },
+    "crates/compute-cuda/src/program/scratch.rs": {
+      "bytes": 2127,
+      "sha256": "b56e06849b36152fe2d32b25ef70b4525bca6a5af9b60d853ac9d1a279ef7f6e"
+    },
+    "crates/compute-cuda/src/program/statistics_api.rs": {
+      "bytes": 3213,
+      "sha256": "cb2395bb461d902d141adab271d383618fce0d8b68f866bc9b7cdb1277e0bd00"
+    },
+    "crates/compute-cuda/src/program/statistics_launch.rs": {
+      "bytes": 7439,
+      "sha256": "c2d6282574dabc970375e3efff6db30dffa7bf9979b435bd79befe5967150eb5"
+    },
+    "crates/compute-cuda/src/program/statistics_plan.rs": {
+      "bytes": 6442,
+      "sha256": "5a70f5c6b82de6bf06695531d858cdf865f496d217e481c19996892c717b2db0"
+    },
+    "crates/compute-cuda/src/program/statistics_preparation_tests.rs": {
+      "bytes": 6234,
+      "sha256": "11e2ec9663e0a64612ff00a8a9a6a886d3bbc82bb4232d4321367b2e9d1769de"
+    },
+    "crates/compute-cuda/src/program/storage.rs": {
+      "bytes": 5545,
+      "sha256": "87276f4851278199d0837724f1ed0a2747217ee267440d2c35119a211d11814e"
+    },
+    "crates/compute-cuda/src/program/typed.rs": {
+      "bytes": 6557,
+      "sha256": "d113a9c856291972992b1f871d7473748141b8505de281105f76e10f9c4bf506"
+    },
+    "crates/compute-cuda/src/program/typed_preparation_tests.rs": {
+      "bytes": 7332,
+      "sha256": "381e4414a313c314850225c7317731a38fe8292e8eee4fc1b9d3719c4dd0892e"
+    },
+    "crates/compute-cuda/src/program/validation.rs": {
+      "bytes": 8191,
+      "sha256": "67796cd89842390edaed8da07943b13f5c92ecd4d395fd5fb29eba1c8dd9d5a3"
+    },
+    "crates/compute-cuda/src/reduction.rs": {
+      "bytes": 6734,
+      "sha256": "1515df8ebbdb61e55f898750ff4eedbcf220f1a7f68004515410505f15874e0e"
+    },
+    "crates/compute-cuda/src/reduction/dispatch.rs": {
+      "bytes": 8463,
+      "sha256": "eba0f295be419264b7adebd31a2c54ec21da6325eafbed07e722f48094d432fd"
+    },
+    "crates/compute-cuda/src/reductions.cu": {
+      "bytes": 5043,
+      "sha256": "688608a68819141cd95efe1a7d79416918ef99c8451bcdea15944445525969df"
+    },
+    "crates/compute-cuda/src/runtime.rs": {
+      "bytes": 16262,
+      "sha256": "ee99cdab3298b0a770e0c0f4fabaf5f65b68cf0677e3a9a251d2ef94675ac1b7"
+    },
+    "crates/compute-cuda/src/scatter.cu": {
+      "bytes": 4324,
+      "sha256": "af931e38e2cbd2b7db490fdc4d3ea3f3b5d80a5a2f80e24ec08044d474c32e54"
+    },
+    "crates/compute-cuda/src/statistics.cu": {
+      "bytes": 6963,
+      "sha256": "e4c212f58ae867163a0eb45fb5f428083fbc83fe720a0e0161e5e69cd6054f34"
+    },
+    "crates/compute-cuda/src/statistics.rs": {
+      "bytes": 8938,
+      "sha256": "0890265f10951eb4bcea10d24ec9416c4f20838e2ff8309a817012076f0841a8"
+    },
+    "crates/compute-cuda/src/statistics_dispatch.rs": {
+      "bytes": 10709,
+      "sha256": "108de41306cdbb9424614e1f7ead7d629548df52fae9d25db594cdabfa941c6f"
+    },
+    "crates/compute-cuda/tests/cuda_tensor.rs": {
+      "bytes": 49408,
+      "sha256": "1fdacc3d3c45904ecc9af63a2a91fc9c972bf46e9f303549568bc2cb561bda63"
+    },
+    "crates/compute-cuda/tests/prepared.rs": {
+      "bytes": 15381,
+      "sha256": "287e9ac8940f42f1165942a15af70480e4b55c5be0a7bbccd232019bdf852f59"
+    },
+    "crates/compute-cuda/tests/prepared_indexing.rs": {
+      "bytes": 4949,
+      "sha256": "e7f2ce63b53b1a9d05b489a5848a8220320348de3626490be11d7e083e1dc811"
+    },
+    "crates/compute-cuda/tests/prepared_indexing/movement.rs": {
+      "bytes": 8826,
+      "sha256": "8db0000446269b1696face6838220dee30044d6108a780f6dd8fffcfffe1d750"
+    },
+    "crates/compute-cuda/tests/prepared_indexing/scans.rs": {
+      "bytes": 6410,
+      "sha256": "2a0900870ab5d1e5d00ed3cfaaf2a72e4943e7ba80691d2fde52062ffa9c92c8"
+    },
+    "crates/compute-cuda/tests/prepared_indexing/scatter.rs": {
+      "bytes": 11844,
+      "sha256": "0179084a86daac2e80077e7ca0de3b847454e7585972745d1f11724958ecede1"
+    },
+    "crates/compute-cuda/tests/prepared_statistics.rs": {
+      "bytes": 2719,
+      "sha256": "42039332f40ad12078e8b27c2085012e5b99af5d12075f8be727273c4bee6905"
+    },
+    "crates/compute-cuda/tests/prepared_statistics/attention.rs": {
+      "bytes": 9905,
+      "sha256": "c215f4c1e13da283dd1f175edf1bca7af86488ac2fed704f7b1a8f9959e0d10a"
+    },
+    "crates/compute-cuda/tests/prepared_statistics/statistics.rs": {
+      "bytes": 6897,
+      "sha256": "ba0abc482b0a2f15729d84a7dc64a562db3cb9d4acf4f9c826cec82d2e072f69"
+    },
+    "crates/compute-cuda/tests/prepared_statistics/support.rs": {
+      "bytes": 4204,
+      "sha256": "45db004890014551b92f60ad26671a698ce7d82687cca5510731776f93869ae7"
+    },
+    "crates/compute-cuda/tests/prepared_typed.rs": {
+      "bytes": 1709,
+      "sha256": "1a3881def96574992210d797a67365ca2bee0498bbf030ee7d705535809afe0d"
+    },
+    "crates/compute-cuda/tests/prepared_typed/low.rs": {
+      "bytes": 8693,
+      "sha256": "5a2a4ed4a7874580dfc200bae57cf72a1a8a3eb350298dc426efb82bca8781fe"
+    },
+    "crates/compute-cuda/tests/prepared_typed/unsigned.rs": {
+      "bytes": 4747,
+      "sha256": "12e5770835b9c622ca5ac696acfa10381ef15c664ff1dfaf40c88656a78231d1"
+    },
+    "crates/compute-cuda/tests/prepared_typed/validation.rs": {
+      "bytes": 4659,
+      "sha256": "43c68fcae6476308e7b8b18498362cd6f884bc70ce6806043032e9300d6d3e5c"
+    },
+    "crates/compute-mlx/Cargo.toml": {
+      "bytes": 355,
+      "sha256": "8b9bc3d39139c1ea04eae9238e60b64f8dc97b248c970b4eebd41d753f0656ac"
+    },
+    "crates/compute-mlx/README.md": {
+      "bytes": 58243,
+      "sha256": "dc4e87c776fd4f1349c8524d2b4a0704a2dc5fcd9efa396515875dc06948d5cb"
+    },
+    "crates/compute-mlx/examples/bench_compiled.rs": {
+      "bytes": 10059,
+      "sha256": "89a023825a7f3412aa3a887dbe3d75025fb3f496f136a3d6ab4e7f7b30713839"
+    },
+    "crates/compute-mlx/examples/bench_compiled_typed.rs": {
+      "bytes": 19199,
+      "sha256": "549ff86b8589954aad72458d03397661e3965be7804e62056612c775c0e7200b"
+    },
+    "crates/compute-mlx/examples/bench_low_matmul.rs": {
+      "bytes": 10290,
+      "sha256": "b07b29429047291fc7b99979586ea40e95fcffc94fdeab088ca64b4e900a494c"
+    },
+    "crates/compute-mlx/examples/compiled_indexing.rs": {
+      "bytes": 2568,
+      "sha256": "29773e9a2ead91c9bf8a35d8acbe29e96a252108ebb79cde24e2210149ce144a"
+    },
+    "crates/compute-mlx/examples/linear.rs": {
+      "bytes": 1110,
+      "sha256": "d9d2e3293e4227fe0908ee42d124f1988d61bfc31adbfe3063de8052fc3e044a"
+    },
+    "crates/compute-mlx/src/ffi.rs": {
+      "bytes": 14932,
+      "sha256": "21f0ac58a7ea2826e8d860c18ff46ce46cd62706f2ed9ec6939b8ba6f77da48c"
+    },
+    "crates/compute-mlx/src/lib.rs": {
+      "bytes": 307,
+      "sha256": "5f26f54bc8d4273f0fb308ad995af0a4040c81eab1660396a2ddb63e4892364b"
+    },
+    "crates/compute-mlx/src/metal/low_attention.metal": {
+      "bytes": 5513,
+      "sha256": "3c92a2463835f04f7708a412a2c3078ee75f8e2e445da8808aa18992c835a5ce"
+    },
+    "crates/compute-mlx/src/metal/low_attention_common.h": {
+      "bytes": 614,
+      "sha256": "eb5b834e73e8900675fd1b9251e6eaf3d94fd3f6f072f2a853bc2ece7514b431"
+    },
+    "crates/compute-mlx/src/metal/low_binary.metal": {
+      "bytes": 851,
+      "sha256": "87186b71ce101056032f82910a7876e1364642260b67ea8de85f41773d5e11a8"
+    },
+    "crates/compute-mlx/src/metal/low_common.h": {
+      "bytes": 2999,
+      "sha256": "d77b126a4d715728c5b5a66fc4507b41594a64f21b05e7586f832d2c7bae458a"
+    },
+    "crates/compute-mlx/src/metal/low_compare.metal": {
+      "bytes": 1004,
+      "sha256": "5cd92357e121df902abe7264b1d887e0a2acfb6a4a2311363b6d6518e52296fa"
+    },
+    "crates/compute-mlx/src/metal/low_matmul.metal": {
+      "bytes": 4605,
+      "sha256": "448b80bc10350e194803311f217b8d16189bffeaff788162c79def1ca496c5e5"
+    },
+    "crates/compute-mlx/src/metal/low_matvec.metal": {
+      "bytes": 1810,
+      "sha256": "120bb46caef5c181cce64b33eeff1cd32d0fccdf0b153a2593c4a8eedb69e8cf"
+    },
+    "crates/compute-mlx/src/metal/low_reduce.metal": {
+      "bytes": 1717,
+      "sha256": "72ebd59c4882a6050bbfc6c5fb53db00707448e4b138642a65da0429cedcf27f"
+    },
+    "crates/compute-mlx/src/metal/low_scan.metal": {
+      "bytes": 1803,
+      "sha256": "49e24ffdee7d9b2d159bf70d339cf65d7aa2014c7146a7f1a3b6d34cc805793e"
+    },
+    "crates/compute-mlx/src/metal/low_scatter_fold.metal": {
+      "bytes": 1145,
+      "sha256": "b682bd0d63f36dd35fe750b1af8439cf43b843495f5ebdc880b14d8fc0fc3f0f"
+    },
+    "crates/compute-mlx/src/metal/low_scatter_lists.metal": {
+      "bytes": 843,
+      "sha256": "85bcdfcc91c85cf05adfcbd02e2f073524cd091197ff62c886197ab081242bf2"
+    },
+    "crates/compute-mlx/src/metal/low_select.metal": {
+      "bytes": 459,
+      "sha256": "6cc1eafdc9db868b34f05e0053d7cd2614225298db2f7991c53ef49a48c0dd47"
+    },
+    "crates/compute-mlx/src/metal/low_stats_common.h": {
+      "bytes": 1343,
+      "sha256": "16d8fa56aa36b947c7b43a29172dcbd7fb78eaffb119f40a9da239326e84d96e"
+    },
+    "crates/compute-mlx/src/metal/low_stats_emit.metal": {
+      "bytes": 873,
+      "sha256": "f8332334e26fc3895e2a8b28f0dfd09d79357f38c4d0479d803aad6fec7da1dc"
+    },
+    "crates/compute-mlx/src/metal/low_stats_rows.metal": {
+      "bytes": 564,
+      "sha256": "8cc0ff0e3b2884c464c8f993dd7f6966154116bd27b5e1b97f4a954ee569a72e"
+    },
+    "crates/compute-mlx/src/metal/low_stats_state.metal": {
+      "bytes": 716,
+      "sha256": "10a6acc434e524bdbcb0a47a4e0f91e802915719c8bd1c3ce17886e345afbc83"
+    },
+    "crates/compute-mlx/src/metal/low_unary.metal": {
+      "bytes": 848,
+      "sha256": "89dfefe2a9cf0b83482b99eeffdd3363abf96fe5b0cfac4f669bf507a40eb8fb"
+    },
+    "crates/compute-mlx/src/native.rs": {
+      "bytes": 22404,
+      "sha256": "8e236af3e0e7d5fd961768e7c6a5acfe4f17ec65807f383cc2aa3b4ea7cb5062"
+    },
+    "crates/compute-mlx/src/native/attention.rs": {
+      "bytes": 635,
+      "sha256": "3803a093ef42be80a5c1d4643ad127b6042bb5c31a1edebb298bdc327f053a9e"
+    },
+    "crates/compute-mlx/src/native/compiled.rs": {
+      "bytes": 14771,
+      "sha256": "d4f2c7c89e783e0ee5d8229190e01175b736dabe1df564c449c79360fa0230c9"
+    },
+    "crates/compute-mlx/src/native/compiled/attention.rs": {
+      "bytes": 1611,
+      "sha256": "96c41b679c181744b889eaca35331ac2b1a4bdf84757bcd587d4d968da1b1185"
+    },
+    "crates/compute-mlx/src/native/compiled/builder.rs": {
+      "bytes": 8226,
+      "sha256": "aafa62e0215fcbcc4815f3d03284cd39250c6460d158e0da90b54d94e400d89b"
+    },
+    "crates/compute-mlx/src/native/compiled/callback.rs": {
+      "bytes": 9336,
+      "sha256": "19a0711c7f1fb180c4eb53e043b59a976756113f70356853a80573b01ce56726"
+    },
+    "crates/compute-mlx/src/native/compiled/compaction.rs": {
+      "bytes": 2361,
+      "sha256": "db32a6eee6afed71315efc16ac250b9afd00f1f82ffa13d1f7bcc094a5d38beb"
+    },
+    "crates/compute-mlx/src/native/compiled/indexing.rs": {
+      "bytes": 3024,
+      "sha256": "087b864b99e85d2f74fdacfb4475a201a861bbdadfd31c36514f0c0c6d078631"
+    },
+    "crates/compute-mlx/src/native/compiled/low_builder.rs": {
+      "bytes": 3561,
+      "sha256": "4373693291d1cc9afb319d79e7fb2e6fad3f671936bb126898c330dcd93ff58b"
+    },
+    "crates/compute-mlx/src/native/compiled/scan.rs": {
+      "bytes": 1556,
+      "sha256": "608244fe80438392c5892337fc4acacad9d2f9339d36fcdc18d8a398ffe5212f"
+    },
+    "crates/compute-mlx/src/native/compiled/scatter.rs": {
+      "bytes": 1496,
+      "sha256": "f1b58a998e2d46e97a3aca62d151bf1d0198edc484c2b8af28317f9be6ccc15d"
+    },
+    "crates/compute-mlx/src/native/compiled/statistics.rs": {
+      "bytes": 5640,
+      "sha256": "03928bdb8e861b6399b93efa60321cf8911921dceccd4cfe62b5a20830a6e5bf"
+    },
+    "crates/compute-mlx/src/native/compiled/typed.rs": {
+      "bytes": 2617,
+      "sha256": "5fcc7901184f450a51d16427d8ca1f934e8455e28f02529d4161eca5b4a7d3a1"
+    },
+    "crates/compute-mlx/src/native/custom_metal.rs": {
+      "bytes": 7929,
+      "sha256": "141dc21a9a395e88ba5ab39adc974a5982c05d48be9a0ccfc09e1f63e58d3157"
+    },
+    "crates/compute-mlx/src/native/index.rs": {
+      "bytes": 5027,
+      "sha256": "3e28561ffe76bdec98394743fa973b5e5458e3fbedd00e35d155a630c0d82d4f"
+    },
+    "crates/compute-mlx/src/native/low_attention.rs": {
+      "bytes": 781,
+      "sha256": "7337ccf1228c81e14452f32e29edf57b7e36e65caef80935cada15ed641c1ef8"
+    },
+    "crates/compute-mlx/src/native/low_index.rs": {
+      "bytes": 2202,
+      "sha256": "a4aab01043d8bac5318f7a5b29accdb3633880ea3d15abe92833ffb674f48e2b"
+    },
+    "crates/compute-mlx/src/native/low_kernels.rs": {
+      "bytes": 3012,
+      "sha256": "082e3ab6cc8cfb9964ea9ec02da98338dafa0412441067dc89dd72f232adda3f"
+    },
+    "crates/compute-mlx/src/native/low_matmul.rs": {
+      "bytes": 455,
+      "sha256": "f6c1312559441d540177c40cd40e384c813ad002fc51c26ac5ec351ac7c65f89"
+    },
+    "crates/compute-mlx/src/native/low_ops.rs": {
+      "bytes": 1755,
+      "sha256": "2829356e6082f20810c0c92c5e1b2cc46daac407c36904a3ea091ea51a7faa71"
+    },
+    "crates/compute-mlx/src/native/low_precision.rs": {
+      "bytes": 5994,
+      "sha256": "3dceb9d34aef516db0b2cda331d39b163b6ea1bb652a1aa14c7326f8b5a4cde9"
+    },
+    "crates/compute-mlx/src/native/low_scatter.rs": {
+      "bytes": 1623,
+      "sha256": "e48c98c600f630193343b05d356ae69747ad5e3dc18008a8dc1ad25dc171f67f"
+    },
+    "crates/compute-mlx/src/native/low_statistics.rs": {
+      "bytes": 1852,
+      "sha256": "7340f1d71fb6160bd667290a47e8ceb22ed3bcd1a0d04c933b01893d6e6c3ba0"
+    },
+    "crates/compute-mlx/src/native/lowering.rs": {
+      "bytes": 3665,
+      "sha256": "a41d8a3fe4f65263ae5cfa3416f978523d7a00ee4b1f2cecba094bd053d97d8a"
+    },
+    "crates/compute-mlx/src/native/lowering/attention.rs": {
+      "bytes": 6622,
+      "sha256": "f04899e07f744a746a43aaae5bbbd5de9afff9b0900540c615fd8f2b7f9405e9"
+    },
+    "crates/compute-mlx/src/native/lowering/attention/float.rs": {
+      "bytes": 6958,
+      "sha256": "041edfc7ecf077be60421af36383398aee33c5d142fb0c08cb9e3dd55a2b6459"
+    },
+    "crates/compute-mlx/src/native/lowering/attention/low.rs": {
+      "bytes": 2479,
+      "sha256": "618ffa4aa82be4a7b4fe74bb1c05f1c44c130637975d79a6bf1f8fbfab6e16c5"
+    },
+    "crates/compute-mlx/src/native/lowering/casts.rs": {
+      "bytes": 2806,
+      "sha256": "0049cdf59951428ed8f6a5db60b3b7c110f5311a3b2793a675aaa294dcc903b5"
+    },
+    "crates/compute-mlx/src/native/lowering/compaction.rs": {
+      "bytes": 2354,
+      "sha256": "c77e579adcedbfc1e6e7704f2681d06532b49ef66a0184f4cb04c7f32ab9bd0f"
+    },
+    "crates/compute-mlx/src/native/lowering/indexing.rs": {
+      "bytes": 9515,
+      "sha256": "76cee24beeeae90c4e7e3fdc0697db5e435ffb3c0d5e8737bd1dfeca5739ff0a"
+    },
+    "crates/compute-mlx/src/native/lowering/ops.rs": {
+      "bytes": 5917,
+      "sha256": "759d46ba158fcc26a27c467c47d160202a24a4490d123b2d6344233e61e00af1"
+    },
+    "crates/compute-mlx/src/native/lowering/ops/matmul.rs": {
+      "bytes": 2732,
+      "sha256": "33ad3812de54d331ef9c5cebcb18101c727b82bb0bb041eb33fe6eba5cd6dd56"
+    },
+    "crates/compute-mlx/src/native/lowering/raw.rs": {
+      "bytes": 6918,
+      "sha256": "0b32dc998c513a906a3d52a1ee29d2db7940a105410005e0ef9313c0bd580529"
+    },
+    "crates/compute-mlx/src/native/lowering/scan.rs": {
+      "bytes": 3983,
+      "sha256": "b1d6a96d2970c58b435383b1d5103b9173a0bbfa7ce18a4f15d702e86f56ec02"
+    },
+    "crates/compute-mlx/src/native/lowering/scatter.rs": {
+      "bytes": 5781,
+      "sha256": "95062a317e3aff389c3f383d270b253a4fe85c21b3ba10715673b99d54ddb40a"
+    },
+    "crates/compute-mlx/src/native/lowering/scatter/low.rs": {
+      "bytes": 4988,
+      "sha256": "bd6a3edf1a48830604ca0d1397dd88dcc8bb6c3bd17bd233214174aff89cabcc"
+    },
+    "crates/compute-mlx/src/native/lowering/statistics.rs": {
+      "bytes": 9410,
+      "sha256": "7a80d582b1f11545a417e7e2cc2632aa9b331fed116beadb698308e84e28fc07"
+    },
+    "crates/compute-mlx/src/native/lowering/statistics_low.rs": {
+      "bytes": 10734,
+      "sha256": "9431c28f8daa515904e2fab3ab148c4a391cf0216d70f7cf91b9206626055c06"
+    },
+    "crates/compute-mlx/src/native/reduction.rs": {
+      "bytes": 3803,
+      "sha256": "d6bc391e3a81c0cef5f0459538ab91376f9731ceb31927762f8d163880435899"
+    },
+    "crates/compute-mlx/src/native/scatter.rs": {
+      "bytes": 1126,
+      "sha256": "53d912829c345e582f8b77ace5bee271b2ad6779fb1dc74945694345045df1c2"
+    },
+    "crates/compute-mlx/src/native/statistics.rs": {
+      "bytes": 1620,
+      "sha256": "7a23215fb6ac2f5ebeae8f8386926ba6c0a2c569b0e47f2298a4ff98a53ee351"
+    },
+    "crates/compute-mlx/tests/attention.rs": {
+      "bytes": 11708,
+      "sha256": "627c29ba83adc5d73071db0d22b7d735737dce37e3424e8b5aaec9eb5fc8f5b1"
+    },
+    "crates/compute-mlx/tests/compiled.rs": {
+      "bytes": 19405,
+      "sha256": "0e6f98444d1fc1a25ffe33586f799a9fe994ad464e524f93adc8d7a361be1bf1"
+    },
+    "crates/compute-mlx/tests/compiled_attention.rs": {
+      "bytes": 5072,
+      "sha256": "3503bcdacc2104be5c6c0432107e640d1226d5ed43c6ad50256e236b627a3975"
+    },
+    "crates/compute-mlx/tests/compiled_attention/boundaries.rs": {
+      "bytes": 8333,
+      "sha256": "0264ad857b8a64fc0c5b87543d2d96f64bbf6ebe0aded95ec79210a96c4deb26"
+    },
+    "crates/compute-mlx/tests/compiled_attention/replay.rs": {
+      "bytes": 5690,
+      "sha256": "c98c0c7cb0942ed9dd29a30a7267881e8f23527bac7f0b4a0b1e67a15322d059"
+    },
+    "crates/compute-mlx/tests/compiled_indexing.rs": {
+      "bytes": 2277,
+      "sha256": "e07ca10022b402fd885d503db4c6982f3ef88bfea18e8ce4d4de06b55cdf9b1c"
+    },
+    "crates/compute-mlx/tests/compiled_indexing/low.rs": {
+      "bytes": 8573,
+      "sha256": "eaa27da1e5811a2957a21ec359bfb0398336a6cebbb4a2ff4e76de6952743388"
+    },
+    "crates/compute-mlx/tests/compiled_indexing/movement.rs": {
+      "bytes": 8155,
+      "sha256": "8e17cd5ff4ae93777242d4234db542ffd4f81cd49ba5961eac3857dbad564682"
+    },
+    "crates/compute-mlx/tests/compiled_indexing/validation.rs": {
+      "bytes": 5956,
+      "sha256": "565d1805949273df55b59c5d6edeb54c1afec151c73b4eb3aa08c67f83c0a4c5"
+    },
+    "crates/compute-mlx/tests/compiled_scan_compaction.rs": {
+      "bytes": 3030,
+      "sha256": "6c485ba7fe3491119fee007215571c9480d5a13d3839338820207c18566393c2"
+    },
+    "crates/compute-mlx/tests/compiled_scan_compaction/compaction.rs": {
+      "bytes": 9685,
+      "sha256": "f2f4d974782ce8eed68ba774c4e7bb7dbe84a315a37fbf6e66f0567e5bcff0c7"
+    },
+    "crates/compute-mlx/tests/compiled_scan_compaction/scans.rs": {
+      "bytes": 7651,
+      "sha256": "3b413d33f3574d6760f01c48ae21a08985e04bad77f1ae7645f72115b418a771"
+    },
+    "crates/compute-mlx/tests/compiled_scan_compaction/validation.rs": {
+      "bytes": 4018,
+      "sha256": "6d200f1bef2da338266ef531271a996a1e1ad57eb9f8eb816b1cdfcf68ccb2b1"
+    },
+    "crates/compute-mlx/tests/compiled_scatter.rs": {
+      "bytes": 3546,
+      "sha256": "714f05f7969010124851ba09624f59154e2263ce9dc2ccc7e959ec001fe63d50"
+    },
+    "crates/compute-mlx/tests/compiled_scatter/boundaries.rs": {
+      "bytes": 8339,
+      "sha256": "b32a60405d743992a12f995c5bf68e3ad04ed91a07be5298f2c876a8e47cf348"
+    },
+    "crates/compute-mlx/tests/compiled_scatter/replay.rs": {
+      "bytes": 8051,
+      "sha256": "e563495a445a9966066716c1da57c67e037d9fe43e54ffe8198f0520343a90a1"
+    },
+    "crates/compute-mlx/tests/compiled_statistics.rs": {
+      "bytes": 18232,
+      "sha256": "2528027c44dd02393540779ec4078310d92e54a45aaa8089ec84414a871498e1"
+    },
+    "crates/compute-mlx/tests/compiled_typed.rs": {
+      "bytes": 2940,
+      "sha256": "8b7ca7f974f51aa7b877d60cc9068e1564fde16900bb43f65c0d63627c8589ff"
+    },
+    "crates/compute-mlx/tests/compiled_typed/arithmetic.rs": {
+      "bytes": 8464,
+      "sha256": "448b633446b9fb2bea3e054e76f0a019867fe523be10eaab6eb5ed8639f21643"
+    },
+    "crates/compute-mlx/tests/compiled_typed/casts.rs": {
+      "bytes": 5968,
+      "sha256": "f6c5e67b2c0d4a2a309faf24a1d582fd23b0d58eff3c023eae4dc7a99ffb7770"
+    },
+    "crates/compute-mlx/tests/compiled_typed/matmul.rs": {
+      "bytes": 9510,
+      "sha256": "d89375137f171e064fe455ee542e7e2f63531cdfc2c05b86f3456963997cc3c4"
+    },
+    "crates/compute-mlx/tests/compiled_typed/reductions.rs": {
+      "bytes": 7251,
+      "sha256": "27da7a7647487fc419f6b209372587b52a08ac7e21325eeccfa2e01b24ae7dce"
+    },
+    "crates/compute-mlx/tests/compiled_typed/tiny.rs": {
+      "bytes": 3205,
+      "sha256": "5b319392e6d087dc89fc1247f73a73471762c30aca8cfa2377db4a9f3785a292"
+    },
+    "crates/compute-mlx/tests/compiled_typed/unsigned.rs": {
+      "bytes": 3908,
+      "sha256": "390214f428ed6f7533f6b148975517aa8f5fb7d9bbe912d2fb73bb8167971b19"
+    },
+    "crates/compute-mlx/tests/compiled_typed/validation.rs": {
+      "bytes": 8510,
+      "sha256": "9b8e5c4870f3dadbe796fff8228902c361eb800c78e0ac2799492ae9de46e1f0"
+    },
+    "crates/compute-mlx/tests/index.rs": {
+      "bytes": 8777,
+      "sha256": "72e261d376defd8f16adbc6f89ce1a11a38929753dc64447636ad06759cd8be0"
+    },
+    "crates/compute-mlx/tests/low_attention.rs": {
+      "bytes": 5530,
+      "sha256": "200afb191f93322d562aa627c5dc2826e23e48db0403c54ef89ff32e2ff43f6a"
+    },
+    "crates/compute-mlx/tests/low_index.rs": {
+      "bytes": 6870,
+      "sha256": "16bb021e238bbd32b920a5a2d496c3d525a88a26cf5ad87c4119c64e76b9edb5"
+    },
+    "crates/compute-mlx/tests/low_matmul.rs": {
+      "bytes": 15734,
+      "sha256": "15cd52767d76d19b9ee014050343727b76b81f12d9e4bfa5e5b3fb79d93b3b8a"
+    },
+    "crates/compute-mlx/tests/low_ops.rs": {
+      "bytes": 9912,
+      "sha256": "35c3445579f31df8f89c4280c2cfbae23153533a20da136802b512e56590bfd3"
+    },
+    "crates/compute-mlx/tests/low_precision.rs": {
+      "bytes": 9039,
+      "sha256": "e67a2e7fac55aa42c4f9ea34af70fab9fa4192fe18c1e5edc22edcae4e300a93"
+    },
+    "crates/compute-mlx/tests/low_scatter.rs": {
+      "bytes": 5468,
+      "sha256": "10d356d7d8f05ca318bfd91e481c3c9b69a85beeba644ed929b2ae00e3259211"
+    },
+    "crates/compute-mlx/tests/low_statistics.rs": {
+      "bytes": 5295,
+      "sha256": "5ca586857315b8bb77a309f2218ea51a209b1dd333cc09d1d4ebff6b333688b9"
+    },
+    "crates/compute-mlx/tests/native.rs": {
+      "bytes": 9246,
+      "sha256": "4835f7ce76bf68859222172fcc07e970edf4de27185216193f93d5f568ee2ef4"
+    },
+    "crates/compute-mlx/tests/reduction.rs": {
+      "bytes": 8489,
+      "sha256": "70fd56edf0f37f193b06c6728f72d32ae4d668d08f320198775ed3a289069bc7"
+    },
+    "crates/compute-mlx/tests/scatter.rs": {
+      "bytes": 7128,
+      "sha256": "4bd9fded403fc16559184766a0ea7b88c2caa3545d63af3718b9ed8bba735a1a"
+    },
+    "crates/compute-mlx/tests/statistics.rs": {
+      "bytes": 7358,
+      "sha256": "d5747568e29b2f84f698ffa04d9c2e3fd3c17dbb5ecbfc640e708f19ec09f7df"
+    },
+    "crates/gpu-compute/src/cuda.rs": {
+      "bytes": 4653,
+      "sha256": "816d56f7447251bcabfc241004dfd0e07053a8a48a53a3344a481febbbd0569a"
+    },
+    "crates/gpu-compute/src/profiling.rs": {
+      "bytes": 18553,
+      "sha256": "0f23cdcd699e99b37574abc6b0a308d5c6a57237389d6dd3cf73b9a85c4d17c5"
+    },
+    "crates/tensor-core/Cargo.toml": {
+      "bytes": 174,
+      "sha256": "3ba0c47e97fea210328deeb68e0734bc22b78655532bfec42b5602bcafb98f2e"
+    },
+    "crates/tensor-core/src/attention.rs": {
+      "bytes": 6679,
+      "sha256": "745c23a42e28712449944fe553742eabc864d293a71c4d27cce33363bb04e1bc"
+    },
+    "crates/tensor-core/src/backend.rs": {
+      "bytes": 2802,
+      "sha256": "d1dc166dbcb26ead35d7c70070903c9139f742055148ecdef05699fceeee52f1"
+    },
+    "crates/tensor-core/src/conformance.rs": {
+      "bytes": 6881,
+      "sha256": "eafd2a2a4ae9c21eaf675bb9b28386aecf24a9dc089e0be226174fc2208a86ec"
+    },
+    "crates/tensor-core/src/conformance/attention.rs": {
+      "bytes": 16315,
+      "sha256": "f7072df35f42be8f3abeae134184b1919c8b09ffcd39554e8c4e4a1e2934a476"
+    },
+    "crates/tensor-core/src/conformance/indexing.rs": {
+      "bytes": 14033,
+      "sha256": "e9573ef58be9869691eb5f1cf6c0c26e40f603020d71585a3bb1b7e04eb32b09"
+    },
+    "crates/tensor-core/src/conformance/low_attention.rs": {
+      "bytes": 19060,
+      "sha256": "3b088abb1d9e12dfedd5deb06a9bb4d2ec5391bc06550e98a6a13391b031cdcf"
+    },
+    "crates/tensor-core/src/conformance/low_index.rs": {
+      "bytes": 16597,
+      "sha256": "4333e24d3b17f61146dd918ec2398ae2979a5cefdb3dd2346388479bce3cc2d6"
+    },
+    "crates/tensor-core/src/conformance/low_ops.rs": {
+      "bytes": 20981,
+      "sha256": "62da702bf39b03892da939de335cb3313eb297569fc645a4758319932f535778"
+    },
+    "crates/tensor-core/src/conformance/low_precision.rs": {
+      "bytes": 12581,
+      "sha256": "a01eecc79f4cdf15e1f7c6d197ac9d1d6efa73abc0293788505b4aaaf37d7ab8"
+    },
+    "crates/tensor-core/src/conformance/low_precision/matmul.rs": {
+      "bytes": 12878,
+      "sha256": "6e3fce64fa427a0d721fb46996f4dbc66c0d6a233f7a416df905e5450ac17556"
+    },
+    "crates/tensor-core/src/conformance/low_precision/matmul/accumulation.rs": {
+      "bytes": 7843,
+      "sha256": "ecc03a5b4bafd4b177b07203d5537e82cca8a31e14adc6bc5e5a34c3c59a1425"
+    },
+    "crates/tensor-core/src/conformance/low_scatter.rs": {
+      "bytes": 18148,
+      "sha256": "c076222f44fab480044e95540a5294b996c751f67d733f2f3715ae2e1af8223b"
+    },
+    "crates/tensor-core/src/conformance/low_statistics.rs": {
+      "bytes": 16309,
+      "sha256": "266f41544196198ba13863a4f0dd35cdecf7edf89216b0547d3e089e15adefd6"
+    },
+    "crates/tensor-core/src/conformance/reduction.rs": {
+      "bytes": 9498,
+      "sha256": "8f97294816707a08aa88e533e6ab7211c826cf36bcd4637a686a5a6e52f9acc5"
+    },
+    "crates/tensor-core/src/conformance/scatter.rs": {
+      "bytes": 11306,
+      "sha256": "cac299ecc6b626c73c60cbbe83a3e2708711c9164b2d241732d0b8427416f80d"
+    },
+    "crates/tensor-core/src/conformance/statistics.rs": {
+      "bytes": 9296,
+      "sha256": "ac2f4e8a95a53a01bc21fdc9ec557bce4b76345226e2a0fc471b54598e69d83b"
+    },
+    "crates/tensor-core/src/conformance/vectors.rs": {
+      "bytes": 3319,
+      "sha256": "4733183e67ac942a2c7593f08cfb34709b47c16c712313f31d2ddbcf173c29c8"
+    },
+    "crates/tensor-core/src/error.rs": {
+      "bytes": 4027,
+      "sha256": "c8267114eabeeb9f6566a415c46a51a7d39d4b365f4021a30ecfd21c6a37957d"
+    },
+    "crates/tensor-core/src/indexing.rs": {
+      "bytes": 5522,
+      "sha256": "a849273f783ca0e1064b2f7e7377872fc35d6512dad36175f352f551ebadbe47"
+    },
+    "crates/tensor-core/src/layout.rs": {
+      "bytes": 5988,
+      "sha256": "4329cd21d5b16c96f63a75c98f40f5e697bdc269ca74da0edbdfff8fc3e4259c"
+    },
+    "crates/tensor-core/src/lib.rs": {
+      "bytes": 1689,
+      "sha256": "06f1d5d2a18652bd134e41b24b45c8afc924d6db2d9e325f824a7a9d77ead840"
+    },
+    "crates/tensor-core/src/low_attention.rs": {
+      "bytes": 2934,
+      "sha256": "194a83ac6501291e648deb3d607a95d34291793feb06f4609217c0ead81a92df"
+    },
+    "crates/tensor-core/src/low_index.rs": {
+      "bytes": 3455,
+      "sha256": "fc4b69baf2cd1bda0f1e3a0d3626e2972953ac521e01a51a84c7ab421bf2d2c2"
+    },
+    "crates/tensor-core/src/low_ops.rs": {
+      "bytes": 3190,
+      "sha256": "694deee603f3249507ded01548ba6bae3a4a8784ee31ff033a1c6b651e4646be"
+    },
+    "crates/tensor-core/src/low_precision.rs": {
+      "bytes": 3823,
+      "sha256": "d47f7c70315fcd8ed285472da18065f8fbb0642c2ccfca65cff60bee7d135814"
+    },
+    "crates/tensor-core/src/low_scatter.rs": {
+      "bytes": 2560,
+      "sha256": "b233e41b10d6e08ba9a65683630b7fd20db4fadc6fef694e7a79d4e6cd9b11c8"
+    },
+    "crates/tensor-core/src/low_statistics.rs": {
+      "bytes": 3954,
+      "sha256": "bbf030dda03bc3037ea919ddb66ab4ef889a7e0fa330f4015aaa5f64926c9ced"
+    },
+    "crates/tensor-core/src/ops.rs": {
+      "bytes": 1189,
+      "sha256": "cdc3b761acce2b4247a04672a08ea6c1611a10020c1ce3feab03df2cd057b62f"
+    },
+    "crates/tensor-core/src/reduction.rs": {
+      "bytes": 2273,
+      "sha256": "0a4fb05f81e37c9d1742f8ddf5f713746a90b98d17811bc23856d631a8984708"
+    },
+    "crates/tensor-core/src/scatter.rs": {
+      "bytes": 2543,
+      "sha256": "67b6bfbe1de074d43d19a2a1155bafa3ef49c55d26c5b0714391a87a03720078"
+    },
+    "crates/tensor-core/src/shape.rs": {
+      "bytes": 6092,
+      "sha256": "e8014c95b38d5a1ebfbb958523e0156c06647c4c639c8c418d7910515b572087"
+    },
+    "crates/tensor-core/src/statistics.rs": {
+      "bytes": 3187,
+      "sha256": "ad05f9401b01fdbc968b609f611414cd8794a551267d595345f5afee0fd1f8b4"
+    },
+    "crates/tensor-core/tests/attention.rs": {
+      "bytes": 3451,
+      "sha256": "8b192337d7b3134b27288444eab89bd1d2ed93870e5fb7bf4aea8f83222f4c5d"
+    },
+    "crates/tensor-core/tests/indexing.rs": {
+      "bytes": 2675,
+      "sha256": "0f2eac9ff569c69d5b2b7fad8624acc6e19a56e8eff0d7ef30289737b872eb58"
+    },
+    "crates/tensor-core/tests/layout.rs": {
+      "bytes": 6472,
+      "sha256": "cb6eb01060dcf19671926e79d8a82636dc677ea547732eb3b76be658ce67d391"
+    },
+    "crates/tensor-core/tests/low_attention.rs": {
+      "bytes": 2476,
+      "sha256": "cd9f6d35b1c673d6e55b0322bc38d0b78b85824cb7a3522c6cd5cbde257df4c5"
+    },
+    "crates/tensor-core/tests/low_ops.rs": {
+      "bytes": 1958,
+      "sha256": "ec791b0b1869a02564142177ec2d18013e04e0ac34608038cfc87e9ae38f76d6"
+    },
+    "crates/tensor-core/tests/low_scatter.rs": {
+      "bytes": 2289,
+      "sha256": "ad235b6c6390588f096f18a90909272b4bc02a1e12223efd729ad3f86c9b4011"
+    },
+    "crates/tensor-core/tests/reduction.rs": {
+      "bytes": 3158,
+      "sha256": "25743a5c447ae8abbbfeffe2859c4f4a28c28e2e65c385e55bee1aae01a582ca"
+    },
+    "crates/tensor-core/tests/scatter.rs": {
+      "bytes": 2335,
+      "sha256": "c114e1e67060fd884fd643d31e5b4873cedda52e47c0c7a0624a7d050b984bfa"
+    },
+    "crates/tensor-core/tests/statistics.rs": {
+      "bytes": 1349,
+      "sha256": "cf14357983b25b36ff6070996d5ff76ebbe7ffe3119b39142ff865fa3096aa91"
+    },
+    "scripts/check-gpu-architecture.py": {
+      "bytes": 2799,
+      "sha256": "98105995ad03441f99d1175905448b0843b663c19fe28761aaeb7becc23f6643"
+    },
+    "scripts/qualify-tensor-backends.py": {
+      "bytes": 3670,
+      "sha256": "08cd6902ae2b1e0af52946f6768643e1e37bd2cedd5a1720a950d8445556378f"
+    }
+  }
+}

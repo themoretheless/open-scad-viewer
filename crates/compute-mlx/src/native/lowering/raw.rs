@@ -60,8 +60,9 @@ pub(in crate::native) fn apply(
         | NativeOp::RightShift
         | NativeOp::BitwiseAnd
         | NativeOp::Compare(_)
-        | NativeOp::Matmul => 2,
-        NativeOp::Select => 3,
+        | NativeOp::Matmul
+        | NativeOp::TakeAxis(_) => 2,
+        NativeOp::Select | NativeOp::PutAlongAxis(_) | NativeOp::Scatter { .. } => 3,
         _ => 1,
     };
     if inputs.len() != arity {
@@ -148,6 +149,27 @@ pub(in crate::native) fn apply(
                 (api.mean_axes)(out, inputs[0], axes.as_ptr(), axes.len(), *keep, stream)
             }
             NativeOp::Matmul => (api.matmul)(out, inputs[0], inputs[1], stream),
+            NativeOp::Scan {
+                axis,
+                inclusive,
+                reverse,
+            } => (api.cumsum)(out, inputs[0], *axis, *reverse, *inclusive, stream),
+            NativeOp::TakeAxis(axis) => (api.take_axis)(out, inputs[0], inputs[1], *axis, stream),
+            NativeOp::PutAlongAxis(axis) => {
+                (api.put_along_axis)(out, inputs[0], inputs[1], inputs[2], *axis, stream)
+            }
+            NativeOp::Scatter { op, axis } => {
+                let operation = match op {
+                    ScatterOp::Add => api.scatter_add_single,
+                    ScatterOp::Multiply => api.scatter_prod_single,
+                    ScatterOp::Min => api.scatter_min_single,
+                    ScatterOp::Max => api.scatter_max_single,
+                    ScatterOp::Replace => {
+                        return Err("Replace requires checked owner selection".into());
+                    }
+                };
+                operation(out, inputs[0], inputs[1], inputs[2], *axis, stream)
+            }
         }
     };
     Api::check(code)

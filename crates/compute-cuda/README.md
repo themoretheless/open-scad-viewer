@@ -89,8 +89,9 @@ WebGPU, MLX or CPU.
 
 No data is read back between stages. Ordinary eager operations queue work on
 one stream and allocate results. Prepared programs retain their adapter-owned
-intermediates and metadata and can write existing outputs. CUDA Graph capture,
-asynchronous readback tickets, scratch pooling and generated fusion remain open.
+intermediates and metadata and can write existing outputs. Opt-in CUDA Graph
+programs capture a rebuilt schedule with owned slots. Asynchronous readback
+tickets, scratch pooling and generated fusion remain open.
 
 ### Prepared resident programs
 
@@ -301,12 +302,12 @@ share checked launch descriptors and their kernel/cuBLAS argument implementation
 
 A prepared program borrows its runtime, owns scratch/metadata, and requires
 `&mut self` for replay. It retains no caller tensor clones between runs. An
-enqueue failure or a failure observed by `program.synchronize()` permanently
+enqueue failure, enqueue panic or a failure observed by `program.synchronize()` permanently
 poisons the program. Outputs can be partially modified after such a failure;
 recovery requires a new program and appropriate runtime recovery. There is no
 rollback of GPU work.
 
-The builder has no narrow node, CUDA Graph capture, generated fusion,
+The builder has no narrow node, generated fusion,
 asynchronous readback or scratch pooling.
 Externally created narrow views can still supply fixed input layouts.
 
@@ -316,6 +317,77 @@ the [typed prepared-program qualification](../../docs/qualification/tensor-cuda-
 and the [earlier f32 qualification](../../docs/qualification/tensor-cuda-programs-2026-09-27.md).
 The examples compile as `no_run` doctests; NVIDIA execution, performance and
 Tensor Core instruction use remain unverified on this Apple host.
+
+### CUDA Graph programs
+
+`CudaPreparedProgram::capture_owned` consumes a prepared program, rebuilds its
+logical views against dense private input slots, then captures that schedule.
+It supports the same typed operations, including indexing counts, statistics,
+attention and cuBLAS GEMM. NVIDIA execution is still unqualified on this host;
+see the [graph qualification](../../docs/qualification/tensor-cuda-graphs-2026-09-27.md).
+
+```rust,no_run
+use compute_cuda::{CudaRuntime, CudaPrepareOptions, CudaCaptureOptions};
+use compute_cuda::tensor_core::{Layout, Shape, TensorBackend, UnaryOp};
+
+let cuda = CudaRuntime::new()?;
+let shape = Shape::new(vec![4])?;
+let mut builder = cuda.program();
+let x = builder.input(Layout::contiguous(shape.clone())?)?;
+let square = builder.unary(x, UnaryOp::Square)?;
+let total = builder.sum_axes(square, &[0], false)?;
+let prepared = builder.prepare(&[square, total], CudaPrepareOptions::default())?;
+let mut graph = prepared.capture_owned(CudaCaptureOptions::default())?;
+let input = cuda.upload_f32(shape, &[1., 2., 3., 4.])?;
+let result = graph.run(&[&input])?;
+assert_eq!(cuda.read_f32(&result[1])?, vec![30.]);
+graph.synchronize()?;
+# Ok::<(), Box<dyn std::error::Error>>(())
+```
+
+`run`/`run_into` require f32 input/output signatures. `run_typed` and
+`run_typed_into` use the existing typed transport and exact external layouts.
+All bindings, alias restrictions and current precision policies are validated
+before any work is enqueued. The first transfer materializes each current
+resident input into a dense slot, the graph runs, and the last transfer writes
+independent caller-owned outputs. Slots are never returned as clonable tensors.
+Input/output copying remains part of each replay's cost.
+
+The graph retains a private nonblocking stream in the same primary CUDA context.
+A fresh Rust context wrapper disables slice event tracking only for private
+allocations; the original runtime keeps its tracking and stream unchanged.
+Two preallocated events order input copies → graph → output copies. Copies use
+the caller's ordinary stream access guards. Custom nonprimary contexts are
+rejected. `CudaRuntime::new_with_stream(CudaStreamMode::NonBlocking)` separately
+selects an explicit ordinary runtime stream; `new()` retains its previous default.
+
+Input view provenance preserves permute/reshape/broadcast semantics after dense
+rebasing. Only required remap materializations are inserted; ordinary prepared
+execution keeps its original plan. No allocation is sized by a sparse external
+input's physical span. Shape, storage and resource budgets are checked before
+new buffers are created. Graph-owned cuBLAS handles have a checked 256-byte-aligned
+workspace, configured after their stream, with host alpha/beta constants.
+
+`CudaCaptureOptions` contains preparation budgets, `max_owned_bytes` and optional
+`cublas_workspace_bytes`. The total includes dense slots and empty sentinels,
+scratch padding, captured and transfer metadata, and workspace alignment padding.
+Driver graph/module/library bookkeeping is excluded. `stats()` reports these
+bytes and the additional input/output copy launches; these are allocation
+contracts, not measured peak memory. `run_typed_into` creates no adapter device
+buffers or events, uploads no metadata, and performs one graph launch.
+
+Warmup and graph upload finish before capture preparation returns. The program
+owns modules, all captured buffers, metadata and library resources until replay
+completion. Drop synchronizes both streams and destroys graph handles first.
+If completion cannot be established after a driver error, it retains the private
+owners rather than free potentially referenced storage. Enqueue/synchronize
+failures poison replay; validation failures leave the graph reusable. Raw graph
+access is serialized, and the wrapper is neither `Send` nor `Sync`.
+
+The [standalone graph example](examples/graph.rs) replays changed resident input.
+Graph capture does not establish a speedup or Tensor Core instruction selection.
+Native capture/replay, failure recovery and Compute Sanitizer remain required
+qualification on NVIDIA hardware.
 
 ### Reductions and vectors
 
@@ -748,7 +820,7 @@ The shared low-attention fixture also checks GQA/broadcasts and final low roundi
 
 ```sh
 cargo test --manifest-path crates/Cargo.toml -p compute-cuda -- --nocapture
-CUDA_REQUIRED=1 cargo test --manifest-path crates/Cargo.toml -p compute-cuda --test cuda_tensor --test prepared --test prepared_typed --test prepared_indexing -- --test-threads=1 --nocapture
+CUDA_REQUIRED=1 cargo test --manifest-path crates/Cargo.toml -p compute-cuda -- --test-threads=1 --nocapture
 ```
 
 `COMPUTE_REQUIRE_CUDA=1` is an equivalent hardware gate.

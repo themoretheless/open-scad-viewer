@@ -56,9 +56,72 @@ pub(crate) enum BufferRef {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(crate) struct PlannedValue {
+    /// Logical transformations of an input-backed value, independent of its
+    /// caller storage strides. Scratch-backed values keep this empty.
+    pub input_views: Vec<InputView>,
     pub buffer: BufferRef,
     pub layout: Layout,
     pub dtype: CudaDtype,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(crate) enum InputView {
+    Permute(Vec<usize>),
+    Broadcast(Shape),
+    Reshape(Shape),
+    Promote { shape: Shape, left: bool },
+}
+impl InputView {
+    pub(super) fn apply(&self, layout: &Layout) -> Result<Layout, CudaError> {
+        Ok(match self {
+            Self::Permute(axes) => layout.permute(axes)?,
+            Self::Broadcast(shape) => layout.broadcast_to(shape.clone())?,
+            Self::Reshape(shape) => layout.reshape(shape.clone())?,
+            Self::Promote { shape, left } => {
+                if layout.shape().rank() != 1 {
+                    return Err(CudaError::InvalidInput("invalid input matrix promotion"));
+                }
+                let stride = layout.strides()[0];
+                Layout::new(
+                    shape.clone(),
+                    if *left {
+                        vec![0, stride]
+                    } else {
+                        vec![stride, 0]
+                    },
+                    layout.offset(),
+                )?
+            }
+        })
+    }
+}
+impl PlannedValue {
+    fn view(&mut self, operation: InputView) -> Result<(), CudaError> {
+        let layout = operation.apply(&self.layout)?;
+        // Allocation-width checks belong to the consumer. For example a
+        // broadcast u32 mask can traverse a larger low-precision result while
+        // still using its original scalar allocation.
+        if matches!(self.buffer, BufferRef::Input(_)) {
+            self.input_views.push(operation);
+        }
+        self.layout = layout;
+        Ok(())
+    }
+    pub(super) fn permute(&mut self, axes: &[usize]) -> Result<(), CudaError> {
+        self.view(InputView::Permute(axes.to_vec()))
+    }
+    pub(super) fn broadcast_to(&mut self, shape: Shape) -> Result<(), CudaError> {
+        self.view(InputView::Broadcast(shape))
+    }
+    pub(super) fn reshape(&mut self, shape: Shape) -> Result<(), CudaError> {
+        self.view(InputView::Reshape(shape))
+    }
+    pub(super) fn promote(&mut self, shape: Shape, left: bool) -> Result<(), CudaError> {
+        if self.layout.shape().rank() == 1 {
+            self.view(InputView::Promote { shape, left })?;
+        }
+        Ok(())
+    }
 }
 
 /// Pure recording. Device-specific preparation expands reduction levels and
@@ -162,7 +225,7 @@ pub(crate) enum Step {
     },
 }
 
-#[derive(Debug, Default)]
+#[derive(Clone, Debug, Default)]
 pub(crate) struct CudaProgramPlan {
     pub inputs: Vec<TensorSpec>,
     pub scratch: Vec<TensorSpec>,

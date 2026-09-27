@@ -20,6 +20,7 @@ pub(super) struct Instruction {
 /// A typed, fixed-layout launch sequence. No caller allocations are retained.
 /// Enqueue or explicit synchronization errors permanently poison the program.
 pub struct CudaPreparedProgram<'rt> {
+    pub(super) logical: super::plan::CudaProgramPlan,
     pub(super) runtime: &'rt CudaRuntime,
     pub(super) inputs: Vec<TensorSpec>,
     pub(super) outputs: Vec<TensorSpec>,
@@ -148,7 +149,7 @@ impl CudaPreparedProgram<'_> {
         self.state.begin(|| Ok(()))?.execute(|| rt.synchronize())
     }
 }
-fn validate_inputs(
+pub(super) fn validate_inputs(
     rt: &CudaRuntime,
     expected: &[TensorSpec],
     precisions: &[MatmulRequest],
@@ -166,7 +167,7 @@ fn validate_inputs(
     )?;
     validation::precisions(precisions, |request| request.validate(rt))
 }
-fn execute(
+pub(super) fn execute(
     rt: &CudaRuntime,
     instructions: &[Instruction],
     scratch: &mut [Option<Storage>],

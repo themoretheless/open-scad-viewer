@@ -9,7 +9,11 @@ use gpu_compute::cuda::{
 use std::sync::Arc;
 use tensor_core::{LowDtype, MatmulPlan, MatmulPrecision, TensorBackend};
 
+mod capture;
 mod plan;
+pub(crate) use capture::{
+    CaptureBlas, capture_default_workspace_bytes, capture_workspace_allocation_bytes,
+};
 pub(crate) use plan::GemmPlan;
 
 /// A checked descriptor and numerical mode retained on its preparation stream.
@@ -20,10 +24,22 @@ pub(crate) struct PreparedGemm {
     input_type: sys::cudaDataType_t,
     compute_type: sys::cublasComputeType_t,
     stream: Arc<CudaStream>,
+    capture_blas: Option<Arc<CaptureBlas>>,
 }
 impl PreparedGemm {
     pub(crate) fn plan(&self) -> &GemmPlan {
         &self.plan
+    }
+    /// Attach the graph-private handle before warmup/capture. Precision and
+    /// input storage modes stay those validated by ordinary preparation.
+    pub(crate) fn attach_capture_blas(&mut self, owner: Arc<CaptureBlas>) -> Result<(), CudaError> {
+        if owner.stream() != &self.stream {
+            return Err(CudaError::InvalidInput(
+                "capture cuBLAS stream differs from prepared GEMM",
+            ));
+        }
+        self.capture_blas = Some(owner);
+        Ok(())
     }
 }
 
@@ -158,6 +174,7 @@ impl CudaRuntime {
             input_type,
             compute_type,
             stream: self.device.stream.clone(),
+            capture_blas: None,
         })
     }
 
@@ -184,9 +201,21 @@ impl CudaRuntime {
         let Some(dimensions) = prepared.plan.dimensions() else {
             return Ok(());
         };
-        let blas = self.blas.get().ok_or(CudaError::InvalidInput(
-            "GEMM was not prepared on this runtime",
-        ))?;
+        let capture_handle = prepared
+            .capture_blas
+            .as_ref()
+            .map(|owner| owner.lock())
+            .transpose()?;
+        let handle = match &capture_handle {
+            Some(guard) => guard.raw(),
+            None => *self
+                .blas
+                .get()
+                .ok_or(CudaError::InvalidInput(
+                    "GEMM was not prepared on this runtime",
+                ))?
+                .handle(),
+        };
         self.device.context.bind_to_thread()?;
         let alpha = 1f32;
         let beta = 0f32;
@@ -203,7 +232,7 @@ impl CudaRuntime {
             // guards register accesses on the same stream as eager execution.
             unsafe {
                 result::gemm_ex(
-                    *blas.handle(),
+                    handle,
                     sys::cublasOperation_t::CUBLAS_OP_N,
                     sys::cublasOperation_t::CUBLAS_OP_N,
                     dimensions.m,

@@ -38,6 +38,7 @@ impl CudaProgramPlanBuilder {
                 Some((
                     index,
                     this.push(PlannedValue {
+                        input_views: Vec::new(),
                         buffer: BufferRef::Scratch(index),
                         layout,
                         dtype: CudaDtype::F32,

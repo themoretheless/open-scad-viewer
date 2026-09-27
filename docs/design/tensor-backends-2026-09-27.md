@@ -41,6 +41,37 @@ canonical definitions from `tensor-core`. Their names and shader discriminants
 remain unchanged. Backend execution code stays separate because native APIs,
 resource lifetimes and scheduling differ.
 
+## Resident domain math
+
+`math-core::tensor::TensorMath` borrows an explicit backend and expresses
+point transforms, pair distances, bounds, centered moments, nearest neighbors
+and directed Chamfer with the same resident primitives. Inputs and outputs
+are native tensors. The `tensor` feature keeps backend dependencies optional;
+`tensor-mlx` does not pull in WGSL or CUDA. `MathGpuSession::tensor()` reuses its
+existing native WGSL device and lazy runtime. f64 APIs, specialized kernels
+and `Acceleration` heuristics keep their separate numerical and placement
+contracts.
+
+`TensorEvalBackend::evaluate` validates f32/u32 handles and completes selected
+results without downloading values. Native WGSL waits for a queue submission,
+CUDA waits for its stream, and MLX evaluates the selected lazy arrays before
+synchronizing. Empty lists fence already submitted work without evaluating
+unspecified lazy outputs. It does not submit an unsubmitted recorder or clear
+allocator caches. The synchronous WGSL adapter is native-only; browser
+completion requires an asynchronous API.
+
+Nearest neighbors process query/target tiles and explicitly evaluate retained
+results between steps, so unreferenced MLX producer graphs do not accumulate
+across all tiles. Resource limits describe conservative recipe-level logical
+buffers and work, excluding backend implementation temporaries and input
+producer graphs. They do not promise a native memory peak. The generic path
+recomputes candidate distances for each rank and keeps deterministic u32 index
+ties; specialized kernels remain available for throughput.
+
+The [domain qualification](../qualification/tensor-domain-math-2026-09-27.md)
+records independent numerical references, required native runs and source
+fingerprints. No common-domain performance claim follows from tensor parity.
+
 ## Common contract
 
 `TensorBackend` supplies upload/read, materialize, reshape, permute, broadcast,
@@ -458,13 +489,14 @@ checks. Unsupported modes must not silently become a different arithmetic policy
 3. Qualify native WGSL f16 arithmetic. Broaden direct low-input/f32-output MLX
    matrix measurements beyond the current Apple GPU and shapes. Preserve
    explicit rounding and numerical tolerances per operation and precision.
-4. Extend typed MLX programs to indexing. Qualify the prepared CUDA operation
-   set on NVIDIA and add CUDA Graph capture. The [CUDA execution design](cuda-reusable-execution-2026-09-27.md)
-   separates prepared buffers from later stream capture. Qualify allocation reuse,
+4. Qualify the prepared CUDA operation set and implemented CUDA Graph mode on NVIDIA. The [CUDA execution design](cuda-reusable-execution-2026-09-27.md)
+   describes prepared buffers, private graph slots and explicit stream bridges. Qualify allocation reuse,
    fusion, launch overhead and memory traffic before selecting defaults.
-5. Route domain math through the shared resident primitives where appropriate,
-   retaining specialized nearest-neighbor and point-cloud kernels. Existing CUDA
-   domain support and CPU fallback wrappers are separate from common tensor parity.
+5. Broaden and optimize the shared resident domain API. `math-core::tensor`
+   now routes transforms, pair distances, bounds, moments, nearest neighbors and
+   directed Chamfer through the same WGSL/CUDA/MLX contracts. Keep specialized
+   kernels and explicit f64/placement contracts; qualify domain performance and
+   asynchronous browser integration before changing defaults.
 6. Run the strict backend qualification on provisioned hardware in CI and qualify
    deployment packages. Native local success is not browser, packaging or CI
    execution proof.
@@ -494,8 +526,12 @@ remains a separate historical result. The
 [typed qualification](../qualification/tensor-mlx-typed-programs-2026-09-27.md)
 records the expanded contracts, tests and matched eager/compiled measurements.
 Compiled programs reuse tracing; fixed GPU allocations and general numerical
-equivalence under fusion require separate qualification. Recorded indexing remains open. Statistics/normalization and attention now
-share eager and compiled lowering for f32 and native low inputs.
+equivalence under fusion require separate qualification. Indexing, scans,
+compaction and scatter now share eager and compiled recipes for all four dtypes;
+statistics/normalization and attention share lowering for f32 and native low inputs.
+The [compiled indexing qualification](../qualification/tensor-mlx-index-programs-2026-09-27.md)
+covers changed masks/indices, resident count composition and fresh scatter state
+in both native compile modes.
 
 ### Prepared CUDA programs
 
@@ -520,8 +556,9 @@ The [typed host/NVRTC qualification](../qualification/tensor-cuda-typed-programs
 retains CPU contracts and all 52 unchanged kernel entries for four virtual
 architectures. Required native tests report unavailable hardware on this host.
 The [earlier f32 qualification](../qualification/tensor-cuda-programs-2026-09-27.md)
-is retained. CUDA numerical execution, performance, graph capture and Tensor
-Core instruction selection remain unverified.
+is retained. CUDA numerical execution, performance, native graph capture/replay and Tensor
+Core instruction selection remain unverified. The [graph implementation and host checks](../qualification/tensor-cuda-graphs-2026-09-27.md)
+cover owned dense slots, logical view rebasing, explicit stream bridges and resource cleanup.
 
 
 The [statistics/attention qualification](../qualification/tensor-prepared-statistics-2026-09-27.md)
