@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { SHADOW_MAP_SIZE, TextureResources } from '../src/services/textureResources'
+import { ENV_MAP_FORMAT, SHADOW_MAP_SIZE, TextureResources } from '../src/services/textureResources'
 import { fillObjectUniform } from '../src/services/uniformFill'
 import { WebGPURenderer } from '../src/services/webgpuRenderer'
 
@@ -89,6 +89,21 @@ describe('TextureResources', () => {
     failFirst!()
     await superseded
     expect(errors).toHaveLength(1)
+  })
+})
+
+describe('environment map upload', () => {
+  it('uses an sRGB texture so the PBR shader samples linear radiance', async () => {
+    stubGpuGlobals()
+    const { device, textures } = fakeDevice()
+    const resources = new TextureResources({ getDevice: () => device, onTexturesRebound: () => undefined, onLoadError: error => { throw error } })
+    resources.init(device, layouts)
+    vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, blob: async () => ({}) })))
+    vi.stubGlobal('createImageBitmap', vi.fn(async () => ({ width: 512, height: 256, close: () => undefined })))
+    await resources.setEnvMap('studio-softbox')
+    expect(ENV_MAP_FORMAT).toBe('rgba8unorm-srgb')
+    expect(textures.at(-1)).toMatchObject({ size: [512, 256], format: 'rgba8unorm-srgb' })
+    expect(resources.envTexture).toBe(textures.at(-1))
   })
 })
 

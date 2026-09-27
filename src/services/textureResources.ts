@@ -13,6 +13,9 @@ import {
   getMatcapPreset,
 } from './rendererContracts'
 
+/** Environment maps hold sRGB-encoded bytes; see setEnvMap. */
+export const ENV_MAP_FORMAT: GPUTextureFormat = 'rgba8unorm-srgb'
+
 /** Key-light shadow map resolution (depth32float, depth-only pass). */
 export const SHADOW_MAP_SIZE = 1024
 
@@ -221,11 +224,14 @@ export class TextureResources {
     return (async () => {
       const response = await fetch(preset.url!)
       if (!response.ok) throw new Error(`Renderer: environment map fetch failed (${response.status})`)
-      // No flipY: equirect v=0 is the +Y pole, which is the PNG's top row.
+      // No flipY: equirect v=0 is the +Z zenith, which is the PNG's top row.
       const bitmap = await createImageBitmap(await response.blob())
       const texture = dev.createTexture({
         size: [bitmap.width, bitmap.height],
-        format: 'rgba8unorm',
+        // The maps store sRGB-encoded radiance; the -srgb format decodes to
+        // linear on sampling, since mesh_pbr lights in linear space and
+        // gamma-encodes its output (rgba8unorm applied the gamma twice).
+        format: ENV_MAP_FORMAT,
         usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST | GPUTextureUsage.RENDER_ATTACHMENT,
       })
       dev.queue.copyExternalImageToTexture({ source: bitmap }, { texture }, [bitmap.width, bitmap.height])
