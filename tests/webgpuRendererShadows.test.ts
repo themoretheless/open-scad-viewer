@@ -43,7 +43,7 @@ function fakeDevice(record: {
   samplers: unknown[]
   bindGroups: Array<{ layout: unknown; entries: unknown[] }>
   pipelines: Array<{ depthStencil?: { format: string; depthBiasSlopeScale?: number }; fragment?: unknown; layout?: { groups: number } }>
-  passes: Array<{ colors: number; depthFormat: string | null }>
+  passes: Array<{ colors: number; depthFormat: string | null; indexedDraws: number }>
   writes: Array<{ buffer: unknown; data: Float32Array }>
 }) {
   const makePass = (descriptor: { colorAttachments: unknown[]; depthStencilAttachment?: { view: object } }) => {
@@ -59,12 +59,15 @@ function fakeDevice(record: {
       setImmediates: () => undefined,
       end: () => undefined,
     }
-    record.passes.push({
+    const entry = {
       colors: descriptor.colorAttachments.length,
       depthFormat: descriptor.depthStencilAttachment
         ? ((descriptor.depthStencilAttachment.view as { viewOf?: string }).viewOf ?? null)
         : null,
-    })
+      indexedDraws: 0,
+    }
+    record.passes.push(entry)
+    pass.drawIndexed = () => { entry.indexedDraws++ }
     return pass
   }
   return {
@@ -103,7 +106,7 @@ function recordShape() {
     samplers: [] as unknown[],
     bindGroups: [] as Array<{ layout: unknown; entries: unknown[] }>,
     pipelines: [] as Array<{ depthStencil?: { format: string; depthBiasSlopeScale?: number }; fragment?: unknown; layout?: { groups: number } }>,
-    passes: [] as Array<{ colors: number; depthFormat: string | null }>,
+    passes: [] as Array<{ colors: number; depthFormat: string | null; indexedDraws: number }>,
     writes: [] as Array<{ buffer: unknown; data: Float32Array }>,
   }
 }
@@ -322,6 +325,24 @@ describe('WebGPURenderer contact shadows', () => {
       expect(shadowPasses(record)).toBe(2)
       internal.render()
       expect(shadowPasses(record)).toBe(2)
+    })
+
+    it('clears the map when the scene turns fully transparent, leaving no stale casters', () => {
+      const { renderer, internal, record } = harness()
+      // Restyling reads the vertex colour and writes the style uniform.
+      Object.assign((internal.meshes as object[])[0], { color: [1, 1, 1, 1], ub: {} })
+      renderer.setShadowsEnabled(true)
+      internal.render()
+      const casters = record.passes.filter(pass => pass.colors === 0)
+      expect(casters.map(pass => pass.indexedDraws)).toEqual([1])
+
+      // A translucent default (e.g. the Glass preset) moves every mesh out of
+      // the opaque set: the map must be re-rendered empty, not kept from the
+      // last opaque frame, or the grid keeps a shadow of nothing.
+      renderer.setDefaultMaterial({ alpha: 0.4 })
+      internal.render()
+      const after = record.passes.filter(pass => pass.colors === 0)
+      expect(after.map(pass => pass.indexedDraws)).toEqual([1, 0])
     })
 
     it('re-renders when the geometry epoch advances (setMeshes path)', () => {
