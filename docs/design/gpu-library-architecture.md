@@ -30,6 +30,9 @@ flowchart TD
     App --> GPU
     Math -->|optional gpu feature| Compute
     Math -->|optional platform / CUDA access| GPU
+    Math -->|optional tensor contract| Tensor
+    Math -->|optional tensor-cuda feature| CUDA
+    Math -->|optional tensor-mlx feature| MLX
     Compute --> GPU
     Compute --> Tensor
     CUDA --> GPU
@@ -53,7 +56,7 @@ photogrammetry. Renaming it alone would not improve responsibility boundaries.
 | --- | --- | --- |
 | `gpu-compute` | Device/queue creation, backend capabilities, byte packing and transport, optional CUDA driver access | Mathematical placement thresholds, geometry, materials, generic array operations |
 | `compute-core` | WGSL kernel compilation, binding contracts, recording/batching, typed arrays, array operations, reduction scheduling | Point-cloud semantics, CPU reference geometry, rendering policy |
-| `math-core` | CPU f64 reference math, validation, numerical tolerances, domain WGSL/PTX, acceleration policy, domain GPU adapters | General pipeline plumbing, application device selection, material/shader variants |
+| `math-core` | CPU f64 reference math, validation, numerical tolerances, domain WGSL/PTX, acceleration policy, domain GPU adapters and shared resident tensor recipes | General pipeline plumbing, application device selection, material/shader variants |
 | `raster-core` | Render WGSL, uniform ABI, variants and browser code generation, render pipelines, frame recording, texture row layout | Generic numerical operations, point-cloud algorithms, independent device selection inside render calls |
 | `tensor-core` | Checked shapes and layouts, canonical operations, native tensor backend contract, shared conformance fixtures | GPU dependencies, allocations, shader code, domain placement |
 | `compute-cuda` | Resident CUDA tensors, CUDA kernels, cuBLAS execution and explicit Tensor Core precision policies | WGSL, MLX loading, CPU fallback, point-cloud semantics |
@@ -119,6 +122,7 @@ compute-core/src/
 math-core/src/
   <algorithm>.rs CPU reference, mathematical contracts and dispatch policy
   acceleration.rs placement policy
+  tensor/        shared resident geometry over explicit WGSL/CUDA/MLX backends
   gpu/
     session.rs   explicit context, fallible execution and lazy caches
     plans.rs     shared recorded-domain wiring

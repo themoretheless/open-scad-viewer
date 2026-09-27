@@ -33,6 +33,7 @@ pub enum TensorComputeError {
     OutputNotContiguous,
     IndexTooLarge,
     UnsupportedPrecision(tensor_core::MatmulPrecision),
+    Evaluation(String),
     LowDtypeMismatch {
         expected: tensor_core::LowDtype,
         actual: tensor_core::LowDtype,
@@ -52,6 +53,7 @@ impl std::fmt::Display for TensorComputeError {
                 f,
                 "WGSL tensors do not support {precision:?} multiplication precision"
             ),
+            Self::Evaluation(error) => write!(f, "GPU evaluation failed: {error}"),
             Self::LowDtypeMismatch { expected, actual } => {
                 write!(f, "low tensor dtype {actual:?}; expected {expected:?}")
             }

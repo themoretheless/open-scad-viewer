@@ -9,6 +9,7 @@ use tensor_core::{BinaryOp, CompareOp, HasShape, MatmulPrecision, Shape, TensorE
 mod attention;
 mod compiled;
 mod custom_metal;
+mod evaluation;
 mod index;
 mod low_attention;
 mod low_index;

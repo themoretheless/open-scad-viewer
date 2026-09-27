@@ -9,6 +9,7 @@ mod attention;
 mod attention_dispatch;
 mod dispatch;
 mod error;
+mod evaluation;
 mod indexing;
 mod libraries;
 mod low_attention;

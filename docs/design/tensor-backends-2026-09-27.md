@@ -41,6 +41,37 @@ canonical definitions from `tensor-core`. Their names and shader discriminants
 remain unchanged. Backend execution code stays separate because native APIs,
 resource lifetimes and scheduling differ.
 
+## Resident domain math
+
+`math-core::tensor::TensorMath` borrows an explicit backend and expresses
+point transforms, pair distances, bounds, centered moments, nearest neighbors
+and directed Chamfer with the same resident primitives. Inputs and outputs
+are native tensors. The `tensor` feature keeps backend dependencies optional;
+`tensor-mlx` does not pull in WGSL or CUDA. `MathGpuSession::tensor()` reuses its
+existing native WGSL device and lazy runtime. f64 APIs, specialized kernels
+and `Acceleration` heuristics keep their separate numerical and placement
+contracts.
+
+`TensorEvalBackend::evaluate` validates f32/u32 handles and completes selected
+results without downloading values. Native WGSL waits for a queue submission,
+CUDA waits for its stream, and MLX evaluates the selected lazy arrays before
+synchronizing. Empty lists fence already submitted work without evaluating
+unspecified lazy outputs. It does not submit an unsubmitted recorder or clear
+allocator caches. The synchronous WGSL adapter is native-only; browser
+completion requires an asynchronous API.
+
+Nearest neighbors process query/target tiles and explicitly evaluate retained
+results between steps, so unreferenced MLX producer graphs do not accumulate
+across all tiles. Resource limits describe conservative recipe-level logical
+buffers and work, excluding backend implementation temporaries and input
+producer graphs. They do not promise a native memory peak. The generic path
+recomputes candidate distances for each rank and keeps deterministic u32 index
+ties; specialized kernels remain available for throughput.
+
+The [domain qualification](../qualification/tensor-domain-math-2026-09-27.md)
+records independent numerical references, required native runs and source
+fingerprints. No common-domain performance claim follows from tensor parity.
+
 ## Common contract
 
 `TensorBackend` supplies upload/read, materialize, reshape, permute, broadcast,
@@ -461,9 +492,11 @@ checks. Unsupported modes must not silently become a different arithmetic policy
 4. Qualify the prepared CUDA operation set and implemented CUDA Graph mode on NVIDIA. The [CUDA execution design](cuda-reusable-execution-2026-09-27.md)
    describes prepared buffers, private graph slots and explicit stream bridges. Qualify allocation reuse,
    fusion, launch overhead and memory traffic before selecting defaults.
-5. Route domain math through the shared resident primitives where appropriate,
-   retaining specialized nearest-neighbor and point-cloud kernels. Existing CUDA
-   domain support and CPU fallback wrappers are separate from common tensor parity.
+5. Broaden and optimize the shared resident domain API. `math-core::tensor`
+   now routes transforms, pair distances, bounds, moments, nearest neighbors and
+   directed Chamfer through the same WGSL/CUDA/MLX contracts. Keep specialized
+   kernels and explicit f64/placement contracts; qualify domain performance and
+   asynchronous browser integration before changing defaults.
 6. Run the strict backend qualification on provisioned hardware in CI and qualify
    deployment packages. Native local success is not browser, packaging or CI
    execution proof.

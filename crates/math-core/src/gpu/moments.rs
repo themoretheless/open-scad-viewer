@@ -101,7 +101,7 @@ impl GpuPointMoments {
             );
             let raw = read_f32(&self.device, &self.queue, &buffers.out, partial_count * 9)?;
             let mut accum = [0.; 9];
-            for chunk in raw.chunks_exact(9).take(partial_count) {
+            for chunk in raw.as_chunks::<9>().0.iter().take(partial_count) {
                 for item in 0..9 {
                     accum[item] += chunk[item] as f64;
                 }
@@ -218,7 +218,7 @@ impl GpuPointCloudStats {
             let mut min = [f64::INFINITY; 3];
             let mut max = [f64::NEG_INFINITY; 3];
             let mut accum = [0.; 9];
-            for chunk in raw.chunks_exact(15).take(partial_count) {
+            for chunk in raw.as_chunks::<15>().0.iter().take(partial_count) {
                 for axis in 0..3 {
                     min[axis] = min[axis].min(chunk[axis] as f64);
                     max[axis] = max[axis].max(chunk[axis + 3] as f64);

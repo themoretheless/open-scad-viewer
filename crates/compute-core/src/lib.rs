@@ -66,6 +66,8 @@ pub use matrix::{GpuMatrix, MatrixView};
 pub use fusion::{Expression, FusedKernel, FusedSumKernel, FusionError, FusionGraph, Predicate};
 
 #[cfg(not(target_arch = "wasm32"))]
+mod evaluation;
+#[cfg(not(target_arch = "wasm32"))]
 mod tensor_backend;
 #[cfg(not(target_arch = "wasm32"))]
 mod tensor_low_backend;

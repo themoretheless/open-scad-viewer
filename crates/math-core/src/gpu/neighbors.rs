@@ -374,7 +374,7 @@ impl GpuNearestTwo {
         let outs: [Buffer; 4] = std::array::from_fn(|k| {
             mk(
                 device,
-                &[
+                [
                     "nearest_two_i0",
                     "nearest_two_d0",
                     "nearest_two_i1",

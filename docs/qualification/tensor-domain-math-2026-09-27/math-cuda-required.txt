@@ -1,0 +1,33 @@
+warning: binary `wgsl_export` should have a kebab-case name
+  |
+1 | /Users/themoretheless/Documents/Sources/open-scad-viewer/crates/target/.../wgsl_export
+  |                                                                            ^^^^^^^^^^^
+  |
+  = note: `cargo::non_kebab_case_bins` is set to `warn` by default
+help: to change the binary name to `wgsl-export`, convert the file stem
+  |
+1 - src/bin/wgsl_export.rs
+1 + src/bin/wgsl-export.rs
+  |
+warning: `raster-core` (manifest) generated 1 warning
+   Compiling compute-cuda v0.1.0 (/Users/themoretheless/Documents/Sources/open-scad-viewer/crates/compute-cuda)
+   Compiling osv-math v0.1.0 (/Users/themoretheless/Documents/Sources/open-scad-viewer/crates/math-core)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 1.49s
+     Running tests/tensor_math.rs (crates/target/debug/build/osv-math/5d546fad17462f11/out/tensor_math-5d546fad17462f11)
+
+running 2 tests
+test cuda_resident_geometry_contract ...
+thread 'cuda_resident_geometry_contract' (31608481) panicked at math-core/tests/tensor_math.rs:93:13:
+required CUDA tensor geometry unavailable: CUDA unavailable: CUDA driver/device is absent or initialization failed
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+FAILED
+test geometry::independent_reference_retains_shifted_covariance_and_finite_sparse_moments ... ok
+
+failures:
+
+failures:
+    cuda_resident_geometry_contract
+
+test result: FAILED. 1 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+error: test failed, to rerun pass `-p osv-math --test tensor_math`

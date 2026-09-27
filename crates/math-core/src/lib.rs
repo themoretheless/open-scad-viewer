@@ -22,8 +22,8 @@ pub use bounds::{
     point_bounds_accelerated, transformed_point_bounds, transformed_point_bounds_accelerated,
 };
 pub use chamfer::{
-    CHAMFER_WGSL, ChamferDistance, DirectedChamfer, chamfer_distance,
-    directed_chamfer_distance, directed_hausdorff_distance, hausdorff_distance,
+    CHAMFER_WGSL, ChamferDistance, DirectedChamfer, chamfer_distance, directed_chamfer_distance,
+    directed_hausdorff_distance, hausdorff_distance,
 };
 pub use distance_pairs::{
     DISTANCE_PAIR_SUM_WGSL, DISTANCE_PAIRS_WGSL, squared_distance_pair_sum,
@@ -44,16 +44,18 @@ pub use moments::{
 pub use nearest_four::{
     FourNearest, NEAREST_FOUR_WGSL, nearest_four, nearest_four_accelerated, nearest_four_first_two,
 };
-pub use nearest_neighbor::{NEAREST_NEIGHBOR_COOPERATIVE_WGSL, NEAREST_NEIGHBOR_WGSL, nearest_neighbor, nearest_neighbor_accelerated};
+pub use nearest_neighbor::{
+    NEAREST_NEIGHBOR_COOPERATIVE_WGSL, NEAREST_NEIGHBOR_WGSL, nearest_neighbor,
+    nearest_neighbor_accelerated,
+};
 pub use nearest_two::{
     NEAREST_TWO_WGSL, Neighbor, TwoNearest, nearest_two, nearest_two_accelerated,
     nearest_two_first_only, nearest_two_ratios_accelerated,
 };
 pub use registration::{IcpOptions, IcpReport, RigidTransform, icp_register, rigid_transform};
 pub use stats::{
-    POINT_CLOUD_STATS_WGSL, PointCloudStats, point_cloud_stats,
-    point_cloud_stats_accelerated, transformed_point_cloud_stats,
-    transformed_point_cloud_stats_accelerated,
+    POINT_CLOUD_STATS_WGSL, PointCloudStats, point_cloud_stats, point_cloud_stats_accelerated,
+    transformed_point_cloud_stats, transformed_point_cloud_stats_accelerated,
 };
 pub use transform_error::{
     TRANSFORMED_DISTANCE_PAIR_SUM_WGSL, transformed_squared_distance_pair_rmse,
@@ -65,6 +67,8 @@ pub use types::{ID, M3, V2, V3};
 pub mod cuda;
 #[cfg(feature = "gpu")]
 pub mod gpu;
+#[cfg(feature = "tensor")]
+pub mod tensor;
 
 pub mod camera_gestures;
 pub mod orbit_camera;

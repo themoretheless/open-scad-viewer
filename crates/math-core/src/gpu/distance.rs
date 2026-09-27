@@ -321,8 +321,8 @@ impl GpuTransformedDistancePairSum {
             // Params: count, pad x3, then 4 rows of (matrix row, translation comp).
             let mut params = pack_u32(&[pair_count as u32, 0, 0, 0]);
             for row in 0..3 {
-                for col in 0..3 {
-                    push_f32(&mut params, m[row][col] as f32);
+                for &value in &m[row] {
+                    push_f32(&mut params, value as f32);
                 }
                 push_f32(&mut params, t[row] as f32);
             }
