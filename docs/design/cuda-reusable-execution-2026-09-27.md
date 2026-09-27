@@ -3,8 +3,9 @@
 Date: 2026-09-27. Prepared f32/u32/f16/bf16 execution is implemented; host and
 indexing qualification is recorded [separately](../qualification/tensor-cuda-index-programs-2026-09-27.md),
 alongside the [typed/NVRTC evidence](../qualification/tensor-cuda-typed-programs-2026-09-27.md).
-NVIDIA execution and timing are pending. The CUDA Graph mode below remains a
-proposal based on source inspection and NVIDIA documentation.
+CUDA Graph code and its CPU ownership/planning checks are now implemented;
+[graph qualification](../qualification/tensor-cuda-graphs-2026-09-27.md) records
+the checks. NVIDIA execution, native lifetime validation and timing are pending.
 
 ## Implemented prepared path
 
@@ -13,12 +14,16 @@ metadata and allocates intermediates once. Each execution binds the caller's
 current resident inputs and writes caller-owned outputs. Dtype and full input
 layout are fixed. The schedule supports typed views, arithmetic, comparisons,
 selection, explicit low casts, reductions, mean, cuBLAS matmul and all four
-indexing families: scan, gather, compaction and scatter. f16/bf16
+indexing families: scan, gather, compaction and scatter. Statistics, normalization
+and attention are also recorded for f32/f16/BF16. f16/bf16
 intermediates use native two-byte storage; reductions and native low GEMM can
-produce f32 results directly without full-input conversion buffers.
+produce f32 results directly without full-input conversion buffers. Statistics
+retain f64 row summaries and bounded partials; attention retains an output-sized
+f64 accumulator. These private buffers are checked against the scratch budget
+and allocated once. Eager and prepared routes share metadata and launch helpers.
 
-A future increment can capture the same prepared launch sequence as an explicit **CUDA Graph with
-owned input/output slots**. Keep that mode separate: fixed addresses, capture
+The opt-in `capture_owned` mode captures a rebuilt prepared sequence as a
+**CUDA Graph with owned input/output slots**. The mode remains separate: fixed addresses, capture
 lifetime, and changes to input values need an additional ownership contract.
 NVIDIA execution is a release gate for that mode. A host build or successful PTX
 compilation cannot qualify graph replay.
@@ -52,10 +57,10 @@ handles or cuBLAS resources referenced by captured work.
 
 Cudarc's ordinary launch builder records buffer access events. Its graph
 `launch` method calls `cuGraphLaunch` directly, so a tensor wrapper must establish
-the buffer dependencies and completion tracking around each replay. Also audit
-capture failure cleanup: the current `end_capture` wrapper creates the raw graph
-before instantiation; a failed instantiation returns before the owning wrapper
-is constructed.
+the buffer dependencies and completion tracking around each replay. The platform
+RAII implementation checks every used graph driver symbol and owns partial graph
+handles before instantiation, including cleanup after invalidated capture. The
+stock cudarc wrapper is not used for this ownership boundary.
 
 Metadata upload is real host/device work today. Its blocking behavior should not
 be inferred solely from the runtime comment: in resolved cudarc 0.19.9, ordinary
@@ -135,8 +140,8 @@ gather → scan → compact → scatter pipeline with resident count composition
   reductions/mean/matmul retain the f32 result; low outputs add a single final
   cast. Strided copies keep the source dtype.
 
-Statistics/normalization and attention remain eager operations. There is no
-builder narrow node, graph capture, fusion or scratch pooling. A pre-existing
+Statistics/normalization and attention are recorded through shared eager launch helpers. There is no
+builder narrow node, fusion or scratch pooling. A pre-existing
 narrow view can be a fixed-layout input.
 
 ### Resident indexing
@@ -218,19 +223,22 @@ Use an explicit nonblocking stream created before allocating program resources;
 do not begin capture around the existing default-stream eager calls.
 [NVIDIA CUDA 12.8 graph capture rules](https://docs.nvidia.com/cuda/archive/12.8.1/cuda-c-programming-guide/index.html#stream-capture)
 
-Provide an opt-in runtime stream configuration, for example
-`CudaRuntime::new_with_stream(CudaStreamMode::NonBlocking)`. Keep the existing
-constructor's behavior compatible. First graph mode requires that explicit
-runtime stream; it does not migrate existing allocations to a new stream or
-silently change global synchronization policy.
+`CudaRuntime::new_with_stream(CudaStreamMode::NonBlocking)` selects an explicit
+ordinary runtime stream. `new()` remains compatible. Graph mode creates its own
+private nonblocking stream under a fresh Rust wrapper for the same primary CUDA
+context. Only that private wrapper has event tracking disabled before allocation;
+caller tracking settings remain unchanged. Custom nonprimary contexts are rejected.
 
-Suggested graph API:
+Implemented graph API:
 
 ```rust,ignore
 CudaPreparedProgram::capture_owned(self, options: CudaCaptureOptions)
     -> Result<CudaGraphProgram<'_>, CudaError>
 CudaGraphProgram::run_into(&mut self, inputs: &[&CudaTensor],
                           outputs: &mut [&mut CudaTensor]) -> Result<(), CudaError>
+CudaGraphProgram::run_typed_into(&mut self, inputs: &[CudaProgramInput<'_>],
+                                outputs: &mut [CudaProgramOutputMut<'_>])
+    -> Result<(), CudaError>
 CudaGraphProgram::stats(&self) -> CudaGraphStats
 ```
 
@@ -259,9 +267,12 @@ transfers, allocations, stream creation, cuBLAS initialization and any warmup
 before capture. Retain all referenced resources through the last replay's
 completion. Wrap capture in an error guard that ends invalidated capture and
 destroys any partially created graph; finish or safely order outstanding work
-before freeing graph-owned buffers.
+before freeing graph-owned buffers. Warmup is already protected by the same
+retirement guard. A failed completion check retains private resource owners.
+Two preallocated events bridge ordinary guarded caller-stream copies and the
+private graph stream; no cudarc slice events participate in capture.
 
-Use the existing symbol-probe pattern for each driver entry actually used,
+The implementation uses the existing symbol-probe pattern for each driver entry used,
 including capture begin/end, instantiate, upload, launch and graph destruction.
 Graph preparation should report unsupported/missing API explicitly; it must not
 silently fall back to per-node submission while advertising graph replay.
@@ -357,15 +368,16 @@ NVIDIA profiler on representative hardware before claiming it.
 ## Scope and rollout
 
 1. Implemented: shared CUDA launch preparation, typed builder/transport and
-   prepared `run_typed_into`, including typed indexing and compatible f32 methods.
+   prepared `run_typed_into`, including typed indexing, statistics/normalization, attention and compatible f32 methods.
    CPU planner, binding,
    budget and poison-state tests pass; NVRTC compiled 52 current entries for
    compute_70/80/90/120. Required native fixtures are present, but numerical
    execution remains unverified on the current Apple host.
 2. Qualify it on NVIDIA and measure eager versus prepared execution with changing
    resident inputs. Preserve the existing eager public contracts.
-3. Add explicit nonlegacy stream selection and graph-owned slots over that same
-   lowered schedule; qualify capture, lifetime and copied-slot performance.
+3. Implemented: explicit ordinary stream selection, private graph-owned dense
+   slots, logical view rebasing, event bridges and retained cuBLAS workspace.
+   Qualify native capture, lifetime, error recovery and copied-slot performance.
 4. Extend prepared operation coverage using existing eager dispatch helpers as
    needed. Consider known-node graph rebinding or typed zero-copy leases only
    after ownership qualification and measurements justify them.
@@ -374,3 +386,6 @@ Keep mathematical planning in `tensor-core`, CUDA tensor execution in
 `compute-cuda`, and platform stream/driver capability support in `gpu-compute`.
 This increment needs no raster changes and no new generic graph framework in
 the backend-neutral crate.
+
+The [statistics/attention qualification](../qualification/tensor-prepared-statistics-2026-09-27.md)
+records the current CUDA host checks and MLX native enabled/disabled results.

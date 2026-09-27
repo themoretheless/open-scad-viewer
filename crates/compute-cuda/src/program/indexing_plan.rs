@@ -53,6 +53,7 @@ impl Expanded {
             let offsets = self.scratch(totals_shape.clone(), accumulator)?;
             self.scan(
                 PlannedValue {
+                    input_views: Vec::new(),
                     buffer: BufferRef::Scratch(totals),
                     layout: Layout::contiguous(totals_shape)?,
                     dtype: accumulator,
@@ -152,6 +153,7 @@ impl Expanded {
         );
         self.scan(
             PlannedValue {
+                input_views: Vec::new(),
                 buffer: BufferRef::Scratch(flags),
                 layout: Layout::contiguous(flags_shape)?,
                 dtype: CudaDtype::U32,

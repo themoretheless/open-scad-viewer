@@ -1,0 +1,1432 @@
+{
+  "schemaVersion": 1,
+  "scope": "Cooperative semantic-edge extraction in owned Rust analysis jobs. Boolean, render preparation, metrics and selection grouping remain synchronous. Not whole-release qualification.",
+  "timestamp": "2026-09-27T13:55:36.713Z",
+  "sourceHashes": {
+    "benchmarks/cooperative-edges-native.rs": "26fff20437656dd37e4b1f0cf18fc835c363fbdc3d2c10b758fadf7aee07fe36",
+    "tests/solidAnalysis.test.ts": "7a3e760201f197b5eac93a8849ba4bff8b6ca83e68eb121e0bef17c87aac0875",
+    "tests/openscadParser.test.ts": "4b3e6b006cf1aa04968ee9b0d32c17ab8a6bbdb59702039d9a13e91e23215f01",
+    "package.json": "860986fe288de1125e2df1e35b53dcfd6da70704cffcd8716f5829aa63de385f"
+  },
+  "checks": {
+    "polygonEdgeTests": 10,
+    "bridgeLifecycleTests": 4,
+    "typescriptTests": 271,
+    "typescriptTestFiles": 11,
+    "typechecks": "application, MCP, browser harness and benchmark passed",
+    "productionBuild": "passed; verify-dist 108 artifacts",
+    "existingWarnings": [
+      "wgsl_export binary naming",
+      "unused ABI doc comment",
+      "Vite packed WASM chunk size"
+    ]
+  },
+  "nativeDifferential": {
+    "cases": 18,
+    "byteParity": true,
+    "largestTriangles": 750000,
+    "maxPolls": 16058,
+    "largestNoWeldSingleSampleMs": {
+      "sync": 52.667084,
+      "cooperative": 92.057917
+    }
+  },
+  "browser": {
+    "timestamp": "2026-09-27T13:55:36.713Z",
+    "cancelAt": 240,
+    "browser": "151.0.7922.34",
+    "hashes": {
+      "crates/polygon-core/src/solid/bvh.rs": "f89d15b8b5db2e48c40d2ff22a3959136dedd180a2e90962feb7ec657e7b41a2",
+      "crates/polygon-core/src/solid/edges.rs": "156fcced9b1cab7ec298fa0356247aa5c2dea657fc8f18b59eae7e5e58267da3",
+      "crates/polygon-core/src/solid/edges/cooperative.rs": "eff33b9e0670169d8b6b2e42a0072ef4d9a90b2c54732d85bcbdd18ff94e36bd",
+      "crates/geometry-bridge/src/mesh_analysis.rs": "206254b82f7e8bd35deaacc65efac5453e74acfb9ed363018fc2f344aaf78bf9",
+      "crates/geometry-bridge/src/mesh.rs": "b2328b2fa7c3ff3465cc7cc8330d9ee39c197d5a54bc17c1638ca4336a7c3cbf",
+      "crates/geometry-bridge/src/abi.rs": "1496799d6ab0b50bac44ddca0ccbc51a83d1011c151734da989bd4da67f76f8e",
+      "crates/geometry-wasm/src/lib.rs": "77b3e63520c31877136d94907fed868342648f80c8f608cfa5b5d7be6bc7229a",
+      "src/services/geometry/meshAnalysis.ts": "359f420fab474085b1b14348caaf76ec149dd9b19b35bdf421f1d71ba3b90e6c",
+      "src/services/cadKernelOps.ts": "3e91c8a9fa04a0906768408ed3584ab28c7ecb6ce3c69802e1c56e5417aeab83",
+      "src/services/openscadParser.ts": "4ec63013a2ba86cde30e1f347af7380fca26330f66ca964cf7acdcdf8a44a57a",
+      "public/wasm/geometry-kernel.wasm": "dd89ddb49a0248d25dfbdeb63f9b76610d877aa94d60256764e5a976ddc26213",
+      "tools/browser-qualification/cooperative-bvh.ts": "4402a15e73bfb4b995e850462781c8d4933d5948f03e5dff7b7df0254fcaa50e",
+      "tools/browser-qualification/cooperative-bvh.worker.ts": "42b598f36762c361b54f14b84e1b640d586d6570e34c6b6d3a3898fd5b6d7971",
+      "tools/browser-qualification/cooperative-bvh.mjs": "78607eee97edfbfd99b581a49cda909e7f5a99e051d21943c860f27f3ca75177"
+    },
+    "pageErrors": [],
+    "workerStarts": 1,
+    "cancelled": [
+      {
+        "id": 1,
+        "status": "cancelled",
+        "checkpoints": 240,
+        "elapsedMs": 143.5,
+        "error": "AbortError: Build cancelled",
+        "cancelLatencyMs": 4.899999976158142
+      },
+      {
+        "id": 2,
+        "status": "cancelled",
+        "checkpoints": 240,
+        "elapsedMs": 131.30000001192093,
+        "error": "AbortError: Build cancelled",
+        "cancelLatencyMs": 4.100000023841858
+      },
+      {
+        "id": 3,
+        "status": "cancelled",
+        "checkpoints": 240,
+        "elapsedMs": 133.5,
+        "error": "AbortError: Build cancelled",
+        "cancelLatencyMs": 4.199999988079071
+      },
+      {
+        "id": 4,
+        "status": "cancelled",
+        "checkpoints": 240,
+        "elapsedMs": 134.70000004768372,
+        "error": "AbortError: Build cancelled",
+        "cancelLatencyMs": 4.300000011920929
+      }
+    ],
+    "recovered": {
+      "id": 5,
+      "status": "succeeded",
+      "checkpoints": 5,
+      "elapsedMs": 0.10000002384185791,
+      "byteParity": true,
+      "triangles": 12,
+      "volume": 27,
+      "nodeCount": 3
+    },
+    "completed": {
+      "id": 6,
+      "status": "succeeded",
+      "checkpoints": 406,
+      "elapsedMs": 221.30000001192093,
+      "byteParity": true,
+      "triangles": 16128,
+      "volume": 112.98383365501246,
+      "nodeCount": 4095
+    },
+    "events": [
+      {
+        "id": 1,
+        "status": "inside-analysis",
+        "checkpoints": 240
+      },
+      {
+        "id": 1,
+        "status": "cancelled",
+        "checkpoints": 240,
+        "elapsedMs": 143.5,
+        "error": "AbortError: Build cancelled"
+      },
+      {
+        "id": 2,
+        "status": "inside-analysis",
+        "checkpoints": 240
+      },
+      {
+        "id": 2,
+        "status": "cancelled",
+        "checkpoints": 240,
+        "elapsedMs": 131.30000001192093,
+        "error": "AbortError: Build cancelled"
+      },
+      {
+        "id": 3,
+        "status": "inside-analysis",
+        "checkpoints": 240
+      },
+      {
+        "id": 3,
+        "status": "cancelled",
+        "checkpoints": 240,
+        "elapsedMs": 133.5,
+        "error": "AbortError: Build cancelled"
+      },
+      {
+        "id": 4,
+        "status": "inside-analysis",
+        "checkpoints": 240
+      },
+      {
+        "id": 4,
+        "status": "cancelled",
+        "checkpoints": 240,
+        "elapsedMs": 134.70000004768372,
+        "error": "AbortError: Build cancelled"
+      },
+      {
+        "id": 5,
+        "status": "succeeded",
+        "checkpoints": 5,
+        "elapsedMs": 0.10000002384185791,
+        "byteParity": true,
+        "triangles": 12,
+        "volume": 27,
+        "nodeCount": 3
+      },
+      {
+        "id": 6,
+        "status": "succeeded",
+        "checkpoints": 406,
+        "elapsedMs": 221.30000001192093,
+        "byteParity": true,
+        "triangles": 16128,
+        "volume": 112.98383365501246,
+        "nodeCount": 4095
+      }
+    ],
+    "scope": "Real Worker messages cancel during pending Rust analysis steps through the production adapter; same Worker then completes cube and sphere. Render preparation remains synchronous."
+  },
+  "edgePhaseEvidence": {
+    "previousBvhOnlyCheckpoints": 179,
+    "cancelCheckpoint": 240,
+    "bvhSourceUnchanged": true,
+    "bridgeTest": "Count BVH polls independently, then cancel analysis after 1, 20 and 80 further edge steps; admission is released"
+  },
+  "analysisBenchmark": {
+    "timestamp": "2026-09-27T13:55:51.224Z",
+    "node": "v22.23.3",
+    "hashes": {
+      "public/wasm/geometry-kernel.wasm": "dd89ddb49a0248d25dfbdeb63f9b76610d877aa94d60256764e5a976ddc26213",
+      "benchmarks/cooperative-analysis.mts": "a6103e8c9b8b0154987d54ec1591efe001d1c22c1c8be414025afc3773f049cc",
+      "src/services/geometry/meshAnalysis.ts": "359f420fab474085b1b14348caaf76ec149dd9b19b35bdf421f1d71ba3b90e6c",
+      "crates/geometry-bridge/src/mesh_analysis.rs": "206254b82f7e8bd35deaacc65efac5453e74acfb9ed363018fc2f344aaf78bf9",
+      "crates/polygon-core/src/solid/edges.rs": "156fcced9b1cab7ec298fa0356247aa5c2dea657fc8f18b59eae7e5e58267da3",
+      "crates/polygon-core/src/solid/edges/cooperative.rs": "eff33b9e0670169d8b6b2e42a0072ef4d9a90b2c54732d85bcbdd18ff94e36bd"
+    },
+    "warmups": 2,
+    "samples": 5,
+    "scope": "Warm alternating local analysis calls; no event-loop sleeps or production cancellation latency claim",
+    "rows": [
+      {
+        "segments": 32,
+        "triangles": 960,
+        "checkpoints": 24,
+        "byteParity": true,
+        "syncMs": [
+          0.6596250000000339,
+          0.6191670000000045,
+          0.5533339999999498,
+          0.5467080000000237,
+          0.5301670000000058
+        ],
+        "cooperativeMs": [
+          1.1429999999999723,
+          1.1287080000000174,
+          1.07974999999999,
+          1.055708999999979,
+          0.9260419999999954
+        ],
+        "syncMedianMs": 0.5533339999999498,
+        "cooperativeMedianMs": 1.07974999999999
+      },
+      {
+        "segments": 128,
+        "triangles": 16128,
+        "checkpoints": 406,
+        "byteParity": true,
+        "syncMs": [
+          12.58808399999998,
+          11.61504199999996,
+          12.209333000000015,
+          11.97804199999996,
+          11.685833000000002
+        ],
+        "cooperativeMs": [
+          16.247000000000014,
+          15.445125000000019,
+          15.990666999999974,
+          16.39308299999999,
+          15.042082999999991
+        ],
+        "syncMedianMs": 11.97804199999996,
+        "cooperativeMedianMs": 15.990666999999974
+      },
+      {
+        "segments": 256,
+        "triangles": 65024,
+        "checkpoints": 1489,
+        "byteParity": true,
+        "syncMs": [
+          46.92504199999996,
+          46.75604199999998,
+          45.40766699999995,
+          46.86654199999998,
+          47.143291999999974
+        ],
+        "cooperativeMs": [
+          60.07574999999997,
+          60.37095899999997,
+          60.05812500000002,
+          60.969040999999834,
+          60.52150000000006
+        ],
+        "syncMedianMs": 46.86654199999998,
+        "cooperativeMedianMs": 60.37095899999997
+      }
+    ]
+  },
+  "synchronousOutputParity": {
+    "rowsMatched": 35,
+    "beforeWasm": {
+      "path": "src/generated/geometry-kernels/kernel_bg.wasm",
+      "sha256": "135ddbfd14833ffc7c2866cbadc917b1ec6af2d4c72114935c57d9c472608a04"
+    },
+    "afterWasm": {
+      "path": "src/generated/geometry-kernels/kernel_bg.wasm",
+      "sha256": "dd89ddb49a0248d25dfbdeb63f9b76610d877aa94d60256764e5a976ddc26213"
+    },
+    "rows": [
+      {
+        "fixture": "cube",
+        "phase": "inspect",
+        "inputSha256": "911a18060f71e3ba8d0a434bc3c339f64d3a55d387e8f59fdce11ac218f445b1",
+        "outputSha256": "03425408b9d262fbc78ba56f312abf4a5b73956b3d6f63db2d9c4468e49f6db3"
+      },
+      {
+        "fixture": "cube",
+        "phase": "export",
+        "inputSha256": "911a18060f71e3ba8d0a434bc3c339f64d3a55d387e8f59fdce11ac218f445b1",
+        "outputSha256": "911a18060f71e3ba8d0a434bc3c339f64d3a55d387e8f59fdce11ac218f445b1"
+      },
+      {
+        "fixture": "cube",
+        "phase": "render",
+        "inputSha256": "911a18060f71e3ba8d0a434bc3c339f64d3a55d387e8f59fdce11ac218f445b1",
+        "outputSha256": "5f8e6f1244f57d1b2f3cb9fb2d0826abb0689337d129b5abe164807187a17145"
+      },
+      {
+        "fixture": "cube",
+        "phase": "bvh",
+        "inputSha256": "911a18060f71e3ba8d0a434bc3c339f64d3a55d387e8f59fdce11ac218f445b1",
+        "outputSha256": "d1f40cec0212e66d51baf9c7c891835ef9e91a36087d4c1593d37d92210e05c9"
+      },
+      {
+        "fixture": "cube",
+        "phase": "edges",
+        "inputSha256": "911a18060f71e3ba8d0a434bc3c339f64d3a55d387e8f59fdce11ac218f445b1",
+        "outputSha256": "ea4bb984318364b44ba5ccb46eab1943a7ff28607eca973a04274d6132215487"
+      },
+      {
+        "fixture": "cube",
+        "phase": "combined",
+        "inputSha256": "911a18060f71e3ba8d0a434bc3c339f64d3a55d387e8f59fdce11ac218f445b1",
+        "outputSha256": "bbc7203f2247a6df5cd01ab1ad276b4b10e62c220964fb0fea126217c604300e"
+      },
+      {
+        "fixture": "cube",
+        "phase": "assetHash",
+        "inputSha256": "911a18060f71e3ba8d0a434bc3c339f64d3a55d387e8f59fdce11ac218f445b1",
+        "outputSha256": "9b929741918bd06f50a88b13079a9fc67b50bfcd571f506ccc589cdb98b4baec"
+      },
+      {
+        "fixture": "sphere-32",
+        "phase": "inspect",
+        "inputSha256": "a9b206deece3100f3f2b7bdb12b57ac3f37327d3a36c60b06a43945159d329a7",
+        "outputSha256": "659f88d3c2611975eccfa686aa6fdaa7defcf20c2b02eee4f2dc4711bbed6bd8"
+      },
+      {
+        "fixture": "sphere-32",
+        "phase": "export",
+        "inputSha256": "a9b206deece3100f3f2b7bdb12b57ac3f37327d3a36c60b06a43945159d329a7",
+        "outputSha256": "a9b206deece3100f3f2b7bdb12b57ac3f37327d3a36c60b06a43945159d329a7"
+      },
+      {
+        "fixture": "sphere-32",
+        "phase": "render",
+        "inputSha256": "a9b206deece3100f3f2b7bdb12b57ac3f37327d3a36c60b06a43945159d329a7",
+        "outputSha256": "c3db66999fad251310021cca25bfabfe8b4200f8f9c3ead25e88b3e1c93cbdfc"
+      },
+      {
+        "fixture": "sphere-32",
+        "phase": "bvh",
+        "inputSha256": "a9b206deece3100f3f2b7bdb12b57ac3f37327d3a36c60b06a43945159d329a7",
+        "outputSha256": "7ea3189792f136fba72a7b76fd14c2560758caefc52057307fabf8aefde48afb"
+      },
+      {
+        "fixture": "sphere-32",
+        "phase": "edges",
+        "inputSha256": "a9b206deece3100f3f2b7bdb12b57ac3f37327d3a36c60b06a43945159d329a7",
+        "outputSha256": "c9dd1f3b5b5ef32ba7b6a5bfb00a4ca8cf317394bac7e639ef04031d2315cc7b"
+      },
+      {
+        "fixture": "sphere-32",
+        "phase": "combined",
+        "inputSha256": "a9b206deece3100f3f2b7bdb12b57ac3f37327d3a36c60b06a43945159d329a7",
+        "outputSha256": "cbcc561ca303023eecef8f39748f13ead7340f91f9b094348559948592e00ba3"
+      },
+      {
+        "fixture": "sphere-32",
+        "phase": "assetHash",
+        "inputSha256": "a9b206deece3100f3f2b7bdb12b57ac3f37327d3a36c60b06a43945159d329a7",
+        "outputSha256": "bd0493cbaf69e0c2a4df570e653edb1ba6b3df9be7cf78616300c378be6594d4"
+      },
+      {
+        "fixture": "sphere-128",
+        "phase": "inspect",
+        "inputSha256": "c1a5a2135d2e060d7240ed09361f2e45b4e3fc31927ad5aa5c04b9a7c324dc3d",
+        "outputSha256": "0a73810ebbdb0538892314969ab78e8af0a99c532e51c3ce7169c4d1618ffa4a"
+      },
+      {
+        "fixture": "sphere-128",
+        "phase": "export",
+        "inputSha256": "c1a5a2135d2e060d7240ed09361f2e45b4e3fc31927ad5aa5c04b9a7c324dc3d",
+        "outputSha256": "c1a5a2135d2e060d7240ed09361f2e45b4e3fc31927ad5aa5c04b9a7c324dc3d"
+      },
+      {
+        "fixture": "sphere-128",
+        "phase": "render",
+        "inputSha256": "c1a5a2135d2e060d7240ed09361f2e45b4e3fc31927ad5aa5c04b9a7c324dc3d",
+        "outputSha256": "2c18fff896b1e909c9f03f9b3cb50f7e721348cf7ba98f727797695478d2d2a1"
+      },
+      {
+        "fixture": "sphere-128",
+        "phase": "bvh",
+        "inputSha256": "c1a5a2135d2e060d7240ed09361f2e45b4e3fc31927ad5aa5c04b9a7c324dc3d",
+        "outputSha256": "016baa239d1d5fd8b109bccfb5b5472e5d4134a308e3da215177c92620637c7f"
+      },
+      {
+        "fixture": "sphere-128",
+        "phase": "edges",
+        "inputSha256": "c1a5a2135d2e060d7240ed09361f2e45b4e3fc31927ad5aa5c04b9a7c324dc3d",
+        "outputSha256": "c9dd1f3b5b5ef32ba7b6a5bfb00a4ca8cf317394bac7e639ef04031d2315cc7b"
+      },
+      {
+        "fixture": "sphere-128",
+        "phase": "combined",
+        "inputSha256": "c1a5a2135d2e060d7240ed09361f2e45b4e3fc31927ad5aa5c04b9a7c324dc3d",
+        "outputSha256": "1d09b219e9bfd07db3afa21aafab7e17658ab6f0003913fbb88c635eab38016d"
+      },
+      {
+        "fixture": "sphere-128",
+        "phase": "assetHash",
+        "inputSha256": "c1a5a2135d2e060d7240ed09361f2e45b4e3fc31927ad5aa5c04b9a7c324dc3d",
+        "outputSha256": "68e6845528698ef034587f192a3375f9a02b33154bda3d26e93fc330b41d5d4e"
+      },
+      {
+        "fixture": "three-spheres-128",
+        "phase": "inspect",
+        "inputSha256": "7e1768ea6495bb92277012cc0563db4833254aab537eed5d6ed903f7547c15e3",
+        "outputSha256": "51d79126bcf49ef4b0e4a98a8fe4307536e939ed878897affecaafc7badeb96b"
+      },
+      {
+        "fixture": "three-spheres-128",
+        "phase": "export",
+        "inputSha256": "7e1768ea6495bb92277012cc0563db4833254aab537eed5d6ed903f7547c15e3",
+        "outputSha256": "7e1768ea6495bb92277012cc0563db4833254aab537eed5d6ed903f7547c15e3"
+      },
+      {
+        "fixture": "three-spheres-128",
+        "phase": "render",
+        "inputSha256": "7e1768ea6495bb92277012cc0563db4833254aab537eed5d6ed903f7547c15e3",
+        "outputSha256": "15ca700b8feb11344cee975d71e3b94edb3757d7201f89ee691ecdc96f3b7e55"
+      },
+      {
+        "fixture": "three-spheres-128",
+        "phase": "bvh",
+        "inputSha256": "7e1768ea6495bb92277012cc0563db4833254aab537eed5d6ed903f7547c15e3",
+        "outputSha256": "c1a2f6c5edfe2cb99c10c8a79de30217e427c8437ba9b468fe26f18b02a81a9c"
+      },
+      {
+        "fixture": "three-spheres-128",
+        "phase": "edges",
+        "inputSha256": "7e1768ea6495bb92277012cc0563db4833254aab537eed5d6ed903f7547c15e3",
+        "outputSha256": "c9dd1f3b5b5ef32ba7b6a5bfb00a4ca8cf317394bac7e639ef04031d2315cc7b"
+      },
+      {
+        "fixture": "three-spheres-128",
+        "phase": "combined",
+        "inputSha256": "7e1768ea6495bb92277012cc0563db4833254aab537eed5d6ed903f7547c15e3",
+        "outputSha256": "ff987135e2c6a9df1a8e944a98dd62e8af4e99318be3ccd75659253bfd6c0366"
+      },
+      {
+        "fixture": "three-spheres-128",
+        "phase": "assetHash",
+        "inputSha256": "7e1768ea6495bb92277012cc0563db4833254aab537eed5d6ed903f7547c15e3",
+        "outputSha256": "ce7e437db0b016eea0325755cf6ba0ae12a1d0274ffdc24ac8a9a2b3901d762d"
+      },
+      {
+        "fixture": "cylinder-128",
+        "phase": "inspect",
+        "inputSha256": "530c7abc069d612256dd7434159b8b030d6428c92bf6b080aacc07bf51e7eb22",
+        "outputSha256": "98f54bc086a44225d9db1cddda564e54e18885a72a470fe820c44d9d0dc72c61"
+      },
+      {
+        "fixture": "cylinder-128",
+        "phase": "export",
+        "inputSha256": "530c7abc069d612256dd7434159b8b030d6428c92bf6b080aacc07bf51e7eb22",
+        "outputSha256": "530c7abc069d612256dd7434159b8b030d6428c92bf6b080aacc07bf51e7eb22"
+      },
+      {
+        "fixture": "cylinder-128",
+        "phase": "render",
+        "inputSha256": "530c7abc069d612256dd7434159b8b030d6428c92bf6b080aacc07bf51e7eb22",
+        "outputSha256": "97228450b31651eb87b1d5a7bdd13760ad142e10f0a3e9d407630c3d927be9be"
+      },
+      {
+        "fixture": "cylinder-128",
+        "phase": "bvh",
+        "inputSha256": "530c7abc069d612256dd7434159b8b030d6428c92bf6b080aacc07bf51e7eb22",
+        "outputSha256": "181b1ae01c0d6a77af901b71b643299b853e007486213f8db7a6e3192813ea63"
+      },
+      {
+        "fixture": "cylinder-128",
+        "phase": "edges",
+        "inputSha256": "530c7abc069d612256dd7434159b8b030d6428c92bf6b080aacc07bf51e7eb22",
+        "outputSha256": "b09c03d0b8bfc52052edf807cbc04fd32498d3c8915f5934ef1d50b4263bc765"
+      },
+      {
+        "fixture": "cylinder-128",
+        "phase": "combined",
+        "inputSha256": "530c7abc069d612256dd7434159b8b030d6428c92bf6b080aacc07bf51e7eb22",
+        "outputSha256": "645efd7a9a7a66777f1144c906d5aa7a8094333dccf07e5e0f5f20195cc1dd72"
+      },
+      {
+        "fixture": "cylinder-128",
+        "phase": "assetHash",
+        "inputSha256": "530c7abc069d612256dd7434159b8b030d6428c92bf6b080aacc07bf51e7eb22",
+        "outputSha256": "514ed07a7c77ce19a07a05bd6fdd01c6a0ad85fef1e5a14f53f79967f68939ad"
+      }
+    ]
+  },
+  "productionRecovery": {
+    "timestamp": "2026-09-27T13:56:38.143Z",
+    "browser": "151.0.7922.34",
+    "hashes": {
+      "dist/assets/geometry.worker-CcKp4gY-.js": "20440943c6d4cc6ad1db2d7f3591bd7da2860a40a90e02b2a7024c468ce1c857",
+      "public/wasm/geometry-kernel.wasm": "dd89ddb49a0248d25dfbdeb63f9b76610d877aa94d60256764e5a976ddc26213",
+      "src/services/buildCoordinator.ts": "09f0a9a8210fa0e89b94f670d997b454b6ca2c17814856d4d0ecae428556303e",
+      "src/workers/geometry.worker.ts": "4fdcd2cdbe066b46af563a91ad854f3c143ec02eb80999a02106612ec2bb0a41",
+      "src/App.vue": "b07a48f6b74f68489c30242ca06432a4807f16f117912532e0d93a7a6f17bd33",
+      "tools/browser-qualification/build-recovery.ts": "6521f99bb1fce213a3160bd959d267f42bbbc06cb52fb54e8b9f5391561470d4",
+      "tools/browser-qualification/build-recovery.mjs": "4e0a4400a4119e4441a3c82bf83ce3916f2957ad858686272b412b5487f4e6c9"
+    },
+    "scope": "Real Chromium Worker transport, production geometry worker and BuildCoordinator. Cooperative cancellation is between statements; no claim of interruption inside a synchronous WASM kernel call.",
+    "scenarioTimeoutMs": 30000,
+    "faultSilenceTimeoutMs": 5000,
+    "fixtures": {
+      "multiStatement": "f3dff8737128a26576a48110b916fa4749ceca5b871cf21e324f0e8023a2b544",
+      "singleStatement": "5f38c823666d9b79a2985e3b1103a7c4b2d7ba86a069fea0be150f7a521e4081",
+      "faultRequest": "bf3cc55d195cac565c37ed00b9f303416ec94e0388afa74bd76e2b59224be39b"
+    },
+    "reports": [
+      {
+        "name": "warm-multi-statement-supersession",
+        "passed": true,
+        "elapsedMs": 324.5999999642372,
+        "faultInjection": "none",
+        "assertions": [
+          "real multi-statement build remained active for 50ms",
+          "obsolete build acknowledged without publication within the production 300ms grace",
+          "same warm worker retained",
+          "replacement cube volume = 125"
+        ],
+        "diagnostics": {
+          "builds": 3,
+          "superseded": 1,
+          "workerStarts": 1,
+          "hardRestarts": 0
+        },
+        "workerRestarts": [],
+        "events": [
+          {
+            "generation": 1,
+            "status": "accepted",
+            "phase": "queued",
+            "revision": 1,
+            "jobId": 1,
+            "ms": 110
+          },
+          {
+            "generation": 1,
+            "status": "started",
+            "phase": "initializing",
+            "revision": 1,
+            "jobId": 1,
+            "ms": 110.19999998807907
+          },
+          {
+            "generation": 1,
+            "status": "progress",
+            "phase": "compiling",
+            "revision": 1,
+            "jobId": 1,
+            "ms": 213.19999998807907
+          },
+          {
+            "generation": 1,
+            "status": "progress",
+            "phase": "serializing",
+            "revision": 1,
+            "jobId": 1,
+            "ms": 217.39999997615814
+          },
+          {
+            "generation": 1,
+            "status": "succeeded",
+            "phase": "complete",
+            "revision": 1,
+            "jobId": 1,
+            "ms": 219.30000001192093
+          },
+          {
+            "generation": 1,
+            "status": "accepted",
+            "phase": "queued",
+            "revision": 2,
+            "jobId": 2,
+            "ms": 223.19999998807907
+          },
+          {
+            "generation": 1,
+            "status": "started",
+            "phase": "initializing",
+            "revision": 2,
+            "jobId": 2,
+            "ms": 223.30000001192093
+          },
+          {
+            "generation": 1,
+            "status": "progress",
+            "phase": "compiling",
+            "revision": 2,
+            "jobId": 2,
+            "ms": 223.5
+          },
+          {
+            "generation": 1,
+            "status": "cancelled",
+            "phase": "compiling",
+            "revision": 2,
+            "jobId": 2,
+            "ms": 320.89999997615814
+          },
+          {
+            "generation": 1,
+            "status": "accepted",
+            "phase": "queued",
+            "revision": 3,
+            "jobId": 3,
+            "ms": 321.5999999642372
+          },
+          {
+            "generation": 1,
+            "status": "started",
+            "phase": "initializing",
+            "revision": 3,
+            "jobId": 3,
+            "ms": 321.5999999642372
+          },
+          {
+            "generation": 1,
+            "status": "progress",
+            "phase": "compiling",
+            "revision": 3,
+            "jobId": 3,
+            "ms": 321.5999999642372
+          },
+          {
+            "generation": 1,
+            "status": "progress",
+            "phase": "serializing",
+            "revision": 3,
+            "jobId": 3,
+            "ms": 322
+          },
+          {
+            "generation": 1,
+            "status": "succeeded",
+            "phase": "complete",
+            "revision": 3,
+            "jobId": 3,
+            "ms": 322.0999999642372
+          }
+        ],
+        "publications": [
+          {
+            "status": "succeeded",
+            "revision": 1,
+            "jobId": 1,
+            "sourceSha256": "a31ee19c8a470195185a94e635a19bf524794c2f8b7b5d3cfd88b2942c92283e",
+            "volume": 8,
+            "ms": 219.89999997615814
+          },
+          {
+            "status": "succeeded",
+            "revision": 3,
+            "jobId": 3,
+            "sourceSha256": "576f1dc5e4b32ce173d79d4488e4e95f5567704ef7cb2b99c8bdc5d3168d05eb",
+            "volume": 125,
+            "ms": 322.19999998807907
+          }
+        ]
+      },
+      {
+        "name": "busy-worker-hard-preemption",
+        "passed": true,
+        "elapsedMs": 543.5,
+        "faultInjection": "none",
+        "assertions": [
+          "real single-statement build remained active for 100ms",
+          "worker replaced once",
+          "obsolete build never published",
+          "replacement cube volume = 216"
+        ],
+        "diagnostics": {
+          "builds": 3,
+          "superseded": 1,
+          "workerStarts": 2,
+          "hardRestarts": 1
+        },
+        "workerRestarts": [],
+        "events": [
+          {
+            "generation": 1,
+            "status": "accepted",
+            "phase": "queued",
+            "revision": 1,
+            "jobId": 1,
+            "ms": 102.80000001192093
+          },
+          {
+            "generation": 1,
+            "status": "started",
+            "phase": "initializing",
+            "revision": 1,
+            "jobId": 1,
+            "ms": 102.89999997615814
+          },
+          {
+            "generation": 1,
+            "status": "progress",
+            "phase": "compiling",
+            "revision": 1,
+            "jobId": 1,
+            "ms": 205.89999997615814
+          },
+          {
+            "generation": 1,
+            "status": "progress",
+            "phase": "serializing",
+            "revision": 1,
+            "jobId": 1,
+            "ms": 209.69999998807907
+          },
+          {
+            "generation": 1,
+            "status": "succeeded",
+            "phase": "complete",
+            "revision": 1,
+            "jobId": 1,
+            "ms": 210.5
+          },
+          {
+            "generation": 1,
+            "status": "accepted",
+            "phase": "queued",
+            "revision": 2,
+            "jobId": 2,
+            "ms": 220.89999997615814
+          },
+          {
+            "generation": 1,
+            "status": "started",
+            "phase": "initializing",
+            "revision": 2,
+            "jobId": 2,
+            "ms": 221
+          },
+          {
+            "generation": 1,
+            "status": "progress",
+            "phase": "compiling",
+            "revision": 2,
+            "jobId": 2,
+            "ms": 221
+          },
+          {
+            "generation": 2,
+            "status": "accepted",
+            "phase": "queued",
+            "revision": 3,
+            "jobId": 3,
+            "ms": 434.39999997615814
+          },
+          {
+            "generation": 2,
+            "status": "started",
+            "phase": "initializing",
+            "revision": 3,
+            "jobId": 3,
+            "ms": 434.39999997615814
+          },
+          {
+            "generation": 2,
+            "status": "progress",
+            "phase": "compiling",
+            "revision": 3,
+            "jobId": 3,
+            "ms": 534.6000000238419
+          },
+          {
+            "generation": 2,
+            "status": "progress",
+            "phase": "serializing",
+            "revision": 3,
+            "jobId": 3,
+            "ms": 538.3999999761581
+          },
+          {
+            "generation": 2,
+            "status": "succeeded",
+            "phase": "complete",
+            "revision": 3,
+            "jobId": 3,
+            "ms": 539.1999999880791
+          }
+        ],
+        "publications": [
+          {
+            "status": "succeeded",
+            "revision": 1,
+            "jobId": 1,
+            "sourceSha256": "a31ee19c8a470195185a94e635a19bf524794c2f8b7b5d3cfd88b2942c92283e",
+            "volume": 8,
+            "ms": 210.60000002384186
+          },
+          {
+            "status": "succeeded",
+            "revision": 3,
+            "jobId": 3,
+            "sourceSha256": "7c09cfe7d916bb31be9c466d0a892df5e51a0d017491c0a90b59838beb0a62ab",
+            "volume": 216,
+            "ms": 539.3999999761581
+          }
+        ]
+      },
+      {
+        "name": "user-cancel-and-rebuild",
+        "passed": true,
+        "elapsedMs": 486.5,
+        "faultInjection": "none",
+        "assertions": [
+          "user cancel reached cancelled state",
+          "cancelled result never published",
+          "subsequent cube volume = 27"
+        ],
+        "diagnostics": {
+          "builds": 3,
+          "superseded": 0,
+          "workerStarts": 2,
+          "hardRestarts": 0
+        },
+        "workerRestarts": [],
+        "events": [
+          {
+            "generation": 1,
+            "status": "accepted",
+            "phase": "queued",
+            "revision": 1,
+            "jobId": 1,
+            "ms": 100.39999997615814
+          },
+          {
+            "generation": 1,
+            "status": "started",
+            "phase": "initializing",
+            "revision": 1,
+            "jobId": 1,
+            "ms": 100.39999997615814
+          },
+          {
+            "generation": 1,
+            "status": "progress",
+            "phase": "compiling",
+            "revision": 1,
+            "jobId": 1,
+            "ms": 201.5
+          },
+          {
+            "generation": 1,
+            "status": "progress",
+            "phase": "serializing",
+            "revision": 1,
+            "jobId": 1,
+            "ms": 205.39999997615814
+          },
+          {
+            "generation": 1,
+            "status": "succeeded",
+            "phase": "complete",
+            "revision": 1,
+            "jobId": 1,
+            "ms": 206.29999995231628
+          },
+          {
+            "generation": 1,
+            "status": "accepted",
+            "phase": "queued",
+            "revision": 2,
+            "jobId": 2,
+            "ms": 212.89999997615814
+          },
+          {
+            "generation": 1,
+            "status": "started",
+            "phase": "initializing",
+            "revision": 2,
+            "jobId": 2,
+            "ms": 212.89999997615814
+          },
+          {
+            "generation": 1,
+            "status": "progress",
+            "phase": "compiling",
+            "revision": 2,
+            "jobId": 2,
+            "ms": 213.0999999642372
+          },
+          {
+            "generation": 2,
+            "status": "accepted",
+            "phase": "queued",
+            "revision": 3,
+            "jobId": 3,
+            "ms": 372.69999998807907
+          },
+          {
+            "generation": 2,
+            "status": "started",
+            "phase": "initializing",
+            "revision": 3,
+            "jobId": 3,
+            "ms": 372.69999998807907
+          },
+          {
+            "generation": 2,
+            "status": "progress",
+            "phase": "compiling",
+            "revision": 3,
+            "jobId": 3,
+            "ms": 470.5
+          },
+          {
+            "generation": 2,
+            "status": "progress",
+            "phase": "serializing",
+            "revision": 3,
+            "jobId": 3,
+            "ms": 474.39999997615814
+          },
+          {
+            "generation": 2,
+            "status": "succeeded",
+            "phase": "complete",
+            "revision": 3,
+            "jobId": 3,
+            "ms": 475.39999997615814
+          }
+        ],
+        "publications": [
+          {
+            "status": "succeeded",
+            "revision": 1,
+            "jobId": 1,
+            "sourceSha256": "a31ee19c8a470195185a94e635a19bf524794c2f8b7b5d3cfd88b2942c92283e",
+            "volume": 8,
+            "ms": 206.39999997615814
+          },
+          {
+            "status": "succeeded",
+            "revision": 3,
+            "jobId": 3,
+            "sourceSha256": "4307ef810af6532c2ffc7139ba669db35d86fb55a097aebf29b7eba5e6c823fa",
+            "volume": 27,
+            "ms": 475.39999997615814
+          }
+        ]
+      },
+      {
+        "name": "silence-timeout-retry",
+        "passed": true,
+        "elapsedMs": 5376.400000035763,
+        "faultInjection": "first generation blocks its event loop on a marked request after a real warmup cube",
+        "assertions": [
+          "one retry on a new production worker",
+          "job/revision/source identity retained",
+          "single success volume = 343"
+        ],
+        "diagnostics": {
+          "builds": 2,
+          "superseded": 0,
+          "workerStarts": 2,
+          "hardRestarts": 1
+        },
+        "workerRestarts": [
+          {
+            "ms": 5210.400000035763
+          }
+        ],
+        "events": [
+          {
+            "generation": 1,
+            "status": "accepted",
+            "phase": "queued",
+            "revision": 1,
+            "jobId": 1,
+            "ms": 103.30000001192093
+          },
+          {
+            "generation": 1,
+            "status": "started",
+            "phase": "initializing",
+            "revision": 1,
+            "jobId": 1,
+            "ms": 103.30000001192093
+          },
+          {
+            "generation": 1,
+            "status": "progress",
+            "phase": "compiling",
+            "revision": 1,
+            "jobId": 1,
+            "ms": 200.60000002384186
+          },
+          {
+            "generation": 1,
+            "status": "progress",
+            "phase": "serializing",
+            "revision": 1,
+            "jobId": 1,
+            "ms": 204.5
+          },
+          {
+            "generation": 1,
+            "status": "succeeded",
+            "phase": "complete",
+            "revision": 1,
+            "jobId": 1,
+            "ms": 205.4000000357628
+          },
+          {
+            "generation": 2,
+            "status": "accepted",
+            "phase": "queued",
+            "revision": 2,
+            "jobId": 2,
+            "ms": 5308.100000023842
+          },
+          {
+            "generation": 2,
+            "status": "started",
+            "phase": "initializing",
+            "revision": 2,
+            "jobId": 2,
+            "ms": 5308.199999988079
+          },
+          {
+            "generation": 2,
+            "status": "progress",
+            "phase": "compiling",
+            "revision": 2,
+            "jobId": 2,
+            "ms": 5363.699999988079
+          },
+          {
+            "generation": 2,
+            "status": "progress",
+            "phase": "serializing",
+            "revision": 2,
+            "jobId": 2,
+            "ms": 5366.100000023842
+          },
+          {
+            "generation": 2,
+            "status": "succeeded",
+            "phase": "complete",
+            "revision": 2,
+            "jobId": 2,
+            "ms": 5366.800000011921
+          }
+        ],
+        "publications": [
+          {
+            "status": "succeeded",
+            "revision": 1,
+            "jobId": 1,
+            "sourceSha256": "a31ee19c8a470195185a94e635a19bf524794c2f8b7b5d3cfd88b2942c92283e",
+            "volume": 8,
+            "ms": 205.4000000357628
+          },
+          {
+            "status": "succeeded",
+            "revision": 2,
+            "jobId": 2,
+            "sourceSha256": "bf3cc55d195cac565c37ed00b9f303416ec94e0388afa74bd76e2b59224be39b",
+            "volume": 343,
+            "ms": 5366.900000035763
+          }
+        ]
+      },
+      {
+        "name": "terminal-timeout-and-new-revision",
+        "passed": true,
+        "elapsedMs": 10392.699999988079,
+        "faultInjection": "first two generations block their event loops on marked requests",
+        "assertions": [
+          "retry budget stops at one",
+          "single WORKER_TIMEOUT publication",
+          "new revision recovers with cube volume = 64"
+        ],
+        "diagnostics": {
+          "builds": 3,
+          "superseded": 0,
+          "workerStarts": 3,
+          "hardRestarts": 1
+        },
+        "workerRestarts": [
+          {
+            "ms": 5169.699999988079
+          }
+        ],
+        "events": [
+          {
+            "generation": 1,
+            "status": "accepted",
+            "phase": "queued",
+            "revision": 1,
+            "jobId": 1,
+            "ms": 100.79999995231628
+          },
+          {
+            "generation": 1,
+            "status": "started",
+            "phase": "initializing",
+            "revision": 1,
+            "jobId": 1,
+            "ms": 100.79999995231628
+          },
+          {
+            "generation": 1,
+            "status": "progress",
+            "phase": "compiling",
+            "revision": 1,
+            "jobId": 1,
+            "ms": 157
+          },
+          {
+            "generation": 1,
+            "status": "progress",
+            "phase": "serializing",
+            "revision": 1,
+            "jobId": 1,
+            "ms": 159.29999995231628
+          },
+          {
+            "generation": 1,
+            "status": "succeeded",
+            "phase": "complete",
+            "revision": 1,
+            "jobId": 1,
+            "ms": 159.79999995231628
+          },
+          {
+            "generation": 3,
+            "status": "accepted",
+            "phase": "queued",
+            "revision": 3,
+            "jobId": 3,
+            "ms": 10284
+          },
+          {
+            "generation": 3,
+            "status": "started",
+            "phase": "initializing",
+            "revision": 3,
+            "jobId": 3,
+            "ms": 10284.199999988079
+          },
+          {
+            "generation": 3,
+            "status": "progress",
+            "phase": "compiling",
+            "revision": 3,
+            "jobId": 3,
+            "ms": 10385.399999976158
+          },
+          {
+            "generation": 3,
+            "status": "progress",
+            "phase": "serializing",
+            "revision": 3,
+            "jobId": 3,
+            "ms": 10389.5
+          },
+          {
+            "generation": 3,
+            "status": "succeeded",
+            "phase": "complete",
+            "revision": 3,
+            "jobId": 3,
+            "ms": 10390.399999976158
+          }
+        ],
+        "publications": [
+          {
+            "status": "succeeded",
+            "revision": 1,
+            "jobId": 1,
+            "sourceSha256": "a31ee19c8a470195185a94e635a19bf524794c2f8b7b5d3cfd88b2942c92283e",
+            "volume": 8,
+            "ms": 159.89999997615814
+          },
+          {
+            "status": "failed",
+            "revision": 2,
+            "jobId": 2,
+            "sourceSha256": "bf3cc55d195cac565c37ed00b9f303416ec94e0388afa74bd76e2b59224be39b",
+            "code": "WORKER_TIMEOUT",
+            "ms": 10172.399999976158
+          },
+          {
+            "status": "succeeded",
+            "revision": 3,
+            "jobId": 3,
+            "sourceSha256": "08a2aa110546f8e0b4232547b016a128070a2a0a03cb7de6dbd8ec8f1772d347",
+            "volume": 64,
+            "ms": 10390.599999964237
+          }
+        ]
+      },
+      {
+        "name": "dispose-during-build",
+        "passed": true,
+        "elapsedMs": 431.80000001192093,
+        "faultInjection": "none",
+        "assertions": [
+          "active jobs cleared",
+          "no publication after disposal"
+        ],
+        "diagnostics": {
+          "builds": 2,
+          "superseded": 0,
+          "workerStarts": 1,
+          "hardRestarts": 0
+        },
+        "workerRestarts": [],
+        "events": [
+          {
+            "generation": 1,
+            "status": "accepted",
+            "phase": "queued",
+            "revision": 1,
+            "jobId": 1,
+            "ms": 102.5
+          },
+          {
+            "generation": 1,
+            "status": "started",
+            "phase": "initializing",
+            "revision": 1,
+            "jobId": 1,
+            "ms": 102.5
+          },
+          {
+            "generation": 1,
+            "status": "progress",
+            "phase": "compiling",
+            "revision": 1,
+            "jobId": 1,
+            "ms": 204.5999999642372
+          },
+          {
+            "generation": 1,
+            "status": "progress",
+            "phase": "serializing",
+            "revision": 1,
+            "jobId": 1,
+            "ms": 208.69999998807907
+          },
+          {
+            "generation": 1,
+            "status": "succeeded",
+            "phase": "complete",
+            "revision": 1,
+            "jobId": 1,
+            "ms": 209.5
+          },
+          {
+            "generation": 1,
+            "status": "accepted",
+            "phase": "queued",
+            "revision": 2,
+            "jobId": 2,
+            "ms": 221
+          },
+          {
+            "generation": 1,
+            "status": "started",
+            "phase": "initializing",
+            "revision": 2,
+            "jobId": 2,
+            "ms": 221.0999999642372
+          },
+          {
+            "generation": 1,
+            "status": "progress",
+            "phase": "compiling",
+            "revision": 2,
+            "jobId": 2,
+            "ms": 221.30000001192093
+          }
+        ],
+        "publications": [
+          {
+            "status": "succeeded",
+            "revision": 1,
+            "jobId": 1,
+            "sourceSha256": "a31ee19c8a470195185a94e635a19bf524794c2f8b7b5d3cfd88b2942c92283e",
+            "volume": 8,
+            "ms": 209.5999999642372
+          }
+        ]
+      }
+    ],
+    "appSmoke": {
+      "initialCubeVolume": 8,
+      "recoveredCubeVolume": 27,
+      "uiMeshCount": "1",
+      "cancelledJob": 3,
+      "cancelledJobPublished": false,
+      "terminations": 1,
+      "assertions": [
+        "Cancel build button terminates active work",
+        "last scene retained after cancel",
+        "Render re-enabled",
+        "next real cube succeeds with exact volume"
+      ],
+      "events": [
+        {
+          "status": "accepted",
+          "phase": "queued",
+          "jobId": 1,
+          "revision": 0
+        },
+        {
+          "status": "started",
+          "phase": "initializing",
+          "jobId": 1,
+          "revision": 0
+        },
+        {
+          "status": "progress",
+          "phase": "compiling",
+          "jobId": 1,
+          "revision": 0
+        },
+        {
+          "status": "progress",
+          "phase": "serializing",
+          "jobId": 1,
+          "revision": 0
+        },
+        {
+          "status": "succeeded",
+          "phase": "complete",
+          "jobId": 1,
+          "revision": 0,
+          "volume": 9375.629150581586
+        },
+        {
+          "status": "accepted",
+          "phase": "queued",
+          "jobId": 2,
+          "revision": 1
+        },
+        {
+          "status": "started",
+          "phase": "initializing",
+          "jobId": 2,
+          "revision": 1
+        },
+        {
+          "status": "progress",
+          "phase": "compiling",
+          "jobId": 2,
+          "revision": 1
+        },
+        {
+          "status": "progress",
+          "phase": "serializing",
+          "jobId": 2,
+          "revision": 1
+        },
+        {
+          "status": "succeeded",
+          "phase": "complete",
+          "jobId": 2,
+          "revision": 1,
+          "volume": 8
+        },
+        {
+          "status": "accepted",
+          "phase": "queued",
+          "jobId": 3,
+          "revision": 2
+        },
+        {
+          "status": "started",
+          "phase": "initializing",
+          "jobId": 3,
+          "revision": 2
+        },
+        {
+          "status": "progress",
+          "phase": "compiling",
+          "jobId": 3,
+          "revision": 2
+        },
+        {
+          "status": "accepted",
+          "phase": "queued",
+          "jobId": 4,
+          "revision": 3
+        },
+        {
+          "status": "started",
+          "phase": "initializing",
+          "jobId": 4,
+          "revision": 3
+        },
+        {
+          "status": "progress",
+          "phase": "compiling",
+          "jobId": 4,
+          "revision": 3
+        },
+        {
+          "status": "progress",
+          "phase": "serializing",
+          "jobId": 4,
+          "revision": 3
+        },
+        {
+          "status": "succeeded",
+          "phase": "complete",
+          "jobId": 4,
+          "revision": 3,
+          "volume": 27
+        }
+      ]
+    },
+    "pageErrors": []
+  },
+  "limitations": [
+    "4,096 work units are not a wall-clock bound; allocations remain synchronous",
+    "Browser harness yields every eight checkpoints; its cancellation latency is not the production scheduling guarantee",
+    "Local benchmark compares all cooperative BVH and edge work against synchronous analysis, not incremental edge overhead",
+    "One premature test run overlapped artifact packaging and failed SHA validation; after packaging completed all 271 tests passed"
+  ]
+}

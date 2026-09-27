@@ -1,4 +1,6 @@
-pub(super) use crate::{M3, V3};
+#[cfg(target_arch = "wasm32")]
+pub(super) use crate::M3;
+pub(super) use crate::V3;
 pub(super) use compute_core::gpu_compute::wgpu;
 pub(super) use compute_core::gpu_compute::{GpuContext, pack_f32, pack_u32};
 pub(super) use compute_core::{
@@ -18,11 +20,13 @@ pub(super) fn mk(device: &Device, label: &str, size: u64, usage: BufferUsages) -
     })
 }
 
+#[cfg(target_arch = "wasm32")]
 pub(super) fn push_f32(bytes: &mut Vec<u8>, value: f32) {
     bytes.extend_from_slice(&value.to_le_bytes());
 }
 
 /// Uniform + read storage + write storage bindings, the common shape.
+#[cfg(target_arch = "wasm32")]
 pub(super) const UNIFORM_STORAGE2: [Binding; 4] = [
     Binding::Uniform,
     Binding::StorageRead,
@@ -40,6 +44,7 @@ pub(super) const NN_BINDINGS: [Binding; 5] = [
 ];
 
 /// Uniform + two read storages + one write storage (pairwise kernels).
+#[cfg(target_arch = "wasm32")]
 pub(super) const UNIFORM_PAIR: [Binding; 4] = [
     Binding::Uniform,
     Binding::StorageRead,
@@ -48,6 +53,7 @@ pub(super) const UNIFORM_PAIR: [Binding; 4] = [
 ];
 
 /// Uniform + read points + one partial-output reduction.
+#[cfg(target_arch = "wasm32")]
 pub(super) const UNIFORM_REDUCE1: [Binding; 3] = [
     Binding::Uniform,
     Binding::StorageRead,

@@ -65,6 +65,9 @@ interface KernelExports extends WebAssembly.Exports {
  abi_render_mesh(id:number,creaseCosine:number):bigint
  abi_surface_groups(stride:number,vp:number,vl:number,ip:number,il:number,angleDegrees:number):bigint
  abi_analyze_solid(id:number,normalCosine:number,edgeCosine:number,leaf:number):bigint
+ abi_solid_analysis_start(id:number,normalCosine:number,edgeCosine:number,leaf:number):bigint
+ abi_solid_analysis_step(job:number):bigint
+ abi_solid_analysis_cancel(job:number):void
  abi_array_field(handle:number,slot:number):number
  abi_array_free(handle:number):void
 }

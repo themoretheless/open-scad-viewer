@@ -1,0 +1,67 @@
+{
+  "prior_compiler_report": "crates/compute-cuda/qualification/nvrtc-12.8.93-linux-aarch64-convolution/report.json",
+  "prior_compiler_report_fingerprint": {
+    "bytes": 52754,
+    "sha256": "a66de44e9b074a1e2e7f2b51dbfd1ab6c95e1aa389d8b8d12f41d831e4cd05e3"
+  },
+  "parts": {
+    "kernels.cu": {
+      "bytes": 3278,
+      "sha256": "69f0e28d899594e8308ae1295fc09e29c17d3443c8938c55e8a74e5f8791a167"
+    },
+    "indexing.cu": {
+      "bytes": 9921,
+      "sha256": "745279f72e62e4b5592bd5a6a4f4179dbd87a66e4303ecf332af3194fccda493"
+    },
+    "reductions.cu": {
+      "bytes": 5043,
+      "sha256": "688608a68819141cd95efe1a7d79416918ef99c8451bcdea15944445525969df"
+    },
+    "scatter.cu": {
+      "bytes": 4324,
+      "sha256": "af931e38e2cbd2b7db490fdc4d3ea3f3b5d80a5a2f80e24ec08044d474c32e54"
+    },
+    "low_precision.cu": {
+      "bytes": 2161,
+      "sha256": "12e423142e04a0a897fd9dd63f947aa3d62a5ad919542ee381e2878875f01243"
+    },
+    "statistics.cu": {
+      "bytes": 6963,
+      "sha256": "e4c212f58ae867163a0eb45fb5f428083fbc83fe720a0e0161e5e69cd6054f34"
+    },
+    "attention.cu": {
+      "bytes": 6708,
+      "sha256": "49a308bf71bec6e35049462777ea9ebe710e2109431f7e958ae2e53096565cb1"
+    },
+    "low_ops.cu": {
+      "bytes": 2447,
+      "sha256": "616a9368c49749dae01f77167071fba0d55dbb742817140fb54637282cd2f90b"
+    },
+    "low_indexing.cu": {
+      "bytes": 2403,
+      "sha256": "80ef93191f0d26342f08e1926723985779a12b9b8b4ea14a207d973409b2db85"
+    },
+    "low_scatter.cu": {
+      "bytes": 3343,
+      "sha256": "90716ff76f5dc93745c7d7c3079b9dd26a0c7f57e18cc27e17a36d3db5c29c42"
+    },
+    "low_statistics.cu": {
+      "bytes": 1661,
+      "sha256": "d574ec9e18b438f2449fe59500d6eb5b964780ad988c97c5ff8593f397acbf55"
+    },
+    "low_attention.cu": {
+      "bytes": 1010,
+      "sha256": "a14005075dbd8d7b6b87708da389fac4d749f86259fbe4d394cb52e172d1eaeb"
+    },
+    "convolution.cu": {
+      "bytes": 3614,
+      "sha256": "816a5bcfdb9080d779d90664dd48cf227ecdfa344b34c722881f26a5c1fbc9e3"
+    }
+  },
+  "bytes": 52876,
+  "sha256": "2a3304e46831d90e85bc272248852c3767bb84e10cbfd635ea3065dba0fc4efa",
+  "source_matches_compilation": true,
+  "retained_ptx_hashes_verified": true,
+  "new_nvrtc_compilation": true,
+  "cuda_runtime_execution_qualified": false
+}

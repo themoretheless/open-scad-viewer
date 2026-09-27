@@ -1,10 +1,17 @@
 //! One set of low-storage graph recipes for eager tensors and compiled values.
 use super::{custom_metal::KernelKey, *};
-use tensor_core::ReduceOp;
+use tensor_core::{ReduceOp, ScatterOp};
 
+pub(super) mod attention;
 pub(super) mod casts;
+pub(super) mod compaction;
+pub(super) mod indexing;
 pub(super) mod ops;
 pub(super) mod raw;
+pub(super) mod scan;
+pub(super) mod scatter;
+pub(super) mod statistics;
+pub(super) mod statistics_low;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(super) struct TensorSpec {
@@ -18,6 +25,15 @@ pub(super) enum NativeOp {
     Binary(BinaryOp),
     Cast(MlxDtype),
     ViewU32,
+    ViewF32,
+    ArangeU32(usize),
+    Softmax(Vec<i32>),
+    Logsumexp(Vec<i32>, bool),
+    FastAttention {
+        scale: f32,
+        causal: bool,
+        masked: bool,
+    },
     PackBf16,
     RightShift,
     BitwiseAnd,
@@ -31,6 +47,17 @@ pub(super) enum NativeOp {
     Reduce(ReduceOp, Vec<i32>, bool),
     Mean(Vec<i32>, bool),
     Matmul,
+    Scan {
+        axis: i32,
+        inclusive: bool,
+        reverse: bool,
+    },
+    TakeAxis(i32),
+    PutAlongAxis(i32),
+    Scatter {
+        op: ScatterOp,
+        axis: i32,
+    },
 }
 
 pub(super) trait Lowering {

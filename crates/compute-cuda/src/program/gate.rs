@@ -26,11 +26,12 @@ impl ExecutionState {
 }
 impl Permit<'_> {
     pub fn execute(self, enqueue: impl FnOnce() -> Result<(), CudaError>) -> Result<(), CudaError> {
-        let result = enqueue();
-        if result.is_err() {
-            self.0.poisoned = true;
-        }
-        result
+        // Arm before calling into driver/library code. Only a normal successful
+        // return makes the state reusable; errors and caught unwinds retain poison.
+        self.0.poisoned = true;
+        enqueue()?;
+        self.0.poisoned = false;
+        Ok(())
     }
 }
 
@@ -198,5 +199,40 @@ mod tests {
             )
             .is_ok()
         );
+    }
+    #[test]
+    fn enqueue_panic_poison_survives_catch_and_blocks_validation_and_replay() {
+        let mut state = ExecutionState::default();
+        let launches = Cell::new(0);
+        let validations = Cell::new(0);
+        let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            state
+                .begin(|| Ok(()))
+                .unwrap()
+                .execute(|| {
+                    launches.set(launches.get() + 1);
+                    panic!("injected panic after first enqueue");
+                })
+                .unwrap();
+        }));
+        assert!(result.is_err());
+        assert!(state.poisoned);
+        let later = state.begin(|| {
+            validations.set(1);
+            Ok(())
+        });
+        assert!(matches!(later, Err(CudaError::ProgramPoisoned)));
+        assert_eq!((launches.get(), validations.get()), (1, 0));
+    }
+    #[test]
+    fn validation_panic_does_not_poison_before_any_enqueue() {
+        let mut state = ExecutionState::default();
+        let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            let _ = state.begin(|| panic!("validation failed before a permit existed"));
+        }));
+        assert!(result.is_err());
+        assert!(!state.poisoned);
+        state.begin(|| Ok(())).unwrap().execute(|| Ok(())).unwrap();
+        assert!(!state.poisoned);
     }
 }

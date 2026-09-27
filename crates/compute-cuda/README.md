@@ -3,7 +3,7 @@
 CUDA implementation of the shared `tensor-core::TensorBackend` and
 `TensorIndexBackend`, `TensorReduceBackend`, `TensorScatterBackend` and
 `TensorLowBackend`, `TensorLowOpsBackend`, `TensorLowIndexBackend`, `TensorLowScatterBackend`, `TensorStatsBackend` and
-`TensorAttentionBackend` contracts.
+`TensorAttentionBackend`, `TensorConvBackend` and `TensorLowConvBackend` contracts.
 f32/u32 and native f16/bf16 storage, layouts and
 intermediate results stay on the selected NVIDIA device.
 Elementwise and reduction kernels use CUDA; matmul uses cuBLAS. There is no CPU
@@ -21,6 +21,20 @@ assert_eq!(cuda.read_f32(&c)?, [1., 7.]);
 ```
 
 ## Runtime requirements
+
+### Direct convolution
+
+`TensorConvBackend::conv` accepts channel-first `[N,C,*spatial]` input and
+`[O,C/groups,*kernel]` weights for one to three spatial axes. `ConvOptions`
+specifies stride, dilation, asymmetric zero padding and groups. The CUDA kernel
+reads strided operands directly and accumulates f32; it does not create an
+im2col tensor. `TensorLowConvBackend::conv_low_f32` reads native f16/BF16 operands
+directly, while `conv_low` adds one final low cast. Bias can be added with
+resident broadcasting. This path does not use cuDNN or claim Tensor Core use.
+Prepared programs and CUDA Graph recording do not yet expose convolution.
+See the [shared contract and qualification](../../docs/qualification/tensor-convolution-2026-09-27.md).
+
+### Libraries and device
 
 - An NVIDIA GPU and a compatible CUDA driver. `OSV_CUDA_DEVICE` selects its ordinal.
 - Compatible cuBLAS and NVRTC shared libraries, loadable by the process. The
@@ -89,8 +103,9 @@ WebGPU, MLX or CPU.
 
 No data is read back between stages. Ordinary eager operations queue work on
 one stream and allocate results. Prepared programs retain their adapter-owned
-intermediates and metadata and can write existing outputs. CUDA Graph capture,
-asynchronous readback tickets, scratch pooling and generated fusion remain open.
+intermediates and metadata and can write existing outputs. Opt-in CUDA Graph
+programs capture a rebuilt schedule with owned slots. Asynchronous readback
+tickets, scratch pooling and generated fusion remain open.
 
 ### Prepared resident programs
 
@@ -301,13 +316,12 @@ share checked launch descriptors and their kernel/cuBLAS argument implementation
 
 A prepared program borrows its runtime, owns scratch/metadata, and requires
 `&mut self` for replay. It retains no caller tensor clones between runs. An
-enqueue failure or a failure observed by `program.synchronize()` permanently
+enqueue failure, enqueue panic or a failure observed by `program.synchronize()` permanently
 poisons the program. Outputs can be partially modified after such a failure;
 recovery requires a new program and appropriate runtime recovery. There is no
 rollback of GPU work.
 
-Statistics/normalization and attention remain available through eager APIs
-only. The builder has no narrow node, CUDA Graph capture, generated fusion,
+The builder has no narrow node, generated fusion,
 asynchronous readback or scratch pooling.
 Externally created narrow views can still supply fixed input layouts.
 
@@ -317,6 +331,77 @@ the [typed prepared-program qualification](../../docs/qualification/tensor-cuda-
 and the [earlier f32 qualification](../../docs/qualification/tensor-cuda-programs-2026-09-27.md).
 The examples compile as `no_run` doctests; NVIDIA execution, performance and
 Tensor Core instruction use remain unverified on this Apple host.
+
+### CUDA Graph programs
+
+`CudaPreparedProgram::capture_owned` consumes a prepared program, rebuilds its
+logical views against dense private input slots, then captures that schedule.
+It supports the same typed operations, including indexing counts, statistics,
+attention and cuBLAS GEMM. NVIDIA execution is still unqualified on this host;
+see the [graph qualification](../../docs/qualification/tensor-cuda-graphs-2026-09-27.md).
+
+```rust,no_run
+use compute_cuda::{CudaRuntime, CudaPrepareOptions, CudaCaptureOptions};
+use compute_cuda::tensor_core::{Layout, Shape, TensorBackend, UnaryOp};
+
+let cuda = CudaRuntime::new()?;
+let shape = Shape::new(vec![4])?;
+let mut builder = cuda.program();
+let x = builder.input(Layout::contiguous(shape.clone())?)?;
+let square = builder.unary(x, UnaryOp::Square)?;
+let total = builder.sum_axes(square, &[0], false)?;
+let prepared = builder.prepare(&[square, total], CudaPrepareOptions::default())?;
+let mut graph = prepared.capture_owned(CudaCaptureOptions::default())?;
+let input = cuda.upload_f32(shape, &[1., 2., 3., 4.])?;
+let result = graph.run(&[&input])?;
+assert_eq!(cuda.read_f32(&result[1])?, vec![30.]);
+graph.synchronize()?;
+# Ok::<(), Box<dyn std::error::Error>>(())
+```
+
+`run`/`run_into` require f32 input/output signatures. `run_typed` and
+`run_typed_into` use the existing typed transport and exact external layouts.
+All bindings, alias restrictions and current precision policies are validated
+before any work is enqueued. The first transfer materializes each current
+resident input into a dense slot, the graph runs, and the last transfer writes
+independent caller-owned outputs. Slots are never returned as clonable tensors.
+Input/output copying remains part of each replay's cost.
+
+The graph retains a private nonblocking stream in the same primary CUDA context.
+A fresh Rust context wrapper disables slice event tracking only for private
+allocations; the original runtime keeps its tracking and stream unchanged.
+Two preallocated events order input copies → graph → output copies. Copies use
+the caller's ordinary stream access guards. Custom nonprimary contexts are
+rejected. `CudaRuntime::new_with_stream(CudaStreamMode::NonBlocking)` separately
+selects an explicit ordinary runtime stream; `new()` retains its previous default.
+
+Input view provenance preserves permute/reshape/broadcast semantics after dense
+rebasing. Only required remap materializations are inserted; ordinary prepared
+execution keeps its original plan. No allocation is sized by a sparse external
+input's physical span. Shape, storage and resource budgets are checked before
+new buffers are created. Graph-owned cuBLAS handles have a checked 256-byte-aligned
+workspace, configured after their stream, with host alpha/beta constants.
+
+`CudaCaptureOptions` contains preparation budgets, `max_owned_bytes` and optional
+`cublas_workspace_bytes`. The total includes dense slots and empty sentinels,
+scratch padding, captured and transfer metadata, and workspace alignment padding.
+Driver graph/module/library bookkeeping is excluded. `stats()` reports these
+bytes and the additional input/output copy launches; these are allocation
+contracts, not measured peak memory. `run_typed_into` creates no adapter device
+buffers or events, uploads no metadata, and performs one graph launch.
+
+Warmup and graph upload finish before capture preparation returns. The program
+owns modules, all captured buffers, metadata and library resources until replay
+completion. Drop synchronizes both streams and destroys graph handles first.
+If completion cannot be established after a driver error, it retains the private
+owners rather than free potentially referenced storage. Enqueue/synchronize
+failures poison replay; validation failures leave the graph reusable. Raw graph
+access is serialized, and the wrapper is neither `Send` nor `Sync`.
+
+The [standalone graph example](examples/graph.rs) replays changed resident input.
+Graph capture does not establish a speedup or Tensor Core instruction selection.
+Native capture/replay, failure recovery and Compute Sanitizer remain required
+qualification on NVIDIA hardware.
 
 ### Reductions and vectors
 
@@ -341,6 +426,42 @@ vector-matrix products remove the inserted row axis. Leading batches broadcast
 for either vector case. Zero-length vector dot products return scalar zero;
 scalar operands remain invalid. Precision policy and cuBLAS dimension limits
 are unchanged.
+
+### Reusable statistics and attention
+
+See the [CUDA/MLX statistics and attention qualification](../../docs/qualification/tensor-prepared-statistics-2026-09-27.md) for current checks and hardware limits.
+
+The builder records `softmax`, `log_softmax`, `logsumexp`, population `moments`,
+`layer_norm` and `attention`. Low inputs expose `_low_f32` results and `_low`
+results with one final cast. Attention keeps f32 additive/u32 keep masks,
+grouped query heads, broadcast batches and signed causal offsets.
+
+CUDA retains f64 row summaries/partials and the attention accumulator during
+preparation. All physical bytes count against the scratch limit; f64 is internal
+kernel state in prepared programs. Public eager f64 tensors use the separate
+`TensorF64Backend` contract below. Singleton and zero-key results are
+initialized on every replay. The ordinary eager API uses the same launch helpers.
+
+```rust,no_run
+use compute_cuda::{CudaPrepareOptions, CudaRuntime};
+use tensor_core::{AttentionMask, AttentionOptions, Layout, Shape, TensorBackend};
+
+let cuda = CudaRuntime::new()?;
+let shape = Shape::new(vec![2, 2])?;
+let mut graph = cuda.program();
+let x = graph.input(Layout::contiguous(shape.clone())?)?;
+let probabilities = graph.softmax(x, &[1])?;
+let attended = graph.attention(probabilities, probabilities, x,
+    AttentionMask::None, AttentionOptions::default())?;
+let normalized = graph.layer_norm(attended, &[1], 1e-5)?;
+let moments = graph.moments(attended, &[1], false)?;
+let mut program = graph.prepare(&[normalized, moments.mean, moments.variance],
+    CudaPrepareOptions::default())?;
+let input = cuda.upload_f32(shape, &[1., 2., 3., 4.])?;
+let outputs = program.run(&[&input])?;
+program.synchronize()?;
+# Ok::<(), Box<dyn std::error::Error>>(())
+```
 
 ### Stable statistics and normalization
 
@@ -714,7 +835,7 @@ The shared low-attention fixture also checks GQA/broadcasts and final low roundi
 
 ```sh
 cargo test --manifest-path crates/Cargo.toml -p compute-cuda -- --nocapture
-CUDA_REQUIRED=1 cargo test --manifest-path crates/Cargo.toml -p compute-cuda --test cuda_tensor --test prepared --test prepared_typed --test prepared_indexing -- --test-threads=1 --nocapture
+CUDA_REQUIRED=1 cargo test --manifest-path crates/Cargo.toml -p compute-cuda -- --test-threads=1 --nocapture
 ```
 
 `COMPUTE_REQUIRE_CUDA=1` is an equivalent hardware gate.
@@ -733,3 +854,69 @@ all 52 entry points and their parameter widths were checked in the
 logs and reproduction. CUDA execution, cuBLAS results, numerical checks on
 NVIDIA and performance measurements still require the mandatory hardware run
 above. No CUDA speedup is claimed.
+
+
+## Native binary64 tensors
+
+`TensorF64Backend` exposes `CudaTensor<f64>` with double-precision unary/binary
+arithmetic, reductions and mean, views, matrix products and explicit evaluation.
+`f64_support()` reports `Float64Support::Native`. A missing CUDA/cuBLAS library
+returns an error; this path does not convert to f32 or run arithmetic on the CPU.
+
+The cuBLAS path uses `CUDA_R_64F` for both operands/output and double alpha/beta,
+with `CUBLAS_COMPUTE_64F_PEDANTIC`. This follows the
+[cuBLAS 12.8 compute/scale type contract](https://docs.nvidia.com/cuda/archive/12.8.0/cublas/index.html#cublasgemmex).
+The shared GEMM planner validates eight-byte output extents, and typed launch
+validation rejects mismatched output/compute modes. No Tensor Core speedup is
+claimed for this path. Parallel reductions and transcendental functions do not
+promise bit-identical CPU results. Finite intermediates and valid unary domains
+are required; sum and sum-based mean can overflow even for finite inputs.
+
+```rust,no_run
+use compute_cuda::CudaRuntime;
+use tensor_core::{BinaryOp, Shape, TensorF64Backend};
+# fn main() -> Result<(), Box<dyn std::error::Error>> {
+let runtime = CudaRuntime::new()?;
+let a = runtime.upload_f64(Shape::new(vec![2])?, &[100_000_000., 100_000_001.])?;
+let origin = runtime.upload_f64(Shape::new(vec![])?, &[100_000_000.])?;
+let delta = runtime.binary_f64(BinaryOp::Subtract, &a, &origin)?;
+assert_eq!(runtime.read_f64(&delta)?, [0., 1.]);
+# Ok(()) }
+```
+
+`math_core::tensor::TensorMathF64` composes this contract for resident transforms,
+bounds, pair distances and centered covariance without narrowing coordinates.
+F64 stable statistics, attention, convolution and prepared/graph APIs remain
+open. WGSL/MLX binary64 arithmetic remains unsupported.
+
+Run the required hardware fixtures with:
+
+```sh
+COMPUTE_REQUIRE_CUDA=1 cargo test --manifest-path crates/Cargo.toml -p compute-cuda --test float64 -- --nocapture
+COMPUTE_REQUIRE_CUDA=1 cargo test --manifest-path crates/Cargo.toml -p osv-math --features tensor-cuda --test tensor_f64 -- --nocapture
+```
+
+The [qualification report](../../docs/qualification/tensor-float64-2026-09-27.md)
+records NVRTC/host evidence separately from the missing NVIDIA execution proof.
+
+
+### Binary64 indexing, scans and scatter
+
+`TensorF64IndexBackend` provides comparisons, selection with u32 masks, prefix
+sums, gather and stable compaction. `TensorF64ScatterBackend` adds Replace, Add,
+Multiply, Min and Max. All reuse the ordinary shape, broadcast, offset, count
+and ownership contracts. Gather/scatter return resident invalid-index counts;
+compaction returns full capacity with a selected prefix and resident count.
+
+The f64 specializations use the existing traversal kernels and scan tree;
+every scan total and carry is double precision. Scatter folds use 64-bit CAS,
+with double arithmetic and bitwise retry termination. Replace elects the last
+logical index deterministically. Arithmetic fold order may vary; inputs and
+intermediates must be finite. Min/max preserve `-0 < +0`. Copy, select, gather,
+compact and Replace preserve raw binary64 payloads, including NaN payloads.
+
+These APIs currently use eager CUDA execution; they do not add f64 slots to
+prepared programs or CUDA Graph. The
+[qualification](../../docs/qualification/tensor-float64-indexing-2026-09-27.md)
+contains the required-device command and distinguishes compile proof from GPU
+execution. Numerical qualification still requires NVIDIA hardware.

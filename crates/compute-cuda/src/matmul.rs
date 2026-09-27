@@ -9,7 +9,11 @@ use gpu_compute::cuda::{
 use std::sync::Arc;
 use tensor_core::{LowDtype, MatmulPlan, MatmulPrecision, TensorBackend};
 
+mod capture;
 mod plan;
+pub(crate) use capture::{
+    CaptureBlas, capture_default_workspace_bytes, capture_workspace_allocation_bytes,
+};
 pub(crate) use plan::GemmPlan;
 
 /// A checked descriptor and numerical mode retained on its preparation stream.
@@ -20,10 +24,22 @@ pub(crate) struct PreparedGemm {
     input_type: sys::cudaDataType_t,
     compute_type: sys::cublasComputeType_t,
     stream: Arc<CudaStream>,
+    capture_blas: Option<Arc<CaptureBlas>>,
 }
 impl PreparedGemm {
     pub(crate) fn plan(&self) -> &GemmPlan {
         &self.plan
+    }
+    /// Attach the graph-private handle before warmup/capture. Precision and
+    /// input storage modes stay those validated by ordinary preparation.
+    pub(crate) fn attach_capture_blas(&mut self, owner: Arc<CaptureBlas>) -> Result<(), CudaError> {
+        if owner.stream() != &self.stream {
+            return Err(CudaError::InvalidInput(
+                "capture cuBLAS stream differs from prepared GEMM",
+            ));
+        }
+        self.capture_blas = Some(owner);
+        Ok(())
     }
 }
 
@@ -141,7 +157,7 @@ impl CudaRuntime {
         Ok(output)
     }
 
-    fn prepare_gemm(
+    pub(crate) fn prepare_gemm(
         &self,
         plan: GemmPlan,
         input_type: sys::cudaDataType_t,
@@ -158,17 +174,20 @@ impl CudaRuntime {
             input_type,
             compute_type,
             stream: self.device.stream.clone(),
+            capture_blas: None,
         })
     }
 
-    fn launch_gemm<T: DeviceRepr>(
+    pub(crate) fn launch_gemm<T: DeviceRepr, O: GemmOutput>(
         &self,
         prepared: &PreparedGemm,
         left: &CudaSlice<T>,
         right: &CudaSlice<T>,
-        output: &mut CudaSlice<f32>,
+        output: &mut CudaSlice<O>,
     ) -> Result<(), CudaError> {
         validate_input_width::<T>(prepared.input_type)?;
+        O::validate(prepared.input_type, prepared.compute_type)?;
+        crate::runtime::validate_logical_size::<O>(prepared.plan.output())?;
         if prepared.stream != self.device.stream
             || left.context() != &self.device.context
             || right.context() != &self.device.context
@@ -184,12 +203,24 @@ impl CudaRuntime {
         let Some(dimensions) = prepared.plan.dimensions() else {
             return Ok(());
         };
-        let blas = self.blas.get().ok_or(CudaError::InvalidInput(
-            "GEMM was not prepared on this runtime",
-        ))?;
+        let capture_handle = prepared
+            .capture_blas
+            .as_ref()
+            .map(|owner| owner.lock())
+            .transpose()?;
+        let handle = match &capture_handle {
+            Some(guard) => guard.raw(),
+            None => *self
+                .blas
+                .get()
+                .ok_or(CudaError::InvalidInput(
+                    "GEMM was not prepared on this runtime",
+                ))?
+                .handle(),
+        };
         self.device.context.bind_to_thread()?;
-        let alpha = 1f32;
-        let beta = 0f32;
+        let alpha = O::ONE;
+        let beta = O::ZERO;
         for index in 0..prepared.plan.calls() {
             let batch = prepared.plan.batch(index)?;
             let a = left.slice(batch.left);
@@ -203,22 +234,22 @@ impl CudaRuntime {
             // guards register accesses on the same stream as eager execution.
             unsafe {
                 result::gemm_ex(
-                    *blas.handle(),
+                    handle,
                     sys::cublasOperation_t::CUBLAS_OP_N,
                     sys::cublasOperation_t::CUBLAS_OP_N,
                     dimensions.m,
                     dimensions.n,
                     dimensions.k,
-                    (&alpha as *const f32).cast(),
+                    (&alpha as *const O).cast(),
                     b_ptr as *const _,
                     prepared.input_type,
                     dimensions.lda,
                     a_ptr as *const _,
                     prepared.input_type,
                     dimensions.ldb,
-                    (&beta as *const f32).cast(),
+                    (&beta as *const O).cast(),
                     out_ptr as *mut _,
-                    sys::cudaDataType_t::CUDA_R_32F,
+                    O::DTYPE,
                     dimensions.ldc,
                     prepared.compute_type,
                     sys::cublasGemmAlgo_t::CUBLAS_GEMM_DEFAULT,
@@ -238,6 +269,7 @@ fn low_input_type(dtype: LowDtype) -> sys::cudaDataType_t {
 fn validate_input_width<T>(input_type: sys::cudaDataType_t) -> Result<(), CudaError> {
     let width = match input_type {
         sys::cudaDataType_t::CUDA_R_32F => 4,
+        sys::cudaDataType_t::CUDA_R_64F => 8,
         sys::cudaDataType_t::CUDA_R_16F | sys::cudaDataType_t::CUDA_R_16BF => 2,
         _ => return Err(CudaError::InvalidInput("unsupported GEMM input type")),
     };
@@ -249,6 +281,63 @@ fn validate_input_width<T>(input_type: sys::cudaDataType_t) -> Result<(), CudaEr
     Ok(())
 }
 
+/// Private implementations keep cuBLAS scalar pointers, output storage and
+/// compute mode coupled. A 64-bit input cannot accidentally use f32 alpha/beta.
+pub(crate) trait GemmOutput: DeviceRepr {
+    const ONE: Self;
+    const ZERO: Self;
+    const DTYPE: sys::cudaDataType_t;
+    fn validate(
+        input: sys::cudaDataType_t,
+        compute: sys::cublasComputeType_t,
+    ) -> Result<(), CudaError>;
+}
+impl GemmOutput for f32 {
+    const ONE: Self = 1.;
+    const ZERO: Self = 0.;
+    const DTYPE: sys::cudaDataType_t = sys::cudaDataType_t::CUDA_R_32F;
+    fn validate(
+        input: sys::cudaDataType_t,
+        compute: sys::cublasComputeType_t,
+    ) -> Result<(), CudaError> {
+        use sys::{cublasComputeType_t::*, cudaDataType_t::*};
+        if matches!(input, CUDA_R_32F | CUDA_R_16F | CUDA_R_16BF)
+            && matches!(
+                compute,
+                CUBLAS_COMPUTE_32F
+                    | CUBLAS_COMPUTE_32F_PEDANTIC
+                    | CUBLAS_COMPUTE_32F_FAST_TF32
+                    | CUBLAS_COMPUTE_32F_FAST_16F
+                    | CUBLAS_COMPUTE_32F_FAST_16BF
+            )
+        {
+            Ok(())
+        } else {
+            Err(CudaError::InvalidInput(
+                "GEMM f32 output requires f32 computation",
+            ))
+        }
+    }
+}
+impl GemmOutput for f64 {
+    const ONE: Self = 1.;
+    const ZERO: Self = 0.;
+    const DTYPE: sys::cudaDataType_t = sys::cudaDataType_t::CUDA_R_64F;
+    fn validate(
+        input: sys::cudaDataType_t,
+        compute: sys::cublasComputeType_t,
+    ) -> Result<(), CudaError> {
+        if input == Self::DTYPE && compute == sys::cublasComputeType_t::CUBLAS_COMPUTE_64F_PEDANTIC
+        {
+            Ok(())
+        } else {
+            Err(CudaError::InvalidInput(
+                "GEMM f64 output requires native f64 inputs and pedantic computation",
+            ))
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -256,6 +345,14 @@ mod tests {
     fn gemm_storage_types_match_the_cublas_abi() {
         use sys::cudaDataType_t::*;
         assert!(validate_input_width::<f32>(CUDA_R_32F).is_ok());
+        assert!(validate_input_width::<f64>(CUDA_R_64F).is_ok());
+        assert!(validate_input_width::<f32>(CUDA_R_64F).is_err());
+        assert!(validate_input_width::<f64>(CUDA_R_32F).is_err());
+        use sys::cublasComputeType_t::*;
+        assert!(<f64 as GemmOutput>::validate(CUDA_R_64F, CUBLAS_COMPUTE_64F_PEDANTIC).is_ok());
+        assert!(<f64 as GemmOutput>::validate(CUDA_R_64F, CUBLAS_COMPUTE_32F).is_err());
+        assert!(<f64 as GemmOutput>::validate(CUDA_R_32F, CUBLAS_COMPUTE_64F_PEDANTIC).is_err());
+        assert!(<f32 as GemmOutput>::validate(CUDA_R_64F, CUBLAS_COMPUTE_64F_PEDANTIC).is_err());
         assert!(validate_input_width::<u16>(CUDA_R_16F).is_ok());
         assert!(validate_input_width::<u16>(CUDA_R_16BF).is_ok());
         assert!(validate_input_width::<f32>(CUDA_R_16BF).is_err());

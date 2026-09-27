@@ -667,6 +667,15 @@ pub(crate) fn export_buffers(id: u32) -> Result<crate::CadMeshBuffer> {
         face_ids: face_ids(m)?,
     })
 }
+/// Admission before display-buffer allocation for a resumable analysis.
+pub(crate) fn check_analysis_triangle_budget(id: u32, limit: usize) -> Result<()> {
+    let shape = get(id)?;
+    if solid(&shape)?.indices.len() / 3 > limit {
+        return Err(input("Solid analysis triangle budget exceeded"));
+    }
+    Ok(())
+}
+
 /// Detach the registry-owned solid before preparing its display buffers.
 pub(crate) fn render_buffers(id: u32, crease_cosine: f64) -> Result<RenderMesh> {
     let shape = get(id)?;

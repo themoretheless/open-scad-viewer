@@ -1,0 +1,696 @@
+{
+  "checked_utc": "2026-09-27T12:06:32.348618+00:00",
+  "test_executables": {
+    "native/contracts": {
+      "Running unittests src/lib.rs": {
+        "passed_entries": 12,
+        "unavailable_skips": 0
+      },
+      "Running tests/attention.rs": {
+        "passed_entries": 3,
+        "unavailable_skips": 0
+      },
+      "Running tests/indexing.rs": {
+        "passed_entries": 4,
+        "unavailable_skips": 0
+      },
+      "Running tests/layout.rs": {
+        "passed_entries": 7,
+        "unavailable_skips": 0
+      },
+      "Running tests/low_attention.rs": {
+        "passed_entries": 2,
+        "unavailable_skips": 0
+      },
+      "Running tests/low_ops.rs": {
+        "passed_entries": 2,
+        "unavailable_skips": 0
+      },
+      "Running tests/low_scatter.rs": {
+        "passed_entries": 2,
+        "unavailable_skips": 0
+      },
+      "Running tests/reduction.rs": {
+        "passed_entries": 3,
+        "unavailable_skips": 0
+      },
+      "Running tests/scatter.rs": {
+        "passed_entries": 3,
+        "unavailable_skips": 0
+      },
+      "Running tests/statistics.rs": {
+        "passed_entries": 2,
+        "unavailable_skips": 0
+      },
+      "Doc-tests tensor_core": {
+        "passed_entries": 0,
+        "unavailable_skips": 0
+      }
+    },
+    "native/wgsl": {
+      "Running tests/evaluation.rs": {
+        "passed_entries": 1,
+        "unavailable_skips": 0
+      },
+      "Running tests/tensor.rs": {
+        "passed_entries": 10,
+        "unavailable_skips": 0
+      },
+      "Running tests/tensor_attention.rs": {
+        "passed_entries": 6,
+        "unavailable_skips": 0
+      },
+      "Running tests/tensor_backend.rs": {
+        "passed_entries": 2,
+        "unavailable_skips": 0
+      },
+      "Running tests/tensor_index.rs": {
+        "passed_entries": 5,
+        "unavailable_skips": 0
+      },
+      "Running tests/tensor_low.rs": {
+        "passed_entries": 4,
+        "unavailable_skips": 0
+      },
+      "Running tests/tensor_low_attention.rs": {
+        "passed_entries": 4,
+        "unavailable_skips": 0
+      },
+      "Running tests/tensor_low_index.rs": {
+        "passed_entries": 5,
+        "unavailable_skips": 0
+      },
+      "Running tests/tensor_low_normalization.rs": {
+        "passed_entries": 4,
+        "unavailable_skips": 0
+      },
+      "Running tests/tensor_low_ops.rs": {
+        "passed_entries": 6,
+        "unavailable_skips": 0
+      },
+      "Running tests/tensor_low_scatter.rs": {
+        "passed_entries": 5,
+        "unavailable_skips": 0
+      },
+      "Running tests/tensor_normalization.rs": {
+        "passed_entries": 5,
+        "unavailable_skips": 0
+      },
+      "Running tests/tensor_reduce.rs": {
+        "passed_entries": 6,
+        "unavailable_skips": 0
+      },
+      "Running tests/tensor_scatter.rs": {
+        "passed_entries": 4,
+        "unavailable_skips": 0
+      }
+    },
+    "native/mlx": {
+      "Running unittests src/lib.rs": {
+        "passed_entries": 9,
+        "unavailable_skips": 0
+      },
+      "Running tests/attention.rs": {
+        "passed_entries": 7,
+        "unavailable_skips": 0
+      },
+      "Running tests/compiled.rs": {
+        "passed_entries": 10,
+        "unavailable_skips": 0
+      },
+      "Running tests/compiled_attention.rs": {
+        "passed_entries": 6,
+        "unavailable_skips": 0
+      },
+      "Running tests/compiled_indexing.rs": {
+        "passed_entries": 6,
+        "unavailable_skips": 0
+      },
+      "Running tests/compiled_scan_compaction.rs": {
+        "passed_entries": 6,
+        "unavailable_skips": 0
+      },
+      "Running tests/compiled_scatter.rs": {
+        "passed_entries": 6,
+        "unavailable_skips": 0
+      },
+      "Running tests/compiled_statistics.rs": {
+        "passed_entries": 7,
+        "unavailable_skips": 0
+      },
+      "Running tests/compiled_typed.rs": {
+        "passed_entries": 19,
+        "unavailable_skips": 0
+      },
+      "Running tests/evaluation.rs": {
+        "passed_entries": 2,
+        "unavailable_skips": 0
+      },
+      "Running tests/index.rs": {
+        "passed_entries": 5,
+        "unavailable_skips": 0
+      },
+      "Running tests/low_attention.rs": {
+        "passed_entries": 4,
+        "unavailable_skips": 0
+      },
+      "Running tests/low_index.rs": {
+        "passed_entries": 4,
+        "unavailable_skips": 0
+      },
+      "Running tests/low_matmul.rs": {
+        "passed_entries": 8,
+        "unavailable_skips": 0
+      },
+      "Running tests/low_ops.rs": {
+        "passed_entries": 6,
+        "unavailable_skips": 0
+      },
+      "Running tests/low_precision.rs": {
+        "passed_entries": 5,
+        "unavailable_skips": 0
+      },
+      "Running tests/low_scatter.rs": {
+        "passed_entries": 3,
+        "unavailable_skips": 0
+      },
+      "Running tests/low_statistics.rs": {
+        "passed_entries": 4,
+        "unavailable_skips": 0
+      },
+      "Running tests/native.rs": {
+        "passed_entries": 6,
+        "unavailable_skips": 0
+      },
+      "Running tests/reduction.rs": {
+        "passed_entries": 6,
+        "unavailable_skips": 0
+      },
+      "Running tests/scatter.rs": {
+        "passed_entries": 5,
+        "unavailable_skips": 0
+      },
+      "Running tests/statistics.rs": {
+        "passed_entries": 6,
+        "unavailable_skips": 0
+      },
+      "Doc-tests compute_mlx": {
+        "passed_entries": 0,
+        "unavailable_skips": 0
+      }
+    },
+    "native/math-wgsl": {
+      "Running tests/tensor_math.rs": {
+        "passed_entries": 2,
+        "unavailable_skips": 0
+      }
+    },
+    "native/math-mlx": {
+      "Running tests/tensor_math.rs": {
+        "passed_entries": 2,
+        "unavailable_skips": 0
+      }
+    },
+    "math-cpu": {
+      "Running unittests src/lib.rs": {
+        "passed_entries": 68,
+        "unavailable_skips": 0
+      },
+      "Running tests/gpu_nearest_cooperative.rs": {
+        "passed_entries": 0,
+        "unavailable_skips": 0
+      },
+      "Running tests/gpu_plans.rs": {
+        "passed_entries": 0,
+        "unavailable_skips": 0
+      },
+      "Running tests/gpu_recorded_domains.rs": {
+        "passed_entries": 0,
+        "unavailable_skips": 0
+      },
+      "Running tests/gpu_stable_stats.rs": {
+        "passed_entries": 0,
+        "unavailable_skips": 0
+      },
+      "Running tests/tensor_math.rs": {
+        "passed_entries": 0,
+        "unavailable_skips": 0
+      },
+      "Doc-tests math_core": {
+        "passed_entries": 0,
+        "unavailable_skips": 0
+      }
+    },
+    "math-contracts": {
+      "Running unittests src/lib.rs": {
+        "passed_entries": 70,
+        "unavailable_skips": 0
+      }
+    },
+    "math-legacy-gpu": {
+      "Running unittests src/lib.rs": {
+        "passed_entries": 89,
+        "unavailable_skips": 0
+      },
+      "Running tests/gpu_nearest_cooperative.rs": {
+        "passed_entries": 3,
+        "unavailable_skips": 0
+      },
+      "Running tests/gpu_plans.rs": {
+        "passed_entries": 3,
+        "unavailable_skips": 0
+      },
+      "Running tests/gpu_recorded_domains.rs": {
+        "passed_entries": 5,
+        "unavailable_skips": 0
+      },
+      "Running tests/gpu_stable_stats.rs": {
+        "passed_entries": 4,
+        "unavailable_skips": 0
+      }
+    },
+    "cuda-host": {
+      "Running unittests src/lib.rs": {
+        "passed_entries": 151,
+        "unavailable_skips": 0
+      },
+      "Running tests/cuda_tensor.rs": {
+        "passed_entries": 1,
+        "unavailable_skips": 1
+      },
+      "Running tests/evaluation.rs": {
+        "passed_entries": 1,
+        "unavailable_skips": 1
+      },
+      "Running tests/graph.rs": {
+        "passed_entries": 2,
+        "unavailable_skips": 1
+      },
+      "Running tests/prepared.rs": {
+        "passed_entries": 1,
+        "unavailable_skips": 1
+      },
+      "Running tests/prepared_indexing.rs": {
+        "passed_entries": 1,
+        "unavailable_skips": 1
+      },
+      "Running tests/prepared_statistics.rs": {
+        "passed_entries": 2,
+        "unavailable_skips": 1
+      },
+      "Running tests/prepared_typed.rs": {
+        "passed_entries": 1,
+        "unavailable_skips": 1
+      },
+      "Doc-tests compute_cuda": {
+        "passed_entries": 6,
+        "unavailable_skips": 0
+      }
+    }
+  },
+  "source_files_verified": 578,
+  "changed_rust_files_formatted": 27,
+  "shader_files_unchanged_from_base": 146,
+  "cuda_kernel_source_parts_unchanged": 12,
+  "cuda_execution_qualified": false,
+  "tensor_core_instruction_use_proven": false,
+  "browser_execution_qualified": false,
+  "device_peak_memory_measured": false,
+  "performance_claim": false,
+  "local_links": [
+    {
+      "document": "docs/qualification/tensor-domain-math-2026-09-27.md",
+      "target": "crates/math-core/src/tensor/mod.rs"
+    },
+    {
+      "document": "docs/qualification/tensor-domain-math-2026-09-27.md",
+      "target": "crates/tensor-core/src/evaluation.rs"
+    },
+    {
+      "document": "docs/qualification/tensor-domain-math-2026-09-27.md",
+      "target": "docs/qualification/tensor-domain-math-2026-09-27/diagnostics/centroid-rounding.txt"
+    },
+    {
+      "document": "docs/qualification/tensor-domain-math-2026-09-27.md",
+      "target": "docs/qualification/tensor-domain-math-2026-09-27/checks.json"
+    },
+    {
+      "document": "docs/qualification/tensor-domain-math-2026-09-27.md",
+      "target": "docs/qualification/tensor-domain-math-2026-09-27/native/contracts.txt"
+    },
+    {
+      "document": "docs/qualification/tensor-domain-math-2026-09-27.md",
+      "target": "docs/qualification/tensor-domain-math-2026-09-27/native/wgsl.txt"
+    },
+    {
+      "document": "docs/qualification/tensor-domain-math-2026-09-27.md",
+      "target": "docs/qualification/tensor-domain-math-2026-09-27/native/mlx.txt"
+    },
+    {
+      "document": "docs/qualification/tensor-domain-math-2026-09-27.md",
+      "target": "docs/qualification/tensor-domain-math-2026-09-27/native/math-wgsl.txt"
+    },
+    {
+      "document": "docs/qualification/tensor-domain-math-2026-09-27.md",
+      "target": "docs/qualification/tensor-domain-math-2026-09-27/native/math-mlx.txt"
+    },
+    {
+      "document": "docs/qualification/tensor-domain-math-2026-09-27.md",
+      "target": "docs/qualification/tensor-domain-math-2026-09-27/math-cpu.txt"
+    },
+    {
+      "document": "docs/qualification/tensor-domain-math-2026-09-27.md",
+      "target": "docs/qualification/tensor-domain-math-2026-09-27/math-contracts.txt"
+    },
+    {
+      "document": "docs/qualification/tensor-domain-math-2026-09-27.md",
+      "target": "docs/qualification/tensor-domain-math-2026-09-27/math-legacy-gpu.txt"
+    },
+    {
+      "document": "docs/qualification/tensor-domain-math-2026-09-27.md",
+      "target": "docs/qualification/tensor-domain-math-2026-09-27/example-wgsl.txt"
+    },
+    {
+      "document": "docs/qualification/tensor-domain-math-2026-09-27.md",
+      "target": "docs/qualification/tensor-domain-math-2026-09-27/example-mlx.txt"
+    },
+    {
+      "document": "docs/qualification/tensor-domain-math-2026-09-27.md",
+      "target": "docs/qualification/tensor-domain-math-2026-09-27/cuda-host.txt"
+    },
+    {
+      "document": "docs/qualification/tensor-domain-math-2026-09-27.md",
+      "target": "docs/qualification/tensor-domain-math-2026-09-27/cuda-evaluation-required.txt"
+    },
+    {
+      "document": "docs/qualification/tensor-domain-math-2026-09-27.md",
+      "target": "docs/qualification/tensor-domain-math-2026-09-27/math-cuda-required.txt"
+    },
+    {
+      "document": "docs/qualification/tensor-domain-math-2026-09-27.md",
+      "target": "docs/qualification/tensor-domain-math-2026-09-27/clippy.txt"
+    },
+    {
+      "document": "docs/qualification/tensor-domain-math-2026-09-27.md",
+      "target": "docs/qualification/tensor-domain-math-2026-09-27/rustdoc.txt"
+    },
+    {
+      "document": "docs/qualification/tensor-domain-math-2026-09-27.md",
+      "target": "docs/qualification/tensor-domain-math-2026-09-27/wasm-check.txt"
+    },
+    {
+      "document": "docs/qualification/tensor-domain-math-2026-09-27.md",
+      "target": "docs/qualification/tensor-domain-math-2026-09-27/artifact-audit.json"
+    },
+    {
+      "document": "docs/qualification/tensor-domain-math-2026-09-27.md",
+      "target": "docs/qualification/tensor-domain-math-2026-09-27/source-fingerprints.json"
+    },
+    {
+      "document": "docs/qualification/tensor-domain-math-2026-09-27.md",
+      "target": "docs/qualification/tensor-domain-math-2026-09-27/artifact-audit.json"
+    },
+    {
+      "document": "docs/qualification/tensor-domain-math-2026-09-27.md",
+      "target": "docs/qualification/tensor-domain-math-2026-09-27/kernel-source-reuse.json"
+    },
+    {
+      "document": "crates/math-core/README.md",
+      "target": "docs/design/gpu-library-architecture.md"
+    },
+    {
+      "document": "crates/math-core/README.md",
+      "target": "crates/math-core/examples/resident_geometry.rs"
+    },
+    {
+      "document": "crates/math-core/README.md",
+      "target": "scripts/qualify-tensor-backends.py"
+    },
+    {
+      "document": "crates/math-core/README.md",
+      "target": "crates/math-core/benchmarks/stable-stats-metal.md"
+    },
+    {
+      "document": "crates/math-core/README.md",
+      "target": "crates/math-core/benchmarks/nearest-neighbor-metal.md"
+    },
+    {
+      "document": "docs/design/gpu-library-architecture.md",
+      "target": "docs/design/tensor-backends-2026-09-27.md"
+    },
+    {
+      "document": "docs/design/gpu-library-architecture.md",
+      "target": "docs/qualification/shader-compute-2026-09-27.md"
+    },
+    {
+      "document": "docs/design/gpu-library-architecture.md",
+      "target": "docs/design/tensor-backends-2026-09-27.md"
+    },
+    {
+      "document": "docs/design/tensor-backends-2026-09-27.md",
+      "target": "docs/qualification/tensor-domain-math-2026-09-27.md"
+    },
+    {
+      "document": "docs/design/tensor-backends-2026-09-27.md",
+      "target": "crates/compute-core/benchmarks/tensor-low-scatter-contracts.md"
+    },
+    {
+      "document": "docs/design/tensor-backends-2026-09-27.md",
+      "target": "docs/qualification/tensor-low-scatter-2026-09-27.md"
+    },
+    {
+      "document": "docs/design/tensor-backends-2026-09-27.md",
+      "target": "docs/qualification/tensor-low-matmul-2026-09-27.md"
+    },
+    {
+      "document": "docs/design/tensor-backends-2026-09-27.md",
+      "target": "docs/qualification/tensor-low-statistics-2026-09-27.md"
+    },
+    {
+      "document": "docs/design/tensor-backends-2026-09-27.md",
+      "target": "docs/qualification/tensor-low-attention-2026-09-27.md"
+    },
+    {
+      "document": "docs/design/tensor-backends-2026-09-27.md",
+      "target": "crates/compute-mlx/README.md"
+    },
+    {
+      "document": "docs/design/tensor-backends-2026-09-27.md",
+      "target": "crates/compute-mlx/qualification/native-metal.txt"
+    },
+    {
+      "document": "docs/design/tensor-backends-2026-09-27.md",
+      "target": "crates/compute-cuda/qualification/nvrtc-12.8.93-linux-aarch64-typed-programs/report.json"
+    },
+    {
+      "document": "docs/design/tensor-backends-2026-09-27.md",
+      "target": "crates/compute-cuda/qualification/README.md"
+    },
+    {
+      "document": "docs/design/tensor-backends-2026-09-27.md",
+      "target": "docs/qualification/tensor-indexing-2026-09-27.md"
+    },
+    {
+      "document": "docs/design/tensor-backends-2026-09-27.md",
+      "target": "docs/qualification/tensor-reductions-2026-09-27.md"
+    },
+    {
+      "document": "docs/design/tensor-backends-2026-09-27.md",
+      "target": "docs/qualification/tensor-scatter-2026-09-27.md"
+    },
+    {
+      "document": "docs/design/tensor-backends-2026-09-27.md",
+      "target": "docs/qualification/tensor-low-precision-2026-09-27.md"
+    },
+    {
+      "document": "docs/design/tensor-backends-2026-09-27.md",
+      "target": "docs/qualification/tensor-statistics-2026-09-27.md"
+    },
+    {
+      "document": "docs/design/tensor-backends-2026-09-27.md",
+      "target": "docs/qualification/tensor-attention-2026-09-27.md"
+    },
+    {
+      "document": "docs/design/tensor-backends-2026-09-27.md",
+      "target": "docs/qualification/tensor-low-ops-2026-09-27.md"
+    },
+    {
+      "document": "docs/design/tensor-backends-2026-09-27.md",
+      "target": "docs/qualification/tensor-low-indexing-2026-09-27.md"
+    },
+    {
+      "document": "docs/design/tensor-backends-2026-09-27.md",
+      "target": "docs/design/cuda-reusable-execution-2026-09-27.md"
+    },
+    {
+      "document": "docs/design/tensor-backends-2026-09-27.md",
+      "target": "docs/qualification/tensor-mlx-programs-2026-09-27.md"
+    },
+    {
+      "document": "docs/design/tensor-backends-2026-09-27.md",
+      "target": "docs/qualification/tensor-mlx-typed-programs-2026-09-27.md"
+    },
+    {
+      "document": "docs/design/tensor-backends-2026-09-27.md",
+      "target": "docs/qualification/tensor-mlx-index-programs-2026-09-27.md"
+    },
+    {
+      "document": "docs/design/tensor-backends-2026-09-27.md",
+      "target": "docs/qualification/tensor-cuda-index-programs-2026-09-27.md"
+    },
+    {
+      "document": "docs/design/tensor-backends-2026-09-27.md",
+      "target": "docs/qualification/tensor-cuda-typed-programs-2026-09-27.md"
+    },
+    {
+      "document": "docs/design/tensor-backends-2026-09-27.md",
+      "target": "docs/qualification/tensor-cuda-programs-2026-09-27.md"
+    },
+    {
+      "document": "docs/design/tensor-backends-2026-09-27.md",
+      "target": "docs/qualification/tensor-cuda-graphs-2026-09-27.md"
+    },
+    {
+      "document": "docs/design/tensor-backends-2026-09-27.md",
+      "target": "docs/qualification/tensor-prepared-statistics-2026-09-27.md"
+    }
+  ],
+  "artifacts": {
+    "crates/math-core/README.md": {
+      "bytes": 30677,
+      "sha256": "adc6fedf1c4ece863f62c6ffb12d0e9d2811c44f0089b50858fe0102e0b9ea60"
+    },
+    "docs/design/gpu-library-architecture.md": {
+      "bytes": 23065,
+      "sha256": "86561f3693cf14d230eee669c77c8a8c946b0c534467cf47aef35b382c471e1b"
+    },
+    "docs/design/tensor-backends-2026-09-27.md": {
+      "bytes": 37243,
+      "sha256": "5ed6868a73880b9aec2f92bf6c8fb13512b8a1110fda05f75dc7d25cfed3b695"
+    },
+    "docs/qualification/tensor-domain-math-2026-09-27/architecture.txt": {
+      "bytes": 72,
+      "sha256": "908d4930fdc094c7934bfd8873bf2aac41b3cbda16c3d7df1db468260215de2c"
+    },
+    "docs/qualification/tensor-domain-math-2026-09-27/checks.json": {
+      "bytes": 11532,
+      "sha256": "b9acd4ec2ece2ee171501c767fe7ceb3014c16ddc82a43c9d421c367148f3bcd"
+    },
+    "docs/qualification/tensor-domain-math-2026-09-27/clippy-contracts.txt": {
+      "bytes": 682,
+      "sha256": "354427e0d3cd07aab77cc15daf15ea2622e2767c581008dfacf461242cac70d4"
+    },
+    "docs/qualification/tensor-domain-math-2026-09-27/clippy-cpu.txt": {
+      "bytes": 682,
+      "sha256": "eb34ed85245f670e7b9f93d52acdd41f18b4a59e448255dfca76d2d9abba03b0"
+    },
+    "docs/qualification/tensor-domain-math-2026-09-27/clippy.txt": {
+      "bytes": 1126,
+      "sha256": "75a1e4ace0acb0061c62e9aa631b40075e9a84167a2e78fc4e7ec1f6d7bb62c2"
+    },
+    "docs/qualification/tensor-domain-math-2026-09-27/cuda-evaluation-required.txt": {
+      "bytes": 1366,
+      "sha256": "5342b9a24cb6428227d0ed85c5fd0a97b1c591274d1228addaec03af6107aeac"
+    },
+    "docs/qualification/tensor-domain-math-2026-09-27/cuda-host.txt": {
+      "bytes": 21050,
+      "sha256": "ba52eb5696c56b9b9b68d62b1a9f42985e16c2947e3863feb2dc9a7ef7d36215"
+    },
+    "docs/qualification/tensor-domain-math-2026-09-27/diagnostics/centroid-rounding.py": {
+      "bytes": 1474,
+      "sha256": "509f4f9764ea3af0082645f31f63f14d62e2e6e9a0bcb847665b9780a4eba486"
+    },
+    "docs/qualification/tensor-domain-math-2026-09-27/diagnostics/centroid-rounding.txt": {
+      "bytes": 631,
+      "sha256": "ea0849b95ae07e35f291da8f4ba0eacc2ac050ef99f5236ee7cb07ae32063b68"
+    },
+    "docs/qualification/tensor-domain-math-2026-09-27/diagnostics/mlx-initial-failure.txt": {
+      "bytes": 1594,
+      "sha256": "bad2f518a6ac2c7e66e3dda4590a2f9294c737181ddb067fed1a1459963e9d77"
+    },
+    "docs/qualification/tensor-domain-math-2026-09-27/diagnostics/wgsl-initial-failure.txt": {
+      "bytes": 1620,
+      "sha256": "2977922df1c3a68f34220866d8332a7d9e1389ac4c3667abf9f367f70c9f8e50"
+    },
+    "docs/qualification/tensor-domain-math-2026-09-27/example-mlx.txt": {
+      "bytes": 876,
+      "sha256": "211d273acdce97c76ddef6dc7126cae423b0685d78002ffc134a62f7ed7076b5"
+    },
+    "docs/qualification/tensor-domain-math-2026-09-27/example-wgsl.txt": {
+      "bytes": 878,
+      "sha256": "255d64d1a26ccc3c0cdd0035b21685910421f2258ebcb6cc671805e76975b8dd"
+    },
+    "docs/qualification/tensor-domain-math-2026-09-27/format.txt": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "docs/qualification/tensor-domain-math-2026-09-27/kernel-source-reuse.json": {
+      "bytes": 10246,
+      "sha256": "8c3dd0f268744f7682db889a130c72250122db84a59b1d5d09d82ee3fefb22fd"
+    },
+    "docs/qualification/tensor-domain-math-2026-09-27/math-contracts.txt": {
+      "bytes": 6336,
+      "sha256": "5436adc040bfe554c1271adf6f6fa1309c064b6c706dae27cbe9cb233dcdbdcd"
+    },
+    "docs/qualification/tensor-domain-math-2026-09-27/math-cpu.txt": {
+      "bytes": 7500,
+      "sha256": "09bdcdf59588256d82c07f681e03a2230dc3e9523667d543248e295be2b7a9e2"
+    },
+    "docs/qualification/tensor-domain-math-2026-09-27/math-cuda-required.txt": {
+      "bytes": 1598,
+      "sha256": "1d0c69798e7af25b3965b0441bcc90e6990d26ac3f6e2c86c5ca708cb3bbf383"
+    },
+    "docs/qualification/tensor-domain-math-2026-09-27/math-legacy-gpu.txt": {
+      "bytes": 10034,
+      "sha256": "cc99bd34faa59ce0dff9cb73ad90e6b07888944bf385c7e92b6c27ff116aafd5"
+    },
+    "docs/qualification/tensor-domain-math-2026-09-27/native/contracts.txt": {
+      "bytes": 6713,
+      "sha256": "266d68757db4f7dde1a12db2b76c7c7bc17374daa3837f3ca8f6c1539513f346"
+    },
+    "docs/qualification/tensor-domain-math-2026-09-27/native/math-mlx.txt": {
+      "bytes": 1407,
+      "sha256": "8c3e5a9a9dca22474e5ba850307c48072a381a8aa6ac2b513d82d2ab4fea791d"
+    },
+    "docs/qualification/tensor-domain-math-2026-09-27/native/math-wgsl.txt": {
+      "bytes": 1600,
+      "sha256": "041659cd2ff699ea8c75471a970ebadcc1f6a3da270ced3df4d8c88bc0565003"
+    },
+    "docs/qualification/tensor-domain-math-2026-09-27/native/mlx.txt": {
+      "bytes": 17851,
+      "sha256": "84a1d9144b6d7d970507d586cb507c65931404030cd8c8848dae609cc428f598"
+    },
+    "docs/qualification/tensor-domain-math-2026-09-27/native/report.json": {
+      "bytes": 3556,
+      "sha256": "7df763a085ba55ff522d29494a3234c660b0a4db9e8926c8c99d48e4cc900e30"
+    },
+    "docs/qualification/tensor-domain-math-2026-09-27/native/wgsl.txt": {
+      "bytes": 10436,
+      "sha256": "88165bb7ac743d42f153f1dc62fb4e266d10cf3342112054d32bcf8589105374"
+    },
+    "docs/qualification/tensor-domain-math-2026-09-27/native.txt": {
+      "bytes": 799,
+      "sha256": "02eaca9a87d51168b8f1aff812e96ca5a65994df4395a697f04021ceffa4610e"
+    },
+    "docs/qualification/tensor-domain-math-2026-09-27/rustdoc.txt": {
+      "bytes": 1368,
+      "sha256": "301dde9f3d8aff7d491923ba296176f279b3ea81c542aa895e1278e1922c8a10"
+    },
+    "docs/qualification/tensor-domain-math-2026-09-27/source-fingerprints.json": {
+      "bytes": 95467,
+      "sha256": "555d7f0919322d2b91846252603623006fc5a865b5f337938b9d240f1efd1e52"
+    },
+    "docs/qualification/tensor-domain-math-2026-09-27/wasm-check.txt": {
+      "bytes": 794,
+      "sha256": "b52344d40ea0dc4cf39d55df22c176899a84be371d3c70b43e10d518b3f3283f"
+    },
+    "docs/qualification/tensor-domain-math-2026-09-27/whitespace.txt": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "docs/qualification/tensor-domain-math-2026-09-27.md": {
+      "bytes": 7620,
+      "sha256": "1a36ff1859b475efd95b949b4d086ebc4c16b9dddfa18f51a1ddacd0f0bc8301"
+    }
+  }
+}

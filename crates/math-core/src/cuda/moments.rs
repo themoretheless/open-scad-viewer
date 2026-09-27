@@ -74,7 +74,7 @@ impl CudaPointMoments {
         let mut partials = vec![0f32; partial_count * 9];
         stream.memcpy_dtoh(&out_view, &mut partials).ok()?;
         let mut accum = [0.; 9];
-        for chunk in partials.chunks_exact(9) {
+        for chunk in partials.as_chunks::<9>().0 {
             for item in 0..9 {
                 accum[item] += chunk[item] as f64;
             }
@@ -178,7 +178,7 @@ impl CudaPointCloudStats {
         let mut min = [f64::INFINITY; 3];
         let mut max = [f64::NEG_INFINITY; 3];
         let mut accum = [0.; 9];
-        for chunk in partials.chunks_exact(15) {
+        for chunk in partials.as_chunks::<15>().0 {
             for axis in 0..3 {
                 min[axis] = min[axis].min(chunk[axis] as f64);
                 max[axis] = max[axis].max(chunk[axis + 3] as f64);

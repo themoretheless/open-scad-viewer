@@ -47,16 +47,6 @@ pub(super) fn transformed_reduction_source(
         .replace("TRANSFORM", transform)
 }
 
-pub(super) struct LowReductionPlan {
-    pub input: MlxTensor,
-    geometry: LowReductionGeometry,
-}
-impl std::ops::Deref for LowReductionPlan {
-    type Target = LowReductionGeometry;
-    fn deref(&self) -> &Self::Target {
-        &self.geometry
-    }
-}
 pub(super) struct LowReductionGeometry {
     pub row_shape: Shape,
     pub order: Vec<usize>,
@@ -103,74 +93,5 @@ impl LowReductionGeometry {
                     .collect::<Vec<_>>(),
             )?
         })
-    }
-}
-
-impl MlxBackend {
-    /// Call after validating axes and handling empty inputs. The permutation
-    /// only changes metadata; rows preserve the logical kept-axis order.
-    pub(super) fn low_reduction_plan(
-        &self,
-        input: &MlxLowTensor,
-        axes: &[usize],
-    ) -> Result<LowReductionPlan, MlxError> {
-        let geometry = LowReductionGeometry::new(input.shape(), axes)?;
-        Ok(LowReductionPlan {
-            input: self.permute(&input.tensor, &geometry.order)?,
-            geometry,
-        })
-    }
-
-    pub(super) fn low_fold_partials(
-        &self,
-        partial: MlxTensor,
-        plan: &LowReductionPlan,
-        shape: Shape,
-        op: ReduceOp,
-        mean: bool,
-    ) -> Result<MlxTensor, MlxError> {
-        if plan.parts == 1 {
-            return Ok(partial);
-        }
-        let params = self.low_parameters(plan.count, plan.row_shape.rank(), 1)?;
-        self.custom_metal(
-            key(reduction_source(op, false, mean, false), &["inp", "params"]),
-            &[&partial, &params],
-            shape,
-            MlxDtype::F32,
-            false,
-            reduction_launch(plan.rows, 1),
-        )
-    }
-
-    pub(super) fn low_parameters(
-        &self,
-        count: usize,
-        rank: usize,
-        parts: usize,
-    ) -> Result<MlxTensor, MlxError> {
-        self.upload_u32(
-            Shape::new(vec![4])?,
-            &[
-                u32::try_from(rank).map_err(|_| MlxError::TooLarge)?,
-                count as u32,
-                (count as u64 >> 32) as u32,
-                u32::try_from(parts).map_err(|_| MlxError::TooLarge)?,
-            ],
-        )
-    }
-    /// MLX omits custom shape/stride arguments for scalar arrays. Promote only
-    /// their metadata to [1]; kernels still emit the requested scalar output.
-    pub(super) fn low_elementwise_view(
-        &self,
-        input: &MlxTensor,
-        shape: &Shape,
-    ) -> Result<MlxTensor, MlxError> {
-        let shape = if shape.rank() == 0 {
-            Shape::new(vec![1])?
-        } else {
-            shape.clone()
-        };
-        self.broadcast_to(input, shape)
     }
 }

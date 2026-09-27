@@ -1,0 +1,10 @@
+Running contracts; log: /Users/themoretheless/Documents/Sources/open-scad-viewer/docs/qualification/tensor-convolution-2026-09-27/native/contracts.txt
+contracts: PASS
+Running wgsl; log: /Users/themoretheless/Documents/Sources/open-scad-viewer/docs/qualification/tensor-convolution-2026-09-27/native/wgsl.txt
+wgsl: PASS
+Running math-wgsl; log: /Users/themoretheless/Documents/Sources/open-scad-viewer/docs/qualification/tensor-convolution-2026-09-27/native/math-wgsl.txt
+math-wgsl: PASS
+Running mlx; log: /Users/themoretheless/Documents/Sources/open-scad-viewer/docs/qualification/tensor-convolution-2026-09-27/native/mlx.txt
+mlx: PASS
+Running math-mlx; log: /Users/themoretheless/Documents/Sources/open-scad-viewer/docs/qualification/tensor-convolution-2026-09-27/native/math-mlx.txt
+math-mlx: PASS

@@ -1,0 +1,7 @@
+Scope: CPU f32 emulation, not native execution
+sparse count=513 nonzero=1.0000000200408773e+20 expected_mean_f64=1.9493177778574608e+17
+fused=False mean=1.949302174651515e+17 error_ULPs=-90.82261208631098 relative_error=-8.004444489840869e-06
+fused=True mean=1.9493104209887232e+17 error_ULPs=-42.82261208631098 relative_error=-3.774073586753054e-06
+anisotropic mean_f64=-5116959000770277.0 mean_abs_f64=5.314327412195196e+17 condition=103.857142716899
+observed_MLX_error_to_mean_abs=5.340253312182942e-08; bound=3e-6*mean_abs=1594298223658.5588
+All-positive sparse data have mean_abs == mean, retaining the original sparse check.

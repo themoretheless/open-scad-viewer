@@ -17,12 +17,11 @@ use gpu_compute::cuda::{
 use std::sync::Arc;
 use tensor_core::{
     Compacted, CompareOp, Gathered, ScanOptions, Shape, TensorBackend, TensorError,
-    TensorIndexBackend,
+    TensorF64Backend, TensorIndexBackend,
 };
 
 pub(crate) trait CudaScalar: DeviceRepr + ValidAsZeroBits + Copy + Default {
     const KIND: usize;
-    const ONE: Self;
     fn materialize(
         runtime: &CudaRuntime,
         input: &CudaTensor<Self>,
@@ -30,7 +29,6 @@ pub(crate) trait CudaScalar: DeviceRepr + ValidAsZeroBits + Copy + Default {
 }
 impl CudaScalar for f32 {
     const KIND: usize = 0;
-    const ONE: Self = 1.;
     fn materialize(
         runtime: &CudaRuntime,
         input: &CudaTensor<Self>,
@@ -40,7 +38,6 @@ impl CudaScalar for f32 {
 }
 impl CudaScalar for u32 {
     const KIND: usize = 1;
-    const ONE: Self = 1;
     fn materialize(
         runtime: &CudaRuntime,
         input: &CudaTensor<Self>,
@@ -49,36 +46,51 @@ impl CudaScalar for u32 {
     }
 }
 
+impl CudaScalar for f64 {
+    const KIND: usize = 2;
+    fn materialize(
+        runtime: &CudaRuntime,
+        input: &CudaTensor<Self>,
+    ) -> Result<CudaTensor<Self>, CudaError> {
+        runtime.materialize_f64(input)
+    }
+}
+
+#[derive(Clone)]
 pub(crate) struct IndexKernels {
-    pub(crate) copy: [CudaFunction; 2],
-    pub(crate) compare: [CudaFunction; 2],
-    pub(crate) select: [CudaFunction; 2],
-    pub(crate) scan: [CudaFunction; 2],
-    pub(crate) add_scan: [CudaFunction; 2],
-    pub(crate) gather: [CudaFunction; 2],
-    pub(crate) compact: [CudaFunction; 2],
+    pub(crate) copy: [CudaFunction; 3],
+    pub(crate) compare: [CudaFunction; 3],
+    pub(crate) select: [CudaFunction; 3],
+    pub(crate) scan: [CudaFunction; 3],
+    pub(crate) add_scan: [CudaFunction; 3],
+    pub(crate) gather: [CudaFunction; 3],
+    pub(crate) compact: [CudaFunction; 3],
     pub(crate) invalid_indices: CudaFunction,
     pub(crate) normalize_mask: CudaFunction,
     pub(crate) scatter_owners: CudaFunction,
-    pub(crate) scatter: [CudaFunction; 2],
+    pub(crate) scatter: [CudaFunction; 3],
 }
 impl IndexKernels {
     pub(crate) fn load(module: &Arc<CudaModule>) -> Result<Self, CudaError> {
-        let pair = |f: &str, u: &str| -> Result<_, CudaError> {
-            Ok([module.load_function(f)?, module.load_function(u)?])
+        let triple = |f: &str, u: &str, d: &str| -> Result<_, CudaError> {
+            Ok([
+                module.load_function(f)?,
+                module.load_function(u)?,
+                module.load_function(d)?,
+            ])
         };
         Ok(Self {
-            copy: pair("copy_f32", "copy_u32")?,
-            compare: pair("compare_f32", "compare_u32")?,
-            select: pair("where_f32", "where_u32")?,
-            scan: pair("scan_f32", "scan_u32")?,
-            add_scan: pair("add_scan_f32", "add_scan_u32")?,
-            gather: pair("gather_f32", "gather_u32")?,
-            compact: pair("compact_f32", "compact_u32")?,
+            copy: triple("copy_f32", "copy_u32", "copy_f64")?,
+            compare: triple("compare_f32", "compare_u32", "compare_f64")?,
+            select: triple("where_f32", "where_u32", "where_f64")?,
+            scan: triple("scan_f32", "scan_u32", "scan_f64")?,
+            add_scan: triple("add_scan_f32", "add_scan_u32", "add_scan_f64")?,
+            gather: triple("gather_f32", "gather_u32", "gather_f64")?,
+            compact: triple("compact_f32", "compact_u32", "compact_f64")?,
             invalid_indices: module.load_function("invalid_indices")?,
             normalize_mask: module.load_function("normalize_mask")?,
             scatter_owners: module.load_function("scatter_owners")?,
-            scatter: pair("scatter_f32", "scatter_u32")?,
+            scatter: triple("scatter_f32", "scatter_u32", "scatter_f64")?,
         })
     }
 }

@@ -82,12 +82,12 @@ impl CudaPointBounds {
         stream.memcpy_dtoh(&max_view, &mut maxes).ok()?;
         let mut min = [f64::INFINITY; 3];
         let mut max = [f64::NEG_INFINITY; 3];
-        for chunk in mins.chunks_exact(3) {
+        for chunk in mins.as_chunks::<3>().0 {
             for axis in 0..3 {
                 min[axis] = min[axis].min(chunk[axis] as f64);
             }
         }
-        for chunk in maxes.chunks_exact(3) {
+        for chunk in maxes.as_chunks::<3>().0 {
             for axis in 0..3 {
                 max[axis] = max[axis].max(chunk[axis] as f64);
             }
@@ -219,12 +219,12 @@ impl CudaTransformedPointBounds {
         stream.memcpy_dtoh(&max_view, &mut maxes).ok()?;
         let mut min = [f64::INFINITY; 3];
         let mut max = [f64::NEG_INFINITY; 3];
-        for chunk in mins.chunks_exact(3) {
+        for chunk in mins.as_chunks::<3>().0 {
             for axis in 0..3 {
                 min[axis] = min[axis].min(chunk[axis] as f64);
             }
         }
-        for chunk in maxes.chunks_exact(3) {
+        for chunk in maxes.as_chunks::<3>().0 {
             for axis in 0..3 {
                 max[axis] = max[axis].max(chunk[axis] as f64);
             }

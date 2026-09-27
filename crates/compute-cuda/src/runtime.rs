@@ -2,7 +2,9 @@ use crate::{
     CudaError,
     libraries::{require_cublas, require_nvrtc},
 };
-use gpu_compute::cuda::{CudaDevice, CudaFunction, CudaSlice, LaunchConfig, cudarc};
+use gpu_compute::cuda::{
+    CudaDevice, CudaFunction, CudaSlice, CudaStreamMode, LaunchConfig, cudarc,
+};
 use std::{cell::OnceCell, sync::Arc};
 use tensor_core::{
     BackendKind, BinaryOp, HasShape, Layout, MatmulPrecision, ReduceOp, Shape, TensorBackend,
@@ -21,7 +23,10 @@ pub const CUDA_KERNEL_SOURCE: &str = concat!(
     include_str!("low_indexing.cu"),
     include_str!("low_scatter.cu"),
     include_str!("low_statistics.cu"),
-    include_str!("low_attention.cu")
+    include_str!("low_attention.cu"),
+    include_str!("convolution.cu"),
+    include_str!("float64.cu"),
+    include_str!("float64_indexing.cu")
 );
 
 #[derive(Clone, Debug)]
@@ -71,6 +76,8 @@ pub struct CudaRuntime {
     pub(crate) low: crate::low_precision::LowKernels,
     pub(crate) statistics: crate::statistics::StatisticsKernels,
     pub(crate) attention: crate::attention::AttentionKernel,
+    pub(crate) convolution: crate::convolution::ConvKernels,
+    pub(crate) float64: crate::float64::F64Kernels,
 }
 impl CudaRuntime {
     pub fn new() -> Result<Self, CudaError> {
@@ -78,6 +85,51 @@ impl CudaRuntime {
             "CUDA driver/device is absent or initialization failed",
         ))?;
         Self::from_device(device)
+    }
+    /// Opt in to an explicit nonblocking execution stream.
+    pub fn new_with_stream(mode: CudaStreamMode) -> Result<Self, CudaError> {
+        let device = CudaDevice::new_with_stream(mode).ok_or(CudaError::Unavailable(
+            "CUDA driver/device is absent or stream initialization failed",
+        ))?;
+        Self::from_device(device)
+    }
+    /// A private wrapper for the same primary CUDA context. Tracking is disabled
+    /// only on this fresh Rust wrapper, before any private allocation exists.
+    /// Graph storage never escapes; explicit event bridges order its use on the
+    /// caller stream, and graph destruction synchronizes both streams.
+    pub(crate) fn graph_runtime(&self) -> Result<Self, CudaError> {
+        crate::libraries::require_graph_runtime()?;
+        let context = cudarc::driver::CudaContext::new(self.capabilities.ordinal)?;
+        if context != self.device.context {
+            return Err(CudaError::InvalidInput(
+                "CUDA Graph requires a primary context",
+            ));
+        }
+        // SAFETY: no buffers/streams have been made with this private wrapper.
+        // It is never exported or used outside the graph's owned lifetime.
+        unsafe { context.disable_event_tracking() };
+        let stream = context.new_stream()?;
+        Ok(Self {
+            device: CudaDevice {
+                context,
+                stream,
+                name: self.device.name.clone(),
+                multiprocessors: self.device.multiprocessors,
+            },
+            capabilities: self.capabilities.clone(),
+            blas: OnceCell::new(),
+            owner: Arc::new(()),
+            unary: self.unary.clone(),
+            binary: self.binary.clone(),
+            binary_u32: self.binary_u32.clone(),
+            reduction: self.reduction.clone(),
+            indexing: self.indexing.clone(),
+            low: self.low.clone(),
+            statistics: self.statistics.clone(),
+            attention: self.attention.clone(),
+            convolution: self.convolution.clone(),
+            float64: self.float64.clone(),
+        })
     }
     pub fn from_device(device: CudaDevice) -> Result<Self, CudaError> {
         validate_device(&device)?;
@@ -147,6 +199,8 @@ impl CudaRuntime {
             low: crate::low_precision::LowKernels::load(&module)?,
             statistics: crate::statistics::StatisticsKernels::load(&module)?,
             attention: crate::attention::AttentionKernel::load(&module)?,
+            convolution: crate::convolution::ConvKernels::load(&module)?,
+            float64: crate::float64::F64Kernels::load(&module)?,
             owner: Arc::new(()),
             device,
             capabilities,
@@ -326,6 +380,9 @@ impl TensorBackend for CudaRuntime {
     fn kind(&self) -> BackendKind {
         BackendKind::Cuda
     }
+    fn f64_support(&self) -> tensor_core::Float64Support {
+        tensor_core::Float64Support::Native
+    }
     fn upload_f32(&self, shape: Shape, values: &[f32]) -> Result<CudaTensor, CudaError> {
         if shape.numel() != values.len() {
             return Err(TensorError::ElementCountMismatch {
@@ -419,6 +476,13 @@ impl TensorBackend for CudaRuntime {
     ) -> Result<CudaTensor, CudaError> {
         self.matmul_impl(a, b, precision)
     }
+}
+
+pub(crate) fn validate_storage(lengths: &[(usize, usize)]) -> Result<(), CudaError> {
+    if lengths.iter().any(|&(actual, required)| actual < required) {
+        return Err(CudaError::InvalidInput("dispatch storage is too small"));
+    }
+    Ok(())
 }
 
 #[cfg(test)]

@@ -1,0 +1,5 @@
+{
+  "platform": "macOS-26.7-arm64-arm-64bit-Mach-O",
+  "cpu": "Apple M4 Max",
+  "rustc": "rustc 1.100.0-nightly (215a8af4b 2026-09-15)"
+}

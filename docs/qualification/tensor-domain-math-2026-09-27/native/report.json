@@ -1,0 +1,158 @@
+{
+  "started_utc": "2026-09-27T11:58:42.722919+00:00",
+  "platform": "macOS-26.7-arm64-arm-64bit-Mach-O",
+  "required_backends": [
+    "wgsl",
+    "mlx"
+  ],
+  "runs": [
+    {
+      "name": "contracts",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "/Users/themoretheless/Documents/Sources/open-scad-viewer/crates/Cargo.toml",
+        "--offline",
+        "-p",
+        "tensor-core",
+        "--features",
+        "conformance",
+        "--",
+        "--test-threads=1",
+        "--nocapture"
+      ],
+      "required_env": {},
+      "exit_code": 0,
+      "elapsed_seconds": 6.744,
+      "log": "contracts.txt"
+    },
+    {
+      "name": "wgsl",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "/Users/themoretheless/Documents/Sources/open-scad-viewer/crates/Cargo.toml",
+        "--offline",
+        "-p",
+        "compute-core",
+        "--test",
+        "evaluation",
+        "--test",
+        "tensor",
+        "--test",
+        "tensor_backend",
+        "--test",
+        "tensor_index",
+        "--test",
+        "tensor_reduce",
+        "--test",
+        "tensor_scatter",
+        "--test",
+        "tensor_low",
+        "--test",
+        "tensor_low_ops",
+        "--test",
+        "tensor_low_index",
+        "--test",
+        "tensor_low_scatter",
+        "--test",
+        "tensor_low_normalization",
+        "--test",
+        "tensor_low_attention",
+        "--test",
+        "tensor_normalization",
+        "--test",
+        "tensor_attention",
+        "--",
+        "--test-threads=1",
+        "--nocapture"
+      ],
+      "required_env": {
+        "COMPUTE_REQUIRE_GPU": "1"
+      },
+      "exit_code": 0,
+      "elapsed_seconds": 27.672,
+      "log": "wgsl.txt"
+    },
+    {
+      "name": "math-wgsl",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "/Users/themoretheless/Documents/Sources/open-scad-viewer/crates/Cargo.toml",
+        "--offline",
+        "-p",
+        "osv-math",
+        "--features",
+        "tensor-wgsl",
+        "--test",
+        "tensor_math",
+        "--",
+        "--test-threads=1",
+        "--nocapture"
+      ],
+      "required_env": {
+        "COMPUTE_REQUIRE_GPU": "1"
+      },
+      "exit_code": 0,
+      "elapsed_seconds": 3.194,
+      "log": "math-wgsl.txt"
+    },
+    {
+      "name": "mlx",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "/Users/themoretheless/Documents/Sources/open-scad-viewer/crates/Cargo.toml",
+        "--offline",
+        "-p",
+        "compute-mlx",
+        "--",
+        "--test-threads=1",
+        "--nocapture"
+      ],
+      "required_env": {
+        "COMPUTE_REQUIRE_MLX": "1"
+      },
+      "exit_code": 0,
+      "elapsed_seconds": 18.416,
+      "log": "mlx.txt"
+    },
+    {
+      "name": "math-mlx",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "/Users/themoretheless/Documents/Sources/open-scad-viewer/crates/Cargo.toml",
+        "--offline",
+        "-p",
+        "osv-math",
+        "--features",
+        "tensor-mlx",
+        "--test",
+        "tensor_math",
+        "--",
+        "--test-threads=1",
+        "--nocapture"
+      ],
+      "required_env": {
+        "COMPUTE_REQUIRE_MLX": "1"
+      },
+      "exit_code": 0,
+      "elapsed_seconds": 1.157,
+      "log": "math-mlx.txt"
+    }
+  ],
+  "passed": true,
+  "finished_utc": "2026-09-27T11:59:39.931966+00:00"
+}

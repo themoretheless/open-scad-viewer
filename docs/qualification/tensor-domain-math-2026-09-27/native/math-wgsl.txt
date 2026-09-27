@@ -1,0 +1,24 @@
+{"command": ["cargo", "test", "--locked", "--manifest-path", "/Users/themoretheless/Documents/Sources/open-scad-viewer/crates/Cargo.toml", "--offline", "-p", "osv-math", "--features", "tensor-wgsl", "--test", "tensor_math", "--", "--test-threads=1", "--nocapture"], "required_env": {"COMPUTE_REQUIRE_GPU": "1"}}
+warning: binary `wgsl_export` should have a kebab-case name
+  |
+1 | /Users/themoretheless/Documents/Sources/open-scad-viewer/crates/target/.../wgsl_export
+  |                                                                            ^^^^^^^^^^^
+  |
+  = note: `cargo::non_kebab_case_bins` is set to `warn` by default
+help: to change the binary name to `wgsl-export`, convert the file stem
+  |
+1 - src/bin/wgsl_export.rs
+1 + src/bin/wgsl-export.rs
+  |
+warning: `raster-core` (manifest) generated 1 warning
+   Compiling compute-core v0.1.0 (/Users/themoretheless/Documents/Sources/open-scad-viewer/crates/compute-core)
+   Compiling osv-math v0.1.0 (/Users/themoretheless/Documents/Sources/open-scad-viewer/crates/math-core)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 1.37s
+     Running tests/tensor_math.rs (crates/target/debug/build/osv-math/144b61ae08bfad4b/out/tensor_math-144b61ae08bfad4b)
+
+running 2 tests
+test geometry::independent_reference_retains_shifted_covariance_and_finite_sparse_moments ... ok
+test wgsl_resident_geometry_contract ... tensor geometry WGSL: BackendReport { kind: Metal, label: "metal", native_api: true, browser_api: false, metal: true }
+ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.28s

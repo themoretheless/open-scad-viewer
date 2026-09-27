@@ -1,0 +1,31 @@
+warning: binary `wgsl_export` should have a kebab-case name
+  |
+1 | /Users/themoretheless/Documents/Sources/open-scad-viewer/crates/target/.../wgsl_export
+  |                                                                            ^^^^^^^^^^^
+  |
+  = note: `cargo::non_kebab_case_bins` is set to `warn` by default
+help: to change the binary name to `wgsl-export`, convert the file stem
+  |
+1 - src/bin/wgsl_export.rs
+1 + src/bin/wgsl-export.rs
+  |
+warning: `raster-core` (manifest) generated 1 warning
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.06s
+     Running tests/graph.rs (crates/target/debug/build/compute-cuda/911ffc34ec6f2adb/out/graph-911ffc34ec6f2adb)
+
+running 2 tests
+test native_cuda_owned_graph_contract ...
+thread 'native_cuda_owned_graph_contract' (31423037) panicked at compute-cuda/tests/graph.rs:111:13:
+required native CUDA graph unavailable: CUDA unavailable: CUDA driver/device is absent or initialization failed
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+FAILED
+test reference::independent_low_codec_known_values_and_even_rounding ... ok
+
+failures:
+
+failures:
+    native_cuda_owned_graph_contract
+
+test result: FAILED. 1 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+error: test failed, to rerun pass `-p compute-cuda --test graph`

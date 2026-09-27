@@ -35,6 +35,7 @@ pub const TENSOR_ELEMENTWISE_WGSL: &str = include_str!("../shaders/tensor_elemen
 pub const TENSOR_SUM_WGSL: &str = include_str!("../shaders/tensor_sum.wgsl");
 pub const TENSOR_REDUCE_WGSL: &str = include_str!("../shaders/tensor_reduce.wgsl");
 pub const TENSOR_MATMUL_WGSL: &str = include_str!("../shaders/tensor_matmul.wgsl");
+pub const TENSOR_CONV_WGSL: &str = include_str!("../shaders/tensor_conv.wgsl");
 
 pub const TENSOR_COPY_WGSL: &str = include_str!("../shaders/tensor_copy.wgsl");
 pub const TENSOR_COMPARE_WGSL: &str = include_str!("../shaders/tensor_compare.wgsl");
@@ -117,7 +118,8 @@ pub const TENSOR_ATTENTION_MERGE_WGSL: &str = concat!(
 );
 
 /// Every shipped kernel (name, source), for validation tests.
-pub const ALL: [(&str, &str); 45] = [
+pub const ALL: [(&str, &str); 46] = [
+    ("tensor_conv", TENSOR_CONV_WGSL),
     ("tensor_low_arithmetic", TENSOR_LOW_ARITHMETIC_WGSL),
     ("tensor_attention_merge", TENSOR_ATTENTION_MERGE_WGSL),
     ("tensor_attention", TENSOR_ATTENTION_WGSL),

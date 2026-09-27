@@ -1,4 +1,4 @@
-//! Resident f32/u32 tensors on an explicit CUDA stream.
+//! Resident f32/f64/u32 and low-precision tensors on an explicit CUDA stream.
 //!
 //! Custom kernels use NVRTC at initialization (or caller-supplied compatible
 //! PTX). Matrix multiplication uses cuBLAS with an explicit precision policy.
@@ -6,8 +6,12 @@
 //! NVIDIA hardware; successful compilation on another platform is not GPU proof.
 #![doc = include_str!("../README.md")]
 mod attention;
+mod attention_dispatch;
+mod convolution;
 mod dispatch;
 mod error;
+mod evaluation;
+mod float64;
 mod indexing;
 mod libraries;
 mod low_attention;
@@ -23,6 +27,7 @@ mod program;
 mod reduction;
 mod runtime;
 mod statistics;
+mod statistics_dispatch;
 
 pub use error::CudaError;
 pub use low_precision::CudaLowTensor;
@@ -35,3 +40,6 @@ pub use program::{
 };
 
 pub use program::{CudaDtype, CudaProgramInput, CudaProgramOutput, CudaProgramOutputMut};
+
+pub use gpu_compute::cuda::CudaStreamMode;
+pub use program::{CudaCaptureOptions, CudaGraphProgram, CudaGraphStats};

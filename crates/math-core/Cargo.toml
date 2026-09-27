@@ -18,14 +18,24 @@ path = "src/lib.rs"
 [features]
 # Portable batch vector/matrix kernels (wgpu compute shaders) for large point
 # sets; the CPU reference (`transform_points`) always stays available.
-gpu = ["dep:gpu-compute", "dep:compute-core"]
+gpu = ["tensor", "dep:gpu-compute", "dep:compute-core"]
 # CUDA driver-API port of the batch transform kernel; includes the wgpu path
 # as fallback.
 cuda = ["gpu", "gpu-compute/cuda"]
+# Shared resident geometry recipes; the contract crate has no native runtime.
+tensor = ["dep:tensor-core"]
+tensor-wgsl = ["gpu"]
+tensor-cuda = ["tensor", "dep:compute-cuda"]
+tensor-mlx = ["tensor", "dep:compute-mlx"]
 
 [dependencies]
 compute-core = { path = "../compute-core", optional = true }
 gpu-compute = { path = "../gpu-compute", optional = true }
+tensor-core = { path = "../tensor-core", optional = true }
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+compute-cuda = { path = "../compute-cuda", optional = true }
+compute-mlx = { path = "../compute-mlx", optional = true }
 
 [dev-dependencies]
 rbench = { workspace = true }
@@ -54,6 +64,11 @@ path = "examples/bench_chamfer.rs"
 name = "bench_workgroup_tuning"
 path = "examples/bench_workgroup_tuning.rs"
 required-features = ["gpu"]
+
+[[example]]
+name = "resident_geometry"
+path = "examples/resident_geometry.rs"
+required-features = ["tensor"]
 
 [[example]]
 name = "bench_recorded_nearest"

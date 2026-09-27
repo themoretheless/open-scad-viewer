@@ -1,0 +1,37 @@
+warning: binary `wgsl_export` should have a kebab-case name
+  |
+1 | /Users/themoretheless/Documents/Sources/open-scad-viewer/crates/target/.../wgsl_export
+  |                                                                            ^^^^^^^^^^^
+  |
+  = note: `cargo::non_kebab_case_bins` is set to `warn` by default
+help: to change the binary name to `wgsl-export`, convert the file stem
+  |
+1 - src/bin/wgsl_export.rs
+1 + src/bin/wgsl-export.rs
+  |
+warning: `raster-core` (manifest) generated 1 warning
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.03s
+     Running tests/compiled_attention.rs (crates/target/debug/build/compute-mlx/21be5996d4524521/out/compiled_attention-21be5996d4524521)
+
+running 6 tests
+test boundaries::direct_low_long_masked_values_and_maximum_remain_finite ... ok
+test boundaries::low_tiny_times_large_dot_is_normal_and_lazy_resources_survive ... ok
+test boundaries::native_causal_closed_rows_and_finite_maximum_values ... ok
+test boundaries::zero_keys_and_rejected_nodes_leave_graph_usable ... ok
+test replay::direct_low_replay_retains_f32_result_and_one_final_rounding ... ok
+test replay::replay_gqa_broadcast_masks_signed_causal_and_post_dot_scale ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.10s
+
+     Running tests/compiled_statistics.rs (crates/target/debug/build/compute-mlx/c7e1bfe4c4e584bf/out/compiled_statistics-c7e1bfe4c4e584bf)
+
+running 7 tests
+test compiled_f32_statistics_near_maximum_are_stable ... ok
+test compiled_low_statistics_preserve_extremes_tiny_normalization_and_final_rounding ... ok
+test compiled_singleton_low_means_and_logsumexp_preserve_every_finite_pattern ... ok
+test compiled_statistics_multiple_unsorted_axes_keep_logical_output_order ... ok
+test compiled_statistics_outputs_compose_without_host_intermediates ... ok
+test compiled_statistics_replays_f32_and_low_strided_hierarchies ... ok
+test compiled_statistics_validate_before_appending_and_handle_empty_outputs ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.52s

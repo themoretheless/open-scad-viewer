@@ -75,6 +75,7 @@ impl Expanded {
                     break;
                 }
                 source = PlannedValue {
+                    input_views: Vec::new(),
                     buffer: BufferRef::Scratch(next),
                     layout: next_layout,
                     dtype: accumulator,

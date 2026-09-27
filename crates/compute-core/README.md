@@ -1,5 +1,29 @@
 # compute-core
 
+## Software binary64
+
+`ComputeRuntime` implements `TensorF64Backend` on native hosts even when the
+GPU has no native f64. `GpuF64Tensor` stores each value as two u32 words;
+uploads, views and readback preserve the bits. All numerical work runs in
+integer WGSL kernels on the selected GPU. There is no f32 conversion or CPU
+arithmetic fallback in this backend.
+
+Supported: strided views and materialization, broadcast elementwise operations,
+sum/product/min/max and mean reductions, and batched matrix multiplication.
+Add/subtract/multiply/divide/sqrt use round-to-nearest, ties-to-even, including
+subnormals, signed zero, infinities and NaNs. NaN payload propagation is not
+standardized. Dynamic rounding modes and exception flags are not exposed.
+`exp/log/sin/cos` use binary64 polynomial arithmetic; they are approximate,
+not guaranteed correctly rounded. Trigonometric argument reduction uses a
+1280-bit 2/pi constant across the finite binary64 exponent range.
+
+This does not yet implement the f64 indexing/scatter extension traits,
+prepared recording, neural-network operations or a browser async tensor API.
+The shader arithmetic source is separately exported for composition.
+
+[Implementation and qualification](../../docs/qualification/software-binary64-2026-09-27.md).
+
+
 Architecture and crate boundaries: [GPU library design](../../docs/design/gpu-library-architecture.md).
 Measured dot/sum improvements, subgroup experiments and covariance precision:
 [reduction qualification](../../docs/qualification/shader-compute-reductions-2026-09-27.md).
@@ -29,6 +53,7 @@ zero-length dimensions represent empty tensors.
 | Low scans | `tensor_scan_low_f32`, `tensor_scan_low`; direct packed loads, f32 prefix accumulation and optional final low rounding |
 | Low statistics | `tensor_softmax_low_f32`, `tensor_log_softmax_low_f32`, `tensor_logsumexp_low_f32`, `tensor_moments_low_f32`, `tensor_layer_norm_low_f32`; direct low inputs, plus final-rounded low results |
 | Matrix products | `tensor_matmul`; vectors, matrices and broadcast batches |
+| Convolution | `tensor_conv`, `tensor_conv_low_f32`, `tensor_conv_low` and `_into` variants; grouped channel-first 1D/2D/3D cross-correlation |
 | Reductions | `tensor_reduce` for f32/u32 sum, product, min, max; f32 `tensor_mean` |
 | Masks | `tensor_compare`, `tensor_select`; exact u32 masks and broadcast selection |
 | Scans | `tensor_scan`; any axis, inclusive/exclusive, forward/reverse |

@@ -37,6 +37,21 @@ pub(super) fn expand(
     };
     for step in plan.steps {
         match step {
+            Step::Statistics {
+                source,
+                output,
+                variance,
+                axes,
+                kind,
+            } => expanded.statistics(source, (output, variance), &axes, kind, multiprocessors)?,
+            Step::Attention {
+                query,
+                key,
+                value,
+                mask,
+                output,
+                plan,
+            } => expanded.attention((query, key, value), mask, output, *plan, multiprocessors)?,
             Step::Scan {
                 source,
                 output,

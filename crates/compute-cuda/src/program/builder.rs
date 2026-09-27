@@ -100,6 +100,7 @@ impl CudaProgramPlanBuilder {
         });
         self.plan.steps.push(step(output));
         Ok(self.push(PlannedValue {
+            input_views: Vec::new(),
             buffer: BufferRef::Scratch(output),
             layout,
             dtype,
@@ -118,6 +119,7 @@ impl CudaProgramPlanBuilder {
             dtype,
         });
         Ok(self.push(PlannedValue {
+            input_views: Vec::new(),
             buffer: BufferRef::Input(input),
             layout,
             dtype,
@@ -176,8 +178,8 @@ impl CudaProgramPlanBuilder {
         op: BinaryOp,
     ) -> Result<CudaValue, CudaError> {
         let shape = left.layout.shape().broadcast(right.layout.shape())?;
-        left.layout = left.layout.broadcast_to(shape.clone())?;
-        right.layout = right.layout.broadcast_to(shape.clone())?;
+        left.broadcast_to(shape.clone())?;
+        right.broadcast_to(shape.clone())?;
         validate_layout(&left.layout, left.dtype)?;
         validate_layout(&right.layout, right.dtype)?;
         self.output(shape, left.dtype, |output| Step::Binary {
@@ -208,7 +210,7 @@ impl CudaProgramPlanBuilder {
         self.transaction(|this| {
             let contiguous = this.materialize(value)?;
             let mut source = this.value(contiguous)?;
-            source.layout = source.layout.reshape(shape)?;
+            source.reshape(shape)?;
             validate_layout(&source.layout, source.dtype)?;
             Ok(this.push(source))
         })
@@ -216,14 +218,14 @@ impl CudaProgramPlanBuilder {
 
     pub fn permute(&mut self, value: CudaValue, axes: &[usize]) -> Result<CudaValue, CudaError> {
         let mut source = self.value(value)?;
-        source.layout = source.layout.permute(axes)?;
+        source.permute(axes)?;
         validate_layout(&source.layout, source.dtype)?;
         Ok(self.push(source))
     }
 
     pub fn broadcast_to(&mut self, value: CudaValue, shape: Shape) -> Result<CudaValue, CudaError> {
         let mut source = self.value(value)?;
-        source.layout = source.layout.broadcast_to(shape)?;
+        source.broadcast_to(shape)?;
         validate_layout(&source.layout, source.dtype)?;
         Ok(self.push(source))
     }
@@ -332,8 +334,8 @@ impl CudaProgramPlanBuilder {
             } else {
                 (a, b)
             };
-            a.layout = promote(a.layout, plan.left, true)?;
-            b.layout = promote(b.layout, plan.right, false)?;
+            a.promote(plan.left, true)?;
+            b.promote(plan.right, false)?;
             // Retain even empty/K=0 operations so preparation still validates
             // requested precision and emits a fresh zero fill where required.
             this.output(plan.output, CudaDtype::F32, |output| Step::Matmul {
@@ -354,19 +356,6 @@ impl CudaProgramPlanBuilder {
     }
 }
 
-fn promote(layout: Layout, shape: Shape, left: bool) -> Result<Layout, CudaError> {
-    if layout.shape().rank() != 1 {
-        return Ok(layout);
-    }
-    let stride = layout.strides()[0];
-    let strides = if left {
-        vec![0, stride]
-    } else {
-        vec![stride, 0]
-    };
-    Ok(Layout::new(shape, strides, layout.offset())?)
-}
-
 #[path = "builder_typed.rs"]
 mod typed;
 
@@ -384,3 +373,14 @@ mod typed_tests;
 #[cfg(test)]
 #[path = "builder_indexing_tests.rs"]
 mod indexing_tests;
+
+#[path = "builder_attention.rs"]
+mod attention;
+#[cfg(test)]
+#[path = "builder_attention_tests.rs"]
+mod attention_tests;
+#[path = "builder_statistics.rs"]
+mod statistics;
+#[cfg(test)]
+#[path = "builder_statistics_tests.rs"]
+mod statistics_tests;

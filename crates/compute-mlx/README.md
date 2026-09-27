@@ -4,6 +4,20 @@ Native Rust tensor execution through the MLX-C shared library. The adapter build
 
 ## Runtime and loading
 
+### Direct convolution
+
+`tensor_core::{TensorConvBackend, TensorLowConvBackend}` provide grouped
+channel-first 1D/2D/3D cross-correlation through `conv`, `conv_low_f32` and
+`conv_low`. `ConvOptions` selects explicit asymmetric zero padding, stride,
+dilation and groups. A shared custom Metal kernel reads strided f32 or native
+f16/BF16 input and weights directly and reduces into f32. The low-result method
+casts that result once; no complete expanded operand or im2col tensor is built.
+The result remains lazy and resident. This requires the existing custom Metal
+ABI; reusable MLX programs do not yet expose convolution. See the
+[shared contract and qualification](../../docs/qualification/tensor-convolution-2026-09-27.md).
+
+### Libraries and device
+
 The current adapter requires MLX with its **Metal GPU backend**. It was executed on Apple M4 Max with Homebrew MLX-C **0.6.0_4** and MLX **0.32.1**. The binding follows the MLX-C 0.6 ABI. Builds need Rust and the cached `libloading` dependency; the C/C++ SDK is only needed to install or build the external runtime.
 
 `MlxBackend::new_gpu()` loads MLX-C at runtime. Set `COMPUTE_MLX_LIBRARY` to a trusted, ABI-compatible shared library before creating the first backend. Otherwise, macOS discovery checks the Homebrew ARM prefix, `/usr/local/lib`, then the system loader. Missing libraries, missing symbols, absent Metal support, and native errors return `MlxError`. The native module is excluded on `wasm32`; this is not a browser backend.
@@ -48,7 +62,7 @@ The [linear example](examples/linear.rs) chains matmul, broadcast bias, ReLU and
 | f32 statistics | stable softmax/log-softmax/logsumexp, mean and population variance, layer norm over arbitrary axes; positive subnormal epsilon supported |
 | f16/bf16 attention | direct low Q/K/V loads, streaming f32 evaluation, f32 output or one final low cast; the same geometry and masks as f32 attention |
 | f32 attention | scaled dot-product attention, GQA, batch broadcast and strided operands; keep/additive masks, signed causal offsets, zero for fully masked rows |
-| Compiled resident programs | fixed-shape f32/u32/f16/bf16 signatures, views, casts, arithmetic, reductions and f32/low matmul through the public native compile API |
+| Compiled resident programs | fixed-shape f32/u32/f16/bf16 signatures, views, casts, arithmetic, reductions, indexing with resident counts, statistics, attention and f32/low matmul through the public native compile API |
 
 Shapes, axes, broadcasting, and matrix dimensions use the shared `tensor-core` contracts. Arrays from another backend instance are rejected, even when both instances use the same physical GPU. `AllowTf32`, `AllowF16`, and `AllowBf16` return an explicit unsupported-precision error. F32 storage or a matmul call does not establish that hardware Tensor Cores were used.
 
@@ -82,11 +96,12 @@ Every run accepts fresh resident tensors with the exact declared shapes, dtypes 
 
 The compiled operation set is explicit:
 
-- f32: all canonical unary/binary and comparison operations, sum/product/min/max, mean and matmul.
+- f32: all canonical unary/binary and comparison operations, select, sum/product/min/max, mean, matmul, statistics/normalization and attention.
 - u32: Add/Subtract/Multiply/Min/Max, comparisons, select, sum/product/min/max. Arithmetic wraps modulo 2^32; integer Divide and implicit promotion are rejected.
-- f16/bf16: exact device casts, all canonical unary/binary operations, arbitrary-axis f32 accumulation reductions/mean, and direct low-input matmul with f32 output. Low-result variants apply one final cast. Views preserve dtype and raw storage bits.
+- f16/bf16: exact device casts, all canonical unary/binary operations, arbitrary-axis f32 accumulation reductions/mean, and direct low-input matmul with f32 output. Low-result variants apply one final cast. Statistics/normalization and attention support direct low inputs with f32 or final low results. Views preserve dtype and raw storage bits.
+- All four dtypes: comparisons, selection, axis scans, gather, fixed-capacity compaction and all five scatter modes. Device counts are ordinary u32 graph values; low scans and scatter also offer direct f32 results.
 
-Low arithmetic, reductions and direct matmul share the eager lowering recipes and Metal sources. Each low arithmetic node writes its own rounded low result before later nodes read it; the compiler must retain that boundary. Compiled `matmul_low` uses the direct f32 result followed by one cast, while eager `matmul_low` keeps its native same-low route. These low arithmetic/reduction/matmul nodes do not allocate full f32 input copies; an explicit `cast_to_f32` still creates its requested f32 result. Casts retain their accessor-only ABI requirements; nonempty custom operations additionally require the complete optional Metal kernel API. Compiled low indexing, scan, scatter, statistics and attention are not exposed in this graph API.
+Low arithmetic, reductions and direct matmul share the eager lowering recipes and Metal sources. Each low arithmetic node writes its own rounded low result before later nodes read it; the compiler must retain that boundary. Compiled `matmul_low` uses the direct f32 result followed by one cast, while eager `matmul_low` keeps its native same-low route. These low arithmetic/reduction/matmul nodes do not allocate full f32 input copies; an explicit `cast_to_f32` still creates its requested f32 result. Casts retain their accessor-only ABI requirements; nonempty custom operations additionally require the complete optional Metal kernel API. Indexing, scan and scatter also share their eager recipes; low movement and Replace preserve raw payloads.
 
 `compile_available()` means the complete optional public compile/closure/vector ABI is present. It does not prove that MLX compilation is enabled, a particular operation fused, or allocations are reused. `compile` constructs a native closure; its first valid `run` traces the graph. `trace_count()` counts callback invocations, not GPU executions. The adapter never changes MLX's global compile mode, default device or default stream. External settings such as `MLX_DISABLE_COMPILE`, native device eligibility or changes to MLX's default-device cache key can disable reuse or trigger another trace; the operations themselves keep this backend's explicit GPU stream. The qualified enabled-mode replay traces once, while an isolated disabled-mode process traces on each fresh run and still computes correct results.
 
@@ -96,7 +111,62 @@ The C callback executes declarative operations under the existing native-call lo
 
 The [typed enabled run](qualification/compiled-typed-focused.txt), [typed disabled run](qualification/compiled-typed-disabled.txt) and [full 104-test run](qualification/compiled-typed-metal.txt) qualify typed replay and shared eager lowering. The [source archive manifest](qualification/compiled-typed-source-manifest.json) records the exact inputs to qualification. The [first typed run](qualification/compiled-typed-initial-failure.txt) exposed two host-oracle errors: the matmul witness values did not distinguish f32 from low output, and an empty f64 sum produced negative zero. The corrected fixture supplies an exact half-ULP witness and the specified positive-zero contraction identity; bit comparisons and tolerances were retained. A separate tiny-BF16 Multiply diagnostic found a real pre-existing normal-product loss and led to the protected multiplication fix described below. No typed-program timing claim follows from correctness qualification.
 
-### Resident indexing
+#### Compiled indexing and resident counts
+
+The [runnable indexing example](examples/compiled_indexing.rs) records gather →
+scan → compaction → scatter, combines invalid-index counters on the GPU, then
+replays with changed values, masks and indices. Only the final outputs are read.
+Run it with `cargo run --manifest-path crates/Cargo.toml -p compute-mlx --example compiled_indexing`.
+
+`gather`, `gather_u32` and `gather_low` return values and an `invalid_count` token.
+`compact`, `compact_u32` and `compact_low` return input-sized storage, a zero tail
+and a scalar `count`. These counts compose with comparisons, selection,
+arithmetic and subsequent indexing. Shape signatures stay fixed; compaction
+changes its resident count rather than resizing the compiled output.
+
+`scan` and `scan_u32` accept an axis and `ScanOptions`. Low scans decode their
+inputs directly, accumulate in f32, and optionally round once to the source dtype.
+`scatter`, `scatter_u32`, `scatter_low` and `scatter_low_f32` return values and an
+invalid count. Replace selects the last valid logical index deterministically.
+Low arithmetic scatter creates freshly zeroed atomic lists on every replay.
+Compound recording rolls back both values and counts if validation fails.
+
+The [compiled indexing qualification](../../docs/qualification/tensor-mlx-index-programs-2026-09-27.md)
+records native checks with compilation enabled and disabled. Reused tracing
+does not establish fixed device allocations or a performance improvement.
+
+#### Compiled statistics and attention
+
+See the [compiled statistics and attention qualification](../../docs/qualification/tensor-prepared-statistics-2026-09-27.md) for current checks and hardware limits.
+
+`softmax`, `log_softmax`, `logsumexp`, `moments`, `layer_norm` and `attention`
+share declarative lowering with the eager API. Their low variants retain native
+f16/BF16 inputs and apply any requested low cast only after the f32 result.
+The callback uses raw C operations under the existing native-call lock; prepared
+constants and custom kernels remain owned by the compiled program. Invalid
+compound operations roll back every recorded node, including both moments outputs.
+
+```rust,no_run
+use compute_mlx::MlxBackend;
+use tensor_core::{AttentionMask, AttentionOptions, Shape};
+
+let mlx = MlxBackend::new_gpu()?;
+let shape = Shape::new(vec![2, 2])?;
+let mut graph = mlx.program();
+let x = graph.input(shape.clone())?;
+let probabilities = graph.softmax(x, &[1])?;
+let attended = graph.attention(probabilities, probabilities, x,
+    AttentionMask::None, AttentionOptions::default())?;
+let normalized = graph.layer_norm(attended, &[1], 1e-5)?;
+let moments = graph.moments(attended, &[1], false)?;
+let program = graph.compile(&[normalized, moments.mean, moments.variance])?;
+let input = mlx.upload_f32(shape, &[1., 2., 3., 4.])?;
+let outputs = program.run(&[&input])?;
+mlx.read_f32(&outputs[0])?;
+# Ok::<(), Box<dyn std::error::Error>>(())
+```
+
+## Resident indexing
 
 Import `tensor_core::TensorIndexBackend` to call its typed methods. Both associated tensor types use `MlxTensor`, with dtype checks at every trait boundary. The inherent reshape, permute, broadcast, materialize, scan and sum methods also support both dtypes.
 
@@ -255,7 +325,9 @@ The C API normally exits on errors. This adapter installs a process-wide error c
 
 ## Validation and remaining scope
 
-Ninety-eight integration tests passed on the actual Metal runtime, including the shared tensor, indexing, reduction, scatter, low-precision, statistics, attention, low-arithmetic, low-indexing, low-scatter, low-statistics and low-attention conformance suites. They cover all canonical arithmetic/comparison operations, strided views, lazy input lifetime, vector/batched matmul, empty tensors/reductions, u32 sum/product wrapping, invalid ownership/dtypes/shapes, scans with 131,075 elements, reductions with 131,077 elements, device gather and stable compaction. Scatter checks include all five modes, 65,539 duplicate indices, repeated deterministic replacement through strided views, broadcast updates, invalid indices, exact u32 values, and empty/scalar cases. Low-precision checks cover all 65,536 raw patterns for each dtype, every finite value's exact round-trip, every positive rounding boundary and its negative mirror, and strided/vector/batched/partial-tile matmul. Statistics checks include arbitrary/strided/broadcast axes, long groups with 131,077 elements, huge common offsets, ±f32::MAX, overflowing raw variance, and the smallest positive epsilon. Attention checks include native general/vector/full/two-pass shapes, GQA, different value depths, strided broadcast masks, signed causal extremes, all-masked rows, scale-overflow avoidance, constant MAX values, and 4,097-key tails. Low arithmetic checks additionally exhaust finite sign/extrema payloads, exact BF16 subnormals and signed zeros through a 131,077-element f32 partial hierarchy, every reduction-axis subset, scalar/empty/broadcast inputs, deferred input lifetime, and a 65,537-row bounded-grid dispatch. Low indexing checks compare all 65,536 raw patterns under all six IEEE comparisons, preserve every payload through strided gather and compaction, and test all scan modes at 255/256/257, 511/512/513 and 131,077 elements, sparse compaction, device chains, and 65,537 independent rows. Six unit tests verify a missing-library error, recovery after an actual MLX-C reshape error on a CPU stream, checked/padded scatter-list allocation, panic containment with local cleanup, actual C closure callback error/recovery, and rollback after a partially recorded typed operation fails. The ten compiled-program integration entries include one marker-only child entry; the disabled-mode test separately launches that child for three native executions. The nineteen typed-program tests cover all low raw payloads, every cast rounding boundary inside the graph, intermediate low rounding, exact u32 arithmetic/branching, f32 reduction/matmul outputs, changed strides, resource lifetime and signature errors. All nineteen also passed in a separate `MLX_DISABLE_COMPILE=1` process. [Original tensor output](qualification/native-metal.txt), [indexing qualification](qualification/index-metal.txt), [reduction/vector qualification](qualification/reduction-metal.txt), [scatter qualification](qualification/scatter-metal.txt), [low-precision qualification](qualification/low-metal.txt), [statistics qualification](qualification/statistics-metal.txt), [attention qualification](qualification/attention-metal.txt), [low-arithmetic qualification](qualification/low-ops-metal.txt), [low-indexing qualification](qualification/low-index-metal.txt), [low-scatter qualification](qualification/low-scatter-metal.txt), [low-statistics qualification](qualification/low-statistics-metal.txt), [low-attention qualification](qualification/low-attention-metal.txt), [complete low-matmul qualification](qualification/low-matmul-metal.txt), [original f32 compiled-program qualification](qualification/compiled-metal.txt), [complete typed-program qualification](qualification/compiled-typed-metal.txt).
+The [current compiled-indexing qualification](../../docs/qualification/tensor-mlx-index-programs-2026-09-27.md) records 138 passing top-level tests (nine unit and 129 integration entries, including one marker-only child entry), all 18 new tests with compilation disabled, and the executed public indexing example.
+
+At the earlier typed-program checkpoint, ninety-eight integration tests passed on the actual Metal runtime, including the shared tensor, indexing, reduction, scatter, low-precision, statistics, attention, low-arithmetic, low-indexing, low-scatter, low-statistics and low-attention conformance suites. They cover all canonical arithmetic/comparison operations, strided views, lazy input lifetime, vector/batched matmul, empty tensors/reductions, u32 sum/product wrapping, invalid ownership/dtypes/shapes, scans with 131,075 elements, reductions with 131,077 elements, device gather and stable compaction. Scatter checks include all five modes, 65,539 duplicate indices, repeated deterministic replacement through strided views, broadcast updates, invalid indices, exact u32 values, and empty/scalar cases. Low-precision checks cover all 65,536 raw patterns for each dtype, every finite value's exact round-trip, every positive rounding boundary and its negative mirror, and strided/vector/batched/partial-tile matmul. Statistics checks include arbitrary/strided/broadcast axes, long groups with 131,077 elements, huge common offsets, ±f32::MAX, overflowing raw variance, and the smallest positive epsilon. Attention checks include native general/vector/full/two-pass shapes, GQA, different value depths, strided broadcast masks, signed causal extremes, all-masked rows, scale-overflow avoidance, constant MAX values, and 4,097-key tails. Low arithmetic checks additionally exhaust finite sign/extrema payloads, exact BF16 subnormals and signed zeros through a 131,077-element f32 partial hierarchy, every reduction-axis subset, scalar/empty/broadcast inputs, deferred input lifetime, and a 65,537-row bounded-grid dispatch. Low indexing checks compare all 65,536 raw patterns under all six IEEE comparisons, preserve every payload through strided gather and compaction, and test all scan modes at 255/256/257, 511/512/513 and 131,077 elements, sparse compaction, device chains, and 65,537 independent rows. Six unit tests verify a missing-library error, recovery after an actual MLX-C reshape error on a CPU stream, checked/padded scatter-list allocation, panic containment with local cleanup, actual C closure callback error/recovery, and rollback after a partially recorded typed operation fails. The ten compiled-program integration entries include one marker-only child entry; the disabled-mode test separately launches that child for three native executions. The nineteen typed-program tests cover all low raw payloads, every cast rounding boundary inside the graph, intermediate low rounding, exact u32 arithmetic/branching, f32 reduction/matmul outputs, changed strides, resource lifetime and signature errors. All nineteen also passed in a separate `MLX_DISABLE_COMPILE=1` process. [Original tensor output](qualification/native-metal.txt), [indexing qualification](qualification/index-metal.txt), [reduction/vector qualification](qualification/reduction-metal.txt), [scatter qualification](qualification/scatter-metal.txt), [low-precision qualification](qualification/low-metal.txt), [statistics qualification](qualification/statistics-metal.txt), [attention qualification](qualification/attention-metal.txt), [low-arithmetic qualification](qualification/low-ops-metal.txt), [low-indexing qualification](qualification/low-index-metal.txt), [low-scatter qualification](qualification/low-scatter-metal.txt), [low-statistics qualification](qualification/low-statistics-metal.txt), [low-attention qualification](qualification/low-attention-metal.txt), [complete low-matmul qualification](qualification/low-matmul-metal.txt), [original f32 compiled-program qualification](qualification/compiled-metal.txt), [complete typed-program qualification](qualification/compiled-typed-metal.txt).
 
 Qualification found two native-runtime edge cases and retained their initial logs: [empty u32 sum](qualification/index-empty-u32-initial-failure.txt) lacked a Metal initializer kernel; [empty-batch vector matmul](qualification/reduction-empty-batch-initial-failure.txt) terminated with SIGSEGV. The adapter handles these mathematical identities with native zeros/ones, and the final suite exercises both fixes.
 
@@ -267,7 +339,7 @@ COMPUTE_REQUIRE_MLX=1 cargo test --offline --manifest-path crates/Cargo.toml \
 cargo run --offline --manifest-path crates/Cargo.toml -p compute-mlx --example linear
 ```
 
-Reduced multiplication policies for f32 storage, slicing, asynchronous readback/cancellation, cross-instance compiled-program caching, compiled indexing/statistics/attention, autodiff, convolution and training operators are not exposed yet. Linux/CUDA-backed MLX, Windows, and mobile packaging have not been validated by this adapter. A missing MLX installation is an unavailable backend, not a successful skipped computation.
+Reduced multiplication policies for f32 storage, slicing, asynchronous readback/cancellation, cross-instance compiled-program caching, autodiff, convolution and training operators are not exposed yet. Linux/CUDA-backed MLX, Windows, and mobile packaging have not been validated by this adapter. A missing MLX installation is an unavailable backend, not a successful skipped computation.
 
 ## Primary references
 

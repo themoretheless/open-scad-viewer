@@ -121,12 +121,12 @@ impl GpuPointBounds {
             )?;
             let mut min = [f64::INFINITY; 3];
             let mut max = [f64::NEG_INFINITY; 3];
-            for chunk in raw_min.chunks_exact(3).take(partial_count) {
+            for chunk in raw_min.as_chunks::<3>().0.iter().take(partial_count) {
                 for axis in 0..3 {
                     min[axis] = min[axis].min(chunk[axis] as f64);
                 }
             }
-            for chunk in raw_max.chunks_exact(3).take(partial_count) {
+            for chunk in raw_max.as_chunks::<3>().0.iter().take(partial_count) {
                 for axis in 0..3 {
                     max[axis] = max[axis].max(chunk[axis] as f64);
                 }
@@ -245,8 +245,8 @@ impl GpuTransformedPointBounds {
             let flat: Vec<f32> = points.iter().flatten().map(|&v| v as f32).collect();
             let mut params = pack_u32(&[point_count as u32, 0, 0, 0]);
             for row in 0..3 {
-                for col in 0..3 {
-                    push_f32(&mut params, m[row][col] as f32);
+                for &value in &m[row] {
+                    push_f32(&mut params, value as f32);
                 }
                 push_f32(&mut params, t[row] as f32);
             }
@@ -275,12 +275,12 @@ impl GpuTransformedPointBounds {
             )?;
             let mut min = [f64::INFINITY; 3];
             let mut max = [f64::NEG_INFINITY; 3];
-            for chunk in raw_min.chunks_exact(3).take(partial_count) {
+            for chunk in raw_min.as_chunks::<3>().0.iter().take(partial_count) {
                 for axis in 0..3 {
                     min[axis] = min[axis].min(chunk[axis] as f64);
                 }
             }
-            for chunk in raw_max.chunks_exact(3).take(partial_count) {
+            for chunk in raw_max.as_chunks::<3>().0.iter().take(partial_count) {
                 for axis in 0..3 {
                     max[axis] = max[axis].max(chunk[axis] as f64);
                 }

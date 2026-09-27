@@ -62,7 +62,8 @@ pub fn transformed_point_cloud_stats(points: &[V3], m: M3, t: V3) -> Result<Poin
 /// bounds and moments in one device pass/upload, which is preferable to running
 /// `point_bounds_accelerated` and `point_moments_accelerated` separately when
 /// callers need both summaries. `Auto` currently keeps the exact CPU reference;
-/// explicit `Gpu`/`Cuda` force f32 device execution and fall back to CPU.
+/// native `Gpu` uses binary64; legacy `Cuda` and browser adapters use f32.
+/// These convenience paths retain CPU fallback on device failure.
 pub fn point_cloud_stats_accelerated(
     points: &[V3],
     #[allow(unused_variables)] acceleration: Acceleration,

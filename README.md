@@ -119,6 +119,9 @@ yet connected to geometric construction or the shared WASM runtime.
 - Versioned preview → full geometry compilation in a warm dedicated Worker,
   with latest-result publication, hard preemption of superseded synchronous
   work, source/AST/tessellation budgets, and transferable geometry artifacts.
+  **Cancel build** stops active and scheduled work while keeping the previous
+  scene. After 30 seconds without a Worker response, the exact build retries
+  once; another timeout reports an error and leaves manual retry available.
 - Stable source-operation and evaluated-entity identities preserve selection,
   isolation, and visibility across preview/full builds and safe source edits.
 - Z-up WebGPU viewport with scene-AABB + triangle-BVH preselection/picking, point/face/

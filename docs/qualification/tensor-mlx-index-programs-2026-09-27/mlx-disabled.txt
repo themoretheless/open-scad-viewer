@@ -1,0 +1,48 @@
+warning: binary `wgsl_export` should have a kebab-case name
+  |
+1 | /Users/themoretheless/Documents/Sources/open-scad-viewer/crates/target/.../wgsl_export
+  |                                                                            ^^^^^^^^^^^
+  |
+  = note: `cargo::non_kebab_case_bins` is set to `warn` by default
+help: to change the binary name to `wgsl-export`, convert the file stem
+  |
+1 - src/bin/wgsl_export.rs
+1 + src/bin/wgsl-export.rs
+  |
+warning: `raster-core` (manifest) generated 1 warning
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.04s
+     Running tests/compiled_indexing.rs (crates/target/debug/build/compute-mlx/ef291fb72080cbc7/out/compiled_indexing-ef291fb72080cbc7)
+
+running 6 tests
+test low::compiled_low_compare_exhausts_payloads_with_changed_strided_inputs ... ok
+test low::compiled_low_select_gather_preserve_all_raw_bits_and_survive_program_drop ... ok
+test low::compiled_scalar_low_comparison_and_selection_use_pointer_metadata ... ok
+test movement::compiled_f32_u32_branching_and_gather_use_changed_strided_resident_values ... ok
+test validation::compiled_gather_empty_outputs_still_count_original_indices ... ok
+test validation::compiled_indexing_rejects_invalid_types_and_owners_before_trace ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.22s
+
+     Running tests/compiled_scan_compaction.rs (crates/target/debug/build/compute-mlx/6ab03994b47d35aa/out/compiled_scan_compaction-6ab03994b47d35aa)
+
+running 6 tests
+test compaction::compiled_compaction_broadcast_masks_preserve_exact_low_payloads_and_scalar_shapes ... ok
+test compaction::compiled_compaction_replays_all_sparse_none_all_and_consumes_count_on_device ... ok
+test scans::compiled_low_scans_keep_f32_prefixes_and_round_each_final_prefix_once ... ok
+test scans::compiled_low_scans_restore_arbitrary_axis_coordinates_and_broadcast_strides ... ok
+test scans::compiled_native_scans_wrap_and_rebind_strided_inputs_in_every_mode ... ok
+test validation::compiled_scan_compaction_validate_owners_types_shapes_and_empty_outputs ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.17s
+
+     Running tests/compiled_scatter.rs (crates/target/debug/build/compute-mlx/5363aa262a91ffc7/out/compiled_scatter-5363aa262a91ffc7)
+
+running 6 tests
+test boundaries::empty_base_counts_compose_on_device_and_scalar_indices_work ... ok
+test boundaries::invalid_scatter_builds_roll_back_before_empty_and_empty_indices_preserve_base ... ok
+test boundaries::low_replace_preserves_every_payload_and_extrema_keep_tiny_signed_zero_bits ... ok
+test replay::low_atomic_lists_and_owners_reset_on_all_few_none_all_replay ... ok
+test replay::low_fold_contention_rounds_only_after_f32_accumulation_and_retains_lazy_inputs ... ok
+test replay::wide_scatter_replays_all_ops_with_changed_unsigned_indices_and_strides ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.16s

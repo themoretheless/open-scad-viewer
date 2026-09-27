@@ -3,6 +3,7 @@ import { computed, nextTick, onUnmounted, ref, shallowRef, watch, watchEffect, t
 import { stringifyMeshJson } from '../services/meshJson'
 import { SolidGpuLayer, isSolidGpuSupported, smoothTriangleList, type SolidGpuBody } from '../services/solidGpuView'
 import { rayTriangleDistance } from '../services/math3d'
+import ModelingFloorGrid from '../components/ModelingFloorGrid.vue'
 import ModelingGridControls from '../components/ModelingGridControls.vue'
 import { applyDirectExtrusionProfile, buildDirectExtrusion, sameSketchPlane } from '../services/directExtrusion'
 import { useModelingGrid } from '../services/modelingGrid'
@@ -179,7 +180,7 @@ let orbitDrag: { x: number; y: number; yaw: number; pitch: number; pointer: numb
 // While the camera is being dragged the view falls back to the working mesh so orbiting stays responsive.
 const cameraDragging = ref(false)
 let heightDrag: { y: number; height: number; pointer: number; svg: SVGSVGElement } | null = null
-let gesture: { start: Point2; document: DirectDocument; vertex: number | null; id: string; pointer: number; pane: Pane; svg: SVGSVGElement; pan: boolean; center: Point2; sketch?: boolean; anchor?: Point2; anchor3?: Vec3; bodyDrag?: { ids: string[]; delta: Vec3 } | null } | null = null
+let gesture: { start: Point2; document: DirectDocument; vertex: number | null; id: string; pointer: number; pane: Pane; svg: SVGSVGElement; pan: boolean; center: Point2; sketch?: boolean; anchor?: Point2; anchor3?: Vec3; dragStart?: Point2; bodyDrag?: { ids: string[]; delta: Vec3 } | null } | null = null
 
 /**
  * Elements offset directly while a body drag is in flight.
@@ -278,7 +279,12 @@ function startVertexDrag(e:PointerEvent,index:number){
  const body=selectedBody.value;if(!body)return
  const target=e.currentTarget as SVGGraphicsElement,svg=target.ownerSVGElement!
  // Exact B-rep bodies keep their surfaces: dragging a corner moves the whole body instead of editing the mesh.
- if(body.brep){gesture={start:position(e),document:history.document,vertex:null,id:body.id,pointer:e.pointerId,pane:'3d',svg,pan:false,center:[...centers.value['3d']]};svg.setPointerCapture(e.pointerId);return}
+ if(body.brep){
+  // The move path uses XY model coordinates, not projected SVG coordinates.
+  gesture={start:plane(position(e),'3d'),document:history.document,vertex:null,id:body.id,pointer:e.pointerId,pane:'3d',svg,pan:false,center:[...centers.value['3d']],
+   anchor3:Array.from(body.mesh.positions.slice(index*3,index*3+3)) as Vec3,dragStart:[e.clientX,e.clientY]}
+  svg.setPointerCapture(e.pointerId);return
+ }
  const groups=coincidentVertexGroups(body.mesh.positions),ids=[...new Set(vertexIndexes.value.flatMap(i=>{const key=`${body.mesh.positions[i*3].toFixed(5)},${body.mesh.positions[i*3+1].toFixed(5)},${body.mesh.positions[i*3+2].toFixed(5)}`;return groups.get(key)??[i]}))]
  vertexDrag={svg,pointer:e.pointerId,start:position(e),ids,before:history.document,moved:false}
  svg.setPointerCapture(e.pointerId)
@@ -1132,11 +1138,6 @@ const nativeCage = computed(() => {
  * stays, so the visible density is constant and nothing jumps.
  */
 const sketchGridStep = computed(() => grid.value * Math.pow(10, Math.max(0, Math.ceil(Math.log10(views.value['2d'] / (100 * grid.value))))))
-const floorGrid = computed(() => {
-  const level=Math.max(0,Math.log10(views.value['3d']/(8*grid.value))), fine=grid.value*10**Math.floor(level)
-  const a=projectDirectPoint([1,0,0],camera.value),b=projectDirectPoint([0,1,0],camera.value)
-  return { fine, opacity:1-(level-Math.floor(level)), transform:`matrix(${a[0]} ${a[1]} ${b[0]} ${b[1]} 0 0)` }
-})
 const ghostPolygons = computed(() => previewBody.value ? meshPolygons(previewBody.value).sort((a,b)=>a.depth-b.depth) : [])
 const extrusionHandle = computed(() => {
   if (operation.value !== 'extrude' || !selectedSketch.value) return null
@@ -1332,6 +1333,8 @@ function move(e: PointerEvent) {
     centers.value[gesture.pane] = [center[0] + gesture.start[0] - p[0], center[1] + gesture.start[1] - p[1]]
     return
   }
+  // Selection and small pointer jitter must not snap or translate an exact body.
+  if (gesture.dragStart && !gesture.bodyDrag && Math.hypot(e.clientX-gesture.dragStart[0],e.clientY-gesture.dragStart[1]) < 3) return
   let p = gesture.sketch&&gesture.pane==='3d'?unprojectDirectPlane(position(e),activePlane.value,camera.value):plane(position(e), gesture.pane); const start = gesture.start
   if (gesture.pane === '2d'||gesture.sketch) {
     const anchor=gesture.anchor
@@ -1390,8 +1393,8 @@ function up(e: PointerEvent) {
   drawMeasure.value = ''; snapMarker.value = null
   if (!gesture || gesture.pointer !== e.pointerId) return
   move(e)
-  const start=gesture.start, before = gesture.document, pane = gesture.pane, drawing=gesture.sketch, pan = gesture.pan, bodyDrag = gesture.bodyDrag; gesture = null
-  if (pan) return
+  const start=gesture.start, before = gesture.document, pane = gesture.pane, drawing=gesture.sketch, pan = gesture.pan, bodyDrag = gesture.bodyDrag, selectionOnly = gesture.dragStart && !bodyDrag; gesture = null
+  if (pan || selectionOnly) return
   run(() => {
     // The exact translation, including B-rep, is applied once here rather than per move.
     if (bodyDrag) { commit(translateBodiesExact(before, bodyDrag.ids, bodyDrag.delta, [0, 0, 1])); settleAfterDrag(); return }
@@ -1845,10 +1848,7 @@ watch([() => props.open, () => props.seedDocument], ([open, seed]) => {
             <svg @pointerdown.capture="touchDown($event, pane)" @pointermove.capture="touchMove" @pointerup.capture="touchEnd" :viewBox="viewBox(pane)" tabindex="0" :aria-label="pane === '2d' ? label('Холст эскизов 2D', '2D sketch canvas') : label('Холст тел 3D', '3D body canvas')" @contextmenu.prevent @wheel.prevent="wheelZoom($event, pane)" @pointerdown="downAt($event, pane)" @pointermove="moveAt" @pointerleave="gpuActive && (hovered = '')" @pointerup="up" @pointercancel="cancelInputGesture" @lostpointercapture="touchPointers.has($event.pointerId) ? cancelInputGesture() : !multiTouch && cancelGesture()" @dragstart.prevent @selectstart.prevent @mousedown.prevent draggable="false">
               <defs><pattern :id="'direct-grid-' + pane" :width="sketchGridStep" :height="sketchGridStep" patternUnits="userSpaceOnUse"><path :d="`M ${sketchGridStep} 0 L 0 0 0 ${sketchGridStep}`" fill="none" stroke="var(--border)" stroke-opacity=".45" stroke-width=".5" vector-effect="non-scaling-stroke" /></pattern></defs>
               <rect v-if="pane === '2d'" x="-2000000" y="-2000000" width="4000000" height="4000000" :fill="'url(#direct-grid-' + pane + ')'" />
-              <g v-if="pane === '3d' && floorVisible && Math.abs(Math.sin(camera.pitch)) > .001" pointer-events="none">
-                <defs><pattern v-for="(step,i) in [floorGrid.fine,floorGrid.fine*10]" :id="'solid-floor-'+i" :key="i" :width="step" :height="step" patternUnits="userSpaceOnUse" :patternTransform="floorGrid.transform"><path :d="`M ${step} 0 H 0 V ${step}`" fill="none" stroke="var(--border)" :stroke-opacity=".45*(i?1:floorGrid.opacity)" stroke-width=".5" vector-effect="non-scaling-stroke" /></pattern></defs>
-                <rect v-for="i in [0,1]" :key="i" :x="centers['3d'][0]-views['3d']*100" :y="centers['3d'][1]-views['3d']*100" :width="views['3d']*200" :height="views['3d']*200" :fill="`url(#solid-floor-${i})`" />
-              </g>
+              <ModelingFloorGrid v-if="pane === '3d' && floorVisible" :camera="camera" :size="views['3d']" :center="centers['3d']" />
               <path v-if="pane === '2d'" d="M -2000000 0 H 2000000 M 0 -2000000 V 2000000" stroke="var(--border)" vector-effect="non-scaling-stroke" />
               <g v-if="pane === '2d'">
                 <path v-for="(loop,i) in workplaneOutline" :key="'workplane-'+i" :d="'M '+loop.map(p=>project(p,'2d').join(',')).join(' L ')+' Z'" fill="var(--border)" fill-opacity=".2" stroke="var(--text-dim)" stroke-dasharray="3 3" vector-effect="non-scaling-stroke" pointer-events="none" />

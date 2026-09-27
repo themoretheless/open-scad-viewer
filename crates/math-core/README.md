@@ -12,6 +12,84 @@ Rust crate name remains `math_core` (`use math_core::…`). Builds on **stable**
 math-core = { package = "osv-math", version = "0.1" }
 ```
 
+## Binary64 geometry
+
+On native hosts, `MathGpuSession::tensor()` returns `TensorMathF64`.
+Existing session calls for paired distances, distance sums, transformed sums,
+bounds, transformed bounds, moments and point-cloud statistics now use software
+binary64 on the selected WGSL GPU. Their `MathExecution` reports
+`GpuArithmetic::SoftwareBinary64`. Finite coordinates outside f32 range and
+local differences below f32 resolution survive upload and computation.
+`try_point_cloud_stats_stable` uses the same centered binary64 implementation.
+
+`TensorMathF64` also composes with the native CUDA f64 tensor backend. Bounds,
+transforms, distances, centered covariance and raw moments share those recipes;
+only final values are read back by the session wrappers. Intermediate products
+and sums must fit f64. This is not an arbitrary-range robust statistics API.
+
+Migration remains in progress: nearest/Chamfer, `MathGpuProgram` recording,
+legacy CUDA geometry adapters and browser session methods still use their
+existing f32 paths. MLX does not yet implement the binary64 tensor contract.
+See the [qualification report](../../docs/qualification/software-binary64-2026-09-27.md).
+
+## Resident geometry through WGSL, CUDA and MLX
+
+The optional `tensor` module expresses point-cloud algorithms once through
+`tensor-core` contracts. Construct `TensorMath::new(&backend)` with a
+`ComputeRuntime`, `CudaRuntime` or `MlxBackend`. Existing `MathGpuSession`
+instances expose binary64 `session.tensor()` on their own device and queue.
+
+The explicit legacy `TensorMath` API uses `[N, 3]` points with f32 coordinates. The API provides affine
+transforms, paired squared distances and sums, bounds, centered covariance,
+raw second moments, nearest neighbors and directed Chamfer summaries.
+Results remain native tensors and compose with other domain or backend
+operations. Upload/read calls are explicit. Errors retain backend failures;
+there is no automatic CPU fallback in this API.
+
+| Feature | Dependencies and use |
+| --- | --- |
+| Default | Existing f64 CPU math, no tensor or GPU runtime |
+| `tensor` | Shared recipes and the dependency-free tensor contract |
+| `tensor-wgsl` / `gpu` | WGSL executor and existing specialized GPU sessions |
+| `tensor-cuda` | Native CUDA tensor executor |
+| `tensor-mlx` | Native MLX executor without WGSL/CUDA dependencies |
+
+`TensorMath::upload_points_f64` explicitly rounds host f64 coordinates to f32
+and rejects nonfinite or overflowing conversions. It cannot recover geometry
+smaller than f32 resolution at a large coordinate offset. CPU f64 functions and `Acceleration` thresholds remain available.
+
+Nearest-neighbor options limit tiles, result bytes and conservative estimates
+of recipe workspace and work before device operations begin. Equal distances use the smaller
+original target index. Outputs have shape `[query_count, k]`; missing neighbors
+use index `u32::MAX` and distance `f32::MAX`. Distances and intermediate arithmetic
+must remain finite. A native evaluation fence completes retained tile outputs
+without reading their values on the CPU. MLX then releases unreferenced lazy
+dependencies. Workspace accounting covers live logical recipe buffers; it
+excludes primitive implementation temporaries/materializations, metadata,
+caches, library workspaces and evaluation of caller-built lazy inputs. It does
+not bound native peak memory or backend internal work. Browser completion is a
+separate asynchronous integration task.
+
+These recipes prioritize common resident composition. WGSL may submit separate
+commands, CUDA may enqueue separate kernels and MLX may build a lazy graph.
+They do not promise fusion, replay or a speedup over specialized kernels.
+The existing fused nearest and point-cloud implementations remain available.
+
+The [executable example](examples/resident_geometry.rs) transforms an uploaded
+cloud, computes its covariance and finds two neighbors before reading results:
+
+```sh
+cargo run --manifest-path crates/Cargo.toml -p osv-math --features tensor-wgsl \
+  --example resident_geometry -- wgsl
+cargo run --manifest-path crates/Cargo.toml -p osv-math --features tensor-mlx \
+  --example resident_geometry -- mlx
+cargo run --manifest-path crates/Cargo.toml -p osv-math --features tensor-cuda \
+  --example resident_geometry -- cuda
+```
+
+The [backend qualifier](../../scripts/qualify-tensor-backends.py) includes the
+shared domain fixture and requires the requested hardware to be available.
+
 ## Crate layout
 
 The crate root is a thin facade: downstream users still import from
@@ -31,8 +109,9 @@ src/
 ├─ nearest_neighbor.rs # CPU reference plus GPU/CUDA dispatch
 ├─ chamfer.rs          # point-cloud Chamfer distance over nearest-neighbor
 ├─ registration.rs     # rigid transform fitting and ICP
-├─ gpu.rs              # portable wgpu backend: Metal/Vulkan/DX12/WebGPU
-└─ cuda.rs             # CUDA driver/PTX backend
+├─ tensor/             # shared resident geometry over tensor backend contracts
+├─ gpu/                # portable wgpu backend: Metal/Vulkan/DX12/WebGPU
+└─ cuda/               # CUDA driver/PTX backend
 ```
 
 ## `transform_points` — plain CPU math, no GPU/CUDA
@@ -43,8 +122,9 @@ of this crate had one, but `examples/bench_gpu.rs` measured GPU and CUDA
 placements slower than this CPU reference at every size from 1K to 5M points
 — even with device buffers reused across calls — because 3 fused
 multiply-adds per point is too little work to amortize kernel-launch and
-host/device synchronization latency. This crate only ships GPU/CUDA
-acceleration for operations that measurably win; see below.
+host/device synchronization latency. Existing `Auto` thresholds use those
+measurements. The resident tensor API above exposes transforms for composition
+with other operations on data that is already on the device.
 
 ## Fused transform-and-error scoring
 

@@ -9,6 +9,41 @@
 
 pub const LEAF_BIT: u32 = 0x8000_0000;
 
+/// Work units per poll of the cooperative builder. A unit visits one input
+/// triangle, bounds record, partition record, node, or output record.
+pub const COOPERATIVE_BATCH: usize = 4096;
+
+struct Work<const COOPERATIVE: bool> {
+    remaining: usize,
+}
+impl<const COOPERATIVE: bool> Work<COOPERATIVE> {
+    fn tick(&mut self) -> bool {
+        if !COOPERATIVE {
+            return false;
+        }
+        self.remaining -= 1;
+        if self.remaining != 0 {
+            return false;
+        }
+        self.remaining = COOPERATIVE_BATCH;
+        true
+    }
+}
+
+/// Deliberately pending once. The owner polls again after returning to its
+/// event loop; this future does not schedule itself or depend on an executor.
+async fn yield_once() {
+    let mut yielded = false;
+    std::future::poll_fn(|_| {
+        if std::mem::replace(&mut yielded, true) {
+            std::task::Poll::Ready(())
+        } else {
+            std::task::Poll::Pending
+        }
+    })
+    .await
+}
+
 /// Math.min/Math.max semantics: NaN propagates, and among equal zeros the
 /// sign follows JavaScript (-0 wins min, +0 wins max). Inputs here are always
 /// finite, so only the zero-sign rule is observable in the output bytes.
@@ -107,8 +142,11 @@ impl Builder<'_> {
         self.source(left) - self.source(right)
     }
 
+    // Keep the stack-based traversal for synchronous callers. Suspending the
+    // traversal adds state spills; the measured synchronous path must not pay
+    // that cost. Both paths share input records and deterministic comparisons.
     /// In-place deterministic quickselect with a three-way partition.
-    fn select_nth(&mut self, start: usize, end: usize, nth: usize, axis: usize) {
+    fn select_nth_sync(&mut self, start: usize, end: usize, nth: usize, axis: usize) {
         debug_assert!(start <= end && end <= self.order.len());
         let mut low = start;
         let mut high = end;
@@ -160,7 +198,7 @@ impl Builder<'_> {
         }
     }
 
-    fn build_node(&mut self, start: usize, end: usize) -> usize {
+    fn build_node_sync(&mut self, start: usize, end: usize) -> usize {
         debug_assert!(start <= end && end <= self.order.len());
         let node = self.nodes.len() / 2;
         self.nodes.resize(self.nodes.len() + 2, 0);
@@ -208,12 +246,142 @@ impl Builder<'_> {
             axis = 2;
         }
         let middle = start + (count >> 1);
-        self.select_nth(start, end, middle, axis);
-        let left = self.build_node(start, middle);
-        let right = self.build_node(middle, end);
+        self.select_nth_sync(start, end, middle, axis);
+        let left = self.build_node_sync(start, middle);
+        let right = self.build_node_sync(middle, end);
         self.nodes[node * 2] = left as u32;
         self.nodes[node * 2 + 1] = right as u32;
         node
+    }
+
+    /// In-place deterministic quickselect with a three-way partition.
+    async fn select_nth<const C: bool>(
+        &mut self,
+        start: usize,
+        end: usize,
+        nth: usize,
+        axis: usize,
+        work: &mut Work<C>,
+    ) {
+        debug_assert!(start <= end && end <= self.order.len());
+        let mut low = start;
+        let mut high = end;
+        while high - low > 1 {
+            let middle = low + ((high - low) >> 1);
+            let low_record = self.record(low);
+            let middle_record = self.record(middle);
+            let high_record = self.record(high - 1);
+            // Allocation-free median-of-three pivot selection.
+            let pivot = if self.compare_records(low_record, middle_record, axis) < 0.0 {
+                if self.compare_records(middle_record, high_record, axis) < 0.0 {
+                    middle_record
+                } else if self.compare_records(low_record, high_record, axis) < 0.0 {
+                    high_record
+                } else {
+                    low_record
+                }
+            } else if self.compare_records(low_record, high_record, axis) < 0.0 {
+                low_record
+            } else if self.compare_records(middle_record, high_record, axis) < 0.0 {
+                high_record
+            } else {
+                middle_record
+            };
+
+            let mut before = low;
+            let mut cursor = low;
+            let mut after = high;
+            while cursor < after {
+                if work.tick() {
+                    yield_once().await;
+                }
+                let comparison = self.compare_records(self.record(cursor), pivot, axis);
+                if comparison < 0.0 {
+                    self.swap_records(before, cursor);
+                    before += 1;
+                    cursor += 1;
+                } else if comparison > 0.0 {
+                    after -= 1;
+                    self.swap_records(cursor, after);
+                } else {
+                    cursor += 1;
+                }
+            }
+            if nth < before {
+                high = before;
+            } else if nth >= after {
+                low = after;
+            } else {
+                return;
+            }
+        }
+    }
+
+    async fn build_nodes<const C: bool>(&mut self, count: usize, work: &mut Work<C>) {
+        // Push right before left: visiting in preorder preserves the exact
+        // recursive node numbering, partition order and floating-point stores.
+        let mut pending = vec![(0, count, None::<usize>)];
+        while let Some((start, end, parent_slot)) = pending.pop() {
+            if work.tick() {
+                yield_once().await;
+            }
+            debug_assert!(start <= end && end <= self.order.len());
+            let node = self.nodes.len() / 2;
+            if let Some(slot) = parent_slot {
+                self.nodes[slot] = node as u32;
+            }
+            self.nodes.resize(self.nodes.len() + 2, 0);
+            let mut min = [f64::INFINITY; 3];
+            let mut max = [f64::NEG_INFINITY; 3];
+            let mut centroid_min = [f64::INFINITY; 3];
+            let mut centroid_max = [f64::NEG_INFINITY; 3];
+
+            for slot in start..end {
+                if work.tick() {
+                    yield_once().await;
+                }
+                let record = self.record(slot);
+                for axis in 0..3 {
+                    let lo = self.triangle_bound(record, axis);
+                    let hi = self.triangle_bound(record, 3 + axis);
+                    min[axis] = js_min(min[axis], lo);
+                    max[axis] = js_max(max[axis], hi);
+                    let c = self.centroid(record, axis);
+                    centroid_min[axis] = js_min(centroid_min[axis], c);
+                    centroid_max[axis] = js_max(centroid_max[axis], c);
+                }
+            }
+
+            for &value in &min {
+                self.bounds.push(value as f32);
+            }
+            for &value in &max {
+                self.bounds.push(value as f32);
+            }
+
+            let count = end - start;
+            if count <= self.leaf_size {
+                self.nodes[node * 2] = start as u32;
+                self.nodes[node * 2 + 1] = LEAF_BIT | count as u32;
+                continue;
+            }
+
+            let extent_x = centroid_max[0] - centroid_min[0];
+            let extent_y = centroid_max[1] - centroid_min[1];
+            let extent_z = centroid_max[2] - centroid_min[2];
+            // Stable tie order is X, then Y, then Z.
+            let mut axis = 0;
+            if extent_y > extent_x {
+                axis = 1;
+            }
+            if extent_z > (if axis == 0 { extent_x } else { extent_y }) {
+                axis = 2;
+            }
+            let middle = start + (count >> 1);
+            self.select_nth(start, end, middle, axis, work).await;
+            pending.push((middle, end, Some(node * 2 + 1)));
+            pending.push((start, middle, Some(node * 2)));
+        }
     }
 }
 
@@ -228,6 +396,44 @@ pub fn build_mesh_bvh(
     vertex_stride: usize,
     leaf_size: usize,
 ) -> MeshBvh {
+    // The non-cooperative specialization has no pending points. Native and
+    // synchronous WASM callers keep the same single-call contract.
+    let mut future = std::pin::pin!(build_impl::<false>(
+        vertices,
+        indices,
+        vertex_stride,
+        leaf_size
+    ));
+    match std::future::Future::poll(
+        future.as_mut(),
+        &mut std::task::Context::from_waker(std::task::Waker::noop()),
+    ) {
+        std::task::Poll::Ready(result) => result,
+        std::task::Poll::Pending => unreachable!("synchronous BVH cannot yield"),
+    }
+}
+
+/// Same algorithm and byte layout, but retains its state between bounded polls.
+/// Dropping the future releases all partial buffers; no partial BVH is exposed.
+pub async fn build_mesh_bvh_cooperative(
+    vertices: &[f32],
+    indices: &[u32],
+    vertex_stride: usize,
+    leaf_size: usize,
+) -> MeshBvh {
+    build_impl::<true>(vertices, indices, vertex_stride, leaf_size).await
+}
+
+async fn build_impl<const C: bool>(
+    vertices: &[f32],
+    indices: &[u32],
+    vertex_stride: usize,
+    leaf_size: usize,
+) -> MeshBvh {
+    let mut work = Work::<C> {
+        remaining: COOPERATIVE_BATCH,
+    };
+    let leaf_size = leaf_size.max(1);
     let triangle_count = indices.len() / 3;
     // `ia < vertex_count` and `vertex_stride >= 3` together imply
     // `ia * vertex_stride + 3 <= vertices.len()`, which `xyz` relies on.
@@ -253,6 +459,9 @@ pub fn build_mesh_bvh(
     let mut centroids: Vec<f32> = Vec::with_capacity(triangle_count * 3);
 
     for (triangle, &[ia, ib, ic]) in indices.as_chunks::<3>().0.iter().enumerate() {
+        if work.tick() {
+            yield_once().await;
+        }
         let (ia, ib, ic) = (ia as usize, ib as usize, ic as usize);
         if ia >= vertex_count || ib >= vertex_count || ic >= vertex_count {
             continue;
@@ -322,23 +531,36 @@ pub fn build_mesh_bvh(
     // Establishes the `Builder` invariant its unchecked accessors rely on.
     assert_eq!(centroids.len(), valid_count * 3);
     assert_eq!(triangle_bounds.len(), valid_count * 6);
+    let mut order = Vec::with_capacity(valid_count);
+    for record in 0..valid_count as u32 {
+        if work.tick() {
+            yield_once().await;
+        }
+        order.push(record);
+    }
     let mut builder = Builder {
         triangle_bounds: &triangle_bounds,
         centroids: &centroids,
         source_triangles: &source_triangles,
-        order: (0..valid_count as u32).collect(),
+        order,
         leaf_size,
         bounds: Vec::with_capacity(maximum_nodes * 6),
         nodes: Vec::with_capacity(maximum_nodes * 2),
     };
-    builder.build_node(0, valid_count);
+    if C {
+        builder.build_nodes(valid_count, &mut work).await;
+    } else {
+        builder.build_node_sync(0, valid_count);
+    }
 
     let node_count = builder.nodes.len() / 2;
-    let triangles = builder
-        .order
-        .iter()
-        .map(|&record| source_triangles[record as usize])
-        .collect();
+    let mut triangles = Vec::with_capacity(valid_count);
+    for &record in &builder.order {
+        if work.tick() {
+            yield_once().await;
+        }
+        triangles.push(source_triangles[record as usize]);
+    }
     MeshBvh {
         node_count,
         bounds: builder.bounds,
@@ -409,5 +631,60 @@ mod tests {
         assert_eq!(next_power_of_two(3), 4);
         assert_eq!(next_power_of_two(1024), 1024);
         assert_eq!(next_power_of_two(1025), 2048);
+    }
+}
+
+#[cfg(test)]
+mod cooperative_tests {
+    use super::*;
+    use std::{
+        future::Future,
+        task::{Context, Poll, Waker},
+    };
+
+    #[test]
+    fn invalid_input_scanning_is_also_interruptible() {
+        let vertices = [0f32; 18];
+        let indices = vec![0u32; COOPERATIVE_BATCH * 9];
+        let mut future = Box::pin(build_mesh_bvh_cooperative(&vertices, &indices, 6, 8));
+        let mut cx = Context::from_waker(Waker::noop());
+        let mut pending = 0;
+        loop {
+            match future.as_mut().poll(&mut cx) {
+                Poll::Pending => pending += 1,
+                Poll::Ready(result) => {
+                    assert_eq!(result.node_count, 0);
+                    break;
+                }
+            }
+            assert!(pending < 10);
+        }
+        assert_eq!(pending, 3);
+    }
+
+    #[test]
+    fn dropping_a_partial_build_leaves_inputs_reusable() {
+        let vertices = [0f32, 0., 0., 1., 0., 0., 0., 1., 0.];
+        let indices: Vec<_> = (0..10000).flat_map(|_| [0, 1, 2]).collect();
+        let mut cx = Context::from_waker(Waker::noop());
+        let mut abandoned = Box::pin(build_mesh_bvh_cooperative(&vertices, &indices, 3, 8));
+        for _ in 0..3 {
+            assert!(abandoned.as_mut().poll(&mut cx).is_pending());
+        }
+        drop(abandoned);
+        let expected = build_mesh_bvh(&vertices, &indices, 3, 8);
+        let mut resumed = Box::pin(build_mesh_bvh_cooperative(&vertices, &indices, 3, 8));
+        let mut polls = 0;
+        let actual = loop {
+            polls += 1;
+            assert!(polls < 1000);
+            if let Poll::Ready(result) = resumed.as_mut().poll(&mut cx) {
+                break result;
+            }
+        };
+        assert!(polls > 3);
+        assert_eq!(actual.bounds, expected.bounds);
+        assert_eq!(actual.nodes, expected.nodes);
+        assert_eq!(actual.triangles, expected.triangles);
     }
 }
