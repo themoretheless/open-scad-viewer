@@ -18,6 +18,12 @@ pub(super) struct Expanded {
     pub stats: CudaProgramStats,
 }
 impl Expanded {
+    pub(super) fn scratch_f64(&mut self, shape: Shape) -> Result<usize, CudaError> {
+        let spec = ScratchSpec::f64(shape)?;
+        let index = self.scratch.len();
+        self.scratch.push(spec);
+        Ok(index)
+    }
     pub(super) fn scratch(&mut self, shape: Shape, dtype: CudaDtype) -> Result<usize, CudaError> {
         allocation_bytes(&shape, dtype)?;
         let index = self.scratch.len();

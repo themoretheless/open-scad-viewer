@@ -421,6 +421,13 @@ impl TensorBackend for CudaRuntime {
     }
 }
 
+pub(crate) fn validate_storage(lengths: &[(usize, usize)]) -> Result<(), CudaError> {
+    if lengths.iter().any(|&(actual, required)| actual < required) {
+        return Err(CudaError::InvalidInput("dispatch storage is too small"));
+    }
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

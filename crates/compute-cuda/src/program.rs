@@ -3,6 +3,7 @@
 use crate::{CudaError, CudaRuntime};
 use tensor_core::{BinaryOp, Layout, MatmulPrecision, ReduceOp, Shape, UnaryOp};
 mod api_typed;
+mod attention_api;
 mod builder;
 mod execution;
 mod expansion;
@@ -16,6 +17,9 @@ mod plan;
 mod preparation;
 mod reduction_plan;
 mod scratch;
+mod statistics_api;
+mod statistics_launch;
+mod statistics_plan;
 mod storage;
 mod typed;
 mod validation;
@@ -154,3 +158,6 @@ mod typed_preparation_tests;
 
 #[cfg(test)]
 mod indexing_preparation_tests;
+
+#[cfg(test)]
+mod statistics_preparation_tests;

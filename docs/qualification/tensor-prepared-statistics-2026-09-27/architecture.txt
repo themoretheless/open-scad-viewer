@@ -1,0 +1,1 @@
+GPU dependency directions, backend isolation and CPU-only contracts: OK

@@ -13,9 +13,13 @@ metadata and allocates intermediates once. Each execution binds the caller's
 current resident inputs and writes caller-owned outputs. Dtype and full input
 layout are fixed. The schedule supports typed views, arithmetic, comparisons,
 selection, explicit low casts, reductions, mean, cuBLAS matmul and all four
-indexing families: scan, gather, compaction and scatter. f16/bf16
+indexing families: scan, gather, compaction and scatter. Statistics, normalization
+and attention are also recorded for f32/f16/BF16. f16/bf16
 intermediates use native two-byte storage; reductions and native low GEMM can
-produce f32 results directly without full-input conversion buffers.
+produce f32 results directly without full-input conversion buffers. Statistics
+retain f64 row summaries and bounded partials; attention retains an output-sized
+f64 accumulator. These private buffers are checked against the scratch budget
+and allocated once. Eager and prepared routes share metadata and launch helpers.
 
 A future increment can capture the same prepared launch sequence as an explicit **CUDA Graph with
 owned input/output slots**. Keep that mode separate: fixed addresses, capture
@@ -135,7 +139,7 @@ gather → scan → compact → scatter pipeline with resident count composition
   reductions/mean/matmul retain the f32 result; low outputs add a single final
   cast. Strided copies keep the source dtype.
 
-Statistics/normalization and attention remain eager operations. There is no
+Statistics/normalization and attention are recorded through shared eager launch helpers. There is no
 builder narrow node, graph capture, fusion or scratch pooling. A pre-existing
 narrow view can be a fixed-layout input.
 
@@ -357,7 +361,7 @@ NVIDIA profiler on representative hardware before claiming it.
 ## Scope and rollout
 
 1. Implemented: shared CUDA launch preparation, typed builder/transport and
-   prepared `run_typed_into`, including typed indexing and compatible f32 methods.
+   prepared `run_typed_into`, including typed indexing, statistics/normalization, attention and compatible f32 methods.
    CPU planner, binding,
    budget and poison-state tests pass; NVRTC compiled 52 current entries for
    compute_70/80/90/120. Required native fixtures are present, but numerical
@@ -374,3 +378,6 @@ Keep mathematical planning in `tensor-core`, CUDA tensor execution in
 `compute-cuda`, and platform stream/driver capability support in `gpu-compute`.
 This increment needs no raster changes and no new generic graph framework in
 the backend-neutral crate.
+
+The [statistics/attention qualification](../qualification/tensor-prepared-statistics-2026-09-27.md)
+records the current CUDA host checks and MLX native enabled/disabled results.
