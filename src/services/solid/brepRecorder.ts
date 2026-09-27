@@ -214,6 +214,7 @@ export function createBrepRecordingKernelOps(
     isEmpty(input) { return base.isEmpty(input) },
     originalId(input) { return base.originalId(input) },
     analyzeSolid(input) { return base.analyzeSolid(input) },
+    analyzeSolidCooperatively(input, checkpoint) { return base.analyzeSolidCooperatively(input, checkpoint) },
     delete(input) { base.delete(input) },
   }
 

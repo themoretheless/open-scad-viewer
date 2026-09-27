@@ -181,6 +181,16 @@ the geometry kernel; warm/build happens only after the source-selected provider 
 admission. When a newer revision supersedes running
 synchronous work, the coordinator requests cancellation and replaces the
 Worker after a configurable grace period if no real checkpoint is reached.
+The coordinator also owns an optional silence watchdog, configured to 30 seconds
+by App. Valid messages from current jobs refresh it; host requests do not. A
+silent job retries once in a fresh Worker with the same source, revision, quality
+and job ID. Its host elapsed time includes both attempts. Each new job has its
+own allowance. A second timeout fails with `WORKER_TIMEOUT`; a redundant preview
+cannot replace an already published full result with a Worker failure. Timer
+tokens and Worker generations fence callbacks after cancellation or replacement.
+`messageerror` settles transport failure immediately. The editor's Cancel build
+action clears scheduled builds and terminates active work while retaining the
+last scene.
 App performs a final revision check before publishing. Export is allowed only
 from an error-free full build of the current source; a retained last-known-good
 mesh after failure is visual context, not a current exportable result.
@@ -234,10 +244,18 @@ assertion transparently evaluates its child geometry, while a failed assertion
 publishes one positioned `failed` terminal per job and never exposes partial
 geometry. Cancellation or supersession wins a race with that failure, so a job
 still has only one terminal outcome. Expression-form assertions remain
-explicitly outside the supported subset. Cooperative yields currently occur
-between top-level statements: a large child block guarded by one passing
-assertion remains synchronous until that statement ends, with hard Worker
-replacement retained as the watchdog boundary.
+explicitly outside the supported subset. Cooperative yields occur between
+nested statements and loop iterations, during chunked publication work, and
+inside Rust BVH construction and semantic-edge extraction. An owned analysis
+job resumes these phases in batches
+of 4,096 work units. The host checks cancellation between steps and frees
+unfinished jobs in `finally`; published arrays are copied only after completion.
+The registry admits at most two jobs, each with at most 750,000 source triangles.
+Render preparation and selection surface grouping remain synchronous. See
+[cooperative BVH](docs/design/cooperative-bvh-2026-09-27.md) and
+[cooperative edges](docs/design/cooperative-edges-2026-09-27.md).
+Individual synchronous WASM calls still require hard Worker replacement when
+they do not return within the cancellation grace or silence deadline.
 
 The post-rewrite review fixed several important compatibility and safety bugs:
 

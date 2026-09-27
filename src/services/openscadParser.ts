@@ -3457,7 +3457,12 @@ async function parseInternal(
         const resolved = exactRecorder.recording.resolve(shape.geometry)
         exactRoots.push('id' in resolved ? { name, id: resolved.id } : { name, inexact: resolved.inexact })
       }
-      const analysis = ctx.kernel.analyzeSolid(shape.geometry)
+      const analysis = options.shouldAbort || options.onYield
+        ? await ctx.kernel.analyzeSolidCooperatively(shape.geometry, async () => {
+          control.poll()
+          await control.yieldIfDue()
+        })
+        : ctx.kernel.analyzeSolid(shape.geometry)
       volume += analysis.volume
       surfaceArea += analysis.surfaceArea
       const mesh = analysis.mesh

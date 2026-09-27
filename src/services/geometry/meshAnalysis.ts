@@ -198,28 +198,54 @@ export function analyzeSolidInKernel(id: number): KernelSolidAnalysis {
     handle = decodeNurbsResult<number>(takeResponse(wasm.abi_analyze_solid(
       id, Math.cos(52.5 * Math.PI / 180), Math.cos(30 * Math.PI / 180), leafSize,
     )))
-    const buffer = memory.buffer
-    const u32 = (slot: number) => new Uint32Array(new Uint32Array(buffer, wasm.abi_array_field(handle, slot), wasm.abi_array_field(handle, slot + 1)))
-    const nodes = u32(12)
-    return {
-      mesh: copyRenderMesh(wasm, buffer, handle),
-      bvh: {
-        version: 1, vertexStride: 6, leafSize, nodeCount: nodes.length / 2,
-        bounds: new Float32Array(new Float32Array(buffer, wasm.abi_array_field(handle, 10), wasm.abi_array_field(handle, 11))),
-        nodes, triangles: u32(14),
-      },
-      semanticEdges: {
-        indices: u32(16),
-        diagnostics: {
-          boundary: wasm.abi_array_field(handle, 18),
-          crease: wasm.abi_array_field(handle, 19),
-          nonManifold: wasm.abi_array_field(handle, 20),
-          degenerate: wasm.abi_array_field(handle, 21),
-        },
-      },
-    }
+    return copySolidAnalysis(wasm, memory.buffer, handle)
   } finally {
     if (handle) wasm.abi_array_free(handle)
+  }
+}
+
+/** One owned Rust job. A rejecting checkpoint cancels and frees its scratch. */
+export async function analyzeSolidCooperativelyInKernel(id: number, checkpoint: () => Promise<void>): Promise<KernelSolidAnalysis> {
+  if (!Number.isInteger(id) || id < 1 || id > 0xffffffff) throw new GeometryKernelError('GEOMETRY_INVALID_INPUT', 'Invalid CAD handle')
+  const {exports: wasm, memory, takeResponse} = kernelRuntime()
+  let job = 0, handle = 0
+  try {
+    await checkpoint()
+    job = decodeNurbsResult<number>(takeResponse(wasm.abi_solid_analysis_start(
+      id, Math.cos(52.5 * Math.PI / 180), Math.cos(30 * Math.PI / 180), 8,
+    )))
+    while (!handle) {
+      await checkpoint()
+      handle = decodeNurbsResult<number>(takeResponse(wasm.abi_solid_analysis_step(job)))
+    }
+    // A memory view is created only after completion and copied before any await.
+    await checkpoint()
+    return copySolidAnalysis(wasm, memory.buffer, handle)
+  } finally {
+    if (job) wasm.abi_solid_analysis_cancel(job)
+    if (handle) wasm.abi_array_free(handle)
+  }
+}
+
+function copySolidAnalysis(wasm: ReturnType<typeof kernelRuntime>['exports'], buffer: ArrayBuffer, handle: number): KernelSolidAnalysis {
+  const u32 = (slot: number) => new Uint32Array(new Uint32Array(buffer, wasm.abi_array_field(handle, slot), wasm.abi_array_field(handle, slot + 1)))
+  const nodes = u32(12)
+  return {
+    mesh: copyRenderMesh(wasm, buffer, handle),
+    bvh: {
+      version: 1, vertexStride: 6, leafSize: 8, nodeCount: nodes.length / 2,
+      bounds: new Float32Array(new Float32Array(buffer, wasm.abi_array_field(handle, 10), wasm.abi_array_field(handle, 11))),
+      nodes, triangles: u32(14),
+    },
+    semanticEdges: {
+      indices: u32(16),
+      diagnostics: {
+        boundary: wasm.abi_array_field(handle, 18),
+        crease: wasm.abi_array_field(handle, 19),
+        nonManifold: wasm.abi_array_field(handle, 20),
+        degenerate: wasm.abi_array_field(handle, 21),
+      },
+    },
   }
 }
 

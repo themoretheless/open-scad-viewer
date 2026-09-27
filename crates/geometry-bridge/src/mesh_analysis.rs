@@ -29,6 +29,106 @@ pub fn analyze_solid(
     Ok(SolidAnalysis { mesh, bvh, edges })
 }
 
+// Jobs own their display buffers and pinned BVH future. No linear-memory view
+// or source-solid borrow survives a step on the host. IDs never get recycled:
+// cancelling a stale job cannot drop a newer one.
+type AnalysisFuture = std::pin::Pin<Box<dyn std::future::Future<Output = SolidAnalysis>>>;
+#[derive(Default)]
+struct AnalysisJobs {
+    next: u32,
+    jobs: std::collections::BTreeMap<u32, AnalysisFuture>,
+}
+thread_local! {
+    static JOBS: std::cell::RefCell<AnalysisJobs> = std::cell::RefCell::new(AnalysisJobs::default());
+}
+const MAX_ANALYSIS_JOBS: usize = 2;
+const MAX_ANALYSIS_TRIANGLES: usize = 750_000;
+
+pub fn start_solid_analysis(
+    id: u32,
+    normal_cosine: f64,
+    edge_cosine: f64,
+    leaf_size: usize,
+) -> crate::Result<u32> {
+    if !normal_cosine.is_finite() || !edge_cosine.is_finite() || !(1..=64).contains(&leaf_size) {
+        return Err(crate::input("Invalid solid analysis parameters"));
+    }
+    JOBS.with(|jobs| {
+        let mut jobs = jobs.borrow_mut();
+        if jobs.jobs.len() >= MAX_ANALYSIS_JOBS {
+            return Err(crate::input("Solid analysis job budget exceeded"));
+        }
+        let next = jobs
+            .next
+            .checked_add(1)
+            .ok_or_else(|| crate::input("Solid analysis job IDs exhausted"))?;
+        crate::mesh::check_analysis_triangle_budget(id, MAX_ANALYSIS_TRIANGLES)?;
+        let mesh = crate::mesh::render_buffers(id, normal_cosine)?;
+        jobs.jobs.insert(
+            next,
+            Box::pin(async move {
+                let bvh = polygon_core::solid::bvh::build_mesh_bvh_cooperative(
+                    &mesh.vertices,
+                    &mesh.indices,
+                    6,
+                    leaf_size,
+                )
+                .await;
+                // Let the host observe cancellation before entering edge extraction,
+                // which also yields internally. No partial result has been published.
+                let mut yielded = false;
+                std::future::poll_fn(|_| {
+                    if std::mem::replace(&mut yielded, true) {
+                        std::task::Poll::Ready(())
+                    } else {
+                        std::task::Poll::Pending
+                    }
+                })
+                .await;
+                let edges = polygon_core::solid::edges::extract_semantic_edges_cooperative(
+                    &mesh.vertices,
+                    &mesh.indices,
+                    &mesh.merge_from,
+                    &mesh.merge_to,
+                    false,
+                    edge_cosine,
+                )
+                .await;
+                SolidAnalysis { mesh, bvh, edges }
+            }),
+        );
+        jobs.next = next;
+        Ok(next)
+    })
+}
+
+/// Zero means pending; a nonzero result is an ordinary owned array-result
+/// handle. Completion consumes the job. Unknown/completed/cancelled jobs refuse.
+pub fn step_solid_analysis(id: u32) -> crate::Result<usize> {
+    JOBS.with(|jobs| {
+        let mut jobs = jobs.borrow_mut();
+        let future = jobs
+            .jobs
+            .get_mut(&id)
+            .ok_or_else(|| crate::input("Unknown or completed solid analysis job"))?;
+        let mut cx = std::task::Context::from_waker(std::task::Waker::noop());
+        match future.as_mut().poll(&mut cx) {
+            std::task::Poll::Pending => Ok(0),
+            std::task::Poll::Ready(result) => {
+                jobs.jobs.remove(&id);
+                Ok(store(AnalysisBuffers::Solid(result)))
+            }
+        }
+    })
+}
+
+/// Idempotent cancellation drops all unfinished scratch and owned input data.
+pub fn cancel_solid_analysis(id: u32) {
+    JOBS.with(|jobs| {
+        jobs.borrow_mut().jobs.remove(&id);
+    });
+}
+
 pub enum AnalysisBuffers {
     SurfaceGroups {
         ids: Vec<u32>,
@@ -193,4 +293,145 @@ pub fn free(handle: usize) {
             *slot = None;
         }
     });
+}
+
+#[cfg(test)]
+mod cooperative_tests {
+    use super::*;
+    use value_codec::json;
+
+    fn sphere() -> u32 {
+        crate::mesh::dispatch(json!({"action":"sphere", "radius":3, "segments":128}))
+            .unwrap()
+            .as_u64()
+            .unwrap() as u32
+    }
+    fn delete(id: u32) {
+        crate::mesh::dispatch(json!({"action":"delete", "ids":[id]})).unwrap();
+    }
+    fn start(id: u32) -> u32 {
+        start_solid_analysis(id, 0.6, 0.8, 8).unwrap()
+    }
+    fn live() -> usize {
+        JOBS.with(|jobs| jobs.borrow().jobs.len())
+    }
+
+    #[test]
+    fn cancelled_jobs_drop_scratch_and_never_alias_new_jobs() {
+        let id = sphere();
+        for _ in 0..8 {
+            let cancelled = start(id);
+            assert_eq!(step_solid_analysis(cancelled).unwrap(), 0);
+            assert_eq!(live(), 1);
+            cancel_solid_analysis(cancelled);
+            assert_eq!(live(), 0);
+            let next = start(id);
+            assert!(next > cancelled);
+            cancel_solid_analysis(cancelled);
+            assert!(step_solid_analysis(cancelled).is_err());
+            assert_eq!(step_solid_analysis(next).unwrap(), 0);
+            cancel_solid_analysis(next);
+        }
+        delete(id);
+    }
+
+    #[test]
+    fn cancellation_after_bvh_drops_edge_scratch_and_releases_admission() {
+        use std::future::Future;
+        let id = sphere();
+        let mesh = crate::mesh::render_buffers(id, 0.6).unwrap();
+        let mut bvh = std::pin::pin!(polygon_core::solid::bvh::build_mesh_bvh_cooperative(
+            &mesh.vertices,
+            &mesh.indices,
+            6,
+            8
+        ));
+        let mut cx = std::task::Context::from_waker(std::task::Waker::noop());
+        let mut bvh_polls = 1;
+        while bvh.as_mut().poll(&mut cx).is_pending() {
+            bvh_polls += 1;
+        }
+        for edge_steps in [1, 20, 80] {
+            let job = start(id);
+            // The poll completing BVH also reaches the pre-edge yield.
+            for _ in 0..bvh_polls + edge_steps {
+                assert_eq!(step_solid_analysis(job).unwrap(), 0);
+            }
+            assert_eq!(live(), 1);
+            cancel_solid_analysis(job);
+            assert_eq!(live(), 0);
+            assert!(step_solid_analysis(job).is_err());
+        }
+        let a = start(id);
+        let b = start(id);
+        cancel_solid_analysis(a);
+        cancel_solid_analysis(b);
+        delete(id);
+    }
+
+    #[test]
+    fn completion_matches_sync_and_owns_snapshot_after_source_deletion() {
+        let id = sphere();
+        let expected = analyze_solid(id, 0.6, 0.8, 8).unwrap();
+        let job = start(id);
+        delete(id);
+        let mut polls = 0;
+        let handle = loop {
+            polls += 1;
+            assert!(polls < 10_000);
+            let result = step_solid_analysis(job).unwrap();
+            if result != 0 {
+                break result;
+            }
+        };
+        assert!(polls > 2);
+        assert_eq!(live(), 0);
+        assert!(step_solid_analysis(job).is_err());
+        cancel_solid_analysis(job);
+        RESULTS.with(|results| {
+            let results = results.borrow();
+            let Some(AnalysisBuffers::Solid(actual)) = &results[handle - 1] else {
+                panic!("missing result")
+            };
+            assert_eq!(actual.mesh.vertices, expected.mesh.vertices);
+            assert_eq!(actual.mesh.indices, expected.mesh.indices);
+            assert_eq!(
+                actual
+                    .bvh
+                    .bounds
+                    .iter()
+                    .map(|x| x.to_bits())
+                    .collect::<Vec<_>>(),
+                expected
+                    .bvh
+                    .bounds
+                    .iter()
+                    .map(|x| x.to_bits())
+                    .collect::<Vec<_>>()
+            );
+            assert_eq!(actual.bvh.nodes, expected.bvh.nodes);
+            assert_eq!(actual.bvh.triangles, expected.bvh.triangles);
+            assert_eq!(actual.edges.indices, expected.edges.indices);
+            assert_eq!(actual.edges.diagnostics, expected.edges.diagnostics);
+        });
+        free(handle);
+    }
+
+    #[test]
+    fn admission_is_bounded_and_failure_does_not_poison_registry() {
+        let id = sphere();
+        assert!(start_solid_analysis(id, f64::NAN, 0.8, 8).is_err());
+        assert!(start_solid_analysis(id, 0.6, 0.8, 0).is_err());
+        let a = start(id);
+        let b = start(id);
+        assert!(start_solid_analysis(id, 0.6, 0.8, 8).is_err());
+        assert_eq!(live(), 2);
+        cancel_solid_analysis(a);
+        let c = start(id);
+        cancel_solid_analysis(b);
+        cancel_solid_analysis(c);
+        delete(id);
+        assert!(start_solid_analysis(id, 0.6, 0.8, 8).is_err());
+        assert_eq!(live(), 0);
+    }
 }

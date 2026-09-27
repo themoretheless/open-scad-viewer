@@ -1,0 +1,1416 @@
+{
+  "schemaVersion": 1,
+  "scope": "Cooperative BVH cancellation only; other synchronous compilation phases still use hard-preemption fallback. Not whole-release qualification.",
+  "timestamp": "2026-09-27T13:27:24.375Z",
+  "sourceHashes": {
+    "benchmarks/cooperative-bvh-native.rs": "ea113b83515556b2f2c56a37fe32e85e7aa86200a3db470642a06bb598a32a09",
+    "tests/fixtures/bvh-before-cooperative.rs": "0dad29581a4ea78a51313d2e85583f890430e7cb85b2fb598b551749c7eafe6e",
+    "tests/solidAnalysis.test.ts": "b41f17bdd0513feb4ec671bef3d76352de5ce13882f4e23cf985fa6f40c67350",
+    "tests/openscadParser.test.ts": "db68752700064c2461314f7a96aa87bd265d43a6c269ce574c7f70324c529857",
+    "src/services/geometry/kernel.ts": "61dc694264fc420e623038d2a18960151960630b636217b5ae74aab97cd29905",
+    "src/services/solid/brepRecorder.ts": "381951b44849f5454ea8ddd907a36ec0acfafed1d5b5720f3b453e6402cbfdeb"
+  },
+  "checks": {
+    "rustBvhTests": 9,
+    "rustAnalysisTests": 3,
+    "typescriptTests": 238,
+    "typescriptTestFiles": 8,
+    "typecheck": "vue-tsc and MCP tsc passed; strict browser harness tsc passed",
+    "productionBuild": "passed; verify-dist 108 artifacts",
+    "existingWarnings": [
+      "wgsl_export binary naming",
+      "unused ABI doc comment",
+      "Vite packed WASM chunk size"
+    ]
+  },
+  "nativeDifferential": {
+    "cases": 122,
+    "byteParity": true,
+    "maxPolls": 11160,
+    "largestTriangles": 750000,
+    "largestSingleSampleMs": {
+      "before": 360.111459,
+      "sync": 321.631458,
+      "cooperative": 421.665958
+    }
+  },
+  "browser": {
+    "timestamp": "2026-09-27T13:27:24.375Z",
+    "browser": "151.0.7922.34",
+    "hashes": {
+      "crates/polygon-core/src/solid/bvh.rs": "f89d15b8b5db2e48c40d2ff22a3959136dedd180a2e90962feb7ec657e7b41a2",
+      "crates/geometry-bridge/src/mesh_analysis.rs": "5aa4ca3169786b9fbb392a48952c9cdf8c8e62b050c6ad9540e280d07bd0c0a0",
+      "crates/geometry-bridge/src/mesh.rs": "b2328b2fa7c3ff3465cc7cc8330d9ee39c197d5a54bc17c1638ca4336a7c3cbf",
+      "crates/geometry-bridge/src/abi.rs": "1496799d6ab0b50bac44ddca0ccbc51a83d1011c151734da989bd4da67f76f8e",
+      "crates/geometry-wasm/src/lib.rs": "77b3e63520c31877136d94907fed868342648f80c8f608cfa5b5d7be6bc7229a",
+      "src/services/geometry/meshAnalysis.ts": "359f420fab474085b1b14348caaf76ec149dd9b19b35bdf421f1d71ba3b90e6c",
+      "src/services/cadKernelOps.ts": "3e91c8a9fa04a0906768408ed3584ab28c7ecb6ce3c69802e1c56e5417aeab83",
+      "src/services/openscadParser.ts": "4ec63013a2ba86cde30e1f347af7380fca26330f66ca964cf7acdcdf8a44a57a",
+      "public/wasm/geometry-kernel.wasm": "135ddbfd14833ffc7c2866cbadc917b1ec6af2d4c72114935c57d9c472608a04",
+      "tools/browser-qualification/cooperative-bvh.ts": "f6485eca8dfefbfc92873eeb6a2b0df4bf78bc8c3295e082f3fb5457ba00c9bc",
+      "tools/browser-qualification/cooperative-bvh.worker.ts": "8b4338abe31652ceaf8498d1ab183e12926eec16211c6c4545cae6850266e1a0",
+      "tools/browser-qualification/cooperative-bvh.mjs": "751c0f28127e24119430e719e90708b3f791f9fc3ccdaea26de74e12c52ded7f"
+    },
+    "pageErrors": [],
+    "workerStarts": 1,
+    "cancelled": [
+      {
+        "id": 1,
+        "status": "cancelled",
+        "checkpoints": 80,
+        "elapsedMs": 55.69999998807907,
+        "error": "AbortError: Build cancelled",
+        "cancelLatencyMs": 5.600000023841858
+      },
+      {
+        "id": 2,
+        "status": "cancelled",
+        "checkpoints": 80,
+        "elapsedMs": 43,
+        "error": "AbortError: Build cancelled",
+        "cancelLatencyMs": 5.099999964237213
+      },
+      {
+        "id": 3,
+        "status": "cancelled",
+        "checkpoints": 80,
+        "elapsedMs": 42.60000002384186,
+        "error": "AbortError: Build cancelled",
+        "cancelLatencyMs": 5.100000023841858
+      },
+      {
+        "id": 4,
+        "status": "cancelled",
+        "checkpoints": 80,
+        "elapsedMs": 42.69999998807907,
+        "error": "AbortError: Build cancelled",
+        "cancelLatencyMs": 5.199999988079071
+      }
+    ],
+    "recovered": {
+      "id": 5,
+      "status": "succeeded",
+      "checkpoints": 4,
+      "elapsedMs": 0.10000002384185791,
+      "byteParity": true,
+      "triangles": 12,
+      "volume": 27,
+      "nodeCount": 3
+    },
+    "completed": {
+      "id": 6,
+      "status": "succeeded",
+      "checkpoints": 179,
+      "elapsedMs": 106.29999995231628,
+      "byteParity": true,
+      "triangles": 16128,
+      "volume": 112.98383365501246,
+      "nodeCount": 4095
+    },
+    "events": [
+      {
+        "id": 1,
+        "status": "inside-bvh",
+        "checkpoints": 80
+      },
+      {
+        "id": 1,
+        "status": "cancelled",
+        "checkpoints": 80,
+        "elapsedMs": 55.69999998807907,
+        "error": "AbortError: Build cancelled"
+      },
+      {
+        "id": 2,
+        "status": "inside-bvh",
+        "checkpoints": 80
+      },
+      {
+        "id": 2,
+        "status": "cancelled",
+        "checkpoints": 80,
+        "elapsedMs": 43,
+        "error": "AbortError: Build cancelled"
+      },
+      {
+        "id": 3,
+        "status": "inside-bvh",
+        "checkpoints": 80
+      },
+      {
+        "id": 3,
+        "status": "cancelled",
+        "checkpoints": 80,
+        "elapsedMs": 42.60000002384186,
+        "error": "AbortError: Build cancelled"
+      },
+      {
+        "id": 4,
+        "status": "inside-bvh",
+        "checkpoints": 80
+      },
+      {
+        "id": 4,
+        "status": "cancelled",
+        "checkpoints": 80,
+        "elapsedMs": 42.69999998807907,
+        "error": "AbortError: Build cancelled"
+      },
+      {
+        "id": 5,
+        "status": "succeeded",
+        "checkpoints": 4,
+        "elapsedMs": 0.10000002384185791,
+        "byteParity": true,
+        "triangles": 12,
+        "volume": 27,
+        "nodeCount": 3
+      },
+      {
+        "id": 6,
+        "status": "succeeded",
+        "checkpoints": 179,
+        "elapsedMs": 106.29999995231628,
+        "byteParity": true,
+        "triangles": 16128,
+        "volume": 112.98383365501246,
+        "nodeCount": 4095
+      }
+    ],
+    "scope": "Real Worker messages cancel during pending Rust BVH steps through the production adapter; same Worker then completes cube and sphere. Render preparation and semantic edges remain synchronous."
+  },
+  "productionRecovery": {
+    "timestamp": "2026-09-27T13:28:02.680Z",
+    "browser": "151.0.7922.34",
+    "hashes": {
+      "dist/assets/geometry.worker-1V0qlgDu.js": "724f7db2a3ff13d1440b07654cb42c0793a3162f453915be841981d3b285933a",
+      "public/wasm/geometry-kernel.wasm": "135ddbfd14833ffc7c2866cbadc917b1ec6af2d4c72114935c57d9c472608a04",
+      "src/services/buildCoordinator.ts": "09f0a9a8210fa0e89b94f670d997b454b6ca2c17814856d4d0ecae428556303e",
+      "src/workers/geometry.worker.ts": "4fdcd2cdbe066b46af563a91ad854f3c143ec02eb80999a02106612ec2bb0a41",
+      "src/App.vue": "b07a48f6b74f68489c30242ca06432a4807f16f117912532e0d93a7a6f17bd33",
+      "tools/browser-qualification/build-recovery.ts": "6521f99bb1fce213a3160bd959d267f42bbbc06cb52fb54e8b9f5391561470d4",
+      "tools/browser-qualification/build-recovery.mjs": "4e0a4400a4119e4441a3c82bf83ce3916f2957ad858686272b412b5487f4e6c9"
+    },
+    "scope": "Real Chromium Worker transport, production geometry worker and BuildCoordinator. Cooperative cancellation is between statements; no claim of interruption inside a synchronous WASM kernel call.",
+    "scenarioTimeoutMs": 30000,
+    "faultSilenceTimeoutMs": 5000,
+    "fixtures": {
+      "multiStatement": "f3dff8737128a26576a48110b916fa4749ceca5b871cf21e324f0e8023a2b544",
+      "singleStatement": "5f38c823666d9b79a2985e3b1103a7c4b2d7ba86a069fea0be150f7a521e4081",
+      "faultRequest": "bf3cc55d195cac565c37ed00b9f303416ec94e0388afa74bd76e2b59224be39b"
+    },
+    "reports": [
+      {
+        "name": "warm-multi-statement-supersession",
+        "passed": true,
+        "elapsedMs": 332.30000001192093,
+        "faultInjection": "none",
+        "assertions": [
+          "real multi-statement build remained active for 50ms",
+          "obsolete build acknowledged without publication within the production 300ms grace",
+          "same warm worker retained",
+          "replacement cube volume = 125"
+        ],
+        "diagnostics": {
+          "builds": 3,
+          "superseded": 1,
+          "workerStarts": 1,
+          "hardRestarts": 0
+        },
+        "workerRestarts": [],
+        "events": [
+          {
+            "generation": 1,
+            "status": "accepted",
+            "phase": "queued",
+            "revision": 1,
+            "jobId": 1,
+            "ms": 104.80000001192093
+          },
+          {
+            "generation": 1,
+            "status": "started",
+            "phase": "initializing",
+            "revision": 1,
+            "jobId": 1,
+            "ms": 105.10000002384186
+          },
+          {
+            "generation": 1,
+            "status": "progress",
+            "phase": "compiling",
+            "revision": 1,
+            "jobId": 1,
+            "ms": 206.89999997615814
+          },
+          {
+            "generation": 1,
+            "status": "progress",
+            "phase": "serializing",
+            "revision": 1,
+            "jobId": 1,
+            "ms": 210.5
+          },
+          {
+            "generation": 1,
+            "status": "succeeded",
+            "phase": "complete",
+            "revision": 1,
+            "jobId": 1,
+            "ms": 212.10000002384186
+          },
+          {
+            "generation": 1,
+            "status": "accepted",
+            "phase": "queued",
+            "revision": 2,
+            "jobId": 2,
+            "ms": 217.19999998807907
+          },
+          {
+            "generation": 1,
+            "status": "started",
+            "phase": "initializing",
+            "revision": 2,
+            "jobId": 2,
+            "ms": 217.30000001192093
+          },
+          {
+            "generation": 1,
+            "status": "progress",
+            "phase": "compiling",
+            "revision": 2,
+            "jobId": 2,
+            "ms": 217.5
+          },
+          {
+            "generation": 1,
+            "status": "cancelled",
+            "phase": "compiling",
+            "revision": 2,
+            "jobId": 2,
+            "ms": 324.30000001192093
+          },
+          {
+            "generation": 1,
+            "status": "accepted",
+            "phase": "queued",
+            "revision": 3,
+            "jobId": 3,
+            "ms": 325.10000002384186
+          },
+          {
+            "generation": 1,
+            "status": "started",
+            "phase": "initializing",
+            "revision": 3,
+            "jobId": 3,
+            "ms": 325.10000002384186
+          },
+          {
+            "generation": 1,
+            "status": "progress",
+            "phase": "compiling",
+            "revision": 3,
+            "jobId": 3,
+            "ms": 325.10000002384186
+          },
+          {
+            "generation": 1,
+            "status": "progress",
+            "phase": "serializing",
+            "revision": 3,
+            "jobId": 3,
+            "ms": 325.5
+          },
+          {
+            "generation": 1,
+            "status": "succeeded",
+            "phase": "complete",
+            "revision": 3,
+            "jobId": 3,
+            "ms": 325.69999998807907
+          }
+        ],
+        "publications": [
+          {
+            "status": "succeeded",
+            "revision": 1,
+            "jobId": 1,
+            "sourceSha256": "a31ee19c8a470195185a94e635a19bf524794c2f8b7b5d3cfd88b2942c92283e",
+            "volume": 8,
+            "ms": 212.60000002384186
+          },
+          {
+            "status": "succeeded",
+            "revision": 3,
+            "jobId": 3,
+            "sourceSha256": "576f1dc5e4b32ce173d79d4488e4e95f5567704ef7cb2b99c8bdc5d3168d05eb",
+            "volume": 125,
+            "ms": 325.80000001192093
+          }
+        ]
+      },
+      {
+        "name": "busy-worker-hard-preemption",
+        "passed": true,
+        "elapsedMs": 554.8000000119209,
+        "faultInjection": "none",
+        "assertions": [
+          "real single-statement build remained active for 100ms",
+          "worker replaced once",
+          "obsolete build never published",
+          "replacement cube volume = 216"
+        ],
+        "diagnostics": {
+          "builds": 3,
+          "superseded": 1,
+          "workerStarts": 2,
+          "hardRestarts": 1
+        },
+        "workerRestarts": [],
+        "events": [
+          {
+            "generation": 1,
+            "status": "accepted",
+            "phase": "queued",
+            "revision": 1,
+            "jobId": 1,
+            "ms": 99
+          },
+          {
+            "generation": 1,
+            "status": "started",
+            "phase": "initializing",
+            "revision": 1,
+            "jobId": 1,
+            "ms": 99
+          },
+          {
+            "generation": 1,
+            "status": "progress",
+            "phase": "compiling",
+            "revision": 1,
+            "jobId": 1,
+            "ms": 202.10000002384186
+          },
+          {
+            "generation": 1,
+            "status": "progress",
+            "phase": "serializing",
+            "revision": 1,
+            "jobId": 1,
+            "ms": 205.70000004768372
+          },
+          {
+            "generation": 1,
+            "status": "succeeded",
+            "phase": "complete",
+            "revision": 1,
+            "jobId": 1,
+            "ms": 206.5
+          },
+          {
+            "generation": 1,
+            "status": "accepted",
+            "phase": "queued",
+            "revision": 2,
+            "jobId": 2,
+            "ms": 216
+          },
+          {
+            "generation": 1,
+            "status": "started",
+            "phase": "initializing",
+            "revision": 2,
+            "jobId": 2,
+            "ms": 216
+          },
+          {
+            "generation": 1,
+            "status": "progress",
+            "phase": "compiling",
+            "revision": 2,
+            "jobId": 2,
+            "ms": 216.10000002384186
+          },
+          {
+            "generation": 2,
+            "status": "accepted",
+            "phase": "queued",
+            "revision": 3,
+            "jobId": 3,
+            "ms": 431.9000000357628
+          },
+          {
+            "generation": 2,
+            "status": "started",
+            "phase": "initializing",
+            "revision": 3,
+            "jobId": 3,
+            "ms": 432
+          },
+          {
+            "generation": 2,
+            "status": "progress",
+            "phase": "compiling",
+            "revision": 3,
+            "jobId": 3,
+            "ms": 539.5
+          },
+          {
+            "generation": 2,
+            "status": "progress",
+            "phase": "serializing",
+            "revision": 3,
+            "jobId": 3,
+            "ms": 543.4000000357628
+          },
+          {
+            "generation": 2,
+            "status": "succeeded",
+            "phase": "complete",
+            "revision": 3,
+            "jobId": 3,
+            "ms": 544.5
+          }
+        ],
+        "publications": [
+          {
+            "status": "succeeded",
+            "revision": 1,
+            "jobId": 1,
+            "sourceSha256": "a31ee19c8a470195185a94e635a19bf524794c2f8b7b5d3cfd88b2942c92283e",
+            "volume": 8,
+            "ms": 206.60000002384186
+          },
+          {
+            "status": "succeeded",
+            "revision": 3,
+            "jobId": 3,
+            "sourceSha256": "7c09cfe7d916bb31be9c466d0a892df5e51a0d017491c0a90b59838beb0a62ab",
+            "volume": 216,
+            "ms": 544.7000000476837
+          }
+        ]
+      },
+      {
+        "name": "user-cancel-and-rebuild",
+        "passed": true,
+        "elapsedMs": 526.1000000238419,
+        "faultInjection": "none",
+        "assertions": [
+          "user cancel reached cancelled state",
+          "cancelled result never published",
+          "subsequent cube volume = 27"
+        ],
+        "diagnostics": {
+          "builds": 3,
+          "superseded": 0,
+          "workerStarts": 2,
+          "hardRestarts": 0
+        },
+        "workerRestarts": [],
+        "events": [
+          {
+            "generation": 1,
+            "status": "accepted",
+            "phase": "queued",
+            "revision": 1,
+            "jobId": 1,
+            "ms": 110.10000002384186
+          },
+          {
+            "generation": 1,
+            "status": "started",
+            "phase": "initializing",
+            "revision": 1,
+            "jobId": 1,
+            "ms": 110.10000002384186
+          },
+          {
+            "generation": 1,
+            "status": "progress",
+            "phase": "compiling",
+            "revision": 1,
+            "jobId": 1,
+            "ms": 221.60000002384186
+          },
+          {
+            "generation": 1,
+            "status": "progress",
+            "phase": "serializing",
+            "revision": 1,
+            "jobId": 1,
+            "ms": 225.30000001192093
+          },
+          {
+            "generation": 1,
+            "status": "succeeded",
+            "phase": "complete",
+            "revision": 1,
+            "jobId": 1,
+            "ms": 226.10000002384186
+          },
+          {
+            "generation": 1,
+            "status": "accepted",
+            "phase": "queued",
+            "revision": 2,
+            "jobId": 2,
+            "ms": 238.30000001192093
+          },
+          {
+            "generation": 1,
+            "status": "started",
+            "phase": "initializing",
+            "revision": 2,
+            "jobId": 2,
+            "ms": 238.4000000357628
+          },
+          {
+            "generation": 1,
+            "status": "progress",
+            "phase": "compiling",
+            "revision": 2,
+            "jobId": 2,
+            "ms": 238.60000002384186
+          },
+          {
+            "generation": 2,
+            "status": "accepted",
+            "phase": "queued",
+            "revision": 3,
+            "jobId": 3,
+            "ms": 409.9000000357628
+          },
+          {
+            "generation": 2,
+            "status": "started",
+            "phase": "initializing",
+            "revision": 3,
+            "jobId": 3,
+            "ms": 409.9000000357628
+          },
+          {
+            "generation": 2,
+            "status": "progress",
+            "phase": "compiling",
+            "revision": 3,
+            "jobId": 3,
+            "ms": 514.4000000357628
+          },
+          {
+            "generation": 2,
+            "status": "progress",
+            "phase": "serializing",
+            "revision": 3,
+            "jobId": 3,
+            "ms": 518.3000000119209
+          },
+          {
+            "generation": 2,
+            "status": "succeeded",
+            "phase": "complete",
+            "revision": 3,
+            "jobId": 3,
+            "ms": 519.1999999880791
+          }
+        ],
+        "publications": [
+          {
+            "status": "succeeded",
+            "revision": 1,
+            "jobId": 1,
+            "sourceSha256": "a31ee19c8a470195185a94e635a19bf524794c2f8b7b5d3cfd88b2942c92283e",
+            "volume": 8,
+            "ms": 226.10000002384186
+          },
+          {
+            "status": "succeeded",
+            "revision": 3,
+            "jobId": 3,
+            "sourceSha256": "4307ef810af6532c2ffc7139ba669db35d86fb55a097aebf29b7eba5e6c823fa",
+            "volume": 27,
+            "ms": 519.1999999880791
+          }
+        ]
+      },
+      {
+        "name": "silence-timeout-retry",
+        "passed": true,
+        "elapsedMs": 5424.900000035763,
+        "faultInjection": "first generation blocks its event loop on a marked request after a real warmup cube",
+        "assertions": [
+          "one retry on a new production worker",
+          "job/revision/source identity retained",
+          "single success volume = 343"
+        ],
+        "diagnostics": {
+          "builds": 2,
+          "superseded": 0,
+          "workerStarts": 2,
+          "hardRestarts": 1
+        },
+        "workerRestarts": [
+          {
+            "ms": 5265.100000023842
+          }
+        ],
+        "events": [
+          {
+            "generation": 1,
+            "status": "accepted",
+            "phase": "queued",
+            "revision": 1,
+            "jobId": 1,
+            "ms": 140.4000000357628
+          },
+          {
+            "generation": 1,
+            "status": "started",
+            "phase": "initializing",
+            "revision": 1,
+            "jobId": 1,
+            "ms": 140.5
+          },
+          {
+            "generation": 1,
+            "status": "progress",
+            "phase": "compiling",
+            "revision": 1,
+            "jobId": 1,
+            "ms": 251.4000000357628
+          },
+          {
+            "generation": 1,
+            "status": "progress",
+            "phase": "serializing",
+            "revision": 1,
+            "jobId": 1,
+            "ms": 255.70000004768372
+          },
+          {
+            "generation": 1,
+            "status": "succeeded",
+            "phase": "complete",
+            "revision": 1,
+            "jobId": 1,
+            "ms": 256.60000002384186
+          },
+          {
+            "generation": 2,
+            "status": "accepted",
+            "phase": "queued",
+            "revision": 2,
+            "jobId": 2,
+            "ms": 5361.100000023842
+          },
+          {
+            "generation": 2,
+            "status": "started",
+            "phase": "initializing",
+            "revision": 2,
+            "jobId": 2,
+            "ms": 5361.200000047684
+          },
+          {
+            "generation": 2,
+            "status": "progress",
+            "phase": "compiling",
+            "revision": 2,
+            "jobId": 2,
+            "ms": 5417.100000023842
+          },
+          {
+            "generation": 2,
+            "status": "progress",
+            "phase": "serializing",
+            "revision": 2,
+            "jobId": 2,
+            "ms": 5419.600000023842
+          },
+          {
+            "generation": 2,
+            "status": "succeeded",
+            "phase": "complete",
+            "revision": 2,
+            "jobId": 2,
+            "ms": 5420.100000023842
+          }
+        ],
+        "publications": [
+          {
+            "status": "succeeded",
+            "revision": 1,
+            "jobId": 1,
+            "sourceSha256": "a31ee19c8a470195185a94e635a19bf524794c2f8b7b5d3cfd88b2942c92283e",
+            "volume": 8,
+            "ms": 256.7000000476837
+          },
+          {
+            "status": "succeeded",
+            "revision": 2,
+            "jobId": 2,
+            "sourceSha256": "bf3cc55d195cac565c37ed00b9f303416ec94e0388afa74bd76e2b59224be39b",
+            "volume": 343,
+            "ms": 5420.300000011921
+          }
+        ]
+      },
+      {
+        "name": "terminal-timeout-and-new-revision",
+        "passed": true,
+        "elapsedMs": 10385.899999976158,
+        "faultInjection": "first two generations block their event loops on marked requests",
+        "assertions": [
+          "retry budget stops at one",
+          "single WORKER_TIMEOUT publication",
+          "new revision recovers with cube volume = 64"
+        ],
+        "diagnostics": {
+          "builds": 3,
+          "superseded": 0,
+          "workerStarts": 3,
+          "hardRestarts": 1
+        },
+        "workerRestarts": [
+          {
+            "ms": 5161.399999976158
+          }
+        ],
+        "events": [
+          {
+            "generation": 1,
+            "status": "accepted",
+            "phase": "queued",
+            "revision": 1,
+            "jobId": 1,
+            "ms": 97.19999998807907
+          },
+          {
+            "generation": 1,
+            "status": "started",
+            "phase": "initializing",
+            "revision": 1,
+            "jobId": 1,
+            "ms": 97.19999998807907
+          },
+          {
+            "generation": 1,
+            "status": "progress",
+            "phase": "compiling",
+            "revision": 1,
+            "jobId": 1,
+            "ms": 152.5
+          },
+          {
+            "generation": 1,
+            "status": "progress",
+            "phase": "serializing",
+            "revision": 1,
+            "jobId": 1,
+            "ms": 154.69999998807907
+          },
+          {
+            "generation": 1,
+            "status": "succeeded",
+            "phase": "complete",
+            "revision": 1,
+            "jobId": 1,
+            "ms": 155.30000001192093
+          },
+          {
+            "generation": 3,
+            "status": "accepted",
+            "phase": "queued",
+            "revision": 3,
+            "jobId": 3,
+            "ms": 10278.199999988079
+          },
+          {
+            "generation": 3,
+            "status": "started",
+            "phase": "initializing",
+            "revision": 3,
+            "jobId": 3,
+            "ms": 10278.300000011921
+          },
+          {
+            "generation": 3,
+            "status": "progress",
+            "phase": "compiling",
+            "revision": 3,
+            "jobId": 3,
+            "ms": 10374.699999988079
+          },
+          {
+            "generation": 3,
+            "status": "progress",
+            "phase": "serializing",
+            "revision": 3,
+            "jobId": 3,
+            "ms": 10378.800000011921
+          },
+          {
+            "generation": 3,
+            "status": "succeeded",
+            "phase": "complete",
+            "revision": 3,
+            "jobId": 3,
+            "ms": 10379.599999964237
+          }
+        ],
+        "publications": [
+          {
+            "status": "succeeded",
+            "revision": 1,
+            "jobId": 1,
+            "sourceSha256": "a31ee19c8a470195185a94e635a19bf524794c2f8b7b5d3cfd88b2942c92283e",
+            "volume": 8,
+            "ms": 155.30000001192093
+          },
+          {
+            "status": "failed",
+            "revision": 2,
+            "jobId": 2,
+            "sourceSha256": "bf3cc55d195cac565c37ed00b9f303416ec94e0388afa74bd76e2b59224be39b",
+            "code": "WORKER_TIMEOUT",
+            "ms": 10169.899999976158
+          },
+          {
+            "status": "succeeded",
+            "revision": 3,
+            "jobId": 3,
+            "sourceSha256": "08a2aa110546f8e0b4232547b016a128070a2a0a03cb7de6dbd8ec8f1772d347",
+            "volume": 64,
+            "ms": 10379.599999964237
+          }
+        ]
+      },
+      {
+        "name": "dispose-during-build",
+        "passed": true,
+        "elapsedMs": 437.80000001192093,
+        "faultInjection": "none",
+        "assertions": [
+          "active jobs cleared",
+          "no publication after disposal"
+        ],
+        "diagnostics": {
+          "builds": 2,
+          "superseded": 0,
+          "workerStarts": 1,
+          "hardRestarts": 0
+        },
+        "workerRestarts": [],
+        "events": [
+          {
+            "generation": 1,
+            "status": "accepted",
+            "phase": "queued",
+            "revision": 1,
+            "jobId": 1,
+            "ms": 105.69999998807907
+          },
+          {
+            "generation": 1,
+            "status": "started",
+            "phase": "initializing",
+            "revision": 1,
+            "jobId": 1,
+            "ms": 105.69999998807907
+          },
+          {
+            "generation": 1,
+            "status": "progress",
+            "phase": "compiling",
+            "revision": 1,
+            "jobId": 1,
+            "ms": 209.10000002384186
+          },
+          {
+            "generation": 1,
+            "status": "progress",
+            "phase": "serializing",
+            "revision": 1,
+            "jobId": 1,
+            "ms": 212.80000001192093
+          },
+          {
+            "generation": 1,
+            "status": "succeeded",
+            "phase": "complete",
+            "revision": 1,
+            "jobId": 1,
+            "ms": 213.5
+          },
+          {
+            "generation": 1,
+            "status": "accepted",
+            "phase": "queued",
+            "revision": 2,
+            "jobId": 2,
+            "ms": 226.19999998807907
+          },
+          {
+            "generation": 1,
+            "status": "started",
+            "phase": "initializing",
+            "revision": 2,
+            "jobId": 2,
+            "ms": 226.30000001192093
+          },
+          {
+            "generation": 1,
+            "status": "progress",
+            "phase": "compiling",
+            "revision": 2,
+            "jobId": 2,
+            "ms": 226.5
+          }
+        ],
+        "publications": [
+          {
+            "status": "succeeded",
+            "revision": 1,
+            "jobId": 1,
+            "sourceSha256": "a31ee19c8a470195185a94e635a19bf524794c2f8b7b5d3cfd88b2942c92283e",
+            "volume": 8,
+            "ms": 213.60000002384186
+          }
+        ]
+      }
+    ],
+    "appSmoke": {
+      "initialCubeVolume": 8,
+      "recoveredCubeVolume": 27,
+      "uiMeshCount": "1",
+      "cancelledJob": 3,
+      "cancelledJobPublished": false,
+      "terminations": 1,
+      "assertions": [
+        "Cancel build button terminates active work",
+        "last scene retained after cancel",
+        "Render re-enabled",
+        "next real cube succeeds with exact volume"
+      ],
+      "events": [
+        {
+          "status": "accepted",
+          "phase": "queued",
+          "jobId": 1,
+          "revision": 0
+        },
+        {
+          "status": "started",
+          "phase": "initializing",
+          "jobId": 1,
+          "revision": 0
+        },
+        {
+          "status": "progress",
+          "phase": "compiling",
+          "jobId": 1,
+          "revision": 0
+        },
+        {
+          "status": "progress",
+          "phase": "serializing",
+          "jobId": 1,
+          "revision": 0
+        },
+        {
+          "status": "succeeded",
+          "phase": "complete",
+          "jobId": 1,
+          "revision": 0,
+          "volume": 9375.629150581586
+        },
+        {
+          "status": "accepted",
+          "phase": "queued",
+          "jobId": 2,
+          "revision": 1
+        },
+        {
+          "status": "started",
+          "phase": "initializing",
+          "jobId": 2,
+          "revision": 1
+        },
+        {
+          "status": "progress",
+          "phase": "compiling",
+          "jobId": 2,
+          "revision": 1
+        },
+        {
+          "status": "progress",
+          "phase": "serializing",
+          "jobId": 2,
+          "revision": 1
+        },
+        {
+          "status": "succeeded",
+          "phase": "complete",
+          "jobId": 2,
+          "revision": 1,
+          "volume": 8
+        },
+        {
+          "status": "accepted",
+          "phase": "queued",
+          "jobId": 3,
+          "revision": 2
+        },
+        {
+          "status": "started",
+          "phase": "initializing",
+          "jobId": 3,
+          "revision": 2
+        },
+        {
+          "status": "progress",
+          "phase": "compiling",
+          "jobId": 3,
+          "revision": 2
+        },
+        {
+          "status": "accepted",
+          "phase": "queued",
+          "jobId": 4,
+          "revision": 3
+        },
+        {
+          "status": "started",
+          "phase": "initializing",
+          "jobId": 4,
+          "revision": 3
+        },
+        {
+          "status": "progress",
+          "phase": "compiling",
+          "jobId": 4,
+          "revision": 3
+        },
+        {
+          "status": "progress",
+          "phase": "serializing",
+          "jobId": 4,
+          "revision": 3
+        },
+        {
+          "status": "succeeded",
+          "phase": "complete",
+          "jobId": 4,
+          "revision": 3,
+          "volume": 27
+        }
+      ]
+    },
+    "pageErrors": []
+  },
+  "synchronousWasmComparison": {
+    "warmups": 2,
+    "samples": 5,
+    "matchingInputAndOutputRows": 35,
+    "scope": "Same local host, serial benchmark invocations; descriptive medians only, no speedup claim. Cooperative throughput is not measured here.",
+    "beforeWasm": {
+      "path": "src/generated/geometry-kernels/kernel_bg.wasm",
+      "sha256": "a93ba6e67df2cd2534dcdc6b524a71506dc6f2092cbb4025b6597e654295d8f6"
+    },
+    "afterWasm": {
+      "path": "src/generated/geometry-kernels/kernel_bg.wasm",
+      "sha256": "135ddbfd14833ffc7c2866cbadc917b1ec6af2d4c72114935c57d9c472608a04"
+    },
+    "rows": [
+      {
+        "fixture": "cube",
+        "phase": "inspect",
+        "inputSha256": "911a18060f71e3ba8d0a434bc3c339f64d3a55d387e8f59fdce11ac218f445b1",
+        "outputSha256": "03425408b9d262fbc78ba56f312abf4a5b73956b3d6f63db2d9c4468e49f6db3",
+        "beforeP50Ms": 0.026167000000043572,
+        "afterP50Ms": 0.031959000000000515
+      },
+      {
+        "fixture": "cube",
+        "phase": "export",
+        "inputSha256": "911a18060f71e3ba8d0a434bc3c339f64d3a55d387e8f59fdce11ac218f445b1",
+        "outputSha256": "911a18060f71e3ba8d0a434bc3c339f64d3a55d387e8f59fdce11ac218f445b1",
+        "beforeP50Ms": 0.016291000000023814,
+        "afterP50Ms": 0.011124999999992724
+      },
+      {
+        "fixture": "cube",
+        "phase": "render",
+        "inputSha256": "911a18060f71e3ba8d0a434bc3c339f64d3a55d387e8f59fdce11ac218f445b1",
+        "outputSha256": "5f8e6f1244f57d1b2f3cb9fb2d0826abb0689337d129b5abe164807187a17145",
+        "beforeP50Ms": 0.012667000000021744,
+        "afterP50Ms": 0.012666999999993322
+      },
+      {
+        "fixture": "cube",
+        "phase": "bvh",
+        "inputSha256": "911a18060f71e3ba8d0a434bc3c339f64d3a55d387e8f59fdce11ac218f445b1",
+        "outputSha256": "d1f40cec0212e66d51baf9c7c891835ef9e91a36087d4c1593d37d92210e05c9",
+        "beforeP50Ms": 0.007666999999969448,
+        "afterP50Ms": 0.00866600000000517
+      },
+      {
+        "fixture": "cube",
+        "phase": "edges",
+        "inputSha256": "911a18060f71e3ba8d0a434bc3c339f64d3a55d387e8f59fdce11ac218f445b1",
+        "outputSha256": "ea4bb984318364b44ba5ccb46eab1943a7ff28607eca973a04274d6132215487",
+        "beforeP50Ms": 0.013916999999992186,
+        "afterP50Ms": 0.01500000000001478
+      },
+      {
+        "fixture": "cube",
+        "phase": "combined",
+        "inputSha256": "911a18060f71e3ba8d0a434bc3c339f64d3a55d387e8f59fdce11ac218f445b1",
+        "outputSha256": "bbc7203f2247a6df5cd01ab1ad276b4b10e62c220964fb0fea126217c604300e",
+        "beforeP50Ms": 0.02199999999999136,
+        "afterP50Ms": 0.022500000000007958
+      },
+      {
+        "fixture": "cube",
+        "phase": "assetHash",
+        "inputSha256": "911a18060f71e3ba8d0a434bc3c339f64d3a55d387e8f59fdce11ac218f445b1",
+        "outputSha256": "9b929741918bd06f50a88b13079a9fc67b50bfcd571f506ccc589cdb98b4baec",
+        "beforeP50Ms": 0.04112499999996544,
+        "afterP50Ms": 0.040625000000005684
+      },
+      {
+        "fixture": "sphere-32",
+        "phase": "inspect",
+        "inputSha256": "a9b206deece3100f3f2b7bdb12b57ac3f37327d3a36c60b06a43945159d329a7",
+        "outputSha256": "659f88d3c2611975eccfa686aa6fdaa7defcf20c2b02eee4f2dc4711bbed6bd8",
+        "beforeP50Ms": 0.1997079999999869,
+        "afterP50Ms": 0.19716599999998152
+      },
+      {
+        "fixture": "sphere-32",
+        "phase": "export",
+        "inputSha256": "a9b206deece3100f3f2b7bdb12b57ac3f37327d3a36c60b06a43945159d329a7",
+        "outputSha256": "a9b206deece3100f3f2b7bdb12b57ac3f37327d3a36c60b06a43945159d329a7",
+        "beforeP50Ms": 0.2470000000000141,
+        "afterP50Ms": 0.2328329999999994
+      },
+      {
+        "fixture": "sphere-32",
+        "phase": "render",
+        "inputSha256": "a9b206deece3100f3f2b7bdb12b57ac3f37327d3a36c60b06a43945159d329a7",
+        "outputSha256": "c3db66999fad251310021cca25bfabfe8b4200f8f9c3ead25e88b3e1c93cbdfc",
+        "beforeP50Ms": 0.3223340000000121,
+        "afterP50Ms": 0.31570800000000077
+      },
+      {
+        "fixture": "sphere-32",
+        "phase": "bvh",
+        "inputSha256": "a9b206deece3100f3f2b7bdb12b57ac3f37327d3a36c60b06a43945159d329a7",
+        "outputSha256": "7ea3189792f136fba72a7b76fd14c2560758caefc52057307fabf8aefde48afb",
+        "beforeP50Ms": 0.1022909999999797,
+        "afterP50Ms": 0.10325000000000273
+      },
+      {
+        "fixture": "sphere-32",
+        "phase": "edges",
+        "inputSha256": "a9b206deece3100f3f2b7bdb12b57ac3f37327d3a36c60b06a43945159d329a7",
+        "outputSha256": "c9dd1f3b5b5ef32ba7b6a5bfb00a4ca8cf317394bac7e639ef04031d2315cc7b",
+        "beforeP50Ms": 0.09166700000002947,
+        "afterP50Ms": 0.08912499999999568
+      },
+      {
+        "fixture": "sphere-32",
+        "phase": "combined",
+        "inputSha256": "a9b206deece3100f3f2b7bdb12b57ac3f37327d3a36c60b06a43945159d329a7",
+        "outputSha256": "cbcc561ca303023eecef8f39748f13ead7340f91f9b094348559948592e00ba3",
+        "beforeP50Ms": 0.48987499999998363,
+        "afterP50Ms": 0.4861659999999972
+      },
+      {
+        "fixture": "sphere-32",
+        "phase": "assetHash",
+        "inputSha256": "a9b206deece3100f3f2b7bdb12b57ac3f37327d3a36c60b06a43945159d329a7",
+        "outputSha256": "bd0493cbaf69e0c2a4df570e653edb1ba6b3df9be7cf78616300c378be6594d4",
+        "beforeP50Ms": 0.05662499999999682,
+        "afterP50Ms": 0.06487500000000068
+      },
+      {
+        "fixture": "sphere-128",
+        "phase": "inspect",
+        "inputSha256": "c1a5a2135d2e060d7240ed09361f2e45b4e3fc31927ad5aa5c04b9a7c324dc3d",
+        "outputSha256": "0a73810ebbdb0538892314969ab78e8af0a99c532e51c3ce7169c4d1618ffa4a",
+        "beforeP50Ms": 2.410583000000031,
+        "afterP50Ms": 2.4693750000000136
+      },
+      {
+        "fixture": "sphere-128",
+        "phase": "export",
+        "inputSha256": "c1a5a2135d2e060d7240ed09361f2e45b4e3fc31927ad5aa5c04b9a7c324dc3d",
+        "outputSha256": "c1a5a2135d2e060d7240ed09361f2e45b4e3fc31927ad5aa5c04b9a7c324dc3d",
+        "beforeP50Ms": 3.1453750000000014,
+        "afterP50Ms": 2.9714159999999765
+      },
+      {
+        "fixture": "sphere-128",
+        "phase": "render",
+        "inputSha256": "c1a5a2135d2e060d7240ed09361f2e45b4e3fc31927ad5aa5c04b9a7c324dc3d",
+        "outputSha256": "2c18fff896b1e909c9f03f9b3cb50f7e721348cf7ba98f727797695478d2d2a1",
+        "beforeP50Ms": 6.132542000000001,
+        "afterP50Ms": 6.053625000000011
+      },
+      {
+        "fixture": "sphere-128",
+        "phase": "bvh",
+        "inputSha256": "c1a5a2135d2e060d7240ed09361f2e45b4e3fc31927ad5aa5c04b9a7c324dc3d",
+        "outputSha256": "016baa239d1d5fd8b109bccfb5b5472e5d4134a308e3da215177c92620637c7f",
+        "beforeP50Ms": 3.591542000000004,
+        "afterP50Ms": 3.577042000000006
+      },
+      {
+        "fixture": "sphere-128",
+        "phase": "edges",
+        "inputSha256": "c1a5a2135d2e060d7240ed09361f2e45b4e3fc31927ad5aa5c04b9a7c324dc3d",
+        "outputSha256": "c9dd1f3b5b5ef32ba7b6a5bfb00a4ca8cf317394bac7e639ef04031d2315cc7b",
+        "beforeP50Ms": 1.3642079999999623,
+        "afterP50Ms": 1.1945830000000228
+      },
+      {
+        "fixture": "sphere-128",
+        "phase": "combined",
+        "inputSha256": "c1a5a2135d2e060d7240ed09361f2e45b4e3fc31927ad5aa5c04b9a7c324dc3d",
+        "outputSha256": "1d09b219e9bfd07db3afa21aafab7e17658ab6f0003913fbb88c635eab38016d",
+        "beforeP50Ms": 11.186958000000004,
+        "afterP50Ms": 11.157207999999969
+      },
+      {
+        "fixture": "sphere-128",
+        "phase": "assetHash",
+        "inputSha256": "c1a5a2135d2e060d7240ed09361f2e45b4e3fc31927ad5aa5c04b9a7c324dc3d",
+        "outputSha256": "68e6845528698ef034587f192a3375f9a02b33154bda3d26e93fc330b41d5d4e",
+        "beforeP50Ms": 0.8653340000000753,
+        "afterP50Ms": 0.8682499999999891
+      },
+      {
+        "fixture": "three-spheres-128",
+        "phase": "inspect",
+        "inputSha256": "7e1768ea6495bb92277012cc0563db4833254aab537eed5d6ed903f7547c15e3",
+        "outputSha256": "51d79126bcf49ef4b0e4a98a8fe4307536e939ed878897affecaafc7badeb96b",
+        "beforeP50Ms": 7.454791999999998,
+        "afterP50Ms": 7.382916000000023
+      },
+      {
+        "fixture": "three-spheres-128",
+        "phase": "export",
+        "inputSha256": "7e1768ea6495bb92277012cc0563db4833254aab537eed5d6ed903f7547c15e3",
+        "outputSha256": "7e1768ea6495bb92277012cc0563db4833254aab537eed5d6ed903f7547c15e3",
+        "beforeP50Ms": 9.788833000000068,
+        "afterP50Ms": 10.25379200000009
+      },
+      {
+        "fixture": "three-spheres-128",
+        "phase": "render",
+        "inputSha256": "7e1768ea6495bb92277012cc0563db4833254aab537eed5d6ed903f7547c15e3",
+        "outputSha256": "15ca700b8feb11344cee975d71e3b94edb3757d7201f89ee691ecdc96f3b7e55",
+        "beforeP50Ms": 18.77429099999995,
+        "afterP50Ms": 18.69545800000003
+      },
+      {
+        "fixture": "three-spheres-128",
+        "phase": "bvh",
+        "inputSha256": "7e1768ea6495bb92277012cc0563db4833254aab537eed5d6ed903f7547c15e3",
+        "outputSha256": "c1a2f6c5edfe2cb99c10c8a79de30217e427c8437ba9b468fe26f18b02a81a9c",
+        "beforeP50Ms": 12.760667000000012,
+        "afterP50Ms": 12.831915999999978
+      },
+      {
+        "fixture": "three-spheres-128",
+        "phase": "edges",
+        "inputSha256": "7e1768ea6495bb92277012cc0563db4833254aab537eed5d6ed903f7547c15e3",
+        "outputSha256": "c9dd1f3b5b5ef32ba7b6a5bfb00a4ca8cf317394bac7e639ef04031d2315cc7b",
+        "beforeP50Ms": 2.103291999999783,
+        "afterP50Ms": 1.889874999999961
+      },
+      {
+        "fixture": "three-spheres-128",
+        "phase": "combined",
+        "inputSha256": "7e1768ea6495bb92277012cc0563db4833254aab537eed5d6ed903f7547c15e3",
+        "outputSha256": "ff987135e2c6a9df1a8e944a98dd62e8af4e99318be3ccd75659253bfd6c0366",
+        "beforeP50Ms": 33.83525000000009,
+        "afterP50Ms": 33.76279199999999
+      },
+      {
+        "fixture": "three-spheres-128",
+        "phase": "assetHash",
+        "inputSha256": "7e1768ea6495bb92277012cc0563db4833254aab537eed5d6ed903f7547c15e3",
+        "outputSha256": "ce7e437db0b016eea0325755cf6ba0ae12a1d0274ffdc24ac8a9a2b3901d762d",
+        "beforeP50Ms": 2.6127080000001115,
+        "afterP50Ms": 2.5668339999999716
+      },
+      {
+        "fixture": "cylinder-128",
+        "phase": "inspect",
+        "inputSha256": "530c7abc069d612256dd7434159b8b030d6428c92bf6b080aacc07bf51e7eb22",
+        "outputSha256": "98f54bc086a44225d9db1cddda564e54e18885a72a470fe820c44d9d0dc72c61",
+        "beforeP50Ms": 0.0521249999999327,
+        "afterP50Ms": 0.053666000000021086
+      },
+      {
+        "fixture": "cylinder-128",
+        "phase": "export",
+        "inputSha256": "530c7abc069d612256dd7434159b8b030d6428c92bf6b080aacc07bf51e7eb22",
+        "outputSha256": "530c7abc069d612256dd7434159b8b030d6428c92bf6b080aacc07bf51e7eb22",
+        "beforeP50Ms": 0.04383400000006077,
+        "afterP50Ms": 0.04345799999987321
+      },
+      {
+        "fixture": "cylinder-128",
+        "phase": "render",
+        "inputSha256": "530c7abc069d612256dd7434159b8b030d6428c92bf6b080aacc07bf51e7eb22",
+        "outputSha256": "97228450b31651eb87b1d5a7bdd13760ad142e10f0a3e9d407630c3d927be9be",
+        "beforeP50Ms": 0.1554590000000644,
+        "afterP50Ms": 0.149375000000191
+      },
+      {
+        "fixture": "cylinder-128",
+        "phase": "bvh",
+        "inputSha256": "530c7abc069d612256dd7434159b8b030d6428c92bf6b080aacc07bf51e7eb22",
+        "outputSha256": "181b1ae01c0d6a77af901b71b643299b853e007486213f8db7a6e3192813ea63",
+        "beforeP50Ms": 0.04087500000014188,
+        "afterP50Ms": 0.040124999999989086
+      },
+      {
+        "fixture": "cylinder-128",
+        "phase": "edges",
+        "inputSha256": "530c7abc069d612256dd7434159b8b030d6428c92bf6b080aacc07bf51e7eb22",
+        "outputSha256": "b09c03d0b8bfc52052edf807cbc04fd32498d3c8915f5934ef1d50b4263bc765",
+        "beforeP50Ms": 0.04995799999983319,
+        "afterP50Ms": 0.05304200000000492
+      },
+      {
+        "fixture": "cylinder-128",
+        "phase": "combined",
+        "inputSha256": "530c7abc069d612256dd7434159b8b030d6428c92bf6b080aacc07bf51e7eb22",
+        "outputSha256": "645efd7a9a7a66777f1144c906d5aa7a8094333dccf07e5e0f5f20195cc1dd72",
+        "beforeP50Ms": 0.23049999999989268,
+        "afterP50Ms": 0.2259999999998854
+      },
+      {
+        "fixture": "cylinder-128",
+        "phase": "assetHash",
+        "inputSha256": "530c7abc069d612256dd7434159b8b030d6428c92bf6b080aacc07bf51e7eb22",
+        "outputSha256": "514ed07a7c77ce19a07a05bd6fdd01c6a0ad85fef1e5a14f53f79967f68939ad",
+        "beforeP50Ms": 0.039625000000114596,
+        "afterP50Ms": 0.03904199999988123
+      }
+    ]
+  },
+  "limitations": [
+    "4,096 work units per BVH step are not a wall-clock deadline",
+    "Render preparation, metrics, Booleans, semantic edges, selection grouping and allocations remain synchronous",
+    "Browser adapter harness yields every eight checkpoints; reported cancel latency is not the production 50 ms scheduler guarantee",
+    "Native cooperative timing is one sample; no general performance claim"
+  ]
+}

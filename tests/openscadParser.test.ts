@@ -413,6 +413,37 @@ describe('cooperative cancellation (shouldAbort)', () => {
     expect(calls).toBeGreaterThan(1)
   })
 
+  it('cancels a single dense solid during analysis and can build again', async () => {
+    let yields = 0
+    let clock = 0
+    // A single primitive has no long statement loop. Reaching this many
+    // checkpoints requires the resumable BVH path before publication.
+    await expect(parseOpenSCAD('sphere(r=3, $fn=128);', {
+      shouldAbort: () => yields >= 80,
+      now: () => { clock += 60; return clock },
+      yieldControl: async () => { yields++ },
+    })).rejects.toBeInstanceOf(AbortedError)
+    expect(yields).toBe(80)
+    const next = await parseOpenSCAD('cube(3);', { shouldAbort: () => false })
+    expect(next.volume).toBeCloseTo(27, 5)
+    expect(next.meshes).toHaveLength(1)
+  })
+
+  it('cancels after BVH completion inside semantic edge extraction', async () => {
+    let yields = 0
+    let clock = 0
+    // The unchanged sphere BVH completed within 179 adapter checkpoints in
+    // the preceding qualification; this boundary exercises edge extraction.
+    await expect(parseOpenSCAD('sphere(r=3, $fn=128);', {
+      shouldAbort: () => yields >= 240,
+      now: () => { clock += 60; return clock },
+      yieldControl: async () => { yields++ },
+    })).rejects.toBeInstanceOf(AbortedError)
+    expect(yields).toBe(240)
+    const next = await parseOpenSCAD('cube(3);', { shouldAbort: () => false })
+    expect(next.volume).toBeCloseTo(27, 5)
+  })
+
   it('still succeeds with an always-false shouldAbort', async () => {
     const result = await parseOpenSCAD('x = 2; cube([x, x, x]);', { shouldAbort: () => false })
     expect(result.meshes).toHaveLength(1)

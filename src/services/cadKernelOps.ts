@@ -1,5 +1,5 @@
 import { tessellateBrepGear, type BrepGearSpec } from './geometry/brep'
-import { analyzeSolidInKernel, type KernelSolidAnalysis } from './geometry/meshAnalysis'
+import { analyzeSolidCooperativelyInKernel, analyzeSolidInKernel, type KernelSolidAnalysis } from './geometry/meshAnalysis'
 import Module, {
   type CrossSection,
   type ErrorStatus,
@@ -120,6 +120,7 @@ export interface CadKernelOps {
   originalId(input: CadKernelHandle): number | null
   asOriginal(input: CadKernelHandle): CadKernelHandle
   analyzeSolid(input: CadKernelHandle): CadKernelSolidAnalysis
+  analyzeSolidCooperatively(input: CadKernelHandle, checkpoint: () => Promise<void>): Promise<CadKernelSolidAnalysis>
   delete(input: CadKernelHandle): void
 }
 
@@ -425,25 +426,14 @@ export function createCadKernelOps(
       const volume = solid.volume()
       const surfaceArea = solid.surfaceArea()
       const { mesh, bvh, semanticEdges } = analyzeSolidInKernel(solid.handle)
-      return Object.freeze({
-        volume,
-        surfaceArea,
-        bvh,
-        semanticEdges,
-        mesh: Object.freeze({
-          numProp: 6,
-          numTri: mesh.indices.length / 3,
-          numVert: mesh.vertices.length / 6,
-          vertProperties: mesh.vertices,
-          triVerts: mesh.indices,
-          mergeFromVert: mesh.mergeFrom,
-          mergeToVert: mesh.mergeTo,
-          runIndex: new Uint32Array([0, mesh.indices.length]),
-          runOriginalID: new Uint32Array([solid.originalID()]),
-          runFlags: new Uint8Array([0]),
-          faceID: mesh.faceIds,
-        }),
-      })
+      return solidAnalysis(solid, volume, surfaceArea, {mesh, bvh, semanticEdges})
+    },
+    async analyzeSolidCooperatively(input, checkpoint) {
+      const solid = geometry3(input)
+      const volume = solid.volume()
+      const surfaceArea = solid.surfaceArea()
+      const analysis = await analyzeSolidCooperativelyInKernel(solid.handle, checkpoint)
+      return solidAnalysis(solid, volume, surfaceArea, analysis)
     },
     delete(input) {
       const owned = ownedHandle(input)
@@ -460,4 +450,26 @@ export async function loadCadKernelOps(): Promise<CadKernelOps> {
   const rawCadSolidConstructor = module.CadSolid
   module.setup()
   return createCadKernelOps(module, rawCadSolidConstructor)
+}
+
+function solidAnalysis(solid: CadSolid, volume: number, surfaceArea: number, {mesh, bvh, semanticEdges}: KernelSolidAnalysis): CadKernelSolidAnalysis {
+  return Object.freeze({
+    volume,
+    surfaceArea,
+    bvh,
+    semanticEdges,
+    mesh: Object.freeze({
+      numProp: 6,
+      numTri: mesh.indices.length / 3,
+      numVert: mesh.vertices.length / 6,
+      vertProperties: mesh.vertices,
+      triVerts: mesh.indices,
+      mergeFromVert: mesh.mergeFrom,
+      mergeToVert: mesh.mergeTo,
+      runIndex: new Uint32Array([0, mesh.indices.length]),
+      runOriginalID: new Uint32Array([solid.originalID()]),
+      runFlags: new Uint8Array([0]),
+      faceID: mesh.faceIds,
+    }),
+  })
 }
