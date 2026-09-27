@@ -1,5 +1,8 @@
+#[cfg(target_arch = "wasm32")]
 use super::bounds::{GpuPointBounds, GpuTransformedPointBounds};
+#[cfg(target_arch = "wasm32")]
 use super::distance::{GpuDistancePairSum, GpuDistancePairs, GpuTransformedDistancePairSum};
+#[cfg(target_arch = "wasm32")]
 use super::moments::{GpuPointCloudStats, GpuPointMoments};
 use super::neighbors::{GpuChamfer, GpuNearestFour, GpuNearestNeighbor, GpuNearestTwo};
 use super::{GpuArithmetic, GpuMathError, MathExecution};
@@ -16,14 +19,21 @@ pub struct MathGpuSession {
     pub(super) point_kernels:
         OnceCell<Result<super::plans::PointKernels, compute_core::KernelError>>,
     nearest_neighbor: OnceCell<Result<GpuNearestNeighbor, compute_core::KernelError>>,
+    #[cfg(target_arch = "wasm32")]
     squared_distance_pairs: OnceCell<Result<GpuDistancePairs, compute_core::KernelError>>,
+    #[cfg(target_arch = "wasm32")]
     squared_distance_pair_sum: OnceCell<Result<GpuDistancePairSum, compute_core::KernelError>>,
+    #[cfg(target_arch = "wasm32")]
     transformed_squared_distance_pair_sum:
         OnceCell<Result<GpuTransformedDistancePairSum, compute_core::KernelError>>,
+    #[cfg(target_arch = "wasm32")]
     point_bounds: OnceCell<Result<GpuPointBounds, compute_core::KernelError>>,
+    #[cfg(target_arch = "wasm32")]
     transformed_point_bounds:
         OnceCell<Result<GpuTransformedPointBounds, compute_core::KernelError>>,
+    #[cfg(target_arch = "wasm32")]
     point_moments: OnceCell<Result<GpuPointMoments, compute_core::KernelError>>,
+    #[cfg(target_arch = "wasm32")]
     point_cloud_stats: OnceCell<Result<GpuPointCloudStats, compute_core::KernelError>>,
     #[cfg(not(target_arch = "wasm32"))]
     stable_stats_runtime: OnceCell<compute_core::ComputeRuntime>,
@@ -38,12 +48,19 @@ impl MathGpuSession {
             context: context.clone(),
             point_kernels: OnceCell::new(),
             nearest_neighbor: OnceCell::new(),
+            #[cfg(target_arch = "wasm32")]
             squared_distance_pairs: OnceCell::new(),
+            #[cfg(target_arch = "wasm32")]
             squared_distance_pair_sum: OnceCell::new(),
+            #[cfg(target_arch = "wasm32")]
             transformed_squared_distance_pair_sum: OnceCell::new(),
+            #[cfg(target_arch = "wasm32")]
             point_bounds: OnceCell::new(),
+            #[cfg(target_arch = "wasm32")]
             transformed_point_bounds: OnceCell::new(),
+            #[cfg(target_arch = "wasm32")]
             point_moments: OnceCell::new(),
+            #[cfg(target_arch = "wasm32")]
             point_cloud_stats: OnceCell::new(),
             #[cfg(not(target_arch = "wasm32"))]
             stable_stats_runtime: OnceCell::new(),
@@ -63,11 +80,11 @@ impl MathGpuSession {
     #[cfg(not(target_arch = "wasm32"))]
     pub fn tensor(
         &self,
-    ) -> Result<crate::tensor::TensorMath<'_, compute_core::ComputeRuntime>, GpuMathError> {
-        Ok(crate::tensor::TensorMath::new(self.tensor_runtime()?))
+    ) -> Result<crate::tensor::TensorMathF64<'_, compute_core::ComputeRuntime>, GpuMathError> {
+        Ok(crate::tensor::TensorMathF64::new(self.tensor_runtime()?))
     }
     #[cfg(not(target_arch = "wasm32"))]
-    fn tensor_runtime(&self) -> Result<&compute_core::ComputeRuntime, GpuMathError> {
+    pub(super) fn tensor_runtime(&self) -> Result<&compute_core::ComputeRuntime, GpuMathError> {
         if self.stable_stats_runtime.get().is_none() {
             let runtime = compute_core::ComputeRuntime::new(&self.context)?;
             let _ = self.stable_stats_runtime.set(runtime);
@@ -111,20 +128,29 @@ impl MathGpuSession {
         a: &[V3],
         b: &[V3],
     ) -> Result<MathExecution<Vec<f64>>, GpuMathError> {
-        if a.len() != b.len() {
-            return Err(GpuMathError::InvalidInput("empty or incompatible inputs"));
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            self.execute_precision(GpuArithmetic::SoftwareBinary64, || {
+                self.f64_distances(a, b, None, false)
+            })
         }
-        self.validate_points(a)?;
-        self.validate_points(b)?;
-        self.execute(|| {
-            let value = self
-                .squared_distance_pairs
-                .get_or_init(|| GpuDistancePairs::new(&self.context))
-                .as_ref()
-                .map_err(|e| GpuMathError::Kernel(e.clone()))?
-                .run(a, b)?;
-            Ok(value)
-        })
+        #[cfg(target_arch = "wasm32")]
+        {
+            if a.len() != b.len() {
+                return Err(GpuMathError::InvalidInput("empty or incompatible inputs"));
+            }
+            self.validate_points(a)?;
+            self.validate_points(b)?;
+            self.execute(|| {
+                let value = self
+                    .squared_distance_pairs
+                    .get_or_init(|| GpuDistancePairs::new(&self.context))
+                    .as_ref()
+                    .map_err(|e| GpuMathError::Kernel(e.clone()))?
+                    .run(a, b)?;
+                Ok(value)
+            })
+        }
     }
     pub fn squared_distance_pair_sum(&self, a: &[V3], b: &[V3]) -> Option<f64> {
         self.try_squared_distance_pair_sum(a, b)
@@ -137,20 +163,29 @@ impl MathGpuSession {
         a: &[V3],
         b: &[V3],
     ) -> Result<MathExecution<f64>, GpuMathError> {
-        if a.len() != b.len() {
-            return Err(GpuMathError::InvalidInput("empty or incompatible inputs"));
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            self.execute_precision(GpuArithmetic::SoftwareBinary64, || {
+                self.f64_distances(a, b, None, true).map(|v| v[0])
+            })
         }
-        self.validate_points(a)?;
-        self.validate_points(b)?;
-        self.execute(|| {
-            let value = self
-                .squared_distance_pair_sum
-                .get_or_init(|| GpuDistancePairSum::new(&self.context))
-                .as_ref()
-                .map_err(|e| GpuMathError::Kernel(e.clone()))?
-                .run(a, b)?;
-            Ok(value)
-        })
+        #[cfg(target_arch = "wasm32")]
+        {
+            if a.len() != b.len() {
+                return Err(GpuMathError::InvalidInput("empty or incompatible inputs"));
+            }
+            self.validate_points(a)?;
+            self.validate_points(b)?;
+            self.execute(|| {
+                let value = self
+                    .squared_distance_pair_sum
+                    .get_or_init(|| GpuDistancePairSum::new(&self.context))
+                    .as_ref()
+                    .map_err(|e| GpuMathError::Kernel(e.clone()))?
+                    .run(a, b)?;
+                Ok(value)
+            })
+        }
     }
     pub fn transformed_squared_distance_pair_sum(
         &self,
@@ -171,21 +206,31 @@ impl MathGpuSession {
         m: M3,
         t: V3,
     ) -> Result<MathExecution<f64>, GpuMathError> {
-        if source.len() != target.len() {
-            return Err(GpuMathError::InvalidInput("empty or incompatible inputs"));
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            self.execute_precision(GpuArithmetic::SoftwareBinary64, || {
+                self.f64_distances(source, target, Some((m, t)), true)
+                    .map(|v| v[0])
+            })
         }
-        self.validate_points(source)?;
-        self.validate_points(target)?;
-        self.validate_transform(m, t)?;
-        self.execute(|| {
-            let value = self
-                .transformed_squared_distance_pair_sum
-                .get_or_init(|| GpuTransformedDistancePairSum::new(&self.context))
-                .as_ref()
-                .map_err(|e| GpuMathError::Kernel(e.clone()))?
-                .run(source, target, m, t)?;
-            Ok(value)
-        })
+        #[cfg(target_arch = "wasm32")]
+        {
+            if source.len() != target.len() {
+                return Err(GpuMathError::InvalidInput("empty or incompatible inputs"));
+            }
+            self.validate_points(source)?;
+            self.validate_points(target)?;
+            self.validate_transform(m, t)?;
+            self.execute(|| {
+                let value = self
+                    .transformed_squared_distance_pair_sum
+                    .get_or_init(|| GpuTransformedDistancePairSum::new(&self.context))
+                    .as_ref()
+                    .map_err(|e| GpuMathError::Kernel(e.clone()))?
+                    .run(source, target, m, t)?;
+                Ok(value)
+            })
+        }
     }
     pub fn point_bounds(&self, points: &[V3]) -> Option<crate::PointBounds> {
         self.try_point_bounds(points)
@@ -197,19 +242,28 @@ impl MathGpuSession {
         &self,
         points: &[V3],
     ) -> Result<MathExecution<crate::PointBounds>, GpuMathError> {
-        if points.is_empty() {
-            return Err(GpuMathError::InvalidInput("empty or incompatible inputs"));
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            self.execute_precision(GpuArithmetic::SoftwareBinary64, || {
+                self.f64_bounds(points, None)
+            })
         }
-        self.validate_points(points)?;
-        self.execute(|| {
-            let value = self
-                .point_bounds
-                .get_or_init(|| GpuPointBounds::new(&self.context))
-                .as_ref()
-                .map_err(|e| GpuMathError::Kernel(e.clone()))?
-                .run(points)?;
-            Ok(value)
-        })
+        #[cfg(target_arch = "wasm32")]
+        {
+            if points.is_empty() {
+                return Err(GpuMathError::InvalidInput("empty or incompatible inputs"));
+            }
+            self.validate_points(points)?;
+            self.execute(|| {
+                let value = self
+                    .point_bounds
+                    .get_or_init(|| GpuPointBounds::new(&self.context))
+                    .as_ref()
+                    .map_err(|e| GpuMathError::Kernel(e.clone()))?
+                    .run(points)?;
+                Ok(value)
+            })
+        }
     }
     pub fn transformed_point_bounds(
         &self,
@@ -228,20 +282,29 @@ impl MathGpuSession {
         m: M3,
         t: V3,
     ) -> Result<MathExecution<crate::PointBounds>, GpuMathError> {
-        if points.is_empty() {
-            return Err(GpuMathError::InvalidInput("empty or incompatible inputs"));
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            self.execute_precision(GpuArithmetic::SoftwareBinary64, || {
+                self.f64_bounds(points, Some((m, t)))
+            })
         }
-        self.validate_points(points)?;
-        self.validate_transform(m, t)?;
-        self.execute(|| {
-            let value = self
-                .transformed_point_bounds
-                .get_or_init(|| GpuTransformedPointBounds::new(&self.context))
-                .as_ref()
-                .map_err(|e| GpuMathError::Kernel(e.clone()))?
-                .run(points, m, t)?;
-            Ok(value)
-        })
+        #[cfg(target_arch = "wasm32")]
+        {
+            if points.is_empty() {
+                return Err(GpuMathError::InvalidInput("empty or incompatible inputs"));
+            }
+            self.validate_points(points)?;
+            self.validate_transform(m, t)?;
+            self.execute(|| {
+                let value = self
+                    .transformed_point_bounds
+                    .get_or_init(|| GpuTransformedPointBounds::new(&self.context))
+                    .as_ref()
+                    .map_err(|e| GpuMathError::Kernel(e.clone()))?
+                    .run(points, m, t)?;
+                Ok(value)
+            })
+        }
     }
     pub fn point_moments(&self, points: &[V3]) -> Option<crate::PointMoments> {
         self.try_point_moments(points)
@@ -253,19 +316,26 @@ impl MathGpuSession {
         &self,
         points: &[V3],
     ) -> Result<MathExecution<crate::PointMoments>, GpuMathError> {
-        if points.is_empty() {
-            return Err(GpuMathError::InvalidInput("empty or incompatible inputs"));
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            self.execute_precision(GpuArithmetic::SoftwareBinary64, || self.f64_moments(points))
         }
-        self.validate_points(points)?;
-        self.execute(|| {
-            let value = self
-                .point_moments
-                .get_or_init(|| GpuPointMoments::new(&self.context))
-                .as_ref()
-                .map_err(|e| GpuMathError::Kernel(e.clone()))?
-                .run(points)?;
-            Ok(value)
-        })
+        #[cfg(target_arch = "wasm32")]
+        {
+            if points.is_empty() {
+                return Err(GpuMathError::InvalidInput("empty or incompatible inputs"));
+            }
+            self.validate_points(points)?;
+            self.execute(|| {
+                let value = self
+                    .point_moments
+                    .get_or_init(|| GpuPointMoments::new(&self.context))
+                    .as_ref()
+                    .map_err(|e| GpuMathError::Kernel(e.clone()))?
+                    .run(points)?;
+                Ok(value)
+            })
+        }
     }
     pub fn point_cloud_stats(&self, points: &[V3]) -> Option<crate::PointCloudStats> {
         self.try_point_cloud_stats(points)
@@ -277,72 +347,36 @@ impl MathGpuSession {
         &self,
         points: &[V3],
     ) -> Result<MathExecution<crate::PointCloudStats>, GpuMathError> {
-        if points.is_empty() {
-            return Err(GpuMathError::InvalidInput("empty or incompatible inputs"));
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            self.execute_precision(GpuArithmetic::SoftwareBinary64, || self.f64_stats(points))
         }
-        self.validate_points(points)?;
-        self.execute(|| {
-            let value = self
-                .point_cloud_stats
-                .get_or_init(|| GpuPointCloudStats::new(&self.context))
-                .as_ref()
-                .map_err(|e| GpuMathError::Kernel(e.clone()))?
-                .run(points)?;
-            Ok(value)
-        })
+        #[cfg(target_arch = "wasm32")]
+        {
+            if points.is_empty() {
+                return Err(GpuMathError::InvalidInput("empty or incompatible inputs"));
+            }
+            self.validate_points(points)?;
+            self.execute(|| {
+                let value = self
+                    .point_cloud_stats
+                    .get_or_init(|| GpuPointCloudStats::new(&self.context))
+                    .as_ref()
+                    .map_err(|e| GpuMathError::Kernel(e.clone()))?
+                    .run(points)?;
+                Ok(value)
+            })
+        }
     }
 
-    /// Explicit f32 statistics with a second, centered covariance pass. Uses
-    /// the recorded stable plan and reads back only the final 24 scalars.
-    /// Kernels are cached; each call uploads the points and allocates its plan.
-    /// For repeated device-resident work, use
-    /// [`super::MathGpuProgram::point_cloud_stats_stable`] instead.
-    ///
-    /// Raw moments keep the original meaning `E[p*p^T]`. Centered arithmetic
-    /// improves covariance at large offsets but cannot recover differences
-    /// lost during f64-to-f32 input conversion, or handle overflowing f32 sums.
+    /// Binary64 statistics with centered covariance. Uses the same resident
+    /// implementation as `try_point_cloud_stats` on native hosts.
     #[cfg(not(target_arch = "wasm32"))]
     pub fn try_point_cloud_stats_stable(
         &self,
         points: &[V3],
     ) -> Result<MathExecution<crate::PointCloudStats>, GpuMathError> {
-        if points.is_empty() {
-            return Err(GpuMathError::InvalidInput("empty or incompatible inputs"));
-        }
-        self.validate_points(points)?;
-        self.execute(|| {
-            let runtime = self.tensor_runtime()?;
-            let flat: Vec<f32> = points.iter().flatten().map(|&v| v as f32).collect();
-            let input = runtime.upload(&flat)?;
-            let mut plan = self.program(runtime)?;
-            let stats = plan.point_cloud_stats_stable(super::PointCloudView::new(&input)?)?;
-            let mut encoder = self
-                .context
-                .device
-                .create_command_encoder(&Default::default());
-            plan.record(&mut encoder);
-            let mut read = runtime.record_read(&mut encoder, &stats.values)?;
-            read.submitted(self.context.queue.submit([encoder.finish()]));
-            let packed = read.wait(std::time::Duration::from_secs(30))?;
-            let get = |i| f64::from(packed[i]);
-            let bounds = crate::PointBounds::new(
-                points.len(),
-                [get(0), get(1), get(2)],
-                [get(3), get(4), get(5)],
-            );
-            let mut moments = crate::PointMoments::from_sums(
-                points.len(),
-                [get(6), get(7), get(8)],
-                [get(9), get(10), get(11), get(12), get(13), get(14)],
-            );
-            moments.centroid = [get(15), get(16), get(17)];
-            moments.covariance = [
-                [get(18), get(19), get(20)],
-                [get(19), get(21), get(22)],
-                [get(20), get(22), get(23)],
-            ];
-            Ok(crate::PointCloudStats::from_parts(bounds, moments))
-        })
+        self.try_point_cloud_stats(points)
     }
     pub fn directed_chamfer(
         &self,
@@ -424,6 +458,13 @@ impl MathGpuSession {
         &self,
         run: impl FnOnce() -> Result<T, GpuMathError>,
     ) -> Result<MathExecution<T>, GpuMathError> {
+        self.execute_precision(GpuArithmetic::F32, run)
+    }
+    fn execute_precision<T>(
+        &self,
+        arithmetic: GpuArithmetic,
+        run: impl FnOnce() -> Result<T, GpuMathError>,
+    ) -> Result<MathExecution<T>, GpuMathError> {
         let oom = self
             .context
             .device
@@ -448,7 +489,7 @@ impl MathGpuSession {
         Ok(MathExecution {
             value: result?,
             backend: self.backend_report(),
-            arithmetic: GpuArithmetic::F32,
+            arithmetic,
         })
     }
 
@@ -466,6 +507,7 @@ impl MathGpuSession {
         }
         Ok(())
     }
+    #[cfg(target_arch = "wasm32")]
     fn validate_transform(&self, m: M3, t: V3) -> Result<(), GpuMathError> {
         if m.iter()
             .flatten()

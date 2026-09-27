@@ -1,0 +1,199 @@
+{"command": ["cargo", "test", "--locked", "--manifest-path", "/Users/themoretheless/Documents/Sources/open-scad-viewer/crates/Cargo.toml", "--offline", "-p", "compute-core", "--test", "binary64", "--test", "tensor_convolution", "--test", "evaluation", "--test", "tensor", "--test", "tensor_backend", "--test", "tensor_index", "--test", "tensor_reduce", "--test", "tensor_scatter", "--test", "tensor_low", "--test", "tensor_low_ops", "--test", "tensor_low_index", "--test", "tensor_low_scatter", "--test", "tensor_low_normalization", "--test", "tensor_low_attention", "--test", "tensor_normalization", "--test", "tensor_attention", "--", "--test-threads=1", "--nocapture"], "required_env": {"COMPUTE_REQUIRE_GPU": "1"}}
+warning: binary `wgsl_export` should have a kebab-case name
+  |
+1 | /Users/themoretheless/Documents/Sources/open-scad-viewer/crates/target/.../wgsl_export
+  |                                                                            ^^^^^^^^^^^
+  |
+  = note: `cargo::non_kebab_case_bins` is set to `warn` by default
+help: to change the binary name to `wgsl-export`, convert the file stem
+  |
+1 - src/bin/wgsl_export.rs
+1 + src/bin/wgsl-export.rs
+  |
+warning: `raster-core` (manifest) generated 1 warning
+   Compiling compute-core v0.1.0 (/Users/themoretheless/Documents/Sources/open-scad-viewer/crates/compute-core)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 2.15s
+     Running tests/binary64.rs (crates/target/debug/build/compute-core/a5e2a58935b6c750/out/binary64-a5e2a58935b6c750)
+
+running 3 tests
+test binary64_wgsl_validates_without_float_arithmetic ... ok
+test native_gpu_binary64_matches_cpu_bits_for_basic_arithmetic ... binary64 device: BackendReport { kind: Metal, label: "metal", native_api: true, browser_api: false, metal: true }
+binary64 op=0: 41444 exact comparisons passed
+binary64 op=1: 41444 exact comparisons passed
+binary64 op=2: 41444 exact comparisons passed
+binary64 op=3: 41444 exact comparisons passed
+binary64 op=4: 41444 exact comparisons passed
+binary64 op=5: 41444 exact comparisons passed
+binary64 op=6: 41444 tolerance comparisons passed
+binary64 op=7: 41444 tolerance comparisons passed
+binary64 op=8: 41444 tolerance comparisons passed
+binary64 op=9: 41444 tolerance comparisons passed
+ok
+test native_gpu_software_binary64_tensor_contract ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.24s
+
+     Running tests/evaluation.rs (crates/target/debug/build/compute-core/1ca6dd7c894954db/out/evaluation-1ca6dd7c894954db)
+
+running 1 test
+test evaluate_fences_producers_and_validates_every_owner ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.13s
+
+     Running tests/tensor.rs (crates/target/debug/build/compute-core/a8bbe2bf73a4d0aa/out/tensor-a8bbe2bf73a4d0aa)
+
+running 10 tests
+test all_unary_and_binary_ops_accept_transposes_and_axis_broadcast ... ok
+test arbitrary_axis_sets_keepdims_scalar_and_empty_reductions ... ok
+test axis_sum_and_batched_matmul_cross_workgroup_dispatch_limit ... ok
+test batched_matmul_broadcasts_and_handles_transposes_odd_tiles ... ok
+test complete_contiguous_tensor_sum_reuses_array_reduction_and_prefixes ... ok
+test hierarchical_axis_reductions_reuse_strided_inputs_and_offset_outputs ... ok
+test invalid_metadata_ownership_shapes_and_aliases_leave_program_usable ... ok
+test rank_twelve_views_materialize_without_fixed_rank_limit ... ok
+test view_chain_broadcast_reduce_and_repeated_execution_preserve_sentinels ... ok
+test zero_contractions_overwrite_reused_outputs_and_zero_batch_is_empty ... ok
+
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.02s
+
+     Running tests/tensor_attention.rs (crates/target/debug/build/compute-core/c8f7c8bcbc580e3d/out/tensor_attention-c8f7c8bcbc580e3d)
+
+running 6 tests
+test attention_checks_owners_masks_shapes_and_aliases_without_partial_recording ... ok
+test scaled_value_accumulator_handles_extreme_finite_values_without_raw_weighted_sums ... ok
+test shader_attention_satisfies_shared_conformance ... ok
+test split_keys_merge_masked_parts_with_offsets_and_changed_resident_inputs ... ok
+test streaming_attention_handles_long_single_query_and_workgroup_grid_stride ... ok
+test strided_attention_reuses_masks_inputs_and_output_offsets_across_key_and_value_tiles ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.89s
+
+     Running tests/tensor_backend.rs (crates/target/debug/build/compute-core/ef490b1106cb223b/out/tensor_backend-ef490b1106cb223b)
+
+running 2 tests
+test shader_backend_satisfies_shared_tensor_conformance ... WGSL tensor conformance backend: BackendReport { kind: Metal, label: "metal", native_api: true, browser_api: false, metal: true }
+ok
+test shader_tensor_backend_rejects_foreign_views_and_reduced_precision ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.19s
+
+     Running tests/tensor_convolution.rs (crates/target/debug/build/compute-core/607ea59c9b07b2c9/out/tensor_convolution-607ea59c9b07b2c9)
+
+running 4 tests
+test grid_stride_outputs_refresh_workgroup_partials ... ok
+test recorded_convolution_replays_strided_inputs_and_preserves_offset_outputs ... ok
+test shared_convolution_contracts ... convolution WGSL: BackendReport { kind: Metal, label: "metal", native_api: true, browser_api: false, metal: true }
+ok
+test validation_does_not_append_writes_and_zero_contractions_rewrite_outputs ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.81s
+
+     Running tests/tensor_index.rs (crates/target/debug/build/compute-core/5c43dda94c502750/out/tensor_index-5c43dda94c502750)
+
+running 5 tests
+test indexing_errors_reject_cross_type_aliases_foreign_counts_and_invalid_axes ... ok
+test prepared_mask_scan_gather_compact_chain_reuses_all_gpu_state ... ok
+test scans_cover_hierarchy_boundaries_reverse_wrapping_and_offset_outputs ... ok
+test shader_index_backend_satisfies_shared_conformance ... ok
+test u32_compaction_and_gather_preserve_large_integer_bits_and_reset_counts ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.84s
+
+     Running tests/tensor_low.rs (crates/target/debug/build/compute-core/0d63ebe94e16e096/out/tensor_low-0d63ebe94e16e096)
+
+running 4 tests
+test low_metadata_dtype_ownership_and_cross_type_aliases_are_rejected ... ok
+test packed_views_preserve_all_neighboring_halves_with_odd_offsets_and_reuse ... ok
+test recorded_cast_strided_batched_matmul_and_low_output_reuse_without_expansion ... ok
+test shader_low_backend_satisfies_exhaustive_shared_conformance ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.93s
+
+     Running tests/tensor_low_attention.rs (crates/target/debug/build/compute-core/b6bf8e850bb88c84/out/tensor_low_attention-b6bf8e850bb88c84)
+
+running 4 tests
+test depth_boundaries_zero_strides_and_grid_stride_reuse_preserve_attention ... ok
+test direct_low_attention_satisfies_shared_conformance ... ok
+test low_attention_validates_dtype_owner_alias_and_empty_masks_before_recording ... ok
+test strided_packed_tiles_split_keys_and_odd_outputs_replay_changing_inputs_and_masks ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.44s
+
+     Running tests/tensor_low_index.rs (crates/target/debug/build/compute-core/9205e6ead9ecab4c/out/tensor_low_index-9205e6ead9ecab4c)
+
+running 5 tests
+test direct_packed_scans_replay_strided_boundaries_and_preserve_output_neighbors ... ok
+test packed_index_backend_satisfies_shared_conformance ... ok
+test packed_index_recording_rejects_alias_dtype_owner_layout_and_rolls_back ... ok
+test prepared_low_compare_select_scan_gather_compact_chain_reuses_gpu_buffers ... ok
+test raw_payload_moves_replay_into_odd_halfwords_and_reset_resident_counts ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.55s
+
+     Running tests/tensor_low_normalization.rs (crates/target/debug/build/compute-core/297475cc987b6f6c/out/tensor_low_normalization-297475cc987b6f6c)
+
+running 4 tests
+test all_recorded_outputs_replay_strided_inputs_and_preserve_odd_neighbor_words ... ok
+test packed_statistics_satisfy_shared_conformance ... ok
+test packed_stats_validation_is_transactional_across_types_and_moments_outputs ... ok
+test tiny_bf16_rows_cross_workgroup_grid_limit_without_losing_normal_results ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.57s
+
+     Running tests/tensor_low_ops.rs (crates/target/debug/build/compute-core/b562c94f4c4c74b1/out/tensor_low_ops-b562c94f4c4c74b1)
+
+running 6 tests
+test bf16_tiny_multiply_preserves_normal_products_in_strided_packed_replay ... ok
+test low_ops_validate_dtype_owner_layout_and_cross_interpretation_aliases ... ok
+test packed_low_operations_satisfy_shared_conformance ... ok
+test packed_reduction_hierarchies_preserve_offsets_and_reuse_f32_and_low_outputs ... ok
+test packed_sign_and_extrema_preserve_every_finite_pattern_and_halfword_neighbors ... ok
+test resident_low_arithmetic_reduction_chain_updates_without_operand_expansion ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.63s
+
+     Running tests/tensor_low_scatter.rs (crates/target/debug/build/compute-core/33c1ce66142a4f39/out/tensor_low_scatter-33c1ce66142a4f39)
+
+running 5 tests
+test packed_extrema_preserve_tiny_bits_and_arithmetic_rounds_completed_destination_once ... ok
+test packed_low_scatter_satisfies_shared_conformance ... ok
+test packed_replace_replays_strided_duplicate_updates_and_preserves_output_halfwords ... ok
+test packed_scatter_rejects_aliases_and_invalid_recordings_without_resetting_outputs ... ok
+test recorded_low_scatter_gather_scan_chain_reuses_all_intermediates ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.72s
+
+     Running tests/tensor_normalization.rs (crates/target/debug/build/compute-core/64baa8d1db0adf7a/out/tensor_normalization-64baa8d1db0adf7a)
+
+running 5 tests
+test overflow_classification_and_tiny_epsilon_do_not_corrupt_normalized_outputs ... subnormal normalization: a=1e-20, epsilon=3.4028235e38, actual=-0.0 (0x80000000), f64_reference=-5.421010851953291e-40
+subnormal normalization: a=1e-20, epsilon=3.4028235e38, actual=0.0 (0x00000000), f64_reference=5.421010851953291e-40
+ok
+test shader_statistics_satisfy_shared_conformance ... ok
+test short_single_groups_and_grid_stride_rows_cross_the_specialization_boundaries ... ok
+test strided_hierarchies_preserve_sentinels_and_reuse_resident_normalization_chains ... ok
+test validation_rejects_aliases_foreign_views_and_invalid_metadata_before_recording ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.02s
+
+     Running tests/tensor_reduce.rs (crates/target/debug/build/compute-core/4ca2b8e9f3245919/out/tensor_reduce-4ca2b8e9f3245919)
+
+running 6 tests
+test f32_reductions_cover_tails_hierarchies_offsets_and_repeated_updates ... ok
+test reductions_reject_invalid_outputs_owners_axes_and_leave_program_usable ... ok
+test shader_reductions_satisfy_shared_conformance ... ok
+test shader_vector_matmul_satisfies_shared_conformance ... ok
+test u32_reductions_preserve_bits_wrapping_identities_and_hierarchy ... ok
+test vector_batched_matmul_reuses_strided_inputs_and_composes_with_reductions ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.16s
+
+     Running tests/tensor_scatter.rs (crates/target/debug/build/compute-core/5bee1f7a48a6bb41/out/tensor_scatter-5bee1f7a48a6bb41)
+
+running 4 tests
+test replace_is_logically_last_and_repeated_plans_reset_owners_counts_and_base ... ok
+test scatter_rejects_cross_type_aliases_foreign_buffers_and_transactional_overflow ... ok
+test shader_scatter_satisfies_shared_conformance ... ok
+test typed_atomic_folds_include_base_handle_contention_and_preserve_wrapping ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.93s

@@ -19,6 +19,7 @@
 
 mod array;
 mod batch;
+pub mod binary64;
 mod buffer;
 mod comparison;
 mod error;

@@ -1,5 +1,7 @@
 //! Geometry whose coordinates and intermediate arithmetic remain binary64.
-use super::{Result, TensorBounds, TensorMathError, shape};
+use super::{
+    Result, TensorBounds, TensorMathError, TensorPointCloudStats, TensorPointMoments, shape,
+};
 use tensor_core::{BinaryOp, HasShape, ReduceOp, TensorF64Backend, UnaryOp};
 
 /// Explicit binary64 geometry. Requires a backend implementing binary64
@@ -158,6 +160,42 @@ impl<'a, B: TensorF64Backend> TensorMathF64<'a, B> {
             samples,
             centroid,
             covariance,
+        })
+    }
+    /// Binary64 population moments. Raw products and their sums must fit f64.
+    pub fn moments(
+        &self,
+        points: &B::F64Tensor,
+    ) -> Result<TensorPointMoments<B::F64Tensor>, B::Error> {
+        let centered = self.covariance(points)?;
+        let transpose = self
+            .backend
+            .permute_f64(points, &[1, 0])
+            .map_err(TensorMathError::Backend)?;
+        let gram = self
+            .backend
+            .matmul_f64(&transpose, points)
+            .map_err(TensorMathError::Backend)?;
+        let count = self
+            .backend
+            .upload_f64(shape(&[])?, &[centered.samples as f64])
+            .map_err(TensorMathError::Backend)?;
+        let second_moment = self.binary(BinaryOp::Divide, &gram, &count)?;
+        Ok(TensorPointMoments {
+            samples: centered.samples,
+            centroid: centered.centroid,
+            covariance: centered.covariance,
+            second_moment,
+        })
+    }
+    /// Bounds and moments from one resident binary64 point tensor.
+    pub fn point_cloud_stats(
+        &self,
+        points: &B::F64Tensor,
+    ) -> Result<TensorPointCloudStats<B::F64Tensor>, B::Error> {
+        Ok(TensorPointCloudStats {
+            bounds: self.bounds(points)?,
+            moments: self.moments(points)?,
         })
     }
     fn binary(

@@ -1,0 +1,22 @@
+[
+  {
+    "name": "binary64",
+    "exit_code": 0,
+    "seconds": 0.231
+  },
+  {
+    "name": "math",
+    "exit_code": 0,
+    "seconds": 8.607
+  },
+  {
+    "name": "clippy",
+    "exit_code": 0,
+    "seconds": 1.235
+  },
+  {
+    "name": "wasm",
+    "exit_code": 0,
+    "seconds": 0.458
+  }
+]

@@ -1,12 +1,15 @@
-#![cfg(all(feature = "tensor-cuda", not(target_arch = "wasm32")))]
-use math_core::tensor::{
-    TensorMathF64,
-    cuda::{CudaError, CudaRuntime},
-};
+#![cfg(all(
+    any(feature = "tensor-cuda", feature = "gpu"),
+    not(target_arch = "wasm32")
+))]
+use math_core::tensor::TensorMathF64;
+#[cfg(feature = "tensor-cuda")]
+use math_core::tensor::cuda::{CudaError, CudaRuntime};
 use tensor_core::{Shape, TensorF64Backend};
 fn shape(dims: &[usize]) -> Shape {
     Shape::new(dims.to_vec()).unwrap()
 }
+#[cfg(feature = "tensor-cuda")]
 #[test]
 fn native_f64_geometry_preserves_local_differences_and_large_range()
 -> Result<(), Box<dyn std::error::Error>> {
@@ -24,7 +27,27 @@ fn native_f64_geometry_preserves_local_differences_and_large_range()
         }
         Err(error) => return Err(error.into()),
     };
-    let math = TensorMathF64::new(&b);
+    exercise(&b)
+}
+#[cfg(feature = "gpu")]
+#[test]
+fn software_f64_geometry_preserves_local_differences_and_large_range()
+-> Result<(), Box<dyn std::error::Error>> {
+    let Some(context) = gpu_compute::GpuContext::new() else {
+        assert!(
+            std::env::var_os("COMPUTE_REQUIRE_GPU").is_none(),
+            "GPU required"
+        );
+        return Ok(());
+    };
+    let session = math_core::gpu::MathGpuSession::new(&context);
+    exercise(session.tensor()?.backend())
+}
+fn exercise<B: TensorF64Backend>(b: &B) -> Result<(), Box<dyn std::error::Error>>
+where
+    B::Error: 'static,
+{
+    let math = TensorMathF64::new(b);
     let origin = 100_000_000.;
     let points = math.upload_points(&[
         [origin, origin, origin],
@@ -51,6 +74,19 @@ fn native_f64_geometry_preserves_local_differences_and_large_range()
         b.read_f64(&stats.covariance)?,
         [0.25, 0.5, 0.75, 0.5, 1., 1.5, 0.75, 1.5, 2.25]
     );
+    let moments = math.moments(&points)?;
+    assert_eq!(
+        b.read_f64(&moments.covariance)?,
+        b.read_f64(&stats.covariance)?
+    );
+    let raw = b.read_f64(&moments.second_moment)?;
+    for i in 0..3 {
+        for j in 0..3 {
+            let expected =
+                (origin * origin + (origin + (i + 1) as f64) * (origin + (j + 1) as f64)) / 2.;
+            assert_eq!(raw[i * 3 + j], expected);
+        }
+    }
     let matrix = b.upload_f64(shape(&[3, 3]), &[2., 0., 0., 0., 3., 0., 0., 0., 4.])?;
     let translation = b.upload_f64(shape(&[3]), &[-2. * origin, -3. * origin, -4. * origin])?;
     assert_eq!(

@@ -12,14 +12,34 @@ Rust crate name remains `math_core` (`use math_core::…`). Builds on **stable**
 math-core = { package = "osv-math", version = "0.1" }
 ```
 
+## Binary64 geometry
+
+On native hosts, `MathGpuSession::tensor()` returns `TensorMathF64`.
+Existing session calls for paired distances, distance sums, transformed sums,
+bounds, transformed bounds, moments and point-cloud statistics now use software
+binary64 on the selected WGSL GPU. Their `MathExecution` reports
+`GpuArithmetic::SoftwareBinary64`. Finite coordinates outside f32 range and
+local differences below f32 resolution survive upload and computation.
+`try_point_cloud_stats_stable` uses the same centered binary64 implementation.
+
+`TensorMathF64` also composes with the native CUDA f64 tensor backend. Bounds,
+transforms, distances, centered covariance and raw moments share those recipes;
+only final values are read back by the session wrappers. Intermediate products
+and sums must fit f64. This is not an arbitrary-range robust statistics API.
+
+Migration remains in progress: nearest/Chamfer, `MathGpuProgram` recording,
+legacy CUDA geometry adapters and browser session methods still use their
+existing f32 paths. MLX does not yet implement the binary64 tensor contract.
+See the [qualification report](../../docs/qualification/software-binary64-2026-09-27.md).
+
 ## Resident geometry through WGSL, CUDA and MLX
 
 The optional `tensor` module expresses point-cloud algorithms once through
 `tensor-core` contracts. Construct `TensorMath::new(&backend)` with a
 `ComputeRuntime`, `CudaRuntime` or `MlxBackend`. Existing `MathGpuSession`
-instances expose `session.tensor()` on their own device and queue.
+instances expose binary64 `session.tensor()` on their own device and queue.
 
-Points have shape `[N, 3]` and f32 coordinates. The API provides affine
+The explicit legacy `TensorMath` API uses `[N, 3]` points with f32 coordinates. The API provides affine
 transforms, paired squared distances and sums, bounds, centered covariance,
 raw second moments, nearest neighbors and directed Chamfer summaries.
 Results remain native tensors and compose with other domain or backend
@@ -36,8 +56,7 @@ there is no automatic CPU fallback in this API.
 
 `TensorMath::upload_points_f64` explicitly rounds host f64 coordinates to f32
 and rejects nonfinite or overflowing conversions. It cannot recover geometry
-smaller than f32 resolution at a large coordinate offset. Existing f64 functions
-and `Acceleration` thresholds retain their established contracts.
+smaller than f32 resolution at a large coordinate offset. CPU f64 functions and `Acceleration` thresholds remain available.
 
 Nearest-neighbor options limit tiles, result bytes and conservative estimates
 of recipe workspace and work before device operations begin. Equal distances use the smaller

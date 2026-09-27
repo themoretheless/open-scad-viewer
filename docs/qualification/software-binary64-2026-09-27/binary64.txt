@@ -1,0 +1,33 @@
+{"command": ["cargo", "test", "--offline", "--locked", "--manifest-path", "/Users/themoretheless/Documents/Sources/open-scad-viewer/crates/Cargo.toml", "-p", "compute-core", "--test", "binary64", "--", "--nocapture"], "COMPUTE_REQUIRE_GPU": "1"}
+warning: binary `wgsl_export` should have a kebab-case name
+  |
+1 | /Users/themoretheless/Documents/Sources/open-scad-viewer/crates/target/.../wgsl_export
+  |                                                                            ^^^^^^^^^^^
+  |
+  = note: `cargo::non_kebab_case_bins` is set to `warn` by default
+help: to change the binary name to `wgsl-export`, convert the file stem
+  |
+1 - src/bin/wgsl_export.rs
+1 + src/bin/wgsl-export.rs
+  |
+warning: `raster-core` (manifest) generated 1 warning
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.06s
+     Running tests/binary64.rs (crates/target/debug/build/compute-core/a5e2a58935b6c750/out/binary64-a5e2a58935b6c750)
+
+running 3 tests
+test binary64_wgsl_validates_without_float_arithmetic ... ok
+binary64 device: BackendReport { kind: Metal, label: "metal", native_api: true, browser_api: false, metal: true }
+binary64 op=0: 41444 exact comparisons passed
+binary64 op=1: 41444 exact comparisons passed
+binary64 op=2: 41444 exact comparisons passed
+binary64 op=3: 41444 exact comparisons passed
+binary64 op=4: 41444 exact comparisons passed
+binary64 op=5: 41444 exact comparisons passed
+binary64 op=6: 41444 tolerance comparisons passed
+binary64 op=7: 41444 tolerance comparisons passed
+binary64 op=8: 41444 tolerance comparisons passed
+binary64 op=9: 41444 tolerance comparisons passed
+test native_gpu_binary64_matches_cpu_bits_for_basic_arithmetic ... ok
+test native_gpu_software_binary64_tensor_contract ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.13s

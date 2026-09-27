@@ -92,6 +92,10 @@ impl TensorBackend for ComputeRuntime {
         BackendKind::Wgsl
     }
 
+    fn f64_support(&self) -> tensor_core::Float64Support {
+        tensor_core::Float64Support::SoftwareBinary64
+    }
+
     fn upload_f32(&self, shape: Shape, values: &[f32]) -> Result<GpuTensor, Self::Error> {
         if shape.numel() != values.len() {
             return Err(TensorError::ElementCountMismatch {
