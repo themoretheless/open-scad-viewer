@@ -8,7 +8,7 @@ import * as geometryKernel from '../src/services/geometry/kernel'
 import { useModelingGrid } from '../src/services/modelingGrid'
 import DirectModeler from '../src/features/DirectModeler.vue'
 import {extrudeDirectSketch,type DirectDocument} from '../src/services/directModeling'
-import {projectDirectPoint,defaultDirectCamera} from '../src/services/directModelingTools'
+import {projectDirectPoint,unprojectDirectXY,defaultDirectCamera} from '../src/services/directModelingTools'
 import {solidTopology} from '../src/services/directSolidTools'
 import {sampleCurve} from '../src/services/directSketchGeometry'
 import {inspectPolygonMesh} from '../src/services/geometry/polygon'
@@ -350,6 +350,38 @@ it('creates rational tube/frustum solids and retains the faceted cylinder option
  const selector=ui.all().find(n=>n.tag==='select'&&n.options.some(o=>o.props.value==='faceted')&&n.options.some(o=>ui.text(o)==='Exact surfaces'))!
  selector.props['onUpdate:modelValue']('faceted');await nextTick();await ui.click('Cylinder')
  expect(ui.doc().bodies.at(-1)?.brep?.faces).toHaveLength(50)
+})
+
+it('selects a B-rep vertex without translating the body on click or pointer jitter',async()=>{
+ const ui=await mount();await ui.click('Box');await ui.click('Vertices')
+ const svg=ui.svg(),before=ui.doc()
+ const vertex=ui.all(svg).find(n=>n.tag==='circle'&&n.props.style?.cursor==='grab'&&Math.abs(n.props.cy)>1)!
+ expect(vertex).toBeDefined()
+ const x=Number(vertex.props.cx),y=Number(vertex.props.cy)
+ await ui.pointer(vertex,x,y)
+ svg.props.onPointerup(ui.event(svg,x,y));await nextTick()
+ expect(ui.doc()).toEqual(before)
+ await ui.pointer(vertex,x,y)
+ svg.props.onPointermove(ui.event(svg,x+1,y+1))
+ svg.props.onPointerup(ui.event(svg,x+1,y+1));await nextTick()
+ expect(ui.doc()).toEqual(before)
+ await ui.click('↶')
+ expect(ui.doc().bodies.some(b=>b.id===before.bodies.at(-1)!.id)).toBe(false)
+})
+
+it('drags a B-rep vertex by the pointer delta without an initial coordinate jump',async()=>{
+ const ui=await mount();await ui.click('Box');await ui.click('Vertices')
+ const svg=ui.svg(),before=ui.doc(),body=before.bodies.at(-1)!
+ const vertex=ui.all(svg).find(n=>n.tag==='circle'&&n.props.style?.cursor==='grab'&&Math.abs(n.props.cy)>1)!
+ const x=Number(vertex.props.cx),y=Number(vertex.props.cy)
+ const a=unprojectDirectXY([x,y],defaultDirectCamera()),b=unprojectDirectXY([x+8,y+5],defaultDirectCamera())
+ await ui.pointer(vertex,x,y)
+ const end={...ui.event(svg,x+8,y+5),altKey:true}
+ svg.props.onPointermove(end);svg.props.onPointerup(end);await nextTick()
+ const moved=ui.doc().bodies.find(b=>b.id===body.id)!
+ expect(moved.brep!.topologyIds).toEqual(body.brep!.topologyIds)
+ for(let i=0;i<body.mesh.positions.length;i++)expect(moved.mesh.positions[i]).toBeCloseTo(body.mesh.positions[i]+(i%3===2?0:b[i%3]-a[i%3]),5)
+ await ui.click('↶');expect(ui.doc()).toEqual(before)
 })
 
 it('preserves authored B-rep for movement and push while refusing retained shell',async()=>{

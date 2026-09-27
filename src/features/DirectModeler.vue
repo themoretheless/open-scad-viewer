@@ -179,7 +179,7 @@ let orbitDrag: { x: number; y: number; yaw: number; pitch: number; pointer: numb
 // While the camera is being dragged the view falls back to the working mesh so orbiting stays responsive.
 const cameraDragging = ref(false)
 let heightDrag: { y: number; height: number; pointer: number; svg: SVGSVGElement } | null = null
-let gesture: { start: Point2; document: DirectDocument; vertex: number | null; id: string; pointer: number; pane: Pane; svg: SVGSVGElement; pan: boolean; center: Point2; sketch?: boolean; anchor?: Point2; anchor3?: Vec3; bodyDrag?: { ids: string[]; delta: Vec3 } | null } | null = null
+let gesture: { start: Point2; document: DirectDocument; vertex: number | null; id: string; pointer: number; pane: Pane; svg: SVGSVGElement; pan: boolean; center: Point2; sketch?: boolean; anchor?: Point2; anchor3?: Vec3; dragStart?: Point2; bodyDrag?: { ids: string[]; delta: Vec3 } | null } | null = null
 
 /**
  * Elements offset directly while a body drag is in flight.
@@ -278,7 +278,12 @@ function startVertexDrag(e:PointerEvent,index:number){
  const body=selectedBody.value;if(!body)return
  const target=e.currentTarget as SVGGraphicsElement,svg=target.ownerSVGElement!
  // Exact B-rep bodies keep their surfaces: dragging a corner moves the whole body instead of editing the mesh.
- if(body.brep){gesture={start:position(e),document:history.document,vertex:null,id:body.id,pointer:e.pointerId,pane:'3d',svg,pan:false,center:[...centers.value['3d']]};svg.setPointerCapture(e.pointerId);return}
+ if(body.brep){
+  // The move path uses XY model coordinates, not projected SVG coordinates.
+  gesture={start:plane(position(e),'3d'),document:history.document,vertex:null,id:body.id,pointer:e.pointerId,pane:'3d',svg,pan:false,center:[...centers.value['3d']],
+   anchor3:Array.from(body.mesh.positions.slice(index*3,index*3+3)) as Vec3,dragStart:[e.clientX,e.clientY]}
+  svg.setPointerCapture(e.pointerId);return
+ }
  const groups=coincidentVertexGroups(body.mesh.positions),ids=[...new Set(vertexIndexes.value.flatMap(i=>{const key=`${body.mesh.positions[i*3].toFixed(5)},${body.mesh.positions[i*3+1].toFixed(5)},${body.mesh.positions[i*3+2].toFixed(5)}`;return groups.get(key)??[i]}))]
  vertexDrag={svg,pointer:e.pointerId,start:position(e),ids,before:history.document,moved:false}
  svg.setPointerCapture(e.pointerId)
@@ -1332,6 +1337,8 @@ function move(e: PointerEvent) {
     centers.value[gesture.pane] = [center[0] + gesture.start[0] - p[0], center[1] + gesture.start[1] - p[1]]
     return
   }
+  // Selection and small pointer jitter must not snap or translate an exact body.
+  if (gesture.dragStart && !gesture.bodyDrag && Math.hypot(e.clientX-gesture.dragStart[0],e.clientY-gesture.dragStart[1]) < 3) return
   let p = gesture.sketch&&gesture.pane==='3d'?unprojectDirectPlane(position(e),activePlane.value,camera.value):plane(position(e), gesture.pane); const start = gesture.start
   if (gesture.pane === '2d'||gesture.sketch) {
     const anchor=gesture.anchor
@@ -1390,8 +1397,8 @@ function up(e: PointerEvent) {
   drawMeasure.value = ''; snapMarker.value = null
   if (!gesture || gesture.pointer !== e.pointerId) return
   move(e)
-  const start=gesture.start, before = gesture.document, pane = gesture.pane, drawing=gesture.sketch, pan = gesture.pan, bodyDrag = gesture.bodyDrag; gesture = null
-  if (pan) return
+  const start=gesture.start, before = gesture.document, pane = gesture.pane, drawing=gesture.sketch, pan = gesture.pan, bodyDrag = gesture.bodyDrag, selectionOnly = gesture.dragStart && !bodyDrag; gesture = null
+  if (pan || selectionOnly) return
   run(() => {
     // The exact translation, including B-rep, is applied once here rather than per move.
     if (bodyDrag) { commit(translateBodiesExact(before, bodyDrag.ids, bodyDrag.delta, [0, 0, 1])); settleAfterDrag(); return }
