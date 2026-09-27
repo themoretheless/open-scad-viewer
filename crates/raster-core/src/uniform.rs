@@ -1,6 +1,13 @@
 //! CPU-side mirror of the WGSL uniform structs. Field order and float offsets
 //! are the GPU contract: `write_f32` emits exactly the layout the shaders
 //! read, and the tests pin the offsets against the browser renderer.
+//!
+//! The offset constants (`SCENE_UNIFORM_FLOATS`, `STYLE_FLOAT_OFFSET`, …) are
+//! generated from the single declarative table in [`crate::layout`] by the
+//! `wgsl_export` codegen (see [`crate::generated_layouts`]) and re-exported
+//! here, so this module's public API is unchanged.
+
+pub use crate::generated_layouts::*;
 
 /// Object uniform: model (16 floats) + nmat (16) + color (4) + style (4)
 /// + morph (4) + baseColor (3) + metallic (1) + emissive (3) + roughness (1)
@@ -27,23 +34,6 @@ pub struct ObjectUniform {
     /// Material preset/flags slot (0 = none).
     pub material_id: f32,
 }
-
-pub const OBJECT_UNIFORM_FLOATS: usize = 56;
-pub const OBJECT_UNIFORM_BYTES: u64 = 224;
-pub const STYLE_FLOAT_OFFSET: usize = 36;
-pub const STYLE_BYTE_OFFSET: u64 = 144;
-pub const MORPH_FLOAT_OFFSET: usize = 40;
-pub const MORPH_BYTE_OFFSET: u64 = 160;
-/// baseColor rgb at MATERIAL_FLOAT_OFFSET..+2, metallic at +3.
-pub const MATERIAL_FLOAT_OFFSET: usize = 44;
-pub const MATERIAL_BYTE_OFFSET: u64 = 176;
-pub const METALLIC_FLOAT_OFFSET: usize = 47;
-/// emissive rgb at EMISSIVE_FLOAT_OFFSET..+2, roughness at +3.
-pub const EMISSIVE_FLOAT_OFFSET: usize = 48;
-pub const EMISSIVE_BYTE_OFFSET: u64 = 192;
-pub const ROUGHNESS_FLOAT_OFFSET: usize = 51;
-pub const MATERIAL_ID_FLOAT_OFFSET: usize = 52;
-pub const MATERIAL_ID_BYTE_OFFSET: u64 = 208;
 
 impl ObjectUniform {
     pub const fn new(model: [f32; 16], nmat: [f32; 16], color: [f32; 4]) -> Self {
@@ -125,21 +115,112 @@ pub struct SceneUniform {
     pub shadow_params: [f32; 4],
 }
 
-pub const SCENE_UNIFORM_FLOATS: usize = 96;
-pub const SCENE_UNIFORM_BYTES: u64 = 384;
-/// Theme block: selectionColor at THEME_FLOAT_OFFSET..+2, then hover/edge/
-/// xray/grid/cap colors every 4 floats (vec3 + pad, 16-byte aligned).
-pub const THEME_FLOAT_OFFSET: usize = 52;
-pub const THEME_BYTE_OFFSET: u64 = 208;
-/// capColor rgb at CAP_FLOAT_OFFSET..+2.
-pub const CAP_FLOAT_OFFSET: usize = 72;
-pub const CAP_BYTE_OFFSET: u64 = 288;
-/// Light view-projection (column-major mat4) at LIGHT_VP_FLOAT_OFFSET..+15.
-pub const LIGHT_VP_FLOAT_OFFSET: usize = 76;
-pub const LIGHT_VP_BYTE_OFFSET: u64 = 304;
-/// Shadow params (enabled, texel, bias, strength) at SHADOW_FLOAT_OFFSET..+3.
-pub const SHADOW_FLOAT_OFFSET: usize = 92;
-pub const SHADOW_BYTE_OFFSET: u64 = 368;
+/// Column-major key-light orthographic view-projection covering the scene
+/// bounds, ported 1:1 from the browser renderer's `shadowLightVP` (pure
+/// row-major JS math in webgpuRenderer.ts + math3d.lookAt/orthographic).
+/// `light` is the scene light direction (scene uniform floats 20..22),
+/// `center`/`radius` the scene bounds; the extent is radius × 1.25.
+pub fn shadow_light_vp(light: [f32; 3], center: [f32; 3], radius: f32) -> [f32; 16] {
+    let len = (light[0] * light[0] + light[1] * light[1] + light[2] * light[2])
+        .sqrt()
+        .max(f32::EPSILON);
+    let l = [light[0] / len, light[1] / len, light[2] / len];
+    let extent = radius.max(1e-3) * 1.25;
+    let eye = [
+        center[0] + l[0] * extent * 2.0,
+        center[1] + l[1] * extent * 2.0,
+        center[2] + l[2] * extent * 2.0,
+    ];
+    let view = look_at_row_major(eye, center, [0.0, 0.0, 1.0]);
+    let proj = orthographic_row_major(-extent, extent, -extent, extent, 0.0, extent * 4.0);
+    let vp = multiply_row_major(&proj, &view);
+    // Row-major product → column-major output (the WGSL mat4 layout).
+    let mut out = [0.0f32; 16];
+    for row in 0..4 {
+        for column in 0..4 {
+            out[column * 4 + row] = vp[row * 4 + column];
+        }
+    }
+    out
+}
+
+/// Row-major mat4 product (a · b), mirroring `multiplyRowMajor`.
+fn multiply_row_major(a: &[f32; 16], b: &[f32; 16]) -> [f32; 16] {
+    let mut out = [0.0f32; 16];
+    for row in 0..4 {
+        for column in 0..4 {
+            out[row * 4 + column] = a[row * 4] * b[column]
+                + a[row * 4 + 1] * b[4 + column]
+                + a[row * 4 + 2] * b[8 + column]
+                + a[row * 4 + 3] * b[12 + column];
+        }
+    }
+    out
+}
+
+/// Right-handed WebGPU orthographic projection (depth range [0, 1]),
+/// row-major; mirrors math3d.orthographic.
+fn orthographic_row_major(
+    left: f32,
+    right: f32,
+    bottom: f32,
+    top: f32,
+    near: f32,
+    far: f32,
+) -> [f32; 16] {
+    let lr = 1.0 / (right - left);
+    let bt = 1.0 / (top - bottom);
+    let nf = 1.0 / (near - far);
+    let mut m = [0.0f32; 16];
+    m[0] = 2.0 * lr;
+    m[3] = -(right + left) * lr;
+    m[5] = 2.0 * bt;
+    m[7] = -(top + bottom) * bt;
+    m[10] = nf;
+    m[11] = near * nf;
+    m[15] = 1.0;
+    m
+}
+
+/// Row-major lookAt view matrix; mirrors math3d.lookAt, including the
+/// parallel-up-axis fallback.
+fn look_at_row_major(eye: [f32; 3], center: [f32; 3], up: [f32; 3]) -> [f32; 16] {
+    let mut zx = eye[0] - center[0];
+    let mut zy = eye[1] - center[1];
+    let mut zz = eye[2] - center[2];
+    let mut len = (zx * zx + zy * zy + zz * zz).sqrt();
+    if len < 1e-10 {
+        zx = 0.0;
+        zy = 0.0;
+        zz = 1.0;
+        len = 1.0;
+    }
+    let fz = [zx / len, zy / len, zz / len];
+
+    let mut xx = up[1] * fz[2] - up[2] * fz[1];
+    let mut xy = up[2] * fz[0] - up[0] * fz[2];
+    let mut xz = up[0] * fz[1] - up[1] * fz[0];
+    len = (xx * xx + xy * xy + xz * xz).sqrt();
+    if len < 1e-10 {
+        let (ax, ay, az) = if fz[2].abs() > 0.9 { (0.0, 1.0, 0.0) } else { (0.0, 0.0, 1.0) };
+        xx = ay * fz[2] - az * fz[1];
+        xy = az * fz[0] - ax * fz[2];
+        xz = ax * fz[1] - ay * fz[0];
+        len = (xx * xx + xy * xy + xz * xz).sqrt();
+    }
+    let fx = [xx / len, xy / len, xz / len];
+    let fy = [
+        fz[1] * fx[2] - fz[2] * fx[1],
+        fz[2] * fx[0] - fz[0] * fx[2],
+        fz[0] * fx[1] - fz[1] * fx[0],
+    ];
+    let mut m = [0.0f32; 16];
+    m[0] = fx[0]; m[1] = fx[1]; m[2] = fx[2]; m[3] = -(fx[0] * eye[0] + fx[1] * eye[1] + fx[2] * eye[2]);
+    m[4] = fy[0]; m[5] = fy[1]; m[6] = fy[2]; m[7] = -(fy[0] * eye[0] + fy[1] * eye[1] + fy[2] * eye[2]);
+    m[8] = fz[0]; m[9] = fz[1]; m[10] = fz[2]; m[11] = -(fz[0] * eye[0] + fz[1] * eye[1] + fz[2] * eye[2]);
+    m[15] = 1.0;
+    m
+}
 
 impl SceneUniform {
     pub const fn new(view_projection: [f32; 16], eye: [f32; 4]) -> Self {
@@ -166,26 +247,26 @@ impl SceneUniform {
 
     /// Writes the full 96-float record into `out`.
     pub fn write_f32(&self, out: &mut [f32; SCENE_UNIFORM_FLOATS]) {
-        out[..16].copy_from_slice(&self.view_projection);
-        out[16..20].copy_from_slice(&self.eye);
-        out[20..24].copy_from_slice(&self.light);
-        out[24..28].copy_from_slice(&self.ambient);
-        out[28..32].copy_from_slice(&self.section);
-        out[32..36].copy_from_slice(&self.options);
-        out[36..52].copy_from_slice(&self.inverse_vp);
-        out[52..55].copy_from_slice(&self.selection_color);
-        out[56..59].copy_from_slice(&self.hover_color);
-        out[60..63].copy_from_slice(&self.edge_color);
-        out[64..67].copy_from_slice(&self.xray_color);
-        out[68..71].copy_from_slice(&self.grid_color);
-        out[72..75].copy_from_slice(&self.cap_color);
-        out[76..92].copy_from_slice(&self.light_vp);
-        out[92..96].copy_from_slice(&self.shadow_params);
-        out[55] = 0.0;
-        out[59] = 0.0;
-        out[63] = 0.0;
-        out[67] = 0.0;
-        out[71] = 0.0;
-        out[75] = 0.0;
+        out[VP_FLOAT_OFFSET..EYE_FLOAT_OFFSET].copy_from_slice(&self.view_projection);
+        out[EYE_FLOAT_OFFSET..LIGHT_FLOAT_OFFSET].copy_from_slice(&self.eye);
+        out[LIGHT_FLOAT_OFFSET..AMBIENT_FLOAT_OFFSET].copy_from_slice(&self.light);
+        out[AMBIENT_FLOAT_OFFSET..SECTION_FLOAT_OFFSET].copy_from_slice(&self.ambient);
+        out[SECTION_FLOAT_OFFSET..OPTIONS_FLOAT_OFFSET].copy_from_slice(&self.section);
+        out[OPTIONS_FLOAT_OFFSET..INVERSE_VP_FLOAT_OFFSET].copy_from_slice(&self.options);
+        out[INVERSE_VP_FLOAT_OFFSET..THEME_FLOAT_OFFSET].copy_from_slice(&self.inverse_vp);
+        out[THEME_FLOAT_OFFSET..THEME_FLOAT_OFFSET + 3].copy_from_slice(&self.selection_color);
+        out[HOVER_FLOAT_OFFSET..HOVER_FLOAT_OFFSET + 3].copy_from_slice(&self.hover_color);
+        out[EDGE_FLOAT_OFFSET..EDGE_FLOAT_OFFSET + 3].copy_from_slice(&self.edge_color);
+        out[XRAY_FLOAT_OFFSET..XRAY_FLOAT_OFFSET + 3].copy_from_slice(&self.xray_color);
+        out[GRID_FLOAT_OFFSET..GRID_FLOAT_OFFSET + 3].copy_from_slice(&self.grid_color);
+        out[CAP_FLOAT_OFFSET..CAP_FLOAT_OFFSET + 3].copy_from_slice(&self.cap_color);
+        out[LIGHT_VP_FLOAT_OFFSET..SHADOW_FLOAT_OFFSET].copy_from_slice(&self.light_vp);
+        out[SHADOW_FLOAT_OFFSET..SCENE_UNIFORM_FLOATS].copy_from_slice(&self.shadow_params);
+        out[THEME_FLOAT_OFFSET + 3] = 0.0;
+        out[HOVER_FLOAT_OFFSET + 3] = 0.0;
+        out[EDGE_FLOAT_OFFSET + 3] = 0.0;
+        out[XRAY_FLOAT_OFFSET + 3] = 0.0;
+        out[GRID_FLOAT_OFFSET + 3] = 0.0;
+        out[CAP_FLOAT_OFFSET + 3] = 0.0;
     }
 }

@@ -42,7 +42,7 @@ function fakeDevice(record: {
   textures: Array<{ size: number[]; format: string; usage: number }>
   samplers: unknown[]
   bindGroups: Array<{ layout: unknown; entries: unknown[] }>
-  pipelines: Array<{ depthStencil?: { format: string }; fragment?: unknown }>
+  pipelines: Array<{ depthStencil?: { format: string }; fragment?: unknown; layout?: { groups: number } }>
   passes: Array<{ colors: number; depthFormat: string | null }>
   writes: Array<{ buffer: unknown; data: Float32Array }>
 }) {
@@ -83,7 +83,7 @@ function fakeDevice(record: {
     createSampler: (descriptor: unknown) => { const sampler = { descriptor }; record.samplers.push(sampler); return sampler },
     createBuffer: () => ({}),
     createBindGroupLayout: () => ({}),
-    createPipelineLayout: () => ({}),
+    createPipelineLayout: (descriptor: { bindGroupLayouts: unknown[] }) => ({ groups: descriptor.bindGroupLayouts.length }),
     createShaderModule: () => ({}),
     createBindGroup: (descriptor: { layout: unknown; entries: unknown[] }) => {
       record.bindGroups.push(descriptor)
@@ -102,7 +102,7 @@ function recordShape() {
     textures: [] as Array<{ size: number[]; format: string; usage: number }>,
     samplers: [] as unknown[],
     bindGroups: [] as Array<{ layout: unknown; entries: unknown[] }>,
-    pipelines: [] as Array<{ depthStencil?: { format: string }; fragment?: unknown }>,
+    pipelines: [] as Array<{ depthStencil?: { format: string }; fragment?: unknown; layout?: { groups: number } }>,
     passes: [] as Array<{ colors: number; depthFormat: string | null }>,
     writes: [] as Array<{ buffer: unknown; data: Float32Array }>,
   }
@@ -137,7 +137,7 @@ function harness() {
   internal.meshImmediatePipeT = null
   internal.sectionCapPipe = 'cap'
   internal.shadowPipe = 'shadow'
-  internal.shadowSampler = {}
+  ;(internal.textures as Record<string, unknown>).shadowSampler = {}
   internal.meshes = [fakeMesh()]
   internal.bounds = { center: [0, 0, 0], radius: 10, min: [-1, -1, -1], max: [1, 1, 1] }
   return { renderer, internal, record }
@@ -153,13 +153,19 @@ describe('WebGPURenderer contact shadows', () => {
     internal.buildPipelines()
 
     // The 1×1 depth dummy is bound so the shaders' sampling path is inert.
+    const textures = internal.textures as Record<string, unknown>
     expect(record.textures).toContainEqual({ size: [1, 1], format: 'depth32float', usage: 4 })
-    expect(internal.shadowBG).not.toBeNull()
-    expect(internal.shadowDummyTexture).not.toBeNull()
+    expect(textures.shadowBG).not.toBeNull()
+    expect(textures.shadowDummyTexture).not.toBeNull()
     // meshShadow compiles to a depth-only pipeline (no fragment, depth32float).
     const shadowPipe = record.pipelines.find(pipeline => pipeline.depthStencil?.format === 'depth32float')
     expect(shadowPipe).toBeDefined()
     expect(shadowPipe!.fragment).toBeUndefined()
+    // Its layout is scene+object only: the depth pass binds groups 0 and 1,
+    // so a third (shadow) group would trip Dawn's "No bind group set" error.
+    expect(shadowPipe!.layout!.groups).toBe(2)
+    // The lit surface pipelines keep the 3-group layout (scene+object+shadow).
+    expect(record.pipelines.some(pipeline => pipeline.layout?.groups === 3)).toBe(true)
     // No real shadow map until shadows are enabled.
     expect(record.textures.some(t => t.size[0] === 1024)).toBe(false)
   })
@@ -223,5 +229,108 @@ describe('WebGPURenderer contact shadows', () => {
     expect(record.passes).toHaveLength(1)
     const write = record.writes.find(entry => entry.buffer === 'sceneUB')
     expect(write!.data[SCENE_UNIFORM_LAYOUT.shadowFloatOffset]).toBe(0)
+  })
+
+  describe('shadow map caching', () => {
+    const shadowPasses = (record: ReturnType<typeof recordShape>) =>
+      record.passes.filter(pass => pass.colors === 0).length
+
+    it('re-renders the shadow pass only when the scene changes, never on camera moves', () => {
+      const { renderer, internal, record } = harness()
+      renderer.setShadowsEnabled(true)
+
+      internal.render()
+      expect(shadowPasses(record)).toBe(1)
+
+      // Static frames hit the cache: no shadow pass is issued again.
+      internal.render()
+      internal.render()
+      expect(shadowPasses(record)).toBe(1)
+      expect(record.passes).toHaveLength(4) // (shadow+main) + main + main
+
+      // Camera movement does not invalidate a light-space depth map.
+      ;(internal as unknown as { yaw: number }).yaw += 0.5
+      ;(internal as unknown as { pitch: number }).pitch += 0.25
+      internal.render()
+      expect(shadowPasses(record)).toBe(1)
+    })
+
+    it('re-renders after a visibility change', () => {
+      const { renderer, internal, record } = harness()
+      // Visibility changes rebuild selection overlays; stub those side paths.
+      internal.rebuildSelectionOverlays = () => undefined
+      internal.rebuildSourceHighlightOverlay = () => undefined
+      renderer.setShadowsEnabled(true)
+      internal.render()
+      expect(shadowPasses(record)).toBe(1)
+
+      // Hiding the only mesh nulls scene bounds, which disables the shadow
+      // sampling path entirely (no pass issued, as before caching).
+      renderer.setMeshVisibility(0, false)
+      internal.render()
+      expect(shadowPasses(record)).toBe(1)
+
+      // Showing it again bumps the epoch: one shadow re-render, then cached.
+      renderer.setMeshVisibility(0, true)
+      internal.render()
+      expect(shadowPasses(record)).toBe(2)
+      internal.render()
+      expect(shadowPasses(record)).toBe(2)
+    })
+
+    it('re-renders while a morph animates, then caches again after it finishes', () => {
+      const { renderer, internal, record } = harness()
+      renderer.setShadowsEnabled(true)
+      internal.render()
+      expect(shadowPasses(record)).toBe(1)
+
+      // A time-based morph moves vertices every frame: the map cannot cache.
+      const mesh = internal.meshes[0] as { morph?: unknown }
+      mesh.morph = { from: new Float32Array(9), target: new Float32Array(9), started: performance.now() }
+      internal.render()
+      internal.render()
+      expect(shadowPasses(record)).toBe(3)
+
+      // Morph retired (advanceGeometryAnimation also bumps the epoch): the
+      // final geometry renders once more, then the cache holds.
+      mesh.morph = undefined
+      ;(internal as unknown as { invalidateShadowMap(): void }).invalidateShadowMap()
+      internal.render()
+      expect(shadowPasses(record)).toBe(4)
+      internal.render()
+      expect(shadowPasses(record)).toBe(4)
+    })
+
+    it('forces one re-render when shadows are toggled back on', () => {
+      const { renderer, internal, record } = harness()
+      renderer.setShadowsEnabled(true)
+      internal.render()
+      internal.render()
+      expect(shadowPasses(record)).toBe(1)
+
+      renderer.setShadowsEnabled(false)
+      internal.render()
+      expect(shadowPasses(record)).toBe(1)
+
+      // Toggling on recreates the map: it must render once even if nothing
+      // else changed, then cache again.
+      renderer.setShadowsEnabled(true)
+      internal.render()
+      expect(shadowPasses(record)).toBe(2)
+      internal.render()
+      expect(shadowPasses(record)).toBe(2)
+    })
+
+    it('re-renders when the geometry epoch advances (setMeshes path)', () => {
+      const { renderer, internal, record } = harness()
+      renderer.setShadowsEnabled(true)
+      internal.render()
+      expect(shadowPasses(record)).toBe(1)
+
+      // setMeshes bumps the epoch; simulated here through the same hook.
+      ;(internal as unknown as { invalidateShadowMap(): void }).invalidateShadowMap()
+      internal.render()
+      expect(shadowPasses(record)).toBe(2)
+    })
   })
 })

@@ -26,16 +26,16 @@ fn shadowFactor(wp: vec3f) -> f32 {
   let lp = sc.lightVP * vec4f(wp, 1.0);
   let ndc = lp.xyz / lp.w;
   let uv = ndc.xy * vec2f(0.5, -0.5) + vec2f(0.5);
-  if (ndc.z < 0.0 || ndc.z > 1.0 || uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) { return 1.0; }
+  let inb = ndc.z >= 0.0 && ndc.z <= 1.0 && uv.x >= 0.0 && uv.x <= 1.0 && uv.y >= 0.0 && uv.y <= 1.0;
   let texel = sc.shadowParams.y;
   let depth = ndc.z - sc.shadowParams.z;
   var sum = 0.0;
   for (var dy = -1; dy <= 1; dy++) {
     for (var dx = -1; dx <= 1; dx++) {
-      sum += textureSampleCompare(shadowMap, shadowSampler, uv + vec2f(f32(dx) * texel, f32(dy) * texel), depth);
+      sum += textureSampleCompare(shadowMap, shadowSampler, clamp(uv, vec2f(0.0), vec2f(1.0)) + vec2f(f32(dx) * texel, f32(dy) * texel), depth);
     }
   }
-  return mix(1.0, sum / 9.0, sc.shadowParams.w);
+  return select(1.0, mix(1.0, sum / 9.0, sc.shadowParams.w), inb);
 }
 
 @vertex fn vs(@location(0) pos: vec3f, @location(1) norm: vec3f, @location(2) fromPos: vec3f) -> V {
@@ -48,6 +48,10 @@ fn shadowFactor(wp: vec3f) -> f32 {
   if (sc.options.x > 0.5 && dot(v.w, sc.section.xyz) < sc.section.w) { discard; }
   // Cheap section-cap approximation: fragments just inside the clip plane
   // (within a fixed world-space epsilon) shade flat/unlit to suggest the cut.
+  // Shadows darken the ambient (indirect) term only; the key light stays.
+  // Hoisted above the section-cap early return: textureSampleCompare must run
+  // in uniform control flow (WGSL uniformity analysis).
+  let shadow = shadowFactor(v.w);
   if (sc.options.x > 0.5 && dot(v.w, sc.section.xyz) < sc.section.w + 0.02) { return vec4f(mix(ob.baseColor, sc.capColor, 0.6) + ob.emissive * 0.2, ob.style.x); }
   let N = normalize(v.n);
   let L = normalize(sc.light.xyz);
@@ -58,8 +62,6 @@ fn shadowFactor(wp: vec3f) -> f32 {
   let bd = max(dot(-N, L), 0.0) * 0.25;
   let selected = mix(ob.color.rgb, sc.selectionColor, ob.style.y * 0.48);
   let base = mix(selected, sc.hoverColor, ob.style.w * 0.38) * ob.baseColor;
-  // Shadows darken the ambient (indirect) term only; the key light stays.
-  let shadow = shadowFactor(v.w);
   // Defaults (baseColor white, metallic 0, emissive black) reproduce the
   // legacy Blinn-Phong look exactly; roughness/materialId are reserved.
   let c = sc.ambient.rgb * base * shadow + d * base + s * vec3f(0.25) * (1.0 - ob.metallic) + bd * base * 0.5 + ob.emissive;
@@ -92,16 +94,16 @@ fn shadowFactor(wp: vec3f) -> f32 {
   let lp = sc.lightVP * vec4f(wp, 1.0);
   let ndc = lp.xyz / lp.w;
   let uv = ndc.xy * vec2f(0.5, -0.5) + vec2f(0.5);
-  if (ndc.z < 0.0 || ndc.z > 1.0 || uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) { return 1.0; }
+  let inb = ndc.z >= 0.0 && ndc.z <= 1.0 && uv.x >= 0.0 && uv.x <= 1.0 && uv.y >= 0.0 && uv.y <= 1.0;
   let texel = sc.shadowParams.y;
   let depth = ndc.z - sc.shadowParams.z;
   var sum = 0.0;
   for (var dy = -1; dy <= 1; dy++) {
     for (var dx = -1; dx <= 1; dx++) {
-      sum += textureSampleCompare(shadowMap, shadowSampler, uv + vec2f(f32(dx) * texel, f32(dy) * texel), depth);
+      sum += textureSampleCompare(shadowMap, shadowSampler, clamp(uv, vec2f(0.0), vec2f(1.0)) + vec2f(f32(dx) * texel, f32(dy) * texel), depth);
     }
   }
-  return mix(1.0, sum / 9.0, sc.shadowParams.w);
+  return select(1.0, mix(1.0, sum / 9.0, sc.shadowParams.w), inb);
 }
 
 @vertex fn vs(@location(0) pos: vec3f, @location(1) norm: vec3f, @location(2) fromPos: vec3f) -> V {
@@ -163,6 +165,10 @@ fn envIrradiance(N: vec3f) -> vec3f {
   if (sc.options.x > 0.5 && dot(v.w, sc.section.xyz) < sc.section.w) { discard; }
   // Cheap section-cap approximation: fragments just inside the clip plane
   // (within a fixed world-space epsilon) shade flat/unlit to suggest the cut.
+  // Shadows darken the indirect terms (irradiance/ambient) only; the direct
+  // key light and specular stay. Hoisted above the section-cap early return:
+  // textureSampleCompare must run in uniform control flow (WGSL uniformity).
+  let shadow = shadowFactor(v.w);
   if (sc.options.x > 0.5 && dot(v.w, sc.section.xyz) < sc.section.w + 0.02) { return vec4f(mix(ob.baseColor, sc.capColor, 0.6) + ob.emissive * 0.2, ob.style.x); }
   let N = normalize(v.n);
   let L = normalize(sc.light.xyz);
@@ -182,9 +188,6 @@ fn envIrradiance(N: vec3f) -> vec3f {
   // Fill term mirroring the Phong shader's back-light contribution.
   let bd = max(dot(-N, L), 0.0) * 0.25;
   var c: vec3f;
-  // Shadows darken the indirect terms (irradiance/ambient) only; the direct
-  // key light and specular stay.
-  let shadow = shadowFactor(v.w);
   if (textureDimensions(envTex).x > 1u) {
     // IBL path: the environment replaces the analytic key light entirely —
     // it already supplies both the diffuse irradiance and the specular
@@ -243,16 +246,16 @@ fn shadowFactor(wp: vec3f) -> f32 {
   let lp = sc.lightVP * vec4f(wp, 1.0);
   let ndc = lp.xyz / lp.w;
   let uv = ndc.xy * vec2f(0.5, -0.5) + vec2f(0.5);
-  if (ndc.z < 0.0 || ndc.z > 1.0 || uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) { return 1.0; }
+  let inb = ndc.z >= 0.0 && ndc.z <= 1.0 && uv.x >= 0.0 && uv.x <= 1.0 && uv.y >= 0.0 && uv.y <= 1.0;
   let texel = sc.shadowParams.y;
   let depth = ndc.z - sc.shadowParams.z;
   var sum = 0.0;
   for (var dy = -1; dy <= 1; dy++) {
     for (var dx = -1; dx <= 1; dx++) {
-      sum += textureSampleCompare(shadowMap, shadowSampler, uv + vec2f(f32(dx) * texel, f32(dy) * texel), depth);
+      sum += textureSampleCompare(shadowMap, shadowSampler, clamp(uv, vec2f(0.0), vec2f(1.0)) + vec2f(f32(dx) * texel, f32(dy) * texel), depth);
     }
   }
-  return mix(1.0, sum / 9.0, sc.shadowParams.w);
+  return select(1.0, mix(1.0, sum / 9.0, sc.shadowParams.w), inb);
 }
 
 @vertex fn vs(@location(0) pos: vec3f, @location(1) norm: vec3f, @location(2) fromPos: vec3f) -> V {
@@ -265,6 +268,10 @@ fn shadowFactor(wp: vec3f) -> f32 {
 @fragment fn fs(v: V) -> @location(0) vec4f {
   if (sc.options.x > 0.5 && dot(v.w, sc.section.xyz) < sc.section.w) { discard; }
   // Cheap section-cap approximation (world-space epsilon highlight).
+  // Shadows darken the ambient floor term only; key/rim/specular stay.
+  // Hoisted above the section-cap early return: textureSampleCompare must run
+  // in uniform control flow (WGSL uniformity analysis).
+  let shadow = shadowFactor(v.w);
   if (sc.options.x > 0.5 && dot(v.w, sc.section.xyz) < sc.section.w + 0.02) { return vec4f(mix(ob.baseColor, sc.capColor, 0.6) + ob.emissive * 0.2, ob.style.x); }
   let N = normalize(v.n);
   let V2 = normalize(sc.eye.xyz - v.w);
@@ -285,8 +292,6 @@ fn shadowFactor(wp: vec3f) -> f32 {
   }
   // Soft top-left key light.
   let key = clamp(dot(m, vec2f(-0.35, 0.55)) * 0.5 + 0.55, 0.0, 1.0);
-  // Shadows darken the ambient floor term only; key/rim/specular stay.
-  let shadow = shadowFactor(v.w);
   // Fresnel rim, tinted slightly cool like a studio bounce.
   let rim = pow(1.0 - clamp(abs(dot(N, V2)), 0.0, 1.0), 2.5);
   // Specular blob: Gaussian around the key-light reflection spot.
@@ -318,16 +323,16 @@ fn shadowFactor(wp: vec3f) -> f32 {
   let lp = sc.lightVP * vec4f(wp, 1.0);
   let ndc = lp.xyz / lp.w;
   let uv = ndc.xy * vec2f(0.5, -0.5) + vec2f(0.5);
-  if (ndc.z < 0.0 || ndc.z > 1.0 || uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) { return 1.0; }
+  let inb = ndc.z >= 0.0 && ndc.z <= 1.0 && uv.x >= 0.0 && uv.x <= 1.0 && uv.y >= 0.0 && uv.y <= 1.0;
   let texel = sc.shadowParams.y;
   let depth = ndc.z - sc.shadowParams.z;
   var sum = 0.0;
   for (var dy = -1; dy <= 1; dy++) {
     for (var dx = -1; dx <= 1; dx++) {
-      sum += textureSampleCompare(shadowMap, shadowSampler, uv + vec2f(f32(dx) * texel, f32(dy) * texel), depth);
+      sum += textureSampleCompare(shadowMap, shadowSampler, clamp(uv, vec2f(0.0), vec2f(1.0)) + vec2f(f32(dx) * texel, f32(dy) * texel), depth);
     }
   }
-  return mix(1.0, sum / 9.0, sc.shadowParams.w);
+  return select(1.0, mix(1.0, sum / 9.0, sc.shadowParams.w), inb);
 }
 
 @vertex fn vs(@location(0) pos: vec3f, @location(1) norm: vec3f, @location(2) fromPos: vec3f) -> V {
@@ -340,6 +345,10 @@ fn shadowFactor(wp: vec3f) -> f32 {
 @fragment fn fs(v: V) -> @location(0) vec4f {
   if (sc.options.x > 0.5 && dot(v.w, sc.section.xyz) < sc.section.w) { discard; }
   // Cheap section-cap approximation (world-space epsilon highlight).
+  // Shadows darken the ambient (indirect) term only; the toon steps stay.
+  // Hoisted above the section-cap early return: textureSampleCompare must run
+  // in uniform control flow (WGSL uniformity analysis).
+  let shadow = shadowFactor(v.w);
   if (sc.options.x > 0.5 && dot(v.w, sc.section.xyz) < sc.section.w + 0.02) { return vec4f(mix(ob.baseColor, sc.capColor, 0.6) + ob.emissive * 0.2, ob.style.x); }
   let N = normalize(v.n);
   let L = normalize(sc.light.xyz);
@@ -352,8 +361,6 @@ fn shadowFactor(wp: vec3f) -> f32 {
   // Fresnel rim darkening suggests an outline without a second pass.
   let rim = pow(1.0 - clamp(abs(dot(N, V2)), 0.0, 1.0), 3.0);
   let outline = 1.0 - smoothstep(0.55, 0.95, rim) * 0.85;
-  // Shadows darken the ambient (indirect) term only; the toon steps stay.
-  let shadow = shadowFactor(v.w);
   let c = base * (sc.ambient.rgb * 0.6 * shadow + step) * outline + ob.emissive;
   return vec4f(c, ob.style.x);
 }`
@@ -490,16 +497,16 @@ fn shadowFactor(wp: vec3f) -> f32 {
   let lp = sc.lightVP * vec4f(wp, 1.0);
   let ndc = lp.xyz / lp.w;
   let uv = ndc.xy * vec2f(0.5, -0.5) + vec2f(0.5);
-  if (ndc.z < 0.0 || ndc.z > 1.0 || uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) { return 1.0; }
+  let inb = ndc.z >= 0.0 && ndc.z <= 1.0 && uv.x >= 0.0 && uv.x <= 1.0 && uv.y >= 0.0 && uv.y <= 1.0;
   let texel = sc.shadowParams.y;
   let depth = ndc.z - sc.shadowParams.z;
   var sum = 0.0;
   for (var dy = -1; dy <= 1; dy++) {
     for (var dx = -1; dx <= 1; dx++) {
-      sum += textureSampleCompare(shadowMap, shadowSampler, uv + vec2f(f32(dx) * texel, f32(dy) * texel), depth);
+      sum += textureSampleCompare(shadowMap, shadowSampler, clamp(uv, vec2f(0.0), vec2f(1.0)) + vec2f(f32(dx) * texel, f32(dy) * texel), depth);
     }
   }
-  return mix(1.0, sum / 9.0, sc.shadowParams.w);
+  return select(1.0, mix(1.0, sum / 9.0, sc.shadowParams.w), inb);
 }
 
 struct V { @builtin(position) p: vec4f, @location(0) near: vec4f, @location(1) far: vec4f }
@@ -583,3 +590,17 @@ struct Obj { model: mat4x4f, nmat: mat4x4f, color: vec4f, style: vec4f, morph: v
   let local = mix(fromPos, pos, ob.morph.x);
   return sc.lightVP * (ob.model * vec4f(local, 1.0));
 }`
+
+/* ── Shared WGSL chunks (canonical text: crates/raster-core/src/chunks.rs) ── */
+
+/** Canonical themed Scene struct (object shaders, the grid, and the shadow pass share it). */
+export const SCENE_STRUCT = /* wgsl */`struct Scene { vp: mat4x4f, eye: vec4f, light: vec4f, ambient: vec4f, section: vec4f, options: vec4f, inverseVP: mat4x4f, selectionColor: vec3f, hoverColor: vec3f, edgeColor: vec3f, xrayColor: vec3f, gridColor: vec3f, capColor: vec3f, lightVP: mat4x4f, shadowParams: vec4f }`
+
+/** Canonical Obj struct (one per-object uniform record). */
+export const OBJ_STRUCT = /* wgsl */`struct Obj { model: mat4x4f, nmat: mat4x4f, color: vec4f, style: vec4f, morph: vec4f, baseColor: vec3f, metallic: f32, emissive: vec3f, roughness: f32, materialId: f32 }`
+
+/** Section-plane discard shared by object/overlay fragment shaders. */
+export const SECTION_CLIP_WGSL = /* wgsl */`if (sc.options.x > 0.5 && dot(v.w, sc.section.xyz) < sc.section.w) { discard; }`
+
+/** Epsilon accent: fragments just inside the clip plane shade flat, tinted toward the theme cap color. */
+export const SECTION_CAP_WGSL = /* wgsl */`if (sc.options.x > 0.5 && dot(v.w, sc.section.xyz) < sc.section.w + 0.02) { return vec4f(mix(ob.baseColor, sc.capColor, 0.6) + ob.emissive * 0.2, ob.style.x); }`

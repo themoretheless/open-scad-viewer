@@ -1,5 +1,7 @@
 # raster-core
 
+Architecture and crate boundaries: [GPU library design](../../docs/design/gpu-library-architecture.md).
+
 Headless WebGPU rasterizer for the open-scad-viewer shader stack: the same
 `.wgsl` sources the browser renderer compiles in TypeScript, driven from Rust
 via `wgpu` — for offscreen rendering, snapshot tests, and native embedding.
@@ -79,3 +81,10 @@ cargo test --offline --manifest-path crates/Cargo.toml -p raster-core
 - `tests/frame.rs` — frame composition (edges on top, grid axes, line +
   overlay, deep-selection x-ray, instancing, transparent blending) with
   pixel assertions and PPM snapshots written to `output/raster-*.ppm`.
+
+`render_rgba_async` returns an `RgbaReadback` ticket after one submission containing
+render and copy commands. Poll `try_read`, cancel it, or use native `wait`.
+`try_render_to_rgba` returns transport/size errors; the legacy `render_to_rgba`
+convenience panics on failure. RGBA decoding removes padded rows above the shared
+`gpu-compute::ByteReadback` transport. Resource upload lives in `resources.rs`;
+frame command recording remains in `rasterizer.rs`.

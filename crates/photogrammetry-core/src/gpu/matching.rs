@@ -124,6 +124,38 @@ impl GpuMatcher {
         da: &[[f32; 128]],
         db: &[[f32; 128]],
     ) -> (Vec<RowBest>, Vec<ColBest>) {
+        self.try_match_descriptors(da, db)
+            .expect("GPU descriptor readback failed")
+    }
+
+    /// Fallible transfer variant for callers that can fall back to CPU matching.
+    pub fn try_match_descriptors(
+        &self,
+        da: &[[f32; 128]],
+        db: &[[f32; 128]],
+    ) -> Result<(Vec<RowBest>, Vec<ColBest>), gpu_compute::ReadbackError> {
+        if da.is_empty() || db.is_empty() {
+            // No dispatch overwrites cached outputs for an empty grid. Produce
+            // the same missing-neighbor values as CPU and CUDA instead of
+            // reading results left by an earlier nonempty call.
+            return Ok((
+                vec![
+                    RowBest {
+                        j: usize::MAX,
+                        d1: f32::INFINITY,
+                        d2: f32::INFINITY
+                    };
+                    da.len()
+                ],
+                vec![
+                    ColBest {
+                        i: usize::MAX,
+                        d1: f32::INFINITY
+                    };
+                    db.len()
+                ],
+            ));
+        }
         let rows = da.len() as u32;
         let cols = db.len() as u32;
         let packed_a = pack_descriptors(da);
@@ -180,10 +212,12 @@ impl GpuMatcher {
         );
         self.queue.submit([encoder.finish()]);
 
-        let rows_raw = super::read_buffer(&self.device, &buffers.read_rows, row_bytes as usize);
-        buffers.read_rows.unmap();
-        let cols_raw = super::read_buffer(&self.device, &buffers.read_cols, col_bytes as usize);
-        buffers.read_cols.unmap();
+        // The shared transport releases each mapping before returning, so these
+        // staging allocations can be reused by the next call without unmapping.
+        let rows_raw =
+            super::try_read_buffer(&self.device, &buffers.read_rows, row_bytes as usize)?;
+        let cols_raw =
+            super::try_read_buffer(&self.device, &buffers.read_cols, col_bytes as usize)?;
 
         let rows_out_vec = rows_raw
             .chunks_exact(12)
@@ -206,7 +240,7 @@ impl GpuMatcher {
                 d1: f32::from_ne_bytes(c[4..8].try_into().unwrap()),
             })
             .collect();
-        (rows_out_vec, cols_out_vec)
+        Ok((rows_out_vec, cols_out_vec))
     }
 
     fn ensure_buffers(&self, row_count: usize, col_count: usize) {
@@ -319,11 +353,12 @@ thread_local! {
 }
 
 /// Matches one descriptor pair-set through a thread-shared GPU context.
-/// `None` when no GPU adapter is available; callers fall back to the CPU scan.
+/// `None` when no GPU adapter is available or readback fails; callers fall back
+/// to the CPU scan.
 pub fn match_pair(da: &[[f32; 128]], db: &[[f32; 128]]) -> Option<(Vec<RowBest>, Vec<ColBest>)> {
     SHARED.with(|cell| {
         let shared: &Option<&(GpuContext, GpuMatcher)> = cell;
-        shared.map(|(_, matcher)| matcher.match_descriptors(da, db))
+        shared.and_then(|(_, matcher)| matcher.try_match_descriptors(da, db).ok())
     })
 }
 
@@ -332,6 +367,8 @@ pub fn match_pair_accelerated(
     db: &[[f32; 128]],
     acceleration: crate::Acceleration,
 ) -> Option<(Vec<RowBest>, Vec<ColBest>)> {
+    #[cfg(not(feature = "cuda"))]
+    let _ = acceleration;
     #[cfg(feature = "cuda")]
     if acceleration == crate::Acceleration::Cuda
         && let Some(result) = cuda::match_pair_cuda(da, db)
@@ -592,6 +629,45 @@ mod tests {
             }
         }
         (best_a, best_b)
+    }
+
+    #[test]
+    fn gpu_matching_reuses_staging_and_handles_empty_grids_after_nonempty_calls() {
+        let Some(context) = GpuContext::new() else {
+            assert!(std::env::var_os("COMPUTE_REQUIRE_GPU").is_none());
+            return;
+        };
+        let matcher = GpuMatcher::new(&context);
+        for count in [9, 3, 12, 1] {
+            let da = descriptors(17, count);
+            let db = descriptors(31, count + 2);
+            let (rows, cols) = matcher.try_match_descriptors(&da, &db).unwrap();
+            let (expected_rows, expected_cols) = cpu_reference(&da, &db);
+            assert_eq!(rows.len(), da.len());
+            assert_eq!(cols.len(), db.len());
+            for (actual, expected) in rows.iter().zip(expected_rows) {
+                assert_eq!(actual.j, expected.0);
+                assert!((actual.d1 - expected.1).abs() <= 1e-4 * expected.1.max(1.));
+            }
+            for (actual, expected) in cols.iter().zip(expected_cols) {
+                assert_eq!(actual.i, expected.0);
+                assert!((actual.d1 - expected.1).abs() <= 1e-4 * expected.1.max(1.));
+            }
+            let (rows, cols) = matcher.try_match_descriptors(&da, &[]).unwrap();
+            assert!(cols.is_empty());
+            assert_eq!(rows.len(), da.len());
+            assert!(
+                rows.iter()
+                    .all(|r| r.j == usize::MAX && r.d1 == f32::INFINITY && r.d2 == f32::INFINITY)
+            );
+            let (rows, cols) = matcher.try_match_descriptors(&[], &db).unwrap();
+            assert!(rows.is_empty());
+            assert_eq!(cols.len(), db.len());
+            assert!(
+                cols.iter()
+                    .all(|c| c.i == usize::MAX && c.d1 == f32::INFINITY)
+            );
+        }
     }
 
     #[test]

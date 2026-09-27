@@ -67,9 +67,7 @@ describe('WebGPURenderer environment-map binding', () => {
     const renderer = new WebGPURenderer()
     const internal = renderer as unknown as {
       dev: unknown
-      envBGL: unknown
-      envBG: unknown
-      envDummyTexture: unknown
+      textures: Record<string, unknown>
       buildPipelines(): void
     }
     internal.dev = fakeDevice(record)
@@ -79,21 +77,20 @@ describe('WebGPURenderer environment-map binding', () => {
     // shadow depth + matcap + env.
     expect(record.samplers).toHaveLength(3)
     expect(record.textures.filter(t => t.size.length === 2 && t.size[0] === 1 && t.size[1] === 1)).toHaveLength(3)
-    expect(internal.envDummyTexture).not.toBeNull()
-    expect(internal.envBG).not.toBeNull()
+    expect(internal.textures.envDummyTexture).not.toBeNull()
+    expect(internal.textures.envBG).not.toBeNull()
     // The dummy is bound in the env bind group (texture view + sampler).
-    const envGroup = record.bindGroups.find(group => group.layout === internal.envBGL)
+    const envGroup = record.bindGroups.find(group => group.layout === internal.textures.envBGL)
     expect(envGroup).toBeDefined()
     expect(envGroup!.entries).toHaveLength(4)
     // The PBR pipeline uses the three-group env layout; plain mesh does not.
     const internalLayouts = renderer as unknown as {
-      objectLayout: unknown
-      envObjectLayout: unknown
+      pipelines: Record<string, unknown>
       getRenderPipeline(id: string): unknown
     }
     internalLayouts.getRenderPipeline('meshPbr')
-    expect(record.pipelines.some(pipeline => pipeline.layout === internalLayouts.envObjectLayout)).toBe(true)
-    expect(record.pipelines.some(pipeline => pipeline.layout === internalLayouts.objectLayout)).toBe(true)
+    expect(record.pipelines.some(pipeline => pipeline.layout === internalLayouts.pipelines.envObjectLayout)).toBe(true)
+    expect(record.pipelines.some(pipeline => pipeline.layout === internalLayouts.pipelines.objectLayout)).toBe(true)
   })
 
   it('opaque PBR draws bind the env bind group at group(2)', () => {
@@ -127,17 +124,19 @@ describe('WebGPURenderer environment-map binding', () => {
     internal.gridVisible = false
     internal.sceneUB = {}
     internal.sceneBG = 'sceneBG'
-    internal.envBG = 'envBG'
+    const textures = internal.textures as Record<string, unknown>
+    const factory = internal.pipelines as Record<string, unknown>
+    textures.envBG = 'envBG'
     internal.meshPipe = 'mesh'
     internal.meshPipeT = 'meshT'
     internal.meshImmediatePipeT = null
     internal.sectionCapPipe = 'cap'
-    internal.envObjectLayout = 'envLayout'
-    internal.objectLayout = 'objectLayout'
-    internal.immediateObjectLayout = null
-    internal.instanceLayout = 'instanceLayout'
-    internal.sceneLayout = 'sceneLayout'
-    internal.vertexLayouts = { mesh: [], edge: [], line: [], grid: [] }
+    factory.envObjectLayout = 'envLayout'
+    factory.objectLayout = 'objectLayout'
+    factory.immediateObjectLayout = null
+    factory.instanceLayout = 'instanceLayout'
+    factory.sceneLayout = 'sceneLayout'
+    factory.vertexLayouts = { mesh: [], edge: [], line: [], grid: [] }
     internal.meshes = [{
       morph: undefined,
       morphSlot: {},
@@ -173,13 +172,14 @@ describe('WebGPURenderer environment-map binding', () => {
     const renderer = new WebGPURenderer()
     const internal = renderer as unknown as Record<string, unknown>
     internal.dev = dev
-    internal.envBGL = {}
-    internal.envSampler = {}
-    internal.envDummyTexture = fakeTexture('dummy')
-    internal.envTexture = internal.envDummyTexture
+    const textures = internal.textures as Record<string, unknown>
+    textures.envBGL = {}
+    textures.envSampler = {}
+    textures.envDummyTexture = fakeTexture('dummy')
+    textures.envTexture = textures.envDummyTexture
     // The group(2) env bind group embeds the shadow map at bindings 2/3.
-    internal.shadowTexture = fakeTexture('shadow')
-    internal.shadowSampler = {}
+    textures.shadowTexture = fakeTexture('shadow')
+    textures.shadowSampler = {}
 
     expect(renderer.currentEnv).toBe('none')
     await expect(renderer.setEnvMap('nope')).rejects.toThrow("unknown environment map 'nope'")
@@ -190,12 +190,12 @@ describe('WebGPURenderer environment-map binding', () => {
     expect(record.textures).toContainEqual({ size: [512, 256] })
     expect(record.externalCopies).toHaveLength(1)
     expect(bitmap.close).toHaveBeenCalled()
-    expect(internal.envBG).not.toBeNull()
+    expect(textures.envBG).not.toBeNull()
 
     // Switching back to 'none' rebinds the 1×1 dummy (analytic fallback).
     await renderer.setEnvMap('none')
     expect(renderer.currentEnv).toBe('none')
-    expect(internal.envTexture).toBe(internal.envDummyTexture)
+    expect(textures.envTexture).toBe(textures.envDummyTexture)
   })
 })
 

@@ -3,7 +3,7 @@ use crate::{Acceleration, V3, dot, sub};
 /// Brute-force nearest-neighbor search: for every query point, the index into
 /// `targets` of its closest point and the squared Euclidean distance to it
 /// (`(u32::MAX, f64::INFINITY)` for a query when `targets` is empty). This is
-/// the CPU reference for [`nearest_neighbor_accelerated`]; O(queries *
+/// the CPU reference for [`crate::nearest_neighbor_accelerated`]; O(queries *
 /// targets) work, exact in f64.
 pub fn nearest_neighbor(queries: &[V3], targets: &[V3]) -> Vec<(u32, f64)> {
     queries
@@ -28,11 +28,15 @@ pub fn nearest_neighbor(queries: &[V3], targets: &[V3]) -> Vec<(u32, f64)> {
 /// `gpu` and `cuda` modules both target this exact formula.
 pub const NEAREST_NEIGHBOR_WGSL: &str = include_str!("nearest_neighbor.wgsl");
 
+/// Cooperative target reduction with one workgroup per query. The production
+/// Metal policy uses 64 lanes; the source retains the tunable WG=256 anchor.
+pub const NEAREST_NEIGHBOR_COOPERATIVE_WGSL: &str = include_str!("nearest_neighbor_cooperative.wgsl");
+
 /// `nearest_neighbor` with an optional GPU/CUDA batch kernel.
 /// `Acceleration::Cuda` runs the PTX port through the CUDA driver (feature
 /// `cuda`), then the wgpu shader (feature `gpu`), then the CPU reference;
 /// anything unavailable or that fails falls through to the next stage, so
-/// the CPU result is always returned. Unlike [`transform_points`], this
+/// the CPU result is always returned. Unlike [`crate::transform_points`], this
 /// operation has enough work per query (a full scan of `targets`) that the
 /// GPU/CUDA placements measurably win at moderate-to-large sizes — see
 /// `examples/bench_gpu.rs`.

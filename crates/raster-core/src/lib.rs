@@ -15,9 +15,14 @@
 pub use gpu_compute;
 pub use wgpu;
 
+pub mod chunks;
 pub mod codegen;
+pub mod generated_layouts;
+pub mod layout;
 pub mod pipeline;
 pub mod rasterizer;
+pub mod readback;
+pub mod resources;
 pub mod shaders;
 pub mod uniform;
 pub mod variants;

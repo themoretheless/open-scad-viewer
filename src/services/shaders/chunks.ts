@@ -1,116 +1,34 @@
 /**
  * Shared WGSL chunks and the CPU-side mirror of the uniform layouts.
  *
- * The Obj struct and OBJECT_UNIFORM_LAYOUT are one contract, as are the Scene
- * struct and SCENE_UNIFORM_LAYOUT: keep them in sync, and read upload offsets
- * from the layout instead of magic numbers.
+ * Since phase 3 of the shader refactor, the canonical WGSL chunk text lives
+ * in Rust (`crates/raster-core/src/chunks.rs`) and the layout values in
+ * `crates/raster-core/src/layout.rs`; the `wgsl_export` codegen emits them
+ * into `generated/sources.ts` and `generated/layouts.ts`. This module only
+ * re-exports those generated constants (plus the `sceneStruct` composer), so
+ * the WGSL text and the upload offsets each have exactly one source of truth.
  */
 
-const SCENE_HEAD = 'struct Scene { vp: mat4x4f, eye: vec4f, light: vec4f, ambient: vec4f, section: vec4f, options: vec4f'
-/** Theme tail: sits after inverseVP at float 52, each vec3f 16-byte aligned. */
-const SCENE_THEME_TAIL = 'selectionColor: vec3f, hoverColor: vec3f, edgeColor: vec3f, xrayColor: vec3f, gridColor: vec3f, capColor: vec3f'
-/** Shadow tail: lightVP (floats 76..91) + shadowParams (floats 92..95). */
-const SCENE_SHADOW_TAIL = 'lightVP: mat4x4f, shadowParams: vec4f'
+import { SCENE_STRUCT } from './generated/sources'
 
-/** Canonical themed Scene struct (object shaders and the grid share it). */
-export const SCENE_STRUCT = `${SCENE_HEAD}, inverseVP: mat4x4f, ${SCENE_THEME_TAIL}, ${SCENE_SHADOW_TAIL} }`
+export {
+  SCENE_STRUCT,
+  OBJ_STRUCT,
+  SECTION_CLIP_WGSL,
+  SECTION_CAP_WGSL,
+} from './generated/sources'
+export { SCENE_UNIFORM_LAYOUT, OBJECT_UNIFORM_LAYOUT } from './generated/layouts'
 
 /**
  * Scene struct composer. `extraMembers` insert between the shared head and
  * the inverseVP + theme tail, so offsets of the themed fields stay fixed.
  */
 export function sceneStruct(extraMembers = ''): string {
-  return `${SCENE_HEAD}${extraMembers}, inverseVP: mat4x4f, ${SCENE_THEME_TAIL}, ${SCENE_SHADOW_TAIL} }`
+  if (!extraMembers) return SCENE_STRUCT
+  return SCENE_STRUCT.replace(', inverseVP: mat4x4f', `${extraMembers}, inverseVP: mat4x4f`)
 }
-
-/**
- * CPU-side mirror of Scene: vp (16 floats) + eye (4) + light (4) + ambient (4)
- * + section (4) + options (4) + inverseVP (16) + theme block (6 colors ×
- * vec3+pad = 24) + shadow block (lightVP 16 + shadowParams 4) = 96 floats
- * = 384 bytes. The theme tail starts at float 52 and the shadow tail at
- * float 76, so legacy offsets are unchanged.
- *
- * shadowParams = (enabled, 1/mapSize, depth bias, strength); enabled 0 keeps
- * every sampling shader on its pixel-identical unshadowed path.
- */
-export const SCENE_UNIFORM_LAYOUT = {
-  floats: 96,
-  bytes: 384,
-  /** selectionColor at themeFloatOffset..+2, then hover/edge/xray/grid/cap every 4 floats. */
-  themeFloatOffset: 52,
-  themeByteOffset: 208,
-  hoverFloatOffset: 56,
-  edgeFloatOffset: 60,
-  xrayFloatOffset: 64,
-  gridFloatOffset: 68,
-  capFloatOffset: 72,
-  capByteOffset: 288,
-  /** lightVP (column-major mat4) at lightVPFloatOffset..+15. */
-  lightVPFloatOffset: 76,
-  lightVPByteOffset: 304,
-  /** shadowParams (enabled, texel, bias, strength) at shadowFloatOffset..+3. */
-  shadowFloatOffset: 92,
-  shadowByteOffset: 368,
-} as const
-
-export const SCENE_BINDING = `@group(0) @binding(0) var<uniform> sc: Scene;`
-
-export const OBJ_STRUCT = `struct Obj { model: mat4x4f, nmat: mat4x4f, color: vec4f, style: vec4f, morph: vec4f, baseColor: vec3f, metallic: f32, emissive: vec3f, roughness: f32, materialId: f32 }`
-
-export const OBJ_BINDING = `@group(1) @binding(0) var<uniform> ob: Obj;`
-
-/**
- * CPU-side mirror of Obj: model (16 floats) + nmat (16) + color (4)
- * + style (4) + morph (4) + baseColor (3) + metallic (1) + emissive (3)
- * + roughness (1) + materialId (1) + pad (3). style = (alpha, selected,
- * edge, hovered); morph.x drives the GPU vertex blend. The material tail
- * starts at float 44, so legacy offsets are unchanged.
- */
-export const OBJECT_UNIFORM_LAYOUT = {
-  floats: 56,
-  bytes: 224,
-  styleFloatOffset: 36,
-  styleByteOffset: 144,
-  morphFloatOffset: 40,
-  morphByteOffset: 160,
-  /** baseColor rgb at materialFloatOffset..+2, metallic at +3. */
-  materialFloatOffset: 44,
-  materialByteOffset: 176,
-  metallicFloatOffset: 47,
-  /** emissive rgb at emissiveFloatOffset..+2, roughness at +3. */
-  emissiveFloatOffset: 48,
-  emissiveByteOffset: 192,
-  roughnessFloatOffset: 51,
-  materialIdFloatOffset: 52,
-  materialIdByteOffset: 208,
-} as const
 
 /** Interleaved position+normal mesh vertex stride in bytes. */
 export const MESH_VERTEX_STRIDE = 24
 /** Morph source positions-only stride in bytes (vertex slot 1). */
 export const MORPH_VERTEX_STRIDE = 12
-
-/** Section-plane discard shared by object fragment shaders. */
-export const SECTION_CLIP_WGSL = `if (sc.options.x > 0.5 && dot(v.w, sc.section.xyz) < sc.section.w) { discard; }`
-
-/**
- * Shared shadow-sampling pins. The mesh-surface shaders (mesh, meshPbr,
- * meshMatcap, meshToon) and the grid bind the key-light depth map plus a
- * comparison sampler and evaluate this 3x3 PCF; `shadowParams.x == 0` keeps
- * the unshadowed path pixel-identical. Binding slots differ per shader:
- * mesh/meshToon at group(2) 0/1, meshPbr/meshMatcap share group(2) with the
- * env/matcap at bindings 2/3, the grid uses group(1) 0/1.
- */
-export const SHADOW_MAP_WGSL = 'var shadowMap: texture_depth_2d;'
-export const SHADOW_SAMPLER_WGSL = 'var shadowSampler: sampler_comparison;'
-export const SHADOW_PCF_WGSL = 'fn shadowFactor(wp: vec3f) -> f32 {'
-export const SHADOW_PCF_SAMPLE_WGSL = 'textureSampleCompare(shadowMap, shadowSampler'
-
-/**
- * Epsilon accent shared by the mesh-surface shaders: fragments just inside
- * the clip plane (within a fixed world-space epsilon) shade flat and unlit
- * with a tint toward the theme cap color. The true section cap lives in
- * mesh_section_cap.wgsl (inverted clip + front-face culling); this band stays
- * as the cut cue for open surfaces, which the back-face cap cannot fill.
- */
-export const SECTION_CAP_WGSL = `if (sc.options.x > 0.5 && dot(v.w, sc.section.xyz) < sc.section.w + 0.02) { return vec4f(mix(ob.baseColor, sc.capColor, 0.6) + ob.emissive * 0.2, ob.style.x); }`

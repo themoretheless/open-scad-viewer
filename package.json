@@ -29,6 +29,7 @@
     "bench:brep-dispatch": "cargo run --release --locked --manifest-path crates/Cargo.toml -p geometry-bridge --example bench_brep_dispatch",
     "bench:gpu": "node scripts/bench-gpu.mjs",
     "bench:webgpu-variants": "node tools/browser-qualification/webgpu-variants-benchmark.mjs",
+    "qual:shader-library": "node tools/browser-qualification/shader-library-qualification.mjs",
     "bench:memory": "node --expose-gc --import tsx benchmarks/cad-memory.mjs",
     "setup:openscad": "node --import tsx scripts/official-openscad-runtime.mjs install",
     "verify:openscad-runtime": "node --import tsx scripts/official-openscad-runtime.mjs verify",

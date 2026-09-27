@@ -385,7 +385,7 @@ impl SweepBatch<'_> {
     }
 
     /// Submits once; returns the raw readback bytes per job, in push order.
-    fn finish_raw(self) -> Vec<Vec<u8>> {
+    fn finish_raw(self) -> Result<Vec<Vec<u8>>, gpu_compute::ReadbackError> {
         let SweepBatch {
             sweep,
             encoder,
@@ -396,7 +396,7 @@ impl SweepBatch<'_> {
         sweep.queue.submit([encoder.finish()]);
         let results = reads
             .iter()
-            .map(|(read_buf, bytes)| super::read_buffer(&sweep.device, read_buf, *bytes))
+            .map(|(read_buf, bytes)| super::try_read_buffer(&sweep.device, read_buf, *bytes))
             .collect();
         drop(keep);
         results
@@ -404,7 +404,14 @@ impl SweepBatch<'_> {
 
     /// Submits once; returns one selection map per pushed job (`push`), in push order.
     pub fn finish(self) -> Vec<Vec<Option<Selection>>> {
-        self.finish_raw()
+        self.try_finish().expect("GPU sweep readback failed")
+    }
+
+    /// Fallible selection readback; a transfer failure cannot become an empty
+    /// selection map. Callers may fall back to a CPU sweep for the whole batch.
+    pub fn try_finish(self) -> Result<Vec<Vec<Option<Selection>>>, gpu_compute::ReadbackError> {
+        Ok(self
+            .finish_raw()?
             .into_iter()
             .map(|raw| {
                 raw.chunks_exact(16)
@@ -420,19 +427,26 @@ impl SweepBatch<'_> {
                     })
                     .collect()
             })
-            .collect()
+            .collect())
     }
 
     /// Submits once; returns raw score rows per job (`push_scores`), in push order.
     pub fn finish_scores(self) -> Vec<Vec<f32>> {
-        self.finish_raw()
+        self.try_finish_scores()
+            .expect("GPU sweep score readback failed")
+    }
+
+    /// Fallible raw-score readback, preserving transfer errors.
+    pub fn try_finish_scores(self) -> Result<Vec<Vec<f32>>, gpu_compute::ReadbackError> {
+        Ok(self
+            .finish_raw()?
             .into_iter()
             .map(|raw| {
                 raw.chunks_exact(4)
                     .map(|c| f32::from_ne_bytes(c.try_into().unwrap()))
                     .collect()
             })
-            .collect()
+            .collect())
     }
 }
 
@@ -645,6 +659,35 @@ pub mod cuda {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn gpu_sweep_readback_failure_is_not_an_empty_selection() {
+        let Some(context) = GpuContext::new() else {
+            assert!(std::env::var_os("COMPUTE_REQUIRE_GPU").is_none());
+            return;
+        };
+        let sweep = GpuSweep::new(&context);
+        let atlas = sweep.upload_grays(&[]);
+        let invalid_staging = context.device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("sweep readback failure fixture"),
+            size: 16,
+            usage: wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        });
+        let mut selections = sweep.batch(&atlas);
+        selections.reads.push((invalid_staging.clone(), 16));
+        assert!(matches!(
+            selections.try_finish(),
+            Err(gpu_compute::ReadbackError::MissingUsage)
+        ));
+        let mut scores = sweep.batch(&atlas);
+        scores.reads.push((invalid_staging, 16));
+        assert!(matches!(
+            scores.try_finish_scores(),
+            Err(gpu_compute::ReadbackError::MissingUsage)
+        ));
+        assert!(sweep.batch(&atlas).try_finish().unwrap().is_empty());
+    }
 
     /// The browser binds only entries 0..=5 for the `sweep` entry point; the
     /// native-only `sweep_select` bindings 6 and 7 must not leak into it.

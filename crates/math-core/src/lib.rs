@@ -44,7 +44,7 @@ pub use moments::{
 pub use nearest_four::{
     FourNearest, NEAREST_FOUR_WGSL, nearest_four, nearest_four_accelerated, nearest_four_first_two,
 };
-pub use nearest_neighbor::{NEAREST_NEIGHBOR_WGSL, nearest_neighbor, nearest_neighbor_accelerated};
+pub use nearest_neighbor::{NEAREST_NEIGHBOR_COOPERATIVE_WGSL, NEAREST_NEIGHBOR_WGSL, nearest_neighbor, nearest_neighbor_accelerated};
 pub use nearest_two::{
     NEAREST_TWO_WGSL, Neighbor, TwoNearest, nearest_two, nearest_two_accelerated,
     nearest_two_first_only, nearest_two_ratios_accelerated,

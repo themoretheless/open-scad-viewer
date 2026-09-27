@@ -78,7 +78,7 @@ function harness() {
     initialized: boolean
     dead: boolean
     lost: boolean
-    objBGL: GPUBindGroupLayout
+    pipelines: { objBGL: GPUBindGroupLayout }
     initialFitDone: boolean
     meshes: Array<{ vb: FakeBuffer; ib: FakeBuffer; ub: FakeBuffer; edgeIB: FakeBuffer | null; edgeIC: number }>
     scheduleEdgeBufferWarmup(): void
@@ -88,7 +88,7 @@ function harness() {
   internal.initialized = true
   internal.dead = false
   internal.lost = false
-  internal.objBGL = {} as GPUBindGroupLayout
+  internal.pipelines.objBGL = {} as GPUBindGroupLayout
   internal.initialFitDone = true
   internal.scheduleEdgeBufferWarmup = vi.fn()
   internal.requestRender = vi.fn()

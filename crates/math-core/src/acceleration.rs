@@ -22,7 +22,7 @@ impl Acceleration {
     /// True for every device-capable placement (`Auto`, `Gpu`, or `Cuda`);
     /// kernels that only have a portable shader use this instead of comparing
     /// against `Gpu`. Kernels with a real size heuristic should resolve
-    /// `Auto` first, as [`nearest_neighbor_accelerated`] does.
+    /// `Auto` first, as [`crate::nearest_neighbor_accelerated`] does.
     #[inline]
     pub const fn is_gpu(self) -> bool {
         matches!(self, Self::Auto | Self::Gpu | Self::Cuda)
@@ -50,7 +50,7 @@ impl Acceleration {
         }
     }
 
-    /// Suggests a placement for [`nearest_neighbor_accelerated`] from the
+    /// Suggests a placement for [`crate::nearest_neighbor_accelerated`] from the
     /// problem size alone, so callers don't have to hand-tune a threshold or
     /// benchmark their own workload before picking an `Acceleration`.
     ///
@@ -84,7 +84,7 @@ impl Acceleration {
         }
     }
 
-    /// Resolves `Auto` for [`nearest_neighbor_accelerated`]; explicit
+    /// Resolves `Auto` for [`crate::nearest_neighbor_accelerated`]; explicit
     /// placements pass through unchanged.
     pub const fn resolve_for_nearest_neighbor(
         self,

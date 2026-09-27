@@ -1,9 +1,10 @@
 //! Cached render pipelines for every shipped shader, mirroring the browser
 //! renderer's pipeline set (blend, depth compare, vertex layouts).
 
+use crate::chunks::expand_chunks;
 use crate::shaders::{
-    DEEP_MESH_WGSL, EDGE_WGSL, GRID_WGSL, LINE_WGSL, MESH_SECTION_CAP_WGSL, MESH_VERTEX_STRIDE,
-    MORPH_VERTEX_STRIDE, MESH_WGSL, SELECTION_OVERLAY_WGSL,
+    DEEP_MESH_WGSL, EDGE_WGSL, GRID_WGSL, LINE_WGSL, MESH_SECTION_CAP_WGSL, MESH_SHADOW_WGSL,
+    MESH_VERTEX_STRIDE, MORPH_VERTEX_STRIDE, MESH_WGSL, SELECTION_OVERLAY_WGSL,
 };
 use crate::uniform::OBJECT_UNIFORM_BYTES;
 use crate::variants::{VertexOutput, instanced_object_shader};
@@ -112,6 +113,9 @@ pub struct RasterPipelines {
     pub instanced_mesh_opaque: RenderPipeline,
     pub instanced_mesh_transparent: RenderPipeline,
     pub instanced_edge: RenderPipeline,
+    /// Depth-only key-light shadow pass (mesh_shadow.wgsl): no color targets,
+    /// no fragment stage, writes the depth32float shadow map.
+    pub shadow: RenderPipeline,
     pub scene_bgl: BindGroupLayout,
     pub object_bgl: BindGroupLayout,
     pub instance_bgl: BindGroupLayout,
@@ -196,6 +200,13 @@ impl RasterPipelines {
             bind_group_layouts: &[Some(&scene_bgl), Some(&shadow_bgl)],
             immediate_size: 0,
         });
+        // Depth-only shadow pass: scene+object groups only, no shadow group —
+        // mirroring the browser renderer's shadowObjectLayout.
+        let shadow_object_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+            label: Some("raster shadow object layout"),
+            bind_group_layouts: &[Some(&scene_bgl), Some(&object_bgl)],
+            immediate_size: 0,
+        });
         let object_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: Some("raster object layout"),
             bind_group_layouts: &[Some(&scene_bgl), Some(&object_bgl), Some(&shadow_bgl)],
@@ -215,15 +226,16 @@ impl RasterPipelines {
             bias: wgpu::DepthBiasState::default(),
         };
 
-        let mesh_mod = module(device, "mesh", MESH_WGSL);
-        let cap_mod = module(device, "mesh section cap", MESH_SECTION_CAP_WGSL);
-        let deep_mod = module(device, "deep mesh", DEEP_MESH_WGSL);
-        let edge_mod = module(device, "edge", EDGE_WGSL);
-        let line_mod = module(device, "line", LINE_WGSL);
-        let grid_mod = module(device, "grid", GRID_WGSL);
-        let overlay_mod = module(device, "selection overlay", SELECTION_OVERLAY_WGSL);
-        let instanced_mesh_mod = module(device, "instanced mesh", &instanced_object_shader(MESH_WGSL, VertexOutput::V));
-        let instanced_edge_mod = module(device, "instanced edge", &instanced_object_shader(EDGE_WGSL, VertexOutput::EdgeV));
+        let mesh_mod = module(device, "mesh", &expand_chunks(MESH_WGSL));
+        let cap_mod = module(device, "mesh section cap", &expand_chunks(MESH_SECTION_CAP_WGSL));
+        let deep_mod = module(device, "deep mesh", &expand_chunks(DEEP_MESH_WGSL));
+        let edge_mod = module(device, "edge", &expand_chunks(EDGE_WGSL));
+        let line_mod = module(device, "line", &expand_chunks(LINE_WGSL));
+        let grid_mod = module(device, "grid", &expand_chunks(GRID_WGSL));
+        let overlay_mod = module(device, "selection overlay", &expand_chunks(SELECTION_OVERLAY_WGSL));
+        let shadow_mod = module(device, "mesh shadow", &expand_chunks(MESH_SHADOW_WGSL));
+        let instanced_mesh_mod = module(device, "instanced mesh", &instanced_object_shader(&expand_chunks(MESH_WGSL), VertexOutput::V));
+        let instanced_edge_mod = module(device, "instanced edge", &instanced_object_shader(&expand_chunks(EDGE_WGSL), VertexOutput::EdgeV));
 
         let opaque_target = || Some(ColorTargetState { format, blend: None, write_mask: ColorWrites::ALL });
         let mesh_primitive = PrimitiveState { cull_mode: None, ..PrimitiveState::default() };
@@ -432,6 +444,30 @@ impl RasterPipelines {
             multiview_mask: None,
             cache: None,
         });
+        // Depth-only shadow-map pass: no color targets, no fragment stage;
+        // writes depth32float from the key light's orthographic VP.
+        let shadow = device.create_render_pipeline(&RenderPipelineDescriptor {
+            label: Some("mesh shadow"),
+            layout: Some(&shadow_object_layout),
+            vertex: VertexState {
+                module: &shadow_mod,
+                entry_point: Some("vs"),
+                compilation_options: wgpu::PipelineCompilationOptions::default(),
+                buffers: &[Some(mesh_vbl()), Some(morph_vbl())],
+            },
+            fragment: None,
+            primitive: mesh_primitive,
+            depth_stencil: Some(wgpu::DepthStencilState {
+                format: wgpu::TextureFormat::Depth32Float,
+                depth_write_enabled: Some(true),
+                depth_compare: Some(CompareFunction::Less),
+                stencil: wgpu::StencilState::default(),
+                bias: wgpu::DepthBiasState::default(),
+            }),
+            multisample: wgpu::MultisampleState::default(),
+            multiview_mask: None,
+            cache: None,
+        });
         let instanced_mesh_opaque = device.create_render_pipeline(&RenderPipelineDescriptor {
             label: Some("instanced mesh opaque"),
             layout: Some(&instance_layout),
@@ -516,6 +552,7 @@ impl RasterPipelines {
             instanced_mesh_opaque,
             instanced_mesh_transparent,
             instanced_edge,
+            shadow,
             scene_bgl,
             object_bgl,
             instance_bgl,

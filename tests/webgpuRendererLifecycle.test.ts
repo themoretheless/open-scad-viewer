@@ -109,13 +109,23 @@ describe('first scene frame submission boundary', () => {
     renderer.onFrameSubmitted = submitted
     const queueSubmit = vi.fn()
     const pass = { setPipeline() {}, setBindGroup() {}, end() {} }
-    const internal = renderer as unknown as { drawable: boolean; render(): void; pendingFrameToken: number | null }
+    const internal = renderer as unknown as { drawable: boolean; render(): void; pendingFrameToken: number | null; pipelines: unknown }
     Object.assign(internal, {
       canvas: { width: 640, height: 480 },
-      dev: { queue: { writeBuffer() {}, submit: queueSubmit }, createCommandEncoder: () => ({ beginRenderPass: () => pass, finish: () => ({}) }) },
+      dev: {
+        queue: { writeBuffer() {}, submit: queueSubmit },
+        createCommandEncoder: () => ({ beginRenderPass: () => pass, finish: () => ({}) }),
+        // The render path resolves pipelines lazily through the cached factory.
+        createShaderModule: () => ({}),
+        createRenderPipeline: () => ({}),
+      },
       ctx: { getCurrentTexture: () => ({ createView() {} }) },
       depth: { createView() {} }, sceneUB: {}, drawable: false,
       updateSize() {}, pendingFrameToken: 7,
+    })
+    Object.assign(internal.pipelines as object, {
+      vertexLayouts: { mesh: [], edge: [], line: [], grid: [] },
+      immediateObjectLayout: null,
     })
     internal.render()
     expect(submitted).not.toHaveBeenCalled()

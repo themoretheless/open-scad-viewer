@@ -19,9 +19,40 @@ import { WebGPURenderer } from '/src/services/webgpuRenderer.ts'
 import { buildMeshBvh } from '/src/services/meshBvh.ts'
 import { extractSemanticEdges } from '/src/services/meshTopology.ts'
 import { geometryAssetId } from '/src/core/scene.ts'
+import { getShader, immediateObjectShader, instancedObjectShader } from '/src/services/shaders/index.ts'
 
 const SHADERS = ['mesh', 'meshPbr', 'meshMatcap', 'meshToon', 'meshUnlit']
 const VARIANTS = ['uniform', 'immediate', 'instanced']
+
+// In-memory uniformity repair, applied only with ?patched=1. Historical
+// context: the WGSL once failed Tint's uniformity analysis — shadowFactor
+// early-returned on non-uniform bounds before textureSampleCompare, and the
+// mesh-family fragment shaders called shadowFactor after the section-cap
+// early return. The fix has landed in crates/raster-core/shaders (clamped
+// coordinates + select, hoisted call); this patch is kept as a tripwire so a
+// regression shows up as stock-FAIL/patched-PASS. Nothing on disk is modified.
+function patchSource(source) {
+  let out = source
+  out = out.replaceAll(
+    'if (ndc.z < 0.0 || ndc.z > 1.0 || uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) { return 1.0; }',
+    'let inb = ndc.z >= 0.0 && ndc.z <= 1.0 && uv.x >= 0.0 && uv.x <= 1.0 && uv.y >= 0.0 && uv.y <= 1.0;')
+  out = out.replaceAll('shadowSampler, uv + vec2f', 'shadowSampler, clamp(uv, vec2f(0.0), vec2f(1.0)) + vec2f')
+  out = out.replaceAll('return mix(1.0, sum / 9.0, sc.shadowParams.w);', 'return select(1.0, mix(1.0, sum / 9.0, sc.shadowParams.w), inb);')
+  // Hoist the shadowFactor call above the section-cap early return.
+  const capReturn = 'if (sc.options.x > 0.5 && dot(v.w, sc.section.xyz) < sc.section.w + 0.02) { return'
+  const call = '  let shadow = shadowFactor(v.w);'
+  if (out.includes(call) && out.includes(capReturn)) {
+    out = out.replace(call + String.fromCharCode(10), '')
+    out = out.replace(capReturn, call + String.fromCharCode(10) + capReturn)
+  }
+  return out
+}
+if (new URLSearchParams(location.search).get('patched') === '1') {
+  for (const id of ['mesh', 'meshPbr', 'meshMatcap', 'meshToon', 'grid']) {
+    const spec = getShader(id)
+    spec.source = patchSource(spec.source)
+  }
+}
 
 function sphere(radius, segments) {
   const positions = []
@@ -128,7 +159,7 @@ function frame() {
   return new Promise(resolve => {
     frameResolve = resolve
     renderer.requestRender()
-    setTimeout(resolve, 2000)
+    setTimeout(resolve, 800)
   }).then(() => { frameResolve = null })
 }
 
@@ -155,28 +186,70 @@ function canvasStats() {
   return { mean, stddev: Math.sqrt(Math.max(0, sum2 / n - mean * mean)), nonBgFraction: nonBg / n }
 }
 
-// Pipeline creation matrix: every shading model x every variant. Results are
-// 'ok', 'unsupported' (registry rejects the variant), or the error message.
+// Pipeline creation matrix: every shading model x every variant. Dawn reports
+// shader/pipeline errors asynchronously, so each creation is wrapped in a
+// validation error scope. Modules may already be cached from init, so the
+// authoritative compile check is the per-variant createShaderModule loop.
 const pipelines = {}
+const device = renderer.dev
+// Attribute async Dawn validation errors (e.g. bind-group mismatches at draw
+// time) to the config that encoded them; run() sets __currentConfig.
+window.__currentConfig = 'init'
+device.addEventListener('uncapturederror', event => {
+  console.log('uncaptured [' + window.__currentConfig + ']: ' + event.error.message.split(String.fromCharCode(10))[0])
+})
 for (const id of SHADERS) {
   for (const variant of VARIANTS) {
+    const key = id + '/' + variant
     try {
-      renderer.getRenderPipeline(id, { variant })
-      pipelines[id + '/' + variant] = 'ok'
+      device.pushErrorScope('validation')
+      const pipeline = renderer.getRenderPipeline(id, { variant })
+      const scopeError = await device.popErrorScope()
+      if (scopeError) { pipelines[key] = 'INVALID: ' + scopeError.message.split(String.fromCharCode(10))[0]; continue }
+      pipelines[key] = 'ok'
     } catch (error) {
-      pipelines[id + '/' + variant] = /does not support/.test(String(error)) ? 'unsupported' : String(error)
+      try { await device.popErrorScope() } catch { /* scope already popped */ }
+      pipelines[key] = /does not support/.test(String(error)) ? 'unsupported' : String(error)
     }
+  }
+}
+// Compile diagnostics per shader x variant, built straight from the registry
+// source (cache-independent): validation scope + compilationInfo.
+const shaderDiagnostics = {}
+for (const id of SHADERS) {
+  const spec = getShader(id)
+  for (const variant of VARIANTS) {
+    const key = id + '/' + variant
+    let source = spec.source
+    try {
+      if (variant === 'immediate') source = immediateObjectShader(source)
+      else if (variant === 'instanced') source = instancedObjectShader(source, spec.vertexLayout === 'edge' ? 'EdgeV' : 'V')
+    } catch (error) {
+      shaderDiagnostics[key] = ['unsupported: ' + String(error)]
+      continue
+    }
+    device.pushErrorScope('validation')
+    const module = device.createShaderModule({ code: source })
+    const scopeError = await device.popErrorScope()
+    const info = await module.getCompilationInfo()
+    const errors = info.messages.filter(m => m.type === 'error').map(m => ':' + m.lineNum + ':' + m.linePos + ' ' + m.message)
+    shaderDiagnostics[key] = scopeError ? ['INVALID: ' + scopeError.message.split(String.fromCharCode(10))[0]]
+      : errors.length ? errors : 'ok'
   }
 }
 
 window.__qual = {
   adapterInfo,
   pipelines,
+  shaderDiagnostics,
+  statusEvents: window.__statusEvents,
   immediateActive: !!renderer.immediateObjectStyle,
   async run(config) {
+    window.__currentConfig = config.name
     renderer.setSection(false, [0, 0, 1], 0)
     renderer.setShadowsEnabled(false)
     renderer.setTheme('default')
+    renderer.setBackgroundColor([0.09, 0.09, 0.11])
     renderer.setDefaultShadingModel('phong')
     renderer.setDefaultMaterial({})
     await renderer.setMatcapTexture('procedural')
@@ -192,7 +265,29 @@ window.__qual = {
     if (config.section) renderer.setSection(true, [0, 0, 1], 0)
     await frame()
     await frame()
-    return canvasStats()
+    return true
+  },
+  // Pixel stats of a compositor screenshot (data URL), decoded via <img> so
+  // the result reflects what a user would see rather than drawImage on the
+  // WebGPU canvas, which can read back empty after present.
+  async imageStats(dataUrl) {
+    const img = new Image()
+    await new Promise((resolve, reject) => { img.onload = resolve; img.onerror = reject; img.src = dataUrl })
+    stats.width = img.width
+    stats.height = img.height
+    sctx.drawImage(img, 0, 0)
+    const data = sctx.getImageData(0, 0, stats.width, stats.height).data
+    const bg = [data[0], data[1], data[2]]
+    let sum = 0, sum2 = 0, nonBg = 0
+    const n = stats.width * stats.height
+    for (let i = 0; i < data.length; i += 4) {
+      const lum = 0.2126 * data[i] + 0.7152 * data[i + 1] + 0.0722 * data[i + 2]
+      sum += lum
+      sum2 += lum * lum
+      if (Math.abs(data[i] - bg[0]) + Math.abs(data[i + 1] - bg[1]) + Math.abs(data[i + 2] - bg[2]) > 12) nonBg++
+    }
+    const mean = sum / n
+    return { mean, stddev: Math.sqrt(Math.max(0, sum2 / n - mean * mean)), nonBgFraction: nonBg / n, background: bg }
   },
 }
 document.getElementById('log').textContent = 'READY'
@@ -226,78 +321,152 @@ const server = await createServer({
 })
 await server.listen()
 
+// Headless Chrome (shell or full) loses the WebGPU device on canvas present
+// in this environment ("A valid external Instance reference no longer
+// exists"), so qualification runs headed with the window parked offscreen.
 const launchOptions = {
-  headless: true,
-  args: ['--enable-unsafe-webgpu', '--headless=new'],
+  headless: false,
+  args: ['--enable-unsafe-webgpu', '--window-position=2000,2000'],
 }
 if (CHROME_EXECUTABLE) launchOptions.executablePath = CHROME_EXECUTABLE
 
 const browser = await chromium.launch(launchOptions)
-const report = { startedAt: new Date().toISOString(), configs: [], pipelines: null, adapterInfo: null, immediateActive: null }
-try {
+const report = {
+  startedAt: new Date().toISOString(),
+  stock: { configs: [], pipelines: null, shaderDiagnostics: null, statusEvents: null },
+  patched: { configs: [], pipelines: null, shaderDiagnostics: null, statusEvents: null },
+  adapterInfo: null,
+  immediateActive: null,
+}
+async function runPass(label, patched, configs) {
   const page = await browser.newPage({ viewport: { width: 660, height: 520 } })
   page.on('pageerror', error => console.log('pageerror:', error.message))
   page.on('console', message => console.log('console:', message.text()))
-  await page.goto(`http://127.0.0.1:${PORT}/tmp/shader-library-qual/index.html`)
-  await page.waitForFunction(() => document.getElementById('log')?.textContent === 'READY', { timeout: 60000 })
-  const meta = await page.evaluate(() => ({
-    adapterInfo: window.__qual.adapterInfo,
-    pipelines: window.__qual.pipelines,
-    immediateActive: window.__qual.immediateActive,
-  }))
-  report.adapterInfo = meta.adapterInfo
-  report.pipelines = meta.pipelines
-  report.immediateActive = meta.immediateActive
-  console.log('adapter:', JSON.stringify(meta.adapterInfo))
-  console.log('immediate variant active:', meta.immediateActive)
-  console.log('pipelines:', JSON.stringify(meta.pipelines, null, 1))
+  const section = report[label]
+  try {
+    await page.goto(`http://127.0.0.1:${PORT}/tmp/shader-library-qual/index.html?patched=${patched ? 1 : 0}`)
+    await page.waitForFunction(() => document.getElementById('log')?.textContent === 'READY', { timeout: 60000 })
+    const meta = await page.evaluate(() => ({
+      adapterInfo: window.__qual.adapterInfo,
+      pipelines: window.__qual.pipelines,
+      shaderDiagnostics: window.__qual.shaderDiagnostics,
+      statusEvents: window.__qual.statusEvents,
+      immediateActive: window.__qual.immediateActive,
+    }))
+    report.adapterInfo = meta.adapterInfo
+    report.immediateActive = meta.immediateActive
+    section.pipelines = meta.pipelines
+    section.shaderDiagnostics = meta.shaderDiagnostics
+    section.statusEvents = meta.statusEvents
+    console.log(`[${label}] adapter:`, JSON.stringify(meta.adapterInfo), 'immediate active:', meta.immediateActive)
+    console.log(`[${label}] pipelines:`, JSON.stringify(meta.pipelines))
+    console.log(`[${label}] shader diagnostics:`, JSON.stringify(meta.shaderDiagnostics))
 
-  const canvas = page.locator('#view')
-  for (const config of CONFIGS) {
-    try {
-      const stats = await page.evaluate(cfg => window.__qual.run(cfg), config)
-      const path = join(OUT, `${config.name}.png`)
-      await canvas.screenshot({ path })
-      const pass = stats.stddev > 3 && stats.nonBgFraction > 0.02
-      report.configs.push({ ...config, stats, screenshot: `output/shader-library-qualification/${config.name}.png`, pass })
-      console.log(`${pass ? 'PASS' : 'FAIL'} ${config.name} stddev=${stats.stddev.toFixed(1)} nonBg=${(stats.nonBgFraction * 100).toFixed(1)}%`)
-    } catch (error) {
-      report.configs.push({ ...config, error: String(error), pass: false })
-      console.log(`FAIL ${config.name} ${error}`)
+    const canvas = page.locator('#view')
+    for (const config of configs) {
+      const file = `${patched ? '' : 'stock-'}${config.name}.png`
+      try {
+        await page.evaluate(cfg => window.__qual.run(cfg), config)
+        const path = join(OUT, file)
+        const shot = await canvas.screenshot({ path })
+        const stats = await page.evaluate(
+          dataUrl => window.__qual.imageStats(dataUrl),
+          'data:image/png;base64,' + shot.toString('base64'),
+        )
+        const pass = stats.stddev > 3 && stats.nonBgFraction > 0.02
+        section.configs.push({ ...config, stats, screenshot: `output/shader-library-qualification/${file}`, pass })
+        console.log(`${pass ? 'PASS' : 'FAIL'} [${label}] ${config.name} stddev=${stats.stddev.toFixed(1)} nonBg=${(stats.nonBgFraction * 100).toFixed(1)}% bg=${stats.background}`)
+      } catch (error) {
+        section.configs.push({ ...config, error: String(error), pass: false })
+        console.log(`FAIL [${label}] ${config.name} ${error}`)
+      }
     }
+  } finally {
+    await page.close()
   }
+}
+try {
+  // Stock pass: the uniformity fix now lives in the committed WGSL sources,
+  // so the full matrix must pass unpatched (no ?patched=1).
+  await runPass('stock', false, CONFIGS)
+  // Patched pass: in-memory uniformity repair, kept as a drift tripwire — if
+  // the WGSL regresses, stock fails while patched still passes.
+  await runPass('patched', true, CONFIGS)
 } finally {
   await browser.close()
   await server.close()
 }
 
+const okResults = results => Object.values(results ?? {}).every(result => result === 'ok' || result === 'unsupported' || (Array.isArray(result) && result[0]?.startsWith('unsupported')))
 report.finishedAt = new Date().toISOString()
-report.pass = report.configs.every(entry => entry.pass)
-  && Object.values(report.pipelines ?? {}).every(result => result === 'ok' || result === 'unsupported')
+report.pass = report.stock.configs.every(entry => entry.pass)
+  && okResults(report.stock.pipelines)
+  && okResults(report.stock.shaderDiagnostics)
 await writeFile(join(OUT, 'report.json'), JSON.stringify(report, null, 2))
+const configRows = section => section.configs.map(entry => entry.error
+  ? `| ${entry.name} | — | — | FAIL (${entry.error}) | — |`
+  : `| ${entry.name} | ${entry.stats.stddev.toFixed(1)} | ${(entry.stats.nonBgFraction * 100).toFixed(1)} | ${entry.pass ? 'PASS' : 'FAIL'} | ${entry.screenshot.split('/').pop()} |`)
 const lines = [
   '# Shader library browser qualification',
   '',
   `- Date: ${report.startedAt}`,
   `- Adapter: ${JSON.stringify(report.adapterInfo)}`,
   `- Immediate variant active: ${report.immediateActive}`,
-  `- Overall: ${report.pass ? 'PASS' : 'FAIL'}`,
+  `- Overall (stock sources): ${report.pass ? 'PASS' : 'FAIL'}`,
   '',
-  '## Pipeline creation (shading model × variant)',
+  '## Stock sources (as committed)',
+  '',
+  '### Shader module compilation (Tint), shader × variant',
+  '',
+  '| shader/variant | diagnostics |',
+  '| --- | --- |',
+  ...Object.entries(report.stock.shaderDiagnostics ?? {}).map(([key, result]) => `| ${key} | ${Array.isArray(result) ? result.join('<br>') : result} |`),
+  '',
+  '### Pipeline creation',
   '',
   '| pipeline | result |',
   '| --- | --- |',
-  ...Object.entries(report.pipelines ?? {}).map(([key, result]) => `| ${key} | ${result} |`),
+  ...Object.entries(report.stock.pipelines ?? {}).map(([key, result]) => `| ${key} | ${result} |`),
   '',
-  '## Configurations',
+  '### Configurations (stock sources)',
   '',
   '| config | stddev | non-bg % | result | screenshot |',
   '| --- | --- | --- | --- | --- |',
-  ...report.configs.map(entry => entry.error
-    ? `| ${entry.name} | — | — | FAIL (${entry.error}) | — |`
-    : `| ${entry.name} | ${entry.stats.stddev.toFixed(1)} | ${(entry.stats.nonBgFraction * 100).toFixed(1)} | ${entry.pass ? 'PASS' : 'FAIL'} | ${entry.name}.png |`),
+  ...configRows(report.stock),
+  '',
+  '### Status events',
+  '',
+  ...(report.stock.statusEvents?.length ? report.stock.statusEvents.map(event => `- ${event}`) : ['- none']),
+  '',
+  '## Patched sources (in-memory uniformity repair)',
+  '',
+  'The patch rewrites shadowFactor\'s non-uniform bounds early-return as a',
+  'clamped select and hoists the shadowFactor call above the section-cap',
+  'early return; nothing on disk is modified.',
+  '',
+  '### Shader module compilation (Tint), shader × variant',
+  '',
+  '| shader/variant | diagnostics |',
+  '| --- | --- |',
+  ...Object.entries(report.patched.shaderDiagnostics ?? {}).map(([key, result]) => `| ${key} | ${Array.isArray(result) ? result.join('<br>') : result} |`),
+  '',
+  '### Pipeline creation',
+  '',
+  '| pipeline | result |',
+  '| --- | --- |',
+  ...Object.entries(report.patched.pipelines ?? {}).map(([key, result]) => `| ${key} | ${result} |`),
+  '',
+  '### Configurations',
+  '',
+  '| config | stddev | non-bg % | result | screenshot |',
+  '| --- | --- | --- | --- | --- |',
+  ...configRows(report.patched),
+  '',
+  '### Status events',
+  '',
+  ...(report.patched.statusEvents?.length ? report.patched.statusEvents.map(event => `- ${event}`) : ['- none']),
   '',
 ]
 await writeFile(join(OUT, 'report.md'), lines.join('\n'))
-console.log(`overall: ${report.pass ? 'PASS' : 'FAIL'} -> ${join(OUT, 'report.md')}`)
+console.log(`overall (stock): ${report.pass ? 'PASS' : 'FAIL'} -> ${join(OUT, 'report.md')}`)
 process.exit(report.pass ? 0 : 1)

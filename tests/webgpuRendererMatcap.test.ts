@@ -67,9 +67,7 @@ describe('WebGPURenderer matcap texture binding', () => {
     const renderer = new WebGPURenderer()
     const internal = renderer as unknown as {
       dev: unknown
-      matcapBGL: unknown
-      matcapBG: unknown
-      matcapDummyTexture: unknown
+      textures: Record<string, unknown>
       buildPipelines(): void
     }
     internal.dev = fakeDevice(record)
@@ -78,22 +76,21 @@ describe('WebGPURenderer matcap texture binding', () => {
     // One matcap sampler (a second sampler belongs to the env-map binding).
     expect(record.samplers.length).toBeGreaterThanOrEqual(1)
     expect(record.textures).toContainEqual({ size: [1, 1] })
-    expect(internal.matcapDummyTexture).not.toBeNull()
-    expect(internal.matcapBG).not.toBeNull()
+    expect(internal.textures.matcapDummyTexture).not.toBeNull()
+    expect(internal.textures.matcapBG).not.toBeNull()
     // The dummy is bound in the matcap bind group (texture view + sampler).
-    const matcapGroup = record.bindGroups.find(group => group.layout === internal.matcapBGL)
+    const matcapGroup = record.bindGroups.find(group => group.layout === internal.textures.matcapBGL)
     expect(matcapGroup).toBeDefined()
     expect(matcapGroup!.entries).toHaveLength(4)
     // The matcap pipeline uses the three-group layout; plain mesh does not.
     // (meshMatcap pipelines are created lazily, so request one explicitly.)
     const internalLayouts = renderer as unknown as {
-      objectLayout: unknown
-      matcapObjectLayout: unknown
+      pipelines: Record<string, unknown>
       getRenderPipeline(id: string): unknown
     }
     internalLayouts.getRenderPipeline('meshMatcap')
-    expect(record.pipelines.some(pipeline => pipeline.layout === internalLayouts.matcapObjectLayout)).toBe(true)
-    expect(record.pipelines.some(pipeline => pipeline.layout === internalLayouts.objectLayout)).toBe(true)
+    expect(record.pipelines.some(pipeline => pipeline.layout === internalLayouts.pipelines.matcapObjectLayout)).toBe(true)
+    expect(record.pipelines.some(pipeline => pipeline.layout === internalLayouts.pipelines.objectLayout)).toBe(true)
   })
 
   it('opaque matcap draws bind the capture bind group at group(2)', () => {
@@ -127,17 +124,19 @@ describe('WebGPURenderer matcap texture binding', () => {
     internal.gridVisible = false
     internal.sceneUB = {}
     internal.sceneBG = 'sceneBG'
-    internal.matcapBG = 'matcapBG'
+    const textures = internal.textures as Record<string, unknown>
+    const factory = internal.pipelines as Record<string, unknown>
+    textures.matcapBG = 'matcapBG'
     internal.meshPipe = 'mesh'
     internal.meshPipeT = 'meshT'
     internal.meshImmediatePipeT = null
     internal.sectionCapPipe = 'cap'
-    internal.matcapObjectLayout = 'matcapLayout'
-    internal.objectLayout = 'objectLayout'
-    internal.immediateObjectLayout = null
-    internal.instanceLayout = 'instanceLayout'
-    internal.sceneLayout = 'sceneLayout'
-    internal.vertexLayouts = { mesh: [], edge: [], line: [], grid: [] }
+    factory.matcapObjectLayout = 'matcapLayout'
+    factory.objectLayout = 'objectLayout'
+    factory.immediateObjectLayout = null
+    factory.instanceLayout = 'instanceLayout'
+    factory.sceneLayout = 'sceneLayout'
+    factory.vertexLayouts = { mesh: [], edge: [], line: [], grid: [] }
     internal.meshes = [{
       morph: undefined,
       morphSlot: {},
@@ -173,13 +172,14 @@ describe('WebGPURenderer matcap texture binding', () => {
     const renderer = new WebGPURenderer()
     const internal = renderer as unknown as Record<string, unknown>
     internal.dev = dev
-    internal.matcapBGL = {}
-    internal.matcapSampler = {}
-    internal.matcapDummyTexture = fakeTexture('dummy')
-    internal.matcapTexture = internal.matcapDummyTexture
+    const textures = internal.textures as Record<string, unknown>
+    textures.matcapBGL = {}
+    textures.matcapSampler = {}
+    textures.matcapDummyTexture = fakeTexture('dummy')
+    textures.matcapTexture = textures.matcapDummyTexture
     // The group(2) matcap bind group embeds the shadow map at bindings 2/3.
-    internal.shadowTexture = fakeTexture('shadow')
-    internal.shadowSampler = {}
+    textures.shadowTexture = fakeTexture('shadow')
+    textures.shadowSampler = {}
 
     expect(renderer.currentMatcap).toBe('procedural')
     await expect(renderer.setMatcapTexture('nope')).rejects.toThrow("unknown matcap 'nope'")
@@ -190,12 +190,12 @@ describe('WebGPURenderer matcap texture binding', () => {
     expect(record.textures).toContainEqual({ size: [256, 256] })
     expect(record.externalCopies).toHaveLength(1)
     expect(bitmap.close).toHaveBeenCalled()
-    expect(internal.matcapBG).not.toBeNull()
+    expect(textures.matcapBG).not.toBeNull()
 
     // Switching back to procedural rebinds the 1×1 dummy (shader fallback).
     await renderer.setMatcapTexture('procedural')
     expect(renderer.currentMatcap).toBe('procedural')
-    expect(internal.matcapTexture).toBe(internal.matcapDummyTexture)
+    expect(textures.matcapTexture).toBe(textures.matcapDummyTexture)
   })
 })
 
