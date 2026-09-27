@@ -132,8 +132,12 @@ const renderer = new WebGPURenderer()
 const ok = await renderer.init(canvas)
 if (!ok) throw new Error('WebGPURenderer.init failed')
 
+// GPUAdapterInfo exposes its fields as prototype getters: spreading it yields {}.
 const adapter = await navigator.gpu.requestAdapter()
-const adapterInfo = adapter?.info ? { ...adapter.info } : null
+const info = adapter?.info
+const adapterInfo = info
+  ? { vendor: info.vendor, architecture: info.architecture, device: info.device, description: info.description }
+  : null
 
 const ball = sphere(10, 32)
 const cube = box(16)
@@ -151,9 +155,17 @@ scene.forEach((m, i) => { m.entityId = 'entity:main/' + i })
 let frameResolve = null
 renderer.onFrameSubmitted = () => { frameResolve?.() }
 window.__statusEvents = []
+// GPU errors per configuration: a frame that fails validation is dropped while
+// the canvas keeps the previous image, so pixels alone would pass it. The
+// renderer reports dropped frames (per-frame validation scope) as 'error'
+// status events; uncaptured device errors are collected below.
+const gpuErrors = []
 renderer.onStatusChange = event => {
   window.__statusEvents.push(JSON.stringify(event, (key, value) => value instanceof Error ? value.message + ' | ' + value.stack : value))
   console.log('status:', window.__statusEvents[window.__statusEvents.length - 1])
+  if (event.status === 'error' || event.status === 'device-lost') {
+    gpuErrors.push(String(event.error?.message ?? event.message ?? event.status).split(String.fromCharCode(10))[0])
+  }
 }
 function frame() {
   return new Promise(resolve => {
@@ -192,11 +204,16 @@ function canvasStats() {
 // authoritative compile check is the per-variant createShaderModule loop.
 const pipelines = {}
 const device = renderer.dev
+// The immediate address space is a device feature; its variants are
+// 'unsupported' (not failures) where the adapter lacks it (e.g. SwiftShader).
+const immediateActive = !!renderer.pipelines.immediateObjectStyle
 // Attribute async Dawn validation errors (e.g. bind-group mismatches at draw
 // time) to the config that encoded them; run() sets __currentConfig.
 window.__currentConfig = 'init'
 device.addEventListener('uncapturederror', event => {
-  console.log('uncaptured [' + window.__currentConfig + ']: ' + event.error.message.split(String.fromCharCode(10))[0])
+  const message = event.error.message.split(String.fromCharCode(10))[0]
+  console.log('uncaptured [' + window.__currentConfig + ']: ' + message)
+  gpuErrors.push(message)
 })
 for (const id of SHADERS) {
   for (const variant of VARIANTS) {
@@ -220,6 +237,10 @@ for (const id of SHADERS) {
   const spec = getShader(id)
   for (const variant of VARIANTS) {
     const key = id + '/' + variant
+    if (variant === 'immediate' && !immediateActive) {
+      shaderDiagnostics[key] = ['unsupported: device lacks the immediate address space']
+      continue
+    }
     let source = spec.source
     try {
       if (variant === 'immediate') source = immediateObjectShader(source)
@@ -243,10 +264,14 @@ window.__qual = {
   pipelines,
   shaderDiagnostics,
   statusEvents: window.__statusEvents,
-  immediateActive: !!renderer.immediateObjectStyle,
+  immediateActive: immediateActive,
   async run(config) {
+    // Settle the previous configuration, then count only this one's errors.
+    await frame()
+    gpuErrors.length = 0
     window.__currentConfig = config.name
     renderer.setSection(false, [0, 0, 1], 0)
+    renderer.setDisplayMode('shaded')
     renderer.setShadowsEnabled(false)
     renderer.setTheme('default')
     renderer.setBackgroundColor([0.09, 0.09, 0.11])
@@ -263,9 +288,10 @@ window.__qual = {
     if (config.env) await renderer.setEnvMap(config.env)
     if (config.shadows) renderer.setShadowsEnabled(true)
     if (config.section) renderer.setSection(true, [0, 0, 1], 0)
+    if (config.displayMode) renderer.setDisplayMode(config.displayMode)
     await frame()
     await frame()
-    return true
+    return [...new Set(gpuErrors)]
   },
   // Pixel stats of a compositor screenshot (data URL), decoded via <img> so
   // the result reflects what a user would see rather than drawImage on the
@@ -305,6 +331,11 @@ const CONFIGS = [
   { name: 'section-off', model: 'phong' },
   { name: 'section-on', model: 'phong', section: true },
   { name: 'section-on-toon', model: 'toon', section: true },
+  // Section caps after surfaces whose group(2) is the matcap/env group.
+  { name: 'section-on-matcap', model: 'matcap', section: true },
+  { name: 'section-on-pbr', model: 'pbr', section: true },
+  { name: 'edges-mode', model: 'phong', displayMode: 'edges' },
+  { name: 'edges-mode-shadows', model: 'phong', displayMode: 'edges', shadows: true },
   { name: 'instanced-phong', model: 'phong', instanced: true },
   { name: 'instanced-toon', model: 'toon', instanced: true },
 ]
@@ -324,10 +355,18 @@ await server.listen()
 // Headless Chrome (shell or full) loses the WebGPU device on canvas present
 // in this environment ("A valid external Instance reference no longer
 // exists"), so qualification runs headed with the window parked offscreen.
-const launchOptions = {
-  headless: false,
-  args: ['--enable-unsafe-webgpu', '--window-position=2000,2000'],
-}
+// SHADER_QUAL_ADAPTER=swiftshader runs headless on Chromium's software
+// adapter instead (GPU-less Linux/CI); ANGLE on SwiftShader avoids that loss.
+const launchOptions = process.env.SHADER_QUAL_ADAPTER === 'swiftshader'
+  ? {
+    headless: true,
+    args: ['--enable-unsafe-webgpu', '--headless=new', '--enable-features=Vulkan', '--use-vulkan=swiftshader',
+      '--use-webgpu-adapter=swiftshader', '--disable-vulkan-surface', '--use-angle=swiftshader'],
+  }
+  : {
+    headless: false,
+    args: ['--enable-unsafe-webgpu', '--window-position=2000,2000'],
+  }
 if (CHROME_EXECUTABLE) launchOptions.executablePath = CHROME_EXECUTABLE
 
 const browser = await chromium.launch(launchOptions)
@@ -366,16 +405,16 @@ async function runPass(label, patched, configs) {
     for (const config of configs) {
       const file = `${patched ? '' : 'stock-'}${config.name}.png`
       try {
-        await page.evaluate(cfg => window.__qual.run(cfg), config)
+        const errors = await page.evaluate(cfg => window.__qual.run(cfg), config)
         const path = join(OUT, file)
         const shot = await canvas.screenshot({ path })
         const stats = await page.evaluate(
           dataUrl => window.__qual.imageStats(dataUrl),
           'data:image/png;base64,' + shot.toString('base64'),
         )
-        const pass = stats.stddev > 3 && stats.nonBgFraction > 0.02
-        section.configs.push({ ...config, stats, screenshot: `output/shader-library-qualification/${file}`, pass })
-        console.log(`${pass ? 'PASS' : 'FAIL'} [${label}] ${config.name} stddev=${stats.stddev.toFixed(1)} nonBg=${(stats.nonBgFraction * 100).toFixed(1)}% bg=${stats.background}`)
+        const pass = errors.length === 0 && stats.stddev > 3 && stats.nonBgFraction > 0.02
+        section.configs.push({ ...config, stats, errors, screenshot: `output/shader-library-qualification/${file}`, pass })
+        console.log(`${pass ? 'PASS' : 'FAIL'} [${label}] ${config.name} stddev=${stats.stddev.toFixed(1)} nonBg=${(stats.nonBgFraction * 100).toFixed(1)}% bg=${stats.background}${errors.length ? ` errors=${JSON.stringify(errors)}` : ''}`)
       } catch (error) {
         section.configs.push({ ...config, error: String(error), pass: false })
         console.log(`FAIL [${label}] ${config.name} ${error}`)
@@ -404,8 +443,8 @@ report.pass = report.stock.configs.every(entry => entry.pass)
   && okResults(report.stock.shaderDiagnostics)
 await writeFile(join(OUT, 'report.json'), JSON.stringify(report, null, 2))
 const configRows = section => section.configs.map(entry => entry.error
-  ? `| ${entry.name} | — | — | FAIL (${entry.error}) | — |`
-  : `| ${entry.name} | ${entry.stats.stddev.toFixed(1)} | ${(entry.stats.nonBgFraction * 100).toFixed(1)} | ${entry.pass ? 'PASS' : 'FAIL'} | ${entry.screenshot.split('/').pop()} |`)
+  ? `| ${entry.name} | — | — | — | FAIL (${entry.error}) | — |`
+  : `| ${entry.name} | ${entry.stats.stddev.toFixed(1)} | ${(entry.stats.nonBgFraction * 100).toFixed(1)} | ${entry.errors.length ? entry.errors.join('<br>').replaceAll('|', '\\|') : 'none'} | ${entry.pass ? 'PASS' : 'FAIL'} | ${entry.screenshot.split('/').pop()} |`)
 const lines = [
   '# Shader library browser qualification',
   '',
@@ -430,8 +469,8 @@ const lines = [
   '',
   '### Configurations (stock sources)',
   '',
-  '| config | stddev | non-bg % | result | screenshot |',
-  '| --- | --- | --- | --- | --- |',
+  '| config | stddev | non-bg % | GPU errors | result | screenshot |',
+  '| --- | --- | --- | --- | --- | --- |',
   ...configRows(report.stock),
   '',
   '### Status events',
@@ -458,8 +497,8 @@ const lines = [
   '',
   '### Configurations',
   '',
-  '| config | stddev | non-bg % | result | screenshot |',
-  '| --- | --- | --- | --- | --- |',
+  '| config | stddev | non-bg % | GPU errors | result | screenshot |',
+  '| --- | --- | --- | --- | --- | --- |',
   ...configRows(report.patched),
   '',
   '### Status events',

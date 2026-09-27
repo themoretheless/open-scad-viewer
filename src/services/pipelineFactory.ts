@@ -41,6 +41,14 @@ export interface ExtraBindGroups {
   shadowBG: GPUBindGroup | null
 }
 
+/**
+ * Slope-scaled depth bias for the shadow-caster pass. The sampling shaders
+ * apply only a small constant bias, which cannot cover surfaces at grazing
+ * angles to the key light (curved parts showed ring-shaped self-shadowing,
+ * "acne"); rasterizer slope bias grows with the depth slope instead.
+ */
+export const SHADOW_CASTER_DEPTH_BIAS = { depthBias: 2, depthBiasSlopeScale: 2, depthBiasClamp: 0 } as const
+
 export class PipelineFactory {
   sceneBGL!: GPUBindGroupLayout
   objBGL!: GPUBindGroupLayout
@@ -51,7 +59,10 @@ export class PipelineFactory {
   envBGL!: GPUBindGroupLayout
   /** group(2)/group(1): key-light depth map + comparison sampler. */
   shadowBGL!: GPUBindGroupLayout
+  /** Grid: scene + shadow group(1). */
   sceneLayout!: GPUPipelineLayout
+  /** Line/overlay pipelines: scene group only (they declare no group(1)). */
+  sceneOnlyLayout!: GPUPipelineLayout
   objectLayout!: GPUPipelineLayout
   /** Depth-only shadow pass: scene+object groups only, no shadow group. */
   shadowObjectLayout!: GPUPipelineLayout
@@ -101,7 +112,11 @@ export class PipelineFactory {
       { binding: 0, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'depth' } },
       { binding: 1, visibility: GPUShaderStage.FRAGMENT, sampler: { type: 'comparison' } },
     ] })
+    // Every layout group must be bound before each draw. Only the grid samples
+    // the shadow map among scene-kind shaders; line and overlay pipelines are
+    // drawn after object groups occupy group(1), so they get a scene-only layout.
     this.sceneLayout = dev.createPipelineLayout({ bindGroupLayouts: [this.sceneBGL, this.shadowBGL] })
+    this.sceneOnlyLayout = dev.createPipelineLayout({ bindGroupLayouts: [this.sceneBGL] })
     this.objectLayout = dev.createPipelineLayout({ bindGroupLayouts: [this.sceneBGL, this.objBGL, this.shadowBGL] })
     this.shadowObjectLayout = dev.createPipelineLayout({ bindGroupLayouts: [this.sceneBGL, this.objBGL] })
     this.matcapObjectLayout = dev.createPipelineLayout({ bindGroupLayouts: [this.sceneBGL, this.objBGL, this.matcapBGL] })
@@ -176,6 +191,9 @@ export class PipelineFactory {
     if (variant !== 'uniform' && !spec.supportsVariants) {
       throw new Error(`Shader '${id}' does not support the '${variant}' variant`)
     }
+    if (variant === 'immediate' && !this.immediateObjectLayout) {
+      throw new Error(`Device does not support the 'immediate' variant (no immediate address space)`)
+    }
     const blend = flavor.blend ?? spec.blend
     const depth = flavor.depth ?? spec.depth
     const topology = flavor.topology ?? spec.topology
@@ -191,14 +209,14 @@ export class PipelineFactory {
         : variant === 'instanced' ? this.instanceLayout
         : variant === 'immediate' ? this.immediateObjectLayout!
         : this.objectLayout
-      : this.sceneLayout
+      : spec.usesShadowBinding ? this.sceneLayout : this.sceneOnlyLayout
     const pipeline = dev.createRenderPipeline(depthOnly ? {
       // Depth-only shadow-map pass: no color targets, no fragment stage;
       // renders mesh depth from the key light into a depth32float texture.
       layout,
       vertex: { module, entryPoint: 'vs', buffers: this.vertexLayouts[spec.vertexLayout] },
       primitive: { topology, cullMode: spec.cullMode },
-      depthStencil: { format: 'depth32float', depthWriteEnabled: true, depthCompare: depth.compare },
+      depthStencil: { format: 'depth32float', depthWriteEnabled: true, depthCompare: depth.compare, ...SHADOW_CASTER_DEPTH_BIAS },
     } : {
       layout,
       vertex: { module, entryPoint: 'vs', buffers: this.vertexLayouts[spec.vertexLayout] },

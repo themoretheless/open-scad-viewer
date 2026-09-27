@@ -116,6 +116,11 @@ describe('shader library modules', () => {
     expect(MESH_PBR_WGSL).toContain('fn envIrradiance(N: vec3f) -> vec3f {')
     expect(MESH_PBR_WGSL).toContain('textureNumLevels(envTex) > 1u')
     expect(MESH_PBR_WGSL).toContain('(kd * albedo / 3.14159265 + specular) * ndl')
+    // The viewer is Z-up (XY grid): the equirect zenith is +Z and the azimuth
+    // wraps around it, with the undefined atan2(0, 0) on the pole axis pinned.
+    expect(MESH_PBR_WGSL).toContain('atan2(d.y, d.x)')
+    expect(MESH_PBR_WGSL).toContain('acos(clamp(d.z, -1.0, 1.0))')
+    expect(MESH_PBR_WGSL).toContain('abs(d.x) + abs(d.y) < 1e-6')
   })
 
   it('mesh-surface shaders shade a flat epsilon accent near the section plane', () => {
