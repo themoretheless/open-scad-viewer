@@ -113,8 +113,8 @@ impl CudaProgramPlanBuilder {
         op: CompareOp,
     ) -> Result<CudaValue, CudaError> {
         let shape = left.layout.shape().broadcast(right.layout.shape())?;
-        left.layout = left.layout.broadcast_to(shape.clone())?;
-        right.layout = right.layout.broadcast_to(shape.clone())?;
+        left.broadcast_to(shape.clone())?;
+        right.broadcast_to(shape.clone())?;
         validate_layout(&left.layout, left.dtype)?;
         validate_layout(&right.layout, right.dtype)?;
         self.output(shape, CudaDtype::U32, |output| Step::Compare {
@@ -166,9 +166,9 @@ impl CudaProgramPlanBuilder {
         // Joint three-way broadcasting preserves the shared zero-axis rule:
         // an empty mask can make an otherwise oversized value broadcast empty.
         let shape = select_shape(mask.layout.shape(), yes.layout.shape(), no.layout.shape())?;
-        mask.layout = mask.layout.broadcast_to(shape.clone())?;
-        yes.layout = yes.layout.broadcast_to(shape.clone())?;
-        no.layout = no.layout.broadcast_to(shape.clone())?;
+        mask.broadcast_to(shape.clone())?;
+        yes.broadcast_to(shape.clone())?;
+        no.broadcast_to(shape.clone())?;
         // The mask remains its existing u32 allocation. A broadcast mask has
         // no result-sized u32 allocation, so only the value dtype limits the
         // logical traversal. Broadcasting preserves its checked storage span.

@@ -20,6 +20,7 @@ pub enum CudaError {
     InvalidInput(&'static str),
     Driver(DriverError),
     Compilation(String),
+    Graph(gpu_compute::cuda::graph::CudaGraphError),
     Blas(String),
     UnsupportedPrecision(&'static str),
 }
@@ -53,6 +54,7 @@ impl std::fmt::Display for CudaError {
             Self::InvalidInput(reason) => f.write_str(reason),
             Self::Driver(error) => error.fmt(f),
             Self::Compilation(error) => write!(f, "NVRTC compilation failed: {error}"),
+            Self::Graph(error) => write!(f, "CUDA Graph failed: {error}"),
             Self::Blas(error) => write!(f, "cuBLAS failed: {error}"),
             Self::UnsupportedPrecision(reason) => {
                 write!(f, "CUDA precision mode unsupported: {reason}")
@@ -69,5 +71,11 @@ impl From<DriverError> for CudaError {
 impl From<tensor_core::TensorError> for CudaError {
     fn from(value: tensor_core::TensorError) -> Self {
         Self::Contract(value)
+    }
+}
+
+impl From<gpu_compute::cuda::graph::CudaGraphError> for CudaError {
+    fn from(value: gpu_compute::cuda::graph::CudaGraphError) -> Self {
+        Self::Graph(value)
     }
 }

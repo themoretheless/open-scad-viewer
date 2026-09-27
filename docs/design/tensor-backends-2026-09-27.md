@@ -458,8 +458,8 @@ checks. Unsupported modes must not silently become a different arithmetic policy
 3. Qualify native WGSL f16 arithmetic. Broaden direct low-input/f32-output MLX
    matrix measurements beyond the current Apple GPU and shapes. Preserve
    explicit rounding and numerical tolerances per operation and precision.
-4. Qualify the prepared CUDA operation set on NVIDIA and add CUDA Graph capture. The [CUDA execution design](cuda-reusable-execution-2026-09-27.md)
-   separates prepared buffers from later stream capture. Qualify allocation reuse,
+4. Qualify the prepared CUDA operation set and implemented CUDA Graph mode on NVIDIA. The [CUDA execution design](cuda-reusable-execution-2026-09-27.md)
+   describes prepared buffers, private graph slots and explicit stream bridges. Qualify allocation reuse,
    fusion, launch overhead and memory traffic before selecting defaults.
 5. Route domain math through the shared resident primitives where appropriate,
    retaining specialized nearest-neighbor and point-cloud kernels. Existing CUDA
@@ -523,8 +523,9 @@ The [typed host/NVRTC qualification](../qualification/tensor-cuda-typed-programs
 retains CPU contracts and all 52 unchanged kernel entries for four virtual
 architectures. Required native tests report unavailable hardware on this host.
 The [earlier f32 qualification](../qualification/tensor-cuda-programs-2026-09-27.md)
-is retained. CUDA numerical execution, performance, graph capture and Tensor
-Core instruction selection remain unverified.
+is retained. CUDA numerical execution, performance, native graph capture/replay and Tensor
+Core instruction selection remain unverified. The [graph implementation and host checks](../qualification/tensor-cuda-graphs-2026-09-27.md)
+cover owned dense slots, logical view rebasing, explicit stream bridges and resource cleanup.
 
 
 The [statistics/attention qualification](../qualification/tensor-prepared-statistics-2026-09-27.md)

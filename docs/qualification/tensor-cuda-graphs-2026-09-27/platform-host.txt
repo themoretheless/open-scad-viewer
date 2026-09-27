@@ -1,0 +1,37 @@
+warning: binary `wgsl_export` should have a kebab-case name
+  |
+1 | /Users/themoretheless/Documents/Sources/open-scad-viewer/crates/target/.../wgsl_export
+  |                                                                            ^^^^^^^^^^^
+  |
+  = note: `cargo::non_kebab_case_bins` is set to `warn` by default
+help: to change the binary name to `wgsl-export`, convert the file stem
+  |
+1 - src/bin/wgsl_export.rs
+1 + src/bin/wgsl-export.rs
+  |
+warning: `raster-core` (manifest) generated 1 warning
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.05s
+     Running unittests src/lib.rs (crates/target/debug/build/gpu-compute/b49df67582bc2b92/out/gpu_compute-b49df67582bc2b92)
+
+running 15 tests
+test cuda::graph::tests::abandoned_capture_and_rust_unwind_end_and_destroy_without_instantiation ...
+thread 'cuda::graph::tests::abandoned_capture_and_rust_unwind_end_and_destroy_without_instantiation' (31423067) panicked at gpu-compute/src/cuda/graph/tests.rs:131:17:
+injected recording failure
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+ok
+test cuda::graph::tests::abort_reports_end_error_and_cleanup_ignores_prior_bind_error ... ok
+test cuda::graph::tests::absent_driver_is_explicit_and_error_formatting_needs_no_driver ... ok
+test cuda::graph::tests::end_error_that_leaves_capture_active_is_retried_before_partial_graph_destroy ... ok
+test cuda::graph::tests::explicit_abort_drains_remaining_capture_before_destroying_partial_graph ... ok
+test cuda::graph::tests::failed_cleanup_bind_records_error_without_using_handles_in_wrong_context ... ok
+test cuda::graph::tests::instantiate_failure_destroys_partial_exec_before_source_graph ... ok
+test cuda::graph::tests::invalidated_end_and_partial_graph_cleanup_are_not_skipped ... ok
+test cuda::graph::tests::launch_upload_and_exec_destroy_errors_do_not_leak_graph ... ok
+test cuda::graph::tests::null_graph_or_exec_is_rejected_and_resources_cleaned ... ok
+test cuda::graph::tests::preflight_and_failed_begin_never_end_someone_elses_capture ... ok
+test cuda::graph::tests::success_upload_launch_and_destruction_have_one_owner_and_order ... ok
+test cuda::tests::device_probe_does_not_panic ... ok
+test cuda::tests::launch_1d_rounds_up ... ok
+test cuda::tests::stream_selection_defaults_to_legacy_without_enabling_capture ... ok
+
+test result: ok. 15 passed; 0 failed; 0 ignored; 0 measured; 9 filtered out; finished in 0.01s

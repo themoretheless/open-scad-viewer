@@ -44,6 +44,7 @@ impl HasLowDtype for CudaLowTensor {
     }
 }
 
+#[derive(Clone)]
 pub(crate) struct LowKernels {
     pub(crate) copy: CudaFunction,
     pub(crate) encode: CudaFunction,

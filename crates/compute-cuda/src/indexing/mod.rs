@@ -49,6 +49,7 @@ impl CudaScalar for u32 {
     }
 }
 
+#[derive(Clone)]
 pub(crate) struct IndexKernels {
     pub(crate) copy: [CudaFunction; 2],
     pub(crate) compare: [CudaFunction; 2],

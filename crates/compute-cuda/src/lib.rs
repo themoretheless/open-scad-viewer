@@ -37,3 +37,6 @@ pub use program::{
 };
 
 pub use program::{CudaDtype, CudaProgramInput, CudaProgramOutput, CudaProgramOutputMut};
+
+pub use gpu_compute::cuda::CudaStreamMode;
+pub use program::{CudaCaptureOptions, CudaGraphProgram, CudaGraphStats};
