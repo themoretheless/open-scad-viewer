@@ -133,12 +133,15 @@ fn geometrySmith(N: vec3f, V2: vec3f, L: vec3f, rough: f32) -> f32 {
     * geometrySchlickGGX(max(dot(N, L), 0.0), rough);
 }
 
-// Equirectangular lookup: u wraps the azimuth around +Y, v maps +Y to the top
-// row (the renderer uploads with imageOrientation flipY, so v=0 is the pole).
+// Equirectangular lookup in the viewer's Z-up world: u wraps the azimuth
+// around +Z, v = 0 is the +Z zenith, which is the PNG's top row (uploaded
+// without flipY). On the pole axis the azimuth is undefined (atan2(0, 0));
+// any u is correct there, so it is pinned instead of left to the backend.
 fn envUv(dir: vec3f) -> vec2f {
   let d = normalize(dir);
-  let u = atan2(d.z, d.x) / 6.2831853 + 0.5;
-  let v = acos(clamp(d.y, -1.0, 1.0)) / 3.14159265;
+  let azimuth = select(atan2(d.y, d.x), 0.0, abs(d.x) + abs(d.y) < 1e-6);
+  let u = azimuth / 6.2831853 + 0.5;
+  let v = acos(clamp(d.z, -1.0, 1.0)) / 3.14159265;
   return vec2f(u, v);
 }
 fn envSample(dir: vec3f, lod: f32) -> vec3f {

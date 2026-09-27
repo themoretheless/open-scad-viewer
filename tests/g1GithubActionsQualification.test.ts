@@ -7,7 +7,7 @@ import { afterEach, describe, expect, it } from 'vitest'
 
 const root = resolve(import.meta.dirname, '..')
 const harness = resolve(root, 'scripts/g1-github-actions.mjs')
-const planPath = resolve(root, 'docs/qualification/semantic-manifold-g1-plan-v41.json')
+const planPath = resolve(root, 'docs/qualification/semantic-manifold-g1-plan-v45.json')
 const plan = JSON.parse(readFileSync(planPath, 'utf8'))
 const runtimeFreeze = JSON.parse(readFileSync(resolve(
   root, 'docs/qualification/environment-freeze/g1-runtime-browser-bindings-v1.json',
@@ -159,9 +159,15 @@ function fixture(): { artifacts: string; first: string } {
 
 function aggregate(artifacts: string, suffix: string, sha = sourceSha, githubSha = sha) {
   const output = resolve(dirname(artifacts), `result-${suffix}.json`)
+  // The harness checks the live hosted-runner image whenever one is present.
+  // These cases exercise evidence integrity, so they must not depend on the
+  // image of whichever GitHub runner happens to execute the test suite.
+  const env: NodeJS.ProcessEnv = { ...process.env, GITHUB_SHA: githubSha }
+  delete env.ImageOS
+  delete env.ImageVersion
   const child = spawnSync(process.execPath, [
     harness, 'aggregate', '--artifacts', artifacts, '--source-sha', sha, '--output', output,
-  ], { cwd: root, encoding: 'utf8', env: {...process.env, GITHUB_SHA: githubSha} })
+  ], { cwd: root, encoding: 'utf8', env })
   return { process: child, output }
 }
 
@@ -172,7 +178,7 @@ afterEach(() => {
 describe('G1 V34 GitHub Actions evidence integrity', () => {
   it('binds the evidence producers and preserves the exact 4740-unit no-claim matrix', () => {
     expect(plan.executionProtocol).toMatchObject({
-      candidateRunId: 'semantic-manifold-g1-candidate-run-v41',
+      candidateRunId: 'semantic-manifold-g1-candidate-run-v45',
       plannedWorkUnits: 4740,
       priorResultsMayBeImported: false,
     })

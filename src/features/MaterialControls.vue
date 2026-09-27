@@ -27,6 +27,16 @@ const emit = defineEmits<{
 const SHADING_MODELS: readonly ShadingModel[] = ['phong', 'pbr', 'matcap', 'toon', 'unlit']
 const label = (ru: string, en: string) => props.locale === 'ru' ? ru : en
 const sliderValue = (event: Event) => (event.target as HTMLInputElement).valueAsNumber
+/**
+ * The preset select is an action, not a bound value: reset it to the
+ * placeholder after applying, so picking the same preset again (after the
+ * sliders moved) still fires `change`.
+ */
+function applyPreset(select: HTMLSelectElement) {
+  const id = select.value
+  select.value = ''
+  if (id) emit('applyPreset', id)
+}
 </script>
 
 <template>
@@ -62,7 +72,7 @@ const sliderValue = (event: Event) => (event.target as HTMLInputElement).valueAs
       <select
         value=""
         :aria-label="label('Пресет материала', 'Material preset')"
-        @change="emit('applyPreset', ($event.target as HTMLSelectElement).value)"
+        @change="applyPreset($event.target as HTMLSelectElement)"
       >
         <option value="" disabled>{{ label('— выбрать —', '— pick —') }}</option>
         <option v-for="preset in MATERIAL_PRESETS" :key="preset.id" :value="preset.id">{{ preset.name }}</option>

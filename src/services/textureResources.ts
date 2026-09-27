@@ -13,6 +13,9 @@ import {
   getMatcapPreset,
 } from './rendererContracts'
 
+/** Environment maps hold sRGB-encoded bytes; see setEnvMap. */
+export const ENV_MAP_FORMAT: GPUTextureFormat = 'rgba8unorm-srgb'
+
 /** Key-light shadow map resolution (depth32float, depth-only pass). */
 export const SHADOW_MAP_SIZE = 1024
 
@@ -79,7 +82,10 @@ export class TextureResources {
     this.shadowDummyTexture?.destroy()
     this.shadowSampler = dev.createSampler({ compare: 'less-equal' })
     this.shadowDummyTexture = dev.createTexture({ size: [1, 1], format: 'depth32float', usage: GPUTextureUsage.TEXTURE_BINDING })
-    this.shadowTexture = this.shadowDummyTexture
+    // The enable flag outlives teardown (device-loss recovery re-inits the
+    // same instance, and callers may enable before init), so an enabled
+    // renderer gets its real map back instead of silently rendering unshadowed.
+    this.shadowTexture = this.shadowsEnabled ? this.createShadowMap(dev) : this.shadowDummyTexture
     this.shadowBG = this.createShadowBindGroup(this.shadowTexture)
     // Matcap fallback: a 1×1 white capture makes the shader take its
     // procedural path (textureDimensions == 1), so the default look is exact.
@@ -122,6 +128,14 @@ export class TextureResources {
         { binding: 2, resource: this.shadowTexture!.createView() },
         { binding: 3, resource: this.shadowSampler! },
       ],
+    })
+  }
+
+  private createShadowMap(dev: GPUDevice): GPUTexture {
+    return dev.createTexture({
+      size: [SHADOW_MAP_SIZE, SHADOW_MAP_SIZE],
+      format: 'depth32float',
+      usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING,
     })
   }
 
@@ -176,7 +190,8 @@ export class TextureResources {
       bind(texture)
     })().catch(error => {
       // A missing capture must not break rendering: stay on the current matcap.
-      this.hooks.onLoadError(error)
+      // A superseded (or torn-down) load is no longer the user's selection.
+      if (token === this.matcapLoadToken) this.hooks.onLoadError(error)
     })
   }
 
@@ -209,11 +224,14 @@ export class TextureResources {
     return (async () => {
       const response = await fetch(preset.url!)
       if (!response.ok) throw new Error(`Renderer: environment map fetch failed (${response.status})`)
-      // No flipY: equirect v=0 is the +Y pole, which is the PNG's top row.
+      // No flipY: equirect v=0 is the +Z zenith, which is the PNG's top row.
       const bitmap = await createImageBitmap(await response.blob())
       const texture = dev.createTexture({
         size: [bitmap.width, bitmap.height],
-        format: 'rgba8unorm',
+        // The maps store sRGB-encoded radiance; the -srgb format decodes to
+        // linear on sampling, since mesh_pbr lights in linear space and
+        // gamma-encodes its output (rgba8unorm applied the gamma twice).
+        format: ENV_MAP_FORMAT,
         usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST | GPUTextureUsage.RENDER_ATTACHMENT,
       })
       dev.queue.copyExternalImageToTexture({ source: bitmap }, { texture }, [bitmap.width, bitmap.height])
@@ -221,7 +239,8 @@ export class TextureResources {
       bind(texture)
     })().catch(error => {
       // A missing map must not break rendering: stay on the current env.
-      this.hooks.onLoadError(error)
+      // A superseded (or torn-down) load is no longer the user's selection.
+      if (token === this.envLoadToken) this.hooks.onLoadError(error)
     })
   }
 
@@ -237,11 +256,7 @@ export class TextureResources {
     if (dev && this.shadowDummyTexture) {
       if (enabled) {
         if (this.shadowTexture && this.shadowTexture !== this.shadowDummyTexture) this.shadowTexture.destroy()
-        this.shadowTexture = dev.createTexture({
-          size: [SHADOW_MAP_SIZE, SHADOW_MAP_SIZE],
-          format: 'depth32float',
-          usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING,
-        })
+        this.shadowTexture = this.createShadowMap(dev)
       } else {
         if (this.shadowTexture && this.shadowTexture !== this.shadowDummyTexture) this.shadowTexture.destroy()
         this.shadowTexture = this.shadowDummyTexture
