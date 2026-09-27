@@ -1,0 +1,21 @@
+$ /tmp/low-matmul-simdgroup-probe
+MLX 0.32.1 float SIMD-group 8x8 matrix probe
+replay=0
+ordinary_dyadic mismatches=0/64 first_actual=0.19921875 first_expected=0.19921875
+minimum_half_times_maximum_half mismatches=0/64 first_actual=0.03123474121 first_expected=0.03123474121
+minimum_bf16_left_times_maximum_bf16 mismatches=64/64 first_actual=0 first_expected=0.2490234375
+minimum_bf16_right_times_maximum_bf16 mismatches=64/64 first_actual=0 first_expected=0.2490234375
+maximum_bf16_subnormal_times_maximum_bf16 mismatches=64/64 first_actual=0 first_expected=31.62597656
+replay=1
+ordinary_dyadic mismatches=0/64 first_actual=0.19921875 first_expected=0.19921875
+minimum_half_times_maximum_half mismatches=0/64 first_actual=0.03123474121 first_expected=0.03123474121
+minimum_bf16_left_times_maximum_bf16 mismatches=64/64 first_actual=0 first_expected=0.2490234375
+minimum_bf16_right_times_maximum_bf16 mismatches=64/64 first_actual=0 first_expected=0.2490234375
+maximum_bf16_subnormal_times_maximum_bf16 mismatches=64/64 first_actual=0 first_expected=31.62597656
+replay=2
+ordinary_dyadic mismatches=0/64 first_actual=0.19921875 first_expected=0.19921875
+minimum_half_times_maximum_half mismatches=0/64 first_actual=0.03123474121 first_expected=0.03123474121
+minimum_bf16_left_times_maximum_bf16 mismatches=64/64 first_actual=0 first_expected=0.2490234375
+minimum_bf16_right_times_maximum_bf16 mismatches=64/64 first_actual=0 first_expected=0.2490234375
+maximum_bf16_subnormal_times_maximum_bf16 mismatches=64/64 first_actual=0 first_expected=31.62597656
+ordinary_failures=0; BF16 subnormal cases are observations, not pass gates

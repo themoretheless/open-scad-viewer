@@ -1,0 +1,30 @@
+warning: binary `wgsl_export` should have a kebab-case name
+  |
+1 | /Users/themoretheless/Documents/Sources/open-scad-viewer/crates/target/.../wgsl_export
+  |                                                                            ^^^^^^^^^^^
+  |
+  = note: `cargo::non_kebab_case_bins` is set to `warn` by default
+help: to change the binary name to `wgsl-export`, convert the file stem
+  |
+1 - src/bin/wgsl_export.rs
+1 + src/bin/wgsl-export.rs
+  |
+warning: `raster-core` (manifest) generated 1 warning
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.05s
+     Running tests/prepared_typed.rs (crates/target/debug/build/compute-cuda/6e1b10e95778f816/out/prepared_typed-6e1b10e95778f816)
+
+running 1 test
+test native_cuda_prepared_typed_contract ... 
+thread 'native_cuda_prepared_typed_contract' (30340884) panicked at compute-cuda/tests/prepared_typed.rs:24:13:
+required native typed CUDA execution unavailable: CUDA unavailable: CUDA driver/device is absent or initialization failed
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+FAILED
+
+failures:
+
+failures:
+    native_cuda_prepared_typed_contract
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+error: test failed, to rerun pass `-p compute-cuda --test prepared_typed`

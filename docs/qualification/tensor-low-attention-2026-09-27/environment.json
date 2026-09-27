@@ -1,0 +1,9 @@
+{
+  "platform": "macOS-26.7-arm64-arm-64bit-Mach-O",
+  "hardware": "Apple M4 Max",
+  "rustc": "rustc 1.100.0-nightly (215a8af4b 2026-09-15)",
+  "macos": "ProductName:\t\tmacOS\nProductVersion:\t\t26.7\nBuildVersion:\t\t25G229",
+  "graphics": "Graphics/Displays:\n\n    Apple M4 Max:\n\n      Chipset Model: Apple M4 Max\n      Type: GPU\n      Bus: Built-In\n      Total Number of Cores: 40\n      Vendor: Apple (0x106b)\n      Metal Support: Metal 4\n      Displays:\n        Color LCD:\n          Display Type: Built-in Liquid Retina XDR Display\n          Resolution: 3456 x 2234 Retina\n          Main Display: Yes\n          Mirror: Off\n          Online: Yes\n          Automatically Adjust Brightness: No\n          Display Asleep: Yes\n          Connection Type: Internal\n        LG UltraFine:\n          Resolution: 6400 x 3600\n          UI Looks like: 3200 x 1800 @ 60.00Hz\n          Mirror: Off\n          Online: Yes\n          Rotation: Supported\n          Automatically Adjust Brightness: Yes\n          Display Asleep: Yes\n\n",
+  "backend": "Metal",
+  "cuda_native_execution": false
+}

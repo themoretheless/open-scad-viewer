@@ -9,6 +9,163 @@ Runtime library for WGSL compute kernels — the compute counterpart of
 own their WGSL sources; what they share is the dispatch plumbing, and that
 lives here.
 
+## Resident tensors
+
+`GpuTensor<T = f32>` adds checked shapes, strides and offsets to existing GPU
+arrays. `f32` and `u32` values stay typed throughout execution. Transpose,
+permutation, narrow and broadcast create shared views; recorded materialization
+copies their logical values on the GPU. Rank-zero shapes represent scalars and
+zero-length dimensions represent empty tensors.
+
+`ComputeProgram` records tensor operations for repeated execution:
+
+| Area | Methods and behavior |
+| --- | --- |
+| Arithmetic | `tensor_unary`, `tensor_binary`; trailing-axis broadcasting |
+| Low arithmetic | `tensor_unary_low`, `tensor_binary_low`; packed f16/BF16 with f32 evaluation and final low rounding |
+| Low reductions | `tensor_reduce_low_f32`, `tensor_mean_low_f32`; direct packed loads with f32 accumulation, plus low-result variants |
+| Low indexing | `tensor_compare_low`, `tensor_select_low`, `tensor_gather_low`, `tensor_compact_low`; exact IEEE masks and raw payload movement |
+| Low scatter | `tensor_scatter_low`, `tensor_scatter_low_f32`; all five modes, direct packed updates and final low rounding |
+| Low scans | `tensor_scan_low_f32`, `tensor_scan_low`; direct packed loads, f32 prefix accumulation and optional final low rounding |
+| Low statistics | `tensor_softmax_low_f32`, `tensor_log_softmax_low_f32`, `tensor_logsumexp_low_f32`, `tensor_moments_low_f32`, `tensor_layer_norm_low_f32`; direct low inputs, plus final-rounded low results |
+| Matrix products | `tensor_matmul`; vectors, matrices and broadcast batches |
+| Reductions | `tensor_reduce` for f32/u32 sum, product, min, max; f32 `tensor_mean` |
+| Masks | `tensor_compare`, `tensor_select`; exact u32 masks and broadcast selection |
+| Scans | `tensor_scan`; any axis, inclusive/exclusive, forward/reverse |
+| Gather | `tensor_gather`; resident indices, zero-filled invalid reads and GPU invalid count |
+| Scatter | `tensor_scatter`; Replace/Add/Multiply/Min/Max, broadcast updates and GPU invalid count |
+| Compaction | `tensor_compact`; stable logical order, fixed capacity, GPU count and zero tail |
+| Statistics | `tensor_softmax`, `tensor_log_softmax`, `tensor_logsumexp`, `tensor_moments`, `tensor_layer_norm`; arbitrary axes and stable centered/scaled arithmetic |
+| Attention | `tensor_attention`; GQA, broadcast batches, resident Keep/additive masks and signed causal offsets |
+| Low attention | `tensor_attention_low_f32`, `tensor_attention_low`; direct packed Q/K/V, f32 accumulation and optional final low rounding |
+
+The `_into` variants use validated caller-owned outputs. Prepared programs keep
+their allocations and bindings; input writes followed by another recording
+reuse the same program. Intermediate results and dynamic counts stay on the
+GPU. See the runnable [tensor program](examples/tensor_program.rs).
+
+Scatter Replace chooses the last logical index among duplicates. Other scatter
+modes include the original value and every valid update; integer add/multiply
+wrap and floating-point accumulation order can vary. Invalid indices are
+counted once even for empty outputs. See [scatter contracts and tests](benchmarks/tensor-scatter.md)
+and [reduction/vector contracts](benchmarks/tensor-reductions.md).
+
+For portable native execution, `tensor-core` defines narrow `TensorBackend`,
+`TensorIndexBackend`, `TensorReduceBackend`, `TensorScatterBackend`,
+`TensorLowBackend`, `TensorLowOpsBackend`, `TensorLowIndexBackend`,
+`TensorLowScatterBackend`, `TensorStatsBackend`, `TensorLowStatsBackend`,
+`TensorAttentionBackend` and `TensorLowAttentionBackend` traits.
+They are implemented by `ComputeRuntime`, `compute-cuda::CudaRuntime` and
+`compute-mlx::MlxBackend`. Their allocation types remain backend-specific and
+foreign-runtime tensors are rejected. The common native adapter synchronizes
+at host readback; the recorded WGSL API also compiles for WASM and exposes
+nonblocking readback. Browser execution requires separate qualification.
+
+Coverage, numerical limits and hardware evidence are tracked in the
+[tensor backend design](../../docs/design/tensor-backends-2026-09-27.md).
+
+### f16 and bf16 storage
+
+`GpuLowTensor` stores two 16-bit values per u32 word. Its shape, strides and
+offsets count 16-bit elements; odd sizes add one padding lane. Empty storage
+uses the minimum four-byte GPU allocation. `allocation_bytes()` reports actual
+backing bytes. The existing `GpuArray<f32/u32>` and `GpuTensor` ABI is unchanged.
+
+`tensor_materialize_low` preserves raw bits. `tensor_cast_to_low` and
+`tensor_cast_to_f32` use integer GPU codecs with round-to-nearest, ties-to-even,
+signed zero, subnormals and signed infinity on overflow. Cast NaNs remain NaNs;
+raw upload/read and materialization also preserve their payload bits.
+
+`tensor_matmul_low_f32` decodes packed values during tiled loads and accumulates
+into f32 output. `tensor_matmul_low` adds one final rounding to the input dtype,
+using only an f32 result intermediate. Whole operands are never expanded to f32.
+Both support vectors, strided matrices, broadcast batches and empty contractions;
+mixed f16/bf16 operands are rejected. `_into` methods accept distinct contiguous
+outputs, including odd 16-bit offsets, and preserve neighboring storage lanes.
+
+The native `TensorLowBackend` adapter provides synchronous raw readback and
+convenient views/casts/products. Recorded programs compose these operations
+with the existing kernels. `upload_low_bits` uploads exact u16 payloads;
+`write_low_storage_bits` updates the full physical logical storage while keeping
+prepared bindings. Use `packed_words()` for recorded raw transfers.
+
+Capabilities report `LowStorage::Packed16x2` and direct matmul support for both
+formats. This path requires no optional `SHADER_F16` feature and makes no claim
+of native half arithmetic or Tensor Core use. See
+[low-precision contracts and exhaustive tests](benchmarks/tensor-low-contracts.md)
+and the [measured storage/execution tradeoff](benchmarks/tensor-low.md).
+
+`TensorLowOpsBackend` adds all nine unary and six binary operations, sum,
+product, min, max and mean. Arithmetic evaluates in f32 and rounds once to
+the input low dtype. Binary dtypes must match. Negate/Abs preserve exact finite
+bits; extrema retain subnormals and select -0 for Min and +0 for Max.
+Reductions load packed inputs directly, accumulate in f32, and return either
+f32 or one final low conversion. Arbitrary axes, strides and broadcast views
+are supported. Recorded `_into` operations preserve neighboring halfwords
+and validate output aliases before appending work. See the
+[arithmetic contracts](benchmarks/tensor-low-ops-contracts.md) and
+[matched benchmark](benchmarks/tensor-low-ops.md).
+
+`TensorLowIndexBackend` adds IEEE comparisons for every low bit pattern, raw
+selection, gather, stable compaction and prefix sums. Routing preserves NaN
+payloads, signed zeros and subnormals; comparisons treat both zeros as equal
+and NaNs as unordered. Gather counts invalid indices once and returns zero for
+invalid reads. Compaction returns fixed capacity with a GPU count and zero tail.
+Scans support every axis, inclusive/exclusive and forward/reverse traversal,
+with f32 accumulation before optional low rounding. Inputs remain packed through
+the first load; existing scan and indexing traversal code is reused. See
+[low indexing contracts](benchmarks/tensor-low-index-contracts.md) and
+[timings and memory accounting](benchmarks/tensor-low-index.md).
+
+`TensorLowScatterBackend` adds all five scatter modes with either low or f32
+output. Replace elects the last logical index and preserves raw low payloads;
+Min/Max preserve finite subnormals and signed-zero ties. Add/Multiply fold direct
+packed update loads into an f32 result accumulator, then round once for low
+output. F32 output retains the value before low rounding. The shared scatter
+traversal and owner/count helpers also support arbitrary strides, broadcast
+updates and replay. See [low scatter contracts](benchmarks/tensor-low-scatter-contracts.md).
+
+`TensorLowStatsBackend` adds all five statistical operations with f32 results
+and one final cast for low results. Packed input loads share the stable f32
+traversal and planner. Row summaries keep small BF16 coordinates in scaled
+units so meaningful normalization results survive input subnormal handling.
+No full f32 input, shifted-input or centered-input temporary is created.
+See [low statistics qualification](../../docs/qualification/tensor-low-statistics-2026-09-27.md).
+
+`TensorLowAttentionBackend` adds the same masked attention geometry for matching
+f16/BF16 Q/K/V, with f32 output or one final low cast. Additive masks remain f32.
+Direct packed loads reuse the tiled/split-key planner without full f32 operand
+copies or score matrices. Integer exponent scaling preserves normal products
+of BF16 subnormal operands and large finite partners. Both outputs have `_into`
+variants with ownership, alias, offset and transactional-recording checks.
+The direct path removes operand temporaries; measured speed depends on shape
+and dtype. See [matched timings](benchmarks/tensor-low-attention.md) and
+[low attention qualification](../../docs/qualification/tensor-low-attention-2026-09-27.md).
+
+### Statistics and attention
+
+Statistics use max-shifted exponentials and scaled centered moments, avoiding
+raw squared moments and overflowing uncentered sums. Softmax, log-softmax and
+layer norm preserve shape; logsumexp and moments reduce arbitrary axes with
+optional dimension retention. Gamma/beta transforms compose with binary ops.
+See [numerical contracts](benchmarks/tensor-normalization-contracts.md) and
+[softmax measurements](benchmarks/tensor-normalization.md).
+
+`tensor_attention(query, key, value, mask, options)` computes forward scaled
+dot-product attention entirely on the device. Inputs are matrices or
+`[..., heads, sequence, depth]`; Q heads can share grouped K/V heads. Mask
+types, scale and causal alignment come from `tensor_core::{AttentionMask,
+AttentionOptions}`. Fully closed rows return zeros. The `_into` form preserves
+caller-owned output offsets and validates aliases before recording.
+
+Streaming tiles avoid score/probability matrices. Long-key problems with few
+query rows split across workgroups and merge bounded partial results. The
+measured decode case is faster than public matmul/softmax composition; the
+measured prefill and wide-value cases remain slower. See the
+[attention contract](benchmarks/tensor-attention-contracts.md),
+[benchmark and limits](benchmarks/tensor-attention.md) and runnable
+[comparison](examples/bench_tensor_attention.rs).
+
 ## Typed array programs
 
 `ComputeRuntime` compiles reusable kernels and owns typed `GpuArray<f32>` and

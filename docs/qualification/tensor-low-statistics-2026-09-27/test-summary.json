@@ -1,0 +1,31 @@
+{
+  "gpu-regression": {
+    "passed": 279,
+    "failed": 0,
+    "ignored": 0,
+    "suites": 43,
+    "log": "docs/qualification/tensor-low-statistics-2026-09-27/gpu-regression.txt"
+  },
+  "contracts": {
+    "passed": 33,
+    "failed": 0,
+    "ignored": 0,
+    "suites": 10,
+    "log": "docs/qualification/tensor-low-statistics-2026-09-27/contracts.txt"
+  },
+  "mlx": {
+    "passed": 60,
+    "failed": 0,
+    "ignored": 0,
+    "suites": 13,
+    "log": "crates/compute-mlx/qualification/low-statistics-metal.txt"
+  },
+  "cuda-host": {
+    "host_tests_passed": 13,
+    "compile_doctests_passed": 1,
+    "native_fixture_skipped": 1,
+    "native_numerics_verified": false,
+    "log": "crates/compute-cuda/qualification/low-statistics-host-tests.txt",
+    "required_failure_log": "crates/compute-cuda/qualification/low-statistics-cuda-required.txt"
+  }
+}

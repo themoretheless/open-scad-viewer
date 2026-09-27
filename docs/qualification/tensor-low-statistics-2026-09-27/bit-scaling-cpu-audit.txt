@@ -1,0 +1,10 @@
+$ python3 docs/qualification/tensor-low-statistics-2026-09-27/audit_stats_scaling.py
+CPU emulation of statistics power-of-two helper formulas
+Python: 3.14.7
+Inspected shader: crates/compute-core/shaders/tensor_stats_common.wgsl
+SHA256: 5c795bdedd18468898361848bbd2948f5267160ed9597160fb162d0d4dba3aac
+PASS: 103,371 finite encodings x downshift powers 1/64/128
+PASS: 25,630 encodings with |x| < 2^-64, shifted up by 64
+PASS: 34 explicit ties/carry/signed-zero boundary assertions
+Scope: CPU formulas only; no WGSL/Metal execution or GPU qualification.
+Exit code: 0

@@ -1,0 +1,2 @@
+   Compiling low-attention-unpack-probe v0.1.0 (/tmp/low-attention-unpack-probe)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.25s

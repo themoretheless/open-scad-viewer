@@ -1,0 +1,21 @@
+{
+  "stage": "WGSL BF16 Multiply before normal-result protection",
+  "sources": [
+    {
+      "path": "crates/compute-core/shaders/tensor_low_arithmetic.wgsl",
+      "bytes": 2672,
+      "sha256": "1627f7eb60f579562f91fa62f165c6b77c389267af8e40c7eb48e93a437526fc"
+    },
+    {
+      "path": "crates/compute-core/shaders/float_power2.wgsl",
+      "bytes": 1501,
+      "sha256": "fafe1617acd6bb4f2de3f9e855967f3e2904993aefe05e0e958588efb815ff7d"
+    },
+    {
+      "path": "crates/compute-core/src/shaders.rs",
+      "bytes": 7682,
+      "sha256": "1bf3e9263c0014eb7b2df788c86a3aa203bddba849139e76be9dcd8b34f8d0a3"
+    }
+  ],
+  "note": "Source snapshot only; no pre-fix WGSL GPU execution was performed in this phase."
+}

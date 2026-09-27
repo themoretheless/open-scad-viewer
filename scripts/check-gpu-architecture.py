@@ -8,8 +8,11 @@ import sys
 ROOT = Path(__file__).resolve().parents[1]
 MANIFEST = ROOT / "crates" / "Cargo.toml"
 ALLOWED = {
+    "tensor-core": set(),
     "gpu-compute": set(),
-    "compute-core": {"gpu-compute"},
+    "compute-core": {"gpu-compute", "tensor-core"},
+    "compute-cuda": {"gpu-compute", "tensor-core"},
+    "compute-mlx": {"tensor-core"},
     "raster-core": {"gpu-compute"},
     "osv-math": {"compute-core", "gpu-compute"},
 }
@@ -36,18 +39,29 @@ def main():
                 problems.append(f"{name} must not depend on {target}")
             if name == "osv-math" and target in allowed and not dependency["optional"]:
                 problems.append(f"{name} -> {target} must remain optional")
-    tree = cargo(
-        "tree", "--offline", "-p", "osv-math", "--no-default-features",
-        "--edges", "normal", "--prefix", "none", "--format", "{p}",
-    )
-    dependency_names = {line.split()[0] for line in tree.splitlines() if line.strip()}
-    for forbidden in ["wgpu", "gpu-compute", "compute-core", "raster-core", "cudarc"]:
-        if forbidden in dependency_names:
-            problems.append(f"CPU-only osv-math unexpectedly includes {forbidden}")
+    def normal_dependencies(name):
+        tree = cargo(
+            "tree", "--offline", "-p", name, "--no-default-features",
+            "--edges", "normal", "--prefix", "none", "--format", "{p}",
+        )
+        return {line.split()[0] for line in tree.splitlines() if line.strip()} - {name}
+
+    gpu_dependencies = {
+        "wgpu", "gpu-compute", "compute-core", "compute-cuda", "compute-mlx",
+        "raster-core", "cudarc",
+    }
+    for name in ("osv-math", "tensor-core"):
+        forbidden = normal_dependencies(name) & gpu_dependencies
+        for dependency in sorted(forbidden):
+            problems.append(f"CPU-only {name} unexpectedly includes {dependency}")
+    # MLX owns its native runtime; pulling wgpu/CUDA through another layer would
+    # defeat independent backend loading and the small tensor contract crate.
+    for dependency in sorted(normal_dependencies("compute-mlx") & (gpu_dependencies - {"compute-mlx"})):
+        problems.append(f"MLX adapter unexpectedly includes {dependency}")
     if problems:
         print("\n".join(problems), file=sys.stderr)
         return 1
-    print("GPU dependency directions and CPU-only math contract: OK")
+    print("GPU dependency directions, backend isolation and CPU-only contracts: OK")
     return 0
 
 

@@ -1,0 +1,47 @@
+CUDA low scatter source/PTX/ABI audit — 2026-09-27
+
+Read-only verification of existing qualification artifacts; no compiler, Docker,
+CUDA driver/device test, or GPU workload was rerun for this audit.
+
+Snapshot: crates/compute-cuda/qualification/nvrtc-12.8.93-linux-aarch64-low-scatter/report.json
+Compiler: NVIDIA NVRTC 12.8.93, isolated Linux aarch64 container.
+
+CUDA_KERNEL_SOURCE concatenation order (production runtime.rs):
+ 1. kernels.cu: 2307 bytes; SHA256 1241ca021598caaf31b8907d71c8ab0a4a9fbda24a7f1a357d8aead8da8ff38f; MATCH
+ 2. indexing.cu: 9921 bytes; SHA256 745279f72e62e4b5592bd5a6a4f4179dbd87a66e4303ecf332af3194fccda493; MATCH
+ 3. reductions.cu: 5043 bytes; SHA256 688608a68819141cd95efe1a7d79416918ef99c8451bcdea15944445525969df; MATCH
+ 4. scatter.cu: 4324 bytes; SHA256 af931e38e2cbd2b7db490fdc4d3ea3f3b5d80a5a2f80e24ec08044d474c32e54; MATCH
+ 5. low_precision.cu: 2161 bytes; SHA256 12e423142e04a0a897fd9dd63f947aa3d62a5ad919542ee381e2878875f01243; MATCH
+ 6. statistics.cu: 5503 bytes; SHA256 83c64711f85bc0a3aeb5fc716b3fd160cc9c6c27945227b09b94aada2d52d5ef; MATCH
+ 7. attention.cu: 5744 bytes; SHA256 56a9e08efd5ba95fecbcecbef328d9a06b8a53fdc28a8119f71e3673fb91d887; MATCH
+ 8. low_ops.cu: 2447 bytes; SHA256 616a9368c49749dae01f77167071fba0d55dbb742817140fb54637282cd2f90b; MATCH
+ 9. low_indexing.cu: 2403 bytes; SHA256 80ef93191f0d26342f08e1926723985779a12b9b8b4ea14a207d973409b2db85; MATCH
+10. low_scatter.cu: 3343 bytes; SHA256 90716ff76f5dc93745c7d7c3079b9dd26a0c7f57e18cc27e17a36d3db5c29c42; MATCH
+
+Combined source: 43196 bytes; MATCH
+Combined SHA256: 2bfe38d408e0208dba2ddc484b60a5011b543b541724b9aa8b7b17afae9544da; MATCH
+
+PTX verification against current compile_nvrtc.py ABI and saved report:
+compute_70: status=0; 47 entries; exact entry-name and ordered parameter-type equality PASS
+  835185 bytes; SHA256 5ccb0076460823df530893f47d2ab0ee95dd855ef29e05336a79d4f309dd8d90; MATCH
+compute_80: status=0; 47 entries; exact entry-name and ordered parameter-type equality PASS
+  835185 bytes; SHA256 7b0347f43633687a4aaa1ccb0cd4f8cfa70732cd04b3cb88a4fb237f14228c79; MATCH
+compute_90: status=0; 47 entries; exact entry-name and ordered parameter-type equality PASS
+  835249 bytes; SHA256 d786499938b20ab09672d27be06fe4f6c19929e96842a6aa812874680614004b; MATCH
+compute_120: status=0; 47 entries; exact entry-name and ordered parameter-type equality PASS
+  1754569 bytes; SHA256 b9eacb948f82503efff3e033ee134867ae2b64ca8f447fe2c593849f9d9933ab; MATCH
+
+New scatter entry ABIs (parameter order, pointers represented by u64):
+scatter_low_raw: u64, u64, u64, u64, u64, u64, u64, u64, u64, u32, u32, u64, u64, u32
+scatter_low_f32: u64, u64, u64, u64, u64, u64, u64, u64, u64, u32, u32, u64, u64, u32, u32
+
+Compilation options: --ftz=false --prec-sqrt=true --prec-div=true --fmad=false
+and the respective --gpu-architecture=compute_<target>.
+
+Limit: this proves current CUDA source matches successfully compiled PTX and the
+declared kernel parameter ABI. It does not prove NVIDIA execution, device memory
+safety, numerical correctness on hardware, cuBLAS execution, or performance.
+NVIDIA driver/device is unavailable on this host; the retained required-device
+failure is crates/compute-cuda/qualification/low-scatter-cuda-required.txt.
+PTX files are local ignored build artifacts; report.json retains their hashes,
+entry names, ordered parameter types, and compiler status.

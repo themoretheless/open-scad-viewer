@@ -1,0 +1,33 @@
+[
+  {
+    "name": "wgsl-metal",
+    "command": [
+      "cargo",
+      "test",
+      "--offline",
+      "--locked",
+      "--manifest-path",
+      "crates/Cargo.toml",
+      "-p",
+      "gpu-compute",
+      "-p",
+      "compute-core",
+      "-p",
+      "raster-core",
+      "-p",
+      "osv-math",
+      "--features",
+      "osv-math/gpu",
+      "--",
+      "--test-threads=1"
+    ],
+    "env": {
+      "COMPUTE_REQUIRE_GPU": "1",
+      "COMPUTE_REQUIRE_TIMESTAMPS": "1",
+      "COMPUTE_REQUIRE_SUBGROUPS": "1"
+    },
+    "exit_code": 0,
+    "elapsed_seconds": 46.828,
+    "log": "wgsl-metal.txt"
+  }
+]
