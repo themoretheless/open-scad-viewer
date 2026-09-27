@@ -3,11 +3,13 @@ import {spawnSync} from 'node:child_process'
 import {mkdirSync, readFileSync, writeFileSync} from 'node:fs'
 import {resolve} from 'node:path'
 import {packStampHit, writePackStamp} from './wasm-pack-stamp.mjs'
+import {reproducibleCargo} from './reproducible-cargo.mjs'
 
 /** Build a compression-only bootstrap; it has no geometry dependencies. */
 export function buildWasmBrotli(root, cargoTarget) {
-  const result = spawnSync('cargo', ['build', '--locked', '--release', '--config', 'profile.release.strip="symbols"', '--config', 'profile.release.codegen-units=1', '--config', 'profile.release.panic="abort"', '--target', 'wasm32-unknown-unknown', '--manifest-path', 'crates/wasm-brotli/Cargo.toml'], {
-    cwd: root, stdio: 'inherit', env: {...process.env, CARGO_TARGET_DIR: cargoTarget},
+  const reproducible = reproducibleCargo(root)
+  const result = spawnSync('cargo', ['build', '--locked', '--release', '--config', 'profile.release.strip="symbols"', '--config', 'profile.release.codegen-units=1', '--config', 'profile.release.panic="abort"', ...reproducible.args, '--target', 'wasm32-unknown-unknown', '--manifest-path', 'crates/wasm-brotli/Cargo.toml'], {
+    cwd: root, stdio: 'inherit', env: {...process.env, ...reproducible.env, CARGO_TARGET_DIR: cargoTarget},
   })
   if (result.error) throw result.error
   if (result.status !== 0) throw new Error(`Brotli decoder build failed (${result.status})`)
