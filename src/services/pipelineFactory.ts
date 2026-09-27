@@ -51,7 +51,10 @@ export class PipelineFactory {
   envBGL!: GPUBindGroupLayout
   /** group(2)/group(1): key-light depth map + comparison sampler. */
   shadowBGL!: GPUBindGroupLayout
+  /** Grid: scene + shadow group(1). */
   sceneLayout!: GPUPipelineLayout
+  /** Line/overlay pipelines: scene group only (they declare no group(1)). */
+  sceneOnlyLayout!: GPUPipelineLayout
   objectLayout!: GPUPipelineLayout
   /** Depth-only shadow pass: scene+object groups only, no shadow group. */
   shadowObjectLayout!: GPUPipelineLayout
@@ -101,7 +104,11 @@ export class PipelineFactory {
       { binding: 0, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'depth' } },
       { binding: 1, visibility: GPUShaderStage.FRAGMENT, sampler: { type: 'comparison' } },
     ] })
+    // Every layout group must be bound before each draw. Only the grid samples
+    // the shadow map among scene-kind shaders; line and overlay pipelines are
+    // drawn after object groups occupy group(1), so they get a scene-only layout.
     this.sceneLayout = dev.createPipelineLayout({ bindGroupLayouts: [this.sceneBGL, this.shadowBGL] })
+    this.sceneOnlyLayout = dev.createPipelineLayout({ bindGroupLayouts: [this.sceneBGL] })
     this.objectLayout = dev.createPipelineLayout({ bindGroupLayouts: [this.sceneBGL, this.objBGL, this.shadowBGL] })
     this.shadowObjectLayout = dev.createPipelineLayout({ bindGroupLayouts: [this.sceneBGL, this.objBGL] })
     this.matcapObjectLayout = dev.createPipelineLayout({ bindGroupLayouts: [this.sceneBGL, this.objBGL, this.matcapBGL] })
@@ -176,6 +183,9 @@ export class PipelineFactory {
     if (variant !== 'uniform' && !spec.supportsVariants) {
       throw new Error(`Shader '${id}' does not support the '${variant}' variant`)
     }
+    if (variant === 'immediate' && !this.immediateObjectLayout) {
+      throw new Error(`Device does not support the 'immediate' variant (no immediate address space)`)
+    }
     const blend = flavor.blend ?? spec.blend
     const depth = flavor.depth ?? spec.depth
     const topology = flavor.topology ?? spec.topology
@@ -191,7 +201,7 @@ export class PipelineFactory {
         : variant === 'instanced' ? this.instanceLayout
         : variant === 'immediate' ? this.immediateObjectLayout!
         : this.objectLayout
-      : this.sceneLayout
+      : spec.usesShadowBinding ? this.sceneLayout : this.sceneOnlyLayout
     const pipeline = dev.createRenderPipeline(depthOnly ? {
       // Depth-only shadow-map pass: no color targets, no fragment stage;
       // renders mesh depth from the key light into a depth32float texture.

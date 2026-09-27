@@ -408,6 +408,9 @@ export class WebGPURenderer {
 
   private raf = 0
   private frameRetryCount = 0
+  /** Frame counter for async validation results; a late clean result must not clear a newer failure. */
+  private frameSequence = 0
+  private lastFailedFrame = 0
   private dead = true
   private initialized = false
   private lost = false
@@ -505,6 +508,12 @@ export class WebGPURenderer {
           reason: info.reason,
           message: info.message,
         })
+      })
+      // Errors outside the per-frame validation scope (pipeline creation,
+      // texture uploads) would otherwise only reach the console.
+      device.addEventListener?.('uncapturederror', event => {
+        if (this.dev !== device || this.dead) return
+        this.reportError('frame', new Error((event as GPUUncapturedErrorEvent).error.message))
       })
 
       this.buildPipelines()
@@ -1807,7 +1816,11 @@ export class WebGPURenderer {
     // when the section plane clips and surfaces are on screen (opaque draws);
     // xray routes everything through the transparent pass, so it skips caps.
     if (this.sectionEnabled && this.displayMode !== 'xray' && this.opaqueDraws.length) {
-      this.sectionCapBundle.draw(pass, dev, this.fmt, this.getRenderPipeline('meshSectionCap'), this.sceneBG, this.opaqueDraws)
+      // The cap layout still has the inert group(2); bind it explicitly: bundles
+      // start with empty state, and after matcap/PBR surfaces the pass holds
+      // an incompatible group(2).
+      this.sectionCapBundle.draw(pass, dev, this.fmt, this.getRenderPipeline('meshSectionCap'), this.sceneBG, this.opaqueDraws,
+        false, this.extraBindGroupForShader('meshSectionCap'))
     }
 
     pass.setPipeline(this.meshTransparentPipeline())
@@ -1864,6 +1877,9 @@ export class WebGPURenderer {
         pass.setPipeline(this.deepMeshPipeline())
         pass.setBindGroup(0, this.sceneBG)
         pass.setBindGroup(1, selectedMesh.bg)
+        // Transparent matcap/PBR draws may have left an incompatible group(2).
+        const deepGroup = this.extraBindGroupForShader('deepMesh')
+        if (deepGroup) pass.setBindGroup(2, deepGroup)
         this.setObjectStyleImmediate(pass, selectedMesh)
         pass.setVertexBuffer(0, selectedMesh.vb)
         pass.setVertexBuffer(1, selectedMesh.morphSlot!)
@@ -1886,8 +1902,9 @@ export class WebGPURenderer {
       pass.draw(this.selectionFaceSlot.count)
     }
 
-    if (transitioning || !this.edgeInstances.draw(pass, dev, this.pipelines.instanceBGL, this.getRenderPipeline('edge', { variant: 'instanced' }), this.sceneBG, this.edgeDraws, true)) {
-      this.edgeBundle.draw(pass, dev, this.fmt, this.getRenderPipeline('edge'), this.sceneBG, this.edgeDraws, true)
+    const edgeGroup = this.extraBindGroupForShader('edge')
+    if (transitioning || !this.edgeInstances.draw(pass, dev, this.pipelines.instanceBGL, this.getRenderPipeline('edge', { variant: 'instanced' }), this.sceneBG, this.edgeDraws, true, edgeGroup)) {
+      this.edgeBundle.draw(pass, dev, this.fmt, this.getRenderPipeline('edge'), this.sceneBG, this.edgeDraws, true, edgeGroup)
     }
 
     if (deepSelectedIndex !== null) {
@@ -1896,6 +1913,8 @@ export class WebGPURenderer {
         pass.setPipeline(this.deepEdgePipeline())
         pass.setBindGroup(0, this.sceneBG)
         pass.setBindGroup(1, selectedMesh.bg)
+        const deepGroup = this.extraBindGroupForShader('edge')
+        if (deepGroup) pass.setBindGroup(2, deepGroup)
         this.setObjectStyleImmediate(pass, selectedMesh)
         pass.setVertexBuffer(0, selectedMesh.vb)
         pass.setVertexBuffer(1, selectedMesh.morphSlot!)
@@ -2032,22 +2051,51 @@ export class WebGPURenderer {
     this.raf = 0
     if (this.dead || this.lost || !this.initialized) return
     this.notifyCameraChange()
+    // WebGPU validation errors (invalid pipeline, missing bind group, ...) are
+    // asynchronous: encoding succeeds and the whole frame is silently dropped
+    // while the canvas keeps the previous image. A per-frame validation scope
+    // turns them into a frame error; only a frame that validated clears one.
+    const device = this.dev
+    const scoped = typeof device?.pushErrorScope === 'function'
+    if (scoped) device!.pushErrorScope('validation')
+    const frame = ++this.frameSequence
+    let rendered = false
     try {
       const animating = this.advanceGeometryAnimation(performance.now())
       this.render()
+      rendered = true
       if (animating) this.requestRender(false)
       this.frameRetryCount = 0
-      if (this.status.status === 'error' && this.status.phase === 'frame') {
-        this.updateStatus({ status: 'ready' })
-      }
+      if (!scoped) this.clearFrameError()
     } catch (error) {
       // A lost/outdated surface can still be retried on the next invalidation,
       // but the failure must remain observable to both UI and developers.
+      this.lastFailedFrame = frame
       this.reportError('frame', error)
       if (this.frameRetryCount < 1) {
         this.frameRetryCount++
         this.requestRender(false)
       }
+    } finally {
+      if (scoped) {
+        void device!.popErrorScope().then(gpuError => {
+          if (device !== this.dev || this.dead) return
+          // No retry: a validation error reproduces on every frame until the
+          // state that caused it changes.
+          if (gpuError) {
+            this.lastFailedFrame = Math.max(this.lastFailedFrame, frame)
+            this.reportError('frame', new Error(gpuError.message))
+          } else if (rendered && this.lastFailedFrame < frame) {
+            this.clearFrameError()
+          }
+        }, () => { /* Device lost: reported through device.lost. */ })
+      }
+    }
+  }
+
+  private clearFrameError() {
+    if (this.status.status === 'error' && this.status.phase === 'frame') {
+      this.updateStatus({ status: 'ready' })
     }
   }
 
