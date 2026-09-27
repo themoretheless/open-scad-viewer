@@ -39,7 +39,7 @@ export function directCornerTool(sketch: DirectSketch, vertex: number, radius: n
   const arc=Array.from({length:segments+1},(_,i):Point2=>i===0?a:i===segments?b:[center[0]+radius*Math.cos(start+sweep*i/segments),center[1]+radius*Math.sin(start+sweep*i/segments)])
   const points=[...p.slice(0,vertex),...arc,...p.slice(vertex+1)].map(p=>[...p] as Point2)
   validateContour(points)
-  return {...bakeSketch(sketch),points}
+  const result={...bakeSketch(sketch),points};delete result.dimensions;return result
 }
 
 export interface DirectRevolveOptions { axis: 'x'|'y'; offset: number; angle: number; segments: number }

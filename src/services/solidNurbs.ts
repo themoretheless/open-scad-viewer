@@ -13,6 +13,7 @@ export interface SolidNurbsCurve {
   id: string
   name: string
   curve: NurbsCurve
+  bridge?: { sourceA: string; sourceB: string; endA: NurbsCurveEnd; endB: NurbsCurveEnd; tension: number }
 }
 
 export interface SolidNurbsSurface {

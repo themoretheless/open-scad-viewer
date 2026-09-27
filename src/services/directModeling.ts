@@ -1,3 +1,4 @@
+import { sketchDimensions, type SketchDimension } from './directDimensions'
 import {callGeometryRust} from './geometry/kernel'
 import { MAX_DOCUMENT_CHARACTERS } from './directDocumentLimits'
 export { MAX_DOCUMENT_CHARACTERS } from './directDocumentLimits'
@@ -11,7 +12,7 @@ import type { NurbsBrep } from './geometry/brep'
 import { BrepInspectionCache } from './brepInspectionCache'
 
 export type Point2 = [number, number]
-export interface DirectSketch { id: string; name: string; points: Point2[]; closed: boolean; analytic?: AnalyticCurve; plane?: SketchPlane; supportBodyId?: string }
+export interface DirectSketch { id: string; name: string; points: Point2[]; closed: boolean; analytic?: AnalyticCurve; plane?: SketchPlane; supportBodyId?: string; dimensions?: SketchDimension[] }
 /** `group` names a flat, optional grouping shown in the scene list. Bodies built from
  * source share one, so a rebuild can be recognised, replaced or deleted as a unit. */
 export interface DirectBody { id: string; name: string; mesh: PolygonMesh; brep?: NurbsBrep; group?: string }
@@ -83,6 +84,10 @@ function* directDocumentValidation(text: string): Generator<void, DirectDocument
       if (![origin,u,v].every(p=>Array.isArray(p)&&p.length===3&&p.every(finite)) || Math.abs(dot3(u,u)-1)>1e-6 || Math.abs(dot3(v,v)-1)>1e-6 || Math.abs(dot3(u,v))>1e-6) throw new Error('Invalid sketch workplane.')
     }
     if (typeof s.closed !== 'boolean' || !Array.isArray(s.points) || s.points.length < 2 || s.points.length > 512 || (s.closed && s.points.length < 3) || !s.points.every(p => Array.isArray(p) && p.length === 2 && p.every(finite))) throw new Error('Invalid sketch.')
+    if (s.dimensions !== undefined) {
+      if (!Array.isArray(s.dimensions)) throw Error('Invalid sketch dimensions.')
+      sketchDimensions(s)
+    }
     yield
   }
   for (const b of d.bodies) {

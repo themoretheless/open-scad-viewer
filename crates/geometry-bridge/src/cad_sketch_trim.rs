@@ -119,6 +119,7 @@ pub fn trim(v: Value) -> Result<Value> {
             .ok_or_else(|| input("Expected sketch record"))?
             .clone();
         s.remove("analytic");
+        s.remove("dimensions");
         s.insert(
             "id".into(),
             encode(if result.is_empty() {
