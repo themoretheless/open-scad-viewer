@@ -1,3 +1,4 @@
+use raster_core::chunks::expand_chunks;
 use raster_core::shaders::{
     DEEP_MESH_WGSL, EDGE_WGSL, GRID_WGSL, LINE_WGSL, MESH_MATCAP_WGSL, MESH_PBR_WGSL,
     MESH_SECTION_CAP_WGSL, MESH_SHADOW_WGSL, MESH_TOON_WGSL, MESH_UNLIT_WGSL, MESH_WGSL,
@@ -20,6 +21,12 @@ fn validate(name: &str, source: &str) {
         .unwrap_or_else(|error| panic!("{name}: WGSL validation failed: {error}"));
 }
 
+/// The raw sources carry `// @chunk` markers; validation and variant
+/// transforms always run over the EXPANDED text (same as codegen emits).
+fn expanded(source: &str) -> String {
+    expand_chunks(source).into_owned()
+}
+
 #[test]
 fn shipped_shaders_validate_with_naga() {
     for (name, source) in [
@@ -36,20 +43,20 @@ fn shipped_shaders_validate_with_naga() {
         ("selection_overlay", SELECTION_OVERLAY_WGSL),
         ("mesh_shadow", MESH_SHADOW_WGSL),
     ] {
-        validate(name, source);
+        validate(name, &expanded(source));
     }
 }
 
 #[test]
 fn instanced_variants_validate_with_naga() {
-    validate("instanced_mesh", &instanced_object_shader(MESH_WGSL, VertexOutput::V));
-    validate("instanced_mesh_pbr", &instanced_object_shader(MESH_PBR_WGSL, VertexOutput::V));
-    validate("instanced_mesh_matcap", &instanced_object_shader(MESH_MATCAP_WGSL, VertexOutput::V));
-    validate("instanced_mesh_toon", &instanced_object_shader(MESH_TOON_WGSL, VertexOutput::V));
-    validate("instanced_mesh_unlit", &instanced_object_shader(MESH_UNLIT_WGSL, VertexOutput::V));
-    validate("instanced_mesh_section_cap", &instanced_object_shader(MESH_SECTION_CAP_WGSL, VertexOutput::V));
-    validate("instanced_deep_mesh", &instanced_object_shader(DEEP_MESH_WGSL, VertexOutput::V));
-    validate("instanced_edge", &instanced_object_shader(EDGE_WGSL, VertexOutput::EdgeV));
+    validate("instanced_mesh", &instanced_object_shader(&expanded(MESH_WGSL), VertexOutput::V));
+    validate("instanced_mesh_pbr", &instanced_object_shader(&expanded(MESH_PBR_WGSL), VertexOutput::V));
+    validate("instanced_mesh_matcap", &instanced_object_shader(&expanded(MESH_MATCAP_WGSL), VertexOutput::V));
+    validate("instanced_mesh_toon", &instanced_object_shader(&expanded(MESH_TOON_WGSL), VertexOutput::V));
+    validate("instanced_mesh_unlit", &instanced_object_shader(&expanded(MESH_UNLIT_WGSL), VertexOutput::V));
+    validate("instanced_mesh_section_cap", &instanced_object_shader(&expanded(MESH_SECTION_CAP_WGSL), VertexOutput::V));
+    validate("instanced_deep_mesh", &instanced_object_shader(&expanded(DEEP_MESH_WGSL), VertexOutput::V));
+    validate("instanced_edge", &instanced_object_shader(&expanded(EDGE_WGSL), VertexOutput::EdgeV));
 }
 
 #[test]
@@ -130,7 +137,7 @@ fn uniform_layout_matches_the_wgsl_contract() {
 #[test]
 fn immediate_variant_serves_style_from_immediate_address_space() {
     for source in [MESH_WGSL, MESH_PBR_WGSL, MESH_MATCAP_WGSL, MESH_TOON_WGSL, MESH_UNLIT_WGSL, MESH_SECTION_CAP_WGSL, DEEP_MESH_WGSL, EDGE_WGSL] {
-        let variant = immediate_object_shader(source);
+        let variant = immediate_object_shader(&expanded(source));
         assert!(variant.starts_with("requires immediate_address_space;"));
         assert!(variant.contains("var<immediate> im_style: vec4f;"));
         assert!(!variant.contains("ob.style"));
@@ -141,7 +148,7 @@ fn immediate_variant_serves_style_from_immediate_address_space() {
 #[test]
 fn instanced_variant_reads_per_instance_records() {
     for (source, output) in [(MESH_WGSL, VertexOutput::V), (EDGE_WGSL, VertexOutput::EdgeV)] {
-        let variant = instanced_object_shader(source, output);
+        let variant = instanced_object_shader(&expanded(source), output);
         assert!(variant.contains("var<storage, read> objects: array<Obj>;"));
         assert!(variant.contains("@builtin(instance_index) instance: u32"));
         assert!(variant.contains("let ob = objects[instance];"));
@@ -190,4 +197,22 @@ fn generated_variant_goldens_match_the_rust_variants() {
         "{} is stale; regenerate with the `wgsl_export` bin",
         path.display()
     );
+}
+
+#[test]
+fn generated_layouts_match_the_layout_table() {
+    // Both layout mirrors derive from the single table in layout.rs.
+    for (path, generate) in [
+        (raster_core::codegen::layouts_ts_path(), raster_core::codegen::generate_layouts_ts as fn() -> String),
+        (raster_core::codegen::layouts_rs_path(), raster_core::codegen::generate_layouts_rs as fn() -> String),
+    ] {
+        let on_disk = std::fs::read_to_string(&path)
+            .unwrap_or_else(|error| panic!("generated layouts missing at {}: {error}", path.display()));
+        assert_eq!(
+            on_disk,
+            generate(),
+            "{} is stale; regenerate with the `wgsl_export` bin",
+            path.display()
+        );
+    }
 }

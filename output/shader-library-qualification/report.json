@@ -1,332 +1,957 @@
 {
-  "startedAt": "2026-09-26T18:38:50.865Z",
-  "configs": [
-    {
-      "name": "model-phong",
-      "model": "phong",
-      "stats": {
-        "mean": 0,
-        "stddev": 0,
-        "nonBgFraction": 0
+  "startedAt": "2026-09-26T23:14:07.493Z",
+  "stock": {
+    "configs": [
+      {
+        "name": "model-phong",
+        "model": "phong",
+        "stats": {
+          "mean": 34.19555862939585,
+          "stddev": 26.630819418235255,
+          "nonBgFraction": 0.2524869791666667,
+          "background": [
+            23,
+            23,
+            28
+          ]
+        },
+        "screenshot": "output/shader-library-qualification/stock-model-phong.png",
+        "pass": true
       },
-      "screenshot": "output/shader-library-qualification/model-phong.png",
-      "pass": false
+      {
+        "name": "model-pbr",
+        "model": "pbr",
+        "stats": {
+          "mean": 38.7982617921192,
+          "stddev": 32.3496876316258,
+          "nonBgFraction": 0.2524869791666667,
+          "background": [
+            23,
+            23,
+            28
+          ]
+        },
+        "screenshot": "output/shader-library-qualification/stock-model-pbr.png",
+        "pass": true
+      },
+      {
+        "name": "model-matcap",
+        "model": "matcap",
+        "stats": {
+          "mean": 39.96981860462584,
+          "stddev": 37.253301899723155,
+          "nonBgFraction": 0.2524869791666667,
+          "background": [
+            23,
+            23,
+            28
+          ]
+        },
+        "screenshot": "output/shader-library-qualification/stock-model-matcap.png",
+        "pass": true
+      },
+      {
+        "name": "model-toon",
+        "model": "toon",
+        "stats": {
+          "mean": 32.40445998355681,
+          "stddev": 22.90478486667164,
+          "nonBgFraction": 0.2524869791666667,
+          "background": [
+            23,
+            23,
+            28
+          ]
+        },
+        "screenshot": "output/shader-library-qualification/stock-model-toon.png",
+        "pass": true
+      },
+      {
+        "name": "model-unlit",
+        "model": "unlit",
+        "stats": {
+          "mean": 44.18799712091558,
+          "stddev": 45.04029441456682,
+          "nonBgFraction": 0.2524869791666667,
+          "background": [
+            23,
+            23,
+            28
+          ]
+        },
+        "screenshot": "output/shader-library-qualification/stock-model-unlit.png",
+        "pass": true
+      },
+      {
+        "name": "model-pbr-metal",
+        "model": "pbr",
+        "material": {
+          "metallic": 1,
+          "roughness": 0.3
+        },
+        "stats": {
+          "mean": 37.214943727680485,
+          "stddev": 29.0938400851563,
+          "nonBgFraction": 0.2524869791666667,
+          "background": [
+            23,
+            23,
+            28
+          ]
+        },
+        "screenshot": "output/shader-library-qualification/stock-model-pbr-metal.png",
+        "pass": true
+      },
+      {
+        "name": "matcap-procedural",
+        "model": "matcap",
+        "matcap": "procedural",
+        "stats": {
+          "mean": 39.30715394447099,
+          "stddev": 35.08423512408642,
+          "nonBgFraction": 0.2524869791666667,
+          "background": [
+            23,
+            23,
+            28
+          ]
+        },
+        "screenshot": "output/shader-library-qualification/stock-matcap-procedural.png",
+        "pass": true
+      },
+      {
+        "name": "matcap-studio",
+        "model": "matcap",
+        "matcap": "studio",
+        "stats": {
+          "mean": 38.5076212178996,
+          "stddev": 33.42103312242679,
+          "nonBgFraction": 0.2524869791666667,
+          "background": [
+            23,
+            23,
+            28
+          ]
+        },
+        "screenshot": "output/shader-library-qualification/stock-matcap-studio.png",
+        "pass": true
+      },
+      {
+        "name": "matcap-clay",
+        "model": "matcap",
+        "matcap": "clay",
+        "stats": {
+          "mean": 37.453482085112874,
+          "stddev": 30.811732887891075,
+          "nonBgFraction": 0.2524869791666667,
+          "background": [
+            23,
+            23,
+            28
+          ]
+        },
+        "screenshot": "output/shader-library-qualification/stock-matcap-clay.png",
+        "pass": true
+      },
+      {
+        "name": "matcap-chrome",
+        "model": "matcap",
+        "matcap": "chrome",
+        "stats": {
+          "mean": 30.65540315933683,
+          "stddev": 23.246988993292664,
+          "nonBgFraction": 0.2524869791666667,
+          "background": [
+            23,
+            23,
+            28
+          ]
+        },
+        "screenshot": "output/shader-library-qualification/stock-matcap-chrome.png",
+        "pass": true
+      },
+      {
+        "name": "matcap-pearl",
+        "model": "matcap",
+        "matcap": "pearl",
+        "stats": {
+          "mean": 33.55552015672681,
+          "stddev": 22.51562313235958,
+          "nonBgFraction": 0.2524869791666667,
+          "background": [
+            23,
+            23,
+            28
+          ]
+        },
+        "screenshot": "output/shader-library-qualification/stock-matcap-pearl.png",
+        "pass": true
+      },
+      {
+        "name": "env-none",
+        "model": "pbr",
+        "env": "none",
+        "stats": {
+          "mean": 37.214943727680485,
+          "stddev": 29.0938400851563,
+          "nonBgFraction": 0.2524869791666667,
+          "background": [
+            23,
+            23,
+            28
+          ]
+        },
+        "screenshot": "output/shader-library-qualification/stock-env-none.png",
+        "pass": true
+      },
+      {
+        "name": "env-studio-softbox",
+        "model": "pbr",
+        "env": "studio-softbox",
+        "stats": {
+          "mean": 39.35944449201435,
+          "stddev": 33.68334209410431,
+          "nonBgFraction": 0.2524869791666667,
+          "background": [
+            23,
+            23,
+            28
+          ]
+        },
+        "screenshot": "output/shader-library-qualification/stock-env-studio-softbox.png",
+        "pass": true
+      },
+      {
+        "name": "env-outdoor-sky",
+        "model": "pbr",
+        "env": "outdoor-sky",
+        "stats": {
+          "mean": 39.254604785619485,
+          "stddev": 33.515966897056416,
+          "nonBgFraction": 0.2524869791666667,
+          "background": [
+            23,
+            23,
+            28
+          ]
+        },
+        "screenshot": "output/shader-library-qualification/stock-env-outdoor-sky.png",
+        "pass": true
+      },
+      {
+        "name": "env-workshop",
+        "model": "pbr",
+        "env": "workshop",
+        "stats": {
+          "mean": 39.012980616353474,
+          "stddev": 32.95521157348619,
+          "nonBgFraction": 0.2524869791666667,
+          "background": [
+            23,
+            23,
+            28
+          ]
+        },
+        "screenshot": "output/shader-library-qualification/stock-env-workshop.png",
+        "pass": true
+      },
+      {
+        "name": "shadows-off",
+        "model": "phong",
+        "stats": {
+          "mean": 34.07638154085515,
+          "stddev": 25.97548984096441,
+          "nonBgFraction": 0.2524869791666667,
+          "background": [
+            23,
+            23,
+            28
+          ]
+        },
+        "screenshot": "output/shader-library-qualification/stock-shadows-off.png",
+        "pass": true
+      },
+      {
+        "name": "shadows-on",
+        "model": "phong",
+        "shadows": true,
+        "stats": {
+          "mean": 31.96753057145934,
+          "stddev": 26.15867575894523,
+          "nonBgFraction": 0.250390625,
+          "background": [
+            23,
+            23,
+            28
+          ]
+        },
+        "screenshot": "output/shader-library-qualification/stock-shadows-on.png",
+        "pass": true
+      },
+      {
+        "name": "shadows-on-pbr-env",
+        "model": "pbr",
+        "env": "studio-softbox",
+        "shadows": true,
+        "stats": {
+          "mean": 38.779093721175315,
+          "stddev": 32.76409951086447,
+          "nonBgFraction": 0.250390625,
+          "background": [
+            23,
+            23,
+            28
+          ]
+        },
+        "screenshot": "output/shader-library-qualification/stock-shadows-on-pbr-env.png",
+        "pass": true
+      },
+      {
+        "name": "theme-default",
+        "theme": "default",
+        "stats": {
+          "mean": 34.07638154085515,
+          "stddev": 25.97548984096441,
+          "nonBgFraction": 0.2524869791666667,
+          "background": [
+            23,
+            23,
+            28
+          ]
+        },
+        "screenshot": "output/shader-library-qualification/stock-theme-default.png",
+        "pass": true
+      },
+      {
+        "name": "theme-dark-contrast",
+        "theme": "dark-contrast",
+        "stats": {
+          "mean": 26.395807198423636,
+          "stddev": 29.16796719040457,
+          "nonBgFraction": 0.25985026041666665,
+          "background": [
+            13,
+            13,
+            18
+          ]
+        },
+        "screenshot": "output/shader-library-qualification/stock-theme-dark-contrast.png",
+        "pass": true
+      },
+      {
+        "name": "theme-light",
+        "theme": "light",
+        "stats": {
+          "mean": 209.7592422748787,
+          "stddev": 57.42407545800349,
+          "nonBgFraction": 0.25195638020833333,
+          "background": [
+            235,
+            235,
+            240
+          ]
+        },
+        "screenshot": "output/shader-library-qualification/stock-theme-light.png",
+        "pass": true
+      },
+      {
+        "name": "section-off",
+        "model": "phong",
+        "stats": {
+          "mean": 34.07638154085515,
+          "stddev": 25.97548984096441,
+          "nonBgFraction": 0.2524869791666667,
+          "background": [
+            23,
+            23,
+            28
+          ]
+        },
+        "screenshot": "output/shader-library-qualification/stock-section-off.png",
+        "pass": true
+      },
+      {
+        "name": "section-on",
+        "model": "phong",
+        "section": true,
+        "stats": {
+          "mean": 39.27053989695497,
+          "stddev": 41.78913887371335,
+          "nonBgFraction": 0.2524869791666667,
+          "background": [
+            23,
+            23,
+            28
+          ]
+        },
+        "screenshot": "output/shader-library-qualification/stock-section-on.png",
+        "pass": true
+      },
+      {
+        "name": "section-on-toon",
+        "model": "toon",
+        "section": true,
+        "stats": {
+          "mean": 37.78737736309734,
+          "stddev": 40.197614005610525,
+          "nonBgFraction": 0.2524869791666667,
+          "background": [
+            23,
+            23,
+            28
+          ]
+        },
+        "screenshot": "output/shader-library-qualification/stock-section-on-toon.png",
+        "pass": true
+      },
+      {
+        "name": "instanced-phong",
+        "model": "phong",
+        "instanced": true,
+        "stats": {
+          "mean": 36.27082521857861,
+          "stddev": 30.089939917116084,
+          "nonBgFraction": 0.29986328125,
+          "background": [
+            23,
+            23,
+            28
+          ]
+        },
+        "screenshot": "output/shader-library-qualification/stock-instanced-phong.png",
+        "pass": true
+      },
+      {
+        "name": "instanced-toon",
+        "model": "toon",
+        "instanced": true,
+        "stats": {
+          "mean": 34.40212453819752,
+          "stddev": 26.288435159872726,
+          "nonBgFraction": 0.29986328125,
+          "background": [
+            23,
+            23,
+            28
+          ]
+        },
+        "screenshot": "output/shader-library-qualification/stock-instanced-toon.png",
+        "pass": true
+      }
+    ],
+    "pipelines": {
+      "mesh/uniform": "ok",
+      "mesh/immediate": "ok",
+      "mesh/instanced": "ok",
+      "meshPbr/uniform": "ok",
+      "meshPbr/immediate": "unsupported",
+      "meshPbr/instanced": "unsupported",
+      "meshMatcap/uniform": "ok",
+      "meshMatcap/immediate": "unsupported",
+      "meshMatcap/instanced": "unsupported",
+      "meshToon/uniform": "ok",
+      "meshToon/immediate": "ok",
+      "meshToon/instanced": "ok",
+      "meshUnlit/uniform": "ok",
+      "meshUnlit/immediate": "ok",
+      "meshUnlit/instanced": "ok"
     },
-    {
-      "name": "model-pbr",
-      "model": "pbr",
-      "stats": {
-        "mean": 0,
-        "stddev": 0,
-        "nonBgFraction": 0
-      },
-      "screenshot": "output/shader-library-qualification/model-pbr.png",
-      "pass": false
+    "shaderDiagnostics": {
+      "mesh/uniform": "ok",
+      "mesh/immediate": "ok",
+      "mesh/instanced": "ok",
+      "meshPbr/uniform": "ok",
+      "meshPbr/immediate": "ok",
+      "meshPbr/instanced": "ok",
+      "meshMatcap/uniform": "ok",
+      "meshMatcap/immediate": "ok",
+      "meshMatcap/instanced": "ok",
+      "meshToon/uniform": "ok",
+      "meshToon/immediate": "ok",
+      "meshToon/instanced": "ok",
+      "meshUnlit/uniform": "ok",
+      "meshUnlit/immediate": "ok",
+      "meshUnlit/instanced": "ok"
     },
-    {
-      "name": "model-matcap",
-      "model": "matcap",
-      "stats": {
-        "mean": 0,
-        "stddev": 0,
-        "nonBgFraction": 0
+    "statusEvents": []
+  },
+  "patched": {
+    "configs": [
+      {
+        "name": "model-phong",
+        "model": "phong",
+        "stats": {
+          "mean": 34.19555862939585,
+          "stddev": 26.630819418235255,
+          "nonBgFraction": 0.2524869791666667,
+          "background": [
+            23,
+            23,
+            28
+          ]
+        },
+        "screenshot": "output/shader-library-qualification/model-phong.png",
+        "pass": true
       },
-      "screenshot": "output/shader-library-qualification/model-matcap.png",
-      "pass": false
+      {
+        "name": "model-pbr",
+        "model": "pbr",
+        "stats": {
+          "mean": 38.7982617921192,
+          "stddev": 32.3496876316258,
+          "nonBgFraction": 0.2524869791666667,
+          "background": [
+            23,
+            23,
+            28
+          ]
+        },
+        "screenshot": "output/shader-library-qualification/model-pbr.png",
+        "pass": true
+      },
+      {
+        "name": "model-matcap",
+        "model": "matcap",
+        "stats": {
+          "mean": 39.96981860462584,
+          "stddev": 37.253301899723155,
+          "nonBgFraction": 0.2524869791666667,
+          "background": [
+            23,
+            23,
+            28
+          ]
+        },
+        "screenshot": "output/shader-library-qualification/model-matcap.png",
+        "pass": true
+      },
+      {
+        "name": "model-toon",
+        "model": "toon",
+        "stats": {
+          "mean": 32.40445998355681,
+          "stddev": 22.90478486667164,
+          "nonBgFraction": 0.2524869791666667,
+          "background": [
+            23,
+            23,
+            28
+          ]
+        },
+        "screenshot": "output/shader-library-qualification/model-toon.png",
+        "pass": true
+      },
+      {
+        "name": "model-unlit",
+        "model": "unlit",
+        "stats": {
+          "mean": 44.18799712091558,
+          "stddev": 45.04029441456682,
+          "nonBgFraction": 0.2524869791666667,
+          "background": [
+            23,
+            23,
+            28
+          ]
+        },
+        "screenshot": "output/shader-library-qualification/model-unlit.png",
+        "pass": true
+      },
+      {
+        "name": "model-pbr-metal",
+        "model": "pbr",
+        "material": {
+          "metallic": 1,
+          "roughness": 0.3
+        },
+        "stats": {
+          "mean": 37.214943727680485,
+          "stddev": 29.0938400851563,
+          "nonBgFraction": 0.2524869791666667,
+          "background": [
+            23,
+            23,
+            28
+          ]
+        },
+        "screenshot": "output/shader-library-qualification/model-pbr-metal.png",
+        "pass": true
+      },
+      {
+        "name": "matcap-procedural",
+        "model": "matcap",
+        "matcap": "procedural",
+        "stats": {
+          "mean": 39.30715394447099,
+          "stddev": 35.08423512408642,
+          "nonBgFraction": 0.2524869791666667,
+          "background": [
+            23,
+            23,
+            28
+          ]
+        },
+        "screenshot": "output/shader-library-qualification/matcap-procedural.png",
+        "pass": true
+      },
+      {
+        "name": "matcap-studio",
+        "model": "matcap",
+        "matcap": "studio",
+        "stats": {
+          "mean": 38.5076212178996,
+          "stddev": 33.42103312242679,
+          "nonBgFraction": 0.2524869791666667,
+          "background": [
+            23,
+            23,
+            28
+          ]
+        },
+        "screenshot": "output/shader-library-qualification/matcap-studio.png",
+        "pass": true
+      },
+      {
+        "name": "matcap-clay",
+        "model": "matcap",
+        "matcap": "clay",
+        "stats": {
+          "mean": 37.453482085112874,
+          "stddev": 30.811732887891075,
+          "nonBgFraction": 0.2524869791666667,
+          "background": [
+            23,
+            23,
+            28
+          ]
+        },
+        "screenshot": "output/shader-library-qualification/matcap-clay.png",
+        "pass": true
+      },
+      {
+        "name": "matcap-chrome",
+        "model": "matcap",
+        "matcap": "chrome",
+        "stats": {
+          "mean": 30.65540315933683,
+          "stddev": 23.246988993292664,
+          "nonBgFraction": 0.2524869791666667,
+          "background": [
+            23,
+            23,
+            28
+          ]
+        },
+        "screenshot": "output/shader-library-qualification/matcap-chrome.png",
+        "pass": true
+      },
+      {
+        "name": "matcap-pearl",
+        "model": "matcap",
+        "matcap": "pearl",
+        "stats": {
+          "mean": 33.55552015672681,
+          "stddev": 22.51562313235958,
+          "nonBgFraction": 0.2524869791666667,
+          "background": [
+            23,
+            23,
+            28
+          ]
+        },
+        "screenshot": "output/shader-library-qualification/matcap-pearl.png",
+        "pass": true
+      },
+      {
+        "name": "env-none",
+        "model": "pbr",
+        "env": "none",
+        "stats": {
+          "mean": 37.214943727680485,
+          "stddev": 29.0938400851563,
+          "nonBgFraction": 0.2524869791666667,
+          "background": [
+            23,
+            23,
+            28
+          ]
+        },
+        "screenshot": "output/shader-library-qualification/env-none.png",
+        "pass": true
+      },
+      {
+        "name": "env-studio-softbox",
+        "model": "pbr",
+        "env": "studio-softbox",
+        "stats": {
+          "mean": 39.35944449201435,
+          "stddev": 33.68334209410431,
+          "nonBgFraction": 0.2524869791666667,
+          "background": [
+            23,
+            23,
+            28
+          ]
+        },
+        "screenshot": "output/shader-library-qualification/env-studio-softbox.png",
+        "pass": true
+      },
+      {
+        "name": "env-outdoor-sky",
+        "model": "pbr",
+        "env": "outdoor-sky",
+        "stats": {
+          "mean": 39.254604785619485,
+          "stddev": 33.515966897056416,
+          "nonBgFraction": 0.2524869791666667,
+          "background": [
+            23,
+            23,
+            28
+          ]
+        },
+        "screenshot": "output/shader-library-qualification/env-outdoor-sky.png",
+        "pass": true
+      },
+      {
+        "name": "env-workshop",
+        "model": "pbr",
+        "env": "workshop",
+        "stats": {
+          "mean": 39.012980616353474,
+          "stddev": 32.95521157348619,
+          "nonBgFraction": 0.2524869791666667,
+          "background": [
+            23,
+            23,
+            28
+          ]
+        },
+        "screenshot": "output/shader-library-qualification/env-workshop.png",
+        "pass": true
+      },
+      {
+        "name": "shadows-off",
+        "model": "phong",
+        "stats": {
+          "mean": 34.07638154085515,
+          "stddev": 25.97548984096441,
+          "nonBgFraction": 0.2524869791666667,
+          "background": [
+            23,
+            23,
+            28
+          ]
+        },
+        "screenshot": "output/shader-library-qualification/shadows-off.png",
+        "pass": true
+      },
+      {
+        "name": "shadows-on",
+        "model": "phong",
+        "shadows": true,
+        "stats": {
+          "mean": 31.96753057145934,
+          "stddev": 26.15867575894523,
+          "nonBgFraction": 0.250390625,
+          "background": [
+            23,
+            23,
+            28
+          ]
+        },
+        "screenshot": "output/shader-library-qualification/shadows-on.png",
+        "pass": true
+      },
+      {
+        "name": "shadows-on-pbr-env",
+        "model": "pbr",
+        "env": "studio-softbox",
+        "shadows": true,
+        "stats": {
+          "mean": 38.779093721175315,
+          "stddev": 32.76409951086447,
+          "nonBgFraction": 0.250390625,
+          "background": [
+            23,
+            23,
+            28
+          ]
+        },
+        "screenshot": "output/shader-library-qualification/shadows-on-pbr-env.png",
+        "pass": true
+      },
+      {
+        "name": "theme-default",
+        "theme": "default",
+        "stats": {
+          "mean": 34.07638154085515,
+          "stddev": 25.97548984096441,
+          "nonBgFraction": 0.2524869791666667,
+          "background": [
+            23,
+            23,
+            28
+          ]
+        },
+        "screenshot": "output/shader-library-qualification/theme-default.png",
+        "pass": true
+      },
+      {
+        "name": "theme-dark-contrast",
+        "theme": "dark-contrast",
+        "stats": {
+          "mean": 26.395807198423636,
+          "stddev": 29.16796719040457,
+          "nonBgFraction": 0.25985026041666665,
+          "background": [
+            13,
+            13,
+            18
+          ]
+        },
+        "screenshot": "output/shader-library-qualification/theme-dark-contrast.png",
+        "pass": true
+      },
+      {
+        "name": "theme-light",
+        "theme": "light",
+        "stats": {
+          "mean": 209.7592422748787,
+          "stddev": 57.42407545800349,
+          "nonBgFraction": 0.25195638020833333,
+          "background": [
+            235,
+            235,
+            240
+          ]
+        },
+        "screenshot": "output/shader-library-qualification/theme-light.png",
+        "pass": true
+      },
+      {
+        "name": "section-off",
+        "model": "phong",
+        "stats": {
+          "mean": 34.07638154085515,
+          "stddev": 25.97548984096441,
+          "nonBgFraction": 0.2524869791666667,
+          "background": [
+            23,
+            23,
+            28
+          ]
+        },
+        "screenshot": "output/shader-library-qualification/section-off.png",
+        "pass": true
+      },
+      {
+        "name": "section-on",
+        "model": "phong",
+        "section": true,
+        "stats": {
+          "mean": 39.27053989695497,
+          "stddev": 41.78913887371335,
+          "nonBgFraction": 0.2524869791666667,
+          "background": [
+            23,
+            23,
+            28
+          ]
+        },
+        "screenshot": "output/shader-library-qualification/section-on.png",
+        "pass": true
+      },
+      {
+        "name": "section-on-toon",
+        "model": "toon",
+        "section": true,
+        "stats": {
+          "mean": 37.78737736309734,
+          "stddev": 40.197614005610525,
+          "nonBgFraction": 0.2524869791666667,
+          "background": [
+            23,
+            23,
+            28
+          ]
+        },
+        "screenshot": "output/shader-library-qualification/section-on-toon.png",
+        "pass": true
+      },
+      {
+        "name": "instanced-phong",
+        "model": "phong",
+        "instanced": true,
+        "stats": {
+          "mean": 36.27082521857861,
+          "stddev": 30.089939917116084,
+          "nonBgFraction": 0.29986328125,
+          "background": [
+            23,
+            23,
+            28
+          ]
+        },
+        "screenshot": "output/shader-library-qualification/instanced-phong.png",
+        "pass": true
+      },
+      {
+        "name": "instanced-toon",
+        "model": "toon",
+        "instanced": true,
+        "stats": {
+          "mean": 34.40212453819752,
+          "stddev": 26.288435159872726,
+          "nonBgFraction": 0.29986328125,
+          "background": [
+            23,
+            23,
+            28
+          ]
+        },
+        "screenshot": "output/shader-library-qualification/instanced-toon.png",
+        "pass": true
+      }
+    ],
+    "pipelines": {
+      "mesh/uniform": "ok",
+      "mesh/immediate": "ok",
+      "mesh/instanced": "ok",
+      "meshPbr/uniform": "ok",
+      "meshPbr/immediate": "unsupported",
+      "meshPbr/instanced": "unsupported",
+      "meshMatcap/uniform": "ok",
+      "meshMatcap/immediate": "unsupported",
+      "meshMatcap/instanced": "unsupported",
+      "meshToon/uniform": "ok",
+      "meshToon/immediate": "ok",
+      "meshToon/instanced": "ok",
+      "meshUnlit/uniform": "ok",
+      "meshUnlit/immediate": "ok",
+      "meshUnlit/instanced": "ok"
     },
-    {
-      "name": "model-toon",
-      "model": "toon",
-      "stats": {
-        "mean": 0,
-        "stddev": 0,
-        "nonBgFraction": 0
-      },
-      "screenshot": "output/shader-library-qualification/model-toon.png",
-      "pass": false
+    "shaderDiagnostics": {
+      "mesh/uniform": "ok",
+      "mesh/immediate": "ok",
+      "mesh/instanced": "ok",
+      "meshPbr/uniform": "ok",
+      "meshPbr/immediate": "ok",
+      "meshPbr/instanced": "ok",
+      "meshMatcap/uniform": "ok",
+      "meshMatcap/immediate": "ok",
+      "meshMatcap/instanced": "ok",
+      "meshToon/uniform": "ok",
+      "meshToon/immediate": "ok",
+      "meshToon/instanced": "ok",
+      "meshUnlit/uniform": "ok",
+      "meshUnlit/immediate": "ok",
+      "meshUnlit/instanced": "ok"
     },
-    {
-      "name": "model-unlit",
-      "model": "unlit",
-      "stats": {
-        "mean": 0,
-        "stddev": 0,
-        "nonBgFraction": 0
-      },
-      "screenshot": "output/shader-library-qualification/model-unlit.png",
-      "pass": false
-    },
-    {
-      "name": "model-pbr-metal",
-      "model": "pbr",
-      "material": {
-        "metallic": 1,
-        "roughness": 0.3
-      },
-      "stats": {
-        "mean": 0,
-        "stddev": 0,
-        "nonBgFraction": 0
-      },
-      "screenshot": "output/shader-library-qualification/model-pbr-metal.png",
-      "pass": false
-    },
-    {
-      "name": "matcap-procedural",
-      "model": "matcap",
-      "matcap": "procedural",
-      "stats": {
-        "mean": 0,
-        "stddev": 0,
-        "nonBgFraction": 0
-      },
-      "screenshot": "output/shader-library-qualification/matcap-procedural.png",
-      "pass": false
-    },
-    {
-      "name": "matcap-studio",
-      "model": "matcap",
-      "matcap": "studio",
-      "stats": {
-        "mean": 0,
-        "stddev": 0,
-        "nonBgFraction": 0
-      },
-      "screenshot": "output/shader-library-qualification/matcap-studio.png",
-      "pass": false
-    },
-    {
-      "name": "matcap-clay",
-      "model": "matcap",
-      "matcap": "clay",
-      "stats": {
-        "mean": 0,
-        "stddev": 0,
-        "nonBgFraction": 0
-      },
-      "screenshot": "output/shader-library-qualification/matcap-clay.png",
-      "pass": false
-    },
-    {
-      "name": "matcap-chrome",
-      "model": "matcap",
-      "matcap": "chrome",
-      "stats": {
-        "mean": 0,
-        "stddev": 0,
-        "nonBgFraction": 0
-      },
-      "screenshot": "output/shader-library-qualification/matcap-chrome.png",
-      "pass": false
-    },
-    {
-      "name": "matcap-pearl",
-      "model": "matcap",
-      "matcap": "pearl",
-      "stats": {
-        "mean": 0,
-        "stddev": 0,
-        "nonBgFraction": 0
-      },
-      "screenshot": "output/shader-library-qualification/matcap-pearl.png",
-      "pass": false
-    },
-    {
-      "name": "env-none",
-      "model": "pbr",
-      "env": "none",
-      "stats": {
-        "mean": 0,
-        "stddev": 0,
-        "nonBgFraction": 0
-      },
-      "screenshot": "output/shader-library-qualification/env-none.png",
-      "pass": false
-    },
-    {
-      "name": "env-studio-softbox",
-      "model": "pbr",
-      "env": "studio-softbox",
-      "stats": {
-        "mean": 0,
-        "stddev": 0,
-        "nonBgFraction": 0
-      },
-      "screenshot": "output/shader-library-qualification/env-studio-softbox.png",
-      "pass": false
-    },
-    {
-      "name": "env-outdoor-sky",
-      "model": "pbr",
-      "env": "outdoor-sky",
-      "stats": {
-        "mean": 0,
-        "stddev": 0,
-        "nonBgFraction": 0
-      },
-      "screenshot": "output/shader-library-qualification/env-outdoor-sky.png",
-      "pass": false
-    },
-    {
-      "name": "env-workshop",
-      "model": "pbr",
-      "env": "workshop",
-      "stats": {
-        "mean": 0,
-        "stddev": 0,
-        "nonBgFraction": 0
-      },
-      "screenshot": "output/shader-library-qualification/env-workshop.png",
-      "pass": false
-    },
-    {
-      "name": "shadows-off",
-      "model": "phong",
-      "stats": {
-        "mean": 0,
-        "stddev": 0,
-        "nonBgFraction": 0
-      },
-      "screenshot": "output/shader-library-qualification/shadows-off.png",
-      "pass": false
-    },
-    {
-      "name": "shadows-on",
-      "model": "phong",
-      "shadows": true,
-      "stats": {
-        "mean": 0,
-        "stddev": 0,
-        "nonBgFraction": 0
-      },
-      "screenshot": "output/shader-library-qualification/shadows-on.png",
-      "pass": false
-    },
-    {
-      "name": "shadows-on-pbr-env",
-      "model": "pbr",
-      "env": "studio-softbox",
-      "shadows": true,
-      "stats": {
-        "mean": 0,
-        "stddev": 0,
-        "nonBgFraction": 0
-      },
-      "screenshot": "output/shader-library-qualification/shadows-on-pbr-env.png",
-      "pass": false
-    },
-    {
-      "name": "theme-default",
-      "theme": "default",
-      "stats": {
-        "mean": 0,
-        "stddev": 0,
-        "nonBgFraction": 0
-      },
-      "screenshot": "output/shader-library-qualification/theme-default.png",
-      "pass": false
-    },
-    {
-      "name": "theme-dark-contrast",
-      "theme": "dark-contrast",
-      "stats": {
-        "mean": 0,
-        "stddev": 0,
-        "nonBgFraction": 0
-      },
-      "screenshot": "output/shader-library-qualification/theme-dark-contrast.png",
-      "pass": false
-    },
-    {
-      "name": "theme-light",
-      "theme": "light",
-      "stats": {
-        "mean": 0,
-        "stddev": 0,
-        "nonBgFraction": 0
-      },
-      "screenshot": "output/shader-library-qualification/theme-light.png",
-      "pass": false
-    },
-    {
-      "name": "section-off",
-      "model": "phong",
-      "stats": {
-        "mean": 0,
-        "stddev": 0,
-        "nonBgFraction": 0
-      },
-      "screenshot": "output/shader-library-qualification/section-off.png",
-      "pass": false
-    },
-    {
-      "name": "section-on",
-      "model": "phong",
-      "section": true,
-      "stats": {
-        "mean": 0,
-        "stddev": 0,
-        "nonBgFraction": 0
-      },
-      "screenshot": "output/shader-library-qualification/section-on.png",
-      "pass": false
-    },
-    {
-      "name": "section-on-toon",
-      "model": "toon",
-      "section": true,
-      "stats": {
-        "mean": 0,
-        "stddev": 0,
-        "nonBgFraction": 0
-      },
-      "screenshot": "output/shader-library-qualification/section-on-toon.png",
-      "pass": false
-    },
-    {
-      "name": "instanced-phong",
-      "model": "phong",
-      "instanced": true,
-      "stats": {
-        "mean": 0,
-        "stddev": 0,
-        "nonBgFraction": 0
-      },
-      "screenshot": "output/shader-library-qualification/instanced-phong.png",
-      "pass": false
-    },
-    {
-      "name": "instanced-toon",
-      "model": "toon",
-      "instanced": true,
-      "stats": {
-        "mean": 0,
-        "stddev": 0,
-        "nonBgFraction": 0
-      },
-      "screenshot": "output/shader-library-qualification/instanced-toon.png",
-      "pass": false
-    }
-  ],
-  "pipelines": {
-    "mesh/uniform": "ok",
-    "mesh/immediate": "ok",
-    "mesh/instanced": "ok",
-    "meshPbr/uniform": "ok",
-    "meshPbr/immediate": "ok",
-    "meshPbr/instanced": "ok",
-    "meshMatcap/uniform": "ok",
-    "meshMatcap/immediate": "ok",
-    "meshMatcap/instanced": "ok",
-    "meshToon/uniform": "ok",
-    "meshToon/immediate": "ok",
-    "meshToon/instanced": "ok",
-    "meshUnlit/uniform": "ok",
-    "meshUnlit/immediate": "ok",
-    "meshUnlit/instanced": "ok"
+    "statusEvents": []
   },
   "adapterInfo": {},
-  "immediateActive": true,
-  "finishedAt": "2026-09-26T18:40:38.144Z",
-  "pass": false
+  "immediateActive": false,
+  "finishedAt": "2026-09-26T23:15:36.640Z",
+  "pass": true
 }

@@ -5,48 +5,46 @@
  * cached pipeline factory reads them instead of hand-wiring descriptors.
  */
 
-import { MESH_WGSL } from './mesh'
-import { MESH_PBR_WGSL } from './meshPbr'
-import { MESH_MATCAP_WGSL } from './meshMatcap'
-import { MESH_TOON_WGSL } from './meshToon'
-import { MESH_UNLIT_WGSL } from './meshUnlit'
-import { MESH_SECTION_CAP_WGSL } from './meshSectionCap'
-import { DEEP_MESH_WGSL } from './deepMesh'
-import { EDGE_WGSL } from './edge'
-import { LINE_WGSL } from './line'
-import { GRID_WGSL } from './grid'
-import { SELECTION_OVERLAY_WGSL } from './selectionOverlay'
-import { MESH_SHADOW_WGSL } from './meshShadow'
+import {
+  MESH_WGSL,
+  MESH_PBR_WGSL,
+  MESH_MATCAP_WGSL,
+  MESH_TOON_WGSL,
+  MESH_UNLIT_WGSL,
+  MESH_SECTION_CAP_WGSL,
+  DEEP_MESH_WGSL,
+  EDGE_WGSL,
+  LINE_WGSL,
+  GRID_WGSL,
+  SELECTION_OVERLAY_WGSL,
+  MESH_SHADOW_WGSL,
+} from './generated/sources'
 
 export {
   OBJECT_UNIFORM_LAYOUT,
   MESH_VERTEX_STRIDE,
   MORPH_VERTEX_STRIDE,
-  OBJ_BINDING,
   OBJ_STRUCT,
-  SCENE_BINDING,
   SCENE_STRUCT,
   SCENE_UNIFORM_LAYOUT,
   SECTION_CAP_WGSL,
   SECTION_CLIP_WGSL,
-  SHADOW_MAP_WGSL,
-  SHADOW_PCF_SAMPLE_WGSL,
-  SHADOW_PCF_WGSL,
-  SHADOW_SAMPLER_WGSL,
   sceneStruct,
 } from './chunks'
-export { MESH_WGSL } from './mesh'
-export { MESH_PBR_WGSL } from './meshPbr'
-export { MESH_MATCAP_WGSL } from './meshMatcap'
-export { MESH_TOON_WGSL } from './meshToon'
-export { MESH_UNLIT_WGSL } from './meshUnlit'
-export { MESH_SECTION_CAP_WGSL } from './meshSectionCap'
-export { DEEP_MESH_WGSL } from './deepMesh'
-export { EDGE_WGSL } from './edge'
-export { LINE_WGSL } from './line'
-export { GRID_WGSL } from './grid'
-export { SELECTION_OVERLAY_WGSL } from './selectionOverlay'
-export { MESH_SHADOW_WGSL } from './meshShadow'
+export {
+  MESH_WGSL,
+  MESH_PBR_WGSL,
+  MESH_MATCAP_WGSL,
+  MESH_TOON_WGSL,
+  MESH_UNLIT_WGSL,
+  MESH_SECTION_CAP_WGSL,
+  DEEP_MESH_WGSL,
+  EDGE_WGSL,
+  LINE_WGSL,
+  GRID_WGSL,
+  SELECTION_OVERLAY_WGSL,
+  MESH_SHADOW_WGSL,
+} from './generated/sources'
 export { immediateObjectShader, instancedObjectShader, supportsImmediateAddressSpace } from './variants'
 
 /* ── Registry ─────────────────────────────────────── */
@@ -145,11 +143,14 @@ registerShader({
 // meshMatcap additionally binds the renderer-wide capture texture at group(2);
 // meshPbr binds the renderer-wide environment map at group(2). All four surface
 // shaders sample the shadow map (meshUnlit stays unlit, shadow-free).
-for (const [id, source, usesMatcapBinding, usesEnvBinding] of [
-  ['meshPbr', MESH_PBR_WGSL, false, true],
-  ['meshMatcap', MESH_MATCAP_WGSL, true, false],
-  ['meshToon', MESH_TOON_WGSL, false, false],
-  ['meshUnlit', MESH_UNLIT_WGSL, false, false],
+// meshPbr/meshMatcap are uniform-flavor only: their immediate/instanced
+// variants would need env/matcap-aware group(2) layouts, which are never
+// requested at runtime, so the factory rejects those combos instead.
+for (const [id, source, usesMatcapBinding, usesEnvBinding, supportsVariants] of [
+  ['meshPbr', MESH_PBR_WGSL, false, true, false],
+  ['meshMatcap', MESH_MATCAP_WGSL, true, false, false],
+  ['meshToon', MESH_TOON_WGSL, false, false, true],
+  ['meshUnlit', MESH_UNLIT_WGSL, false, false, true],
 ] as const) {
   registerShader({
     id,
@@ -160,7 +161,7 @@ for (const [id, source, usesMatcapBinding, usesEnvBinding] of [
     topology: 'triangle-list',
     cullMode: 'none',
     vertexLayout: 'mesh',
-    supportsVariants: true,
+    supportsVariants,
     usesMatcapBinding,
     usesEnvBinding,
     usesShadowBinding: id !== 'meshUnlit',

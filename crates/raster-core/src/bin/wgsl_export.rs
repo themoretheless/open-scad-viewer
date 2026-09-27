@@ -7,9 +7,11 @@
 
 use raster_core::codegen as codegen;
 
-const GENERATED: [(&str, fn() -> String, fn() -> std::path::PathBuf); 2] = [
+const GENERATED: [(&str, fn() -> String, fn() -> std::path::PathBuf); 4] = [
     ("sources", codegen::generate_ts_sources, codegen::generated_ts_path),
     ("variant goldens", codegen::generate_variant_goldens_ts, codegen::variant_goldens_path),
+    ("TS layouts", codegen::generate_layouts_ts, codegen::layouts_ts_path),
+    ("Rust layouts", codegen::generate_layouts_rs, codegen::layouts_rs_path),
 ];
 
 fn main() {

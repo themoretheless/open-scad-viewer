@@ -127,6 +127,46 @@ describe('shader library modules', () => {
     }
   })
 
+  it('shadow sampling keeps textureSampleCompare in uniform control flow', () => {
+    // Tint uniformity analysis (Dawn/Chrome) rejects textureSampleCompare
+    // reached through non-uniform early returns — a blank canvas in every
+    // shading mode. Best-effort lint: the PCF helper must clamp coordinates
+    // and select on the bounds predicate instead of early-returning, and the
+    // mesh-family fragment shaders must evaluate shadowFactor above the
+    // section-cap early return.
+    const shadowed = [MESH_WGSL, MESH_PBR_WGSL, MESH_MATCAP_WGSL, MESH_TOON_WGSL, GRID_WGSL]
+    for (const code of shadowed) {
+      expect(code).toContain('textureSampleCompare(shadowMap, shadowSampler, clamp(uv')
+      expect(code).toContain('return select(1.0, mix(1.0, sum / 9.0, sc.shadowParams.w), inb);')
+      expect(code).not.toMatch(/uv\.x < 0\.0 \|\| uv\.x > 1\.0.*return 1\.0/)
+      // The only remaining early return in shadowFactor is the uniform
+      // shadowParams.x gate (sc.* is uniform, so it cannot diverge).
+      const pcfStart = code.indexOf('fn shadowFactor(')
+      const pcfEnd = code.indexOf('return select(1.0, mix(1.0, sum / 9.0, sc.shadowParams.w), inb);')
+      const pcf = code.slice(pcfStart, pcfEnd)
+      const returns = pcf.split('\n').filter(line => line.includes('return'))
+      expect(returns.filter(line => !line.includes('select('))).toEqual(
+        ['  if (sc.shadowParams.x < 0.5) { return 1.0; }'])
+    }
+    for (const code of [MESH_WGSL, MESH_PBR_WGSL, MESH_MATCAP_WGSL, MESH_TOON_WGSL]) {
+      const call = code.indexOf('let shadow = shadowFactor(v.w);')
+      const capReturn = code.indexOf(SECTION_CAP_WGSL)
+      expect(call).toBeGreaterThanOrEqual(0)
+      expect(capReturn).toBeGreaterThanOrEqual(0)
+      expect(call).toBeLessThan(capReturn)
+      // The hoisted call is the only one: no second shadowFactor after the cap.
+      expect(code.indexOf('shadowFactor(v.w)', capReturn)).toBe(-1)
+    }
+  })
+
+  it('meshPbr/meshMatcap reject immediate/instanced variants (uniform flavor only)', () => {
+    // Their group(2) expects env/matcap bindings; the variant layouts carry the
+    // shadow group there, so those pipelines must never be built.
+    for (const id of ['meshPbr', 'meshMatcap']) {
+      expect(getShader(id).supportsVariants).toBe(false)
+    }
+  })
+
   it('grid shares the themed scene struct and reads its grid color', () => {
     expect(GRID_WGSL).toContain(SCENE_STRUCT)
     expect(GRID_WGSL).toContain('inverseVP: mat4x4f')
@@ -208,8 +248,11 @@ describe('shader registry', () => {
   it('registers all twelve shipped shaders with their canonical sources', () => {
     const expected: Array<[string, string, string, boolean]> = [
       ['mesh', MESH_WGSL, 'object', true],
-      ['meshPbr', MESH_PBR_WGSL, 'object', true],
-      ['meshMatcap', MESH_MATCAP_WGSL, 'object', true],
+      // meshPbr/meshMatcap are uniform-flavor only: their immediate/instanced
+      // variants would need env/matcap-aware group(2) layouts, which are never
+      // requested at runtime, so the registry refuses them.
+      ['meshPbr', MESH_PBR_WGSL, 'object', false],
+      ['meshMatcap', MESH_MATCAP_WGSL, 'object', false],
       ['meshToon', MESH_TOON_WGSL, 'object', true],
       ['meshUnlit', MESH_UNLIT_WGSL, 'object', true],
       ['meshSectionCap', MESH_SECTION_CAP_WGSL, 'object', true],

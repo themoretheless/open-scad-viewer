@@ -241,6 +241,67 @@ fn instanced_draws_place_each_record_its_own_transform() {
 }
 
 #[test]
+fn shadow_pass_darkens_occluded_floor_and_toggles_off_exactly() {
+    let Some(context) = GpuContext::new() else { return };
+    let mut rasterizer = Rasterizer::new(context, wgpu::TextureFormat::Rgba8Unorm);
+    rasterizer.set_scene(&scene());
+
+    // Floor: large quad at z = 0.6 (farther: with the identity VP, larger NDC
+    // z loses the Less depth test). Blocker: triangle at z = 0.2 near the
+    // origin, casting a shadow onto the floor along the default key light
+    // (0.55, 0.75, 0.45).
+    let mut floor_vertices = Vec::with_capacity(24);
+    for (x, y) in [(-1.5f32, -1.5f32), (1.5, -1.5), (1.5, 1.5), (-1.5, 1.5)] {
+        floor_vertices.extend_from_slice(&[x, y, 0.6, 0.0, 0.0, 1.0]);
+    }
+    let floor = rasterizer.create_mesh(
+        &floor_vertices,
+        &[0, 1, 2, 0, 2, 3],
+        &uniform([0.8, 0.8, 0.8], [1.0, 0.0, 0.0, 0.0], identity()),
+        None,
+    );
+    let (blocker_vertices, blocker_indices) = triangle();
+    let blocker = rasterizer.create_mesh(
+        &blocker_vertices,
+        &blocker_indices,
+        &uniform([0.2, 0.2, 0.2], [1.0, 0.0, 0.0, 0.0], translated(0.0, 0.0, 0.2)),
+        None,
+    );
+
+    let frame = Frame { clear: CLEAR, meshes: &[&floor, &blocker], ..Frame::default() };
+
+    // Baseline: shadows never enabled — the pre-shadow look.
+    let off = rasterizer.render_to_rgba(WIDTH, HEIGHT, &frame);
+    snapshot("shadow-off", &off);
+
+    // Shadows on: the pass runs and occluded floor pixels darken.
+    rasterizer.set_shadow_bounds(Some(([0.0, 0.0, 0.4], 1.5)));
+    rasterizer.set_shadows_enabled(true);
+    rasterizer.set_scene(&scene());
+    let on = rasterizer.render_to_rgba(WIDTH, HEIGHT, &frame);
+    snapshot("shadow-on", &on);
+
+    let mut darkened = 0usize;
+    for i in 0..(WIDTH * HEIGHT) as usize {
+        let (a, b) = (&off[i * 4..i * 4 + 3], &on[i * 4..i * 4 + 3]);
+        if a.iter().zip(b).all(|(x, y)| *y + 10 < *x) {
+            darkened += 1;
+        }
+    }
+    assert!(darkened > 50, "blocker shadow darkens a floor region: {darkened} px");
+
+    // Lit floor far from the blocker keeps its exact color (the shadow only
+    // touches the occluded region).
+    assert_eq!(pixel(&off, 3, 3), pixel(&on, 3, 3), "lit floor corner unchanged");
+
+    // Toggling back off restores the pre-shadow look pixel for pixel.
+    rasterizer.set_shadows_enabled(false);
+    rasterizer.set_scene(&scene());
+    let off_again = rasterizer.render_to_rgba(WIDTH, HEIGHT, &frame);
+    assert_eq!(off, off_again, "disabling shadows restores the exact baseline");
+}
+
+#[test]
 fn transparent_mesh_blends_over_opaque_and_skips_depth_write() {
     let Some(context) = GpuContext::new() else { return };
     let mut rasterizer = Rasterizer::new(context, wgpu::TextureFormat::Rgba8Unorm);

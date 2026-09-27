@@ -7,12 +7,16 @@
 
 use crate::pipeline::RasterPipelines;
 use crate::shaders::MORPH_VERTEX_STRIDE;
-use crate::uniform::{SCENE_UNIFORM_BYTES, SCENE_UNIFORM_FLOATS, SceneUniform};
+use crate::uniform::{SCENE_UNIFORM_BYTES, SCENE_UNIFORM_FLOATS, SceneUniform, shadow_light_vp};
 use gpu_compute::{GpuContext, pack_f32, wgpu};
 
 pub use crate::resources::{
     DrawEdges, DrawMesh, InstancePool, InstancedGeometry, LineBatch, OverlayBatch,
 };
+
+/// Key-light shadow map resolution (depth32float, depth-only pass) — mirrors
+/// the browser renderer's SHADOW_MAP_SIZE.
+pub const SHADOW_MAP_SIZE: u32 = 1024;
 
 /// One frame's worth of draws, composited in the browser renderer's order:
 /// deep-selection underlay, grid, opaque meshes, instanced meshes,
@@ -43,10 +47,23 @@ pub struct Rasterizer {
     morph_dummy: wgpu::Buffer,
     grid_quad: wgpu::Buffer,
     depth: Option<(wgpu::Texture, wgpu::TextureView, u32, u32)>,
-    /// 1×1 dummy depth map + comparison sampler bound where mesh-surface and
-    /// grid shaders sample the key-light shadow map; `shadow_params` stays
-    /// disabled natively, so the dummy is never actually read.
+    /// 1×1 dummy depth map bound where mesh-surface and grid shaders sample
+    /// the key-light shadow map while shadows are off; combined with
+    /// `shadow_params` disabled this keeps the default look pixel-identical.
     shadow_bind_group: wgpu::BindGroup,
+    /// Comparison sampler shared by the dummy and the real shadow map.
+    shadow_sampler: wgpu::Sampler,
+    /// Real 1024² depth32float shadow map + its bind group, allocated lazily
+    /// the first time shadows are enabled.
+    shadow_map: Option<(wgpu::Texture, wgpu::TextureView, wgpu::BindGroup)>,
+    /// Contact-shadow toggle (mirrors `setShadowsEnabled`). Default off.
+    shadows_enabled: bool,
+    /// Scene bounds (center, radius) feeding the light orthographic VP; the
+    /// shadow pass stays inactive until both this and the toggle are set.
+    shadow_bounds: Option<([f32; 3], f32)>,
+    /// Resolved in `set_scene`: shadows requested AND bounds known AND the
+    /// scene did not force `shadow_params` off.
+    shadow_active: bool,
     /// Mirrors `SceneUniform.options.x`; gates the section-cap pass.
     section_enabled: bool,
 }
@@ -139,6 +156,11 @@ impl Rasterizer {
             grid_quad,
             depth: None,
             shadow_bind_group,
+            shadow_sampler,
+            shadow_map: None,
+            shadows_enabled: false,
+            shadow_bounds: None,
+            shadow_active: false,
             section_enabled: false,
         }
     }
@@ -147,14 +169,112 @@ impl Rasterizer {
         &self.context.device
     }
 
-    /// Uploads the full scene uniform.
+    /// Uploads the full scene uniform. When shadows are active (enabled via
+    /// [`Rasterizer::set_shadows_enabled`] with bounds set, and the scene does
+    /// not force `shadow_params` off), the key-light orthographic VP is
+    /// computed from the bounds and the scene light direction and written over
+    /// `light_vp`, with `shadow_params.x` forced to 1 — mirroring the browser
+    /// renderer's scene-upload tail. Otherwise the shadow tail is zeroed and
+    /// the frame stays pixel-identical to the unshadowed path.
     pub fn set_scene(&mut self, scene: &SceneUniform) {
         let mut floats = [0.0f32; SCENE_UNIFORM_FLOATS];
         scene.write_f32(&mut floats);
+        // scene.shadow_params[0] < 0 forces off even when the toggle is on;
+        // the default (0.0) simply follows the toggle.
+        self.shadow_active = self.shadows_enabled
+            && self.shadow_bounds.is_some()
+            && self.shadow_map.is_some()
+            && scene.shadow_params[0] >= 0.0;
+        if self.shadow_active {
+            let (center, radius) = self.shadow_bounds.unwrap();
+            let vp = shadow_light_vp(
+                [scene.light[0], scene.light[1], scene.light[2]],
+                center,
+                radius,
+            );
+            floats[76..92].copy_from_slice(&vp);
+            floats[92] = 1.0;
+            floats[93] = 1.0 / SHADOW_MAP_SIZE as f32;
+            floats[94] = if scene.shadow_params[2] > 0.0 { scene.shadow_params[2] } else { 0.0015 };
+            floats[95] = if scene.shadow_params[3] > 0.0 { scene.shadow_params[3] } else { 1.0 };
+        } else {
+            floats[76..92].fill(0.0);
+            floats[92] = 0.0;
+            floats[93] = 1.0 / SHADOW_MAP_SIZE as f32;
+            floats[94] = 0.0015;
+            floats[95] = 1.0;
+        }
         self.context
             .queue
             .write_buffer(&self.scene_buffer, 0, &pack_f32(&floats));
         self.section_enabled = scene.options[0] > 0.5;
+    }
+
+    /// Whether contact shadows are currently toggled on (independent of
+    /// whether bounds are known yet).
+    pub fn shadows_enabled(&self) -> bool {
+        self.shadows_enabled
+    }
+
+    /// Toggles the key-light contact-shadow pass. Enabling lazily allocates
+    /// the real 1024² depth32float shadow map and rebinds it; disabling
+    /// rebinds the 1×1 dummy and restores the pre-shadow look exactly.
+    pub fn set_shadows_enabled(&mut self, enabled: bool) {
+        if self.shadows_enabled == enabled {
+            return;
+        }
+        self.shadows_enabled = enabled;
+        if enabled && self.shadow_map.is_none() {
+            let texture = self.context.device.create_texture(&wgpu::TextureDescriptor {
+                label: Some("raster shadow map"),
+                size: wgpu::Extent3d {
+                    width: SHADOW_MAP_SIZE,
+                    height: SHADOW_MAP_SIZE,
+                    depth_or_array_layers: 1,
+                },
+                mip_level_count: 1,
+                sample_count: 1,
+                dimension: wgpu::TextureDimension::D2,
+                format: wgpu::TextureFormat::Depth32Float,
+                usage: wgpu::TextureUsages::RENDER_ATTACHMENT
+                    | wgpu::TextureUsages::TEXTURE_BINDING,
+                view_formats: &[],
+            });
+            let view = texture.create_view(&wgpu::TextureViewDescriptor::default());
+            let bind_group = self
+                .context
+                .device
+                .create_bind_group(&wgpu::BindGroupDescriptor {
+                    label: Some("raster shadow map bind group"),
+                    layout: &self.pipelines.shadow_bgl,
+                    entries: &[
+                        wgpu::BindGroupEntry {
+                            binding: 0,
+                            resource: wgpu::BindingResource::TextureView(&view),
+                        },
+                        wgpu::BindGroupEntry {
+                            binding: 1,
+                            resource: wgpu::BindingResource::Sampler(&self.shadow_sampler),
+                        },
+                    ],
+                });
+            self.shadow_map = Some((texture, view, bind_group));
+        }
+    }
+
+    /// Sets the scene bounds (center, radius) used to build the key-light
+    /// orthographic VP; `None` disables the shadow pass until bounds are set.
+    pub fn set_shadow_bounds(&mut self, bounds: Option<([f32; 3], f32)>) {
+        self.shadow_bounds = bounds;
+    }
+
+    /// The bind group the sampling shaders should read this frame: the real
+    /// shadow map while active, the inert dummy otherwise.
+    fn active_shadow_bg(&self) -> &wgpu::BindGroup {
+        match (&self.shadow_map, self.shadow_active) {
+            (Some((_, _, bind_group)), true) => bind_group,
+            _ => &self.shadow_bind_group,
+        }
     }
 
     fn ensure_depth(&mut self, width: u32, height: u32) {
@@ -211,6 +331,41 @@ impl Rasterizer {
         frame: &Frame,
     ) {
         self.ensure_depth(width, height);
+        // Contact shadow: render opaque meshes' depth from the key light into
+        // the shadow map before the main pass samples it (surfaces + grid
+        // floor). No camera-frustum culling, mirroring the browser renderer.
+        // Simplified vs the TS Tier 2 cache: re-rendered every frame while
+        // active (no epoch tracking in the native API).
+        if self.shadow_active {
+            let (_, view, _) = self.shadow_map.as_ref().unwrap();
+            let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                label: Some("raster shadow"),
+                color_attachments: &[],
+                depth_stencil_attachment: Some(wgpu::RenderPassDepthStencilAttachment {
+                    view,
+                    depth_ops: Some(wgpu::Operations {
+                        load: wgpu::LoadOp::Clear(1.0),
+                        store: wgpu::StoreOp::Store,
+                    }),
+                    stencil_ops: None,
+                }),
+                timestamp_writes: None,
+                occlusion_query_set: None,
+                multiview_mask: None,
+            });
+            pass.set_pipeline(&self.pipelines.shadow);
+            pass.set_bind_group(0, &self.scene_bind_group, &[]);
+            for draw in frame.meshes.iter().filter(|d| !d.transparent) {
+                pass.set_bind_group(1, &draw.bind_group, &[]);
+                pass.set_vertex_buffer(0, draw.vertex_buffer.slice(..));
+                match &draw.morph_source {
+                    Some(source) => pass.set_vertex_buffer(1, source.slice(..)),
+                    None => pass.set_vertex_buffer(1, self.morph_dummy.slice(..)),
+                }
+                pass.set_index_buffer(draw.index_buffer.slice(..), wgpu::IndexFormat::Uint32);
+                pass.draw_indexed(0..draw.index_count, 0, 0..1);
+            }
+        }
         {
             let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
                 label: Some("raster frame"),
@@ -239,7 +394,7 @@ impl Rasterizer {
 
             if frame.grid {
                 pass.set_pipeline(&self.pipelines.grid);
-                pass.set_bind_group(1, &self.shadow_bind_group, &[]);
+                pass.set_bind_group(1, self.active_shadow_bg(), &[]);
                 pass.set_vertex_buffer(0, self.grid_quad.slice(..));
                 pass.draw(0..6, 0..1);
             }
@@ -281,7 +436,7 @@ impl Rasterizer {
                 };
                 pass.set_pipeline(pipeline);
                 pass.set_bind_group(1, &pool.bind_group, &[]);
-                pass.set_bind_group(2, &self.shadow_bind_group, &[]);
+                pass.set_bind_group(2, self.active_shadow_bg(), &[]);
                 pass.set_vertex_buffer(0, geometry.vertex_buffer.slice(..));
                 match &geometry.morph_source {
                     Some(source) => pass.set_vertex_buffer(1, source.slice(..)),
@@ -329,14 +484,14 @@ impl Rasterizer {
 
             if let Some(lines) = frame.lines {
                 pass.set_pipeline(&self.pipelines.line);
-                pass.set_bind_group(1, &self.shadow_bind_group, &[]);
+                pass.set_bind_group(1, self.active_shadow_bg(), &[]);
                 pass.set_vertex_buffer(0, lines.vertex_buffer.slice(..));
                 pass.draw(0..lines.vertex_count, 0..1);
             }
 
             if let Some(overlay) = frame.overlay {
                 pass.set_pipeline(&self.pipelines.selection_overlay);
-                pass.set_bind_group(1, &self.shadow_bind_group, &[]);
+                pass.set_bind_group(1, self.active_shadow_bg(), &[]);
                 pass.set_vertex_buffer(0, overlay.vertex_buffer.slice(..));
                 pass.draw(0..overlay.vertex_count, 0..1);
             }
@@ -356,9 +511,9 @@ impl Rasterizer {
         pass.set_pipeline(pipeline);
         pass.set_bind_group(1, bind_group, &[]);
         // Mesh-surface shaders sample the shadow map at group(2); the dummy
-        // binding is inert while shadow_params stays disabled, and pipelines
-        // whose shader does not declare group(2) simply ignore it.
-        pass.set_bind_group(2, &self.shadow_bind_group, &[]);
+        // binding is inert while shadows are inactive, and pipelines whose
+        // shader does not declare group(2) simply ignore it.
+        pass.set_bind_group(2, self.active_shadow_bg(), &[]);
         pass.set_vertex_buffer(0, vertex_buffer.slice(..));
         match morph_source {
             Some(source) => pass.set_vertex_buffer(1, source.slice(..)),
@@ -377,7 +532,7 @@ impl Rasterizer {
     ) {
         pass.set_pipeline(pipeline);
         pass.set_bind_group(1, &edges.bind_group, &[]);
-        pass.set_bind_group(2, &self.shadow_bind_group, &[]);
+        pass.set_bind_group(2, self.active_shadow_bg(), &[]);
         pass.set_vertex_buffer(0, edges.vertex_buffer.slice(..));
         match &edges.morph_source {
             Some(source) => pass.set_vertex_buffer(1, source.slice(..)),
