@@ -1,0 +1,81 @@
+{
+  "schema": "cad-roadmap-occt/1",
+  "oracle": "OpenCascade via cadquery-ocp",
+  "version": "8.0.1.0.0",
+  "scope": "Independent STEP read, solid validity, exact bounding box, volume and OCCT-tessellated preview. Does not certify all STEP inputs.",
+  "passed": true,
+  "parts": [
+    {
+      "name": "bracket",
+      "stepSha256": "547e3ef0488217424f7ab2f067350ac206f484e14efe9ceb56c279a3c576a6fe",
+      "valid": true,
+      "solids": 1,
+      "faces": 8,
+      "boundsMm": [
+        [
+          -1e-07,
+          -1e-07,
+          -1e-07
+        ],
+        [
+          40.0000001,
+          30.0000001,
+          22.0000001
+        ]
+      ],
+      "volumeMm3": 7149.999999999998,
+      "maxBoundsErrorMm": 1.0000000116860974e-07,
+      "volumeErrorMm3": 1.8189894035458565e-12,
+      "passed": true,
+      "previewTriangles": 20
+    },
+    {
+      "name": "enclosure",
+      "stepSha256": "7c3d0a88cc657c8873d81c72dc3d582e4aa87723a28abdf8d93b8a2cf454a261",
+      "valid": true,
+      "solids": 1,
+      "faces": 46,
+      "boundsMm": [
+        [
+          -1e-07,
+          -1e-07,
+          -1e-07
+        ],
+        [
+          40.0000001,
+          30.0000001,
+          22.0000001
+        ]
+      ],
+      "volumeMm3": 7680.000000000004,
+      "maxBoundsErrorMm": 1.0000000116860974e-07,
+      "volumeErrorMm3": 3.637978807091713e-12,
+      "passed": true,
+      "previewTriangles": 92
+    },
+    {
+      "name": "flange",
+      "stepSha256": "14f7e28a0a67925d5c55c4dc3b3bba0c27418a1b2d043e93f1a81ad893318b74",
+      "valid": true,
+      "solids": 1,
+      "faces": 10,
+      "boundsMm": [
+        [
+          -20.000000100000005,
+          -20.000000100000005,
+          -1e-07
+        ],
+        [
+          20.000000100000005,
+          20.000000100000005,
+          8.0000001
+        ]
+      ],
+      "volumeMm3": 9424.777960681715,
+      "maxBoundsErrorMm": 1.0000000472132342e-07,
+      "volumeErrorMm3": 8.766437531448901e-08,
+      "passed": true,
+      "previewTriangles": 608
+    }
+  ]
+}

@@ -555,7 +555,27 @@ pub(crate) fn side_is_proven(
     } {
         return Ok(false);
     }
-    let domain = surface_domain(surface);
+    let carrier_domain = surface_domain(surface);
+    // STEP may retain a complete cylindrical carrier for a rectangular trim
+    // spanning only part of its profile direction. Prove that trim rectangle
+    // against exact restricted isocurves, not the whole carrier boundaries.
+    let mut domain = [[f64::INFINITY, f64::NEG_INFINITY]; 2];
+    for coedge in &model.loops[face.outer].coedges {
+        for p in &coedge.pcurve.control_points {
+            for i in 0..2 {
+                domain[i][0] = domain[i][0].min(p[i]);
+                domain[i][1] = domain[i][1].max(p[i]);
+            }
+        }
+    }
+    if (0..2).any(|i| {
+        domain[i][0] >= domain[i][1]
+            || domain[i][0] < carrier_domain[i][0]
+            || domain[i][1] > carrier_domain[i][1]
+    }) || domain[axis] != carrier_domain[axis]
+    {
+        return Ok(false);
+    }
     let mut boundaries = BTreeSet::new();
     let mut horizontal = 0;
     for coedge in &model.loops[face.outer].coedges {
@@ -593,6 +613,9 @@ pub(crate) fn side_is_proven(
             return Ok(false);
         }
         let mut iso = surface.iso(if constant == 0 { Axis::U } else { Axis::V }, a[constant])?;
+        if domain[varying] != carrier_domain[varying] {
+            iso = iso.trim(domain[varying][0], domain[varying][1])?;
+        }
         if a[varying] > b[varying] {
             iso = iso.reverse()?;
         }
@@ -707,4 +730,45 @@ pub fn recognize(model: &Model) -> Result<Option<ProfilePrism>> {
         z_min,
         z_max,
     }))
+}
+
+#[cfg(test)]
+mod imported_cap_tests {
+    use super::*;
+    #[test]
+    fn recognizes_trimmed_step_carriers_without_admitting_deformed_sides() {
+        let model: Model = value_codec::from_str(include_str!(
+            "../../../docs/qualification/cad-roadmap-2026-09-28/parts-history/imported-flange.json"
+        ))
+        .unwrap();
+        let recognized = recognize(&model).unwrap().unwrap();
+        assert_eq!(
+            (recognized.z_min, recognized.z_max, recognized.loops.len()),
+            (0., 7., 2)
+        );
+        let usage = model.shells[0]
+            .faces
+            .iter()
+            .find(|u| model.faces[u.face].surface.control_points.len() == 9)
+            .unwrap()
+            .clone();
+        assert!(side_is_proven(&model, &usage, 0., 7.).unwrap());
+        let mut deformed = model.clone();
+        deformed.faces[usage.face].surface.control_points[1][1][0] += 0.01;
+        assert!(!side_is_proven(&deformed, &usage, 0., 7.).unwrap());
+        let mut trimmed = model.clone();
+        let wire = trimmed.faces[usage.face].outer;
+        trimmed.loops[wire].coedges[0].pcurve.control_points[0][0] += 0.01;
+        assert!(!side_is_proven(&trimmed, &usage, 0., 7.).unwrap());
+        let top = model
+            .faces
+            .iter()
+            .position(|f| planar_cap_z(&f.surface) == Some(7.))
+            .unwrap();
+        let result = crate::operations::push_planar_face(&model, top, 1.).unwrap();
+        let volume = crate::analysis::mass_properties(&result, 1e-7, 200_000)
+            .unwrap()
+            .signed_volume_mm3;
+        assert!((volume - 3000. * std::f64::consts::PI).abs() < 1e-5);
+    }
 }

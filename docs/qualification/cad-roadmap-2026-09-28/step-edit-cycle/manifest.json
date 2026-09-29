@@ -1,0 +1,71 @@
+{
+  "schema": "cad-roadmap-step/1",
+  "units": "mm",
+  "toleranceMm": 0.000001,
+  "relativeVolumeTolerance": 1e-8,
+  "parts": [
+    {
+      "name": "bracket",
+      "file": "bracket.step",
+      "sha256": "547e3ef0488217424f7ab2f067350ac206f484e14efe9ceb56c279a3c576a6fe",
+      "expected": {
+        "volumeMm3": 7150,
+        "boundsMm": [
+          [
+            0,
+            0,
+            0
+          ],
+          [
+            40,
+            30,
+            22
+          ]
+        ]
+      },
+      "sourceSha256": "a5680b6649fca4b705bf0069f91d03fce058a143b656d01b0cde83dd22874a61"
+    },
+    {
+      "name": "enclosure",
+      "file": "enclosure.step",
+      "sha256": "7c3d0a88cc657c8873d81c72dc3d582e4aa87723a28abdf8d93b8a2cf454a261",
+      "expected": {
+        "volumeMm3": 7680,
+        "boundsMm": [
+          [
+            0,
+            0,
+            0
+          ],
+          [
+            40,
+            30,
+            22
+          ]
+        ]
+      },
+      "sourceSha256": "ae5f71ec506f0afb8a7d2c5019dcbf793f2a93ad9c449eb53ff8cf6c424fb170"
+    },
+    {
+      "name": "flange",
+      "file": "flange.step",
+      "sha256": "14f7e28a0a67925d5c55c4dc3b3bba0c27418a1b2d043e93f1a81ad893318b74",
+      "expected": {
+        "volumeMm3": 9424.77796076938,
+        "boundsMm": [
+          [
+            -20,
+            -20,
+            0
+          ],
+          [
+            20,
+            20,
+            8
+          ]
+        ]
+      },
+      "sourceSha256": "2fddc081daf61ce71e8283daa2616cc1c0afb7c4079697e8448b52fd396d585f"
+    }
+  ]
+}

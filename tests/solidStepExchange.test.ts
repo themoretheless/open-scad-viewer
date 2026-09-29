@@ -91,3 +91,28 @@ it('exports current edited B-rep geometry rather than its retained STEP source',
  expect(Math.min(...xs)).toBeCloseTo(5);expect(Math.max(...xs)).toBeCloseTo(9)
  await expect(exportSolidStepCurrent({id:'mesh',name:'Mesh',mesh})).rejects.toThrow('exact B-rep')
 })
+
+it.each([
+ ['bracket',7150,22],['enclosure',7680,22],['flange',3000*Math.PI,8],
+] as const)('imports, edits and re-exports the current %s STEP',async(name,volume,height)=>{
+ const {pushPullFace,solidTopology}=await import('../src/services/directSolidTools')
+ const {analyzeNurbsBrep,inspectNurbsBrep}=await import('../src/services/geometry/brep')
+ const text=readFileSync(new URL(`../docs/qualification/cad-roadmap-2026-09-28/cap-step-exchange/${name}.step`,import.meta.url),'utf8')
+ const initial=emptyDirectDocument(),before=structuredClone(initial)
+ const imported=await prepareSolidStepImport(text,initial)
+ expect(initial).toEqual(before);expect(imported.document.bodies).toHaveLength(1)
+ const body=imported.document.bodies[0]
+ const faces=solidTopology(body.mesh).faces
+ const top=faces.map((face,index)=>({face,index})).filter(({face})=>face.normal[2]>.99).sort((a,b)=>b.face.center[2]-a.face.center[2])[0].index
+ const edited=pushPullFace(body,top,1)
+ expect(edited.id).toBe(body.id)
+ expect(inspectNurbsBrep(edited.brep!).topologyValid).toBe(true)
+ expect(analyzeNurbsBrep(edited.brep!).signedVolumeMm3).toBeCloseTo(volume,4)
+ const output=await exportSolidStepCurrent(edited)
+ expect(output).not.toBe(text)
+ const restored=await prepareSolidStepImport(output,emptyDirectDocument())
+ const result=restored.document.bodies[0].brep!
+ expect(inspectNurbsBrep(result).topologyValid).toBe(true)
+ expect(analyzeNurbsBrep(result).signedVolumeMm3).toBeCloseTo(volume,4)
+ expect(Math.max(...result.vertices.map(v=>v.point[2]))).toBeCloseTo(height,6)
+},60000)
