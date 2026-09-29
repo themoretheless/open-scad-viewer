@@ -122,6 +122,14 @@ export interface CertifiedNurbsCurveEdit {
     dataSiteErrorUpper?: number
     withinEntityTolerance?: boolean
     periodPreserved?: boolean
+    wrappedStorage?: boolean
+    seam?: {
+      domain: [number, number]
+      period: number
+      c0: {available: boolean; residualUpper: number | null; certified: boolean}
+      c1: {available: boolean; residualUpper: number | null; certified: boolean}
+      c2: {available: boolean; residualUpper: number | null; certified: boolean}
+    } | null
     accepted?: boolean
     rolledBack?: boolean
     exactZeroRecognized?: boolean
@@ -270,3 +278,9 @@ export const intersectNurbsSurfaceSurfaceCertified = (
 
 export const verifyNurbsSurfaceSurfaceCoverage = (report: NurbsSurfaceSurfaceIntersectionCertificate) =>
   callNurbsRust('surface_surface_verify_coverage', {report})
+
+export const rebuildNurbsCurveCertified = (curve: NurbsCurve, degree: number, controlCount: number, maxError: number, tolerance?: NurbsToleranceContext): CertifiedNurbsCurveEdit =>
+  callNurbsRust('curve_rebuild_certified', {curve, degree, controlCount, maxError, ...toleranceArgs(tolerance)})
+
+export const rebuildNurbsSurfaceCertified = (surface: NurbsSurface, axis: 'u'|'v', degree: number, controlCount: number, maxError: number, tolerance?: NurbsToleranceContext): CertifiedNurbsSurfaceEdit =>
+  callNurbsRust('surface_rebuild_certified', {surface, axis, degree, controlCount, maxError, ...toleranceArgs(tolerance)})

@@ -1,0 +1,7 @@
+{
+  "sourceSha256": "5da16d8a0df523c3067ec4f3a96261bf327abd74ea75c9087d0d9e1c04ef92be",
+  "cases": 32,
+  "queries": 3872,
+  "arithmetic": "exact rational tensor Bernstein evaluation",
+  "checks": "passed"
+}

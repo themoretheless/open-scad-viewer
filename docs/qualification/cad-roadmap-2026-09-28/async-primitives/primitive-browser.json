@@ -1,0 +1,9 @@
+{
+  "browser": "151.0.7922.34",
+  "workerRequests": 12,
+  "cancelledWorkerTerminated": true,
+  "exactPrimitives": 8,
+  "facetedPrimitives": 3,
+  "boxSizeMm": 20,
+  "undoRedoAndReload": true
+}

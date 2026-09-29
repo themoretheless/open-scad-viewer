@@ -1,0 +1,17 @@
+{
+  "cadTests": 376,
+  "cadFiles": 33,
+  "finalFocusedTests": 171,
+  "finalFocusedFiles": 3,
+  "extraTestAfterFullRun": "native Enter on File menu while command active",
+  "vueTypes": true,
+  "mcpTypes": true,
+  "build": true,
+  "verifyDist": true,
+  "assetBytes": 6860220,
+  "scope": [
+    "nurbs-loft",
+    "nurbs-sweep",
+    "nurbs-patch"
+  ]
+}

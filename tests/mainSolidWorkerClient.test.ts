@@ -120,3 +120,66 @@ it('recovers from constructor and postMessage failures and closes deterministica
   client.dispose();await rejected
   await expect(client.run({kind:'truss',model:model()})).rejects.toMatchObject({code:'CAD_DISPOSED'})
 })
+
+it.each([[[0,0,0],[1,0,NaN]],[[0,0],[1,0,0]],[[0,0,0]],'invalid'].map(closestPoints=>({closestPoints})))('rejects malformed closest-point coordinates: %j',async ({closestPoints})=>{
+ const {client,ports}=setup(),task=client.run({kind:'inspect',bodies:[]})
+ ports[0].reply({ok:true,result:[{a:'A',b:'B',gapMm:1,overlapMm3:0,closestPoints,displayMeshOnly:true}]})
+ await expect(task).rejects.toMatchObject({code:'CAD_PROTOCOL'})
+})
+it('preserves closest-point witnesses through the worker response',async()=>{
+ const {client,ports}=setup(),task=client.run({kind:'inspect',bodies:[]})
+ const result=[{a:'A',b:'B',gapMm:1,overlapMm3:0,closestPoints:[[0,0,0],[1,0,0]],displayMeshOnly:true}]
+ ports[0].reply({ok:true,result});await expect(task).resolves.toEqual(result)
+})
+
+it('checks mesh-contact indices against the requested mesh',async()=>{
+ const {client,ports}=setup()
+ const mesh={positions:new Float64Array([0,0,0,1,0,0,0,1,0]),indices:new Uint32Array([0,1,2])}
+ const first=client.run({kind:'meshContacts',mesh})
+ const clean={scope:'display-mesh-all-contacts',relativeTolerance:1e-9,contact:null,contacts:[],triangleIds:[],lines:[],complete:true,stopReason:null,work:1,maxWork:200_000,maxContacts:10_000}
+ ports[0].reply({ok:true,result:clean})
+ await expect(first).resolves.toMatchObject({contact:null})
+ const bad=client.run({kind:'meshContacts',mesh})
+ const invalid={triangles:[0,9],point:[0,0,0],sharedVertices:0,toleranceMm:1e-9}
+ ports[0].reply({ok:true,result:{...clean,contact:invalid,contacts:[invalid]}})
+ await expect(bad).rejects.toMatchObject({code:'CAD_PROTOCOL'})
+})
+
+it('rejects malformed profile diagnostics instead of exposing them to the scene',async()=>{
+ const {client,ports}=setup()
+ const document={version:1 as const,sketches:[],bodies:[]}
+ const pending=client.run({kind:'profilePrepare',document,ids:[],tolerance:.01})
+ ports[0].reply({ok:true,result:{document,id:'a',plane:{origin:[0,0,0],u:[1,0,0],v:[0,1,0]},report:{accepted:false,reason:'endpoint-topology',points:[],connectors:[],defects:[{chain:0,end:'start',point:[Infinity,0],kind:'gap',candidates:[]}]}}})
+ await expect(pending).rejects.toMatchObject({code:'CAD_PROTOCOL'})
+ expect(ports[0].terminate).toHaveBeenCalledOnce()
+})
+
+it('refuses a contradictory NURBS certificate before it reaches Apply',async()=>{
+ const {client,ports}=setup(),document={version:1 as const,sketches:[],bodies:[]}
+ const pending=client.run({kind:'nurbsRefit',document,options:{operation:'nurbs-reduce',id:'curve',axis:'u',degree:1,controlCount:2,maxError:.01}})
+ ports[0].reply({ok:true,result:{document,certificate:{version:'nurbs-foundation/1',accepted:true,rolledBack:true,evidence:{toleranceIdentity:{canonical:'test'}}}}})
+ await expect(pending).rejects.toMatchObject({code:'CAD_PROTOCOL'})
+ expect(ports[0].terminate).toHaveBeenCalledOnce()
+})
+
+it('preserves incomplete mesh inspection and rejects contradictory completion claims',async()=>{
+ const mesh={positions:new Float64Array([0,0,0,1,0,0,0,1,0]),indices:new Uint32Array([0,1,2])}
+ const partial={scope:'display-mesh-all-contacts',relativeTolerance:1e-9,contact:null,contacts:[],triangleIds:[],lines:[],complete:false,stopReason:'work-limit',work:1,maxWork:1,maxContacts:10_000}
+ const {client,ports}=setup(),first=client.run({kind:'meshContacts',mesh,maxWork:1})
+ ports[0].reply({ok:true,result:partial});await expect(first).resolves.toMatchObject({complete:false,contacts:[]})
+ const second=client.run({kind:'meshContacts',mesh,maxWork:1})
+ ports[0].reply({ok:true,result:{...partial,complete:true}});await expect(second).rejects.toMatchObject({code:'CAD_PROTOCOL'})
+})
+
+it('terminates a curve-distance request and ignores its late reply after restart',async()=>{
+ const {client,ports}=setup(),curve={degree:1,knots:[0,0,1,1],controlPoints:[[0,0],[1,0]],weights:[1,1]}
+ const job={kind:'curveDistance' as const,a:curve,b:curve,toleranceMm:.001,maxCells:100}
+ const first=client.run(job),old=ports[0].onmessage
+ const rejected=expect(first).rejects.toMatchObject({name:'AbortError'})
+ client.cancel();await rejected
+ expect(ports[0].terminate).toHaveBeenCalledOnce()
+ const second=client.run(job),result={method:'interval-de-boor-pair-subdivision',distanceIntervalMm:[0,1e-12],parameters:[0,0],points:[[0,0],[0,0]],pointEnclosures:[[[0,0],[0,0]],[[0,0],[0,0]]],converged:true,reason:'tolerance',cells:1,maxCells:100,toleranceMm:.001}
+ old?.({data:{version:1,id:1,kind:'curveDistance',ok:true,result:{...result,maxCells:1}}} as MessageEvent)
+ ports[1].reply({ok:true,result})
+ await expect(second).resolves.toEqual(result)
+})

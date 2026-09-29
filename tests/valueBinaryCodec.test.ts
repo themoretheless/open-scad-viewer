@@ -73,3 +73,22 @@ describe('dependency-free WASM boundary',()=>{
   expect(result).toMatchObject({ok:true})
  })
 })
+
+it('encodes safe integer limbs identically to signed and unsigned BigInt wire values',()=>{
+ const values=[0,1,-1,2147483647,2147483648,-2147483648,4294967295,4294967296,-4294967296,-4294967297,Number.MAX_SAFE_INTEGER,Number.MIN_SAFE_INTEGER]
+ let seed=7
+ for(let i=0;i<2000;i++){
+  seed=(Math.imul(seed,1664525)+1013904223)>>>0
+  const high=seed%2097152
+  seed=(Math.imul(seed,1664525)+1013904223)>>>0
+  values.push((high*4294967296+seed)*(i%2?-1:1))
+ }
+ for(const value of values){
+  const expected=new Uint8Array(13);expected.set([77,71,86,49,value<0?8:7])
+  const view=new DataView(expected.buffer)
+  if(value<0)view.setBigInt64(5,BigInt(value),true);else view.setBigUint64(5,BigInt(value),true)
+  expect(encodeBinary(value)).toEqual(expected)
+  expect(decodeBinary(expected)).toBe(value)
+ }
+ expect(Object.is(decodeBinary(encodeBinary(-0)),-0)).toBe(true)
+})

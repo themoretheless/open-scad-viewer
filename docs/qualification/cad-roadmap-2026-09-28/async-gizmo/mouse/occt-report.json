@@ -1,0 +1,57 @@
+{
+  "schema": "cad-roadmap-occt/1",
+  "oracle": "OpenCascade via cadquery-ocp",
+  "version": "8.0.1.0.0",
+  "scope": "Independent STEP read, solid validity, exact bounding box, volume and OCCT-tessellated preview. Does not certify all STEP inputs.",
+  "passed": true,
+  "parts": [
+    {
+      "name": "Worker gizmo rotate",
+      "stepSha256": "30eb11c4a728e1daf712b8a7ea9feb48e5e5d90a03d1e0f223fffeffe6f31c27",
+      "valid": true,
+      "solids": 1,
+      "faces": 6,
+      "boundsMm": [
+        [
+          -10.0000001,
+          -13.32919024443657,
+          -3.3291902444365697
+        ],
+        [
+          10.0000001,
+          13.32919024443657,
+          23.32919024443657
+        ]
+      ],
+      "volumeMm3": 7999.999999999998,
+      "maxBoundsErrorMm": 1.0000000116860974e-07,
+      "volumeErrorMm3": 1.8189894035458565e-12,
+      "passed": true,
+      "previewTriangles": 12
+    },
+    {
+      "name": "Worker gizmo scale",
+      "stepSha256": "eea1f8d4182e4495498af05cbfd4b94b04135cbbfa5989a09003b306e2821fea",
+      "valid": true,
+      "solids": 1,
+      "faces": 6,
+      "boundsMm": [
+        [
+          -17.43302772058574,
+          -17.43302772058574,
+          -7.4330277205857405
+        ],
+        [
+          17.43302772058574,
+          17.43302772058574,
+          27.43302772058574
+        ]
+      ],
+      "volumeMm3": 42384.634434009546,
+      "maxBoundsErrorMm": 1.0000000116860974e-07,
+      "volumeErrorMm3": 7.275957614183426e-12,
+      "passed": true,
+      "previewTriangles": 12
+    }
+  ]
+}

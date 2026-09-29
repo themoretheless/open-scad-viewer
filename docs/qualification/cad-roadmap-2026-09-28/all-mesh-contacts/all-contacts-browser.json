@@ -1,0 +1,12 @@
+{
+  "browser": "151.0.7922.34",
+  "separateContacts": 3,
+  "allTrianglesHighlighted": 6,
+  "contactNavigation": true,
+  "keyboardNavigation": true,
+  "contactCancellation": true,
+  "partialContacts": 10000,
+  "extendedCompleteContacts": 11175,
+  "uniqueTriangleOutlines": 150,
+  "documentUnchanged": true
+}

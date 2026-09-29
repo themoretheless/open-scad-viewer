@@ -1,0 +1,15 @@
+{
+  "domainU": [
+    0.2,
+    0.8
+  ],
+  "domainV": [
+    0.1,
+    0.9
+  ],
+  "matchingExports": [
+    "surface-43.json",
+    "surface-redone-45.json"
+  ],
+  "ok": true
+}

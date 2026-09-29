@@ -1,0 +1,7 @@
+{
+  "dist": "/var/folders/jx/ps1h62vx3gdgly_ddwly4mqr0000gn/T/osv-bridge-cancel-bn_m8ca5",
+  "sha256": {
+    "index.html": "253e602ba504d23dc16b8e13353623bc5d20c02719084898271dd43dde1e7e99",
+    "wasm/geometry-kernel.wasm": "ea9ca96c762901fff9831adf5f3f086bc33d6d0ba1dd98d48223794e7f43aa13"
+  }
+}

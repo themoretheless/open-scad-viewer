@@ -1,0 +1,81 @@
+{
+  "schema": "cad-roadmap-occt/1",
+  "oracle": "OpenCascade via cadquery-ocp",
+  "version": "8.0.1.0.0",
+  "scope": "Independent STEP read, solid validity, exact bounding box, volume and OCCT-tessellated preview. Does not certify all STEP inputs.",
+  "passed": true,
+  "parts": [
+    {
+      "name": "Browser box 2\u00d73\u00d74",
+      "stepSha256": "ff97ac5f487e1d51b7e80561e5cca859ad7dfaead198f02607dec582421fcf41",
+      "valid": true,
+      "solids": 1,
+      "faces": 6,
+      "boundsMm": [
+        [
+          -1e-07,
+          -1e-07,
+          -1e-07
+        ],
+        [
+          2.0000001,
+          3.0000001,
+          4.0000001
+        ]
+      ],
+      "volumeMm3": 24.0,
+      "maxBoundsErrorMm": 1.0000000028043132e-07,
+      "volumeErrorMm3": 0.0,
+      "passed": true,
+      "previewTriangles": 12
+    },
+    {
+      "name": "Browser box 7\u00d73\u00d74",
+      "stepSha256": "2b42506729356ed5fd1db8bfb32fde8b407f178f754235fbb745bd6f849e5487",
+      "valid": true,
+      "solids": 1,
+      "faces": 6,
+      "boundsMm": [
+        [
+          -1e-07,
+          -1e-07,
+          -1e-07
+        ],
+        [
+          7.0000001,
+          3.0000001,
+          4.0000001
+        ]
+      ],
+      "volumeMm3": 84.00000000000001,
+      "maxBoundsErrorMm": 1.0000000028043132e-07,
+      "volumeErrorMm3": 1.4210854715202004e-14,
+      "passed": true,
+      "previewTriangles": 12
+    },
+    {
+      "name": "Browser UI scale 2",
+      "stepSha256": "144505f5613d354741b49d8437aa22b86fe4bbf8b007879bc0f9fd1da5c4ca91",
+      "valid": true,
+      "solids": 1,
+      "faces": 6,
+      "boundsMm": [
+        [
+          -3.5000001,
+          -1.5000001,
+          -2.0000001
+        ],
+        [
+          10.5000001,
+          4.5000001,
+          6.0000001
+        ]
+      ],
+      "volumeMm3": 672.0000000000001,
+      "maxBoundsErrorMm": 1.0000000028043132e-07,
+      "volumeErrorMm3": 1.1368683772161603e-13,
+      "passed": true,
+      "previewTriangles": 12
+    }
+  ]
+}

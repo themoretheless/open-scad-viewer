@@ -30,3 +30,19 @@ it('maps viewport pointer positions onto rotated and vertical sketch planes',()=
   expect(local[0]).toBeCloseTo(3);expect(local[1]).toBeCloseTo(7)
  }
 })
+
+it('roundtrips rational snap targets through structured cloning without snapping to chords',async()=>{
+ const {resolveModelingSnap}=await import('../src/services/modelingSnaps')
+ const geometry=bodySnapGeometry(body(createBrepCylinder(5,10)))
+ const copied=structuredClone(geometry)
+ expect(copied).toEqual(geometry)
+ const curved=copied.segments.find(segment=>segment.nurbs&&segment.a[2]===0&&segment.b[2]===0)!
+ expect(curved).toBeDefined()
+ const chord=curved.a.map((v,i)=>(v+curved.b[i])/2) as [number,number,number]
+ const result=resolveModelingSnap(chord,{points:[],segments:[curved]}, {project:p=>[p[0]*100,p[1]*100],grid:0,geometry:true,radius:10,anchor:[0,0,0]})
+ expect(result.kind).toBe('edge')
+ expect(Math.hypot(result.point[0],result.point[1])).toBeCloseTo(5,10)
+ expect(Math.hypot(chord[0],chord[1])).toBeLessThan(5-1e-5)
+ expect(result.point).not.toEqual(chord)
+ expect(resolveModelingSnap(chord,{points:[],segments:[curved]}, {project:p=>[p[0]*100,p[1]*100],grid:0,geometry:false}).kind).toBeNull()
+})

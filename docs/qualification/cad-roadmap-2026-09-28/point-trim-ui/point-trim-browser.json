@@ -1,0 +1,17 @@
+{
+  "browser": "151.0.7922.34",
+  "cancelledWorkerTerminated": true,
+  "preview": true,
+  "bothRetainedEnds": true,
+  "keyboardApply": true,
+  "endpointRefused": true,
+  "cut": [
+    8.000000000000009,
+    5.999999999999987,
+    0
+  ],
+  "identityPreserved": true,
+  "rationalWeights": true,
+  "undoRedo": true,
+  "reload": true
+}

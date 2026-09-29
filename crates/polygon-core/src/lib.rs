@@ -154,6 +154,13 @@ impl<'de> value_codec::Deserialize<'de> for Construction {
     }
 }
 #[derive(Debug, Clone)]
+pub struct MeshDiagnosticLocations {
+    pub boundary_edges: Vec<[usize;2]>,
+    pub non_manifold_edges: Vec<[usize;2]>,
+    pub orientation_edges: Vec<[usize;2]>,
+    pub degenerate_triangles: Vec<usize>,
+}
+#[derive(Debug, Clone)]
 pub struct Report {
     pub boolean: Option<solid::boolean::BooleanReport>,
     pub triangle_count: usize,
@@ -427,6 +434,19 @@ impl Mesh {
             self.positions[3 * index + 1],
             self.positions[3 * index + 2],
         ])
+    }
+    /// Exact indexed locations, using the same predicates as inspect().
+    /// Boundary edges remain available even when they cannot form ordered loops.
+    pub fn diagnostic_locations(&self) -> Result<MeshDiagnosticLocations> {
+        self.validate()?;
+        let edges=mesh_topology::EdgeUses::new(&self.indices);
+        let (non_manifold_edges,orientation_edges)=edges.defects();
+        let mut degenerate_triangles=Vec::new();
+        for (i,t) in self.indices.as_chunks::<3>().0.iter().enumerate() {
+            let a=self.point(t[0])?;let ab=sub(self.point(t[1])?,a);let ac=sub(self.point(t[2])?,a);
+            if norm(cross(ab,ac)) <= f64::EPSILON*(norm(ab)*norm(ac)).max(1.) {degenerate_triangles.push(i);}
+        }
+        Ok(MeshDiagnosticLocations{boundary_edges:edges.boundary().collect(),non_manifold_edges,orientation_edges,degenerate_triangles})
     }
     pub fn inspect(&self) -> Result<Report> {
         self.inspect_with_edges().map(|(report, _)| report)

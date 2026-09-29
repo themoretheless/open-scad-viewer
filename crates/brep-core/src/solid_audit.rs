@@ -14,6 +14,7 @@ fn refuse(message: &str) -> Error {
 
 #[derive(Clone, Debug)]
 pub struct SolidAuditCertificate {
+    /// Ownership, incidence and admitted bounds passed; not full geometric validity.
     pub ok: bool,
     pub body_count: usize,
     pub shell_count: usize,
@@ -22,7 +23,11 @@ pub struct SolidAuditCertificate {
     pub shell_bounds: Vec<AuditAabb>,
     pub body_bounds: Vec<AuditAabb>,
     pub entity_error_budget_mm: f64,
+    /// Candidate count is a resource bound, not evidence of intersection testing.
+    pub self_intersection_pairs_candidate: usize,
     pub self_intersection_pairs_checked: usize,
+    /// Includes face self-intersections, so zero face pairs is not sufficient.
+    pub self_intersection_complete: bool,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -40,7 +45,8 @@ impl AuditAabb {
     }
 }
 
-/// A model which has passed the complete local topology/geometry validator.
+/// A model which has passed local topology and sampled geometry validation.
+/// Edge/surface agreement between the sampled parameters is not established.
 #[derive(Clone, Debug)]
 pub struct LocallyValidatedModel(Model);
 impl LocallyValidatedModel {
@@ -63,7 +69,9 @@ impl LocallyValidatedModel {
     }
 }
 
-/// Immutable production hand-off: topology success plus a global audit proof.
+/// Immutable hand-off after the bounded ownership/incidence audit.
+/// This does not establish that the boundary is embedded; see the explicit
+/// self-intersection completeness field in the certificate.
 #[derive(Clone, Debug)]
 pub struct GloballyAuditedSolidSet {
     model: Model,
@@ -601,10 +609,13 @@ fn audit_validated(model: &Model) -> Result<SolidAuditCertificate> {
     if pair_count > 32_640 {
         return Err(refuse("Bounded self-intersection pair budget exceeded"));
     }
-    // Incidence uniqueness plus complete boundary correspondence proves all
-    // boundary contacts in the admitted matrix. Non-incidental body contacts
-    // were excluded above by conservative rational control-hull bounds.
-    notes.push("bounded_self_intersection_check_ok");
+    // Counting face pairs only enforces a resource limit. Neither incidence
+    // nor separation of different bodies excludes intersections within a face
+    // or between faces of the same shell. Do not publish these as checked pairs.
+    let self_intersection_complete = model.faces.is_empty();
+    if !self_intersection_complete {
+        notes.push("self_intersection_not_checked");
+    }
 
     let context = model
         .tolerance_context()
@@ -639,7 +650,9 @@ fn audit_validated(model: &Model) -> Result<SolidAuditCertificate> {
         shell_bounds,
         body_bounds,
         entity_error_budget_mm,
-        self_intersection_pairs_checked: pair_count,
+        self_intersection_pairs_candidate: pair_count,
+        self_intersection_pairs_checked: 0,
+        self_intersection_complete,
     })
 }
 
@@ -654,6 +667,68 @@ mod tests {
         let cert = audit_solid(&model).unwrap();
         assert!(cert.ok);
         assert!(cert.sew.complete);
+        assert!(cert.self_intersection_pairs_candidate > 0);
+        assert_eq!(cert.self_intersection_pairs_checked, 0);
+        assert!(!cert.self_intersection_complete);
+        assert!(cert.notes.contains(&"self_intersection_not_checked"));
+    }
+
+    #[test]
+    fn single_face_sphere_does_not_imply_self_intersection_proof() {
+        let cert = audit_solid(&sphere(2.).unwrap()).unwrap();
+        assert!(cert.ok);
+        assert_eq!(cert.self_intersection_pairs_checked, 0);
+        assert!(!cert.self_intersection_complete);
+    }
+
+    #[test]
+    fn sampled_edge_agreement_does_not_establish_geometric_closure() {
+        let mut model = crate::cuboid([0.; 3], [1.; 3]).unwrap();
+        // Degree-nine polynomial vanishes at every parameter used by validate(),
+        // but bows away from both supporting faces between those samples.
+        let mut power = vec![1.];
+        for j in 0..=8 {
+            let root = j as f64 / 8.;
+            let mut next = vec![0.; power.len() + 1];
+            for (i, &value) in power.iter().enumerate() {
+                next[i] -= root * value;
+                next[i + 1] += value;
+            }
+            power = next;
+        }
+        fn choose(n: usize, k: usize) -> f64 {
+            (0..k).fold(1., |v, i| v * (n - i) as f64 / (i + 1) as f64)
+        }
+        let edge = &mut model.edges[0];
+        let a = edge.curve.control_points.first().unwrap().clone();
+        let b = edge.curve.control_points.last().unwrap().clone();
+        let axis = (0..3).find(|&i| a[i] == b[i]).unwrap();
+        edge.curve.degree = 9;
+        edge.curve.knots = [vec![0.; 10], vec![1.; 10]].concat();
+        edge.curve.weights = vec![1.; 10];
+        edge.curve.control_points = (0..=9).map(|i| {
+            let mut point: Vec<f64> = (0..3)
+                .map(|k| a[k] + (b[k] - a[k]) * i as f64 / 9.).collect();
+            point[axis] += (0..=i)
+                .map(|k| power[k] * choose(i, k) / choose(9, k)).sum::<f64>();
+            point
+        }).collect();
+        let t = 1. / 16.;
+        let point = crate::curve_point(&edge.curve, t).unwrap();
+        assert!((point[axis] - a[axis]).abs() > model.tolerance_mm * 10.);
+        model.validate().unwrap();
+        let cert = audit_solid(&model).unwrap();
+        // The existing incidence audit accepts this model. Its certificate must
+        // never be interpreted as a complete geometric validity certificate.
+        assert!(!cert.self_intersection_complete);
+        assert_eq!(cert.self_intersection_pairs_checked, 0);
+        let face = model.faces.iter().find(|face| model.loops[face.outer].coedges.iter().any(|c| c.edge == 0)).unwrap();
+        let coedge = model.loops[face.outer].coedges.iter().find(|c| c.edge == 0).unwrap();
+        let checked = nurbs_core::curve_surface_agreement::verify(
+            &model.edges[0].curve, &coedge.pcurve, &face.surface,
+            coedge.reversed, model.tolerance_mm, 10_000).unwrap();
+        assert_eq!(checked.status, nurbs_core::curve_surface_agreement::Status::Mismatch);
+        assert!(checked.witness_distance.unwrap()[0] > model.tolerance_mm);
     }
 
     #[test]
@@ -662,6 +737,9 @@ mod tests {
         let cert = audit_solid(&model).unwrap();
         assert!(cert.ok);
         assert!(cert.notes.contains(&"empty_solid_admitted"));
+        assert!(cert.self_intersection_complete);
+        assert_eq!(cert.self_intersection_pairs_candidate, 0);
+        assert_eq!(cert.self_intersection_pairs_checked, 0);
     }
 
     #[test]

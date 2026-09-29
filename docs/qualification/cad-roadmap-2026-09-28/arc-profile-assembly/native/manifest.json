@@ -1,0 +1,108 @@
+{
+  "schema": "cad-roadmap-step/1",
+  "units": "mm",
+  "toleranceMm": 0.000001,
+  "relativeVolumeTolerance": 1e-8,
+  "parts": [
+    {
+      "name": "semicircle",
+      "file": "semicircle.step",
+      "sha256": "6f6547ee05a31137e990126e848ea8f42531135f36dea8cbff42e327e4d0a130",
+      "expected": {
+        "volumeMm3": 31.41592653589793,
+        "boundsMm": [
+          [
+            -2,
+            0,
+            0
+          ],
+          [
+            2,
+            2,
+            5
+          ]
+        ]
+      }
+    },
+    {
+      "name": "clockwise-quarter",
+      "file": "clockwise-quarter.step",
+      "sha256": "d63343aa3b204a74a22c51c45e2167be5e5fb926b153bfaaae69eeb00bdb0c32",
+      "expected": {
+        "volumeMm3": 3.4247779607693793,
+        "boundsMm": [
+          [
+            0,
+            -2,
+            0
+          ],
+          [
+            2,
+            0,
+            3
+          ]
+        ]
+      }
+    },
+    {
+      "name": "major-arc",
+      "file": "major-arc.step",
+      "sha256": "83e7cd24922c8f7a515a5e62ab99a1abf740dbd4dd75b3b70284a0a4d9d07dfa",
+      "expected": {
+        "volumeMm3": 45.69911184307752,
+        "boundsMm": [
+          [
+            -2,
+            -2,
+            -4
+          ],
+          [
+            2,
+            2,
+            0
+          ]
+        ]
+      }
+    },
+    {
+      "name": "oblique-arc",
+      "file": "oblique-arc.step",
+      "sha256": "9a95fc42c4eb75970ec8825eb4c9a2122c7b6c70ed8a8ad01fe6a3a764eedf49",
+      "expected": {
+        "volumeMm3": 1.4781338370015944,
+        "boundsMm": [
+          [
+            0,
+            0.44990210868773,
+            0
+          ],
+          [
+            1.9487401295704705,
+            2,
+            2
+          ]
+        ]
+      }
+    },
+    {
+      "name": "fractional-arc",
+      "file": "fractional-arc.step",
+      "sha256": "30a8be7d2c5001d81aabed576c438e5de97ee9af20430f97771b545366c170b7",
+      "expected": {
+        "volumeMm3": 0.03472557019709577,
+        "boundsMm": [
+          [
+            1.781061235973432,
+            0,
+            0
+          ],
+          [
+            2,
+            0.9098466209822352,
+            1
+          ]
+        ]
+      }
+    }
+  ]
+}

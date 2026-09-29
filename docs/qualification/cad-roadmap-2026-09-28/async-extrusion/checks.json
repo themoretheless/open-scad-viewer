@@ -1,0 +1,12 @@
+{
+  "cadTests": 367,
+  "cadFiles": 33,
+  "focusedTests": 153,
+  "focusedFiles": 3,
+  "vueTypes": true,
+  "mcpTypes": true,
+  "build": true,
+  "verifyDist": true,
+  "assetBytes": 6835576,
+  "scope": "extrusion preview only; remaining previews are synchronous"
+}

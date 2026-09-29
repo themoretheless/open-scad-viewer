@@ -1,0 +1,15 @@
+{
+  "browser": "151.0.7922.34",
+  "operation": "Subtract profile regions",
+  "retainedArcs": true,
+  "exactExtrusion": true,
+  "gpuFallback": true,
+  "renderedTriangles": 1264,
+  "cancel": true,
+  "undo": true,
+  "repeat": true,
+  "jsonReload": true,
+  "keyboard": false,
+  "tabPresses": 0,
+  "downloads": 9
+}

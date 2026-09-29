@@ -1,0 +1,1 @@
+{"version":1,"bodies":[],"sketches":[],"curves":[{"id":"arc","name":"Arc","curve":{"degree":2,"knots":[0,0,0,1,1,1],"controlPoints":[[10,0,0],[10,10,0],[0,10,0]],"weights":[1,0.7071067811865476,1]}}],"blenderProjectId":"3192e595-147b-41da-9055-63175d98f118","surfaces":[]}

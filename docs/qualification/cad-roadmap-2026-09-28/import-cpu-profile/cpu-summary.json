@@ -1,0 +1,354 @@
+{
+  "scope": "Exclusive sampled CPU time over the supplied capture window; capture boundaries define scope. A main-thread profile excludes workers.",
+  "sampleCount": 2272,
+  "sampledMs": 2878.482,
+  "categories": [
+    {
+      "key": "other",
+      "sampledMs": 1169.277,
+      "percent": 40.621306647045216
+    },
+    {
+      "key": "idle",
+      "sampledMs": 1013.682,
+      "percent": 35.215853356039744
+    },
+    {
+      "key": "wasm",
+      "sampledMs": 534.655,
+      "percent": 18.574199873405497
+    },
+    {
+      "key": "garbageCollection",
+      "sampledMs": 158.278,
+      "percent": 5.498662142059599
+    },
+    {
+      "key": "structuredClone",
+      "sampledMs": 2.59,
+      "percent": 0.0899779814499448
+    }
+  ],
+  "topFrames": [
+    {
+      "name": "(idle)",
+      "source": "",
+      "line": 0,
+      "column": 0,
+      "sampledMs": 1013.682,
+      "percent": 35.215853356039744
+    },
+    {
+      "name": "E",
+      "source": "http://127.0.0.1:60305/assets/direct-modeling-F1wsr1Op.js",
+      "line": 1,
+      "column": 1177,
+      "sampledMs": 307.899,
+      "percent": 10.696575486662763
+    },
+    {
+      "name": "(program)",
+      "source": "",
+      "line": 0,
+      "column": 0,
+      "sampledMs": 170.18,
+      "percent": 5.912143970328805
+    },
+    {
+      "name": "(garbage collector)",
+      "source": "",
+      "line": 0,
+      "column": 0,
+      "sampledMs": 158.278,
+      "percent": 5.498662142059599
+    },
+    {
+      "name": "encode",
+      "source": "",
+      "line": 0,
+      "column": 0,
+      "sampledMs": 111.182,
+      "percent": 3.862521982072495
+    },
+    {
+      "name": "f",
+      "source": "http://127.0.0.1:60305/assets/binary-codec-crZ2ua3Q.js",
+      "line": 1,
+      "column": 521,
+      "sampledMs": 106.468,
+      "percent": 3.69875510772692
+    },
+    {
+      "name": "t",
+      "source": "http://127.0.0.1:60305/assets/meshJson-CVKQT5bI.js",
+      "line": 1,
+      "column": 131,
+      "sampledMs": 62.158,
+      "percent": 2.1594020737319184
+    },
+    {
+      "name": "a.onmessage",
+      "source": "http://127.0.0.1:60305/assets/mainSolidWorkerClient-Cdstf7XX.js",
+      "line": 1,
+      "column": 15900,
+      "sampledMs": 56.624,
+      "percent": 1.9671479620160903
+    },
+    {
+      "name": "wasm-function[36]",
+      "source": "wasm://wasm/0220cca6",
+      "line": 1,
+      "column": 42829,
+      "sampledMs": 43.814,
+      "percent": 1.5221217294393363
+    },
+    {
+      "name": "wasm-function[670]",
+      "source": "wasm://wasm/0220cca6",
+      "line": 1,
+      "column": 2014611,
+      "sampledMs": 40.543,
+      "percent": 1.4084854447587305
+    },
+    {
+      "name": "wasm-function[18]",
+      "source": "wasm://wasm/0220cca6",
+      "line": 1,
+      "column": 27522,
+      "sampledMs": 37,
+      "percent": 1.2853997349992115
+    },
+    {
+      "name": "wasm-function[371]",
+      "source": "wasm://wasm/0220cca6",
+      "line": 1,
+      "column": 1674156,
+      "sampledMs": 33.347,
+      "percent": 1.158492566568073
+    },
+    {
+      "name": "wasm-function[19]",
+      "source": "wasm://wasm/0220cca6",
+      "line": 1,
+      "column": 32338,
+      "sampledMs": 31.245,
+      "percent": 1.0854679654067665
+    },
+    {
+      "name": "wasm-function[2700]",
+      "source": "wasm://wasm/0220cca6",
+      "line": 1,
+      "column": 5060894,
+      "sampledMs": 29.921,
+      "percent": 1.0394714992138216
+    },
+    {
+      "name": "wasm-function[58]",
+      "source": "wasm://wasm/0220cca6",
+      "line": 1,
+      "column": 1254270,
+      "sampledMs": 29.555,
+      "percent": 1.026756463997343
+    },
+    {
+      "name": "wasm-function[167]",
+      "source": "wasm://wasm/0220cca6",
+      "line": 1,
+      "column": 1338717,
+      "sampledMs": 25.09,
+      "percent": 0.8716399824629788
+    },
+    {
+      "name": "getAriaRole",
+      "source": "",
+      "line": 3343,
+      "column": 21,
+      "sampledMs": 20.336,
+      "percent": 0.7064834867822692
+    },
+    {
+      "name": "r",
+      "source": "http://127.0.0.1:60305/assets/DirectModeler-CO9EP187.js",
+      "line": 84,
+      "column": 63974,
+      "sampledMs": 19.721,
+      "percent": 0.6851180587545797
+    },
+    {
+      "name": "wasm-function[3244]",
+      "source": "wasm://wasm/0220cca6",
+      "line": 1,
+      "column": 5472167,
+      "sampledMs": 18.827,
+      "percent": 0.6540600219143284
+    },
+    {
+      "name": "wasm-function[5482]",
+      "source": "wasm://wasm/0220cca6",
+      "line": 1,
+      "column": 7727401,
+      "sampledMs": 17.002,
+      "percent": 0.5906585484988268
+    },
+    {
+      "name": "setAttribute",
+      "source": "",
+      "line": 0,
+      "column": 0,
+      "sampledMs": 16.737,
+      "percent": 0.5814523071535622
+    },
+    {
+      "name": "l",
+      "source": "http://127.0.0.1:60305/assets/binary-codec-crZ2ua3Q.js",
+      "line": 1,
+      "column": 299,
+      "sampledMs": 16.507,
+      "percent": 0.5734619844765401
+    },
+    {
+      "name": "wasm-function[368]",
+      "source": "wasm://wasm/0220cca6",
+      "line": 1,
+      "column": 1671922,
+      "sampledMs": 16.38,
+      "percent": 0.5690499367374887
+    },
+    {
+      "name": "query",
+      "source": "",
+      "line": 5301,
+      "column": 17,
+      "sampledMs": 16.377,
+      "percent": 0.5689457151373536
+    },
+    {
+      "name": "wasm-function[5377]",
+      "source": "wasm://wasm/0220cca6",
+      "line": 1,
+      "column": 7684656,
+      "sampledMs": 16.342,
+      "percent": 0.5677297964691111
+    },
+    {
+      "name": "wasm-function[104]",
+      "source": "wasm://wasm/0220cca6",
+      "line": 1,
+      "column": 1283553,
+      "sampledMs": 15.317,
+      "percent": 0.5321207497562952
+    },
+    {
+      "name": "match",
+      "source": "",
+      "line": 5261,
+      "column": 17,
+      "sampledMs": 15.03,
+      "percent": 0.5221502166767067
+    },
+    {
+      "name": "wasm-function[639]",
+      "source": "wasm://wasm/0220cca6",
+      "line": 1,
+      "column": 1956431,
+      "sampledMs": 12.264,
+      "percent": 0.42605790135217103
+    },
+    {
+      "name": "u",
+      "source": "http://127.0.0.1:60305/assets/binary-codec-crZ2ua3Q.js",
+      "line": 1,
+      "column": 2235,
+      "sampledMs": 11.113,
+      "percent": 0.38607154743368205
+    },
+    {
+      "name": "get",
+      "source": "http://127.0.0.1:60305/assets/DirectModeler-CO9EP187.js",
+      "line": 83,
+      "column": 14346,
+      "sampledMs": 10.09,
+      "percent": 0.3505319817876228
+    },
+    {
+      "name": "wasm-function[341]",
+      "source": "wasm://wasm/0220cca6",
+      "line": 1,
+      "column": 1618849,
+      "sampledMs": 10.051,
+      "percent": 0.34917710098586685
+    },
+    {
+      "name": "wasm-function[1103]",
+      "source": "wasm://wasm/0220cca6",
+      "line": 1,
+      "column": 3055503,
+      "sampledMs": 8.957,
+      "percent": 0.3111709574699442
+    },
+    {
+      "name": "wasm-function[638]",
+      "source": "wasm://wasm/0220cca6",
+      "line": 1,
+      "column": 1955941,
+      "sampledMs": 8.845,
+      "percent": 0.3072800177315682
+    },
+    {
+      "name": "wasm-function[2798]",
+      "source": "wasm://wasm/0220cca6",
+      "line": 1,
+      "column": 5113421,
+      "sampledMs": 8.714,
+      "percent": 0.3027290078590035
+    },
+    {
+      "name": "wasm-function[59]",
+      "source": "wasm://wasm/0220cca6",
+      "line": 1,
+      "column": 1256192,
+      "sampledMs": 8.591,
+      "percent": 0.29845592225346557
+    },
+    {
+      "name": "rn",
+      "source": "http://127.0.0.1:60305/assets/vue-DxqjmqvJ.js",
+      "line": 1,
+      "column": 19281,
+      "sampledMs": 7.499,
+      "percent": 0.26051925980429963
+    },
+    {
+      "name": "q",
+      "source": "http://127.0.0.1:60305/assets/direct-modeling-F1wsr1Op.js",
+      "line": 1,
+      "column": 12287,
+      "sampledMs": 7.457,
+      "percent": 0.2590601574024086
+    },
+    {
+      "name": "ct",
+      "source": "http://127.0.0.1:60305/assets/vue-DxqjmqvJ.js",
+      "line": 1,
+      "column": 11695,
+      "sampledMs": 7.416,
+      "percent": 0.257635795533896
+    },
+    {
+      "name": "",
+      "source": "http://127.0.0.1:60305/assets/directBodies-COJ8ovNJ.js",
+      "line": 1,
+      "column": 68,
+      "sampledMs": 7.395,
+      "percent": 0.2569062443329505
+    },
+    {
+      "name": "wasm-function[131]",
+      "source": "wasm://wasm/0220cca6",
+      "line": 1,
+      "column": 1288705,
+      "sampledMs": 6.378,
+      "percent": 0.22157512188716136
+    }
+  ]
+}

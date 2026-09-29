@@ -1,0 +1,172 @@
+warning: binary `wgsl_export` should have a kebab-case name
+  |
+1 | /Users/themoretheless/Documents/Sources/open-scad-viewer/crates/target/.../wgsl_export
+  |                                                                            ^^^^^^^^^^^
+  |
+  = note: `cargo::non_kebab_case_bins` is set to `warn` by default
+help: to change the binary name to `wgsl-export`, convert the file stem
+  |
+1 - src/bin/wgsl_export.rs
+1 + src/bin/wgsl-export.rs
+  |
+warning: `raster-core` (manifest) generated 1 warning
+warning: function `rebuild_add` is never used
+    --> nurbs-core/src/foundation.rs:3249:4
+     |
+3249 | fn rebuild_add(a:[f64;2],b:[f64;2])->[f64;2] { [next_down(a[0]+b[0]),next_up(a[1]+b[1])] }
+     |    ^^^^^^^^^^^
+     |
+     = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: function `rebuild_mul` is never used
+    --> nurbs-core/src/foundation.rs:3250:4
+     |
+3250 | fn rebuild_mul(a:[f64;2],b:[f64;2])->[f64;2] {
+     |    ^^^^^^^^^^^
+
+warning: function `rebuild_binomial` is never used
+    --> nurbs-core/src/foundation.rs:3254:4
+     |
+3254 | fn rebuild_binomial(n:usize,k:usize)->[f64;2] {
+     |    ^^^^^^^^^^^^^^^^
+
+warning: function `rebuild_product_factor` is never used
+    --> nurbs-core/src/foundation.rs:3258:4
+     |
+3258 | fn rebuild_product_factor(p:usize,q:usize,i:usize,j:usize)->[f64;2] {
+     |    ^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `aligns_degrees_domains_and_knots_without_introducing_C0_seams` should have a snake case name
+   --> nurbs-core/src/continuity/preparation.rs:115:12
+    |
+115 |  #[test]fn aligns_degrees_domains_and_knots_without_introducing_C0_seams(){
+    |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case (notice the capitalization): `aligns_degrees_domains_and_knots_without_introducing_c0_seams`
+    |
+    = note: `#[warn(non_snake_case)]` (part of `#[warn(nonstandard_style)]`) on by default
+
+warning: `nurbs-core` (lib test) generated 5 warnings
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.44s
+     Running unittests src/lib.rs (crates/target/debug/build/nurbs-core/99320b39da039acf/out/nurbs_core-99320b39da039acf)
+
+running 118 tests
+test continuity::curve_match::tests::rejects_unclamped_knots_without_absolute_epsilon_and_degenerate_reference ... ok
+test continuity::curve_match::tests::refuses_a_handle_lost_to_coordinate_rounding ... ok
+test continuity::curve_match::tests::matches_all_endpoint_pairs_and_preserves_weights_and_other_controls ... ok
+test continuity::preparation::tests::already_compatible_normalized_surfaces_keep_their_controls ... ok
+test continuity::preparation::tests::certificate_detects_candidate_translation_and_refuses_rounded_knot_maps ... ok
+test continuity::preparation::tests::checked_preparation_returns_original_pair_on_failed_budget ... ok
+test continuity::tests::application_gate_requires_a_finite_budget_and_second_order_seam_smoothness ... ok
+test continuity::tests::refuses_incompatible_basis_and_nonpositive_result_weights ... ok
+test continuity::tests::periodic_and_multispan_seams_are_proved_without_sampling ... ok
+test continuity::tests::rejects_rank_loss_between_sampling_sites ... ok
+test continuity::preparation::tests::explicit_conversion_can_unlink_both_periodic_inputs ... ok
+test continuity::tests::handles_different_cross_degrees_and_nonuniform_end_spans ... ok
+test continuity::tests::rounded_normalized_knots_cannot_hide_an_incompatible_basis ... ok
+test continuity::tests::reversed_matching_restores_parameter_direction ... ok
+test coons::tests::refuses_gaps_incompatible_weights_and_wrong_roles ... ok
+test coons::tests::reproduces_all_four_boundaries_and_analytic_interior ... ok
+test coons::tests::rational_quarter_cylinder_preserves_boundaries_and_radius ... ok
+test curve_distance::tests::covers_multiple_spans_weights_and_periodic_seam ... ok
+test curve_distance::tests::parallel_lines_and_skew_interior_minimum ... ok
+test curve_distance::tests::rejects_invalid_contract_and_initial_budget ... ok
+test curve_distance::tests::work_limit_is_explicit_and_retains_global_bounds ... ok
+test continuity::preparation::tests::explicit_conversion_prepares_mixed_seams_and_bounds_the_original_geometry ... ok
+test curve_surface_agreement::tests::rational_curved_support_is_verified_without_planar_assumption ... ok
+test curve_surface_agreement::tests::matching_reversed_and_exhausted ... ok
+test curve_surface_agreement::tests::rational_pcurve_composition_preserves_the_shared_parameter ... ok
+test curve_surface_agreement::tests::pcurve_crosses_surface_knots_at_strict_tolerance ... ok
+test curve_surface_agreement::tests::rational_multispan_and_nonbinary_domains ... ok
+test curve_surface_agreement::tests::departure_has_enclosed_witness_and_invalid_uv_is_unresolved ... ok
+test foundation::deviation_span_tests::discontinuity_cannot_receive_a_lipschitz_certificate ... ok
+test foundation::normal_regularity_regressions::aligned_corners_do_not_certify_an_interior_rank_loss ... ok
+test foundation::deviation_span_tests::narrow_peak_between_samples_is_bounded ... ok
+test curve_distance::tests::rational_circle_distance_has_original_curve_witnesses ... ok
+test foundation::normal_regularity_regressions::flat_corner_normals_do_not_prove_a_patch_is_planar ... ok
+test foundation::rebuild_tests::rebuild_rejects_invalid_budgets_and_basis ... ok
+test continuity::preparation::tests::prepares_periodic_seams_with_different_degrees_and_preserves_wrapping ... ok
+test foundation::periodic_rebuild_tests::rollback_retains_periodic_source_and_invalid_counts_fail ... ok
+test curve_surface_agreement::tests::rational_quadratic_periodic_surface_seam ... ok
+test foundation::rebuild_tests::rebuild_preserves_rational_shape_within_reported_bound ... ok
+test foundation::rebuild_tests::rebuild_controls_and_degree_with_rollback ... ok
+test foundation::surface_rebuild_tests::surface_bound_detects_a_peak_between_uniform_samples ... ok
+test foundation::surface_rebuild_tests::surface_rebuild_never_accepts_an_overflowed_bound ... ok
+test foundation::surface_rebuild_tests::refuses_a_removed_bump_and_preserves_the_original ... ok
+test foundation::surface_reduction_validation_tests::reduces_both_axes_with_zero_error ... ok
+test foundation::surface_reduction_validation_tests::rejects_degrees_before_unsigned_subtraction ... ok
+test framed_sweep::tests::rejects_ambiguous_initial_frame_and_invalid_counts ... ok
+test radial_bounds::tests::constant_radius_is_certified_from_polynomial_coefficients ... ok
+test framed_sweep::tests::straight_path_preserves_profile_and_translates ... ok
+test framed_sweep::tests::refinement_detects_arc_error_and_improves_with_sections ... ok
+test framed_sweep::tests::circular_path_turns_profile_without_changing_section_length ... ok
+test curve_distance::conditioning_tests::distance_survives_common_weight_scaling_and_translation ... ok
+test ray_surface::tests::outer_boundary_roots_cannot_be_counted_as_isolated_interior_crossings ... ok
+test ray_surface::tests::transverse_plane_root_and_exclusion ... ok
+test ray_surface::tests::nonbinary_knots_and_negative_direction_keep_parameter_enclosures ... ok
+test ray_surface::tests::rational_weights_and_multiple_spans_are_covered ... ok
+test ray_surface::tests::covers_two_separate_roots_without_seed_sampling ... ok
+test ray_surface::tests::tangency_coincidence_and_limits_never_claim_empty_coverage ... ok
+test surface::construction_tests::loft_aligns_degrees_and_domains ... ok
+test curve_surface_agreement::tests::both_periodic_axes_cross_seams_together ... ok
+test surface::construction_tests::rational_sweep_matches_sum_of_curves ... ok
+test curve_distance::two_curve_tests::separates_two_rational_arcs_at_a_non_sampled_minimum ... ok
+test foundation::periodic_surface_rebuild_tests::mixed_periodic_and_open_axes_preserve_cylinder_seam ... ok
+test surface_distance::tests::planes_and_interior_point_projection ... ok
+test surface_distance::tests::original_knots_multiple_spans_and_periodic_seam ... ok
+test surface_distance::tests::translation_and_invalid_inputs ... ok
+test foundation::surface_rebuild_tests::rational_and_polynomial_rebuilds_bound_the_whole_patch ... ok
+test surface_distance::tests::work_limit_is_not_a_completed_minimum ... ok
+test surface_injectivity::tests::all_spans_must_pass_the_same_global_test ... ok
+test surface_injectivity::tests::folded_and_collapsed_charts_never_claim_injectivity ... ok
+test curve_surface_agreement::tests::periodic_lift_crosses_seam_and_negative_periods ... ok
+test tests::brush_rejects_invalid_brushes_and_inputs ... ok
+test tests::brush_moves_controls_locally_and_preserves_rational_definition ... ok
+test surface_injectivity::tests::nonlinear_graph_and_vertical_rotation_are_globally_injective ... ok
+test tests::certified_projection_reports_uniqueness_and_ambiguity ... ok
+test tests::foundation_boundary_and_mutation_limits_are_deterministic ... ok
+test tests::foundation_curve_certificate_is_outward_and_positive ... ok
+test tests::edits_preserve_geometry_and_domain ... ok
+test tests::foundation_v3_reparameterization_and_fitting_are_typed ... ok
+test tests::malformed_boundary_input_returns_errors_without_poisoning_kernel ... ok
+test tests::output_budget_is_checked_before_elevation ... ok
+test tests::interpolation_approximation_and_exact_reparameterization_are_certified ... ok
+test tests::rational_circle_has_analytic_jets ... ok
+test tests::sculpt_targets_expose_polygon_and_net_structure ... ok
+test tests::sculpt_edits_preserve_rational_definition ... ok
+test tests::natural_endpoints_and_periodic_seams_are_supported ... ok
+test tests::surface_construction_and_iso_are_consistent ... ok
+test tests::foundation_v5_certified_curve_curve_and_curve_surface ... ok
+test tests::foundation_handles_adversarial_positive_weights_and_surface_cells ... ok
+test trim_domain::tests::bounded_joins_are_explicit_and_large_gaps_are_rejected ... ok
+test trim_domain::tests::periodic_curve_and_crossing_path_keep_winding_semantics ... ok
+test tests::foundation_v5_adversarial_scales_seams_and_weights ... ok
+test trim_domain::tests::square_regions_vertices_and_full_rectangles ... ok
+test trim_domain::tests::rational_circle_hole_and_orientation ... ok
+test trim_domain::tests::translation_scaling_and_resource_stops ... ok
+test trim_point::screen_tests::refuses_ambiguous_screen_depth_and_degenerate_projection ... ok
+test trim_point::screen_tests::screen_pick_trims_original_depth_and_uses_pixel_capture_distance ... ok
+test trim_point::subdivision_regression::retains_stationary_root_on_subdivision_boundary_for_tilted_arc ... ok
+test trim_point::tests::dispatch_returns_a_trim_report_and_preserves_the_cut_interval ... ok
+test trim_point::tests::refuses_ambiguous_distant_endpoint_and_closed_inputs ... ok
+test trim_point::tests::retains_the_exact_rational_arc ... ok
+test trim_point::tests::trims_both_sides_of_a_rational_line_without_changing_the_source ... ok
+test trim_domain::tests::general_weighted_cubic_loops_and_non_knot_boundary_point ... ok
+test trimmed_surface_distance::tests::empty_domain_is_distinct_from_contact ... ok
+test trimmed_surface_distance::tests::budgets_keep_coverage_and_do_not_fabricate_a_witness ... ok
+test tests::successor_normal_cone_and_reduction_rollback_are_explicit ... ok
+test trimmed_surface_distance::tests::excludes_hole_interior_from_upper_witnesses ... ok
+test continuity::preparation::tests::aligns_degrees_domains_and_knots_without_introducing_C0_seams ... ok
+test trimmed_surface_distance::tests::periodic_witness_stays_in_the_admitted_uv_branch ... ok
+test surface_distance::tests::joint_minimum_inside_both_curved_surfaces ... ok
+test continuity::tests::rational_jets_match_all_boundary_pairs_in_normalized_coordinates ... ok
+test tests::certified_general_surface_surface_intersection ... ok
+test trimmed_surface_distance::tests::two_finite_trimmed_patches_approach_the_hole_boundary ... ok
+test surface_distance::tests::rational_cylinder_patch_and_weight_scaling ... ok
+test foundation::periodic_rebuild_tests::rebuilds_periodic_degrees_with_wrapped_controls_and_bounded_error ... ok
+test foundation::periodic_surface_rebuild_tests::both_periodic_axes_keep_wrapping_and_certify_dense_error ... ok
+test tests::foundation_v3_periodic_edits_preserve_wrapping_and_seam_evidence ... ok
+test tests::foundation_v4_closes_pre_intersection_gaps ... ok
+test tests::successor_projection_covers_rational_stationary_and_surface_boundaries ... ok
+test trimmed_surface_distance::tests::rational_circular_hole_excludes_the_surface_center ... ok
+
+test result: ok. 118 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 32.78s
+

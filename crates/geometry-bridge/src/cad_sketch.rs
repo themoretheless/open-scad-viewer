@@ -7,6 +7,11 @@ fn finite(v: impl IntoIterator<Item = f64>) -> Result<()> {
         Err(input("Sketch geometry exceeds finite numeric range."))
     }
 }
+/// One angular convention for display, snapping and retained arc endpoints.
+pub(crate) fn arc_direction(degrees:f64)->[f64;2]{
+ let a=degrees.rem_euclid(360.);
+ match a{0.=>[1.,0.],90.=>[0.,1.],180.=>[-1.,0.],270.=>[0.,-1.],_=>{let(s,c)=a.to_radians().sin_cos();[c,s]}}
+}
 pub fn sample(curve: Value) -> Result<Value> {
     let kind: String = field(&curve, "kind")?;
     let center: [f64; 2] = field(&curve, "center")?;
@@ -28,8 +33,7 @@ pub fn sample(curve: Value) -> Result<Value> {
     let count = if kind == "circle" { n } else { n + 1 };
     let mut points = Vec::with_capacity(count);
     for i in 0..count {
-        let angle = (start + sweep * i as f64 / n as f64).to_radians();
-        let (s, c) = angle.sin_cos();
+        let [c,s] = arc_direction(if i==n {start+sweep} else {start + sweep * i as f64 / n as f64});
         let p = [center[0] + radius * c, center[1] + radius * s];
         finite(p)?;
         points.push(p);
@@ -164,4 +168,41 @@ pub fn transform_points(v: Value) -> Result<Value> {
         result.push(q);
     }
     encode(result)
+}
+
+/// A closed tessellated capsule, specified by two end-cap centers and full width.
+pub fn slot(v: Value) -> Result<Value> {
+    let a: [f64; 2] = field(&v, "a")?;
+    let b: [f64; 2] = field(&v, "b")?;
+    let width: f64 = field(&v, "width")?;
+    if !a.into_iter().chain(b).chain([width]).all(|x| x.is_finite() && x.abs() <= 1e6)
+        || width < 0.02 || (b[0]-a[0]).hypot(b[1]-a[1]) < 1e-6 {
+        return Err(input("Slot requires distinct centers and width between 0.02 and 1000000 mm."));
+    }
+    let angle = (b[1]-a[1]).atan2(b[0]-a[0]);
+    let mut points = Vec::with_capacity(66);
+    for (center, start) in [(b, angle-std::f64::consts::FRAC_PI_2), (a, angle+std::f64::consts::FRAC_PI_2)] {
+        for i in 0..=32 {
+            let t = start + std::f64::consts::PI * i as f64 / 32.;
+            let p = [center[0]+width*0.5*t.cos(),center[1]+width*0.5*t.sin()];
+            if p.iter().any(|x| !x.is_finite() || x.abs()>1e6) { return Err(input("Slot exceeds coordinate range.")); }
+            points.push(p);
+        }
+    }
+    encode(points)
+}
+
+#[cfg(test)]
+mod slot_tests {
+    use super::*;
+    #[test]
+    fn capsule_bounds_and_invalid_centers() {
+        let result=slot(super::super::json!({"a":[0.,0.],"b":[10.,0.],"width":4.})).unwrap();
+        let points: Vec<[f64;2]>=result.as_array().unwrap().iter().map(|p|[p[0].as_f64().unwrap(),p[1].as_f64().unwrap()]).collect();
+        assert_eq!(points.len(),66);
+        assert!((points.iter().map(|p|p[0]).fold(f64::INFINITY,f64::min)+2.).abs()<1e-9);
+        assert!((points.iter().map(|p|p[0]).fold(f64::NEG_INFINITY,f64::max)-12.).abs()<1e-9);
+        assert!(slot(super::super::json!({"a":[0.,0.],"b":[0.,0.],"width":4.})).is_err());
+        assert!(slot(super::super::json!({"a":[0.,0.],"b":[10.,0.],"width":0.})).is_err());
+    }
 }

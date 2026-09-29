@@ -21,6 +21,7 @@ pub fn dispatch(v: Value) -> Result<Value> {
         None => 1e-7,
     };
     match v["op"].as_str() {
+        Some("brep_profile_offset") => profile(planar_trim::offset(&field::<Vec<Vec<Curve>>>(&v,"loops")?,field(&v,"distance")?,tolerance)?,tolerance),
         Some("brep_profile_transform") => profile(
             brep_core::transform::profile(
                 &field::<Vec<Vec<Curve>>>(&v, "loops")?,
@@ -169,4 +170,13 @@ mod tests {
             );
         }
     }
+    #[test]
+    fn offsets_retained_regions_and_reports_empty_material() {
+        let loops=vec![rectangle([0.,0.],[6.,4.])];
+        let expanded=dispatch(json!({"op":"brep_profile_offset","loops":loops,"distance":1.})).unwrap();
+        assert!((expanded["areaMm2"].as_f64().unwrap()-(44.+std::f64::consts::PI)).abs()<1e-7);
+        let empty=dispatch(json!({"op":"brep_profile_offset","loops":loops,"distance":-5.})).unwrap();
+        assert_eq!(empty["loops"],json!([]));assert_eq!(empty["geometryStatus"],json!("numerical_uncertified"));
+    }
+
 }

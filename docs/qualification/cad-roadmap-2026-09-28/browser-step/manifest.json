@@ -1,0 +1,68 @@
+{
+  "schema": "cad-roadmap-step/1",
+  "units": "mm",
+  "toleranceMm": 0.000001,
+  "relativeVolumeTolerance": 1e-8,
+  "parts": [
+    {
+      "name": "Browser box 2×3×4",
+      "file": "browser-2.step",
+      "sha256": "ff97ac5f487e1d51b7e80561e5cca859ad7dfaead198f02607dec582421fcf41",
+      "expected": {
+        "boundsMm": [
+          [
+            0,
+            0,
+            0
+          ],
+          [
+            2,
+            3,
+            4
+          ]
+        ],
+        "volumeMm3": 24
+      }
+    },
+    {
+      "name": "Browser box 7×3×4",
+      "file": "browser-7.step",
+      "sha256": "2b42506729356ed5fd1db8bfb32fde8b407f178f754235fbb745bd6f849e5487",
+      "expected": {
+        "boundsMm": [
+          [
+            0,
+            0,
+            0
+          ],
+          [
+            7,
+            3,
+            4
+          ]
+        ],
+        "volumeMm3": 84
+      }
+    },
+    {
+      "name": "Browser UI scale 2",
+      "file": "browser-edited.step",
+      "sha256": "144505f5613d354741b49d8437aa22b86fe4bbf8b007879bc0f9fd1da5c4ca91",
+      "expected": {
+        "boundsMm": [
+          [
+            -3.5,
+            -1.5,
+            -2
+          ],
+          [
+            10.5,
+            4.5,
+            6
+          ]
+        ],
+        "volumeMm3": 672
+      }
+    }
+  ]
+}

@@ -1,0 +1,8 @@
+{
+  "sha256": "f106a36ad2d1e1f591c8c5a7e91518f07bfcb096952e0b0ae6c4eba35362b3a6",
+  "samples": 8449,
+  "maxSampledRadialErrorMm": 0.00042840936231325344,
+  "circularFixtureSagittaBoundMm": 0.00042840936231325344,
+  "generalSweepCertificate": false,
+  "oracle": "Independent Python Cox-de Boor evaluation and circular chord sagitta"
+}

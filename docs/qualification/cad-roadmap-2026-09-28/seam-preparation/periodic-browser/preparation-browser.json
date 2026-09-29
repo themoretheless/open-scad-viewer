@@ -1,0 +1,13 @@
+{
+  "browser": "151.0.7922.34",
+  "periodic": true,
+  "proof": "Допуск подтверждён · A ≤ 3.555e-14 mm · B ≤ 3.514e-14 mm",
+  "refusal": true,
+  "cancel": true,
+  "undo": true,
+  "identityPreserved": true,
+  "reversalReset": true,
+  "downloads": 3,
+  "keyboard": false,
+  "tabPresses": 0
+}

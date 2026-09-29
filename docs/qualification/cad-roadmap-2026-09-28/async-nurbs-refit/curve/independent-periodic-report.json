@@ -1,0 +1,9 @@
+{
+  "sha256": "6bb7aa335df94f2fc0043013f8e236ff1752bcadd84157a4444231a48dcf6e76",
+  "samples": 8193,
+  "maxSampledDeviationMm": 0.00895422556495196,
+  "reportedDeviationUpperMm": 0.01645704194962626,
+  "seamPositionResidualMm": 2.0014830212433605e-16,
+  "oracle": "Independent Python rational Cox-de Boor evaluation",
+  "independentContinuousCertificate": false
+}

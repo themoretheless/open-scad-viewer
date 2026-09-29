@@ -1,0 +1,33 @@
+{
+  "schema": "cad-roadmap-occt/1",
+  "oracle": "OpenCascade via cadquery-ocp",
+  "version": "8.0.1.0.0",
+  "scope": "Independent STEP read, solid validity, exact bounding box, volume and OCCT-tessellated preview. Does not certify all STEP inputs.",
+  "passed": true,
+  "parts": [
+    {
+      "name": "Worker subtraction",
+      "stepSha256": "f73348f9ccc36362659d0d968c9feed26a96f7830667888039e728514766a016",
+      "valid": true,
+      "solids": 1,
+      "faces": 6,
+      "boundsMm": [
+        [
+          -10.0000001,
+          -10.0000001,
+          -1e-07
+        ],
+        [
+          -4.9999999,
+          10.0000001,
+          20.0000001
+        ]
+      ],
+      "volumeMm3": 1999.9999999999998,
+      "maxBoundsErrorMm": 1.0000000116860974e-07,
+      "volumeErrorMm3": 2.2737367544323206e-13,
+      "passed": true,
+      "previewTriangles": 12
+    }
+  ]
+}

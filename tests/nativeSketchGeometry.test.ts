@@ -127,3 +127,16 @@ it('refuses invalid or overflowing placement before returning a partial point ba
  expect(()=>worldPoints([[2,0]],{origin:[0,0,0],u:[1e308,0,0],v:[0,1,0]})).toThrow('finite')
  expect(worldPoints([[2,3]])).toEqual([[2,3,0]])
 })
+
+it('builds a closed slot with bounded semicircular caps and rejects degenerate inputs',async()=>{
+ const {slotSketch,validateSimpleSketch}=await import('../src/services/directSketchGeometry')
+ const points=slotSketch([0,0],[10,0],4)
+ expect(points).toHaveLength(66)
+ expect(Math.min(...points.map(p=>p[0]))).toBeCloseTo(-2)
+ expect(Math.max(...points.map(p=>p[0]))).toBeCloseTo(12)
+ expect(Math.max(...points.map(p=>p[1]))).toBeCloseTo(2)
+ expect(()=>validateSimpleSketch(points,true)).not.toThrow()
+ expect(()=>slotSketch([0,0],[0,0],4)).toThrow()
+ expect(()=>slotSketch([0,0],[10,0],0)).toThrow()
+ expect(()=>slotSketch([0,0],[10,0],Infinity)).toThrow()
+})

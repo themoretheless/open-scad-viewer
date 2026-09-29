@@ -1,6 +1,62 @@
 //! Atomic affine operations on body records and their retained B-rep.
 use super::{Result, Value, encode, field, input};
 use polygon_core::Mesh;
+/// Decode one source once and derive its placements in one transport call.
+pub fn instances(v: Value) -> Result<Value> {
+    let mesh: Mesh = field(&v, "mesh")?;
+    let brep = v
+        .get("brep")
+        .map(|_| field::<brep_core::Model>(&v, "brep"))
+        .transpose()?;
+    let matrices: Vec<[[f64; 4]; 4]> = field(&v, "matrices")?;
+    if matrices.len() > 1000 {
+        return Err(input("At most 1000 instance placements per batch."));
+    }
+    let mut result = Vec::with_capacity(matrices.len());
+    for matrix in matrices {
+        let mut geometry = value_codec::Map::new();
+        geometry.insert("mesh".into(), encode(mesh.transform(matrix)?)?);
+        if let Some(model) = &brep {
+            geometry.insert(
+                "brep".into(),
+                encode(brep_core::transform::affine(model, matrix)?)?,
+            );
+        }
+        result.push(Value::Object(geometry));
+    }
+    // Entries already own encoded Values. Serializing this tree again copies
+    // every B-rep control point and mesh buffer before binary transport.
+    Ok(Value::Array(result))
+}
+/// Compose a world-space edit with an instance's source placement.
+pub fn instance_transform(v: Value) -> Result<Value> {
+    let mesh: Mesh = field(&v, "mesh")?;
+    let placement: [[f64; 4]; 4] = field(&v, "matrix")?;
+    let delta: [f64; 3] = field(&v, "delta")?;
+    let axis: [f64; 3] = field(&v, "axis")?;
+    let angle: f64 = field(&v, "angle")?;
+    let scale: f64 = field(&v, "scale")?;
+    if !placement
+        .iter()
+        .flatten()
+        .chain(&delta)
+        .chain(&axis)
+        .chain([&angle, &scale])
+        .all(|x| x.is_finite())
+        || placement[3] != [0., 0., 0., 1.]
+        || scale <= 0.
+    {
+        return Err(input("Invalid instance transform."));
+    }
+    let edit = matrix(&[mesh.positions], delta, axis, angle, scale)?;
+    let composed: [[f64; 4]; 4] = std::array::from_fn(|i| {
+        std::array::from_fn(|j| (0..4).map(|k| edit[i][k] * placement[k][j]).sum())
+    });
+    if !composed.iter().flatten().all(|x| x.is_finite()) {
+        return Err(input("Instance transform exceeds finite numeric range."));
+    }
+    encode(composed)
+}
 pub fn joint(v: Value) -> Result<Value> {
     let bodies: Vec<Value> = field(&v, "bodies")?;
     let axis: [f64; 3] = field(&v, "axis")?;
@@ -60,7 +116,8 @@ pub fn arrange(v: Value) -> Result<Value> {
     let keys = meshes
         .iter()
         .map(|m| {
-            let (min, max) = polygon_core::scene_flatten::bounds(std::slice::from_ref(&m.positions))?;
+            let (min, max) =
+                polygon_core::scene_flatten::bounds(std::slice::from_ref(&m.positions))?;
             Ok(match mode.as_str() {
                 "min" => min[axis],
                 "max" => max[axis],
@@ -198,4 +255,68 @@ pub(super) fn apply(bodies: Vec<Value>, meshes: Vec<Mesh>, matrix: [[f64; 4]; 4]
         result.push(Value::Object(object));
     }
     encode(result)
+}
+
+#[cfg(test)]
+mod instance_tests {
+    use super::*;
+    use value_codec::json;
+
+    #[test]
+    fn batch_placements_preserve_order_and_refuse_singular_matrix() {
+        let identity = [
+            [1., 0., 0., 0.],
+            [0., 1., 0., 0.],
+            [0., 0., 1., 0.],
+            [0., 0., 0., 1.],
+        ];
+        let mut moved = identity;
+        moved[0][3] = 7.;
+        let mut v = json!({"mesh":{"positions":[0.,0.,0.,1.,0.,0.,0.,1.,0.],"indices":[0,1,2]},"matrices":[identity,moved]});
+        let result = instances(v.clone()).unwrap();
+        // The direct Value tree must match the former codec round trip.
+        assert_eq!(result, encode(result.clone()).unwrap());
+        let meshes: Vec<Value> = value_codec::from_value(result).unwrap();
+        assert_eq!(field::<Mesh>(&meshes[0], "mesh").unwrap().positions[0], 0.);
+        assert_eq!(field::<Mesh>(&meshes[1], "mesh").unwrap().positions[0], 7.);
+        moved[0][0] = 0.;
+        v["matrices"] = json!([identity, moved]);
+        assert!(instances(v).is_err());
+    }
+
+    #[test]
+    fn instance_edit_composes_about_current_bounds_center() {
+        let v = json!({
+            "mesh":{"positions":[10.,0.,0.,11.,2.,3.],"indices":[]},
+            "matrix":[[1.,0.,0.,10.],[0.,1.,0.,0.],[0.,0.,1.,0.],[0.,0.,0.,1.]],
+            "delta":[1.,0.,0.],"axis":[0.,0.,1.],"angle":90.,"scale":2.
+        });
+        let result: [[f64; 4]; 4] =
+            value_codec::from_value(instance_transform(v).unwrap()).unwrap();
+        let expected = [
+            [0., -2., 0., 13.5],
+            [2., 0., 0., 0.],
+            [0., 0., 2., -1.5],
+            [0., 0., 0., 1.],
+        ];
+        for i in 0..4 {
+            for j in 0..4 {
+                assert!((result[i][j] - expected[i][j]).abs() < 1e-12);
+            }
+        }
+    }
+
+    #[test]
+    fn instance_edit_rejects_invalid_affine_and_zero_scale() {
+        let v = json!({
+            "mesh":{"positions":[0.,0.,0.,1.,2.,3.],"indices":[]},
+            "matrix":[[1.,0.,0.,0.],[0.,1.,0.,0.],[0.,0.,1.,0.],[0.,0.,0.,1.]],
+            "delta":[0.,0.,0.],"axis":[0.,0.,1.],"angle":0.,"scale":0.
+        });
+        assert!(instance_transform(v.clone()).is_err());
+        let mut invalid = v;
+        invalid["scale"] = json!(1.);
+        invalid["matrix"][3][0] = json!(1.);
+        assert!(instance_transform(invalid).is_err());
+    }
 }

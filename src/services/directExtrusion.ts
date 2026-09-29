@@ -1,3 +1,4 @@
+import {sketchProfile} from './retainedSketchProfile'
 import { extrudeSketchBrep, parseDirectDocument, type DirectBody, type DirectDocument, type DirectSketch } from './directModeling'
 import { cross3, xyPlane, type SketchPlane } from './directSketchGeometry'
 import { booleanNurbsBrep, extrudeBrepCurves, tessellateNurbsBrep, transformNurbsBrep, type NurbsBrep } from './geometry/brep'
@@ -14,8 +15,9 @@ export function extrudeSketchProfile(sketches: readonly DirectSketch[], height: 
   if (!Number.isFinite(height)||Math.abs(height)<.00001||!Number.isFinite(offset)) throw Error('Extrusion height must be finite and nonzero.')
   const plane=sketches[0].plane??xyPlane()
   if(sketches.some(s=>!sameSketchPlane(s.plane,plane))) throw Error('All profile contours must lie on the same workplane.')
-  if(sketches.length===1)return extrudeSketchBrep(sketches[0],height,offset)
+  if(sketches.length===1&&!sketches[0].retainedProfile)return extrudeSketchBrep(sketches[0],height,offset)
   const loops=sketches.flatMap(sketch=>{
+    if(sketch.retainedProfile)return sketchProfile(sketch).loops
     if(sketch.analytic?.kind==='circle') {
       const {center,radius}=sketch.analytic
       return transformBrepProfile(authorBrepProfile({kind:'circle',radius}),[1,0,0,0,0,1,0,0,0,0,1,0,center[0],center[1],0,1]).loops

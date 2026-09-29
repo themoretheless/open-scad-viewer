@@ -1,0 +1,16 @@
+{
+  "cadTests": 378,
+  "cadFiles": 33,
+  "focusedTests": 173,
+  "focusedFiles": 3,
+  "vueTypes": true,
+  "mcpTypes": true,
+  "build": true,
+  "verifyDist": true,
+  "assetBytes": 6862039,
+  "scope": [
+    "curveMatch",
+    "surfaceMatch",
+    "seamPrepare"
+  ]
+}

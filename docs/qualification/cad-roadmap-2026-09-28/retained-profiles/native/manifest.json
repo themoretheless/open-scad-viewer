@@ -1,0 +1,48 @@
+{
+  "schema": "cad-roadmap-step/1",
+  "units": "mm",
+  "toleranceMm": 0.000001,
+  "relativeVolumeTolerance": 1e-8,
+  "parts": [
+    {
+      "name": "retained-union",
+      "file": "retained-union.step",
+      "sha256": "e650dc23f86cc017e49c7894628b073c7a45612ceeecb02f1600cc4987fc22d9",
+      "expected": {
+        "volumeMm3": 241.41592653589794,
+        "boundsMm": [
+          [
+            -4,
+            -3,
+            0
+          ],
+          [
+            5,
+            3,
+            5
+          ]
+        ]
+      }
+    },
+    {
+      "name": "retained-scaled",
+      "file": "retained-scaled.step",
+      "sha256": "e63acf7bc5a797dabae7a55273fba1ad6cce8dfb4a23ae593d15568b927771a5",
+      "expected": {
+        "volumeMm3": 965.6637061435918,
+        "boundsMm": [
+          [
+            -8,
+            -6,
+            -5
+          ],
+          [
+            10,
+            6,
+            0
+          ]
+        ]
+      }
+    }
+  ]
+}

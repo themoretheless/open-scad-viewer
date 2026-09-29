@@ -1,0 +1,129 @@
+{
+  "schema": "cad-roadmap-occt/1",
+  "oracle": "OpenCascade via cadquery-ocp",
+  "version": "8.0.1.0.0",
+  "scope": "Independent STEP read, solid validity, exact bounding box, volume and OCCT-tessellated preview. Does not certify all STEP inputs.",
+  "passed": true,
+  "parts": [
+    {
+      "name": "semicircle",
+      "stepSha256": "6f6547ee05a31137e990126e848ea8f42531135f36dea8cbff42e327e4d0a130",
+      "valid": true,
+      "solids": 1,
+      "faces": 5,
+      "boundsMm": [
+        [
+          -2.0000001,
+          -1e-07,
+          -1e-07
+        ],
+        [
+          2.0000001,
+          2.0000001,
+          5.0000001
+        ]
+      ],
+      "volumeMm3": 31.415926536327078,
+      "maxBoundsErrorMm": 1.0000000028043132e-07,
+      "volumeErrorMm3": 4.291464961170277e-10,
+      "passed": true,
+      "previewTriangles": 144
+    },
+    {
+      "name": "clockwise-quarter",
+      "stepSha256": "d63343aa3b204a74a22c51c45e2167be5e5fb926b153bfaaae69eeb00bdb0c32",
+      "valid": true,
+      "solids": 1,
+      "faces": 4,
+      "boundsMm": [
+        [
+          -1e-07,
+          -2.0000001,
+          -1e-07
+        ],
+        [
+          2.0000001,
+          1e-07,
+          3.0000001000000003
+        ]
+      ],
+      "volumeMm3": 3.4247779616555603,
+      "maxBoundsErrorMm": 1.0000000028043132e-07,
+      "volumeErrorMm3": 8.861809064342197e-10,
+      "passed": true,
+      "previewTriangles": 72
+    },
+    {
+      "name": "major-arc",
+      "stepSha256": "83e7cd24922c8f7a515a5e62ab99a1abf740dbd4dd75b3b70284a0a4d9d07dfa",
+      "valid": true,
+      "solids": 1,
+      "faces": 6,
+      "boundsMm": [
+        [
+          -2.0000001,
+          -2.0000001,
+          -4.0000001
+        ],
+        [
+          2.0000001,
+          2.0000001,
+          1e-07
+        ]
+      ],
+      "volumeMm3": 45.69911184272684,
+      "maxBoundsErrorMm": 1.0000000028043132e-07,
+      "volumeErrorMm3": 3.5067415637968224e-10,
+      "passed": true,
+      "previewTriangles": 216
+    },
+    {
+      "name": "oblique-arc",
+      "stepSha256": "9a95fc42c4eb75970ec8825eb4c9a2122c7b6c70ed8a8ad01fe6a3a764eedf49",
+      "valid": true,
+      "solids": 1,
+      "faces": 4,
+      "boundsMm": [
+        [
+          -1e-07,
+          0.44990200868773,
+          -1e-07
+        ],
+        [
+          1.9487402295704706,
+          2.0000001,
+          2.0000001
+        ]
+      ],
+      "volumeMm3": 1.478133837117276,
+      "maxBoundsErrorMm": 1.0000000005838672e-07,
+      "volumeErrorMm3": 1.1568168645226251e-10,
+      "passed": true,
+      "previewTriangles": 64
+    },
+    {
+      "name": "fractional-arc",
+      "stepSha256": "30a8be7d2c5001d81aabed576c438e5de97ee9af20430f97771b545366c170b7",
+      "valid": true,
+      "solids": 1,
+      "faces": 4,
+      "boundsMm": [
+        [
+          1.7810611359734319,
+          -1e-07,
+          -1e-07
+        ],
+        [
+          2.0000001,
+          0.9098467209822353,
+          1.0000001
+        ]
+      ],
+      "volumeMm3": 0.03472557019709575,
+      "maxBoundsErrorMm": 1.0000000005838672e-07,
+      "volumeErrorMm3": 2.0816681711721685e-17,
+      "passed": true,
+      "previewTriangles": 24
+    }
+  ]
+}

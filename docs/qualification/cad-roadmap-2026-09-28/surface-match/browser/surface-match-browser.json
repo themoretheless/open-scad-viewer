@@ -1,0 +1,24 @@
+{
+  "browser": "151.0.7922.34",
+  "checks": [
+    {
+      "order": 1,
+      "report": "Верхняя граница ошибки: 3.463e-14 mm · Допуск подтверждён",
+      "refusal": true,
+      "cancel": true,
+      "undo": true,
+      "identityPreserved": true
+    },
+    {
+      "order": 2,
+      "report": "Верхняя граница ошибки: 1.821e-13 mm · Допуск подтверждён",
+      "refusal": true,
+      "cancel": true,
+      "undo": true,
+      "identityPreserved": true
+    }
+  ],
+  "downloads": 6,
+  "keyboard": false,
+  "tabPresses": 0
+}

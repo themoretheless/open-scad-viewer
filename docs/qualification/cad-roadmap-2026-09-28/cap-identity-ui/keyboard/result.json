@@ -1,0 +1,14 @@
+{
+  "ok": true,
+  "keyboard": true,
+  "tabs": 2897,
+  "cases": [
+    "bracket",
+    "enclosure",
+    "flange"
+  ],
+  "pushMm": 1,
+  "undoRedo": true,
+  "reload": true,
+  "errors": []
+}

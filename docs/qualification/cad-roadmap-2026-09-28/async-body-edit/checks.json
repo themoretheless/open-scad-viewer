@@ -1,0 +1,19 @@
+{
+  "cadTests": 371,
+  "cadFiles": 33,
+  "workerTests": 29,
+  "workerFiles": 2,
+  "vueTypes": true,
+  "mcpTypes": true,
+  "build": true,
+  "verifyDist": true,
+  "assetBytes": 6856284,
+  "scope": [
+    "push",
+    "chamfer",
+    "edge-fillet",
+    "shell",
+    "split"
+  ],
+  "remaining": "profile and NURBS preview, transforms and direct Boolean remain synchronous"
+}

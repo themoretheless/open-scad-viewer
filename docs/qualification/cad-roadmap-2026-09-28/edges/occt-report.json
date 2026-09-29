@@ -1,0 +1,105 @@
+{
+  "schema": "cad-roadmap-occt/1",
+  "oracle": "OpenCascade via cadquery-ocp",
+  "version": "8.0.1.0.0",
+  "scope": "Independent STEP read, solid validity, exact bounding box, volume and OCCT-tessellated preview. Does not certify all STEP inputs.",
+  "passed": true,
+  "parts": [
+    {
+      "name": "fillet-four-r1",
+      "stepSha256": "84db2f46643ac2d9f7271a27106dbfc08b922fbf4be0a045413b70f474c80059",
+      "valid": true,
+      "solids": 1,
+      "faces": 10,
+      "boundsMm": [
+        [
+          -1.0000000001102229e-07,
+          -1.0000000001102229e-07,
+          -1e-07
+        ],
+        [
+          10.0000001,
+          8.0000001,
+          6.000000100000001
+        ]
+      ],
+      "volumeMm3": 474.8495559083788,
+      "maxBoundsErrorMm": 1.0000000116860974e-07,
+      "volumeErrorMm3": 1.3159933587303385e-08,
+      "passed": true,
+      "previewTriangles": 316
+    },
+    {
+      "name": "fillet-one-r05",
+      "stepSha256": "d8ddb73b95d3c95ab34e28e05e3f5a4f03ae47e15398d5f4b88985d657a515ba",
+      "valid": true,
+      "solids": 1,
+      "faces": 7,
+      "boundsMm": [
+        [
+          -1e-07,
+          -1.0000000000551115e-07,
+          -1e-07
+        ],
+        [
+          10.0000001,
+          8.0000001,
+          6.000000100000001
+        ]
+      ],
+      "volumeMm3": 479.67809724347836,
+      "maxBoundsErrorMm": 1.0000000116860974e-07,
+      "volumeErrorMm3": 1.617820544197457e-09,
+      "passed": true,
+      "previewTriangles": 84
+    },
+    {
+      "name": "chamfer-one-d1",
+      "stepSha256": "97d9035726f8cc32b94faf6abe913234ce79d6c0e7f632d8fcadb5e37e95836d",
+      "valid": true,
+      "solids": 1,
+      "faces": 7,
+      "boundsMm": [
+        [
+          -1e-07,
+          -1e-07,
+          -1e-07
+        ],
+        [
+          10.0000001,
+          8.0000001,
+          6.0000001
+        ]
+      ],
+      "volumeMm3": 477.0,
+      "maxBoundsErrorMm": 1.0000000028043132e-07,
+      "volumeErrorMm3": 0.0,
+      "passed": true,
+      "previewTriangles": 16
+    },
+    {
+      "name": "fillet-four-r2",
+      "stepSha256": "c38d01e199371342614260bfa1026512f11878c072bb432fed102c203b439a82",
+      "valid": true,
+      "solids": 1,
+      "faces": 10,
+      "boundsMm": [
+        [
+          -1.000000000220446e-07,
+          -1.0000000002204458e-07,
+          -1e-07
+        ],
+        [
+          10.000000100000001,
+          8.0000001,
+          6.000000100000001
+        ]
+      ],
+      "volumeMm3": 459.39822366727526,
+      "maxBoundsErrorMm": 1.0000000116860974e-07,
+      "volumeErrorMm3": 1.887974576675333e-08,
+      "passed": true,
+      "previewTriangles": 300
+    }
+  ]
+}

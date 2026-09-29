@@ -1,0 +1,172 @@
+{
+  "artifact": {
+    "geometryWasmSha256": "fc2810e7b32b95b44df8b1be0b7fa41b477df692369cb95dd737bb70b277ed38",
+    "indexSha256": "dbcecf2a6dd13f5ef3ec4b173114f1eb4e6201f3a41114a8d36e723502a262f9"
+  },
+  "browser": "151.0.7922.34",
+  "keyboard": false,
+  "tabs": 0,
+  "expectedMm": 2.1360009363293826,
+  "displayedIntervalMm": [
+    2.13600023408,
+    2.1360015742
+  ],
+  "holeResult": {
+    "cells": 200,
+    "containment": "not-classified",
+    "converged": true,
+    "distanceIntervalMm": [
+      2.136000234083315,
+      2.136001574204169
+    ],
+    "domainCells": 7076,
+    "evaluatedPairs": 5,
+    "faces": [
+      9,
+      5
+    ],
+    "maxCells": 1000000,
+    "maxDomainCells": 8000000,
+    "method": "interval-trimmed-face-pairs",
+    "pairs": 60,
+    "parameters": [
+      [
+        0.47500005,
+        0.6000001500000001
+      ],
+      [
+        1.0000000000000001e-7,
+        1.0000000000000001e-7
+      ]
+    ],
+    "pointEnclosures": [
+      [
+        [
+          4.750000499999991,
+          4.750000500000009
+        ],
+        [
+          6.00000149999999,
+          6.000001500000012
+        ],
+        [
+          0,
+          0
+        ]
+      ],
+      [
+        [
+          4.75,
+          4.75
+        ],
+        [
+          5.249999949999999,
+          5.249999950000001
+        ],
+        [
+          2.0000000999999994,
+          2.0000001000000003
+        ]
+      ]
+    ],
+    "points": [
+      [
+        4.7500005000000005,
+        6.000001500000001,
+        0
+      ],
+      [
+        4.75,
+        5.24999995,
+        2.0000001
+      ]
+    ],
+    "reason": "tolerance",
+    "scope": "boundary-shells-bounded-joins",
+    "toleranceMm": 0.001,
+    "toleranceUv": 1e-7
+  },
+  "nestedInterval": [
+    3,
+    3
+  ],
+  "nativeResult": {
+    "cells": 1,
+    "containment": "not-classified",
+    "converged": true,
+    "distanceIntervalMm": [
+      2.99999999999997,
+      3.0000000000000075
+    ],
+    "domainCells": 18,
+    "evaluatedPairs": 1,
+    "faces": [
+      0,
+      0
+    ],
+    "maxCells": 1000000,
+    "maxDomainCells": 8000000,
+    "method": "interval-trimmed-face-pairs",
+    "pairs": 64,
+    "parameters": [
+      [
+        0.125,
+        0.125
+      ],
+      [
+        0.125,
+        0.125
+      ]
+    ],
+    "pointEnclosures": [
+      [
+        [
+          0.4848484848484828,
+          0.4848484848484869
+        ],
+        [
+          0.4848484848484828,
+          0.4848484848484869
+        ],
+        [
+          1.878787878787878,
+          1.8787878787878796
+        ]
+      ],
+      [
+        [
+          1.212121212121207,
+          1.2121212121212173
+        ],
+        [
+          1.212121212121207,
+          1.2121212121212173
+        ],
+        [
+          4.696969696969695,
+          4.696969696969699
+        ]
+      ]
+    ],
+    "points": [
+      [
+        0.4848484848484849,
+        0.4848484848484848,
+        1.878787878787879
+      ],
+      [
+        1.212121212121212,
+        1.212121212121212,
+        4.696969696969697
+      ]
+    ],
+    "reason": "tolerance",
+    "scope": "boundary-shells-bounded-joins",
+    "toleranceMm": 0.001,
+    "toleranceUv": 1e-7
+  },
+  "requests": 5,
+  "cancelledWorkerTerminated": true,
+  "invalidTargetLocalized": true,
+  "documentUnchanged": true
+}

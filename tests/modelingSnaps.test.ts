@@ -99,3 +99,25 @@ it('finds intersections in vertical planes but rejects merely projected crossing
  g.segments[1]={a:[0,2,10],b:[10,2,0]}
  expect(resolveModelingSnap([5,0,5],g,{...options,project}).kind).not.toBe('intersection')
 })
+
+it('preserves analytic arc snaps in a serialized rotated workplane',()=>{
+ const geometry:SnapGeometry={points:[],segments:[{a:[10,5,0],b:[10,0,5],arc:{plane:{origin:[10,0,0],u:[0,1,0],v:[0,0,1]},center:[0,0],radius:5,start:0,sweep:90}}]}
+ const result=resolveModelingSnap([10,2.5,2.5],structuredClone(geometry),{project:p=>[p[1],p[2]],grid:0,geometry:true,radius:10,anchor:[10,0,0]})
+ expect(result.kind).toBe('edge');expect(result.point[0]).toBe(10)
+ expect(result.point[1]).toBeCloseTo(5/Math.sqrt(2),12);expect(result.point[2]).toBeCloseTo(5/Math.sqrt(2),12)
+})
+
+it('keeps retained rational edges exact after cloning and respects every degree-one knot span',async()=>{
+ const {warmGeometryKernel}=await import('../src/services/geometry/kernel');await warmGeometryKernel()
+ const curve={degree:2,knots:[0,0,0,1,1,1],controlPoints:[[10,0],[10,10],[0,10]],weights:[1,Math.SQRT1_2,1]}
+ const geometry=structuredClone(sketchSnapGeometry([{id:'r',name:'Rational',closed:false,points:[],retainedProfile:{loops:[[curve]]}}]))
+ expect(geometry.segments).toHaveLength(16)
+ expect(geometry.points.find(p=>p.kind==='midpoint')!.point).toEqual([Math.SQRT1_2*10,Math.SQRT1_2*10,0])
+ const edge=geometry.segments[5],chord=edge.a.map((v,i)=>(v+edge.b[i])/2) as Vec3
+ const hit=resolveModelingSnap(chord,{points:[],segments:[edge]},{...options,project:p=>[p[0]*100,p[1]*100]})
+ expect(hit.kind).toBe('edge');expect(Math.hypot(hit.point[0],hit.point[1])).toBeCloseTo(10,10)
+ expect(Math.hypot(chord[0],chord[1])).toBeLessThan(9.999)
+ const polyline={degree:1,knots:[0,0,.25,1,1],controlPoints:[[0,0],[5,0],[5,10]],weights:[1,1,1]}
+ const lines=sketchSnapGeometry([{id:'p',name:'Piecewise',closed:false,points:[],retainedProfile:{loops:[[polyline]]}}])
+ expect(lines.segments).toEqual([{a:[0,0,0],b:[5,0,0]},{a:[5,0,0],b:[5,10,0]}])
+})

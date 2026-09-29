@@ -1,0 +1,45 @@
+{
+  "runtime": "v22.23.3",
+  "platform": "darwin",
+  "arch": "arm64",
+  "scope": "Node materialized B-rep instances; no browser/GPU claims",
+  "measurements": [
+    {
+      "instances": 1000,
+      "bodies": 1001,
+      "memoryBefore": {
+        "rss": 76536840,
+        "heapTotal": 38666240,
+        "heapUsed": 21529168,
+        "external": 5667989,
+        "arrayBuffers": 3376930
+      },
+      "memoryAfter": {
+        "rss": 1863517816,
+        "heapTotal": 954531840,
+        "heapUsed": 918129696,
+        "external": 17436200,
+        "arrayBuffers": 3741821
+      },
+      "jsonBytes": 19003382,
+      "compactBytes": 149902,
+      "resolveMs": 2079.306375,
+      "parseSamplesMs": [
+        2430.665583,
+        2258.9849159999994,
+        1961.7816669999993,
+        2408.394833000002,
+        2133.1423749999994
+      ],
+      "commitMs": 2488.825667000001,
+      "undoMs": 2173.207040999998,
+      "redoMs": 2333.8940000000002,
+      "historyStorage": {
+        "undoStates": 1,
+        "redoStates": 0,
+        "materializedStates": 1,
+        "retainedCharacters": 299804
+      }
+    }
+  ]
+}

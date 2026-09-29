@@ -1,0 +1,14 @@
+{
+  "browser": "151.0.7922.34",
+  "workerRequests": 27,
+  "meshVerticesAndCv": true,
+  "numericCvKeyboard": true,
+  "invalidCvRefused": true,
+  "cancel": true,
+  "undoRedo": true,
+  "reload": true,
+  "displayVerified": true,
+  "keyboard": false,
+  "tabPresses": 152,
+  "downloads": 16
+}

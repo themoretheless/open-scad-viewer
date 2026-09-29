@@ -68,3 +68,60 @@ describe('direct corner and revolve operations',()=>{
     expect(()=>applyDirectRevolve(solid,'s',opts,'difference','missing','unused')).toThrow('target')
   })
 })
+
+import {parseDirectDocument} from '../src/services/directModeling'
+import {prepareSolidProfile} from '../src/services/solidProfilePreparation'
+describe('native profile preparation',()=>{
+ const document=()=>({...emptyDirectDocument(),sketches:[
+  {id:'a',name:'First',closed:false,points:[[10,10],[10,0]] as [number,number][]},
+  {id:'b',name:'Second',closed:false,points:[[0,0],[0,10]] as [number,number][]},
+  {id:'c',name:'Third',closed:false,points:[[0,10],[10,10]] as [number,number][]},
+  {id:'d',name:'Fourth',closed:false,points:[[10,0],[0,0]] as [number,number][]},
+ ]})
+ it('orders reversed inputs and produces a closed extrudable profile with preserved identity',()=>{
+  const d=document(),before=structuredClone(d),r=prepareSolidProfile(d,['a','c','d','b'],0)
+  expect(r.report.accepted).toBe(true);expect(d).toEqual(before)
+  expect(r.document.sketches).toHaveLength(1);expect(r.document.sketches[0].id).toBe('a')
+  const mesh=extrudeDirectSketch(r.document.sketches[0],5,'body').mesh,report=inspectPolygonMesh(mesh)
+  expect(report.closed).toBe(true);expect(report.signedVolumeMm3).toBeCloseTo(500)
+ })
+ it('keeps both original gap endpoints as an explicit connector and refuses below tolerance',()=>{
+  const d={...emptyDirectDocument(),sketches:[{id:'a',name:'Gap',closed:false,points:[[0,0],[10,0],[10,10],[0,10],[0,.1]] as [number,number][]}]}
+  const refused=prepareSolidProfile(d,['a'],.09);expect(refused.report.accepted).toBe(false);expect(refused.document).toEqual(d);expect(refused.report.defects).toHaveLength(2)
+  const accepted=prepareSolidProfile(d,['a'],.11);expect(accepted.report.accepted).toBe(true);expect(accepted.report.points).toEqual(d.sketches[0].points);expect(accepted.report.connectors).toHaveLength(1)
+ })
+ it('refuses ambiguous endpoint connectivity',()=>{
+  const d=document();d.sketches.push({id:'branch',name:'Branch',closed:false,points:[[10,0],[20,0]]})
+  const result=prepareSolidProfile(d,d.sketches.map(s=>s.id),0)
+  expect(result.report.accepted).toBe(false);expect(result.report.defects.some(d=>d.kind==='ambiguous')).toBe(true);expect(result.document).toEqual(d)
+ })
+ it('refuses mixed planes and reports gaps in open analytic arcs',()=>{
+  const d=document();Object.assign(d.sketches[0],{plane:{origin:[0,0,5],u:[1,0,0],v:[0,1,0]}})
+  expect(()=>prepareSolidProfile(d,['a','b'],0)).toThrow('plane')
+  Object.assign(d.sketches[0],{plane:{v:[0,1,0],origin:[0,0,0],u:[1,0,0]}})
+  expect(prepareSolidProfile(d,['a','b','c','d'],0).report.accepted).toBe(true)
+  Object.assign(d.sketches[0],{analytic:{kind:'arc',center:[0,0],radius:1,start:0,sweep:90}})
+  expect(prepareSolidProfile(d,['a'],0).report.reason).toBe('endpoint-topology')
+ })
+})
+
+it('returns located crossing segments without modifying the source profile',()=>{
+ const document={...emptyDirectDocument(),sketches:[{id:'crossing',name:'Crossing',closed:false,points:[[0,0],[2,2],[0,2],[2,0],[0,0]] as [number,number][]}]}
+ const result=prepareSolidProfile(document,['crossing'],0)
+ expect(result.report.accepted).toBe(false);expect(result.document).toEqual(document)
+ expect(result.report.segmentDefect).toEqual({kind:'intersection',segments:[{index:0,a:[0,0],b:[2,2]},{index:2,a:[0,2],b:[2,0]}]})
+})
+
+it('assembles arcs and lines without consulting display chords, preserving identity and JSON',()=>{
+ const document={...emptyDirectDocument(),sketches:[
+  {id:'arc',name:'Semicircle',closed:false,points:[[999,999],[998,998]] as [number,number][],analytic:{kind:'arc' as const,center:[0,0] as [number,number],radius:2,start:0,sweep:180}},
+  {id:'line',name:'Diameter',closed:false,points:[[-2,0],[2,0]] as [number,number][]},
+ ]}
+ const before=structuredClone(document),result=prepareSolidProfile(document,['arc','line'],0)
+ expect(result.report.accepted).toBe(true);expect(document).toEqual(before)
+ const sketch=result.document.sketches[0]
+ expect(sketch.id).toBe('arc');expect(sketch.analytic).toBeUndefined();expect(sketch.retainedProfile!.areaMm2).toBeCloseTo(2*Math.PI,10)
+ expect(sketch.retainedProfile!.loops[0].filter(c=>c.degree===2)).toHaveLength(2)
+ expect(result.document.sketches).toHaveLength(1)
+ expect(parseDirectDocument(JSON.stringify(result.document)).sketches[0].retainedProfile).toEqual(sketch.retainedProfile)
+})

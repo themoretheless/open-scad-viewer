@@ -1,0 +1,10 @@
+{
+  "sourceSha256": "48eb633db642e3ea67415dc1e65acb33ef24e95807df001db3a0430d7a3b4501",
+  "arithmetic": "exact rational basis evaluation",
+  "rectangles": 30,
+  "sampledPoints": 3630,
+  "witnesses": 2,
+  "analyticDistanceMm": "11.2132034355964257320253308631454711785450781306542210976501960698609871769316055827558130",
+  "cells": 11039,
+  "independentEnclosureChecks": "passed"
+}

@@ -1,0 +1,16 @@
+{
+  "cadTests": 363,
+  "testFiles": 33,
+  "vueTypecheck": true,
+  "mcpTypecheck": true,
+  "viteBuild": true,
+  "distVerified": true,
+  "assetsBytes": 6815572,
+  "rawWasmBytes": 10975204,
+  "nativeStepCases": 5,
+  "browserOperations": [
+    "difference",
+    "intersection"
+  ],
+  "scope": "Boolean regions of closed coplanar line/circular-arc profiles; no general NURBS or open-curve trim claim."
+}

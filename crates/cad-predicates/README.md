@@ -504,3 +504,25 @@ empty batches. 61 predicate/topology tests pass in debug and release;
 module-only all-target Clippy with denied warnings passes. This remains native
 candidate infrastructure; UI project persistence and general curved B-rep
 certification are still open.
+
+### Candidate 11: rational Bézier identity
+
+`rational_bezier_identity` compares two positive-weight rational Bézier curves
+of degrees 1–32 at the same normalized parameter. Inputs are original Euclidean
+XYZ coordinates and weights as four `LeafRef`s per control. Exact expansion
+arithmetic checks every coefficient of `Na*Wb - Nb*Wa` for each coordinate.
+Degree elevation and uniform positive weight scaling can therefore preserve
+identity without identical control arrays. Reversal is represented by reversing
+one original control sequence before calling the predicate.
+
+`Equal` proves parameterized identity; `Different` does not rule out the same
+geometric image under another parameterization. Nonpositive weights, exhausted
+resources, cancellation or unavailable exact arithmetic yield `Indeterminate`.
+The result retains context identity and consumed work. Multiple knot spans and
+general reparameterization are outside this API.
+
+The independent oracle in `scripts/verify-bezier-identity.py` expands the
+Bernstein basis into the power basis using Python Fraction. The 146-case corpus
+covers 73 equal and 73 different cases, weight scaling, coordinate transformations,
+one-ULP changes and degrees through 32. High-degree nonconstant cases are elevated
+lines; this is not qualification of all rational curves of those degrees.

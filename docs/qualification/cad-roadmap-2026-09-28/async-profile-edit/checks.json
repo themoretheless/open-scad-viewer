@@ -1,0 +1,20 @@
+{
+  "cadTests": 372,
+  "cadFiles": 33,
+  "finalFocusedTests": 162,
+  "finalFocusedFiles": 3,
+  "extraTestAfterFullRun": "old Boolean response after target swap",
+  "vueTypes": true,
+  "mcpTypes": true,
+  "build": true,
+  "verifyDist": true,
+  "assetBytes": 6857135,
+  "scope": [
+    "profile-union",
+    "profile-difference",
+    "profile-intersection",
+    "offset",
+    "extend",
+    "curve"
+  ]
+}

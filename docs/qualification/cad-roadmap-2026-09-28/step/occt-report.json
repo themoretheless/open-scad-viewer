@@ -1,0 +1,105 @@
+{
+  "schema": "cad-roadmap-occt/1",
+  "oracle": "OpenCascade via cadquery-ocp",
+  "version": "8.0.1.0.0",
+  "scope": "Independent STEP read, solid validity, exact bounding box, volume and OCCT-tessellated preview. Does not certify all STEP inputs.",
+  "passed": true,
+  "parts": [
+    {
+      "name": "bracket",
+      "stepSha256": "545b4474eee3dbc27fdf8b2b459222853d1220740f5d4f48f0d8370519a3dc20",
+      "valid": true,
+      "solids": 1,
+      "faces": 8,
+      "boundsMm": [
+        [
+          -1e-07,
+          -1e-07,
+          -1e-07
+        ],
+        [
+          40.0000001,
+          30.0000001,
+          20.0000001
+        ]
+      ],
+      "volumeMm3": 6500.0,
+      "maxBoundsErrorMm": 1.0000000116860974e-07,
+      "volumeErrorMm3": 0.0,
+      "passed": true,
+      "previewTriangles": 20
+    },
+    {
+      "name": "flange",
+      "stepSha256": "2831a600c9522878f4f430b40bb7a4ad6a5238aa9481d792ffe76afc7c38348f",
+      "valid": true,
+      "solids": 1,
+      "faces": 10,
+      "boundsMm": [
+        [
+          -20.000000100000005,
+          -20.000000100000005,
+          -1e-07
+        ],
+        [
+          20.000000100000005,
+          20.000000100000005,
+          6.000000100000001
+        ]
+      ],
+      "volumeMm3": 7068.583470511286,
+      "maxBoundsErrorMm": 1.0000000472132342e-07,
+      "volumeErrorMm3": 6.574919098056853e-08,
+      "passed": true,
+      "previewTriangles": 608
+    },
+    {
+      "name": "enclosure",
+      "stepSha256": "834f22cde87362656d31abc70996c733a940b3d3322fbdb0f4df142cd4b19a37",
+      "valid": true,
+      "solids": 1,
+      "faces": 46,
+      "boundsMm": [
+        [
+          -1e-07,
+          -1e-07,
+          -1e-07
+        ],
+        [
+          40.0000001,
+          30.0000001,
+          20.0000001
+        ]
+      ],
+      "volumeMm3": 7151.999999999999,
+      "maxBoundsErrorMm": 1.0000000116860974e-07,
+      "volumeErrorMm3": 9.094947017729282e-13,
+      "passed": true,
+      "previewTriangles": 92
+    },
+    {
+      "name": "edited-box",
+      "stepSha256": "63817a55082d1f0aea46be8c89727fc482656d106ac3f8207ff6e0b48255c2d7",
+      "valid": true,
+      "solids": 1,
+      "faces": 6,
+      "boundsMm": [
+        [
+          4.9999999,
+          -1e-07,
+          -1e-07
+        ],
+        [
+          9.0000001,
+          3.0000001,
+          4.0000001
+        ]
+      ],
+      "volumeMm3": 48.0,
+      "maxBoundsErrorMm": 1.0000000028043132e-07,
+      "volumeErrorMm3": 0.0,
+      "passed": true,
+      "previewTriangles": 12
+    }
+  ]
+}

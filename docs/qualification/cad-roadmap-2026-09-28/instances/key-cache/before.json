@@ -1,0 +1,100 @@
+{
+  "runtime": "v22.23.3",
+  "platform": "darwin",
+  "arch": "arm64",
+  "scope": "Node materialized B-rep instances; no browser/GPU claims",
+  "measurements": [
+    {
+      "instances": 100,
+      "bodies": 101,
+      "jsonBytes": 1911562,
+      "compactBytes": 32294,
+      "resolveMs": 120.86116700000002,
+      "parseSamplesMs": [
+        124.75312499999995,
+        117.31487500000003,
+        118.50695800000017,
+        123.80608400000006,
+        121.64420799999994
+      ],
+      "commitMs": 126.1903749999999,
+      "undoMs": 122.17654199999993,
+      "redoMs": 122.9904160000001,
+      "historyStorage": {
+        "undoStates": 1,
+        "redoStates": 0,
+        "materializedStates": 1,
+        "retainedCharacters": 64588
+      }
+    },
+    {
+      "instances": 199,
+      "bodies": 200,
+      "jsonBytes": 3788030,
+      "compactBytes": 45175,
+      "resolveMs": 227.87333400000034,
+      "parseSamplesMs": [
+        388.82345799999985,
+        392.4150420000001,
+        392.6505830000001,
+        404.7851249999999,
+        388.8749579999994
+      ],
+      "commitMs": 410.9343749999998,
+      "undoMs": 242.71029199999975,
+      "redoMs": 242.37145799999962,
+      "historyStorage": {
+        "undoStates": 1,
+        "redoStates": 0,
+        "materializedStates": 1,
+        "retainedCharacters": 90350
+      }
+    },
+    {
+      "instances": 500,
+      "bodies": 501,
+      "jsonBytes": 9493482,
+      "compactBytes": 84342,
+      "resolveMs": 565.2954170000003,
+      "parseSamplesMs": [
+        1001.4909169999992,
+        1029.2521659999984,
+        996.0420410000006,
+        1050.2337909999987,
+        1005.4001249999983
+      ],
+      "commitMs": 1181.4235420000005,
+      "undoMs": 636.5653750000001,
+      "redoMs": 626.7219169999989,
+      "historyStorage": {
+        "undoStates": 1,
+        "redoStates": 0,
+        "materializedStates": 1,
+        "retainedCharacters": 168684
+      }
+    },
+    {
+      "instances": 1000,
+      "bodies": 1001,
+      "jsonBytes": 19003382,
+      "compactBytes": 149902,
+      "resolveMs": 1173.4991249999985,
+      "parseSamplesMs": [
+        2045.114125,
+        2047.595624999998,
+        2048.2686670000003,
+        2045.0489579999994,
+        2097.3070420000004
+      ],
+      "commitMs": 2043.1229170000006,
+      "undoMs": 1275.651082999997,
+      "redoMs": 1300.656624999996,
+      "historyStorage": {
+        "undoStates": 1,
+        "redoStates": 0,
+        "materializedStates": 1,
+        "retainedCharacters": 299804
+      }
+    }
+  ]
+}

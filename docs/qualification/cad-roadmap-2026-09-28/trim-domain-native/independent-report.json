@@ -1,0 +1,12 @@
+{
+  "sourceSha256": "1ab104be3f4ed5ecf24598891914347e8bbe9c7507d67a26f32deda9e1383386",
+  "arithmetic": "exact rational Bernstein ray roots",
+  "cases": 6,
+  "queries": 3750,
+  "locations": {
+    "inside": 888,
+    "outside": 2862
+  },
+  "maxNativeCells": 66,
+  "checks": "passed"
+}

@@ -1,0 +1,82 @@
+{
+  "browser": "151.0.7922.34",
+  "faceA": 9,
+  "faceB": 0,
+  "expectedMm": 2.1360009363293826,
+  "displayedIntervalMm": [
+    2.13600023408,
+    2.13691566721
+  ],
+  "nativeResult": {
+    "cells": 41,
+    "converged": true,
+    "distanceIntervalMm": [
+      2.136000234083315,
+      2.136915667206546
+    ],
+    "domainCells": 1461,
+    "maxCells": 100000,
+    "maxDomainCells": 8000000,
+    "method": "interval-trimmed-surface-subdivision",
+    "parameters": [
+      [
+        0.6000001500000001,
+        0.47500005
+      ],
+      [
+        0.125,
+        0.999999825
+      ]
+    ],
+    "pointEnclosures": [
+      [
+        [
+          6.00000149999999,
+          6.000001500000012
+        ],
+        [
+          4.750000499999991,
+          4.750000500000009
+        ],
+        [
+          0,
+          0
+        ]
+      ],
+      [
+        [
+          5.249999912499998,
+          5.249999912500002
+        ],
+        [
+          4.812499999999999,
+          4.812500000000001
+        ],
+        [
+          2,
+          2
+        ]
+      ]
+    ],
+    "points": [
+      [
+        6.000001500000001,
+        4.7500005000000005,
+        0
+      ],
+      [
+        5.2499999125,
+        4.8125,
+        2
+      ]
+    ],
+    "reason": "tolerance",
+    "scope": "trimmed-surfaces-bounded-joins",
+    "toleranceMm": 0.001,
+    "toleranceUv": 1e-7
+  },
+  "requests": 6,
+  "cancelledWorkerTerminated": true,
+  "invalidFaceLocalized": true,
+  "documentUnchanged": true
+}

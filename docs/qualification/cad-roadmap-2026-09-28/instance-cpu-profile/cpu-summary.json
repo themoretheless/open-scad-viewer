@@ -1,0 +1,329 @@
+{
+  "scope": "Exclusive sampled CPU time for the entire process, including setup; no per-operation or browser latency claims",
+  "sampleCount": 11854,
+  "sampledMs": 34789.083,
+  "categories": [
+    {
+      "key": "wasm",
+      "sampledMs": 20353.078,
+      "percent": 58.504209495835234
+    },
+    {
+      "key": "binaryCodec",
+      "sampledMs": 4865.255,
+      "percent": 13.985005008611466
+    },
+    {
+      "key": "garbageCollection",
+      "sampledMs": 3852.004,
+      "percent": 11.07245051558272
+    },
+    {
+      "key": "other",
+      "sampledMs": 2208.703,
+      "percent": 6.348839375846728
+    },
+    {
+      "key": "document",
+      "sampledMs": 1601.455,
+      "percent": 4.60332627910888
+    },
+    {
+      "key": "structuredClone",
+      "sampledMs": 1222.002,
+      "percent": 3.5126019274494817
+    },
+    {
+      "key": "meshJson",
+      "sampledMs": 684.711,
+      "percent": 1.968177775769485
+    },
+    {
+      "key": "idle",
+      "sampledMs": 1.875,
+      "percent": 0.005389621796009972
+    }
+  ],
+  "topFrames": [
+    {
+      "name": "",
+      "source": "src/services/valueBinaryCodec.ts",
+      "line": 1,
+      "sampledMs": 4840.381,
+      "percent": 13.913505567249357
+    },
+    {
+      "name": "(garbage collector)",
+      "source": "",
+      "line": 0,
+      "sampledMs": 3852.004,
+      "percent": 11.07245051558272
+    },
+    {
+      "name": "wasm-function[18]",
+      "source": "wasm://wasm/0220cbfe",
+      "line": 1,
+      "sampledMs": 2490.073,
+      "percent": 7.157627581043168
+    },
+    {
+      "name": "wasm-function[36]",
+      "source": "wasm://wasm/0220cbfe",
+      "line": 1,
+      "sampledMs": 2207.665,
+      "percent": 6.345855681220456
+    },
+    {
+      "name": "wasm-function[371]",
+      "source": "wasm://wasm/0220cbfe",
+      "line": 1,
+      "sampledMs": 1440.095,
+      "percent": 4.139502613506656
+    },
+    {
+      "name": "wasm-function[670]",
+      "source": "wasm://wasm/0220cbfe",
+      "line": 1,
+      "sampledMs": 1402.009,
+      "percent": 4.030025741121144
+    },
+    {
+      "name": "structuredClone",
+      "source": "node:internal/worker/js_transferable",
+      "line": 112,
+      "sampledMs": 1222.002,
+      "percent": 3.5126019274494817
+    },
+    {
+      "name": "decode",
+      "source": "node:internal/encoding",
+      "line": 442,
+      "sampledMs": 1172,
+      "percent": 3.3688729306259666
+    },
+    {
+      "name": "wasm-function[3244]",
+      "source": "wasm://wasm/0220cbfe",
+      "line": 1,
+      "sampledMs": 1066.92,
+      "percent": 3.0668241528527784
+    },
+    {
+      "name": "wasm-function[104]",
+      "source": "wasm://wasm/0220cbfe",
+      "line": 1,
+      "sampledMs": 1066.676,
+      "percent": 3.066122783403058
+    },
+    {
+      "name": "directDocumentValidation",
+      "source": "src/services/directModeling.ts",
+      "line": 1,
+      "sampledMs": 1041.416,
+      "percent": 2.9935137985672116
+    },
+    {
+      "name": "wasm-function[167]",
+      "source": "wasm://wasm/0220cbfe",
+      "line": 1,
+      "sampledMs": 922.323,
+      "percent": 2.651185143339363
+    },
+    {
+      "name": "wasm-function[1671]",
+      "source": "wasm://wasm/0220cbfe",
+      "line": 1,
+      "sampledMs": 844.751,
+      "percent": 2.4282071476273175
+    },
+    {
+      "name": "wasm-function[5482]",
+      "source": "wasm://wasm/0220cbfe",
+      "line": 1,
+      "sampledMs": 796.924,
+      "percent": 2.290730112087174
+    },
+    {
+      "name": "wasm-function[19]",
+      "source": "wasm://wasm/0220cbfe",
+      "line": 1,
+      "sampledMs": 693.746,
+      "percent": 1.9941485666638583
+    },
+    {
+      "name": "stringifyMeshJson",
+      "source": "src/services/meshJson.ts",
+      "line": 1,
+      "sampledMs": 654.169,
+      "percent": 1.8803858670261588
+    },
+    {
+      "name": "wasm-function[49]",
+      "source": "wasm://wasm/0220cbfe",
+      "line": 1,
+      "sampledMs": 616.84,
+      "percent": 1.7730849646137554
+    },
+    {
+      "name": "normalizeOwnedJson",
+      "source": "src/services/directModeling.ts",
+      "line": 1,
+      "sampledMs": 497.539,
+      "percent": 1.4301584206746696
+    },
+    {
+      "name": "inspect",
+      "source": "src/services/brepInspectionCache.ts",
+      "line": 1,
+      "sampledMs": 443.46,
+      "percent": 1.2747102302179105
+    },
+    {
+      "name": "wasm-function[369]",
+      "source": "wasm://wasm/0220cbfe",
+      "line": 1,
+      "sampledMs": 350.539,
+      "percent": 1.007612071867488
+    },
+    {
+      "name": "wasm-function[2700]",
+      "source": "wasm://wasm/0220cbfe",
+      "line": 1,
+      "sampledMs": 347.75,
+      "percent": 0.9995951890999829
+    },
+    {
+      "name": "wasm-function[368]",
+      "source": "wasm://wasm/0220cbfe",
+      "line": 1,
+      "sampledMs": 342.249,
+      "percent": 0.983782757366729
+    },
+    {
+      "name": "wasm-function[60]",
+      "source": "wasm://wasm/0220cbfe",
+      "line": 1,
+      "sampledMs": 340.203,
+      "percent": 0.977901602062923
+    },
+    {
+      "name": "wasm-function[5380]",
+      "source": "wasm://wasm/0220cbfe",
+      "line": 1,
+      "sampledMs": 322.291,
+      "percent": 0.92641418573752
+    },
+    {
+      "name": "wasm-function[30]",
+      "source": "wasm://wasm/0220cbfe",
+      "line": 1,
+      "sampledMs": 299.668,
+      "percent": 0.861385164995582
+    },
+    {
+      "name": "wasm-function[131]",
+      "source": "wasm://wasm/0220cbfe",
+      "line": 1,
+      "sampledMs": 276.322,
+      "percent": 0.7942779060891028
+    },
+    {
+      "name": "wasm-function[2368]",
+      "source": "wasm://wasm/0220cbfe",
+      "line": 1,
+      "sampledMs": 253.042,
+      "percent": 0.7273603618698429
+    },
+    {
+      "name": "wasm-function[1892]",
+      "source": "wasm://wasm/0220cbfe",
+      "line": 1,
+      "sampledMs": 237.876,
+      "percent": 0.6837662263187564
+    },
+    {
+      "name": "wasm-function[59]",
+      "source": "wasm://wasm/0220cbfe",
+      "line": 1,
+      "sampledMs": 182.334,
+      "percent": 0.5241126936286306
+    },
+    {
+      "name": "wasm-function[341]",
+      "source": "wasm://wasm/0220cbfe",
+      "line": 1,
+      "sampledMs": 177.462,
+      "percent": 0.5101083003538782
+    },
+    {
+      "name": "wasm-function[2798]",
+      "source": "wasm://wasm/0220cbfe",
+      "line": 1,
+      "sampledMs": 171.956,
+      "percent": 0.4942814962958351
+    },
+    {
+      "name": "wasm-function[5415]",
+      "source": "wasm://wasm/0220cbfe",
+      "line": 1,
+      "sampledMs": 167.582,
+      "percent": 0.481708586570103
+    },
+    {
+      "name": "wasm-function[5379]",
+      "source": "wasm://wasm/0220cbfe",
+      "line": 1,
+      "sampledMs": 160.082,
+      "percent": 0.46015009938606316
+    },
+    {
+      "name": "sha256Hex",
+      "source": "src/core/sha256.ts",
+      "line": 1,
+      "sampledMs": 155.04,
+      "percent": 0.4456570470684726
+    },
+    {
+      "name": "wasm-function[4570]",
+      "source": "wasm://wasm/0220cbfe",
+      "line": 1,
+      "sampledMs": 143.669,
+      "percent": 0.41297150603251026
+    },
+    {
+      "name": "wasm-function[1672]",
+      "source": "wasm://wasm/0220cbfe",
+      "line": 1,
+      "sampledMs": 143.002,
+      "percent": 0.41105423790560963
+    },
+    {
+      "name": "wasm-function[4501]",
+      "source": "wasm://wasm/0220cbfe",
+      "line": 1,
+      "sampledMs": 139.877,
+      "percent": 0.40207153491225966
+    },
+    {
+      "name": "wasm-function[2404]",
+      "source": "wasm://wasm/0220cbfe",
+      "line": 1,
+      "sampledMs": 119.663,
+      "percent": 0.34396710025383537
+    },
+    {
+      "name": "encode",
+      "source": "node:internal/encoding",
+      "line": 351,
+      "sampledMs": 111.831,
+      "percent": 0.321454290703782
+    },
+    {
+      "name": "wasm-function[5506]",
+      "source": "wasm://wasm/0220cbfe",
+      "line": 1,
+      "sampledMs": 86.876,
+      "percent": 0.2497220176800866
+    }
+  ]
+}

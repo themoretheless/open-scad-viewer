@@ -1,0 +1,7 @@
+{
+  "dist": "/var/folders/jx/ps1h62vx3gdgly_ddwly4mqr0000gn/T/osv-bridge-error-sktgf4io",
+  "sha256": {
+    "index.html": "a19595d7d75f1771bfb5c4375cbe63f112b21cedf40b85eeec47a7ab615dcc83",
+    "wasm/geometry-kernel.wasm": "ea9ca96c762901fff9831adf5f3f086bc33d6d0ba1dd98d48223794e7f43aa13"
+  }
+}

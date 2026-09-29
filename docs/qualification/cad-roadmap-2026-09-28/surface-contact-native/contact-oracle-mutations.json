@@ -1,0 +1,14 @@
+[
+  {
+    "mutation": "wrong-point",
+    "rejected": true
+  },
+  {
+    "mutation": "false-absence",
+    "rejected": true
+  },
+  {
+    "mutation": "changed-control",
+    "rejected": true
+  }
+]

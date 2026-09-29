@@ -63,7 +63,7 @@ pub fn dimensions(v: Value) -> Result<Value> {
             let middle=start+angle.to_radians()/2.;
             json!({"value":if valid {json!(angle)} else {Value::Null},"label":[points[*b][0]+radius*middle.cos(),points[*b][1]+radius*middle.sin()],"lines":[arc]})
         } else {
-            let value = if kind == "horizontal" { u[0] } else { u[1] };
+            let value = if kind == "horizontal" { -u[0] } else { -u[1] };
             let offset = if kind == "horizontal" { [0., 0.15 * u[0].signum()] } else { [0.15 * u[1].signum(), 0.] };
             json!({"value":value,"label":[(points[*a][0]+points[*b][0])/2.+offset[0],(points[*a][1]+points[*b][1])/2.+offset[1]],"lines":[vec![points[*a],points[*b]]]})
         }
@@ -87,7 +87,7 @@ mod tests {
     #[test]
     fn horizontal_and_vertical_dimensions_edit_one_axis() {
         let mut v=json!({"points":[[0,0],[3,4]],"dimensions":[{"kind":"horizontal","a":0,"b":1},{"kind":"vertical","a":0,"b":1}]});
-        assert_eq!(dimensions(v.clone()).unwrap()["measurements"][0]["value"].as_f64(),Some(-3.));
+        assert_eq!(dimensions(v.clone()).unwrap()["measurements"][0]["value"].as_f64(),Some(3.));
         v["edit"]=json!({"index":0,"value":8});
         let result=dimensions(v).unwrap();
         assert_eq!(result["points"][1][0].as_f64(),Some(8.));

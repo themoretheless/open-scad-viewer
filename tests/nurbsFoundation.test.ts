@@ -214,3 +214,9 @@ describe('NURBS foundation product boundary', () => {
     expect(self.components.some(c => c.kind === 'overlap')).toBe(true)
   })
 })
+
+test('does not infer whole-patch regularity from matching corner normals',()=>{
+ const surface={degreeU:3,degreeV:1,knotsU:[0,0,0,0,1,1,1,1],knotsV:[0,0,1,1],controlPoints:[0,1,0,1].map(x=>[[x,0,0],[x,1,0]]),weights:Array.from({length:4},()=>[1,1])}
+ const result=certifyNurbsSurfaceFoundation(surface)
+ expect(result.cells[0].normalRegularity.classification).toBe('unresolved')
+})

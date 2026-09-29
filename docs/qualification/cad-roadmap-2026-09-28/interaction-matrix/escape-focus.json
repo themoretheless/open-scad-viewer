@@ -1,0 +1,17 @@
+{
+  "tabPresses": 358,
+  "sequentialTabNavigation": true,
+  "escapeRestoresFileFocus": true,
+  "interaction": "keyboard",
+  "theme": "nord",
+  "uiScaleEdit": 2,
+  "stepDownloads": 3,
+  "browser": "151.0.7922.34",
+  "downloads": 9,
+  "sourceWidthsMm": [
+    2,
+    7
+  ],
+  "stableProjectId": true,
+  "reloadPreserved": true
+}

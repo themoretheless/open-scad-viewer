@@ -16,6 +16,10 @@ export interface SolidGpuBody {
   normals: Float32Array
   /** HSL hue per triangle (220 base, 266 selected, 190 hovered, 40 selected face). */
   hues: Float32Array
+  /** RGB color used when the triangle hue is negative. */
+  color?: [number,number,number]
+  metallic?: number
+  roughness?: number
 }
 
 export interface SolidGpuView {
@@ -36,10 +40,12 @@ struct VertexOut {
   @builtin(position) position: vec4<f32>,
   @location(0) normal: vec3<f32>,
   @location(1) hue: f32,
+  @location(2) color: vec3<f32>,
+  @location(3) material: vec2<f32>,
 };
 
 @vertex
-fn vs(@location(0) pos: vec3<f32>, @location(1) nrm: vec3<f32>, @location(2) hue: f32) -> VertexOut {
+fn vs(@location(0) pos: vec3<f32>, @location(1) nrm: vec3<f32>, @location(2) hue: f32, @location(3) color: vec3<f32>, @location(4) material: vec2<f32>) -> VertexOut {
   let p = u.rotation * pos;
   // The 3D SVG pane maps projectDirectPoint's x' and y' straight to viewBox units (no Y flip; that is 2D-only).
   let svgX = p.x;
@@ -53,6 +59,8 @@ fn vs(@location(0) pos: vec3<f32>, @location(1) nrm: vec3<f32>, @location(2) hue
   out.position = vec4<f32>(sx / u.screen.x * 2.0 - 1.0, 1.0 - sy / u.screen.y * 2.0, 0.5 - p.z / u.view.w, 1.0);
   out.normal = u.rotation * nrm;
   out.hue = hue;
+  out.color = color;
+  out.material = material;
   return out;
 }
 
@@ -75,8 +83,30 @@ fn fs(in: VertexOut, @builtin(front_facing) front: bool) -> @location(0) vec4<f3
   var n = normalize(in.normal);
   if (n.z < 0.0) { n = -n; }
   // Same lightness formula as the SVG fallback (directFaceShade), so both displays match.
-  let lightness = clamp(48.0 + 20.0 * n.z - 15.0 * n.y + 8.0 * n.x, 24.0, 78.0) / 100.0;
-  let rgb = hsl(in.hue, 0.45, lightness);
+  let lightness = clamp(48.0 + 20.0 * n.z - 15.0 * n.y + 8.0 * n.x, 24.0, 78.0) / 120.0;
+  let rgb = select(hsl(in.hue, 0.45, lightness), in.color * lightness / 0.78, in.hue < 0.0);
+  if (in.hue < 0.0 && in.material.y >= 0.0) {
+    let base = pow(max(in.color, vec3<f32>(0.0)), vec3<f32>(2.2));
+    let metallic = clamp(in.material.x, 0.0, 1.0);
+    let rough = clamp(in.material.y, 0.04, 1.0);
+    let v = vec3<f32>(0.0, 0.0, 1.0);
+    let l = normalize(vec3<f32>(-0.4, -0.6, 1.0));
+    let h = normalize(v+l);
+    let nv = max(dot(n,v), 0.001);
+    let nl = max(dot(n,l), 0.0);
+    let nh = max(dot(n,h), 0.0);
+    let a2 = pow(rough, 4.0);
+    let denom = nh*nh*(a2-1.0)+1.0;
+    let distribution = a2 / max(3.14159265*denom*denom, 0.000001);
+    let k = (rough+1.0)*(rough+1.0)/8.0;
+    let geometry = nv/(nv*(1.0-k)+k) * nl/(nl*(1.0-k)+k);
+    let f0 = mix(vec3<f32>(0.04), base, metallic);
+    let fresnel = f0+(vec3<f32>(1.0)-f0)*pow(1.0-max(dot(h,v),0.0),5.0);
+    let specular = distribution*geometry*fresnel/max(4.0*nv*nl,0.0001);
+    let diffuse = (vec3<f32>(1.0)-fresnel)*(1.0-metallic)*base/3.14159265;
+    let linear = (diffuse+specular)*nl*2.5 + base*0.12;
+    return vec4<f32>(pow(linear/(vec3<f32>(1.0)+linear),vec3<f32>(1.0/2.2)),1.0);
+  }
   return vec4<f32>(rgb, 1.0);
 }
 `
@@ -115,7 +145,13 @@ export class SolidGpuLayer {
   private frame = 0
   private disposed = false
 
-  constructor(private readonly canvas: HTMLCanvasElement) {}
+  constructor(private readonly canvas: HTMLCanvasElement,private readonly onUnavailable?:()=>void) {}
+
+  private fail():void {
+    if(this.disposed)return
+    this.destroy()
+    this.onUnavailable?.()
+  }
 
   async init(): Promise<boolean> {
     if (!isSolidGpuSupported()) return false
@@ -134,11 +170,13 @@ export class SolidGpuLayer {
         vertex: {
           module, entryPoint: 'vs',
           buffers: [{
-            arrayStride: 7 * 4,
+            arrayStride: 12 * 4,
             attributes: [
               { shaderLocation: 0, offset: 0, format: 'float32x3' },
               { shaderLocation: 1, offset: 12, format: 'float32x3' },
               { shaderLocation: 2, offset: 24, format: 'float32' },
+              { shaderLocation: 3, offset: 28, format: 'float32x3' },
+              { shaderLocation: 4, offset: 40, format: 'float32x2' },
             ],
           }],
         },
@@ -151,7 +189,8 @@ export class SolidGpuLayer {
         layout: this.pipeline.getBindGroupLayout(0),
         entries: [{ binding: 0, resource: { buffer: this.uniformBuffer } }],
       })
-      device.lost.then(() => { if (!this.disposed) this.device = null }).catch(() => {})
+      device.lost.then(() => this.fail()).catch(() => this.fail())
+      device.addEventListener('uncapturederror',()=>this.fail())
       this.device = device
       this.context = context
       return true
@@ -163,16 +202,19 @@ export class SolidGpuLayer {
   get ready(): boolean { return !!this.device && !!this.pipeline }
 
   setBodies(bodies: readonly SolidGpuBody[]): void {
+    try { this.uploadBodies(bodies) } catch { this.fail() }
+  }
+  private uploadBodies(bodies: readonly SolidGpuBody[]): void {
     const device = this.device
     if (!device) return
     let total = 0
     for (const body of bodies) total += body.positions.length / 3
-    const data = new Float32Array(total * 7)
+    const data = new Float32Array(total * 12)
     this.ranges = new Map()
     let offset = 0
     for (const body of bodies) {
       const count = body.positions.length / 3
-      this.ranges.set(body.id, { start: offset / 7, count })
+      this.ranges.set(body.id, { start: offset / 12, count })
       for (let i = 0; i < count; i++) {
         data[offset++] = body.positions[i * 3]
         data[offset++] = body.positions[i * 3 + 1]
@@ -181,6 +223,9 @@ export class SolidGpuLayer {
         data[offset++] = body.normals[i * 3 + 1]
         data[offset++] = body.normals[i * 3 + 2]
         data[offset++] = body.hues[Math.floor(i / 3)]
+        for(const channel of body.color??[1,1,1])data[offset++]=channel
+        data[offset++]=body.metallic??0
+        data[offset++]=body.roughness??(body.metallic!==undefined?0.5:-1)
       }
     }
     this.vertexBuffer?.destroy()
@@ -188,7 +233,7 @@ export class SolidGpuLayer {
     this.vertexCount = total
     this.packed = data
     if (total === 0) { this.requestFrame(); return }
-    this.vertexBuffer = device.createBuffer({ size: Math.max(28, data.byteLength), usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST })
+    this.vertexBuffer = device.createBuffer({ size: Math.max(48, data.byteLength), usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST })
     device.queue.writeBuffer(this.vertexBuffer, 0, data)
     this.requestFrame()
   }
@@ -206,15 +251,15 @@ export class SolidGpuLayer {
     for (const id of ids) {
       const range = this.ranges.get(id)
       if (!range) continue
-      const slice = new Float32Array(range.count * 7)
+      const slice = new Float32Array(range.count * 12)
       for (let i = 0; i < range.count; i++) {
-        const from = (range.start + i) * 7, to = i * 7
+        const from = (range.start + i) * 12, to = i * 12
         slice[to] = packed[from] + delta[0]
         slice[to + 1] = packed[from + 1] + delta[1]
         slice[to + 2] = packed[from + 2] + delta[2]
-        for (let k = 3; k < 7; k++) slice[to + k] = packed[from + k]
+        for (let k = 3; k < 12; k++) slice[to + k] = packed[from + k]
       }
-      device.queue.writeBuffer(buffer, range.start * 7 * 4, slice)
+      device.queue.writeBuffer(buffer, range.start * 12 * 4, slice)
     }
     this.requestFrame()
   }
@@ -237,7 +282,7 @@ export class SolidGpuLayer {
 
   requestFrame(): void {
     if (this.frame || this.disposed) return
-    this.frame = requestAnimationFrame(() => { this.frame = 0; this.render() })
+    this.frame = requestAnimationFrame(() => { this.frame = 0; try { this.render() } catch { this.fail() } })
   }
 
   private render(): void {
@@ -268,7 +313,7 @@ export class SolidGpuLayer {
     const drawStarted = performance.now()
     device.queue.submit([encoder.finish()])
     // Resolves once the GPU has finished; measured even when frame callbacks are throttled.
-    void device.queue.onSubmittedWorkDone().then(() => { this.lastDrawMs = performance.now() - drawStarted })
+    void device.queue.onSubmittedWorkDone().then(() => { this.lastDrawMs = performance.now() - drawStarted }).catch(() => this.fail())
   }
 
   destroy(): void {

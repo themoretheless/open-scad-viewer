@@ -1,0 +1,9 @@
+{
+  "cases": 192,
+  "samples": 6336,
+  "precisionDigits": 80,
+  "maxMeasuredJetResidual": 1.964067487537587e-14,
+  "maxFractionOfReportedBound": 0.20758144417315536,
+  "sha256": "a9ffb200c63e15b7a8e431819fc184b21d057c162517b80d74824a51828921c3",
+  "oracle": "Independent Decimal Cox-de Boor rational first, second and mixed derivatives"
+}

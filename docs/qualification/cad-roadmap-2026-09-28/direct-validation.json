@@ -1,0 +1,41 @@
+{
+  "node": "v22.23.3",
+  "platform": "darwin",
+  "arch": "arm64",
+  "cpu": "Apple M4 Max",
+  "sourceSha256": "6b17ede8e5ebdc7483e0983fc339523447cded6c27cd13b176a2c00d56ae7f89",
+  "documentSha256": "e5eb455fe979f6ff8bf87fa55d9b5792ec2e4fbebfa8afc014b956d4c5b343ec",
+  "bodies": 20,
+  "uniqueBreps": 20,
+  "documentCharacters": 19852257,
+  "uniqueBrepCharacters": 14517080,
+  "firstValidationMs": 643.7435409999998,
+  "warmups": 3,
+  "samplesMs": [
+    128.48841599999923,
+    130.3478329999998,
+    129.32708300000013,
+    133.01479199999994,
+    169.80375000000004,
+    129.05208299999958,
+    127.9717499999997,
+    127.15716699999939,
+    128.24483300000065
+  ],
+  "p50Ms": 129.05208299999958,
+  "scope": "In-process synchronous document validation, including JSON parsing, normalization and owned result creation; fixture build and equality checks excluded from samples. First-validation timing additionally includes reference serialization. No browser paint or heap measurement.",
+  "files": [
+    {
+      "path": "src/services/directModeling.ts",
+      "sha256": "f0ac514fb6d170bc7e3f4ad61716164ffef03d8abdb79346fe0c940f394d9701"
+    },
+    {
+      "path": "src/services/brepInspectionCache.ts",
+      "sha256": "f973eb9817d148cd03074bae653f05f45181c9e9568c95c837f78d258de9c132"
+    },
+    {
+      "path": "src/generated/geometry-kernels/kernel_bg.wasm",
+      "sha256": "a61bf9198972b47cade5b456c2d4fdb9f1bf859821d2d9d9c1ee3bc9056639f2"
+    }
+  ]
+}

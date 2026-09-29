@@ -37,10 +37,9 @@ export function bodySnapGeometry(body: DirectBody): SnapGeometry {
       add(first,'vertex');add(last,'vertex');add(middle,'midpoint')
       if(curve.degree===1)geometry.segments.push({a:first,b:last})
       else{
-        // Each segment carries a curve evaluator: the chosen target remains on
-        // the authored curve rather than on a tessellation chord.
+        // Serializable curve intervals preserve exact targets across worker messages.
         const samples=Array.from({length:17},(_,i)=>evaluate(i/16))
-        for(let i=0;i<16;i++)geometry.segments.push({a:samples[i],b:samples[i+1],evaluate:t=>evaluate((i+t)/16)})
+        for(let i=0;i<16;i++)geometry.segments.push({a:samples[i],b:samples[i+1],nurbs:{curve,start:a+(b-a)*i/16,end:a+(b-a)*(i+1)/16}})
         if(curve.degree===2&&curve.controlPoints.length===3){
           const u=middle.map((v,i)=>v-first[i]) as Vec3,v=last.map((x,i)=>x-first[i]) as Vec3,n=cross3(u,v),n2=n.reduce((s,x)=>s+x*x,0)
           if(n2>1e-16){

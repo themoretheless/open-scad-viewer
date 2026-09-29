@@ -1,3 +1,4 @@
+import {requirePolylineSketch} from './retainedSketchProfile'
 import { bakeSketch, worldPoint } from './directSketchGeometry'
 import { revolvePolygonProfile, booleanPolygonMeshes } from './geometry/polygon'
 import { parseDirectDocument, type DirectSketch, type DirectBody, type DirectDocument, type Point2 } from './directModeling'
@@ -20,6 +21,7 @@ function validateContour(points: Point2[]) {
 }
 /** Bake a single corner to a sampled arc; never mutate the source sketch. */
 export function directCornerTool(sketch: DirectSketch, vertex: number, radius: number, kind: 'fillet'|'dogear'): DirectSketch {
+  requirePolylineSketch(sketch)
   if(!sketch.closed || !Number.isInteger(vertex) || vertex<0 || vertex>=sketch.points.length) throw new Error('Select a corner of a closed contour.')
   if(!Number.isFinite(radius)||radius<.01||radius>1e6) throw new Error('Radius must be at least 0.01 mm.')
   validateContour(sketch.points)
@@ -45,6 +47,7 @@ export function directCornerTool(sketch: DirectSketch, vertex: number, radius: n
 export interface DirectRevolveOptions { axis: 'x'|'y'; offset: number; angle: number; segments: number }
 /** Rotate in the sketch's own XY plane around its horizontal or vertical axis. */
 export function directRevolveTool(sketch: DirectSketch, options: DirectRevolveOptions): DirectBody {
+  requirePolylineSketch(sketch)
   const {axis,offset,angle,segments}=options
   if(!sketch.closed) throw new Error('Close the contour before revolving.')
   validateContour(sketch.points)

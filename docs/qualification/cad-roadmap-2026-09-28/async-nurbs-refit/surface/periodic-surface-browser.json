@@ -1,0 +1,25 @@
+{
+  "browser": "151.0.7922.34",
+  "periodicSurfaceRebuild": true,
+  "axes": [
+    {
+      "axis": "u",
+      "deviationUpperMm": 0.03358436863391599,
+      "applyContrast": 6.4039520367480005,
+      "refusal": true,
+      "cancel": true,
+      "undo": true,
+      "identityPreserved": true
+    },
+    {
+      "axis": "v",
+      "deviationUpperMm": 0.008051567763621838,
+      "applyContrast": 6.4039520367480005,
+      "refusal": true,
+      "cancel": true,
+      "undo": true,
+      "identityPreserved": true
+    }
+  ],
+  "downloads": 6
+}

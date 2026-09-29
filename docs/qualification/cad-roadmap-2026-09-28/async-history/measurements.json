@@ -1,0 +1,88 @@
+{
+  "scope": "Headless Chromium UI import and Undo/Redo through durable save; automation latency included. RAF gaps during operations are not orbit FPS; heap is sampled without forced GC.",
+  "cancellationChecked": true,
+  "browser": "151.0.7922.34",
+  "viewport": {
+    "width": 1280,
+    "height": 800
+  },
+  "bodies": 1001,
+  "before": {
+    "Nodes": 2114,
+    "JSHeapUsedSize": 12054560,
+    "JSHeapTotalSize": 15253504
+  },
+  "after": {
+    "Nodes": 27259,
+    "JSHeapUsedSize": 242989952,
+    "JSHeapTotalSize": 346341376
+  },
+  "samples": [
+    {
+      "action": "import",
+      "elapsedMs": 5213.021291999999,
+      "frameCount": 27,
+      "maxFrameGapMs": 4974.9
+    },
+    {
+      "action": "undo",
+      "elapsedMs": 172.63866599999983,
+      "frameCount": 19,
+      "maxFrameGapMs": 16.200000000000728
+    },
+    {
+      "action": "redo",
+      "elapsedMs": 2666.8231669999996,
+      "frameCount": 128,
+      "maxFrameGapMs": 1582.6999999999998
+    },
+    {
+      "action": "undo",
+      "elapsedMs": 79.4129580000008,
+      "frameCount": 8,
+      "maxFrameGapMs": 16.69999999999891
+    },
+    {
+      "action": "redo",
+      "elapsedMs": 2725.2618330000005,
+      "frameCount": 126,
+      "maxFrameGapMs": 1641.6000000000004
+    },
+    {
+      "action": "undo",
+      "elapsedMs": 78.37270800000078,
+      "frameCount": 8,
+      "maxFrameGapMs": 16.700000000000728
+    },
+    {
+      "action": "redo",
+      "elapsedMs": 2705.787250000001,
+      "frameCount": 127,
+      "maxFrameGapMs": 1616.6000000000004
+    },
+    {
+      "action": "undo",
+      "elapsedMs": 82.50358299999971,
+      "frameCount": 8,
+      "maxFrameGapMs": 25.700000000000728
+    },
+    {
+      "action": "redo",
+      "elapsedMs": 2593.859333999999,
+      "frameCount": 127,
+      "maxFrameGapMs": 1516.7000000000007
+    },
+    {
+      "action": "undo",
+      "elapsedMs": 82.89887500000259,
+      "frameCount": 9,
+      "maxFrameGapMs": 16.700000000000728
+    },
+    {
+      "action": "redo",
+      "elapsedMs": 2790.886624999999,
+      "frameCount": 129,
+      "maxFrameGapMs": 1675
+    }
+  ]
+}

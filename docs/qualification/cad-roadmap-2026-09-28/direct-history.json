@@ -1,0 +1,115 @@
+{
+  "node": "v22.23.3",
+  "platform": "darwin",
+  "arch": "arm64",
+  "cpu": "Apple M4 Max",
+  "warmups": 3,
+  "samples": 9,
+  "scope": "DirectHistory undo/redo including returned defensive clone; construction, commit and correctness checks outside timing.",
+  "files": [
+    {
+      "path": "src/services/directModeling.ts",
+      "sha256": "f0ac514fb6d170bc7e3f4ad61716164ffef03d8abdb79346fe0c940f394d9701"
+    },
+    {
+      "path": "src/generated/geometry-kernels/kernel_bg.wasm",
+      "sha256": "a61bf9198972b47cade5b456c2d4fdb9f1bf859821d2d9d9c1ee3bc9056639f2"
+    }
+  ],
+  "results": [
+    {
+      "teeth": 12,
+      "faces": 158,
+      "documentCharacters": 1274453,
+      "beforeSha256": "2fa39204790284ac37d5dd80b1faafb546a8476b1a17b3cb5d8e485cbc2557f6",
+      "afterSha256": "9d43c3b678605b241b7fb7cc4d19964f64ef95b4ec28f596493264e8efc7b94e",
+      "samples": [
+        {
+          "undoMs": 5.960624999999936,
+          "redoMs": 10.500499999999988
+        },
+        {
+          "undoMs": 7.773208999999952,
+          "redoMs": 9.010499999999979
+        },
+        {
+          "undoMs": 7.631375000000048,
+          "redoMs": 10.98233300000004
+        },
+        {
+          "undoMs": 5.963375000000042,
+          "redoMs": 11.913666000000035
+        },
+        {
+          "undoMs": 6.347499999999968,
+          "redoMs": 10.934332999999924
+        },
+        {
+          "undoMs": 7.7681669999999485,
+          "redoMs": 11.233874999999898
+        },
+        {
+          "undoMs": 7.310124999999971,
+          "redoMs": 11.45595800000001
+        },
+        {
+          "undoMs": 6.144416999999976,
+          "redoMs": 10.549125000000004
+        },
+        {
+          "undoMs": 7.926874999999882,
+          "redoMs": 9.036542000000054
+        }
+      ],
+      "undoP50Ms": 7.310124999999971,
+      "redoP50Ms": 10.934332999999924
+    },
+    {
+      "teeth": 32,
+      "faces": 418,
+      "documentCharacters": 3413558,
+      "beforeSha256": "d110ea20c30ef5603e1c1a586ec3693cd2f30159dcd2d3cad8e6b45352837541",
+      "afterSha256": "6a80ec535dfd803357a744a13bedf053d37b14a6e1c0179285f13467c4378e03",
+      "samples": [
+        {
+          "undoMs": 27.76412500000015,
+          "redoMs": 30.52333299999964
+        },
+        {
+          "undoMs": 27.822250000000167,
+          "redoMs": 56.445624999999836
+        },
+        {
+          "undoMs": 25.96220799999992,
+          "redoMs": 31.920458999999937
+        },
+        {
+          "undoMs": 27.24200000000019,
+          "redoMs": 31.647958000000017
+        },
+        {
+          "undoMs": 27.321042000000034,
+          "redoMs": 30.35504200000014
+        },
+        {
+          "undoMs": 27.69316600000002,
+          "redoMs": 29.044459000000188
+        },
+        {
+          "undoMs": 27.13583299999982,
+          "redoMs": 30.10483299999987
+        },
+        {
+          "undoMs": 27.706374999999753,
+          "redoMs": 30.286667000000307
+        },
+        {
+          "undoMs": 28.419750000000022,
+          "redoMs": 30.16833399999996
+        }
+      ],
+      "undoP50Ms": 27.69316600000002,
+      "redoP50Ms": 30.35504200000014
+    }
+  ]
+}

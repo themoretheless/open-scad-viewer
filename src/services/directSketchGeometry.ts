@@ -1,3 +1,4 @@
+import {transformRetainedSketch,offsetRetainedSketch,requirePolylineSketch} from './retainedSketchProfile'
 import {callGeometryRust} from './geometry/kernel'
 import type { DirectSketch, Point2 } from './directModeling'
 export type Vec3 = [number,number,number]
@@ -14,20 +15,27 @@ export function worldPoint(p:number[],plane:SketchPlane=xyPlane()):Vec3 {return 
 export function sampleCurve(c:AnalyticCurve):Point2[] {
  return callGeometryRust('cad_sample_curve',{curve:c})
 }
-export function bakeSketch(s:DirectSketch):DirectSketch {const next=structuredClone(s);delete next.analytic;return next}
+export function bakeSketch(s:DirectSketch):DirectSketch {requirePolylineSketch(s);const next=structuredClone(s);delete next.analytic;return next}
 export function transformSketch(s:DirectSketch,delta:Point2,angle:number,scale:number,pivot?:Point2):DirectSketch {
+ if(s.retainedProfile)return transformRetainedSketch(s,delta,angle,scale,pivot)
  return callGeometryRust('cad_transform_sketch',{sketch:s,delta,angle,scale,pivot:pivot??null})
 }
 export function validateSimpleSketch(points:Point2[],closed=true) {
  callGeometryRust('cad_validate_sketch',{points,closed})
 }
 export function offsetSketch(s:DirectSketch,distance:number):DirectSketch {
+ if(s.retainedProfile)return offsetRetainedSketch(s,distance)
  return callGeometryRust('cad_offset_sketch',{sketch:s,distance})
 }
 /** Trim a clicked segment between intersections, retaining remaining chains. */
 export function trimSketch(s:DirectSketch,edge:number,at:number,boundaries:DirectSketch[]):DirectSketch[] {
+ requirePolylineSketch(s);boundaries.forEach(requirePolylineSketch)
  return callGeometryRust('cad_trim_sketch',{sketch:s,edge,at,boundaries})
 }
 export function extendSketch(s:DirectSketch,end:'start'|'end',boundaries:DirectSketch[]):DirectSketch {
+ requirePolylineSketch(s);boundaries.forEach(requirePolylineSketch)
  return callGeometryRust('cad_extend_sketch',{sketch:s,end,boundaries})
 }
+
+/** Tessellated closed slot; width is the full end-cap diameter. */
+export function slotSketch(a:Point2,b:Point2,width:number):Point2[] { return callGeometryRust('cad_slot',{a,b,width}) }

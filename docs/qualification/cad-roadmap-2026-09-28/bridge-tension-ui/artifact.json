@@ -1,0 +1,7 @@
+{
+  "dist": "/var/folders/jx/ps1h62vx3gdgly_ddwly4mqr0000gn/T/osv-tension-3m9h4gt1",
+  "sha256": {
+    "index.html": "8d14c307e170dd46d9280e0d0b0e132ca44b2e8cffd34242c4976b93cf02359a",
+    "wasm/geometry-kernel.wasm": "ea9ca96c762901fff9831adf5f3f086bc33d6d0ba1dd98d48223794e7f43aa13"
+  }
+}

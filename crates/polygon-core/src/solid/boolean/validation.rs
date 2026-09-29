@@ -82,6 +82,23 @@ fn intersections(a: [Point; 3], b: [Point; 3], eps: f64) -> Vec<Point> {
 /// Bounded sweep checks crossings and coplanar overlaps, allowing only contact
 /// represented by shared vertex/edge indices. All predicates use the CSG tolerance.
 pub(super) fn geometry(mesh: &Mesh, eps: f64, budget: &mut Budget) -> Result<()> {
+    if let Some((a,b,p,shared))=first_geometry_failure(mesh,eps,budget)? {
+        return Err(invalid(&format!(
+            "Solid contains intersecting, overlapping or unstitched triangles at the Boolean tolerance: triangles {a}/{b}, shared={shared}, point={p:?}"
+        )));
+    }
+    Ok(())
+}
+pub(super) struct GeometryFailures {
+    pub contacts: Vec<(usize,usize,Point,usize)>,
+    pub complete: bool,
+    pub stop_reason: Option<&'static str>,
+}
+pub(super) fn first_geometry_failure(mesh: &Mesh, eps: f64, budget: &mut Budget) -> Result<Option<(usize,usize,Point,usize)>> {
+    Ok(geometry_failures(mesh,eps,budget,None)?.contacts.into_iter().next())
+}
+pub(super) fn geometry_failures(mesh: &Mesh, eps: f64, budget: &mut Budget, max_contacts: Option<usize>) -> Result<GeometryFailures> {
+    let mut report=GeometryFailures {contacts:vec![],complete:false,stop_reason:None};
     let triangles: Vec<[Point; 3]> = mesh
         .indices
         .as_chunks::<3>()
@@ -150,14 +167,17 @@ pub(super) fn geometry(mesh: &Mesh, eps: f64, budget: &mut Budget) -> Result<()>
     let mut ids: Vec<_> = (0..triangles.len()).collect();
     let mut nodes = vec![];
     if ids.is_empty() {
-        return Ok(());
+        report.complete=true;return Ok(report);
     }
     let root = build(&mut ids, &bounds, &mut nodes);
     for a in 0..triangles.len() {
         let mut stack = vec![root];
         let mut candidates = vec![];
         while let Some(i) = stack.pop() {
-            budget.tick(1)?;
+            if let Err(error)=budget.tick(1) {
+                if max_contacts.is_none(){return Err(error);}
+                report.stop_reason=Some("work-limit");return Ok(report);
+            }
             let node = &nodes[i];
             if (0..3)
                 .any(|k| bounds[a].0[k] > node.hi[k] + eps || node.lo[k] > bounds[a].1[k] + eps)
@@ -177,8 +197,11 @@ pub(super) fn geometry(mesh: &Mesh, eps: f64, budget: &mut Budget) -> Result<()>
         // sorting every triangle's list.
         let mut failure: Option<(usize, Point, usize)> = None;
         for b in candidates {
-            budget.tick(1)?;
-            if failure.as_ref().is_some_and(|(fb, _, _)| b >= *fb) {
+            if let Err(error)=budget.tick(1) {
+                if max_contacts.is_none(){return Err(error);}
+                report.stop_reason=Some("work-limit");return Ok(report);
+            }
+            if max_contacts.is_none() && failure.as_ref().is_some_and(|(fb, _, _)| b >= *fb) {
                 continue;
             }
             if (0..3).any(|i| {
@@ -200,18 +223,21 @@ pub(super) fn geometry(mesh: &Mesh, eps: f64, budget: &mut Budget) -> Result<()>
                     _ => false,
                 };
                 if !allowed {
-                    failure = Some((b, p, shared.len()));
+                    if let Some(limit)=max_contacts {
+                        report.contacts.push((a,b,p,shared.len()));
+                        if report.contacts.len()>=limit {
+                            report.stop_reason=Some("contact-limit");return Ok(report);
+                        }
+                    } else {failure = Some((b, p, shared.len()));}
                     break;
                 }
             }
         }
         if let Some((b, p, shared)) = failure {
-            return Err(invalid(&format!(
-                "Solid contains intersecting, overlapping or unstitched triangles at the Boolean tolerance: triangles {a}/{b}, shared={shared}, point={p:?}"
-            )));
+            report.contacts.push((a,b,p,shared));return Ok(report);
         }
     }
-    Ok(())
+    report.complete=true;Ok(report)
 }
 fn winding(mesh: &Mesh, p: Point, budget: &mut Budget) -> Result<f64> {
     winding_triangles(mesh, p, 0..mesh.indices.len() / 3, budget)

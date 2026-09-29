@@ -1,0 +1,11 @@
+{
+  "sourceSha256": "03b229da1cb51d4ff28eec19e9576ee93eb2bc1fcab28ddb4059f5d25cc7973f",
+  "queries": 268,
+  "classified": 268,
+  "unresolved": 0,
+  "odd": 44,
+  "even": 224,
+  "maxCells": 198,
+  "arithmetic": "exact rational analytic parity and crossing counts",
+  "checks": "passed"
+}

@@ -1,0 +1,12 @@
+{
+  "browser": "151.0.7922.34",
+  "proof": "Отмеченные сегменты пересекаются. Обрежьте их или измените точки, затем повторите сборку.",
+  "locatedSegments": [
+    0,
+    2
+  ],
+  "refused": true,
+  "cancel": true,
+  "keyboard": false,
+  "tabPresses": 0
+}

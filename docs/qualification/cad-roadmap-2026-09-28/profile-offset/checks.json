@@ -1,0 +1,19 @@
+{
+  "cadTests": 366,
+  "testFiles": 33,
+  "nativePlanarTests": 21,
+  "nativeProfileBridgeTests": 4,
+  "vueTypecheck": true,
+  "mcpTypecheck": true,
+  "viteBuild": true,
+  "distVerified": true,
+  "assetsBytes": 6820375,
+  "rawWasmBytes": 10982071,
+  "geometryWasmBytes": 8925951,
+  "nativeStepCases": 7,
+  "browserThemes": [
+    "dark",
+    "light"
+  ],
+  "scope": "Euclidean round-join offset of retained line/circular-arc regions. Numerical binary64 geometry under planar Boolean limits; general NURBS and miter joins for retained profiles are not claimed."
+}

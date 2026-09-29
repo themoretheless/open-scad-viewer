@@ -1,0 +1,16 @@
+{
+  "browser": "151.0.7922.34",
+  "key": "scad-solid-modeler-v1",
+  "simultaneousWriters": true,
+  "conflictPreservesBoth": true,
+  "adoptUndo": true,
+  "sharedLoadWorkerCancellation": true,
+  "closedWaitingWriter": true,
+  "abortedSnapshotRetainsPrevious": true,
+  "rendererCrashAtPublication": [
+    "before",
+    "after"
+  ],
+  "missingAndCorruptCacheRecovered": true,
+  "startupWorkerCancellationAndReload": true
+}

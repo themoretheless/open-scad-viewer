@@ -1,0 +1,14 @@
+{
+  "browser": "151.0.7922.34",
+  "workerRequests": 7,
+  "bridgeAndBrepDiagnostics": true,
+  "properties": "V = 8000.0000 mm³ · A = 2400.0000 mm² · центр [0.000, 0.000, 10.000]",
+  "undoRedo": true,
+  "escapeCancellation": true,
+  "parameterCancellation": true,
+  "invalidTension": true,
+  "workerFailureRetry": true,
+  "keyboard": true,
+  "tabPresses": 1208,
+  "downloads": 10
+}

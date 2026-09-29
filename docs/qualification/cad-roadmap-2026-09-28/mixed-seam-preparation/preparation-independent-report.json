@@ -1,0 +1,8 @@
+{
+  "cases": 22,
+  "samples": 23958,
+  "precisionDigits": 80,
+  "maxMeasuredDeviation": 0.021253031700935877,
+  "maxFractionOfBound": 0.6328251077935402,
+  "sha256": "420b8eede4048ae4126c86e8e5afbea77998062dd3332b548b76f86b07018432"
+}

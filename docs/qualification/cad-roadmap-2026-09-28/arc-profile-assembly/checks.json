@@ -1,0 +1,19 @@
+{
+  "nativeCadTests": 42,
+  "nativeProfileTests": 14,
+  "cadTests": 358,
+  "testFiles": 33,
+  "vueTypecheck": true,
+  "mcpTypecheck": true,
+  "viteBuild": true,
+  "verifiedArtifacts": 116,
+  "assetBytes": 6812553,
+  "rawWasmBytes": 10975204,
+  "geometryWasmBytes": 8919084,
+  "occtFixtures": 5,
+  "browserThemes": [
+    "dark",
+    "light"
+  ],
+  "scope": "Open polylines and circular arcs; numerical binary64 analytic geometry, not a general NURBS or exact arithmetic certificate."
+}

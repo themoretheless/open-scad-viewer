@@ -1,0 +1,30 @@
+{
+  "svgImported": true,
+  "svgUndo": true,
+  "svgDimensions": {
+    "width": "14mm",
+    "height": "6mm",
+    "paths": 1,
+    "bounds": [
+      0,
+      0,
+      14,
+      6
+    ]
+  },
+  "tabPresses": 0,
+  "sequentialTabNavigation": false,
+  "escapeRestoresFileFocus": false,
+  "interaction": "mouse",
+  "theme": "system",
+  "uiScaleEdit": 2,
+  "stepDownloads": 3,
+  "browser": "151.0.7922.34",
+  "downloads": 12,
+  "sourceWidthsMm": [
+    2,
+    7
+  ],
+  "stableProjectId": true,
+  "reloadPreserved": true
+}

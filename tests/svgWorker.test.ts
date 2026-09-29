@@ -85,6 +85,15 @@ describe('SVG worker ownership and lifecycle', () => {
     await expect(task).rejects.toMatchObject({ code: 'SVG_PROTOCOL' })
     expect(ports[0].terminate).toHaveBeenCalledTimes(1)
   })
+  it('rejects malformed imported contours before they can enter a Solid document',async()=>{
+    for(const contours of [[],[[[0,0],[1,0]]],[[[0,0],[1,0],[0,NaN]]],Array.from({length:6667},()=>[[0,0],[1,0],[0,1]])]){
+      const {client,ports}=setup()
+      const pending=client.run({kind:'contours',svg:'<svg/>',options:{}})
+      ports[0].emit({version:1,id:1,ok:true,result:{...output,contours}})
+      await expect(pending).rejects.toMatchObject({code:'SVG_PROTOCOL'})
+      expect(ports[0].terminate).toHaveBeenCalledTimes(1)
+    }
+  })
   it('cleans up failed postMessage and constructor failures', async () => {
     const port = new Port(); port.postMessage.mockImplementation(() => { throw new Error('DataCloneError') })
     const factory = vi.fn(() => port), client = new SvgWorkerClient(factory); clients.push(client)

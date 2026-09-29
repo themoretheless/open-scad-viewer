@@ -26,3 +26,22 @@ it('refuses over-budget or malformed requests and recovers',()=>{
  expect(()=>inspectCadPairs([a,{...b,mesh:{positions:[0,0],indices:[]}}])).toThrow()
  expect(inspectCadPairs([a,b])[0].gapMm).toBeCloseTo(Math.sqrt(3),12)
 })
+
+it('returns closest points on separated meshes and omits them for volumetric overlap',()=>{
+ const a=box('A',[0,0,0],[10,10,10]),b=box('B',[13,0,0],[23,10,10])
+ const result=inspectCadPairs([a,b])[0]
+ expect(result.displayMeshOnly).toBe(true)
+ const [p,q]=result.closestPoints!
+ expect(p[0]).toBe(10);expect(q[0]).toBe(13)
+ expect(Math.hypot(...p.map((x,i)=>q[i]-x))).toBeCloseTo(result.gapMm,12)
+ expect(inspectCadPairs([a,box('inside',[1,1,1],[2,2,2])])[0].closestPoints).toBeNull()
+})
+
+it('reports zero solid clearance for a contained body below the former volume threshold',()=>{
+ const outer=box('outer',[0,0,0],[.01,.01,.01]),inner=box('inner',[.001,.001,.001],[.0011,.0011,.0011])
+ for(const bodies of [[outer,inner],[inner,outer]]) {
+  const result=inspectCadPairs(bodies)[0]
+  expect(result.overlapMm3).toBeGreaterThan(0);expect(result.overlapMm3).toBeLessThan(1e-9)
+  expect(result.gapMm).toBe(0);expect(result.closestPoints).toBeNull()
+ }
+})

@@ -36,6 +36,7 @@ import {
   type MeshWorkspaceDocument,
 } from '../services/meshEditing'
 import { defaultDirectCamera, projectDirectPoint } from '../services/directModelingTools'
+import { projectMeshModelerFaces } from '../services/meshModelerProjection'
 import { storageGet, storageSet } from '../services/safeStorage'
 import { importMeshFromFile, MESH_IMPORT_ACCEPT, stripMeshExtension } from '../services/meshImport'
 import { polygonMeshToExportMesh, MESH_EXPORT_FORMATS, MESH_FORMAT_LABELS, type MeshExportFormat } from '../services/meshConvert'
@@ -501,14 +502,7 @@ function projected(objectId: string) {
   const object = document.value.objects.find(o => o.id === objectId)
   if (!object || !object.visible) return { tris: [] as Array<{ points: string; face: number; depth: number }>, verts: [] as Array<{ x: number; y: number; id: number }>, edges: [] as Array<{ x1: number; y1: number; x2: number; y2: number; id: number }> }
   const cam = camera.value
-  const tris: Array<{ points: string; face: number; depth: number }> = []
-  for (let f = 0; f < object.mesh.indices.length / 3; f++) {
-    const pts = [0, 1, 2].map(k => {
-      const i = object.mesh.indices[f * 3 + k]
-      return projectDirectPoint([object.mesh.positions[i * 3], object.mesh.positions[i * 3 + 1], object.mesh.positions[i * 3 + 2]], cam)
-    })
-    tris.push({ points: pts.map(p => `${p[0]},${-p[1]}`).join(' '), face: f, depth: pts.reduce((sum, p) => sum + p[2], 0) / 3 })
-  }
+  const tris = projectMeshModelerFaces(object.mesh, cam)
   const verts: Array<{ x: number; y: number; id: number }> = []
   if (selectMode.value === 'vertex') {
     for (let i = 0; i < object.mesh.positions.length / 3; i++) {

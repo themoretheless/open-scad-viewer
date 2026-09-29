@@ -1,0 +1,56 @@
+{
+  "runtime": "v22.23.3",
+  "platform": "darwin",
+  "arch": "arm64",
+  "scope": "Node materialized B-rep instances; no browser/GPU claims",
+  "measurements": [
+    {
+      "instances": 100,
+      "bodies": 101,
+      "jsonBytes": 1911562,
+      "compactBytes": 32294,
+      "resolveMs": 175.09016600000007,
+      "parseSamplesMs": [
+        177.3392920000001,
+        170.99595799999997,
+        168.65316600000006,
+        173.5272500000001,
+        167.32124999999996
+      ],
+      "commitMs": 185.6658339999999,
+      "undoMs": 12.530749999999898,
+      "redoMs": 12.794708999999784
+    },
+    {
+      "instances": 199,
+      "bodies": 200,
+      "jsonBytes": 3788030,
+      "compactBytes": 45175,
+      "resolveMs": 320.5909590000001,
+      "parseSamplesMs": [
+        471.771667,
+        471.6028329999999,
+        472.9161670000003,
+        479.10704200000055,
+        477.87908399999924
+      ],
+      "commitMs": 524.8419589999994,
+      "undoMs": 25.75116700000035,
+      "redoMs": 25.567791999999827
+    },
+    {
+      "instances": 500,
+      "bodies": 501,
+      "jsonBytes": 9493482,
+      "resolveMs": 805.817916,
+      "rejected": "Invalid direct modeling document."
+    },
+    {
+      "instances": 1000,
+      "bodies": 1001,
+      "jsonBytes": 19003382,
+      "resolveMs": 1663.3999999999996,
+      "rejected": "Invalid direct modeling document."
+    }
+  ]
+}

@@ -452,3 +452,69 @@ fn difference_many_subtracts_separated_cutters_in_batches() {
         plate.indices
     );
 }
+
+#[test]
+fn diagnostic_intersection_returns_original_pair_and_world_point() {
+    let mut mesh=cube([0.,0.,0.],[1.,1.,1.]);
+    assert!(first_mesh_intersection(&mesh,1e-9,100_000).unwrap().is_none());
+    let other=cube([0.5,0.5,0.5],[1.5,1.5,1.5]);
+    let offset=mesh.positions.len()/3;
+    mesh.positions.extend(other.positions);
+    mesh.indices.extend(other.indices.iter().map(|i|i+offset));
+    let hit=first_mesh_intersection(&mesh,1e-9,100_000).unwrap().unwrap();
+    assert!(hit.triangles[0]<12 && hit.triangles[1]>=12);
+    assert!(hit.point.iter().all(|v|*v>=0.5-1e-8 && *v<=1.+1e-8));
+    assert!(first_mesh_intersection(&mesh,1e-9,1).is_err());
+    for p in mesh.positions.chunks_exact_mut(3){for v in p{*v=*v*1e-4+100.;}}
+    let scaled=first_mesh_intersection(&mesh,1e-9,100_000).unwrap().unwrap();
+    assert_eq!(hit.triangles,scaled.triangles);
+    for i in 0..3 {assert!((scaled.point[i]-(100.+hit.point[i]*1e-4)).abs()<1e-10);}
+}
+
+#[test]
+fn diagnostic_intersection_distinguishes_shared_edge_from_coplanar_overlap() {
+    let mut mesh=Mesh{positions:vec![0.,0.,0., 2.,0.,0., 0.,2.,0., 2.,2.,0.],
+        indices:vec![0,1,2, 1,3,2],uv:None};
+    assert!(first_mesh_intersection(&mesh,1e-9,1000).unwrap().is_none());
+    mesh.indices=vec![0,1,2, 0,1,2];
+    assert_eq!(first_mesh_intersection(&mesh,1e-9,1000).unwrap().unwrap().triangles,[0,1]);
+    mesh.indices=vec![0,0,1];
+    assert!(first_mesh_intersection(&mesh,1e-9,1000).is_err());
+}
+
+#[test]
+fn diagnostic_intersections_enumerates_separate_defects_and_preserves_partial_results() {
+    let mut mesh=Mesh {positions:vec![],indices:vec![],uv:None};
+    for x in [0.,10.,20.] {
+        let n=mesh.positions.len()/3;
+        mesh.positions.extend([x,0.,0.,x+2.,0.,0.,x,2.,0.]);
+        mesh.indices.extend([n,n+1,n+2,n,n+1,n+2]);
+    }
+    let all=mesh_intersections(&mesh,1e-9,1000,100).unwrap();
+    assert!(all.complete);assert_eq!(all.stop_reason,None);
+    assert_eq!(all.contacts.iter().map(|c|c.triangles).collect::<Vec<_>>(),vec![[0,1],[2,3],[4,5]]);
+    let capped=mesh_intersections(&mesh,1e-9,1000,1).unwrap();
+    assert!(!capped.complete);assert_eq!(capped.stop_reason,Some("contact-limit"));assert_eq!(capped.contacts.len(),1);
+    let partial=mesh_intersections(&mesh,1e-9,6,100).unwrap();
+    assert!(!partial.complete);assert_eq!(partial.stop_reason,Some("work-limit"));assert_eq!(partial.work,6);
+    assert_eq!(partial.contacts.len(),1);
+    let no_result=mesh_intersections(&mesh,1e-9,1,100).unwrap();
+    assert!(!no_result.complete);assert!(no_result.contacts.is_empty());
+    assert!(mesh_intersections(&mesh,1e-9,100,0).is_err());
+}
+
+#[test]
+fn diagnostic_intersections_matches_pairwise_checks_and_keeps_valid_adjacency() {
+    let mut mesh=cube([0.,0.,0.],[1.,1.,1.]);
+    assert!(mesh_intersections(&mesh,1e-9,100_000,1000).unwrap().contacts.is_empty());
+    let other=cube([0.5,0.5,0.5],[1.5,1.5,1.5]);let offset=mesh.positions.len()/3;
+    mesh.positions.extend(other.positions);mesh.indices.extend(other.indices.iter().map(|i|i+offset));
+    let all=mesh_intersections(&mesh,1e-9,100_000,1000).unwrap();assert!(all.complete);assert!(all.contacts.len()>1);
+    // Use the same global bounds and original shared indices while checking each pair.
+    let mut expected=vec![];
+    for a in 0..mesh.indices.len()/3 {for b in a+1..mesh.indices.len()/3 {
+        let pair=Mesh {positions:mesh.positions.clone(),indices:[&mesh.indices[a*3..a*3+3],&mesh.indices[b*3..b*3+3]].concat(),uv:None};
+        if first_mesh_intersection(&pair,1e-9,1000).unwrap().is_some(){expected.push([a,b]);}
+    }}
+    assert_eq!(all.contacts.iter().map(|c|c.triangles).collect::<Vec<_>>(),expected);
+}

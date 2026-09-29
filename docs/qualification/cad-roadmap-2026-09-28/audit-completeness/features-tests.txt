@@ -1,0 +1,79 @@
+warning: binary `wgsl_export` should have a kebab-case name
+  |
+1 | /Users/themoretheless/Documents/Sources/open-scad-viewer/crates/target/.../wgsl_export
+  |                                                                            ^^^^^^^^^^^
+  |
+  = note: `cargo::non_kebab_case_bins` is set to `warn` by default
+help: to change the binary name to `wgsl-export`, convert the file stem
+  |
+1 - src/bin/wgsl_export.rs
+1 + src/bin/wgsl-export.rs
+  |
+warning: `raster-core` (manifest) generated 1 warning
+warning: function `rebuild_add` is never used
+    --> nurbs-core/src/foundation.rs:3249:4
+     |
+3249 | fn rebuild_add(a:[f64;2],b:[f64;2])->[f64;2] { [next_down(a[0]+b[0]),next_up(a[1]+b[1])] }
+     |    ^^^^^^^^^^^
+     |
+     = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: function `rebuild_mul` is never used
+    --> nurbs-core/src/foundation.rs:3250:4
+     |
+3250 | fn rebuild_mul(a:[f64;2],b:[f64;2])->[f64;2] {
+     |    ^^^^^^^^^^^
+
+warning: function `rebuild_binomial` is never used
+    --> nurbs-core/src/foundation.rs:3254:4
+     |
+3254 | fn rebuild_binomial(n:usize,k:usize)->[f64;2] {
+     |    ^^^^^^^^^^^^^^^^
+
+warning: function `rebuild_product_factor` is never used
+    --> nurbs-core/src/foundation.rs:3258:4
+     |
+3258 | fn rebuild_product_factor(p:usize,q:usize,i:usize,j:usize)->[f64;2] {
+     |    ^^^^^^^^^^^^^^^^^^^^^^
+
+warning: `nurbs-core` (lib) generated 4 warnings
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.05s
+     Running unittests src/lib.rs (crates/target/debug/build/brep-core/b361d23d180ae8d4/out/brep_core-b361d23d180ae8d4)
+
+running 33 tests
+test analytic_features::tests::analytic_fillet_af01_cuboid_edge ... ok
+test analytic_features::tests::curved_fillet_refuses_af_n1 ... ok
+test analytic_features::tests::analytic_chamfer_af01_cuboid_edge ... ok
+test analytic_features::tests::cylinder_shell_offset ... ok
+test analytic_features::tests::exact_cylinder_shell_is_rigid_stable_and_refuses_unowned_rims ... ok
+test analytic_features::tests::frame_law_refuses_bent_nonparallel_path ... ok
+test analytic_features::tests::exact_multi_section_loft_has_correspondence_topology_and_audit_oracles ... ok
+test analytic_features::tests::exact_variable_radius_fillet_authors_linear_law_on_vertical_cuboid_edge ... ok
+test analytic_features::tests::frame_law_production_sweep ... ok
+test analytic_features::tests::frame_law_refuses_unknown_law ... ok
+test analytic_features::tests::iges_refuses_stl_payload ... ok
+test analytic_features::tests::loft_sweep_mutations_refuse_atomically_with_exact_codes ... ok
+test analytic_features::tests::fillet_chain_remaps_two_vertical_corners ... ok
+test analytic_features::tests::exact_convex_chamfer_handles_connected_chain_permutations_atomically ... ok
+test analytic_features::tests::exact_shell_refusals_are_atomic_and_typed ... ok
+test analytic_features::tests::mesh_bevel_cannot_be_claimed_via_curved_chamfer ... ok
+test analytic_features::tests::iges_roundtrip_entity_subset ... ok
+test analytic_features::tests::solid_loft_refuses_nonrectangular_section_carriers ... ok
+test analytic_features::tests::successor_parallel_sweep_certifies_and_bent_rmf_refuses ... ok
+test analytic_features::tests::step_roundtrip_not_faceted ... ok
+test analytic_features::tests::solid_loft_section_match ... ok
+test analytic_features::tests::unsupported_transition_and_variable_radius_are_typed_refusals ... ok
+test analytic_features::tests::successor_multi_edge_fillet_is_context_audit_and_naming_bound ... ok
+test analytic_features::tests::planar_shell_as01 ... ok
+test analytic_features::tests::exact_valence3_corner_blend_authors_sphere_and_three_cylinders ... ok
+test analytic_features::tests::exact_bent_rmf_sweep_certifies_path_frame_laws_and_reversal ... ok
+test analytic_features::tests::cylinder_shell_preserves_rigid_placement ... ok
+test analytic_features::tests::exact_prism_fillet_supports_mixed_and_closed_profile_selections_under_rigid_placement ... ok
+test analytic_features::tests::exact_tube_offsets_preserve_topology_under_rigid_placement ... ok
+test analytic_features::tests::analytic_chamfer_honors_each_selected_vertical_corner ... ok
+test analytic_features::tests::exact_prism_fillet_has_independent_square_volume_and_radius_oracles ... ok
+test analytic_features::tests::exact_shell_has_independent_box_volume_area_thickness_oracles ... ok
+test analytic_features::tests::exact_shell_offsets_planar_inward_outward_and_nonadjacent_openings ... ok
+
+test result: ok. 33 passed; 0 failed; 0 ignored; 0 measured; 555 filtered out; finished in 1.48s
+

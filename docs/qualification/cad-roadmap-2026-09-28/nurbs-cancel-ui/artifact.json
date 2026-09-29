@@ -1,0 +1,7 @@
+{
+  "dist": "/var/folders/jx/ps1h62vx3gdgly_ddwly4mqr0000gn/T/osv-nurbs-cancel-b_e3s20f",
+  "sha256": {
+    "index.html": "0eaf5d5f459ab1e2d516ba8dbf5031bd435fc18ee2b60c001917599bda94a5ad",
+    "wasm/geometry-kernel.wasm": "ea9ca96c762901fff9831adf5f3f086bc33d6d0ba1dd98d48223794e7f43aa13"
+  }
+}

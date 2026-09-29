@@ -1,0 +1,45 @@
+{
+  "version": 1,
+  "sketches": [],
+  "bodies": [],
+  "curves": [
+    {
+      "id": "rebuild-curve",
+      "name": "Rebuild curve input",
+      "curve": {
+        "degree": 2,
+        "knots": [
+          2,
+          2,
+          2,
+          5,
+          5,
+          5
+        ],
+        "controlPoints": [
+          [
+            0,
+            0,
+            0
+          ],
+          [
+            1,
+            2,
+            0
+          ],
+          [
+            2,
+            0,
+            0
+          ]
+        ],
+        "weights": [
+          1,
+          1,
+          1
+        ]
+      },
+      "segments": 64
+    }
+  ]
+}

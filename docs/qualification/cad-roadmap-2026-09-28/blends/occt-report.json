@@ -1,0 +1,109 @@
+{
+  "schema": "cad-roadmap-occt/1",
+  "oracle": "OpenCascade via cadquery-ocp",
+  "version": "8.0.1.0.0",
+  "scope": "Independent STEP read, solid validity, exact bounding box, volume and OCCT-tessellated preview. Does not certify all STEP inputs.",
+  "passed": true,
+  "parts": [
+    {
+      "name": "variable-r0.5",
+      "stepSha256": "7f016a799bdc1da1cebd748c6478ea6bfdf12e3eecefa5229cb1bb0eaa97bf9d",
+      "valid": true,
+      "solids": 1,
+      "faces": 7,
+      "boundsMm": [
+        [
+          -1e-07,
+          -1e-07,
+          -1e-07
+        ],
+        [
+          10.000000100000001,
+          8.0000001,
+          6.000000100000001
+        ]
+      ],
+      "volumeMm3": 478.6050880581892,
+      "maxBoundsErrorMm": 1.0000000116860974e-07,
+      "volumeErrorMm3": 3.8942289393162355e-09,
+      "passed": true,
+      "previewTriangles": 86,
+      "lowerVolumeMm3": 239.62444619745722,
+      "lowerVolumeErrorMm3": 5.884883194084978e-07
+    },
+    {
+      "name": "variable-r1",
+      "stepSha256": "16f4f9390bf5ba5e3b7c965f6a4dba31565719504f52d09eecb6c007dd1e2438",
+      "valid": true,
+      "solids": 1,
+      "faces": 7,
+      "boundsMm": [
+        [
+          -1e-07,
+          -1e-07,
+          -1e-07
+        ],
+        [
+          10.000000100000001,
+          8.0000001,
+          6.000000100000001
+        ]
+      ],
+      "volumeMm3": 476.9955742826901,
+      "maxBoundsErrorMm": 1.0000000116860974e-07,
+      "volumeErrorMm3": 4.874209480476566e-09,
+      "passed": true,
+      "previewTriangles": 90,
+      "lowerVolumeMm3": 238.9806409746342,
+      "lowerVolumeErrorMm3": 3.015036611486721e-07
+    },
+    {
+      "name": "corner-r0.5",
+      "stepSha256": "8d163fdc4a6a3e43f62d44ce69ad91c9178013cc7d2e200b2917358606ee91ac",
+      "valid": true,
+      "solids": 1,
+      "faces": 10,
+      "boundsMm": [
+        [
+          -1e-07,
+          -1e-07,
+          -1e-07
+        ],
+        [
+          10.000000100000001,
+          8.0000001,
+          6.0000001
+        ]
+      ],
+      "volumeMm3": 478.73331513343203,
+      "maxBoundsErrorMm": 1.0000000116860974e-07,
+      "volumeErrorMm3": 6.173715974000515e-07,
+      "passed": true,
+      "previewTriangles": 330
+    },
+    {
+      "name": "corner-r1",
+      "stepSha256": "64c95d57b74c63a7d456b1bb0b250c17a26c38bb5ce399c2359ab212be764300",
+      "valid": true,
+      "solids": 1,
+      "faces": 10,
+      "boundsMm": [
+        [
+          -1e-07,
+          -1e-07,
+          -1e-07
+        ],
+        [
+          10.000000100000001,
+          8.0000001,
+          6.0000001
+        ]
+      ],
+      "volumeMm3": 475.01696241962725,
+      "maxBoundsErrorMm": 1.0000000116860974e-07,
+      "volumeErrorMm3": 2.2126825456325605e-06,
+      "passed": true,
+      "previewTriangles": 342
+    }
+  ]
+}

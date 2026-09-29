@@ -245,7 +245,9 @@ impl value_codec::Serialize for AuthorizedHealResult {
                     "ok":self.audit.ok,
                     "bodyCount":self.audit.body_count,
                     "shellCount":self.audit.shell_count,
-                    "selfIntersectionPairsChecked":self.audit.self_intersection_pairs_checked
+                    "selfIntersectionPairsCandidate": self.audit.self_intersection_pairs_candidate,
+                "selfIntersectionComplete": self.audit.self_intersection_complete,
+                "selfIntersectionPairsChecked":self.audit.self_intersection_pairs_checked
                 },
                 "changeSet":self.change_set,
                 "namingComplete":self.naming_complete

@@ -1,0 +1,46 @@
+{
+  "browser": "151.0.7922.34",
+  "profile": "/tmp/cad-crash-profile-97r06e",
+  "phases": [
+    {
+      "phase": "before",
+      "pid": 67706,
+      "code": null,
+      "signal": "SIGKILL",
+      "recoveredBodies": 2,
+      "recoveredGroups": 0,
+      "referenceBeforeCharacters": 19289,
+      "referenceAfterCharacters": 0,
+      "snapshots": [
+        {
+          "id": "5af107e8-5bf6-4fcc-95c9-2b349a19a274",
+          "characters": 4221184
+        }
+      ],
+      "matches": true
+    },
+    {
+      "phase": "after",
+      "pid": 67789,
+      "code": null,
+      "signal": "SIGKILL",
+      "recoveredBodies": 2,
+      "recoveredGroups": 60,
+      "referenceBeforeCharacters": 0,
+      "referenceAfterCharacters": 0,
+      "snapshots": [
+        {
+          "id": "5af107e8-5bf6-4fcc-95c9-2b349a19a274",
+          "characters": 4221184
+        },
+        {
+          "id": "826b82fb-8c2d-44d5-a003-d96c2f7073f7",
+          "characters": 4221184
+        }
+      ],
+      "matches": true
+    }
+  ],
+  "persistentProfileReopened": true,
+  "legacyDraftMigrated": true
+}

@@ -1,0 +1,17 @@
+{
+  "artifact": {
+    "geometryWasmSha256": "dd5995820cd4c2aca5ad36640358546e2298c1c651b027b610f7e2120c998089",
+    "indexSha256": "59924037d84d6522356d60d992b8dee25577f32b1e200991b545a544362b3aed"
+  },
+  "ok": true,
+  "keyboard": false,
+  "tabs": 0,
+  "mismatchCount": 2,
+  "partial": true,
+  "invalidInput": true,
+  "retry": true,
+  "cancel": true,
+  "restart": true,
+  "unchanged": true,
+  "errors": []
+}

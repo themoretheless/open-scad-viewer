@@ -36,6 +36,7 @@ mod cad_boolean;
 mod cad_centered_lattice;
 mod cad_clearance;
 mod cad_draft;
+mod cad_display;
 mod cad_edge_edit;
 mod cad_face_selection;
 mod cad_hole;
@@ -48,7 +49,15 @@ mod cad_planar_edit;
 mod cad_sections;
 mod cad_selection;
 mod cad_sketch;
+mod cad_profile_prepare;
 mod cad_dimensions;
+mod cad_quantity;
+mod cad_diagnostics;
+mod cad_face_distance;
+mod cad_shell_distance;
+mod cad_boundary_agreement;
+mod cad_face_contacts;
+mod cad_surface_diagnostics;
 mod cad_bridge_curve;
 mod cad_sketch_offset;
 mod cad_sketch_trim;
@@ -333,6 +342,8 @@ fn curved_graph_boolean_value(
                 "ok": certificate.audit.ok,
                 "bodyCount": certificate.audit.body_count,
                 "shellCount": certificate.audit.shell_count,
+                "selfIntersectionPairsCandidate": certificate.audit.self_intersection_pairs_candidate,
+                "selfIntersectionComplete": certificate.audit.self_intersection_complete,
                 "selfIntersectionPairsChecked": certificate.audit.self_intersection_pairs_checked,
                 "notes": certificate.audit.notes
             },
@@ -419,6 +430,8 @@ fn general_nurbs_boolean_value(
                 "ok": certificate.audit.ok,
                 "bodyCount": certificate.audit.body_count,
                 "shellCount": certificate.audit.shell_count,
+                "selfIntersectionPairsCandidate": certificate.audit.self_intersection_pairs_candidate,
+                "selfIntersectionComplete": certificate.audit.self_intersection_complete,
                 "selfIntersectionPairsChecked": certificate.audit.self_intersection_pairs_checked,
                 "notes": certificate.audit.notes
             },
@@ -567,6 +580,7 @@ pub fn dispatch(mut v: Value) -> Result<Value> {
         "brep_profile_transform"
         | "brep_profile_author"
         | "brep_profile_validate"
+        | "brep_profile_offset"
         | "brep_profile_boolean"
         | "brep_profile_signed_area" => brep_profile::dispatch(v),
         "cad" | "mesh" => mesh::dispatch(v),
@@ -742,6 +756,17 @@ pub fn dispatch(mut v: Value) -> Result<Value> {
             },
         )?),
         // Mesh sections, planned toolpaths and validated G-code previews.
+        "cad_surface_boundary_measure" => cad_surface_diagnostics::measure(v),
+        "cad_mesh_intersection" => cad_diagnostics::intersection(v),
+        "cad_mesh_intersections" => cad_diagnostics::intersections(v),
+        "cad_mesh_diagnostic_locations" => cad_diagnostics::locations(v),
+        "cad_plane_section" => cad_diagnostics::section(v),
+        "cad_measure_points" => cad_diagnostics::measure_points(v),
+        "cad_curve_curvature" => cad_diagnostics::curvature(v),
+        "cad_face_distance" => cad_face_distance::measure(v),
+        "cad_shell_distance" => cad_shell_distance::measure(v),
+        "cad_boundary_agreement" => cad_boundary_agreement::diagnose(v),
+        "cad_face_contacts" => cad_face_contacts::diagnose(v),
         "mesh_section" => {
             let mesh: Mesh = field(&v, "mesh")?;
             let z_mm: f64 = field(&v, "z")?;
@@ -1697,7 +1722,11 @@ pub fn dispatch(mut v: Value) -> Result<Value> {
         "cad_resize_bodies" => cad_body_affine::resize(v),
         "cad_draft_bodies" => cad_draft::draft(v),
         "cad_mirror_bodies" => cad_body_affine::mirror(v),
+        "cad_prepare_retained_profile" => cad_profile_prepare::prepare_retained(v),
+        "cad_prepare_profile" => cad_profile_prepare::prepare(v),
+        "cad_slot" => cad_sketch::slot(v),
         "cad_dimensions" => cad_dimensions::dimensions(v),
+        "cad_quantity" => cad_quantity::parse(v),
         "cad_bridge_curve" => cad_bridge_curve::bridge(v),
         "cad_trim_sketch" => cad_sketch_trim::trim(v),
         "cad_extend_sketch" => cad_sketch_trim::extend(v),
@@ -1744,6 +1773,9 @@ pub fn dispatch(mut v: Value) -> Result<Value> {
         "cad_joint_bodies" => cad_body_affine::joint(v),
         "cad_arrange_bodies" => cad_body_affine::arrange(v),
         "cad_transform_bodies" => cad_body_affine::transform(v),
+        "cad_instance_transform" => cad_body_affine::instance_transform(v),
+        "cad_display_mesh" => cad_display::prepare(v),
+        "cad_instances" => cad_body_affine::instances(v),
         "cad_transform_selection" => cad_selection::transform(v),
         "mesh_thicken" => encode(field::<Mesh>(&v, "mesh")?.thicken(field(&v, "vector")?)?),
         "mesh_transform" => {

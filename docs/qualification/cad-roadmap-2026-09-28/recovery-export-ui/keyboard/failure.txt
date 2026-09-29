@@ -1,0 +1,182 @@
+OpenSCAD Viewer
+model.scad
+Solid
+Mesh
+Команды
+Ctrl K
+Экспорт
+?
+RU
+Тема
+Как в системе
+Тёмная
+Светлая
+Nord
+Solarized
+Собрать
+Авто
+В Solid
+Примеры
+Генераторы
+1
+2
+3
+4
+▾
+5
+6
+7
+▾
+8
+9
+10
+▾
+11
+12
+// OpenSCAD primitives — rendered with a real geometry kernel
+cube([20, 15, 10]);
+
+translate([30, 0, 8])
+  sphere(r = 8, $fn = 32);
+
+translate([0, 28, 0])
+  cylinder(h = 18, r = 7, $fn = 32);
+
+translate([30, 28, 0])
+  cylinder(h = 18, r1 = 8, r2 = 3, $fn = 6);
+
+
+Объекты 4
+Треугольники 1 116
+Объём 9 375,63
+Площадь 3 994,72
+Готово · 79 ms
+Клетка
+mm
+cm
+m
+in
+Шейдер
+phong
+pbr
+matcap
+toon
+unlit
+Пресет
+— выбрать —
+Default Plastic
+Brushed Metal
+Matte
+Emissive
+Plastic
+Rubber
+Glass
+Anodized Aluminum
+Тема
+Default
+Dark Contrast
+Light
+Цвет
+Металл
+Шерох.
+Тени
+Вид
+Изометрия
+Спереди
+Сзади
+Слева
+Справа
+Сверху
+Снизу
+Failed to execute 'requestDevice' on 'GPUAdapter': A valid external Instance reference no longer exists.
+Повторить запуск 3D
+X
+Y
+Z
+TOP
+FRONT
+RIGHT
+BK
+L
+B
+ISO
+Сцена
+4
+⌄
+МЕШИ
+4
+Объект 1
+12 тр.
+Объект 2
+960 тр.
+Объект 3
+124 тр.
+Объект 4
+20 тр.
+Enter выбрать · / фокус · . изолировать · H видимость
+Клик: выбрать · повторный клик: глубже · ЛКМ: вращение · ПКМ/Shift: панорама · колесо: масштаб · F: фокус
+CPU · без 3D
+Manifold
+Черновик сохранён в браузере
+Восстанавливаю геометрию…
+Отмена · Esc
+Solid
+Plasticity-like CAD
+↶
+↷
+Мышь
+Инструменты
+?
+Команда…
+Ctrl K
+Файл
+Создавать в 
+Без группы
+Перенести выбор
+Новая группа
+Повтор · Shift R
+Привязки: вкл
+Плоскость: XY
+Изолировать тела
+Выбрано: 0
+Наведение
+Выбор
+Предпросмотр
+XY
+Размеры
+Клетка
+mm
+cm
+m
+in
+Привязки
+⋯
++
+−
+Начните с контура
+Выберите фигуру сверху и нарисуйте её мышью
+ISO
+STL
+STL (ASCII)
+STL (binary)
+3MF
+OBJ
+PLY
+OFF
+AMF
+Клетка
+mm
+cm
+m
+in
+Привязки
+⋯
++
+−
+120 FPS · 8.2 ms
+Из плоской фигуры — в объём
+Выберите эскиз слева и нажмите «Выдавить»
+Сцена
+0
+Сцена пуста. Добавьте примитив или нарисуйте эскиз.
+ЛКМ: выбор / вращение 3D · СКМ или Shift: перенос · Колесо: масштаб

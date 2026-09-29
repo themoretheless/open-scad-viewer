@@ -157,3 +157,17 @@ fn imported_mesh_budget_is_separate_from_tessellation_budget() {
     };
     assert!(oversized.inspect().is_err());
 }
+
+#[test]
+fn diagnostic_locations_match_counts_and_keep_branched_boundaries() {
+    let mesh = Mesh { positions: vec![0.,0.,0., 1.,0.,0., 0.,1.,0., 0.,-1.,0., 0.,0.,1.], indices: vec![0,1,2, 0,1,3, 1,0,4], uv: None };
+    let report=mesh.inspect().unwrap();let d=mesh.diagnostic_locations().unwrap();
+    assert_eq!(d.non_manifold_edges,vec![[0,1]]);
+    assert_eq!(d.boundary_edges.len(),report.boundary_edges);
+    assert_eq!(d.non_manifold_edges.len(),report.non_manifold_edges);
+    assert!(mesh.boundary_loops().is_err());
+    let mut oriented=mesh.clone();oriented.indices=vec![0,1,2,0,1,3];
+    assert_eq!(oriented.diagnostic_locations().unwrap().orientation_edges,vec![[0,1]]);
+    oriented.indices=vec![0,1,1];
+    assert_eq!(oriented.diagnostic_locations().unwrap().degenerate_triangles,vec![0]);
+}

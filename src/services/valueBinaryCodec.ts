@@ -8,18 +8,20 @@ const isFlatNumberView=(v:unknown):v is ArrayBufferView&{length:number}=>
 /** Per-key hints: arrays of numeric triples decode directly into flat typed arrays. */
 export type BinaryTripleHints=Readonly<Record<string,'f64'|'u8'|'u32'>>
 export function encodeBinary(value:unknown):Uint8Array {
+ // Repeated schema keys dominate CAD packets; cache only bounded keys for this call.
+ const encodedKeys=new Map<string,Uint8Array>()
  let data=new Uint8Array(1024),view=new DataView(data.buffer),offset=4,nodes=0
  data.set([77,71,86,49])
  const reserve=(n:number)=>{if(n>LIMIT-offset)throw new Error('Binary size limit');if(offset+n>data.length){const next=new Uint8Array(Math.min(LIMIT,Math.max(offset+n,data.length*2)));next.set(data);data=next;view=new DataView(data.buffer)}}
  const byte=(n:number)=>{reserve(1);data[offset++]=n}
  const count=(n:number)=>{reserve(4);view.setUint32(offset,n,true);offset+=4}
- const put=(v:unknown,depth:number)=>{
+ const put=(v:unknown,depth:number,key=false)=>{
   if(depth>128||++nodes>4_000_000)throw new Error('Binary nesting or item limit')
   if(v===null){byte(0);return}if(v===false){byte(1);return}if(v===true){byte(2);return}
   if(typeof v==='number'){if(!Number.isFinite(v))throw new Error('Nonfinite binary number');const integer=Number.isSafeInteger(v)&&!Object.is(v,-0);byte(integer?(v>=0?7:8):3);reserve(8);if(integer){if(v>=0)view.setBigUint64(offset,BigInt(v),true);else view.setBigInt64(offset,BigInt(v),true)}else view.setFloat64(offset,v,true);offset+=8;return}
-  if(typeof v==='string'){const bytes=encoder.encode(v);byte(4);count(bytes.length);reserve(bytes.length);data.set(bytes,offset);offset+=bytes.length;return}
+  if(typeof v==='string'){let bytes=key?encodedKeys.get(v):undefined;if(!bytes){bytes=encoder.encode(v);if(key&&v.length<=128&&encodedKeys.size<256)encodedKeys.set(v,bytes)}byte(4);count(bytes.length);reserve(bytes.length);data.set(bytes,offset);offset+=bytes.length;return}
   if(Array.isArray(v)||isFlatNumberView(v)){byte(5);count(v.length);const items=v as ArrayLike<unknown>;for(let i=0;i<items.length;i++)put(items[i],depth+1);return}
-  if(typeof v==='object'&&v){byte(6);const entries=Object.entries(v).filter(([,v])=>v!==undefined);count(entries.length);for(const[k,item]of entries){put(k,depth+1);put(item,depth+1)}return}
+  if(typeof v==='object'&&v){byte(6);const entries=Object.entries(v).filter(([,v])=>v!==undefined);count(entries.length);for(const[k,item]of entries){put(k,depth+1,true);put(item,depth+1)}return}
   throw new Error('Unsupported binary value')
  }
  put(value,0);return data.slice(0,offset)

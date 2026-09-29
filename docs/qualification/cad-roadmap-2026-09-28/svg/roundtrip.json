@@ -1,0 +1,35 @@
+{
+  "input": "/tmp/solid-svg-qualification/browser-edited.svg",
+  "sha256": "11e14b164da39557aab2c81a9d6a5e9dcee9a46d19cf0df3057d3ed399cf667b",
+  "downloaded": {
+    "volumeMm3": 168,
+    "bounds": {
+      "min": [
+        0,
+        0,
+        0
+      ],
+      "max": [
+        14,
+        6,
+        2
+      ]
+    }
+  },
+  "holeRoundtrip": {
+    "volumeMm3": 600,
+    "bounds": {
+      "min": [
+        0,
+        0,
+        0
+      ],
+      "max": [
+        20,
+        20,
+        2
+      ]
+    }
+  },
+  "scope": "Native SVG reimport and extrusion; downloaded Solid XY projection and perforated profile"
+}

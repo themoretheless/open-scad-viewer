@@ -1,0 +1,87 @@
+{
+  "scope": "Headless Chromium UI import and Undo/Redo through durable save; automation latency included. RAF gaps during operations are not orbit FPS; heap is sampled without forced GC.",
+  "browser": "151.0.7922.34",
+  "viewport": {
+    "width": 1280,
+    "height": 800
+  },
+  "bodies": 1001,
+  "before": {
+    "Nodes": 2217,
+    "JSHeapUsedSize": 11459188,
+    "JSHeapTotalSize": 16302080
+  },
+  "after": {
+    "Nodes": 27237,
+    "JSHeapUsedSize": 142122268,
+    "JSHeapTotalSize": 256311296
+  },
+  "samples": [
+    {
+      "action": "import",
+      "elapsedMs": 5103.117292000001,
+      "frameCount": 16,
+      "maxFrameGapMs": 4950.1
+    },
+    {
+      "action": "undo",
+      "elapsedMs": 85.2807499999999,
+      "frameCount": 9,
+      "maxFrameGapMs": 16.699999999999818
+    },
+    {
+      "action": "redo",
+      "elapsedMs": 2489.705958999999,
+      "frameCount": 13,
+      "maxFrameGapMs": 2358.2999999999993
+    },
+    {
+      "action": "undo",
+      "elapsedMs": 201.61341699999866,
+      "frameCount": 24,
+      "maxFrameGapMs": 16.599999999998545
+    },
+    {
+      "action": "redo",
+      "elapsedMs": 2589.71025,
+      "frameCount": 27,
+      "maxFrameGapMs": 2350.9000000000015
+    },
+    {
+      "action": "undo",
+      "elapsedMs": 112.6850830000003,
+      "frameCount": 15,
+      "maxFrameGapMs": 16.69999999999891
+    },
+    {
+      "action": "redo",
+      "elapsedMs": 2471.9451659999995,
+      "frameCount": 16,
+      "maxFrameGapMs": 2316.6000000000004
+    },
+    {
+      "action": "undo",
+      "elapsedMs": 68.88524999999936,
+      "frameCount": 7,
+      "maxFrameGapMs": 16.700000000000728
+    },
+    {
+      "action": "redo",
+      "elapsedMs": 2456.542792,
+      "frameCount": 12,
+      "maxFrameGapMs": 2316
+    },
+    {
+      "action": "undo",
+      "elapsedMs": 74.92995800000062,
+      "frameCount": 9,
+      "maxFrameGapMs": 16.600000000000364
+    },
+    {
+      "action": "redo",
+      "elapsedMs": 2492.5497080000023,
+      "frameCount": 14,
+      "maxFrameGapMs": 2349.899999999998
+    }
+  ]
+}

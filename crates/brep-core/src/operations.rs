@@ -1760,6 +1760,104 @@ pub fn draft_planar_prism(
     Ok(out)
 }
 
+// Move an exposed polygonal cap along straight parallel side edges. The cap
+// may be nonconvex or contain holes; no other vertex level may be crossed.
+fn push_prismatic_cap(model: &Model, face_id: usize, distance: f64) -> Result<Model> {
+    model.validate()?;
+    if model.bodies.len()!=1 || model.shells.len()!=1 || !model.bodies[0].inner_shells.is_empty() {
+        return Err(unsupported("Cap editing requires one connected shell"));
+    }
+    let shell=&model.shells[model.bodies[0].outer_shell];
+    let selected=shell.faces.iter().find(|f|f.face==face_id)
+        .ok_or_else(||unsupported("Unknown cap face"))?;
+    let mut plane=face_plane(model,face_id)?;
+    if selected.reversed {plane.normal=mul(plane.normal,-1.);plane.offset=-plane.offset;}
+    let tolerance=model.tolerance_mm*8.;
+    let face=&model.faces[face_id];
+    let mut moved=BTreeSet::new();
+    let mut cap_edges=BTreeSet::new();
+    for ring in std::iter::once(&face.outer).chain(&face.holes) {
+        moved.extend(loop_vertices(model,*ring)?);
+        cap_edges.extend(model.loops[*ring].coedges.iter().map(|c|c.edge));
+    }
+    // A displayed planar rim can consist of several adjacent B-rep faces.
+    // Include its connected coplanar component, never a remote coplanar cap.
+    loop {
+        let count=moved.len();
+        for usage in &shell.faces {
+            let f=&model.faces[usage.face];
+            let mut ids=Vec::new();
+            for ring in std::iter::once(&f.outer).chain(&f.holes) {ids.extend(loop_vertices(model,*ring)?);}
+            let edges=std::iter::once(&f.outer).chain(&f.holes).flat_map(|&id|model.loops[id].coedges.iter().map(|c|c.edge)).collect::<Vec<_>>();
+            if edges.iter().any(|id|cap_edges.contains(id)) && ids.iter().all(|&i|(dot(plane.normal,model.vertices[i].point)-plane.offset).abs()<=tolerance) {
+                moved.extend(ids);
+                cap_edges.extend(edges);
+            }
+        }
+        if moved.len()==count {break;}
+    }
+    for (i,v) in model.vertices.iter().enumerate() {
+        let gap=plane.offset-dot(plane.normal,v.point);
+        if moved.contains(&i) {if gap.abs()>tolerance{return Err(unsupported("Cap is not planar"));}}
+        else if gap<=tolerance || gap+distance<=tolerance {
+            return Err(unsupported("Cap displacement reaches another vertex level"));
+        }
+    }
+    for edge in &model.edges {
+        if moved.contains(&edge.vertices[0])!=moved.contains(&edge.vertices[1]) {
+            let d=sub(model.vertices[edge.vertices[1]].point,model.vertices[edge.vertices[0]].point);
+            if norm(cross(d,plane.normal))>tolerance {
+                return Err(unsupported("Cap side edges must follow the displacement direction"));
+            }
+        }
+    }
+    let mut polygons=Vec::new();
+    for usage in &shell.faces {
+        face_plane(model,usage.face)?; // Refuse curved geometry; do not flatten it.
+        let f=&model.faces[usage.face];
+        let ring=|id| -> Result<Vec<[f64;3]>> {
+            let mut points=loop_vertices(model,id)?.into_iter().map(|i| {
+                let p=model.vertices[i].point;
+                if moved.contains(&i){add(p,mul(plane.normal,distance))}else{p}
+            }).collect::<Vec<_>>();
+            if usage.reversed {points.reverse();}
+            Ok(points)
+        };
+        polygons.push(PlanarBoundary{outer:ring(f.outer)?,holes:f.holes.iter().map(|&id|ring(id)).collect::<Result<Vec<_>>>()?});
+    }
+    let mut out=model_from_trimmed_polygons(polygons,model.tolerance_mm)?;
+    // This edit changes geometry without splitting or merging topology. Match
+    // the rebuilt incidence graph to the source, including displaced vertices.
+    fn correspondence<T: PartialEq>(target: &[T], source: &[T]) -> Result<Vec<usize>> {
+        if target.len()!=source.len() {return Err(unsupported("Cap reconstruction changed topology"));}
+        let mut used=BTreeSet::new();
+        let mut result=Vec::new();
+        for key in target {
+            let matches=source.iter().enumerate().filter(|(_,candidate)|*candidate==key).map(|(i,_)|i).collect::<Vec<_>>();
+            if matches.len()!=1 || !used.insert(matches[0]) {return Err(unsupported("Cap topology correspondence is ambiguous"));}
+            result.push(matches[0]);
+        }
+        Ok(result)
+    }
+    let expected=model.vertices.iter().enumerate().map(|(i,v)|if moved.contains(&i){add(v.point,mul(plane.normal,distance))}else{v.point}).collect::<Vec<_>>();
+    let vertex_map=correspondence(&out.vertices.iter().map(|v|v.point).collect::<Vec<_>>(),&expected)?;
+    let edge_key=|mut pair:[usize;2]|{pair.sort();pair};
+    let edge_map=correspondence(&out.edges.iter().map(|e|edge_key(e.vertices.map(|i|vertex_map[i]))).collect::<Vec<_>>(),&model.edges.iter().map(|e|edge_key(e.vertices)).collect::<Vec<_>>())?;
+    let ring_key=|mut edges:Vec<usize>|{edges.sort();edges};
+    let loop_map=correspondence(&out.loops.iter().map(|l|ring_key(l.coedges.iter().map(|c|edge_map[c.edge]).collect())).collect::<Vec<_>>(),&model.loops.iter().map(|l|ring_key(l.coedges.iter().map(|c|c.edge).collect())).collect::<Vec<_>>())?;
+    let face_map=correspondence(&out.faces.iter().map(|f|(loop_map[f.outer],ring_key(f.holes.iter().map(|&i|loop_map[i]).collect()))).collect::<Vec<_>>(),&model.faces.iter().map(|f|(f.outer,ring_key(f.holes.clone()))).collect::<Vec<_>>())?;
+    out.1.vertices=vertex_map.iter().map(|&i|model.1.vertices[i]).collect();
+    out.1.edges=edge_map.iter().map(|&i|model.1.edges[i]).collect();
+    out.1.loops=loop_map.iter().map(|&i|model.1.loops[i]).collect();
+    out.1.faces=face_map.iter().map(|&i|model.1.faces[i]).collect();
+    out.1.shells=model.1.shells.clone();
+    out.1.bodies=model.1.bodies.clone();
+    out.1.lineage=model.1.lineage.clone();
+    out.refresh_change_set(&[model]);
+    out.validate()?;
+    Ok(out)
+}
+
 pub fn push_planar_face(model: &Model, face_id: usize, distance: f64) -> Result<Model> {
     if !distance.is_finite() || distance.abs() > 1e6 {
         return Err(Error::new(
@@ -1803,7 +1901,22 @@ pub fn push_planar_face(model: &Model, face_id: usize, distance: f64) -> Result<
         matrix[3][3] = 1.;
         return crate::transform::affine(model, matrix);
     }
-    let mut planes = convex_planes(model)?;
+    // Preserve original rational side surfaces, weights and topology for a
+    // recognized single XY profile prism. Fix the opposite cap exactly.
+    if model.bodies.len()==1 {
+        if let Some(profile)=crate::prism::recognize(model)? {
+            if let Some(z)=model.faces.get(face_id).and_then(|f|crate::prism::planar_cap_z(&f.surface)) {
+                if z==profile.z_min || z==profile.z_max {
+                    let height=profile.z_max-profile.z_min;
+                    if height+distance<=model.tolerance_mm*8. {return Err(failed("Displacement consumes the prism"));}
+                    let scale=1.+distance/height;
+                    let fixed=if z==profile.z_max {profile.z_min}else{profile.z_max};
+                    return crate::transform::affine(model,[[1.,0.,0.,0.],[0.,1.,0.,0.],[0.,0.,scale,(1.-scale)*fixed],[0.,0.,0.,1.]]);
+                }
+            }
+        }
+    }
+    let mut planes = match convex_planes(model) {Ok(p)=>p,Err(_)=>return push_prismatic_cap(model,face_id,distance)};
     let faces = &model.shells[model.bodies[0].outer_shell].faces;
     let selected = faces
         .iter()
@@ -2179,6 +2292,37 @@ pub fn fillet_edges(
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn push_nonconvex_cap_and_enclosure_preserves_floor() {
+        let bracket=extrude_polygon(&[[0.,0.],[40.,0.],[40.,5.],[5.,5.],[5.,30.],[0.,30.]],0.,20.).unwrap();
+        let enclosure=boolean(&cuboid([0.;3],[40.,30.,20.]).unwrap(),&cuboid([2.,2.,2.],[38.,28.,22.]).unwrap(),"difference").unwrap();
+        for (model,volume,area) in [(bracket,6500.,325.),(enclosure,7152.,264.)] {
+            let top=model.faces.iter().enumerate().find(|(_,f)|f.surface.control_points.iter().flatten().all(|p|(p[2]-20.).abs()<1e-8)).unwrap().0;
+            let before=model.clone();
+            for distance in [1.,-1.] {
+                let edited=push_planar_face(&model,top,distance).unwrap();
+                let mass=crate::analysis::mass_properties(&edited,1e-7,200_000).unwrap().signed_volume_mm3;
+                assert!((mass-(volume+area*distance)).abs()<1e-5,"{mass}");
+                assert_eq!(edited.validate().unwrap().boundary_edge_count,0);
+                for (before,after) in [(&model.1.vertices,&edited.1.vertices),(&model.1.edges,&edited.1.edges),(&model.1.loops,&edited.1.loops),(&model.1.faces,&edited.1.faces),(&model.1.shells,&edited.1.shells),(&model.1.bodies,&edited.1.bodies)] {
+                    assert_eq!(before.iter().collect::<BTreeSet<_>>(),after.iter().collect::<BTreeSet<_>>());
+                }
+                for (i,v) in model.vertices.iter().enumerate() {
+                    let mut expected=v.point;
+                    if (expected[2]-20.).abs()<1e-8 {expected[2]+=distance;}
+                    let target=edited.vertices.iter().position(|v|norm(sub(v.point,expected))<1e-8).unwrap();
+                    assert_eq!(model.1.vertices[i],edited.1.vertices[target]);
+                }
+                // Every pre-existing level below the selected cap stays fixed.
+                for v in model.vertices.iter().filter(|v|v.point[2]<20.-1e-8) {
+                    assert!(edited.vertices.iter().any(|p|p.point==v.point));
+                }
+            }
+            assert!(push_planar_face(&model,top,-20.).is_err());
+            assert_eq!(model.vertices.iter().map(|v|v.point).collect::<Vec<_>>(),before.vertices.iter().map(|v|v.point).collect::<Vec<_>>());
+        }
+    }
+
 
     fn bounds(model: &Model) -> ([f64; 3], [f64; 3]) {
         (
@@ -2221,6 +2365,19 @@ mod tests {
                 .flatten()
                 .for_each(transform);
         }
+    }
+
+    #[test]
+    fn rotated_nonconvex_cap_moves_along_normal_and_refuses_oblique_sides() {
+        let model=extrude_polygon(&[[0.,0.],[4.,0.],[4.,1.],[1.,1.],[1.,3.],[0.,3.]],0.,2.).unwrap();
+        let top=model.faces.iter().position(|f|f.surface.control_points.iter().flatten().all(|p|p[2]==2.)).unwrap();
+        let rotated=crate::transform::affine(&model,[[1.,0.,0.,7.],[0.,0.6,-0.8,-3.],[0.,0.8,0.6,2.],[0.,0.,0.,1.]]).unwrap();
+        let pushed=push_planar_face(&rotated,top,0.5).unwrap();
+        let volume=crate::analysis::mass_properties(&pushed,1e-7,200_000).unwrap().signed_volume_mm3;
+        assert!((volume-15.).abs()<1e-6);
+        let sheared=crate::transform::affine(&model,[[1.,0.,0.25,0.],[0.,1.,0.,0.],[0.,0.,1.,0.],[0.,0.,0.,1.]]).unwrap();
+        assert!(push_planar_face(&sheared,top,0.5).is_err());
+        assert!(push_planar_face(&model,top,-2.).is_err());
     }
 
     #[test]

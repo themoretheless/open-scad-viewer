@@ -1,0 +1,17 @@
+{
+  "ok": true,
+  "keyboard": true,
+  "tabs": 4808,
+  "cases": [
+    "bracket",
+    "enclosure",
+    "flange"
+  ],
+  "pushMm": 1,
+  "undoRedo": true,
+  "cancelLateReply": true,
+  "selectionChange": false,
+  "documentChange": true,
+  "reload": true,
+  "errors": []
+}

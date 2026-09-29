@@ -1,0 +1,100 @@
+{
+  "scope": "Headless Chromium UI import and Undo/Redo through durable save; automation latency included. RAF gaps during operations are not orbit FPS; heap is sampled without forced GC.",
+  "cpuProfile": null,
+  "cancellationChecked": true,
+  "browser": "151.0.7922.34",
+  "viewport": {
+    "width": 1280,
+    "height": 800
+  },
+  "bodies": 1001,
+  "before": {
+    "Nodes": 2114,
+    "JSHeapUsedSize": 12039232,
+    "JSHeapTotalSize": 15253504
+  },
+  "after": {
+    "Nodes": 66439,
+    "JSHeapUsedSize": 274949268,
+    "JSHeapTotalSize": 444121088
+  },
+  "samples": [
+    {
+      "action": "import",
+      "profiled": false,
+      "elapsedMs": 5185.187375,
+      "frameCount": 17,
+      "maxFrameGapMs": 5016.599999999999
+    },
+    {
+      "action": "undo",
+      "profiled": false,
+      "elapsedMs": 174.77370799999971,
+      "frameCount": 20,
+      "maxFrameGapMs": 16.699999999999818
+    },
+    {
+      "action": "redo",
+      "profiled": false,
+      "elapsedMs": 1814.8078329999998,
+      "frameCount": 132,
+      "maxFrameGapMs": 658.3999999999996
+    },
+    {
+      "action": "undo",
+      "profiled": false,
+      "elapsedMs": 74.84520799999973,
+      "frameCount": 8,
+      "maxFrameGapMs": 15.800000000000182
+    },
+    {
+      "action": "redo",
+      "profiled": false,
+      "elapsedMs": 1687.2907079999995,
+      "frameCount": 131,
+      "maxFrameGapMs": 574.3999999999996
+    },
+    {
+      "action": "undo",
+      "profiled": false,
+      "elapsedMs": 75.66087499999958,
+      "frameCount": 8,
+      "maxFrameGapMs": 17.19999999999891
+    },
+    {
+      "action": "redo",
+      "profiled": false,
+      "elapsedMs": 1757.752958000001,
+      "frameCount": 133,
+      "maxFrameGapMs": 599.8999999999996
+    },
+    {
+      "action": "undo",
+      "profiled": false,
+      "elapsedMs": 81.36183300000084,
+      "frameCount": 9,
+      "maxFrameGapMs": 17.100000000000364
+    },
+    {
+      "action": "redo",
+      "profiled": false,
+      "elapsedMs": 1726.4140420000003,
+      "frameCount": 135,
+      "maxFrameGapMs": 575
+    },
+    {
+      "action": "undo",
+      "profiled": false,
+      "elapsedMs": 79.40795799999978,
+      "frameCount": 8,
+      "maxFrameGapMs": 16.599999999998545
+    },
+    {
+      "action": "redo",
+      "profiled": false,
+      "elapsedMs": 1696.3991659999992,
+      "frameCount": 132,
+      "maxFrameGapMs": 575.1000000000004
+    }
+  ]
+}

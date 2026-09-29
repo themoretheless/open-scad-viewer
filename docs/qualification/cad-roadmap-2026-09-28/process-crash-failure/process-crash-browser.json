@@ -1,0 +1,24 @@
+{
+  "browser": "151.0.7922.34",
+  "profile": "/tmp/cad-crash-profile-9tpMOm",
+  "phases": [
+    {
+      "phase": "before",
+      "pid": 5416,
+      "code": null,
+      "signal": "SIGKILL",
+      "recoveredBodies": 0,
+      "recoveredGroups": 0,
+      "referenceBeforeCharacters": 19263,
+      "referenceAfterCharacters": 0,
+      "snapshots": [
+        {
+          "id": "fb930c75-d204-4f72-970c-fbc5446cfb6a",
+          "characters": 4221184
+        }
+      ],
+      "matches": false
+    }
+  ],
+  "persistentProfileReopened": true
+}

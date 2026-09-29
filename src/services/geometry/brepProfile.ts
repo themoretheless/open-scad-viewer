@@ -32,3 +32,6 @@ export type AuthoredBrepProfile = {kind:'circle';radius:number}|{kind:'rectangle
 export const authorBrepProfile=(definition:AuthoredBrepProfile):BrepProfile=>callGeometryRust('brep_profile_author',definition)
 
 export const transformBrepProfile=(profile:BrepProfile,matrix:readonly number[]):BrepProfile=>callGeometryRust('brep_profile_transform',{loops:profile.loops,matrix,toleranceMm:profile.toleranceMm})
+
+/** Euclidean parallel region with round joins, including holes and topology changes. */
+export const offsetBrepProfile=(profile:BrepProfile,distance:number):BrepProfile=>callGeometryRust('brep_profile_offset',{loops:profile.loops,distance,toleranceMm:profile.toleranceMm})

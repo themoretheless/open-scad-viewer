@@ -58,3 +58,21 @@ export function trimNurbsSurface(surface: NurbsSurface, first: number | [number,
 }
 export function isoNurbsCurve(surface: NurbsSurface, direction: NurbsSurfaceAxis, parameter: number): NurbsCurve { return callNurbsRust('surface_iso', { surface, axis: direction, u: parameter }) }
 export function nurbsSurfaceBounds(surface: NurbsSurface): { min: Point3; max: Point3 } { return callNurbsRust('surface_bounds', { surface }) }
+
+/** Distance between complete surface images; trimmed B-rep faces are a separate domain. */
+export interface NurbsSurfaceDistance {
+  method:'interval-tensor-de-boor-pair-subdivision'
+  scope:'untrimmed-surfaces'
+  distanceIntervalMm:[number,number]
+  parameters:[[number,number],[number,number]]
+  points:[Point3,Point3]
+  pointEnclosures:[Array<[number,number]>,Array<[number,number]>]
+  converged:boolean
+  reason:'tolerance'|'work-limit'|'precision-limit'
+  cells:number
+  maxCells:number
+  toleranceMm:number
+}
+export function measureNurbsSurfaceDistance(a:NurbsSurface,b:NurbsSurface,toleranceMm=0.001,maxCells=10000):NurbsSurfaceDistance {
+  return callNurbsRust('surface_distance',{a,b,toleranceMm,maxCells})
+}

@@ -1,3 +1,7 @@
+import {extrudeSketchProfile} from './directExtrusion'
+import {withRetainedProfile} from './retainedSketchProfile'
+import {validateBrepProfile,type BrepProfile} from './geometry/brepProfile'
+import {resolveSolidInstances,type SolidInstanceLink} from './solidInstances'
 import { sketchDimensions, type SketchDimension } from './directDimensions'
 import {callGeometryRust} from './geometry/kernel'
 import { MAX_DOCUMENT_CHARACTERS } from './directDocumentLimits'
@@ -12,17 +16,18 @@ import type { NurbsBrep } from './geometry/brep'
 import { BrepInspectionCache } from './brepInspectionCache'
 
 export type Point2 = [number, number]
-export interface DirectSketch { id: string; name: string; points: Point2[]; closed: boolean; analytic?: AnalyticCurve; plane?: SketchPlane; supportBodyId?: string; dimensions?: SketchDimension[] }
+export interface DirectSketch { group?: string; id: string; name: string; points: Point2[]; closed: boolean; retainedProfile?: BrepProfile; analytic?: AnalyticCurve; plane?: SketchPlane; supportBodyId?: string; dimensions?: SketchDimension[] }
 /** `group` names a flat, optional grouping shown in the scene list. Bodies built from
  * source share one, so a rebuild can be recognised, replaced or deleted as a unit. */
-export interface DirectBody { id: string; name: string; mesh: PolygonMesh; brep?: NurbsBrep; group?: string }
+export interface DirectMaterial { name: string; color: string; metallic?: number; roughness?: number }
+export interface DirectBody { id: string; name: string; mesh: PolygonMesh; brep?: NurbsBrep; group?: string; material?: DirectMaterial; instance?: SolidInstanceLink }
 /** A group owns the source its bodies were built from, so it stays editable and rebuildable. */
 export interface DirectGroup { name: string; source: string }
 export interface DirectInterchangeMetadata {
   step?:{route:string;retained:boolean;refusalBoundary:string[];identityLoss:string[];metadataLoss:string[];
     definitionIdentities:string[];occurrenceIdentities:string[];productHierarchy:string[];externalReferences:string[]}
 }
-export interface DirectDocument { version: 1; sketches: DirectSketch[]; bodies: DirectBody[]; curves?: SolidNurbsCurve[]; surfaces?: SolidNurbsSurface[]; groups?: DirectGroup[]; interchange?: DirectInterchangeMetadata }
+export interface DirectDocument { version: 1; blenderProjectId?: string; sketches: DirectSketch[]; bodies: DirectBody[]; curves?: SolidNurbsCurve[]; surfaces?: SolidNurbsSurface[]; groups?: DirectGroup[]; interchange?: DirectInterchangeMetadata }
 export const emptyDirectDocument = (): DirectDocument => ({ version: 1, sketches: [], bodies: [], curves: [], surfaces: [] })
 const clone = <T>(value: T): T => structuredClone(value)
 const DEEP_JSON_NORMALIZATION = Symbol('deep JSON normalization')
@@ -41,16 +46,30 @@ function normalizeOwnedJson(value: unknown, depth = 0): unknown {
 }
 const finite = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v) && Math.abs(v) <= 1e6
 
-const inspectedBreps = new BrepInspectionCache()
+// Lazy construction avoids initialization-order coupling between shared CAD chunks.
+let inspectedBreps: BrepInspectionCache | undefined
 
 /** localStorage holds about 5 MB per origin; bigger documents are kept in memory only. */
 export const MAX_DRAFT_CHARACTERS = 4_000_000
+export const MAX_DIRECT_INSTANCES = 1000
+
+/** Persist each independent shape once; linked bodies retain identity and placement. */
+export function serializeDirectDocument(document:DirectDocument):string {
+ return stringifyMeshJson({...document,bodies:document.bodies.map(body=>{
+  if(!body.instance)return body
+  const {mesh:_mesh,brep:_brep,...linked}=body
+  return linked
+ })})
+}
 
 function* directDocumentValidation(text: string): Generator<void, DirectDocument> {
   // In-memory bound only; the browser draft has its own, smaller quota (see persist in DirectModeler).
   if (text.length > MAX_DOCUMENT_CHARACTERS) throw new Error('Document exceeds 64 MB.')
   const d = JSON.parse(text) as DirectDocument
-  if (!d || d.version !== 1 || !Array.isArray(d.sketches) || !Array.isArray(d.bodies) || d.sketches.length + d.bodies.length > 200) throw new Error('Invalid direct modeling document.')
+  if (!d || d.version !== 1 || !Array.isArray(d.sketches) || !Array.isArray(d.bodies) || d.sketches.length + d.bodies.length > 200+MAX_DIRECT_INSTANCES) throw new Error('Invalid direct modeling document.')
+  if(d.blenderProjectId!==undefined&&(typeof d.blenderProjectId!=='string'||!d.blenderProjectId.trim()||d.blenderProjectId.length>100))throw Error('Invalid Blender project identity.')
+  const instanceCount=d.bodies.filter(body=>body?.instance).length
+  if(instanceCount>MAX_DIRECT_INSTANCES||d.sketches.length+d.bodies.length-instanceCount>200)throw Error('Invalid direct modeling document: supports at most 200 independent bodies/sketches and 1000 linked instances.')
   d.curves ??= []
   d.surfaces ??= []
   if(d.interchange){
@@ -74,16 +93,22 @@ function* directDocumentValidation(text: string): Generator<void, DirectDocument
   const ids = new Set<string>()
   for (const item of [...d.sketches, ...d.bodies, ...d.curves, ...d.surfaces]) {
     if (typeof item.id !== 'string' || ids.has(item.id) || typeof item.name !== 'string' || item.name.length > 100) throw new Error('Invalid object identity.')
+    if (item.group !== undefined && (typeof item.group !== 'string' || !item.group.length || item.group.length > 100)) throw new Error('Invalid object group.')
     ids.add(item.id)
   }
   for (const s of d.sketches) {
     if(s.supportBodyId!==undefined&&(typeof s.supportBodyId!=='string'||s.supportBodyId.length>200))throw new Error('Invalid sketch support body.')
+    if(s.retainedProfile){
+      if(s.analytic||s.dimensions?.length)throw Error('Retained profiles cannot carry polygon dimensions or a second analytic definition.')
+      const profile=validateBrepProfile(s.retainedProfile.loops,'material-left',s.retainedProfile.toleranceMm)
+      Object.assign(s,withRetainedProfile(s,profile))
+    }
     if (s.analytic) { s.points = sampleCurve(s.analytic); s.closed = s.analytic.kind === 'circle' }
     if (s.plane) {
       const {origin,u,v}=s.plane
       if (![origin,u,v].every(p=>Array.isArray(p)&&p.length===3&&p.every(finite)) || Math.abs(dot3(u,u)-1)>1e-6 || Math.abs(dot3(v,v)-1)>1e-6 || Math.abs(dot3(u,v))>1e-6) throw new Error('Invalid sketch workplane.')
     }
-    if (typeof s.closed !== 'boolean' || !Array.isArray(s.points) || s.points.length < 2 || s.points.length > 512 || (s.closed && s.points.length < 3) || !s.points.every(p => Array.isArray(p) && p.length === 2 && p.every(finite))) throw new Error('Invalid sketch.')
+    if (typeof s.closed !== 'boolean' || !Array.isArray(s.points) || s.points.length < 2 || s.points.length > (s.retainedProfile?8192:512) || (s.closed && s.points.length < 3) || !s.points.every(p => Array.isArray(p) && p.length === 2 && p.every(finite))) throw new Error('Invalid sketch.')
     if (s.dimensions !== undefined) {
       if (!Array.isArray(s.dimensions)) throw Error('Invalid sketch dimensions.')
       sketchDimensions(s)
@@ -91,15 +116,19 @@ function* directDocumentValidation(text: string): Generator<void, DirectDocument
     yield
   }
   for (const b of d.bodies) {
+    if(b.material!==undefined&&(!b.material||typeof b.material.name!=='string'||!b.material.name.length||b.material.name.length>100||typeof b.material.color!=='string'||!/^#[0-9a-f]{6}$/i.test(b.material.color)))throw Error('Invalid body material.')
+    if(b.material&&[b.material.metallic,b.material.roughness].some(v=>v!==undefined&&(!Number.isFinite(v)||v<0||v>1)))throw Error('Invalid body material.')
     if (b.group !== undefined && (typeof b.group !== 'string' || b.group.length === 0 || b.group.length > 100)) {
       throw new Error('Invalid body group.')
     }
+    // A compact instance omits both caches. Partially supplied caches still fail validation.
+    if(b.instance&&b.mesh===undefined&&b.brep===undefined){yield;continue}
     const m = b.mesh
     if (!m || !Array.isArray(m.positions) || !Array.isArray(m.indices) || m.positions.length < 9 || m.positions.length > 150_000 || m.positions.length % 3 || m.indices.length < 3 || m.indices.length > 150_000 || m.indices.length % 3 || !m.positions.every(finite) || !m.indices.every(i => Number.isInteger(i) && i >= 0 && i < m.positions.length / 3)) throw new Error('Invalid body mesh.')
     // JSON boundary: plain parsed arrays are boxed into typed views exactly once.
     normalizePolygonMesh(m)
     if (b.brep) {
-      inspectedBreps.inspect(b.brep)
+      ;(inspectedBreps ??= new BrepInspectionCache()).inspect(b.brep)
       if ([b.brep.vertices,b.brep.edges,b.brep.loops,b.brep.faces,b.brep.shells,b.brep.bodies].every(items=>items.length===0)) throw new Error('An empty B-rep cannot be stored as a displayed body; remove the body entry.')
       if (b.brep.faces.length === 0) throw new Error('Displayed body B-rep must include at least one face.')
       const meshAabb = aabbFromPositions(m.positions)
@@ -119,6 +148,26 @@ function* directDocumentValidation(text: string): Generator<void, DirectDocument
       }
     }
     yield
+  }
+  // Validate serialized caches first, then derive linked geometry from validated sources.
+  if(d.bodies.some(body=>body.instance)) {
+    // Bound expansion before allocating geometry: a small reference document must not
+    // multiply a large source into an unbounded set of materialized copies.
+    const sourceSizes=new Map(d.bodies.filter(body=>!body.instance).map(body=>[
+      body.id,
+      // A transformed float may serialize much longer than an integer source value.
+      // 24 digits plus JSON quotes conservatively covers every finite JSON number.
+      JSON.stringify(JSON.parse(stringifyMeshJson(body)),(_key,value)=>typeof value==='number'?'0'.repeat(24):value).length,
+    ]))
+    // Use the same bound for full and compact input so every accepted state can
+    // be restored from its compact history representation.
+    let expanded=serializeDirectDocument(d).length
+    for(const body of d.bodies)if(body.instance){
+      expanded+=sourceSizes.get(body.instance.sourceId)??0
+      if(expanded>MAX_DOCUMENT_CHARACTERS)throw Error('Expanded instance document exceeds 64 MB.')
+    }
+    d.bodies=resolveSolidInstances(d).bodies
+    if(d.bodies.some(body=>body.instance&&!body.mesh.positions.every(finite)))throw Error('Instance placement exceeds document coordinate bounds.')
   }
   for (const item of d.curves) { validateNurbsCurve(item.curve); yield }
   for (const item of d.surfaces) {
@@ -201,28 +250,64 @@ const aabbFromBrep = (brep: NurbsBrep): { inner: Aabb; outer: Aabb } => {
   return { inner, outer }
 }
 
-/** Snapshots contain independent geometry, never sketch references or a feature tree.
- * The serialized text travels with the snapshot so a commit never re-serializes it. */
-interface DirectSnapshot { document: DirectDocument; characters: number; text: string }
+/** Inactive snapshots retain compact text only; exactly one current state owns geometry. */
+interface DirectSnapshot { characters: number; text: string }
 export class DirectHistory {
+  private restoreGeneration = 0
   private past: DirectSnapshot[] = []
   private future: DirectSnapshot[] = []
-  private current: DirectSnapshot
+  private current: DirectSnapshot & {document:DirectDocument}
   constructor(document = emptyDirectDocument()) {
     const text = stringifyMeshJson(document)
     const validated = parseDirectDocument(text)
-    const validatedText = stringifyMeshJson(validated)
+    const validatedText = serializeDirectDocument(validated)
     this.current = { document: validated, characters: validatedText.length, text: validatedText }
   }
+  /** Export identity is metadata: retain it across existing Undo/Redo states without adding a geometry edit. */
+  ensureBlenderProjectId(): string {
+    if(this.current.document.blenderProjectId)return this.current.document.blenderProjectId
+    const id=crypto.randomUUID()
+    const stamp=(snapshot:DirectSnapshot):DirectSnapshot=>{
+      const document=JSON.parse(snapshot.text) as DirectDocument
+      if(document.blenderProjectId)return snapshot
+      document.blenderProjectId=id
+      const text=stringifyMeshJson(document)
+      return {text,characters:text.length}
+    }
+    this.past=this.past.map(stamp);this.future=this.future.map(stamp)
+    this.current={...stamp(this.current),document:{...this.current.document,blenderProjectId:id}}
+    return id
+  }
   get document() { return clone(this.current.document) }
+  /** Immutable identity for consumers caching a committed snapshot across document copies. */
+  get snapshotKey() { return this.current.text }
   get canUndo() { return this.past.length > 0 }
   get canRedo() { return this.future.length > 0 }
-  commit(document: DirectDocument) {
-    const text = stringifyMeshJson(document)
-    const next = parseDirectDocument(text)
-    const nextText = stringifyMeshJson(next)
+  get storageStats() {
+    return {undoStates:this.past.length,redoStates:this.future.length,materializedStates:1,
+      retainedCharacters:this.current.characters+[...this.past,...this.future].reduce((sum,snapshot)=>sum+snapshot.characters,0)}
+  }
+  commit(document: DirectDocument, validateChange?: (resolved:DirectDocument)=>void) {
+    this.commitValidated(parseDirectDocument(stringifyMeshJson(document)),validateChange)
+  }
+  /** Loader must run the authoritative parser; no history changes while it runs. */
+  async commitAsync(load:()=>Promise<DirectDocument>,validateChange?:(resolved:DirectDocument)=>void):Promise<boolean> {
+    const generation=++this.restoreGeneration,base=this.current
+    const loaded=await load()
+    if(generation!==this.restoreGeneration||this.current!==base)return false
+    this.commitValidated(clone(loaded),validateChange)
+    return true
+  }
+  private commitValidated(next:DirectDocument,validateChange?:(resolved:DirectDocument)=>void) {
+    const base=this.current
+    next.blenderProjectId ??= this.current.document.blenderProjectId
+    // UI policies (for example locked linked bodies) must see resolved geometry.
+    // Give the policy its own copy so it cannot mutate the validated state.
+    validateChange?.(clone(next))
+    if(this.current!==base)throw Error('History changed during commit validation.')
+    const nextText = serializeDirectDocument(next)
     if (nextText.length === this.current.characters && nextText === this.current.text) return
-    this.past.push(this.current)
+    this.past.push({text:this.current.text,characters:this.current.characters})
     // The existing bound counts serialized characters, not actual heap bytes.
     // Size travels with its snapshot through undo/redo; neither needs to serialize it again.
     let retained = this.past.reduce((sum, snapshot) => sum + snapshot.characters, 0)
@@ -232,18 +317,53 @@ export class DirectHistory {
     this.current = { document: next, characters: nextText.length, text: nextText }; this.future = []
   }
   undo() {
-    const d = this.past.pop()
-    if (d) { this.future.push(this.current); this.current = d }
+    const d = this.past.at(-1)
+    if (d) {
+      const document=parseDirectDocument(d.text)
+      this.past.pop();this.future.push({text:this.current.text,characters:this.current.characters});this.current={...d,document}
+    }
     return this.document
   }
   redo() {
-    const d = this.future.pop()
-    if (d) { this.past.push(this.current); this.current = d }
+    const d = this.future.at(-1)
+    if (d) {
+      const document=parseDirectDocument(d.text)
+      this.future.pop();this.past.push({text:this.current.text,characters:this.current.characters});this.current={...d,document}
+    }
     return this.document
+  }
+  /** The loader must validate geometry with the authoritative parser. Startup
+   * recovery replaces the baseline only if no intervening edit or cancellation occurred. */
+  async resetAsync(load:()=>Promise<DirectDocument>):Promise<boolean> {
+    const generation=++this.restoreGeneration,base=this.current
+    const loaded=await load()
+    if(generation!==this.restoreGeneration||this.current!==base)return false
+    const document=clone(loaded),text=serializeDirectDocument(document)
+    this.current={document,text,characters:text.length};this.past=[];this.future=[]
+    return true
+  }
+  cancelRestore() { this.restoreGeneration++ }
+  /** The loader must run the authoritative document parser (normally in a worker).
+   * Keep both stacks intact until it succeeds against this exact history state. */
+  async restoreAsync(direction:'undo'|'redo',load:(text:string)=>Promise<DirectDocument>):Promise<boolean> {
+    const generation=++this.restoreGeneration,base=this.current
+    const from=direction==='undo'?this.past:this.future,to=direction==='undo'?this.future:this.past
+    const snapshot=from.at(-1)
+    if(!snapshot)return false
+    const loaded=await load(snapshot.text)
+    if(generation!==this.restoreGeneration||this.current!==base||from.at(-1)!==snapshot)return false
+    // A response for another snapshot cannot move the stacks. Geometry validation
+    // belongs to the loader; re-parsing here would block the main thread again.
+    if(serializeDirectDocument(loaded)!==snapshot.text)throw Error('History restore returned a different document.')
+    const document=clone(loaded)
+    from.pop();to.push({text:base.text,characters:base.characters})
+    this.current={...snapshot,document}
+    return true
   }
 }
 
 export function extrudeDirectSketch(sketch: DirectSketch, height: number, id: string): DirectBody {
+  if(sketch.retainedProfile)throw Error('Use the exact profile extrusion for retained curves.')
   if (!sketch.closed || sketch.points.length < 3) throw new Error('Close the contour before extrusion.')
   if (!finite(height) || height <= 0) throw new Error('Height must be positive.')
   const built = extrudePolygonProfile({ outer: sketch.points.map(p => [...p]) }, [0, 0, height])
@@ -251,7 +371,7 @@ export function extrudeDirectSketch(sketch: DirectSketch, height: number, id: st
 }
 
 /** Author the sketch extrusion before deriving a display mesh. */
-export const extrudeSketchBrep=(sketch:DirectSketch,height:number,baseZ=0):NurbsBrep=>callGeometryRust('brep_nurbs_sketch_extrude',{sketch,height,baseZ})
+export const extrudeSketchBrep=(sketch:DirectSketch,height:number,baseZ=0):NurbsBrep=>sketch.retainedProfile?extrudeSketchProfile([sketch],height,baseZ):callGeometryRust('brep_nurbs_sketch_extrude',{sketch,height,baseZ})
 
 export function transformDirectPoints(points: number[][], delta: number[], angle: number, scale: number): number[][] {
   return callGeometryRust('cad_transform_points',{points,delta,angle,scale})

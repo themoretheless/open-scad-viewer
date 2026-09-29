@@ -180,6 +180,17 @@ impl MeshSectionIndex {
     }
 
     pub fn section(&self, z_mm: f64) -> Result<MeshSection> {
+        self.section_impl(z_mm, false).map(|(section, _)| section)
+    }
+
+    /// Display-only contour: preserve distinct topological nodes even when their
+    /// coordinates round to the same f64. Never weld or remove their segments.
+    /// Return source triangles for every such segment; not suitable for toolpaths.
+    pub fn section_for_display(&self, z_mm: f64) -> Result<(MeshSection, Vec<usize>)> {
+        self.section_impl(z_mm, true)
+    }
+
+    fn section_impl(&self, z_mm: f64, display: bool) -> Result<(MeshSection, Vec<usize>)> {
         if !z_mm.is_finite() {
             return Err(error(
                 "SECTION_INVALID_HEIGHT",
@@ -191,6 +202,7 @@ impl MeshSectionIndex {
         let mut positions = BTreeMap::new();
         let mut outgoing = BTreeMap::new();
         let mut incoming = BTreeSet::new();
+        let mut collapsed = Vec::new();
         for &index in &candidates {
             let triangle = &self.triangles[index];
             let mut start = None;
@@ -212,10 +224,14 @@ impl MeshSectionIndex {
                     continue;
                 } // Isolated vertex contact, no area boundary.
                 if p == q {
+                    if display {
+                        collapsed.push(triangle.source);
+                    } else {
                     return Err(error(
                         "SECTION_UNRESOLVED_EDGE",
                         "Distinct section endpoints collapsed numerically",
                     ));
+                    }
                 }
                 positions.insert(a, p);
                 positions.insert(b, q);
@@ -262,11 +278,11 @@ impl MeshSectionIndex {
             }
             contours.push(contour);
         }
-        Ok(MeshSection {
+        Ok((MeshSection {
             z_mm,
             contours,
             candidate_triangles: candidates.len(),
-        })
+        }, collapsed))
     }
 }
 
@@ -289,6 +305,29 @@ pub fn project(mesh: &Mesh) -> Result<Rings> {
         triangles.push(r)
     }
     planar(&triangles, &vec![], "union")
+}
+
+#[cfg(test)]
+mod display_precision_tests {
+    use super::*;
+    #[test]
+    fn display_preserves_topological_nodes_while_strict_section_refuses_collapse() {
+        let mesh = Mesh {
+            positions: vec![1.,1.,0., 2.,1.,1., 1.,2.,1., 0.,0.,1.],
+            indices: vec![0,1,3, 0,2,1, 0,3,2, 1,2,3], uv: None,
+        };
+        let index = MeshSectionIndex::new(&mesh).unwrap();
+        assert_eq!(index.section(1e-17).unwrap_err().code, "SECTION_UNRESOLVED_EDGE");
+        let (section, collapsed) = index.section_for_display(1e-17).unwrap();
+        assert_eq!(collapsed.len(), 3);
+        assert_eq!(section.contours.len(), 1);
+        assert_eq!(section.contours[0].points.len(), 3);
+        assert_eq!(section.contours[0].source_triangles.len(), 3);
+        assert!(section.contours[0].points.iter().all(|p| *p == [1.,1.]));
+        let (normal, warnings) = index.section_for_display(0.5).unwrap();
+        assert!(warnings.is_empty());
+        assert_eq!(normal.contours[0].points, index.section(0.5).unwrap().contours[0].points);
+    }
 }
 
 pub fn slice(mesh: &Mesh, z: f64) -> Result<Rings> {

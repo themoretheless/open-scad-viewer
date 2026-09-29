@@ -11,6 +11,7 @@ export async function executeSvgJob(job: SvgJob): Promise<SvgGeometryResult> {
   }
   const profile = await svgProfile(job.svg, job.options)
   return { svg: contoursSvg(profile.contours), widthMm: profile.widthMm, heightMm: profile.heightMm, warnings: profile.warnings,
+    ...(job.kind === 'contours' ? {contours:profile.contours} : {}),
     ...(job.kind === 'extrude' ? { source: contoursExtrusion(profile.contours, job.height) } : {}) }
 }
 

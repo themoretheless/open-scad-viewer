@@ -1,0 +1,11 @@
+{
+  "ok": true,
+  "cases": [
+    "bracket",
+    "enclosure",
+    "flange"
+  ],
+  "pushMm": 1,
+  "undoRedo": true,
+  "errors": []
+}

@@ -1,0 +1,33 @@
+{
+  "schema": "cad-roadmap-occt/1",
+  "oracle": "OpenCascade via cadquery-ocp",
+  "version": "8.0.1.0.0",
+  "scope": "Independent STEP read, solid validity, exact bounding box, volume and OCCT-tessellated preview. Does not certify all STEP inputs.",
+  "passed": true,
+  "parts": [
+    {
+      "name": "Browser offset plate",
+      "stepSha256": "2e79d44817027ce0e91d42e44088c1247c86e7b695e1403da16b30ac42659823",
+      "valid": true,
+      "solids": 1,
+      "faces": 14,
+      "boundsMm": [
+        [
+          -0.5000001,
+          -0.5000001,
+          -1e-07
+        ],
+        [
+          8.500000100000001,
+          6.500000100000001,
+          5.0000001
+        ]
+      ],
+      "volumeMm3": 309.9999999940487,
+      "maxBoundsErrorMm": 1.0000000116860974e-07,
+      "volumeErrorMm3": 5.951278581051156e-09,
+      "passed": true,
+      "previewTriangles": 592
+    }
+  ]
+}

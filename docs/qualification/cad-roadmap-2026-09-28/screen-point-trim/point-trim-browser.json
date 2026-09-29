@@ -1,0 +1,27 @@
+{
+  "screenPick": true,
+  "screenCut": [
+    7.071068001782352,
+    7.071067621948593,
+    13.535533810974297
+  ],
+  "screenCancel": true,
+  "rotatedCamera": true,
+  "numericModeSwitch": true,
+  "depthPreserved": true,
+  "browser": "151.0.7922.34",
+  "cancelledWorkerTerminated": true,
+  "preview": true,
+  "bothRetainedEnds": true,
+  "keyboardApply": true,
+  "endpointRefused": true,
+  "cut": [
+    8.000000000000009,
+    5.999999999999987,
+    0
+  ],
+  "identityPreserved": true,
+  "rationalWeights": true,
+  "undoRedo": true,
+  "reload": true
+}

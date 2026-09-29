@@ -1,0 +1,130 @@
+{
+  "schema": "cad-roadmap-step/1",
+  "units": "mm",
+  "toleranceMm": 0.000001,
+  "relativeVolumeTolerance": 1e-8,
+  "parts": [
+    {
+      "name": "variable-r0.5",
+      "file": "variable-r0.5.step",
+      "sha256": "7f016a799bdc1da1cebd748c6478ea6bfdf12e3eecefa5229cb1bb0eaa97bf9d",
+      "expected": {
+        "volumeMm3": 478.60508806208344,
+        "boundsMm": [
+          [
+            0,
+            0,
+            0
+          ],
+          [
+            10,
+            8,
+            6
+          ]
+        ],
+        "sectionZ": 3,
+        "lowerVolumeMm3": 239.62444678594554
+      },
+      "certificate": {
+        "capability": "exact-variable-radius-fillet/1",
+        "complete": true,
+        "notes": [
+          "exact_linear_radius_law",
+          "rational_conical_fillet_face",
+          "no_constant_radius_substitution",
+          "no_valence3_corner"
+        ]
+      }
+    },
+    {
+      "name": "variable-r1",
+      "file": "variable-r1.step",
+      "sha256": "16f4f9390bf5ba5e3b7c965f6a4dba31565719504f52d09eecb6c007dd1e2438",
+      "expected": {
+        "volumeMm3": 476.9955742875643,
+        "boundsMm": [
+          [
+            0,
+            0,
+            0
+          ],
+          [
+            10,
+            8,
+            6
+          ]
+        ],
+        "sectionZ": 3,
+        "lowerVolumeMm3": 238.98064127613787
+      },
+      "certificate": {
+        "capability": "exact-variable-radius-fillet/1",
+        "complete": true,
+        "notes": [
+          "exact_linear_radius_law",
+          "rational_conical_fillet_face",
+          "no_constant_radius_substitution",
+          "no_valence3_corner"
+        ]
+      }
+    },
+    {
+      "name": "corner-r0.5",
+      "file": "corner-r0.5.step",
+      "sha256": "8d163fdc4a6a3e43f62d44ce69ad91c9178013cc7d2e200b2917358606ee91ac",
+      "expected": {
+        "volumeMm3": 478.73331451606043,
+        "boundsMm": [
+          [
+            0,
+            0,
+            0
+          ],
+          [
+            10,
+            8,
+            6
+          ]
+        ]
+      },
+      "certificate": {
+        "capability": "exact-valence3-corner-blend/1",
+        "complete": true,
+        "notes": [
+          "exact_equal_radius_sphere_octant",
+          "three_rational_cylinders",
+          "plane_cylinder_sphere_network"
+        ]
+      }
+    },
+    {
+      "name": "corner-r1",
+      "file": "corner-r1.step",
+      "sha256": "64c95d57b74c63a7d456b1bb0b250c17a26c38bb5ce399c2359ab212be764300",
+      "expected": {
+        "volumeMm3": 475.0169602069447,
+        "boundsMm": [
+          [
+            0,
+            0,
+            0
+          ],
+          [
+            10,
+            8,
+            6
+          ]
+        ]
+      },
+      "certificate": {
+        "capability": "exact-valence3-corner-blend/1",
+        "complete": true,
+        "notes": [
+          "exact_equal_radius_sphere_octant",
+          "three_rational_cylinders",
+          "plane_cylinder_sphere_network"
+        ]
+      }
+    }
+  ]
+}

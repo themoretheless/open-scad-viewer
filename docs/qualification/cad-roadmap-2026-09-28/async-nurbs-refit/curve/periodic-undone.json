@@ -1,0 +1,1 @@
+{"version":1,"sketches":[],"bodies":[],"curves":[{"id":"periodic","name":"Periodic loop","curve":{"degree":2,"knots":[0,1,2,3,4,5,6,7,8],"controlPoints":[[1,0,0],[0,1,0],[-1,0,0],[0,-1,0],[1,0,0],[0,1,0]],"weights":[1,0.8,1.2,1,1,0.8],"periodic":true}}],"surfaces":[],"blenderProjectId":"7fe510c6-9277-407e-b093-a2d826d6326c"}

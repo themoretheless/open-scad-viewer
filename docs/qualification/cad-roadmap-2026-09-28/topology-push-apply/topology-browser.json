@@ -1,0 +1,11 @@
+{
+  "browser": "151.0.7922.34",
+  "cancelledWorkerTerminated": true,
+  "faceSketch": true,
+  "bodySwitchCancels": true,
+  "ctrlMetaFaceToggle": true,
+  "repeatedClickPushCancel": true,
+  "push2mmUndoRedo": true,
+  "documentUnchanged": true,
+  "requests": 10
+}

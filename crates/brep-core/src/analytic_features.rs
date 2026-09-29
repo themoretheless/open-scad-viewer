@@ -68,6 +68,8 @@ impl value_codec::Serialize for AuditedFeatureResult {
                 "ok":self.audit.ok,
                 "bodyCount":self.audit.body_count,
                 "shellCount":self.audit.shell_count,
+                "selfIntersectionPairsCandidate": self.audit.self_intersection_pairs_candidate,
+                "selfIntersectionComplete": self.audit.self_intersection_complete,
                 "selfIntersectionPairsChecked":self.audit.self_intersection_pairs_checked,
                 "notes":self.audit.notes
             },
@@ -3064,7 +3066,9 @@ mod tests {
                 .count(),
             10
         );
-        assert!(result.audit.self_intersection_pairs_checked > 0);
+        assert!(result.audit.self_intersection_pairs_candidate > 0);
+        assert_eq!(result.audit.self_intersection_pairs_checked, 0);
+        assert!(!result.audit.self_intersection_complete);
         // Independent Simpson integration of the quadratic section-area law.
         let expected_volume = (4. + 4. * 5. + 6.) * 2. / 6. + (6. + 4. * 4.375 + 3.) * 3. / 6.;
         let mass = crate::analysis::mass_properties(&result.model, 1e-6, 10_000).unwrap();

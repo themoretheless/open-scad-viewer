@@ -44,12 +44,20 @@ pub mod nurbs_step_solid;
 pub mod nurbs_step_trimmed;
 pub mod operations;
 pub mod planar_trim;
+pub mod face_contact;
+pub mod face_contacts;
+pub mod shared_boundary;
+pub mod face_domain;
+pub mod face_injectivity;
+pub mod shell_distance;
+pub mod ray_parity;
 pub mod predicate_evidence;
 pub mod prism;
 pub mod prism_frame;
 mod profile_imprint;
 pub mod sketch;
 pub mod solid_audit;
+pub mod boundary_agreement;
 mod sphere_boolean;
 pub mod step_interchange;
 pub mod step_interchange_v3;
@@ -1348,6 +1356,17 @@ impl Model {
         Ok(uv)
     }
     pub fn validate(&self) -> Result<Report> {
+        self.validate_impl(true)
+    }
+
+    /// Diagnostic-only admission. All topology, IDs, definitions, endpoint and
+    /// UV-wire checks remain active; edge/lift agreement is checked separately
+    /// over complete intervals. This does not admit the model to editing.
+    pub(crate) fn validate_boundary_diagnostic_inputs(&self) -> Result<Report> {
+        self.validate_impl(false)
+    }
+
+    fn validate_impl(&self, sampled_agreement: bool) -> Result<Report> {
         self.0.validate_topology().map_err(|e| Error {
             code: e.code,
             message: e.message,
@@ -1483,7 +1502,7 @@ impl Model {
                     edge_used[c.edge] = true;
                     c.pcurve.validate()?;
                     require(c.pcurve.control_points[0].len() == 2, "pcurve must be 2D")?;
-                    if edge.degenerate {
+                    if edge.degenerate && sampled_agreement {
                         validate_pole_boundary(
                             &f.surface,
                             &c.pcurve,
@@ -1506,16 +1525,19 @@ impl Model {
                         first_uv = Some(uv0);
                     }
                     previous_uv = Some(uv1);
-                    // Endpoint agreement is exact to tolerance; interiors are explicitly sampled.
-                    for i in 0..=8 {
-                        let t = i as f64 / 8.;
-                        let uv = curve_point(&c.pcurve, t)?;
-                        let p = surface.evaluate(uv[0], uv[1])?.point;
-                        let q = curve_point(&edge.curve, if c.reversed { 1. - t } else { t })?;
-                        require(
-                            distance(&p, &q) <= tol,
-                            "pcurve/surface and 3D edge disagree at sampled parameters",
-                        )?;
+                    // Diagnostic callers replace these samples with full-interval
+                    // verification and retain per-use mismatch/unknown results.
+                    if sampled_agreement {
+                        for i in 0..=8 {
+                            let t = i as f64 / 8.;
+                            let uv = curve_point(&c.pcurve, t)?;
+                            let p = surface.evaluate(uv[0], uv[1])?.point;
+                            let q = curve_point(&edge.curve, if c.reversed { 1. - t } else { t })?;
+                            require(
+                                distance(&p, &q) <= tol,
+                                "pcurve/surface and 3D edge disagree at sampled parameters",
+                            )?;
+                        }
                     }
                 }
                 require(previous == first, "Loop is not closed")?;
@@ -1567,7 +1589,7 @@ impl Model {
             body_count: self.bodies.len(),
             boundary_edge_count: boundary,
             topology_valid: true,
-            geometry_agreement: "sampled_with_tolerance",
+            geometry_agreement: if sampled_agreement { "sampled_with_tolerance" } else { "not_checked" },
             solid_geometry_status: "not_certified",
         })
     }

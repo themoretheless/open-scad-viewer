@@ -1,0 +1,12 @@
+{
+  "cadTests": 375,
+  "cadFiles": 33,
+  "focusedTests": 168,
+  "focusedFiles": 3,
+  "vueTypes": true,
+  "mcpTypes": true,
+  "build": true,
+  "verifyDist": true,
+  "assetBytes": 6858922,
+  "scope": "curve and surface degree reduction and rebuild with certificates"
+}

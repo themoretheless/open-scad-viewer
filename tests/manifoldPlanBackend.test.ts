@@ -293,6 +293,7 @@ describe('SemanticProgram to Manifold qualification adapter', () => {
     for (const directory of ['core/', 'components/']) visit(new URL(directory, root))
     files.push(fileURLToPath(new URL('../src/services/openscadCompiler.ts', import.meta.url)))
     expect(files.map(file => relative(rootPath, file).split(sep).join('/')).sort()).toEqual([
+      'components/CadQuantityInput.vue',
       'components/CommandPalette.vue',
       'components/CustomizerPanel.vue',
       'components/ExampleGallery.vue',
@@ -301,6 +302,7 @@ describe('SemanticProgram to Manifold qualification adapter', () => {
       'components/KeyboardShortcuts.vue',
       'components/ModelingFloorGrid.vue',
       'components/ModelingGridControls.vue',
+      'components/SceneObjectControls.vue',
       'components/SceneOutliner.vue',
       'components/SketchDimensionPanel.vue',
       'components/ViewCube.vue',

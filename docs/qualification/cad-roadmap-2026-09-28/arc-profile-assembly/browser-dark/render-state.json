@@ -1,0 +1,21 @@
+{
+  "errors": [],
+  "canvases": [
+    {
+      "width": 611,
+      "height": 415,
+      "rect": {
+        "x": 325.234375,
+        "y": 253,
+        "width": 610.765625,
+        "height": 415,
+        "top": 253,
+        "right": 936,
+        "bottom": 668,
+        "left": 325.234375
+      },
+      "display": "block"
+    }
+  ],
+  "svgPolygons": 686
+}

@@ -1,0 +1,108 @@
+{
+  "schema": "cad-roadmap-step/1",
+  "units": "mm",
+  "toleranceMm": 0.000001,
+  "relativeVolumeTolerance": 1e-8,
+  "parts": [
+    {
+      "name": "circular-hole",
+      "file": "circular-hole.step",
+      "sha256": "74a77b9373279a57a27ab058b0db3e0a2a53948a506321639c4d4f6927da3a64",
+      "expected": {
+        "volumeMm3": 106.30088815692248,
+        "boundsMm": [
+          [
+            -4,
+            -3,
+            0
+          ],
+          [
+            4,
+            3,
+            3
+          ]
+        ]
+      }
+    },
+    {
+      "name": "common-disk",
+      "file": "common-disk.step",
+      "sha256": "f83b42f545373f6087a9290212ee45f26dfa643beb4abfabe1ab39fe47f33f84",
+      "expected": {
+        "volumeMm3": 37.69911184307752,
+        "boundsMm": [
+          [
+            -2,
+            -2,
+            0
+          ],
+          [
+            2,
+            2,
+            3
+          ]
+        ]
+      }
+    },
+    {
+      "name": "trimmed-right-half",
+      "file": "trimmed-right-half.step",
+      "sha256": "a2f0bde59e9694f562e9af9da7105299def24f544b6fff074c9a9a096e098328",
+      "expected": {
+        "volumeMm3": 18.84955592153876,
+        "boundsMm": [
+          [
+            0,
+            -2,
+            0
+          ],
+          [
+            2,
+            2,
+            3
+          ]
+        ]
+      }
+    },
+    {
+      "name": "trimmed-left-half",
+      "file": "trimmed-left-half.step",
+      "sha256": "8b4870b3c77fe6f3717f38b16caec1a77761811ff6d1c5a957996dd86ca87529",
+      "expected": {
+        "volumeMm3": 12.566370614359172,
+        "boundsMm": [
+          [
+            -2,
+            -2,
+            -2
+          ],
+          [
+            0,
+            2,
+            0
+          ]
+        ]
+      }
+    },
+    {
+      "name": "two-holes",
+      "file": "two-holes.step",
+      "sha256": "59bbdedf655e01fe6e9331d1d0bfe65c594fb00848efd6ad5855d181ff7be655",
+      "expected": {
+        "volumeMm3": 139.2876110196153,
+        "boundsMm": [
+          [
+            -4,
+            -3,
+            0
+          ],
+          [
+            4,
+            3,
+            3
+          ]
+        ]
+      }
+    }
+  ]
+}

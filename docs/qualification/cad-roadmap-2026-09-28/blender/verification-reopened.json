@@ -1,0 +1,40 @@
+{
+  "blender": "5.3.0 Alpha",
+  "build": "870477355736",
+  "source_bounds_mm": [
+    [
+      0.0,
+      7.0
+    ],
+    [
+      0.0,
+      3.0
+    ],
+    [
+      0.0,
+      4.0
+    ]
+  ],
+  "instance_bounds_mm": [
+    [
+      10.0,
+      17.0
+    ],
+    [
+      0.0,
+      3.0
+    ],
+    [
+      0.0,
+      4.0
+    ]
+  ],
+  "instance_width_m": 0.007000000216066837,
+  "object_identity_preserved": true,
+  "user_transform_preserved": true,
+  "modifier_material_name_preserved": true,
+  "unrelated_object_preserved": true,
+  "parent_and_custom_property_preserved": true,
+  "reopened_in_new_process": true,
+  "bridge_object_count": 2
+}

@@ -1,0 +1,1 @@
+{"version":1,"sketches":[],"bodies":[],"blenderProjectId":"9bc67a4f-874f-466c-b4c7-b9cb30568e2f","curves":[{"id":"bee684aa-f48c-4ec4-b3a6-a8ebc9741ac4","name":"NURBS curve","curve":{"controlPoints":[[-20,0,0],[-14,9,0],[0,0,0],[14,-9,0],[20,0,0]],"degree":3,"knots":[0,0,0,0,0.5,1,1,1,1],"periodic":false,"weights":[1,1,1,1,1]}}],"surfaces":[]}

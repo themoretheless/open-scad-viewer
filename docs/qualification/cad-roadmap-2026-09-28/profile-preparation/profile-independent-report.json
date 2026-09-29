@@ -1,0 +1,8 @@
+{
+  "cases": 256,
+  "precisionDigits": 80,
+  "maxConnectorLength": 1.0,
+  "inputSegmentsPreserved": true,
+  "simpleClosedContours": true,
+  "sha256": "9f563c7ce66a62fcf390204af35cb1f85e12cfb0ae0bd35347511ec0bc885e3b"
+}

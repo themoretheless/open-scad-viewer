@@ -1,0 +1,24 @@
+{
+  "oracle": "Independent Python Cox-de Boor evaluation and second-order one-sided differences",
+  "independentContinuousCertificate": false,
+  "axes": [
+    {
+      "axis": "u",
+      "sha256": "debc6b2373c9907844ca82ad022033b66cad313cadee575cb9fdc8518ef02b75",
+      "samples": 4225,
+      "maxSampledDeviationMm": 0.021253031700936134,
+      "reportedDeviationUpperMm": 0.033584368633898666,
+      "maxSeamPositionResidualMm": 7.021666937153402e-16,
+      "maxFiniteDifferenceSeamTangentResidual": 9.543689450353544e-09
+    },
+    {
+      "axis": "v",
+      "sha256": "edcb9388f22ebbf9a1827cf38872c38216449b12683ddf19672367c8ca9d524f",
+      "samples": 4225,
+      "maxSampledDeviationMm": 0.0038559916269704066,
+      "reportedDeviationUpperMm": 0.008051567763604342,
+      "maxSeamPositionResidualMm": 5.087681048627601e-16,
+      "maxFiniteDifferenceSeamTangentResidual": 4.2554801856990785e-08
+    }
+  ]
+}

@@ -140,7 +140,7 @@ export interface CertifiedBrepMassProperties {
  inertiaMm5:[[CertifiedInterval,CertifiedInterval,CertifiedInterval],[CertifiedInterval,CertifiedInterval,CertifiedInterval],[CertifiedInterval,CertifiedInterval,CertifiedInterval]]
  context:{version:number;canonical:string}
  evidenceClaimCount:number
- audit:{ok:boolean;bodyCount:number;shellCount:number;selfIntersectionPairsChecked:number}
+ audit:{ok:boolean;bodyCount:number;shellCount:number;selfIntersectionPairsCandidate:number;selfIntersectionComplete:boolean;selfIntersectionPairsChecked:number}
  changeSet:RustChangeSet
  namingComplete:true
  composition:{componentCount:number;cavityCount:number;signedShellComposition:true}
@@ -162,7 +162,7 @@ export interface AuthorizedHealResult {
   displacementLedger:{operation:number;actualMm:number;cumulativeMm:number}[]
   cumulativeDisplacementMm:number
   sew:{matched:number;complete:true;displacementBudgetOk:true}
-  audit:{ok:true;bodyCount:number;shellCount:number;selfIntersectionPairsChecked:number}
+  audit:{ok:true;bodyCount:number;shellCount:number;selfIntersectionPairsCandidate:number;selfIntersectionComplete:boolean;selfIntersectionPairsChecked:number}
   changeSet:RustChangeSet
   namingComplete:true
  }
@@ -179,7 +179,7 @@ export interface ExactAnalyticShellResult {
  }
  context:{version:number;canonical:string}
  evidenceClaimCount:number
- audit:{ok:true;bodyCount:number;shellCount:number;selfIntersectionPairsChecked:number;notes:string[]}
+ audit:{ok:true;bodyCount:number;shellCount:number;selfIntersectionPairsCandidate:number;selfIntersectionComplete:boolean;selfIntersectionPairsChecked:number;notes:string[]}
  changeSet:RustChangeSet
  namingComplete:true
 }
@@ -202,7 +202,7 @@ export const extrudeBrepCurves=(loops:NurbsCurve[][],zMin:number,zMax:number):Nu
 export const extrudeBrepPolygon=(profile:[number,number][],zMin:number,zMax:number,holes:[number,number][][]=[]):NurbsBrep=>callGeometryRust('brep_nurbs_extrude_polygon',{profile,holes,zMin,zMax})
 /** Planar-triangulated construction, not a smooth NURBS loft. */
 /** Native bilinear side patches between admitted parallel convex sections. */
-export const createRuledSketchLoft=(sketches:DirectSketch[],ids:string[]):{brep:NurbsBrep;mesh:PolygonMesh}=>{const r=callGeometryRust<{brep:NurbsBrep;mesh:PolygonMesh}>('cad_ruled_sketch_loft',{sketches,ids});normalizePolygonMesh(r.mesh);return r}
+export const createRuledSketchLoft=(sketches:DirectSketch[],ids:string[]):{brep:NurbsBrep;mesh:PolygonMesh}=>{if(sketches.some(s=>ids.includes(s.id)&&s.retainedProfile))throw Error('Ruled sketch loft does not yet support retained curve profiles.');const r=callGeometryRust<{brep:NurbsBrep;mesh:PolygonMesh}>('cad_ruled_sketch_loft',{sketches,ids});normalizePolygonMesh(r.mesh);return r}
 export const createRuledBrepLoft=(sections:[number,number,number][][]):NurbsBrep=>callGeometryRust('brep_nurbs_ruled_loft',{sections})
 export const createFacetedBrepLoft=(sections:[number,number,number][][]):NurbsBrep=>callGeometryRust('brep_nurbs_faceted_loft',{sections})
 /** Planar-triangulated polyline sweep, not an analytic pipe. */
@@ -226,7 +226,7 @@ export interface CertifiedCurvedGraphBoolean {
   tensorCells:number
   exactCorrespondence:true
   sew:{matched:number;complete:true;displacementBudgetOk:true}
-  audit:{ok:true;bodyCount:1;shellCount:1;selfIntersectionPairsChecked:number;notes:string[]}
+  audit:{ok:true;bodyCount:1;shellCount:1;selfIntersectionPairsCandidate:number;selfIntersectionComplete:boolean;selfIntersectionPairsChecked:number;notes:string[]}
   changeSet:RustChangeSet
   namingComplete:true
   noFallback:true
@@ -283,7 +283,7 @@ export interface GeneralNurbsBooleanResult {
   ssReportsComplete:true
   ssFacePairs:number
   sew:{matched:number;complete:true;displacementBudgetOk:true}
-  audit:{ok:true;bodyCount:number;shellCount:number;selfIntersectionPairsChecked:number;notes:string[]}
+  audit:{ok:true;bodyCount:number;shellCount:number;selfIntersectionPairsCandidate:number;selfIntersectionComplete:boolean;selfIntersectionPairsChecked:number;notes:string[]}
   changeSet:RustChangeSet
   naming:{split:number;retained:number;deleted:number;generated:number;operationStable:true}
   resultComponents:number
@@ -306,7 +306,7 @@ export interface AuditedBrepFeature {
  certificate:{capability:'analytic-multi-edge-fillet/1'|'exact-parallel-frame-sweep/1'|'exact-convex-straight-edge-chamfer/1'|'exact-convex-prism-edge-fillet/1'|'analytic-solid-loft/2'|'exact-parallel-frame-sweep/2'|'exact-variable-radius-fillet/1'|'exact-valence3-corner-blend/1';complete:true;notes:string[]}
  context:{version:number;canonical:string}
  evidenceClaimCount:number
- audit:{ok:true;bodyCount:number;shellCount:number;selfIntersectionPairsChecked:number}
+ audit:{ok:true;bodyCount:number;shellCount:number;selfIntersectionPairsCandidate:number;selfIntersectionComplete:boolean;selfIntersectionPairsChecked:number}
  changeSet:RustChangeSet
  namingComplete:true
 }

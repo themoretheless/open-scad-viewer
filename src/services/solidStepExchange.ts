@@ -1,7 +1,7 @@
 import {importStepForWorkbench, exportRetainedStepForWorkbench} from './cadStepRouting'
 import { stringifyMeshJson } from './meshJson'
 import {loadProjectStepModel, saveProjectStepModel} from './cadStepIndexedDb'
-import {parseDirectDocument, type DirectDocument} from './directModeling'
+import {parseDirectDocument, type DirectBody, type DirectDocument} from './directModeling'
 import {warmGeometryKernel} from './geometry/kernel'
 
 /** Validate the complete addition before replacing the independently retained original. */
@@ -26,4 +26,13 @@ export async function exportSolidStepOriginal() {
   const stored = await loadProjectStepModel()
   if (!stored) throw Error('No saved AP242 original. Import a retained STEP model first.')
   return exportRetainedStepForWorkbench(stored.model, stored.document).text
+}
+
+/** Export the selected body's current B-rep, independent of the retained source file. */
+export async function exportSolidStepCurrent(body:DirectBody) {
+  if(!body.brep)throw Error('Current STEP export requires an exact B-rep body. Export this mesh as STL or OBJ.')
+  const model=structuredClone(body.brep)
+  await warmGeometryKernel()
+  const {exportDirectStepV9}=await import('./cadNurbsStep')
+  return exportDirectStepV9(model).text
 }

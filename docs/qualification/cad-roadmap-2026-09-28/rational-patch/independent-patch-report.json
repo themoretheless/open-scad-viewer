@@ -1,0 +1,7 @@
+{
+  "sha256": "d95af90b1b604a69483bea0f0eb66cf3e532d9543a7c1c6a0a6bd37e5421a6a4",
+  "samples": 2145,
+  "maxRadiusErrorMm": 2.220446049250313e-16,
+  "maxHeightErrorMm": 4.440892098500626e-16,
+  "oracle": "Independent Python Cox-de Boor evaluation against unit quarter-cylinder"
+}

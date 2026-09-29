@@ -1,0 +1,14 @@
+[
+  {
+    "mutation": "wrong-edge",
+    "rejected": true
+  },
+  {
+    "mutation": "wrong-plane",
+    "rejected": true
+  },
+  {
+    "mutation": "shifted-controls",
+    "rejected": true
+  }
+]

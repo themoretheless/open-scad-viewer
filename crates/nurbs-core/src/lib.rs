@@ -11,8 +11,25 @@
 )]
 #![allow(unused_features)]
 pub mod curve;
+pub mod coons;
+pub mod continuity;
+pub mod framed_sweep;
 pub mod edit;
 pub mod foundation;
+pub mod trim_point;
+pub mod curve_distance;
+mod distance_bounds;
+pub mod surface_distance;
+pub mod surface_injectivity;
+pub mod surface_contact;
+pub mod surface_contact_search;
+pub mod radial_bounds;
+pub mod ray_surface;
+pub mod curve_surface_agreement;
+mod curve_surface_composition;
+mod periodic_chart;
+pub mod trim_domain;
+pub mod trimmed_surface_distance;
 pub mod intersection;
 pub mod ss_intersection;
 pub mod surface;
@@ -62,6 +79,23 @@ pub fn dispatch(v: Value) -> Result<Value> {
             &field(&v, "surface")?,
             optional_field(&v, "tolerance")?,
         );
+    }
+    if op == "surface_distance" {
+        return Ok(surface_distance::distance(&field(&v, "a")?, &field(&v, "b")?, field(&v, "toleranceMm")?, field(&v, "maxCells")?)?.to_value());
+    }
+    if op == "curve_distance" {
+        return Ok(curve_distance::distance(
+            &field(&v, "a")?,
+            &field(&v, "b")?,
+            field(&v, "toleranceMm")?,
+            field(&v, "maxCells")?,
+        )?.to_value());
+    }
+    if op == "curve_trim_screen_point" {
+        return trim_point::trim_at_screen_point(&field(&v, "curve")?, &field::<Vec<f64>>(&v, "point")?, &field(&v, "matrix")?, &field::<String>(&v, "keep")?, field(&v, "radius")?);
+    }
+    if op == "curve_trim_point" {
+        return trim_point::trim_at_point(&field(&v, "curve")?, &field::<Vec<f64>>(&v, "point")?, &field::<String>(&v, "keep")?, field(&v, "maxDistance")?);
     }
     if op == "curve_project_certified" {
         return foundation::project_curve(
@@ -122,12 +156,25 @@ pub fn dispatch(v: Value) -> Result<Value> {
             optional_field(&v, "tolerance")?,
         );
     }
+    if op == "curve_rebuild_certified" {
+        return foundation::rebuild_curve(
+            &field(&v, "curve")?, field(&v, "degree")?,
+            field(&v, "controlCount")?, field(&v, "maxError")?,
+            optional_field(&v, "tolerance")?,
+        );
+    }
     if op == "curve_reduce_certified" {
         return foundation::reduce_curve_degree(
             &field(&v, "curve")?,
             field(&v, "degree")?,
             field(&v, "maxError")?,
             optional_field(&v, "tolerance")?,
+        );
+    }
+    if op == "surface_rebuild_certified" {
+        return foundation::rebuild_surface(
+            &field(&v,"surface")?,field(&v,"axis")?,field(&v,"degree")?,
+            field(&v,"controlCount")?,field(&v,"maxError")?,optional_field(&v,"tolerance")?,
         );
     }
     if op == "surface_remove_certified" || op == "surface_reduce_certified" {
@@ -303,6 +350,23 @@ pub fn dispatch(v: Value) -> Result<Value> {
             field(&v, "u")?,
             v["periodic"].as_bool().unwrap_or(false),
         )?);
+    }
+    if op == "surface_coons_patch" {
+        return encode(coons::patch(&field::<Vec<curve::Curve>>(&v,"boundaries")?)?);
+    }
+    if op == "curve_match_g1" {
+        return continuity::curve_match::checked(&field(&v,"reference")?,&field(&v,"edited")?,&field::<String>(&v,"referenceEnd")?,&field::<String>(&v,"editedEnd")?,optional_field::<f64>(&v,"maxAngleDegrees")?.unwrap_or(1e-6));
+    }
+    if op == "surface_prepare_seams" {
+        return continuity::preparation::checked_with_conversion(&field(&v,"reference")?,&field(&v,"edited")?,&field::<String>(&v,"referenceBoundary")?,&field::<String>(&v,"editedBoundary")?,optional_field::<bool>(&v,"reverse")?.unwrap_or(false),field(&v,"maxError")?,optional_field::<bool>(&v,"openPeriodic")?.unwrap_or(false));
+    }
+    if op == "surface_match_jets" {
+        return continuity::match_surface_jets_checked(&field(&v,"reference")?,&field(&v,"edited")?,
+            &field::<String>(&v,"referenceBoundary")?,&field::<String>(&v,"editedBoundary")?,
+            field(&v,"order")?,field(&v,"scale")?,optional_field::<bool>(&v,"reverse")?.unwrap_or(false),optional_field::<f64>(&v,"maxError")?.unwrap_or(1e-6));
+    }
+    if op == "surface_framed_sweep" {
+        return framed_sweep::checked_sweep(&field(&v,"profile")?,&field(&v,"path")?,field(&v,"normal")?,field(&v,"sections")?,field(&v,"maxDeviation")?);
     }
     if op == "surface_sweep" {
         return encode(surface::sweep(&field(&v, "profile")?, &field(&v, "path")?)?);

@@ -60,3 +60,76 @@ it('keeps representable large centroids finite and refuses malformed point trans
  expect(()=>transformDirectPoints([[1e308,0]],[1e308,0],0,1)).toThrow('finite')
  expect(transformDirectPoints([[0,0]],[1,2],0,1)).toEqual([[1,2]])
 })
+
+it('restores history asynchronously without moving stacks on failure, cancellation or stale results',async()=>{
+ const history=new DirectHistory(),doc=history.document;doc.sketches.push(sketch());history.commit(doc)
+ const stats=history.storageStats
+ let finish!:(document:ReturnType<typeof emptyDirectDocument>)=>void
+ let requested=''
+ const pending=history.restoreAsync('undo',text=>{requested=text;return new Promise(resolve=>{finish=resolve})})
+ expect(history.storageStats).toEqual(stats)
+ history.cancelRestore();finish(parseDirectDocument(requested));expect(await pending).toBe(false)
+ expect(history.storageStats).toEqual(stats)
+ await expect(history.restoreAsync('undo',async()=>{throw Error('worker stopped')})).rejects.toThrow('worker stopped')
+ expect(history.storageStats).toEqual(stats)
+ const stale=history.restoreAsync('undo',text=>{requested=text;return new Promise(resolve=>{finish=resolve})})
+ const edit=history.document;edit.sketches[0].name='New edit';history.commit(edit)
+ finish(parseDirectDocument(requested));expect(await stale).toBe(false)
+ expect(history.document.sketches[0].name).toBe('New edit');expect(history.canRedo).toBe(false)
+})
+
+it('accepts only the latest asynchronous history request and owns the restored document',async()=>{
+ const history=new DirectHistory(),doc=history.document;doc.sketches.push(sketch());history.commit(doc)
+ let finish!:(document:ReturnType<typeof emptyDirectDocument>)=>void
+ let requested=''
+ const old=history.restoreAsync('undo',text=>{requested=text;return new Promise(resolve=>{finish=resolve})})
+ expect(await history.restoreAsync('undo',async text=>parseDirectDocument(text))).toBe(true)
+ finish(parseDirectDocument(requested));expect(await old).toBe(false)
+ expect(history.document.sketches).toHaveLength(0)
+ let loaded!:ReturnType<typeof emptyDirectDocument>
+ expect(await history.restoreAsync('redo',async text=>loaded=parseDirectDocument(text))).toBe(true)
+ loaded.sketches[0].name='borrowed mutation'
+ expect(history.document.sketches[0].name).toBe('L')
+ const stats=history.storageStats
+ await expect(history.restoreAsync('undo',async()=>history.document)).rejects.toThrow('different document')
+ expect(history.storageStats).toEqual(stats)
+ expect(history.storageStats.materializedStates).toBe(1)
+})
+
+it('commits a parsed async result atomically and ignores cancelled or superseded preparation',async()=>{
+ const history=new DirectHistory(),candidate=emptyDirectDocument();candidate.sketches.push(sketch())
+ let finish!:(value:typeof candidate)=>void
+ const pending=history.commitAsync(()=>new Promise(resolve=>{finish=resolve}))
+ expect(history.canUndo).toBe(false);history.cancelRestore();finish(candidate)
+ expect(await pending).toBe(false);expect(history.document.sketches).toHaveLength(0)
+ await expect(history.commitAsync(async()=>candidate,()=>{throw Error('locked')})).rejects.toThrow('locked')
+ expect(history.canUndo).toBe(false)
+ const old=history.commitAsync(()=>new Promise(resolve=>{finish=resolve}))
+ expect(await history.commitAsync(async()=>candidate)).toBe(true)
+ finish(emptyDirectDocument());expect(await old).toBe(false)
+ candidate.sketches[0].name='external mutation'
+ expect(history.document.sketches[0].name).toBe('L')
+ expect(history.undo().sketches).toHaveLength(0)
+ expect(history.redo().sketches[0].name).toBe('L')
+})
+
+it('resets a recovered baseline atomically without adding undo or sharing caller data',async()=>{
+ const h=new DirectHistory(),next=emptyDirectDocument();next.sketches.push(sketch())
+ h.commit(next)
+ const recovered=emptyDirectDocument();recovered.sketches.push({...sketch(),name:'Recovered'})
+ expect(await h.resetAsync(async()=>parseDirectDocument(JSON.stringify(recovered)))).toBe(true)
+ expect(h.canUndo).toBe(false);expect(h.canRedo).toBe(false)
+ recovered.sketches[0].name='Outside';expect(h.document.sketches[0].name).toBe('Recovered')
+ const before=h.document
+ await expect(h.resetAsync(async()=>{throw Error('corrupt recovery')})).rejects.toThrow('corrupt recovery')
+ expect(h.document).toEqual(before)
+})
+it('ignores baseline recovery after cancellation or an intervening edit',async()=>{
+ const h=new DirectHistory(),recovered=emptyDirectDocument();recovered.sketches.push(sketch())
+ let complete!:(value:ReturnType<typeof emptyDirectDocument>)=>void
+ const first=h.resetAsync(()=>new Promise(resolve=>complete=resolve));h.cancelRestore();complete(recovered)
+ expect(await first).toBe(false);expect(h.document.sketches).toHaveLength(0)
+ const second=h.resetAsync(()=>new Promise(resolve=>complete=resolve))
+ const edited=h.document;edited.sketches.push({...sketch(),name:'New edit'});h.commit(edited);complete(recovered)
+ expect(await second).toBe(false);expect(h.document.sketches[0].name).toBe('New edit');expect(h.canUndo).toBe(true)
+})

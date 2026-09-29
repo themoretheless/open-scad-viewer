@@ -24,12 +24,12 @@ fn cross(a: P, b: P) -> P {
         a[0] * b[1] - a[1] * b[0],
     ]
 }
-fn segments(a: P, b: P, c: P, d: P) -> f64 {
+fn segment_pair(a: P, b: P, c: P, d: P) -> (f64, [P;2]) {
     let u = sub(b, a);
     let v = sub(d, c);
     let w = sub(a, c);
     if !u.iter().chain(&v).chain(&w).all(|x| x.is_finite()) {
-        return f64::NAN;
+        return (f64::NAN,[a,c]);
     }
     let scale = u
         .iter()
@@ -38,7 +38,7 @@ fn segments(a: P, b: P, c: P, d: P) -> f64 {
         .map(|x| x.abs())
         .fold(0., f64::max);
     if scale == 0. {
-        return 0.;
+        return (0.,[a,c]);
     }
     let u = u.map(|x| x / scale);
     let v = v.map(|x| x / scale);
@@ -50,14 +50,18 @@ fn segments(a: P, b: P, c: P, d: P) -> f64 {
         } else {
             0.
         };
-        norm(std::array::from_fn(|k| p[k] - t * d[k]))
+        (norm(std::array::from_fn(|k| p[k] - t * d[k])), t)
     };
     // If the constrained minimum lies on the boundary of the parameter square,
     // at least one endpoint attains it. This also handles parallel/zero edges.
-    let mut best = endpoint(w, v)
-        .min(endpoint(std::array::from_fn(|k| w[k] + u[k]), v))
-        .min(endpoint(w.map(|x| -x), u))
-        .min(endpoint(sub(v, w), u));
+    let e0=endpoint(w,v);
+    let e1=endpoint(std::array::from_fn(|k|w[k]+u[k]),v);
+    let e2=endpoint(w.map(|x|-x),u);
+    let e3=endpoint(sub(v,w),u);
+    let mut best=(e0.0,0.,e0.1);
+    for candidate in [(e1.0,1.,e1.1),(e2.0,e2.1,0.),(e3.0,e3.1,1.)] {
+        if candidate.0<best.0 {best=candidate;}
+    }
     let n = cross(u, v);
     let magnitude = n.iter().map(|x| x.abs()).fold(0., f64::max);
     if magnitude > 0. {
@@ -68,16 +72,19 @@ fn segments(a: P, b: P, c: P, d: P) -> f64 {
         let s = (dot(cross(v, w), n) / magnitude) / denominator;
         let t = (dot(cross(u, w), n) / magnitude) / denominator;
         if (0. ..=1.).contains(&s) && (0. ..=1.).contains(&t) {
-            best = best.min(norm(std::array::from_fn(|k| w[k] + s * u[k] - t * v[k])));
+            let distance=norm(std::array::from_fn(|k| w[k] + s * u[k] - t * v[k]));
+            if distance<best.0 {best=(distance,s,t);}
         }
     }
-    best * scale
+    (best.0 * scale,[std::array::from_fn(|k|a[k]+best.1*(b[k]-a[k])),std::array::from_fn(|k|c[k]+best.2*(d[k]-c[k]))])
 }
-fn consider(gap: &mut f64, distance: f64) -> Result<()> {
-    if !distance.is_finite() {
+#[cfg(test)]
+fn segments(a:P,b:P,c:P,d:P)->f64 {segment_pair(a,b,c,d).0}
+fn consider(gap: &mut f64, witness:&mut Option<[P;2]>, distance: f64, points:[P;2]) -> Result<()> {
+    if !distance.is_finite() || !points.iter().flatten().all(|x|x.is_finite()) {
         return Err(input("Clearance arithmetic exceeds finite numeric range."));
     }
-    *gap = gap.min(distance);
+    if distance<*gap {*gap=distance;*witness=Some(points);}
     Ok(())
 }
 pub fn inspect(v: Value) -> Result<Value> {
@@ -131,28 +138,24 @@ pub fn inspect(v: Value) -> Result<Value> {
             .report
             .signed_volume_mm3
             .abs();
-            let mut gap = if volume > 1e-9 { 0. } else { f64::INFINITY };
+            // Any positive intersection volume means the solids overlap, regardless of units.
+            let mut gap = if volume > 0. { 0. } else { f64::INFINITY };
+            let mut witness=None;
             if gap != 0. {
                 for a in &triangles[i] {
                     for b in &triangles[j] {
                         for &p in a {
-                            consider(
-                                &mut gap,
-                                norm(sub(p, closest_triangle(p, b[0], b[1], b[2]))),
-                            )?;
+                            let q=closest_triangle(p,b[0],b[1],b[2]);
+                            consider(&mut gap,&mut witness,norm(sub(p,q)),[p,q])?;
                         }
                         for &p in b {
-                            consider(
-                                &mut gap,
-                                norm(sub(p, closest_triangle(p, a[0], a[1], a[2]))),
-                            )?;
+                            let q=closest_triangle(p,a[0],a[1],a[2]);
+                            consider(&mut gap,&mut witness,norm(sub(p,q)),[q,p])?;
                         }
                         for x in 0..3 {
                             for y in 0..3 {
-                                consider(
-                                    &mut gap,
-                                    segments(a[x], a[(x + 1) % 3], b[y], b[(y + 1) % 3]),
-                                )?;
+                                let (distance,points)=segment_pair(a[x],a[(x+1)%3],b[y],b[(y+1)%3]);
+                                consider(&mut gap,&mut witness,distance,points)?;
                             }
                         }
                     }
@@ -165,7 +168,7 @@ pub fn inspect(v: Value) -> Result<Value> {
             }
             let a: String = field(&bodies[i], "name")?;
             let b: String = field(&bodies[j], "name")?;
-            reports.push(value_codec::json!({"a":a,"b":b,"overlapMm3":volume,"gapMm":gap}));
+            reports.push(value_codec::json!({"a":a,"b":b,"overlapMm3":volume,"gapMm":gap,"closestPoints":witness,"displayMeshOnly":true}));
         }
     }
     encode(reports)
@@ -173,6 +176,14 @@ pub fn inspect(v: Value) -> Result<Value> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn closest_segment_points_include_interior_and_endpoint_minima() {
+        let (distance,points)=segment_pair([-1.,0.,0.],[1.,0.,0.],[0.,-1.,3.],[0.,1.,3.]);
+        assert_eq!(distance,3.);assert_eq!(points,[[0.,0.,0.],[0.,0.,3.]]);
+        let (distance,points)=segment_pair([0.,0.,0.],[1.,0.,0.],[2.,2.,0.],[3.,2.,0.]);
+        assert_eq!(points,[[1.,0.,0.],[2.,2.,0.]]);
+        assert_eq!(distance,norm(sub(points[0],points[1])));
+    }
     #[test]
     fn segment_distance_is_scale_covariant() {
         for scale in [1e-100, 1e-6, 1., 1e100] {

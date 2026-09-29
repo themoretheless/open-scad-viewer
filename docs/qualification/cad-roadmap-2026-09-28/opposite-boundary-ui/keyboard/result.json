@@ -1,0 +1,21 @@
+{
+  "artifact": {
+    "geometryWasmSha256": "d98278295c3bc6883ca46e44b2f83f5f5600fb2f1502ccf87c267403496674a0",
+    "indexSha256": "c691960f5aa9ff7f30d6b44ca81506e1505ff6c710544be6638a4e423d4304d4"
+  },
+  "ok": true,
+  "keyboard": true,
+  "tabs": 1294,
+  "contactPairCount": 6,
+  "cubeSharedBoundaries": 12,
+  "cubeClassified": true,
+  "curvedSharedBoundaries": 10,
+  "curvedUnresolvedPairs": 2,
+  "partial": true,
+  "invalidInput": true,
+  "retry": true,
+  "cancel": true,
+  "restart": true,
+  "unchanged": true,
+  "errors": []
+}

@@ -1438,3 +1438,68 @@ pub(crate) fn stitch_mesh(mesh: &Mesh, eps: f64) -> Result<Mesh> {
     let p = polygons(mesh, eps, &mut budget)?;
     stitch(p, eps, &mut budget)
 }
+
+
+/// First disallowed contact at a relative tolerance, not an exact B-rep certificate.
+/// Triangle indices refer to the original input. Degenerate inputs are refused.
+#[derive(Clone, Debug)]
+pub struct MeshIntersectionLocation {
+    pub triangles: [usize; 2],
+    pub point: Point,
+    pub shared_vertices: usize,
+    pub tolerance_mm: f64,
+}
+pub fn first_mesh_intersection(mesh: &Mesh, relative_tolerance: f64, max_work: usize) -> Result<Option<MeshIntersectionLocation>> {
+    let (normalized,origin,extent)=intersection_mesh(mesh,relative_tolerance,max_work)?;
+    let mut budget=Budget{stage:"mesh intersection inspection",work:0,fragments:0,
+        options:Options{max_work,..Options::default()}};
+    Ok(validation::first_geometry_failure(&normalized,relative_tolerance,&mut budget)?.map(|(a,b,p,shared)|MeshIntersectionLocation{
+        triangles:[a,b],point:std::array::from_fn(|i|p[i]*extent+origin[i]),shared_vertices:shared,tolerance_mm:relative_tolerance*extent,
+    }))
+}
+
+fn intersection_mesh(mesh:&Mesh,relative_tolerance:f64,max_work:usize)->Result<(Mesh,Point,f64)> {
+    mesh.validate()?;
+    if !(1e-12..=1e-5).contains(&relative_tolerance) || max_work==0 || max_work>8_000_000 {
+        return Err(invalid("Invalid intersection tolerance or work budget"));
+    }
+    if mesh.indices.is_empty(){return Ok((mesh.clone(),[0.;3],1.));}
+    let (lo,hi)=bounds(mesh).ok_or_else(||invalid("Mesh bounds unavailable"))?;
+    let extent=(0..3).map(|i|hi[i]-lo[i]).fold(0.,f64::max);
+    if !extent.is_finite() || extent<=0. {return Err(invalid("Degenerate mesh bounds"));}
+    let origin:Point=std::array::from_fn(|i|lo[i]/2.+hi[i]/2.);
+    let mut normalized=mesh.clone();
+    for p in normalized.positions.chunks_exact_mut(3) {
+        for i in 0..3 {p[i]=(p[i]-origin[i])/extent;}
+    }
+    for t in normalized.indices.chunks_exact(3) {
+        let a=normalized.point(t[0])?;let b=normalized.point(t[1])?;let c=normalized.point(t[2])?;
+        if norm(cross(sub(b,a),sub(c,a)))<=relative_tolerance*relative_tolerance {
+            return Err(invalid("Degenerate triangle: repair it before intersection inspection"));
+        }
+    }
+    Ok((normalized,origin,extent))
+}
+
+/// Every disallowed triangle pair, with explicit incomplete results at resource limits.
+/// This checks the displayed triangle mesh at a relative tolerance, not the source B-rep.
+#[derive(Clone, Debug)]
+pub struct MeshIntersectionReport {
+    pub contacts: Vec<MeshIntersectionLocation>,
+    pub complete: bool,
+    pub stop_reason: Option<&'static str>,
+    pub work: usize,
+}
+pub fn mesh_intersections(mesh:&Mesh,relative_tolerance:f64,max_work:usize,max_contacts:usize)->Result<MeshIntersectionReport> {
+    if max_contacts==0 || max_contacts>100_000 {return Err(invalid("Invalid intersection contact limit"));}
+    let (normalized,origin,extent)=intersection_mesh(mesh,relative_tolerance,max_work)?;
+    let mut budget=Budget {stage:"mesh intersection inspection",work:0,fragments:0,options:Options{max_work,..Options::default()}};
+    let mut report=validation::geometry_failures(&normalized,relative_tolerance,&mut budget,Some(max_contacts))?;
+    report.contacts.sort_by_key(|&(a,b,_,_)|(a,b));
+    Ok(MeshIntersectionReport {
+        contacts:report.contacts.into_iter().map(|(a,b,p,shared)|MeshIntersectionLocation {
+            triangles:[a,b],point:std::array::from_fn(|i|p[i]*extent+origin[i]),shared_vertices:shared,tolerance_mm:relative_tolerance*extent,
+        }).collect(),
+        complete:report.complete,stop_reason:report.stop_reason,work:budget.work.min(max_work),
+    })
+}

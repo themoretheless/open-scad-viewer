@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, ref, useId, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, ref, useId, watch } from 'vue'
 import {
   isPaletteCommandEnabled,
   nextEnabledCommandIndex,
@@ -28,6 +28,12 @@ const activeIndex = ref(-1)
 const inputRef = ref<HTMLInputElement | null>(null)
 const dialogRef = ref<HTMLElement | null>(null)
 let previousFocus: HTMLElement | null = null
+function restorePreviousFocus() {
+  const target=previousFocus
+  previousFocus=null
+  void nextTick(()=>{if(props.restoreFocus && target?.isConnected)target.focus({preventScroll:true})})
+}
+onBeforeUnmount(restorePreviousFocus)
 
 const filteredCommands = computed(() => rankPaletteCommands(props.commands, query.value))
 
@@ -44,12 +50,9 @@ watch(() => props.open, async open => {
     inputRef.value?.focus()
     inputRef.value?.select()
   } else {
-    const target = previousFocus
-    await nextTick()
-    if (props.restoreFocus && target?.isConnected) target.focus({ preventScroll: true })
-    previousFocus = null
+    restorePreviousFocus()
   }
-})
+}, { immediate: true })
 
 watch(filteredCommands, commands => {
   activeIndex.value = nextEnabledCommandIndex(commands, -1, 1)

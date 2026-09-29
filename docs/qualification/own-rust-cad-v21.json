@@ -1,0 +1,59 @@
+{
+  "id": "own-rust-cad-v21",
+  "successorOf": "docs/qualification/own-rust-cad-v20.json",
+  "previousSha256": "c38cce506c68e260f811f71eb7cdbbc7b9b8eb965d96af2bd9e8c4e1843efe4a",
+  "recordedAt": "2026-09-29",
+  "purpose": "Append-only current-byte fingerprint re-issued for the G0 v29 / G1 v46 re-freeze. Drift since G0 v28 / G1 v45: the own-Rust geometry kernel was rebuilt from current crate sources (mesh intersection enumeration, NURBS distance and trim work on the feature branch), the source bundle files crates/brep-core/src/operations.rs, crates/brep-core/src/lib.rs, crates/geometry-bridge/src/lib.rs and src/services/geometry/brep.ts changed, package.json gained the test:cad-roadmap script, and tests/manifoldPlanBackend.test.ts now also lists the CadQuantityInput and SceneObjectControls components (neither imports manifold-3d). Notices and lockfiles are byte-identical to own-rust-cad-v20, and the V12 bounded non-manifold and mixed-dimensional topology scope is unchanged.",
+  "qualificationClaim": "none",
+  "wasm": {
+    "path": "src/generated/geometry-kernels/kernel_bg.wasm",
+    "sha256": "11871385e622bfb76c90ba3aed300dd7c54bb47099c2223adfc33620b5bdad44",
+    "byteLength": 9064098
+  },
+  "sourceBundle": {
+    "canonicalization": "UTF-8 path sorted: path + NUL + exact file bytes + LF",
+    "sha256": "a2be3179c4bb5e1b4a69e44971362626f29802727bc8597239573310b0782e11",
+    "paths": [
+      "crates/brep-core/src/analysis.rs",
+      "crates/brep-core/src/analytic.rs",
+      "crates/brep-core/src/analytic/loft.rs",
+      "crates/brep-core/src/analytic_features.rs",
+      "crates/brep-core/src/close_topology.rs",
+      "crates/brep-core/src/iges_interchange_v2.rs",
+      "crates/brep-core/src/imprint_pipeline.rs",
+      "crates/brep-core/src/intersections.rs",
+      "crates/brep-core/src/lib.rs",
+      "crates/brep-core/src/nurbs_ss_g6.rs",
+      "crates/brep-core/src/operations.rs",
+      "crates/brep-core/src/solid_audit.rs",
+      "crates/brep-core/src/step_interchange_v3.rs",
+      "crates/brep-core/src/transactions.rs",
+      "crates/brep-core/src/trim_sew.rs",
+      "crates/brep-core/src/uv_arrangement.rs",
+      "crates/brep-topology/src/lib.rs",
+      "crates/geometry-bridge/src/brep.rs",
+      "crates/geometry-bridge/src/lib.rs",
+      "crates/geometry-bridge/src/tests.rs",
+      "src/services/cadIges.ts",
+      "src/services/cadNurbsStep.ts",
+      "src/services/geometry/brep.ts",
+      "src/services/geometry/brepCapability.ts",
+      "tests/brepInterchangeV11.test.ts",
+      "tests/brepQualificationV10.test.ts",
+      "tests/brepQualificationV11.test.ts",
+      "tests/brepQualificationV12.test.ts",
+      "tests/brepQualificationV8.test.ts",
+      "tests/brepQualificationV9.test.ts"
+    ]
+  },
+  "dependencyFingerprints": {
+    "noticesSha256": "789499bf4bcbaacad6ead9d5e8f51e5ecbd3ec37bb9b9ef2d45bb7c115bd5c84",
+    "npmLockfileSha256": "8fb1cab7fde2b4f8b9331cfdddbc9dc0909b1ccf2ca5d26fb0c6a47b976145d1",
+    "rustLockfileSha256": "7fc1ae10d289ae341360c9ae82671b2680408a5c6a3f7830cc7136119a27c5e3"
+  },
+  "claimBoundary": [
+    "This is a reproducible byte fingerprint, not an external clean qualification run.",
+    "It covers only the finite explicit topology, correspondence, direct-cell interchange and typed-refusal matrix.",
+    "It does not approve G0, G1, production cutover, silent healing, tolerance growth, arbitrary branching or singular topology."
+  ]
+}

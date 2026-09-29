@@ -2,7 +2,7 @@ import {readFileSync} from 'node:fs'
 import {IDBFactory} from 'fake-indexeddb'
 import {afterEach, beforeEach, expect, it, vi} from 'vitest'
 import {emptyDirectDocument} from '../src/services/directModeling'
-import {prepareSolidStepImport, exportSolidStepOriginal} from '../src/services/solidStepExchange'
+import {prepareSolidStepImport, exportSolidStepOriginal, exportSolidStepCurrent} from '../src/services/solidStepExchange'
 import * as store from '../src/services/cadStepIndexedDb'
 import * as kernel from '../src/services/geometry/kernel'
 
@@ -78,4 +78,16 @@ it('does not access retained native data before warm-up and recovers after failu
  release()
  expect(await exporting).toBe(source)
  expect(load).toHaveBeenCalledOnce()
+})
+
+it('exports current edited B-rep geometry rather than its retained STEP source',async()=>{
+ const {createBrepBox,transformNurbsBrep,tessellateNurbsBrep}=await import('../src/services/geometry/brep')
+ const {importDirectStepV9}=await import('../src/services/cadNurbsStep')
+ const brep=transformNurbsBrep(createBrepBox([0,0,0],[2,3,4]),[[2,0,0,5],[0,1,0,0],[0,0,1,0],[0,0,0,1]])
+ const mesh=tessellateNurbsBrep(brep)
+ const text=await exportSolidStepCurrent({id:'edited',name:'Edited',brep,mesh})
+ const imported=importDirectStepV9(text)
+ const xs=imported.model.vertices.map(v=>v.point[0])
+ expect(Math.min(...xs)).toBeCloseTo(5);expect(Math.max(...xs)).toBeCloseTo(9)
+ await expect(exportSolidStepCurrent({id:'mesh',name:'Mesh',mesh})).rejects.toThrow('exact B-rep')
 })

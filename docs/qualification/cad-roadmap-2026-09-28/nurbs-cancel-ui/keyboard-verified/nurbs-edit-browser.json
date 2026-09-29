@@ -1,0 +1,13 @@
+{
+  "browser": "151.0.7922.34",
+  "workerRequests": 24,
+  "nativeNurbsCommands": 12,
+  "cancelledCommands": 12,
+  "repeatedLaunchBlocked": true,
+  "undoRedo": true,
+  "reload": true,
+  "displayReady": true,
+  "keyboard": true,
+  "tabPresses": 6583,
+  "downloads": 52
+}

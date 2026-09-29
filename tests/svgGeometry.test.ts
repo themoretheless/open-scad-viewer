@@ -1,9 +1,16 @@
+import {readFileSync} from 'node:fs'
 import { describe, it, expect } from 'vitest'
 import { svgContours, contoursSvg, contoursExtrusion, meshSvgContours, SVG_MAX_BYTES } from '../src/services/svgGeometry'
 import { HeadlessGeometryService } from '../src/mcp/geometryService'
 const geometry = new HeadlessGeometryService()
 const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="20mm" height="20mm" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M0 0H20V20H0Z M5 5H15V15H5Z"/></svg>'
 describe('SVG geometry workflows', () => {
+  it('reimports the qualified Solid browser download at its edited physical dimensions',async()=>{
+    const exported=readFileSync(new URL('../docs/qualification/cad-roadmap-2026-09-28/svg/browser-edited.svg',import.meta.url),'utf8')
+    const result=await geometry.analyze(contoursExtrusion(await svgContours(exported),2),'full')
+    expect(result.volume).toBeCloseTo(168,5)
+    expect(result.bounds).toEqual({min:[0,0,0],max:[14,6,2]})
+  })
   it('extrudes SVG holes with physical units, then roundtrips the silhouette', async () => {
     const contours = await svgContours(svg)
     const source = contoursExtrusion(contours, 4)

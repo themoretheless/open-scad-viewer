@@ -68,8 +68,27 @@ const limits = new Map([
 // Bernstein/Krawczyk/continuation; GPU SDF view bridging added more bridge
 // surface. The shared packed kernel measures 3060308 bytes; retain a bounded
 // 39692-byte margin.
-const geometryChunkBudget = 3_100_000
+// Periodic rebuild and cyclic Greville collocation: measured 3,106,403 bytes.
+// Certified curve endpoint matching: measured 3,144,213 bytes.
+// Profile cycle assembly and exact orientation checks: measured 3,147,988 bytes.
+// Retained arc assembly and common snap endpoints: measured 3,153,648 bytes.
+// Analytic retained region offset: measured 3,156,133 bytes.
+// Native display refinement, picking map and normals: measured 3,160,333 bytes.
+// Point-driven rational curve trim: measured 3,162,248 packed bytes.
+// Interval NURBS curve distance: measured packed geometry 3,172,373 bytes.
+// Surface distance and interval tensor restriction: measured 3,180,728 bytes.
+// Radial bounds and shell distance kernels: measured 3,200,233 bytes.
+// Full-interval boundary diagnostics: measured 3,218,328 packed bytes.
+// Face-contact diagnostics: measured packed kernel 3,226,638 bytes.
+// Shared-edge plane criterion: measured packed kernel 3,230,813 bytes.
+// Opposite-side shared-edge criterion: measured 3,234,683 packed bytes.
+// Exact rational Bezier identity: measured 3,236,243 packed bytes.
+// Prismatic cap Push/Pull: measured geometry chunk 3,240,213 bytes.
+// Incidence-based cap identity preservation: measured 3,243,603 bytes.
+const geometryChunkBudget = 3_244_000
 const jsChunkBudgets = [
+  // CAD worker with lazy ModelGraph importer: surface boundary diagnostics included: measured 108,116 bytes.
+  [/^assets\/mainSolid\.worker-[^/]+\.js$/, 116_000], // Distance kernel worker additions: measured 115,579 bytes. Surface distance worker dispatch: measured 115,110 bytes. Retained NURBS snap intervals: measured 114,200 bytes. Sketch snap preparation: measured 113,885 bytes. Body snap preparation: measured 112,083 bytes. Face sketch preparation in worker: measured 109,472 bytes.
   // After removing logical-expression payload inlining: 470353 / 84511 / 34064 bytes.
   [/^assets\/geometry\.worker-[^/]+\.js$/, 500_000],
   // Theme uniforms + default-material setters added ~0.8 kB; measured: 100,763 bytes.
@@ -89,9 +108,12 @@ const jsChunkBudgets = [
   [/^assets\/index-[^/]+\.js$/, 240_000],
   // Packed HarfBuzz runtime, measured: 179,520 bytes.
   [/^assets\/harfbuzz-bytes-[^/]+\.js$/, 200_000],
-  // Direct modeling panel/tool surface with grid, snapping, and extrusion
-  // controls, measured: 162,692 bytes. Keep a bounded 7.3 kB margin.
-  [/^assets\/DirectModeler-[^/]+\.js$/, 170_000],
+  // Direct modeling panel with command guidance, inline dimensions, and isolation.
+  // Workspace recovery and mesh diagnostics: measured 195,146 bytes.
+  // Exact edge authoring adds the canonical capability registry and native wrappers (measured 220614 bytes).
+  // Instance editing, draft recovery, exchange, diagnostics materials, SVG exchange and localized patch diagnostics and framed sweep controls: about 279 kB.
+  // Profile region commands and target selection: measured 310,394 bytes.
+  [/^assets\/DirectModeler-[^/]+\.js$/, 375_000], // Face-contact panel: measured 369,457 bytes. Distance kernels panel growth: measured 364,044 bytes. Radial bound diagnostics: measured 358,648 bytes. Trimmed face distance: measured 353,799 bytes. Full NURBS surface distance panel: measured 348,231 bytes. NURBS edge distance controls and witnesses: measured 344,995 bytes. All mesh contacts, completion and navigation: measured 340,273 bytes. Diagnostic input errors, retry and focus: measured 337,331 bytes. Screen point picking and focus: measured 334,107 bytes. Point trim preview and numeric inputs: measured 332,651 bytes. Retained NURBS targets in world coordinates: measured 328,305 bytes. Async body snap readiness: measured 327,041 bytes. Async authored edges: measured 326,006 bytes. Async topology selection: measured 325,581 bytes. Localized CV errors and accessible field association: measured 324,730 bytes. Cancellable retained profile display: measured 323,401 bytes. Cancellable surface display queue: measured 320,648 bytes. Worker startup recovery: measured 317,274 bytes. Cancellable JSON import: measured 316,313 bytes. Durable draft head and async restoration; previously async extrusion preview: measured 312,541 bytes.
   // Modeling tools with validated transferable G-code moves, measured: 100,285 bytes.
   [/^assets\/MainModelingTools-[^/]+\.js$/, 102_000],
   // WASM brotli unpacking helper chunk, measured: 122,900 bytes.
@@ -257,6 +279,49 @@ for (const [name, artifact, compression] of [
 // of renderer code (6,449,885 bytes measured); the budget moves once.
 // PBR environment maps add three 512×256 equirect PNGs (~63 kB) plus ~6 kB of
 // renderer code (6,519,598 bytes measured); the budget moves once.
-const totalBudget = 6_560_000
+// Current editor/tool bundle: 6.58 MB; retain a bounded 22 kB margin.
+// Sketch slot kernel, validated dimension UI and constraint status: measured 6,602,602 bytes.
+// Qualified exact edge authoring with capability checks: measured 6,639,504 bytes.
+// Variable-radius and three-edge blend controls: bounded additional 10 kB.
+// Curve/surface rebuild UI; updated native kernel remains within this bounded increment.
+// IndexedDB fallback for large Solid drafts adds a bounded storage/recovery path.
+// Patch gap markers and bilingual rational-boundary guidance: measured 6,720,201 bytes.
+// Framed sweep native payload and UI: measured 6,728,937 bytes.
+// Certified surface jets, regularity and preview: measured 6,764,071 asset bytes.
+// Open/periodic seam preparation and UI: measured 6,776,051 asset bytes.
+// Explicit periodic unlinking: measured 6,778,259 asset bytes.
+// Curve G1 native proof, command preview and endpoint guides: measured 6,787,376 asset bytes.
+// Profile preparation with gap markers and command panel: measured 6,797,062 asset bytes.
+// Retained profile document/render/transform/extrusion bridge: measured 6,805,989 asset bytes including GPU loss fallback.
+// Arc profile preparation in the existing command: measured 6,812,553 asset bytes including repeat after undo.
+// Retained profile difference/intersection and role controls: measured 6,815,572 bytes after command panel layout.
+// Round offset with holes and complete preview loops: measured 6,820,375 asset bytes.
+// Worker extrusion imports and cancellation state: measured 6,835,576 asset bytes.
+// Body edit worker dependencies and cancellation state: measured 6,856,284 bytes.
+// Profile preparation report validation: measured 6,858,268 bytes.
+// Surface construction worker and refinement report validation: measured 6,860,202 bytes.
+// Matching and seam preparation worker reports: measured 6,862,039 bytes.
+// Worker display preparation and cancellation: measured 6,889,592 asset bytes.
+// Worker ModelGraph import: measured 6,894,083 asset bytes.
+// Cancellable surface-boundary report and protocol: measured 6,896,876 asset bytes.
+// Worker surface display queue and retry controls: measured 6,900,283 asset bytes.
+// Retained profile display queue and protocol add about 3 kB of UI/worker code.
+// Topology worker protocol validates face/edge indices: measured 6,906,147 bytes.
+// Authored edge worker protocol and UI: measured 6,908,108 bytes.
+// Body snap worker preparation and descriptor validation add about 4 kB.
+// Sketch snap worker and bounded protocol: measured 6,916,660 asset bytes.
+// Retained NURBS snap intervals and world placement: measured 6,918,347 bytes.
+// Point trim Rust/WASM operation and preview UI: measured 6,924,791 bytes.
+// NURBS curve distance kernel, worker protocol and edge UI: measured 6,949,848 bytes.
+// Complete NURBS surface distance: measured 6,962,603 asset bytes.
+// Explicit audit completeness fields: measured 7,000,039 bytes after production build.
+// Distance kernel bundles growth: measured 7,008,135 asset bytes after production build.
+// Boundary diagnostics, protocol and panel: measured 7,023,018 asset bytes.
+// Face-contact kernel, worker validation and panel: measured 7,039,890 asset bytes.
+// Shared-edge report, protocol and panel: measured 7,045,011 asset bytes.
+// Two shared-edge certificate variants: measured 7,049,056 asset bytes.
+// Keyboard face selection adds 937 bytes; measured assets 7,057,203.
+// Explicit quantity labels and linked errors: measured assets 7,062,786 bytes.
+const totalBudget = 7_064_000
 if (total > totalBudget) throw new Error(`dist totals ${total} bytes; budget is ${totalBudget}`)
 console.log(`Verified ${files.length} dist artifacts (${total} asset bytes + ${rawWasmBytes} raw WASM bytes = ${total + rawWasmBytes} total bytes)`)

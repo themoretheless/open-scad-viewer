@@ -1,0 +1,31 @@
+{
+  "runtime": "v22.23.3",
+  "platform": "darwin",
+  "arch": "arm64",
+  "scope": "Node materialized B-rep instances; no browser/GPU claims",
+  "measurements": [
+    {
+      "instances": 1000,
+      "bodies": 1001,
+      "jsonBytes": 19003382,
+      "compactBytes": 149902,
+      "resolveMs": 1901.318166,
+      "parseSamplesMs": [
+        3273.3430420000004,
+        3215.0227499999983,
+        3848.442165999999,
+        3579.0553340000006,
+        2543.189291999999
+      ],
+      "commitMs": 4488.546791999997,
+      "undoMs": 2990.4877500000002,
+      "redoMs": 2269.0650840000017,
+      "historyStorage": {
+        "undoStates": 1,
+        "redoStates": 0,
+        "materializedStates": 1,
+        "retainedCharacters": 299804
+      }
+    }
+  ]
+}

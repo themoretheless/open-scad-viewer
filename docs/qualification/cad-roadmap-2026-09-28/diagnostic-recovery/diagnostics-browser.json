@@ -1,0 +1,12 @@
+{
+  "browser": "151.0.7922.34",
+  "workerFailureRetry": true,
+  "keyboardRetry": true,
+  "tabs": 7,
+  "invalidInputPreventsRequest": true,
+  "zeroNormalLocalized": true,
+  "fieldAssociated": true,
+  "planeReset": true,
+  "escapeTerminatesWorker": true,
+  "documentUnchanged": true
+}

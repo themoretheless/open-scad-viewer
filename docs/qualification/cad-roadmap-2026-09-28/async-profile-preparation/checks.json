@@ -1,0 +1,12 @@
+{
+  "cadTests": 374,
+  "cadFiles": 33,
+  "focusedTests": 165,
+  "focusedFiles": 3,
+  "vueTypes": true,
+  "mcpTypes": true,
+  "build": true,
+  "verifyDist": true,
+  "assetBytes": 6858268,
+  "scope": "profile preparation with diagnostic reports"
+}

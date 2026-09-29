@@ -1,0 +1,31 @@
+{
+  "holeExtrusionVolumeMm3": 600,
+  "svgImported": true,
+  "svgUndo": true,
+  "svgDimensions": {
+    "width": "14mm",
+    "height": "6mm",
+    "paths": 1,
+    "bounds": [
+      0,
+      0,
+      14,
+      6
+    ]
+  },
+  "tabPresses": 849,
+  "sequentialTabNavigation": true,
+  "escapeRestoresFileFocus": true,
+  "interaction": "keyboard",
+  "theme": "system",
+  "uiScaleEdit": 2,
+  "stepDownloads": 3,
+  "browser": "151.0.7922.34",
+  "downloads": 13,
+  "sourceWidthsMm": [
+    2,
+    7
+  ],
+  "stableProjectId": true,
+  "reloadPreserved": true
+}

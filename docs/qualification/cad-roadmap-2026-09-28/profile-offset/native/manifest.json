@@ -1,0 +1,155 @@
+{
+  "schema": "cad-roadmap-step/1",
+  "units": "mm",
+  "toleranceMm": 0.000001,
+  "relativeVolumeTolerance": 1e-8,
+  "parts": [
+    {
+      "name": "neck-split",
+      "file": "neck-split.step",
+      "sha256": "4591635f272b6c1e41eeb2a1442c0a5a4c25fe7f743f69456532a830641673a2",
+      "expected": {
+        "volumeMm3": 19.07841260555831,
+        "boundsMm": [
+          [
+            -2.7,
+            -1.7,
+            0
+          ],
+          [
+            2.7,
+            1.7,
+            2
+          ]
+        ],
+        "solids": 2
+      }
+    },
+    {
+      "name": "disk-grown",
+      "file": "disk-grown.step",
+      "sha256": "5f59daaad987e9aaeacb1de6a2bf7b01987f993d7d339305b3e0bf0f3796ec0d",
+      "expected": {
+        "volumeMm3": 56.548667764616276,
+        "boundsMm": [
+          [
+            -3,
+            -3,
+            0
+          ],
+          [
+            3,
+            3,
+            2
+          ]
+        ],
+        "solids": 1
+      }
+    },
+    {
+      "name": "disk-eroded",
+      "file": "disk-eroded.step",
+      "sha256": "ae68e77b25c6c6f053fcac25a550b78dcf51d7a524ceb955aac80485eb9f442c",
+      "expected": {
+        "volumeMm3": 14.137166941154069,
+        "boundsMm": [
+          [
+            -1.5,
+            -1.5,
+            0
+          ],
+          [
+            1.5,
+            1.5,
+            2
+          ]
+        ],
+        "solids": 1
+      }
+    },
+    {
+      "name": "plate-grown",
+      "file": "plate-grown.step",
+      "sha256": "6fab29d75f9df25c61f197ad4b3cdcb252c6342cd264b67aeeac3cf976f9fc8b",
+      "expected": {
+        "volumeMm3": 124,
+        "boundsMm": [
+          [
+            -0.5,
+            -0.5,
+            0
+          ],
+          [
+            8.5,
+            6.5,
+            2
+          ]
+        ],
+        "solids": 1
+      }
+    },
+    {
+      "name": "plate-eroded",
+      "file": "plate-eroded.step",
+      "sha256": "3fa7cccf220d78d04ca94e2305b7dd0632b791aa069b3a509885de348db2f046",
+      "expected": {
+        "volumeMm3": 55.86283305884593,
+        "boundsMm": [
+          [
+            0.5,
+            0.5,
+            0
+          ],
+          [
+            7.5,
+            5.5,
+            2
+          ]
+        ],
+        "solids": 1
+      }
+    },
+    {
+      "name": "semicircle-grown",
+      "file": "semicircle-grown.step",
+      "sha256": "8ed5d74a2837c78f0cb69d7a8a719f5606ec28dac9d91f0002e540b1fe384a22",
+      "expected": {
+        "volumeMm3": 24.420352248333657,
+        "boundsMm": [
+          [
+            -2.5,
+            -0.5,
+            0
+          ],
+          [
+            2.5,
+            2.5,
+            2
+          ]
+        ],
+        "solids": 1
+      }
+    },
+    {
+      "name": "semicircle-eroded",
+      "file": "semicircle-eroded.step",
+      "sha256": "2cb2e210b40846bb769632e896dbb039b5db1568015293a0182fbfc4db5836b0",
+      "expected": {
+        "volumeMm3": 4.125103815660391,
+        "boundsMm": [
+          [
+            -1.4142135623730951,
+            0.5,
+            0
+          ],
+          [
+            1.4142135623730951,
+            1.5,
+            2
+          ]
+        ],
+        "solids": 1
+      }
+    }
+  ]
+}

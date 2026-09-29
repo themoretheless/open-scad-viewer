@@ -1,6 +1,6 @@
 import {describe,it,expect} from 'vitest'
 import { directCornerTool } from '../src/services/directProfileTools'
-import {bridgeNurbsCurves,sketchDimensions,editSketchDimension} from '../src/services/directDimensions'
+import {bridgeNurbsCurves,sketchDimensions,sketchDimensionStatus,editSketchDimension} from '../src/services/directDimensions'
 import {evaluateNurbsCurve,type NurbsCurve} from '../src/services/nurbsCurve'
 import {emptyDirectDocument,parseDirectDocument,DirectHistory,type DirectSketch} from '../src/services/directModeling'
 const curve=(x:number):NurbsCurve=>({degree:2,knots:[0,0,0,1,1,1],controlPoints:[[x,0,0],[x+1,2,0],[x+3,1,0]],weights:[1,2,1]})
@@ -61,4 +61,34 @@ describe('G2 bridges and sketch dimensions',()=>{
     expect(edited.analytic?.radius).toBe(10)
     expect(sketchDimensions(edited).measurements.map(m=>m.value)).toEqual([10,20])
   })
+})
+
+it('measures a two-point axis dimension without aligning the segment, and edits with a stable sign',()=>{
+ const sketch:DirectSketch={id:'axis',name:'Axis',closed:false,points:[[0,0],[3,4]],dimensions:[{kind:'horizontal',a:0,b:1},{kind:'vertical',a:0,b:1}]}
+ expect(sketchDimensions(sketch).measurements.map(m=>m.value)).toEqual([3,4])
+ const edited=editSketchDimension(sketch,0,-8)
+ expect(edited.points).toEqual([[0,0],[-8,4]])
+ expect(sketchDimensions(edited).measurements.map(m=>m.value)).toEqual([-8,4])
+ expect(sketch.points).toEqual([[0,0],[3,4]])
+})
+it('rejects conflicting lengths without changing the source',()=>{
+ const sketch:DirectSketch={id:'c',name:'Conflict',closed:false,points:[[0,0],[10,0],[10,10]],dimensions:[{kind:'length',a:0,b:1},{kind:'length',a:0,b:1}]}
+ const before=JSON.stringify(sketch)
+ expect(()=>editSketchDimension(sketch,0,20)).toThrow(/conflict|converge/)
+ expect(JSON.stringify(sketch)).toBe(before)
+})
+it('resamples analytic curves when their radius changes',()=>{
+ const sketch:DirectSketch={id:'circle',name:'Circle',closed:true,points:[[1,0],[0,1],[-1,0],[0,-1]],analytic:{kind:'circle',center:[0,0],radius:1,start:0,sweep:360},dimensions:[{kind:'radius'}]}
+ const changed=editSketchDimension(sketch,0,8)
+ expect(changed.points.length).toBeGreaterThan(4)
+ for(const p of changed.points)expect(Math.hypot(...p)).toBeCloseTo(8,8)
+ expect(sketch.analytic?.radius).toBe(1)
+})
+
+it('reports remaining freedom and duplicate length constraints without moving points',()=>{
+ const sketch:DirectSketch={id:'s',name:'Lengths',closed:false,points:[[0,0],[10,0],[10,10]],dimensions:[{kind:'length',a:0,b:1},{kind:'length',a:0,b:1}]}
+ const state=sketchDimensionStatus(sketch)!
+ expect(state.status).toBe('underconstrained');expect(state.degrees_of_freedom).toBe(5);expect(state.redundant_equations).toBe(1)
+ expect(state.points.map(p=>p.position)).toEqual(sketch.points)
+ expect(sketchDimensionStatus({...sketch,dimensions:[{kind:'horizontal',a:0,b:1}]})).toBeNull()
 })

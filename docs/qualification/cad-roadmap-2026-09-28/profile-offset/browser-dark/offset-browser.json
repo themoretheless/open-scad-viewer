@@ -1,0 +1,14 @@
+{
+  "browser": "151.0.7922.34",
+  "roundOffset": true,
+  "holesPreviewed": true,
+  "emptyRefusal": true,
+  "units": true,
+  "cancel": true,
+  "undo": true,
+  "repeat": true,
+  "jsonReload": true,
+  "keyboard": false,
+  "tabPresses": 0,
+  "downloads": 8
+}

@@ -1,0 +1,129 @@
+{
+  "schema": "cad-roadmap-occt/1",
+  "oracle": "OpenCascade via cadquery-ocp",
+  "version": "8.0.1.0.0",
+  "scope": "Independent STEP read, solid validity, exact bounding box, volume and OCCT-tessellated preview. Does not certify all STEP inputs.",
+  "passed": true,
+  "parts": [
+    {
+      "name": "circular-hole",
+      "stepSha256": "74a77b9373279a57a27ab058b0db3e0a2a53948a506321639c4d4f6927da3a64",
+      "valid": true,
+      "solids": 1,
+      "faces": 10,
+      "boundsMm": [
+        [
+          -4.0000001,
+          -3.0000001,
+          -1e-07
+        ],
+        [
+          4.0000001,
+          3.0000001,
+          3.0000001000000003
+        ]
+      ],
+      "volumeMm3": 106.30088815727314,
+      "maxBoundsErrorMm": 1.0000000028043132e-07,
+      "volumeErrorMm3": 3.5065284009760944e-10,
+      "passed": true,
+      "previewTriangles": 304
+    },
+    {
+      "name": "common-disk",
+      "stepSha256": "f83b42f545373f6087a9290212ee45f26dfa643beb4abfabe1ab39fe47f33f84",
+      "valid": true,
+      "solids": 1,
+      "faces": 6,
+      "boundsMm": [
+        [
+          -2.0000001,
+          -2.0000001,
+          -1e-07
+        ],
+        [
+          2.0000001,
+          2.0000001,
+          3.0000001000000003
+        ]
+      ],
+      "volumeMm3": 37.69911184272686,
+      "maxBoundsErrorMm": 1.0000000028043132e-07,
+      "volumeErrorMm3": 3.5065994552496704e-10,
+      "passed": true,
+      "previewTriangles": 284
+    },
+    {
+      "name": "trimmed-right-half",
+      "stepSha256": "a2f0bde59e9694f562e9af9da7105299def24f544b6fff074c9a9a096e098328",
+      "valid": true,
+      "solids": 1,
+      "faces": 5,
+      "boundsMm": [
+        [
+          -1e-07,
+          -2.0000001000000003,
+          -1e-07
+        ],
+        [
+          2.0000001,
+          2.0000001,
+          3.0000001000000003
+        ]
+      ],
+      "volumeMm3": 18.849555922445475,
+      "maxBoundsErrorMm": 1.0000000028043132e-07,
+      "volumeErrorMm3": 9.067164796761062e-10,
+      "passed": true,
+      "previewTriangles": 144
+    },
+    {
+      "name": "trimmed-left-half",
+      "stepSha256": "8b4870b3c77fe6f3717f38b16caec1a77761811ff6d1c5a957996dd86ca87529",
+      "valid": true,
+      "solids": 1,
+      "faces": 5,
+      "boundsMm": [
+        [
+          -2.0000001,
+          -2.0000001000000003,
+          -2.0000001
+        ],
+        [
+          1e-07,
+          2.0000001,
+          1e-07
+        ]
+      ],
+      "volumeMm3": 12.566370614963649,
+      "maxBoundsErrorMm": 1.0000000028043132e-07,
+      "volumeErrorMm3": 6.044764688795112e-10,
+      "passed": true,
+      "previewTriangles": 144
+    },
+    {
+      "name": "two-holes",
+      "stepSha256": "59bbdedf655e01fe6e9331d1d0bfe65c594fb00848efd6ad5855d181ff7be655",
+      "valid": true,
+      "solids": 1,
+      "faces": 14,
+      "boundsMm": [
+        [
+          -4.0000001,
+          -3.0000001,
+          -1e-07
+        ],
+        [
+          4.0000001,
+          3.0000001,
+          3.0000001000000003
+        ]
+      ],
+      "volumeMm3": 139.28761101965915,
+      "maxBoundsErrorMm": 1.0000000028043132e-07,
+      "volumeErrorMm3": 4.3854697651113383e-11,
+      "passed": true,
+      "previewTriangles": 596
+    }
+  ]
+}

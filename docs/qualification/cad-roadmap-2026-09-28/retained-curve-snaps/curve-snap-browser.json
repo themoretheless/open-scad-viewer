@@ -1,0 +1,50 @@
+{
+  "browser": "151.0.7922.34",
+  "cases": [
+    {
+      "case": "xy",
+      "point": [
+        23.578299581962717,
+        20.139336171345313,
+        5
+      ],
+      "radius": 10.000000000000002,
+      "planeDistance": 0,
+      "sampleInterval": 5.497991658110621
+    },
+    {
+      "case": "retained-vertical",
+      "point": [
+        20,
+        23.579146363233907,
+        10.137922506053439
+      ],
+      "radius": 10.000000000000002,
+      "planeDistance": 0,
+      "sampleInterval": 5.496313147633656
+    },
+    {
+      "case": "vertical",
+      "point": [
+        20,
+        23.578299360876223,
+        10.139336540370806
+      ],
+      "radius": 10,
+      "planeDistance": 0,
+      "sampleInterval": 5.497992096293364
+    },
+    {
+      "case": "tilted-arc",
+      "point": [
+        14.017247831754371,
+        24.90294887150373,
+        4.017247831754371
+      ],
+      "radius": 10,
+      "planeDistance": 0,
+      "sampleInterval": 5.49076497110969
+    }
+  ],
+  "undoRedo": true
+}

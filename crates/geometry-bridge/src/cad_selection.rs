@@ -3,6 +3,22 @@ use super::cad_body_affine;
 use super::{Result, Value, encode, field, input};
 use polygon_core::Mesh;
 type V = [f64; 3];
+type Matrix = [[f64; 4]; 4];
+fn multiply(a: Matrix, b: Matrix) -> Matrix {
+    std::array::from_fn(|i| std::array::from_fn(|j| (0..4).map(|k| a[i][k] * b[k][j]).sum()))
+}
+fn inverse_similarity(m: Matrix, scale: f64) -> Result<Matrix> {
+    let mut inverse = [[0.; 4]; 4];
+    inverse[3][3] = 1.;
+    for i in 0..3 {
+        for j in 0..3 {
+            inverse[i][j] = (m[j][i] / scale) / scale;
+        }
+        inverse[i][3] = -(0..3).map(|j| inverse[i][j] * m[j][3]).sum::<f64>();
+    }
+    finite(inverse.iter().flatten().copied())?;
+    Ok(inverse)
+}
 fn finite(xs: impl IntoIterator<Item = f64>) -> Result<()> {
     if xs.into_iter().all(f64::is_finite) {
         Ok(())
@@ -87,6 +103,24 @@ pub fn transform(v: Value) -> Result<Value> {
         return Ok(document);
     }
     let matrix = cad_body_affine::matrix(&positions, delta, axis, angle, scale)?;
+    let inverse = inverse_similarity(matrix, scale)?;
+    // If both source and occurrence move, conjugate its placement so the occurrence
+    // receives the world transform once: (T M T^-1) (T source) = T M source.
+    for &i in &body_ids {
+        if let Some(link) = bodies[i].get_mut("instance") {
+            let source_id: String = field(link, "sourceId")?;
+            let placement: Matrix = field(link, "matrix")?;
+            if placement[3] != [0., 0., 0., 1.] {
+                return Err(input("Invalid instance placement."));
+            }
+            let mut next = multiply(matrix, placement);
+            if ids.contains(&source_id) {
+                next = multiply(next, inverse);
+            }
+            finite(next.iter().flatten().copied())?;
+            link["matrix"] = encode(next)?;
+        }
+    }
     let rotate =
         |p: V| -> V { std::array::from_fn(|i| (0..3).map(|j| matrix[i][j] / scale * p[j]).sum()) };
     let moved = cad_body_affine::apply(
@@ -148,4 +182,28 @@ pub fn transform(v: Value) -> Result<Value> {
     document["bodies"] = encode(bodies)?;
     document["sketches"] = encode(sketches)?;
     Ok(document)
+}
+
+#[cfg(test)]
+mod instance_tests {
+    use super::*;
+    #[test]
+    fn similarity_inverse_cancels_rotation_scale_and_translation() {
+        for scale in [0.01, 1., 100.] {
+            let m = cad_body_affine::matrix(
+                &[vec![0., 0., 0., 20., 30., 40.]],
+                [3., -4., 5.],
+                [1., 2., 3.],
+                37.,
+                scale,
+            )
+            .unwrap();
+            let identity = multiply(m, inverse_similarity(m, scale).unwrap());
+            for i in 0..4 {
+                for j in 0..4 {
+                    assert!((identity[i][j] - if i == j { 1. } else { 0. }).abs() < 1e-10);
+                }
+            }
+        }
+    }
 }

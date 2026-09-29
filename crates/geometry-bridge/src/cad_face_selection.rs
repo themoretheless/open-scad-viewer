@@ -2,7 +2,11 @@
 //! This is not persistent topological naming or certified correspondence.
 use super::{Result, Value, encode, field, input};
 use polygon_core::Mesh;
-pub fn select(v: Value) -> Result<Value> {
+pub fn select(v: Value) -> Result<Value> { select_impl(v, false) }
+/// Push-cap admission may resolve a connected coplanar collection. The native
+/// cap operation must validate connectivity and refuse remote coplanar pieces.
+pub fn select_cap(v: Value) -> Result<Value> { select_impl(v, true) }
+fn select_impl(v: Value, cap: bool) -> Result<Value> {
     let body: Value = field(&v, "body")?;
     let model: brep_core::Model = field(&body, "brep")?;
     model.validate()?;
@@ -57,7 +61,7 @@ pub fn select(v: Value) -> Result<Value> {
         })
         .map(|(i, _)| i)
         .collect::<Vec<_>>();
-    if matches.len() != 1 {
+    if matches.is_empty() || (!cap && matches.len() != 1) {
         return Err(input(
             "Displayed face does not identify one authored planar B-rep support.",
         ));

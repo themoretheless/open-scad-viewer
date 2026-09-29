@@ -1,0 +1,131 @@
+{
+  "schema": "cad-roadmap-step/1",
+  "units": "mm",
+  "toleranceMm": 0.000001,
+  "relativeVolumeTolerance": 1e-8,
+  "parts": [
+    {
+      "name": "fillet-four-r1",
+      "file": "fillet-four-r1.step",
+      "sha256": "84db2f46643ac2d9f7271a27106dbfc08b922fbf4be0a045413b70f474c80059",
+      "expected": {
+        "volumeMm3": 474.84955592153875,
+        "boundsMm": [
+          [
+            0,
+            0,
+            0
+          ],
+          [
+            10,
+            8,
+            6
+          ]
+        ]
+      },
+      "certificate": {
+        "capability": "exact-convex-prism-edge-fillet/1",
+        "complete": true,
+        "notes": [
+          "exact_positive_weight_circular_profile",
+          "exact_cylindrical_longitudinal_patch",
+          "mixed_selected_unselected_profile_vertices",
+          "open_or_closed_profile_selection",
+          "no_mesh_fallback"
+        ]
+      }
+    },
+    {
+      "name": "fillet-one-r05",
+      "file": "fillet-one-r05.step",
+      "sha256": "d8ddb73b95d3c95ab34e28e05e3f5a4f03ae47e15398d5f4b88985d657a515ba",
+      "expected": {
+        "volumeMm3": 479.6780972450962,
+        "boundsMm": [
+          [
+            0,
+            0,
+            0
+          ],
+          [
+            10,
+            8,
+            6
+          ]
+        ]
+      },
+      "certificate": {
+        "capability": "exact-convex-prism-edge-fillet/1",
+        "complete": true,
+        "notes": [
+          "exact_positive_weight_circular_profile",
+          "exact_cylindrical_longitudinal_patch",
+          "mixed_selected_unselected_profile_vertices",
+          "open_or_closed_profile_selection",
+          "no_mesh_fallback"
+        ]
+      }
+    },
+    {
+      "name": "chamfer-one-d1",
+      "file": "chamfer-one-d1.step",
+      "sha256": "97d9035726f8cc32b94faf6abe913234ce79d6c0e7f632d8fcadb5e37e95836d",
+      "expected": {
+        "volumeMm3": 477,
+        "boundsMm": [
+          [
+            0,
+            0,
+            0
+          ],
+          [
+            10,
+            8,
+            6
+          ]
+        ]
+      },
+      "certificate": {
+        "capability": "exact-convex-straight-edge-chamfer/1",
+        "complete": true,
+        "notes": [
+          "exact_equal_distance_support_plane",
+          "connected_open_or_closed_selection",
+          "deterministic_planar_corner_intersection",
+          "no_mesh_fallback"
+        ]
+      }
+    },
+    {
+      "name": "fillet-four-r2",
+      "file": "fillet-four-r2.step",
+      "sha256": "c38d01e199371342614260bfa1026512f11878c072bb432fed102c203b439a82",
+      "expected": {
+        "volumeMm3": 459.398223686155,
+        "boundsMm": [
+          [
+            0,
+            0,
+            0
+          ],
+          [
+            10,
+            8,
+            6
+          ]
+        ]
+      },
+      "certificate": {
+        "capability": "exact-convex-prism-edge-fillet/1",
+        "complete": true,
+        "notes": [
+          "exact_positive_weight_circular_profile",
+          "exact_cylindrical_longitudinal_patch",
+          "mixed_selected_unselected_profile_vertices",
+          "open_or_closed_profile_selection",
+          "no_mesh_fallback"
+        ]
+      }
+    }
+  ]
+}

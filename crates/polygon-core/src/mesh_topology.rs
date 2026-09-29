@@ -64,6 +64,16 @@ impl EdgeUses {
         counts
     }
 
+    pub(crate) fn defects(&self) -> (Vec<[usize;2]>, Vec<[usize;2]>) {
+        let mut non_manifold=Vec::new(); let mut orientation=Vec::new();
+        for uses in self.groups() {
+            let [a,b]=unpack(uses[0]); let edge=[a.min(b),a.max(b)];
+            if uses.len()>2 {non_manifold.push(edge);}
+            else if uses.len()==2 && uses[0]&1==uses[1]&1 {orientation.push(edge);}
+        }
+        (non_manifold,orientation)
+    }
+
     /// Directed boundary edges in the same canonical order as the former map.
     pub(crate) fn boundary(&self) -> impl Iterator<Item = [usize; 2]> + '_ {
         self.groups()

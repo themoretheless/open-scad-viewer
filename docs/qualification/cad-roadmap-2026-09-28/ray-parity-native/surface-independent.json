@@ -1,0 +1,8 @@
+{
+  "sourceSha256": "85805d12189fa7eca5379d04a87d0b55413d879aedda5f9e2d6e1f6c0072d9e6",
+  "cases": 54,
+  "roots": 108,
+  "arithmetic": "exact rational Bernstein signs and degree bounds",
+  "maxCells": 99,
+  "checks": "passed"
+}

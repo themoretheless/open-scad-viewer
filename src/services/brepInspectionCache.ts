@@ -8,8 +8,9 @@ export class BrepInspectionCache {
   private readonly maxEntries: number
   private readonly maxCharacters: number
 
+  // Cover the admitted 200 independent objects plus 1000 instances without scan eviction.
   constructor(
-    limits = { maxEntries: 128, maxCharacters: MAX_DOCUMENT_CHARACTERS },
+    limits = { maxEntries: 1200, maxCharacters: MAX_DOCUMENT_CHARACTERS },
     private readonly inspectModel: (model: NurbsBrep) => void = inspectNurbsBrep,
   ) {
     for (const limit of [limits.maxEntries, limits.maxCharacters]) {
