@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import VrControls from './components/VrControls.vue'
 import ModelingGridControls from './components/ModelingGridControls.vue'
 import MaterialControls from './features/MaterialControls.vue'
 import { clamp } from './services/math3d'
@@ -2807,6 +2808,7 @@ function sanitizeFileName(name: string) { return (name.replace(/[^\w.() -]+/g, '
       </section>
       <section v-else class="editor-panel" :style="{ width: `${editorWidth}px` }" :aria-label="t('editor')">
         <div class="toolbar editor-toolbar">
+          <VrControls :meshes="sceneState.meshes" :visibility="sceneState.visibility" :isolated="sceneState.isolated" :selected-index="sceneState.selectedIndex" :locale="lang" />
           <button class="btn btn-primary" type="button" title="Ctrl/⌘+Enter" :disabled="rendering" @click="doRender('full')">
             <svg class="play" width="11" height="11" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6 4v16l14-8z"/></svg>
             {{ t('render') }}

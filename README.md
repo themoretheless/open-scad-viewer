@@ -695,3 +695,56 @@ It records `docs/qualification/svg-static-cycle-v1.json` only when every check
 passes and neither the sources, test inputs, build configuration nor geometry
 WASM/Brotli decoder change during qualification. This
 component evidence does not replace the application's broader release gates.
+
+### VR viewing
+
+The **VR** button is available in the source editor and the Solid and Mesh toolbars.
+Open the application over HTTPS (localhost also works) in a browser with an available
+WebXR headset, then choose **Enter VR**. The browser asks permission to start an
+immersive session. WebXR session requirements are described in the
+[WebXR specification](https://www.w3.org/TR/webxr/).
+
+VR shows a snapshot of the visible geometry at entry, including visibility/isolation
+and object placement. CAD Z-up is converted to headset Y-up. The scene is fitted to
+60 cm along its longest dimension and placed 1.2 m ahead; this is **not a 1:1 physical
+scale**. Move your head to inspect it, and use the controller trigger to recenter.
+Exit through the headset menu or **Exit VR**. Re-enter to refresh the snapshot.
+
+This viewing mode uses opaque matte colors. Section cuts, annotations, material
+transparency, editing tools and transient editing overlays are not reproduced.
+The desktop view keeps its existing renderer and camera. A missing headset,
+unsupported browser or denied permission produces an actionable message.
+
+Validation: `npx vitest run tests/vrControls.test.ts tests/vrScene.test.ts tests/vrSession.test.ts` covers
+scene transforms, visibility, stereo draw submission and session cleanup. Physical
+headset comfort, device permissions and compositor output require a headset smoke test.
+
+
+#### Headset-free development check
+
+Run the development server and open its URL with `?xrEmulator=1`. This explicitly
+loads Meta IWER 2.5.0 with a Quest 3 profile; it is excluded from production builds.
+Use the ordinary **VR → Enter VR** controls in Solid, Mesh or the source editor.
+The bottom emulator panel provides head movement, rotation, a controller trigger,
+reset and session exit. **Free movement** enables IWER's own controls.
+**Inspect stereo** displays the actual session views, eye separation and WebGL error.
+Expected: `left, right`, `63.0 mm`, error `0`.
+
+The browser smoke test covers all three entry points, head movement, controller
+recentering, emulator-menu exit and repeated entry. See
+[the recorded validation](docs/vr-emulator-validation.md).
+
+
+#### VR crate boundary
+
+`crates/vr-core` is an independent Rust crate (`rlib` + `cdylib`) with no geometry
+kernel or browser dependencies. It owns scene transforms, indexed bounds,
+CAD Z-up to XR Y-up conversion, the 60 cm fit and viewer-relative anchor placement.
+`src/services/vrKernel.ts` transfers typed data to its WASM ABI; `vrScene.ts`
+selects visible application objects. WebXR permission/session lifecycle and WebGL
+submission remain browser host responsibilities in `vrSession.ts`.
+
+Build with `npm run build:vr` (also included in `build:geometry` and normal npm
+lifecycle hooks). Run native tests with `cargo test --locked --manifest-path
+crates/Cargo.toml -p vr-core`. The VR TypeScript tests use the actual generated
+WASM module, including invalid geometry recovery and memory-growth checks.

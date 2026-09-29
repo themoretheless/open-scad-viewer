@@ -10,6 +10,11 @@ import { readWorkspaceShareHash } from './services/workspaceShare'
 import { setOptionalWasmCompiler } from './services/wasmCompilation'
 import { compileStreamingWasm } from './services/wasmStreaming'
 
+if (import.meta.env.DEV && new URLSearchParams(location.search).get('xrEmulator') === '1') {
+  const { installVrEmulator } = await import('./dev/vrEmulator')
+  installVrEmulator()
+}
+
 setOptionalWasmCompiler(compileStreamingWasm)
 
 // Apply the bounded built-in palette before the asynchronous workspace bootstrap.

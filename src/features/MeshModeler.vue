@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import VrControls from '../components/VrControls.vue'
+import { prepareVrPolygons } from '../services/vrScene'
 import { computed, nextTick, ref, shallowRef, watch } from 'vue'
 import { stringifyMeshJson } from '../services/meshJson'
 import ModelingFloorGrid from '../components/ModelingFloorGrid.vue'
@@ -627,6 +629,7 @@ function onWheel(event: WheelEvent) {
   view.value = Math.max(20, Math.min(800, view.value * (event.deltaY > 0 ? 0.9 : 1.1)))
 }
 
+function vrSnapshot() { return prepareVrPolygons(document.value.objects.filter(object => object.visible).map(object => object.mesh)) }
 const scene = computed(() => document.value.objects.filter(o => o.visible).map(o => ({ id: o.id, ...projected(o.id) })))
 // SVG uses painter order: sort all faces together so nearer objects also cover farther ones.
 const sceneFaces = computed(() => scene.value.flatMap(object =>
@@ -655,6 +658,7 @@ const sceneFaces = computed(() => scene.value.flatMap(object =>
     <div class="mesh-body">
       <input ref="fileInput" type="file" :accept="MESH_IMPORT_ACCEPT" hidden @change="importMesh" />
       <div class="pane-tools" role="toolbar" :aria-label="label('Инструменты Mesh', 'Mesh tools')">
+        <VrControls :get-scene="vrSnapshot" :available="document.objects.some(object => object.visible && object.mesh.indices.length > 0)" :locale="locale" />
         <button type="button" class="tool-icon" :title="label('Куб', 'Cube')" :aria-label="label('Куб', 'Cube')" @click="addPrimitive('box')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7l8-4 8 4-8 4zM4 7v10l8 4 8-4V7M12 11v10"/></svg></button>
         <button type="button" class="tool-icon" :title="label('UV-сфера', 'UV Sphere')" :aria-label="label('UV-сфера', 'UV Sphere')" @click="addPrimitive('sphere')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM3 12h18M12 3c-3 2.5-3 15.5 0 18M12 3c3 2.5 3 15.5 0 18"/></svg></button>
         <button type="button" class="tool-icon" :title="label('Импорт сетки', 'Import mesh')" :aria-label="label('Импорт сетки', 'Import mesh')" @click="fileInput?.click()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21V9M6 15l6-6 6 6M4 5h16"/></svg></button>

@@ -40,3 +40,6 @@ src/generated/geometry-kernels
 src/generated/language-kernel
 src/generated/wasm-brotli
 src/generated/harfbuzz
+
+# Independent VR WASM module
+src/generated/vr-core/

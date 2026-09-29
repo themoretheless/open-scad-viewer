@@ -37,6 +37,7 @@ export default defineConfig({
             { name: 'harfbuzz-bytes', test: /src[\\/]generated[\\/]harfbuzz[\\/]bytes/ },
             { name: 'photogrammetry-bytes', test: /src[\\/]generated[\\/]photogrammetry[\\/]bytes/ },
             { name: 'wasm-brotli-bytes', test: /src[\\/]generated[\\/]wasm-brotli[\\/]bytes/ },
+            { name: 'vr-core-bytes', test: /src[\\/]generated[\\/]vr-core[\\/]bytes/ },
             // Shared by the entry graph (photogrammetry loader) and lazy language
             // chunks; without its own chunk it drags the geometry kernel into
             // the entry preload list.

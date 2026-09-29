@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import VrControls from '../components/VrControls.vue'
+import { prepareVrPolygons } from '../services/vrScene'
 import type {FaceContacts} from '../services/solidFaceContacts'
 import type {BoundaryAgreement} from '../services/solidBoundaryAgreement'
 import type {NurbsSurfaceDistance} from '../services/nurbsSurface'
@@ -2101,6 +2103,9 @@ watch(() => [props.open, kernelReady.value, smoothDisplay.value, renderBodies.va
     if (generation === displayGeneration) displayPending.value = false
   }
 }, { flush: 'post', immediate: true })
+function vrSnapshot() {
+  return prepareVrPolygons(renderBodies.value.map(body => ({ ...displayMeshFor(body).mesh, color: body.material ? solidMaterialRgb(body.material.color) : undefined })))
+}
 const gpuBodies = computed<SolidGpuBody[]>(() => {
   if (!gpuActive.value) return []
   const hideSelected = !!advancedPreview.value.document
@@ -3186,6 +3191,7 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
         <div v-if="pane === '3d' && sketchPaneOpen" class="splitter" role="separator" tabindex="0" aria-orientation="vertical" :aria-label="label('Ширина 2D и 3D', '2D and 3D width')" :aria-valuenow="Math.round(split)" :aria-valuemin="25" :aria-valuemax="75" @pointerdown="resizeSplit" @pointermove="moveSplit" @pointerup="($event.currentTarget as HTMLElement).releasePointerCapture($event.pointerId)" @keydown="splitKey" @dblclick="split = 50"><span /></div>
         <section v-show="pane === '3d' || sketchPaneOpen" class="pane" :class="{ active: mode === pane, 'sketch-pane': pane === '2d' }" :aria-label="pane === '2d' ? label('2D — эскизы', '2D — sketches') : label('3D — тела', '3D — bodies')">
           <div class="pane-tools">
+            <VrControls v-if="pane === '3d'" :get-scene="vrSnapshot" :available="renderBodies.some(body => body.mesh.indices.length > 0)" :locale="locale" />
             <template v-if="pane === '2d'">
               <button v-for="(name, value) in { select: label('Выбор · V', 'Select · V'), rectangle: label('Прямоугольник · R', 'Rectangle · R'), circle: label('Круг · C', 'Circle · C'), arc: label('Дуга', 'Arc'), slot: label('Паз', 'Slot'), trim: label('Обрезать','Trim'), polyline: label('Ломаная · L', 'Polyline · L') }" :key="value" class="tool-icon" :title="name" :aria-label="name" :aria-pressed="tool === value" @click="beginSketch(value)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><path :d="TOOL_ICONS[value]" /></svg></button>
               <button class="tool-icon" :title="label('Рамка','Box select')" :aria-label="label('Рамка','Box select')" :aria-pressed="boxSelect" @click="boxSelect=!boxSelect"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><path :d="TOOL_ICONS.box" /></svg></button>
