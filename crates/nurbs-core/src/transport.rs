@@ -18,6 +18,35 @@ fn optional_field<T: for<'a> Deserialize<'a>>(v: &Value, k: &str) -> Result<Opti
 }
 pub fn dispatch(v: Value) -> Result<Value> {
     let op: String = field(&v, "op")?;
+    if op == "curve_offset_bevel_wire" {
+        let result=curve_offset_wire::bevel_wire(&field(&v,"curve")?,field(&v,"distance")?,field(&v,"toleranceMm")?,field(&v,"maxCells")?)?;
+        let diagnostics=crate::curve_offset_diagnostics::inspect_chain(&result.edges,result.closed,optional_field::<usize>(&v,"maxPairs")?.unwrap_or(1_000_000))?.to_value();
+        let cells:Vec<_>=result.edges.iter().zip(&result.roles).map(|(edge,role)|{
+            let source=match role {curve_offset_wire::Role::Source(domain)=>json!({"kind":"source-offset","domain":domain}),curve_offset_wire::Role::Bevel(knot)=>json!({"kind":"bevel","sourceKnot":knot})};
+            json!({"domain":edge.domain,"stationDomain":edge.domain,"source":source,"errorUpperMm":edge.error_upper_mm})
+        }).collect();
+        return Ok(json!({"curves":encode(result.curves)?,"report":{"accepted":true,"closed":result.closed,"wholeWire":true,"wholeCurve":false,"method":"outward-source-offset-bevel-wire/1","errorUpperMm":result.error_upper_mm,"toleranceMm":v["toleranceMm"].clone(),"cells":cells,"chainDiagnostics":diagnostics,"offsetRegularityCertified":false,"regionTopologyCertified":false,"regionTrimmed":false}}));
+    }
+    if op == "curve_offset_bounded" {
+        let result = curve_offset::approximate_curve(&field(&v,"curve")?,field(&v,"distance")?,
+            field(&v,"toleranceMm")?,field(&v,"maxCells")?)?;
+        let cells: Vec<_> = result.segments.iter().map(|s|json!({
+            "domain":s.domain,"errorUpperMm":s.error_upper_mm
+        })).collect();
+        let diagnostics = if result.segments.is_empty() {Value::Null} else {
+            crate::curve_offset_diagnostics::inspect_chain(&result.segments,result.closed,
+                optional_field::<usize>(&v,"maxPairs")?.unwrap_or(1_000_000))?.to_value()
+        };
+        return Ok(json!({"curves":encode(result.curves)?,"report":{
+            "closed":result.closed,
+            "accepted":true,"errorUpperMm":result.error_upper_mm,
+            "toleranceMm":v["toleranceMm"].clone(),"wholeCurve":true,
+            "method":"outward-rational-jets-chord-bound/1","cells":cells,
+            "chainDiagnostics":diagnostics,
+            "offsetRegularityCertified":false,
+            "regionTopologyCertified":false
+        }}));
+    }
     if op == "curve_certify_foundation" {
         return foundation::certify_curve(&field(&v, "curve")?, optional_field(&v, "tolerance")?);
     }

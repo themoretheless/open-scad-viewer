@@ -136,7 +136,7 @@ it('generates nominal graphs off-thread and exposes, rather than hides, their bo
   expect(result.reactionsN.reduce((sum,force)=>sum+force[2],0)).toBeCloseTo(100,9)
   expect(box.vertices.byteLength).toBeGreaterThan(0)
   const flat={...box,vertices:box.vertices.map((value,i)=>i%6===2?0:value)}
-  await expect(client.run({kind:'latticeGraph',mesh:flat,options:latticeOptions})).rejects.toThrow('three-dimensional bounds')
+  await expect(client.run({kind:'latticeGraph',mesh:flat,options:latticeOptions})).rejects.toThrow(/three-dimensional bounds|3D bounds/)
   expect(await client.run({kind:'latticeGraph',mesh:box,options:latticeOptions})).toEqual(graph)
   expect(workers).toHaveLength(1)
 },30000)
@@ -149,3 +149,36 @@ it('transfers loads across explicit solid bonds in the real worker and preserves
   const unstable=structuredClone(bondedSolidExample);unstable.restrained.fill([false,false,false])
   await expect(client.run({kind:'bondedSolid',inputJson:JSON.stringify(unstable)})).rejects.toMatchObject({code:'BONDED_SOLID_SOLVE'})
 },30000)
+
+it('retains a bounded NURBS offset through the real worker and preserves source geometry',async()=>{
+ const client=new MainSolidWorkerClient(realWorker);clients.push(client)
+ const document={version:1 as const,sketches:[],bodies:[],curves:[{id:'source',name:'Line',curve:{degree:1,knots:[0,0,1,1],weights:[1,1],controlPoints:[[0,0,7],[10,0,7]]}}]}
+ const before=structuredClone(document)
+ const result=await client.run({kind:'curveOffset',document,options:{id:'source',createdId:'offset',distance:2,toleranceMm:.01,maxCells:256,maxPairs:1000}})
+ expect(document).toEqual(before);expect(result.document.curves![0]).toEqual(before.curves[0])
+ expect(result.document.curves![1]).toMatchObject({id:'offset',curve:{degree:1}})
+ const points=result.document.curves![1]!.curve.controlPoints
+ expect(points).toHaveLength(2)
+ for(const [i,point] of points.entries()){
+  expect(Math.hypot(point[0]!-i*10,point[1]!-2)).toBeLessThanOrEqual(result.report.errorUpperMm)
+  expect(point[2]).toBe(7)
+ }
+ expect(result.report).toMatchObject({accepted:true,wholeCurve:true,regionTopologyCertified:false,offsetRegularityCertified:false})
+ expect(result.report.errorUpperMm).toBeLessThanOrEqual(.01)
+ const corner={...document,curves:[{...document.curves[0]!,curve:{degree:1,knots:[0,0,.5,1,1],weights:[1,1,1],controlPoints:[[0,0,7],[10,0,7],[10,10,7]]}}]}
+ await expect(client.run({kind:'curveOffset',document:corner,options:{id:'source',createdId:'corner-offset',distance:2,toleranceMm:.01,maxCells:256,maxPairs:1000}})).rejects.toThrow('explicit profile join')
+ const zero=await client.run({kind:'curveOffset',document,options:{id:'source',createdId:'zero',distance:0,toleranceMm:.01,maxCells:256,maxPairs:1000}})
+ expect(zero.document.curves![1]!.curve).toEqual(document.curves[0]!.curve)
+})
+
+it('retains a periodic bevel offset through real WASM with explicit source roles',async()=>{
+ const client=new MainSolidWorkerClient(realWorker);clients.push(client)
+ const document={version:1 as const,sketches:[],bodies:[],curves:[{id:'square',name:'Periodic square',curve:{degree:1,knots:[0,1,2,3,4,5,6],weights:[1,1,1,1,1],controlPoints:[[0,0,3],[10,0,3],[10,10,3],[0,10,3],[0,0,3]],periodic:true}}]}
+ const before=structuredClone(document)
+ const result=await client.run({kind:'curveOffset',document,options:{id:'square',createdId:'bevel',distance:-2,toleranceMm:1e-6,maxCells:256,maxPairs:1000,join:'bevel'}})
+ expect(document).toEqual(before);expect(result.document.curves![0]).toEqual(document.curves[0])
+ expect(result.report).toMatchObject({accepted:true,closed:true,wholeCurve:false,wholeWire:true,regionTrimmed:false,regionTopologyCertified:false,chainDiagnostics:{complete:true,simple:true}})
+ expect(result.report.cells.filter(c=>c.source?.kind==='bevel')).toHaveLength(4)
+ const points=result.document.curves![1]!.curve.controlPoints
+ expect(points[0]).toEqual(points.at(-1));expect(points.every(p=>p[2]===3)).toBe(true)
+})

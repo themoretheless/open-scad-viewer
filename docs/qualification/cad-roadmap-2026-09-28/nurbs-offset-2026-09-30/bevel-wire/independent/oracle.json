@@ -1,0 +1,11 @@
+{
+  "oracle": "Decimal(70) independent rational one-sided source-normal/bevel evaluation",
+  "samples": 2934,
+  "cells": 326,
+  "curves": 2,
+  "maxSampledErrorMm": 0.0002998446804550896,
+  "errorUpperMm": 0.0004996983281230756,
+  "closed": true,
+  "continuousCertificateFromIndependentOracle": false,
+  "regionTopologyCertified": false
+}

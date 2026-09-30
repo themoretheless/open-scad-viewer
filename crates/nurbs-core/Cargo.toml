@@ -14,3 +14,7 @@ math-core = { package = "osv-math", path = "../math-core" }
 value-codec = { path = "../value-codec" }
 geometry-ops = { path = "../geometry-ops" }
 cad-predicates = { path = "../cad-predicates" }
+
+[[example]]
+name = "bounded_curve_offset"
+required-features = ["transport"]

@@ -1,3 +1,4 @@
+import {validCurveOffsetDiagnostics} from './curveOffsetDiagnostics'
 import {solidDistanceExpectation,validSolidDistance,type SolidDistanceOptions,type SolidDistanceResult} from './solidDistance'
 import {selfIntersectionExpectation,validSelfIntersection,type SelfIntersection} from './solidSelfIntersection'
 import {faceContactExpectation,validFaceContacts,type FaceContacts,type FaceContactLimits} from './solidFaceContacts'
@@ -19,6 +20,7 @@ import type {DisplayMesh} from './solidDisplayCache'
 import type {NurbsBrep} from './geometry/brep'
 import type {SolidBrepToolOptions,SolidBrepToolResult} from './solidBrepTool'
 import type {SolidNurbsEditOptions} from './solidNurbsEdit'
+import type {SolidCurveOffsetOptions,offsetSolidCurve} from './solidCurveOffset'
 import type {SolidPointEditOptions} from './solidPointEdit'
 import type {SolidSketchEditOptions} from './solidSketchEdit'
 import type {SolidBooleanOptions,SolidBooleanResult} from './solidBoolean'
@@ -72,6 +74,7 @@ export type MainSolidJob =
   | {kind:'modelGraphImport';document:DirectDocument;text:string;group?:string}
   | {kind:'brepTool';document:DirectDocument;options:SolidBrepToolOptions}
   | {kind:'nurbsEdit';document:DirectDocument;options:SolidNurbsEditOptions}
+  | {kind:'curveOffset';document:DirectDocument;options:SolidCurveOffsetOptions}
   | {kind:'pointEdit';document:DirectDocument;options:SolidPointEditOptions}
   | {kind:'sketchEdit';document:DirectDocument;options:SolidSketchEditOptions}
   | {kind:'boolean';document:DirectDocument;options:SolidBooleanOptions}
@@ -94,7 +97,7 @@ export type MainSolidJob =
   | {kind:'bondedSolid';inputJson:string}
   | {kind:'structuralSections'; mesh:LatticeGraphMesh; axis:'x'|'y'|'z'; stations:number[]}
   | {kind:'latticeGraph'; mesh:LatticeGraphMesh; options:LighteningOptions}
-export interface MainSolidResults {solidDistance:SolidDistanceResult;selfIntersection:SelfIntersection;faceContacts:FaceContacts;boundaryAgreement:BoundaryAgreement;shellDistance:ShellDistanceResult;faceDistance:FaceDistanceResult;surfaceDistance:NurbsSurfaceDistance;curveDistance:NurbsCurveDistance;sketchSnaps:SnapGeometry;bodySnaps:SnapGeometry;faceSketch:ReturnType<typeof prepareSolidFaceSketch>;bodyEdges:ReturnType<typeof solidBodyEdges>;topology:ReturnType<typeof solidTopology>;curveDisplay:number[][];profileDisplay:[number,number][][];surfaceMesh:PolygonMesh;surfaceBoundary:SurfaceBoundaryReport;measureVertices:PointMeasurement;measureEdge:CurveMeasurement;primitive:DirectDocument;modelGraphImport:DirectDocument;displayMesh:DisplayMesh;restoreDocument:DirectDocument;brepTool:SolidBrepToolResult;nurbsEdit:DirectDocument;pointEdit:DirectDocument;sketchEdit:DirectDocument;boolean:SolidBooleanResult;sceneEdit:DirectDocument;curveMatch:ReturnType<typeof matchSolidCurve>;surfaceMatch:ReturnType<typeof matchSolidSurface>;seamPrepare:ReturnType<typeof prepareSolidSurfaceSeams>;surfaceBuild:ReturnType<typeof buildSolidSurface>;nurbsRefit:ReturnType<typeof refitSolidNurbs>;profilePrepare:ReturnType<typeof prepareSolidProfile>;profileEdit:DirectDocument;bodyEdit:DirectDocument;revolve:DirectDocument;extrusion:DirectDocument;meshContacts:ReturnType<typeof inspectSolidIntersections>;bondedSolid:BondedSolidResult; main:DirectDocument; cad:DirectDocument; inspect:CadPairReport[]; truss:TrussResponse; latticeGraph:NominalLatticeGraph; structuralSections:StructuralSections}
+export interface MainSolidResults {solidDistance:SolidDistanceResult;selfIntersection:SelfIntersection;faceContacts:FaceContacts;boundaryAgreement:BoundaryAgreement;shellDistance:ShellDistanceResult;faceDistance:FaceDistanceResult;surfaceDistance:NurbsSurfaceDistance;curveDistance:NurbsCurveDistance;sketchSnaps:SnapGeometry;bodySnaps:SnapGeometry;faceSketch:ReturnType<typeof prepareSolidFaceSketch>;bodyEdges:ReturnType<typeof solidBodyEdges>;topology:ReturnType<typeof solidTopology>;curveDisplay:number[][];profileDisplay:[number,number][][];surfaceMesh:PolygonMesh;surfaceBoundary:SurfaceBoundaryReport;measureVertices:PointMeasurement;measureEdge:CurveMeasurement;primitive:DirectDocument;modelGraphImport:DirectDocument;displayMesh:DisplayMesh;restoreDocument:DirectDocument;brepTool:SolidBrepToolResult;nurbsEdit:DirectDocument;curveOffset:ReturnType<typeof offsetSolidCurve>;pointEdit:DirectDocument;sketchEdit:DirectDocument;boolean:SolidBooleanResult;sceneEdit:DirectDocument;curveMatch:ReturnType<typeof matchSolidCurve>;surfaceMatch:ReturnType<typeof matchSolidSurface>;seamPrepare:ReturnType<typeof prepareSolidSurfaceSeams>;surfaceBuild:ReturnType<typeof buildSolidSurface>;nurbsRefit:ReturnType<typeof refitSolidNurbs>;profilePrepare:ReturnType<typeof prepareSolidProfile>;profileEdit:DirectDocument;bodyEdit:DirectDocument;revolve:DirectDocument;extrusion:DirectDocument;meshContacts:ReturnType<typeof inspectSolidIntersections>;bondedSolid:BondedSolidResult; main:DirectDocument; cad:DirectDocument; inspect:CadPairReport[]; truss:TrussResponse; latticeGraph:NominalLatticeGraph; structuralSections:StructuralSections}
 export type MainSolidRequest = {version:1; id:number; job:MainSolidJob}
 export type MainSolidResponse = {version:1; id:number; kind:MainSolidJob['kind']} & (
   | {ok:true; result:MainSolidResults[keyof MainSolidResults]}
@@ -323,6 +326,23 @@ export function mainSolidResult(job:MainSolidExpectation, value:unknown): boolea
     return nonnegative(c.budget)&&!!b&&Number.isInteger(b.degree)&&b.degree>=1&&Number.isInteger(b.controlCount)&&b.controlCount>b.degree
       &&b.normalizedSeam===true&&typeof b.editedReversed==='boolean'&&arrayOf(b.referenceDomain,2,finite)&&arrayOf(b.editedDomain,2,finite)
       &&(!c.accepted||c.wholeSurface===true&&nonnegative(c.referenceErrorUpper)&&nonnegative(c.editedErrorUpper)&&c.referenceErrorUpper!<=c.budget&&c.editedErrorUpper!<=c.budget)
+  }
+  if(job.kind==='curveOffset') {
+    const nonnegative=(n:unknown):n is number=>finite(n)&&n>=0
+    const v=value as MainSolidResults['curveOffset'],r=v.report
+    return mainSolidResult({kind:'extrusion'},v.document)&&!!r&&r.accepted===true
+      &&(r.method==='outward-rational-jets-chord-bound/1'?r.wholeCurve===true:r.method==='outward-source-offset-bevel-wire/1'&&r.wholeCurve===false&&r.wholeWire===true&&r.regionTrimmed===false)&&typeof r.closed==='boolean'
+      &&r.regionTopologyCertified===false&&r.offsetRegularityCertified===false
+      &&nonnegative(r.errorUpperMm)&&finite(r.toleranceMm)&&r.toleranceMm>0&&r.errorUpperMm<=r.toleranceMm
+      &&Array.isArray(r.cells)&&r.cells.length<=65536&&r.cells.every(c=>!!c&&arrayOf(c.domain,2,finite)
+        &&c.domain[0]<c.domain[1]&&nonnegative(c.errorUpperMm)&&c.errorUpperMm<=r.errorUpperMm)
+      &&(r.wholeWire!==true||r.cells.length>0&&r.cells.every((c,i)=>{
+        const role=c.source
+        return c.domain[0]===i&&c.domain[1]===i+1&&!!role&&(role.kind==='source-offset'
+          ?arrayOf(role.domain,2,finite)&&role.domain[0]<role.domain[1]
+          :role.kind==='bevel'&&finite(role.sourceKnot))
+      }))
+      &&(r.cells.length?validCurveOffsetDiagnostics(r.chainDiagnostics,r.cells.length):r.chainDiagnostics===null)
   }
   if(job.kind==='surfaceBuild') {
     const v=value as MainSolidResults['surfaceBuild'],r=v.report

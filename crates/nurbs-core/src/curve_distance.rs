@@ -7,7 +7,7 @@ use value_codec::{Value, json};
 
 /// Homogeneous de Boor, with outward rounding of every arithmetic operation.
 /// A span parameter stays inside all interpolation knot ranges, so alpha ∈ [0,1].
-pub(crate) fn enclosure(curve: &Curve, span: usize, t: Interval) -> Result<Vec<Interval>> {
+pub(crate) fn restricted_controls(curve: &Curve, span: usize, t: Interval) -> Result<Vec<Vec<Interval>>> {
     let degree = curve.degree;
     let dimension = curve.control_points[0].len();
     let mut d = Vec::with_capacity(degree + 1);
@@ -42,7 +42,7 @@ pub(crate) fn enclosure(curve: &Curve, span: usize, t: Interval) -> Result<Vec<I
     // lo^(degree-k), hi^k. Keep the construction interval-valued and then use
     // the positive rational convex hull, avoiding interval-parameter dependency.
     let count = if t.lo == t.hi { 1 } else { degree + 1 };
-    let mut bounds = vec![[f64::INFINITY, f64::NEG_INFINITY]; dimension];
+    let mut controls = Vec::with_capacity(count);
     for k in 0..count {
         let mut q = d.clone();
         for r in 1..=degree {
@@ -67,25 +67,28 @@ pub(crate) fn enclosure(curve: &Curve, span: usize, t: Interval) -> Result<Vec<I
                 q[j][dimension] = q[j][dimension].intersect(min_weight, max_weight)?;
             }
         }
+        controls.push(q[degree].clone());
+    }
+    Ok(controls)
+}
+
+pub(crate) fn enclosure(curve: &Curve, span: usize, t: Interval) -> Result<Vec<Interval>> {
+    let dimension = curve.control_points[0].len();
+    let origin = &curve.control_points[span - curve.degree];
+    let mut bounds = vec![[f64::INFINITY, f64::NEG_INFINITY]; dimension];
+    for control in restricted_controls(curve, span, t)? {
         for axis in 0..dimension {
-            let lo = (span - degree..=span)
-                .map(|i| curve.control_points[i][axis])
-                .fold(f64::INFINITY, f64::min);
-            let hi = (span - degree..=span)
-                .map(|i| curve.control_points[i][axis])
-                .fold(f64::NEG_INFINITY, f64::max);
-            let p = q[degree][axis]
-                .div(q[degree][dimension])?
-                .add(Interval::point(origin[axis]))?
-                .intersect(lo, hi)?;
+            let lo = (span - curve.degree..=span)
+                .map(|i| curve.control_points[i][axis]).fold(f64::INFINITY, f64::min);
+            let hi = (span - curve.degree..=span)
+                .map(|i| curve.control_points[i][axis]).fold(f64::NEG_INFINITY, f64::max);
+            let p = control[axis].div(control[dimension])?
+                .add(Interval::point(origin[axis]))?.intersect(lo, hi)?;
             bounds[axis][0] = bounds[axis][0].min(p.lo);
             bounds[axis][1] = bounds[axis][1].max(p.hi);
         }
     }
-    bounds
-        .into_iter()
-        .map(|[lo, hi]| Interval::new(lo, hi))
-        .collect()
+    bounds.into_iter().map(|[lo, hi]| Interval::new(lo, hi)).collect()
 }
 
 fn spans(curve: &Curve) -> Vec<usize> {
