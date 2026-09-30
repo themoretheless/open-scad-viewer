@@ -1,6 +1,7 @@
 import {readFileSync} from 'node:fs'
 import {brotliCompressSync, deflateRawSync} from 'node:zlib'
 import {describe, expect, it} from 'vitest'
+import {decodeBase91} from '../src/services/wasmBase91'
 import packedHarfBuzz from '../src/generated/harfbuzz/bytes'
 import {unpackBrotliWasmBase64} from '../src/services/wasmBrotliPacking'
 import {verifyPackedWasmChunk} from '../scripts/verify-packed-wasm.mjs'
@@ -23,10 +24,10 @@ describe('lossless packed HarfBuzz runtime', () => {
     const stale = Buffer.from(original)
     stale[stale.length - 1] ^= 1
     expect(() => verifyPackedWasmChunk(chunk(packedHarfBuzz), stale, 'HarfBuzz')).toThrow(/differs from the original/)
-    const wrongSize = Buffer.from(packedHarfBuzz, 'base64')
+    const wrongSize = Buffer.from(decodeBase91(packedHarfBuzz))
     wrongSize.writeUInt32LE(original.length + 1)
     expect(() => verifyPackedWasmChunk(chunk(wrongSize.toString('base64')), original, 'HarfBuzz')).toThrow(/size mismatch/)
-    const trailing = Buffer.concat([Buffer.from(packedHarfBuzz, 'base64'), Buffer.from([0, 0])])
+    const trailing = Buffer.concat([Buffer.from(decodeBase91(packedHarfBuzz)), Buffer.from([0, 0])])
     expect(() => verifyPackedWasmChunk(chunk(trailing.toString('base64')), original, 'HarfBuzz')).toThrow(/trailing/)
     const invalid = Buffer.from(original)
     invalid[0] = 1

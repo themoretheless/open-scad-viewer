@@ -1,5 +1,5 @@
-import { expect, it } from 'vitest'
-import { DirectHistory, emptyDirectDocument } from '../src/services/directModeling'
+import { expect, it, vi } from 'vitest'
+import { DirectHistory, emptyDirectDocument, parseDirectDocument } from '../src/services/directModeling'
 
 const document = (name: string) => ({ ...emptyDirectDocument(), groups: [{ name, source: 'cube(1);' }] })
 
@@ -44,4 +44,35 @@ it('retains the serialized-size bound after undo/redo and a new commit', () => {
   history.commit(large(5))
   for (let revision = 4; revision >= 2; revision--) expect(history.undo().groups![0]!.name).toBe(`${revision}-0`)
   expect(history.canUndo).toBe(false)
+})
+
+it('projects detached object identities without copying mesh geometry',()=>{
+ const d=emptyDirectDocument()
+ d.sketches.push({id:'outline',name:'Outline',points:[[0,0],[1,0],[0,1]],closed:true})
+ d.bodies.push({id:'body',name:'Body',mesh:{positions:new Float64Array([0,0,0,1,0,0,0,1,0]),indices:new Uint32Array([0,1,2])}})
+ const history=new DirectHistory(d)
+ const copying=vi.spyOn(globalThis,'structuredClone')
+ const ids=history.objectIds
+ expect(copying).not.toHaveBeenCalled();copying.mockRestore()
+ expect(ids).toEqual(['body','outline'])
+ ids.splice(0,ids.length,'corrupted')
+ expect(history.objectIds).toEqual(['body','outline'])
+ history.commit(emptyDirectDocument());expect(history.objectIds).toEqual([])
+ history.undo();expect(history.objectIds).toEqual(['body','outline'])
+ history.redo();expect(history.objectIds).toEqual([])
+})
+
+
+it('reading identities after async restore leaves compact history unmaterialized',async()=>{
+ const d=emptyDirectDocument()
+ d.sketches.push({id:'outline',name:'Outline',points:[[0,0],[1,0],[0,1]],closed:true})
+ const history=new DirectHistory(d)
+ history.commit(emptyDirectDocument())
+ expect(await history.restoreAsync('undo',async text=>parseDirectDocument(text))).toBe(true)
+ expect(history.storageStats.materializedStates).toBe(0)
+ expect(history.objectIds).toEqual(['outline'])
+ expect(history.storageStats.materializedStates).toBe(0)
+ expect(await history.restoreAsync('redo',async text=>parseDirectDocument(text))).toBe(true)
+ expect(history.objectIds).toEqual([])
+ expect(history.storageStats.materializedStates).toBe(0)
 })

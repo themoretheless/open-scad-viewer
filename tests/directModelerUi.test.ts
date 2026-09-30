@@ -286,7 +286,8 @@ it('runs authored B-rep boolean and refuses unsupported fillet edge combinations
  await ui.pointer(edge);const connected=edges.slice(1).find(item=>String(item.props.points).split(' ').some(point=>ends.has(point)))!
  connected.props.onPointerdown({...ui.event(connected),shiftKey:true});await nextTick();await ui.click('Fillet 3D')
  await ui.click('Apply · Enter')
- expect(ui.text(ui.all()[0])).toContain('Cap edges and valence-3 corner chains')
+ expect(ui.text(ui.all()[0])).toContain('The feature is unproven for this geometry')
+ expect(ui.text(ui.all()[0])).toContain('select suitable edges')
  expect(ui.button('Apply · Enter').props.disabled).toBe(true)
  expect(ui.doc()).toEqual(before)
 })
@@ -303,6 +304,27 @@ it('previews, applies and undoes a qualified exact fillet from an edge pick',asy
  expect(analyzeNurbsBrep(body.brep!).signedVolumeMm3).toBeCloseTo(8000-(1-Math.PI/4)*80,5)
  await ui.click('↶');expect(ui.doc()).toEqual(before)
  await ui.click('↷');expect(ui.doc().bodies.at(-1)!.brep).toEqual(body.brep)
+})
+
+it('locates an oversized fillet and recovers after reducing its radius',async()=>{
+ const ui=await mount();await ui.click('Box');const before=ui.doc(),body=before.bodies.at(-1)!,brep=body.brep!
+ const index=brep.edges.findIndex(edge=>{const [a,b]=edge.vertices.map(v=>brep.vertices[v].point);return a[0]===b[0]&&a[1]===b[1]})
+ await ui.click('Edges');await ui.pointer(ui.all(ui.svg()).find(n=>n.props['data-topology-edge']===brep.topologyIds!.edges[index])!)
+ await ui.click('Fillet 3D')
+ quantityField(ui,'Radius / size, mm').props['onUpdate:modelValue']('30');await flushClearance()
+ const text=ui.text(ui.all()[0]);expect(text).toContain(body.name+' · edges ');expect(text).toContain('Reduce the radius or chamfer size')
+ const keys=()=>ui.all().find(n=>String(n.props.class??'').includes('command-keys'))!
+ expect(ui.text(keys())).not.toContain('Enter')
+ expect(ui.text(keys())).toContain('Esc')
+ expect(ui.all(ui.svg()).find(n=>n.props['data-topology-edge']===brep.topologyIds!.edges[index])!.props.stroke).toBe('#f87171')
+ expect(ui.button('Apply · Enter').props.disabled).toBe(true);expect(ui.doc()).toEqual(before)
+ quantityField(ui,'Radius / size, mm').props['onUpdate:modelValue']('1');await flushClearance()
+ expect(ui.button('Apply · Enter').props.disabled).toBe(false)
+ expect(ui.text(ui.all()[0])).not.toContain('The feature does not fit')
+ expect(ui.text(keys())).toContain('Enter')
+ expect(ui.all(ui.svg()).find(n=>n.props['data-topology-edge']===brep.topologyIds!.edges[index])!.props.stroke).toBe('#ffc977')
+ await ui.click('Apply · Enter');expect(ui.doc().bodies.at(-1)!.brep).not.toEqual(brep)
+ await ui.click('↶');expect(ui.doc()).toEqual(before)
 })
 it('authors a full sketch revolve as an explicitly faceted B-rep',async()=>{
  const ui=await mount();await ui.click('Profile');await ui.click('Revolve')
@@ -477,13 +499,13 @@ it('drags a B-rep vertex by the pointer delta without an initial coordinate jump
 
 it('preserves authored B-rep for movement and push while refusing retained shell',async()=>{
  const ui=await mount();await ui.click('Box');const original=ui.doc().bodies.at(-1)!
- await ui.click('Move · G');const svg=ui.svg();await ui.pointer(ui.all(svg).find(n=>n.tag==='polygon'&&n.props.onPointerdown)!,0,0)
+ await ui.click('Move · G');const svg=ui.svg();await ui.pointer(ui.all(svg).find(n=>n.tag==='polygon'&&n.props['data-body']===original.id&&n.props.onPointerdown)!,0,0)
  svg.props.onPointermove(ui.event(svg,4,3));svg.props.onPointerup(ui.event(svg,4,3));await flushClearance()
  const moved=ui.doc().bodies.find(b=>b.id===original.id)!
  expect(moved.brep).toBeDefined();expect(moved.brep!.topologyIds).toEqual(original.brep!.topologyIds);expect(moved.brep!.vertices).not.toEqual(original.brep!.vertices)
- await ui.click('↶');await ui.click('Faces');await ui.pointer(ui.all(ui.svg()).find(n=>n.tag==='polygon')!);await ui.click('Push / Pull');await ui.click('Apply · Enter')
+ await ui.click('↶');await ui.click('Faces');await ui.pointer(ui.all(ui.svg()).find(n=>n.tag==='polygon'&&n.props['data-body']===original.id)!);await ui.click('Push / Pull');await ui.click('Apply · Enter')
  expect(ui.doc().bodies.find(b=>b.id===original.id)!.brep).toBeDefined()
- await ui.click('↶');await ui.click('Faces');await ui.pointer(ui.all(ui.svg()).find(n=>n.tag==='polygon')!);await ui.click('Shell');await ui.click('Apply · Enter')
+ await ui.click('↶');await ui.click('Faces');await ui.pointer(ui.all(ui.svg()).find(n=>n.tag==='polygon'&&n.props['data-body']===original.id)!);await ui.click('Shell');await ui.click('Apply · Enter')
  expect(ui.text(ui.all()[0])).toContain('refuse faceted fallback')
  expect(ui.button('Apply · Enter').props.disabled).toBe(true)
  expect(ui.doc().bodies.find(b=>b.id===original.id)).toEqual(original)
@@ -1004,7 +1026,7 @@ it.each(['Sweep','NURBS loft'])('previews %s, cancels and restores its native su
  const seed={version:1,sketches:[],bodies:[],curves:[a,b]}
  const ui=await mount({},JSON.stringify(seed));await ui.click('Profile curve');await ui.click('Path curve',true)
  const before=ui.doc();await ui.click(command)
- expect(ui.all().some(n=>n.tag==='polygon'&&n.props['fill-opacity']==='.45')).toBe(true)
+ expect(ui.all().some(n=>n.tag==='polygon'&&Number(n.props['fill-opacity'])===.45)).toBe(true)
  expect(ui.all().some(n=>String(n.props.class).includes('nurbs-card'))).toBe(false)
  expect(ui.doc()).toEqual(before)
  await commandKey(ui,'Escape');expect(ui.doc()).toEqual(before)
@@ -1067,7 +1089,7 @@ it.each([false,true])('previews and commits a four-boundary patch (rational=%s) 
  const curves=points.map((controlPoints,i)=>({id:'edge'+i,name:['Bottom','Top','Left','Right'][i],curve:{degree:controlPoints.length-1,knots:[...Array(controlPoints.length).fill(0),...Array(controlPoints.length).fill(1)],controlPoints,weights:controlPoints.length===3?[1,Math.SQRT1_2,1]:[1,1]}}))
  const ui=await mount({},JSON.stringify({version:1,sketches:[],bodies:[],curves}));for(let i=0;i<4;i++)await ui.click(curves[i].name,i>0)
  const before=ui.doc();await ui.click('Coons patch');expect(ui.doc()).toEqual(before)
- expect(ui.text(ui.all()[0])).toContain('Bottom · vMin');expect(ui.all().some(n=>n.tag==='polygon'&&n.props['fill-opacity']==='.45')).toBe(true)
+ expect(ui.text(ui.all()[0])).toContain('Bottom · vMin');expect(ui.all().some(n=>n.tag==='polygon'&&Number(n.props['fill-opacity'])===.45)).toBe(true)
  await commandKey(ui,'Escape');expect(ui.doc()).toEqual(before)
  await ui.click('Coons patch');await commandKey(ui,'Enter');expect(ui.doc().surfaces).toHaveLength(1);expect(ui.doc().curves).toEqual(before.curves)
  await ui.click('↶');expect(ui.doc()).toEqual(before)
@@ -1123,7 +1145,7 @@ it('previews a surface rebuild and preserves the original through cancel and und
  const surface={degreeU:2,degreeV:2,knotsU:[0,0,0,1,1,1],knotsV:[0,0,0,1,1,1],controlPoints:Array.from({length:3},(_,i)=>Array.from({length:3},(_,j)=>[i,j,0])),weights:Array.from({length:3},()=>[1,1,1])}
  const ui=await mount({},JSON.stringify({version:1,sketches:[],bodies:[],surfaces:[{id:'surface-rebuild',name:'Surface rebuild input',surface,segmentsU:4,segmentsV:4}]}))
  await ui.click('Surface rebuild input');const before=ui.doc();await ui.click('Rebuild surface')
- expect(ui.all().some(n=>n.tag==='polygon'&&n.props['fill-opacity']==='.45')).toBe(true)
+ expect(ui.all().some(n=>n.tag==='polygon'&&Number(n.props['fill-opacity'])===.45)).toBe(true)
  await commandKey(ui,'Escape');expect(ui.doc()).toEqual(before)
  await ui.click('Rebuild surface');const direction=ui.all().find(n=>n.tag==='select'&&n.props['aria-label']==='Direction')!
  direction.props['onUpdate:modelValue']('v');await flushClearance();await commandKey(ui,'Enter')
@@ -1139,7 +1161,7 @@ it('keeps a surface rebuild outside tolerance out of the document and undo histo
  const controls=ui.all().find(n=>n.tag==='input'&&n.parent&&ui.text(n.parent).startsWith('Control points')&&n.props['onUpdate:modelValue'])!
  controls.props['onUpdate:modelValue'](2);await flushClearance()
  expect(ui.text(ui.all()[0])).toContain('Deviation exceeds the tolerance')
- expect(ui.all().some(n=>n.tag==='polygon'&&n.props['fill-opacity']==='.45')).toBe(false)
+ expect(ui.all().some(n=>n.tag==='polygon'&&Number(n.props['fill-opacity'])===.45)).toBe(false)
  await commandKey(ui,'Enter');expect(ui.doc()).toEqual(before);expect(ui.button('↶').props.disabled).toBe(true)
  await commandKey(ui,'Escape');expect(ui.doc()).toEqual(before)
 })
@@ -1522,7 +1544,7 @@ it.each(['en','ru'])('explains incompatible patch weights and keeps the document
  const ui=await mount({locale},JSON.stringify({version:1,sketches:[],bodies:[],curves}))
  for(let i=0;i<4;i++)await ui.click(`Edge ${i}`,i>0)
  const before=ui.doc();await ui.click('Coons patch')
- expect(ui.text(ui.all()[0])).toContain(locale==='ru'?'Веса в углах границ несовместимы':'Boundary corner weights are incompatible')
+ expect(ui.text(ui.all()[0])).toContain(locale==='ru'?'Несовместимые угловые веса':'Incompatible corner weights')
  await commandKey(ui,'Enter');expect(ui.doc()).toEqual(before)
  await commandKey(ui,'Escape');expect(ui.doc()).toEqual(before)
 })
@@ -1732,7 +1754,7 @@ it('subtracts profile regions with target roles, empty-result refusal, cancel, u
  await ui.click('Subtract profile regions');expect(ui.all().some(n=>n.props['data-preview']==='retained-profile')).toBe(true)
  const target=ui.all().find(n=>n.props['aria-label']==='Target profile')!
  target.props.onChange({target:{value:'cut'}});await flushClearance()
- expect(ui.text(ui.all()[0])).toContain('No material remains')
+ expect(ui.text(ui.all()[0])).toContain('Empty result')
  await commandKey(ui,'Enter');expect(normalized()).toEqual(before)
  target.props.onChange({target:{value:'plate'}});await flushClearance()
  await commandKey(ui,'Escape');expect(normalized()).toEqual(before)
@@ -1781,7 +1803,7 @@ it('previews every retained offset loop and supports units, refusal, cancel and 
  const preview=ui.all().find(n=>n.props['data-preview']==='offset-profile')!
  expect(preview.props.d.match(/M /g)).toHaveLength(2)
  input.props['onUpdate:modelValue']('-10 mm');await flushClearance();await commandKey(ui,'Enter');expect(normalized()).toEqual(before)
- expect(ui.text(ui.all()[0])).toContain('The offset removes the entire profile')
+ expect(ui.text(ui.all()[0])).toContain('Offset removes the profile')
  input.props['onUpdate:modelValue']('0.5 mm');await flushClearance();await commandKey(ui,'Escape');expect(normalized()).toEqual(before)
  await ui.click('Offset');await commandKey(ui,'Enter')
  expect(ui.doc().sketches[0].retainedProfile!.areaMm2).toBeCloseTo(62,7)
@@ -1861,6 +1883,37 @@ it('keeps only the newest body edit and ignores a result after Escape',async()=>
  expect(ui.doc()).toEqual(before);expect(ui.all().some(n=>n.props.class==='operation-card')).toBe(false)
 })
 
+it.each(['success','failure'] as const)('isolates a reopened body command from late %s of the closed panel',async outcome=>{
+ const {applySolidBodyEdit}=await import('../src/services/solidBodyEdit')
+ const requests:Array<{job:any;resolve:(value:any)=>void;reject:(error:Error)=>void}>=[]
+ previewWorkerRun.mockImplementation(job=>job.kind==='restoreDocument'?undefined:new Promise((resolve,reject)=>requests.push({job,resolve,reject})))
+ const ui=await mount();await ui.click('Cube');const before=ui.doc();await ui.click('Split')
+ quantityField(ui,'Distance, mm').props['onUpdate:modelValue']('5 mm');await flushClearance()
+ const obsolete=[...requests]
+ await ui.setProps({open:false});await ui.setProps({open:true});await flushClearance()
+ expect(requests).toHaveLength(obsolete.length)
+ expect(ui.all().some(n=>n.props.class==='operation-card')).toBe(false)
+ expect(ui.doc()).toEqual(before)
+ await ui.click('Split');await flushClearance()
+ const current=requests.at(-1)!
+ expect(obsolete).not.toContain(current)
+ expect(ui.button('Apply · Enter').props.disabled).toBe(true)
+ for(const request of obsolete){
+  if(outcome==='success')request.resolve(applySolidBodyEdit(request.job.document,request.job.options))
+  else request.reject(Error('closed panel split failure'))
+ }
+ await flushClearance()
+ expect(ui.doc()).toEqual(before)
+ expect(ui.button('Apply · Enter').props.disabled).toBe(true)
+ expect(ui.text(ui.all()[0])).not.toContain('closed panel split failure')
+ await commandKey(ui,'Enter');expect(ui.doc()).toEqual(before)
+ current.resolve(applySolidBodyEdit(current.job.document,current.job.options));await flushClearance()
+ expect(ui.button('Apply · Enter').props.disabled).toBe(false)
+ await commandKey(ui,'Enter');const after=ui.doc();expect(after.bodies).toHaveLength(2)
+ await ui.click('↶');expect(ui.doc()).toEqual(before)
+ await ui.click('↷');expect(ui.doc()).toEqual(after)
+})
+
 it.each([false,true])('waits for the released Push/Pull handle result; cancel=%s',async cancel=>{
  const {applySolidBodyEdit}=await import('../src/services/solidBodyEdit')
  const requests:Array<{job:any;resolve:(value:any)=>void}>=[]
@@ -1910,7 +1963,7 @@ it('does not show or commit the old Boolean preview after swapping target roles'
  requests[1].reject(Error('Profile contains no material.'));await flushClearance()
  requests[0].resolve(applySolidProfileEdit(requests[0].job.document,requests[0].job.options));await flushClearance()
  expect(ui.button('Apply · Enter').props.disabled).toBe(true)
- expect(ui.text(ui.all()[0])).toContain('No material remains')
+ expect(ui.text(ui.all()[0])).toContain('Empty result')
  expect(ui.all().some(n=>n.props['data-preview']==='retained-profile')).toBe(false)
  await commandKey(ui,'Enter');expect(ui.doc()).toEqual(before)
 })
@@ -2212,6 +2265,25 @@ it('ignores native NURBS replies after selection, document replacement and closu
  requests[2].resolve(applySolidNurbsEdit(requests[2].job.document,requests[2].job.options));await flushClearance();expect(ui.doc()).toEqual(changed)
 })
 
+it.each(['success','failure'] as const)('discards native bridge %s after changing the destination group',async outcome=>{
+ const {applySolidNurbsEdit}=await import('../src/services/solidNurbsEdit')
+ const a=createSolidNurbsCurve('a'),b=createSolidNurbsCurve('b');a.name='First';b.name='Second';b.curve.controlPoints.forEach(p=>p[0]+=60)
+ const ui=await mount({seedDocument:{version:1,sketches:[],bodies:[],curves:[a,b],groups:[{name:'Destination',source:''}]}})
+ const requests:Array<{job:any;resolve:(value:any)=>void;reject:(error:Error)=>void}>=[]
+ previewWorkerRun.mockImplementation(job=>job.kind==='nurbsEdit'?new Promise((resolve,reject)=>requests.push({job,resolve,reject})):undefined)
+ await ui.click('First');await ui.click('Second',true);const before=ui.doc();await ui.click('Create G2 bridge')
+ expect(requests).toHaveLength(1)
+ await ui.click('Active group: Destination')
+ if(outcome==='success')requests[0].resolve(applySolidNurbsEdit(requests[0].job.document,requests[0].job.options))
+ else requests[0].reject(Error('obsolete group bridge error'))
+ await flushClearance();expect(ui.doc()).toEqual(before)
+ expect(ui.text(ui.all()[0])).not.toContain('obsolete group bridge error')
+ await ui.click('Create G2 bridge');expect(requests).toHaveLength(2)
+ requests[1].resolve(applySolidNurbsEdit(requests[1].job.document,requests[1].job.options));await flushClearance()
+ expect(ui.doc().curves).toHaveLength(3);expect(ui.doc().curves![2].group).toBe('Destination')
+ await ui.click('↶');expect(ui.doc()).toEqual(before)
+})
+
 it('invalidates bridge creation when tension changes and saves one undoable dependent curve',async()=>{
  const {applySolidNurbsEdit}=await import('../src/services/solidNurbsEdit')
  const a=createSolidNurbsCurve('a'),b=createSolidNurbsCurve('b');a.name='First';b.name='Second';b.curve.controlPoints.forEach(p=>p[0]+=60)
@@ -2314,6 +2386,33 @@ it('keeps history intact on cancelled or failed worker restore and ignores late 
  expect(ui.doc()).toEqual(before);expect(ui.button('↷').props.disabled).toBe(false)
 })
 
+it('uses the restored worker response for display without another history document clone',async()=>{
+ const {DirectHistory}=await import('../src/services/directModeling')
+ const ui=await mount();await ui.click('Box');const before=ui.doc()
+ const read=vi.spyOn(DirectHistory.prototype,'document','get')
+ try{
+  await ui.click('↶');await flushClearance()
+  expect(read).not.toHaveBeenCalled()
+  await ui.click('↷');await flushClearance()
+  expect(read).not.toHaveBeenCalled();expect(ui.doc()).toEqual(before)
+ }finally{read.mockRestore()}
+})
+
+it.each([false,true])('pans without copying geometry or creating history (cancel=%s)',async cancel=>{
+ const {DirectHistory}=await import('../src/services/directModeling')
+ const ui=await mount(),svg=ui.svg(),before=ui.doc(),view=svg.props.viewBox
+ const read=vi.spyOn(DirectHistory.prototype,'document','get')
+ try{
+  svg.props.onPointerdown({...ui.event(svg,100,100),button:1});await nextTick()
+  svg.props.onPointermove({...ui.event(svg,140,120),button:1});await nextTick()
+  expect(svg.props.viewBox).not.toEqual(view)
+  if(cancel)await commandKey(ui,'Escape')
+  else {svg.props.onPointerup({...ui.event(svg,140,120),button:1});await flushClearance()}
+  expect(read).not.toHaveBeenCalled();expect(ui.doc()).toEqual(before)
+  expect(ui.button('↶').props.disabled).toBe(true)
+ }finally{read.mockRestore()}
+})
+
 it('imports compact instances through history while preserving cache validation and locks',async()=>{
  const {serializeDirectDocument}=await import('../src/services/directModeling')
  const ui=await mount();await ui.click('Cube');await ui.click('Create linked instance');await commandKey(ui,'Enter')
@@ -2350,7 +2449,7 @@ it('keeps working geometry while display refinement is pending and rejects repli
  const requests:Array<{job:any;resolve:(value:any)=>void}>=[]
  displayWorkerRun.mockImplementation(job=>new Promise(resolve=>requests.push({job,resolve})))
  const ui=await mount({seedDocument:cylinderSeed()});await flushClearance()
- const before=ui.doc(),coarse=before.bodies[0].mesh.indices.length/3
+ const before=ui.doc(),coarse=before.bodies[0].mesh.indices.length/6
  const faces=()=>ui.all(ui.svg()).filter(n=>n.tag==='polygon'&&n.props['data-body']==='imported-cylinder')
  expect(faces()).toHaveLength(coarse);expect(requests).toHaveLength(1)
  await ui.click('Smooth B-rep display')
@@ -2363,10 +2462,10 @@ it('keeps working geometry while display refinement is pending and rejects repli
  await ui.click('Smooth B-rep display');await ui.click('Smooth B-rep display')
  const current=requests.at(-1)!,result=prepareSolidDisplay(current.job.mesh,current.job.brep)
  current.resolve(result);await flushClearance()
- expect(faces()).toHaveLength(result.mesh.indices.length/3)
+ expect(faces()).toHaveLength(result.mesh.indices.length/6)
  expect(faces().length).toBeGreaterThan(coarse);expect(ui.doc()).toEqual(before)
  await ui.click('Imported cylinder');await ui.click('Faces');await ui.pointer(faces()[0]);await flushClearance()
- expect(ui.all(ui.svg()).some(n=>n.tag==='polygon'&&String(n.props.fill).startsWith('hsl(40 '))).toBe(true)
+ expect(ui.all(ui.svg()).some(n=>n.tag==='polygon'&&String(n.props.style?.color).startsWith('hsl(40 '))).toBe(true)
  expect(ui.doc()).toEqual(before)
 })
 
@@ -2443,6 +2542,40 @@ it('imports ModelGraph through a cancellable worker and preserves the prior scen
  const third=load();await flushClearance();await ui.click('Box');const edited=ui.doc()
  requests[2].resolve(await importSolidModelGraph(requests[2].job.document,text));await third;await flushClearance()
  expect(ui.doc()).toEqual(edited)
+})
+
+it.each([false,true])('cancels ModelGraph import on group change; late failure=%s',async failure=>{
+ const {importSolidModelGraph}=await import('../src/services/solidModelGraphImport')
+ const ui=await mount({seedDocument:{version:1,sketches:[],bodies:[],groups:[{name:'Destination',source:''}]}})
+ const before=ui.doc(),text=readFileSync('tests/fixtures/solid-modelgraph-import.json','utf8')
+ const input=ui.all().find(n=>n.tag==='input'&&n.props.accept==='.json,application/json')!
+ const requests:Array<{job:any;resolve:(value:any)=>void;reject:(error:Error)=>void}>=[]
+ previewWorkerRun.mockImplementation(job=>job.kind==='modelGraphImport'?new Promise((resolve,reject)=>requests.push({job,resolve,reject})):undefined)
+ const load=()=>input.props.onChange({target:{files:[{size:text.length,text:async()=>text}],value:'modelgraph.json'}})
+ const first=load();await flushClearance();expect(requests).toHaveLength(1)
+ await ui.click('Active group: Destination')
+ if(failure)requests[0].reject(Error('obsolete import destination'));else requests[0].resolve(await importSolidModelGraph(requests[0].job.document,text))
+ await first;await flushClearance();expect(ui.doc()).toEqual(before);expect(ui.text(ui.all()[0])).not.toContain('obsolete import destination')
+ const second=load();await flushClearance();expect(requests[1].job.group).toBe('Destination')
+ requests[1].resolve(await importSolidModelGraph(requests[1].job.document,text,requests[1].job.group));await second;await flushClearance()
+ for(const item of [...ui.doc().curves??[],...ui.doc().surfaces??[]])expect(item.group).toBe('Destination')
+ expect(ui.doc().curves).toHaveLength(1);expect(ui.doc().surfaces).toHaveLength(1)
+ const after=ui.doc();await ui.click('↶');expect(ui.doc()).toEqual(before);await ui.click('↷');expect(ui.doc()).toEqual(after)
+})
+
+it.each([false,true])('discards ModelGraph file read after group change; failure=%s',async failure=>{
+ const ui=await mount({seedDocument:{version:1,sketches:[],bodies:[],groups:[{name:'Destination',source:''}]}})
+ const before=ui.doc(),text=readFileSync('tests/fixtures/solid-modelgraph-import.json','utf8')
+ const input=ui.all().find(n=>n.tag==='input'&&n.props.accept==='.json,application/json')!
+ let resolve!:(text:string)=>void,reject!:(e:Error)=>void
+ const read=new Promise<string>((yes,no)=>{resolve=yes;reject=no})
+ const pending=input.props.onChange({target:{files:[{size:text.length,text:()=>read}],value:'modelgraph.json'}})
+ await flushClearance();await ui.click('Active group: Destination')
+ const count=previewWorkerRun.mock.calls.filter(([job])=>job.kind==='modelGraphImport').length
+ if(failure)reject(Error('obsolete file read'));else resolve(text)
+ await pending;await flushClearance()
+ expect(previewWorkerRun.mock.calls.filter(([job])=>job.kind==='modelGraphImport')).toHaveLength(count)
+ expect(ui.doc()).toEqual(before);expect(ui.text(ui.all()[0])).not.toContain('obsolete file read')
 })
 
 it('cancels primitive construction on Escape, parameter change and closure, then adds one undoable body',async()=>{
@@ -2706,7 +2839,7 @@ it('previews point trimming, cancels without edits and commits the retained end 
  expect(ui.all().some(n=>n.props['data-preview']==='point-trim')).toBe(false)
  await ui.click('Trim NURBS at point')
  ui.all().find(n=>n.props['aria-label']==='Cut point X')!.props['onUpdate:modelValue']('10 mm');ui.all().find(n=>n.props['aria-label']==='Cut point Y')!.props['onUpdate:modelValue']('0 mm');await flushClearance()
- expect(ui.text(ui.all()[0])).toContain('The point is at a curve endpoint')
+ expect(ui.text(ui.all()[0])).toContain('Curve endpoint')
  expect(ui.button('Apply · Enter').props.disabled).toBe(true)
  ui.all().find(n=>n.props['aria-label']==='Cut point X')!.props['onUpdate:modelValue']('8 mm');ui.all().find(n=>n.props['aria-label']==='Cut point Y')!.props['onUpdate:modelValue']('6 mm')
  ui.all().find(n=>n.props['aria-label']==='Retain endpoint')!.props['onUpdate:modelValue']('end');await flushClearance()
@@ -2935,7 +3068,7 @@ it('invalidates global shell reports on budget changes, cancellation and invalid
  requests[0].resolve(result);await flushClearance()
  expect(ui.all().some(n=>n.props['data-measurement']==='shell-distance')).toBe(false)
  requests[1].resolve({...result,converged:false,reason:'domain-work-limit',distanceIntervalMm:[0,null],points:null,parameters:null,pointEnclosures:null,faces:null});await flushClearance()
- expect(ui.text(ui.all()[0])).toContain('upper bound is unknown')
+ await vi.waitFor(()=>expect(ui.text(ui.all()[0])).toContain('upper bound is unknown'))
  expect(ui.all().some(n=>n.props['data-measurement']==='shell-distance')).toBe(false)
  budget().props['onUpdate:modelValue'](100000);await flushClearance();await commandKey(ui,'Escape')
  requests[2].resolve(result);await flushClearance()
@@ -2995,4 +3128,492 @@ it.each([
   await ui.click('Apply · Enter');expect(ui.doc()).not.toEqual(before)
   await ui.click('↶');expect(ui.doc()).toEqual(before)
  }finally{vi.useRealTimers()}
+})
+
+
+it.each([
+ ['Lock',false],['Lock',true],['Hide',false],['Hide',true],
+] as const)('invalidates body preview on %s with completed=%s',async(action,completed)=>{
+ const {applySolidBodyEdit}=await import('../src/services/solidBodyEdit')
+ const requests:Array<{job:any;resolve:(value:any)=>void}>=[]
+ previewWorkerRun.mockImplementation(job=>job.kind==='restoreDocument'?undefined:new Promise(resolve=>requests.push({job,resolve})))
+ const ui=await mount();await ui.click('Cube');const before=ui.doc();await ui.click('Split')
+ quantityField(ui,'Distance, mm').props['onUpdate:modelValue']('5 mm');await flushClearance()
+ const pending=[...requests],latest=pending.at(-1)!
+ if(completed){latest.resolve(applySolidBodyEdit(latest.job.document,latest.job.options));await flushClearance();expect(ui.button('Apply · Enter').props.disabled).toBe(false)}
+ await ui.click(action+': Cube')
+ for(const request of pending)request.resolve(applySolidBodyEdit(request.job.document,request.job.options))
+ await flushClearance();await commandKey(ui,'Enter')
+ expect(ui.doc()).toEqual(before)
+ expect(ui.all().some(n=>n.props.class==='operation-card')).toBe(false)
+ expect(ui.all().some(n=>n.props['data-preview-body'])).toBe(false)
+ expect(ui.button('Cube').props.disabled).toBe(true)
+ await ui.click((action==='Lock'?'Unlock':'Show')+': Cube');await ui.click('Cube');await ui.click('Split')
+ quantityField(ui,'Distance, mm').props['onUpdate:modelValue']('5 mm');await flushClearance()
+ const current=requests.at(-1)!;expect(pending).not.toContain(current)
+ current.resolve(applySolidBodyEdit(current.job.document,current.job.options));await flushClearance()
+ await commandKey(ui,'Enter');expect(ui.doc().bodies).toHaveLength(2)
+ await ui.click('↶');expect(ui.doc()).toEqual(before)
+})
+
+
+it('retries a failed body calculation without changing inputs or adding history before Apply',async()=>{
+ const {applySolidBodyEdit}=await import('../src/services/solidBodyEdit')
+ const requests:Array<{job:any;resolve:(value:any)=>void;reject:(error:Error)=>void}>=[]
+ previewWorkerRun.mockImplementation(job=>job.kind==='restoreDocument'?undefined:new Promise((resolve,reject)=>requests.push({job,resolve,reject})))
+ const ui=await mount();await ui.click('Cube');const before=ui.doc();await ui.click('Split')
+ quantityField(ui,'Distance, mm').props['onUpdate:modelValue']('5 mm');await flushClearance()
+ const failed=requests.at(-1)!;failed.reject(Error('worker unavailable'));await flushClearance()
+ expect(ui.doc()).toEqual(before);expect(ui.button('Apply · Enter').props.disabled).toBe(true)
+ await ui.click('Retry calculation');const retry=requests.at(-1)!
+ expect(retry).not.toBe(failed);expect(retry.job).toEqual(failed.job)
+ expect(ui.button('Retry calculation').props.disabled).toBe(true)
+ retry.resolve(applySolidBodyEdit(retry.job.document,retry.job.options));await flushClearance()
+ expect(ui.doc()).toEqual(before);expect(ui.text(ui.all()[0])).not.toContain('worker unavailable')
+ expect(ui.button('Retry calculation').props.disabled).toBe(false)
+ const count=requests.length;await commandKey(ui,'Enter');expect(requests).toHaveLength(count)
+ expect(ui.doc().bodies).toHaveLength(2);await ui.click('↶');expect(ui.doc()).toEqual(before)
+})
+
+
+it.each([
+ ['CAD_CRASH','The calculation stopped unexpectedly'],
+ ['CAD_TIMEOUT','The calculation timed out'],
+ ['CAD_TRANSPORT','A valid calculation result could not be received'],
+ ['CAD_PROTOCOL','A valid calculation result could not be received'],
+] as const)('explains %s body failures with a recovery action',async(code,message)=>{
+ const requests:Array<{reject:(error:Error)=>void}>=[]
+ previewWorkerRun.mockImplementation(job=>job.kind==='restoreDocument'?undefined:new Promise((_resolve,reject)=>requests.push({reject})))
+ const ui=await mount();await ui.click('Cube');const before=ui.doc();await ui.click('Split')
+ const keys=ui.all().find(n=>String(n.props.class??'').includes('command-keys'))!
+ expect(ui.text(keys)).not.toContain('Enter');expect(ui.text(keys)).toContain('Esc')
+ requests.at(-1)!.reject(Object.assign(Error('internal implementation detail'),{code}));await flushClearance()
+ const text=ui.text(ui.all()[0]);expect(text).toContain(message);expect(text).toContain('The model is unchanged')
+ expect(text).not.toContain('internal implementation detail');expect(ui.doc()).toEqual(before)
+ expect(ui.button('Retry calculation').props.disabled).toBe(false)
+ expect(ui.button('Apply · Enter').props.disabled).toBe(true)
+})
+
+
+it('opens guided subtraction without cloning the history for every selected body',async()=>{
+ const {DirectHistory}=await import('../src/services/directModeling')
+ const first=await mount(),cube=first.doc().bodies[0]
+ const bodies=['A','B','C'].map(id=>({...structuredClone(cube),id,name:id}))
+ const ui=await mount({},stringifyMeshJson({version:1,sketches:[],bodies}))
+ await ui.click('A');await ui.click('B',true);await ui.click('C',true)
+ const before=ui.doc(),read=vi.spyOn(DirectHistory.prototype,'document','get')
+ try{
+  await ui.click('Subtract: A − B')
+  expect(read).not.toHaveBeenCalled()
+  expect(ui.doc()).toEqual(before)
+  await commandKey(ui,'Escape');expect(ui.doc()).toEqual(before)
+ }finally{read.mockRestore()}
+})
+
+it.each(['CAD_CRASH','CAD_TIMEOUT','CAD_TRANSPORT','CAD_PROTOCOL'])('recovers Boolean from %s without changing operands or history on failure',async code=>{
+ const {applySolidBoolean}=await import('../src/services/solidBoolean')
+ const requests:Array<{job:any;resolve:(value:any)=>void;reject:(error:Error)=>void}>=[]
+ previewWorkerRun.mockImplementation(job=>job.kind==='boolean'?new Promise((resolve,reject)=>requests.push({job,resolve,reject})):undefined)
+ const brep=createBrepCylinder(3,5),mesh=tessellateNurbsBrep(brep,4)
+ const body=(id:string)=>({id,name:id,brep:structuredClone(brep),mesh:{positions:mesh.positions,indices:mesh.indices}})
+ const ui=await mount({},stringifyMeshJson({version:1,sketches:[],bodies:[body('Stock'),body('Cutter')]}))
+ const before=ui.doc()
+ await ui.click('Stock');await ui.click('Cutter',true);await ui.click('B-rep Union')
+ requests[0].reject(Object.assign(Error('transport implementation detail'),{code}));await flushClearance()
+ expect(ui.doc()).toEqual(before)
+ expect(ui.text(ui.all()[0])).toContain('The model is unchanged')
+ expect(ui.text(ui.all()[0])).not.toContain('transport implementation detail')
+ if(code==='CAD_CRASH')expect(ui.text(ui.all()[0])).toContain('Run the operation again with the selected bodies')
+ await ui.click('B-rep Union');expect(requests[1].job).toEqual(requests[0].job)
+ requests[1].resolve(applySolidBoolean(requests[1].job.document,requests[1].job.options));await flushClearance()
+ expect(ui.doc().bodies).toHaveLength(1)
+ await ui.click('↶');expect(ui.doc()).toEqual(before)
+})
+
+it.each(['Extrude · E','Revolve'])('retries %s preview after a worker crash and commits only the successful result',async command=>{
+ const {applyDirectExtrusionProfile}=await import('../src/services/directExtrusion')
+ const {applySolidRevolve}=await import('../src/services/solidRevolve')
+ const requests:Array<{job:any;resolve:(value:any)=>void;reject:(error:Error)=>void}>=[]
+ previewWorkerRun.mockImplementation(job=>['extrusion','revolve'].includes(job.kind)?new Promise((resolve,reject)=>requests.push({job,resolve,reject})):undefined)
+ const ui=await mount();await ui.click('Profile');const before=ui.doc()
+ vi.useFakeTimers()
+ try{
+  await ui.click(command);await vi.advanceTimersByTimeAsync(100)
+  requests[0].reject(Object.assign(Error('internal crash'),{code:'CAD_CRASH'}));await flushClearance()
+  expect(ui.text(ui.all()[0])).toContain('The calculation stopped unexpectedly')
+  expect(ui.doc()).toEqual(before);expect(ui.button('Apply · Enter').props.disabled).toBe(true)
+  await ui.click('Retry calculation');expect(ui.button('Retry calculation').props.disabled).toBe(true)
+  await vi.advanceTimersByTimeAsync(100)
+  const {id:oldId,...oldOptions}=requests[0].job.options,{id:newId,...newOptions}=requests[1].job.options
+  expect(newOptions).toEqual(oldOptions);expect(requests[1].job.document).toEqual(requests[0].job.document)
+  const job=requests[1].job
+  requests[1].resolve(job.kind==='extrusion'?applyDirectExtrusionProfile(job.document,job.options):applySolidRevolve(job.document,job.options));await flushClearance()
+  expect(ui.doc()).toEqual(before);expect(ui.button('Apply · Enter').props.disabled).toBe(false)
+  await commandKey(ui,'Enter');expect(requests).toHaveLength(2);expect(ui.doc().bodies).toHaveLength(before.bodies.length+1)
+  await ui.click('↶');expect(ui.doc()).toEqual(before)
+ }finally{vi.useRealTimers()}
+})
+
+it.each([
+ ['Extrude · E',false],['Extrude · E',true],['Revolve',false],['Revolve',true],
+] as const)('ignores cancelled retry for %s with late failure=%s after reopening',async(command,lateFailure)=>{
+ const {applyDirectExtrusionProfile}=await import('../src/services/directExtrusion')
+ const {applySolidRevolve}=await import('../src/services/solidRevolve')
+ const requests:Array<{job:any;resolve:(value:any)=>void;reject:(error:Error)=>void}>=[]
+ previewWorkerRun.mockImplementation(job=>['extrusion','revolve'].includes(job.kind)?new Promise((resolve,reject)=>requests.push({job,resolve,reject})):undefined)
+ const ui=await mount();await ui.click('Profile');const before=ui.doc()
+ vi.useFakeTimers()
+ const result=(job:any)=>job.kind==='extrusion'?applyDirectExtrusionProfile(job.document,job.options):applySolidRevolve(job.document,job.options)
+ try{
+  await ui.click(command);await vi.advanceTimersByTimeAsync(100)
+  requests[0].reject(Object.assign(Error('first failure'),{code:'CAD_CRASH'}));await flushClearance()
+  await ui.click('Retry calculation');await vi.advanceTimersByTimeAsync(100)
+  const cancelled=requests[1]
+  await commandKey(ui,'Escape');await ui.click(command);await vi.advanceTimersByTimeAsync(100)
+  expect(ui.all().some(n=>n.tag==='button'&&ui.text(n)==='Retry calculation')).toBe(false)
+  if(lateFailure)cancelled.reject(Error('obsolete retry failure'));else cancelled.resolve(result(cancelled.job))
+  await flushClearance();await commandKey(ui,'Enter')
+  expect(ui.doc()).toEqual(before);expect(ui.button('Apply · Enter').props.disabled).toBe(true)
+  expect(ui.text(ui.all()[0])).not.toContain('obsolete retry failure')
+  expect(ui.all().some(n=>n.props['data-preview-body'])).toBe(false)
+  requests[2].resolve(result(requests[2].job));await flushClearance()
+  await commandKey(ui,'Enter');expect(ui.doc().bodies).toHaveLength(before.bodies.length+1)
+  await ui.click('↶');expect(ui.doc()).toEqual(before)
+ }finally{vi.useRealTimers()}
+})
+
+it.each([
+ ['Extrude · E',false],['Extrude · E',true],['Revolve',false],['Revolve',true],
+] as const)('refreshes %s after destination group change with late failure=%s',async(command,lateFailure)=>{
+ const {applyDirectExtrusionProfile}=await import('../src/services/directExtrusion')
+ const {applySolidRevolve}=await import('../src/services/solidRevolve')
+ const requests:Array<{job:any;resolve:(value:any)=>void;reject:(error:Error)=>void}>=[]
+ previewWorkerRun.mockImplementation(job=>['extrusion','revolve'].includes(job.kind)?new Promise((resolve,reject)=>requests.push({job,resolve,reject})):undefined)
+ const ui=await mount({seedDocument:{version:1,sketches:[{id:'s',name:'Profile',closed:true,points:[[0,0],[10,0],[10,10],[0,10]]}],bodies:[],groups:[{name:'Destination',source:''}]}});await ui.click('Profile');const before=ui.doc()
+ const result=(job:any)=>job.kind==='extrusion'?applyDirectExtrusionProfile(job.document,job.options):applySolidRevolve(job.document,job.options)
+ vi.useFakeTimers()
+ try{
+  await ui.click(command);await vi.advanceTimersByTimeAsync(100);expect(requests).toHaveLength(1)
+  await ui.click('Active group: Destination');await vi.advanceTimersByTimeAsync(100)
+  expect(requests).toHaveLength(2)
+  if(lateFailure)requests[0].reject(Error('obsolete destination preview'));else requests[0].resolve(result(requests[0].job))
+  await flushClearance();expect(ui.doc()).toEqual(before)
+  expect(ui.button('Apply · Enter').props.disabled).toBe(true)
+  expect(ui.text(ui.all()[0])).not.toContain('obsolete destination preview')
+  expect(ui.all().some(n=>n.props['data-preview-body'])).toBe(false)
+  requests[1].resolve(result(requests[1].job));await flushClearance();await commandKey(ui,'Enter')
+  expect(ui.doc().bodies).toHaveLength(1);expect(ui.doc().bodies[0].group).toBe('Destination')
+  await ui.click('↶');expect(ui.doc()).toEqual(before)
+ }finally{vi.useRealTimers()}
+})
+
+it.each(['Fillet','DogEar','Circular copies'])('retries sketch command %s after a worker failure',async command=>{
+ const {applySolidSketchEdit}=await import('../src/services/solidSketchEdit')
+ const requests:Array<{job:any;resolve:(value:any)=>void;reject:(error:Error)=>void}>=[]
+ previewWorkerRun.mockImplementation(job=>job.kind==='sketchEdit'?new Promise((resolve,reject)=>requests.push({job,resolve,reject})):undefined)
+ const ui=await mount();await ui.click('Profile');const before=ui.doc();await ui.click(command)
+ const failed=requests.at(-1)!
+ failed.reject(Object.assign(Error('internal transport detail'),{code:'CAD_TRANSPORT'}));await flushClearance()
+ expect(ui.text(ui.all()[0])).toContain('A valid calculation result could not be received')
+ expect(ui.doc()).toEqual(before);expect(ui.button('Apply · Enter').props.disabled).toBe(true)
+ await ui.click('Retry calculation');const retry=requests.at(-1)!
+ const {copyIds:oldIds,...oldOptions}=failed.job.options,{copyIds:newIds,...newOptions}=retry.job.options
+ expect(newOptions).toEqual(oldOptions);expect(retry.job.document).toEqual(failed.job.document)
+ expect(ui.button('Retry calculation').props.disabled).toBe(true)
+ retry.resolve(applySolidSketchEdit(retry.job.document,retry.job.options));await flushClearance()
+ expect(ui.doc()).toEqual(before);expect(ui.button('Apply · Enter').props.disabled).toBe(false)
+ const count=requests.length;await commandKey(ui,'Enter');expect(requests).toHaveLength(count)
+ expect(ui.doc()).not.toEqual(before);await ui.click('↶');expect(ui.doc()).toEqual(before)
+})
+
+it.each(['Fillet','DogEar','Circular copies'].flatMap(command=>[false,true].map(failure=>({command,failure}))))('refreshes sketch $command after group change; late failure=$failure',async({command,failure})=>{
+ const {applySolidSketchEdit}=await import('../src/services/solidSketchEdit')
+ const requests:Array<{job:any;resolve:(value:any)=>void;reject:(error:Error)=>void}>=[]
+ previewWorkerRun.mockImplementation(job=>job.kind==='sketchEdit'?new Promise((resolve,reject)=>requests.push({job,resolve,reject})):undefined)
+ const ui=await mount({seedDocument:{version:1,sketches:[{id:'s',name:'Profile',closed:true,points:[[0,0],[10,0],[10,10],[0,10]]}],bodies:[],groups:[{name:'Destination',source:''}]}})
+ await ui.click('Profile');const before=ui.doc();await ui.click(command);const old=requests.at(-1)!
+ await ui.click('Active group: Destination');const current=requests.at(-1)!
+ expect(current).not.toBe(old)
+ if(failure)old.reject(Error('obsolete sketch group'));else old.resolve(applySolidSketchEdit(old.job.document,old.job.options))
+ await flushClearance();expect(ui.doc()).toEqual(before);expect(ui.button('Apply · Enter').props.disabled).toBe(true)
+ expect(ui.text(ui.all()[0])).not.toContain('obsolete sketch group')
+ current.resolve(applySolidSketchEdit(current.job.document,current.job.options));await flushClearance();await commandKey(ui,'Enter')
+ expect(ui.doc()).not.toEqual(before)
+ if(command==='Circular copies')for(const sketch of ui.doc().sketches.filter(s=>s.id!=='s'))expect(sketch.group).toBe('Destination')
+ await ui.click('↶');expect(ui.doc()).toEqual(before)
+})
+
+it('cancels obsolete pair inspection when enabling within-face diagnostics',async()=>{
+ const requests:Array<{job:any;resolve:(value:any)=>void}>=[]
+ previewWorkerRun.mockImplementation(job=>['faceContacts','selfIntersection'].includes(job.kind)?new Promise(resolve=>requests.push({job,resolve})):undefined)
+ const brep=createBrepBox([0,0,0],[10,10,10]),mesh=tessellateNurbsBrep(brep,2)
+ const ui=await mount({},stringifyMeshJson({version:1,sketches:[],bodies:[{id:'exact',name:'Exact',brep,mesh}]}))
+ await ui.click('Exact');const before=ui.doc();await ui.click('Body diagnostics');await ui.click('Inspect face contacts')
+ const old=requests.at(-1)!
+ const toggle=ui.all().find(n=>n.tag==='input'&&n.props.type==='checkbox'&&n.parent&&ui.text(n.parent).includes('Inspect within faces'))!
+ toggle.props['onUpdate:modelValue'](true);await flushClearance()
+ const latest=requests.at(-1)!;expect(latest.job.kind).toBe('selfIntersection');expect(latest.job.maxSpans).toBe(10000)
+ old.resolve({pairs:[],contactPairCount:99});await flushClearance()
+ expect(ui.text(ui.all()[0])).not.toContain('Contacts: 99')
+ latest.resolve({pairs:[],absenceProven:false,faces:[{face:2,result:null}],contactPairCount:0,sharedBoundaryPairCount:0,unresolvedPairCount:1,unvisitedPairs:0});await flushClearance()
+ expect(ui.text(ui.all()[0])).toContain('Absence of self-intersections is unproven')
+ expect(ui.text(ui.all()[0])).toContain('Unvisited or unproven faces: 3')
+ expect(ui.doc()).toEqual(before)
+})
+
+it('hides rear faces of a closed B-rep in CPU view while preserving two-sided mesh display',async()=>{
+ const closed=await mount({seedDocument:cylinderSeed()});await flushClearance()
+ const count=(ui:Awaited<ReturnType<typeof mount>>)=>ui.all(ui.svg()).filter(n=>n.tag==='polygon'&&n.props['data-body']==='imported-cylinder').length
+ const doc=closed.doc(),before=JSON.stringify(doc)
+ expect(count(closed)).toBeGreaterThan(0)
+ const meshOnly=structuredClone(doc);delete meshOnly.bodies[0].brep
+ const open=await mount({seedDocument:meshOnly});await flushClearance()
+ expect(count(open)).toBe(meshOnly.bodies[0].mesh.indices.length/3)
+ expect(JSON.stringify(closed.doc())).toBe(before)
+})
+
+it.each(['variable','corner'])('locates an oversized %s fillet and recovers without losing history',async mode=>{
+ const ui=await mount();await ui.click('Box');const before=ui.doc(),body=before.bodies.at(-1)!,brep=body.brep!
+ const max=[0,1,2].map(axis=>Math.max(...brep.vertices.map(v=>v.point[axis])))
+ const vertex=brep.vertices.findIndex(v=>v.point.every((x,i)=>x===max[i]))
+ const indexes=mode==='corner'?brep.edges.flatMap((e,i)=>e.vertices.includes(vertex)?[i]:[]):[brep.edges.findIndex(e=>{const [a,b]=e.vertices.map(v=>brep.vertices[v].point);return a[0]===b[0]&&a[1]===b[1]})]
+ await ui.click('Edges')
+ for(const [i,index] of indexes.entries()){
+  const edge=ui.all(ui.svg()).find(n=>n.props['data-topology-edge']===brep.topologyIds!.edges[index])!
+  edge.props.onPointerdown({...ui.event(edge),shiftKey:i>0});await nextTick()
+ }
+ await ui.click('Fillet 3D')
+ ui.all().find(n=>n.tag==='select'&&n.props['aria-label']==='Fillet type')!.props['onUpdate:modelValue'](mode);await flushClearance()
+ quantityField(ui,mode==='variable'?'Radius A, mm':'Radius / size, mm').props['onUpdate:modelValue']('30');await flushClearance()
+ expect(ui.text(ui.all()[0])).toContain(body.name+' · edges ')
+ expect(ui.text(ui.all()[0])).toContain('Reduce the radius or chamfer size')
+ expect(ui.button('Apply · Enter').props.disabled).toBe(true);expect(ui.doc()).toEqual(before)
+ for(const index of indexes)expect(ui.all(ui.svg()).find(n=>n.props['data-topology-edge']===brep.topologyIds!.edges[index])!.props.stroke).toBe('#f87171')
+ quantityField(ui,mode==='variable'?'Radius A, mm':'Radius / size, mm').props['onUpdate:modelValue']('1');await flushClearance()
+ expect(ui.button('Apply · Enter').props.disabled).toBe(false)
+ await ui.click('Apply · Enter');const after=ui.doc();expect(after).not.toEqual(before)
+ await ui.click('↶');expect(ui.doc()).toEqual(before)
+ await ui.click('↷');expect(ui.doc()).toEqual(after)
+})
+
+it('renders material opacity and keeps geometry intact through history and reload',async()=>{
+ const ui=await mount();await ui.click('Box');await ui.click('Properties')
+ const before=ui.doc(),body=before.bodies.at(-1)!
+ const change=async(value:string)=>{ui.all().find(n=>n.tag==='input'&&n.props['aria-label']==='Opacity')!.props.onChange({target:{value}});await flushClearance()}
+ await change('0.35')
+ expect(ui.doc().bodies.at(-1)!.material?.opacity).toBe(.35)
+ expect(ui.doc().bodies.at(-1)!.brep).toEqual(body.brep)
+ expect(ui.doc().bodies.at(-1)!.mesh).toEqual(body.mesh)
+ const polygons=()=>ui.all(ui.svg()).filter(n=>n.tag==='polygon'&&n.props['data-body']===body.id)
+ expect(polygons().length).toBeGreaterThanOrEqual(12);expect(polygons().every(n=>n.props.opacity===.35&&n.props.stroke==='none')).toBe(true)
+ const after=ui.doc();await change('1.1');expect(ui.doc()).toEqual(after)
+ await ui.click('↶');expect(ui.doc()).toEqual(before)
+ await ui.click('↷');expect(ui.doc()).toEqual(after)
+ const restored=await mount({},ui.serialized());expect(restored.doc()).toEqual(after)
+})
+
+it('maps CPU split fragments back to their original selectable face',async()=>{
+ const ui=await mount();await ui.click('Box');await ui.click('Properties')
+ ui.all().find(n=>n.tag==='input'&&n.props['aria-label']==='Opacity')!.props.onChange({target:{value:'0.35'}});await flushClearance()
+ const before=ui.doc(),body=before.bodies.at(-1)!,faces=solidTopology(body.mesh).faces
+ await ui.click('Faces');await flushClearance()
+ const fragments=ui.all(ui.svg()).filter(n=>n.tag==='polygon'&&n.props['data-body']===body.id)
+ expect(fragments.length).toBeGreaterThan(body.mesh.indices.length/3)
+ for(const fragment of fragments){
+  const triangle=Number(fragment.props['data-triangle']),expected=faces.findIndex(f=>f.triangles.includes(triangle))
+  expect(expected).toBeGreaterThanOrEqual(0)
+  ui.all().find(n=>n.props['aria-label']==='Select face')!.props['onUpdate:modelValue'](-1);await flushClearance()
+  fragment.props.onPointerdown(ui.event(fragment));await flushClearance()
+  const highlighted=ui.all(ui.svg()).filter(n=>n.tag==='polygon'&&n.props['data-body']===body.id&&String(n.props.style?.color).startsWith('hsl(40 '))
+  expect(highlighted.length).toBeGreaterThan(0)
+  expect([...new Set(highlighted.map(n=>Number(n.props['data-triangle'])))].sort((a,b)=>a-b)).toEqual([...faces[expected].triangles].sort((a,b)=>a-b))
+ }
+ expect(ui.doc()).toEqual(before)
+})
+
+
+it('reports approximate CPU transparency and clears the status after reducing the scene',async()=>{
+ const {TransparentBsp}=await import('../src/services/transparentBsp')
+ const ui=await mount();await ui.click('Box');await ui.click('Properties')
+ const fail=vi.spyOn(TransparentBsp.prototype,'ordered').mockImplementation(()=>{throw Error('Transparency operation limit exceeded')})
+ try{
+  ui.all().find(n=>n.tag==='input'&&n.props['aria-label']==='Opacity')!.props.onChange({target:{value:'0.35'}});await flushClearance()
+  const before=ui.doc()
+  expect(ui.all().some(n=>n.props['aria-label']==='transparency-limit')).toBe(true)
+  expect(ui.all(ui.svg()).some(n=>n.props['data-body'])).toBe(true)
+  await ui.click('Scene');await ui.click('Hide: '+before.bodies.at(-1)!.name)
+  expect(ui.all().some(n=>n.props['aria-label']==='transparency-limit')).toBe(false)
+  expect(ui.doc()).toEqual(before)
+ }finally{fail.mockRestore()}
+})
+
+it('reuses CPU transparency geometry during orbit and invalidates it after scene and material edits',async()=>{
+ const {TransparentBsp}=await import('../src/services/transparentBsp')
+ const build=vi.spyOn(TransparentBsp.prototype as any,'partition')
+ try{
+  const ui=await mount();await ui.click('Box');await ui.click('Properties')
+  const opacity=()=>ui.all().find(n=>n.tag==='input'&&n.props['aria-label']==='Opacity')!
+  opacity().props.onChange({target:{value:'0.35'}});await flushClearance()
+  const before=ui.doc(),svg=ui.svg(),down={...ui.event(svg,0,0),button:2}
+  svg.props.onPointerdown(down);await flushClearance()
+  const calls=build.mock.calls.length,points=()=>ui.all(svg).filter(n=>n.props['data-body']).map(n=>n.props.points)
+  const initial=points()
+  for(let i=1;i<=5;i++){svg.props.onPointermove({...ui.event(svg,i*10,i*4),button:2});await flushClearance()}
+  expect(build.mock.calls.length).toBe(calls)
+  expect(points()).not.toEqual(initial);expect(ui.doc()).toEqual(before)
+  svg.props.onPointerup({...ui.event(svg,50,20),button:2});await flushClearance()
+  const settled=build.mock.calls.length
+  await ui.click('Box');await flushClearance()
+  expect(build.mock.calls.length).toBeGreaterThan(settled)
+  const edited=ui.doc();await ui.click('↶');expect(ui.doc()).toEqual(before)
+  await ui.click('↷');expect(ui.doc()).toEqual(edited)
+  await ui.click('Scene');const target=edited.bodies.at(-1)!;ui.all().find(n=>n.props['data-scene-key']==='object:'+target.id)!.children.find(n=>n.tag==='button')!.props.onClick({shiftKey:false});await flushClearance();await ui.click('Properties');const materialCalls=build.mock.calls.length
+  opacity().props.onChange({target:{value:'0.5'}});await flushClearance()
+  expect(build.mock.calls.length).toBeGreaterThan(materialCalls)
+  expect(ui.doc().bodies).toHaveLength(edited.bodies.length);expect(ui.doc().bodies.find(b=>b.id===target.id)!.material?.opacity).toBe(.5)
+ }finally{build.mockRestore()}
+})
+
+it('refreshes transparent world fragments after smooth refinement and orbit settle without changing the cylinder',async()=>{
+ const {TransparentBsp}=await import('../src/services/transparentBsp'),{prepareSolidDisplay}=await import('../src/services/solidDisplayPreparation')
+ const build=vi.spyOn(TransparentBsp.prototype as any,'partition'),requests:Array<{job:any;resolve:(value:any)=>void}>=[]
+ displayWorkerRun.mockImplementation(job=>new Promise(resolve=>requests.push({job,resolve})))
+ try{
+  const seed=cylinderSeed();seed.bodies[0].material={name:'Glass',color:'#2288dd',opacity:.35}
+  const ui=await mount({seedDocument:seed});await flushClearance();const before=ui.doc(),svg=ui.svg()
+  const geometry=()=>ui.all(svg).filter(n=>n.props['data-body']==='imported-cylinder').map(n=>n.props.points)
+  const coarse=geometry(),calls=build.mock.calls.length;expect(requests).toHaveLength(1)
+  requests[0].resolve(prepareSolidDisplay(requests[0].job.mesh,requests[0].job.brep));await flushClearance()
+  expect(build.mock.calls.length).toBeGreaterThan(calls);const smooth=geometry();expect(smooth).not.toEqual(coarse)
+  svg.props.onPointerdown({...ui.event(svg),button:2});await flushClearance();const moving=build.mock.calls.length
+  svg.props.onPointermove({...ui.event(svg,20,10),button:2});await flushClearance();expect(build.mock.calls.length).toBe(moving)
+  svg.props.onPointerup({...ui.event(svg,20,10),button:2});await flushClearance();expect(build.mock.calls.length).toBeGreaterThan(moving)
+  expect(ui.doc()).toEqual(before)
+  await ui.click('Smooth B-rep display');expect(geometry()).not.toEqual(smooth);expect(ui.doc()).toEqual(before)
+ }finally{build.mockRestore()}
+})
+
+it('invalidates transparent world fragments for changed Push Pull preview and clears them on Escape',async()=>{
+ const {TransparentBsp}=await import('../src/services/transparentBsp'),build=vi.spyOn(TransparentBsp.prototype as any,'partition')
+ try{
+  const ui=await mount();await ui.click('Cube');await ui.click('Properties')
+  ui.all().find(n=>n.props['aria-label']==='Opacity')!.props.onChange({target:{value:'0.35'}});await flushClearance()
+  const before=ui.doc();await ui.click('Faces');await ui.pointer(ui.all(ui.svg()).find(n=>n.props['data-body'])!)
+  const calls=build.mock.calls.length;await ui.click('Push / Pull');await flushClearance()
+  expect(build.mock.calls.length).toBeGreaterThan(calls)
+  const preview=()=>ui.all(ui.svg()).filter(n=>n.props['data-preview-body']).map(n=>n.props.points)
+  const initial=preview();expect(initial.length).toBeGreaterThan(0);const previewCalls=build.mock.calls.length
+  quantityField(ui,'Distance, mm').props['onUpdate:modelValue']('3');await flushClearance()
+  expect(build.mock.calls.length).toBeGreaterThan(previewCalls);expect(preview()).not.toEqual(initial);expect(ui.doc()).toEqual(before)
+  await commandKey(ui,'Escape');expect(preview()).toEqual([]);expect(ui.doc()).toEqual(before)
+  expect(ui.all(ui.svg()).some(n=>n.props['data-body']===before.bodies[0].id)).toBe(true)
+ }finally{build.mockRestore()}
+})
+
+it('keeps working cylinder fragment lighting equal to the original face shade across orbit cameras',async()=>{
+ const {directFaceShade}=await import('../src/services/directModelingTools')
+ const seed=cylinderSeed();seed.bodies[0].material={name:'Glass',color:'#2288dd',opacity:.35}
+ const ui=await mount({seedDocument:seed});await ui.click('Smooth B-rep display');await ui.click('Imported cylinder')
+ const before=ui.doc(),svg=ui.svg(),initial=defaultDirectCamera()
+ svg.props.onPointerdown({...ui.event(svg),button:2});await flushClearance()
+ for(const [x,y] of [[0,0],[30,10],[-40,35],[85,-40]]){
+  svg.props.onPointermove({...ui.event(svg,x,y),button:2});await flushClearance()
+  const camera={yaw:initial.yaw+x*.007,pitch:Math.max(-1.5,Math.min(1.5,initial.pitch+y*.007))}
+  const fragments=ui.all(svg).filter(n=>n.props['data-body']==='imported-cylinder');expect(fragments.length).toBeGreaterThan(0)
+  for(const fragment of fragments){const shade=Number(String(fragment.props.style.color).match(/45% ([\d.]+)%/)?.[1]);expect(shade).toBe(directFaceShade(before.bodies[0].mesh,Number(fragment.props['data-triangle']),camera))}
+ }
+ svg.props.onPointerup({...ui.event(svg,85,-40),button:2});await flushClearance();expect(ui.doc()).toEqual(before)
+})
+
+it('explains how to fix an insufficient closed sweep section count and keeps the document unchanged',async()=>{
+ const profile={id:'profile',name:'Profile',curve:{degree:1,knots:[0,0,1,1],controlPoints:[[1,0,0],[1.2,0,0]],weights:[1,1]}}
+ const path={id:'path',name:'Path',curve:{degree:2,knots:[0,0,0,.25,.25,.5,.5,.75,.75,1,1,1],controlPoints:[[1,0,0],[1,1,0],[0,1,0],[-1,1,0],[-1,0,0],[-1,-1,0],[0,-1,0],[1,-1,0],[1,0,0]],weights:Array.from({length:9},(_,i)=>i%2?Math.SQRT1_2:1)}}
+ const ui=await mount({seedDocument:{version:1,bodies:[],sketches:[],curves:[profile,path]}})
+ await ui.click('Profile');await ui.click('Path',true);const before=ui.doc();await ui.click('Sweep')
+ ui.all().find(n=>n.props['aria-label']==='Sweep orientation')!.props['onUpdate:modelValue']('framed');await flushClearance()
+ ui.all().find(n=>n.props['aria-label']==='Sweep sections')!.props['onUpdate:modelValue'](3);await flushClearance()
+ expect(ui.text(ui.all()[0])).toContain('Use at least 4 sections for a closed path.')
+ expect(ui.button('Apply · Enter').props.disabled).toBe(true);expect(ui.doc()).toEqual(before)
+ await commandKey(ui,'Escape');expect(ui.doc()).toEqual(before)
+})
+
+it('prepares incompatible Coons weights with budget refusal, cancel and exact source history',async()=>{
+ const points=[[[0,0,0],[2,0,0]],[[0,2,0],[2,2,0]],[[0,0,0],[0,2,0]],[[2,0,0],[2,2,0]]]
+ const curves=points.map((controlPoints,i)=>({id:`prepared-edge-${i}`,name:`Prepared edge ${i}`,curve:{degree:1,knots:[0,0,1,1],controlPoints,weights:i===0?[1,.5]:[1,1]}}))
+ const ui=await mount({seedDocument:{version:1,bodies:[],sketches:[],curves}})
+ for(let i=0;i<4;i++)await ui.click(`Prepared edge ${i}`,i>0)
+ const before=ui.doc();await ui.click('Coons patch')
+ await vi.waitFor(()=>expect(ui.all().some(n=>n.props['aria-label']==='Prepare patch boundary weights')).toBe(true))
+ const enabled=ui.all().find(n=>n.props['aria-label']==='Prepare patch boundary weights')!
+ enabled.props.onChange({target:{checked:true}});await flushClearance()
+ expect(ui.all().some(n=>n.props['data-diagnostic']==='patch-preparation')).toBe(true)
+ expect(ui.doc()).toEqual(before)
+ quantityField(ui,'Preparation budget, mm').props['onUpdate:modelValue'](0);await flushClearance()
+ expect(ui.text(ui.all()[0])).toContain('Boundary preparation exceeds the budget')
+ expect(ui.text(ui.all()[0])).toContain('Bottom · vMin:')
+ expect(ui.all().filter(n=>n.props['data-diagnostic']==='patch-budget')).toHaveLength(1)
+ expect(ui.button('Apply · Enter').props.disabled).toBe(true);expect(ui.doc()).toEqual(before)
+ quantityField(ui,'Preparation budget, mm').props['onUpdate:modelValue'](1e-6);await flushClearance()
+ expect(ui.all().some(n=>n.props['data-diagnostic']==='patch-budget')).toBe(false)
+ await commandKey(ui,'Escape');expect(ui.doc()).toEqual(before)
+ await ui.click('Coons patch');await commandKey(ui,'Enter')
+ expect(ui.doc().surfaces).toHaveLength(1);expect(ui.doc().curves).toEqual(before.curves)
+ const committed=ui.doc();await ui.click('↶');expect(ui.doc()).toEqual(before)
+ await ui.click('↷');expect(ui.doc()).toEqual(committed)
+})
+
+it('ignores stale Coons preparation bounds and errors after retry and cancellation',async()=>{
+ const {buildSolidSurface}=await import('../src/services/solidSurfaceConstruction')
+ const requests:Array<{job:any;resolve:(value:any)=>void;reject:(error:Error)=>void}>=[]
+ previewWorkerRun.mockImplementation(job=>job.kind==='surfaceBuild'?new Promise((resolve,reject)=>requests.push({job,resolve,reject})):undefined)
+ const points=[[[0,0,0],[2,0,0]],[[0,2,0],[2,2,0]],[[0,0,0],[0,2,0]],[[2,0,0],[2,2,0]]]
+ const curves=points.map((controlPoints,i)=>({id:`async-patch-${i}`,name:`Async boundary ${i}`,curve:{degree:1,knots:[0,0,1,1],controlPoints,weights:i===0?[1,.5]:[1,1]}}))
+ const ui=await mount({seedDocument:{version:1,bodies:[],sketches:[],curves}})
+ for(let i=0;i<4;i++)await ui.click(`Async boundary ${i}`,i>0)
+ const before=ui.doc();await ui.click('Coons patch')
+ await vi.waitFor(()=>expect(ui.all().some(n=>n.props['aria-label']==='Prepare patch boundary weights')).toBe(true))
+ ui.all().find(n=>n.props['aria-label']==='Prepare patch boundary weights')!.props.onChange({target:{checked:true}});await flushClearance()
+ quantityField(ui,'Preparation budget, mm').props['onUpdate:modelValue'](0);await flushClearance()
+ quantityField(ui,'Preparation budget, mm').props['onUpdate:modelValue'](1e-6);await flushClearance()
+ expect(requests).toHaveLength(4);expect(ui.button('Apply · Enter').props.disabled).toBe(true)
+ const latest=buildSolidSurface(requests[3].job.document,requests[3].job.options)
+ requests[3].resolve(latest);await flushClearance()
+ const diagnostic=ui.text(ui.all().find(n=>n.props['data-diagnostic']==='patch-preparation')!)
+ requests[2].resolve(buildSolidSurface(requests[2].job.document,requests[2].job.options));await flushClearance()
+ requests[1].resolve(buildSolidSurface(requests[1].job.document,requests[1].job.options));await flushClearance()
+ requests[0].reject(Error('stale boundary failure'));await flushClearance()
+ expect(ui.button('Apply · Enter').props.disabled).toBe(false)
+ expect(ui.text(ui.all().find(n=>n.props['data-diagnostic']==='patch-preparation')!)).toBe(diagnostic)
+ await commandKey(ui,'Enter');expect(ui.doc()).toEqual(latest.document)
+ await ui.click('↶');expect(ui.doc()).toEqual(before)
+ await ui.click('Coons patch');expect(requests).toHaveLength(5)
+ await commandKey(ui,'Escape')
+ requests[4].resolve(buildSolidSurface(requests[4].job.document,requests[4].job.options));await flushClearance()
+ expect(ui.doc()).toEqual(before)
+ expect(ui.all().some(n=>n.props['data-diagnostic']==='patch-preparation')).toBe(false)
+})
+
+it.each(['en','ru'])('recovers Coons roles and directions with local error markers (%s)',async locale=>{
+ const points=[[[0,0,0],[2,0,0]],[[0,2,0],[2,2,0]],[[0,0,0],[0,2,0]],[[2,0,0],[2,2,0]]]
+ const curves=points.map((controlPoints,i)=>({id:`role-${i}`,name:`Role ${i}`,curve:{degree:1,knots:[0,0,1,1],controlPoints,weights:[1,1]}}))
+ const ui=await mount({locale,seedDocument:{version:1,bodies:[],sketches:[],curves}})
+ for(let i=0;i<4;i++)await ui.click(`Role ${i}`,i>0)
+ const before=ui.doc();await ui.click('Coons patch')
+ const topLabel=locale==='ru'?'Верх · vMax':'Top · vMax'
+ const top=ui.all().find(n=>n.tag==='select'&&n.props['aria-label']===topLabel)!
+ top.props.onKeydown({key:'Home',preventDefault(){},stopPropagation(){}});await flushClearance()
+ expect(ui.text(ui.all()[0])).toContain(locale==='ru'?'Для каждой роли выберите отдельную кривую.':'Choose a distinct curve for each role.')
+ expect(ui.button(locale==='ru'?'Готово · Enter':'Apply · Enter').props.disabled).toBe(true)
+ await commandKey(ui,'Enter');expect(ui.doc()).toEqual(before)
+ top.props.onKeydown({key:'ArrowDown',preventDefault(){},stopPropagation(){}});await flushClearance()
+ const reverse=ui.all().find(n=>n.tag==='input'&&n.props.type==='checkbox'&&n.parent&&ui.text(n.parent).includes(locale==='ru'?'Развернуть: Справа':'Reverse: Right'))!
+ reverse.props['onUpdate:modelValue'](true);await flushClearance()
+ expect(ui.text(ui.all()[0])).toContain(locale==='ru'?'Угол 2':'Corner 2')
+ const markers=ui.all().find(n=>n.props['data-diagnostic']==='patch-gap')!
+ expect(markers.children.filter(n=>n.tag==='circle')).toHaveLength(2)
+ expect(ui.button(locale==='ru'?'Готово · Enter':'Apply · Enter').props.disabled).toBe(true)
+ reverse.props['onUpdate:modelValue'](false);await flushClearance()
+ expect(ui.all().some(n=>n.props['data-diagnostic']==='patch-gap')).toBe(false)
+ await commandKey(ui,'Enter');expect(ui.doc().surfaces).toHaveLength(1);expect(ui.doc().curves).toEqual(before.curves)
+ await ui.click('↶');expect(ui.doc()).toEqual(before)
 })

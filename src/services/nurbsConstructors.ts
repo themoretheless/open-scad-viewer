@@ -24,7 +24,7 @@ export const coonsNurbsPatch=(boundaries:NurbsCurve[]):NurbsSurface=>callNurbsRu
 
 export interface FramedSweepResult {
  surface:NurbsSurface|null
- report:{accepted:boolean;sampledControlDeviation:number;budget:number;stations:number;sections:number;continuousBound:false;method:'double-reflection-fourfold-section-refinement'}
+ report:{accepted:boolean;sampledControlDeviation:number;budget:number;stations:number;sections:number;closedPath?:boolean;seamContinuity?:'C0'|'open';continuousBound:false;method:'double-reflection-fourfold-section-refinement'}
 }
 /** Sampled refinement diagnostic only; not a certified continuous error bound. */
 export const framedSweepNurbsCurve=(profile:NurbsCurve,path:NurbsCurve,normal:[number,number,number],sections:number,maxDeviation:number):FramedSweepResult=>
@@ -82,3 +82,11 @@ export interface CurveMatchResult {
 }
 export const matchNurbsCurveG1=(reference:NurbsCurve,edited:NurbsCurve,referenceEnd:'start'|'end',editedEnd:'start'|'end',maxAngleDegrees=1e-6):CurveMatchResult=>
  callNurbsRust('curve_match_g1',{reference,edited,referenceEnd,editedEnd,maxAngleDegrees})
+
+export interface CoonsBoundaryPreparation {
+ curve:NurbsCurve
+ report:{accepted:boolean;errorUpper:number;budget:number;wholeCurve:true;method:'outward-homogeneous-Bernstein-difference'}
+}
+/** Preserve boundary parameters; return the source definition if the bound exceeds budget. */
+export const prepareCoonsBoundaryWeights=(curve:NurbsCurve,maxError:number):CoonsBoundaryPreparation=>
+ {const result=callNurbsRust<CoonsBoundaryPreparation>('curve_prepare_coons_weights',{curve,maxError});return result.report.accepted?result:{...result,curve:structuredClone(curve)}}

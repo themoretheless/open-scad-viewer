@@ -1,6 +1,7 @@
 import {extrudeSketchProfile} from './directExtrusion'
 import {withRetainedProfile} from './retainedSketchProfile'
 import {validateBrepProfile,type BrepProfile} from './geometry/brepProfile'
+import type {SolidInstanceBatchCache} from './solidInstanceBatchCache'
 import {resolveSolidInstances,type SolidInstanceLink} from './solidInstances'
 import { sketchDimensions, type SketchDimension } from './directDimensions'
 import {callGeometryRust} from './geometry/kernel'
@@ -19,7 +20,7 @@ export type Point2 = [number, number]
 export interface DirectSketch { group?: string; id: string; name: string; points: Point2[]; closed: boolean; retainedProfile?: BrepProfile; analytic?: AnalyticCurve; plane?: SketchPlane; supportBodyId?: string; dimensions?: SketchDimension[] }
 /** `group` names a flat, optional grouping shown in the scene list. Bodies built from
  * source share one, so a rebuild can be recognised, replaced or deleted as a unit. */
-export interface DirectMaterial { name: string; color: string; metallic?: number; roughness?: number }
+export interface DirectMaterial { name: string; color: string; metallic?: number; roughness?: number; opacity?: number }
 export interface DirectBody { id: string; name: string; mesh: PolygonMesh; brep?: NurbsBrep; group?: string; material?: DirectMaterial; instance?: SolidInstanceLink }
 /** A group owns the source its bodies were built from, so it stays editable and rebuildable. */
 export interface DirectGroup { name: string; source: string }
@@ -62,7 +63,7 @@ export function serializeDirectDocument(document:DirectDocument):string {
  })})
 }
 
-function* directDocumentValidation(text: string): Generator<void, DirectDocument> {
+function* directDocumentValidation(text: string, instanceCache?:SolidInstanceBatchCache): Generator<void, DirectDocument> {
   // In-memory bound only; the browser draft has its own, smaller quota (see persist in DirectModeler).
   if (text.length > MAX_DOCUMENT_CHARACTERS) throw new Error('Document exceeds 64 MB.')
   const d = JSON.parse(text) as DirectDocument
@@ -117,7 +118,7 @@ function* directDocumentValidation(text: string): Generator<void, DirectDocument
   }
   for (const b of d.bodies) {
     if(b.material!==undefined&&(!b.material||typeof b.material.name!=='string'||!b.material.name.length||b.material.name.length>100||typeof b.material.color!=='string'||!/^#[0-9a-f]{6}$/i.test(b.material.color)))throw Error('Invalid body material.')
-    if(b.material&&[b.material.metallic,b.material.roughness].some(v=>v!==undefined&&(!Number.isFinite(v)||v<0||v>1)))throw Error('Invalid body material.')
+    if(b.material&&[b.material.metallic,b.material.roughness,b.material.opacity].some(v=>v!==undefined&&(!Number.isFinite(v)||v<0||v>1)))throw Error('Invalid body material.')
     if (b.group !== undefined && (typeof b.group !== 'string' || b.group.length === 0 || b.group.length > 100)) {
       throw new Error('Invalid body group.')
     }
@@ -166,7 +167,7 @@ function* directDocumentValidation(text: string): Generator<void, DirectDocument
       expanded+=sourceSizes.get(body.instance.sourceId)??0
       if(expanded>MAX_DOCUMENT_CHARACTERS)throw Error('Expanded instance document exceeds 64 MB.')
     }
-    d.bodies=resolveSolidInstances(d).bodies
+    d.bodies=resolveSolidInstances(d,instanceCache).bodies
     if(d.bodies.some(body=>body.instance&&!body.mesh.positions.every(finite)))throw Error('Instance placement exceeds document coordinate bounds.')
   }
   for (const item of d.curves) { validateNurbsCurve(item.curve); yield }
@@ -187,8 +188,8 @@ function* directDocumentValidation(text: string): Generator<void, DirectDocument
   }
 }
 
-export function parseDirectDocument(text: string): DirectDocument {
-  const validation = directDocumentValidation(text)
+export function parseDirectDocument(text: string, instanceCache?:SolidInstanceBatchCache): DirectDocument {
+  const validation = directDocumentValidation(text,instanceCache)
   for (;;) {
     const step = validation.next()
     if (step.done) return step.value
@@ -250,22 +251,25 @@ const aabbFromBrep = (brep: NurbsBrep): { inner: Aabb; outer: Aabb } => {
   return { inner, outer }
 }
 
-/** Inactive snapshots retain compact text only; exactly one current state owns geometry. */
+/** Inactive snapshots retain compact text only; at most one current state owns geometry. */
 interface DirectSnapshot { characters: number; text: string }
 export class DirectHistory {
   private restoreGeneration = 0
   private past: DirectSnapshot[] = []
   private future: DirectSnapshot[] = []
-  private current: DirectSnapshot & {document:DirectDocument}
+  private current: DirectSnapshot & {document?:DirectDocument}
   constructor(document = emptyDirectDocument()) {
     const text = stringifyMeshJson(document)
     const validated = parseDirectDocument(text)
     const validatedText = serializeDirectDocument(validated)
     this.current = { document: validated, characters: validatedText.length, text: validatedText }
   }
+  private get currentDocument():DirectDocument {
+    return this.current.document ??= parseDirectDocument(this.current.text)
+  }
   /** Export identity is metadata: retain it across existing Undo/Redo states without adding a geometry edit. */
   ensureBlenderProjectId(): string {
-    if(this.current.document.blenderProjectId)return this.current.document.blenderProjectId
+    if(this.currentDocument.blenderProjectId)return this.currentDocument.blenderProjectId
     const id=crypto.randomUUID()
     const stamp=(snapshot:DirectSnapshot):DirectSnapshot=>{
       const document=JSON.parse(snapshot.text) as DirectDocument
@@ -275,16 +279,23 @@ export class DirectHistory {
       return {text,characters:text.length}
     }
     this.past=this.past.map(stamp);this.future=this.future.map(stamp)
-    this.current={...stamp(this.current),document:{...this.current.document,blenderProjectId:id}}
+    this.current={...stamp(this.current),document:{...this.currentDocument,blenderProjectId:id}}
     return id
   }
-  get document() { return clone(this.current.document) }
+  get document() { return clone(this.currentDocument) }
+  /** Detached metadata projection: callers needing only identities do not copy geometry. */
+  get objectIds():string[] {
+    // Async restore intentionally retains only a validated compact snapshot.
+    // Reading identities must not resolve every linked instance on the UI thread.
+    const d=this.current.document??JSON.parse(this.current.text) as DirectDocument
+    return [...d.bodies,...d.sketches,...d.curves??[],...d.surfaces??[]].map(object=>object.id)
+  }
   /** Immutable identity for consumers caching a committed snapshot across document copies. */
   get snapshotKey() { return this.current.text }
   get canUndo() { return this.past.length > 0 }
   get canRedo() { return this.future.length > 0 }
   get storageStats() {
-    return {undoStates:this.past.length,redoStates:this.future.length,materializedStates:1,
+    return {undoStates:this.past.length,redoStates:this.future.length,materializedStates:this.current.document?1:0,
       retainedCharacters:this.current.characters+[...this.past,...this.future].reduce((sum,snapshot)=>sum+snapshot.characters,0)}
   }
   commit(document: DirectDocument, validateChange?: (resolved:DirectDocument)=>void) {
@@ -300,7 +311,7 @@ export class DirectHistory {
   }
   private commitValidated(next:DirectDocument,validateChange?:(resolved:DirectDocument)=>void) {
     const base=this.current
-    next.blenderProjectId ??= this.current.document.blenderProjectId
+    next.blenderProjectId ??= this.currentDocument.blenderProjectId
     // UI policies (for example locked linked bodies) must see resolved geometry.
     // Give the policy its own copy so it cannot mutate the validated state.
     validateChange?.(clone(next))
@@ -355,9 +366,10 @@ export class DirectHistory {
     // A response for another snapshot cannot move the stacks. Geometry validation
     // belongs to the loader; re-parsing here would block the main thread again.
     if(serializeDirectDocument(loaded)!==snapshot.text)throw Error('History restore returned a different document.')
-    const document=clone(loaded)
+    // Retain the already validated immutable snapshot; materialize a private copy
+    // only if a synchronous history consumer asks for geometry later.
     from.pop();to.push({text:base.text,characters:base.characters})
-    this.current={...snapshot,document}
+    this.current={...snapshot}
     return true
   }
 }

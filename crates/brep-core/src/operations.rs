@@ -1865,6 +1865,11 @@ pub fn push_planar_face(model: &Model, face_id: usize, distance: f64) -> Result<
             "Face displacement must be finite and within ±1000000 mm",
         ));
     }
+    if model.bodies.len() > 1 {
+        return crate::body_edit::edit_face(model, face_id, |part, face| {
+            push_planar_face(part, face, distance)
+        });
+    }
     if let Some(cylinder) = crate::intersections::recognize_cylinder(model)? {
         let cap = cylinder
             .caps
@@ -1928,7 +1933,16 @@ pub fn push_planar_face(model: &Model, face_id: usize, distance: f64) -> Result<
             "Planar editing supports at most 64 support planes",
         ));
     }
-    planes[selected].offset += distance;
+    // Boolean output can partition one supporting plane into several faces.
+    // Moving only one leaves the other coincident constraints clipping the cap.
+    let support = planes[selected].clone();
+    for plane in &mut planes {
+        if norm(sub(plane.normal, support.normal)) <= 1e-10
+            && (plane.offset - support.offset).abs() <= model.tolerance_mm
+        {
+            plane.offset += distance;
+        }
+    }
     let mut out = model_from_planes(&planes, model.tolerance_mm)?;
     if !out.vertices.iter().any(|v| {
         (dot(planes[selected].normal, v.point) - planes[selected].offset).abs()
@@ -2292,6 +2306,40 @@ pub fn fillet_edges(
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn push_boolean_partitioned_cap_moves_all_supports() {
+        let model = boolean(
+            &cuboid([0.; 3], [12., 10., 10.]).unwrap(),
+            &cuboid([8., 0., 0.], [20., 10., 10.]).unwrap(),
+            "union",
+        ).unwrap();
+        let caps: Vec<_> = model.faces.iter().enumerate().filter(|(_, face)|
+            face.surface.control_points.iter().flatten().all(|p| (p[2] - 10.).abs() < 1e-8)
+        ).map(|(id, _)| id).collect();
+        assert!(caps.len() > 1, "fixture must contain partitioned cap faces");
+        for cap in caps {
+            for distance in [2., -2.] {
+                let edited = push_planar_face(&model, cap, distance).unwrap();
+                assert_eq!(edited.validate().unwrap().boundary_edge_count, 0);
+                let volume = crate::analysis::mass_properties(&edited, 1e-7, 200_000).unwrap().signed_volume_mm3;
+                assert!((volume - 200. * (10. + distance)).abs() < 1e-5, "{volume}");
+                assert_eq!(bounds(&edited), ([0.; 3], [20., 10., 10. + distance]));
+                let longitudinal: Vec<_> = edited.edges.iter().enumerate().filter(|(_, edge)| {
+                    let a = edited.vertices[edge.vertices[0]].point;
+                    let b = edited.vertices[edge.vertices[1]].point;
+                    a[0] == b[0] && a[1] == b[1]
+                }).map(|(id, _)| id).collect();
+                assert_eq!(longitudinal.len(), 4);
+                let rounded = crate::analytic_features::exact_convex_prism_fillet(&edited, &longitudinal, 1.).unwrap();
+                let volume = crate::analysis::mass_properties(&rounded.model, 1e-7, 200_000).unwrap().signed_volume_mm3;
+                let expected = (200. - 4. + std::f64::consts::PI) * (10. + distance);
+                assert!((volume - expected).abs() < 1e-5, "rounded {volume}, expected {expected}");
+            }
+            assert!(push_planar_face(&model, cap, -10.).is_err());
+        }
+        assert_eq!(bounds(&model), ([0.; 3], [20., 10., 10.]));
+    }
+
     #[test]
     fn push_nonconvex_cap_and_enclosure_preserves_floor() {
         let bracket=extrude_polygon(&[[0.,0.],[40.,0.],[40.,5.],[5.,5.],[5.,30.],[0.,30.]],0.,20.).unwrap();

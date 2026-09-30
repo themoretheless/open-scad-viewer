@@ -1230,7 +1230,7 @@ pub(crate) fn valence3_cuboid_max_corner(
     )
 }
 
-/// Exact constant-radius rounding of selected vertices of a strictly convex
+/// Exact constant-radius rounding of selected convex vertices of a simple
 /// CCW profile, extruded along local +Z. Every round is one positive-weight
 /// rational circular arc and therefore authors a cylindrical, not faceted,
 /// side face.
@@ -1242,9 +1242,24 @@ pub(crate) fn rounded_convex_prism_edges(
     z0: f64,
     z1: f64,
 ) -> Result<Model> {
+    if !z1.is_finite() || z1 <= z0 {
+        return Err(refuse("Rounded convex prism height is invalid"));
+    }
+    let curves = rounded_profile_curves(source, profile, rounded, radius, z0)?;
+    extrude_curve_loop(&curves, z0, z1, source.tolerance_mm, &[source])
+}
+
+/// Exact material-left rounded profile, shared by extrusion and revolution.
+pub(crate) fn rounded_profile_curves(
+    source: &Model,
+    profile: &[[f64; 2]],
+    rounded: &[bool],
+    radius: f64,
+    z0: f64,
+) -> Result<Vec<Curve>> {
     if profile.len() < 3
         || profile.len() != rounded.len()
-        || !(radius.is_finite() && radius > 0. && z1 > z0)
+        || !(radius.is_finite() && radius > 0. && z0.is_finite())
     {
         return Err(refuse("Rounded convex prism parameters are invalid"));
     }
@@ -1268,6 +1283,9 @@ pub(crate) fn rounded_convex_prism_edges(
             .ok_or_else(|| refuse("Rounded profile has a collapsed incoming edge"))?;
         let v = unit([next[0] - p[0], next[1] - p[1]])
             .ok_or_else(|| refuse("Rounded profile has a collapsed outgoing edge"))?;
+        if u[0] * v[1] - u[1] * v[0] >= -1e-12 {
+            return Err(refuse("Selected profile corner must be convex"));
+        }
         let theta = (u[0] * v[0] + u[1] * v[1]).clamp(-1., 1.).acos();
         let turn = std::f64::consts::PI - theta;
         if !(theta > 1e-6 && turn > 1e-6) {
@@ -1309,7 +1327,32 @@ pub(crate) fn rounded_convex_prism_edges(
             vec![entry[next][0], entry[next][1], z0],
         ));
     }
-    extrude_curve_loop(&curves, z0, z1, source.tolerance_mm, &[source])
+    // Nonadjacent boundary spans must be proved disjoint. A valid adjacent
+    // tangent budget alone does not exclude a collision across a concave notch.
+    let mut spec = cad_predicates::ToleranceContext::default_valid().specification().clone();
+    spec.linear_abs = source.tolerance_mm;
+    let bounds: Vec<_> = curves.iter().map(|curve| {
+        let mut min = [f64::INFINITY; 2];
+        let mut max = [f64::NEG_INFINITY; 2];
+        for point in &curve.control_points {
+            for axis in 0..2 { min[axis] = min[axis].min(point[axis]); max[axis] = max[axis].max(point[axis]); }
+        }
+        (min, max)
+    }).collect();
+    for i in 0..curves.len() {
+        for j in i + 2..curves.len() {
+            if i == 0 && j + 1 == curves.len() { continue; }
+            let (a_min, a_max) = bounds[i];
+            let (b_min, b_max) = bounds[j];
+            if (0..2).any(|axis| a_max[axis] + source.tolerance_mm < b_min[axis] || b_max[axis] + source.tolerance_mm < a_min[axis]) { continue; }
+            let report = nurbs_core::intersection::intersect_curve_curve(&curves[i], &curves[j], Some(cad_predicates::ToleranceContext::new(spec.clone()).map_err(|_| refuse("Invalid fillet collision tolerance"))?))?;
+            if report["coverage"]["complete"].as_bool() != Some(true)
+                || report["components"].as_array().is_none_or(|components| !components.is_empty()) {
+                return Err(refuse("Fillet boundary collides with a nonadjacent span or separation is unresolved"));
+            }
+        }
+    }
+    Ok(curves)
 }
 
 /// Parallel cylinder wall imprint from Complete generator-line events.
@@ -1493,6 +1536,72 @@ pub fn cavity(outer: &Model, inner: &Model, tolerance: f64) -> Result<Model> {
 mod tests {
     use super::*;
     use crate::cylinder;
+
+    #[test]
+    fn annular_outer_round_revolves_to_exact_toroidal_faces() {
+        let source = crate::tube(20., 5., 6.).unwrap();
+        let before = value_codec::to_string(&source).unwrap();
+        let profile = [[5., 0.], [20., 0.], [20., 6.], [5., 6.]];
+        for radius in [0.25_f64, 1., 2.5] {
+            let mut curves = rounded_profile_curves(&source, &profile, &[false, false, true, false], radius, 0.).unwrap();
+            for curve in &mut curves {
+                for point in &mut curve.control_points { point.truncate(2); }
+            }
+            let result = crate::revolve_wire(&curves, source.tolerance_mm).unwrap();
+            crate::solid_audit::audit_solid(&result).unwrap();
+            let volume = crate::analysis::mass_properties(&result, 1e-9, 300_000).unwrap().signed_volume_mm3;
+            // Pappus: rotate the removed square-minus-quarter-disc area.
+            // Its first moment relative to the arc center is r^3 / 6.
+            let removed_moment = (20.-radius)*(1.-std::f64::consts::PI/4.)*radius*radius + radius.powi(3)/6.;
+            let expected = 2250.*std::f64::consts::PI - 2.*std::f64::consts::PI*removed_moment;
+            assert!((volume-expected).abs()<2e-5, "{volume} != {expected}");
+            assert_eq!(result.faces.iter().filter(|f|f.surface.degree_u==2 && f.surface.degree_v==2).count(),4);
+            for face in result.faces.iter().filter(|f|f.surface.degree_u==2 && f.surface.degree_v==2) {
+                let s=&face.surface;
+                let domain_u=[s.knots_u[s.degree_u],s.knots_u[s.knots_u.len()-s.degree_u-1]];
+                let domain_v=[s.knots_v[s.degree_v],s.knots_v[s.knots_v.len()-s.degree_v-1]];
+                for a in [0.,0.25,0.5,0.75,1.] {
+                    for b in [0.,0.25,0.5,0.75,1.] {
+                        let p=s.evaluate(domain_u[0]+a*(domain_u[1]-domain_u[0]),domain_v[0]+b*(domain_v[1]-domain_v[0])).unwrap().point;
+                        let residual=(p[0].hypot(p[1])-(20.-radius)).hypot(p[2]-(6.-radius))-radius;
+                        assert!(residual.abs()<1e-9,"torus radius residual {residual}");
+                    }
+                }
+            }
+        }
+        assert!(rounded_profile_curves(&source,&profile,&[false,false,true,false],6.,0.).is_err());
+        assert_eq!(value_codec::to_string(&source).unwrap(),before);
+    }
+
+    #[test]
+    fn concave_prism_selected_outer_round_has_analytic_volume() {
+        let profile = [[0., 0.], [40., 0.], [40., 5.], [5., 5.], [5., 30.], [0., 30.]];
+        let source = crate::extrude_polygon(&profile, 0., 20.).unwrap();
+        let before = value_codec::to_string(&source).unwrap();
+        for rounded in [
+            [true, false, false, false, false, false],
+            [true, true, true, false, true, true],
+        ] {
+            let result = rounded_convex_prism_edges(&source, &profile, &rounded, 1., 0., 20.).unwrap();
+            crate::solid_audit::audit_solid(&result).unwrap();
+            let volume = crate::analysis::mass_properties(&result, 1e-9, 300_000).unwrap().signed_volume_mm3;
+            let count = rounded.iter().filter(|v| **v).count();
+            let expected = 6500. - count as f64 * (1. - std::f64::consts::PI / 4.) * 20.;
+            assert!((volume - expected).abs() < 2e-5, "{volume} != {expected}");
+            assert_eq!(result.faces.iter().filter(|f| f.surface.degree_u == 2 || f.surface.degree_v == 2).count(), count);
+        }
+        let error = rounded_convex_prism_edges(&source, &profile, &[false, false, false, true, false, false], 1., 0., 20.).unwrap_err();
+        assert!(error.message.contains("must be convex"));
+        let selected = [true, false, false, false, false, false];
+        let near = rounded_convex_prism_edges(&source, &profile, &selected, 16., 0., 20.).unwrap();
+        crate::solid_audit::audit_solid(&near).unwrap();
+        let expected = 6500. - 16_f64.powi(2) * (1. - std::f64::consts::PI / 4.) * 20.;
+        let volume = crate::analysis::mass_properties(&near, 1e-9, 300_000).unwrap().signed_volume_mm3;
+        assert!((volume - expected).abs() < 2e-5, "{volume} != {expected}");
+        let collision = rounded_convex_prism_edges(&source, &profile, &selected, 20., 0., 20.).unwrap_err();
+        assert!(collision.message.contains("nonadjacent span"));
+        assert_eq!(value_codec::to_string(&source).unwrap(), before);
+    }
 
     #[test]
     fn disjoint_union_is_separated_without_prism() {

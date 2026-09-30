@@ -88,6 +88,7 @@ it('accepts only the latest asynchronous history request and owns the restored d
  expect(history.document.sketches).toHaveLength(0)
  let loaded!:ReturnType<typeof emptyDirectDocument>
  expect(await history.restoreAsync('redo',async text=>loaded=parseDirectDocument(text))).toBe(true)
+ expect(history.storageStats.materializedStates).toBe(0)
  loaded.sketches[0].name='borrowed mutation'
  expect(history.document.sketches[0].name).toBe('L')
  const stats=history.storageStats

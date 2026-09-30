@@ -92,6 +92,14 @@ try {
   const boundText=await solid.locator('.operation-card output').textContent()
   const deviationUpperMm=Number(boundText.match(/: ([0-9.eE+-]+) mm/)[1])
   assert.ok(Number.isFinite(deviationUpperMm)&&deviationUpperMm<=.2)
+  if(process.env.SOLID_GPU_HEADED==='1'){
+   await solid.getByRole('status',{name:'surface-display',exact:true}).waitFor({state:'hidden'})
+   const failure=await solid.locator('canvas.gpu-layer').getAttribute('data-gpu-error')
+   if(failure){await writeFile(path.join(directory,'gpu-failure.json'),JSON.stringify({failure,axis},null,2));throw Error(failure)}
+   await solid.locator('canvas.gpu-layer').waitFor({state:'visible'})
+   assert.ok(await solid.locator('[data-preview-body]').count()>0)
+   assert.ok(await solid.locator('[data-preview-body]').evaluateAll(nodes=>nodes.every(n=>getComputedStyle(n).fill==='rgba(0, 0, 0, 0)'&&getComputedStyle(n).stroke==='none')))
+  }
   await page.screenshot({path:path.join(directory,`surface-${axis}-preview.png`)})
   await solid.getByRole('button',{name:'Esc',exact:true}).click()
   const canceled=await download('Скачать проект JSON',`surface-${axis}-canceled.json`)

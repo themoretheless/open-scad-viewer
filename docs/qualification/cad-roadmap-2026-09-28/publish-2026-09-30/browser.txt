@@ -1,0 +1,17 @@
+{
+  prepareWeights: true,
+  nonbinaryPreparation: true,
+  keyboard: true,
+  tabPresses: 1297,
+  roleRecovery: true,
+  gpuAlignment: false,
+  narrowLayout: true,
+  gapEndpointMarkers: 2,
+  localizedRefusal: true,
+  browser: '151.0.7922.34',
+  rationalPatch: true,
+  cancel: true,
+  undo: true,
+  sourceCurvesPreserved: true,
+  downloads: 12
+}

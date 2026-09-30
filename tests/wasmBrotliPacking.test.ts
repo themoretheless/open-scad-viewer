@@ -7,6 +7,7 @@ import photogrammetryBytes from '../src/generated/photogrammetry/bytes'
 import {unpackWasmBase64} from '../src/services/wasmPacking'
 import {unpackBrotliWasm, unpackBrotliWasmBase64} from '../src/services/wasmBrotliPacking'
 import {encodeBase85, decodeBase85} from '../scripts/wasm-base85.mjs'
+import {encodeVariableBase93} from '../scripts/wasm-base91.mjs'
 import {verifyPackedWasmChunk} from '../scripts/verify-packed-wasm.mjs'
 
 function pack(data: Uint8Array, quality = 11): Uint8Array {
@@ -16,6 +17,36 @@ function pack(data: Uint8Array, quality = 11): Uint8Array {
 }
 
 describe('synchronous Brotli WASM packages', () => {
+  it('decodes section streams exactly and refuses malformed tables', () => {
+    const original = Buffer.from([0, 97, 115, 109, 1, 0, 0, 0])
+    const split = Math.floor(original.length / 2)
+    const chunks = [original.subarray(0, split), original.subarray(split)]
+    const compressed = chunks.map(chunk => brotliCompressSync(chunk, {params: {[constants.BROTLI_PARAM_QUALITY]: 5}}))
+    const header = Buffer.alloc(21)
+    header.writeUInt32LE(original.length + 0x80000000); header[4] = 2
+    chunks.forEach((chunk, i) => {
+      header.writeUInt32LE(chunk.length, 5 + 8 * i)
+      header.writeUInt32LE(compressed[i].length, 9 + 8 * i)
+    })
+    const packed = Buffer.concat([header, ...compressed])
+    expect(Buffer.from(unpackBrotliWasm(packed))).toEqual(original)
+    expect(verifyPackedWasmChunk(`export default '${encodeVariableBase93(packed)}'`, original, 'sections')).toBe(original.length)
+    for (const change of [
+      (b: Buffer) => { b[4] = 0 },
+      (b: Buffer) => { b[4] = 9 },
+      (b: Buffer) => { b.writeUInt32LE(0, 5) },
+      (b: Buffer) => { b.writeUInt32LE(0xffffffff, 9) },
+      (b: Buffer) => { b.writeUInt32LE(1, 13) },
+    ]) {
+      const invalid = Buffer.from(packed); change(invalid)
+      expect(() => unpackBrotliWasm(invalid)).toThrow()
+      expect(() => verifyPackedWasmChunk(`export default '${encodeVariableBase93(invalid)}'`, original, 'sections')).toThrow()
+    }
+    expect(() => unpackBrotliWasm(packed.subarray(0, 12))).toThrow()
+    expect(() => unpackBrotliWasm(packed.subarray(0, -1))).toThrow()
+    expect(() => unpackBrotliWasm(Buffer.concat([packed, Buffer.from([0])]))).toThrow()
+  })
+
   it('round-trips compact literals through both build-time and Rust decoders', () => {
     for (let length = 0; length < 100; length++) {
       const data = Uint8Array.from({length}, (_, i) => (i * 97 + length) & 255)

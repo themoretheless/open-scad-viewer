@@ -69,7 +69,7 @@ try {
  const fixture=JSON.parse(await readFile('docs/qualification/cad-roadmap-2026-09-28/async-scene-edit/mouse/before.json','utf8'))
  const curveFixture=JSON.parse(await readFile('docs/qualification/cad-roadmap-2026-09-28/async-native-nurbs/mouse/before.json','utf8'))
  const a=structuredClone(curveFixture.curves[0]),b=structuredClone(a);a.id='a';a.name='First';b.id='b';b.name='Second';b.curve.controlPoints.forEach(p=>p[0]+=60)
- const original={version:1,sketches:[],bodies:[fixture.bodies[0]],curves:[a,b]}
+ const original={version:1,sketches:[],bodies:[fixture.bodies[0]],curves:[a,b],...(process.argv.includes('--group-change')?{groups:[{name:'Destination',source:''}]}:{})}
  await openMenu();await solid.locator('input[accept=".json,application/json"]').setInputFiles({name:'bridge.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(original))})
  if(await menu.evaluate(e=>e.parentElement.open))await activate(menu)
  await solid.getByRole('status',{name:'history-restore',exact:true}).waitFor({state:'hidden'})
@@ -87,10 +87,11 @@ try {
   assert.equal(await page.evaluate(()=>window.__sceneEditRequests),0)
  }
  await setTension('1');assert.equal(await tensionInput.getAttribute('aria-invalid'),'false')
- for(const cancel of ['escape','parameter']){
+ for(const cancel of ['escape','parameter',...(process.argv.includes('--group-change')?['group']:[])]){
   await page.evaluate(()=>{window.__bridgeHold=true;window.__bridgeHeld=false;window.__bridgeTerminated=false})
   await activate(createBridge);await page.waitForFunction(()=>window.__bridgeHeld)
   if(cancel==='escape')await page.keyboard.press('Escape')
+  else if(cancel==='group')await activate(solid.getByRole('button',{name:'Активная группа: Destination',exact:true}))
   else {
    const tension=solid.getByRole('spinbutton',{name:'Натяжение',exact:true})
    if(keyboard){await tabTo(tension);await page.keyboard.press('ControlOrMeta+a');await page.keyboard.insertText('1.5')}else await tension.fill('1.5')
@@ -147,8 +148,8 @@ try {
  await page.waitForFunction(()=>document.body.innerText.includes('Открытых рёбер: 0'))
  assert.ok(await solid.locator('[data-diagnostic="section"]').count()>0)
  await page.screenshot({path:path.join(directory,'diagnostics.png')})
- const requests=requestsBeforeReload+await page.evaluate(()=>window.__sceneEditRequests);assert.equal(requests,7)
+ const requests=requestsBeforeReload+await page.evaluate(()=>window.__sceneEditRequests);assert.equal(requests,process.argv.includes('--group-change')?8:7)
  assert.deepEqual(renderErrors,[])
- const report={browser:browser.version(),workerRequests:requests,bridgeAndBrepDiagnostics:true,properties,undoRedo:true,escapeCancellation:true,parameterCancellation:true,invalidTension:true,workerFailureRetry:true,bridgeReload:true,exportBlockedDuringRecovery:true,keyboard,tabPresses,downloads}
+ const report={browser:browser.version(),workerRequests:requests,bridgeAndBrepDiagnostics:true,properties,undoRedo:true,escapeCancellation:true,parameterCancellation:true,groupCancellation:process.argv.includes('--group-change'),invalidTension:true,workerFailureRetry:true,bridgeReload:true,exportBlockedDuringRecovery:true,keyboard,tabPresses,downloads}
  await writeFile(path.join(directory,'bridge-diagnostics-browser.json'),JSON.stringify(report,null,2)+'\n');console.log(report)
 }catch(error){if(page){await page.screenshot({path:path.join(directory,'failure.png')}).catch(()=>{});await writeFile(path.join(directory,'failure.txt'),await page.locator('body').innerText().catch(()=>''))}throw error}finally{await browser?.close();await new Promise(resolve=>server.close(resolve))}

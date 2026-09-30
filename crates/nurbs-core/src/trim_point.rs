@@ -191,6 +191,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "transport")]
     fn dispatch_returns_a_trim_report_and_preserves_the_cut_interval() {
         let curve = Curve::from_polyline(vec![vec![0., 0.], vec![10., 0.]]).unwrap();
         let result=crate::dispatch(json!({"op":"curve_trim_point","curve":curve,"point":[4.,0.],"keep":"start","maxDistance":0.01})).unwrap();

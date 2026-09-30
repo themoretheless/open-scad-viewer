@@ -55,6 +55,7 @@ mod cad_quantity;
 mod cad_diagnostics;
 mod cad_face_distance;
 mod cad_shell_distance;
+mod cad_solid_distance;
 mod cad_boundary_agreement;
 mod cad_face_contacts;
 mod cad_surface_diagnostics;
@@ -765,8 +766,10 @@ pub fn dispatch(mut v: Value) -> Result<Value> {
         "cad_curve_curvature" => cad_diagnostics::curvature(v),
         "cad_face_distance" => cad_face_distance::measure(v),
         "cad_shell_distance" => cad_shell_distance::measure(v),
+        "cad_solid_distance" => cad_solid_distance::measure(v),
         "cad_boundary_agreement" => cad_boundary_agreement::diagnose(v),
         "cad_face_contacts" => cad_face_contacts::diagnose(v),
+        "cad_self_intersection" => cad_face_contacts::diagnose_self_intersection(v),
         "mesh_section" => {
             let mesh: Mesh = field(&v, "mesh")?;
             let z_mm: f64 = field(&v, "z")?;
@@ -1149,13 +1152,19 @@ pub fn dispatch(mut v: Value) -> Result<Value> {
                 field(&v, "distance")?,
             )?)
         }
-        "brep_nurbs_exact_convex_prism_fillet" => {
+        "brep_nurbs_exact_convex_prism_fillet" | "brep_nurbs_exact_simple_prism_fillet" | "brep_nurbs_exact_annular_fillet" | "brep_nurbs_exact_layered_prism_fillet" => {
             require_exact_fields(
                 &v,
                 &["op", "model", "edges", "radius"],
                 "exact fillet request",
             )?;
-            encode(brep_core::exact_convex_prism_fillet(
+            let author = match v["op"].as_str() {
+                Some("brep_nurbs_exact_simple_prism_fillet") => brep_core::exact_simple_prism_fillet,
+                Some("brep_nurbs_exact_annular_fillet") => brep_core::exact_annular_fillet,
+                Some("brep_nurbs_exact_layered_prism_fillet") => brep_core::exact_layered_prism_fillet,
+                _ => brep_core::exact_convex_prism_fillet,
+            };
+            encode(author(
                 &field(&v, "model")?,
                 &field::<Vec<usize>>(&v, "edges")?,
                 field(&v, "radius")?,

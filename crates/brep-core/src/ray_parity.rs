@@ -22,6 +22,53 @@ pub struct Report {
     pub cells: usize,
     pub domain_cells: usize,
 }
+/// Bounded direction retries for point parity. A certified ray suffices only
+/// after the caller establishes an embedded closed boundary. This report does
+/// not certify that precondition or turn unresolved rays into outside points.
+#[derive(Debug)]
+pub struct PointReport {
+    pub parity: Option<bool>,
+    pub attempts: Vec<Report>,
+    pub cells: usize,
+    pub domain_cells: usize,
+}
+pub fn classify_point(
+    model: &Model,
+    point: [f64; 3],
+    directions: &[[f64; 3]],
+    tolerance_uv: f64,
+    max_cells: usize,
+    max_domain_cells: usize,
+) -> Result<PointReport> {
+    model.validate()?;
+    if model.faces.is_empty()
+        || directions.is_empty() || directions.len() > 16
+        || !point.iter().all(|x| x.is_finite())
+        || directions.iter().any(|d| !d.iter().all(|x| x.is_finite()) || d.iter().all(|&x| x == 0.))
+        || !tolerance_uv.is_finite() || tolerance_uv <= 0.
+        || !(1..=1000000).contains(&max_cells)
+        || !(1..=8000000).contains(&max_domain_cells)
+    {
+        return Err(Error::new("BREP_INVALID_INPUT", "Point parity requires 1..16 finite nonzero directions and bounded positive tolerances and work"));
+    }
+    let mut result = PointReport { parity: None, attempts: Vec::new(), cells: 0, domain_cells: 0 };
+    for (i, &direction) in directions.iter().enumerate() {
+        let cells = max_cells - result.cells;
+        let domains = max_domain_cells - result.domain_cells;
+        if cells == 0 || domains == 0 { break; }
+        // Reserve work for later directions instead of letting a tangent ray
+        // consume the complete budget. Unused work carries forward.
+        let remaining = directions.len() - i;
+        let attempt = classify_ray(model, point, direction, tolerance_uv,
+            (cells / remaining).max(1), (domains / remaining).max(1))?;
+        result.cells += attempt.cells;
+        result.domain_cells += attempt.domain_cells;
+        result.parity = attempt.parity;
+        result.attempts.push(attempt);
+        if result.parity.is_some() { break; }
+    }
+    Ok(result)
+}
 pub fn classify_ray(
     model: &Model,
     point: [f64; 3],
@@ -167,6 +214,56 @@ pub fn classify_ray(
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn point_retries_a_boundary_hit_without_treating_it_as_outside() {
+        let m = crate::cuboid([0.; 3], [1.; 3]).unwrap();
+        let before = format!("{m:?}");
+        let r = classify_point(&m, [-1., 0., 0.5], &[[1., 0., 0.], [1., 0.3, 0.11]], 1e-7, 10000, 100000).unwrap();
+        assert_eq!(r.attempts.len(), 2);
+        assert_eq!(r.attempts[0].parity, None);
+        assert_eq!(r.parity, Some(false));
+        assert_eq!(r.cells, r.attempts.iter().map(|a| a.cells).sum::<usize>());
+        assert_eq!(r.domain_cells, r.attempts.iter().map(|a| a.domain_cells).sum::<usize>());
+        assert!(r.cells <= 10000 && r.domain_cells <= 100000);
+        assert_eq!(format!("{m:?}"), before);
+    }
+    #[test]
+    fn point_retry_budget_and_boundary_origins_remain_unresolved() {
+        let m = crate::cuboid([0.; 3], [1.; 3]).unwrap();
+        let directions = [[1., 0.3, 0.11], [-1., 0.17, 0.29]];
+        let r = classify_point(&m, [0., 0.4, 0.5], &directions, 1e-7, 10000, 100000).unwrap();
+        assert_eq!(r.parity, None);
+        let r = classify_point(&m, [0.3, 0.4, 0.5], &directions, 1e-7, 1, 1).unwrap();
+        assert_eq!(r.parity, None);
+        assert!(r.cells <= 1 && r.domain_cells <= 1);
+        assert!(classify_point(&m, [0.; 3], &[], 1e-7, 100, 100).is_err());
+        assert!(classify_point(&m, [0.; 3], &[[1., 0., 0.], [f64::NAN, 0., 0.]], 1e-7, 100, 100).is_err());
+    }
+    #[test]
+    fn cavity_and_rigid_placement_preserve_material_parity() {
+        let outer = crate::cuboid([0.; 3], [10.; 3]).unwrap();
+        let inner = crate::cuboid([2.; 3], [8.; 3]).unwrap();
+        let cavity = crate::operations::boolean(&outer, &inner, "difference").unwrap();
+        assert_eq!(cavity.bodies[0].inner_shells.len(), 1);
+        let angle = 0.37_f64;
+        let (s, c) = angle.sin_cos();
+        let matrix = [[c, -s, 0., 13.], [s, c, 0., -7.], [0., 0., 1., 3.], [0., 0., 0., 1.]];
+        let placed = crate::transform::affine(&cavity, matrix).unwrap();
+        for (point, expected) in [([1., 4., 5.], true), ([5., 4., 5.], false), ([-1., 4., 5.], false)] {
+            for direction in [[1., 0.07, 0.03], [-1., 0.09, 0.02]] {
+                let moved_point = [c*point[0]-s*point[1]+13., s*point[0]+c*point[1]-7., point[2]+3.];
+                let moved_direction = [c*direction[0]-s*direction[1], s*direction[0]+c*direction[1], direction[2]];
+                for (model, p, d) in [(&cavity, point, direction), (&placed, moved_point, moved_direction)] {
+                    let report = classify_ray(model, p, d, 1e-7, 100000, 1000000).unwrap();
+                    assert_eq!(report.parity, Some(expected), "{p:?} {d:?}: {:?}", report.unresolved);
+                    let retry = classify_point(model, p, &[d, [-d[0], -d[1], -d[2]]], 1e-7, 100000, 1000000).unwrap();
+                    assert_eq!(retry.parity, Some(expected));
+                    assert!(retry.cells <= 100000 && retry.domain_cells <= 1000000);
+                }
+            }
+        }
+    }
+
     #[test]
     fn cube_inside_outside_and_boundary() {
         let m = crate::cuboid([0.; 3], [1.; 3]).unwrap();

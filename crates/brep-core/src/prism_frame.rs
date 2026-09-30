@@ -401,6 +401,10 @@ fn record_total_adjustments(
 /// then pass full prism or layered-prism recognition. Authored perturbations indistinguishable from
 /// roundoff can lie inside the reported bound; this is not exact certification.
 pub fn localize(a: &Model, b: &Model) -> Result<Option<(Model, Model, Frame)>> {
+    localize_along(a,b,None)
+}
+
+pub(crate) fn localize_along(a: &Model, b: &Model, direction: Option<[f64;3]>) -> Result<Option<(Model, Model, Frame)>> {
     a.validate()?;
     b.validate()?;
     if a.vertices.is_empty() || b.vertices.is_empty() {
@@ -430,6 +434,10 @@ pub fn localize(a: &Model, b: &Model) -> Result<Option<(Model, Model, Frame)>> {
     let mut tried = Vec::<[f64; 3]>::new();
     for candidate in directions {
         let z = candidate.direction;
+        if let Some(direction) = direction {
+            let Some(direction) = unit(direction) else { return Ok(None); };
+            if norm(cross(direction,z)) > 128. * f64::EPSILON { continue; }
+        }
         if tried
             .iter()
             .any(|d| norm(sub(*d, z)) <= 128. * f64::EPSILON)

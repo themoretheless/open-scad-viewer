@@ -303,7 +303,7 @@ export const filletNurbsBrep=(model:NurbsBrep,edge:number,radius:number,segments
 export const filletNurbsBrepEdges=(model:NurbsBrep,edges:number[],radius:number,segments=12):NurbsBrep=>callGeometryRust('brep_nurbs_fillet_edges',{model,edges,radius,segments})
 export interface AuditedBrepFeature {
  model:NurbsBrep
- certificate:{capability:'analytic-multi-edge-fillet/1'|'exact-parallel-frame-sweep/1'|'exact-convex-straight-edge-chamfer/1'|'exact-convex-prism-edge-fillet/1'|'analytic-solid-loft/2'|'exact-parallel-frame-sweep/2'|'exact-variable-radius-fillet/1'|'exact-valence3-corner-blend/1';complete:true;notes:string[]}
+ certificate:{capability:'analytic-multi-edge-fillet/1'|'exact-parallel-frame-sweep/1'|'exact-convex-straight-edge-chamfer/1'|'exact-convex-prism-edge-fillet/1'|'exact-simple-prism-convex-edge-fillet/1'|'exact-annular-circular-edge-fillet/1'|'exact-layered-prism-edge-fillet/1'|'analytic-solid-loft/2'|'exact-parallel-frame-sweep/2'|'exact-variable-radius-fillet/1'|'exact-valence3-corner-blend/1';complete:true;notes:string[]}
  context:{version:number;canonical:string}
  evidenceClaimCount:number
  audit:{ok:true;bodyCount:number;shellCount:number;selfIntersectionPairsCandidate:number;selfIntersectionComplete:boolean;selfIntersectionPairsChecked:number}
@@ -315,6 +315,7 @@ export const auditedMultiEdgeFillet=(model:NurbsBrep,edges:number[],radius:numbe
 export const exactConvexChamfer=(model:NurbsBrep,edges:number[],distance:number):AuditedBrepFeature=>callGeometryRust('brep_nurbs_exact_convex_chamfer',{model,edges,distance})
 /** Exact cylindrical rounds on selected longitudinal edges of a rigidly placed convex prism. */
 export const exactConvexPrismFillet=(model:NurbsBrep,edges:number[],radius:number):AuditedBrepFeature=>callGeometryRust('brep_nurbs_exact_convex_prism_fillet',{model,edges,radius})
+export const exactSimplePrismFillet=(model:NurbsBrep,edges:number[],radius:number):AuditedBrepFeature=>callGeometryRust('brep_nurbs_exact_simple_prism_fillet',{model,edges,radius})
 /** Exact linear radius law on one vertical cuboid edge; constant-radius pairs refuse. */
 export const exactVariableRadiusFillet=(model:NurbsBrep,edges:number[],radii:[number,number][]):AuditedBrepFeature=>callGeometryRust('brep_nurbs_exact_variable_radius_fillet',{model,edges,radii})
 /** Exact equal-radius sphere+cylinder valence-3 blend at the AA cuboid max corner. */
@@ -364,3 +365,7 @@ export const composeStepV8Occurrences=(models:NurbsBrep[]):NurbsBrep=>
 export const composeStepV9Occurrences=(models:NurbsBrep[]):NurbsBrep=>
   callGeometryRust('brep_nurbs_compose_step_v9',{models})
 export const placeNurbsBrep=(model:NurbsBrep,origin:number[],u:number[],v:number[],offset:number[]):NurbsBrep=>callGeometryRust('brep_nurbs_workplane',{model,origin,u,v,offset})
+
+export const exactAnnularFillet=(model:NurbsBrep,edges:number[],radius:number):AuditedBrepFeature=>callGeometryRust('brep_nurbs_exact_annular_fillet',{model,edges,radius})
+
+export const exactLayeredPrismFillet=(model:NurbsBrep,edges:number[],radius:number):AuditedBrepFeature=>callGeometryRust('brep_nurbs_exact_layered_prism_fillet',{model,edges,radius})

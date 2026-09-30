@@ -3,6 +3,8 @@ use super::*;
 use std::collections::BTreeMap;
 
 pub struct Tessellation {
+    /// Exact shell ownership from tessellation traversal, one entry per triangle.
+    pub closed_triangles: Option<Vec<bool>>,
     pub built: BuiltMesh,
     pub face_ids: Vec<usize>,
     pub topology_face_ids: Option<Vec<String>>,
@@ -217,6 +219,7 @@ fn finish_indexed_mode(
         notes,
     };
     Ok(Tessellation {
+        closed_triangles: None,
         built: BuiltMesh { mesh, report },
         face_ids,
         topology_face_ids,
@@ -604,6 +607,7 @@ fn nurbs_with_freeform_note(
     }
     let mut registry = EdgeSamplingRegistry::new(model, segments)?;
     let mut face_ids = Vec::new();
+    let mut closed_triangles = Vec::new();
     for shell in &model.shells {
         for use_ in &shell.faces {
             let face = &model.faces[use_.face];
@@ -627,6 +631,7 @@ fn nurbs_with_freeform_note(
                 )?
             };
             registry.append(face, use_, built, &mut face_ids)?;
+            closed_triangles.resize(face_ids.len(), shell.closed);
         }
     }
     registry.verify_boundary_uses(model, &face_ids)?;
@@ -650,6 +655,7 @@ fn nurbs_with_freeform_note(
         !model.shells.is_empty() && model.shells.iter().all(|s| s.closed),
         note,
     )?;
+    result.closed_triangles = Some(closed_triangles);
     if let Some(certificate) = &mut result.certificate {
         certificate.shell_count = model.shells.len();
     }

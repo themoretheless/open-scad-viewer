@@ -1,4 +1,4 @@
-import {constructSolidSurface} from '../src/services/solidSurfaceConstruction'
+import {constructSolidSurface,buildSolidSurface} from '../src/services/solidSurfaceConstruction'
 import { describe, expect, it } from 'vitest'
 import { emptyDirectDocument, parseDirectDocument } from '../src/services/directModeling'
 import { solidDocumentToMeshDocument } from '../src/services/solidBridge'
@@ -13,7 +13,7 @@ import {
   updateSolidNurbsControlPoint,
 } from '../src/services/solidNurbs'
 import { evaluateNurbsSurface, trimNurbsSurface } from '../src/services/nurbsSurface'
-import { evaluateNurbsCurve } from '../src/services/nurbsCurve'
+import { evaluateNurbsCurve, insertNurbsKnot } from '../src/services/nurbsCurve'
 
 describe('Solid native NURBS bridge', () => {
   it('retains rational definitions in the Solid document and validates edits', () => {
@@ -152,7 +152,7 @@ describe('Solid surface construction',()=>{
   }
   expect(result.group).toBe('Assembly');expect(d).toEqual(before)
   expect(()=>constructSolidSurface(d,['profile','profile'],'nurbs-sweep','bad')).toThrow('distinct')
-  expect(()=>constructSolidSurface(d,['profile','missing'],'nurbs-sweep','bad')).toThrow('no longer exists')
+  expect(()=>constructSolidSurface(d,['profile','missing'],'nurbs-sweep','bad')).toThrow('Curve missing. Choose inputs again.')
  })
  it('interpolates ordered loft sections and preserves the result through document reload',()=>{
   const d=emptyDirectDocument()
@@ -291,7 +291,7 @@ it('preserves a rational cylindrical patch through Solid history and serializati
  }
 })
 
-import {framedSweepNurbsCurve} from '../src/services/nurbsConstructors'
+import {framedSweepNurbsCurve,prepareCoonsBoundaryWeights,coonsNurbsPatch} from '../src/services/nurbsConstructors'
 it('rotates a profile along a rational arc and refuses excessive sampled deviation',()=>{
  const profile={degree:1,controlPoints:[[1,0,0],[1.2,0,0]],weights:[1,1],knots:[0,0,1,1]}
  const path={degree:2,controlPoints:[[1,0,0],[1,1,0],[0,1,0]],weights:[1,Math.SQRT1_2,1],knots:[0,0,0,1,1,1]}
@@ -308,7 +308,7 @@ it('rotates a profile along a rational arc and refuses excessive sampled deviati
  expect({profile,path}).toEqual(before)
  const d=emptyDirectDocument();d.curves=[{...createSolidNurbsCurve('p'),curve:profile},{...createSolidNurbsCurve('q'),curve:path}]
  const options={mode:'framed' as const,normal:[0,0,1] as [number,number,number],sections:3,maxDeviation:.001}
- expect(()=>constructSolidSurface(d,['p','q'],'nurbs-sweep','s',undefined,[],options)).toThrow('Increase sections')
+ expect(()=>constructSolidSurface(d,['p','q'],'nurbs-sweep','s',undefined,[],options)).toThrow('Adjust sections or budget.')
  const surface=constructSolidSurface(d,['p','q'],'nurbs-sweep','s',undefined,[],{...options,sections:32})
  expect(surface.name).toBe('Framed sweep');d.surfaces!.push(surface)
  expect(parseDirectDocument(JSON.stringify(d)).surfaces![0]).toEqual(surface)
@@ -456,4 +456,131 @@ describe('Certified curve endpoint matching',()=>{
   const before=structuredClone(document),result=matchSolidCurve(document,'a','b','end','start',0)
   expect(result.report.accepted).toBe(false);expect(result.document).toEqual(before);expect(document).toEqual(before)
  })
+})
+
+it('builds a closed rational sweep with periodic storage and an explicit C0 seam report',()=>{
+ const profile={degree:1,controlPoints:[[1,0,0],[1.2,0,0]],weights:[1,1],knots:[0,0,1,1]}
+ const path={degree:2,controlPoints:[[1,0,0],[1,1,0],[0,1,0],[-1,1,0],[-1,0,0],[-1,-1,0],[0,-1,0],[1,-1,0],[1,0,0]],weights:Array.from({length:9},(_,i)=>i%2?Math.SQRT1_2:1),knots:[0,0,0,.25,.25,.5,.5,.75,.75,1,1,1]}
+ const before=structuredClone({profile,path}),result=framedSweepNurbsCurve(profile,path,[1,0,0],17,.1)
+ expect(result.report).toMatchObject({accepted:true,closedPath:true,seamContinuity:'C0',continuousBound:false,stations:65})
+ expect(result.surface?.periodicV).toBe(true)
+ for(const row of result.surface!.controlPoints)expect(row.at(-1)).toEqual(row[0])
+ for(let i=0;i<=16;i++){
+  const p=evaluateNurbsSurface(result.surface!,1,i/16).point
+  expect(Math.hypot(p[0],p[1])).toBeCloseTo(1.2,11)
+ }
+ const d=emptyDirectDocument();d.curves=[{...createSolidNurbsCurve('profile'),curve:profile},{...createSolidNurbsCurve('path'),curve:path}]
+ const surface=constructSolidSurface(d,['profile','path'],'nurbs-sweep','closed',undefined,[],{mode:'framed',normal:[1,0,0],sections:17,maxDeviation:.1})
+ d.surfaces=[surface];expect(parseDirectDocument(JSON.stringify(d)).surfaces![0]).toEqual(surface)
+ expect(framedSweepNurbsCurve(profile,path,[1,0,0],17,0).surface).toBeNull()
+ expect(()=>framedSweepNurbsCurve(profile,path,[1,0,0],3,.1)).toThrow('at least four')
+ expect({profile,path}).toEqual(before)
+})
+
+it('closes a nonplanar periodic sweep without changing section length or source curves',()=>{
+ const controls=Array.from({length:6},(_,i)=>{const a=i*2*Math.PI/6;return [Math.cos(a),Math.sin(a),.3*Math.sin(2*a)]})
+ const path={degree:3,knots:Array.from({length:13},(_,i)=>(i-3)/6),controlPoints:[...controls,...controls.slice(0,3)],weights:Array(9).fill(1),periodic:true}
+ const start=evaluateNurbsCurve(path,0).point
+ const profile={degree:1,knots:[0,0,1,1],controlPoints:[[start[0],start[1],start[2]+.1],[start[0],start[1],start[2]+.2]],weights:[1,.8]}
+ const before=structuredClone({profile,path}),result=framedSweepNurbsCurve(profile,path,[0,0,1],25,1)
+ expect(result.report).toMatchObject({accepted:true,closedPath:true,seamContinuity:'C0',continuousBound:false,stations:97})
+ expect(result.surface?.periodicV).toBe(true)
+ for(const row of result.surface!.controlPoints)expect(row.at(-1)).toEqual(row[0])
+ for(let i=0;i<25;i++){
+  const a=evaluateNurbsSurface(result.surface!,0,i/24).point,b=evaluateNurbsSurface(result.surface!,1,i/24).point
+  expect(Math.hypot(...a.map((v,k)=>v-b[k]))).toBeCloseTo(.1,11)
+ }
+ expect(evaluateNurbsSurface(result.surface!,.4,0).point).toEqual(evaluateNurbsSurface(result.surface!,.4,1).point)
+ expect({profile,path}).toEqual(before)
+})
+
+it('keeps an open path open even when transported profile sections coincide',()=>{
+ const profile={degree:1,knots:[0,0,1,1],controlPoints:[[0,0,0],[0,0,1]],weights:[1,1]}
+ const path={degree:2,knots:[0,0,0,1,1,1],controlPoints:[[1,0,0],[1,1,0],[0,1,0]],weights:[1,Math.SQRT1_2,1]}
+ const result=framedSweepNurbsCurve(profile,path,[0,0,1],17,1)
+ expect(result.report).toMatchObject({accepted:true,closedPath:false,seamContinuity:'open'})
+ expect(result.surface?.periodicV).toBe(false)
+})
+
+it('preserves mixed rational patch boundary parameters across domains and weight scaling',()=>{
+ const d=emptyDirectDocument();d.curves=patchCurves()
+ const weights=[[1,.8,2],[3,4],[1,3],[2,1.5,4]],domains=[[-3,7],[11,13],[.2,.9],[-20,-10]]
+ d.curves.forEach((c,i)=>{c.curve.weights=weights[i]!})
+ d.curves[0]!.curve=insertNurbsKnot(insertNurbsKnot(d.curves[0]!.curve,.17),.61)
+ d.curves[3]!.curve=insertNurbsKnot(d.curves[3]!.curve,.42)
+ d.curves.forEach((c,i)=>{const [a,b]=domains[i]!;c.curve.knots=c.curve.knots.map(k=>a!+(b!-a!)*k)})
+ const before=structuredClone(d),patch=constructSolidSurface(d,d.curves.map(c=>c.id),'nurbs-patch','mixed')
+ expect(d).toEqual(before)
+ for(let i=0;i<=100;i++){
+  const t=i/100
+  for(const [edge,u,v] of [[0,t,0],[1,t,1],[2,0,t],[3,1,t]]){
+   const [a,b]=domains[edge!]!,p=evaluateNurbsSurface(patch.surface,u!,v!).point,q=evaluateNurbsCurve(d.curves[edge!]!.curve,a!+(b!-a!)*t).point
+   for(let k=0;k<3;k++)expect(Math.abs(p[k]!-q[k]!)).toBeLessThan(2e-12)
+  }
+ }
+ d.surfaces!.push(patch);expect(parseDirectDocument(JSON.stringify(d)).surfaces?.[0]).toEqual(patch)
+})
+
+it('refuses nonpositive Coons interior weights without changing valid rational boundaries',()=>{
+ const d=emptyDirectDocument(),points=[[[0,0,0],[1,0,0],[2,0,0]],[[0,2,0],[1,2,0],[2,2,0]],[[0,0,0],[0,1,0],[0,2,0]],[[2,0,0],[2,1,0],[2,2,0]]]
+ d.curves=points.map((controlPoints,i)=>({id:`boundary-${i}`,name:`Boundary ${i}`,curve:{degree:2,controlPoints,weights:[1,.1,1],knots:[0,0,0,1,1,1]}}))
+ const before=structuredClone(d)
+ expect(()=>constructSolidSurface(d,d.curves!.map(c=>c.id),'nurbs-patch','invalid')).toThrow('positive finite weights')
+ expect(d).toEqual(before)
+})
+
+it('prepares incompatible rational Coons weights with a whole-domain error gate and exact rollback',()=>{
+ const sources=patchCurves().map(c=>c.curve);sources[0]!.weights=[1,.8,.5]
+ const before=structuredClone(sources)
+ expect(()=>coonsNurbsPatch(sources)).toThrow('corner weights')
+ const prepared=sources.map(c=>prepareCoonsBoundaryWeights(c,1e-6))
+ expect(prepared.every(p=>p.report.accepted&&p.report.wholeCurve&&p.report.errorUpper<=1e-6)).toBe(true)
+ const patch=coonsNurbsPatch(prepared.map(p=>p.curve))
+ for(let i=0;i<=100;i++){
+  const t=i/100
+  for(const [edge,u,v] of [[0,t,0],[1,t,1],[2,0,t],[3,1,t]]){
+   const p=evaluateNurbsSurface(patch,u!,v!).point,q=evaluateNurbsCurve(sources[edge!]!,t).point
+   expect(Math.hypot(...p.map((x,k)=>x-q[k]!))).toBeLessThan(1e-6)
+  }
+ }
+ const refused=prepareCoonsBoundaryWeights(sources[0]!,0)
+ expect(refused.report.accepted).toBe(false);expect(refused.curve).toEqual(sources[0])
+ expect(sources).toEqual(before)
+})
+
+it('prepares nonbinary corner weights without a spurious corner-cycle refusal',()=>{
+ for(const seed of [1,7,31,100]){
+  const sources=patchCurves().map((c,edge)=>({...c.curve,weights:c.curve.weights.map((_,i)=>.1+(seed*7+edge*13+i*17)/31)}))
+  const before=structuredClone(sources),prepared=sources.map(c=>prepareCoonsBoundaryWeights(c,1e-6))
+  for(const p of prepared){
+   expect(p.report.accepted).toBe(true)
+   expect(p.curve.weights[0]).toBe(1);expect(p.curve.weights.at(-1)).toBe(1)
+  }
+  const surface=coonsNurbsPatch(prepared.map(p=>p.curve))
+  for(let i=0;i<=20;i++)for(const [edge,u,v] of [[0,i/20,0],[1,i/20,1],[2,0,i/20],[3,1,i/20]]){
+   const actual=evaluateNurbsSurface(surface,u!,v!).point,expected=evaluateNurbsCurve(sources[edge!]!,i/20).point
+   expect(Math.hypot(...actual.map((x,k)=>x-expected[k]!))).toBeLessThan(1e-6)
+  }
+  expect(sources).toEqual(before)
+ }
+})
+
+it('keeps identical clamped corners under nonbinary uniform weight scaling',()=>{
+ const sources=patchCurves().map((c,i)=>({...c.curve,weights:c.curve.weights.map(()=>[.1,.7,.3,.9][i]!),controlPoints:c.curve.controlPoints.map(p=>[.1+.3*p[0]!, .1+.7*p[1]!,p[2]!])}))
+ const before=structuredClone(sources)
+ const patch=coonsNurbsPatch(sources)
+ expect(patch).toEqual(coonsNurbsPatch(sources.map(c=>({...c,weights:c.weights.map(()=>1)}))))
+ expect(sources).toEqual(before)
+})
+
+it('identifies the refused boundary role independently of document order',()=>{
+ const d=emptyDirectDocument();d.curves=patchCurves();d.curves[0]!.curve.weights=[1,.8,.5]
+ const before=structuredClone(d),ids=d.curves.map(c=>c.id)
+ for(let shift=0;shift<4;shift++){
+  const roles=[...ids.slice(shift),...ids.slice(0,shift)]
+  const result=buildSolidSurface(d,{kind:'nurbs-patch',ids:roles,id:'refused',reversed:[false,false,false,false],sweep:{mode:'translation',normal:[0,0,1],sections:24,maxDeviation:1e-6},patchPreparation:{enabled:true,maxError:0}})
+  expect(result.document).toBeNull()
+  expect(result.error).toBe(`PATCH_BUDGET:${roles.indexOf(ids[0]!)}`)
+  expect(d).toEqual(before)
+ }
 })

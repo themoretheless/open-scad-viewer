@@ -1,0 +1,32 @@
+{
+  "capability": "exact-layered-prism-edge-fillet/1",
+  "status": "in-progress",
+  "qualificationClaim": "none",
+  "evidenceRoot": "docs/qualification/cad-roadmap-2026-09-28/enclosure-round-2026-09-30",
+  "passed": [
+    "Native R1/R4 and cavity collision R8",
+    "Rotated and translated enclosure; source immutability",
+    "Complete chain admission and partial-chain refusal",
+    "Bridge strict fields, audit and naming",
+    "38 analytic feature regressions",
+    "TypeScript check",
+    "WASM API and command route, 26 feature/history tests",
+    "Enclosure mixed20 with exact history and STEP reimport",
+    "Eight independent OCCT STEP cases",
+    "Production UI worker cancel/late responses, errors/retry, Apply, Undo/Redo",
+    "667 CAD tests / 58 files",
+    "Production budget unchanged and passed",
+    "Independent OCCT final mixed20 STEP and re-export for all three roadmap parts",
+    "Recorded mouse and keyboard enclosure fillet scenarios",
+    "Workspace and document replacement cancellation with late success/failure"
+  ],
+  "pending": [
+    "Full qualification matrix",
+    "Full mouse/keyboard and context matrix"
+  ],
+  "additionalEvidence": [
+    "docs/qualification/cad-roadmap-2026-09-28/mixed20-step-2026-09-30",
+    "docs/qualification/cad-roadmap-2026-09-28/edge-context-2026-09-30",
+    "docs/qualification/cad-roadmap-2026-09-28/edge-document-switch-2026-09-30"
+  ]
+}

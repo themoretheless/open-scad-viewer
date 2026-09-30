@@ -12,14 +12,17 @@ pub fn instances(v: Value) -> Result<Value> {
     if matrices.len() > 1000 {
         return Err(input("At most 1000 instance placements per batch."));
     }
+    let placements = brep.as_ref()
+        .map(|model| brep_core::transform::affine_batch(model, &matrices))
+        .transpose()?;
     let mut result = Vec::with_capacity(matrices.len());
-    for matrix in matrices {
+    for (index, matrix) in matrices.into_iter().enumerate() {
         let mut geometry = value_codec::Map::new();
         geometry.insert("mesh".into(), encode(mesh.transform(matrix)?)?);
-        if let Some(model) = &brep {
+        if let Some(models) = &placements {
             geometry.insert(
                 "brep".into(),
-                encode(brep_core::transform::affine(model, matrix)?)?,
+                encode(&models[index])?,
             );
         }
         result.push(Value::Object(geometry));
@@ -262,6 +265,23 @@ mod instance_tests {
     use super::*;
     use value_codec::json;
 
+    #[test]
+    fn batch_brep_matches_individual_geometry_and_preserves_input() {
+        let source = brep_core::cuboid([0.,0.,0.],[2.,3.,4.]).unwrap();
+        let mesh = polygon_core::Mesh { positions: vec![0.,0.,0.,2.,0.,0.,0.,3.,0.], indices: vec![0,1,2], uv: None };
+        let matrices = [
+            [[1.,0.,0.,8.],[0.,1.,0.,-2.],[0.,0.,1.,3.],[0.,0.,0.,1.]],
+            [[-2.,0.,0.,0.],[0.,3.,0.,0.],[0.,0.,4.,0.],[0.,0.,0.,1.]],
+        ];
+        let input = json!({"mesh":encode(&mesh).unwrap(),"brep":encode(&source).unwrap(),"matrices":matrices});
+        let before = input.clone();
+        let result: Vec<Value> = value_codec::from_value(instances(input.clone()).unwrap()).unwrap();
+        for (entry,matrix) in result.iter().zip(matrices) {
+            assert_eq!(entry.get("brep").unwrap(), &encode(brep_core::transform::affine(&source,matrix).unwrap()).unwrap());
+            assert_eq!(entry.get("mesh").unwrap(), &encode(mesh.transform(matrix).unwrap()).unwrap());
+        }
+        assert_eq!(input,before);
+    }
     #[test]
     fn batch_placements_preserve_order_and_refuse_singular_matrix() {
         let identity = [

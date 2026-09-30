@@ -12,6 +12,7 @@ pub struct Limits {
 }
 #[derive(Clone, Debug)]
 pub enum SharedBoundary {
+    ExactHull(crate::boundary_hull_contact::Certificate),
     PlanarFace(crate::shared_boundary::Certificate),
     OppositeSides(crate::shared_boundary::OppositeSidesCertificate),
 }
@@ -36,6 +37,11 @@ pub struct Report {
     pub all_pairs_classified: bool,
 }
 pub fn inspect(model: &Model, tolerance_uv: f64, limits: Limits) -> Result<Report> {
+    inspect_with_hulls(model, tolerance_uv, limits, &[])
+}
+/// Hull certificates are admitted only by the exact boundary embedding audit.
+pub(crate) fn inspect_with_hulls(model: &Model, tolerance_uv: f64, limits: Limits,
+    hulls: &[crate::boundary_hull_contact::Certificate]) -> Result<Report> {
     model.validate_boundary_diagnostic_inputs()?;
     if !(1..=100_000).contains(&limits.pairs)
         || !(1..=1_000_000).contains(&limits.cells)
@@ -81,7 +87,9 @@ pub fn inspect(model: &Model, tolerance_uv: f64, limits: Limits) -> Result<Repor
             }
             let sa = &model.faces[a].surface;
             let sb = &model.faces[b].surface;
-            let boundary = if let Some(c) = crate::shared_boundary::certify(model, [a, b]) {
+            let boundary = if let Some(c) = hulls.iter().find(|c|c.faces==[a,b]) {
+                Some(SharedBoundary::ExactHull(c.clone()))
+            } else if let Some(c) = crate::shared_boundary::certify(model, [a, b]) {
                 Some(SharedBoundary::PlanarFace(c))
             } else {
                 crate::shared_boundary::certify_opposite(model, [a, b])?

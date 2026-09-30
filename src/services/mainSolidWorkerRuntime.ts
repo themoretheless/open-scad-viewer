@@ -1,3 +1,5 @@
+import {measureSolidDistance} from './solidDistance'
+import {inspectSelfIntersection} from './solidSelfIntersection'
 import {inspectFaceContacts} from './solidFaceContacts'
 import {inspectBoundaryAgreement} from './solidBoundaryAgreement'
 import {measureNurbsSurfaceDistance} from './nurbsSurface'
@@ -13,6 +15,7 @@ import {measureSurfaceBoundaries} from './solidSurfaceDiagnostics'
 import {measureSolidVertices,measureSolidEdgeCurvature,measureFaceDistance,measureShellDistance} from './solidMeasurements'
 import {addSolidPrimitive} from './solidPrimitive'
 import {prepareSolidDisplay} from './solidDisplayPreparation'
+import {SolidInstanceBatchCache} from './solidInstanceBatchCache'
 import {parseDirectDocument} from './directModeling'
 import {applySolidBrepTool} from './solidBrepTool'
 import {applySolidNurbsEdit} from './solidNurbsEdit'
@@ -55,8 +58,10 @@ async function execute(job:MainSolidJob):Promise<MainSolidResults[keyof MainSoli
     case 'profileDisplay':return retainedProfileDisplay(job.profile)
     case 'surfaceMesh':return tessellateSolidNurbsSurface(job.item)
     case 'surfaceBoundary':return measureSurfaceBoundaries(job.a,job.b,job.options)
+    case 'selfIntersection':return inspectSelfIntersection(job.model,job.toleranceUv,job.limits,job.maxSpans)
     case 'faceContacts':return inspectFaceContacts(job.model,job.toleranceUv,job.limits)
     case 'boundaryAgreement':return inspectBoundaryAgreement(job.model,job.maxCells)
+    case 'solidDistance':return measureSolidDistance(job.options)
     case 'shellDistance':return measureShellDistance(job.options)
     case 'faceDistance':return measureFaceDistance(job.options)
     case 'surfaceDistance':return measureNurbsSurfaceDistance(job.a,job.b,job.toleranceMm,job.maxCells)
@@ -65,7 +70,7 @@ async function execute(job:MainSolidJob):Promise<MainSolidResults[keyof MainSoli
     case 'measureEdge':return measureSolidEdgeCurvature(job.body,job.edge,job.parameter)
     case 'primitive':return addSolidPrimitive(job.document,job.options)
     case 'displayMesh':return prepareSolidDisplay(job.mesh,job.brep,job.segments)
-    case 'restoreDocument':return parseDirectDocument(job.text)
+    case 'restoreDocument':return parseDirectDocument(job.text,instanceCache)
     case 'modelGraphImport':return (await import('./solidModelGraphImport')).importSolidModelGraph(job.document,job.text,job.group)
     case 'brepTool':return applySolidBrepTool(job.document,job.options)
     case 'nurbsEdit':return applySolidNurbsEdit(job.document,job.options)
@@ -96,7 +101,7 @@ async function execute(job:MainSolidJob):Promise<MainSolidResults[keyof MainSoli
     case 'latticeGraph': {
       checkLatticeGraphInput(job.mesh,job.options)
       const graph={modelKind:'nominal-bounding-box-axial' as const,...spatialGraph({id:'nominal',name:'Nominal graph',mesh:flattenGroupGeometry([job.mesh])},job.options)}
-      if(!isNominalLatticeGraph(graph))throw new Error('Nominal graph requires distinct nodes and three-dimensional bounds within 125 nodes and 400 members.')
+      if(!isNominalLatticeGraph(graph))throw new Error('Graph needs distinct nodes and 3D bounds; maximum 125 nodes, 400 members.')
       return graph
     }
   }
@@ -107,7 +112,7 @@ export function createMainSolidWorkerHandler(post:(response:MainSolidResponse,tr
     validate:(value)=>{
       const request=value as Partial<MainSolidRequest>|null
       if(!request || request.version!==1 || !Number.isSafeInteger(request.id) || request.id!<1
-        || !request.job || !['faceContacts','boundaryAgreement','shellDistance','faceDistance','surfaceDistance','curveDistance','sketchSnaps','bodySnaps','faceSketch','bodyEdges','topology','curveDisplay','profileDisplay','surfaceMesh','surfaceBoundary','measureVertices','measureEdge','primitive','modelGraphImport','displayMesh','restoreDocument','brepTool','nurbsEdit','pointEdit','sketchEdit','boolean','sceneEdit','curveMatch','surfaceMatch','seamPrepare','surfaceBuild','nurbsRefit','profilePrepare','profileEdit','bodyEdit','revolve','extrusion','main','cad','inspect','meshContacts','truss','latticeGraph','structuralSections','bondedSolid'].includes(request.job.kind))return null
+        || !request.job || !['solidDistance','selfIntersection','faceContacts','boundaryAgreement','shellDistance','faceDistance','surfaceDistance','curveDistance','sketchSnaps','bodySnaps','faceSketch','bodyEdges','topology','curveDisplay','profileDisplay','surfaceMesh','surfaceBoundary','measureVertices','measureEdge','primitive','modelGraphImport','displayMesh','restoreDocument','brepTool','nurbsEdit','pointEdit','sketchEdit','boolean','sceneEdit','curveMatch','surfaceMatch','seamPrepare','surfaceBuild','nurbsRefit','profilePrepare','profileEdit','bodyEdit','revolve','extrusion','main','cad','inspect','meshContacts','truss','latticeGraph','structuralSections','bondedSolid'].includes(request.job.kind))return null
       return request as MainSolidRequest
     },
     busyError:{name:'Error',code:'CAD_BUSY',message:'CAD worker is busy'},
@@ -121,3 +126,5 @@ export function createMainSolidWorkerHandler(post:(response:MainSolidResponse,tr
     failure:(request,error)=>({version:1,id:request.id,kind:request.job.kind,ok:false,error}),
   })
 }
+
+const instanceCache=new SolidInstanceBatchCache()

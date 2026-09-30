@@ -11,6 +11,36 @@ use crate::{
 };
 use value_codec::{Value, json};
 
+/// Exact endpoint closure of an authored UV loop. This does not prove that
+/// the loop is simple, oriented correctly, or disjoint from other loops.
+/// Clamped endpoints equal their authored controls even with rational weights.
+/// None means an unclamped/periodic endpoint has no exact proof here.
+pub fn exact_loop_joins(curves: &[Curve]) -> Result<Option<bool>> {
+    check(!curves.is_empty(), "Exact UV closure needs a nonempty loop")?;
+    for c in curves {
+        c.validate()?;
+        check(c.control_points[0].len()==2,"Exact UV closure needs 2D curves")?;
+    }
+    let endpoint=|c:&Curve,end:bool|->Option<[f64;2]> {
+        if c.periodic {return None;}
+        let n=c.control_points.len();
+        if end {
+            c.knots[n..].iter().all(|k|*k==c.knots[n]).then(||[c.control_points[n-1][0],c.control_points[n-1][1]])
+        }else{
+            c.knots[..=c.degree].iter().all(|k|*k==c.knots[c.degree]).then(||[c.control_points[0][0],c.control_points[0][1]])
+        }
+    };
+    let mut complete=true;
+    for i in 0..curves.len() {
+        match (endpoint(&curves[i],true),endpoint(&curves[(i+1)%curves.len()],false)) {
+            (Some(a),Some(b)) if a!=b =>return Ok(Some(false)),
+            (Some(_),Some(_))=>{},
+            _=>complete=false,
+        }
+    }
+    Ok(complete.then_some(true))
+}
+
 type Point = [f64; 2];
 type Rectangle = [[f64; 2]; 2];
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -421,6 +451,23 @@ mod tests {
             ],
             periodic: false,
         }
+    }
+    #[test]
+    fn exact_joins_distinguish_tiny_gaps_and_unclamped_endpoints() {
+        let mut curves=vec![
+            Curve::from_polyline(vec![vec![0.,0.],vec![1.,0.]]).unwrap(),
+            Curve::from_polyline(vec![vec![1.,0.],vec![0.,1.]]).unwrap(),
+            Curve::from_polyline(vec![vec![0.,1.],vec![0.,0.]]).unwrap(),
+        ];
+        curves[0].weights=vec![2.,3.];
+        assert_eq!(exact_loop_joins(&curves).unwrap(),Some(true));
+        curves[1].control_points[0][1]=1e-12;
+        assert!(TrimDomain::new(&[curves.clone()],1e-6).is_ok());
+        assert_eq!(exact_loop_joins(&curves).unwrap(),Some(false));
+        curves[1].control_points[0][1]=0.;
+        curves[0].knots=vec![-1.,0.,1.,2.];
+        assert_eq!(exact_loop_joins(&curves).unwrap(),None);
+        assert!(exact_loop_joins(&[]).is_err());
     }
     #[test]
     fn square_regions_vertices_and_full_rectangles() {

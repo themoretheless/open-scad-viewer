@@ -10,7 +10,8 @@ assert.ok(['system','dark','light','nord','solarized'].includes(theme))
 await mkdir(directory,{recursive:true})
 const server=createServer(async(req,res)=>{
  try {
-  const url=new URL(req.url,'http://localhost'),file=path.resolve(root,'.'+(url.pathname==='/'?'/index.html':decodeURIComponent(url.pathname)))
+  const url=new URL(req.url,'http://localhost');if(url.pathname==='/favicon.ico'){res.writeHead(204).end();return}
+  const file=path.resolve(root,'.'+(url.pathname==='/'?'/index.html':decodeURIComponent(url.pathname)))
   if(!file.startsWith(root+path.sep)){res.writeHead(403).end();return}
   res.setHeader('Content-Type',file.endsWith('.html')?'text/html':file.endsWith('.js')?'text/javascript':file.endsWith('.css')?'text/css':file.endsWith('.wasm')?'application/wasm':'application/octet-stream')
   res.end(await readFile(file))
@@ -51,6 +52,7 @@ try {
  const menu=solid.locator('summary[title="Файл"]')
  async function openMenu(){if(await menu.evaluate(e=>!e.parentElement.open))await activate(menu)}
  async function download(label,file,json=true){
+  await solid.getByRole('status',{name:'history-restore',exact:true}).waitFor({state:'hidden'})
   await openMenu()
   const pending=page.waitForEvent('download',{timeout:20000})
   await activate(solid.getByRole('button',{name:label,exact:true}))
@@ -71,12 +73,26 @@ try {
  async function command(name){await activate(solid.getByRole('button',{name:'Команда… Ctrl K',exact:true}));const search=page.getByRole('combobox',{name:'Search commands / Поиск команд'});await search.fill(name);await search.press('Enter')}
  const apply=solid.getByRole('button',{name:'Готово · Enter',exact:true})
  await command('Box')
+ await solid.getByRole('button',{name:'Куб · 3D',exact:true}).waitFor()
+ await solid.getByRole('status',{name:'primitive-build',exact:true}).waitFor({state:'hidden'})
  const before=await download('Скачать проект JSON','before.json');assert.equal(before.bodies.length,1)
  if(await menu.evaluate(e=>e.parentElement.open))await activate(menu)
  await command('Split')
  await solid.getByLabel('Расстояние, мм',{exact:true}).fill('5 mm')
  await apply.click({trial:true})
+ await page.keyboard.press('Escape')
+ assert.equal(await solid.locator('[data-preview-body]').count(),0)
+ assert.deepEqual(await download('Скачать проект JSON','preview-cancelled.json'),before)
+ if(await menu.evaluate(e=>e.parentElement.open))await activate(menu)
+ await command('Split');await solid.getByLabel('Расстояние, мм',{exact:true}).fill('5 mm');await apply.click({trial:true})
  const requests=await page.evaluate(()=>window.__bodyEditRequests);assert.ok(requests>0)
+ if(process.env.SOLID_GPU_HEADED==='1'){
+  await solid.locator('canvas.gpu-layer').waitFor({state:'visible'})
+  assert.equal(await solid.locator('canvas.gpu-layer').getAttribute('data-gpu-error'),null)
+  assert.ok(await solid.locator('[data-preview-body]').count()>0)
+  assert.ok(await solid.locator('[data-preview-body]').evaluateAll(nodes=>nodes.every(n=>getComputedStyle(n).fill==='rgba(0, 0, 0, 0)'&&getComputedStyle(n).stroke==='none')))
+ }
+
  await page.screenshot({path:path.join(directory,'body-edit-preview.png')})
  await activate(apply);assert.equal(await page.evaluate(()=>window.__bodyEditRequests),requests)
  const changed=await download('Скачать проект JSON','split.json');assert.equal(changed.bodies.length,2)
@@ -91,6 +107,6 @@ try {
  await activate(solid.getByRole('button',{name:'↷',exact:true}))
  const redone=await download('Скачать проект JSON','redone.json');assert.deepEqual(redone.bodies,changed.bodies)
  assert.deepEqual(renderErrors,[])
- const report={browser:browser.version(),workerRequests:requests,applyWithoutRecompute:true,undoRedo:true,keyboard,tabPresses,downloads}
+ const report={browser:browser.version(),workerRequests:requests,applyWithoutRecompute:true,cancelPreservesDocument:true,undoRedo:true,keyboard,tabPresses,downloads}
  await writeFile(path.join(directory,'body-edit-browser.json'),JSON.stringify(report,null,2)+'\n');console.log(report)
 }catch(error){if(page){await page.screenshot({path:path.join(directory,'failure.png')}).catch(()=>{});await writeFile(path.join(directory,'failure.txt'),await page.locator('body').innerText().catch(()=>''))}throw error}finally{await browser?.close();await new Promise(resolve=>server.close(resolve))}

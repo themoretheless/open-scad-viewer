@@ -25,12 +25,13 @@ try {
  page=await browser.newPage({acceptDownloads:true})
  page.on('pageerror',e=>renderErrors.push(String(e)));page.on('console',m=>{if(m.type()==='error')renderErrors.push(m.text())})
  await page.addInitScript(()=>{
-  window.__booleanRequests=0;window.__holdBoolean=false;window.__lateBoolean=null;window.__booleanTerminated=false;const NativeWorker=window.Worker
+  window.__failBoolean=false;window.__booleanRequests=0;window.__holdBoolean=false;window.__lateBoolean=null;window.__booleanTerminated=false;const NativeWorker=window.Worker
   window.Worker=class extends NativeWorker {
    postMessage(message,...args){
     if(message?.job?.kind==='boolean'){
      window.__booleanRequests++
-     if(window.__holdBoolean){this.held=true;const callback=this.onmessage;this.onmessage=event=>{if(event.data?.ok===true)window.__lateBoolean=()=>callback?.call(this,event)}}
+     if(window.__failBoolean){window.__failBoolean=false;const callback=this.onmessage;this.onmessage=()=>callback?.call(this,{data:{version:1,id:message.id,kind:'boolean',ok:false,error:{name:'Error',code:'CAD_CRASH',message:'Injected internal failure'}}})}
+     if(window.__holdBoolean){this.held=true;const callback=this.onmessage;this.onmessage=event=>{if(event.data?.ok===true)window.__lateBoolean=fail=>callback?.call(this,fail?{data:{...event.data,ok:false,error:{name:'Error',code:'CAD_CRASH',message:'Late cancelled Boolean'}}}:event)}}
     }
     return super.postMessage(message,...args)
    }
@@ -96,11 +97,24 @@ try {
  await selectPair();await command('Union bodies')
  await page.waitForFunction(()=>typeof window.__lateBoolean==='function')
  await writeFile(path.join(directory,'pending-focus.json'),JSON.stringify(await page.evaluate(()=>({tag:document.activeElement?.tagName,html:document.activeElement?.outerHTML,pending:document.body.innerText.includes('Boolean')})),null,2))
- await page.keyboard.press('Escape')
+ if(process.argv.includes('--context-switch'))await page.getByRole('button',{name:'Mesh',exact:true}).click()
+ else await page.keyboard.press('Escape')
  await page.waitForFunction(()=>window.__booleanTerminated)
- await page.evaluate(()=>{window.__holdBoolean=false;window.__lateBoolean()})
+ await page.evaluate(()=>{window.__holdBoolean=false;window.__lateBoolean();window.__lateBoolean(true)})
+ if(process.argv.includes('--context-switch')){
+  await page.getByRole('button',{name:'Solid',exact:true}).click()
+  assert.equal(await solid.locator('[data-preview-body]').count(),0)
+ }
  assert.deepEqual(await download('Скачать проект JSON','cancelled.json'),before)
  if(await menu.evaluate(e=>e.parentElement.open))await activate(menu)
+ if(process.argv.includes('--fail-operation')){
+  await page.evaluate(()=>window.__failBoolean=true)
+  await selectPair();await command('Union bodies')
+  await page.getByRole('alert').filter({hasText:'Вычисление прервано из-за сбоя. Модель не изменена. Повторите операцию с выбранными телами.'}).waitFor()
+  assert.deepEqual(await download('Скачать проект JSON','failed.json'),before)
+  await page.screenshot({path:path.join(directory,'boolean-error.png')})
+  if(await menu.evaluate(e=>e.parentElement.open))await activate(menu)
+ }
  await selectPair();await command('Union bodies')
  await solid.getByRole('button',{name:'Cutter',exact:true}).waitFor({state:'detached'})
  const united=await download('Скачать проект JSON','union.json');assert.equal(united.bodies.length,1);assert.equal(united.bodies[0].id,'stock')
@@ -109,7 +123,7 @@ try {
  await selectPair();await command('B-rep A − B')
  await activate(solid.getByRole('button',{name:'OK',exact:true}))
  await solid.getByRole('dialog',{name:'Вычитание',exact:true}).waitFor({state:'detached'})
- const requests=await page.evaluate(()=>window.__booleanRequests);assert.equal(requests,3)
+ const requests=await page.evaluate(()=>window.__booleanRequests);assert.equal(requests,process.argv.includes('--fail-operation')?4:3)
  await page.screenshot({path:path.join(directory,'boolean-result.png')})
  const changed=await download('Скачать проект JSON','subtracted.json');assert.equal(changed.bodies.length,1);assert.equal(changed.bodies[0].id,'stock')
  if(await menu.evaluate(e=>e.parentElement.open))await activate(menu)
@@ -122,6 +136,6 @@ try {
  await activate(solid.getByRole('button',{name:'↷',exact:true}))
  const redone=await download('Скачать проект JSON','redone.json');assert.deepEqual(redone.bodies,changed.bodies)
  assert.deepEqual(renderErrors,[])
- const report={browser:browser.version(),workerRequests:requests,booleanOperations:2,cancelledLateSuccess:true,undoRedo:true,keyboard,tabPresses,downloads}
+ const report={browser:browser.version(),workerRequests:requests,booleanOperations:2,cancelledLateSuccess:true,cancelledLateFailure:true,contextSwitch:process.argv.includes('--context-switch'),retryFailure:process.argv.includes('--fail-operation'),undoRedo:true,keyboard,tabPresses,downloads}
  await writeFile(path.join(directory,'boolean-browser.json'),JSON.stringify(report,null,2)+'\n');console.log(report)
 }catch(error){if(page){await page.screenshot({path:path.join(directory,'failure.png')}).catch(()=>{});await writeFile(path.join(directory,'failure.txt'),await page.locator('body').innerText().catch(()=>''))}throw error}finally{await browser?.close();await new Promise(resolve=>server.close(resolve))}

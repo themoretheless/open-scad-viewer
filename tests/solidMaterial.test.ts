@@ -35,3 +35,21 @@ it('persists bounded metallic and roughness parameters through undo and reload',
  for(const value of [-1,1.01,NaN,Infinity])expect(()=>assignSolidMaterial(history.document,[body.id],{name:'Bad',color:'#ffffff',metallic:value})).toThrow('Invalid body material')
  expect(()=>parseDirectDocument(stringifyMeshJson({version:1,sketches:[],bodies:[{...body,material:{name:'Bad',color:'#ffffff',roughness:2}}]}))).toThrow('Invalid body material')
 })
+
+it('preserves opacity through history, reload and geometric edits without sharing the material',()=>{
+ const body=cadRoadmapParts()[3].body,history=new DirectHistory({version:1,sketches:[],bodies:[body]})
+ const material={name:'Glass preview',color:'#cc7744',opacity:.35}
+ history.commit(assignSolidMaterial(history.document,[body.id],material));material.opacity=1
+ expect(history.undo().bodies[0].material).toBeUndefined()
+ expect(history.redo().bodies[0].material?.opacity).toBe(.35)
+ const restored=parseDirectDocument(stringifyMeshJson(history.document))
+ const moved=transformSelection(restored,[body.id],[1,0,0],[0,0,1],0,1)
+ expect(moved.bodies[0].material?.opacity).toBe(.35)
+ for(const part of splitSolid(moved.bodies[0],[0,0,1],2))expect(part.material?.opacity).toBe(.35)
+ for(const opacity of [0,1])expect(assignSolidMaterial(restored,[body.id],{...material,opacity}).bodies[0].material?.opacity).toBe(opacity)
+ for(const opacity of [-.01,1.01,NaN,Infinity,null,'0.5']){
+  const invalid={...material,opacity} as never
+  expect(()=>assignSolidMaterial(restored,[body.id],invalid)).toThrow('Invalid body material')
+  expect(()=>parseDirectDocument(stringifyMeshJson({...restored,bodies:[{...body,material:invalid}]}))).toThrow('Invalid body material')
+ }
+})

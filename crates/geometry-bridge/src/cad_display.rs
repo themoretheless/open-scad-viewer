@@ -70,28 +70,37 @@ fn smooth(mesh: &Mesh, flat: &[V3]) -> Vec<V3> {
         .chunks_exact(3)
         .map(|p| [fixed_key(p[0]), fixed_key(p[1]), fixed_key(p[2])])
         .collect();
-    let mut sums: HashMap<[FixedKey; 3], V3> = HashMap::new();
+    // Keep incident normals separate so a sharp crease cannot tilt a planar cap.
+    let mut incident: HashMap<[FixedKey; 3], Vec<V3>> = HashMap::new();
     for (t, n) in mesh.indices.chunks_exact(3).zip(flat) {
         for &index in t {
-            let sum = sums.entry(keys[index]).or_insert([0.; 3]);
-            for i in 0..3 {
-                sum[i] += n[i];
-            }
+            incident.entry(keys[index]).or_default().push(*n);
         }
     }
     mesh.indices
         .chunks_exact(3)
         .zip(flat)
         .map(|(t, n)| {
-            let sum: V3 =
-                std::array::from_fn(|i| t.iter().map(|&index| sums[&keys[index]][i]).sum());
+            let mut sum = [0.; 3];
+            for &index in t {
+                for candidate in &incident[&keys[index]] {
+                    // Smooth only within 60 degrees of this triangle's geometric normal.
+                    if (0..3).map(|i| candidate[i] * n[i]).sum::<f64>() > 0.5 {
+                        for i in 0..3 {
+                            sum[i] += candidate[i];
+                        }
+                    }
+                }
+            }
             let len = length(sum);
             if len > 1e-9 { sum.map(|x| x / len) } else { *n }
         })
         .collect()
 }
-fn result(mesh: Mesh, map: Option<Vec<usize>>, normals: Vec<V3>) -> Result<Value> {
+fn result(mesh: Mesh, map: Option<Vec<usize>>, normals: Vec<V3>, closed: Option<Vec<bool>>, work_closed: Option<Vec<bool>>) -> Result<Value> {
     let mut value = value_codec::Map::new();
+    value.insert("closed".into(), encode(closed)?);
+    value.insert("workClosed".into(), encode(work_closed)?);
     value.insert("mesh".into(), encode(mesh)?);
     value.insert("map".into(), encode(map)?);
     value.insert("normals".into(), encode(normals)?);
@@ -111,9 +120,23 @@ pub fn prepare(v: Value) -> Result<Value> {
     } else {
         None
     };
+    let mut work_closed = None;
     if let Some(model) = model {
+        // Only exact reproduction establishes ownership of an older working mesh.
+        // Do not use the approximate picking correspondence for visibility.
+        if model.shells.iter().any(|s| s.closed) && model.shells.iter().any(|s| !s.closed) {
+            for detail in [segments, 4, 1].into_iter().chain(2..=32) {
+                if let Ok(tess) = brep::nurbs(&model, detail) {
+                    if tess.built.mesh.positions == mesh.positions && tess.built.mesh.indices == mesh.indices {
+                        work_closed = tess.closed_triangles;
+                        break;
+                    }
+                }
+            }
+        }
         // Refinement failure keeps the working mesh, just like the existing UI.
         if let Ok(dense) = brep::nurbs(&model, segments) {
+            let closed = dense.closed_triangles;
             let dense = dense.built.mesh;
             let count = dense.indices.len() / 3;
             if count <= budget
@@ -140,17 +163,42 @@ pub fn prepare(v: Value) -> Result<Value> {
                     })
                     .collect();
                 let normals = smooth(&dense, &normals);
-                return result(dense, Some(map), normals);
+                return result(dense, Some(map), normals, closed, work_closed);
             }
         }
     }
-    result(mesh, None, work_normals)
+    result(mesh, None, work_normals, work_closed.clone(), work_closed)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use value_codec::json;
+    #[test]
+    fn mixed_shell_display_keeps_exact_triangle_ownership() {
+        let mut model = brep_core::step_interchange_v3::import_step_v9(include_str!(
+            "../../../tests/fixtures/step-v6/self-authored-mixed-unit-product-assembly.step"
+        )).unwrap().0;
+        model.bodies.pop();
+        model.1.bodies.pop();
+        model.shells[1].closed = false;
+        let tess = brep::nurbs(&model, 1).unwrap();
+        let expected: Vec<bool> = tess.face_ids.iter().map(|face|
+            model.shells[0].faces.iter().any(|f| f.face == *face)
+        ).collect();
+        assert!(expected.contains(&true) && expected.contains(&false));
+        let output = prepare(json!({"mesh":tess.built.mesh,"brep":model,"segments":12,"maxTriangles":4000})).unwrap();
+        assert_eq!(field::<Vec<bool>>(&output, "closed").unwrap(), expected);
+        assert_eq!(field::<Vec<bool>>(&output, "workClosed").unwrap(), expected);
+        let mut limited = json!({"mesh":tess.built.mesh,"brep":model,"segments":12,"maxTriangles":1});
+        let fallback = prepare(limited.clone()).unwrap();
+        assert!(fallback["map"].is_null());
+        assert_eq!(field::<Vec<bool>>(&fallback, "closed").unwrap(), expected);
+        limited["mesh"]["positions"][0] = json!(0.123);
+        let unrelated = prepare(limited).unwrap();
+        assert!(unrelated["closed"].is_null());
+        assert!(unrelated["workClosed"].is_null());
+    }
     #[test]
     fn fixed_keys_follow_binary_rational_decimal_rounding() {
         assert_eq!(fixed_key(0.000005), FixedKey::Decimal(false, 1));
@@ -185,10 +233,40 @@ mod tests {
         .unwrap();
         assert_eq!(output["mesh"]["positions"], before["positions"]);
         assert_eq!(output["mesh"]["indices"], before["indices"]);
+        let original: Mesh = field(&json!({"mesh":before}), "mesh").unwrap();
+        assert_eq!(
+            field::<Vec<V3>>(&output, "normals").unwrap(),
+            stats(&original).unwrap().1
+        );
         assert_eq!(
             field::<Vec<usize>>(&output, "map").unwrap(),
             (0..count).collect::<Vec<_>>()
         );
+    }
+    #[test]
+    fn cylinder_caps_stay_flat_while_walls_smooth() {
+        let model = brep_core::analytic::cylinder(5., 8.).unwrap();
+        let mesh = brep::nurbs(&model, 3).unwrap().built.mesh;
+        let output =
+            prepare(json!({"mesh":mesh,"brep":model,"segments":12,"maxTriangles":4000})).unwrap();
+        let dense: Mesh = field(&output, "mesh").unwrap();
+        let normals: Vec<V3> = field(&output, "normals").unwrap();
+        let (centers, geometric) = stats(&dense).unwrap();
+        let mut caps = 0;
+        let mut walls = 0;
+        for ((center, flat), normal) in centers.iter().zip(&geometric).zip(normals) {
+            if flat[2].abs() > 0.99 {
+                caps += 1;
+                assert!(normal[0].abs() < 1e-12 && normal[1].abs() < 1e-12);
+                assert!((normal[2] - flat[2]).abs() < 1e-12);
+            } else {
+                walls += 1;
+                assert!(normal[2].abs() < 1e-12);
+                let radial = center[0].hypot(center[1]);
+                assert!((normal[0] * center[0] + normal[1] * center[1]) / radial > 0.99);
+            }
+        }
+        assert!(caps > 0 && walls > 0);
     }
     #[test]
     fn sphere_refinement_maps_to_working_triangles_and_honors_budget() {

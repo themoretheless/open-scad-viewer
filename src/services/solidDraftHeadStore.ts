@@ -30,9 +30,13 @@ export async function writeSolidDraftHead(key:string,expected:string|null,text:s
   const tx=db.transaction(store,'readwrite',{durability:'strict'}),r=tx.objectStore(store).get(key)
   let failure:Error|undefined
   r.onsuccess=()=>{
+   if(r.result!==undefined&&(!valid(r.result)||r.result.key!==key)){failure=Error('DRAFT_CORRUPT');tx.abort();return}
    if((r.result?.revision??null)!==expected){failure=Error('DRAFT_CONFLICT');tx.abort();return}
-   if(!current()){failure=Error('DRAFT_SUPERSEDED');tx.abort();return}
-   tx.objectStore(store).put(head)
+   try{
+    if(!current()){failure=Error('DRAFT_SUPERSEDED');tx.abort();return}
+    const write=tx.objectStore(store).put(head)
+    write.onerror=()=>{failure=write.error??Error('Durable draft write failed.')}
+   }catch(e){failure=e instanceof Error?e:Error(String(e));tx.abort()}
   }
   tx.oncomplete=()=>resolve(head)
   tx.onabort=tx.onerror=()=>reject(failure??tx.error??Error('Durable draft transaction failed.'))
