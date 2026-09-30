@@ -23,6 +23,7 @@ import type {CadOptions,CadAction} from '../services/cadWorkbench'
 const BondedSolidPanel=defineAsyncComponent(()=>import('./BondedSolidPanel.vue'))
 const StructuralSectionsPanel=defineAsyncComponent(()=>import('./StructuralSectionsPanel.vue'))
 const NominalTrussPanel=defineAsyncComponent(()=>import('./NominalTrussPanel.vue'))
+const LaserCamPanel=defineAsyncComponent(()=>import('./LaserCamPanel.vue'))
 const props=defineProps<{meshes:MeshData[];selection:number[];hit:PickHit|null;source:string;ready:boolean;locale:string;initialAction?:CadAction;externalPreviewEpoch?:number}>()
 const emit=defineEmits<{apply:[source:string];preview:[meshes:MeshData[]|null];close:[]}>()
 const label=(a:string,b:string)=>props.locale==='ru'?a:b
@@ -90,6 +91,6 @@ async function calculate(apply=false){
 <BondedSolidPanel :locale="locale"/>
 <StructuralSectionsPanel :meshes="meshes" :selection="selection" :source="source" :ready="ready" :locale="locale"/>
 <NominalTrussPanel v-if="o.action==='lighten'&&o.lightening&&spatialMode" :meshes="meshes" :selection="selection" :source="source" :ready="ready" :locale="locale" :options="o.lightening" :print-settings="printSettings" :preview-epoch="previewEpoch" @preview="fieldPreview"/>
-<GcodePanel :meshes="meshes" :selection="selection" :source="source" :ready="ready" :locale="locale"/><footer><button :disabled="busy" @click="calculate()">{{ label('Предпросмотр','Preview') }}</button><button :disabled="busy" @click="calculate(true)">{{ label('Применить','Apply') }}</button><button @click="cancel">{{ label('Отмена','Cancel') }}</button></footer><p v-if="busy" role="status">{{ label('Расчёт…','Computing…') }}</p><p v-if="error" role="alert">{{ error }}</p><p v-if="info">{{ info }}</p>
+<GcodePanel :meshes="meshes" :selection="selection" :source="source" :ready="ready" :locale="locale"/><LaserCamPanel :meshes="meshes" :selection="selection" :source="source" :ready="ready" :locale="locale"/><footer><button :disabled="busy" @click="calculate()">{{ label('Предпросмотр','Preview') }}</button><button :disabled="busy" @click="calculate(true)">{{ label('Применить','Apply') }}</button><button @click="cancel">{{ label('Отмена','Cancel') }}</button></footer><p v-if="busy" role="status">{{ label('Расчёт…','Computing…') }}</p><p v-if="error" role="alert">{{ error }}</p><p v-if="info">{{ info }}</p>
  </aside></template>
 <style scoped>.cad-workbench{position:absolute;left:10px;top:100px;z-index:7;width:330px;max-height:65%;overflow:auto;padding:10px;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:6px;font-size:12px}.cad-workbench header,.cad-workbench footer,.cad-workbench label{display:flex;align-items:center;gap:6px;margin:6px 0}.cad-workbench header{justify-content:space-between}.cad-workbench input[type=number]{width:55px}.cad-workbench button,.cad-workbench input,.cad-workbench select{font:inherit;background:var(--surface-raised);color:var(--text);border:1px solid var(--border);padding:5px;border-radius:4px}.cad-workbench select{min-width:0;max-width:240px}.cad-workbench [role=alert]{color:var(--danger)}</style>

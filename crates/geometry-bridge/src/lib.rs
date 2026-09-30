@@ -66,6 +66,7 @@ mod cad_texture;
 mod cad_thread;
 mod camera_gestures;
 mod gcode;
+mod laser;
 pub mod intersections;
 #[cfg(feature = "cuda")]
 mod lattice_cuda;
@@ -786,6 +787,7 @@ pub fn dispatch(mut v: Value) -> Result<Value> {
         "mesh_gcode_job" => gcode::export_job(&v),
         "gcode_preview" => gcode::parse(&v),
         "gcode_parse" => gcode::inspect(&v),
+        "laser_preflight" | "laser_grbl" | "laser_frame" => laser::dispatch(&v),
         "brep_nurbs_sketch_extrude" => {
             let sketch = v.get("sketch").ok_or_else(|| input("Missing sketch"))?;
             let profile = match sketch.get("analytic") {

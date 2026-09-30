@@ -69,6 +69,12 @@ parameters. Its material totals are positive filament advance, not net deposited
 material; firmware tool-change macros are not executed. See the
 [extrusion accounting contract](docs/design/gcode-extrusion-accounting-2026-09-20.md).
 
+The geometry kernel also exposes a bounded, offline
+[laser CAM foundation](docs/design/laser-cam.md): ordered Line/Fill operations,
+GRBL `M3`/`M4` output, multi-pass jobs, optional `M8`/`M9` air assist,
+preflight statistics and a separately generated laser-off `G0` frame. It does
+not connect to or stream commands to a controller.
+
 Solid provides exact rational cylinders, apex cones, conical frustums, tubes,
 spheres and tori. Exact profile rotation supports signed partial turns and
 profiles touching the axis. New sketch
