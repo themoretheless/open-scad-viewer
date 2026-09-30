@@ -90,7 +90,7 @@ export function offsetSolidCurve(source:DirectDocument,p:SolidCurveOffsetOptions
   if(occupied.has(id))throw Error('Each offset curve needs a unique identity.')
   if(!Array.isArray(c.controlPoints)||!c.controlPoints.length||c.controlPoints.length>256
    ||c.controlPoints.some(q=>q.length!==2||q.some(v=>!Number.isFinite(v))))throw Error('Offset returned invalid curve coordinates.')
-  return {id,name:`${selected.name} · offset ${i+1}`,group:selected.group,
+  return {offsetConstruction:{version:1 as const,scope:'at-construction' as const,sourceId:selected.id,distanceMm:p.distance,toleranceMm:r.toleranceMm,errorUpperMm:r.errorUpperMm,method:r.method,segmentCount:r.cells.length,crossings:r.chainDiagnostics?.crossings.length??0,contacts:r.chainDiagnostics?.contacts.length??0,uncertain:r.chainDiagnostics?.uncertain.length??0,complete:r.chainDiagnostics?.complete??false,regionTopologyCertified:false as const},id,name:`${selected.name} · offset ${i+1}`,group:selected.group,
    curve:p.distance===0?structuredClone(selected.curve):{...c,controlPoints:c.controlPoints.map(q=>dimension===3?[q[0]!,q[1]!,z!]:[...q])}}
  })
  const document=structuredClone(source)

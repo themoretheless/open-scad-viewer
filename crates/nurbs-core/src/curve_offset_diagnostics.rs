@@ -26,7 +26,33 @@ impl Diagnostics {
     }
 }
 
-fn orientation(a: [f64; 2], b: [f64; 2], c: [f64; 2]) -> Result<Option<i8>> {
+/// Inspect the current represented straight edges, independent of offset provenance.
+/// Station indices refer to retained control-polygon edges across ordered chunks.
+pub fn inspect_curves(curves: &[crate::curve::Curve], max_pairs: usize) -> Result<Diagnostics> {
+    check(!curves.is_empty() && curves.len() <= 128, "Select an ordered chord chain.")?;
+    let mut edges = Vec::new();
+    let mut z = None;
+    for curve in curves {
+        curve.validate()?;
+        check(curve.degree == 1 && !curve.periodic, "Chain diagnostics require retained degree-one curves.")?;
+        check(curve.knots[0] == curve.knots[1] && curve.knots[curve.knots.len()-1] == curve.knots[curve.knots.len()-2] && (0..curve.control_points.len()-1).all(|i| curve.knots[i+1] < curve.knots[i+2]), "Use a continuous clamped chord chain.")?;
+        for point in &curve.control_points {
+            check(point.len() == 2 || point.len() == 3, "Use an XY planar chain.")?;
+            let height = if point.len() == 3 { point[2] } else { 0. };
+            if let Some(previous) = z { check(previous == height, "Use a constant Z chain.")?; } else { z = Some(height); }
+        }
+        for pair in curve.control_points.windows(2) {
+            check(edges.len() < 65536, "Chain exceeds 65536 edges.")?;
+            let station = edges.len() as f64;
+            edges.push(Segment { domain: [station, station + 1.], points: [[pair[0][0],pair[0][1]],[pair[1][0],pair[1][1]]], error_upper_mm: 0. });
+        }
+    }
+    check(!edges.is_empty(), "Chain has no edges.")?;
+    let closed = edges[0].points[0] == edges.last().unwrap().points[1];
+    inspect_chain(&edges, closed, max_pairs)
+}
+
+pub(crate) fn orientation(a: [f64; 2], b: [f64; 2], c: [f64; 2]) -> Result<Option<i8>> {
     if (a[0] == b[0] && b[0] == c[0]) || (a[1] == b[1] && b[1] == c[1]) {
         return Ok(Some(0));
     }
@@ -40,13 +66,13 @@ fn orientation(a: [f64; 2], b: [f64; 2], c: [f64; 2]) -> Result<Option<i8>> {
         None
     })
 }
-fn apart(a: &Segment, b: &Segment) -> bool {
+pub(crate) fn apart(a: &Segment, b: &Segment) -> bool {
     (0..2).any(|k| {
         a.points[0][k].max(a.points[1][k]) < b.points[0][k].min(b.points[1][k])
             || b.points[0][k].max(b.points[1][k]) < a.points[0][k].min(a.points[1][k])
     })
 }
-fn shared_vertex_only(a: &Segment, b: &Segment) -> Result<bool> {
+pub(crate) fn shared_vertex_only(a: &Segment, b: &Segment) -> Result<bool> {
     for i in 0..2 {
         for j in 0..2 {
             if a.points[i] != b.points[j] {
@@ -192,4 +218,33 @@ mod tests {
         assert_eq!(report.degenerate, vec![0]);
         assert_eq!(report.to_value()["simple"], false);
     }
+}
+
+#[cfg(test)]
+mod current_chain_tests {
+ use super::*;
+ use crate::curve::Curve;
+ fn wire(points:Vec<Vec<f64>>) -> Curve {
+  let n=points.len();let mut knots=vec![0.];knots.extend((0..n).map(|i|i as f64));knots.push((n-1) as f64);
+  Curve{degree:1,knots,weights:vec![1.;n],control_points:points,periodic:false}
+ }
+ #[test]fn edits_change_current_diagnostics_without_offset_metadata(){
+  let square=wire(vec![vec![0.,0.,7.],vec![2.,0.,7.],vec![2.,2.,7.],vec![0.,2.,7.],vec![0.,0.,7.]]);
+  assert!(inspect_curves(&[square],100).unwrap().crossings.is_empty());
+  let crossed=wire(vec![vec![0.,0.,7.],vec![2.,2.,7.],vec![0.,2.,7.],vec![2.,0.,7.],vec![0.,0.,7.]]);
+  assert_eq!(inspect_curves(&[crossed],100).unwrap().crossings,vec![[0,2]]);
+ }
+ #[cfg(feature="transport")]
+ #[test]fn transport_dispatch_uses_current_curve_definitions(){
+  let curve=wire(vec![vec![0.,0.],vec![2.,2.],vec![0.,2.],vec![2.,0.],vec![0.,0.]]);
+  let value=crate::transport::dispatch(json!({"op":"curve_chain_diagnostics","curves":[value_codec::to_value(curve).unwrap()],"maxPairs":100})).unwrap();
+  assert_eq!(value["crossings"],json!([[0,2]]));
+  assert_eq!(value["originalOffsetTopologyCertified"],false);
+ }
+ #[test]fn disconnected_nonplanar_and_discontinuous_inputs_are_refused(){
+  let a=wire(vec![vec![0.,0.],vec![1.,0.]]);let b=wire(vec![vec![2.,0.],vec![3.,0.]]);
+  assert!(inspect_curves(&[a,b],100).is_err());
+  let a=wire(vec![vec![0.,0.,0.],vec![1.,0.,1.]]);assert!(inspect_curves(&[a],100).is_err());
+  let mut a=wire(vec![vec![0.,0.],vec![1.,0.],vec![2.,0.],vec![3.,0.]]);a.knots[3]=a.knots[2];assert!(inspect_curves(&[a],100).is_err());
+ }
 }

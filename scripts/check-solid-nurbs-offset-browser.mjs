@@ -36,7 +36,7 @@ try {
   window.__offsetHold=false;window.__offsetHeld=[];window.__offsetTerminated=0;window.__offsetReleased=0
   window.Worker=class extends NativeWorker {
    set onmessage(handler){this.__handler=handler;super.onmessage=handler?event=>{
-    if(window.__offsetHold&&event.data?.kind==='curveOffset'&&event.data.ok===true){
+    if(window.__offsetHold&&['curveOffset','curveChainInspection'].includes(event.data?.kind)&&event.data.ok===true){
      this.__held=true;window.__offsetHeld.push(()=>{window.__offsetReleased++;handler(event)});return
     }
     handler(event)
@@ -98,6 +98,7 @@ try {
  await solid.getByRole('button',{name:'↶',exact:true}).click();assert.deepEqual(await exportDoc('undo.json'),before)
  await solid.getByRole('button',{name:'↷',exact:true}).click();assert.deepEqual(await exportDoc('redo.json'),applied)
  await page.reload();await ready();assert.deepEqual(await exportDoc('reload.json'),applied)
+ if(process.argv.includes('--construction')){await solid.getByRole('button',{name:applied.curves.at(-1).name,exact:true}).click();const info=solid.getByTestId('offset-construction');await info.waitFor();assert.match(await info.innerText(),/при построении/);assert.match(await info.innerText(),/После правок нужна новая проверка/);await page.screenshot({path:path.join(directory,'construction.png')});if(process.argv.includes('--inspect-current')){await solid.getByRole('button',{name:'Проверить текущую цепочку',exact:true}).click();const report=solid.getByTestId('current-chain-report');await report.waitFor();assert.match(await report.innerText(),/пересечения 4/);assert.ok(await solid.locator('[data-diagnostic="curve-offset-error"]').count());await page.screenshot({path:path.join(directory,'current-chain.png')});await page.evaluate(()=>window.__offsetHold=true);await solid.getByRole('button',{name:'Проверить текущую цепочку',exact:true}).click();await page.waitForFunction(()=>window.__offsetHeld.length===1);await page.keyboard.press('Escape');await page.evaluate(()=>{window.__offsetHold=false;window.__offsetHeld.splice(0).forEach(release=>release())});assert.equal(await solid.getByTestId('current-chain-report').count(),0);assert.equal(await solid.locator('[data-diagnostic="curve-offset-error"]').count(),0);await solid.getByRole('button',{name:'Проверить текущую цепочку',exact:true}).click();await report.waitFor();await solid.locator('[data-cv-field="x"]').fill('1');await solid.getByRole('button',{name:'Применить CV',exact:true}).click();await page.waitForFunction(()=>!document.querySelector('[data-testid="current-chain-report"]'));assert.equal(await solid.locator('[data-diagnostic="curve-offset-error"]').count(),0);await solid.getByRole('button',{name:'Offset source',exact:true}).click();assert.equal(await solid.getByTestId('current-chain-report').count(),0);assert.equal(await solid.locator('[data-diagnostic="curve-offset-error"]').count(),0)}}
  let sequenceCount=0
  if(sequence){
   captureExports=true

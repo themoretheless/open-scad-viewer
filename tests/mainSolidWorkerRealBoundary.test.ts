@@ -182,3 +182,16 @@ it('retains a periodic bevel offset through real WASM with explicit source roles
  const points=result.document.curves![1]!.curve.controlPoints
  expect(points[0]).toEqual(points.at(-1));expect(points.every(p=>p[2]===3)).toBe(true)
 })
+
+it('reinspects edited current chords through the real worker without construction metadata',async()=>{
+ const client=new MainSolidWorkerClient(realWorker);clients.push(client)
+ const curve={degree:1,knots:[0,0,1,2,3,4,4],weights:[1,1,1,1,1],controlPoints:[[0,0,7],[2,2,7],[0,2,7],[2,0,7],[0,0,7]]}
+ const document={version:1 as const,bodies:[],sketches:[],curves:[{id:'chain',name:'Current chain',curve}]}
+ const before=structuredClone(document)
+ const report=await client.run({kind:'curveChainInspection',document,ids:['chain'],maxPairs:100})
+ expect(document).toEqual(before)
+ expect(report).toMatchObject({complete:true,crossings:[[0,2]],originalOffsetTopologyCertified:false})
+ const corrected=structuredClone(document);corrected.curves[0]!.curve.controlPoints=[[0,0,7],[2,0,7],[2,2,7],[0,2,7],[0,0,7]]
+ expect(await client.run({kind:'curveChainInspection',document:corrected,ids:['chain'],maxPairs:100})).toMatchObject({complete:true,simple:true,crossings:[]})
+ expect(await client.run({kind:'curveChainInspection',document,ids:['chain'],maxPairs:1})).toMatchObject({complete:false,checks:1})
+})
