@@ -1,0 +1,33 @@
+{
+  "capability": "exact-simple-prism-convex-edge-fillet/1",
+  "status": "executing",
+  "qualificationClaim": "none",
+  "evidenceRoot": "docs/qualification/cad-roadmap-2026-09-28/concave-prism-round-2026-09-30/wasm-api",
+  "passed": [
+    "Native and bridge L-profile radii 0.25, 1, 16, rigid placement, source atomicity",
+    "WASM L-profile five exterior corners and rigid placement; C-profile outer corner and excessive-radius refusal",
+    "Inner-corner, cap-edge, duplicate, empty, out-of-range selection and invalid-radius refusals",
+    "Analytic volume, audit, naming and serialization",
+    "656 CAD tests before final C-profile test; final focused matrix 10 tests",
+    "Production old-capability UI error/retry/undo browser smoke after repacking",
+    "Types, Vite, verify-dist; 7159351 asset bytes; limits unchanged",
+    "L/C R0.5, base and rigid placement: undo/redo/JSON restore then STEP export/import/re-export; eight files independently valid in OCCT8.0.1.0.0, volume error <=1.98e-8 mm3, bounds error <=1.01e-7 mm",
+    "Holed and disconnected prism refusals preserve exact source JSON; seven focused tests and types pass",
+    "Production Chromium L-bracket: successful preview cancelled with exact JSON, radius30 refusal localized, radius1 recovery, Apply, Undo/Redo; page errors empty. UI evidence concave-prism-round-2026-09-30/ui/.",
+    "Production worker: held R1 success, Esc terminates worker; late success/error after cancel and reopened R2 preserve exact JSON and preview DOM; Apply sends no extra bodyEdit request. late-worker/result.json."
+  ],
+  "pending": [
+    "Broader simple-profile geometric matrix beyond the recorded finite L/C cases",
+    "Mixed 20-edit bracket/flange/enclosure acceptance",
+    "Full worker cancellation/stale-response and mouse/keyboard matrix for new capability"
+  ],
+  "packing": {
+    "windowBits": 24,
+    "blockBits": 16,
+    "mode": "font",
+    "byteIdentityVerified": true,
+    "note": "Window23 exceeded geometry chunk budget by346 bytes. Window24 changes compression only; decoder limits unchanged."
+  },
+  "stepEvidence": "docs/qualification/cad-roadmap-2026-09-28/concave-prism-round-2026-09-30/step",
+  "registryMaturity": "AnalyticComplete"
+}

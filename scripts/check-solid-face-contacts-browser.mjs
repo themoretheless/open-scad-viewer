@@ -102,10 +102,26 @@ try {
   if(!await panel.isVisible())await act(solid.getByRole('button',{name:'Проверить контакты граней',exact:true}))
  }
  await summary.filter({hasText:'Контактов: 0 · Общих границ: 12 · Не завершено пар: 0 · Не посещено: 0'}).waitFor({timeout:120000})
- await panel.getByText('Пары граней разнесены или соприкасаются только по подтверждённым общим границам.',{exact:true}).waitFor()
+ await panel.getByText('Пары граней разнесены либо имеют лишь подтверждённые общие границы.',{exact:true}).waitFor()
  assert.equal(await solid.locator('[data-diagnostic="face-contact"]').count(),0)
  await page.screenshot({path:path.join(directory,'cube-classified.png')})
  assert.deepEqual(await exportDoc('cube-after.json'),cubeBefore)
+ if(process.argv.includes('--self-intersection')){
+  const within=panel.getByRole('checkbox',{name:'Проверять внутри граней',exact:true})
+  async function toggle(){if(keyboard){await focus(within);await page.keyboard.press('Space')}else await within.click()}
+  await toggle()
+  await panel.getByText('Отсутствие самопересечений подтверждено.',{exact:true}).waitFor({timeout:120000})
+  await number(limit,'1')
+  await panel.getByText('Отсутствие самопересечений не доказано.',{exact:true}).waitFor()
+  await panel.getByText('Не проверены или не доказаны грани: 2, 3, 4, 5, 6',{exact:true}).waitFor()
+  assert.deepEqual(await exportDoc('self-partial.json'),cubeBefore)
+  await number(limit,'10000')
+  await panel.getByText('Отсутствие самопересечений подтверждено.',{exact:true}).waitFor({timeout:120000})
+  await page.screenshot({path:path.join(directory,'self-proven.png')})
+  assert.deepEqual(await exportDoc('self-after.json'),cubeBefore)
+  await toggle()
+ }
+
  const curved=JSON.parse(await readFile('tests/fixtures/curved-shared-boundary-browser.json','utf8'))
  await act(menu);await solid.locator('input[accept=".json,application/json"]').setInputFiles({name:'curved.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(curved.document))});await closeMenu();await ready()
  await act(solid.getByRole('tab',{name:'Сцена',exact:true}));await act(solid.getByRole('button',{name:'Curved shared boundary',exact:true}))
@@ -113,11 +129,11 @@ try {
  await openDiagnostics()
  await summary.filter({hasText:'Контактов: 0 · Общих границ: 12 · Не завершено пар: 0 · Не посещено: 0'}).waitFor({timeout:120000})
  assert.equal(await solid.locator('[data-diagnostic="face-contact"]').count(),0)
- await panel.getByText('Пары граней разнесены или соприкасаются только по подтверждённым общим границам.',{exact:true}).waitFor()
+ await panel.getByText('Пары граней разнесены либо имеют лишь подтверждённые общие границы.',{exact:true}).waitFor()
  await page.screenshot({path:path.join(directory,'curved-shared.png')})
  assert.deepEqual(await exportDoc('curved-after.json'),curvedBefore)
  assert.deepEqual(errors,[])
  const artifact={geometryWasmSha256:createHash('sha256').update(await readFile(path.join(root,'wasm/geometry-kernel.wasm'))).digest('hex'),indexSha256:createHash('sha256').update(await readFile(path.join(root,'index.html'))).digest('hex')}
- await writeFile(path.join(directory,'result.json'),JSON.stringify({artifact,ok:true,keyboard,tabs,contactPairCount:fixture.result.contactPairCount,cubeSharedBoundaries:12,cubeClassified:true,curvedSharedBoundaries:12,curvedUnresolvedPairs:0,partial:true,invalidInput:true,retry:true,cancel:true,restart:true,selectionCancellation:true,modelSwitchCancellation:true,staleReplyAfterImport:true,unchanged:true,errors},null,2))
+ await writeFile(path.join(directory,'result.json'),JSON.stringify({artifact,ok:true,selfIntersection:process.argv.includes('--self-intersection'),keyboard,tabs,contactPairCount:fixture.result.contactPairCount,cubeSharedBoundaries:12,cubeClassified:true,curvedSharedBoundaries:12,curvedUnresolvedPairs:0,partial:true,invalidInput:true,retry:true,cancel:true,restart:true,selectionCancellation:true,modelSwitchCancellation:true,staleReplyAfterImport:true,unchanged:true,errors},null,2))
 }catch(error){if(page){await page.screenshot({path:path.join(directory,'failure.png')}).catch(()=>{});await writeFile(path.join(directory,'failure.txt'),await page.locator('body').innerText().catch(()=>''))}throw error}
 finally{await browser?.close();await new Promise(resolve=>server.close(resolve))}

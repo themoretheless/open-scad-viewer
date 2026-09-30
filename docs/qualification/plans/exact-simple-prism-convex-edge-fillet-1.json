@@ -1,0 +1,143 @@
+{
+  "$schema": "./brep-capability-qualification-plan-v7.schema.json",
+  "schema": "open-scad-viewer/brep-capability-qualification-plan",
+  "schemaVersion": 7,
+  "planId": "exact-simple-prism-convex-edge-fillet-1",
+  "gate": {
+    "id": "g8-full",
+    "name": "brep-full-closed-matrix",
+    "version": 7
+  },
+  "lifecycle": {
+    "status": "executing",
+    "qualificationClaim": "none"
+  },
+  "claimBoundary": {
+    "candidateClaim": "Exact constant-radius rounds on selected convex longitudinal edges of an audited simple polygonal prism, including concave profiles, under rigid placement; complete separation checks and solid audit are required.",
+    "forbiddenClaims": [
+      "Concave selected corners, holes, cap edges, curved source edges, non-prismatic solids, arbitrary corner transitions, or unresolved boundary separation.",
+      "Valence-3 rolling-ball corner networks, sphere/rational setback transitions, variable radius, G2 blends, healing, mesh, or fallback."
+    ]
+  },
+  "capability": "exact-simple-prism-convex-edge-fillet/1",
+  "successorOf": "exact-convex-prism-edge-fillet/1",
+  "dependencies": [
+    {
+      "capability": "numeric-evidence-curved-brep/1",
+      "requiredMaturity": "Qualified"
+    },
+    {
+      "capability": "boundary-correspondence/1",
+      "requiredMaturity": "Qualified"
+    },
+    {
+      "capability": "exact-sew/1",
+      "requiredMaturity": "Qualified"
+    },
+    {
+      "capability": "global-solid-audit/1",
+      "requiredMaturity": "Qualified"
+    },
+    {
+      "capability": "persistent-naming/1",
+      "requiredMaturity": "Qualified"
+    }
+  ],
+  "scope": {
+    "included": [
+      "Simple polygonal prisms with matching parallel caps, including concave L and C profiles.",
+      "Selected convex longitudinal straight edges; exact rational circles and analytic volume/radius checks.",
+      "Rigid placement, source atomicity, persistent identities and serialized history."
+    ],
+    "excluded": [
+      "Concave selected corners, holes, cap edges, curved source edges, non-prismatic solids, arbitrary corner transitions, or unresolved boundary separation.",
+      "Valence-3 rolling-ball corner networks, sphere/rational setback transitions, variable radius, G2 blends, healing, mesh, or fallback."
+    ]
+  },
+  "matrix": [
+    {
+      "id": "BL7-SIMPLE-L-PROFILE-SINGLE-AND-MULTIPLE",
+      "expected": "Complete",
+      "blocksQualification": true
+    },
+    {
+      "id": "BL7-SIMPLE-C-PROFILE-RIGID-PLACEMENT",
+      "expected": "Complete",
+      "blocksQualification": true
+    },
+    {
+      "id": "BL7-SIMPLE-RADIUS-COLLISION-AND-INNER-CORNER",
+      "expected": "typed-refuse",
+      "blocksQualification": true
+    },
+    {
+      "id": "BL7-SIMPLE-INVALID-INPUT-ATOMICITY",
+      "expected": "typed-refuse",
+      "blocksQualification": true
+    },
+    {
+      "id": "BL7-SIMPLE-SERIALIZED-HISTORY-AND-STEP",
+      "expected": "Complete",
+      "blocksQualification": true
+    },
+    {
+      "id": "BL7-SIMPLE-WORKER-UI-CANCEL-UNDO",
+      "expected": "Complete",
+      "blocksQualification": true
+    }
+  ],
+  "bindings": {
+    "implementation": [
+      "crates/brep-core/src/analytic_features.rs",
+      "crates/brep-core/src/imprint_pipeline.rs",
+      "crates/brep-core/src/operations.rs",
+      "crates/brep-core/src/lib.rs",
+      "crates/geometry-bridge/src/lib.rs",
+      "crates/geometry-bridge/src/tests.rs",
+      "src/services/geometry/brep.ts",
+      "src/services/geometry/brepCapability.ts"
+    ],
+    "registry": "src/services/geometry/brepCapability.ts",
+    "evidenceJson": "docs/qualification/exact-simple-prism-convex-edge-fillet-1-progress.json"
+  },
+  "evidence": {
+    "state": "executing",
+    "notes": [
+      "Native/bridge/WASM finite L/C cases, atomic refusals, serialized history and eight independent OCCT STEP files passed.",
+      "Production UI L-bracket preview/Esc/radius refusal/recovery/Apply/Undo/Redo passed. Registry is AnalyticComplete; broader qualification remains open."
+    ]
+  },
+  "resetPolicy": "false-Complete freezes this capability and transitively stales all dependents; recovery requires a successor capability ID",
+  "unresolvedRows": [
+    {
+      "id": "BL7-SIMPLE-L-PROFILE-SINGLE-AND-MULTIPLE",
+      "status": "open",
+      "resolution": "Execute and record the full matrix before enabling the product capability."
+    },
+    {
+      "id": "BL7-SIMPLE-C-PROFILE-RIGID-PLACEMENT",
+      "status": "open",
+      "resolution": "Execute and record the full matrix before enabling the product capability."
+    },
+    {
+      "id": "BL7-SIMPLE-RADIUS-COLLISION-AND-INNER-CORNER",
+      "status": "open",
+      "resolution": "Execute and record the full matrix before enabling the product capability."
+    },
+    {
+      "id": "BL7-SIMPLE-INVALID-INPUT-ATOMICITY",
+      "status": "open",
+      "resolution": "Execute and record the full matrix before enabling the product capability."
+    },
+    {
+      "id": "BL7-SIMPLE-SERIALIZED-HISTORY-AND-STEP",
+      "status": "closed",
+      "resolution": "Four restored L/C models, base and rigid placement, exported/imported/re-exported; all eight STEP files pass OCCT. See concave-prism-round-2026-09-30/step/."
+    },
+    {
+      "id": "BL7-SIMPLE-WORKER-UI-CANCEL-UNDO",
+      "status": "open",
+      "resolution": "Execute and record the full matrix before enabling the product capability."
+    }
+  ]
+}

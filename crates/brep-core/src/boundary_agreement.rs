@@ -72,9 +72,92 @@ pub fn verify(model: &Model, max_cells: usize) -> Result<Report> {
     }
     Ok(report)
 }
+#[derive(Clone, Debug)]
+pub struct ExactUse {
+    pub face: usize,
+    pub wire: usize,
+    pub coedge: usize,
+    pub edge: usize,
+    /// None for an unsupported representation or an unvisited use.
+    pub decision: Option<cad_predicates::BezierIdentityDecision>,
+}
+#[derive(Clone, Debug)]
+pub struct ExactReport {
+    pub all_equal: bool,
+    /// Endpoint closure alone does not establish simple trim regions.
+    pub joins: Vec<(usize, usize, Option<bool>)>,
+    pub all_joins_exact: bool,
+    pub work: u64,
+    pub uses: Vec<ExactUse>,
+}
+/// Exact edge/lift identity, distinct from tolerance agreement. This alone is
+/// not a certificate of valid trim regions, embedding or solid volume.
+pub fn verify_exact(model: &Model, max_work: u64) -> Result<ExactReport> {
+    model.validate_boundary_diagnostic_inputs()?;
+    if max_work == 0 || max_work > cad_predicates::MAX_WORK {
+        return Err(Error::new("BREP_AGREEMENT_BUDGET","Exact boundary work must be in 1..1000000"));
+    }
+    let mut report=ExactReport{all_equal:true,joins:Vec::new(),all_joins_exact:true,work:0,uses:Vec::new()};
+    for (face_id,face) in model.faces.iter().enumerate() {
+        for &wire in std::iter::once(&face.outer).chain(&face.holes) {
+            let curves=model.loops[wire].coedges.iter().map(|c|c.pcurve.clone()).collect::<Vec<_>>();
+            let closed=nurbs_core::trim_domain::exact_loop_joins(&curves)?;
+            report.all_joins_exact &= closed==Some(true);
+            report.joins.push((face_id,wire,closed));
+            for (coedge_id,coedge) in model.loops[wire].coedges.iter().enumerate() {
+                let decision=if report.work<max_work {
+                    curve_surface_agreement::verify_exact(&model.edges[coedge.edge].curve,&coedge.pcurve,&face.surface,coedge.reversed,max_work-report.work)?
+                }else{None};
+                if let Some(d)=&decision {report.work+=d.work_used;}
+                report.all_equal &= decision.as_ref().is_some_and(|d|d.outcome==cad_predicates::BezierIdentity::Equal);
+                report.uses.push(ExactUse{face:face_id,wire,coedge:coedge_id,edge:coedge.edge,decision});
+            }
+        }
+    }
+    Ok(report)
+}
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn exact_closure_survives_a_nonplanar_bilinear_warp_and_weight_scaling() {
+        let mut m=crate::cuboid([0.;3],[1.;3]).unwrap();
+        // z -> z + xy/4: top/bottom become bilinear graphs. Every box edge
+        // has constant x or y, so its exact image remains a straight segment.
+        for v in &mut m.vertices {v.point[2]+=v.point[0]*v.point[1]/4.;}
+        for e in &mut m.edges {
+            for p in &mut e.curve.control_points {p[2]+=p[0]*p[1]/4.;}
+            for w in &mut e.curve.weights {*w*=3.;}
+        }
+        for f in &mut m.faces {
+            for row in &mut f.surface.control_points {for p in row {p[2]+=p[0]*p[1]/4.;}}
+            for row in &mut f.surface.weights {for w in row {*w*=2.;}}
+        }
+        m.validate().unwrap();
+        let r=verify_exact(&m,1000000).unwrap();
+        assert!(r.all_equal);assert!(r.all_joins_exact);assert_eq!(r.joins.len(),6);assert_eq!(r.uses.len(),24);
+        let needed=r.work;
+        assert!(needed>0 && needed<1000000);
+        assert!(verify_exact(&m,needed).unwrap().all_equal);
+        let partial=verify_exact(&m,needed-1).unwrap();
+        assert!(!partial.all_equal);assert!(partial.work<=needed-1);
+        assert_eq!(partial.uses.len(),24);
+    }
+    #[test]
+    fn exact_closure_distinguishes_a_subtolerance_gap_and_keeps_every_use() {
+        let mut m=crate::cuboid([0.;3],[1.;3]).unwrap();
+        let r=verify_exact(&m,1000000).unwrap();
+        assert!(r.all_equal);assert!(r.all_joins_exact);assert_eq!(r.joins.len(),6);assert_eq!(r.uses.len(),24);assert!(r.work<=1000000);
+        let partial=verify_exact(&m,1).unwrap();
+        assert!(!partial.all_equal);assert_eq!(partial.uses.len(),24);assert!(partial.work<=1);
+        m.edges[0].curve.control_points[0][2]+=1e-12;
+        assert!(verify(&m,10000).unwrap().complete);
+        let before=format!("{m:?}");
+        let r=verify_exact(&m,1000000).unwrap();
+        assert!(!r.all_equal);
+        assert!(r.uses.iter().any(|u|u.decision.as_ref().is_some_and(|d|d.outcome==cad_predicates::BezierIdentity::Different)));
+        assert_eq!(format!("{m:?}"),before);
+    }
     #[test]
     fn exhaustion_preserves_all_boundary_uses_without_mutation() {
         let model = crate::cuboid([0.; 3], [1.; 3]).unwrap();

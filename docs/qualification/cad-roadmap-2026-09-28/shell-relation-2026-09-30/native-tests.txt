@@ -1,0 +1,69 @@
+warning: binary `wgsl_export` should have a kebab-case name
+  |
+1 | /Users/themoretheless/Documents/Sources/open-scad-viewer/crates/target/.../wgsl_export
+  |                                                                            ^^^^^^^^^^^
+  |
+  = note: `cargo::non_kebab_case_bins` is set to `warn` by default
+help: to change the binary name to `wgsl-export`, convert the file stem
+  |
+1 - src/bin/wgsl_export.rs
+1 + src/bin/wgsl-export.rs
+  |
+warning: `raster-core` (manifest) generated 1 warning
+warning: function `rebuild_add` is never used
+    --> nurbs-core/src/foundation.rs:3249:4
+     |
+3249 | fn rebuild_add(a:[f64;2],b:[f64;2])->[f64;2] { [next_down(a[0]+b[0]),next_up(a[1]+b[1])] }
+     |    ^^^^^^^^^^^
+     |
+     = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: function `rebuild_mul` is never used
+    --> nurbs-core/src/foundation.rs:3250:4
+     |
+3250 | fn rebuild_mul(a:[f64;2],b:[f64;2])->[f64;2] {
+     |    ^^^^^^^^^^^
+
+warning: function `rebuild_binomial` is never used
+    --> nurbs-core/src/foundation.rs:3254:4
+     |
+3254 | fn rebuild_binomial(n:usize,k:usize)->[f64;2] {
+     |    ^^^^^^^^^^^^^^^^
+
+warning: function `rebuild_product_factor` is never used
+    --> nurbs-core/src/foundation.rs:3258:4
+     |
+3258 | fn rebuild_product_factor(p:usize,q:usize,i:usize,j:usize)->[f64;2] {
+     |    ^^^^^^^^^^^^^^^^^^^^^^
+
+warning: `nurbs-core` (lib) generated 4 warnings
+   Compiling brep-core v0.1.0 (/Users/themoretheless/Documents/Sources/open-scad-viewer/crates/brep-core)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 2.60s
+     Running unittests src/lib.rs (crates/target/debug/build/brep-core/b361d23d180ae8d4/out/brep_core-b361d23d180ae8d4)
+
+running 22 tests
+test shell_distance::tests::exhausted_budget_keeps_unvisited_pairs_in_lower_bound ... ok
+test analytic_features::tests::exact_shell_refusals_are_atomic_and_typed ... ok
+test shell_distance::tests::separated_boxes_have_global_face_witnesses ... ok
+test analytic_features::tests::cylinder_shell_offset ... ok
+test analytic_features::tests::cylinder_shell_preserves_rigid_placement ... ok
+test shell_distance::tests::concentric_rational_spheres_keep_a_positive_shell_gap ... ok
+test solid_audit::tests::orphan_shell_mutation_refuses_global_audit ... ok
+test tests::open_shell_is_not_a_body ... ok
+test analytic_features::tests::planar_shell_as01 ... ok
+test shell_distance::tests::diagonal_and_touching_boxes_match_analytic_distance ... ok
+test transform::tests::affine_reflection_preserves_identity_and_reverses_shell_uses ... ok
+test shell_distance::tests::nested_shells_do_not_claim_zero_volume_clearance ... ok
+test shell_relation::tests::touching_shells_cannot_be_classified_by_samples ... ok
+test analytic_features::tests::exact_cylinder_shell_is_rigid_stable_and_refuses_unowned_rims ... ok
+test shell_distance::tests::all_face_pairs_respect_a_hole_in_the_top_cap ... ok
+test shell_relation::tests::nested_and_separate_shells_keep_both_parities_and_global_budget ... ok
+test shell_distance::tests::deterministic_box_family_matches_independent_axis_gap_formula ... ok
+test analytic_features::tests::exact_shell_has_independent_box_volume_area_thickness_oracles ... ok
+test operations::tests::enclosed_difference_builds_an_inner_shell_and_remains_a_boolean_operand ... ok
+test analytic_features::tests::exact_shell_offsets_planar_inward_outward_and_nonadjacent_openings ... ok
+test analytic::tests::region_revolution_owns_cavity_shell_and_nested_island ... ok
+test shell_relation::tests::rotation_swapping_and_exhaustion_preserve_the_contract ... ok
+
+test result: ok. 22 passed; 0 failed; 0 ignored; 0 measured; 600 filtered out; finished in 1.94s
+

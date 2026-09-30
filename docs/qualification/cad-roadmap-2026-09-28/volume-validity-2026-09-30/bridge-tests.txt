@@ -1,0 +1,144 @@
+warning: binary `wgsl_export` should have a kebab-case name
+  |
+1 | /Users/themoretheless/Documents/Sources/open-scad-viewer/crates/target/.../wgsl_export
+  |                                                                            ^^^^^^^^^^^
+  |
+  = note: `cargo::non_kebab_case_bins` is set to `warn` by default
+help: to change the binary name to `wgsl-export`, convert the file stem
+  |
+1 - src/bin/wgsl_export.rs
+1 + src/bin/wgsl-export.rs
+  |
+warning: `raster-core` (manifest) generated 1 warning
+   Compiling autocfg v1.5.1
+   Compiling crc32fast v1.5.2
+   Compiling bytemuck v1.25.2
+   Compiling simd-adler32 v0.3.10
+   Compiling libm v0.2.16
+   Compiling adler2 v2.0.1
+   Compiling version_check v0.9.5
+   Compiling log v0.4.34
+   Compiling arrayvec v0.7.8
+   Compiling float-cmp v0.9.0
+   Compiling bitflags v2.13.2
+   Compiling smallvec v1.16.0
+   Compiling tinyvec_macros v0.1.1
+   Compiling arrayref v0.3.9
+   Compiling printer-core v0.1.0 (/Users/themoretheless/Documents/Sources/open-scad-viewer/crates/printer-core)
+   Compiling siphasher v1.0.3
+   Compiling tinyvec v1.13.2
+   Compiling rawpointer v0.2.1
+   Compiling strict-num v0.1.1
+   Compiling miniz_oxide v0.9.1
+   Compiling polycool v0.4.0
+   Compiling slotmap v1.1.1
+   Compiling fdeflate v0.3.7
+   Compiling miniz_oxide v0.8.9
+   Compiling unicode-script v0.5.8
+   Compiling unicode-properties v0.1.4
+   Compiling num-traits v0.2.19
+   Compiling matrixmultiply v0.3.11
+   Compiling unicode-ccc v0.4.0
+   Compiling unicode-bidi-mirroring v0.4.0
+   Compiling kurbo v0.13.1
+   Compiling roxmltree v0.21.1
+   Compiling simplecss v0.2.2
+   Compiling tiny-skia-path v0.12.0
+   Compiling wide v1.7.1
+   Compiling data-url v0.3.2
+   Compiling imagesize v0.14.0
+   Compiling quick-error v2.0.1
+   Compiling byteorder-lite v0.1.0
+   Compiling weezl v0.1.12
+   Compiling color_quant v1.1.0
+   Compiling pico-args v0.5.0
+   Compiling zune-core v0.5.3
+   Compiling base64 v0.22.1
+   Compiling xmlwriter v0.1.0
+   Compiling unicode-vo v0.1.0
+   Compiling unicode-bidi v0.3.18
+   Compiling gif v0.14.2
+   Compiling zune-jpeg v0.5.15
+   Compiling image-webp v0.2.4
+   Compiling rgb v0.8.53
+warning: function `rebuild_add` is never used
+    --> nurbs-core/src/foundation.rs:3249:4
+     |
+3249 | fn rebuild_add(a:[f64;2],b:[f64;2])->[f64;2] { [next_down(a[0]+b[0]),next_up(a[1]+b[1])] }
+     |    ^^^^^^^^^^^
+     |
+     = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: function `rebuild_mul` is never used
+    --> nurbs-core/src/foundation.rs:3250:4
+     |
+3250 | fn rebuild_mul(a:[f64;2],b:[f64;2])->[f64;2] {
+     |    ^^^^^^^^^^^
+
+warning: function `rebuild_binomial` is never used
+    --> nurbs-core/src/foundation.rs:3254:4
+     |
+3254 | fn rebuild_binomial(n:usize,k:usize)->[f64;2] {
+     |    ^^^^^^^^^^^^^^^^
+
+warning: function `rebuild_product_factor` is never used
+    --> nurbs-core/src/foundation.rs:3258:4
+     |
+3258 | fn rebuild_product_factor(p:usize,q:usize,i:usize,j:usize)->[f64;2] {
+     |    ^^^^^^^^^^^^^^^^^^^^^^
+
+warning: `nurbs-core` (lib) generated 4 warnings
+   Compiling brep-core v0.1.0 (/Users/themoretheless/Documents/Sources/open-scad-viewer/crates/brep-core)
+   Compiling subdivision-core v0.1.0 (/Users/themoretheless/Documents/Sources/open-scad-viewer/crates/subdivision-core)
+   Compiling flate2 v1.1.10
+   Compiling gcode-core v0.1.0 (/Users/themoretheless/Documents/Sources/open-scad-viewer/crates/gcode-core)
+   Compiling sdf-core v0.1.0 (/Users/themoretheless/Documents/Sources/open-scad-viewer/crates/sdf-core)
+   Compiling sketch-core v0.1.0 (/Users/themoretheless/Documents/Sources/open-scad-viewer/crates/sketch-core)
+   Compiling svgtypes v0.16.1
+   Compiling png v0.18.1
+   Compiling polygon-core v0.1.0 (/Users/themoretheless/Documents/Sources/open-scad-viewer/crates/polygon-core)
+   Compiling mechanical-core v0.1.0 (/Users/themoretheless/Documents/Sources/open-scad-viewer/crates/mechanical-core)
+   Compiling manifold-core v0.1.0 (/Users/themoretheless/Documents/Sources/open-scad-viewer/crates/manifold-core)
+   Compiling gcode-optimize v0.1.0 (/Users/themoretheless/Documents/Sources/open-scad-viewer/crates/gcode-optimize)
+   Compiling slicer-core v0.1.0 (/Users/themoretheless/Documents/Sources/open-scad-viewer/crates/slicer-core)
+   Compiling tiny-skia v0.12.0
+   Compiling core_maths v0.1.1
+   Compiling ttf-parser v0.25.1
+   Compiling num-integer v0.1.47
+   Compiling num-complex v0.4.6
+   Compiling approx v0.5.1
+   Compiling num-rational v0.4.2
+   Compiling rustybuzz v0.20.1
+   Compiling fontdb v0.23.0
+   Compiling usvg v0.47.0 (/Users/themoretheless/Documents/Sources/open-scad-viewer/crates/vendor/usvg)
+   Compiling simba v0.10.2
+   Compiling resvg v0.47.0 (/Users/themoretheless/Documents/Sources/open-scad-viewer/crates/vendor/resvg)
+   Compiling nalgebra v0.35.0
+   Compiling mechanics-core v0.1.0 (/Users/themoretheless/Documents/Sources/open-scad-viewer/crates/mechanics-core)
+   Compiling geometry-bridge v0.1.0 (/Users/themoretheless/Documents/Sources/open-scad-viewer/crates/geometry-bridge)
+warning: unused doc comment
+  --> geometry-bridge/src/abi.rs:56:1
+   |
+56 | / /// Capacity of the last packed response allocation. `encode_binary` grows its
+57 | | /// Vec amortized, so capacity usually exceeds length; the response is freed
+58 | | /// before the next request (see `decodePacked` on the host), so a single slot
+59 | | /// suffices. Buffers not matching the slot (request/staging allocations from
+60 | | /// `abi_alloc`, boxed slices) have capacity == length and take the fallback.
+   | |_----------------------------------------------------------------------------^
+   |   |
+   |   rustdoc does not generate documentation for macro invocations
+   |
+   = help: to document an item produced by a macro, the macro must produce the documentation as part of its expansion
+   = note: `#[warn(unused_doc_comments)]` (part of `#[warn(unused)]`) on by default
+
+warning: `geometry-bridge` (lib test) generated 1 warning
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 17.26s
+     Running unittests src/lib.rs (crates/target/debug/build/geometry-bridge/f3a6d61557721d52/out/geometry_bridge-f3a6d61557721d52)
+
+running 3 tests
+test cad_face_contacts::tests::visited_is_not_complete_and_output_truncation_is_explicit ... ok
+test cad_face_contacts::tests::contact_witness_survives_without_exporting_unresolved_boxes ... ok
+test cad_face_contacts::tests::combined_diagnostics_keep_face_limits_and_volume_scope_explicit ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 332 filtered out; finished in 0.02s
+

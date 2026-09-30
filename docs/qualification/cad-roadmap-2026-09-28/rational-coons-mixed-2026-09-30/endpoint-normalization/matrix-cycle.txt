@@ -1,0 +1,64 @@
+warning: binary `wgsl_export` should have a kebab-case name
+  |
+1 | /Users/themoretheless/Documents/Sources/open-scad-viewer/crates/target/.../wgsl_export
+  |                                                                            ^^^^^^^^^^^
+  |
+  = note: `cargo::non_kebab_case_bins` is set to `warn` by default
+help: to change the binary name to `wgsl-export`, convert the file stem
+  |
+1 - src/bin/wgsl_export.rs
+1 + src/bin/wgsl-export.rs
+  |
+warning: `raster-core` (manifest) generated 1 warning
+   Compiling nurbs-core v0.1.0 (/Users/themoretheless/Documents/Sources/open-scad-viewer/crates/nurbs-core)
+warning: function `rebuild_add` is never used
+    --> nurbs-core/src/foundation.rs:3249:4
+     |
+3249 | fn rebuild_add(a:[f64;2],b:[f64;2])->[f64;2] { [next_down(a[0]+b[0]),next_up(a[1]+b[1])] }
+     |    ^^^^^^^^^^^
+     |
+     = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: function `rebuild_mul` is never used
+    --> nurbs-core/src/foundation.rs:3250:4
+     |
+3250 | fn rebuild_mul(a:[f64;2],b:[f64;2])->[f64;2] {
+     |    ^^^^^^^^^^^
+
+warning: function `rebuild_binomial` is never used
+    --> nurbs-core/src/foundation.rs:3254:4
+     |
+3254 | fn rebuild_binomial(n:usize,k:usize)->[f64;2] {
+     |    ^^^^^^^^^^^^^^^^
+
+warning: function `rebuild_product_factor` is never used
+    --> nurbs-core/src/foundation.rs:3258:4
+     |
+3258 | fn rebuild_product_factor(p:usize,q:usize,i:usize,j:usize)->[f64;2] {
+     |    ^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `aligns_degrees_domains_and_knots_without_introducing_C0_seams` should have a snake case name
+   --> nurbs-core/src/continuity/preparation.rs:115:12
+    |
+115 |  #[test]fn aligns_degrees_domains_and_knots_without_introducing_C0_seams(){
+    |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case (notice the capitalization): `aligns_degrees_domains_and_knots_without_introducing_c0_seams`
+    |
+    = note: `#[warn(non_snake_case)]` (part of `#[warn(nonstandard_style)]`) on by default
+
+warning: `nurbs-core` (lib test) generated 5 warnings
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 1.76s
+     Running unittests src/lib.rs (crates/target/debug/build/nurbs-core/01c5bf64d4610c5c/out/nurbs_core-01c5bf64d4610c5c)
+
+running 9 tests
+test coons::tests::normalization_refuses_degree_limit_and_invalid_weights ... ok
+test coons::tests::refuses_gaps_incompatible_weights_and_wrong_roles ... ok
+test coons::tests::refuses_nonpositive_interior_weights_even_with_positive_boundary_weights ... ok
+test coons::tests::reproduces_all_four_boundaries_and_analytic_interior ... ok
+test coons::tests::rational_quarter_cylinder_preserves_boundaries_and_radius ... ok
+test coons::tests::affine_homogeneous_normalization_preserves_rational_curve_and_domain ... ok
+test coons::tests::prepared_incompatible_weight_cycle_builds_with_original_boundary_parameters ... ok
+test coons::tests::mixed_rational_bases_domains_and_scales_preserve_boundary_parameters ... ok
+test coons::tests::normalization_preserves_points_and_jets_across_degrees_and_weight_scales ... ok
+
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 139 filtered out; finished in 0.06s
+

@@ -1,3 +1,4 @@
+import {SolidInstanceBatchCache} from '../src/services/solidInstanceBatchCache'
 import {transformPolygonMesh} from '../src/services/geometry/polygon'
 import {it,expect} from 'vitest'
 import {createSolidInstance,detachSolidInstances,resolveSolidInstances,transformSolidInstance} from '../src/services/solidInstances'
@@ -175,4 +176,36 @@ it('checks resolved linked geometry before changing history and isolates policy 
  expect(history.document.bodies[0].name).toBe('Source')
  expect(maxX(history.undo().bodies[1].mesh.positions)).toBe(11)
  expect(maxX(history.redo().bodies[1].mesh.positions)).toBe(14)
+})
+
+it('reuses exact instance batches without sharing mutable geometry or stale placements',()=>{
+ const seed=emptyDirectDocument(),source=box(1);seed.bodies.push(source,{...source,id:'copy',instance:{sourceId:'source',matrix:structuredClone(placement)}})
+ const cache=new SolidInstanceBatchCache(),first=resolveSolidInstances(seed,cache)
+ expect(cache.size).toBe(1);const bytes=cache.retainedBytes
+ first.bodies[1].mesh.positions[0]=999;first.bodies[1].brep!.vertices[0].point[0]=999
+ const second=resolveSolidInstances(seed,cache)
+ expect(cache.size).toBe(1);expect(cache.retainedBytes).toBe(bytes)
+ expect(maxX(second.bodies[1].mesh.positions)).toBe(11)
+ expect(second.bodies[1].brep!.vertices[0].point[0]).not.toBe(999)
+ seed.bodies[0]=box(4)
+ expect(maxX(resolveSolidInstances(seed,cache).bodies[1].mesh.positions)).toBe(14);expect(cache.size).toBe(2)
+ seed.bodies[1].instance!.matrix[0][3]=20
+ expect(maxX(resolveSolidInstances(seed,cache).bodies[1].mesh.positions)).toBe(24);expect(cache.size).toBe(3)
+ const probe=new SolidInstanceBatchCache();probe.set('a',[source])
+ const bounded=new SolidInstanceBatchCache(probe.retainedBytes);bounded.set('a',[source]);bounded.set('b',[source])
+ expect(bounded.get('a')).toBeUndefined();expect(bounded.get('b')).toBeDefined();expect(bounded.retainedBytes).toBe(probe.retainedBytes)
+ const disabled=new SolidInstanceBatchCache(0);disabled.set('a',[source]);expect(disabled.size).toBe(0)
+})
+
+it('reads all instance identities after async undo without expanding retained geometry',async()=>{
+ const seed=emptyDirectDocument();seed.bodies.push(box(1))
+ const linked=createSolidInstance(seed,'source','instance',placement),history=new DirectHistory(linked)
+ history.commit(emptyDirectDocument())
+ expect(await history.restoreAsync('undo',async text=>parseDirectDocument(text))).toBe(true)
+ expect(history.storageStats.materializedStates).toBe(0)
+ expect(history.objectIds).toEqual(['source','instance'])
+ expect(history.storageStats.materializedStates).toBe(0)
+ const restored=history.document
+ expect(maxX(restored.bodies[1].mesh.positions)).toBe(11)
+ expect(restored.bodies[1].brep).toEqual(linked.bodies[1].brep)
 })

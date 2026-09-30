@@ -1,3 +1,5 @@
+import {solidDistanceExpectation,validSolidDistance,type SolidDistanceOptions,type SolidDistanceResult} from './solidDistance'
+import {selfIntersectionExpectation,validSelfIntersection,type SelfIntersection} from './solidSelfIntersection'
 import {faceContactExpectation,validFaceContacts,type FaceContacts,type FaceContactLimits} from './solidFaceContacts'
 import {boundaryExpectation,validBoundaryAgreement,type BoundaryAgreement} from './solidBoundaryAgreement'
 import type {SnapGeometry} from './modelingSnaps'
@@ -54,8 +56,10 @@ export type MainSolidJob =
   | {kind:'profileDisplay';profile:BrepProfile}
   | {kind:'surfaceMesh';item:SolidNurbsSurface}
   | {kind:'surfaceBoundary';a:NurbsSurface;b:NurbsSurface;options:SurfaceBoundaryOptions}
+  | {kind:'selfIntersection';model:NurbsBrep;toleranceUv:number;limits:FaceContactLimits;maxSpans:number}
   | {kind:'faceContacts';model:NurbsBrep;toleranceUv:number;limits:FaceContactLimits}
   | {kind:'boundaryAgreement';model:NurbsBrep;maxCells:number}
+  | {kind:'solidDistance';options:SolidDistanceOptions}
   | {kind:'shellDistance';options:ShellDistanceOptions}
   | {kind:'faceDistance';options:FaceDistanceOptions}
   | {kind:'surfaceDistance';a:NurbsSurface;b:NurbsSurface;toleranceMm:number;maxCells:number}
@@ -90,7 +94,7 @@ export type MainSolidJob =
   | {kind:'bondedSolid';inputJson:string}
   | {kind:'structuralSections'; mesh:LatticeGraphMesh; axis:'x'|'y'|'z'; stations:number[]}
   | {kind:'latticeGraph'; mesh:LatticeGraphMesh; options:LighteningOptions}
-export interface MainSolidResults {faceContacts:FaceContacts;boundaryAgreement:BoundaryAgreement;shellDistance:ShellDistanceResult;faceDistance:FaceDistanceResult;surfaceDistance:NurbsSurfaceDistance;curveDistance:NurbsCurveDistance;sketchSnaps:SnapGeometry;bodySnaps:SnapGeometry;faceSketch:ReturnType<typeof prepareSolidFaceSketch>;bodyEdges:ReturnType<typeof solidBodyEdges>;topology:ReturnType<typeof solidTopology>;curveDisplay:number[][];profileDisplay:[number,number][][];surfaceMesh:PolygonMesh;surfaceBoundary:SurfaceBoundaryReport;measureVertices:PointMeasurement;measureEdge:CurveMeasurement;primitive:DirectDocument;modelGraphImport:DirectDocument;displayMesh:DisplayMesh;restoreDocument:DirectDocument;brepTool:SolidBrepToolResult;nurbsEdit:DirectDocument;pointEdit:DirectDocument;sketchEdit:DirectDocument;boolean:SolidBooleanResult;sceneEdit:DirectDocument;curveMatch:ReturnType<typeof matchSolidCurve>;surfaceMatch:ReturnType<typeof matchSolidSurface>;seamPrepare:ReturnType<typeof prepareSolidSurfaceSeams>;surfaceBuild:ReturnType<typeof buildSolidSurface>;nurbsRefit:ReturnType<typeof refitSolidNurbs>;profilePrepare:ReturnType<typeof prepareSolidProfile>;profileEdit:DirectDocument;bodyEdit:DirectDocument;revolve:DirectDocument;extrusion:DirectDocument;meshContacts:ReturnType<typeof inspectSolidIntersections>;bondedSolid:BondedSolidResult; main:DirectDocument; cad:DirectDocument; inspect:CadPairReport[]; truss:TrussResponse; latticeGraph:NominalLatticeGraph; structuralSections:StructuralSections}
+export interface MainSolidResults {solidDistance:SolidDistanceResult;selfIntersection:SelfIntersection;faceContacts:FaceContacts;boundaryAgreement:BoundaryAgreement;shellDistance:ShellDistanceResult;faceDistance:FaceDistanceResult;surfaceDistance:NurbsSurfaceDistance;curveDistance:NurbsCurveDistance;sketchSnaps:SnapGeometry;bodySnaps:SnapGeometry;faceSketch:ReturnType<typeof prepareSolidFaceSketch>;bodyEdges:ReturnType<typeof solidBodyEdges>;topology:ReturnType<typeof solidTopology>;curveDisplay:number[][];profileDisplay:[number,number][][];surfaceMesh:PolygonMesh;surfaceBoundary:SurfaceBoundaryReport;measureVertices:PointMeasurement;measureEdge:CurveMeasurement;primitive:DirectDocument;modelGraphImport:DirectDocument;displayMesh:DisplayMesh;restoreDocument:DirectDocument;brepTool:SolidBrepToolResult;nurbsEdit:DirectDocument;pointEdit:DirectDocument;sketchEdit:DirectDocument;boolean:SolidBooleanResult;sceneEdit:DirectDocument;curveMatch:ReturnType<typeof matchSolidCurve>;surfaceMatch:ReturnType<typeof matchSolidSurface>;seamPrepare:ReturnType<typeof prepareSolidSurfaceSeams>;surfaceBuild:ReturnType<typeof buildSolidSurface>;nurbsRefit:ReturnType<typeof refitSolidNurbs>;profilePrepare:ReturnType<typeof prepareSolidProfile>;profileEdit:DirectDocument;bodyEdit:DirectDocument;revolve:DirectDocument;extrusion:DirectDocument;meshContacts:ReturnType<typeof inspectSolidIntersections>;bondedSolid:BondedSolidResult; main:DirectDocument; cad:DirectDocument; inspect:CadPairReport[]; truss:TrussResponse; latticeGraph:NominalLatticeGraph; structuralSections:StructuralSections}
 export type MainSolidRequest = {version:1; id:number; job:MainSolidJob}
 export type MainSolidResponse = {version:1; id:number; kind:MainSolidJob['kind']} & (
   | {ok:true; result:MainSolidResults[keyof MainSolidResults]}
@@ -113,6 +117,8 @@ function numericSequenceOf(value:unknown, length:number, check:(v:unknown)=>bool
 }
 const vector = (v:unknown) => arrayOf(v,3,finite)
 export type MainSolidExpectation = {kind:'displayMesh';triangles:number}
+  | ({kind:'solidDistance'}&ReturnType<typeof solidDistanceExpectation>)
+  | ({kind:'selfIntersection'}&ReturnType<typeof selfIntersectionExpectation>)
   | ({kind:'faceContacts'}&ReturnType<typeof faceContactExpectation>)
   | ({kind:'boundaryAgreement'}&ReturnType<typeof boundaryExpectation>)
   | {kind:'shellDistance';domains:[number,number][][][];toleranceMm:number;toleranceUv:number;maxCells:number;maxDomainCells:number}
@@ -132,8 +138,10 @@ export type MainSolidExpectation = {kind:'displayMesh';triangles:number}
   | {kind:'truss'; nodes:number; members:number}
   | {kind:'structuralSections';axis:'x'|'y'|'z';stations:number[]}
   | {kind:'bondedSolid';nodes:number;tets:number;bonds:number}
-  | {kind:Exclude<MainSolidJob['kind'],'faceContacts'|'boundaryAgreement'|'shellDistance'|'faceDistance'|'surfaceDistance'|'curveDistance'|'sketchSnaps'|'bodySnaps'|'bodyEdges'|'topology'|'curveDisplay'|'profileDisplay'|'surfaceMesh'|'surfaceBoundary'|'displayMesh'|'brepTool'|'truss'|'structuralSections'|'bondedSolid'|'meshContacts'>}
+  | {kind:Exclude<MainSolidJob['kind'],'solidDistance'|'selfIntersection'|'faceContacts'|'boundaryAgreement'|'shellDistance'|'faceDistance'|'surfaceDistance'|'curveDistance'|'sketchSnaps'|'bodySnaps'|'bodyEdges'|'topology'|'curveDisplay'|'profileDisplay'|'surfaceMesh'|'surfaceBoundary'|'displayMesh'|'brepTool'|'truss'|'structuralSections'|'bondedSolid'|'meshContacts'>}
 export function mainSolidExpectation(job:MainSolidJob):MainSolidExpectation {
+  if(job.kind==='solidDistance')return {kind:job.kind,...solidDistanceExpectation(job.options)}
+  if(job.kind==='selfIntersection')return {kind:job.kind,...selfIntersectionExpectation(job.model,job.toleranceUv,job.limits,job.maxSpans)}
   if(job.kind==='faceContacts')return {kind:job.kind,...faceContactExpectation(job.model,job.toleranceUv,job.limits)}
   if(job.kind==='boundaryAgreement')return {kind:job.kind,...boundaryExpectation(job.model,job.maxCells)}
   if(job.kind==='shellDistance'){const o=job.options;return {kind:job.kind,domains:[o.a,o.b].map(m=>m.faces.map(({surface:s})=>[[s.knotsU[s.degreeU],s.knotsU[s.controlPoints.length]],[s.knotsV[s.degreeV],s.knotsV[s.controlPoints[0]?.length??0]]])),toleranceMm:o.toleranceMm,toleranceUv:o.toleranceUv,maxCells:o.maxCells,maxDomainCells:o.maxDomainCells}}
@@ -161,6 +169,8 @@ export function mainSolidExpectation(job:MainSolidJob):MainSolidExpectation {
 /** Admit the result for this request, not merely any object with a result field. */
 export function mainSolidResult(job:MainSolidExpectation, value:unknown): boolean {
   if (!value || typeof value!=='object') return false
+  if(job.kind==='solidDistance')return validSolidDistance(job,value)
+  if(job.kind==='selfIntersection')return validSelfIntersection(job,value)
   if(job.kind==='faceContacts')return validFaceContacts(job,value)
   if(job.kind==='boundaryAgreement')return validBoundaryAgreement(job,value)
   if(job.kind==='shellDistance'){
@@ -263,6 +273,8 @@ export function mainSolidResult(job:MainSolidExpectation, value:unknown): boolea
       &&numericSequenceOf(m.indices,m.indices.length,i=>Number.isSafeInteger(i)&&Number(i)>=0&&Number(i)<vertices)
       &&(m.uv===undefined||numericSequenceOf(m.uv,vertices*2,finite))
       &&arrayOf(v.normals,count,vector)
+      &&(v.closed==null||arrayOf(v.closed,count,x=>typeof x==='boolean'))
+      &&(v.workClosed==null||arrayOf(v.workClosed,job.triangles,x=>typeof x==='boolean'))
       &&(v.map===null?count===job.triangles:count<=4000&&arrayOf(v.map,count,i=>Number.isSafeInteger(i)&&Number(i)>=0&&Number(i)<job.triangles))
   }
   if(job.kind==='brepTool'){

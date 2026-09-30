@@ -3,7 +3,9 @@
 use super::{Result, Value, field};
 use brep_core::face_contacts::Limits;
 use value_codec::json;
-pub fn diagnose(v: Value) -> Result<Value> {
+pub fn diagnose(v: Value) -> Result<Value> { diagnose_inner(v, false) }
+pub fn diagnose_self_intersection(v: Value) -> Result<Value> { diagnose_inner(v, true) }
+fn diagnose_inner(v: Value, combined: bool) -> Result<Value> {
     let model: brep_core::Model = field(&v, "model")?;
     let tolerance_uv: f64 = field(&v, "toleranceUv")?;
     let limits = Limits {
@@ -20,7 +22,11 @@ pub fn diagnose(v: Value) -> Result<Value> {
             "Return at most 4096 unresolved boxes",
         ));
     }
-    let report = brep_core::face_contacts::inspect(&model, tolerance_uv, limits)?;
+    let (report, face_report) = if combined {
+        let max_spans: usize = field(&v, "maxSpans")?;
+        let result = brep_core::self_intersection::inspect(&model, tolerance_uv, max_spans, limits)?;
+        (result.pairs, Some((result.faces, max_spans, result.absence_proven)))
+    } else { (brep_core::face_contacts::inspect(&model, tolerance_uv, limits)?, None) };
     let mut exported = 0;
     let mut unresolved_boxes = 0;
     let mut contacts = 0;
@@ -38,25 +44,61 @@ pub fn diagnose(v: Value) -> Result<Value> {
             (witness,r.cells,r.domain_cells,boxes,count)
         } else {if p.boundary.is_some() {shared_boundaries+=1;} else {unresolved_pairs+=1;}(None,0,0,Vec::new(),0)};
         json!({"faces":p.faces,"status":p.reason,"sharedBoundary":p.boundary.as_ref().map(|c|match c {
+            brep_core::face_contacts::SharedBoundary::ExactHull(c)=>json!({"kind":"exact-hull","faces":c.faces,"edges":c.edges,"vertex":c.vertex,"hullIntersection":c.hull_intersection}),
             brep_core::face_contacts::SharedBoundary::PlanarFace(c)=>json!({"kind":"planar-face","edge":c.edge,"planarFace":c.planar_face,"sidedFace":c.sided_face}),
             brep_core::face_contacts::SharedBoundary::OppositeSides(c)=>json!({"kind":"opposite-sides","edge":c.edge,"faces":c.faces}),
         }),"witness":witness,"cells":cells,"domainCells":domain_cells,"unresolvedBoxes":boxes,"unresolvedBoxCount":count})
     }).collect::<Vec<_>>();
-    Ok(
-        json!({"method":"interval-trimmed-face-contacts","scope":"distinct-face-pairs","solidGeometryStatus":"not-certified",
+    let mut output = json!({"method":"interval-trimmed-face-contacts","scope":"distinct-face-pairs","solidGeometryStatus":"not-certified",
         "totalPairs":report.total_pairs,"visitedPairs":pairs.len(),"unvisitedPairs":report.total_pairs-pairs.len(),"nextPair":report.next_pair,
         "allPairsVisited":report.next_pair.is_none(),"allPairsDisjoint":report.all_pairs_disjoint,"allPairsClassified":report.all_pairs_classified,"sharedBoundaryPairCount":shared_boundaries,
         "contactPairCount":contacts,"disjointPairCount":disjoint,"unresolvedPairCount":unresolved_pairs,
         "unresolvedBoxCount":unresolved_boxes,"exportedBoxCount":exported,"boxesTruncated":exported<unresolved_boxes,
         "cells":report.cells,"domainCells":report.domain_cells,"toleranceUv":tolerance_uv,
-        "limits":{"maxPairs":limits.pairs,"maxCells":limits.cells,"maxDomainCells":limits.domain_cells,"cellsPerPair":limits.cells_per_pair,"domainCellsPerPair":limits.domain_cells_per_pair,"maxBoxes":max_boxes},"pairs":pairs}),
-    )
+        "limits":{"maxPairs":limits.pairs,"maxCells":limits.cells,"maxDomainCells":limits.domain_cells,"cellsPerPair":limits.cells_per_pair,"domainCellsPerPair":limits.domain_cells_per_pair,"maxBoxes":max_boxes},"pairs":pairs});
+    if let Some((faces, max_spans, absence_proven)) = face_report {
+        output["scope"] = json!("within-face-and-distinct-face-pairs");
+        output["absenceProven"] = json!(absence_proven);
+        output["allFacesInjective"] = json!(faces.all_faces_injective);
+        output["spans"] = json!(faces.spans);
+        output["maxSpans"] = json!(max_spans);
+        output["faces"] = json!(faces.faces.iter().map(|face| json!({
+            "face": face.face,
+            "result": face.result.as_ref().map(|r| json!({"proven":r.proven,"projection":r.projection,
+                "contractionUpper":r.contraction_upper,"spans":r.spans,"reason":r.reason}))
+        })).collect::<Vec<_>>());
+    }
+    Ok(output)
 }
 #[cfg(test)]
 mod tests {
     use super::*;
     fn request(model: &brep_core::Model) -> Value {
         json!({"op":"cad_face_contacts","model":model,"toleranceUv":1e-8,"maxPairs":100,"maxCells":10000,"maxDomainCells":100000,"cellsPerPair":16,"domainCellsPerPair":1000,"maxBoxes":2})
+    }
+    #[test]
+    fn combined_diagnostics_keep_face_limits_and_volume_scope_explicit() {
+        let model = brep_core::cuboid([0.; 3], [1.; 3]).unwrap();
+        let mut q = request(&model);
+        q["op"] = json!("cad_self_intersection");
+        q["maxSpans"] = json!(6);
+        let report = crate::dispatch(q.clone()).unwrap();
+        assert_eq!(report["absenceProven"], json!(true));
+        assert_eq!(report["solidGeometryStatus"], json!("not-certified"));
+        assert_eq!(report["scope"], json!("within-face-and-distinct-face-pairs"));
+        assert_eq!(field::<Vec<Value>>(&report, "faces").unwrap().len(), 6);
+        q["maxSpans"] = json!(1);
+        let report = crate::dispatch(q.clone()).unwrap();
+        assert_eq!(report["absenceProven"], json!(false));
+        assert_eq!(report["allPairsClassified"], json!(true));
+        let faces: Vec<Value> = field(&report, "faces").unwrap();
+        assert_eq!(faces[1]["result"], Value::Null);
+        q["maxSpans"] = json!(6);
+        q["maxPairs"] = json!(1);
+        let report = crate::dispatch(q).unwrap();
+        assert_eq!(report["absenceProven"], json!(false));
+        assert_eq!(report["allFacesInjective"], json!(true));
+        assert_eq!(report["unvisitedPairs"], json!(14));
     }
     #[test]
     fn visited_is_not_complete_and_output_truncation_is_explicit() {

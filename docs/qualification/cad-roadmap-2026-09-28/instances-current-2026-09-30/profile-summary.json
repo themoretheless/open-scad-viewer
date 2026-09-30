@@ -1,0 +1,349 @@
+{
+  "scope": "Exclusive sampled CPU time over the supplied capture window; capture boundaries define scope. A main-thread profile excludes workers.",
+  "sampleCount": 1646,
+  "sampledMs": 2230.462,
+  "categories": [
+    {
+      "key": "other",
+      "sampledMs": 1212.111,
+      "percent": 54.343494755794985
+    },
+    {
+      "key": "idle",
+      "sampledMs": 960.371,
+      "percent": 43.057043787340916
+    },
+    {
+      "key": "garbageCollection",
+      "sampledMs": 56.715,
+      "percent": 2.542746749328166
+    },
+    {
+      "key": "structuredClone",
+      "sampledMs": 1.265,
+      "percent": 0.056714707535927535
+    }
+  ],
+  "topFrames": [
+    {
+      "name": "(idle)",
+      "source": "",
+      "line": 0,
+      "column": 0,
+      "sampledMs": 960.371,
+      "percent": 43.057043787340916
+    },
+    {
+      "name": "E",
+      "source": "http://127.0.0.1:49317/assets/direct-modeling-DcUb6wuW.js",
+      "line": 1,
+      "column": 1182,
+      "sampledMs": 468.247,
+      "percent": 20.993274039190087
+    },
+    {
+      "name": "(program)",
+      "source": "",
+      "line": 0,
+      "column": 0,
+      "sampledMs": 259.07,
+      "percent": 11.615082435836163
+    },
+    {
+      "name": "pn",
+      "source": "http://127.0.0.1:49317/assets/DirectModeler-BG7RgLHK.js",
+      "line": 83,
+      "column": 12585,
+      "sampledMs": 125.053,
+      "percent": 5.606596301573396
+    },
+    {
+      "name": "t",
+      "source": "http://127.0.0.1:49317/assets/meshJson-CVKQT5bI.js",
+      "line": 1,
+      "column": 131,
+      "sampledMs": 65.152,
+      "percent": 2.921009190024309
+    },
+    {
+      "name": "(garbage collector)",
+      "source": "",
+      "line": 0,
+      "column": 0,
+      "sampledMs": 56.715,
+      "percent": 2.542746749328166
+    },
+    {
+      "name": "a.onmessage",
+      "source": "http://127.0.0.1:49317/assets/mainSolidWorkerClient-C5tWxGE-.js",
+      "line": 1,
+      "column": 34329,
+      "sampledMs": 49.754,
+      "percent": 2.2306589397174217
+    },
+    {
+      "name": "getAriaRole",
+      "source": "",
+      "line": 3343,
+      "column": 21,
+      "sampledMs": 18.867,
+      "percent": 0.8458785668619326
+    },
+    {
+      "name": "setAttribute",
+      "source": "",
+      "line": 0,
+      "column": 0,
+      "sampledMs": 15.457,
+      "percent": 0.6929954421998671
+    },
+    {
+      "name": "uC",
+      "source": "http://127.0.0.1:49317/assets/DirectModeler-BG7RgLHK.js",
+      "line": 84,
+      "column": 85250,
+      "sampledMs": 13.853,
+      "percent": 0.6210820897195289
+    },
+    {
+      "name": "query",
+      "source": "",
+      "line": 5301,
+      "column": 17,
+      "sampledMs": 13.828,
+      "percent": 0.6199612456970798
+    },
+    {
+      "name": "match",
+      "source": "",
+      "line": 5261,
+      "column": 17,
+      "sampledMs": 12.554,
+      "percent": 0.5628430343130706
+    },
+    {
+      "name": "",
+      "source": "http://127.0.0.1:49317/assets/DirectModeler-BG7RgLHK.js",
+      "line": 84,
+      "column": 167296,
+      "sampledMs": 11.312,
+      "percent": 0.5071595032777962
+    },
+    {
+      "name": "",
+      "source": "http://127.0.0.1:49317/assets/meshJson-CVKQT5bI.js",
+      "line": 1,
+      "column": 161,
+      "sampledMs": 9.958,
+      "percent": 0.44645459102194973
+    },
+    {
+      "name": "get",
+      "source": "http://127.0.0.1:49317/assets/DirectModeler-BG7RgLHK.js",
+      "line": 83,
+      "column": 11962,
+      "sampledMs": 8.579,
+      "percent": 0.384628834743654
+    },
+    {
+      "name": "elementSafeTagName",
+      "source": "",
+      "line": 3015,
+      "column": 28,
+      "sampledMs": 8.402,
+      "percent": 0.37669325906471396
+    },
+    {
+      "name": "w",
+      "source": "http://127.0.0.1:49317/assets/vue-DxqjmqvJ.js",
+      "line": 1,
+      "column": 47104,
+      "sampledMs": 7.389,
+      "percent": 0.33127665927507394
+    },
+    {
+      "name": "includes",
+      "source": "http://127.0.0.1:49317/assets/vue-DxqjmqvJ.js",
+      "line": 1,
+      "column": 10252,
+      "sampledMs": 7.173,
+      "percent": 0.3215925669211132
+    },
+    {
+      "name": "",
+      "source": "http://127.0.0.1:49317/assets/DirectModeler-BG7RgLHK.js",
+      "line": 84,
+      "column": 241572,
+      "sampledMs": 6.287,
+      "percent": 0.28186985476551496
+    },
+    {
+      "name": "Rr",
+      "source": "http://127.0.0.1:49317/assets/vue-DxqjmqvJ.js",
+      "line": 1,
+      "column": 33676,
+      "sampledMs": 6.256,
+      "percent": 0.280480008177678
+    },
+    {
+      "name": "get",
+      "source": "http://127.0.0.1:49317/assets/vue-DxqjmqvJ.js",
+      "line": 1,
+      "column": 12207,
+      "sampledMs": 5.823,
+      "percent": 0.2610669897088585
+    },
+    {
+      "name": "insertBefore",
+      "source": "",
+      "line": 0,
+      "column": 0,
+      "sampledMs": 5.044,
+      "percent": 0.22614148996934266
+    },
+    {
+      "name": "Ro",
+      "source": "http://127.0.0.1:49317/assets/vue-DxqjmqvJ.js",
+      "line": 1,
+      "column": 70187,
+      "sampledMs": 5.028,
+      "percent": 0.22542414979497521
+    },
+    {
+      "name": "",
+      "source": "http://127.0.0.1:49317/assets/vue-DxqjmqvJ.js",
+      "line": 1,
+      "column": 48981,
+      "sampledMs": 5.013,
+      "percent": 0.22475164338150572
+    },
+    {
+      "name": "Tn",
+      "source": "http://127.0.0.1:49317/assets/vue-DxqjmqvJ.js",
+      "line": 1,
+      "column": 21754,
+      "sampledMs": 4.969,
+      "percent": 0.2227789579019952
+    },
+    {
+      "name": "getExplicitAriaRole",
+      "source": "",
+      "line": 3336,
+      "column": 29,
+      "sampledMs": 4.886,
+      "percent": 0.21905775574746397
+    },
+    {
+      "name": "ne",
+      "source": "http://127.0.0.1:49317/assets/vue-DxqjmqvJ.js",
+      "line": 1,
+      "column": 48182,
+      "sampledMs": 4.833,
+      "percent": 0.21668156641987177
+    },
+    {
+      "name": "getImplicitAriaRole",
+      "source": "",
+      "line": 3233,
+      "column": 29,
+      "sampledMs": 3.757,
+      "percent": 0.16844043969365988
+    },
+    {
+      "name": "ee",
+      "source": "http://127.0.0.1:49317/assets/vue-DxqjmqvJ.js",
+      "line": 1,
+      "column": 47323,
+      "sampledMs": 3.626,
+      "percent": 0.16256721701602628
+    },
+    {
+      "name": "prepare",
+      "source": "http://127.0.0.1:49317/assets/DirectModeler-BG7RgLHK.js",
+      "line": 83,
+      "column": 6534,
+      "sampledMs": 3.617,
+      "percent": 0.1621637131679446
+    },
+    {
+      "name": "d_",
+      "source": "http://127.0.0.1:49317/assets/DirectModeler-BG7RgLHK.js",
+      "line": 84,
+      "column": 11518,
+      "sampledMs": 2.533,
+      "percent": 0.11356391635454897
+    },
+    {
+      "name": "yn",
+      "source": "http://127.0.0.1:49317/assets/vue-DxqjmqvJ.js",
+      "line": 1,
+      "column": 20909,
+      "sampledMs": 2.533,
+      "percent": 0.11356391635454897
+    },
+    {
+      "name": "",
+      "source": "http://127.0.0.1:49317/assets/directBodies-COJ8ovNJ.js",
+      "line": 1,
+      "column": 68,
+      "sampledMs": 2.517,
+      "percent": 0.1128465761801815
+    },
+    {
+      "name": "qo",
+      "source": "http://127.0.0.1:49317/assets/vue-DxqjmqvJ.js",
+      "line": 1,
+      "column": 71085,
+      "sampledMs": 2.517,
+      "percent": 0.1128465761801815
+    },
+    {
+      "name": "computeAriaRole",
+      "source": "",
+      "line": 3351,
+      "column": 25,
+      "sampledMs": 2.512,
+      "percent": 0.11262240737569167
+    },
+    {
+      "name": "Q",
+      "source": "http://127.0.0.1:49317/assets/DirectModeler-BG7RgLHK.js",
+      "line": 84,
+      "column": 72765,
+      "sampledMs": 2.487,
+      "percent": 0.11150156335324252
+    },
+    {
+      "name": "Jo",
+      "source": "http://127.0.0.1:49317/assets/vue-DxqjmqvJ.js",
+      "line": 1,
+      "column": 71548,
+      "sampledMs": 2.467,
+      "percent": 0.11060488813528319
+    },
+    {
+      "name": "",
+      "source": "http://127.0.0.1:49317/assets/DirectModeler-BG7RgLHK.js",
+      "line": 84,
+      "column": 85391,
+      "sampledMs": 2.114,
+      "percent": 0.09477857053830104
+    },
+    {
+      "name": "removeAttribute",
+      "source": "",
+      "line": 0,
+      "column": 0,
+      "sampledMs": 1.294,
+      "percent": 0.05801488660196856
+    },
+    {
+      "name": "createElementNS",
+      "source": "",
+      "line": 0,
+      "column": 0,
+      "sampledMs": 1.272,
+      "percent": 0.0570285438622133
+    }
+  ]
+}

@@ -43,13 +43,19 @@ mod nurbs_step_shared;
 pub mod nurbs_step_solid;
 pub mod nurbs_step_trimmed;
 pub mod operations;
+mod body_edit;
 pub mod planar_trim;
 pub mod face_contact;
 pub mod face_contacts;
 pub mod shared_boundary;
 pub mod face_domain;
 pub mod face_injectivity;
+pub mod self_intersection;
 pub mod shell_distance;
+pub mod solid_distance;
+pub mod shell_relation;
+pub mod shell_nesting;
+pub mod shell_orientation;
 pub mod ray_parity;
 pub mod predicate_evidence;
 pub mod prism;
@@ -58,6 +64,9 @@ mod profile_imprint;
 pub mod sketch;
 pub mod solid_audit;
 pub mod boundary_agreement;
+pub mod boundary_embedding;
+pub mod boundary_hull_contact;
+pub mod volume_validity;
 mod sphere_boolean;
 pub mod step_interchange;
 pub mod step_interchange_v3;
@@ -75,12 +84,12 @@ pub use analytic_boolean::{BooleanCertificate, analytic_boolean, analytic_boolea
 pub use analytic_features::{
     AUDITED_MULTI_EDGE_FILLET_CAPABILITY, AuditedFeatureResult, EXACT_ANALYTIC_SHELL_CAPABILITY,
     EXACT_BENT_RMF_SWEEP_CAPABILITY, EXACT_CONVEX_CHAMFER_CAPABILITY,
-    EXACT_CONVEX_PRISM_FILLET_CAPABILITY, EXACT_MULTI_SECTION_LOFT_CAPABILITY,
+    EXACT_CONVEX_PRISM_FILLET_CAPABILITY, EXACT_SIMPLE_PRISM_FILLET_CAPABILITY, EXACT_ANNULAR_FILLET_CAPABILITY, EXACT_MULTI_SECTION_LOFT_CAPABILITY,
     EXACT_PARALLEL_FRAME_SWEEP_CAPABILITY, EXACT_VALENCE3_CORNER_BLEND_CAPABILITY,
     EXACT_VARIABLE_RADIUS_FILLET_CAPABILITY, FeatureCertificate, analytic_chamfer, analytic_fillet,
     analytic_fillet_chain, analytic_shell, analytic_solid_loft, audited_bent_rmf_sweep,
     audited_multi_edge_fillet, audited_multi_section_loft, audited_parallel_frame_sweep,
-    exact_analytic_shell, exact_convex_chamfer, exact_convex_prism_fillet,
+    exact_analytic_shell, exact_annular_fillet, exact_layered_prism_fillet, exact_convex_chamfer, exact_convex_prism_fillet, exact_simple_prism_fillet,
     exact_valence3_corner_blend, exact_variable_radius_fillet, export_iges, frame_law_ruled_sweep,
     import_iges,
 };

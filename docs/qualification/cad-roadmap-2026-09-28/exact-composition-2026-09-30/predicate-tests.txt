@@ -1,0 +1,104 @@
+warning: binary `wgsl_export` should have a kebab-case name
+  |
+1 | /Users/themoretheless/Documents/Sources/open-scad-viewer/crates/target/.../wgsl_export
+  |                                                                            ^^^^^^^^^^^
+  |
+  = note: `cargo::non_kebab_case_bins` is set to `warn` by default
+help: to change the binary name to `wgsl-export`, convert the file stem
+  |
+1 - src/bin/wgsl_export.rs
+1 + src/bin/wgsl-export.rs
+  |
+warning: `raster-core` (manifest) generated 1 warning
+   Compiling cad-predicates v0.1.0 (/Users/themoretheless/Documents/Sources/open-scad-viewer/crates/cad-predicates)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.49s
+     Running unittests src/lib.rs (crates/target/debug/build/cad-predicates/fe4c3e9c5bffce7c/out/cad_predicates-fe4c3e9c5bffce7c)
+
+running 15 tests
+test tests::ordinary_sign_zero_and_handedness_use_authored_bits ... ok
+test tests::work_cancellation_deadline_and_expansion_capacity_fail_explicitly ... ok
+test tests::residual_classification_requires_matching_enclosure_and_respects_gray_band ... ok
+test bezier_identity::tests::exhausted_budget_and_nonpositive_weights_never_certify ... ok
+test tests::serialized_tolerance_identity_cannot_be_substituted ... ok
+test bezier_identity::tests::degree_elevation_and_weight_scaling_are_exact ... ok
+test tests::rational_denominators_do_not_become_rounded_input_leaves ... ok
+test bezier_composition_identity::tests::missing_weights_and_work_do_not_establish_identity ... ok
+test tests::portable_tolerance_identity_round_trips_and_detects_policy_changes ... ok
+test tests::cancelling_products_keep_the_roundoff_component ... ok
+test tests::admission_preserves_source_and_context_identity ... ok
+test tests::uniform_extreme_exponents_can_normalize_but_unsafe_products_refuse ... ok
+test bezier_identity::tests::rational_quadratic_and_cubic_identity_uses_all_coordinates ... ok
+test bezier_composition_identity::tests::rational_surface_weights_participate_in_the_exact_composition ... ok
+test bezier_composition_identity::tests::diagonal_graph_composition_is_exact_for_polynomial_and_rational_pcurves ... ok
+
+test result: ok. 15 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests/construction3_recipes.rs (crates/target/debug/build/cad-predicates/e2a6983dc000a871/out/construction3_recipes-e2a6983dc000a871)
+
+running 23 tests
+test empty_batches_observe_cancellation_and_deadlines ... ok
+test coplanar_query_distinguishes_off_plane_degeneracy_and_resource_failure ... ok
+test exact_degenerate_parallel_and_contained_classification ... ok
+test graph_replay_rebinds_verified_source_and_rejects_structural_or_value_tampering ... ok
+test coplanar_endpoint_replay_retains_exact_coordinates ... ok
+test exact_point_order_deduplicates_recipes_without_merging_rounded_neighbors ... ok
+test point_triangle_reports_all_features_and_exact_off_plane_sign ... ok
+test finite_domain_uses_exact_boundary_signs_not_enclosure_centers_or_tolerance ... ok
+test batch_replay_is_atomic_and_uses_one_budget ... ok
+test portable_graph_preserves_shared_dependencies_and_authored_rationals ... ok
+test singleton_overlap_endpoints_are_exactly_equal_and_context_checked ... ok
+test binary_recipe_roundtrip_replays_exactly_and_rejects_every_truncation ... ok
+test unified_query_never_publishes_partial_geometry_when_work_expires ... ok
+test unified_segment_triangle_covers_crossing_coplanar_empty_and_degenerate_cases ... ok
+test coplanar_face_contacts_reduce_to_point_or_segment_without_duplicate_vertices ... ok
+test triangle_pair_assembles_exact_shared_segments_contacts_and_explicit_coplanarity ... ok
+test retained_third_and_nested_plane_inputs_preserve_exact_zero ... ok
+test overlap_endpoint_recipes_survive_source_handle_drop_and_enforce_depth_limit ... ok
+test closed_domains_classify_every_triangle_feature_and_segment_boundary ... ok
+test coplanar_hexagon_is_canonical_convex_and_exact_in_every_projection ... ok
+test affine_rational_oracle_checks_coordinates_parameters_and_incidence ... ok
+test rational_polygon_matrix_matches_independent_sequential_clipping ... ok
+test coplanar_clipping_matches_boundary_enumeration_under_affine_placements ... ok
+
+test result: ok. 23 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.70s
+
+     Running tests/construction_recipes.rs (crates/target/debug/build/cad-predicates/ca96a905c723a29c/out/construction_recipes-ca96a905c723a29c)
+
+running 12 tests
+test nearly_parallel_lines_are_not_coerced_to_parallel_or_coincident ... ok
+test construction_and_followup_enforce_context_budget_cancellation_and_error_bounds ... ok
+test broad_binary_exponent_spans_preserve_the_unreduced_exact_path ... ok
+test constructed_one_third_is_not_its_rounded_center ... ok
+test all_constructed_orientation_permutations_preserve_exact_incidence ... ok
+test constructed_endpoints_detect_exact_degeneracy_and_validate_before_cancel ... ok
+test endpoint_order_and_affine_placement_preserve_exact_intersection ... ok
+test diamond_dag_shares_ancestors_without_exponential_evaluation_or_debug_output ... ok
+test construction_chains_keep_exact_recipes_and_refuse_the_depth_boundary_atomically ... ok
+test rational_line_matrix_matches_separate_affine_oracle_and_parameter_correspondence ... ok
+test nested_general_intersections_match_the_separate_rational_oracle ... ok
+test combined_graph_node_cap_counts_unique_dependencies_and_preserves_inputs ... ok
+
+test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.08s
+
+     Running tests/independent_oracle.rs (crates/target/debug/build/cad-predicates/02e9f826fe55271d/out/independent_oracle-02e9f826fe55271d)
+
+running 10 tests
+test invalid_tolerance_profiles_do_not_create_contexts ... ok
+test distance_rejects_wrong_dimensions_and_negative_radius_without_coercion ... ok
+test foreign_arena_references_are_rejected_even_with_equal_source_labels ... ok
+test authentic_leaf_admission_rejects_nonfinite_noncanonical_and_out_of_range_inputs ... ok
+test missing_or_foreign_residual_evidence_never_becomes_a_model_decision ... ok
+test context_identity_tracks_source_revision_bits_and_tolerance_policy ... ok
+test residual_evidence_that_exceeds_the_entity_error_cap_is_refused ... ok
+test finite_work_precision_cancel_and_deadline_bounds_fail_explicitly ... ok
+test model_classification_uses_proven_enclosures_and_keeps_thresholds_indeterminate ... ok
+test native_signs_match_independent_rational_candidate_corpus ... ok
+
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests cad_predicates
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

@@ -1,5 +1,6 @@
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
+import {compactWgslPlugin} from './scripts/compact-wgsl.mjs'
 
 // Split the heavy, independent subsystems into their own chunks so the parser,
 // renderer, and exporters aren't all forced into the main entry chunk.
@@ -7,10 +8,10 @@ import vue from '@vitejs/plugin-vue'
 // their dependencies, so lazy groups never drag the geometry kernel into the
 // entry preload list.
 export default defineConfig({
-  plugins: [vue()],
+  plugins: [compactWgslPlugin(),vue()],
   worker: { format: 'es', rollupOptions: { output: { manualChunks(id) {
     // Share decoder code on disk; each worker still owns its runtime state.
-    if (/src[\\/]services[\\/]wasmPacking\.ts$/.test(id)) return 'worker-wasm-packing'
+    if (/src[\\/]services[\\/](wasmPacking|wasmBase91|wasmBrotliPacking)\.ts$/.test(id)) return 'worker-wasm-packing'
     if (id.includes('/src/generated/geometry-kernels/bytes')) return 'geometry-kernel-bytes'
     if (id.includes('/src/generated/language-kernel/bytes')) return 'language-kernel-bytes'
     if (id.includes('/src/generated/harfbuzz/bytes')) return 'harfbuzz-bytes'
@@ -41,7 +42,7 @@ export default defineConfig({
             // Shared by the entry graph (photogrammetry loader) and lazy language
             // chunks; without its own chunk it drags the geometry kernel into
             // the entry preload list.
-            { name: 'binary-codec', test: /(src[\\/]core[\\/]sha256\.ts|src[\\/]services[\\/](wasmPacking|valueBinaryCodec)\.ts)$/ },
+            { name: 'binary-codec', test: /(src[\\/]core[\\/]sha256\.ts|src[\\/]services[\\/](wasmPacking|wasmBase91|valueBinaryCodec)\.ts)$/ },
             // The entry graph needs only this regex; keep it out of the lazy
             // compiler chunk so the geometry kernel is not preloaded.
             { name: 'detect', test: /src[\\/]services[\\/]modelGraphTextDetect\.ts$/ },
@@ -49,6 +50,7 @@ export default defineConfig({
             // compiler it would pull the language kernel into the entry preload.
             { name: 'wasm-host', test: /src[\\/]services[\\/](wasmHost|wasmBrotliPacking)\.ts$/ },
             { name: 'modelgraph-text', test: /src[\\/]services[\\/]modelGraphText\.ts$/ },
+            { name: 'solid-draft-storage', test: /src[\\/]services[\\/]solidDraft(Head)?Store\.ts$/ },
             { name: 'directBodies', test: /src[\\/]services[\\/]directBodiesScad\.ts$/ },
             {
               // Direct-modeling helpers are shared by lazy CAD panels; they must
@@ -57,6 +59,7 @@ export default defineConfig({
               test: /src[\\/]services[\\/]direct(Modeling|SolidTools|ProfileTools|SketchGeometry|ModelingTools)\.ts$/,
               includeDependenciesRecursively: false,
             },
+            { name: 'solid-gpu-view', test: /src[\\/]services[\\/]solidGpuView/ },
             { name: 'surface-selection', test: /src[\\/]services[\\/]meshSurfaceGroups/ },
             { name: 'parser', test: /src[\\/]services[\\/]openscadParser|src[\\/]parser[\\/]/ },
             { name: 'renderer', test: /src[\\/]services[\\/]webgpuRenderer|src[\\/]renderer[\\/]/ },

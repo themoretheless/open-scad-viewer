@@ -135,3 +135,48 @@ mod tests {
         assert!(d.classify([[-0.1, 0.2], [0.1, 0.2]], 1000).is_err());
     }
 }
+
+pub struct TrimAudit {
+    /// Missing entries remain explicit for unsupported or unvisited faces.
+    pub faces: Vec<Option<nurbs_core::trim_region_audit::Report>>,
+    pub all_valid: bool,
+    pub pairs: usize,
+    pub cells: usize,
+    pub domain_cells: usize,
+}
+/// UV-region evidence only; edge lifts, surface embedding and volume validity
+/// have separate checks. Every budget is shared by all inspected faces.
+pub fn audit_trim_regions(model: &Model,tolerance_uv:f64,max_pairs:usize,max_cells:usize,max_domain_cells:usize)->Result<TrimAudit>{
+    model.validate_boundary_diagnostic_inputs()?;
+    if !(1..=100000).contains(&max_pairs)||!(1..=100000).contains(&max_cells)||!(1..=1000000).contains(&max_domain_cells)
+        || !tolerance_uv.is_finite()||tolerance_uv<=0. {
+        return Err(Error::new("BREP_INVALID_INPUT","Trim audit requires positive tolerance and bounded work"));
+    }
+    let mut out=TrimAudit{faces:Vec::new(),all_valid:!model.faces.is_empty(),pairs:0,cells:0,domain_cells:0};
+    for face in &model.faces {
+        let loops=std::iter::once(face.outer).chain(face.holes.iter().copied())
+            .map(|wire|model.loops[wire].coedges.iter().map(|c|c.pcurve.clone()).collect::<Vec<_>>()).collect::<Vec<_>>();
+        let result=if out.pairs<max_pairs&&out.cells<max_cells&&out.domain_cells<max_domain_cells
+            && loops.len()<=16&&loops.iter().all(|l|l.len()>=2)&&loops.iter().map(Vec::len).sum::<usize>()<=256 {
+            Some(nurbs_core::trim_region_audit::inspect(&loops,tolerance_uv,max_pairs-out.pairs,max_cells-out.cells,max_domain_cells-out.domain_cells)?)
+        }else{None};
+        if let Some(r)=&result{out.pairs+=r.pairs;out.cells+=r.cells;out.domain_cells+=r.domain_cells;}
+        out.all_valid &= result.as_ref().is_some_and(|r|r.valid==Some(true));out.faces.push(result);
+    }
+    Ok(out)
+}
+#[cfg(test)]
+mod trim_audit_tests {
+    use super::*;
+    #[test]
+    fn cube_regions_and_global_exhaustion_preserve_face_indices(){
+        let m=crate::cuboid([0.;3],[1.;3]).unwrap();let before=format!("{m:?}");
+        let r=audit_trim_regions(&m,1e-8,1000,10000,100000).unwrap();
+        assert!(r.all_valid);assert_eq!(r.faces.len(),6);
+        for (p,c,d) in [(1,10000,100000),(1000,1,100000),(1000,10000,1)]{
+            let r=audit_trim_regions(&m,1e-8,p,c,d).unwrap();
+            assert!(!r.all_valid);assert_eq!(r.faces.len(),6);assert!(r.pairs<=p&&r.cells<=c&&r.domain_cells<=d);
+        }
+        assert_eq!(format!("{m:?}"),before);
+    }
+}

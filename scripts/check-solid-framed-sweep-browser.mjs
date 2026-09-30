@@ -5,6 +5,7 @@ import {readFile,mkdir,writeFile} from 'node:fs/promises'
 import path from 'node:path'
 import {loadQualificationPlaywrightPackage} from './qualificationPlaywrightPackage.mjs'
 const root=path.resolve('dist'),directory=path.resolve(process.argv[2]??'/tmp/solid-framed-sweep')
+const nonplanar=process.argv.includes('--nonplanar'),closed=process.argv.includes('--closed')||nonplanar,sections=nonplanar?25:closed?17:32
 const keyboard=process.argv.includes('--keyboard'),theme=process.argv.find(a=>a.startsWith('--theme='))?.slice(8)??'system'
 assert.ok(['system','dark','light','nord','solarized'].includes(theme))
 await mkdir(directory,{recursive:true})
@@ -60,6 +61,12 @@ try {
   {id:'profile',name:'Profile',curve:{degree:1,controlPoints:[[1,0,0],[1.2,0,0]],weights:[1,1],knots:[0,0,1,1]}},
   {id:'path',name:'Path',curve:{degree:2,controlPoints:[[1,0,0],[1,1,0],[0,1,0]],weights:[1,Math.SQRT1_2,1],knots:[0,0,0,1,1,1]}}
  ]
+ if(closed)curves[1].curve={degree:2,controlPoints:[[1,0,0],[1,1,0],[0,1,0],[-1,1,0],[-1,0,0],[-1,-1,0],[0,-1,0],[1,-1,0],[1,0,0]],weights:Array.from({length:9},(_,i)=>i%2?Math.SQRT1_2:1),knots:[0,0,0,.25,.25,.5,.5,.75,.75,1,1,1]}
+ if(nonplanar){
+  const points=Array.from({length:6},(_,i)=>{const a=i*2*Math.PI/6;return [Math.cos(a),Math.sin(a),.3*Math.sin(2*a)]}),start=[0,1,2].map(k=>(points[0][k]+4*points[1][k]+points[2][k])/6)
+  curves[1].curve={degree:3,controlPoints:[...points,...points.slice(0,3)],weights:Array(9).fill(1),knots:Array.from({length:13},(_,i)=>(i-3)/6),periodic:true}
+  curves[0].curve={degree:1,knots:[0,0,1,1],weights:[1,.8],controlPoints:[[start[0],start[1],start[2]+.1],[start[0],start[1],start[2]+.2]]}
+ }
  await openMenu()
  await solid.locator('input[accept=".json,application/json"]').setInputFiles({name:'sweep.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify({version:1,sketches:[],bodies:[],curves}))})
  await solid.getByRole('button',{name:'Path',exact:true}).waitFor()
@@ -74,12 +81,14 @@ try {
  }
  await sweep()
  await solid.getByLabel('Sweep sections',{exact:true}).fill('3')
- await solid.getByText('Измеренное отклонение превышает предел.',{exact:false}).waitFor()
+ await solid.getByText(closed?'Для замкнутого пути задайте минимум 4 сечения.':'Измеренное отклонение превышает предел.',{exact:false}).waitFor()
  assert.equal(await solid.getByRole('button',{name:'Готово · Enter',exact:true}).isDisabled(),true)
- await solid.getByLabel('Sweep sections',{exact:true}).fill('32')
- await solid.locator('[data-diagnostic="sweep-refinement"]').filter({hasText:'125'}).waitFor()
+ if(closed){const budget=solid.getByRole('textbox',{name:'Предел отклонения, мм',exact:true});await budget.fill(nonplanar?'1':'0.1');await budget.press('Tab')}
+ await solid.getByLabel('Sweep sections',{exact:true}).fill(String(sections))
+ await solid.locator('[data-diagnostic="sweep-refinement"]').filter({hasText:String(4*(sections-1)+1)}).waitFor()
+ if(closed){await solid.locator('[data-diagnostic="sweep-refinement"]').filter({hasText:'Замкнутый шов C0'}).waitFor();await solid.locator('[data-diagnostic="sweep-refinement"]').evaluate(el=>el.scrollIntoView({block:'center'}))}
  await page.screenshot({path:path.join(directory,'sweep-preview.png')})
- await solid.getByRole('button',{name:'Esc',exact:true}).click()
+ await solid.getByLabel('3D — тела',{exact:true}).getByRole('button',{name:'Esc',exact:true}).click()
  const canceled=await download('Скачать проект JSON','sweep-canceled.json')
  assert.equal(canceled.surfaces.length,0)
  if(await menu.evaluate(e=>e.parentElement.open))await activate(menu)
@@ -90,13 +99,22 @@ try {
  assert.equal(committed.surfaces[0].name,'Framed sweep')
  assert.deepEqual(committed.curves,curves)
  const points=committed.surfaces[0].surface.controlPoints
- assert.equal(points[0].length,32)
- for(const point of points[1])assert.ok(Math.abs(Math.hypot(point[0],point[1])-1.2)<1e-12)
+ assert.equal(points[0].length,sections)
+ if(closed){assert.equal(committed.surfaces[0].surface.periodicV,true);for(const row of points)assert.deepEqual(row.at(-1),row[0])}
+ if(nonplanar)for(let i=0;i<sections;i++)assert.ok(Math.abs(Math.hypot(...points[0][i].map((v,k)=>v-points[1][i][k]))-.1)<1e-12)
+ else for(const point of points[1])assert.ok(Math.abs(Math.hypot(point[0],point[1])-1.2)<1e-12)
  if(await menu.evaluate(e=>e.parentElement.open))await activate(menu)
  await solid.getByRole('button',{name:'↶',exact:true}).click()
  const undone=await download('Скачать проект JSON','sweep-undone.json')
  assert.equal(undone.surfaces.length,0)
- const report={browser:browser.version(),framedSweep:true,refusal:true,cancel:true,undo:true,sourceCurvesPreserved:true,downloads}
+ if(closed){
+  if(await menu.evaluate(e=>e.parentElement.open))await activate(menu)
+  await solid.getByRole('button',{name:'↷',exact:true}).click()
+  assert.deepEqual(await download('Скачать проект JSON','sweep-redone.json'),committed)
+  await page.reload();await solid.getByRole('button',{name:'Framed sweep',exact:true}).waitFor()
+  assert.deepEqual(await download('Скачать проект JSON','sweep-reloaded.json'),committed)
+ }
+ const report={closed,nonplanar,browser:browser.version(),framedSweep:true,refusal:true,cancel:true,undo:true,sourceCurvesPreserved:true,downloads}
  await writeFile(path.join(directory,'framed-sweep-browser.json'),JSON.stringify(report,null,2)+'\n')
  console.log(report)
 }finally{await browser?.close();await new Promise(resolve=>server.close(resolve))}

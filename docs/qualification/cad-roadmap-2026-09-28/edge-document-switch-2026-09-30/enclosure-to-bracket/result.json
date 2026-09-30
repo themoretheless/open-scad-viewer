@@ -1,0 +1,8 @@
+{
+  "ok": true,
+  "workerTerminated": true,
+  "replacementPreserved": true,
+  "lateSuccessAndFailure": true,
+  "reload": true,
+  "errors": []
+}

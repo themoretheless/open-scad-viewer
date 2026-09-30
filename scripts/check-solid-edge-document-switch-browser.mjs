@@ -1,0 +1,119 @@
+import assert from 'node:assert/strict'
+import {createHash} from 'node:crypto'
+import {createServer} from 'node:http'
+import {readFile,mkdir,writeFile} from 'node:fs/promises'
+import path from 'node:path'
+import {loadQualificationPlaywrightPackage} from './qualificationPlaywrightPackage.mjs'
+const root=path.resolve(process.env.SOLID_QUALIFICATION_DIST??'dist'),directory=path.resolve(process.argv[2]??'/tmp/solid-edge-errors')
+const inputMode=process.env.SOLID_EDGE_INPUT??'keyboard';assert.ok(['mouse','keyboard'].includes(inputMode))
+const mode=process.argv[3]??'constant';assert.ok(['constant','variable','corner'].includes(mode))
+await mkdir(directory,{recursive:true})
+const server=createServer(async(req,res)=>{
+ try {
+  const url=new URL(req.url,'http://localhost'),file=path.resolve(root,'.'+(url.pathname==='/'?'/index.html':decodeURIComponent(url.pathname)))
+  if(!file.startsWith(root+path.sep)){res.writeHead(403).end();return}
+  res.setHeader('Content-Type',file.endsWith('.html')?'text/html':file.endsWith('.js')?'text/javascript':file.endsWith('.css')?'text/css':file.endsWith('.wasm')?'application/wasm':'application/octet-stream')
+  res.end(await readFile(file))
+ }catch{res.writeHead(404).end()}
+})
+await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve))
+let browser,page
+const errors=[]
+try{
+ const {playwright}=await loadQualificationPlaywrightPackage();browser=await playwright.chromium.launch({headless:true})
+ page=await browser.newPage({acceptDownloads:true,viewport:{width:1440,height:1000}});page.on('pageerror',e=>errors.push(String(e)))
+ await page.addInitScript(()=>{
+  window.__holdEdge=false;window.__lateEdge=null;window.__edgeTerminated=false;window.__edgeRequests=0
+  const NativeWorker=window.Worker
+  window.Worker=class extends NativeWorker{
+   postMessage(message,...args){
+    if(message?.job?.kind==='bodyEdit'&&message.job.options?.operation==='edge-fillet'){
+     window.__edgeRequests++
+     if(window.__holdEdge){
+      this.held=true;const callback=this.onmessage
+      this.onmessage=event=>{if(event.data?.ok===true)window.__lateEdge=fail=>callback?.call(this,fail?{data:{...event.data,ok:false,error:{name:'Error',code:'CAD_CRASH',message:'Late discarded edge failure'}}}:event)}
+     }
+    }
+    return super.postMessage(message,...args)
+   }
+   terminate(){if(this.held)window.__edgeTerminated=true;return super.terminate()}
+  }
+ })
+ await page.goto(`http://127.0.0.1:${server.address().port}`)
+ const solid=page.getByRole('region',{name:'Solid — CAD-лепка',exact:true}),menu=solid.locator('summary[title="Файл"]')
+ async function activate(locator){if(inputMode==='keyboard')await locator.press('Enter');else await locator.click()}
+ async function selectEdge(id,add=false){
+  const edge=solid.locator(`[data-topology-edge="${id}"]`)
+  if(inputMode==='keyboard'){await edge.press(add?'Shift+Enter':'Enter');return}
+  const point=await edge.evaluate(e=>{
+   const m=e.getScreenCTM(),length=e.getTotalLength()
+   for(const fraction of [.5,.25,.75,.1,.9]){
+    const p=e.getPointAtLength(length*fraction),point={x:m.a*p.x+m.c*p.y+m.e,y:m.b*p.x+m.d*p.y+m.f}
+    if(document.elementFromPoint(point.x,point.y)===e)return point
+   }
+   throw Error('Selected edge has no unobstructed sampled mouse target')
+  })
+  if(add)await page.keyboard.down('Shift')
+  try{await page.mouse.click(point.x,point.y)}finally{if(add)await page.keyboard.up('Shift')}
+ }
+ async function ready(){for(const name of ['history-restore','display-refinement','topology-preparation'])await solid.getByRole('status',{name,exact:true}).waitFor({state:'hidden'})}
+ async function openMenu(){await ready();if(!await menu.evaluate(e=>e.parentElement.open))await activate(menu)}
+ async function closeMenu(){if(await menu.evaluate(e=>e.parentElement.open))await activate(menu)}
+ let lastDownload=0
+ async function download(label,file){
+  const wait=1100-(Date.now()-lastDownload);if(wait>0)await new Promise(resolve=>setTimeout(resolve,wait));lastDownload=Date.now()
+  await openMenu();const pending=page.waitForEvent('download');await activate(solid.getByRole('button',{name:label,exact:true}));await(await pending).saveAs(path.join(directory,file));await closeMenu();return readFile(path.join(directory,file))
+ }
+ async function doc(name){return JSON.parse(await download('Скачать проект JSON',name+'.json'))}
+
+ const fixtureRoot=path.resolve(process.env.SOLID_EDGE_FIXTURE_ROOT??'docs/qualification/cad-roadmap-2026-09-28/edge-errors-2026-09-30')
+ await openMenu();await solid.locator('input[accept=".json,application/json"]').setInputFiles(path.join(fixtureRoot,'fixture.json'));await closeMenu();await ready()
+ const before=await doc('before'),id=(await readFile(path.join(fixtureRoot,'edge-id.txt'),'utf8')).trim()
+ await activate(solid.getByRole('tab',{name:'Сцена',exact:true}));await activate(solid.getByRole('button',{name:before.bodies[0].name,exact:true}));await activate(solid.getByRole('button',{name:'Рёбра',exact:true}));await ready()
+ const brep=before.bodies[0].brep,max=[0,1,2].map(axis=>Math.max(...brep.vertices.map(v=>v.point[axis])))
+ const vertex=brep.vertices.findIndex(v=>v.point.every((x,i)=>x===max[i]))
+ const fixtureEdges=await readFile(path.join(fixtureRoot,'edge-ids.json'),'utf8').then(JSON.parse).catch(error=>{if(error.code==='ENOENT')return [id];throw error})
+ const ids=mode==='corner'?brep.edges.flatMap((e,i)=>e.vertices.includes(vertex)?[brep.topologyIds.edges[i]]:[]):fixtureEdges
+ if(inputMode==='mouse'){
+  const bounds=await solid.locator(`[data-topology-edge="${ids[0]}"]`).evaluate(e=>{
+   const r=e.ownerSVGElement.getBoundingClientRect();return {x:r.x+r.width*.7,y:r.y+r.height*.2}
+  })
+  await page.mouse.move(bounds.x,bounds.y);await page.mouse.down({button:'right'})
+  await page.mouse.move(bounds.x+80,bounds.y+35,{steps:12});await page.mouse.up({button:'right'});await ready()
+ }
+ if(ids.length>1&&mode==='constant'){
+  await selectEdge(ids[0])
+  await activate(solid.getByRole('button',{name:'Команда… Ctrl K',exact:true}))
+  const partialSearch=page.getByRole('combobox',{name:'Search commands / Поиск команд'});await partialSearch.fill('Скруглить 3D');await partialSearch.press('Enter')
+  const curved=brep.edges[brep.topologyIds.edges.indexOf(ids[0])].curve.degree>1
+  await solid.getByText(curved?'Выберите полное кольцо:':'Выберите всю цепочку рёбер',{exact:false}).waitFor()
+  assert.equal(await solid.getByRole('button',{name:'Готово · Enter',exact:true}).isDisabled(),true)
+  assert.deepEqual(await doc('partial-rim'),before)
+  await page.keyboard.press('Escape');await ready()
+ }
+ for(const [i,edge] of ids.entries())await selectEdge(edge,i>0)
+ await activate(solid.getByRole('button',{name:'Команда… Ctrl K',exact:true}))
+ const search=page.getByRole('combobox',{name:'Search commands / Поиск команд'});await search.fill('Скруглить 3D');await search.press('Enter')
+ await solid.getByRole('combobox',{name:'Тип скругления',exact:true}).selectOption(mode)
+ if(process.env.SOLID_EDGE_FIXTURE_ROOT){
+  await page.evaluate(()=>window.__holdEdge=true)
+  await solid.getByRole('textbox',{name:'Радиус / размер, мм',exact:true}).fill('1 mm')
+  await page.waitForFunction(()=>typeof window.__lateEdge==='function')
+  assert.equal(await solid.getByRole('button',{name:'Готово · Enter',exact:true}).isDisabled(),true)
+  const replacement=JSON.parse(await readFile(process.env.SOLID_EDGE_REPLACEMENT,'utf8'))
+  assert.notDeepEqual(replacement.bodies[0].brep,before.bodies[0].brep)
+  await openMenu();await solid.locator('input[accept=".json,application/json"]').setInputFiles(process.env.SOLID_EDGE_REPLACEMENT);await closeMenu();await ready()
+  await page.waitForFunction(()=>window.__edgeTerminated)
+  const imported=await doc('imported')
+  assert.deepEqual(imported.bodies.map(b=>b.brep),replacement.bodies.map(b=>b.brep))
+  await page.evaluate(()=>{window.__holdEdge=false;window.__lateEdge(false);window.__lateEdge(true)})
+  assert.deepEqual(await doc('late-imported'),imported)
+  assert.equal(await solid.locator('[data-preview-body]').count(),0)
+  await page.reload();await ready()
+  assert.deepEqual(await doc('reloaded'),imported)
+  assert.deepEqual(errors,[])
+  await page.screenshot({path:path.join(directory,'reloaded.png')})
+  await writeFile(path.join(directory,'result.json'),JSON.stringify({ok:true,workerTerminated:true,replacementPreserved:true,lateSuccessAndFailure:true,reload:true,errors},null,2))
+ }
+}catch(error){if(page){await page.screenshot({path:path.join(directory,'failure.png')}).catch(()=>{});await writeFile(path.join(directory,'failure.txt'),await page.locator('body').innerText().catch(()=>''))}throw error}
+finally{await browser?.close();await new Promise(resolve=>server.close(resolve))}

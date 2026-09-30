@@ -5,6 +5,8 @@
 //! construction results as authored input. Opaque references prevent accidental
 //! cross-source reuse; they do not authenticate arbitrary caller assertions.
 mod arithmetic;
+mod bezier_composition_identity;
+pub use bezier_composition_identity::*;
 mod bezier_identity;
 pub use bezier_identity::*;
 mod construction;

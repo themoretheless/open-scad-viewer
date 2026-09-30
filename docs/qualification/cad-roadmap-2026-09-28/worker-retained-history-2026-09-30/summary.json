@@ -1,0 +1,289 @@
+[
+  {
+    "action": "import",
+    "pageJsHeapBytes": 109024556,
+    "workerCount": 4,
+    "workerJsHeapBytes": 17135912,
+    "workerWasmAllocatedBytes": 20578304
+  },
+  {
+    "action": "undo",
+    "pageJsHeapBytes": 32371384,
+    "workerCount": 4,
+    "workerJsHeapBytes": 17059704,
+    "workerWasmAllocatedBytes": 20578304
+  },
+  {
+    "action": "redo",
+    "pageJsHeapBytes": 74515324,
+    "workerCount": 4,
+    "workerJsHeapBytes": 17157616,
+    "workerWasmAllocatedBytes": 20578304
+  },
+  {
+    "action": "undo",
+    "pageJsHeapBytes": 32491536,
+    "workerCount": 3,
+    "workerJsHeapBytes": 13108220,
+    "workerWasmAllocatedBytes": 18219008
+  },
+  {
+    "action": "redo",
+    "pageJsHeapBytes": 74146320,
+    "workerCount": 4,
+    "workerJsHeapBytes": 17151672,
+    "workerWasmAllocatedBytes": 20578304
+  },
+  {
+    "action": "undo",
+    "pageJsHeapBytes": 32583224,
+    "workerCount": 3,
+    "workerJsHeapBytes": 13110120,
+    "workerWasmAllocatedBytes": 18219008
+  },
+  {
+    "action": "redo",
+    "pageJsHeapBytes": 74262900,
+    "workerCount": 4,
+    "workerJsHeapBytes": 17149632,
+    "workerWasmAllocatedBytes": 20578304
+  },
+  {
+    "action": "undo",
+    "pageJsHeapBytes": 32693032,
+    "workerCount": 3,
+    "workerJsHeapBytes": 13128708,
+    "workerWasmAllocatedBytes": 18219008
+  },
+  {
+    "action": "redo",
+    "pageJsHeapBytes": 74306540,
+    "workerCount": 4,
+    "workerJsHeapBytes": 17144124,
+    "workerWasmAllocatedBytes": 20578304
+  },
+  {
+    "action": "undo",
+    "pageJsHeapBytes": 32711504,
+    "workerCount": 3,
+    "workerJsHeapBytes": 13130116,
+    "workerWasmAllocatedBytes": 18219008
+  },
+  {
+    "action": "redo",
+    "pageJsHeapBytes": 74315172,
+    "workerCount": 4,
+    "workerJsHeapBytes": 17142396,
+    "workerWasmAllocatedBytes": 20578304
+  },
+  {
+    "action": "undo",
+    "pageJsHeapBytes": 32727696,
+    "workerCount": 3,
+    "workerJsHeapBytes": 13129060,
+    "workerWasmAllocatedBytes": 18219008
+  },
+  {
+    "action": "redo",
+    "pageJsHeapBytes": 74334488,
+    "workerCount": 4,
+    "workerJsHeapBytes": 17142956,
+    "workerWasmAllocatedBytes": 20578304
+  },
+  {
+    "action": "undo",
+    "pageJsHeapBytes": 32730000,
+    "workerCount": 3,
+    "workerJsHeapBytes": 13130116,
+    "workerWasmAllocatedBytes": 18219008
+  },
+  {
+    "action": "redo",
+    "pageJsHeapBytes": 74303280,
+    "workerCount": 4,
+    "workerJsHeapBytes": 17141944,
+    "workerWasmAllocatedBytes": 20578304
+  },
+  {
+    "action": "undo",
+    "pageJsHeapBytes": 32743528,
+    "workerCount": 3,
+    "workerJsHeapBytes": 13129060,
+    "workerWasmAllocatedBytes": 18219008
+  },
+  {
+    "action": "redo",
+    "pageJsHeapBytes": 74332072,
+    "workerCount": 4,
+    "workerJsHeapBytes": 17176884,
+    "workerWasmAllocatedBytes": 20578304
+  },
+  {
+    "action": "undo",
+    "pageJsHeapBytes": 32742196,
+    "workerCount": 3,
+    "workerJsHeapBytes": 13130620,
+    "workerWasmAllocatedBytes": 18219008
+  },
+  {
+    "action": "redo",
+    "pageJsHeapBytes": 74293232,
+    "workerCount": 4,
+    "workerJsHeapBytes": 17172808,
+    "workerWasmAllocatedBytes": 20578304
+  },
+  {
+    "action": "undo",
+    "pageJsHeapBytes": 32759204,
+    "workerCount": 3,
+    "workerJsHeapBytes": 13129564,
+    "workerWasmAllocatedBytes": 18219008
+  },
+  {
+    "action": "redo",
+    "pageJsHeapBytes": 74379052,
+    "workerCount": 4,
+    "workerJsHeapBytes": 17143640,
+    "workerWasmAllocatedBytes": 20578304
+  },
+  {
+    "action": "undo",
+    "pageJsHeapBytes": 32819384,
+    "workerCount": 3,
+    "workerJsHeapBytes": 13130692,
+    "workerWasmAllocatedBytes": 18219008
+  },
+  {
+    "action": "redo",
+    "pageJsHeapBytes": 74450732,
+    "workerCount": 4,
+    "workerJsHeapBytes": 17167884,
+    "workerWasmAllocatedBytes": 20578304
+  },
+  {
+    "action": "undo",
+    "pageJsHeapBytes": 32837468,
+    "workerCount": 3,
+    "workerJsHeapBytes": 13129636,
+    "workerWasmAllocatedBytes": 18219008
+  },
+  {
+    "action": "redo",
+    "pageJsHeapBytes": 74462936,
+    "workerCount": 4,
+    "workerJsHeapBytes": 17146752,
+    "workerWasmAllocatedBytes": 20578304
+  },
+  {
+    "action": "undo",
+    "pageJsHeapBytes": 32864680,
+    "workerCount": 3,
+    "workerJsHeapBytes": 13134260,
+    "workerWasmAllocatedBytes": 18219008
+  },
+  {
+    "action": "redo",
+    "pageJsHeapBytes": 74482876,
+    "workerCount": 4,
+    "workerJsHeapBytes": 17146180,
+    "workerWasmAllocatedBytes": 20578304
+  },
+  {
+    "action": "undo",
+    "pageJsHeapBytes": 32869988,
+    "workerCount": 3,
+    "workerJsHeapBytes": 13133852,
+    "workerWasmAllocatedBytes": 18219008
+  },
+  {
+    "action": "redo",
+    "pageJsHeapBytes": 74445592,
+    "workerCount": 4,
+    "workerJsHeapBytes": 17244304,
+    "workerWasmAllocatedBytes": 20578304
+  },
+  {
+    "action": "undo",
+    "pageJsHeapBytes": 32871764,
+    "workerCount": 3,
+    "workerJsHeapBytes": 13134260,
+    "workerWasmAllocatedBytes": 18219008
+  },
+  {
+    "action": "redo",
+    "pageJsHeapBytes": 74493880,
+    "workerCount": 4,
+    "workerJsHeapBytes": 17146884,
+    "workerWasmAllocatedBytes": 20578304
+  },
+  {
+    "action": "undo",
+    "pageJsHeapBytes": 32895028,
+    "workerCount": 3,
+    "workerJsHeapBytes": 13133908,
+    "workerWasmAllocatedBytes": 18219008
+  },
+  {
+    "action": "redo",
+    "pageJsHeapBytes": 74463848,
+    "workerCount": 4,
+    "workerJsHeapBytes": 17146108,
+    "workerWasmAllocatedBytes": 20578304
+  },
+  {
+    "action": "undo",
+    "pageJsHeapBytes": 32899192,
+    "workerCount": 3,
+    "workerJsHeapBytes": 13133608,
+    "workerWasmAllocatedBytes": 18219008
+  },
+  {
+    "action": "redo",
+    "pageJsHeapBytes": 74528552,
+    "workerCount": 4,
+    "workerJsHeapBytes": 17181400,
+    "workerWasmAllocatedBytes": 20578304
+  },
+  {
+    "action": "undo",
+    "pageJsHeapBytes": 32891508,
+    "workerCount": 3,
+    "workerJsHeapBytes": 13133100,
+    "workerWasmAllocatedBytes": 18219008
+  },
+  {
+    "action": "redo",
+    "pageJsHeapBytes": 74423944,
+    "workerCount": 4,
+    "workerJsHeapBytes": 17177668,
+    "workerWasmAllocatedBytes": 20578304
+  },
+  {
+    "action": "undo",
+    "pageJsHeapBytes": 32908828,
+    "workerCount": 3,
+    "workerJsHeapBytes": 13134964,
+    "workerWasmAllocatedBytes": 18219008
+  },
+  {
+    "action": "redo",
+    "pageJsHeapBytes": 74524032,
+    "workerCount": 4,
+    "workerJsHeapBytes": 17144388,
+    "workerWasmAllocatedBytes": 20578304
+  },
+  {
+    "action": "undo",
+    "pageJsHeapBytes": 32913404,
+    "workerCount": 3,
+    "workerJsHeapBytes": 13133908,
+    "workerWasmAllocatedBytes": 18219008
+  },
+  {
+    "action": "redo",
+    "pageJsHeapBytes": 74428300,
+    "workerCount": 4,
+    "workerJsHeapBytes": 17147424,
+    "workerWasmAllocatedBytes": 20578304
+  }
+]

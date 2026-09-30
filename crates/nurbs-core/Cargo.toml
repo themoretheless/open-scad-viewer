@@ -5,6 +5,10 @@ edition.workspace = true
 rust-version.workspace = true
 publish.workspace = true
 
+[features]
+default = ["transport"]
+transport = []
+
 [dependencies]
 math-core = { package = "osv-math", path = "../math-core" }
 value-codec = { path = "../value-codec" }

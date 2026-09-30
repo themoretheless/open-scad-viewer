@@ -1,0 +1,55 @@
+warning: binary `wgsl_export` should have a kebab-case name
+  |
+1 | /Users/themoretheless/Documents/Sources/open-scad-viewer/crates/target/.../wgsl_export
+  |                                                                            ^^^^^^^^^^^
+  |
+  = note: `cargo::non_kebab_case_bins` is set to `warn` by default
+help: to change the binary name to `wgsl-export`, convert the file stem
+  |
+1 - src/bin/wgsl_export.rs
+1 + src/bin/wgsl-export.rs
+  |
+warning: `raster-core` (manifest) generated 1 warning
+   Compiling nurbs-core v0.1.0 (/Users/themoretheless/Documents/Sources/open-scad-viewer/crates/nurbs-core)
+   Compiling brep-topology v0.1.0 (/Users/themoretheless/Documents/Sources/open-scad-viewer/crates/brep-topology)
+warning: function `rebuild_add` is never used
+    --> nurbs-core/src/foundation.rs:3249:4
+     |
+3249 | fn rebuild_add(a:[f64;2],b:[f64;2])->[f64;2] { [next_down(a[0]+b[0]),next_up(a[1]+b[1])] }
+     |    ^^^^^^^^^^^
+     |
+     = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: function `rebuild_mul` is never used
+    --> nurbs-core/src/foundation.rs:3250:4
+     |
+3250 | fn rebuild_mul(a:[f64;2],b:[f64;2])->[f64;2] {
+     |    ^^^^^^^^^^^
+
+warning: function `rebuild_binomial` is never used
+    --> nurbs-core/src/foundation.rs:3254:4
+     |
+3254 | fn rebuild_binomial(n:usize,k:usize)->[f64;2] {
+     |    ^^^^^^^^^^^^^^^^
+
+warning: function `rebuild_product_factor` is never used
+    --> nurbs-core/src/foundation.rs:3258:4
+     |
+3258 | fn rebuild_product_factor(p:usize,q:usize,i:usize,j:usize)->[f64;2] {
+     |    ^^^^^^^^^^^^^^^^^^^^^^
+
+warning: `nurbs-core` (lib) generated 4 warnings
+   Compiling brep-core v0.1.0 (/Users/themoretheless/Documents/Sources/open-scad-viewer/crates/brep-core)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 9.47s
+     Running unittests src/lib.rs (crates/target/debug/build/brep-core/b361d23d180ae8d4/out/brep_core-b361d23d180ae8d4)
+
+running 6 tests
+test boundary_agreement::tests::exhaustion_preserves_all_boundary_uses_without_mutation ... ok
+test boundary_agreement::tests::every_cube_boundary_use_can_be_proven ... ok
+test boundary_agreement::tests::sampled_mismatch_gets_a_local_diagnostic_and_bad_indices_still_refuse ... ok
+test boundary_agreement::tests::exact_closure_distinguishes_a_subtolerance_gap_and_keeps_every_use ... ok
+test boundary_agreement::tests::cylinder_and_sphere_boundary_charts_at_model_tolerance ... ok
+test boundary_agreement::tests::lifted_periodic_uv_is_diagnosable_without_admitting_regular_operations ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 623 filtered out; finished in 0.06s
+

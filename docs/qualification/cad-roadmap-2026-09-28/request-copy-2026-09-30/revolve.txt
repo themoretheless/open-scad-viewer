@@ -1,0 +1,10 @@
+{
+  browser: '151.0.7922.34',
+  workerRequests: 2,
+  applyWithoutRecompute: true,
+  invalidQuantityClearsPreview: true,
+  undoRedo: true,
+  keyboard: false,
+  tabPresses: 0,
+  downloads: 5
+}

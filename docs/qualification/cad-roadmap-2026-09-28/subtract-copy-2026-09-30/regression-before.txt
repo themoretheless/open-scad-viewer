@@ -1,0 +1,44 @@
+
+ RUN  v4.1.11 /Users/themoretheless/Documents/Sources/open-scad-viewer
+
+ ❯ |direct-ui| tests/directModelerUi.test.ts (205 tests | 1 failed | 204 skipped) 328ms
+   × opens guided subtraction without cloning the history for every selected body 326ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |direct-ui| tests/directModelerUi.test.ts > opens guided subtraction without cloning the history for every selected body
+AssertionError: expected "get document" to not be called at all, but actually been called 3 times
+
+Received:
+
+  1st get document call:
+
+    Array []
+
+  2nd get document call:
+
+    Array []
+
+  3rd get document call:
+
+    Array []
+
+
+Number of calls: 3
+
+ ❯ tests/directModelerUi.test.ts:3099:20
+    3097|  try{
+    3098|   await ui.click('Subtract: A − B')
+    3099|   expect(read).not.toHaveBeenCalled()
+       |                    ^
+    3100|   expect(ui.doc()).toEqual(before)
+    3101|   await commandKey(ui,'Escape');expect(ui.doc()).toEqual(before)
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 204 skipped (205)
+   Start at  01:43:21
+   Duration  1.99s (transform 1.35s, setup 0ms, import 1.55s, tests 328ms, environment 11ms)
+

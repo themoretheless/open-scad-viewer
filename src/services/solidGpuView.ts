@@ -1,3 +1,4 @@
+import {TransparentBsp, type TransparentFragment} from './transparentBsp'
 /**
  * Smooth GPU display for the Solid workspace.
  *
@@ -20,6 +21,7 @@ export interface SolidGpuBody {
   color?: [number,number,number]
   metallic?: number
   roughness?: number
+  opacity?: number
 }
 
 export interface SolidGpuView {
@@ -42,10 +44,11 @@ struct VertexOut {
   @location(1) hue: f32,
   @location(2) color: vec3<f32>,
   @location(3) material: vec2<f32>,
+  @location(4) opacity: f32,
 };
 
 @vertex
-fn vs(@location(0) pos: vec3<f32>, @location(1) nrm: vec3<f32>, @location(2) hue: f32, @location(3) color: vec3<f32>, @location(4) material: vec2<f32>) -> VertexOut {
+fn vs(@location(0) pos: vec3<f32>, @location(1) nrm: vec3<f32>, @location(2) hue: f32, @location(3) color: vec3<f32>, @location(4) material: vec2<f32>, @location(5) opacity: f32) -> VertexOut {
   let p = u.rotation * pos;
   // The 3D SVG pane maps projectDirectPoint's x' and y' straight to viewBox units (no Y flip; that is 2D-only).
   let svgX = p.x;
@@ -61,6 +64,7 @@ fn vs(@location(0) pos: vec3<f32>, @location(1) nrm: vec3<f32>, @location(2) hue
   out.hue = hue;
   out.color = color;
   out.material = material;
+  out.opacity = opacity;
   return out;
 }
 
@@ -105,9 +109,9 @@ fn fs(in: VertexOut, @builtin(front_facing) front: bool) -> @location(0) vec4<f3
     let specular = distribution*geometry*fresnel/max(4.0*nv*nl,0.0001);
     let diffuse = (vec3<f32>(1.0)-fresnel)*(1.0-metallic)*base/3.14159265;
     let linear = (diffuse+specular)*nl*2.5 + base*0.12;
-    return vec4<f32>(pow(linear/(vec3<f32>(1.0)+linear),vec3<f32>(1.0/2.2)),1.0);
+    return vec4<f32>(pow(linear/(vec3<f32>(1.0)+linear),vec3<f32>(1.0/2.2))*in.opacity,in.opacity);
   }
-  return vec4<f32>(rgb, 1.0);
+  return vec4<f32>(rgb*in.opacity, in.opacity);
 }
 `
 
@@ -130,6 +134,15 @@ export class SolidGpuLayer {
   private device: GPUDevice | null = null
   private context: GPUCanvasContext | null = null
   private pipeline: GPURenderPipeline | null = null
+  private transparentPipeline: GPURenderPipeline | null = null
+  private transparentBindGroup: GPUBindGroup | null = null
+  private transparentVertices: GPUBuffer | null = null
+  private transparentTree: TransparentBsp | null = null
+  private transparentData: Float32Array | null = null
+  private transparentDirection: number[] | null = null
+  private opaqueCount = 0
+  private transparentTriangles: Array<{first:number;body:string}> = []
+  private dragOffsets = new Map<string,readonly [number,number,number]>()
   private uniformBuffer: GPUBuffer | null = null
   private bindGroup: GPUBindGroup | null = null
   private vertexBuffer: GPUBuffer | null = null
@@ -147,8 +160,9 @@ export class SolidGpuLayer {
 
   constructor(private readonly canvas: HTMLCanvasElement,private readonly onUnavailable?:()=>void) {}
 
-  private fail():void {
+  private fail(reason:unknown='WebGPU unavailable'):void {
     if(this.disposed)return
+    this.canvas.setAttribute?.('data-gpu-error',reason instanceof Error?reason.message:String(reason))
     this.destroy()
     this.onUnavailable?.()
   }
@@ -160,41 +174,48 @@ export class SolidGpuLayer {
       if (!adapter || this.disposed) return false
       const device = await adapter.requestDevice()
       if (this.disposed) { device.destroy(); return false }
+      this.device=device
       const context = this.canvas.getContext('webgpu')
-      if (!context) return false
+      if (!context) {this.destroy();return false}
+      this.context=context
       this.format = navigator.gpu.getPreferredCanvasFormat()
       context.configure({ device, format: this.format, alphaMode: 'premultiplied' })
       const module = device.createShaderModule({ code: SHADER })
-      this.pipeline = device.createRenderPipeline({
+      const makePipeline=(transparent:boolean)=>device.createRenderPipeline({
         layout: 'auto',
         vertex: {
           module, entryPoint: 'vs',
           buffers: [{
-            arrayStride: 12 * 4,
+            arrayStride: 13 * 4,
             attributes: [
               { shaderLocation: 0, offset: 0, format: 'float32x3' },
               { shaderLocation: 1, offset: 12, format: 'float32x3' },
               { shaderLocation: 2, offset: 24, format: 'float32' },
               { shaderLocation: 3, offset: 28, format: 'float32x3' },
               { shaderLocation: 4, offset: 40, format: 'float32x2' },
+              { shaderLocation: 5, offset: 48, format: 'float32' },
             ],
           }],
         },
-        fragment: { module, entryPoint: 'fs', targets: [{ format: this.format }] },
+        fragment: { module, entryPoint: 'fs', targets: [{ format: this.format, ...(transparent?{blend:{color:{srcFactor:'one',dstFactor:'one-minus-src-alpha',operation:'add'},alpha:{srcFactor:'one',dstFactor:'one-minus-src-alpha',operation:'add'}} as GPUBlendState}:{}) }] },
         primitive: { topology: 'triangle-list', cullMode: 'none' },
-        depthStencil: { format: 'depth24plus', depthWriteEnabled: true, depthCompare: 'less' },
+        depthStencil: { format: 'depth24plus', depthWriteEnabled: !transparent, depthCompare: 'less' },
       })
+      this.pipeline=makePipeline(false)
+      this.transparentPipeline=makePipeline(true)
       this.uniformBuffer = device.createBuffer({ size: 48 + 16 + 16, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST })
       this.bindGroup = device.createBindGroup({
         layout: this.pipeline.getBindGroupLayout(0),
         entries: [{ binding: 0, resource: { buffer: this.uniformBuffer } }],
       })
-      device.lost.then(() => this.fail()).catch(() => this.fail())
-      device.addEventListener('uncapturederror',()=>this.fail())
+      this.transparentBindGroup=device.createBindGroup({layout:this.transparentPipeline.getBindGroupLayout(0),entries:[{binding:0,resource:{buffer:this.uniformBuffer}}]})
+      device.lost.then(info => this.fail(info?.message??'WebGPU device lost')).catch(error => this.fail(error))
+      device.addEventListener('uncapturederror',event=>this.fail(event.error))
       this.device = device
       this.context = context
       return true
     } catch {
+      this.destroy()
       return false
     }
   }
@@ -202,19 +223,27 @@ export class SolidGpuLayer {
   get ready(): boolean { return !!this.device && !!this.pipeline }
 
   setBodies(bodies: readonly SolidGpuBody[]): void {
-    try { this.uploadBodies(bodies) } catch { this.fail() }
+    try { this.uploadBodies(bodies) } catch(error) { this.fail(error) }
   }
   private uploadBodies(bodies: readonly SolidGpuBody[]): void {
     const device = this.device
     if (!device) return
     let total = 0
-    for (const body of bodies) total += body.positions.length / 3
-    const data = new Float32Array(total * 12)
+    for (const body of bodies) {const opacity=body.opacity??1;if(!Number.isFinite(opacity)||opacity<0||opacity>1)throw Error('Invalid material opacity');total += body.positions.length / 3}
+    const data = new Float32Array(total * 13)
+    this.opaqueCount=0;this.transparentTriangles=[];this.dragOffsets.clear()
+    const ordered=[...bodies.filter(b=>(b.opacity??1)>=1),...bodies.filter(b=>(b.opacity??1)<1)]
     this.ranges = new Map()
     let offset = 0
-    for (const body of bodies) {
+    for (const body of ordered) {
       const count = body.positions.length / 3
-      this.ranges.set(body.id, { start: offset / 12, count })
+      this.ranges.set(body.id, { start: offset / 13, count })
+      const alpha=body.opacity??1
+      if(!Number.isFinite(alpha)||alpha<0||alpha>1)throw Error('Invalid material opacity')
+      if(alpha===1)this.opaqueCount+=count
+      else if(alpha>0)for(let i=0;i<count;i+=3){
+        this.transparentTriangles.push({first:offset/13+i,body:body.id})
+      }
       for (let i = 0; i < count; i++) {
         data[offset++] = body.positions[i * 3]
         data[offset++] = body.positions[i * 3 + 1]
@@ -226,12 +255,16 @@ export class SolidGpuLayer {
         for(const channel of body.color??[1,1,1])data[offset++]=channel
         data[offset++]=body.metallic??0
         data[offset++]=body.roughness??(body.metallic!==undefined?0.5:-1)
+        data[offset++]=alpha
       }
     }
     this.vertexBuffer?.destroy()
+    this.transparentVertices?.destroy();this.transparentVertices=null
+
     this.vertexBuffer = null
     this.vertexCount = total
     this.packed = data
+    try { this.rebuildTransparency() } catch(error) { this.fail(error); return }
     if (total === 0) { this.requestFrame(); return }
     this.vertexBuffer = device.createBuffer({ size: Math.max(48, data.byteLength), usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST })
     device.queue.writeBuffer(this.vertexBuffer, 0, data)
@@ -251,17 +284,33 @@ export class SolidGpuLayer {
     for (const id of ids) {
       const range = this.ranges.get(id)
       if (!range) continue
-      const slice = new Float32Array(range.count * 12)
+      this.dragOffsets.set(id,[...delta])
+      const slice = new Float32Array(range.count * 13)
       for (let i = 0; i < range.count; i++) {
-        const from = (range.start + i) * 12, to = i * 12
+        const from = (range.start + i) * 13, to = i * 13
         slice[to] = packed[from] + delta[0]
         slice[to + 1] = packed[from + 1] + delta[1]
         slice[to + 2] = packed[from + 2] + delta[2]
-        for (let k = 3; k < 12; k++) slice[to + k] = packed[from + k]
+        for (let k = 3; k < 13; k++) slice[to + k] = packed[from + k]
       }
-      device.queue.writeBuffer(buffer, range.start * 12 * 4, slice)
+      device.queue.writeBuffer(buffer, range.start * 13 * 4, slice)
     }
+    try { this.rebuildTransparency() } catch(error) { this.fail(error); return }
     this.requestFrame()
+  }
+
+  private rebuildTransparency(): void {
+    this.transparentVertices?.destroy();this.transparentVertices=null;this.transparentTree=null;this.transparentDirection=null;this.transparentData=null
+    if(!this.device||!this.packed||!this.transparentTriangles.length)return
+    const packed=this.packed
+    const fragments:TransparentFragment[]=this.transparentTriangles.map(t=>{
+      const delta=this.dragOffsets.get(t.body)??[0,0,0]
+      const vertices=[0,1,2].map(i=>Array.from(packed.subarray((t.first+i)*13,(t.first+i+1)*13)).map((v,k)=>k<3?v+delta[k]:v))
+      return {owner:t.body,triangle:vertices as unknown as TransparentFragment['triangle']}
+    })
+    this.transparentTree=new TransparentBsp(fragments)
+    this.transparentData=new Float32Array(this.transparentTree.fragmentCount*3*13)
+    if(this.transparentTree.fragmentCount)this.transparentVertices=this.device.createBuffer({size:this.transparentTree.fragmentCount*3*13*4,usage:GPUBufferUsage.VERTEX|GPUBufferUsage.COPY_DST})
   }
 
   setView(view: SolidGpuView): void {
@@ -282,7 +331,7 @@ export class SolidGpuLayer {
 
   requestFrame(): void {
     if (this.frame || this.disposed) return
-    this.frame = requestAnimationFrame(() => { this.frame = 0; try { this.render() } catch { this.fail() } })
+    this.frame = requestAnimationFrame(() => { this.frame = 0; try { this.render() } catch(error) { this.fail(error) } })
   }
 
   private render(): void {
@@ -307,13 +356,24 @@ export class SolidGpuLayer {
       pass.setPipeline(pipeline)
       pass.setBindGroup(0, this.bindGroup)
       pass.setVertexBuffer(0, this.vertexBuffer)
-      pass.draw(this.vertexCount)
+      pass.draw(this.opaqueCount)
+      if(this.transparentVertices&&this.transparentPipeline&&this.transparentBindGroup){
+        const rotation=solidRotationColumns(this.view.camera)
+        const direction=[rotation[2],rotation[6],rotation[10]] as [number,number,number]
+        if(!this.transparentDirection||direction.some((v,i)=>v!==this.transparentDirection![i])){
+          this.transparentTree!.writeOrdered(direction,this.transparentData!)
+          device.queue.writeBuffer(this.transparentVertices,0,this.transparentData!)
+          this.transparentDirection=direction
+        }
+        pass.setPipeline(this.transparentPipeline);pass.setBindGroup(0,this.transparentBindGroup)
+        pass.setVertexBuffer(0,this.transparentVertices);pass.draw(this.transparentTree!.fragmentCount*3)
+      }
     }
     pass.end()
     const drawStarted = performance.now()
     device.queue.submit([encoder.finish()])
     // Resolves once the GPU has finished; measured even when frame callbacks are throttled.
-    void device.queue.onSubmittedWorkDone().then(() => { this.lastDrawMs = performance.now() - drawStarted }).catch(() => this.fail())
+    void device.queue.onSubmittedWorkDone().then(() => { this.lastDrawMs = performance.now() - drawStarted }).catch(error => this.fail(error))
   }
 
   destroy(): void {
@@ -321,10 +381,17 @@ export class SolidGpuLayer {
     if (this.frame) cancelAnimationFrame(this.frame)
     this.vertexBuffer?.destroy()
     this.depth?.destroy()
+    this.transparentVertices?.destroy()
     this.uniformBuffer?.destroy()
     try { this.context?.unconfigure() } catch { /* context may be lost */ }
     this.device?.destroy()
     this.device = null
+    this.context=null;this.pipeline=null;this.transparentPipeline=null
+    this.bindGroup=null;this.transparentBindGroup=null;this.uniformBuffer=null
+    this.vertexBuffer=null;this.transparentVertices=null;this.depth=null
+    this.packed=null;this.transparentTree=null;this.transparentData=null;this.transparentDirection=null
+    this.transparentTriangles=[];this.ranges.clear();this.dragOffsets.clear()
+    this.vertexCount=0;this.opaqueCount=0;this.frame=0
   }
 }
 

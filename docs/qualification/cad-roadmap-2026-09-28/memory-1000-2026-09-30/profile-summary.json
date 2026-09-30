@@ -1,0 +1,122 @@
+[
+  {
+    "function": "(idle)",
+    "url": "",
+    "lineZeroBased": -1,
+    "selfMs": 918.409
+  },
+  {
+    "function": "E",
+    "url": "http://127.0.0.1:59689/assets/direct-modeling-BzhtvoLw.js",
+    "lineZeroBased": 0,
+    "selfMs": 281.906
+  },
+  {
+    "function": "(program)",
+    "url": "",
+    "lineZeroBased": -1,
+    "selfMs": 207.158
+  },
+  {
+    "function": "on",
+    "url": "http://127.0.0.1:59689/assets/DirectModeler-C2jfCI6A.js",
+    "lineZeroBased": 82,
+    "selfMs": 131.486
+  },
+  {
+    "function": "t",
+    "url": "http://127.0.0.1:59689/assets/meshJson-CVKQT5bI.js",
+    "lineZeroBased": 0,
+    "selfMs": 66.218
+  },
+  {
+    "function": "a.onmessage",
+    "url": "http://127.0.0.1:59689/assets/mainSolidWorkerClient-B43i1z7h.js",
+    "lineZeroBased": 0,
+    "selfMs": 43.303
+  },
+  {
+    "function": "(garbage collector)",
+    "url": "",
+    "lineZeroBased": -1,
+    "selfMs": 34.994
+  },
+  {
+    "function": "",
+    "url": "http://127.0.0.1:59689/assets/DirectModeler-C2jfCI6A.js",
+    "lineZeroBased": 83,
+    "selfMs": 12.969
+  },
+  {
+    "function": "getAriaRole",
+    "url": "",
+    "lineZeroBased": 3342,
+    "selfMs": 10.545
+  },
+  {
+    "function": "setAttribute",
+    "url": "",
+    "lineZeroBased": -1,
+    "selfMs": 10.056
+  },
+  {
+    "function": "computeAriaRole",
+    "url": "",
+    "lineZeroBased": 3350,
+    "selfMs": 8.747
+  },
+  {
+    "function": "Do",
+    "url": "http://127.0.0.1:59689/assets/vue-DxqjmqvJ.js",
+    "lineZeroBased": 0,
+    "selfMs": 7.522
+  },
+  {
+    "function": "elementSafeTagName",
+    "url": "",
+    "lineZeroBased": 3014,
+    "selfMs": 6.027
+  },
+  {
+    "function": "qo",
+    "url": "http://127.0.0.1:59689/assets/vue-DxqjmqvJ.js",
+    "lineZeroBased": 0,
+    "selfMs": 6.005
+  },
+  {
+    "function": "ee",
+    "url": "http://127.0.0.1:59689/assets/vue-DxqjmqvJ.js",
+    "lineZeroBased": 0,
+    "selfMs": 4.523
+  },
+  {
+    "function": "getAttribute",
+    "url": "",
+    "lineZeroBased": -1,
+    "selfMs": 4.522
+  },
+  {
+    "function": "Rr",
+    "url": "http://127.0.0.1:59689/assets/vue-DxqjmqvJ.js",
+    "lineZeroBased": 0,
+    "selfMs": 4.509
+  },
+  {
+    "function": "getExplicitAriaRole",
+    "url": "",
+    "lineZeroBased": 3335,
+    "selfMs": 4.504
+  },
+  {
+    "function": "ne",
+    "url": "http://127.0.0.1:59689/assets/vue-DxqjmqvJ.js",
+    "lineZeroBased": 0,
+    "selfMs": 4.501
+  },
+  {
+    "function": "bC",
+    "url": "http://127.0.0.1:59689/assets/DirectModeler-C2jfCI6A.js",
+    "lineZeroBased": 83,
+    "selfMs": 3.571
+  }
+]

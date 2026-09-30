@@ -1,0 +1,30 @@
+{
+  "browser": "151.0.7922.34",
+  "webgpu": true,
+  "distinctRenderedMaterials": 3,
+  "transparentOrdering": true,
+  "opaqueOcclusion": true,
+  "zeroOpacity": true,
+  "dragOrdering": true,
+  "cameraOrdering": true,
+  "viewUploads": {
+    "pan": 0,
+    "rotate": 1
+  },
+  "crossingTransparency": {
+    "inputOrderInvariant": true,
+    "matchesSplitReference": true,
+    "referenceHash": "f47ca83d7a3d9c5b3181032806c8733077007469f372e96ff568fcc9aa21f915",
+    "hashes": [
+      "f47ca83d7a3d9c5b3181032806c8733077007469f372e96ff568fcc9aa21f915",
+      "f47ca83d7a3d9c5b3181032806c8733077007469f372e96ff568fcc9aa21f915"
+    ],
+    "scope": "Exact x=0 split reference for two planar triangles; no general transparency acceptance."
+  },
+  "errors": [],
+  "hashes": [
+    "c06123a3447c5f8d2f734f6c735e78243ba4630deb85e7fa17070df534ad5ad1",
+    "24277bc5f11b1fc502397516077739a1aed7ffef974cd20ee0bbeca686fc13fd",
+    "28345160fd2db09a5e3ffe1e48465280e56787ffd7367e5f4ef8160f8a450a5f"
+  ]
+}

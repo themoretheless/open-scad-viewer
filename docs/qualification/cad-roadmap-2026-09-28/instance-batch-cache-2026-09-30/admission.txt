@@ -1,0 +1,4 @@
+{"limit":16000000,"iteration":0,"elapsedMs":1052.1796250000002,"hits":0,"misses":32,"entries":13,"estimatedRetainedBytes":15353962}
+{"limit":16000000,"iteration":1,"elapsedMs":1085.3733749999997,"hits":0,"misses":32,"entries":13,"estimatedRetainedBytes":15353962}
+{"limit":64000000,"iteration":0,"elapsedMs":1058.3992080000003,"hits":0,"misses":32,"entries":32,"estimatedRetainedBytes":39050340}
+{"limit":64000000,"iteration":1,"elapsedMs":77.97504099999969,"hits":32,"misses":0,"entries":32,"estimatedRetainedBytes":39050340}

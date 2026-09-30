@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import {createServer} from 'node:http'
-import {readFile,mkdir,writeFile} from 'node:fs/promises'
+import {tmpdir} from 'node:os'
+import {readFile,mkdir,writeFile,mkdtemp,rm} from 'node:fs/promises'
 import path from 'node:path'
 import {loadQualificationPlaywrightPackage} from './qualificationPlaywrightPackage.mjs'
 const root=path.resolve('dist'),directory=path.resolve(process.argv[2]??'/tmp/solid-profile-offset')
@@ -16,12 +17,13 @@ const server=createServer(async(req,res)=>{
  }catch{res.writeHead(404).end()}
 })
 await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve))
-let browser,page
+let browser,page,persistentContext,profile
 const errors=[]
 try{
  const {playwright}=await loadQualificationPlaywrightPackage()
- browser=await playwright.chromium.launch({headless:true})
- const context=await browser.newContext({acceptDownloads:true})
+ if(process.argv.includes('--persistent')){profile=await mkdtemp(path.join(tmpdir(),'cad-draft-quota-'));persistentContext=await playwright.chromium.launchPersistentContext(profile,{headless:true,acceptDownloads:true});browser=persistentContext.browser()}
+ else browser=await playwright.chromium.launch({headless:true})
+ const context=persistentContext??await browser.newContext({acceptDownloads:true})
  const origin=`http://127.0.0.1:${server.address().port}`
  page=await context.newPage();page.on('pageerror',e=>errors.push(String(e)))
  await page.goto(origin)
@@ -35,6 +37,8 @@ try{
  const key=await page.evaluate(()=>['scad-main-modeler-v1','scad-solid-modeler-v1'].find(k=>localStorage.getItem(k)))
  assert.ok(key)
  let other=await context.newPage();other.on('pageerror',e=>errors.push(String(e)));await other.goto(origin);await saved(other)
+ // This tab keeps the initial revision while the other two resolve a conflict.
+ const stale=await context.newPage();stale.on('pageerror',e=>errors.push(String(e)));await stale.goto(origin);await saved(stale)
  async function hold(){await page.evaluate(key=>{window.__held=false;window.__lock=navigator.locks.request('solid-draft:'+key,()=>new Promise(resolve=>{window.__release=resolve;window.__held=true}))},key);await page.waitForFunction(()=>window.__held)}
  async function release(){await page.evaluate(()=>window.__release());await page.evaluate(()=>window.__lock)}
  await hold()
@@ -64,6 +68,22 @@ try{
  assert.deepEqual(await exportDoc(loser,'adopted.json'),canonical)
  await region(loser).getByRole('button',{name:'↶',exact:true}).click();await saved(loser);assert.deepEqual(await exportDoc(loser,'local-undo.json'),local)
  await loser.screenshot({path:path.join(directory,'recovered-local.png')})
+ // A third stale writer cannot overwrite the head with subsequent edits.
+ const latest=await page.evaluate(key=>localStorage.getItem(key),key)
+ await command(stale,'Cylinder')
+ await stale.waitForFunction(()=>document.body.innerText.includes('Документ изменён в другой вкладке'))
+ const staleLocal=await exportDoc(stale,'third-stale-local.json')
+ assert.notDeepEqual(staleLocal,normalize(JSON.parse(latest)))
+ await menu(stale).click()
+ assert.equal(await region(stale).getByRole('button',{name:'Повторить сохранение черновика',exact:true}).count(),0)
+ await closeMenu(stale);await command(stale,'Sphere')
+ await stale.waitForFunction(()=>document.body.innerText.includes('Документ изменён в другой вкладке'))
+ assert.equal(await page.evaluate(key=>localStorage.getItem(key),key),latest)
+ const staleEdited=await exportDoc(stale,'third-retry-local.json')
+ assert.equal(staleEdited.bodies.length,staleLocal.bodies.length+1)
+ await stale.reload();await saved(stale)
+ assert.deepEqual(await exportDoc(stale,'third-reloaded.json'),normalize(JSON.parse(latest)))
+ await stale.close()
  // Closing a waiting writer cannot publish its abandoned state after the lock is released.
  await other.close();other=await context.newPage();await other.goto(origin);await saved(other)
  const durable=await page.evaluate(key=>localStorage.getItem(key),key)
@@ -73,7 +93,7 @@ try{
  assert.deepEqual(await exportDoc(other,'after-close.json'),normalize(JSON.parse(durable)))
  // Abort an IndexedDB snapshot transaction before publication; the old reference survives.
  await other.evaluate(()=>{const add=IDBObjectStore.prototype.add;IDBObjectStore.prototype.add=function(...args){const request=add.apply(this,args);if(this.name==='snapshots'){this.transaction.abort()}return request}})
- const large={version:1,sketches:[],bodies:[],groups:Array.from({length:60},(_,i)=>({name:`Group ${i}`,source:' '.repeat(70000)}))}
+ const large={version:1,sketches:[],bodies:canonical.bodies,groups:Array.from({length:60},(_,i)=>({name:`Group ${i}`,source:' '.repeat(70000)}))}
  await menu(other).click();await region(other).locator('input[accept=".json,application/json"]').setInputFiles({name:'large.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(large))});await closeMenu(other)
  await region(other).getByRole('status',{name:'Не сохранено',exact:true}).waitFor()
  assert.equal(await other.evaluate(key=>localStorage.getItem(key),key),durable)
@@ -99,7 +119,7 @@ try{
   const reference=await page.evaluate(key=>localStorage.getItem(key),key)
   const restored=await exportDoc(other,`crash-${phase}.json`)
   if(phase==='before'){assert.equal(reference,prior);assert.deepEqual(restored,normalize(JSON.parse(durable)))}
-  else {assert.equal(restored.groups.length,60);assert.deepEqual(restored.bodies,[])}
+  else {assert.equal(restored.groups.length,60);assert.deepEqual(restored.bodies,large.bodies)}
   crashPhases.push(phase)
  }
  const canonicalAfterCrash=await exportDoc(other,'canonical-after-crash.json')
@@ -137,7 +157,90 @@ try{
  await recovery.reload();await saved(recovery)
  assert.deepEqual(await exportDoc(recovery,'retried-recovery.json'),canonicalAfterCrash)
  await recovery.close()
+ await other.reload();await saved(other);page=other
+ // Corruption while a tab remains open must not be replaced by its next save.
+ const originalHead=await other.evaluate(async key=>new Promise((resolve,reject)=>{
+  const r=indexedDB.open('scad-solid-draft-heads-v1',1);r.onerror=()=>reject(r.error);r.onsuccess=()=>{
+   const db=r.result,tx=db.transaction('heads','readwrite'),store=tx.objectStore('heads'),get=store.get(key);let head
+   get.onsuccess=()=>{head=get.result;store.put({...head,text:null})}
+   tx.oncomplete=()=>{db.close();resolve(head)};tx.onabort=()=>{db.close();reject(tx.error)}
+  }
+ }),key)
+ await command(other,'Box');await region(other).getByRole('status',{name:'Не сохранено',exact:true}).waitFor()
+ await region(other).locator('.error-bar').filter({hasText:'Сохранённая версия повреждена. Скачайте локальный JSON через меню «Файл».'}).waitFor()
+ const unsavedLocal=await exportDoc(other,'corrupt-head-local.json')
+ assert.notDeepEqual(unsavedLocal,canonicalAfterCrash)
+ await other.evaluate(async head=>new Promise((resolve,reject)=>{
+  const r=indexedDB.open('scad-solid-draft-heads-v1',1);r.onsuccess=()=>{
+   const db=r.result,tx=db.transaction('heads','readwrite'),store=tx.objectStore('heads'),get=store.get(head.key)
+   get.onsuccess=()=>{if(get.result.text!==null||get.result.revision!==head.revision){tx.abort();return}store.put(head)}
+   tx.oncomplete=()=>{db.close();resolve()};tx.onabort=()=>{db.close();reject(Error('Corrupt head was overwritten'))}
+  };r.onerror=()=>reject(r.error)
+ }),originalHead)
+ await menu(other).click();await region(other).getByRole('button',{name:'Повторить сохранение черновика',exact:true}).click();await closeMenu(other);await saved(other)
+ await other.reload();await saved(other);assert.deepEqual(await exportDoc(other,'corrupt-head-retried.json'),unsavedLocal)
+ // Use Chromium's real quota manager, not a mocked IndexedDB request.
+ const quotaSession=await context.newCDPSession(other)
+ const beforeQuota=await other.evaluate(key=>localStorage.getItem(key),key)
+ const readHead=()=>other.evaluate(key=>new Promise((resolve,reject)=>{
+  const r=indexedDB.open('scad-solid-draft-heads-v1',1);r.onerror=()=>reject(r.error);r.onsuccess=()=>{
+   const db=r.result,tx=db.transaction('heads','readonly'),get=tx.objectStore('heads').get(key)
+   tx.oncomplete=()=>{db.close();resolve(get.result)};tx.onabort=()=>{db.close();reject(tx.error)}
+  }
+ }),key)
+ const headBeforeQuota=await readHead()
+ await quotaSession.send('Storage.overrideQuotaForOrigin',{origin,quotaSize:1})
+ // Chromium caches bucket space for 30 seconds (BucketContext::kBucketSpaceCacheTimeLimit).
+ // Expire that allowance before attempting the application write against the new quota.
+ await new Promise(resolve=>setTimeout(resolve,31000))
+ const quotaEvidence=await quotaSession.send('Storage.getUsageAndQuota',{origin});console.log({quotaEvidence})
+ await command(other,'Sphere');await region(other).getByRole('status',{name:'Не сохранено',exact:true}).waitFor()
+ await region(other).locator('.error-bar').filter({hasText:'Хранилище заполнено. Скачайте JSON, освободите место и повторите сохранение.'}).waitFor()
+ assert.equal(await other.evaluate(key=>localStorage.getItem(key),key),beforeQuota)
+ assert.deepEqual(await readHead(),headBeforeQuota)
+ await other.locator('.statusbar').getByText('Черновик сохранён в браузере',{exact:true}).waitFor({state:'hidden'})
+ await other.screenshot({path:path.join(directory,'quota-refused.png')})
+ const quotaLocal=await exportDoc(other,'quota-local.json')
+ assert.notDeepEqual(quotaLocal,unsavedLocal)
+ await quotaSession.send('Storage.overrideQuotaForOrigin',{origin})
+ await menu(other).click();await region(other).getByRole('button',{name:'Повторить сохранение черновика',exact:true}).click();await closeMenu(other);await saved(other)
+ await other.reload();await saved(other);assert.deepEqual(await exportDoc(other,'quota-retried.json'),quotaLocal)
+ assert.notEqual((await readHead()).revision,headBeforeQuota.revision)
+ // Large documents first add an immutable snapshot; failure must not publish a new head
+ // or leave an orphan row, and retry must publish a resolvable snapshot reference.
+ const snapshotKeys=()=>other.evaluate(()=>new Promise((resolve,reject)=>{
+  const r=indexedDB.open('scad-solid-draft-snapshots-v1',1);r.onerror=()=>reject(r.error);r.onsuccess=()=>{
+   const db=r.result,tx=db.transaction('snapshots','readonly'),get=tx.objectStore('snapshots').getAllKeys()
+   tx.oncomplete=()=>{db.close();resolve(get.result)};tx.onabort=()=>{db.close();reject(tx.error)}
+  }
+ }))
+ const beforeLargeHead=await readHead(),beforeLargeReference=await other.evaluate(key=>localStorage.getItem(key),key),beforeLargeKeys=await snapshotKeys()
+ await quotaSession.send('Storage.overrideQuotaForOrigin',{origin,quotaSize:1})
+ await new Promise(resolve=>setTimeout(resolve,31000))
+ await menu(other).click();await region(other).locator('input[accept=".json,application/json"]').setInputFiles({name:'quota-large.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(large))});await closeMenu(other)
+ await region(other).getByRole('status',{name:'Не сохранено',exact:true}).waitFor()
+ await region(other).locator('.error-bar').filter({hasText:'Хранилище заполнено. Скачайте JSON, освободите место и повторите сохранение.'}).waitFor()
+ assert.deepEqual(await readHead(),beforeLargeHead)
+ assert.deepEqual(await snapshotKeys(),beforeLargeKeys)
+ assert.equal(await other.evaluate(key=>localStorage.getItem(key),key),beforeLargeReference)
+ const quotaLargeLocal=await exportDoc(other,'quota-large-local.json')
+ assert.ok(JSON.stringify(quotaLargeLocal).length>4_000_000)
+ await quotaSession.send('Storage.overrideQuotaForOrigin',{origin});await quotaSession.detach()
+ await menu(other).click();await region(other).getByRole('button',{name:'Повторить сохранение черновика',exact:true}).click();await closeMenu(other);await saved(other)
+ const largeReference=JSON.parse(await other.evaluate(key=>localStorage.getItem(key),key))
+ assert.equal(typeof largeReference.solidDraftId,'string')
+ assert.ok((await snapshotKeys()).includes(largeReference.solidDraftId))
+ assert.notEqual((await readHead()).revision,beforeLargeHead.revision)
+ await other.reload();await saved(other);assert.deepEqual(await exportDoc(other,'quota-large-retried.json'),quotaLargeLocal)
+ if(profile){
+  await persistentContext.close()
+  persistentContext=await playwright.chromium.launchPersistentContext(profile,{headless:true,acceptDownloads:true})
+  browser=persistentContext.browser();page=await persistentContext.newPage();page.on('pageerror',e=>errors.push(String(e)))
+  await page.goto(origin);await saved(page)
+  assert.deepEqual(await exportDoc(page,'browser-restarted.json'),quotaLargeLocal)
+  await page.screenshot({path:path.join(directory,'browser-restarted.png')})
+ }
  assert.deepEqual(errors,[])
- const report={browser:browser.version(),key,simultaneousWriters:true,conflictPreservesBoth:true,adoptUndo:true,sharedLoadWorkerCancellation:true,closedWaitingWriter:true,abortedSnapshotRetainsPrevious:true,rendererCrashAtPublication:crashPhases,missingAndCorruptCacheRecovered:true,startupWorkerCancellationAndReload:true}
+ const report={browser:browser.version(),browserRestart:!!profile,key,simultaneousWriters:true,thirdStaleWriterEditsAndReload:true,conflictPreservesBoth:true,adoptUndo:true,sharedLoadWorkerCancellation:true,closedWaitingWriter:true,abortedSnapshotRetainsPrevious:true,rendererCrashAtPublication:crashPhases,missingAndCorruptCacheRecovered:true,startupWorkerCancellationAndReload:true,corruptHeadPreservedAndRetry:true,realQuotaRefusalAndRetry:true,largeSnapshotQuotaRefusalAndRetry:true,quotaEvidence}
  await writeFile(path.join(directory,'draft-concurrency-browser.json'),JSON.stringify(report,null,2)+'\n');console.log(report)
-}catch(error){if(page&&!page.isClosed()){await page.screenshot({path:path.join(directory,'failure.png')}).catch(()=>{});await writeFile(path.join(directory,'failure.txt'),await page.locator('body').innerText().catch(()=>''))}throw error}finally{await browser?.close();await new Promise(resolve=>server.close(resolve))}
+}catch(error){if(page&&!page.isClosed()){await page.screenshot({path:path.join(directory,'failure.png')}).catch(()=>{});await writeFile(path.join(directory,'failure.txt'),await page.locator('body').innerText().catch(()=>''))}throw error}finally{await persistentContext?.close();await browser?.close();await new Promise(resolve=>server.close(resolve));if(profile)await rm(profile,{recursive:true,force:true})}

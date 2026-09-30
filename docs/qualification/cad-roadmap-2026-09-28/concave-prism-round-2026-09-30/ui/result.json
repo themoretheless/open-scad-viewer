@@ -1,0 +1,9 @@
+{
+  "ok": true,
+  "mode": "constant",
+  "oversizeRefusal": true,
+  "localized": true,
+  "reduceRadiusRecovery": true,
+  "undoRedo": true,
+  "errors": []
+}

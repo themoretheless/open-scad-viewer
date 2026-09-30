@@ -312,6 +312,7 @@ pub fn tessellate_patches(set: &PatchSet, segments: usize) -> Result<brep::Tesse
     let mesh = brep::weld(mesh, tolerance)?;
     let report = mesh.inspect()?;
     Ok(brep::Tessellation {
+        closed_triangles: None,
         built: BuiltMesh { mesh, report },
         face_ids: ids,
         topology_face_ids: None,

@@ -1,0 +1,29 @@
+{
+  "schema": "cad-roadmap-step/1",
+  "units": "mm",
+  "toleranceMm": 0.000001,
+  "relativeVolumeTolerance": 1e-8,
+  "parts": [
+    {
+      "name": "mixed-input",
+      "file": "mixed-input.step",
+      "sha256": "e57a3db055e04aec19b54558dfc2d2d9fdeebd183faf913cfaf647009b4a5d4f",
+      "expected": {
+        "solids": 2,
+        "boundsMm": [
+          [
+            0,
+            0,
+            0
+          ],
+          [
+            304.79999999999995,
+            76.19999999999999,
+            101.6
+          ]
+        ],
+        "volumeMm3": 393313.53599999996
+      }
+    }
+  ]
+}

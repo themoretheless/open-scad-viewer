@@ -1,0 +1,202 @@
+[
+  {
+    "selfMs": 945.334,
+    "frame": {
+      "functionName": "(idle)",
+      "scriptId": "0",
+      "url": "",
+      "lineNumber": -1,
+      "columnNumber": -1
+    }
+  },
+  {
+    "selfMs": 194.162,
+    "frame": {
+      "functionName": "(program)",
+      "scriptId": "0",
+      "url": "",
+      "lineNumber": -1,
+      "columnNumber": -1
+    }
+  },
+  {
+    "selfMs": 61.182,
+    "frame": {
+      "functionName": "on",
+      "scriptId": "47",
+      "url": "http://127.0.0.1:64944/assets/DirectModeler-B7Isj8Rd.js",
+      "lineNumber": 82,
+      "columnNumber": 12555
+    }
+  },
+  {
+    "selfMs": 60.17,
+    "frame": {
+      "functionName": "t",
+      "scriptId": "10",
+      "url": "http://127.0.0.1:64944/assets/meshJson-CVKQT5bI.js",
+      "lineNumber": 0,
+      "columnNumber": 130
+    }
+  },
+  {
+    "selfMs": 43.61,
+    "frame": {
+      "functionName": "a.onmessage",
+      "scriptId": "42",
+      "url": "http://127.0.0.1:64944/assets/mainSolidWorkerClient-ZhrYXi2N.js",
+      "lineNumber": 0,
+      "columnNumber": 40048
+    }
+  },
+  {
+    "selfMs": 13.62,
+    "frame": {
+      "functionName": "(garbage collector)",
+      "scriptId": "0",
+      "url": "",
+      "lineNumber": -1,
+      "columnNumber": -1
+    }
+  },
+  {
+    "selfMs": 12.029,
+    "frame": {
+      "functionName": "query",
+      "scriptId": "56",
+      "url": "",
+      "lineNumber": 5300,
+      "columnNumber": 16
+    }
+  },
+  {
+    "selfMs": 9.027,
+    "frame": {
+      "functionName": "t",
+      "scriptId": "10",
+      "url": "http://127.0.0.1:64944/assets/meshJson-CVKQT5bI.js",
+      "lineNumber": 0,
+      "columnNumber": 130
+    }
+  },
+  {
+    "selfMs": 7.54,
+    "frame": {
+      "functionName": "getExplicitAriaRole",
+      "scriptId": "56",
+      "url": "",
+      "lineNumber": 3335,
+      "columnNumber": 28
+    }
+  },
+  {
+    "selfMs": 7.526,
+    "frame": {
+      "functionName": "getAriaRole",
+      "scriptId": "56",
+      "url": "",
+      "lineNumber": 3342,
+      "columnNumber": 20
+    }
+  },
+  {
+    "selfMs": 6.02,
+    "frame": {
+      "functionName": "ct",
+      "scriptId": "5",
+      "url": "http://127.0.0.1:64944/assets/vue-DxqjmqvJ.js",
+      "lineNumber": 0,
+      "columnNumber": 11694
+    }
+  },
+  {
+    "selfMs": 6.017,
+    "frame": {
+      "functionName": "computeAriaRole",
+      "scriptId": "56",
+      "url": "",
+      "lineNumber": 3350,
+      "columnNumber": 24
+    }
+  },
+  {
+    "selfMs": 6.013,
+    "frame": {
+      "functionName": "addEventListener",
+      "scriptId": "0",
+      "url": "",
+      "lineNumber": -1,
+      "columnNumber": -1
+    }
+  },
+  {
+    "selfMs": 6.011,
+    "frame": {
+      "functionName": "",
+      "scriptId": "42",
+      "url": "http://127.0.0.1:64944/assets/mainSolidWorkerClient-ZhrYXi2N.js",
+      "lineNumber": 0,
+      "columnNumber": 39739
+    }
+  },
+  {
+    "selfMs": 6.008,
+    "frame": {
+      "functionName": "Do",
+      "scriptId": "5",
+      "url": "http://127.0.0.1:64944/assets/vue-DxqjmqvJ.js",
+      "lineNumber": 0,
+      "columnNumber": 68730
+    }
+  },
+  {
+    "selfMs": 4.515,
+    "frame": {
+      "functionName": "prepare",
+      "scriptId": "47",
+      "url": "http://127.0.0.1:64944/assets/DirectModeler-B7Isj8Rd.js",
+      "lineNumber": 82,
+      "columnNumber": 6406
+    }
+  },
+  {
+    "selfMs": 4.512,
+    "frame": {
+      "functionName": "",
+      "scriptId": "25",
+      "url": "http://127.0.0.1:64944/assets/directBodies-COJ8ovNJ.js",
+      "lineNumber": 0,
+      "columnNumber": 67
+    }
+  },
+  {
+    "selfMs": 4.506,
+    "frame": {
+      "functionName": "parentElementOrShadowHost",
+      "scriptId": "56",
+      "url": "",
+      "lineNumber": 2924,
+      "columnNumber": 34
+    }
+  },
+  {
+    "selfMs": 4.504,
+    "frame": {
+      "functionName": "elementSafeTagName",
+      "scriptId": "56",
+      "url": "",
+      "lineNumber": 3014,
+      "columnNumber": 27
+    }
+  },
+  {
+    "selfMs": 4.503,
+    "frame": {
+      "functionName": "setAttribute",
+      "scriptId": "0",
+      "url": "",
+      "lineNumber": -1,
+      "columnNumber": -1
+    }
+  }
+]

@@ -1,0 +1,143 @@
+{
+  "$schema": "./brep-capability-qualification-plan-v7.schema.json",
+  "schema": "open-scad-viewer/brep-capability-qualification-plan",
+  "schemaVersion": 7,
+  "planId": "exact-annular-circular-edge-fillet-1",
+  "gate": {
+    "id": "g8-full",
+    "name": "brep-full-closed-matrix",
+    "version": 7
+  },
+  "lifecycle": {
+    "status": "executing",
+    "qualificationClaim": "none"
+  },
+  "claimBoundary": {
+    "candidateClaim": "Exact constant-radius toroidal rounds on selected complete inner or outer circular rims of a recognized rational annular cylinder under rigid placement.",
+    "forbiddenClaims": [
+      "Partial circular arcs or arbitrary curved edges and endpoint/corner transitions.",
+      "General trimmed or reparameterized annular models, offset/healing, or mesh fallback."
+    ]
+  },
+  "capability": "exact-annular-circular-edge-fillet/1",
+  "successorOf": "exact-simple-prism-convex-edge-fillet/1",
+  "dependencies": [
+    {
+      "capability": "numeric-evidence-curved-brep/1",
+      "requiredMaturity": "Qualified"
+    },
+    {
+      "capability": "boundary-correspondence/1",
+      "requiredMaturity": "Qualified"
+    },
+    {
+      "capability": "exact-sew/1",
+      "requiredMaturity": "Qualified"
+    },
+    {
+      "capability": "global-solid-audit/1",
+      "requiredMaturity": "Qualified"
+    },
+    {
+      "capability": "persistent-naming/1",
+      "requiredMaturity": "Qualified"
+    }
+  ],
+  "scope": {
+    "included": [
+      "Recognized quarter-cylinder annular walls and two planar annular caps.",
+      "One or more complete circular rims, represented by four authored quarter arcs each.",
+      "Exact rational toroidal faces, audited closed solid and inherited identities."
+    ],
+    "excluded": [
+      "Partial circular arcs or arbitrary curved edges and endpoint/corner transitions.",
+      "General trimmed or reparameterized annular models, offset/healing, or mesh fallback."
+    ]
+  },
+  "matrix": [
+    {
+      "id": "BL7-ANNULAR-RIMS-AND-RIGID-PLACEMENT",
+      "expected": "Complete",
+      "blocksQualification": true
+    },
+    {
+      "id": "BL7-ANNULAR-PARTIAL-SEAM-COLLISION-REFUSAL",
+      "expected": "typed-refuse",
+      "blocksQualification": true
+    },
+    {
+      "id": "BL7-ANNULAR-IDENTITY-AND-ATOMICITY",
+      "expected": "Complete",
+      "blocksQualification": true
+    },
+    {
+      "id": "BL7-ANNULAR-ROADMAP-FLANGE-WASM",
+      "expected": "Complete",
+      "blocksQualification": true
+    },
+    {
+      "id": "BL7-ANNULAR-STEP-INDEPENDENT-ORACLE",
+      "expected": "Complete",
+      "blocksQualification": true
+    },
+    {
+      "id": "BL7-ANNULAR-WORKER-UI-HISTORY",
+      "expected": "Complete",
+      "blocksQualification": true
+    }
+  ],
+  "bindings": {
+    "implementation": [
+      "crates/brep-core/src/analytic_features.rs",
+      "crates/brep-core/src/imprint_pipeline.rs",
+      "crates/brep-core/src/operations.rs",
+      "crates/brep-core/src/lib.rs",
+      "crates/geometry-bridge/src/lib.rs",
+      "crates/geometry-bridge/src/tests.rs",
+      "src/services/geometry/brep.ts",
+      "src/services/geometry/brepCapability.ts"
+    ],
+    "registry": "src/services/geometry/brepCapability.ts",
+    "evidenceJson": "docs/qualification/exact-annular-circular-edge-fillet-1-progress.json"
+  },
+  "evidence": {
+    "state": "executing",
+    "notes": [
+      "Native, bridge, roadmap-flange WASM, twelve independent OCCT STEP files and production UI/worker scenario passed.",
+      "Registry AnalyticComplete. Full qualification remains open; 662 CAD tests and build budgets passed."
+    ]
+  },
+  "resetPolicy": "false-Complete freezes this capability and transitively stales all dependents; recovery requires a successor capability ID",
+  "unresolvedRows": [
+    {
+      "id": "BL7-ANNULAR-RIMS-AND-RIGID-PLACEMENT",
+      "status": "open",
+      "resolution": "Record the complete native, WASM and product matrix before a Qualified claim."
+    },
+    {
+      "id": "BL7-ANNULAR-PARTIAL-SEAM-COLLISION-REFUSAL",
+      "status": "open",
+      "resolution": "Record the complete native, WASM and product matrix before a Qualified claim."
+    },
+    {
+      "id": "BL7-ANNULAR-IDENTITY-AND-ATOMICITY",
+      "status": "open",
+      "resolution": "Record the complete native, WASM and product matrix before a Qualified claim."
+    },
+    {
+      "id": "BL7-ANNULAR-ROADMAP-FLANGE-WASM",
+      "status": "closed",
+      "resolution": "See annular-round-2026-09-30/wasm/ and step/; finite recorded flange cases passed."
+    },
+    {
+      "id": "BL7-ANNULAR-STEP-INDEPENDENT-ORACLE",
+      "status": "closed",
+      "resolution": "See annular-round-2026-09-30/wasm/ and step/; finite recorded flange cases passed."
+    },
+    {
+      "id": "BL7-ANNULAR-WORKER-UI-HISTORY",
+      "status": "closed",
+      "resolution": "Recorded roadmap flange browser scenario passed; see annular-round-2026-09-30/ui/. Broader all-command acceptance remains separate."
+    }
+  ]
+}

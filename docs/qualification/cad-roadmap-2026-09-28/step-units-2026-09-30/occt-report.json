@@ -1,0 +1,441 @@
+{
+  "schema": "cad-roadmap-occt/1",
+  "oracle": "OpenCascade via cadquery-ocp",
+  "version": "8.0.1.0.0",
+  "scope": "Independent STEP read, solid validity, exact bounding box, volume and OCCT-tessellated preview. Does not certify all STEP inputs.",
+  "passed": true,
+  "parts": [
+    {
+      "name": "bracket-centimetre-input",
+      "stepSha256": "dead574a0af2c3ecf52680df101a02cebda4e60c0e23285b4df900a1297d0ae9",
+      "valid": true,
+      "solids": 1,
+      "faces": 8,
+      "boundsMm": [
+        [
+          -1e-07,
+          -1e-07,
+          -1e-07
+        ],
+        [
+          400.0000001,
+          300.0000001,
+          210.0000001
+        ]
+      ],
+      "volumeMm3": 6824999.999999998,
+      "maxBoundsErrorMm": 1.0000002248489182e-07,
+      "volumeErrorMm3": 1.862645149230957e-09,
+      "passed": true,
+      "previewTriangles": 20
+    },
+    {
+      "name": "bracket-centimetre-edited",
+      "stepSha256": "90fb424dde0a3d9b7797cdbc039e86114a535a2f505ecd04bf806c95a9613df7",
+      "valid": true,
+      "solids": 1,
+      "faces": 8,
+      "boundsMm": [
+        [
+          -1e-07,
+          -1e-07,
+          -1e-07
+        ],
+        [
+          400.0000001,
+          300.0000001,
+          211.0000001
+        ]
+      ],
+      "volumeMm3": 6857500.0,
+      "maxBoundsErrorMm": 1.0000002248489182e-07,
+      "volumeErrorMm3": 0.0,
+      "passed": true,
+      "previewTriangles": 20
+    },
+    {
+      "name": "enclosure-centimetre-input",
+      "stepSha256": "ac4c6d1bd107e27a3101916769ac5bf3af15df3ebe1581fc79b44afa9c2b48fa",
+      "valid": true,
+      "solids": 1,
+      "faces": 46,
+      "boundsMm": [
+        [
+          -1e-07,
+          -1e-07,
+          -1e-07
+        ],
+        [
+          400.0000001,
+          300.0000001,
+          210.0000001
+        ]
+      ],
+      "volumeMm3": 7415999.999999997,
+      "maxBoundsErrorMm": 1.0000002248489182e-07,
+      "volumeErrorMm3": 2.7939677238464355e-09,
+      "passed": true,
+      "previewTriangles": 92
+    },
+    {
+      "name": "enclosure-centimetre-edited",
+      "stepSha256": "829c0a4da41b1e656f8ee53bb46418227e6f7378cbefadbae92bd40e73adcb66",
+      "valid": true,
+      "solids": 1,
+      "faces": 46,
+      "boundsMm": [
+        [
+          -1e-07,
+          -1e-07,
+          -1e-07
+        ],
+        [
+          400.0000001,
+          300.0000001,
+          211.0000001
+        ]
+      ],
+      "volumeMm3": 7442399.999999999,
+      "maxBoundsErrorMm": 1.0000002248489182e-07,
+      "volumeErrorMm3": 9.313225746154785e-10,
+      "passed": true,
+      "previewTriangles": 92
+    },
+    {
+      "name": "flange-centimetre-input",
+      "stepSha256": "2cc877b5cac2100d7c3e855206a0dd58b9d53c488d6b7b77ee9f305cfb2b00b7",
+      "valid": true,
+      "solids": 1,
+      "faces": 10,
+      "boundsMm": [
+        [
+          -200.00000010000002,
+          -200.00000010000002,
+          -1e-07
+        ],
+        [
+          200.00000010000002,
+          200.00000010000002,
+          70.0000001
+        ]
+      ],
+      "volumeMm3": 8246680.715596498,
+      "maxBoundsErrorMm": 1.0000002248489182e-07,
+      "volumeErrorMm3": 7.670838385820389e-05,
+      "passed": true,
+      "previewTriangles": 1280
+    },
+    {
+      "name": "flange-centimetre-edited",
+      "stepSha256": "17727b97c61cc11dbd61f1afcc425bdf5c54bee531aef2bbeb3d4542a7e38333",
+      "valid": true,
+      "solids": 1,
+      "faces": 10,
+      "boundsMm": [
+        [
+          -200.00000010000002,
+          -200.00000010000002,
+          -1e-07
+        ],
+        [
+          200.00000010000002,
+          200.00000010000002,
+          71.0000001
+        ]
+      ],
+      "volumeMm3": 8364490.440105023,
+      "maxBoundsErrorMm": 1.0000002248489182e-07,
+      "volumeErrorMm3": 7.780082523822784e-05,
+      "passed": true,
+      "previewTriangles": 1280
+    },
+    {
+      "name": "bracket-metre-input",
+      "stepSha256": "74f2c0b6dcf60227f11f740da3083206c8e5c50d0c097dedf4da9f2d1f4f1b4a",
+      "valid": true,
+      "solids": 1,
+      "faces": 8,
+      "boundsMm": [
+        [
+          -1e-07,
+          -1e-07,
+          -1e-07
+        ],
+        [
+          40000.0000001,
+          30000.0000001,
+          21000.0000001
+        ]
+      ],
+      "volumeMm3": 6825000000000.0,
+      "maxBoundsErrorMm": 1.00000761449337e-07,
+      "volumeErrorMm3": 0.0,
+      "passed": true,
+      "previewTriangles": 20
+    },
+    {
+      "name": "bracket-metre-edited",
+      "stepSha256": "0b085b7b1eb81cd8f1c5b42b93e683791937ada568a9e2977772e6d66f350ab3",
+      "valid": true,
+      "solids": 1,
+      "faces": 8,
+      "boundsMm": [
+        [
+          -1e-07,
+          -1e-07,
+          -1e-07
+        ],
+        [
+          40000.0000001,
+          30000.0000001,
+          21001.0000001
+        ]
+      ],
+      "volumeMm3": 6825324999999.998,
+      "maxBoundsErrorMm": 1.00000761449337e-07,
+      "volumeErrorMm3": 0.001953125,
+      "passed": true,
+      "previewTriangles": 20
+    },
+    {
+      "name": "enclosure-metre-input",
+      "stepSha256": "2b00d0928c23a701bd2e54b9b7b4c0209a6d5f3e41c5029e33c10e3e0d5315fb",
+      "valid": true,
+      "solids": 1,
+      "faces": 46,
+      "boundsMm": [
+        [
+          -1e-07,
+          -1e-07,
+          -1e-07
+        ],
+        [
+          40000.0000001,
+          30000.0000001,
+          21000.0000001
+        ]
+      ],
+      "volumeMm3": 7415999999999.998,
+      "maxBoundsErrorMm": 1.00000761449337e-07,
+      "volumeErrorMm3": 0.001953125,
+      "passed": true,
+      "previewTriangles": 92
+    },
+    {
+      "name": "enclosure-metre-edited",
+      "stepSha256": "1406080490a3cdf08ea22f387f869a09b81fb031b56377805c0f919084f7e261",
+      "valid": true,
+      "solids": 1,
+      "faces": 46,
+      "boundsMm": [
+        [
+          -1e-07,
+          -1e-07,
+          -1e-07
+        ],
+        [
+          40000.0000001,
+          30000.0000001,
+          21001.0000001
+        ]
+      ],
+      "volumeMm3": 7416264000000.001,
+      "maxBoundsErrorMm": 1.00000761449337e-07,
+      "volumeErrorMm3": 0.0009765625,
+      "passed": true,
+      "previewTriangles": 92
+    },
+    {
+      "name": "flange-metre-input",
+      "stepSha256": "117a382328a4d055d9bc0fd018f51a206b65dc273ae58f5be96e2f64cb377173",
+      "valid": true,
+      "solids": 1,
+      "faces": 10,
+      "boundsMm": [
+        [
+          -20000.000000100004,
+          -20000.000000100004,
+          -1e-07
+        ],
+        [
+          20000.000000100004,
+          20000.000000100004,
+          7000.0000001
+        ]
+      ],
+      "volumeMm3": 8246680715596.502,
+      "maxBoundsErrorMm": 1.000043994281441e-07,
+      "volumeErrorMm3": 76.705078125,
+      "passed": true,
+      "previewTriangles": 12608
+    },
+    {
+      "name": "flange-metre-edited",
+      "stepSha256": "ee70a8de7669c4fc1c11c2bb873481f77711a5ea9109a25df5a740a3cbda0ad7",
+      "valid": true,
+      "solids": 1,
+      "faces": 10,
+      "boundsMm": [
+        [
+          -20000.000000100004,
+          -20000.000000100004,
+          -1e-07
+        ],
+        [
+          20000.000000100004,
+          20000.000000100004,
+          7001.000000100001
+        ]
+      ],
+      "volumeMm3": 8247858812841.584,
+      "maxBoundsErrorMm": 1.000043994281441e-07,
+      "volumeErrorMm3": 76.71875,
+      "passed": true,
+      "previewTriangles": 12608
+    },
+    {
+      "name": "bracket-inch-input",
+      "stepSha256": "95e3af01299e678b35cff01109a3e638c34738eb80e6c95b5ffba767522b7c92",
+      "valid": true,
+      "solids": 1,
+      "faces": 8,
+      "boundsMm": [
+        [
+          -1e-07,
+          -1e-07,
+          -1e-07
+        ],
+        [
+          1016.0000001,
+          762.0000001,
+          533.4000000999999
+        ]
+      ],
+      "volumeMm3": 111841711.80000001,
+      "maxBoundsErrorMm": 1e-07,
+      "volumeErrorMm3": 1.4901161193847656e-08,
+      "passed": true,
+      "previewTriangles": 20
+    },
+    {
+      "name": "bracket-inch-edited",
+      "stepSha256": "8a7f2530e0d35e30964d5b9d9b2c756c9a5e1e802a435386fe211899b55d5a7c",
+      "valid": true,
+      "solids": 1,
+      "faces": 8,
+      "boundsMm": [
+        [
+          -1e-07,
+          -1e-07,
+          -1e-07
+        ],
+        [
+          1016.0000001,
+          762.0000001,
+          534.4000000999999
+        ]
+      ],
+      "volumeMm3": 112051388.79999997,
+      "maxBoundsErrorMm": 1e-07,
+      "volumeErrorMm3": 2.9802322387695312e-08,
+      "passed": true,
+      "previewTriangles": 20
+    },
+    {
+      "name": "enclosure-inch-input",
+      "stepSha256": "d6f5efb282692d2f932cf0951f5e829799effc804f3164034b314116cd999651",
+      "valid": true,
+      "solids": 1,
+      "faces": 46,
+      "boundsMm": [
+        [
+          -1e-07,
+          -1e-07,
+          -1e-07
+        ],
+        [
+          1016.0000001,
+          762.0000001,
+          533.4000000999999
+        ]
+      ],
+      "volumeMm3": 121526466.62400006,
+      "maxBoundsErrorMm": 1e-07,
+      "volumeErrorMm3": 7.450580596923828e-08,
+      "passed": true,
+      "previewTriangles": 92
+    },
+    {
+      "name": "enclosure-inch-edited",
+      "stepSha256": "a1cb16ad544a50ba66a1a7107c2c712417271e8a3715bb80613e3318c2ee7dc6",
+      "valid": true,
+      "solids": 1,
+      "faces": 46,
+      "boundsMm": [
+        [
+          -1e-07,
+          -1e-07,
+          -1e-07
+        ],
+        [
+          1016.0000001,
+          762.0000001,
+          534.4000000999999
+        ]
+      ],
+      "volumeMm3": 121696788.86399996,
+      "maxBoundsErrorMm": 1e-07,
+      "volumeErrorMm3": 1.4901161193847656e-08,
+      "passed": true,
+      "previewTriangles": 92
+    },
+    {
+      "name": "flange-inch-input",
+      "stepSha256": "151eccdb62e75aea3e8099c81fa64bc101dba7989cb4dacd8d23da830ad2fd47",
+      "valid": true,
+      "solids": 1,
+      "faces": 10,
+      "boundsMm": [
+        [
+          -508.0000001000001,
+          -508.0000001000001,
+          -1e-07
+        ],
+        [
+          508.0000001000001,
+          508.0000001000001,
+          177.8000001
+        ]
+      ],
+      "volumeMm3": 135138884.67404562,
+      "maxBoundsErrorMm": 1.0000007932831068e-07,
+      "volumeErrorMm3": 0.0012570023536682129,
+      "passed": true,
+      "previewTriangles": 2016
+    },
+    {
+      "name": "flange-inch-edited",
+      "stepSha256": "3ca137ea27b1bea699e29a6922b319416b63065116051e4feb269af4e45b0323",
+      "valid": true,
+      "solids": 1,
+      "faces": 10,
+      "boundsMm": [
+        [
+          -508.0000001000001,
+          -508.0000001000001,
+          -1e-07
+        ],
+        [
+          508.0000001000001,
+          508.0000001000001,
+          178.80000009999998
+        ]
+      ],
+      "volumeMm3": 135898945.8926848,
+      "maxBoundsErrorMm": 1.0000007932831068e-07,
+      "volumeErrorMm3": 0.0012640953063964844,
+      "passed": true,
+      "previewTriangles": 2016
+    }
+  ]
+}

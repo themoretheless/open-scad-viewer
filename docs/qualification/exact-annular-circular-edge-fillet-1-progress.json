@@ -1,0 +1,17 @@
+{
+  "capability": "exact-annular-circular-edge-fillet/1",
+  "qualificationClaim": "none",
+  "state": "executing",
+  "evidenceRoot": "docs/qualification/cad-roadmap-2026-09-28/annular-round-2026-09-30",
+  "native": "37 analytic_features tests plus opposite rim identity check passed; bridge test passed",
+  "pending": [
+    "Full geometry qualification beyond recorded annular cases",
+    "Mouse/keyboard/context matrix and mixed20 flange/enclosure acceptance"
+  ],
+  "wasm": "Roadmap nested-circle flange R0.25/1/2.5, rigid placement, history/serialization and refusals passed; 660 CAD tests/58 files passed",
+  "step": "12 files independently valid in OCCT8.0.1.0.0 including reimport/reexport; max volume error3.51e-7 mm3, bounds error1.01e-7 mm",
+  "packing": "Base92 variable pairs: verify-dist passes, assets7158618, raw WASM11459495; WASM byte identity and browser worker regression passed.",
+  "registryMaturity": "AnalyticComplete",
+  "ui": "Roadmap flange: partial arc refused with complete-rim instruction, four arcs selected, Esc/late success+error/R2 preview preservation, R30 refusal/R1 recovery, Apply without recompute, exact Undo/Redo; browser errors empty",
+  "build": "662 CAD tests, types, Vite/verify-dist passed; assets7159586, raw WASM11459495, budgets unchanged"
+}

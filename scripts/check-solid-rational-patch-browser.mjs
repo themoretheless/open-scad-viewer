@@ -5,7 +5,9 @@ import {readFile,mkdir,writeFile} from 'node:fs/promises'
 import path from 'node:path'
 import {loadQualificationPlaywrightPackage} from './qualificationPlaywrightPackage.mjs'
 const root=path.resolve('dist'),directory=path.resolve(process.argv[2]??'/tmp/solid-rational-patch')
-const keyboard=process.argv.includes('--keyboard'),theme=process.argv.find(a=>a.startsWith('--theme='))?.slice(8)??'system'
+const prepareWeights=process.argv.includes('--prepare-weights'),keyboard=process.argv.includes('--keyboard'),theme=process.argv.find(a=>a.startsWith('--theme='))?.slice(8)??'system'
+const nonbinaryPreparation=process.argv.includes('--nonbinary-preparation')
+assert.ok(!nonbinaryPreparation||prepareWeights,'Nonbinary qualification requires preparation')
 assert.ok(['system','dark','light','nord','solarized'].includes(theme))
 await mkdir(directory,{recursive:true})
 const server=createServer(async(req,res)=>{
@@ -38,6 +40,22 @@ try {
   else await locator.click()
  }
  const solid=page.getByRole('region',{name:'Solid — CAD-лепка',exact:true})
+ async function selectBoundaries(){
+  for(let i=0;i<4;i++){
+   const row=solid.getByRole('button',{name:`Boundary ${i}`,exact:true})
+   if(keyboard){await tabTo(row);await page.keyboard.press(i?'Shift+Enter':'Enter')}
+   else await row.click({modifiers:i?['Shift']:[]})
+  }
+ }
+ async function inputBudget(field,value){
+  if(keyboard){await tabTo(field);await page.keyboard.press('ControlOrMeta+A');await page.keyboard.insertText(value)}
+  else await field.fill(value)
+  await field.press('Tab')
+ }
+ async function cancelPatch(){
+  if(keyboard)await page.keyboard.press('Escape')
+  else await solid.getByLabel('3D — тела',{exact:true}).getByRole('button',{name:'Esc',exact:true}).click()
+ }
  let downloads=0
  const menu=solid.locator('summary[title="Файл"]')
  async function openMenu(){if(await menu.evaluate(e=>!e.parentElement.open))await activate(menu)}
@@ -57,49 +75,132 @@ try {
   return json?JSON.parse(text):text
  }
  const controlPoints=[[[1,0,0],[1,1,0],[0,1,0]],[[1,0,2],[1,1,2],[0,1,2]],[[1,0,0],[1,0,2]],[[0,1,0],[0,1,2]]]
- const curves=controlPoints.map((points,i)=>({id:`boundary-${i}`,name:`Boundary ${i}`,curve:{degree:points.length-1,controlPoints:points,knots:[...Array(points.length).fill(0),...Array(points.length).fill(1)],weights:i<2?[1,Math.SQRT1_2,1]:[1,1]}}))
+ let curves=controlPoints.map((points,i)=>({id:`boundary-${i}`,name:`Boundary ${i}`,curve:{degree:points.length-1,controlPoints:points,knots:[...Array(points.length).fill(0),...Array(points.length).fill(1)],weights:i<2?[1,Math.SQRT1_2,1]:[1,1]}}))
+ const fixture=process.argv.find(a=>a.startsWith('--fixture='))?.slice(10)
+ if(fixture)curves=JSON.parse(await readFile(fixture,'utf8')).curves
  await openMenu()
  await solid.locator('input[accept=".json,application/json"]').setInputFiles({name:'rational-patch.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify({version:1,sketches:[],bodies:[],curves}))})
+ await page.waitForFunction(()=>document.querySelector('input[accept=".json,application/json"]')?.value==='')
  await solid.getByRole('button',{name:'Boundary 3',exact:true}).waitFor()
  if(await menu.evaluate(e=>e.parentElement.open))await activate(menu)
- for(let i=0;i<4;i++)await solid.getByRole('button',{name:`Boundary ${i}`,exact:true}).click({modifiers:i?['Shift']:[]})
+ await selectBoundaries()
  async function patch(){
-  await solid.getByRole('button',{name:'Команда… Ctrl K',exact:true}).click()
+  await activate(solid.getByRole('button',{name:'Команда… Ctrl K',exact:true}))
   const search=page.getByRole('combobox',{name:'Search commands / Поиск команд'})
-  await search.fill('Coons patch');await search.press('Enter')
+  if(keyboard)await search.pressSequentially('Coons patch');else await search.fill('Coons patch');await search.press('Enter')
  }
  await patch()
- await solid.getByRole('button',{name:'Esc',exact:true}).click()
+ const topRole=solid.getByRole('combobox',{name:'Верх · vMax',exact:true})
+ async function setTopRole(id){
+  if(!keyboard){await topRole.selectOption(id);return}
+  await tabTo(topRole)
+  const index=await topRole.locator('option').evaluateAll((options,id)=>options.findIndex(o=>o.value===id),id)
+  assert.ok(index>=0)
+  const current=await topRole.evaluate(el=>el.selectedIndex)
+  for(let i=0;i<Math.abs(index-current);i++)await page.keyboard.press(index<current?'ArrowUp':'ArrowDown')
+  await page.keyboard.press('Tab')
+  assert.equal(await topRole.inputValue(),id)
+ }
+ await setTopRole(curves[0].id)
+ await solid.getByText('Для каждой роли выберите отдельную кривую.',{exact:false}).waitFor()
+ assert.equal(await solid.getByRole('button',{name:'Готово · Enter',exact:true}).isDisabled(),true)
+ await setTopRole(curves[1].id)
+ const rightDirection=solid.getByRole('checkbox',{name:'Развернуть: Справа · uMax',exact:true})
+ if(keyboard){await tabTo(rightDirection);await page.keyboard.press('Space')}else await rightDirection.check()
+ await solid.getByText('Угол 2:',{exact:false}).waitFor()
+ assert.equal(await solid.locator('[data-diagnostic="patch-gap"] circle').count(),2)
+ assert.equal(await solid.getByRole('button',{name:'Готово · Enter',exact:true}).isDisabled(),true)
+ if(keyboard){await tabTo(rightDirection);await page.keyboard.press('Space')}else await rightDirection.uncheck()
+ await solid.getByRole('button',{name:'Готово · Enter',exact:true}).waitFor()
+ await solid.locator('[data-preview-body]').first().waitFor({state:'visible'})
+ await cancelPatch()
  const canceled=await download('Скачать проект JSON','patch-canceled.json')
  assert.equal(canceled.surfaces.length,0)
  if(await menu.evaluate(e=>e.parentElement.open))await activate(menu)
  await patch()
- await solid.getByRole('button',{name:'Готово · Enter',exact:true}).click()
+ await activate(solid.getByRole('button',{name:'Готово · Enter',exact:true}))
  const committed=await download('Скачать проект JSON','patch-committed.json')
  assert.equal(committed.surfaces.length,1)
  assert.deepEqual(committed.curves,curves)
  assert.ok(committed.surfaces[0].surface.weights.some(row=>row.some(w=>w!==1)))
  if(await menu.evaluate(e=>e.parentElement.open))await activate(menu)
- await solid.getByRole('button',{name:'↶',exact:true}).click()
+ await activate(solid.getByRole('button',{name:'↶',exact:true}))
  const undone=await download('Скачать проект JSON','patch-undone.json')
  assert.equal(undone.surfaces.length,0)
- const invalid=structuredClone(curves);invalid[0].curve.weights[2]=.5
+ if(await menu.evaluate(e=>e.parentElement.open))await activate(menu)
+ await activate(solid.getByRole('button',{name:'↷',exact:true}))
+ const redone=await download('Скачать проект JSON','patch-redone.json')
+ assert.deepEqual(redone.surfaces,committed.surfaces)
+ await page.reload();await solid.getByRole('button',{name:'Boundary 3',exact:true}).waitFor()
+ const reloaded=await download('Скачать проект JSON','patch-reloaded.json')
+ assert.deepEqual(reloaded.surfaces,committed.surfaces);assert.deepEqual(reloaded.curves,curves)
+ const invalid=structuredClone(curves);invalid[0].curve.weights[invalid[0].curve.weights.length-1]=.5
+ if(nonbinaryPreparation)invalid.forEach((c,edge)=>{c.curve.weights=c.curve.weights.map((_,i)=>.1+(7+edge*13+i*17)/31)})
  await openMenu()
  await solid.locator('input[accept=".json,application/json"]').setInputFiles({name:'incompatible.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify({version:1,sketches:[],bodies:[],curves:invalid}))})
+ await page.waitForFunction(()=>document.querySelector('input[accept=".json,application/json"]')?.value==='')
+ const importedInvalid=await download('Скачать проект JSON','patch-invalid-import.json')
+ assert.deepEqual(importedInvalid.curves,invalid)
  if(await menu.evaluate(e=>e.parentElement.open))await activate(menu)
- for(let i=0;i<4;i++)await solid.getByRole('button',{name:`Boundary ${i}`,exact:true}).click({modifiers:i?['Shift']:[]})
+ await selectBoundaries()
  await patch()
- await solid.getByText('Веса в углах границ несовместимы.',{exact:false}).waitFor()
+ await solid.getByText('Несовместимые угловые веса.',{exact:false}).waitFor()
  const refused=await download('Скачать проект JSON','patch-refused.json')
  assert.equal(refused.surfaces.length,0)
  assert.deepEqual(refused.curves,invalid)
+ if(prepareWeights){
+  if(await menu.evaluate(e=>e.parentElement.open))await activate(menu)
+  const checkbox=solid.getByRole('checkbox',{name:'Prepare patch boundary weights',exact:true})
+  if(keyboard){await tabTo(checkbox);await page.keyboard.press('Space')}else await checkbox.check()
+  await solid.locator('[data-diagnostic="patch-preparation"]').waitFor()
+  const budget=solid.getByRole('textbox',{name:'Допуск подготовки, мм',exact:true})
+  await inputBudget(budget,'0')
+  await solid.getByText('Подготовка границ превышает допуск.',{exact:false}).waitFor()
+  await solid.locator('[data-diagnostic="patch-budget"]').waitFor()
+  assert.equal(await solid.locator('[data-diagnostic="patch-budget"]').count(),1)
+  assert.equal(await solid.locator('[data-diagnostic="patch-budget"]').getAttribute('stroke'),'#ff647c')
+  const refusal=solid.locator('.operation-card [role="alert"]').filter({hasText:'Подготовка границ превышает допуск.'})
+  const errorBox=await refusal.boundingBox(),panelBox=await solid.locator('.operation-card').boundingBox()
+  assert.ok(errorBox&&panelBox&&errorBox.y>=panelBox.y&&errorBox.y+errorBox.height<=panelBox.y+panelBox.height,'Preparation error is outside the visible command panel')
+  await page.screenshot({path:path.join(directory,'patch-preparation-refused.png')})
+  assert.equal(await solid.getByRole('button',{name:'Готово · Enter',exact:true}).isDisabled(),true)
+  await inputBudget(budget,'0.000001')
+  await solid.locator('[data-diagnostic="patch-preparation"]').waitFor()
+  assert.equal(await solid.locator('[data-diagnostic="patch-budget"]').count(),0)
+  await solid.locator('[data-preview-body]').first().waitFor({state:'visible'})
+  await solid.locator('[data-diagnostic="patch-preparation"]').evaluate(el=>el.scrollIntoView({block:'center'}))
+  await page.screenshot({path:path.join(directory,'patch-prepared-preview.png')})
+  await cancelPatch()
+  const preparedCanceled=await download('Скачать проект JSON','patch-prepared-canceled.json')
+  assert.deepEqual(preparedCanceled.curves,invalid);assert.equal(preparedCanceled.surfaces.length,0)
+  if(await menu.evaluate(e=>e.parentElement.open))await activate(menu)
+  await patch();await solid.locator('[data-diagnostic="patch-preparation"]').waitFor()
+  await activate(solid.getByRole('button',{name:'Готово · Enter',exact:true}))
+  const prepared=await download('Скачать проект JSON','patch-prepared.json')
+  assert.deepEqual(prepared.curves,invalid);assert.equal(prepared.surfaces.length,1)
+  if(await menu.evaluate(e=>e.parentElement.open))await activate(menu)
+  await activate(solid.getByRole('button',{name:'↶',exact:true}))
+  const preparedUndone=await download('Скачать проект JSON','patch-prepared-undone.json')
+  assert.deepEqual(preparedUndone.curves,invalid);assert.equal(preparedUndone.surfaces.length,0)
+  if(await menu.evaluate(e=>e.parentElement.open))await activate(menu)
+  await activate(solid.getByRole('button',{name:'↷',exact:true}))
+  const preparedRedone=await download('Скачать проект JSON','patch-prepared-redone.json')
+  assert.deepEqual(preparedRedone.surfaces,prepared.surfaces)
+  await page.reload();await solid.getByRole('button',{name:'Boundary 3',exact:true}).waitFor()
+  const preparedReloaded=await download('Скачать проект JSON','patch-prepared-reloaded.json')
+  assert.deepEqual(preparedReloaded.curves,invalid);assert.deepEqual(preparedReloaded.surfaces,prepared.surfaces)
+  if(await menu.evaluate(e=>e.parentElement.open))await activate(menu)
+  await selectBoundaries()
+  await patch()
+ }
  if(await menu.evaluate(e=>e.parentElement.open))await activate(menu)
- await solid.getByRole('button',{name:'Esc',exact:true}).click()
+ await cancelPatch()
  const gap=structuredClone(curves);gap[2].curve.controlPoints[0][0]=1.2
  await openMenu()
  await solid.locator('input[accept=".json,application/json"]').setInputFiles({name:'gap.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify({version:1,sketches:[],bodies:[],curves:gap}))})
+ await page.waitForFunction(()=>document.querySelector('input[accept=".json,application/json"]')?.value==='')
  if(await menu.evaluate(e=>e.parentElement.open))await activate(menu)
- for(let i=0;i<4;i++)await solid.getByRole('button',{name:`Boundary ${i}`,exact:true}).click({modifiers:i?['Shift']:[]})
+ await selectBoundaries()
  await patch()
  await solid.locator('[data-diagnostic="patch-gap"]').waitFor()
  assert.equal(await solid.locator('[data-diagnostic="patch-gap"] circle').count(),2)
@@ -128,7 +229,10 @@ try {
  assert.ok(fps&&fps.y+fps.height<=narrowCard.y,'FPS badge overlaps command panel')
  await page.screenshot({path:path.join(directory,'patch-gap-narrow.png')})
 
- const report={gpuAlignment:process.env.SOLID_GPU_HEADED==='1',narrowLayout:true,gapEndpointMarkers:2,localizedRefusal:true,browser:browser.version(),rationalPatch:true,cancel:true,undo:true,sourceCurvesPreserved:true,downloads}
+ const report={prepareWeights,nonbinaryPreparation,keyboard,tabPresses,roleRecovery:true,gpuAlignment:process.env.SOLID_GPU_HEADED==='1',narrowLayout:true,gapEndpointMarkers:2,localizedRefusal:true,browser:browser.version(),rationalPatch:true,cancel:true,undo:true,sourceCurvesPreserved:true,downloads}
  await writeFile(path.join(directory,'rational-patch-browser.json'),JSON.stringify(report,null,2)+'\n')
  console.log(report)
+}catch(error){
+ if(browser){const pages=browser.contexts().flatMap(c=>c.pages());if(pages[0]){await pages[0].screenshot({path:path.join(directory,'failure.png')});await writeFile(path.join(directory,'failure.txt'),await pages[0].locator('body').innerText())}}
+ throw error
 }finally{await browser?.close();await new Promise(resolve=>server.close(resolve))}

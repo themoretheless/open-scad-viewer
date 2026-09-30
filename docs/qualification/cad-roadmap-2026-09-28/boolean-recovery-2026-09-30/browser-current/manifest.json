@@ -1,0 +1,1 @@
+{"schema":"cad-roadmap-step/1","units":"mm","toleranceMm":0.000001,"relativeVolumeTolerance":1e-8,"parts":[{"name":"Worker subtraction","file":"browser-boolean.step","sha256":"f73348f9ccc36362659d0d968c9feed26a96f7830667888039e728514766a016","expected":{"volumeMm3":2000,"boundsMm":[[-10,-10,0],[-5,10,20]]}}]}

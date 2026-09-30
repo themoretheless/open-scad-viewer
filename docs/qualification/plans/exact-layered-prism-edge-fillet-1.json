@@ -1,0 +1,143 @@
+{
+  "$schema": "./brep-capability-qualification-plan-v7.schema.json",
+  "schema": "open-scad-viewer/brep-capability-qualification-plan",
+  "schemaVersion": 7,
+  "planId": "exact-layered-prism-edge-fillet-1",
+  "gate": {
+    "id": "g8-full",
+    "name": "brep-full-closed-matrix",
+    "version": 7
+  },
+  "lifecycle": {
+    "status": "executing",
+    "qualificationClaim": "none"
+  },
+  "claimBoundary": {
+    "candidateClaim": "Constant-radius outer longitudinal rounds of structurally recognized straight-boundary layered prisms under rigid placement, with complete selected chains and removed material contained in every layer.",
+    "forbiddenClaims": [
+      "Arbitrary curved edges, partial longitudinal chains, endpoint and corner transitions.",
+      "Unproven layered topology, cavity penetration, or general fillet qualification."
+    ]
+  },
+  "capability": "exact-layered-prism-edge-fillet/1",
+  "successorOf": "exact-simple-prism-convex-edge-fillet/1",
+  "dependencies": [
+    {
+      "capability": "numeric-evidence-curved-brep/1",
+      "requiredMaturity": "Qualified"
+    },
+    {
+      "capability": "boundary-correspondence/1",
+      "requiredMaturity": "Qualified"
+    },
+    {
+      "capability": "exact-sew/1",
+      "requiredMaturity": "Qualified"
+    },
+    {
+      "capability": "global-solid-audit/1",
+      "requiredMaturity": "Qualified"
+    },
+    {
+      "capability": "persistent-naming/1",
+      "requiredMaturity": "Qualified"
+    }
+  ],
+  "scope": {
+    "included": [
+      "Complete longitudinal chains of a convex cutting envelope.",
+      "Per-layer containment of source and removed region; exact intersection preserves cavities.",
+      "Bounded rigid-frame normalization, audited result and inherited topology IDs."
+    ],
+    "excluded": [
+      "Arbitrary curved edges, partial longitudinal chains, endpoint and corner transitions.",
+      "Unproven layered topology, cavity penetration, or general fillet qualification."
+    ]
+  },
+  "matrix": [
+    {
+      "id": "BL7-LAYERED-CHAINS-RIGID-PLACEMENT",
+      "expected": "Complete",
+      "blocksQualification": true
+    },
+    {
+      "id": "BL7-LAYERED-PARTIAL-CAVITY-REFUSAL",
+      "expected": "typed-refuse",
+      "blocksQualification": true
+    },
+    {
+      "id": "BL7-LAYERED-IDENTITY-ATOMICITY",
+      "expected": "Complete",
+      "blocksQualification": true
+    },
+    {
+      "id": "BL7-LAYERED-ROADMAP-ENCLOSURE-WASM",
+      "expected": "Complete",
+      "blocksQualification": true
+    },
+    {
+      "id": "BL7-LAYERED-STEP-INDEPENDENT-ORACLE",
+      "expected": "Complete",
+      "blocksQualification": true
+    },
+    {
+      "id": "BL7-LAYERED-WORKER-UI-HISTORY",
+      "expected": "Complete",
+      "blocksQualification": true
+    }
+  ],
+  "bindings": {
+    "implementation": [
+      "crates/brep-core/src/analytic_features.rs",
+      "crates/brep-core/src/imprint_pipeline.rs",
+      "crates/brep-core/src/operations.rs",
+      "crates/brep-core/src/lib.rs",
+      "crates/geometry-bridge/src/lib.rs",
+      "crates/geometry-bridge/src/tests.rs",
+      "src/services/geometry/brep.ts",
+      "crates/brep-core/src/prism_frame.rs"
+    ],
+    "registry": "src/services/geometry/brepCapability.ts",
+    "evidenceJson": "docs/qualification/exact-layered-prism-edge-fillet-1-progress.json"
+  },
+  "evidence": {
+    "state": "executing",
+    "notes": [
+      "Native, bridge, roadmap enclosure WASM, STEP and production UI scenarios passed; see linked progress evidence.",
+      "Registry AnalyticComplete. Full qualification remains open; 667 CAD tests and unchanged production budgets passed."
+    ]
+  },
+  "resetPolicy": "false-Complete freezes this capability and transitively stales all dependents; recovery requires a successor capability ID",
+  "unresolvedRows": [
+    {
+      "id": "BL7-LAYERED-CHAINS-RIGID-PLACEMENT",
+      "status": "open",
+      "resolution": "Complete and record the native, WASM and product matrix before qualification."
+    },
+    {
+      "id": "BL7-LAYERED-PARTIAL-CAVITY-REFUSAL",
+      "status": "open",
+      "resolution": "Complete and record the native, WASM and product matrix before qualification."
+    },
+    {
+      "id": "BL7-LAYERED-IDENTITY-ATOMICITY",
+      "status": "open",
+      "resolution": "Complete and record the native, WASM and product matrix before qualification."
+    },
+    {
+      "id": "BL7-LAYERED-ROADMAP-ENCLOSURE-WASM",
+      "status": "closed",
+      "resolution": "Recorded roadmap enclosure R1/R4, rigid placement and mixed20 service chain passed."
+    },
+    {
+      "id": "BL7-LAYERED-STEP-INDEPENDENT-ORACLE",
+      "status": "closed",
+      "resolution": "Eight enclosure STEP cases and final mixed20 export/re-export passed independent OCCT."
+    },
+    {
+      "id": "BL7-LAYERED-WORKER-UI-HISTORY",
+      "status": "closed",
+      "resolution": "Recorded mouse/keyboard fillet, workspace/document cancellation and late replies passed. All-command UI acceptance remains separate."
+    }
+  ]
+}

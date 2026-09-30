@@ -1,3 +1,4 @@
+import type {SolidInstanceBatchCache} from './solidInstanceBatchCache'
 import type {DirectDocument,DirectBody} from './directModeling'
 import {normalizePolygonMesh} from './geometry/polygon'
 import {callGeometryRust} from './geometry/kernel'
@@ -11,7 +12,7 @@ export function transformSolidInstance(document:DirectDocument,id:string,delta:n
  return resolveSolidInstances(next)
 }
 /** References point directly to an independent source; geometry math stays in Rust. */
-export function resolveSolidInstances(document:DirectDocument):DirectDocument {
+export function resolveSolidInstances(document:DirectDocument,cache?:SolidInstanceBatchCache):DirectDocument {
  const bodies=new Map(document.bodies.map(body=>[body.id,body]))
  const groups=new Map<string,DirectBody[]>()
  for(const body of document.bodies){
@@ -31,7 +32,10 @@ export function resolveSolidInstances(document:DirectDocument):DirectDocument {
   // A single 1000-body packet caused a 37-second first allocation in qualification.
   for(let start=0;start<group.length;start+=batchSize){
    const batch=group.slice(start,start+batchSize)
-   const result=callGeometryRust<Pick<DirectBody,'mesh'|'brep'>[]>('cad_instances',{mesh:source.mesh,...(source.brep?{brep:source.brep}:{}),matrices:batch.map(body=>body.instance!.matrix)})
+   const input={mesh:source.mesh,...(source.brep?{brep:source.brep}:{}),matrices:batch.map(body=>body.instance!.matrix)}
+   const key=cache?stringifyMeshJson(input):undefined
+   let result=key===undefined?undefined:cache!.get(key)
+   if(!result){result=callGeometryRust<Pick<DirectBody,'mesh'|'brep'>[]>('cad_instances',input);if(key!==undefined&&result.length===batch.length)cache!.set(key,result)}
    if(result.length!==batch.length)throw Error('Instance batch returned an incomplete result.')
    result.forEach((item,i)=>{normalizePolygonMesh(item.mesh);geometry.set(batch[i].id,item)})
   }

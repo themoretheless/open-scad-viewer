@@ -1,0 +1,75 @@
+warning: binary `wgsl_export` should have a kebab-case name
+  |
+1 | /Users/themoretheless/Documents/Sources/open-scad-viewer/crates/target/.../wgsl_export
+  |                                                                            ^^^^^^^^^^^
+  |
+  = note: `cargo::non_kebab_case_bins` is set to `warn` by default
+help: to change the binary name to `wgsl-export`, convert the file stem
+  |
+1 - src/bin/wgsl_export.rs
+1 + src/bin/wgsl-export.rs
+  |
+warning: `raster-core` (manifest) generated 1 warning
+warning: function `rebuild_add` is never used
+    --> nurbs-core/src/foundation.rs:3249:4
+     |
+3249 | fn rebuild_add(a:[f64;2],b:[f64;2])->[f64;2] { [next_down(a[0]+b[0]),next_up(a[1]+b[1])] }
+     |    ^^^^^^^^^^^
+     |
+     = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: function `rebuild_mul` is never used
+    --> nurbs-core/src/foundation.rs:3250:4
+     |
+3250 | fn rebuild_mul(a:[f64;2],b:[f64;2])->[f64;2] {
+     |    ^^^^^^^^^^^
+
+warning: function `rebuild_binomial` is never used
+    --> nurbs-core/src/foundation.rs:3254:4
+     |
+3254 | fn rebuild_binomial(n:usize,k:usize)->[f64;2] {
+     |    ^^^^^^^^^^^^^^^^
+
+warning: function `rebuild_product_factor` is never used
+    --> nurbs-core/src/foundation.rs:3258:4
+     |
+3258 | fn rebuild_product_factor(p:usize,q:usize,i:usize,j:usize)->[f64;2] {
+     |    ^^^^^^^^^^^^^^^^^^^^^^
+
+warning: `nurbs-core` (lib) generated 4 warnings
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.04s
+     Running unittests src/lib.rs (crates/target/debug/build/brep-core/b361d23d180ae8d4/out/brep_core-b361d23d180ae8d4)
+
+running 29 tests
+test step_interchange_v3::tests::periodic_analytic_surfaces_have_specific_typed_refusals ... ok
+test step_interchange_v3::tests::v4_maps_finite_analytic_carriers_and_endpoint_point_selectors ... ok
+test step_interchange_v3::tests::product_assembly_rejects_cycles_mismatched_products_and_geometry_containers ... ok
+test step_interchange_v3::tests::parses_self_authored_analytic_and_conversion_fixtures ... ok
+test step_interchange_v3::tests::product_assembly_frames_use_their_own_units ... ok
+test step_interchange_v3::tests::imports_product_assembly_containers_with_mixed_leaf_units ... ok
+test step_interchange_v3::tests::refuses_duplicate_missing_cycle_depth_and_unknown_reachable_geometry ... ok
+test step_interchange_v3::tests::orphan_transform_does_not_move_direct_geometry ... ok
+test step_interchange_v3::tests::entity_reorder_preserves_digest_bound_identity ... ok
+test step_interchange_v3::tests::only_representation_reachable_rigid_transform_moves_geometry ... ok
+test step_interchange_v3::tests::direct_roundtrip_preserves_topology_and_identity ... ok
+test step_interchange_v3::tests::lexer_accepts_comments_case_escapes_d_exponents_and_forward_refs ... ok
+test step_interchange_v3::tests::v9_certifies_interior_point_inverse_and_ambiguity ... ok
+test step_interchange_v3::tests::v5_orders_distinct_occurrence_transforms_and_refuses_cycle_or_ambiguity ... ok
+test step_interchange_v3::tests::v9_roundtrips_retained_open_shell ... ok
+test step_interchange_v3::tests::v5_uses_rational_complexes_and_oriented_void_shells ... ok
+test step_interchange_v3::tests::aggregate_parser_and_graph_budgets_refuse ... ok
+test step_interchange_v3::tests::v5_emits_selected_ap242_context_and_roundtrips ... ok
+test step_interchange_v3::tests::multiple_cavities_shared_edges_senses_and_metadata_mutation ... ok
+test step_interchange_v3::tests::v5_roundtrips_rational_analytic_bodies_and_sense_combinations ... ok
+test step_interchange_v3::tests::v10_retains_affine_occurrence_graph_and_detects_mutation ... ok
+test step_interchange_v3::tests::v6_applies_nonuniform_occurrence_affine_and_refuses_singular ... ok
+test step_interchange_v3::tests::v6_exact_and_plus_one_resource_boundaries ... ok
+test step_interchange_v3::tests::v7_requires_whole_domain_boundary_identities_for_periodic_carriers ... ok
+test step_interchange_v3::tests::v8_carries_whole_domain_regularity_in_the_topology_certificate ... ok
+test step_interchange_v3::tests::v6_roundtrips_certified_pole_boundaries ... ok
+test step_interchange_v3::tests::direct_more_than_32_bodies_and_metadata_free_identity ... ok
+test step_interchange_v3::tests::v6_exhausts_valid_edge_oriented_bound_face_and_void_senses ... ok
+test step_interchange_v3::tests::v8_exhausts_all_coupled_sense_masks_with_equivalence_or_refusal ... ok
+
+test result: ok. 29 passed; 0 failed; 0 ignored; 0 measured; 617 filtered out; finished in 24.91s
+

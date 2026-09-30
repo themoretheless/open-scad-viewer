@@ -1,0 +1,9 @@
+{
+  "preparedBoundaryWeights": true,
+  "samples": 10201,
+  "maxCoordinateError": 1.5543122344752192e-15,
+  "minimumSampledWeight": 1.0,
+  "continuousCertificate": false,
+  "sha256": "7e46cadfed6bb7765209cdbae506665f1d045cac8e42214d454ece1fc428c74d",
+  "oracle": "Independent Cox-de Boor and homogeneous Coons formula"
+}

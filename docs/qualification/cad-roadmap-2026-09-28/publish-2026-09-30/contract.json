@@ -1,0 +1,32 @@
+{
+  "status": "verified-for-source-publication",
+  "nativePassed": 1258,
+  "nativeIgnored": 3,
+  "cadPassed": 730,
+  "cadFiles": 62,
+  "assetBytes": 7141030,
+  "assetBudget": 7152000,
+  "geometryBudget": 3244000,
+  "geometryWasmBytes": 9393774,
+  "geometryWasmSha256": "f67056f0f1fa9ef86543ac0a67720b5e62a8dc75f1b675693670c614cd315084",
+  "browser": {
+    "prepareWeights": true,
+    "nonbinaryPreparation": true,
+    "keyboard": true,
+    "tabPresses": 1297,
+    "roleRecovery": true,
+    "gpuAlignment": false,
+    "narrowLayout": true,
+    "gapEndpointMarkers": 2,
+    "localizedRefusal": true,
+    "browser": "151.0.7922.34",
+    "rationalPatch": true,
+    "cancel": true,
+    "undo": true,
+    "sourceCurvesPreserved": true,
+    "downloads": 12
+  },
+  "fullP0P3Complete": false,
+  "offsetIncluded": false,
+  "externalCI": "not-yet-verified"
+}

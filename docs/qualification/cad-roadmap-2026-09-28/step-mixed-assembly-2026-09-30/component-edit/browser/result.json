@@ -1,0 +1,11 @@
+{
+  "ok": true,
+  "cases": [
+    "mixed",
+    "placed"
+  ],
+  "pushMm": 1,
+  "undoRedo": true,
+  "reload": true,
+  "errors": []
+}

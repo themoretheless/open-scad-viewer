@@ -1,0 +1,33 @@
+
+ RUN  v4.1.11 /Users/themoretheless/Documents/Sources/open-scad-viewer
+
+ ❯ |direct-ui| tests/directModelerUi.test.ts (246 tests | 1 failed | 245 skipped) 454ms
+   × reuses CPU transparency geometry during orbit and invalidates it after scene and material edits 453ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |direct-ui| tests/directModelerUi.test.ts > reuses CPU transparency geometry during orbit and invalidates it after scene and material edits
+AssertionError: expected undefined to be 0.5 // Object.is equality
+
+- Expected:
+0.5
+
++ Received:
+undefined
+
+ ❯ tests/directModelerUi.test.ts:3473:82
+    3471|   opacity().props.onChange({target:{value:'0.5'}});await flushClearanc…
+    3472|   expect(build.mock.calls.length).toBeGreaterThan(materialCalls)
+    3473|   expect(ui.doc().bodies.find(b=>b.id===before.bodies[0].id)!.material…
+       |                                                                                  ^
+    3474|  }finally{build.mockRestore()}
+    3475| })
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed | 1 passed (2)
+      Tests  1 failed | 2 passed | 254 skipped (257)
+   Start at  16:08:56
+   Duration  2.50s (transform 2.34s, setup 0ms, import 2.15s, tests 1.30s, environment 10ms)
+

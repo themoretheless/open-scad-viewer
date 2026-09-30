@@ -1,0 +1,11 @@
+{
+  "thirdStaleTabPassed": true,
+  "checks": [
+    "No force-save retry offered during conflict",
+    "Subsequent local edit retains conflict",
+    "Shared head unchanged",
+    "Local edits exportable",
+    "Reload adopts latest canonical head"
+  ],
+  "fullConcurrencyRun": "passed"
+}

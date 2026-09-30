@@ -1,0 +1,15 @@
+/Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/geometry/kernel.ts:126
+ if(!envelope.ok){const ErrorType=envelope.error.code.startsWith('NURBS_')?NurbsCurveError:GeometryKernelError;throw new ErrorType(envelope.error.code,envelope.error.message)}
+                                                                                                                     ^
+
+GeometryKernelError: Selected representation is outside the admitted direct B-rep products
+    at decodeNurbsResult (/Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/geometry/kernel.ts:126:118)
+    at callGeometryRust (/Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/geometry/kernel.ts:133:10)
+    at importDirectStepV10 (/Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/cadNurbsStep.ts:293:3)
+    at importStepForWorkbench (/Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/cadStepRouting.ts:88:18)
+    at prepareSolidStepImport (/Users/themoretheless/Documents/Sources/open-scad-viewer/src/services/solidStepExchange.ts:11:20)
+    at async <anonymous> (/Users/themoretheless/Documents/Sources/open-scad-viewer/scripts/export-cad-step-mixed-assembly.mts:23:16) {
+  code: 'BREP_STEP_V3_REFUSED'
+}
+
+Node.js v22.23.3

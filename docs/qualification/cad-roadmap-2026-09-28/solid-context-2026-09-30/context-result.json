@@ -1,0 +1,19 @@
+{
+  "passed": true,
+  "operations": [
+    "boolean",
+    "revolve",
+    "extrusion"
+  ],
+  "checks": [
+    "Hold real worker success",
+    "Switch Solid to Mesh",
+    "Worker termination",
+    "Deliver late success and failure",
+    "Return to Solid without preview",
+    "Exact document equality",
+    "Retry after injected failure",
+    "Undo/Redo"
+  ],
+  "scope": "Three recorded CPU production browser scenarios; not all commands or all contexts"
+}

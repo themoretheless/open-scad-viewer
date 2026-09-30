@@ -1,0 +1,39 @@
+
+ RUN  v4.1.11 /Users/themoretheless/Documents/Sources/open-scad-viewer
+
+ ❯ |direct-ui| tests/directModelerUi.test.ts (241 tests | 6 failed | 235 skipped) 383ms
+   × refreshes sketch 'Fillet' after group change; late failure=false 320ms
+   × refreshes sketch 'Fillet' after group change; late failure=true 20ms
+   × refreshes sketch 'DogEar' after group change; late failure=false 14ms
+   × refreshes sketch 'DogEar' after group change; late failure=true 9ms
+   × refreshes sketch 'Circular copies' after group change; late failure=false 11ms
+   × refreshes sketch 'Circular copies' after group change; late failure=true 9ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 6 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |direct-ui| tests/directModelerUi.test.ts > refreshes sketch 'Fillet' after group change; late failure=false
+ FAIL  |direct-ui| tests/directModelerUi.test.ts > refreshes sketch 'Fillet' after group change; late failure=true
+ FAIL  |direct-ui| tests/directModelerUi.test.ts > refreshes sketch 'DogEar' after group change; late failure=false
+ FAIL  |direct-ui| tests/directModelerUi.test.ts > refreshes sketch 'DogEar' after group change; late failure=true
+ FAIL  |direct-ui| tests/directModelerUi.test.ts > refreshes sketch 'Circular copies' after group change; late failure=false
+ FAIL  |direct-ui| tests/directModelerUi.test.ts > refreshes sketch 'Circular copies' after group change; late failure=true
+AssertionError: expected { …(3) } not to be { …(3) } // Object.is equality
+
+Compared values have no visual difference.
+
+ ❯ tests/directModelerUi.test.ts:3302:22
+    3300|  await ui.click('Profile');const before=ui.doc();await ui.click(comman…
+    3301|  await ui.click('Active group: Destination');const current=requests.at…
+    3302|  expect(current).not.toBe(old)
+       |                      ^
+    3303|  if(failure)old.reject(Error('obsolete sketch group'));else old.resolv…
+    3304|  await flushClearance();expect(ui.doc()).toEqual(before);expect(ui.but…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/6]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  6 failed | 235 skipped (241)
+   Start at  12:35:21
+   Duration  2.12s (transform 1.43s, setup 0ms, import 1.63s, tests 383ms, environment 9ms)
+

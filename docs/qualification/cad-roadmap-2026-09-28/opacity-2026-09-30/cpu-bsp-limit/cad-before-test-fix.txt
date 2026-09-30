@@ -1,0 +1,26 @@
+
+> open-scad-viewer@0.1.0 test:cad-roadmap
+> vitest run tests/transparentBsp.test.ts tests/transparentTriangleSplit.test.ts tests/directModelerUi.test.ts tests/directModeling.test.ts tests/directHistory.test.ts tests/directDocumentAsync.test.ts tests/directDocumentNormalization.test.ts tests/directDimensions.test.ts tests/directAdvancedTools.test.ts tests/directProfileTools.test.ts tests/directExtrusion.test.ts tests/cadRoadmapAcceptance.test.ts tests/solidStepExchange.test.ts tests/solidNurbs.test.ts tests/nurbsCurve.test.ts tests/nurbsCurveDistance.test.ts tests/nurbsSurface.test.ts tests/nurbsSurfaceDistance.test.ts tests/faceDistance.test.ts tests/shellDistance.test.ts tests/solidBoundaryAgreement.test.ts tests/solidFaceContacts.test.ts tests/solidSelfIntersection.test.ts tests/solidDistance.test.ts tests/solidVolumeDistanceUi.test.ts tests/wasmBase91.test.ts tests/brepRuledLoft.test.ts tests/brepSteppedEnclosureExample.test.ts tests/meshInstances.test.ts tests/modelGraphAssembly.test.ts tests/svgDocumentAsync.test.ts tests/svgGeometry.test.ts tests/svgWorker.test.ts tests/commandSearch.test.ts tests/cadRoadmapHistory.test.ts tests/solidStepAssembly.test.ts tests/solidMaterial.test.ts tests/solidExactEdgeFeature.test.ts tests/solidBodyEdges.test.ts tests/solidPlaneSection.test.ts tests/solidMeasurements.test.ts tests/nativeCadClearance.test.ts tests/solidInstances.test.ts tests/solidDraftStore.test.ts tests/solidDraftHeadStore.test.ts tests/solidBlenderExchange.test.ts tests/solidGpuFallback.test.ts tests/solidDisplayCache.test.ts tests/solidPrimitive.test.ts tests/solidSurfaceDisplayQueue.test.ts tests/solidSnapPreparation.test.ts tests/solidSketchSnapPreparation.test.ts tests/solidSnapGeometry.test.ts tests/modelingSnaps.test.ts tests/solidDisplayQueue.test.ts tests/solidDisplayPreparation.test.ts tests/mainSolidWorkerRuntime.test.ts tests/mainSolidWorkerTransport.test.ts
+
+
+ RUN  v4.1.11 /Users/themoretheless/Documents/Sources/open-scad-viewer
+
+ ❯ |direct-ui| tests/directModelerUi.test.ts (229 tests | 1 failed) 54468ms
+   × reports approximate CPU transparency and clears the status after reducing the scene 33ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |direct-ui| tests/directModelerUi.test.ts > reports approximate CPU transparency and clears the status after reducing the scene
+Error: Missing button Hide: Cube
+ ❯ Object.click tests/directModelerUi.test.ts:115:173
+
+ ❯ tests/directModelerUi.test.ts:3345:12
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed | 57 passed (58)
+      Tests  1 failed | 654 passed (655)
+   Start at  09:48:28
+   Duration  56.44s (transform 3.94s, setup 0ms, import 8.61s, tests 83.74s, environment 26ms)
+

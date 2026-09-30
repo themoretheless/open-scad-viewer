@@ -1,0 +1,50 @@
+{
+  "schema": "cad-roadmap-step/1",
+  "units": "mm",
+  "toleranceMm": 0.000001,
+  "relativeVolumeTolerance": 1e-8,
+  "parts": [
+    {
+      "name": "mixed",
+      "file": "mixed-browser.step",
+      "sha256": "f9dfa662e5b890a009bc4f5de6465366f7878b64d6833ee64afe62ad7e330445",
+      "expected": {
+        "solids": 2,
+        "boundsMm": [
+          [
+            0,
+            0,
+            0
+          ],
+          [
+            304.79999999999995,
+            76.19999999999999,
+            102.6
+          ]
+        ],
+        "volumeMm3": 397184.496
+      }
+    },
+    {
+      "name": "placed",
+      "file": "placed-browser.step",
+      "sha256": "c01d7a2611c7b83e4d04e6369dd1baf9abc956c875e1dafedd85a6653b0bdfb6",
+      "expected": {
+        "solids": 2,
+        "boundsMm": [
+          [
+            0,
+            0,
+            0
+          ],
+          [
+            379.4,
+            76.19999999999999,
+            102.6
+          ]
+        ],
+        "volumeMm3": 397184.496
+      }
+    }
+  ]
+}

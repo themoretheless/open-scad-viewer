@@ -24,8 +24,8 @@ try {
  page=await browser.newPage({acceptDownloads:true})
  page.on('pageerror',e=>renderErrors.push(String(e)));page.on('console',m=>{if(m.type()==='error')renderErrors.push(m.text())})
  await page.addInitScript(()=>{
-  window.__sketchEditRequests=0;const NativeWorker=window.Worker
-  window.Worker=class extends NativeWorker {postMessage(message,...args){if(message?.job?.kind==='sketchEdit')window.__sketchEditRequests++;return super.postMessage(message,...args)}}
+  window.__failSketch=false;window.__sketchEditRequests=0;const NativeWorker=window.Worker
+  window.Worker=class extends NativeWorker {postMessage(message,...args){if(message?.job?.kind==='sketchEdit'){window.__sketchEditRequests++;if(window.__failSketch){window.__failSketch=false;const callback=this.onmessage;this.onmessage=event=>callback?.call(this,{data:{...event.data,ok:false,error:{name:'Error',code:'CAD_TRANSPORT',message:'Injected transport failure'}}})}}return super.postMessage(message,...args)}}
   if(!navigator.gpu)return
   const request=navigator.gpu.requestAdapter.bind(navigator.gpu)
   navigator.gpu.requestAdapter=async(...args)=>{const adapter=await request(...args);if(adapter){const make=adapter.requestDevice.bind(adapter);adapter.requestDevice=async(...args)=>{const device=await make(...args);window.__qualificationGpuDevice=device;return device}}return adapter}
@@ -78,8 +78,19 @@ try {
   assert.equal(await apply.isDisabled(),true)
   await page.waitForFunction(selector=>!document.querySelector(selector),preview)
   assert.equal(await page.evaluate(()=>window.__sketchEditRequests),requests)
-  await input(field,value);await apply.click({trial:true})
-  assert.equal(await page.evaluate(()=>window.__sketchEditRequests),requests+1)
+  if(process.argv.includes('--fail-preview'))await page.evaluate(()=>window.__failSketch=true)
+  await input(field,value)
+  if(process.argv.includes('--fail-preview')){
+   await solid.getByRole('alert').filter({hasText:'Не удалось получить корректный результат вычисления'}).waitFor()
+   assert.equal(await apply.isDisabled(),true)
+   const failed=await download('Скачать проект JSON',`failed-${requests}.json`)
+   assert.deepEqual(failed.sketches[0].points,original.sketches[0].points);assert.equal(failed.sketches.length,1)
+   if(await menu.evaluate(e=>e.parentElement.open))await activate(menu)
+   await page.screenshot({path:path.join(directory,`retry-${requests}.png`)})
+   await activate(solid.getByRole('button',{name:'Повторить вычисление',exact:true}))
+  }
+  await apply.click({trial:true})
+  assert.equal(await page.evaluate(()=>window.__sketchEditRequests),requests+(process.argv.includes('--fail-preview')?2:1))
   assert.ok(await solid.locator(preview).count()>0)
  }
 
@@ -129,6 +140,6 @@ try {
  await activate(solid.getByRole('button',{name:'↷',exact:true}))
  const redone=await download('Скачать проект JSON','redone.json');assert.deepEqual(redone.sketches,changed.sketches)
  assert.deepEqual(renderErrors,[])
- const report={browser:browser.version(),workerRequests:requests,applyWithoutNewWorkerRequest:true,invalidQuantities:['fillet','dogear','array'],undoRedo:true,keyboard,tabPresses,downloads}
+ const report={browser:browser.version(),workerRequests:requests,retryFailure:process.argv.includes('--fail-preview'),applyWithoutNewWorkerRequest:true,invalidQuantities:['fillet','dogear','array'],undoRedo:true,keyboard,tabPresses,downloads}
  await writeFile(path.join(directory,'sketch-edit-browser.json'),JSON.stringify(report,null,2)+'\n');console.log(report)
 }catch(error){if(page){await page.screenshot({path:path.join(directory,'failure.png')}).catch(()=>{});await writeFile(path.join(directory,'failure.txt'),await page.locator('body').innerText().catch(()=>''))}throw error}finally{await browser?.close();await new Promise(resolve=>server.close(resolve))}

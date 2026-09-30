@@ -1,0 +1,19 @@
+{
+  "scope": "Internal authoring prototype: one outer top annular edge, radii0.25/1/2.5, R20/r5/h6 annulus",
+  "passed": true,
+  "checks": [
+    "Solid audit",
+    "Independent Pappus first-moment volume oracle, absolute error<2e-5 mm3",
+    "Four degree2x2 rational toroidal patches",
+    "100 evaluated torus points per radius, radius residual<1e-9 mm",
+    "Radius6 collision refusal",
+    "Source immutability",
+    "Existing prism regression tests"
+  ],
+  "notImplemented": [
+    "Recognition of an existing annular body and selected complete circular edge",
+    "Persistent naming/ChangeSet and public feature certificate",
+    "Bridge/WASM/UI and STEP exchange for this operation",
+    "General curved-edge/corner fillet support"
+  ]
+}

@@ -1133,3 +1133,59 @@ fn certified_freeform_mass_crosses_bridge() {
         .is_err()
     );
 }
+
+
+#[test]
+fn simple_prism_fillet_bridge_reports_distinct_capability() {
+    let model=brep_core::extrude_polygon(&[[0.,0.],[40.,0.],[40.,5.],[5.,5.],[5.,30.],[0.,30.]],0.,20.).unwrap();
+    let edge=model.edges.iter().position(|e| {
+        let [a,b]=e.vertices.map(|v|model.vertices[v].point);
+        a[0]==0. && b[0]==0. && a[1]==0. && b[1]==0. && (a[2]-b[2]).abs()>19.
+    }).unwrap();
+    let result=dispatch(json!({"op":"brep_nurbs_exact_simple_prism_fillet","model":encode(model).unwrap(),"edges":[edge],"radius":1.})).unwrap();
+    assert_eq!(result["certificate"]["capability"].as_str(),Some("exact-simple-prism-convex-edge-fillet/1"));
+    assert_eq!(result["certificate"]["complete"],true);
+    assert_eq!(result["audit"]["ok"],true);
+    assert_eq!(result["namingComplete"],true);
+}
+
+#[test]
+fn annular_fillet_bridge_requires_complete_rim() {
+    let model=brep_core::tube(20.,5.,6.).unwrap();
+    let edges:Vec<_>=model.edges.iter().enumerate().filter(|(_,e)|e.curve.degree==2 && e.vertices.iter().all(|v|{
+        let p=model.vertices[*v].point;p[2]>5. && p[0].hypot(p[1])>19.
+    })).map(|(i,_)|i).collect();
+    assert_eq!(edges.len(),4);
+    let encoded=encode(model).unwrap();
+    let result=dispatch(json!({"op":"brep_nurbs_exact_annular_fillet","model":encoded.clone(),"edges":edges.clone(),"radius":1.})).unwrap();
+    assert_eq!(result["certificate"]["capability"].as_str(),Some("exact-annular-circular-edge-fillet/1"));
+    assert_eq!(result["certificate"]["complete"],true);
+    assert_eq!(result["audit"]["ok"],true);
+    assert_eq!(result["namingComplete"],true);
+    assert!(dispatch(json!({"op":"brep_nurbs_exact_annular_fillet","model":encoded,"edges":[edges[0]],"radius":1.})).is_err());
+}
+
+#[test]
+fn layered_fillet_bridge_checks_chain_and_cavity() {
+    let outer=brep_core::cuboid([0.,0.,0.],[40.,30.,20.]).unwrap();
+    let cutter=brep_core::cuboid([2.,2.,2.],[38.,28.,22.]).unwrap();
+    let model=brep_core::boolean(&outer,&cutter,"difference").unwrap();
+    let edges:Vec<_>=model.edges.iter().enumerate().filter(|(_,e)| e.vertices.iter().all(|v| {
+        let p=model.vertices[*v].point;p[0]==0. && p[1]==0.
+    })).map(|(i,_)|i).collect();
+    assert!(edges.len()>1);
+    let encoded=encode(model).unwrap();
+    let request=json!({"op":"brep_nurbs_exact_layered_prism_fillet","model":encoded.clone(),"edges":edges.clone(),"radius":1.});
+    let result=dispatch(request.clone()).unwrap();
+    assert_eq!(result["certificate"]["capability"].as_str(),Some("exact-layered-prism-edge-fillet/1"));
+    assert_eq!(result["audit"]["ok"],true);
+    assert_eq!(result["namingComplete"],true);
+    let mut extra=request.clone();extra["unexpected"]=json!(true);
+    assert!(dispatch(extra).is_err());
+    for radius in [0.,-1.,8.] {
+        let mut bad=request.clone();bad["radius"]=json!(radius);
+        assert!(dispatch(bad).is_err());
+    }
+    let mut partial=request;partial["edges"]=json!([edges[0]]);
+    assert!(dispatch(partial).is_err());
+}

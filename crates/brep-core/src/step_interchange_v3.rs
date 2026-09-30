@@ -2901,10 +2901,71 @@ fn representation_occurrences(
     general_affine: bool,
     allow_open_shells: bool,
 ) -> Result<Vec<RepresentationOccurrence>> {
-    let mut outgoing: BTreeMap<usize, Vec<(usize, usize, usize)>> = BTreeMap::new();
+    // CDSR identifies product occurrences. Its relationship runs child -> parent;
+    // traverse parent -> child while retaining the child-to-parent placement.
+    let mut products = BTreeMap::new();
+    let mut assembly = BTreeMap::new();
+    if general_affine {
+        for entity in entities.values() {
+            if let Value::Call(name, args) = &entity.value
+                && name == "SHAPE_DEFINITION_REPRESENTATION"
+                && args.len() == 2
+            {
+                let (kind, shape) = call(entities, one_ref(&args[0], "product shape")?)?;
+                if kind == "PRODUCT_DEFINITION_SHAPE" && shape.len() == 3 {
+                    products.insert(
+                        one_ref(&args[1], "product representation")?,
+                        one_ref(&shape[2], "product definition")?,
+                    );
+                }
+            }
+        }
+        for entity in entities.values() {
+            if let Value::Call(name, args) = &entity.value
+                && name == "CONTEXT_DEPENDENT_SHAPE_REPRESENTATION"
+            {
+                if args.len() != 2 {
+                    return Err(refuse("Malformed product occurrence"));
+                }
+                let relation = one_ref(&args[0], "occurrence relationship")?;
+                let (child, parent, _) = relationship_components(entities, relation)?
+                    .ok_or_else(|| refuse("Occurrence requires a placement relationship"))?;
+                let (kind, shape) = call(entities, one_ref(&args[1], "occurrence shape")?)?;
+                if kind != "PRODUCT_DEFINITION_SHAPE" || shape.len() != 3 {
+                    return Err(refuse("Invalid occurrence product shape"));
+                }
+                let (kind, usage) = call(entities, one_ref(&shape[2], "occurrence usage")?)?;
+                if kind != "NEXT_ASSEMBLY_USAGE_OCCURRENCE"
+                    || usage.len() != 6
+                    || products.get(&parent) != Some(&one_ref(&usage[3], "parent product")?)
+                    || products.get(&child) != Some(&one_ref(&usage[4], "child product")?)
+                {
+                    return Err(refuse(
+                        "Occurrence product endpoints disagree with placement",
+                    ));
+                }
+                if assembly.insert(relation, (parent, child)).is_some() {
+                    return Err(refuse("Duplicate product occurrence relationship"));
+                }
+            }
+        }
+    }
+    let mut outgoing: BTreeMap<usize, Vec<(usize, usize, usize, bool)>> = BTreeMap::new();
+    let mut component_representations = BTreeSet::new();
     for id in entities.keys() {
         if let Some((from, to, operator)) = relationship_components(entities, *id)? {
-            outgoing.entry(from).or_default().push((*id, to, operator));
+            if let Some(&(parent, child)) = assembly.get(id) {
+                outgoing
+                    .entry(parent)
+                    .or_default()
+                    .push((*id, child, operator, true));
+                component_representations.insert(child);
+            } else {
+                outgoing
+                    .entry(from)
+                    .or_default()
+                    .push((*id, to, operator, false));
+            }
         }
     }
     for edges in outgoing.values_mut() {
@@ -2918,7 +2979,7 @@ fn representation_occurrences(
         rep: usize,
         matrix: [[f64; 4]; 4],
         entities: &BTreeMap<usize, Entity>,
-        outgoing: &BTreeMap<usize, Vec<(usize, usize, usize)>>,
+        outgoing: &BTreeMap<usize, Vec<(usize, usize, usize, bool)>>,
         active: &mut BTreeSet<usize>,
         depth: usize,
         allow_affine: bool,
@@ -2939,6 +3000,7 @@ fn representation_occurrences(
         }
         let (ty, args) = call(entities, rep)?;
         if ty != "ADVANCED_BREP_SHAPE_REPRESENTATION"
+            && !(general_affine && ty == "SHAPE_REPRESENTATION")
             && !(allow_open_shells && ty == "MANIFOLD_SURFACE_SHAPE_REPRESENTATION")
         {
             return Err(refuse(
@@ -2947,6 +3009,16 @@ fn representation_occurrences(
         }
         if args.len() != 3 {
             return Err(refuse("Shape representation argument count mismatch"));
+        }
+        if ty == "SHAPE_REPRESENTATION" {
+            if !outgoing.contains_key(&rep) {
+                return Err(refuse("Empty product assembly container"));
+            }
+            for item in list(&args[1], "assembly placement items")? {
+                if call(entities, one_ref(item, "assembly item")?)?.0 != "AXIS2_PLACEMENT_3D" {
+                    return Err(refuse("Unsupported geometry in product assembly container"));
+                }
+            }
         }
         let linked = reachable(entities, &[rep])?;
         let scale = length_scale(entities, &linked, false)?;
@@ -2974,7 +3046,7 @@ fn representation_occurrences(
             })
         }
         if let Some(edges) = outgoing.get(&rep) {
-            for (relationship, child, operator) in edges {
+            for (relationship, child, operator, product_occurrence) in edges {
                 let affine_complex = allow_affine
                     && component(
                         &components(entities, *operator)?,
@@ -2995,10 +3067,15 @@ fn representation_occurrences(
                                     "ITEM_DEFINED_TRANSFORMATION argument count mismatch",
                                 ));
                             }
+                            let source_scale = if *product_occurrence {
+                                length_scale(entities, &reachable(entities, &[*child])?, false)?
+                            } else {
+                                scale
+                            };
                             let from = rigid_frame(
                                 entities,
                                 one_ref(&operator_args[2], "transformation source")?,
-                                scale,
+                                source_scale,
                             )?;
                             let to = rigid_frame(
                                 entities,
@@ -3040,8 +3117,25 @@ fn representation_occurrences(
         [0., 0., 1., 0.],
         [0., 0., 0., 1.],
     ];
+    let roots: Vec<_> = selected
+        .iter()
+        .filter(|rep| !component_representations.contains(rep))
+        .copied()
+        .collect();
+    let mut covered = BTreeSet::new();
+    let mut pending = roots.clone();
+    while let Some(rep) = pending.pop() {
+        if covered.insert(rep) {
+            if let Some(edges) = outgoing.get(&rep) {
+                pending.extend(edges.iter().map(|edge| edge.1));
+            }
+        }
+    }
+    if selected.iter().any(|rep| !covered.contains(rep)) {
+        return Err(refuse("Cyclic or unreachable product assembly"));
+    }
     let mut out = Vec::new();
-    for rep in selected {
+    for rep in &roots {
         walk(
             *rep,
             identity,
@@ -3342,6 +3436,7 @@ fn import_step_direct(
         for id in &selected {
             let (ty, _) = call(&entities, *id)?;
             if ty != "ADVANCED_BREP_SHAPE_REPRESENTATION"
+                && !(allow_open_shells && ty == "SHAPE_REPRESENTATION")
                 && !(allow_open_shells && ty == "MANIFOLD_SURFACE_SHAPE_REPRESENTATION")
             {
                 return Err(refuse(
@@ -3492,7 +3587,9 @@ fn import_step_direct(
     };
     let mut linked = reachable(&entities, &graph_roots)?;
     if ap242_composition {
-        linked.clear();
+        if capability != STEP_INTERCHANGE_V9_CAPABILITY {
+            linked.clear();
+        }
         for occurrence in &occurrences {
             linked.extend(occurrence.linked.iter().copied())
         }
@@ -3507,6 +3604,7 @@ fn import_step_direct(
         ));
     }
     const REACHABLE_TYPES: &[&str] = &[
+        "SHAPE_REPRESENTATION",
         "ADVANCED_BREP_SHAPE_REPRESENTATION",
         "MANIFOLD_SURFACE_SHAPE_REPRESENTATION",
         "MANIFOLD_SOLID_BREP",
@@ -5157,6 +5255,76 @@ mod tests {
             }));
     }
 
+    #[test]
+    fn product_assembly_frames_use_their_own_units() {
+        let text = include_str!(
+            "../../../tests/fixtures/step-v6/self-authored-mixed-unit-product-assembly.step"
+        );
+        let extra = "#700=CARTESIAN_POINT('',(1.,0.,0.));\n#701=AXIS2_PLACEMENT_3D('',#700,$,$);\n#702=CARTESIAN_POINT('',(100.,0.,0.));\n#703=AXIS2_PLACEMENT_3D('',#702,$,$);\n#704=ITEM_DEFINED_TRANSFORMATION('','',#701,#703);\n";
+        let moved = text
+            .replace(
+                "#576,#13)REPRESENTATION_RELATIONSHIP_WITH_TRANSFORMATION(#8)",
+                "#576,#13)REPRESENTATION_RELATIONSHIP_WITH_TRANSFORMATION(#704)",
+            )
+            .replace("ENDSEC;\nEND-ISO", &format!("{extra}ENDSEC;\nEND-ISO"));
+        let (model, _, _) = import_step_v9(&moved).unwrap();
+        let max = model
+            .vertices
+            .iter()
+            .map(|v| v.point[0])
+            .fold(f64::NEG_INFINITY, f64::max);
+        assert!((max - (304.8 + 100. - 25.4)).abs() < 1e-8);
+    }
+    #[test]
+    fn product_assembly_rejects_cycles_mismatched_products_and_geometry_containers() {
+        let text = include_str!(
+            "../../../tests/fixtures/step-v6/self-authored-mixed-unit-product-assembly.step"
+        );
+        let bad_item = text.replace(
+            "SHAPE_REPRESENTATION('',(#7),#5)",
+            "SHAPE_REPRESENTATION('',(#15),#5)",
+        );
+        assert!(
+            import_step_v9(&bad_item)
+                .unwrap_err()
+                .message
+                .contains("Unsupported geometry")
+        );
+        let bad_product = text.replace("'inch','inch','',#11,#582,$", "'inch','inch','',#11,#11,$");
+        assert!(
+            import_step_v9(&bad_product)
+                .unwrap_err()
+                .message
+                .contains("endpoints disagree")
+        );
+        let extra = "#700=NEXT_ASSEMBLY_USAGE_OCCURRENCE('cycle','cycle','',#582,#11,$);\n#701=PRODUCT_DEFINITION_SHAPE('','',#700);\n#702=(REPRESENTATION_RELATIONSHIP('','',#13,#576)REPRESENTATION_RELATIONSHIP_WITH_TRANSFORMATION(#8)SHAPE_REPRESENTATION_RELATIONSHIP());\n#703=CONTEXT_DEPENDENT_SHAPE_REPRESENTATION(#702,#701);\n";
+        let cycle = text.replace("ENDSEC;\nEND-ISO", &format!("{extra}ENDSEC;\nEND-ISO"));
+        assert!(
+            import_step_v9(&cycle)
+                .unwrap_err()
+                .message
+                .contains("Cyclic")
+        );
+    }
+    #[test]
+    fn imports_product_assembly_containers_with_mixed_leaf_units() {
+        let text = include_str!(
+            "../../../tests/fixtures/step-v6/self-authored-mixed-unit-product-assembly.step"
+        );
+        let (model, _, report) = import_step_v9(text).unwrap();
+        assert_eq!(model.bodies.len(), 2);
+        assert_eq!(report.occurrence_identities.len(), 2);
+        let mut max = [f64::NEG_INFINITY; 3];
+        for vertex in &model.vertices {
+            for (axis, bound) in max.iter_mut().enumerate() {
+                *bound = bound.max(vertex.point[axis]);
+            }
+        }
+        for (actual, expected) in max.into_iter().zip([304.8, 76.2, 101.6]) {
+            assert!((actual - expected).abs() < 1e-8);
+        }
+        model.validate().unwrap();
+    }
     #[test]
     fn direct_roundtrip_preserves_topology_and_identity() {
         let model = freeform_cuboid_solid([0., 0., 0.], [2., 3., 4.]).unwrap();

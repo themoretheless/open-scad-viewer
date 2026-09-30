@@ -1,0 +1,344 @@
+{
+  "scope": "Exclusive sampled CPU time over the supplied capture window; capture boundaries define scope. A main-thread profile excludes workers.",
+  "sampleCount": 16809,
+  "sampledMs": 21453.439,
+  "categories": [
+    {
+      "key": "other",
+      "sampledMs": 20833.842,
+      "percent": 97.11189893610997
+    },
+    {
+      "key": "garbageCollection",
+      "sampledMs": 610.751,
+      "percent": 2.84686758146328
+    },
+    {
+      "key": "idle",
+      "sampledMs": 8.846,
+      "percent": 0.04123348242675685
+    }
+  ],
+  "topFrames": [
+    {
+      "name": "(program)",
+      "source": "",
+      "line": 0,
+      "column": 0,
+      "sampledMs": 6599.429,
+      "percent": 30.761636863907928
+    },
+    {
+      "name": "setAttribute",
+      "source": "",
+      "line": 0,
+      "column": 0,
+      "sampledMs": 2493.519,
+      "percent": 11.622933740366754
+    },
+    {
+      "name": "insertBefore",
+      "source": "",
+      "line": 0,
+      "column": 0,
+      "sampledMs": 1308.854,
+      "percent": 6.100905314061769
+    },
+    {
+      "name": "get",
+      "source": "http://127.0.0.1:51075/assets/vue-DxqjmqvJ.js",
+      "line": 1,
+      "column": 12207,
+      "sampledMs": 1192.026,
+      "percent": 5.556339941582326
+    },
+    {
+      "name": "q",
+      "source": "http://127.0.0.1:51075/assets/direct-modeling-DcUb6wuW.js",
+      "line": 1,
+      "column": 12583,
+      "sampledMs": 1071.56,
+      "percent": 4.99481691490115
+    },
+    {
+      "name": "ne",
+      "source": "http://127.0.0.1:51075/assets/vue-DxqjmqvJ.js",
+      "line": 1,
+      "column": 48182,
+      "sampledMs": 889.418,
+      "percent": 4.1458061805382345
+    },
+    {
+      "name": "Q",
+      "source": "http://127.0.0.1:51075/assets/DirectModeler-DGMBPG7Z.js",
+      "line": 84,
+      "column": 72810,
+      "sampledMs": 778.397,
+      "percent": 3.6283087294302794
+    },
+    {
+      "name": "fe",
+      "source": "http://127.0.0.1:51075/assets/vue-DxqjmqvJ.js",
+      "line": 1,
+      "column": 52111,
+      "sampledMs": 663.769,
+      "percent": 3.0939981230981197
+    },
+    {
+      "name": "",
+      "source": "http://127.0.0.1:51075/assets/DirectModeler-DGMBPG7Z.js",
+      "line": 84,
+      "column": 85454,
+      "sampledMs": 627.421,
+      "percent": 2.9245707413156463
+    },
+    {
+      "name": "(garbage collector)",
+      "source": "",
+      "line": 0,
+      "column": 0,
+      "sampledMs": 610.751,
+      "percent": 2.84686758146328
+    },
+    {
+      "name": "w",
+      "source": "http://127.0.0.1:51075/assets/vue-DxqjmqvJ.js",
+      "line": 1,
+      "column": 47104,
+      "sampledMs": 416.06,
+      "percent": 1.9393627287447948
+    },
+    {
+      "name": "X",
+      "source": "http://127.0.0.1:51075/assets/direct-modeling-DcUb6wuW.js",
+      "line": 1,
+      "column": 13188,
+      "sampledMs": 359.544,
+      "percent": 1.6759271089357748
+    },
+    {
+      "name": "rn",
+      "source": "http://127.0.0.1:51075/assets/vue-DxqjmqvJ.js",
+      "line": 1,
+      "column": 19281,
+      "sampledMs": 356.684,
+      "percent": 1.6625959129443069
+    },
+    {
+      "name": "",
+      "source": "http://127.0.0.1:51075/assets/DirectModeler-DGMBPG7Z.js",
+      "line": 84,
+      "column": 85608,
+      "sampledMs": 314.053,
+      "percent": 1.4638818512966616
+    },
+    {
+      "name": "qo",
+      "source": "http://127.0.0.1:51075/assets/vue-DxqjmqvJ.js",
+      "line": 1,
+      "column": 71085,
+      "sampledMs": 293.199,
+      "percent": 1.3666759907350985
+    },
+    {
+      "name": "",
+      "source": "http://127.0.0.1:51075/assets/DirectModeler-DGMBPG7Z.js",
+      "line": 84,
+      "column": 167293,
+      "sampledMs": 272.613,
+      "percent": 1.270719347140568
+    },
+    {
+      "name": "",
+      "source": "http://127.0.0.1:51075/assets/directBodies-COJ8ovNJ.js",
+      "line": 1,
+      "column": 68,
+      "sampledMs": 272.1,
+      "percent": 1.268328122125315
+    },
+    {
+      "name": "f_",
+      "source": "http://127.0.0.1:51075/assets/DirectModeler-DGMBPG7Z.js",
+      "line": 84,
+      "column": 11531,
+      "sampledMs": 269.806,
+      "percent": 1.2576351977881028
+    },
+    {
+      "name": "o",
+      "source": "http://127.0.0.1:51075/assets/vue-DxqjmqvJ.js",
+      "line": 1,
+      "column": 218,
+      "sampledMs": 246.678,
+      "percent": 1.1498296380361208
+    },
+    {
+      "name": "includes",
+      "source": "http://127.0.0.1:51075/assets/vue-DxqjmqvJ.js",
+      "line": 1,
+      "column": 10252,
+      "sampledMs": 240.441,
+      "percent": 1.1207573760085738
+    },
+    {
+      "name": "No",
+      "source": "http://127.0.0.1:51075/assets/vue-DxqjmqvJ.js",
+      "line": 1,
+      "column": 69323,
+      "sampledMs": 189.107,
+      "percent": 0.8814763917337449
+    },
+    {
+      "name": "",
+      "source": "http://127.0.0.1:51075/assets/DirectModeler-DGMBPG7Z.js",
+      "line": 84,
+      "column": 85749,
+      "sampledMs": 186.745,
+      "percent": 0.8704665018974347
+    },
+    {
+      "name": "Rr",
+      "source": "http://127.0.0.1:51075/assets/vue-DxqjmqvJ.js",
+      "line": 1,
+      "column": 33676,
+      "sampledMs": 175.331,
+      "percent": 0.8172629106223949
+    },
+    {
+      "name": "Tn",
+      "source": "http://127.0.0.1:51075/assets/vue-DxqjmqvJ.js",
+      "line": 1,
+      "column": 21754,
+      "sampledMs": 136.037,
+      "percent": 0.6341034647172419
+    },
+    {
+      "name": "p_",
+      "source": "http://127.0.0.1:51075/assets/DirectModeler-DGMBPG7Z.js",
+      "line": 84,
+      "column": 11559,
+      "sampledMs": 110.893,
+      "percent": 0.516900810168477
+    },
+    {
+      "name": "vn",
+      "source": "http://127.0.0.1:51075/assets/vue-DxqjmqvJ.js",
+      "line": 1,
+      "column": 20657,
+      "sampledMs": 104.745,
+      "percent": 0.4882434000441607
+    },
+    {
+      "name": "dC",
+      "source": "http://127.0.0.1:51075/assets/DirectModeler-DGMBPG7Z.js",
+      "line": 84,
+      "column": 85313,
+      "sampledMs": 90.107,
+      "percent": 0.42001191510601166
+    },
+    {
+      "name": "e",
+      "source": "http://127.0.0.1:51075/assets/directBodies-COJ8ovNJ.js",
+      "line": 1,
+      "column": 11,
+      "sampledMs": 71.297,
+      "percent": 0.33233366454674235
+    },
+    {
+      "name": "get value",
+      "source": "http://127.0.0.1:51075/assets/vue-DxqjmqvJ.js",
+      "line": 1,
+      "column": 17424,
+      "sampledMs": 71.09,
+      "percent": 0.33136878427742983
+    },
+    {
+      "name": "fs",
+      "source": "http://127.0.0.1:51075/assets/vue-DxqjmqvJ.js",
+      "line": 2,
+      "column": 3115,
+      "sampledMs": 68.523,
+      "percent": 0.31940333668648646
+    },
+    {
+      "name": "get value",
+      "source": "http://127.0.0.1:51075/assets/vue-DxqjmqvJ.js",
+      "line": 1,
+      "column": 16665,
+      "sampledMs": 66.519,
+      "percent": 0.31006217697777966
+    },
+    {
+      "name": "",
+      "source": "http://127.0.0.1:51075/assets/DirectModeler-DGMBPG7Z.js",
+      "line": 84,
+      "column": 241569,
+      "sampledMs": 60.234,
+      "percent": 0.2807661745979281
+    },
+    {
+      "name": "ct",
+      "source": "http://127.0.0.1:51075/assets/vue-DxqjmqvJ.js",
+      "line": 1,
+      "column": 11695,
+      "sampledMs": 59.86,
+      "percent": 0.27902286435289
+    },
+    {
+      "name": "Ro",
+      "source": "http://127.0.0.1:51075/assets/vue-DxqjmqvJ.js",
+      "line": 1,
+      "column": 70187,
+      "sampledMs": 55.045,
+      "percent": 0.25657891026235935
+    },
+    {
+      "name": "ua",
+      "source": "http://127.0.0.1:51075/assets/vue-DxqjmqvJ.js",
+      "line": 1,
+      "column": 57410,
+      "sampledMs": 48.798,
+      "percent": 0.2274600356614154
+    },
+    {
+      "name": "O",
+      "source": "http://127.0.0.1:51075/assets/vue-DxqjmqvJ.js",
+      "line": 1,
+      "column": 49784,
+      "sampledMs": 45.277,
+      "percent": 0.21104774856842298
+    },
+    {
+      "name": "v",
+      "source": "http://127.0.0.1:51075/assets/vue-DxqjmqvJ.js",
+      "line": 1,
+      "column": 46198,
+      "sampledMs": 45.01,
+      "percent": 0.20980319285873
+    },
+    {
+      "name": "",
+      "source": "http://127.0.0.1:51075/assets/vue-DxqjmqvJ.js",
+      "line": 1,
+      "column": 48981,
+      "sampledMs": 39.973,
+      "percent": 0.18632443963879172
+    },
+    {
+      "name": "",
+      "source": "http://127.0.0.1:51075/assets/DirectModeler-DGMBPG7Z.js",
+      "line": 84,
+      "column": 85827,
+      "sampledMs": 39.955,
+      "percent": 0.1862405370066776
+    },
+    {
+      "name": "insert",
+      "source": "http://127.0.0.1:51075/assets/vue-DxqjmqvJ.js",
+      "line": 1,
+      "column": 63297,
+      "sampledMs": 35.26,
+      "percent": 0.1643559337969078
+    }
+  ]
+}

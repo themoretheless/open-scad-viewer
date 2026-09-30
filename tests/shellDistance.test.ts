@@ -36,3 +36,25 @@ it('recovers from rejected shell budgets in the worker',async()=>{
  await handler({version:1,id:2,job:{kind:'shellDistance',options:o}})
  expect(messages[1]).toMatchObject({id:2,ok:true,result:{converged:true,containment:'not-classified'}})
 })
+
+it('reserves work for every pair of rotated nested shells',()=>{
+ const base=JSON.parse(readFileSync(new URL('./fixtures/boundary-agreement.json',import.meta.url),'utf8')).cases.find((c:any)=>c.name==='normal').document.bodies[0].brep
+ const transform=(scale:number,offset:number)=>{
+  const m=structuredClone(base),c=Math.cos(.37),s=Math.sin(.37)
+  const point=(p:number[])=>{const x=p[0]*scale+offset,y=p[1]*scale+offset;return [c*x-s*y+13,s*x+c*y-7,p[2]*scale+offset+3]}
+  for(const v of m.vertices)v.point=point(v.point)
+  for(const e of m.edges)e.curve.controlPoints=e.curve.controlPoints.map(point)
+  for(const f of m.faces)f.surface.controlPoints=f.surface.controlPoints.map((row:number[][])=>row.map(point))
+  return m
+ }
+ const o:ShellDistanceOptions={a:transform(6,2),b:transform(10,0),toleranceMm:1e-4,toleranceUv:1e-7,maxCells:10000,maxDomainCells:100000},before=JSON.stringify(o),r=measureShellDistance(o)
+ expect(r.distanceIntervalMm[0]).toBeGreaterThan(0)
+ expect(r.distanceIntervalMm[0]).toBeLessThanOrEqual(2)
+ expect(r.distanceIntervalMm[1]).not.toBeNull()
+ expect(r.distanceIntervalMm[1]!).toBeGreaterThanOrEqual(2-1e-12)
+ expect(r.cells).toBeLessThanOrEqual(o.maxCells)
+ expect(r.domainCells).toBeLessThanOrEqual(o.maxDomainCells)
+ expect(r.containment).toBe('not-classified')
+ expect(mainSolidResult(mainSolidExpectation({kind:'shellDistance',options:o}),r)).toBe(true)
+ expect(JSON.stringify(o)).toBe(before)
+})

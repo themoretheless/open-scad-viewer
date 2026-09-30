@@ -1,0 +1,29 @@
+
+ RUN  v4.1.11 /Users/themoretheless/Documents/Sources/open-scad-viewer
+
+ ❯ |node| tests/solidNurbs.test.ts (45 tests | 1 failed | 44 skipped) 259ms
+   × keeps identical clamped corners under nonbinary uniform weight scaling 258ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |node| tests/solidNurbs.test.ts > keeps identical clamped corners under nonbinary uniform weight scaling
+NurbsCurveError: Coons corner 1 does not coincide; connect or reverse the boundary curves
+ ❯ decodeNurbsResult src/services/geometry/kernel.ts:126:118
+    124| export function decodeNurbsResult<T>(result:unknown):T{
+    125|  const envelope=result as {ok:boolean;value:T;error:{code:string;messa…
+    126|  if(!envelope.ok){const ErrorType=envelope.error.code.startsWith('NURB…
+       |                                                                                                                      ^
+    127|  return envelope.value
+    128| }
+ ❯ callGeometryRust src/services/geometry/kernel.ts:133:10
+ ❯ coonsNurbsPatch src/services/nurbsConstructors.ts:23:70
+ ❯ tests/solidNurbs.test.ts:571:14
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 44 skipped (45)
+   Start at  23:01:02
+   Duration  984ms (transform 540ms, setup 0ms, import 633ms, tests 259ms, environment 0ms)
+

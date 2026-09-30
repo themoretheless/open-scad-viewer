@@ -98,7 +98,7 @@ pub fn distance(
     let mut domain_cells = 0;
     let mut evaluated_pairs = 0;
     let mut reason = "pair-resolution-limit";
-    for pair in &queue {
+    for (pair_index, pair) in queue.iter().enumerate() {
         // Bounds for pruned and unvisited pairs still participate in the result.
         if pair.lower >= upper || upper - pair.lower <= tolerance_mm {
             lower = lower.min(pair.lower);
@@ -114,7 +114,10 @@ pub fn distance(
             continue;
         }
         let [i, j] = pair.faces;
-        let remaining = (max_cells - cells).min(100000);
+        // Reserve subdivision work for every remaining pair. Otherwise one
+        // near pair can consume the entire budget while overlapping AABBs of
+        // all later (actually separated) pairs retain a zero lower bound.
+        let remaining = ((max_cells - cells) / (queue.len() - pair_index)).max(1).min(100000);
         // Initial knot pairs must fit before entering the face solver.
         let spans = |s: &nurbs_core::surface::Surface| {
             let count = |knots: &[f64], degree: usize, n: usize| {

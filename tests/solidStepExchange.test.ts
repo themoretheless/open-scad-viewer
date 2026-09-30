@@ -5,10 +5,58 @@ import {emptyDirectDocument} from '../src/services/directModeling'
 import {prepareSolidStepImport, exportSolidStepOriginal, exportSolidStepCurrent} from '../src/services/solidStepExchange'
 import * as store from '../src/services/cadStepIndexedDb'
 import * as kernel from '../src/services/geometry/kernel'
+import {pushPullFace,solidTopology} from '../src/services/directSolidTools'
+import {createBrepBox,tessellateNurbsBrep} from '../src/services/geometry/brep'
+import {exportSolidStepAssembly} from '../src/services/solidStepAssembly'
 
 const source=readFileSync(new URL('./fixtures/step-v6/self-authored-ap242-assembly.step',import.meta.url),'utf8')
 beforeEach(()=>vi.stubGlobal('indexedDB',new IDBFactory()))
 afterEach(()=>{vi.restoreAllMocks();vi.unstubAllGlobals()})
+
+it('preserves standalone surface shells when editing another assembly component',async()=>{
+ const document=emptyDirectDocument()
+ for(let i=0;i<3;i++){
+  const brep=createBrepBox([i*10,0,0],[i*10+2,2,(i+1)*2])
+  document.bodies.push({id:'part-'+i,name:'Part '+i,brep,mesh:tessellateNurbsBrep(brep,2)})
+ }
+ const imported=await prepareSolidStepImport(await exportSolidStepAssembly(document),emptyDirectDocument())
+ const body=imported.document.bodies[0]!,brep=body.brep!
+ const surface=brep.bodies.pop()!;brep.topologyIds!.bodies.pop()
+ brep.shells[surface.outerShell].closed=false
+ body.mesh=tessellateNurbsBrep(brep,2)
+ const before=JSON.stringify(body)
+ const face=solidTopology(body.mesh).faces.findIndex(f=>f.normal[2]>.99&&Math.abs(f.center[2]-4)<1e-8)
+ expect(face).toBeGreaterThanOrEqual(0)
+ const result=pushPullFace(body,face,1)
+ expect(JSON.stringify(body)).toBe(before)
+ expect(result.brep!.bodies).toHaveLength(2)
+ expect(result.brep!.shells).toHaveLength(3)
+ for(const [i,vertex] of brep.vertices.entries())if(vertex.point[0]>=20){
+  const id=brep.topologyIds!.vertices[i],j=result.brep!.topologyIds!.vertices.indexOf(id)
+  expect(j).toBeGreaterThanOrEqual(0);expect(result.brep!.vertices[j]).toEqual(vertex)
+ }
+ expect(result.brep!.topologyIds!.shells).toContain(brep.topologyIds!.shells[surface.outerShell])
+ expect(result.brep!.shells.filter(s=>!s.closed)).toHaveLength(1)
+})
+
+it('edits one mixed-unit product component and retains the original STEP',async()=>{
+ const text=readFileSync(new URL('./fixtures/step-v6/self-authored-mixed-unit-product-assembly.step',import.meta.url),'utf8')
+ const imported=await prepareSolidStepImport(text,emptyDirectDocument())
+ const body=imported.document.bodies[0]!,before=JSON.stringify(body)
+ expect(body.brep!.bodies).toHaveLength(2)
+ const top=solidTopology(body.mesh).faces.findIndex(face=>face.normal[2]>.99&&Math.abs(face.center[2]-101.6)<1e-7)
+ expect(top).toBeGreaterThanOrEqual(0)
+ const edited=pushPullFace(body,top,1)
+ expect(JSON.stringify(body)).toBe(before)
+ expect(edited.id).toBe(body.id)
+ expect(edited.brep!.topologyIds!.bodies).toEqual(body.brep!.topologyIds!.bodies)
+ expect(Math.max(...edited.brep!.vertices.map(v=>v.point[2]))).toBeCloseTo(102.6,8)
+ expect(await exportSolidStepOriginal()).toBe(text)
+ const exported=await exportSolidStepCurrent(edited)
+ const back=await prepareSolidStepImport(exported,emptyDirectDocument())
+ expect(back.document.bodies[0]!.brep!.bodies).toHaveLength(2)
+ expect(Math.max(...back.document.bodies[0]!.brep!.vertices.map(v=>v.point[2]))).toBeCloseTo(102.6,8)
+})
 
 it('prepares independent editable bodies while retaining the exact original graph',async()=>{
  const before=emptyDirectDocument(), copy=structuredClone(before)

@@ -1,0 +1,81 @@
+
+> open-scad-viewer@0.1.0 test:cad-roadmap
+> vitest run tests/transparentBsp.test.ts tests/transparentTriangleSplit.test.ts tests/directModelerUi.test.ts tests/directModeling.test.ts tests/directHistory.test.ts tests/directDocumentAsync.test.ts tests/directDocumentNormalization.test.ts tests/directDimensions.test.ts tests/directAdvancedTools.test.ts tests/directProfileTools.test.ts tests/directExtrusion.test.ts tests/cadRoadmapAcceptance.test.ts tests/solidStepExchange.test.ts tests/solidNurbs.test.ts tests/nurbsCurve.test.ts tests/nurbsCurveDistance.test.ts tests/nurbsSurface.test.ts tests/nurbsSurfaceDistance.test.ts tests/faceDistance.test.ts tests/shellDistance.test.ts tests/solidBoundaryAgreement.test.ts tests/solidFaceContacts.test.ts tests/solidSelfIntersection.test.ts tests/solidDistance.test.ts tests/solidVolumeDistanceUi.test.ts tests/wasmBase91.test.ts tests/brepRuledLoft.test.ts tests/brepSteppedEnclosureExample.test.ts tests/meshInstances.test.ts tests/modelGraphAssembly.test.ts tests/svgDocumentAsync.test.ts tests/svgGeometry.test.ts tests/svgWorker.test.ts tests/commandSearch.test.ts tests/cadRoadmapHistory.test.ts tests/solidStepAssembly.test.ts tests/solidMaterial.test.ts tests/solidExactEdgeFeature.test.ts tests/solidBodyEdges.test.ts tests/solidPlaneSection.test.ts tests/solidMeasurements.test.ts tests/nativeCadClearance.test.ts tests/solidInstances.test.ts tests/solidDraftStore.test.ts tests/solidDraftHeadStore.test.ts tests/solidBlenderExchange.test.ts tests/solidGpuFallback.test.ts tests/solidDisplayCache.test.ts tests/solidPrimitive.test.ts tests/solidSurfaceDisplayQueue.test.ts tests/solidSnapPreparation.test.ts tests/solidSketchSnapPreparation.test.ts tests/solidSnapGeometry.test.ts tests/modelingSnaps.test.ts tests/solidDisplayQueue.test.ts tests/solidDisplayPreparation.test.ts tests/mainSolidWorkerRuntime.test.ts tests/mainSolidWorkerTransport.test.ts
+
+
+ RUN  v4.1.11 /Users/themoretheless/Documents/Sources/open-scad-viewer
+
+ ❯ |direct-ui| tests/directModelerUi.test.ts (228 tests | 5 failed) 34749ms
+   × previews Sweep, cancels and restores its native surface through undo/redo 132ms
+   × previews NURBS loft, cancels and restores its native surface through undo/redo 305ms
+   × previews and commits a four-boundary patch (rational=false) with undo and immutable inputs 36ms
+   × previews and commits a four-boundary patch (rational=true) with undo and immutable inputs 196ms
+   × previews a surface rebuild and preserves the original through cancel and undo 10ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 5 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |direct-ui| tests/directModelerUi.test.ts > previews Sweep, cancels and restores its native surface through undo/redo
+ FAIL  |direct-ui| tests/directModelerUi.test.ts > previews NURBS loft, cancels and restores its native surface through undo/redo
+AssertionError: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ tests/directModelerUi.test.ts:1029:79
+    1027|  const ui=await mount({},JSON.stringify(seed));await ui.click('Profile…
+    1028|  const before=ui.doc();await ui.click(command)
+    1029|  expect(ui.all().some(n=>n.tag==='polygon'&&n.props['fill-opacity']===…
+       |                                                                               ^
+    1030|  expect(ui.all().some(n=>String(n.props.class).includes('nurbs-card'))…
+    1031|  expect(ui.doc()).toEqual(before)
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/5]⎯
+
+ FAIL  |direct-ui| tests/directModelerUi.test.ts > previews and commits a four-boundary patch (rational=false) with undo and immutable inputs
+ FAIL  |direct-ui| tests/directModelerUi.test.ts > previews and commits a four-boundary patch (rational=true) with undo and immutable inputs
+AssertionError: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ tests/directModelerUi.test.ts:1092:135
+    1090|  const ui=await mount({},JSON.stringify({version:1,sketches:[],bodies:…
+    1091|  const before=ui.doc();await ui.click('Coons patch');expect(ui.doc()).…
+    1092|  expect(ui.text(ui.all()[0])).toContain('Bottom · vMin');expect(ui.all…
+       |                                                                                                                                       ^
+    1093|  await commandKey(ui,'Escape');expect(ui.doc()).toEqual(before)
+    1094|  await ui.click('Coons patch');await commandKey(ui,'Enter');expect(ui.…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/5]⎯
+
+ FAIL  |direct-ui| tests/directModelerUi.test.ts > previews a surface rebuild and preserves the original through cancel and undo
+AssertionError: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ tests/directModelerUi.test.ts:1148:79
+    1146|  const ui=await mount({},JSON.stringify({version:1,sketches:[],bodies:…
+    1147|  await ui.click('Surface rebuild input');const before=ui.doc();await u…
+    1148|  expect(ui.all().some(n=>n.tag==='polygon'&&n.props['fill-opacity']===…
+       |                                                                               ^
+    1149|  await commandKey(ui,'Escape');expect(ui.doc()).toEqual(before)
+    1150|  await ui.click('Rebuild surface');const direction=ui.all().find(n=>n.…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/5]⎯
+
+
+ Test Files  1 failed | 57 passed (58)
+      Tests  5 failed | 648 passed (653)
+   Start at  09:33:33
+   Duration  36.91s (transform 4.30s, setup 0ms, import 8.97s, tests 64.37s, environment 26ms)
+

@@ -1,0 +1,11 @@
+file:///Users/themoretheless/Documents/Sources/open-scad-viewer/scripts/verify-dist.mjs:144
+    throw new Error(`dist artifact ${file.path} is ${file.bytes} bytes; budget is ${limit}`)
+          ^
+
+Error: dist artifact assets/geometry-kernel-bytes-CZ3r5o1y.js is 3259083 bytes; budget is 3259000
+    at file:///Users/themoretheless/Documents/Sources/open-scad-viewer/scripts/verify-dist.mjs:144:11
+    at ModuleJob.run (node:internal/modules/esm/module_job:343:25)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:681:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:117:5)
+
+Node.js v22.23.3

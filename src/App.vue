@@ -448,6 +448,7 @@ function sceneMeshesToMeshDocument(): MeshWorkspaceDocument {
   return doc
 }
 
+const solidGpuActive=ref(false)
 const workspaceMode = computed<WorkspaceMode>(() => (meshModelerOpen.value ? 'mesh' : 'solid'))
 
 /** Source is no longer a workspace of its own; it opens as a drawer over either one. */
@@ -3224,10 +3225,10 @@ function sanitizeFileName(name: string) { return (name.replace(/[^\w.() -]+/g, '
     </main>
 
     <footer class="statusbar" :aria-label="lang === 'ru' ? 'Состояние' : 'Status'">
-      <span class="status-item"><i class="status-dot" :class="gpuOk ? 'ok' : 'off'" aria-hidden="true" />{{ currentBackendQuality.backend === 'webgpu-interactive' ? t('backendWebGpu') : t('backendHeadless') }}</span>
+      <span class="status-item"><i class="status-dot" :class="(directModelerOpen?solidGpuActive:gpuOk) ? 'ok' : 'off'" aria-hidden="true" />{{ directModelerOpen ? (solidGpuActive?t('backendWebGpu'):'CPU · SVG') : currentBackendQuality.backend === 'webgpu-interactive' ? t('backendWebGpu') : t('backendHeadless') }}</span>
       <span class="status-item kernel-badge">Manifold</span>
       <span v-if="currentBackendQuality.transparency === 'object-sorted-alpha'" class="status-item">{{ t('transparencySorted') }}</span>
-      <span class="status-item" role="status">{{ persistenceLabel }}</span>
+      <span v-if="!directModelerOpen && !meshModelerOpen" class="status-item" role="status">{{ persistenceLabel }}</span>
     </footer>
 
     <div v-if="exportDialogOpen" class="dialog-backdrop" @click.self="exportDialogOpen = false">
@@ -3266,6 +3267,7 @@ function sanitizeFileName(name: string) { return (name.replace(/[^\w.() -]+/g, '
       @execute="executeCommand"
     />
     <DirectModeler
+      @backend="solidGpuActive = $event"
       :open="directModelerOpen"
       :locale="lang"
       :can-append="!isModelGraphText(code)"

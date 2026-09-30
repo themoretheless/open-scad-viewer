@@ -61,11 +61,21 @@ it('owns regenerated analytic sketch samples independently of other parses', asy
   expect(parseDirectDocument(text)).toStrictEqual(expected)
 })
 
-it('keeps deeply nested serializer refusals rather than silently broadening admission', async () => {
+it('matches the runtime serializer admission for deeply nested metadata', async () => {
   const text = wrap('['.repeat(20_000) + '0' + ']'.repeat(20_000))
-  expect(() => legacy(text)).toThrow(RangeError)
-  expect(() => parseDirectDocument(text)).toThrow(RangeError)
-  await expect(parseDirectDocumentAsync(text)).rejects.toBeInstanceOf(RangeError)
+  let normalized: ReturnType<typeof legacy>
+  try { normalized = legacy(text) }
+  catch (error) {
+    expect(error).toBeInstanceOf(RangeError)
+    expect(() => parseDirectDocument(text)).toThrow(RangeError)
+    await expect(parseDirectDocumentAsync(text)).rejects.toBeInstanceOf(RangeError)
+    return
+  }
+  // V8 versions with an iterative serializer admit this tree. Compare its
+  // serialized form because recursive equality can overflow on the same input.
+  const expected = JSON.stringify(normalized)
+  expect(JSON.stringify(parseDirectDocument(text))).toBe(expected)
+  expect(JSON.stringify(await parseDirectDocumentAsync(text))).toBe(expected)
 })
 
 it('does not publish geometry made invalid by numeric overflow', async () => {

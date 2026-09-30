@@ -1,0 +1,1 @@
+{"schema":"cad-roadmap-step/1","units":"mm","toleranceMm":0.000001,"relativeVolumeTolerance":1e-8,"parts":[{"name":"Worker split","file":"browser-split.step","sha256":"bd1d4c16948ed0fc866c82f97744d99dd436d58a159198e81b45bbf08754d745","expected":{"volumeMm3":6000,"boundsMm":[[-10,-10,5],[10,10,20]]}}]}

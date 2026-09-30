@@ -1,0 +1,36 @@
+
+ RUN  v4.1.11 /Users/themoretheless/Documents/Sources/open-scad-viewer
+
+ ❯ |node| tests/transparentBsp.test.ts (8 tests | 1 failed | 7 skipped) 5ms
+   × preserves depth order of distinct near-coplanar layers 4ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |node| tests/transparentBsp.test.ts > preserves depth order of distinct near-coplanar layers
+AssertionError: expected [ 'high', 'low' ] to deeply equal [ 'low', 'high' ]
+
+- Expected
++ Received
+
+  [
+-   "low",
+    "high",
++   "low",
+  ]
+
+ ❯ tests/transparentBsp.test.ts:111:49
+    109|  for(const gap of [1e-8,1e-10,1e-12])for(const input of [[layer('low',…
+    110|   const tree=new TransparentBsp(input)
+    111|   expect(tree.ordered([0,0,1]).map(f=>f.owner)).toEqual(['low','high'])
+       |                                                 ^
+    112|   expect(tree.ordered([0,0,-1]).map(f=>f.owner)).toEqual(['high','low'…
+    113|  }
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 7 skipped (8)
+   Start at  08:56:02
+   Duration  113ms (transform 20ms, setup 0ms, import 25ms, tests 5ms, environment 0ms)
+
