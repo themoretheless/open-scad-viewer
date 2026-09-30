@@ -349,7 +349,7 @@ function setProfileTarget(id:string){
 const pointTrimPick=shallowRef<{point:[number,number];matrix:NurbsScreenProjection;radius:number}|null>(null)
 const activePlane=ref<SketchPlane>(xyPlane()),advancedOp=ref<'nurbs-offset'|'nurbs-point-trim'|'instance-transform'|'instance-create'|'instance-place'|'push'|'chamfer'|'edge-fillet'|'shell'|'split'|'offset'|'extend'|'curve'|'transform'|'loft'|'nurbs-loft'|'nurbs-sweep'|'nurbs-rebuild'|'nurbs-reduce'|'nurbs-surface-rebuild'|'nurbs-surface-reduce'|'nurbs-patch'|'nurbs-match'|'nurbs-prepare'|'nurbs-curve-match'|'profile-prepare'|'profile-union'|'profile-difference'|'profile-intersection'|null>(null)
 const loftPreviewId=ref(''),surfaceInputs=ref<string[]>([]),surfaceReversed=ref<boolean[]>([])
-const advanced=ref({offsetJoin:'smooth' as 'smooth'|'bevel',patchPrepare:false,patchError:1e-6,profileGap:.01,curveEndA:'end' as 'start'|'end',curveEndB:'start' as 'start'|'end',curveAngle:1e-6,prepareOpenPeriodic:false,matchOrder:1 as 1|2,matchBoundaryA:'uMax' as SurfaceJetBoundary,matchBoundaryB:'uMin' as SurfaceJetBoundary,matchScale:1,matchReverse:false,matchError:1e-6,sweepMode:'translation' as 'translation'|'framed',sweepSections:24,sweepDeviation:.01,sweepNormalX:0,sweepNormalY:0,sweepNormalZ:1,surfaceAxis:'u' as 'u'|'v',rebuildControls:6,reduceDegree:1,maxError:.01,distance:2,radius:2,endRadius:3,filletMode:'constant' as 'constant'|'variable'|'corner',axis:'z' as 'x'|'y'|'z',x:0,y:0,z:0,angle:0,scale:1,cx:0,cy:0,start:0,sweep:180,end:'end' as 'start'|'end'})
+const advanced=ref({offsetJoin:'smooth' as 'smooth'|'bevel'|'trim-nonzero'|'trim-evenodd',patchPrepare:false,patchError:1e-6,profileGap:.01,curveEndA:'end' as 'start'|'end',curveEndB:'start' as 'start'|'end',curveAngle:1e-6,prepareOpenPeriodic:false,matchOrder:1 as 1|2,matchBoundaryA:'uMax' as SurfaceJetBoundary,matchBoundaryB:'uMin' as SurfaceJetBoundary,matchScale:1,matchReverse:false,matchError:1e-6,sweepMode:'translation' as 'translation'|'framed',sweepSections:24,sweepDeviation:.01,sweepNormalX:0,sweepNormalY:0,sweepNormalZ:1,surfaceAxis:'u' as 'u'|'v',rebuildControls:6,reduceDegree:1,maxError:.01,distance:2,radius:2,endRadius:3,filletMode:'constant' as 'constant'|'variable'|'corner',axis:'z' as 'x'|'y'|'z',x:0,y:0,z:0,angle:0,scale:1,cx:0,cy:0,start:0,sweep:180,end:'end' as 'start'|'end'})
 const brepSegments=ref(4),filletSegments=ref(12)
 const revolveGeometry=ref<'faceted'|'exact'>('faceted')
 function selectIndexKey(e:KeyboardEvent,current:number,last:number,min=0){
@@ -1050,7 +1050,7 @@ function bodyCalculationFailure(error:unknown,hasRetryButton=true):string {
 function surfaceConstructionError(error:unknown):string {
  const message=error instanceof Error?error.message:String(error)
  if(advancedOp.value==='nurbs-offset'){
-  if(message.includes('explicit profile join'))return label('В кривой есть излом. Разделите её на гладкие участки; соединения углов ещё не поддерживаются.','The curve has a corner. Split it into smooth spans; corner joins are not yet supported.')
+  if(message.includes('explicit profile join'))return label('В кривой есть излом. Выберите Bevel или обрезку в поле «Соединения».','The curve has a corner. Choose Bevel or a trim mode under Joins.')
   if(message.includes('XY plane'))return label('Нужна кривая в плоскости XY с постоянной Z. Выберите плоскую кривую.','Select a curve in an XY plane with constant Z.')
   if(message.includes('budget')||message.includes('limit'))return label('Предел вычисления достигнут. Увеличьте допуск или разделите кривую.','Calculation limit reached. Increase tolerance or split the curve.')
  }
@@ -1100,9 +1100,9 @@ const bodyEditWorker=createSolidPreviewWorker()
 let bodyEditGeneration=0,bodyEditApplyGeneration:number|null=null
 const chainProject=(point:[number,number,number])=>project(point,'3d')
 const currentChain=shallowRef<{curves:import('../services/solidNurbs').SolidNurbsCurve[];diagnostics:import('../services/curveOffsetDiagnostics').CurveOffsetDiagnostics}|null>(null)
-const curveOffsetReport=shallowRef<import('../services/solidCurveOffset').CurveOffsetReport|null>(null)
+const curveOffsetState=shallowRef<Awaited<ReturnType<typeof import('../services/previewSolidCurveOffset').previewSolidCurveOffset>>|null>(null)
 const bodyEditPending=ref(false),bodyEditResult=shallowRef<DirectDocument|null>(null),bodyEditError=ref('')
-function cancelBodyEdit(){curveOffsetReport.value=null;bodyEditApplyGeneration=null;bodyEditGeneration++;bodyEditWorker.cancel();bodyEditPending.value=false;bodyEditResult.value=null;preparedProfileResult.value=null;nurbsRefitResult.value=null;surfaceBuildResult.value=null;curveMatchResult.value=null;surfaceMatchResult.value=null;seamPrepareResult.value=null;bodyEditError.value=''}
+function cancelBodyEdit(){curveOffsetState.value=null;bodyEditApplyGeneration=null;bodyEditGeneration++;bodyEditWorker.cancel();bodyEditPending.value=false;bodyEditResult.value=null;preparedProfileResult.value=null;nurbsRefitResult.value=null;surfaceBuildResult.value=null;curveMatchResult.value=null;surfaceMatchResult.value=null;seamPrepareResult.value=null;bodyEditError.value=''}
 onUnmounted(()=>{cancelBodyEdit();bodyEditWorker.dispose()})
 watch(()=>[props.open,bodyEditRevision.value,advancedOp.value,document.value,selection.value,faceIndex.value,edgeIndex.value,JSON.stringify(edgeIndexes.value),JSON.stringify(openingFaces.value),JSON.stringify(surfaceInputs.value),JSON.stringify(selectedIds.value),JSON.stringify(surfaceReversed.value),loftPreviewId.value,activeGroup.value,JSON.stringify(advanced.value),JSON.stringify(pointTrimPick.value),filletSegments.value,JSON.stringify(invalidQuantities.value)],()=>{
  cancelBodyEdit()
@@ -1119,8 +1119,8 @@ watch(()=>[props.open,bodyEditRevision.value,advancedOp.value,document.value,sel
    // postMessage snapshots this shallow-ref document; avoid a JSON roundtrip on the UI thread.
    const source=document.value
    if(operation==='nurbs-offset'){
-    const result=await bodyEditWorker.run({kind:'curveOffset',document:source,options:{id:options.id,createdId:loftPreviewId.value,join:options.offsetJoin==='bevel'?'bevel':undefined,distance:options.distance,toleranceMm:options.maxError,maxCells:4096,maxPairs:1000000}})
-    if(generation===bodyEditGeneration){bodyEditResult.value=result.document;curveOffsetReport.value=result.report}
+    const result=await (await import('../services/previewSolidCurveOffset')).previewSolidCurveOffset(bodyEditWorker,source,{...options,createdId:loftPreviewId.value})
+    if(generation===bodyEditGeneration){bodyEditResult.value=result.document;curveOffsetState.value=result}
     return
    }
    if(operation==='nurbs-point-trim'){
@@ -3538,7 +3538,7 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
                 <circle v-if="pointTrimCut" data-diagnostic="point-trim-cut" :cx="project(pointTrimCut,'3d')[0]" :cy="project(pointTrimCut,'3d')[1]" :r="views['3d']/100" fill="#77eac5" />
               </g>
               <CurveOffsetPreview v-if="pane==='3d' && currentChain" v-bind="currentChain" :project="chainProject" />
-              <CurveOffsetPreview v-if="pane==='3d' && advancedOp==='nurbs-offset'" :curves="advancedPreview.document?.curves??[]" :id="loftPreviewId" :report="curveOffsetReport" :project="chainProject" :sample="curvePoints" />
+              <CurveOffsetPreview v-if="pane==='3d' && advancedOp==='nurbs-offset'" :curves="advancedPreview.document?.curves??[]" :id="loftPreviewId" :report="curveOffsetState?.report" :project="chainProject" :sample="curvePoints" />
               <polyline v-if="pane==='3d' && advancedOp==='nurbs-curve-match' && advancedPreview.document" data-preview="curve-match" :points="curvePoints(advancedPreview.document.curves!.find(c=>c.id===surfaceInputs[1])!.curve).map(p=>project([p[0],p[1],p[2]??0],'3d').join(',')).join(' ')" fill="none" stroke="#77eac5" stroke-width="3" vector-effect="non-scaling-stroke" pointer-events="none" />
               <polyline v-if="pane==='3d' && (advancedOp==='nurbs-rebuild'||advancedOp==='nurbs-reduce') && advancedPreview.document" data-preview="curve-reduction" :points="curvePoints(advancedPreview.document.curves!.find(c=>c.id===selection)!.curve).map(p=>project(p,'3d').join(',')).join(' ')" fill="none" stroke="#77eac5" stroke-width="3" vector-effect="non-scaling-stroke" pointer-events="none" />
               <g v-if="pane==='3d' && surfaceDistance?.value" pointer-events="none" data-measurement="surface-distance">
@@ -3599,7 +3599,7 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
                 <small>{{ label('Кривые и отверстия сохраняются. ID — первого профиля. Размеры удаляются; Undo возвращает входы.','Curves, holes and the first profile identity are retained. Dimensions are removed; Undo restores the inputs.') }}</small>
                 <small>{{ label('Прямые и круговые дуги; неоднозначные пересечения отклоняются.','Lines and circular arcs; ambiguous intersections are refused.') }}</small>
               </template>
-              <CurveOffsetControls v-if="advancedOp==='nurbs-offset'" v-model:join="advanced.offsetJoin" v-model:distance="advanced.distance" v-model:tolerance="advanced.maxError" :locale="locale" :report="curveOffsetReport" :on-distance-validity="valid=>quantityValidity('distance',valid)" :on-tolerance-validity="valid=>quantityValidity('maxError',valid)" />
+              <CurveOffsetControls v-if="advancedOp==='nurbs-offset'" v-model:join="advanced.offsetJoin" v-model:distance="advanced.distance" v-model:tolerance="advanced.maxError" :locale="locale" :state="curveOffsetState" :on-distance-validity="valid=>quantityValidity('distance',valid)" :on-tolerance-validity="valid=>quantityValidity('maxError',valid)" />
               <template v-if="advancedOp==='profile-prepare'">
                 <small>{{ label('Первый выбранный профиль сохраняет ID и свойства. Дуги сохраняют кривизну. Остальные входят в его контур. Размеры удаляются; Undo восстанавливает входы.','The first selected profile keeps its identity and properties. Arcs retain their curvature. The others merge into its contour. Dimensions are removed; Undo restores the inputs.') }}</small>
                 <label class="preparation-tolerance">{{ label('Допуск разрыва, мм','Gap tolerance, mm') }}<CadQuantityInput v-model="advanced.profileGap" :locale="locale" :min="0" :max="1000000" style="width:110px" :aria-label="label('Допуск разрыва, мм','Gap tolerance, mm')" @validity="quantityValidity('profileGap',$event)" /></label>

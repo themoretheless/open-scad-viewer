@@ -1,3 +1,4 @@
+import {validCurveOffsetRegion} from './curveOffsetRegion'
 import {validCurveOffsetConstruction} from './curveOffsetConstruction'
 import {extrudeSketchProfile} from './directExtrusion'
 import {withRetainedProfile} from './retainedSketchProfile'
@@ -171,7 +172,7 @@ function* directDocumentValidation(text: string, instanceCache?:SolidInstanceBat
     d.bodies=resolveSolidInstances(d,instanceCache).bodies
     if(d.bodies.some(body=>body.instance&&!body.mesh.positions.every(finite)))throw Error('Instance placement exceeds document coordinate bounds.')
   }
-  for (const item of d.curves) { validateNurbsCurve(item.curve); if(item.offsetConstruction!==undefined&&!validCurveOffsetConstruction(item.offsetConstruction))throw Error('Invalid offset construction evidence.'); yield }
+  for (const item of d.curves) { validateNurbsCurve(item.curve); if(item.offsetRegion!==undefined&&!validCurveOffsetRegion(item.offsetRegion))throw Error('Invalid offset loop membership.'); if(item.offsetConstruction!==undefined&&!validCurveOffsetConstruction(item.offsetConstruction))throw Error('Invalid offset construction evidence.'); yield }
   for (const item of d.surfaces) {
     if (!Number.isInteger(item.segmentsU) || item.segmentsU < 2 || item.segmentsU > 64 ||
         !Number.isInteger(item.segmentsV) || item.segmentsV < 2 || item.segmentsV > 64) throw new Error('Invalid NURBS display tessellation.')

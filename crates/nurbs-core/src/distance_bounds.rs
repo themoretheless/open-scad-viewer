@@ -46,6 +46,10 @@ impl Interval {
         numeric(b.lo > 0., "Distance denominator is not separated from zero")?;
         self.mul(Self::new((1. / b.hi).next_down(), (1. / b.lo).next_up())?)
     }
+    pub(crate) fn div_signed(self, b: Self) -> Result<Self> {
+        if b.hi < 0. { Self::new(-self.hi, -self.lo)?.div(Self::new(-b.hi, -b.lo)?) }
+        else { self.div(b) }
+    }
     pub(crate) fn intersect(self, lo: f64, hi: f64) -> Result<Self> {
         Self::new(self.lo.max(lo), self.hi.min(hi))
     }

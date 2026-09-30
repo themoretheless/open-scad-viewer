@@ -195,3 +195,23 @@ it('reinspects edited current chords through the real worker without constructio
  expect(await client.run({kind:'curveChainInspection',document:corrected,ids:['chain'],maxPairs:100})).toMatchObject({complete:true,simple:true,crossings:[]})
  expect(await client.run({kind:'curveChainInspection',document,ids:['chain'],maxPairs:1})).toMatchObject({complete:false,checks:1})
 })
+
+it('constructs trimmed offset loops through real WASM and refuses incomplete arrangements',async()=>{
+ const client=new MainSolidWorkerClient(realWorker);clients.push(client)
+ const document={version:1 as const,bodies:[],sketches:[],curves:[{id:'square',name:'Square',curve:{degree:1,knots:[0,0,1,2,3,4,4],weights:[1,1,1,1,1],controlPoints:[[0,0,7],[4,0,7],[4,4,7],[0,4,7],[0,0,7]]}}]}
+ const options={id:'square',createdId:'trimmed',distance:-.5,toleranceMm:1e-4,maxCells:1024,maxPairs:10000,maxWitnessChecks:100000,intersectionToleranceMm:1e-6,fillRule:'nonzero' as const}
+ const before=structuredClone(document)
+ const result=await client.run({kind:'trimmedCurveOffset',document,options})
+ expect(document).toEqual(before);expect(result.document.curves![0]).toEqual(before.curves[0])
+ expect(result.loopIds).toEqual([['trimmed:0:0']])
+ const points=result.document.curves![1]!.curve.controlPoints
+ expect(points[0]).toEqual(points.at(-1));expect(points.every(p=>p[2]===7)).toBe(true)
+ expect(result.report).toMatchObject({regionTrimmed:true,originalOffsetTopologyCertified:false,topologyScope:'represented-reconstructed-chord-graph'})
+ const crossed=structuredClone(document);crossed.curves[0]!.curve.controlPoints=[[0,0,7],[4,4,7],[0,4,7],[4,0,7],[0,0,7]]
+ const pieces=await client.run({kind:'trimmedCurveOffset',document:crossed,options:{...options,distance:.1}})
+ expect(pieces.loopIds.length).toBeGreaterThanOrEqual(2)
+ for(const ids of pieces.loopIds){const curves=ids.map(id=>pieces.document.curves!.find(c=>c.id===id)!);expect(curves[0]!.curve.controlPoints[0]).toEqual(curves.at(-1)!.curve.controlPoints.at(-1));expect(curves.every(c=>c.offsetRegion?.scope==='at-construction')).toBe(true)}
+
+ await expect(client.run({kind:'trimmedCurveOffset',document,options:{...options,maxPairs:1}})).rejects.toThrow()
+ expect(document).toEqual(before)
+})

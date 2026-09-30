@@ -66,7 +66,7 @@ fn miter_enclosed(
         denominator.lo > 0. || denominator.hi < 0.,
         "Miter tangent lines are parallel or unresolved; use bevel",
     )?;
-    let t = cross(delta, v)?.div(denominator)?;
+    let t = cross(delta, v)?.div_signed(denominator)?;
     let enclosure = [a[0].add(u[0].mul(t)?)?, a[1].add(u[1].mul(t)?)?];
     for origin in [a, b] {
         numeric(

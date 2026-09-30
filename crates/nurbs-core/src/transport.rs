@@ -21,6 +21,26 @@ pub fn dispatch(v: Value) -> Result<Value> {
     if op == "curve_chain_diagnostics" {
         return Ok(crate::curve_offset_diagnostics::inspect_curves(&field::<Vec<curve::Curve>>(&v,"curves")?, optional_field::<usize>(&v,"maxPairs")?.unwrap_or(1_000_000))?.to_value());
     }
+    if op == "curve_offset_trimmed_bevel" {
+        let wire=curve_offset_wire::bevel_wire(&field(&v,"curve")?,field(&v,"distance")?,field(&v,"toleranceMm")?,field(&v,"maxCells")?)?;
+        crate::check(wire.closed, "Trimmed offset requires a closed source.")?;
+        let rule=match field::<String>(&v,"fillRule")?.as_str() {
+            "nonzero" => crate::chord_winding::FillRule::NonZero,
+            "evenodd" => crate::chord_winding::FillRule::EvenOdd,
+            _ => { crate::check(false,"Choose nonzero or evenodd fill.")?; unreachable!() }
+        };
+        let graph=crate::chord_arrangement::split(&wire.edges,true,field(&v,"intersectionToleranceMm")?,optional_field::<usize>(&v,"maxPairs")?.unwrap_or(1_000_000))?;
+        let loops=crate::chord_fill_selection::boundary_curves(&graph,rule,optional_field::<usize>(&v,"maxWitnessChecks")?.unwrap_or(1_000_000))?;
+        let intersection_error=graph.vertices.iter().map(|p|p.error_upper_mm).fold(0.,f64::max);
+        return Ok(json!({"loops":encode(loops)?,"report":{
+            "accepted":true,"method":"represented-bevel-offset-fill/1",
+            "fillRule":v["fillRule"].clone(),"regionTrimmed":true,
+            "topologyScope":"represented-reconstructed-chord-graph",
+            "regionTopologyCertified":false,"originalOffsetTopologyCertified":false,
+            "sourceWireErrorUpperMm":wire.error_upper_mm,
+            "intersectionConstructionErrorUpperMm":intersection_error
+        }}));
+    }
     if op == "curve_offset_bevel_wire" {
         let result=curve_offset_wire::bevel_wire(&field(&v,"curve")?,field(&v,"distance")?,field(&v,"toleranceMm")?,field(&v,"maxCells")?)?;
         let diagnostics=crate::curve_offset_diagnostics::inspect_chain(&result.edges,result.closed,optional_field::<usize>(&v,"maxPairs")?.unwrap_or(1_000_000))?.to_value();

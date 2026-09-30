@@ -20,3 +20,18 @@ it('rejects malformed or falsely certified evidence',()=>{
  expect(validCurveOffsetConstruction(evidence)).toBe(true)
  for(const change of [{scope:'current-geometry'},{regionTopologyCertified:true},{errorUpperMm:.02},{crossings:7},{complete:true,uncertain:1},{sourceId:''},{distanceMm:Infinity}])expect(validCurveOffsetConstruction({...evidence,...change})).toBe(false)
 })
+it('preserves offset loop ownership and rejects impossible chunk membership',async()=>{
+ await warmGeometryKernel()
+ const offsetRegion={version:1 as const,scope:'at-construction' as const,sourceId:'source',loopId:'loop',part:0,parts:1,fillRule:'nonzero' as const,originalOffsetTopologyCertified:false as const}
+ const document={version:1 as const,bodies:[],sketches:[],curves:[{id:'offset-part',name:'Part',curve:{degree:1,knots:[0,0,1,1],weights:[1,1],controlPoints:[[0,2],[10,2]]},offsetRegion}]}
+ expect(parseDirectDocument(serializeDirectDocument(document)).curves![0]!.offsetRegion).toEqual(offsetRegion)
+ const history=new DirectHistory(document),edited=structuredClone(document)
+ edited.curves[0]!.curve.controlPoints[1]![0]=12
+ history.commit(edited);history.undo()
+ expect(history.document.curves![0]!.offsetRegion).toEqual(offsetRegion)
+ history.redo();expect(history.document.curves![0]!.offsetRegion?.scope).toBe('at-construction')
+ expect(history.document.curves![0]!.curve.controlPoints[1]![0]).toBe(12)
+
+ const broken=structuredClone(document);broken.curves[0]!.offsetRegion.part=1
+ expect(()=>parseDirectDocument(serializeDirectDocument(broken))).toThrow('Invalid offset loop membership')
+})

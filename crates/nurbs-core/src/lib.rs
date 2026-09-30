@@ -25,6 +25,12 @@ pub mod curve_offset;
 pub mod curve_offset_join;
 pub mod curve_offset_wire;
 mod curve_offset_diagnostics;
+pub mod chord_intersection;
+pub mod chord_arrangement;
+pub mod chord_faces;
+pub mod chord_embedding;
+pub mod chord_winding;
+pub mod chord_witness;
 pub mod surface_distance;
 pub mod surface_injectivity;
 pub mod surface_contact;
@@ -68,3 +74,5 @@ pub use transport::{dispatch, execute};
 
 #[cfg(all(test, feature = "transport"))]
 mod tests;
+
+pub mod chord_fill_selection;

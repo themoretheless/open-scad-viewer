@@ -4,7 +4,7 @@ import {readFile,mkdir,writeFile} from 'node:fs/promises'
 import path from 'node:path'
 import {loadQualificationPlaywrightPackage} from './qualificationPlaywrightPackage.mjs'
 const root=path.resolve('dist'),directory=path.resolve(process.argv[2]??'/tmp/solid-nurbs-offset')
-const keyboard=process.argv.includes('--keyboard'),theme=process.argv.find(a=>a.startsWith('--theme='))?.slice(8)??'system'
+const evenOdd=process.argv.includes('--even-odd'),keyboard=process.argv.includes('--keyboard'),theme=process.argv.find(a=>a.startsWith('--theme='))?.slice(8)??'system'
 assert.ok(['system','dark','light','nord','solarized'].includes(theme))
 await mkdir(directory,{recursive:true})
 const server=createServer(async(req,res)=>{
@@ -36,7 +36,7 @@ try {
   window.__offsetHold=false;window.__offsetHeld=[];window.__offsetTerminated=0;window.__offsetReleased=0
   window.Worker=class extends NativeWorker {
    set onmessage(handler){this.__handler=handler;super.onmessage=handler?event=>{
-    if(window.__offsetHold&&['curveOffset','curveChainInspection'].includes(event.data?.kind)&&event.data.ok===true){
+    if(window.__offsetHold&&['curveOffset','trimmedCurveOffset','curveChainInspection'].includes(event.data?.kind)&&event.data.ok===true){
      this.__held=true;window.__offsetHeld.push(()=>{window.__offsetReleased++;handler(event)});return
     }
     handler(event)
@@ -49,10 +49,11 @@ try {
  const solid=page.getByRole('region',{name:'Solid — CAD-лепка',exact:true}),menu=solid.locator('summary[title="Файл"]')
  await solid.waitFor()
  async function ready(){await solid.getByRole('status',{name:'history-restore',exact:true}).waitFor({state:'hidden'});await solid.getByRole('status',{name:'curve-display',exact:true}).waitFor({state:'hidden'})}
- const crossing=process.argv.includes('--crossing'),bevel=process.argv.includes('--bevel')
+ const crossing=process.argv.includes('--crossing'),trimmed=process.argv.includes('--trimmed'),bevel=process.argv.includes('--bevel')||trimmed
  const fixture={version:1,sketches:[],bodies:[],curves:[{id:'source',name:'Offset source',curve:{degree:2,knots:[0,0,0,1,1,1],controlPoints:[[0,0,7],[10,10,7],[20,0,7]],weights:[1,.8,1]}}]}
  if(crossing)fixture.curves[0].curve={degree:3,knots:[0,0,0,0,1,1,1,1],controlPoints:[[0,0,7],[10,20,7],[-10,20,7],[1,0,7]],weights:[1,1,1,1]}
  if(bevel)fixture.curves[0].curve={degree:1,knots:[0,1,2,3,4,5,6],controlPoints:[[0,0,7],[10,0,7],[10,10,7],[0,10,7],[0,0,7]],weights:[1,1,1,1,1],periodic:true}
+ if(trimmed&&crossing)fixture.curves[0].curve={degree:1,knots:[0,0,1,2,3,4,4],controlPoints:[[0,0,7],[4,4,7],[0,4,7],[4,0,7],[0,0,7]],weights:[1,1,1,1,1]}
  await ready();await menu.click()
  await solid.locator('input[accept=".json,application/json"]').setInputFiles({name:'offset.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(fixture))})
  await solid.getByRole('button',{name:'Offset source',exact:true}).waitFor();await menu.click();await ready()
@@ -74,7 +75,20 @@ try {
 
  const sequence=process.argv.includes('--sequence20')
  let before=await exportDoc('before.json')
- async function command(wait=true){await solid.getByRole('button',{name:'Offset source',exact:true}).click();await solid.getByRole('button',{name:'Команда… Ctrl K',exact:true}).click();const search=page.getByRole('combobox',{name:'Search commands / Поиск команд'});await search.fill('Offset NURBS curve');await search.press('Enter');if(bevel)await solid.getByLabel('Соединения',{exact:true}).selectOption('bevel');if(crossing)await solid.getByLabel('Смещение, мм',{exact:true}).fill('0.1 mm');if(!wait)return;await solid.getByTestId('curve-offset-report').waitFor();await solid.getByTestId('curve-offset-diagnostics').waitFor();assert.equal(await solid.getByRole('button',{name:'Готово · Enter',exact:true}).isEnabled(),true);await solid.getByLabel('Смещение, мм',{exact:true}).focus()}
+ async function command(wait=true){
+  const sourceButton=solid.getByRole('button',{name:'Offset source',exact:true})
+  if(keyboard){await sourceButton.focus();await sourceButton.press('Enter');await page.keyboard.press('Control+k')}
+  else {await sourceButton.click();await solid.getByRole('button',{name:'Команда… Ctrl K',exact:true}).click()}
+  const search=page.getByRole('combobox',{name:'Search commands / Поиск команд'});await search.fill('Offset NURBS curve');await search.press('Enter')
+  if(bevel){const joins=solid.getByLabel('Соединения',{exact:true});if(keyboard&&trimmed&&evenOdd){await joins.focus();await joins.press('End');assert.equal(await joins.inputValue(),'trim-evenodd')}else await joins.selectOption(trimmed?(evenOdd?'trim-evenodd':'trim-nonzero'):'bevel')}
+  const distance=solid.getByLabel('Смещение, мм',{exact:true})
+  if(trimmed||crossing){const text=crossing?'0.1 mm':'-2 mm';if(keyboard){await distance.focus();await distance.press('ControlOrMeta+a');await page.keyboard.insertText(text)}else await distance.fill(text)}
+  if(!wait)return
+  await solid.getByTestId(trimmed?'trimmed-offset-report':'curve-offset-report').waitFor()
+  if(!trimmed)await solid.getByTestId('curve-offset-diagnostics').waitFor()
+  assert.equal(await solid.getByRole('button',{name:'Готово · Enter',exact:true}).isEnabled(),true);await distance.focus()
+ }
+
  await page.evaluate(()=>window.__offsetHold=true)
  await command(false);await page.waitForFunction(()=>window.__offsetHeld.length===1)
  assert.equal(await solid.getByRole('button',{name:'Готово · Enter',exact:true}).isDisabled(),true)
@@ -93,7 +107,7 @@ try {
  assert.equal(delayed.terminated,2);assert.equal(delayed.released,2)
  await menu.click();await solid.locator('input[accept=".json,application/json"]').setInputFiles({name:'offset.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(fixture))});await menu.click();await ready()
  before=await exportDoc('reimported-before.json')
- await command();assert.ok(await solid.locator('[data-preview="curve-offset"]').count());if(crossing||bevel)assert.ok(await solid.locator('[data-diagnostic="curve-offset-error"]').count());await page.screenshot({path:path.join(directory,'preview.png')});await page.keyboard.press('Escape');assert.deepEqual(await exportDoc('cancel.json'),before)
+ await command();assert.ok(await solid.locator('[data-preview="curve-offset"]').count());if(!trimmed&&(crossing||bevel))assert.ok(await solid.locator('[data-diagnostic="curve-offset-error"]').count());await page.screenshot({path:path.join(directory,'preview.png')});await page.keyboard.press('Escape');assert.deepEqual(await exportDoc('cancel.json'),before)
  await command();await page.keyboard.press('Enter');const applied=await exportDoc('applied.json');assert.ok(applied.curves.length>before.curves.length);assert.deepEqual(applied.curves[0],before.curves[0])
  await solid.getByRole('button',{name:'↶',exact:true}).click();assert.deepEqual(await exportDoc('undo.json'),before)
  await solid.getByRole('button',{name:'↷',exact:true}).click();assert.deepEqual(await exportDoc('redo.json'),applied)
@@ -115,5 +129,14 @@ try {
   for(let i=1;i<=20;i++){await solid.getByRole('button',{name:'↷',exact:true}).click();assert.deepEqual(await exportDoc(`sequence-redo-${i}.json`),snapshots[i])}
   await page.reload();await ready();assert.deepEqual(await exportDoc('sequence-reload.json'),snapshots.at(-1))
  }
- assert.deepEqual(errors,[]);await writeFile(path.join(directory,'contract.json'),JSON.stringify({bevel,crossing,sequenceCount,sequenceExportEvidence:'JSON Blob from real export button; no repeated browser downloads',cancel:true,apply:true,undo:true,redo:true,reload:true,lateCancel:true,lateDocumentSwitch:true,delayed,errors},null,2));console.log('Offset browser lifecycle passed')
+ if(process.argv.includes('--error-feedback')){
+  const snapshot=await exportDoc('before-error.json');await command()
+  const joins=solid.getByLabel('Соединения',{exact:true});await joins.focus();await joins.press('Home')
+  await solid.getByText('В кривой есть излом. Выберите Bevel или обрезку в поле «Соединения».',{exact:true}).waitFor()
+  assert.equal(await solid.getByRole('button',{name:'Готово · Enter',exact:true}).isDisabled(),true)
+  await joins.press('End');await solid.getByTestId('trimmed-offset-report').waitFor()
+  assert.equal(await solid.getByRole('button',{name:'Готово · Enter',exact:true}).isEnabled(),true)
+  await page.keyboard.press('Escape');assert.deepEqual(await exportDoc('after-error-recovery.json'),snapshot)
+ }
+ assert.deepEqual(errors,[]);await writeFile(path.join(directory,'contract.json'),JSON.stringify({keyboard,evenOdd,trimmed,bevel,crossing,sequenceCount,sequenceExportEvidence:'JSON Blob from real export button; no repeated browser downloads',cancel:true,apply:true,undo:true,redo:true,reload:true,lateCancel:true,lateDocumentSwitch:true,delayed,errors},null,2));console.log('Offset browser lifecycle passed')
 }catch(error){if(page){await page.screenshot({path:path.join(directory,'failure.png')}).catch(()=>{});await writeFile(path.join(directory,'failure.txt'),await page.locator('body').innerText().catch(()=>''));await writeFile(path.join(directory,'console.json'),JSON.stringify(consoleMessages,null,2))}throw error}finally{await browser?.close();await new Promise(resolve=>server.close(resolve))}
