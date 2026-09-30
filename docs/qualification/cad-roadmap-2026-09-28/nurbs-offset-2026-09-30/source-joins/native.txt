@@ -57,4 +57,3 @@ test curve_offset_join::tests::rational_curved_sides_use_one_sided_source_jets .
 test curve_offset_join::tests::source_knot_preserves_original_and_bounds_weighted_corner ... ok
 
 test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 171 filtered out; finished in 0.00s
-

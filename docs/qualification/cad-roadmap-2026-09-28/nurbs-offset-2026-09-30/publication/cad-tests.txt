@@ -35,4 +35,3 @@ Error: ENOENT: no such file or directory, open '/private/tmp/open-scad-viewer-ca
       Tests  1 failed | 731 passed (732)
    Start at  02:11:48
    Duration  83.28s (transform 16.93s, setup 0ms, import 27.66s, tests 166.96s, environment 39ms)
-
