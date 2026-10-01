@@ -1447,7 +1447,7 @@ function moveAt(e: PointerEvent) {
 
 function sync(next:DirectDocument=history.document) { snapDocument.value=next; document.value=next; const ids=new Set(documentObjects(document.value).map(o=>o.id));if(selection.value&&!ids.has(selection.value))selection.value='';extraSelection.value=extraSelection.value.filter(id=>ids.has(id)); if (gpuActive.value) settleAfterDrag(); const s=document.value.sketches.find(s=>s.id===selection.value);if(s&&!samePlane(s.plane,activePlane.value)){activePlane.value=s.plane??xyPlane();workplaneOutline.value=[]} undoable.value = history.canUndo; redoable.value = history.canRedo; persist() }
 function prepareCommit(next: DirectDocument, origin:'edit'|'file'='edit') {
-  const previous=origin==='file'&&!lockedIds.value.length?undefined:history.document
+  const previous=origin==='file'&&!lockedIds.value.length?undefined:snapDocument.value
   const existing=new Set(previous?documentObjects(previous).map(b=>b.id):history.objectIds)
   const sourceChanges=new Map<string,boolean>()
   // Imported caches are checked and rebuilt by the authoritative history parser.

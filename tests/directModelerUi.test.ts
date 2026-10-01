@@ -2134,6 +2134,24 @@ it('waits for the released translation, discards a canceled result and commits t
  await ui.click('↶');expect(ui.doc()).toEqual(before)
 })
 
+it('checks commit policies against the committed snapshot without another history clone',async()=>{
+ const {DirectHistory}=await import('../src/services/directModeling')
+ const {applySolidSceneEdit}=await import('../src/services/solidSceneEdit')
+ let request!:{job:any;resolve:(value:any)=>void}
+ previewWorkerRun.mockImplementation(job=>job.kind==='sceneEdit'?new Promise(resolve=>{request={job,resolve}}):undefined)
+ const ui=await mount();await ui.click('Cube');const before=ui.doc();await ui.click('Properties')
+ ui.all().find(n=>n.tag==='input'&&n.props['aria-label']==='ΔX')!.props['onUpdate:modelValue']('5 mm')
+ await flushClearance();await ui.click('Apply')
+ const result=applySolidSceneEdit(request.job.document,request.job.options)
+ const read=vi.spyOn(DirectHistory.prototype,'document','get')
+ try{
+  request.resolve(result);await flushClearance()
+  expect(read).toHaveBeenCalledTimes(1)
+  expect(ui.doc().bodies[0].mesh.positions).not.toEqual(before.bodies[0].mesh.positions)
+ }finally{read.mockRestore()}
+ await ui.click('↶');expect(ui.doc()).toEqual(before)
+})
+
 it('accepts units in numeric transforms and cancels pending work on malformed input',async()=>{
  const {applySolidSceneEdit}=await import('../src/services/solidSceneEdit')
  const requests:Array<{job:any;resolve:(value:any)=>void}>=[]
