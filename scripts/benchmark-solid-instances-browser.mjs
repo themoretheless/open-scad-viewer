@@ -79,8 +79,8 @@ try{
   const poll=()=>{if(!memoryPending)memoryPending=sample().catch(e=>memoryErrors.push(String(e))).finally(()=>{memoryPending=null})}
   poll();memoryTimer=setInterval(poll,memoryIntervalMs)
  }
- const profileAction=process.argv.includes('--profile-source-edit')?'source-edit':process.argv.includes('--profile-import')?'import':'redo'
- const profiling=process.argv.includes('--profile-source-edit')||process.argv.includes('--profile')||process.argv.includes('--profile-import')||process.argv.includes('--profile-orbit')
+ const profileAction=process.argv.includes('--profile-detached-source-edit')?'detached-source-edit':process.argv.includes('--profile-source-edit')?'source-edit':process.argv.includes('--profile-import')?'import':'redo'
+ const profiling=process.argv.includes('--profile-detached-source-edit')||process.argv.includes('--profile-source-edit')||process.argv.includes('--profile')||process.argv.includes('--profile-import')||process.argv.includes('--profile-orbit')
  let profileCaptured=false
  if(profiling)await cdp.send('Profiler.enable')
  async function measure(action,run){
