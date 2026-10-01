@@ -2134,6 +2134,24 @@ it('waits for the released translation, discards a canceled result and commits t
  await ui.click('↶');expect(ui.doc()).toEqual(before)
 })
 
+it('accepts units in numeric transforms and cancels pending work on malformed input',async()=>{
+ const {applySolidSceneEdit}=await import('../src/services/solidSceneEdit')
+ const requests:Array<{job:any;resolve:(value:any)=>void}>=[]
+ previewWorkerRun.mockImplementation(job=>job.kind==='sceneEdit'?new Promise(resolve=>requests.push({job,resolve})):undefined)
+ const ui=await mount();await ui.click('Profile');const before=ui.doc();await ui.click('Properties')
+ const field=()=>ui.all().find(n=>n.tag==='input'&&n.props['aria-label']==='ΔX')!
+ field().props['onUpdate:modelValue']('2 cm');await flushClearance();await ui.click('Apply')
+ expect(requests[0].job.options.x).toBe(20)
+ field().props['onUpdate:modelValue']('bad');await flushClearance()
+ expect(ui.button('Apply').props.disabled).toBe(true);expect(field().props['aria-invalid']).toBe(true)
+ requests[0].resolve(applySolidSceneEdit(requests[0].job.document,requests[0].job.options));await flushClearance()
+ expect(ui.doc()).toEqual(before)
+ field().props['onUpdate:modelValue']('1 in');await flushClearance();await ui.click('Apply')
+ expect(requests[1].job.options.x).toBe(25.4)
+ requests[1].resolve(applySolidSceneEdit(requests[1].job.document,requests[1].job.options));await flushClearance()
+ expect(ui.doc().sketches[0].points[0]).toEqual([25.4,0]);await ui.click('↶');expect(ui.doc()).toEqual(before)
+})
+
 it('invalidates a pending numeric transform when its input changes',async()=>{
  const {applySolidSceneEdit}=await import('../src/services/solidSceneEdit')
  const requests:Array<{job:any;resolve:(value:any)=>void}>=[]

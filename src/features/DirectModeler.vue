@@ -1662,8 +1662,13 @@ async function commitDirectTransform(before:DirectDocument,ids:string[],delta:Ve
 }
 watch(()=>[props.open,document.value,JSON.stringify(selectedIds.value),dx.value,dy.value,dz.value,angle.value,scale.value],()=>{if(directTransformPending.value)cancelDirectTransform()},{flush:'sync'})
 onUnmounted(()=>{cancelDirectTransform();directTransformWorker.dispose()})
+const transformInputErrors=ref<Record<string,boolean>>({})
+const transformInputInvalid=computed(()=>Object.keys(transformInputErrors.value).length>0)
+function transformValidity(key:string,valid:boolean){
+ if(valid)delete transformInputErrors.value[key];else{transformInputErrors.value[key]=true;cancelDirectTransform()}
+}
 function transform(){
- if(directTransformPending.value)return
+ if(directTransformPending.value||transformInputInvalid.value)return
  cancelCommand()
  void commitDirectTransform(history.document,[...selectedIds.value],[dx.value,dy.value,dz.value],angle.value,scale.value,!!selectedSketch.value&&selectedIds.value.length===1,true)
 }
@@ -3869,10 +3874,10 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
           <div class="dock-heading">{{ selectedSketch?.name || selectedBody?.name || label('Свойства', 'Properties') }}</div>
           <div v-if="selectedSketch || selectedBody" class="dock-props">
       <div v-if="!selectedBody?.instance" class="exact-grid">
-        <label>X <input v-model.number="dx" type="number" aria-label="ΔX"></label><label>Y <input v-model.number="dy" type="number" aria-label="ΔY"></label><label v-if="selectedBody">Z <input v-model.number="dz" type="number" aria-label="ΔZ"></label>
-        <label>↻ <input v-model.number="angle" type="number" :aria-label="label('Поворот Z', 'Z rotation')">°</label><label>× <input v-model.number="scale" type="number" min=".001" step=".1" :aria-label="label('Масштаб', 'Scale')"></label>
+        <label>X <CadQuantityInput v-model="dx" aria-label="ΔX" kind="length" :locale="locale" @validity="transformValidity('dx',$event)" /></label><label>Y <CadQuantityInput v-model="dy" aria-label="ΔY" kind="length" :locale="locale" @validity="transformValidity('dy',$event)" /></label><label v-if="selectedBody">Z <CadQuantityInput v-model="dz" aria-label="ΔZ" kind="length" :locale="locale" @validity="transformValidity('dz',$event)" /></label>
+        <label>↻ <CadQuantityInput v-model="angle" kind="angle" :locale="locale" :aria-label="label('Поворот Z', 'Z rotation')" @validity="transformValidity('angle',$event)" />°</label><label>× <CadQuantityInput v-model="scale" kind="scalar" :locale="locale" :min=".001" :aria-label="label('Масштаб', 'Scale')" @validity="transformValidity('scale',$event)" /></label>
       </div>
-      <div v-if="!selectedBody?.instance" class="exact-actions"><button class="primary" :disabled="directTransformPending" @click="transform">{{ label('Применить', 'Apply') }}</button></div>
+      <div v-if="!selectedBody?.instance" class="exact-actions"><button class="primary" :disabled="directTransformPending||transformInputInvalid" @click="transform">{{ label('Применить', 'Apply') }}</button></div>
       <p v-if="selectedBody?.instance">{{ label('Связанный экземпляр · источник: ','Linked instance · source: ') + (document.bodies.find(b=>b.id===selectedBody?.instance?.sourceId)?.name??selectedBody.instance.sourceId) }}</p>
       <template v-if="selectedBody?.instance">
         <button @click="executeSolidCommand('instance-transform')">{{ label('Преобразовать экземпляр','Transform instance') }}</button>
