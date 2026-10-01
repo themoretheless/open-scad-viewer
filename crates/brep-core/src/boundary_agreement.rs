@@ -175,6 +175,20 @@ mod tests {
         assert_eq!(format!("{model:?}"), before);
     }
     #[test]
+    fn sphere_charts_have_global_perspective_injectivity(){
+        for radius in [2.,3.,1e-5,1e6]{
+            let model=crate::sphere(radius).unwrap();let before=format!("{model:?}");
+            for (index,face) in model.faces.iter().enumerate(){
+                let basis=[[1.,0.,0.,0.],[0.,1.,0.,0.]];
+                let denominator=[0.,0.,if index<4{1.}else{-1.},radius];
+                let q=nurbs_core::surface_injectivity::certify_projective_projection(&face.surface,basis,denominator,16).unwrap();
+                assert!(q.is_some(),"radius={radius}, face={index}, q={q:?}");
+                assert!(nurbs_core::surface_injectivity::certify_projective_projection(&face.surface,basis,denominator,15).unwrap().is_none());
+            }
+            assert_eq!(format!("{model:?}"),before);
+        }
+    }
+    #[test]
     fn sphere_equator_uses_exact_rational_circle_traversal(){
         // Radius 3 makes the stereographic control coordinates binary-exact,
         // separating circle parameterization from control-coordinate rounding.

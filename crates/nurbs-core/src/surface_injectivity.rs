@@ -191,6 +191,55 @@ pub const LINEAR_PROJECTIONS: [[[f64;3];2];6]=[
 pub fn certify_linear_projection(s:&Surface,basis:[[f64;3];2],max_cells:usize)->Result<Option<f64>> {
     Ok(linear_projection_work(s,basis,max_cells)?.0)
 }
+/// A fixed perspective projection (two affine numerators divided by one
+/// affine denominator). All coefficients refer to [x,y,z,1]. The denominator
+/// must stay strictly positive over every covered section. A single global
+/// Jacobian contraction proves injectivity of the original chart; no rounded
+/// transformed control points or sampled denominator admission are used.
+pub fn certify_projective_projection(s:&Surface,numerators:[[f64;4];2],denominator:[f64;4],max_cells:usize)->Result<Option<f64>>{
+    s.validate()?;
+    check(max_cells>0&&max_cells<=100000&&numerators.iter().flatten().chain(denominator.iter()).all(|x|x.is_finite()),"Projective projection requires finite coefficients and 1..100000 cells")?;
+    if s.periodic_u||s.periodic_v{return Ok(None);}
+    let mut global=[[I{lo:f64::INFINITY,hi:f64::NEG_INFINITY};2];2];
+    let mut cells=0;
+    for u in s.degree_u..s.control_points.len(){for v in s.degree_v..s.control_points[0].len(){
+        let ranges=[[s.knots_u[u],s.knots_u[u+1]],[s.knots_v[v],s.knots_v[v+1]]];
+        if ranges.iter().any(|r|r[0]>=r[1]){continue;}
+        for i in 0..4{for j in 0..4{
+            if cells==max_cells{return Ok(None);}
+            let section=std::array::from_fn(|k|{let n=[i,j][k];let [lo,hi]=ranges[k];
+                [if n==0{lo}else{lo+(hi-lo)*(n as f64/4.)},if n==3{hi}else{lo+(hi-lo)*((n+1) as f64/4.)}]});
+            cells+=1;
+            let Some(jac)=projective_section_jacobian(s,[u,v],section,numerators,denominator)? else{return Ok(None);};
+            for row in 0..2{for axis in 0..2{global[row][axis]=hull([global[row][axis],jac[row][axis]].into_iter());}}
+        }}
+    }}
+    Ok(contraction(global)?.filter(|q|*q<1.))
+}
+fn projective_section_jacobian(s:&Surface,span:[usize;2],domain:[[f64;2];2],numerators:[[f64;4];2],denominator:[f64;4])->Result<Option<[[I;2];2]>>{
+    let source=crate::curve_surface_composition::surface_net_on(s,span,domain)?;
+    let dot=|h:[I;4],coeff:[f64;4]|->Result<I>{let mut sum=I::point(0.);for k in 0..4{sum=sum.add(h[k].mul(I::point(coeff[k]))?)?;}Ok(sum)};
+    let mut net=Vec::new();
+    for row in source{let mut out=Vec::new();for h in row{out.push([dot(h,numerators[0])?,dot(h,numerators[1])?,dot(h,denominator)?]);}net.push(out);}
+    let values:[I;3]=std::array::from_fn(|k|hull(net.iter().flatten().map(|h|h[k])));
+    if values[2].lo<=0.{return Ok(None);}
+    let square=values[2].mul(values[2])?;
+    let degrees=[s.degree_u,s.degree_v];
+    let mut result=[[I::point(0.);2];2];
+    for axis in 0..2{
+        let width=I::point(domain[axis][1]).sub(I::point(domain[axis][0]))?;
+        let mut diffs=Vec::new();
+        for i in 0..=degrees[0]{for j in 0..=degrees[1]{
+            if (axis==0&&i==degrees[0])||(axis==1&&j==degrees[1]){continue;}
+            let a=net[i][j];let b=net[i+usize::from(axis==0)][j+usize::from(axis==1)];
+            let mut d=[I::point(0.);3];
+            for k in 0..3{d[k]=b[k].sub(a[k])?.mul(I::point(degrees[axis] as f64))?.div(width)?;}diffs.push(d);
+        }}
+        let d:[I;3]=std::array::from_fn(|k|hull(diffs.iter().map(|h|h[k])));
+        for row in 0..2{result[row][axis]=d[row].mul(values[2])?.sub(values[row].mul(d[2])?)?.div(square)?;}
+    }
+    Ok(Some(result))
+}
 fn linear_projection_work(s:&Surface,basis:[[f64;3];2],max_cells:usize)->Result<(Option<f64>,usize)> {
     s.validate()?;
     check(max_cells>0&&max_cells<=100000&&basis.iter().flatten().all(|x|x.is_finite()),"Linear projection requires finite coefficients and 1..100000 cells")?;
@@ -276,6 +325,29 @@ mod tests {
             periodic_u: false,
             periodic_v: false,
         }
+    }
+    #[test]
+    fn perspective_projection_requires_a_nonzero_denominator_and_full_global_coverage(){
+        let basis=[[1.,0.,0.,0.],[0.,1.,0.,0.]];
+        let mut s=graph();let before=format!("{s:?}");
+        assert!(certify_projective_projection(&s,basis,[0.,0.,0.,1.],16).unwrap().is_some());
+        assert!(certify_projective_projection(&s,basis,[0.,0.,0.,1.],15).unwrap().is_none());
+        for d in [[0.,0.,0.,0.],[0.,0.,0.,-1.],[1.,0.,0.,-0.5],[1.,0.,0.,0.]]{
+            assert!(certify_projective_projection(&s,basis,d,16).unwrap().is_none());
+        }
+        assert_eq!(format!("{s:?}"),before);
+        assert!(certify_projective_projection(&s,basis,[0.,0.,0.,1.],0).is_err());
+        assert!(certify_projective_projection(&s,[[f64::NAN,0.,0.,0.],basis[1]],[0.,0.,0.,1.],16).is_err());
+        s.degree_u=1;s.knots_u=vec![0.,0.,0.5,1.,1.];
+        assert!(certify_projective_projection(&s,basis,[0.,0.,0.,1.],32).unwrap().is_some());
+        assert!(certify_projective_projection(&s,basis,[0.,0.,0.,1.],31).unwrap().is_none());
+        for p in &mut s.control_points[2]{p[0]=0.;}
+        // Each side is locally invertible, but the complete folded chart isn't.
+        assert!(certify_projective_projection(&s,basis,[0.,0.,0.,1.],32).unwrap().is_none());
+        s.periodic_u=true;
+        s.knots_u=vec![-1.,0.,1.,2.,3.];
+        s.control_points[2]=s.control_points[0].clone();s.weights[2]=s.weights[0].clone();
+        assert!(certify_projective_projection(&s,basis,[0.,0.,0.,1.],32).unwrap().is_none());
     }
     #[test]
     fn diagonal_projection_certifies_quarter_cylinder_and_refuses_partial_coverage(){
