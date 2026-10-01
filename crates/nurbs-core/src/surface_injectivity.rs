@@ -54,6 +54,10 @@ pub(crate) fn section_jacobian(
             }
         }
     }
+    homogeneous_section_jacobian(&net,[p,q],domain)
+}
+fn homogeneous_section_jacobian(net:&[Vec<[I;4]>],degrees:[usize;2],domain:[[f64;2];2])->Result<[[I;2];3]>{
+    let [p,q]=degrees;
     let values: [I; 4] = std::array::from_fn(|k| hull(net.iter().flatten().map(|h| h[k])));
     let denominator = values[3].mul(values[3])?;
     let mut result = [[I::point(0.); 2]; 3];
@@ -243,25 +247,10 @@ fn projective_section_jacobian(s:&Surface,span:[usize;2],domain:[[f64;2];2],nume
     let source=crate::curve_surface_composition::surface_net_on(s,span,domain)?;
     let dot=|h:[I;4],coeff:[f64;4]|->Result<I>{let mut sum=I::point(0.);for k in 0..4{sum=sum.add(h[k].mul(I::point(coeff[k]))?)?;}Ok(sum)};
     let mut net=Vec::new();
-    for row in source{let mut out=Vec::new();for h in row{out.push([dot(h,numerators[0])?,dot(h,numerators[1])?,dot(h,denominator)?]);}net.push(out);}
-    let values:[I;3]=std::array::from_fn(|k|hull(net.iter().flatten().map(|h|h[k])));
-    if values[2].lo<=0.{return Ok(None);}
-    let square=values[2].mul(values[2])?;
-    let degrees=[s.degree_u,s.degree_v];
-    let mut result=[[I::point(0.);2];2];
-    for axis in 0..2{
-        let width=I::point(domain[axis][1]).sub(I::point(domain[axis][0]))?;
-        let mut diffs=Vec::new();
-        for i in 0..=degrees[0]{for j in 0..=degrees[1]{
-            if (axis==0&&i==degrees[0])||(axis==1&&j==degrees[1]){continue;}
-            let a=net[i][j];let b=net[i+usize::from(axis==0)][j+usize::from(axis==1)];
-            let mut d=[I::point(0.);3];
-            for k in 0..3{d[k]=b[k].sub(a[k])?.mul(I::point(degrees[axis] as f64))?.div(width)?;}diffs.push(d);
-        }}
-        let d:[I;3]=std::array::from_fn(|k|hull(diffs.iter().map(|h|h[k])));
-        for row in 0..2{result[row][axis]=d[row].mul(values[2])?.sub(values[row].mul(d[2])?)?.div(square)?;}
-    }
-    Ok(Some(result))
+    for row in source{let mut out=Vec::new();for h in row{out.push([dot(h,numerators[0])?,dot(h,numerators[1])?,I::point(0.),dot(h,denominator)?]);}net.push(out);}
+    if hull(net.iter().flatten().map(|h|h[3])).lo<=0.{return Ok(None);}
+    let result=homogeneous_section_jacobian(&net,[s.degree_u,s.degree_v],domain)?;
+    Ok(Some([result[0],result[1]]))
 }
 fn linear_projection_work(s:&Surface,basis:[[f64;3];2],max_cells:usize)->Result<(Option<f64>,usize)> {
     s.validate()?;
