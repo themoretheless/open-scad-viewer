@@ -333,6 +333,8 @@ for (const [name, artifact, compression] of [
 // +4,279 from the preceding qualified build, preserving 924 bytes of headroom.
 // Profile segment provenance, response validation and absolute placement cache:
 // 7,164,247 measured bytes; +1,770, preserving the preceding 802-byte headroom.
-const totalBudget = 7_165_049
+// Multispan trim injectivity and indexed commit lookup: 7,165,388 measured;
+// +1,141 bytes, preserving the preceding 802-byte headroom.
+const totalBudget = 7_166_190
 if (total > totalBudget) throw new Error(`dist totals ${total} bytes; budget is ${totalBudget}`)
 console.log(`Verified ${files.length} dist artifacts (${total} asset bytes + ${rawWasmBytes} raw WASM bytes = ${total + rawWasmBytes} total bytes)`)

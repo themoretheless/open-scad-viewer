@@ -1447,15 +1447,17 @@ function prepareCommit(next: DirectDocument, origin:'edit'|'file'='edit') {
   const previous=origin==='file'&&!lockedIds.value.length?undefined:snapDocument.value
   const existing=new Set(previous?documentObjects(previous).map(b=>b.id):history.objectIds)
   const sourceChanges=new Map<string,boolean>()
+  const previousBodies=new Map(previous?.bodies.map(body=>[body.id,body])??[])
+  const nextBodies=new Map(next.bodies.map(body=>[body.id,body]))
   // Imported caches are checked and rebuilt by the authoritative history parser.
   // The edit-only guard detects attempts to modify a live linked body directly.
   for(const body of previous?.bodies??[])if(origin==='edit'&&body.instance) {
     const sourceId=body.instance.sourceId
     if(!sourceChanges.has(sourceId)) {
-      const oldSource=previous!.bodies.find(item=>item.id===sourceId),newSource=next.bodies.find(item=>item.id===sourceId)
+      const oldSource=previousBodies.get(sourceId),newSource=nextBodies.get(sourceId)
       sourceChanges.set(sourceId,stringifyMeshJson({mesh:oldSource?.mesh,brep:oldSource?.brep})!==stringifyMeshJson({mesh:newSource?.mesh,brep:newSource?.brep}))
     }
-    const candidate=next.bodies.find(item=>item.id===body.id)
+    const candidate=nextBodies.get(body.id)
     if(!sourceChanges.get(sourceId)&&candidate?.instance&&stringifyMeshJson(candidate.instance)===stringifyMeshJson(body.instance)
       &&stringifyMeshJson({mesh:candidate.mesh,brep:candidate.brep})!==stringifyMeshJson({mesh:body.mesh,brep:body.brep}))
       throw Error(label('Измените источник или отсоедините экземпляр: ','Edit the source or detach the instance: ')+body.name)

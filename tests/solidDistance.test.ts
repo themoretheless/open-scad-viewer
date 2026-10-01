@@ -139,3 +139,24 @@ it('qualifies actual WASM exact sphere distances across the tested radius scales
   }
  }
 })
+
+it('audits multispan NURBS trim boundaries in WASM and retains unknown when trim work runs out',async()=>{
+ const {warmGeometryKernel}=await import('../src/services/geometry/kernel')
+ const {measureSolidDistance}=await import('../src/services/solidDistance')
+ await warmGeometryKernel()
+ const request=structuredClone(cases[3].request)
+ const coedge=request.a.loops[request.a.faces[0].outer].coedges[0],curve=coedge.pcurve
+ const [a,b]=curve.controlPoints
+ coedge.pcurve={degree:2,knots:[0,0,0,.5,1,1,1],controlPoints:[0,.25,.75,1].map(t=>a.map((x:number,i:number)=>x*(1-t)+b[i]*t)),weights:[1,1,1,1],periodic:false}
+ const before=structuredClone(request)
+ const result=measureSolidDistance(request)
+ expect(result.validity[0].trimValid).toBe(true)
+ expect(validSolidDistance(solidDistanceExpectation(request),result)).toBe(true)
+ const limited={...request,validityLimits:{...request.validityLimits,trimCells:1}}
+ const incomplete=measureSolidDistance(limited)
+ expect(incomplete.validity[0].trimValid).toBe(false)
+ expect(incomplete.converged).toBe(false)
+ expect(incomplete.reason).toBe('volume-validity-unproven')
+ expect(validSolidDistance(solidDistanceExpectation(limited),incomplete)).toBe(true)
+ expect(request).toEqual(before)
+})

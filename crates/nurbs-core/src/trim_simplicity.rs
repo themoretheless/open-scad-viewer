@@ -1,6 +1,6 @@
-//! Sufficient simplicity evidence for a closed rational Bezier UV loop.
+//! Sufficient simplicity evidence for a closed rational NURBS UV loop.
 //! Failure of a sufficient test is unproven, never evidence of an intersection.
-use crate::{Result,check,curve::Curve,curve_distance,trim_domain};
+use crate::{Result,check,curve::Curve,curve_distance,curve_jets,trim_domain};
 pub struct Pair {pub curves:[usize;2],pub proven:bool}
 pub struct Report {
     pub proven_simple:bool,
@@ -26,6 +26,30 @@ fn monotone(c:&Curve)->bool {
         || (p[0][k]>p[p.len()-1][k] && p.windows(2).all(|w|w[0][k]>=w[1][k]))
     })
 }
+// A common strictly signed coordinate derivative over every original knot
+// span proves global injectivity of a continuous rational B-spline. Blossom
+// extraction encloses the original coefficients; no fitted/decomposed curve
+// is used as proof. Exhausting this sufficient test leaves the result unproven.
+fn monotone_spans(c:&Curve,cells:&mut usize,max_cells:usize)->Result<bool>{
+ if c.periodic{return Ok(false);}
+ let spans=(c.degree..c.control_points.len()).filter(|&i|c.knots[i]<c.knots[i+1]).collect::<Vec<_>>();
+ for axis in 0..2{for positive in [true,false]{
+  let mut pending=spans.iter().map(|&i|(i,[c.knots[i],c.knots[i+1]],0)).collect::<Vec<_>>();
+  let mut proven=true;
+  while let Some((span,domain,depth))=pending.pop(){
+   if *cells==max_cells{return Ok(false);}
+   *cells+=1;
+   let derivative=curve_jets::enclose(c,span,domain)?[1][axis];
+   if if positive{derivative.lo>0.}else{derivative.hi<0.}{continue;}
+   if if positive{derivative.hi<=0.}else{derivative.lo>=0.}{proven=false;break;}
+   let middle=domain[0]*0.5+domain[1]*0.5;
+   if depth==16||middle<=domain[0]||middle>=domain[1]{proven=false;break;}
+   pending.push((span,[domain[0],middle],depth+1));pending.push((span,[middle,domain[1]],depth+1));
+  }
+  if proven{return Ok(true);}
+ }}
+ Ok(false)
+}
 fn adjacent_separated(a:&Curve,b:&Curve,join:&[f64])->bool {
     // One open curve lies strictly on one side of a coordinate line through
     // the common endpoint; the other lies on the opposite closed half-plane.
@@ -43,8 +67,9 @@ pub fn inspect(curves:&[Curve],tolerance_uv:f64,max_pairs:usize,max_cells:usize)
         && (1..=100000).contains(&max_cells) && tolerance_uv.is_finite() && tolerance_uv>0.,
         "Trim simplicity requires 2..256 curves, positive tolerance and bounded work")?;
     let exact_joins=trim_domain::exact_loop_joins(curves)?;
-    let injective=curves.iter().map(|c|bezier(c)&&monotone(c)).collect::<Vec<_>>();
-    let n=curves.len();let mut out=Report{proven_simple:false,exact_joins,injective,pairs:Vec::new(),total_pairs:n*(n-1)/2,cells:0};
+    let mut cells=0;
+    let injective=curves.iter().map(|c|if bezier(c)&&monotone(c){Ok(true)}else{monotone_spans(c,&mut cells,max_cells)}).collect::<Result<Vec<_>>>()?;
+    let n=curves.len();let mut out=Report{proven_simple:false,exact_joins,injective,pairs:Vec::new(),total_pairs:n*(n-1)/2,cells};
     if exact_joins!=Some(true)||out.injective.iter().any(|v|!*v){return Ok(out);}
     for a in 0..n {for b in a+1..n {
         if out.pairs.len()==max_pairs {return Ok(out);}
@@ -68,6 +93,23 @@ pub fn inspect(curves:&[Curve],tolerance_uv:f64,max_pairs:usize,max_cells:usize)
 mod tests {
     use super::*;
     fn polygon(p:&[[f64;2]])->Vec<Curve>{(0..p.len()).map(|i|Curve::from_polyline(vec![p[i].to_vec(),p[(i+1)%p.len()].to_vec()]).unwrap()).collect()}
+    #[test]
+    fn multispan_rational_boundary_preserves_original_definition(){
+        let curve=Curve{degree:2,knots:vec![0.,0.,0.,0.5,1.,1.,1.],control_points:vec![vec![0.,0.],vec![0.5,-0.5],vec![1.5,-0.5],vec![2.,0.]],weights:vec![1.,0.8,1.2,1.],periodic:false};
+        let mut curves=polygon(&[[0.,0.],[2.,0.],[2.,2.],[0.,2.]]);curves[0]=curve;
+        let before=format!("{curves:?}");
+        let r=inspect(&curves,1e-8,100,10000).unwrap();assert!(r.proven_simple);assert!(r.cells>0&&r.cells<=10000);
+        let reversed=curves.iter().rev().map(Curve::reverse).collect::<Result<Vec<_>>>().unwrap();
+        assert!(inspect(&reversed,1e-8,100,10000).unwrap().proven_simple);
+        assert_eq!(format!("{curves:?}"),before);
+        assert!(!inspect(&curves,1e-8,100,1).unwrap().proven_simple);
+    }
+    #[test]
+    fn multispan_returning_boundary_never_receives_injectivity_proof(){
+        let curve=Curve::from_polyline(vec![vec![0.,0.],vec![2.,0.],vec![1.,0.],vec![3.,0.]]).unwrap();
+        let mut curves=polygon(&[[0.,0.],[3.,0.],[3.,2.],[0.,2.]]);curves[0]=curve;
+        let r=inspect(&curves,1e-8,100,10000).unwrap();assert!(!r.proven_simple);assert!(!r.injective[0]);
+    }
     #[test]
     fn square_bowtie_and_incomplete_work_are_distinct(){
         let square=polygon(&[[0.,0.],[1.,0.],[1.,1.],[0.,1.]]);

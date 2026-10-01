@@ -366,3 +366,19 @@ it('preserves retained profile segment provenance across the real worker boundar
  expect(result.document.sketches[0].id).toBe('arc')
  expect(document).toEqual(before)
 })
+
+it('retains multispan trim proofs and incomplete budgets across real postMessage',async()=>{
+ const {readFileSync}=await import('node:fs')
+ const cases=JSON.parse(readFileSync(new URL('../docs/qualification/cad-roadmap-2026-09-28/solid-distance-2026-09-30/contract-fixtures.json',import.meta.url),'utf8')).cases
+ const options=structuredClone(cases[3].request)
+ const coedge=options.a.loops[options.a.faces[0].outer].coedges[0],curve=coedge.pcurve,[a,b]=curve.controlPoints
+ coedge.pcurve={degree:2,knots:[0,0,0,.5,1,1,1],controlPoints:[0,.25,.75,1].map(t=>a.map((x:number,i:number)=>x*(1-t)+b[i]*t)),weights:[1,1,1,1],periodic:false}
+ const before=structuredClone(options),client=new MainSolidWorkerClient(realWorker);clients.push(client)
+ const result=await client.run({kind:'solidDistance',options})
+ expect(result.validity[0].trimValid).toBe(true)
+ const limited=await client.run({kind:'solidDistance',options:{...options,validityLimits:{...options.validityLimits,trimCells:1}}})
+ expect(limited.validity[0].trimValid).toBe(false)
+ expect(limited.converged).toBe(false)
+ expect(limited.reason).toBe('volume-validity-unproven')
+ expect(options).toEqual(before)
+})

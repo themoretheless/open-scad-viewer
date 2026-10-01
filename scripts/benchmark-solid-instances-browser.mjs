@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict'
+import {createHash} from 'node:crypto'
 import {workerHeapSampler} from './qualificationWorkerHeap.mjs'
 import {createServer} from 'node:http'
 import {readFile,mkdir,writeFile} from 'node:fs/promises'
@@ -16,6 +17,7 @@ const collectWorkers=process.argv.includes('--worker-memory'),collectRetained=pr
 const iterations=Number(process.argv.find(arg=>arg.startsWith('--iterations='))?.split('=')[1]??5)
 assert.ok(Number.isInteger(iterations)&&iterations>=1&&iterations<=100,'iterations must be between 1 and 100')
 const text=await readFile(fixture,'utf8'),expected=JSON.parse(text),root=path.resolve('dist'),directory=path.resolve(output)
+const fixtureIdentity={sha256:createHash('sha256').update(text).digest('hex'),bytes:Buffer.byteLength(text),bodies:expected.bodies.length}
 await mkdir(directory,{recursive:true})
 const server=createServer(async(req,res)=>{
  try{
@@ -363,6 +365,7 @@ try{
  const compactSceneRequests=await page.evaluate(()=>window.__compactSceneRequests??null)
  if(process.argv.includes('--require-compact-scene'))assert.ok(compactSceneRequests?.length&&compactSceneRequests.every(request=>request.compact),'Metadata and detach edits must send compact snapshots')
  const result={compactSceneRequests,groupEditingChecked:process.argv.includes('--groups'),instanceDetachChecked:process.argv.includes('--detach'),renderer,outlinerContainmentDisabled:process.argv.includes('--disable-outliner-containment'),outlinerChecked:process.argv.includes('--check-outliner'),outlinerControlsChecked:process.argv.includes('--check-outliner-controls'),outlinerDeletionChecked:process.argv.includes('--check-outliner-delete'),retainedMemory,memory,scope:(process.env.SOLID_GPU_HEADED==='1'?'Headed':'Headless')+' Chromium UI import and Undo/Redo through durable save; automation latency included. RAF gaps during operations are not orbit FPS; heap is sampled '+(collectRetained?'with separate forced-GC diagnostics.':'without forced GC.'),importCancellationChecked:process.argv.includes('--check-import-cancel'),cpuProfile:process.argv.includes('--profile-orbit')?'orbit.cpuprofile':profileCaptured?profileAction+'.cpuprofile':null,cancellationChecked:process.argv.includes('--check-cancel'),browser:browser.version(),machine:{platform:os.platform(),release:os.release(),arch:os.arch(),cpu:os.cpus()[0]?.model,logicalCpus:os.cpus().length,ramBytes:os.totalmem()},iterations,timingSummary,orbit,maxObservedHeapBytes:Math.max(before.JSHeapUsedSize,...samples.map(s=>s.heap.JSHeapUsedSize)),heapScope:'Samples after each operation only; not peak process memory.',viewport:{width:1280,height:800},bodies:expected.bodies.length,before,after:await heap(),samples}
+ result.fixtureIdentity=fixtureIdentity
  await writeFile(path.join(directory,'measurements.json'),JSON.stringify(result,null,2)+'\n')
  console.log(JSON.stringify(result))
 }finally{clearInterval(memoryTimer);await memoryPending;await browser?.close();await new Promise(resolve=>server.close(resolve))}

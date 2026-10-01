@@ -80,6 +80,15 @@ mod tests {
     }
     fn audit(l:Vec<Vec<Curve>>)->Report{inspect(&l,1e-8,1000,10000,100000).unwrap()}
     #[test]
+    fn multispan_rational_outer_with_hole_is_audited_without_chords(){
+        let mut outer=square(0.,10.,false);
+        outer[0]=Curve{degree:2,knots:vec![0.,0.,0.,0.5,1.,1.,1.],control_points:vec![vec![0.,0.],vec![2.5,-1.],vec![7.5,-1.],vec![10.,0.]],weights:vec![1.,0.8,1.2,1.],periodic:false};
+        let loops=vec![outer,square(2.,4.,true)];let before=format!("{loops:?}");
+        let r=audit(loops.clone());assert_eq!(r.valid,Some(true));assert!(r.loops[0].injective[0]);assert_eq!(r.winding,vec![Some(1),Some(-1)]);
+        assert_eq!(format!("{loops:?}"),before);
+        let limited=inspect(&loops,1e-8,1000,1,100000).unwrap();assert_eq!(limited.valid,None);assert!(limited.cells<=1);
+    }
+    #[test]
     fn correct_hole_and_reversed_whole_region_are_admitted(){
         for reverse in [false,true]{let r=audit(vec![square(0.,10.,reverse),square(2.,4.,!reverse)]);assert_eq!(r.valid,Some(true));assert!(r.cells<=10000&&r.domain_cells<=100000);}
     }
