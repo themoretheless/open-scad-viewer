@@ -135,6 +135,17 @@ try {
  const sketchPane=solid.getByRole('region',{name:'2D — эскизы',exact:true})
  const canvasBounds=await sketchPane.locator('.canvas-viewport').boundingBox(),paneBounds=await sketchPane.boundingBox()
  assert.ok(canvasBounds.width>paneBounds.width*.9);assert.ok(canvasBounds.height>=120)
+ await input(solid.getByLabel('Центр Y',{exact:true}),'0')
+ const titleVisibility=await sketchPane.locator('.operation-card').evaluate(card=>{
+  card.scrollTop=card.scrollHeight
+  const title=card.querySelector(':scope > strong'),a=card.getBoundingClientRect(),b=title.getBoundingClientRect()
+  return {scrollTop:card.scrollTop,top:b.top,bottom:b.bottom,panelTop:a.top,panelBottom:a.bottom,text:title.textContent,visible:document.elementFromPoint(b.left+b.width/2,b.top+b.height/2)===title}
+ })
+ assert.ok(titleVisibility.scrollTop>0,'exercise a scrolled command panel')
+ assert.ok(titleVisibility.top>=titleVisibility.panelTop && titleVisibility.bottom<=titleVisibility.panelBottom)
+ assert.equal(titleVisibility.visible,true,'operation title remains unobscured')
+ assert.equal(titleVisibility.text,'Круговые копии')
+ await writeFile(path.join(directory,'title-visibility.json'),JSON.stringify(titleVisibility,null,2))
  await page.screenshot({path:path.join(directory,'array-preview.png')})
  await cancelPrepared('array');await command('Circular copies');await input(count,'4');await input(solid.getByLabel(/^Угол/),'360');await apply.click({trial:true})
  const requests=await page.evaluate(()=>window.__sketchEditRequests)

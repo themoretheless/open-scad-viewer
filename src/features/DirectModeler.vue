@@ -4112,7 +4112,8 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
 .gizmo-dimension{display:flex;align-items:center;gap:.3em;background:var(--bg, #252520);color:var(--text, #f5f5f0);border:1px solid #77eac5;border-radius:.3em;padding:.2em;box-sizing:border-box;width:100%;height:85%}.gizmo-dimension :deep(.quantity-field){width:100%}.gizmo-dimension :deep(input){font:inherit;min-width:0;width:100%;padding:0;border:0;background:transparent;color:inherit}.gizmo-dimension.failed{border-color:#f87171}.gizmo-dimension:focus-within{outline:2px solid var(--accent)}
 .scene-list .selected-group{color:var(--accent);border-left:2px solid var(--accent)}
 .operation-card small[role=alert]{color:var(--danger);border-left:2px solid var(--danger);padding-left:7px}
-.operation-card>small[role=alert]{position:sticky;top:0;z-index:2;background:var(--surface)}
+.operation-card>strong{position:sticky;top:0;z-index:3;background:var(--surface);box-shadow:0 -15px 0 var(--surface),0 6px 0 var(--surface)}
+.operation-card>small[role=alert]{position:sticky;top:44px;z-index:2;background:var(--surface)}
 @media(max-width:750px){.state-legend{display:none}.command-guidance{font-size:11px}.workspace-state{gap:6px}}
 .scene-list .object-row{display:flex;align-items:center;min-width:0}.scene-list .object-row>button{flex:1;min-width:0}.object-row.muted>button{opacity:.4}.object-row.locked>button{border-left:2px dashed var(--text-dim)}.scene-group .group-name{border:0;background:transparent;text-align:left;padding:2px;font:inherit;color:inherit}.scene-group .group-name[aria-pressed=true]{color:var(--accent)}
 
@@ -4121,7 +4122,6 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
 .canvas-viewport{position:relative;flex:1;min-width:0;min-height:0;overflow:hidden}
 .canvas-wrap.profile-preparation-pane{flex-direction:column}
 .canvas-wrap.profile-preparation-pane>.operation-card{flex:0 1 auto;width:100%;max-height:65%;border-left:0;border-right:0;gap:8px;padding:12px}
-.canvas-wrap.profile-preparation-pane>.operation-card>strong{position:sticky;top:0;z-index:1;background:var(--surface)}
 .canvas-wrap>.operation-card{position:relative;inset:auto;flex:0 0 245px;box-sizing:border-box;max-height:100%;margin:0;border-radius:0;border-top:0;border-bottom:0;box-shadow:none}
 .touch-mode .canvas-viewport>svg{touch-action:none}
 @media(max-width:750px){.canvas-wrap{flex-direction:column}.canvas-wrap>.operation-card{flex:0 1 auto;width:100%;max-height:45%;border-left:0;border-right:0}.canvas-viewport{min-height:120px}}
