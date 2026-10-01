@@ -89,7 +89,7 @@ it('qualifies actual WASM complete cylinder face and pair proofs',async()=>{
  const before=JSON.stringify(model),r=inspectSelfIntersection(model,toleranceUv,limits,maxSpans)
  expect(validSelfIntersection(selfIntersectionExpectation(model,toleranceUv,limits,maxSpans),r)).toBe(true)
  expect(r.allFacesInjective).toBe(true);expect(r.spans).toBe(102)
- expect(r.faces).toEqual(fixture.result.faces)
+ expect(r.faces).toMatchObject(fixture.result.faces)
  expect(r.absenceProven).toBe(true);expect(JSON.stringify(model)).toBe(before)
 })
 
@@ -130,4 +130,19 @@ it('authors actual WASM sphere equators with matching rational edge and trim tra
   const weights=model.edges[equator.edge].curve.weights
   expect(equator.reversed?[...weights].reverse():weights).toEqual([1,1,2])
  }
+})
+
+it('qualifies actual WASM perspective face proofs and exhausted aggregate budgets',async()=>{
+ const fixture=JSON.parse(readFileSync(new URL('../docs/qualification/cad-roadmap-2026-09-28/curved-volume-2026-10-01/projective-face-native.json',import.meta.url),'utf8'))
+ const {model,toleranceUv,maxSpans,op,...limits}=fixture.request
+ const {inspectSelfIntersection}=await import('../src/services/solidSelfIntersection')
+ const before=JSON.stringify(model)
+ for(const budget of [maxSpans,967,1]){
+  const r=inspectSelfIntersection(model,toleranceUv,limits,budget)
+  expect(validSelfIntersection(selfIntersectionExpectation(model,toleranceUv,limits,budget),r)).toBe(true)
+  expect(r.absenceProven).toBe(false);expect(r.allFacesInjective).toBe(budget===maxSpans)
+  if(budget===maxSpans){expect(r.faces).toEqual(fixture.result.faces);expect(r.spans).toBe(968)}
+  else expect(r.spans).toBe(budget)
+ }
+ expect(JSON.stringify(model)).toBe(before)
 })

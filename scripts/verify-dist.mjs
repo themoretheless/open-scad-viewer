@@ -325,6 +325,9 @@ for (const [name, artifact, compression] of [
 // Explicit quantity labels and linked errors: measured assets 7,062,786 bytes.
 // WebXR stereo viewer and controls across all workspaces: measured 7,072,458 bytes.
 // Separate VR core payload plus current CAD retry/error UI: measured 7,149,470 bytes.
-const totalBudget = 7_152_000
+// Checked perspective proofs and exact sphere volume/distance add 3,992 asset
+// bytes (7,153,462 measured). A 4,000-byte feature increment preserves the
+// existing approximately 2,530-byte headroom; named artifact limits still apply.
+const totalBudget = 7_156_000
 if (total > totalBudget) throw new Error(`dist totals ${total} bytes; budget is ${totalBudget}`)
 console.log(`Verified ${files.length} dist artifacts (${total} asset bytes + ${rawWasmBytes} raw WASM bytes = ${total + rawWasmBytes} total bytes)`)

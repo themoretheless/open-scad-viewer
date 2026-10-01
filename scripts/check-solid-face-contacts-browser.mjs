@@ -24,8 +24,9 @@ try {
  browser=await playwright.chromium.launch({headless:true})
  page=await browser.newPage({acceptDownloads:true});page.on('pageerror',e=>errors.push(String(e)))
  await page.addInitScript(()=>{
-  const Native=window.Worker;window.__contactsRequests=0
+  const Native=window.Worker;window.__contactsRequests=0;window.__selfResults=[]
   window.Worker=class extends Native {
+   constructor(...args){super(...args);this.addEventListener('message',e=>{if(e.data?.kind==='selfIntersection'&&e.data.ok)window.__selfResults.push(e.data.result)})}
    postMessage(message,...args){
     if(message?.job?.kind==='faceContacts'){
      window.__contactsRequests++
@@ -132,8 +133,36 @@ try {
  await panel.getByText('Пары граней разнесены либо имеют лишь подтверждённые общие границы.',{exact:true}).waitFor()
  await page.screenshot({path:path.join(directory,'curved-shared.png')})
  assert.deepEqual(await exportDoc('curved-after.json'),curvedBefore)
+ let projective=null
+ if(process.argv.includes('--projective')){
+  const fixture=JSON.parse(await readFile('docs/qualification/cad-roadmap-2026-09-28/curved-volume-2026-10-01/projective-face-native.json','utf8'))
+  assert.ok(fixture.displayMesh?.positions.length>100,'Sphere needs its original NURBS display mesh')
+  const document={version:1,sketches:[],bodies:[{id:'projective-sphere',name:'Projective sphere',brep:fixture.request.model,mesh:{positions:fixture.displayMesh.positions,indices:fixture.displayMesh.indices}}]}
+  await act(menu);await solid.locator('input[accept=".json,application/json"]').setInputFiles({name:'sphere.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(document))});await closeMenu();await ready()
+  await act(solid.getByRole('tab',{name:'Сцена',exact:true}));await act(solid.getByRole('button',{name:'Projective sphere',exact:true}))
+  const before=await exportDoc('sphere-before.json');await openDiagnostics()
+  const within=panel.getByRole('checkbox',{name:'Проверять внутри граней',exact:true})
+  await number(limit,'1000')
+  if(!await within.isChecked()){if(keyboard){await focus(within);await page.keyboard.press('Space')}else await within.click()}
+  await page.waitForFunction(()=>window.__selfResults.some(r=>r.faces.length===8&&r.maxSpans===1000&&r.allFacesInjective),null,{timeout:120000})
+  projective=await page.evaluate(()=>window.__selfResults.findLast(r=>r.faces.length===8&&r.maxSpans===1000))
+  assert.equal(projective.spans,968);assert.equal(projective.absenceProven,false)
+  assert.ok(projective.faces.every(f=>f.result.reason==='global-projective-projection-contraction'))
+  await panel.getByText('Отсутствие самопересечений не доказано.',{exact:true}).waitFor()
+  await within.scrollIntoViewIfNeeded()
+  await page.screenshot({path:path.join(directory,'sphere-projective.png')})
+  assert.deepEqual(await exportDoc('sphere-after.json'),before)
+  await number(limit,'967')
+  await page.waitForFunction(()=>window.__selfResults.some(r=>r.faces.length===8&&r.maxSpans===967),null,{timeout:120000})
+  const partial=await page.evaluate(()=>window.__selfResults.findLast(r=>r.faces.length===8&&r.maxSpans===967))
+  assert.equal(partial.spans,967);assert.equal(partial.allFacesInjective,false);assert.equal(partial.absenceProven,false)
+  await panel.getByText('Не проверены или не доказаны грани: 8',{exact:true}).waitFor()
+  await within.scrollIntoViewIfNeeded()
+  await page.screenshot({path:path.join(directory,'sphere-projective-partial.png')})
+  assert.deepEqual(await exportDoc('sphere-partial-after.json'),before)
+ }
  assert.deepEqual(errors,[])
  const artifact={geometryWasmSha256:createHash('sha256').update(await readFile(path.join(root,'wasm/geometry-kernel.wasm'))).digest('hex'),indexSha256:createHash('sha256').update(await readFile(path.join(root,'index.html'))).digest('hex')}
- await writeFile(path.join(directory,'result.json'),JSON.stringify({artifact,ok:true,selfIntersection:process.argv.includes('--self-intersection'),keyboard,tabs,contactPairCount:fixture.result.contactPairCount,cubeSharedBoundaries:12,cubeClassified:true,curvedSharedBoundaries:12,curvedUnresolvedPairs:0,partial:true,invalidInput:true,retry:true,cancel:true,restart:true,selectionCancellation:true,modelSwitchCancellation:true,staleReplyAfterImport:true,unchanged:true,errors},null,2))
+ await writeFile(path.join(directory,'result.json'),JSON.stringify({artifact,ok:true,selfIntersection:process.argv.includes('--self-intersection'),projective,keyboard,tabs,contactPairCount:fixture.result.contactPairCount,cubeSharedBoundaries:12,cubeClassified:true,curvedSharedBoundaries:12,curvedUnresolvedPairs:0,partial:true,invalidInput:true,retry:true,cancel:true,restart:true,selectionCancellation:true,modelSwitchCancellation:true,staleReplyAfterImport:true,unchanged:true,errors},null,2))
 }catch(error){if(page){await page.screenshot({path:path.join(directory,'failure.png')}).catch(()=>{});await writeFile(path.join(directory,'failure.txt'),await page.locator('body').innerText().catch(()=>''))}throw error}
 finally{await browser?.close();await new Promise(resolve=>server.close(resolve))}

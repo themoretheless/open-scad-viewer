@@ -87,7 +87,8 @@ mod tests {
         for f in report["faces"].as_array().unwrap(){assert_eq!(f["result"]["reason"],json!("global-projective-projection-contraction"));assert!(f["result"]["projectiveProjection"].is_array());}
         assert_eq!(value_codec::to_value(&model).unwrap(),before);
         if let Ok(path)=std::env::var("CAD_PROJECTIVE_INJECTIVITY_FIXTURE"){
-            std::fs::write(path,value_codec::to_string(&json!({"request":q,"result":report})).unwrap()).unwrap();
+            let display_mesh=crate::dispatch(json!({"op":"brep_nurbs_tessellate","model":model,"segments":16})).unwrap();
+            std::fs::write(path,value_codec::to_string(&json!({"request":q,"result":report,"displayMesh":display_mesh})).unwrap()).unwrap();
         }
     }
     #[test]

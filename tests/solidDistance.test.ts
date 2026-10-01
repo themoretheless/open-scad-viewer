@@ -111,3 +111,31 @@ it('validates native exact-sphere volume and separation without accepting incomp
   expect(validSolidDistance(e,incomplete)).toBe(false)
  }
 })
+
+it('qualifies actual WASM exact sphere distances across the tested radius scales',async()=>{
+ const {callGeometryRust}=await import('../src/services/geometry/kernel')
+ const {measureSolidDistance}=await import('../src/services/solidDistance')
+ for(const radius of [0.000011444091796875,0.375,1.5,6,12,786432]){
+  const a=callGeometryRust<any>('brep_nurbs_sphere',{radius}),contained=radius===786432
+  const b=contained?callGeometryRust<any>('brep_nurbs_sphere',{radius:3}):structuredClone(a),offset=2*radius+2
+  if(!contained){
+   for(const v of b.vertices)v.point[0]+=offset
+   for(const edge of b.edges)for(const p of edge.curve.controlPoints)p[0]+=offset
+   for(const face of b.faces)for(const row of face.surface.controlPoints)for(const p of row)p[0]+=offset
+  }
+  const options={...structuredClone(cases[6].request),a,b},before=JSON.stringify(options)
+  const r=measureSolidDistance(options)
+  expect(validSolidDistance(solidDistanceExpectation(options),r)).toBe(true)
+  expect(r.validity.every(v=>v.proven),`radius=${radius}`).toBe(true)
+  expect(r.converged,`radius=${radius}, reason=${r.reason}`).toBe(true)
+  expect(r.materialOverlap).toBe(contained)
+  const gap=contained?0:2
+  expect(r.distanceIntervalMm![0]).toBeLessThanOrEqual(gap);expect(r.distanceIntervalMm![1]).toBeGreaterThanOrEqual(gap)
+  expect(r.distanceIntervalMm![1]-r.distanceIntervalMm![0]).toBeLessThanOrEqual(options.toleranceMm)
+  expect(JSON.stringify(options)).toBe(before)
+  if(contained){
+   const invalid=structuredClone(a);for(const v of invalid.vertices)v.point[0]+=offset
+   expect(()=>measureSolidDistance({...options,b:invalid})).toThrow('Invalid vertex coordinates')
+  }
+ }
+})
