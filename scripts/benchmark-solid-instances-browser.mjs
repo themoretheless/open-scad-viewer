@@ -112,6 +112,7 @@ try{
   if(profile){const {profile:cpu}=await cdp.send('Profiler.stop');await writeFile(path.join(directory,profileAction+'.cpuprofile'),JSON.stringify(cpu));profileCaptured=true}
   samples.push({action,profiled:profile,elapsedMs,heap:await heap(),frameCount:frameGapsMs.length,maxFrameGapMs:Math.max(0,...frameGapsMs)})
   if(collectRetained){await cdp.send('HeapProfiler.collectGarbage');retainedSamples.push({action,...await heap(),...(workerHeap?{workers:await workerHeap()}: {})})}
+  await writeFile(path.join(directory,'measurements-partial.json'),JSON.stringify({complete:false,before,samples,memoryReadings,memoryErrors},null,2)+'\n')
  }
  if(process.argv.includes('--check-import-cancel')){
   await page.evaluate(()=>{window.__importPosted=false;const post=Worker.prototype.postMessage;Worker.prototype.postMessage=function(message,...args){if(message?.job?.kind==='restoreDocument')window.__importPosted=true;return post.call(this,message,...args)}})
@@ -277,6 +278,7 @@ try{
  if(process.argv.includes('--require-webgpu'))assert.equal(renderer.gpuCanvasVisible,true,'WebGPU must remain active; CPU fallback cannot qualify GPU performance')
  let orbit=null
  if(process.argv.includes('--orbit')){
+  await solid.getByRole('tab',{name:'Сцена',exact:true}).click()
   for(const name of ['snap-preparation','sketch-snap-preparation','topology-preparation'])await solid.getByRole('status',{name,exact:true}).waitFor({state:'hidden'})
   const svg=solid.locator('svg[aria-label="Холст тел 3D"]'),box=await svg.boundingBox()
   assert.ok(box)
@@ -302,6 +304,7 @@ try{
   orbit.rafFps=orbit.frameGapsMs.length*1000/orbit.durationMs
   orbit.pointerMoves=180
   orbit.scope='RAF cadence during 180 automated right-button orbit moves; includes input automation, automated rendering, not physical display presentation rate.'
+  await writeFile(path.join(directory,'orbit-partial.json'),JSON.stringify({complete:false,orbit,renderer},null,2)+'\n')
   let hit=await svg.evaluate(svg=>{
    for(const polygon of svg.querySelectorAll('polygon[data-body]')){
     const points=[...polygon.points];if(!points.length)continue
