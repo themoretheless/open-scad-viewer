@@ -818,7 +818,7 @@ watchEffect(onCleanup=>{
  if(!enabled||!body)return
  diagnosticsPending.value=true
  const valid=()=>current&&props.open&&diagnosticsOpen.value&&document.value===snapshot&&selectedBody.value?.id===body.id
- void displayInspectionWorker.run({kind:'brepTool',document:history.document,options:{kind:'display',id:body.id,offset,normal}}).then(result=>{
+ void displayInspectionWorker.run({kind:'brepTool',document:snapshot,options:{kind:'display',id:body.id,offset,normal}}).then(result=>{
   if(valid()&&result.kind==='display')diagnostics.value={value:result.diagnostics,error:''}
  }).catch(e=>{if(valid())diagnostics.value={value:null,error:e instanceof Error?e.message:String(e)}})
  .finally(()=>{if(valid())diagnosticsPending.value=false})

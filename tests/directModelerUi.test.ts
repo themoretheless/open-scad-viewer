@@ -2892,6 +2892,20 @@ it('invalidates screen trim requests on another click, numeric mode and Escape',
  expect(ui.doc()).toEqual(before);expect(ui.all().some(n=>n.props['data-preview']==='point-trim')).toBe(false)
 })
 
+it('updates section diagnostics without materializing a history geometry copy',async()=>{
+ const {DirectHistory}=await import('../src/services/directModeling')
+ const ui=await mount();await ui.click('Cube');const before=ui.doc()
+ const read=vi.spyOn(DirectHistory.prototype,'document','get')
+ try{
+  await ui.click('Body diagnostics')
+  const offset=ui.all().find(n=>n.tag==='input'&&n.props['aria-label']==='Section offset, mm')!
+  offset.props['onUpdate:modelValue']('6 mm');await flushClearance()
+  expect(ui.all().some(n=>n.props['data-diagnostic']==='section')).toBe(true)
+  expect(read).not.toHaveBeenCalled()
+  expect(ui.doc()).toEqual(before)
+ }finally{read.mockRestore()}
+})
+
 it('invalidates section previews on malformed input and explains a zero normal at its fields',async()=>{
  const ui=await mount();await ui.click('Cube');const before=ui.doc();await ui.click('Body diagnostics')
  const normal=(axis:string)=>ui.all().find(n=>n.tag==='input'&&n.props['aria-label']==='Normal '+axis)!
