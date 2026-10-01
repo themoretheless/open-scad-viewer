@@ -3992,3 +3992,14 @@ for(const locale of ['en','ru'] as const)it('retries surface distance after loca
  await ui.click(locale==='ru'?'Повторить измерение поверхностей':'Retry surface distance');await flushClearance()
  expect(ui.all().some(n=>n.props['data-surface-distance']!==undefined)).toBe(true);expect(ui.doc()).toEqual(before)
 })
+
+it('creates an exact polyline contour through coordinate inputs and preserves history',async()=>{
+ await geometryKernel.warmGeometryKernel();const ui=await mount();await ui.click('Polyline');const before=ui.doc()
+ const field=(axis:string)=>ui.all().find(n=>n.props['aria-label']==='Point coordinate '+axis)!
+ for(const [x,y] of [[0,0],[20,0],[20,10],[0,10]]){field('X').props['onUpdate:modelValue'](x);field('Y').props['onUpdate:modelValue'](y);await nextTick();await ui.click('Add point')}
+ expect(ui.button('Add point').props.disabled).toBe(true);expect(ui.doc()).toEqual(before)
+ await ui.click('Close contour');const after=ui.doc();expect(after.sketches).toHaveLength(before.sketches.length+1);expect(after.sketches.at(-1)!.points).toEqual([[0,0],[20,0],[20,10],[0,10]]);expect(after.sketches.at(-1)!.closed).toBe(true)
+ await ui.click('↶');expect(ui.doc()).toEqual(before);await ui.click('↷');expect(ui.doc()).toEqual(after)
+ await ui.click('Polyline');field('X').props['onUpdate:modelValue']('bad');await nextTick();expect(ui.button('Add point').props.disabled).toBe(true);expect(ui.doc()).toEqual(after)
+ await commandKey(ui,'Escape');expect(ui.doc()).toEqual(after)
+})
