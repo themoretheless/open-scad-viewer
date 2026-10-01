@@ -43,6 +43,7 @@ mod periodic_chart;
 pub mod trim_domain;
 pub mod trim_simplicity;
 pub mod trim_region_audit;
+pub mod planar_area;
 pub mod trimmed_surface_distance;
 pub mod intersection;
 pub mod ss_intersection;
