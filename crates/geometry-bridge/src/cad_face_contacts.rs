@@ -64,7 +64,7 @@ fn diagnose_inner(v: Value, combined: bool) -> Result<Value> {
         output["maxSpans"] = json!(max_spans);
         output["faces"] = json!(faces.faces.iter().map(|face| json!({
             "face": face.face,
-            "result": face.result.as_ref().map(|r| json!({"proven":r.proven,"projection":r.projection,
+            "result": face.result.as_ref().map(|r| json!({"proven":r.proven,"projection":r.projection,"linearProjection":r.linear_projection,
                 "contractionUpper":r.contraction_upper,"spans":r.spans,"reason":r.reason}))
         })).collect::<Vec<_>>());
     }
@@ -75,6 +75,23 @@ mod tests {
     use super::*;
     fn request(model: &brep_core::Model) -> Value {
         json!({"op":"cad_face_contacts","model":model,"toleranceUv":1e-8,"maxPairs":100,"maxCells":10000,"maxDomainCells":100000,"cellsPerPair":16,"domainCellsPerPair":1000,"maxBoxes":2})
+    }
+    #[test]
+    fn cylinder_face_proofs_include_linear_basis_and_complete_work_counts(){
+        let model=brep_core::analytic::cylinder(2.,4.).unwrap();
+        let mut q=request(&model);q["op"]=json!("cad_self_intersection");q["maxSpans"]=json!(1000);
+        let report=crate::dispatch(q.clone()).unwrap();
+        assert_eq!(report["allFacesInjective"],json!(true));
+        assert_eq!(report["solidGeometryStatus"],json!("not-certified"));
+        let faces:Vec<Value>=field(&report,"faces").unwrap();
+        for face in &faces[..4]{
+            assert_eq!(face["result"]["reason"],json!("global-linear-projection-contraction"));
+            assert_eq!(face["result"]["projection"],Value::Null);
+            assert!(field::<usize>(&face["result"],"spans").unwrap()>=17);
+        }
+        if let Ok(path)=std::env::var("CAD_LINEAR_INJECTIVITY_FIXTURE"){
+            std::fs::write(path,value_codec::to_string(&json!({"request":q,"result":report})).unwrap()).unwrap();
+        }
     }
     #[test]
     fn combined_diagnostics_keep_face_limits_and_volume_scope_explicit() {

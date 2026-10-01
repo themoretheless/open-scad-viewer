@@ -63,3 +63,21 @@ it('runs real combined diagnostics through the worker after a rejected span budg
  expect(messages[1]).toMatchObject({id:2,kind:'selfIntersection',ok:true,result:{absenceProven:true}})
  expect(validSelfIntersection(expectation,messages[1].result)).toBe(true)
 })
+
+it('checks the linear basis and actual subdivision budget in face proofs',()=>{
+ const e=selfIntersectionExpectation(model,toleranceUv,limits,22),r=structuredClone(report)
+ r.maxSpans=22;r.spans=22
+ Object.assign(r.faces[0].result,{projection:null,linearProjection:[[1,1,0],[0,0,1]],spans:17,reason:'global-linear-projection-contraction'})
+ expect(validSelfIntersection(e,r)).toBe(true)
+ for(const patch of [{linearProjection:[[1,1,0],[0,0,2]]},{linearProjection:[[1,NaN,0],[0,0,1]]},{linearProjection:null},{spans:16},{spans:23},{projection:[0,1]},{contractionUpper:1}]){
+  const copy=structuredClone(r);Object.assign(copy.faces[0].result,patch);expect(validSelfIntersection(e,copy)).toBe(false)
+ }
+})
+
+it('accepts actual native cylinder linear-projection reports without certifying all pairs',()=>{
+ const fixture=JSON.parse(readFileSync(new URL('../docs/qualification/cad-roadmap-2026-09-28/curved-volume-2026-10-01/linear-face-native.json',import.meta.url),'utf8'))
+ const {model,toleranceUv,maxSpans,op,...limits}=fixture.request
+ expect(validSelfIntersection(selfIntersectionExpectation(model,toleranceUv,limits,maxSpans),fixture.result)).toBe(true)
+ expect(fixture.result.allFacesInjective).toBe(true)
+ expect(fixture.result.absenceProven).toBe(false)
+})

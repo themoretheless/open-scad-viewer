@@ -50,6 +50,8 @@ mod tests {
     #[test]
     fn linear_projection_certifies_every_authored_cylinder_side(){
         let model=crate::analytic::cylinder(2.,4.).unwrap();
+        assert!(inspect(&model,1000).unwrap().all_faces_injective);
+        let partial=inspect(&model,16).unwrap();assert!(!partial.all_faces_injective);assert!(partial.spans<=16);
         for (i,direction) in [[-1.,1.,0.],[-1.,-1.,0.],[1.,-1.,0.],[1.,1.,0.]].into_iter().enumerate(){
             let q=surface_injectivity::certify_linear_projection(&model.faces[i].surface,[direction,[0.,0.,1.]],16).unwrap();
             assert!(q.is_some(),"face {i}: {q:?}");
@@ -75,7 +77,7 @@ mod tests {
                 *p = vec![0.; 3];
             }
         }
-        let r = inspect(&model, 6).unwrap();
+        let r = inspect(&model, 1000).unwrap();
         assert!(!r.all_faces_injective);
         assert!(!r.faces[0].result.as_ref().unwrap().proven);
         assert!(

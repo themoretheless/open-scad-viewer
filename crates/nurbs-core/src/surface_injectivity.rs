@@ -7,6 +7,7 @@ use crate::{Result, check, distance_bounds::Interval as I, surface::Surface};
 pub struct Report {
     pub proven: bool,
     pub projection: Option<[usize; 2]>,
+    pub linear_projection: Option<[[f64;3];2]>,
     pub contraction_upper: Option<f64>,
     pub spans: usize,
     pub reason: &'static str,
@@ -125,6 +126,7 @@ pub fn certify(s: &Surface, max_spans: usize) -> Result<Report> {
     let mut report = Report {
         proven: false,
         projection: None,
+        linear_projection: None,
         contraction_upper: None,
         spans: 0,
         reason: "projection-not-proven",
@@ -166,22 +168,40 @@ pub fn certify(s: &Surface, max_spans: usize) -> Result<Report> {
             }
         }
     }
+    for basis in LINEAR_PROJECTIONS{
+        if report.spans==max_spans{report.reason="work-limit";return Ok(report);}
+        let (q,cells)=linear_projection_work(s,basis,max_spans-report.spans)?;
+        report.spans+=cells;
+        if let Some(q)=q{
+            report.proven=true;report.linear_projection=Some(basis);report.contraction_upper=Some(q);
+            report.reason="global-linear-projection-contraction";return Ok(report);
+        }
+    }
+    if report.spans==max_spans{report.reason="work-limit";}
     Ok(report)
 }
+pub const LINEAR_PROJECTIONS: [[[f64;3];2];6]=[
+    [[1.,1.,0.],[0.,0.,1.]],[[1.,-1.,0.],[0.,0.,1.]],
+    [[1.,0.,1.],[0.,1.,0.]],[[1.,0.,-1.],[0.,1.,0.]],
+    [[0.,1.,1.],[1.,0.,0.]],[[0.,1.,-1.],[1.,0.,0.]],
+];
 /// Certify a fixed linear projection using a common Jacobian hull over every
 /// knot rectangle. Subdivision tightens bounds; it never replaces the global
 /// contraction with unrelated local certificates. None includes budget exhaustion.
 pub fn certify_linear_projection(s:&Surface,basis:[[f64;3];2],max_cells:usize)->Result<Option<f64>> {
+    Ok(linear_projection_work(s,basis,max_cells)?.0)
+}
+fn linear_projection_work(s:&Surface,basis:[[f64;3];2],max_cells:usize)->Result<(Option<f64>,usize)> {
     s.validate()?;
     check(max_cells>0&&max_cells<=100000&&basis.iter().flatten().all(|x|x.is_finite()),"Linear projection requires finite coefficients and 1..100000 cells")?;
-    if s.periodic_u||s.periodic_v{return Ok(None);}
+    if s.periodic_u||s.periodic_v{return Ok((None,0));}
     let mut global=[[I{lo:f64::INFINITY,hi:f64::NEG_INFINITY};2];2];
     let mut cells=0;
     for u in s.degree_u..s.control_points.len(){for v in s.degree_v..s.control_points[0].len(){
         let ranges=[[s.knots_u[u],s.knots_u[u+1]],[s.knots_v[v],s.knots_v[v+1]]];
         if ranges.iter().any(|r|r[0]>=r[1]){continue;}
         for i in 0..4{for j in 0..4{
-            if cells==max_cells{return Ok(None);}
+            if cells==max_cells{return Ok((None,cells));}
             let section=std::array::from_fn(|k|{
                 let n=[i,j][k];let [lo,hi]=ranges[k];
                 [if n==0{lo}else{lo+(hi-lo)*(n as f64/4.)},if n==3{hi}else{lo+(hi-lo)*((n+1) as f64/4.)}]
@@ -194,7 +214,7 @@ pub fn certify_linear_projection(s:&Surface,basis:[[f64;3];2],max_cells:usize)->
             }}
         }}
     }}
-    Ok(contraction(global)?.filter(|q|*q<1.))
+    Ok((contraction(global)?.filter(|q|*q<1.),cells))
 }
 /// Enclose (dS/du cross dS/dv) dot direction over the requested rectangle.
 /// At a knot, include both one-sided derivatives. A point rectangle uses a
