@@ -53,7 +53,7 @@ try{
   await activate(menu);await solid.locator('input[accept=".json,application/json"]').setInputFiles({name:'mixed.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(initial))});await activate(menu);await ready()
   await activate(solid.getByRole('tab',{name:'Сцена',exact:true}))
   const snapshots=[await exportDoc(name+'-0.json')]
-  let current=snapshots[0],step=0
+  let current=snapshots[0],step=0,cancelledPreviews=0
   async function save(){
    current=await exportDoc(name+'-'+(++step)+'.json')
    const actual=current.bodies.find(b=>b.id===name),oracle=expected[step].bodies[0]
@@ -63,6 +63,11 @@ try{
     const ids=actual.brep.topologyIds[kind];assert.equal(ids.length,actual.brep[kind].length);assert.equal(new Set(ids).size,ids.length)
    }
    snapshots.push(current)
+  }
+  async function cancelPreview(){
+   await page.waitForFunction(element=>!element.disabled,await apply.elementHandle())
+   if(keyboard)await page.keyboard.press('Escape');else await solid.getByRole('button',{name:'Esc',exact:true}).last().click()
+   assert.deepEqual(await exportDoc(name+'-cancel-preview-'+(++cancelledPreviews)+'.json'),current)
   }
   async function select(){await ready();await activate(solid.getByRole('button',{name:title,exact:true}))}
   async function move(){await select();await command('Transform selection');await input('X','1 mm');await activate(apply);await save()}
@@ -82,7 +87,7 @@ try{
     },{candidates,id:name})
     assert.ok(point,`${name}: visible top cap`);await page.mouse.click(point.x,point.y)
    }
-   await command('Push / Pull');await input('Расстояние, мм','1 mm');await activate(apply);await save()
+   await command('Push / Pull');await input('Расстояние, мм','1 mm');await cancelPreview();await command('Push / Pull');await input('Расстояние, мм','1 mm');await activate(apply);await save()
    await select();const tool=solid.getByRole('button',{name:`Tool ${cycle}`,exact:true})
    if(keyboard){await focusByTab(tool);await page.keyboard.press('Shift+Enter')}else await tool.click({modifiers:['Shift']})
    await command(name==='bracket'?'Union bodies':'B-rep A − B')
@@ -102,13 +107,13 @@ try{
     assert.ok(point,'Visible edge target');if(j)await page.keyboard.down('Shift');try{await page.mouse.click(point.x,point.y)}finally{if(j)await page.keyboard.up('Shift')}
    }
   }
-  await command('Скруглить 3D');await input('Радиус / размер, мм','1 mm');await activate(apply);await save();await move()
-  assert.equal(step,20);assert.equal(new Set(snapshots.map(d=>JSON.stringify(d))).size,21)
+  await command('Скруглить 3D');await input('Радиус / размер, мм','1 mm');await cancelPreview();await command('Скруглить 3D');await input('Радиус / размер, мм','1 mm');await activate(apply);await save();await move()
+  assert.equal(cancelledPreviews,7);assert.equal(step,20);assert.equal(new Set(snapshots.map(d=>JSON.stringify(d))).size,21)
   await page.screenshot({path:path.join(directory,name+'.png')})
   for(let i=19;i>=0;i--){await activate(solid.getByRole('button',{name:'↶',exact:true}));assert.deepEqual(await exportDoc(name+'-undo-'+i+'.json'),snapshots[i])}
   for(let i=1;i<=20;i++){await activate(solid.getByRole('button',{name:'↷',exact:true}));assert.deepEqual(await exportDoc(name+'-redo-'+i+'.json'),snapshots[i])}
   await solid.getByRole('status',{name:'Сохранено в браузере',exact:true}).waitFor();await page.reload();await solid.getByRole('button',{name:title,exact:true}).waitFor();assert.deepEqual(await exportDoc(name+'-reload.json'),current)
  }
- assert.deepEqual(errors,[]);await writeFile(path.join(directory,'result.json'),JSON.stringify({ok:true,keyboard,tabs,edits:20,cases:['bracket','enclosure','flange'],errors},null,2))
+ assert.deepEqual(errors,[]);await writeFile(path.join(directory,'result.json'),JSON.stringify({ok:true,keyboard,tabs,edits:20,cancelledPreviewsPerPart:7,cases:['bracket','enclosure','flange'],errors},null,2))
 }catch(e){if(page){await page.screenshot({path:path.join(directory,'failure.png')}).catch(()=>{});await writeFile(path.join(directory,'failure.txt'),await page.locator('body').innerText().catch(()=>''))}throw e}
 finally{await browser?.close();await new Promise(resolve=>server.close(resolve))}
