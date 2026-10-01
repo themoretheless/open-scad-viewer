@@ -1,0 +1,62 @@
+{
+  "scope": "primitive creation/history/reload only; native failure localization and general command execution remain unverified",
+  "sourceBaseline": "0012e40b",
+  "commands": [
+    {
+      "id": "add-box",
+      "mouse": "passed creation + per-creation Undo/Redo",
+      "keyboard": "passed palette activation + per-creation Undo/Redo",
+      "reload": "passed complete document",
+      "failureLocalization": "unverified"
+    },
+    {
+      "id": "add-wedge",
+      "mouse": "passed creation + per-creation Undo/Redo",
+      "keyboard": "passed palette activation + per-creation Undo/Redo",
+      "reload": "passed complete document",
+      "failureLocalization": "unverified"
+    },
+    {
+      "id": "add-cylinder",
+      "mouse": "passed creation + per-creation Undo/Redo",
+      "keyboard": "passed palette activation + per-creation Undo/Redo",
+      "reload": "passed complete document",
+      "failureLocalization": "unverified"
+    },
+    {
+      "id": "add-frustum",
+      "mouse": "passed creation + per-creation Undo/Redo",
+      "keyboard": "passed palette activation + per-creation Undo/Redo",
+      "reload": "passed complete document",
+      "failureLocalization": "unverified"
+    },
+    {
+      "id": "add-tube",
+      "mouse": "passed creation + per-creation Undo/Redo",
+      "keyboard": "passed palette activation + per-creation Undo/Redo",
+      "reload": "passed complete document",
+      "failureLocalization": "unverified"
+    },
+    {
+      "id": "add-cone",
+      "mouse": "passed creation + per-creation Undo/Redo",
+      "keyboard": "passed palette activation + per-creation Undo/Redo",
+      "reload": "passed complete document",
+      "failureLocalization": "unverified"
+    },
+    {
+      "id": "add-sphere",
+      "mouse": "passed creation + per-creation Undo/Redo",
+      "keyboard": "passed palette activation + per-creation Undo/Redo",
+      "reload": "passed complete document",
+      "failureLocalization": "unverified"
+    },
+    {
+      "id": "add-torus",
+      "mouse": "passed creation + per-creation Undo/Redo",
+      "keyboard": "passed palette activation + per-creation Undo/Redo",
+      "reload": "passed complete document",
+      "failureLocalization": "unverified"
+    }
+  ]
+}
