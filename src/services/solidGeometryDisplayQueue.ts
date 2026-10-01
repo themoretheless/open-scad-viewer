@@ -21,7 +21,15 @@ export class SolidGeometryDisplayQueue<Item extends {id:string}, Mesh, Job> {
  async prepare(items:readonly Item[]):Promise<GeometryDisplayResult>{
   this.cancel();const generation=this.generation,result:GeometryDisplayResult={changed:false,errors:[]}
   const requested=new Map<string,Item>()
-  for(const item of items){const key=this.key(item);if(!this.cache.has(key))requested.set(key,item)}
+  let sliceStart=performance.now()
+  for(const item of items){
+   const key=this.key(item);if(!this.cache.has(key))requested.set(key,item)
+   if(performance.now()-sliceStart>=8){
+    await new Promise<void>(resolve=>setTimeout(resolve,0))
+    if(generation!==this.generation)return {changed:false,errors:[]}
+    sliceStart=performance.now()
+   }
+  }
   for(const [key,item] of requested){
    try{
     const mesh=await this.port.run(this.job(item))
@@ -31,7 +39,15 @@ export class SolidGeometryDisplayQueue<Item extends {id:string}, Mesh, Job> {
     else result.errors.push({id:item.id,message:'Geometry display exceeds the cache budget.'})
    }catch(e){if(generation!==this.generation)return {changed:false,errors:[]};result.errors.push({id:item.id,message:e instanceof Error?e.message:String(e)})}
   }
-  for(const item of items)if(!this.get(item)&&!result.errors.some(e=>e.id===item.id))result.errors.push({id:item.id,message:'Geometry display is unavailable. Reduce detail or retry.'})
+  sliceStart=performance.now()
+  for(const item of items){
+   if(!this.get(item)&&!result.errors.some(e=>e.id===item.id))result.errors.push({id:item.id,message:'Geometry display is unavailable. Reduce detail or retry.'})
+   if(performance.now()-sliceStart>=8){
+    await new Promise<void>(resolve=>setTimeout(resolve,0))
+    if(generation!==this.generation)return {changed:false,errors:[]}
+    sliceStart=performance.now()
+   }
+  }
   return result
  }
 }

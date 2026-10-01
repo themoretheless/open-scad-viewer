@@ -11,3 +11,9 @@ Actual WASM scale qualification covers five separated sphere pairs, containment 
 Both face-diagnostic browser runs passed. All eight sphere faces have certified perspective injectivity at 968 work units; a 967 limit leaves the final face unproved. The general face-pair diagnostic still reports absenceProven=false because not every pair is classified. This differs from the specialized exact boundary certificate used by volume validity.
 
 Screenshots were inspected. Tessellation remains visibly faceted. Arbitrary radii, rotations, general self-intersection absence and the complete P0–P3 roadmap remain unqualified.
+
+Current-kernel history regression: all 17 cadRoadmapHistory tests passed (29.67 seconds), including 20 mixed edits for bracket, flange and enclosure and exact history snapshots. This is runtime evidence; a new keyboard browser history run remains in progress.
+
+Current-kernel P0 keyboard crash/retry qualification passed for bracket, enclosure and flange: 3,458 Tab actions; real worker error event, new-worker retry, command focus, repeat, late-reply cancellation, Undo/Redo, reload and zero page errors. Evidence: current-kernel-preview-crash-retry.json. This covers cap Push/Pull only.
+
+Current-kernel keyboard browser history qualification completed successfully: bracket, enclosure and flange, 20 edits each, full Undo/Redo snapshots, late-reply cancellation, reload and no page errors; 41,096 Tab actions. Evidence: current-kernel-history20-keyboard.json. This proves this cap-edit scenario, not every supported command or every control-part operation sequence.
