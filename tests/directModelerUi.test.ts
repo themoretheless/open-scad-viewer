@@ -4106,3 +4106,23 @@ it.each([
  expect(ui.doc().sketches[0].id).toBe('first')
  await ui.click('↶');expect(ui.doc()).toEqual(before)
 })
+
+it.each(['en','ru'])('blocks undersized analytic arc sweeps before worker dispatch in %s',async locale=>{
+ await geometryKernel.warmGeometryKernel()
+ const arc={id:'edit-arc',name:'Editable arc',closed:false,points:[],analytic:{kind:'arc',center:[0,0],radius:2,start:0,sweep:180}}
+ const ui=await mount({locale},JSON.stringify(parseDirectDocument(JSON.stringify({version:1,sketches:[arc],bodies:[]}))));await ui.click(arc.name)
+ await ui.click(locale==='ru'?'Параметры кривой':'Curve parameters');await flushClearance();const before=ui.doc()
+ const field=quantityField(ui,locale==='ru'?'Угол дуги':'Arc sweep')
+ for(const sweep of ['0','0.01','-0.05']){
+  const jobs=previewWorkerRun.mock.calls.filter(([job])=>job.kind==='profileEdit').length
+  field.props['onUpdate:modelValue'](sweep);await flushClearance()
+  expect(ui.button(locale==='ru'?'Готово · Enter':'Apply · Enter').props.disabled).toBe(true)
+  expect(ui.text(ui.all()[0])).toContain(locale==='ru'?'Модуль угла дуги':'Arc sweep magnitude')
+  expect(previewWorkerRun.mock.calls.filter(([job])=>job.kind==='profileEdit').length).toBe(jobs)
+  const requests=previewWorkerRun.mock.calls.length;await commandKey(ui,'Enter');expect(previewWorkerRun.mock.calls.length).toBe(requests);expect(ui.doc()).toEqual(before)
+ }
+ field.props['onUpdate:modelValue']('-0.1 deg');await flushClearance()
+ expect(ui.button(locale==='ru'?'Готово · Enter':'Apply · Enter').props.disabled).toBe(false)
+ await commandKey(ui,'Enter');expect(ui.doc().sketches[0].analytic?.sweep).toBe(-.1)
+ await ui.click('↶');expect(parseDirectDocument(JSON.stringify(ui.doc()))).toEqual(parseDirectDocument(JSON.stringify(before)))
+})
