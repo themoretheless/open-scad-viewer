@@ -23,3 +23,7 @@ The first browser run found that Escape cancelled gesture state but left the dra
 ## Remaining qualification
 
 This fixture selects an imported rotated sketch plane; selecting a body face and creating in the 3D pane remains a separate scenario. General command matrix and P1–P3 remain open. This change does not qualify arbitrary fillets, general B-rep diagnostics or surfaces.
+
+## Follow-up
+
+The final shared circle/arc implementation was additionally qualified on a body face through actual mouse and keyboard input. See ../arc-coordinates-2026-10-02/status.md and its circle-face-mouse / circle-face-keyboard reports for pinned final source/build identity, supportBodyId and Y=-10 plane checks.

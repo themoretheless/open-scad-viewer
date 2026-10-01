@@ -5,7 +5,7 @@ import path from 'node:path'
 import {createHash} from 'node:crypto'
 import {readdir} from 'node:fs/promises'
 import {loadQualificationPlaywrightPackage} from './qualificationPlaywrightPackage.mjs'
-const root=path.resolve(process.env.SOLID_QUALIFICATION_DIST??'dist'),directory=path.resolve(process.argv[2]??'/tmp/solid-circle-coordinates')
+const root=path.resolve(process.env.SOLID_QUALIFICATION_DIST??'dist'),directory=path.resolve(process.argv[2]??'/tmp/solid-arc-coordinates')
 const keyboard=process.argv.includes('--keyboard'),theme=process.argv.find(a=>a.startsWith('--theme='))?.slice(8)??'system'
 assert.ok(['system','dark','light','nord','solarized'].includes(theme))
 await mkdir(directory,{recursive:true})
@@ -71,27 +71,35 @@ try {
   await command('Sketch on face');await solid.getByRole('status',{name:'face-sketch-preparation',exact:true}).waitFor({state:'hidden'});await solid.getByText('Рисуйте на выделенной грани в 3D или в панели эскиза. Затем нажмите «Выдавить».',{exact:true}).waitFor()
  }
 
- const before=await exportDoc('before.json');await command('Circle')
+ const sweep=process.argv.includes('--clockwise')?-120:120
+ const before=await exportDoc('before.json');await command('Arc')
  async function input(name,value){const field=solid.getByRole('textbox',{name,exact:true});if(keyboard){await focusByTab(field);await page.keyboard.press('ControlOrMeta+A');await page.keyboard.insertText(value)}else await field.fill(value)}
- const create=solid.getByRole('button',{name:'Создать круг',exact:true}),preview=solid.locator('[data-preview="numeric-circle"]')
+ const create=solid.getByRole('button',{name:'Создать дугу',exact:true}),preview=solid.locator('[data-preview="numeric-arc"]')
  for(const value of ['bad','0','-1','1000001']){
-  await input('Радиус круга',value);assert.equal(await create.isDisabled(),true);assert.equal(await preview.count(),0)
+  await input('Радиус дуги',value);assert.equal(await create.isDisabled(),true);assert.equal(await preview.count(),0)
  }
- await input('Координата точки X','2 cm');await input('Координата точки Y','-5 mm');await input('Радиус круга','6 mm');await preview.waitFor();assert.equal(await create.isDisabled(),false)
+ await input('Координата точки X','2 cm');await input('Координата точки Y','-5 mm');await input('Радиус дуги','6 mm')
+ for(const invalid of ['bad','0','0.01','-0.05','360','-360']){await input('Разворот дуги',invalid);assert.equal(await create.isDisabled(),true);assert.equal(await preview.count(),0)}
+ await input('Разворот дуги',String(sweep)+' deg');await input('Начальный угол дуги','bad');assert.equal(await create.isDisabled(),true);assert.equal(await preview.count(),0)
+ const invalidStart=solid.getByRole('textbox',{name:'Начальный угол дуги',exact:true});assert.equal(await invalidStart.getAttribute('aria-invalid'),'true');assert.ok(await invalidStart.getAttribute('aria-errormessage'));await page.screenshot({path:path.join(directory,'invalid-start.png')})
+ await input('Начальный угол дуги','30 deg');await preview.waitFor();assert.equal(await create.isDisabled(),false)
  await input('Координата точки X','bad');assert.equal(await create.isDisabled(),true);assert.equal(await preview.count(),0);await input('Координата точки X','2 cm');await preview.waitFor()
  assert.deepEqual(await exportDoc('draft.json'),before);await page.screenshot({path:path.join(directory,'draft.png')})
- await activate(create);const after=await exportDoc('created.json'),circle=after.sketches.at(-1);assert.equal(after.sketches.length,before.sketches.length+1);assert.deepEqual(circle.analytic,{kind:'circle',center:[20,-5],radius:6,start:0,sweep:360});if(facePlane){
+ await activate(create);const after=await exportDoc('created.json'),circle=after.sketches.at(-1);assert.equal(after.sketches.length,before.sketches.length+1);assert.deepEqual(circle.analytic,{kind:'arc',center:[20,-5],radius:6,start:30,sweep});if(facePlane){
   plane=circle.plane;assert.equal(circle.supportBodyId,'base');assert.ok(Math.abs(plane.origin[1]+10)<1e-9)
   for(const axis of [plane.u,plane.v]){assert.ok(Math.abs(axis[1])<1e-9);assert.ok(Math.abs(Math.hypot(...axis)-1)<1e-9)}
   assert.ok(Math.abs(plane.u.reduce((sum,x,i)=>sum+x*plane.v[i],0))<1e-9)
   for(const p of circle.points){const world=plane.origin.map((x,i)=>x+plane.u[i]*p[0]+plane.v[i]*p[1]);assert.ok(Math.abs(world[1]+10)<1e-9)}
- }else assert.deepEqual(circle.plane,plane);assert.equal(circle.closed,true)
+ }else assert.deepEqual(circle.plane,plane);assert.equal(circle.closed,false)
+ const expectedPoint=angle=>[20+6*Math.cos(angle*Math.PI/180),-5+6*Math.sin(angle*Math.PI/180)]
+ for(const [actual,expected] of [[circle.points[0],expectedPoint(30)],[circle.points.at(-1),expectedPoint(30+sweep)]])for(let i=0;i<2;i++)assert.ok(Math.abs(actual[i]-expected[i])<1e-9)
+ assert.ok(circle.points.length>2)
  assert.equal(await preview.count(),0)
  await activate(solid.getByRole('button',{name:'↶',exact:true}));assert.deepEqual(await exportDoc('undone.json'),before);await activate(solid.getByRole('button',{name:'↷',exact:true}));assert.deepEqual(await exportDoc('redone.json'),after)
- await command('Circle');await input('Радиус круга','9');await page.keyboard.press('Escape');assert.deepEqual(await exportDoc('cancelled.json'),after);assert.equal(await preview.count(),0)
+ await command('Arc');await input('Радиус дуги','9');await page.keyboard.press('Escape');assert.deepEqual(await exportDoc('cancelled.json'),after);assert.equal(await preview.count(),0)
  await solid.getByRole('status',{name:'Сохранено в браузере',exact:true}).waitFor();await page.reload();await ready();assert.deepEqual(await exportDoc('reloaded.json'),after);assert.deepEqual(errors,[])
  const gpuActive=await solid.locator('.gpu-layer').evaluate(c=>c.style.visibility==='visible');if(process.argv.includes('--require-gpu'))assert.equal(gpuActive,true)
- await page.screenshot({path:path.join(directory,'circle.png')});const report={artifacts,browser:browser.version(),keyboard,tabs,gpuActive,rotated,facePlane,plane,exactCoordinates:true,invalidInput:true,invalidRadiusValues:['bad',0,-1,1000001],cancelledDraftUnchanged:true,undoRedo:true,reloadExact:true};await writeFile(path.join(directory,'circle-browser.json'),JSON.stringify(report,null,2)+'\n');console.log(report)
+ await page.screenshot({path:path.join(directory,'arc.png')});const report={artifacts,browser:browser.version(),keyboard,tabs,gpuActive,rotated,facePlane,plane,sweep,exactCoordinates:true,invalidInput:true,invalidRadiusValues:['bad',0,-1,1000001],invalidSweepValues:['bad',0,.01,-.05,360,-360],endpointToleranceMm:1e-9,cancelledDraftUnchanged:true,undoRedo:true,reloadExact:true};await writeFile(path.join(directory,'arc-browser.json'),JSON.stringify(report,null,2)+'\n');console.log(report)
 
 }catch(error){console.error('Page errors:',errors);if(page){await page.screenshot({path:path.join(directory,'failure.png')}).catch(()=>{});await writeFile(path.join(directory,'failure.txt'),await page.locator('body').innerText().catch(()=>''))}throw error}
 finally{await browser?.close();await new Promise(resolve=>server.close(resolve))}

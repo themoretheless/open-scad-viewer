@@ -117,11 +117,14 @@ const selection = ref(props.initialSelection ?? ''), mode = ref<'2d' | '3d'>('2d
 const draftCursor=ref<Point2|null>(null)
 const slotWidth=ref(5), slotWidthValid=ref(true)
 const draftPoint=ref<Point2>([0,0]),draftPointValid=ref([true,true])
-const draftRadius=ref(10),draftRadiusValid=ref(true)
-const exactCircle=computed(()=>draftPointValid.value.every(Boolean)&&draftPoint.value.every(Number.isFinite)&&draftRadiusValid.value&&Number.isFinite(draftRadius.value)&&draftRadius.value>=.01&&draftRadius.value<=1000000?{kind:'circle' as const,center:[...draftPoint.value] as Point2,radius:draftRadius.value,start:0,sweep:360}:null)
-const exactCirclePoints=computed(()=>tool.value==='circle'&&exactCircle.value?sampleCurve(exactCircle.value):[])
-function createExactCircle(){if(tool.value!=='circle'||!exactCircle.value)return;run(()=>{addSketch(sampleCurve(exactCircle.value!),true,exactCircle.value!);draft.value=[];draftCursor.value=null;tool.value='select'})}
-
+const draftRadius=ref(10),draftRadiusValid=ref(true),draftArcStart=ref(0),draftArcSweep=ref(180),draftArcValid=ref([true,true])
+const exactRoundCurve=computed(()=>{
+ if(!draftPointValid.value.every(Boolean)||!draftPoint.value.every(Number.isFinite)||!draftRadiusValid.value||!Number.isFinite(draftRadius.value)||draftRadius.value<.01||draftRadius.value>1000000)return null
+ if(tool.value==='arc'&&(!draftArcValid.value.every(Boolean)||!Number.isFinite(draftArcStart.value)||!Number.isFinite(draftArcSweep.value)||Math.abs(draftArcSweep.value)<.1||Math.abs(draftArcSweep.value)>=360))return null
+ return {kind:tool.value==='arc'?'arc' as const:'circle' as const,center:[...draftPoint.value] as Point2,radius:draftRadius.value,start:tool.value==='arc'?draftArcStart.value:0,sweep:tool.value==='arc'?draftArcSweep.value:360}
+})
+const exactRoundPoints=computed(()=>(tool.value==='circle'||tool.value==='arc')&&exactRoundCurve.value?sampleCurve(exactRoundCurve.value):[])
+function createExactRoundCurve(){if((tool.value!=='circle'&&tool.value!=='arc')||!exactRoundCurve.value)return;run(()=>{addSketch(sampleCurve(exactRoundCurve.value!),exactRoundCurve.value!.kind==='circle',exactRoundCurve.value!);draft.value=[];draftCursor.value=null;tool.value='select'})}
 const canAddDraftPoint=computed(()=>draftPointValid.value.every(Boolean)&&draftPoint.value.every(Number.isFinite)&&!draft.value.some(p=>p[0]===draftPoint.value[0]&&p[1]===draftPoint.value[1]))
 function addExactDraftPoint(){if(tool.value!=='polyline'||!canAddDraftPoint.value)return;draft.value=[...draft.value,[...draftPoint.value]];draftCursor.value=null;snapMarker.value=null;snapGuide.value=null}
 function undoDraftPoint(){draft.value=draft.value.slice(0,-1);draftCursor.value=null;snapMarker.value=null;snapGuide.value=null}
@@ -1551,7 +1554,7 @@ function addSketch(points: Point2[], closed: boolean, analytic?: import('../serv
 }
 function beginSketch(value: typeof tool.value) {
   cancelGesture(); operation.value = null; advancedOp.value = null; boxSelect.value = false
-  choosingSketchFace.value=false;draftPoint.value=[0,0];draftPointValid.value=[true,true];draftRadius.value=10;draftRadiusValid.value=true;tool.value = value; mode.value = workplaneBodyId.value ? '3d' : '2d'; sketchPaneOpen.value = true
+  choosingSketchFace.value=false;draftPoint.value=[0,0];draftPointValid.value=[true,true];draftRadius.value=10;draftRadiusValid.value=true;draftArcStart.value=0;draftArcSweep.value=180;draftArcValid.value=[true,true];tool.value = value; mode.value = workplaneBodyId.value ? '3d' : '2d'; sketchPaneOpen.value = true
 }
 const canExtrudeSketch = computed(() => !!selectedSketch.value?.closed && tool.value === 'select' && !draft.value.length)
 function finish(closed: boolean) { run(() => { if (draft.value.length < (closed ? 3 : 2)) return; addSketch(draft.value, closed); draft.value = []; draftCursor.value=null; tool.value = 'select' }) }
@@ -3528,7 +3531,7 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
                   <circle v-for="cv in nativeCage" :key="cv.u+'-'+cv.v" :cx="project(cv.point,'3d')[0]" :cy="project(cv.point,'3d')[1]" :r="views['3d']/110" :fill="cvU===cv.u&&cvV===cv.v?'#ff8b77':'#ffc977'" stroke="#2a2114" vector-effect="non-scaling-stroke" @pointerdown.stop="startCv($event,cv.u,cv.v)" />
                 </g>
               </g>
-              <polyline v-if="pane===mode && tool==='circle' && !draft.length && exactCirclePoints.length" data-preview="numeric-circle" :points="exactCirclePoints.map(p=>project(pane==='3d'?worldPoint(p,activePlane):p,pane).join(',')).join(' ')" fill="none" stroke="#b894ff" stroke-dasharray="4 3" vector-effect="non-scaling-stroke" pointer-events="none" />
+              <polyline v-if="pane===mode && (tool==='circle'||tool==='arc') && !draft.length && exactRoundPoints.length" :data-preview="tool==='circle'?'numeric-circle':'numeric-arc'" :points="exactRoundPoints.map(p=>project(pane==='3d'?worldPoint(p,activePlane):p,pane).join(',')).join(' ')" fill="none" stroke="#b894ff" stroke-dasharray="4 3" vector-effect="non-scaling-stroke" pointer-events="none" />
               <g v-if="pane==='3d' && workplaneBodyId" pointer-events="none" fill="none" stroke="#77eac5" vector-effect="non-scaling-stroke">
                 <path v-for="(loop,i) in workplaneOutline" :key="i" :d="'M '+loop.map(p=>project(worldPoint(p,activePlane),'3d').join(',')).join(' L ')+' Z'" stroke-dasharray="5 3" stroke-width="1" vector-effect="non-scaling-stroke" />
                 <polyline v-if="draft.length" :points="(tool==='polyline'&&draftCursor?[...draft,draftCursor]:draft).map(p=>project(worldPoint(p,activePlane),'3d').join(',')).join(' ')" stroke-width="2" />
@@ -3656,14 +3659,18 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
             <div class="zoom-tools"><button :aria-label="label('Приблизить ', 'Zoom in ') + pane" @click="zoom(pane, .8)">+</button><button :aria-label="label('Отдалить ', 'Zoom out ') + pane" @click="zoom(pane, 1.25)">−</button></div>
             <div v-if="pane === '3d'" class="fps-badge" :class="{ low: fps > 0 && fps < 30 }" role="status" :aria-label="label('Кадров в секунду', 'Frames per second')">{{ fps }} FPS · {{ frameMs }} ms<template v-if="gpuActive"> · draw {{ drawMs }} ms</template></div>
             </div>
-            <section v-if="(tool==='polyline'||tool==='circle') && pane===mode" class="operation-card" :aria-label="tool==='circle'?label('Точный круг','Exact circle'):label('Точки ломаной','Polyline points')">
-              <strong>{{ tool==='circle'?label('Круг — центр и радиус','Circle — center and radius'):label('Ломаная — точные координаты','Polyline — exact coordinates') }}</strong>
-              <small>{{ tool==='circle'?label('Центр и радиус в активной плоскости, мм. Создать круг — применить, Esc — отменить.','Center and radius in the active plane, mm. Create circle applies; Esc cancels.'):label('Координаты в активной плоскости, мм. Добавьте точки, затем замкните контур или завершите линию. Esc — отмена.','Coordinates in the active plane, mm. Add points, then close the contour or finish the line. Esc cancels.') }}</small>
+            <section v-if="(tool==='polyline'||tool==='circle'||tool==='arc') && pane===mode" class="operation-card" :aria-label="tool==='arc'?label('Точная дуга','Exact arc'):tool==='circle'?label('Точный круг','Exact circle'):label('Точки ломаной','Polyline points')">
+              <strong>{{ tool==='arc'?label('Дуга — центр, радиус и углы','Arc — center, radius and angles'):tool==='circle'?label('Круг — центр и радиус','Circle — center and radius'):label('Ломаная — точные координаты','Polyline — exact coordinates') }}</strong>
+              <small>{{ tool==='arc'?label('Углы в градусах. Положительный разворот — против часовой стрелки. Создать дугу — применить, Esc — отменить.','Angles in degrees. Positive sweep runs counterclockwise. Create arc applies; Esc cancels.'):tool==='circle'?label('Центр и радиус в активной плоскости, мм. Создать круг — применить, Esc — отменить.','Center and radius in the active plane, mm. Create circle applies; Esc cancels.'):label('Координаты в активной плоскости, мм. Добавьте точки, затем замкните контур или завершите линию. Esc — отмена.','Coordinates in the active plane, mm. Add points, then close the contour or finish the line. Esc cancels.') }}</small>
               <label v-for="(axis,i) in ['X','Y']" :key="axis">{{ axis }}<CadQuantityInput v-model="draftPoint[i]" :locale="locale" :min="-1000000" :max="1000000" :aria-label="label('Координата точки ','Point coordinate ')+axis" @validity="draftPointValid[i]=$event" /></label>
-              <template v-if="tool==='circle'">
-                <label>{{ label('Радиус, мм','Radius, mm') }}<CadQuantityInput v-model="draftRadius" :locale="locale" :min=".01" :max="1000000" :aria-label="label('Радиус круга','Circle radius')" @validity="draftRadiusValid=$event" /></label>
-                <button :disabled="!exactCircle" @click="createExactCircle">{{ label('Создать круг','Create circle') }}</button>
-                <small v-if="!exactCircle" role="alert">{{ label('Исправьте центр и радиус (0,01–1 000 000 мм).','Correct the center and radius (0.01–1,000,000 mm).') }}</small>
+              <template v-if="tool==='circle'||tool==='arc'">
+                <label>{{ label('Радиус, мм','Radius, mm') }}<CadQuantityInput v-model="draftRadius" :locale="locale" :min=".01" :max="1000000" :aria-label="tool==='arc'?label('Радиус дуги','Arc radius'):label('Радиус круга','Circle radius')" @validity="draftRadiusValid=$event" /></label>
+                <template v-if="tool==='arc'">
+                  <label>{{ label('Начальный угол','Start angle') }}<CadQuantityInput v-model="draftArcStart" kind="angle" :locale="locale" :min="-360000" :max="360000" :aria-label="label('Начальный угол дуги','Arc start angle')" @validity="draftArcValid[0]=$event" /></label>
+                  <label>{{ label('Разворот','Sweep') }}<CadQuantityInput v-model="draftArcSweep" kind="angle" :locale="locale" :min="-359.999999" :max="359.999999" :aria-label="label('Разворот дуги','Arc sweep')" @validity="draftArcValid[1]=$event" /></label>
+                </template>
+                <button :disabled="!exactRoundCurve" @click="createExactRoundCurve">{{ tool==='arc'?label('Создать дугу','Create arc'):label('Создать круг','Create circle') }}</button>
+                <small v-if="!exactRoundCurve" role="alert">{{ tool==='arc'?label('Исправьте центр, радиус и углы. Радиус от 0,01 мм; модуль разворота от 0,1° до 360° без полного оборота.','Correct center, radius and angles. Radius starts at 0.01 mm; absolute sweep starts at 0.1° and must be below 360°.'):label('Исправьте центр и радиус (0,01–1 000 000 мм).','Correct the center and radius (0.01–1,000,000 mm).') }}</small>
               </template>
               <template v-else>
               <button :disabled="!canAddDraftPoint" @click="addExactDraftPoint">{{ label('Добавить точку','Add point') }}</button>

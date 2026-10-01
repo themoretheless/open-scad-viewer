@@ -4015,3 +4015,14 @@ it('creates an exact circle from numeric inputs without committing its preview',
  field('Circle radius').props['onUpdate:modelValue']('9 mm');await nextTick();expect(ui.all().some(n=>n.props['data-preview']==='numeric-circle')).toBe(true)
  await commandKey(ui,'Escape');expect(ui.doc()).toEqual(after);expect(ui.all().some(n=>n.props['data-preview']==='numeric-circle')).toBe(false)
 })
+
+it.each([120,-120])('authors an exact directed arc with sweep %s and cancels preview',async(sweep)=>{
+ await geometryKernel.warmGeometryKernel();const ui=await mount();await ui.click('Arc');const before=ui.doc()
+ const field=(name:string)=>ui.all().find(n=>n.props['aria-label']===name)!
+ field('Point coordinate X').props['onUpdate:modelValue']('2 cm');field('Point coordinate Y').props['onUpdate:modelValue'](-5);field('Arc radius').props['onUpdate:modelValue']('6 mm');field('Arc start angle').props['onUpdate:modelValue']('30 deg');field('Arc sweep').props['onUpdate:modelValue'](sweep);await nextTick()
+ expect(ui.doc()).toEqual(before);expect(ui.all().some(n=>n.props['data-preview']==='numeric-arc')).toBe(true)
+ await ui.click('Create arc');const after=ui.doc();expect(after.sketches.at(-1)!.analytic).toEqual({kind:'arc',center:[20,-5],radius:6,start:30,sweep});expect(after.sketches.at(-1)!.closed).toBe(false)
+ await ui.click('↶');expect(ui.doc()).toEqual(before);await ui.click('↷');expect(ui.doc()).toEqual(after)
+ await ui.click('Arc');for(const invalid of ['bad',0,.01,-.05,360,-360]){field('Arc sweep').props['onUpdate:modelValue'](invalid);await nextTick();expect(ui.button('Create arc').props.disabled).toBe(true);expect(ui.all().some(n=>n.props['data-preview']==='numeric-arc')).toBe(false)}
+ field('Arc sweep').props['onUpdate:modelValue'](-90);await nextTick();expect(ui.all().some(n=>n.props['data-preview']==='numeric-arc')).toBe(true);await commandKey(ui,'Escape');expect(ui.doc()).toEqual(after);expect(ui.all().some(n=>n.props['data-preview']==='numeric-arc')).toBe(false)
+})
