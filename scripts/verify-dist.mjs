@@ -329,6 +329,8 @@ for (const [name, artifact, compression] of [
 // bytes (7,153,462 measured). A 4,000-byte feature increment preserves the
 // existing approximately 2,530-byte headroom; named artifact limits still apply.
 // Retained profile revolution plus native partial-band STEP fix: 7,158,076 measured bytes; +2,357 from preceding qualified build.
-const totalBudget = 7_159_000
+// Retained corresponding-section loft: 7,162,355 measured asset bytes;
+// +4,279 from the preceding qualified build, preserving 924 bytes of headroom.
+const totalBudget = 7_163_279
 if (total > totalBudget) throw new Error(`dist totals ${total} bytes; budget is ${totalBudget}`)
 console.log(`Verified ${files.length} dist artifacts (${total} asset bytes + ${rawWasmBytes} raw WASM bytes = ${total + rawWasmBytes} total bytes)`)

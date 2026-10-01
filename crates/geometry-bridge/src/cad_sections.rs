@@ -84,6 +84,60 @@ pub fn build(v: Value) -> Result<Value> {
     encode(built.mesh)
 }
 
+fn retained_loft(profiles: &[&Value]) -> Result<Value> {
+    use nurbs_core::curve::Curve;
+    if profiles.len()!=2 { return Err(input("Retained loft currently requires two corresponding sections; use two sections or split the loft.")); }
+    let loops=|sketch: &Value| -> Result<Vec<Vec<Curve>>> {
+        if !field::<bool>(sketch,"closed")? { return Err(input("Loft sections must be closed.")); }
+        if let Some(profile)=sketch.get("retainedProfile") { field(profile,"loops") }
+        else if sketch.get("analytic").is_none() { Ok(vec![brep_core::sketch::polygon_wire(field(sketch,"points")?)?]) }
+        else { Err(input("Prepare analytic curves as retained profiles before loft.")) }
+    };
+    let a=loops(profiles[0])?;let b=loops(profiles[1])?;
+    for profile in [&a,&b] {
+        if profile.len()>brep_core::prism::MAX_PROFILE_LOOPS
+            || profile.iter().map(Vec::len).sum::<usize>()>brep_core::prism::MAX_PROFILE_CURVES
+            || profile.iter().flatten().map(|c|c.control_points.len()).sum::<usize>()>brep_core::prism::MAX_PROFILE_CONTROLS {
+            return Err(input("Retained loft exceeds profile loop, span or control budget."));
+        }
+    }
+    if a.is_empty() || a.len()!=b.len() || a.iter().zip(&b).any(|(a,b)|a.len()!=b.len()) {
+        return Err(input("Loft sections require matching contour and segment counts."));
+    }
+    for (a,b) in a.iter().flatten().zip(b.iter().flatten()) {
+        a.validate()?;b.validate()?;
+        if a.degree!=b.degree || a.knots!=b.knots || a.weights!=b.weights || a.periodic!=b.periodic || a.control_points.len()!=b.control_points.len()
+            || a.control_points.iter().chain(&b.control_points).any(|p|p.len()!=2) {
+            return Err(input("Retained loft requires matching curve degrees, knots, weights and control counts; align the source curves."));
+        }
+    }
+    let points: Vec<_>=a.iter().flatten().flat_map(|c|&c.control_points).zip(b.iter().flatten().flat_map(|c|&c.control_points)).collect();
+    let (first,top)=points[0];
+    let scale=points.iter().find_map(|(p,q)|(0..2).find(|&i|(p[i]-first[i]).abs()>1e-10).map(|i|(q[i]-top[i])/(p[i]-first[i])))
+        .ok_or_else(||input("Loft profile has degenerate control bounds."))?;
+    let offset=[top[0]-scale*first[0],top[1]-scale*first[1]];
+    if !scale.is_finite() || scale<=0. || points.iter().any(|(p,q)|(0..2).any(|i|scale*p[i]+offset[i]!=q[i])) {
+        return Err(input("Retained loft requires an exactly corresponding positive uniform scale and translation; edit the section copies."));
+    }
+    let plane=|s: &Value|s.get("plane").cloned().unwrap_or_else(||value_codec::json!({"origin":[0.,0.,0.],"u":[1.,0.,0.],"v":[0.,1.,0.]}));
+    let pa=plane(profiles[0]);let pb=plane(profiles[1]);
+    let origin:[f64;3]=field(&pa,"origin")?;let end:[f64;3]=field(&pb,"origin")?;
+    let u:[f64;3]=field(&pa,"u")?;let v:[f64;3]=field(&pa,"v")?;
+    let dot=|a:[f64;3],b:[f64;3]|(0..3).map(|i|a[i]*b[i]).sum::<f64>();
+    if u!=field::<[f64;3]>(&pb,"u")? || v!=field::<[f64;3]>(&pb,"v")? || (dot(u,u)-1.).abs()>1e-12 || (dot(v,v)-1.).abs()>1e-12 || dot(u,v).abs()>1e-12 {
+        return Err(input("Retained loft requires parallel sections with the same orthonormal sketch basis."));
+    }
+    let n=[u[1]*v[2]-u[2]*v[1],u[2]*v[0]-u[0]*v[2],u[0]*v[1]-u[1]*v[0]];
+    let delta=std::array::from_fn(|i|end[i]-origin[i]);
+    let height=dot(delta,n);
+    if !height.is_finite() || height<=0. { return Err(input("Order loft sections along the positive sketch normal with distinct planes.")); }
+    let local=brep_core::prism::loft_scaled(&a,0.,height,scale,[offset[0]+dot(delta,u),offset[1]+dot(delta,v)])?;
+    let matrix=std::array::from_fn(|i|if i==3 {[0.,0.,0.,1.]}else{[u[i],v[i],n[i],origin[i]]});
+    let model=brep_core::transform::affine(&local,matrix)?;
+    let mesh=super::brep::nurbs(&model,4)?.built.mesh;
+    Ok(value_codec::json!({"brep":model,"mesh":mesh}))
+}
+
 /// Preserve authored polygon vertices for ruled B-rep correspondence.
 pub fn ruled(v: Value) -> Result<Value> {
     let sketches: Vec<Value> = field(&v, "sketches")?;
@@ -91,6 +145,8 @@ pub fn ruled(v: Value) -> Result<Value> {
     if !(2..=64).contains(&ids.len()) {
         return Err(input("Select 2–64 closed polygon sketches in loft order."));
     }
+    let profiles: Vec<_>=ids.iter().map(|id|sketches.iter().find(|s|s.get("id").and_then(Value::as_str)==Some(id.as_str())).ok_or_else(||input("Loft section is missing."))).collect::<Result<_>>()?;
+    if profiles.iter().any(|s|s.get("retainedProfile").is_some()) { return retained_loft(&profiles); }
     let mut sections = Vec::with_capacity(ids.len());
     for id in ids {
         let sketch = sketches
@@ -107,4 +163,32 @@ pub fn ruled(v: Value) -> Result<Value> {
     let model = brep_core::ruled_loft(&sections)?;
     let mesh = super::brep::nurbs(&model, 4)?.built.mesh;
     Ok(value_codec::json!({"brep":model,"mesh":mesh}))
+}
+
+#[cfg(test)]
+mod retained_tests {
+    use super::*;
+    #[test]
+    fn retained_scaled_sections_preserve_holes_and_refuse_noncorresponding_controls() {
+        use nurbs_core::curve::Curve;
+        let mut hole=brep_core::sketch::circle_wire(1.).unwrap();
+        hole=hole.iter().rev().map(Curve::reverse).collect::<nurbs_core::Result<Vec<_>>>().unwrap();
+        let loops=vec![brep_core::sketch::circle_wire(3.).unwrap(),hole];
+        let mut top=loops.clone();
+        for p in top.iter_mut().flatten().flat_map(|c|&mut c.control_points) { p[0]=2.*p[0]+5.;p[1]=2.*p[1]+7.; }
+        let request=value_codec::json!({"ids":["base","top"],"sketches":[
+            {"id":"base","closed":true,"points":[],"retainedProfile":{"loops":loops}},
+            {"id":"top","closed":true,"points":[],"retainedProfile":{"loops":top},"plane":{"origin":[0.,0.,10.],"u":[1.,0.,0.],"v":[0.,1.,0.]}}
+        ]});
+        let before=request.clone();
+        let result=ruled(request.clone()).unwrap();
+        let model:brep_core::Model=field(&result,"brep").unwrap();
+        model.validate().unwrap();
+        assert_eq!(model.bodies.len(),1);
+        assert_eq!(model.faces.iter().filter(|f|f.holes.len()==1).count(),2);
+        assert_eq!(request,before);
+        let mut invalid=request.clone();
+        invalid["sketches"][1]["retainedProfile"]["loops"][0][0]["controlPoints"][1][0]=Value::from(123.);
+        assert!(ruled(invalid).is_err());
+    }
 }

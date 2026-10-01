@@ -202,7 +202,7 @@ export const extrudeBrepCurves=(loops:NurbsCurve[][],zMin:number,zMax:number):Nu
 export const extrudeBrepPolygon=(profile:[number,number][],zMin:number,zMax:number,holes:[number,number][][]=[]):NurbsBrep=>callGeometryRust('brep_nurbs_extrude_polygon',{profile,holes,zMin,zMax})
 /** Planar-triangulated construction, not a smooth NURBS loft. */
 /** Native bilinear side patches between admitted parallel convex sections. */
-export const createRuledSketchLoft=(sketches:DirectSketch[],ids:string[]):{brep:NurbsBrep;mesh:PolygonMesh}=>{if(sketches.some(s=>ids.includes(s.id)&&s.retainedProfile))throw Error('Ruled sketch loft does not yet support retained curve profiles.');const r=callGeometryRust<{brep:NurbsBrep;mesh:PolygonMesh}>('cad_ruled_sketch_loft',{sketches,ids});normalizePolygonMesh(r.mesh);return r}
+export const createRuledSketchLoft=(sketches:DirectSketch[],ids:string[]):{brep:NurbsBrep;mesh:PolygonMesh}=>{const r=callGeometryRust<{brep:NurbsBrep;mesh:PolygonMesh}>('cad_ruled_sketch_loft',{sketches,ids});normalizePolygonMesh(r.mesh);return r}
 export const createRuledBrepLoft=(sections:[number,number,number][][]):NurbsBrep=>callGeometryRust('brep_nurbs_ruled_loft',{sections})
 export const createFacetedBrepLoft=(sections:[number,number,number][][]):NurbsBrep=>callGeometryRust('brep_nurbs_faceted_loft',{sections})
 /** Planar-triangulated polyline sweep, not an analytic pipe. */

@@ -333,6 +333,39 @@ pub fn extrude(loops: &[Vec<Curve>], z_min: f64, z_max: f64) -> Result<Model> {
     Ok(model)
 }
 
+/// Ruled loft from a retained profile to its uniformly scaled, translated copy.
+/// Every intermediate section is an affine image with strictly positive scale,
+/// so it preserves the admitted profile's components, holes and orientation.
+/// This is not the general correspondence problem for independent profiles.
+pub fn loft_scaled(
+    loops: &[Vec<Curve>], z_min: f64, z_max: f64, scale: f64, offset: [f64; 2],
+) -> Result<Model> {
+    if !scale.is_finite() || scale <= 0. || !offset.iter().all(|x| x.is_finite()) {
+        return Err(Error::new("BREP_INVALID_SIZE", "Loft requires a finite positive scale and finite offset"));
+    }
+    let mut model = extrude(loops, z_min, z_max)?;
+    let map = |p: &mut [f64]| -> Result<()> {
+        let t = (p[2]-z_min)/(z_max-z_min);
+        let factor = 1.+t*(scale-1.);
+        for i in 0..2 { p[i] = factor*p[i]+t*offset[i]; }
+        if p.iter().any(|x| !x.is_finite() || x.abs()>1e6) {
+            return Err(Error::new("BREP_INVALID_SIZE", "Loft control coordinates exceed +/-1000000 mm"));
+        }
+        Ok(())
+    };
+    for vertex in &mut model.vertices { map(&mut vertex.point)?; }
+    for edge in &mut model.edges {
+        for point in &mut edge.curve.control_points { map(point)?; }
+    }
+    for face in &mut model.faces {
+        for row in &mut face.surface.control_points {
+            for point in row { map(point)?; }
+        }
+    }
+    model.validate()?;
+    Ok(model)
+}
+
 fn roundoff_equal(a: f64, b: f64) -> bool {
     roundoff_equal_at(a, b, a.abs().max(b.abs()))
 }
@@ -735,6 +768,34 @@ pub fn recognize(model: &Model) -> Result<Option<ProfilePrism>> {
 #[cfg(test)]
 mod imported_cap_tests {
     use super::*;
+    #[test]
+    fn scaled_retained_loft_preserves_holes_and_rational_sections() {
+        let mut hole=crate::sketch::circle_wire(1.).unwrap();
+        hole=hole.iter().rev().map(Curve::reverse).collect::<nurbs_core::Result<Vec<_>>>().unwrap();
+        let loops=vec![crate::sketch::circle_wire(3.).unwrap(),hole];
+        let before=value_codec::to_value(&loops).unwrap();
+        let loft=loft_scaled(&loops,0.,10.,2.,[5.,7.]).unwrap();
+        assert_eq!(loft.bodies.len(),1);
+        assert_eq!(loft.faces.iter().filter(|face|face.holes.len()==1).count(),2);
+        assert_eq!(value_codec::to_value(&loops).unwrap(),before);
+        let side=&loft.faces[0].surface;
+        let point=side.evaluate(0.37,0.5).unwrap().point;
+        let source=loops[0][0].evaluate(0.37).unwrap().point;
+        assert!((point[0]-(1.5*source[0]+2.5)).abs()<1e-12);
+        assert!((point[1]-(1.5*source[1]+3.5)).abs()<1e-12);
+        assert!((point[2]-5.).abs()<1e-12);
+        assert!(side.weights.iter().flatten().any(|w| *w!=1.));
+        let (step,_,_)=crate::step_interchange_v3::export_step_v9(&loft).unwrap();
+        let (restored,_,_)=crate::step_interchange_v3::import_step_v9(&step).unwrap();
+        restored.validate().unwrap();
+        assert_eq!(restored.bodies.len(),1);
+        assert_eq!(restored.faces.iter().filter(|face|face.holes.len()==1).count(),2);
+        for scale in [0.,-1.,f64::NAN,f64::INFINITY] {
+            assert!(loft_scaled(&loops,0.,10.,scale,[0.,0.]).is_err());
+        }
+        assert!(loft_scaled(&loops,0.,10.,2.,[1e6,0.]).is_err());
+    }
+
     #[test]
     fn recognizes_trimmed_step_carriers_without_admitting_deformed_sides() {
         let model: Model = value_codec::from_str(include_str!(
