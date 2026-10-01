@@ -79,7 +79,7 @@ async function execute(job:MainSolidJob):Promise<MainSolidResults[keyof MainSoli
     case 'pointEdit':return applySolidPointEdit(job.document,job.options)
     case 'sketchEdit':return applySolidSketchEdit(job.document,job.options)
     case 'boolean':return applySolidBoolean(job.document,job.options)
-    case 'sceneEdit':return parseDirectDocument(serializeDirectDocument(applySolidSceneEdit(job.document,job.options)),instanceCache)
+    case 'sceneEdit':return parseDirectDocument(serializeDirectDocument(applySolidSceneEdit(job.document,job.options,instanceCache)),instanceCache)
     case 'curveMatch':return matchSolidCurve(...job.args)
     case 'surfaceMatch':return matchSolidSurface(...job.args)
     case 'seamPrepare':return prepareSolidSurfaceSeams(...job.args)
