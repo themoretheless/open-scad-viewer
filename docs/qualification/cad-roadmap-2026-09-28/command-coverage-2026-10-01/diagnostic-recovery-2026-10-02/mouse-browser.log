@@ -1,0 +1,18 @@
+{
+  browser: '157.0.8081.0',
+  gpuActive: true,
+  keyboard: false,
+  tabPresses: 0,
+  contactFailureRetry: true,
+  paletteCancelRestoresFocus: true,
+  commandFocusPreserved: true,
+  reloadExact: true,
+  workerFailureRetry: true,
+  keyboardRetry: false,
+  invalidInputPreventsRequest: true,
+  zeroNormalLocalized: true,
+  fieldAssociated: true,
+  planeReset: true,
+  escapeTerminatesWorker: true,
+  documentUnchanged: true
+}
