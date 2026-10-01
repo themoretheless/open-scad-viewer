@@ -2056,24 +2056,42 @@ const gpuActive = ref(false)
 watch(gpuActive,value=>emit('backend',value),{immediate:true})
 let gpuLayer: SolidGpuLayer | null = null
 let gpuResize: ResizeObserver | null = null
-let gpuInitStarted = false
-function mountGpuCanvas(el: Element | ComponentPublicInstance | null) {
-  if (typeof HTMLCanvasElement === 'undefined' || !(el instanceof HTMLCanvasElement) || gpuInitStarted || !isSolidGpuSupported()) return
-  gpuInitStarted = true
-  const layer = new SolidGpuLayer(el,()=>{gpuActive.value=false;notice.value=label('WebGPU отключён. Работа продолжена на CPU; можно сохранить проект.','WebGPU stopped. Work continues on CPU; you can save the project.')})
-  void layer.init().then(ok => {
-    if (!ok || !layer.ready) { layer.destroy(); return }
-    gpuLayer = layer
-    const wrap = el.parentElement
-    if (wrap) {
-      gpuResize = new ResizeObserver(() => layer.resize(wrap.clientWidth, wrap.clientHeight, window.devicePixelRatio || 1))
-      gpuResize.observe(wrap)
-      layer.resize(wrap.clientWidth, wrap.clientHeight, window.devicePixelRatio || 1)
-    }
-    gpuActive.value = true
+let gpuInitStarted = false, gpuGeneration = 0
+let gpuCanvas: HTMLCanvasElement | null = null
+const gpuInitializing=ref(false),gpuRetryVisible=ref(false)
+let gpuFailureNotice=''
+function stopGpuLayer() {
+  gpuGeneration++;gpuResize?.disconnect();gpuResize=null
+  gpuLayer?.destroy();gpuLayer=null;gpuActive.value=false;gpuInitializing.value=false
+}
+function retryGpuLayer() {
+  if(gpuInitializing.value || !gpuCanvas || !props.open)return
+  stopGpuLayer()
+  const generation=gpuGeneration,canvas=gpuCanvas
+  gpuInitializing.value=true
+  const unavailable=()=>{
+    if(generation!==gpuGeneration)return
+    gpuInitializing.value=false;gpuActive.value=false;gpuRetryVisible.value=true
+    gpuResize?.disconnect();gpuResize=null
+    gpuFailureNotice=label('WebGPU отключён. Работа продолжена на CPU; можно сохранить проект.','WebGPU stopped. Work continues on CPU; you can save the project.')
+    notice.value=gpuFailureNotice
+  }
+  const layer=new SolidGpuLayer(canvas,unavailable);gpuLayer=layer
+  void layer.init().then(ok=>{
+    if(generation!==gpuGeneration){layer.destroy();return}
+    if(!ok || !layer.ready){layer.destroy();unavailable();return}
+    const wrap=canvas.parentElement
+    if(wrap){gpuResize=new ResizeObserver(()=>layer.resize(wrap.clientWidth,wrap.clientHeight,window.devicePixelRatio||1));gpuResize.observe(wrap);layer.resize(wrap.clientWidth,wrap.clientHeight,window.devicePixelRatio||1)}
+    gpuInitializing.value=false;gpuRetryVisible.value=false;gpuActive.value=true
+    if(notice.value===gpuFailureNotice)notice.value=''
   })
 }
-onUnmounted(() => { gpuResize?.disconnect(); gpuLayer?.destroy(); gpuLayer = null; if (fpsHandle) cancelAnimationFrame(fpsHandle); fpsHandle = 0; clearTimeout(settleHandle) })
+function mountGpuCanvas(el: Element | ComponentPublicInstance | null) {
+  if(typeof HTMLCanvasElement==='undefined' || !(el instanceof HTMLCanvasElement) || gpuInitStarted || !isSolidGpuSupported())return
+  gpuInitStarted=true;gpuCanvas=el;retryGpuLayer()
+}
+watch(()=>props.open,open=>{if(!open){stopGpuLayer();gpuRetryVisible.value=false}else if(gpuCanvas)void nextTick(retryGpuLayer)})
+onUnmounted(() => { stopGpuLayer();gpuCanvas=null; if (fpsHandle) cancelAnimationFrame(fpsHandle); fpsHandle = 0; clearTimeout(settleHandle) })
 watch(() => props.open, open => {
   // The DOM-less test renderer has no frame callbacks, and a hidden workspace need not count.
   if (typeof requestAnimationFrame !== 'function') return
@@ -4086,8 +4104,9 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
     <div class="input-hint" role="status">{{ inputMode === 'touch' ? label('Два пальца: масштаб и перенос · Навигация: одним пальцем вращать 3D / двигать 2D', 'Two fingers: zoom and pan · Navigate: one finger orbits 3D / pans 2D') : label('ЛКМ: выбор / вращение 3D · СКМ или Shift: перенос · Колесо: масштаб', 'Left drag: select / orbit 3D · Middle drag or Shift: pan · Wheel: zoom') }}</div>
     <div v-if="showHelp" class="help-card"><p>{{ label('Грани: выберите поверхность, затем тяните её или жёлтую ручку. Ctrl/⌘ + клик выбирает несколько открытых граней для Shell. Для фаски и скругления включите «Рёбра».','Faces: select a surface, then drag it or its yellow handle. Ctrl/⌘ click selects multiple Shell openings. Switch to Edges for chamfers and fillets.') }}</p><p>{{ label('Shift + клик и «Рамка» выделяют несколько объектов. Манипулятор двигает, вращает и масштабирует весь выбор. У окружностей и дуг есть ручки центра, радиуса и концов дуги.','Shift click and Box select select multiple objects. The gizmo moves, rotates and scales the whole selection. Circles and arcs have center, radius and arc endpoint handles.') }}</p><strong>{{ label('Управление', 'Controls') }}</strong><p>{{ label('2D: тяните фигуру или вершину. Alt временно отключает привязку. Ломаная замыкается кликом по первой точке.', '2D: drag shapes or vertices. Alt bypasses snapping. Close a polyline by clicking its first point.') }}</p><p>{{ label('3D: тяните для вращения; G включает перемещение тела. ПКМ всегда вращает. Shift или средняя кнопка — панорама. Колесо — масштаб.', '3D: drag to orbit; G enables body movement. Right drag always orbits. Shift or middle drag pans. Wheel zooms.') }}</p><p>{{ label('E — предпросмотр выдавливания; зелёная ручка меняет высоту. Enter подтверждает, Escape отменяет. Ctrl/⌘ Z — отмена, Ctrl/⌘ Shift Z — повтор.', 'E previews extrusion; the green handle changes height. Enter applies, Escape cancels. Ctrl/⌘ Z undoes; Ctrl/⌘ Shift Z redoes.') }}</p><button @click="showHelp = false">{{ label('Понятно', 'Got it') }}</button></div>
     <div v-if="polygonView.limited" class="notice-bar" role="status" aria-label="transparency-limit">{{ label('Прозрачность приблизительная. Скройте часть сцены.','Transparency is approximate. Hide some objects.') }}</div>
+    <div v-if="gpuRetryVisible || gpuInitializing" class="notice-bar" role="status" aria-label="gpu-recovery"><span>{{ gpuInitializing ? label('Восстанавливаю WebGPU…','Restoring WebGPU…') : gpuFailureNotice }}</span><button v-if="gpuRetryVisible" type="button" :disabled="gpuInitializing" @click="retryGpuLayer">{{ label('Повторить WebGPU','Retry WebGPU') }}</button></div>
     <div v-if="error" class="error-bar" role="alert">{{ error }} <button @click="error = ''">×</button></div>
-    <div v-else-if="notice" class="notice-bar" role="status">{{ notice }} <button @click="notice = ''">×</button></div>
+    <div v-else-if="notice && !((gpuRetryVisible || gpuInitializing) && notice===gpuFailureNotice)" class="notice-bar" role="status">{{ notice }} <button @click="notice = ''">×</button></div>
   </section>
 </template>
 <style scoped>

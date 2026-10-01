@@ -27,9 +27,10 @@ try {
  const gpuDiagnostics=process.argv.includes('--trace-gpu')?await installGpuTextureDiagnostics(page):()=>[]
  page.on('response',response=>{if(response.status()>=400)failedResources.push({url:response.url(),status:response.status()})});page.on('pageerror',e=>renderErrors.push(String(e)));page.on('console',m=>{if(m.type()==='error')renderErrors.push(m.text())})
  await page.addInitScript(()=>{
+  if(window.GPUCanvasContext){const configure=GPUCanvasContext.prototype.configure;GPUCanvasContext.prototype.configure=function(descriptor){if(this.canvas.className==='gpu-layer'){window.__solidGpuDevice=descriptor.device;window.__solidGpuDeviceRequests=(window.__solidGpuDeviceRequests??0)+1}return configure.call(this,descriptor)}}
   if(!navigator.gpu)return
   const request=navigator.gpu.requestAdapter.bind(navigator.gpu)
-  navigator.gpu.requestAdapter=async(...args)=>{const adapter=await request(...args);if(adapter){const make=adapter.requestDevice.bind(adapter);adapter.requestDevice=async(...args)=>{const device=await make(...args);window.__qualificationGpuDevice=device;window.__gpuValidationErrors??=[];device.addEventListener('uncapturederror',event=>window.__gpuValidationErrors.push({message:event.error.message,width:document.querySelector('.gpu-layer')?.width,height:document.querySelector('.gpu-layer')?.height}));return device}}return adapter}
+  navigator.gpu.requestAdapter=async(...args)=>{const adapter=await request(...args);if(adapter){const make=adapter.requestDevice.bind(adapter);adapter.requestDevice=async(...args)=>{const device=await make(...args);if(window.__holdNextGpuDevice){window.__holdNextGpuDevice=false;window.__heldGpuDevice=device;await new Promise(resolve=>window.__releaseHeldGpuDevice=resolve)}window.__qualificationGpuDevice=device;window.__gpuValidationErrors??=[];device.addEventListener('uncapturederror',event=>window.__gpuValidationErrors.push({message:event.error.message,width:document.querySelector('.gpu-layer')?.width,height:document.querySelector('.gpu-layer')?.height}));return device}}return adapter}
  })
  const origin=`http://127.0.0.1:${server.address().port}`
  await page.goto(origin)
@@ -86,6 +87,36 @@ try {
   }
  }
  const initial=await snapshot('initial.json'),source=initial.bodies.find(b=>!b.instance),linked=initial.bodies.find(b=>b.instance)
+ if(process.argv.includes('--gpu-recovery')){
+  assert.equal(await solid.locator('.gpu-layer').evaluate(canvas=>canvas.style.visibility==='visible'),true)
+  await page.evaluate(()=>window.__solidGpuDevice.destroy())
+  const retry=solid.getByRole('button',{name:'Повторить WebGPU',exact:true})
+  await retry.waitFor();assert.equal(await solid.locator('.gpu-layer').evaluate(canvas=>canvas.style.visibility==='visible'),false)
+  assert.deepEqual(await download('Скачать проект JSON','gpu-failed-document.json'),initial)
+  if(await menu.evaluate(e=>e.parentElement.open))await activate(menu)
+  await page.screenshot({path:path.join(directory,'gpu-failed.png')})
+  await activate(retry)
+  await solid.getByRole('status',{name:'gpu-recovery',exact:true}).waitFor({state:'hidden'})
+  assert.equal(await solid.locator('.gpu-layer').evaluate(canvas=>canvas.style.visibility==='visible'),true)
+  assert.equal(await page.evaluate(()=>window.__solidGpuDeviceRequests),2)
+  assert.deepEqual(await snapshot('gpu-recovered-document.json'),initial)
+  assert.equal(await solid.getByRole('button',{name:source.name,exact:true}).getAttribute('aria-pressed'),'true')
+  await page.screenshot({path:path.join(directory,'gpu-recovered.png')})
+  await page.evaluate(()=>window.__solidGpuDevice.destroy());await retry.waitFor()
+  await page.evaluate(()=>window.__holdNextGpuDevice=true);await activate(retry)
+  await page.waitForFunction(()=>typeof window.__releaseHeldGpuDevice==='function')
+  assert.equal(await retry.isDisabled(),true)
+  const modes=page.getByRole('group',{name:'Режим работы',exact:true})
+  await activate(modes.getByRole('button',{name:'Mesh',exact:true}));await solid.waitFor({state:'hidden'})
+  await activate(modes.getByRole('button',{name:'Solid',exact:true}));await solid.waitFor({state:'visible'})
+  await page.waitForFunction(()=>document.querySelector('.gpu-layer')?.style.visibility==='visible')
+  const staleLoss=await page.evaluate(async()=>{const pending=window.__heldGpuDevice.lost;window.__releaseHeldGpuDevice();return (await pending).reason})
+  assert.equal(staleLoss,'destroyed')
+  await solid.getByRole('status',{name:'gpu-recovery',exact:true}).waitFor({state:'hidden'})
+  assert.equal(await page.evaluate(()=>window.__solidGpuDeviceRequests),3)
+  assert.deepEqual(await snapshot('gpu-reopened-document.json'),initial)
+
+ }
  await command('Delete')
  await solid.getByRole('alert').filter({hasText:'Нельзя удалить источник «'+source.name+'»: остаются связанные экземпляры — 1'}).waitFor()
  await page.screenshot({path:path.join(directory,'blocked-source-delete.png')})
@@ -145,6 +176,6 @@ try {
  assert.deepEqual(renderErrors,[])
  const gpuActive=await solid.locator('.gpu-layer').evaluate(canvas=>canvas.style.visibility==='visible')
  if(process.argv.includes('--require-gpu'))assert.equal(gpuActive,true,'Solid GPU renderer must remain active')
- const report={gpuActive,gpuChecks,browser:browser.version(),keyboard,tabPresses,downloads,groupCreateHistory:true,groupMoveHistory:true,groupDeleteHistory:true,sourceDeleteLocalized:true,lockedGroupDeleteLocalized:true,workspaceReload:true,finalReload:true}
+ const report={staleGpuInitialization:process.argv.includes('--gpu-recovery'),gpuRecovery:process.argv.includes('--gpu-recovery'),gpuActive,gpuChecks,browser:browser.version(),keyboard,tabPresses,downloads,groupCreateHistory:true,groupMoveHistory:true,groupDeleteHistory:true,sourceDeleteLocalized:true,lockedGroupDeleteLocalized:true,workspaceReload:true,finalReload:true}
  await writeFile(path.join(directory,'scene-state-browser.json'),JSON.stringify(report,null,2)+'\n');console.log(report)
 }catch(error){if(page){await page.screenshot({path:path.join(directory,'failure.png')}).catch(()=>{});await writeFile(path.join(directory,'failure.txt'),await page.locator('body').innerText().catch(()=>''))}throw error}finally{await browser?.close();await new Promise(resolve=>server.close(resolve))}
