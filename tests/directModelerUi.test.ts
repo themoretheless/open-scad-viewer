@@ -4072,3 +4072,32 @@ it('cancels automatic slot creation after a mouse drag while its profile worker 
  await commandKey(ui,'Escape');for(const r of requests)r.resolve(prepareSolidProfile(r.job.document,r.job.ids,r.job.tolerance));await flushClearance()
  expect(ui.doc()).toEqual(before);expect(ui.all().some(n=>n.props['data-preview']==='numeric-slot')).toBe(false)
 })
+
+it.each([
+ ['en','Profile input private-id requires exactly clamped non-periodic endpoints.','NURBS endpoints must be clamped'],
+ ['ru','Profile input private-id requires exactly clamped non-periodic endpoints.','Концы NURBS должны быть зажаты узлами'],
+ ['en','Profile inputs must use the same sketch plane.','All lines must use one sketch plane'],
+ ['ru','Profile inputs must use the same sketch plane.','Все линии должны использовать одну плоскость'],
+ ['en','Profile preparation requires open polylines, arcs or NURBS curves.','Select open polylines, arcs or NURBS'],
+ ['ru','Profile preparation requires open polylines, arcs or NURBS curves.','Выберите открытые ломаные, дуги или NURBS'],
+])('localizes profile preparation refusal and retries without consuming inputs (%s, %s)',async(locale,message,visible)=>{
+ await geometryKernel.warmGeometryKernel()
+ const {prepareSolidProfile}=await import('../src/services/solidProfilePreparation')
+ const requests:Array<{job:any;resolve:(value:any)=>void;reject:(error:Error)=>void}>=[]
+ previewWorkerRun.mockImplementation(job=>job.kind==='profilePrepare'?new Promise((resolve,reject)=>requests.push({job,resolve,reject})):undefined)
+ const sketches=[{id:'first',name:'First chain',closed:false,points:[[0,0],[10,0],[10,6]]},{id:'second',name:'Second chain',closed:false,points:[[10,6],[0,6],[0,0]]}]
+ const ui=await mount({locale},JSON.stringify({version:1,sketches,bodies:[]}))
+ await ui.click('First chain');await ui.click('Second chain',true);const before=ui.doc()
+ await ui.click(locale==='ru'?'Собрать профиль':'Prepare profile');await flushClearance()
+ expect(requests).toHaveLength(1);requests[0]!.reject(Error(message));await flushClearance()
+ expect(ui.text(ui.all()[0])).toContain(visible)
+ expect(ui.text(ui.all()[0])).not.toContain(message)
+ expect(ui.doc()).toEqual(before)
+ await ui.click(locale==='ru'?'Повторить вычисление':'Retry calculation');await flushClearance()
+ expect(requests).toHaveLength(2);expect(requests[1]!.job).toEqual(requests[0]!.job)
+ const latest=requests[1]!;latest.resolve(prepareSolidProfile(latest.job.document,latest.job.ids,latest.job.tolerance));await flushClearance()
+ expect(ui.doc()).toEqual(before)
+ await commandKey(ui,'Enter');expect(ui.doc().sketches).toHaveLength(1)
+ expect(ui.doc().sketches[0].id).toBe('first')
+ await ui.click('↶');expect(ui.doc()).toEqual(before)
+})
