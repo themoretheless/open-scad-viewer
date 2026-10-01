@@ -2119,6 +2119,29 @@ it('applies one circular-copy candidate and exposes invalid array parameters',as
  expect(ui.text(ui.all()[0])).toContain('Use 2–64 instances')
 })
 
+it('supersedes a pending gizmo history publication with the next gesture',async()=>{
+ const {DirectHistory}=await import('../src/services/directModeling')
+ const ui=await mount();await ui.click('Cube');const before=ui.doc(),svg=ui.svg()
+ const original=DirectHistory.prototype.commitAsync
+ let release!:()=>void,calls=0
+ const gate=new Promise<void>(resolve=>{release=resolve})
+ const commit=vi.spyOn(DirectHistory.prototype,'commitAsync').mockImplementation(function(load,validate){
+  const hold=++calls===1
+  return original.call(this,async()=>{const result=await load();if(hold)await gate;return result},validate)
+ })
+ async function drag(x:number){
+  const handle=ui.all(svg).find(n=>n.tag==='g'&&n.props.onPointerdown&&n.children.some(c=>c.tag==='line'))!
+  await ui.pointer(handle,0,0);svg.props.onPointermove({...ui.event(svg,x,0),altKey:true})
+  svg.props.onPointerup({...ui.event(svg,x,0),altKey:true});await flushClearance()
+ }
+ try{
+  await drag(20);expect(calls).toBe(1)
+  await drag(40);release();await flushClearance()
+  expect(calls).toBe(2);expect(ui.doc()).not.toEqual(before)
+  await ui.click('↶');expect(ui.doc()).toEqual(before)
+ }finally{release();commit.mockRestore()}
+})
+
 it('cancels gizmo history publication after the final worker response',async()=>{
  const {DirectHistory}=await import('../src/services/directModeling')
  const ui=await mount(),baseline=ui.doc();await ui.click('Box');const before=ui.doc(),svg=ui.svg()
