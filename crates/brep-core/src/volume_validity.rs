@@ -96,6 +96,13 @@ mod tests {
     fn authored_curved_primitives_have_certified_volume_validity(){
         for (name,m) in [("cylinder",crate::analytic::cylinder(2.,4.).unwrap()),("sphere",crate::analytic::sphere(2.).unwrap())]{
             let r=inspect(&m,1e-8,limits()).unwrap();
+            if !r.boundary.agreement.all_equal {
+                for use_ in &r.boundary.agreement.uses {
+                    if !use_.decision.as_ref().is_some_and(|d|d.outcome==cad_predicates::BezierIdentity::Equal) {
+                        eprintln!("{name}: boundary face={} wire={} coedge={} edge={} decision={:?}",use_.face,use_.wire,use_.coedge,use_.edge,use_.decision);
+                    }
+                }
+            }
             assert!(r.proven,"{name}: exact={} joins={} trim={} faces={} pairs={} nesting={:?} orientations={:?}",
                 r.boundary.agreement.all_equal,r.boundary.agreement.all_joins_exact,r.boundary.trim.all_valid,
                 r.boundary.intersections.faces.all_faces_injective,r.boundary.intersections.pairs.all_pairs_classified,

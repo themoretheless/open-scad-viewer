@@ -51,11 +51,20 @@ mod tests{
         let a=brep_core::cuboid([0.;3],[2.;3]).unwrap();
         let mut reversed=a.clone();for f in &mut reversed.shells[0].faces{f.reversed=!f.reversed;}
         let cavity=brep_core::operations::boolean(&brep_core::cuboid([0.;3],[10.;3]).unwrap(),&brep_core::cuboid([2.;3],[8.;3]).unwrap(),"difference").unwrap();
+        let cylinder=brep_core::analytic::cylinder(2.,4.).unwrap();let mut raised=cylinder.clone();
+        for v in &mut raised.vertices{v.point[2]+=7.;}
+        for e in &mut raised.edges{for p in &mut e.curve.control_points{p[2]+=7.;}}
+        for f in &mut raised.faces{for row in &mut f.surface.control_points{for p in row{p[2]+=7.;}}}
+        let meshes=[&cylinder,&raised].map(|m|crate::dispatch(json!({"op":"brep_nurbs_tessellate","model":m,"segments":16})).unwrap());
         let inputs=[request(a.clone(),brep_core::cuboid([0.5;3],[1.5;3]).unwrap()),
             request(a.clone(),reversed),request(a.clone(),brep_core::cuboid([1.,0.5,0.5],[3.,1.5,1.5]).unwrap()),
             request(a,brep_core::cuboid([5.,0.5,0.5],[6.,1.5,1.5]).unwrap()),
-            request(cavity,brep_core::cuboid([3.;3],[4.;3]).unwrap())];
-        let cases=inputs.into_iter().map(|input|{let result=crate::dispatch(input.clone()).unwrap();json!({"request":input,"result":result})}).collect::<Vec<_>>();
+            request(cavity,brep_core::cuboid([3.;3],[4.;3]).unwrap()),request(cylinder,raised)];
+        let cases=inputs.into_iter().enumerate().map(|(i,input)|{
+            let result=crate::dispatch(input.clone()).unwrap();let mut value=json!({"request":input,"result":result});
+            if i==5{value["displayMeshes"]=json!(meshes);value["expectedDistanceMm"]=json!(3.);}
+            value
+        }).collect::<Vec<_>>();
         std::fs::write(path,value_codec::to_string(&json!({"cases":cases})).unwrap()).unwrap();
     }
     #[test]

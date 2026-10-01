@@ -72,7 +72,7 @@ it('validates actual WASM volume-distance responses without changing either inpu
   expect(r.reason).toBe(c.result.reason)
   expect(r.distanceIntervalMm).toEqual(c.result.distanceIntervalMm)
   expect(r.separationWitness).toEqual(c.result.separationWitness)
-  if(r.reason==='separated-volumes'){const gap=index===3?3:1;expect(r.distanceIntervalMm![0]).toBeLessThanOrEqual(gap);expect(r.distanceIntervalMm![1]).toBeGreaterThanOrEqual(gap);expect(r.distanceIntervalMm![1]-r.distanceIntervalMm![0]).toBeLessThanOrEqual(c.request.toleranceMm)}
+  if(r.reason==='separated-volumes'){const gap=c.expectedDistanceMm??(index===3?3:1);expect(r.distanceIntervalMm![0]).toBeLessThanOrEqual(gap);expect(r.distanceIntervalMm![1]).toBeGreaterThanOrEqual(gap);expect(r.distanceIntervalMm![1]-r.distanceIntervalMm![0]).toBeLessThanOrEqual(c.request.toleranceMm)}
   expect(JSON.stringify(c.request)).toBe(before)
  }
 })
@@ -85,4 +85,14 @@ it('keeps the cavity witness on the inner authored shell',()=>{
  expect(request.a.bodies[0].innerShells.some((s:number)=>request.a.shells[s].faces.some((f:any)=>f.face===face))).toBe(true)
  expect(result.distanceIntervalMm[0]).toBeLessThanOrEqual(1)
  expect(result.distanceIntervalMm[1]).toBeGreaterThanOrEqual(1)
+})
+
+it('validates native curved-cylinder volume and original-face witness reports',()=>{
+ const {request,result,displayMeshes}=cases[5]
+ expect(validSolidDistance(solidDistanceExpectation(request),result)).toBe(true)
+ expect(result.validity.every((v:any)=>v.proven)).toBe(true)
+ expect(result.reason).toBe('separated-volumes')
+ expect(result.distanceIntervalMm[0]).toBeLessThanOrEqual(3)
+ expect(result.distanceIntervalMm[1]).toBeGreaterThanOrEqual(3)
+ expect(displayMeshes.every((mesh:any)=>mesh.positions.length>100)).toBe(true)
 })
