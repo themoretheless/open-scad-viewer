@@ -3619,3 +3619,18 @@ it.each(['en','ru'])('recovers Coons roles and directions with local error marke
  await commandKey(ui,'Enter');expect(ui.doc().surfaces).toHaveLength(1);expect(ui.doc().curves).toEqual(before.curves)
  await ui.click('↶');expect(ui.doc()).toEqual(before)
 })
+
+
+it('refuses a drag with pending snaps without materializing or cloning history geometry',async()=>{
+ const {DirectHistory}=await import('../src/services/directModeling')
+ bodySnapsWorkerRun.mockImplementation(()=>new Promise(()=>{}))
+ const ui=await mount();await ui.click('Cube');const before=ui.doc(),svg=ui.svg()
+ const gizmo=ui.all(svg).find(n=>n.tag==='g'&&n.props.onPointerdown&&n.children.some(c=>c.tag==='line'))!
+ expect(gizmo).toBeDefined()
+ const read=vi.spyOn(DirectHistory.prototype,'document','get')
+ try{
+  await ui.pointer(gizmo,0,0)
+  expect(ui.text(ui.all()[0])).toContain('Body snaps are not ready')
+  expect(read).not.toHaveBeenCalled();expect(ui.doc()).toEqual(before)
+ }finally{read.mockRestore()}
+})

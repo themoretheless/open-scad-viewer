@@ -383,7 +383,7 @@ const bodyVertices=computed(()=>{
  return [...coincidentVertexGroups(selectedBody.value.mesh.positions).values()].map(group=>{const p=project(points[group[0]],'3d');return {i:group[0],group,x:p[0],y:p[1]}})
 })
 function startVertexDrag(e:PointerEvent,index:number){
- if(!requireBodySnaps(e,history.document))return
+ if(!requireBodySnaps(e,document.value))return
  cancelNativeNurbs();cancelGizmoWorker();if(directTransformPending.value)cancelDirectTransform()
  e.stopPropagation()
  if(e.button!==0)return
@@ -1269,7 +1269,7 @@ const gizmoAxes=computed(()=>gizmoCenter.value?(['x','y','z'] as const).map((axi
  return {axis,color:['#ff7777','#77df9d','#77baff'][i],base:project(c,'3d'),tip:project(c.map((x,k)=>x+n[k]*length),'3d'),ring:Array.from({length:65},(_,i)=>{const a=i*Math.PI/32;return project(c.map((x,k)=>x+length*.7*(u[k]*Math.cos(a)+v[k]*Math.sin(a))),'3d').join(',')}).join(' ')}
 }):[])
 function startGizmo(e:PointerEvent,kind:'move'|'rotate'|'scale'|'push'|'split',axis:'x'|'y'|'z') {
- if(kind==='move'&&!requireBodySnaps(e,history.document))return
+ if(kind==='move'&&!requireBodySnaps(e,document.value))return
  cancelNativeNurbs();cancelGizmoWorker()
  if(directTransformPending.value)cancelDirectTransform()
  if(kind==='rotate'||kind==='scale')previewingTransform.value=true
@@ -1287,7 +1287,7 @@ function startCurve(e:PointerEvent,kind:'center'|'radius'|'start'|'end'){
  e.preventDefault();e.stopPropagation();advancedOp.value=null;const svg=canvasOf(e);svg.focus();curveDrag={id:selection.value,kind,before:history.document,pointer:e.pointerId,inverse:svg.getScreenCTM()?.inverse()??null};svg.setPointerCapture(e.pointerId)
 }
 function startCv(e:PointerEvent,u:number,v:number) {
- if(!requireBodySnaps(e,history.document))return
+ if(!requireBodySnaps(e,document.value))return
  cancelNativeNurbs();cancelGizmoWorker();if(directTransformPending.value)cancelDirectTransform()
  const point=selectedNurbsCurve.value?.curve.controlPoints[u]??selectedNurbsSurface.value?.surface.controlPoints[u]?.[v]
  if(!selectedNurbs.value||!point)return
@@ -2509,7 +2509,7 @@ function down(e: PointerEvent, pane: Pane, id = '', vertex: number | null = null
     orbitDrag = { x:e.clientX, y:e.clientY, yaw:camera.value.yaw, pitch:camera.value.pitch, pointer:e.pointerId, svg }; cameraDragging.value = true; svg.setPointerCapture(e.pointerId); return
   }
   const drawing = pane==='2d'||(pane==='3d'&&faceDrawing.value)
-  if(!pan&&!(drawing?requireSketchSnaps(e):requireBodySnaps(e,history.document)))return
+  if(!pan&&!(drawing?requireSketchSnaps(e):requireBodySnaps(e,document.value)))return
   if (pan) { gesture = { start: position(e), document: document.value, vertex: null, id: '', pointer: e.pointerId, pane, svg, pan: true, center: [...centers.value[pane]] }; cameraDragging.value = true; svg.setPointerCapture(e.pointerId); return }
   let p: Point2
   try { p = drawing&&pane==='3d'?unprojectDirectPlane(position(e),activePlane.value,camera.value):plane(position(e), pane) } catch (e) { error.value = String(e); return }

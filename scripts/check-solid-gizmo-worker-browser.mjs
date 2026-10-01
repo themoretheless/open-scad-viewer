@@ -71,7 +71,10 @@ try {
  async function command(name){await activate(solid.getByRole('button',{name:'Команда… Ctrl K',exact:true}));const search=page.getByRole('combobox',{name:'Search commands / Поиск команд'});await search.fill(name);await search.press('Enter')}
  const apply=solid.getByRole('button',{name:'Готово · Enter',exact:true})
  await command('Box')
+ await solid.getByRole('button',{name:'Куб · 3D',exact:true}).waitFor()
+ await solid.getByRole('status',{name:'primitive-build',exact:true}).waitFor({state:'hidden'})
  await command('Create linked instance');await activate(apply)
+ await solid.getByRole('status',{name:'history-restore',exact:true}).waitFor({state:'hidden'})
  await command('Select instance source')
  const before=await download('Скачать проект JSON','before.json');assert.equal(before.bodies.length,2)
  if(await menu.evaluate(e=>e.parentElement.open))await activate(menu)
