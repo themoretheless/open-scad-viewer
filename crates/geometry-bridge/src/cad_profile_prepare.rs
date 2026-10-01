@@ -59,7 +59,15 @@ fn assemble(v:Value,curves:Option<Vec<Vec<Curve>>>)->Result<Value>{
  if entry!=0||visited.iter().any(|x|!*x){return Ok(json!({"accepted":false,"reason":"disconnected","points":[],"defects":[],"connectors":connectors}));}
  if curves.is_some(){
   let original=wire.clone();
-  let loops=match brep_core::profile_region::orient_even_odd(&[wire],1e-7){Ok(loops)=>loops,Err(e)=>return Ok(json!({"accepted":false,"reason":"invalid-contour","points":[],"defects":[],"connectors":connectors,"detail":e.to_string(),"curveSources":provenance}))};
+  let loops=match brep_core::profile_region::orient_even_odd(&[wire],1e-7){
+   Ok(loops)=>loops,
+   Err(e)=>{
+    let mut report=json!({"accepted":false,"reason":"invalid-contour","points":[],"defects":[],"connectors":connectors,"detail":e.to_string(),"curveSources":provenance});
+    // Diagnostics retain the authored traversal; failed orientation changes no inputs.
+    if (2..=254).contains(&original.len()) {report["diagnosticLoops"]=json!([original]);}
+    return Ok(report)
+   }
+  };
   // Orientation reverses both segment order and direction. Keep the source
   // mapping aligned with the returned profile, rather than the traversal.
   if !loops[0].iter().zip(&original).all(|(a,b)|a.degree==b.degree&&a.knots==b.knots&&a.control_points==b.control_points&&a.weights==b.weights&&a.periodic==b.periodic){provenance.reverse();for source in &mut provenance{let reversed=field::<bool>(source,"reversed")?;source["reversed"]=json!(!reversed);}}
@@ -214,5 +222,23 @@ pub fn prepare_retained(v:Value)->Result<Value>{
   let loops:Vec<Vec<Curve>>=field(profile,"loops").unwrap();assert_eq!(value_codec::to_string(&loops[0][0]).unwrap(),value_codec::to_string(&curve).unwrap());
   let model=brep_core::prism::extrude(&loops,0.,5.).unwrap();model.validate().unwrap();
   assert_eq!(value_codec::to_string(&sketches).unwrap(),original);
+ }
+}
+
+#[cfg(test)]
+mod intersection_diagnostic_tests {
+ use super::*;
+ #[test]
+ fn refused_rational_contour_retains_assembled_sources_for_diagnostics() {
+  let arch=Curve {degree:2,knots:vec![0.,0.,0.,1.,1.,1.],control_points:vec![vec![0.,0.],vec![1.,5.],vec![2.,0.]],weights:vec![1.,0.8,1.],periodic:false};
+  let r=prepare_retained(json!({"tolerance":0.,"sketches":[{"closed":false,"curves":[arch.clone()]},{"closed":false,"points":[[2.,0.],[2.,2.],[0.,2.],[0.,0.]]}]})).unwrap();
+  assert_eq!(r["accepted"],json!(false));
+  assert_eq!(r["reason"],json!("invalid-contour"));
+  let loops:Vec<Vec<Curve>>=field(&r,"diagnosticLoops").unwrap();
+  assert_eq!(value_codec::to_value(&loops[0][0]).unwrap(),value_codec::to_value(&arch).unwrap());
+  assert_eq!(r["curveSources"].as_array().unwrap().len(),loops[0].len());
+  let diagnostics=brep_core::profile_intersections::inspect(&loops,1e-7,128,8192).unwrap();
+  let crossing=diagnostics["pairs"].as_array().unwrap().iter().find(|p|p["first"]["curve"]==json!(0)&&p["second"]["curve"]==json!(2)).unwrap();
+  assert_eq!(crossing["report"]["components"].as_array().unwrap().len(),2);
  }
 }

@@ -1,3 +1,6 @@
+import {sampleSolidNurbsCurve} from './solidNurbs'
+import {profileIntersectionDiagnostics} from './profileIntersectionDiagnostics'
+import {inspectProfileIntersections,type ProfileIntersectionReport} from './geometry/profileIntersections'
 import type {DirectDocument,DirectSketch,Point2} from './directModeling'
 import {callGeometryRust} from './geometry/kernel'
 import {withRetainedProfile,retainedProfileDisplay} from './retainedSketchProfile'
@@ -5,6 +8,11 @@ import type {BrepProfile} from './geometry/brepProfile'
 import {xyPlane,cross3,dot3,unit3,type SketchPlane,type Vec3} from './directSketchGeometry'
 import {validateNurbsCurve,type NurbsCurve} from './nurbsCurve'
 export interface ProfilePreparationReport {
+ /** Original assembled XY definitions for read-only diagnostics of a refused contour. */
+ diagnosticLoops?:NurbsCurve[][]
+ intersections?:ProfileIntersectionReport
+ diagnosticDisplay?:{curve:number;kind:'intersection'|'overlap'|'unproven';points:Point2[]}[]
+ intersectionDiagnosticError?:string
  /** Ordered like the returned profile; connectors identify both input chains. */
  curveSources?:({chain:number;segment:number;reversed:boolean;connector:false}|{chain:number;end:'start'|'end';nextChain:number;reversed:boolean;connector:true})[]
  /** Measured floating-point reconstruction error; no exact coplanarity claim. */
@@ -67,6 +75,19 @@ export function prepareSolidProfile(document:DirectDocument,ids:string[],toleran
  const report=items.some(i=>i.curve)||sketches.some(s=>s.analytic)
   ?callGeometryRust<ProfilePreparationReport>('cad_prepare_retained_profile',{sketches,tolerance})
   :callGeometryRust<ProfilePreparationReport>('cad_prepare_profile',{chains:sketches.map(s=>s.points),tolerance})
+ if(!report.accepted&&report.reason==='invalid-contour'&&report.diagnosticLoops){
+  try{
+   report.intersections=inspectProfileIntersections(report.diagnosticLoops,{maxPairs:128,maxBoxes:8192,toleranceMm:1e-7})
+   const presentation=profileIntersectionDiagnostics(report.diagnosticLoops,report.intersections)
+   const kind=presentation.overlaps.length?'overlap':presentation.points.length?'intersection':!presentation.complete?'unproven':undefined
+   if(kind&&!report.segmentDefect)report.segmentDefect={kind,segments:[]}
+   const highlighted=new Map<number,'intersection'|'overlap'|'unproven'>()
+   for(const [kind,events] of [['unproven',[...presentation.unresolved,...presentation.endpointBands]],['intersection',presentation.points],['overlap',presentation.overlaps]] as const)
+    for(const event of events)for(const ref of [event.first,event.second])highlighted.set(ref.curve,kind)
+   report.diagnosticDisplay=[...highlighted].map(([curve,kind])=>({curve,kind,points:sampleSolidNurbsCurve(report.diagnosticLoops![0]![curve]!,48).map(p=>[p[0],p[1]] as Point2)}))
+  }
+  catch(error){report.intersectionDiagnosticError=error instanceof Error?error.message:String(error)}
+ }
  if(items.some(i=>i.curve))report.projectionMaxDeviationMm=projectionMaxDeviationMm
  if(report.profile)report.points=retainedProfileDisplay(report.profile)[0]
  const next=structuredClone(document)

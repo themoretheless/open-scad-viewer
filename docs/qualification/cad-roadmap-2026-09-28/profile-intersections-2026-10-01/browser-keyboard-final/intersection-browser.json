@@ -1,0 +1,14 @@
+{
+  "browser": "151.0.7922.34",
+  "keyboard": true,
+  "tabPresses": 273,
+  "intersections": 2,
+  "sourceSegments": [
+    0,
+    2
+  ],
+  "applyRefused": true,
+  "cancelPreservesSources": true,
+  "downloads": 2,
+  "scope": "distinct-profile-segment-pairs"
+}

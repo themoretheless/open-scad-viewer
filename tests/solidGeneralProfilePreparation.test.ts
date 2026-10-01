@@ -59,3 +59,20 @@ it('refuses nonplanar control nets and leaves ambiguous endpoint inputs untouche
  const result=prepareSolidProfile(flat,['curve'],0)
  expect(result.report.accepted).toBe(false);expect(result.document).toEqual(flat)
 })
+it('localizes both rational crossings of a refused contour and keeps the document unchanged',async()=>{
+ const document=emptyDirectDocument()
+ document.curves=[{id:'arch',name:'Arch',curve:{degree:2,knots:[0,0,0,1,1,1],controlPoints:[[0,0],[1,5],[2,0]],weights:[1,.8,1]}}]
+ document.sketches=[{id:'lines',name:'Lines',closed:false,points:[[2,0],[2,2],[0,2],[0,0]]}]
+ const before=structuredClone(document),result=prepareSolidProfile(document,['arch','lines'],0)
+ expect(result.report).toMatchObject({accepted:false,reason:'invalid-contour'})
+ expect(result.report.diagnosticLoops?.[0][0]).toEqual({...document.curves[0].curve,periodic:false})
+ const {profileIntersectionDiagnostics}=await import('../src/services/profileIntersectionDiagnostics')
+ const events=profileIntersectionDiagnostics(result.report.diagnosticLoops!,result.report.intersections!)
+ expect(events.points).toHaveLength(2)
+ expect(events.points.every(p=>p.first.curve===0&&p.second.curve===2)).toBe(true)
+ expect(events.points.every(p=>Math.abs(p.point[1]-2)<1e-7)).toBe(true)
+ expect(result.report.diagnosticDisplay?.filter(s=>s.kind==='intersection').map(s=>s.curve).sort()).toEqual([0,2])
+ expect(result.report.intersectionDiagnosticError).toBeUndefined()
+ expect(mainSolidResult(mainSolidExpectation({kind:'profilePrepare',document,ids:['arch','lines'],tolerance:0}),result)).toBe(true)
+ expect(result.document).toEqual(before);expect(document).toEqual(before)
+})

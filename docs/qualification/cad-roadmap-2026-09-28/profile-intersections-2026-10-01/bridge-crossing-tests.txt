@@ -1,0 +1,106 @@
+warning: binary `wgsl_export` should have a kebab-case name
+  |
+1 | /private/tmp/open-scad-viewer-cad-resume/crates/target/.../wgsl_export
+  |                                                            ^^^^^^^^^^^
+  |
+  = note: `cargo::non_kebab_case_bins` is set to `warn` by default
+help: to change the binary name to `wgsl-export`, convert the file stem
+  |
+1 - src/bin/wgsl_export.rs
+1 + src/bin/wgsl-export.rs
+  |
+warning: `raster-core` (manifest) generated 1 warning
+warning: function `rebuild_add` is never used
+    --> nurbs-core/src/foundation.rs:3249:4
+     |
+3249 | fn rebuild_add(a:[f64;2],b:[f64;2])->[f64;2] { [next_down(a[0]+b[0]),next_up(a[1]+b[1])] }
+     |    ^^^^^^^^^^^
+     |
+     = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: function `rebuild_mul` is never used
+    --> nurbs-core/src/foundation.rs:3250:4
+     |
+3250 | fn rebuild_mul(a:[f64;2],b:[f64;2])->[f64;2] {
+     |    ^^^^^^^^^^^
+
+warning: function `rebuild_binomial` is never used
+    --> nurbs-core/src/foundation.rs:3254:4
+     |
+3254 | fn rebuild_binomial(n:usize,k:usize)->[f64;2] {
+     |    ^^^^^^^^^^^^^^^^
+
+warning: function `rebuild_product_factor` is never used
+    --> nurbs-core/src/foundation.rs:3258:4
+     |
+3258 | fn rebuild_product_factor(p:usize,q:usize,i:usize,j:usize)->[f64;2] {
+     |    ^^^^^^^^^^^^^^^^^^^^^^
+
+warning: `nurbs-core` (lib) generated 4 warnings
+   Compiling geometry-bridge v0.1.0 (/private/tmp/open-scad-viewer-cad-resume/crates/geometry-bridge)
+warning: unused doc comment
+  --> geometry-bridge/src/abi.rs:56:1
+   |
+56 | / /// Capacity of the last packed response allocation. `encode_binary` grows its
+57 | | /// Vec amortized, so capacity usually exceeds length; the response is freed
+58 | | /// before the next request (see `decodePacked` on the host), so a single slot
+59 | | /// suffices. Buffers not matching the slot (request/staging allocations from
+60 | | /// `abi_alloc`, boxed slices) have capacity == length and take the fallback.
+   | |_----------------------------------------------------------------------------^
+   |   |
+   |   rustdoc does not generate documentation for macro invocations
+   |
+   = help: to document an item produced by a macro, the macro must produce the documentation as part of its expansion
+   = note: `#[warn(unused_doc_comments)]` (part of `#[warn(unused)]`) on by default
+
+warning: `geometry-bridge` (lib) generated 1 warning
+warning: `geometry-bridge` (lib test) generated 1 warning (1 duplicate)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 3.06s
+     Running unittests src/lib.rs (crates/target/debug/build/geometry-bridge/c81859b9ed0b6398/out/geometry_bridge-c81859b9ed0b6398)
+
+running 1 test
+test cad_profile_prepare::intersection_diagnostic_tests::refused_rational_contour_retains_assembled_sources_for_diagnostics ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 346 filtered out; finished in 0.02s
+
+     Running tests/analytic_brep_tessellation.rs (crates/target/debug/build/geometry-bridge/178bac29cdf8ec4b/out/analytic_brep_tessellation-178bac29cdf8ec4b)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 5 filtered out; finished in 0.00s
+
+     Running tests/box_sphere_tessellation.rs (crates/target/debug/build/geometry-bridge/7d7243a54fec5fc5/out/box_sphere_tessellation-7d7243a54fec5fc5)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 1 filtered out; finished in 0.00s
+
+     Running tests/build_surfaces.rs (crates/target/debug/build/geometry-bridge/05268a0618df31db/out/build_surfaces-05268a0618df31db)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 2 filtered out; finished in 0.00s
+
+     Running tests/gcode.rs (crates/target/debug/build/geometry-bridge/ad22c4bb065e5c2c/out/gcode-ad22c4bb065e5c2c)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 7 filtered out; finished in 0.00s
+
+     Running tests/gear_tessellation.rs (crates/target/debug/build/geometry-bridge/19a71fa321a0cf4a/out/gear_tessellation-19a71fa321a0cf4a)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 2 filtered out; finished in 0.00s
+
+     Running tests/owned_brep_dispatch.rs (crates/target/debug/build/geometry-bridge/f84ec61d4ea94a67/out/owned_brep_dispatch-f84ec61d4ea94a67)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 4 filtered out; finished in 0.00s
+
+     Running tests/tolerant_sweep_tessellation.rs (crates/target/debug/build/geometry-bridge/0e00d32333505a5b/out/tolerant_sweep_tessellation-0e00d32333505a5b)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 1 filtered out; finished in 0.00s

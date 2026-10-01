@@ -24,10 +24,10 @@ try {
  browser=await playwright.chromium.launch({headless:process.env.SOLID_GPU_HEADED!=='1',args:['--enable-unsafe-webgpu'],...(process.env.CHROMIUM_EXECUTABLE?{executablePath:process.env.CHROMIUM_EXECUTABLE}:{})})
  page=await browser.newPage({acceptDownloads:true})
  page.on('pageerror',e=>renderErrors.push(String(e)));page.on('console',m=>{if(m.type()==='error')renderErrors.push(m.text())})
- if(process.argv.includes('--profile-provenance'))await page.addInitScript(()=>{
+ if(process.argv.includes('--profile-provenance')||process.argv.includes('--profile-intersections'))await page.addInitScript(()=>{
   const OriginalWorker=window.Worker;window.__profileProvenance=null
   window.Worker=class extends OriginalWorker{
-   constructor(...args){super(...args);this.addEventListener('message',event=>{if(event.data?.kind==='profilePrepare'&&event.data.ok&&event.data.result.report.accepted)window.__profileProvenance=event.data.result.report})}
+   constructor(...args){super(...args);this.addEventListener('message',event=>{if(event.data?.kind==='profilePrepare'&&event.data.ok)window.__profileProvenance=event.data.result.report})}
   }
  })
  await page.addInitScript(()=>{
@@ -90,6 +90,8 @@ try {
  if(regionOperation!=='union')original.sketches=[{id:'rect',name:'Plate',closed:true,points:[[-4,-3],[4,-3],[4,3],[-4,3]]},{id:'circle',name:'Circular cutter',closed:true,points:[],analytic:{kind:'circle',center:[0,0],radius:2,start:0,sweep:360}}]
  if(arcs)original.sketches=[{id:'rect',name:'Diameter',closed:false,points:[[-2,0],[2,0]]},{id:'circle',name:'Semicircle',closed:false,points:[],analytic:{kind:'arc',center:[0,0],radius:2,start:0,sweep:180}}]
  if(generalNurbs){original.sketches=[{id:'line',name:'Profile lines',closed:false,points:[[2,0],[2,2],[0,2],[0,0]]}];original.curves=[{id:'nurbs',name:'General NURBS',curve:{degree:2,knots:[0,0,0,1,1,1],controlPoints:[[0,0],[1,-1],[2,0]],weights:[1,1,1]}}]}
+ const diagnosticFixture=process.argv.includes('--profile-intersections')
+ if(diagnosticFixture){assert.ok(generalNurbs);original.curves[0].curve.controlPoints[1][1]=5;original.curves[0].curve.weights=[1,.8,1]}
  const inputs=generalNurbs?[original.curves[0],original.sketches[0]]:original.sketches
  await openMenu()
  await solid.locator('input[accept=".json,application/json"]').setInputFiles({name:'profiles.json' ,mimeType:'application/json',buffer:Buffer.from(JSON.stringify(original))})
@@ -103,6 +105,29 @@ try {
  async function command(name){await activate(solid.getByRole('button',{name:'Команда… Ctrl K',exact:true}));const search=page.getByRole('combobox',{name:'Search commands / Поиск команд'});await search.fill(name);await search.press('Enter')}
  const apply=solid.getByRole('button',{name:'Готово · Enter',exact:true})
  await command(operation)
+ if(diagnosticFixture){
+  await solid.getByTestId('profile-intersection-coverage').waitFor({timeout:90000})
+  assert.equal(await apply.isDisabled(),true)
+  const report=await page.evaluate(()=>window.__profileProvenance)
+  assert.equal(report.accepted,false);assert.equal(report.reason,'invalid-contour')
+  assert.ok(report.intersections?.visitedPairs>0)
+  const pane=solid.getByRole('region',{name:'2D — эскизы',exact:true})
+  const points=pane.locator('[data-diagnostic="profile-curve-intersection"]')
+  assert.equal(await points.count(),2)
+  for(const marker of await points.all()){
+   assert.equal(await marker.getAttribute('data-segments'),'0,2')
+   assert.ok(Math.abs(Number(await marker.getAttribute('cy'))+2)<1e-6)
+  }
+  assert.ok(await pane.locator('[data-diagnostic="profile-curve-segment"][data-status="intersection"]').count()>=2)
+  await page.screenshot({path:path.join(directory,'profile-intersections.png')})
+  await writeFile(path.join(directory,'diagnostic-report.json'),JSON.stringify(report,null,2)+'\n')
+  if(keyboard)await page.keyboard.press('Escape');else await activate(solid.getByRole('button',{name:'Esc',exact:true}))
+  const canceled=await download('Скачать проект JSON','canceled.json')
+  assert.deepEqual(canceled.sketches,before.sketches);assert.deepEqual(canceled.curves,before.curves)
+  assert.deepEqual(canceled.bodies,before.bodies)
+  const result={browser:browser.version(),keyboard,tabPresses,intersections:2,sourceSegments:[0,2],applyRefused:true,cancelPreservesSources:true,downloads,scope:'distinct-profile-segment-pairs'}
+  await writeFile(path.join(directory,'intersection-browser.json'),JSON.stringify(result,null,2)+'\n');console.log(result)
+ }else{
  if(regionOperation==='difference'){
   const target=solid.getByLabel('Основной профиль',{exact:true})
   await target.selectOption('circle');assert.equal(await apply.isDisabled(),true)
@@ -172,4 +197,5 @@ try {
  const reloaded=await download('Скачать проект JSON','reloaded.json');assert.deepEqual(reloaded.sketches,joined.sketches)
  const report={browser:browser.version(),profileWorkerCancelled:await page.evaluate(()=>window.__profileDisplayTerminated===true),operation,retainedArcs:!generalNurbs,retainedGeneralNurbs:generalNurbs,exactExtrusion:true,gpuFallback:gpuDeviceDestroyed,renderedTriangles,cancel:true,undo:true,repeat:true,jsonReload:true,keyboard,tabPresses,downloads}
  await writeFile(path.join(directory,'retained-browser.json'),JSON.stringify(report,null,2)+'\n');console.log(report)
+ }
 }catch(error){if(page){await page.screenshot({path:path.join(directory,'failure.png')}).catch(()=>{});await writeFile(path.join(directory,'failure.txt'),await page.locator('body').innerText().catch(()=>''))}throw error}finally{await browser?.close();await new Promise(resolve=>server.close(resolve))}

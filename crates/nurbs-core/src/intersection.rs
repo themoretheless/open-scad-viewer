@@ -828,7 +828,7 @@ fn spans(curve: &Curve) -> Result<Vec<[f64; 2]>> {
     Ok(segments.iter().map(|s| s.domain()).collect())
 }
 
-fn encode_cc_report(report: Report, tolerance: &ToleranceContext, complete: bool) -> Value {
+fn encode_cc_report(report: Report, tolerance: &ToleranceContext, complete: bool, max_boxes:usize) -> Value {
     let components: Vec<Value> = report
         .components
         .into_iter()
@@ -877,7 +877,7 @@ fn encode_cc_report(report: Report, tolerance: &ToleranceContext, complete: bool
             "boxesVisited":report.boxes_visited,
             "bernsteinExcluded":report.bernstein_excluded,
             "krawczykIsolated":report.krawczyk_isolated,
-            "resourceLimit":MAX_BOXES
+            "resourceLimit":max_boxes
         },
         "components":components,
         "unresolved":report.unresolved,
@@ -892,6 +892,12 @@ pub fn intersect_curve_curve(
     second: &Curve,
     tolerance: Option<ToleranceContext>,
 ) -> Result<Value> {
+    intersect_curve_curve_bounded(first,second,tolerance,MAX_BOXES)
+}
+/// Same original-definition coverage, with a caller-owned work budget.
+/// Unvisited boxes remain explicit unresolved coverage.
+pub fn intersect_curve_curve_bounded(first:&Curve,second:&Curve,tolerance:Option<ToleranceContext>,max_boxes:usize)->Result<Value>{
+    check((1..=MAX_BOXES).contains(&max_boxes),"Curve intersection needs 1..8192 boxes")?;
     admit_curve(first)?;
     admit_curve(second)?;
     let tolerance = context(tolerance);
@@ -920,7 +926,7 @@ pub fn intersect_curve_curve(
         "Span-pair resource exceeded before subdivision",
     )?;
     while let Some((ta, tb, ha, hb, depth)) = pending.pop_front() {
-        if report.boxes_visited >= MAX_BOXES {
+        if report.boxes_visited >= max_boxes {
             report.unresolved.push(json!({
                 "parameterBox":[ta[0],ta[1],tb[0],tb[1]],
                 "reason":"resource_boundary"
@@ -1035,7 +1041,7 @@ pub fn intersect_curve_curve(
         report.components = merged;
     }
     let complete = report.unresolved.is_empty();
-    Ok(encode_cc_report(report, &tolerance, complete))
+    Ok(encode_cc_report(report, &tolerance, complete,max_boxes))
 }
 
 pub(crate) fn surface_spans(surface: &Surface) -> Result<Vec<[f64; 4]>> {
@@ -1744,4 +1750,20 @@ pub fn resource_boundary_probe(degree: usize, controls: usize) -> Result<Value> 
     Ok(
         json!({"version":VERSION,"admitted":true,"maxDegree":MAX_DEGREE,"maxControls":MAX_CONTROLS,"maxBoxes":MAX_BOXES,"maxSpans":MAX_SPANS}),
     )
+}
+
+#[cfg(test)]mod bounded_curve_tests {
+ use super::*;
+ fn line(a:[f64;3],b:[f64;3])->Curve{Curve::from_polyline(vec![a.to_vec(),b.to_vec()]).unwrap()}
+ #[test]fn default_budget_keeps_existing_report_identical(){
+  let a=line([0.,0.,0.],[2.,2.,0.]);let b=line([0.,2.,0.],[2.,0.,0.]);
+  assert_eq!(intersect_curve_curve(&a,&b,None).unwrap(),intersect_curve_curve_bounded(&a,&b,None,8192).unwrap());
+ }
+ #[test]fn unvisited_source_spans_remain_unresolved_at_box_limit(){
+  let a=Curve::from_polyline(vec![vec![0.,0.,0.],vec![1.,1.,0.],vec![2.,0.,0.]]).unwrap();let b=line([1.,-1.,0.],[1.,2.,0.]);
+  let report=intersect_curve_curve_bounded(&a,&b,None,1).unwrap();
+  assert_eq!(report["coverage"]["resourceLimit"].as_u64(),Some(1));assert!(report["coverage"]["boxesVisited"].as_u64().unwrap()<=1);assert_eq!(report["coverage"]["complete"].as_bool(),Some(false));
+  assert!(!report["unresolved"].as_array().unwrap().is_empty());
+  assert!(intersect_curve_curve_bounded(&a,&b,None,0).is_err());
+ }
 }

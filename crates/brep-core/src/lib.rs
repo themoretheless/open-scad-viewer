@@ -46,6 +46,7 @@ pub mod operations;
 mod body_edit;
 pub mod planar_trim;
 pub mod profile_region;
+pub mod profile_intersections;
 pub mod face_contact;
 pub mod face_contacts;
 pub mod shared_boundary;

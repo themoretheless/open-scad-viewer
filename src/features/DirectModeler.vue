@@ -73,6 +73,7 @@ import {isSolidNurbsRefit,type refitSolidNurbs} from '../services/solidCurveRedu
 import {isSolidSurfaceBuild,type buildSolidSurface} from '../services/solidSurfaceConstruction'
 import { isGeometryKernelReady, warmGeometryKernel } from '../services/geometry/kernel'
 import { type BrepMassProperties, type BrepBooleanOperation } from '../services/geometry/brep'
+const ProfileIntersectionPresentation=defineAsyncComponent(()=>import('../components/ProfileIntersectionPresentation.vue'))
 const CurvePointTrimControls=defineAsyncComponent(()=>import('../components/CurvePointTrimControls.vue'))
 const CurveOffsetPreview=defineAsyncComponent(()=>import('../components/CurveOffsetPreview'))
 const CurveOffsetConstructionInfo=defineAsyncComponent(()=>import('../components/CurveOffsetConstructionInfo'))
@@ -3548,6 +3549,7 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
                 <circle v-for="(defect,i) in profilePreparation.value.report.defects" :key="i" :cx="defect.point[0]" :cy="-defect.point[1]" :r="views['2d']/90" fill="#ff647c"/>
                 <polyline v-for="(connector,i) in profilePreparation.value.report.connectors" :key="'link'+i" :points="[connector.a,connector.b].map(p=>[p[0],-p[1]].join(',')).join(' ')" fill="none" stroke="#ffc977" stroke-width="4" vector-effect="non-scaling-stroke"/>
               </g>
+              <ProfileIntersectionPresentation v-if="advancedOp==='profile-prepare' && profilePreparation?.value?.report.intersections" mode="preview" :report="profilePreparation.value.report" :project="project" :pane="pane" :plane="profilePreparation.value.plane" :view="views[pane]"/>
               <g v-if="pane==='3d' && advancedOp==='nurbs-curve-match'" data-diagnostic="curve-match-endpoints" pointer-events="none"><g v-for="guide in curveMatchGuides" :key="guide.id"><polyline :points="guide.points" fill="none" :stroke="guide.color" stroke-width="2" stroke-dasharray="5 3" vector-effect="non-scaling-stroke"/><circle :cx="guide.x" :cy="guide.y" :r="views['3d']/(guide.id===0?85:140)" :fill="guide.color"/><text :x="guide.x+(guide.id===0?-1:1)*views['3d']/35" :y="guide.y-views['3d']/45" :fill="guide.color" :font-size="views['3d']/40">{{ guide.id===0?'A':'B' }}</text></g></g>
               <g v-if="pane==='3d' && advancedOp==='nurbs-point-trim'" pointer-events="none">
                 <polyline v-if="pointTrimPreviewPoints.length" data-preview="point-trim" :points="pointTrimPreviewPoints.map(p=>project(p,'3d').join(',')).join(' ')" fill="none" stroke="#77eac5" stroke-width="4" vector-effect="non-scaling-stroke" />
@@ -3619,7 +3621,8 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
               <template v-if="advancedOp==='profile-prepare'">
                 <small>{{ label('Первый вход сохраняет ID и свойства. Кривые сохраняются, размеры удаляются. Undo восстанавливает входы.','The first input keeps its identity and properties. Curves are retained; dimensions are removed. Undo restores the inputs.') }}</small>
                 <label class="preparation-tolerance">{{ label('Допуск разрыва, мм','Gap tolerance, mm') }}<CadQuantityInput v-model="advanced.profileGap" :locale="locale" :min="0" :max="1000000" style="width:110px" :aria-label="label('Допуск разрыва, мм','Gap tolerance, mm')" @validity="quantityValidity('profileGap',$event)" /></label>
-                <output v-if="profilePreparation?.value" data-testid="profile-preparation-report">{{ profilePreparation.value.report.accepted?label('Контур замкнут. Добавлено отрезков: ','Closed contour. Added connectors: ')+profilePreparation.value.report.connectors.length:profilePreparationError(profilePreparation.value.report.reason,profilePreparation.value.report.segmentDefect?.kind) }}</output>
+                <output v-if="profilePreparation?.value?.report.accepted" data-testid="profile-preparation-report">{{ profilePreparation.value.report.accepted?label('Контур замкнут. Добавлено отрезков: ','Closed contour. Added connectors: ')+profilePreparation.value.report.connectors.length:profilePreparationError(profilePreparation.value.report.reason,profilePreparation.value.report.segmentDefect?.kind) }}</output>
+                <ProfileIntersectionPresentation v-if="profilePreparation?.value" mode="status" :report="profilePreparation.value.report" :locale="locale"/>
               </template>
               <CurvePointTrimControls v-if="advancedOp==='nurbs-point-trim'" :advanced="advanced" @update:advanced="value=>advanced={...advanced,...value}" :locale="locale" :dimension="selectedNurbsCurve?.curve.controlPoints[0]?.length??3" :pick="pointTrimPick" :cut="pointTrimCut" @numeric="pointTrimNumeric" @validity="quantityValidity" />
               <template v-if="advancedOp==='nurbs-curve-match'">

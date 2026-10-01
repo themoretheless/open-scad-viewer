@@ -27,6 +27,10 @@ pub fn dispatch(v: Value) -> Result<Value> {
         None => 1e-7,
     };
     match v["op"].as_str() {
+        Some("brep_profile_intersections") => brep_core::profile_intersections::inspect(
+            &field::<Vec<Vec<Curve>>>(&v,"loops")?,tolerance,
+            if v.get("maxPairs").is_some(){field(&v,"maxPairs")?}else{128},
+            if v.get("maxBoxes").is_some(){field(&v,"maxBoxes")?}else{32768}),
         Some("brep_profile_offset") => profile(planar_trim::offset(&field::<Vec<Vec<Curve>>>(&v,"loops")?,field(&v,"distance")?,tolerance)?,tolerance),
         Some("brep_profile_transform") => profile(
             brep_core::transform::profile(
@@ -114,6 +118,13 @@ mod tests {
             .rev()
             .map(|c| c.reverse().unwrap())
             .collect()
+    }
+    #[test]
+    fn retained_intersection_query_reports_original_segments_and_work_bounds(){
+        let loops=vec![vec![Curve::from_polyline(vec![vec![0.,0.],vec![2.,2.]]).unwrap()],vec![Curve::from_polyline(vec![vec![0.,2.],vec![2.,0.]]).unwrap()]];
+        let r=dispatch(json!({"op":"brep_profile_intersections","loops":loops,"maxPairs":1,"maxBoxes":8192})).unwrap();
+        assert_eq!(r["scope"].as_str(),Some("distinct-profile-segment-pairs"));assert_eq!(r["complete"].as_bool(),Some(true),"{r:?}");
+        assert!(r["boxesVisited"].as_u64().unwrap()<=8192);assert_eq!(r["pairs"][0]["report"]["components"][0]["kind"].as_str(),Some("point"));
     }
     #[test]
     fn general_profile_validation_roundtrip_transform_and_area_enclosure() {

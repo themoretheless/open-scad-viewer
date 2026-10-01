@@ -583,6 +583,7 @@ pub fn dispatch(mut v: Value) -> Result<Value> {
         | "brep_profile_validate"
         | "brep_profile_offset"
         | "brep_profile_boolean"
+        | "brep_profile_intersections"
         | "brep_profile_signed_area" => brep_profile::dispatch(v),
         "cad" | "mesh" => mesh::dispatch(v),
         "path2d" => path2d::dispatch(v),

@@ -1,3 +1,4 @@
+import {inspectProfileIntersections} from './geometry/profileIntersections'
 import {measureSolidDistance} from './solidDistance'
 import {inspectSelfIntersection} from './solidSelfIntersection'
 import {inspectFaceContacts} from './solidFaceContacts'
@@ -85,6 +86,7 @@ async function execute(job:MainSolidJob):Promise<MainSolidResults[keyof MainSoli
     case 'seamPrepare':return prepareSolidSurfaceSeams(...job.args)
     case 'surfaceBuild':return buildSolidSurface(job.document,job.options)
     case 'nurbsRefit':return refitSolidNurbs(job.document,job.options)
+    case 'profileIntersections':return inspectProfileIntersections(job.loops,job.options)
     case 'profilePrepare':return prepareSolidProfile(job.document,job.ids,job.tolerance)
     case 'profileEdit':return applySolidProfileEdit(job.document,job.options)
     case 'bodyEdit':return applySolidBodyEdit(job.document,job.options)
@@ -114,7 +116,7 @@ export function createMainSolidWorkerHandler(post:(response:MainSolidResponse,tr
     validate:(value)=>{
       const request=value as Partial<MainSolidRequest>|null
       if(!request || request.version!==1 || !Number.isSafeInteger(request.id) || request.id!<1
-        || !request.job || !['solidDistance','selfIntersection','faceContacts','boundaryAgreement','shellDistance','faceDistance','surfaceDistance','curveDistance','sketchSnaps','bodySnaps','faceSketch','bodyEdges','topology','curveDisplay','profileDisplay','surfaceMesh','surfaceBoundary','measureVertices','measureEdge','primitive','modelGraphImport','displayMesh','restoreDocument','brepTool','curveChainInspection','trimmedCurveOffset','curveOffset','nurbsEdit','pointEdit','sketchEdit','boolean','sceneEdit','curveMatch','surfaceMatch','seamPrepare','surfaceBuild','nurbsRefit','profilePrepare','profileEdit','bodyEdit','revolve','extrusion','main','cad','inspect','meshContacts','truss','latticeGraph','structuralSections','bondedSolid'].includes(request.job.kind))return null
+        || !request.job || !['solidDistance','selfIntersection','faceContacts','boundaryAgreement','shellDistance','faceDistance','surfaceDistance','curveDistance','sketchSnaps','bodySnaps','faceSketch','bodyEdges','topology','curveDisplay','profileDisplay','surfaceMesh','surfaceBoundary','measureVertices','measureEdge','primitive','modelGraphImport','displayMesh','restoreDocument','brepTool','curveChainInspection','trimmedCurveOffset','curveOffset','nurbsEdit','pointEdit','sketchEdit','boolean','sceneEdit','curveMatch','surfaceMatch','seamPrepare','surfaceBuild','nurbsRefit','profileIntersections','profilePrepare','profileEdit','bodyEdit','revolve','extrusion','main','cad','inspect','meshContacts','truss','latticeGraph','structuralSections','bondedSolid'].includes(request.job.kind))return null
       return request as MainSolidRequest
     },
     busyError:{name:'Error',code:'CAD_BUSY',message:'CAD worker is busy'},

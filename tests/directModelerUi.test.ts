@@ -9,7 +9,7 @@ import * as stepStore from '../src/services/cadStepIndexedDb'
 import * as geometryKernel from '../src/services/geometry/kernel'
 import { useModelingGrid } from '../src/services/modelingGrid'
 import DirectModeler from '../src/features/DirectModeler.vue'
-beforeAll(async()=>{await import('../src/components/CurvePointTrimControls.vue')})
+beforeAll(async()=>{await import('../src/components/CurvePointTrimControls.vue');await import('../src/components/ProfileIntersectionPresentation.vue')})
 import {extrudeDirectSketch,parseDirectDocument,type DirectDocument} from '../src/services/directModeling'
 import {projectDirectPoint,unprojectDirectXY,defaultDirectCamera} from '../src/services/directModelingTools'
 import {solidTopology} from '../src/services/directSolidTools'
@@ -3798,4 +3798,38 @@ it('revolves a retained holed profile in exact mode and preserves it through can
  expect(ui.doc().bodies[0].brep!.faces.filter(face=>face.holes.length===1)).toHaveLength(2)
  expect(ui.doc().sketches[0].retainedProfile).toEqual(profile)
  await ui.click('↶');expect(ui.doc()).toEqual(before)
+})
+
+it('marks rational profile crossings in both views and refuses Enter without changing source geometry',async()=>{
+ await geometryKernel.warmGeometryKernel()
+ const arch={id:'arch',name:'Rational arch',curve:{degree:2,knots:[0,0,0,1,1,1],controlPoints:[[0,0],[1,5],[2,0]],weights:[1,.8,1]}}
+ const lines={id:'lines',name:'Closing lines',closed:false,points:[[2,0],[2,2],[0,2],[0,0]]}
+ const ui=await mount({},JSON.stringify({version:1,sketches:[lines],curves:[arch],bodies:[]}))
+ await ui.click(arch.name);await ui.click(lines.name,true);const before=ui.doc()
+ await ui.click('Prepare profile');await flushClearance()
+ const markers=ui.all().filter(n=>n.props['data-diagnostic']==='profile-curve-intersection')
+ expect(markers).toHaveLength(4)
+ expect(markers.every(n=>n.props['data-segments']==='0,2')).toBe(true)
+ expect(ui.all().filter(n=>n.props['data-diagnostic']==='profile-curve-segment'&&n.props['data-status']==='intersection')).toHaveLength(4)
+ expect(ui.text(ui.all()[0])).toContain('The marked segments intersect')
+ expect(ui.text(ui.all()[0])).toContain('Self-intersections within a single curve are outside this check')
+ expect(ui.button('Apply · Enter').props.disabled).toBe(true)
+ await commandKey(ui,'Enter');expect(ui.doc()).toEqual(before)
+ await commandKey(ui,'Escape');expect(ui.doc()).toEqual(before)
+ expect(ui.all().some(n=>n.props['data-diagnostic']==='profile-curve-intersection')).toBe(false)
+})
+
+it('discards a late rational crossing diagnostic after Escape',async()=>{
+ const {prepareSolidProfile}=await import('../src/services/solidProfilePreparation')
+ const requests:Array<{job:any;resolve:(value:any)=>void}>=[]
+ previewWorkerRun.mockImplementation(job=>job.kind==='profilePrepare'?new Promise(resolve=>requests.push({job,resolve})):undefined)
+ const arch={id:'arch',name:'Late arch',curve:{degree:2,knots:[0,0,0,1,1,1],controlPoints:[[0,0],[1,5],[2,0]],weights:[1,.8,1]}}
+ const lines={id:'lines',name:'Late lines',closed:false,points:[[2,0],[2,2],[0,2],[0,0]]}
+ const ui=await mount({},JSON.stringify({version:1,sketches:[lines],curves:[arch],bodies:[]}))
+ await ui.click(arch.name);await ui.click(lines.name,true);const before=ui.doc()
+ await ui.click('Prepare profile');expect(requests).toHaveLength(1)
+ await commandKey(ui,'Escape')
+ const request=requests[0]!;request.resolve(prepareSolidProfile(request.job.document,request.job.ids,request.job.tolerance));await flushClearance()
+ expect(ui.all().some(n=>n.props['data-diagnostic']==='profile-curve-intersection')).toBe(false)
+ expect(ui.doc()).toEqual(before)
 })
