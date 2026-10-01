@@ -209,3 +209,20 @@ it('reads all instance identities after async undo without expanding retained ge
  expect(maxX(restored.bodies[1].mesh.positions)).toBe(11)
  expect(restored.bodies[1].brep).toEqual(linked.bodies[1].brep)
 })
+
+it('matches full-document Rust transforms while isolating untouched scene objects',async()=>{
+ const {callGeometryRust}=await import('../src/services/geometry/kernel')
+ const seed=emptyDirectDocument();seed.bodies.push(box(2))
+ const document=createSolidInstance(seed,'source','instance',placement)
+ document.sketches=[{id:'untouched-sketch',name:'Sketch',closed:true,points:[[0,0],[1,0],[0,1]]}]
+ document.groups=[{name:'Assembly',source:'fixture'}]
+ const before=stringifyMeshJson(document)
+ const ids=['source','instance'],delta:[number,number,number]=[1,-2,3],axis:[number,number,number]=[0,0,1]
+ const expected=callGeometryRust('cad_transform_selection',{document,ids,delta,axis,angle:90,scale:2})
+ const actual=transformSelection(document,ids,delta,axis,90,2)
+ expect(JSON.parse(stringifyMeshJson(actual))).toEqual(JSON.parse(stringifyMeshJson(expected)))
+ expect(stringifyMeshJson(document)).toBe(before)
+ actual.sketches[0].points[0][0]=123;actual.groups![0].source='changed'
+ expect(document.sketches[0].points[0][0]).toBe(0)
+ expect(document.groups![0].source).toBe('fixture')
+})

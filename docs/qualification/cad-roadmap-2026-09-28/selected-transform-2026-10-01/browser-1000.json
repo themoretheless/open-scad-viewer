@@ -1,0 +1,245 @@
+{
+  "compactSceneRequests": [
+    {
+      "operation": "instance-detach",
+      "compact": true,
+      "characters": 149960
+    },
+    {
+      "operation": "instance-detach",
+      "compact": true,
+      "characters": 149960
+    },
+    {
+      "operation": "transform",
+      "compact": true,
+      "characters": 168565
+    },
+    {
+      "operation": "transform",
+      "compact": true,
+      "characters": 149960
+    }
+  ],
+  "groupEditingChecked": false,
+  "instanceDetachChecked": true,
+  "renderer": {
+    "navigatorGpu": true,
+    "diagnostics": [
+      {
+        "event": "adapter",
+        "available": false
+      },
+      {
+        "event": "adapter",
+        "available": false
+      }
+    ],
+    "gpuCanvasVisible": false,
+    "backend": "Объекты 4Треугольники 1 116Объём 9 375,63Площадь 3 994,72Готово · 138 ms"
+  },
+  "outlinerContainmentDisabled": false,
+  "outlinerChecked": false,
+  "outlinerControlsChecked": false,
+  "outlinerDeletionChecked": false,
+  "retainedMemory": null,
+  "memory": null,
+  "scope": "Headless Chromium UI import and Undo/Redo through durable save; automation latency included. RAF gaps during operations are not orbit FPS; heap is sampled without forced GC.",
+  "importCancellationChecked": false,
+  "cpuProfile": null,
+  "cancellationChecked": false,
+  "browser": "151.0.7922.34",
+  "machine": {
+    "platform": "darwin",
+    "release": "25.6.0",
+    "arch": "arm64",
+    "cpu": "Apple M4 Max",
+    "logicalCpus": 16,
+    "ramBytes": 137438953472
+  },
+  "iterations": 1,
+  "timingSummary": {
+    "import": {
+      "count": 1,
+      "p50Ms": 3401.126375,
+      "p95Ms": 3401.126375,
+      "maxFrameGapMs": 599.3
+    },
+    "undo": {
+      "count": 1,
+      "p50Ms": 50.54508299999998,
+      "p95Ms": 50.54508299999998,
+      "maxFrameGapMs": 9
+    },
+    "redo": {
+      "count": 1,
+      "p50Ms": 600.2880830000004,
+      "p95Ms": 600.2880830000004,
+      "maxFrameGapMs": 208.39999999999964
+    },
+    "instance-detach": {
+      "count": 1,
+      "p50Ms": 2711.75525,
+      "p95Ms": 2711.75525,
+      "maxFrameGapMs": 517
+    },
+    "instance-detach-undo": {
+      "count": 1,
+      "p50Ms": 532.3504159999993,
+      "p95Ms": 532.3504159999993,
+      "maxFrameGapMs": 199.9999999999991
+    },
+    "instance-detach-redo": {
+      "count": 1,
+      "p50Ms": 1377.0967500000006,
+      "p95Ms": 1377.0967500000006,
+      "maxFrameGapMs": 208.29999999999927
+    },
+    "detached-source-edit": {
+      "count": 1,
+      "p50Ms": 3666.3845,
+      "p95Ms": 3666.3845,
+      "maxFrameGapMs": 400
+    },
+    "source-edit": {
+      "count": 1,
+      "p50Ms": 3048.2378339999996,
+      "p95Ms": 3048.2378339999996,
+      "maxFrameGapMs": 375.09999999999854
+    },
+    "source-edit-undo": {
+      "count": 1,
+      "p50Ms": 1742.9882079999988,
+      "p95Ms": 1742.9882079999988,
+      "maxFrameGapMs": 183.3000000000029
+    }
+  },
+  "orbit": null,
+  "maxObservedHeapBytes": 558831364,
+  "heapScope": "Samples after each operation only; not peak process memory.",
+  "viewport": {
+    "width": 1280,
+    "height": 800
+  },
+  "bodies": 1001,
+  "before": {
+    "Nodes": 2290,
+    "JSHeapUsedSize": 13146196,
+    "JSHeapTotalSize": 17793024
+  },
+  "after": {
+    "Nodes": 21372,
+    "JSHeapUsedSize": 563970892,
+    "JSHeapTotalSize": 629899264
+  },
+  "samples": [
+    {
+      "action": "import",
+      "profiled": false,
+      "elapsedMs": 3401.126375,
+      "heap": {
+        "Nodes": 20802,
+        "JSHeapUsedSize": 199345804,
+        "JSHeapTotalSize": 253394944
+      },
+      "frameCount": 334,
+      "maxFrameGapMs": 599.3
+    },
+    {
+      "action": "undo",
+      "profiled": false,
+      "elapsedMs": 50.54508299999998,
+      "heap": {
+        "Nodes": 20832,
+        "JSHeapUsedSize": 189920044,
+        "JSHeapTotalSize": 259506176
+      },
+      "frameCount": 6,
+      "maxFrameGapMs": 9
+    },
+    {
+      "action": "redo",
+      "profiled": false,
+      "elapsedMs": 600.2880830000004,
+      "heap": {
+        "Nodes": 39389,
+        "JSHeapUsedSize": 272916212,
+        "JSHeapTotalSize": 324829184
+      },
+      "frameCount": 46,
+      "maxFrameGapMs": 208.39999999999964
+    },
+    {
+      "action": "instance-detach",
+      "profiled": false,
+      "elapsedMs": 2711.75525,
+      "heap": {
+        "Nodes": 20518,
+        "JSHeapUsedSize": 220953036,
+        "JSHeapTotalSize": 268320768
+      },
+      "frameCount": 260,
+      "maxFrameGapMs": 517
+    },
+    {
+      "action": "instance-detach-undo",
+      "profiled": false,
+      "elapsedMs": 532.3504159999993,
+      "heap": {
+        "Nodes": 20444,
+        "JSHeapUsedSize": 111115884,
+        "JSHeapTotalSize": 281788416
+      },
+      "frameCount": 37,
+      "maxFrameGapMs": 199.9999999999991
+    },
+    {
+      "action": "instance-detach-redo",
+      "profiled": false,
+      "elapsedMs": 1377.0967500000006,
+      "heap": {
+        "Nodes": 20523,
+        "JSHeapUsedSize": 190033108,
+        "JSHeapTotalSize": 287916032
+      },
+      "frameCount": 135,
+      "maxFrameGapMs": 208.29999999999927
+    },
+    {
+      "action": "detached-source-edit",
+      "profiled": false,
+      "elapsedMs": 3666.3845,
+      "heap": {
+        "Nodes": 21265,
+        "JSHeapUsedSize": 379900288,
+        "JSHeapTotalSize": 443564032
+      },
+      "frameCount": 388,
+      "maxFrameGapMs": 400
+    },
+    {
+      "action": "source-edit",
+      "profiled": false,
+      "elapsedMs": 3048.2378339999996,
+      "heap": {
+        "Nodes": 21295,
+        "JSHeapUsedSize": 467307972,
+        "JSHeapTotalSize": 519585792
+      },
+      "frameCount": 315,
+      "maxFrameGapMs": 375.09999999999854
+    },
+    {
+      "action": "source-edit-undo",
+      "profiled": false,
+      "elapsedMs": 1742.9882079999988,
+      "heap": {
+        "Nodes": 21371,
+        "JSHeapUsedSize": 558831364,
+        "JSHeapTotalSize": 626671616
+      },
+      "frameCount": 183,
+      "maxFrameGapMs": 183.3000000000029
+    }
+  ]
+}
