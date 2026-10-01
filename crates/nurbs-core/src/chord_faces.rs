@@ -74,6 +74,8 @@ pub fn walk(graph: &Arrangement) -> Result<Walks> {
     }
     let mut comparisons = 0;
     for (vertex, row) in outgoing.iter_mut().enumerate() {
+        // Canceled source edges may leave unused construction vertices.
+        if row.is_empty() { continue; }
         check(
             row.len() >= 2 && row.len() <= 64,
             "Closed boundary graph needs vertex degree 2..64.",

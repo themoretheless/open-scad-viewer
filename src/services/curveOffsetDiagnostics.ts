@@ -1,6 +1,6 @@
 export interface CurveOffsetDiagnostics {
  scope:'represented-offset-chain'
- method:'outward-line-pair-interval/1'
+ method:'outward-line-pair-interval/1'|'outward-line-pair-interval-exact/2'
  crossings:[number,number][];contacts:[number,number][];uncertain:[number,number][];degenerate:number[]
  complete:boolean;checks:number;totalPairs:number;enumerationComplete:boolean;predicatesComplete:boolean;simple:boolean
  originalOffsetTopologyCertified:false
@@ -9,7 +9,7 @@ export interface CurveOffsetDiagnostics {
 export function validCurveOffsetDiagnostics(value:unknown,segments:number):value is CurveOffsetDiagnostics {
  if(!value||typeof value!=='object'||!Number.isInteger(segments)||segments<1||segments>65536)return false
  const d=value as CurveOffsetDiagnostics,total=segments*(segments-1)/2
- if(d.scope!=='represented-offset-chain'||d.method!=='outward-line-pair-interval/1'||d.originalOffsetTopologyCertified!==false
+ if(d.scope!=='represented-offset-chain'||!['outward-line-pair-interval/1','outward-line-pair-interval-exact/2'].includes(d.method)||d.originalOffsetTopologyCertified!==false
   ||d.totalPairs!==total||!Number.isInteger(d.checks)||d.checks<0||d.checks>Math.min(total,1000000))return false
  const index=(n:unknown):n is number=>Number.isInteger(n)&&Number(n)>=0&&Number(n)<segments
  const seen=new Set<string>()

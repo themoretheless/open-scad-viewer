@@ -15,7 +15,7 @@ pub struct Diagnostics {
 }
 impl Diagnostics {
     pub fn to_value(&self) -> Value {
-        json!({"scope":"represented-offset-chain","method":"outward-line-pair-interval/1",
+        json!({"scope":"represented-offset-chain","method":"outward-line-pair-interval-exact/2",
             "crossings":self.crossings,"contacts":self.contacts,"uncertain":self.uncertain,
             "degenerate":self.degenerate,"complete":self.complete,"checks":self.checks,
             "enumerationComplete":self.checks==self.total_pairs,
@@ -58,12 +58,24 @@ pub(crate) fn orientation(a: [f64; 2], b: [f64; 2], c: [f64; 2]) -> Result<Optio
     }
     let x = |p: [f64; 2], axis| Interval::point(p[axis]).sub(Interval::point(a[axis]));
     let cross = x(b, 0)?.mul(x(c, 1)?)?.sub(x(b, 1)?.mul(x(c, 0)?)?)?;
-    Ok(if cross.lo > 0. {
-        Some(1)
-    } else if cross.hi < 0. {
-        Some(-1)
-    } else {
-        None
+    if cross.lo > 0. { return Ok(Some(1)); }
+    if cross.hi < 0. { return Ok(Some(-1)); }
+    // Resolve the represented binary64 inputs, never an earlier unrounded
+    // construction. Indeterminate exact evaluation remains indeterminate.
+    use cad_predicates::{AuthoredScalar,SourceArena,ToleranceContext,PredicateContext,Limits,Outcome,Sign,orient2d};
+    let arena=SourceArena::authored("represented-chord-orientation",1,
+        [a,b,c].into_iter().flatten().map(|x|AuthoredScalar::Binary64Bits(x.to_bits())).collect())
+        .map_err(|e|crate::input(format!("Invalid chord predicate source: {e}")))?;
+    let tolerance=ToleranceContext::default_valid();
+    let mut context=PredicateContext::new(&arena,&tolerance,Limits::default(),None);
+    let pair=|i|[arena.leaf(i).unwrap(),arena.leaf(i+1).unwrap()];
+    let result=orient2d(&mut context,pair(0),pair(2),pair(4))
+        .map_err(|e|crate::input(format!("Chord orientation failed: {e}")))?;
+    Ok(match result.outcome {
+        Outcome::Sign(Sign::Positive)=>Some(1),
+        Outcome::Sign(Sign::Negative)=>Some(-1),
+        Outcome::Sign(Sign::Zero)=>Some(0),
+        Outcome::Indeterminate(_)=>None,
     })
 }
 pub(crate) fn apart(a: &Segment, b: &Segment) -> bool {
@@ -172,6 +184,12 @@ pub fn inspect_chain(segments: &[Segment], closed: bool, max_pairs: usize) -> Re
                 if x * y > 0 || z * w > 0 {
                     continue;
                 }
+                let inside=|p:[f64;2],line:[[f64;2];2]|(0..2).all(|k|
+                    p[k]>=line[0][k].min(line[1][k]) && p[k]<=line[0][k].max(line[1][k]));
+                if (x==0 && inside(b.points[0],a.points)) || (y==0 && inside(b.points[1],a.points))
+                    || (z==0 && inside(a.points[0],b.points)) || (w==0 && inside(a.points[1],b.points)) {
+                    report.contacts.push([i,j]);continue;
+                }
             }
             // An unresolved touching/overlap predicate cannot prove simplicity.
             report.uncertain.push([i, j]);
@@ -209,7 +227,9 @@ mod tests {
     fn overlap_resource_and_degeneracy_do_not_prove_simple() {
         let overlap = chain(&[[0., 0.], [2., 0.], [1., 0.]]);
         let report = inspect_chain(&overlap, false, 100).unwrap();
-        assert!(!report.complete && report.uncertain == vec![[0, 1]]);
+        assert!(report.complete && report.contacts == vec![[0, 1]] && report.uncertain.is_empty());
+        assert_eq!(report.to_value()["simple"],false);
+        assert_eq!(report.to_value()["originalOffsetTopologyCertified"],false);
         let square = chain(&[[0., 0.], [2., 0.], [2., 2.], [0., 2.], [0., 0.]]);
         let report = inspect_chain(&square, true, 1).unwrap();
         assert!(!report.complete && report.checks == 1 && report.total_pairs == 6);
@@ -247,4 +267,17 @@ mod current_chain_tests {
   let a=wire(vec![vec![0.,0.,0.],vec![1.,0.,1.]]);assert!(inspect_curves(&[a],100).is_err());
   let mut a=wire(vec![vec![0.,0.],vec![1.,0.],vec![2.,0.],vec![3.,0.]]);a.knots[3]=a.knots[2];assert!(inspect_curves(&[a],100).is_err());
  }
+}
+
+#[cfg(test)]
+mod exact_orientation_tests {
+    use super::*;
+    #[test]
+    fn diagonal_collinearity_and_nearby_sides_are_distinct() {
+        let a=[1e9,1e9];let b=[1e9+4.,1e9+6.];let c=[1e9+2.,1e9+3.];
+        assert_eq!(orientation(a,b,c).unwrap(),Some(0));
+        assert_eq!(orientation(a,b,[c[0],f64::from_bits(c[1].to_bits()+1)]).unwrap(),Some(1));
+        assert_eq!(orientation(a,b,[c[0],f64::from_bits(c[1].to_bits()-1)]).unwrap(),Some(-1));
+        assert_eq!(orientation([1.25,3.5],[2.5,7.],[3.75,10.5]).unwrap(),Some(0));
+    }
 }

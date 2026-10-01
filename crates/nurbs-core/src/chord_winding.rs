@@ -43,6 +43,14 @@ pub fn at(chain: &[Segment], point: [f64; 2]) -> Result<i32> {
             && chain[0].points[0] == chain.last().unwrap().points[1],
         "Winding requires an exactly connected closed chain.",
     )?;
+    at_segments(chain,point)
+}
+/// Winding of directed represented edges. The caller must prove balanced
+/// incidence before using this on an unordered circulation.
+pub(crate) fn at_segments(chain:&[Segment],point:[f64;2])->Result<i32> {
+    check(!chain.is_empty() && chain.len()<=65536 && point.iter().all(|x|x.is_finite() && x.abs()<=1e9)
+        && chain.iter().all(|e|e.points.iter().flatten().all(|x|x.is_finite() && x.abs()<=1e9)),
+        "Use a bounded finite represented circulation.")?;
     let mut count = 0;
     for edge in chain {
         let [a, b] = edge.points;

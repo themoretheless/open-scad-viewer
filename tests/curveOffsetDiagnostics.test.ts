@@ -9,3 +9,9 @@ it('rejects false completeness, unknown indices, duplicate pairs and topology cl
  for(const patch of [{simple:true},{checks:4},{totalPairs:4},{crossings:[[0,3]]},{contacts:[[0,2]]},{uncertain:[[0,1]]},{originalOffsetTopologyCertified:true}])
   expect(validCurveOffsetDiagnostics({...base(),...patch},3)).toBe(false)
 })
+
+it('admits explicit exact-predicate diagnostics while retaining version-one compatibility',()=>{
+ const value=base();expect(validCurveOffsetDiagnostics(value,3)).toBe(true)
+ expect(validCurveOffsetDiagnostics({...value,method:'outward-line-pair-interval-exact/2'},3)).toBe(true)
+ expect(validCurveOffsetDiagnostics({...value,method:'unknown'},3)).toBe(false)
+})

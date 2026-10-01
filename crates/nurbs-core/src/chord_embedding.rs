@@ -98,6 +98,7 @@ mod tests {
                 })
                 .collect(),
             edges: edges.iter().map(|e| edge(e[0], e[1])).collect(),
+            source_edges:None,
         }
     }
     #[test]

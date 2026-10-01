@@ -3,12 +3,12 @@
 use crate::{
     Result, check, chord_intersection, curve_offset::Segment, curve_offset_diagnostics, numeric,
 };
-#[derive(Debug)]
+#[derive(Debug,Clone)]
 pub struct Vertex {
     pub point: [f64; 2],
     pub error_upper_mm: f64,
 }
-#[derive(Debug)]
+#[derive(Debug,Clone)]
 pub struct Edge {
     pub vertices: [usize; 2],
     pub source_edge: usize,
@@ -21,10 +21,21 @@ pub struct Edge {
 pub struct Arrangement {
     pub vertices: Vec<Vertex>,
     pub edges: Vec<Edge>,
+    /// All directed source occurrences, including coincident geometry.
+    pub source_edges: Option<Vec<Edge>>,
 }
 struct Cut {
     parameter: [f64; 2],
     vertex: usize,
+}
+fn contact_parameter(a:[f64;2],b:[f64;2],point:[f64;2])->Result<[f64;2]> {
+    use crate::distance_bounds::Interval;
+    let axis=usize::from((b[1]-a[1]).abs()>(b[0]-a[0]).abs());
+    let numerator=Interval::point(point[axis]).sub(Interval::point(a[axis]))?;
+    let denominator=Interval::point(b[axis]).sub(Interval::point(a[axis]))?;
+    let parameter=numerator.div_signed(denominator)?;
+    numeric(parameter.lo>0. && parameter.hi<1.,"Interior contact parameter is unresolved at an endpoint.")?;
+    Ok([parameter.lo,parameter.hi])
 }
 pub fn split(
     chain: &[Segment],
@@ -39,46 +50,50 @@ pub fn split(
     let diagnostics = curve_offset_diagnostics::inspect_chain(chain, closed, max_pairs)?;
     numeric(
         diagnostics.complete
-            && diagnostics.contacts.is_empty()
             && diagnostics.uncertain.is_empty()
             && diagnostics.degenerate.is_empty(),
-        "Chain splitting needs complete diagnostics without contacts, overlap or degeneracy.",
+        "Chain splitting needs complete diagnostics without unresolved pairs or degeneracy.",
     )?;
     check(
         chain.len() + usize::from(!closed) + diagnostics.crossings.len() <= 65536,
         "Intersection graph exceeds vertex budget.",
     )?;
     let mut vertices = Vec::new();
-    vertices.push(Vertex {
-        point: chain[0].points[0],
-        error_upper_mm: 0.,
-    });
-    for (index, edge) in chain.iter().enumerate() {
-        if !closed || index + 1 < chain.len() {
-            vertices.push(Vertex {
-                point: edge.points[1],
-                error_upper_mm: 0.,
-            });
-        }
+    let mut canonical = std::collections::BTreeMap::new();
+    let mut endpoints = Vec::new();
+    for point in std::iter::once(chain[0].points[0]).chain(chain.iter().map(|e|e.points[1])) {
+        let key=point.map(|x|if x==0. {0} else {x.to_bits()});
+        let vertex=*canonical.entry(key).or_insert_with(||{
+            let index=vertices.len();vertices.push(Vertex {point,error_upper_mm:0.});index
+        });
+        endpoints.push(vertex);
     }
-    let mut cuts: Vec<Vec<Cut>> = (0..chain.len())
-        .map(|i| {
-            vec![
-                Cut {
-                    parameter: [0., 0.],
-                    vertex: i,
-                },
-                Cut {
-                    parameter: [1., 1.],
-                    vertex: if closed && (i + 1 == chain.len()) {
-                        0
-                    } else {
-                        i + 1
-                    },
-                },
-            ]
-        })
-        .collect();
+    let mut cuts: Vec<Vec<Cut>> = (0..chain.len()).map(|i|vec![
+        Cut {parameter:[0.,0.],vertex:endpoints[i]},
+        Cut {parameter:[1.,1.],vertex:endpoints[i+1]},
+    ]).collect();
+    for &[a,b] in &diagnostics.contacts {
+        if curve_offset_diagnostics::shared_vertex_only(&chain[a],&chain[b])? { continue; }
+        let [start,end]=chain[a].points;
+        let collinear=curve_offset_diagnostics::orientation(start,end,chain[b].points[0])?==Some(0)
+            && curve_offset_diagnostics::orientation(start,end,chain[b].points[1])?==Some(0);
+        let mut resolved=collinear;
+        for (source,target) in [(a,b),(b,a)] {
+            let [start,end]=chain[target].points;
+            for endpoint in 0..2 {
+                let point=chain[source].points[endpoint];
+                if point==start || point==end { continue; }
+                if !(0..2).all(|k| point[k]>=start[k].min(end[k]) && point[k]<=start[k].max(end[k])) { continue; }
+                if curve_offset_diagnostics::orientation(start,end,point)?!=Some(0) { continue; }
+                let vertex=endpoints[source+endpoint];
+                if !cuts[target].iter().any(|c|c.vertex==vertex) {
+                    cuts[target].push(Cut {parameter:contact_parameter(start,end,point)?,vertex});
+                }
+                resolved=true;
+            }
+        }
+        numeric(resolved,"Contact could not be reconciled with an exact represented endpoint.")?;
+    }
     for [a, b] in diagnostics.crossings {
         let crossing = chord_intersection::proper(chain[a].points, chain[b].points, tolerance_mm)?;
         let vertex = vertices.len();
@@ -119,7 +134,10 @@ pub fn split(
             });
         }
     }
-    Ok(Arrangement { vertices, edges })
+    let source_edges=edges.clone();
+    let mut seen=std::collections::BTreeSet::new();
+    edges.retain(|e| {let [a,b]=e.vertices;seen.insert(if a<b {[a,b]} else {[b,a]})});
+    Ok(Arrangement { vertices, edges, source_edges:Some(source_edges) })
 }
 #[cfg(test)]
 mod tests {
@@ -134,6 +152,36 @@ mod tests {
                 error_upper_mm: 0.,
             })
             .collect()
+    }
+    #[test]
+    fn interior_contacts_split_axis_and_diagonal_chords() {
+        let points=[[0.,0.],[4.,0.],[4.,4.],[2.,0.],[0.,4.],[0.,0.]];
+        for source in [chain(&points),chain(&points.map(|[x,y]|[x+y,x+2.*y]))] {
+            let graph=split(&source,true,1e-6,1000).unwrap();
+            assert_eq!(graph.edges.len(),6);
+            let contact=graph.vertices.iter().position(|v|v.point==source[2].points[1]).unwrap();
+            assert_eq!(graph.edges.iter().filter(|e|e.vertices.contains(&contact)).count(),4);
+            assert_eq!(graph.edges.iter().filter(|e|e.source_edge==0).count(),2);
+            crate::chord_embedding::admit(&graph,1000).unwrap();
+            assert_eq!(crate::chord_fill_selection::boundaries(&graph,crate::chord_winding::FillRule::NonZero,10000).unwrap().len(),2);
+        }
+    }
+    #[test]
+    fn shared_endpoint_contacts_use_one_topological_vertex() {
+        let source=chain(&[[0.,0.],[4.,0.],[4.,4.],[0.,4.],[0.,0.],[-4.,0.],[-4.,-4.],[0.,-4.],[0.,0.]]);
+        let graph=split(&source,true,1e-6,1000).unwrap();
+        assert_eq!(graph.vertices.len(),7);assert_eq!(graph.edges.len(),8);
+        let shared=graph.vertices.iter().position(|v|v.point==[0.,0.]).unwrap();
+        assert_eq!(graph.edges.iter().filter(|e|e.vertices.contains(&shared)).count(),4);
+        crate::chord_embedding::admit(&graph,1000).unwrap();
+        let loops=crate::chord_fill_selection::boundaries(&graph,crate::chord_winding::FillRule::NonZero,10000).unwrap();
+        assert_eq!(loops.len(),2);assert!(loops.iter().all(|c|c.len()==4));
+    }
+    #[test]
+    fn overlapping_chords_retain_directed_source_occurrences() {
+        let overlap=chain(&[[0.,0.],[4.,0.],[2.,0.],[2.,4.],[0.,0.]]);
+        let graph=split(&overlap,true,1e-6,1000).unwrap();
+        assert!(graph.source_edges.as_ref().unwrap().len()>graph.edges.len());
     }
     #[test]
     fn bowtie_splits_into_six_connected_edges_with_shared_crossing() {
@@ -186,6 +234,8 @@ mod tests {
         assert!(graph.vertices.iter().all(|v| v.error_upper_mm == 0.));
         assert!(split(&input, true, 1e-6, 1).is_err());
         let overlap = chain(&[[0., 0.], [2., 0.], [1., 0.]]);
-        assert!(split(&overlap, false, 1e-6, 100).is_err());
+        let graph=split(&overlap,false,1e-6,100).unwrap();
+        assert_eq!(graph.edges.len(),2);
+        assert_eq!(graph.source_edges.as_ref().unwrap().len(),3);
     }
 }

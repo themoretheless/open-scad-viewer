@@ -10,15 +10,18 @@ pub struct ClassifiedWalk {
 /// Edges must retain the connected source traversal order. Both orientations are
 /// classified; filled walks are not yet a merged region boundary.
 pub fn classify(graph: &Arrangement, rule: FillRule, max_witness_checks: usize) -> Result<Vec<ClassifiedWalk>> {
-    let walks = chord_faces::walk(graph)?;
-    check(!graph.edges.is_empty() && graph.edges.len() <= 65536, "Use a bounded represented source traversal.")?;
+    check((1..=1000000).contains(&max_witness_checks) && graph.vertices.len()<=65536
+        && graph.edges.len()<=131072 && graph.vertices.iter().all(|v|v.point.iter().all(|x|x.is_finite() && x.abs()<=1e9)),
+        "Use bounded finite graph coordinates and a witness budget.")?;
+    let source_edges=graph.source_edges.as_deref().unwrap_or(&graph.edges);
+    check(!source_edges.is_empty() && source_edges.len() <= 65536 && source_edges.iter().all(|e|e.vertices.iter().all(|v|*v<graph.vertices.len())), "Use a bounded represented source traversal.")?;
     // Partition ordered source traversals at exact closure; disconnected loops
     // keep their orientation and share the reconstructed graph coordinates.
     let mut sources = Vec::new();
     let mut source = Vec::new();
-    let mut first = graph.edges[0].vertices[0];
+    let mut first = source_edges[0].vertices[0];
     let mut previous = first;
-    for e in &graph.edges {
+    for e in source_edges {
         if source.is_empty() { first = e.vertices[0]; previous = first; }
         check(e.vertices[0] == previous, "Source loop is disconnected before closure.")?;
         let i = source.len();
@@ -30,9 +33,34 @@ pub fn classify(graph: &Arrangement, rule: FillRule, max_witness_checks: usize) 
         }
     }
     check(source.is_empty(), "Source loop is not closed.")?;
+    // Closed source traversals imply zero net incidence at every vertex.
+    // Cancel coincident opposite passes before graph admission and point winding.
+    let mut net=std::collections::BTreeMap::<[usize;2],i32>::new();
+    for e in source_edges {
+        let [a,b]=e.vertices;check(a!=b,"Source has a collapsed represented edge.")?;
+        let (key,sign)=if a<b {([a,b],1)} else {([b,a],-1)};
+        *net.entry(key).or_default()+=sign;
+    }
+    let geometry:std::collections::BTreeSet<_>=graph.edges.iter().map(|e| {let [a,b]=e.vertices;if a<b {[a,b]} else {[b,a]}}).collect();
+    check(geometry.len()==graph.edges.len() && geometry.len()==net.len() && net.keys().all(|k|geometry.contains(k)),
+        "Graph geometry does not match represented source occurrences.")?;
+    let active=Arrangement {vertices:graph.vertices.clone(),edges:graph.edges.iter().filter(|e| {
+        let [a,b]=e.vertices;net[&if a<b {[a,b]} else {[b,a]}]!=0
+    }).cloned().collect(),source_edges:None};
+    if active.edges.is_empty() { return Ok(Vec::new()); }
+    let mut circulation=Vec::new();
+    for ([a,b],multiplicity) in net {
+        let pair=if multiplicity>0 {[a,b]} else {[b,a]};
+        for _ in 0..multiplicity.unsigned_abs() {
+            let i=circulation.len();
+            circulation.push(Segment {points:pair.map(|v|graph.vertices[v].point),domain:[i as f64,(i+1) as f64],error_upper_mm:0.});
+        }
+    }
+    let walks=chord_faces::walk(&active)?;
+
     walks.counterclockwise.into_iter().chain(walks.clockwise).map(|vertices| {
-        let witness = chord_witness::left(graph, &vertices, max_witness_checks)?;
-        let winding = chord_winding::at_loops(&sources, witness)?;
+        let witness = chord_witness::left(&active, &vertices, max_witness_checks)?;
+        let winding = chord_winding::at_segments(&circulation, witness)?;
         Ok(ClassifiedWalk { vertices, witness, winding, filled: chord_winding::filled(winding, rule) })
     }).collect()
 }
@@ -111,7 +139,43 @@ mod tests {
     }
     fn combine(mut a: Arrangement, b: Arrangement) -> Arrangement {
         let offset=a.vertices.len();a.vertices.extend(b.vertices);
+        let mut source=a.source_edges.take().unwrap_or_else(||a.edges.clone());
+        source.extend(b.source_edges.unwrap_or_else(||b.edges.clone()).into_iter().map(|mut e| { e.vertices=e.vertices.map(|v|v+offset);e }));
+        a.source_edges=Some(source);
         a.edges.extend(b.edges.into_iter().map(|mut e| { e.vertices=e.vertices.map(|v|v+offset);e }));a
+    }
+    #[test]
+    fn retraced_spikes_and_closed_bridges_do_not_change_filled_regions() {
+        let spike=fixture(&[[0.,0.],[4.,0.],[4.,4.],[0.,4.],[0.,0.],[-3.,0.],[0.,0.]]);
+        for rule in [FillRule::NonZero,FillRule::EvenOdd] {
+            let loops=boundaries(&spike,rule,10000).unwrap();assert_eq!(loops.len(),1);assert_eq!(loops[0].len(),4);
+        }
+        let empty=fixture(&[[0.,0.],[3.,3.],[0.,0.]]);
+        assert!(boundaries(&empty,FillRule::NonZero,10000).unwrap().is_empty());
+        let bridge=fixture(&[[0.,0.],[2.,0.],[2.,2.],[0.,2.],[0.,0.],[-4.,0.],[-6.,0.],[-6.,-2.],[-4.,-2.],[-4.,0.],[0.,0.]]);
+        assert_eq!(boundaries(&bridge,FillRule::NonZero,10000).unwrap().len(),2);
+    }
+    #[test]
+    fn coincident_traversals_preserve_winding_and_opposite_directions_cancel() {
+        let square=vec![[0.,0.],[4.,0.],[4.,4.],[0.,4.],[0.,0.]];
+        for reversed in [false,true] {
+            let mut points=square.clone();let second=if reversed {square.iter().copied().rev().collect::<Vec<_>>()} else {square.clone()};
+            points.extend(second.into_iter().skip(1));
+            let graph=fixture(&points);
+            assert_eq!(graph.edges.len(),4);assert_eq!(graph.source_edges.as_ref().unwrap().len(),8);
+            assert_eq!(boundaries(&graph,FillRule::NonZero,10000).unwrap().len(),usize::from(!reversed));
+            assert!(boundaries(&graph,FillRule::EvenOdd,10000).unwrap().is_empty());
+        }
+    }
+    #[test]
+    fn partial_shared_boundary_is_removed_between_filled_regions() {
+        let graph=fixture(&[[0.,0.],[4.,0.],[4.,4.],[0.,4.],[0.,0.],[0.,-2.],[2.,-2.],[2.,0.],[0.,0.]]);
+        assert_eq!(graph.edges.len(),8);assert_eq!(graph.source_edges.as_ref().unwrap().len(),9);
+        for rule in [FillRule::NonZero,FillRule::EvenOdd] {
+            let loops=boundaries(&graph,rule,10000).unwrap();assert_eq!(loops.len(),1);
+            let c=&loops[0];let area=(0..c.len()).map(|i| {let a=graph.vertices[c[i]].point;let b=graph.vertices[c[(i+1)%c.len()]].point;a[0]*b[1]-a[1]*b[0]}).sum::<f64>()*0.5;
+            assert_eq!(area,20.);
+        }
     }
     #[test]
     fn long_boundary_chunks_share_endpoints_and_close() {
