@@ -31,7 +31,7 @@ try{
   }
   throw new Error('Control is not reachable by Tab: '+await locator.getAttribute('aria-label'))
  }
- async function activate(locator){if(keyboard){await focusByTab(locator);await page.keyboard.press('Enter')}else await locator.click()}
+ async function activate(locator){if(keyboard){await locator.waitFor({state:'visible'});await page.waitForFunction(element=>!element.disabled,await locator.elementHandle());await focusByTab(locator);await page.keyboard.press('Enter')}else await locator.click()}
  async function ready(){for(const name of ['history-restore','display-refinement','topology-preparation'])await solid.getByRole('status',{name,exact:true}).waitFor({state:'hidden'})}
  let lastDownload=0
  async function exportDoc(name){if(history20){const wait=1100-(Date.now()-lastDownload);if(wait>0)await new Promise(resolve=>setTimeout(resolve,wait));lastDownload=Date.now()}await ready();if(!await menu.evaluate(e=>e.parentElement.open))await activate(menu);const event=page.waitForEvent('download');await activate(solid.getByRole('button',{name:'Скачать проект JSON',exact:true}));await(await event).saveAs(path.join(directory,name));await activate(menu);return JSON.parse(await readFile(path.join(directory,name),'utf8'))}

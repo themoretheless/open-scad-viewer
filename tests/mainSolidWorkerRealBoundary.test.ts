@@ -215,3 +215,32 @@ it('constructs trimmed offset loops through real WASM and refuses incomplete arr
  await expect(client.run({kind:'trimmedCurveOffset',document,options:{...options,maxPairs:1}})).rejects.toThrow()
  expect(document).toEqual(before)
 })
+
+it('proves diagonal overlap contacts through the real worker without mutating the source',async()=>{
+ const client=new MainSolidWorkerClient(realWorker);clients.push(client)
+ const controlPoints=[[0,0,7],[6,6,7],[2,2,7],[2,5,7],[0,0,7]]
+ const curve={degree:1,knots:[0,0,1,2,3,4,4],weights:[1,1,1,1,1],controlPoints}
+ const document={version:1 as const,bodies:[],sketches:[],curves:[{id:'contact-chain',name:'Overlap',curve}]}
+ const before=structuredClone(document)
+ const report=await client.run({kind:'curveChainInspection',document,ids:['contact-chain'],maxPairs:100})
+ expect(report).toMatchObject({method:'outward-line-pair-interval-exact/2',complete:true,simple:false,uncertain:[],originalOffsetTopologyCertified:false})
+ expect(report.contacts.length).toBeGreaterThan(0)
+ const limited=await client.run({kind:'curveChainInspection',document,ids:['contact-chain'],maxPairs:1})
+ expect(limited).toMatchObject({complete:false,enumerationComplete:false,checks:1,simple:false})
+ expect(document).toEqual(before)
+})
+
+it('distinguishes an exact interior endpoint contact from a nearby separated chord',async()=>{
+ const client=new MainSolidWorkerClient(realWorker);clients.push(client)
+ const document={version:1 as const,bodies:[],sketches:[],curves:[{id:'touch',name:'Touch',curve:{degree:1,knots:[0,0,1,2,3,4,4],weights:[1,1,1,1,1],controlPoints:[[0,0,0],[4,0,0],[4,4,0],[2,0,0],[0,0,0]]}}]}
+ const contact=await client.run({kind:'curveChainInspection',document,ids:['touch'],maxPairs:100})
+ expect(contact).toMatchObject({complete:true,simple:false,uncertain:[]})
+ expect(contact.contacts).toContainEqual([0,2])
+ const translated=structuredClone(document)
+ translated.curves[0]!.curve.controlPoints=translated.curves[0]!.curve.controlPoints.map(([x,y,z])=>[x!+100000000,y!-100000000,z!])
+ const moved=await client.run({kind:'curveChainInspection',document:translated,ids:['touch'],maxPairs:100})
+ expect(moved.contacts).toEqual(contact.contacts);expect(moved.uncertain).toEqual([])
+ const separated=structuredClone(document);separated.curves[0]!.curve.controlPoints[3]=[2,.00001,0]
+ const clear=await client.run({kind:'curveChainInspection',document:separated,ids:['touch'],maxPairs:100})
+ expect(clear).toMatchObject({complete:true,simple:true,contacts:[],crossings:[],uncertain:[]})
+})
