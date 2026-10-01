@@ -1,0 +1,37 @@
+{
+  "scope": "Node alternating compact instance versions; cache capacity and identity proof, not UI latency or RSS",
+  "rows": [
+    {
+      "version": 0,
+      "elapsedMs": 3223.1671670000005,
+      "hits": 0,
+      "misses": 32,
+      "entries": 32,
+      "estimatedRetainedBytes": 20194828
+    },
+    {
+      "version": 1,
+      "elapsedMs": 4096.804708000001,
+      "hits": 0,
+      "misses": 32,
+      "entries": 64,
+      "estimatedRetainedBytes": 40340568
+    },
+    {
+      "version": 0,
+      "elapsedMs": 845.61175,
+      "hits": 32,
+      "misses": 0,
+      "entries": 64,
+      "estimatedRetainedBytes": 40340568
+    },
+    {
+      "version": 1,
+      "elapsedMs": 575.7663749999992,
+      "hits": 32,
+      "misses": 0,
+      "entries": 64,
+      "estimatedRetainedBytes": 40340568
+    }
+  ]
+}
