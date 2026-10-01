@@ -4003,3 +4003,14 @@ it('creates an exact polyline contour through coordinate inputs and preserves hi
  await ui.click('Polyline');field('X').props['onUpdate:modelValue']('bad');await nextTick();expect(ui.button('Add point').props.disabled).toBe(true);expect(ui.doc()).toEqual(after)
  await commandKey(ui,'Escape');expect(ui.doc()).toEqual(after)
 })
+
+it('creates an exact circle from numeric inputs without committing its preview',async()=>{
+ await geometryKernel.warmGeometryKernel();const ui=await mount();await commandKey(ui,'c');const before=ui.doc()
+ const field=(name:string)=>ui.all().find(n=>n.props['aria-label']===name)!
+ field('Point coordinate X').props['onUpdate:modelValue']('2 cm');field('Point coordinate Y').props['onUpdate:modelValue'](-5);field('Circle radius').props['onUpdate:modelValue']('6 mm');await nextTick()
+ expect(ui.doc()).toEqual(before);expect(ui.all().some(n=>n.props['data-preview']==='numeric-circle')).toBe(true)
+ await ui.click('Create circle');const after=ui.doc();expect(after.sketches.at(-1)!.analytic).toEqual({kind:'circle',center:[20,-5],radius:6,start:0,sweep:360})
+ await ui.click('↶');expect(ui.doc()).toEqual(before);await ui.click('↷');expect(ui.doc()).toEqual(after)
+ await commandKey(ui,'c');field('Circle radius').props['onUpdate:modelValue']('bad');await nextTick();expect(ui.button('Create circle').props.disabled).toBe(true);expect(ui.all().some(n=>n.props['data-preview']==='numeric-circle')).toBe(false)
+ await commandKey(ui,'Escape');expect(ui.doc()).toEqual(after)
+})
