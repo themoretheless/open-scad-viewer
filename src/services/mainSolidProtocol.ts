@@ -81,7 +81,7 @@ export type MainSolidJob =
   | {kind:'pointEdit';document:DirectDocument;options:SolidPointEditOptions}
   | {kind:'sketchEdit';document:DirectDocument;options:SolidSketchEditOptions}
   | {kind:'boolean';document:DirectDocument;options:SolidBooleanOptions}
-  | {kind:'sceneEdit';document:DirectDocument;options:SolidSceneEditOptions}
+  | {kind:'sceneEdit';document:DirectDocument|string;options:SolidSceneEditOptions}
   | {kind:'curveMatch';args:Parameters<typeof matchSolidCurve>}
   | {kind:'surfaceMatch';args:Parameters<typeof matchSolidSurface>}
   | {kind:'seamPrepare';args:Parameters<typeof prepareSolidSurfaceSeams>}

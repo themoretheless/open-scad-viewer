@@ -5,7 +5,7 @@ import {MainSolidWorkerClient, type MainSolidPort} from '../src/services/mainSol
 import type {MainSolidRequest} from '../src/services/mainSolidProtocol'
 import type {TrussModel} from '../src/services/trussAnalysis'
 import {resolveTrussScenario} from '../src/services/trussScenario'
-import {extrudeDirectSketch} from '../src/services/directModeling'
+import {serializeDirectDocument,extrudeDirectSketch} from '../src/services/directModeling'
 import {previewMeshes} from '../src/services/mainModeling'
 import type {LighteningOptions} from '../src/services/solidLightening'
 
@@ -293,4 +293,22 @@ it('changes groups through the worker without changing geometry, identities or i
  expect(ungrouped.bodies).toEqual(linked.bodies)
  await expect(client.run({kind:'sceneEdit',document:created,options:{...options,operation:'group-create',group:'Empty'}})).rejects.toThrow('Group already exists')
  await expect(client.run({kind:'sceneEdit',document:created,options:{...options,operation:'group-create',group:''}})).rejects.toThrow('Invalid object group')
+})
+
+it('accepts compact scene snapshots with exact parity and rejects invalid geometry before metadata edits',async()=>{
+ const client=new MainSolidWorkerClient(realWorker);clients.push(client)
+ const source=extrudeDirectSketch({id:'sketch',name:'Box',closed:true,points:[[0,0],[2,0],[2,3],[0,3]]},4,'source')
+ const options={operation:'instance-create' as const,id:'source',ids:['source'],createdId:'linked',x:10,y:0,z:0,axis:'z' as const,angle:0,scale:1}
+ const linked=await client.run({kind:'sceneEdit',document:{version:1,sketches:[],bodies:[source]},options})
+ const text=serializeDirectDocument(linked),compact=JSON.parse(text)
+ expect(compact.bodies[1].mesh).toBeUndefined();expect(compact.bodies[1].brep).toBeUndefined()
+ for(const operation of ['group-move','group-create','instance-detach','transform'] as const){
+  const edit={...options,operation,ids:['linked'],group:'Assembly'}
+  const full=await client.run({kind:'sceneEdit',document:linked,options:edit})
+  const restored=await client.run({kind:'sceneEdit',document:text,options:edit})
+  expect(restored).toEqual(full)
+ }
+ compact.bodies[0].mesh.indices[0]=99999
+ await expect(client.run({kind:'sceneEdit',document:JSON.stringify(compact),options:{...options,operation:'group-create',group:'Unsafe'}})).rejects.toThrow()
+ expect(linked.bodies[1].instance?.sourceId).toBe('source')
 })

@@ -1,0 +1,337 @@
+{
+  "compactSceneRequests": [
+    {
+      "operation": "group-create",
+      "compact": true,
+      "characters": 149960
+    },
+    {
+      "operation": "group-move",
+      "compact": true,
+      "characters": 150003
+    },
+    {
+      "operation": "group-move",
+      "compact": true,
+      "characters": 150003
+    },
+    {
+      "operation": "group-move",
+      "compact": true,
+      "characters": 150003
+    },
+    {
+      "operation": "instance-detach",
+      "compact": true,
+      "characters": 149960
+    },
+    {
+      "operation": "instance-detach",
+      "compact": true,
+      "characters": 149960
+    },
+    {
+      "operation": "transform",
+      "compact": true,
+      "characters": 168565
+    },
+    {
+      "operation": "transform",
+      "compact": true,
+      "characters": 149960
+    }
+  ],
+  "groupEditingChecked": true,
+  "instanceDetachChecked": true,
+  "renderer": {
+    "navigatorGpu": true,
+    "diagnostics": [
+      {
+        "event": "adapter",
+        "available": false
+      },
+      {
+        "event": "adapter",
+        "available": false
+      }
+    ],
+    "gpuCanvasVisible": false,
+    "backend": "Объекты 4Треугольники 1 116Объём 9 375,63Площадь 3 994,72Готово · 135 ms"
+  },
+  "outlinerContainmentDisabled": false,
+  "outlinerChecked": false,
+  "outlinerControlsChecked": false,
+  "outlinerDeletionChecked": false,
+  "retainedMemory": null,
+  "memory": null,
+  "scope": "Headless Chromium UI import and Undo/Redo through durable save; automation latency included. RAF gaps during operations are not orbit FPS; heap is sampled without forced GC.",
+  "importCancellationChecked": false,
+  "cpuProfile": null,
+  "cancellationChecked": false,
+  "browser": "151.0.7922.34",
+  "machine": {
+    "platform": "darwin",
+    "release": "25.6.0",
+    "arch": "arm64",
+    "cpu": "Apple M4 Max",
+    "logicalCpus": 16,
+    "ramBytes": 137438953472
+  },
+  "iterations": 1,
+  "timingSummary": {
+    "import": {
+      "count": 1,
+      "p50Ms": 3321.340625,
+      "p95Ms": 3321.340625,
+      "maxFrameGapMs": 550
+    },
+    "undo": {
+      "count": 1,
+      "p50Ms": 51.925750000000335,
+      "p95Ms": 51.925750000000335,
+      "maxFrameGapMs": 8.400000000000091
+    },
+    "redo": {
+      "count": 1,
+      "p50Ms": 477.5956249999999,
+      "p95Ms": 477.5956249999999,
+      "maxFrameGapMs": 208.5
+    },
+    "group-create": {
+      "count": 1,
+      "p50Ms": 1747.457125,
+      "p95Ms": 1747.457125,
+      "maxFrameGapMs": 483
+    },
+    "group-move": {
+      "count": 1,
+      "p50Ms": 1852.4933330000003,
+      "p95Ms": 1852.4933330000003,
+      "maxFrameGapMs": 491.60000000000036
+    },
+    "group-move-undo": {
+      "count": 1,
+      "p50Ms": 518.2002080000002,
+      "p95Ms": 518.2002080000002,
+      "maxFrameGapMs": 200
+    },
+    "group-move-redo": {
+      "count": 1,
+      "p50Ms": 511.07779200000004,
+      "p95Ms": 511.07779200000004,
+      "maxFrameGapMs": 200
+    },
+    "instance-detach": {
+      "count": 1,
+      "p50Ms": 3249.8731659999994,
+      "p95Ms": 3249.8731659999994,
+      "maxFrameGapMs": 716.5
+    },
+    "instance-detach-undo": {
+      "count": 1,
+      "p50Ms": 759.7434999999987,
+      "p95Ms": 759.7434999999987,
+      "maxFrameGapMs": 304.09999999999854
+    },
+    "instance-detach-redo": {
+      "count": 1,
+      "p50Ms": 1759.3610830000016,
+      "p95Ms": 1759.3610830000016,
+      "maxFrameGapMs": 325
+    },
+    "detached-source-edit": {
+      "count": 1,
+      "p50Ms": 6542.8139169999995,
+      "p95Ms": 6542.8139169999995,
+      "maxFrameGapMs": 458.3999999999978
+    },
+    "source-edit": {
+      "count": 1,
+      "p50Ms": 4466.472041000001,
+      "p95Ms": 4466.472041000001,
+      "maxFrameGapMs": 433.3000000000029
+    },
+    "source-edit-undo": {
+      "count": 1,
+      "p50Ms": 1684.8361659999973,
+      "p95Ms": 1684.8361659999973,
+      "maxFrameGapMs": 175.10000000000218
+    }
+  },
+  "orbit": null,
+  "maxObservedHeapBytes": 535778560,
+  "heapScope": "Samples after each operation only; not peak process memory.",
+  "viewport": {
+    "width": 1280,
+    "height": 800
+  },
+  "bodies": 1001,
+  "before": {
+    "Nodes": 2290,
+    "JSHeapUsedSize": 13324800,
+    "JSHeapTotalSize": 18055168
+  },
+  "after": {
+    "Nodes": 20494,
+    "JSHeapUsedSize": 166875240,
+    "JSHeapTotalSize": 392691712
+  },
+  "samples": [
+    {
+      "action": "import",
+      "profiled": false,
+      "elapsedMs": 3321.340625,
+      "heap": {
+        "Nodes": 20802,
+        "JSHeapUsedSize": 199934296,
+        "JSHeapTotalSize": 253476864
+      },
+      "frameCount": 331,
+      "maxFrameGapMs": 550
+    },
+    {
+      "action": "undo",
+      "profiled": false,
+      "elapsedMs": 51.925750000000335,
+      "heap": {
+        "Nodes": 20832,
+        "JSHeapUsedSize": 190554172,
+        "JSHeapTotalSize": 259325952
+      },
+      "frameCount": 6,
+      "maxFrameGapMs": 8.400000000000091
+    },
+    {
+      "action": "redo",
+      "profiled": false,
+      "elapsedMs": 477.5956249999999,
+      "heap": {
+        "Nodes": 39389,
+        "JSHeapUsedSize": 276895052,
+        "JSHeapTotalSize": 322027520
+      },
+      "frameCount": 31,
+      "maxFrameGapMs": 208.5
+    },
+    {
+      "action": "group-create",
+      "profiled": false,
+      "elapsedMs": 1747.457125,
+      "heap": {
+        "Nodes": 20788,
+        "JSHeapUsedSize": 193845200,
+        "JSHeapTotalSize": 246661120
+      },
+      "frameCount": 151,
+      "maxFrameGapMs": 483
+    },
+    {
+      "action": "group-move",
+      "profiled": false,
+      "elapsedMs": 1852.4933330000003,
+      "heap": {
+        "Nodes": 20897,
+        "JSHeapUsedSize": 144162424,
+        "JSHeapTotalSize": 274808832
+      },
+      "frameCount": 159,
+      "maxFrameGapMs": 491.60000000000036
+    },
+    {
+      "action": "group-move-undo",
+      "profiled": false,
+      "elapsedMs": 518.2002080000002,
+      "heap": {
+        "Nodes": 20977,
+        "JSHeapUsedSize": 225605740,
+        "JSHeapTotalSize": 291487744
+      },
+      "frameCount": 33,
+      "maxFrameGapMs": 200
+    },
+    {
+      "action": "group-move-redo",
+      "profiled": false,
+      "elapsedMs": 511.07779200000004,
+      "heap": {
+        "Nodes": 21058,
+        "JSHeapUsedSize": 306908144,
+        "JSHeapTotalSize": 373178368
+      },
+      "frameCount": 34,
+      "maxFrameGapMs": 200
+    },
+    {
+      "action": "instance-detach",
+      "profiled": false,
+      "elapsedMs": 3249.8731659999994,
+      "heap": {
+        "Nodes": 20528,
+        "JSHeapUsedSize": 199927880,
+        "JSHeapTotalSize": 309788672
+      },
+      "frameCount": 296,
+      "maxFrameGapMs": 716.5
+    },
+    {
+      "action": "instance-detach-undo",
+      "profiled": false,
+      "elapsedMs": 759.7434999999987,
+      "heap": {
+        "Nodes": 20577,
+        "JSHeapUsedSize": 279686208,
+        "JSHeapTotalSize": 342163456
+      },
+      "frameCount": 49,
+      "maxFrameGapMs": 304.09999999999854
+    },
+    {
+      "action": "instance-detach-redo",
+      "profiled": false,
+      "elapsedMs": 1759.3610830000016,
+      "heap": {
+        "Nodes": 20517,
+        "JSHeapUsedSize": 178009580,
+        "JSHeapTotalSize": 344702976
+      },
+      "frameCount": 163,
+      "maxFrameGapMs": 325
+    },
+    {
+      "action": "detached-source-edit",
+      "profiled": false,
+      "elapsedMs": 6542.8139169999995,
+      "heap": {
+        "Nodes": 20495,
+        "JSHeapUsedSize": 197121732,
+        "JSHeapTotalSize": 334594048
+      },
+      "frameCount": 724,
+      "maxFrameGapMs": 458.3999999999978
+    },
+    {
+      "action": "source-edit",
+      "profiled": false,
+      "elapsedMs": 4466.472041000001,
+      "heap": {
+        "Nodes": 21314,
+        "JSHeapUsedSize": 535778560,
+        "JSHeapTotalSize": 600113152
+      },
+      "frameCount": 479,
+      "maxFrameGapMs": 433.3000000000029
+    },
+    {
+      "action": "source-edit-undo",
+      "profiled": false,
+      "elapsedMs": 1684.8361659999973,
+      "heap": {
+        "Nodes": 20493,
+        "JSHeapUsedSize": 161625728,
+        "JSHeapTotalSize": 392396800
+      },
+      "frameCount": 176,
+      "maxFrameGapMs": 175.10000000000218
+    }
+  ]
+}
