@@ -235,23 +235,19 @@ pub(crate) fn certify(model: &Model, faces: [usize; 2]) -> Option<Certificate> {
                 continue;
             }
             let edge = &model.edges[ca.edge].curve;
-            let Some(ba) = boundary(&a.surface, &ca.pcurve, edge) else {
-                continue;
-            };
-            let Some(bb) = boundary(&b.surface, &cb.pcurve, edge) else {
-                continue;
-            };
-            for (first, second, bound, fi, si) in [
-                (&a.surface, &b.surface, ba, faces[0], faces[1]),
-                (&b.surface, &a.surface, bb, faces[1], faces[0]),
+            for (first,second,first_use,second_use,fi,si) in [
+                (&a.surface,&b.surface,ca,cb,faces[0],faces[1]),
+                (&b.surface,&a.surface,cb,ca,faces[1],faces[0]),
             ] {
-                if sided(first, second, bound) {
-                    return Some(Certificate {
-                        edge: ca.edge,
-                        sided_face: fi,
-                        planar_face: si,
-                    });
-                }
+                let Some(bound)=boundary(first,&first_use.pcurve,edge) else{continue};
+                if !sided(first,second,bound){continue;}
+                // The planar face may have a curved trim rather than a natural
+                // rectangle side. Prove its complete lift exactly; proximity
+                // or a shared topological index cannot establish this boundary.
+                let exact=boundary(second,&second_use.pcurve,edge).is_some()
+                    || nurbs_core::curve_surface_agreement::verify_exact(edge,&second_use.pcurve,second,second_use.reversed,32768)
+                        .ok().flatten().is_some_and(|d|d.outcome==cad_predicates::BezierIdentity::Equal);
+                if exact{return Some(Certificate{edge:ca.edge,sided_face:fi,planar_face:si});}
             }
         }
     }
@@ -277,6 +273,26 @@ pub fn inspect_opposite_pair(
     }
     certify_opposite(model, faces)
 }
+/// A straight shared edge still admits an authored coordinate plane. Strict
+/// control-net sidedness excludes every off-boundary point from that plane.
+fn opposite_axis_sides(a:&Surface,b:&Surface,pa:&Curve,pb:&Curve,edge:&Curve)->bool{
+    let (Some(ba),Some(bb))=(boundary(a,pa,edge),boundary(b,pb,edge)) else{return false};
+    if [a,b].iter().zip([ba,bb]).any(|(s,bound)|[s.degree_u,s.degree_v][bound.0]==0){return false;}
+    for axis in 0..3{
+        let value=edge.control_points[0][axis];
+        if !edge.control_points.iter().all(|p|p[axis]==value){continue;}
+        let side=|s:&Surface,bound:(usize,usize)|{
+            let mut positive=None;
+            for (u,row) in s.control_points.iter().enumerate(){for (v,p) in row.iter().enumerate(){
+                if [u,v][bound.0]==bound.1{if p[axis]!=value{return None;}}
+                else{if p[axis]==value{return None;}let next=p[axis]>value;if positive.is_some_and(|v|v!=next){return None;}positive=Some(next);}
+            }}
+            positive
+        };
+        if let (Some(sa),Some(sb))=(side(a,ba),side(b,bb)){if sa!=sb{return true;}}
+    }
+    false
+}
 pub(crate) fn certify_opposite(
     model: &Model,
     faces: [usize; 2],
@@ -296,7 +312,7 @@ pub(crate) fn certify_opposite(
     for ca in uses(a) {
         if let Some(others) = by_edge.get(&ca.edge) {
             for cb in others {
-                if separates_surfaces(
+                if opposite_axis_sides(&a.surface,&b.surface,&ca.pcurve,&cb.pcurve,&model.edges[ca.edge].curve) || separates_surfaces(
                     &a.surface,
                     &b.surface,
                     &ca.pcurve,
@@ -392,6 +408,31 @@ pub fn separates_surfaces(
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn adjacent_cylinder_sides_use_exact_authored_axis_planes(){
+        let model=crate::analytic::cylinder(2.,4.).unwrap();
+        for faces in [[0,1],[1,2],[2,3],[0,3]]{
+            assert!(inspect_opposite_pair(&model,faces).unwrap().is_some(),"{faces:?}");
+        }
+        let a=&model.faces[0].surface;let b=&model.faces[1].surface;
+        let edge=model.loops[model.faces[0].outer].coedges.iter().find(|ca|model.loops[model.faces[1].outer].coedges.iter().any(|cb|cb.edge==ca.edge)).unwrap();
+        let other=model.loops[model.faces[1].outer].coedges.iter().find(|cb|cb.edge==edge.edge).unwrap();
+        let mut same_side=b.clone();for row in &mut same_side.control_points{for p in row{p[0]=p[0].abs();}}
+        assert!(!opposite_axis_sides(a,&same_side,&edge.pcurve,&other.pcurve,&model.edges[edge.edge].curve));
+    }
+    #[test]
+    fn cylinder_caps_admit_curved_exact_trims_but_not_nearby_lifts(){
+        let model=crate::analytic::cylinder(2.,4.).unwrap();
+        for side in 0..4{for cap in 4..6{
+            let c=inspect_pair(&model,[side,cap]).unwrap().expect("exact curved cap trim");
+            assert_eq!(c.sided_face,side);assert_eq!(c.planar_face,cap);
+            let mut broken=model.clone();
+            let wire=broken.faces[cap].outer;
+            let use_=broken.loops[wire].coedges.iter_mut().find(|u|u.edge==c.edge).unwrap();
+            use_.pcurve.control_points[1][0]+=1e-12;
+            assert!(certify(&broken,[side,cap]).is_none());
+        }}
+    }
     #[test]
     fn cube_only_certifies_adjacent_pairs() {
         let m = crate::cuboid([0.; 3], [1.; 3]).unwrap();

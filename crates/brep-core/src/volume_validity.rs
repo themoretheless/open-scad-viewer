@@ -85,6 +85,13 @@ mod tests {
             orientation_cells: 100000, orientation_domain_cells: 1000000, orientation_spans: 100 }
     }
     #[test]
+    fn authored_cylinder_has_certified_volume_validity(){
+        let m=crate::analytic::cylinder(2.,4.).unwrap();let before=format!("{m:?}");
+        let r=inspect(&m,1e-8,limits()).unwrap();
+        assert!(r.proven);assert!(r.boundary.intersections.absence_proven);
+        assert_eq!(r.orientations[0].outward,Some(true));assert_eq!(format!("{m:?}"),before);
+    }
+    #[test]
     #[ignore = "Roadmap gate: curved face embedding remains unproven"]
     fn authored_curved_primitives_have_certified_volume_validity(){
         for (name,m) in [("cylinder",crate::analytic::cylinder(2.,4.).unwrap()),("sphere",crate::analytic::sphere(2.).unwrap())]{

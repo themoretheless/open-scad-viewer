@@ -92,3 +92,10 @@ it('qualifies actual WASM linear face proofs while retaining unresolved cylinder
  expect(r.faces).toEqual(fixture.result.faces)
  expect(r.absenceProven).toBe(false);expect(JSON.stringify(model)).toBe(before)
 })
+
+it('validates native complete-cylinder pair classification with linear face proofs',()=>{
+ const fixture=JSON.parse(readFileSync(new URL('../docs/qualification/cad-roadmap-2026-09-28/curved-volume-2026-10-01/complete-cylinder-native.json',import.meta.url),'utf8'))
+ const {model,toleranceUv,maxSpans,op,...limits}=fixture.request
+ expect(validSelfIntersection(selfIntersectionExpectation(model,toleranceUv,limits,maxSpans),fixture.result)).toBe(true)
+ expect(fixture.result.absenceProven).toBe(true)
+})

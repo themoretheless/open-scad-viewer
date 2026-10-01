@@ -137,6 +137,18 @@ mod tests{
             pairs:100,contact_pairs:1000,cells:100000,domain_cells:1000000}
     }
     #[test]
+    fn separated_cylinders_keep_the_analytic_axial_gap_and_authored_witnesses(){
+        let a=crate::analytic::cylinder(2.,4.).unwrap();let mut b=a.clone();
+        for v in &mut b.vertices{v.point[2]+=7.;}
+        for e in &mut b.edges{for p in &mut e.curve.control_points{p[2]+=7.;}}
+        for f in &mut b.faces{for row in &mut f.surface.control_points{for p in row{p[2]+=7.;}}}
+        let r=distance(&a,&b,1e-5,1e-8,limits()).unwrap();
+        assert!(r.converged,"{} {:?}",r.reason,r.distance_interval_mm);assert_eq!(r.material_overlap,Some(false));
+        let d=r.distance_interval_mm.unwrap();assert!(d[0]<=3.&&d[1]>=3.&&d[1]-d[0]<=1e-5);
+        let w=r.separation_witness(&a,&b).unwrap();let uv=w.geometry.parameters.unwrap();let points=w.geometry.points.unwrap();
+        for (i,m) in [&a,&b].into_iter().enumerate(){assert_eq!(m.faces[w.faces[i]].surface.evaluate(uv[i][0],uv[i][1]).unwrap().point,points[i]);}
+    }
+    #[test]
     fn separation_witness_evaluates_on_original_faces_and_matches_upper_bound(){
         let a=crate::cuboid([0.;3],[2.;3]).unwrap();
         let mut b=crate::cuboid([5.,0.5,0.5],[6.,1.5,1.5]).unwrap();
