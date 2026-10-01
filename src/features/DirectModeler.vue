@@ -4132,6 +4132,7 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
 
 @media(max-width:750px){
   .workspace-bar{flex-wrap:wrap}
+  .workspace-bar>.file-menu{margin-left:auto}
   .command-search{flex:1 1 160px;min-width:0}
   .file-menu>div{max-width:calc(100vw - 16px);max-height:calc(100dvh - 140px);overflow:auto;box-sizing:border-box}
 }
