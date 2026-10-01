@@ -99,3 +99,35 @@ it('validates native complete-cylinder pair classification with linear face proo
  expect(validSelfIntersection(selfIntersectionExpectation(model,toleranceUv,limits,maxSpans),fixture.result)).toBe(true)
  expect(fixture.result.absenceProven).toBe(true)
 })
+
+it('checks native perspective face proofs against source coefficients and complete work counts',()=>{
+ const fixture=JSON.parse(readFileSync(new URL('../docs/qualification/cad-roadmap-2026-09-28/curved-volume-2026-10-01/projective-face-native.json',import.meta.url),'utf8'))
+ const {model,toleranceUv,maxSpans,op,...limits}=fixture.request
+ const e=selfIntersectionExpectation(model,toleranceUv,limits,maxSpans),r=fixture.result
+ expect(validSelfIntersection(e,r)).toBe(true);expect(r.spans).toBe(968)
+ expect(r.allFacesInjective).toBe(true);expect(r.absenceProven).toBe(false)
+ for(const patch of [
+  {projectiveProjection:null},{projectiveProjection:[[1,0,0,0],[0,1,0,0],[0,0,1,4]]},
+  {projectiveProjection:[[1,0,0,0],[0,1,0,0],[0,0,1,NaN]]},
+  {projectiveProjection:[[2,0,0,0],[0,1,0,0],[0,0,1,3]]},
+  {projectiveProjection:[[1,0,0,0],[0,1,0,0]]},
+  {spans:112},{spans:129},{projection:[0,1]},{linearProjection:[[1,1,0],[0,0,1]]},
+  {contractionUpper:1},{reason:'global-linear-projection-contraction'},{proven:false}
+ ]){
+  const copy=structuredClone(r);Object.assign(copy.faces[0].result,patch)
+  expect(validSelfIntersection(e,copy)).toBe(false)
+ }
+ expect(validSelfIntersection(e,{...r,absenceProven:true})).toBe(false)
+})
+
+it('authors actual WASM sphere equators with matching rational edge and trim traversals',async()=>{
+ const {callGeometryRust}=await import('../src/services/geometry/kernel')
+ const model=callGeometryRust<any>('brep_nurbs_sphere',{radius:3})
+ expect(model.faces).toHaveLength(8);expect(model.edges).toHaveLength(12)
+ for(const face of model.faces){
+  const equator=model.loops[face.outer].coedges[1]
+  expect(equator.pcurve.weights).toEqual([1,1,2])
+  const weights=model.edges[equator.edge].curve.weights
+  expect(equator.reversed?[...weights].reverse():weights).toEqual([1,1,2])
+ }
+})

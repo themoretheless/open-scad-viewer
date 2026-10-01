@@ -8,6 +8,7 @@ pub struct Report {
     pub proven: bool,
     pub projection: Option<[usize; 2]>,
     pub linear_projection: Option<[[f64;3];2]>,
+    pub projective_projection: Option<[[f64;4];3]>,
     pub contraction_upper: Option<f64>,
     pub spans: usize,
     pub reason: &'static str,
@@ -127,6 +128,7 @@ pub fn certify(s: &Surface, max_spans: usize) -> Result<Report> {
         proven: false,
         projection: None,
         linear_projection: None,
+        projective_projection: None,
         contraction_upper: None,
         spans: 0,
         reason: "projection-not-proven",
@@ -177,6 +179,15 @@ pub fn certify(s: &Surface, max_spans: usize) -> Result<Report> {
             report.reason="global-linear-projection-contraction";return Ok(report);
         }
     }
+    for projection in projective_projections(s){
+        if report.spans==max_spans{report.reason="work-limit";return Ok(report);}
+        let (q,cells)=projective_projection_work(s,[projection[0],projection[1]],projection[2],max_spans-report.spans)?;
+        report.spans+=cells;
+        if let Some(q)=q{
+            report.proven=true;report.projective_projection=Some(projection);report.contraction_upper=Some(q);
+            report.reason="global-projective-projection-contraction";return Ok(report);
+        }
+    }
     if report.spans==max_spans{report.reason="work-limit";}
     Ok(report)
 }
@@ -185,6 +196,14 @@ pub const LINEAR_PROJECTIONS: [[[f64;3];2];6]=[
     [[1.,0.,1.],[0.,1.,0.]],[[1.,0.,-1.],[0.,1.,0.]],
     [[0.,1.,1.],[1.,0.,0.]],[[0.,1.,-1.],[1.,0.,0.]],
 ];
+pub fn projective_projections(s:&Surface)->[[[f64;4];3];6]{
+    std::array::from_fn(|i|{
+        let axis=[2,2,0,0,1,1][i];let free=match axis{2=>[0,1],0=>[1,2],_=>[0,2]};
+        let extent=s.control_points.iter().flatten().map(|p|p[axis].abs()).fold(0.,f64::max);
+        let mut rows=[[0.;4];3];rows[0][free[0]]=1.;rows[1][free[1]]=1.;
+        rows[2][axis]=if i%2==0{1.}else{-1.};rows[2][3]=extent;rows
+    })
+}
 /// Certify a fixed linear projection using a common Jacobian hull over every
 /// knot rectangle. Subdivision tightens bounds; it never replaces the global
 /// contraction with unrelated local certificates. None includes budget exhaustion.
@@ -197,24 +216,28 @@ pub fn certify_linear_projection(s:&Surface,basis:[[f64;3];2],max_cells:usize)->
 /// Jacobian contraction proves injectivity of the original chart; no rounded
 /// transformed control points or sampled denominator admission are used.
 pub fn certify_projective_projection(s:&Surface,numerators:[[f64;4];2],denominator:[f64;4],max_cells:usize)->Result<Option<f64>>{
+    Ok(projective_projection_work(s,numerators,denominator,max_cells)?.0)
+}
+fn projective_projection_work(s:&Surface,numerators:[[f64;4];2],denominator:[f64;4],max_cells:usize)->Result<(Option<f64>,usize)>{
     s.validate()?;
     check(max_cells>0&&max_cells<=100000&&numerators.iter().flatten().chain(denominator.iter()).all(|x|x.is_finite()),"Projective projection requires finite coefficients and 1..100000 cells")?;
-    if s.periodic_u||s.periodic_v{return Ok(None);}
+    if s.periodic_u||s.periodic_v{return Ok((None,0));}
     let mut global=[[I{lo:f64::INFINITY,hi:f64::NEG_INFINITY};2];2];
     let mut cells=0;
+    let mut all_positive=true;
     for u in s.degree_u..s.control_points.len(){for v in s.degree_v..s.control_points[0].len(){
         let ranges=[[s.knots_u[u],s.knots_u[u+1]],[s.knots_v[v],s.knots_v[v+1]]];
         if ranges.iter().any(|r|r[0]>=r[1]){continue;}
         for i in 0..4{for j in 0..4{
-            if cells==max_cells{return Ok(None);}
+            if cells==max_cells{return Ok((None,cells));}
             let section=std::array::from_fn(|k|{let n=[i,j][k];let [lo,hi]=ranges[k];
                 [if n==0{lo}else{lo+(hi-lo)*(n as f64/4.)},if n==3{hi}else{lo+(hi-lo)*((n+1) as f64/4.)}]});
             cells+=1;
-            let Some(jac)=projective_section_jacobian(s,[u,v],section,numerators,denominator)? else{return Ok(None);};
+            let Some(jac)=projective_section_jacobian(s,[u,v],section,numerators,denominator)? else{all_positive=false;continue;};
             for row in 0..2{for axis in 0..2{global[row][axis]=hull([global[row][axis],jac[row][axis]].into_iter());}}
         }}
     }}
-    Ok(contraction(global)?.filter(|q|*q<1.))
+    Ok((if all_positive{contraction(global)?.filter(|q|*q<1.)}else{None},cells))
 }
 fn projective_section_jacobian(s:&Surface,span:[usize;2],domain:[[f64;2];2],numerators:[[f64;4];2],denominator:[f64;4])->Result<Option<[[I;2];2]>>{
     let source=crate::curve_surface_composition::surface_net_on(s,span,domain)?;

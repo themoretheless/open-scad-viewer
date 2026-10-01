@@ -48,6 +48,15 @@ pub fn inspect(model: &Model, max_spans: usize) -> Result<Report> {
 mod tests {
     use super::*;
     #[test]
+    fn perspective_projection_certifies_every_sphere_chart_with_shared_budget(){
+        let model=crate::analytic::sphere(3.).unwrap();let before=format!("{model:?}");
+        let r=inspect(&model,1000).unwrap();assert!(r.all_faces_injective);assert_eq!(r.spans,968);
+        for f in &r.faces{let x=f.result.as_ref().unwrap();assert_eq!(x.reason,"global-projective-projection-contraction");assert!(x.projective_projection.is_some());}
+        let r=inspect(&model,967).unwrap();assert!(!r.all_faces_injective);assert_eq!(r.spans,967);
+        assert_eq!(r.faces.last().unwrap().result.as_ref().unwrap().reason,"work-limit");
+        assert_eq!(format!("{model:?}"),before);
+    }
+    #[test]
     fn linear_projection_certifies_every_authored_cylinder_side(){
         let model=crate::analytic::cylinder(2.,4.).unwrap();
         assert!(inspect(&model,1000).unwrap().all_faces_injective);
