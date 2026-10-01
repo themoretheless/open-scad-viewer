@@ -26,9 +26,11 @@ pub fn measure(v:Value)->Result<Value>{
     })).collect();
     let contact=r.contact.as_ref().map(|(faces,w)|json!({"faces":faces,"firstUv":w.first_uv,"secondUv":w.second_uv,
         "pointIntervalMm":w.point,"contractionUpper":w.contraction_upper}));
+    let separation=r.separation_witness(&a,&b).map(|w|json!({"faces":w.faces,
+        "parameters":w.geometry.parameters,"points":w.geometry.points,"pointEnclosures":w.geometry.point_enclosures}));
     Ok(json!({"method":"certified-volume-distance","scope":"closed-material-sets",
         "validity":validity,"distanceIntervalMm":r.distance_interval_mm,"materialOverlap":r.material_overlap,
-        "converged":r.converged,"reason":r.reason,"contact":contact,
+        "converged":r.converged,"reason":r.reason,"contact":contact,"separationWitness":separation,
         "totalShellPairs":r.total_pairs,"visitedShellPairs":r.pairs.len(),"contactPairsVisited":r.contact_pairs_visited,
         "cells":r.cells,"domainCells":r.domain_cells,"toleranceMm":tolerance_mm,"toleranceUv":tolerance_uv,
         "limits":{"maxPairs":limits.pairs,"maxContactPairs":limits.contact_pairs,"maxCells":limits.cells,"maxDomainCells":limits.domain_cells,"validity":config}}))

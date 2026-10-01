@@ -31,6 +31,28 @@ pub struct Report {
     pub converged: bool,
     pub reason: &'static str,
 }
+/// An admitted pair on the original authored faces that supplies the reported
+/// separation upper bound. Containment/contact do not reuse boundary witnesses.
+pub struct SeparationWitness<'a> {
+    pub faces: [usize;2],
+    pub geometry: &'a nurbs_core::trimmed_surface_distance::TrimmedDistance,
+}
+impl Report {
+    pub fn separation_witness<'a>(&'a self, a:&Model, b:&Model)->Option<SeparationWitness<'a>> {
+        if self.material_overlap!=Some(false){return None;}
+        let upper=self.distance_interval_mm?[1];
+        let pair=self.pairs.iter().find(|p|p.relation.boundary.upper_bound_mm==Some(upper))?;
+        let local=pair.relation.boundary.faces?;
+        let mut faces=[0;2];
+        for (side,model) in [a,b].into_iter().enumerate(){
+            let shell=model.shells.get(pair.shells[side])?;
+            // isolated_outward_shell numbers faces by sorted original index.
+            let ids=shell.faces.iter().map(|f|f.face).collect::<std::collections::BTreeSet<_>>();
+            faces[side]=*ids.iter().nth(local[side])?;
+        }
+        Some(SeparationWitness{faces,geometry:pair.relation.boundary.witness.as_ref()?})
+    }
+}
 pub fn distance(a:&Model,b:&Model,tolerance_mm:f64,tolerance_uv:f64,limits:Limits)->Result<Report>{
     if !tolerance_mm.is_finite() || tolerance_mm<=0. || !(1..=100000).contains(&limits.pairs)
         || !(1..=100000).contains(&limits.contact_pairs) || !(2..=1000000).contains(&limits.cells) || !(2..=8000000).contains(&limits.domain_cells) {
@@ -113,6 +135,25 @@ mod tests{
                 contacts:crate::face_contacts::Limits{pairs:10000,cells:100000,domain_cells:1000000,cells_per_pair:1000,domain_cells_per_pair:10000}},
             nesting_pairs:100,nesting_cells:100000,nesting_domain_cells:1000000,orientation_cells:100000,orientation_domain_cells:1000000,orientation_spans:100},
             pairs:100,contact_pairs:1000,cells:100000,domain_cells:1000000}
+    }
+    #[test]
+    fn separation_witness_evaluates_on_original_faces_and_matches_upper_bound(){
+        let a=crate::cuboid([0.;3],[2.;3]).unwrap();
+        let mut b=crate::cuboid([5.,0.5,0.5],[6.,1.5,1.5]).unwrap();
+        b.shells[0].faces.reverse();
+        let r=distance(&a,&b,1e-5,1e-8,limits()).unwrap();
+        let w=r.separation_witness(&a,&b).unwrap();
+        let uv=w.geometry.parameters.unwrap();let points=w.geometry.points.unwrap();
+        for (i,m) in [&a,&b].into_iter().enumerate(){
+            let p=m.faces[w.faces[i]].surface.evaluate(uv[i][0],uv[i][1]).unwrap().point;
+            assert_eq!(p,points[i]);
+        }
+        let gap=points[0].iter().zip(points[1]).map(|(a,b)|(a-b).powi(2)).sum::<f64>().sqrt();
+        let bounds=r.distance_interval_mm.unwrap();
+        assert!((gap-3.).abs()<1e-5);assert!(gap<=bounds[1]);
+        let nested=crate::cuboid([0.5;3],[1.5;3]).unwrap();
+        let r=distance(&a,&nested,1e-5,1e-8,limits()).unwrap();
+        assert!(r.separation_witness(&a,&nested).is_none());
     }
     #[test]
     fn nested_material_has_zero_distance_but_cavity_keeps_its_gap(){
