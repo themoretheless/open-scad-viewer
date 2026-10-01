@@ -1618,7 +1618,7 @@ async function drainGizmoTransforms(){
   while(gizmoQueued&&epoch===gizmoEpoch){
    const job=gizmoQueued;gizmoQueued=null
    try{
-    const result=await gizmoWorker.run({...job.job,document:JSON.parse(stringifyMeshJson(job.job.document))})
+    const result=await gizmoWorker.run({...job.job,document:job.job.document})
     if(epoch!==gizmoEpoch)return
     if(job.revision!==gizmoRevision)continue
     if(gizmoApplyRevision===job.revision){
@@ -1653,7 +1653,7 @@ async function commitDirectTransform(before:DirectDocument,ids:string[],delta:Ve
  const generation=directTransformGeneration
  directTransformPending.value=true;error.value=''
  try{
-  const result=await directTransformWorker.run({kind:'sceneEdit',document:JSON.parse(stringifyMeshJson(before)),options:{operation:localSketch?'sketch-transform':'transform',id:ids[0],ids,createdId:'',x:delta[0],y:delta[1],z:delta[2],axis:'z',angle:rotation,scale:factor}})
+  const result=await directTransformWorker.run({kind:'sceneEdit',document:before,options:{operation:localSketch?'sketch-transform':'transform',id:ids[0],ids,createdId:'',x:delta[0],y:delta[1],z:delta[2],axis:'z',angle:rotation,scale:factor}})
   if(generation!==directTransformGeneration)return
   directTransformPending.value=false;commit(result);settleAfterDrag()
   if(resetFields){dx.value=dy.value=dz.value=angle.value=0;scale.value=1}

@@ -244,3 +244,15 @@ it('distinguishes an exact interior endpoint contact from a nearby separated cho
  const clear=await client.run({kind:'curveChainInspection',document:separated,ids:['touch'],maxPairs:100})
  expect(clear).toMatchObject({complete:true,simple:true,contacts:[],crossings:[],uncertain:[]})
 })
+
+it('transforms typed scene meshes through postMessage without detaching or changing source buffers',async()=>{
+ const client=new MainSolidWorkerClient(realWorker);clients.push(client)
+ const body=extrudeDirectSketch({id:'s',name:'Box',closed:true,points:[[0,0],[10,0],[10,10],[0,10]]},10,'a')
+ const positions=Float64Array.from(body.mesh.positions),indices=Uint32Array.from(body.mesh.indices)
+ body.mesh={positions,indices};const before=Array.from(positions)
+ const result=await client.run({kind:'sceneEdit',document:{version:1,sketches:[],bodies:[body]},options:{operation:'transform',id:'a',ids:['a'],createdId:'',x:5,y:0,z:0,axis:'z',angle:0,scale:1}})
+ expect(Array.from(positions)).toEqual(before);expect(indices.byteLength).toBeGreaterThan(0)
+ const xs=Array.from(result.bodies[0].mesh.positions).filter((_,i)=>i%3===0)
+ expect(Math.min(...xs)).toBe(5);expect(Math.max(...xs)).toBe(15)
+ expect(result.bodies[0].id).toBe('a')
+},30000)
