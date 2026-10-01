@@ -85,6 +85,17 @@ mod tests {
             orientation_cells: 100000, orientation_domain_cells: 1000000, orientation_spans: 100 }
     }
     #[test]
+    #[ignore = "Roadmap gate: curved face embedding remains unproven"]
+    fn authored_curved_primitives_have_certified_volume_validity(){
+        for (name,m) in [("cylinder",crate::analytic::cylinder(2.,4.).unwrap()),("sphere",crate::analytic::sphere(2.).unwrap())]{
+            let r=inspect(&m,1e-8,limits()).unwrap();
+            assert!(r.proven,"{name}: exact={} joins={} trim={} faces={} pairs={} nesting={:?} orientations={:?}",
+                r.boundary.agreement.all_equal,r.boundary.agreement.all_joins_exact,r.boundary.trim.all_valid,
+                r.boundary.intersections.faces.all_faces_injective,r.boundary.intersections.pairs.all_pairs_classified,
+                r.nesting.as_ref().and_then(|n|n.roles_consistent),r.orientations.iter().map(|o|o.outward).collect::<Vec<_>>());
+        }
+    }
+    #[test]
     fn cube_orientation_and_exhaustion_are_independent_of_embedding() {
         let mut m = crate::cuboid([0.;3],[1.;3]).unwrap();
         assert!(inspect(&m,1e-8,limits()).unwrap().proven);

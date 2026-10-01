@@ -48,6 +48,14 @@ pub fn inspect(model: &Model, max_spans: usize) -> Result<Report> {
 mod tests {
     use super::*;
     #[test]
+    fn linear_projection_certifies_every_authored_cylinder_side(){
+        let model=crate::analytic::cylinder(2.,4.).unwrap();
+        for (i,direction) in [[-1.,1.,0.],[-1.,-1.,0.],[1.,-1.,0.],[1.,1.,0.]].into_iter().enumerate(){
+            let q=surface_injectivity::certify_linear_projection(&model.faces[i].surface,[direction,[0.,0.,1.]],16).unwrap();
+            assert!(q.is_some(),"face {i}: {q:?}");
+        }
+    }
+    #[test]
     fn cube_faces_pass_and_budget_keeps_unvisited_faces_explicit() {
         let model = crate::cuboid([0.; 3], [1.; 3]).unwrap();
         let r = inspect(&model, 6).unwrap();

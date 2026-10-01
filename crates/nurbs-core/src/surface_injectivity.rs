@@ -168,6 +168,34 @@ pub fn certify(s: &Surface, max_spans: usize) -> Result<Report> {
     }
     Ok(report)
 }
+/// Certify a fixed linear projection using a common Jacobian hull over every
+/// knot rectangle. Subdivision tightens bounds; it never replaces the global
+/// contraction with unrelated local certificates. None includes budget exhaustion.
+pub fn certify_linear_projection(s:&Surface,basis:[[f64;3];2],max_cells:usize)->Result<Option<f64>> {
+    s.validate()?;
+    check(max_cells>0&&max_cells<=100000&&basis.iter().flatten().all(|x|x.is_finite()),"Linear projection requires finite coefficients and 1..100000 cells")?;
+    if s.periodic_u||s.periodic_v{return Ok(None);}
+    let mut global=[[I{lo:f64::INFINITY,hi:f64::NEG_INFINITY};2];2];
+    let mut cells=0;
+    for u in s.degree_u..s.control_points.len(){for v in s.degree_v..s.control_points[0].len(){
+        let ranges=[[s.knots_u[u],s.knots_u[u+1]],[s.knots_v[v],s.knots_v[v+1]]];
+        if ranges.iter().any(|r|r[0]>=r[1]){continue;}
+        for i in 0..4{for j in 0..4{
+            if cells==max_cells{return Ok(None);}
+            let section=std::array::from_fn(|k|{
+                let n=[i,j][k];let [lo,hi]=ranges[k];
+                [if n==0{lo}else{lo+(hi-lo)*(n as f64/4.)},if n==3{hi}else{lo+(hi-lo)*((n+1) as f64/4.)}]
+            });
+            let jac=section_jacobian(s,[u,v],section)?;cells+=1;
+            for row in 0..2{for axis in 0..2{
+                let mut value=I::point(0.);
+                for k in 0..3{value=value.add(I::point(basis[row][k]).mul(jac[k][axis])?)?;}
+                global[row][axis]=hull([global[row][axis],value].into_iter());
+            }}
+        }}
+    }}
+    Ok(contraction(global)?.filter(|q|*q<1.))
+}
 /// Enclose (dS/du cross dS/dv) dot direction over the requested rectangle.
 /// At a knot, include both one-sided derivatives. A point rectangle uses a
 /// non-collapsed knot span for derivative bounds, never a zero column.
@@ -228,6 +256,18 @@ mod tests {
             periodic_u: false,
             periodic_v: false,
         }
+    }
+    #[test]
+    fn diagonal_projection_certifies_quarter_cylinder_and_refuses_partial_coverage(){
+        let mut s=Surface{degree_u:2,degree_v:1,knots_u:vec![0.,0.,0.,1.,1.,1.],knots_v:vec![0.,0.,1.,1.],
+            control_points:vec![vec![vec![2.,0.,0.],vec![2.,0.,4.]],vec![vec![2.,2.,0.],vec![2.,2.,4.]],vec![vec![0.,2.,0.],vec![0.,2.,4.]]],
+            weights:vec![vec![1.;2],vec![std::f64::consts::FRAC_1_SQRT_2;2],vec![1.;2]],periodic_u:false,periodic_v:false};
+        let basis=[[-1.,1.,0.],[0.,0.,1.]];
+        assert!(!certify(&s,10).unwrap().proven);
+        let q=certify_linear_projection(&s,basis,16).unwrap();assert!(q.is_some(),"{q:?}");
+        assert!(certify_linear_projection(&s,basis,15).unwrap().is_none());
+        for row in &mut s.control_points{for p in row{p[2]=0.;}}
+        assert!(certify_linear_projection(&s,basis,16).unwrap().is_none());
     }
     #[test]
     fn normal_bounds_cover_graph_derivatives_and_do_not_collapse_at_points() {
@@ -294,6 +334,7 @@ mod tests {
             }
         }
         assert!(!certify(&s, 10).unwrap().proven);
+        assert!(certify_linear_projection(&s,[[1.,0.,0.],[0.,1.,0.]],100).unwrap().is_none());
         for row in &mut s.control_points {
             for p in row {
                 p[0] = 0.;
