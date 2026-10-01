@@ -1475,8 +1475,8 @@ function prepareCommit(next: DirectDocument, origin:'edit'|'file'='edit') {
   const added=documentObjects(next).filter(b=>!existing.has(b.id)).map(b=>b.id)
   return {validateLocked,added}
 }
-function finishCommit(added:string[]){
- sync()
+function finishCommit(added:string[],next?:DirectDocument){
+ sync(next)
  if(isolatedBodyIds.value.length)isolatedBodyIds.value=[...new Set([...isolatedBodyIds.value,...added])]
 }
 function commit(next:DirectDocument){
@@ -1656,9 +1656,10 @@ async function commitDirectTransform(before:DirectDocument,ids:string[],delta:Ve
   const result=await directTransformWorker.run({kind:'sceneEdit',document:before,options:{operation:localSketch?'sketch-transform':'transform',id:ids[0],ids,createdId:'',x:delta[0],y:delta[1],z:delta[2],axis:'z',angle:rotation,scale:factor}})
   if(generation!==directTransformGeneration)return
   const {validateLocked,added}=prepareCommit(result)
+  result.blenderProjectId ??= snapDocument.value.blenderProjectId
   const applied=await history.commitAsync(async()=>result,validateLocked)
   if(generation!==directTransformGeneration||!applied)return
-  directTransformPending.value=false;finishCommit(added);settleAfterDrag()
+  directTransformPending.value=false;finishCommit(added,result);settleAfterDrag()
   if(resetFields){dx.value=dy.value=dz.value=angle.value=0;scale.value=1}
  }catch(e){if(generation===directTransformGeneration){error.value=e instanceof Error?e.message:String(e);clearDragPreview()}}
  finally{if(generation===directTransformGeneration)directTransformPending.value=false}

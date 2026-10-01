@@ -2134,7 +2134,7 @@ it('waits for the released translation, discards a canceled result and commits t
  await ui.click('↶');expect(ui.doc()).toEqual(before)
 })
 
-it('checks commit policies against the committed snapshot without another history clone',async()=>{
+it('publishes the validated transform response without another history geometry clone',async()=>{
  const {DirectHistory}=await import('../src/services/directModeling')
  const {applySolidSceneEdit}=await import('../src/services/solidSceneEdit')
  let request!:{job:any;resolve:(value:any)=>void}
@@ -2146,7 +2146,7 @@ it('checks commit policies against the committed snapshot without another histor
  const read=vi.spyOn(DirectHistory.prototype,'document','get')
  try{
   request.resolve(result);await flushClearance()
-  expect(read).toHaveBeenCalledTimes(1)
+  expect(read).not.toHaveBeenCalled()
   expect(ui.doc().bodies[0].mesh.positions).not.toEqual(before.bodies[0].mesh.positions)
  }finally{read.mockRestore()}
  await ui.click('↶');expect(ui.doc()).toEqual(before)
