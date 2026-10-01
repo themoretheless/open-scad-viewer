@@ -175,6 +175,23 @@ mod tests {
         assert_eq!(format!("{model:?}"), before);
     }
     #[test]
+    fn sphere_equator_uses_exact_rational_circle_traversal(){
+        // Radius 3 makes the stereographic control coordinates binary-exact,
+        // separating circle parameterization from control-coordinate rounding.
+        let model=crate::sphere(3.).unwrap();
+        let before=format!("{model:?}");
+        let r=verify_exact(&model,1000000).unwrap();
+        assert!(r.all_equal,"{:?}",r.uses);assert!(r.all_joins_exact);
+        assert_eq!(format!("{model:?}"),before);
+        // Radius 2 still requires nonbinary 4/3 surface coordinates. A
+        // tolerance-qualified sphere must not acquire an exact volume claim.
+        let rounded=crate::sphere(2.).unwrap();
+        assert!(verify(&rounded,4096).unwrap().complete);
+        let r=verify_exact(&rounded,1000000).unwrap();
+        assert!(!r.all_equal);
+        assert!(r.uses.iter().any(|u|u.decision.as_ref().is_some_and(|d|d.outcome==cad_predicates::BezierIdentity::Different)));
+    }
+    #[test]
     fn cylinder_and_sphere_boundary_charts_at_model_tolerance() {
         for model in [crate::cylinder(2., 3.).unwrap(), crate::sphere(2.).unwrap()] {
             let report = verify(&model, 4096).unwrap();

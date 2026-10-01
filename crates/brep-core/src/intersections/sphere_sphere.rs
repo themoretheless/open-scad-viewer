@@ -80,7 +80,7 @@ pub(crate) fn unit_quarter_arc(curve: &Curve) -> bool {
     curve.degree == 2
         && curve.knots == [0., 0., 0., 1., 1., 1.]
         && curve.control_points == [[1., 0.].to_vec(), [1., 1.].to_vec(), [0., 1.].to_vec()]
-        && curve.weights == [1., ARC_WEIGHT, 1.]
+        && (curve.weights == [1., ARC_WEIGHT, 1.] || curve.weights == [1., 1., 2.])
 }
 pub(crate) fn axis_line(curve: &Curve, from: [f64; 2], to: [f64; 2]) -> bool {
     curve.degree == 1
