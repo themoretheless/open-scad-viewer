@@ -96,3 +96,18 @@ it('validates native curved-cylinder volume and original-face witness reports',(
  expect(result.distanceIntervalMm[1]).toBeGreaterThanOrEqual(3)
  expect(displayMeshes.every((mesh:any)=>mesh.positions.length>100)).toBe(true)
 })
+
+it('validates native exact-sphere volume and separation without accepting incomplete validity',()=>{
+ const {request,result,displayMeshes,expectedDistanceMm}=cases[6]
+ const e=solidDistanceExpectation(request)
+ expect(validSolidDistance(e,result)).toBe(true);expect(expectedDistanceMm).toBe(2)
+ expect(result.validity.every((v:any)=>v.proven&&v.boundaryProven&&v.exactAgreement&&v.selfIntersectionAbsent)).toBe(true)
+ expect(result.reason).toBe('separated-volumes');expect(result.materialOverlap).toBe(false)
+ expect(result.distanceIntervalMm[0]).toBeLessThanOrEqual(2);expect(result.distanceIntervalMm[1]).toBeGreaterThanOrEqual(2)
+ expect(result.separationWitness.points).toHaveLength(2)
+ expect(displayMeshes.every((mesh:any)=>mesh.positions.length>100)).toBe(true)
+ for(const side of [0,1]){
+  const incomplete=structuredClone(result);incomplete.validity[side].selfIntersectionAbsent=false
+  expect(validSolidDistance(e,incomplete)).toBe(false)
+ }
+})

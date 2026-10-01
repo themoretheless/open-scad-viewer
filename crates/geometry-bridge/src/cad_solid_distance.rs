@@ -56,13 +56,22 @@ mod tests{
         for e in &mut raised.edges{for p in &mut e.curve.control_points{p[2]+=7.;}}
         for f in &mut raised.faces{for row in &mut f.surface.control_points{for p in row{p[2]+=7.;}}}
         let meshes=[&cylinder,&raised].map(|m|crate::dispatch(json!({"op":"brep_nurbs_tessellate","model":m,"segments":16})).unwrap());
+        let sphere=brep_core::analytic::sphere(3.).unwrap();let mut shifted=sphere.clone();
+        for v in &mut shifted.vertices{v.point[0]+=8.;}
+        for e in &mut shifted.edges{for p in &mut e.curve.control_points{p[0]+=8.;}}
+        for f in &mut shifted.faces{for row in &mut f.surface.control_points{for p in row{p[0]+=8.;}}}
+        let sphere_meshes=[&sphere,&shifted].map(|m|crate::dispatch(json!({"op":"brep_nurbs_tessellate","model":m,"segments":16})).unwrap());
         let inputs=[request(a.clone(),brep_core::cuboid([0.5;3],[1.5;3]).unwrap()),
             request(a.clone(),reversed),request(a.clone(),brep_core::cuboid([1.,0.5,0.5],[3.,1.5,1.5]).unwrap()),
             request(a,brep_core::cuboid([5.,0.5,0.5],[6.,1.5,1.5]).unwrap()),
-            request(cavity,brep_core::cuboid([3.;3],[4.;3]).unwrap()),request(cylinder,raised)];
+            request(cavity,brep_core::cuboid([3.;3],[4.;3]).unwrap()),request(cylinder,raised),request(sphere,shifted)];
         let cases=inputs.into_iter().enumerate().map(|(i,input)|{
             let result=crate::dispatch(input.clone()).unwrap();let mut value=json!({"request":input,"result":result});
             if i==5{value["displayMeshes"]=json!(meshes);value["expectedDistanceMm"]=json!(3.);}
+            if i==6{
+                assert_eq!(result["reason"],json!("separated-volumes"));assert_eq!(result["validity"][0]["proven"],json!(true));assert_eq!(result["validity"][1]["proven"],json!(true));
+                value["displayMeshes"]=json!(sphere_meshes);value["expectedDistanceMm"]=json!(2.);
+            }
             value
         }).collect::<Vec<_>>();
         std::fs::write(path,value_codec::to_string(&json!({"cases":cases})).unwrap()).unwrap();
