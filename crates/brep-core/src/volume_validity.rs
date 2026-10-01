@@ -102,6 +102,16 @@ mod tests {
         }
     }
     #[test]
+    fn exact_sphere_radius_family_keeps_all_volume_proofs(){
+        for radius in [0.000011444091796875,0.375,1.5,6.,12.,786432.]{
+            let model=crate::analytic::sphere(radius).unwrap();let before=format!("{model:?}");
+            let r=inspect(&model,1e-8,limits()).unwrap();
+            assert!(r.proven,"radius={radius}, boundary={}, orientations={:?}",r.boundary.proven,r.orientations.iter().map(|o|o.outward).collect::<Vec<_>>());
+            assert!(r.boundary.agreement.all_equal);assert!(r.boundary.intersections.absence_proven);
+            assert_eq!(format!("{model:?}"),before);
+        }
+    }
+    #[test]
     fn authored_cylinder_has_certified_volume_validity(){
         let m=crate::analytic::cylinder(2.,4.).unwrap();let before=format!("{m:?}");
         let r=inspect(&m,1e-8,limits()).unwrap();

@@ -11,3 +11,7 @@ Two radius-3 spheres with centers 8 mm apart along X have the known filled-volum
 The distance test exposed a translation-dependent perspective candidate. Numerator offsets now come from the original chart corner, and denominator offsets/extents come from an original boundary control anchor. These coefficients only choose a projection: outward interval derivative bounds still prove the original surface. The checked worker expectation derives the same coefficients from the submitted source.
 
 This stage is native. WASM packaging, protocol fixtures for the complete sphere volume stage and browser distance qualification remain outstanding. Arbitrary radii, rotated spheres and general curved solids are not qualified by these cases; the broader curved-volume roadmap gate remains open.
+
+## Scale qualification
+
+An additional native regression proves every volume stage for radii `0.000011444091796875`, `0.375`, `1.5`, `6`, `12` and `786432` mm, checking input immutability for each. These are exactly represented dyadic scalings of radius 3; the smallest and largest approach the constructor's supported size bounds. The six-case regression passes in 1.06 seconds. This records six tested scales; general radius admission still requires its own exact boundary proof.
