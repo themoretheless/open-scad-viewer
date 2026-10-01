@@ -1684,7 +1684,7 @@ function transformValidity(key:string,valid:boolean){
 function transform(){
  if(directTransformPending.value||transformInputInvalid.value)return
  cancelCommand()
- void commitDirectTransform(history.document,[...selectedIds.value],[dx.value,dy.value,dz.value],angle.value,scale.value,!!selectedSketch.value&&selectedIds.value.length===1,true)
+ void commitDirectTransform(history.document,selectedIds.value,[dx.value,dy.value,dz.value],angle.value,scale.value,!!selectedSketch.value&&selectedIds.value.length===1,true)
 }
 function appendBodies() {
   run(() => {
@@ -2572,6 +2572,7 @@ function move(e: PointerEvent) {
   }
   if(selectionBox.value){selectionBox.value.end=position(e);return}
   if(manipulatorDrag){const g=manipulatorDrag,f=views.value['3d']/Math.min(g.svg.clientWidth,g.svg.clientHeight),x=(e.clientX-g.x)*f,y=(e.clientY-g.y)*f,l=g.direction[0]**2+g.direction[1]**2
+    if(!x&&!y&&!gizmoBase)return
     let distance=l>.001?(x*g.direction[0]+y*g.direction[1])/l:-y
     if(g.kind!=='move')distance=snapDistance(distance,e)
     if(g.kind==='move'&&gizmoCenter.value){const anchor=gizmoCenter.value,axis=['x','y','z'].indexOf(g.axis),target=anchor.map((v,i)=>v+(i===axis?distance:0)) as Vec3;distance=snapped3(target,e,g.before,selectedIds.value,anchor,axis)[axis]-anchor[axis]}
@@ -2675,7 +2676,7 @@ function up(e: PointerEvent) {
   }
   if(manipulatorDrag){const g=manipulatorDrag;if(e.clientX===g.x&&e.clientY===g.y&&!gizmoBase){cancelGesture();return}move(e);manipulatorDrag=null
     if(g.kind==='push'){clearDragPreview();if(bodyEditPending.value)bodyEditApplyGeneration=bodyEditGeneration;else applyCommand();return}
-    if(g.kind==='move'){if(g.delta)void commitDirectTransform(g.before,[...selectedIds.value],g.delta);else settleAfterDrag();return}
+    if(g.kind==='move'){if(g.delta)void commitDirectTransform(g.before,selectedIds.value,g.delta);return}
     if(g.kind!=='split')gizmoApplyRevision=gizmoRevision;return}
 
   if (heightDrag) { heightDrag = null; return }

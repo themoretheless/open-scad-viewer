@@ -2125,7 +2125,7 @@ it.each(['move','rotate','scale'])('does not publish a stationary %s gizmo click
  const before=ui.doc(),svg=ui.svg(),commit=vi.spyOn(DirectHistory.prototype,'commitAsync')
  try{
   const handle=ui.all(svg).find(n=>kind==='rotate'?n.tag==='polyline'&&n.props.onPointerdown&&n.props.stroke==='#ff7777':n.tag==='g'&&n.props.onPointerdown&&n.children.some(c=>c.tag==='line'))!
-  await ui.pointer(handle,0,0);svg.props.onPointerup({...ui.event(svg,0,0),altKey:true});await flushClearance()
+  await ui.pointer(handle,0,0);svg.props.onPointermove({...ui.event(svg,0,0),altKey:true});await flushClearance();svg.props.onPointerup({...ui.event(svg,0,0),altKey:true});await flushClearance()
   expect(commit).not.toHaveBeenCalled();expect(ui.doc()).toEqual(before)
   await ui.click('↶');expect(ui.doc()).toEqual(baseline)
  }finally{commit.mockRestore()}
