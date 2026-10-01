@@ -4074,6 +4074,10 @@ it('cancels automatic slot creation after a mouse drag while its profile worker 
 })
 
 it.each([
+ ['en','Select distinct open sketches or NURBS curves.','Remove duplicate inputs'],
+ ['ru','Select distinct open sketches or NURBS curves.','Уберите повторяющиеся входы'],
+ ['en','Profile input private-id must lie in the same sketch plane; control deviation exceeds 0.0000001 mm.','Control points deviate from the profile plane'],
+ ['ru','Profile input private-id must lie in the same sketch plane; control deviation exceeds 0.0000001 mm.','Управляющие точки выходят из плоскости профиля'],
  ['en','Profile input private-id requires exactly clamped non-periodic endpoints.','NURBS endpoints must be clamped'],
  ['ru','Profile input private-id requires exactly clamped non-periodic endpoints.','Концы NURBS должны быть зажаты узлами'],
  ['en','Profile inputs must use the same sketch plane.','All lines must use one sketch plane'],
@@ -4091,6 +4095,7 @@ it.each([
  await ui.click(locale==='ru'?'Собрать профиль':'Prepare profile');await flushClearance()
  expect(requests).toHaveLength(1);requests[0]!.reject(Error(message));await flushClearance()
  expect(ui.text(ui.all()[0])).toContain(visible)
+ expect(ui.text(ui.all()[0])).toContain('First chain, Second chain:')
  expect(ui.text(ui.all()[0])).not.toContain(message)
  expect(ui.doc()).toEqual(before)
  await ui.click(locale==='ru'?'Повторить вычисление':'Retry calculation');await flushClearance()
