@@ -1,0 +1,19 @@
+# General retained-profile region integration — 2026-10-01
+
+Work in progress; browser/WASM admission is not qualified yet.
+
+Native `profile_region` proves loop simplicity and winding, distinct-loop separation, nesting depths and parents for unordered loops, holes, islands and disjoint components. It uses original rational definitions and interval distance/domain queries. Work limits: 64 loops, 254 curves, 8192 controls, 100000 geometry cells/pairs, 100000 area cells and 1000000 domain cells. Per-distance queries are capped at 4096 cells because admission only requires a positive distance lower bound; exact distance convergence is unnecessary. Unknown/contact results refuse admission. Existing analytic event-arrangement routes remain available, including their qualified endpoint contacts.
+
+Native retained-profile validation returns an explicit signed material-area interval for general curves; `areaMm2` is its midpoint and the overall status remains `numerical_uncertified`. Even-odd normalization only reverses original definitions. General affine transforms are admitted if the resulting region proof succeeds; the existing restriction on nonuniform transforms of analytic circular profiles remains. Extrusion consumes proven component roles and preserves rational side boundaries. The native preparation endpoint accepts clamped nonperiodic XY NURBS chains and retains segment provenance. Selecting document NURBS curves in the preparation UI still needs implementation.
+
+Native validation: 682 B-rep library tests passed, 3 existing roadmap tests ignored; 22 profile-related geometry-bridge tests passed. The five new profile checks cover nesting/islands/disjoint components, crossing/contact/open refusal, rational extrusion, profile serialization/placement/area, and NURBS preparation provenance. Full native NURBS area suite was qualified in the preceding stage.
+
+WASM build handle at stage handoff: exec session 35650, log `/private/tmp/cad-general-profile-wasm-build.log`. Do not restart until terminal state is verified. TypeScript tests added for document reload, affine placement and extrusion need the completed new WASM. Typecheck final handle 82788. No commit, push, browser, STEP or complete-roadmap claim for this stage yet.
+
+## UI route in progress
+
+The preparation command now accepts document NURBS curves alongside open sketch lines/arcs. Curve inputs are projected into the first sketch plane, or a plane inferred from all selected control nets. Constant-Z inputs retain the XY coordinate basis. A measured reconstruction deviation above 1e-7 mm refuses admission; this floating-point check does not claim exact coplanarity. Source nodes are consumed only after successful native preparation; the first input identity/group becomes the retained sketch. Worker provenance expectations account for one retained definition per NURBS input. Repeat after Undo recognizes restored curve inputs. Added host/real-worker tests cover preparation, spatial plane inference, nonplanar refusal, identity, groups, history and reload; they await the new kernel. TypeScript compilation passed after the route changes.
+
+## Updated runtime evidence
+
+WASM build session 35650 completed successfully. Optimized native kernel: 9,600,320 bytes. Host and real Node worker suite: 32 tests passed across four files. Includes mixed NURBS/sketch preparation, spatial plane reconstruction, unchanged source definitions, Undo/Redo/document reload, malformed projection-report refusal and general-profile extrusion volume. Existing refusal coverage was updated to the new XY diagnostic and still-unqualified single-curve loop topology, preserving refusal assertions. Vite built successfully. Asset total 7,173,640 bytes, +8,252 relative to previous 7,165,388; total budget adjusted by exactly that feature increment with the previous 802-byte headroom. Browser and independent STEP checks remain pending.

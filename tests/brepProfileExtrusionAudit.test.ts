@@ -78,11 +78,11 @@ it('distinguishes admitted 3D affine solids from circular 2D profile admission',
     .rejects.toMatchObject({ code: 'E_SEMANTIC_BACKEND_FAILURE', backendCause: { code: 'E_BREP_SEMANTIC_UNSUPPORTED' } })
 })
 
-it('refuses implicit 3D projection and unsupported curve bases instead of dropping coordinates', async () => {
+it('refuses implicit 3D projection and unqualified single-curve topology instead of dropping coordinates', async () => {
   const planar3d = { ...circle(), controlPoints: circle().controlPoints.map(p => [...p, 0]) }
-  expect(() => validateBrepProfile([[planar3d]])).toThrow(/2D/)
+  expect(() => validateBrepProfile([[planar3d]])).toThrow(/2D|XY/)
   expect(() => extrudeBrepCurves([[planar3d]], 0, 2)).toThrow(/2D/)
-  expect(() => validateBrepProfile([[elevateNurbsCurve(circle(), 3)]])).toThrow(/line|quadratic|circular/i)
+  expect(() => validateBrepProfile([[elevateNurbsCurve(circle(), 3)]])).toThrow(/Trim region audit/i)
   expect(() => lower('linear_extrude(height=2) multmatrix([[1,0,0,0],[0,1,0,0],[0,0,1,1],[0,0,0,1]]) square(2);'))
     .toThrow(/must preserve the XY plane/)
   await expect(solid('linear_extrude(height=2) projection() cube(1);'))

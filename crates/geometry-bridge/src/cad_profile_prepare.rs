@@ -59,7 +59,7 @@ fn assemble(v:Value,curves:Option<Vec<Vec<Curve>>>)->Result<Value>{
  if entry!=0||visited.iter().any(|x|!*x){return Ok(json!({"accepted":false,"reason":"disconnected","points":[],"defects":[],"connectors":connectors}));}
  if curves.is_some(){
   let original=wire.clone();
-  let loops=match brep_core::planar_trim::orient_even_odd(&[wire],1e-7){Ok(loops)=>loops,Err(e)=>return Ok(json!({"accepted":false,"reason":"invalid-contour","points":[],"defects":[],"connectors":connectors,"detail":e.to_string(),"curveSources":provenance}))};
+  let loops=match brep_core::profile_region::orient_even_odd(&[wire],1e-7){Ok(loops)=>loops,Err(e)=>return Ok(json!({"accepted":false,"reason":"invalid-contour","points":[],"defects":[],"connectors":connectors,"detail":e.to_string(),"curveSources":provenance}))};
   // Orientation reverses both segment order and direction. Keep the source
   // mapping aligned with the returned profile, rather than the traversal.
   if !loops[0].iter().zip(&original).all(|(a,b)|a.degree==b.degree&&a.knots==b.knots&&a.control_points==b.control_points&&a.weights==b.weights&&a.periodic==b.periodic){provenance.reverse();for source in &mut provenance{let reversed=field::<bool>(source,"reversed")?;source["reversed"]=json!(!reversed);}}
@@ -94,14 +94,26 @@ fn assemble(v:Value,curves:Option<Vec<Vec<Curve>>>)->Result<Value>{
 
 }
 
-/// Assemble analytic arcs and polylines. Display samples never enter this path.
+/// Assemble retained XY NURBS, analytic arcs and polylines. Samples are excluded.
 pub fn prepare_retained(v:Value)->Result<Value>{
  let sketches:Vec<Value>=field(&v,"sketches")?;
  if sketches.is_empty()||sketches.len()>128{return Err(input("Select 1–128 open sketches."));}
  let mut curves=Vec::new();let mut chains=Vec::new();
  for sketch in sketches{
   if field::<bool>(&sketch,"closed")?{return Err(input("Profile preparation requires open sketches."));}
-  let wire=if let Some(arc)=sketch.get("analytic").filter(|a|!a.is_null()){
+  let wire=if sketch.get("curves").is_some(){
+   let wire:Vec<Curve>=field(&sketch,"curves")?;
+   if wire.is_empty()||wire.len()>256{return Err(input("Invalid NURBS profile chain size."));}
+   for c in &wire {
+    c.validate()?;let n=c.control_points.len();
+    if c.periodic||c.control_points.iter().any(|p|p.len()!=2||p.iter().any(|x|x.abs()>1e6))
+      ||!c.knots[..=c.degree].iter().all(|&k|k==c.knots[c.degree])||!c.knots[n..].iter().all(|&k|k==c.knots[n]){
+     return Err(input("Profile preparation requires clamped nonperiodic XY NURBS."));
+    }
+   }
+   for pair in wire.windows(2){if pair[0].control_points.last()!=pair[1].control_points.first(){return Err(input("NURBS chain has an unjoined internal endpoint."));}}
+   wire
+  }else if let Some(arc)=sketch.get("analytic").filter(|a|!a.is_null()){
    if field::<String>(arc,"kind")?!="arc"{return Err(input("Select open arcs or polylines."));}
    let center:P=field(arc,"center")?;let radius:f64=field(arc,"radius")?;let start:f64=field(arc,"start")?;let sweep:f64=field(arc,"sweep")?;
    if !center.iter().chain([&radius,&start,&sweep]).all(|x|x.is_finite())||center.iter().any(|x|x.abs()>1e6)||!(0.01..=1e6).contains(&radius)||!(0.1..360.).contains(&sweep.abs())||start.abs()>1e6{return Err(input("Invalid open arc parameters."));}
@@ -186,5 +198,21 @@ pub fn prepare_retained(v:Value)->Result<Value>{
    let r=prepare_retained(json!({"sketches":[{"closed":false,"analytic":arc},{"closed":false,"points":[samples.last().unwrap(),samples.first().unwrap()]}],"tolerance":0.})).unwrap();
    assert_eq!(r["accepted"],json!(true),"{r:?}");assert_eq!(r["connectors"],json!([]));
   }
+ }
+}
+
+#[cfg(test)]mod general_profile_tests {
+ use super::*;
+ #[test]fn prepares_original_nurbs_and_reports_sources_after_orientation(){
+  let curve=Curve{degree:2,knots:vec![0.,0.,0.,0.5,1.,1.,1.],control_points:vec![vec![0.,0.],vec![0.5,-1.],vec![1.5,-1.],vec![2.,0.]],weights:vec![1.,0.8,1.2,1.],periodic:false};
+  let sketches=json!([{"closed":false,"curves":[curve]},{"closed":false,"points":[[2,0],[2,2],[0,2],[0,0]]}]);
+  let original=value_codec::to_string(&sketches).unwrap();
+  let report=prepare_retained(json!({"sketches":sketches,"tolerance":0.})).unwrap();
+  assert_eq!(report["accepted"],json!(true));
+  assert_eq!(report["curveSources"][0],json!({"chain":0,"segment":0,"reversed":false,"connector":false}));
+  let profile=&report["profile"];assert!(profile.get("areaIntervalMm2").is_some());
+  let loops:Vec<Vec<Curve>>=field(profile,"loops").unwrap();assert_eq!(value_codec::to_string(&loops[0][0]).unwrap(),value_codec::to_string(&curve).unwrap());
+  let model=brep_core::prism::extrude(&loops,0.,5.).unwrap();model.validate().unwrap();
+  assert_eq!(value_codec::to_string(&sketches).unwrap(),original);
  }
 }

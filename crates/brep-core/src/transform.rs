@@ -228,7 +228,8 @@ pub fn profile(
             "A 2D B-rep transform must be numerically nonsingular",
         ));
     }
-    if loops.iter().flatten().any(|curve| curve.degree > 1)
+    if crate::planar_trim::validate(loops, tolerance).is_ok()
+        && loops.iter().flatten().any(|curve| curve.degree > 1)
         && ((na * na + nc * nc - nb * nb - nd * nd).abs() > 16. * f64::EPSILON
             || (na * nb + nc * nd).abs() > 16. * f64::EPSILON)
     {
@@ -236,7 +237,7 @@ pub fn profile(
             "Nonuniform scale/shear of circular profiles requires unsupported elliptical trims",
         ));
     }
-    crate::planar_trim::validate(loops, tolerance)?;
+    crate::profile_region::validate(loops, tolerance)?;
     let mut result = loops.to_vec();
     for wire in &mut result {
         for curve in wire.iter_mut() {
@@ -252,7 +253,7 @@ pub fn profile(
             }
         }
     }
-    crate::planar_trim::validate(&result, tolerance)?;
+    crate::profile_region::validate(&result, tolerance)?;
     Ok(result)
 }
 

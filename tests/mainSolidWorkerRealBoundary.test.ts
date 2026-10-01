@@ -382,3 +382,19 @@ it('retains multispan trim proofs and incomplete budgets across real postMessage
  expect(limited.reason).toBe('volume-validity-unproven')
  expect(options).toEqual(before)
 })
+
+it('prepares original general NURBS through the real worker boundary',async()=>{
+ const {emptyDirectDocument}=await import('../src/services/directModeling')
+ const {prepareSolidProfile}=await import('../src/services/solidProfilePreparation')
+ const {warmGeometryKernel}=await import('../src/services/geometry/kernel');await warmGeometryKernel()
+ const document=emptyDirectDocument()
+ document.curves=[{id:'nurbs',name:'NURBS',curve:{degree:2,knots:[0,0,0,1,1,1],controlPoints:[[0,0],[1,-1],[2,0]],weights:[1,1,1]}}]
+ document.sketches=[{id:'line',name:'Line',closed:false,points:[[2,0],[2,2],[0,2],[0,0]]}]
+ const before=structuredClone(document),client=new MainSolidWorkerClient(realWorker);clients.push(client)
+ const result=await client.run({kind:'profilePrepare',document,ids:['nurbs','line'],tolerance:0})
+ expect(result).toEqual(prepareSolidProfile(document,['nurbs','line'],0))
+ expect(result.report.accepted).toBe(true)
+ expect(result.document.sketches[0].id).toBe('nurbs')
+ expect(result.document.curves).toEqual([])
+ expect(document).toEqual(before)
+})

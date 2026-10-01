@@ -58,6 +58,8 @@ try {
   throw Error('Target is unreachable through sequential Tab navigation: '+await locator.getAttribute('aria-label'))
  }
  async function activate(locator){
+  await locator.waitFor()
+  await page.waitForFunction(el=>!(el instanceof HTMLButtonElement)||!el.disabled,await locator.elementHandle())
   if(keyboard){await tabTo(locator);await page.keyboard.press('Enter')}
   else await locator.click()
  }
@@ -80,20 +82,22 @@ try {
   const text=await readFile(path.join(directory,file),'utf8')
   return json?JSON.parse(text):text
  }
- const arcs=process.argv.includes('--arcs')
+ const arcs=process.argv.includes('--arcs'),generalNurbs=process.argv.includes('--general-nurbs'),preparation=arcs||generalNurbs
  const regionOperation=process.argv.find(a=>a.startsWith('--profile-operation='))?.split('=')[1]??'union'
- assert.ok(['union','difference','intersection'].includes(regionOperation));assert.ok(!arcs||regionOperation==='union')
- const operation=arcs?'Prepare profile':regionOperation==='difference'?'Subtract profile regions':regionOperation==='intersection'?'Intersect exact profiles':'Union exact profiles'
+ assert.ok(['union','difference','intersection'].includes(regionOperation));assert.ok(!preparation||regionOperation==='union')
+ const operation=preparation?'Prepare profile':regionOperation==='difference'?'Subtract profile regions':regionOperation==='intersection'?'Intersect exact profiles':'Union exact profiles'
  const original={version:1,sketches:[{id:'rect',name:'Rectangle',closed:true,points:[[-4,-3],[3,-3],[3,3],[-4,3]]},{id:'circle',name:'Circle',closed:true,points:[],analytic:{kind:'circle',center:[3,0],radius:2,start:0,sweep:360}}],bodies:[]}
  if(regionOperation!=='union')original.sketches=[{id:'rect',name:'Plate',closed:true,points:[[-4,-3],[4,-3],[4,3],[-4,3]]},{id:'circle',name:'Circular cutter',closed:true,points:[],analytic:{kind:'circle',center:[0,0],radius:2,start:0,sweep:360}}]
  if(arcs)original.sketches=[{id:'rect',name:'Diameter',closed:false,points:[[-2,0],[2,0]]},{id:'circle',name:'Semicircle',closed:false,points:[],analytic:{kind:'arc',center:[0,0],radius:2,start:0,sweep:180}}]
+ if(generalNurbs){original.sketches=[{id:'line',name:'Profile lines',closed:false,points:[[2,0],[2,2],[0,2],[0,0]]}];original.curves=[{id:'nurbs',name:'General NURBS',curve:{degree:2,knots:[0,0,0,1,1,1],controlPoints:[[0,0],[1,-1],[2,0]],weights:[1,1,1]}}]}
+ const inputs=generalNurbs?[original.curves[0],original.sketches[0]]:original.sketches
  await openMenu()
  await solid.locator('input[accept=".json,application/json"]').setInputFiles({name:'profiles.json' ,mimeType:'application/json',buffer:Buffer.from(JSON.stringify(original))})
- await solid.getByRole('button',{name:original.sketches[0].name,exact:true}).waitFor()
+ await solid.getByRole('button',{name:inputs[0].name,exact:true}).waitFor()
  const before=await download('Скачать проект JSON','before.json')
  if(await menu.evaluate(e=>e.parentElement.open))await activate(menu)
- await activate(solid.getByRole('button',{name:original.sketches[0].name,exact:true}))
- const second=solid.getByRole('button',{name:original.sketches[1].name,exact:true})
+ await activate(solid.getByRole('button',{name:inputs[0].name,exact:true}))
+ const second=solid.getByRole('button',{name:inputs[1].name,exact:true})
  if(keyboard){await tabTo(second);await page.keyboard.press('Shift+Enter')}else await second.click({modifiers:['Shift']})
  await activate(solid.getByRole('region',{name:'2D — эскизы',exact:true}).getByRole('button',{name:'Вписать',exact:true}))
  async function command(name){await activate(solid.getByRole('button',{name:'Команда… Ctrl K',exact:true}));const search=page.getByRole('combobox',{name:'Search commands / Поиск команд'});await search.fill(name);await search.press('Enter')}
@@ -106,13 +110,13 @@ try {
   await page.screenshot({path:path.join(directory,'empty-result.png')})
   await target.selectOption('rect');assert.match(await solid.getByTestId('profile-operands').textContent(),/Circular cutter/)
  }
- await apply.click({trial:true});assert.equal(await solid.locator(arcs?'[data-preview="prepared-profile"]':'[data-preview="retained-profile"]').count(),1)
+ await apply.click({trial:true});assert.equal(await solid.locator(preparation?'[data-preview="prepared-profile"]':'[data-preview="retained-profile"]').count(),1)
  if(process.argv.includes('--profile-provenance')){
-  assert.ok(arcs,'Provenance fixture requires --arcs')
+  assert.ok(preparation,'Provenance fixture requires preparation')
   const report=await page.evaluate(()=>window.__profileProvenance)
-  assert.ok(report?.accepted);assert.equal(report.curveSources.length,3)
+  assert.ok(report?.accepted);assert.equal(report.curveSources.length,generalNurbs?4:3)
   assert.equal(report.curveSources.filter(s=>s.chain===0).length,1)
-  assert.equal(report.curveSources.filter(s=>s.chain===1).length,2)
+  assert.equal(report.curveSources.filter(s=>s.chain===1).length,generalNurbs?3:2)
   assert.ok(report.curveSources.every(s=>s.connector===false&&typeof s.reversed==='boolean'))
   await writeFile(path.join(directory,'profile-provenance.json'),JSON.stringify(report,null,2)+'\n')
  }
@@ -125,15 +129,16 @@ try {
   await solid.getByRole('button',{name:'Обновить профили',exact:true}).click()
  }
  await solid.getByRole('status',{name:'profile-display',exact:true}).waitFor({state:'hidden'})
- if(!arcs)assert.ok((await solid.locator('[data-preview="retained-profile"]').getAttribute('d'))?.includes(' L '),'Retained preview must contain sampled geometry')
+ if(!preparation)assert.ok((await solid.locator('[data-preview="retained-profile"]').getAttribute('d'))?.includes(' L '),'Retained preview must contain sampled geometry')
  const heading=solid.locator('.operation-card>strong'),headingBox=await heading.boundingBox(),cardBox=await solid.locator('.operation-card').boundingBox()
  assert.ok(headingBox&&cardBox&&headingBox.y>=cardBox.y&&headingBox.y+headingBox.height<=cardBox.y+cardBox.height,'Command heading must remain visible')
+ if(generalNurbs){const helpBox=await solid.locator('.operation-card>small').first().boundingBox();await writeFile(path.join(directory,'command-layout.json'),JSON.stringify({headingBox,helpBox,cardBox,scrollTop:await solid.locator('.operation-card').evaluate(el=>el.scrollTop)}));assert.ok(helpBox&&helpBox.y>=headingBox.y+headingBox.height,'Command heading must not cover help text')}
  await page.screenshot({path:path.join(directory,'retained-preview.png')})
  await activate(solid.getByRole('button',{name:'Esc',exact:true}))
- const canceled=await download('Скачать проект JSON','canceled.json');assert.deepEqual(canceled.sketches,before.sketches)
+ const canceled=await download('Скачать проект JSON','canceled.json');assert.deepEqual(canceled.sketches,before.sketches);if(generalNurbs)assert.deepEqual(canceled.curves,before.curves)
  if(await menu.evaluate(e=>e.parentElement.open))await activate(menu)
  await command(operation);await activate(apply)
- const joined=await download('Скачать проект JSON','joined.json');assert.equal(joined.sketches.length,1)
+ const joined=await download('Скачать проект JSON','joined.json');assert.equal(joined.sketches.length,1);if(generalNurbs){assert.equal(joined.sketches[0].id,'nurbs');assert.deepEqual(joined.curves,[]);assert.ok(joined.sketches[0].retainedProfile.areaIntervalMm2)}
  assert.ok(joined.sketches[0].retainedProfile.loops.flat().some(c=>c.degree===2))
  if(await menu.evaluate(e=>e.parentElement.open))await activate(menu)
  await activate(solid.getByRole('button',{name:'↶',exact:true}))
@@ -153,15 +158,18 @@ try {
  if(await solid.locator('canvas.gpu-layer').isVisible())await solid.locator('canvas.gpu-layer').screenshot({path:path.join(directory,'gpu-only.png')})
  await page.screenshot({path:path.join(directory,'retained-extruded.png')})
  const step=await download('STEP выбранного тела · текущая геометрия','browser-retained.step',false)
- await writeFile(path.join(directory,'manifest.json'),JSON.stringify({schema:'cad-roadmap-step/1',units:'mm',toleranceMm:1e-6,relativeVolumeTolerance:1e-8,parts:[{name:'Browser retained union',file:'browser-retained.step',sha256:createHash('sha256').update(step).digest('hex'),expected:{volumeMm3:(arcs?2*Math.PI:regionOperation==='difference'?48-4*Math.PI:regionOperation==='intersection'?4*Math.PI:42+2*Math.PI)*5,boundsMm:arcs?[[-2,0,0],[2,2,5]]:regionOperation==='difference'?[[-4,-3,0],[4,3,5]]:regionOperation==='intersection'?[[-2,-2,0],[2,2,5]]:[[-4,-3,0],[5,3,5]]}}]}))
+ await writeFile(path.join(directory,'manifest.json'),JSON.stringify({schema:'cad-roadmap-step/1',units:'mm',toleranceMm:1e-6,relativeVolumeTolerance:1e-8,parts:[{name:'Browser retained union',file:'browser-retained.step',sha256:createHash('sha256').update(step).digest('hex'),expected:{volumeMm3:(generalNurbs?14/3:arcs?2*Math.PI:regionOperation==='difference'?48-4*Math.PI:regionOperation==='intersection'?4*Math.PI:42+2*Math.PI)*5,boundsMm:generalNurbs?[[0,-.5,0],[2,2,5]]:arcs?[[-2,0,0],[2,2,5]]:regionOperation==='difference'?[[-4,-3,0],[4,3,5]]:regionOperation==='intersection'?[[-2,-2,0],[2,2,5]]:[[-4,-3,0],[5,3,5]]}}]}))
  if(await menu.evaluate(e=>e.parentElement.open))await activate(menu)
  await activate(solid.getByRole('button',{name:'↶',exact:true}))
+ await solid.getByRole('button',{name:extruded.bodies[0].name,exact:true}).waitFor({state:'hidden'})
  const undoBody=await download('Скачать проект JSON','undo-body.json');assert.deepEqual(undoBody.sketches,joined.sketches);assert.equal(undoBody.bodies.length,0)
  if(await menu.evaluate(e=>e.parentElement.open))await activate(menu)
  await activate(solid.getByRole('button',{name:'↶',exact:true}))
- const undone=await download('Скачать проект JSON','undone.json');assert.deepEqual(undone.sketches,before.sketches)
+ if(generalNurbs)await solid.getByRole('button',{name:'Profile lines',exact:true}).waitFor()
+ const undone=await download('Скачать проект JSON','undone.json');assert.deepEqual(undone.sketches,before.sketches);if(generalNurbs)assert.deepEqual(undone.curves,before.curves)
  await openMenu();await solid.locator('input[accept=".json,application/json"]').setInputFiles({name:'joined.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(joined))})
+ if(generalNurbs)await solid.getByRole('button',{name:'Profile lines',exact:true}).waitFor({state:'hidden'})
  const reloaded=await download('Скачать проект JSON','reloaded.json');assert.deepEqual(reloaded.sketches,joined.sketches)
- const report={browser:browser.version(),profileWorkerCancelled:await page.evaluate(()=>window.__profileDisplayTerminated===true),operation,retainedArcs:true,exactExtrusion:true,gpuFallback:gpuDeviceDestroyed,renderedTriangles,cancel:true,undo:true,repeat:true,jsonReload:true,keyboard,tabPresses,downloads}
+ const report={browser:browser.version(),profileWorkerCancelled:await page.evaluate(()=>window.__profileDisplayTerminated===true),operation,retainedArcs:!generalNurbs,retainedGeneralNurbs:generalNurbs,exactExtrusion:true,gpuFallback:gpuDeviceDestroyed,renderedTriangles,cancel:true,undo:true,repeat:true,jsonReload:true,keyboard,tabPresses,downloads}
  await writeFile(path.join(directory,'retained-browser.json'),JSON.stringify(report,null,2)+'\n');console.log(report)
 }catch(error){if(page){await page.screenshot({path:path.join(directory,'failure.png')}).catch(()=>{});await writeFile(path.join(directory,'failure.txt'),await page.locator('body').innerText().catch(()=>''))}throw error}finally{await browser?.close();await new Promise(resolve=>server.close(resolve))}

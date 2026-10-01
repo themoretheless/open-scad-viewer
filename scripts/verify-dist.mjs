@@ -335,6 +335,8 @@ for (const [name, artifact, compression] of [
 // 7,164,247 measured bytes; +1,770, preserving the preceding 802-byte headroom.
 // Multispan trim injectivity and indexed commit lookup: 7,165,388 measured;
 // +1,141 bytes, preserving the preceding 802-byte headroom.
-const totalBudget = 7_166_190
+// General NURBS region admission, interval area and preparation UI: measured
+// 7,173,589 bytes (+8,201); preserve the previous 802-byte headroom.
+const totalBudget = 7_174_391
 if (total > totalBudget) throw new Error(`dist totals ${total} bytes; budget is ${totalBudget}`)
 console.log(`Verified ${files.length} dist artifacts (${total} asset bytes + ${rawWasmBytes} raw WASM bytes = ${total + rawWasmBytes} total bytes)`)

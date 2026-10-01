@@ -100,8 +100,8 @@ fn cap_pcurve(curve: &Curve, bounds: [[f64; 2]; 2]) -> Curve {
 /// Each loop traverses with material on its left. Nested islands and disjoint
 /// outer loops become separate bodies; holes remain cap trim loops. Curve
 /// definitions are retained exactly up to affine knot-domain normalization.
-/// Planar profile validation currently admits lines and rational circular arcs;
-/// unsupported general-curve containment is refused before constructing solids.
+/// General rational loops require bounded simplicity, separation and nesting
+/// proofs. Unsupported or unproven containment is refused before construction.
 pub fn extrude(loops: &[Vec<Curve>], z_min: f64, z_max: f64) -> Result<Model> {
     if !z_min.is_finite()
         || !z_max.is_finite()
@@ -179,7 +179,7 @@ pub fn extrude(loops: &[Vec<Curve>], z_min: f64, z_max: f64) -> Result<Model> {
             "Prism profile exceeds 254 active curve spans",
         ));
     }
-    let components = crate::planar_trim::components(&profile, TOLERANCE)?;
+    let components = crate::profile_region::components(&profile, TOLERANCE)?;
     if curve_count + 2 * components.len() > 256 {
         return Err(Error::new(
             "BREP_RESOURCE_LIMIT",

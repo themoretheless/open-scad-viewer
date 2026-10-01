@@ -3,11 +3,13 @@ import type {NurbsCurve} from '../nurbsCurve'
 
 export type BrepProfileFillRule = 'material-left' | 'even-odd'
 export type BrepProfileBooleanOperation = 'union' | 'intersection' | 'difference' | 'xor'
-/** Analytic line/circular-arc region; empty material has loops=[] and areaMm2=0. */
+/** Retained rational region; unproven topology is refused. Empty material has loops=[] and areaMm2=0. */
 export interface BrepProfile {
   kind: 'brep-profile'
   loops: NurbsCurve[][]
   areaMm2: number
+  /** Outward integration enclosure for admitted general NURBS. */
+  areaIntervalMm2?: [number,number]
   toleranceMm: number
   geometryStatus: 'numerical_uncertified'
 }

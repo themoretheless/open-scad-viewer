@@ -45,6 +45,7 @@ pub mod nurbs_step_trimmed;
 pub mod operations;
 mod body_edit;
 pub mod planar_trim;
+pub mod profile_region;
 pub mod face_contact;
 pub mod face_contacts;
 pub mod shared_boundary;
