@@ -1,0 +1,110 @@
+[
+  {
+    "firstRequest": true,
+    "workerAgeMs": 0,
+    "dispatchAt": 505.3999999985099,
+    "postMessageMs": 0,
+    "ok": false,
+    "roundTripMs": 54.899999998509884
+  },
+  {
+    "kind": "primitive",
+    "id": 1,
+    "firstRequest": true,
+    "workerAgeMs": 0,
+    "dispatchAt": 706.6999999955297,
+    "postMessageMs": 0,
+    "ok": true,
+    "roundTripMs": 104.70000000298023
+  },
+  {
+    "kind": "topology",
+    "id": 1,
+    "firstRequest": true,
+    "workerAgeMs": 0,
+    "dispatchAt": 813.1999999955297,
+    "postMessageMs": 0,
+    "ok": true,
+    "roundTripMs": 108.39999999850988
+  },
+  {
+    "kind": "bodySnaps",
+    "id": 1,
+    "firstRequest": true,
+    "workerAgeMs": 0,
+    "dispatchAt": 816.5999999940395,
+    "postMessageMs": 0.10000000149011612,
+    "ok": true,
+    "roundTripMs": 112.90000000596046
+  },
+  {
+    "kind": "displayMesh",
+    "id": 1,
+    "firstRequest": true,
+    "workerAgeMs": 0,
+    "dispatchAt": 813.6999999955297,
+    "postMessageMs": 0.10000000149011612,
+    "ok": true,
+    "roundTripMs": 131.89999999850988
+  },
+  {
+    "kind": "measureVertices",
+    "id": 2,
+    "firstRequest": true,
+    "workerAgeMs": 0.09999999403953552,
+    "dispatchAt": 1305.5999999940395,
+    "postMessageMs": 0,
+    "ok": true,
+    "roundTripMs": 89.70000000298023
+  },
+  {
+    "kind": "bodyEdges",
+    "id": 1,
+    "firstRequest": true,
+    "workerAgeMs": 0,
+    "dispatchAt": 1530.8999999985099,
+    "postMessageMs": 0.19999999552965164,
+    "ok": true,
+    "roundTripMs": 96.89999999850988
+  },
+  {
+    "kind": "measureEdge",
+    "id": 1,
+    "firstRequest": true,
+    "workerAgeMs": 0.10000000149011612,
+    "dispatchAt": 1681.2999999970198,
+    "postMessageMs": 0,
+    "ok": true,
+    "roundTripMs": 93.60000000149012
+  },
+  {
+    "kind": "measureEdge",
+    "id": 2,
+    "firstRequest": false,
+    "workerAgeMs": 191.70000000298023,
+    "dispatchAt": 1872.8999999985099,
+    "postMessageMs": 0.10000000149011612,
+    "ok": true,
+    "roundTripMs": 1.1999999955296516
+  },
+  {
+    "kind": "measureVertices",
+    "id": 4,
+    "firstRequest": false,
+    "workerAgeMs": 673.8999999985099,
+    "dispatchAt": 1979.3999999985099,
+    "postMessageMs": 0.10000000149011612,
+    "ok": true,
+    "roundTripMs": 14.699999995529652
+  },
+  {
+    "kind": "measureEdge",
+    "id": 4,
+    "firstRequest": false,
+    "workerAgeMs": 415.3999999985099,
+    "dispatchAt": 2096.5999999940395,
+    "postMessageMs": 0.20000000298023224,
+    "ok": true,
+    "roundTripMs": 13.400000005960464
+  }
+]

@@ -24,6 +24,14 @@ try {
  browser=await playwright.chromium.launch({headless:true,args:['--enable-unsafe-webgpu'],...(process.env.CHROMIUM_EXECUTABLE?{executablePath:process.env.CHROMIUM_EXECUTABLE}:{})})
  page=await browser.newPage({acceptDownloads:true});page.on('pageerror',e=>{errors.push(e.stack??String(e));console.error(e.stack??String(e))});page.on('console',message=>{if(message.type()==='error')errors.push(message.text())})
  await page.addInitScript(()=>{
+  const NativeWorker=window.Worker;window.__workerRoundTrips=[]
+  window.Worker=class extends NativeWorker {
+   constructor(...args){super(...args);this.__timingStarted=performance.now();this.__jobs=new Map();this.addEventListener('message',event=>{const data=event.data,job=this.__jobs.get(data?.id);if(!job||data?.kind!==job.kind)return;this.__jobs.delete(data.id);window.__workerRoundTrips.push({...job,ok:data.ok===true,roundTripMs:performance.now()-job.dispatchAt})})}
+   postMessage(message,...args){const start=performance.now();const job={kind:message?.job?.kind,id:message?.id,firstRequest:this.__jobs.size===0&&!this.__hasPosted,workerAgeMs:start-this.__timingStarted,dispatchAt:start,postMessageMs:0};this.__jobs.set(message.id,job);this.__hasPosted=true;const result=super.postMessage(message,...args);job.postMessageMs=performance.now()-start;return result}
+   terminate(){for(const job of this.__jobs.values())window.__workerRoundTrips.push({...job,cancelled:true,elapsedUntilTerminationMs:performance.now()-job.dispatchAt});this.__jobs.clear();return super.terminate()}
+  }
+ })
+ await page.addInitScript(()=>{
   const NativeWorker=window.Worker;window.__measurementRequests=0;window.__holdMeasurement=true
   window.Worker=class extends NativeWorker {
    postMessage(message,...args){
@@ -87,6 +95,7 @@ try {
  assert.deepEqual(await exportDoc('measured.json'),before)
  const requests=await page.evaluate(()=>window.__measurementRequests);assert.ok(requests>=4)
  await page.screenshot({path:path.join(directory,'measurements.png')})
+ const roundTrips=await page.evaluate(()=>window.__workerRoundTrips);await writeFile(path.join(directory,'worker-round-trips.json'),JSON.stringify(roundTrips,null,2)+'\n')
  await page.keyboard.press('Escape')
  await activate(solid.getByRole('button',{name:'↶',exact:true}));await ready()
  const undone=await exportDoc('measurement-undone.json');assert.equal(undone.bodies.length,before.bodies.length-1)
