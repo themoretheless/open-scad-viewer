@@ -357,6 +357,12 @@ function selectIndexKey(e:KeyboardEvent,current:number,last:number,min=0){
  e.preventDefault();e.stopPropagation()
  return e.key==='Home'?min:e.key==='End'?last:Math.max(min,Math.min(last,current+(e.key==='ArrowDown'?1:-1)))
 }
+function setPickedEdge(index:number){edgeIndex.value=index;edgeIndexes.value=index>=0?[index]:[];advancedOp.value=null}
+function edgeSelectionKey(e:KeyboardEvent){
+ const indices=[-1,...featureEdges.value.map(edge=>edge.i)]
+ const index=selectIndexKey(e,Math.max(0,indices.indexOf(edgeIndex.value)),indices.length-1)
+ if(index!==null)setPickedEdge(indices[index])
+}
 function revolveGeometryKey(e: KeyboardEvent){
  const index=selectIndexKey(e,revolveGeometry.value==='exact'?1:0,1,selectedSketch.value?.retainedProfile?1:0)
  if(index!==null)revolveGeometry.value=index?'exact':'faceted'
@@ -656,6 +662,10 @@ watchEffect(onCleanup=>{
 })
 const measurementWorker=createSolidPreviewWorker(),curvatureWorker=createSolidPreviewWorker()
 const measurementPending=ref(false),curvaturePending=ref(false)
+const vertexAValid=computed(()=>!!selectedBody.value && Number.isInteger(measureA.value) && measureA.value>=1 && measureA.value<=solidVertexCount(selectedBody.value))
+const vertexBValid=computed(()=>!!measurementTarget.value && Number.isInteger(measureB.value) && measureB.value>=1 && measureB.value<=solidVertexCount(measurementTarget.value))
+const curveParameterValid=computed(()=>Number.isFinite(curveParameter.value) && curveParameter.value>=0 && curveParameter.value<=1)
+const measurementRevision=ref(0),curvatureRevision=ref(0),measurementRetryVisible=ref(false),curvatureRetryVisible=ref(false)
 const measurement=shallowRef<{value:PointMeasurement|null;error:string}|null>(null)
 const curvatureMeasurement=shallowRef<{value:CurveMeasurement|null;error:string}|null>(null)
 onUnmounted(()=>{measurementWorker.dispose();curvatureWorker.dispose()})
@@ -664,25 +674,29 @@ watchEffect(onCleanup=>{
  const source=selectedBody.value,target=measurementTarget.value,a=measureA.value-1,b=measureB.value-1
  let current=true
  onCleanup(()=>{current=false;measurementWorker.cancel()})
- measurement.value=null;measurementPending.value=false
+ void measurementRevision.value
+ measurement.value=null;measurementPending.value=false;measurementRetryVisible.value=false
  if(!enabled||!source)return
  if(!target){measurement.value={value:null,error:label('Выберите существующее тело B.','Choose an existing target body.')};return}
+ if(!vertexAValid.value || !vertexBValid.value){measurement.value={value:null,error:!vertexAValid.value?label('Укажите существующую вершину A.','Choose an existing vertex A.'):label('Укажите существующую вершину B.','Choose an existing vertex B.')};return}
  measurementPending.value=true
  void measurementWorker.run({kind:'measureVertices',a:source,indexA:a,b:target,indexB:b}).then(value=>{
   if(current)measurement.value={value,error:''}
- }).catch(e=>{if(current)measurement.value={value:null,error:e instanceof Error?e.message:String(e)}})
+ }).catch(()=>{if(current){measurementRetryVisible.value=true;measurement.value={value:null,error:label('Не удалось измерить вершины. Проверьте тела и повторите измерение.','Could not measure these vertices. Check the bodies and retry the measurement.')}}})
  .finally(()=>{if(current)measurementPending.value=false})
 })
 watchEffect(onCleanup=>{
  const enabled=props.open&&measurementOpen.value,body=selectedBody.value,edge=edgeIndex.value,parameter=curveParameter.value
  let current=true
  onCleanup(()=>{current=false;curvatureWorker.cancel()})
- curvatureMeasurement.value=null;curvaturePending.value=false
+ void curvatureRevision.value
+ curvatureMeasurement.value=null;curvaturePending.value=false;curvatureRetryVisible.value=false
  if(!enabled||!body?.brep||edge<0)return
+ if(!curveParameterValid.value){curvatureMeasurement.value={value:null,error:label('Задайте параметр ребра от 0 до 1.','Set an edge parameter between 0 and 1.')};return}
  curvaturePending.value=true
  void curvatureWorker.run({kind:'measureEdge',body,edge,parameter}).then(value=>{
   if(current)curvatureMeasurement.value={value,error:''}
- }).catch(e=>{if(current)curvatureMeasurement.value={value:null,error:e instanceof Error?e.message:String(e)}})
+ }).catch(()=>{if(current){curvatureRetryVisible.value=true;curvatureMeasurement.value={value:null,error:label('Не удалось измерить кривизну. Проверьте ребро и повторите измерение.','Could not measure curvature. Check the edge and retry the measurement.')}}})
  .finally(()=>{if(current)curvaturePending.value=false})
 })
 const edgeDistanceOpen=ref(false),edgeDistanceA=ref(1),edgeDistanceB=ref(2),edgeDistanceBudget=ref(10000)
@@ -3380,7 +3394,7 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
       <button v-if="hiddenIds.length" @click="hiddenIds=[]">{{ label('Показать всё','Show all objects') }} ({{ hiddenIds.length }})</button>
       <span v-if="lockedIds.length">{{ label('Заблокировано','Locked') }}: {{ lockedIds.length }}</span>
       <span v-if="subtract">{{ label('A — основа · B — вырез', 'A — target · B — cutter') }}</span>
-      <label v-if="pickMode==='edge' && selectedBody">{{ label('Ребро','Edge') }} <select :value="edgeIndex" :aria-label="label('Выбрать ребро','Select edge')" @change="edgeIndex=Number(($event.target as HTMLSelectElement).value);edgeIndexes=edgeIndex>=0?[edgeIndex]:[];advancedOp=null"><option :value="-1">—</option><option v-for="edge in featureEdges" :key="edge.i" :value="edge.i">{{ edge.i+1 }}</option></select></label>
+      <label v-if="pickMode==='edge' && selectedBody">{{ label('Ребро','Edge') }} <select :value="edgeIndex" :aria-label="label('Выбрать ребро','Select edge')" @change="setPickedEdge(Number(($event.target as HTMLSelectElement).value))" @keydown="edgeSelectionKey"><option :value="-1">—</option><option v-for="edge in featureEdges" :key="edge.i" :value="edge.i">{{ edge.i+1 }}</option></select></label>
       <span v-if="edgeIndexes.length">{{ label('Рёбра','Edges') }}: {{ edgeIndexes.length }}</span>
       <span v-if="dragConstraint">{{ label('Ограничение','Constraint') }}: {{ dragConstraint }} · Esc {{ label('отмена','cancel') }}</span>
       <span v-else-if="advancedOp==='split' || advancedOp==='transform'">{{ label('Ось','Axis') }}: {{ advanced.axis.toUpperCase() }}</span>
@@ -3944,13 +3958,13 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
       <section v-if="selectedBody" class="body-diagnostics" :aria-label="label('Измерения','Measurements')">
         <button @click="measurementOpen=!measurementOpen" :aria-pressed="measurementOpen">{{ label('Измерения','Measurements') }}</button>
         <template v-if="measurementOpen">
-          <label v-if="!clearanceOpen && !shellDistanceOpen && !volumeDistanceOpen">{{ label('Вершина A','Vertex A') }}<input v-model.number="measureA" type="number" min="1" :max="solidVertexCount(selectedBody)" :aria-label="label('Вершина A','Vertex A')"></label>
+          <label v-if="!clearanceOpen && !shellDistanceOpen && !volumeDistanceOpen">{{ label('Вершина A','Vertex A') }}<input v-model.number="measureA" type="number" min="1" :max="solidVertexCount(selectedBody)" :aria-invalid="!vertexAValid" :aria-describedby="!vertexAValid ? 'vertex-measurement-error' : undefined" :aria-label="label('Вершина A','Vertex A')"></label>
           <label>{{ label('Тело B','Body B') }}<select v-model="measureTarget" :aria-describedby="shellDistanceOpen?'shell-distance-error':undefined" :aria-invalid="shellDistanceOpen&&(!measurementTarget?.brep||measurementTarget.id===selectedBody.id)" :aria-label="label('Тело B','Body B')"><option value="">{{ label('Выбранное тело','Selected body') }}</option><option v-for="body in document.bodies" :key="body.id" :value="body.id">{{ body.name }}</option></select></label>
-          <label v-if="!clearanceOpen && !shellDistanceOpen && !volumeDistanceOpen">{{ label('Вершина B','Vertex B') }}<input v-model.number="measureB" type="number" min="1" :max="measurementTarget?solidVertexCount(measurementTarget):1" :aria-label="label('Вершина B','Vertex B')"></label>
+          <label v-if="!clearanceOpen && !shellDistanceOpen && !volumeDistanceOpen">{{ label('Вершина B','Vertex B') }}<input v-model.number="measureB" type="number" min="1" :max="measurementTarget?solidVertexCount(measurementTarget):1" :aria-invalid="!vertexBValid" :aria-describedby="!vertexBValid ? 'vertex-measurement-error' : undefined" :aria-label="label('Вершина B','Vertex B')"></label>
           <small v-if="measurementPending && !shellDistanceOpen && !volumeDistanceOpen" role="status" aria-label="vertex-measurement">{{ label('Измеряю вершины…','Measuring vertices…') }} <button @click="measurementOpen=false">Esc</button></small>
           <output v-if="measurement?.value && !shellDistanceOpen && !volumeDistanceOpen">{{ measurement.value.distanceMm.toFixed(6) }} mm · ΔXYZ [{{ measurement.value.deltaMm.map(v=>v.toFixed(6)).join(', ') }}]</output>
           <small v-if="measurement?.value && !shellDistanceOpen && !volumeDistanceOpen">A [{{ measurement.value.a.map(v=>v.toFixed(6)).join(', ') }}] · B [{{ measurement.value.b.map(v=>v.toFixed(6)).join(', ') }}] mm</small>
-          <p v-if="measurement?.error && !shellDistanceOpen && !volumeDistanceOpen" role="alert">{{ measurement.error }}</p>
+          <p v-if="measurement?.error && !shellDistanceOpen && !volumeDistanceOpen" id="vertex-measurement-error" role="alert">{{ measurement.error }}</p><button v-if="measurementRetryVisible" @click="measurementRevision++">{{ label('Повторить измерение вершин','Retry vertex measurement') }}</button>
           <button v-if="selectedBody.brep" @click="edgeDistanceOpen=!edgeDistanceOpen" :aria-pressed="edgeDistanceOpen">{{ label('Расстояние между рёбрами','Distance between edges') }}</button>
           <fieldset v-if="edgeDistanceOpen" class="edge-distance-panel" aria-label="edge-distance">
             <legend>{{ label('Расстояние между исходными рёбрами','Distance between original edges') }}</legend>
@@ -4001,9 +4015,9 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
           </template>
           <template v-if="selectedBody.brep && edgeIndex>=0">
             <small v-if="curvaturePending" role="status" aria-label="edge-measurement">{{ label('Измеряю кривизну…','Measuring curvature…') }} <button @click="measurementOpen=false">Esc</button></small>
-            <label>{{ label('Параметр ребра (0…1)','Edge parameter (0…1)') }}<input v-model.number="curveParameter" type="number" min="0" max="1" step=".05" :aria-label="label('Параметр ребра','Edge parameter')"></label>
+            <label>{{ label('Параметр ребра (0…1)','Edge parameter (0…1)') }}<input v-model.number="curveParameter" type="number" min="0" max="1" step=".05" :aria-invalid="!curveParameterValid" :aria-describedby="!curveParameterValid ? 'curvature-measurement-error' : undefined" :aria-label="label('Параметр ребра','Edge parameter')"></label>
             <output v-if="curvatureMeasurement?.value">{{ label('Локальный радиус кривизны','Local curvature radius') }}: {{ curvatureMeasurement.value.radiusMm===null?'∞':curvatureMeasurement.value.radiusMm.toFixed(6)+' mm' }}</output>
-            <p v-if="curvatureMeasurement?.error" role="alert">{{ curvatureMeasurement.error }}</p>
+            <p v-if="curvatureMeasurement?.error" id="curvature-measurement-error" role="alert">{{ curvatureMeasurement.error }}</p><button v-if="curvatureRetryVisible" @click="curvatureRevision++">{{ label('Повторить измерение кривизны','Retry curvature measurement') }}</button>
           </template>
           <small v-if="!clearanceOpen && !shellDistanceOpen && !volumeDistanceOpen">{{ label('Расстояние между указанными вершинами, не минимальное расстояние между телами. Для радиуса выберите ребро B-rep.','Distance between the specified vertices, not the minimum distance between bodies. Select a B-rep edge to measure curvature.') }}</small>
         </template>
@@ -4110,7 +4124,7 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
   </section>
 </template>
 <style scoped>
-.body-diagnostics [role=group][aria-invalid=true]{outline:2px solid var(--danger,#ff6978);outline-offset:3px;border-radius:4px}
+.body-diagnostics [role=group][aria-invalid=true],.body-diagnostics input[aria-invalid=true]{outline:2px solid var(--danger,#ff6978);outline-offset:3px;border-radius:4px}
 .edge-distance-panel,.face-distance-panel,.shell-distance-panel{display:grid;gap:8px;min-width:0}.edge-distance-panel output,.face-distance-panel output,.shell-distance-panel output{display:block;overflow-wrap:anywhere}.edge-distance-panel small,.face-distance-panel small,.shell-distance-panel small{display:block}
 .boundary-agreement-panel{display:grid;gap:8px;min-width:0}.boundary-agreement-panel small,.boundary-agreement-panel output{display:block}.boundary-agreement-panel output{overflow-wrap:anywhere}
 .body-diagnostics{display:grid;gap:8px;padding:8px 0}.body-diagnostics label{display:grid;gap:4px}.body-diagnostics p{margin:0}.body-diagnostics small{color:var(--text-dim)}

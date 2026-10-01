@@ -1,0 +1,18 @@
+{
+  "historyUntouched": true,
+  "undoRedo": true,
+  "reloadExact": true,
+  "gpuActive": true,
+  "keyboard": true,
+  "tabPresses": 1125,
+  "fieldErrors": true,
+  "localizedWorkerFailures": true,
+  "retryVertex": true,
+  "retryCurvature": true,
+  "browser": "157.0.8081.0",
+  "workerRequests": 8,
+  "cancelledWorkerTerminated": true,
+  "vertexDistanceMm": 14.142135623730951,
+  "edgeRadiusMm": 10,
+  "documentUnchanged": true
+}

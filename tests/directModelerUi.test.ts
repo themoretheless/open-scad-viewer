@@ -3903,3 +3903,50 @@ it('preserves 1000 linked instances on source refusal and restores deleting the 
  await ui.click('↶');expect(ui.serialized()).toBe(grouped)
  await ui.click('↷');expect(ui.doc().bodies).toEqual([])
 })
+
+for(const locale of ['en','ru'])it('locates invalid vertex and curvature input without worker calls: '+locale,async()=>{
+ const seed=cylinderSeed(),ui=await mount({locale,seedDocument:seed});await ui.click('Imported cylinder')
+ await ui.click(locale==='ru'?'Измерить вершины / ребро':'Measure vertices / edge')
+ const field=(en:string,ru:string)=>ui.all().find(n=>n.props['aria-label']===(locale==='ru'?ru:en))!
+ const before=ui.doc(),vertex=field('Vertex B','Вершина B'),calls=measurementWorkerRun.mock.calls.length
+ vertex.props['onUpdate:modelValue'](9999);await flushClearance()
+ expect(vertex.props['aria-invalid']).toBe(true);expect(vertex.props['aria-describedby']).toBe('vertex-measurement-error')
+ expect(ui.text(ui.all()[0])).toContain(locale==='ru'?'Укажите существующую вершину B.':'Choose an existing vertex B.')
+ expect(measurementWorkerRun.mock.calls.length).toBe(calls)
+ vertex.props['onUpdate:modelValue'](2);await flushClearance()
+ await ui.click(locale==='ru'?'Рёбра':'Edges')
+ field('Select edge','Выбрать ребро').props.onChange({target:{value:String(seed.bodies[0].brep!.edges.findIndex(edge=>edge.curve.degree===2))}});await flushClearance()
+ const parameter=field('Edge parameter','Параметр ребра'),edgeCalls=measurementWorkerRun.mock.calls.length
+ for(const invalid of [-1,1.1,NaN,'']){
+  parameter.props['onUpdate:modelValue'](invalid);await flushClearance()
+  expect(parameter.props['aria-invalid']).toBe(true);expect(parameter.props['aria-describedby']).toBe('curvature-measurement-error')
+  expect(ui.text(ui.all()[0])).toContain(locale==='ru'?'Задайте параметр ребра от 0 до 1.':'Set an edge parameter between 0 and 1.')
+  expect(measurementWorkerRun.mock.calls.length).toBe(edgeCalls)
+ }
+ parameter.props['onUpdate:modelValue'](.25);await flushClearance();expect(parameter.props['aria-invalid']).toBe(false)
+ const picker=field('Select edge','Выбрать ребро')
+ picker.props.onKeydown({key:'Home',preventDefault(){},stopPropagation(){}});await flushClearance();expect(picker.props.value).toBe(-1)
+ picker.props.onKeydown({key:'ArrowDown',preventDefault(){},stopPropagation(){}});await flushClearance();expect(picker.props.value).toBe(seed.bodies[0].brep!.edges.findIndex(edge=>edge.curve.degree===2))
+ expect(ui.doc()).toEqual(before)
+})
+
+for(const locale of ['en','ru'])it('localizes current measurement worker failures and retries both reports: '+locale,async()=>{
+ const {measureSolidVertices,measureSolidEdgeCurvature}=await import('../src/services/solidMeasurements')
+ const ui=await mount({locale,seedDocument:cylinderSeed()});await ui.click('Imported cylinder');await ui.click(locale==='ru'?'Рёбра':'Edges')
+ const picker=ui.all().find(n=>n.props['aria-label']===(locale==='ru'?'Выбрать ребро':'Select edge'))!
+ picker.props.onKeydown({key:'ArrowDown',preventDefault(){},stopPropagation(){}});await flushClearance()
+ let failVertices=true,failCurvature=true
+ measurementWorkerRun.mockImplementation(async job=>{
+  if(job.kind==='measureVertices'){if(failVertices){failVertices=false;return Promise.reject(Error('private vertex failure'))}return measureSolidVertices(job.a,job.indexA,job.b,job.indexB)}
+  if(failCurvature){failCurvature=false;return Promise.reject(Error('private curvature failure'))}return measureSolidEdgeCurvature(job.body,job.edge,job.parameter)
+ })
+ const before=ui.doc();await ui.click(locale==='ru'?'Измерить вершины / ребро':'Measure vertices / edge')
+ expect(ui.text(ui.all()[0])).toContain(locale==='ru'?'Не удалось измерить вершины.':'Could not measure these vertices.')
+ expect(ui.text(ui.all()[0])).toContain(locale==='ru'?'Не удалось измерить кривизну.':'Could not measure curvature.')
+ expect(ui.text(ui.all()[0])).not.toContain('private')
+ await ui.click(locale==='ru'?'Повторить измерение вершин':'Retry vertex measurement')
+ await ui.click(locale==='ru'?'Повторить измерение кривизны':'Retry curvature measurement')
+ expect(ui.all().some(n=>n.props['data-measurement']==='distance')).toBe(true)
+ expect(ui.all().some(n=>n.props['data-measurement']==='curvature')).toBe(true)
+ expect(ui.doc()).toEqual(before)
+})
