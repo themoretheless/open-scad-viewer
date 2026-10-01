@@ -313,7 +313,7 @@ export class DirectHistory {
   }
   private commitValidated(next:DirectDocument,validateChange?:(resolved:DirectDocument)=>void) {
     const base=this.current
-    next.blenderProjectId ??= this.currentDocument.blenderProjectId
+    next.blenderProjectId ??= (this.current.document??JSON.parse(this.current.text) as DirectDocument).blenderProjectId
     // UI policies (for example locked linked bodies) must see resolved geometry.
     // Give the policy its own copy so it cannot mutate the validated state.
     validateChange?.(clone(next))
