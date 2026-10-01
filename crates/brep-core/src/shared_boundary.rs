@@ -293,6 +293,50 @@ fn opposite_axis_sides(a:&Surface,b:&Surface,pa:&Curve,pb:&Curve,edge:&Curve)->b
     }
     false
 }
+// Exact quarter-disk trim: its interior has 1-u²-v²>0 and its circular
+// boundary has equality. This is a UV-domain certificate, independent of
+// recognition of any particular analytic solid.
+fn quarter_disk_trim(model:&Model,face:&crate::Face)->bool{
+    if !face.holes.is_empty(){return false;}
+    let uses=&model.loops[face.outer].coedges;if uses.len()!=3{return false;}
+    let line=|p:&Curve,a:[f64;2],b:[f64;2]|p.degree==1&&!p.periodic&&p.knots==[0.,0.,1.,1.]&&p.weights==[1.,1.]&&p.control_points==[a.to_vec(),b.to_vec()];
+    uses.iter().any(|c|line(&c.pcurve,[0.,0.],[1.,0.]))
+        &&uses.iter().any(|c|line(&c.pcurve,[0.,1.],[0.,0.]))
+        &&uses.iter().any(|c|{let p=&c.pcurve;p.degree==2&&!p.periodic&&p.knots==[0.,0.,0.,1.,1.,1.]&&p.weights==[1.,1.,2.]&&p.control_points==[vec![1.,0.],vec![1.,1.],vec![0.,1.]]})
+}
+fn disk_sided(s:&Surface,axis:usize,plane:f64)->Option<bool>{
+    if s.degree_u!=2||s.degree_v!=2||s.periodic_u||s.periodic_v
+        ||s.knots_u!=[0.,0.,0.,1.,1.,1.]||s.knots_v!=[0.,0.,0.,1.,1.,1.]
+        ||s.control_points.len()!=3||s.control_points[0].len()!=3||s.weights[0][0]!=1.{return None;}
+    let pole=s.control_points[0][0][axis];if pole==plane{return None;}
+    for i in 0..3{for j in 0..3{
+        let factor=1.-f64::from(i==2)-f64::from(j==2);
+        // This determinant is (z-plane)*weight-(pole-plane)*factor.
+        // Subtractions remain inside the exact predicate, not rounded inputs.
+        let values=[plane,0.,0.,s.control_points[i][j][axis],factor,0.,pole,s.weights[i][j],1.,plane,0.,1.];
+        let source=SourceArena::authored("trimmed-disk-plane-numerator",1,values.into_iter().map(|x|AuthoredScalar::Binary64Bits(x.to_bits())).collect()).ok()?;
+        let tolerance=ToleranceContext::default_valid();let mut ctx=PredicateContext::new(&source,&tolerance,Limits::default(),None);
+        let point=|n|std::array::from_fn(|k|source.leaf(n+k).unwrap());
+        if cad_predicates::orient3d(&mut ctx,point(0),point(3),point(6),point(9)).ok()?.outcome!=Outcome::Sign(Sign::Zero){return None;}
+    }}
+    Some(pole>plane)
+}
+fn opposite_disk_sides(model:&Model,faces:[usize;2],ca:&crate::Coedge,cb:&crate::Coedge)->crate::Result<bool>{
+    let a=&model.faces[faces[0]];let b=&model.faces[faces[1]];
+    if !quarter_disk_trim(model,a)||!quarter_disk_trim(model,b){return Ok(false);}
+    let edge=&model.edges[ca.edge].curve;
+    for axis in 0..3{
+        let plane=edge.control_points[0][axis];
+        if !edge.control_points.iter().all(|p|p[axis]==plane){continue;}
+        if let (Some(sa),Some(sb))=(disk_sided(&a.surface,axis,plane),disk_sided(&b.surface,axis,plane)){
+            if sa==sb{continue;}
+            let equal=|face:&crate::Face,c:&crate::Coedge|nurbs_core::curve_surface_agreement::verify_exact(edge,&c.pcurve,&face.surface,c.reversed,32768)
+                .map(|d|d.is_some_and(|d|d.outcome==cad_predicates::BezierIdentity::Equal));
+            if equal(a,ca)?&&equal(b,cb)?{return Ok(true);}
+        }
+    }
+    Ok(false)
+}
 pub(crate) fn certify_opposite(
     model: &Model,
     faces: [usize; 2],
@@ -312,7 +356,7 @@ pub(crate) fn certify_opposite(
     for ca in uses(a) {
         if let Some(others) = by_edge.get(&ca.edge) {
             for cb in others {
-                if opposite_axis_sides(&a.surface,&b.surface,&ca.pcurve,&cb.pcurve,&model.edges[ca.edge].curve) || separates_surfaces(
+                if opposite_axis_sides(&a.surface,&b.surface,&ca.pcurve,&cb.pcurve,&model.edges[ca.edge].curve) || opposite_disk_sides(model,faces,ca,cb)? || separates_surfaces(
                     &a.surface,
                     &b.surface,
                     &ca.pcurve,
@@ -408,6 +452,19 @@ pub fn separates_surfaces(
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn sphere_equator_is_the_only_contact_of_opposite_exact_disk_sides(){
+        let model=crate::analytic::sphere(3.).unwrap();let before=format!("{model:?}");
+        for faces in [[0,4],[1,5],[2,6],[3,7]]{
+            assert!(certify_opposite(&model,faces).unwrap().is_some(),"{faces:?}");
+        }
+        let mut changed=model.clone();changed.faces[4].surface.control_points[1][1][2]+=1e-12;
+        assert!(certify_opposite(&changed,[0,4]).unwrap().is_none());
+        let mut same_side=model.clone();for row in &mut same_side.faces[4].surface.control_points{for p in row{p[2]=-p[2];}}
+        assert!(certify_opposite(&same_side,[0,4]).unwrap().is_none());
+        let rounded=crate::analytic::sphere(2.).unwrap();assert!(certify_opposite(&rounded,[0,4]).unwrap().is_none());
+        assert_eq!(format!("{model:?}"),before);
+    }
     #[test]
     fn adjacent_cylinder_sides_use_exact_authored_axis_planes(){
         let model=crate::analytic::cylinder(2.,4.).unwrap();

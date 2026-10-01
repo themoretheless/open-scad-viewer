@@ -60,7 +60,7 @@ mod tests {
                 domain_cells: 100000, cells_per_pair: 16, domain_cells_per_pair: 1000 } }
     }
     #[test]
-    fn sphere_pole_contacts_preserve_the_incomplete_embedding_status(){
+    fn exact_sphere_boundary_embedding_covers_poles_equator_edges_and_vertices(){
         let model=crate::analytic::sphere(3.).unwrap();let before=format!("{model:?}");
         let mut l=limits();l.spans=1000;
         let r=inspect(&model,1e-8,l).unwrap();
@@ -69,7 +69,11 @@ mod tests {
         for pair in [[0,2],[1,3],[4,6],[5,7]]{
             assert!(r.hull_contacts.iter().any(|c|c.faces==pair&&c.vertex.is_some()));
         }
-        assert!(!r.proven);assert!(!r.intersections.absence_proven);
+        assert!(r.proven);assert!(r.intersections.absence_proven);
+        assert!(r.intersections.pairs.all_pairs_classified);
+        assert_eq!(r.hull_contacts.iter().filter(|c|c.vertex.is_some()).count(),12);
+        let rounded=crate::analytic::sphere(2.).unwrap();let r=inspect(&rounded,1e-8,l).unwrap();
+        assert!(!r.proven);assert!(!r.agreement.all_equal);assert!(r.hull_contacts.is_empty());
         assert_eq!(format!("{model:?}"),before);
     }
     #[test]

@@ -20,7 +20,7 @@ fn edge_ends(model: &Model, edge: usize) -> Option<[[f64;3];2]> {
 pub(crate) fn certify(model:&Model, faces:[usize;2])->Option<Certificate>{
     let edges=faces.map(|f|std::iter::once(model.faces[f].outer).chain(model.faces[f].holes.iter().copied())
         .flat_map(|l|model.loops[l].coedges.iter().map(|c|c.edge)).collect::<BTreeSet<_>>());
-    let hulls=faces.map(|f|{
+    let mut hulls=faces.map(|f|{
         let mut h=[[f64::INFINITY,f64::NEG_INFINITY];3];
         for p in model.faces[f].surface.control_points.iter().flatten(){for k in 0..3{h[k][0]=h[k][0].min(p[k]);h[k][1]=h[k][1].max(p[k]);}}
         h
@@ -32,9 +32,11 @@ pub(crate) fn certify(model:&Model, faces:[usize;2])->Option<Certificate>{
     // only through controls lying on that plane. Simultaneous support-plane
     // constraints can isolate a corner even when the initial hulls overlap
     // along a larger interval. Never apply this to a plane cutting a hull.
-    let supports=(0..3).filter(|&k|intersection[k][0]==intersection[k][1]
-        && hulls.iter().all(|h|intersection[k][0]==h[k][0]||intersection[k][0]==h[k][1])).collect::<Vec<_>>();
-    if !supports.is_empty(){
+    let mut previous=0;
+    for _ in 0..3{
+        let supports=(0..3).filter(|&k|intersection[k][0]==intersection[k][1]
+            && hulls.iter().all(|h|intersection[k][0]==h[k][0]||intersection[k][0]==h[k][1])).collect::<Vec<_>>();
+        if supports.len()<=previous{break;}previous=supports.len();
         let restricted=faces.map(|f|{
             let mut h=[[f64::INFINITY,f64::NEG_INFINITY];3];
             for p in model.faces[f].surface.control_points.iter().flatten(){
@@ -46,6 +48,7 @@ pub(crate) fn certify(model:&Model, faces:[usize;2])->Option<Certificate>{
         });
         intersection=std::array::from_fn(|k|[restricted[0][k][0].max(restricted[1][k][0]),restricted[0][k][1].min(restricted[1][k][1])]);
         if intersection.iter().any(|r|r[0]>r[1]){return None;}
+        hulls=restricted;
     }
     let free=(0..3).filter(|&k|intersection[k][0]<intersection[k][1]).collect::<Vec<_>>();
     if free.len()>1{return None;}
@@ -101,6 +104,15 @@ mod tests {
             assert!(certify(&separate,faces).is_none());
         }
         assert_eq!(format!("{model:?}"),before);
+    }
+    #[test]
+    fn adjacent_hemisphere_quadrants_meet_only_at_a_shared_equator_vertex(){
+        let model=crate::analytic::sphere(3.).unwrap();
+        for upper in 0..4{for quarter in [(upper+1)%4,(upper+3)%4]{
+            let c=certify(&model,[upper,quarter+4]).unwrap();
+            assert_eq!(c.vertex,Some(if quarter==(upper+1)%4{quarter}else{upper}));
+            assert!(c.edges.is_empty());
+        }}
     }
     #[test]
     fn a_plane_cutting_a_control_hull_cannot_discard_its_interior_controls(){

@@ -11,13 +11,11 @@ export interface SelfIntersection extends Omit<FaceContacts,'scope'> {
 }
 export function selfIntersectionExpectation(model:NurbsBrep,toleranceUv:number,limits:FaceContactLimits,maxSpans:number){
  const spans=(knots:number[],degree:number,count:number)=>knots.slice(degree,count).filter((k,i)=>k<knots[degree+i+1]).length
- const projectiveProjections=model.faces.map(({surface:s})=>[2,2,0,0,1,1].map((axis,i)=>{
-  const free=axis===2?[0,1]:axis===0?[1,2]:[0,2],rows=Array.from({length:3},()=>[0,0,0,0])
-  rows[0][free[0]]=1;rows[1][free[1]]=1;rows[2][axis]=i%2===0?1:-1
-  rows[2][3]=s.controlPoints.reduce((n,row)=>row.reduce((m,p)=>Math.max(m,Math.abs(p[axis])),n),0)
-  return rows
+ const projectiveData=model.faces.map(({surface:s})=>[0,1,2].map(axis=>{
+  const anchor=s.controlPoints[s.controlPoints.length-1][0][axis]
+  return [s.controlPoints[0][0][axis],anchor,s.controlPoints.reduce((n,row)=>row.reduce((m,p)=>Math.max(m,Math.abs(p[axis]-anchor)),n),0)]
  }))
- return {...faceContactExpectation(model,toleranceUv,limits),maxSpans,projectiveProjections,faceSpans:model.faces.map(({surface:s})=>spans(s.knotsU,s.degreeU,s.controlPoints.length)*spans(s.knotsV,s.degreeV,s.controlPoints[0].length))}
+ return {...faceContactExpectation(model,toleranceUv,limits),maxSpans,projectiveData,faceSpans:model.faces.map(({surface:s})=>spans(s.knotsU,s.degreeU,s.controlPoints.length)*spans(s.knotsV,s.degreeV,s.controlPoints[0].length))}
 }
 const linearProjections=[[[1,1,0],[0,0,1]],[[1,-1,0],[0,0,1]],[[1,0,1],[0,1,0]],[[1,0,-1],[0,1,0]],[[0,1,1],[1,0,0]],[[0,1,-1],[1,0,0]]]
 export function validSelfIntersection(e:ReturnType<typeof selfIntersectionExpectation>,value:unknown):value is SelfIntersection {
@@ -46,7 +44,11 @@ export function validSelfIntersection(e:ReturnType<typeof selfIntersectionExpect
    }else if(x.reason==='global-projective-projection-contraction'){
     const basis=x.projectiveProjection
     if(x.projection!==null||x.linearProjection!==null||!Array.isArray(basis)||basis.length!==3||!basis.every(row=>Array.isArray(row)&&row.length===4&&row.every(Number.isFinite)))return false
-    const candidate=e.projectiveProjections[i].findIndex(p=>p.every((row,j)=>row.every((n,k)=>n===basis[j][k])))
+    const candidate=[2,2,0,0,1,1].findIndex((axis,c)=>{
+     const free=axis===2?[0,1]:axis===0?[1,2]:[0,2]
+     const sign=c%2===0?1:-1,data=e.projectiveData[i]
+     return basis.every((row,j)=>row.every((n,k)=>n===(j<2?(k===3?-data[free[j]][0]:k===free[j]?1:0):k===3?data[axis][2]-sign*data[axis][1]:k===axis?sign:0)))
+    })
     if(candidate<0||x.spans!==e.faceSpans[i]*(97+16*(candidate+1)))return false
    }else return false
   }else{

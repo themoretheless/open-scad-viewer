@@ -137,6 +137,21 @@ mod tests{
             pairs:100,contact_pairs:1000,cells:100000,domain_cells:1000000}
     }
     #[test]
+    fn separated_exact_spheres_keep_the_analytic_gap_and_original_surface_witnesses(){
+        let a=crate::analytic::sphere(3.).unwrap();let mut b=a.clone();
+        for v in &mut b.vertices{v.point[0]+=8.;}
+        for e in &mut b.edges{for p in &mut e.curve.control_points{p[0]+=8.;}}
+        for f in &mut b.faces{for row in &mut f.surface.control_points{for p in row{p[0]+=8.;}}}
+        let before=[format!("{a:?}"),format!("{b:?}")];
+        let r=distance(&a,&b,1e-5,1e-8,limits()).unwrap();
+        for (i,v) in r.validity.iter().enumerate(){if !v.proven{eprintln!("sphere {i}: exact={} trim={} faces={} spans={} pairs={} outward={:?}",v.boundary.agreement.all_equal,v.boundary.trim.all_valid,v.boundary.intersections.faces.all_faces_injective,v.boundary.intersections.faces.spans,v.boundary.intersections.pairs.all_pairs_classified,v.orientations.iter().map(|o|o.outward).collect::<Vec<_>>());}}
+        assert!(r.converged,"{} {:?}",r.reason,r.distance_interval_mm);assert_eq!(r.material_overlap,Some(false));
+        let d=r.distance_interval_mm.unwrap();assert!(d[0]<=2.&&d[1]>=2.&&d[1]-d[0]<=1e-5);
+        let w=r.separation_witness(&a,&b).unwrap();let uv=w.geometry.parameters.unwrap();let points=w.geometry.points.unwrap();
+        for (i,m) in [&a,&b].into_iter().enumerate(){assert_eq!(m.faces[w.faces[i]].surface.evaluate(uv[i][0],uv[i][1]).unwrap().point,points[i]);}
+        assert_eq!(before,[format!("{a:?}"),format!("{b:?}")]);
+    }
+    #[test]
     fn separated_cylinders_keep_the_analytic_radial_gap(){
         let a=crate::analytic::cylinder(2.,4.).unwrap();let mut b=a.clone();
         for v in &mut b.vertices{v.point[0]+=7.;}

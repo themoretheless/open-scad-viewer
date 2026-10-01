@@ -85,6 +85,23 @@ mod tests {
             orientation_cells: 100000, orientation_domain_cells: 1000000, orientation_spans: 100 }
     }
     #[test]
+    fn binary_exact_sphere_has_certified_volume_validity(){
+        let model=crate::analytic::sphere(3.).unwrap();let before=format!("{model:?}");
+        let r=inspect(&model,1e-8,limits()).unwrap();
+        assert!(r.proven,"boundary={} orientation={:?}",r.boundary.proven,r.orientations.iter().map(|o|o.outward).collect::<Vec<_>>());
+        assert!(r.boundary.intersections.absence_proven);assert_eq!(r.orientations[0].outward,Some(true));
+        assert_eq!(format!("{model:?}"),before);
+        let rounded=crate::analytic::sphere(2.).unwrap();let r=inspect(&rounded,1e-8,limits()).unwrap();
+        assert!(!r.proven);assert!(!r.boundary.agreement.all_equal);
+        for offset in [[8.,-4.,6.],[-8.,4.,-6.]]{
+            let mut moved=model.clone();
+            for v in &mut moved.vertices{for k in 0..3{v.point[k]+=offset[k];}}
+            for e in &mut moved.edges{for p in &mut e.curve.control_points{for k in 0..3{p[k]+=offset[k];}}}
+            for f in &mut moved.faces{for row in &mut f.surface.control_points{for p in row{for k in 0..3{p[k]+=offset[k];}}}}
+            let r=inspect(&moved,1e-8,limits()).unwrap();assert!(r.proven,"offset={offset:?}");
+        }
+    }
+    #[test]
     fn authored_cylinder_has_certified_volume_validity(){
         let m=crate::analytic::cylinder(2.,4.).unwrap();let before=format!("{m:?}");
         let r=inspect(&m,1e-8,limits()).unwrap();

@@ -203,9 +203,11 @@ pub const LINEAR_PROJECTIONS: [[[f64;3];2];6]=[
 pub fn projective_projections(s:&Surface)->[[[f64;4];3];6]{
     std::array::from_fn(|i|{
         let axis=[2,2,0,0,1,1][i];let free=match axis{2=>[0,1],0=>[1,2],_=>[0,2]};
-        let extent=s.control_points.iter().flatten().map(|p|p[axis].abs()).fold(0.,f64::max);
+        let anchor=s.control_points[s.control_points.len()-1][0][axis];
+        let extent=s.control_points.iter().flatten().map(|p|(p[axis]-anchor).abs()).fold(0.,f64::max);
         let mut rows=[[0.;4];3];rows[0][free[0]]=1.;rows[1][free[1]]=1.;
-        rows[2][axis]=if i%2==0{1.}else{-1.};rows[2][3]=extent;rows
+        for j in 0..2{let origin=s.control_points[0][0][free[j]];rows[j][3]=if origin==0.{0.}else{-origin};}
+        rows[2][axis]=if i%2==0{1.}else{-1.};rows[2][3]=extent-rows[2][axis]*anchor;rows
     })
 }
 /// Certify a fixed linear projection using a common Jacobian hull over every
