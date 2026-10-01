@@ -638,26 +638,27 @@ function resetWorkplane() { cancelGesture();activePlane.value=xyPlane();workplan
 const volumeDistanceOpen=ref(false),volumeContact=shallowRef<Vec3[]|null>(null)
 const measurementOpen=ref(false),measureTarget=ref(''),measureA=ref(1),measureB=ref(2),curveParameter=ref(.5)
 const formatMeasurement=(value:number)=>value!==0&&Math.abs(value)<1e-6?value.toExponential(3):value.toFixed(6)
-const clearanceOpen=ref(false)
+const clearanceOpen=ref(false),clearanceRevision=ref(0),clearanceRetryVisible=ref(false)
 const measurementTarget=computed(()=>measureTarget.value?document.value.bodies.find(body=>body.id===measureTarget.value):selectedBody.value)
 const clearanceWorker=createSolidClearanceWorker()
 const clearanceMeasurement=shallowRef<{value:CadPairReport|null;error:string}|null>(null)
 const clearancePending=ref(false)
 onUnmounted(()=>clearanceWorker.dispose())
 watchEffect(onCleanup=>{
+ void clearanceRevision.value
  const enabled=props.open&&measurementOpen.value&&clearanceOpen.value
  const source=selectedBody.value,target=measurementTarget.value,snapshot=document.value
  const sourceId=selection.value,targetId=measureTarget.value
  let current=true
  onCleanup(()=>{current=false;clearanceWorker.cancel()})
- clearanceMeasurement.value=null;clearancePending.value=false
+ clearanceMeasurement.value=null;clearancePending.value=false;clearanceRetryVisible.value=false
  if(!enabled||!source)return
  if(!target||target.id===source.id){clearanceMeasurement.value={value:null,error:label('Выберите другое тело B.','Choose a different body B.')};return}
  clearancePending.value=true
  const valid=()=>current&&props.open&&document.value===snapshot&&selection.value===sourceId&&measureTarget.value===targetId&&measurementOpen.value&&clearanceOpen.value
  void clearanceWorker.run({kind:'inspect',bodies:[source,target].map(({id,name,mesh})=>({id,name,mesh}))}).then(reports=>{
   if(valid())clearanceMeasurement.value={value:reports[0],error:''}
- }).catch(e=>{if(valid())clearanceMeasurement.value={value:null,error:e instanceof Error?e.message:String(e)}})
+ }).catch(()=>{if(valid()){clearanceRetryVisible.value=true;clearanceMeasurement.value={value:null,error:label('Не удалось вычислить зазор по сетке. Повторите расчёт; при повторном отказе проверьте сетки выбранных тел.','Could not compute mesh clearance. Retry; if it fails again, inspect the selected body meshes.')}}})
  .finally(()=>{if(valid())clearancePending.value=false})
 })
 const measurementWorker=createSolidPreviewWorker(),curvatureWorker=createSolidPreviewWorker()
@@ -4017,7 +4018,7 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
             <small>{{ label('Расчёт по сеткам тел. Для B-rep точность ограничена детализацией.','Measured on body meshes. B-rep accuracy is limited by tessellation.') }}</small>
             <p v-if="clearancePending" role="status">{{ label('Вычисляем зазор…','Computing clearance…') }}</p>
             <output v-if="clearanceMeasurement?.value">{{ label('Зазор','Clearance') }}: {{ formatMeasurement(clearanceMeasurement.value.gapMm) }} mm · {{ label('Перекрытие','Overlap') }}: {{ formatMeasurement(clearanceMeasurement.value.overlapMm3) }} mm³</output>
-            <p v-if="clearanceMeasurement?.error" role="alert">{{ clearanceMeasurement.error }}</p>
+            <p v-if="clearanceMeasurement?.error" role="alert">{{ clearanceMeasurement.error }}</p><button v-if="clearanceRetryVisible" @click="clearanceRevision++">{{ label('Повторить расчёт зазора','Retry mesh clearance') }}</button>
           </template>
           <template v-if="selectedBody.brep && edgeIndex>=0">
             <small v-if="curvaturePending" role="status" aria-label="edge-measurement">{{ label('Измеряю кривизну…','Measuring curvature…') }} <button @click="measurementOpen=false">Esc</button></small>

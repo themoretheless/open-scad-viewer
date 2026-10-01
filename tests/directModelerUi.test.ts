@@ -3950,3 +3950,17 @@ for(const locale of ['en','ru'])it('localizes current measurement worker failure
  expect(ui.all().some(n=>n.props['data-measurement']==='curvature')).toBe(true)
  expect(ui.doc()).toEqual(before)
 })
+
+for(const locale of ['en','ru'] as const)it('localizes mesh clearance failures and retries without edits: '+locale,async()=>{
+ await geometryKernel.warmGeometryKernel()
+ const body=(id:string,min:number[],max:number[])=>{const brep=createBrepBox(min,max);return {id,name:id,brep,mesh:tessellateNurbsBrep(brep,1)}}
+ const ui=await mount({locale},stringifyMeshJson({version:1,sketches:[],bodies:[body('Mesh A',[0,0,0],[10,10,10]),body('Mesh B',[13,0,0],[23,10,10])]}))
+ await ui.click('Mesh A');await ui.click('Mesh B',true);const before=ui.doc()
+ clearanceWorkerRun.mockRejectedValueOnce(new Error('Private mesh worker transport failure'))
+ await ui.click(locale==='ru'?'Зазор двух тел по сетке':'Two-body mesh clearance');await flushClearance()
+ const text=ui.text(ui.all()[0]);expect(text).toContain(locale==='ru'?'Не удалось вычислить зазор по сетке.':'Could not compute mesh clearance.');expect(text).not.toContain('Private mesh worker')
+ expect(ui.all().some(n=>n.props['data-measurement']==='clearance')).toBe(false)
+ await ui.click(locale==='ru'?'Повторить расчёт зазора':'Retry mesh clearance');await flushClearance()
+ expect(ui.text(ui.all()[0])).toContain(locale==='ru'?'Зазор: 3.000000 mm':'Clearance: 3.000000 mm');expect(ui.all().some(n=>n.props['data-measurement']==='clearance')).toBe(true);expect(ui.doc()).toEqual(before)
+ expect(ui.all().some(n=>n.tag==='button'&&ui.text(n)===(locale==='ru'?'Повторить расчёт зазора':'Retry mesh clearance'))).toBe(false)
+})
