@@ -1,0 +1,92 @@
+{
+  "schema": "cad-roadmap-step/1",
+  "units": "mm",
+  "toleranceMm": 0.000001,
+  "relativeVolumeTolerance": 1e-8,
+  "parts": [
+    {
+      "name": "mixed-input",
+      "file": "mixed-input.step",
+      "sha256": "e57a3db055e04aec19b54558dfc2d2d9fdeebd183faf913cfaf647009b4a5d4f",
+      "expected": {
+        "solids": 2,
+        "boundsMm": [
+          [
+            0,
+            0,
+            0
+          ],
+          [
+            304.79999999999995,
+            76.19999999999999,
+            101.6
+          ]
+        ],
+        "volumeMm3": 393313.53599999996
+      }
+    },
+    {
+      "name": "mixed-edited",
+      "file": "mixed-edited.step",
+      "sha256": "f9dfa662e5b890a009bc4f5de6465366f7878b64d6833ee64afe62ad7e330445",
+      "expected": {
+        "solids": 2,
+        "boundsMm": [
+          [
+            0,
+            0,
+            0
+          ],
+          [
+            304.79999999999995,
+            76.19999999999999,
+            102.6
+          ]
+        ],
+        "volumeMm3": 397184.496
+      }
+    },
+    {
+      "name": "placed-input",
+      "file": "placed-input.step",
+      "sha256": "b65376181b3fd1349dbb0b54649bf6ed9f8b1538a15068096457a2608d02c0cf",
+      "expected": {
+        "solids": 2,
+        "boundsMm": [
+          [
+            0,
+            0,
+            0
+          ],
+          [
+            379.4,
+            76.19999999999999,
+            101.6
+          ]
+        ],
+        "volumeMm3": 393313.53599999996
+      }
+    },
+    {
+      "name": "placed-edited",
+      "file": "placed-edited.step",
+      "sha256": "c01d7a2611c7b83e4d04e6369dd1baf9abc956c875e1dafedd85a6653b0bdfb6",
+      "expected": {
+        "solids": 2,
+        "boundsMm": [
+          [
+            0,
+            0,
+            0
+          ],
+          [
+            379.4,
+            76.19999999999999,
+            102.6
+          ]
+        ],
+        "volumeMm3": 397184.496
+      }
+    }
+  ]
+}
