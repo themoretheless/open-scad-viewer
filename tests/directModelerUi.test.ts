@@ -3964,3 +3964,31 @@ for(const locale of ['en','ru'] as const)it('localizes mesh clearance failures a
  expect(ui.text(ui.all()[0])).toContain(locale==='ru'?'Зазор: 3.000000 mm':'Clearance: 3.000000 mm');expect(ui.all().some(n=>n.props['data-measurement']==='clearance')).toBe(true);expect(ui.doc()).toEqual(before)
  expect(ui.all().some(n=>n.tag==='button'&&ui.text(n)===(locale==='ru'?'Повторить расчёт зазора':'Retry mesh clearance'))).toBe(false)
 })
+
+for(const locale of ['en','ru'] as const)it('validates and retries surface boundary inspection: '+locale,async()=>{
+ await geometryKernel.warmGeometryKernel()
+ const ui=await mount({locale},readFileSync('tests/fixtures/solid-surface-boundary.json','utf8'))
+ await ui.click('Surface A');await ui.click('Surface B',true);const before=ui.doc()
+ boundaryWorkerRun.mockRejectedValueOnce(new Error('Private surface boundary transport failure'))
+ await ui.click(locale==='ru'?'Проверить стык поверхностей':'Inspect surface boundary');await flushClearance()
+ expect(ui.text(ui.all()[0])).toContain(locale==='ru'?'Не удалось проверить стык поверхностей.':'Could not inspect the surface boundary.');expect(ui.text(ui.all()[0])).not.toContain('Private surface')
+ await ui.click(locale==='ru'?'Повторить проверку стыка':'Retry surface boundary inspection');await flushClearance()
+ expect(ui.all().filter(n=>n.props['data-boundary-inspection'])).toHaveLength(2)
+ for(const [name,bad,good] of [[locale==='ru'?'Точек проверки':'Sample count',1,65],[locale==='ru'?'Допуск зазора, мм':'Gap tolerance, mm',0,.01],[locale==='ru'?'Допуск угла, °':'Angle tolerance, °',91,1]] as const){
+  const field=ui.all().find(n=>n.props['aria-label']===name)!,requests=boundaryWorkerRun.mock.calls.length
+  field.props['onUpdate:modelValue'](bad);await flushClearance();expect(field.props['aria-invalid']).toBe(true);expect(field.props['aria-describedby']).toBe('surface-boundary-error');expect(boundaryWorkerRun.mock.calls.length).toBe(requests);expect(ui.all().filter(n=>n.props['data-boundary-inspection'])).toHaveLength(0)
+  field.props['onUpdate:modelValue'](good);await flushClearance();expect(ui.all().filter(n=>n.props['data-boundary-inspection'])).toHaveLength(2)
+ }
+ expect(ui.doc()).toEqual(before)
+})
+
+for(const locale of ['en','ru'] as const)it('retries surface distance after localized transport failure: '+locale,async()=>{
+ await geometryKernel.warmGeometryKernel()
+ const ui=await mount({locale},readFileSync('tests/fixtures/solid-surface-boundary.json','utf8'))
+ await ui.click('Surface A');await ui.click('Surface B',true);const before=ui.doc()
+ measurementWorkerRun.mockImplementationOnce(async(job:any)=>{expect(job.kind).toBe('surfaceDistance');throw new Error('Private surface distance transport failure')})
+ await ui.click(locale==='ru'?'Расстояние между поверхностями':'Distance between surfaces');await flushClearance()
+ expect(ui.text(ui.all()[0])).toContain(locale==='ru'?'Не удалось измерить поверхности.':'Could not measure the surfaces.');expect(ui.text(ui.all()[0])).not.toContain('Private surface')
+ await ui.click(locale==='ru'?'Повторить измерение поверхностей':'Retry surface distance');await flushClearance()
+ expect(ui.all().some(n=>n.props['data-surface-distance']!==undefined)).toBe(true);expect(ui.doc()).toEqual(before)
+})

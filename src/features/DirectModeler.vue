@@ -541,11 +541,13 @@ const selectedFace = computed(() => topology.value.faces[faceIndex.value])
 const selectedFaceTriangles=computed(()=>new Set((openingFaces.value.length?openingFaces.value:[faceIndex.value]).flatMap(i=>topology.value.faces[i]?.triangles??[])))
 const samePlane = sameSketchPlane
 const surfaceDistanceOpen=ref(false),surfaceDistanceBudget=ref(10000),surfaceDistancePending=ref(false)
+const surfaceDistanceRevision=ref(0),surfaceDistanceRetryVisible=ref(false)
 const surfaceDistanceWorker=createSolidPreviewWorker()
 const surfaceDistance=shallowRef<{value:NurbsSurfaceDistance|null;error:string}|null>(null)
 onUnmounted(()=>surfaceDistanceWorker.dispose())
-const boundaryInspection=ref(false)
+const boundaryInspection=ref(false),boundaryInspectionRevision=ref(0),boundaryRetryVisible=ref(false)
 const boundaryOptions=ref<SurfaceBoundaryOptions>({boundaryA:'uMax',boundaryB:'uMin',reverse:false,samples:65,toleranceMm:.01,angleToleranceDeg:1})
+const boundaryInputValid=computed(()=>({gap:Number.isFinite(boundaryOptions.value.toleranceMm)&&boundaryOptions.value.toleranceMm>=.000001,angle:Number.isFinite(boundaryOptions.value.angleToleranceDeg)&&boundaryOptions.value.angleToleranceDeg>=0&&boundaryOptions.value.angleToleranceDeg<=90,samples:Number.isInteger(boundaryOptions.value.samples)&&boundaryOptions.value.samples>=2&&boundaryOptions.value.samples<=257}))
 const boundaryWorker=createSolidPreviewWorker(),boundaryPending=ref(false)
 const boundaryReport=shallowRef<{value:SurfaceBoundaryReport|null;error:string}|null>(null)
 onUnmounted(()=>boundaryWorker.dispose())
@@ -3255,31 +3257,34 @@ async function refreshSurfaceDisplay(){
 watch(()=>[props.open,kernelReady.value,document.value.surfaces,advancedPreview.value.document?.surfaces],()=>void refreshSurfaceDisplay(),{immediate:true,flush:'post'})
 
 watchEffect(onCleanup=>{
+ void surfaceDistanceRevision.value
  const enabled=props.open&&surfaceDistanceOpen.value&&!commandActive.value,pair=selectedSurfacePair.value
  const surfaces=document.value.surfaces,maxCells=surfaceDistanceBudget.value
  let current=true
  onCleanup(()=>{current=false;surfaceDistanceWorker.cancel()})
- surfaceDistance.value=null;surfaceDistancePending.value=false
+ surfaceDistance.value=null;surfaceDistancePending.value=false;surfaceDistanceRetryVisible.value=false
  if(!enabled||!pair)return
  const [a,b]=pair.map(id=>surfaces!.find(s=>s.id===id)!.surface)
  surfaceDistancePending.value=true
  void surfaceDistanceWorker.run({kind:'surfaceDistance',a,b,toleranceMm:.001,maxCells}).then(value=>{
   if(current)surfaceDistance.value={value,error:''}
- }).catch(()=>{if(current)surfaceDistance.value={value:null,error:label('Не удалось измерить поверхности. Проверьте геометрию или увеличьте объём расчёта.','Could not measure the surfaces. Check their geometry or increase the calculation budget.')}})
+ }).catch(()=>{if(current){surfaceDistanceRetryVisible.value=true;surfaceDistance.value={value:null,error:label('Не удалось измерить поверхности. Проверьте геометрию или увеличьте объём расчёта.','Could not measure the surfaces. Check their geometry or increase the calculation budget.')}}})
  .finally(()=>{if(current)surfaceDistancePending.value=false})
 })
 watchEffect(onCleanup=>{
+ void boundaryInspectionRevision.value
  const enabled=props.open&&boundaryInspection.value&&!commandActive.value,pair=selectedSurfacePair.value
  const surfaces=document.value.surfaces,options={...boundaryOptions.value}
  let current=true
  onCleanup(()=>{current=false;boundaryWorker.cancel()})
- boundaryReport.value=null;boundaryPending.value=false
+ boundaryReport.value=null;boundaryPending.value=false;boundaryRetryVisible.value=false
  if(!enabled||!pair)return
+ if(!Object.values(boundaryInputValid.value).every(Boolean)){boundaryReport.value={value:null,error:label('Исправьте выделенные поля: зазор не меньше 0,000001 мм, угол от 0 до 90°, целое число точек от 2 до 257.','Correct the highlighted fields: gap at least 0.000001 mm, angle from 0 to 90°, integer sample count from 2 to 257.')};return}
  const [a,b]=pair.map(id=>surfaces!.find(s=>s.id===id)!.surface)
  boundaryPending.value=true
  void boundaryWorker.run({kind:'surfaceBoundary',a,b,options}).then(value=>{
   if(current)boundaryReport.value={value,error:''}
- }).catch(e=>{if(current)boundaryReport.value={value:null,error:e instanceof Error?e.message:String(e)}})
+ }).catch(()=>{if(current){boundaryRetryVisible.value=true;boundaryReport.value={value:null,error:label('Не удалось проверить стык поверхностей. Повторите проверку; при повторном отказе проверьте выбранные границы.','Could not inspect the surface boundary. Retry; if it fails again, inspect the selected boundaries.')}}})
  .finally(()=>{if(current)boundaryPending.value=false})
 })
 
@@ -3772,7 +3777,7 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
                     <p v-else role="status">{{ label('Расчёт не завершён: показаны нижняя и верхняя границы. Увеличьте объём расчёта или проверьте меньшие участки поверхностей.','Calculation incomplete: lower and upper bounds are shown. Increase the calculation budget or inspect smaller surface regions.') }}</p>
                     <small>{{ label('Измерены полные выбранные NURBS-поверхности.','The complete selected NURBS surfaces are measured.') }}</small>
                   </template>
-                  <p v-if="surfaceDistance?.error" role="alert">{{ surfaceDistance.error }}</p>
+                  <p v-if="surfaceDistance?.error" role="alert">{{ surfaceDistance.error }}</p><button v-if="surfaceDistanceRetryVisible" @click="surfaceDistanceRevision++">{{ label('Повторить измерение поверхностей','Retry surface distance') }}</button>
                 </template>
               </section>
               <section v-if="selectedSurfacePair" aria-label="Surface boundary inspection" class="body-diagnostics">
@@ -3783,15 +3788,15 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
                   <label>{{ label('Граница A','Boundary A') }}<select v-model="boundaryOptions.boundaryA" :aria-label="label('Граница A','Boundary A')"><option v-for="b in ['uMin','uMax','vMin','vMax']" :key="b">{{ b }}</option></select></label>
                   <label>{{ label('Граница B','Boundary B') }}<select v-model="boundaryOptions.boundaryB" :aria-label="label('Граница B','Boundary B')"><option v-for="b in ['uMin','uMax','vMin','vMax']" :key="b">{{ b }}</option></select></label>
                   <label><input type="checkbox" v-model="boundaryOptions.reverse">{{ label('Обратное направление B','Reverse B direction') }}</label>
-                  <label>{{ label('Допуск зазора, мм','Gap tolerance, mm') }}<input v-model.number="boundaryOptions.toleranceMm" type="number" min="0.000001" step=".01"></label>
-                  <label>{{ label('Допуск угла, °','Angle tolerance, °') }}<input v-model.number="boundaryOptions.angleToleranceDeg" type="number" min="0" max="90" step=".1"></label>
-                  <label>{{ label('Точек проверки','Sample count') }}<input v-model.number="boundaryOptions.samples" type="number" min="2" max="257" step="1"></label>
+                  <label>{{ label('Допуск зазора, мм','Gap tolerance, mm') }}<input v-model.number="boundaryOptions.toleranceMm" :aria-label="label('Допуск зазора, мм','Gap tolerance, mm')" :aria-invalid="!boundaryInputValid.gap" :aria-describedby="!boundaryInputValid.gap?'surface-boundary-error':undefined" type="number" min="0.000001" step=".01"></label>
+                  <label>{{ label('Допуск угла, °','Angle tolerance, °') }}<input v-model.number="boundaryOptions.angleToleranceDeg" :aria-label="label('Допуск угла, °','Angle tolerance, °')" :aria-invalid="!boundaryInputValid.angle" :aria-describedby="!boundaryInputValid.angle?'surface-boundary-error':undefined" type="number" min="0" max="90" step=".1"></label>
+                  <label>{{ label('Точек проверки','Sample count') }}<input v-model.number="boundaryOptions.samples" :aria-label="label('Точек проверки','Sample count')" :aria-invalid="!boundaryInputValid.samples" :aria-describedby="!boundaryInputValid.samples?'surface-boundary-error':undefined" type="number" min="2" max="257" step="1"></label>
                   <template v-if="boundaryReport?.value">
                     <output>{{ label('Максимальный зазор: ','Maximum gap: ')+boundaryReport.value.maxGapMm.toFixed(6) }} mm</output>
                     <output>{{ label('Угол касательных плоскостей: ','Tangent-plane angle: ')+(boundaryReport.value.maxTangentPlaneAngleDeg?.toFixed(6)??label('не определён','undefined')) }}°</output>
                     <strong>{{ boundaryReport.value.sampledWithinTolerance?label('Проверенные точки в допуске','Sampled points within tolerance'):label('Допуск не подтверждён','Tolerance not confirmed') }}</strong>
                   </template>
-                  <p v-if="boundaryReport?.error" role="alert">{{ boundaryReport.error }}</p>
+                  <p v-if="boundaryReport?.error" id="surface-boundary-error" role="alert">{{ boundaryReport.error }}</p><button v-if="boundaryRetryVisible" @click="boundaryInspectionRevision++">{{ label('Повторить проверку стыка','Retry surface boundary inspection') }}</button>
                   <small>{{ label('Проверка по равномерной выборке, не гарантия между точками. Жёлтый — A, зелёный — B, красный — зазоры. Сравниваются касательные плоскости без учёта знака нормали.','Uniform samples do not prove agreement between points. Yellow: A; green: B; red: gaps. Tangent planes are compared without normal orientation.') }}</small>
                 </template>
               </section>
