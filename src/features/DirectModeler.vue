@@ -3681,7 +3681,7 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
                 <label>{{ label('Поворот, °','Rotation, °') }}<CadQuantityInput :aria-label="label('Поворот, °','Rotation, °')" v-model="advanced.angle" kind="angle" :locale="locale" @validity="quantityValidity('advanced.angle', $event)" /></label><label>{{ label('Масштаб','Scale') }}<CadQuantityInput :aria-label="label('Масштаб','Scale')" v-model="advanced.scale" kind="scalar" :locale="locale" @validity="quantityValidity('advanced.scale', $event)" :min=".01" step=".1" /></label>
               </template>
               <small v-if="bodyEditPending" role="status">{{ label('Вычисление предпросмотра… Esc — отмена.', 'Calculating preview… Esc to cancel.') }}</small>
-              <button v-if="bodyEditRetryVisible" type="button" :disabled="bodyEditPending || Object.keys(invalidQuantities).length>0" @click="bodyEditRevision++">{{ label('Повторить вычисление','Retry calculation') }}</button>
+              <button v-if="bodyEditRetryVisible" type="button" :disabled="bodyEditPending || Object.keys(invalidQuantities).length>0" @click="workspace?.focus(); bodyEditRevision++">{{ label('Повторить вычисление','Retry calculation') }}</button>
               <div><button class="primary" :disabled="!commandReady" @click="applyCommand">{{ label('Готово · Enter','Apply · Enter') }}</button><button @click="cancelCommand">Esc</button></div>
             </div>
 

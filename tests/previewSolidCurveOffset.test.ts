@@ -13,7 +13,9 @@ it('localizes a native refusal with the source curve and preserves the failed in
  expect(run.mock.calls[0]![0]).toMatchObject({kind:'trimmedCurveOffset',options:{fillRule:'evenodd'}})
 })
 it('retains typed worker failure identity for retry and cancellation handling',async()=>{
- const failure=new MainSolidWorkerError('CAD_CRASH','Worker crashed')
- const client={run:vi.fn().mockRejectedValue(failure)} as unknown as MainSolidWorkerClient
- await expect(previewSolidCurveOffset(client,document,options)).rejects.toBe(failure)
+ for(const code of ['CAD_CRASH','CAD_CANCELLED','CAD_PROTOCOL']){
+  const failure=new MainSolidWorkerError(code,'Worker failure',code==='CAD_CANCELLED'?'AbortError':undefined)
+  const client={run:vi.fn().mockRejectedValue(failure)} as unknown as MainSolidWorkerClient
+  await expect(previewSolidCurveOffset(client,document,options)).rejects.toBe(failure)
+ }
 })
