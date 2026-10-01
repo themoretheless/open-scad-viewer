@@ -82,7 +82,8 @@
         "Проверка стенок и коллизий до публикации результата",
         "Сохранение выбора и идентичностей после перестроения"
       ],
-      "status": "open"
+      "status": "open",
+      "implementationProgress": "Equal-radius axis-aligned cuboid blend implemented for all eight corners. Native tests and 48 WASM-exported STEP cases pass OpenCascade; general corners remain open."
     },
     {
       "id": "solid_distance",

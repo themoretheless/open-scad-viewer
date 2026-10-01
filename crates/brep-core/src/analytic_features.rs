@@ -760,7 +760,7 @@ pub fn exact_variable_radius_fillet(
 }
 
 /// Exact equal-radius valence-3 corner blend: three concurrent cuboid edges at the
-/// max corner become rational quarter-cylinders joined by a stereographic spherical octant.
+/// selected corner become rational quarter-cylinders joined by a stereographic spherical octant.
 pub fn exact_valence3_corner_blend(
     model: &Model,
     edges: &[usize],
@@ -778,10 +778,17 @@ pub fn exact_valence3_corner_blend(
             "Valence-3 radius must be finite and positive",
         ));
     }
-    if edges.len() != 3 {
+    if edges.len() != 3
+        || edges
+            .iter()
+            .copied()
+            .collect::<std::collections::BTreeSet<_>>()
+            .len()
+            != 3
+    {
         return Err(refuse(
             "BREP_VALENCE3_CORNER_BLEND_REFUSED",
-            "exact-valence3-corner-blend/1 admits exactly three concurrent edges at the max corner",
+            "exact-valence3-corner-blend/1 admits exactly three distinct concurrent cuboid edges",
         ));
     }
     if !is_axis_aligned_cuboid(model) {
@@ -812,7 +819,7 @@ pub fn exact_valence3_corner_blend(
             ));
         }
     }
-    // Three edges must share exactly one common vertex, and that vertex must be the max corner.
+    // Three distinct edges must share one cuboid corner.
     let sets: Vec<[usize; 2]> = edges.iter().map(|&e| model.edges[e].vertices).collect();
     for &v in &sets[0] {
         if sets[1].contains(&v) && sets[2].contains(&v) {
@@ -827,20 +834,36 @@ pub fn exact_valence3_corner_blend(
         ));
     };
     let p = model.vertices[vid].point;
-    let at_max = (0..3).all(|i| (p[i] - max[i]).abs() <= model.tolerance_mm.max(1e-9));
-    if !at_max {
-        return Err(refuse(
-            "BREP_VALENCE3_CORNER_BLEND_REFUSED",
-            "exact-valence3-corner-blend/1 admits the axis-aligned max corner only",
-        ));
-    }
-    let result = crate::imprint_pipeline::valence3_cuboid_max_corner(model, min, max, radius)
-        .map_err(|error| {
-            refuse(
+    // Reflect each minimum coordinate to the maximum corner. This is an
+    // isometry: radius and contact angles remain unchanged. affine() also
+    // reverses shell uses for odd reflections and preserves topology IDs.
+    let tolerance = model.tolerance_mm.max(1e-9);
+    let mut placement = [[0.; 4]; 4];
+    placement[3][3] = 1.;
+    for i in 0..3 {
+        if (p[i] - max[i]).abs() <= tolerance {
+            placement[i][i] = 1.;
+        } else if (p[i] - min[i]).abs() <= tolerance {
+            placement[i][i] = -1.;
+            placement[i][3] = min[i] + max[i];
+        } else {
+            return Err(refuse(
                 "BREP_VALENCE3_CORNER_BLEND_REFUSED",
-                &format!("Valence-3 authorship refused: {}", error.message),
-            )
-        })?;
+                "Selected vertex must be a cuboid corner",
+            ));
+        }
+    }
+    let local_source = crate::transform::affine(model, placement)?;
+    let local_result =
+        crate::imprint_pipeline::valence3_cuboid_max_corner(&local_source, min, max, radius)
+            .map_err(|error| {
+                refuse(
+                    "BREP_VALENCE3_CORNER_BLEND_REFUSED",
+                    &format!("Valence-3 authorship refused: {}", error.message),
+                )
+            })?;
+    // The reflection is its own inverse. Certify the final world-space solid.
+    let result = crate::transform::affine(&local_result, placement)?;
     let spheres = result
         .faces
         .iter()
@@ -3262,6 +3285,62 @@ mod tests {
                 .contains(&"no_constant_radius_substitution")
         );
         out.model.validate().unwrap();
+    }
+
+    #[test]
+    fn exact_valence3_corner_blend_all_eight_corners_and_duplicate_refusal() {
+        let min = [-7., 3., -2.];
+        let max = [3., 11., 4.];
+        let source = cuboid(min, max).unwrap();
+        let before = format!("{source:?}");
+        let mut reference_volume: Option<f64> = None;
+        for mask in 0..8 {
+            let corner =
+                std::array::from_fn::<_, 3, _>(
+                    |i| if mask & (1 << i) == 0 { min[i] } else { max[i] },
+                );
+            let vertex = source
+                .vertices
+                .iter()
+                .position(|v| v.point == corner)
+                .unwrap();
+            let edges: Vec<_> = source
+                .edges
+                .iter()
+                .enumerate()
+                .filter_map(|(i, e)| e.vertices.contains(&vertex).then_some(i))
+                .collect();
+            assert_eq!(edges.len(), 3);
+            let out = exact_valence3_corner_blend(&source, &edges, 1.).unwrap();
+            assert!(
+                out.audit.ok && out.naming_complete && out.feature.complete,
+                "corner {mask}"
+            );
+            let volume = crate::analysis::mass_properties(&out.model, 1e-9, 300_000)
+                .unwrap()
+                .signed_volume_mm3;
+            let expected = 480. - (1. - std::f64::consts::PI / 4.) * 21.
+                - (1. - std::f64::consts::PI / 6.);
+            assert!((volume - expected).abs() < 2e-5, "corner {mask}: {volume} != {expected}");
+            if let Some(reference) = reference_volume {
+                assert!(
+                    (volume - reference).abs() < 2e-5,
+                    "corner {mask}: {volume} != {reference}"
+                );
+            } else {
+                reference_volume = Some(volume);
+            }
+            let (actual_min, actual_max) = model_bounds(&out.model);
+            for i in 0..3 {
+                assert!((actual_min[i] - min[i]).abs() < 1e-9);
+                assert!((actual_max[i] - max[i]).abs() < 1e-9);
+            }
+            assert!(
+                exact_valence3_corner_blend(&source, &[edges[0], edges[0], edges[1]], 1.).is_err()
+            );
+            assert!(exact_valence3_corner_blend(&source, &edges, 3.).is_err());
+        }
+        assert_eq!(format!("{source:?}"), before);
     }
 
     #[test]

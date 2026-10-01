@@ -1,3 +1,7 @@
+# Current implementation
+
+Eight-corner cuboid blend is implemented and independently checked in 48 STEP cases. See [extension results](corner-extension.md). The audit below records the initial baseline; general P1 remains incomplete.
+
 # Точная геометрия P1
 
 Приоритет повышен по запросу пользователя. Статус: аудит и критерии приёмки; расширение геометрического ядра ещё не реализовано.
