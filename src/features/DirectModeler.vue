@@ -409,7 +409,7 @@ const nativeNurbsWorker=createSolidPreviewWorker(),nativeNurbsPending=ref(false)
 const nativeBrepMode=ref<'mass'|'mesh'|null>(null)
 let nativeNurbsGeneration=0
 const gizmoWorker=createSolidPreviewWorker(),gizmoPending=ref(false)
-let gizmoEpoch=0,gizmoRevision=0,gizmoRunning=false,gizmoPublishing=false
+let gizmoEpoch=0,gizmoRevision=0,gizmoRunning=false,gizmoPublishing=false,gizmoHistoryPending=false
 let gizmoApplyRevision:number|null=null,gizmoBase:DirectDocument|null=null,gizmoPublished:DirectDocument|null=null
 type DragWorkerJob=Extract<MainSolidJob,{kind:'sceneEdit'|'pointEdit'}>
 const pointEditActive=ref(false)
@@ -1600,6 +1600,7 @@ function restoreGizmoPreview(){
  gizmoPublished=null
 }
 function cancelGizmoWorker(){
+ if(gizmoHistoryPending){history.cancelRestore();gizmoHistoryPending=false}
  gizmoEpoch++;gizmoWorker.cancel();gizmoQueued=null;gizmoRunning=false;gizmoPending.value=false;gizmoApplyRevision=null
  numericPointEdit=false;pointEditActive.value=false;restoreGizmoPreview();gizmoBase=null;previewingTransform.value=false
 }
@@ -1618,12 +1619,21 @@ async function drainGizmoTransforms(){
   while(gizmoQueued&&epoch===gizmoEpoch){
    const job=gizmoQueued;gizmoQueued=null
    try{
-    const result=await gizmoWorker.run({...job.job,document:job.job.document})
+    const result=await gizmoWorker.run(job.job)
     if(epoch!==gizmoEpoch)return
     if(job.revision!==gizmoRevision)continue
     if(gizmoApplyRevision===job.revision){
      numericPointEdit=false;gizmoPublishing=true
-     try{previewingTransform.value=false;commit(result)}finally{gizmoPublishing=false}
+     try{
+      if(job.job.kind==='sceneEdit'){
+       const {validateLocked,added}=prepareCommit(result)
+       result.blenderProjectId ??= snapDocument.value.blenderProjectId
+       gizmoHistoryPending=true
+       const applied=await history.commitAsync(async()=>result,validateLocked)
+       if(epoch!==gizmoEpoch||!applied)return
+       previewingTransform.value=false;finishCommit(added,result)
+      }else{previewingTransform.value=false;commit(result)}
+     }finally{if(epoch===gizmoEpoch)gizmoHistoryPending=false;gizmoPublishing=false}
      gizmoBase=null;gizmoPublished=null;gizmoApplyRevision=null;gizmoPending.value=false;pointEditActive.value=false;settleAfterDrag()
     }else{
      gizmoPublishing=true;document.value=result;gizmoPublished=document.value;gizmoPublishing=false

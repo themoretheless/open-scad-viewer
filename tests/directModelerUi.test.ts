@@ -2119,6 +2119,26 @@ it('applies one circular-copy candidate and exposes invalid array parameters',as
  expect(ui.text(ui.all()[0])).toContain('Use 2–64 instances')
 })
 
+it('cancels gizmo history publication after the final worker response',async()=>{
+ const {DirectHistory}=await import('../src/services/directModeling')
+ const ui=await mount(),baseline=ui.doc();await ui.click('Box');const before=ui.doc(),svg=ui.svg()
+ const original=DirectHistory.prototype.commitAsync
+ let release!:()=>void,loaded=false
+ const gate=new Promise<void>(resolve=>{release=resolve})
+ const commit=vi.spyOn(DirectHistory.prototype,'commitAsync').mockImplementation(function(load,validate){
+  return original.call(this,async()=>{const result=await load();loaded=true;await gate;return result},validate)
+ })
+ try{
+  const handle=ui.all(svg).find(n=>n.tag==='g'&&n.props.onPointerdown&&n.children.some(c=>c.tag==='line'))!
+  await ui.pointer(handle,0,0)
+  svg.props.onPointermove({...ui.event(svg,20,0),altKey:true})
+  svg.props.onPointerup({...ui.event(svg,20,0),altKey:true});await flushClearance()
+  expect(loaded).toBe(true);await commandKey(ui,'Escape');release();await flushClearance()
+  expect(ui.doc()).toEqual(before)
+  await ui.click('↶');expect(ui.doc()).toEqual(baseline)
+ }finally{release();commit.mockRestore()}
+})
+
 it('waits for the released translation, discards a canceled result and commits the latest drag once',async()=>{
  const {applySolidSceneEdit}=await import('../src/services/solidSceneEdit')
  const requests:Array<{job:any;resolve:(value:any)=>void}>=[]
@@ -2132,6 +2152,27 @@ it('waits for the released translation, discards a canceled result and commits t
  const latest=applySolidSceneEdit(requests[1].job.document,requests[1].job.options)
  requests[1].resolve(latest);await flushClearance();expect(ui.doc().bodies).toEqual(JSON.parse(stringifyMeshJson(latest)).bodies)
  await ui.click('↶');expect(ui.doc()).toEqual(before)
+})
+
+it.each(['Escape','invalid-input','selection-change'])('cancels numeric history publication after worker completion: %s',async(action)=>{
+ const {DirectHistory}=await import('../src/services/directModeling')
+ const ui=await mount(),baseline=ui.doc();await ui.click('Box');await ui.click('Profile');const before=ui.doc();await ui.click('Properties')
+ const input=()=>ui.all().find(n=>n.tag==='input'&&n.props['aria-label']==='ΔX')!
+ input().props['onUpdate:modelValue']('5 mm');await flushClearance()
+ const original=DirectHistory.prototype.commitAsync
+ let release!:()=>void,loaded=false
+ const gate=new Promise<void>(resolve=>{release=resolve})
+ const commit=vi.spyOn(DirectHistory.prototype,'commitAsync').mockImplementation(function(load,validate){
+  return original.call(this,async()=>{const result=await load();loaded=true;await gate;return result},validate)
+ })
+ try{
+  await ui.click('Apply');expect(loaded).toBe(true)
+  if(action==='Escape')await commandKey(ui,'Escape')
+  else if(action==='invalid-input'){input().props['onUpdate:modelValue']('bad');await flushClearance()}
+  else{await ui.click('Scene');await ui.click('Cube')}
+  release();await flushClearance();expect(ui.doc()).toEqual(before)
+  await ui.click('↶');expect(ui.doc()).toEqual(baseline)
+ }finally{release();commit.mockRestore()}
 })
 
 it('publishes the validated transform response without another history geometry clone',async()=>{
