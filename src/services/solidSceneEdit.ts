@@ -12,8 +12,8 @@ export function applySolidSceneEdit(document:DirectDocument,p:SolidSceneEditOpti
  if(p.operation==='instance-detach')return detachSolidInstances(document,p.ids,instanceCache)
  const axis=p.axis==='x'?[1,0,0] as const:p.axis==='y'?[0,1,0] as const:[0,0,1] as const
  if(p.operation==='transform')return resolveSolidInstances(transformSelection(document,p.ids,[p.x,p.y,p.z],[...axis],p.angle,p.scale),instanceCache)
- if(p.operation==='instance-transform')return transformSolidInstance(document,p.id,[p.x,p.y,p.z],[...axis],p.angle,p.scale)
- if(p.operation==='instance-create')return createSolidInstance(document,p.id,p.createdId,[[1,0,0,p.x],[0,1,0,p.y],[0,0,1,p.z],[0,0,0,1]])
+ if(p.operation==='instance-transform')return transformSolidInstance(document,p.id,[p.x,p.y,p.z],[...axis],p.angle,p.scale,instanceCache)
+ if(p.operation==='instance-create')return createSolidInstance(document,p.id,p.createdId,[[1,0,0,p.x],[0,1,0,p.y],[0,0,1,p.z],[0,0,0,1]],instanceCache)
  const d=structuredClone(document)
  switch(p.operation){
   case 'group-create':

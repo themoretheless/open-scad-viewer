@@ -302,8 +302,8 @@ it('accepts compact scene snapshots with exact parity and rejects invalid geomet
  const linked=await client.run({kind:'sceneEdit',document:{version:1,sketches:[],bodies:[source]},options})
  const text=serializeDirectDocument(linked),compact=JSON.parse(text)
  expect(compact.bodies[1].mesh).toBeUndefined();expect(compact.bodies[1].brep).toBeUndefined()
- for(const operation of ['group-move','group-create','instance-detach','transform'] as const){
-  const edit={...options,operation,ids:['linked'],group:'Assembly'}
+ for(const operation of ['group-move','group-create','instance-detach','transform','instance-transform','instance-create'] as const){
+  const edit={...options,operation,id:operation==='instance-transform'?'linked':'source',createdId:'another-link',ids:['linked'],group:'Assembly'}
   const full=await client.run({kind:'sceneEdit',document:linked,options:edit})
   const restored=await client.run({kind:'sceneEdit',document:text,options:edit})
   expect(restored).toEqual(full)

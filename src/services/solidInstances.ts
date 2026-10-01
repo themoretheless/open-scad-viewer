@@ -5,11 +5,11 @@ import {callGeometryRust} from './geometry/kernel'
 import {stringifyMeshJson} from './meshJson'
 export interface SolidInstanceLink {sourceId:string;matrix:number[][]}
 /** Relative world-space edit about the current mesh bounds center. */
-export function transformSolidInstance(document:DirectDocument,id:string,delta:number[],axis:number[],angle:number,scale:number):DirectDocument {
- const next=resolveSolidInstances(structuredClone(document)),body=next.bodies.find(body=>body.id===id)
+export function transformSolidInstance(document:DirectDocument,id:string,delta:number[],axis:number[],angle:number,scale:number,cache?:SolidInstanceBatchCache):DirectDocument {
+ const next=resolveSolidInstances(structuredClone(document),cache),body=next.bodies.find(body=>body.id===id)
  if(!body?.instance)throw Error('Select a linked instance.')
  body.instance.matrix=callGeometryRust('cad_instance_transform',{mesh:body.mesh,matrix:body.instance.matrix,delta,axis,angle,scale})
- return resolveSolidInstances(next)
+ return resolveSolidInstances(next,cache)
 }
 /** References point directly to an independent source; geometry math stays in Rust. */
 export function resolveSolidInstances(document:DirectDocument,cache?:SolidInstanceBatchCache):DirectDocument {
@@ -47,13 +47,13 @@ export function resolveSolidInstances(document:DirectDocument,cache?:SolidInstan
  })
  return {...document,bodies:resolved}
 }
-export function createSolidInstance(document:DirectDocument,sourceId:string,id:string,matrix:number[][]):DirectDocument {
+export function createSolidInstance(document:DirectDocument,sourceId:string,id:string,matrix:number[][],cache?:SolidInstanceBatchCache):DirectDocument {
  const source=document.bodies.find(body=>body.id===sourceId)
  if(!source||source.instance)throw Error('Choose an independent source body.')
  if(!id||[...document.bodies,...document.sketches,...document.curves??[],...document.surfaces??[]].some(item=>item.id===id))throw Error('Instance needs a unique object ID.')
  const next=structuredClone(document)
  next.bodies.push({...structuredClone(source),id,name:source.name.slice(0,89)+' · instance',instance:{sourceId,matrix:structuredClone(matrix)}})
- return resolveSolidInstances(next)
+ return resolveSolidInstances(next,cache)
 }
 export function detachSolidInstances(document:DirectDocument,ids:readonly string[],cache?:SolidInstanceBatchCache):DirectDocument {
  const next=resolveSolidInstances(structuredClone(document),cache)
