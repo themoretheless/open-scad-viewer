@@ -36,7 +36,7 @@ pub fn inspect(loops:&[Vec<Curve>],tolerance_uv:f64,max_pairs:usize,max_cells:us
     for a in 0..loops.len(){for b in a+1..loops.len(){
         for ca in &loops[a]{for cb in &loops[b]{
             if out.pairs==max_pairs || out.cells==max_cells {out.problem_loops=Some([a,b]);return Ok(out);}
-            let r=curve_distance::distance(ca,cb,tolerance_uv,((max_cells-out.cells)/(count*count).max(1)).max(1))?;
+            let r=curve_distance::prove_separation(ca,cb,tolerance_uv,((max_cells-out.cells)/(count*count).max(1)).max(1))?;
             out.pairs+=1;out.cells+=r.cells;
             if r.distance_interval_mm[0]<=0. {out.problem_loops=Some([a,b]);return Ok(out);}
         }}

@@ -1,0 +1,1 @@
+{"version":1,"sketches":[{"id":"line","name":"Profile lines","closed":false,"points":[[2,0],[2,2],[0,2],[0,0]]}],"bodies":[],"curves":[{"id":"nurbs","name":"General NURBS","curve":{"degree":2,"knots":[0,0,0,1,1,1],"controlPoints":[[0,0],[1,-1],[2,0]],"weights":[1,1,1]}}],"blenderProjectId":"43cde150-a356-4706-8046-ee673f6b1431","surfaces":[]}

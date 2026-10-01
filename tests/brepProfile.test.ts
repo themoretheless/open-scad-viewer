@@ -99,3 +99,19 @@ it('retains a general NURBS profile through validation, document reload, affine 
   expect(analyzeNurbsBrep(model).signedVolumeMm3).toBeCloseTo(140,6)
   expect(JSON.stringify(loop)).toBe(original)
 })
+
+it('keeps holes, nested islands and separate components in a general rational region',async()=>{
+  const {extrudeBrepCurves,analyzeNurbsBrep}=await import('../src/services/geometry/brep')
+  const outer=rectangle(0,0,2,2)
+  outer[0]={degree:2,knots:[0,0,0,1,1,1],controlPoints:[[0,0],[1,-1],[2,0]],weights:[1,1,1]}
+  const rings=[rectangle(.5,.5,.75,.75),rectangle(.75,.75,.25,.25),rectangle(3,0,1,1),outer]
+  const source=JSON.stringify(rings),profile=validateBrepProfile(rings,'even-odd')
+  expect(profile.loops).toHaveLength(4)
+  expect(profile.areaIntervalMm2?.[0]).toBeLessThanOrEqual(31/6)
+  expect(profile.areaIntervalMm2?.[1]).toBeGreaterThanOrEqual(31/6)
+  expect(validateBrepProfile(profile.loops)).toEqual(profile)
+  const model=extrudeBrepCurves(profile.loops,0,3)
+  expect(model.bodies).toHaveLength(3)
+  expect(analyzeNurbsBrep(model).signedVolumeMm3).toBeCloseTo(15.5,6)
+  expect(JSON.stringify(rings)).toBe(source)
+})

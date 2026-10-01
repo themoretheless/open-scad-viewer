@@ -106,7 +106,7 @@ pub fn inspect(loops: &[Vec<Curve>], tolerance: f64, material_left: bool) -> Res
                         return Err(failure(i, "loop separation work limit"));
                     }
                     let distance =
-                        curve_distance::distance(a, b, tolerance, (100000 - cells).min(4096))?;
+                        curve_distance::prove_separation(a, b, tolerance, (100000 - cells).min(4096))?;
                     cells += distance.cells;
                     pairs += 1;
                     if distance.distance_interval_mm[0] <= 0. {

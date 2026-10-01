@@ -1,0 +1,75 @@
+warning: binary `wgsl_export` should have a kebab-case name
+  |
+1 | /private/tmp/open-scad-viewer-cad-resume/crates/target/.../wgsl_export
+  |                                                            ^^^^^^^^^^^
+  |
+  = note: `cargo::non_kebab_case_bins` is set to `warn` by default
+help: to change the binary name to `wgsl-export`, convert the file stem
+  |
+1 - src/bin/wgsl_export.rs
+1 + src/bin/wgsl-export.rs
+  |
+warning: `raster-core` (manifest) generated 1 warning
+    Finished `release` profile [optimized] target(s) in 0.06s
+wasm-brotli: wasm unchanged, skipping packaging (stamp hit)
+warning: binary `wgsl_export` should have a kebab-case name
+  |
+1 | /private/tmp/open-scad-viewer-cad-resume/crates/target/.../wgsl_export
+  |                                                            ^^^^^^^^^^^
+  |
+  = note: `cargo::non_kebab_case_bins` is set to `warn` by default
+help: to change the binary name to `wgsl-export`, convert the file stem
+  |
+1 - src/bin/wgsl_export.rs
+1 + src/bin/wgsl-export.rs
+  |
+warning: `raster-core` (manifest) generated 1 warning
+   Compiling nurbs-core v0.1.0 (/private/tmp/open-scad-viewer-cad-resume/crates/nurbs-core)
+warning: function `rebuild_add` is never used
+    --> nurbs-core/src/foundation.rs:3249:4
+     |
+3249 | fn rebuild_add(a:[f64;2],b:[f64;2])->[f64;2] { [next_down(a[0]+b[0]),next_up(a[1]+b[1])] }
+     |    ^^^^^^^^^^^
+     |
+     = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: function `rebuild_mul` is never used
+    --> nurbs-core/src/foundation.rs:3250:4
+     |
+3250 | fn rebuild_mul(a:[f64;2],b:[f64;2])->[f64;2] {
+     |    ^^^^^^^^^^^
+
+warning: function `rebuild_binomial` is never used
+    --> nurbs-core/src/foundation.rs:3254:4
+     |
+3254 | fn rebuild_binomial(n:usize,k:usize)->[f64;2] {
+     |    ^^^^^^^^^^^^^^^^
+
+warning: function `rebuild_product_factor` is never used
+    --> nurbs-core/src/foundation.rs:3258:4
+     |
+3258 | fn rebuild_product_factor(p:usize,q:usize,i:usize,j:usize)->[f64;2] {
+     |    ^^^^^^^^^^^^^^^^^^^^^^
+
+   Compiling brep-core v0.1.0 (/private/tmp/open-scad-viewer-cad-resume/crates/brep-core)
+warning: `nurbs-core` (lib) generated 4 warnings
+   Compiling geometry-bridge v0.1.0 (/private/tmp/open-scad-viewer-cad-resume/crates/geometry-bridge)
+warning: unused doc comment
+  --> geometry-bridge/src/abi.rs:56:1
+   |
+56 | / /// Capacity of the last packed response allocation. `encode_binary` grows its
+57 | | /// Vec amortized, so capacity usually exceeds length; the response is freed
+58 | | /// before the next request (see `decodePacked` on the host), so a single slot
+59 | | /// suffices. Buffers not matching the slot (request/staging allocations from
+60 | | /// `abi_alloc`, boxed slices) have capacity == length and take the fallback.
+   | |_----------------------------------------------------------------------------^
+   |   |
+   |   rustdoc does not generate documentation for macro invocations
+   |
+   = help: to document an item produced by a macro, the macro must produce the documentation as part of its expansion
+   = note: `#[warn(unused_doc_comments)]` (part of `#[warn(unused)]`) on by default
+
+warning: `geometry-bridge` (lib) generated 1 warning
+   Compiling geometry-wasm v0.1.0 (/private/tmp/open-scad-viewer-cad-resume/crates/geometry-wasm)
+    Finished `release` profile [optimized] target(s) in 1m 05s
+wasm-opt: 10816052 -> 9600358 bytes (11.2% smaller)

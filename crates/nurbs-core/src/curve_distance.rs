@@ -7,7 +7,11 @@ use value_codec::{Value, json};
 
 /// Homogeneous de Boor, with outward rounding of every arithmetic operation.
 /// A span parameter stays inside all interpolation knot ranges, so alpha ∈ [0,1].
-pub(crate) fn restricted_controls(curve: &Curve, span: usize, t: Interval) -> Result<Vec<Vec<Interval>>> {
+pub(crate) fn restricted_controls(
+    curve: &Curve,
+    span: usize,
+    t: Interval,
+) -> Result<Vec<Vec<Interval>>> {
     let degree = curve.degree;
     let dimension = curve.control_points[0].len();
     let mut d = Vec::with_capacity(degree + 1);
@@ -79,16 +83,23 @@ pub(crate) fn enclosure(curve: &Curve, span: usize, t: Interval) -> Result<Vec<I
     for control in restricted_controls(curve, span, t)? {
         for axis in 0..dimension {
             let lo = (span - curve.degree..=span)
-                .map(|i| curve.control_points[i][axis]).fold(f64::INFINITY, f64::min);
+                .map(|i| curve.control_points[i][axis])
+                .fold(f64::INFINITY, f64::min);
             let hi = (span - curve.degree..=span)
-                .map(|i| curve.control_points[i][axis]).fold(f64::NEG_INFINITY, f64::max);
-            let p = control[axis].div(control[dimension])?
-                .add(Interval::point(origin[axis]))?.intersect(lo, hi)?;
+                .map(|i| curve.control_points[i][axis])
+                .fold(f64::NEG_INFINITY, f64::max);
+            let p = control[axis]
+                .div(control[dimension])?
+                .add(Interval::point(origin[axis]))?
+                .intersect(lo, hi)?;
             bounds[axis][0] = bounds[axis][0].min(p.lo);
             bounds[axis][1] = bounds[axis][1].max(p.hi);
         }
     }
-    bounds.into_iter().map(|[lo, hi]| Interval::new(lo, hi)).collect()
+    bounds
+        .into_iter()
+        .map(|[lo, hi]| Interval::new(lo, hi))
+        .collect()
 }
 
 fn spans(curve: &Curve) -> Vec<usize> {
@@ -209,6 +220,27 @@ pub fn distance(
     tolerance_mm: f64,
     max_cells: usize,
 ) -> Result<CurveDistance> {
+    distance_impl(a, b, tolerance_mm, max_cells, false)
+}
+/// Stops once a strictly positive global lower bound proves disjoint images.
+/// `converged` still means distance tolerance; `reason=separated` is only a
+/// separation proof. Contact, insufficient work and precision remain unproven.
+/// Initialization covers every original span pair before permitting early exit.
+pub fn prove_separation(
+    a: &Curve,
+    b: &Curve,
+    tolerance_mm: f64,
+    max_cells: usize,
+) -> Result<CurveDistance> {
+    distance_impl(a, b, tolerance_mm, max_cells, true)
+}
+fn distance_impl(
+    a: &Curve,
+    b: &Curve,
+    tolerance_mm: f64,
+    max_cells: usize,
+    stop_at_separation: bool,
+) -> Result<CurveDistance> {
     a.validate()?;
     b.validate()?;
     check(
@@ -275,6 +307,10 @@ pub fn distance(
         if best.upper - lower <= tolerance_mm {
             break;
         }
+        if stop_at_separation && lower > 0. {
+            reason = "separated";
+            break;
+        }
         if cells + 2 > max_cells {
             reason = "work-limit";
             break;
@@ -337,6 +373,66 @@ pub fn distance(
     })
 }
 
+#[cfg(test)]
+mod separation_tests {
+    use super::*;
+    #[test]
+    fn stops_after_global_separation_without_claiming_precise_distance() {
+        let a = Curve {
+            degree: 2,
+            knots: vec![0., 0., 0., 1., 1., 1.],
+            control_points: vec![vec![0., 0.], vec![1., 1.], vec![2., 0.]],
+            weights: vec![1., 0.8, 1.],
+            periodic: false,
+        };
+        let b = Curve::from_polyline(vec![vec![0., 2.], vec![2., 2.]]).unwrap();
+        let source = format!("{a:?}{b:?}");
+        let proof = prove_separation(&a, &b, 1e-8, 10000).unwrap();
+        let exact = distance(&a, &b, 1e-8, 10000).unwrap();
+        assert_eq!(proof.reason, "separated");
+        assert!(!proof.converged);
+        assert_eq!(proof.cells, 1);
+        assert!(proof.cells < exact.cells);
+        let expected = 14. / 9.;
+        assert!(
+            proof.distance_interval_mm[0] > 0.
+                && proof.distance_interval_mm[0] <= expected
+                && proof.distance_interval_mm[1] >= expected
+        );
+        assert_eq!(format!("{a:?}{b:?}"), source);
+    }
+    #[test]
+    fn covers_all_original_spans_before_proof_and_refuses_contact() {
+        let a = Curve::from_polyline(vec![vec![0., 0.], vec![1., 0.], vec![2., 2.]]).unwrap();
+        let b = Curve::from_polyline(vec![vec![0., 2.], vec![3., 2.]]).unwrap();
+        assert!(prove_separation(&a, &b, 1e-8, 1).is_err());
+        for budget in [2, 10, 1000] {
+            let proof = prove_separation(&a, &b, 1e-8, budget).unwrap();
+            assert!(proof.distance_interval_mm[0] <= 0.);
+            assert_ne!(proof.reason, "separated");
+            assert!(proof.cells <= budget);
+        }
+        let crossed = Curve::from_polyline(vec![vec![0., 2.], vec![2., 0.]]).unwrap();
+        let diagonal = Curve::from_polyline(vec![vec![0., 0.], vec![2., 2.]]).unwrap();
+        assert_eq!(
+            prove_separation(&crossed, &diagonal, 1e-8, 1000)
+                .unwrap()
+                .distance_interval_mm[0],
+            0.
+        );
+        let tangent = Curve::from_polyline(vec![vec![0., 0.5], vec![2., 0.5]]).unwrap();
+        let arch = Curve {
+            degree: 2,
+            knots: vec![0., 0., 0., 1., 1., 1.],
+            control_points: vec![vec![0., 0.], vec![1., 1.], vec![2., 0.]],
+            weights: vec![1.; 3],
+            periodic: false,
+        };
+        let proof = prove_separation(&arch, &tangent, 1e-8, 1000).unwrap();
+        assert_eq!(proof.distance_interval_mm[0], 0.);
+        assert_ne!(proof.reason, "separated");
+    }
+}
 #[cfg(test)]
 mod tests {
     use super::*;
