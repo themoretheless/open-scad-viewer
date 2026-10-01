@@ -159,7 +159,33 @@ try {
  if(await menu.evaluate(e=>e.parentElement.open))await activate(menu)
  await activate(solid.getByRole('button',{name:'↷',exact:true}))
  const redone=await download('Скачать проект JSON','redone.json');assert.deepEqual(redone.bodies,changed.bodies)
+ if(process.argv.includes('--object-history')){
+  async function snapshot(file){const value=await download('Скачать проект JSON',file);if(await menu.evaluate(e=>e.parentElement.open))await activate(menu);return value}
+  async function historyRoundtrip(before,after,key){
+   await activate(solid.getByRole('button',{name:'↶',exact:true}));assert.deepEqual(await snapshot(key+'-undo.json'),before)
+   await activate(solid.getByRole('button',{name:'↷',exact:true}));assert.deepEqual(await snapshot(key+'-redo.json'),after)
+  }
+  if(await menu.evaluate(e=>e.parentElement.open))await activate(menu)
+  await command('Duplicate');const duplicated=await snapshot('duplicated.json')
+  assert.equal(duplicated.bodies.length,3);assert.deepEqual(duplicated.bodies.slice(0,2),redone.bodies)
+  const copy=duplicated.bodies[2];assert.ok(!redone.bodies.some(b=>b.id===copy.id))
+  await historyRoundtrip(redone,duplicated,'duplicate')
+  await activate(solid.getByRole('button',{name:copy.name,exact:true}));await command('Delete')
+  const deleted=await snapshot('deleted-copy.json');assert.deepEqual(deleted,redone)
+  await historyRoundtrip(duplicated,deleted,'delete')
+  const linked=deleted.bodies.find(b=>b.instance),source=deleted.bodies.find(b=>b.id===linked.instance.sourceId)
+  await activate(solid.getByRole('button',{name:linked.name,exact:true}));await command('Make independent')
+  await solid.getByText('Создаётся независимое тело. Esc — отменить.',{exact:true}).waitFor({state:'hidden'})
+  const detached=await snapshot('detached.json'),body=detached.bodies.find(b=>b.id===linked.id)
+  assert.equal(body.instance,undefined);assert.ok(body.brep);assert.deepEqual(detached.bodies.find(b=>b.id===source.id),source)
+  const expected=source.brep.vertices.map(v=>linked.instance.matrix.slice(0,3).map(row=>row[0]*v.point[0]+row[1]*v.point[1]+row[2]*v.point[2]+row[3]))
+  for(let axis=0;axis<3;axis++)for(const fn of [Math.min,Math.max])assert.ok(Math.abs(fn(...body.brep.vertices.map(v=>v.point[axis]))-fn(...expected.map(p=>p[axis])))<1e-8)
+  await historyRoundtrip(deleted,detached,'detach')
+  await solid.getByRole('status',{name:'Сохранено в браузере',exact:true}).waitFor();await page.reload()
+  await solid.getByRole('status',{name:'history-restore',exact:true}).waitFor({state:'hidden'})
+  assert.deepEqual(await snapshot('object-reloaded.json'),detached)
+ }
  assert.deepEqual(renderErrors,[])
- const report={browser:browser.version(),workerRequests:requests,applyWithoutNewWorkerRequest:true,cancelledLateSuccess:true,invalidInput:process.argv.includes('--invalid-input'),fieldErrors:process.argv.includes('--field-errors'),undoRedo:true,keyboard,tabPresses,downloads}
+ const report={browser:browser.version(),workerRequests:requests,applyWithoutNewWorkerRequest:true,cancelledLateSuccess:true,invalidInput:process.argv.includes('--invalid-input'),fieldErrors:process.argv.includes('--field-errors'),undoRedo:true,objectHistory:process.argv.includes('--object-history'),keyboard,tabPresses,downloads}
  await writeFile(path.join(directory,'scene-edit-browser.json'),JSON.stringify(report,null,2)+'\n');console.log(report)
 }catch(error){if(page){await page.screenshot({path:path.join(directory,'failure.png')}).catch(()=>{});await writeFile(path.join(directory,'failure.txt'),await page.locator('body').innerText().catch(()=>''))}throw error}finally{await browser?.close();await new Promise(resolve=>server.close(resolve))}
