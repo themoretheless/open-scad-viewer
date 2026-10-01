@@ -135,6 +135,7 @@ try {
   await activate(solid.getByRole('button',{name:'↷',exact:true}));const redone=await download('Скачать проект JSON',kind+'-redone.json');assert.deepEqual(redone.bodies,changed.bodies)
   if(await menu.evaluate(e=>e.parentElement.open))await activate(menu)
   await activate(solid.getByRole('button',{name:'↶',exact:true}))
+  await solid.getByRole('status',{name:'history-restore',exact:true}).waitFor({state:'hidden'})
  }
  await writeFile(path.join(directory,'manifest.json'),JSON.stringify({schema:'cad-roadmap-step/1',units:'mm',toleranceMm:1e-6,relativeVolumeTolerance:1e-8,parts}))
  const requests=await page.evaluate(()=>window.__sceneEditRequests)
