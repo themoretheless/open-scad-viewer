@@ -1456,6 +1456,10 @@ function prepareCommit(next: DirectDocument, origin:'edit'|'file'='edit') {
   const sourceChanges=new Map<string,boolean>()
   const previousBodies=new Map(previous?.bodies.map(body=>[body.id,body])??[])
   const nextBodies=new Map(next.bodies.map(body=>[body.id,body]))
+  if(origin==='edit')for(const source of previous?.bodies??[])if(!nextBodies.has(source.id)) {
+    const linked=next.bodies.filter(body=>body.instance?.sourceId===source.id)
+    if(linked.length)throw Error(label('Нельзя удалить источник «','Cannot delete source “')+source.name+label('»: остаются связанные экземпляры — ','”: linked instances remain — ')+linked.length+'. '+label('Сделайте их независимыми или удалите вместе с источником.','Make them independent or delete them together with the source.'))
+  }
   // Imported caches are checked and rebuilt by the authoritative history parser.
   // The edit-only guard detects attempts to modify a live linked body directly.
   for(const body of previous?.bodies??[])if(origin==='edit'&&body.instance) {

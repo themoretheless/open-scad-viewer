@@ -3868,3 +3868,38 @@ it.each(['en','ru'])('keeps the complete command registry identified and explain
  expect(ids).toContain('repeat')
  for(const kind of ['box','wedge','cylinder','frustum','tube','cone','sphere','torus'])expect(ids).toContain('add-'+kind)
 })
+
+for(const locale of ['en','ru'])it('localizes source deletion and group deletion dependencies without changing history: '+locale,async()=>{
+ await geometryKernel.warmGeometryKernel()
+ const base=extrudeDirectSketch({id:'profile',name:'Profile',closed:true,points:[[0,0],[10,0],[10,10],[0,10]]},10,'source')
+ const {createSolidInstance}=await import('../src/services/solidInstances')
+ const seed=createSolidInstance({version:1,sketches:[],bodies:[{...base,name:'Source',group:'Sources'}],groups:[{name:'Sources',source:''}]},'source','linked',[[1,0,0,20],[0,1,0,0],[0,0,1,0],[0,0,0,1]])
+ seed.bodies[1].name='Linked';seed.bodies[1].group='Copies'
+ const ui=await mount({locale},stringifyMeshJson(seed)),before=ui.doc()
+ await ui.click('Source');await ui.click(locale==='ru'?'Удалить':'Delete')
+ expect(ui.doc()).toEqual(before)
+ expect(ui.text(ui.all()[0])).toContain(locale==='ru'?'Нельзя удалить источник «Source»: остаются связанные экземпляры — 1':'Cannot delete source “Source”: linked instances remain — 1')
+ expect(ui.text(ui.all()[0])).toContain(locale==='ru'?'Сделайте их независимыми или удалите вместе с источником.':'Make them independent or delete them together with the source.')
+ await ui.click((locale==='ru'?'Удалить группу ':'Delete group ')+'Sources');expect(ui.doc()).toEqual(before)
+ await ui.click('Linked');await ui.click(locale==='ru'?'Сделать независимым':'Make independent')
+ const detached=ui.doc();expect(detached.bodies[1].instance).toBeUndefined()
+ await ui.click((locale==='ru'?'Удалить группу ':'Delete group ')+'Sources')
+ const removed=ui.doc();expect(removed.bodies.map(body=>body.id)).toEqual(['linked']);expect(removed.bodies[0]).toEqual(detached.bodies[1])
+ await ui.click('↶');expect(ui.doc()).toEqual(detached)
+ await ui.click('↷');expect(ui.doc()).toEqual(removed)
+})
+
+it('preserves 1000 linked instances on source refusal and restores deleting the entire group',async()=>{
+ await geometryKernel.warmGeometryKernel()
+ const source={...extrudeDirectSketch({id:'profile',name:'Profile',closed:true,points:[[0,0],[10,0],[10,10],[0,10]]},10,'source'),name:'Source',group:'Sources'}
+ const bodies=[source,...Array.from({length:1000},(_,i)=>({id:'linked-'+i,name:'Linked '+i,group:'Copies',instance:{sourceId:source.id,matrix:[[1,0,0,(i%40)*20],[0,1,0,Math.floor(i/40)*20],[0,0,1,0],[0,0,0,1]]}}))]
+ const ui=await mount({},stringifyMeshJson({version:1,sketches:[],bodies,groups:[{name:'Sources',source:''},{name:'Copies',source:''}]})),before=ui.serialized()
+ await ui.click('Source');await ui.click('Delete')
+ expect(ui.serialized()).toBe(before);expect(ui.text(ui.all()[0])).toContain('linked instances remain — 1000')
+ await ui.click('Delete group Sources');expect(ui.serialized()).toBe(before)
+ await ui.click('Active group: Copies');await ui.click('Move selection to group')
+ const grouped=ui.serialized();expect(JSON.parse(grouped).bodies.every((body:any)=>body.group==='Copies')).toBe(true)
+ await ui.click('Delete group Copies');expect(ui.doc().bodies).toEqual([])
+ await ui.click('↶');expect(ui.serialized()).toBe(grouped)
+ await ui.click('↷');expect(ui.doc().bodies).toEqual([])
+})
