@@ -489,17 +489,15 @@ function toggleObjectState(id:string, kind:'hidden'|'locked') {
 }
 function moveSelectionToGroup() {
   cancelCommand()
-  const next=history.document
-  for(const object of documentObjects(next))if(selectedIds.value.includes(object.id)&&objectSelectable(object.id)) {
-    if(activeGroup.value)object.group=activeGroup.value;else delete object.group
-  }
-  commit(next)
+  void commitDirectTransform(snapDocument.value,selectedIds.value.filter(objectSelectable),[0,0,0],0,1,false,false,false,{operation:'group-move',group:activeGroup.value})
 }
-function addEmptyGroup() {
+async function addEmptyGroup() {
+  if(directTransformPending.value)return
+  cancelCommand()
   const names=new Set([...documentObjects(document.value).map(b=>b.group),...(document.value.groups??[]).map(g=>g.name)])
   let i=1;while(names.has(label('Группа ','Group ')+i))i++
-  const name=label('Группа ','Group ')+i,next=history.document
-  next.groups=[...(next.groups??[]),{name,source:''}];commit(next);activeGroup.value=name
+  const name=label('Группа ','Group ')+i
+  if(await commitDirectTransform(snapDocument.value,[],[0,0,0],0,1,false,false,false,{operation:'group-create',group:name}))activeGroup.value=name
 }
 function selectEdgeChain() {
   if(!selectedBody.value || edgeIndex.value<0)return
@@ -1651,19 +1649,19 @@ watch(()=>[props.open,document.value,JSON.stringify(selectedIds.value)],()=>{
 watch(()=>[cvU.value,cvV.value],()=>{if(pointEditActive.value&&(gizmoBase||gizmoPending.value)){cancelGizmoWorker();cvDrag=null}},{flush:'sync'})
 watch(()=>[cvU.value,cvV.value,cvX.value,cvY.value,cvZ.value,cvWeight.value],()=>{if(numericPointEdit&&gizmoPending.value)cancelGizmoWorker()},{flush:'sync'})
 onUnmounted(()=>{cancelGizmoWorker();gizmoWorker.dispose()})
-const directTransformWorker=createSolidPreviewWorker(),directTransformPending=ref(false)
+const directTransformWorker=createSolidPreviewWorker(),directTransformPending=ref(false),directTransformOperation=ref('transform')
 let directTransformGeneration=0
 function cancelDirectTransform(){
  directTransformGeneration++;directTransformWorker.cancel()
  if(directTransformPending.value){history.cancelRestore();clearDragPreview()}
  directTransformPending.value=false
 }
-async function commitDirectTransform(before:DirectDocument,ids:string[],delta:Vec3,rotation=0,factor=1,localSketch=false,resetFields=false,detach=false){
+async function commitDirectTransform(before:DirectDocument,ids:string[],delta:Vec3,rotation=0,factor=1,localSketch=false,resetFields=false,detach=false,metadata?:{operation:'group-create'|'group-move';group:string}){
  cancelDirectTransform()
  const generation=directTransformGeneration
- directTransformPending.value=true;error.value=''
+ directTransformPending.value=true;directTransformOperation.value=metadata?.operation??(detach?'instance-detach':'transform');error.value=''
  try{
-  const result=await directTransformWorker.run({kind:'sceneEdit',document:before,options:{operation:detach?'instance-detach':localSketch?'sketch-transform':'transform',id:ids[0],ids,createdId:'',x:delta[0],y:delta[1],z:delta[2],axis:'z',angle:rotation,scale:factor}})
+  const result=await directTransformWorker.run({kind:'sceneEdit',document:before,options:{operation:metadata?.operation??(detach?'instance-detach':localSketch?'sketch-transform':'transform'),group:metadata?.group,id:ids[0]??'',ids,createdId:'',x:delta[0],y:delta[1],z:delta[2],axis:'z',angle:rotation,scale:factor}})
   if(generation!==directTransformGeneration)return
   const {validateLocked,added}=prepareCommit(result)
   result.blenderProjectId ??= snapDocument.value.blenderProjectId
@@ -1671,10 +1669,11 @@ async function commitDirectTransform(before:DirectDocument,ids:string[],delta:Ve
   if(generation!==directTransformGeneration||!applied)return
   directTransformPending.value=false;finishCommit(added,result);settleAfterDrag()
   if(resetFields){dx.value=dy.value=dz.value=angle.value=0;scale.value=1}
+  return true
  }catch(e){if(generation===directTransformGeneration){error.value=e instanceof Error?e.message:String(e);clearDragPreview()}}
  finally{if(generation===directTransformGeneration)directTransformPending.value=false}
 }
-watch(()=>[props.open,document.value,JSON.stringify(selectedIds.value),dx.value,dy.value,dz.value,angle.value,scale.value],()=>{if(directTransformPending.value)cancelDirectTransform()},{flush:'sync'})
+watch(()=>[props.open,document.value,JSON.stringify(selectedIds.value),activeGroup.value,dx.value,dy.value,dz.value,angle.value,scale.value],()=>{if(directTransformPending.value)cancelDirectTransform()},{flush:'sync'})
 onUnmounted(()=>{cancelDirectTransform();directTransformWorker.dispose()})
 const transformInputErrors=ref<Record<string,boolean>>({})
 const transformInputInvalid=computed(()=>Object.keys(transformInputErrors.value).length>0)
@@ -2109,7 +2108,7 @@ const commandHint = computed(() => {
   if(nativeNurbsPending.value&&nativeBrepMode.value)return label('Вычисляется B-rep. Esc — отменить.', 'Computing B-rep. Esc cancels.')
   if(nativeNurbsPending.value)return label('Вычисляется NURBS-команда. Esc — отменить.', 'Computing NURBS command. Esc cancels.')
   if(gizmoPending.value)return label('Вычисляется преобразование. Esc — отменить.', 'Computing transform. Esc cancels.')
-  if(directTransformPending.value)return label('Вычисляется преобразование. Esc — отменить.', 'Computing transform. Esc cancels.')
+  if(directTransformPending.value)return directTransformOperation.value.startsWith('group-')?label('Изменяется группа. Esc — отменить.','Updating group. Esc cancels.'):directTransformOperation.value==='instance-detach'?label('Создаётся независимое тело. Esc — отменить.','Making body independent. Esc cancels.'):label('Вычисляется преобразование. Esc — отменить.', 'Computing transform. Esc cancels.')
   if(sketchEditPending.value)return label('Вычисляется предпросмотр. Esc — отменить.', 'Computing preview. Esc cancels.')
   if(booleanPending.value)return label('Вычисляется Boolean. Esc — отменить.', 'Computing Boolean. Esc cancels.')
   if (commandFailure.value) return label('Измените параметры или выбор. Исходная модель сохранена.', 'Change parameters or selection. The original model is preserved.')
@@ -3345,8 +3344,8 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
     </div>
     <div class="workspace-state" aria-live="polite">
       <label>{{ label('Создавать в','Create in') }} <select v-model="activeGroup" :aria-label="label('Активная группа','Active group')"><option value="">{{ label('Без группы','Ungrouped') }}</option><option v-for="section in bodySections.filter(s=>s.name)" :key="section.key" :value="section.name!">{{ section.name }}</option></select></label>
-      <button :disabled="!selectedIds.length" @click="moveSelectionToGroup">{{ label('Перенести выбор', 'Move selection to group') }}</button>
-      <button @click="addEmptyGroup">{{ label('Новая группа','New empty group') }}</button>
+      <button :disabled="!selectedIds.length||directTransformPending" @click="moveSelectionToGroup">{{ label('Перенести выбор', 'Move selection to group') }}</button>
+      <button :disabled="directTransformPending" @click="addEmptyGroup">{{ label('Новая группа','New empty group') }}</button>
       <button v-if="hiddenIds.length" @click="hiddenIds=[]">{{ label('Показать всё','Show all objects') }} ({{ hiddenIds.length }})</button>
       <span v-if="lockedIds.length">{{ label('Заблокировано','Locked') }}: {{ lockedIds.length }}</span>
       <span v-if="subtract">{{ label('A — основа · B — вырез', 'A — target · B — cutter') }}</span>

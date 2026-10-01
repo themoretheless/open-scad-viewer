@@ -276,3 +276,21 @@ it('transforms typed scene meshes through postMessage without detaching or chang
  expect(changedSource.bodies[1]).toEqual(detached.bodies[1])
  expect(Array.from(changedSource.bodies[0].mesh.positions)).not.toEqual(Array.from(detached.bodies[0].mesh.positions))
 },30000)
+
+it('changes groups through the worker without changing geometry, identities or instance links',async()=>{
+ const client=new MainSolidWorkerClient(realWorker);clients.push(client)
+ const source=extrudeDirectSketch({id:'sketch',name:'Box',closed:true,points:[[0,0],[2,0],[2,3],[0,3]]},4,'source')
+ const options={operation:'instance-create' as const,id:'source',ids:['source'],createdId:'linked',x:10,y:0,z:0,axis:'z' as const,angle:0,scale:1}
+ const linked=await client.run({kind:'sceneEdit',document:{version:1,sketches:[],bodies:[source]},options})
+ const before=structuredClone(linked)
+ const grouped=await client.run({kind:'sceneEdit',document:linked,options:{...options,operation:'group-move',ids:['linked'],group:'Assembly'}})
+ expect(grouped.bodies[0]).toEqual(linked.bodies[0])
+ expect(grouped.bodies[1]).toEqual({...linked.bodies[1],group:'Assembly'})
+ expect(linked).toEqual(before)
+ const created=await client.run({kind:'sceneEdit',document:grouped,options:{...options,operation:'group-create',group:'Empty'}})
+ expect(created.groups).toEqual([{name:'Empty',source:''}]);expect(created.bodies).toEqual(grouped.bodies)
+ const ungrouped=await client.run({kind:'sceneEdit',document:created,options:{...options,operation:'group-move',ids:['linked'],group:''}})
+ expect(ungrouped.bodies).toEqual(linked.bodies)
+ await expect(client.run({kind:'sceneEdit',document:created,options:{...options,operation:'group-create',group:'Empty'}})).rejects.toThrow('Group already exists')
+ await expect(client.run({kind:'sceneEdit',document:created,options:{...options,operation:'group-create',group:''}})).rejects.toThrow('Invalid object group')
+})

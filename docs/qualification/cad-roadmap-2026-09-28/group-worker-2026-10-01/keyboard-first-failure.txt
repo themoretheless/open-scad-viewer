@@ -1,0 +1,11 @@
+file:///private/tmp/open-scad-viewer-cad-resume/scripts/benchmark-solid-instances-browser.mjs:123
+  async function focusGroupControl(locator){for(let i=0;i<1000;i++){if(await locator.evaluate(el=>el===document.activeElement))return;await page.keyboard.press('Tab');groupTabs++}throw Error('Group control unreachable with Tab')}
+                                                                                                                                                                                         ^
+
+Error: Group control unreachable with Tab
+    at focusGroupControl (file:///private/tmp/open-scad-viewer-cad-resume/scripts/benchmark-solid-instances-browser.mjs:123:186)
+    at async activateGroupControl (file:///private/tmp/open-scad-viewer-cad-resume/scripts/benchmark-solid-instances-browser.mjs:124:61)
+    at async exportGroupState (file:///private/tmp/open-scad-viewer-cad-resume/scripts/benchmark-solid-instances-browser.mjs:126:292)
+    at async file:///private/tmp/open-scad-viewer-cad-resume/scripts/benchmark-solid-instances-browser.mjs:127:18
+
+Node.js v26.10.0
