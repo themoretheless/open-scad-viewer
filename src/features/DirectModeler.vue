@@ -16,6 +16,7 @@ import SceneObjectControls from '../components/SceneObjectControls.vue'
 import SceneVirtualList from '../components/SceneVirtualList.vue'
 import { connectedEdgeChain } from '../services/edgeSelection'
 import CadQuantityInput from '../components/CadQuantityInput.vue'
+import {numericRectangle,numericSlotSources} from '../services/numericSketchAuthoring'
 import {type SurfaceBoundaryReport,type SurfaceBoundaryOptions} from '../services/solidSurfaceDiagnostics'
 import { type inspectSolidDisplay, inspectSolidIntersections } from '../services/solidDiagnostics'
 import SketchDimensionPanel from '../components/SketchDimensionPanel.vue'
@@ -125,6 +126,33 @@ const exactRoundCurve=computed(()=>{
 })
 const exactRoundPoints=computed(()=>(tool.value==='circle'||tool.value==='arc')&&exactRoundCurve.value?sampleCurve(exactRoundCurve.value):[])
 function createExactRoundCurve(){if((tool.value!=='circle'&&tool.value!=='arc')||!exactRoundCurve.value)return;run(()=>{addSketch(sampleCurve(exactRoundCurve.value!),exactRoundCurve.value!.kind==='circle',exactRoundCurve.value!);draft.value=[];draftCursor.value=null;tool.value='select'})}
+const draftSize=ref<Point2>([20,10]),draftSizeValid=ref([true,true]),draftEnd=ref<Point2>([20,0]),draftEndValid=ref([true,true])
+const exactRectangle=computed(()=>draftPointValid.value.every(Boolean)&&draftSizeValid.value.every(Boolean)?numericRectangle(draftPoint.value,draftSize.value):null)
+function createExactRectangle(){if(tool.value!=='rectangle'||!exactRectangle.value)return;run(()=>{addSketch(exactRectangle.value!,true);draft.value=[];draftCursor.value=null;tool.value='select'})}
+const numericSlotWorker=createSolidPreviewWorker(),numericSlotPending=ref(false),numericSlotResult=shallowRef<DirectSketch|null>(null),numericSlotError=ref(false),numericSlotRetry=ref(0)
+let numericSlotGeneration=0,numericSlotAutoApply=false
+function cancelNumericSlot(){numericSlotGeneration++;numericSlotWorker.cancel();numericSlotPending.value=false;numericSlotResult.value=null;numericSlotError.value=false;numericSlotAutoApply=false}
+onUnmounted(()=>{cancelNumericSlot();numericSlotWorker.dispose()})
+const numericSlotInput=computed(()=>draftPointValid.value.every(Boolean)&&draftEndValid.value.every(Boolean)&&slotWidthValid.value?numericSlotSources(draftPoint.value,draftEnd.value,slotWidth.value,activePlane.value):null)
+function createExactSlot(){const sketch=numericSlotResult.value;if(tool.value!=='slot'||numericSlotPending.value||!sketch?.retainedProfile||!numericSlotInput.value)return;run(()=>{addSketch(sketch.points,true,undefined,sketch.retainedProfile);draft.value=[];draftCursor.value=null;tool.value='select'})}
+function refreshNumericSlot(){
+ const autoApply=numericSlotAutoApply;cancelNumericSlot()
+ if(!props.open||tool.value!=='slot'||!numericSlotInput.value)return
+ const generation=numericSlotGeneration,source=document.value,input=numericSlotInput.value
+ numericSlotPending.value=true
+ queueMicrotask(async()=>{
+  if(generation!==numericSlotGeneration)return
+  try{
+   const result=await numericSlotWorker.run({kind:'profilePrepare',...input,tolerance:1e-7})
+   if(generation!==numericSlotGeneration||tool.value!=='slot'||document.value!==source)return
+   const sketch=result.document.sketches.find(s=>s.id===result.id)
+   if(!result.report.accepted||!sketch?.retainedProfile)throw Error('Slot profile preparation failed')
+   numericSlotResult.value=sketch;numericSlotPending.value=false
+   if(autoApply)createExactSlot()
+  }catch{if(generation===numericSlotGeneration)numericSlotError.value=true}
+  finally{if(generation===numericSlotGeneration)numericSlotPending.value=false}
+ })
+}
 const canAddDraftPoint=computed(()=>draftPointValid.value.every(Boolean)&&draftPoint.value.every(Number.isFinite)&&!draft.value.some(p=>p[0]===draftPoint.value[0]&&p[1]===draftPoint.value[1]))
 function addExactDraftPoint(){if(tool.value!=='polyline'||!canAddDraftPoint.value)return;draft.value=[...draft.value,[...draftPoint.value]];draftCursor.value=null;snapMarker.value=null;snapGuide.value=null}
 function undoDraftPoint(){draft.value=draft.value.slice(0,-1);draftCursor.value=null;snapMarker.value=null;snapGuide.value=null}
@@ -277,7 +305,7 @@ let orbitDrag: { x: number; y: number; yaw: number; pitch: number; pointer: numb
 // While the camera is being dragged the view falls back to the working mesh so orbiting stays responsive.
 const cameraDragging = ref(false)
 let heightDrag: { y: number; height: number; pointer: number; svg: SVGSVGElement } | null = null
-let gesture: { start: Point2; document: DirectDocument; vertex: number | null; id: string; pointer: number; pane: Pane; svg: SVGSVGElement; pan: boolean; center: Point2; sketch?: boolean; anchor?: Point2; anchor3?: Vec3; dragStart?: Point2; workerEdit?:boolean; inverse?:DOMMatrix|null; bodyDrag?: { ids: string[]; delta: Vec3 } | null } | null = null
+let gesture: { start: Point2; document: DirectDocument; vertex: number | null; id: string; pointer: number; pane: Pane; svg: SVGSVGElement; pan: boolean; center: Point2; end?:Point2; sketch?: boolean; anchor?: Point2; anchor3?: Vec3; dragStart?: Point2; workerEdit?:boolean; inverse?:DOMMatrix|null; bodyDrag?: { ids: string[]; delta: Vec3 } | null } | null = null
 
 /**
  * Elements offset directly while a body drag is in flight.
@@ -1546,15 +1574,15 @@ async function undo(redo = false) {
 }
 watch(()=>[props.open,document.value,lockedIds.value.join(','),activeGroup.value],()=>{if(historyPending.value)cancelHistoryRestore()},{flush:'sync'})
 onUnmounted(()=>{cancelHistoryRestore();historyWorker.dispose()})
-function addSketch(points: Point2[], closed: boolean, analytic?: import('../services/directSketchGeometry').AnalyticCurve) {
+function addSketch(points: Point2[], closed: boolean, analytic?: import('../services/directSketchGeometry').AnalyticCurve,retainedProfile?:import('../services/geometry/brepProfile').BrepProfile) {
   validateSimpleSketch(points,closed)
   const d = history.document, id = crypto.randomUUID()
-  d.sketches.push({ id, name: label('Эскиз ', 'Sketch ') + (d.sketches.length + 1), points, closed, analytic, plane: JSON.parse(JSON.stringify(activePlane.value)), ...(workplaneBodyId.value?{supportBodyId:workplaneBodyId.value}:{}) })
+  d.sketches.push({ id, name: label('Эскиз ', 'Sketch ') + (d.sketches.length + 1), points, closed, analytic, ...(retainedProfile?{retainedProfile}:{}), plane: JSON.parse(JSON.stringify(activePlane.value)), ...(workplaneBodyId.value?{supportBodyId:workplaneBodyId.value}:{}) })
   commit(d); pickObject(id,'2d')
 }
 function beginSketch(value: typeof tool.value) {
   cancelGesture(); operation.value = null; advancedOp.value = null; boxSelect.value = false
-  choosingSketchFace.value=false;draftPoint.value=[0,0];draftPointValid.value=[true,true];draftRadius.value=10;draftRadiusValid.value=true;draftArcStart.value=0;draftArcSweep.value=180;draftArcValid.value=[true,true];tool.value = value; mode.value = workplaneBodyId.value ? '3d' : '2d'; sketchPaneOpen.value = true
+  choosingSketchFace.value=false;draftPoint.value=[0,0];draftPointValid.value=[true,true];draftRadius.value=10;draftRadiusValid.value=true;draftArcStart.value=0;draftArcSweep.value=180;draftArcValid.value=[true,true];draftSize.value=[20,10];draftSizeValid.value=[true,true];draftEnd.value=[20,0];draftEndValid.value=[true,true];tool.value = value; mode.value = workplaneBodyId.value ? '3d' : '2d'; sketchPaneOpen.value = true
 }
 const canExtrudeSketch = computed(() => !!selectedSketch.value?.closed && tool.value === 'select' && !draft.value.length)
 function finish(closed: boolean) { run(() => { if (draft.value.length < (closed ? 3 : 2)) return; addSketch(draft.value, closed); draft.value = []; draftCursor.value=null; tool.value = 'select' }) }
@@ -2206,7 +2234,7 @@ function cancelCommandState() {
   cancelDisplayPreparation()
   cancelHistoryRestore()
   cancelDirectTransform(); cancelSketchEdit(); cancelBoolean(); invalidateSolidPreview(); invalidQuantities.value = {}
-  cancelGesture(); operation.value = null; advancedOp.value = null; subtract.value = null
+  cancelNumericSlot();cancelGesture(); operation.value = null; advancedOp.value = null; subtract.value = null
   previewBody.value = null; previewEmpty.value = false; previewError.value = ''
 }
 function cancelCommand(){cancelCommandState();tool.value='select';workspace.value?.focus()}
@@ -2688,6 +2716,7 @@ function move(e: PointerEvent) {
     else p = snapped(p,e,start,gesture.pane)
   } else { const anchor=gesture.anchor3??[start[0],start[1],0],target=snapped3([anchor[0]+p[0]-start[0],anchor[1]+p[1]-start[1],anchor[2]],e,gesture.document,selectedIds.value,anchor,undefined,true);p=[start[0]+target[0]-anchor[0],start[1]+target[1]-anchor[1]] }
   if (gesture.sketch) {
+    gesture.end=[...p]
     try { draft.value = tool.value === 'slot' ? (slotWidthValid.value && Math.hypot(p[0]-start[0],p[1]-start[1])>1e-6 ? slotSketch(start,p,slotWidth.value) : []) : tool.value === 'rectangle' ? [start, [p[0], start[1]], p, [start[0], p[1]]] : Array.from({ length: tool.value==='arc'?33:64 }, (_, i) => { const r = Math.hypot(p[0] - start[0], p[1] - start[1]), a = i * Math.PI / 32; return [start[0] + r * Math.cos(a), start[1] + r * Math.sin(a)] as Point2 })
     } catch(cause) { draft.value=[];error.value=String(cause);return }
     drawMeasure.value = tool.value === 'slot' ? label('Паз: ширина ','Slot width: ')+slotWidth.value+' mm' : tool.value === 'circle' ? `R ${Math.hypot(p[0]-start[0],p[1]-start[1]).toFixed(2)} mm` : `${Math.abs(p[0]-start[0]).toFixed(2)} × ${Math.abs(p[1]-start[1]).toFixed(2)} mm`
@@ -2748,9 +2777,10 @@ function up(e: PointerEvent) {
   drawMeasure.value = ''; snapMarker.value = null
   if (!gesture || gesture.pointer !== e.pointerId) return
   move(e)
-  const start=gesture.start, before = gesture.document, pane = gesture.pane, drawing=gesture.sketch, pan = gesture.pan, bodyDrag = gesture.bodyDrag, selectionOnly = gesture.dragStart && !bodyDrag, workerEdit=gesture.workerEdit; gesture = null
+  const start=gesture.start, before = gesture.document, pane = gesture.pane, drawing=gesture.sketch, pan = gesture.pan, bodyDrag = gesture.bodyDrag, end=gesture.end, selectionOnly = gesture.dragStart && !bodyDrag, workerEdit=gesture.workerEdit; gesture = null
   if (pan || selectionOnly) return
   if(workerEdit){gizmoApplyRevision=gizmoRevision;return}
+  if(drawing&&tool.value==='slot'&&draft.value.length&&end){draftPoint.value=[...start];draftEnd.value=[...end];draftPointValid.value=[true,true];draftEndValid.value=[true,true];numericSlotAutoApply=true;draft.value=[];refreshNumericSlot();return}
   run(() => {
     // The exact translation, including B-rep, is applied once here rather than per move.
     if (bodyDrag) { void commitDirectTransform(before,bodyDrag.ids,bodyDrag.delta); return }
@@ -3238,6 +3268,7 @@ async function refreshCurveDisplay(){
  if(result.changed)curveDisplayVersion.value++
  curveDisplayErrors.value=result.errors;curveDisplayPending.value=false
 }
+watch(()=>[props.open,tool.value,document.value,JSON.stringify(activePlane.value),JSON.stringify(draftPoint.value),JSON.stringify(draftPointValid.value),JSON.stringify(draftEnd.value),JSON.stringify(draftEndValid.value),slotWidth.value,slotWidthValid.value,numericSlotRetry.value],refreshNumericSlot,{flush:'sync'})
 watch(()=>[props.open,kernelReady.value,displayCurves.value],()=>void refreshCurveDisplay(),{immediate:true,flush:'post'})
 
 const displayProfiles=computed(()=>[...document.value.sketches,...(advancedPreview.value.document?.sketches??[])].flatMap(s=>s.retainedProfile?[{id:s.id,profile:s.retainedProfile}]:[]))
@@ -3531,7 +3562,8 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
                   <circle v-for="cv in nativeCage" :key="cv.u+'-'+cv.v" :cx="project(cv.point,'3d')[0]" :cy="project(cv.point,'3d')[1]" :r="views['3d']/110" :fill="cvU===cv.u&&cvV===cv.v?'#ff8b77':'#ffc977'" stroke="#2a2114" vector-effect="non-scaling-stroke" @pointerdown.stop="startCv($event,cv.u,cv.v)" />
                 </g>
               </g>
-              <polyline v-if="pane===mode && (tool==='circle'||tool==='arc') && !draft.length && exactRoundPoints.length" :data-preview="tool==='circle'?'numeric-circle':'numeric-arc'" :points="exactRoundPoints.map(p=>project(pane==='3d'?worldPoint(p,activePlane):p,pane).join(',')).join(' ')" fill="none" stroke="#b894ff" stroke-dasharray="4 3" vector-effect="non-scaling-stroke" pointer-events="none" />
+              <polyline v-if="pane===mode && (tool==='circle'||tool==='arc') && !draft.length && exactRoundPoints.length" :data-preview="tool==='circle'?'numeric-circle':'numeric-arc'" :points="exactRoundPoints.map(p=>project(pane==='3d'?worldPoint(p,activePlane):p,pane).join(',')).join(' ')" fill="none" stroke="#77eac5" stroke-width="2" stroke-dasharray="4 3" vector-effect="non-scaling-stroke" pointer-events="none" />
+              <polyline v-if="pane===mode && !draft.length && (tool==='rectangle'&&exactRectangle || tool==='slot'&&numericSlotResult)" :data-preview="tool==='rectangle'?'numeric-rectangle':'numeric-slot'" :points="[...(tool==='rectangle'?exactRectangle!:numericSlotResult!.points),(tool==='rectangle'?exactRectangle!:numericSlotResult!.points)[0]].map(p=>project(pane==='3d'?worldPoint(p,activePlane):p,pane).join(',')).join(' ')" fill="none" stroke="#77eac5" stroke-width="2" stroke-dasharray="4 3" vector-effect="non-scaling-stroke" pointer-events="none" />
               <g v-if="pane==='3d' && workplaneBodyId" pointer-events="none" fill="none" stroke="#77eac5" vector-effect="non-scaling-stroke">
                 <path v-for="(loop,i) in workplaneOutline" :key="i" :d="'M '+loop.map(p=>project(worldPoint(p,activePlane),'3d').join(',')).join(' L ')+' Z'" stroke-dasharray="5 3" stroke-width="1" vector-effect="non-scaling-stroke" />
                 <polyline v-if="draft.length" :points="(tool==='polyline'&&draftCursor?[...draft,draftCursor]:draft).map(p=>project(worldPoint(p,activePlane),'3d').join(',')).join(' ')" stroke-width="2" />
@@ -3659,6 +3691,28 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
             <div class="zoom-tools"><button :aria-label="label('Приблизить ', 'Zoom in ') + pane" @click="zoom(pane, .8)">+</button><button :aria-label="label('Отдалить ', 'Zoom out ') + pane" @click="zoom(pane, 1.25)">−</button></div>
             <div v-if="pane === '3d'" class="fps-badge" :class="{ low: fps > 0 && fps < 30 }" role="status" :aria-label="label('Кадров в секунду', 'Frames per second')">{{ fps }} FPS · {{ frameMs }} ms<template v-if="gpuActive"> · draw {{ drawMs }} ms</template></div>
             </div>
+            <section v-if="(tool==='rectangle'||tool==='slot')&&pane===mode" class="operation-card" :aria-label="tool==='rectangle'?label('Точный прямоугольник','Exact rectangle'):label('Точный паз','Exact slot')">
+              <header class="numeric-authoring-header"><strong>{{ tool==='rectangle'?label('Прямоугольник — точка и размеры','Rectangle — origin and size'):label('Паз — центры и ширина','Slot — centers and width') }}</strong>
+                <template v-if="tool==='rectangle'"><small v-if="!exactRectangle" role="alert">{{ label('Исправьте точку и размеры. Размеры от 0,01 мм; все углы должны быть в пределах ±1 000 000 мм.','Correct origin and size. Dimensions start at 0.01 mm; all corners must stay within ±1,000,000 mm.') }}</small></template>
+                <template v-else><small v-if="!numericSlotInput" role="alert">{{ label('Исправьте центры и ширину. Центры должны различаться минимум на 0,000001 мм, ширина — от 0,02 мм; контур — в пределах ±1 000 000 мм.','Correct centers and width. Centers must be at least 0.000001 mm apart, width starts at 0.02 mm; contour must stay within ±1,000,000 mm.') }}</small><small v-else-if="numericSlotError" role="alert">{{ label('Не удалось подготовить паз. Повторите расчёт или измените центры и ширину.','Could not prepare the slot. Retry or change centers and width.') }}</small><button v-if="numericSlotError" @click="numericSlotRetry++">{{ label('Повторить расчёт паза','Retry slot calculation') }}</button><small v-if="numericSlotPending" role="status" aria-label="numeric-slot-preparation">{{ label('Готовлю точный паз…','Preparing exact slot…') }}</small></template>
+              </header>
+              <small>{{ tool==='rectangle'?label('Начальная точка и положительные размеры в активной плоскости, мм. Создать — применить, Esc — отменить.','Origin and positive dimensions in the active plane, mm. Create applies; Esc cancels.'):label('Два центра торцов и полная ширина, мм. Создать — применить, Esc — отменить.','Two end-cap centers and full width, mm. Create applies; Esc cancels.') }}</small>
+              <label v-for="(axis,i) in ['X','Y']" :key="axis">{{ tool==='slot'?'A · ':'' }}{{ axis }}<CadQuantityInput v-model="draftPoint[i]" :locale="locale" :min="-1000000" :max="1000000" :aria-label="label('Начальная координата ','Origin coordinate ')+axis" @validity="draftPointValid[i]=$event" /></label>
+              <template v-if="tool==='rectangle'">
+                <label v-for="(axis,i) in [label('Ширина','Width'),label('Высота','Height')]" :key="axis">{{ axis }}<CadQuantityInput v-model="draftSize[i]" :locale="locale" :min=".01" :max="1000000" :aria-label="label('Размер прямоугольника ','Rectangle size ')+axis" @validity="draftSizeValid[i]=$event" /></label>
+
+                <button :disabled="!exactRectangle" @click="createExactRectangle">{{ label('Создать прямоугольник','Create rectangle') }}</button>
+              </template>
+              <template v-else>
+                <label v-for="(axis,i) in ['X','Y']" :key="axis">B · {{ axis }}<CadQuantityInput v-model="draftEnd[i]" :locale="locale" :min="-1000000" :max="1000000" :aria-label="label('Конечная координата ','End coordinate ')+axis" @validity="draftEndValid[i]=$event" /></label>
+                <label>{{ label('Ширина паза, мм','Slot width, mm') }}<CadQuantityInput v-model="slotWidth" :locale="locale" :min=".02" :max="1000000" :aria-label="label('Ширина паза, мм','Slot width, mm')" @validity="slotWidthValid=$event" /></label>
+
+
+
+
+                <button :disabled="!numericSlotInput||numericSlotPending||!numericSlotResult" @click="createExactSlot">{{ label('Создать паз','Create slot') }}</button>
+              </template>
+            </section>
             <section v-if="(tool==='polyline'||tool==='circle'||tool==='arc') && pane===mode" class="operation-card" :aria-label="tool==='arc'?label('Точная дуга','Exact arc'):tool==='circle'?label('Точный круг','Exact circle'):label('Точки ломаной','Polyline points')">
               <strong>{{ tool==='arc'?label('Дуга — центр, радиус и углы','Arc — center, radius and angles'):tool==='circle'?label('Круг — центр и радиус','Circle — center and radius'):label('Ломаная — точные координаты','Polyline — exact coordinates') }}</strong>
               <small>{{ tool==='arc'?label('Углы в градусах. Положительный разворот — против часовой стрелки. Создать дугу — применить, Esc — отменить.','Angles in degrees. Positive sweep runs counterclockwise. Create arc applies; Esc cancels.'):tool==='circle'?label('Центр и радиус в активной плоскости, мм. Создать круг — применить, Esc — отменить.','Center and radius in the active plane, mm. Create circle applies; Esc cancels.'):label('Координаты в активной плоскости, мм. Добавьте точки, затем замкните контур или завершите линию. Esc — отмена.','Coordinates in the active plane, mm. Add points, then close the contour or finish the line. Esc cancels.') }}</small>
@@ -4156,7 +4210,7 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
     </aside>
     </div>
     <footer v-if="tool==='slot' || (tool === 'polyline' && draft.length)" class="context-bar">
-      <span v-if="tool==='slot'">{{ label('Потяните от центра одного торца к другому. Esc — отмена.','Drag between the two end-cap centers. Esc cancels.') }}</span><label v-if="tool==='slot'">{{ label('Ширина паза, мм','Slot width, mm') }} <CadQuantityInput v-model="slotWidth" :locale="locale" :min="0.02" :max="1000000" :aria-label="label('Ширина паза, мм','Slot width, mm')" @validity="slotWidthValid=$event" /></label><template v-if="tool === 'polyline' && draft.length"><button @click="undoDraftPoint">{{ label('Убрать точку · Backspace','Undo point · Backspace') }}</button><span>{{ draft.length }} {{ label('точек', 'points') }}</span><button :disabled="draft.length < 3" @click="finish(true)">{{ label('Замкнуть контур', 'Close contour') }}</button><button :disabled="draft.length < 2" @click="finish(false)">{{ label('Завершить линию', 'Finish line') }}</button><button @click="cancelGesture">Esc</button></template>
+      <span v-if="tool==='slot'">{{ label('Потяните от центра одного торца к другому. Esc — отмена.','Drag between the two end-cap centers. Esc cancels.') }}</span><template v-if="tool === 'polyline' && draft.length"><button @click="undoDraftPoint">{{ label('Убрать точку · Backspace','Undo point · Backspace') }}</button><span>{{ draft.length }} {{ label('точек', 'points') }}</span><button :disabled="draft.length < 3" @click="finish(true)">{{ label('Замкнуть контур', 'Close contour') }}</button><button :disabled="draft.length < 2" @click="finish(false)">{{ label('Завершить линию', 'Finish line') }}</button><button @click="cancelGesture">Esc</button></template>
     </footer>
     <CommandPalette v-if="paletteOpen" :open="paletteOpen" :commands="solidCommands" @close="paletteOpen = false" @execute="executeSolidCommand" />
     <div class="input-hint" role="status">{{ inputMode === 'touch' ? label('Два пальца: масштаб и перенос · Навигация: одним пальцем вращать 3D / двигать 2D', 'Two fingers: zoom and pan · Navigate: one finger orbits 3D / pans 2D') : label('ЛКМ: выбор / вращение 3D · СКМ или Shift: перенос · Колесо: масштаб', 'Left drag: select / orbit 3D · Middle drag or Shift: pan · Wheel: zoom') }}</div>
@@ -4193,6 +4247,7 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
 .gizmo-dimension{display:flex;align-items:center;gap:.3em;background:var(--bg, #252520);color:var(--text, #f5f5f0);border:1px solid #77eac5;border-radius:.3em;padding:.2em;box-sizing:border-box;width:100%;height:85%}.gizmo-dimension :deep(.quantity-field){width:100%}.gizmo-dimension :deep(input){font:inherit;min-width:0;width:100%;padding:0;border:0;background:transparent;color:inherit}.gizmo-dimension.failed{border-color:#f87171}.gizmo-dimension:focus-within{outline:2px solid var(--accent)}
 .scene-list .selected-group{color:var(--accent);border-left:2px solid var(--accent)}
 .operation-card small[role=alert]{color:var(--danger);border-left:2px solid var(--danger);padding-left:7px}
+.operation-card .numeric-authoring-header{position:sticky;top:0;z-index:3;background:var(--surface);display:grid;gap:8px;box-shadow:0 -15px 0 var(--surface),0 6px 0 var(--surface)}.operation-card .numeric-authoring-header [role=alert]{color:var(--danger,#f87171)}
 .operation-card>strong{position:sticky;top:0;z-index:3;background:var(--surface);box-shadow:0 -15px 0 var(--surface),0 6px 0 var(--surface)}
 .operation-card>small[role=alert]{position:sticky;top:44px;z-index:2;background:var(--surface)}
 @media(max-width:750px){.state-legend{display:none}.command-guidance{font-size:11px}.workspace-state{gap:6px}}

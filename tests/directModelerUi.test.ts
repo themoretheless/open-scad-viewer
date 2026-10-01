@@ -915,7 +915,7 @@ it('draws a slot with a validated width and undoes it as one operation',async()=
  width.props['onUpdate:modelValue']('0.4 cm');await nextTick()
  const svg=ui.all().find(n=>n.tag==='svg'&&n.props['aria-label']==='2D sketch canvas')!
  svg.props.onPointerdown({...ui.event(svg,40,-40),altKey:true});svg.props.onPointermove({...ui.event(svg,50,-40),altKey:true});svg.props.onPointerup({...ui.event(svg,50,-40),altKey:true});await flushClearance()
- const slot=ui.doc().sketches.at(-1)!;expect(slot.closed).toBe(true);expect(slot.points).toHaveLength(66)
+ const slot=ui.doc().sketches.at(-1)!;expect(slot.closed).toBe(true);expect(slot.retainedProfile!.loops[0]).toHaveLength(6)
  expect(Math.max(...slot.points.map(p=>p[1]))-Math.min(...slot.points.map(p=>p[1]))).toBeCloseTo(4)
  await ui.click('↶');expect(ui.doc()).toEqual(before)
 })
@@ -4025,4 +4025,50 @@ it.each([120,-120])('authors an exact directed arc with sweep %s and cancels pre
  await ui.click('↶');expect(ui.doc()).toEqual(before);await ui.click('↷');expect(ui.doc()).toEqual(after)
  await ui.click('Arc');for(const invalid of ['bad',0,.01,-.05,360,-360]){field('Arc sweep').props['onUpdate:modelValue'](invalid);await nextTick();expect(ui.button('Create arc').props.disabled).toBe(true);expect(ui.all().some(n=>n.props['data-preview']==='numeric-arc')).toBe(false)}
  field('Arc sweep').props['onUpdate:modelValue'](-90);await nextTick();expect(ui.all().some(n=>n.props['data-preview']==='numeric-arc')).toBe(true);await commandKey(ui,'Escape');expect(ui.doc()).toEqual(after);expect(ui.all().some(n=>n.props['data-preview']==='numeric-arc')).toBe(false)
+})
+
+it('creates a numeric rectangle with exact dimensions, preview, cancel and history',async()=>{
+ const ui=await mount();await commandKey(ui,'r');const before=ui.doc()
+ const field=(name:string)=>ui.all().find(n=>n.props['aria-label']===name)!
+ field('Origin coordinate X').props['onUpdate:modelValue']('2 cm');field('Origin coordinate Y').props['onUpdate:modelValue'](-5);field('Rectangle size Width').props['onUpdate:modelValue']('10 mm');field('Rectangle size Height').props['onUpdate:modelValue'](6);await nextTick()
+ expect(ui.doc()).toEqual(before);expect(ui.all().some(n=>n.props['data-preview']==='numeric-rectangle')).toBe(true)
+ await ui.click('Create rectangle');const after=ui.doc();expect(after.sketches.at(-1)!.points).toEqual([[20,-5],[30,-5],[30,1],[20,1]])
+ await ui.click('↶');expect(ui.doc()).toEqual(before);await ui.click('↷');expect(ui.doc()).toEqual(after)
+ await commandKey(ui,'r');for(const value of ['bad',0,-1]){field('Rectangle size Width').props['onUpdate:modelValue'](value);await nextTick();expect(ui.button('Create rectangle').props.disabled).toBe(true)}
+ field('Rectangle size Width').props['onUpdate:modelValue'](10);await nextTick();await commandKey(ui,'Escape');expect(ui.doc()).toEqual(after);expect(ui.all().some(n=>n.props['data-preview']==='numeric-rectangle')).toBe(false)
+})
+it('creates a retained numeric slot from its prepared preview and preserves history',async()=>{
+ const ui=await mount();await ui.click('Slot');const before=ui.doc()
+ const field=(name:string)=>ui.all().find(n=>n.props['aria-label']===name)!
+ field('Origin coordinate X').props['onUpdate:modelValue'](0);field('Origin coordinate Y').props['onUpdate:modelValue'](0);field('End coordinate X').props['onUpdate:modelValue'](10);field('End coordinate Y').props['onUpdate:modelValue'](0);field('Slot width, mm').props['onUpdate:modelValue']('0.4 cm');await flushClearance()
+ expect(ui.doc()).toEqual(before);expect(ui.all().some(n=>n.props['data-preview']==='numeric-slot')).toBe(true)
+ await ui.click('Create slot');const after=ui.doc();expect(after.sketches.at(-1)!.retainedProfile!.areaMm2).toBeCloseTo(40+4*Math.PI,10)
+ await ui.click('↶');expect(ui.doc()).toEqual(before);await ui.click('↷');expect(ui.doc()).toEqual(after)
+ await ui.click('Slot');field('End coordinate X').props['onUpdate:modelValue'](0);await flushClearance();expect(ui.button('Create slot').props.disabled).toBe(true);expect(ui.all().some(n=>n.props['data-preview']==='numeric-slot')).toBe(false)
+ await commandKey(ui,'Escape');expect(ui.doc()).toEqual(after)
+})
+it('discards cancelled and superseded numeric slot preparation replies',async()=>{
+ const {prepareSolidProfile}=await import('../src/services/solidProfilePreparation');const requests:Array<{job:any;resolve:(value:any)=>void}>=[]
+ previewWorkerRun.mockImplementation(job=>job.kind==='profilePrepare'?new Promise(resolve=>requests.push({job,resolve})):undefined)
+ const ui=await mount();await ui.click('Slot');const before=ui.doc();expect(requests).toHaveLength(1)
+ const field=ui.all().find(n=>n.props['aria-label']==='End coordinate X')!;field.props['onUpdate:modelValue'](10);await flushClearance();expect(requests).toHaveLength(2)
+ const reply=(r:typeof requests[number])=>prepareSolidProfile(r.job.document,r.job.ids,r.job.tolerance)
+ requests[0].resolve(reply(requests[0]));await flushClearance();expect(ui.button('Create slot').props.disabled).toBe(true)
+ await commandKey(ui,'Escape');requests[1].resolve(reply(requests[1]));await flushClearance();expect(ui.doc()).toEqual(before);expect(ui.all().some(n=>n.props['data-preview']==='numeric-slot')).toBe(false)
+})
+it.each(['en','ru'])('localizes numeric slot worker failure and recovers through retry in %s',async(locale)=>{
+ let fail=true;previewWorkerRun.mockImplementation(job=>{if(job.kind==='profilePrepare'&&fail){fail=false;return Promise.reject(Error('PRIVATE TRANSPORT'))}return undefined})
+ const ui=await mount({locale});await ui.click(locale==='ru'?'Паз':'Slot');const before=ui.doc()
+ const expected=locale==='ru'?'Не удалось подготовить паз.':'Could not prepare the slot.'
+ expect(ui.all().some(n=>n.props.role==='alert'&&ui.text(n).includes(expected))).toBe(true);expect(ui.all().some(n=>ui.text(n).includes('PRIVATE TRANSPORT'))).toBe(false)
+ await ui.click(locale==='ru'?'Повторить расчёт паза':'Retry slot calculation');expect(ui.doc()).toEqual(before);expect(ui.all().some(n=>n.props['data-preview']==='numeric-slot')).toBe(true)
+})
+
+it('cancels automatic slot creation after a mouse drag while its profile worker is pending',async()=>{
+ const {prepareSolidProfile}=await import('../src/services/solidProfilePreparation');const requests:Array<{job:any;resolve:(value:any)=>void}>=[]
+ previewWorkerRun.mockImplementation(job=>job.kind==='profilePrepare'?new Promise(resolve=>requests.push({job,resolve})):undefined)
+ const ui=await mount();await ui.click('Slot');const before=ui.doc(),svg=ui.all().find(n=>n.tag==='svg'&&n.props['aria-label']==='2D sketch canvas')!
+ svg.props.onPointerdown({...ui.event(svg,40,-40),altKey:true});svg.props.onPointermove({...ui.event(svg,50,-40),altKey:true});svg.props.onPointerup({...ui.event(svg,50,-40),altKey:true});await flushClearance();expect(ui.doc()).toEqual(before)
+ await commandKey(ui,'Escape');for(const r of requests)r.resolve(prepareSolidProfile(r.job.document,r.job.ids,r.job.tolerance));await flushClearance()
+ expect(ui.doc()).toEqual(before);expect(ui.all().some(n=>n.props['data-preview']==='numeric-slot')).toBe(false)
 })

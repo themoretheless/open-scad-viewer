@@ -1,0 +1,48 @@
+{
+  "schema": "cad-roadmap-step/1",
+  "units": "mm",
+  "toleranceMm": 0.000001,
+  "relativeVolumeTolerance": 1e-8,
+  "parts": [
+    {
+      "name": "Numeric rectangle",
+      "file": "rectangle.step",
+      "sha256": "bbd30d18b6fee8ec40326f9140cc841c6d77c67c6f0774067ed092330b7baa8f",
+      "expected": {
+        "volumeMm3": 420,
+        "boundsMm": [
+          [
+            38,
+            -5,
+            0
+          ],
+          [
+            48,
+            1,
+            7
+          ]
+        ]
+      }
+    },
+    {
+      "name": "Numeric slot",
+      "file": "slot.step",
+      "sha256": "5c6d085887f0376cea3efe02e1c1731f0bd326dbf2cc39e84408c90391abb3df",
+      "expected": {
+        "volumeMm3": 227.9645943005142,
+        "boundsMm": [
+          [
+            16,
+            -2,
+            0
+          ],
+          [
+            23,
+            6,
+            7
+          ]
+        ]
+      }
+    }
+  ]
+}
