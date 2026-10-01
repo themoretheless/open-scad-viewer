@@ -145,6 +145,9 @@ impl Evaluation {
     pub fn first_derivatives(&self) -> Option<([f64; 3], [f64; 3])> {
         Some((self.du?, self.dv?))
     }
+    pub fn second_derivatives(&self) -> Option<([f64; 3], [f64; 3], [f64; 3])> {
+        Some((self.duu?, self.duv?, self.dvv?))
+    }
     pub fn unit_normal(&self) -> Option<[f64; 3]> {
         self.normal
     }

@@ -90,3 +90,39 @@ export interface CoonsBoundaryPreparation {
 /** Preserve boundary parameters; return the source definition if the bound exceeds budget. */
 export const prepareCoonsBoundaryWeights=(curve:NurbsCurve,maxError:number):CoonsBoundaryPreparation=>
  {const result=callNurbsRust<CoonsBoundaryPreparation>('curve_prepare_coons_weights',{curve,maxError});return result.report.accepted?result:{...result,curve:structuredClone(curve)}}
+
+export const bezierNurbsCurve = (points: [number,number,number][], weights?: number[]): NurbsCurve => callNurbsRust('curve_bezier',{points,weights})
+export const lineNurbsCurve = (start: [number,number,number], end: [number,number,number]): NurbsCurve => callNurbsRust('curve_line',{start,end})
+export const circleNurbsCurve = (center: [number,number,number], normal: [number,number,number], radius: number): NurbsCurve => callNurbsRust('curve_circle',{center,normal,radius})
+export const clampedLoftNurbsCurves=(curves:NurbsCurve[],parameters:number[],startTangent:[number,number,number],endTangent:[number,number,number]):NurbsSurface=>callNurbsRust('surface_clamped_loft',{curves,parameters,start_tangent:startTangent,end_tangent:endTangent})
+export const closedLoftNurbsCurves=(curves:NurbsCurve[],parameters:number[]):NurbsSurface=>callNurbsRust('surface_closed_loft',{curves,parameters})
+export const naturalLoftNurbsCurves=(curves:NurbsCurve[],parameters:number[]):NurbsSurface=>callNurbsRust('surface_natural_loft',{curves,parameters})
+export const controlTangentLoftNurbsCurves = (curves: NurbsCurve[], parameters: number[], startTangents: [number,number,number][], endTangents: [number,number,number][]): NurbsSurface => callNurbsRust('surface_control_tangent_loft', {curves, parameters, start_tangents:startTangents, end_tangents:endTangents})
+export const guidedLoftNurbsCurves = (curves: NurbsCurve[], parameters: number[], guides: NurbsCurve[], guideParameters: number[], startTangents?: [number,number,number][], endTangents?: [number,number,number][]): NurbsSurface => callNurbsRust('surface_guided_loft', {curves, parameters, guides, guide_parameters:guideParameters, start_tangents:startTangents, end_tangents:endTangents})
+
+export interface AlignedNurbsLoft {
+ surface:NurbsSurface
+ guides:NurbsCurve[]
+ guide_parameters:number[]
+ guide_order:number[]
+ reversed:boolean[]
+ section_error_upper:number[]
+ guide_error_upper:number[]
+}
+/** Automatic isolated intersections, guide reversal/sorting and piecewise V mapping. */
+export const autoGuidedLoftNurbsCurves=(curves:NurbsCurve[],parameters:number[],guides:NurbsCurve[],budget:number,parameterTolerance=1e-8):AlignedNurbsLoft=>callNurbsRust('surface_auto_guided_loft',{curves,parameters,guides,budget,parameter_tolerance:parameterTolerance})
+export interface LoftEndConstraint {
+ reference:NurbsSurface
+ boundary:'uMin'|'uMax'|'vMin'|'vMax'
+ order:1|2
+ scale:number
+ reverse?:boolean
+}
+export interface MatchedNurbsLoft {
+ surface:NurbsSurface
+ seams:unknown[]
+ section_error_upper:number[]
+ guide_error_upper:number[]
+}
+/** Certified scaled boundary jets with whole-curve section/guide retention bounds. */
+export const matchNurbsLoftEnds=(surface:NurbsSurface,curves:NurbsCurve[],parameters:number[],budget:number,start?:LoftEndConstraint,end?:LoftEndConstraint,guides:NurbsCurve[]=[],guideParameters:number[]=[]):MatchedNurbsLoft=>callNurbsRust('surface_loft_match_ends',{surface,curves,parameters,budget,start,end,guides,guide_parameters:guideParameters})

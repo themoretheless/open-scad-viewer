@@ -9,6 +9,18 @@ const insert = z.array(z.object({ value: scalar, count: z.number().int().min(1).
 export const modelGraphNurbsSchema = z.object({
     language: z.literal('modelgraph/nurbs-1'), units: z.literal('mm'), parameters: z.array(z.object({ id, value: number }).strict()).max(64).default([]),
     nodes: z.array(z.discriminatedUnion('op', [
+        z.object({id,op:z.literal('bezier_curve'),points:z.array(vector).min(2).max(26),weights:z.array(scalar).min(2).max(26).optional()}).strict(),
+        z.object({id,op:z.literal('line_curve'),start:vector,end:vector}).strict(),
+        z.object({id,op:z.literal('circle_curve'),center:vector,normal:vector,radius:scalar}).strict(),
+        z.object({id,op:z.literal('control_tangent_loft_surface'),inputs:z.array(id).min(2).max(11),parameters:z.array(scalar).min(2).max(11),start_tangents:z.array(vector).min(2).max(32),end_tangents:z.array(vector).min(2).max(32)}).strict(),
+        z.object({id,op:z.literal('auto_guided_loft_surface'),inputs:z.array(id).min(2).max(11),parameters:z.array(scalar).min(2).max(11),guides:z.array(id).min(1).max(9),budget:scalar,parameter_tolerance:scalar.optional()}).strict(),
+        z.object({id,op:z.literal('loft_match_surface'),input:id,sections:z.array(id).min(2).max(11),parameters:z.array(scalar).min(2).max(11),guides:z.array(id).max(11).default([]),guide_parameters:z.array(scalar).max(11).default([]),budget:scalar,start_reference:id.optional(),end_reference:id.optional(),start_boundary:z.enum(['uMin','uMax','vMin','vMax']).default('vMax'),end_boundary:z.enum(['uMin','uMax','vMin','vMax']).default('vMin'),order:z.number().int().min(1).max(2).default(1),start_scale:scalar.default(1),end_scale:scalar.default(1),start_reverse:z.boolean().default(false),end_reverse:z.boolean().default(false)}).strict(),
+        z.object({id,op:z.literal('brep_natural_loft'),sections:z.array(z.array(z.array(id).min(1).max(64)).min(1).max(16)).min(2).max(11),parameters:z.array(scalar).min(2).max(11)}).strict(),
+        z.object({id,op:z.literal('brep_capped_loft'),start:z.array(z.array(id).min(1).max(64)).min(1).max(16),end:z.array(z.array(id).min(1).max(64)).min(1).max(16),sides:z.array(z.array(id).min(1).max(64)).min(1).max(16)}).strict(),
+        z.object({id,op:z.literal('guided_loft_surface'),inputs:z.array(id).min(2).max(11),parameters:z.array(scalar).min(2).max(11),guides:z.array(id).min(1).max(11),guide_parameters:z.array(scalar).min(1).max(11),start_tangents:z.array(vector).min(2).max(32).optional(),end_tangents:z.array(vector).min(2).max(32).optional()}).strict(),
+        z.object({id,op:z.literal('clamped_loft_surface'),inputs:z.array(id).min(2).max(11),parameters:z.array(scalar).min(2).max(11),start_tangent:vector,end_tangent:vector}).strict(),
+        z.object({id,op:z.literal('closed_loft_surface'),inputs:z.array(id).min(4).max(11),parameters:z.array(scalar).min(4).max(11)}).strict(),
+        z.object({id,op:z.literal('natural_loft_surface'),inputs:z.array(id).min(2).max(11),parameters:z.array(scalar).min(2).max(11)}).strict(),
         z.object({id,op:z.literal('polygon_profile'),outer:z.array(uv).min(3).max(128),holes:z.array(z.array(uv).min(3).max(128)).max(16).default([])}).strict(),
         z.object({id,op:z.literal('extrude'),input:id,height:scalar}).strict(),
         z.object({id,op:z.literal('revolve'),input:id,angle:scalar,segments:z.number().int().min(3).max(64).default(32)}).strict(),

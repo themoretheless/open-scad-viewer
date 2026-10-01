@@ -1341,3 +1341,6 @@ mod tests {
         assert!(tube(2., 3., 3.).is_err());
     }
 }
+
+mod rational_loft;
+pub use rational_loft::{rational_section_loft, natural_section_loft, capped_loft_surfaces, periodic_section_loft};

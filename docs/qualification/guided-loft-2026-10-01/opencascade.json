@@ -1,0 +1,11 @@
+{
+  "parser": "OpenCascade/cadquery-ocp",
+  "faces": 1,
+  "edges": 4,
+  "solids": 0,
+  "valid": true,
+  "sampled_positions": 25,
+  "max_position_error": 2.220446049250313e-16,
+  "max_v_derivative_error": 4.440892098500626e-16,
+  "scope": "one nonrational guided open shell; sampled geometry and jets, not continuous certification"
+}

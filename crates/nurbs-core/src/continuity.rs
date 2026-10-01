@@ -269,3 +269,29 @@ pub fn match_surface_jets_checked(reference:&Surface,edited:&Surface,reference_b
   assert!(match_surface_jets(&invalid,&source,"uMax","uMin",1,1.).is_err());
  }
 }
+
+/// Inspect represented boundary jets without editing either input surface.
+/// The seam basis must already agree; returned bounds concern these inputs.
+pub fn inspect_surface_jets_checked_report(
+    reference:&Surface, edited:&Surface, reference_boundary:&str,
+    edited_boundary:&str, order:usize, scale:f64, max_error:f64,
+)->Result<Value>{
+    reference.validate()?;edited.validate()?;
+    check((order==1||order==2)&&scale.is_finite()&&scale>0.&&max_error.is_finite()&&max_error>=0.,"Invalid surface jet inspection options")?;
+    let r=Boundary::parse(reference_boundary)?;let e=Boundary::parse(edited_boundary)?;
+    let (rp,rn,rk,_)=r.along(reference);let (ep,en,ek,_)=e.along(edited);
+    check(rp==ep&&rn==en,"Surface jet inspection requires a common seam basis")?;
+    affine_knots(rk,[rk[rp],rk[rn]],ek,[ek[ep],ek[en]])?;
+    r.coefficients(reference,order)?;e.coefficients(edited,order)?;
+    let reference_regularity=regularity::certify(reference,r)?;
+    let edited_regularity=regularity::certify(edited,e)?;
+    let error_bounds=bounds::certify(reference,edited,r,e,order,scale)?;
+    let smooth=[(reference,r),(edited,e)].iter().all(|(s,b)|{
+        let (p,n,k,periodic)=b.along(s);let a=k[p];let z=k[n];
+        k.iter().all(|&u|!((u>a||periodic&&u==a)&&u<z&&k.iter().filter(|&&x|x==u).count()>p.saturating_sub(order)))
+    });
+    let regular=reference_regularity["certified"]==json!(true)&&edited_regularity["certified"]==json!(true);
+    let error=["positionUpper","firstDerivativeUpper","secondDerivativeUpper","mixedDerivativeUpper"].iter().filter_map(|k|error_bounds[*k].as_f64()).fold(0_f64,f64::max);
+    let accepted=regular&&smooth&&error<=max_error;
+    Ok(json!({"continuityOrder":order,"normalScale":scale,"regularityCertified":regular,"referenceRegularity":reference_regularity,"editedRegularity":edited_regularity,"errorBounds":error_bounds,"accepted":accepted,"errorUpper":error,"maxError":max_error,"tangentialSmoothnessCertified":smooth,"method":"homogeneous-normalized-boundary-jets"}))
+}

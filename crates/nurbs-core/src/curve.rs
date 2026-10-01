@@ -1,6 +1,7 @@
 use crate::{Result, check, numeric, numeric_err, resource};
 
 #[derive(Clone, Debug)]
+#[derive(PartialEq)]
 pub struct Curve {
     pub degree: usize,
     pub knots: Vec<f64>,

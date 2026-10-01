@@ -1,3 +1,4 @@
+import { isModelGraphText } from './modelGraphTextDetect'
 import { boundedSceneEntityId } from '../core/boundedSceneEntityId'
 import { brepGearFaceCount } from './geometry/brep'
 import { evaluateModelGraphGeometry, requireModelGraphChecks } from './modelGraphChecks'
@@ -3540,7 +3541,7 @@ let parseQueue: Promise<void> = Promise.resolve()
 /** Parse and evaluate the supported OpenSCAD subset in a serialized WASM scope. */
 export function parseOpenSCAD(source: string, options: ParseOptions = {}): Promise<ParseResult> {
   const run = async () => {
-    if (/^\s*\/\/\s*@modelgraph-text\/1\b/.test(source)) {
+    if (isModelGraphText(source)) {
       const { compileModelGraphText } = await import('./modelGraphText')
       const compiled = compileModelGraphText(source)
       if (compiled.execution_target === 'own-nurbs') {
