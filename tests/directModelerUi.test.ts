@@ -2152,6 +2152,21 @@ it('accepts units in numeric transforms and cancels pending work on malformed in
  expect(ui.doc().sketches[0].points[0]).toEqual([25.4,0]);await ui.click('↶');expect(ui.doc()).toEqual(before)
 })
 
+it.each([['ΔX','1 rad'],['ΔY','NaN'],['ΔZ','Infinity'],['Z rotation','2 cm'],['Scale','0'],['Scale','-1']])('refuses invalid numeric transform %s = %s without a worker request',async(label,value)=>{
+ const ui=await mount();await ui.click('Cube');const before=ui.doc();await ui.click('Properties')
+ const field=()=>ui.all().find(n=>n.tag==='input'&&n.props['aria-label']===label)!
+ field().props['onUpdate:modelValue'](value);await flushClearance()
+ expect(field().props['aria-invalid']).toBe(true)
+ expect(field().props['aria-errormessage']).toBeTruthy()
+ expect(ui.button('Apply').props.disabled).toBe(true)
+ const count=previewWorkerRun.mock.calls.filter(([job])=>job.kind==='sceneEdit').length
+ ui.button('Apply').props.onClick();await flushClearance()
+ expect(previewWorkerRun.mock.calls.filter(([job])=>job.kind==='sceneEdit')).toHaveLength(count)
+ expect(ui.doc()).toEqual(before)
+ field().props['onUpdate:modelValue'](label==='Scale'?'1':'0');await flushClearance()
+ expect(ui.button('Apply').props.disabled).toBe(false)
+})
+
 it('invalidates a pending numeric transform when its input changes',async()=>{
  const {applySolidSceneEdit}=await import('../src/services/solidSceneEdit')
  const requests:Array<{job:any;resolve:(value:any)=>void}>=[]
