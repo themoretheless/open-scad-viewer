@@ -4,14 +4,14 @@ import type {NurbsBrep} from '../services/geometry/brep'
 import type {SolidDistanceResult,VolumeValidityLimits} from '../services/solidDistance'
 import {createSolidPreviewWorker} from '../services/solidPreviewWorker'
 const props=defineProps<{active:boolean;ru:boolean;a?:NurbsBrep;b?:NurbsBrep;same:boolean;names:[string,string]}>()
-const emit=defineEmits<{state:[active:boolean,point:[number,number,number]|null]}>()
+const emit=defineEmits<{state:[active:boolean,point:Array<[number,number,number]>|null]}>()
 const label=(a:string,b:string)=>props.ru?a:b
 const enabled=ref(false),extended=ref(false),retry=ref(0),pending=ref(false),error=ref('')
 const result=shallowRef<SolidDistanceResult|null>(null),worker=createSolidPreviewWorker()
 onUnmounted(()=>{worker.dispose();emit('state',false,null)})
 watchEffect(()=>{
  const active=props.active&&enabled.value,box=active?result.value?.contact?.pointIntervalMm:null
- emit('state',active,box?box.map(([lo,hi])=>lo/2+hi/2) as [number,number,number]:null)
+ emit('state',active,box?[box.map(([lo,hi])=>lo/2+hi/2) as [number,number,number]]:active?result.value?.separationWitness?.points??null:null)
 })
 watchEffect(onCleanup=>{
  const active=props.active&&enabled.value,a=props.a,b=props.b,same=props.same,budget=extended.value?1000000:100000
@@ -50,6 +50,10 @@ const failures=computed(()=>result.value?.validity.flatMap((v,i)=>v.proven?[]:[{
    <p v-if="result.converged" role="status">{{result.materialOverlap?label('Общие точки тел подтверждены. Расстояние — 0 мм.','The bodies share points. Distance is 0 mm.'):label('Допуск расстояния достигнут: 0,001 мм.','Distance tolerance reached: 0.001 mm.')}}</p>
    <p v-else role="status">{{label('Проверка не завершена. Увеличьте объём расчёта; при повторном отказе проверьте геометрию.','Check incomplete. Increase the calculation budget; if it remains unresolved, inspect the geometry.')}}</p>
    <ul v-if="failures.length"><li v-for="f in failures" :key="f.name">{{f.name}}: {{f.stage}}</li></ul>
+   <template v-if="result.separationWitness">
+    <small>{{label('Точки на гранях A / B: ','Points on faces A / B: ')}}{{result.separationWitness.faces.map(f=>f+1).join(' / ')}}</small>
+    <small v-for="(p,i) in result.separationWitness.points" :key="i" data-solid-witness>{{i===0?'A':'B'}} [{{p.map(x=>Number(x.toPrecision(12))).join(', ')}}] mm</small>
+   </template>
    <small v-if="result.contact">{{label('Контакт на гранях A / B: ','Contact on faces A / B: ')}}{{result.contact.faces.map(f=>f+1).join(' / ')}}</small>
   </template>
   <p v-if="error" role="alert">{{error}}</p>

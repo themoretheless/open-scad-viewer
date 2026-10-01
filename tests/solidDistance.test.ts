@@ -33,6 +33,14 @@ it('rejects inconsistent proof, budgets, shell ownership and contact coordinates
  ]){const r=structuredClone(contact.result);mutate(r);expect(validSolidDistance(ce,r)).toBe(false)}
  const separated=cases[3],se=solidDistanceExpectation(separated.request)
  for(const patch of [{materialOverlap:true},{distanceIntervalMm:[0,3]},{visitedShellPairs:0},{converged:false},{reason:'material-containment'}])expect(validSolidDistance(se,{...separated.result,...patch})).toBe(false)
+ for(const mutate of [
+  (r:any)=>r.separationWitness=null,
+  (r:any)=>r.separationWitness.faces[0]=999,
+  (r:any)=>r.separationWitness.parameters[0][0]=-1,
+  (r:any)=>r.separationWitness.points[0][0]=Infinity,
+  (r:any)=>r.separationWitness.pointEnclosures[0][0]=[9,8],
+  (r:any)=>{r.separationWitness.points[0][0]=20;r.separationWitness.pointEnclosures[0][0]=[20,20]},
+ ]){const r=structuredClone(separated.result);mutate(r);expect(validSolidDistance(se,r)).toBe(false)}
  const invalid=cases[1],ie=solidDistanceExpectation(invalid.request)
  expect(validSolidDistance(ie,{...invalid.result,distanceIntervalMm:[0,0]})).toBe(false)
  expect(validSolidDistance(ie,{...invalid.result,converged:true})).toBe(false)
@@ -58,12 +66,23 @@ it('terminates an obsolete solid-distance request and rejects incomplete proof i
 
 it('validates actual WASM volume-distance responses without changing either input',async()=>{
  const {measureSolidDistance}=await import('../src/services/solidDistance')
- for(const c of cases){
+ for(const [index,c] of cases.entries()){
   const before=JSON.stringify(c.request),r=measureSolidDistance(c.request)
   expect(validSolidDistance(solidDistanceExpectation(c.request),r)).toBe(true)
   expect(r.reason).toBe(c.result.reason)
   expect(r.distanceIntervalMm).toEqual(c.result.distanceIntervalMm)
-  if(r.reason==='separated-volumes'){expect(r.distanceIntervalMm![0]).toBeLessThanOrEqual(3);expect(r.distanceIntervalMm![1]).toBeGreaterThanOrEqual(3);expect(r.distanceIntervalMm![1]-r.distanceIntervalMm![0]).toBeLessThanOrEqual(c.request.toleranceMm)}
+  expect(r.separationWitness).toEqual(c.result.separationWitness)
+  if(r.reason==='separated-volumes'){const gap=index===3?3:1;expect(r.distanceIntervalMm![0]).toBeLessThanOrEqual(gap);expect(r.distanceIntervalMm![1]).toBeGreaterThanOrEqual(gap);expect(r.distanceIntervalMm![1]-r.distanceIntervalMm![0]).toBeLessThanOrEqual(c.request.toleranceMm)}
   expect(JSON.stringify(c.request)).toBe(before)
  }
+})
+
+it('keeps the cavity witness on the inner authored shell',()=>{
+ const {request,result}=cases[4]
+ expect(result.reason).toBe('separated-volumes')
+ expect(validSolidDistance(solidDistanceExpectation(request),result)).toBe(true)
+ const face=result.separationWitness.faces[0]
+ expect(request.a.bodies[0].innerShells.some((s:number)=>request.a.shells[s].faces.some((f:any)=>f.face===face))).toBe(true)
+ expect(result.distanceIntervalMm[0]).toBeLessThanOrEqual(1)
+ expect(result.distanceIntervalMm[1]).toBeGreaterThanOrEqual(1)
 })

@@ -18,6 +18,7 @@ export interface SolidDistanceResult {
  method:'certified-volume-distance';scope:'closed-material-sets';validity:[Validity,Validity]
  distanceIntervalMm:Interval|null;materialOverlap:boolean|null;converged:boolean
  reason:'volume-validity-unproven'|'shell-pairs-incomplete'|'containment-unproven'|'material-containment'|'separated-volumes'|'boundary-distance-unresolved'|'certified-boundary-contact'
+ separationWitness:{faces:[number,number];parameters:[Interval,Interval];points:[[number,number,number],[number,number,number]];pointEnclosures:[[Interval,Interval,Interval],[Interval,Interval,Interval]]}|null
  contact:{faces:[number,number];firstUv:[Interval,Interval];secondUv:[Interval,Interval];pointIntervalMm:[Interval,Interval,Interval];contractionUpper:number}|null
  totalShellPairs:number;visitedShellPairs:number;contactPairsVisited:number;cells:number;domainCells:number;toleranceMm:number;toleranceUv:number
  limits:{maxPairs:number;maxContactPairs:number;maxCells:number;maxDomainCells:number;validity:VolumeValidityLimits}
@@ -55,6 +56,22 @@ export function validSolidDistance(e:ReturnType<typeof solidDistanceExpectation>
  if(r.totalShellPairs!==total||!integer(r.visitedShellPairs,Math.min(total,e.limits.maxPairs))||!integer(r.contactPairsVisited,Math.min(e.models[0].domains.length*e.models[1].domains.length,e.limits.maxContactPairs))||!integer(r.cells,e.limits.maxCells)||!integer(r.domainCells,e.limits.maxDomainCells))return false
  const d=r.distanceIntervalMm
  if(d!==null&&(!interval(d)||d[0]<0))return false
+ const w=r.separationWitness
+ if(w!==null){
+  if(!w||r.materialOverlap!==false||d===null||!Array.isArray(w.faces)||w.faces.length!==2||!w.faces.every((f,i)=>integer(f,e.models[i].domains.length-1)))return false
+  if(!Array.isArray(w.parameters)||w.parameters.length!==2||!w.parameters.every((uv,i)=>Array.isArray(uv)&&uv.length===2&&uv.every((t,k)=>Number.isFinite(t)&&t>=e.models[i].domains[w.faces[i]][k][0]&&t<=e.models[i].domains[w.faces[i]][k][1])))return false
+  if(!Array.isArray(w.points)||w.points.length!==2||!w.points.every(p=>Array.isArray(p)&&p.length===3&&p.every(Number.isFinite))||!Array.isArray(w.pointEnclosures)||w.pointEnclosures.length!==2)return false
+  let uncertainty=0
+  for(let i=0;i<2;i++){
+   const bounds=w.pointEnclosures[i]
+   if(!Array.isArray(bounds)||bounds.length!==3||!bounds.every((x,k)=>interval(x)&&x[0]<=w.points[i][k]&&x[1]>=w.points[i][k]))return false
+   uncertainty+=bounds.reduce((sum,x,k)=>sum+Math.max(w.points[i][k]-x[0],x[1]-w.points[i][k]),0)
+  }
+  const gap=Math.hypot(...w.points[0].map((x,k)=>x-w.points[1][k]))
+  if(!Number.isFinite(gap)||!Number.isFinite(uncertainty))return false
+  uncertainty+=Number.EPSILON*Math.max(1,gap,...w.points.flat().map(Math.abs))*16
+  if(gap<d[0]-uncertainty||gap>d[1]+uncertainty)return false
+ }else if(r.materialOverlap===false&&d!==null)return false
  if(r.contact!==null){
   const c=r.contact
   if(!c||!Array.isArray(c.faces)||c.faces.length!==2||!c.faces.every((f,i)=>integer(f,e.models[i].domains.length-1))||r.contactPairsVisited===0)return false

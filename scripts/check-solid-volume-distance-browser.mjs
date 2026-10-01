@@ -83,10 +83,13 @@ try {
   const field=solid.getByRole('group',{name:'solid-volume-distance',exact:true})
   await field.getByText('Проверяю объёмы и расстояние…',{exact:true}).waitFor({state:'hidden',timeout:120000})
   if(index===1){await field.getByText('Body B: ориентация оболочек не подтверждена',{exact:true}).waitFor();assert.equal(await field.locator('[data-solid-distance]').count(),0)}
+  else if(index>=3){await field.getByText('Допуск расстояния достигнут: 0,001 мм.',{exact:true}).waitFor();assert.equal(await field.locator('[data-solid-witness]').count(),2);const marker=solid.locator('[data-measurement="volume-separation"]');assert.equal(await marker.locator('circle').count(),2);assert.equal(await marker.locator('line').count(),1)}
   else {await field.getByText('Общие точки тел подтверждены. Расстояние — 0 мм.',{exact:true}).waitFor();assert.equal(await field.locator('[data-solid-distance]').innerText(),'0 … 0 mm')}
   assert.equal(await solid.locator('[data-measurement="distance"]').count(),0)
   assert.equal(await solid.locator('[data-measurement="volume-contact"]').count(),index===2?1:0)
-  results.push(await page.evaluate(()=>window.__distanceResults.at(-1)))
+  const result=await page.evaluate(()=>window.__distanceResults.at(-1))
+  if(index>=3){const gap=index===3?3:1;assert.equal(result.reason,'separated-volumes');assert.ok(result.distanceIntervalMm[0]<=gap&&result.distanceIntervalMm[1]>=gap);assert.ok(result.separationWitness)}
+  results.push(result)
   assert.deepEqual(await exportDoc(`after-${index}.json`),before)
   await field.scrollIntoViewIfNeeded();await page.screenshot({path:path.join(directory,`volume-${index}.png`)})
   if(index===0){
