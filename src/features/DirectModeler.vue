@@ -2206,7 +2206,7 @@ function cancelCommandState() {
   cancelGesture(); operation.value = null; advancedOp.value = null; subtract.value = null
   previewBody.value = null; previewEmpty.value = false; previewError.value = ''
 }
-function cancelCommand(){cancelCommandState();workspace.value?.focus()}
+function cancelCommand(){cancelCommandState();tool.value='select';workspace.value?.focus()}
 
 function quantityValidity(key: string, valid: boolean) { if (valid) delete invalidQuantities.value[key]; else invalidQuantities.value[key] = true }
 const commandReady = computed(() => {
