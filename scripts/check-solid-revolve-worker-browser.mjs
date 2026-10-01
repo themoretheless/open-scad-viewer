@@ -5,6 +5,7 @@ import {readFile,mkdir,writeFile} from 'node:fs/promises'
 import path from 'node:path'
 import {loadQualificationPlaywrightPackage} from './qualificationPlaywrightPackage.mjs'
 const root=path.resolve(process.env.SOLID_QUALIFICATION_DIST??'dist'),directory=path.resolve(process.argv[2]??'/tmp/solid-profile-offset')
+const retainedFixture=process.argv.find(a=>a.startsWith('--retained-holed-quarter='))?.slice('--retained-holed-quarter='.length)
 const extrude=process.argv.includes('--extrude'),gpu=process.env.SOLID_GPU_HEADED==='1'
 const keyboard=process.argv.includes('--keyboard'),theme=process.argv.find(a=>a.startsWith('--theme='))?.slice(8)??'system'
 assert.ok(['system','dark','light','nord','solarized'].includes(theme))
@@ -83,7 +84,7 @@ try {
   const text=await readFile(path.join(directory,file),'utf8')
   return json?JSON.parse(text):text
  }
- const original={version:1,sketches:[{id:'profile',name:'Revolve profile',closed:true,points:[[0,0],[10,0],[10,10],[0,10]]}],bodies:[]}
+ const original=retainedFixture?JSON.parse(await readFile(retainedFixture,'utf8')):{version:1,sketches:[{id:'profile',name:'Revolve profile',closed:true,points:[[0,0],[10,0],[10,10],[0,10]]}],bodies:[]}
  if(process.argv.includes('--occlusion')){
   const yaw=Math.PI/4,pitch=Math.atan(1/Math.sqrt(2)),right=[Math.cos(yaw),-Math.sin(yaw),0],up=[Math.sin(yaw)*Math.sin(pitch),Math.cos(yaw)*Math.sin(pitch),-Math.cos(pitch)],toward=[Math.sin(yaw)*Math.cos(pitch),Math.cos(yaw)*Math.cos(pitch),Math.sin(pitch)]
   const positions=[[-50,-50],[50,-50],[50,50],[-50,50]].flatMap(([x,y])=>right.map((v,i)=>x*v+y*up[i]+(process.argv.includes('--behind')?-100:100)*toward[i]))
@@ -129,10 +130,10 @@ try {
  const geometry=solid.locator('label').filter({hasText:/^Поверхности вращения/}).locator('select')
  if(keyboard){await tabTo(geometry);await page.keyboard.press('End');await page.keyboard.press('Enter');await page.keyboard.press('Tab');assert.equal(await geometry.inputValue(),'exact')}
  else await geometry.selectOption('exact')
- await input(solid.getByLabel(/^Смещение оси, мм/),'-5 mm')
+ await input(solid.getByLabel(/^Смещение оси, мм/),retainedFixture?'0 mm':'-5 mm')
  await input(solid.getByLabel(/^Угол/),'180')
  }
- const amount=solid.getByLabel(extrude?/^Высота, мм/:/^Угол/),value=extrude?'12':'360'
+ const amount=solid.getByLabel(extrude?/^Высота, мм/:/^Угол/),value=extrude?'12':retainedFixture?'90':'360'
  await input(amount,value)
  await apply.click({trial:true})
  let previewHash
@@ -196,7 +197,7 @@ try {
  const changed=await download('Скачать проект JSON','revolved.json');assert.equal(changed.bodies.length,original.bodies.length+1);assert.ok(changed.bodies.at(-1).brep);if(process.argv.includes('--group-change'))assert.equal(changed.bodies.at(-1).group,'Destination')
  if(await menu.evaluate(e=>e.parentElement.open))await activate(menu)
  const step=await download('STEP выбранного тела · текущая геометрия','browser-revolve.step',false)
- await writeFile(path.join(directory,'manifest.json'),JSON.stringify({schema:'cad-roadmap-step/1',units:'mm',toleranceMm:1e-6,relativeVolumeTolerance:1e-8,parts:[{name:'Worker revolve',file:'browser-revolve.step',sha256:createHash('sha256').update(step).digest('hex'),expected:extrude?{volumeMm3:1200,boundsMm:[[0,0,0],[10,10,12]]}:{volumeMm3:2000*Math.PI,boundsMm:[[-20,0,-15],[10,10,15]]}}]}))
+ await writeFile(path.join(directory,'manifest.json'),JSON.stringify({schema:'cad-roadmap-step/1',units:'mm',toleranceMm:1e-6,relativeVolumeTolerance:1e-8,parts:[{name:'Worker revolve',file:'browser-revolve.step',sha256:createHash('sha256').update(step).digest('hex'),expected:retainedFixture?{volumeMm3:22.5*Math.PI,boundsMm:[[0,0,-6],[6,4,0]]}:extrude?{volumeMm3:1200,boundsMm:[[0,0,0],[10,10,12]]}:{volumeMm3:2000*Math.PI,boundsMm:[[-20,0,-15],[10,10,15]]}}]}))
  if(await menu.evaluate(e=>e.parentElement.open))await activate(menu)
  await activate(solid.getByRole('button',{name:'↶',exact:true}))
  const undone=await download('Скачать проект JSON','undone.json');assert.deepEqual(undone.bodies,before.bodies)
@@ -214,6 +215,6 @@ try {
   assert.deepEqual(await download('Скачать проект JSON','after-mode-switch.json'),redone)
  }
  assert.deepEqual(renderErrors,[])
- const report={gpu,deviceLoss:process.argv.includes('--lose-device'),occlusion:process.argv.includes('--occlusion'),bodyBehind:process.argv.includes('--behind'),operation:extrude?'extrusion':'revolve',browser:browser.version(),workerRequests:requests,retryFailure:process.argv.includes('--fail-preview'),applyWithoutRecompute:true,invalidQuantityClearsPreview:true,undoRedo:true,keyboard,tabPresses,downloads}
+ const report={retainedFixture:retainedFixture??null,gpu,deviceLoss:process.argv.includes('--lose-device'),occlusion:process.argv.includes('--occlusion'),bodyBehind:process.argv.includes('--behind'),operation:extrude?'extrusion':'revolve',browser:browser.version(),workerRequests:requests,retryFailure:process.argv.includes('--fail-preview'),applyWithoutRecompute:true,invalidQuantityClearsPreview:true,undoRedo:true,keyboard,tabPresses,downloads}
  await writeFile(path.join(directory,'revolve-browser.json'),JSON.stringify(report,null,2)+'\n');console.log(report)
 }catch(error){if(page){await page.screenshot({path:path.join(directory,'failure.png')}).catch(()=>{});await writeFile(path.join(directory,'failure.txt'),await page.locator('body').innerText().catch(()=>''))}throw error}finally{await browser?.close();await new Promise(resolve=>server.close(resolve))}

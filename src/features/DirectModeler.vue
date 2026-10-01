@@ -58,7 +58,6 @@ import { polygonMeshToExportMesh, MESH_EXPORT_FORMATS, MESH_FORMAT_LABELS, type 
 import { exportMeshFormatCompressed } from '../services/meshExportFormats'
 import { downloadBytes } from '../services/downloadArtifact'
 import { solidDocumentToMeshDocument } from '../services/solidBridge'
-import {requirePolylineSketch} from '../services/retainedSketchProfile'
 import type {prepareSolidProfile} from '../services/solidProfilePreparation'
 import type {matchSolidCurve} from '../services/solidCurveMatching'
 import type {matchSolidSurface,prepareSolidSurfaceSeams} from '../services/solidSurfaceMatching'
@@ -358,7 +357,7 @@ function selectIndexKey(e:KeyboardEvent,current:number,last:number,min=0){
  return e.key==='Home'?min:e.key==='End'?last:Math.max(min,Math.min(last,current+(e.key==='ArrowDown'?1:-1)))
 }
 function revolveGeometryKey(e: KeyboardEvent){
- const index=selectIndexKey(e,revolveGeometry.value==='exact'?1:0,1)
+ const index=selectIndexKey(e,revolveGeometry.value==='exact'?1:0,1,selectedSketch.value?.retainedProfile?1:0)
  if(index!==null)revolveGeometry.value=index?'exact':'faceted'
 }
 function surfaceInputKey(e:KeyboardEvent,role:number){
@@ -1513,9 +1512,9 @@ function beginSketch(value: typeof tool.value) {
 const canExtrudeSketch = computed(() => !!selectedSketch.value?.closed && tool.value === 'select' && !draft.value.length)
 function finish(closed: boolean) { run(() => { if (draft.value.length < (closed ? 3 : 2)) return; addSketch(draft.value, closed); draft.value = []; draftCursor.value=null; tool.value = 'select' }) }
 function beginExtrude(kind: 'extrude'|'revolve' = 'extrude') {
- if(kind==='revolve'&&selectedSketch.value)requirePolylineSketch(selectedSketch.value)
   if (!canExtrudeSketch.value) return
   cancelCommand(); boxSelect.value=false
+  if(kind==='revolve'&&selectedSketch.value?.retainedProfile)revolveGeometry.value='exact'
   profileIds.value=selectedIds.value.filter(id=>document.value.sketches.some(s=>s.id===id&&s.closed&&samePlane(s.plane,selectedSketch.value!.plane)))
   if(!profileIds.value.length)profileIds.value=[selectedSketch.value!.id]
   const support=document.value.bodies.find(b=>b.id===selectedSketch.value!.supportBodyId)
@@ -3799,7 +3798,7 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
                 <label>{{ label('Ось в эскизе', 'Sketch axis') }}<select v-model="revolveAxis"><option value="y">Y · {{ label('вертикаль', 'vertical') }}</option><option value="x">X · {{ label('горизонталь', 'horizontal') }}</option></select></label>
                 <label>{{ label('Смещение оси, мм', 'Axis offset, mm') }}<CadQuantityInput :aria-label="label('Смещение оси, мм', 'Axis offset, mm')" v-model="revolveOffset" kind="length" :locale="locale" @validity="quantityValidity('revolveOffset', $event)" step="1" /></label>
                 <label>{{ label('Угол, °', 'Angle, °') }}<CadQuantityInput :aria-label="label('Угол, °', 'Angle, °')" v-model="revolveAngle" kind="angle" :locale="locale" @validity="quantityValidity('revolveAngle', $event)" :min="-360" :max="360" step="15" /></label>
-            <label>{{ label('Поверхности вращения','Revolve surfaces') }}<select v-model="revolveGeometry" @keydown="revolveGeometryKey"><option value="faceted">{{ label('Гранёные','Faceted') }}</option><option value="exact">{{ label('Точные NURBS','Exact NURBS') }}</option></select></label>
+            <label>{{ label('Поверхности вращения','Revolve surfaces') }}<select v-model="revolveGeometry" @keydown="revolveGeometryKey"><option value="faceted" :disabled="!!selectedSketch?.retainedProfile">{{ label('Гранёные','Faceted') }}</option><option value="exact">{{ label('Точные NURBS','Exact NURBS') }}</option></select></label>
                 <label>{{ label('Сегменты', 'Segments') }}<input v-model.number="revolveSegments" type="number" min="8" max="128"></label>
                 <small>{{ label('Пунктир слева — ось вращения. Контур должен лежать по одну сторону от неё.', 'The dashed line on the left is the rotation axis. Keep the profile on one side of it.') }}</small>
               </template>
