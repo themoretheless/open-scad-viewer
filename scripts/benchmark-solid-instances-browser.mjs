@@ -29,8 +29,23 @@ await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve))
 let browser,memoryTimer,memoryPending
 try{
  const {playwright}=await loadQualificationPlaywrightPackage()
- browser=await playwright.chromium.launch({headless:true})
+ browser=await playwright.chromium.launch({headless:true,...(process.argv.includes('--require-webgpu')?{args:['--enable-unsafe-webgpu']}: {})})
  const context=await browser.newContext({viewport:{width:1280,height:800},acceptDownloads:true}),page=await context.newPage(),errors=[]
+ await page.addInitScript(()=>{
+  window.__gpuQualification=[]
+  if(!navigator.gpu)return
+  const request=navigator.gpu.requestAdapter.bind(navigator.gpu)
+  navigator.gpu.requestAdapter=async(...args)=>{
+   const adapter=await request(...args);window.__gpuQualification.push({event:'adapter',available:!!adapter})
+   if(adapter){const make=adapter.requestDevice.bind(adapter);adapter.requestDevice=async(...args)=>{
+    const device=await make(...args)
+    device.addEventListener('uncapturederror',event=>window.__gpuQualification.push({event:'error',message:event.error.message}))
+    device.lost.then(info=>window.__gpuQualification.push({event:'lost',reason:info.reason,message:info.message}))
+    return device
+   }}
+   return adapter
+  }
+ })
  page.setDefaultTimeout(120000);page.on('pageerror',error=>errors.push(String(error)))
  if(process.argv.includes('--disable-cpu-canvas'))await page.addInitScript(()=>{const original=HTMLCanvasElement.prototype.getContext;HTMLCanvasElement.prototype.getContext=function(...args){return this.hasAttribute('data-cpu-orbit')?null:original.apply(this,args)}})
  await page.goto(`http://127.0.0.1:${server.address().port}`)
@@ -177,6 +192,9 @@ try{
   await solid.getByRole('button',{name:'↶',exact:true}).click();await saved()
  }
 
+ const renderer=await page.evaluate(()=>({navigatorGpu:!!navigator.gpu,diagnostics:window.__gpuQualification,gpuCanvasVisible:[...document.querySelectorAll('.gpu-layer')].some(canvas=>getComputedStyle(canvas).visibility==='visible'),backend:document.querySelector('footer')?.textContent??''}))
+ await writeFile(path.join(directory,'renderer.json'),JSON.stringify(renderer,null,2)+'\n')
+ if(process.argv.includes('--require-webgpu'))assert.equal(renderer.gpuCanvasVisible,true,'WebGPU must remain active; CPU fallback cannot qualify GPU performance')
  let orbit=null
  if(process.argv.includes('--orbit')){
   for(const name of ['snap-preparation','sketch-snap-preparation','topology-preparation'])await solid.getByRole('status',{name,exact:true}).waitFor({state:'hidden'})
@@ -240,7 +258,7 @@ try{
   scope:'Polling during the whole run, including operations and orbit. Main-page JS heap excludes workers; aggregate Chromium RSS includes shared pages more than once. Sampled maxima are not a guaranteed instantaneous peak. CDP and ps instrumentation can affect timings.',
  }:null
  const retainedMemory=collectRetained?{scope:'Main-page heap after explicit GC after each operation, outside its elapsed timer. GC changes subsequent operation conditions; these timings are not comparable with ordinary runs. Native/process allocations are excluded. Optional worker records report each worker isolate separately after GC; ended workers are marked explicitly.',samples:retainedSamples}:null
- const result={outlinerContainmentDisabled:process.argv.includes('--disable-outliner-containment'),outlinerChecked:process.argv.includes('--check-outliner'),outlinerControlsChecked:process.argv.includes('--check-outliner-controls'),outlinerDeletionChecked:process.argv.includes('--check-outliner-delete'),retainedMemory,memory,scope:'Headless Chromium UI import and Undo/Redo through durable save; automation latency included. RAF gaps during operations are not orbit FPS; heap is sampled '+(collectRetained?'with separate forced-GC diagnostics.':'without forced GC.'),importCancellationChecked:process.argv.includes('--check-import-cancel'),cpuProfile:process.argv.includes('--profile-orbit')?'orbit.cpuprofile':profileCaptured?profileAction+'.cpuprofile':null,cancellationChecked:process.argv.includes('--check-cancel'),browser:browser.version(),machine:{platform:os.platform(),release:os.release(),arch:os.arch(),cpu:os.cpus()[0]?.model,logicalCpus:os.cpus().length,ramBytes:os.totalmem()},iterations,timingSummary,orbit,maxObservedHeapBytes:Math.max(before.JSHeapUsedSize,...samples.map(s=>s.heap.JSHeapUsedSize)),heapScope:'Samples after each operation only; not peak process memory.',viewport:{width:1280,height:800},bodies:expected.bodies.length,before,after:await heap(),samples}
+ const result={renderer,outlinerContainmentDisabled:process.argv.includes('--disable-outliner-containment'),outlinerChecked:process.argv.includes('--check-outliner'),outlinerControlsChecked:process.argv.includes('--check-outliner-controls'),outlinerDeletionChecked:process.argv.includes('--check-outliner-delete'),retainedMemory,memory,scope:'Headless Chromium UI import and Undo/Redo through durable save; automation latency included. RAF gaps during operations are not orbit FPS; heap is sampled '+(collectRetained?'with separate forced-GC diagnostics.':'without forced GC.'),importCancellationChecked:process.argv.includes('--check-import-cancel'),cpuProfile:process.argv.includes('--profile-orbit')?'orbit.cpuprofile':profileCaptured?profileAction+'.cpuprofile':null,cancellationChecked:process.argv.includes('--check-cancel'),browser:browser.version(),machine:{platform:os.platform(),release:os.release(),arch:os.arch(),cpu:os.cpus()[0]?.model,logicalCpus:os.cpus().length,ramBytes:os.totalmem()},iterations,timingSummary,orbit,maxObservedHeapBytes:Math.max(before.JSHeapUsedSize,...samples.map(s=>s.heap.JSHeapUsedSize)),heapScope:'Samples after each operation only; not peak process memory.',viewport:{width:1280,height:800},bodies:expected.bodies.length,before,after:await heap(),samples}
  await writeFile(path.join(directory,'measurements.json'),JSON.stringify(result,null,2)+'\n')
  console.log(JSON.stringify(result))
 }finally{clearInterval(memoryTimer);await memoryPending;await browser?.close();await new Promise(resolve=>server.close(resolve))}
