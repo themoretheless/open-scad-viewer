@@ -60,6 +60,19 @@ mod tests {
                 domain_cells: 100000, cells_per_pair: 16, domain_cells_per_pair: 1000 } }
     }
     #[test]
+    fn sphere_pole_contacts_preserve_the_incomplete_embedding_status(){
+        let model=crate::analytic::sphere(3.).unwrap();let before=format!("{model:?}");
+        let mut l=limits();l.spans=1000;
+        let r=inspect(&model,1e-8,l).unwrap();
+        assert!(r.agreement.all_equal&&r.agreement.all_joins_exact&&r.trim.all_valid);
+        assert!(r.intersections.faces.all_faces_injective);
+        for pair in [[0,2],[1,3],[4,6],[5,7]]{
+            assert!(r.hull_contacts.iter().any(|c|c.faces==pair&&c.vertex.is_some()));
+        }
+        assert!(!r.proven);assert!(!r.intersections.absence_proven);
+        assert_eq!(format!("{model:?}"),before);
+    }
+    #[test]
     fn cube_requires_every_stage_and_preserves_input() {
         let m = crate::cuboid([0.;3], [1.;3]).unwrap();
         let before = format!("{m:?}");
