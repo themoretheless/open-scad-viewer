@@ -35,6 +35,7 @@ try {
   }
  })
  await page.addInitScript(()=>{
+  if(window.GPUCanvasContext){const configure=GPUCanvasContext.prototype.configure;GPUCanvasContext.prototype.configure=function(descriptor){if(this.canvas.className==='gpu-layer'){window.__solidGpuDevice=descriptor.device;window.__solidGpuDeviceConfigurations=(window.__solidGpuDeviceConfigurations??0)+1}return configure.call(this,descriptor)}}
   if(!navigator.gpu)return
   const request=navigator.gpu.requestAdapter.bind(navigator.gpu)
   navigator.gpu.requestAdapter=async(...args)=>{const adapter=await request(...args);if(adapter){const make=adapter.requestDevice.bind(adapter);adapter.requestDevice=async(...args)=>{const device=await make(...args);window.__qualificationGpuDevice=device;return device}}return adapter}
@@ -189,13 +190,25 @@ try {
  assert.ok(extruded.bodies[0].brep.faces.some(f=>f.surface.degreeU===2||f.surface.degreeV===2))
  if(await menu.evaluate(e=>e.parentElement.open))await activate(menu)
  await activate(solid.getByRole('region',{name:'3D — тела',exact:true}).getByRole('button',{name:'Вписать',exact:true}))
- const gpuLoss=process.argv.includes('--gpu-loss');const gpuDeviceDestroyed=gpuLoss&&await page.evaluate(()=>{const device=window.__qualificationGpuDevice;if(!device)return false;device.destroy();return true})
- if(gpuLoss)await solid.locator('[data-body]').first().waitFor({state:'visible'})
+ const gpuLoss=process.argv.includes('--gpu-loss');const gpuDeviceDestroyed=gpuLoss&&await page.evaluate(()=>{const device=window.__solidGpuDevice;if(!device)return false;device.destroy();return true})
+ if(gpuLoss){assert.equal(gpuDeviceDestroyed,true);await solid.getByRole('button',{name:'Повторить WebGPU',exact:true}).waitFor();assert.equal(await solid.locator('.gpu-layer').evaluate(c=>c.style.visibility==='visible'),false);await solid.locator('[data-body]').first().waitFor({state:'visible'})}
  else assert.equal(await solid.locator('.gpu-layer').evaluate(c=>c.style.visibility==='visible'),true)
  const renderedTriangles=await solid.locator('[data-body]').count();if(gpuLoss)assert.ok(renderedTriangles>0);assert.deepEqual(renderErrors,[])
  await writeFile(path.join(directory,'render-state.json'),JSON.stringify({errors:renderErrors,canvases:await solid.locator('canvas').evaluateAll(nodes=>nodes.map(n=>({width:n.width,height:n.height,rect:n.getBoundingClientRect().toJSON(),display:getComputedStyle(n).display}))),svgPolygons:await solid.locator('[data-body]').count()},null,2))
  if(await solid.locator('canvas.gpu-layer').isVisible())await solid.locator('canvas.gpu-layer').screenshot({path:path.join(directory,'gpu-only.png')})
  await page.screenshot({path:path.join(directory,'retained-extruded.png')})
+ if(gpuLoss){
+  const failed=await download('Скачать проект JSON','gpu-failed.json');assert.deepEqual(failed,extruded)
+  if(await menu.evaluate(e=>e.parentElement.open))await activate(menu)
+  const configurations=await page.evaluate(()=>window.__solidGpuDeviceConfigurations)
+  await activate(solid.getByRole('button',{name:'Повторить WebGPU',exact:true}));await solid.getByRole('status',{name:'gpu-recovery',exact:true}).waitFor({state:'hidden'})
+  assert.equal(await solid.locator('.gpu-layer').evaluate(c=>c.style.visibility==='visible'),true)
+  assert.ok(await page.evaluate(()=>window.__solidGpuDeviceConfigurations)>configurations)
+  const recovered=await download('Скачать проект JSON','gpu-recovered.json');assert.deepEqual(recovered,extruded)
+  if(await menu.evaluate(e=>e.parentElement.open))await activate(menu)
+  assert.equal(await solid.getByRole('button',{name:extruded.bodies[0].name,exact:true}).getAttribute('aria-pressed'),'true')
+  await page.screenshot({path:path.join(directory,'gpu-recovered.png')})
+ }
  const step=await download('STEP выбранного тела · текущая геометрия','browser-retained.step',false)
  await writeFile(path.join(directory,'manifest.json'),JSON.stringify({schema:'cad-roadmap-step/1',units:'mm',toleranceMm:1e-6,relativeVolumeTolerance:1e-8,parts:[{name:'Browser retained union',file:'browser-retained.step',sha256:createHash('sha256').update(step).digest('hex'),expected:{volumeMm3:(generalNurbs?14/3:arcs?2*Math.PI:regionOperation==='difference'?48-4*Math.PI:regionOperation==='intersection'?4*Math.PI:42+2*Math.PI)*5,boundsMm:generalNurbs?[[0,-.5,0],[2,2,5]]:arcs?[[-2,0,0],[2,2,5]]:regionOperation==='difference'?[[-4,-3,0],[4,3,5]]:regionOperation==='intersection'?[[-2,-2,0],[2,2,5]]:[[-4,-3,0],[5,3,5]]}}]}))
  if(await menu.evaluate(e=>e.parentElement.open))await activate(menu)
@@ -212,7 +225,7 @@ try {
  await page.reload();await solid.getByRole('button',{name:joined.sketches[0].name,exact:true}).waitFor();await solid.getByRole('status',{name:'history-restore',exact:true}).waitFor({state:'hidden'})
  const restored=await download('Скачать проект JSON','restored.json');assert.deepEqual(restored,joined)
  assert.deepEqual(renderErrors,[])
- const report={artifacts,completeDocumentChecks:true,browserReloadExact:true,browser:browser.version(),profileWorkerCancelled:await page.evaluate(()=>window.__profileDisplayTerminated===true),operation,retainedArcs:!generalNurbs,retainedGeneralNurbs:generalNurbs,exactExtrusion:true,gpuFallback:gpuDeviceDestroyed,renderedTriangles,cancel:true,undo:true,repeat:true,jsonReload:true,keyboard,tabPresses,downloads}
+ const report={artifacts,completeDocumentChecks:true,browserReloadExact:true,browser:browser.version(),profileWorkerCancelled:await page.evaluate(()=>window.__profileDisplayTerminated===true),operation,retainedArcs:!generalNurbs,retainedGeneralNurbs:generalNurbs,exactExtrusion:true,gpuFallback:gpuDeviceDestroyed,gpuRecovered:gpuLoss,renderedTriangles,cancel:true,undo:true,repeat:true,jsonReload:true,keyboard,tabPresses,downloads}
  await writeFile(path.join(directory,'retained-browser.json'),JSON.stringify(report,null,2)+'\n');console.log(report)
  }
 }catch(error){if(page){await page.screenshot({path:path.join(directory,'failure.png')}).catch(()=>{});await writeFile(path.join(directory,'failure.txt'),await page.locator('body').innerText().catch(()=>''))}throw error}finally{await browser?.close();await new Promise(resolve=>server.close(resolve))}
