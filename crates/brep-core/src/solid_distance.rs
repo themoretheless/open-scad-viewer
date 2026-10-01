@@ -169,6 +169,16 @@ mod tests{
             assert_eq!(r.material_overlap,Some(false),"{}",r.reason);
             let d=r.distance_interval_mm.unwrap();assert!(d[0]>0. && d[0]<=1. && d[1]>=1.);
             assert!(r.cells<=100000 && r.domain_cells<=1000000);
+            let witness=r.separation_witness(a,b).unwrap();
+            let uv=witness.geometry.parameters.unwrap();let points=witness.geometry.points.unwrap();
+            for (i,model) in [a,b].into_iter().enumerate(){
+                assert_eq!(model.faces[witness.faces[i]].surface.evaluate(uv[i][0],uv[i][1]).unwrap().point,points[i]);
+                if model.shells.len()>1{
+                    assert!(model.bodies[0].inner_shells.iter().any(|&shell|model.shells[shell].faces.iter().any(|f|f.face==witness.faces[i])));
+                }
+            }
+            let gap=points[0].iter().zip(points[1]).map(|(a,b)|(a-b).powi(2)).sum::<f64>().sqrt();
+            assert!((gap-1.).abs()<1e-5);
         }
         assert_eq!(format!("{cavity:?}{island:?}"),before);
     }
