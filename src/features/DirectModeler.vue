@@ -2673,10 +2673,10 @@ function up(e: PointerEvent) {
     const items=box.pane==='2d'?visibleSketches.value.map(s=>({id:s.id,points:s.points.map(p=>project(p,'2d'))})):sceneBodies.value.map(b=>({id:b.id,points:bodyPoints(b).map(p=>project(p,'3d'))}))
     const ids=items.filter(o=>objectSelectable(o.id)&&o.points.every(p=>p[0]>=min[0]&&p[0]<=max[0]&&p[1]>=min[1]&&p[1]<=max[1])).map(o=>o.id);selection.value=ids[0]??'';extraSelection.value=ids.slice(1);selectionBox.value=null;return
   }
-  if(manipulatorDrag){const g=manipulatorDrag;move(e);manipulatorDrag=null;previewingTransform.value=g.kind==='rotate'||g.kind==='scale'
+  if(manipulatorDrag){const g=manipulatorDrag;if(e.clientX===g.x&&e.clientY===g.y&&!gizmoBase){cancelGesture();return}move(e);manipulatorDrag=null
     if(g.kind==='push'){clearDragPreview();if(bodyEditPending.value)bodyEditApplyGeneration=bodyEditGeneration;else applyCommand();return}
     if(g.kind==='move'){if(g.delta)void commitDirectTransform(g.before,[...selectedIds.value],g.delta);else settleAfterDrag();return}
-    if(g.kind==='rotate'||g.kind==='scale')gizmoApplyRevision=gizmoRevision;return}
+    if(g.kind!=='split')gizmoApplyRevision=gizmoRevision;return}
 
   if (heightDrag) { heightDrag = null; return }
   if (orbitDrag) { orbitDrag = null; return }

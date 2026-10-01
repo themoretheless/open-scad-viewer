@@ -2119,6 +2119,18 @@ it('applies one circular-copy candidate and exposes invalid array parameters',as
  expect(ui.text(ui.all()[0])).toContain('Use 2–64 instances')
 })
 
+it.each(['move','rotate','scale'])('does not publish a stationary %s gizmo click',async(kind)=>{
+ const {DirectHistory}=await import('../src/services/directModeling')
+ const ui=await mount(),baseline=ui.doc();await ui.click('Box');await ui.click('Gizmo: '+kind)
+ const before=ui.doc(),svg=ui.svg(),commit=vi.spyOn(DirectHistory.prototype,'commitAsync')
+ try{
+  const handle=ui.all(svg).find(n=>kind==='rotate'?n.tag==='polyline'&&n.props.onPointerdown&&n.props.stroke==='#ff7777':n.tag==='g'&&n.props.onPointerdown&&n.children.some(c=>c.tag==='line'))!
+  await ui.pointer(handle,0,0);svg.props.onPointerup({...ui.event(svg,0,0),altKey:true});await flushClearance()
+  expect(commit).not.toHaveBeenCalled();expect(ui.doc()).toEqual(before)
+  await ui.click('↶');expect(ui.doc()).toEqual(baseline)
+ }finally{commit.mockRestore()}
+})
+
 it('supersedes a pending gizmo history publication with the next gesture',async()=>{
  const {DirectHistory}=await import('../src/services/directModeling')
  const ui=await mount();await ui.click('Cube');const before=ui.doc(),svg=ui.svg()
