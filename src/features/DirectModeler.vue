@@ -12,7 +12,6 @@ import {SolidSketchSnapPreparation} from '../services/solidSketchSnapPreparation
 import {readSolidDraftHead,writeSolidDraftHead} from '../services/solidDraftHeadStore'
 import type {MainSolidJob} from '../services/mainSolidProtocol'
 import {collectSolidDraftSnapshots,withSolidDraftLock,solidDraftSnapshotId,readSolidDraftSnapshot,writeSolidDraftSnapshot,removeSolidDraftSnapshot} from '../services/solidDraftStore'
-import {detachSolidInstances} from '../services/solidInstances'
 import SceneObjectControls from '../components/SceneObjectControls.vue'
 import SceneVirtualList from '../components/SceneVirtualList.vue'
 import { connectedEdgeChain } from '../services/edgeSelection'
@@ -1659,12 +1658,12 @@ function cancelDirectTransform(){
  if(directTransformPending.value){history.cancelRestore();clearDragPreview()}
  directTransformPending.value=false
 }
-async function commitDirectTransform(before:DirectDocument,ids:string[],delta:Vec3,rotation=0,factor=1,localSketch=false,resetFields=false){
+async function commitDirectTransform(before:DirectDocument,ids:string[],delta:Vec3,rotation=0,factor=1,localSketch=false,resetFields=false,detach=false){
  cancelDirectTransform()
  const generation=directTransformGeneration
  directTransformPending.value=true;error.value=''
  try{
-  const result=await directTransformWorker.run({kind:'sceneEdit',document:before,options:{operation:localSketch?'sketch-transform':'transform',id:ids[0],ids,createdId:'',x:delta[0],y:delta[1],z:delta[2],axis:'z',angle:rotation,scale:factor}})
+  const result=await directTransformWorker.run({kind:'sceneEdit',document:before,options:{operation:detach?'instance-detach':localSketch?'sketch-transform':'transform',id:ids[0],ids,createdId:'',x:delta[0],y:delta[1],z:delta[2],axis:'z',angle:rotation,scale:factor}})
   if(generation!==directTransformGeneration)return
   const {validateLocked,added}=prepareCommit(result)
   result.blenderProjectId ??= snapDocument.value.blenderProjectId
@@ -2785,7 +2784,7 @@ const availableSolidCommands = computed<SolidCommand[]>(() => {
     cmd('instance-create','Создать связанный экземпляр','Create linked instance',()=>beginAdvanced('instance-create'),{enabled:!!body&&!body.instance,disabledReason:label('Выберите независимое тело-источник','Select an independent source body')}),
     cmd('instance-transform','Преобразовать экземпляр','Transform instance',()=>beginAdvanced('instance-transform'),{enabled:!!body?.instance,disabledReason:label('Выберите связанный экземпляр','Select a linked instance')}),
     cmd('instance-place','Разместить экземпляр','Place instance',()=>beginAdvanced('instance-place'),{enabled:!!body?.instance,disabledReason:label('Выберите связанный экземпляр','Select a linked instance')}),
-    cmd('instance-detach','Сделать независимым','Make independent',()=>run(()=>commit(detachSolidInstances(history.document,selectedIds.value))),{enabled:!!body?.instance,disabledReason:label('Выберите связанный экземпляр','Select a linked instance')}),
+    cmd('instance-detach','Сделать независимым','Make independent',()=>run(()=>commitDirectTransform(document.value,[...selectedIds.value],[0,0,0],0,1,false,false,true)),{enabled:!!body?.instance,disabledReason:label('Выберите связанный экземпляр','Select a linked instance')}),
     cmd('instance-source','Выбрать источник экземпляра','Select instance source',()=>{if(body?.instance)pickObject(body.instance.sourceId,'3d')},{enabled:!!body?.instance,disabledReason:label('Выберите связанный экземпляр','Select a linked instance')}),
     cmd('body-clearance','Зазор двух тел по сетке','Two-body mesh clearance',()=>{measureTarget.value=selectedIds.value.find(id=>id!==selection.value)??'';exactCardOpen.value=true;measurementOpen.value=true;clearanceOpen.value=true;workspace.value?.focus()},{enabled:!!body&&selectedIds.value.length===2&&selectedIds.value.every(id=>document.value.bodies.some(b=>b.id===id)),disabledReason:label('Выберите два тела с Shift','Shift-select two bodies')}),
     cmd('measurements','Измерить вершины / ребро','Measure vertices / edge',()=>{exactCardOpen.value=true;measurementOpen.value=true;workspace.value?.focus()},{enabled:!!body,disabledReason:needSelection}),

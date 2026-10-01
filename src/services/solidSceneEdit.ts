@@ -2,13 +2,14 @@ import type {SolidInstanceBatchCache} from './solidInstanceBatchCache'
 import {transformSketch} from './directSketchGeometry'
 import {parseDirectDocument,type DirectDocument} from './directModeling'
 import {transformSelection} from './directSolidTools'
-import {createSolidInstance,transformSolidInstance,resolveSolidInstances} from './solidInstances'
+import {createSolidInstance,transformSolidInstance,resolveSolidInstances,detachSolidInstances} from './solidInstances'
 import {createRuledSketchLoft} from './geometry/brep'
 import {stringifyMeshJson} from './meshJson'
-export type SolidSceneEditOperation='sketch-transform'|'transform'|'instance-create'|'instance-transform'|'instance-place'|'loft'
+export type SolidSceneEditOperation='sketch-transform'|'transform'|'instance-create'|'instance-transform'|'instance-place'|'instance-detach'|'loft'
 export interface SolidSceneEditOptions {operation:SolidSceneEditOperation;id:string;ids:string[];createdId:string;x:number;y:number;z:number;axis:'x'|'y'|'z';angle:number;scale:number}
-export function isSolidSceneEdit(operation:unknown):operation is SolidSceneEditOperation{return ['sketch-transform','transform','instance-create','instance-transform','instance-place','loft'].includes(String(operation))}
+export function isSolidSceneEdit(operation:unknown):operation is SolidSceneEditOperation{return ['sketch-transform','transform','instance-create','instance-transform','instance-place','instance-detach','loft'].includes(String(operation))}
 export function applySolidSceneEdit(document:DirectDocument,p:SolidSceneEditOptions,instanceCache?:SolidInstanceBatchCache):DirectDocument {
+ if(p.operation==='instance-detach')return detachSolidInstances(document,p.ids,instanceCache)
  const d=structuredClone(document),axis=p.axis==='x'?[1,0,0] as const:p.axis==='y'?[0,1,0] as const:[0,0,1] as const
  switch(p.operation){
   case 'sketch-transform':{

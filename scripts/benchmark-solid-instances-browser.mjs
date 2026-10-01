@@ -48,6 +48,13 @@ try{
  })
  page.setDefaultTimeout(120000);page.on('pageerror',error=>errors.push(String(error)))
  if(process.argv.includes('--disable-cpu-canvas'))await page.addInitScript(()=>{const original=HTMLCanvasElement.prototype.getContext;HTMLCanvasElement.prototype.getContext=function(...args){return this.hasAttribute('data-cpu-orbit')?null:original.apply(this,args)}})
+ if(process.argv.includes('--detach'))await page.addInitScript(()=>{
+  const NativeWorker=window.Worker;window.__holdDetach=false;window.__detachTerminations=0
+  window.Worker=class extends NativeWorker{
+   postMessage(message,...args){if(window.__holdDetach&&message?.job?.kind==='sceneEdit'&&message.job.options.operation==='instance-detach'){this.__detachHeld=true;window.__detachHeld=true;return}return super.postMessage(message,...args)}
+   terminate(){if(this.__detachHeld)window.__detachTerminations++;return super.terminate()}
+  }
+ })
  await page.goto(`http://127.0.0.1:${server.address().port}`)
  if(process.argv.includes('--disable-outliner-containment'))await page.addStyleTag({content:'.scene-list .object-row{content-visibility:visible!important;contain-intrinsic-block-size:none!important}'})
  const solid=page.getByRole('region',{name:'Solid — CAD-лепка',exact:true}),menu=solid.locator('summary[title="Файл"]')
@@ -101,6 +108,30 @@ try{
  for(let i=0;i<iterations;i++){
   await measure('undo',()=>solid.getByRole('button',{name:'↶',exact:true}).click())
   await measure('redo',()=>solid.getByRole('button',{name:'↷',exact:true}).click())
+ }
+ if(process.argv.includes('--detach')){
+  const instance=expected.bodies.find(body=>body.instance),source=expected.bodies.find(body=>body.id===instance?.instance.sourceId);assert.ok(instance&&source)
+  async function exportState(name){await saved();await menu.click();const download=page.waitForEvent('download');await solid.getByRole('button',{name:'Скачать проект JSON',exact:true}).click();await (await download).saveAs(path.join(directory,name+'.json'));await menu.click();return JSON.parse(await readFile(path.join(directory,name+'.json'),'utf8'))}
+  async function selectInstance(){await solid.getByRole('tab',{name:'Сцена',exact:true}).click();await solid.getByRole('button',{name:instance.name,exact:true}).click();await solid.getByRole('tab',{name:'Свойства',exact:true}).click()}
+  const beforeDetach=await exportState('detach-before');await selectInstance()
+  await page.evaluate(()=>window.__holdDetach=true)
+  await solid.getByRole('button',{name:'Сделать независимым',exact:true}).click();await page.waitForFunction(()=>window.__detachHeld)
+  await page.keyboard.press('Escape');await page.waitForFunction(()=>window.__detachTerminations>0)
+  assert.deepEqual(await exportState('detach-cancelled'),beforeDetach)
+  await page.evaluate(()=>window.__holdDetach=false);await selectInstance()
+  await measure('instance-detach',async()=>{await solid.getByRole('button',{name:'Сделать независимым',exact:true}).click();await solid.getByRole('button',{name:'Сделать независимым',exact:true}).waitFor({state:'hidden'})})
+  const detached=await exportState('detached'),independent=detached.bodies.find(body=>body.id===instance.id)
+  assert.ok(independent&&!independent.instance);assert.deepEqual(detached.bodies.find(body=>body.id===source.id),source)
+  const m=instance.instance.matrix,transformed=[]
+  for(let i=0;i<source.mesh.positions.length;i+=3)for(let axis=0;axis<3;axis++)transformed.push(m[axis][0]*source.mesh.positions[i]+m[axis][1]*source.mesh.positions[i+1]+m[axis][2]*source.mesh.positions[i+2]+m[axis][3])
+  assert.deepEqual(independent.mesh.positions,transformed);assert.deepEqual(independent.mesh.indices,source.mesh.indices)
+  await measure('instance-detach-undo',()=>solid.getByRole('button',{name:'↶',exact:true}).click());assert.deepEqual(await exportState('detach-undone'),beforeDetach)
+  await measure('instance-detach-redo',()=>solid.getByRole('button',{name:'↷',exact:true}).click());assert.deepEqual(await exportState('detach-redone'),detached)
+  await solid.getByRole('tab',{name:'Сцена',exact:true}).click();await solid.getByRole('button',{name:source.name,exact:true}).click();await solid.getByRole('tab',{name:'Свойства',exact:true}).click()
+  await solid.getByRole('textbox',{name:'ΔX',exact:true}).fill('1 mm')
+  await measure('detached-source-edit',async()=>{await solid.getByRole('button',{name:'Применить',exact:true}).click();await page.waitForFunction(()=>document.querySelector('input[aria-label="ΔX"]')?.value==='0')})
+  const changed=await exportState('detached-source-changed');assert.deepEqual(changed.bodies.find(body=>body.id===instance.id),independent);assert.notDeepEqual(changed.bodies.find(body=>body.id===source.id),source)
+  await solid.getByRole('button',{name:'↶',exact:true}).click();await saved();await solid.getByRole('button',{name:'↶',exact:true}).click();await saved();assert.deepEqual(await exportState('detach-restored'),beforeDetach)
  }
  if(process.argv.includes('--source-edit')){
   const source=expected.bodies.find(body=>!body.instance);assert.ok(source)
@@ -264,7 +295,7 @@ try{
  assert.deepEqual(errors,[])
  await page.screenshot({path:path.join(directory,'scene.png')})
  const percentile=(values,p)=>{const sorted=[...values].sort((a,b)=>a-b);return sorted[Math.max(0,Math.ceil(sorted.length*p)-1)]??null}
- const timingSummary=Object.fromEntries(['import','undo','redo',...(process.argv.includes('--source-edit')?['source-edit','source-edit-undo']:[]),...(process.argv.includes('--reimport')?['reimport']:[])].map(action=>{
+ const timingSummary=Object.fromEntries(['import','undo','redo',...(process.argv.includes('--detach')?['instance-detach','instance-detach-undo','instance-detach-redo','detached-source-edit']:[]),...(process.argv.includes('--source-edit')?['source-edit','source-edit-undo']:[]),...(process.argv.includes('--reimport')?['reimport']:[])].map(action=>{
   const measured=samples.filter(sample=>sample.action===action&&!sample.profiled)
   return [action,{count:measured.length,p50Ms:percentile(measured.map(s=>s.elapsedMs),.5),p95Ms:percentile(measured.map(s=>s.elapsedMs),.95),maxFrameGapMs:Math.max(0,...measured.map(s=>s.maxFrameGapMs))}]
  }))
@@ -277,7 +308,7 @@ try{
   scope:'Polling during the whole run, including operations and orbit. Main-page JS heap excludes workers; aggregate Chromium RSS includes shared pages more than once. Sampled maxima are not a guaranteed instantaneous peak. CDP and ps instrumentation can affect timings.',
  }:null
  const retainedMemory=collectRetained?{scope:'Main-page heap after explicit GC after each operation, outside its elapsed timer. GC changes subsequent operation conditions; these timings are not comparable with ordinary runs. Native/process allocations are excluded. Optional worker records report each worker isolate separately after GC; ended workers are marked explicitly.',samples:retainedSamples}:null
- const result={renderer,outlinerContainmentDisabled:process.argv.includes('--disable-outliner-containment'),outlinerChecked:process.argv.includes('--check-outliner'),outlinerControlsChecked:process.argv.includes('--check-outliner-controls'),outlinerDeletionChecked:process.argv.includes('--check-outliner-delete'),retainedMemory,memory,scope:(process.env.SOLID_GPU_HEADED==='1'?'Headed':'Headless')+' Chromium UI import and Undo/Redo through durable save; automation latency included. RAF gaps during operations are not orbit FPS; heap is sampled '+(collectRetained?'with separate forced-GC diagnostics.':'without forced GC.'),importCancellationChecked:process.argv.includes('--check-import-cancel'),cpuProfile:process.argv.includes('--profile-orbit')?'orbit.cpuprofile':profileCaptured?profileAction+'.cpuprofile':null,cancellationChecked:process.argv.includes('--check-cancel'),browser:browser.version(),machine:{platform:os.platform(),release:os.release(),arch:os.arch(),cpu:os.cpus()[0]?.model,logicalCpus:os.cpus().length,ramBytes:os.totalmem()},iterations,timingSummary,orbit,maxObservedHeapBytes:Math.max(before.JSHeapUsedSize,...samples.map(s=>s.heap.JSHeapUsedSize)),heapScope:'Samples after each operation only; not peak process memory.',viewport:{width:1280,height:800},bodies:expected.bodies.length,before,after:await heap(),samples}
+ const result={instanceDetachChecked:process.argv.includes('--detach'),renderer,outlinerContainmentDisabled:process.argv.includes('--disable-outliner-containment'),outlinerChecked:process.argv.includes('--check-outliner'),outlinerControlsChecked:process.argv.includes('--check-outliner-controls'),outlinerDeletionChecked:process.argv.includes('--check-outliner-delete'),retainedMemory,memory,scope:(process.env.SOLID_GPU_HEADED==='1'?'Headed':'Headless')+' Chromium UI import and Undo/Redo through durable save; automation latency included. RAF gaps during operations are not orbit FPS; heap is sampled '+(collectRetained?'with separate forced-GC diagnostics.':'without forced GC.'),importCancellationChecked:process.argv.includes('--check-import-cancel'),cpuProfile:process.argv.includes('--profile-orbit')?'orbit.cpuprofile':profileCaptured?profileAction+'.cpuprofile':null,cancellationChecked:process.argv.includes('--check-cancel'),browser:browser.version(),machine:{platform:os.platform(),release:os.release(),arch:os.arch(),cpu:os.cpus()[0]?.model,logicalCpus:os.cpus().length,ramBytes:os.totalmem()},iterations,timingSummary,orbit,maxObservedHeapBytes:Math.max(before.JSHeapUsedSize,...samples.map(s=>s.heap.JSHeapUsedSize)),heapScope:'Samples after each operation only; not peak process memory.',viewport:{width:1280,height:800},bodies:expected.bodies.length,before,after:await heap(),samples}
  await writeFile(path.join(directory,'measurements.json'),JSON.stringify(result,null,2)+'\n')
  console.log(JSON.stringify(result))
 }finally{clearInterval(memoryTimer);await memoryPending;await browser?.close();await new Promise(resolve=>server.close(resolve))}

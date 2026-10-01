@@ -55,8 +55,8 @@ export function createSolidInstance(document:DirectDocument,sourceId:string,id:s
  next.bodies.push({...structuredClone(source),id,name:source.name.slice(0,89)+' · instance',instance:{sourceId,matrix:structuredClone(matrix)}})
  return resolveSolidInstances(next)
 }
-export function detachSolidInstances(document:DirectDocument,ids:readonly string[]):DirectDocument {
- const next=resolveSolidInstances(structuredClone(document))
+export function detachSolidInstances(document:DirectDocument,ids:readonly string[],cache?:SolidInstanceBatchCache):DirectDocument {
+ const next=resolveSolidInstances(structuredClone(document),cache)
  for(const body of next.bodies)if(ids.includes(body.id))delete body.instance
  return next
 }
