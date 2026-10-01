@@ -39,7 +39,9 @@ function reference(mesh:PolygonMesh,dense:PolygonMesh){
 }
 it.each(['box','sphere'])('preserves display geometry and picking with crease-aware shading for %s',kind=>{
  const brep=kind==='box'?createBrepBox([0,0,0],[2,3,4]):createBrepSphere(5)
- const mesh=tessellateNurbsBrep(brep,3),dense=tessellateNurbsBrep(brep,12),expected=reference(mesh,dense),actual=prepareSolidDisplay(mesh,brep)
+ const segments=kind==='sphere'?8:12
+ const mesh=tessellateNurbsBrep(brep,3),dense=tessellateNurbsBrep(brep,segments),expected=reference(mesh,dense),actual=prepareSolidDisplay(mesh,brep,segments)
+ expect(dense.indices.length/3).toBeLessThanOrEqual(4000)
  expect(Array.from(actual.mesh.positions)).toEqual(Array.from(dense.positions))
  expect(Array.from(actual.mesh.indices)).toEqual(Array.from(dense.indices))
  expect(actual.map).toEqual(expected.map)
@@ -92,4 +94,17 @@ it('preserves exact closed-shell membership for dense and working mixed meshes',
  expect(JSON.stringify(doc)).toBe(before)
  const changed=structuredClone(body.mesh);changed.positions[0]+=.123
  expect(prepareSolidDisplay(changed,body.brep).workClosed).toBeNull()
+})
+
+it('keeps the sphere working mesh and picking when requested refinement exceeds its budget',()=>{
+ const brep=createBrepSphere(5),mesh=tessellateNurbsBrep(brep,3),before=structuredClone(mesh)
+ const dense=tessellateNurbsBrep(brep,12)
+ expect(dense.indices.length/3).toBeGreaterThan(4000)
+ const actual=prepareSolidDisplay(mesh,brep,12)
+ expect(Array.from(actual.mesh.positions)).toEqual(Array.from(mesh.positions))
+ expect(Array.from(actual.mesh.indices)).toEqual(Array.from(mesh.indices))
+ expect(actual.map).toBeNull()
+ const expected=stats(mesh).normals
+ actual.normals.forEach((normal,i)=>normal.forEach((x,k)=>expect(x).toBeCloseTo(expected[i][k],12)))
+ expect(mesh).toEqual(before)
 })

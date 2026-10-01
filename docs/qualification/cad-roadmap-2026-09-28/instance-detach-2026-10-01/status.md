@@ -13,3 +13,15 @@ Numeric transform and instance detach now send snapDocument to the worker. This 
 Both before/after CPU-profile browser runs passed cancellation, exact independent geometry, full Undo/Redo and independent-source-change assertions on 1000 instances. The before profile sampled about 717.6 ms inclusive through get currentDocument / document parsing. The after profile contains no get currentDocument path for this operation. It still includes about 175.5 ms in structuredClone under commitAsync. Profiles contain browser and worker wait time and do not prove overall speed qualification. The summary excludes profiled actions from ordinary timing percentiles by design.
 
 Typecheck, production build and distribution verification passed after this change (7,153,884 asset bytes). The full P0–P3 objective remains open.
+
+## Time-limited B-rep display scan
+
+SolidDisplayQueue now yields after either 32 B-rep keys or 8 ms, preserving atomic prepared-key publication and generation cancellation. A deterministic test simulates expensive keys and cancels a three-body scan before worker dispatch. All 13 display queue tests passed. Typecheck, production build and size verification passed (7,153,952 asset bytes). CPU browser qualification on 1000 linked instances passed import cancellation, restoration cancellation/retry, Undo/Redo and exact final source/instance identity and placement export. This does not qualify a single expensive geometry key or total render latency.
+
+The general CAD regression command now includes SolidGeometryDisplayQueue, scene-edit cache and the real postMessage worker boundary tests. Its final run is in progress.
+
+The first expanded CAD regression run had 779 passing tests and one sphere display assertion failure. Its old oracle assumed segments=12 always fits the 4000-triangle refinement budget; the new exact rational sphere exceeds it. Production correctly retained the working mesh. The tests now separately verify refined geometry and picking at segments=8 within budget, and exact working geometry, null picking remap, normals and source immutability when segments=12 exceeds budget. All seven display preparation tests passed. The full expanded CAD regression is rerunning; not yet qualified as green.
+
+Remaining synchronous P0 paths found in the UI audit: moveSelectionToGroup and addEmptyGroup both read history.document and use synchronous commit(next). Their metadata-only changes still rematerialize and validate the complete instance scene. These paths are the next worker migration target; they are not qualified as responsive by the current display and transform tests.
+
+Expanded CAD regression completed: 781 tests passed across all 65 files, no failures or skips, 68.53 seconds. Evidence: full-regression-final.txt. This validates the current suite, not every open P0–P3 requirement.

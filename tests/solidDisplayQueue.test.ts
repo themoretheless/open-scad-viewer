@@ -93,3 +93,16 @@ it('the default event-loop yield permits cancelling before any refinement reques
  expect(await pending).toBe(false)
  expect(port.run).not.toHaveBeenCalled()
 })
+
+it('yields for expensive keys before reaching the 32-body batch limit',async()=>{
+ let clock=0,release!:()=>void
+ const now=vi.spyOn(performance,'now').mockImplementation(()=>clock+=5)
+ const port={cancel:vi.fn(),run:vi.fn()},yieldScan=vi.fn(()=>new Promise<void>(resolve=>release=resolve))
+ const queue=new SolidDisplayQueue(port,new SolidDisplayCache(),yieldScan)
+ try{
+  const pending=queue.prepare([body('a'),body('b'),body('c')])
+  expect(yieldScan).toHaveBeenCalledTimes(1);expect(port.run).not.toHaveBeenCalled()
+  queue.cancel();release();expect(await pending).toBe(false)
+  expect(port.run).not.toHaveBeenCalled();expect(queue.get(body('a'))).toBeUndefined()
+ }finally{now.mockRestore()}
+})
