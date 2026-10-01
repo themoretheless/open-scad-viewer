@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict'
-import {createHash} from 'node:crypto'
 import {createServer} from 'node:http'
 import {readFile,mkdir,writeFile} from 'node:fs/promises'
 import path from 'node:path'
+import {installGpuTextureDiagnostics} from './qualificationGpuTextureDiagnostics.mjs'
 import {loadQualificationPlaywrightPackage} from './qualificationPlaywrightPackage.mjs'
 const root=path.resolve(process.env.SOLID_QUALIFICATION_DIST??'dist'),directory=path.resolve(process.argv[2]??'/tmp/solid-profile-offset')
 const keyboard=process.argv.includes('--keyboard'),theme=process.argv.find(a=>a.startsWith('--theme='))?.slice(8)??'system'
@@ -10,20 +10,22 @@ assert.ok(['system','dark','light','nord','solarized'].includes(theme))
 await mkdir(directory,{recursive:true})
 const server=createServer(async(req,res)=>{
  try {
-  const url=new URL(req.url,'http://localhost'),file=path.resolve(root,'.'+(url.pathname==='/'?'/index.html':decodeURIComponent(url.pathname)))
+  const url=new URL(req.url,'http://localhost');if(url.pathname==='/favicon.ico'){res.writeHead(204).end();return}
+  const file=path.resolve(root,'.'+(url.pathname==='/'?'/index.html':decodeURIComponent(url.pathname)))
   if(!file.startsWith(root+path.sep)){res.writeHead(403).end();return}
   res.setHeader('Content-Type',file.endsWith('.html')?'text/html':file.endsWith('.js')?'text/javascript':file.endsWith('.css')?'text/css':file.endsWith('.wasm')?'application/wasm':'application/octet-stream')
   res.end(await readFile(file))
- }catch{res.writeHead(404).end()}
+ }catch{failedResources.push({url:req.url,status:404,source:'qualification-server'});res.writeHead(404).end()}
 })
 await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve))
 let browser,page
-const renderErrors=[]
+const renderErrors=[],failedResources=[]
 try {
  const {playwright}=await loadQualificationPlaywrightPackage()
  browser=await playwright.chromium.launch({headless:process.env.SOLID_GPU_HEADED!=='1',args:['--enable-unsafe-webgpu'],...(process.env.CHROMIUM_EXECUTABLE?{executablePath:process.env.CHROMIUM_EXECUTABLE}:{})})
  page=await browser.newPage({acceptDownloads:true})
- page.on('pageerror',e=>renderErrors.push(String(e)));page.on('console',m=>{if(m.type()==='error')renderErrors.push(m.text())})
+ const gpuDiagnostics=process.argv.includes('--trace-gpu')?await installGpuTextureDiagnostics(page):()=>[]
+ page.on('response',response=>{if(response.status()>=400)failedResources.push({url:response.url(),status:response.status()})});page.on('pageerror',e=>renderErrors.push(String(e)));page.on('console',m=>{if(m.type()==='error')renderErrors.push(m.text())})
  await page.addInitScript(()=>{
   if(!navigator.gpu)return
   const request=navigator.gpu.requestAdapter.bind(navigator.gpu)
@@ -41,6 +43,8 @@ try {
   throw Error('Target is unreachable through sequential Tab navigation: '+await locator.getAttribute('aria-label'))
  }
  async function activate(locator){
+  await locator.waitFor({state:'visible'})
+  await page.waitForFunction(element=>!element.disabled,await locator.elementHandle())
   if(keyboard){await tabTo(locator);await page.keyboard.press('Enter')}
   else await locator.click()
  }
@@ -70,11 +74,12 @@ try {
  async function input(locator,value){if(keyboard){await tabTo(locator);await page.keyboard.press('ControlOrMeta+A');await page.keyboard.insertText(value)}else await locator.fill(value)}
  const apply=solid.getByRole('button',{name:'Готово · Enter',exact:true})
  await command('Box')
- await solid.locator('[data-body]').first().waitFor({state:'visible'})
+ await solid.getByRole('button',{name:'Куб · 3D',exact:true}).waitFor({state:'visible'})
  await solid.getByRole('status',{name:'primitive-build',exact:true}).waitFor({state:'hidden'})
  await command('Create linked instance');await activate(apply)
  await command('Select instance source')
- async function snapshot(file){const d=await download('Скачать проект JSON',file);if(await menu.evaluate(e=>e.parentElement.open))await activate(menu);return d}
+ let gpuChecks=0
+ async function snapshot(file){if(process.argv.includes('--require-gpu')){assert.equal(await solid.locator('.gpu-layer').evaluate(canvas=>canvas.style.visibility==='visible'),true,'GPU must remain active at '+file);gpuChecks++}const d=await download('Скачать проект JSON',file);if(await menu.evaluate(e=>e.parentElement.open))await activate(menu);return d}
  async function historyRoundtrip(before,after,key){
   for(const [button,expected,file] of [['↶',before,key+'-undo.json'],['↷',after,key+'-redo.json']]){
    await activate(solid.getByRole('button',{name:button,exact:true}));await solid.getByRole('status',{name:'history-restore',exact:true}).waitFor({state:'hidden'});assert.deepEqual(await snapshot(file),expected)
@@ -133,7 +138,13 @@ try {
  await solid.getByRole('status',{name:'history-restore',exact:true}).waitFor({state:'hidden'})
  assert.deepEqual(await snapshot('final-reloaded.json'),deleted)
  await writeFile(path.join(directory,'gpu-validation-errors.json'),JSON.stringify(await page.evaluate(()=>window.__gpuValidationErrors??[]),null,2))
+ await writeFile(path.join(directory,'failed-resources.json'),JSON.stringify(failedResources,null,2))
+ const diagnosticEvents=gpuDiagnostics()
+ await writeFile(path.join(directory,'gpu-texture-diagnostics.json'),JSON.stringify(diagnosticEvents,null,2))
+ assert.deepEqual(diagnosticEvents.filter(event=>event.kind.endsWith('-error')),[],'captured GPU validation failures are still failures')
  assert.deepEqual(renderErrors,[])
- const report={browser:browser.version(),keyboard,tabPresses,downloads,groupCreateHistory:true,groupMoveHistory:true,groupDeleteHistory:true,sourceDeleteLocalized:true,lockedGroupDeleteLocalized:true,workspaceReload:true,finalReload:true}
+ const gpuActive=await solid.locator('.gpu-layer').evaluate(canvas=>canvas.style.visibility==='visible')
+ if(process.argv.includes('--require-gpu'))assert.equal(gpuActive,true,'Solid GPU renderer must remain active')
+ const report={gpuActive,gpuChecks,browser:browser.version(),keyboard,tabPresses,downloads,groupCreateHistory:true,groupMoveHistory:true,groupDeleteHistory:true,sourceDeleteLocalized:true,lockedGroupDeleteLocalized:true,workspaceReload:true,finalReload:true}
  await writeFile(path.join(directory,'scene-state-browser.json'),JSON.stringify(report,null,2)+'\n');console.log(report)
 }catch(error){if(page){await page.screenshot({path:path.join(directory,'failure.png')}).catch(()=>{});await writeFile(path.join(directory,'failure.txt'),await page.locator('body').innerText().catch(()=>''))}throw error}finally{await browser?.close();await new Promise(resolve=>server.close(resolve))}
