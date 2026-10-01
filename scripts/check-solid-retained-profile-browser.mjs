@@ -59,6 +59,20 @@ try {
    terminate(){if(this.__heldPreparation)window.__preparationTerminated++;return super.terminate()}
   }
  })
+ if(process.argv.includes('--stale-regions'))await page.addInitScript(()=>{
+  const NativeWorker=window.Worker;window.__regionHeld=[];window.__regionTerminated=0;window.__failRegion=true
+  window.Worker=class extends NativeWorker{
+   constructor(...args){super(...args);this.addEventListener('message',event=>{if(event.data?.kind==='profileEdit'&&event.data.ok)window.__regionLastReply=structuredClone(event.data)})}
+   postMessage(message,...rest){
+    if(message?.job?.kind==='profileEdit'){
+     if(window.__failRegion){window.__failRegion=false;queueMicrotask(()=>this.onmessage?.({data:{version:1,id:message.id,kind:'profileEdit',ok:false,error:{name:'Error',code:'CAD_TRANSPORT',message:'PRIVATE REGION FAILURE'}}}));return}
+     if(window.__holdRegion){this.__heldRegion=true;window.__regionHeld.push({message:structuredClone(message),callback:this.onmessage});return}
+    }
+    return super.postMessage(message,...rest)
+   }
+   terminate(){if(this.__heldRegion)window.__regionTerminated++;return super.terminate()}
+  }
+ })
  const origin=`http://127.0.0.1:${server.address().port}`
  await page.goto(origin)
  await page.getByRole('combobox',{name:'Тема',exact:true}).selectOption(theme)
@@ -137,6 +151,12 @@ try {
  async function command(name){await activate(solid.getByRole('button',{name:'Команда… Ctrl K',exact:true}));const search=page.getByRole('combobox',{name:'Search commands / Поиск команд'});await enterText(search,name);await page.keyboard.press('Enter')}
  const apply=solid.getByRole('button',{name:'Готово · Enter',exact:true})
  await command(operation)
+ if(process.argv.includes('--stale-regions')){
+  assert.ok(!preparation)
+  await solid.getByRole('alert').filter({hasText:'Не удалось получить корректный результат вычисления.'}).waitFor()
+  assert.equal(await apply.isDisabled(),true);assert.equal((await solid.innerText()).includes('PRIVATE REGION FAILURE'),false)
+  await activate(solid.getByRole('button',{name:'Повторить вычисление',exact:true}))
+ }
  if(diagnosticFixture){
   await solid.getByTestId('profile-intersection-coverage').waitFor({timeout:90000})
   assert.equal(await apply.isDisabled(),true)
@@ -168,6 +188,22 @@ try {
   await choose(target,'rect');assert.match(await solid.getByTestId('profile-operands').textContent(),/Circular cutter/)
  }
  await apply.click({trial:true});assert.equal(await solid.locator(preparation?'[data-preview="prepared-profile"]':'[data-preview="retained-profile"]').count(),1)
+ let staleRegionChecked=false
+ if(process.argv.includes('--stale-regions')){
+  await page.waitForFunction(()=>window.__regionLastReply?.ok===true)
+  await page.keyboard.press('Escape');await page.evaluate(()=>window.__holdRegion=true)
+  await command(operation);await page.waitForFunction(()=>window.__regionHeld.length===1)
+  await page.keyboard.press('Escape');await command(operation);await page.waitForFunction(()=>window.__regionHeld.length===2)
+  await page.evaluate(()=>{const held=window.__regionHeld[0];held.callback({data:{...window.__regionLastReply,id:held.message.id}})})
+  assert.equal(await apply.isDisabled(),true);assert.equal(await solid.locator('[data-preview="retained-profile"]').count(),0)
+  await page.keyboard.press('Escape');assert.equal(await page.evaluate(()=>window.__regionTerminated),2)
+  await page.evaluate(()=>{window.__holdRegion=false;const held=window.__regionHeld[1];held.callback({data:{...window.__regionLastReply,id:held.message.id}})})
+  assert.deepEqual(await download('Скачать проект JSON','region-late-cancelled.json'),before)
+  assert.equal(await solid.locator('[data-preview="retained-profile"]').count(),0)
+  if(await menu.evaluate(e=>e.parentElement.open))await activate(menu)
+  await command(operation);await apply.click({trial:true});await solid.locator('[data-preview="retained-profile"]').waitFor()
+  staleRegionChecked=true
+ }
  let stalePreparationChecked=false
  if(process.argv.includes('--stale-preparation')){
   assert.ok(preparation);await page.waitForFunction(()=>window.__preparationLastReply?.ok===true)
@@ -261,7 +297,7 @@ try {
  await page.reload();await solid.getByRole('button',{name:joined.sketches[0].name,exact:true}).waitFor();await solid.getByRole('status',{name:'history-restore',exact:true}).waitFor({state:'hidden'})
  const restored=await download('Скачать проект JSON','restored.json');assert.deepEqual(restored,joined)
  assert.deepEqual(renderErrors,[])
- const report={artifacts,stalePreparationChecked,completeDocumentChecks:true,browserReloadExact:true,browser:browser.version(),profileWorkerCancelled:await page.evaluate(()=>window.__profileDisplayTerminated===true),operation,retainedArcs:!generalNurbs,retainedGeneralNurbs:generalNurbs,rationalWeights:rational,generalAreaMm2:generalNurbs?generalArea:undefined,exactExtrusion:true,gpuFallback:gpuDeviceDestroyed,gpuRecovered:gpuLoss,renderedTriangles,cancel:true,undo:true,repeat:true,jsonReload:true,keyboard,tabPresses,downloads}
+ const report={artifacts,staleRegionChecked,stalePreparationChecked,completeDocumentChecks:true,browserReloadExact:true,browser:browser.version(),profileWorkerCancelled:await page.evaluate(()=>window.__profileDisplayTerminated===true),operation,retainedArcs:!generalNurbs,retainedGeneralNurbs:generalNurbs,rationalWeights:rational,generalAreaMm2:generalNurbs?generalArea:undefined,exactExtrusion:true,gpuFallback:gpuDeviceDestroyed,gpuRecovered:gpuLoss,renderedTriangles,cancel:true,undo:true,repeat:true,jsonReload:true,keyboard,tabPresses,downloads}
  await writeFile(path.join(directory,'retained-browser.json'),JSON.stringify(report,null,2)+'\n');console.log(report)
  }
 }catch(error){if(page){await page.screenshot({path:path.join(directory,'failure.png')}).catch(()=>{});await writeFile(path.join(directory,'failure.txt'),await page.locator('body').innerText().catch(()=>''))}throw error}finally{await browser?.close();await new Promise(resolve=>server.close(resolve))}
