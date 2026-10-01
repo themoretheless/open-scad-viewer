@@ -81,3 +81,14 @@ it('accepts actual native cylinder linear-projection reports without certifying 
  expect(fixture.result.allFacesInjective).toBe(true)
  expect(fixture.result.absenceProven).toBe(false)
 })
+
+it('qualifies actual WASM linear face proofs while retaining unresolved cylinder pairs',async()=>{
+ const fixture=JSON.parse(readFileSync(new URL('../docs/qualification/cad-roadmap-2026-09-28/curved-volume-2026-10-01/linear-face-native.json',import.meta.url),'utf8'))
+ const {model,toleranceUv,maxSpans,op,...limits}=fixture.request
+ const {inspectSelfIntersection}=await import('../src/services/solidSelfIntersection')
+ const before=JSON.stringify(model),r=inspectSelfIntersection(model,toleranceUv,limits,maxSpans)
+ expect(validSelfIntersection(selfIntersectionExpectation(model,toleranceUv,limits,maxSpans),r)).toBe(true)
+ expect(r.allFacesInjective).toBe(true);expect(r.spans).toBe(102)
+ expect(r.faces).toEqual(fixture.result.faces)
+ expect(r.absenceProven).toBe(false);expect(JSON.stringify(model)).toBe(before)
+})
