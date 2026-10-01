@@ -29,7 +29,7 @@ await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve))
 let browser,memoryTimer,memoryPending
 try{
  const {playwright}=await loadQualificationPlaywrightPackage()
- browser=await playwright.chromium.launch({headless:true,...(process.argv.includes('--require-webgpu')?{args:['--enable-unsafe-webgpu']}: {})})
+ browser=await playwright.chromium.launch({headless:process.env.SOLID_GPU_HEADED!=='1',...(process.argv.includes('--require-webgpu')?{args:['--enable-unsafe-webgpu']}: {})})
  const context=await browser.newContext({viewport:{width:1280,height:800},acceptDownloads:true}),page=await context.newPage(),errors=[]
  await page.addInitScript(()=>{
   window.__gpuQualification=[]
@@ -204,7 +204,7 @@ try{
   await page.screenshot({path:path.join(directory,'orbit-before.png')})
   await page.mouse.move(x,y);await page.mouse.down({button:'right'})
   if(process.argv.includes('--profile-orbit'))await cdp.send('Profiler.start')
-  await page.evaluate(()=>{window.__orbitFrames=[];window.__orbitStart=performance.now();window.__orbitPrevious=window.__orbitStart;window.__orbitRecording=true;const frame=t=>{if(!window.__orbitRecording)return;window.__orbitFrames.push(t-window.__orbitPrevious);window.__orbitPrevious=t;requestAnimationFrame(frame)};requestAnimationFrame(frame)})
+  await page.evaluate(()=>{window.__orbitFrames=[];window.__orbitStart=performance.now();window.__orbitPrevious=null;window.__orbitRecording=true;const frame=t=>{if(!window.__orbitRecording)return;if(window.__orbitPrevious!==null)window.__orbitFrames.push(t-window.__orbitPrevious);window.__orbitPrevious=t;requestAnimationFrame(frame)};requestAnimationFrame(frame)})
   for(let i=1;i<=180;i++)await page.mouse.move(x+100*Math.sin(i/35),y+40*Math.sin(i/29))
   orbit=await page.evaluate(()=>{window.__orbitRecording=false;return {durationMs:performance.now()-window.__orbitStart,frameGapsMs:window.__orbitFrames}})
   if(process.argv.includes('--disable-cpu-canvas'))assert.ok(await svg.locator('polygon[data-body]').count()>1200,'Unavailable canvas must retain SVG geometry during motion')
@@ -221,8 +221,8 @@ try{
   assert.ok(orbit.frameGapsMs.length>1,'Orbit must produce animation frames')
   orbit.rafFps=orbit.frameGapsMs.length*1000/orbit.durationMs
   orbit.pointerMoves=180
-  orbit.scope='RAF cadence during 180 automated right-button orbit moves; includes input automation, headless rendering, not physical display presentation rate.'
-  const hit=await svg.evaluate(svg=>{
+  orbit.scope='RAF cadence during 180 automated right-button orbit moves; includes input automation, automated rendering, not physical display presentation rate.'
+  let hit=await svg.evaluate(svg=>{
    for(const polygon of svg.querySelectorAll('polygon[data-body]')){
     const points=[...polygon.points];if(!points.length)continue
     const center=new DOMPoint(points.reduce((n,p)=>n+p.x,0)/points.length,points.reduce((n,p)=>n+p.y,0)/points.length).matrixTransform(svg.getScreenCTM())
@@ -231,11 +231,30 @@ try{
    }
    return null
   })
-  assert.ok(hit,'A visible polygon must remain pickable after orbit')
-  await page.mouse.click(hit.x,hit.y)
+  if(renderer.gpuCanvasVisible){
+   assert.equal(await solid.locator('.gpu-layer').evaluate(canvas=>getComputedStyle(canvas).visibility), 'visible')
+   const initialNames=await solid.locator('.object-row button[aria-pressed="true"]').evaluateAll(buttons=>buttons.map(button=>button.getAttribute('aria-label')))
+   for(const ry of [.5,.6,.7,.8,.4]){
+    for(const rx of [.5,.6,.7,.8,.4]){
+     const px=box.x+box.width*rx,py=box.y+box.height*ry
+     await page.mouse.click(px,py)
+     const selected=solid.locator('.object-row button[aria-pressed="true"]')
+     if(await selected.count()){
+      const name=await selected.first().getAttribute('aria-label'),body=expected.bodies.find(body=>body.name===name)
+      if(body&&!initialNames.includes(name)){hit={id:body.id,x:px,y:py};break}
+     }
+    }
+    if(hit)break
+   }
+  }
+  assert.ok(hit,'A visible body must remain pickable after orbit')
+  if(!renderer.gpuCanvasVisible)await page.mouse.click(hit.x,hit.y)
   const body=expected.bodies.find(body=>body.id===hit.id);assert.ok(body)
   assert.equal(await solid.getByRole('button',{name:body.name,exact:true}).getAttribute('aria-pressed'),'true')
   orbit.pickAfterOrbit=hit.id
+  assert.equal(await solid.getByText('Вычисляется преобразование. Esc — отменить.',{exact:true}).count(),0,'A body selection click must not start a transform')
+  renderer.afterOrbit=await page.evaluate(()=>({diagnostics:window.__gpuQualification,gpuCanvasVisible:[...document.querySelectorAll('.gpu-layer')].some(canvas=>getComputedStyle(canvas).visibility==='visible')}))
+  if(process.argv.includes('--require-webgpu')){assert.equal(renderer.afterOrbit.gpuCanvasVisible,true);assert.ok(renderer.afterOrbit.diagnostics.every(event=>event.event==='adapter'),'No GPU error or device loss during orbit')}
   await page.screenshot({path:path.join(directory,'orbit-after.png')})
  }
  await menu.click();const download=page.waitForEvent('download');await solid.getByRole('button',{name:'Скачать проект JSON',exact:true}).click();await (await download).saveAs(path.join(directory,'restored.json'));await menu.click()
@@ -258,7 +277,7 @@ try{
   scope:'Polling during the whole run, including operations and orbit. Main-page JS heap excludes workers; aggregate Chromium RSS includes shared pages more than once. Sampled maxima are not a guaranteed instantaneous peak. CDP and ps instrumentation can affect timings.',
  }:null
  const retainedMemory=collectRetained?{scope:'Main-page heap after explicit GC after each operation, outside its elapsed timer. GC changes subsequent operation conditions; these timings are not comparable with ordinary runs. Native/process allocations are excluded. Optional worker records report each worker isolate separately after GC; ended workers are marked explicitly.',samples:retainedSamples}:null
- const result={renderer,outlinerContainmentDisabled:process.argv.includes('--disable-outliner-containment'),outlinerChecked:process.argv.includes('--check-outliner'),outlinerControlsChecked:process.argv.includes('--check-outliner-controls'),outlinerDeletionChecked:process.argv.includes('--check-outliner-delete'),retainedMemory,memory,scope:'Headless Chromium UI import and Undo/Redo through durable save; automation latency included. RAF gaps during operations are not orbit FPS; heap is sampled '+(collectRetained?'with separate forced-GC diagnostics.':'without forced GC.'),importCancellationChecked:process.argv.includes('--check-import-cancel'),cpuProfile:process.argv.includes('--profile-orbit')?'orbit.cpuprofile':profileCaptured?profileAction+'.cpuprofile':null,cancellationChecked:process.argv.includes('--check-cancel'),browser:browser.version(),machine:{platform:os.platform(),release:os.release(),arch:os.arch(),cpu:os.cpus()[0]?.model,logicalCpus:os.cpus().length,ramBytes:os.totalmem()},iterations,timingSummary,orbit,maxObservedHeapBytes:Math.max(before.JSHeapUsedSize,...samples.map(s=>s.heap.JSHeapUsedSize)),heapScope:'Samples after each operation only; not peak process memory.',viewport:{width:1280,height:800},bodies:expected.bodies.length,before,after:await heap(),samples}
+ const result={renderer,outlinerContainmentDisabled:process.argv.includes('--disable-outliner-containment'),outlinerChecked:process.argv.includes('--check-outliner'),outlinerControlsChecked:process.argv.includes('--check-outliner-controls'),outlinerDeletionChecked:process.argv.includes('--check-outliner-delete'),retainedMemory,memory,scope:(process.env.SOLID_GPU_HEADED==='1'?'Headed':'Headless')+' Chromium UI import and Undo/Redo through durable save; automation latency included. RAF gaps during operations are not orbit FPS; heap is sampled '+(collectRetained?'with separate forced-GC diagnostics.':'without forced GC.'),importCancellationChecked:process.argv.includes('--check-import-cancel'),cpuProfile:process.argv.includes('--profile-orbit')?'orbit.cpuprofile':profileCaptured?profileAction+'.cpuprofile':null,cancellationChecked:process.argv.includes('--check-cancel'),browser:browser.version(),machine:{platform:os.platform(),release:os.release(),arch:os.arch(),cpu:os.cpus()[0]?.model,logicalCpus:os.cpus().length,ramBytes:os.totalmem()},iterations,timingSummary,orbit,maxObservedHeapBytes:Math.max(before.JSHeapUsedSize,...samples.map(s=>s.heap.JSHeapUsedSize)),heapScope:'Samples after each operation only; not peak process memory.',viewport:{width:1280,height:800},bodies:expected.bodies.length,before,after:await heap(),samples}
  await writeFile(path.join(directory,'measurements.json'),JSON.stringify(result,null,2)+'\n')
  console.log(JSON.stringify(result))
 }finally{clearInterval(memoryTimer);await memoryPending;await browser?.close();await new Promise(resolve=>server.close(resolve))}
