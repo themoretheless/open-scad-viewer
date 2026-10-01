@@ -18,6 +18,22 @@ try{
   await page.locator('.more-menu > summary').click()
   await page.getByRole('button',{name:'Перенести сцену в Mesh',exact:true}).click()
   await page.getByRole('button',{name:'Исходный код',exact:true}).click()
+  await page.locator('.mesh-workspace').focus()
+  await page.keyboard.press('f')
+  // Pan the CPU mesh into the visible viewport before taking qualification images.
+  const svg=page.locator('.mesh-view'),box=await svg.boundingBox()
+  const bounds=await svg.locator('polygon').evaluateAll(nodes=>{
+   const boxes=nodes.map(node=>node.getBoundingClientRect())
+   return boxes.length?{left:Math.min(...boxes.map(b=>b.left)),right:Math.max(...boxes.map(b=>b.right)),top:Math.min(...boxes.map(b=>b.top)),bottom:Math.max(...boxes.map(b=>b.bottom))}:null
+  })
+  if(box&&bounds){
+   const viewport=page.viewportSize(),x=box.x+30,y=box.y+30
+   const targetX=(Math.max(box.x,0)+Math.min(box.x+box.width,viewport.width))/2
+   const targetY=(Math.max(box.y,0)+Math.min(box.y+box.height,viewport.height))/2
+   await page.mouse.move(x,y);await page.keyboard.down('Shift');await page.mouse.down()
+   await page.mouse.move(x+targetX-(bounds.left+bounds.right)/2,y+targetY-(bounds.top+bounds.bottom)/2,{steps:8})
+   await page.mouse.up();await page.keyboard.up('Shift')
+  }
   await page.waitForTimeout(1000)
   const name=file.replace('.r',''),text=await page.locator('body').innerText()
   await page.screenshot({path:path.join(directory,name+'.png'),fullPage:true})

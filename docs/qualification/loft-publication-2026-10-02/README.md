@@ -12,3 +12,7 @@ Branch: codex/loft-library, based on origin/main 8e7cb190.
 Spatial budget is in mm. U-station parameter_tolerance is dimensionless, defaults to 1e-8, and must lie in (0,1].
 
 The earlier qualification directories retain evidence from the original shared checkout. This directory records the isolated publication checkout. CI and GPU qualification are not claimed.
+
+Final optimized geometry WASM: 9,676,259 bytes. The 38 focused loft/text/Brotli tests and vue-tsc passed after packaging. Three fresh Chromium CPU mesh previews were rendered and visually inspected; capped loft reports 1116 vertices / 2228 triangles and closed. The harness pans geometry into the viewport for screenshots.
+
+CI previously failed on fresh runners because build-vr.mjs forced Cargo --offline while the pinned rbench Git dependency was not cached. The build retains --locked and now allows normal dependency acquisition; local VR build passed. CI is rerun after publication.
