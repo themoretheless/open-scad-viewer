@@ -1,0 +1,15 @@
+{
+  "scope": "Node cache retained-byte accounting, not process RSS; sequential runs are not paired timing evidence",
+  "before": {
+    "limit": 64000000,
+    "entries": 32,
+    "estimatedRetainedBytes": 39050340,
+    "warmParseMs": 202.07754199999908
+  },
+  "after": {
+    "limit": 64000000,
+    "entries": 32,
+    "estimatedRetainedBytes": 20194828,
+    "warmParseMs": 397.58708300000217
+  }
+}
