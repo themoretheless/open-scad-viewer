@@ -174,7 +174,7 @@ function handleKeydown(event: KeyboardEvent) {
               :aria-disabled="!isPaletteCommandEnabled(command)"
               :aria-describedby="!isPaletteCommandEnabled(command) ? reasonId(index) : undefined"
               :data-palette-index="index"
-              @pointerenter="activatePointer(index)"
+              @pointermove="activatePointer(index)"
               @click="execute(command)"
             >
               <span class="command-copy">

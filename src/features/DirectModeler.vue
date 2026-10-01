@@ -1040,6 +1040,12 @@ function bodyCalculationFailure(error:unknown,hasRetryButton=true):string {
    ?label('Размер сопряжения не помещается. Уменьшите радиус или размер фаски.','The feature does not fit. Reduce the radius or chamfer size.')
    :label('Сопряжение не подтверждено для выбранной геометрии. Проверьте условия режима ниже и выберите подходящие рёбра.','The feature is unproven for this geometry. Check the mode requirements below and select suitable edges.'))
  }
+ if(code==='BREP_RESOURCE_LIMIT'||code==='BREP_ANALYSIS_INDETERMINATE'){
+  const source=selectedBody.value?.name??selectedNurbsCurve.value?.name??label('Выбранная геометрия','Selected geometry')
+  return source+': '+(code==='BREP_RESOURCE_LIMIT'
+   ?label('Исчерпан лимит вычислений. Модель не изменена. Упростите геометрию или разделите операцию.','The calculation budget was exhausted. The model is unchanged. Simplify geometry or split the operation.')
+   :label('Точность расчёта не подтверждена. Модель не изменена. Проверьте замкнутость, ориентацию и вырожденные участки.','Calculation accuracy is unconfirmed. The model is unchanged. Check closure, orientation and degenerate regions.'))
+ }
  if(code==='CAD_CRASH')return label('Вычисление прервано из-за сбоя. Модель не изменена. ','The calculation stopped unexpectedly. The model is unchanged. ')+(hasRetryButton?label('Нажмите «Повторить вычисление».','Choose Retry calculation.'):label('Повторите операцию с выбранными телами.','Run the operation again with the selected bodies.'))
  if(code==='CAD_TIMEOUT')return label('Истекло время расчёта. Модель не изменена. Упростите геометрию или повторите расчёт.','The calculation timed out. The model is unchanged. Simplify geometry or retry.')
  if(code==='CAD_TRANSPORT'||code==='CAD_PROTOCOL')return label('Не удалось получить корректный результат вычисления. Модель не изменена. Повторите вычисление.','A valid calculation result could not be received. The model is unchanged. Retry the calculation.')

@@ -339,6 +339,8 @@ for (const [name, artifact, compression] of [
 // 7,173,589 bytes (+8,201); preserve the previous 802-byte headroom.
 // Distinct profile-pair diagnostics, source-aware presentation and protocol validation:
 // measured assets 7,193,674 bytes (+21,171 from 1d76d709), with 926-byte margin.
-const totalBudget = 7_194_600
+// Selective directional mass integration and localized failures: measured
+// assets 7,196,033 bytes (+2,359 from profile-pair qualification); 967-byte margin.
+const totalBudget = 7_197_000
 if (total > totalBudget) throw new Error(`dist totals ${total} bytes; budget is ${totalBudget}`)
 console.log(`Verified ${files.length} dist artifacts (${total} asset bytes + ${rawWasmBytes} raw WASM bytes = ${total + rawWasmBytes} total bytes)`)

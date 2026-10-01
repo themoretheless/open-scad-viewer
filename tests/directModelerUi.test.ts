@@ -118,7 +118,7 @@ async function mount(props: Record<string,unknown> = {}, savedDraft?:string, pre
  const svg=()=>all().find(n=>n.tag==='svg'&&n.props['aria-label']==='3D body canvas')!
  const event=(n:Node,x=0,y=0)=>({button:0,target:n,currentTarget:n,clientX:x,clientY:y,pointerId:1,preventDefault(){},stopPropagation(){}})
  const pointer=async(n:Node,x=0,y=0)=>{n.props.onPointerdown(event(n,x,y));await nextTick()}
- return {storageChanged:()=>windowListeners.get('storage')?.({key:'scad-solid-modeler-v1'}),all,text,button,click,svg,pointer,event,setProps:async(next:Record<string,unknown>)=>{Object.assign(currentProps,next);await nextTick()},preferences,serialized:()=>stored,doc:()=>{const parsed=JSON.parse(stored) as DirectDocument;return parsed.bodies.some(body=>body.instance&&!body.mesh)?JSON.parse(stringifyMeshJson(parseDirectDocument(stored))) as DirectDocument:parsed},field:async(value:number)=>{const input=all().find(n=>n.tag==='input'&&n.props['onUpdate:modelValue']&&n.props.step===.5)??all().find(n=>n.tag==='input'&&n.props.type==='number'&&n.props['onUpdate:modelValue']);if(!input)throw Error('Missing field');input.props['onUpdate:modelValue'](value);await flushClearance()}}
+ return {commands:()=>instance.value.solidCommands as Array<{id:string;label:string;enabled?:boolean;disabledReason?:string}>,storageChanged:()=>windowListeners.get('storage')?.({key:'scad-solid-modeler-v1'}),all,text,button,click,svg,pointer,event,setProps:async(next:Record<string,unknown>)=>{Object.assign(currentProps,next);await nextTick()},preferences,serialized:()=>stored,doc:()=>{const parsed=JSON.parse(stored) as DirectDocument;return parsed.bodies.some(body=>body.instance&&!body.mesh)?JSON.parse(stringifyMeshJson(parseDirectDocument(stored))) as DirectDocument:parsed},field:async(value:number)=>{const input=all().find(n=>n.tag==='input'&&n.props['onUpdate:modelValue']&&n.props.step===.5)??all().find(n=>n.tag==='input'&&n.props.type==='number'&&n.props['onUpdate:modelValue']);if(!input)throw Error('Missing field');input.props['onUpdate:modelValue'](value);await flushClearance()}}
 }
 
 function cylinderSeed(): DirectDocument {
@@ -3324,6 +3324,8 @@ it.each([
  ['CAD_TIMEOUT','The calculation timed out'],
  ['CAD_TRANSPORT','A valid calculation result could not be received'],
  ['CAD_PROTOCOL','A valid calculation result could not be received'],
+ ['BREP_RESOURCE_LIMIT','The calculation budget was exhausted'],
+ ['BREP_ANALYSIS_INDETERMINATE','Calculation accuracy is unconfirmed'],
 ] as const)('explains %s body failures with a recovery action',async(code,message)=>{
  const requests:Array<{reject:(error:Error)=>void}>=[]
  previewWorkerRun.mockImplementation(job=>job.kind==='restoreDocument'?undefined:new Promise((_resolve,reject)=>requests.push({reject})))
@@ -3333,8 +3335,23 @@ it.each([
  requests.at(-1)!.reject(Object.assign(Error('internal implementation detail'),{code}));await flushClearance()
  const text=ui.text(ui.all()[0]);expect(text).toContain(message);expect(text).toContain('The model is unchanged')
  expect(text).not.toContain('internal implementation detail');expect(ui.doc()).toEqual(before)
+ if(code==='BREP_RESOURCE_LIMIT'||code==='BREP_ANALYSIS_INDETERMINATE')expect(text).toContain('Cube: ')
  expect(ui.button('Retry calculation').props.disabled).toBe(false)
  expect(ui.button('Apply · Enter').props.disabled).toBe(true)
+})
+
+
+it.each([
+ ['BREP_RESOURCE_LIMIT','Исчерпан лимит вычислений'],
+ ['BREP_ANALYSIS_INDETERMINATE','Точность расчёта не подтверждена'],
+] as const)('localizes %s body failures in Russian without changing the model',async(code,message)=>{
+ const requests:Array<{reject:(error:Error)=>void}>=[]
+ previewWorkerRun.mockImplementation(job=>job.kind==='restoreDocument'?undefined:new Promise((_resolve,reject)=>requests.push({reject})))
+ const ui=await mount({locale:'ru'});await ui.click('Cube');const before=ui.doc();await ui.click('Разрезать')
+ requests.at(-1)!.reject(Object.assign(Error('internal implementation detail'),{code}));await flushClearance()
+ const text=ui.text(ui.all()[0]);expect(text).toContain('Cube: '+message);expect(text).toContain('Модель не изменена')
+ expect(text).not.toContain('internal implementation detail');expect(ui.doc()).toEqual(before)
+ await commandKey(ui,'Escape');expect(ui.doc()).toEqual(before)
 })
 
 
@@ -3832,4 +3849,22 @@ it('discards a late rational crossing diagnostic after Escape',async()=>{
  const request=requests[0]!;request.resolve(prepareSolidProfile(request.job.document,request.job.ids,request.job.tolerance));await flushClearance()
  expect(ui.all().some(n=>n.props['data-diagnostic']==='profile-curve-intersection')).toBe(false)
  expect(ui.doc()).toEqual(before)
+})
+
+
+it.each(['en','ru'])('keeps the complete command registry identified and explains disabled actions in %s',async locale=>{
+ const ui=await mount({locale})
+ let ids:string[]=[]
+ for(const selection of [null,'Cube','Profile']){
+  if(selection)await ui.click(selection)
+  const commands=ui.commands(),current=commands.map(c=>c.id)
+  expect(commands).toHaveLength(95);expect(new Set(current).size).toBe(current.length)
+  if(ids.length)expect(current).toEqual(ids);else ids=current
+  for(const command of commands){
+   expect(command.label.trim(),command.id).not.toBe('')
+   if(command.enabled===false)expect(command.disabledReason?.trim(),command.id).toBeTruthy()
+  }
+ }
+ expect(ids).toContain('repeat')
+ for(const kind of ['box','wedge','cylinder','frustum','tube','cone','sphere','torus'])expect(ids).toContain('add-'+kind)
 })

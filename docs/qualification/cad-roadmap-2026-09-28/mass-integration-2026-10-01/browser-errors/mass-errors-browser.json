@@ -1,0 +1,11 @@
+{
+  "browser": "151.0.7922.34",
+  "injectedFailureCodes": [
+    "BREP_RESOURCE_LIMIT",
+    "BREP_ANALYSIS_INDETERMINATE"
+  ],
+  "sourceLocalized": true,
+  "applyDisabled": true,
+  "retryEnabled": true,
+  "escapePreservesDocument": true
+}

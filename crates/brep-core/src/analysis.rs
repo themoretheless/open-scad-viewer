@@ -886,12 +886,25 @@ pub fn certified_freeform_mass_properties(model: &Model) -> Result<CertifiedMass
     })
 }
 
-const GAUSS: [(f64, f64); 5] = [
+const GAUSS_POLYNOMIAL: [(f64, f64); 5] = [
     (-0.906179845938664, 0.236926885056189),
     (-0.538469310105683, 0.478628670499366),
     (0., 0.568888888888889),
     (0.538469310105683, 0.478628670499366),
     (0.906179845938664, 0.236926885056189),
+];
+// Eight-point Gauss-Legendre integrates smooth rational patch cells with
+// fewer subdivisions. Knot/weight conditioning and both directional error
+// estimates still gate acceptance; every flux evaluation is budgeted.
+const GAUSS_RATIONAL: [(f64, f64); 8] = [
+    (-0.9602898564975363, 0.1012285362903763),
+    (-0.7966664774136267, 0.2223810344533745),
+    (-0.5255324099163290, 0.3137066458778873),
+    (-0.1834346424956498, 0.3626837833783620),
+    (0.1834346424956498, 0.3626837833783620),
+    (0.5255324099163290, 0.3137066458778873),
+    (0.7966664774136267, 0.2223810344533745),
+    (0.9602898564975363, 0.1012285362903763),
 ];
 #[derive(Clone, Debug)]
 pub struct MassProperties {
@@ -1237,7 +1250,7 @@ fn flux(
 fn face_integral(
     model: &Model,
     use_: &FaceUse,
-    divisions: usize,
+    divisions: [usize; 2],
     origin: [f64; 3],
     budget: &mut Budget,
     integration_spans: &BTreeMap<usize, Vec<Vec<[f64; 2]>>>,
@@ -1245,6 +1258,16 @@ fn face_integral(
 ) -> Result<[f64; 11]> {
     let face = &model.faces[use_.face];
     let surface = &face.surface;
+    // Constant homogeneous weights cancel to a polynomial patch; retain the
+    // cheaper rule for these faces. Varying positive weights need the higher
+    // order rational rule. Both routes use the same directional convergence
+    // estimates, conditioning schedules and shared evaluation budget.
+    let quadrature: &[(f64, f64)] = if surface.weights.iter().flatten()
+        .all(|weight| *weight == surface.weights[0][0]) {
+        &GAUSS_POLYNOMIAL
+    } else {
+        &GAUSS_RATIONAL
+    };
     let u0 = surface.knots_u[surface.degree_u];
     let mut result = [0.; 11];
     for &wire in std::iter::once(&face.outer).chain(&face.holes) {
@@ -1252,10 +1275,10 @@ fn face_integral(
             // Pcurves already follow their loop; coedge.reversed applies to the 3D carrier only.
             let curve = &coedge.pcurve;
             for &[start, end] in &integration_spans[&wire][coedge_index] {
-                for part in 0..divisions {
-                    let a = start + (end - start) * part as f64 / divisions as f64;
-                    let b = start + (end - start) * (part + 1) as f64 / divisions as f64;
-                    for (x, w) in GAUSS {
+                for part in 0..divisions[0] {
+                    let a = start + (end - start) * part as f64 / divisions[0] as f64;
+                    let b = start + (end - start) * (part + 1) as f64 / divisions[0] as f64;
+                    for &(x, w) in quadrature {
                         let evaluation = curve.evaluate((a + b) / 2. + x * (b - a) / 2.)?;
                         let dv = evaluation.d1.ok_or_else(|| {
                             Error::new("BREP_ANALYSIS_INDETERMINATE", "Undefined trim derivative")
@@ -1265,10 +1288,11 @@ fn face_integral(
                         }
                         let [u, v] = [evaluation.point[0], evaluation.point[1]];
                         for [low, high] in spans(&integration_grids[use_.face][0], [u0, u]) {
-                            for inner in 0..divisions {
-                                let l = low + (high - low) * inner as f64 / divisions as f64;
-                                let h = low + (high - low) * (inner + 1) as f64 / divisions as f64;
-                                for (ix, iw) in GAUSS {
+                            for inner in 0..divisions[1] {
+                                let l = low + (high - low) * inner as f64 / divisions[1] as f64;
+                                let h =
+                                    low + (high - low) * (inner + 1) as f64 / divisions[1] as f64;
+                                for &(ix, iw) in quadrature {
                                     let values = flux(
                                         surface,
                                         (l + h) / 2. + ix * (h - l) / 2.,
@@ -1367,83 +1391,128 @@ pub fn mass_properties(
             integration_spans.insert(wire, schedule);
         }
     }
-    let mut previous: Option<Vec<[f64; 11]>> = None;
-    for divisions in [1, 2, 4, 8, 16] {
-        let current: Vec<_> = uses
-            .iter()
-            .map(|u| {
-                face_integral(
-                    model,
-                    u,
-                    divisions,
-                    origin,
-                    &mut budget,
-                    &integration_spans,
-                    &integration_grids,
+    // Independently refine the Green boundary integral and its surface
+    // antiderivative. Each face retains both directional error estimates;
+    // accurate directions are not uniformly refined with harder neighbors.
+    let integrate = |index: usize, divisions: [usize; 2], budget: &mut Budget| {
+        face_integral(
+            model,
+            uses[index],
+            divisions,
+            origin,
+            budget,
+            &integration_spans,
+            &integration_grids,
+        )
+        .map_err(|error| {
+            if error.code == "BREP_RESOURCE_LIMIT" {
+                Error::new(
+                    "BREP_RESOURCE_LIMIT",
+                    format!(
+                        "{} (face {}, subdivisions {:?}, evaluations {}/{})",
+                        error.message, uses[index].face, divisions, budget.used, budget.limit
+                    ),
                 )
-            })
-            .collect::<Result<_>>()?;
-        if let Some(old) = &previous {
-            let mut errors = [0.; 11];
-            let mut total = [0.; 11];
-            for (a, b) in old.iter().zip(&current) {
-                for i in 0..11 {
-                    errors[i] += (a[i] - b[i]).abs();
-                    total[i] += b[i];
-                }
+            } else {
+                error
             }
-            if (0..11)
-                .all(|i| errors[i] <= relative_tolerance * total[i].abs().max(scales[i] * 1e-3))
-            {
-                let volume = total[1];
-                if volume <= scales[1] * 1e-14 {
-                    return Err(Error::new(
-                        "BREP_ANALYSIS_INDETERMINATE",
-                        "Boundary has non-positive or numerically unresolved signed volume",
-                    ));
-                }
-                let c: [f64; 3] = std::array::from_fn(|i| total[2 + i] / volume);
-                let moments: [[f64; 3]; 3] = [
-                    [total[5], total[8], total[9]],
-                    [total[8], total[6], total[10]],
-                    [total[9], total[10], total[7]],
-                ];
-                let central: [[f64; 3]; 3] = std::array::from_fn(|i| {
-                    std::array::from_fn(|j| moments[i][j] - volume * c[i] * c[j])
-                });
-                let trace = (0..3).map(|i| central[i][i]).sum::<f64>();
-                let inertia = std::array::from_fn(|i| {
-                    std::array::from_fn(|j| {
-                        if i == j {
-                            trace - central[i][j]
-                        } else {
-                            -central[i][j]
-                        }
-                    })
-                });
-                if total
-                    .iter()
-                    .chain(inertia.iter().flatten())
-                    .any(|x| !x.is_finite())
-                {
-                    return Err(Error::new(
-                        "BREP_ANALYSIS_INDETERMINATE",
-                        "Non-finite mass integral",
-                    ));
-                }
-                return Ok(MassProperties {
-                    surface_area_mm2: total[0],
-                    signed_volume_mm3: volume,
-                    centroid: std::array::from_fn(|i| origin[i] + c[i]),
-                    inertia_mm5: inertia,
-                    conservative_bounds: bounds,
-                    area_error_estimate_mm2: errors[0],
-                    volume_error_estimate_mm3: errors[1],
-                    evaluations: budget.used,
-                });
+        })
+    };
+    let mut divisions = vec![[2, 2]; uses.len()];
+    let mut current = (0..uses.len())
+        .map(|i| integrate(i, [2, 2], &mut budget))
+        .collect::<Result<Vec<_>>>()?;
+    let mut face_errors = vec![[[0.; 11]; 2]; uses.len()];
+    for index in 0..uses.len() {
+        for axis in 0..2 {
+            let mut coarse_divisions = divisions[index];
+            coarse_divisions[axis] /= 2;
+            let coarse = integrate(index, coarse_divisions, &mut budget)?;
+            face_errors[index][axis] =
+                std::array::from_fn(|i| (current[index][i] - coarse[i]).abs());
+        }
+    }
+    loop {
+        let mut errors = [0.; 11];
+        let mut total = [0.; 11];
+        for (index, values) in current.iter().enumerate() {
+            for i in 0..11 {
+                errors[i] += face_errors[index][0][i] + face_errors[index][1][i];
+                total[i] += values[i];
             }
         }
-        previous = Some(current);
+        if (0..11).all(|i| errors[i] <= relative_tolerance * total[i].abs().max(scales[i] * 1e-3)) {
+            let volume = total[1];
+            if volume <= scales[1] * 1e-14 {
+                return Err(Error::new(
+                    "BREP_ANALYSIS_INDETERMINATE",
+                    "Boundary has non-positive or numerically unresolved signed volume",
+                ));
+            }
+            let c: [f64; 3] = std::array::from_fn(|i| total[2 + i] / volume);
+            let moments: [[f64; 3]; 3] = [
+                [total[5], total[8], total[9]],
+                [total[8], total[6], total[10]],
+                [total[9], total[10], total[7]],
+            ];
+            let central: [[f64; 3]; 3] = std::array::from_fn(|i| {
+                std::array::from_fn(|j| moments[i][j] - volume * c[i] * c[j])
+            });
+            let trace = (0..3).map(|i| central[i][i]).sum::<f64>();
+            let inertia = std::array::from_fn(|i| {
+                std::array::from_fn(|j| {
+                    if i == j {
+                        trace - central[i][j]
+                    } else {
+                        -central[i][j]
+                    }
+                })
+            });
+            if total
+                .iter()
+                .chain(inertia.iter().flatten())
+                .any(|x| !x.is_finite())
+            {
+                return Err(Error::new(
+                    "BREP_ANALYSIS_INDETERMINATE",
+                    "Non-finite mass integral",
+                ));
+            }
+            return Ok(MassProperties {
+                surface_area_mm2: total[0],
+                signed_volume_mm3: volume,
+                centroid: std::array::from_fn(|i| origin[i] + c[i]),
+                inertia_mm5: inertia,
+                conservative_bounds: bounds,
+                area_error_estimate_mm2: errors[0],
+                volume_error_estimate_mm3: errors[1],
+                evaluations: budget.used,
+            });
+        }
+        let next = (0..uses.len())
+            .flat_map(|index| (0..2).map(move |axis| (index, axis)))
+            .filter(|&(index, axis)| divisions[index][axis] < 16)
+            .max_by(|&(a, aa), &(b, bb)| {
+                let score = |index: usize, axis: usize| {
+                    (0..11)
+                        .map(|i| face_errors[index][axis][i] / total[i].abs().max(scales[i] * 1e-3))
+                        .fold(0_f64, f64::max)
+                };
+                score(a, aa).total_cmp(&score(b, bb))
+            });
+        let Some((index, axis)) = next else { break };
+        let old = current[index];
+        divisions[index][axis] *= 2;
+        let refined = integrate(index, divisions[index], &mut budget)?;
+        face_errors[index][axis] = std::array::from_fn(|i| (refined[i] - old[i]).abs());
+        // Refresh the other direction at the new grid; mixed dependence must
+        // not inherit a stale error estimate from the earlier face grid.
+        let other = 1 - axis;
+        let mut coarse_divisions = divisions[index];
+        coarse_divisions[other] /= 2;
+        let coarse = integrate(index, coarse_divisions, &mut budget)?;
+        face_errors[index][other] = std::array::from_fn(|i| (refined[i] - coarse[i]).abs());
+        current[index] = refined;
     }
     Err(Error::new(
         "BREP_ANALYSIS_INDETERMINATE",
