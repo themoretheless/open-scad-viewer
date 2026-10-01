@@ -78,6 +78,30 @@ try {
  await command('Select instance source')
  const before=await download('Скачать проект JSON','before.json');assert.equal(before.bodies.length,2)
  if(await menu.evaluate(e=>e.parentElement.open))await activate(menu)
+ let numericUnits=false
+ if(process.argv.includes('--numeric-units')){
+  await activate(solid.getByRole('tab',{name:'Свойства',exact:true}))
+  const x=solid.getByRole('textbox',{name:'ΔX',exact:true})
+  async function enter(locator,value){await tabTo(locator);await page.keyboard.press('ControlOrMeta+a');await page.keyboard.insertText(value)}
+  const numericApply=solid.getByRole('button',{name:'Применить',exact:true})
+  await enter(x,'bad');assert.equal(await x.getAttribute('aria-invalid'),'true');assert.equal(await numericApply.isDisabled(),true)
+  await page.screenshot({path:path.join(directory,'numeric-error.png')})
+  await enter(x,'2 cm')
+  await enter(solid.getByRole('textbox',{name:'Поворот Z',exact:true}),'0.5 rad')
+  await enter(solid.getByRole('textbox',{name:'Масштаб',exact:true}),'1.5')
+  await activate(numericApply)
+  await page.waitForFunction(()=>document.querySelector('input[aria-label="ΔX"]')?.value==='0')
+  const option=await page.evaluate(()=>window.__transformOptions.at(-1))
+  assert.equal(option.x,20);assert.ok(Math.abs(option.angle-0.5*180/Math.PI)<1e-10);assert.equal(option.scale,1.5)
+  const changed=await download('Скачать проект JSON','numeric-applied.json');assert.notDeepEqual(changed.bodies[0].mesh.positions,before.bodies[0].mesh.positions)
+  await activate(solid.getByRole('button',{name:'↶',exact:true}))
+  assert.deepEqual((await download('Скачать проект JSON','numeric-undone.json')).bodies,before.bodies)
+  await activate(solid.getByRole('button',{name:'↷',exact:true}))
+  assert.deepEqual((await download('Скачать проект JSON','numeric-redone.json')).bodies,changed.bodies)
+  await activate(solid.getByRole('button',{name:'↶',exact:true}))
+  if(await menu.evaluate(e=>e.parentElement.open))await activate(menu)
+  numericUnits=true
+ }
  const parts=[]
  for(const kind of ['rotate','scale']){
   await command('Gizmo: '+kind)
@@ -115,6 +139,6 @@ try {
  await writeFile(path.join(directory,'manifest.json'),JSON.stringify({schema:'cad-roadmap-step/1',units:'mm',toleranceMm:1e-6,relativeVolumeTolerance:1e-8,parts}))
  const requests=await page.evaluate(()=>window.__sceneEditRequests)
  assert.deepEqual(renderErrors,[])
- const report={browser:browser.version(),workerRequests:requests,rotateScale:true,cancel:true,undoRedo:true,keyboard,tabPresses,downloads}
+ const report={browser:browser.version(),workerRequests:requests,rotateScale:true,cancel:true,undoRedo:true,keyboard,tabPresses,downloads,numericUnits}
  await writeFile(path.join(directory,'gizmo-browser.json'),JSON.stringify(report,null,2)+'\n');console.log(report)
 }catch(error){if(page){await page.screenshot({path:path.join(directory,'failure.png')}).catch(()=>{});await writeFile(path.join(directory,'failure.txt'),await page.locator('body').innerText().catch(()=>''))}throw error}finally{await browser?.close();await new Promise(resolve=>server.close(resolve))}
