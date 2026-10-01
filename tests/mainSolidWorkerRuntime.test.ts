@@ -648,3 +648,14 @@ it('keeps the midpoint projection of a tilted rational arc through the worker',a
  result.curves![0].curve.controlPoints.at(-1)!.forEach((v,i)=>expect(v).toBeCloseTo(p[i],8))
  expect(document.curves[0].curve.controlPoints).toEqual([[10,0,10],[10,10,15],[0,10,15]])
 })
+
+it('reports opt-in warmup execution and transfer preparation timings without changing the result',async()=>{
+ const messages:MainSolidResponse[]=[],handle=createMainSolidWorkerHandler(message=>messages.push(message))
+ const body={id:'points',name:'Points',mesh:{positions:[0,0,0,3,4,0],indices:[]}}
+ const job={kind:'measureVertices' as const,a:body,b:body,indexA:0,indexB:1}
+ await handle({version:1,id:901,job,traceTiming:true});await handle({version:1,id:902,job})
+ expect(messages[0]).toMatchObject({ok:true,result:{distanceMm:5}});expect(messages[1]).toMatchObject({ok:true,result:{distanceMm:5}})
+ expect(messages[1]).not.toHaveProperty('timing')
+ for(const value of Object.values(messages[0].timing!)){expect(Number.isFinite(value)).toBe(true);expect(value).toBeGreaterThanOrEqual(0)}
+ await handle({version:1,id:903,job:{...job,indexA:999},traceTiming:true});expect(messages[2]).toMatchObject({ok:false});expect(messages[2].timing).toBeDefined()
+})

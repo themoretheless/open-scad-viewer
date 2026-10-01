@@ -112,6 +112,7 @@ async function execute(job:MainSolidJob):Promise<MainSolidResults[keyof MainSoli
 }
 
 export function createMainSolidWorkerHandler(post:(response:MainSolidResponse,transfer?:ArrayBuffer[])=>void) {
+  const timing=new Map<number,{warmupMs:number;executeMs:number;prepareMs:number}>()
   return createWorkerHandler<MainSolidRequest,MainSolidResponse,MainSolidResults[keyof MainSolidResults]>(post,{
     validate:(value)=>{
       const request=value as Partial<MainSolidRequest>|null
@@ -120,14 +121,22 @@ export function createMainSolidWorkerHandler(post:(response:MainSolidResponse,tr
       return request as MainSolidRequest
     },
     busyError:{name:'Error',code:'CAD_BUSY',message:'CAD worker is busy'},
-    beforeExecute:()=>warmGeometryKernel(),
-    execute:(request)=>execute(request.job),
+    beforeExecute:async request=>{
+      if(request.traceTiming!==true){await warmGeometryKernel();return}
+      const entry={warmupMs:0,executeMs:0,prepareMs:0};timing.set(request.id,entry);const start=performance.now();try{await warmGeometryKernel()}finally{entry.warmupMs=performance.now()-start}
+    },
+    execute:async request=>{
+      const entry=timing.get(request.id);if(!entry)return execute(request.job)
+      const start=performance.now();try{return await execute(request.job)}finally{entry.executeMs=performance.now()-start}
+    },
     success:(request,result)=>{
       // Transfer only the freshly created response buffers; never the request's scene-owned ones.
+      const entry=timing.get(request.id),start=entry?performance.now():0
       const prepared=prepareMainSolidTransfer({version:1,id:request.id,kind:request.job.kind,ok:true,result})
+      if(entry){entry.prepareMs=performance.now()-start;prepared.response.timing=entry;timing.delete(request.id)}
       return {message:prepared.response,transfer:prepared.transfer}
     },
-    failure:(request,error)=>({version:1,id:request.id,kind:request.job.kind,ok:false,error}),
+    failure:(request,error)=>{const entry=error.code==='CAD_BUSY'?undefined:timing.get(request.id);if(entry)timing.delete(request.id);return {version:1,id:request.id,kind:request.job.kind,ok:false,error,...(entry?{timing:entry}:{})}},
   })
 }
 
