@@ -37,9 +37,10 @@ try {
    return nativeAnchorClick.call(this)
   }
   const NativeWorker=window.Worker
-  window.__offsetHold=false;window.__offsetHeld=[];window.__offsetTerminated=0;window.__offsetReleased=0
+  window.__offsetFault=false;window.__offsetFaults=0;window.__offsetHold=false;window.__offsetHeld=[];window.__offsetTerminated=0;window.__offsetReleased=0
   window.Worker=class extends NativeWorker {
    set onmessage(handler){this.__handler=handler;super.onmessage=handler?event=>{
+    if(window.__offsetFault&&['curveOffset','trimmedCurveOffset'].includes(event.data?.kind)&&event.data.ok===true){window.__offsetFault=false;window.__offsetFaults++;handler({data:{...event.data,version:99}});return}
     if(window.__offsetHold&&['curveOffset','trimmedCurveOffset','curveChainInspection'].includes(event.data?.kind)&&event.data.ok===true){
      this.__held=true;window.__offsetHeld.push(()=>{window.__offsetReleased++;handler(event)});return
     }
@@ -153,11 +154,24 @@ try {
  if(process.argv.includes('--error-feedback')){
   const snapshot=await exportDoc('before-error.json');await command()
   const joins=solid.getByLabel('Соединения',{exact:true});await focusControl(joins);await joins.press('Home')
-  await solid.getByText('В кривой есть излом. Выберите Bevel или обрезку в поле «Соединения».',{exact:true}).waitFor()
+  await solid.getByRole('alert').filter({hasText:'Offset source: В кривой есть излом. Выберите Bevel или обрезку в поле «Соединения».'}).waitFor()
   assert.equal(await solid.getByRole('button',{name:'Готово · Enter',exact:true}).isDisabled(),true)
   await joins.press('End');await solid.getByTestId('trimmed-offset-report').waitFor()
   assert.equal(await solid.getByRole('button',{name:'Готово · Enter',exact:true}).isEnabled(),true)
   await page.keyboard.press('Escape');assert.deepEqual(await exportDoc('after-error-recovery.json'),snapshot)
  }
- assert.deepEqual(errors,[]);await writeFile(path.join(directory,'contract.json'),JSON.stringify({keyboard,evenOdd,trimmed,bevel,crossing,sequenceCount,tabNavigation,tabSteps,keyboardHistory:keyboard,keyboardExportActivation:keyboard,keyboardFocusEvidence:tabNavigation?'Controls reached by real Tab presses; import uses fixture setup':'Controls focused by qualification harness; full Tab traversal not qualified',sequenceExportEvidence:'JSON Blob from real export button; no repeated browser downloads',cancel:true,apply:true,undo:true,redo:true,reload:true,lateCancel:true,lateDocumentSwitch:true,delayed,errors},null,2));console.log('Offset browser lifecycle passed')
+ if(process.argv.includes('--worker-failure')){
+  const snapshot=await exportDoc('before-worker-failure.json')
+  await page.evaluate(()=>window.__offsetFault=true);await command(false)
+  await solid.getByRole('alert').filter({hasText:'Не удалось получить корректный результат вычисления.'}).waitFor()
+  assert.equal(await solid.getByRole('button',{name:'Готово · Enter',exact:true}).isDisabled(),true)
+  await activate(solid.getByRole('button',{name:'Повторить вычисление',exact:true}))
+  await solid.getByTestId(trimmed?'trimmed-offset-report':'curve-offset-report').waitFor()
+  assert.equal(await solid.getByRole('button',{name:'Готово · Enter',exact:true}).isEnabled(),true)
+  await page.keyboard.press('Escape')
+  assert.equal(await solid.locator('[data-preview="curve-offset"]').count(),0)
+  assert.deepEqual(await exportDoc('after-worker-retry-cancel.json'),snapshot)
+  assert.equal(await page.evaluate(()=>window.__offsetFaults),1)
+ }
+ assert.deepEqual(errors,[]);await writeFile(path.join(directory,'contract.json'),JSON.stringify({workerFailureRetry:process.argv.includes('--worker-failure'),keyboard,evenOdd,trimmed,bevel,crossing,sequenceCount,tabNavigation,tabSteps,keyboardHistory:keyboard,keyboardExportActivation:keyboard,keyboardFocusEvidence:tabNavigation?'Controls reached by real Tab presses; import uses fixture setup':'Controls focused by qualification harness; full Tab traversal not qualified',sequenceExportEvidence:'JSON Blob from real export button; no repeated browser downloads',cancel:true,apply:true,undo:true,redo:true,reload:true,lateCancel:true,lateDocumentSwitch:true,delayed,errors},null,2));console.log('Offset browser lifecycle passed')
 }catch(error){if(page){await page.screenshot({path:path.join(directory,'failure.png')}).catch(()=>{});await writeFile(path.join(directory,'failure.txt'),await page.locator('body').innerText().catch(()=>''));await writeFile(path.join(directory,'console.json'),JSON.stringify(consoleMessages,null,2))}throw error}finally{await browser?.close();await new Promise(resolve=>server.close(resolve))}

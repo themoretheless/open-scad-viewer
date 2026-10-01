@@ -37,6 +37,30 @@ fn contact_parameter(a:[f64;2],b:[f64;2],point:[f64;2])->Result<[f64;2]> {
     numeric(parameter.lo>0. && parameter.hi<1.,"Interior contact parameter is unresolved at an endpoint.")?;
     Ok([parameter.lo,parameter.hi])
 }
+/// Compare exact recipes over represented source endpoints, never rounded observations.
+fn same_crossing(first:[[f64;2];4],second:[[f64;2];4],tolerance_mm:f64)->Result<bool> {
+ use cad_predicates::{AuthoredScalar,SourceArena,ToleranceContext,PredicateContext,Limits,
+  intersect_authored_lines2d,LineIntersection2,Point2Input,orient2d_points,Outcome,Sign};
+ let arena=SourceArena::authored("represented-chord-crossing-recipes",1,
+  first.into_iter().chain(second).flatten().map(|x|AuthoredScalar::Binary64Bits(x.to_bits())).collect())
+  .map_err(|e|crate::input(format!("Crossing source admission failed: {e}")))?;
+ let tolerance=ToleranceContext::from_brep_tolerance_mm(tolerance_mm)
+  .map_err(|e|crate::input(format!("Crossing tolerance admission failed: {e}")))?;
+ let mut context=PredicateContext::new(&arena,&tolerance,Limits::default(),None);
+ let point=|i:usize|[arena.leaf(2*i).unwrap(),arena.leaf(2*i+1).unwrap()];
+ let result=intersect_authored_lines2d(&mut context,point(0),point(1),point(2),point(3))
+  .map_err(|e|crate::input(format!("Crossing recipe failed: {e}")))?;
+ let LineIntersection2::Unique(recipe)=result.outcome else {return Err(crate::input("Exact crossing recipe was not resolved."));};
+ for i in [4,6] {
+  let result=orient2d_points(&mut context,Point2Input::Authored(point(i)),Point2Input::Authored(point(i+1)),Point2Input::Constructed(&recipe))
+   .map_err(|e|crate::input(format!("Crossing incidence failed: {e}")))?;
+  match result.outcome {
+   Outcome::Sign(Sign::Zero)=>{},Outcome::Sign(_)=>return Ok(false),
+   Outcome::Indeterminate(_)=>return Err(crate::input("Exact crossing incidence was not resolved.")),
+  }
+ }
+ Ok(true)
+}
 pub fn split(
     chain: &[Segment],
     closed: bool,
@@ -94,13 +118,45 @@ pub fn split(
         }
         numeric(resolved,"Contact could not be reconciled with an exact represented endpoint.")?;
     }
+    let mut crossing_sources=std::collections::BTreeMap::<usize,[usize;2]>::new();
+    let mut reconciliation_checks=0;
     for [a, b] in diagnostics.crossings {
-        let crossing = chord_intersection::proper(chain[a].points, chain[b].points, tolerance_mm)?;
-        let vertex = vertices.len();
-        vertices.push(Vertex {
-            point: crossing.point,
-            error_upper_mm: crossing.error_upper_mm,
+        let mut crossing=chord_intersection::proper(chain[a].points,chain[b].points,tolerance_mm)?;
+        let [p,q]=chain[a].points;let [r,s]=chain[b].points;
+        let u=[q[0]-p[0],q[1]-p[1]];let v=[s[0]-r[0],s[1]-r[1]];
+        let delta=[r[0]-p[0],r[1]-p[1]];
+        let t=(delta[0]*v[1]-delta[1]*v[0])/(u[0]*v[1]-u[1]*v[0]);
+        let candidate=[p[0]+u[0]*t,p[1]+u[1]*t];
+        // Floating estimates require exact incidence and an already proved unique intersection.
+        if candidate.iter().all(|x|x.is_finite() && x.abs()<=1e9)
+            && curve_offset_diagnostics::orientation(p,q,candidate)?==Some(0)
+            && curve_offset_diagnostics::orientation(r,s,candidate)?==Some(0) {
+            crossing.point=candidate;crossing.error_upper_mm=0.;
+        }
+        let exact=curve_offset_diagnostics::orientation(p,q,crossing.point)?==Some(0)
+            && curve_offset_diagnostics::orientation(r,s,crossing.point)?==Some(0);
+        let key=crossing.point.map(|x|if x==0. {0} else {x.to_bits()});
+        let mut shared=if exact {canonical.get(&key).copied()} else {None};
+        let mut tested=std::collections::BTreeSet::new();
+        for (edge,parameter) in [(a,crossing.parameter_a),(b,crossing.parameter_b)] {
+            for cut in &cuts[edge] {
+                if cut.parameter[1]<parameter[0] || parameter[1]<cut.parameter[0] {continue;}
+                let Some(&[c,d])=crossing_sources.get(&cut.vertex) else {continue;};
+                if !tested.insert(cut.vertex) {continue;}
+                reconciliation_checks+=1;
+                check(reconciliation_checks<=max_pairs,"Crossing reconciliation budget exceeded.")?;
+                if same_crossing([chain[c].points[0],chain[c].points[1],chain[d].points[0],chain[d].points[1]],
+                    [p,q,r,s],tolerance_mm)? {
+                    numeric(shared.is_none() || shared==Some(cut.vertex),"Concurrent crossing vertices need additional reconciliation.")?;
+                    shared=Some(cut.vertex);
+                }
+            }
+        }
+        let vertex=shared.unwrap_or_else(||{
+            let index=vertices.len();vertices.push(Vertex {point:crossing.point,error_upper_mm:crossing.error_upper_mm});
+            if exact {canonical.insert(key,index);}index
         });
+        crossing_sources.entry(vertex).or_insert([a,b]);
         cuts[a].push(Cut {
             parameter: crossing.parameter_a,
             vertex,
@@ -111,7 +167,15 @@ pub fn split(
         });
     }
     let mut edges = Vec::new();
-    for (source_edge, mut row) in cuts.into_iter().enumerate() {
+    for (source_edge, row) in cuts.into_iter().enumerate() {
+        let mut unique=std::collections::BTreeMap::<usize,[f64;2]>::new();
+        for cut in row {
+            if let Some(previous)=unique.get_mut(&cut.vertex) {
+                previous[0]=previous[0].max(cut.parameter[0]);previous[1]=previous[1].min(cut.parameter[1]);
+                numeric(previous[0]<=previous[1],"Shared crossing has inconsistent source parameters.")?;
+            } else {unique.insert(cut.vertex,cut.parameter);}
+        }
+        let mut row:Vec<_>=unique.into_iter().map(|(vertex,parameter)|Cut {vertex,parameter}).collect();
         row.sort_by(|a, b| a.parameter[0].total_cmp(&b.parameter[0]));
         for pair in row.windows(2) {
             numeric(
@@ -152,6 +216,53 @@ mod tests {
                 error_upper_mm: 0.,
             })
             .collect()
+    }
+    #[test]
+    fn three_exact_crossings_share_one_vertex_without_collapsed_cuts() {
+        let points=[[-4.,0.],[4.,0.],[0.,4.],[0.,-4.],[-4.,-4.],[4.,4.]];
+        for shift in [0.,1e6] {for reverse in [false,true] {
+            let mut points:Vec<_>=points.iter().map(|p|[p[0]+shift,p[1]+shift]).collect();if reverse {points.reverse();}
+            let graph=split(&chain(&points),false,1e-6,1000).unwrap();
+            let centers:Vec<_>=graph.vertices.iter().enumerate().filter(|(_,v)|v.point==[shift,shift]).collect();
+            assert_eq!(centers.len(),1);let center=centers[0].0;assert_eq!(centers[0].1.error_upper_mm,0.);
+            assert_eq!(graph.edges.iter().filter(|e|e.vertices.contains(&center)).count(),6);
+            crate::chord_embedding::admit(&graph,1000).unwrap();
+        }}
+    }
+    #[test]
+    fn nonbinary_concurrent_intersections_share_an_exact_recipe() {
+        let points=[[-2.,0.],[5.,1.],[0.,1.],[1.,-1.],[-2.,-2.],[2.,2.]];
+        for reverse in [false,true] {
+            let mut points=points.to_vec();if reverse {points.reverse();}
+            let graph=split(&chain(&points),false,1e-6,1000).unwrap();
+            let centers:Vec<_>=graph.vertices.iter().enumerate().filter(|(_,v)|(v.point[0]-1./3.).abs()<1e-12 && (v.point[1]-1./3.).abs()<1e-12).collect();
+            assert_eq!(centers.len(),1);let center=centers[0].0;
+            assert_eq!(graph.edges.iter().filter(|e|e.vertices.contains(&center)).count(),6);
+            crate::chord_embedding::admit(&graph,1000).unwrap();
+        }
+    }
+    #[test]
+    fn exact_recipe_does_not_equate_nearby_intersections() {
+        let first=[[-2.,0.],[5.,1.],[0.,1.],[1.,-1.]];
+        let second=[[-2.,0.],[5.,1.],[0.,1.+2f64.powi(-40)],[1.,-1.]];
+        assert!(!same_crossing(first,second,1e-6).unwrap());
+        assert!(same_crossing(first,[[-2.,-2.],[2.,2.],[0.,1.],[1.,-1.]],1e-6).unwrap());
+    }
+    #[test]
+    fn concurrent_closed_profile_materializes_connected_filled_loops() {
+        let source=chain(&[[-2.,0.],[5.,1.],[0.,1.],[1.,-1.],[-2.,-2.],[2.,2.],[-2.,0.]]);
+        let graph=split(&source,true,1e-6,1000).unwrap();
+        for rule in [crate::chord_winding::FillRule::NonZero,crate::chord_winding::FillRule::EvenOdd] {
+            let loops=crate::chord_fill_selection::boundary_curves(&graph,rule,10000).unwrap();assert!(!loops.is_empty());
+            for pieces in loops {assert_eq!(pieces[0].control_points[0],*pieces.last().unwrap().control_points.last().unwrap());}
+        }
+    }
+    #[test]
+    fn nearby_distinct_crossings_are_not_merged_by_tolerance() {
+        let d=2f64.powi(-30);
+        let graph=split(&chain(&[[-4.,0.],[4.,0.],[d,4.],[d,-4.],[-4.,-4.],[4.,4.]]),false,1e-6,1000).unwrap();
+        assert_eq!(graph.vertices.iter().filter(|v|v.point.iter().all(|x|x.abs()<1e-8)).count(),3);
+        crate::chord_embedding::admit(&graph,1000).unwrap();
     }
     #[test]
     fn interior_contacts_split_axis_and_diagonal_chords() {

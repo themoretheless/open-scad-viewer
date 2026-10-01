@@ -24,24 +24,9 @@ fn angle_order(origin: [f64; 2], a: [f64; 2], b: [f64; 2]) -> Result<Ordering> {
             Ordering::Greater
         });
     }
-    let u = [
-        Interval::point(a[0]).sub(Interval::point(origin[0]))?,
-        Interval::point(a[1]).sub(Interval::point(origin[1]))?,
-    ];
-    let v = [
-        Interval::point(b[0]).sub(Interval::point(origin[0]))?,
-        Interval::point(b[1]).sub(Interval::point(origin[1]))?,
-    ];
-    let cross = u[0].mul(v[1])?.sub(u[1].mul(v[0])?)?;
-    numeric(
-        cross.lo > 0. || cross.hi < 0.,
-        "Graph has coincident rays or unresolved angular order.",
-    )?;
-    Ok(if cross.lo > 0. {
-        Ordering::Less
-    } else {
-        Ordering::Greater
-    })
+    let sign=crate::curve_offset_diagnostics::orientation(origin,a,b)?;
+    numeric(matches!(sign,Some(1)|Some(-1)),"Graph has coincident rays or unresolved angular order.")?;
+    Ok(if sign==Some(1) {Ordering::Less} else {Ordering::Greater})
 }
 pub fn walk(graph: &Arrangement) -> Result<Walks> {
     crate::chord_embedding::admit(graph,1_000_000)?;
@@ -180,6 +165,15 @@ mod tests {
             })
             .collect();
         chord_arrangement::split(&chain, true, 1e-6, 100).unwrap()
+    }
+    #[test]
+    fn adjacent_binary64_rays_have_exact_angular_order() {
+        for origin in [[0f64,0.],[1e6,-1e6]] {
+            let a=[origin[0]+1.,origin[1]+1.];
+            let b=[a[0],f64::from_bits(if a[1]>0. {a[1].to_bits()+1} else {a[1].to_bits()-1})];
+            assert_eq!(angle_order(origin,a,b).unwrap(),Ordering::Less);
+            assert_eq!(angle_order(origin,b,a).unwrap(),Ordering::Greater);assert!(angle_order(origin,a,a).is_err());
+        }
     }
     #[test]
     fn square_and_reversed_square_have_one_counterclockwise_walk() {
