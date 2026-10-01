@@ -57,8 +57,8 @@ try{
   const poll=()=>{if(!memoryPending)memoryPending=sample().catch(e=>memoryErrors.push(String(e))).finally(()=>{memoryPending=null})}
   poll();memoryTimer=setInterval(poll,memoryIntervalMs)
  }
- const profileAction=process.argv.includes('--profile-import')?'import':'redo'
- const profiling=process.argv.includes('--profile')||process.argv.includes('--profile-import')||process.argv.includes('--profile-orbit')
+ const profileAction=process.argv.includes('--profile-source-edit')?'source-edit':process.argv.includes('--profile-import')?'import':'redo'
+ const profiling=process.argv.includes('--profile-source-edit')||process.argv.includes('--profile')||process.argv.includes('--profile-import')||process.argv.includes('--profile-orbit')
  let profileCaptured=false
  if(profiling)await cdp.send('Profiler.enable')
  async function measure(action,run){
@@ -86,6 +86,20 @@ try{
  for(let i=0;i<iterations;i++){
   await measure('undo',()=>solid.getByRole('button',{name:'↶',exact:true}).click())
   await measure('redo',()=>solid.getByRole('button',{name:'↷',exact:true}).click())
+ }
+ if(process.argv.includes('--source-edit')){
+  const source=expected.bodies.find(body=>!body.instance);assert.ok(source)
+  for(let i=0;i<iterations;i++){
+   await solid.getByRole('tab',{name:'Сцена',exact:true}).click()
+   await solid.getByRole('button',{name:source.name,exact:true}).click()
+   await solid.getByRole('tab',{name:'Свойства',exact:true}).click()
+   const x=solid.getByRole('textbox',{name:'ΔX',exact:true});await x.fill('1 mm')
+   await measure('source-edit',async()=>{
+    await solid.getByRole('button',{name:'Применить',exact:true}).click()
+    await page.waitForFunction(()=>document.querySelector('input[aria-label="ΔX"]')?.value==='0')
+   })
+   await measure('source-edit-undo',()=>solid.getByRole('button',{name:'↶',exact:true}).click())
+  }
  }
  if(process.argv.includes('--check-cancel')){
   await solid.getByRole('button',{name:'↶',exact:true}).click();await saved()
@@ -213,7 +227,7 @@ try{
  assert.deepEqual(errors,[])
  await page.screenshot({path:path.join(directory,'scene.png')})
  const percentile=(values,p)=>{const sorted=[...values].sort((a,b)=>a-b);return sorted[Math.max(0,Math.ceil(sorted.length*p)-1)]??null}
- const timingSummary=Object.fromEntries(['import','undo','redo',...(process.argv.includes('--reimport')?['reimport']:[])].map(action=>{
+ const timingSummary=Object.fromEntries(['import','undo','redo',...(process.argv.includes('--source-edit')?['source-edit','source-edit-undo']:[]),...(process.argv.includes('--reimport')?['reimport']:[])].map(action=>{
   const measured=samples.filter(sample=>sample.action===action&&!sample.profiled)
   return [action,{count:measured.length,p50Ms:percentile(measured.map(s=>s.elapsedMs),.5),p95Ms:percentile(measured.map(s=>s.elapsedMs),.95),maxFrameGapMs:Math.max(0,...measured.map(s=>s.maxFrameGapMs))}]
  }))
