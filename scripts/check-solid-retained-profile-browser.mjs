@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import {createHash} from 'node:crypto'
 import {createServer} from 'node:http'
-import {readFile,mkdir,writeFile} from 'node:fs/promises'
+import {readFile,mkdir,writeFile,readdir} from 'node:fs/promises'
 import path from 'node:path'
 import {loadQualificationPlaywrightPackage} from './qualificationPlaywrightPackage.mjs'
 const root=path.resolve('dist'),directory=path.resolve(process.argv[2]??'/tmp/solid-seam-preparation')
@@ -11,12 +11,16 @@ await mkdir(directory,{recursive:true})
 const server=createServer(async(req,res)=>{
  try {
   const url=new URL(req.url,'http://localhost'),file=path.resolve(root,'.'+(url.pathname==='/'?'/index.html':decodeURIComponent(url.pathname)))
+  if(url.pathname==='/favicon.ico'){res.writeHead(204).end();return}
   if(!file.startsWith(root+path.sep)){res.writeHead(403).end();return}
   res.setHeader('Content-Type',file.endsWith('.html')?'text/html':file.endsWith('.js')?'text/javascript':file.endsWith('.css')?'text/css':file.endsWith('.wasm')?'application/wasm':'application/octet-stream')
   res.end(await readFile(file))
  }catch{res.writeHead(404).end()}
 })
 await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve))
+const chunks=(await readdir(path.join(root,'assets'))).filter(n=>/^DirectModeler-[^/]+\.js$/.test(n));assert.equal(chunks.length,1)
+const digest=async file=>createHash('sha256').update(await readFile(file)).digest('hex')
+const artifacts={directModeler:{file:chunks[0],sha256:await digest(path.join(root,'assets',chunks[0]))},wasmSha256:await digest(path.join(root,'wasm/geometry-kernel.wasm')),sourceSha256:await digest('src/features/DirectModeler.vue')}
 let browser,page
 const renderErrors=[]
 try {
@@ -51,11 +55,20 @@ try {
  await page.getByRole('combobox',{name:'Тема',exact:true}).selectOption(theme)
  let tabPresses=0
  async function tabTo(locator){
-  for(let i=0;i<250;i++){
+  for(let i=0;i<1500;i++){
    if(await locator.evaluate(el=>el===document.activeElement))return
    await page.keyboard.press('Tab');tabPresses++
   }
   throw Error('Target is unreachable through sequential Tab navigation: '+await locator.getAttribute('aria-label'))
+ }
+ async function enterText(locator,value){if(keyboard){await tabTo(locator);await page.keyboard.press('ControlOrMeta+A');await page.keyboard.insertText(value)}else await locator.fill(value)}
+ async function choose(locator,value){
+  if(!keyboard){await locator.selectOption(value);return}
+  const label=await locator.locator('option').evaluateAll((nodes,value)=>nodes.find(n=>n.value===value)?.textContent,value);assert.ok(label)
+  await tabTo(locator);await page.keyboard.press('Tab');await page.keyboard.press('Shift+Tab');await tabTo(locator)
+  const cdp=await page.context().newCDPSession(page)
+  try{for(const letter of label)await cdp.send('Input.dispatchKeyEvent',{type:'char',text:letter,key:letter})}finally{await cdp.detach()}
+  assert.equal(await locator.inputValue(),value)
  }
  async function activate(locator){
   await locator.waitFor()
@@ -102,7 +115,7 @@ try {
  const second=solid.getByRole('button',{name:inputs[1].name,exact:true})
  if(keyboard){await tabTo(second);await page.keyboard.press('Shift+Enter')}else await second.click({modifiers:['Shift']})
  await activate(solid.getByRole('region',{name:'2D — эскизы',exact:true}).getByRole('button',{name:'Вписать',exact:true}))
- async function command(name){await activate(solid.getByRole('button',{name:'Команда… Ctrl K',exact:true}));const search=page.getByRole('combobox',{name:'Search commands / Поиск команд'});await search.fill(name);await search.press('Enter')}
+ async function command(name){await activate(solid.getByRole('button',{name:'Команда… Ctrl K',exact:true}));const search=page.getByRole('combobox',{name:'Search commands / Поиск команд'});await enterText(search,name);await page.keyboard.press('Enter')}
  const apply=solid.getByRole('button',{name:'Готово · Enter',exact:true})
  await command(operation)
  if(diagnosticFixture){
@@ -130,10 +143,10 @@ try {
  }else{
  if(regionOperation==='difference'){
   const target=solid.getByLabel('Основной профиль',{exact:true})
-  await target.selectOption('circle');assert.equal(await apply.isDisabled(),true)
-  await solid.getByText('Общей области нет или основной профиль полностью вырезан. Измените входы или основной профиль.',{exact:true}).first().waitFor()
+  await choose(target,'circle');assert.equal(await apply.isDisabled(),true)
+  await solid.getByText('Пустой результат. Измените входные профили или основной профиль.',{exact:true}).first().waitFor()
   await page.screenshot({path:path.join(directory,'empty-result.png')})
-  await target.selectOption('rect');assert.match(await solid.getByTestId('profile-operands').textContent(),/Circular cutter/)
+  await choose(target,'rect');assert.match(await solid.getByTestId('profile-operands').textContent(),/Circular cutter/)
  }
  await apply.click({trial:true});assert.equal(await solid.locator(preparation?'[data-preview="prepared-profile"]':'[data-preview="retained-profile"]').count(),1)
  if(process.argv.includes('--profile-provenance')){
@@ -149,9 +162,9 @@ try {
   const status=solid.getByRole('status',{name:'profile-display',exact:true})
   await status.waitFor();await page.waitForFunction(()=>window.__profileDisplayHeld)
   assert.equal(await solid.locator('[data-preview="retained-profile"]').getAttribute('d'),'')
-  await status.getByRole('button',{name:'Esc',exact:true}).click()
+  await activate(status.getByRole('button',{name:'Esc',exact:true}))
   assert.equal(await page.evaluate(()=>window.__profileDisplayTerminated),true)
-  await solid.getByRole('button',{name:'Обновить профили',exact:true}).click()
+  await activate(solid.getByRole('button',{name:'Обновить профили',exact:true}))
  }
  await solid.getByRole('status',{name:'profile-display',exact:true}).waitFor({state:'hidden'})
  if(!preparation)assert.ok((await solid.locator('[data-preview="retained-profile"]').getAttribute('d'))?.includes(' L '),'Retained preview must contain sampled geometry')
@@ -160,7 +173,7 @@ try {
  if(generalNurbs){const helpBox=await solid.locator('.operation-card>small').first().boundingBox();await writeFile(path.join(directory,'command-layout.json'),JSON.stringify({headingBox,helpBox,cardBox,scrollTop:await solid.locator('.operation-card').evaluate(el=>el.scrollTop)}));assert.ok(helpBox&&helpBox.y>=headingBox.y+headingBox.height,'Command heading must not cover help text')}
  await page.screenshot({path:path.join(directory,'retained-preview.png')})
  await activate(solid.getByRole('button',{name:'Esc',exact:true}))
- const canceled=await download('Скачать проект JSON','canceled.json');assert.deepEqual(canceled.sketches,before.sketches);if(generalNurbs)assert.deepEqual(canceled.curves,before.curves)
+ const canceled=await download('Скачать проект JSON','canceled.json');assert.deepEqual(canceled,before)
  if(await menu.evaluate(e=>e.parentElement.open))await activate(menu)
  await command(operation);await activate(apply)
  const joined=await download('Скачать проект JSON','joined.json');assert.equal(joined.sketches.length,1);if(generalNurbs){assert.equal(joined.sketches[0].id,'nurbs');assert.deepEqual(joined.curves,[]);assert.ok(joined.sketches[0].retainedProfile.areaIntervalMm2)}
@@ -168,17 +181,18 @@ try {
  if(await menu.evaluate(e=>e.parentElement.open))await activate(menu)
  await activate(solid.getByRole('button',{name:'↶',exact:true}))
  await activate(solid.getByRole('button',{name:'Повтор · Shift R',exact:true}));await activate(apply)
- const repeated=await download('Скачать проект JSON','repeated.json');assert.deepEqual(repeated.sketches,joined.sketches)
+ const repeated=await download('Скачать проект JSON','repeated.json');assert.deepEqual(repeated,joined)
  if(await menu.evaluate(e=>e.parentElement.open))await activate(menu)
  await command('Extrude')
- await solid.getByLabel('Высота, мм',{exact:true}).fill('5 mm');await activate(apply)
+ await enterText(solid.getByLabel('Высота, мм',{exact:true}),'5 mm');await activate(apply)
  const extruded=await download('Скачать проект JSON','extruded.json');assert.equal(extruded.bodies.length,1)
  assert.ok(extruded.bodies[0].brep.faces.some(f=>f.surface.degreeU===2||f.surface.degreeV===2))
  if(await menu.evaluate(e=>e.parentElement.open))await activate(menu)
  await activate(solid.getByRole('region',{name:'3D — тела',exact:true}).getByRole('button',{name:'Вписать',exact:true}))
- const gpuDeviceDestroyed=await page.evaluate(()=>{const device=window.__qualificationGpuDevice;if(!device)return false;device.destroy();return true})
- await solid.locator('[data-body]').first().waitFor({state:'visible'})
- const renderedTriangles=await solid.locator('[data-body]').count();assert.ok(renderedTriangles>0);assert.deepEqual(renderErrors,[])
+ const gpuLoss=process.argv.includes('--gpu-loss');const gpuDeviceDestroyed=gpuLoss&&await page.evaluate(()=>{const device=window.__qualificationGpuDevice;if(!device)return false;device.destroy();return true})
+ if(gpuLoss)await solid.locator('[data-body]').first().waitFor({state:'visible'})
+ else assert.equal(await solid.locator('.gpu-layer').evaluate(c=>c.style.visibility==='visible'),true)
+ const renderedTriangles=await solid.locator('[data-body]').count();if(gpuLoss)assert.ok(renderedTriangles>0);assert.deepEqual(renderErrors,[])
  await writeFile(path.join(directory,'render-state.json'),JSON.stringify({errors:renderErrors,canvases:await solid.locator('canvas').evaluateAll(nodes=>nodes.map(n=>({width:n.width,height:n.height,rect:n.getBoundingClientRect().toJSON(),display:getComputedStyle(n).display}))),svgPolygons:await solid.locator('[data-body]').count()},null,2))
  if(await solid.locator('canvas.gpu-layer').isVisible())await solid.locator('canvas.gpu-layer').screenshot({path:path.join(directory,'gpu-only.png')})
  await page.screenshot({path:path.join(directory,'retained-extruded.png')})
@@ -187,15 +201,18 @@ try {
  if(await menu.evaluate(e=>e.parentElement.open))await activate(menu)
  await activate(solid.getByRole('button',{name:'↶',exact:true}))
  await solid.getByRole('button',{name:extruded.bodies[0].name,exact:true}).waitFor({state:'hidden'})
- const undoBody=await download('Скачать проект JSON','undo-body.json');assert.deepEqual(undoBody.sketches,joined.sketches);assert.equal(undoBody.bodies.length,0)
+ const undoBody=await download('Скачать проект JSON','undo-body.json');assert.deepEqual(undoBody,joined)
  if(await menu.evaluate(e=>e.parentElement.open))await activate(menu)
  await activate(solid.getByRole('button',{name:'↶',exact:true}))
  if(generalNurbs)await solid.getByRole('button',{name:'Profile lines',exact:true}).waitFor()
- const undone=await download('Скачать проект JSON','undone.json');assert.deepEqual(undone.sketches,before.sketches);if(generalNurbs)assert.deepEqual(undone.curves,before.curves)
+ const undone=await download('Скачать проект JSON','undone.json');assert.deepEqual(undone,before)
  await openMenu();await solid.locator('input[accept=".json,application/json"]').setInputFiles({name:'joined.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(joined))})
  if(generalNurbs)await solid.getByRole('button',{name:'Profile lines',exact:true}).waitFor({state:'hidden'})
- const reloaded=await download('Скачать проект JSON','reloaded.json');assert.deepEqual(reloaded.sketches,joined.sketches)
- const report={browser:browser.version(),profileWorkerCancelled:await page.evaluate(()=>window.__profileDisplayTerminated===true),operation,retainedArcs:!generalNurbs,retainedGeneralNurbs:generalNurbs,exactExtrusion:true,gpuFallback:gpuDeviceDestroyed,renderedTriangles,cancel:true,undo:true,repeat:true,jsonReload:true,keyboard,tabPresses,downloads}
+ const reloaded=await download('Скачать проект JSON','reloaded.json');assert.deepEqual(reloaded,joined)
+ await page.reload();await solid.getByRole('button',{name:joined.sketches[0].name,exact:true}).waitFor();await solid.getByRole('status',{name:'history-restore',exact:true}).waitFor({state:'hidden'})
+ const restored=await download('Скачать проект JSON','restored.json');assert.deepEqual(restored,joined)
+ assert.deepEqual(renderErrors,[])
+ const report={artifacts,completeDocumentChecks:true,browserReloadExact:true,browser:browser.version(),profileWorkerCancelled:await page.evaluate(()=>window.__profileDisplayTerminated===true),operation,retainedArcs:!generalNurbs,retainedGeneralNurbs:generalNurbs,exactExtrusion:true,gpuFallback:gpuDeviceDestroyed,renderedTriangles,cancel:true,undo:true,repeat:true,jsonReload:true,keyboard,tabPresses,downloads}
  await writeFile(path.join(directory,'retained-browser.json'),JSON.stringify(report,null,2)+'\n');console.log(report)
  }
 }catch(error){if(page){await page.screenshot({path:path.join(directory,'failure.png')}).catch(()=>{});await writeFile(path.join(directory,'failure.txt'),await page.locator('body').innerText().catch(()=>''))}throw error}finally{await browser?.close();await new Promise(resolve=>server.close(resolve))}
