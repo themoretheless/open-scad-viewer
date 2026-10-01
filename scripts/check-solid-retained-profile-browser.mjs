@@ -104,8 +104,18 @@ try {
  if(regionOperation!=='union')original.sketches=[{id:'rect',name:'Plate',closed:true,points:[[-4,-3],[4,-3],[4,3],[-4,3]]},{id:'circle',name:'Circular cutter',closed:true,points:[],analytic:{kind:'circle',center:[0,0],radius:2,start:0,sweep:360}}]
  if(arcs)original.sketches=[{id:'rect',name:'Diameter',closed:false,points:[[-2,0],[2,0]]},{id:'circle',name:'Semicircle',closed:false,points:[],analytic:{kind:'arc',center:[0,0],radius:2,start:0,sweep:180}}]
  if(generalNurbs){original.sketches=[{id:'line',name:'Profile lines',closed:false,points:[[2,0],[2,2],[0,2],[0,0]]}];original.curves=[{id:'nurbs',name:'General NURBS',curve:{degree:2,knots:[0,0,0,1,1,1],controlPoints:[[0,0],[1,-1],[2,0]],weights:[1,1,1]}}]}
+ const rational=process.argv.includes('--rational');assert.ok(!rational||generalNurbs)
+ if(rational)original.curves[0].curve.weights=[1,.8,1]
  const diagnosticFixture=process.argv.includes('--profile-intersections')
  if(diagnosticFixture){assert.ok(generalNurbs);original.curves[0].curve.controlPoints[1][1]=5;original.curves[0].curve.weights=[1,.8,1]}
+ // Independent analytic rational-Bezier evaluation and Simpson area oracle.
+ const curveWeight=rational ? 0.8 : 1
+ function archArea(){
+  const w=curveWeight,n=20000,h=1/n
+  const value=t=>{const d=(1-t)**2+2*w*t*(1-t)+t*t,dd=2*(1-w)*(2*t-1),nx=2*w*t*(1-t)+2*t*t,dx=2*w*(1-2*t)+4*t,ny=-2*w*t*(1-t);return -(ny/d)*(dx*d-nx*dd)/(d*d)}
+  let sum=value(0)+value(1);for(let i=1;i<n;i++)sum+=(i%2?4:2)*value(i*h);return sum*h/3
+ }
+ const generalArea=4+archArea()
  const inputs=generalNurbs?[original.curves[0],original.sketches[0]]:original.sketches
  await openMenu()
  await solid.locator('input[accept=".json,application/json"]').setInputFiles({name:'profiles.json' ,mimeType:'application/json',buffer:Buffer.from(JSON.stringify(original))})
@@ -210,7 +220,7 @@ try {
   await page.screenshot({path:path.join(directory,'gpu-recovered.png')})
  }
  const step=await download('STEP выбранного тела · текущая геометрия','browser-retained.step',false)
- await writeFile(path.join(directory,'manifest.json'),JSON.stringify({schema:'cad-roadmap-step/1',units:'mm',toleranceMm:1e-6,relativeVolumeTolerance:1e-8,parts:[{name:'Browser retained union',file:'browser-retained.step',sha256:createHash('sha256').update(step).digest('hex'),expected:{volumeMm3:(generalNurbs?14/3:arcs?2*Math.PI:regionOperation==='difference'?48-4*Math.PI:regionOperation==='intersection'?4*Math.PI:42+2*Math.PI)*5,boundsMm:generalNurbs?[[0,-.5,0],[2,2,5]]:arcs?[[-2,0,0],[2,2,5]]:regionOperation==='difference'?[[-4,-3,0],[4,3,5]]:regionOperation==='intersection'?[[-2,-2,0],[2,2,5]]:[[-4,-3,0],[5,3,5]]}}]}))
+ await writeFile(path.join(directory,'manifest.json'),JSON.stringify({schema:'cad-roadmap-step/1',units:'mm',toleranceMm:1e-6,relativeVolumeTolerance:1e-8,parts:[{name:'Browser retained union',file:'browser-retained.step',sha256:createHash('sha256').update(step).digest('hex'),expected:{volumeMm3:(generalNurbs?generalArea:arcs?2*Math.PI:regionOperation==='difference'?48-4*Math.PI:regionOperation==='intersection'?4*Math.PI:42+2*Math.PI)*5,boundsMm:generalNurbs?[[0,-curveWeight/(1+curveWeight),0],[2,2,5]]:arcs?[[-2,0,0],[2,2,5]]:regionOperation==='difference'?[[-4,-3,0],[4,3,5]]:regionOperation==='intersection'?[[-2,-2,0],[2,2,5]]:[[-4,-3,0],[5,3,5]]}}]}))
  if(await menu.evaluate(e=>e.parentElement.open))await activate(menu)
  await activate(solid.getByRole('button',{name:'↶',exact:true}))
  await solid.getByRole('button',{name:extruded.bodies[0].name,exact:true}).waitFor({state:'hidden'})
@@ -220,12 +230,13 @@ try {
  if(generalNurbs)await solid.getByRole('button',{name:'Profile lines',exact:true}).waitFor()
  const undone=await download('Скачать проект JSON','undone.json');assert.deepEqual(undone,before)
  await openMenu();await solid.locator('input[accept=".json,application/json"]').setInputFiles({name:'joined.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(joined))})
- if(generalNurbs)await solid.getByRole('button',{name:'Profile lines',exact:true}).waitFor({state:'hidden'})
+ await solid.getByRole('button',{name:inputs[1].name,exact:true}).waitFor({state:'hidden'})
+ await solid.getByRole('status',{name:'history-restore',exact:true}).waitFor({state:'hidden'})
  const reloaded=await download('Скачать проект JSON','reloaded.json');assert.deepEqual(reloaded,joined)
  await page.reload();await solid.getByRole('button',{name:joined.sketches[0].name,exact:true}).waitFor();await solid.getByRole('status',{name:'history-restore',exact:true}).waitFor({state:'hidden'})
  const restored=await download('Скачать проект JSON','restored.json');assert.deepEqual(restored,joined)
  assert.deepEqual(renderErrors,[])
- const report={artifacts,completeDocumentChecks:true,browserReloadExact:true,browser:browser.version(),profileWorkerCancelled:await page.evaluate(()=>window.__profileDisplayTerminated===true),operation,retainedArcs:!generalNurbs,retainedGeneralNurbs:generalNurbs,exactExtrusion:true,gpuFallback:gpuDeviceDestroyed,gpuRecovered:gpuLoss,renderedTriangles,cancel:true,undo:true,repeat:true,jsonReload:true,keyboard,tabPresses,downloads}
+ const report={artifacts,completeDocumentChecks:true,browserReloadExact:true,browser:browser.version(),profileWorkerCancelled:await page.evaluate(()=>window.__profileDisplayTerminated===true),operation,retainedArcs:!generalNurbs,retainedGeneralNurbs:generalNurbs,rationalWeights:rational,generalAreaMm2:generalNurbs?generalArea:undefined,exactExtrusion:true,gpuFallback:gpuDeviceDestroyed,gpuRecovered:gpuLoss,renderedTriangles,cancel:true,undo:true,repeat:true,jsonReload:true,keyboard,tabPresses,downloads}
  await writeFile(path.join(directory,'retained-browser.json'),JSON.stringify(report,null,2)+'\n');console.log(report)
  }
 }catch(error){if(page){await page.screenshot({path:path.join(directory,'failure.png')}).catch(()=>{});await writeFile(path.join(directory,'failure.txt'),await page.locator('body').innerText().catch(()=>''))}throw error}finally{await browser?.close();await new Promise(resolve=>server.close(resolve))}

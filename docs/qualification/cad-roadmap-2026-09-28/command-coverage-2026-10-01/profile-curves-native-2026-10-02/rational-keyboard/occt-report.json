@@ -1,0 +1,33 @@
+{
+  "schema": "cad-roadmap-occt/1",
+  "oracle": "OpenCascade via cadquery-ocp",
+  "version": "8.0.1.0.0",
+  "scope": "Independent STEP read, solid validity, exact bounding box, volume and OCCT-tessellated preview. Does not certify all STEP inputs.",
+  "passed": true,
+  "parts": [
+    {
+      "name": "Browser retained union",
+      "stepSha256": "74ce5a337fb7f7f208cd4c85e4058125710e912f8e94bf761373057d614ac8eb",
+      "valid": true,
+      "solids": 1,
+      "faces": 6,
+      "boundsMm": [
+        [
+          -1e-07,
+          -0.4444445444444445,
+          -1e-07
+        ],
+        [
+          2.0000001,
+          2.0000001,
+          5.000000100000001
+        ]
+      ],
+      "volumeMm3": 23.027798311364556,
+      "maxBoundsErrorMm": 1.0000000116860974e-07,
+      "volumeErrorMm3": 3.7780267803100287e-10,
+      "passed": true,
+      "previewTriangles": 80
+    }
+  ]
+}
