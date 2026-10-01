@@ -36,3 +36,23 @@ it('reuses exact cached batches for instance creation and placement without shar
  placed.bodies[0].mesh.positions[0]=999
  expect(created).toEqual(original)
 })
+
+it('reuses absolute placement results while retaining the instance orientation and input ownership',async()=>{
+ await warmGeometryKernel()
+ const brep=createBrepBox([0,0,0],[2,3,4]),mesh=tessellateNurbsBrep(brep,1)
+ const document:DirectDocument={version:1,sketches:[],bodies:[{id:'source',name:'Source',brep,mesh},{id:'linked',name:'Linked',brep,mesh,instance:{sourceId:'source',matrix:[[0,-1,0,10],[1,0,0,0],[0,0,1,0],[0,0,0,1]]}}]}
+ const before=structuredClone(document),cache=new SolidInstanceBatchCache(),get=vi.spyOn(cache,'get')
+ const options={operation:'instance-place' as const,id:'linked',ids:['linked'],createdId:'',x:7,y:8,z:9,axis:'z' as const,angle:0,scale:1}
+ const first=applySolidSceneEdit(document,options,cache)
+ expect(first).toEqual(applySolidSceneEdit(document,options))
+ expect(first.bodies[1].instance!.matrix).toEqual([[0,-1,0,7],[1,0,0,8],[0,0,1,9],[0,0,0,1]])
+ get.mockClear()
+ const repeated=applySolidSceneEdit(document,options,cache)
+ expect(get.mock.results.some(row=>row.type==='return'&&row.value!==undefined)).toBe(true)
+ expect(repeated).toEqual(first)
+ const validated=parseDirectDocument(serializeDirectDocument(repeated),cache)
+ expect(validated).toEqual(parseDirectDocument(serializeDirectDocument(first)))
+ repeated.bodies[1].mesh.positions[0]=999
+ expect(first.bodies[1].mesh.positions[0]).not.toBe(999)
+ expect(document).toEqual(before)
+})

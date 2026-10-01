@@ -302,8 +302,8 @@ it('accepts compact scene snapshots with exact parity and rejects invalid geomet
  const linked=await client.run({kind:'sceneEdit',document:{version:1,sketches:[],bodies:[source]},options})
  const text=serializeDirectDocument(linked),compact=JSON.parse(text)
  expect(compact.bodies[1].mesh).toBeUndefined();expect(compact.bodies[1].brep).toBeUndefined()
- for(const operation of ['group-move','group-create','instance-detach','transform','instance-transform','instance-create'] as const){
-  const edit={...options,operation,id:operation==='instance-transform'?'linked':'source',createdId:'another-link',ids:['linked'],group:'Assembly'}
+ for(const operation of ['group-move','group-create','instance-detach','transform','instance-transform','instance-create','instance-place'] as const){
+  const edit={...options,operation,id:operation==='instance-transform'||operation==='instance-place'?'linked':'source',createdId:'another-link',ids:['linked'],group:'Assembly'}
   const full=await client.run({kind:'sceneEdit',document:linked,options:edit})
   const restored=await client.run({kind:'sceneEdit',document:text,options:edit})
   expect(restored).toEqual(full)
@@ -346,5 +346,23 @@ it('builds a retained holed loft through postMessage without changing source pro
  expect(result.sketches).toEqual(sketches)
  expect(document).toEqual(before)
  await expect(client.run({kind:'sceneEdit',document,options:{...options,ids:['top','base']}})).rejects.toThrow(/positive sketch normal/)
+ expect(document).toEqual(before)
+})
+
+it('preserves retained profile segment provenance across the real worker boundary',async()=>{
+ const {prepareSolidProfile}=await import('../src/services/solidProfilePreparation')
+ const {warmGeometryKernel}=await import('../src/services/geometry/kernel')
+ await warmGeometryKernel()
+ const document={version:1 as const,bodies:[],sketches:[
+  {id:'arc',name:'Arc',closed:false,points:[[999,999],[998,998]] as [number,number][],analytic:{kind:'arc' as const,center:[0,0] as [number,number],radius:2,start:0,sweep:-180}},
+  {id:'line',name:'Line',closed:false,points:[[-2,0],[2,0]] as [number,number][]},
+ ]},before=structuredClone(document)
+ const client=new MainSolidWorkerClient(realWorker);clients.push(client)
+ const result=await client.run({kind:'profilePrepare',document,ids:['arc','line'],tolerance:0})
+ expect(result).toEqual(prepareSolidProfile(document,['arc','line'],0))
+ expect(result.report.accepted).toBe(true)
+ expect(result.report.curveSources).toHaveLength(3)
+ expect(result.report.curveSources!.filter(s=>s.chain===0).every(s=>s.reversed)).toBe(true)
+ expect(result.document.sketches[0].id).toBe('arc')
  expect(document).toEqual(before)
 })

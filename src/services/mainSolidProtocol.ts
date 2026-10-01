@@ -139,6 +139,7 @@ export type MainSolidExpectation = {kind:'trimmedCurveOffset';createdId:string;f
   | {kind:'curveChainInspection';segments:number;maxPairs:number}
   | {kind:'curveDisplay';dimension:number}
   | {kind:'profileDisplay';counts:number[]}
+  | {kind:'profilePrepare';chainSegments?:number[]}
   | {kind:'surfaceMesh';u:number;v:number}
   | {kind:'surfaceBoundary';samples:number}
   | {kind:'brepTool';id:string;operation:'mass'|'mesh'|'display'}
@@ -146,8 +147,9 @@ export type MainSolidExpectation = {kind:'trimmedCurveOffset';createdId:string;f
   | {kind:'truss'; nodes:number; members:number}
   | {kind:'structuralSections';axis:'x'|'y'|'z';stations:number[]}
   | {kind:'bondedSolid';nodes:number;tets:number;bonds:number}
-  | {kind:Exclude<MainSolidJob['kind'],'trimmedCurveOffset'|'curveChainInspection'|'solidDistance'|'selfIntersection'|'faceContacts'|'boundaryAgreement'|'shellDistance'|'faceDistance'|'surfaceDistance'|'curveDistance'|'sketchSnaps'|'bodySnaps'|'bodyEdges'|'topology'|'curveDisplay'|'profileDisplay'|'surfaceMesh'|'surfaceBoundary'|'displayMesh'|'brepTool'|'truss'|'structuralSections'|'bondedSolid'|'meshContacts'>}
+  | {kind:Exclude<MainSolidJob['kind'],'trimmedCurveOffset'|'curveChainInspection'|'solidDistance'|'selfIntersection'|'faceContacts'|'boundaryAgreement'|'shellDistance'|'faceDistance'|'surfaceDistance'|'curveDistance'|'sketchSnaps'|'bodySnaps'|'bodyEdges'|'topology'|'curveDisplay'|'profileDisplay'|'surfaceMesh'|'surfaceBoundary'|'displayMesh'|'brepTool'|'truss'|'structuralSections'|'bondedSolid'|'meshContacts'|'profilePrepare'>}
 export function mainSolidExpectation(job:MainSolidJob):MainSolidExpectation {
+  if(job.kind==='profilePrepare')return {kind:job.kind,chainSegments:job.ids.map(id=>{const s=job.document.sketches.find(s=>s.id===id);return s?.analytic?.kind==='arc'?Math.ceil(Math.abs(s.analytic.sweep)/90):Math.max(0,(s?.points.length??0)-1)})}
   if(job.kind==='trimmedCurveOffset')return {kind:job.kind,createdId:job.options.createdId,fillRule:job.options.fillRule,toleranceMm:job.options.toleranceMm,intersectionToleranceMm:job.options.intersectionToleranceMm}
   if(job.kind==='solidDistance')return {kind:job.kind,...solidDistanceExpectation(job.options)}
   if(job.kind==='selfIntersection')return {kind:job.kind,...selfIntersectionExpectation(job.model,job.toleranceUv,job.limits,job.maxSpans)}
@@ -397,6 +399,9 @@ export function mainSolidResult(job:MainSolidExpectation, value:unknown): boolea
       &&r.accepted===(r.reason==='accepted')&&Array.isArray(r.points)&&r.points.every(point)
       &&Array.isArray(r.defects)&&r.defects.every(d=>d&&Number.isInteger(d.chain)&&d.chain>=0&&['start','end'].includes(d.end)&&point(d.point)&&['gap','ambiguous'].includes(d.kind)&&Array.isArray(d.candidates)&&d.candidates.every(i=>Number.isInteger(i)&&i>=0))
       &&Array.isArray(r.connectors)&&r.connectors.every(c=>c&&point(c.a)&&point(c.b))
+      &&(r.curveSources===undefined||Array.isArray(r.curveSources)&&r.curveSources.length<=512&&r.curveSources.every(s=>s&&Number.isInteger(s.chain)&&s.chain>=0&&typeof s.reversed==='boolean'&&(!job.chainSegments||s.chain<job.chainSegments.length)
+        &&(s.connector===false?Number.isInteger(s.segment)&&s.segment>=0&&(!job.chainSegments||s.segment<job.chainSegments[s.chain]):s.connector===true&&['start','end'].includes(s.end)&&Number.isInteger(s.nextChain)&&s.nextChain>=0&&(!job.chainSegments||s.nextChain<job.chainSegments.length)))
+        &&(!r.profile||Array.isArray(r.profile.loops)&&r.profile.loops.every(Array.isArray)&&r.curveSources.length===r.profile.loops.reduce((n,loop)=>n+loop.length,0)))
       &&(!r.segmentDefect||(['intersection','overlap','degenerate','unproven'].includes(r.segmentDefect.kind)&&Array.isArray(r.segmentDefect.segments)&&r.segmentDefect.segments.every(s=>Number.isInteger(s.index)&&s.index>=0&&point(s.a)&&point(s.b))))
   }
   if(job.kind==='meshContacts') {

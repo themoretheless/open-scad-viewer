@@ -37,7 +37,7 @@ export function applySolidSceneEdit(document:DirectDocument,p:SolidSceneEditOpti
   case 'instance-place':{
    const body=d.bodies.find(b=>b.id===p.id);if(!body?.instance)throw Error('Select a linked instance.')
    body.instance.matrix[0][3]=p.x;body.instance.matrix[1][3]=p.y;body.instance.matrix[2][3]=p.z
-   return resolveSolidInstances(d)
+   return resolveSolidInstances(d,instanceCache)
   }
   case 'loft':d.bodies.push({id:p.createdId,name:'Ruled loft',...createRuledSketchLoft(d.sketches,p.ids)});return parseDirectDocument(stringifyMeshJson(d))
   default:throw Error('Unsupported scene edit.')

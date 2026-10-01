@@ -331,6 +331,8 @@ for (const [name, artifact, compression] of [
 // Retained profile revolution plus native partial-band STEP fix: 7,158,076 measured bytes; +2,357 from preceding qualified build.
 // Retained corresponding-section loft: 7,162,355 measured asset bytes;
 // +4,279 from the preceding qualified build, preserving 924 bytes of headroom.
-const totalBudget = 7_163_279
+// Profile segment provenance, response validation and absolute placement cache:
+// 7,164,247 measured bytes; +1,770, preserving the preceding 802-byte headroom.
+const totalBudget = 7_165_049
 if (total > totalBudget) throw new Error(`dist totals ${total} bytes; budget is ${totalBudget}`)
 console.log(`Verified ${files.length} dist artifacts (${total} asset bytes + ${rawWasmBytes} raw WASM bytes = ${total + rawWasmBytes} total bytes)`)

@@ -4,6 +4,8 @@ import {withRetainedProfile,retainedProfileDisplay} from './retainedSketchProfil
 import type {BrepProfile} from './geometry/brepProfile'
 import {xyPlane} from './directSketchGeometry'
 export interface ProfilePreparationReport {
+ /** Ordered like the returned profile; connectors identify both input chains. */
+ curveSources?:({chain:number;segment:number;reversed:boolean;connector:false}|{chain:number;end:'start'|'end';nextChain:number;reversed:boolean;connector:true})[]
  profile?:BrepProfile
  detail?:string
  accepted:boolean

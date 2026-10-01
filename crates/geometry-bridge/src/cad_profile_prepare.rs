@@ -43,24 +43,28 @@ fn assemble(v:Value,curves:Option<Vec<Vec<Curve>>>)->Result<Value>{
  }}
  let defects:Vec<Value>=links.iter().enumerate().filter(|(_,l)|l.len()!=1).map(|(i,l)|json!({"chain":i/2,"end":if i%2==0{"start"}else{"end"},"point":ends[i],"kind":if l.is_empty(){"gap"}else{"ambiguous"},"candidates":l})).collect();
  if !defects.is_empty(){return Ok(json!({"accepted":false,"reason":"endpoint-topology","points":[],"defects":defects,"connectors":[]}));}
- let mut wire=Vec::new();
+ let mut wire=Vec::new();let mut provenance=Vec::new();
  let mut visited=vec![false;chains.len()];let mut entry=0;let mut points=Vec::new();let mut connectors=Vec::new();
  loop{
   let chain=entry/2;if visited[chain]{break;}visited[chain]=true;
   let ordered:Vec<P>=if entry%2==0{chains[chain].clone()}else{chains[chain].iter().rev().copied().collect()};
   if let Some(ref curves)=curves{
-   if entry%2==0{wire.extend(curves[chain].clone());}else{for c in curves[chain].iter().rev(){wire.push(c.reverse()?);}}
+   if entry%2==0{for (segment,c) in curves[chain].iter().enumerate(){wire.push(c.clone());provenance.push(json!({"chain":chain,"segment":segment,"reversed":false,"connector":false}));}}else{for (segment,c) in curves[chain].iter().enumerate().rev(){wire.push(c.reverse()?);provenance.push(json!({"chain":chain,"segment":segment,"reversed":true,"connector":false}));}}
   }
   for p in ordered{if points.last()!=Some(&p){points.push(p);}}
   let exit=entry^1;let next=links[exit][0];
-  if ends[exit]!=ends[next]{connectors.push(json!({"a":ends[exit],"b":ends[next]}));if curves.is_some(){wire.push(Curve::from_polyline(vec![ends[exit].to_vec(),ends[next].to_vec()])?);}}
+  if ends[exit]!=ends[next]{connectors.push(json!({"a":ends[exit],"b":ends[next]}));if curves.is_some(){wire.push(Curve::from_polyline(vec![ends[exit].to_vec(),ends[next].to_vec()])?);provenance.push(json!({"chain":chain,"end":if exit%2==0{"start"}else{"end"},"nextChain":next/2,"connector":true,"reversed":false}));}}
   entry=next;
  }
  if entry!=0||visited.iter().any(|x|!*x){return Ok(json!({"accepted":false,"reason":"disconnected","points":[],"defects":[],"connectors":connectors}));}
  if curves.is_some(){
-  let loops=match brep_core::planar_trim::orient_even_odd(&[wire],1e-7){Ok(loops)=>loops,Err(e)=>return Ok(json!({"accepted":false,"reason":"invalid-contour","points":[],"defects":[],"connectors":connectors,"detail":e.to_string()}))};
+  let original=wire.clone();
+  let loops=match brep_core::planar_trim::orient_even_odd(&[wire],1e-7){Ok(loops)=>loops,Err(e)=>return Ok(json!({"accepted":false,"reason":"invalid-contour","points":[],"defects":[],"connectors":connectors,"detail":e.to_string(),"curveSources":provenance}))};
+  // Orientation reverses both segment order and direction. Keep the source
+  // mapping aligned with the returned profile, rather than the traversal.
+  if !loops[0].iter().zip(&original).all(|(a,b)|a.degree==b.degree&&a.knots==b.knots&&a.control_points==b.control_points&&a.weights==b.weights&&a.periodic==b.periodic){provenance.reverse();for source in &mut provenance{let reversed=field::<bool>(source,"reversed")?;source["reversed"]=json!(!reversed);}}
   let profile=super::brep_profile::profile(loops,1e-7)?;
-  return Ok(json!({"accepted":true,"reason":"accepted","points":[],"defects":[],"connectors":connectors,"profile":profile}));
+  return Ok(json!({"accepted":true,"reason":"accepted","points":[],"defects":[],"connectors":connectors,"profile":profile,"curveSources":provenance}));
  }
  if points.first()==points.last(){points.pop();}
  if points.len()<3||points.len()>512||points.iter().enumerate().any(|(i,p)|*p==points[(i+1)%points.len()]){return Ok(json!({"accepted":false,"reason":"invalid-contour","points":[],"defects":[],"connectors":connectors}));}
@@ -123,6 +127,19 @@ pub fn prepare_retained(v:Value)->Result<Value>{
  use super::*;
  fn arc(start:f64,sweep:f64)->Value{json!({"closed":false,"analytic":{"kind":"arc","center":[0.,0.],"radius":2.,"start":start,"sweep":sweep}})}
  fn line(points:Vec<P>)->Value{json!({"closed":false,"points":points})}
+ #[test]fn provenance_tracks_output_orientation_and_explicit_connectors(){
+  for sweep in [180.,-180.]{
+   let r=prepare_retained(json!({"sketches":[arc(0.,sweep),line(vec![[-2.,0.],[2.,0.]])],"tolerance":0.})).unwrap();
+   let loops:Vec<Vec<Curve>>=field(&r["profile"],"loops").unwrap();
+   let sources=r["curveSources"].as_array().unwrap();assert_eq!(sources.len(),loops[0].len());
+   for (curve,source) in loops[0].iter().zip(sources){
+    let chain=source["chain"].as_u64().unwrap();let reverse=source["reversed"].as_bool().unwrap();
+    if chain==0{assert_eq!(curve.degree,2);assert_eq!(reverse,sweep<0.);}else{assert_eq!(curve.degree,1);}
+   }
+  }
+  let r=prepare_retained(json!({"sketches":[arc(0.,180.),line(vec![[-2.,-0.01],[2.,0.]])],"tolerance":0.011})).unwrap();
+  assert_eq!(r["curveSources"].as_array().unwrap().iter().filter(|s|s["connector"]==json!(true)).count(),1);
+ }
  #[test]fn semicircle_retains_quadratics_and_area(){
   for sweep in [180.,-180.]{
    let r=prepare_retained(json!({"sketches":[arc(0.,sweep),line(vec![[-2.,0.],[2.,0.]])],"tolerance":0.})).unwrap();

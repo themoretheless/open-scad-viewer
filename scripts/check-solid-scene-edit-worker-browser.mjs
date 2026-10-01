@@ -84,18 +84,19 @@ try {
  await solid.locator('[data-body]').first().waitFor({state:'visible'})
  await solid.getByRole('status',{name:'primitive-build',exact:true}).waitFor({state:'hidden'})
  await command('Create linked instance');await activate(apply)
- if(process.argv.includes('--instance-placement')){
+ if(process.argv.includes('--instance-placement')||process.argv.includes('--absolute-placement')){
   const created=await download('Скачать проект JSON','instance-created.json')
   if(await menu.evaluate(e=>e.parentElement.open))await activate(menu)
   const linked=created.bodies.find(body=>body.instance);assert.ok(linked)
-  await command('Transform instance')
+  const absolute=process.argv.includes('--absolute-placement')
+  await command(absolute?'Place instance':'Transform instance')
   await input(solid.getByLabel(/^X/),'7')
   await activate(apply)
   const placed=await download('Скачать проект JSON','instance-placed.json')
   assert.deepEqual(placed.bodies.find(body=>!body.instance),created.bodies.find(body=>!body.instance))
   const actual=placed.bodies.find(body=>body.id===linked.id)
   assert.equal(actual.instance.sourceId,linked.instance.sourceId)
-  const expectedMatrix=structuredClone(linked.instance.matrix);expectedMatrix[0][3]+=7
+  const expectedMatrix=structuredClone(linked.instance.matrix);if(absolute)expectedMatrix[0][3]=7;else expectedMatrix[0][3]+=7
   assert.deepEqual(actual.instance.matrix,expectedMatrix)
   assert.equal(actual.mesh,undefined,'Compact export stores linked placement rather than duplicate geometry')
   if(await menu.evaluate(e=>e.parentElement.open))await activate(menu)

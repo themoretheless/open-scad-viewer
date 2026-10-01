@@ -24,6 +24,12 @@ try {
  browser=await playwright.chromium.launch({headless:process.env.SOLID_GPU_HEADED!=='1',args:['--enable-unsafe-webgpu'],...(process.env.CHROMIUM_EXECUTABLE?{executablePath:process.env.CHROMIUM_EXECUTABLE}:{})})
  page=await browser.newPage({acceptDownloads:true})
  page.on('pageerror',e=>renderErrors.push(String(e)));page.on('console',m=>{if(m.type()==='error')renderErrors.push(m.text())})
+ if(process.argv.includes('--profile-provenance'))await page.addInitScript(()=>{
+  const OriginalWorker=window.Worker;window.__profileProvenance=null
+  window.Worker=class extends OriginalWorker{
+   constructor(...args){super(...args);this.addEventListener('message',event=>{if(event.data?.kind==='profilePrepare'&&event.data.ok&&event.data.result.report.accepted)window.__profileProvenance=event.data.result.report})}
+  }
+ })
  await page.addInitScript(()=>{
   if(!navigator.gpu)return
   const request=navigator.gpu.requestAdapter.bind(navigator.gpu)
@@ -101,6 +107,15 @@ try {
   await target.selectOption('rect');assert.match(await solid.getByTestId('profile-operands').textContent(),/Circular cutter/)
  }
  await apply.click({trial:true});assert.equal(await solid.locator(arcs?'[data-preview="prepared-profile"]':'[data-preview="retained-profile"]').count(),1)
+ if(process.argv.includes('--profile-provenance')){
+  assert.ok(arcs,'Provenance fixture requires --arcs')
+  const report=await page.evaluate(()=>window.__profileProvenance)
+  assert.ok(report?.accepted);assert.equal(report.curveSources.length,3)
+  assert.equal(report.curveSources.filter(s=>s.chain===0).length,1)
+  assert.equal(report.curveSources.filter(s=>s.chain===1).length,2)
+  assert.ok(report.curveSources.every(s=>s.connector===false&&typeof s.reversed==='boolean'))
+  await writeFile(path.join(directory,'profile-provenance.json'),JSON.stringify(report,null,2)+'\n')
+ }
  if(process.argv.includes('--hold-profile-display')){
   const status=solid.getByRole('status',{name:'profile-display',exact:true})
   await status.waitFor();await page.waitForFunction(()=>window.__profileDisplayHeld)
