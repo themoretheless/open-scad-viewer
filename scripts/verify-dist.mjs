@@ -88,7 +88,7 @@ const limits = new Map([
 const geometryChunkBudget = 3_244_000
 const jsChunkBudgets = [
   // CAD worker with lazy ModelGraph importer: surface boundary diagnostics included: measured 108,116 bytes.
-  [/^assets\/mainSolid\.worker-[^/]+\.js$/, 118_500], // Retained profile pair diagnostics and validated transport: measured 117,652 bytes; 848-byte margin. Distance kernel worker additions: measured 115,579 bytes. Surface distance worker dispatch: measured 115,110 bytes. Retained NURBS snap intervals: measured 114,200 bytes. Sketch snap preparation: measured 113,885 bytes. Body snap preparation: measured 112,083 bytes. Face sketch preparation in worker: measured 109,472 bytes.
+  [/^assets\/mainSolid\.worker-[^/]+\.js$/, 120_000], // Retained profile pair diagnostics and validated transport: measured 117,652 bytes; 848-byte margin. Distance kernel worker additions: measured 115,579 bytes. Surface distance worker dispatch: measured 115,110 bytes. Retained NURBS snap intervals: measured 114,200 bytes. Sketch snap preparation: measured 113,885 bytes. Body snap preparation: measured 112,083 bytes. Face sketch preparation in worker: measured 109,472 bytes.
   // After removing logical-expression payload inlining: 470353 / 84511 / 34064 bytes.
   [/^assets\/geometry\.worker-[^/]+\.js$/, 500_000],
   // Theme uniforms + default-material setters added ~0.8 kB; measured: 100,763 bytes.
@@ -345,6 +345,7 @@ for (const [name, artifact, compression] of [
 // Measurement validation/retry and deterministic edge selection plus invalid-field styling add 2,041 measured bytes; total assets 7,199,431 bytes.
 // Mesh clearance localization and retry add 462 bytes; assets 7,200,606 bytes.
 // Surface diagnostic validation and retry add 2,045 bytes; assets 7,202,651 bytes.
-const totalBudget = 7_203_500
+// Verified network compiler in CAD worker: assets 7,204,548 bytes; +1,374 bytes.
+const totalBudget = 7_205_500
 if (total > totalBudget) throw new Error(`dist totals ${total} bytes; budget is ${totalBudget}`)
 console.log(`Verified ${files.length} dist artifacts (${total} asset bytes + ${rawWasmBytes} raw WASM bytes = ${total + rawWasmBytes} total bytes)`)

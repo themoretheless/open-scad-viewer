@@ -46,6 +46,7 @@ try {
    terminate(){if(this.__held)window.__measurementTerminated=true;return super.terminate()}
   }
  })
+ if(process.argv.includes('--corrupt-wasm'))await page.context().route('**/wasm/geometry-kernel.wasm',route=>route.fulfill({status:200,contentType:'application/wasm',body:Buffer.from([0,97,115,109,1,0,0,0])}))
  await page.goto(`http://127.0.0.1:${server.address().port}`)
  await page.getByRole('region',{name:'Solid — CAD-лепка',exact:true}).waitFor({timeout:10000})
  let tabPresses=0
