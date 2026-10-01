@@ -49,7 +49,8 @@ mod tests{
         let a=brep_core::cuboid([0.;3],[2.;3]).unwrap();
         let mut reversed=a.clone();for f in &mut reversed.shells[0].faces{f.reversed=!f.reversed;}
         let inputs=[request(a.clone(),brep_core::cuboid([0.5;3],[1.5;3]).unwrap()),
-            request(a.clone(),reversed),request(a,brep_core::cuboid([1.,0.5,0.5],[3.,1.5,1.5]).unwrap())];
+            request(a.clone(),reversed),request(a.clone(),brep_core::cuboid([1.,0.5,0.5],[3.,1.5,1.5]).unwrap()),
+            request(a,brep_core::cuboid([5.,0.5,0.5],[6.,1.5,1.5]).unwrap())];
         let cases=inputs.into_iter().map(|input|{let result=crate::dispatch(input.clone()).unwrap();json!({"request":input,"result":result})}).collect::<Vec<_>>();
         std::fs::write(path,value_codec::to_string(&json!({"cases":cases})).unwrap()).unwrap();
     }

@@ -2,11 +2,15 @@ import {readFileSync} from 'node:fs'
 import {expect,it} from 'vitest'
 import {solidDistanceExpectation,validSolidDistance} from '../src/services/solidDistance'
 const cases=JSON.parse(readFileSync(new URL('../docs/qualification/cad-roadmap-2026-09-28/solid-distance-2026-09-30/contract-fixtures.json',import.meta.url),'utf8')).cases
-it('accepts native containment, invalid-volume and contact reports',()=>{
+it('accepts native containment, invalid-volume, contact and separated-volume reports',()=>{
  for(const c of cases)expect(validSolidDistance(solidDistanceExpectation(c.request),c.result)).toBe(true)
  expect(cases[0].result.reason).toBe('material-containment')
  expect(cases[1].result.reason).toBe('volume-validity-unproven')
  expect(cases[2].result.reason).toBe('certified-boundary-contact')
+ expect(cases[3].result.reason).toBe('separated-volumes')
+ const gap=cases[3].result.distanceIntervalMm
+ expect(gap[0]).toBeLessThanOrEqual(3);expect(gap[1]).toBeGreaterThanOrEqual(3)
+ expect(gap[1]-gap[0]).toBeLessThanOrEqual(cases[3].request.toleranceMm)
 })
 it('rejects inconsistent proof, budgets, shell ownership and contact coordinates',()=>{
  const {request,result}=cases[0],e=solidDistanceExpectation(request)
@@ -27,6 +31,8 @@ it('rejects inconsistent proof, budgets, shell ownership and contact coordinates
   (r:any)=>r.contactPairsVisited=0,
   (r:any)=>r.contact=null,
  ]){const r=structuredClone(contact.result);mutate(r);expect(validSolidDistance(ce,r)).toBe(false)}
+ const separated=cases[3],se=solidDistanceExpectation(separated.request)
+ for(const patch of [{materialOverlap:true},{distanceIntervalMm:[0,3]},{visitedShellPairs:0},{converged:false},{reason:'material-containment'}])expect(validSolidDistance(se,{...separated.result,...patch})).toBe(false)
  const invalid=cases[1],ie=solidDistanceExpectation(invalid.request)
  expect(validSolidDistance(ie,{...invalid.result,distanceIntervalMm:[0,0]})).toBe(false)
  expect(validSolidDistance(ie,{...invalid.result,converged:true})).toBe(false)
@@ -57,6 +63,7 @@ it('validates actual WASM volume-distance responses without changing either inpu
   expect(validSolidDistance(solidDistanceExpectation(c.request),r)).toBe(true)
   expect(r.reason).toBe(c.result.reason)
   expect(r.distanceIntervalMm).toEqual(c.result.distanceIntervalMm)
+  if(r.reason==='separated-volumes'){expect(r.distanceIntervalMm![0]).toBeLessThanOrEqual(3);expect(r.distanceIntervalMm![1]).toBeGreaterThanOrEqual(3);expect(r.distanceIntervalMm![1]-r.distanceIntervalMm![0]).toBeLessThanOrEqual(c.request.toleranceMm)}
   expect(JSON.stringify(c.request)).toBe(before)
  }
 })
