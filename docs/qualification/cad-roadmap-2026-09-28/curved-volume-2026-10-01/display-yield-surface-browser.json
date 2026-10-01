@@ -1,0 +1,14 @@
+{
+  "gpu": false,
+  "previewChecked": true,
+  "occlusionChecked": false,
+  "bodyBehind": false,
+  "browser": "151.0.7922.34",
+  "workerRequestsBeforeReload": 4,
+  "cancelledWorkerTerminated": true,
+  "picking": true,
+  "initialTriangles": 64,
+  "refinedTriangles": 128,
+  "undoRedoAndReload": true,
+  "authoredSurfaceUnchanged": true
+}

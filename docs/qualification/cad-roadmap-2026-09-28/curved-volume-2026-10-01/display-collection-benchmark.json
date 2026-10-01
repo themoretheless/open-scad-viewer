@@ -1,0 +1,14 @@
+{
+  "sourceSha256": "b3fbbe30adae69e1672aa153dff519cada97e4f328e8d450f16a9a8f0d002d72",
+  "node": "v26.10.0",
+  "scope": "Node main-thread geometry-key collection and cache scan; no browser rendering or worker transport",
+  "items": 1000,
+  "controlPointsPerCurve": 100,
+  "jobs": 1000,
+  "errors": [],
+  "elapsedMs": 14.543916999999993,
+  "heartbeatCount": 4,
+  "maxHeartbeatGapMs": 14.649417,
+  "p95HeartbeatGapMs": 14.649417,
+  "retainedWeight": 7032000
+}
