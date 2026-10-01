@@ -1,0 +1,77 @@
+{
+  "workerFailureRetry": true,
+  "keyboard": true,
+  "tabPresses": 571,
+  "gpuActive": true,
+  "reloadExact": true,
+  "browser": "157.0.8081.0",
+  "edgeA": 0,
+  "edgeB": 2,
+  "expectedMm": 20,
+  "displayedIntervalMm": [
+    20,
+    20
+  ],
+  "nativeResult": {
+    "cells": 1,
+    "converged": true,
+    "distanceIntervalMm": [
+      19.99999999999999,
+      20.00000000000001
+    ],
+    "maxCells": 10000,
+    "method": "interval-de-boor-pair-subdivision",
+    "parameters": [
+      0,
+      0
+    ],
+    "pointEnclosures": [
+      [
+        [
+          9.999999999999998,
+          10
+        ],
+        [
+          0,
+          1.9e-322
+        ],
+        [
+          0,
+          0
+        ]
+      ],
+      [
+        [
+          9.999999999999998,
+          10
+        ],
+        [
+          0,
+          1.9e-322
+        ],
+        [
+          20,
+          20
+        ]
+      ]
+    ],
+    "points": [
+      [
+        10,
+        0,
+        0
+      ],
+      [
+        10,
+        0,
+        20
+      ]
+    ],
+    "reason": "tolerance",
+    "toleranceMm": 0.001
+  },
+  "requests": 6,
+  "cancelledWorkerTerminated": true,
+  "invalidEdgeLocalized": true,
+  "documentUnchanged": true
+}

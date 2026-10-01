@@ -27,7 +27,7 @@ try {
   const NativeWorker=window.Worker;window.__holdDistance=false;window.__distanceRequests=0;window.__distanceResults=[]
   window.Worker=class extends NativeWorker {
    constructor(...args){super(...args);this.addEventListener('message',e=>{if(e.data?.kind==='faceDistance'&&e.data.ok)window.__distanceResults.push(e.data.result)})}
-   postMessage(message,...args){if(message?.job?.kind==='faceDistance'){window.__distanceRequests++;if(window.__holdDistance){this.__held=true;window.__distanceHeld=true;return}}return super.postMessage(message,...args)}
+   postMessage(message,...args){if(message?.job?.kind==='faceDistance'){window.__distanceRequests++;if(window.__failDistance){window.__failDistance=false;queueMicrotask(()=>this.onmessage?.({data:{version:1,id:message.id,kind:message.job.kind,ok:false,error:{name:'Error',code:'CAD_TRANSPORT',message:'Private distance worker failure'}}}));return}if(window.__holdDistance){this.__held=true;window.__distanceHeld=true;return}}return super.postMessage(message,...args)}
    terminate(){if(this.__held)window.__distanceTerminated=true;return super.terminate()}
   }
  })
@@ -85,13 +85,16 @@ try {
  await page.evaluate(()=>window.__holdDistance=false)
  await command('Measure vertices / edge')
  await field.getByText('Допуск расстояния достигнут: 0,001 мм.',{exact:true}).waitFor()
+ await page.evaluate(()=>window.__failDistance=true);await activate(solid.getByRole('button',{name:'Расстояние между гранями',exact:true}));await activate(solid.getByRole('button',{name:'Расстояние между гранями',exact:true}))
+ await field.getByRole('alert').waitFor();assert.equal((await field.innerText()).includes('Private distance'),false);assert.equal(await solid.locator('[data-measurement="face-distance"]').count(),0)
+ await activate(field.getByRole('button',{name:'Повторить измерение граней',exact:true}));await field.getByText('Допуск расстояния достигнут: 0,001 мм.',{exact:true}).waitFor()
  assert.deepEqual(await exportDoc('after.json'),before)
  await field.scrollIntoViewIfNeeded();await page.screenshot({path:path.join(directory,'face-distance.png')})
  assert.deepEqual(errors,[])
  const nativeResult=await page.evaluate(()=>window.__distanceResults.at(-1)),requests=await page.evaluate(()=>window.__distanceRequests);assert.ok(nativeResult);assert.ok(requests>=3)
  const gpuActive=await solid.locator('.gpu-layer').evaluate(c=>c.style.visibility==='visible');if(process.argv.includes('--require-gpu'))assert.equal(gpuActive,true)
  await solid.getByRole('status',{name:'Сохранено в браузере',exact:true}).waitFor();await page.reload();await ready();assert.deepEqual(await exportDoc('reloaded.json'),before);assert.deepEqual(errors,[])
- const report={keyboard,tabs,gpuActive,reloadExact:true,browser:browser.version(),faceA:edgeA,faceB:edgeB,expectedMm:expected,displayedIntervalMm:interval,nativeResult,requests,cancelledWorkerTerminated:true,invalidFaceLocalized:true,documentUnchanged:true}
+ const report={workerFailureRetry:true,keyboard,tabs,gpuActive,reloadExact:true,browser:browser.version(),faceA:edgeA,faceB:edgeB,expectedMm:expected,displayedIntervalMm:interval,nativeResult,requests,cancelledWorkerTerminated:true,invalidFaceLocalized:true,documentUnchanged:true}
  await writeFile(path.join(directory,'face-distance-browser.json'),JSON.stringify(report,null,2)+'\n');console.log(report)
 }catch(error){console.error('Page errors:',errors);if(page){await page.screenshot({path:path.join(directory,'failure.png')}).catch(()=>{});await writeFile(path.join(directory,'failure.txt'),await page.locator('body').innerText().catch(()=>''))}throw error}
 finally{await browser?.close();await new Promise(resolve=>server.close(resolve))}

@@ -700,15 +700,17 @@ watchEffect(onCleanup=>{
  .finally(()=>{if(current)curvaturePending.value=false})
 })
 const edgeDistanceOpen=ref(false),edgeDistanceA=ref(1),edgeDistanceB=ref(2),edgeDistanceBudget=ref(10000)
+const edgeDistanceRevision=ref(0),edgeDistanceRetryVisible=ref(false)
 const edgeDistanceWorker=createSolidPreviewWorker(),edgeDistancePending=ref(false)
 const edgeDistance=shallowRef<{value:NurbsCurveDistance|null;error:string}|null>(null)
 onUnmounted(()=>edgeDistanceWorker.dispose())
 watchEffect(onCleanup=>{
+ void edgeDistanceRevision.value
  const enabled=props.open&&measurementOpen.value&&edgeDistanceOpen.value
  const source=selectedBody.value,target=measurementTarget.value,a=edgeDistanceA.value-1,b=edgeDistanceB.value-1,maxCells=edgeDistanceBudget.value
  let current=true
  onCleanup(()=>{current=false;edgeDistanceWorker.cancel()})
- edgeDistance.value=null;edgeDistancePending.value=false
+ edgeDistance.value=null;edgeDistancePending.value=false;edgeDistanceRetryVisible.value=false
  if(!enabled||!source)return
  if(!source.brep||!target?.brep){edgeDistance.value={value:null,error:label('Выберите два тела с B-rep геометрией.','Choose two bodies with B-rep geometry.')};return}
  if(!Number.isInteger(a)||!source.brep.edges[a]){edgeDistance.value={value:null,error:label('Укажите существующее ребро A.','Choose an existing edge A.')};return}
@@ -716,19 +718,21 @@ watchEffect(onCleanup=>{
  edgeDistancePending.value=true
  void edgeDistanceWorker.run({kind:'curveDistance',a:source.brep.edges[a].curve,b:target.brep.edges[b].curve,toleranceMm:.001,maxCells}).then(value=>{
   if(current)edgeDistance.value={value,error:''}
- }).catch(()=>{if(current)edgeDistance.value={value:null,error:label('Не удалось измерить выбранные рёбра. Проверьте геометрию или увеличьте объём расчёта.','Could not measure these edges. Check their geometry or increase the calculation budget.')}})
+ }).catch(()=>{if(current){edgeDistanceRetryVisible.value=true;edgeDistance.value={value:null,error:label('Не удалось измерить выбранные рёбра. Проверьте геометрию или увеличьте объём расчёта.','Could not measure these edges. Check their geometry or increase the calculation budget.')}}})
  .finally(()=>{if(current)edgeDistancePending.value=false})
 })
 const faceDistanceOpen=ref(false),faceDistanceA=ref(1),faceDistanceB=ref(2),faceDistanceBudget=ref(10000)
+const faceDistanceRevision=ref(0),faceDistanceRetryVisible=ref(false)
 const faceDistanceWorker=createSolidPreviewWorker(),faceDistancePending=ref(false)
 const faceDistance=shallowRef<{value:FaceDistanceResult|null;error:string}|null>(null)
 onUnmounted(()=>faceDistanceWorker.dispose())
 watchEffect(onCleanup=>{
+ void faceDistanceRevision.value
  const enabled=props.open&&measurementOpen.value&&faceDistanceOpen.value
  const source=selectedBody.value,target=measurementTarget.value,a=faceDistanceA.value-1,b=faceDistanceB.value-1,maxCells=faceDistanceBudget.value
  let current=true
  onCleanup(()=>{current=false;faceDistanceWorker.cancel()})
- faceDistance.value=null;faceDistancePending.value=false
+ faceDistance.value=null;faceDistancePending.value=false;faceDistanceRetryVisible.value=false
  if(!enabled||!source)return
  if(!source.brep||!target?.brep){faceDistance.value={value:null,error:label('Выберите два тела с B-rep геометрией.','Choose two bodies with B-rep geometry.')};return}
  if(!Number.isInteger(a)||!source.brep.faces[a]){faceDistance.value={value:null,error:label('Укажите существующую грань A.','Choose an existing face A.')};return}
@@ -736,26 +740,28 @@ watchEffect(onCleanup=>{
  faceDistancePending.value=true
  void faceDistanceWorker.run({kind:'faceDistance',options:{a:source.brep,b:target.brep,faceA:a,faceB:b,toleranceMm:.001,toleranceUv:1e-7,maxCells,maxDomainCells:maxCells===10000?1000000:8000000}}).then(value=>{
   if(current)faceDistance.value={value,error:''}
- }).catch(()=>{if(current)faceDistance.value={value:null,error:label('Не удалось измерить выбранные грани. Проверьте геометрию или увеличьте объём расчёта.','Could not measure these faces. Check their geometry or increase the calculation budget.')}})
+ }).catch(()=>{if(current){faceDistanceRetryVisible.value=true;faceDistance.value={value:null,error:label('Не удалось измерить выбранные грани. Проверьте геометрию или увеличьте объём расчёта.','Could not measure these faces. Check their geometry or increase the calculation budget.')}}})
  .finally(()=>{if(current)faceDistancePending.value=false})
 })
 const shellDistanceOpen=ref(false),shellDistanceBudget=ref(100000)
+const shellDistanceRevision=ref(0),shellDistanceRetryVisible=ref(false)
 const shellDistanceWorker=createSolidPreviewWorker(),shellDistancePending=ref(false)
 const shellDistance=shallowRef<{value:ShellDistanceResult|null;error:string}|null>(null)
 onUnmounted(()=>shellDistanceWorker.dispose())
 watchEffect(onCleanup=>{
+ void shellDistanceRevision.value
  const enabled=props.open&&measurementOpen.value&&shellDistanceOpen.value
  const source=selectedBody.value,target=measurementTarget.value,maxCells=shellDistanceBudget.value
  let current=true
  onCleanup(()=>{current=false;shellDistanceWorker.cancel()})
- shellDistance.value=null;shellDistancePending.value=false
+ shellDistance.value=null;shellDistancePending.value=false;shellDistanceRetryVisible.value=false
  if(!enabled||!source)return
  if(!source.brep||!target?.brep){shellDistance.value={value:null,error:label('Выберите два тела с B-rep геометрией.','Choose two bodies with B-rep geometry.')};return}
  if(source.id===target.id){shellDistance.value={value:null,error:label('Выберите другое тело B.','Choose a different body B.')};return}
  shellDistancePending.value=true
  void shellDistanceWorker.run({kind:'shellDistance',options:{a:source.brep,b:target.brep,toleranceMm:.001,toleranceUv:1e-7,maxCells,maxDomainCells:maxCells===100000?1000000:8000000}}).then(value=>{
   if(current)shellDistance.value={value,error:''}
- }).catch(()=>{if(current)shellDistance.value={value:null,error:label('Не удалось измерить оболочки тел. Проверьте геометрию или увеличьте объём расчёта.','Could not measure these boundary shells. Check their geometry or increase the calculation budget.')}})
+ }).catch(()=>{if(current){shellDistanceRetryVisible.value=true;shellDistance.value={value:null,error:label('Не удалось измерить оболочки тел. Проверьте геометрию или увеличьте объём расчёта.','Could not measure these boundary shells. Check their geometry or increase the calculation budget.')}}})
  .finally(()=>{if(current)shellDistancePending.value=false})
 })
 const diagnosticPanel=ref<HTMLElement>()
@@ -3978,7 +3984,7 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
               <p v-else role="status">{{ label('Расчёт не завершён: показаны нижняя и верхняя границы. Увеличьте объём расчёта; если лимит уже максимальный, проверьте более короткие участки рёбер.','Calculation incomplete: lower and upper bounds are shown. Increase the calculation budget; at the maximum budget, inspect shorter edge sections.') }}</p>
               <small>{{ label('Измерены только выбранные рёбра.','Only the selected edges are measured.') }}</small>
             </template>
-            <p v-if="edgeDistance?.error" id="edge-distance-error" role="alert">{{ edgeDistance.error }}</p>
+            <p v-if="edgeDistance?.error" id="edge-distance-error" role="alert">{{ edgeDistance.error }}</p><button v-if="edgeDistanceRetryVisible" @click="edgeDistanceRevision++">{{ label('Повторить измерение рёбер','Retry edge distance') }}</button>
           </fieldset>
           <button v-if="selectedBody.brep" @click="faceDistanceOpen=!faceDistanceOpen" :aria-pressed="faceDistanceOpen">{{ label('Расстояние между гранями','Distance between faces') }}</button>
           <fieldset v-if="faceDistanceOpen" class="face-distance-panel" aria-label="face-distance">
@@ -3995,7 +4001,7 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
               <p v-else role="status">{{ label('Расчёт не завершён: показаны нижняя и верхняя границы. Увеличьте объём расчёта; при максимальном лимите результат остаётся неполным.','Calculation incomplete: lower and upper bounds are shown. Increase the calculation budget; at the maximum budget, the result remains incomplete.') }}</p>
               <small>{{ label('Измерены выбранные грани с их отверстиями.','The selected faces and their holes are measured.') }}</small>
             </template>
-            <p v-if="faceDistance?.error" id="face-distance-error" role="alert">{{ faceDistance.error }}</p>
+            <p v-if="faceDistance?.error" id="face-distance-error" role="alert">{{ faceDistance.error }}</p><button v-if="faceDistanceRetryVisible" @click="faceDistanceRevision++">{{ label('Повторить измерение граней','Retry face distance') }}</button>
           </fieldset>
           <SolidVolumeDistance @state="(active,point)=>{volumeDistanceOpen=active;volumeContact=point}" :active="props.open && measurementOpen" :ru="ru" :a="selectedBody.brep" :b="measurementTarget?.brep" :same="selectedBody.id===measurementTarget?.id" :names="[selectedBody.name,measurementTarget?.name??'B']"/>
           <button v-if="selectedBody.brep" @click="shellDistanceOpen=!shellDistanceOpen" :aria-pressed="shellDistanceOpen">{{ label('Расстояние между оболочками','Distance between shells') }}</button>
@@ -4004,7 +4010,7 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
             <label>{{ label('Объём расчёта','Calculation budget') }}<select v-model.number="shellDistanceBudget" :aria-label="label('Объём расчёта оболочек','Shell calculation budget')"><option :value="100000">{{ label('Обычный','Standard') }}</option><option :value="1000000">{{ label('Расширенный','Extended') }}</option></select></label>
             <small v-if="shellDistancePending" role="status">{{ label('Измеряю расстояние…','Measuring distance…') }} <button @click="shellDistanceOpen=false">Esc</button></small>
             <ShellDistanceSummary v-if="shellDistance?.value" :value="shellDistance.value" :ru="ru"/>
-            <p v-if="shellDistance?.error" id="shell-distance-error" role="alert">{{ shellDistance.error }}</p>
+            <p v-if="shellDistance?.error" id="shell-distance-error" role="alert">{{ shellDistance.error }}</p><button v-if="shellDistanceRetryVisible" @click="shellDistanceRevision++">{{ label('Повторить измерение оболочек','Retry shell distance') }}</button>
           </fieldset>
           <button @click="clearanceOpen=!clearanceOpen" :aria-pressed="clearanceOpen">{{ label('Зазор тел по сетке','Body mesh clearance') }}</button>
           <template v-if="clearanceOpen">
