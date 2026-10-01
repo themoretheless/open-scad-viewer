@@ -51,6 +51,14 @@ try {
    terminate(){if(this.heldProfile)window.__profileDisplayTerminated=true;return super.terminate()}
   }
  })
+ if(process.argv.includes('--stale-preparation'))await page.addInitScript(()=>{
+  const NativeWorker=window.Worker;window.__preparationHeld=[];window.__preparationTerminated=0
+  window.Worker=class extends NativeWorker{
+   constructor(...args){super(...args);this.addEventListener('message',event=>{if(event.data?.kind==='profilePrepare'&&event.data.ok)window.__preparationLastReply=structuredClone(event.data)})}
+   postMessage(message,...rest){if(window.__holdPreparation&&message?.job?.kind==='profilePrepare'){this.__heldPreparation=true;window.__preparationHeld.push({message:structuredClone(message),callback:this.onmessage});return}return super.postMessage(message,...rest)}
+   terminate(){if(this.__heldPreparation)window.__preparationTerminated++;return super.terminate()}
+  }
+ })
  const origin=`http://127.0.0.1:${server.address().port}`
  await page.goto(origin)
  await page.getByRole('combobox',{name:'Тема',exact:true}).selectOption(theme)
@@ -160,6 +168,23 @@ try {
   await choose(target,'rect');assert.match(await solid.getByTestId('profile-operands').textContent(),/Circular cutter/)
  }
  await apply.click({trial:true});assert.equal(await solid.locator(preparation?'[data-preview="prepared-profile"]':'[data-preview="retained-profile"]').count(),1)
+ let stalePreparationChecked=false
+ if(process.argv.includes('--stale-preparation')){
+  assert.ok(preparation);await page.waitForFunction(()=>window.__preparationLastReply?.ok===true)
+  await page.evaluate(()=>window.__holdPreparation=true)
+  const tolerance=solid.getByLabel('Допуск разрыва, мм',{exact:true})
+  await enterText(tolerance,'0.02 mm');await page.waitForFunction(()=>window.__preparationHeld.length===1)
+  await enterText(tolerance,'0.03 mm');await page.waitForFunction(()=>window.__preparationHeld.length===2)
+  await page.evaluate(()=>{const held=window.__preparationHeld[0];held.callback({data:{...window.__preparationLastReply,id:held.message.id}})})
+  assert.equal(await apply.isDisabled(),true);assert.equal(await solid.locator('[data-preview="prepared-profile"]').count(),0)
+  await page.keyboard.press('Escape');assert.equal(await page.evaluate(()=>window.__preparationTerminated),2)
+  await page.evaluate(()=>{window.__holdPreparation=false;const held=window.__preparationHeld[1];held.callback({data:{...window.__preparationLastReply,id:held.message.id}})})
+  const stale=await download('Скачать проект JSON','late-cancelled.json');assert.deepEqual(stale,before)
+  assert.equal(await solid.locator('[data-preview="prepared-profile"]').count(),0)
+  if(await menu.evaluate(e=>e.parentElement.open))await activate(menu)
+  await command(operation);await apply.click({trial:true});await solid.locator('[data-preview="prepared-profile"]').waitFor()
+  stalePreparationChecked=true
+ }
  if(process.argv.includes('--profile-provenance')){
   assert.ok(preparation,'Provenance fixture requires preparation')
   const report=await page.evaluate(()=>window.__profileProvenance)
@@ -236,7 +261,7 @@ try {
  await page.reload();await solid.getByRole('button',{name:joined.sketches[0].name,exact:true}).waitFor();await solid.getByRole('status',{name:'history-restore',exact:true}).waitFor({state:'hidden'})
  const restored=await download('Скачать проект JSON','restored.json');assert.deepEqual(restored,joined)
  assert.deepEqual(renderErrors,[])
- const report={artifacts,completeDocumentChecks:true,browserReloadExact:true,browser:browser.version(),profileWorkerCancelled:await page.evaluate(()=>window.__profileDisplayTerminated===true),operation,retainedArcs:!generalNurbs,retainedGeneralNurbs:generalNurbs,rationalWeights:rational,generalAreaMm2:generalNurbs?generalArea:undefined,exactExtrusion:true,gpuFallback:gpuDeviceDestroyed,gpuRecovered:gpuLoss,renderedTriangles,cancel:true,undo:true,repeat:true,jsonReload:true,keyboard,tabPresses,downloads}
+ const report={artifacts,stalePreparationChecked,completeDocumentChecks:true,browserReloadExact:true,browser:browser.version(),profileWorkerCancelled:await page.evaluate(()=>window.__profileDisplayTerminated===true),operation,retainedArcs:!generalNurbs,retainedGeneralNurbs:generalNurbs,rationalWeights:rational,generalAreaMm2:generalNurbs?generalArea:undefined,exactExtrusion:true,gpuFallback:gpuDeviceDestroyed,gpuRecovered:gpuLoss,renderedTriangles,cancel:true,undo:true,repeat:true,jsonReload:true,keyboard,tabPresses,downloads}
  await writeFile(path.join(directory,'retained-browser.json'),JSON.stringify(report,null,2)+'\n');console.log(report)
  }
 }catch(error){if(page){await page.screenshot({path:path.join(directory,'failure.png')}).catch(()=>{});await writeFile(path.join(directory,'failure.txt'),await page.locator('body').innerText().catch(()=>''))}throw error}finally{await browser?.close();await new Promise(resolve=>server.close(resolve))}
