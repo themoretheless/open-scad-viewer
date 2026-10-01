@@ -1,0 +1,55 @@
+{
+  "scope": "Node commitAsync after compact async undo, 1000 linked instances; candidate prepared before timing; no browser/FPS claim",
+  "rows": [
+    {
+      "variant": "current",
+      "iteration": 1,
+      "elapsedMs": 194.6083749999998
+    },
+    {
+      "variant": "baseline",
+      "iteration": 1,
+      "elapsedMs": 906.5457080000015
+    },
+    {
+      "variant": "baseline",
+      "iteration": 2,
+      "elapsedMs": 907.6219170000004
+    },
+    {
+      "variant": "current",
+      "iteration": 2,
+      "elapsedMs": 198.17599999999948
+    },
+    {
+      "variant": "current",
+      "iteration": 3,
+      "elapsedMs": 215.07416600000215
+    },
+    {
+      "variant": "baseline",
+      "iteration": 3,
+      "elapsedMs": 947.4407499999943
+    },
+    {
+      "variant": "baseline",
+      "iteration": 4,
+      "elapsedMs": 997.632375000001
+    },
+    {
+      "variant": "current",
+      "iteration": 4,
+      "elapsedMs": 220.36204200000066
+    },
+    {
+      "variant": "current",
+      "iteration": 5,
+      "elapsedMs": 261.5836249999993
+    },
+    {
+      "variant": "baseline",
+      "iteration": 5,
+      "elapsedMs": 973.7456670000029
+    }
+  ]
+}
