@@ -1645,7 +1645,7 @@ const directTransformWorker=createSolidPreviewWorker(),directTransformPending=re
 let directTransformGeneration=0
 function cancelDirectTransform(){
  directTransformGeneration++;directTransformWorker.cancel()
- if(directTransformPending.value)clearDragPreview()
+ if(directTransformPending.value){history.cancelRestore();clearDragPreview()}
  directTransformPending.value=false
 }
 async function commitDirectTransform(before:DirectDocument,ids:string[],delta:Vec3,rotation=0,factor=1,localSketch=false,resetFields=false){
@@ -1655,7 +1655,10 @@ async function commitDirectTransform(before:DirectDocument,ids:string[],delta:Ve
  try{
   const result=await directTransformWorker.run({kind:'sceneEdit',document:before,options:{operation:localSketch?'sketch-transform':'transform',id:ids[0],ids,createdId:'',x:delta[0],y:delta[1],z:delta[2],axis:'z',angle:rotation,scale:factor}})
   if(generation!==directTransformGeneration)return
-  directTransformPending.value=false;commit(result);settleAfterDrag()
+  const {validateLocked,added}=prepareCommit(result)
+  const applied=await history.commitAsync(async()=>result,validateLocked)
+  if(generation!==directTransformGeneration||!applied)return
+  directTransformPending.value=false;finishCommit(added);settleAfterDrag()
   if(resetFields){dx.value=dy.value=dz.value=angle.value=0;scale.value=1}
  }catch(e){if(generation===directTransformGeneration){error.value=e instanceof Error?e.message:String(e);clearDragPreview()}}
  finally{if(generation===directTransformGeneration)directTransformPending.value=false}
