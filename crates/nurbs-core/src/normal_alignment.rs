@@ -127,13 +127,13 @@ fn jacobian_on(s: &Surface, indices: [usize; 2], domain: [[f64; 2]; 2]) -> Resul
     }
     Ok(result)
 }
-pub fn inspect(
+fn validate_input(
     s: &Surface,
     domain: [[f64; 2]; 2],
     direction: [f64; 3],
     max_sine_squared: f64,
     max_spans: usize,
-) -> Result<Report> {
+) -> Result<()> {
     s.validate()?;
     check(
         direction.iter().all(|x| x.is_finite())
@@ -155,6 +155,19 @@ pub fn inspect(
             "Normal rectangle must lie inside the natural surface domain",
         )?;
     }
+    Ok(())
+}
+pub fn inspect(
+    s: &Surface,
+    domain: [[f64; 2]; 2],
+    direction: [f64; 3],
+    max_sine_squared: f64,
+    max_spans: usize,
+) -> Result<Report> {
+    validate_input(s, domain, direction, max_sine_squared, max_spans)?;
+    let degrees = [s.degree_u, s.degree_v];
+    let knots = [&s.knots_u, &s.knots_v];
+    let counts = [s.control_points.len(), s.control_points[0].len()];
     let mut out = Report {
         aligned: None,
         sine_squared_interval: None,
@@ -245,6 +258,107 @@ pub fn inspect(
     Ok(out)
 }
 
+/// Angular compatibility over both complete original UV rectangles. This
+/// checks normal directions, not positional coincidence or a shared seam map.
+#[derive(Debug)]
+pub struct PairReport {
+    pub aligned: Option<bool>,
+    pub sine_squared_interval: Option<[f64; 2]>,
+    pub normal_components: [Option<[[f64; 2]; 3]>; 2],
+    pub spans: usize,
+    pub reason: &'static str,
+}
+pub fn inspect_pair(
+    surfaces: [&Surface; 2],
+    domains: [[[f64; 2]; 2]; 2],
+    max_sine_squared: f64,
+    max_spans: usize,
+) -> Result<PairReport> {
+    // Validate both inputs before a budget refusal can hide invalid geometry.
+    for side in 0..2 {
+        validate_input(
+            surfaces[side],
+            domains[side],
+            [1., 0., 0.],
+            max_sine_squared,
+            max_spans,
+        )?;
+    }
+    let first = inspect(
+        surfaces[0],
+        domains[0],
+        [1., 0., 0.],
+        max_sine_squared,
+        max_spans,
+    )?;
+    let mut out = PairReport {
+        aligned: None,
+        sine_squared_interval: None,
+        normal_components: [first.normal_components, None],
+        spans: first.spans,
+        reason: "normal-unresolved",
+    };
+    if first.spans == max_spans {
+        out.reason = "span-limit";
+        return Ok(out);
+    }
+    let second = inspect(
+        surfaces[1],
+        domains[1],
+        [1., 0., 0.],
+        max_sine_squared,
+        max_spans - first.spans,
+    )?;
+    out.spans += second.spans;
+    out.normal_components[1] = second.normal_components;
+    if first.reason == "span-limit" || second.reason == "span-limit" {
+        out.reason = "span-limit";
+        return Ok(out);
+    }
+    let mut normals = [[I::point(0.); 3]; 2];
+    for side in 0..2 {
+        let Some(hull) = out.normal_components[side] else {
+            return Ok(out);
+        };
+        if hull.iter().all(|r| r[0] <= 0. && r[1] >= 0.) {
+            return Ok(out);
+        }
+        let scale = hull.iter().flatten().map(|x| x.abs()).fold(0_f64, f64::max);
+        for k in 0..3 {
+            normals[side][k] = I::new(hull[k][0], hull[k][1])?.div(I::point(scale))?;
+        }
+    }
+    let denominator = norm_squared(normals[0])?.mul(norm_squared(normals[1])?)?;
+    if denominator.lo <= 0. {
+        return Ok(out);
+    }
+    let mut cross = [I::point(0.); 3];
+    for k in 0..3 {
+        let a = (k + 1) % 3;
+        let b = (k + 2) % 3;
+        cross[k] = normals[0][a]
+            .mul(normals[1][b])?
+            .sub(normals[0][b].mul(normals[1][a])?)?;
+    }
+    let sine = norm_squared(cross)?.div(denominator)?;
+    let bounds = [sine.lo.max(0.), sine.hi.min(1.)];
+    I::new(bounds[0], bounds[1])?;
+    out.sine_squared_interval = Some(bounds);
+    out.aligned = if bounds[1] <= max_sine_squared {
+        Some(true)
+    } else if bounds[0] > max_sine_squared {
+        Some(false)
+    } else {
+        None
+    };
+    out.reason = match out.aligned {
+        Some(true) => "angular-tolerance",
+        Some(false) => "oblique",
+        None => "angular-unresolved",
+    };
+    Ok(out)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -262,6 +376,51 @@ mod tests {
             periodic_u: false,
             periodic_v: false,
         }
+    }
+    #[test]
+    fn pair_normals_distinguish_tangency_fold_and_singular_transition() {
+        let a = plane();
+        let mut b = a.clone();
+        for row in &mut b.control_points {
+            for p in row {
+                p[0] += 100.;
+                p[1] -= 20.;
+            }
+        }
+        let domains = [[[0., 1.], [0., 1.]]; 2];
+        let r = inspect_pair([&a, &b], domains, 1e-6, 2).unwrap();
+        assert_eq!(r.aligned, Some(true));
+        assert_eq!(r.spans, 2);
+        // Position is deliberately different: angular agreement is not G0/G1.
+        b.control_points.reverse();
+        assert_eq!(
+            inspect_pair([&a, &b], domains, 1e-6, 2).unwrap().aligned,
+            Some(true)
+        );
+        for row in &mut b.control_points {
+            for p in row {
+                p[2] = p[0] - 100.;
+            }
+        }
+        let r = inspect_pair([&a, &b], domains, 1e-6, 2).unwrap();
+        assert_eq!(r.aligned, Some(false));
+        let d = r.sine_squared_interval.unwrap();
+        assert!(d[0] <= 0.5 && d[1] >= 0.5);
+        for row in &mut b.control_points {
+            for p in row {
+                p[1] = 0.;
+                p[2] = 0.;
+            }
+        }
+        let r = inspect_pair([&a, &b], domains, 1e-6, 2).unwrap();
+        assert_eq!(r.aligned, None);
+        assert_eq!(r.reason, "normal-unresolved");
+        let r = inspect_pair([&a, &a], domains, 1e-6, 1).unwrap();
+        assert_eq!(r.aligned, None);
+        assert_eq!(r.reason, "span-limit");
+        assert_eq!(r.spans, 1);
+        let invalid = [domains[0], [[0., 2.], [0., 1.]]];
+        assert!(inspect_pair([&a, &a], invalid, 1e-6, 1).is_err());
     }
     #[test]
     fn parallel_antiparallel_oblique_and_collapsed_normals_are_distinct() {

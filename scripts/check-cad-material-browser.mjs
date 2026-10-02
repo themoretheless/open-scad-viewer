@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict'
+import {createHash} from 'node:crypto'
 import {createServer} from 'node:http'
 import {readFile,mkdir,writeFile} from 'node:fs/promises'
 import path from 'node:path'
@@ -26,8 +27,8 @@ try {
  await page.addInitScript(()=>{
   const NativeWorker=window.Worker;window.__holdDistance=false;window.__distanceRequests=0;window.__distanceResults=[];window.__distanceTimings=[]
   window.Worker=class extends NativeWorker {
-   constructor(...args){super(...args);this.__starts=new Map();this.addEventListener('message',e=>{if(['materialChord','materialSegment'].includes(e.data?.kind)&&e.data.ok){window.__distanceResults.push(e.data.result);const start=this.__starts.get(e.data.id);if(start!==undefined){window.__distanceTimings.push({workerRoundTripMs:performance.now()-start,cells:e.data.result.cells,domainCells:e.data.result.domainCells,converged:e.data.result.converged});this.__starts.delete(e.data.id)}}})}
-   postMessage(message,...args){if(['materialChord','materialSegment'].includes(message?.job?.kind)){window.__distanceRequests++;if(window.__failDistance){window.__failDistance=false;queueMicrotask(()=>this.onmessage?.({data:{version:1,id:message.id,kind:message.job.kind,ok:false,error:{name:'Error',code:'CAD_TRANSPORT',message:'Private distance worker failure'}}}));return}if(window.__holdDistance){this.__held=true;window.__distanceHeld=true;return}this.__starts.set(message.id,performance.now())}return super.postMessage(message,...args)}
+   constructor(...args){super(...args);this.__starts=new Map();this.addEventListener('message',e=>{if(['materialChord','materialSegment','materialWall'].includes(e.data?.kind)&&e.data.ok){window.__distanceResults.push(e.data.result);const start=this.__starts.get(e.data.id);if(start!==undefined){window.__distanceTimings.push({workerRoundTripMs:performance.now()-start,cells:e.data.result.cells,domainCells:e.data.result.domainCells,converged:e.data.result.converged});this.__starts.delete(e.data.id)}}})}
+   postMessage(message,...args){if(['materialChord','materialSegment','materialWall'].includes(message?.job?.kind)){window.__distanceRequests++;if(window.__failDistance){window.__failDistance=false;queueMicrotask(()=>this.onmessage?.({data:{version:1,id:message.id,kind:message.job.kind,ok:false,error:{name:'Error',code:'CAD_TRANSPORT',message:'Private distance worker failure'}}}));return}if(window.__holdDistance){this.__held=true;window.__distanceHeld=true;return}this.__starts.set(message.id,performance.now())}return super.postMessage(message,...args)}
    terminate(){if(this.__held)window.__distanceTerminated=true;return super.terminate()}
   }
  })
@@ -53,7 +54,7 @@ try {
  async function closeMenu(){if(await menu.evaluate(e=>e.parentElement.open))await activate(menu)}
  async function ready(){await page.waitForFunction(()=>!document.body.innerText.includes('Восстанавливаю геометрию'));await solid.getByRole('status',{name:'history-restore',exact:true}).waitFor({state:'hidden'});await solid.getByRole('status',{name:'primitive-build',exact:true}).waitFor({state:'hidden'});await solid.getByRole('status',{name:'display-refinement',exact:true}).waitFor({state:'hidden'})}
  async function exportDoc(file){await ready();if(await menu.evaluate(e=>!e.parentElement.open))await activate(menu);const pending=page.waitForEvent('download');await activate(solid.getByRole('button',{name:'Скачать проект JSON',exact:true}));const download=await pending;await download.saveAs(path.join(directory,file));await closeMenu();return JSON.parse(await readFile(path.join(directory,file),'utf8'))}
- async function command(name){await closeMenu();await activate(solid.getByRole('button',{name:'Команда… Ctrl K',exact:true}));const search=page.getByRole('combobox',{name:'Search commands / Поиск команд'});await input(search,name);await search.press('Enter')}
+ async function command(name){await closeMenu();await activate(page.getByRole('button',{name:'Команды',exact:true}));const search=page.getByRole('combobox',{name:'Search commands / Поиск команд'});await input(search,name);await search.press('Enter')}
 
  const documentFixture=JSON.parse(await readFile('docs/qualification/cad-roadmap-2026-09-28/p1-development-2026-10-02/boundary-embedding-wasm/browser-document.json','utf8'))
  await ready();await activate(menu)
@@ -78,6 +79,47 @@ try {
  const radialBounds=radialLength.replace(' mm','').split(' … ').map(Number)
  assert.ok(radialBounds[0]<=15&&radialBounds[1]>=15)
  await page.screenshot({path:path.join(directory,'material-radial-normal.png'),fullPage:true})
+ if(process.argv.includes('--wall')){
+  await choose(field.getByRole('combobox',{name:'Режим проверки материала',exact:true}),'wall')
+  const contract=JSON.parse(await readFile('docs/qualification/cad-roadmap-2026-09-28/p1-development-2026-10-03/material-wall/contract.json','utf8'))
+  const wallCase=contract.cases.find(c=>c.name==='annular-wall')
+  assert.ok(wallCase)
+  for(let group=0;group<2;group++)for(const face of wallCase.request.faceGroups[group]){
+   const checkbox=field.getByRole('group',{name:'Группа граней '+(group+1),exact:true}).getByRole('checkbox',{name:'Грань '+(face+1),exact:true})
+   if(keyboard){await focusByTab(checkbox);await page.keyboard.press('Space')}else await checkbox.check()
+  }
+  await coords([25,2,3],[-24,0,0]);await run()
+  await field.locator('[data-wall-converged="false"]').waitFor({timeout:120000})
+  await field.locator('[data-material-normal]').filter({hasText:'Линия наклонена'}).waitFor()
+  assert.equal(await field.locator('[data-wall-thickness]').count(),0)
+  assert.equal(await solid.locator('[data-diagnostic="material-path"] line').getAttribute('stroke'),'#ff6978')
+  await coords([15,20,3],[-14.4,-19.2,0])
+  await run();await field.locator('[data-wall-converged="true"]').waitFor({timeout:120000})
+  const bounds=(await field.locator('[data-wall-thickness]').innerText()).replace(' mm','').split(' … ').map(Number)
+  assert.ok(bounds[0]<=15&&bounds[1]>=15)
+  assert.equal(await solid.locator('[data-material-face]').count(),2)
+  await page.screenshot({path:path.join(directory,'wall-thickness.png'),fullPage:true})
+  await page.evaluate(()=>{window.__holdDistance=true;window.__distanceHeld=false;window.__distanceTerminated=false});await run();await page.waitForFunction(()=>window.__distanceHeld===true)
+  await input(field.getByRole('spinbutton',{name:'Допуск, мм',exact:true}),'0.02')
+  await page.waitForFunction(()=>window.__distanceTerminated===true)
+  assert.equal(await field.locator('[data-wall-thickness]').count(),0)
+  await page.evaluate(()=>{window.__holdDistance=false;window.__failDistance=true});await run()
+  await field.getByRole('alert').filter({hasText:'Проверка не выполнена'}).waitFor()
+  await run();await field.locator('[data-wall-converged="true"]').waitFor({timeout:120000})
+  const auto=field.getByRole('checkbox',{name:'Автоматически искать тонкие участки',exact:true})
+  if(keyboard){await focusByTab(auto);await page.keyboard.press('Space')}else await auto.check()
+  await page.evaluate(()=>{window.__holdDistance=true;window.__distanceHeld=false;window.__distanceTerminated=false})
+  await run();await page.waitForFunction(()=>window.__distanceHeld===true)
+  await input(field.getByRole('spinbutton',{name:'Допуск, мм',exact:true}),'0.01')
+  await page.waitForFunction(()=>window.__distanceTerminated===true)
+  assert.equal(await field.locator('[data-wall-thickness]').count(),0)
+  await page.evaluate(()=>{window.__holdDistance=false})
+  await run();await field.locator('[data-wall-converged="true"]').waitFor({timeout:120000})
+  const autoBounds=(await field.locator('[data-wall-thickness]').innerText()).replace(' mm','').split(' … ').map(Number)
+  assert.ok(autoBounds[0]<=15&&autoBounds[1]>=15)
+  await page.screenshot({path:path.join(directory,'automatic-wall.png'),fullPage:true})
+  await choose(field.getByRole('combobox',{name:'Режим проверки материала',exact:true}),'chord')
+ }
  await coords([25,2,3],[-50,0,0]);await run()
  await field.getByRole('status').filter({hasText:'Нужны два пересечения'}).waitFor({timeout:120000})
  assert.equal(await solid.locator('[data-material-face]').count(),4)
@@ -90,7 +132,7 @@ try {
  assert.equal(await solid.locator('[data-diagnostic="material-path"]').count(),0)
  await choose(field.getByRole('combobox',{name:'Режим проверки материала',exact:true}),'chord')
  await coords([25,2,3],[-24,0,0])
- await page.evaluate(()=>{window.__holdDistance=true});await run()
+ await page.evaluate(()=>{window.__holdDistance=true;window.__distanceHeld=false;window.__distanceTerminated=false});await run()
  await page.waitForFunction(()=>window.__distanceHeld===true)
  await page.keyboard.press('Escape');await field.waitFor({state:'hidden'})
  await page.waitForFunction(()=>window.__distanceTerminated===true)
@@ -108,6 +150,6 @@ try {
  const after=await exportDoc('after.json');assert.deepEqual(after,before)
  await page.reload();await ready();const restored=await exportDoc('reloaded.json');assert.deepEqual(restored,before)
  assert.deepEqual(errors,[])
- await writeFile(path.join(directory,'report.json'),JSON.stringify({passed:true,keyboard,tabs,length,radialLength,results,cancelledHeldRequest:true,retry:true,invalidLineLocalized:true,documentUnchanged:true,reloadExact:true,errors},null,2)+'\n')
+ await writeFile(path.join(directory,'report.json'),JSON.stringify({passed:true,wasmSha256:createHash('sha256').update(await readFile(path.join(root,'wasm/geometry-kernel.wasm'))).digest('hex'),wall:process.argv.includes('--wall'),keyboard,tabs,length,radialLength,results,cancelledHeldRequest:true,retry:true,invalidLineLocalized:true,documentUnchanged:true,reloadExact:true,errors},null,2)+'\n')
  console.log(JSON.stringify({passed:true,keyboard,cases:results.length,length}))
 }finally{await browser?.close();await new Promise(resolve=>server.close(resolve))}

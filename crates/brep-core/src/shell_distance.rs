@@ -93,6 +93,32 @@ pub fn distance_between_face_sets(
             "Shell distance requires 1..100000 face pairs",
         ));
     }
+    // Any shared finite center gives a valid radial lower bound. Retain the
+    // world origin and also center the bounds on the placed models, so a rigid
+    // translation cannot erase the useful concentric-wall estimate.
+    let center = std::array::from_fn::<_, 3, _>(|axis| {
+        let lo = a
+            .vertices
+            .iter()
+            .chain(&b.vertices)
+            .map(|v| v.point[axis])
+            .fold(f64::INFINITY, f64::min);
+        let hi = a
+            .vertices
+            .iter()
+            .chain(&b.vertices)
+            .map(|v| v.point[axis])
+            .fold(f64::NEG_INFINITY, f64::max);
+        lo / 2. + hi / 2.
+    });
+    let origins = [
+        [0.; 3],
+        if center.iter().all(|x| x.is_finite()) {
+            center
+        } else {
+            [0.; 3]
+        },
+    ];
     let prepare = |m: &Model, selected: &[usize]| -> Result<_> {
         selected
             .iter()
@@ -107,13 +133,19 @@ pub fn distance_between_face_sets(
                     FaceDomain::new(m, i, tolerance_uv)?,
                     rectangle_bounds(s, domain)?,
                     // Radius is an optional tightening; numeric range failure keeps the Cartesian bound.
-                    nurbs_core::radial_bounds::radius_bounds(s, [0.; 3])
-                        .ok()
-                        .flatten(),
-                    std::array::from_fn::<_, 3, _>(|axis| {
-                        nurbs_core::radial_bounds::axis_radius_bounds(s, axis, [0.; 3])
+                    origins.map(|origin| {
+                        nurbs_core::radial_bounds::radius_bounds(s, origin)
                             .ok()
                             .flatten()
+                    }),
+                    std::array::from_fn::<_, 6, _>(|slot| {
+                        nurbs_core::radial_bounds::axis_radius_bounds(
+                            s,
+                            slot % 3,
+                            origins[slot / 3],
+                        )
+                        .ok()
+                        .flatten()
                     }),
                 ))
             })
@@ -124,12 +156,14 @@ pub fn distance_between_face_sets(
     let mut queue = Vec::with_capacity(pairs);
     for (i, (_, ba, ra, axes_a)) in aa.iter().enumerate() {
         for (j, (_, bb, rb, axes_b)) in bb.iter().enumerate() {
-            let radial = match (ra, rb) {
-                (Some(a), Some(b)) => {
-                    enclosure_distance(&[*a, [0.; 2], [0.; 2]], &[*b, [0.; 2], [0.; 2]])?.0
+            let mut radial = 0_f64;
+            for (a, b) in ra.iter().zip(rb) {
+                if let (Some(a), Some(b)) = (a, b) {
+                    radial = radial.max(
+                        enclosure_distance(&[*a, [0.; 2], [0.; 2]], &[*b, [0.; 2], [0.; 2]])?.0,
+                    );
                 }
-                _ => 0.,
-            };
+            }
             let axial = axes_a
                 .iter()
                 .zip(axes_b)
@@ -344,6 +378,40 @@ mod tests {
         assert_eq!(r.pairs, 36);
         assert!(r.evaluated_pairs < 36);
         assert!(r.faces.is_some());
+    }
+    #[test]
+    fn placed_annular_wall_keeps_concentric_lower_bounds() {
+        let original =
+            crate::circular_blend::partial_annular_quarter(20., 5., 6., 1.25, 1., 1e-7).unwrap();
+        let placed = crate::transform::affine(
+            &original,
+            [
+                [0., -1., 0., 123.],
+                [0., 0., -1., -45.],
+                [1., 0., 0., 67.],
+                [0., 0., 0., 1.],
+            ],
+        )
+        .unwrap();
+        let before = format!("{placed:?}");
+        let aa = [2, 7, 12, 16, 20, 24];
+        let bb = [3, 8, 13, 17, 21, 25];
+        for model in [&original, &placed] {
+            let r = distance_between_face_sets(model, &aa, model, &bb, 1e-5, 1e-7, 100000, 1000000)
+                .unwrap();
+            assert!(
+                r.converged,
+                "{} {} {:?}",
+                r.reason, r.lower_bound_mm, r.upper_bound_mm
+            );
+            assert!(r.lower_bound_mm <= 15. && r.upper_bound_mm.unwrap() >= 15.);
+            assert!(r.upper_bound_mm.unwrap() - r.lower_bound_mm <= 1e-5);
+            assert_eq!(r.pairs, 36);
+            let coarse =
+                distance_between_face_sets(model, &aa, model, &bb, 1e-5, 1e-7, 1, 1).unwrap();
+            assert!(coarse.lower_bound_mm > 14.99 && coarse.lower_bound_mm <= 15.);
+        }
+        assert_eq!(format!("{placed:?}"), before);
     }
     #[test]
     fn exhausted_budget_keeps_unvisited_pairs_in_lower_bound() {

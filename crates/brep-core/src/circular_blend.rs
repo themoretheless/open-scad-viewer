@@ -1185,6 +1185,31 @@ mod tests {
     }
 
     #[test]
+    fn transition_join_has_full_interval_normal_coverage_and_refuses_the_pole(){
+        for direction in [-1.,1.] {
+            let transition=plane_cylinder_transition(20.,6.,0.,1.25,0.3,direction*0.7).unwrap();
+            let constant=plane_cylinder_rim(20.,6.,1.25,0.3+direction*0.7,direction*0.4).unwrap();
+            let before=format!("{:?}",transition.surface);
+            let mut queue=vec![[0.,1.]];let mut checked=0;let mut admitted=0;
+            while let Some(v)=queue.pop(){
+                checked+=1;assert!(checked*2<=100000,"whole meridian angular coverage exhausted at {v:?}, admitted={admitted}");
+                let r=nurbs_core::normal_alignment::inspect_pair(
+                    [&transition.surface,&constant[0].surface],[[[1.,1.],v],[[0.,0.],v]],1e-6,2).unwrap();
+                if r.aligned==Some(true){admitted+=1;continue}
+                assert_ne!(r.aligned,Some(false),"a proved angular break cannot be hidden by subdivision");
+                let mid=v[0]/2.+v[1]/2.;assert!(mid>v[0]&&mid<v[1]);
+                queue.push([mid,v[1]]);queue.push([v[0],mid]);
+            }
+            assert!(admitted>1);
+            eprintln!("transition direction={direction}: checked={checked}, admitted={admitted}, normal spans={}",checked*2);
+            let pole=nurbs_core::normal_alignment::inspect_pair(
+                [&transition.surface,&constant[0].surface],[[[0.,0.],[0.5,0.5]],[[0.,0.],[0.5,0.5]]],1e-6,2).unwrap();
+            assert_eq!(pole.aligned,None);assert_eq!(pole.reason,"normal-unresolved");
+            assert_eq!(format!("{:?}",transition.surface),before);
+        }
+    }
+
+    #[test]
     fn transition_boundaries_certify_poles_and_form_an_oriented_loop() {
         for (r0, r1, pole_index) in [(0., 1.25, 3), (1.25, 0., 1)] {
             let span = plane_cylinder_transition(20., 6., r0, r1, 5.9, 0.7).unwrap();

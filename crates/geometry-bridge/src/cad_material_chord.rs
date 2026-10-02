@@ -29,12 +29,7 @@ pub fn inspect(v: Value) -> Result<Value> {
             sine,
             spans,
         )?;
-        let evidence = json!({"aligned":nr.aligned,"spans":nr.spans,
-            "endpoints":nr.endpoints.iter().enumerate().map(|(i,r)|r.as_ref().map(|r|json!({
-                "face":nr.chord.boundary.contacts[i].face,"uv":nr.chord.boundary.contacts[i].uv,
-                "aligned":r.aligned,"sineSquaredInterval":r.sine_squared_interval,
-                "normalComponents":r.normal_components,"spans":r.spans,"reason":r.reason
-            }))).collect::<Vec<_>>()});
+        let evidence = normal_evidence(&nr);
         let status = match nr.aligned {
             Some(true) => "angular-tolerance",
             Some(false) => "oblique",
@@ -48,6 +43,37 @@ pub fn inspect(v: Value) -> Result<Value> {
             "not-qualified",
         )
     };
+    render(
+        &model,
+        &r,
+        origin,
+        direction,
+        tolerance_uv,
+        &config,
+        &normal_config,
+        normal_evidence,
+        normal_alignment,
+    )
+}
+pub(super) fn normal_evidence(nr: &brep_core::material_chord::NormalReport) -> Value {
+    json!({"aligned":nr.aligned,"spans":nr.spans,
+        "endpoints":nr.endpoints.iter().enumerate().map(|(i,r)|r.as_ref().map(|r|json!({
+            "face":nr.chord.boundary.contacts[i].face,"uv":nr.chord.boundary.contacts[i].uv,
+            "aligned":r.aligned,"sineSquaredInterval":r.sine_squared_interval,
+            "normalComponents":r.normal_components,"spans":r.spans,"reason":r.reason
+        }))).collect::<Vec<_>>()})
+}
+pub(super) fn render(
+    model: &brep_core::Model,
+    r: &brep_core::material_chord::Report,
+    origin: [f64; 3],
+    direction: [f64; 3],
+    tolerance_uv: f64,
+    config: &Value,
+    normal_config: &Option<Value>,
+    normal_evidence: Option<Value>,
+    normal_alignment: &str,
+) -> Result<Value> {
     let seed = r.seed.as_ref().map(|s| {
         json!({"inside":s.parity,
             "cells":s.cells,"domainCells":s.domain_cells,

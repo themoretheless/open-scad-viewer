@@ -8,34 +8,35 @@ export interface ThemeDefinition {
   readonly tokens: Readonly<Record<string, string>>
 }
 
-// Graphite ground with an amber accent; every value is checked by assertThemeCatalog.
+// Warm graphite with a single muted warm accent; every value is checked by assertThemeCatalog.
+// --hairline is the quiet divider for chrome; --border stays contrast-checked for controls.
 const darkTokens = {
-  '--bg': '#111214', '--surface': '#16171a', '--surface-raised': '#1f2024',
-  '--border': '#6c6f77', '--text': '#e7e5df', '--text-dim': '#a9a69e',
-  '--accent': '#f0b35a', '--accent-strong': '#94601a', '--hover': '#26282d',
-  '--danger': '#f08a7e', '--warning': '#f0b35a', '--canvas-bg': '#1a1b1f', '--focus': '#ffd08a',
+  '--bg': '#1e1d1b', '--surface': '#262523', '--surface-raised': '#32302d',
+  '--border': '#76726a', '--hairline': '#383530', '--text': '#ece9e4', '--text-dim': '#a6a199',
+  '--accent': '#e29a5a', '--accent-strong': '#a0511d', '--hover': '#2f2d2a',
+  '--danger': '#ff8d84', '--warning': '#e6b24e', '--canvas-bg': '#2d2b28', '--focus': '#f0b98a',
 } as const
 
 export const THEME_CATALOG: readonly ThemeDefinition[] = Object.freeze([
   { id: 'dark', name: { ru: 'Тёмная', en: 'Dark' }, scheme: 'dark', tokens: darkTokens },
   {
     id: 'light', name: { ru: 'Светлая', en: 'Light' }, scheme: 'light', tokens: {
-      '--bg': '#f4f1ea', '--surface': '#fbfaf7', '--surface-raised': '#efebe2',
-      '--border': '#8a8275', '--text': '#1f1c18', '--text-dim': '#5e574d',
-      '--accent': '#8a5200', '--accent-strong': '#6e4100', '--hover': '#ebe6db',
-      '--danger': '#b3261e', '--warning': '#8a5b00', '--canvas-bg': '#e9e4da', '--focus': '#6e4100',
+      '--bg': '#f6f4f1', '--surface': '#ffffff', '--surface-raised': '#ebe8e3',
+      '--border': '#8a857c', '--hairline': '#e3dfd9', '--text': '#1d1b18', '--text-dim': '#5d5850',
+      '--accent': '#a5521a', '--accent-strong': '#8a4310', '--hover': '#eeebe6',
+      '--danger': '#b3261e', '--warning': '#8a5b00', '--canvas-bg': '#e4e0da', '--focus': '#8a4310',
     } },
   {
     id: 'nord', name: { ru: 'Nord', en: 'Nord' }, scheme: 'dark', tokens: {
       '--bg': '#242933', '--surface': '#2e3440', '--surface-raised': '#3b4252',
-      '--border': '#7d899f', '--text': '#eceff4', '--text-dim': '#c0c8d6',
+      '--border': '#7d899f', '--hairline': '#3b4252', '--text': '#eceff4', '--text-dim': '#c0c8d6',
       '--accent': '#88c0d0', '--accent-strong': '#466985', '--hover': '#434c5e',
       '--danger': '#ef8c8c', '--warning': '#ebcb8b', '--canvas-bg': '#20242d', '--focus': '#9bd8e8',
     } },
   {
     id: 'solarized', name: { ru: 'Solarized', en: 'Solarized' }, scheme: 'dark', tokens: {
       '--bg': '#002b36', '--surface': '#073642', '--surface-raised': '#104653',
-      '--border': '#93a1a1', '--text': '#eee8d5', '--text-dim': '#b8c2c0',
+      '--border': '#93a1a1', '--hairline': '#0d4653', '--text': '#eee8d5', '--text-dim': '#b8c2c0',
       '--accent': '#2aa8d8', '--accent-strong': '#17658c', '--hover': '#0d4653',
       '--danger': '#ff7d6f', '--warning': '#e0bd4f', '--canvas-bg': '#001f27', '--focus': '#7fd8f5',
     } },

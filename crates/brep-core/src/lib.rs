@@ -57,6 +57,7 @@ pub mod self_intersection;
 pub mod shell_distance;
 pub mod material_segment;
 pub mod material_chord;
+pub mod material_wall;
 pub mod solid_distance;
 pub mod shell_relation;
 pub mod shell_nesting;

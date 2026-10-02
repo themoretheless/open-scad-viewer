@@ -19,8 +19,9 @@ await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve))
 let browser,page
 const errors=[]
 try{
- const {playwright}=await loadQualificationPlaywrightPackage();browser=await playwright.chromium.launch({headless:true})
+ const {playwright}=await loadQualificationPlaywrightPackage();browser=await playwright.chromium.launch({headless:true,...(process.env.CHROMIUM_EXECUTABLE?{executablePath:process.env.CHROMIUM_EXECUTABLE}:{})})
  page=await browser.newPage({acceptDownloads:true,viewport:{width:1440,height:1000}});page.on('pageerror',e=>errors.push(String(e)))
+ if(process.argv.includes('--cpu'))await page.addInitScript(()=>Object.defineProperty(navigator,'gpu',{configurable:true,value:undefined}))
  await page.goto(`http://127.0.0.1:${server.address().port}`)
  const solid=page.getByRole('region',{name:'Solid — CAD-лепка',exact:true}),menu=solid.locator('summary[title="Файл"]')
  let tabs=0
@@ -39,7 +40,7 @@ try{
  const fixtureRoot=process.env.CAD_MIXED20_UI_OUTPUT??'/tmp/cad-mixed20-ui-fixtures'
  const apply=solid.getByRole('button',{name:'Готово · Enter',exact:true})
  async function command(name){
-  await activate(solid.getByRole('button',{name:'Команда… Ctrl K',exact:true}))
+  await activate(page.getByRole('button',{name:'Команды',exact:true}))
   const search=page.getByRole('combobox',{name:'Search commands / Поиск команд'})
   if(keyboard){await focusByTab(search);await page.keyboard.insertText(name);await page.keyboard.press('Enter')}
   else {await search.fill(name);await search.press('Enter')}
@@ -114,6 +115,6 @@ try{
   for(let i=1;i<=20;i++){await activate(solid.getByRole('button',{name:'↷',exact:true}));assert.deepEqual(await exportDoc(name+'-redo-'+i+'.json'),snapshots[i])}
   await solid.getByRole('status',{name:'Сохранено в браузере',exact:true}).waitFor();await page.reload();await solid.getByRole('button',{name:title,exact:true}).waitFor();assert.deepEqual(await exportDoc(name+'-reload.json'),current)
  }
- assert.deepEqual(errors,[]);await writeFile(path.join(directory,'result.json'),JSON.stringify({ok:true,keyboard,tabs,edits:20,cancelledPreviewsPerPart:7,cases:['bracket','enclosure','flange'],errors},null,2))
+ assert.deepEqual(errors,[]);await writeFile(path.join(directory,'result.json'),JSON.stringify({ok:true,renderer:process.argv.includes('--cpu')?'cpu-fallback':'browser-default',keyboard,tabs,edits:20,cancelledPreviewsPerPart:7,cases:['bracket','enclosure','flange'],errors},null,2))
 }catch(e){if(page){await page.screenshot({path:path.join(directory,'failure.png')}).catch(()=>{});await writeFile(path.join(directory,'failure.txt'),await page.locator('body').innerText().catch(()=>''))}throw e}
 finally{await browser?.close();await new Promise(resolve=>server.close(resolve))}

@@ -27,6 +27,26 @@ fn main() {
     let result=geometry_bridge::dispatch(exhausted.clone()).unwrap();
     assert_eq!(result["proven"],json!(false));
     cases.push(json!({"name":"chord-work-limit","request":exhausted,"result":result}));
+    if std::env::args().nth(2).as_deref()==Some("wall") {
+        let face=|x|cube.faces.iter().position(|f|f.surface.control_points.iter().flatten().all(|p|p[0]==x)).unwrap();
+        let a=vec![2,7,12,16,20,24];let b=vec![3,8,13,17,21,25];
+        let mut wall_cases=Vec::new();
+        for(name,index,origin,direction,groups,spans,cells,converged) in [
+            ("cube-wall",1,[-2.,5.,5.],[14.,0.,0.],[vec![face(0.)],vec![face(10.)]],100,10000,true),
+            ("cube-normal-budget",1,[-2.,5.,5.],[14.,0.,0.],[vec![face(0.)],vec![face(10.)]],1,10000,false),
+            ("annular-wall",4,[15.,20.,3.],[-14.4,-19.2,0.],[a.clone(),b.clone()],100,10000,true),
+            ("annular-wide",4,[15.,20.,3.],[-14.4,-19.2,0.],[vec![2,7,12,16,20,24,0,5,10],b.clone()],100,1,false),
+            ("annular-hole",4,[25.,2.,3.],[-50.,0.,0.],[a,b],100,10000,false),
+        ] {
+            let mut input=cases[index]["request"].clone();input["op"]=json!("cad_material_wall");
+            input["origin"]=json!(origin);input["direction"]=json!(direction);input["faceGroups"]=json!(groups);
+            input["normalAudit"]=json!({"maxSineSquared":1e-6,"maxSpans":spans});input["toleranceMm"]=json!(1e-5);
+            input["maxDistanceCells"]=json!(cells);input["maxDistanceDomainCells"]=json!(1000000);
+            let result=geometry_bridge::dispatch(input.clone()).unwrap();assert_eq!(result["converged"],json!(converged));
+            wall_cases.push(json!({"name":name,"request":input,"result":result}));
+        }
+        cases=wall_cases;
+    }
     if std::env::args().nth(2).as_deref()==Some("normal") {
         let mut normal_cases=Vec::new();
         for (name,index,direction,spans,expected) in [

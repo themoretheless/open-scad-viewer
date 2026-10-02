@@ -1,0 +1,2183 @@
+{
+  "scope": "controlled bracket/enclosure/flange histories; all-command and general BRep completion unproven",
+  "parts": [
+    {
+      "interaction": "mouse",
+      "name": "bracket",
+      "committedEdits": 20,
+      "cancelledPreviews": 7,
+      "undoStates": 20,
+      "redoStates": 20,
+      "reloadExact": true,
+      "topologyIdsUnique": true,
+      "boundsToleranceMm": 0.000001
+    },
+    {
+      "interaction": "mouse",
+      "name": "enclosure",
+      "committedEdits": 20,
+      "cancelledPreviews": 7,
+      "undoStates": 20,
+      "redoStates": 20,
+      "reloadExact": true,
+      "topologyIdsUnique": true,
+      "boundsToleranceMm": 0.000001
+    },
+    {
+      "interaction": "mouse",
+      "name": "flange",
+      "committedEdits": 20,
+      "cancelledPreviews": 7,
+      "undoStates": 20,
+      "redoStates": 20,
+      "reloadExact": true,
+      "topologyIdsUnique": true,
+      "boundsToleranceMm": 0.000001
+    },
+    {
+      "interaction": "keyboard",
+      "name": "bracket",
+      "committedEdits": 20,
+      "cancelledPreviews": 7,
+      "undoStates": 20,
+      "redoStates": 20,
+      "reloadExact": true,
+      "topologyIdsUnique": true,
+      "boundsToleranceMm": 0.000001
+    },
+    {
+      "interaction": "keyboard",
+      "name": "enclosure",
+      "committedEdits": 20,
+      "cancelledPreviews": 7,
+      "undoStates": 20,
+      "redoStates": 20,
+      "reloadExact": true,
+      "topologyIdsUnique": true,
+      "boundsToleranceMm": 0.000001
+    },
+    {
+      "interaction": "keyboard",
+      "name": "flange",
+      "committedEdits": 20,
+      "cancelledPreviews": 7,
+      "undoStates": 20,
+      "redoStates": 20,
+      "reloadExact": true,
+      "topologyIdsUnique": true,
+      "boundsToleranceMm": 0.000001
+    }
+  ],
+  "files": [
+    {
+      "file": "cad-redesign-history-fixtures/bracket/initial.json",
+      "sha256": "dbe9853e6479817607d2a43251419df92f7a017161ec5138e99484de0ac70a80",
+      "bytes": 144314
+    },
+    {
+      "file": "cad-redesign-history-fixtures/bracket/expected.json",
+      "sha256": "c4183ba7d665eb5a50d902c63ba4ad9d26c187f825c097ab42874a0010e667a4",
+      "bytes": 3091868
+    },
+    {
+      "file": "cad-redesign-history-fixtures/enclosure/initial.json",
+      "sha256": "9eacacc200de07e999d4382c69b4a359a3549053f40f8f9ca3672d46f27c58ff",
+      "bytes": 260174
+    },
+    {
+      "file": "cad-redesign-history-fixtures/enclosure/expected.json",
+      "sha256": "2096e53db2da6f6b251f2e4c4848c28c983757cd0573a7b4c08252d13cefe0c9",
+      "bytes": 10818293
+    },
+    {
+      "file": "cad-redesign-history-fixtures/flange/initial.json",
+      "sha256": "a57f692e26660644582e00cff8f8433b664c348ff0ea569355f3f2c7865b5b6e",
+      "bytes": 415388
+    },
+    {
+      "file": "cad-redesign-history-fixtures/flange/expected.json",
+      "sha256": "e2df77da840dd43359b96da88c931b9eb00669778f70ee1cbcf3c22cb36a1d05",
+      "bytes": 3261374
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/result.json",
+      "sha256": "b3aeb172efe10216088e8a745e7b959a8d8c3bf27047768f1d1805b44d1dde63",
+      "bytes": 207
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/bracket-0.json",
+      "sha256": "6fe83b7b88660df0fff31b50b1c3ff1de158309df9abb921f20c7c300ba721e3",
+      "bytes": 144372
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/bracket-1.json",
+      "sha256": "92eb9a2b451e7c7bce78f91a96dd019819c4e4f2f68193ffab0d1a022a013042",
+      "bytes": 144372
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/bracket-2.json",
+      "sha256": "f7229c57255679f8fd204d0cb9b5b34982f3511b6be1ebde59854ea047ef66d1",
+      "bytes": 176518
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/bracket-3.json",
+      "sha256": "3c7dacaef02e3837f463a8a1fae385cb61a42c753e8ac297e43c78b057ef005d",
+      "bytes": 176518
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/bracket-4.json",
+      "sha256": "6f06bc773329e2b34024a4b9fbb142592ba4449360ae5264892cd71a66dad0dd",
+      "bytes": 176582
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/bracket-5.json",
+      "sha256": "6e1a192c39460725ea2fd586e998529c599099b6bf3570c433c08d25aed59c63",
+      "bytes": 186804
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/bracket-6.json",
+      "sha256": "fa497b2d9fe5c3ccfc58284c4f5f36606d141fcf486e57144ce700ea6892a116",
+      "bytes": 186804
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/bracket-7.json",
+      "sha256": "b00441d748d48a13441b36a53795a1432068ef030ae069a7b93a164a18bcaf63",
+      "bytes": 186740
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/bracket-8.json",
+      "sha256": "2e152183a8d46dbe1623a3cfce78cd67b095419dffafd8bd2abfb2f50c868543",
+      "bytes": 196962
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/bracket-9.json",
+      "sha256": "fc299c223d94fc79343c4c86b314cf2c4ab4656f7b0c0bb49eec3c5d882348b0",
+      "bytes": 196962
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/bracket-10.json",
+      "sha256": "996e6daca84ad03f2b0bf6f9d73a9474e1d58b188bf4f3e0b769b53576957da1",
+      "bytes": 196962
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/bracket-11.json",
+      "sha256": "20954077556eb1742cbf04de2479c5a3161d9b92196c2f8617c858a88283433b",
+      "bytes": 207184
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/bracket-12.json",
+      "sha256": "e877bb6a0b8c29c1baf65acc36032e512e2940cd580349b6f176221ad5300c54",
+      "bytes": 207184
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/bracket-13.json",
+      "sha256": "18e18346bfd7637633bf690982dd35502d06b8b7b55308279d08a4fab954648d",
+      "bytes": 207248
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/bracket-14.json",
+      "sha256": "c9ebe37377c64b704df370d9a9c882220be816cfeade07aafb15c3d7c52f7a4e",
+      "bytes": 217470
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/bracket-15.json",
+      "sha256": "d7002cff6312200edfc268d5818dcd7999bd4fd469d90b522f15976ac94d773e",
+      "bytes": 217530
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/bracket-16.json",
+      "sha256": "cd693dc13788df0923d7880cbec8ca5766bbc6c4fb84d20a39ea7a714d2c10ed",
+      "bytes": 217466
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/bracket-17.json",
+      "sha256": "58a1e8d0aa66eaad8c9671854889f0f1d80f8d6df90fd509927988ed4f8bc8bb",
+      "bytes": 227688
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/bracket-18.json",
+      "sha256": "e273c6c07425e1b3c553d0d45f90b834388d1823f2827694b82c90434de40f2e",
+      "bytes": 227688
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/bracket-19.json",
+      "sha256": "3d92585833cb28d2e79cca964ee94de342b889f8f3b815b63eaed17208ac7b8f",
+      "bytes": 255160
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/bracket-20.json",
+      "sha256": "49d2ffb0635ea0420c5eee8551b281a9a454838a737ea62728b33afc2e7d1b03",
+      "bytes": 238143
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/bracket-undo-0.json",
+      "sha256": "6fe83b7b88660df0fff31b50b1c3ff1de158309df9abb921f20c7c300ba721e3",
+      "bytes": 144372
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/bracket-undo-1.json",
+      "sha256": "92eb9a2b451e7c7bce78f91a96dd019819c4e4f2f68193ffab0d1a022a013042",
+      "bytes": 144372
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/bracket-undo-2.json",
+      "sha256": "f7229c57255679f8fd204d0cb9b5b34982f3511b6be1ebde59854ea047ef66d1",
+      "bytes": 176518
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/bracket-undo-3.json",
+      "sha256": "3c7dacaef02e3837f463a8a1fae385cb61a42c753e8ac297e43c78b057ef005d",
+      "bytes": 176518
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/bracket-undo-4.json",
+      "sha256": "6f06bc773329e2b34024a4b9fbb142592ba4449360ae5264892cd71a66dad0dd",
+      "bytes": 176582
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/bracket-undo-5.json",
+      "sha256": "6e1a192c39460725ea2fd586e998529c599099b6bf3570c433c08d25aed59c63",
+      "bytes": 186804
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/bracket-undo-6.json",
+      "sha256": "fa497b2d9fe5c3ccfc58284c4f5f36606d141fcf486e57144ce700ea6892a116",
+      "bytes": 186804
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/bracket-undo-7.json",
+      "sha256": "b00441d748d48a13441b36a53795a1432068ef030ae069a7b93a164a18bcaf63",
+      "bytes": 186740
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/bracket-undo-8.json",
+      "sha256": "2e152183a8d46dbe1623a3cfce78cd67b095419dffafd8bd2abfb2f50c868543",
+      "bytes": 196962
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/bracket-undo-9.json",
+      "sha256": "fc299c223d94fc79343c4c86b314cf2c4ab4656f7b0c0bb49eec3c5d882348b0",
+      "bytes": 196962
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/bracket-undo-10.json",
+      "sha256": "996e6daca84ad03f2b0bf6f9d73a9474e1d58b188bf4f3e0b769b53576957da1",
+      "bytes": 196962
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/bracket-undo-11.json",
+      "sha256": "20954077556eb1742cbf04de2479c5a3161d9b92196c2f8617c858a88283433b",
+      "bytes": 207184
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/bracket-undo-12.json",
+      "sha256": "e877bb6a0b8c29c1baf65acc36032e512e2940cd580349b6f176221ad5300c54",
+      "bytes": 207184
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/bracket-undo-13.json",
+      "sha256": "18e18346bfd7637633bf690982dd35502d06b8b7b55308279d08a4fab954648d",
+      "bytes": 207248
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/bracket-undo-14.json",
+      "sha256": "c9ebe37377c64b704df370d9a9c882220be816cfeade07aafb15c3d7c52f7a4e",
+      "bytes": 217470
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/bracket-undo-15.json",
+      "sha256": "d7002cff6312200edfc268d5818dcd7999bd4fd469d90b522f15976ac94d773e",
+      "bytes": 217530
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/bracket-undo-16.json",
+      "sha256": "cd693dc13788df0923d7880cbec8ca5766bbc6c4fb84d20a39ea7a714d2c10ed",
+      "bytes": 217466
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/bracket-undo-17.json",
+      "sha256": "58a1e8d0aa66eaad8c9671854889f0f1d80f8d6df90fd509927988ed4f8bc8bb",
+      "bytes": 227688
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/bracket-undo-18.json",
+      "sha256": "e273c6c07425e1b3c553d0d45f90b834388d1823f2827694b82c90434de40f2e",
+      "bytes": 227688
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/bracket-undo-19.json",
+      "sha256": "3d92585833cb28d2e79cca964ee94de342b889f8f3b815b63eaed17208ac7b8f",
+      "bytes": 255160
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/bracket-redo-1.json",
+      "sha256": "92eb9a2b451e7c7bce78f91a96dd019819c4e4f2f68193ffab0d1a022a013042",
+      "bytes": 144372
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/bracket-redo-2.json",
+      "sha256": "f7229c57255679f8fd204d0cb9b5b34982f3511b6be1ebde59854ea047ef66d1",
+      "bytes": 176518
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/bracket-redo-3.json",
+      "sha256": "3c7dacaef02e3837f463a8a1fae385cb61a42c753e8ac297e43c78b057ef005d",
+      "bytes": 176518
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/bracket-redo-4.json",
+      "sha256": "6f06bc773329e2b34024a4b9fbb142592ba4449360ae5264892cd71a66dad0dd",
+      "bytes": 176582
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/bracket-redo-5.json",
+      "sha256": "6e1a192c39460725ea2fd586e998529c599099b6bf3570c433c08d25aed59c63",
+      "bytes": 186804
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/bracket-redo-6.json",
+      "sha256": "fa497b2d9fe5c3ccfc58284c4f5f36606d141fcf486e57144ce700ea6892a116",
+      "bytes": 186804
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/bracket-redo-7.json",
+      "sha256": "b00441d748d48a13441b36a53795a1432068ef030ae069a7b93a164a18bcaf63",
+      "bytes": 186740
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/bracket-redo-8.json",
+      "sha256": "2e152183a8d46dbe1623a3cfce78cd67b095419dffafd8bd2abfb2f50c868543",
+      "bytes": 196962
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/bracket-redo-9.json",
+      "sha256": "fc299c223d94fc79343c4c86b314cf2c4ab4656f7b0c0bb49eec3c5d882348b0",
+      "bytes": 196962
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/bracket-redo-10.json",
+      "sha256": "996e6daca84ad03f2b0bf6f9d73a9474e1d58b188bf4f3e0b769b53576957da1",
+      "bytes": 196962
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/bracket-redo-11.json",
+      "sha256": "20954077556eb1742cbf04de2479c5a3161d9b92196c2f8617c858a88283433b",
+      "bytes": 207184
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/bracket-redo-12.json",
+      "sha256": "e877bb6a0b8c29c1baf65acc36032e512e2940cd580349b6f176221ad5300c54",
+      "bytes": 207184
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/bracket-redo-13.json",
+      "sha256": "18e18346bfd7637633bf690982dd35502d06b8b7b55308279d08a4fab954648d",
+      "bytes": 207248
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/bracket-redo-14.json",
+      "sha256": "c9ebe37377c64b704df370d9a9c882220be816cfeade07aafb15c3d7c52f7a4e",
+      "bytes": 217470
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/bracket-redo-15.json",
+      "sha256": "d7002cff6312200edfc268d5818dcd7999bd4fd469d90b522f15976ac94d773e",
+      "bytes": 217530
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/bracket-redo-16.json",
+      "sha256": "cd693dc13788df0923d7880cbec8ca5766bbc6c4fb84d20a39ea7a714d2c10ed",
+      "bytes": 217466
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/bracket-redo-17.json",
+      "sha256": "58a1e8d0aa66eaad8c9671854889f0f1d80f8d6df90fd509927988ed4f8bc8bb",
+      "bytes": 227688
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/bracket-redo-18.json",
+      "sha256": "e273c6c07425e1b3c553d0d45f90b834388d1823f2827694b82c90434de40f2e",
+      "bytes": 227688
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/bracket-redo-19.json",
+      "sha256": "3d92585833cb28d2e79cca964ee94de342b889f8f3b815b63eaed17208ac7b8f",
+      "bytes": 255160
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/bracket-redo-20.json",
+      "sha256": "49d2ffb0635ea0420c5eee8551b281a9a454838a737ea62728b33afc2e7d1b03",
+      "bytes": 238143
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/bracket-cancel-preview-1.json",
+      "sha256": "6fe83b7b88660df0fff31b50b1c3ff1de158309df9abb921f20c7c300ba721e3",
+      "bytes": 144372
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/bracket-cancel-preview-2.json",
+      "sha256": "3c7dacaef02e3837f463a8a1fae385cb61a42c753e8ac297e43c78b057ef005d",
+      "bytes": 176518
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/bracket-cancel-preview-3.json",
+      "sha256": "fa497b2d9fe5c3ccfc58284c4f5f36606d141fcf486e57144ce700ea6892a116",
+      "bytes": 186804
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/bracket-cancel-preview-4.json",
+      "sha256": "fc299c223d94fc79343c4c86b314cf2c4ab4656f7b0c0bb49eec3c5d882348b0",
+      "bytes": 196962
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/bracket-cancel-preview-5.json",
+      "sha256": "e877bb6a0b8c29c1baf65acc36032e512e2940cd580349b6f176221ad5300c54",
+      "bytes": 207184
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/bracket-cancel-preview-6.json",
+      "sha256": "d7002cff6312200edfc268d5818dcd7999bd4fd469d90b522f15976ac94d773e",
+      "bytes": 217530
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/bracket-cancel-preview-7.json",
+      "sha256": "e273c6c07425e1b3c553d0d45f90b834388d1823f2827694b82c90434de40f2e",
+      "bytes": 227688
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/bracket-reload.json",
+      "sha256": "d1974fcbf9c6febe7218450852ce03aaa71e84ccd64822f9207cab1c4de20b1d",
+      "bytes": 238143
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/enclosure-0.json",
+      "sha256": "1533043f76668d2d5b4127a55dfa0ba7ed4d3d905e387a4ce227209f63a37df4",
+      "bytes": 260232
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/enclosure-1.json",
+      "sha256": "211573326e3b4ae39faff88d747132adc7c75ca8aaf80e9987c2614606d2195f",
+      "bytes": 260232
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/enclosure-2.json",
+      "sha256": "32a48904ec26ea9455c8a7c1f835f7364173e85eef89439ac9281b97388982e5",
+      "bytes": 340635
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/enclosure-3.json",
+      "sha256": "e06cab31d88ca1f5c70c1070ab57130a153552dd89a97447e6c41d04a1a94475",
+      "bytes": 340635
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/enclosure-4.json",
+      "sha256": "552b363ded7362c1bb00fff9c60a9a7f723e394280e4d8bc1e0291c6ab313290",
+      "bytes": 340633
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/enclosure-5.json",
+      "sha256": "3abb437429268730ccf7ab69eeb3d1c8f170fa628b2567257ecab8563c837df6",
+      "bytes": 426193
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/enclosure-6.json",
+      "sha256": "327c067344204aa9b03ebda3ccb0dd72c4dfabebc5f78e42b15e212109ea7de7",
+      "bytes": 426193
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/enclosure-7.json",
+      "sha256": "0a597bb977cb6198c9abbc79b3c1265442020a69ba4d814f9d7dc832dd57ee49",
+      "bytes": 426191
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/enclosure-8.json",
+      "sha256": "c92c88bf739a0c40db61b9ed7db42dee9d66c366acb69f64881e8b9e6e96f648",
+      "bytes": 518998
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/enclosure-9.json",
+      "sha256": "ba4732ff866e4abe19dd3beeb6e1d854c8837adeec4590264150e7c36ecd09d3",
+      "bytes": 518878
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/enclosure-10.json",
+      "sha256": "6a2bdfb547ea1260618a2b2770447f0a706a076b6a8f3bc71c8df1e90c28c3e9",
+      "bytes": 518880
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/enclosure-11.json",
+      "sha256": "04f6f3b713f78470f47700cc6db5eb444c2c78d04bcddf6b0f34ce0a5bc91ca6",
+      "bytes": 615924
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/enclosure-12.json",
+      "sha256": "2631d559347883dc37676a51106408fa3e94a3a287662271f342ff800aa60726",
+      "bytes": 615924
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/enclosure-13.json",
+      "sha256": "ab0ca18d79b4348523fe65fd351f4d863162227b56775d5b0d3b4f8ef0982745",
+      "bytes": 615926
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/enclosure-14.json",
+      "sha256": "91a07ab09d864171bf9f3fb2e40a7fb73e52f69ac60fc2d112fb7ab57fc5927b",
+      "bytes": 718493
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/enclosure-15.json",
+      "sha256": "4affc6f8329136143f2999dddf326b14467fdda7b51034fc3d8b607e1df554e6",
+      "bytes": 718493
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/enclosure-16.json",
+      "sha256": "277929e3b50e10752bed57818e71743f82822a64bb98bdd6a6251f4165b61470",
+      "bytes": 718495
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/enclosure-17.json",
+      "sha256": "c6cd3693dc498ff88306d431f547303f9daa90cbca31a9d756720c43b6da4070",
+      "bytes": 827890
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/enclosure-18.json",
+      "sha256": "82fe4702ef2f40727bb3b5d2ffaeba1b3225111aa3e4b4af6fc5db5dfd7161e4",
+      "bytes": 827890
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/enclosure-19.json",
+      "sha256": "2ea116d741be5894c52d819563ad363a4bf88118f3db82b98e4d474b56eea3ef",
+      "bytes": 948939
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/enclosure-20.json",
+      "sha256": "29fc80a87784e4ac00c18453b101e8546cbea8ae5e773b69a6f6cb40e36daea2",
+      "bytes": 905254
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/enclosure-undo-0.json",
+      "sha256": "1533043f76668d2d5b4127a55dfa0ba7ed4d3d905e387a4ce227209f63a37df4",
+      "bytes": 260232
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/enclosure-undo-1.json",
+      "sha256": "211573326e3b4ae39faff88d747132adc7c75ca8aaf80e9987c2614606d2195f",
+      "bytes": 260232
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/enclosure-undo-2.json",
+      "sha256": "32a48904ec26ea9455c8a7c1f835f7364173e85eef89439ac9281b97388982e5",
+      "bytes": 340635
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/enclosure-undo-3.json",
+      "sha256": "e06cab31d88ca1f5c70c1070ab57130a153552dd89a97447e6c41d04a1a94475",
+      "bytes": 340635
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/enclosure-undo-4.json",
+      "sha256": "552b363ded7362c1bb00fff9c60a9a7f723e394280e4d8bc1e0291c6ab313290",
+      "bytes": 340633
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/enclosure-undo-5.json",
+      "sha256": "3abb437429268730ccf7ab69eeb3d1c8f170fa628b2567257ecab8563c837df6",
+      "bytes": 426193
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/enclosure-undo-6.json",
+      "sha256": "327c067344204aa9b03ebda3ccb0dd72c4dfabebc5f78e42b15e212109ea7de7",
+      "bytes": 426193
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/enclosure-undo-7.json",
+      "sha256": "0a597bb977cb6198c9abbc79b3c1265442020a69ba4d814f9d7dc832dd57ee49",
+      "bytes": 426191
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/enclosure-undo-8.json",
+      "sha256": "c92c88bf739a0c40db61b9ed7db42dee9d66c366acb69f64881e8b9e6e96f648",
+      "bytes": 518998
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/enclosure-undo-9.json",
+      "sha256": "ba4732ff866e4abe19dd3beeb6e1d854c8837adeec4590264150e7c36ecd09d3",
+      "bytes": 518878
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/enclosure-undo-10.json",
+      "sha256": "6a2bdfb547ea1260618a2b2770447f0a706a076b6a8f3bc71c8df1e90c28c3e9",
+      "bytes": 518880
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/enclosure-undo-11.json",
+      "sha256": "04f6f3b713f78470f47700cc6db5eb444c2c78d04bcddf6b0f34ce0a5bc91ca6",
+      "bytes": 615924
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/enclosure-undo-12.json",
+      "sha256": "2631d559347883dc37676a51106408fa3e94a3a287662271f342ff800aa60726",
+      "bytes": 615924
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/enclosure-undo-13.json",
+      "sha256": "ab0ca18d79b4348523fe65fd351f4d863162227b56775d5b0d3b4f8ef0982745",
+      "bytes": 615926
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/enclosure-undo-14.json",
+      "sha256": "91a07ab09d864171bf9f3fb2e40a7fb73e52f69ac60fc2d112fb7ab57fc5927b",
+      "bytes": 718493
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/enclosure-undo-15.json",
+      "sha256": "4affc6f8329136143f2999dddf326b14467fdda7b51034fc3d8b607e1df554e6",
+      "bytes": 718493
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/enclosure-undo-16.json",
+      "sha256": "277929e3b50e10752bed57818e71743f82822a64bb98bdd6a6251f4165b61470",
+      "bytes": 718495
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/enclosure-undo-17.json",
+      "sha256": "c6cd3693dc498ff88306d431f547303f9daa90cbca31a9d756720c43b6da4070",
+      "bytes": 827890
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/enclosure-undo-18.json",
+      "sha256": "82fe4702ef2f40727bb3b5d2ffaeba1b3225111aa3e4b4af6fc5db5dfd7161e4",
+      "bytes": 827890
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/enclosure-undo-19.json",
+      "sha256": "2ea116d741be5894c52d819563ad363a4bf88118f3db82b98e4d474b56eea3ef",
+      "bytes": 948939
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/enclosure-redo-1.json",
+      "sha256": "211573326e3b4ae39faff88d747132adc7c75ca8aaf80e9987c2614606d2195f",
+      "bytes": 260232
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/enclosure-redo-2.json",
+      "sha256": "32a48904ec26ea9455c8a7c1f835f7364173e85eef89439ac9281b97388982e5",
+      "bytes": 340635
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/enclosure-redo-3.json",
+      "sha256": "e06cab31d88ca1f5c70c1070ab57130a153552dd89a97447e6c41d04a1a94475",
+      "bytes": 340635
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/enclosure-redo-4.json",
+      "sha256": "552b363ded7362c1bb00fff9c60a9a7f723e394280e4d8bc1e0291c6ab313290",
+      "bytes": 340633
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/enclosure-redo-5.json",
+      "sha256": "3abb437429268730ccf7ab69eeb3d1c8f170fa628b2567257ecab8563c837df6",
+      "bytes": 426193
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/enclosure-redo-6.json",
+      "sha256": "327c067344204aa9b03ebda3ccb0dd72c4dfabebc5f78e42b15e212109ea7de7",
+      "bytes": 426193
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/enclosure-redo-7.json",
+      "sha256": "0a597bb977cb6198c9abbc79b3c1265442020a69ba4d814f9d7dc832dd57ee49",
+      "bytes": 426191
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/enclosure-redo-8.json",
+      "sha256": "c92c88bf739a0c40db61b9ed7db42dee9d66c366acb69f64881e8b9e6e96f648",
+      "bytes": 518998
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/enclosure-redo-9.json",
+      "sha256": "ba4732ff866e4abe19dd3beeb6e1d854c8837adeec4590264150e7c36ecd09d3",
+      "bytes": 518878
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/enclosure-redo-10.json",
+      "sha256": "6a2bdfb547ea1260618a2b2770447f0a706a076b6a8f3bc71c8df1e90c28c3e9",
+      "bytes": 518880
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/enclosure-redo-11.json",
+      "sha256": "04f6f3b713f78470f47700cc6db5eb444c2c78d04bcddf6b0f34ce0a5bc91ca6",
+      "bytes": 615924
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/enclosure-redo-12.json",
+      "sha256": "2631d559347883dc37676a51106408fa3e94a3a287662271f342ff800aa60726",
+      "bytes": 615924
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/enclosure-redo-13.json",
+      "sha256": "ab0ca18d79b4348523fe65fd351f4d863162227b56775d5b0d3b4f8ef0982745",
+      "bytes": 615926
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/enclosure-redo-14.json",
+      "sha256": "91a07ab09d864171bf9f3fb2e40a7fb73e52f69ac60fc2d112fb7ab57fc5927b",
+      "bytes": 718493
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/enclosure-redo-15.json",
+      "sha256": "4affc6f8329136143f2999dddf326b14467fdda7b51034fc3d8b607e1df554e6",
+      "bytes": 718493
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/enclosure-redo-16.json",
+      "sha256": "277929e3b50e10752bed57818e71743f82822a64bb98bdd6a6251f4165b61470",
+      "bytes": 718495
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/enclosure-redo-17.json",
+      "sha256": "c6cd3693dc498ff88306d431f547303f9daa90cbca31a9d756720c43b6da4070",
+      "bytes": 827890
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/enclosure-redo-18.json",
+      "sha256": "82fe4702ef2f40727bb3b5d2ffaeba1b3225111aa3e4b4af6fc5db5dfd7161e4",
+      "bytes": 827890
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/enclosure-redo-19.json",
+      "sha256": "2ea116d741be5894c52d819563ad363a4bf88118f3db82b98e4d474b56eea3ef",
+      "bytes": 948939
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/enclosure-redo-20.json",
+      "sha256": "29fc80a87784e4ac00c18453b101e8546cbea8ae5e773b69a6f6cb40e36daea2",
+      "bytes": 905254
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/enclosure-cancel-preview-1.json",
+      "sha256": "1533043f76668d2d5b4127a55dfa0ba7ed4d3d905e387a4ce227209f63a37df4",
+      "bytes": 260232
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/enclosure-cancel-preview-2.json",
+      "sha256": "e06cab31d88ca1f5c70c1070ab57130a153552dd89a97447e6c41d04a1a94475",
+      "bytes": 340635
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/enclosure-cancel-preview-3.json",
+      "sha256": "327c067344204aa9b03ebda3ccb0dd72c4dfabebc5f78e42b15e212109ea7de7",
+      "bytes": 426193
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/enclosure-cancel-preview-4.json",
+      "sha256": "ba4732ff866e4abe19dd3beeb6e1d854c8837adeec4590264150e7c36ecd09d3",
+      "bytes": 518878
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/enclosure-cancel-preview-5.json",
+      "sha256": "2631d559347883dc37676a51106408fa3e94a3a287662271f342ff800aa60726",
+      "bytes": 615924
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/enclosure-cancel-preview-6.json",
+      "sha256": "4affc6f8329136143f2999dddf326b14467fdda7b51034fc3d8b607e1df554e6",
+      "bytes": 718493
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/enclosure-cancel-preview-7.json",
+      "sha256": "82fe4702ef2f40727bb3b5d2ffaeba1b3225111aa3e4b4af6fc5db5dfd7161e4",
+      "bytes": 827890
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/enclosure-reload.json",
+      "sha256": "1444d0630ba8e5c6fe81cb5c52e051b921df663b662a3aa1cce59461fe073013",
+      "bytes": 905254
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/flange-0.json",
+      "sha256": "ce40e8fd6ca55ac0fe857fb3a5e82d3f21702f1565403f7d1758820d61f4ed30",
+      "bytes": 415446
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/flange-1.json",
+      "sha256": "d38e6273d3117a764a65c3c36d90a2ff13b4c8aa6a3e72b8c67c5ba9fad9f0a6",
+      "bytes": 406510
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/flange-2.json",
+      "sha256": "716681f276ca2f77caeb685322c9a2d8a6a453521cf7f1026fb135e8bad31fe1",
+      "bytes": 368507
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/flange-3.json",
+      "sha256": "2148a2f4ae4a72f2db5ae7e91c5da65efe3e7748594c20a740eb890a40478e6d",
+      "bytes": 368497
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/flange-4.json",
+      "sha256": "e4271e564cd6af972654643ab12f8116ca6e9a6e8ceb2b805446439e7568ec79",
+      "bytes": 358849
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/flange-5.json",
+      "sha256": "1094ef9b34e944802924a1971c42a4d8f4c6af0736b4d614234a2def985ad7d7",
+      "bytes": 322423
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/flange-6.json",
+      "sha256": "7f02e8702f659c693f712de6efca2fef2354ece6da9c1edf0c2c927b44a09f13",
+      "bytes": 322413
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/flange-7.json",
+      "sha256": "9465970c5aa3f259d693b910242eebf2902c139ba58b1c0ab737b6577c882883",
+      "bytes": 313621
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/flange-8.json",
+      "sha256": "0b5796a0398ca715c8bdd2e0c3da16bd90e00561749382d89e41fa3352c32827",
+      "bytes": 276662
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/flange-9.json",
+      "sha256": "4ea6d08264d77a43e26d09401ef0b14c6bdb07d38cae06cd45fa8f34318bf8df",
+      "bytes": 276558
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/flange-10.json",
+      "sha256": "b8d519c7471ea54f92abfce08076e1895808482591dc49ac67ba25095a2b9e2a",
+      "bytes": 267807
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/flange-11.json",
+      "sha256": "878071004e44c519374c4ee4c38c9de5d19c1074dff45a9a83b09b07cc80c4a5",
+      "bytes": 229357
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/flange-12.json",
+      "sha256": "68d53612d7f65437b1c3837991dcbf5a0f4adc75f4f90adbc024eadaa7ed5f15",
+      "bytes": 229400
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/flange-13.json",
+      "sha256": "f6ab47e5e371f4aa84296c0f787f9876f214e37d654c7f84c04d1eb531b95ef5",
+      "bytes": 220706
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/flange-14.json",
+      "sha256": "e65f06d7b5aa7ef9252d598488c4ef6ed7c09373d00acab23b9e8baf50d7c6c6",
+      "bytes": 182447
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/flange-15.json",
+      "sha256": "1c72d6b3c699696d806657bf468c5ae651cd02ef9816f9c8e59f8060326c602f",
+      "bytes": 182428
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/flange-16.json",
+      "sha256": "8936b3038b23844e18894fc28e80c11d439dc6f4ab057be98726f0526030792d",
+      "bytes": 173496
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/flange-17.json",
+      "sha256": "13968e1594d68599bcc186e7fed2abb1e8deddc292933efd468dba3a0fd00973",
+      "bytes": 137832
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/flange-18.json",
+      "sha256": "87e53f7442ecb95d5be2c9a5f355d5f45abcdc1dd0dc41ba2108c06904fea856",
+      "bytes": 137843
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/flange-19.json",
+      "sha256": "f199e099b4dbc393d999def250579185c390fa13f2e7170b8faeddbd0d09d83e",
+      "bytes": 600693
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/flange-20.json",
+      "sha256": "f8a96a7baaeae51d66ffcc15bd28d87b2ab7a7c373ef0e4179c9bab9deb5a1c8",
+      "bytes": 372673
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/flange-undo-0.json",
+      "sha256": "ce40e8fd6ca55ac0fe857fb3a5e82d3f21702f1565403f7d1758820d61f4ed30",
+      "bytes": 415446
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/flange-undo-1.json",
+      "sha256": "d38e6273d3117a764a65c3c36d90a2ff13b4c8aa6a3e72b8c67c5ba9fad9f0a6",
+      "bytes": 406510
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/flange-undo-2.json",
+      "sha256": "716681f276ca2f77caeb685322c9a2d8a6a453521cf7f1026fb135e8bad31fe1",
+      "bytes": 368507
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/flange-undo-3.json",
+      "sha256": "2148a2f4ae4a72f2db5ae7e91c5da65efe3e7748594c20a740eb890a40478e6d",
+      "bytes": 368497
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/flange-undo-4.json",
+      "sha256": "e4271e564cd6af972654643ab12f8116ca6e9a6e8ceb2b805446439e7568ec79",
+      "bytes": 358849
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/flange-undo-5.json",
+      "sha256": "1094ef9b34e944802924a1971c42a4d8f4c6af0736b4d614234a2def985ad7d7",
+      "bytes": 322423
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/flange-undo-6.json",
+      "sha256": "7f02e8702f659c693f712de6efca2fef2354ece6da9c1edf0c2c927b44a09f13",
+      "bytes": 322413
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/flange-undo-7.json",
+      "sha256": "9465970c5aa3f259d693b910242eebf2902c139ba58b1c0ab737b6577c882883",
+      "bytes": 313621
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/flange-undo-8.json",
+      "sha256": "0b5796a0398ca715c8bdd2e0c3da16bd90e00561749382d89e41fa3352c32827",
+      "bytes": 276662
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/flange-undo-9.json",
+      "sha256": "4ea6d08264d77a43e26d09401ef0b14c6bdb07d38cae06cd45fa8f34318bf8df",
+      "bytes": 276558
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/flange-undo-10.json",
+      "sha256": "b8d519c7471ea54f92abfce08076e1895808482591dc49ac67ba25095a2b9e2a",
+      "bytes": 267807
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/flange-undo-11.json",
+      "sha256": "878071004e44c519374c4ee4c38c9de5d19c1074dff45a9a83b09b07cc80c4a5",
+      "bytes": 229357
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/flange-undo-12.json",
+      "sha256": "68d53612d7f65437b1c3837991dcbf5a0f4adc75f4f90adbc024eadaa7ed5f15",
+      "bytes": 229400
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/flange-undo-13.json",
+      "sha256": "f6ab47e5e371f4aa84296c0f787f9876f214e37d654c7f84c04d1eb531b95ef5",
+      "bytes": 220706
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/flange-undo-14.json",
+      "sha256": "e65f06d7b5aa7ef9252d598488c4ef6ed7c09373d00acab23b9e8baf50d7c6c6",
+      "bytes": 182447
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/flange-undo-15.json",
+      "sha256": "1c72d6b3c699696d806657bf468c5ae651cd02ef9816f9c8e59f8060326c602f",
+      "bytes": 182428
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/flange-undo-16.json",
+      "sha256": "8936b3038b23844e18894fc28e80c11d439dc6f4ab057be98726f0526030792d",
+      "bytes": 173496
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/flange-undo-17.json",
+      "sha256": "13968e1594d68599bcc186e7fed2abb1e8deddc292933efd468dba3a0fd00973",
+      "bytes": 137832
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/flange-undo-18.json",
+      "sha256": "87e53f7442ecb95d5be2c9a5f355d5f45abcdc1dd0dc41ba2108c06904fea856",
+      "bytes": 137843
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/flange-undo-19.json",
+      "sha256": "f199e099b4dbc393d999def250579185c390fa13f2e7170b8faeddbd0d09d83e",
+      "bytes": 600693
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/flange-redo-1.json",
+      "sha256": "d38e6273d3117a764a65c3c36d90a2ff13b4c8aa6a3e72b8c67c5ba9fad9f0a6",
+      "bytes": 406510
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/flange-redo-2.json",
+      "sha256": "716681f276ca2f77caeb685322c9a2d8a6a453521cf7f1026fb135e8bad31fe1",
+      "bytes": 368507
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/flange-redo-3.json",
+      "sha256": "2148a2f4ae4a72f2db5ae7e91c5da65efe3e7748594c20a740eb890a40478e6d",
+      "bytes": 368497
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/flange-redo-4.json",
+      "sha256": "e4271e564cd6af972654643ab12f8116ca6e9a6e8ceb2b805446439e7568ec79",
+      "bytes": 358849
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/flange-redo-5.json",
+      "sha256": "1094ef9b34e944802924a1971c42a4d8f4c6af0736b4d614234a2def985ad7d7",
+      "bytes": 322423
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/flange-redo-6.json",
+      "sha256": "7f02e8702f659c693f712de6efca2fef2354ece6da9c1edf0c2c927b44a09f13",
+      "bytes": 322413
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/flange-redo-7.json",
+      "sha256": "9465970c5aa3f259d693b910242eebf2902c139ba58b1c0ab737b6577c882883",
+      "bytes": 313621
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/flange-redo-8.json",
+      "sha256": "0b5796a0398ca715c8bdd2e0c3da16bd90e00561749382d89e41fa3352c32827",
+      "bytes": 276662
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/flange-redo-9.json",
+      "sha256": "4ea6d08264d77a43e26d09401ef0b14c6bdb07d38cae06cd45fa8f34318bf8df",
+      "bytes": 276558
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/flange-redo-10.json",
+      "sha256": "b8d519c7471ea54f92abfce08076e1895808482591dc49ac67ba25095a2b9e2a",
+      "bytes": 267807
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/flange-redo-11.json",
+      "sha256": "878071004e44c519374c4ee4c38c9de5d19c1074dff45a9a83b09b07cc80c4a5",
+      "bytes": 229357
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/flange-redo-12.json",
+      "sha256": "68d53612d7f65437b1c3837991dcbf5a0f4adc75f4f90adbc024eadaa7ed5f15",
+      "bytes": 229400
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/flange-redo-13.json",
+      "sha256": "f6ab47e5e371f4aa84296c0f787f9876f214e37d654c7f84c04d1eb531b95ef5",
+      "bytes": 220706
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/flange-redo-14.json",
+      "sha256": "e65f06d7b5aa7ef9252d598488c4ef6ed7c09373d00acab23b9e8baf50d7c6c6",
+      "bytes": 182447
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/flange-redo-15.json",
+      "sha256": "1c72d6b3c699696d806657bf468c5ae651cd02ef9816f9c8e59f8060326c602f",
+      "bytes": 182428
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/flange-redo-16.json",
+      "sha256": "8936b3038b23844e18894fc28e80c11d439dc6f4ab057be98726f0526030792d",
+      "bytes": 173496
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/flange-redo-17.json",
+      "sha256": "13968e1594d68599bcc186e7fed2abb1e8deddc292933efd468dba3a0fd00973",
+      "bytes": 137832
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/flange-redo-18.json",
+      "sha256": "87e53f7442ecb95d5be2c9a5f355d5f45abcdc1dd0dc41ba2108c06904fea856",
+      "bytes": 137843
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/flange-redo-19.json",
+      "sha256": "f199e099b4dbc393d999def250579185c390fa13f2e7170b8faeddbd0d09d83e",
+      "bytes": 600693
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/flange-redo-20.json",
+      "sha256": "f8a96a7baaeae51d66ffcc15bd28d87b2ab7a7c373ef0e4179c9bab9deb5a1c8",
+      "bytes": 372673
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/flange-cancel-preview-1.json",
+      "sha256": "ce40e8fd6ca55ac0fe857fb3a5e82d3f21702f1565403f7d1758820d61f4ed30",
+      "bytes": 415446
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/flange-cancel-preview-2.json",
+      "sha256": "2148a2f4ae4a72f2db5ae7e91c5da65efe3e7748594c20a740eb890a40478e6d",
+      "bytes": 368497
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/flange-cancel-preview-3.json",
+      "sha256": "7f02e8702f659c693f712de6efca2fef2354ece6da9c1edf0c2c927b44a09f13",
+      "bytes": 322413
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/flange-cancel-preview-4.json",
+      "sha256": "4ea6d08264d77a43e26d09401ef0b14c6bdb07d38cae06cd45fa8f34318bf8df",
+      "bytes": 276558
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/flange-cancel-preview-5.json",
+      "sha256": "68d53612d7f65437b1c3837991dcbf5a0f4adc75f4f90adbc024eadaa7ed5f15",
+      "bytes": 229400
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/flange-cancel-preview-6.json",
+      "sha256": "1c72d6b3c699696d806657bf468c5ae651cd02ef9816f9c8e59f8060326c602f",
+      "bytes": 182428
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/flange-cancel-preview-7.json",
+      "sha256": "87e53f7442ecb95d5be2c9a5f355d5f45abcdc1dd0dc41ba2108c06904fea856",
+      "bytes": 137843
+    },
+    {
+      "file": "cad-redesign-history-mouse-cpu/flange-reload.json",
+      "sha256": "d3cc24266bfac72374827dc3a9366fb6f385ea4f2ef147ac366419be35441783",
+      "bytes": 372673
+    },
+    {
+      "file": "cad-redesign-history-keyboard/result.json",
+      "sha256": "512c7cf08db732ebede54523c53cb827016acefc2a25b70984d6bda0cf15c126",
+      "bytes": 180
+    },
+    {
+      "file": "cad-redesign-history-keyboard/bracket-0.json",
+      "sha256": "d2ab4a906e15955db2aa3aea53e9745b019b9846041b520809f605b06b312974",
+      "bytes": 144372
+    },
+    {
+      "file": "cad-redesign-history-keyboard/bracket-1.json",
+      "sha256": "754997408f087126bac1e88fa84f909de74e85be59feece36980b8c6dda422f9",
+      "bytes": 144372
+    },
+    {
+      "file": "cad-redesign-history-keyboard/bracket-2.json",
+      "sha256": "1ef23d750926abf437f96e2ab7c764ed193fa3026990cc22011b5bbc9b3304d0",
+      "bytes": 176518
+    },
+    {
+      "file": "cad-redesign-history-keyboard/bracket-3.json",
+      "sha256": "0f9cef1e25931bd99cb0e89d780c9cd8b46f4db8206729dbba8092179b799790",
+      "bytes": 176518
+    },
+    {
+      "file": "cad-redesign-history-keyboard/bracket-4.json",
+      "sha256": "c64d51229748f23bff1d7251f90e02ae7fdbb4f394031f3cf5b5dfcaaffbb21f",
+      "bytes": 176582
+    },
+    {
+      "file": "cad-redesign-history-keyboard/bracket-5.json",
+      "sha256": "c311e4e3c08a4cd10975cac147b20c9427f6e9a5505e5d17cd5ec54cc20289c4",
+      "bytes": 186804
+    },
+    {
+      "file": "cad-redesign-history-keyboard/bracket-6.json",
+      "sha256": "19115e77f54d9cf59c1ea497c4b8ba41ed4f0d2021423972539ce02f5d4f089d",
+      "bytes": 186804
+    },
+    {
+      "file": "cad-redesign-history-keyboard/bracket-7.json",
+      "sha256": "723d38c3e409d61f8ec07e962db1ce154d408fadd585efecc80cda18787082a9",
+      "bytes": 186740
+    },
+    {
+      "file": "cad-redesign-history-keyboard/bracket-8.json",
+      "sha256": "fe52b406acc8f178680839b4a924aeee5dedd6b525f3da44814a1868b430ee97",
+      "bytes": 196962
+    },
+    {
+      "file": "cad-redesign-history-keyboard/bracket-9.json",
+      "sha256": "8d18d5ca259843666198da5357ff17c6a4cb852cd01385fa6e03176bca0934af",
+      "bytes": 196962
+    },
+    {
+      "file": "cad-redesign-history-keyboard/bracket-10.json",
+      "sha256": "bba13f58052c2885a1f76e6905b5f004ae01757a27afcb25ea98d01c2c60d4de",
+      "bytes": 196962
+    },
+    {
+      "file": "cad-redesign-history-keyboard/bracket-11.json",
+      "sha256": "b503a9f9533f64621770ea2267729ac785fc91077c784558141996cdd37edf04",
+      "bytes": 207184
+    },
+    {
+      "file": "cad-redesign-history-keyboard/bracket-12.json",
+      "sha256": "dd842c121a70b474b278986dfbfcd936fb76a66969596960968e8550cd86b98f",
+      "bytes": 207184
+    },
+    {
+      "file": "cad-redesign-history-keyboard/bracket-13.json",
+      "sha256": "b4ded93a76696284c3e1958af5562fcb1f5a22cfa53ef9345d4e6f996bfdda7a",
+      "bytes": 207248
+    },
+    {
+      "file": "cad-redesign-history-keyboard/bracket-14.json",
+      "sha256": "a71117231b8c90bacc49d966d4ae844b5ceefe745b1d557f6c248817b70ec6f1",
+      "bytes": 217470
+    },
+    {
+      "file": "cad-redesign-history-keyboard/bracket-15.json",
+      "sha256": "3c93dde1f9d08bd83979a93bcd1129b6d0690d6c5f1c5f2f51251ca1f46bc549",
+      "bytes": 217530
+    },
+    {
+      "file": "cad-redesign-history-keyboard/bracket-16.json",
+      "sha256": "b425866efa2baeeb6d7f7b75e1c5d2640743fed694b01959a6d551dc6a13f42d",
+      "bytes": 217466
+    },
+    {
+      "file": "cad-redesign-history-keyboard/bracket-17.json",
+      "sha256": "cdd545a309293847ef2d5ff774a57ed8d5e7cfca0fd79c711a3cb58e3460a6ed",
+      "bytes": 227688
+    },
+    {
+      "file": "cad-redesign-history-keyboard/bracket-18.json",
+      "sha256": "712aec5433abd2e35c83a4131a48c94d7e1b88e6e59d8ccec1ff31a2d45b3307",
+      "bytes": 227688
+    },
+    {
+      "file": "cad-redesign-history-keyboard/bracket-19.json",
+      "sha256": "edbfdc3506e652a11ed055a7b9ea070271729eaf7daf8123cd720e85ce6324b6",
+      "bytes": 255160
+    },
+    {
+      "file": "cad-redesign-history-keyboard/bracket-20.json",
+      "sha256": "bd20c5f57cff0dc468d16d62d9088ec89671e485ee9f2ceb077468b206602ef1",
+      "bytes": 238143
+    },
+    {
+      "file": "cad-redesign-history-keyboard/bracket-undo-0.json",
+      "sha256": "d2ab4a906e15955db2aa3aea53e9745b019b9846041b520809f605b06b312974",
+      "bytes": 144372
+    },
+    {
+      "file": "cad-redesign-history-keyboard/bracket-undo-1.json",
+      "sha256": "754997408f087126bac1e88fa84f909de74e85be59feece36980b8c6dda422f9",
+      "bytes": 144372
+    },
+    {
+      "file": "cad-redesign-history-keyboard/bracket-undo-2.json",
+      "sha256": "1ef23d750926abf437f96e2ab7c764ed193fa3026990cc22011b5bbc9b3304d0",
+      "bytes": 176518
+    },
+    {
+      "file": "cad-redesign-history-keyboard/bracket-undo-3.json",
+      "sha256": "0f9cef1e25931bd99cb0e89d780c9cd8b46f4db8206729dbba8092179b799790",
+      "bytes": 176518
+    },
+    {
+      "file": "cad-redesign-history-keyboard/bracket-undo-4.json",
+      "sha256": "c64d51229748f23bff1d7251f90e02ae7fdbb4f394031f3cf5b5dfcaaffbb21f",
+      "bytes": 176582
+    },
+    {
+      "file": "cad-redesign-history-keyboard/bracket-undo-5.json",
+      "sha256": "c311e4e3c08a4cd10975cac147b20c9427f6e9a5505e5d17cd5ec54cc20289c4",
+      "bytes": 186804
+    },
+    {
+      "file": "cad-redesign-history-keyboard/bracket-undo-6.json",
+      "sha256": "19115e77f54d9cf59c1ea497c4b8ba41ed4f0d2021423972539ce02f5d4f089d",
+      "bytes": 186804
+    },
+    {
+      "file": "cad-redesign-history-keyboard/bracket-undo-7.json",
+      "sha256": "723d38c3e409d61f8ec07e962db1ce154d408fadd585efecc80cda18787082a9",
+      "bytes": 186740
+    },
+    {
+      "file": "cad-redesign-history-keyboard/bracket-undo-8.json",
+      "sha256": "fe52b406acc8f178680839b4a924aeee5dedd6b525f3da44814a1868b430ee97",
+      "bytes": 196962
+    },
+    {
+      "file": "cad-redesign-history-keyboard/bracket-undo-9.json",
+      "sha256": "8d18d5ca259843666198da5357ff17c6a4cb852cd01385fa6e03176bca0934af",
+      "bytes": 196962
+    },
+    {
+      "file": "cad-redesign-history-keyboard/bracket-undo-10.json",
+      "sha256": "bba13f58052c2885a1f76e6905b5f004ae01757a27afcb25ea98d01c2c60d4de",
+      "bytes": 196962
+    },
+    {
+      "file": "cad-redesign-history-keyboard/bracket-undo-11.json",
+      "sha256": "b503a9f9533f64621770ea2267729ac785fc91077c784558141996cdd37edf04",
+      "bytes": 207184
+    },
+    {
+      "file": "cad-redesign-history-keyboard/bracket-undo-12.json",
+      "sha256": "dd842c121a70b474b278986dfbfcd936fb76a66969596960968e8550cd86b98f",
+      "bytes": 207184
+    },
+    {
+      "file": "cad-redesign-history-keyboard/bracket-undo-13.json",
+      "sha256": "b4ded93a76696284c3e1958af5562fcb1f5a22cfa53ef9345d4e6f996bfdda7a",
+      "bytes": 207248
+    },
+    {
+      "file": "cad-redesign-history-keyboard/bracket-undo-14.json",
+      "sha256": "a71117231b8c90bacc49d966d4ae844b5ceefe745b1d557f6c248817b70ec6f1",
+      "bytes": 217470
+    },
+    {
+      "file": "cad-redesign-history-keyboard/bracket-undo-15.json",
+      "sha256": "3c93dde1f9d08bd83979a93bcd1129b6d0690d6c5f1c5f2f51251ca1f46bc549",
+      "bytes": 217530
+    },
+    {
+      "file": "cad-redesign-history-keyboard/bracket-undo-16.json",
+      "sha256": "b425866efa2baeeb6d7f7b75e1c5d2640743fed694b01959a6d551dc6a13f42d",
+      "bytes": 217466
+    },
+    {
+      "file": "cad-redesign-history-keyboard/bracket-undo-17.json",
+      "sha256": "cdd545a309293847ef2d5ff774a57ed8d5e7cfca0fd79c711a3cb58e3460a6ed",
+      "bytes": 227688
+    },
+    {
+      "file": "cad-redesign-history-keyboard/bracket-undo-18.json",
+      "sha256": "712aec5433abd2e35c83a4131a48c94d7e1b88e6e59d8ccec1ff31a2d45b3307",
+      "bytes": 227688
+    },
+    {
+      "file": "cad-redesign-history-keyboard/bracket-undo-19.json",
+      "sha256": "edbfdc3506e652a11ed055a7b9ea070271729eaf7daf8123cd720e85ce6324b6",
+      "bytes": 255160
+    },
+    {
+      "file": "cad-redesign-history-keyboard/bracket-redo-1.json",
+      "sha256": "754997408f087126bac1e88fa84f909de74e85be59feece36980b8c6dda422f9",
+      "bytes": 144372
+    },
+    {
+      "file": "cad-redesign-history-keyboard/bracket-redo-2.json",
+      "sha256": "1ef23d750926abf437f96e2ab7c764ed193fa3026990cc22011b5bbc9b3304d0",
+      "bytes": 176518
+    },
+    {
+      "file": "cad-redesign-history-keyboard/bracket-redo-3.json",
+      "sha256": "0f9cef1e25931bd99cb0e89d780c9cd8b46f4db8206729dbba8092179b799790",
+      "bytes": 176518
+    },
+    {
+      "file": "cad-redesign-history-keyboard/bracket-redo-4.json",
+      "sha256": "c64d51229748f23bff1d7251f90e02ae7fdbb4f394031f3cf5b5dfcaaffbb21f",
+      "bytes": 176582
+    },
+    {
+      "file": "cad-redesign-history-keyboard/bracket-redo-5.json",
+      "sha256": "c311e4e3c08a4cd10975cac147b20c9427f6e9a5505e5d17cd5ec54cc20289c4",
+      "bytes": 186804
+    },
+    {
+      "file": "cad-redesign-history-keyboard/bracket-redo-6.json",
+      "sha256": "19115e77f54d9cf59c1ea497c4b8ba41ed4f0d2021423972539ce02f5d4f089d",
+      "bytes": 186804
+    },
+    {
+      "file": "cad-redesign-history-keyboard/bracket-redo-7.json",
+      "sha256": "723d38c3e409d61f8ec07e962db1ce154d408fadd585efecc80cda18787082a9",
+      "bytes": 186740
+    },
+    {
+      "file": "cad-redesign-history-keyboard/bracket-redo-8.json",
+      "sha256": "fe52b406acc8f178680839b4a924aeee5dedd6b525f3da44814a1868b430ee97",
+      "bytes": 196962
+    },
+    {
+      "file": "cad-redesign-history-keyboard/bracket-redo-9.json",
+      "sha256": "8d18d5ca259843666198da5357ff17c6a4cb852cd01385fa6e03176bca0934af",
+      "bytes": 196962
+    },
+    {
+      "file": "cad-redesign-history-keyboard/bracket-redo-10.json",
+      "sha256": "bba13f58052c2885a1f76e6905b5f004ae01757a27afcb25ea98d01c2c60d4de",
+      "bytes": 196962
+    },
+    {
+      "file": "cad-redesign-history-keyboard/bracket-redo-11.json",
+      "sha256": "b503a9f9533f64621770ea2267729ac785fc91077c784558141996cdd37edf04",
+      "bytes": 207184
+    },
+    {
+      "file": "cad-redesign-history-keyboard/bracket-redo-12.json",
+      "sha256": "dd842c121a70b474b278986dfbfcd936fb76a66969596960968e8550cd86b98f",
+      "bytes": 207184
+    },
+    {
+      "file": "cad-redesign-history-keyboard/bracket-redo-13.json",
+      "sha256": "b4ded93a76696284c3e1958af5562fcb1f5a22cfa53ef9345d4e6f996bfdda7a",
+      "bytes": 207248
+    },
+    {
+      "file": "cad-redesign-history-keyboard/bracket-redo-14.json",
+      "sha256": "a71117231b8c90bacc49d966d4ae844b5ceefe745b1d557f6c248817b70ec6f1",
+      "bytes": 217470
+    },
+    {
+      "file": "cad-redesign-history-keyboard/bracket-redo-15.json",
+      "sha256": "3c93dde1f9d08bd83979a93bcd1129b6d0690d6c5f1c5f2f51251ca1f46bc549",
+      "bytes": 217530
+    },
+    {
+      "file": "cad-redesign-history-keyboard/bracket-redo-16.json",
+      "sha256": "b425866efa2baeeb6d7f7b75e1c5d2640743fed694b01959a6d551dc6a13f42d",
+      "bytes": 217466
+    },
+    {
+      "file": "cad-redesign-history-keyboard/bracket-redo-17.json",
+      "sha256": "cdd545a309293847ef2d5ff774a57ed8d5e7cfca0fd79c711a3cb58e3460a6ed",
+      "bytes": 227688
+    },
+    {
+      "file": "cad-redesign-history-keyboard/bracket-redo-18.json",
+      "sha256": "712aec5433abd2e35c83a4131a48c94d7e1b88e6e59d8ccec1ff31a2d45b3307",
+      "bytes": 227688
+    },
+    {
+      "file": "cad-redesign-history-keyboard/bracket-redo-19.json",
+      "sha256": "edbfdc3506e652a11ed055a7b9ea070271729eaf7daf8123cd720e85ce6324b6",
+      "bytes": 255160
+    },
+    {
+      "file": "cad-redesign-history-keyboard/bracket-redo-20.json",
+      "sha256": "bd20c5f57cff0dc468d16d62d9088ec89671e485ee9f2ceb077468b206602ef1",
+      "bytes": 238143
+    },
+    {
+      "file": "cad-redesign-history-keyboard/bracket-cancel-preview-1.json",
+      "sha256": "d2ab4a906e15955db2aa3aea53e9745b019b9846041b520809f605b06b312974",
+      "bytes": 144372
+    },
+    {
+      "file": "cad-redesign-history-keyboard/bracket-cancel-preview-2.json",
+      "sha256": "0f9cef1e25931bd99cb0e89d780c9cd8b46f4db8206729dbba8092179b799790",
+      "bytes": 176518
+    },
+    {
+      "file": "cad-redesign-history-keyboard/bracket-cancel-preview-3.json",
+      "sha256": "19115e77f54d9cf59c1ea497c4b8ba41ed4f0d2021423972539ce02f5d4f089d",
+      "bytes": 186804
+    },
+    {
+      "file": "cad-redesign-history-keyboard/bracket-cancel-preview-4.json",
+      "sha256": "8d18d5ca259843666198da5357ff17c6a4cb852cd01385fa6e03176bca0934af",
+      "bytes": 196962
+    },
+    {
+      "file": "cad-redesign-history-keyboard/bracket-cancel-preview-5.json",
+      "sha256": "dd842c121a70b474b278986dfbfcd936fb76a66969596960968e8550cd86b98f",
+      "bytes": 207184
+    },
+    {
+      "file": "cad-redesign-history-keyboard/bracket-cancel-preview-6.json",
+      "sha256": "3c93dde1f9d08bd83979a93bcd1129b6d0690d6c5f1c5f2f51251ca1f46bc549",
+      "bytes": 217530
+    },
+    {
+      "file": "cad-redesign-history-keyboard/bracket-cancel-preview-7.json",
+      "sha256": "712aec5433abd2e35c83a4131a48c94d7e1b88e6e59d8ccec1ff31a2d45b3307",
+      "bytes": 227688
+    },
+    {
+      "file": "cad-redesign-history-keyboard/bracket-reload.json",
+      "sha256": "48e0f035cfc022f93426ab97cdd8c5246ad9316593628d11e79f9c9600d2d444",
+      "bytes": 238143
+    },
+    {
+      "file": "cad-redesign-history-keyboard/enclosure-0.json",
+      "sha256": "2887e5072be43596ba0a1f5bea14f2ee5d887461c11edb2c30eadde0ee65c196",
+      "bytes": 260232
+    },
+    {
+      "file": "cad-redesign-history-keyboard/enclosure-1.json",
+      "sha256": "34e20b8a83f1f64b73f9424b2ab23d3c204b92dd1cb7fe5dfcabb4957f9bf841",
+      "bytes": 260232
+    },
+    {
+      "file": "cad-redesign-history-keyboard/enclosure-2.json",
+      "sha256": "fcdb556a4392923d03c7abd0e5cecdcb9efacc606369b0ad1a796f6a1e4555c1",
+      "bytes": 340635
+    },
+    {
+      "file": "cad-redesign-history-keyboard/enclosure-3.json",
+      "sha256": "87af2af8b9eb4326e452fd8eebd16670361c133428d6bb3e6581791f332f5063",
+      "bytes": 340635
+    },
+    {
+      "file": "cad-redesign-history-keyboard/enclosure-4.json",
+      "sha256": "4f8e0a569eba9a9b8bff3abe86a1d531d88c57bf2184aededf5b4e96c3e6c2a9",
+      "bytes": 340633
+    },
+    {
+      "file": "cad-redesign-history-keyboard/enclosure-5.json",
+      "sha256": "dca9ba42d6f8cfde596b35d684406e3382193de8893f602d8de658d4bb0ae35f",
+      "bytes": 426193
+    },
+    {
+      "file": "cad-redesign-history-keyboard/enclosure-6.json",
+      "sha256": "f87747f35ccf5472121ca11d2b4194edfb7f0574a7b411292d7073230fc2f7d4",
+      "bytes": 426193
+    },
+    {
+      "file": "cad-redesign-history-keyboard/enclosure-7.json",
+      "sha256": "062aca94bb7c43b4489ed24e588b63cbdbadcad774692315a3fbb80890ed3b08",
+      "bytes": 426191
+    },
+    {
+      "file": "cad-redesign-history-keyboard/enclosure-8.json",
+      "sha256": "f1fc9f78aa24732f20d3d18bdc091fecaf2622a46345c1e414d892685de08d40",
+      "bytes": 518998
+    },
+    {
+      "file": "cad-redesign-history-keyboard/enclosure-9.json",
+      "sha256": "2e7164e180e791b2f88b73f90e0c017a0cd159c1808cad727a3de5788aeb53eb",
+      "bytes": 518878
+    },
+    {
+      "file": "cad-redesign-history-keyboard/enclosure-10.json",
+      "sha256": "fb5d9daa7df4e92555360f8236f7cc231c65db9bde4cabec15229dc6870e0933",
+      "bytes": 518880
+    },
+    {
+      "file": "cad-redesign-history-keyboard/enclosure-11.json",
+      "sha256": "d0784f2e3312a0408beab6438fb3ee0d865e81493a63704ada360782ac4fd917",
+      "bytes": 615924
+    },
+    {
+      "file": "cad-redesign-history-keyboard/enclosure-12.json",
+      "sha256": "b293850079cbfbb68f4504b925fd7de9fb63af3408db663ab8f00c7132400fc6",
+      "bytes": 615924
+    },
+    {
+      "file": "cad-redesign-history-keyboard/enclosure-13.json",
+      "sha256": "bf7e8f63454b5d416defa57d5956e2dc605c1ce1185622122c71051bdd721af3",
+      "bytes": 615926
+    },
+    {
+      "file": "cad-redesign-history-keyboard/enclosure-14.json",
+      "sha256": "b154f5f417785d9cd216657df732195e1a730a2c1c146d35db6fc35151dc473d",
+      "bytes": 718493
+    },
+    {
+      "file": "cad-redesign-history-keyboard/enclosure-15.json",
+      "sha256": "656a7b2263bb52134c9fa687552f68e212b6ad1b94a822c1d9b82756ee2de848",
+      "bytes": 718493
+    },
+    {
+      "file": "cad-redesign-history-keyboard/enclosure-16.json",
+      "sha256": "ed6cca69e361af192c4da40de56cb63ff7a6a8252f066e0786ec451625f234dd",
+      "bytes": 718495
+    },
+    {
+      "file": "cad-redesign-history-keyboard/enclosure-17.json",
+      "sha256": "6c76125e74d218db514cebac306e0773a23570c04c740d88310441f8dd089e1f",
+      "bytes": 827890
+    },
+    {
+      "file": "cad-redesign-history-keyboard/enclosure-18.json",
+      "sha256": "2556588b688f471f62e9d7425e95b44f816990a93ec91a4cefa3d6af9b62f542",
+      "bytes": 827890
+    },
+    {
+      "file": "cad-redesign-history-keyboard/enclosure-19.json",
+      "sha256": "ab847cf3ef95349b06f8653880d8349bf0bc350c68a69f631a1dfea9138bb331",
+      "bytes": 948939
+    },
+    {
+      "file": "cad-redesign-history-keyboard/enclosure-20.json",
+      "sha256": "e7e5dc1897e1fd5a347c9b737b30a8630ac25f047d900673cf097995f838180f",
+      "bytes": 905254
+    },
+    {
+      "file": "cad-redesign-history-keyboard/enclosure-undo-0.json",
+      "sha256": "2887e5072be43596ba0a1f5bea14f2ee5d887461c11edb2c30eadde0ee65c196",
+      "bytes": 260232
+    },
+    {
+      "file": "cad-redesign-history-keyboard/enclosure-undo-1.json",
+      "sha256": "34e20b8a83f1f64b73f9424b2ab23d3c204b92dd1cb7fe5dfcabb4957f9bf841",
+      "bytes": 260232
+    },
+    {
+      "file": "cad-redesign-history-keyboard/enclosure-undo-2.json",
+      "sha256": "fcdb556a4392923d03c7abd0e5cecdcb9efacc606369b0ad1a796f6a1e4555c1",
+      "bytes": 340635
+    },
+    {
+      "file": "cad-redesign-history-keyboard/enclosure-undo-3.json",
+      "sha256": "87af2af8b9eb4326e452fd8eebd16670361c133428d6bb3e6581791f332f5063",
+      "bytes": 340635
+    },
+    {
+      "file": "cad-redesign-history-keyboard/enclosure-undo-4.json",
+      "sha256": "4f8e0a569eba9a9b8bff3abe86a1d531d88c57bf2184aededf5b4e96c3e6c2a9",
+      "bytes": 340633
+    },
+    {
+      "file": "cad-redesign-history-keyboard/enclosure-undo-5.json",
+      "sha256": "dca9ba42d6f8cfde596b35d684406e3382193de8893f602d8de658d4bb0ae35f",
+      "bytes": 426193
+    },
+    {
+      "file": "cad-redesign-history-keyboard/enclosure-undo-6.json",
+      "sha256": "f87747f35ccf5472121ca11d2b4194edfb7f0574a7b411292d7073230fc2f7d4",
+      "bytes": 426193
+    },
+    {
+      "file": "cad-redesign-history-keyboard/enclosure-undo-7.json",
+      "sha256": "062aca94bb7c43b4489ed24e588b63cbdbadcad774692315a3fbb80890ed3b08",
+      "bytes": 426191
+    },
+    {
+      "file": "cad-redesign-history-keyboard/enclosure-undo-8.json",
+      "sha256": "f1fc9f78aa24732f20d3d18bdc091fecaf2622a46345c1e414d892685de08d40",
+      "bytes": 518998
+    },
+    {
+      "file": "cad-redesign-history-keyboard/enclosure-undo-9.json",
+      "sha256": "2e7164e180e791b2f88b73f90e0c017a0cd159c1808cad727a3de5788aeb53eb",
+      "bytes": 518878
+    },
+    {
+      "file": "cad-redesign-history-keyboard/enclosure-undo-10.json",
+      "sha256": "fb5d9daa7df4e92555360f8236f7cc231c65db9bde4cabec15229dc6870e0933",
+      "bytes": 518880
+    },
+    {
+      "file": "cad-redesign-history-keyboard/enclosure-undo-11.json",
+      "sha256": "d0784f2e3312a0408beab6438fb3ee0d865e81493a63704ada360782ac4fd917",
+      "bytes": 615924
+    },
+    {
+      "file": "cad-redesign-history-keyboard/enclosure-undo-12.json",
+      "sha256": "b293850079cbfbb68f4504b925fd7de9fb63af3408db663ab8f00c7132400fc6",
+      "bytes": 615924
+    },
+    {
+      "file": "cad-redesign-history-keyboard/enclosure-undo-13.json",
+      "sha256": "bf7e8f63454b5d416defa57d5956e2dc605c1ce1185622122c71051bdd721af3",
+      "bytes": 615926
+    },
+    {
+      "file": "cad-redesign-history-keyboard/enclosure-undo-14.json",
+      "sha256": "b154f5f417785d9cd216657df732195e1a730a2c1c146d35db6fc35151dc473d",
+      "bytes": 718493
+    },
+    {
+      "file": "cad-redesign-history-keyboard/enclosure-undo-15.json",
+      "sha256": "656a7b2263bb52134c9fa687552f68e212b6ad1b94a822c1d9b82756ee2de848",
+      "bytes": 718493
+    },
+    {
+      "file": "cad-redesign-history-keyboard/enclosure-undo-16.json",
+      "sha256": "ed6cca69e361af192c4da40de56cb63ff7a6a8252f066e0786ec451625f234dd",
+      "bytes": 718495
+    },
+    {
+      "file": "cad-redesign-history-keyboard/enclosure-undo-17.json",
+      "sha256": "6c76125e74d218db514cebac306e0773a23570c04c740d88310441f8dd089e1f",
+      "bytes": 827890
+    },
+    {
+      "file": "cad-redesign-history-keyboard/enclosure-undo-18.json",
+      "sha256": "2556588b688f471f62e9d7425e95b44f816990a93ec91a4cefa3d6af9b62f542",
+      "bytes": 827890
+    },
+    {
+      "file": "cad-redesign-history-keyboard/enclosure-undo-19.json",
+      "sha256": "ab847cf3ef95349b06f8653880d8349bf0bc350c68a69f631a1dfea9138bb331",
+      "bytes": 948939
+    },
+    {
+      "file": "cad-redesign-history-keyboard/enclosure-redo-1.json",
+      "sha256": "34e20b8a83f1f64b73f9424b2ab23d3c204b92dd1cb7fe5dfcabb4957f9bf841",
+      "bytes": 260232
+    },
+    {
+      "file": "cad-redesign-history-keyboard/enclosure-redo-2.json",
+      "sha256": "fcdb556a4392923d03c7abd0e5cecdcb9efacc606369b0ad1a796f6a1e4555c1",
+      "bytes": 340635
+    },
+    {
+      "file": "cad-redesign-history-keyboard/enclosure-redo-3.json",
+      "sha256": "87af2af8b9eb4326e452fd8eebd16670361c133428d6bb3e6581791f332f5063",
+      "bytes": 340635
+    },
+    {
+      "file": "cad-redesign-history-keyboard/enclosure-redo-4.json",
+      "sha256": "4f8e0a569eba9a9b8bff3abe86a1d531d88c57bf2184aededf5b4e96c3e6c2a9",
+      "bytes": 340633
+    },
+    {
+      "file": "cad-redesign-history-keyboard/enclosure-redo-5.json",
+      "sha256": "dca9ba42d6f8cfde596b35d684406e3382193de8893f602d8de658d4bb0ae35f",
+      "bytes": 426193
+    },
+    {
+      "file": "cad-redesign-history-keyboard/enclosure-redo-6.json",
+      "sha256": "f87747f35ccf5472121ca11d2b4194edfb7f0574a7b411292d7073230fc2f7d4",
+      "bytes": 426193
+    },
+    {
+      "file": "cad-redesign-history-keyboard/enclosure-redo-7.json",
+      "sha256": "062aca94bb7c43b4489ed24e588b63cbdbadcad774692315a3fbb80890ed3b08",
+      "bytes": 426191
+    },
+    {
+      "file": "cad-redesign-history-keyboard/enclosure-redo-8.json",
+      "sha256": "f1fc9f78aa24732f20d3d18bdc091fecaf2622a46345c1e414d892685de08d40",
+      "bytes": 518998
+    },
+    {
+      "file": "cad-redesign-history-keyboard/enclosure-redo-9.json",
+      "sha256": "2e7164e180e791b2f88b73f90e0c017a0cd159c1808cad727a3de5788aeb53eb",
+      "bytes": 518878
+    },
+    {
+      "file": "cad-redesign-history-keyboard/enclosure-redo-10.json",
+      "sha256": "fb5d9daa7df4e92555360f8236f7cc231c65db9bde4cabec15229dc6870e0933",
+      "bytes": 518880
+    },
+    {
+      "file": "cad-redesign-history-keyboard/enclosure-redo-11.json",
+      "sha256": "d0784f2e3312a0408beab6438fb3ee0d865e81493a63704ada360782ac4fd917",
+      "bytes": 615924
+    },
+    {
+      "file": "cad-redesign-history-keyboard/enclosure-redo-12.json",
+      "sha256": "b293850079cbfbb68f4504b925fd7de9fb63af3408db663ab8f00c7132400fc6",
+      "bytes": 615924
+    },
+    {
+      "file": "cad-redesign-history-keyboard/enclosure-redo-13.json",
+      "sha256": "bf7e8f63454b5d416defa57d5956e2dc605c1ce1185622122c71051bdd721af3",
+      "bytes": 615926
+    },
+    {
+      "file": "cad-redesign-history-keyboard/enclosure-redo-14.json",
+      "sha256": "b154f5f417785d9cd216657df732195e1a730a2c1c146d35db6fc35151dc473d",
+      "bytes": 718493
+    },
+    {
+      "file": "cad-redesign-history-keyboard/enclosure-redo-15.json",
+      "sha256": "656a7b2263bb52134c9fa687552f68e212b6ad1b94a822c1d9b82756ee2de848",
+      "bytes": 718493
+    },
+    {
+      "file": "cad-redesign-history-keyboard/enclosure-redo-16.json",
+      "sha256": "ed6cca69e361af192c4da40de56cb63ff7a6a8252f066e0786ec451625f234dd",
+      "bytes": 718495
+    },
+    {
+      "file": "cad-redesign-history-keyboard/enclosure-redo-17.json",
+      "sha256": "6c76125e74d218db514cebac306e0773a23570c04c740d88310441f8dd089e1f",
+      "bytes": 827890
+    },
+    {
+      "file": "cad-redesign-history-keyboard/enclosure-redo-18.json",
+      "sha256": "2556588b688f471f62e9d7425e95b44f816990a93ec91a4cefa3d6af9b62f542",
+      "bytes": 827890
+    },
+    {
+      "file": "cad-redesign-history-keyboard/enclosure-redo-19.json",
+      "sha256": "ab847cf3ef95349b06f8653880d8349bf0bc350c68a69f631a1dfea9138bb331",
+      "bytes": 948939
+    },
+    {
+      "file": "cad-redesign-history-keyboard/enclosure-redo-20.json",
+      "sha256": "e7e5dc1897e1fd5a347c9b737b30a8630ac25f047d900673cf097995f838180f",
+      "bytes": 905254
+    },
+    {
+      "file": "cad-redesign-history-keyboard/enclosure-cancel-preview-1.json",
+      "sha256": "2887e5072be43596ba0a1f5bea14f2ee5d887461c11edb2c30eadde0ee65c196",
+      "bytes": 260232
+    },
+    {
+      "file": "cad-redesign-history-keyboard/enclosure-cancel-preview-2.json",
+      "sha256": "87af2af8b9eb4326e452fd8eebd16670361c133428d6bb3e6581791f332f5063",
+      "bytes": 340635
+    },
+    {
+      "file": "cad-redesign-history-keyboard/enclosure-cancel-preview-3.json",
+      "sha256": "f87747f35ccf5472121ca11d2b4194edfb7f0574a7b411292d7073230fc2f7d4",
+      "bytes": 426193
+    },
+    {
+      "file": "cad-redesign-history-keyboard/enclosure-cancel-preview-4.json",
+      "sha256": "2e7164e180e791b2f88b73f90e0c017a0cd159c1808cad727a3de5788aeb53eb",
+      "bytes": 518878
+    },
+    {
+      "file": "cad-redesign-history-keyboard/enclosure-cancel-preview-5.json",
+      "sha256": "b293850079cbfbb68f4504b925fd7de9fb63af3408db663ab8f00c7132400fc6",
+      "bytes": 615924
+    },
+    {
+      "file": "cad-redesign-history-keyboard/enclosure-cancel-preview-6.json",
+      "sha256": "656a7b2263bb52134c9fa687552f68e212b6ad1b94a822c1d9b82756ee2de848",
+      "bytes": 718493
+    },
+    {
+      "file": "cad-redesign-history-keyboard/enclosure-cancel-preview-7.json",
+      "sha256": "2556588b688f471f62e9d7425e95b44f816990a93ec91a4cefa3d6af9b62f542",
+      "bytes": 827890
+    },
+    {
+      "file": "cad-redesign-history-keyboard/enclosure-reload.json",
+      "sha256": "1b1ccfc8bf74260bdfda30b5d3703998e7f4f243cc4069d58cc44a167850b074",
+      "bytes": 905254
+    },
+    {
+      "file": "cad-redesign-history-keyboard/flange-0.json",
+      "sha256": "ad41c42d15c5d4b2d951e8c5bd9a4ea3f234c8179d3f79886040215729c258cd",
+      "bytes": 415446
+    },
+    {
+      "file": "cad-redesign-history-keyboard/flange-1.json",
+      "sha256": "d715f00095d2b7d5caeb97faf1e8f7ad09190cc87668eb12c249802fc2fd80fa",
+      "bytes": 406510
+    },
+    {
+      "file": "cad-redesign-history-keyboard/flange-2.json",
+      "sha256": "80702f64e51f12db6f1eb03aa4286ee4f54ef8f891dbd91c0bd34c25e7190b05",
+      "bytes": 368507
+    },
+    {
+      "file": "cad-redesign-history-keyboard/flange-3.json",
+      "sha256": "165e324277d510a7915944bc9bb6c95db26b5fb27196fac96ebc993110adbb70",
+      "bytes": 368497
+    },
+    {
+      "file": "cad-redesign-history-keyboard/flange-4.json",
+      "sha256": "6bd01363310eb5c0a76a5c267e28d4fe0db91f8277f5b7e0afb98eeba3f48edb",
+      "bytes": 358849
+    },
+    {
+      "file": "cad-redesign-history-keyboard/flange-5.json",
+      "sha256": "7d83ad69812fcf61c2c6aae336d96ae03c8c25dc82aa3402e8149e5e0008bb1f",
+      "bytes": 322423
+    },
+    {
+      "file": "cad-redesign-history-keyboard/flange-6.json",
+      "sha256": "88634fbd56692accae6b440cea8983331ae27e9a4f98aedafeaa5bb787f92823",
+      "bytes": 322413
+    },
+    {
+      "file": "cad-redesign-history-keyboard/flange-7.json",
+      "sha256": "a3c1551dd2e987be5597bbd58ba8f0cf7dd51c66e706d5b959f4fc6b75ca487f",
+      "bytes": 313621
+    },
+    {
+      "file": "cad-redesign-history-keyboard/flange-8.json",
+      "sha256": "f9db9cf2963f0ad9c31277de786b3dfdd73c2fca7085d65217458b1ee654e415",
+      "bytes": 276662
+    },
+    {
+      "file": "cad-redesign-history-keyboard/flange-9.json",
+      "sha256": "f2313d78a0b6902c6cd5e8dca3621ded12d91861b3cb778bda4c4e3d921bb003",
+      "bytes": 276558
+    },
+    {
+      "file": "cad-redesign-history-keyboard/flange-10.json",
+      "sha256": "ecef9f4a0c8c1297a9c1c3f4eecf7ac1c2a9b1013088d4bd15049a1a2737d5f1",
+      "bytes": 267807
+    },
+    {
+      "file": "cad-redesign-history-keyboard/flange-11.json",
+      "sha256": "e2e6b417ef0cf4c4379c4456b7df394560f8eb6aae6f526b9a6b2cf020450ced",
+      "bytes": 229357
+    },
+    {
+      "file": "cad-redesign-history-keyboard/flange-12.json",
+      "sha256": "4fcace65c5d0a042ab93262aa0a59047214b505c9c12c478d124d19defc074f0",
+      "bytes": 229400
+    },
+    {
+      "file": "cad-redesign-history-keyboard/flange-13.json",
+      "sha256": "3e8abacceb94efa3630edeed036f751f978bf569b218d53230dfb31537da47e6",
+      "bytes": 220706
+    },
+    {
+      "file": "cad-redesign-history-keyboard/flange-14.json",
+      "sha256": "5c08257873f41f7d40260b8d87b52aefd08bcc91b23a367a385eab82cfbc545a",
+      "bytes": 182447
+    },
+    {
+      "file": "cad-redesign-history-keyboard/flange-15.json",
+      "sha256": "63a0e9566a51a7f342d3f887457ddf9438f378ba95a929e8025a59d52a13aa8f",
+      "bytes": 182428
+    },
+    {
+      "file": "cad-redesign-history-keyboard/flange-16.json",
+      "sha256": "41cf7f9f13ea422657ccf43f93129341973eca22d1a8de995ab8de654e1d91d4",
+      "bytes": 173496
+    },
+    {
+      "file": "cad-redesign-history-keyboard/flange-17.json",
+      "sha256": "15bfaa0f0afb7fc29ca97e1d0602538b821b35c3e54b4e5d239516b9edb03499",
+      "bytes": 137832
+    },
+    {
+      "file": "cad-redesign-history-keyboard/flange-18.json",
+      "sha256": "37824c7ef5e2ae3fc13ad646234f15e75c565413cb36e4db11c07bbec1860f48",
+      "bytes": 137843
+    },
+    {
+      "file": "cad-redesign-history-keyboard/flange-19.json",
+      "sha256": "3e5099d544b910a1e3dbe63115253d07c5178f4f185fc56298426afc36ff6eb5",
+      "bytes": 600693
+    },
+    {
+      "file": "cad-redesign-history-keyboard/flange-20.json",
+      "sha256": "59e0a238bf61840c214c32fece417b3d5cfa4cb7fc5fa5aa314cfd0651ba1a1d",
+      "bytes": 372673
+    },
+    {
+      "file": "cad-redesign-history-keyboard/flange-undo-0.json",
+      "sha256": "ad41c42d15c5d4b2d951e8c5bd9a4ea3f234c8179d3f79886040215729c258cd",
+      "bytes": 415446
+    },
+    {
+      "file": "cad-redesign-history-keyboard/flange-undo-1.json",
+      "sha256": "d715f00095d2b7d5caeb97faf1e8f7ad09190cc87668eb12c249802fc2fd80fa",
+      "bytes": 406510
+    },
+    {
+      "file": "cad-redesign-history-keyboard/flange-undo-2.json",
+      "sha256": "80702f64e51f12db6f1eb03aa4286ee4f54ef8f891dbd91c0bd34c25e7190b05",
+      "bytes": 368507
+    },
+    {
+      "file": "cad-redesign-history-keyboard/flange-undo-3.json",
+      "sha256": "165e324277d510a7915944bc9bb6c95db26b5fb27196fac96ebc993110adbb70",
+      "bytes": 368497
+    },
+    {
+      "file": "cad-redesign-history-keyboard/flange-undo-4.json",
+      "sha256": "6bd01363310eb5c0a76a5c267e28d4fe0db91f8277f5b7e0afb98eeba3f48edb",
+      "bytes": 358849
+    },
+    {
+      "file": "cad-redesign-history-keyboard/flange-undo-5.json",
+      "sha256": "7d83ad69812fcf61c2c6aae336d96ae03c8c25dc82aa3402e8149e5e0008bb1f",
+      "bytes": 322423
+    },
+    {
+      "file": "cad-redesign-history-keyboard/flange-undo-6.json",
+      "sha256": "88634fbd56692accae6b440cea8983331ae27e9a4f98aedafeaa5bb787f92823",
+      "bytes": 322413
+    },
+    {
+      "file": "cad-redesign-history-keyboard/flange-undo-7.json",
+      "sha256": "a3c1551dd2e987be5597bbd58ba8f0cf7dd51c66e706d5b959f4fc6b75ca487f",
+      "bytes": 313621
+    },
+    {
+      "file": "cad-redesign-history-keyboard/flange-undo-8.json",
+      "sha256": "f9db9cf2963f0ad9c31277de786b3dfdd73c2fca7085d65217458b1ee654e415",
+      "bytes": 276662
+    },
+    {
+      "file": "cad-redesign-history-keyboard/flange-undo-9.json",
+      "sha256": "f2313d78a0b6902c6cd5e8dca3621ded12d91861b3cb778bda4c4e3d921bb003",
+      "bytes": 276558
+    },
+    {
+      "file": "cad-redesign-history-keyboard/flange-undo-10.json",
+      "sha256": "ecef9f4a0c8c1297a9c1c3f4eecf7ac1c2a9b1013088d4bd15049a1a2737d5f1",
+      "bytes": 267807
+    },
+    {
+      "file": "cad-redesign-history-keyboard/flange-undo-11.json",
+      "sha256": "e2e6b417ef0cf4c4379c4456b7df394560f8eb6aae6f526b9a6b2cf020450ced",
+      "bytes": 229357
+    },
+    {
+      "file": "cad-redesign-history-keyboard/flange-undo-12.json",
+      "sha256": "4fcace65c5d0a042ab93262aa0a59047214b505c9c12c478d124d19defc074f0",
+      "bytes": 229400
+    },
+    {
+      "file": "cad-redesign-history-keyboard/flange-undo-13.json",
+      "sha256": "3e8abacceb94efa3630edeed036f751f978bf569b218d53230dfb31537da47e6",
+      "bytes": 220706
+    },
+    {
+      "file": "cad-redesign-history-keyboard/flange-undo-14.json",
+      "sha256": "5c08257873f41f7d40260b8d87b52aefd08bcc91b23a367a385eab82cfbc545a",
+      "bytes": 182447
+    },
+    {
+      "file": "cad-redesign-history-keyboard/flange-undo-15.json",
+      "sha256": "63a0e9566a51a7f342d3f887457ddf9438f378ba95a929e8025a59d52a13aa8f",
+      "bytes": 182428
+    },
+    {
+      "file": "cad-redesign-history-keyboard/flange-undo-16.json",
+      "sha256": "41cf7f9f13ea422657ccf43f93129341973eca22d1a8de995ab8de654e1d91d4",
+      "bytes": 173496
+    },
+    {
+      "file": "cad-redesign-history-keyboard/flange-undo-17.json",
+      "sha256": "15bfaa0f0afb7fc29ca97e1d0602538b821b35c3e54b4e5d239516b9edb03499",
+      "bytes": 137832
+    },
+    {
+      "file": "cad-redesign-history-keyboard/flange-undo-18.json",
+      "sha256": "37824c7ef5e2ae3fc13ad646234f15e75c565413cb36e4db11c07bbec1860f48",
+      "bytes": 137843
+    },
+    {
+      "file": "cad-redesign-history-keyboard/flange-undo-19.json",
+      "sha256": "3e5099d544b910a1e3dbe63115253d07c5178f4f185fc56298426afc36ff6eb5",
+      "bytes": 600693
+    },
+    {
+      "file": "cad-redesign-history-keyboard/flange-redo-1.json",
+      "sha256": "d715f00095d2b7d5caeb97faf1e8f7ad09190cc87668eb12c249802fc2fd80fa",
+      "bytes": 406510
+    },
+    {
+      "file": "cad-redesign-history-keyboard/flange-redo-2.json",
+      "sha256": "80702f64e51f12db6f1eb03aa4286ee4f54ef8f891dbd91c0bd34c25e7190b05",
+      "bytes": 368507
+    },
+    {
+      "file": "cad-redesign-history-keyboard/flange-redo-3.json",
+      "sha256": "165e324277d510a7915944bc9bb6c95db26b5fb27196fac96ebc993110adbb70",
+      "bytes": 368497
+    },
+    {
+      "file": "cad-redesign-history-keyboard/flange-redo-4.json",
+      "sha256": "6bd01363310eb5c0a76a5c267e28d4fe0db91f8277f5b7e0afb98eeba3f48edb",
+      "bytes": 358849
+    },
+    {
+      "file": "cad-redesign-history-keyboard/flange-redo-5.json",
+      "sha256": "7d83ad69812fcf61c2c6aae336d96ae03c8c25dc82aa3402e8149e5e0008bb1f",
+      "bytes": 322423
+    },
+    {
+      "file": "cad-redesign-history-keyboard/flange-redo-6.json",
+      "sha256": "88634fbd56692accae6b440cea8983331ae27e9a4f98aedafeaa5bb787f92823",
+      "bytes": 322413
+    },
+    {
+      "file": "cad-redesign-history-keyboard/flange-redo-7.json",
+      "sha256": "a3c1551dd2e987be5597bbd58ba8f0cf7dd51c66e706d5b959f4fc6b75ca487f",
+      "bytes": 313621
+    },
+    {
+      "file": "cad-redesign-history-keyboard/flange-redo-8.json",
+      "sha256": "f9db9cf2963f0ad9c31277de786b3dfdd73c2fca7085d65217458b1ee654e415",
+      "bytes": 276662
+    },
+    {
+      "file": "cad-redesign-history-keyboard/flange-redo-9.json",
+      "sha256": "f2313d78a0b6902c6cd5e8dca3621ded12d91861b3cb778bda4c4e3d921bb003",
+      "bytes": 276558
+    },
+    {
+      "file": "cad-redesign-history-keyboard/flange-redo-10.json",
+      "sha256": "ecef9f4a0c8c1297a9c1c3f4eecf7ac1c2a9b1013088d4bd15049a1a2737d5f1",
+      "bytes": 267807
+    },
+    {
+      "file": "cad-redesign-history-keyboard/flange-redo-11.json",
+      "sha256": "e2e6b417ef0cf4c4379c4456b7df394560f8eb6aae6f526b9a6b2cf020450ced",
+      "bytes": 229357
+    },
+    {
+      "file": "cad-redesign-history-keyboard/flange-redo-12.json",
+      "sha256": "4fcace65c5d0a042ab93262aa0a59047214b505c9c12c478d124d19defc074f0",
+      "bytes": 229400
+    },
+    {
+      "file": "cad-redesign-history-keyboard/flange-redo-13.json",
+      "sha256": "3e8abacceb94efa3630edeed036f751f978bf569b218d53230dfb31537da47e6",
+      "bytes": 220706
+    },
+    {
+      "file": "cad-redesign-history-keyboard/flange-redo-14.json",
+      "sha256": "5c08257873f41f7d40260b8d87b52aefd08bcc91b23a367a385eab82cfbc545a",
+      "bytes": 182447
+    },
+    {
+      "file": "cad-redesign-history-keyboard/flange-redo-15.json",
+      "sha256": "63a0e9566a51a7f342d3f887457ddf9438f378ba95a929e8025a59d52a13aa8f",
+      "bytes": 182428
+    },
+    {
+      "file": "cad-redesign-history-keyboard/flange-redo-16.json",
+      "sha256": "41cf7f9f13ea422657ccf43f93129341973eca22d1a8de995ab8de654e1d91d4",
+      "bytes": 173496
+    },
+    {
+      "file": "cad-redesign-history-keyboard/flange-redo-17.json",
+      "sha256": "15bfaa0f0afb7fc29ca97e1d0602538b821b35c3e54b4e5d239516b9edb03499",
+      "bytes": 137832
+    },
+    {
+      "file": "cad-redesign-history-keyboard/flange-redo-18.json",
+      "sha256": "37824c7ef5e2ae3fc13ad646234f15e75c565413cb36e4db11c07bbec1860f48",
+      "bytes": 137843
+    },
+    {
+      "file": "cad-redesign-history-keyboard/flange-redo-19.json",
+      "sha256": "3e5099d544b910a1e3dbe63115253d07c5178f4f185fc56298426afc36ff6eb5",
+      "bytes": 600693
+    },
+    {
+      "file": "cad-redesign-history-keyboard/flange-redo-20.json",
+      "sha256": "59e0a238bf61840c214c32fece417b3d5cfa4cb7fc5fa5aa314cfd0651ba1a1d",
+      "bytes": 372673
+    },
+    {
+      "file": "cad-redesign-history-keyboard/flange-cancel-preview-1.json",
+      "sha256": "ad41c42d15c5d4b2d951e8c5bd9a4ea3f234c8179d3f79886040215729c258cd",
+      "bytes": 415446
+    },
+    {
+      "file": "cad-redesign-history-keyboard/flange-cancel-preview-2.json",
+      "sha256": "165e324277d510a7915944bc9bb6c95db26b5fb27196fac96ebc993110adbb70",
+      "bytes": 368497
+    },
+    {
+      "file": "cad-redesign-history-keyboard/flange-cancel-preview-3.json",
+      "sha256": "88634fbd56692accae6b440cea8983331ae27e9a4f98aedafeaa5bb787f92823",
+      "bytes": 322413
+    },
+    {
+      "file": "cad-redesign-history-keyboard/flange-cancel-preview-4.json",
+      "sha256": "f2313d78a0b6902c6cd5e8dca3621ded12d91861b3cb778bda4c4e3d921bb003",
+      "bytes": 276558
+    },
+    {
+      "file": "cad-redesign-history-keyboard/flange-cancel-preview-5.json",
+      "sha256": "4fcace65c5d0a042ab93262aa0a59047214b505c9c12c478d124d19defc074f0",
+      "bytes": 229400
+    },
+    {
+      "file": "cad-redesign-history-keyboard/flange-cancel-preview-6.json",
+      "sha256": "63a0e9566a51a7f342d3f887457ddf9438f378ba95a929e8025a59d52a13aa8f",
+      "bytes": 182428
+    },
+    {
+      "file": "cad-redesign-history-keyboard/flange-cancel-preview-7.json",
+      "sha256": "37824c7ef5e2ae3fc13ad646234f15e75c565413cb36e4db11c07bbec1860f48",
+      "bytes": 137843
+    },
+    {
+      "file": "cad-redesign-history-keyboard/flange-reload.json",
+      "sha256": "02b3710e9dfa4c63f8332a9576ec1005b4459b9af63fd0174552a5ac8a82bcbe",
+      "bytes": 372673
+    }
+  ]
+}

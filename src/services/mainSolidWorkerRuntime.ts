@@ -1,3 +1,4 @@
+import {inspectMaterialWall} from './solidMaterialWall'
 import {inspectMaterialSegment,inspectMaterialChord} from './solidMaterialVolume'
 import {solidPartialAnnularPreview} from './solidPartialAnnularPreview'
 import {inspectProfileIntersections} from './geometry/profileIntersections'
@@ -63,6 +64,7 @@ async function execute(job:MainSolidJob):Promise<MainSolidResults[keyof MainSoli
     case 'selfIntersection':return inspectSelfIntersection(job.model,job.toleranceUv,job.limits,job.maxSpans,job.boundaryAudit)
     case 'faceContacts':return inspectFaceContacts(job.model,job.toleranceUv,job.limits)
     case 'boundaryAgreement':return inspectBoundaryAgreement(job.model,job.maxCells)
+    case 'materialWall':return inspectMaterialWall(job.options)
     case 'materialSegment':return inspectMaterialSegment(job.options)
     case 'materialChord':return inspectMaterialChord(job.options)
     case 'solidDistance':return measureSolidDistance(job.options)
@@ -122,7 +124,7 @@ export function createMainSolidWorkerHandler(post:(response:MainSolidResponse,tr
     validate:(value)=>{
       const request=value as Partial<MainSolidRequest>|null
       if(!request || request.version!==1 || !Number.isSafeInteger(request.id) || request.id!<1
-        || !request.job || !['materialSegment','materialChord','solidDistance','selfIntersection','faceContacts','boundaryAgreement','shellDistance','faceDistance','surfaceDistance','curveDistance','sketchSnaps','bodySnaps','faceSketch','bodyEdges','topology','curveDisplay','profileDisplay','surfaceMesh','surfaceBoundary','measureVertices','measureEdge','primitive','modelGraphImport','displayMesh','restoreDocument','brepTool','curveChainInspection','trimmedCurveOffset','curveOffset','nurbsEdit','pointEdit','sketchEdit','boolean','sceneEdit','curveMatch','surfaceMatch','seamPrepare','surfaceBuild','nurbsRefit','profileIntersections','profilePrepare','profileEdit','bodyEdit','partialAnnularPreview','revolve','extrusion','main','cad','inspect','meshContacts','truss','latticeGraph','structuralSections','bondedSolid'].includes(request.job.kind))return null
+        || !request.job || !['materialWall','materialSegment','materialChord','solidDistance','selfIntersection','faceContacts','boundaryAgreement','shellDistance','faceDistance','surfaceDistance','curveDistance','sketchSnaps','bodySnaps','faceSketch','bodyEdges','topology','curveDisplay','profileDisplay','surfaceMesh','surfaceBoundary','measureVertices','measureEdge','primitive','modelGraphImport','displayMesh','restoreDocument','brepTool','curveChainInspection','trimmedCurveOffset','curveOffset','nurbsEdit','pointEdit','sketchEdit','boolean','sceneEdit','curveMatch','surfaceMatch','seamPrepare','surfaceBuild','nurbsRefit','profileIntersections','profilePrepare','profileEdit','bodyEdit','partialAnnularPreview','revolve','extrusion','main','cad','inspect','meshContacts','truss','latticeGraph','structuralSections','bondedSolid'].includes(request.job.kind))return null
       return request as MainSolidRequest
     },
     busyError:{name:'Error',code:'CAD_BUSY',message:'CAD worker is busy'},
