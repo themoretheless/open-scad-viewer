@@ -1,3 +1,4 @@
+import type {solidPartialAnnularPreview} from './solidPartialAnnularPreview'
 import {validateProfileIntersectionReport,type ProfileIntersectionReport,type ProfileIntersectionOptions} from './geometry/profileIntersections'
 import type {TrimmedOffsetOptions,offsetTrimmedSolidCurve} from './solidTrimmedCurveOffset'
 import {validCurveOffsetDiagnostics} from './curveOffsetDiagnostics'
@@ -91,6 +92,7 @@ export type MainSolidJob =
   | {kind:'profileIntersections';loops:NurbsCurve[][];options:Required<ProfileIntersectionOptions>}
   | {kind:'profilePrepare';document:DirectDocument;ids:string[];tolerance:number}
   | {kind:'profileEdit';document:DirectDocument;options:SolidProfileEditOptions}
+  | {kind:'partialAnnularPreview';body:DirectBody;edge:number;radius:number}
   | {kind:'bodyEdit';document:DirectDocument;options:SolidBodyEditOptions}
   | {kind:'revolve'; document:DirectDocument; options:SolidRevolveOptions}
   | {kind:'extrusion'; document:DirectDocument; options:DirectExtrusionOptions}
@@ -102,7 +104,7 @@ export type MainSolidJob =
   | {kind:'bondedSolid';inputJson:string}
   | {kind:'structuralSections'; mesh:LatticeGraphMesh; axis:'x'|'y'|'z'; stations:number[]}
   | {kind:'latticeGraph'; mesh:LatticeGraphMesh; options:LighteningOptions}
-export interface MainSolidResults {profileIntersections:ProfileIntersectionReport;trimmedCurveOffset:ReturnType<typeof offsetTrimmedSolidCurve>;curveChainInspection:import('./curveOffsetDiagnostics').CurveOffsetDiagnostics;solidDistance:SolidDistanceResult;selfIntersection:SelfIntersection;faceContacts:FaceContacts;boundaryAgreement:BoundaryAgreement;shellDistance:ShellDistanceResult;faceDistance:FaceDistanceResult;surfaceDistance:NurbsSurfaceDistance;curveDistance:NurbsCurveDistance;sketchSnaps:SnapGeometry;bodySnaps:SnapGeometry;faceSketch:ReturnType<typeof prepareSolidFaceSketch>;bodyEdges:ReturnType<typeof solidBodyEdges>;topology:ReturnType<typeof solidTopology>;curveDisplay:number[][];profileDisplay:[number,number][][];surfaceMesh:PolygonMesh;surfaceBoundary:SurfaceBoundaryReport;measureVertices:PointMeasurement;measureEdge:CurveMeasurement;primitive:DirectDocument;modelGraphImport:DirectDocument;displayMesh:DisplayMesh;restoreDocument:DirectDocument;brepTool:SolidBrepToolResult;nurbsEdit:DirectDocument;curveOffset:ReturnType<typeof offsetSolidCurve>;pointEdit:DirectDocument;sketchEdit:DirectDocument;boolean:SolidBooleanResult;sceneEdit:DirectDocument;curveMatch:ReturnType<typeof matchSolidCurve>;surfaceMatch:ReturnType<typeof matchSolidSurface>;seamPrepare:ReturnType<typeof prepareSolidSurfaceSeams>;surfaceBuild:ReturnType<typeof buildSolidSurface>;nurbsRefit:ReturnType<typeof refitSolidNurbs>;profilePrepare:ReturnType<typeof prepareSolidProfile>;profileEdit:DirectDocument;bodyEdit:DirectDocument;revolve:DirectDocument;extrusion:DirectDocument;meshContacts:ReturnType<typeof inspectSolidIntersections>;bondedSolid:BondedSolidResult; main:DirectDocument; cad:DirectDocument; inspect:CadPairReport[]; truss:TrussResponse; latticeGraph:NominalLatticeGraph; structuralSections:StructuralSections}
+export interface MainSolidResults {partialAnnularPreview:ReturnType<typeof solidPartialAnnularPreview>;profileIntersections:ProfileIntersectionReport;trimmedCurveOffset:ReturnType<typeof offsetTrimmedSolidCurve>;curveChainInspection:import('./curveOffsetDiagnostics').CurveOffsetDiagnostics;solidDistance:SolidDistanceResult;selfIntersection:SelfIntersection;faceContacts:FaceContacts;boundaryAgreement:BoundaryAgreement;shellDistance:ShellDistanceResult;faceDistance:FaceDistanceResult;surfaceDistance:NurbsSurfaceDistance;curveDistance:NurbsCurveDistance;sketchSnaps:SnapGeometry;bodySnaps:SnapGeometry;faceSketch:ReturnType<typeof prepareSolidFaceSketch>;bodyEdges:ReturnType<typeof solidBodyEdges>;topology:ReturnType<typeof solidTopology>;curveDisplay:number[][];profileDisplay:[number,number][][];surfaceMesh:PolygonMesh;surfaceBoundary:SurfaceBoundaryReport;measureVertices:PointMeasurement;measureEdge:CurveMeasurement;primitive:DirectDocument;modelGraphImport:DirectDocument;displayMesh:DisplayMesh;restoreDocument:DirectDocument;brepTool:SolidBrepToolResult;nurbsEdit:DirectDocument;curveOffset:ReturnType<typeof offsetSolidCurve>;pointEdit:DirectDocument;sketchEdit:DirectDocument;boolean:SolidBooleanResult;sceneEdit:DirectDocument;curveMatch:ReturnType<typeof matchSolidCurve>;surfaceMatch:ReturnType<typeof matchSolidSurface>;seamPrepare:ReturnType<typeof prepareSolidSurfaceSeams>;surfaceBuild:ReturnType<typeof buildSolidSurface>;nurbsRefit:ReturnType<typeof refitSolidNurbs>;profilePrepare:ReturnType<typeof prepareSolidProfile>;profileEdit:DirectDocument;bodyEdit:DirectDocument;revolve:DirectDocument;extrusion:DirectDocument;meshContacts:ReturnType<typeof inspectSolidIntersections>;bondedSolid:BondedSolidResult; main:DirectDocument; cad:DirectDocument; inspect:CadPairReport[]; truss:TrussResponse; latticeGraph:NominalLatticeGraph; structuralSections:StructuralSections}
 export type MainSolidRequest = {version:1; id:number; job:MainSolidJob; traceTiming?:boolean}
 export type MainSolidResponse = {version:1; id:number; kind:MainSolidJob['kind']; timing?:{warmupMs:number;executeMs:number;prepareMs:number}} & (
   | {ok:true; result:MainSolidResults[keyof MainSolidResults]}
@@ -124,7 +126,8 @@ function numericSequenceOf(value:unknown, length:number, check:(v:unknown)=>bool
   return true
 }
 const vector = (v:unknown) => arrayOf(v,3,finite)
-export type MainSolidExpectation = {kind:'trimmedCurveOffset';createdId:string;fillRule:'nonzero'|'evenodd';toleranceMm:number;intersectionToleranceMm:number}
+export type MainSolidExpectation = {kind:'partialAnnularPreview';id:string;bodyIdentity:string|undefined}
+  | {kind:'trimmedCurveOffset';createdId:string;fillRule:'nonzero'|'evenodd';toleranceMm:number;intersectionToleranceMm:number}
   | {kind:'displayMesh';triangles:number}
   | ({kind:'solidDistance'}&ReturnType<typeof solidDistanceExpectation>)
   | ({kind:'selfIntersection'}&ReturnType<typeof selfIntersectionExpectation>)
@@ -150,8 +153,9 @@ export type MainSolidExpectation = {kind:'trimmedCurveOffset';createdId:string;f
   | {kind:'truss'; nodes:number; members:number}
   | {kind:'structuralSections';axis:'x'|'y'|'z';stations:number[]}
   | {kind:'bondedSolid';nodes:number;tets:number;bonds:number}
-  | {kind:Exclude<MainSolidJob['kind'],'trimmedCurveOffset'|'curveChainInspection'|'solidDistance'|'selfIntersection'|'faceContacts'|'boundaryAgreement'|'shellDistance'|'faceDistance'|'surfaceDistance'|'curveDistance'|'sketchSnaps'|'bodySnaps'|'bodyEdges'|'topology'|'curveDisplay'|'profileDisplay'|'surfaceMesh'|'surfaceBoundary'|'displayMesh'|'brepTool'|'truss'|'structuralSections'|'bondedSolid'|'meshContacts'|'profilePrepare'|'profileIntersections'>}
+  | {kind:Exclude<MainSolidJob['kind'],'trimmedCurveOffset'|'curveChainInspection'|'solidDistance'|'selfIntersection'|'faceContacts'|'boundaryAgreement'|'shellDistance'|'faceDistance'|'surfaceDistance'|'curveDistance'|'sketchSnaps'|'bodySnaps'|'bodyEdges'|'topology'|'curveDisplay'|'profileDisplay'|'surfaceMesh'|'surfaceBoundary'|'displayMesh'|'brepTool'|'truss'|'structuralSections'|'bondedSolid'|'meshContacts'|'profilePrepare'|'profileIntersections'|'partialAnnularPreview'>}
 export function mainSolidExpectation(job:MainSolidJob):MainSolidExpectation {
+  if(job.kind==='partialAnnularPreview')return {kind:job.kind,id:job.body.id,bodyIdentity:job.body.brep?.topologyIds?.bodies[0]}
   if(job.kind==='profileIntersections')return {kind:job.kind,loops:structuredClone(job.loops),options:{...job.options}}
   if(job.kind==='profilePrepare')return {kind:job.kind,chainSegments:job.ids.map(id=>{if(job.document.curves?.some(c=>c.id===id))return 1;const s=job.document.sketches.find(s=>s.id===id);return s?.analytic?.kind==='arc'?Math.ceil(Math.abs(s.analytic.sweep)/90):Math.max(0,(s?.points.length??0)-1)})}
   if(job.kind==='trimmedCurveOffset')return {kind:job.kind,createdId:job.options.createdId,fillRule:job.options.fillRule,toleranceMm:job.options.toleranceMm,intersectionToleranceMm:job.options.intersectionToleranceMm}
@@ -281,6 +285,17 @@ export function mainSolidResult(job:MainSolidExpectation, value:unknown): boolea
     const v=value as CurveMeasurement
     return vector(v.point)&&finite(v.parameter)&&v.parameter>=0&&v.parameter<=1&&finite(v.curvaturePerMm)&&v.curvaturePerMm>=0
       &&(v.radiusMm===null||finite(v.radiusMm)&&v.radiusMm>0)
+  }
+  if(job.kind==='partialAnnularPreview') {
+    const v=value as MainSolidResults['partialAnnularPreview'], q=v.evidence?.qualification, mesh=v.body?.mesh
+    if(v.body?.id!==job.id || !job.bodyIdentity || v.body.brep?.topologyIds?.bodies.length!==1
+      || v.body.brep.topologyIds.bodies[0]!==job.bodyIdentity || !mesh
+      || q?.status!=='preview-only' || q.commitAllowed!==false
+      || q.boundaryIntersectionProof!=='unqualified' || q.transitionContinuityProof!=='unqualified'
+      || !isNumericSequence(mesh.positions)||!isNumericSequence(mesh.indices)
+      || !mesh.positions.length || mesh.positions.length%3 || !mesh.indices.length || mesh.indices.length%3)return false
+    return numericSequenceOf(mesh.positions,mesh.positions.length,finite)
+      && numericSequenceOf(mesh.indices,mesh.indices.length,i=>Number.isSafeInteger(i)&&Number(i)>=0&&Number(i)<mesh.positions.length/3)
   }
   if(job.kind==='displayMesh'){
     const v=value as DisplayMesh,m=v.mesh

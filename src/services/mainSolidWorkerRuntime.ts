@@ -1,3 +1,4 @@
+import {solidPartialAnnularPreview} from './solidPartialAnnularPreview'
 import {inspectProfileIntersections} from './geometry/profileIntersections'
 import {measureSolidDistance} from './solidDistance'
 import {inspectSelfIntersection} from './solidSelfIntersection'
@@ -89,6 +90,7 @@ async function execute(job:MainSolidJob):Promise<MainSolidResults[keyof MainSoli
     case 'profileIntersections':return inspectProfileIntersections(job.loops,job.options)
     case 'profilePrepare':return prepareSolidProfile(job.document,job.ids,job.tolerance)
     case 'profileEdit':return applySolidProfileEdit(job.document,job.options)
+    case 'partialAnnularPreview':return solidPartialAnnularPreview(job.body,job.edge,job.radius)
     case 'bodyEdit':return applySolidBodyEdit(job.document,job.options)
     case 'revolve':return applySolidRevolve(job.document,job.options)
     case 'extrusion':return applyDirectExtrusionProfile(job.document,job.options)
