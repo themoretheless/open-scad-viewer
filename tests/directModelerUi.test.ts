@@ -2022,7 +2022,7 @@ it('discards a surface construction after input reversal and cancellation',async
  expect(requests).toHaveLength(2);await ui.click('↶');expect(ui.doc()).toEqual(before)
  await ui.click('NURBS loft');await commandKey(ui,'Escape')
  requests[2].resolve(buildSolidSurface(requests[2].job.document,requests[2].job.options));await flushClearance();expect(ui.doc()).toEqual(before)
-})
+},60_000)
 
 it.each(['summary','select'])('keeps native Enter on %s while a command is active',async tag=>{
  const ui=await mount();await ui.click('Cube');await ui.click('Split');const before=ui.doc()

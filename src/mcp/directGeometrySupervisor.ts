@@ -185,6 +185,8 @@ function boundedInteger(
 
 function defaultWorkerFactory(_workerEpoch: number): Worker {
   return new Worker(new URL('./directGeometry.worker.mjs', import.meta.url), {
+    // The bootstrap owns its loader; do not inherit a second --import tsx realm.
+    execArgv: [],
     // Geometry source never needs host credentials or configuration. An empty
     // environment keeps accidental dependency reads from inheriting secrets.
     env: {},

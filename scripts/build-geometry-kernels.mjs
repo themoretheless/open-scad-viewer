@@ -1,3 +1,4 @@
+import {createHash} from 'node:crypto'
 import {spawnSync} from 'node:child_process'
 import {mkdirSync,rmSync} from 'node:fs'
 import {fileURLToPath} from 'node:url'
@@ -22,6 +23,7 @@ mkdirSync(publicWasm,{recursive:true})
 for(const file of ['kernel.js','kernel.d.ts','kernel_bg.wasm.d.ts'])rmSync(resolve(output,file),{force:true})
 const built=resolve(cargoTarget,'wasm32-unknown-unknown/release/geometry_wasm.wasm')
 const wasm=optimizeWasm(built)
+console.log(`geometry-kernels artifact: sha256=${createHash('sha256').update(wasm).digest('hex')} bytes=${wasm.byteLength}`)
 // Skip WebAssembly.Module compilation, brotli quality 11 and base85 encoding
 // when the optimized wasm is byte-identical to the last packaged run.
 packGeometryKernel(wasm,output,publicWasm)

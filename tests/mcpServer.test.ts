@@ -219,11 +219,14 @@ describe('OpenSCAD MCP server', () => {
       mimeType: 'text/x-openscad',
     })])
 
-    const capabilities = await request('resources/read', {
-      uri: 'openscad://capabilities',
-    }) as { contents: Array<{ text: string }> }
-    const capabilitiesJson = JSON.parse(capabilities.contents[0].text) as Record<string, unknown>
-    expect(capabilitiesJson).toMatchObject({
+    // The product keeps its 250 ms cold-start admission budget. Poll the
+    // resource until the asynchronous provider is ready before asserting it.
+    await expect.poll(async () => {
+      const capabilities = await request('resources/read', {
+        uri: 'openscad://capabilities',
+      }) as { contents: Array<{ text: string }> }
+      return JSON.parse(capabilities.contents[0].text) as Record<string, unknown>
+    }, { timeout: 10_000 }).toMatchObject({
       protocol_versions: expect.arrayContaining(['2026-07-28', '2025-11-25']),
       geometry_engines: {
         source_directed_routing: true,

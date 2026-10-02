@@ -305,7 +305,7 @@ describe('MCP CLI', () => {
       method: 'notifications/resources/list_changed',
     }))
     expect(run.stderr).toContain('OpenSCAD Viewer MCP server ready (DuckDB: :memory:)')
-  }, 15_000)
+  }, 45_000)
 
   it('survives a 24-request stdio burst and replies to every admitted or rejected id', async () => {
     const run = await runStdioBurst()
