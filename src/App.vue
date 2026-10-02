@@ -105,6 +105,7 @@ import {
 import type { BrowserWorkspacePersistence, WorkspaceRetryResult } from './services/workspacePersistence'
 import { encodeWorkspaceShare } from './services/workspaceShare'
 import { WebGPURenderer } from './services/webgpuRenderer'
+import { customizeTokens, normalizeHex } from './services/themeCustomization'
 import {
   assertThemeCatalog,
   resolveTheme,
@@ -140,6 +141,7 @@ const props = defineProps<{
 const L: Record<Language, Record<string, string>> = {
   ru: {
     title: 'OpenSCAD Viewer',
+    settings: 'Настройки', customBase: 'Основной цвет', customAccent: 'Акцентный цвет', customReset: 'Сбросить цвета',
     render: 'Собрать', auto: 'Авто', examples: 'Примеры', functionReference: 'Справочник функций',
     basic: 'Примитивы', csg: 'Настоящий CSG', house: 'Дом с модулями', tower: 'Параметрическая башня',
     open: 'Открыть', save: 'Сохранить', share: 'Поделиться',
@@ -197,6 +199,7 @@ const L: Record<Language, Record<string, string>> = {
   },
   en: {
     title: 'OpenSCAD Viewer',
+    settings: 'Settings', customBase: 'Base color', customAccent: 'Accent color', customReset: 'Reset colors',
     render: 'Render', auto: 'Auto', examples: 'Examples', functionReference: 'Function reference',
     basic: 'Primitives', csg: 'Real CSG', house: 'Modular house', tower: 'Parametric tower',
     open: 'Open', save: 'Save', share: 'Share',
@@ -261,6 +264,25 @@ const preVersionedTheme = storageGetEnum<ThemeSelection>('scad-theme-selection',
 const themeSelection = ref(storageGetEnum<ThemeSelection>('scad-theme-v1', THEME_SELECTIONS, preVersionedTheme))
 const themeMediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
 const systemPrefersDark = ref(themeMediaQuery.matches)
+const customAccent = ref<string | null>(normalizeHex(storageGet('scad-accent-v1')))
+const customBase = ref<string | null>(normalizeHex(storageGet('scad-base-v1')))
+const effectiveTokens = computed(() => resolveTheme(themeSelection.value, systemPrefersDark.value).tokens)
+function setCustomColor(kind: 'accent' | 'base', event: Event) {
+  const value = normalizeHex((event.target as HTMLInputElement).value)
+  if (kind === 'accent') customAccent.value = value
+  else customBase.value = value
+  applyPreferences()
+}
+function effectiveCanvasColor() {
+  const theme = resolveTheme(themeSelection.value, systemPrefersDark.value)
+  const tokens = { ...theme.tokens, ...customizeTokens(theme.tokens, { accent: customAccent.value, base: customBase.value }) }
+  return themeCanvasColor({ ...theme, tokens })
+}
+function resetCustomColors() {
+  customAccent.value = null
+  customBase.value = null
+  applyPreferences()
+}
 const isDark = computed(() => resolveTheme(themeSelection.value, systemPrefersDark.value).scheme === 'dark')
 const workspaceDocument = ref<WorkspaceDocumentSnapshot>(props.initialWorkspace)
 const code = ref(props.initialWorkspace.source)
@@ -1107,7 +1129,7 @@ async function initializeViewportRenderer() {
   void nextRenderer.setMatcapTexture(matcapId.value).catch(() => {})
   void nextRenderer.setEnvMap(envId.value).catch(() => {})
   nextRenderer.setShadowsEnabled(shadowsEnabled.value)
-  nextRenderer.setBackgroundColor(themeCanvasColor(resolveTheme(themeSelection.value, systemPrefersDark.value)))
+  nextRenderer.setBackgroundColor(effectiveCanvasColor())
   // Applied after the app-theme background so a theme backgroundColor wins.
   nextRenderer.setTheme(renderThemeId.value)
   nextRenderer.setSelectionMode(selectionMode.value)
@@ -1247,7 +1269,7 @@ async function recoverRenderer(
     void instance.setMatcapTexture(matcapId.value).catch(() => {})
     void instance.setEnvMap(envId.value).catch(() => {})
     instance.setShadowsEnabled(shadowsEnabled.value)
-    instance.setBackgroundColor(themeCanvasColor(resolveTheme(themeSelection.value, systemPrefersDark.value)))
+    instance.setBackgroundColor(effectiveCanvasColor())
     instance.setTheme(renderThemeId.value)
     instance.setSelectionMode(selectionMode.value)
     instance.setGridVisible(gridVisible.value)
@@ -1784,10 +1806,15 @@ function applyPreferences() {
   document.documentElement.dataset.themePreset = themeSelection.value
   document.documentElement.lang = lang.value
   document.documentElement.style.colorScheme = theme.scheme
-  for (const [token, value] of Object.entries(theme.tokens)) {
+  const tokens = { ...theme.tokens, ...customizeTokens(theme.tokens, { accent: customAccent.value, base: customBase.value }) }
+  for (const [token, value] of Object.entries(tokens)) {
     document.documentElement.style.setProperty(token, value)
   }
-  renderer?.setBackgroundColor(themeCanvasColor(theme))
+  renderer?.setBackgroundColor(effectiveCanvasColor())
+  if (customAccent.value) storageSet('scad-accent-v1', customAccent.value)
+  else storageSet('scad-accent-v1', '')
+  if (customBase.value) storageSet('scad-base-v1', customBase.value)
+  else storageSet('scad-base-v1', '')
   // Re-apply the render theme so its backgroundColor (when set) stays authoritative.
   renderer?.setTheme(renderThemeId.value)
   storageSet('scad-theme-v1', themeSelection.value)
@@ -2662,17 +2689,14 @@ function sanitizeFileName(name: string) { return (name.replace(/[^\w.() -]+/g, '
   <div class="app" @dragover.prevent @drop.prevent="handleDrop" @pointerdown.capture="closeMenusOutside">
     <nav class="topbar" aria-label="Application" :inert="functionReferenceOpen">
       <div class="topbar-left">
-        <svg class="logo" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true">
+        <svg class="logo" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round" aria-hidden="true">
           <path d="M12 3 3 8v8l9 5 9-5V8z"/><path d="M3 8l9 5 9-5M12 13v8"/>
         </svg>
-        <span class="brand">{{ t('title') }}</span>
-        <span class="topbar-divider" aria-hidden="true" />
         <details class="menu file-menu">
           <summary class="file-chip" :title="t('fileMenu')">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6"/></svg>
             <span class="file-chip-name">{{ fileName }}</span>
             <span v-if="workspaceConflict || workspacePersistenceStatus !== 'saved'" class="file-chip-dot" :class="workspaceConflict ? 'error' : workspacePersistenceStatus" aria-hidden="true" />
-            <svg class="chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+            <svg class="chevron" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
           </summary>
           <div class="menu-list" @click="closeMenus">
             <button type="button" :title="t('openFile')" @click="triggerOpen">{{ t('open') }}</button>
@@ -2697,17 +2721,6 @@ function sanitizeFileName(name: string) { return (name.replace(/[^\w.() -]+/g, '
           @click="openWorkspaceMode(mode)"
         >{{ workspaceModeLabel(mode, lang) }}</button>
       </div>
-      <button
-        class="icon-btn source-toggle"
-        type="button"
-        :class="{ active: editorOpen }"
-        :aria-pressed="editorOpen"
-        :aria-label="lang === 'ru' ? 'Исходный код' : 'Source'"
-        :title="lang === 'ru' ? 'Исходный код' : 'Source'"
-        @click="editorOpen = !editorOpen"
-      >
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M8 6 3 12l5 6M16 6l5 6-5 6"/></svg>
-      </button>
       <div class="topbar-right">
         <div v-if="workspaceConflict" class="persistence-conflict" role="alert">
           <span>⚠ {{ t('storageConflict') }}</span>
@@ -2722,43 +2735,53 @@ function sanitizeFileName(name: string) { return (name.replace(/[^\w.() -]+/g, '
           :title="storageFailureDetail || t('retrySave')"
           @click="retryWorkspacePersistence"
         >⚠ {{ t('unsavedDraft') }}</button>
-        <button class="icon-btn command-btn" type="button" :title="t('commandHelp')" aria-keyshortcuts="Control+K Meta+K" @click="openCommandPalette">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-          <span>{{ t('commands') }}</span> <kbd>Ctrl K</kbd>
+        <button
+          class="icon-btn source-toggle"
+          type="button"
+          :class="{ active: editorOpen }"
+          :aria-pressed="editorOpen"
+          :aria-label="lang === 'ru' ? 'Исходный код' : 'Source'"
+          :title="lang === 'ru' ? 'Исходный код' : 'Source'"
+          @click="editorOpen = !editorOpen"
+        >
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 6 3 12l5 6M16 6l5 6-5 6"/></svg>
+        </button>
+        <button class="icon-btn command-btn" type="button" :title="t('commandHelp')" :aria-label="t('commands')" aria-keyshortcuts="Control+K Meta+K" @click="openCommandPalette">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+          <span>{{ t('commandHelp') }}</span> <kbd>Ctrl K</kbd>
         </button>
         <button class="btn topbar-action" type="button" :title="t('exportTitle')" @click="openExportDialog">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v12M6 9l6 6 6-6"/><path d="M4 19h16"/></svg>
           <span>{{ t('export') }}</span>
         </button>
-        <button class="btn topbar-action share-action" type="button" :title="t('shareFile')" @click="shareSource">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 13.5 6.8 4M15.4 6.5l-6.8 4"/></svg>
-          <span>{{ t('share') }}</span>
-        </button>
-        <button
-          class="icon-btn"
-          type="button"
-          :title="t('shortcuts')"
-          aria-keyshortcuts="?"
-          aria-haspopup="dialog"
-          :aria-expanded="shortcutHelpOpen"
-          @click="shortcutHelpOpen = true"
-        >?</button>
-        <button class="icon-btn lang-btn" type="button" :aria-label="t('language')" @click="toggleLang">
-          {{ lang === 'ru' ? 'RU' : 'EN' }}
-        </button>
-        <label class="theme-picker">
-          <span class="sr-only">{{ t('theme') }}</span>
-          <select v-model="themeSelection" :aria-label="t('theme')" @change="applyPreferences">
-            <option value="system">{{ t('systemTheme') }}</option>
-            <option v-for="theme in THEME_CATALOG" :key="theme.id" :value="theme.id">
-              {{ theme.name[lang] }}
-            </option>
-          </select>
-        </label>
-        <button class="icon-btn" type="button" :aria-label="isDark ? t('lightTheme') : t('darkTheme')" :aria-pressed="isDark" @click="toggleTheme">
-          <svg v-if="isDark" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
-          <svg v-else width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
-        </button>
+        <details class="menu settings-menu">
+          <summary class="icon-btn" :title="t('settings')" :aria-label="t('settings')">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="5" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="12" cy="19" r="1.7"/></svg>
+          </summary>
+          <div class="menu-list menu-right">
+            <div class="menu-row" @click.stop>
+              <span>{{ t('theme') }}</span>
+              <select v-model="themeSelection" :aria-label="t('theme')" @change="applyPreferences">
+                <option value="system">{{ t('systemTheme') }}</option>
+                <option v-for="theme in THEME_CATALOG" :key="theme.id" :value="theme.id">{{ theme.name[lang] }}</option>
+              </select>
+            </div>
+            <label class="menu-row" @click.stop>
+              <span>{{ t('customBase') }}</span>
+              <input type="color" :value="customBase ?? effectiveTokens['--bg']" :aria-label="t('customBase')" @input="setCustomColor('base', $event)">
+            </label>
+            <label class="menu-row" @click.stop>
+              <span>{{ t('customAccent') }}</span>
+              <input type="color" :value="customAccent ?? effectiveTokens['--accent']" :aria-label="t('customAccent')" @input="setCustomColor('accent', $event)">
+            </label>
+            <button v-if="customAccent || customBase" type="button" @click.stop="resetCustomColors">{{ t('customReset') }}</button>
+            <button type="button" :aria-label="t('language')" @click="toggleLang">
+              <span>{{ t('language') }}</span><kbd>{{ lang === 'ru' ? 'RU' : 'EN' }}</kbd>
+            </button>
+            <button type="button" aria-keyshortcuts="?" aria-haspopup="dialog" @click="closeMenus(); shortcutHelpOpen = true">
+              <span>{{ t('shortcuts') }}</span><kbd>?</kbd>
+            </button>
+          </div>
+        </details>
       </div>
     </nav>
 
@@ -2816,17 +2839,8 @@ function sanitizeFileName(name: string) { return (name.replace(/[^\w.() -]+/g, '
           </button>
           <button v-if="rendering" class="btn" type="button" @click="cancelGeometryBuild()">{{ t('cancelBuild') }}</button>
           <label class="auto-check"><input v-model="autoRender" type="checkbox"> {{ t('auto') }}</label>
-          <button
-            class="btn"
-            type="button"
-            :disabled="solidBuilding"
-            :title="lang === 'ru' ? 'Собрать точные тела (NURBS) и открыть в Solid' : 'Build exact NURBS solids and open them in Solid'"
-            @click="buildSolidFromSource()"
-          >{{ solidBuilding ? '…' : (lang === 'ru' ? 'В Solid' : 'To Solid') }}</button>
           <button v-if="solidBuilding" class="btn" type="button" @click="cancelSolidBuild()">{{ lang === 'ru' ? 'Отмена' : 'Cancel' }}</button>
           <span class="toolbar-spacer" aria-hidden="true" />
-          <button class="btn" type="button" @click="exampleGalleryOpen = true">{{ t('examples') }}</button>
-          <button class="btn" type="button" @click="mechanicalGeneratorOpen = true">{{ t('generators') }}</button>
           <button
             ref="functionReferenceButton"
             class="icon-btn"
@@ -2845,6 +2859,10 @@ function sanitizeFileName(name: string) { return (name.replace(/[^\w.() -]+/g, '
               <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>
             </summary>
             <div class="menu-list menu-right" @click="closeMenus">
+              <button type="button" :disabled="solidBuilding" :title="lang === 'ru' ? 'Собрать точные тела (NURBS) и открыть в Solid' : 'Build exact NURBS solids and open them in Solid'" @click="buildSolidFromSource()">{{ solidBuilding ? '…' : (lang === 'ru' ? 'В Solid' : 'To Solid') }}</button>
+              <button type="button" @click="exampleGalleryOpen = true">{{ t('examples') }}</button>
+              <button type="button" @click="mechanicalGeneratorOpen = true">{{ t('generators') }}</button>
+              <span class="menu-sep" aria-hidden="true" />
               <button type="button" aria-keyshortcuts="Alt+Shift+F" @click="formatEditor">{{ t('format') }} <kbd>Alt Shift F</kbd></button>
               <button type="button" @click="openEditorFind(false)">{{ t('find') }}</button>
               <button type="button" @click="openEditorFind(true)">{{ t('replace') }}</button>
@@ -2971,6 +2989,7 @@ function sanitizeFileName(name: string) { return (name.replace(/[^\w.() -]+/g, '
             :title="canPreviousView ? `${t('previousView')} · [` : t('noPreviousView')"
             @click="previousView"
           ><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg></button>
+          <span class="vt-sep" aria-hidden="true" />
           <button class="view-btn icon-only" type="button" :aria-pressed="projection === 'orthographic'" :aria-label="projection === 'perspective' ? t('perspective') : t('orthographic')" :title="`${projection === 'perspective' ? t('perspective') : t('orthographic')} → ${projection === 'perspective' ? t('orthographic') : t('perspective')}`" @click="toggleProjection">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path v-if="projection === 'perspective'" d="M4 20L9 4h6l5 16zM6.5 12h11M5 16h14"/><path v-else d="M4 7l8-4 8 4-8 4zM4 7v10l8 4 8-4V7M12 11v10"/></svg>
           </button>
@@ -3005,9 +3024,7 @@ function sanitizeFileName(name: string) { return (name.replace(/[^\w.() -]+/g, '
             :disabled="!sectionAvailable && !sectionEnabled"
             @click="scanPanelOpen = !scanPanelOpen"
           ><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7l8-4 8 4-8 4z"/><path d="M4 7v10l8 4 8-4V7"/><path d="M2 12h20" stroke-dasharray="3 2"/></svg><i v-if="sectionEnabled" class="scan-active-dot" aria-hidden="true" /></button>
-          <button ref="dockToggleRef" class="view-btn icon-only" type="button" :aria-label="t('sidebar')" :aria-pressed="dockOpen" :aria-expanded="dockOpen" aria-controls="cad-sidebar" @click="dockOpen = !dockOpen">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M15 4v16"/></svg>
-          </button>
+          <span class="vt-sep" aria-hidden="true" />
           <div class="display-modes" role="group" :aria-label="t('display')">
             <button class="view-btn icon-only" type="button" :aria-pressed="displayMode === 'shaded'" :aria-label="t('shaded')" :title="t('shaded')" @click="setDisplayMode('shaded')">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7l8-4 8 4-8 4z" fill="currentColor" fill-opacity="0.35"/><path d="M4 7v10l8 4 8-4V7M12 11v10"/></svg>
@@ -3031,6 +3048,10 @@ function sanitizeFileName(name: string) { return (name.replace(/[^\w.() -]+/g, '
               <option value="bottom">{{ t('bottom') }}</option>
             </select>
           </label>
+          <span class="vt-sep" aria-hidden="true" />
+          <button ref="dockToggleRef" class="view-btn icon-only" type="button" :aria-label="t('sidebar')" :aria-pressed="dockOpen" :aria-expanded="dockOpen" aria-controls="cad-sidebar" @click="dockOpen = !dockOpen">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M15 4v16"/></svg>
+          </button>
         </div>
 
         <ScanPlanePanel
@@ -3220,7 +3241,6 @@ function sanitizeFileName(name: string) { return (name.replace(/[^\w.() -]+/g, '
         </div>
         <div v-if="rendering" class="rendering-badge" role="status"><span class="spinner" />{{ t('compiling') }} · {{ t(renderingQuality) }}</div>
         <div v-else-if="stale" class="stale-badge">{{ t('stale') }}</div>
-        <div class="canvas-hint" :class="{ 'with-dock': dockOpen }">{{ t('hint') }}</div>
       </section>
     </main>
 
@@ -3229,6 +3249,7 @@ function sanitizeFileName(name: string) { return (name.replace(/[^\w.() -]+/g, '
       <span class="status-item kernel-badge">Manifold</span>
       <span v-if="currentBackendQuality.transparency === 'object-sorted-alpha'" class="status-item">{{ t('transparencySorted') }}</span>
       <span v-if="!directModelerOpen && !meshModelerOpen" class="status-item" role="status">{{ persistenceLabel }}</span>
+      <span v-if="!directModelerOpen && !meshModelerOpen" class="status-item status-hint">{{ t('hint') }}</span>
     </footer>
 
     <div v-if="exportDialogOpen" class="dialog-backdrop" @click.self="exportDialogOpen = false">
@@ -3315,41 +3336,46 @@ function sanitizeFileName(name: string) { return (name.replace(/[^\w.() -]+/g, '
 
 <style>
 :root {
-  --bg: #111214;
-  --surface: #16171a;
-  --surface-raised: #1f2024;
-  --border: #2c2e33;
-  --text: #e7e5df;
-  --text-dim: #a9a69e;
-  --accent: #f0b35a;
-  --accent-strong: #94601a;
-  --hover: #26282d;
-  --danger: #f08a7e;
-  --warning: #f0b35a;
-  --canvas-bg: #1a1b1f;
-  --focus: #ffd08a;
-  --topbar-h: 52px;
-  --font-ui: "IBM Plex Sans", ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --bg: #1e1d1b;
+  --surface: #262523;
+  --surface-raised: #32302d;
+  --border: #76726a;
+  --hairline: #383530;
+  --text: #ece9e4;
+  --text-dim: #a6a199;
+  --accent: #e29a5a;
+  --accent-strong: #a0511d;
+  --hover: #2f2d2a;
+  --danger: #ff8d84;
+  --warning: #e6b24e;
+  --canvas-bg: #2d2b28;
+  --focus: #f0b98a;
+  --topbar-h: 40px;
+  --statusbar-h: 24px;
+  --dock-w: 320px;
+  --font-ui: "Inter", ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --font-mono: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
-  --radius: 8px;
+  --radius: 6px;
 }
 
 [data-theme="light"] {
-  --bg: #f4f1ea;
-  --surface: #fbfaf7;
-  --surface-raised: #efebe2;
-  --border: #d5cfc2;
-  --text: #1f1c18;
-  --text-dim: #5e574d;
-  --accent: #8a5200;
-  --accent-strong: #6e4100;
-  --hover: #ebe6db;
+  --bg: #f6f4f1;
+  --surface: #ffffff;
+  --surface-raised: #ebe8e3;
+  --border: #8a857c;
+  --hairline: #e3dfd9;
+  --text: #1d1b18;
+  --text-dim: #5d5850;
+  --accent: #a5521a;
+  --accent-strong: #8a4310;
+  --hover: #eeebe6;
   --danger: #b3261e;
   --warning: #8a5b00;
-  --canvas-bg: #e9e4da;
-  --focus: #6e4100;
+  --canvas-bg: #e4e0da;
+  --focus: #8a4310;
 }
 
+@media (max-width: 800px) { :root { --topbar-h: 64px; } }
 *, *::before, *::after { box-sizing: border-box; }
 html, body, #app { width: 100%; height: 100%; margin: 0; }
 body {
@@ -3357,7 +3383,8 @@ body {
   background: var(--bg);
   color: var(--text);
   font-family: var(--font-ui);
-  font-size: 13px;
+  font-size: 12px;
+  -webkit-font-smoothing: antialiased;
 }
 button, select, textarea, input { font: inherit; }
 button, select { color: inherit; }
@@ -3395,104 +3422,100 @@ button, select { color: inherit; }
 <style scoped>
 .app { display: flex; flex-direction: column; min-height: 100vh; height: 100dvh; background: var(--bg); }
 
-/* Top bar */
+/* Top bar: three quiet zones — file, mode, tools. Nothing else competes with the viewport. */
 .topbar {
   z-index: 10; height: var(--topbar-h); display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 12px;
-  padding: 0 12px 0 14px; background: var(--surface); border-bottom: 1px solid var(--border); flex-shrink: 0;
+  padding: 0 8px 0 12px; background: var(--surface); border-bottom: 1px solid var(--hairline); flex-shrink: 0;
 }
-.topbar-left, .topbar-right { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.topbar-left, .topbar-right { display: flex; align-items: center; gap: 4px; min-width: 0; }
 .topbar-right { justify-content: flex-end; }
-.logo { color: var(--accent); flex-shrink: 0; }
-.brand { font-weight: 600; font-size: 14px; letter-spacing: -0.01em; white-space: nowrap; }
-.topbar-divider { width: 1px; height: 20px; background: var(--border); margin-inline: 4px; }
-.kernel-badge { font-family: var(--font-mono); }
+.logo { color: var(--text-dim); flex-shrink: 0; margin-right: 6px; }
 
 .icon-btn, .btn, .view-btn {
-  min-height: 36px; border: 1px solid var(--border); border-radius: var(--radius); background: transparent;
-  color: var(--text); cursor: pointer; transition: background .12s, border-color .12s;
+  min-height: 28px; border: 0; border-radius: var(--radius); background: transparent;
+  color: var(--text); cursor: pointer; transition: background .1s, color .1s;
   display: inline-flex; align-items: center; justify-content: center; gap: 6px;
 }
-.icon-btn { min-width: 36px; padding: 0 7px; color: var(--text-dim); }
+.icon-btn { min-width: 28px; padding: 0 6px; color: var(--text-dim); }
 .icon-btn:hover, .btn:hover, .view-btn:hover { background: var(--hover); color: var(--text); }
 .icon-btn:focus-visible, .btn:focus-visible, .view-btn:focus-visible, .select:focus-visible, summary:focus-visible,
 .view-select:focus-visible, .splitter:focus-visible, .gpu-canvas:focus-visible, .code:focus-visible, .dock-rail button:focus-visible,
 .selection-modes button:focus-visible, .format-card:focus-within, .mode-switch button:focus-visible {
-  outline: 2px solid var(--focus); outline-offset: 2px;
+  outline: 2px solid var(--focus); outline-offset: 1px;
 }
-.btn { padding: 0 10px; font-size: 13px; font-weight: 500; white-space: nowrap; }
-.btn:disabled, .icon-btn:disabled { opacity: .5; cursor: default; }
-.btn-primary { background: var(--accent); border-color: var(--accent); color: var(--bg); font-weight: 600; }
-.btn-primary:hover { background: var(--accent-strong); border-color: var(--accent-strong); color: #fff; }
+.btn { padding: 0 10px; font-size: 12px; font-weight: 500; white-space: nowrap; background: var(--surface-raised); }
+.btn:disabled, .icon-btn:disabled { opacity: .45; cursor: default; }
+.btn-primary { background: var(--accent-strong); color: #fff; font-weight: 600; }
+.btn-primary:hover { background: color-mix(in srgb, var(--accent-strong) 82%, #fff); color: #fff; }
 .btn-primary:disabled { cursor: progress; }
-.topbar-action span { display: inline; }
-.command-btn { min-width: 300px; background: var(--surface-raised); justify-content: flex-start; padding-inline: 12px; color: var(--text-dim); font-weight: 400; }
+.command-btn { min-width: 200px; background: var(--bg); justify-content: flex-start; padding-inline: 10px; color: var(--text-dim); font-weight: 400; }
 .command-btn span { flex: 1; text-align: left; }
 .command-btn kbd, .menu-list kbd, .status-hint kbd {
-  padding: 1px 5px; border: 1px solid var(--border); border-radius: 4px; color: var(--text-dim);
-  font: 11px var(--font-mono); white-space: nowrap;
+  padding: 0 5px; border: 1px solid var(--hairline); border-radius: 4px; color: var(--text-dim);
+  font: 10.5px var(--font-mono); white-space: nowrap;
 }
-.lang-btn { font-size: 12px; font-weight: 600; }
-.theme-picker select {
-  max-width: 100px; height: 30px; padding: 0 7px; color: inherit; background: transparent;
-  border: 1px solid var(--border); border-radius: var(--radius); font-size: 12px;
-}
+.source-toggle.active { color: var(--accent); background: color-mix(in srgb, var(--accent) 14%, transparent); }
 
 /* Menus (details/summary) */
 .menu { position: relative; }
 .menu > summary { list-style: none; cursor: pointer; }
 .menu > summary::-webkit-details-marker { display: none; }
 .menu-list {
-  position: absolute; z-index: 20; top: calc(100% + 6px); left: 0; min-width: 220px; display: flex; flex-direction: column; gap: 2px;
-  padding: 6px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface);
-  box-shadow: 0 16px 44px rgba(0,0,0,.28);
+  position: absolute; z-index: 20; top: calc(100% + 4px); left: 0; min-width: 200px; display: flex; flex-direction: column; gap: 1px;
+  padding: 4px; border: 1px solid var(--hairline); border-radius: 8px; background: var(--surface);
+  box-shadow: 0 12px 36px rgba(0,0,0,.35);
 }
 .menu-list.menu-right { left: auto; right: 0; }
-.more-menu { margin-left: auto; }
-.menu-list button {
-  display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 32px; padding: 0 10px;
-  border: 0; border-radius: 6px; background: transparent; color: var(--text); cursor: pointer; text-align: left; font-size: 13px; white-space: nowrap;
+.menu-list button, .menu-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 28px; padding: 0 8px;
+  border: 0; border-radius: 5px; background: transparent; color: var(--text); text-align: left; font-size: 12px; white-space: nowrap;
 }
+.menu-list button { cursor: pointer; }
+.menu-row { color: var(--text-dim); }
+.menu-row input[type="color"] { width: 28px; height: 22px; padding: 0; border: 1px solid var(--hairline); border-radius: 5px; background: none; cursor: pointer; }
+.menu-row select { height: 24px; padding: 0 4px; border: 1px solid var(--hairline); border-radius: 5px; background: var(--bg); color: var(--text); font-size: 12px; }
 .menu-list button:hover, .menu-list button:focus-visible { background: var(--hover); outline: none; }
-.menu-list button:disabled { opacity: .45; cursor: default; }
-.menu-status { padding: 8px 10px 4px; border-top: 1px solid var(--border); margin-top: 4px; color: var(--text-dim); font-size: 12px; }
+.menu-list button:disabled { opacity: .4; cursor: default; }
+.menu-sep { height: 1px; margin: 3px 4px; background: var(--hairline); }
+.menu-status { padding: 6px 8px 3px; border-top: 1px solid var(--hairline); margin-top: 3px; color: var(--text-dim); font-size: 11px; }
 .file-chip {
-  display: inline-flex; align-items: center; gap: 8px; height: 30px; padding: 0 10px; border-radius: var(--radius);
-  border: 1px solid transparent; color: var(--text); max-width: 320px;
+  display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 8px; border-radius: var(--radius);
+  color: var(--text); max-width: 280px;
 }
-.file-chip:hover, .menu[open] > .file-chip { background: var(--hover); border-color: var(--border); }
+.file-chip:hover, .menu[open] > .file-chip { background: var(--hover); }
 .file-chip svg { color: var(--text-dim); flex-shrink: 0; }
-.file-chip-name { font-family: var(--font-mono); font-size: 12.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.file-chip-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--warning); flex-shrink: 0; }
+.file-chip-name { font-size: 12px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.file-chip-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--warning); flex-shrink: 0; }
 .file-chip-dot.error { background: var(--danger); }
-.persistence-status { border: 0; background: transparent; color: var(--text-dim); font-size: 12px; white-space: nowrap; }
+.persistence-status { border: 0; background: transparent; color: var(--text-dim); font-size: 11px; white-space: nowrap; }
 .persistence-error { color: var(--danger); cursor: pointer; }
 .persistence-error:hover { text-decoration: underline; }
-.persistence-conflict { display: flex; align-items: center; gap: 5px; color: var(--danger); font-size: 12px; }
+.persistence-conflict { display: flex; align-items: center; gap: 5px; color: var(--danger); font-size: 11px; }
 .persistence-conflict button {
-  border: 1px solid var(--border); border-radius: 6px; background: var(--surface-raised);
+  border: 0; border-radius: 5px; background: var(--surface-raised);
   color: var(--text); padding: 3px 6px; cursor: pointer;
 }
 
-/* Mode switch */
-.mode-switch { display: inline-flex; gap: 2px; padding: 3px; background: var(--surface-raised); border: 1px solid var(--border); border-radius: 9px; justify-self: center; }
+/* Mode switch: flat text tabs */
+.mode-switch { display: inline-flex; gap: 2px; justify-self: center; }
 .mode-switch button {
-  min-width: 64px; height: 30px; padding: 0 14px; border: 0; border-radius: 6px; background: transparent;
+  height: 28px; padding: 0 12px; border: 0; border-radius: var(--radius); background: transparent;
   color: var(--text-dim); font-weight: 500; cursor: pointer;
 }
 .mode-switch button:hover { color: var(--text); background: var(--hover); }
-.mode-switch button.active { background: var(--hover); color: var(--text); box-shadow: inset 0 -2px 0 var(--accent); font-weight: 600; }
+.mode-switch button.active { background: var(--surface-raised); color: var(--text); }
 
 /* Layout */
-.no-gpu { position: absolute; z-index: 8; inset: 0; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 14px; color: var(--danger); background: var(--canvas-bg); font-size: 1rem; padding: 40px; text-align: center; }
+.no-gpu { position: absolute; z-index: 8; inset: 0; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 14px; color: var(--danger); background: var(--canvas-bg); font-size: 13px; padding: 24px; text-align: center; }
 .main { flex: 1; min-height: 0; display: flex; overflow: hidden; }
 /* With no Code workspace the source opens over the active one. The viewport stays
    laid out off to the side: hiding it would resize its canvas to zero. */
 .main.editor-drawer {
   position: fixed;
-  inset: var(--topbar-h) auto 28px 0;
+  inset: var(--topbar-h) auto var(--statusbar-h) 0;
   z-index: 30;
-  width: min(560px, 82vw);
-  border-right: 1px solid var(--border);
+  width: min(520px, 82vw);
+  border-right: 1px solid var(--hairline);
   box-shadow: 0 0 40px #0006;
 }
 .main.editor-drawer > .splitter { display: none; }
@@ -3504,42 +3527,40 @@ button, select { color: inherit; }
   pointer-events: none;
 }
 .main.editor-drawer .editor-panel { width: 100% !important; max-width: none; }
-.source-toggle.active { color: var(--accent); border-color: var(--accent); }
 .group-editor { display: flex; flex-direction: column; min-height: 0; }
-.group-name-input { flex: 1; min-width: 0; padding: 5px 8px; background: var(--surface-raised); color: var(--text); border: 1px solid var(--border); border-radius: 5px; font: inherit; }
+.group-name-input { flex: 1; min-width: 0; padding: 4px 8px; background: var(--bg); color: var(--text); border: 1px solid var(--hairline); border-radius: 5px; font: inherit; }
 .group-editor .code-area { position: relative; flex: 1; min-height: 0; overflow: auto; }
 .group-editor .code-highlight { position: absolute; inset: 0; margin: 0; pointer-events: none; }
 .group-editor .code-input { position: relative; width: 100%; height: 100%; background: transparent; color: transparent; caret-color: var(--text); border: 0; resize: none; outline: none; }
-.group-hint { margin: 0; padding: 8px 12px; color: var(--text-dim); font-size: 11.5px; line-height: 1.5; border-top: 1px solid var(--border); }
+.group-hint { margin: 0; padding: 8px 12px; color: var(--text-dim); font-size: 11px; line-height: 1.5; border-top: 1px solid var(--hairline); }
 
 .editor-panel {
   min-width: 300px; min-height: 0; max-width: calc(100vw - 320px); display: flex; flex-direction: column;
-  background: var(--bg); border-right: 1px solid var(--border); overflow-x: hidden; overflow-y: auto;
+  background: var(--bg); overflow-x: hidden; overflow-y: auto;
 }
-.toolbar { display: flex; align-items: center; gap: 6px; padding: 6px 8px; border-bottom: 1px solid var(--border); }
-.editor-toolbar { flex-wrap: wrap; min-height: 42px; }
+.toolbar { display: flex; align-items: center; gap: 4px; padding: 5px 8px; border-bottom: 1px solid var(--hairline); background: var(--surface); }
+.editor-toolbar { flex-wrap: wrap; min-height: 38px; }
 .toolbar-spacer, .statusbar-spacer { flex: 1; }
-.play { margin-right: 1px; }
-.auto-check { display: flex; align-items: center; gap: 7px; color: var(--text-dim); font-size: 13px; cursor: pointer; padding-inline: 4px; }
+.auto-check { display: flex; align-items: center; gap: 6px; color: var(--text-dim); font-size: 12px; cursor: pointer; padding-inline: 6px; }
 .auto-check input { accent-color: var(--accent); margin: 0; }
-.toolbar-divider { width: 1px; align-self: stretch; background: var(--border); margin-inline: 2px; }
 .select, .view-select {
-  height: 28px; max-width: 155px; border: 1px solid var(--border); border-radius: 6px;
-  padding: 0 22px 0 8px; background: var(--bg); color: var(--text); font-size: 12px;
+  height: 26px; max-width: 140px; border: 0; border-radius: var(--radius);
+  padding: 0 4px; background: transparent; color: var(--text); font-size: 12px; cursor: pointer;
 }
+.view-select:hover { background: var(--hover); }
 
 /* Find */
 .find-bar {
-  display: flex; flex-wrap: wrap; align-items: center; gap: 5px; padding: 6px 10px;
-  border-bottom: 1px solid var(--border); background: var(--surface); font-size: 12px;
+  display: flex; flex-wrap: wrap; align-items: center; gap: 4px; padding: 5px 8px;
+  border-bottom: 1px solid var(--hairline); background: var(--surface); font-size: 12px;
 }
 .find-bar > input[type="search"], .find-bar > input[type="text"] {
-  min-width: 90px; flex: 1 1 110px; height: 28px; padding: 3px 8px; border: 1px solid var(--border);
-  border-radius: 6px; background: var(--bg); color: var(--text);
+  min-width: 90px; flex: 1 1 110px; height: 26px; padding: 2px 8px; border: 1px solid var(--hairline);
+  border-radius: 5px; background: var(--bg); color: var(--text);
 }
-.find-bar button { min-width: 28px; min-height: 28px; border: 1px solid var(--border); border-radius: 6px; background: transparent; color: var(--text); cursor: pointer; }
+.find-bar button { min-width: 26px; min-height: 26px; border: 0; border-radius: 5px; background: transparent; color: var(--text); cursor: pointer; }
 .find-bar button:hover { background: var(--hover); }
-.find-bar button:disabled { opacity: .45; cursor: default; }
+.find-bar button:disabled { opacity: .4; cursor: default; }
 .find-status { min-width: 42px; color: var(--text-dim); text-align: center; }
 .find-case { display: flex; align-items: center; gap: 4px; color: var(--text-dim); white-space: nowrap; }
 
@@ -3553,7 +3574,7 @@ button, select { color: inherit; }
 }
 .code-editor { position: relative; display: flex; flex: 1; min-height: 120px; overflow: hidden; background: var(--bg); }
 .code-content { position: relative; isolation: isolate; flex: 1; min-width: 0; }
-.code-gutter { flex: 0 0 auto; width: calc(var(--line-number-digits) * 1ch + 38px); overflow: hidden; color: var(--text-dim); opacity: .7; user-select: none; font: 12.5px/1.6 var(--font-mono); }
+.code-gutter { flex: 0 0 auto; width: calc(var(--line-number-digits) * 1ch + 38px); overflow: hidden; color: var(--text-dim); opacity: .6; user-select: none; font: 12.5px/1.6 var(--font-mono); }
 .code-gutter pre { margin: 0; padding: 14px 10px; text-align: right; font: inherit; white-space: pre; }
 .code-editor .code { position: absolute; inset: 0; height: 100%; margin: 0; box-sizing: border-box; }
 .code-highlight { z-index: 0; pointer-events: none; overflow: hidden; }
@@ -3564,10 +3585,11 @@ button, select { color: inherit; }
 .code-highlight :deep(.syntax-keyword) { color: #7ab8f5; }
 .code-highlight :deep(.syntax-string) { color: #9fd0a8; }
 .code-highlight :deep(.syntax-number) { color: #9fd0a8; }
-.code-highlight :deep(.syntax-function) { color: var(--accent); }
+.code-highlight :deep(.syntax-function) { color: #e6c07b; }
 .code-highlight :deep(.syntax-property) { color: var(--warning); }
 .code-highlight :deep(.syntax-operator) { color: var(--text-dim); }
 [data-theme="light"] .code-highlight :deep(.syntax-keyword) { color: #1f6fc2; }
+[data-theme="light"] .code-highlight :deep(.syntax-function) { color: #8a5b00; }
 [data-theme="light"] .code-highlight :deep(.syntax-string), [data-theme="light"] .code-highlight :deep(.syntax-number) { color: #2f7d3f; }
 @media (forced-colors: active) {
   .code-highlight { display: none; }
@@ -3580,82 +3602,86 @@ button, select { color: inherit; }
 .diagnostic-link:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; border-radius: 2px; }
 .error { color: var(--danger); background: color-mix(in srgb, var(--danger) 12%, transparent); border: 1px solid color-mix(in srgb, var(--danger) 35%, transparent); }
 .warning { max-height: 88px; overflow: auto; color: var(--warning); background: color-mix(in srgb, var(--warning) 10%, transparent); border: 1px solid color-mix(in srgb, var(--warning) 28%, transparent); }
-.stats { display: flex; flex-wrap: wrap; align-items: center; gap: 5px 12px; min-height: 34px; padding: 5px 12px; border-top: 1px solid var(--border); color: var(--text-dim); font-size: 12px; }
-.stats strong { color: var(--text); font-weight: 600; font-variant-numeric: tabular-nums; }
+.stats { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; min-height: 28px; padding: 4px 12px; border-top: 1px solid var(--hairline); background: var(--surface); color: var(--text-dim); font-size: 11px; }
+.stats strong { color: var(--text); font-weight: 500; font-variant-numeric: tabular-nums; }
 .status { margin-left: auto; display: flex; align-items: center; gap: 6px; color: #9fd0a8; }
-.status::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+.status::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
 .status.busy { color: var(--accent); }
 .status.stale { color: var(--warning); }
 .status.failed { color: var(--danger); }
 [data-theme="light"] .status { color: #2f7d3f; }
 
-/* Splitter */
+/* Splitter: a 1px seam that widens into a handle on hover */
 .splitter {
-  position: relative; z-index: 4; width: 6px; flex: 0 0 6px; cursor: col-resize;
-  background: var(--surface); touch-action: none;
+  position: relative; z-index: 4; width: 1px; flex: 0 0 1px; cursor: col-resize;
+  background: var(--hairline); touch-action: none;
 }
-.splitter::before { content: ''; position: absolute; inset: 0 -9px; }
-.splitter span { position: absolute; width: 2px; height: 34px; inset: 50% auto auto 50%; transform: translate(-50%, -50%); border-radius: 2px; background: var(--border); }
+.splitter::before { content: ''; position: absolute; inset: 0 -4px; }
+.splitter span { position: absolute; width: 3px; height: 100%; inset: 0 auto auto -1px; background: transparent; transition: background .12s; }
 .splitter:hover span, .splitter:focus-visible span { background: var(--accent); }
 
-/* Viewport */
+/* Viewport: the scene is the interface. Chrome floats over it and stays small. */
 .canvas-panel { flex: 1; min-width: 0; position: relative; overflow: hidden; background: var(--canvas-bg); }
 .gpu-canvas { width: 100%; height: 100%; display: block; touch-action: none; outline: 0; }
 .viewer-toolbar {
-  position: absolute; z-index: 3; top: 12px; left: 50%; transform: translateX(-50%);
-  display: flex; align-items: center; gap: 2px; max-width: calc(100% - 24px); padding: 4px;
-  border: 1px solid var(--border); border-radius: 12px;
-  background: color-mix(in srgb, var(--surface) 86%, transparent); backdrop-filter: blur(6px); color: var(--text);
+  position: absolute; z-index: 3; top: 10px; left: 50%; transform: translateX(-50%);
+  display: flex; align-items: center; gap: 1px; max-width: calc(100% - 24px); padding: 3px;
+  border: 1px solid var(--hairline); border-radius: 8px;
+  background: color-mix(in srgb, var(--surface) 92%, transparent); backdrop-filter: blur(8px); color: var(--text);
+  box-shadow: 0 4px 16px rgba(0,0,0,.18);
 }
-.viewer-toolbar.with-dock { left: calc((100% - 344px) / 2); max-width: calc(100% - 368px); }
-.view-btn { min-height: 32px; padding: 0 11px; border-color: transparent; color: var(--text-dim); font-size: 13px; font-weight: 500; }
+.viewer-toolbar.with-dock { left: calc((100% - var(--dock-w)) / 2); max-width: calc(100% - var(--dock-w) - 24px); }
+.vt-sep { width: 1px; height: 16px; margin-inline: 3px; background: var(--hairline); flex: 0 0 1px; }
+.view-btn { min-height: 28px; padding: 0 9px; color: var(--text-dim); font-size: 12px; font-weight: 500; }
 .view-btn:hover { color: var(--text); }
-.view-btn[aria-pressed="true"], .view-btn.active { background: var(--surface-raised); color: var(--text); }
-.view-btn.icon-only { min-width: 32px; padding-inline: 0; }
+.view-btn[aria-pressed="true"], .view-btn.active { background: color-mix(in srgb, var(--accent) 16%, transparent); color: var(--accent); }
+.view-btn.icon-only { min-width: 28px; padding-inline: 0; }
 .scan-toggle { display: flex; align-items: center; gap: 5px; white-space: nowrap; }
 .scan-active-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--accent); }
-.view-select-label { display: flex; align-items: center; }
-.view-select { max-width: 110px; }
-.display-modes { display: flex; gap: 2px; }
-.view-cube-wrap { position: absolute; z-index: 2; top: 60px; right: 14px; }
-.view-cube-wrap.with-dock { right: 358px; }
+.view-select { max-width: 96px; }
+.display-modes, .view-select-label { display: flex; align-items: center; }
+.view-cube-wrap { position: absolute; z-index: 2; top: 56px; right: 12px; }
+.view-cube-wrap.with-dock { right: calc(var(--dock-w) + 12px); }
+.canvas-panel :deep(.modeling-grid-controls) { padding: 0; }
+.canvas-panel :deep(.modeling-grid-controls summary) { border: 0; background: transparent; color: var(--text-dim); border-radius: var(--radius); padding: 5px 7px; }
+.canvas-panel :deep(.modeling-grid-controls summary:hover) { background: var(--hover); color: var(--text); }
 .selection-modes {
-  position: absolute; z-index: 3; top: 60px; left: 14px; display: flex; flex-direction: column; gap: 2px; padding: 3px;
-  border: 1px solid var(--border); border-radius: 9px; background: color-mix(in srgb, var(--surface) 86%, transparent);
-  color: var(--text); backdrop-filter: blur(5px);
+  position: absolute; z-index: 3; top: 56px; left: 10px; display: flex; flex-direction: column; gap: 1px; padding: 3px;
+  border: 1px solid var(--hairline); border-radius: 8px; background: color-mix(in srgb, var(--surface) 92%, transparent);
+  color: var(--text); backdrop-filter: blur(8px); box-shadow: 0 4px 16px rgba(0,0,0,.18);
 }
 .selection-modes button {
-  min-height: 34px; min-width: 34px; display: flex; align-items: center; justify-content: center; gap: 6px; padding: 0 8px; border: 0;
-  border-radius: 7px; background: transparent; color: var(--text-dim); cursor: pointer; font-size: 12px;
+  min-height: 30px; min-width: 30px; display: flex; align-items: center; justify-content: center; gap: 6px; padding: 0 8px; border: 0;
+  border-radius: 6px; background: transparent; color: var(--text-dim); cursor: pointer; font-size: 12px;
 }
 .selection-modes button > span:not(.mode-point, .mode-face, .mode-body) { display: none; }
 .selection-modes button:hover { background: var(--hover); color: var(--text); }
-.selection-modes button.active { background: var(--surface-raised); color: var(--text); }
+.selection-modes button.active { background: color-mix(in srgb, var(--accent) 16%, transparent); color: var(--accent); }
 .selection-modes kbd { display: none; }
-.mode-point { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+.mode-point { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
 .mode-face { width: 10px; height: 10px; border: 1.5px solid currentColor; background: color-mix(in srgb, currentColor 25%, transparent); transform: skewY(-18deg); }
 .mode-body { width: 10px; height: 10px; border: 1.5px solid currentColor; box-shadow: inset 2px -2px color-mix(in srgb, currentColor 30%, transparent); }
 
-/* Dock */
+/* Dock: a slim right panel, tabs as a rail */
 .cad-dock {
-  position: absolute; z-index: 4; top: 0; right: 0; bottom: 0; width: min(344px, calc(100% - 16px));
-  min-height: 0; display: flex; background: var(--bg); border-left: 1px solid var(--border);
+  position: absolute; z-index: 4; top: 0; right: 0; bottom: 0; width: min(var(--dock-w), calc(100% - 16px));
+  min-height: 0; display: flex; background: var(--surface); border-left: 1px solid var(--hairline);
 }
 .dock-rail {
-  flex: 0 0 46px; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px 0;
-  border-right: 1px solid var(--border);
+  flex: 0 0 40px; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 0;
+  border-right: 1px solid var(--hairline); background: var(--bg);
 }
 .dock-rail button, .dock-close {
-  width: 34px; height: 34px; border: 0; border-radius: var(--radius); background: transparent; color: var(--text-dim); cursor: pointer;
+  width: 30px; height: 30px; border: 0; border-radius: var(--radius); background: transparent; color: var(--text-dim); cursor: pointer;
   display: flex; align-items: center; justify-content: center;
 }
 .dock-rail button:hover, .dock-close:hover { color: var(--text); background: var(--hover); }
-.dock-rail button.active { color: var(--text); background: var(--surface-raised); }
+.dock-rail button.active { color: var(--accent); background: color-mix(in srgb, var(--accent) 14%, transparent); }
 .dock-rail-spacer { flex: 1; }
 .dock-body { flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; }
 .dock-panel { min-height: 0; display: flex; flex: 1; flex-direction: column; overflow: hidden; }
 .dock-panel > :deep(.outliner), .dock-panel > :deep(.inspect-panel) { width: 100%; min-height: 0; flex: 1; border-radius: 0; border-width: 0; }
-.customizer-card { min-height: 0; flex: 1; overflow: auto; background: var(--bg); }
+.customizer-card { min-height: 0; flex: 1; overflow: auto; background: var(--surface); }
 .dock-scroll { min-height: 0; flex: 1; overflow: auto; overscroll-behavior: contain; }
 .dock-scroll :deep(details.svg-panel), .dock-scroll :deep(details.photo-panel), .dock-scroll > .performance-panel { border: 0; border-radius: 0; background: transparent; }
 .dock-scroll :deep(details.svg-panel > summary), .dock-scroll :deep(details.photo-panel > summary), .dock-scroll > .performance-panel > summary { display: none; }
@@ -3664,109 +3690,101 @@ button, select { color: inherit; }
 .dock-scroll > .performance-panel { border-top: 0; }
 .dock-scroll > .performance-panel .performance-content { max-height: none; padding: 12px; }
 .canvas-panel :deep(.main-model-tools) {
-  left: 14px; right: auto; bottom: 34px; max-width: calc(100% - 28px); padding: 6px 8px; border-radius: 12px;
-  background: color-mix(in srgb, var(--surface) 90%, transparent); backdrop-filter: blur(6px);
+  left: 50%; right: auto; transform: translateX(-50%); bottom: 12px; width: max-content; max-width: calc(100% - 24px); padding: 6px 8px; border-radius: 8px;
+  border-color: var(--hairline); background: color-mix(in srgb, var(--surface) 94%, transparent); backdrop-filter: blur(8px);
+  box-shadow: 0 6px 24px rgba(0,0,0,.28);
 }
-.canvas-panel.with-dock :deep(.main-model-tools) { max-width: calc(100% - 372px); }
-
+.canvas-panel.with-dock :deep(.main-model-tools) { left: calc((100% - var(--dock-w)) / 2); max-width: calc(100% - var(--dock-w) - 24px); }
 
 /* HUD and badges */
 .selection-hud {
-  position: absolute; z-index: 3; top: 12px; left: 14px; display: flex; align-items: center; gap: 8px;
-  min-height: 30px; padding: 0 6px 0 10px; border: 1px solid var(--border);
-  border-radius: var(--radius); background: color-mix(in srgb, var(--surface) 86%, transparent); color: var(--text);
-  backdrop-filter: blur(5px); font-size: 12.5px;
+  position: absolute; z-index: 3; bottom: 12px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 6px;
+  min-height: 28px; padding: 0 4px 0 10px; border: 1px solid var(--hairline);
+  border-radius: 8px; background: color-mix(in srgb, var(--surface) 92%, transparent); color: var(--text);
+  backdrop-filter: blur(8px); font-size: 12px; box-shadow: 0 4px 16px rgba(0,0,0,.18);
 }
 .selection-hud > span { display: flex; align-items: center; gap: 6px; }
-.selection-dot { width: 8px; height: 8px; border-radius: 2px; background: var(--accent); }
+.selection-dot { width: 7px; height: 7px; border-radius: 2px; background: var(--accent); }
 .selection-hud button {
-  min-width: 24px; height: 22px; padding: 0 6px; border: 1px solid var(--border);
+  min-width: 22px; height: 22px; padding: 0 6px; border: 0;
   border-radius: 5px; background: transparent; color: var(--text-dim); cursor: pointer;
 }
-.selection-hud button:hover, .selection-hud button[aria-pressed="true"] { background: var(--surface-raised); color: var(--text); }
+.selection-hud button:hover, .selection-hud button[aria-pressed="true"] { background: var(--hover); color: var(--text); }
 .rendering-badge, .stale-badge {
-  position: absolute; z-index: 2; top: 58px; left: 50%; transform: translateX(-50%);
-  display: flex; align-items: center; gap: 7px; padding: 6px 12px; border-radius: 999px;
-  background: color-mix(in srgb, var(--surface) 86%, transparent); color: var(--text); border: 1px solid var(--border);
-  backdrop-filter: blur(5px); font-size: 12px; pointer-events: none;
+  position: absolute; z-index: 2; top: 54px; left: 50%; transform: translateX(-50%);
+  display: flex; align-items: center; gap: 7px; padding: 4px 10px; border-radius: 999px;
+  background: color-mix(in srgb, var(--surface) 92%, transparent); color: var(--text); border: 1px solid var(--hairline);
+  backdrop-filter: blur(8px); font-size: 11px; pointer-events: none;
 }
 .stale-badge { color: var(--warning); }
-.spinner { width: 11px; height: 11px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin .7s linear infinite; }
+.spinner { width: 10px; height: 10px; border: 2px solid var(--hairline); border-top-color: var(--accent); border-radius: 50%; animation: spin .7s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
-.canvas-hint {
-  position: absolute; z-index: 2; bottom: 10px; right: 14px;
-  max-width: calc(100% - 28px); color: var(--text-dim); font-size: 11.5px; text-align: right; pointer-events: none;
-}
-.canvas-hint.with-dock { right: 358px; }
 
-/* Status bar */
+/* Status bar: one quiet line, the control hint lives here instead of over the scene */
 .statusbar {
-  height: 28px; flex-shrink: 0; display: flex; align-items: center; gap: 16px; padding: 0 14px;
-  background: var(--surface); border-top: 1px solid var(--border); color: var(--text-dim); font-size: 11.5px; white-space: nowrap; overflow: hidden;
+  height: var(--statusbar-h); flex-shrink: 0; display: flex; align-items: center; gap: 14px; padding: 0 12px;
+  background: var(--surface); border-top: 1px solid var(--hairline); color: var(--text-dim); font-size: 11px; white-space: nowrap; overflow: hidden;
 }
 .status-item { display: inline-flex; align-items: center; gap: 6px; }
+.status-hint { margin-left: auto; overflow: hidden; text-overflow: ellipsis; opacity: .8; }
 .status-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--danger); }
-.status-dot.ok { background: #9fd0a8; }
-[data-theme="light"] .status-dot.ok { background: #2f7d3f; }
-.status-hint kbd { font-size: 10.5px; padding: 0 4px; }
+.status-dot.ok { background: var(--accent); }
 
 /* Dialogs */
-.dialog-backdrop { position: fixed; z-index: 40; inset: 0; display: flex; align-items: center; justify-content: center; padding: 20px; background: rgba(0,0,0,.45); }
+.dialog-backdrop { position: fixed; z-index: 40; inset: 0; display: flex; align-items: center; justify-content: center; padding: 20px; background: rgba(0,0,0,.5); }
 .dialog {
-  width: min(620px, 100%); max-height: 100%; overflow: auto; display: flex; flex-direction: column;
-  background: var(--surface); border: 1px solid var(--border); border-radius: 14px; box-shadow: 0 24px 64px rgba(0,0,0,.4);
+  width: min(560px, 100%); max-height: 100%; overflow: auto; display: flex; flex-direction: column;
+  background: var(--surface); border: 1px solid var(--hairline); border-radius: 10px; box-shadow: 0 24px 64px rgba(0,0,0,.5);
 }
-.dialog-header { display: flex; align-items: flex-start; gap: 10px; padding: 18px 20px 14px; border-bottom: 1px solid var(--border); }
+.dialog-header { display: flex; align-items: flex-start; gap: 10px; padding: 16px 18px 12px; border-bottom: 1px solid var(--hairline); }
 .dialog-header > div { flex: 1; }
-.dialog-header h2 { margin: 0; font-size: 17px; font-weight: 600; letter-spacing: -0.01em; }
-.dialog-header p { margin: 2px 0 0; color: var(--text-dim); }
-.format-grid { margin: 0; padding: 18px 20px 8px; border: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
-.format-grid legend { padding: 0; margin-bottom: 8px; color: var(--text-dim); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; }
+.dialog-header h2 { margin: 0; font-size: 14px; font-weight: 600; }
+.dialog-header p { margin: 2px 0 0; color: var(--text-dim); font-size: 11.5px; }
+.format-grid { margin: 0; padding: 16px 18px 6px; border: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+.format-grid legend { padding: 0; margin-bottom: 8px; color: var(--text-dim); font-size: 10.5px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; }
 .format-card {
-  display: flex; flex-direction: column; gap: 3px; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--border);
+  display: flex; flex-direction: column; gap: 2px; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--hairline);
   background: var(--bg); cursor: pointer;
 }
-.format-card.active { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 14%, var(--bg)); }
+.format-card:hover { border-color: var(--border); }
+.format-card.active { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, var(--bg)); }
 .format-card input { position: absolute; opacity: 0; width: 1px; height: 1px; }
 .format-name { font-weight: 600; }
-.format-card small { color: var(--text-dim); font-size: 11.5px; }
-.dialog-note { margin: 6px 20px 14px; padding: 10px 12px; border-radius: var(--radius); background: var(--bg); border: 1px solid var(--border); color: var(--text-dim); font-size: 12.5px; }
+.format-card small { color: var(--text-dim); font-size: 11px; }
+.dialog-note { margin: 6px 18px 14px; padding: 8px 10px; border-radius: var(--radius); background: var(--bg); border: 1px solid var(--hairline); color: var(--text-dim); font-size: 11.5px; }
 .dialog-note.warning { color: var(--warning); }
-.dialog-footer { display: flex; align-items: center; gap: 8px; padding: 14px 20px; border-top: 1px solid var(--border); background: var(--bg); border-radius: 0 0 14px 14px; }
+.dialog-footer { display: flex; align-items: center; gap: 6px; padding: 12px 18px; border-top: 1px solid var(--hairline); background: var(--bg); border-radius: 0 0 10px 10px; }
 .toast {
-  position: fixed; z-index: 50; left: 50%; bottom: 44px; transform: translateX(-50%);
-  padding: 8px 13px; border: 1px solid var(--border); border-radius: var(--radius);
-  background: var(--surface-raised); box-shadow: 0 8px 32px rgba(0,0,0,.28); font-size: 13px;
+  position: fixed; z-index: 50; left: 50%; bottom: 40px; transform: translateX(-50%);
+  padding: 7px 12px; border: 1px solid var(--hairline); border-radius: 8px;
+  background: var(--surface-raised); box-shadow: 0 8px 32px rgba(0,0,0,.35); font-size: 12px;
 }
 
 @media (max-width: 1360px) {
-  .topbar-action.share-action span { display: none; }
+  .command-btn { min-width: 0; }
+  .command-btn span { display: none; }
 }
 
 @media (max-width: 1100px) {
-  .command-btn { min-width: 0; }
-  .command-btn span, .command-btn kbd { display: none; }
-  .topbar-action span { display: none; }
-  .theme-picker { display: none; }
+  .command-btn kbd { display: none; }
 }
 
 @media (max-width: 800px) {
-  .topbar { grid-template-columns: 1fr auto; row-gap: 0; height: auto; min-height: 44px; padding-block: 6px; }
+  .topbar { grid-template-columns: 1fr auto; row-gap: 0; height: auto; min-height: 40px; padding-block: 4px; }
   .mode-switch { grid-column: 1 / -1; justify-self: stretch; }
   .mode-switch button { flex: 1; }
   .main { flex-direction: column; overflow: auto; }
-  .editor-panel { width: 100% !important; min-width: 0; max-width: none; height: 46dvh; flex: 0 0 46dvh; border-right: 0; }
+  .editor-panel { width: 100% !important; min-width: 0; max-width: none; height: 46dvh; flex: 0 0 46dvh; }
   .splitter { display: none; }
-  .canvas-panel { min-height: 46dvh; flex: 1 0 46dvh; border-top: 1px solid var(--border); }
+  .canvas-panel { min-height: 46dvh; flex: 1 0 46dvh; border-top: 1px solid var(--hairline); }
   .viewer-toolbar, .viewer-toolbar.with-dock { left: 8px; right: 8px; max-width: none; transform: none; justify-content: center; flex-wrap: wrap; }
-  .view-cube-wrap { top: 60px; right: 8px; }
+  .view-cube-wrap { top: 56px; right: 8px; }
   .view-cube-wrap.with-dock { display: none; }
-  .selection-modes { top: 60px; left: 8px; }
-  .selection-hud { top: 12px; left: 8px; }
-  .cad-dock { width: min(344px, calc(100% - 8px)); }
-  .canvas-panel :deep(.main-model-tools), .canvas-panel.with-dock :deep(.main-model-tools) { left: 8px; right: 8px; max-width: none; }
-  .canvas-hint, .canvas-hint.with-dock { right: 8px; }
-  .stats { font-size: 11.5px; }
+  .selection-modes { top: 56px; left: 8px; }
+  .selection-hud { left: 8px; transform: none; max-width: calc(100% - 16px); }
+  .cad-dock { width: min(var(--dock-w), calc(100% - 8px)); }
+  .canvas-panel :deep(.main-model-tools), .canvas-panel.with-dock :deep(.main-model-tools) { left: 8px; right: 8px; transform: none; max-width: none; width: auto; }
+  .stats { font-size: 11px; }
   .status { width: 100%; margin-left: 0; }
   .statusbar { gap: 10px; }
   .status-hint { display: none; }
@@ -3774,14 +3792,11 @@ button, select { color: inherit; }
 }
 
 @media (max-width: 480px) {
-  .brand { display: none; }
   .file-chip { max-width: 160px; }
   .select { max-width: 128px; }
   .view-btn { padding-inline: 6px; }
   .view-select { max-width: 78px; }
   .view-cube-wrap { display: none; }
-  .selection-hud { max-width: calc(100% - 16px); }
-  .canvas-hint { white-space: normal; }
 }
 
 @media (prefers-reduced-motion: reduce) {
