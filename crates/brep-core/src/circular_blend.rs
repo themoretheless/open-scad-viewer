@@ -1455,6 +1455,24 @@ mod tests {
                 assert_eq!(result.validate().unwrap().boundary_edge_count, 0);
                 assert_eq!(result.bodies.len(), 1);
                 assert!(result.persistent_naming_complete());
+                assert!(result.1.change_set.validate().is_ok());
+                for (index, vertex) in source.vertices.iter().enumerate() {
+                    let target = result
+                        .vertices
+                        .iter()
+                        .position(|candidate| candidate.point == vertex.point)
+                        .expect("original sharp endpoints must remain authored vertices");
+                    assert_eq!(source.1.vertices[index], result.1.vertices[target]);
+                }
+                assert_eq!(
+                    source
+                        .1
+                        .edges
+                        .iter()
+                        .filter(|id| result.1.edges.contains(id))
+                        .count(),
+                    8
+                );
                 admitted += 1;
             }
         }
