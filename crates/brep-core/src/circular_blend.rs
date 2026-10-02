@@ -1456,6 +1456,17 @@ mod tests {
                 assert_eq!(result.bodies.len(), 1);
                 assert!(result.persistent_naming_complete());
                 assert!(result.1.change_set.validate().is_ok());
+                assert_eq!(source.1.bodies, result.1.bodies);
+                let restored: crate::Model =
+                    value_codec::from_str(&value_codec::to_string(&result).unwrap()).unwrap();
+                restored.validate().unwrap();
+                assert_eq!(restored.1.bodies, source.1.bodies);
+                assert!(restored.persistent_naming_complete());
+                assert!(result.1.change_set.changes.iter().any(|change| change.kind
+                    == crate::ChangeKind::Persisted
+                    && change.topo_kind == crate::TopoKind::Body
+                    && change.parents == source.1.bodies
+                    && change.children == result.1.bodies));
                 for (index, vertex) in source.vertices.iter().enumerate() {
                     let target = result
                         .vertices

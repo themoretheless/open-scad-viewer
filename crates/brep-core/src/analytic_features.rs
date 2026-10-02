@@ -2143,6 +2143,19 @@ pub fn build_partial_annular_preview(model: &Model, edge_index: usize, radius: f
     let local=crate::circular_blend::partial_annular_quarter(outer,inner,height,radius,direction,model.tolerance_mm)?;
     let mut result=place_axial(&local,[first,second],axis,origin)?;
     result.inherit_topology_ids(&[model]);
+    // This explicitly selected edit replaces exactly one source body with
+    // exactly one result body. Preserve its identity independently of the
+    // changed shell signature. Persisted means entity identity, not geometry.
+    if model.bodies.len()!=1 || result.bodies.len()!=1 {
+        return Err(refuse(CODE,"Preview requires one source and one result body"));
+    }
+    let body_id=model.1.bodies[0];
+    result.1.bodies[0]=body_id;
+    result.1.lineage.push(crate::TopologyLineageRecord {
+        operation:"persist".into(), entity_kind:"body".into(),
+        parents:vec![body_id], children:vec![body_id],
+    });
+    result.refresh_change_set(&[model]);
     result.validate()?;
     Ok(result)
 }
