@@ -55,6 +55,7 @@ pub mod face_domain;
 pub mod face_injectivity;
 pub mod self_intersection;
 pub mod shell_distance;
+pub mod material_segment;
 pub mod solid_distance;
 pub mod shell_relation;
 pub mod shell_nesting;
