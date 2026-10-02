@@ -113,3 +113,41 @@ fn json_multispan_section_mapping_retains_the_original_section() {
         }
     }
 }
+
+#[test]
+fn json_loft_accepts_subdivision_certified_monotonic_section_map() {
+    let start = Curve {
+        degree: 1,
+        knots: vec![0., 0., 0.5, 1., 1.],
+        control_points: vec![vec![0., 0., 0.], vec![0.5, 1., 0.], vec![1., 0., 0.]],
+        weights: vec![1., 0.75, 1.],
+        periodic: false,
+    };
+    let mut end = start.clone();
+    for point in &mut end.control_points {
+        point[2] += 2.;
+    }
+    let mapping = json!({"pieces":[{"domain":[0.,1.],"range":[0.,1.],
+        "controlValues":[0.,0.6,0.4,1.],"weights":[1.,1.,1.,1.]}]});
+    let loft = geometry_bridge::dispatch(json!({"op":"surface_natural_loft",
+        "curves":[start.clone(),end],"parameters":[0.,1.],
+        "section_mappings":[mapping.clone(),mapping]}))
+    .unwrap();
+    let surface: Surface = value_codec::from_value(loft).unwrap();
+    // Independently evaluate the authored cubic Bernstein polynomial.
+    for sample in 0..=1000 {
+        let u = sample as f64 / 1000.;
+        let t = 1.8 * u * (1. - u).powi(2) + 1.2 * u * u * (1. - u) + u.powi(3);
+        let expected = start.evaluate(t).unwrap().point;
+        for (v, z) in [(0., 0.), (1., 2.)] {
+            let actual = surface.evaluate(u, v).unwrap().point;
+            let error = (0..3)
+                .map(|axis| {
+                    (actual[axis] - expected[axis] - if axis == 2 { z } else { 0. }).powi(2)
+                })
+                .sum::<f64>()
+                .sqrt();
+            assert!(error <= 1e-6, "u={u}, v={v}, error={error}");
+        }
+    }
+}
