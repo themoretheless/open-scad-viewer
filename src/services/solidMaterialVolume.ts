@@ -2,7 +2,10 @@ import type {NurbsBrep} from './geometry/brep'
 import type {VolumeValidityLimits} from './solidDistance'
 import {callGeometryRust} from './geometry/kernel'
 type Interval=[number,number]
-export interface MaterialOptions {model:NurbsBrep;origin:[number,number,number];direction:[number,number,number];toleranceUv:number;limits:{validity:VolumeValidityLimits;pointCells:number;pointDomainCells:number;segmentCells:number;segmentDomainCells:number}}
+export interface NormalAudit {maxSineSquared:number;maxSpans:number}
+interface NormalEndpoint {face:number;uv:[Interval,Interval];aligned:boolean|null;sineSquaredInterval:Interval|null;normalComponents:[Interval,Interval,Interval]|null;spans:number;reason:string}
+interface NormalEvidence {aligned:boolean|null;spans:number;endpoints:[NormalEndpoint|null,NormalEndpoint|null]}
+export interface MaterialOptions {normalAudit?:NormalAudit;model:NurbsBrep;origin:[number,number,number];direction:[number,number,number];toleranceUv:number;limits:{validity:VolumeValidityLimits;pointCells:number;pointDomainCells:number;segmentCells:number;segmentDomainCells:number}}
 interface Crossing {face:number;uv:[Interval,Interval];parameter:Interval}
 interface Unresolved {face:number;uv:[Interval,Interval];reason:string}
 interface Boundary {contacts:Crossing[];unresolved:Unresolved[];cells:number;domainCells:number;boundaryFree?:boolean}
@@ -10,7 +13,7 @@ interface Seed {inside:boolean|null;cells:number;domainCells:number;attempts:Arr
 interface Validity {proven:boolean;boundaryProven:boolean;exactAgreement:boolean;exactJoins:boolean;trimValid:boolean;selfIntersectionAbsent:boolean;nestingRolesConsistent:boolean|null;orientations:Array<{shell:number;expectedOutward:boolean;outward:boolean|null}>}
 interface Base {sourceModel:NurbsBrep;origin:number[];direction:number[];parameterInterval:Interval;toleranceUv:number;limits:MaterialOptions['limits'];validity:Validity;seed:Seed|null;proven:boolean;reason:string}
 export interface MaterialSegment extends Base {method:'continuous-material-segment';scope:'strict-interior-authored-parametric-segment';segment:Boundary|null}
-export interface MaterialChord extends Base {method:'continuous-material-chord';scope:'material-between-original-transverse-boundary-roots';normalAlignment:'not-qualified';minimumWallThickness:'not-qualified';boundary:Boundary;pointEnclosures:[Interval[],Interval[]]|null;lengthIntervalMm:Interval|null}
+export interface MaterialChord extends Base {method:'continuous-material-chord';scope:'material-between-original-transverse-boundary-roots';normalAlignment:'not-qualified'|'angular-tolerance'|'oblique'|'unresolved';normalAudit?:NormalAudit|null;normalEvidence?:NormalEvidence|null;minimumWallThickness:'not-qualified';boundary:Boundary;pointEnclosures:[Interval[],Interval[]]|null;lengthIntervalMm:Interval|null}
 export type MaterialResult=MaterialSegment|MaterialChord
 export interface MaterialOverlay {line:[[number,number,number],[number,number,number]];marks:Array<{point:[number,number,number];face:number;unresolved:boolean}>;proven:boolean}
 const snapshot=(v:unknown)=>JSON.stringify(v,(_,x)=>x&&typeof x==='object'&&!Array.isArray(x)?Object.fromEntries(Object.keys(x).sort().map(k=>[k,x[k]])):x)
@@ -18,8 +21,9 @@ const interval=(x:unknown):x is Interval=>Array.isArray(x)&&x.length===2&&x.ever
 const work=(x:unknown,max:number)=>typeof x==='number'&&Number.isSafeInteger(x)&&x>=0&&x<=max
 const bool=(x:unknown)=>x===null||typeof x==='boolean'
 export function materialExpectation(options:MaterialOptions,mode:'segment'|'chord') {
- return {mode,source:snapshot(options.model),origin:snapshot(options.origin),direction:snapshot(options.direction),toleranceUv:options.toleranceUv,limits:structuredClone(options.limits),
+ return {mode,normalAudit:structuredClone(options.normalAudit??null),source:snapshot(options.model),origin:snapshot(options.origin),direction:snapshot(options.direction),toleranceUv:options.toleranceUv,limits:structuredClone(options.limits),
   shells:options.model.shells.map((_,i)=>!options.model.bodies.some(b=>b.innerShells.includes(i))),
+  normalSpans:options.model.faces.map(({surface:s})=>[s.knotsU.slice(s.degreeU,s.controlPoints.length+1),s.knotsV.slice(s.degreeV,s.controlPoints[0].length+1)]),
   domains:options.model.faces.map(({surface:s})=>[[s.knotsU[s.degreeU],s.knotsU[s.controlPoints.length]],[s.knotsV[s.degreeV],s.knotsV[s.controlPoints[0].length]]] as [Interval,Interval])}
 }
 export function validMaterial(e:ReturnType<typeof materialExpectation>,value:unknown):value is MaterialResult {
@@ -59,7 +63,7 @@ export function validMaterial(e:ReturnType<typeof materialExpectation>,value:unk
   if(seed.inside!==true)return !r.proven&&b===null&&r.reason===(seed.inside===false?'seed-outside':'seed-unresolved')
   return b!==null&&r.proven===b.boundaryFree&&r.reason===(b.boundaryFree?'interior-segment':b.contacts.length?'boundary-contact':'segment-unresolved')
  }
- if(r.normalAlignment!=='not-qualified'||r.minimumWallThickness!=='not-qualified'||b===null)return false
+ if(r.minimumWallThickness!=='not-qualified'||b===null||!validNormals(e,r))return false
  let reason='volume-unproven'
  if(v.proven){
   if(!seed)return false
@@ -76,3 +80,33 @@ export function validMaterial(e:ReturnType<typeof materialExpectation>,value:unk
 }
 export const inspectMaterialSegment=(options:MaterialOptions):MaterialSegment=>callGeometryRust('cad_material_segment',options)
 export const inspectMaterialChord=(options:MaterialOptions):MaterialChord=>callGeometryRust('cad_material_chord',options)
+
+function validNormals(e:ReturnType<typeof materialExpectation>,r:MaterialChord):boolean {
+ const config=e.normalAudit
+ if(snapshot(r.normalAudit??null)!==snapshot(config))return false
+ const n=r.normalEvidence
+ if(config===null)return r.normalAlignment==='not-qualified'&&n==null
+ if(!Number.isFinite(config.maxSineSquared)||config.maxSineSquared<0||config.maxSineSquared>=1||!Number.isSafeInteger(config.maxSpans)||config.maxSpans<1||config.maxSpans>100000)return false
+ if(!n||!bool(n.aligned)||!work(n.spans,config.maxSpans)||!Array.isArray(n.endpoints)||n.endpoints.length!==2)return false
+ let spans=0
+ for(const [i,a] of n.endpoints.entries()){
+  if(a===null){if(r.proven&&spans<config.maxSpans)return false;continue}
+  const c=r.boundary.contacts[i]
+  if(!r.proven||!c||a.face!==c.face||snapshot(a.uv)!==snapshot(c.uv)||!bool(a.aligned)||!work(a.spans,config.maxSpans-spans))return false
+  const available=config.maxSpans-spans
+  const required=e.normalSpans[a.face].reduce((total,knots,axis)=>total*knots.slice(0,-1).filter((lo,j)=>lo<knots[j+1]&&a.uv[axis][0]<=knots[j+1]&&a.uv[axis][1]>=lo).length,1)
+  if(required<1||a.spans!==Math.min(required,available)||(a.reason==='span-limit')!==(required>available))return false
+  spans+=a.spans
+  const d=a.sineSquaredInterval,h=a.normalComponents
+  if(h!==null&&(!Array.isArray(h)||h.length!==3||!h.every(interval)))return false
+  if(d!==null&&(!interval(d)||d[0]<0||d[1]>1||h===null||h.every(x=>x[0]<=0&&x[1]>=0)))return false
+  if(a.reason==='angular-tolerance'){if(a.aligned!==true||d===null||d[1]>config.maxSineSquared)return false}
+  else if(a.reason==='oblique'){if(a.aligned!==false||d===null||d[0]<=config.maxSineSquared)return false}
+  else if(a.reason==='angular-unresolved'){if(a.aligned!==null||d===null||d[0]>config.maxSineSquared||d[1]<=config.maxSineSquared)return false}
+  else if(a.reason==='normal-unresolved'){if(a.aligned!==null||d!==null||h===null)return false}
+  else if(a.reason==='span-limit'){if(a.aligned!==null||d!==null||h!==null)return false}
+  else return false
+ }
+ const aligned=n.endpoints.some(a=>a?.aligned===false)?false:n.endpoints.every(a=>a?.aligned===true)?true:null
+ return spans===n.spans&&n.aligned===aligned&&r.normalAlignment===(aligned===true?'angular-tolerance':aligned===false?'oblique':'unresolved')
+}

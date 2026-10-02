@@ -16,7 +16,38 @@ pub fn inspect(v: Value) -> Result<Value> {
         segment_cells: field(&config, "segmentCells")?,
         segment_domain_cells: field(&config, "segmentDomainCells")?,
     };
-    let r = brep_core::material_chord::inspect(&model, origin, direction, tolerance_uv, limits)?;
+    let normal_config: Option<Value> = field(&v, "normalAudit")?;
+    let (r, normal_evidence, normal_alignment) = if let Some(audit) = normal_config.as_ref() {
+        let sine: f64 = field(audit, "maxSineSquared")?;
+        let spans: usize = field(audit, "maxSpans")?;
+        let nr = brep_core::material_chord::inspect_with_normals(
+            &model,
+            origin,
+            direction,
+            tolerance_uv,
+            limits,
+            sine,
+            spans,
+        )?;
+        let evidence = json!({"aligned":nr.aligned,"spans":nr.spans,
+            "endpoints":nr.endpoints.iter().enumerate().map(|(i,r)|r.as_ref().map(|r|json!({
+                "face":nr.chord.boundary.contacts[i].face,"uv":nr.chord.boundary.contacts[i].uv,
+                "aligned":r.aligned,"sineSquaredInterval":r.sine_squared_interval,
+                "normalComponents":r.normal_components,"spans":r.spans,"reason":r.reason
+            }))).collect::<Vec<_>>()});
+        let status = match nr.aligned {
+            Some(true) => "angular-tolerance",
+            Some(false) => "oblique",
+            None => "unresolved",
+        };
+        (nr.chord, Some(evidence), status)
+    } else {
+        (
+            brep_core::material_chord::inspect(&model, origin, direction, tolerance_uv, limits)?,
+            None,
+            "not-qualified",
+        )
+    };
     let seed = r.seed.as_ref().map(|s| {
         json!({"inside":s.parity,
             "cells":s.cells,"domainCells":s.domain_cells,
@@ -29,7 +60,7 @@ pub fn inspect(v: Value) -> Result<Value> {
     let validity = &r.validity;
     Ok(json!({"method":"continuous-material-chord",
         "scope":"material-between-original-transverse-boundary-roots",
-        "normalAlignment":"not-qualified","minimumWallThickness":"not-qualified",
+        "normalAlignment":normal_alignment,"normalAudit":normal_config,"normalEvidence":normal_evidence,"minimumWallThickness":"not-qualified",
         "parameterInterval":[0.,1.],"origin":origin,"direction":direction,
         "sourceModel":model,"limits":config,"toleranceUv":tolerance_uv,
         "proven":r.proven,"reason":r.reason,"seed":seed,
@@ -82,5 +113,26 @@ mod tests {
                 assert_eq!(r["pointEnclosures"], Value::Null);
             }
         }
+    }
+    #[test]
+    fn explicit_normal_audit_binds_tolerance_endpoints_and_shared_work() {
+        let cube = brep_core::cuboid([0.; 3], [10.; 3]).unwrap();
+        let mut input =
+            super::super::cad_material_segment::tests::request(&cube, [-2., 5., 5.], [14., 0., 0.]);
+        input["op"] = json!("cad_material_chord");
+        input["normalAudit"] = json!({"maxSineSquared":1e-6,"maxSpans":2});
+        let r = crate::dispatch(input.clone()).unwrap();
+        assert_eq!(r["proven"], json!(true));
+        assert_eq!(r["normalAlignment"], json!("angular-tolerance"));
+        assert_eq!(r["normalAudit"], input["normalAudit"]);
+        assert_eq!(r["normalEvidence"]["aligned"], json!(true));
+        assert_eq!(r["normalEvidence"]["spans"], json!(2));
+        input["normalAudit"]["maxSpans"] = json!(1);
+        let r = crate::dispatch(input.clone()).unwrap();
+        assert_eq!(r["proven"], json!(true));
+        assert_eq!(r["normalAlignment"], json!("unresolved"));
+        assert_eq!(r["normalEvidence"]["endpoints"][1], Value::Null);
+        input["normalAudit"]["maxSpans"] = json!(0);
+        assert!(crate::dispatch(input).is_err());
     }
 }

@@ -38,6 +38,7 @@ pub mod surface_contact;
 pub mod surface_contact_search;
 pub mod radial_bounds;
 pub mod ray_surface;
+pub mod normal_alignment;
 pub mod curve_surface_agreement;
 mod curve_surface_composition;
 mod periodic_chart;

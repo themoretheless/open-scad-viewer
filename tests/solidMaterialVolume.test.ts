@@ -59,3 +59,60 @@ it.each([0,1])('cancels obsolete material job %i and rejects stale or forged rep
   await rejected
  }finally{client.dispose()}
 })
+
+it('binds native normal evidence to request tolerance, original endpoints and shared budget',()=>{
+ const normal=JSON.parse(readFileSync(new URL('../docs/qualification/cad-roadmap-2026-09-28/p1-development-2026-10-02/material-normals/contract.json',import.meta.url),'utf8')).cases
+ for(const c of normal){
+  const e=materialExpectation(c.request,'chord')
+  expect(validMaterial(e,c.result),c.name).toBe(true)
+  expect(mainSolidResult(mainSolidExpectation({kind:'materialChord',options:c.request}),c.result),c.name).toBe(true)
+  const changed=structuredClone(c.request);changed.normalAudit.maxSineSquared*=2
+  expect(validMaterial(materialExpectation(changed,'chord'),c.result)).toBe(false)
+  for(const mutate of [
+   (r:any)=>r.normalAudit.maxSpans++,
+   (r:any)=>r.normalEvidence.spans++,
+   (r:any)=>r.normalEvidence.endpoints[0].spans=0,
+   (r:any)=>r.normalEvidence.endpoints[0]=null,
+   (r:any)=>r.normalEvidence.endpoints[0].face++,
+   (r:any)=>r.normalEvidence.endpoints[0].uv[0][0]+=1e-5,
+   (r:any)=>r.normalEvidence.aligned=!r.normalEvidence.aligned,
+   (r:any)=>r.normalAlignment='not-qualified',
+  ]){const r=structuredClone(c.result);mutate(r);expect(validMaterial(e,r),c.name).toBe(false)}
+ }
+ expect(normal.map((c:any)=>c.result.normalEvidence.aligned)).toEqual([true,false,null,false,true])
+})
+
+it('rejects normal evidence with inconsistent classification, bounds or coverage',()=>{
+ const normal=JSON.parse(readFileSync(new URL('../docs/qualification/cad-roadmap-2026-09-28/p1-development-2026-10-02/material-normals/contract.json',import.meta.url),'utf8')).cases
+ const c=normal[0],e=materialExpectation(c.request,'chord')
+ for(const mutate of [
+  (r:any)=>r.normalEvidence.endpoints[0].sineSquaredInterval=[0,1],
+  (r:any)=>r.normalEvidence.endpoints[0].normalComponents=null,
+  (r:any)=>r.normalEvidence.endpoints[0].normalComponents=[[0,0],[0,0],[0,0]],
+  (r:any)=>r.normalEvidence.endpoints[0].normalComponents[0]=[Infinity,Infinity],
+  (r:any)=>r.normalEvidence.endpoints[0].reason='span-limit',
+  (r:any)=>r.normalEvidence.endpoints[0].reason='oblique',
+  (r:any)=>r.normalEvidence.endpoints[0].reason='unknown',
+  (r:any)=>r.normalEvidence.endpoints[1]=null,
+ ]){const r=structuredClone(c.result);mutate(r);expect(validMaterial(e,r)).toBe(false)}
+})
+it('cancels a normal audit when its budget changes and rejects the old configuration',async()=>{
+ const normal=JSON.parse(readFileSync(new URL('../docs/qualification/cad-roadmap-2026-09-28/p1-development-2026-10-02/material-normals/contract.json',import.meta.url),'utf8')).cases
+ const {MainSolidWorkerClient}=await import('../src/services/mainSolidWorkerClient')
+ const ports:any[]=[]
+ const client=new MainSolidWorkerClient(()=>{const p:any={onmessage:null,onerror:null,onmessageerror:null,terminated:false,postMessage(m:any){this.request=m},terminate(){this.terminated=true}};ports.push(p);return p})
+ try{
+  const first=client.run({kind:'materialChord',options:normal[0].request})
+  const cancelled=expect(first).rejects.toMatchObject({name:'AbortError'}),stale=ports[0].onmessage,old=ports[0].request
+  const second=client.run({kind:'materialChord',options:normal[2].request})
+  const rejected=expect(second).rejects.toThrow()
+  await cancelled;expect(ports[0].terminated).toBe(true)
+  stale({data:{version:1,id:old.id,kind:'materialChord',ok:true,result:normal[0].result}})
+  ports[1].onmessage({data:{version:1,id:ports[1].request.id,kind:'materialChord',ok:true,result:normal[0].result}})
+  await rejected
+  const third=client.run({kind:'materialChord',options:normal[2].request})
+  const fresh=ports.at(-1);expect(ports[1].terminated).toBe(true)
+  fresh.onmessage({data:{version:1,id:fresh.request.id,kind:'materialChord',ok:true,result:normal[2].result}})
+  await expect(third).resolves.toMatchObject({proven:true,normalAlignment:'unresolved'})
+ }finally{client.dispose()}
+})

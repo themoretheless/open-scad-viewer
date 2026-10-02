@@ -27,5 +27,24 @@ fn main() {
     let result=geometry_bridge::dispatch(exhausted.clone()).unwrap();
     assert_eq!(result["proven"],json!(false));
     cases.push(json!({"name":"chord-work-limit","request":exhausted,"result":result}));
+    if std::env::args().nth(2).as_deref()==Some("normal") {
+        let mut normal_cases=Vec::new();
+        for (name,index,direction,spans,expected) in [
+            ("cube-normal",1,[14.,0.,0.],2,Some(true)),
+            ("cube-oblique",1,[14.,4.,0.],2,Some(false)),
+            ("cube-normal-budget",1,[14.,0.,0.],1,None),
+            ("annular-oblique",4,[-24.,0.,0.],100,Some(false)),
+            ("annular-radial",4,[-14.4,-19.2,0.],100,Some(true)),
+        ] {
+            let mut input=cases[index]["request"].clone();
+            input["direction"]=json!(direction);
+            if name=="annular-radial" {input["origin"]=json!([15.,20.,3.]);}
+            input["normalAudit"]=json!({"maxSineSquared":1e-6,"maxSpans":spans});
+            let result=geometry_bridge::dispatch(input.clone()).unwrap();
+            assert_eq!(result["normalEvidence"]["aligned"],json!(expected));
+            normal_cases.push(json!({"name":name,"request":input,"result":result}));
+        }
+        cases=normal_cases;
+    }
     std::fs::write(path,value_codec::to_string(&json!({"cases":cases})).unwrap()).unwrap();
 }

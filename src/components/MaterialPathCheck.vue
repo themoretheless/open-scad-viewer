@@ -7,7 +7,7 @@ import {evaluateNurbsSurface} from '../services/nurbsSurface'
 const props=defineProps<{active:boolean;ru:boolean;model?:NurbsBrep}>()
 const emit=defineEmits<{state:[active:boolean,overlay:MaterialOverlay|null]}>()
 const label=(ru:string,en:string)=>props.ru?ru:en
-const enabled=ref(false),mode=ref<'chord'|'segment'>('chord'),origin=ref([-2,5,5]),direction=ref([14,0,0]),extended=ref(false)
+const enabled=ref(false),mode=ref<'chord'|'segment'>('chord'),origin=ref([-2,5,5]),direction=ref([14,0,0]),extended=ref(false),normalAudit=ref(true)
 const pending=ref(false),error=ref(''),result=shallowRef<MaterialResult|null>(null)
 const request=shallowRef<{mode:'chord'|'segment';options:MaterialOptions}|null>(null),worker=createSolidPreviewWorker()
 watch(()=>props.model,model=>{
@@ -17,7 +17,7 @@ watch(()=>props.model,model=>{
  origin.value=[b[0][0]-pad,(b[1][0]+b[1][1])/2,(b[2][0]+b[2][1])/2]
  direction.value=[b[0][1]-b[0][0]+2*pad,0,0]
 },{immediate:true})
-watch(()=>[props.active,props.model,enabled.value,mode.value,extended.value,...origin.value,...direction.value],()=>{
+watch(()=>[props.active,props.model,enabled.value,mode.value,extended.value,normalAudit.value,...origin.value,...direction.value],()=>{
  request.value=null;result.value=null;error.value='';pending.value=false;worker.cancel()
 },{flush:'sync'})
 function run(){
@@ -26,7 +26,7 @@ function run(){
   error.value=label('Введите конечные координаты и ненулевое смещение XYZ.','Enter finite coordinates and a nonzero XYZ displacement.');return
  }
  const budget=extended.value?1000000:100000,domains=extended.value?8000000:1000000
- request.value={mode:mode.value,options:{model:props.model,origin:[...origin.value] as [number,number,number],direction:[...direction.value] as [number,number,number],toleranceUv:1e-7,
+ request.value={mode:mode.value,options:{...(mode.value==='chord'&&normalAudit.value?{normalAudit:{maxSineSquared:1e-6,maxSpans:extended.value?10000:1000}}:{}),model:props.model,origin:[...origin.value] as [number,number,number],direction:[...direction.value] as [number,number,number],toleranceUv:1e-7,
   limits:{pointCells:budget,pointDomainCells:domains,segmentCells:budget,segmentDomainCells:domains,validity:{exactWork:1000000,trimPairs:10000,trimCells:100000,trimDomainCells:1000000,spans:4096,
    facePairs:10000,faceCells:extended.value?1000000:150000,faceDomainCells:extended.value?8000000:1500000,faceCellsPerPair:1024,faceDomainCellsPerPair:100000,
    nestingPairs:1000,nestingCells:budget,nestingDomainCells:domains,orientationCells:budget,orientationDomainCells:domains,orientationSpans:10000}}}}
@@ -76,6 +76,7 @@ onUnmounted(()=>{worker.dispose();emit('state',false,null)})
   <label>{{label('Проверка','Check')}}<select v-model="mode" :aria-label="label('Режим проверки материала','Material check mode')"><option value="chord">{{label('Между гранями','Between faces')}}</option><option value="segment">{{label('Весь отрезок внутри','Entire segment inside')}}</option></select></label>
   <small>{{mode==='chord'?label('Начните снаружи тела и проведите линию через одну стенку.','Start outside the body and pass the line through one wall.'):label('Укажите начало внутри материала и смещение до конца отрезка.','Set a start inside material and displacement to the segment end.')}}</small>
   <div v-for="(values,name) in {origin,direction}" :key="name" class="coordinates"><span>{{name==='origin'?label('Начало, мм','Start, mm'):label('Смещение, мм','Displacement, mm')}}</span><label v-for="(axis,k) in ['X','Y','Z']" :key="axis">{{axis}}<input v-model.number="values[k]" type="number" step="any" :aria-label="label(name==='origin'?'Начало ':'Смещение ',name==='origin'?'Start ':'Displacement ')+axis" :aria-invalid="!Number.isFinite(values[k]) || name==='direction' && direction.every(x=>x===0)" aria-describedby="material-path-error"></label></div>
+  <label v-if="mode==='chord'"><input v-model="normalAudit" type="checkbox">{{label('Проверить направление к граням','Check direction against faces')}}</label>
   <label><input v-model="extended" type="checkbox">{{label('Расширенный расчёт','Extended calculation')}}</label>
   <button type="button" @click="run">{{result||error?label('Повторить проверку','Retry check'):label('Проверить','Check')}} · Enter</button>
   <p v-if="pending" role="status">{{label('Проверяю материал…','Checking material…')}}</p>
@@ -83,10 +84,11 @@ onUnmounted(()=>{worker.dispose();emit('state',false,null)})
   <template v-if="result">
    <p role="status" :data-material-proven="result.proven">{{message}}</p>
    <output v-if="result.method==='continuous-material-chord'&&result.lengthIntervalMm" data-material-length>{{result.lengthIntervalMm.map(x=>Number(x.toPrecision(12))).join(' … ')}} mm</output>
+   <p v-if="result.method==='continuous-material-chord'&&result.normalAlignment!=='not-qualified'" data-material-normal role="status">{{result.normalAlignment==='angular-tolerance'?label('Направление перпендикулярно обеим граням с угловым допуском около 0,0573°.','Direction is normal to both faces within an angular tolerance of approximately 0.0573°.'):result.normalAlignment==='oblique'?label('Линия наклонена к грани. Измените направление для измерения поперёк стенки.','The line is oblique to a face. Change direction to measure across the wall.'):label('Направление не подтверждено. Измените линию или расширьте расчёт.','Direction is unproven. Change the line or extend the calculation.')}}</p>
    <small v-if="boundary">{{label('Пересечения','Crossings')}}: {{boundary.contacts.length}} · {{label('Непроверенные участки','Unchecked regions')}}: {{boundary.unresolved.length}}</small>
    <ul v-if="issues.length"><li v-for="(c,i) in issues.slice(0,16)" :key="i">{{label('Грань','Face')}} {{c.face+1}} · {{c.unresolved?label('не проверена','unchecked'):label('пересечение','crossing')}}</li></ul>
   </template>
-  <small>{{label('Длина вдоль заданной линии. Для минимальной толщины нужна отдельная проверка направления и всей стенки.','Length along the specified line. Minimum thickness requires a separate check of direction and the entire wall.')}}</small>
+  <small>{{label('Длина вдоль заданной линии. Минимальная толщина требует проверки всей стенки.','Length along the specified line. Minimum thickness requires checking the entire wall.')}}</small>
   <button type="button" @click="enabled=false">{{label('Закрыть','Close')}} · Esc</button>
  </fieldset>
 </template>

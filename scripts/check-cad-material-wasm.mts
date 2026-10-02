@@ -6,13 +6,30 @@ import {inspectMaterialChord,inspectMaterialSegment,materialExpectation,validMat
 import {mainSolidExpectation,mainSolidResult} from '../src/services/mainSolidProtocol'
 import {createMainSolidWorkerHandler} from '../src/services/mainSolidWorkerRuntime'
 const directory=resolve(process.argv[2]);mkdirSync(directory,{recursive:true})
-const fixtures=JSON.parse(readFileSync('docs/qualification/cad-roadmap-2026-09-28/p1-development-2026-10-02/material-segment/contract.json','utf8')).cases
+const fixtures=JSON.parse(readFileSync(process.argv[3]??'docs/qualification/cad-roadmap-2026-09-28/p1-development-2026-10-02/material-segment/contract.json','utf8')).cases
 const cases=[]
 for(const c of fixtures){
  const before=JSON.stringify(c.request),mode=c.request.op==='cad_material_chord'?'chord':'segment'
  const start=performance.now(),result=mode==='chord'?inspectMaterialChord(c.request):inspectMaterialSegment(c.request)
  assert(validMaterial(materialExpectation(c.request,mode),result),c.name)
  assert.equal(result.proven,c.result.proven,c.name);assert.equal(result.reason,c.result.reason,c.name)
+ if(result.method==='continuous-material-chord'){
+  assert.equal(result.normalAlignment,c.result.normalAlignment,c.name)
+  assert.deepEqual(result.normalEvidence?.aligned??null,c.result.normalEvidence?.aligned??null,c.name)
+  if(result.normalEvidence){
+   assert.equal(result.normalEvidence.spans,c.result.normalEvidence.spans,c.name)
+   for(const [i,a] of result.normalEvidence.endpoints.entries()){
+    const native=c.result.normalEvidence.endpoints[i]
+    if(a===null){assert.equal(native,null,c.name);continue}
+    assert.equal(a.reason,native.reason,c.name);assert.equal(a.face,native.face,c.name)
+    assert.deepEqual(a.uv,native.uv,c.name)
+    for(const [actual,reference] of [[a.sineSquaredInterval,native.sineSquaredInterval],...(a.normalComponents??[]).map((x,k)=>[x,native.normalComponents[k]])]){
+     if(actual===null){assert.equal(reference,null,c.name);continue}
+     assert(actual[0]<=reference[1]&&actual[1]>=reference[0],c.name)
+    }
+   }
+  }
+ }
  if(result.method==='continuous-material-chord'&&result.proven){
   const d=result.lengthIntervalMm!,native=c.result.lengthIntervalMm
   assert(d[0]<=native[1]&&d[1]>=native[0]);assert(d[1]-d[0]<1e-5)
@@ -38,6 +55,6 @@ for(const [i,c] of fixtures.entries()){
  assert.equal(reply.result.proven,c.result.proven,c.name)
 }
 const wasm=readFileSync('public/wasm/geometry-kernel.wasm')
-const report={schema:'cad-continuous-material-wasm/1',passed:true,wasmSha256:createHash('sha256').update(wasm).digest('hex'),wasmBytes:wasm.length,cases,workerHandlerCases:messages,scope:'Authored interior segments and original-root material chords; normal alignment and global minimum thickness remain unqualified.'}
+const report={schema:'cad-continuous-material-wasm/1',passed:true,wasmSha256:createHash('sha256').update(wasm).digest('hex'),wasmBytes:wasm.length,cases,workerHandlerCases:messages,scope:'Authored interior segments, original-root material chords and requested endpoint normal alignment; global minimum thickness remains unqualified.'}
 writeFileSync(resolve(directory,'report.json'),JSON.stringify(report,null,2)+'\n')
 console.log(JSON.stringify({passed:true,cases:cases.length,workerHandlerCases:messages.length,wasmSha256:report.wasmSha256}))
