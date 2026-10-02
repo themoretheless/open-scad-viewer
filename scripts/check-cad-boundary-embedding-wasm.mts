@@ -24,6 +24,17 @@ for(const name of ['complete','exact-work-exhausted','face-work-exhausted']){
  if(name==='complete'){
   assert.equal(result.visitedPairs,351);assert.equal(result.unresolvedPairCount,0)
   assert.equal(result.pairs.filter(p=>p.sharedBoundary?.kind==='exact-hull'&&p.sharedBoundary.joinedProof?.proven).length,2)
+  const expected=selfIntersectionExpectation(model,toleranceUv,contactLimits,spans,audit)
+  const changed=structuredClone(model);changed.vertices[0].point[0]+=0.001
+  assert.equal(validSelfIntersection(selfIntersectionExpectation(changed,toleranceUv,contactLimits,spans,audit),result),false,'stale geometry')
+  assert.equal(validSelfIntersection(selfIntersectionExpectation(model,toleranceUv,contactLimits,spans,{...audit,exactWork:1}),result),false,'stale audit budget')
+  for(const patch of [{cells:511},{dominanceMarginLower:1e9},{projection:[[1,0,0],[0,1,0]]},{collapsedEnd:1}]){
+   const altered=structuredClone(result)
+   const certificate=altered.pairs.find(p=>p.sharedBoundary?.kind==='exact-hull'&&p.sharedBoundary.joinedProof)?.sharedBoundary
+   assert(certificate?.kind==='exact-hull'&&certificate.joinedProof)
+   Object.assign(certificate.joinedProof,patch)
+   assert.equal(validSelfIntersection(expected,altered),false,'altered joined proof '+JSON.stringify(patch))
+  }
  }else assert(result.pairs.every(p=>p.sharedBoundary?.kind!=='exact-hull'))
  assert.equal(JSON.stringify(model),before)
  const request={op:'cad_self_intersection',model,toleranceUv,...contactLimits,maxSpans:spans,boundaryAudit:audit}

@@ -4141,8 +4141,8 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
           <button v-if="selectedBody.brep" @click="faceContactsOpen=!faceContactsOpen" :aria-pressed="faceContactsOpen">{{ label('Проверить контакты граней','Inspect face contacts') }}</button>
           <fieldset v-if="faceContactsOpen" aria-label="face-contacts" class="boundary-agreement-panel">
             <legend>{{ label('Контакты B-rep-граней','B-rep face contacts') }}</legend>
-            <label><input v-model="inspectWithinFaces" type="checkbox">{{ label('Проверять внутри граней','Inspect within faces') }}</label>
-            <label v-if="inspectWithinFaces"><input v-model="inspectExactBoundary" type="checkbox">{{ label('Проверять точное совпадение и замыкание границ','Inspect exact boundary agreement and closure') }}</label>
+            <label class="diagnostic-checkbox"><input v-model="inspectWithinFaces" type="checkbox">{{ label('Проверять внутри граней','Inspect within faces') }}</label>
+            <label v-if="inspectWithinFaces" class="diagnostic-checkbox"><input v-model="inspectExactBoundary" type="checkbox">{{ label('Проверять точное совпадение и замыкание границ','Inspect exact boundary agreement and closure') }}</label>
             <label>{{ label('Лимит проверки контактов','Contact inspection limit') }}<input v-model.number="faceContactsBudget" type="number" min="1" max="1000000" step="1" :aria-invalid="faceContactsBudgetInvalid" aria-describedby="face-contacts-error" :aria-label="label('Лимит проверки контактов','Contact inspection limit')"></label>
             <p v-if="faceContactsPending" role="status" aria-label="face-contacts-pending">{{ label('Проверяю контакты…','Inspecting contacts…') }} <button @click="faceContactsOpen=false">Esc</button></p>
             <template v-if="faceContactsResult">
@@ -4242,7 +4242,7 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
 <style scoped>
 .body-diagnostics [role=group][aria-invalid=true],.body-diagnostics input[aria-invalid=true]{outline:2px solid var(--danger,#ff6978);outline-offset:3px;border-radius:4px}
 .edge-distance-panel,.face-distance-panel,.shell-distance-panel{display:grid;gap:8px;min-width:0}.edge-distance-panel output,.face-distance-panel output,.shell-distance-panel output{display:block;overflow-wrap:anywhere}.edge-distance-panel small,.face-distance-panel small,.shell-distance-panel small{display:block}
-.boundary-agreement-panel{display:grid;gap:8px;min-width:0}.boundary-agreement-panel small,.boundary-agreement-panel output{display:block}.boundary-agreement-panel output{overflow-wrap:anywhere}
+.boundary-agreement-panel{display:grid;gap:8px;min-width:0}.boundary-agreement-panel .diagnostic-checkbox{display:flex;align-items:flex-start;gap:6px}.boundary-agreement-panel .diagnostic-checkbox input{width:auto;flex:0 0 auto;margin:2px 0 0}.boundary-agreement-panel small,.boundary-agreement-panel output{display:block}.boundary-agreement-panel output{overflow-wrap:anywhere}
 .body-diagnostics{display:grid;gap:8px;padding:8px 0}.body-diagnostics label{display:grid;gap:4px}.body-diagnostics p{margin:0}.body-diagnostics small{color:var(--text-dim)}
 .restore-loading{position:absolute;inset:0;z-index:100;display:grid;place-items:center;background:var(--bg);color:var(--text-dim)}
 

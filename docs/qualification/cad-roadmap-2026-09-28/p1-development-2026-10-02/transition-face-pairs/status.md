@@ -5,22 +5,31 @@
 For the canonical quarter specimen (20/5/6/1.25), native exact boundary
 embedding and self-intersection absence are proven: 108 exact boundary
 uses, 27 injective faces and all 351 pairs classified. The full native suite
-passes 723 tests with three ignored. Latest joined-chart WASM packaging and
-application checks remain pending. Endpoint G1, thickness, general volume qualification and the
+passes 723 tests with three ignored. Latest joined-chart WASM and application checks pass for this canonical source. Endpoint G1, thickness, general volume qualification and the
 full P0–P3 roadmap remain open; preview Apply remains disabled.
 
 The combined Rust API now accepts explicit boundary audit limits and returns
 source-bound embedding evidence, positive trim winding and joined contact
 proofs. Seven bridge regressions pass, including exact-work exhaustion.
-The frontend protocol and diagnostic option are implemented: 24 focused tests
-and Vue type checking pass. Current packaged-WASM and mouse/keyboard checks
-for this integration remain pending; scripts include those acceptance cases.
+The frontend protocol and diagnostic option are implemented: 25 focused tests
+and Vue type checking pass. Packaged WASM passes complete, exact-work-exhausted
+and face-work-exhausted cases plus a real worker-handler case. Altered source,
+budgets and joined proofs are refused. Both final mouse and keyboard browser
+scenarios pass cancellation, Retry, stale replies after import and document
+preservation. The final mouse screenshot was visually inspected.
 
 A new native `volume_validity` regression proves consistent material volume
 for the same canonical specimen: embedded boundary, consistent nesting roles
 and one outward shell. The focused test passes and preserves the source model.
 This is a geometric validity result, not an integrated volume measurement,
 wall-thickness certificate or a qualification of other poses/radii.
+
+Current WASM SHA256: `0b03b8dc61d645539c143efbf8f6b1bd082e1a7bdf604c926c5e9b8439d247c3`
+(9,781,868 bytes). Production build verification passes: 140 artifacts,
+7,291,372 asset bytes and 11,837,988 raw WASM bytes. Reports are in
+`../boundary-embedding-wasm/`, `../boundary-embedding-browser-mouse-final/`
+and `../boundary-embedding-browser-keyboard-final/`. These results qualify
+boundary embedding on the canonical source; Apply remains disabled.
 
 The following sections record each qualification stage and its scope.
 
