@@ -10,6 +10,7 @@ pub struct CircularBlendSpan {
     pub surface: Surface,
     radius_law: [f64; 4],
     cylinder_height: f64,
+    cylinder_radius: f64,
 }
 
 pub struct CircularBlendBoundary {
@@ -95,6 +96,121 @@ impl CircularBlendSpan {
             })
             .collect();
         open_face(surface, boundaries.try_into().ok().unwrap(), tolerance_mm)
+    }
+
+    /// Retained planar cap sector between the blend rail and a circular inner
+    /// boundary. Curves map affinely to the planar chart without approximation.
+    pub fn trimmed_plane_sheet(
+        &self,
+        inner_radius: f64,
+        tolerance_mm: f64,
+    ) -> Result<crate::Model> {
+        let radius = self.cylinder_radius;
+        let height = self.cylinder_height;
+        let maximum = self.radius_law.iter().copied().fold(0., f64::max);
+        if !inner_radius.is_finite() || inner_radius <= 0. || inner_radius >= radius - maximum {
+            return Err(invalid(
+                "Planar blend trim requires an inner circle strictly inside the contact rail",
+            ));
+        }
+        let surface = Surface {
+            degree_u: 1,
+            degree_v: 1,
+            knots_u: vec![0., 0., 1., 1.],
+            knots_v: vec![0., 0., 1., 1.],
+            control_points: vec![
+                vec![
+                    vec![-radius, -radius, height],
+                    vec![-radius, radius, height],
+                ],
+                vec![vec![radius, -radius, height], vec![radius, radius, height]],
+            ],
+            weights: vec![vec![1., 1.], vec![1., 1.]],
+            periodic_u: false,
+            periodic_v: false,
+        };
+        let outer = &self.plane_contact;
+        let angular = &self.cylinder_contact;
+        let inner = Curve {
+            control_points: angular
+                .control_points
+                .iter()
+                .map(|p| {
+                    vec![
+                        p[0] * inner_radius / radius,
+                        p[1] * inner_radius / radius,
+                        height,
+                    ]
+                })
+                .collect(),
+            ..angular.clone()
+        };
+        let a = outer.control_points.first().unwrap();
+        let b = outer.control_points.last().unwrap();
+        let ia = inner.control_points.first().unwrap();
+        let ib = inner.control_points.last().unwrap();
+        let line = |a: Vec<f64>, b: Vec<f64>| Curve {
+            degree: 1,
+            knots: vec![0., 0., 1., 1.],
+            control_points: vec![a, b],
+            weights: vec![1., 1.],
+            periodic: false,
+        };
+        let curves = [
+            outer.clone(),
+            line(b.clone(), ib.clone()),
+            inner.reverse()?,
+            line(ia.clone(), a.clone()),
+        ];
+        let mut boundaries: Vec<_> = curves
+            .into_iter()
+            .map(|curve| {
+                let pcurve = Curve {
+                    control_points: curve
+                        .control_points
+                        .iter()
+                        .map(|p| {
+                            vec![
+                                (p[0] + radius) / (2. * radius),
+                                (p[1] + radius) / (2. * radius),
+                            ]
+                        })
+                        .collect(),
+                    ..curve.clone()
+                };
+                CircularBlendBoundary {
+                    curve,
+                    pcurve,
+                    collapsed_pole: None,
+                }
+            })
+            .collect();
+        let angular_a = &angular.control_points[0];
+        let angular_b = &angular.control_points[1];
+        if angular_a[0] * angular_b[1] - angular_a[1] * angular_b[0] < 0. {
+            boundaries.reverse();
+            for boundary in &mut boundaries {
+                boundary.curve = boundary.curve.reverse()?;
+                boundary.pcurve = boundary.pcurve.reverse()?;
+            }
+        }
+        open_face(surface, boundaries.try_into().ok().unwrap(), tolerance_mm)
+    }
+
+    /// Combine the blend and its two retained neighbor sectors. Still open at
+    /// the inner/bottom boundaries and angular sides; this is not a volume body.
+    pub fn trimmed_support_region(
+        &self,
+        inner_radius: f64,
+        tolerance_mm: f64,
+    ) -> Result<crate::Model> {
+        let p = &self.cylinder_contact.control_points;
+        let positive = p[0][0] * p[1][1] - p[0][1] * p[1][0] > 0.;
+        assemble_support_sheets(vec![
+            (self.to_open_sheet(tolerance_mm)?, positive),
+            (self.trimmed_plane_sheet(inner_radius, tolerance_mm)?, false),
+            (self.trimmed_cylinder_sheet(tolerance_mm)?, !positive),
+        ])
     }
 
     /// Four oriented chart boundaries. A collapsed endpoint is certified by
@@ -218,6 +334,83 @@ fn open_face(
     Ok(model)
 }
 
+fn assemble_support_sheets(sheets: Vec<(crate::Model, bool)>) -> Result<crate::Model> {
+    let mut iter = sheets.into_iter();
+    let (mut result, reversed) = iter
+        .next()
+        .ok_or_else(|| invalid("No support sheets to assemble"))?;
+    result.0.shells[0].faces[0].reversed = reversed;
+    for (sheet, reversed) in iter {
+        sheet.validate()?;
+        let mut vertex_map = Vec::new();
+        for vertex in &sheet.vertices {
+            let index = result
+                .vertices
+                .iter()
+                .position(|v| v.point == vertex.point)
+                .unwrap_or_else(|| {
+                    result.0.vertices.push(vertex.clone());
+                    result.vertices.len() - 1
+                });
+            vertex_map.push(index);
+        }
+        let mut coedges = Vec::new();
+        for use_ in &sheet.loops[0].coedges {
+            let edge = &sheet.edges[use_.edge];
+            let ends = edge.vertices.map(|v| vertex_map[v]);
+            let shared = result.edges.iter().enumerate().find(|(_, e)| {
+                !e.degenerate && (e.vertices == ends || e.vertices == [ends[1], ends[0]])
+            });
+            let (index, edge_reversed) = if let Some((i, existing)) = shared {
+                let edge_reversed = existing.vertices != ends;
+                let curve = if edge_reversed {
+                    edge.curve.reverse()?
+                } else {
+                    edge.curve.clone()
+                };
+                if curve.degree != existing.curve.degree
+                    || curve.knots != existing.curve.knots
+                    || curve.control_points != existing.curve.control_points
+                    || curve.weights != existing.curve.weights
+                    || curve.periodic != existing.curve.periodic
+                {
+                    return Err(invalid(
+                        "Support seam definitions differ; no tolerance welding admitted",
+                    ));
+                }
+                (i, edge_reversed)
+            } else {
+                let index = result.edges.len();
+                result.0.edges.push(crate::Edge {
+                    vertices: ends,
+                    curve: edge.curve.clone(),
+                    degenerate: edge.degenerate,
+                });
+                (index, false)
+            };
+            coedges.push(crate::Coedge {
+                edge: index,
+                reversed: edge_reversed,
+                pcurve: use_.pcurve.clone(),
+            });
+        }
+        let outer = result.loops.len();
+        result.0.loops.push(crate::Loop { coedges });
+        let face = result.faces.len();
+        result.0.faces.push(crate::Face {
+            surface: sheet.faces[0].surface.clone(),
+            outer,
+            holes: vec![],
+        });
+        result.0.shells[0]
+            .faces
+            .push(crate::FaceUse { face, reversed });
+    }
+    result.rebuild_topology_ids();
+    result.validate()?;
+    Ok(result)
+}
+
 fn arc(radius: f64, z: f64, start: f64, sweep: f64) -> Curve {
     let middle = start + sweep / 2.;
     let weight = (sweep / 2.).cos();
@@ -316,6 +509,7 @@ pub fn plane_cylinder_rim(
             surface,
             radius_law: [radius; 4],
             cylinder_height: height,
+            cylinder_radius: outer_radius,
         });
     }
     Ok(spans)
@@ -456,6 +650,7 @@ pub fn plane_cylinder_transition(
         surface,
         radius_law: law,
         cylinder_height: height,
+        cylinder_radius: outer_radius,
     })
 }
 
@@ -490,77 +685,11 @@ pub fn circular_blend_strip(
     let middle =
         plane_cylinder_rim(outer_radius, height, radius, middle_start, middle_sweep)?.remove(0);
     let exit = plane_cylinder_transition(outer_radius, height, radius, 0., end_start, exit_sweep)?;
-    let mut result = entry.to_open_sheet(tolerance_mm)?;
-    for span in [middle, exit] {
-        let sheet = span.to_open_sheet(tolerance_mm)?;
-        let mut vertex_map = Vec::new();
-        for vertex in &sheet.vertices {
-            let index = result
-                .vertices
-                .iter()
-                .position(|v| v.point == vertex.point)
-                .unwrap_or_else(|| {
-                    result.0.vertices.push(vertex.clone());
-                    result.vertices.len() - 1
-                });
-            vertex_map.push(index);
-        }
-        let mut coedges = Vec::new();
-        for use_ in &sheet.loops[0].coedges {
-            let edge = &sheet.edges[use_.edge];
-            let ends = edge.vertices.map(|v| vertex_map[v]);
-            let shared = result.edges.iter().enumerate().find(|(_, e)| {
-                !e.degenerate && (e.vertices == ends || e.vertices == [ends[1], ends[0]])
-            });
-            let (index, reversed) = if let Some((i, existing)) = shared {
-                let reversed = existing.vertices != ends;
-                let curve = if reversed {
-                    edge.curve.reverse()?
-                } else {
-                    edge.curve.clone()
-                };
-                if curve.degree != existing.curve.degree
-                    || curve.knots != existing.curve.knots
-                    || curve.control_points != existing.curve.control_points
-                    || curve.weights != existing.curve.weights
-                    || curve.periodic != existing.curve.periodic
-                {
-                    return Err(invalid(
-                        "Circular strip seam definitions differ; no tolerance welding admitted",
-                    ));
-                }
-                (i, reversed)
-            } else {
-                let index = result.edges.len();
-                result.0.edges.push(crate::Edge {
-                    vertices: ends,
-                    curve: edge.curve.clone(),
-                    degenerate: edge.degenerate,
-                });
-                (index, false)
-            };
-            coedges.push(crate::Coedge {
-                edge: index,
-                reversed,
-                pcurve: use_.pcurve.clone(),
-            });
-        }
-        let outer = result.loops.len();
-        result.0.loops.push(crate::Loop { coedges });
-        let face = result.faces.len();
-        result.0.faces.push(crate::Face {
-            surface: span.surface,
-            outer,
-            holes: vec![],
-        });
-        result.0.shells[0].faces.push(crate::FaceUse {
-            face,
-            reversed: false,
-        });
-    }
-    result.rebuild_topology_ids();
-    result.validate()?;
-    Ok(result)
+    assemble_support_sheets(vec![
+        (entry.to_open_sheet(tolerance_mm)?, false),
+        (middle.to_open_sheet(tolerance_mm)?, false),
+        (exit.to_open_sheet(tolerance_mm)?, false),
+    ])
 }
 
 #[cfg(test)]
@@ -775,6 +904,60 @@ mod tests {
                 let actual = sheet.faces[0].surface.evaluate(uv[0], uv[1]).unwrap().point;
                 let expected = sheet.edges[2].curve.evaluate(t).unwrap().point;
                 assert!((0..3).all(|k| (actual[k] - expected[k]).abs() < 1e-10));
+            }
+        }
+    }
+
+    #[test]
+    fn plane_trim_maps_all_boundaries_and_rejects_contact_overlap() {
+        for direction in [-1., 1.] {
+            for (r0, r1) in [(0., 1.25), (1.25, 0.), (0.5, 1.25)] {
+                let span =
+                    plane_cylinder_transition(20., 6., r0, r1, 5.9, direction * 0.7).unwrap();
+                let sheet = span.trimmed_plane_sheet(5., 1e-7).unwrap();
+                assert_eq!(sheet.validate().unwrap().boundary_edge_count, 4);
+                for coedge in &sheet.loops[0].coedges {
+                    for i in 0..=40 {
+                        let t = i as f64 / 40.;
+                        let uv = coedge.pcurve.evaluate(t).unwrap().point;
+                        let actual = sheet.faces[0].surface.evaluate(uv[0], uv[1]).unwrap().point;
+                        let expected = sheet.edges[coedge.edge].curve.evaluate(t).unwrap().point;
+                        assert!((0..3).all(|k| (actual[k] - expected[k]).abs() < 1e-10));
+                    }
+                }
+                assert!(span.trimmed_plane_sheet(19., 1e-7).is_err());
+                assert!(span.trimmed_plane_sheet(0., 1e-7).is_err());
+            }
+        }
+    }
+
+    #[test]
+    fn neighbor_regions_share_plane_and_cylinder_contact_edges() {
+        for direction in [-1., 1.] {
+            for (r0, r1) in [(0., 1.25), (1.25, 0.), (0.5, 1.25)] {
+                let span =
+                    plane_cylinder_transition(20., 6., r0, r1, 5.9, direction * 0.7).unwrap();
+                let region = span.trimmed_support_region(5., 1e-7).unwrap();
+                let report = region.validate().unwrap();
+                assert_eq!(report.face_count, 3);
+                assert_eq!(report.body_count, 0);
+                assert_eq!(region.edges.len(), 10);
+                assert_eq!(
+                    report.boundary_edge_count,
+                    if r0 == 0. || r1 == 0. { 7 } else { 8 }
+                );
+                let shared = (0..region.edges.len())
+                    .filter(|&i| {
+                        region
+                            .loops
+                            .iter()
+                            .flat_map(|l| &l.coedges)
+                            .filter(|c| c.edge == i)
+                            .count()
+                            == 2
+                    })
+                    .count();
+                assert_eq!(shared, 2);
             }
         }
     }

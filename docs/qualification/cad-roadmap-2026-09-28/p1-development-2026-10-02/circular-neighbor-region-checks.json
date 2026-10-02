@@ -1,0 +1,33 @@
+{
+  "schema": "cad-p1-circular-neighbor-region/1",
+  "rustTestsPassed": 10,
+  "planeTrimBoundarySamples": 984,
+  "radiusPairs": [
+    [
+      0,
+      1.25
+    ],
+    [
+      1.25,
+      0
+    ],
+    [
+      0.5,
+      1.25
+    ]
+  ],
+  "directions": [
+    "forward",
+    "reverse"
+  ],
+  "neighborRegionFaces": 3,
+  "sharedContactEdges": 2,
+  "edgeDefinitions": "exact full rational definitions; mismatch refuses without tolerance welding",
+  "planeInnerBoundaryRadiusMm": 5,
+  "planeOverlapRefusalChecked": true,
+  "sourceSolidEdited": false,
+  "closedSolidAssembled": false,
+  "independentNeighborTrimOracleVerified": false,
+  "bridgeAndUiExposed": false,
+  "generalP1Complete": false
+}
