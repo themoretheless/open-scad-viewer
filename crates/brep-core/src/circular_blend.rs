@@ -8,6 +8,8 @@ pub struct CircularBlendSpan {
     pub plane_contact: Curve,
     pub cylinder_contact: Curve,
     pub surface: Surface,
+    radius_law: [f64; 4],
+    cylinder_height: f64,
 }
 
 pub struct CircularBlendBoundary {
@@ -20,73 +22,79 @@ impl CircularBlendSpan {
     /// Assemble one open B-rep face. This intentionally has no volume body;
     /// the pole edge retains a full UV boundary while its 3D curve is constant.
     pub fn to_open_sheet(&self, tolerance_mm: f64) -> Result<crate::Model> {
-        if !tolerance_mm.is_finite() || tolerance_mm <= 0. {
-            return Err(invalid(
-                "Circular blend sheet requires positive finite tolerance",
-            ));
-        }
-        let boundaries = self.boundaries()?;
-        let net = &self.surface.control_points;
-        let last = net.len() - 1;
-        let last_v = net[0].len() - 1;
-        let corners = [
-            &net[0][0],
-            &net[last][0],
-            &net[last][last_v],
-            &net[0][last_v],
-        ];
-        let mut vertices: Vec<crate::Vertex> = Vec::new();
-        let mut indices = Vec::new();
-        for p in corners {
-            let point = [p[0], p[1], p[2]];
-            let index = vertices
+        open_face(self.surface.clone(), self.boundaries()?, tolerance_mm)
+    }
+
+    /// Retained cylinder strip trimmed below the blend contact rail. The
+    /// cubic UV height law has the same parameter as the authored 3D rail.
+    pub fn trimmed_cylinder_sheet(&self, tolerance_mm: f64) -> Result<crate::Model> {
+        let rail = &self.cylinder_contact;
+        let height = self.cylinder_height;
+        let surface = Surface {
+            degree_u: rail.degree,
+            degree_v: 1,
+            knots_u: rail.knots.clone(),
+            knots_v: vec![0., 0., 1., 1.],
+            control_points: rail
+                .control_points
                 .iter()
-                .position(|v| v.point == point)
-                .unwrap_or_else(|| {
-                    vertices.push(crate::Vertex { point });
-                    vertices.len() - 1
-                });
-            indices.push(index);
-        }
-        let mut edges = Vec::new();
-        let mut coedges = Vec::new();
-        for (i, boundary) in boundaries.into_iter().enumerate() {
-            edges.push(crate::Edge {
-                vertices: [indices[i], indices[(i + 1) % 4]],
-                curve: boundary.curve,
-                degenerate: boundary.collapsed_pole.is_some(),
-            });
-            coedges.push(crate::Coedge {
-                edge: i,
-                reversed: false,
-                pcurve: boundary.pcurve,
-            });
-        }
-        let mut model = crate::Model(
-            brep_topology::Model {
-                vertices,
-                edges,
-                loops: vec![crate::Loop { coedges }],
-                faces: vec![crate::Face {
-                    surface: self.surface.clone(),
-                    outer: 0,
-                    holes: vec![],
-                }],
-                shells: vec![crate::Shell {
-                    faces: vec![crate::FaceUse {
-                        face: 0,
-                        reversed: false,
-                    }],
-                    closed: false,
-                }],
-                bodies: vec![],
-                tolerance_mm,
-            },
-            crate::TopologyIds::default(),
-        );
-        model.rebuild_topology_ids();
-        model.validate()?;
-        Ok(model)
+                .map(|p| vec![vec![p[0], p[1], 0.], vec![p[0], p[1], height]])
+                .collect(),
+            weights: rail.weights.iter().map(|w| vec![*w, *w]).collect(),
+            periodic_u: false,
+            periodic_v: false,
+        };
+        let bottom = Curve {
+            control_points: rail
+                .control_points
+                .iter()
+                .map(|p| vec![p[0], p[1], 0.])
+                .collect(),
+            ..rail.clone()
+        };
+        let a = rail.control_points.first().unwrap();
+        let b = rail.control_points.last().unwrap();
+        let line = |a: Vec<f64>, b: Vec<f64>| Curve {
+            degree: 1,
+            knots: vec![0., 0., 1., 1.],
+            control_points: vec![a, b],
+            weights: vec![1., 1.],
+            periodic: false,
+        };
+        let top_uv = Curve {
+            degree: 3,
+            knots: vec![0., 0., 0., 0., 1., 1., 1., 1.],
+            control_points: self
+                .radius_law
+                .iter()
+                .enumerate()
+                .map(|(i, r)| vec![i as f64 / 3., (height - r) / height])
+                .collect(),
+            weights: vec![1.; 4],
+            periodic: false,
+        };
+        let curves = [
+            bottom,
+            line(vec![b[0], b[1], 0.], b.clone()),
+            rail.reverse()?,
+            line(a.clone(), vec![a[0], a[1], 0.]),
+        ];
+        let uv = [
+            line(vec![0., 0.], vec![1., 0.]),
+            line(vec![1., 0.], vec![1., b[2] / height]),
+            top_uv.reverse()?,
+            line(vec![0., a[2] / height], vec![0., 0.]),
+        ];
+        let boundaries: Vec<_> = curves
+            .into_iter()
+            .zip(uv)
+            .map(|(curve, pcurve)| CircularBlendBoundary {
+                curve,
+                pcurve,
+                collapsed_pole: None,
+            })
+            .collect();
+        open_face(surface, boundaries.try_into().ok().unwrap(), tolerance_mm)
     }
 
     /// Four oriented chart boundaries. A collapsed endpoint is certified by
@@ -140,6 +148,74 @@ impl CircularBlendSpan {
         }
         Ok(result.try_into().ok().unwrap())
     }
+}
+
+fn open_face(
+    surface: Surface,
+    boundaries: [CircularBlendBoundary; 4],
+    tolerance_mm: f64,
+) -> Result<crate::Model> {
+    if !tolerance_mm.is_finite() || tolerance_mm <= 0. {
+        return Err(invalid(
+            "Circular blend sheet requires positive finite tolerance",
+        ));
+    }
+    let corners: Vec<_> = boundaries
+        .iter()
+        .map(|b| &b.curve.control_points[0])
+        .collect();
+    let mut vertices: Vec<crate::Vertex> = Vec::new();
+    let mut indices = Vec::new();
+    for p in corners {
+        let point = [p[0], p[1], p[2]];
+        let index = vertices
+            .iter()
+            .position(|v| v.point == point)
+            .unwrap_or_else(|| {
+                vertices.push(crate::Vertex { point });
+                vertices.len() - 1
+            });
+        indices.push(index);
+    }
+    let mut edges = Vec::new();
+    let mut coedges = Vec::new();
+    for (i, boundary) in boundaries.into_iter().enumerate() {
+        edges.push(crate::Edge {
+            vertices: [indices[i], indices[(i + 1) % 4]],
+            curve: boundary.curve,
+            degenerate: boundary.collapsed_pole.is_some(),
+        });
+        coedges.push(crate::Coedge {
+            edge: i,
+            reversed: false,
+            pcurve: boundary.pcurve,
+        });
+    }
+    let mut model = crate::Model(
+        brep_topology::Model {
+            vertices,
+            edges,
+            loops: vec![crate::Loop { coedges }],
+            faces: vec![crate::Face {
+                surface,
+                outer: 0,
+                holes: vec![],
+            }],
+            shells: vec![crate::Shell {
+                faces: vec![crate::FaceUse {
+                    face: 0,
+                    reversed: false,
+                }],
+                closed: false,
+            }],
+            bodies: vec![],
+            tolerance_mm,
+        },
+        crate::TopologyIds::default(),
+    );
+    model.rebuild_topology_ids();
+    model.validate()?;
+    Ok(model)
 }
 
 fn arc(radius: f64, z: f64, start: f64, sweep: f64) -> Curve {
@@ -238,6 +314,8 @@ pub fn plane_cylinder_rim(
             plane_contact,
             cylinder_contact,
             surface,
+            radius_law: [radius; 4],
+            cylinder_height: height,
         });
     }
     Ok(spans)
@@ -376,6 +454,8 @@ pub fn plane_cylinder_transition(
         plane_contact,
         cylinder_contact,
         surface,
+        radius_law: law,
+        cylinder_height: height,
     })
 }
 
@@ -677,6 +757,25 @@ mod tests {
                 })
                 .collect();
             assert_eq!(uses.iter().filter(|&&n| n == 2).count(), 2);
+        }
+    }
+
+    #[test]
+    fn cylinder_trim_uses_contact_rail_and_cubic_uv_height() {
+        for (r0, r1) in [(0., 1.25), (1.25, 0.), (0.5, 1.25)] {
+            let span = plane_cylinder_transition(20., 6., r0, r1, 5.9, -0.7).unwrap();
+            let sheet = span.trimmed_cylinder_sheet(1e-7).unwrap();
+            assert_eq!(sheet.validate().unwrap().boundary_edge_count, 4);
+            let mut bad = sheet.clone();
+            bad.0.loops[0].coedges[2].pcurve.control_points[1][1] += 0.01;
+            assert!(bad.validate().is_err());
+            for i in 0..=40 {
+                let t = i as f64 / 40.;
+                let uv = sheet.loops[0].coedges[2].pcurve.evaluate(t).unwrap().point;
+                let actual = sheet.faces[0].surface.evaluate(uv[0], uv[1]).unwrap().point;
+                let expected = sheet.edges[2].curve.evaluate(t).unwrap().point;
+                assert!((0..3).all(|k| (actual[k] - expected[k]).abs() < 1e-10));
+            }
         }
     }
 
