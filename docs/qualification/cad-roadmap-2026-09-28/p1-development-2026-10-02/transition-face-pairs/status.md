@@ -60,3 +60,26 @@ asset bytes and 11,805,167 raw WASM bytes. Both mouse and keyboard browser
 scenarios load the regenerated model, inspect all faces at full budget,
 retain the unproven whole-model result, exercise partial budgets, and preserve
 the document. The mouse quotient screenshot was visually inspected.
+
+## Expanded pair search
+
+The same source model is rechecked with 1024 geometry cells and 100000 UV
+domain cells per pair. All 351 pairs are visited, consuming 77950 geometry
+cells and 717156 domain cells: 240 disjoint, 43 shared boundary and 68
+unresolved. Whole-model absence remains unproven.
+
+The six pairs without shared topology (6/15, 6/23, 9/18, 9/26, 15/23,
+18/26) close after 365–569 geometry cells. Targeted searches retain explicit
+unresolved boxes at budget 256 and cover the entire domain at budget 1024.
+The remaining 68 consist of 16 shared-edge and 52 shared-vertex pairs;
+these require qualified boundary-contact proofs. Increasing a budget is
+not accepted as proof if any unresolved box remains.
+
+Reproduce the expanded audit with `transition-boundary-prerequisites`,
+`--regenerate --exact-only --embedding --pair-cells=1024
+--pair-domain-cells=100000`. See `embedding-budget1024.json` and
+`separate-pairs-budget.json` for complete reports.
+
+The new native regression `partial_annular_separate_pairs_require_complete_search_coverage`
+passes for all six pairs, checks both insufficient and sufficient budgets,
+and verifies source preservation. No production runtime changes in this step.

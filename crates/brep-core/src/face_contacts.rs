@@ -137,6 +137,23 @@ pub(crate) fn inspect_with_hulls(model: &Model, tolerance_uv: f64, limits: Limit
 }
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn partial_annular_separate_pairs_require_complete_search_coverage() {
+        let model=crate::circular_blend::partial_annular_quarter(20.,5.,6.,1.25,1.,1e-7).unwrap();
+        let before=format!("{model:?}");
+        for [a,b] in [[6,15],[6,23],[9,18],[9,26],[15,23],[18,26]] {
+            let da=crate::face_domain::FaceDomain::new(&model,a,1e-8).unwrap();
+            let db=crate::face_domain::FaceDomain::new(&model,b,1e-8).unwrap();
+            let run=|budget|nurbs_core::surface_contact_search::search_trimmed(
+                &model.faces[a].surface,&model.faces[b].surface,[&da.region,&db.region],budget,1_000_000).unwrap();
+            let partial=run(256);
+            assert!(!partial.absence_proven&&!partial.unresolved.is_empty());
+            let complete=run(1024);
+            assert!(complete.absence_proven&&complete.unresolved.is_empty(),"faces={a}/{b}");
+            assert!(complete.contact.is_none());
+        }
+        assert_eq!(format!("{model:?}"),before);
+    }
     use super::*;
     fn limits() -> Limits {
         Limits {
