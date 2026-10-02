@@ -271,6 +271,37 @@ fn json_cartesian_guided_loft_retains_independent_guide_weights() {
     }
     automatic["maxCells"] = json!(1);
     assert!(geometry_bridge::dispatch(automatic).is_err());
+    let field = |z| Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 1.],
+        control_points: vec![vec![0., 0., z]; 2],
+        weights: vec![1.; 2],
+        periodic: false,
+    };
+    let mut clamped = request.clone();
+    clamped["boundary_tangents"] = json!([field(2.), field(0.5)]);
+    let result = geometry_bridge::dispatch(clamped.clone()).unwrap();
+    let certificates = result["certificate"]["tangents"].as_array().unwrap();
+    assert_eq!(certificates.len(), 2);
+    for certificate in certificates {
+        assert_eq!(certificate["accepted"], true);
+        assert!(certificate["errorUpper"].as_f64().unwrap() <= 1e-6);
+    }
+    let mut auto_clamped = clamped.clone();
+    auto_clamped["op"] = json!("surface_auto_guided_loft_cartesian");
+    auto_clamped["budget"] = json!(1e-6);
+    let result = geometry_bridge::dispatch(auto_clamped.clone()).unwrap();
+    assert_eq!(
+        result["certificate"]["tangents"].as_array().unwrap().len(),
+        2
+    );
+    for certificate in result["certificate"]["tangents"].as_array().unwrap() {
+        assert_eq!(certificate["accepted"], true);
+    }
+    auto_clamped["maxCells"] = json!(1);
+    assert!(geometry_bridge::dispatch(auto_clamped).is_err());
+    clamped["maxCells"] = json!(1);
+    assert!(geometry_bridge::dispatch(clamped).is_err());
     let mut tangents = request.clone();
     tangents["start_tangents"] = json!([[0., 0., 1.], [0., 0., 1.]]);
     assert!(geometry_bridge::dispatch(tangents).is_err());

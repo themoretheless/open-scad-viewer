@@ -327,6 +327,7 @@ export interface CartesianGuidedLoftResult {
     operation: 'cartesian-guided-loft'
     exact: false
     fittedToExactPromotion: false
+    tangents?: BoundaryVTangentCertificate[]
     curves: CartesianGordonResult['certificate']['curves']
   }
 }
@@ -355,6 +356,7 @@ export interface AutoCartesianGuidedLoftResult {
     operation: 'cartesian-auto-guided-loft'
     exact: false
     fittedToExactPromotion: false
+    tangents?: BoundaryVTangentCertificate[]
     curves: CartesianGordonResult['certificate']['curves']
   }
 }
@@ -402,5 +404,29 @@ export function createClampedCartesianGordonSurface(
   return callNurbsRust<CartesianGordonResult>('surface_gordon_cartesian', {
     u_curves: uCurves, v_curves: vCurves, parameters_u: parametersU, parameters_v: parametersV,
     boundary_tangents: boundaryTangents, errorBudget, maxCells, maxMapEvaluations,
+  })
+}
+
+/** Boundary fields use normalized dP/dV, independently of authored section stations. */
+export function createClampedCartesianGuidedLoft(
+  curves: NurbsCurve[], parameters: number[], guides: NurbsCurve[], guideParameters: number[],
+  boundaryTangents: [NurbsCurve, NurbsCurve], errorBudget = 1e-6, maxCells = 50000, maxMapEvaluations = 200000,
+): CartesianGuidedLoftResult {
+  return callNurbsRust<CartesianGuidedLoftResult>('surface_guided_loft_cartesian', {
+    curves, parameters, guides, guide_parameters: guideParameters, boundary_tangents: boundaryTangents,
+    errorBudget, maxCells, maxMapEvaluations,
+  })
+}
+
+/** Targets are normalized dP/dV fields after guide orientation and station mapping. */
+export function createAutoClampedCartesianGuidedLoft(
+  curves: NurbsCurve[], parameters: number[], guides: NurbsCurve[], boundaryTangents: [NurbsCurve, NurbsCurve],
+  budget = 1e-6, parameterTolerance = 1e-8, maxCells = 50000, maxMapEvaluations = 200000,
+  sectionMappings?: Array<RationalReparameterization | null>,
+): AutoCartesianGuidedLoftResult {
+  return callNurbsRust<AutoCartesianGuidedLoftResult>('surface_auto_guided_loft_cartesian', {
+    curves, parameters, guides, boundary_tangents: boundaryTangents, budget,
+    parameter_tolerance: parameterTolerance, maxCells, maxMapEvaluations,
+    ...(sectionMappings ? {section_mappings: sectionMappings} : {}),
   })
 }

@@ -155,8 +155,8 @@ pub(crate) fn interpolate_budgeted(
 /// Guided Cartesian interpolation with independent rational weights.
 /// Missing U boundaries are natural Cartesian splines through section endpoints.
 /// The returned numerical certificates cover authored sections, guides and the
-/// generated boundary guides. Endpoint tangent constraints use the separate
-/// homogeneous constructor until Cartesian tangent qualification is available.
+/// generated boundary guides. Authored control-tangent arrays use the homogeneous
+/// constructor; normalized rational fields use interpolate_cartesian_with_tangents.
 pub fn interpolate_cartesian(
     sections: &[Curve],
     parameters: &[f64],
@@ -166,6 +166,50 @@ pub fn interpolate_cartesian(
     max_cells: usize,
     max_map_evaluations: usize,
 ) -> Result<(Surface, Vec<value_codec::Value>)> {
+    let (surface, curves, _) = interpolate_cartesian_mode(
+        sections,
+        parameters,
+        guides,
+        guide_parameters,
+        None,
+        tolerance,
+        max_cells,
+        max_map_evaluations,
+    )?;
+    Ok((surface, curves))
+}
+/// Tangent fields describe dP/dV with normalized U and V parameters.
+pub fn interpolate_cartesian_with_tangents(
+    sections: &[Curve],
+    parameters: &[f64],
+    guides: &[Curve],
+    guide_parameters: &[f64],
+    tangents: &[Curve; 2],
+    tolerance: f64,
+    max_cells: usize,
+    max_map_evaluations: usize,
+) -> Result<(Surface, Vec<value_codec::Value>, Vec<value_codec::Value>)> {
+    interpolate_cartesian_mode(
+        sections,
+        parameters,
+        guides,
+        guide_parameters,
+        Some(tangents),
+        tolerance,
+        max_cells,
+        max_map_evaluations,
+    )
+}
+fn interpolate_cartesian_mode(
+    sections: &[Curve],
+    parameters: &[f64],
+    guides: &[Curve],
+    guide_parameters: &[f64],
+    tangents: Option<&[Curve; 2]>,
+    tolerance: f64,
+    max_cells: usize,
+    max_map_evaluations: usize,
+) -> Result<(Surface, Vec<value_codec::Value>, Vec<value_codec::Value>)> {
     check(
         (2..=86).contains(&sections.len()),
         "Cartesian guided loft needs 2..86 sections",
@@ -187,6 +231,18 @@ pub fn interpolate_cartesian(
         .collect::<Result<Vec<_>>>()?;
     let mut network = guides.to_vec();
     let mut stations = guide_parameters.to_vec();
+    let normalized_parameters = crate::gordon::stations(parameters, sections.len())?;
+    if let Some(targets) = tangents {
+        for target in targets {
+            target.validate()?;
+            check(
+                !target.periodic
+                    && target.domain() == [0., 1.]
+                    && target.control_points[0].len() == 3,
+                "Cartesian tangent fields must be open normalized 3D curves",
+            )?;
+        }
+    }
     let boundary = |parameter| -> Result<Curve> {
         let sites = normalized
             .iter()
@@ -195,7 +251,18 @@ pub fn interpolate_cartesian(
                     .map(|e| [e.point[0], e.point[1], e.point[2]])
             })
             .collect::<Result<Vec<_>>>()?;
-        crate::natural_spline::interpolate(&sites, parameters)
+        if let Some(targets) = tangents {
+            let a = targets[0].evaluate(parameter)?.point;
+            let b = targets[1].evaluate(parameter)?.point;
+            crate::natural_spline::clamped(
+                &sites,
+                &normalized_parameters,
+                [a[0], a[1], a[2]],
+                [b[0], b[1], b[2]],
+            )
+        } else {
+            crate::natural_spline::interpolate(&sites, parameters)
+        }
     };
     if stations[0] != 0. {
         network.insert(0, boundary(0.)?);
@@ -209,15 +276,29 @@ pub fn interpolate_cartesian(
         network.len() <= 86,
         "Cartesian guided loft exceeds 86 effective guides",
     )?;
-    crate::gordon::patch_cartesian(
-        sections,
-        &network,
-        &stations,
-        parameters,
-        tolerance,
-        max_cells,
-        max_map_evaluations,
-    )
+    if let Some(targets) = tangents {
+        crate::gordon::patch_cartesian_with_tangents(
+            sections,
+            &network,
+            &stations,
+            parameters,
+            targets,
+            tolerance,
+            max_cells,
+            max_map_evaluations,
+        )
+    } else {
+        let (surface, curves) = crate::gordon::patch_cartesian(
+            sections,
+            &network,
+            &stations,
+            parameters,
+            tolerance,
+            max_cells,
+            max_map_evaluations,
+        )?;
+        Ok((surface, curves, Vec::new()))
+    }
 }
 
 #[cfg(test)]
@@ -395,5 +476,64 @@ mod cartesian_tests {
         assert!(
             interpolate_cartesian(&sections, &[0., 1.], &[guide], &[0.5], 1e-6, 1, 200000).is_err()
         );
+    }
+}
+
+#[cfg(test)]
+mod clamped_cartesian_tests {
+    use super::*;
+    #[test]
+    fn clamped_guided_loft_retains_missing_boundaries_and_tangents() {
+        let sections = [
+            crate::primitives::line([0., 0., 0.], [1., 0., 0.]).unwrap(),
+            crate::primitives::line([0., 0., 1.], [1., 0., 1.]).unwrap(),
+        ];
+        let mut guide = crate::primitives::line([0.5, 0., 0.], [0.5, 0., 1.]).unwrap();
+        guide.weights = vec![1., 2.];
+        let field = |z| Curve {
+            degree: 1,
+            knots: vec![0., 0., 1., 1.],
+            control_points: vec![vec![0., 0., z]; 2],
+            weights: vec![1.; 2],
+            periodic: false,
+        };
+        let targets = [field(2.), field(0.5)];
+        let (surface, curves, tangents) = interpolate_cartesian_with_tangents(
+            &sections,
+            &[2., 7.],
+            &[guide.clone()],
+            &[0.5],
+            &targets,
+            1e-6,
+            50000,
+            200000,
+        )
+        .unwrap();
+        assert_eq!(curves.len(), 5);
+        assert_eq!(tangents.len(), 2);
+        for sample in 0..=100 {
+            let t = sample as f64 / 100.;
+            let actual = surface.evaluate(0.5, t).unwrap().point;
+            let expected = guide.evaluate(t).unwrap().point;
+            for k in 0..3 {
+                assert!((actual[k] - expected[k]).abs() < 1e-11);
+            }
+            for end in 0..2 {
+                // Stored C0 U knots intentionally withhold a two-sided full jet.
+                // Both neighboring samples and the full-domain tangent certificate are checked.
+                for u in [t.next_down().max(0.), t.next_up().min(1.)] {
+                    let derivative = surface
+                        .evaluate(u, end as f64)
+                        .unwrap()
+                        .first_derivatives()
+                        .unwrap()
+                        .1;
+                    let expected = targets[end].evaluate(u).unwrap().point;
+                    for k in 0..3 {
+                        assert!((derivative[k] - expected[k]).abs() < 1e-10);
+                    }
+                }
+            }
+        }
     }
 }

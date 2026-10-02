@@ -13,6 +13,7 @@ pub struct AlignedLoft {
     pub section_error_upper: Vec<f64>,
     pub guide_error_upper: Vec<f64>,
     pub curve_certificates: Vec<value_codec::Value>,
+    pub tangent_certificates: Vec<value_codec::Value>,
 }
 fn curve_error(a: &Curve, b: &Curve) -> Result<f64> {
     let a = crate::gordon::normalized(a)?;
@@ -98,6 +99,7 @@ pub fn interpolate_with_parameter_tolerance(
         budget,
         parameter_tolerance,
         None,
+        None,
     )
 }
 
@@ -119,6 +121,29 @@ pub fn interpolate_cartesian_with_parameter_tolerance(
         budget,
         parameter_tolerance,
         Some((max_cells, max_map_evaluations)),
+        None,
+    )
+}
+
+/// Automatic Cartesian loft with normalized dP/dV boundary fields.
+pub fn interpolate_cartesian_with_tangents(
+    sections: &[Curve],
+    parameters: &[f64],
+    guides: &[Curve],
+    targets: &[Curve; 2],
+    budget: f64,
+    parameter_tolerance: f64,
+    max_cells: usize,
+    max_map_evaluations: usize,
+) -> Result<AlignedLoft> {
+    interpolate_mode(
+        sections,
+        parameters,
+        guides,
+        budget,
+        parameter_tolerance,
+        Some((max_cells, max_map_evaluations)),
+        Some(targets),
     )
 }
 
@@ -129,6 +154,7 @@ fn interpolate_mode(
     budget: f64,
     parameter_tolerance: f64,
     cartesian: Option<(usize, usize)>,
+    targets: Option<&[Curve; 2]>,
 ) -> Result<AlignedLoft> {
     if let Some((cells, evaluations)) = cartesian {
         check(
@@ -220,17 +246,34 @@ fn interpolate_mode(
     let reversed = entries.iter().map(|e| e.2).collect();
     let mapping_errors = entries.iter().map(|e| e.4).collect::<Vec<_>>();
     let guides = entries.into_iter().map(|e| e.3).collect::<Vec<_>>();
+    let mut tangent_certificates = Vec::new();
     let (surface, section_error_upper, guide_error_upper, curve_certificates) =
         if let Some((max_cells, max_map_evaluations)) = cartesian {
-            let (surface, certificates) = crate::guided_loft::interpolate_cartesian(
-                &sections,
-                parameters,
-                &guides,
-                &guide_parameters,
-                budget,
-                max_cells,
-                max_map_evaluations,
-            )?;
+            let (surface, certificates) = if let Some(targets) = targets {
+                let (surface, certificates, tangents) =
+                    crate::guided_loft::interpolate_cartesian_with_tangents(
+                        &sections,
+                        parameters,
+                        &guides,
+                        &guide_parameters,
+                        targets,
+                        budget,
+                        max_cells,
+                        max_map_evaluations,
+                    )?;
+                tangent_certificates = tangents;
+                (surface, certificates)
+            } else {
+                crate::guided_loft::interpolate_cartesian(
+                    &sections,
+                    parameters,
+                    &guides,
+                    &guide_parameters,
+                    budget,
+                    max_cells,
+                    max_map_evaluations,
+                )?
+            };
             let upper = |index: usize| -> Result<f64> {
                 certificates[index]["errorUpper"]
                     .as_f64()
@@ -289,6 +332,7 @@ fn interpolate_mode(
         section_error_upper,
         guide_error_upper,
         curve_certificates,
+        tangent_certificates,
     })
 }
 
@@ -383,5 +427,46 @@ mod cartesian_tests {
                 assert!((actual[k] - expected[k]).abs() < 1e-11);
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod clamped_cartesian_tests {
+    use super::*;
+    #[test]
+    fn automatic_clamped_loft_retains_reversed_rational_guide_and_tangents() {
+        let sections = [
+            crate::primitives::line([0., 0., 0.], [1., 0., 0.]).unwrap(),
+            crate::primitives::line([0., 0., 1.], [1., 0., 1.]).unwrap(),
+        ];
+        let mut guide = crate::primitives::line([0.5, 0., 1.], [0.5, 0., 0.]).unwrap();
+        guide.weights = vec![3., 1.];
+        let field = |z| Curve {
+            degree: 1,
+            knots: vec![0., 0., 1., 1.],
+            control_points: vec![vec![0., 0., z]; 2],
+            weights: vec![1.; 2],
+            periodic: false,
+        };
+        let targets = [field(3.), field(1. / 3.)];
+        let result = interpolate_cartesian_with_tangents(
+            &sections,
+            &[2., 7.],
+            &[guide],
+            &targets,
+            1e-6,
+            1e-8,
+            50000,
+            200000,
+        )
+        .unwrap();
+        assert_eq!(result.reversed, vec![true]);
+        assert_eq!(result.tangent_certificates.len(), 2);
+        assert!(
+            result
+                .tangent_certificates
+                .iter()
+                .all(|c| c["accepted"] == value_codec::json!(true))
+        );
     }
 }

@@ -39,15 +39,20 @@ pub fn dispatch(v: Value) -> Result<Value> {
         let budget=field::<f64>(&v,"budget")?;
         let parameter_tolerance=optional_field::<f64>(&v,"parameter_tolerance")?.unwrap_or(1e-8);
         let result=if op=="surface_auto_guided_loft_cartesian" {
-            loft_alignment::interpolate_cartesian_with_parameter_tolerance(sections,&parameters,&guides,
-                budget,parameter_tolerance,field(&v,"maxCells")?,field(&v,"maxMapEvaluations")?)?
+            if let Some(targets)=optional_field::<[curve::Curve;2]>(&v,"boundary_tangents")? {
+                loft_alignment::interpolate_cartesian_with_tangents(sections,&parameters,&guides,&targets,
+                    budget,parameter_tolerance,field(&v,"maxCells")?,field(&v,"maxMapEvaluations")?)?
+            } else {
+                loft_alignment::interpolate_cartesian_with_parameter_tolerance(sections,&parameters,&guides,
+                    budget,parameter_tolerance,field(&v,"maxCells")?,field(&v,"maxMapEvaluations")?)?
+            }
         } else {
             loft_alignment::interpolate_with_parameter_tolerance(sections,&parameters,&guides,budget,parameter_tolerance)?
         };
         let mut output = json!({"surface":result.surface,"guides":result.guides,"guide_parameters":result.guide_parameters,"guide_order":result.guide_order,"reversed":result.reversed,"section_error_upper":result.section_error_upper,"guide_error_upper":result.guide_error_upper});
         if op=="surface_auto_guided_loft_cartesian" {
             output["certificate"]=json!({"operation":"cartesian-auto-guided-loft","exact":false,
-                "fittedToExactPromotion":false,"curves":result.curve_certificates});
+                "fittedToExactPromotion":false,"curves":result.curve_certificates,"tangents":result.tangent_certificates});
         }
         if let Some(mapped) = mapped {
             output["sections"] = value_codec::to_value(mapped.curves).map_err(|e| input(e.to_string()))?;
@@ -74,13 +79,25 @@ pub fn dispatch(v: Value) -> Result<Value> {
         check(v.get("start_tangents").is_none_or(Value::is_null)
             && v.get("end_tangents").is_none_or(Value::is_null),
             "Cartesian guided loft endpoint tangent constraints are not yet qualified")?;
-        let (surface, curves)=guided_loft::interpolate_cartesian(
-            &field::<Vec<curve::Curve>>(&v,"curves")?, &field::<Vec<f64>>(&v,"parameters")?,
-            &field::<Vec<curve::Curve>>(&v,"guides")?, &field::<Vec<f64>>(&v,"guide_parameters")?,
-            field::<f64>(&v,"errorBudget")?, field::<usize>(&v,"maxCells")?, field::<usize>(&v,"maxMapEvaluations")?)?;
+        let sections=field::<Vec<curve::Curve>>(&v,"curves")?;
+        let parameters=field::<Vec<f64>>(&v,"parameters")?;
+        let guides=field::<Vec<curve::Curve>>(&v,"guides")?;
+        let guide_parameters=field::<Vec<f64>>(&v,"guide_parameters")?;
+        let tolerance=field(&v,"errorBudget")?;
+        let max_cells=field(&v,"maxCells")?;
+        let max_map_evaluations=field(&v,"maxMapEvaluations")?;
+        let (surface,curves,tangents)=if let Some(targets)=optional_field::<[curve::Curve;2]>(&v,"boundary_tangents")? {
+            guided_loft::interpolate_cartesian_with_tangents(&sections,&parameters,&guides,&guide_parameters,
+                &targets,tolerance,max_cells,max_map_evaluations)?
+        } else {
+            let (surface,curves)=guided_loft::interpolate_cartesian(&sections,&parameters,&guides,&guide_parameters,
+                tolerance,max_cells,max_map_evaluations)?;
+            (surface,curves,Vec::new())
+        };
         return Ok(json!({"surface":surface,"certificate":{"operation":"cartesian-guided-loft",
-            "exact":false,"fittedToExactPromotion":false,"curves":curves}}));
+            "exact":false,"fittedToExactPromotion":false,"curves":curves,"tangents":tangents}}));
     }
+
     if op == "surface_guided_loft" {
         let start = optional_field::<Vec<[f64; 3]>>(&v, "start_tangents")?;
         let end = optional_field::<Vec<[f64; 3]>>(&v, "end_tangents")?;
