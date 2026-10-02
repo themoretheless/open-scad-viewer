@@ -1,8 +1,8 @@
 # Within-face absence on a collapsed transition boundary
 
-2026-10-02. Native implementation and explicit source fixtures. This new
-proof is not yet integrated into combined B-rep diagnostics or the packaged
-WASM runtime. Preview application remains disabled.
+2026-10-02. Native implementation and explicit source fixtures. The proof is integrated into native combined B-rep diagnostics and source-bound
+frontend validation. The packaged WASM and production browser validation pass
+with both mouse and keyboard input. Preview application remains disabled.
 
 ## Geometry correction
 
@@ -67,7 +67,35 @@ certified dominance margin is 0.3582135898381414. Two nurbs-core tests cover
 polynomial and rational triangular charts, reversed poles, partial budgets,
 exact-order refusal at a 1e-12 mutation and a folded transverse parameter.
 
-These fixtures use specified projections on the constructed axis-aligned
-geometry. General placement/frame selection and B-rep pole ownership must
-be integrated and validated before updating the UI aggregate. Distinct-face
-contacts, endpoint G1 and the complete volume certificate remain open.
+The source-frame projection uses exact expressions in original binary64
+control points, with outward interval bounds. Its orthogonality identity is
+preserved algebraically. `source-frame-native.json` covers 108 entry/exit
+cases across three scales, three radii, both directions and three placements;
+all pass without changing their source models.
+
+`combined-native.json` proves within-face absence for all 27 faces: 25 regular
+charts and two quotient charts. Pole ownership is checked against actual
+coedges, vertices, complete UV traversal and the collapsed surface boundary.
+The frontend binds the returned proof to all original surface controls,
+weights, knots and periodicity as well as its frame and pole identities.
+Fourteen protocol tests pass, including mutations outside the projection
+frame, altered reply controls and weights. TypeScript checking passes.
+
+Distinct-face contacts, endpoint G1 and the complete volume certificate
+remain open. The aggregate `absenceProven` remains false. No preview commit
+is enabled by this within-face certificate.
+
+## Packaged runtime evidence
+
+15 WASM/protocol tests pass. `wasm/report.json` records six placement/budget
+cases and two worker handler cases, with unchanged source models. Both
+`browser-mouse/result.json` and `browser-keyboard/result.json` pass against
+the same production WASM; the mouse screenshot was visually inspected.
+The UI distinguishes within-face coverage from unresolved distinct-face
+contacts and endpoint smoothness. Exported documents remain unchanged.
+
+Geometry WASM: 9734183 bytes; SHA256 `3f158c6c1624a32b213761f9f763633df1f3ca8b3553cdd8b45e105c8deb323d`.
+Production verification: 140 artifacts, 7,270,619 asset bytes and 11,790,303
+raw WASM bytes, totaling 19,060,922 bytes. Size ceilings retain the prior
+measured headroom after accounting for this feature. Preview commit remains
+disabled.

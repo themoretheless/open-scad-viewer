@@ -1131,6 +1131,8 @@ mod tests {
                 let s=&model.faces[face].surface;
                 let proof=nurbs_core::surface_quotient_injectivity::certify(s,end,projection,16,256).unwrap();
                 assert!(proof.proven,"face {face}, direction {direction}: {proof:?}");
+                let source_proof=nurbs_core::surface_quotient_injectivity::certify_source_frame(s,end,16,256).unwrap();
+                assert!(source_proof.proven,"source frame: {source_proof:?}");
                 assert!(!nurbs_core::surface_injectivity::certify(s,1000).unwrap().proven);
                 if radius==2.5 {
                     let [a,b,e,c]=proof.weighted_bounds.unwrap();assert!(a*b<c*e);

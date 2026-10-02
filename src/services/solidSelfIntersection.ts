@@ -7,8 +7,14 @@ export interface FaceInjectivity {
 }
 export interface SelfIntersection extends Omit<FaceContacts,'scope'> {
  scope:'within-face-and-distinct-face-pairs';absenceProven:boolean;allFacesInjective:boolean
- spans:number;maxSpans:number;faces:Array<{face:number;result:FaceInjectivity|null}>
+ spans:number;maxSpans:number;faces:Array<{face:number;result:FaceInjectivity|null;quotientProof?:QuotientProof|null}>
 }
+export interface QuotientProof {
+ collapsedEnd:number;poleEdge:number;poleVertex:number;proven:boolean;cells:number;reason:string
+ sourceFrame:number[][]|null;weightedBounds:[number,number,number,number]|null;dominanceMarginLower:number|null;bandMarginsLower:number[]|null
+ sourceSurface:NurbsBrep['faces'][number]['surface']
+}
+export function faceAbsenceProven(f:SelfIntersection['faces'][number]):boolean{return !!(f.result?.proven||f.quotientProof?.proven)}
 export function selfIntersectionExpectation(model:NurbsBrep,toleranceUv:number,limits:FaceContactLimits,maxSpans:number){
  const spans=(knots:number[],degree:number,count:number)=>knots.slice(degree,count).filter((k,i)=>k<knots[degree+i+1]).length
  const projectiveData=model.faces.map(({surface:s})=>[0,1,2].map(axis=>{
@@ -25,7 +31,50 @@ export function selfIntersectionExpectation(model:NurbsBrep,toleranceUv:number,l
    return knots.every(k=>k===knots[0])&&p.every(row=>eq(row[j],p[0][j]))
   })
  })
- return {...faceContactExpectation(model,toleranceUv,limits),maxSpans,projectiveData,collapsed,polarCandidates:model.faces.map(({surface})=>polarCandidates(surface)),faceSpans:model.faces.map(({surface:s})=>spans(s.knotsU,s.degreeU,s.controlPoints.length)*spans(s.knotsV,s.degreeV,s.controlPoints[0].length))}
+ return {...faceContactExpectation(model,toleranceUv,limits),maxSpans,projectiveData,collapsed,quotients:model.faces.map((_,i)=>quotientExpectation(model,i)),polarCandidates:model.faces.map(({surface})=>polarCandidates(surface)),faceSpans:model.faces.map(({surface:s})=>spans(s.knotsU,s.degreeU,s.controlPoints.length)*spans(s.knotsV,s.degreeV,s.controlPoints[0].length))}
+}
+function quotientExpectation(model:NurbsBrep,face:number){
+ const f=model.faces[face],s=f.surface,p=s.controlPoints,u=[s.knotsU[s.degreeU],s.knotsU[p.length]],v=[s.knotsV[s.degreeV],s.knotsV[p[0].length]]
+ const eq=(a:number[],b:number[])=>a.length===b.length&&a.every((n,k)=>n===b[k])
+ for(const loop of [f.outer,...f.holes])for(const ce of model.loops[loop].coedges){
+  const edge=model.edges[ce.edge],curve=ce.pcurve,pole=model.vertices[edge.vertices[0]].point
+  if(edge.vertices[0]!==edge.vertices[1]||!edge.curve.controlPoints.every(p=>eq(p,pole))||curve.degree!==1||curve.controlPoints.length!==2)continue
+  const [a,b]=curve.controlPoints
+  if(a[0]!==b[0]||!((a[1]===v[0]&&b[1]===v[1])||(a[1]===v[1]&&b[1]===v[0])))continue
+  const end=u.findIndex(x=>x===a[0]);if(end<0)continue
+  const index=(i:number)=>end===0?i:p.length-1-i
+  if(!p[index(0)].every(point=>eq(point,pole)))continue
+  const clamped=(k:number[],d:number)=>k.length===2*(d+1)&&k.slice(0,d+1).every(v=>v===k[d])&&k.slice(d+1).every(v=>v===k[d+1])
+  const supported=!s.periodicU&&!s.periodicV&&s.degreeU>=2&&s.degreeU<=8&&s.degreeV<=8&&p.length===s.degreeU+1&&p[0].length===s.degreeV+1&&clamped(s.knotsU,s.degreeU)&&clamped(s.knotsV,s.degreeV)
+  return {collapsedEnd:end,poleEdge:ce.edge,poleVertex:edge.vertices[0],sourceEvidence:surfaceEvidence(s),sourceFrame:supported?[p[index(0)][0],p[index(1)][0],p[index(2)][0],p[index(2)][p[0].length-1]]:null}
+ }
+ return null
+}
+function surfaceEvidence(s:NurbsBrep['faces'][number]['surface']):number[]|null{
+ if(!s||!Number.isSafeInteger(s.degreeU)||!Number.isSafeInteger(s.degreeV)||!Array.isArray(s.knotsU)||!Array.isArray(s.knotsV)||!Array.isArray(s.controlPoints)||s.controlPoints.length<2||!Array.isArray(s.controlPoints[0])||s.controlPoints[0].length<2||!Array.isArray(s.weights))return null
+ const p=s.controlPoints,rows=p.length,columns=p[0].length
+ if(!p.every(row=>Array.isArray(row)&&row.length===columns&&row.every(point=>Array.isArray(point)&&point.length===3))||s.weights.length!==rows||!s.weights.every(row=>Array.isArray(row)&&row.length===columns)||(s.periodicU!=null&&typeof s.periodicU!=='boolean')||(s.periodicV!=null&&typeof s.periodicV!=='boolean'))return null
+ const values=[s.degreeU,s.degreeV,s.knotsU.length,...s.knotsU,s.knotsV.length,...s.knotsV,rows,columns,...p.flat(2),...s.weights.flat(),Number(s.periodicU??false),Number(s.periodicV??false)]
+ return values.every(Number.isFinite)?values:null
+}
+function validQuotient(expected:ReturnType<typeof quotientExpectation>,q:QuotientProof,remaining:number):boolean{
+ if(!expected||remaining<256||q.collapsedEnd!==expected.collapsedEnd||q.poleEdge!==expected.poleEdge||q.poleVertex!==expected.poleVertex||typeof q.proven!=='boolean'||!Number.isSafeInteger(q.cells)||q.cells<0||q.cells>256||q.cells>remaining)return false
+ const evidence=surfaceEvidence(q.sourceSurface)
+ if(!evidence||!expected.sourceEvidence||evidence.length!==expected.sourceEvidence.length||!evidence.every((n,k)=>n===expected.sourceEvidence![k]))return false
+ if(expected.sourceFrame===null){if(q.sourceFrame!==null)return false}
+ else if(!Array.isArray(q.sourceFrame)||q.sourceFrame.length!==4||!q.sourceFrame.every((row,j)=>Array.isArray(row)&&row.length===3&&row.every((n,k)=>Number.isFinite(n)&&n===expected.sourceFrame![j][k])))return false
+ if(q.cells===0)return !q.proven&&['unsupported-chart','boundary-not-collapsed','weighted-order-not-proven','frame-not-separated'].includes(q.reason)&&q.weightedBounds===null&&q.dominanceMarginLower===null&&q.bandMarginsLower===null
+ if(q.reason==='weight-not-separated')return !q.proven&&q.weightedBounds===null&&q.dominanceMarginLower===null&&q.bandMarginsLower===null
+ if(q.cells!==256||!Array.isArray(q.weightedBounds)||q.weightedBounds.length!==4||!q.weightedBounds.every(Number.isFinite)||typeof q.dominanceMarginLower!=='number'||!Number.isFinite(q.dominanceMarginLower))return false
+ const [a,b,e,c]=q.weightedBounds,margin=q.dominanceMarginLower
+ if(e<0||c<0)return false
+ if(q.bandMarginsLower!==null&&(!Array.isArray(q.bandMarginsLower)||q.bandMarginsLower.length!==16||!q.bandMarginsLower.every(Number.isFinite)||Math.min(...q.bandMarginsLower)!==margin))return false
+ if(q.proven){
+  if(a<=0||b<=0||margin<=0)return false
+  if(q.reason==='global-weighted-quotient-dominance')return q.bandMarginsLower===null&&margin<=a*b-c*e
+  return q.reason==='global-localized-weighted-quotient-dominance'&&q.bandMarginsLower!==null&&q.bandMarginsLower.every(m=>m>0)
+ }
+ return q.reason==='weighted-projection-not-proven'&&(a<=0||b<=0||margin<=0)
 }
 function polarCandidates(s:NurbsBrep['faces'][number]['surface']):number[][][]{
  const p=s.controlPoints,w=s.weights
@@ -50,7 +99,7 @@ export function validSelfIntersection(e:ReturnType<typeof selfIntersectionExpect
  for(let i=0;i<r.faces.length;i++){
   const f=r.faces[i];if(!f||f.face!==i)return false
   const x=f.result
-  if(used===e.maxSpans){if(x!==null)return false;all=false;continue}
+  if(used===e.maxSpans){if(x!==null||f.quotientProof!=null)return false;all=false;continue}
   if(!x||typeof x.proven!=='boolean'||!Number.isSafeInteger(x.spans)||x.spans<0)return false
   const periodic=e.domains[i].periodic,pole=e.collapsed[i],remaining=e.maxSpans-used,base=periodic||pole?0:Math.min(e.faceSpans[i],remaining)
   if(x.spans<base||x.spans>remaining)return false
@@ -83,7 +132,6 @@ export function validSelfIntersection(e:ReturnType<typeof selfIntersectionExpect
     if(candidate<0||x.spans!==e.faceSpans[i]*(193+256*(candidate+1)))return false
    }else return false
   }else{
-   all=false
    if(x.projection!==null||x.linearProjection!=null||x.projectiveProjection!=null||x.polarProjection!=null||x.contractionUpper!==null)return false
    if(periodic){if(x.spans!==0||x.reason!=='periodic-domain')return false}
    else if(pole){if(x.spans!==0||x.reason!=='collapsed-boundary-requires-quotient-proof')return false}
@@ -95,6 +143,11 @@ export function validSelfIntersection(e:ReturnType<typeof selfIntersectionExpect
     if(x.spans!==expected)return false
    }else return false
   }
+  if(f.quotientProof!=null){
+   if(x.proven||periodic||!pole||!validQuotient(e.quotients[i],f.quotientProof,e.maxSpans-used))return false
+   used+=f.quotientProof.cells
+  }
+  all=all&&faceAbsenceProven(f)
  }
  return r.spans===used&&r.allFacesInjective===all&&r.absenceProven===(all&&r.allPairsClassified)
 }

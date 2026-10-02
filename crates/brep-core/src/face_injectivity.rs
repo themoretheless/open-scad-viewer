@@ -4,11 +4,25 @@ use crate::Model;
 use nurbs_core::{
     Error, Result,
     surface_injectivity::{self, Report as FaceReport},
+    surface_quotient_injectivity,
 };
 #[derive(Clone, Debug)]
 pub struct Face {
     pub face: usize,
     pub result: Option<FaceReport>,
+    pub quotient: Option<Quotient>,
+}
+#[derive(Clone, Debug)]
+pub struct Quotient {
+    pub collapsed_end: usize,
+    pub pole_edge: usize,
+    pub pole_vertex: usize,
+    pub result: surface_quotient_injectivity::Report,
+}
+impl Face {
+    pub fn absence_proven(&self)->bool {
+        self.result.as_ref().is_some_and(|r|r.proven)||self.quotient.as_ref().is_some_and(|q|q.result.proven)
+    }
 }
 #[derive(Clone, Debug)]
 pub struct Report {
@@ -38,29 +52,81 @@ pub fn inspect(model: &Model, max_spans: usize) -> Result<Report> {
         } else {
             None
         };
-        report.all_faces_injective &= result.as_ref().is_some_and(|r| r.proven);
         report.spans += result.as_ref().map_or(0, |r| r.spans);
-        report.faces.push(Face { face, result });
+        let quotient=if result.as_ref().is_some_and(|r|r.reason=="collapsed-boundary-requires-quotient-proof") && max_spans-report.spans>=256 {
+            if let Some((end,edge,vertex))=declared_pole(model,face) {
+                let proof=surface_quotient_injectivity::certify_source_frame(&f.surface,end,16,max_spans-report.spans)?;
+                report.spans+=proof.cells;
+                Some(Quotient{collapsed_end:end,pole_edge:edge,pole_vertex:vertex,result:proof})
+            }else{None}
+        }else{None};
+        let face=Face {face,result,quotient};
+        report.all_faces_injective &=face.absence_proven();
+        report.faces.push(face);
     }
     Ok(report)
+}
+fn declared_pole(model:&Model,face:usize)->Option<(usize,usize,usize)> {
+    let f=&model.faces[face];let s=&f.surface;
+    let u=[s.knots_u[s.degree_u],s.knots_u[s.control_points.len()]];
+    let v=[s.knots_v[s.degree_v],s.knots_v[s.control_points[0].len()]];
+    for loop_index in std::iter::once(f.outer).chain(f.holes.iter().copied()) {
+        for ce in &model.loops[loop_index].coedges {
+            let edge=&model.edges[ce.edge];
+            if edge.vertices[0]!=edge.vertices[1] {continue;}
+            let pole=model.vertices[edge.vertices[0]].point;
+            if !edge.curve.control_points.iter().all(|p|p.as_slice()==pole.as_slice()) || crate::validate_pole_boundary(s,&ce.pcurve,pole).is_err() {continue;}
+            let a=&ce.pcurve.control_points[0];let b=&ce.pcurve.control_points[1];
+            if a[0]==b[0] && ((a[1]==v[0]&&b[1]==v[1])||(a[1]==v[1]&&b[1]==v[0])) {
+                if let Some(end)=u.iter().position(|value|*value==a[0]) {return Some((end,ce.edge,edge.vertices[0]));}
+            }
+        }
+    }
+    None
 }
 #[cfg(test)]
 mod tests {
     use super::*;
     #[test]
-    fn polar_torus_proof_survives_rigid_placement_without_promoting_collapsed_tips() {
+    fn regular_and_quotient_proofs_survive_rigid_placement() {
         let base=crate::circular_blend::partial_annular_quarter(20.,5.,6.,1.25,1.,1e-7).unwrap();
         let (sa,ca)=0.37_f64.sin_cos();let (sb,cb)=(-0.61_f64).sin_cos();
         let placed=crate::transform::affine(&base,[[ca*cb,-sa,ca*sb,17.],[sa*cb,ca,sa*sb,-9.],[-sb,0.,cb,23.],[0.,0.,0.,1.]]).unwrap();
         let before=format!("{placed:?}");
+        for (face,end) in [(0,0),(10,1)] {
+            let proof=nurbs_core::surface_quotient_injectivity::certify_source_frame(&placed.faces[face].surface,end,16,256).unwrap();
+            assert!(proof.proven,"placed pole: {proof:?}");
+        }
         let r=inspect(&placed,4096).unwrap();
-        assert!(!r.all_faces_injective);
+        assert!(r.all_faces_injective);
         assert_eq!(r.faces.iter().filter(|f|f.result.as_ref().is_some_and(|r|r.proven)).count(),25);
+        assert_eq!(r.faces.iter().filter(|f|f.quotient.as_ref().is_some_and(|q|q.result.proven)).count(),2);
         let torus=r.faces[5].result.as_ref().unwrap();
         assert!(torus.proven);assert_eq!(torus.reason,"global-polar-projection-contraction");
         assert!(torus.polar_projection.is_some());assert!(torus.contraction_upper.unwrap()<1.);
         for i in [0,10] { assert_eq!(r.faces[i].result.as_ref().unwrap().reason,"collapsed-boundary-requires-quotient-proof"); }
         assert_eq!(format!("{placed:?}"),before);
+    }
+    #[test]
+    fn quotient_budget_and_pole_ownership_are_required() {
+        let base=crate::circular_blend::partial_annular_quarter(20.,5.,6.,1.25,1.,1e-7).unwrap();
+        let before=format!("{base:?}");
+        let short=inspect(&base,255).unwrap();
+        assert!(short.faces[0].quotient.is_none());
+        assert!(!short.all_faces_injective);assert!(short.spans<=255);
+        let exact=inspect(&base,256).unwrap();
+        assert!(exact.faces[0].quotient.as_ref().unwrap().result.proven);
+        assert_eq!(exact.spans,256);assert!(!exact.all_faces_injective);
+        assert!(exact.faces.iter().skip(1).all(|f|f.result.is_none()&&f.quotient.is_none()));
+        let (_,edge,_)=declared_pole(&base,0).unwrap();
+        let mut missing=base.clone();
+        missing.loops[base.faces[0].outer].coedges.retain(|ce|ce.edge!=edge);
+        assert!(declared_pole(&missing,0).is_none());
+        let mut partial=base.clone();
+        let ce=partial.loops[base.faces[0].outer].coedges.iter_mut().find(|ce|ce.edge==edge).unwrap();
+        ce.pcurve.control_points[1][1]=(ce.pcurve.control_points[0][1]+ce.pcurve.control_points[1][1])*0.5;
+        assert!(declared_pole(&partial,0).is_none());
+        assert_eq!(format!("{base:?}"),before);
     }
     #[test]
     fn perspective_projection_certifies_every_sphere_chart_with_shared_budget(){

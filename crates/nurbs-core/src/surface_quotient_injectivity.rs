@@ -14,6 +14,13 @@ pub struct Report {
     /// Conditional dominance margins when the first projection restricts
     /// where a second, potentially coincident parameter point could lie.
     pub band_margins_lower: Option<Vec<f64>>,
+    /// Original controls defining an exact orthogonal source frame: pole,
+    /// adjacent-row point, and the two meridian controls in the next row.
+    pub source_frame: Option<[[f64; 3]; 4]>,
+}
+enum Projection {
+    Fixed([[f64; 3]; 2]),
+    Source,
 }
 
 /// Work in normalized u,v and reverse u for collapsed_end=1. The projection
@@ -26,6 +33,39 @@ pub fn certify(
     subdivisions: usize,
     max_cells: usize,
 ) -> Result<Report> {
+    certify_inner(
+        s,
+        collapsed_end,
+        Projection::Fixed(projection),
+        subdivisions,
+        max_cells,
+    )
+}
+/// The source frame is defined without rounding its orthogonality: t=A-P,
+/// h=B1-B0, f=t.(S-P), g=(h-(h.t)/(t.t)*t).(S-P). Interval coefficients
+/// enclose this exact rational expression. Its known value at A is exactly
+/// zero for g, regardless of rigid placement or binary64 rounding of controls.
+pub fn certify_source_frame(
+    s: &Surface,
+    collapsed_end: usize,
+    subdivisions: usize,
+    max_cells: usize,
+) -> Result<Report> {
+    certify_inner(
+        s,
+        collapsed_end,
+        Projection::Source,
+        subdivisions,
+        max_cells,
+    )
+}
+fn certify_inner(
+    s: &Surface,
+    collapsed_end: usize,
+    projection: Projection,
+    subdivisions: usize,
+    max_cells: usize,
+) -> Result<Report> {
     s.validate()?;
     check(
         collapsed_end <= 1
@@ -33,7 +73,10 @@ pub fn certify(
             && subdivisions <= 64
             && max_cells > 0
             && max_cells <= 100_000
-            && projection.iter().flatten().all(|x| x.is_finite()),
+            && match &projection {
+                Projection::Fixed(p) => p.iter().flatten().all(|x| x.is_finite()),
+                Projection::Source => true,
+            },
         "Quotient injectivity requires endpoint 0/1, finite projection, 1..64 subdivisions and 1..100000 cells",
     )?;
     let mut report = Report {
@@ -43,6 +86,7 @@ pub fn certify(
         weighted_bounds: None,
         dominance_margin_lower: None,
         band_margins_lower: None,
+        source_frame: None,
     };
     let (p, q) = (s.degree_u, s.degree_v);
     let clamped = |k: &[f64], d: usize| {
@@ -68,6 +112,51 @@ pub fn certify(
         report.reason = "boundary-not-collapsed";
         return Ok(report);
     }
+    let coefficients = match projection {
+        Projection::Fixed(p) => p.map(|row| row.map(I::point)),
+        Projection::Source => {
+            if p < 2 {
+                report.reason = "unsupported-chart";
+                return Ok(report);
+            }
+            let frame: [[f64; 3]; 4] = [
+                pole.as_slice().try_into().unwrap(),
+                s.control_points[index(1)][0].as_slice().try_into().unwrap(),
+                s.control_points[index(2)][0].as_slice().try_into().unwrap(),
+                s.control_points[index(2)][q].as_slice().try_into().unwrap(),
+            ];
+            report.source_frame = Some(frame);
+            let difference = |a: [f64; 3], b: [f64; 3]| -> Result<[I; 3]> {
+                let mut result = [I::point(0.); 3];
+                for k in 0..3 {
+                    if a[k] != b[k] {
+                        result[k] = I::point(a[k]).sub(I::point(b[k]))?;
+                    }
+                }
+                Ok(result)
+            };
+            let dot = |a: [I; 3], b: [I; 3]| -> Result<I> {
+                let mut result = I::point(0.);
+                for k in 0..3 {
+                    result = add(result, mul(a[k], b[k])?)?;
+                }
+                Ok(result)
+            };
+            let tangent = difference(frame[1], frame[0])?;
+            let meridian = difference(frame[3], frame[2])?;
+            let length_squared = dot(tangent, tangent)?;
+            if length_squared.lo <= 0. {
+                report.reason = "frame-not-separated";
+                return Ok(report);
+            }
+            let alpha = dot(meridian, tangent)?.div(length_squared)?;
+            let mut normal = [I::point(0.); 3];
+            for k in 0..3 {
+                normal[k] = sub(meridian[k], mul(alpha, tangent[k])?)?;
+            }
+            [tangent, normal]
+        }
+    };
     let mut coordinates: [Poly; 3] =
         std::array::from_fn(|_| vec![vec![I::point(0.); q + 1]; p + 1]);
     for i in 0..=p {
@@ -76,18 +165,29 @@ pub fn certify(
             let weight = I::point(s.weights[index(i)][j]);
             coordinates[2][i][j] = weight;
             for row in 0..2 {
+                if row == 1
+                    && report
+                        .source_frame
+                        .as_ref()
+                        .is_some_and(|frame| point.as_slice() == frame[1].as_slice())
+                {
+                    // Exact orthogonality of the constructed expression, not
+                    // a tolerance test on independently rounded coefficients.
+                    coordinates[row][i][j] = I::point(0.);
+                    continue;
+                }
                 let mut value = I::point(0.);
                 for k in 0..3 {
                     // Equality of binary64 input coordinates establishes exact
                     // zero differences. Preserve them without tolerance snapping.
-                    if point[k] == pole[k] || projection[row][k] == 0. {
+                    if point[k] == pole[k] || zero(coefficients[row][k]) {
                         continue;
                     }
                     value = add(
                         value,
                         I::point(point[k])
                             .sub(I::point(pole[k]))?
-                            .mul(I::point(projection[row][k]))?,
+                            .mul(coefficients[row][k])?,
                     )?;
                 }
                 coordinates[row][i][j] = mul(value, weight)?;

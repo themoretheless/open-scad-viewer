@@ -64,6 +64,9 @@ fn diagnose_inner(v: Value, combined: bool) -> Result<Value> {
         output["maxSpans"] = json!(max_spans);
         output["faces"] = json!(faces.faces.iter().map(|face| json!({
             "face": face.face,
+            "quotientProof":face.quotient.as_ref().map(|q|json!({"collapsedEnd":q.collapsed_end,"poleEdge":q.pole_edge,"poleVertex":q.pole_vertex,
+                "proven":q.result.proven,"cells":q.result.cells,"reason":q.result.reason,"sourceFrame":q.result.source_frame,"sourceSurface":model.faces[face.face].surface,"weightedBounds":q.result.weighted_bounds,
+                "dominanceMarginLower":q.result.dominance_margin_lower,"bandMarginsLower":q.result.band_margins_lower})),
             "result": face.result.as_ref().map(|r| json!({"proven":r.proven,"projection":r.projection,"linearProjection":r.linear_projection,
                 "projectiveProjection":r.projective_projection,
                 "polarProjection":r.polar_projection,
@@ -79,20 +82,25 @@ mod tests {
         json!({"op":"cad_face_contacts","model":model,"toleranceUv":1e-8,"maxPairs":100,"maxCells":10000,"maxDomainCells":100000,"cellsPerPair":16,"domainCellsPerPair":1000,"maxBoxes":2})
     }
     #[test]
-    fn partial_annular_diagnostics_prove_torus_face_and_keep_poles_unresolved() {
+    fn partial_annular_diagnostics_include_owned_quotient_proofs_without_certifying_pairs() {
         let model=brep_core::circular_blend::partial_annular_quarter(20.,5.,6.,1.25,1.,1e-7).unwrap();
         let before=value_codec::to_value(&model).unwrap();
         let mut q=request(&model);q["op"]=json!("cad_self_intersection");q["maxSpans"]=json!(4096);
         let report=crate::dispatch(q.clone()).unwrap();
         assert_eq!(report["absenceProven"],json!(false));
-        assert_eq!(report["allFacesInjective"],json!(false));
+        assert_eq!(report["allFacesInjective"],json!(true));
         let faces=report["faces"].as_array().unwrap();
         assert_eq!(faces.iter().filter(|f|f["result"]["proven"]==json!(true)).count(),25);
         assert_eq!(faces[5]["result"]["reason"],json!("global-polar-projection-contraction"));
         assert!(faces[5]["result"]["polarProjection"].is_array());
-        for index in [0,10] { assert_eq!(faces[index]["result"]["reason"],json!("collapsed-boundary-requires-quotient-proof")); }
+        for index in [0,10] {
+            assert_eq!(faces[index]["result"]["reason"],json!("collapsed-boundary-requires-quotient-proof"));
+            assert_eq!(faces[index]["quotientProof"]["proven"],json!(true));
+            assert_eq!(faces[index]["quotientProof"]["cells"],json!(256));
+            assert!(faces[index]["quotientProof"]["sourceFrame"].is_array());
+        }
         assert_eq!(value_codec::to_value(&model).unwrap(),before);
-        if let Ok(path)=std::env::var("CAD_POLAR_INJECTIVITY_FIXTURE") {
+        if let Ok(path)=std::env::var("CAD_QUOTIENT_INJECTIVITY_FIXTURE") {
             std::fs::write(path,value_codec::to_string(&json!({"request":q,"result":report})).unwrap()).unwrap();
         }
     }
