@@ -1442,4 +1442,31 @@ mod tests {
         }
         assert!(plane_cylinder_rim(20., 6., 1., 0., 7.).is_err());
     }
+
+    #[test]
+    fn source_preview_admits_only_four_outer_rim_arcs_and_preserves_source() {
+        let source = crate::tube(20., 5., 6.).unwrap();
+        let original = format!("{source:?}");
+        let mut admitted = 0;
+        for edge in 0..source.edges.len() {
+            if let Ok(result) =
+                crate::analytic_features::build_partial_annular_preview(&source, edge, 1.25)
+            {
+                assert_eq!(result.validate().unwrap().boundary_edge_count, 0);
+                assert_eq!(result.bodies.len(), 1);
+                assert!(result.persistent_naming_complete());
+                admitted += 1;
+            }
+        }
+        assert_eq!(admitted, 4);
+        assert_eq!(original, format!("{source:?}"));
+        assert!(
+            crate::analytic_features::build_partial_annular_preview(
+                &source,
+                source.edges.len(),
+                1.25
+            )
+            .is_err()
+        );
+    }
 }

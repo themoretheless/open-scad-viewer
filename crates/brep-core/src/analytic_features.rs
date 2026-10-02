@@ -2109,6 +2109,44 @@ fn place_axial(
 
 type AnalyticTube = (f64, f64, f64, [f64; 3], [f64; 3], [[f64; 3]; 2]);
 
+/// Experimental preview construction for one top outer quarter-rim edge.
+/// This returns no feature certificate: result boundary proof and complete
+/// source ownership qualification are still required before command admission.
+pub fn build_partial_annular_preview(model: &Model, edge_index: usize, radius: f64) -> Result<Model> {
+    const CODE: &str = "BREP_PARTIAL_ANNULAR_PREVIEW_REFUSED";
+    model.validate()?;
+    audit_solid(model)?;
+    let (outer,inner,height,origin,axis,_) = recognize_analytic_tube(model)
+        .ok_or_else(|| refuse(CODE,"Preview source must be a recognized annular cylinder"))?;
+    let edge=model.edges.get(edge_index).ok_or_else(|| refuse(CODE,"Invalid circular edge"))?;
+    let curve=&edge.curve;
+    if curve.degree!=2 || curve.periodic || curve.knots!=[0.,0.,0.,1.,1.,1.]
+        || curve.control_points.len()!=3 || curve.weights.len()!=3 {
+        return Err(refuse(CODE,"Select a top outer quarter-circle edge"));
+    }
+    let tolerance=(outer.max(height)*1e-10).max(1e-12);
+    let local:Vec<_>=curve.control_points.iter().map(|p|sub3([p[0],p[1],p[2]],origin)).collect();
+    let radial:Vec<_>=local.iter().map(|p| {
+        let z=dot3(*p,axis);
+        [p[0]-z*axis[0],p[1]-z*axis[1],p[2]-z*axis[2]]
+    }).collect();
+    if local.iter().any(|p|(dot3(*p,axis)-height).abs()>tolerance)
+        || [0,2].iter().any(|i|(dot3(radial[*i],radial[*i]).sqrt()-outer).abs()>tolerance)
+        || dot3(radial[0],radial[2]).abs()>outer*tolerance
+        || (0..3).any(|k|(radial[1][k]-radial[0][k]-radial[2][k]).abs()>tolerance)
+        || curve.weights.iter().zip([1.,std::f64::consts::FRAC_1_SQRT_2,1.]).any(|(a,b)|(*a-b).abs()>1e-12) {
+        return Err(refuse(CODE,"Edge is not a recognized top outer quarter-circle"));
+    }
+    let first=unit3(radial[0]).ok_or_else(||refuse(CODE,"Invalid radial frame"))?;
+    let second=unit3(cross3(axis,first)).ok_or_else(||refuse(CODE,"Invalid radial frame"))?;
+    let direction=dot3(radial[2],second).signum();
+    let local=crate::circular_blend::partial_annular_quarter(outer,inner,height,radius,direction,model.tolerance_mm)?;
+    let mut result=place_axial(&local,[first,second],axis,origin)?;
+    result.inherit_topology_ids(&[model]);
+    result.validate()?;
+    Ok(result)
+}
+
 /// Full circular rims of a recognized annular cylinder. Partial arcs require
 /// endpoint transitions and are refused rather than extending the selection.
 pub fn exact_annular_fillet(model: &Model, edges: &[usize], radius: f64) -> Result<AuditedFeatureResult> {
