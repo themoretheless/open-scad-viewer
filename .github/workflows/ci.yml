@@ -111,7 +111,12 @@ jobs:
       - run: npm ci
       - run: npm run test:wasm-optimize
       - run: npm run build:geometry
+      # Hosted Windows smoke does not qualify the software DX12 adapter. An
+      # unavailable Vulkan adapter exercises the existing optional-GPU skip;
+      # COMPUTE_REQUIRE_GPU keeps required GPU runs fail-closed.
       - run: cargo test --locked --manifest-path crates/Cargo.toml --workspace
+        env:
+          WGPU_BACKEND: ${{ runner.os == 'Windows' && 'vulkan' || 'metal' }}
       - run: node node_modules/vitest/vitest.mjs run tests/duckdbModelStore.test.ts tests/mcpCli.test.ts
 
   official-openscad-mcp:
