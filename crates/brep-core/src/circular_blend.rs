@@ -704,6 +704,18 @@ pub fn plane_cylinder_transition(
         weights[k] = meridian_weights.to_vec();
         if r == 0. {
             controls[k] = vec![center_controls[k].clone(); 3];
+            // The adjacent radius-law control also equals zero. Its Euclidean
+            // point is independent of meridian v, just like the pole row.
+            // Repeated multiply/divide through different meridian weights
+            // otherwise introduces one-ulp transverse changes in this row.
+            let adjacent = if k == 0 { 1 } else { 4 };
+            center_controls[adjacent][2] = height;
+            for d in 0..2 {
+                if point[d] == unit.control_points[1][d] {
+                    center_controls[adjacent][d] = outer_radius * point[d];
+                }
+            }
+            controls[adjacent] = vec![center_controls[adjacent].clone(); 3];
         }
     }
     let knots: Vec<_> = std::iter::repeat_n(0., 6)
@@ -1111,6 +1123,35 @@ mod tests {
         }
     }
 
+    #[test]
+    fn partial_transition_poles_pass_weighted_quotient_proof_without_claiming_g1() {
+        for radius in [1.25,2.5] { for direction in [-1.,1.] {
+            let model=partial_annular_quarter(20.,5.,6.,radius,direction,1e-7).unwrap();
+            for (face,end,projection) in [(0,0,[[0.,direction,0.],[1.,0.,-1.]]),(10,1,[[1.,0.,0.],[0.,direction,-1.]])] {
+                let s=&model.faces[face].surface;
+                let proof=nurbs_core::surface_quotient_injectivity::certify(s,end,projection,16,256).unwrap();
+                assert!(proof.proven,"face {face}, direction {direction}: {proof:?}");
+                assert!(!nurbs_core::surface_injectivity::certify(s,1000).unwrap().proven);
+                if radius==2.5 {
+                    let [a,b,e,c]=proof.weighted_bounds.unwrap();assert!(a*b<c*e);
+                    assert_eq!(proof.reason,"global-localized-weighted-quotient-dominance");
+                    assert!(proof.band_margins_lower.unwrap().iter().all(|m|*m>0.));
+                }
+            }
+        }}
+    }
+    #[test]
+    fn zero_radius_neighbor_controls_do_not_acquire_transverse_roundoff() {
+        for (r0,r1,row) in [(0.,1.25,1),(1.25,0.,4)] {
+            for (start,sweep) in [(0.,0.3),(5.9,-0.7),(0.3,1.2)] {
+                let span=plane_cylinder_transition(20.,6.,r0,r1,start,sweep).unwrap();
+                let controls=&span.surface.control_points[row];
+                assert!(controls.iter().all(|p|*p==controls[0]));
+                assert_eq!(controls[0][2],6.);
+                assert_eq!(controls[0],span.centers.control_points[row]);
+            }
+        }
+    }
     #[test]
     fn collapsed_transition_tip_has_distinct_normal_limits_not_a_regular_g1_point() {
         // Both contact rails end at the original sharp rim. Their limiting

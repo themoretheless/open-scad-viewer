@@ -33,6 +33,7 @@ pub mod chord_winding;
 pub mod chord_witness;
 pub mod surface_distance;
 pub mod surface_injectivity;
+pub mod surface_quotient_injectivity;
 pub mod surface_contact;
 pub mod surface_contact_search;
 pub mod radial_bounds;
