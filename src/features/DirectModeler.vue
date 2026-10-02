@@ -4146,3 +4146,38 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
  .canvas-viewport{min-height:120px}
 }
 </style>
+
+<style scoped>
+/* Quiet chrome: the app shell already owns title, search and file actions. */
+.direct-workspace { inset: var(--topbar-h, 40px) 0 var(--statusbar-h, 24px); font-size: 12px; }
+.direct-workspace .workspace-bar { gap: 6px; padding: 4px 10px; background: var(--surface); border-bottom: 1px solid var(--hairline); }
+.direct-workspace .workspace-bar > strong,
+.direct-workspace .workspace-bar > .subtle,
+.direct-workspace .workspace-bar > .command-search { display: none; }
+.direct-workspace .workspace-bar > .file-menu { margin-left: auto; }
+.direct-workspace button:not(.primary), .direct-workspace summary, .direct-workspace select { border-color: transparent; background: transparent; border-radius: 6px; }
+.direct-workspace button:hover:not(:disabled):not(.primary), .direct-workspace summary:hover { background: var(--hover); }
+.direct-workspace button[aria-pressed="true"]:not(.primary), .direct-workspace button.active:not(.primary) { background: color-mix(in srgb, var(--accent) 16%, transparent); color: var(--accent); border-color: transparent; }
+.direct-workspace button:disabled { opacity: .4; }
+.direct-workspace .primitive-bar, .direct-workspace .sketch-start-bar { border-bottom: 1px solid var(--hairline); }
+/* Viewport first: pane tools and grid controls float over the scene instead of taking rows. */
+.direct-workspace .pane { position: relative; }
+.direct-workspace .pane-tools {
+  position: absolute; z-index: 3; top: 10px; left: 10px; max-width: calc(100% - 20px); min-height: 0; padding: 3px; gap: 1px;
+  border: 1px solid var(--hairline); border-radius: 8px; background: color-mix(in srgb, var(--surface) 92%, transparent);
+  backdrop-filter: blur(8px); box-shadow: 0 4px 16px rgba(0,0,0,.18);
+}
+.direct-workspace .pane-tools .tool-icon { width: 30px; height: 30px; }
+.direct-workspace .pane-tools .tool-divider { height: 16px; background: var(--hairline); }
+.direct-workspace .pane > .modeling-grid-controls {
+  position: absolute; z-index: 3; left: 10px; bottom: 10px; padding: 2px 6px; border: 1px solid var(--hairline); border-radius: 8px;
+  background: color-mix(in srgb, var(--surface) 92%, transparent); backdrop-filter: blur(8px);
+}
+.direct-workspace .pane > .modeling-grid-controls :deep(details > div) { top: auto; bottom: 100%; right: auto; left: 0; }
+.direct-workspace .workspace-state { gap: 6px 10px; padding: 3px 12px; border-bottom: 1px solid var(--hairline); background: var(--surface); }
+.direct-workspace .workspace-state .state-legend { display: none; }
+.direct-workspace .splitter { border: 0; background: var(--hairline); }
+.direct-workspace .splitter span { display: none; }
+.direct-workspace .splitter:hover, .direct-workspace .splitter:focus-visible { background: var(--accent); }
+.direct-workspace input, .direct-workspace select { border-color: var(--hairline); }
+</style>

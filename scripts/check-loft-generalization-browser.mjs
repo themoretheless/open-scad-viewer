@@ -39,6 +39,7 @@ try{
   const input=page.locator('input[accept=".scad,.r,.mg,text/plain"]'),editor=page.locator('textarea.code-input')
   const load=async(file,source)=>{await input.setInputFiles({name:file,mimeType:'text/plain',buffer:Buffer.from(source)})}
   const build=async()=>{await page.getByRole('button',{name:'Собрать',exact:true}).click();await page.waitForFunction(()=>{const b=[...document.querySelectorAll('button')].find(b=>b.textContent.trim()==='Собрать');return b&&!b.disabled},{},{timeout:120000})}
+  const toSolid=async()=>{const button=page.getByRole('button',{name:'В Solid',exact:true});if(!await button.isVisible())await page.locator('.editor-toolbar .more-menu > summary').click();await button.click()}
   const assertions=[]
   for(const file of ['cartesian-control-tangent-loft.r','cartesian-auto-control-tangent-loft.r','cartesian-mapped-loft.r','mapped-natural-loft.r','authored-nonplanar-cap-loft.r']){
    await load(file,await readFile(path.resolve('examples/rush',file),'utf8'));await build()
@@ -49,7 +50,7 @@ try{
   const cap=await readFile('examples/rush/authored-nonplanar-cap-loft.r','utf8')
   await load('exhausted.r',cap.replace('loft_embedding_limits()','loft_embedding_limits(facePairs: 1)'));await build()
   assert.match(await page.locator('.message.error').innerText(),/embedding|pairs|budget/i);assertions.push({case:'embedding-budget-refusal',status:'refused'});console.log(viewport.width,'budget refused')
-  await page.getByRole('button',{name:'В Solid',exact:true}).click();await page.locator('.message.error').waitFor();await page.waitForFunction(()=>![...document.querySelectorAll('.editor-toolbar button')].some(b=>b.textContent.trim()==='…'))
+  await toSolid();await page.locator('.message.error').waitFor();await page.waitForFunction(()=>![...document.querySelectorAll('.editor-toolbar button')].some(b=>b.textContent.trim()==='…'))
   assert.match(await page.locator('.message.error').innerText(),/embedding|pairs|budget/i);assertions.push({case:'solid-budget-refusal',status:'refused without publishing a body'})
   await load('cancel-build.r',cap);await page.evaluate(()=>window.loftHoldBuild=true)
   await page.getByRole('button',{name:'Собрать',exact:true}).click();await page.waitForFunction(()=>window.loftHeld.includes('build'))
@@ -58,18 +59,18 @@ try{
   console.log(viewport.width,'build cancelled')
   await page.evaluate(()=>window.loftHoldBuild=false);await build();assert.equal(await page.locator('.message.error').count(),0)
   await page.evaluate(()=>window.loftHoldExact=true)
-  await page.getByRole('button',{name:'В Solid',exact:true}).click();await page.waitForFunction(()=>window.loftHeld.includes('exact'))
+  await toSolid();await page.waitForFunction(()=>window.loftHeld.includes('exact'))
   await page.getByRole('button',{name:'Отмена',exact:true}).click();await page.waitForFunction(()=>window.loftTerminated.includes('exact'))
   assertions.push({case:'solid-cancellation',status:'cancelled',fault:'explicitly held worker dispatch'})
   console.log(viewport.width,'solid cancelled')
   const before=await page.evaluate(()=>window.loftTerminated.length)
-  await page.getByRole('button',{name:'В Solid',exact:true}).click()
+  await toSolid()
   await page.waitForFunction(n=>window.loftHeld.filter(x=>x==='exact').length>=n,2)
   await editor.fill(cap+'\n// revised while Solid was building\n')
   await page.waitForFunction(n=>window.loftTerminated.length>n,before);assertions.push({case:'source-change',status:'superseded exact worker terminated'})
   console.log(viewport.width,'source superseded')
   await page.evaluate(()=>window.loftHoldExact=false)
-  await page.getByRole('button',{name:'В Solid',exact:true}).click()
+  await toSolid()
   const solid=page.getByRole('region',{name:'Solid — CAD-лепка',exact:true})
   await page.waitForFunction(()=>document.querySelector('main.main')?.inert===true,{},{timeout:120000})
   await solid.getByRole('status',{name:'display-refinement',exact:true}).waitFor({state:'hidden',timeout:120000})
