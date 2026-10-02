@@ -421,4 +421,122 @@ mod tests {
             }
         }
     }
+    #[test]
+    fn checked_curved_rational_network_retains_all_six_authored_curves() {
+        let stations = [0., 0.5, 1.];
+        let u: Vec<_> = stations
+            .iter()
+            .enumerate()
+            .map(|(i, &y)| {
+                let weight = [0.5, 2., 4.][i];
+                let height = [0.5, 1., 0.5][i];
+                Curve {
+                    degree: 2,
+                    knots: vec![0., 0., 0., 1., 1., 1.],
+                    control_points: vec![
+                        vec![0., y, 0.],
+                        vec![0.5, y, height * (1. + weight) / weight],
+                        vec![1., y, 0.],
+                    ],
+                    weights: vec![1., weight, 1.],
+                    periodic: false,
+                }
+            })
+            .collect();
+        let v: Vec<_> = stations
+            .iter()
+            .enumerate()
+            .map(|(i, &x)| {
+                let weight = [4., 2., 0.5][i];
+                let (end, middle) = if i == 1 {
+                    (0.5, 1. + 0.5 / weight)
+                } else {
+                    (0., 0.)
+                };
+                Curve {
+                    degree: 2,
+                    knots: vec![0., 0., 0., 1., 1., 1.],
+                    control_points: vec![vec![x, 0., end], vec![x, 0.5, middle], vec![x, 1., end]],
+                    weights: vec![1., weight, 1.],
+                    periodic: false,
+                }
+            })
+            .collect();
+        let (surface, certificates) =
+            super::super::patch_cartesian(&u, &v, &stations, &stations, 1e-6, 50000, 200000)
+                .unwrap();
+        assert_eq!(certificates.len(), 6);
+        assert!(
+            certificates
+                .iter()
+                .all(|c| c["accepted"] == value_codec::json!(true)
+                    && c["errorUpper"].as_f64().unwrap() <= 1e-6)
+        );
+        assert!((surface.evaluate(0.5, 0.5).unwrap().point[2] - 1.).abs() < 1e-11);
+        for sample in 0..=100 {
+            let t = sample as f64 / 100.;
+            for (j, curve) in u.iter().enumerate() {
+                let actual = surface.evaluate(t, stations[j]).unwrap().point;
+                let expected = curve.evaluate(t).unwrap().point;
+                for k in 0..3 {
+                    assert!((actual[k] - expected[k]).abs() < 1e-10);
+                }
+            }
+            for (i, curve) in v.iter().enumerate() {
+                let actual = surface.evaluate(stations[i], t).unwrap().point;
+                let expected = curve.evaluate(t).unwrap().point;
+                for k in 0..3 {
+                    assert!((actual[k] - expected[k]).abs() < 1e-10);
+                }
+            }
+        }
+        // Independent closed-form natural-cardinal basis for stations 0,1/2,1.
+        // No production spline/control-net construction is used for this oracle.
+        let cardinal = |t: f64| {
+            if t <= 0.5 {
+                let b = 2. * t;
+                let q = 0.25 * (b.powi(3) - b);
+                [1. - b + q, b - 2. * q, q]
+            } else {
+                let b = 2. * t - 1.;
+                let a = 1. - b;
+                let q = 0.25 * (a.powi(3) - a);
+                [q, a - 2. * q, b + q]
+            }
+        };
+        for iu in 0..=10 {
+            for iv in 0..=10 {
+                let x = iu as f64 / 10.;
+                let y = iv as f64 / 10.;
+                let m = cardinal(x);
+                let l = cardinal(y);
+                let mut expected = [0.; 3];
+                for j in 0..3 {
+                    let point = u[j].evaluate(x).unwrap().point;
+                    for k in 0..3 {
+                        expected[k] += l[j] * point[k];
+                    }
+                }
+                for i in 0..3 {
+                    let point = v[i].evaluate(y).unwrap().point;
+                    for k in 0..3 {
+                        expected[k] += m[i] * point[k];
+                    }
+                    for j in 0..3 {
+                        let crossing = u[j].evaluate(stations[i]).unwrap().point;
+                        for k in 0..3 {
+                            expected[k] -= m[i] * l[j] * crossing[k];
+                        }
+                    }
+                }
+                let actual = surface.evaluate(x, y).unwrap().point;
+                for k in 0..3 {
+                    assert!(
+                        (actual[k] - expected[k]).abs() < 1e-10,
+                        "Cartesian Gordon formula mismatch at ({x},{y}), axis {k}"
+                    );
+                }
+            }
+        }
+    }
 }
