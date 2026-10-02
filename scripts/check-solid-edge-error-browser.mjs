@@ -42,6 +42,13 @@ try{
  await page.goto(`http://127.0.0.1:${server.address().port}`)
  const solid=page.getByRole('region',{name:'Solid — CAD-лепка',exact:true}),menu=solid.locator('summary[title="Файл"]')
  async function activate(locator){if(inputMode==='keyboard')await locator.press('Enter');else await locator.click()}
+ async function enterText(locator,text){
+  if(inputMode==='keyboard'){
+   await locator.press('ControlOrMeta+A');await locator.press('Backspace')
+   await page.keyboard.insertText(text)
+   if(await locator.getAttribute('role')!=='combobox')await locator.press('Tab')
+  }else await locator.fill(text)
+ }
  async function selectEdge(id,add=false){
   const edge=solid.locator(`[data-topology-edge="${id}"]`)
   if(inputMode==='keyboard'){await edge.press(add?'Shift+Enter':'Enter');return}
@@ -86,7 +93,7 @@ try{
  if(ids.length>1&&mode==='constant'){
   await selectEdge(ids[0])
   await activate(solid.getByRole('button',{name:'Команда… Ctrl K',exact:true}))
-  const partialSearch=page.getByRole('combobox',{name:'Search commands / Поиск команд'});await partialSearch.fill('Скруглить 3D');await partialSearch.press('Enter')
+  const partialSearch=page.getByRole('combobox',{name:'Search commands / Поиск команд'});await enterText(partialSearch,'Скруглить 3D');await partialSearch.press('Enter')
   const curved=brep.edges[brep.topologyIds.edges.indexOf(ids[0])].curve.degree>1
   await solid.getByText(curved?'Выберите полное кольцо:':'Выберите всю цепочку рёбер',{exact:false}).waitFor()
   assert.equal(await solid.getByRole('button',{name:'Готово · Enter',exact:true}).isDisabled(),true)
@@ -95,11 +102,18 @@ try{
  }
  for(const [i,edge] of ids.entries())await selectEdge(edge,i>0)
  await activate(solid.getByRole('button',{name:'Команда… Ctrl K',exact:true}))
- const search=page.getByRole('combobox',{name:'Search commands / Поиск команд'});await search.fill('Скруглить 3D');await search.press('Enter')
- await solid.getByRole('combobox',{name:'Тип скругления',exact:true}).selectOption(mode)
+ const search=page.getByRole('combobox',{name:'Search commands / Поиск команд'});await enterText(search,'Скруглить 3D');await search.press('Enter')
+ const filletType=solid.getByRole('combobox',{name:'Тип скругления',exact:true})
+ if(inputMode==='keyboard'){
+  const label=await filletType.locator('option').evaluateAll((nodes,value)=>nodes.find(n=>n.value===value)?.textContent,mode)
+  await filletType.press('Tab');await page.keyboard.press('Shift+Tab')
+  const cdp=await page.context().newCDPSession(page)
+  try{for(const letter of label)await cdp.send('Input.dispatchKeyEvent',{type:'char',text:letter,key:letter})}finally{await cdp.detach()}
+ }else await filletType.selectOption(mode)
+ assert.equal(await filletType.inputValue(),mode)
  if(process.env.SOLID_EDGE_FIXTURE_ROOT){
   await page.evaluate(()=>window.__holdEdge=true)
-  await solid.getByRole('textbox',{name:'Радиус / размер, мм',exact:true}).fill('1 mm')
+  await enterText(solid.getByRole('textbox',{name:'Радиус / размер, мм',exact:true}),'1.25 mm')
   await page.waitForFunction(()=>typeof window.__lateEdge==='function')
   assert.equal(await solid.getByRole('button',{name:'Готово · Enter',exact:true}).isDisabled(),true)
   if(process.env.SOLID_EDGE_CONTEXT_SWITCH){
@@ -114,8 +128,8 @@ try{
   await page.evaluate(()=>{window.__holdEdge=false;window.__lateEdge(false);window.__lateEdge(true)})
   assert.deepEqual(await doc('late-cancelled'),before)
   assert.equal(await solid.locator('[data-preview-body]').count(),0)
-  await activate(solid.getByRole('button',{name:'Команда… Ctrl K',exact:true}));await search.fill('Скруглить 3D');await search.press('Enter')
-  await solid.getByRole('textbox',{name:'Радиус / размер, мм',exact:true}).fill('2 mm')
+  await activate(solid.getByRole('button',{name:'Команда… Ctrl K',exact:true}));await enterText(search,'Скруглить 3D');await search.press('Enter')
+  await enterText(solid.getByRole('textbox',{name:'Радиус / размер, мм',exact:true}),'2 mm')
   await page.waitForFunction(()=>[...document.querySelectorAll('button')].some(b=>b.textContent?.trim()==='Готово · Enter'&&!b.disabled))
   const currentPreview=await solid.locator('[data-preview-body]').evaluateAll(nodes=>nodes.map(n=>n.outerHTML))
   assert.ok(currentPreview.length>0)
@@ -124,7 +138,7 @@ try{
   assert.equal(await solid.getByRole('button',{name:'Готово · Enter',exact:true}).isDisabled(),false)
   assert.deepEqual(await solid.locator('[data-preview-body]').evaluateAll(nodes=>nodes.map(n=>n.outerHTML)),currentPreview)
  }
- const amount=solid.getByRole('textbox',{name:mode==='variable'?'Радиус A, мм':'Радиус / размер, мм',exact:true});await amount.fill('30 mm')
+ const amount=solid.getByRole('textbox',{name:mode==='variable'?'Радиус A, мм':'Радиус / размер, мм',exact:true});await enterText(amount,'30 mm')
  await solid.getByText('Размер сопряжения не помещается.',{exact:false}).waitFor()
  assert.ok((await solid.innerText()).includes(before.bodies[0].name+' · рёбра '))
  assert.ok((await solid.innerText()).includes('Уменьшите радиус или размер фаски.'))
@@ -137,7 +151,7 @@ try{
  assert.ok(unselected.every(color=>color==='#89baff'))
  for(const edge of ids)assert.equal(await solid.locator(`[data-topology-edge="${edge}"]`).getAttribute('stroke'),'#f87171')
  await page.screenshot({path:path.join(directory,'error.png')})
- await amount.fill('1 mm');await solid.getByRole('button',{name:'Готово · Enter',exact:true}).click({trial:true})
+ await enterText(amount,'1 mm');await solid.getByRole('button',{name:'Готово · Enter',exact:true}).click({trial:true})
  const requestsBeforeApply=await page.evaluate(()=>window.__edgeRequests)
  await activate(solid.getByRole('button',{name:'Готово · Enter',exact:true}));await ready()
  assert.equal(await page.evaluate(()=>window.__edgeRequests),requestsBeforeApply)
@@ -145,6 +159,6 @@ try{
  await activate(solid.getByRole('button',{name:'↶',exact:true}));assert.deepEqual(await doc('undo'),before)
  await activate(solid.getByRole('button',{name:'↷',exact:true}));assert.deepEqual(await doc('redo'),after)
  await page.reload();await solid.getByRole('button',{name:after.bodies[0].name,exact:true}).waitFor();await ready();assert.deepEqual(await doc('reloaded'),after)
- assert.deepEqual(errors,[]);await writeFile(path.join(directory,'result.json'),JSON.stringify({ok:true,mode,inputMode,contextSwitch:!!process.env.SOLID_EDGE_CONTEXT_SWITCH,oversizeRefusal:true,localized:true,reduceRadiusRecovery:true,undoRedo:true,reload:true,applyWithoutRecompute:true,lateResponseAfterCancelAndReopen:!!process.env.SOLID_EDGE_FIXTURE_ROOT,errors},null,2))
+ assert.deepEqual(errors,[]);await writeFile(path.join(directory,'result.json'),JSON.stringify({ok:true,mode,inputMode,keyboardNumericInput:inputMode==='keyboard',contextSwitch:!!process.env.SOLID_EDGE_CONTEXT_SWITCH,oversizeRefusal:true,localized:true,reduceRadiusRecovery:true,undoRedo:true,reload:true,applyWithoutRecompute:true,lateResponseAfterCancelAndReopen:!!process.env.SOLID_EDGE_FIXTURE_ROOT,errors},null,2))
 }catch(error){if(page){await page.screenshot({path:path.join(directory,'failure.png')}).catch(()=>{});await writeFile(path.join(directory,'failure.txt'),await page.locator('body').innerText().catch(()=>''))}throw error}
 finally{await browser?.close();await new Promise(resolve=>server.close(resolve))}

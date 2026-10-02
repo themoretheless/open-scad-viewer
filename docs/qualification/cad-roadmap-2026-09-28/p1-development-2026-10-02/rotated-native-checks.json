@@ -30,7 +30,7 @@
       "mouse edge selection and command activation",
       "keyboard edge selection and command activation"
     ],
-    "numericFields": "Playwright fill; full keyboard-only numeric workflow remains unqualified",
+    "numericFields": "Native keyboard text input with select-all, deletion, insertion and Tab commit; native select typeahead uses Chromium char events.",
     "checks": [
       "localized excessive-radius refusal",
       "radius correction",
@@ -40,6 +40,8 @@
       "actual page reload"
     ],
     "camera": "fit before selection and after orbit",
-    "sourceWasmSha256": "105c4def695089fa0f4011d178410c239cc14477ef8c9069a3c22f0950a4608b"
+    "sourceWasmSha256": "105c4def695089fa0f4011d178410c239cc14477ef8c9069a3c22f0950a4608b",
+    "keyboardNumericInputVerified": true,
+    "sequentialTabNavigationQualified": false
   }
 }
