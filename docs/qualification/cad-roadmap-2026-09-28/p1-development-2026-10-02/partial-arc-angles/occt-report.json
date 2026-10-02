@@ -1,0 +1,188 @@
+{
+  "schema": "cad-partial-quarter-occt/1",
+  "scope": "Enumerated quarter-rim specimens; numerical volume and OCCT topology validity. General self-intersections and whole-domain tangency remain unqualified.",
+  "oracleConvergenceMm3": 0.0,
+  "passed": true,
+  "parts": [
+    {
+      "name": "case-0",
+      "sha256": "ed318929dd29dc6944b68c00b407d89dc4eaad8b91af48eb9715b37f5a80f9b1",
+      "parameters": [
+        20.0,
+        5.0,
+        6.0,
+        1.25
+      ],
+      "valid": true,
+      "solids": 1,
+      "volumeMm3": 7067.176879680185,
+      "expectedVolumeMm3": 7067.176879702504,
+      "volumeErrorMm3": 2.231899998150766e-08,
+      "boundsMm": [
+        [
+          -20.000000100000005,
+          -20.0000001,
+          -1e-07
+        ],
+        [
+          20.00000010000001,
+          20.000000100000005,
+          6.000000100000003
+        ]
+      ],
+      "boundsErrorMm": 1.000000082740371e-07,
+      "integrationRelativeError": 2.0398641900546996e-15,
+      "passed": true
+    },
+    {
+      "name": "case-1",
+      "sha256": "b3539f65a7652e8aacee3a336040e4e202f68d117fa1bb9cd2355ec3386d8550",
+      "parameters": [
+        20.0,
+        5.0,
+        6.0,
+        1.25
+      ],
+      "valid": true,
+      "solids": 1,
+      "volumeMm3": 7067.176879680185,
+      "expectedVolumeMm3": 7067.176879702504,
+      "volumeErrorMm3": 2.231899998150766e-08,
+      "boundsMm": [
+        [
+          -20.000000100000005,
+          -20.0000001,
+          -1e-07
+        ],
+        [
+          20.0000001,
+          20.0000001,
+          6.000000100000003
+        ]
+      ],
+      "boundsErrorMm": 1.0000000472132342e-07,
+      "integrationRelativeError": 2.087302892148995e-15,
+      "passed": true
+    },
+    {
+      "name": "case-2",
+      "sha256": "7c022e489e0592465a4896c7b450c3e7de227cf48787120882028c09db80d5d7",
+      "parameters": [
+        20.0,
+        5.0,
+        6.0,
+        1.25
+      ],
+      "valid": true,
+      "solids": 1,
+      "volumeMm3": 7063.832268533905,
+      "expectedVolumeMm3": 7063.832268537017,
+      "volumeErrorMm3": 3.1113813747651875e-09,
+      "boundsMm": [
+        [
+          -20.0000001,
+          -20.000000100000005,
+          -1e-07
+        ],
+        [
+          20.000000100000005,
+          20.0000001,
+          6.000000100000002
+        ]
+      ],
+      "boundsErrorMm": 1.0000000472132342e-07,
+      "integrationRelativeError": 5.361340083305738e-16,
+      "passed": true
+    },
+    {
+      "name": "case-3",
+      "sha256": "237ccdd3ddb7bc497a863008b2a6a54aab612db0519b684949c900a42a44c056",
+      "parameters": [
+        20.0,
+        5.0,
+        6.0,
+        1.25
+      ],
+      "valid": true,
+      "solids": 1,
+      "volumeMm3": 7063.832268533905,
+      "expectedVolumeMm3": 7063.832268537017,
+      "volumeErrorMm3": 3.1113813747651875e-09,
+      "boundsMm": [
+        [
+          -20.0000001,
+          -20.0000001,
+          -1e-07
+        ],
+        [
+          20.00000010000001,
+          20.000000100000005,
+          6.000000100000002
+        ]
+      ],
+      "boundsErrorMm": 1.000000082740371e-07,
+      "integrationRelativeError": 4.918493741803829e-16,
+      "passed": true
+    },
+    {
+      "name": "case-4",
+      "sha256": "19b2bcae41a83a3434e2a384708ae8188f7a586040aa0f60a758bb11c7ab5bb0",
+      "parameters": [
+        20.0,
+        5.0,
+        6.0,
+        1.25
+      ],
+      "valid": true,
+      "solids": 1,
+      "volumeMm3": 7054.338921755165,
+      "expectedVolumeMm3": 7054.338921794172,
+      "volumeErrorMm3": 3.900731826433912e-08,
+      "boundsMm": [
+        [
+          -20.00000010000001,
+          -20.0000001,
+          -1e-07
+        ],
+        [
+          20.000000100000012,
+          20.000000100000005,
+          6.000000100000003
+        ]
+      ],
+      "boundsErrorMm": 1.0000001182675078e-07,
+      "integrationRelativeError": 1.305247591577178e-14,
+      "passed": true
+    },
+    {
+      "name": "case-5",
+      "sha256": "f6984d5bcb7682a2acf6bec7fdbe1d096fcb69da8e76d110f3ce3501467e532c",
+      "parameters": [
+        20.0,
+        5.0,
+        6.0,
+        1.25
+      ],
+      "valid": true,
+      "solids": 1,
+      "volumeMm3": 7054.338921755164,
+      "expectedVolumeMm3": 7054.338921794172,
+      "volumeErrorMm3": 3.900822775904089e-08,
+      "boundsMm": [
+        [
+          -20.000000100000012,
+          -20.000000100000005,
+          -1e-07
+        ],
+        [
+          20.00000010000001,
+          20.0000001,
+          6.000000100000003
+        ]
+      ],
+      "boundsErrorMm": 1.0000001182675078e-07,
+      "integrationRelativeError": 1.3090217201362965e-14,
+      "passed": true
+    }
+  ]
+}

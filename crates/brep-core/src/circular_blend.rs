@@ -854,14 +854,59 @@ pub fn partial_annular_quarter(
     if direction != 1. && direction != -1. {
         return Err(invalid("Quarter blend direction must be +1 or -1"));
     }
-    let q = direction * std::f64::consts::FRAC_PI_2;
+    partial_annular_arc(
+        outer_radius,
+        inner_radius,
+        height,
+        radius,
+        direction * std::f64::consts::FRAC_PI_2,
+        tolerance_mm,
+    )
+}
+
+/// Prototype annular construction for a signed top-rim sweep up to half a
+/// circle. The blend consumes one quarter of the sweep at each transition.
+/// Like the quarter wrapper, this does not certify a source-edit feature.
+pub fn partial_annular_arc(
+    outer_radius: f64,
+    inner_radius: f64,
+    height: f64,
+    radius: f64,
+    sweep: f64,
+    tolerance_mm: f64,
+) -> Result<crate::Model> {
+    if !sweep.is_finite() || sweep.abs() < 1e-10 || sweep.abs() > std::f64::consts::PI {
+        return Err(invalid(
+            "Partial annular sweep must be finite, nonzero and at most pi",
+        ));
+    }
+    let direction = sweep.signum();
+    let q = sweep;
     let spans = circular_strip_spans(outer_radius, height, radius, 0., q / 4., q / 2., q / 4.)?;
+    let mut endpoint = spans[2]
+        .cylinder_contact
+        .control_points
+        .last()
+        .unwrap()
+        .clone();
     let mut sheets = Vec::new();
     for span in spans {
         sheets.extend(span.annular_sheets(inner_radius, tolerance_mm)?);
     }
-    for i in 1..4 {
-        let top = arc(outer_radius, height, i as f64 * q, q);
+    let remaining = direction * std::f64::consts::TAU - q;
+    let count = (remaining.abs() / std::f64::consts::FRAC_PI_2).ceil() as usize;
+    let step = remaining / count as f64;
+    let mut angle = q;
+    for i in 0..count {
+        let mut top = arc(outer_radius, height, angle, step);
+        // Author common endpoint controls from the preceding boundary. This
+        // avoids independently rounded trig endpoints; no tolerance weld.
+        top.control_points[0] = endpoint;
+        if i + 1 == count {
+            *top.control_points.last_mut().unwrap() = vec![outer_radius, 0., height];
+        }
+        endpoint = top.control_points.last().unwrap().clone();
+        angle += step;
         let bottom = Curve {
             control_points: top
                 .control_points
@@ -1371,6 +1416,22 @@ mod tests {
             assert_eq!(model.edges.len(), 55);
             assert_eq!(model.vertices.len(), 26);
             assert_eq!(model.edges.iter().filter(|e| e.degenerate).count(), 2);
+        }
+    }
+
+    #[test]
+    fn different_partial_arc_angles_close_with_shared_endpoints() {
+        for sweep in [0.31, std::f64::consts::PI / 3., std::f64::consts::PI] {
+            for sign in [-1., 1.] {
+                let model = partial_annular_arc(20., 5., 6., 1.25, sign * sweep, 1e-7).unwrap();
+                let report = model.validate().unwrap();
+                assert_eq!(report.body_count, 1);
+                assert_eq!(report.boundary_edge_count, 0);
+                assert_eq!(model.edges.iter().filter(|e| e.degenerate).count(), 2);
+            }
+        }
+        for sweep in [0., f64::NAN, 4.] {
+            assert!(partial_annular_arc(20., 5., 6., 1.25, sweep, 1e-7).is_err());
         }
     }
 

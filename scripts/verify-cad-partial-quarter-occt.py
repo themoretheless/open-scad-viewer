@@ -16,9 +16,9 @@ from OCP.BRepBndLib import BRepBndLib
 from OCP.Bnd import Bnd_Box
 
 
-def expected_volume(intervals, parameters=(20., 5., 6., 1.25)):
+def expected_volume(intervals, parameters=(20., 5., 6., 1.25), sweep=math.pi/2):
     outer, inner, height, radius = parameters
-    angle = math.pi / 8
+    angle = abs(sweep) / 4
 
     def moment(r):
         return (outer - r) * (1 - math.pi / 4) * r*r + r**3 / 6
@@ -35,7 +35,7 @@ def expected_volume(intervals, parameters=(20., 5., 6., 1.25)):
 
     total = integrand(0.) + integrand(1.)
     total += sum((4 if i % 2 else 2)*integrand(i/intervals) for i in range(1, intervals))
-    removed = total/(3*intervals) + moment(radius)*math.pi/4
+    removed = total/(3*intervals) + moment(radius)*abs(sweep)/2
     return math.pi*(outer*outer-inner*inner)*height - removed
 
 
@@ -47,8 +47,8 @@ def main(directory):
     rows = []
     for case in cases:
         name = case['name']
-        expected = expected_volume(8192, case['parameters'])
-        convergence = max(convergence, abs(expected-expected_volume(4096, case['parameters'])))
+        expected = expected_volume(8192, case['parameters'], case.get('sweep', math.pi/2))
+        convergence = max(convergence, abs(expected-expected_volume(4096, case['parameters'], case.get('sweep', math.pi/2))))
         path = directory / (name+'.step')
         reader = STEPControl_Reader()
         assert reader.ReadFile(str(path)) == IFSelect_RetDone
