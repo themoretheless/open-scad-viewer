@@ -4155,9 +4155,9 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
 .direct-workspace .workspace-bar > .subtle,
 .direct-workspace .workspace-bar > .command-search { display: none; }
 .direct-workspace .workspace-bar > .file-menu { margin-left: auto; }
-.direct-workspace button, .direct-workspace summary, .direct-workspace select { border-color: transparent; background: transparent; border-radius: 6px; }
-.direct-workspace button:hover:not(:disabled), .direct-workspace summary:hover { background: var(--hover); }
-.direct-workspace button[aria-pressed="true"], .direct-workspace button.active { background: color-mix(in srgb, var(--accent) 16%, transparent); color: var(--accent); border-color: transparent; }
+.direct-workspace button:not(.primary), .direct-workspace summary, .direct-workspace select { border-color: transparent; background: transparent; border-radius: 6px; }
+.direct-workspace button:hover:not(:disabled):not(.primary), .direct-workspace summary:hover { background: var(--hover); }
+.direct-workspace button[aria-pressed="true"]:not(.primary), .direct-workspace button.active:not(.primary) { background: color-mix(in srgb, var(--accent) 16%, transparent); color: var(--accent); border-color: transparent; }
 .direct-workspace button:disabled { opacity: .4; }
 .direct-workspace .primitive-bar, .direct-workspace .sketch-start-bar { border-bottom: 1px solid var(--hairline); }
 /* Viewport first: pane tools and grid controls float over the scene instead of taking rows. */

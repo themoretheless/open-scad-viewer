@@ -836,7 +836,7 @@ const sceneFaces = computed(() => scene.value.flatMap(object =>
 .mesh-workspace {
   user-select: none;
   position: fixed;
-  inset: var(--topbar-h, 52px) 0 28px;
+  inset: var(--topbar-h, 40px) 0 var(--statusbar-h, 24px);
   z-index: 20;
   display: flex;
   flex-direction: column;
@@ -933,7 +933,7 @@ const sceneFaces = computed(() => scene.value.flatMap(object =>
 /* Quiet chrome, viewport first: matches the app shell and the Solid workspace. */
 .mesh-bar { gap: 6px; padding: 4px 10px; background: var(--surface); border-bottom: 1px solid var(--hairline); }
 .mesh-bar > strong, .mesh-bar > .command-search { display: none; }
-.mesh-bar button, .mesh-bar summary, .dock-props button { border-color: transparent; background: transparent; border-radius: 6px; }
+.mesh-bar button:not(.primary), .mesh-bar summary, .dock-props button:not(.primary) { border-color: transparent; background: transparent; border-radius: 6px; }
 .mesh-bar button:hover:not(:disabled), .mesh-bar summary:hover, .dock-props button:hover:not(:disabled) { background: var(--hover); }
 .mesh-body { position: relative; }
 .pane-tools {

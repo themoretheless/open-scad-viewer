@@ -273,6 +273,11 @@ function setCustomColor(kind: 'accent' | 'base', event: Event) {
   else customBase.value = value
   applyPreferences()
 }
+function effectiveCanvasColor() {
+  const theme = resolveTheme(themeSelection.value, systemPrefersDark.value)
+  const tokens = { ...theme.tokens, ...customizeTokens(theme.tokens, { accent: customAccent.value, base: customBase.value }) }
+  return themeCanvasColor({ ...theme, tokens })
+}
 function resetCustomColors() {
   customAccent.value = null
   customBase.value = null
@@ -1124,7 +1129,7 @@ async function initializeViewportRenderer() {
   void nextRenderer.setMatcapTexture(matcapId.value).catch(() => {})
   void nextRenderer.setEnvMap(envId.value).catch(() => {})
   nextRenderer.setShadowsEnabled(shadowsEnabled.value)
-  nextRenderer.setBackgroundColor(themeCanvasColor(resolveTheme(themeSelection.value, systemPrefersDark.value)))
+  nextRenderer.setBackgroundColor(effectiveCanvasColor())
   // Applied after the app-theme background so a theme backgroundColor wins.
   nextRenderer.setTheme(renderThemeId.value)
   nextRenderer.setSelectionMode(selectionMode.value)
@@ -1264,7 +1269,7 @@ async function recoverRenderer(
     void instance.setMatcapTexture(matcapId.value).catch(() => {})
     void instance.setEnvMap(envId.value).catch(() => {})
     instance.setShadowsEnabled(shadowsEnabled.value)
-    instance.setBackgroundColor(themeCanvasColor(resolveTheme(themeSelection.value, systemPrefersDark.value)))
+    instance.setBackgroundColor(effectiveCanvasColor())
     instance.setTheme(renderThemeId.value)
     instance.setSelectionMode(selectionMode.value)
     instance.setGridVisible(gridVisible.value)
@@ -1805,7 +1810,7 @@ function applyPreferences() {
   for (const [token, value] of Object.entries(tokens)) {
     document.documentElement.style.setProperty(token, value)
   }
-  renderer?.setBackgroundColor(themeCanvasColor({ ...theme, tokens }))
+  renderer?.setBackgroundColor(effectiveCanvasColor())
   if (customAccent.value) storageSet('scad-accent-v1', customAccent.value)
   else storageSet('scad-accent-v1', '')
   if (customBase.value) storageSet('scad-base-v1', customBase.value)
@@ -3370,6 +3375,7 @@ function sanitizeFileName(name: string) { return (name.replace(/[^\w.() -]+/g, '
   --focus: #8a4310;
 }
 
+@media (max-width: 800px) { :root { --topbar-h: 64px; } }
 *, *::before, *::after { box-sizing: border-box; }
 html, body, #app { width: 100%; height: 100%; margin: 0; }
 body {

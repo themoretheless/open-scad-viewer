@@ -35,10 +35,22 @@ export function customizeTokens(tokens: Readonly<Record<string, string>>, custom
   let text = tokens['--text']
   if (custom.base) {
     const base = custom.base
-    const dark = contrastRatio('#ffffff', base) > contrastRatio('#000000', base)
-    const toward = dark ? '#ffffff' : '#000000'
-    surface = dark ? mix(base, toward, 0.04) : mix(base, '#ffffff', 0.7)
-    text = reach(dark ? '#ece9e4' : '#1d1b18', dark ? '#ffffff' : '#000000', base, 4.5)
+    // Each direction derives its own surface; pick the one whose extreme text reads best on both backgrounds.
+    const plan = (dark: boolean) => {
+      const toward = dark ? '#ffffff' : '#000000'
+      let derived = dark ? mix(base, toward, 0.04) : mix(base, '#ffffff', 0.7)
+      let worst = Math.min(contrastRatio(toward, base), contrastRatio(toward, derived))
+      if (worst < 4.5) {
+        derived = base
+        worst = contrastRatio(toward, base)
+      }
+      return { dark, toward, derived, worst }
+    }
+    const chosen = [plan(true), plan(false)].sort((x, y) => y.worst - x.worst)[0]
+    const { dark, toward } = chosen
+    surface = chosen.derived
+    text = reach(dark ? '#ece9e4' : '#1d1b18', toward, base, 4.5)
+    text = reach(text, toward, surface, 4.5)
     const edge = dark ? 0.1 : 0.05
     Object.assign(result, {
       '--bg': base, '--surface': surface, '--surface-raised': mix(base, toward, edge),

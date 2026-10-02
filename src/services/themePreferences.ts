@@ -8,7 +8,7 @@ export interface ThemeDefinition {
   readonly tokens: Readonly<Record<string, string>>
 }
 
-// Neutral graphite with a single cool-blue accent; every value is checked by assertThemeCatalog.
+// Warm graphite with a single muted warm accent; every value is checked by assertThemeCatalog.
 // --hairline is the quiet divider for chrome; --border stays contrast-checked for controls.
 const darkTokens = {
   '--bg': '#1e1d1b', '--surface': '#262523', '--surface-raised': '#32302d',
