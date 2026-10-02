@@ -172,6 +172,21 @@ pub fn patch(
     combine(s)
 }
 
+/// Cartesian Gordon interpolation with independent rational crossing weights.
+/// Every authored section and guide must pass a bounded whole-domain retention
+/// audit. Returned certificates are numerical, never exact-identity claims.
+pub fn patch_cartesian(
+    u_curves: &[Curve], v_curves: &[Curve],
+    parameters_u: &[f64], parameters_v: &[f64],
+    tolerance: f64, max_cells: usize, max_map_evaluations: usize,
+) -> Result<(Surface, Vec<value_codec::Value>)> {
+    check((1..=1_000_000).contains(&max_cells)
+        && (1..=1_000_000).contains(&max_map_evaluations),
+        "Cartesian Gordon audit budgets must be in 1..1000000")?;
+    cartesian::checked(u_curves,v_curves,parameters_u,parameters_v,
+        tolerance,max_cells,max_map_evaluations)
+}
+
 pub(crate) fn combine(mut s: [Surface; 3]) -> Result<Surface> {
     align(&mut s, Axis::U)?;
     align(&mut s, Axis::V)?;

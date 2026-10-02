@@ -151,3 +151,50 @@ fn json_loft_accepts_subdivision_certified_monotonic_section_map() {
         }
     }
 }
+
+#[test]
+fn json_cartesian_gordon_retains_incompatible_weights_and_refuses_incomplete_audit() {
+    let line = |a: [f64; 3], b: [f64; 3], weights: Vec<f64>| Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 1.],
+        control_points: vec![a.to_vec(), b.to_vec()],
+        weights,
+        periodic: false,
+    };
+    let mut u = [
+        line([0., 0., 0.], [1., 0., 0.], vec![1., 2.]),
+        line([0., 1., 0.], [1., 1., 1.], vec![3., 1.]),
+    ];
+    for knot in &mut u[0].knots {
+        *knot = 2. + 5. * *knot;
+    }
+    let v = [
+        line([0., 0., 0.], [0., 1., 0.], vec![2., 1.]),
+        line([1., 0., 0.], [1., 1., 1.], vec![1., 4.]),
+    ];
+    let request = json!({"op":"surface_gordon_cartesian","u_curves":u,"v_curves":v,
+        "parameters_u":[0.,1.],"parameters_v":[0.,1.],"errorBudget":1e-6,"maxCells":50000,"maxMapEvaluations":200000});
+    let result = geometry_bridge::dispatch(request.clone()).unwrap();
+    assert_eq!(result["certificate"]["exact"], false);
+    let certificates = result["certificate"]["curves"].as_array().unwrap();
+    assert_eq!(certificates.len(), 4);
+    for certificate in certificates {
+        assert_eq!(certificate["accepted"], true);
+        assert!(certificate["errorUpper"].as_f64().unwrap() <= 1e-6);
+    }
+    let surface: Surface = value_codec::from_value(result["surface"].clone()).unwrap();
+    for sample in 0..=100 {
+        let t = sample as f64 / 100.;
+        for (i, curve) in u.iter().enumerate() {
+            let actual = surface.evaluate(t, i as f64).unwrap().point;
+            let [start, end] = curve.domain();
+            let expected = curve.evaluate(start + t * (end - start)).unwrap().point;
+            for k in 0..3 {
+                assert!((actual[k] - expected[k]).abs() < 1e-12);
+            }
+        }
+    }
+    let mut depleted = request;
+    depleted["maxCells"] = json!(1);
+    assert!(geometry_bridge::dispatch(depleted).is_err());
+}

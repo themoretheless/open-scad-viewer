@@ -89,6 +89,14 @@ pub fn dispatch(v: Value) -> Result<Value> {
             None => natural_loft::interpolate(&curves,&parameters)?,
         });
     }
+    if op == "surface_gordon_cartesian" {
+        let (surface, curves) = gordon::patch_cartesian(
+            &field::<Vec<curve::Curve>>(&v,"u_curves")?, &field::<Vec<curve::Curve>>(&v,"v_curves")?,
+            &field::<Vec<f64>>(&v,"parameters_u")?, &field::<Vec<f64>>(&v,"parameters_v")?,
+            field::<f64>(&v,"errorBudget")?, field::<usize>(&v,"maxCells")?, field::<usize>(&v,"maxMapEvaluations")?)?;
+        return Ok(json!({"surface":surface,"certificate":{"operation":"cartesian-gordon",
+            "exact":false,"fittedToExactPromotion":false,"curves":curves}}));
+    }
     if op == "surface_gordon" {return encode(gordon::patch(&field::<Vec<curve::Curve>>(&v,"u_curves")?,&field::<Vec<curve::Curve>>(&v,"v_curves")?,&field::<Vec<f64>>(&v,"parameters_u")?,&field::<Vec<f64>>(&v,"parameters_v")?)?);}
     if op == "surface_grid_spline" { return encode(grid_spline::interpolate(&field::<Vec<Vec<[f64;3]>>>(&v,"points")?,&field::<Vec<f64>>(&v,"parameters_u")?,&field::<Vec<f64>>(&v,"parameters_v")?)?); }
 

@@ -299,3 +299,23 @@ export const rebuildNurbsCurveCertified = (curve: NurbsCurve, degree: number, co
 
 export const rebuildNurbsSurfaceCertified = (surface: NurbsSurface, axis: 'u'|'v', degree: number, controlCount: number, maxError: number, tolerance?: NurbsToleranceContext): CertifiedNurbsSurfaceEdit =>
   callNurbsRust('surface_rebuild_certified', {surface, axis, degree, controlCount, maxError, ...toleranceArgs(tolerance)})
+
+export interface CartesianGordonResult {
+  surface: NurbsSurface
+  certificate: {
+    operation: 'cartesian-gordon'
+    exact: false
+    fittedToExactPromotion: false
+    curves: Array<{accepted: true; exact: false; tolerance: number; errorUpper: number; cells: number; mapEvaluations: number}>
+  }
+}
+
+/** Retains each authored curve with a bounded whole-domain numerical audit. */
+export function createCartesianGordonSurface(
+  uCurves: NurbsCurve[], vCurves: NurbsCurve[], parametersU: number[], parametersV: number[],
+  errorBudget = 1e-6, maxCells = 50000, maxMapEvaluations = 200000,
+): CartesianGordonResult {
+  return callNurbsRust<CartesianGordonResult>('surface_gordon_cartesian', {
+    u_curves: uCurves, v_curves: vCurves, parameters_u: parametersU, parameters_v: parametersV,
+    errorBudget, maxCells, maxMapEvaluations})
+}
