@@ -339,3 +339,33 @@ export function createCartesianGuidedLoft(
     curves, parameters, guides, guide_parameters: guideParameters, errorBudget, maxCells, maxMapEvaluations,
   })
 }
+
+export interface AutoCartesianGuidedLoftResult {
+  surface: NurbsSurface
+  guides: NurbsCurve[]
+  guide_parameters: number[]
+  guide_order: number[]
+  reversed: boolean[]
+  section_error_upper: number[]
+  guide_error_upper: number[]
+  sections?: NurbsCurve[]
+  section_mapping_certificates?: Array<Record<string, unknown> | null>
+  certificate: {
+    operation: 'cartesian-auto-guided-loft'
+    exact: false
+    fittedToExactPromotion: false
+    curves: CartesianGordonResult['certificate']['curves']
+  }
+}
+
+export function createAutoCartesianGuidedLoft(
+  curves: NurbsCurve[], parameters: number[], guides: NurbsCurve[], budget = 1e-6,
+  parameterTolerance = 1e-8, maxCells = 50000, maxMapEvaluations = 200000,
+  sectionMappings?: Array<RationalReparameterization | null>,
+): AutoCartesianGuidedLoftResult {
+  return callNurbsRust<AutoCartesianGuidedLoftResult>('surface_auto_guided_loft_cartesian', {
+    curves, parameters, guides, budget, parameter_tolerance: parameterTolerance,
+    maxCells, maxMapEvaluations,
+    ...(sectionMappings ? {section_mappings: sectionMappings} : {}),
+  })
+}

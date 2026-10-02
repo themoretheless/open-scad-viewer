@@ -223,6 +223,24 @@ fn json_cartesian_guided_loft_retains_independent_guide_weights() {
             assert!((actual[k] - expected[k]).abs() < 1e-11);
         }
     }
+    let mut automatic = request.clone();
+    automatic["op"] = json!("surface_auto_guided_loft_cartesian");
+    automatic["budget"] = json!(1e-6);
+    let aligned = geometry_bridge::dispatch(automatic.clone()).unwrap();
+    assert_eq!(
+        aligned["certificate"]["operation"],
+        "cartesian-auto-guided-loft"
+    );
+    assert_eq!(
+        aligned["certificate"]["curves"].as_array().unwrap().len(),
+        5
+    );
+    assert!((aligned["guide_parameters"][0].as_f64().unwrap() - 0.5).abs() < 1e-8);
+    for error in aligned["guide_error_upper"].as_array().unwrap() {
+        assert!(error.as_f64().unwrap() <= 1e-6);
+    }
+    automatic["maxCells"] = json!(1);
+    assert!(geometry_bridge::dispatch(automatic).is_err());
     let mut tangents = request.clone();
     tangents["start_tangents"] = json!([[0., 0., 1.], [0., 0., 1.]]);
     assert!(geometry_bridge::dispatch(tangents).is_err());

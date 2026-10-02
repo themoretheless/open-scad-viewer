@@ -36,6 +36,7 @@ pub(super) fn cells(
     v_curves: &[Curve],
     parameters_u: &[f64],
     parameters_v: &[f64],
+    crossing_budget: f64,
 ) -> Result<Vec<Surface>> {
     check(
         (2..=86).contains(&u_curves.len()) && (2..=86).contains(&v_curves.len()),
@@ -57,8 +58,8 @@ pub(super) fn cells(
             let a = u[j].evaluate(pu[i])?.point;
             let b = v[i].evaluate(pv[j])?.point;
             check(
-                a == b,
-                "Cartesian Gordon crossings must agree geometrically",
+                (0..3).map(|k| (a[k] - b[k]).powi(2)).sum::<f64>().sqrt() <= crossing_budget,
+                "Cartesian Gordon crossing discrepancy exceeds its explicit budget",
             )?;
             crossings[i][j] = [a[0], a[1], a[2]];
         }
@@ -220,7 +221,7 @@ pub(super) fn assemble(
         tolerance.is_finite() && tolerance > 0.,
         "Cartesian Gordon needs positive seam tolerance",
     )?;
-    let mut patches = cells(u, v, pu, pv)?;
+    let mut patches = cells(u, v, pu, pv, tolerance)?;
     let du = patches.iter().map(|s| s.degree_u).max().unwrap();
     let dv = patches.iter().map(|s| s.degree_v).max().unwrap();
     for patch in &mut patches {
@@ -314,7 +315,7 @@ mod tests {
             line([1., 0., 0.], [1., 1., 1.], vec![1., 4.]),
         ];
         assert!(super::super::patch(&u, &v, &[0., 1.], &[0., 1.]).is_err());
-        let patches = cells(&u, &v, &[0., 1.], &[0., 1.]).unwrap();
+        let patches = cells(&u, &v, &[0., 1.], &[0., 1.], 0.).unwrap();
         let (_, certificates) = checked(&u, &v, &[0., 1.], &[0., 1.], 1e-6, 50000, 200000).unwrap();
         assert_eq!(certificates.len(), 4);
         assert!(
@@ -374,7 +375,7 @@ mod tests {
             .enumerate()
             .map(|(i, &s)| make(s, [4., 0.5, 2.][i], true))
             .collect();
-        let patches = cells(&u, &v, &stations, &stations).unwrap();
+        let patches = cells(&u, &v, &stations, &stations, 0.).unwrap();
         let joined = assemble(&u, &v, &stations, &stations, 1e-6).unwrap();
         assert_eq!(patches.len(), 4);
         for patch in &patches {
