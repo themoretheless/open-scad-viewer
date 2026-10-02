@@ -26,3 +26,11 @@ Reproduce the six-pair report with the `transition-wall-clearance` example.
 This proves selected face-image clearances, not a whole-body minimum thickness
 or material chord certificate. WASM and application qualification of this
 new lower bound remain pending. Endpoint G1 and general geometry remain open.
+
+Frontend witness admission now checks coordinate containment, consistency of
+point distance with the global interval, and coverage of the complete witness
+box by the upper bound. Fifteen face/shell/surface measurement regressions and
+Vue type checking pass. Actual-WASM six-pair and worker budget tests are
+prepared; the browser script accepts these source fixtures and records worker
+round-trip time separately from subsequent rendering. Those new runs remain
+pending while the corresponding WASM build is live.

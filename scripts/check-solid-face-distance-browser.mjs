@@ -24,10 +24,10 @@ try {
  browser=await playwright.chromium.launch({headless:true,args:['--enable-unsafe-webgpu'],...(process.env.CHROMIUM_EXECUTABLE?{executablePath:process.env.CHROMIUM_EXECUTABLE}:{})})
  page=await browser.newPage({acceptDownloads:true});page.on('pageerror',e=>{errors.push(e.stack??String(e));console.error(e.stack??String(e))});page.on('console',m=>{if(m.type()==='error')errors.push(m.text())})
  await page.addInitScript(()=>{
-  const NativeWorker=window.Worker;window.__holdDistance=false;window.__distanceRequests=0;window.__distanceResults=[]
+  const NativeWorker=window.Worker;window.__holdDistance=false;window.__distanceRequests=0;window.__distanceResults=[];window.__distanceTimings=[]
   window.Worker=class extends NativeWorker {
-   constructor(...args){super(...args);this.addEventListener('message',e=>{if(e.data?.kind==='faceDistance'&&e.data.ok)window.__distanceResults.push(e.data.result)})}
-   postMessage(message,...args){if(message?.job?.kind==='faceDistance'){window.__distanceRequests++;if(window.__failDistance){window.__failDistance=false;queueMicrotask(()=>this.onmessage?.({data:{version:1,id:message.id,kind:message.job.kind,ok:false,error:{name:'Error',code:'CAD_TRANSPORT',message:'Private distance worker failure'}}}));return}if(window.__holdDistance){this.__held=true;window.__distanceHeld=true;return}}return super.postMessage(message,...args)}
+   constructor(...args){super(...args);this.__starts=new Map();this.addEventListener('message',e=>{if(e.data?.kind==='faceDistance'&&e.data.ok){window.__distanceResults.push(e.data.result);const start=this.__starts.get(e.data.id);if(start!==undefined){window.__distanceTimings.push({workerRoundTripMs:performance.now()-start,cells:e.data.result.cells,domainCells:e.data.result.domainCells,converged:e.data.result.converged});this.__starts.delete(e.data.id)}}})}
+   postMessage(message,...args){if(message?.job?.kind==='faceDistance'){window.__distanceRequests++;if(window.__failDistance){window.__failDistance=false;queueMicrotask(()=>this.onmessage?.({data:{version:1,id:message.id,kind:message.job.kind,ok:false,error:{name:'Error',code:'CAD_TRANSPORT',message:'Private distance worker failure'}}}));return}if(window.__holdDistance){this.__held=true;window.__distanceHeld=true;return}this.__starts.set(message.id,performance.now())}return super.postMessage(message,...args)}
    terminate(){if(this.__held)window.__distanceTerminated=true;return super.terminate()}
   }
  })
@@ -54,14 +54,15 @@ try {
  async function ready(){await page.waitForFunction(()=>!document.body.innerText.includes('Восстанавливаю геометрию'));await solid.getByRole('status',{name:'history-restore',exact:true}).waitFor({state:'hidden'});await solid.getByRole('status',{name:'primitive-build',exact:true}).waitFor({state:'hidden'});await solid.getByRole('status',{name:'display-refinement',exact:true}).waitFor({state:'hidden'})}
  async function exportDoc(file){await ready();if(await menu.evaluate(e=>!e.parentElement.open))await activate(menu);const pending=page.waitForEvent('download');await activate(solid.getByRole('button',{name:'Скачать проект JSON',exact:true}));const download=await pending;await download.saveAs(path.join(directory,file));await closeMenu();return JSON.parse(await readFile(path.join(directory,file),'utf8'))}
  async function command(name){await closeMenu();await activate(solid.getByRole('button',{name:'Команда… Ctrl K',exact:true}));const search=page.getByRole('combobox',{name:'Search commands / Поиск команд'});await input(search,name);await search.press('Enter')}
- const fixture=JSON.parse(await readFile('tests/fixtures/face-distance.json','utf8'))
+ const fixturePath=process.argv.find(a=>a.startsWith('--fixture='))?.slice('--fixture='.length)??'tests/fixtures/face-distance.json'
+ const fixture=JSON.parse(await readFile(fixturePath,'utf8'))
  await ready();await activate(menu)
  await solid.locator('input[accept=".json,application/json"]').setInputFiles({name:'faces.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(fixture.document))})
  await closeMenu();await ready();await activate(solid.getByRole('tab',{name:'Сцена',exact:true}))
- await activate(solid.getByRole('button',{name:'Plate with hole',exact:true}))
+ await activate(solid.getByRole('button',{name:fixture.bodyAName??'Plate with hole',exact:true}))
  const before=await exportDoc('before.json')
  await command('Measure vertices / edge')
- await choose(solid.getByRole('combobox',{name:'Тело B',exact:true}),'probe')
+ await choose(solid.getByRole('combobox',{name:'Тело B',exact:true}),fixture.bodyBId??'probe')
  await activate(solid.getByRole('button',{name:'Расстояние между гранями',exact:true}))
  const field=solid.getByRole('group',{name:'face-distance',exact:true})
  const edgeA=fixture.faceA,edgeB=fixture.faceB
@@ -94,7 +95,8 @@ try {
  const nativeResult=await page.evaluate(()=>window.__distanceResults.at(-1)),requests=await page.evaluate(()=>window.__distanceRequests);assert.ok(nativeResult);assert.ok(requests>=3)
  const gpuActive=await solid.locator('.gpu-layer').evaluate(c=>c.style.visibility==='visible');if(process.argv.includes('--require-gpu'))assert.equal(gpuActive,true)
  await solid.getByRole('status',{name:'Сохранено в браузере',exact:true}).waitFor();await page.reload();await ready();assert.deepEqual(await exportDoc('reloaded.json'),before);assert.deepEqual(errors,[])
- const report={workerFailureRetry:true,keyboard,tabs,gpuActive,reloadExact:true,browser:browser.version(),faceA:edgeA,faceB:edgeB,expectedMm:expected,displayedIntervalMm:interval,nativeResult,requests,cancelledWorkerTerminated:true,invalidFaceLocalized:true,documentUnchanged:true}
+ const timings=await page.evaluate(()=>window.__distanceTimings)
+ const report={timings,timingScope:'Post request through receipt of worker response; includes startup and messaging, excludes subsequent rendering.',workerFailureRetry:true,keyboard,tabs,gpuActive,reloadExact:true,browser:browser.version(),fixturePath,faceA:edgeA,faceB:edgeB,expectedMm:expected,displayedIntervalMm:interval,nativeResult,requests,cancelledWorkerTerminated:true,invalidFaceLocalized:true,documentUnchanged:true}
  await writeFile(path.join(directory,'face-distance-browser.json'),JSON.stringify(report,null,2)+'\n');console.log(report)
 }catch(error){console.error('Page errors:',errors);if(page){await page.screenshot({path:path.join(directory,'failure.png')}).catch(()=>{});await writeFile(path.join(directory,'failure.txt'),await page.locator('body').innerText().catch(()=>''))}throw error}
 finally{await browser?.close();await new Promise(resolve=>server.close(resolve))}

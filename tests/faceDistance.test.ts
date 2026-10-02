@@ -34,3 +34,13 @@ it('recovers from invalid face input in the worker',async()=>{
  await handler({version:1,id:2,job:{kind:'faceDistance',options:o}})
  expect(messages[1]).toMatchObject({id:2,ok:true,result:{converged:true}})
 })
+
+it('refuses points outside their enclosures and upper bounds that omit the witness',()=>{
+ const o=options(),r=measureFaceDistance(o),e=mainSolidExpectation({kind:'faceDistance',options:o})
+ const outside=structuredClone(r);outside.points![0][0]+=100
+ expect(mainSolidResult(e,outside)).toBe(false)
+ const widened=structuredClone(r);widened.pointEnclosures![0][0]=[-100,100]
+ expect(mainSolidResult(e,widened)).toBe(false)
+ const wrongGap=structuredClone(r);wrongGap.distanceIntervalMm=[0,0.0001]
+ expect(mainSolidResult(e,wrongGap)).toBe(false)
+})

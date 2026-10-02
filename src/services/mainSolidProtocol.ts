@@ -126,6 +126,15 @@ function numericSequenceOf(value:unknown, length:number, check:(v:unknown)=>bool
   return true
 }
 const vector = (v:unknown) => arrayOf(v,3,finite)
+function distanceWitnessConsistent(points:number[][],bounds:number[][][],lo:number,hi:number):boolean {
+ const scale=Math.max(1,...points.flat().map(Math.abs),...bounds.flat(2).map(Math.abs),hi)
+ const roundoff=Number.EPSILON*scale*32
+ for(let side=0;side<2;side++)for(let k=0;k<3;k++)if(points[side][k]<bounds[side][k][0]-roundoff||points[side][k]>bounds[side][k][1]+roundoff)return false
+ const gap=Math.hypot(...points[0].map((x,k)=>x-points[1][k]))
+ const enclosureUpper=Math.hypot(...bounds[0].map((a,k)=>Math.max(Math.abs(a[0]-bounds[1][k][1]),Math.abs(a[1]-bounds[1][k][0]))))
+ return Number.isFinite(gap)&&Number.isFinite(enclosureUpper)&&gap>=lo-roundoff&&gap<=hi+roundoff&&enclosureUpper<=hi+roundoff
+}
+
 export type MainSolidExpectation = {kind:'partialAnnularPreview';id:string;bodyIdentity:string|undefined}
   | {kind:'trimmedCurveOffset';createdId:string;fillRule:'nonzero'|'evenodd';toleranceMm:number;intersectionToleranceMm:number}
   | {kind:'displayMesh';triangles:number}
@@ -207,7 +216,7 @@ export function mainSolidResult(job:MainSolidExpectation, value:unknown): boolea
       ||!v.faces!.every((f,i)=>!!job.domains[i][f])
       ||!arrayOf(v.parameters,2,uv=>arrayOf(uv,2,finite))
       ||!v.parameters!.every((uv,i)=>uv.every((t,k)=>t>=job.domains[i][v.faces![i]][k][0]&&t<=job.domains[i][v.faces![i]][k][1]))
-      ||!arrayOf(v.points,2,vector)||!arrayOf(v.pointEnclosures,2,p=>arrayOf(p,3,interval))||v.evaluatedPairs===0||v.cells===0||v.domainCells===0)return false
+      ||!arrayOf(v.points,2,vector)||!arrayOf(v.pointEnclosures,2,p=>arrayOf(p,3,interval))||v.evaluatedPairs===0||v.cells===0||v.domainCells===0||!distanceWitnessConsistent(v.points!,v.pointEnclosures!,lo,hi))return false
     return v.converged?v.reason==='tolerance'&&hi!==null&&hi-lo<=job.toleranceMm
       :['work-limit','domain-work-limit','pair-resolution-limit','empty-domain'].includes(v.reason)&&(hi===null||hi-lo>job.toleranceMm)&&(v.reason!=='empty-domain'||hi===null)
   }
@@ -222,7 +231,7 @@ export function mainSolidResult(job:MainSolidExpectation, value:unknown): boolea
     if(hi===null){if(v.parameters!==null||v.points!==null||v.pointEnclosures!==null||v.converged)return false}
     else if(!finite(hi)||hi<lo||!arrayOf(v.parameters,2,uv=>arrayOf(uv,2,finite))
       ||!v.parameters!.every((uv,i)=>uv.every((t,k)=>!!job.domains[i][k]&&t>=job.domains[i][k][0]&&t<=job.domains[i][k][1]))
-      ||!arrayOf(v.points,2,vector)||!arrayOf(v.pointEnclosures,2,p=>arrayOf(p,3,interval)))return false
+      ||!arrayOf(v.points,2,vector)||!arrayOf(v.pointEnclosures,2,p=>arrayOf(p,3,interval))||!distanceWitnessConsistent(v.points!,v.pointEnclosures!,lo,hi))return false
     return v.converged?v.reason==='tolerance'&&hi!==null&&hi-lo<=job.toleranceMm
       :['work-limit','domain-work-limit','precision-limit','empty-domain'].includes(v.reason)&&(hi===null||hi-lo>job.toleranceMm)&&(v.reason!=='empty-domain'||hi===null)
   }
@@ -235,6 +244,7 @@ export function mainSolidResult(job:MainSolidExpectation, value:unknown): boolea
       &&interval(v.distanceIntervalMm)&&v.distanceIntervalMm[0]>=0
       &&arrayOf(v.parameters,2,uv=>arrayOf(uv,2,finite))&&v.parameters.every((uv,i)=>uv.every((t,k)=>t>=job.domains[i][k][0]&&t<=job.domains[i][k][1]))
       &&arrayOf(v.points,2,vector)&&arrayOf(v.pointEnclosures,2,p=>arrayOf(p,3,interval))
+      &&distanceWitnessConsistent(v.points,v.pointEnclosures,v.distanceIntervalMm[0],v.distanceIntervalMm[1])
       &&typeof v.converged==='boolean'
       &&(v.converged?v.reason==='tolerance'&&v.distanceIntervalMm[1]-v.distanceIntervalMm[0]<=job.toleranceMm
         :['work-limit','precision-limit'].includes(v.reason)&&v.distanceIntervalMm[1]-v.distanceIntervalMm[0]>job.toleranceMm)
