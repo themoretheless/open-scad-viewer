@@ -314,18 +314,25 @@ pub fn plane_cylinder_transition(
             }
         }
     }
-    // Canonicalize true zero-radius poles exactly. Arithmetic evaluation of
-    // equivalent weighted controls can differ by an ulp; topology requires
-    // one identical vertex, not tolerance-based collapse of a small edge.
+    // Author shared endpoint definitions directly, avoiding multiply/divide
+    // roundoff in equivalent homogeneous endpoint coefficients.
     for (k, r, angular_index) in [(0, start_radius, 0), (5, end_radius, 2)] {
+        let point = &unit.control_points[angular_index];
+        center_controls[k] = vec![
+            (outer_radius - r) * point[0],
+            (outer_radius - r) * point[1],
+            height - r,
+        ];
+        controls[k] = [
+            (outer_radius - r, height),
+            (outer_radius, height),
+            (outer_radius, height - r),
+        ]
+        .map(|(radial, z)| vec![radial * point[0], radial * point[1], z])
+        .to_vec();
+        weights[k] = meridian_weights.to_vec();
         if r == 0. {
-            let pole = vec![
-                outer_radius * unit.control_points[angular_index][0],
-                outer_radius * unit.control_points[angular_index][1],
-                height,
-            ];
-            center_controls[k] = pole.clone();
-            controls[k] = vec![pole; 3];
+            controls[k] = vec![center_controls[k].clone(); 3];
         }
     }
     let knots: Vec<_> = std::iter::repeat_n(0., 6)
@@ -370,6 +377,110 @@ pub fn plane_cylinder_transition(
         cylinder_contact,
         surface,
     })
+}
+
+/// Assemble a start transition, constant span and end transition into an open
+/// shell. Shared seams must match complete curve definitions exactly; this is
+/// authored shared topology, not tolerance welding or a closed-solid claim.
+pub fn circular_blend_strip(
+    outer_radius: f64,
+    height: f64,
+    radius: f64,
+    start: f64,
+    entry_sweep: f64,
+    middle_sweep: f64,
+    exit_sweep: f64,
+    tolerance_mm: f64,
+) -> Result<crate::Model> {
+    let sweeps = [entry_sweep, middle_sweep, exit_sweep];
+    if sweeps.iter().any(|s| {
+        !s.is_finite()
+            || s.abs() < 1e-12
+            || s.abs() > std::f64::consts::FRAC_PI_2
+            || s.signum() != entry_sweep.signum()
+    }) || sweeps.iter().map(|s| s.abs()).sum::<f64>() >= std::f64::consts::TAU
+    {
+        return Err(invalid(
+            "Circular strip requires three finite consistently directed spans of at most pi/2",
+        ));
+    }
+    let middle_start = start + entry_sweep;
+    let end_start = middle_start + middle_sweep;
+    let entry = plane_cylinder_transition(outer_radius, height, 0., radius, start, entry_sweep)?;
+    let middle =
+        plane_cylinder_rim(outer_radius, height, radius, middle_start, middle_sweep)?.remove(0);
+    let exit = plane_cylinder_transition(outer_radius, height, radius, 0., end_start, exit_sweep)?;
+    let mut result = entry.to_open_sheet(tolerance_mm)?;
+    for span in [middle, exit] {
+        let sheet = span.to_open_sheet(tolerance_mm)?;
+        let mut vertex_map = Vec::new();
+        for vertex in &sheet.vertices {
+            let index = result
+                .vertices
+                .iter()
+                .position(|v| v.point == vertex.point)
+                .unwrap_or_else(|| {
+                    result.0.vertices.push(vertex.clone());
+                    result.vertices.len() - 1
+                });
+            vertex_map.push(index);
+        }
+        let mut coedges = Vec::new();
+        for use_ in &sheet.loops[0].coedges {
+            let edge = &sheet.edges[use_.edge];
+            let ends = edge.vertices.map(|v| vertex_map[v]);
+            let shared = result.edges.iter().enumerate().find(|(_, e)| {
+                !e.degenerate && (e.vertices == ends || e.vertices == [ends[1], ends[0]])
+            });
+            let (index, reversed) = if let Some((i, existing)) = shared {
+                let reversed = existing.vertices != ends;
+                let curve = if reversed {
+                    edge.curve.reverse()?
+                } else {
+                    edge.curve.clone()
+                };
+                if curve.degree != existing.curve.degree
+                    || curve.knots != existing.curve.knots
+                    || curve.control_points != existing.curve.control_points
+                    || curve.weights != existing.curve.weights
+                    || curve.periodic != existing.curve.periodic
+                {
+                    return Err(invalid(
+                        "Circular strip seam definitions differ; no tolerance welding admitted",
+                    ));
+                }
+                (i, reversed)
+            } else {
+                let index = result.edges.len();
+                result.0.edges.push(crate::Edge {
+                    vertices: ends,
+                    curve: edge.curve.clone(),
+                    degenerate: edge.degenerate,
+                });
+                (index, false)
+            };
+            coedges.push(crate::Coedge {
+                edge: index,
+                reversed,
+                pcurve: use_.pcurve.clone(),
+            });
+        }
+        let outer = result.loops.len();
+        result.0.loops.push(crate::Loop { coedges });
+        let face = result.faces.len();
+        result.0.faces.push(crate::Face {
+            surface: span.surface,
+            outer,
+            holes: vec![],
+        });
+        result.0.shells[0].faces.push(crate::FaceUse {
+            face,
+            reversed: false,
+        });
+    }
+    result.rebuild_topology_ids();
+    result.validate()?;
+    Ok(result)
 }
 
 #[cfg(test)]
@@ -531,6 +642,41 @@ mod tests {
             });
             invalid_body.rebuild_topology_ids();
             assert!(invalid_body.validate().is_err());
+        }
+    }
+
+    #[test]
+    fn three_span_strip_shares_two_seams_and_keeps_two_poles() {
+        for direction in [-1., 1.] {
+            let strip = circular_blend_strip(
+                20.,
+                6.,
+                1.25,
+                5.9,
+                direction * 0.3,
+                direction * 0.7,
+                direction * 0.4,
+                1e-7,
+            )
+            .unwrap();
+            let report = strip.validate().unwrap();
+            assert_eq!(report.face_count, 3);
+            assert_eq!(report.body_count, 0);
+            assert_eq!(strip.edges.len(), 10);
+            assert_eq!(strip.vertices.len(), 6);
+            assert_eq!(strip.edges.iter().filter(|e| e.degenerate).count(), 2);
+            assert_eq!(report.boundary_edge_count, 6);
+            let uses: Vec<_> = (0..strip.edges.len())
+                .map(|i| {
+                    strip
+                        .loops
+                        .iter()
+                        .flat_map(|l| &l.coedges)
+                        .filter(|c| c.edge == i)
+                        .count()
+                })
+                .collect();
+            assert_eq!(uses.iter().filter(|&&n| n == 2).count(), 2);
         }
     }
 

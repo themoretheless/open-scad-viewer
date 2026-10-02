@@ -1,6 +1,6 @@
 {
   "schema": "cad-circular-support-occt/1",
-  "sourceSha256": "aaee863e42eab6fda0209038784da56244039bbea438d9222423dac1559aa1da",
+  "sourceSha256": "65c55a61b039af378ba1e512ce5bdeda64d120ade877f59904aa27d95ca9af6b",
   "scope": "Independent rational surface evaluation, contact normals and OCCT-created open-face validity. Does not certify a sewn solid, native coedge import, or absence of all intersections.",
   "passed": true,
   "cases": [
@@ -51,7 +51,7 @@
       "faceValid": true,
       "samples": 861,
       "maxPointErrorMm": 1.0658141036401503e-14,
-      "maxNormalAlignmentError": 2.220446049250313e-16,
+      "maxNormalAlignmentError": 3.3306690738754696e-16,
       "passed": true
     },
     {
