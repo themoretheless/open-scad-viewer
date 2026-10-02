@@ -90,7 +90,8 @@ const limits = new Map([
 // Source-bound quotient proof: measured 3264898 bytes; prior 397-byte margin retained.
 // Exact ruled-boundary construction: 3,269,660 bytes; retain 397-byte margin.
 // Exact boundary embedding and joined contacts: measured 3281684 bytes; retain 397-byte headroom.
-const geometryChunkBudget = 3_282_081
+// Axis-radius distance bounds: measured 3282832 bytes; retain 397-byte headroom.
+const geometryChunkBudget = 3_283_229
 const jsChunkBudgets = [
   // CAD worker with lazy ModelGraph importer: surface boundary diagnostics included: measured 108,116 bytes.
   [/^assets\/mainSolid\.worker-[^/]+\.js$/, 120_000], // Retained profile pair diagnostics and validated transport: measured 117,652 bytes; 848-byte margin. Distance kernel worker additions: measured 115,579 bytes. Surface distance worker dispatch: measured 115,110 bytes. Retained NURBS snap intervals: measured 114,200 bytes. Sketch snap preparation: measured 113,885 bytes. Body snap preparation: measured 112,083 bytes. Face sketch preparation in worker: measured 109,472 bytes.
@@ -365,6 +366,7 @@ for (const [name, artifact, compression] of [
 // Source-bound quotient proof: measured assets 7270619 bytes; prior 1042-byte margin retained.
 // Exact ruled-boundary construction: 7,275,381 bytes; retain 1,042-byte margin.
 // Source-bound boundary diagnostics: measured 7291372 asset bytes; retain 1042-byte headroom.
-const totalBudget = 7_292_414
+// Distance witness validation: measured 7293083 asset bytes; retain 1042-byte headroom.
+const totalBudget = 7_294_125
 if (total > totalBudget) throw new Error(`dist totals ${total} bytes; budget is ${totalBudget}`)
 console.log(`Verified ${files.length} dist artifacts (${total} asset bytes + ${rawWasmBytes} raw WASM bytes = ${total + rawWasmBytes} total bytes)`)

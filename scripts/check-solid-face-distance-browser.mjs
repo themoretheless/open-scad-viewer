@@ -93,9 +93,10 @@ try {
  await field.scrollIntoViewIfNeeded();await page.screenshot({path:path.join(directory,'face-distance.png')})
  assert.deepEqual(errors,[])
  const nativeResult=await page.evaluate(()=>window.__distanceResults.at(-1)),requests=await page.evaluate(()=>window.__distanceRequests);assert.ok(nativeResult);assert.ok(requests>=3)
+ const timings=await page.evaluate(()=>window.__distanceTimings)
+ assert.ok(timings.length>=3&&timings.every(t=>Number.isFinite(t.workerRoundTripMs)&&t.workerRoundTripMs>0))
  const gpuActive=await solid.locator('.gpu-layer').evaluate(c=>c.style.visibility==='visible');if(process.argv.includes('--require-gpu'))assert.equal(gpuActive,true)
  await solid.getByRole('status',{name:'Сохранено в браузере',exact:true}).waitFor();await page.reload();await ready();assert.deepEqual(await exportDoc('reloaded.json'),before);assert.deepEqual(errors,[])
- const timings=await page.evaluate(()=>window.__distanceTimings)
  const report={timings,timingScope:'Post request through receipt of worker response; includes startup and messaging, excludes subsequent rendering.',workerFailureRetry:true,keyboard,tabs,gpuActive,reloadExact:true,browser:browser.version(),fixturePath,faceA:edgeA,faceB:edgeB,expectedMm:expected,displayedIntervalMm:interval,nativeResult,requests,cancelledWorkerTerminated:true,invalidFaceLocalized:true,documentUnchanged:true}
  await writeFile(path.join(directory,'face-distance-browser.json'),JSON.stringify(report,null,2)+'\n');console.log(report)
 }catch(error){console.error('Page errors:',errors);if(page){await page.screenshot({path:path.join(directory,'failure.png')}).catch(()=>{});await writeFile(path.join(directory,'failure.txt'),await page.locator('body').innerText().catch(()=>''))}throw error}
