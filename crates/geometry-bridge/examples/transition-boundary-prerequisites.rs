@@ -12,7 +12,7 @@ fn main(){
  let embedding=if args.iter().any(|a|a=="--embedding") {
     let r=brep_core::boundary_embedding::inspect(&model,1e-8,brep_core::boundary_embedding::Limits{exact_work:1_000_000,trim_pairs:10000,trim_cells:100000,trim_domain_cells:1000000,spans:4096,contacts:brep_core::face_contacts::Limits{pairs:400,cells:150000,domain_cells:1500000,cells_per_pair:pair_cells,domain_cells_per_pair:pair_domain_cells}}).unwrap();
     Some(json!({"proven":r.proven,"allFacesInjective":r.intersections.faces.all_faces_injective,"absenceProven":r.intersections.absence_proven,"allPairsClassified":r.intersections.pairs.all_pairs_classified,
-      "hullContacts":r.hull_contacts.iter().map(|c|json!({"faces":c.faces,"edges":c.edges,"vertex":c.vertex,"hullIntersection":c.hull_intersection})).collect::<Vec<_>>(),
+      "hullContacts":r.hull_contacts.iter().map(|c|json!({"faces":c.faces,"edges":c.edges,"vertex":c.vertex,"contactEnclosure":c.contact_enclosure})).collect::<Vec<_>>(),
       "pairs":r.intersections.pairs.pairs.iter().map(|p|json!({"faces":p.faces,"status":p.reason})).collect::<Vec<_>>(),"cells":r.intersections.pairs.cells,"domainCells":r.intersections.pairs.domain_cells}))
  }else{None};
  let output=json!({"sourceModel":model,"pairCellsBudget":pair_cells,"pairDomainCellsBudget":pair_domain_cells,"embedding":embedding,"allEqual":agreement.all_equal,"allJoinsExact":agreement.all_joins_exact,"exactWork":agreement.work,

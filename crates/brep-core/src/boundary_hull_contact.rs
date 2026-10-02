@@ -6,7 +6,9 @@ use std::collections::BTreeSet;
 #[derive(Clone, Debug)]
 pub struct Certificate {
     pub faces: [usize;2],
-    pub hull_intersection: [[f64;2];3],
+    /// Encloses possible surface contact after all proof restrictions.
+    /// Bezier support restrictions can be tighter than control-hull overlap.
+    pub contact_enclosure: [[f64;2];3],
     pub edges: Vec<usize>,
     pub vertex: Option<usize>,
 }
@@ -72,7 +74,7 @@ fn certify_axis(model:&Model, faces:[usize;2])->Option<Certificate>{
     }
     let free=(0..3).filter(|&k|intersection[k][0]<intersection[k][1]).collect::<Vec<_>>();
     if free.len()>1{return None;}
-    let mut out=Certificate{faces,hull_intersection:intersection,edges:Vec::new(),vertex:None};
+    let mut out=Certificate{faces,contact_enclosure:intersection,edges:Vec::new(),vertex:None};
     if free.is_empty(){
         let point=intersection.map(|r|r[0]);
         // Require the same topological vertex and an exact curve endpoint on
@@ -137,12 +139,41 @@ fn certify_edge_plane(model:&Model,faces:[usize;2])->Option<Certificate>{
             } if !valid{break;} }
             if valid&&(segment_only[0]||segment_only[1])&&signs.iter().any(Option::is_some)
                 && !(signs[0].is_some()&&signs[0]==signs[1]) {
-                return Some(Certificate{faces,hull_intersection:std::array::from_fn(|k|[a[k].min(b[k]),a[k].max(b[k])]),
+                return Some(Certificate{faces,contact_enclosure:std::array::from_fn(|k|[a[k].min(b[k]),a[k].max(b[k])]),
                     edges:vec![edge],vertex:None});
             }
         }
     }
     None
+}
+
+// In a single clamped tensor Bezier chart every interior basis value is
+// positive. A nonplanar one-sided net can reach its support plane only on
+// complete zero-sign natural edges or zero-sign corners, not at an isolated
+// intermediate control. Enumerate those strata before allowing a vertex.
+fn bezier_plane_vertex_only(surface:&nurbs_core::surface::Surface,plane:[&[f64];3],point:&[f64])->bool {
+    use cad_predicates::Sign;
+    let sizes=[surface.control_points.len(),surface.control_points[0].len()];
+    let degrees=[surface.degree_u,surface.degree_v];let knots=[&surface.knots_u,&surface.knots_v];
+    if (0..2).any(|k|degrees[k]==0||sizes[k]!=degrees[k]+1
+        ||knots[k][..=degrees[k]].iter().any(|v|*v!=knots[k][degrees[k]])
+        ||knots[k][sizes[k]..].iter().any(|v|*v!=knots[k][sizes[k]])){return false;}
+    let mut sign=None;let mut zeros=vec![vec![false;sizes[1]];sizes[0]];
+    for (u,row) in surface.control_points.iter().enumerate(){for (v,p) in row.iter().enumerate(){
+        let Some(s)=crate::shared_boundary::orient(&[plane[0],plane[1],plane[2],p],None) else{return false};
+        if s==Sign::Zero{zeros[u][v]=true;}else{
+            if sign.is_some_and(|previous|previous!=s){return false;}sign=Some(s);
+        }
+    }}
+    if sign.is_none(){return false;}
+    for u in [0,sizes[0]-1]{for v in [0,sizes[1]-1]{
+        if zeros[u][v]&&surface.control_points[u][v]!=point{return false;}
+    }}
+    for u in [0,sizes[0]-1]{if zeros[u].iter().all(|z|*z)
+        && surface.control_points[u].iter().any(|p|p!=point){return false;}}
+    for v in [0,sizes[1]-1]{if (0..sizes[0]).all(|u|zeros[u][v])
+        && (0..sizes[0]).any(|u|surface.control_points[u][v]!=point){return false;}}
+    true
 }
 
 // A supporting plane need not align with world axes. Original binary64
@@ -174,9 +205,13 @@ fn certify_vertex_plane(model:&Model, faces:[usize;2])->Option<Certificate>{
                 else if signs[side].is_some_and(|previous|previous!=sign){valid=false;break;}
                 else {signs[side]=Some(sign);}
             } if !valid{break;} }
+            if valid {for side in 0..2 {
+                if !vertex_only[side]{vertex_only[side]=bezier_plane_vertex_only(
+                    &model.faces[faces[side]].surface,[&point,candidates[a],candidates[b]],&point);}
+            }}
             if valid && (vertex_only[0]||vertex_only[1]) && signs.iter().any(Option::is_some)
                 && !(signs[0].is_some()&&signs[0]==signs[1]) {
-                return Some(Certificate{faces,hull_intersection:point.map(|v|[v,v]),edges:Vec::new(),vertex:Some(vertex)});
+                return Some(Certificate{faces,contact_enclosure:point.map(|v|[v,v]),edges:Vec::new(),vertex:Some(vertex)});
             }
         }}
     }
@@ -186,6 +221,18 @@ fn certify_vertex_plane(model:&Model, faces:[usize;2])->Option<Certificate>{
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn strict_bezier_basis_excludes_intermediate_support_controls_from_vertex_contact() {
+        let model=crate::circular_blend::partial_annular_quarter(20.,5.,6.,1.25,1.,1e-7).unwrap();
+        let plane:[&[f64];3]=[&[0.,0.,6.],&[1.,0.,6.],&[0.,1.,6.]];
+        let point=&[20.,0.,6.];let surface=&model.faces[2].surface;
+        assert_ne!(surface.control_points[1][1],point);
+        assert_eq!(surface.control_points[1][1][2],6.);
+        assert!(bezier_plane_vertex_only(surface,plane,point));
+        let mut extra=surface.clone();let n=extra.control_points.len();extra.control_points[n-1][1][2]=6.;
+        assert!(!bezier_plane_vertex_only(&extra,plane,point));
+        assert!(certify_vertex_plane(&model,[1,2]).is_some());
+    }
     #[test]
     fn oblique_straight_edge_support_requires_exact_segment_ownership() {
         let mut model=crate::cuboid([0.;3],[2.;3]).unwrap();
@@ -215,7 +262,7 @@ mod tests {
         assert!(certify_axis(&model,[0,2]).is_none());
         let c=certify_vertex_plane(&model,[0,2]).unwrap();
         assert_eq!(c.vertex,Some(4));assert!(c.edges.is_empty());
-        assert_eq!(c.hull_intersection,model.vertices[4].point.map(|v|[v,v]));
+        assert_eq!(c.contact_enclosure,model.vertices[4].point.map(|v|[v,v]));
         let mut overlap=model.clone();overlap.faces[2].surface=overlap.faces[0].surface.clone();
         assert!(certify_vertex_plane(&overlap,[0,2]).is_none());
         let mut moved=model.clone();moved.vertices[4].point[0]+=1e-12;
@@ -226,7 +273,7 @@ mod tests {
         let model=crate::analytic::sphere(3.).unwrap();let before=format!("{model:?}");
         for (faces,pole) in [([0,2],4),([1,3],4),([4,6],5),([5,7],5)]{
             let c=certify(&model,faces).unwrap();assert_eq!(c.vertex,Some(pole));assert!(c.edges.is_empty());
-            assert_eq!(c.hull_intersection,model.vertices[pole].point.map(|x|[x,x]));
+            assert_eq!(c.contact_enclosure,model.vertices[pole].point.map(|x|[x,x]));
             let mut separate=model.clone();
             for wire in std::iter::once(separate.faces[faces[1]].outer).chain(separate.faces[faces[1]].holes.clone()){
                 for i in 0..separate.loops[wire].coedges.len(){
@@ -284,7 +331,7 @@ mod tests {
         let mut m=crate::cuboid([0.;3],[1.;3]).unwrap();
         assert!(certify(&m,[0,0]).is_none());
         let c=(0..6).flat_map(|a|(a+1..6).map(move|b|[a,b])).find_map(|p|certify(&m,p)).unwrap();
-        let axis=(0..3).find(|&k|c.hull_intersection[k][0]<c.hull_intersection[k][1]).unwrap();
+        let axis=(0..3).find(|&k|c.contact_enclosure[k][0]<c.contact_enclosure[k][1]).unwrap();
         for e in c.edges{for p in &mut m.edges[e].curve.control_points{p[(axis+1)%3]+=1e-12;}}
         assert!(certify(&m,c.faces).is_none());
     }

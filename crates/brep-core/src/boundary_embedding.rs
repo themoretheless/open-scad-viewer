@@ -89,6 +89,8 @@ mod tests {
         assert!(r.hull_contacts.iter().any(|c|c.faces==[0,6]&&c.vertex.is_some()));
         assert!(r.hull_contacts.iter().any(|c|c.faces==[1,23]&&!c.edges.is_empty()));
         assert!(r.hull_contacts.iter().any(|c|c.faces==[4,9]&&c.edges==vec![13]));
+        assert!(r.hull_contacts.iter().any(|c|c.faces==[1,2]&&c.vertex==Some(0)));
+        assert!(r.intersections.pairs.pairs.iter().any(|p|p.faces==[0,1]&&p.reason=="shared-boundary"));
         assert!(!r.proven); // Endpoint/edge contacts still need further proofs.
         l.exact_work=1;l.contacts.pairs=1;
         let incomplete=inspect(&model,1e-8,l).unwrap();

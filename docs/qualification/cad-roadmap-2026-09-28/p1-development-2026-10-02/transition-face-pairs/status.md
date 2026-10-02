@@ -148,3 +148,31 @@ ends. Whole-model absence remains unproven.
 The preceding WASM build finished; an updated build containing both planar
 trim enclosures and straight-edge support is now running. Updated WASM and
 browser qualification remain pending.
+
+## Native exact Bezier support strata
+
+Single clamped tensor-Bezier charts have strictly positive basis values in
+the interior. A one-sided nonplanar net therefore reaches its supporting
+plane only on complete zero-sign natural edges or zero-sign corners.
+Intermediate zero controls are not individually reachable surface points.
+Vertex proofs enumerate these strata and require all reachable zero edges
+and corners to be the exact owned vertex. Shared-plane edge proofs allow
+an extra collapsed natural edge only at an endpoint of the identified
+exactly matched boundary curve. Multispan charts retain previous refusal.
+
+All eight hull-contact tests and eleven shared-boundary tests pass, including
+extra reachable support corners and moved collapsed endpoint controls.
+Full regenerated audit has 240 disjoint pairs, 109 shared contacts and two
+unresolved pairs, 0/2 and 10/12 (transition versus cylindrical wall). Eighty-two
+boundary-support certificates are admitted; geometry work is 10366 cells
+and UV work is 66041 cells. Within-face absence remains proven on all 27
+faces. Whole-model absence, endpoint G1 and wall thickness remain unproven.
+
+Certificate metadata now calls the bound `contactEnclosure`, since Bezier
+stratum proofs can restrict surface contact more tightly than the intersection
+of unqualified control hulls. Historical fixtures retain their original field.
+Current in-flight WASM packaging was started before this change; updated
+packaging and browser qualification are still required.
+
+All four embedding regressions pass, including exact-prerequisite exhaustion
+and the newly admitted vertex and curved-boundary contact cases.

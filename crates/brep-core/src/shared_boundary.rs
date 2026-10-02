@@ -146,6 +146,29 @@ fn boundary(s: &Surface, p: &Curve, edge: &Curve) -> Option<(usize, usize)> {
     }
     None
 }
+// Zero controls off the owned boundary need not be reachable surface points.
+// Positive single-Bezier bases restrict support-plane contact to complete
+// zero natural edges and zero corners. Extra collapsed edges are allowed only
+// when all their controls equal an endpoint of the owned boundary curve.
+fn bezier_plane_edge_only(s:&Surface,plane:[&[f64];3],boundary:(usize,usize))->bool {
+    let sizes=[s.control_points.len(),s.control_points[0].len()];
+    let degrees=[s.degree_u,s.degree_v];let knots=[&s.knots_u,&s.knots_v];
+    if (0..2).any(|k|degrees[k]==0||sizes[k]!=degrees[k]+1||!clamped(knots[k],degrees[k],sizes[k])){return false;}
+    let at=|fixed:usize,free:usize|if boundary.0==0{&s.control_points[fixed][free]}else{&s.control_points[free][fixed]};
+    let endpoints=[at(boundary.1,0),at(boundary.1,sizes[1-boundary.0]-1)];
+    let zero=|p:&[f64]|orient(&[plane[0],plane[1],plane[2],p],None)==Some(Sign::Zero);
+    for u in [0,sizes[0]-1]{for v in [0,sizes[1]-1]{
+        if [u,v][boundary.0]!=boundary.1&&zero(&s.control_points[u][v])
+            && !endpoints.contains(&&s.control_points[u][v]){return false;}
+    }}
+    for axis in 0..2 {for fixed in [0,sizes[axis]-1] {
+        if axis==boundary.0&&fixed==boundary.1{continue;}
+        let controls=(0..sizes[1-axis]).map(|free|if axis==0{&s.control_points[fixed][free]}else{&s.control_points[free][fixed]}).collect::<Vec<_>>();
+        if controls.iter().all(|p|zero(p)) && !endpoints.iter().any(|endpoint|controls.iter().all(|p|*p==*endpoint)){return false;}
+    }}
+    true
+}
+
 fn sided(first: &Surface, second: &Surface, boundary: (usize, usize)) -> bool {
     let points: Vec<_> = second
         .control_points
@@ -196,7 +219,7 @@ fn sided(first: &Surface, second: &Surface, boundary: (usize, usize)) -> bool {
     let mut zeros=false;
     for (u,row) in first.control_points.iter().enumerate(){for (v,p) in row.iter().enumerate(){
         if [u,v][boundary.0]==boundary.1{continue;}
-        if orient(&[p0,p1,p2,p],None)==Some(Sign::Zero){zeros=true;if [u,v][boundary.0]==opposite{return false;}}
+        if orient(&[p0,p1,p2,p],None)==Some(Sign::Zero){zeros=true;if [u,v][boundary.0]==opposite{return side.is_some()&&bezier_plane_edge_only(first,[p0,p1,p2],boundary);}}
     }}
     if zeros&&size!=[first.degree_u,first.degree_v][boundary.0]+1{return false;}
     side.is_some()
@@ -506,6 +529,21 @@ mod tests {
         let other=model.loops[model.faces[1].outer].coedges.iter().find(|cb|cb.edge==edge.edge).unwrap();
         let mut same_side=b.clone();for row in &mut same_side.control_points{for p in row{p[0]=p[0].abs();}}
         assert!(!opposite_axis_sides(a,&same_side,&edge.pcurve,&other.pcurve,&model.edges[edge.edge].curve));
+    }
+    #[test]
+    fn collapsed_secondary_boundary_must_be_an_owned_curve_endpoint() {
+        let model=crate::circular_blend::partial_annular_quarter(20.,5.,6.,1.25,1.,1e-7).unwrap();
+        for pair in [[0,1],[10,11]] {
+            let c=certify(&model,pair).unwrap();assert_eq!(c.sided_face,pair[0]);
+            let mut extra=model.clone();
+            // Moving an opposite zero corner within the support plane creates
+            // an extra reachable contact rather than an allowed collapsed end.
+            let controls=&mut extra.faces[pair[0]].surface.control_points;
+            let pole=[0,controls.len()-1].into_iter().find(|&i|controls[i].iter().all(|p|p==&controls[i][0])).unwrap();
+            controls[pole][2][0]+=1e-12;
+            assert!(!bezier_plane_edge_only(&extra.faces[pair[0]].surface,[&[0.,0.,6.],&[1.,0.,6.],&[0.,1.,6.]],(1,0)),"direct helper pair={pair:?}");
+            assert!(certify(&extra,pair).is_none(),"pair={pair:?} certificate={:?}",certify(&extra,pair));
+        }
     }
     #[test]
     fn tangent_boundary_control_rows_remain_strictly_separated() {
