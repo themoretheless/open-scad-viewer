@@ -318,7 +318,7 @@ export const exactConvexPrismFillet=(model:NurbsBrep,edges:number[],radius:numbe
 export const exactSimplePrismFillet=(model:NurbsBrep,edges:number[],radius:number):AuditedBrepFeature=>callGeometryRust('brep_nurbs_exact_simple_prism_fillet',{model,edges,radius})
 /** Exact linear radius law on one vertical cuboid edge; constant-radius pairs refuse. */
 export const exactVariableRadiusFillet=(model:NurbsBrep,edges:number[],radii:[number,number][]):AuditedBrepFeature=>callGeometryRust('brep_nurbs_exact_variable_radius_fillet',{model,edges,radii})
-/** Exact equal-radius sphere+cylinder valence-3 blend at any corner of an axis-aligned cuboid. */
+/** Exact equal-radius sphere+cylinder valence-3 blend at any corner of a rigidly placed cuboid. */
 export const exactValence3CornerBlend=(model:NurbsBrep,edges:number[],radius:number):AuditedBrepFeature=>callGeometryRust('brep_nurbs_exact_valence3_corner_blend',{model,edges,radius})
 export const auditedParallelFrameSweep=(profile:[number,number][],path:[number,number,number][],frameLaw:'fixed'|'rotation-minimizing'|'rmf'='rmf'):AuditedBrepFeature=>callGeometryRust('brep_nurbs_audited_parallel_frame_sweep',{profile,path,frameLaw})
 /** Exact indexed 3..16-section rational ruled/Bezier solid loft successor. */

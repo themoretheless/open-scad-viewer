@@ -9,8 +9,18 @@
   ],
   "volumeToleranceMm3": 2e-05,
   "shearRefusalChecked": true,
-  "independentRotatedStepVerified": false,
+  "independentRotatedStepVerified": true,
   "browserVerified": false,
-  "wasmBuild": "running; process session 43240; log /private/tmp/cad-p1-rotated-wasm-build.log",
-  "generalP1Complete": false
+  "wasmBuild": "completed",
+  "generalP1Complete": false,
+  "independentStepCases": 144,
+  "wasmSha256": "105c4def695089fa0f4011d178410c239cc14477ef8c9069a3c22f0950a4608b",
+  "wasmBytes": 9618131,
+  "serviceStepPackingTestsPassed": 34,
+  "productionBuildPassed": true,
+  "assetBytes": 7223719,
+  "assetGrowthBytes": 4644,
+  "assetBudget": 7224761,
+  "distVerificationPassed": true,
+  "typecheckPassed": true
 }

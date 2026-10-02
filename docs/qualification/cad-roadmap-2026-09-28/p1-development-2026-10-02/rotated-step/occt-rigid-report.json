@@ -1,0 +1,1303 @@
+{
+  "schema": "cad-rigid-step-occt/1",
+  "passed": true,
+  "scope": "Numerical validity, analytical volume and bounds against independent OCCT rigid transform; does not prove general geometry or surface continuity.",
+  "parts": [
+    {
+      "name": "corner-0-r0.25-0",
+      "valid": true,
+      "solids": 1,
+      "boundsErrorMm": 1.0000000116860974e-07,
+      "volumeErrorMm3": 9.374446108267875e-08,
+      "integrationRelativeError": 3.273718940077088e-14,
+      "passed": true
+    },
+    {
+      "name": "corner-0-r0.25-1",
+      "valid": true,
+      "solids": 1,
+      "boundsErrorMm": 1.0000000116860974e-07,
+      "volumeErrorMm3": 9.374446108267875e-08,
+      "integrationRelativeError": 3.273718940077088e-14,
+      "passed": true
+    },
+    {
+      "name": "corner-0-r1-0",
+      "valid": true,
+      "solids": 1,
+      "boundsErrorMm": 1.0000000116860974e-07,
+      "volumeErrorMm3": 3.129849801553064e-07,
+      "integrationRelativeError": 4.4968885384550326e-13,
+      "passed": true
+    },
+    {
+      "name": "corner-0-r1-1",
+      "valid": true,
+      "solids": 1,
+      "boundsErrorMm": 1.0000000116860974e-07,
+      "volumeErrorMm3": 3.129849801553064e-07,
+      "integrationRelativeError": 4.4968885384550326e-13,
+      "passed": true
+    },
+    {
+      "name": "corner-0-r2.5-0",
+      "valid": true,
+      "solids": 1,
+      "boundsErrorMm": 1.0000000116860974e-07,
+      "volumeErrorMm3": 4.633145067600708e-07,
+      "integrationRelativeError": 2.7798796130739113e-12,
+      "passed": true
+    },
+    {
+      "name": "corner-0-r2.5-1",
+      "valid": true,
+      "solids": 1,
+      "boundsErrorMm": 1.0000000116860974e-07,
+      "volumeErrorMm3": 4.633145067600708e-07,
+      "integrationRelativeError": 2.7798796130739113e-12,
+      "passed": true
+    },
+    {
+      "name": "corner-1-r0.25-0",
+      "valid": true,
+      "solids": 1,
+      "boundsErrorMm": 1.0000000116860974e-07,
+      "volumeErrorMm3": 9.26925736166595e-08,
+      "integrationRelativeError": 3.3655074117650843e-12,
+      "passed": true
+    },
+    {
+      "name": "corner-1-r0.25-1",
+      "valid": true,
+      "solids": 1,
+      "boundsErrorMm": 1.0000000116860974e-07,
+      "volumeErrorMm3": 9.26925736166595e-08,
+      "integrationRelativeError": 3.3655074117650843e-12,
+      "passed": true
+    },
+    {
+      "name": "corner-1-r1-0",
+      "valid": true,
+      "solids": 1,
+      "boundsErrorMm": 1.0000000116860974e-07,
+      "volumeErrorMm3": 2.988332994391385e-07,
+      "integrationRelativeError": 3.7292497850696755e-12,
+      "passed": true
+    },
+    {
+      "name": "corner-1-r1-1",
+      "valid": true,
+      "solids": 1,
+      "boundsErrorMm": 1.0000000116860974e-07,
+      "volumeErrorMm3": 2.988332994391385e-07,
+      "integrationRelativeError": 3.7292497850696755e-12,
+      "passed": true
+    },
+    {
+      "name": "corner-1-r2.5-0",
+      "valid": true,
+      "solids": 1,
+      "boundsErrorMm": 1.0000000116860974e-07,
+      "volumeErrorMm3": 4.083436238033755e-07,
+      "integrationRelativeError": 4.456417895904914e-12,
+      "passed": true
+    },
+    {
+      "name": "corner-1-r2.5-1",
+      "valid": true,
+      "solids": 1,
+      "boundsErrorMm": 1.0000000116860974e-07,
+      "volumeErrorMm3": 4.083436238033755e-07,
+      "integrationRelativeError": 4.456417895904914e-12,
+      "passed": true
+    },
+    {
+      "name": "corner-2-r0.25-0",
+      "valid": true,
+      "solids": 1,
+      "boundsErrorMm": 1.0000000116860974e-07,
+      "volumeErrorMm3": 9.269263046007836e-08,
+      "integrationRelativeError": 3.36530951058834e-12,
+      "passed": true
+    },
+    {
+      "name": "corner-2-r0.25-1",
+      "valid": true,
+      "solids": 1,
+      "boundsErrorMm": 1.0000000116860974e-07,
+      "volumeErrorMm3": 9.269263046007836e-08,
+      "integrationRelativeError": 3.36530951058834e-12,
+      "passed": true
+    },
+    {
+      "name": "corner-2-r1-0",
+      "valid": true,
+      "solids": 1,
+      "boundsErrorMm": 1.0000000116860974e-07,
+      "volumeErrorMm3": 2.988332994391385e-07,
+      "integrationRelativeError": 3.7294476862469776e-12,
+      "passed": true
+    },
+    {
+      "name": "corner-2-r1-1",
+      "valid": true,
+      "solids": 1,
+      "boundsErrorMm": 1.0000000116860974e-07,
+      "volumeErrorMm3": 2.988332994391385e-07,
+      "integrationRelativeError": 3.7294476862469776e-12,
+      "passed": true
+    },
+    {
+      "name": "corner-2-r2.5-0",
+      "valid": true,
+      "solids": 1,
+      "boundsErrorMm": 1.0000000116860974e-07,
+      "volumeErrorMm3": 4.083436238033755e-07,
+      "integrationRelativeError": 4.456291239150732e-12,
+      "passed": true
+    },
+    {
+      "name": "corner-2-r2.5-1",
+      "valid": true,
+      "solids": 1,
+      "boundsErrorMm": 1.0000000116860974e-07,
+      "volumeErrorMm3": 4.083436238033755e-07,
+      "integrationRelativeError": 4.456291239150732e-12,
+      "passed": true
+    },
+    {
+      "name": "corner-3-r0.25-0",
+      "valid": true,
+      "solids": 1,
+      "boundsErrorMm": 1.0000000116860974e-07,
+      "volumeErrorMm3": 9.374451792609761e-08,
+      "integrationRelativeError": 3.273718940077088e-14,
+      "passed": true
+    },
+    {
+      "name": "corner-3-r0.25-1",
+      "valid": true,
+      "solids": 1,
+      "boundsErrorMm": 1.0000000116860974e-07,
+      "volumeErrorMm3": 9.374451792609761e-08,
+      "integrationRelativeError": 3.273718940077088e-14,
+      "passed": true
+    },
+    {
+      "name": "corner-3-r1-0",
+      "valid": true,
+      "solids": 1,
+      "boundsErrorMm": 1.0000000116860974e-07,
+      "volumeErrorMm3": 3.129849801553064e-07,
+      "integrationRelativeError": 4.4968885384550326e-13,
+      "passed": true
+    },
+    {
+      "name": "corner-3-r1-1",
+      "valid": true,
+      "solids": 1,
+      "boundsErrorMm": 1.0000000116860974e-07,
+      "volumeErrorMm3": 3.129849801553064e-07,
+      "integrationRelativeError": 4.4968885384550326e-13,
+      "passed": true
+    },
+    {
+      "name": "corner-3-r2.5-0",
+      "valid": true,
+      "solids": 1,
+      "boundsErrorMm": 1.0000000116860974e-07,
+      "volumeErrorMm3": 4.6331456360348966e-07,
+      "integrationRelativeError": 2.7798796130739113e-12,
+      "passed": true
+    },
+    {
+      "name": "corner-3-r2.5-1",
+      "valid": true,
+      "solids": 1,
+      "boundsErrorMm": 1.0000000116860974e-07,
+      "volumeErrorMm3": 4.6331456360348966e-07,
+      "integrationRelativeError": 2.7798796130739113e-12,
+      "passed": true
+    },
+    {
+      "name": "corner-4-r0.25-0",
+      "valid": true,
+      "solids": 1,
+      "boundsErrorMm": 1.0000000116860974e-07,
+      "volumeErrorMm3": 9.26925736166595e-08,
+      "integrationRelativeError": 3.365309510588336e-12,
+      "passed": true
+    },
+    {
+      "name": "corner-4-r0.25-1",
+      "valid": true,
+      "solids": 1,
+      "boundsErrorMm": 1.0000000116860974e-07,
+      "volumeErrorMm3": 9.26925736166595e-08,
+      "integrationRelativeError": 3.365309510588336e-12,
+      "passed": true
+    },
+    {
+      "name": "corner-4-r1-0",
+      "valid": true,
+      "solids": 1,
+      "boundsErrorMm": 1.0000000116860974e-07,
+      "volumeErrorMm3": 2.988332994391385e-07,
+      "integrationRelativeError": 3.7292497850696755e-12,
+      "passed": true
+    },
+    {
+      "name": "corner-4-r1-1",
+      "valid": true,
+      "solids": 1,
+      "boundsErrorMm": 1.0000000116860974e-07,
+      "volumeErrorMm3": 2.988332994391385e-07,
+      "integrationRelativeError": 3.7292497850696755e-12,
+      "passed": true
+    },
+    {
+      "name": "corner-4-r2.5-0",
+      "valid": true,
+      "solids": 1,
+      "boundsErrorMm": 1.0000000116860974e-07,
+      "volumeErrorMm3": 4.083436238033755e-07,
+      "integrationRelativeError": 4.456417895904914e-12,
+      "passed": true
+    },
+    {
+      "name": "corner-4-r2.5-1",
+      "valid": true,
+      "solids": 1,
+      "boundsErrorMm": 1.0000000116860974e-07,
+      "volumeErrorMm3": 4.083436238033755e-07,
+      "integrationRelativeError": 4.456417895904914e-12,
+      "passed": true
+    },
+    {
+      "name": "corner-5-r0.25-0",
+      "valid": true,
+      "solids": 1,
+      "boundsErrorMm": 1.0000000116860974e-07,
+      "volumeErrorMm3": 9.374446108267875e-08,
+      "integrationRelativeError": 3.273718940077088e-14,
+      "passed": true
+    },
+    {
+      "name": "corner-5-r0.25-1",
+      "valid": true,
+      "solids": 1,
+      "boundsErrorMm": 1.0000000116860974e-07,
+      "volumeErrorMm3": 9.374446108267875e-08,
+      "integrationRelativeError": 3.273718940077088e-14,
+      "passed": true
+    },
+    {
+      "name": "corner-5-r1-0",
+      "valid": true,
+      "solids": 1,
+      "boundsErrorMm": 1.0000000116860974e-07,
+      "volumeErrorMm3": 3.129849801553064e-07,
+      "integrationRelativeError": 4.4968885384550326e-13,
+      "passed": true
+    },
+    {
+      "name": "corner-5-r1-1",
+      "valid": true,
+      "solids": 1,
+      "boundsErrorMm": 1.0000000116860974e-07,
+      "volumeErrorMm3": 3.129849801553064e-07,
+      "integrationRelativeError": 4.4968885384550326e-13,
+      "passed": true
+    },
+    {
+      "name": "corner-5-r2.5-0",
+      "valid": true,
+      "solids": 1,
+      "boundsErrorMm": 1.0000000116860974e-07,
+      "volumeErrorMm3": 4.6331456360348966e-07,
+      "integrationRelativeError": 2.7798796130739113e-12,
+      "passed": true
+    },
+    {
+      "name": "corner-5-r2.5-1",
+      "valid": true,
+      "solids": 1,
+      "boundsErrorMm": 1.0000000116860974e-07,
+      "volumeErrorMm3": 4.6331456360348966e-07,
+      "integrationRelativeError": 2.7798796130739113e-12,
+      "passed": true
+    },
+    {
+      "name": "corner-6-r0.25-0",
+      "valid": true,
+      "solids": 1,
+      "boundsErrorMm": 1.0000000116860974e-07,
+      "volumeErrorMm3": 9.374451792609761e-08,
+      "integrationRelativeError": 3.273718940077088e-14,
+      "passed": true
+    },
+    {
+      "name": "corner-6-r0.25-1",
+      "valid": true,
+      "solids": 1,
+      "boundsErrorMm": 1.0000000116860974e-07,
+      "volumeErrorMm3": 9.374451792609761e-08,
+      "integrationRelativeError": 3.273718940077088e-14,
+      "passed": true
+    },
+    {
+      "name": "corner-6-r1-0",
+      "valid": true,
+      "solids": 1,
+      "boundsErrorMm": 1.0000000116860974e-07,
+      "volumeErrorMm3": 3.129849801553064e-07,
+      "integrationRelativeError": 4.4968885384550326e-13,
+      "passed": true
+    },
+    {
+      "name": "corner-6-r1-1",
+      "valid": true,
+      "solids": 1,
+      "boundsErrorMm": 1.0000000116860974e-07,
+      "volumeErrorMm3": 3.129849801553064e-07,
+      "integrationRelativeError": 4.4968885384550326e-13,
+      "passed": true
+    },
+    {
+      "name": "corner-6-r2.5-0",
+      "valid": true,
+      "solids": 1,
+      "boundsErrorMm": 1.0000000116860974e-07,
+      "volumeErrorMm3": 4.6331456360348966e-07,
+      "integrationRelativeError": 2.7798796130739113e-12,
+      "passed": true
+    },
+    {
+      "name": "corner-6-r2.5-1",
+      "valid": true,
+      "solids": 1,
+      "boundsErrorMm": 1.0000000116860974e-07,
+      "volumeErrorMm3": 4.6331456360348966e-07,
+      "integrationRelativeError": 2.7798796130739113e-12,
+      "passed": true
+    },
+    {
+      "name": "corner-7-r0.25-0",
+      "valid": true,
+      "solids": 1,
+      "boundsErrorMm": 1.0000000116860974e-07,
+      "volumeErrorMm3": 9.269263046007836e-08,
+      "integrationRelativeError": 3.36530951058834e-12,
+      "passed": true
+    },
+    {
+      "name": "corner-7-r0.25-1",
+      "valid": true,
+      "solids": 1,
+      "boundsErrorMm": 1.0000000116860974e-07,
+      "volumeErrorMm3": 9.269263046007836e-08,
+      "integrationRelativeError": 3.36530951058834e-12,
+      "passed": true
+    },
+    {
+      "name": "corner-7-r1-0",
+      "valid": true,
+      "solids": 1,
+      "boundsErrorMm": 1.0000000116860974e-07,
+      "volumeErrorMm3": 2.988332994391385e-07,
+      "integrationRelativeError": 3.729051883892374e-12,
+      "passed": true
+    },
+    {
+      "name": "corner-7-r1-1",
+      "valid": true,
+      "solids": 1,
+      "boundsErrorMm": 1.0000000116860974e-07,
+      "volumeErrorMm3": 2.988332994391385e-07,
+      "integrationRelativeError": 3.729051883892374e-12,
+      "passed": true
+    },
+    {
+      "name": "corner-7-r2.5-0",
+      "valid": true,
+      "solids": 1,
+      "boundsErrorMm": 1.0000000116860974e-07,
+      "volumeErrorMm3": 4.083436238033755e-07,
+      "integrationRelativeError": 4.456291239150732e-12,
+      "passed": true
+    },
+    {
+      "name": "corner-7-r2.5-1",
+      "valid": true,
+      "solids": 1,
+      "boundsErrorMm": 1.0000000116860974e-07,
+      "volumeErrorMm3": 4.083436238033755e-07,
+      "integrationRelativeError": 4.456291239150732e-12,
+      "passed": true
+    },
+    {
+      "name": "corner-0-r0.25-0-placed1",
+      "valid": true,
+      "solids": 1,
+      "boundsErrorMm": 7.105427357601002e-15,
+      "volumeErrorMm3": 9.248333299183287e-08,
+      "integrationRelativeError": 1.0684288746210598e-11,
+      "passed": true
+    },
+    {
+      "name": "corner-0-r0.25-1-placed1",
+      "valid": true,
+      "solids": 1,
+      "boundsErrorMm": 7.105427357601002e-15,
+      "volumeErrorMm3": 9.248333299183287e-08,
+      "integrationRelativeError": 1.0684288746210598e-11,
+      "passed": true
+    },
+    {
+      "name": "corner-0-r1-0-placed1",
+      "valid": true,
+      "solids": 1,
+      "boundsErrorMm": 3.552713678800501e-15,
+      "volumeErrorMm3": 2.954784008579736e-07,
+      "integrationRelativeError": 1.1047635338198613e-11,
+      "passed": true
+    },
+    {
+      "name": "corner-0-r1-1-placed1",
+      "valid": true,
+      "solids": 1,
+      "boundsErrorMm": 3.552713678800501e-15,
+      "volumeErrorMm3": 2.954784008579736e-07,
+      "integrationRelativeError": 1.1047635338198613e-11,
+      "passed": true
+    },
+    {
+      "name": "corner-0-r2.5-0-placed1",
+      "valid": true,
+      "solids": 1,
+      "boundsErrorMm": 3.552713678800501e-15,
+      "volumeErrorMm3": 3.873731202475028e-07,
+      "integrationRelativeError": 1.1774771826919829e-11,
+      "passed": true
+    },
+    {
+      "name": "corner-0-r2.5-1-placed1",
+      "valid": true,
+      "solids": 1,
+      "boundsErrorMm": 3.552713678800501e-15,
+      "volumeErrorMm3": 3.873731202475028e-07,
+      "integrationRelativeError": 1.1774771826919829e-11,
+      "passed": true
+    },
+    {
+      "name": "corner-1-r0.25-0-placed1",
+      "valid": true,
+      "solids": 1,
+      "boundsErrorMm": 3.552713678800501e-15,
+      "volumeErrorMm3": 9.348218554805499e-08,
+      "integrationRelativeError": 5.2802507423725543e-14,
+      "passed": true
+    },
+    {
+      "name": "corner-1-r0.25-1-placed1",
+      "valid": true,
+      "solids": 1,
+      "boundsErrorMm": 3.552713678800501e-15,
+      "volumeErrorMm3": 9.348218554805499e-08,
+      "integrationRelativeError": 5.2802507423725543e-14,
+      "passed": true
+    },
+    {
+      "name": "corner-1-r1-0-placed1",
+      "valid": true,
+      "solids": 1,
+      "boundsErrorMm": 3.552713678800501e-15,
+      "volumeErrorMm3": 3.0878459256200586e-07,
+      "integrationRelativeError": 4.2402358247550664e-13,
+      "passed": true
+    },
+    {
+      "name": "corner-1-r1-1-placed1",
+      "valid": true,
+      "solids": 1,
+      "boundsErrorMm": 3.552713678800501e-15,
+      "volumeErrorMm3": 3.0878459256200586e-07,
+      "integrationRelativeError": 4.2402358247550664e-13,
+      "passed": true
+    },
+    {
+      "name": "corner-1-r2.5-0-placed1",
+      "valid": true,
+      "solids": 1,
+      "boundsErrorMm": 2.6645352591003757e-15,
+      "volumeErrorMm3": 4.370603505776671e-07,
+      "integrationRelativeError": 2.714135492884991e-12,
+      "passed": true
+    },
+    {
+      "name": "corner-1-r2.5-1-placed1",
+      "valid": true,
+      "solids": 1,
+      "boundsErrorMm": 2.6645352591003757e-15,
+      "volumeErrorMm3": 4.370603505776671e-07,
+      "integrationRelativeError": 2.714135492884991e-12,
+      "passed": true
+    },
+    {
+      "name": "corner-2-r0.25-0-placed1",
+      "valid": true,
+      "solids": 1,
+      "boundsErrorMm": 1.7763568394002505e-15,
+      "volumeErrorMm3": 9.348212870463612e-08,
+      "integrationRelativeError": 5.363121859669058e-14,
+      "passed": true
+    },
+    {
+      "name": "corner-2-r0.25-1-placed1",
+      "valid": true,
+      "solids": 1,
+      "boundsErrorMm": 1.7763568394002505e-15,
+      "volumeErrorMm3": 9.348212870463612e-08,
+      "integrationRelativeError": 5.363121859669058e-14,
+      "passed": true
+    },
+    {
+      "name": "corner-2-r1-0-placed1",
+      "valid": true,
+      "solids": 1,
+      "boundsErrorMm": 1.7763568394002505e-15,
+      "volumeErrorMm3": 3.0878442203174927e-07,
+      "integrationRelativeError": 4.2402472600034025e-13,
+      "passed": true
+    },
+    {
+      "name": "corner-2-r1-1-placed1",
+      "valid": true,
+      "solids": 1,
+      "boundsErrorMm": 1.7763568394002505e-15,
+      "volumeErrorMm3": 3.0878442203174927e-07,
+      "integrationRelativeError": 4.2402472600034025e-13,
+      "passed": true
+    },
+    {
+      "name": "corner-2-r2.5-0-placed1",
+      "valid": true,
+      "solids": 1,
+      "boundsErrorMm": 1.7763568394002505e-15,
+      "volumeErrorMm3": 4.3706046426450484e-07,
+      "integrationRelativeError": 2.7141405960535253e-12,
+      "passed": true
+    },
+    {
+      "name": "corner-2-r2.5-1-placed1",
+      "valid": true,
+      "solids": 1,
+      "boundsErrorMm": 1.7763568394002505e-15,
+      "volumeErrorMm3": 4.3706046426450484e-07,
+      "integrationRelativeError": 2.7141405960535253e-12,
+      "passed": true
+    },
+    {
+      "name": "corner-3-r0.25-0-placed1",
+      "valid": true,
+      "solids": 1,
+      "boundsErrorMm": 3.552713678800501e-15,
+      "volumeErrorMm3": 9.374502951686736e-08,
+      "integrationRelativeError": 3.272843848139084e-14,
+      "passed": true
+    },
+    {
+      "name": "corner-3-r0.25-1-placed1",
+      "valid": true,
+      "solids": 1,
+      "boundsErrorMm": 3.552713678800501e-15,
+      "volumeErrorMm3": 9.374502951686736e-08,
+      "integrationRelativeError": 3.272843848139084e-14,
+      "passed": true
+    },
+    {
+      "name": "corner-3-r1-0-placed1",
+      "valid": true,
+      "solids": 1,
+      "boundsErrorMm": 3.552713678800501e-15,
+      "volumeErrorMm3": 3.1298549174607615e-07,
+      "integrationRelativeError": 4.497254466401846e-13,
+      "passed": true
+    },
+    {
+      "name": "corner-3-r1-1-placed1",
+      "valid": true,
+      "solids": 1,
+      "boundsErrorMm": 3.552713678800501e-15,
+      "volumeErrorMm3": 3.1298549174607615e-07,
+      "integrationRelativeError": 4.497254466401846e-13,
+      "passed": true
+    },
+    {
+      "name": "corner-3-r2.5-0-placed1",
+      "valid": true,
+      "solids": 1,
+      "boundsErrorMm": 3.552713678800501e-15,
+      "volumeErrorMm3": 4.6331518888109713e-07,
+      "integrationRelativeError": 2.7798796130739113e-12,
+      "passed": true
+    },
+    {
+      "name": "corner-3-r2.5-1-placed1",
+      "valid": true,
+      "solids": 1,
+      "boundsErrorMm": 3.552713678800501e-15,
+      "volumeErrorMm3": 4.6331518888109713e-07,
+      "integrationRelativeError": 2.7798796130739113e-12,
+      "passed": true
+    },
+    {
+      "name": "corner-4-r0.25-0-placed1",
+      "valid": true,
+      "solids": 1,
+      "boundsErrorMm": 3.552713678800501e-15,
+      "volumeErrorMm3": 9.269291467717267e-08,
+      "integrationRelativeError": 3.361351487053419e-12,
+      "passed": true
+    },
+    {
+      "name": "corner-4-r0.25-1-placed1",
+      "valid": true,
+      "solids": 1,
+      "boundsErrorMm": 3.552713678800501e-15,
+      "volumeErrorMm3": 9.269291467717267e-08,
+      "integrationRelativeError": 3.361351487053419e-12,
+      "passed": true
+    },
+    {
+      "name": "corner-4-r1-0-placed1",
+      "valid": true,
+      "solids": 1,
+      "boundsErrorMm": 3.552713678800501e-15,
+      "volumeErrorMm3": 2.988336973430705e-07,
+      "integrationRelativeError": 3.7290518838923814e-12,
+      "passed": true
+    },
+    {
+      "name": "corner-4-r1-1-placed1",
+      "valid": true,
+      "solids": 1,
+      "boundsErrorMm": 3.552713678800501e-15,
+      "volumeErrorMm3": 2.988336973430705e-07,
+      "integrationRelativeError": 3.7290518838923814e-12,
+      "passed": true
+    },
+    {
+      "name": "corner-4-r2.5-0-placed1",
+      "valid": true,
+      "solids": 1,
+      "boundsErrorMm": 3.552713678800501e-15,
+      "volumeErrorMm3": 4.0834419223756413e-07,
+      "integrationRelativeError": 4.4562912391507254e-12,
+      "passed": true
+    },
+    {
+      "name": "corner-4-r2.5-1-placed1",
+      "valid": true,
+      "solids": 1,
+      "boundsErrorMm": 3.552713678800501e-15,
+      "volumeErrorMm3": 4.0834419223756413e-07,
+      "integrationRelativeError": 4.4562912391507254e-12,
+      "passed": true
+    },
+    {
+      "name": "corner-5-r0.25-0-placed1",
+      "valid": true,
+      "solids": 1,
+      "boundsErrorMm": 3.552713678800501e-15,
+      "volumeErrorMm3": 9.37449726734485e-08,
+      "integrationRelativeError": 3.2745940320150835e-14,
+      "passed": true
+    },
+    {
+      "name": "corner-5-r0.25-1-placed1",
+      "valid": true,
+      "solids": 1,
+      "boundsErrorMm": 3.552713678800501e-15,
+      "volumeErrorMm3": 9.37449726734485e-08,
+      "integrationRelativeError": 3.2745940320150835e-14,
+      "passed": true
+    },
+    {
+      "name": "corner-5-r1-0-placed1",
+      "valid": true,
+      "solids": 1,
+      "boundsErrorMm": 3.552713678800501e-15,
+      "volumeErrorMm3": 3.1298537805923843e-07,
+      "integrationRelativeError": 4.4970715024284353e-13,
+      "passed": true
+    },
+    {
+      "name": "corner-5-r1-1-placed1",
+      "valid": true,
+      "solids": 1,
+      "boundsErrorMm": 3.552713678800501e-15,
+      "volumeErrorMm3": 3.1298537805923843e-07,
+      "integrationRelativeError": 4.4970715024284353e-13,
+      "passed": true
+    },
+    {
+      "name": "corner-5-r2.5-0-placed1",
+      "valid": true,
+      "solids": 1,
+      "boundsErrorMm": 7.105427357601002e-15,
+      "volumeErrorMm3": 4.6331513203767827e-07,
+      "integrationRelativeError": 2.7797979623774048e-12,
+      "passed": true
+    },
+    {
+      "name": "corner-5-r2.5-1-placed1",
+      "valid": true,
+      "solids": 1,
+      "boundsErrorMm": 7.105427357601002e-15,
+      "volumeErrorMm3": 4.6331513203767827e-07,
+      "integrationRelativeError": 2.7797979623774048e-12,
+      "passed": true
+    },
+    {
+      "name": "corner-6-r0.25-0-placed1",
+      "valid": true,
+      "solids": 1,
+      "boundsErrorMm": 1.7763568394002505e-15,
+      "volumeErrorMm3": 9.374485898661078e-08,
+      "integrationRelativeError": 3.2745940320150885e-14,
+      "passed": true
+    },
+    {
+      "name": "corner-6-r0.25-1-placed1",
+      "valid": true,
+      "solids": 1,
+      "boundsErrorMm": 1.7763568394002505e-15,
+      "volumeErrorMm3": 9.374485898661078e-08,
+      "integrationRelativeError": 3.2745940320150885e-14,
+      "passed": true
+    },
+    {
+      "name": "corner-6-r1-0-placed1",
+      "valid": true,
+      "solids": 1,
+      "boundsErrorMm": 3.552713678800501e-15,
+      "volumeErrorMm3": 3.129852643724007e-07,
+      "integrationRelativeError": 4.496888538455024e-13,
+      "passed": true
+    },
+    {
+      "name": "corner-6-r1-1-placed1",
+      "valid": true,
+      "solids": 1,
+      "boundsErrorMm": 3.552713678800501e-15,
+      "volumeErrorMm3": 3.129852643724007e-07,
+      "integrationRelativeError": 4.496888538455024e-13,
+      "passed": true
+    },
+    {
+      "name": "corner-6-r2.5-0-placed1",
+      "valid": true,
+      "solids": 1,
+      "boundsErrorMm": 3.552713678800501e-15,
+      "volumeErrorMm3": 4.633149046640028e-07,
+      "integrationRelativeError": 2.7797979623774076e-12,
+      "passed": true
+    },
+    {
+      "name": "corner-6-r2.5-1-placed1",
+      "valid": true,
+      "solids": 1,
+      "boundsErrorMm": 3.552713678800501e-15,
+      "volumeErrorMm3": 4.633149046640028e-07,
+      "integrationRelativeError": 2.7797979623774076e-12,
+      "passed": true
+    },
+    {
+      "name": "corner-7-r0.25-0-placed1",
+      "valid": true,
+      "solids": 1,
+      "boundsErrorMm": 8.881784197001252e-16,
+      "volumeErrorMm3": 9.348207186121726e-08,
+      "integrationRelativeError": 5.343331742105673e-14,
+      "passed": true
+    },
+    {
+      "name": "corner-7-r0.25-1-placed1",
+      "valid": true,
+      "solids": 1,
+      "boundsErrorMm": 8.881784197001252e-16,
+      "volumeErrorMm3": 9.348207186121726e-08,
+      "integrationRelativeError": 5.343331742105673e-14,
+      "passed": true
+    },
+    {
+      "name": "corner-7-r1-0-placed1",
+      "valid": true,
+      "solids": 1,
+      "boundsErrorMm": 3.552713678800501e-15,
+      "volumeErrorMm3": 3.08784535718587e-07,
+      "integrationRelativeError": 4.2402301071308906e-13,
+      "passed": true
+    },
+    {
+      "name": "corner-7-r1-1-placed1",
+      "valid": true,
+      "solids": 1,
+      "boundsErrorMm": 3.552713678800501e-15,
+      "volumeErrorMm3": 3.08784535718587e-07,
+      "integrationRelativeError": 4.2402301071308906e-13,
+      "passed": true
+    },
+    {
+      "name": "corner-7-r2.5-0-placed1",
+      "valid": true,
+      "solids": 1,
+      "boundsErrorMm": 8.881784197001252e-16,
+      "volumeErrorMm3": 4.37060407421086e-07,
+      "integrationRelativeError": 2.7141508023905836e-12,
+      "passed": true
+    },
+    {
+      "name": "corner-7-r2.5-1-placed1",
+      "valid": true,
+      "solids": 1,
+      "boundsErrorMm": 8.881784197001252e-16,
+      "volumeErrorMm3": 4.37060407421086e-07,
+      "integrationRelativeError": 2.7141508023905836e-12,
+      "passed": true
+    },
+    {
+      "name": "corner-0-r0.25-0-placed2",
+      "valid": true,
+      "solids": 1,
+      "boundsErrorMm": 7.105427357601002e-15,
+      "volumeErrorMm3": 9.248333299183287e-08,
+      "integrationRelativeError": 1.0681122327377957e-11,
+      "passed": true
+    },
+    {
+      "name": "corner-0-r0.25-1-placed2",
+      "valid": true,
+      "solids": 1,
+      "boundsErrorMm": 7.105427357601002e-15,
+      "volumeErrorMm3": 9.248333299183287e-08,
+      "integrationRelativeError": 1.0681122327377957e-11,
+      "passed": true
+    },
+    {
+      "name": "corner-0-r1-0-placed2",
+      "valid": true,
+      "solids": 1,
+      "boundsErrorMm": 7.105427357601002e-15,
+      "volumeErrorMm3": 2.954784008579736e-07,
+      "integrationRelativeError": 1.1047437437021033e-11,
+      "passed": true
+    },
+    {
+      "name": "corner-0-r1-1-placed2",
+      "valid": true,
+      "solids": 1,
+      "boundsErrorMm": 7.105427357601002e-15,
+      "volumeErrorMm3": 2.954784008579736e-07,
+      "integrationRelativeError": 1.1047437437021033e-11,
+      "passed": true
+    },
+    {
+      "name": "corner-0-r2.5-0-placed2",
+      "valid": true,
+      "solids": 1,
+      "boundsErrorMm": 1.0658141036401503e-14,
+      "volumeErrorMm3": 3.8737317709092167e-07,
+      "integrationRelativeError": 1.1774645170165513e-11,
+      "passed": true
+    },
+    {
+      "name": "corner-0-r2.5-1-placed2",
+      "valid": true,
+      "solids": 1,
+      "boundsErrorMm": 1.0658141036401503e-14,
+      "volumeErrorMm3": 3.8737317709092167e-07,
+      "integrationRelativeError": 1.1774645170165513e-11,
+      "passed": true
+    },
+    {
+      "name": "corner-1-r0.25-0-placed2",
+      "valid": true,
+      "solids": 1,
+      "boundsErrorMm": 3.552713678800501e-15,
+      "volumeErrorMm3": 9.348241292173043e-08,
+      "integrationRelativeError": 5.31735721280385e-14,
+      "passed": true
+    },
+    {
+      "name": "corner-1-r0.25-1-placed2",
+      "valid": true,
+      "solids": 1,
+      "boundsErrorMm": 3.552713678800501e-15,
+      "volumeErrorMm3": 9.348241292173043e-08,
+      "integrationRelativeError": 5.31735721280385e-14,
+      "passed": true
+    },
+    {
+      "name": "corner-1-r1-0-placed2",
+      "valid": true,
+      "solids": 1,
+      "boundsErrorMm": 3.552713678800501e-15,
+      "volumeErrorMm3": 3.0878476309226244e-07,
+      "integrationRelativeError": 4.2402415423792246e-13,
+      "passed": true
+    },
+    {
+      "name": "corner-1-r1-1-placed2",
+      "valid": true,
+      "solids": 1,
+      "boundsErrorMm": 3.552713678800501e-15,
+      "volumeErrorMm3": 3.0878476309226244e-07,
+      "integrationRelativeError": 4.2402415423792246e-13,
+      "passed": true
+    },
+    {
+      "name": "corner-1-r2.5-0-placed2",
+      "valid": true,
+      "solids": 1,
+      "boundsErrorMm": 3.552713678800501e-15,
+      "volumeErrorMm3": 4.370606916381803e-07,
+      "integrationRelativeError": 2.714145699222053e-12,
+      "passed": true
+    },
+    {
+      "name": "corner-1-r2.5-1-placed2",
+      "valid": true,
+      "solids": 1,
+      "boundsErrorMm": 3.552713678800501e-15,
+      "volumeErrorMm3": 4.370606916381803e-07,
+      "integrationRelativeError": 2.714145699222053e-12,
+      "passed": true
+    },
+    {
+      "name": "corner-2-r0.25-0-placed2",
+      "valid": true,
+      "solids": 1,
+      "boundsErrorMm": 7.105427357601002e-15,
+      "volumeErrorMm3": 9.34830381993379e-08,
+      "integrationRelativeError": 5.321067859846919e-14,
+      "passed": true
+    },
+    {
+      "name": "corner-2-r0.25-1-placed2",
+      "valid": true,
+      "solids": 1,
+      "boundsErrorMm": 7.105427357601002e-15,
+      "volumeErrorMm3": 9.34830381993379e-08,
+      "integrationRelativeError": 5.321067859846919e-14,
+      "passed": true
+    },
+    {
+      "name": "corner-2-r1-0-placed2",
+      "valid": true,
+      "solids": 1,
+      "boundsErrorMm": 7.105427357601002e-15,
+      "volumeErrorMm3": 3.0878533152645105e-07,
+      "integrationRelativeError": 4.24024154237923e-13,
+      "passed": true
+    },
+    {
+      "name": "corner-2-r1-1-placed2",
+      "valid": true,
+      "solids": 1,
+      "boundsErrorMm": 7.105427357601002e-15,
+      "volumeErrorMm3": 3.0878533152645105e-07,
+      "integrationRelativeError": 4.24024154237923e-13,
+      "passed": true
+    },
+    {
+      "name": "corner-2-r2.5-0-placed2",
+      "valid": true,
+      "solids": 1,
+      "boundsErrorMm": 7.105427357601002e-15,
+      "volumeErrorMm3": 4.370612600723689e-07,
+      "integrationRelativeError": 2.7141354928849815e-12,
+      "passed": true
+    },
+    {
+      "name": "corner-2-r2.5-1-placed2",
+      "valid": true,
+      "solids": 1,
+      "boundsErrorMm": 7.105427357601002e-15,
+      "volumeErrorMm3": 4.370612600723689e-07,
+      "integrationRelativeError": 2.7141354928849815e-12,
+      "passed": true
+    },
+    {
+      "name": "corner-3-r0.25-0-placed2",
+      "valid": true,
+      "solids": 1,
+      "boundsErrorMm": 3.552713678800501e-15,
+      "volumeErrorMm3": 9.374502951686736e-08,
+      "integrationRelativeError": 3.273718940077079e-14,
+      "passed": true
+    },
+    {
+      "name": "corner-3-r0.25-1-placed2",
+      "valid": true,
+      "solids": 1,
+      "boundsErrorMm": 3.552713678800501e-15,
+      "volumeErrorMm3": 9.374502951686736e-08,
+      "integrationRelativeError": 3.273718940077079e-14,
+      "passed": true
+    },
+    {
+      "name": "corner-3-r1-0-placed2",
+      "valid": true,
+      "solids": 1,
+      "boundsErrorMm": 3.552713678800501e-15,
+      "volumeErrorMm3": 3.1298549174607615e-07,
+      "integrationRelativeError": 4.497071502428435e-13,
+      "passed": true
+    },
+    {
+      "name": "corner-3-r1-1-placed2",
+      "valid": true,
+      "solids": 1,
+      "boundsErrorMm": 3.552713678800501e-15,
+      "volumeErrorMm3": 3.1298549174607615e-07,
+      "integrationRelativeError": 4.497071502428435e-13,
+      "passed": true
+    },
+    {
+      "name": "corner-3-r2.5-0-placed2",
+      "valid": true,
+      "solids": 1,
+      "boundsErrorMm": 3.552713678800501e-15,
+      "volumeErrorMm3": 4.633150751942594e-07,
+      "integrationRelativeError": 2.7798796130739077e-12,
+      "passed": true
+    },
+    {
+      "name": "corner-3-r2.5-1-placed2",
+      "valid": true,
+      "solids": 1,
+      "boundsErrorMm": 3.552713678800501e-15,
+      "volumeErrorMm3": 4.633150751942594e-07,
+      "integrationRelativeError": 2.7798796130739077e-12,
+      "passed": true
+    },
+    {
+      "name": "corner-4-r0.25-0-placed2",
+      "valid": true,
+      "solids": 1,
+      "boundsErrorMm": 3.552713678800501e-15,
+      "volumeErrorMm3": 9.269291467717267e-08,
+      "integrationRelativeError": 3.3670906211791044e-12,
+      "passed": true
+    },
+    {
+      "name": "corner-4-r0.25-1-placed2",
+      "valid": true,
+      "solids": 1,
+      "boundsErrorMm": 3.552713678800501e-15,
+      "volumeErrorMm3": 9.269291467717267e-08,
+      "integrationRelativeError": 3.3670906211791044e-12,
+      "passed": true
+    },
+    {
+      "name": "corner-4-r1-0-placed2",
+      "valid": true,
+      "solids": 1,
+      "boundsErrorMm": 3.552713678800501e-15,
+      "volumeErrorMm3": 2.9883364049965166e-07,
+      "integrationRelativeError": 3.728656081537742e-12,
+      "passed": true
+    },
+    {
+      "name": "corner-4-r1-1-placed2",
+      "valid": true,
+      "solids": 1,
+      "boundsErrorMm": 3.552713678800501e-15,
+      "volumeErrorMm3": 2.9883364049965166e-07,
+      "integrationRelativeError": 3.728656081537742e-12,
+      "passed": true
+    },
+    {
+      "name": "corner-4-r2.5-0-placed2",
+      "valid": true,
+      "solids": 1,
+      "boundsErrorMm": 3.552713678800501e-15,
+      "volumeErrorMm3": 4.083439648638887e-07,
+      "integrationRelativeError": 4.456037925642364e-12,
+      "passed": true
+    },
+    {
+      "name": "corner-4-r2.5-1-placed2",
+      "valid": true,
+      "solids": 1,
+      "boundsErrorMm": 3.552713678800501e-15,
+      "volumeErrorMm3": 4.083439648638887e-07,
+      "integrationRelativeError": 4.456037925642364e-12,
+      "passed": true
+    },
+    {
+      "name": "corner-5-r0.25-0-placed2",
+      "valid": true,
+      "solids": 1,
+      "boundsErrorMm": 7.105427357601002e-15,
+      "volumeErrorMm3": 9.374440423925989e-08,
+      "integrationRelativeError": 3.274594032015098e-14,
+      "passed": true
+    },
+    {
+      "name": "corner-5-r0.25-1-placed2",
+      "valid": true,
+      "solids": 1,
+      "boundsErrorMm": 7.105427357601002e-15,
+      "volumeErrorMm3": 9.374440423925989e-08,
+      "integrationRelativeError": 3.274594032015098e-14,
+      "passed": true
+    },
+    {
+      "name": "corner-5-r1-0-placed2",
+      "valid": true,
+      "solids": 1,
+      "boundsErrorMm": 7.105427357601002e-15,
+      "volumeErrorMm3": 3.1298503699872526e-07,
+      "integrationRelativeError": 4.4968885384550437e-13,
+      "passed": true
+    },
+    {
+      "name": "corner-5-r1-1-placed2",
+      "valid": true,
+      "solids": 1,
+      "boundsErrorMm": 7.105427357601002e-15,
+      "volumeErrorMm3": 3.1298503699872526e-07,
+      "integrationRelativeError": 4.4968885384550437e-13,
+      "passed": true
+    },
+    {
+      "name": "corner-5-r2.5-0-placed2",
+      "valid": true,
+      "solids": 1,
+      "boundsErrorMm": 7.105427357601002e-15,
+      "volumeErrorMm3": 4.633146204469085e-07,
+      "integrationRelativeError": 2.7798796130739158e-12,
+      "passed": true
+    },
+    {
+      "name": "corner-5-r2.5-1-placed2",
+      "valid": true,
+      "solids": 1,
+      "boundsErrorMm": 7.105427357601002e-15,
+      "volumeErrorMm3": 4.633146204469085e-07,
+      "integrationRelativeError": 2.7798796130739158e-12,
+      "passed": true
+    },
+    {
+      "name": "corner-6-r0.25-0-placed2",
+      "valid": true,
+      "solids": 1,
+      "boundsErrorMm": 7.105427357601002e-15,
+      "volumeErrorMm3": 9.374542742079939e-08,
+      "integrationRelativeError": 3.275469123953096e-14,
+      "passed": true
+    },
+    {
+      "name": "corner-6-r0.25-1-placed2",
+      "valid": true,
+      "solids": 1,
+      "boundsErrorMm": 7.105427357601002e-15,
+      "volumeErrorMm3": 9.374542742079939e-08,
+      "integrationRelativeError": 3.275469123953096e-14,
+      "passed": true
+    },
+    {
+      "name": "corner-6-r1-0-placed2",
+      "valid": true,
+      "solids": 1,
+      "boundsErrorMm": 4.6629367034256575e-15,
+      "volumeErrorMm3": 3.129858328065893e-07,
+      "integrationRelativeError": 4.4968885384550326e-13,
+      "passed": true
+    },
+    {
+      "name": "corner-6-r1-1-placed2",
+      "valid": true,
+      "solids": 1,
+      "boundsErrorMm": 4.6629367034256575e-15,
+      "volumeErrorMm3": 3.129858328065893e-07,
+      "integrationRelativeError": 4.4968885384550326e-13,
+      "passed": true
+    },
+    {
+      "name": "corner-6-r2.5-0-placed2",
+      "valid": true,
+      "solids": 1,
+      "boundsErrorMm": 7.105427357601002e-15,
+      "volumeErrorMm3": 4.6331530256793485e-07,
+      "integrationRelativeError": 2.7799612637704114e-12,
+      "passed": true
+    },
+    {
+      "name": "corner-6-r2.5-1-placed2",
+      "valid": true,
+      "solids": 1,
+      "boundsErrorMm": 7.105427357601002e-15,
+      "volumeErrorMm3": 4.6331530256793485e-07,
+      "integrationRelativeError": 2.7799612637704114e-12,
+      "passed": true
+    },
+    {
+      "name": "corner-7-r0.25-0-placed2",
+      "valid": true,
+      "solids": 1,
+      "boundsErrorMm": 7.105427357601002e-15,
+      "volumeErrorMm3": 9.348195817437954e-08,
+      "integrationRelativeError": 5.340857977410242e-14,
+      "passed": true
+    },
+    {
+      "name": "corner-7-r0.25-1-placed2",
+      "valid": true,
+      "solids": 1,
+      "boundsErrorMm": 7.105427357601002e-15,
+      "volumeErrorMm3": 9.348195817437954e-08,
+      "integrationRelativeError": 5.340857977410242e-14,
+      "passed": true
+    },
+    {
+      "name": "corner-7-r1-0-placed2",
+      "valid": true,
+      "solids": 1,
+      "boundsErrorMm": 7.105427357601002e-15,
+      "volumeErrorMm3": 3.087842515014927e-07,
+      "integrationRelativeError": 4.2402358247550705e-13,
+      "passed": true
+    },
+    {
+      "name": "corner-7-r1-1-placed2",
+      "valid": true,
+      "solids": 1,
+      "boundsErrorMm": 7.105427357601002e-15,
+      "volumeErrorMm3": 3.087842515014927e-07,
+      "integrationRelativeError": 4.2402358247550705e-13,
+      "passed": true
+    },
+    {
+      "name": "corner-7-r2.5-0-placed2",
+      "valid": true,
+      "solids": 1,
+      "boundsErrorMm": 7.105427357601002e-15,
+      "volumeErrorMm3": 4.370600663605728e-07,
+      "integrationRelativeError": 2.714140596053524e-12,
+      "passed": true
+    },
+    {
+      "name": "corner-7-r2.5-1-placed2",
+      "valid": true,
+      "solids": 1,
+      "boundsErrorMm": 7.105427357601002e-15,
+      "volumeErrorMm3": 4.370600663605728e-07,
+      "integrationRelativeError": 2.714140596053524e-12,
+      "passed": true
+    }
+  ]
+}

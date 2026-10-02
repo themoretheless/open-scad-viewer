@@ -352,6 +352,8 @@ for (const [name, artifact, compression] of [
 // Rectangle and retained-slot authoring with sticky feedback: assets 7,218,044 bytes.
 // Named profile refusal messages add 814 asset bytes; retain the previous 456-byte total margin.
 // Arc sweep range validation adds 803 bytes; prior total margin retained.
-const totalBudget = 7_220_117
+// Rigid cuboid corner-frame recovery adds 4,644 measured asset bytes.
+// Preserve the preceding 1,042-byte margin.
+const totalBudget = 7_224_761
 if (total > totalBudget) throw new Error(`dist totals ${total} bytes; budget is ${totalBudget}`)
 console.log(`Verified ${files.length} dist artifacts (${total} asset bytes + ${rawWasmBytes} raw WASM bytes = ${total + rawWasmBytes} total bytes)`)

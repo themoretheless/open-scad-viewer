@@ -83,7 +83,7 @@
         "Сохранение выбора и идентичностей после перестроения"
       ],
       "status": "open",
-      "implementationProgress": "Equal-radius axis-aligned cuboid blend implemented for all eight corners. Native tests and 48 WASM-exported STEP cases pass OpenCascade; general corners remain open."
+      "implementationProgress": "Equal-radius cuboid blend implemented in recovered orthonormal frames. 40 Rust operation tests and 144 WASM-exported STEP cases pass independent OpenCascade checks. Browser interaction and general corner blends remain open."
     },
     {
       "id": "solid_distance",
