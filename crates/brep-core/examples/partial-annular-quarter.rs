@@ -15,6 +15,41 @@ fn main() {
             value_codec::to_string(&model).unwrap(),
         )
         .unwrap();
+        let diagnostic = brep_core::self_intersection::inspect(
+            &model,
+            1e-8,
+            4096,
+            brep_core::face_contacts::Limits {
+                pairs: 1000,
+                cells: 20000,
+                domain_cells: 200000,
+                cells_per_pair: 64,
+                domain_cells_per_pair: 1000,
+            },
+        )
+        .unwrap();
+        let report = value_codec::json!({
+            "absenceProven": diagnostic.absence_proven,
+            "allFacesInjective": diagnostic.faces.all_faces_injective,
+            "allPairsClassified": diagnostic.pairs.all_pairs_classified,
+            "totalPairs": diagnostic.pairs.total_pairs,
+            "visitedPairs": diagnostic.pairs.pairs.len(),
+            "nextPair": diagnostic.pairs.next_pair,
+            "faces": diagnostic.faces.faces.iter().map(|face| value_codec::json!({
+                "face": face.face,
+                "proven": face.result.as_ref().is_some_and(|r| r.proven),
+                "reason": face.result.as_ref().map(|r| r.reason),
+            })).collect::<Vec<_>>(),
+            "pairs": diagnostic.pairs.pairs.iter().map(|pair| value_codec::json!({
+                "faces": pair.faces, "reason": pair.reason,
+            })).collect::<Vec<_>>(),
+        });
+        std::fs::write(
+            format!("{directory}/{name}-diagnostic.json"),
+            value_codec::to_string_pretty(&report).unwrap(),
+        )
+        .unwrap();
+        println!("{name}: absence proven = {}", diagnostic.absence_proven);
         match export_step_v9(&model) {
             Ok((text, _, _)) => {
                 std::fs::write(format!("{directory}/{name}.step"), text).unwrap();
