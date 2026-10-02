@@ -10,7 +10,7 @@
   "volumeToleranceMm3": 2e-05,
   "shearRefusalChecked": true,
   "independentRotatedStepVerified": true,
-  "browserVerified": false,
+  "browserVerified": true,
   "wasmBuild": "completed",
   "generalP1Complete": false,
   "independentStepCases": 144,
@@ -22,5 +22,24 @@
   "assetGrowthBytes": 4644,
   "assetBudget": 7224761,
   "distVerificationPassed": true,
-  "typecheckPassed": true
+  "typecheckPassed": true,
+  "browserScope": {
+    "corners": 1,
+    "placements": 1,
+    "inputs": [
+      "mouse edge selection and command activation",
+      "keyboard edge selection and command activation"
+    ],
+    "numericFields": "Playwright fill; full keyboard-only numeric workflow remains unqualified",
+    "checks": [
+      "localized excessive-radius refusal",
+      "radius correction",
+      "late reply ignored after cancel and reopen",
+      "apply without recomputation",
+      "whole-document Undo/Redo",
+      "actual page reload"
+    ],
+    "camera": "fit before selection and after orbit",
+    "sourceWasmSha256": "105c4def695089fa0f4011d178410c239cc14477ef8c9069a3c22f0950a4608b"
+  }
 }

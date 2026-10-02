@@ -20,7 +20,7 @@ await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve))
 let browser,page
 const errors=[]
 try{
- const {playwright}=await loadQualificationPlaywrightPackage();browser=await playwright.chromium.launch({headless:true})
+ const {playwright}=await loadQualificationPlaywrightPackage();browser=await playwright.chromium.launch({headless:true,...(process.env.CHROMIUM_EXECUTABLE?{executablePath:process.env.CHROMIUM_EXECUTABLE}: {})})
  page=await browser.newPage({acceptDownloads:true,viewport:{width:1440,height:1000}});page.on('pageerror',e=>errors.push(String(e)))
  await page.addInitScript(()=>{
   window.__holdEdge=false;window.__lateEdge=null;window.__edgeTerminated=false;window.__edgeRequests=0
@@ -68,18 +68,20 @@ try{
 
  const fixtureRoot=path.resolve(process.env.SOLID_EDGE_FIXTURE_ROOT??'docs/qualification/cad-roadmap-2026-09-28/edge-errors-2026-09-30')
  await openMenu();await solid.locator('input[accept=".json,application/json"]').setInputFiles(path.join(fixtureRoot,'fixture.json'));await closeMenu();await ready()
+ await solid.getByRole('button',{name:JSON.parse(await readFile(path.join(fixtureRoot,'fixture.json'),'utf8')).bodies[0].name,exact:true}).waitFor();await ready()
  const before=await doc('before'),id=(await readFile(path.join(fixtureRoot,'edge-id.txt'),'utf8')).trim()
  await activate(solid.getByRole('tab',{name:'Сцена',exact:true}));await activate(solid.getByRole('button',{name:before.bodies[0].name,exact:true}));await activate(solid.getByRole('button',{name:'Рёбра',exact:true}));await ready()
+ await activate(solid.getByRole('button',{name:'Вписать',exact:true}).last());await ready()
  const brep=before.bodies[0].brep,max=[0,1,2].map(axis=>Math.max(...brep.vertices.map(v=>v.point[axis])))
  const vertex=brep.vertices.findIndex(v=>v.point.every((x,i)=>x===max[i]))
  const fixtureEdges=await readFile(path.join(fixtureRoot,'edge-ids.json'),'utf8').then(JSON.parse).catch(error=>{if(error.code==='ENOENT')return [id];throw error})
- const ids=mode==='corner'?brep.edges.flatMap((e,i)=>e.vertices.includes(vertex)?[brep.topologyIds.edges[i]]:[]):fixtureEdges
+ const ids=mode==='corner'&&!process.env.SOLID_EDGE_CORNER_EDGES?brep.edges.flatMap((e,i)=>e.vertices.includes(vertex)?[brep.topologyIds.edges[i]]:[]):fixtureEdges
  if(inputMode==='mouse'){
   const bounds=await solid.locator(`[data-topology-edge="${ids[0]}"]`).evaluate(e=>{
    const r=e.ownerSVGElement.getBoundingClientRect();return {x:r.x+r.width*.7,y:r.y+r.height*.2}
   })
   await page.mouse.move(bounds.x,bounds.y);await page.mouse.down({button:'right'})
-  await page.mouse.move(bounds.x+80,bounds.y+35,{steps:12});await page.mouse.up({button:'right'});await ready()
+  await page.mouse.move(bounds.x+80,bounds.y+35,{steps:12});await page.mouse.up({button:'right'});await ready();await activate(solid.getByRole('button',{name:'Вписать',exact:true}).last());await ready()
  }
  if(ids.length>1&&mode==='constant'){
   await selectEdge(ids[0])
@@ -142,6 +144,7 @@ try{
  const after=await doc('after');assert.notDeepEqual(after.bodies[0].brep,before.bodies[0].brep)
  await activate(solid.getByRole('button',{name:'↶',exact:true}));assert.deepEqual(await doc('undo'),before)
  await activate(solid.getByRole('button',{name:'↷',exact:true}));assert.deepEqual(await doc('redo'),after)
- assert.deepEqual(errors,[]);await writeFile(path.join(directory,'result.json'),JSON.stringify({ok:true,mode,inputMode,contextSwitch:!!process.env.SOLID_EDGE_CONTEXT_SWITCH,oversizeRefusal:true,localized:true,reduceRadiusRecovery:true,undoRedo:true,applyWithoutRecompute:true,lateResponseAfterCancelAndReopen:!!process.env.SOLID_EDGE_FIXTURE_ROOT,errors},null,2))
+ await page.reload();await solid.getByRole('button',{name:after.bodies[0].name,exact:true}).waitFor();await ready();assert.deepEqual(await doc('reloaded'),after)
+ assert.deepEqual(errors,[]);await writeFile(path.join(directory,'result.json'),JSON.stringify({ok:true,mode,inputMode,contextSwitch:!!process.env.SOLID_EDGE_CONTEXT_SWITCH,oversizeRefusal:true,localized:true,reduceRadiusRecovery:true,undoRedo:true,reload:true,applyWithoutRecompute:true,lateResponseAfterCancelAndReopen:!!process.env.SOLID_EDGE_FIXTURE_ROOT,errors},null,2))
 }catch(error){if(page){await page.screenshot({path:path.join(directory,'failure.png')}).catch(()=>{});await writeFile(path.join(directory,'failure.txt'),await page.locator('body').innerText().catch(()=>''))}throw error}
 finally{await browser?.close();await new Promise(resolve=>server.close(resolve))}
