@@ -187,18 +187,19 @@ impl CircularBlendSpan {
 fn trimmed_cylinder(
     rail: &Curve,
     height: f64,
-    radius_law: [f64; 4],
+    _radius_law: [f64; 4],
     tolerance_mm: f64,
 ) -> Result<crate::Model> {
+    if !height.is_finite()||height<=0.||rail.control_points.iter().any(|p|p[2]<=0.||p[2]>height){return Err(invalid("Cylinder contact rail must stay strictly above the bottom and below its declared height"));}
     let surface = Surface {
         degree_u: rail.degree,
         degree_v: 1,
-        knots_u: rail.knots.clone(),
+        knots_u: rail.knots.iter().map(|k|3.*k).collect(),
         knots_v: vec![0., 0., 1., 1.],
         control_points: rail
             .control_points
             .iter()
-            .map(|p| vec![vec![p[0], p[1], 0.], vec![p[0], p[1], height]])
+            .map(|p| vec![vec![p[0], p[1], 0.], p.clone()])
             .collect(),
         weights: rail.weights.iter().map(|w| vec![*w, *w]).collect(),
         periodic_u: false,
@@ -221,22 +222,10 @@ fn trimmed_cylinder(
         weights: vec![1., 1.],
         periodic: false,
     };
-    let top_uv = if radius_law.iter().all(|r| *r == radius_law[0]) {
-        let z = (height - radius_law[0]) / height;
-        line(vec![0., z], vec![1., z])
-    } else {
-        Curve {
-            degree: 3,
-            knots: vec![0., 0., 0., 0., 1., 1., 1., 1.],
-            control_points: radius_law
-                .iter()
-                .enumerate()
-                .map(|(i, r)| vec![i as f64 / 3., (height - r) / height])
-                .collect(),
-            weights: vec![1.; 4],
-            periodic: false,
-        }
-    };
+    // A ruled cylinder chart between the original bottom and contact rail.
+    // Its top is the authored rational curve itself, so no rounded polynomial
+    // height law or U-coordinate degree elevation enters boundary agreement.
+    let top_uv=line(vec![0.,1.],vec![3.,1.]);
     let curves = [
         bottom,
         line(vec![b[0], b[1], 0.], b.clone()),
@@ -244,10 +233,10 @@ fn trimmed_cylinder(
         line(a.clone(), vec![a[0], a[1], 0.]),
     ];
     let uv = [
-        line(vec![0., 0.], vec![1., 0.]),
-        line(vec![1., 0.], vec![1., b[2] / height]),
+        line(vec![0., 0.], vec![3., 0.]),
+        line(vec![3., 0.], vec![3., 1.]),
         top_uv.reverse()?,
-        line(vec![0., a[2] / height], vec![0., 0.]),
+        line(vec![0., 1.], vec![0., 0.]),
     ];
     let boundaries: Vec<_> = curves
         .into_iter()
@@ -276,21 +265,15 @@ fn trimmed_plane(
             "Planar blend trim requires an inner circle strictly inside the contact rail",
         ));
     }
+    // Enclose every authored outer control without rounding a UV inverse.
+    // Rational arc controls can exceed nominal +/-R by a binary64 ulp.
+    let bounds=std::array::from_fn::<_,2,_>(|axis|outer.control_points.iter().fold([-radius,radius],|r,p|[r[0].min(p[axis]),r[1].max(p[axis])]));
     let surface = Surface {
-        degree_u: 1,
-        degree_v: 1,
-        knots_u: vec![0., 0., 1., 1.],
-        knots_v: vec![0., 0., 1., 1.],
-        control_points: vec![
-            vec![
-                vec![-radius, -radius, height],
-                vec![-radius, radius, height],
-            ],
-            vec![vec![radius, -radius, height], vec![radius, radius, height]],
-        ],
-        weights: vec![vec![1., 1.], vec![1., 1.]],
-        periodic_u: false,
-        periodic_v: false,
+        degree_u: 1,degree_v: 1,
+        knots_u: vec![bounds[0][0],bounds[0][0],bounds[0][1],bounds[0][1]],
+        knots_v: vec![bounds[1][0],bounds[1][0],bounds[1][1],bounds[1][1]],
+        control_points: (0..2).map(|u|(0..2).map(|v|vec![bounds[0][u],bounds[1][v],height]).collect()).collect(),
+        weights: vec![vec![1.,1.],vec![1.,1.]],periodic_u:false,periodic_v:false,
     };
     let inner = Curve {
         control_points: angular
@@ -331,10 +314,10 @@ fn trimmed_plane(
                     .control_points
                     .iter()
                     .map(|p| {
-                        vec![
-                            (p[0] + radius) / (2. * radius),
-                            (p[1] + radius) / (2. * radius),
-                        ]
+                        // Identity plane chart: retain authored X/Y exactly.
+                        // A rounded normalization followed by its inverse
+                        // otherwise changes the lifted rational boundary.
+                        vec![p[0], p[1]]
                     })
                     .collect(),
                 ..curve.clone()
@@ -523,8 +506,8 @@ fn arc(radius: f64, z: f64, start: f64, sweep: f64) -> Curve {
         control_points: vec![
             vec![radius * first[0], radius * first[1], z],
             vec![
-                radius * middle.cos() / weight,
-                radius * middle.sin() / weight,
+                radius * (middle.cos() / weight),
+                radius * (middle.sin() / weight),
                 z,
             ],
             vec![radius * last[0], radius * last[1], z],
@@ -718,6 +701,9 @@ pub fn plane_cylinder_transition(
             controls[adjacent] = vec![center_controls[adjacent].clone(); 3];
         }
     }
+    // The plane contact and its meridian tangent controls have authored
+    // height H. Product-degree arithmetic must not introduce a Z residual.
+    for row in &mut controls {row[0][2]=height;row[1][2]=height;}
     let knots: Vec<_> = std::iter::repeat_n(0., 6)
         .chain(std::iter::repeat_n(1., 6))
         .collect();
@@ -1300,7 +1286,7 @@ mod tests {
     }
 
     #[test]
-    fn cylinder_trim_uses_contact_rail_and_cubic_uv_height() {
+    fn cylinder_trim_uses_contact_rail_as_natural_ruled_boundary() {
         for (r0, r1) in [(0., 1.25), (1.25, 0.), (0.5, 1.25)] {
             let span = plane_cylinder_transition(20., 6., r0, r1, 5.9, -0.7).unwrap();
             let sheet = span.trimmed_cylinder_sheet(1e-7).unwrap();
@@ -1318,6 +1304,50 @@ mod tests {
         }
     }
 
+    #[test]
+    fn plane_chart_contains_quarter_arc_controls_beyond_nominal_radius() {
+        let outer=arc(20.,6.,std::f64::consts::PI,std::f64::consts::FRAC_PI_2);
+        let sheet=trimmed_plane(&outer,&outer,20.,6.,[0.;4],5.,1e-7).unwrap();let face=&sheet.faces[0];
+        for use_ in &sheet.loops[face.outer].coedges {
+            let r=nurbs_core::curve_surface_agreement::verify_exact(&sheet.edges[use_.edge].curve,&use_.pcurve,&face.surface,use_.reversed,10000).unwrap().unwrap();
+            assert_eq!(r.outcome,cad_predicates::BezierIdentity::Equal,"edge {}: {r:?}",use_.edge);
+        }
+    }
+    #[test]
+    fn constant_rim_contact_rails_equal_surface_boundary_controls() {
+        for direction in [-1.,1.] {for radius in [0.25,1.25,2.5] {
+            let span=plane_cylinder_rim(20.,6.,radius,0.3,direction*0.7).unwrap().remove(0);
+            for (v,curve) in [(0.,&span.plane_contact),(1.,&span.cylinder_contact)] {
+                let p=nurbs_core::curve::Curve::from_polyline(vec![vec![0.,v],vec![1.,v]]).unwrap();
+                let r=nurbs_core::curve_surface_agreement::verify_exact(curve,&p,&span.surface,false,10000).unwrap().unwrap();
+                assert_eq!(r.outcome,cad_predicates::BezierIdentity::Equal,"radius {radius} v={v}: {r:?}");
+            }
+        }}
+    }
+    #[test]
+    fn cylinder_vertical_rails_lift_exactly_in_height_coordinates() {
+        for direction in [-1.,1.] {
+            let span=plane_cylinder_transition(20.,6.,0.,1.25,0.,direction*0.7).unwrap();
+            let sheet=span.trimmed_cylinder_sheet(1e-7).unwrap();let face=&sheet.faces[0];
+            for i in [1,3] {
+                let use_=&sheet.loops[face.outer].coedges[i];
+                let r=nurbs_core::curve_surface_agreement::verify_exact(&sheet.edges[use_.edge].curve,&use_.pcurve,&face.surface,use_.reversed,1_000_000).unwrap().unwrap();
+                assert_eq!(r.outcome,cad_predicates::BezierIdentity::Equal,"vertical rail {i}: {r:?}");
+            }
+        }
+    }
+    #[test]
+    fn plane_trim_lifts_authored_boundaries_exactly_without_uv_roundtrip() {
+        for direction in [-1.,1.] {
+            let span=plane_cylinder_transition(20.,6.,0.,1.25,0.,direction*0.7).unwrap();
+            let sheet=span.trimmed_plane_sheet(5.,1e-7).unwrap();
+            let face=&sheet.faces[0];
+            for use_ in &sheet.loops[face.outer].coedges {
+                let result=nurbs_core::curve_surface_agreement::verify_exact(&sheet.edges[use_.edge].curve,&use_.pcurve,&face.surface,use_.reversed,1_000_000).unwrap().unwrap();
+                assert_eq!(result.outcome,cad_predicates::BezierIdentity::Equal,"edge {}: {result:?}",use_.edge);
+            }
+        }
+    }
     #[test]
     fn plane_trim_maps_all_boundaries_and_rejects_contact_overlap() {
         for direction in [-1., 1.] {

@@ -1,6 +1,7 @@
 //! Sufficient shared-boundary certificate using original control points.
 //! One surface lies in a plane; the other has exactly one boundary control row
-//! in that plane and every remaining control point strictly on the same side.
+//! in that plane and remaining control points on the same side. When zeros
+//! occur off that boundary, a complete opposite Bezier row must be strict.
 //! Positive rational basis weights then forbid any off-boundary contact.
 use crate::Model;
 use cad_predicates::{
@@ -181,9 +182,8 @@ fn sided(first: &Surface, second: &Surface, boundary: (usize, usize)) -> bool {
                     return false;
                 }
             } else {
-                if !matches!(s, Some(Sign::Positive | Sign::Negative)) {
-                    return false;
-                }
+                if s==Some(Sign::Zero){continue;}
+                if !matches!(s, Some(Sign::Positive | Sign::Negative)) {return false;}
                 if side.is_some() && side != s {
                     return false;
                 }
@@ -191,6 +191,14 @@ fn sided(first: &Surface, second: &Surface, boundary: (usize, usize)) -> bool {
             }
         }
     }
+    let size=[first.control_points.len(),first.control_points[0].len()][boundary.0];
+    let opposite=if boundary.1==0{size-1}else{0};
+    let mut zeros=false;
+    for (u,row) in first.control_points.iter().enumerate(){for (v,p) in row.iter().enumerate(){
+        if [u,v][boundary.0]==boundary.1{continue;}
+        if orient(&[p0,p1,p2,p],None)==Some(Sign::Zero){zeros=true;if [u,v][boundary.0]==opposite{return false;}}
+    }}
+    if zeros&&size!=[first.degree_u,first.degree_v][boundary.0]+1{return false;}
     side.is_some()
 }
 /// Validate the diagnostic input and try the sufficient shared-edge criterion.
@@ -207,7 +215,7 @@ pub fn inspect_pair(model: &Model, faces: [usize; 2]) -> crate::Result<Option<Ce
 }
 
 /// Returns no certificate on insufficient precision, periodic charts, oversized
-/// nets, unsupported boundary representations or additional zero-side controls.
+/// nets, unsupported boundary representations or additional plane contacts.
 /// Callers must structurally validate the model first.
 pub(crate) fn certify(model: &Model, faces: [usize; 2]) -> Option<Certificate> {
     let a = model.faces.get(faces[0])?;
@@ -275,6 +283,7 @@ pub fn inspect_opposite_pair(
 }
 /// A straight shared edge still admits an authored coordinate plane. Strict
 /// control-net sidedness excludes every off-boundary point from that plane.
+/// Zero intermediate Bezier rows are allowed with a strict opposite row.
 fn opposite_axis_sides(a:&Surface,b:&Surface,pa:&Curve,pb:&Curve,edge:&Curve)->bool{
     let (Some(ba),Some(bb))=(boundary(a,pa,edge),boundary(b,pb,edge)) else{return false};
     if [a,b].iter().zip([ba,bb]).any(|(s,bound)|[s.degree_u,s.degree_v][bound.0]==0){return false;}
@@ -285,8 +294,19 @@ fn opposite_axis_sides(a:&Surface,b:&Surface,pa:&Curve,pb:&Curve,edge:&Curve)->b
             let mut positive=None;
             for (u,row) in s.control_points.iter().enumerate(){for (v,p) in row.iter().enumerate(){
                 if [u,v][bound.0]==bound.1{if p[axis]!=value{return None;}}
-                else{if p[axis]==value{return None;}let next=p[axis]>value;if positive.is_some_and(|v|v!=next){return None;}positive=Some(next);}
+                else{if p[axis]==value{continue;}let next=p[axis]>value;if positive.is_some_and(|v|v!=next){return None;}positive=Some(next);}
             }}
+            let zero_off=s.control_points.iter().enumerate().any(|(u,row)|row.iter().enumerate().any(|(v,p)|[u,v][bound.0]!=bound.1&&p[axis]==value));
+            if zero_off {
+                let size=[s.control_points.len(),s.control_points[0].len()][bound.0];
+                let degree=[s.degree_u,s.degree_v][bound.0];
+                if size!=degree+1{return None;}
+                // The opposite endpoint Bernstein basis is strictly positive
+                // everywhere away from the declared boundary. Its complete
+                // row must lie strictly on the common side, including corners.
+                let opposite=if bound.1==0{size-1}else{0};
+                if s.control_points.iter().enumerate().any(|(u,row)|row.iter().enumerate().any(|(v,p)|[u,v][bound.0]==opposite&&p[axis]==value)){return None;}
+            }
             positive
         };
         if let (Some(sa),Some(sb))=(side(a,ba),side(b,bb)){if sa!=sb{return true;}}
@@ -434,13 +454,23 @@ pub fn separates_surfaces(
                         return None;
                     }
                 } else {
-                    if sign == Sign::Zero || side.is_some_and(|s| s != sign) {
-                        return None;
-                    }
+                    if sign == Sign::Zero {continue;}
+                    if side.is_some_and(|s| s != sign) {return None;}
                     side = Some(sign);
                 }
             }
         }
+        let size=[surface.control_points.len(),surface.control_points[0].len()][bound.0];
+        let opposite=if bound.1==0{size-1}else{0};
+        let mut zeros=false;
+        for (u,row) in surface.control_points.iter().enumerate(){for (v,p) in row.iter().enumerate(){
+            if [u,v][bound.0]==bound.1{continue;}
+            if orient(&[p0,p1,p2,p],None)?==Sign::Zero{zeros=true;if [u,v][bound.0]==opposite{return None;}}
+        }}
+        if zeros&&size!=[surface.degree_u,surface.degree_v][bound.0]+1{return None;}
+        // With positive weights, the opposite endpoint Bernstein row has
+        // positive basis everywhere off this boundary, including free ends.
+        // Zero intermediate rows cannot add a second contact with the plane.
         side
     };
     Ok(matches!(
@@ -476,6 +506,21 @@ mod tests {
         let other=model.loops[model.faces[1].outer].coedges.iter().find(|cb|cb.edge==edge.edge).unwrap();
         let mut same_side=b.clone();for row in &mut same_side.control_points{for p in row{p[0]=p[0].abs();}}
         assert!(!opposite_axis_sides(a,&same_side,&edge.pcurve,&other.pcurve,&model.edges[edge.edge].curve));
+    }
+    #[test]
+    fn tangent_boundary_control_rows_remain_strictly_separated() {
+        let model=crate::analytic::cylinder(2.,4.).unwrap();
+        let edge=model.loops[model.faces[0].outer].coedges.iter().find(|ca|model.loops[model.faces[1].outer].coedges.iter().any(|cb|cb.edge==ca.edge)).unwrap();
+        let other=model.loops[model.faces[1].outer].coedges.iter().find(|cb|cb.edge==edge.edge).unwrap();
+        let mut a=model.faces[0].surface.clone();let b=&model.faces[1].surface;
+        let (fixed,row)=boundary(&a,&edge.pcurve,&model.edges[edge.edge].curve).unwrap();
+        let axis=(0..3).find(|&k|model.edges[edge.edge].curve.control_points.iter().all(|p|p[k]==model.edges[edge.edge].curve.control_points[0][k])).unwrap();
+        let plane=model.edges[edge.edge].curve.control_points[0][axis];
+        for (u,r) in a.control_points.iter_mut().enumerate(){for (v,p) in r.iter_mut().enumerate(){if [u,v][fixed]==1{p[axis]=plane;}}}
+        assert!(opposite_axis_sides(&a,b,&edge.pcurve,&other.pcurve,&model.edges[edge.edge].curve));
+        let opposite=if row==0{2}else{0};
+        if fixed==0{a.control_points[opposite][0][axis]=plane;}else{a.control_points[0][opposite][axis]=plane;}
+        assert!(!opposite_axis_sides(&a,b,&edge.pcurve,&other.pcurve,&model.edges[edge.edge].curve));
     }
     #[test]
     fn cylinder_caps_admit_curved_exact_trims_but_not_nearby_lifts(){
@@ -553,6 +598,8 @@ mod tests {
         curved.control_points[1][0][2] = -0.25;
         assert!(!sided(&curved, &plane, (0, 0)));
         curved.control_points[1][0][2] = 0.;
+        assert!(sided(&curved, &plane, (0, 0)));
+        curved.control_points[2][0][2] = 0.;
         assert!(!sided(&curved, &plane, (0, 0)));
     }
     #[test]
@@ -630,6 +677,18 @@ mod tests {
         let mut shifted = b.clone();
         shifted.weights[0][1] = 0.5;
         assert!(!separates_surfaces(&a, &shifted, &pcurve, &pcurve, &edge).unwrap());
+        let tangent = |mut s:Surface| {
+            s.degree_u=2;s.knots_u=vec![0.,0.,0.,1.,1.,1.];
+            s.control_points.insert(1,s.control_points[0].clone());
+            s.weights.insert(1,s.weights[0].clone());s
+        };
+        let mut ta=tangent(a.clone());let mut tb=tangent(b.clone());let mut oblique=edge.clone();
+        let place=|p:&mut Vec<f64>|{p[2]+=p[0]+2.*p[1]+8.;p[0]+=16.;p[1]-=4.;};
+        for s in [&mut ta,&mut tb]{for row in &mut s.control_points{for p in row{place(p);}}}
+        for p in &mut oblique.control_points{place(p);}
+        assert!(separates_surfaces(&ta,&tb,&pcurve,&pcurve,&oblique).unwrap());
+        let mut extra=tb.clone();extra.control_points[2][0]=extra.control_points[0][0].clone();
+        assert!(!separates_surfaces(&ta,&extra,&pcurve,&pcurve,&oblique).unwrap());
         let reversed = Curve::from_polyline(vec![vec![0., 1.], vec![0., 0.]]).unwrap();
         assert!(separates_surfaces(&a, &b, &reversed, &pcurve, &edge).unwrap());
     }

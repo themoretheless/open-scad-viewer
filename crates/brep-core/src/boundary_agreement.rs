@@ -98,6 +98,7 @@ pub fn verify_exact(model: &Model, max_work: u64) -> Result<ExactReport> {
         return Err(Error::new("BREP_AGREEMENT_BUDGET","Exact boundary work must be in 1..1000000"));
     }
     let mut report=ExactReport{all_equal:true,joins:Vec::new(),all_joins_exact:true,work:0,uses:Vec::new()};
+    let mut jobs=Vec::new();
     for (face_id,face) in model.faces.iter().enumerate() {
         for &wire in std::iter::once(&face.outer).chain(&face.holes) {
             let curves=model.loops[wire].coedges.iter().map(|c|c.pcurve.clone()).collect::<Vec<_>>();
@@ -105,20 +106,49 @@ pub fn verify_exact(model: &Model, max_work: u64) -> Result<ExactReport> {
             report.all_joins_exact &= closed==Some(true);
             report.joins.push((face_id,wire,closed));
             for (coedge_id,coedge) in model.loops[wire].coedges.iter().enumerate() {
-                let decision=if report.work<max_work {
-                    curve_surface_agreement::verify_exact(&model.edges[coedge.edge].curve,&coedge.pcurve,&face.surface,coedge.reversed,max_work-report.work)?
-                }else{None};
-                if let Some(d)=&decision {report.work+=d.work_used;}
-                report.all_equal &= decision.as_ref().is_some_and(|d|d.outcome==cad_predicates::BezierIdentity::Equal);
-                report.uses.push(ExactUse{face:face_id,wire,coedge:coedge_id,edge:coedge.edge,decision});
+                jobs.push((report.uses.len(),face_id,coedge));
+                report.uses.push(ExactUse{face:face_id,wire,coedge:coedge_id,edge:coedge.edge,decision:None});
             }
         }
+    }
+    // Run simpler traversals first without dividing their proof budgets.
+    // This preserves exact total-work admission and original output ordering.
+    jobs.sort_by_key(|(_,face,c)| {
+        let s=&model.faces[*face].surface;
+        (c.pcurve.degree!=1,s.degree_u+s.degree_v+c.pcurve.degree+model.edges[c.edge].curve.degree)
+    });
+    for (index,face,coedge) in jobs {
+        let decision=if report.work<max_work {
+            curve_surface_agreement::verify_exact(&model.edges[coedge.edge].curve,&coedge.pcurve,&model.faces[face].surface,coedge.reversed,max_work-report.work)?
+        }else{None};
+        if let Some(d)=&decision{report.work+=d.work_used;}
+        report.all_equal &=decision.as_ref().is_some_and(|d|d.outcome==cad_predicates::BezierIdentity::Equal);
+        report.uses[index].decision=decision;
     }
     Ok(report)
 }
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn partial_annular_ruled_support_closes_every_authored_boundary_exactly() {
+        let model=crate::circular_blend::partial_annular_quarter(20.,5.,6.,1.25,1.,1e-7).unwrap();
+        let before=format!("{model:?}");let r=verify_exact(&model,1_000_000).unwrap();
+        assert!(r.all_equal&&r.all_joins_exact);assert_eq!(r.uses.len(),108);assert!(r.work<=1_000_000);
+        assert!(r.uses.iter().all(|u|u.decision.as_ref().is_some_and(|d|d.outcome==cad_predicates::BezierIdentity::Equal)));
+        assert_eq!(format!("{model:?}"),before);
+    }
+    #[test]
+    fn partial_annular_exact_boundaries_cover_scale_radius_and_direction_matrix() {
+        for scale in [0.1,1.,10.] { for radius in [0.5,1.25,2.] { for direction in [-1.,1.] {
+            let model=crate::circular_blend::partial_annular_quarter(
+                20.*scale,5.*scale,6.*scale,radius*scale,direction,1e-7*scale).unwrap();
+            let r=verify_exact(&model,1_000_000).unwrap();
+            assert!(r.all_equal&&r.all_joins_exact,
+                "scale={scale} radius={radius} direction={direction}: {r:?}");
+            assert_eq!(r.uses.len(),108);
+        } } }
+    }
     #[test]
     fn exact_closure_survives_a_nonplanar_bilinear_warp_and_weight_scaling() {
         let mut m=crate::cuboid([0.;3],[1.;3]).unwrap();

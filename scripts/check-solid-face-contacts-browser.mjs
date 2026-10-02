@@ -188,7 +188,8 @@ try {
  }
  let quotient=null
  if(process.argv.includes('--quotient')){
-  const document=JSON.parse(await readFile('docs/qualification/cad-roadmap-2026-09-28/p1-development-2026-10-02/pole-quotient/wasm/browser-document.json','utf8'))
+  const documentPath=process.argv.find(a=>a.startsWith('--quotient-document='))?.slice('--quotient-document='.length)??'docs/qualification/cad-roadmap-2026-09-28/p1-development-2026-10-02/pole-quotient/wasm/browser-document.json'
+  const document=JSON.parse(await readFile(documentPath,'utf8'))
   await page.evaluate(()=>{window.__selfResults=[]})
   await act(menu);await solid.locator('input[accept=".json,application/json"]').setInputFiles({name:'quotient.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(document))});await closeMenu();await ready()
   await act(solid.getByRole('tab',{name:'Сцена',exact:true}));await act(solid.getByRole('button',{name:'Quotient annular',exact:true}))

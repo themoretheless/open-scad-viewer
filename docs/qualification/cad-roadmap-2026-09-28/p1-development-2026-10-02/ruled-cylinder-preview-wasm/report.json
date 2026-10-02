@@ -1,0 +1,56 @@
+{
+  "schema": "cad-partial-preview-wasm/1",
+  "scope": "Actual WASM API and display mesh; UI command and full geometric qualification remain open.",
+  "wasmSha256": "ec1628b9a209703be2770dbf8d2cc3fffd38507c858b18d17339778c9b9144f8",
+  "passed": true,
+  "cases": [
+    {
+      "placement": 0,
+      "edge": 2,
+      "vertices": 2056,
+      "triangles": 4112
+    },
+    {
+      "placement": 0,
+      "edge": 6,
+      "vertices": 2056,
+      "triangles": 4112
+    },
+    {
+      "placement": 0,
+      "edge": 9,
+      "vertices": 2056,
+      "triangles": 4112
+    },
+    {
+      "placement": 0,
+      "edge": 11,
+      "vertices": 2110,
+      "triangles": 4220
+    },
+    {
+      "placement": 1,
+      "edge": 2,
+      "vertices": 2056,
+      "triangles": 4112
+    },
+    {
+      "placement": 1,
+      "edge": 6,
+      "vertices": 2056,
+      "triangles": 4112
+    },
+    {
+      "placement": 1,
+      "edge": 9,
+      "vertices": 2056,
+      "triangles": 4112
+    },
+    {
+      "placement": 1,
+      "edge": 11,
+      "vertices": 2110,
+      "triangles": 4220
+    }
+  ]
+}

@@ -8,7 +8,10 @@ import {createMainSolidWorkerHandler} from '../src/services/mainSolidWorkerRunti
 
 const directory=resolve(process.argv[2]);mkdirSync(directory,{recursive:true})
 const fixture=JSON.parse(readFileSync(resolve('docs/qualification/cad-roadmap-2026-09-28/p1-development-2026-10-02/pole-quotient/combined-native.json'),'utf8'))
-const {model:base,toleranceUv,maxSpans:_budget,op:_op,...limits}=fixture.request
+const {model:legacyBase,toleranceUv,maxSpans:_budget,op:_op,...limits}=fixture.request
+const sourceFixture=process.argv[3] ? resolve(process.argv[3]) : null
+const base=sourceFixture ? JSON.parse(readFileSync(sourceFixture,'utf8')).sourceModel : legacyBase
+assert(base && Array.isArray(base.faces), 'Qualification fixture must contain a source model')
 const a=.37,b=-.61
 const matrix:[[number,number,number,number],[number,number,number,number],[number,number,number,number],[number,number,number,number]]=[
  [Math.cos(a)*Math.cos(b),-Math.sin(a),Math.cos(a)*Math.sin(b),17],
@@ -46,6 +49,6 @@ for(const [placement,model] of [base,transformNurbsBrep(base,matrix)].entries())
 const wasm=readFileSync(resolve('public/wasm/geometry-kernel.wasm'))
 const mesh=tessellateNurbsBrep(base,12)
 writeFileSync(resolve(directory,'browser-document.json'),JSON.stringify({version:1,sketches:[],bodies:[{id:'quotient-annular',name:'Quotient annular',brep:base,mesh:{positions:Array.from(mesh.positions),indices:Array.from(mesh.indices)}}]})+'\n')
-const report={schema:'cad-quotient-injectivity-wasm/1',passed:true,wasmSha256:createHash('sha256').update(wasm).digest('hex'),wasmBytes:wasm.length,cases,workerHandlerCases:2,scope:'Actual WASM and worker handler; within-face quotient absence proven; endpoint G1 and distinct-face contacts remain unqualified.'}
+const report={schema:'cad-quotient-injectivity-wasm/1',sourceFixture,passed:true,wasmSha256:createHash('sha256').update(wasm).digest('hex'),wasmBytes:wasm.length,cases,workerHandlerCases:2,scope:'Actual WASM and worker handler; within-face quotient absence proven; endpoint G1 and distinct-face contacts remain unqualified.'}
 writeFileSync(resolve(directory,'report.json'),JSON.stringify(report,null,2)+'\n')
 console.log(JSON.stringify({passed:true,cases:cases.length,workerHandlerCases:2,wasmSha256:report.wasmSha256}))
