@@ -1178,6 +1178,10 @@ fn partial_annular_bridge_is_explicitly_preview_only() {
     let restored:brep_core::Model=field(&result,"model").unwrap();
     assert_eq!(restored.1.bodies[0],body_id);
     assert_eq!(restored.validate().unwrap().boundary_edge_count,0);
+    let mesh=dispatch(json!({"op":"brep_nurbs_tessellate","model":result["model"].clone(),"segments":12}));
+    assert!(mesh.is_ok(),"preview display tessellation: {:?}",mesh.err());
+    let mesh=mesh.unwrap();
+    assert!(mesh["indices"].as_array().unwrap().len()<=20000*3);
     assert!(dispatch(json!({"op":"brep_nurbs_partial_annular_preview","model":encoded.clone(),"edge":999,"radius":1.25})).is_err());
     assert!(dispatch(json!({"op":"brep_nurbs_partial_annular_preview","model":encoded,"edge":2,"radius":1.25,"commitAllowed":true})).is_err());
 }

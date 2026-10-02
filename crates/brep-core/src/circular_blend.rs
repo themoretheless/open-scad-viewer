@@ -221,16 +221,21 @@ fn trimmed_cylinder(
         weights: vec![1., 1.],
         periodic: false,
     };
-    let top_uv = Curve {
-        degree: 3,
-        knots: vec![0., 0., 0., 0., 1., 1., 1., 1.],
-        control_points: radius_law
-            .iter()
-            .enumerate()
-            .map(|(i, r)| vec![i as f64 / 3., (height - r) / height])
-            .collect(),
-        weights: vec![1.; 4],
-        periodic: false,
+    let top_uv = if radius_law.iter().all(|r| *r == radius_law[0]) {
+        let z = (height - radius_law[0]) / height;
+        line(vec![0., z], vec![1., z])
+    } else {
+        Curve {
+            degree: 3,
+            knots: vec![0., 0., 0., 0., 1., 1., 1., 1.],
+            control_points: radius_law
+                .iter()
+                .enumerate()
+                .map(|(i, r)| vec![i as f64 / 3., (height - r) / height])
+                .collect(),
+            weights: vec![1.; 4],
+            periodic: false,
+        }
     };
     let curves = [
         bottom,

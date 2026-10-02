@@ -468,7 +468,7 @@ impl EdgeSamplingRegistry {
             face_ids.push(use_.face);
         }
         if face_ids.len() > 20000 {
-            return Err(input("B-rep tessellation exceeds 20000 triangles"));
+            return Err(input(format!("B-rep tessellation exceeds 20000 triangles after face {}: {} triangles",use_.face,face_ids.len())));
         }
         Ok(())
     }
@@ -627,7 +627,8 @@ fn nurbs_with_freeform_note(
                 clamp_interior_to_trims(
                     model,
                     face,
-                    refine_trimmed_face(face, triangulate_boundary(&outer, &holes)?, segments)?,
+                    refine_trimmed_face(face, triangulate_boundary(&outer, &holes)?, segments)
+                        .map_err(|error|input(format!("Face {} refinement: {}",use_.face,error.message)))?,
                 )?
             };
             registry.append(face, use_, built, &mut face_ids)?;
@@ -1117,7 +1118,7 @@ fn refine_trimmed_face(
             }
         }
         if refined.len() > 20000 {
-            return Err(input("B-rep tessellation exceeds 20000 triangles"));
+            return Err(input(format!("B-rep tessellation exceeds 20000 triangles during interior refinement: {} triangles at segments {}",refined.len(),segments)));
         }
         triangles = refined;
     }
