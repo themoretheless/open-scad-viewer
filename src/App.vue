@@ -3302,20 +3302,20 @@ function sanitizeFileName(name: string) { return (name.replace(/[^\w.() -]+/g, '
 
 <style>
 :root {
-  --bg: #1d1d1f;
-  --surface: #252527;
-  --surface-raised: #303033;
-  --border: #707076;
-  --hairline: #333336;
-  --text: #ececee;
-  --text-dim: #a2a2a8;
-  --accent: #5c9dff;
-  --accent-strong: #2a63c8;
-  --hover: #2d2d30;
+  --bg: #1e1d1b;
+  --surface: #262523;
+  --surface-raised: #32302d;
+  --border: #76726a;
+  --hairline: #383530;
+  --text: #ece9e4;
+  --text-dim: #a6a199;
+  --accent: #e29a5a;
+  --accent-strong: #a0511d;
+  --hover: #2f2d2a;
   --danger: #ff8d84;
   --warning: #e6b24e;
-  --canvas-bg: #2b2b2e;
-  --focus: #8dbaff;
+  --canvas-bg: #2d2b28;
+  --focus: #f0b98a;
   --topbar-h: 40px;
   --statusbar-h: 24px;
   --dock-w: 320px;
@@ -3325,20 +3325,20 @@ function sanitizeFileName(name: string) { return (name.replace(/[^\w.() -]+/g, '
 }
 
 [data-theme="light"] {
-  --bg: #f6f6f7;
+  --bg: #f6f4f1;
   --surface: #ffffff;
-  --surface-raised: #ececee;
-  --border: #85858b;
-  --hairline: #e2e2e5;
-  --text: #1b1b1d;
-  --text-dim: #5a5a60;
-  --accent: #1f5fd6;
-  --accent-strong: #1b4fb0;
-  --hover: #efeff1;
+  --surface-raised: #ebe8e3;
+  --border: #8a857c;
+  --hairline: #e3dfd9;
+  --text: #1d1b18;
+  --text-dim: #5d5850;
+  --accent: #a5521a;
+  --accent-strong: #8a4310;
+  --hover: #eeebe6;
   --danger: #b3261e;
   --warning: #8a5b00;
-  --canvas-bg: #e3e3e6;
-  --focus: #1b4fb0;
+  --canvas-bg: #e4e0da;
+  --focus: #8a4310;
 }
 
 *, *::before, *::after { box-sizing: border-box; }
