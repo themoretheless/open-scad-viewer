@@ -498,24 +498,31 @@ fn assemble_support_sheets(sheets: Vec<(crate::Model, bool)>) -> Result<crate::M
     Ok(result)
 }
 
+fn angular_unit(angle: f64) -> [f64; 2] {
+    let quadrant = angle / std::f64::consts::FRAC_PI_2;
+    if quadrant.is_finite() && quadrant.fract() == 0. {
+        [[1., 0.], [0., 1.], [-1., 0.], [0., -1.]][quadrant.rem_euclid(4.) as usize]
+    } else {
+        [angle.cos(), angle.sin()]
+    }
+}
+
 fn arc(radius: f64, z: f64, start: f64, sweep: f64) -> Curve {
     let middle = start + sweep / 2.;
     let weight = (sweep / 2.).cos();
+    let first = angular_unit(start);
+    let last = angular_unit(start + sweep);
     Curve {
         degree: 2,
         knots: vec![0., 0., 0., 1., 1., 1.],
         control_points: vec![
-            vec![radius * start.cos(), radius * start.sin(), z],
+            vec![radius * first[0], radius * first[1], z],
             vec![
                 radius * middle.cos() / weight,
                 radius * middle.sin() / weight,
                 z,
             ],
-            vec![
-                radius * (start + sweep).cos(),
-                radius * (start + sweep).sin(),
-                z,
-            ],
+            vec![radius * last[0], radius * last[1], z],
         ],
         weights: vec![1., weight, 1.],
         periodic: false,
@@ -831,6 +838,99 @@ pub fn circular_blend_annular_strip(
         sheets.extend(span.annular_sheets(inner_radius, tolerance_mm)?);
     }
     assemble_support_sheets(sheets)
+}
+
+/// Prototype closed annular solid with a top-outer quarter-rim blend and
+/// smoothstep endpoint transitions. This is topology-valid construction,
+/// not a feature certificate, source edit or complete geometric solid audit.
+pub fn partial_annular_quarter(
+    outer_radius: f64,
+    inner_radius: f64,
+    height: f64,
+    radius: f64,
+    direction: f64,
+    tolerance_mm: f64,
+) -> Result<crate::Model> {
+    if direction != 1. && direction != -1. {
+        return Err(invalid("Quarter blend direction must be +1 or -1"));
+    }
+    let q = direction * std::f64::consts::FRAC_PI_2;
+    let spans = circular_strip_spans(outer_radius, height, radius, 0., q / 4., q / 2., q / 4.)?;
+    let mut sheets = Vec::new();
+    for span in spans {
+        sheets.extend(span.annular_sheets(inner_radius, tolerance_mm)?);
+    }
+    for i in 1..4 {
+        let top = arc(outer_radius, height, i as f64 * q, q);
+        let bottom = Curve {
+            control_points: top
+                .control_points
+                .iter()
+                .map(|p| vec![p[0], p[1], 0.])
+                .collect(),
+            ..top.clone()
+        };
+        let inner = Curve {
+            control_points: top
+                .control_points
+                .iter()
+                .map(|p| {
+                    vec![
+                        p[0] * inner_radius / outer_radius,
+                        p[1] * inner_radius / outer_radius,
+                        height,
+                    ]
+                })
+                .collect(),
+            ..top.clone()
+        };
+        sheets.push((
+            trimmed_plane(
+                &top,
+                &top,
+                outer_radius,
+                height,
+                [0.; 4],
+                inner_radius,
+                tolerance_mm,
+            )?,
+            false,
+        ));
+        sheets.push((
+            trimmed_cylinder(&top, height, [0.; 4], tolerance_mm)?,
+            direction < 0.,
+        ));
+        sheets.push((
+            trimmed_cylinder(&inner, height, [0.; 4], tolerance_mm)?,
+            direction > 0.,
+        ));
+        sheets.push((
+            trimmed_plane(
+                &bottom,
+                &top,
+                outer_radius,
+                0.,
+                [0.; 4],
+                inner_radius,
+                tolerance_mm,
+            )?,
+            true,
+        ));
+    }
+    let mut model = assemble_support_sheets(sheets)?;
+    if model.validate()?.boundary_edge_count != 0 {
+        return Err(invalid(
+            "Partial annular construction has unmatched boundaries",
+        ));
+    }
+    model.0.shells[0].closed = true;
+    model.0.bodies.push(crate::Body {
+        outer_shell: 0,
+        inner_shells: vec![],
+    });
+    model.rebuild_topology_ids();
+    model.validate()?;
+    Ok(model)
 }
 
 fn circular_strip_spans(
@@ -1257,6 +1357,20 @@ mod tests {
                     assert_ne!(senses[0], senses[1]);
                 }
             }
+        }
+    }
+
+    #[test]
+    fn quarter_annular_blend_closes_without_welding_and_has_one_body() {
+        for direction in [-1., 1.] {
+            let model = partial_annular_quarter(20., 5., 6., 1.25, direction, 1e-7).unwrap();
+            let report = model.validate().unwrap();
+            assert_eq!(report.body_count, 1);
+            assert_eq!(report.boundary_edge_count, 0);
+            assert_eq!(model.faces.len(), 27);
+            assert_eq!(model.edges.len(), 55);
+            assert_eq!(model.vertices.len(), 26);
+            assert_eq!(model.edges.iter().filter(|e| e.degenerate).count(), 2);
         }
     }
 

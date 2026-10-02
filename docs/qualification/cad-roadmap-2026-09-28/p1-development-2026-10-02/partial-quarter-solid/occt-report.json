@@ -1,0 +1,23 @@
+{
+  "scope": "Independent OCCT import of native STEP topology; numerical validity and volume only, not general self-intersection or feature qualification.",
+  "parts": [
+    {
+      "name": "negative",
+      "readStatus": "IFSelect_ReturnStatus.IFSelect_RetDone",
+      "roots": 1,
+      "valid": true,
+      "solids": 1,
+      "volumeMm3": 7061.45737246677,
+      "integrationRelativeError": 4.128072744702103e-13
+    },
+    {
+      "name": "positive",
+      "readStatus": "IFSelect_ReturnStatus.IFSelect_RetDone",
+      "roots": 1,
+      "valid": true,
+      "solids": 1,
+      "volumeMm3": 7061.457372466771,
+      "integrationRelativeError": 4.128597344110504e-13
+    }
+  ]
+}
