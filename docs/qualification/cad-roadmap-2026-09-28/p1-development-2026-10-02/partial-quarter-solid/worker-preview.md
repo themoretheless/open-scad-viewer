@@ -19,6 +19,13 @@ when all radius-law controls agree. The native bridge regression now passes
 at segments=12 without raising the triangle budget. All 17 circular-blend
 native tests pass. Error messages include face and triangle-count context.
 
+The edge-fillet panel now offers Partial arc preview, with explicit incomplete
+qualification text and disabled command application. Its UI regression test
+verifies job submission for the selected edge, unchanged document when Apply
+is invoked, and a late worker response ignored after Escape. This test holds
+the worker response; it does not prove actual browser display geometry.
+
 The fixed WASM rebuild and scripts/check-cad-partial-preview-wasm.mts must
-complete before runtime is qualified. Browser UI mode, complete intersection
-and transition proofs, and document commit acceptance remain open.
+complete before runtime is qualified. Actual browser display and input checks,
+complete intersection and transition proofs, and document commit acceptance
+remain open.

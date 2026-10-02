@@ -16,7 +16,7 @@ import {solidTopology} from '../src/services/directSolidTools'
 import {sampleCurve} from '../src/services/directSketchGeometry'
 import {inspectPolygonMesh} from '../src/services/geometry/polygon'
 import {stringifyMeshJson} from '../src/services/meshJson'
-import {createBrepBox,analyzeNurbsBrep,createBrepCylinder,createBrepSphere,transformNurbsBrep,tessellateNurbsBrep} from '../src/services/geometry/brep'
+import {createBrepBox,createBrepTube,analyzeNurbsBrep,createBrepCylinder,createBrepSphere,transformNurbsBrep,tessellateNurbsBrep} from '../src/services/geometry/brep'
 vi.mock('../src/services/solidDraftHeadStore',()=>({readSolidDraftHead:async()=>null,writeSolidDraftHead:async(key:string,_expected:string|null,text:string)=>({key,revision:crypto.randomUUID(),text})}))
 const previewWorkerRun=vi.hoisted(()=>vi.fn())
 const displayWorkerRun=vi.hoisted(()=>vi.fn())
@@ -4125,4 +4125,32 @@ it.each(['en','ru'])('blocks undersized analytic arc sweeps before worker dispat
  expect(ui.button(locale==='ru'?'Готово · Enter':'Apply · Enter').props.disabled).toBe(false)
  await commandKey(ui,'Enter');expect(ui.doc().sketches[0].analytic?.sweep).toBe(-.1)
  await ui.click('↶');expect(parseDirectDocument(JSON.stringify(ui.doc()))).toEqual(parseDirectDocument(JSON.stringify(before)))
+})
+
+
+it('keeps partial annular mode preview-only and ignores a response after Escape',async()=>{
+ const brep=createBrepTube(20,5,6),mesh=tessellateNurbsBrep(brep,2)
+ const seed:DirectDocument={version:1,sketches:[],bodies:[{id:'annular',name:'Annular',brep,mesh}]}
+ const ui=await mount({seedDocument:seed});await flushClearance();const before=ui.doc()
+ await ui.click('Edges')
+ const edge=ui.all(ui.svg()).find(n=>n.props['data-topology-edge']===brep.topologyIds!.edges[2])!
+ edge.props.onPointerdown(ui.event(edge));await nextTick();await ui.click('Fillet 3D')
+ let resolvePreview:(value:any)=>void=()=>{}
+ let request:any
+ previewWorkerRun.mockImplementation(job=>{
+  if(job.kind!=='partialAnnularPreview')return undefined
+  request=job;return new Promise(resolve=>{resolvePreview=resolve})
+ })
+ try {
+  ui.all().find(n=>n.tag==='select'&&n.props['aria-label']==='Fillet type')!.props['onUpdate:modelValue']('partial-preview')
+  await flushClearance()
+  expect(request?.kind).toBe('partialAnnularPreview');expect(request.edge).toBe(2)
+  expect(ui.text(ui.all()[0])).toContain('Preview only: geometry checks remain incomplete')
+  expect(ui.button('Apply · Enter').props.disabled).toBe(true)
+  await ui.click('Apply · Enter');expect(ui.doc()).toEqual(before)
+  await ui.click('Esc')
+  resolvePreview({body:seed.bodies[0],evidence:{qualification:{status:'preview-only',commitAllowed:false}}})
+  await flushClearance();expect(ui.doc()).toEqual(before)
+  expect(ui.all().some(n=>n.tag==='select'&&n.props['aria-label']==='Fillet type')).toBe(false)
+ }finally {previewWorkerRun.mockReset()}
 })
