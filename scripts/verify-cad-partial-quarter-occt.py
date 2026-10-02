@@ -12,10 +12,12 @@ from OCP.TopExp import TopExp_Explorer
 from OCP.TopAbs import TopAbs_SOLID
 from OCP.BRepGProp import BRepGProp
 from OCP.GProp import GProp_GProps
+from OCP.BRepBndLib import BRepBndLib
+from OCP.Bnd import Bnd_Box
 
 
-def expected_volume(intervals):
-    outer, inner, height, radius = 20., 5., 6., 1.25
+def expected_volume(intervals, parameters=(20., 5., 6., 1.25)):
+    outer, inner, height, radius = parameters
     angle = math.pi / 8
 
     def moment(r):
@@ -38,10 +40,15 @@ def expected_volume(intervals):
 
 
 def main(directory):
-    expected = expected_volume(8192)
-    convergence = abs(expected-expected_volume(4096))
+    manifest_path = directory/'manifest.json'
+    cases = json.loads(manifest_path.read_text())['cases'] if manifest_path.exists() else [
+        dict(name=name, parameters=[20., 5., 6., 1.25]) for name in ['negative', 'positive']]
+    convergence = 0.
     rows = []
-    for name in ['negative', 'positive']:
+    for case in cases:
+        name = case['name']
+        expected = expected_volume(8192, case['parameters'])
+        convergence = max(convergence, abs(expected-expected_volume(4096, case['parameters'])))
         path = directory / (name+'.step')
         reader = STEPControl_Reader()
         assert reader.ReadFile(str(path)) == IFSelect_RetDone
@@ -56,13 +63,21 @@ def main(directory):
         integration = BRepGProp.VolumeProperties_s(shape, props, Eps=1e-12)
         error = abs(props.Mass()-expected)
         valid = BRepCheck_Analyzer(shape).IsValid()
+        box = Bnd_Box()
+        BRepBndLib.AddOptimal_s(shape, box, False, False)
+        actual_bounds = [[p.X(), p.Y(), p.Z()] for p in [box.CornerMin(), box.CornerMax()]]
+        outer, _, height, _ = case['parameters']
+        expected_bounds = [[-outer, -outer, 0.], [outer, outer, height]]
+        bounds_error = max(abs(a-b) for actual, target in zip(actual_bounds, expected_bounds)
+                           for a, b in zip(actual, target))
         rows.append(dict(name=name, sha256=hashlib.sha256(path.read_bytes()).hexdigest(),
-                         valid=valid, solids=solids, volumeMm3=props.Mass(),
+                         parameters=case['parameters'], valid=valid, solids=solids, volumeMm3=props.Mass(),
                          expectedVolumeMm3=expected, volumeErrorMm3=error,
+                         boundsMm=actual_bounds, boundsErrorMm=bounds_error,
                          integrationRelativeError=integration,
-                         passed=valid and solids == 1 and error <= 1e-6))
+                         passed=valid and solids == 1 and error <= 1e-6 and bounds_error <= 1e-6))
     report = dict(schema='cad-partial-quarter-occt/1',
-                  scope='Two fixed quarter-rim specimens; numerical volume and OCCT topology validity. General self-intersections and whole-domain tangency remain unqualified.',
+                  scope='Enumerated quarter-rim specimens; numerical volume and OCCT topology validity. General self-intersections and whole-domain tangency remain unqualified.',
                   oracleConvergenceMm3=convergence,
                   passed=convergence <= 1e-8 and all(row['passed'] for row in rows), parts=rows)
     (directory/'occt-report.json').write_text(json.dumps(report, indent=2)+'\n')
