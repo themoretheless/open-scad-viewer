@@ -38,8 +38,9 @@ fn full_cover(mapping: &Value, depth: usize) -> Result<()> {
 
 /// Each map takes common loft U to the corresponding normalized source U.
 /// Null entries retain the source parameterization. Strict monotonicity and
-/// complete coverage are mandatory; source trimming and fitting are not used.
-/// Materialization retains the foundation composition resource limits.
+/// complete coverage are mandatory; cropping and fitting are not used.
+/// Materialization retains the foundation resource limits and requires a
+/// whole-domain numerical retention certificate within 1e-6 model units.
 pub fn prepare(sections: &[Curve], mappings: &[Option<Value>]) -> Result<PreparedSections> {
     check(
         sections.len() == mappings.len(),
@@ -51,16 +52,49 @@ pub fn prepare(sections: &[Curve], mappings: &[Option<Value>]) -> Result<Prepare
         let source = crate::gordon::normalized(section)?;
         if let Some(mapping) = mapping {
             full_cover(mapping, 0)?;
-            let result =
-                crate::foundation::materialize_reparameterized_curve(&source, mapping, None)?;
+            let result = crate::foundation::materialize_reparameterized_curve_bounded(
+                &source, mapping, 1e-6, 50_000, 200_000,
+            )?;
             let curve: Curve = value_codec::from_value(result["curve"].clone())
                 .map_err(|e| crate::input(e.to_string()))?;
             check(
                 curve.domain() == [0., 1.],
                 "Mapped loft section domain must be [0,1]",
             )?;
+            // Compare with the authored definition as well, including the
+            // normalization trim and knot remapping performed above.
+            let domain = section.domain();
+            let reference_mapping = if domain == [0., 1.] {
+                mapping.clone()
+            } else {
+                let affine = json!({"pieces":[{"domain":[0.,1.],"range":domain,
+                    "controlValues":domain,"weights":[1.,1.]}]});
+                let mut factors = mapping
+                    .get("composition")
+                    .and_then(Value::as_array)
+                    .cloned()
+                    .unwrap_or_else(|| vec![mapping.clone()]);
+                factors.push(affine);
+                json!({"composition":factors})
+            };
+            let retained = crate::foundation::certify_reparameterized_curve_retention(
+                section,
+                &reference_mapping,
+                &curve,
+                1e-6,
+                50_000,
+                200_000,
+            )?;
+            if retained["certificate"]["accepted"].as_bool() != Some(true) {
+                return Err(crate::numeric_err(
+                    "Mapped section failed original-definition retention",
+                ));
+            }
+            let mut certificate = result["certificate"].clone();
+            certificate["normalizedSourceRetention"] = certificate["retention"].clone();
+            certificate["retention"] = retained["certificate"].clone();
             curves.push(curve);
-            certificates.push(result["certificate"].clone());
+            certificates.push(certificate);
         } else {
             curves.push(source);
             certificates.push(json!({"operation":"identity-section-mapping","domain":[0.,1.]}));
@@ -223,6 +257,68 @@ mod tests {
                     < 1e-12
             );
         }
+    }
+    #[test]
+    fn nonlinear_maps_cross_interior_section_knots_with_whole_retention() {
+        let section = Curve {
+            degree: 1,
+            knots: vec![0., 0., 0.5, 1., 1.],
+            control_points: vec![vec![0., 0., 0.], vec![0.5, 1., 0.], vec![1., 0., 0.]],
+            weights: vec![1., 0.75, 1.],
+            periodic: false,
+        };
+        let map = json!({"pieces":[{"domain":[0.,1.],"range":[0.,1.],"controlValues":[0.,0.25,1.],"weights":[1.,1.,1.]}]});
+        let prepared = prepare(&[section.clone()], &[Some(map)]).unwrap();
+        let upper = prepared.certificates[0]["retention"]["errorUpper"]
+            .as_f64()
+            .unwrap();
+        assert!(upper <= 1e-6);
+        for i in 0..=1000 {
+            let u = i as f64 / 1000.;
+            let expected = section.evaluate((u + u * u) * 0.5).unwrap().point;
+            let actual = prepared.curves[0].evaluate(u).unwrap().point;
+            let distance = expected
+                .iter()
+                .zip(actual)
+                .map(|(a, b)| (a - b).powi(2))
+                .sum::<f64>()
+                .sqrt();
+            assert!(distance <= upper);
+        }
+    }
+    #[test]
+    fn retention_includes_original_nonunit_section_normalization() {
+        let section = Curve {
+            degree: 1,
+            knots: vec![-3., -3., 2., 7., 7.],
+            control_points: vec![vec![0., 0., 0.], vec![0.5, 1., 0.], vec![1., 0., 0.]],
+            weights: vec![1., 0.75, 1.],
+            periodic: false,
+        };
+        let map = json!({"pieces":[{"domain":[0.,1.],"range":[0.,1.],"controlValues":[0.,0.25,1.],"weights":[1.,1.,1.]}]});
+        let prepared = prepare(&[section.clone()], &[Some(map)]).unwrap();
+        let upper = prepared.certificates[0]["retention"]["errorUpper"]
+            .as_f64()
+            .unwrap();
+        for i in 0..=1000 {
+            let u = i as f64 / 1000.;
+            let expected = section
+                .evaluate(-3. + 10. * (u + u * u) * 0.5)
+                .unwrap()
+                .point;
+            let actual = prepared.curves[0].evaluate(u).unwrap().point;
+            let distance = expected
+                .iter()
+                .zip(actual)
+                .map(|(a, b)| (a - b).powi(2))
+                .sum::<f64>()
+                .sqrt();
+            assert!(distance <= upper);
+        }
+        assert_eq!(
+            prepared.certificates[0]["retention"]["mapCertificate"]["range"],
+            json!([-3., 7.])
+        );
     }
     #[test]
     fn nonlinear_degree_nine_map_uses_the_actual_composed_degree_budget() {

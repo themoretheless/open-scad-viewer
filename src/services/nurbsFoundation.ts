@@ -186,6 +186,21 @@ export const fitNurbsSurfaceCertified = (points:[number,number,number][][],toler
   callNurbsRust('surface_fit_certified',{points,...toleranceArgs(tolerance)})
 export const materializeReparameterizedNurbsCurve = (curve:NurbsCurve,mapping:RationalReparameterization,tolerance?:NurbsToleranceContext):CertifiedNurbsCurveEdit =>
   callNurbsRust('curve_materialize_reparameterization',{curve,mapping,...toleranceArgs(tolerance)})
+export interface BoundedReparameterizationResult {
+  curve: NurbsCurve
+  certificate: {
+    operation: 'materialize-bounded-reparameterization'
+    exact: false
+    fittedToExactPromotion: false
+    retention: {accepted: true; exact: false; tolerance: number; errorUpper: number; cells: number; mapEvaluations: number}
+    preimages: unknown[]
+  }
+}
+export const materializeReparameterizedNurbsCurveBounded = (
+  curve: NurbsCurve, mapping: RationalReparameterization,
+  errorBudget = 1e-6, maxCells = 50_000, maxMapEvaluations = 200_000,
+): BoundedReparameterizationResult =>
+  callNurbsRust('curve_materialize_reparameterization_bounded', {curve, mapping, errorBudget, maxCells, maxMapEvaluations})
 export const fitNurbsCurveCloudCertified = (points:number[][],controlCount:number,tolerance?:NurbsToleranceContext):CertifiedNurbsCurveEdit =>
   callNurbsRust('curve_fit_cloud_certified',{points,controlCount,...toleranceArgs(tolerance)})
 export const fitNurbsSurfaceCloudCertified = (points:[number,number,number][],controlsU:number,controlsV:number,tolerance?:NurbsToleranceContext):CertifiedNurbsSurfaceEdit =>

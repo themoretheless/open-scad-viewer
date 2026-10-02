@@ -72,3 +72,44 @@ fn json_nonplanar_loft_requires_global_embedding_and_two_caps() {
     crossing["sides"][0][0] = value_codec::to_value(side).unwrap();
     assert!(geometry_bridge::dispatch(crossing).is_err());
 }
+
+#[test]
+fn json_multispan_section_mapping_retains_the_original_section() {
+    let start = Curve {
+        degree: 1,
+        knots: vec![0., 0., 0.5, 1., 1.],
+        control_points: vec![vec![0., 0., 0.], vec![0.5, 1., 0.], vec![1., 0., 0.]],
+        weights: vec![1., 0.75, 1.],
+        periodic: false,
+    };
+    let mut end = start.clone();
+    for p in &mut end.control_points {
+        p[2] += 2.;
+    }
+    let mapping = json!({"pieces":[{"domain":[0.,1.],"range":[0.,1.],"controlValues":[0.,0.25,1.],"weights":[1.,1.,1.]}]});
+    let materialization = json!({"op":"curve_materialize_reparameterization_bounded","curve":start,
+        "mapping":mapping,"errorBudget":1e-6,"maxCells":50000,"maxMapEvaluations":200000});
+    let mapped = geometry_bridge::dispatch(materialization.clone()).unwrap();
+    assert_eq!(mapped["certificate"]["exact"], false);
+    assert_eq!(mapped["certificate"]["retention"]["accepted"], true);
+    let mut depleted = materialization;
+    depleted["maxCells"] = json!(1);
+    assert!(geometry_bridge::dispatch(depleted).is_err());
+    let loft = geometry_bridge::dispatch(
+        json!({"op":"surface_natural_loft","curves":[start.clone(),end],
+        "parameters":[0.,1.],"section_mappings":[mapping.clone(),mapping]}),
+    )
+    .unwrap();
+    let surface: Surface = value_codec::from_value(loft).unwrap();
+    for u in [0., 0.13, 0.37, 0.6180339887498949, 0.83, 1.] {
+        let expected = start.evaluate((u + u * u) * 0.5).unwrap().point;
+        for (v, z) in [(0., 0.), (1., 2.)] {
+            let actual = surface.evaluate(u, v).unwrap().point;
+            for axis in 0..3 {
+                assert!(
+                    (actual[axis] - expected[axis] - if axis == 2 { z } else { 0. }).abs() <= 1e-6
+                );
+            }
+        }
+    }
+}

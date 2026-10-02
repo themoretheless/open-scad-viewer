@@ -347,6 +347,12 @@ pub fn dispatch(v: Value) -> Result<Value> {
             optional_field(&v, "tolerance")?,
         );
     }
+    if op == "curve_materialize_reparameterization_bounded" {
+        return foundation::materialize_reparameterized_curve_bounded(
+            &field(&v, "curve")?, &v["mapping"], field(&v, "errorBudget")?,
+            field(&v, "maxCells")?, field(&v, "maxMapEvaluations")?,
+        );
+    }
     if op == "curve_materialize_reparameterization" {
         return foundation::materialize_reparameterized_curve(
             &field(&v, "curve")?,

@@ -2640,15 +2640,23 @@ fn compose_curve_with_piece(curve: &Curve, piece: &MapPiece) -> Result<Curve> {
         "Composition requires a single Bézier span after restriction",
     )?;
     let span = segments[0].definition().clone();
+    compose_bezier_with_piece(&span, piece)
+}
+
+fn compose_bezier_with_piece(span: &Curve, piece: &MapPiece) -> Result<Curve> {
     let dimension = span.control_points[0].len();
     let n = span.degree;
-    // Map range normalized into [0,1] for the active Bézier parameter of `span`.
+    let source_domain = span.domain();
+    // Map values are normalized into the source span's domain. A bounded
+    // knot preimage may put a tiny part outside that span; the whole-composition
+    // retention gate must cover this polynomial continuation as well.
+
     let map_p: Vec<f64> = piece
         .values
         .iter()
         .zip(&piece.weights)
         .map(|(value, weight)| {
-            ((value - piece.range[0]) / (piece.range[1] - piece.range[0])) * weight
+            ((value - source_domain[0]) / (source_domain[1] - source_domain[0])) * weight
         })
         .collect();
     let map_q = piece.weights.clone();
@@ -3459,3 +3467,11 @@ mod periodic_surface_rebuild_tests {
 #[path = "reparameterization_preimages.rs"]
 mod preimages;
 pub use preimages::bound_reparameterization_preimages;
+
+#[path = "reparameterization_retention.rs"]
+mod reparameterization_retention;
+pub use reparameterization_retention::certify_reparameterized_curve_retention;
+
+#[path = "reparameterization_materialization.rs"]
+mod reparameterization_materialization;
+pub use reparameterization_materialization::materialize_reparameterized_curve_bounded;

@@ -5,12 +5,12 @@ use crate::distance_bounds::Interval as I;
 use crate::{Result, check, numeric, resource};
 use value_codec::{Value, json};
 
-enum Map {
+pub(super) enum Map {
     Pieces(Vec<MapPiece>),
     Composition(Vec<Map>),
 }
 impl Map {
-    fn parse(value: &Value) -> Result<Self> {
+    pub(super) fn parse(value: &Value) -> Result<Self> {
         if let Some(parts) = value.get("composition").and_then(Value::as_array) {
             Ok(Self::Composition(
                 parts.iter().map(Self::parse).collect::<Result<_>>()?,
@@ -23,7 +23,7 @@ impl Map {
             Ok(Self::Pieces(pieces))
         }
     }
-    fn enclosure(&self, input: I, work: &mut usize, limit: usize) -> Result<I> {
+    pub(super) fn enclosure(&self, input: I, work: &mut usize, limit: usize) -> Result<I> {
         match self {
             Self::Composition(parts) => parts
                 .iter()
@@ -48,6 +48,74 @@ impl Map {
             }
         }
     }
+    pub(super) fn jet(&self, input: I, work: &mut usize, limit: usize) -> Result<(I, I)> {
+        match self {
+            Self::Composition(parts) => {
+                parts
+                    .iter()
+                    .try_fold((input, I::point(1.)), |(value, derivative), part| {
+                        let (next, factor) = part.jet(value, work, limit)?;
+                        Ok((next, derivative.mul(factor)?))
+                    })
+            }
+            Self::Pieces(pieces) => {
+                let value = self.enclosure(input, work, limit)?;
+                let mut bounds = [f64::INFINITY, f64::NEG_INFINITY];
+                for piece in pieces {
+                    let lo = input.lo.max(piece.domain[0]);
+                    let hi = input.hi.min(piece.domain[1]);
+                    if lo > hi {
+                        continue;
+                    }
+                    let derivative = derivative_piece(piece, I::new(lo, hi)?)?;
+                    bounds[0] = bounds[0].min(derivative.lo);
+                    bounds[1] = bounds[1].max(derivative.hi);
+                }
+                Ok((value, I::new(bounds[0], bounds[1])?))
+            }
+        }
+    }
+}
+
+fn de_casteljau(mut controls: Vec<I>, t: I) -> Result<I> {
+    let one = I::point(1.).sub(t)?;
+    for size in (1..controls.len()).rev() {
+        for i in 0..size {
+            controls[i] = controls[i].mul(one)?.add(controls[i + 1].mul(t)?)?;
+        }
+    }
+    Ok(controls[0])
+}
+fn derivative_piece(piece: &MapPiece, input: I) -> Result<I> {
+    let extent = I::point(piece.domain[1]).sub(I::point(piece.domain[0]))?;
+    let t = input
+        .sub(I::point(piece.domain[0]))?
+        .div(extent)?
+        .intersect(0., 1.)?;
+    let p = piece
+        .values
+        .iter()
+        .zip(&piece.weights)
+        .map(|(&x, &w)| I::point(x).mul(I::point(w)))
+        .collect::<Result<Vec<_>>>()?;
+    let q: Vec<_> = piece.weights.iter().map(|&w| I::point(w)).collect();
+    let differentiate = |v: &[I]| {
+        v.windows(2)
+            .map(|pair| pair[1].sub(pair[0])?.mul(I::point((v.len() - 1) as f64)))
+            .collect::<Result<Vec<_>>>()
+    };
+    let dp = de_casteljau(differentiate(&p)?, t)?;
+    let dq = de_casteljau(differentiate(&q)?, t)?;
+    let p = de_casteljau(p, t)?;
+    let q = de_casteljau(q, t)?.intersect(
+        piece.weights.iter().copied().fold(f64::INFINITY, f64::min),
+        piece
+            .weights
+            .iter()
+            .copied()
+            .fold(f64::NEG_INFINITY, f64::max),
+    )?;
+    dp.mul(q)?.sub(p.mul(dq)?)?.div(q.mul(q)?)?.div(extent)
 }
 
 fn choose(n: usize, k: usize) -> u64 {
@@ -118,7 +186,16 @@ fn enclose_piece(piece: &MapPiece, input: I) -> Result<I> {
             q[i] = q[i].mul(one)?.add(q[i + 1].mul(t)?)?;
         }
     }
-    p[0].div(q[0])?.intersect(piece.range[0], piece.range[1])
+    let denominator = q[0].intersect(
+        piece.weights.iter().copied().fold(f64::INFINITY, f64::min),
+        piece
+            .weights
+            .iter()
+            .copied()
+            .fold(f64::NEG_INFINITY, f64::max),
+    )?;
+    p[0].div(denominator)?
+        .intersect(piece.range[0], piece.range[1])
 }
 
 /// Enclose every requested inverse of a certified increasing rational map.
