@@ -2021,32 +2021,6 @@ fn evaluate_map_piece(piece: &MapPiece, u: f64) -> f64 {
     }
     numerator / denominator
 }
-fn map_derivative_coefficients(piece: &MapPiece) -> Vec<f64> {
-    let homogeneous = piece
-        .values
-        .iter()
-        .zip(&piece.weights)
-        .map(|(x, w)| [x * w, *w])
-        .collect::<Vec<_>>();
-    let degree = piece.values.len() - 1;
-    let derivative = homogeneous
-        .array_windows()
-        .map(|[a, b]| [degree as f64 * (b[0] - a[0]), degree as f64 * (b[1] - a[1])])
-        .collect::<Vec<_>>();
-    let first = bernstein_product(
-        &derivative.iter().map(|x| x[0]).collect::<Vec<_>>(),
-        &piece.weights,
-    );
-    let second = bernstein_product(
-        &homogeneous.iter().map(|x| x[0]).collect::<Vec<_>>(),
-        &derivative.iter().map(|x| x[1]).collect::<Vec<_>>(),
-    );
-    first
-        .into_iter()
-        .zip(second)
-        .map(|(x, y)| (x - y) / (piece.domain[1] - piece.domain[0]))
-        .collect()
-}
 fn evaluate_mapping(mapping: &Value, u: f64) -> Result<f64> {
     if let Some(composition) = mapping.get("composition").and_then(Value::as_array) {
         check(
@@ -2106,16 +2080,11 @@ fn certify_mapping(mapping: &Value, tolerance: Option<ToleranceContext>, depth: 
     let certificates = pieces
         .iter()
         .map(|piece| {
-            let derivative = map_derivative_coefficients(piece);
-            let bounds = interval(derivative.iter().copied());
-            numeric(
-                bounds[0] > 0.,
-                "Rational map derivative is not certified strictly positive",
-            )?;
+            let bounds = preimages::prove_increasing(piece)?;
             Ok(
                 json!({"domain":piece.domain,"range":piece.range,"derivativeNumeratorBounds":bounds,
             "denominatorBounds":interval(piece.weights.iter().copied()),
-            "inverseInterval":piece.domain,"method":"rational-Bernstein-positive-derivative"}),
+            "inverseInterval":piece.domain,"method":"outward-pairwise-Bernstein-subdivision-positive-derivative"}),
             )
         })
         .collect::<Result<Vec<_>>>()?;

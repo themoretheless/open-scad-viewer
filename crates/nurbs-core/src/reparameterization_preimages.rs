@@ -121,7 +121,7 @@ fn derivative_piece(piece: &MapPiece, input: I) -> Result<I> {
 fn choose(n: usize, k: usize) -> u64 {
     (0..k.min(n - k)).fold(1, |v, i| v * (n - i) as u64 / (i + 1) as u64)
 }
-fn prove_increasing(piece: &MapPiece) -> Result<()> {
+pub(super) fn prove_increasing(piece: &MapPiece) -> Result<[f64; 2]> {
     // Pairwise form of P'Q-PQ' avoids subtracting two large products.
     // Its degree is 2*n-2; all arithmetic encloses the authored binary64 data.
     let n = piece.values.len() - 1;
@@ -144,12 +144,17 @@ fn prove_increasing(piece: &MapPiece) -> Result<()> {
     }
     let mut pending = vec![(coefficients, 0usize)];
     let mut cells = 0usize;
+    let mut bounds = [f64::INFINITY, f64::NEG_INFINITY];
     while let Some((coefficients, depth)) = pending.pop() {
         cells += 1;
         if cells > 4096 {
             return Err(resource("Map monotonicity subdivision budget exhausted"));
         }
         if coefficients.iter().all(|c| c.lo > 0.) {
+            for c in &coefficients {
+                bounds[0] = bounds[0].min(c.lo);
+                bounds[1] = bounds[1].max(c.hi);
+            }
             continue;
         }
         numeric(
@@ -171,7 +176,9 @@ fn prove_increasing(piece: &MapPiece) -> Result<()> {
         pending.push((right, depth + 1));
         pending.push((left, depth + 1));
     }
-    Ok(())
+    let physical = I::new(bounds[0], bounds[1])?
+        .div(I::point(piece.domain[1]).sub(I::point(piece.domain[0]))?)?;
+    Ok([physical.lo, physical.hi])
 }
 fn enclose_piece(piece: &MapPiece, input: I) -> Result<I> {
     // Authored endpoints are exact real ratios (value*weight)/weight.
@@ -365,5 +372,28 @@ mod monotonicity_tests {
             weights: vec![1e-12, 1e12],
         };
         prove_increasing(&piece).unwrap();
+    }
+}
+
+#[cfg(test)]
+mod public_monotonicity_tests {
+    use super::*;
+    #[test]
+    fn public_certificate_accepts_subdivision_and_rejects_stationary_map() {
+        let mapping = json!({"pieces":[{"domain":[0.,1.],"range":[0.,1.],
+            "controlValues":[0.,0.6,0.4,1.],"weights":[1.,1.,1.,1.]}]});
+        let certificate = certify_reparameterization(&mapping, None).unwrap();
+        assert!(
+            certificate["pieces"][0]["derivativeNumeratorBounds"][0]
+                .as_f64()
+                .unwrap()
+                > 0.
+        );
+        let report = bound_reparameterization_preimages(&mapping, &[0.5], 1e-10, 1000).unwrap();
+        let root = &report["preimages"][0]["parameterInterval"];
+        assert!(root[0].as_f64().unwrap() <= 0.5 && root[1].as_f64().unwrap() >= 0.5);
+        let stationary = json!({"pieces":[{"domain":[0.,1.],"range":[0.,1.],
+            "controlValues":[0.,1.,0.,1.],"weights":[1.,1.,1.,1.]}]});
+        assert!(certify_reparameterization(&stationary, None).is_err());
     }
 }
