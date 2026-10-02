@@ -10,7 +10,7 @@ pub(super) struct Cell {
 fn choose(n: usize, k: usize) -> f64 {
     (0..k.min(n - k)).fold(1u64, |v, i| v * (n - i) as u64 / (i + 1) as u64) as f64
 }
-fn product(a: &[f64], b: &[f64]) -> Vec<f64> {
+pub(super) fn product(a: &[f64], b: &[f64]) -> Vec<f64> {
     let (n, m) = (a.len() - 1, b.len() - 1);
     let mut result = vec![0.; n + m + 1];
     for (i, x) in a.iter().enumerate() {
