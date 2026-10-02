@@ -42,3 +42,17 @@ it('drops a partial-annular preview delivered after cancellation and replacement
   await expect(second).resolves.toMatchObject({evidence:{qualification:{commitAllowed:false}}})
  }finally{client.dispose()}
 })
+
+it('accepts and executes the partial-annular request through the complete worker handler',async()=>{
+ const {createBrepTube,tessellateNurbsBrep}=await import('../src/services/geometry/brep')
+ const {createMainSolidWorkerHandler}=await import('../src/services/mainSolidWorkerRuntime')
+ const brep=createBrepTube(20,5,6)
+ const source={id:'annular',name:'Annular',brep,mesh:tessellateNurbsBrep(brep,2)}
+ const actualJob={kind:'partialAnnularPreview' as const,body:source,edge:2,radius:1.25}
+ const messages:any[]=[],handle=createMainSolidWorkerHandler(message=>messages.push(message))
+ await handle({version:1,id:1,job:actualJob})
+ expect(messages).toHaveLength(1)
+ expect(messages[0].ok).toBe(true)
+ expect(mainSolidResult(mainSolidExpectation(actualJob),messages[0].result)).toBe(true)
+ expect(messages[0].result.body.mesh.indices.length/3).toBe(7714)
+})

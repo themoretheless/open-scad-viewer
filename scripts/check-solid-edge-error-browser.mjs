@@ -6,7 +6,7 @@ import path from 'node:path'
 import {loadQualificationPlaywrightPackage} from './qualificationPlaywrightPackage.mjs'
 const root=path.resolve(process.env.SOLID_QUALIFICATION_DIST??'dist'),directory=path.resolve(process.argv[2]??'/tmp/solid-edge-errors')
 const inputMode=process.env.SOLID_EDGE_INPUT??'keyboard';assert.ok(['mouse','keyboard'].includes(inputMode))
-const mode=process.argv[3]??'constant';assert.ok(['constant','variable','corner'].includes(mode))
+const mode=process.argv[3]??'constant';assert.ok(['constant','variable','corner','partial-preview'].includes(mode))
 await mkdir(directory,{recursive:true})
 const server=createServer(async(req,res)=>{
  try {
@@ -27,7 +27,7 @@ try{
   const NativeWorker=window.Worker
   window.Worker=class extends NativeWorker{
    postMessage(message,...args){
-    if(message?.job?.kind==='bodyEdit'&&message.job.options?.operation==='edge-fillet'){
+    if((message?.job?.kind==='bodyEdit'&&message.job.options?.operation==='edge-fillet'||message?.job?.kind==='partialAnnularPreview')){
      window.__edgeRequests++
      if(window.__holdEdge){
       this.held=true;const callback=this.onmessage
@@ -111,6 +111,23 @@ try{
   try{for(const letter of label)await cdp.send('Input.dispatchKeyEvent',{type:'char',text:letter,key:letter})}finally{await cdp.detach()}
  }else await filletType.selectOption(mode)
  assert.equal(await filletType.inputValue(),mode)
+ if(mode==='partial-preview'){
+  await enterText(solid.getByRole('textbox',{name:'\u0420\u0430\u0434\u0438\u0443\u0441 / \u0440\u0430\u0437\u043c\u0435\u0440, \u043c\u043c',exact:true}),'1.25 mm')
+  await solid.locator('[data-preview-body]').first().waitFor()
+  assert.equal(await solid.getByRole('button',{name:'\u0413\u043e\u0442\u043e\u0432\u043e \u00b7 Enter',exact:true}).isDisabled(),true)
+  await solid.focus();await page.keyboard.press('Enter');assert.deepEqual(await doc('preview-no-commit'),before)
+  await page.screenshot({path:path.join(directory,'preview.png')})
+  await page.evaluate(()=>window.__holdEdge=true)
+  await enterText(solid.getByRole('textbox',{name:'\u0420\u0430\u0434\u0438\u0443\u0441 / \u0440\u0430\u0437\u043c\u0435\u0440, \u043c\u043c',exact:true}),'2 mm')
+  await page.waitForFunction(()=>typeof window.__lateEdge==='function')
+  await page.keyboard.press('Escape');await ready()
+  assert.equal(await page.evaluate(()=>window.__edgeTerminated),true)
+  await page.evaluate(()=>{window.__holdEdge=false;window.__lateEdge(false);window.__lateEdge(true)})
+  assert.deepEqual(await doc('cancelled'),before)
+  assert.equal(await solid.locator('[data-preview-body]').count(),0)
+  assert.deepEqual(errors,[])
+  await writeFile(path.join(directory,'result.json'),JSON.stringify({ok:true,mode,inputMode,actualPreview:true,commitBlocked:true,lateResponseIgnored:true,documentUnchanged:true,errors},null,2))
+ }else{
  if(process.env.SOLID_EDGE_FIXTURE_ROOT){
   await page.evaluate(()=>window.__holdEdge=true)
   await enterText(solid.getByRole('textbox',{name:'Радиус / размер, мм',exact:true}),'1.25 mm')
@@ -160,5 +177,6 @@ try{
  await activate(solid.getByRole('button',{name:'↷',exact:true}));assert.deepEqual(await doc('redo'),after)
  await page.reload();await solid.getByRole('button',{name:after.bodies[0].name,exact:true}).waitFor();await ready();assert.deepEqual(await doc('reloaded'),after)
  assert.deepEqual(errors,[]);await writeFile(path.join(directory,'result.json'),JSON.stringify({ok:true,mode,inputMode,keyboardNumericInput:inputMode==='keyboard',contextSwitch:!!process.env.SOLID_EDGE_CONTEXT_SWITCH,oversizeRefusal:true,localized:true,reduceRadiusRecovery:true,undoRedo:true,reload:true,applyWithoutRecompute:true,lateResponseAfterCancelAndReopen:!!process.env.SOLID_EDGE_FIXTURE_ROOT,errors},null,2))
+ }
 }catch(error){if(page){await page.screenshot({path:path.join(directory,'failure.png')}).catch(()=>{});await writeFile(path.join(directory,'failure.txt'),await page.locator('body').innerText().catch(()=>''))}throw error}
 finally{await browser?.close();await new Promise(resolve=>server.close(resolve))}
