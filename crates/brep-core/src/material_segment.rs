@@ -26,7 +26,7 @@ pub struct Report {
     pub seed: Option<ray_parity::PointReport>,
     pub segment: Option<SegmentReport>,
 }
-fn valid_line(
+pub(crate) fn valid_line(
     origin: [f64; 3],
     direction: [f64; 3],
     tolerance_uv: f64,
@@ -239,9 +239,9 @@ pub fn inspect(
     Ok(out)
 }
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
     use super::*;
-    fn limits() -> Limits {
+    pub(crate) fn limits() -> Limits {
         Limits {
             volume: volume_validity::Limits {
                 boundary: crate::boundary_embedding::Limits {

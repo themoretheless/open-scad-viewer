@@ -1,6 +1,6 @@
 use super::{Result,Value,field};
 use value_codec::json;
-fn validity_limits(v:&Value)->Result<brep_core::volume_validity::Limits>{
+pub(super) fn validity_limits(v:&Value)->Result<brep_core::volume_validity::Limits>{
     Ok(brep_core::volume_validity::Limits{
         boundary:brep_core::boundary_embedding::Limits{
             exact_work:field(v,"exactWork")?,trim_pairs:field(v,"trimPairs")?,trim_cells:field(v,"trimCells")?,

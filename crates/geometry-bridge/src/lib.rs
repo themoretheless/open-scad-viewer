@@ -56,6 +56,8 @@ mod cad_diagnostics;
 mod cad_face_distance;
 mod cad_shell_distance;
 mod cad_solid_distance;
+mod cad_material_segment;
+mod cad_material_chord;
 mod cad_boundary_agreement;
 mod cad_face_contacts;
 mod cad_surface_diagnostics;
@@ -768,6 +770,8 @@ pub fn dispatch(mut v: Value) -> Result<Value> {
         "cad_face_distance" => cad_face_distance::measure(v),
         "cad_shell_distance" => cad_shell_distance::measure(v),
         "cad_solid_distance" => cad_solid_distance::measure(v),
+        "cad_material_segment" => cad_material_segment::inspect(v),
+        "cad_material_chord" => cad_material_chord::inspect(v),
         "cad_boundary_agreement" => cad_boundary_agreement::diagnose(v),
         "cad_face_contacts" => cad_face_contacts::diagnose(v),
         "cad_self_intersection" => cad_face_contacts::diagnose_self_intersection(v),
