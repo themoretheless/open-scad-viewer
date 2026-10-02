@@ -5,6 +5,8 @@ mod denominators;
 mod cartesian;
 #[path = "gordon_tangent_fields.rs"]
 mod tangent_fields;
+#[path = "gordon_tangent_audit.rs"]
+mod tangent_audit;
 use crate::{
     Result, check,
     curve::{Curve, basis},
@@ -187,6 +189,15 @@ pub fn patch_cartesian(
         "Cartesian Gordon audit budgets must be in 1..1000000")?;
     cartesian::checked(u_curves,v_curves,parameters_u,parameters_v,
         tolerance,max_cells,max_map_evaluations)
+}
+
+/// Certifies the complete boundary dP/dv field against contiguous target curves.
+/// Uses original tensor controls and outward arithmetic; incomplete work returns
+/// accepted:false and no error bound, never an exact-identity certificate.
+pub fn certify_boundary_v_tangent(
+    surface:&Surface,targets:&[Curve],end:bool,tolerance:f64,max_cells:usize,
+)->Result<value_codec::Value> {
+    tangent_audit::verify(surface,targets,end,tolerance,max_cells)
 }
 
 pub(crate) fn combine(mut s: [Surface; 3]) -> Result<Surface> {

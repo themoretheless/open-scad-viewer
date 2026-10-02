@@ -113,6 +113,48 @@ mod tests {
             for end in [false, true] {
                 let fields = boundary_v_derivative(&candidate, end).unwrap();
                 assert_eq!(fields.len(), candidate.control_points.len() - 1);
+                let certificate =
+                    super::super::tangent_audit::verify(&surface, &fields, end, 1e-10, 1000)
+                        .unwrap();
+                assert_eq!(certificate["accepted"], true);
+                #[cfg(feature = "transport")]
+                {
+                    let json_certificate=crate::transport::dispatch(value_codec::json!({
+                        "op":"surface_boundary_v_tangent_certify","surface":surface,"targets":fields,
+                        "end":end,"tolerance":1e-10,"maxCells":1000})).unwrap();
+                    assert_eq!(json_certificate["accepted"], true);
+                    assert_eq!(json_certificate["exact"], false);
+                }
+
+                if fields.len() == 1 {
+                    let mut distorted = fields[0].elevate(3).unwrap();
+                    distorted.control_points[1][0] += 0.01 / distorted.weights[1];
+                    distorted.control_points[2][0] -= 0.01 / distorted.weights[2];
+                    for u in [0., 0.5, 1.] {
+                        let original = fields[0].evaluate(u).unwrap().point;
+                        let altered = distorted.evaluate(u).unwrap().point;
+                        assert!((original[0] - altered[0]).abs() < 1e-12);
+                    }
+                    let rejected = super::super::tangent_audit::verify(
+                        &surface,
+                        &[distorted],
+                        end,
+                        1e-10,
+                        100,
+                    )
+                    .unwrap();
+                    assert_eq!(rejected["accepted"], false);
+                    assert_eq!(rejected["errorUpper"], value_codec::Value::Null);
+                }
+
+                if fields.len() > 1 {
+                    let incomplete =
+                        super::super::tangent_audit::verify(&candidate, &fields, end, 1e-10, 1)
+                            .unwrap();
+                    assert_eq!(incomplete["accepted"], false);
+                    assert_eq!(incomplete["errorUpper"], value_codec::Value::Null);
+                }
+
                 for i in 0..=1000 {
                     let u = i as f64 / 1000.;
                     let expected = surface

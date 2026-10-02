@@ -113,6 +113,11 @@ pub fn dispatch(v: Value) -> Result<Value> {
             None => natural_loft::interpolate(&curves,&parameters)?,
         });
     }
+    if op == "surface_boundary_v_tangent_certify" {
+        return gordon::certify_boundary_v_tangent(&field(&v,"surface")?,
+            &field::<Vec<curve::Curve>>(&v,"targets")?,field(&v,"end")?,
+            field(&v,"tolerance")?,field(&v,"maxCells")?);
+    }
     if op == "surface_gordon_cartesian" {
         let (surface, curves) = gordon::patch_cartesian(
             &field::<Vec<curve::Curve>>(&v,"u_curves")?, &field::<Vec<curve::Curve>>(&v,"v_curves")?,

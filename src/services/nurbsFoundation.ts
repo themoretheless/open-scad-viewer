@@ -369,3 +369,26 @@ export function createAutoCartesianGuidedLoft(
     ...(sectionMappings ? {section_mappings: sectionMappings} : {}),
   })
 }
+
+export interface BoundaryVTangentCertificate {
+  operation: 'cartesian-boundary-tangent-retention'
+  exact: false
+  accepted: boolean
+  errorUpper: number | null
+  tolerance: number
+  cells: number
+  maxCells: number
+  domain: [number, number]
+  end: boolean
+  unresolvedReason: string | null
+  method: 'outward-original-tensor-quotient-rule-Bernstein-residual'
+}
+
+/** Targets describe dP/dv and must cover the complete authored U domain. */
+export function certifyNurbsSurfaceBoundaryVTangent(
+  surface: NurbsSurface, targets: NurbsCurve[], end = false, tolerance = 1e-6, maxCells = 50000,
+): BoundaryVTangentCertificate {
+  return callNurbsRust<BoundaryVTangentCertificate>('surface_boundary_v_tangent_certify', {
+    surface, targets, end, tolerance, maxCells,
+  })
+}
