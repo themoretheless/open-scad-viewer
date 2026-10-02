@@ -85,6 +85,23 @@ mod tests {
             orientation_cells: 100000, orientation_domain_cells: 1000000, orientation_spans: 100 }
     }
     #[test]
+    fn canonical_partial_annular_boundary_has_consistent_material_volume() {
+        let model=crate::circular_blend::partial_annular_quarter(20.,5.,6.,1.25,1.,1e-7).unwrap();
+        let before=format!("{model:?}");
+        let mut budget=limits();
+        budget.boundary.spans=4096;
+        budget.boundary.contacts.cells=150000;
+        budget.boundary.contacts.domain_cells=1500000;
+        budget.boundary.contacts.cells_per_pair=1024;
+        budget.boundary.contacts.domain_cells_per_pair=100000;
+        let r=inspect(&model,1e-8,budget).unwrap();
+        assert!(r.boundary.proven);
+        assert!(r.proven,"nesting={:?} orientation={:?}",r.nesting.as_ref().map(|n|n.roles_consistent),r.orientations.iter().map(|o|o.outward).collect::<Vec<_>>());
+        assert_eq!(r.orientations.len(),1);
+        assert_eq!(r.orientations[0].outward,Some(true));
+        assert_eq!(format!("{model:?}"),before);
+    }
+    #[test]
     fn binary_exact_sphere_has_certified_volume_validity(){
         let model=crate::analytic::sphere(3.).unwrap();let before=format!("{model:?}");
         let r=inspect(&model,1e-8,limits()).unwrap();

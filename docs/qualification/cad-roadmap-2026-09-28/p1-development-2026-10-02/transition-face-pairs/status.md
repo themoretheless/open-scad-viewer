@@ -6,7 +6,7 @@ For the canonical quarter specimen (20/5/6/1.25), native exact boundary
 embedding and self-intersection absence are proven: 108 exact boundary
 uses, 27 injective faces and all 351 pairs classified. The full native suite
 passes 723 tests with three ignored. Latest joined-chart WASM packaging and
-application checks remain pending. Endpoint G1, thickness, volume and the
+application checks remain pending. Endpoint G1, thickness, general volume qualification and the
 full P0–P3 roadmap remain open; preview Apply remains disabled.
 
 The combined Rust API now accepts explicit boundary audit limits and returns
@@ -15,6 +15,12 @@ proofs. Seven bridge regressions pass, including exact-work exhaustion.
 The frontend protocol and diagnostic option are implemented: 24 focused tests
 and Vue type checking pass. Current packaged-WASM and mouse/keyboard checks
 for this integration remain pending; scripts include those acceptance cases.
+
+A new native `volume_validity` regression proves consistent material volume
+for the same canonical specimen: embedded boundary, consistent nesting roles
+and one outward shell. The focused test passes and preserves the source model.
+This is a geometric validity result, not an integrated volume measurement,
+wall-thickness certificate or a qualification of other poses/radii.
 
 The following sections record each qualification stage and its scope.
 
