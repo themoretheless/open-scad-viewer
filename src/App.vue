@@ -105,6 +105,7 @@ import {
 import type { BrowserWorkspacePersistence, WorkspaceRetryResult } from './services/workspacePersistence'
 import { encodeWorkspaceShare } from './services/workspaceShare'
 import { WebGPURenderer } from './services/webgpuRenderer'
+import { customizeTokens, normalizeHex } from './services/themeCustomization'
 import {
   assertThemeCatalog,
   resolveTheme,
@@ -140,7 +141,7 @@ const props = defineProps<{
 const L: Record<Language, Record<string, string>> = {
   ru: {
     title: 'OpenSCAD Viewer',
-    settings: 'Настройки',
+    settings: 'Настройки', customBase: 'Основной цвет', customAccent: 'Акцентный цвет', customReset: 'Сбросить цвета',
     render: 'Собрать', auto: 'Авто', examples: 'Примеры', functionReference: 'Справочник функций',
     basic: 'Примитивы', csg: 'Настоящий CSG', house: 'Дом с модулями', tower: 'Параметрическая башня',
     open: 'Открыть', save: 'Сохранить', share: 'Поделиться',
@@ -198,7 +199,7 @@ const L: Record<Language, Record<string, string>> = {
   },
   en: {
     title: 'OpenSCAD Viewer',
-    settings: 'Settings',
+    settings: 'Settings', customBase: 'Base color', customAccent: 'Accent color', customReset: 'Reset colors',
     render: 'Render', auto: 'Auto', examples: 'Examples', functionReference: 'Function reference',
     basic: 'Primitives', csg: 'Real CSG', house: 'Modular house', tower: 'Parametric tower',
     open: 'Open', save: 'Save', share: 'Share',
@@ -263,6 +264,20 @@ const preVersionedTheme = storageGetEnum<ThemeSelection>('scad-theme-selection',
 const themeSelection = ref(storageGetEnum<ThemeSelection>('scad-theme-v1', THEME_SELECTIONS, preVersionedTheme))
 const themeMediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
 const systemPrefersDark = ref(themeMediaQuery.matches)
+const customAccent = ref<string | null>(normalizeHex(storageGet('scad-accent-v1')))
+const customBase = ref<string | null>(normalizeHex(storageGet('scad-base-v1')))
+const effectiveTokens = computed(() => resolveTheme(themeSelection.value, systemPrefersDark.value).tokens)
+function setCustomColor(kind: 'accent' | 'base', event: Event) {
+  const value = normalizeHex((event.target as HTMLInputElement).value)
+  if (kind === 'accent') customAccent.value = value
+  else customBase.value = value
+  applyPreferences()
+}
+function resetCustomColors() {
+  customAccent.value = null
+  customBase.value = null
+  applyPreferences()
+}
 const isDark = computed(() => resolveTheme(themeSelection.value, systemPrefersDark.value).scheme === 'dark')
 const workspaceDocument = ref<WorkspaceDocumentSnapshot>(props.initialWorkspace)
 const code = ref(props.initialWorkspace.source)
@@ -1786,10 +1801,15 @@ function applyPreferences() {
   document.documentElement.dataset.themePreset = themeSelection.value
   document.documentElement.lang = lang.value
   document.documentElement.style.colorScheme = theme.scheme
-  for (const [token, value] of Object.entries(theme.tokens)) {
+  const tokens = { ...theme.tokens, ...customizeTokens(theme.tokens, { accent: customAccent.value, base: customBase.value }) }
+  for (const [token, value] of Object.entries(tokens)) {
     document.documentElement.style.setProperty(token, value)
   }
-  renderer?.setBackgroundColor(themeCanvasColor(theme))
+  renderer?.setBackgroundColor(themeCanvasColor({ ...theme, tokens }))
+  if (customAccent.value) storageSet('scad-accent-v1', customAccent.value)
+  else storageSet('scad-accent-v1', '')
+  if (customBase.value) storageSet('scad-base-v1', customBase.value)
+  else storageSet('scad-base-v1', '')
   // Re-apply the render theme so its backgroundColor (when set) stays authoritative.
   renderer?.setTheme(renderThemeId.value)
   storageSet('scad-theme-v1', themeSelection.value)
@@ -2740,6 +2760,15 @@ function sanitizeFileName(name: string) { return (name.replace(/[^\w.() -]+/g, '
                 <option v-for="theme in THEME_CATALOG" :key="theme.id" :value="theme.id">{{ theme.name[lang] }}</option>
               </select>
             </div>
+            <label class="menu-row" @click.stop>
+              <span>{{ t('customBase') }}</span>
+              <input type="color" :value="customBase ?? effectiveTokens['--bg']" :aria-label="t('customBase')" @input="setCustomColor('base', $event)">
+            </label>
+            <label class="menu-row" @click.stop>
+              <span>{{ t('customAccent') }}</span>
+              <input type="color" :value="customAccent ?? effectiveTokens['--accent']" :aria-label="t('customAccent')" @input="setCustomColor('accent', $event)">
+            </label>
+            <button v-if="customAccent || customBase" type="button" @click.stop="resetCustomColors">{{ t('customReset') }}</button>
             <button type="button" :aria-label="t('language')" @click="toggleLang">
               <span>{{ t('language') }}</span><kbd>{{ lang === 'ru' ? 'RU' : 'EN' }}</kbd>
             </button>
@@ -3437,6 +3466,7 @@ button, select { color: inherit; }
 }
 .menu-list button { cursor: pointer; }
 .menu-row { color: var(--text-dim); }
+.menu-row input[type="color"] { width: 28px; height: 22px; padding: 0; border: 1px solid var(--hairline); border-radius: 5px; background: none; cursor: pointer; }
 .menu-row select { height: 24px; padding: 0 4px; border: 1px solid var(--hairline); border-radius: 5px; background: var(--bg); color: var(--text); font-size: 12px; }
 .menu-list button:hover, .menu-list button:focus-visible { background: var(--hover); outline: none; }
 .menu-list button:disabled { opacity: .4; cursor: default; }

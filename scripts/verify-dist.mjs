@@ -327,6 +327,6 @@ for (const [name, artifact, compression] of [
 // WebXR stereo viewer and controls across all workspaces: measured 7,072,458 bytes.
 // Separate VR core payload plus current CAD retry/error UI: measured 7,149,470 bytes.
 // Loft operations, language schema and mobile menu: Linux CI measured 7,209,826 asset bytes.
-const totalBudget = 7_211_000
+const totalBudget = 7_222_000
 if (total > totalBudget) throw new Error(`dist totals ${total} bytes; budget is ${totalBudget}`)
 console.log(`Verified ${files.length} dist artifacts (${total} asset bytes + ${rawWasmBytes} raw WASM bytes = ${total + rawWasmBytes} total bytes)`)
