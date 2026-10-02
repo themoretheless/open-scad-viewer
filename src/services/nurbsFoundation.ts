@@ -306,6 +306,7 @@ export interface CartesianGordonResult {
     operation: 'cartesian-gordon'
     exact: false
     fittedToExactPromotion: false
+    tangents?: BoundaryVTangentCertificate[]
     curves: Array<{accepted: true; exact: false; tolerance: number; errorUpper: number; cells: number; mapEvaluations: number}>
   }
 }
@@ -390,5 +391,16 @@ export function certifyNurbsSurfaceBoundaryVTangent(
 ): BoundaryVTangentCertificate {
   return callNurbsRust<BoundaryVTangentCertificate>('surface_boundary_v_tangent_certify', {
     surface, targets, end, tolerance, maxCells,
+  })
+}
+
+/** Boundary fields describe dP/dV with both U and V normalized to [0,1]. */
+export function createClampedCartesianGordonSurface(
+  uCurves: NurbsCurve[], vCurves: NurbsCurve[], parametersU: number[], parametersV: number[],
+  boundaryTangents: [NurbsCurve, NurbsCurve], errorBudget = 1e-6, maxCells = 50000, maxMapEvaluations = 200000,
+): CartesianGordonResult {
+  return callNurbsRust<CartesianGordonResult>('surface_gordon_cartesian', {
+    u_curves: uCurves, v_curves: vCurves, parameters_u: parametersU, parameters_v: parametersV,
+    boundary_tangents: boundaryTangents, errorBudget, maxCells, maxMapEvaluations,
   })
 }

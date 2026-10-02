@@ -119,12 +119,21 @@ pub fn dispatch(v: Value) -> Result<Value> {
             field(&v,"tolerance")?,field(&v,"maxCells")?);
     }
     if op == "surface_gordon_cartesian" {
-        let (surface, curves) = gordon::patch_cartesian(
-            &field::<Vec<curve::Curve>>(&v,"u_curves")?, &field::<Vec<curve::Curve>>(&v,"v_curves")?,
-            &field::<Vec<f64>>(&v,"parameters_u")?, &field::<Vec<f64>>(&v,"parameters_v")?,
-            field::<f64>(&v,"errorBudget")?, field::<usize>(&v,"maxCells")?, field::<usize>(&v,"maxMapEvaluations")?)?;
+        let u=field::<Vec<curve::Curve>>(&v,"u_curves")?;
+        let guides=field::<Vec<curve::Curve>>(&v,"v_curves")?;
+        let pu=field::<Vec<f64>>(&v,"parameters_u")?;
+        let pv=field::<Vec<f64>>(&v,"parameters_v")?;
+        let tolerance=field::<f64>(&v,"errorBudget")?;
+        let max_cells=field::<usize>(&v,"maxCells")?;
+        let max_map_evaluations=field::<usize>(&v,"maxMapEvaluations")?;
+        let (surface,curves,tangents)=if let Some(targets)=optional_field::<[curve::Curve;2]>(&v,"boundary_tangents")? {
+            gordon::patch_cartesian_with_tangents(&u,&guides,&pu,&pv,&targets,tolerance,max_cells,max_map_evaluations)?
+        } else {
+            let (surface,curves)=gordon::patch_cartesian(&u,&guides,&pu,&pv,tolerance,max_cells,max_map_evaluations)?;
+            (surface,curves,Vec::new())
+        };
         return Ok(json!({"surface":surface,"certificate":{"operation":"cartesian-gordon",
-            "exact":false,"fittedToExactPromotion":false,"curves":curves}}));
+            "exact":false,"fittedToExactPromotion":false,"curves":curves,"tangents":tangents}}));
     }
     if op == "surface_gordon" {return encode(gordon::patch(&field::<Vec<curve::Curve>>(&v,"u_curves")?,&field::<Vec<curve::Curve>>(&v,"v_curves")?,&field::<Vec<f64>>(&v,"parameters_u")?,&field::<Vec<f64>>(&v,"parameters_v")?)?);}
     if op == "surface_grid_spline" { return encode(grid_spline::interpolate(&field::<Vec<Vec<[f64;3]>>>(&v,"points")?,&field::<Vec<f64>>(&v,"parameters_u")?,&field::<Vec<f64>>(&v,"parameters_v")?)?); }

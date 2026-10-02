@@ -5,13 +5,32 @@ use super::{
 };
 use crate::{Result, check, curve::Curve, surface::Surface};
 
-fn axis(curves: &[Curve], parameters: &[f64]) -> Result<Vec<Cell>> {
+fn axis(curves: &[Curve], parameters: &[f64], clamped: bool) -> Result<Vec<Cell>> {
     let mut inputs = curves.to_vec();
     for station in 0..parameters.len() {
         let sites: Vec<_> = (0..parameters.len())
             .map(|i| [if i == station { 1. } else { 0. }, 0., 0.])
             .collect();
-        inputs.push(crate::natural_spline::interpolate(&sites, parameters)?);
+        inputs.push(if clamped {
+            crate::natural_spline::clamped(&sites, parameters, [0.; 3], [0.; 3])?
+        } else {
+            crate::natural_spline::interpolate(&sites, parameters)?
+        });
+    }
+    if clamped {
+        let zeros = vec![[0.; 3]; parameters.len()];
+        inputs.push(crate::natural_spline::clamped(
+            &zeros,
+            parameters,
+            [1., 0., 0.],
+            [0.; 3],
+        )?);
+        inputs.push(crate::natural_spline::clamped(
+            &zeros,
+            parameters,
+            [0.; 3],
+            [1., 0., 0.],
+        )?);
     }
     denominators::prepare(&inputs)
 }
@@ -31,6 +50,7 @@ fn elevate(mut controls: Vec<f64>, degree: usize) -> Vec<f64> {
 /// Produces Bezier cells of sum L_j(v)C_j(u) + sum M_i(u)G_i(v)
 /// minus the tensor interpolation of the Cartesian crossing points.
 /// Shared denominators are products of positive univariate denominators.
+#[cfg(test)]
 pub(super) fn cells(
     u_curves: &[Curve],
     v_curves: &[Curve],
@@ -38,11 +58,28 @@ pub(super) fn cells(
     parameters_v: &[f64],
     crossing_budget: f64,
 ) -> Result<Vec<Surface>> {
+    cells_mode(
+        u_curves,
+        v_curves,
+        parameters_u,
+        parameters_v,
+        crossing_budget,
+        None,
+    )
+}
+fn cells_mode(
+    u_curves: &[Curve],
+    v_curves: &[Curve],
+    parameters_u: &[f64],
+    parameters_v: &[f64],
+    crossing_budget: f64,
+    tangents: Option<&[Curve; 2]>,
+) -> Result<Vec<Surface>> {
     check(
         (2..=86).contains(&u_curves.len()) && (2..=86).contains(&v_curves.len()),
         "Cartesian Gordon needs 2..86 curves in each family",
     )?;
-    let u = u_curves
+    let mut u = u_curves
         .iter()
         .map(normalized)
         .collect::<Result<Vec<_>>>()?;
@@ -64,8 +101,40 @@ pub(super) fn cells(
             crossings[i][j] = [a[0], a[1], a[2]];
         }
     }
-    let ucells = axis(&u, &pu)?;
-    let vcells = axis(&v, &pv)?;
+    let section_count = u.len();
+    let mut guide_derivatives = vec![[[0.; 3]; 2]; v.len()];
+    if let Some(targets) = tangents {
+        for target in targets {
+            target.validate()?;
+            check(
+                !target.periodic
+                    && target.domain() == [0., 1.]
+                    && target.control_points[0].len() == 3,
+                "Cartesian tangent fields must be open normalized 3D curves",
+            )?;
+        }
+        for (i, guide) in v.iter().enumerate() {
+            for (end, parameter) in [0., 1.].into_iter().enumerate() {
+                let actual = guide
+                    .evaluate(parameter)?
+                    .d1
+                    .ok_or_else(|| crate::numeric_err("Missing guide derivative"))?;
+                let expected = targets[end].evaluate(pu[i])?.point;
+                check(
+                    (0..3)
+                        .map(|k| (actual[k] - expected[k]).powi(2))
+                        .sum::<f64>()
+                        .sqrt()
+                        <= crossing_budget,
+                    "Guide endpoint derivatives conflict with Cartesian tangent fields",
+                )?;
+                guide_derivatives[i][end] = [actual[0], actual[1], actual[2]];
+            }
+        }
+        u.extend(targets.iter().cloned());
+    }
+    let ucells = axis(&u, &pu, false)?;
+    let vcells = axis(&v, &pv, tangents.is_some())?;
     let degree = |cells: &[Cell]| {
         cells
             .iter()
@@ -111,7 +180,7 @@ pub(super) fn cells(
                     let w = qu[a] * qv[b];
                     weights[a][b] = w;
                     for k in 0..3 {
-                        let sections: f64 = (0..u.len())
+                        let sections: f64 = (0..section_count)
                             .map(|j| un[j][k][a] * vn[v.len() + j][0][b])
                             .sum();
                         let guides: f64 = (0..v.len())
@@ -119,7 +188,7 @@ pub(super) fn cells(
                             .sum();
                         let correction: f64 = (0..v.len())
                             .map(|i| {
-                                (0..u.len())
+                                (0..section_count)
                                     .map(|j| {
                                         crossings[i][j][k]
                                             * un[u.len() + i][0][a]
@@ -128,7 +197,23 @@ pub(super) fn cells(
                                     .sum::<f64>()
                             })
                             .sum();
-                        control_points[a][b][k] = (sections + guides - correction) / w;
+                        let tangent_correction = if tangents.is_some() {
+                            (0..2)
+                                .map(|end| {
+                                    let interpolated: f64 = (0..v.len())
+                                        .map(|i| {
+                                            un[u.len() + i][0][a] * guide_derivatives[i][end][k]
+                                        })
+                                        .sum();
+                                    (un[section_count + end][k][a] - interpolated)
+                                        * vn[v.len() + section_count + end][0][b]
+                                })
+                                .sum::<f64>()
+                        } else {
+                            0.
+                        };
+                        control_points[a][b][k] =
+                            (sections + guides - correction + tangent_correction) / w;
                     }
                 }
             }
@@ -217,11 +302,21 @@ pub(super) fn assemble(
     pv: &[f64],
     tolerance: f64,
 ) -> Result<Surface> {
+    assemble_mode(u, v, pu, pv, tolerance, None)
+}
+fn assemble_mode(
+    u: &[Curve],
+    v: &[Curve],
+    pu: &[f64],
+    pv: &[f64],
+    tolerance: f64,
+    tangents: Option<&[Curve; 2]>,
+) -> Result<Surface> {
     check(
         tolerance.is_finite() && tolerance > 0.,
         "Cartesian Gordon needs positive seam tolerance",
     )?;
-    let mut patches = cells(u, v, pu, pv, tolerance)?;
+    let mut patches = cells_mode(u, v, pu, pv, tolerance, tangents)?;
     let du = patches.iter().map(|s| s.degree_u).max().unwrap();
     let dv = patches.iter().map(|s| s.degree_v).max().unwrap();
     for patch in &mut patches {
@@ -261,6 +356,28 @@ pub(super) fn checked(
     max_map_evaluations: usize,
 ) -> Result<(Surface, Vec<value_codec::Value>)> {
     let surface = assemble(u, v, pu, pv, tolerance)?;
+    let certificates = curve_audits(
+        &surface,
+        u,
+        v,
+        pu,
+        pv,
+        tolerance,
+        max_cells,
+        max_map_evaluations,
+    )?;
+    Ok((surface, certificates))
+}
+fn curve_audits(
+    surface: &Surface,
+    u: &[Curve],
+    v: &[Curve],
+    pu: &[f64],
+    pv: &[f64],
+    tolerance: f64,
+    max_cells: usize,
+    max_map_evaluations: usize,
+) -> Result<Vec<value_codec::Value>> {
     let pu = stations(pu, v.len())?;
     let pv = stations(pv, u.len())?;
     let mut certificates = Vec::new();
@@ -291,7 +408,46 @@ pub(super) fn checked(
             certificates.push(certificate);
         }
     }
-    Ok((surface, certificates))
+    Ok(certificates)
+}
+
+pub(super) fn checked_with_tangents(
+    u: &[Curve],
+    v: &[Curve],
+    pu: &[f64],
+    pv: &[f64],
+    targets: &[Curve; 2],
+    tolerance: f64,
+    max_cells: usize,
+    max_map_evaluations: usize,
+) -> Result<(Surface, Vec<value_codec::Value>, Vec<value_codec::Value>)> {
+    let surface = assemble_mode(u, v, pu, pv, tolerance, Some(targets))?;
+    let curves = curve_audits(
+        &surface,
+        u,
+        v,
+        pu,
+        pv,
+        tolerance,
+        max_cells,
+        max_map_evaluations,
+    )?;
+    let mut tangents = Vec::new();
+    for (end, target) in targets.iter().enumerate() {
+        let certificate = super::tangent_audit::verify(
+            &surface,
+            std::slice::from_ref(target),
+            end == 1,
+            tolerance,
+            max_cells,
+        )?;
+        crate::numeric(
+            certificate["accepted"] == value_codec::json!(true),
+            "Cartesian endpoint tangent retention was not established",
+        )?;
+        tangents.push(certificate);
+    }
+    Ok((surface, curves, tangents))
 }
 
 #[cfg(test)]
@@ -538,5 +694,75 @@ mod tests {
                 }
             }
         }
+    }
+    #[test]
+    fn clamped_cartesian_network_retains_weights_curves_and_tangent_fields() {
+        let line = |a: [f64; 3], b: [f64; 3], weights: Vec<f64>| Curve {
+            degree: 1,
+            knots: vec![0., 0., 1., 1.],
+            control_points: vec![a.to_vec(), b.to_vec()],
+            weights,
+            periodic: false,
+        };
+        let u = [
+            line([0., 0., 0.], [1., 0., 0.], vec![1., 2.]),
+            line([0., 0., 1.], [1., 0., 1.], vec![2., 1.]),
+        ];
+        let v = [
+            line([0., 0., 0.], [0., 0., 1.], vec![1., 2.]),
+            line([1., 0., 0.], [1., 0., 1.], vec![3., 1.]),
+        ];
+        let tangents = [
+            line([0., 0., 2.], [0., 0., 1. / 3.], vec![1., 1.]),
+            line([0., 0., 0.5], [0., 0., 3.], vec![1., 1.]),
+        ];
+        let (surface, curve_certificates, tangent_certificates) =
+            super::super::patch_cartesian_with_tangents(
+                &u,
+                &v,
+                &[0., 1.],
+                &[0., 1.],
+                &tangents,
+                1e-6,
+                50000,
+                200000,
+            )
+            .unwrap();
+        assert_eq!(curve_certificates.len(), 4);
+        assert_eq!(tangent_certificates.len(), 2);
+        for certificate in tangent_certificates {
+            assert_eq!(certificate["accepted"], true);
+            assert!(certificate["errorUpper"].as_f64().unwrap() <= 1e-6);
+        }
+        for sample in 0..=100 {
+            let x = sample as f64 / 100.;
+            for end in 0..2 {
+                let evaluated = surface.evaluate(x, end as f64).unwrap();
+                let expected = u[end].evaluate(x).unwrap().point;
+                for k in 0..3 {
+                    assert!((evaluated.point[k] - expected[k]).abs() < 1e-11);
+                }
+                let derivative = evaluated.first_derivatives().unwrap().1;
+                let expected = tangents[end].evaluate(x).unwrap().point;
+                for k in 0..3 {
+                    assert!((derivative[k] - expected[k]).abs() < 1e-10);
+                }
+            }
+        }
+        let mut conflict = tangents;
+        conflict[0].control_points[0][2] += 1.;
+        assert!(
+            super::super::patch_cartesian_with_tangents(
+                &u,
+                &v,
+                &[0., 1.],
+                &[0., 1.],
+                &conflict,
+                1e-6,
+                50000,
+                200000
+            )
+            .is_err()
+        );
     }
 }

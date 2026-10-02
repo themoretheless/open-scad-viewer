@@ -194,6 +194,36 @@ fn json_cartesian_gordon_retains_incompatible_weights_and_refuses_incomplete_aud
             }
         }
     }
+    let mut clamped = request.clone();
+    let targets = [
+        nurbs_core::primitives::line([0., 0.5, 0.], [0., 4., 4.]).unwrap(),
+        nurbs_core::primitives::line([0., 2., 0.], [0., 0.25, 0.25]).unwrap(),
+    ];
+    clamped["boundary_tangents"] = json!(targets);
+    let result = geometry_bridge::dispatch(clamped.clone()).unwrap();
+    let certificates = result["certificate"]["tangents"].as_array().unwrap();
+    assert_eq!(certificates.len(), 2);
+    for certificate in certificates {
+        assert_eq!(certificate["accepted"], true);
+    }
+    let surface: Surface = value_codec::from_value(result["surface"].clone()).unwrap();
+    for i in 0..=100 {
+        let u = i as f64 / 100.;
+        for end in 0..2 {
+            let actual = surface
+                .evaluate(u, end as f64)
+                .unwrap()
+                .first_derivatives()
+                .unwrap()
+                .1;
+            let expected = targets[end].evaluate(u).unwrap().point;
+            for k in 0..3 {
+                assert!((actual[k] - expected[k]).abs() < 1e-10);
+            }
+        }
+    }
+    clamped["maxCells"] = json!(1);
+    assert!(geometry_bridge::dispatch(clamped).is_err());
     let mut depleted = request;
     depleted["maxCells"] = json!(1);
     assert!(geometry_bridge::dispatch(depleted).is_err());

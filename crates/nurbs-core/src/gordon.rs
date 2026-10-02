@@ -191,6 +191,18 @@ pub fn patch_cartesian(
         tolerance,max_cells,max_map_evaluations)
 }
 
+/// Cartesian network interpolation with authored dP/dV boundary fields.
+/// V and tangent-curve U parameters are normalized to [0,1]. Curve and tangent
+/// certificates must both establish their complete-domain numerical bounds.
+pub fn patch_cartesian_with_tangents(
+    u:&[Curve],v:&[Curve],pu:&[f64],pv:&[f64],tangents:&[Curve;2],
+    tolerance:f64,max_cells:usize,max_map_evaluations:usize,
+)->Result<(Surface,Vec<value_codec::Value>,Vec<value_codec::Value>)> {
+    check((1..=1_000_000).contains(&max_cells) && (1..=1_000_000).contains(&max_map_evaluations),
+        "Cartesian tangent construction audit budgets must be in 1..1000000")?;
+    cartesian::checked_with_tangents(u,v,pu,pv,tangents,tolerance,max_cells,max_map_evaluations)
+}
+
 /// Certifies the complete boundary dP/dv field against contiguous target curves.
 /// Uses original tensor controls and outward arithmetic; incomplete work returns
 /// accepted:false and no error bound, never an exact-identity certificate.
