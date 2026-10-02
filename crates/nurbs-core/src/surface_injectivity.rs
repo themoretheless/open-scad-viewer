@@ -141,6 +141,26 @@ pub fn certify(s: &Surface, max_spans: usize) -> Result<Report> {
         report.reason = "periodic-domain";
         return Ok(report);
     }
+    // A clamped boundary with identical Euclidean controls maps a whole
+    // parameter edge to one point, even with different positive weights.
+    // Strict rectangular-chart injectivity cannot certify that pole. A future
+    // proof on the quotient domain must handle it explicitly.
+    let collapsed_u = [0, s.control_points.len()-1].into_iter().any(|i| {
+        let knots = if i == 0 { &s.knots_u[..=s.degree_u] }
+            else { &s.knots_u[s.control_points.len()..] };
+        knots.iter().all(|k| *k == knots[0]) &&
+            s.control_points[i].iter().all(|p| *p == s.control_points[i][0])
+    });
+    let collapsed_v = [0, s.control_points[0].len()-1].into_iter().any(|j| {
+        let knots = if j == 0 { &s.knots_v[..=s.degree_v] }
+            else { &s.knots_v[s.control_points[0].len()..] };
+        knots.iter().all(|k| *k == knots[0]) &&
+            s.control_points.iter().all(|row| row[j] == s.control_points[0][j])
+    });
+    if collapsed_u || collapsed_v {
+        report.reason = "collapsed-boundary-requires-quotient-proof";
+        return Ok(report);
+    }
     let mut j = [[I {
         lo: f64::INFINITY,
         hi: f64::NEG_INFINITY,
@@ -447,6 +467,21 @@ mod tests {
             }
         }
         assert!(!certify(&s, 10).unwrap().proven);
+    }
+    #[test]
+    fn clamped_pole_reports_missing_quotient_proof_without_spending_budget() {
+        let mut s = graph();
+        let pole = s.control_points[0][0].clone();
+        for p in &mut s.control_points[0] { *p = pole.clone(); }
+        for (j, w) in s.weights[0].iter_mut().enumerate() { *w = 1. + j as f64; }
+        let result = certify(&s, 10).unwrap();
+        assert!(!result.proven);
+        assert_eq!(result.spans, 0);
+        assert_eq!(result.reason, "collapsed-boundary-requires-quotient-proof");
+        // Close but distinct controls cannot be classified as an exact pole.
+        s.control_points[0][1][0] += 1e-10;
+        assert_ne!(certify(&s, 10).unwrap().reason,
+            "collapsed-boundary-requires-quotient-proof");
     }
     #[test]
     fn all_spans_must_pass_the_same_global_test() {

@@ -25,6 +25,13 @@ Both orientations have identical bounded diagnostic coverage:
 - 130 pairs unresolved; no combined absence-of-self-intersection proof.
 - 24/27 face charts proven injective; three charts remain unproven.
 
+Faces 0 and 10 have exact clamped boundary poles. Strict rectangular-chart
+injectivity is impossible there because an entire parameter edge maps to one
+point. The diagnostic now explicitly reports
+`collapsed-boundary-requires-quotient-proof` without spending subdivision budget.
+Face 5 remains `projection-not-proven`. A future boundary proof must distinguish
+the intended pole identification from unintended interior self-contact.
+
 An unresolved result does not establish a defect. OCCT validity and volume do
 not replace the missing boundary proof. The prototype is not exposed as a
 source-edit command: retained source identities, a ChangeSet, whole-domain
