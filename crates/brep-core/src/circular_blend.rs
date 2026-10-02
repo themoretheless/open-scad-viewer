@@ -29,73 +29,12 @@ impl CircularBlendSpan {
     /// Retained cylinder strip trimmed below the blend contact rail. The
     /// cubic UV height law has the same parameter as the authored 3D rail.
     pub fn trimmed_cylinder_sheet(&self, tolerance_mm: f64) -> Result<crate::Model> {
-        let rail = &self.cylinder_contact;
-        let height = self.cylinder_height;
-        let surface = Surface {
-            degree_u: rail.degree,
-            degree_v: 1,
-            knots_u: rail.knots.clone(),
-            knots_v: vec![0., 0., 1., 1.],
-            control_points: rail
-                .control_points
-                .iter()
-                .map(|p| vec![vec![p[0], p[1], 0.], vec![p[0], p[1], height]])
-                .collect(),
-            weights: rail.weights.iter().map(|w| vec![*w, *w]).collect(),
-            periodic_u: false,
-            periodic_v: false,
-        };
-        let bottom = Curve {
-            control_points: rail
-                .control_points
-                .iter()
-                .map(|p| vec![p[0], p[1], 0.])
-                .collect(),
-            ..rail.clone()
-        };
-        let a = rail.control_points.first().unwrap();
-        let b = rail.control_points.last().unwrap();
-        let line = |a: Vec<f64>, b: Vec<f64>| Curve {
-            degree: 1,
-            knots: vec![0., 0., 1., 1.],
-            control_points: vec![a, b],
-            weights: vec![1., 1.],
-            periodic: false,
-        };
-        let top_uv = Curve {
-            degree: 3,
-            knots: vec![0., 0., 0., 0., 1., 1., 1., 1.],
-            control_points: self
-                .radius_law
-                .iter()
-                .enumerate()
-                .map(|(i, r)| vec![i as f64 / 3., (height - r) / height])
-                .collect(),
-            weights: vec![1.; 4],
-            periodic: false,
-        };
-        let curves = [
-            bottom,
-            line(vec![b[0], b[1], 0.], b.clone()),
-            rail.reverse()?,
-            line(a.clone(), vec![a[0], a[1], 0.]),
-        ];
-        let uv = [
-            line(vec![0., 0.], vec![1., 0.]),
-            line(vec![1., 0.], vec![1., b[2] / height]),
-            top_uv.reverse()?,
-            line(vec![0., a[2] / height], vec![0., 0.]),
-        ];
-        let boundaries: Vec<_> = curves
-            .into_iter()
-            .zip(uv)
-            .map(|(curve, pcurve)| CircularBlendBoundary {
-                curve,
-                pcurve,
-                collapsed_pole: None,
-            })
-            .collect();
-        open_face(surface, boundaries.try_into().ok().unwrap(), tolerance_mm)
+        trimmed_cylinder(
+            &self.cylinder_contact,
+            self.cylinder_height,
+            self.radius_law,
+            tolerance_mm,
+        )
     }
 
     /// Retained planar cap sector between the blend rail and a circular inner
@@ -105,96 +44,15 @@ impl CircularBlendSpan {
         inner_radius: f64,
         tolerance_mm: f64,
     ) -> Result<crate::Model> {
-        let radius = self.cylinder_radius;
-        let height = self.cylinder_height;
-        let maximum = self.radius_law.iter().copied().fold(0., f64::max);
-        if !inner_radius.is_finite() || inner_radius <= 0. || inner_radius >= radius - maximum {
-            return Err(invalid(
-                "Planar blend trim requires an inner circle strictly inside the contact rail",
-            ));
-        }
-        let surface = Surface {
-            degree_u: 1,
-            degree_v: 1,
-            knots_u: vec![0., 0., 1., 1.],
-            knots_v: vec![0., 0., 1., 1.],
-            control_points: vec![
-                vec![
-                    vec![-radius, -radius, height],
-                    vec![-radius, radius, height],
-                ],
-                vec![vec![radius, -radius, height], vec![radius, radius, height]],
-            ],
-            weights: vec![vec![1., 1.], vec![1., 1.]],
-            periodic_u: false,
-            periodic_v: false,
-        };
-        let outer = &self.plane_contact;
-        let angular = &self.cylinder_contact;
-        let inner = Curve {
-            control_points: angular
-                .control_points
-                .iter()
-                .map(|p| {
-                    vec![
-                        p[0] * inner_radius / radius,
-                        p[1] * inner_radius / radius,
-                        height,
-                    ]
-                })
-                .collect(),
-            ..angular.clone()
-        };
-        let a = outer.control_points.first().unwrap();
-        let b = outer.control_points.last().unwrap();
-        let ia = inner.control_points.first().unwrap();
-        let ib = inner.control_points.last().unwrap();
-        let line = |a: Vec<f64>, b: Vec<f64>| Curve {
-            degree: 1,
-            knots: vec![0., 0., 1., 1.],
-            control_points: vec![a, b],
-            weights: vec![1., 1.],
-            periodic: false,
-        };
-        let curves = [
-            outer.clone(),
-            line(b.clone(), ib.clone()),
-            inner.reverse()?,
-            line(ia.clone(), a.clone()),
-        ];
-        let mut boundaries: Vec<_> = curves
-            .into_iter()
-            .map(|curve| {
-                let pcurve = Curve {
-                    control_points: curve
-                        .control_points
-                        .iter()
-                        .map(|p| {
-                            vec![
-                                (p[0] + radius) / (2. * radius),
-                                (p[1] + radius) / (2. * radius),
-                            ]
-                        })
-                        .collect(),
-                    ..curve.clone()
-                };
-                CircularBlendBoundary {
-                    curve,
-                    pcurve,
-                    collapsed_pole: None,
-                }
-            })
-            .collect();
-        let angular_a = &angular.control_points[0];
-        let angular_b = &angular.control_points[1];
-        if angular_a[0] * angular_b[1] - angular_a[1] * angular_b[0] < 0. {
-            boundaries.reverse();
-            for boundary in &mut boundaries {
-                boundary.curve = boundary.curve.reverse()?;
-                boundary.pcurve = boundary.pcurve.reverse()?;
-            }
-        }
-        open_face(surface, boundaries.try_into().ok().unwrap(), tolerance_mm)
+        trimmed_plane(
+            &self.plane_contact,
+            &self.cylinder_contact,
+            self.cylinder_radius,
+            self.cylinder_height,
+            self.radius_law,
+            inner_radius,
+            tolerance_mm,
+        )
     }
 
     /// Combine the blend and its two retained neighbor sectors. Still open at
@@ -210,6 +68,66 @@ impl CircularBlendSpan {
             (self.to_open_sheet(tolerance_mm)?, positive),
             (self.trimmed_plane_sheet(inner_radius, tolerance_mm)?, false),
             (self.trimmed_cylinder_sheet(tolerance_mm)?, !positive),
+        ])
+    }
+
+    /// Add the inner cylindrical wall and bottom cap. Only the two angular
+    /// cuts stay open; these five faces surround the complete annular section.
+    pub fn annular_side_sector(
+        &self,
+        inner_radius: f64,
+        tolerance_mm: f64,
+    ) -> Result<crate::Model> {
+        assemble_support_sheets(self.annular_sheets(inner_radius, tolerance_mm)?)
+    }
+
+    fn annular_sheets(
+        &self,
+        inner_radius: f64,
+        tolerance_mm: f64,
+    ) -> Result<Vec<(crate::Model, bool)>> {
+        let rail = &self.cylinder_contact;
+        let radius = self.cylinder_radius;
+        let height = self.cylinder_height;
+        let p = &rail.control_points;
+        let positive = p[0][0] * p[1][1] - p[0][1] * p[1][0] > 0.;
+        let inner = Curve {
+            control_points: p
+                .iter()
+                .map(|p| {
+                    vec![
+                        p[0] * inner_radius / radius,
+                        p[1] * inner_radius / radius,
+                        height,
+                    ]
+                })
+                .collect(),
+            ..rail.clone()
+        };
+        let bottom = Curve {
+            control_points: p.iter().map(|p| vec![p[0], p[1], 0.]).collect(),
+            ..rail.clone()
+        };
+        Ok(vec![
+            (self.to_open_sheet(tolerance_mm)?, positive),
+            (self.trimmed_plane_sheet(inner_radius, tolerance_mm)?, false),
+            (self.trimmed_cylinder_sheet(tolerance_mm)?, !positive),
+            (
+                trimmed_cylinder(&inner, height, [0.; 4], tolerance_mm)?,
+                positive,
+            ),
+            (
+                trimmed_plane(
+                    &bottom,
+                    rail,
+                    radius,
+                    0.,
+                    [0.; 4],
+                    inner_radius,
+                    tolerance_mm,
+                )?,
+                true,
+            ),
         ])
     }
 
@@ -264,6 +182,175 @@ impl CircularBlendSpan {
         }
         Ok(result.try_into().ok().unwrap())
     }
+}
+
+fn trimmed_cylinder(
+    rail: &Curve,
+    height: f64,
+    radius_law: [f64; 4],
+    tolerance_mm: f64,
+) -> Result<crate::Model> {
+    let surface = Surface {
+        degree_u: rail.degree,
+        degree_v: 1,
+        knots_u: rail.knots.clone(),
+        knots_v: vec![0., 0., 1., 1.],
+        control_points: rail
+            .control_points
+            .iter()
+            .map(|p| vec![vec![p[0], p[1], 0.], vec![p[0], p[1], height]])
+            .collect(),
+        weights: rail.weights.iter().map(|w| vec![*w, *w]).collect(),
+        periodic_u: false,
+        periodic_v: false,
+    };
+    let bottom = Curve {
+        control_points: rail
+            .control_points
+            .iter()
+            .map(|p| vec![p[0], p[1], 0.])
+            .collect(),
+        ..rail.clone()
+    };
+    let a = rail.control_points.first().unwrap();
+    let b = rail.control_points.last().unwrap();
+    let line = |a: Vec<f64>, b: Vec<f64>| Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 1.],
+        control_points: vec![a, b],
+        weights: vec![1., 1.],
+        periodic: false,
+    };
+    let top_uv = Curve {
+        degree: 3,
+        knots: vec![0., 0., 0., 0., 1., 1., 1., 1.],
+        control_points: radius_law
+            .iter()
+            .enumerate()
+            .map(|(i, r)| vec![i as f64 / 3., (height - r) / height])
+            .collect(),
+        weights: vec![1.; 4],
+        periodic: false,
+    };
+    let curves = [
+        bottom,
+        line(vec![b[0], b[1], 0.], b.clone()),
+        rail.reverse()?,
+        line(a.clone(), vec![a[0], a[1], 0.]),
+    ];
+    let uv = [
+        line(vec![0., 0.], vec![1., 0.]),
+        line(vec![1., 0.], vec![1., b[2] / height]),
+        top_uv.reverse()?,
+        line(vec![0., a[2] / height], vec![0., 0.]),
+    ];
+    let boundaries: Vec<_> = curves
+        .into_iter()
+        .zip(uv)
+        .map(|(curve, pcurve)| CircularBlendBoundary {
+            curve,
+            pcurve,
+            collapsed_pole: None,
+        })
+        .collect();
+    open_face(surface, boundaries.try_into().ok().unwrap(), tolerance_mm)
+}
+
+fn trimmed_plane(
+    outer: &Curve,
+    angular: &Curve,
+    radius: f64,
+    height: f64,
+    radius_law: [f64; 4],
+    inner_radius: f64,
+    tolerance_mm: f64,
+) -> Result<crate::Model> {
+    let maximum = radius_law.iter().copied().fold(0., f64::max);
+    if !inner_radius.is_finite() || inner_radius <= 0. || inner_radius >= radius - maximum {
+        return Err(invalid(
+            "Planar blend trim requires an inner circle strictly inside the contact rail",
+        ));
+    }
+    let surface = Surface {
+        degree_u: 1,
+        degree_v: 1,
+        knots_u: vec![0., 0., 1., 1.],
+        knots_v: vec![0., 0., 1., 1.],
+        control_points: vec![
+            vec![
+                vec![-radius, -radius, height],
+                vec![-radius, radius, height],
+            ],
+            vec![vec![radius, -radius, height], vec![radius, radius, height]],
+        ],
+        weights: vec![vec![1., 1.], vec![1., 1.]],
+        periodic_u: false,
+        periodic_v: false,
+    };
+    let inner = Curve {
+        control_points: angular
+            .control_points
+            .iter()
+            .map(|p| {
+                vec![
+                    p[0] * inner_radius / radius,
+                    p[1] * inner_radius / radius,
+                    height,
+                ]
+            })
+            .collect(),
+        ..angular.clone()
+    };
+    let a = outer.control_points.first().unwrap();
+    let b = outer.control_points.last().unwrap();
+    let ia = inner.control_points.first().unwrap();
+    let ib = inner.control_points.last().unwrap();
+    let line = |a: Vec<f64>, b: Vec<f64>| Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 1.],
+        control_points: vec![a, b],
+        weights: vec![1., 1.],
+        periodic: false,
+    };
+    let curves = [
+        outer.clone(),
+        line(b.clone(), ib.clone()),
+        inner.reverse()?,
+        line(ia.clone(), a.clone()),
+    ];
+    let mut boundaries: Vec<_> = curves
+        .into_iter()
+        .map(|curve| {
+            let pcurve = Curve {
+                control_points: curve
+                    .control_points
+                    .iter()
+                    .map(|p| {
+                        vec![
+                            (p[0] + radius) / (2. * radius),
+                            (p[1] + radius) / (2. * radius),
+                        ]
+                    })
+                    .collect(),
+                ..curve.clone()
+            };
+            CircularBlendBoundary {
+                curve,
+                pcurve,
+                collapsed_pole: None,
+            }
+        })
+        .collect();
+    let angular_a = &angular.control_points[0];
+    let angular_b = &angular.control_points[1];
+    if angular_a[0] * angular_b[1] - angular_a[1] * angular_b[0] < 0. {
+        boundaries.reverse();
+        for boundary in &mut boundaries {
+            boundary.curve = boundary.curve.reverse()?;
+            boundary.pcurve = boundary.pcurve.reverse()?;
+        }
+    }
+    open_face(surface, boundaries.try_into().ok().unwrap(), tolerance_mm)
 }
 
 fn open_face(
@@ -717,6 +804,35 @@ pub fn circular_blend_retained_strip(
     assemble_support_sheets(sheets)
 }
 
+/// Five retained side surfaces per span, joined through both end transitions.
+/// The two angular section loops remain open; no body is issued here.
+pub fn circular_blend_annular_strip(
+    outer_radius: f64,
+    inner_radius: f64,
+    height: f64,
+    radius: f64,
+    start: f64,
+    entry_sweep: f64,
+    middle_sweep: f64,
+    exit_sweep: f64,
+    tolerance_mm: f64,
+) -> Result<crate::Model> {
+    let spans = circular_strip_spans(
+        outer_radius,
+        height,
+        radius,
+        start,
+        entry_sweep,
+        middle_sweep,
+        exit_sweep,
+    )?;
+    let mut sheets = Vec::new();
+    for span in spans {
+        sheets.extend(span.annular_sheets(inner_radius, tolerance_mm)?);
+    }
+    assemble_support_sheets(sheets)
+}
+
 fn circular_strip_spans(
     outer_radius: f64,
     height: f64,
@@ -1061,6 +1177,79 @@ mod tests {
                             .iter()
                             .filter(move |c| c.edge == edge)
                             .map(move |c| c.reversed ^ face_use.reversed)
+                    })
+                    .collect();
+                assert!(senses.len() == 1 || senses.len() == 2);
+                if senses.len() == 2 {
+                    assert_ne!(senses[0], senses[1]);
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn annular_sector_has_complete_walls_and_only_two_angular_cuts() {
+        for direction in [-1., 1.] {
+            for (r0, r1) in [(0., 1.25), (1.25, 0.), (0.5, 1.25)] {
+                let span =
+                    plane_cylinder_transition(20., 6., r0, r1, 5.9, direction * 0.7).unwrap();
+                let sector = span.annular_side_sector(5., 1e-7).unwrap();
+                let report = sector.validate().unwrap();
+                assert_eq!(report.face_count, 5);
+                assert_eq!(report.body_count, 0);
+                assert_eq!(sector.edges.len(), 15);
+                assert_eq!(
+                    report.boundary_edge_count,
+                    if r0 == 0. || r1 == 0. { 9 } else { 10 }
+                );
+                let shared = (0..sector.edges.len())
+                    .filter(|&i| {
+                        sector
+                            .loops
+                            .iter()
+                            .flat_map(|l| &l.coedges)
+                            .filter(|c| c.edge == i)
+                            .count()
+                            == 2
+                    })
+                    .count();
+                assert_eq!(shared, 5);
+            }
+        }
+    }
+
+    #[test]
+    fn annular_strip_keeps_only_the_two_unrounded_end_sections() {
+        for direction in [-1., 1.] {
+            let strip = circular_blend_annular_strip(
+                20.,
+                5.,
+                6.,
+                1.25,
+                5.9,
+                direction * 0.3,
+                direction * 0.7,
+                direction * 0.4,
+                1e-7,
+            )
+            .unwrap();
+            let report = strip.validate().unwrap();
+            assert_eq!(report.face_count, 15);
+            assert_eq!(report.body_count, 0);
+            assert_eq!(strip.edges.len(), 35);
+            assert_eq!(strip.vertices.len(), 18);
+            assert_eq!(report.boundary_edge_count, 8);
+            assert_eq!(strip.edges.iter().filter(|e| e.degenerate).count(), 2);
+            for edge in 0..strip.edges.len() {
+                let senses: Vec<_> = strip.shells[0]
+                    .faces
+                    .iter()
+                    .flat_map(|f| {
+                        strip.loops[strip.faces[f.face].outer]
+                            .coedges
+                            .iter()
+                            .filter(move |c| c.edge == edge)
+                            .map(move |c| c.reversed ^ f.reversed)
                     })
                     .collect();
                 assert!(senses.len() == 1 || senses.len() == 2);
