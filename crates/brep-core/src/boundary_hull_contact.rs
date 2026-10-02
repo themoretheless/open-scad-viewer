@@ -35,7 +35,7 @@ fn contact_controls(model:&Model,face:usize)->Vec<&[f64]>{
 }
 /// Input must be structurally valid. Does not establish its prerequisites.
 pub(crate) fn certify(model:&Model, faces:[usize;2])->Option<Certificate>{
-    certify_axis(model,faces).or_else(||certify_vertex_plane(model,faces))
+    certify_axis(model,faces).or_else(||certify_edge_plane(model,faces)).or_else(||certify_vertex_plane(model,faces))
 }
 fn certify_axis(model:&Model, faces:[usize;2])->Option<Certificate>{
     let edges=faces.map(|f|std::iter::once(model.faces[f].outer).chain(model.faces[f].holes.iter().copied())
@@ -104,6 +104,47 @@ fn certify_axis(model:&Model, faces:[usize;2])->Option<Certificate>{
     None
 }
 
+// A straight owned edge covers its endpoint segment. A separating plane
+// can restrict the intersection of the enclosing hulls to this segment even
+// when its world-axis bounding box has two or three nonzero dimensions.
+fn certify_edge_plane(model:&Model,faces:[usize;2])->Option<Certificate>{
+    use cad_predicates::Sign;
+    let nets=faces.map(|f|contact_controls(model,f));
+    if nets.iter().any(|n|n.len()>64){return None;}
+    let edges=faces.map(|f|std::iter::once(model.faces[f].outer).chain(model.faces[f].holes.iter().copied())
+        .flat_map(|l|model.loops[l].coedges.iter().map(|c|c.edge)).collect::<BTreeSet<_>>());
+    for &edge in edges[0].intersection(&edges[1]) {
+        let curve=&model.edges[edge].curve;
+        if curve.degree!=1||curve.control_points.len()!=2{continue;}
+        let Some([a,b])=edge_ends(model,edge) else{continue};
+        if a==b||[a,b].iter().enumerate().any(|(i,p)|*p!=model.vertices[model.edges[edge].vertices[i]].point){continue;}
+        let on_segment=|p:&[f64]|(0..3).all(|k|p[k]>=a[k].min(b[k])&&p[k]<=a[k].max(b[k]))
+            && [[0,1],[0,2],[1,2]].into_iter().all(|axes|
+                crate::shared_boundary::orient(&[&a,&b,p],Some(axes))==Some(Sign::Zero));
+        // Coplanar trim hulls need a transverse candidate, since their own
+        // controls only generate their common support plane. Arbitrary finite
+        // candidate points are safe: exact signs on every original enclosure
+        // control, rather than candidate generation, establish separation.
+        let mut candidates=nets.iter().flatten().take(128).map(|p|[p[0],p[1],p[2]]).collect::<Vec<_>>();
+        for axis in 0..3 {let mut p=a;p[axis]+=1.;if p.iter().all(|v|v.is_finite())&&p!=a{candidates.push(p);}}
+        for candidate in &candidates {
+            let mut signs=[None,None];let mut segment_only=[true,true];let mut valid=true;
+            for side in 0..2 {for &p in &nets[side] {
+                let Some(sign)=crate::shared_boundary::orient(&[&a,&b,candidate,p],None) else{valid=false;break};
+                if sign==Sign::Zero {segment_only[side]&=on_segment(p);}
+                else if signs[side].is_some_and(|previous|previous!=sign){valid=false;break;}
+                else{signs[side]=Some(sign);}
+            } if !valid{break;} }
+            if valid&&(segment_only[0]||segment_only[1])&&signs.iter().any(Option::is_some)
+                && !(signs[0].is_some()&&signs[0]==signs[1]) {
+                return Some(Certificate{faces,hull_intersection:std::array::from_fn(|k|[a[k].min(b[k]),a[k].max(b[k])]),
+                    edges:vec![edge],vertex:None});
+            }
+        }
+    }
+    None
+}
+
 // A supporting plane need not align with world axes. Original binary64
 // controls and an exact orientation predicate establish its two half spaces.
 // If one net reaches the plane only at the shared vertex, every possible
@@ -145,6 +186,23 @@ fn certify_vertex_plane(model:&Model, faces:[usize;2])->Option<Certificate>{
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn oblique_straight_edge_support_requires_exact_segment_ownership() {
+        let mut model=crate::cuboid([0.;3],[2.;3]).unwrap();
+        let map=|p:&mut [f64]|{let [x,y,z]=[p[0],p[1],p[2]];p[0]=x+y;p[1]=y+z;p[2]=z+x;};
+        for v in &mut model.vertices{map(&mut v.point);}
+        for e in &mut model.edges{for p in &mut e.curve.control_points{map(p);}}
+        for f in &mut model.faces{for p in f.surface.control_points.iter_mut().flatten(){map(p);}}
+        model.validate().unwrap();
+        let certificate=(0..6).flat_map(|a|(a+1..6).map(move|b|[a,b]))
+            .filter(|p|certify_axis(&model,*p).is_none()).find_map(|p|certify_edge_plane(&model,p)).unwrap();
+        assert_eq!(certificate.edges.len(),1);assert!(certificate.vertex.is_none());
+        let mut moved=model.clone();let edge=certificate.edges[0];
+        moved.edges[edge].curve.control_points[0][0]+=1e-12;
+        assert!(certify_edge_plane(&moved,certificate.faces).is_none());
+        let mut overlap=model.clone();overlap.faces[certificate.faces[1]].surface=overlap.faces[certificate.faces[0]].surface.clone();
+        assert!(certify_edge_plane(&overlap,certificate.faces).is_none());
+    }
     #[test]
     fn oblique_support_is_exact_and_requires_the_owned_vertex() {
         let mut model=crate::analytic::sphere(3.).unwrap();

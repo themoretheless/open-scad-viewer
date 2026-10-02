@@ -124,3 +124,27 @@ after complete prerequisites, and admits no hull certificates with an
 insufficient exact-agreement budget. Model preservation is checked. These
 latest planar enclosure changes are native only; current in-flight WASM
 build was started before them and must be followed by updated packaging.
+
+## Native straight-edge support
+
+An exact separating plane through the endpoints of an owned straight edge
+now permits a non-axis-aligned segment as the only possible hull contact.
+Every zero-sign control of at least one net must lie on that segment, checked
+by exact projected collinearity and endpoint coordinate bounds. Both nets
+must lie in opposite closed half spaces, with a nonzero sign on at least one
+side. Clamped degree-one two-control edges and exact endpoint ownership are
+required. Candidate planes include bounded control-derived candidates and
+three finite transverse points for coplanar trims; acceptance always checks
+all original enclosure controls with exact orient3d signs.
+
+Seven hull tests pass, including a sheared cube, shifted edge endpoint and
+overlapping faces. Full source audit retains all 351 pairs: 240 disjoint,
+105 shared boundary and six unresolved. Four additional common-edge pairs
+are certified: 1/6, 4/9, 6/11, 9/14. Eighty hull certificates are admitted;
+geometry work is 14462 cells and UV work is 132845 cells. The six remaining
+are 0/1, 0/2, 1/2, 10/11, 10/12 and 11/12, all around the two transition
+ends. Whole-model absence remains unproven.
+
+The preceding WASM build finished; an updated build containing both planar
+trim enclosures and straight-edge support is now running. Updated WASM and
+browser qualification remain pending.
