@@ -212,6 +212,24 @@ pub fn certify_boundary_v_tangent(
     tangent_audit::verify(surface,targets,end,tolerance,max_cells)
 }
 
+/// Certifies normalized dP/dV against authored dP/dt controls multiplied
+/// by the original station extent, including subtraction and scaling rounding.
+pub fn certify_authored_boundary_v_tangent(
+    surface: &Surface, target: &Curve, end: bool, parameters: &[f64],
+    tolerance: f64, max_cells: usize,
+) -> Result<value_codec::Value> {
+    check(parameters.len() >= 2, "Tangent conversion needs two stations")?;
+    stations(parameters, parameters.len())?;
+    let scale = crate::distance_bounds::Interval::point(*parameters.last().unwrap())
+        .sub(crate::distance_bounds::Interval::point(parameters[0]))?;
+    let mut certificate = tangent_audit::verify_scaled(surface, std::slice::from_ref(target),
+        end, tolerance, max_cells, scale)?;
+    certificate["targetUnits"] = value_codec::json!("authored-dP/dt");
+    certificate["normalizedScaleEnclosure"] = value_codec::json!([scale.lo, scale.hi]);
+    certificate["stationDomain"] = value_codec::json!([parameters[0], parameters[parameters.len()-1]]);
+    Ok(certificate)
+}
+
 pub(crate) fn combine(mut s: [Surface; 3]) -> Result<Surface> {
     align(&mut s, Axis::U)?;
     align(&mut s, Axis::V)?;

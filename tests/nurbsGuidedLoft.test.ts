@@ -91,3 +91,19 @@ it('imports a closed loft shared seam through the published WASM STEP route',asy
   a.forEach((x,i)=>expect(x).toBeCloseTo(b[i]!,9))
  }
 })
+
+it('retains authored tangent units through Cartesian Rush and packaged geometry',()=>{
+ for(const path of ['examples/rush/cartesian-control-tangent-loft.r','examples/rush/cartesian-auto-control-tangent-loft.r']){
+  const source=readFileSync(path,'utf8')
+  const compiled=compileModelGraphText(source)
+  const loft=compiled.document.nodes.find(n=>n.op==='guided_loft_surface'||n.op==='auto_guided_loft_surface')!
+  expect(loft).toMatchObject({construction:'cartesian',parameters:[2,7],max_cells:50000,max_map_evaluations:200000})
+  const built=buildOwnNurbs(compiled.document,{action:'build'})
+  expect(built.report.construction?.[loft.id]).toMatchObject({exact:false,
+   tangents:[{accepted:true,targetUnits:'authored-dP/dt',stationDomain:[2,7]},
+             {accepted:true,targetUnits:'authored-dP/dt',stationDomain:[2,7]}]})
+  expect(()=>buildOwnNurbs(compileModelGraphText(source.replace('max_cells: 50000','max_cells: 1')).document,{action:'build'})).toThrow()
+  expect(()=>compileModelGraphText(source.replace('construction: "cartesian"','construction: "homogeneous"'))).toThrow()
+  expect(()=>compileModelGraphText(source.replace('parameters: [2,7]','parameters: [2mm,7mm]'))).toThrow()
+ }
+},60000)

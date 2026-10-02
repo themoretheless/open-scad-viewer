@@ -62,7 +62,13 @@ fn owning_span(knots: &[f64], degree: usize, count: usize, domain: [f64; 2]) -> 
         .find(|&i| knots[i] <= domain[0] && knots[i + 1] >= domain[1] && knots[i] < knots[i + 1])
         .unwrap()
 }
-fn bound(surface: &Surface, target: &Curve, end: bool, domain: [f64; 2]) -> Result<f64> {
+fn bound(
+    surface: &Surface,
+    target: &Curve,
+    end: bool,
+    domain: [f64; 2],
+    target_scale: I,
+) -> Result<f64> {
     let nv = surface.control_points[0].len();
     let p = surface.degree_u;
     let (owner, neighbor, extent, sign) = if end {
@@ -124,7 +130,7 @@ fn bound(surface: &Surface, target: &Curve, end: bool, domain: [f64; 2]) -> Resu
             let w = I::point(weight).div(I::point(ts))?;
             let mut row = point
                 .iter()
-                .map(|&x| I::point(x).mul(w))
+                .map(|&x| I::point(x).mul(target_scale)?.mul(w))
                 .collect::<Result<Vec<_>>>()?;
             row.push(w);
             Ok(row)
@@ -175,6 +181,21 @@ pub(super) fn verify(
     tolerance: f64,
     max_cells: usize,
 ) -> Result<Value> {
+    verify_scaled(surface, targets, end, tolerance, max_cells, I::point(1.))
+}
+
+pub(super) fn verify_scaled(
+    surface: &Surface,
+    targets: &[Curve],
+    end: bool,
+    tolerance: f64,
+    max_cells: usize,
+    target_scale: I,
+) -> Result<Value> {
+    check(
+        target_scale.lo > 0. && target_scale.hi.is_finite(),
+        "Invalid tangent unit scale",
+    )?;
     surface.validate()?;
     check(
         !surface.periodic_u
@@ -246,7 +267,7 @@ pub(super) fn verify(
             break;
         }
         cells += 1;
-        match bound(surface, &targets[index], end, [a, b]) {
+        match bound(surface, &targets[index], end, [a, b], target_scale) {
             Ok(error) if error <= tolerance => {
                 upper = upper.max(error);
             }

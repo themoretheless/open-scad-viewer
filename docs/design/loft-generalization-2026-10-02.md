@@ -37,6 +37,39 @@ These are source/native changes. The packaged WASM and language/runtime delivery
 ## Still required by the complete goal
 
 1. Extend representation qualification beyond the verified bounded multi-span and subdivision-certified cases, then deliver and qualify the bounded multi-span composition through the packaged runtime and language entrypoints. Native evidence now covers an irrational knot preimage, different source weights, nested rational factors, original nonunit domains and incomplete-budget refusal. Periodic source covers remain outside the current loft section contract; the runtime must preserve all stated degree/control/work/conditioning refusals and numerical certificates.
-2. Complete authored control-tangent unit conversion for Cartesian guided/automatic entrypoints and broaden curved-network/end-condition qualification. Different-weight BRep sections and the explicit Cartesian network constructor are supported natively; arbitrary guided network coverage and packaged delivery remain incomplete. Natural homogeneous weight overshoot also remains a refusal; it must not become an unlabelled fit.
+2. Deliver the native authored control-tangent unit conversion through packaged Cartesian guided/automatic entrypoints and broaden curved-network/end-condition qualification. Different-weight BRep sections and the explicit Cartesian network constructor are supported natively; arbitrary guided network coverage and packaged delivery remain incomplete. Natural homogeneous weight overshoot also remains a refusal; it must not become an unlabelled fit.
 3. Complete Rust/JSON/WASM/TypeScript/Rush integration and examples for the new paths. Rebuild artifacts, append fresh source/artifact evidence without rewriting historical qualification, verify browser/STEP behavior, run CI and publish through a new PR.
 4. Cleanup only after explicit confirmation: two merged local branches (`codex/cad-ready-2026-09-30`, `codex/laser-cam-integrate`) and three stale worktree registrations (`open-scad-viewer-cad-ready`, `open-scad-viewer-laser-cam`, `open-scad-viewer-laser-integrate`). Preserve the unmerged foundation branch, active CAD checkout, primary dirty checkout and stash.
+
+## Authored tangent units in Cartesian loft (2026-10-02)
+
+Guided and automatic Cartesian constructors now accept paired control-tangent
+arrays in original station dP/dt units. The arrays use the aligned section U
+basis and the respective endpoint section rational weights. Construction uses
+normalized dP/dV candidates; acceptance additionally compares original tensor
+controls against the original authored field multiplied by an outward enclosure
+of the original station extent. This includes subtraction/scaling rounding and
+never treats a rounded converted target as an exact authored derivative.
+
+JSON retains start_tangents/end_tangents names and rejects incomplete pairs or
+simultaneous normalized boundary_tangents. TypeScript exposes both authored
+control-array constructors. Native regression covers varying endpoint rational
+weights, stations [2,7], independent derivative evaluation over both boundaries,
+a reversed weighted automatic guide, incompatible endpoint derivatives and
+incomplete work. Bridge regression covers both entrypoints and certificate unit
+provenance. Rust unit tests:314 passed, capacity:2 passed, doc test:1 passed;
+bridge:5 passed. Both Rush examples lower natively; the runtime passes55 unit
+and1 emitter-parity tests. Rush/ModelGraph adds explicit construction:"cartesian"
+and numerical work budgets to existing guided/automatic entrypoints. The host
+retains numerical certificates in construction reports and rejects options that
+would otherwise be ignored by homogeneous construction. The rebuilt language package parses both examples with original stations and
+work budgets intact. Both packages were rebuilt;19 public loft tests pass, including construction of
+both Rush examples and incomplete-work/unit refusals. Finite source/artifact
+evidence is recorded in ../qualification/loft-generalization-2026-10-02/authored-tangent-runtime-v1.json.
+Browser/STEP verification, broader mapped-path integration and new CI remain pending.
+
+For mapped Cartesian loft, qualification must additionally compare final loft
+isocurves directly with the original composed section definitions. Separate
+mapping-retention and mapped-network-retention certificates do not by themselves
+establish a single requested end-to-end error budget; this remains required
+before publication.

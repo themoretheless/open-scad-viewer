@@ -16,6 +16,18 @@ fn optional_field<T: for<'a> Deserialize<'a>>(v: &Value, k: &str) -> Result<Opti
         _ => Ok(None),
     }
 }
+fn control_tangents(v: &Value) -> Result<Option<[Vec<[f64; 3]>; 2]>> {
+    let start = optional_field(v, "start_tangents")?;
+    let end = optional_field(v, "end_tangents")?;
+    let controls = match (start, end) {
+        (None, None) => None,
+        (Some(a), Some(b)) => Some([a, b]),
+        _ => return Err(input("Cartesian loft requires both endpoint tangent fields")),
+    };
+    check(controls.is_none() || v.get("boundary_tangents").is_none_or(Value::is_null),
+        "Specify authored control tangents or normalized boundary fields, not both")?;
+    Ok(controls)
+}
 pub fn dispatch(v: Value) -> Result<Value> {
     let op: String = field(&v, "op")?;
     if op=="curve_compose" {return encode(paths::compose(&field::<Vec<curve::Curve>>(&v,"curves")?)?)}
@@ -39,7 +51,10 @@ pub fn dispatch(v: Value) -> Result<Value> {
         let budget=field::<f64>(&v,"budget")?;
         let parameter_tolerance=optional_field::<f64>(&v,"parameter_tolerance")?.unwrap_or(1e-8);
         let result=if op=="surface_auto_guided_loft_cartesian" {
-            if let Some(targets)=optional_field::<[curve::Curve;2]>(&v,"boundary_tangents")? {
+            if let Some(controls)=control_tangents(&v)? {
+                loft_alignment::interpolate_cartesian_with_control_tangents(sections,&parameters,&guides,&controls,
+                    budget,parameter_tolerance,field(&v,"maxCells")?,field(&v,"maxMapEvaluations")?)?
+            } else if let Some(targets)=optional_field::<[curve::Curve;2]>(&v,"boundary_tangents")? {
                 loft_alignment::interpolate_cartesian_with_tangents(sections,&parameters,&guides,&targets,
                     budget,parameter_tolerance,field(&v,"maxCells")?,field(&v,"maxMapEvaluations")?)?
             } else {
@@ -76,9 +91,6 @@ pub fn dispatch(v: Value) -> Result<Value> {
         return Ok(json!({"surface":result.surface,"seams":result.seams,"section_error_upper":result.section_error_upper,"guide_error_upper":result.guide_error_upper}));
     }
     if op == "surface_guided_loft_cartesian" {
-        check(v.get("start_tangents").is_none_or(Value::is_null)
-            && v.get("end_tangents").is_none_or(Value::is_null),
-            "Cartesian guided loft endpoint tangent constraints are not yet qualified")?;
         let sections=field::<Vec<curve::Curve>>(&v,"curves")?;
         let parameters=field::<Vec<f64>>(&v,"parameters")?;
         let guides=field::<Vec<curve::Curve>>(&v,"guides")?;
@@ -86,7 +98,10 @@ pub fn dispatch(v: Value) -> Result<Value> {
         let tolerance=field(&v,"errorBudget")?;
         let max_cells=field(&v,"maxCells")?;
         let max_map_evaluations=field(&v,"maxMapEvaluations")?;
-        let (surface,curves,tangents)=if let Some(targets)=optional_field::<[curve::Curve;2]>(&v,"boundary_tangents")? {
+        let (surface,curves,tangents)=if let Some(controls)=control_tangents(&v)? {
+            guided_loft::interpolate_cartesian_with_control_tangents(&sections,&parameters,&guides,&guide_parameters,
+                &controls,tolerance,max_cells,max_map_evaluations)?
+        } else if let Some(targets)=optional_field::<[curve::Curve;2]>(&v,"boundary_tangents")? {
             guided_loft::interpolate_cartesian_with_tangents(&sections,&parameters,&guides,&guide_parameters,
                 &targets,tolerance,max_cells,max_map_evaluations)?
         } else {

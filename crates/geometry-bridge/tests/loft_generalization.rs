@@ -302,6 +302,29 @@ fn json_cartesian_guided_loft_retains_independent_guide_weights() {
     assert!(geometry_bridge::dispatch(auto_clamped).is_err());
     clamped["maxCells"] = json!(1);
     assert!(geometry_bridge::dispatch(clamped).is_err());
+    let mut authored = request.clone();
+    authored["parameters"] = json!([2., 7.]);
+    authored["start_tangents"] = json!([[0., 0., 0.4], [0., 0., 0.4]]);
+    authored["end_tangents"] = json!([[0., 0., 0.1], [0., 0., 0.1]]);
+    for operation in [
+        "surface_guided_loft_cartesian",
+        "surface_auto_guided_loft_cartesian",
+    ] {
+        authored["op"] = json!(operation);
+        authored["budget"] = json!(1e-6);
+        let result = geometry_bridge::dispatch(authored.clone()).unwrap();
+        for certificate in result["certificate"]["tangents"].as_array().unwrap() {
+            assert_eq!(certificate["accepted"], true);
+            assert_eq!(certificate["targetUnits"], "authored-dP/dt");
+            assert_eq!(certificate["stationDomain"], json!([2., 7.]));
+        }
+        let mut conflicting = authored.clone();
+        conflicting["boundary_tangents"] = json!([field(2.), field(0.5)]);
+        assert!(geometry_bridge::dispatch(conflicting).is_err());
+        let mut incomplete = authored.clone();
+        incomplete["maxCells"] = json!(1);
+        assert!(geometry_bridge::dispatch(incomplete).is_err());
+    }
     let mut tangents = request.clone();
     tangents["start_tangents"] = json!([[0., 0., 1.], [0., 0., 1.]]);
     assert!(geometry_bridge::dispatch(tangents).is_err());

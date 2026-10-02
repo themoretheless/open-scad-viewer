@@ -778,6 +778,16 @@ impl Compiler {
                     node["parameter_tolerance"]=raw(args.remove(at).1)?;
                 }
             }
+            for key in ["construction","error_budget","max_cells","max_map_evaluations"] {
+                if let Some(at)=args.iter().position(|(n,_)|n.as_deref()==Some(key)) {
+                    let value=raw(args.remove(at).1)?;
+                    node[key]=if key=="construction" {
+                        let mode=value["text"].as_str().ok_or_else(||crate::error("Loft construction must be a string"))?;
+                        if !["cartesian","homogeneous"].contains(&mode){return Err(crate::error("Invalid loft construction"));}
+                        json!(mode)
+                    } else {value};
+                }
+            }
             for key in ["start_tangents","end_tangents"] {
                 if let Some(at)=args.iter().position(|(n,_)|n.as_deref()==Some(key)) {node[key]=raw(args.remove(at).1)?;}
                 else if name=="control_tangent_loft_surface" {return Err(crate::error(format!("Loft requires named {key}")));}
@@ -786,7 +796,7 @@ impl Compiler {
             if args.iter().any(|(n,_)|n.is_some()){return Err(crate::error("Loft sections must be positional"));}
             let mut inputs=Vec::new();if let Some(id)=input{inputs.push(id);}
             for(_,value)in args{inputs.push(self.geometry(value)?);}
-            if !(2..=11).contains(&inputs.len()){return Err(crate::error("Loft requires 2..11 sections"));}
+            if !(2..=86).contains(&inputs.len()){return Err(crate::error("Loft requires 2..86 sections"));}
             node["inputs"]=json!(inputs);return self.add(node);
         }
         if name=="clamped_loft_surface" {

@@ -147,6 +147,48 @@ pub fn interpolate_cartesian_with_tangents(
     )
 }
 
+/// Authored control tangents retain dP/dt units on the original station domain.
+pub fn interpolate_cartesian_with_control_tangents(
+    sections: &[Curve],
+    parameters: &[f64],
+    guides: &[Curve],
+    controls: &[Vec<[f64; 3]>; 2],
+    budget: f64,
+    parameter_tolerance: f64,
+    max_cells: usize,
+    max_map_evaluations: usize,
+) -> Result<AlignedLoft> {
+    let (authored, normalized) =
+        crate::guided_loft::authored_control_tangent_fields(sections, parameters, controls)?;
+    let mut result = interpolate_cartesian_with_tangents(
+        sections,
+        parameters,
+        guides,
+        &normalized,
+        budget,
+        parameter_tolerance,
+        max_cells,
+        max_map_evaluations,
+    )?;
+    result.tangent_certificates.clear();
+    for end in 0..2 {
+        let certificate = crate::gordon::certify_authored_boundary_v_tangent(
+            &result.surface,
+            &authored[end],
+            end == 1,
+            parameters,
+            budget,
+            max_cells,
+        )?;
+        crate::numeric(
+            certificate["accepted"] == value_codec::json!(true),
+            "Automatic authored tangent unit conversion could not be certified",
+        )?;
+        result.tangent_certificates.push(certificate);
+    }
+    Ok(result)
+}
+
 fn interpolate_mode(
     sections: &[Curve],
     parameters: &[f64],

@@ -152,11 +152,99 @@ pub(crate) fn interpolate_budgeted(
     ])
 }
 
+/// Build authored dP/dt fields in the aligned section basis and normalized
+/// candidates for Cartesian construction. Original fields remain audit targets.
+pub fn authored_control_tangent_fields(
+    sections: &[Curve],
+    parameters: &[f64],
+    controls: &[Vec<[f64; 3]>; 2],
+) -> Result<([Curve; 2], [Curve; 2])> {
+    check(
+        (2..=86).contains(&sections.len()),
+        "Cartesian tangent loft needs 2..86 sections",
+    )?;
+    crate::gordon::stations(parameters, sections.len())?;
+    let aligned = crate::surface::loft_aligned(sections)?;
+    check(
+        controls
+            .iter()
+            .all(|c| c.len() == aligned.control_points.len())
+            && controls.iter().flatten().flatten().all(|x| x.is_finite()),
+        "Tangent controls must be finite and match the aligned U control count",
+    )?;
+    let fields: [Curve; 2] = std::array::from_fn(|end| Curve {
+        degree: aligned.degree_u,
+        knots: aligned.knots_u.clone(),
+        control_points: controls[end].iter().map(|p| p.to_vec()).collect(),
+        weights: aligned
+            .weights
+            .iter()
+            .map(|w| if end == 0 { w[0] } else { *w.last().unwrap() })
+            .collect(),
+        periodic: false,
+    });
+    let extent = parameters[parameters.len() - 1] - parameters[0];
+    let mut normalized = fields.clone();
+    for field in &mut normalized {
+        for point in &mut field.control_points {
+            for x in point {
+                *x *= extent;
+            }
+        }
+        field.validate()?;
+    }
+    for field in &fields {
+        field.validate()?;
+    }
+    Ok((fields, normalized))
+}
+
+pub fn interpolate_cartesian_with_control_tangents(
+    sections: &[Curve],
+    parameters: &[f64],
+    guides: &[Curve],
+    guide_parameters: &[f64],
+    controls: &[Vec<[f64; 3]>; 2],
+    tolerance: f64,
+    max_cells: usize,
+    max_map_evaluations: usize,
+) -> Result<(Surface, Vec<value_codec::Value>, Vec<value_codec::Value>)> {
+    let (authored, normalized) = authored_control_tangent_fields(sections, parameters, controls)?;
+    let (surface, curves, _) = interpolate_cartesian_with_tangents(
+        sections,
+        parameters,
+        guides,
+        guide_parameters,
+        &normalized,
+        tolerance,
+        max_cells,
+        max_map_evaluations,
+    )?;
+    let mut certificates = Vec::new();
+    for end in 0..2 {
+        let certificate = crate::gordon::certify_authored_boundary_v_tangent(
+            &surface,
+            &authored[end],
+            end == 1,
+            parameters,
+            tolerance,
+            max_cells,
+        )?;
+        crate::numeric(
+            certificate["accepted"] == value_codec::json!(true),
+            "Authored tangent unit conversion could not be certified",
+        )?;
+        certificates.push(certificate);
+    }
+    Ok((surface, curves, certificates))
+}
+
 /// Guided Cartesian interpolation with independent rational weights.
 /// Missing U boundaries are natural Cartesian splines through section endpoints.
 /// The returned numerical certificates cover authored sections, guides and the
-/// generated boundary guides. Authored control-tangent arrays use the homogeneous
-/// constructor; normalized rational fields use interpolate_cartesian_with_tangents.
+/// generated boundary guides. Authored dP/dt arrays are supported by
+/// interpolate_cartesian_with_control_tangents; normalized rational fields use
+/// interpolate_cartesian_with_tangents.
 pub fn interpolate_cartesian(
     sections: &[Curve],
     parameters: &[f64],
@@ -535,5 +623,116 @@ mod clamped_cartesian_tests {
                 }
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod authored_cartesian_tests {
+    use super::*;
+    #[test]
+    fn authored_units_retain_varying_rational_fields_and_refuse_exhaustion() {
+        let mut first = crate::primitives::line([0., 0., 0.], [1., 0., 0.]).unwrap();
+        first.weights = vec![1., 2.];
+        let mut last = first.clone();
+        for point in &mut last.control_points {
+            point[2] = 1.;
+        }
+        last.weights = vec![3., 1.];
+        let guide = crate::primitives::line([0., 0., 0.], [0., 0., 1.]).unwrap();
+        let controls = [
+            vec![[0., 0., 0.2], [0., 0., 0.4]],
+            vec![[0., 0., 0.2], [0., 0., 0.1]],
+        ];
+        let sections = [first, last];
+        let (surface, _, certificates) = interpolate_cartesian_with_control_tangents(
+            &sections,
+            &[2., 7.],
+            &[guide.clone()],
+            &[0.],
+            &controls,
+            1e-6,
+            50000,
+            200000,
+        )
+        .unwrap();
+        assert!(
+            certificates
+                .iter()
+                .all(|c| c["accepted"] == value_codec::json!(true)
+                    && c["targetUnits"] == value_codec::json!("authored-dP/dt"))
+        );
+        let (authored, _) =
+            authored_control_tangent_fields(&sections, &[2., 7.], &controls).unwrap();
+        for end in 0..2 {
+            for i in 0..=100 {
+                let u = i as f64 / 100.;
+                let expected = authored[end].evaluate(u).unwrap().point;
+                let (_, dv) = surface
+                    .evaluate(u, end as f64)
+                    .unwrap()
+                    .first_derivatives()
+                    .unwrap();
+                for k in 0..3 {
+                    assert!((dv[k] / 5. - expected[k]).abs() < 1e-10);
+                }
+            }
+        }
+        assert!(
+            interpolate_cartesian_with_control_tangents(
+                &sections,
+                &[2., 7.],
+                &[guide],
+                &[0.],
+                &controls,
+                1e-6,
+                1,
+                200000
+            )
+            .is_err()
+        );
+    }
+    #[test]
+    fn automatic_authored_units_survive_reversed_guide() {
+        let sections = [
+            crate::primitives::line([0., 0., 0.], [1., 0., 0.]).unwrap(),
+            crate::primitives::line([0., 0., 1.], [1., 0., 1.]).unwrap(),
+        ];
+        let mut guide = crate::primitives::line([0.5, 0., 1.], [0.5, 0., 0.]).unwrap();
+        guide.weights = vec![3., 1.];
+        let controls = [vec![[0., 0., 0.6]; 2], vec![[0., 0., 1. / 15.]; 2]];
+        let result = crate::loft_alignment::interpolate_cartesian_with_control_tangents(
+            &sections,
+            &[2., 7.],
+            &[guide],
+            &controls,
+            1e-6,
+            1e-8,
+            50000,
+            200000,
+        )
+        .unwrap();
+        let mut conflicting = controls.clone();
+        conflicting[0][0][2] = 0.2;
+        let forward = crate::primitives::line([0.5, 0., 0.], [0.5, 0., 1.]).unwrap();
+        assert!(
+            interpolate_cartesian_with_control_tangents(
+                &sections,
+                &[2., 7.],
+                &[forward],
+                &[0.5],
+                &conflicting,
+                1e-6,
+                50000,
+                200000
+            )
+            .is_err()
+        );
+        assert_eq!(result.reversed, vec![true]);
+        assert!(
+            result
+                .tangent_certificates
+                .iter()
+                .all(|c| c["accepted"] == value_codec::json!(true))
+        );
     }
 }

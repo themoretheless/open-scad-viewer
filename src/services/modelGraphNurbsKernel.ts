@@ -13,7 +13,7 @@ import { exportMeshFormat, meshExportBase64, type MeshExportFormat } from './mes
 import { compileModelGraphNurbs } from './modelGraphNurbsCompiler';
 import { validateNurbsCurve, evaluateNurbsCurve, insertNurbsKnot, elevateNurbsCurve, trimNurbsCurve, reverseNurbsCurve, nurbsCurveBounds, type NurbsCurve } from './nurbsCurve';
 import { validateNurbsSurface, evaluateNurbsSurface, insertNurbsSurfaceKnot, elevateNurbsSurface, trimNurbsSurface, reverseNurbsSurface, isoNurbsCurve, nurbsSurfaceBounds, type NurbsSurface } from './nurbsSurface';
-import {certifyNurbsCurveFoundation, certifyNurbsSurfaceFoundation} from './nurbsFoundation';
+import {createCartesianGuidedLoft, createControlTangentCartesianGuidedLoft, createAutoCartesianGuidedLoft, createAutoControlTangentCartesianGuidedLoft, certifyNurbsCurveFoundation, certifyNurbsSurfaceFoundation} from './nurbsFoundation';
 import { loftAlignedNurbsCurves,sweepNurbsCurve,loftNurbsCurves, extrudeNurbsCurve, revolveNurbsCurve } from './nurbsConstructors';
 import { tessellateNurbsSurface, thickenNurbsMesh, exportNurbsStl } from './geometry/tessellation';
 type Mesh = ReturnType<typeof tessellateNurbsSurface>;
@@ -174,6 +174,14 @@ export function buildOwnNurbs(document: unknown, request: OwnNurbsRequest) {
                 case 'surface_sweep': result={kind:'surface',data:sweepNurbsCurve(needCurve(n.inputs[0]),needCurve(n.inputs[1]))};break;
                 case 'control_tangent_loft_surface': result={kind:'surface',data:controlTangentLoftNurbsCurves(n.inputs.map(needCurve),n.parameters,n.start_tangents,n.end_tangents)};break;
                 case 'auto_guided_loft_surface': {
+                    if(n.construction==='cartesian') {
+                        const curves=n.inputs.map(needCurve),guides=n.guides.map(needCurve);
+                        const built=n.start_tangents && n.end_tangents
+                            ?createAutoControlTangentCartesianGuidedLoft(curves,n.parameters,guides,n.start_tangents,n.end_tangents,n.budget,n.parameter_tolerance,n.max_cells,n.max_map_evaluations)
+                            :createAutoCartesianGuidedLoft(curves,n.parameters,guides,n.budget,n.parameter_tolerance,n.max_cells,n.max_map_evaluations);
+                        constructionReports[key]={...built.certificate,guideParameters:built.guide_parameters,guideOrder:built.guide_order,reversed:built.reversed,sectionErrorUpper:built.section_error_upper,guideErrorUpper:built.guide_error_upper};
+                        result={kind:'surface',data:built.surface};break;
+                    }
                     const built=autoGuidedLoftNurbsCurves(n.inputs.map(needCurve),n.parameters,n.guides.map(needCurve),n.budget,n.parameter_tolerance);
                     constructionReports[key]={method:"automatic-loft-alignment",guideParameters:built.guide_parameters,guideOrder:built.guide_order,reversed:built.reversed,sectionErrorUpper:built.section_error_upper,guideErrorUpper:built.guide_error_upper};
                     result={kind:'surface',data:built.surface};break;
@@ -187,7 +195,17 @@ export function buildOwnNurbs(document: unknown, request: OwnNurbsRequest) {
                 }
                 case 'brep_natural_loft': result={kind:'brep',data:createNaturalBrepSectionLoft(n.sections.map(s=>s.map(r=>r.map(needCurve))),n.parameters)};break;
                 case 'brep_capped_loft': result={kind:'brep',data:createCappedBrepLoftSurfaces(n.start.map(r=>r.map(needCurve)),n.end.map(r=>r.map(needCurve)),n.sides.map(r=>r.map(needSurface)))};break;
-                case 'guided_loft_surface': result={kind:'surface',data:guidedLoftNurbsCurves(n.inputs.map(needCurve),n.parameters,n.guides.map(needCurve),n.guide_parameters,n.start_tangents,n.end_tangents)};break;
+                case 'guided_loft_surface': {
+                    if(n.construction==='cartesian') {
+                        const curves=n.inputs.map(needCurve),guides=n.guides.map(needCurve);
+                        const built=n.start_tangents && n.end_tangents
+                            ?createControlTangentCartesianGuidedLoft(curves,n.parameters,guides,n.guide_parameters,n.start_tangents,n.end_tangents,n.error_budget,n.max_cells,n.max_map_evaluations)
+                            :createCartesianGuidedLoft(curves,n.parameters,guides,n.guide_parameters,n.error_budget,n.max_cells,n.max_map_evaluations);
+                        constructionReports[key]=built.certificate;
+                        result={kind:'surface',data:built.surface};break;
+                    }
+                    result={kind:'surface',data:guidedLoftNurbsCurves(n.inputs.map(needCurve),n.parameters,n.guides.map(needCurve),n.guide_parameters,n.start_tangents,n.end_tangents)};break;
+                }
                 case 'clamped_loft_surface': result={kind:'surface',data:clampedLoftNurbsCurves(n.inputs.map(needCurve),n.parameters,n.start_tangent,n.end_tangent)};break;
 
                 case 'line_curve': result={kind:'curve',data:lineNurbsCurve(n.start,n.end)};break;
