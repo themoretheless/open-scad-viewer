@@ -2155,6 +2155,45 @@ pub fn build_partial_annular_preview(model: &Model, edge_index: usize, radius: f
         operation:"persist".into(), entity_kind:"body".into(),
         parents:vec![body_id], children:vec![body_id],
     });
+    let mut face_relations=vec![vec![];result.faces.len()];
+    if result.faces.len()!=27 {
+        return Err(refuse(CODE,"Unexpected partial annular preview face layout"));
+    }
+    for (target_index,target) in result.faces.iter().enumerate() {
+        // The prototype author fixes this face ordering: three
+        // five-face blend sectors, then three four-face unrounded sectors.
+        let role=if target_index<15 {target_index%5}
+            else { [1,2,3,4][(target_index-15)%4] };
+        if role==0 {continue;} // New blend surface, not retained support.
+        let candidates:Vec<_>=model.faces.iter().enumerate().filter_map(|(source_index,source)| {
+            let s=&source.surface;
+            if role==1 || role==4 {
+                let z=if role==1 {height} else {0.};
+                return (s.degree_u==1 && s.degree_v==1 &&
+                    s.control_points.iter().flatten().all(|p|
+                        (dot3(sub3([p[0],p[1],p[2]],origin),axis)-z).abs()<=tolerance))
+                    .then_some(source_index);
+            }
+            if s.degree_u!=2 || s.degree_v!=1 {return None;}
+            let radial_point=|p:&Vec<f64>| {
+                let d=sub3([p[0],p[1],p[2]],origin);let z=dot3(d,axis);
+                [d[0]-z*axis[0],d[1]-z*axis[1],d[2]-z*axis[2]]
+            };
+            let a=radial_point(&s.control_points[0][0]);
+            let b=radial_point(&s.control_points[2][0]);
+            let expected=if role==2 {outer} else {inner};
+            if (dot3(a,a).sqrt()-expected).abs()>tolerance {return None;}
+            let controls:Vec<_>=target.surface.control_points.iter().flatten().map(radial_point).collect();
+            let contained=controls.iter().all(|p|dot3(*p,a)>=-outer*tolerance && dot3(*p,b)>=-outer*tolerance);
+            let interior=controls.iter().any(|p|dot3(*p,a)>outer*tolerance && dot3(*p,b)>outer*tolerance);
+            (contained && interior).then_some(source_index)
+        }).collect();
+        if candidates.len()!=1 {
+            return Err(refuse(CODE,"Retained preview support has ambiguous source ownership"));
+        }
+        face_relations[target_index]=candidates;
+    }
+    Model::record_relations(&mut result.1.lineage,"face",&model.1.faces,&result.1.faces,&face_relations);
     result.refresh_change_set(&[model]);
     result.validate()?;
     Ok(result)

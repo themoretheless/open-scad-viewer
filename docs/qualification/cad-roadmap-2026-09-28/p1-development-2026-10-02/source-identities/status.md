@@ -16,7 +16,10 @@ reload must retain that body identity and complete names.
 The source model remains unchanged. The report includes the full ChangeSet.
 
 Complete generated naming and a structurally valid ChangeSet do not establish
-correct ownership of a source edit. Parentage of sector faces needs explicit
-qualification before this preview can become a user command.
+correct ownership of a source edit. The four tested arcs now have explicit
+source parentage for all 24 retained-support sector faces; three blend faces
+are generated. Each retained-support face has exactly one source parent and
+all ten source faces are represented. Ambiguous support ownership is refused.
+The native test verifies these relations as well as ChangeSet validity.
 The reconstruction subdivides original annular caps and side charts, so source
 face ownership must describe splits rather than pretend all faces persisted.

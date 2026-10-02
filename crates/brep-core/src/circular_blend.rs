@@ -1456,6 +1456,35 @@ mod tests {
                 assert_eq!(result.bodies.len(), 1);
                 assert!(result.persistent_naming_complete());
                 assert!(result.1.change_set.validate().is_ok());
+                let face_changes: Vec<_> = result
+                    .1
+                    .change_set
+                    .changes
+                    .iter()
+                    .filter(|change| {
+                        change.topo_kind == crate::TopoKind::Face && !change.parents.is_empty()
+                    })
+                    .collect();
+                for (index, id) in result.1.faces.iter().enumerate() {
+                    let owners: Vec<_> = face_changes
+                        .iter()
+                        .filter(|change| change.children.contains(id))
+                        .collect();
+                    if [0, 5, 10].contains(&index) {
+                        assert!(owners.is_empty());
+                    } else {
+                        assert_eq!(owners.len(), 1);
+                        assert_eq!(owners[0].parents.len(), 1);
+                        assert!(source.1.faces.contains(&owners[0].parents[0]));
+                    }
+                }
+                for source_face in &source.1.faces {
+                    assert!(
+                        face_changes
+                            .iter()
+                            .any(|change| change.parents.contains(source_face))
+                    );
+                }
                 assert_eq!(source.1.bodies, result.1.bodies);
                 let restored: crate::Model =
                     value_codec::from_str(&value_codec::to_string(&result).unwrap()).unwrap();
