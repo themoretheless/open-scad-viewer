@@ -25,7 +25,14 @@ verifies job submission for the selected edge, unchanged document when Apply
 is invoked, and a late worker response ignored after Escape. This test holds
 the worker response; it does not prove actual browser display geometry.
 
-The fixed WASM rebuild and scripts/check-cad-partial-preview-wasm.mts must
-complete before runtime is qualified. Actual browser display and input checks,
+The fixed WASM rebuild and scripts/check-cad-partial-preview-wasm.mts pass.
+Eight actual WASM results cover four arcs in the original and rotated frame:
+body identity, source immutability, explicit preview qualification, finite
+indexed display mesh, and worker reply validation. Each display has 3857
+vertices and 7714 triangles. WASM SHA-256 is recorded in partial-preview-wasm/report.json.
+Production Vite build passes; verify-dist checks 140 artifacts. Asset bytes
+increase by 24841 to 7248560; budgets retain the previous measured headroom.
+
+Actual browser display and input checks,
 complete intersection and transition proofs, and document commit acceptance
 remain open.
