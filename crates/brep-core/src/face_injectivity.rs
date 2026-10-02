@@ -48,6 +48,21 @@ pub fn inspect(model: &Model, max_spans: usize) -> Result<Report> {
 mod tests {
     use super::*;
     #[test]
+    fn polar_torus_proof_survives_rigid_placement_without_promoting_collapsed_tips() {
+        let base=crate::circular_blend::partial_annular_quarter(20.,5.,6.,1.25,1.,1e-7).unwrap();
+        let (sa,ca)=0.37_f64.sin_cos();let (sb,cb)=(-0.61_f64).sin_cos();
+        let placed=crate::transform::affine(&base,[[ca*cb,-sa,ca*sb,17.],[sa*cb,ca,sa*sb,-9.],[-sb,0.,cb,23.],[0.,0.,0.,1.]]).unwrap();
+        let before=format!("{placed:?}");
+        let r=inspect(&placed,4096).unwrap();
+        assert!(!r.all_faces_injective);
+        assert_eq!(r.faces.iter().filter(|f|f.result.as_ref().is_some_and(|r|r.proven)).count(),25);
+        let torus=r.faces[5].result.as_ref().unwrap();
+        assert!(torus.proven);assert_eq!(torus.reason,"global-polar-projection-contraction");
+        assert!(torus.polar_projection.is_some());assert!(torus.contraction_upper.unwrap()<1.);
+        for i in [0,10] { assert_eq!(r.faces[i].result.as_ref().unwrap().reason,"collapsed-boundary-requires-quotient-proof"); }
+        assert_eq!(format!("{placed:?}"),before);
+    }
+    #[test]
     fn perspective_projection_certifies_every_sphere_chart_with_shared_budget(){
         let model=crate::analytic::sphere(3.).unwrap();let before=format!("{model:?}");
         let r=inspect(&model,1000).unwrap();assert!(r.all_faces_injective);assert_eq!(r.spans,968);

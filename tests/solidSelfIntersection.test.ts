@@ -5,6 +5,21 @@ const fixture=JSON.parse(readFileSync(new URL('../docs/qualification/cad-roadmap
 const {model,toleranceUv,op,...limits}=fixture.request
 const expectation=selfIntersectionExpectation(model,toleranceUv,limits,6)
 const report={...fixture.result,scope:'within-face-and-distinct-face-pairs',maxSpans:6,spans:6,allFacesInjective:true,absenceProven:true,faces:model.faces.map((_:unknown,face:number)=>({face,result:{proven:true,projection:[0,1],contractionUpper:0.01,spans:1,reason:'global-projection-contraction'}}))}
+it('binds native polar proof coefficients to the source and leaves collapsed tips unresolved',()=>{
+ const f=JSON.parse(readFileSync(new URL('../docs/qualification/cad-roadmap-2026-09-28/p1-development-2026-10-02/polar-injectivity/native.json',import.meta.url),'utf8'))
+ const {model,toleranceUv,maxSpans,op,...limits}=f.request
+ const e=selfIntersectionExpectation(model,toleranceUv,limits,maxSpans),r=f.result
+ expect(validSelfIntersection(e,r)).toBe(true)
+ expect(r.faces.filter((f:any)=>f.result?.proven)).toHaveLength(25)
+ expect(r.absenceProven).toBe(false)
+ for(const patch of [{polarProjection:null},{polarProjection:[[1,0,0,0],[0,1,0,0],[0,0,1,0]]},{polarProjection:[[NaN,0,0,0],[0,1,0,0],[0,0,1,0]]},{spans:193},{spans:448},{contractionUpper:1},{projection:[0,1]},{proven:false}]){
+  const copy=structuredClone(r);Object.assign(copy.faces[5].result,patch)
+  expect(validSelfIntersection(e,copy)).toBe(false)
+ }
+ const forged=structuredClone(r)
+ Object.assign(forged.faces[0].result,{proven:true,projection:[0,1],reason:'global-projection-contraction',spans:1,contractionUpper:0.01})
+ expect(validSelfIntersection(e,forged)).toBe(false)
+})
 it('validates aggregate proof only when every face and pair is covered',()=>{
  expect(validSelfIntersection(expectation,report)).toBe(true)
  for(const patch of [{absenceProven:false},{allFacesInjective:false},{spans:5},{maxSpans:7},{faces:report.faces.slice(1)},{solidGeometryStatus:'certified'}])expect(validSelfIntersection(expectation,{...report,...patch})).toBe(false)

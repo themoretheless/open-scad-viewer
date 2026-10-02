@@ -2,8 +2,8 @@ import type {NurbsBrep} from './geometry/brep'
 import {callGeometryRust} from './geometry/kernel'
 import {faceContactExpectation,validFaceContacts,type FaceContacts,type FaceContactLimits} from './solidFaceContacts'
 export interface FaceInjectivity {
- proven:boolean;projection:[number,number]|null;linearProjection?:[[number,number,number],[number,number,number]]|null;projectiveProjection?:number[][]|null;contractionUpper:number|null;spans:number
- reason:'global-projection-contraction'|'global-linear-projection-contraction'|'global-projective-projection-contraction'|'projection-not-proven'|'work-limit'|'periodic-domain'
+ proven:boolean;projection:[number,number]|null;linearProjection?:[[number,number,number],[number,number,number]]|null;projectiveProjection?:number[][]|null;polarProjection?:number[][]|null;contractionUpper:number|null;spans:number
+ reason:'global-projection-contraction'|'global-linear-projection-contraction'|'global-projective-projection-contraction'|'global-polar-projection-contraction'|'collapsed-boundary-requires-quotient-proof'|'projection-not-proven'|'work-limit'|'periodic-domain'
 }
 export interface SelfIntersection extends Omit<FaceContacts,'scope'> {
  scope:'within-face-and-distinct-face-pairs';absenceProven:boolean;allFacesInjective:boolean
@@ -15,7 +15,32 @@ export function selfIntersectionExpectation(model:NurbsBrep,toleranceUv:number,l
   const anchor=s.controlPoints[s.controlPoints.length-1][0][axis]
   return [s.controlPoints[0][0][axis],anchor,s.controlPoints.reduce((n,row)=>row.reduce((m,p)=>Math.max(m,Math.abs(p[axis]-anchor)),n),0)]
  }))
- return {...faceContactExpectation(model,toleranceUv,limits),maxSpans,projectiveData,faceSpans:model.faces.map(({surface:s})=>spans(s.knotsU,s.degreeU,s.controlPoints.length)*spans(s.knotsV,s.degreeV,s.controlPoints[0].length))}
+ const collapsed=model.faces.map(({surface:s})=>{
+  const p=s.controlPoints,eq=(a:number[],b:number[])=>a.every((n,k)=>n===b[k])
+  return [0,p.length-1].some(i=>{
+   const knots=i===0?s.knotsU.slice(0,s.degreeU+1):s.knotsU.slice(p.length)
+   return knots.every(k=>k===knots[0])&&p[i].every(x=>eq(x,p[i][0]))
+  })||[0,p[0].length-1].some(j=>{
+   const knots=j===0?s.knotsV.slice(0,s.degreeV+1):s.knotsV.slice(p[0].length)
+   return knots.every(k=>k===knots[0])&&p.every(row=>eq(row[j],p[0][j]))
+  })
+ })
+ return {...faceContactExpectation(model,toleranceUv,limits),maxSpans,projectiveData,collapsed,polarCandidates:model.faces.map(({surface})=>polarCandidates(surface)),faceSpans:model.faces.map(({surface:s})=>spans(s.knotsU,s.degreeU,s.controlPoints.length)*spans(s.knotsV,s.degreeV,s.controlPoints[0].length))}
+}
+function polarCandidates(s:NurbsBrep['faces'][number]['surface']):number[][][]{
+ const p=s.controlPoints,w=s.weights
+ if(s.degreeU!==2||p.length!==3||s.degreeV>8||!s.knotsU.slice(0,3).every(k=>k===s.knotsU[2])||!s.knotsU.slice(3).every(k=>k===s.knotsU[3])||!s.knotsV.slice(0,s.degreeV+1).every(k=>k===s.knotsV[s.degreeV]))return []
+ const dot=(a:number[],b:number[])=>a[0]*b[0]+a[1]*b[1]+a[2]*b[2]
+ const cross=(a:number[],b:number[])=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]]
+ const first=p[0][0],last=p[2][0],weights=[w[0][0],2*w[1][0],w[2][0]],denominator=weights[0]+weights[1]+weights[2]
+ const middle=first.map((n,k)=>(n*weights[0]+p[1][0][k]*weights[1]+last[k]*weights[2])/denominator)
+ const a=middle.map((n,k)=>n-first[k]),b=last.map((n,k)=>n-first[k]),n=cross(a,b),squared=dot(n,n)
+ if(!Number.isFinite(squared)||squared===0)return []
+ const an=dot(a,a),bn=dot(b,b),bx=cross(b,n),nx=cross(n,a)
+ const center=first.map((v,k)=>v+(an*bx[k]+bn*nx[k])/(2*squared)),radial=middle.map((v,k)=>v-center[k]),radius=Math.sqrt(dot(radial,radial)),normal=Math.sqrt(dot(n,n))
+ if(!center.every(Number.isFinite)||!Number.isFinite(radius)||radius===0||!Number.isFinite(normal)||normal===0)return []
+ const x=radial.map(v=>v/radius),z=n.map(v=>v/normal),y=cross(z,x),affine=(d:number[])=>[...d,-dot(d,center)]
+ return [1,-1].map(sign=>[affine(x),affine(y),affine(z.map(v=>v*sign))]).filter(c=>c.flat().every(Number.isFinite))
 }
 const linearProjections=[[[1,1,0],[0,0,1]],[[1,-1,0],[0,0,1]],[[1,0,1],[0,1,0]],[[1,0,-1],[0,1,0]],[[0,1,1],[1,0,0]],[[0,1,-1],[1,0,0]]]
 export function validSelfIntersection(e:ReturnType<typeof selfIntersectionExpectation>,value:unknown):value is SelfIntersection {
@@ -27,11 +52,12 @@ export function validSelfIntersection(e:ReturnType<typeof selfIntersectionExpect
   const x=f.result
   if(used===e.maxSpans){if(x!==null)return false;all=false;continue}
   if(!x||typeof x.proven!=='boolean'||!Number.isSafeInteger(x.spans)||x.spans<0)return false
-  const periodic=e.domains[i].periodic,remaining=e.maxSpans-used,base=periodic?0:Math.min(e.faceSpans[i],remaining)
+  const periodic=e.domains[i].periodic,pole=e.collapsed[i],remaining=e.maxSpans-used,base=periodic||pole?0:Math.min(e.faceSpans[i],remaining)
   if(x.spans<base||x.spans>remaining)return false
   used+=x.spans
   if(x.proven){
-   if(periodic||typeof x.contractionUpper!=='number'||!Number.isFinite(x.contractionUpper)||x.contractionUpper<0||x.contractionUpper>=1)return false
+   if(periodic||pole||typeof x.contractionUpper!=='number'||!Number.isFinite(x.contractionUpper)||x.contractionUpper<0||x.contractionUpper>=1)return false
+   if(x.reason!=='global-polar-projection-contraction'&&x.polarProjection!=null)return false
    if(x.reason==='global-projection-contraction'){
     if(x.projectiveProjection!=null)return false
     if(x.spans!==e.faceSpans[i]||x.linearProjection!=null||!Array.isArray(x.projection)||x.projection.length!==2||![[0,1],[0,2],[1,2]].some(p=>p[0]===x.projection![0]&&p[1]===x.projection![1]))return false
@@ -50,14 +76,22 @@ export function validSelfIntersection(e:ReturnType<typeof selfIntersectionExpect
      return basis.every((row,j)=>row.every((n,k)=>n===(j<2?(k===3?-data[free[j]][0]:k===free[j]?1:0):k===3?data[axis][2]-sign*data[axis][1]:k===axis?sign:0)))
     })
     if(candidate<0||x.spans!==e.faceSpans[i]*(97+16*(candidate+1)))return false
+   }else if(x.reason==='global-polar-projection-contraction'){
+    const basis=x.polarProjection
+    if(x.projection!==null||x.linearProjection!==null||x.projectiveProjection!==null||!Array.isArray(basis)||basis.length!==3||!basis.every(row=>Array.isArray(row)&&row.length===4&&row.every(Number.isFinite)))return false
+    const candidate=e.polarCandidates[i].findIndex(c=>c.every((row,j)=>row.every((n,k)=>n===basis[j][k])))
+    if(candidate<0||x.spans!==e.faceSpans[i]*(193+256*(candidate+1)))return false
    }else return false
   }else{
    all=false
-   if(x.projection!==null||x.linearProjection!=null||x.projectiveProjection!=null||x.contractionUpper!==null)return false
+   if(x.projection!==null||x.linearProjection!=null||x.projectiveProjection!=null||x.polarProjection!=null||x.contractionUpper!==null)return false
    if(periodic){if(x.spans!==0||x.reason!=='periodic-domain')return false}
+   else if(pole){if(x.spans!==0||x.reason!=='collapsed-boundary-requires-quotient-proof')return false}
    else if(x.reason==='work-limit'){if(x.spans!==remaining)return false}
    else if(x.reason==='projection-not-proven'){
-    const expected=e.faceSpans[i]*(x.projectiveProjection!==undefined?193:x.linearProjection===undefined?1:97)
+    const previous=e.faceSpans[i]*(x.projectiveProjection!==undefined?193:x.linearProjection===undefined?1:97)
+    const polar=x.polarProjection===undefined?0:Math.min(e.polarCandidates[i].length,Math.max(0,Math.floor((remaining-previous)/(e.faceSpans[i]*256))))
+    const expected=previous+polar*e.faceSpans[i]*256
     if(x.spans!==expected)return false
    }else return false
   }

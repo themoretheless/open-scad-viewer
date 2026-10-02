@@ -9,6 +9,7 @@ pub struct Report {
     pub projection: Option<[usize; 2]>,
     pub linear_projection: Option<[[f64;3];2]>,
     pub projective_projection: Option<[[f64;4];3]>,
+    pub polar_projection: Option<[[f64;4];3]>,
     pub contraction_upper: Option<f64>,
     pub spans: usize,
     pub reason: &'static str,
@@ -133,6 +134,7 @@ pub fn certify(s: &Surface, max_spans: usize) -> Result<Report> {
         projection: None,
         linear_projection: None,
         projective_projection: None,
+        polar_projection: None,
         contraction_upper: None,
         spans: 0,
         reason: "projection-not-proven",
@@ -212,6 +214,20 @@ pub fn certify(s: &Surface, max_spans: usize) -> Result<Report> {
             report.reason="global-projective-projection-contraction";return Ok(report);
         }
     }
+    let cells = polar_cells(s,16);
+    if s.degree_u <= 8 && s.degree_v <= 8 && cells <= max_spans-report.spans {
+        for coordinates in polar_projection_candidates(s)? {
+            if cells > max_spans-report.spans { break; }
+            let proof = certify_polar_projection(s,coordinates,16,cells)?;
+            // Reserve the complete coverage cost even if a candidate is
+            // rejected early. The shared budget never understates work.
+            report.spans += cells;
+            if let Some(q) = proof {
+                report.proven=true;report.polar_projection=Some(coordinates);report.contraction_upper=Some(q);
+                report.reason="global-polar-projection-contraction";return Ok(report);
+            }
+        }
+    }
     if report.spans==max_spans{report.reason="work-limit";}
     Ok(report)
 }
@@ -244,6 +260,170 @@ pub fn certify_linear_projection(s:&Surface,basis:[[f64;3];2],max_cells:usize)->
 pub fn certify_projective_projection(s:&Surface,numerators:[[f64;4];2],denominator:[f64;4],max_cells:usize)->Result<Option<f64>>{
     Ok(projective_projection_work(s,numerators,denominator,max_cells)?.0)
 }
+/// A nonlinear projection F=(atan2(y,x), sqrt(x*x+y*y)-z), with x,y,z
+/// supplied as affine functions of the original position. A strictly positive
+/// x hull establishes one continuous angle branch. One common Jacobian hull
+/// and contraction over the entire chart prove global injectivity; successful
+/// local cells alone are insufficient. Collapsed boundaries are not quotiented.
+pub fn certify_polar_projection(
+    s: &Surface,
+    coordinates: [[f64; 4]; 3],
+    subdivisions: usize,
+    max_cells: usize,
+) -> Result<Option<f64>> {
+    s.validate()?;
+    check(
+        subdivisions > 0 && subdivisions <= 64 && max_cells > 0 && max_cells <= 100_000
+            && coordinates.iter().flatten().all(|x| x.is_finite()),
+        "Polar projection requires finite coordinates, 1..64 subdivisions and 1..100000 cells",
+    )?;
+    if s.periodic_u || s.periodic_v || s.degree_u > 8 || s.degree_v > 8 { return Ok(None); }
+    // Surface validation rejects disconnected full-multiplicity internal knots.
+    let required = polar_cells(s,subdivisions);
+    if required > max_cells { return Ok(None); }
+    let mut global = [[I { lo: f64::INFINITY, hi: f64::NEG_INFINITY }; 2]; 2];
+    let mut cells = 0;
+    for u in s.degree_u..s.control_points.len() {
+        for v in s.degree_v..s.control_points[0].len() {
+            let ranges = [[s.knots_u[u], s.knots_u[u+1]], [s.knots_v[v], s.knots_v[v+1]]];
+            if ranges.iter().any(|r| r[0] >= r[1]) { continue; }
+            for i in 0..subdivisions { for j in 0..subdivisions {
+                if cells == max_cells { return Ok(None); }
+                let domain = std::array::from_fn(|k| {
+                    let n = [i,j][k]; let [lo,hi] = ranges[k];
+                    [if n == 0 { lo } else { lo+(hi-lo)*(n as f64/subdivisions as f64) },
+                     if n+1 == subdivisions { hi } else { lo+(hi-lo)*((n+1) as f64/subdivisions as f64) }]
+                });
+                cells += 1;
+                let Some(jac) = polar_section_jacobian(s, [u,v], domain, coordinates)? else { return Ok(None); };
+                for row in 0..2 { for axis in 0..2 {
+                    global[row][axis] = hull([global[row][axis],jac[row][axis]].into_iter());
+                }}
+            }}
+        }
+    }
+    Ok(contraction(global)?.filter(|q| *q < 1.))
+}
+fn polar_cells(s: &Surface, subdivisions: usize) -> usize {
+    let active = |knots: &[f64],degree: usize,count: usize|
+        (degree..count).filter(|&k| knots[k] < knots[k+1]).count();
+    active(&s.knots_u,s.degree_u,s.control_points.len())
+        * active(&s.knots_v,s.degree_v,s.control_points[0].len()) * subdivisions * subdivisions
+}
+fn polar_projection_candidates(s: &Surface) -> Result<Vec<[[f64;4];3]>> {
+    // Restrict automatic frame guesses to one clamped quadratic iso-curve.
+    // The public verifier also accepts other degrees and explicit frames.
+    if s.degree_u != 2 || s.control_points.len() != 3
+        || !s.knots_u[..3].iter().all(|k| *k == s.knots_u[2])
+        || !s.knots_u[3..].iter().all(|k| *k == s.knots_u[3])
+        || !s.knots_v[..=s.degree_v].iter().all(|k| *k == s.knots_v[s.degree_v]) {
+        return Ok(Vec::new());
+    }
+    let first: [f64;3]=s.control_points[0][0].as_slice().try_into().unwrap();
+    let last: [f64;3]=s.control_points[2][0].as_slice().try_into().unwrap();
+    let weights=[s.weights[0][0],2.*s.weights[1][0],s.weights[2][0]];
+    let denominator=weights[0]+weights[1]+weights[2];
+    let middle: [f64;3]=std::array::from_fn(|k|(first[k]*weights[0]+s.control_points[1][0][k]*weights[1]+last[k]*weights[2])/denominator);
+    let a=std::array::from_fn(|k|middle[k]-first[k]);let b=std::array::from_fn(|k|last[k]-first[k]);
+    let n=math_core::cross(a,b);let squared=math_core::dot(n,n);
+    if !squared.is_finite() || squared==0. { return Ok(Vec::new()); }
+    let an=math_core::dot(a,a);let bn=math_core::dot(b,b);
+    let bx=math_core::cross(b,n);let nx=math_core::cross(n,a);
+    let center: [f64;3]=std::array::from_fn(|k|first[k]+(an*bx[k]+bn*nx[k])/(2.*squared));
+    let radial=std::array::from_fn(|k|middle[k]-center[k]);let radius=math_core::norm(radial);let normal=math_core::norm(n);
+    if center.iter().any(|x|!x.is_finite()) || !radius.is_finite() || radius==0. || !normal.is_finite() || normal==0. { return Ok(Vec::new()); }
+    let x=radial.map(|v|v/radius);let z=n.map(|v|v/normal);let y=math_core::cross(z,x);
+    let affine=|direction: [f64;3]| [direction[0],direction[1],direction[2],-math_core::dot(direction,center)];
+    let candidates=[1.,-1.].map(|sign|[affine(x),affine(y),affine(z.map(|v|v*sign))]);
+    Ok(candidates.into_iter().filter(|c|c.iter().flatten().all(|v|v.is_finite())).collect())
+}
+fn polar_section_jacobian(s: &Surface, span: [usize;2], domain: [[f64;2];2], coordinates: [[f64;4];3]) -> Result<Option<[[I;2];2]>> {
+    let source = crate::curve_surface_composition::surface_net_on(s, span, domain)?;
+    let mut net = Vec::new();
+    for row in source {
+        let mut projected = Vec::new();
+        for h in row {
+            let mut out = [I::point(0.);4]; out[3] = h[3];
+            for k in 0..3 { for d in 0..4 {
+                out[k] = out[k].add(h[d].mul(I::point(coordinates[k][d]))?)?;
+            }}
+            projected.push(out);
+        }
+        net.push(projected);
+    }
+    let mut position = [I { lo: f64::INFINITY, hi: f64::NEG_INFINITY };3];
+    for h in net.iter().flatten() {
+        if h[3].lo <= 0. { return Ok(None); }
+        for k in 0..3 { position[k] = hull([position[k],h[k].div(h[3])?].into_iter()); }
+    }
+    let [x,y,_] = position;
+    if x.lo <= 0. { return Ok(None); }
+    // Squaring a signed interval is not the independent product I*I.
+    let square = |a: I| -> Result<I> {
+        let minimum = if a.lo <= 0. && a.hi >= 0. { 0. } else { a.lo.abs().min(a.hi.abs()) };
+        let maximum = a.lo.abs().max(a.hi.abs());
+        I::new((minimum*minimum).next_down().max(0.),(maximum*maximum).next_up())
+    };
+    let radial_squared = square(x)?.add(square(y)?)?;
+    if radial_squared.lo <= 0. { return Ok(None); }
+    let components: [PolarPoly;4] = std::array::from_fn(|k| net.iter().map(|row| row.iter().map(|h| h[k]).collect()).collect());
+    let [nx,ny,nz,w] = &components;
+    let squared = polar_poly_add(&polar_poly_mul(nx,nx)?, &polar_poly_mul(ny,ny)?, 1.)?;
+    let squared_hull = hull(squared.iter().flatten().copied());
+    if squared_hull.lo <= 0. { return Ok(None); }
+    let sqrt_squared = I::new(squared_hull.lo.sqrt().next_down(), squared_hull.hi.sqrt().next_up())?;
+    let weight = hull(w.iter().flatten().copied());
+    let weight_squared = weight.mul(weight)?;
+    let radial_denominator = weight_squared.mul(sqrt_squared)?.mul(I::point(2.))?;
+    let mut result = [[I::point(0.);2];2];
+    for axis in 0..2 {
+        let dx = polar_poly_derivative(nx,axis,domain)?;
+        let dy = polar_poly_derivative(ny,axis,domain)?;
+        let dz = polar_poly_derivative(nz,axis,domain)?;
+        let dw = polar_poly_derivative(w,axis,domain)?;
+        let ds = polar_poly_derivative(&squared,axis,domain)?;
+        let angular = polar_poly_add(&polar_poly_mul(nx,&dy)?, &polar_poly_mul(ny,&dx)?, -1.)?;
+        let radial = polar_poly_add(&polar_poly_mul(w,&ds)?, &polar_poly_mul(&squared,&dw)?, -2.)?;
+        let vertical = polar_poly_add(&polar_poly_mul(&dz,w)?, &polar_poly_mul(nz,&dw)?, -1.)?;
+        result[0][axis] = hull(angular.iter().flatten().copied()).div(squared_hull)?;
+        result[1][axis] = hull(radial.iter().flatten().copied()).div(radial_denominator)?
+            .sub(hull(vertical.iter().flatten().copied()).div(weight_squared)?)?;
+    }
+    Ok(Some(result))
+}
+type PolarPoly = Vec<Vec<I>>;
+fn polar_poly_add(a: &PolarPoly,b: &PolarPoly,scale: f64) -> Result<PolarPoly> {
+    a.iter().zip(b).map(|(ra,rb)| ra.iter().zip(rb).map(|(x,y)| x.add(y.mul(I::point(scale))?)).collect()).collect()
+}
+fn polar_poly_derivative(a: &PolarPoly,axis: usize,domain: [[f64;2];2]) -> Result<PolarPoly> {
+    let [p,q] = [a.len()-1,a[0].len()-1];
+    let degrees = [p,q];
+    let width = I::point(domain[axis][1]).sub(I::point(domain[axis][0]))?;
+    (0..=p-usize::from(axis==0)).map(|i| (0..=q-usize::from(axis==1)).map(|j|
+        a[i+usize::from(axis==0)][j+usize::from(axis==1)].sub(a[i][j])?
+            .mul(I::point(degrees[axis] as f64))?.div(width)
+    ).collect()).collect()
+}
+fn polar_poly_mul(a: &PolarPoly,b: &PolarPoly) -> Result<PolarPoly> {
+    let [p,q,r,t] = [a.len()-1,a[0].len()-1,b.len()-1,b[0].len()-1];
+    // Current callers cap each source degree at eight, hence all binomial
+    // coefficients here (degree <=24) are exactly representable integers.
+    let choose = |n: usize,k: usize| {
+        let mut value=1u64;
+        for i in 0..k.min(n-k) { value=value*(n-i) as u64/(i+1) as u64; }
+        value as f64
+    };
+    let coefficient = |n: usize,m: usize,i: usize,j: usize| -> Result<I> {
+        I::point(choose(n,i)).mul(I::point(choose(m,j)))?.div(I::point(choose(n+m,i+j)))
+    };
+    let mut out=vec![vec![I::point(0.);q+t+1];p+r+1];
+    for i in 0..=p { for j in 0..=q { for k in 0..=r { for l in 0..=t {
+        let scale=coefficient(p,r,i,k)?.mul(coefficient(q,t,j,l)?)?;
+        out[i+k][j+l]=out[i+k][j+l].add(a[i][j].mul(b[k][l])?.mul(scale)?)?;
+    }}}}
+    Ok(out)
+}
+
 fn projective_projection_work(s:&Surface,numerators:[[f64;4];2],denominator:[f64;4],max_cells:usize)->Result<(Option<f64>,usize)>{
     s.validate()?;
     check(max_cells>0&&max_cells<=100000&&numerators.iter().flatten().chain(denominator.iter()).all(|x|x.is_finite()),"Projective projection requires finite coefficients and 1..100000 cells")?;
@@ -342,6 +522,61 @@ pub fn normal_direction_bounds(s: &Surface, domain: [[f64;2];2], direction: [f64
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn polar_jacobian_bounds_contain_independent_rational_coordinate_derivatives() {
+        // x=2, y=2u/(1+u), z=-3v/(1+2v), from separable weights.
+        let s = Surface {
+            degree_u: 1, degree_v: 1,
+            knots_u: vec![0.,0.,1.,1.], knots_v: vec![0.,0.,1.,1.],
+            control_points: (0..2).map(|i| (0..2).map(|j| vec![2.,i as f64,-(j as f64)]).collect()).collect(),
+            weights: vec![vec![1.,3.],vec![2.,6.]], periodic_u: false, periodic_v: false,
+        };
+        let coordinates=[[1.,0.,0.,0.],[0.,1.,0.,0.],[0.,0.,1.,0.]];
+        for i in 0..4 { for j in 0..4 {
+            let domain=[[i as f64/4.,(i+1) as f64/4.],[j as f64/4.,(j+1) as f64/4.]];
+            let bounds=polar_section_jacobian(&s,[1,1],domain,coordinates).unwrap().unwrap();
+            for u in domain[0] { for v in domain[1] {
+                let y=2.*u/(1.+u);let dy=2./(1.+u).powi(2);
+                let expected=[[2.*dy/(4.+y*y),0.],[y*dy/(4.+y*y).sqrt(),3./(1.+2.*v).powi(2)]];
+                for row in 0..2 { for axis in 0..2 {
+                    let b=bounds[row][axis];let value=expected[row][axis];
+                    assert!(b.lo<=value && value<=b.hi,"{row}/{axis}: {b:?} excludes {value}");
+                }}
+            }}
+        }}
+    }
+    #[test]
+    fn polar_projection_requires_global_coverage_continuity_and_two_independent_parameters() {
+        let mut s = Surface {
+            degree_u: 1, degree_v: 1,
+            knots_u: vec![0.,0.,1.,1.], knots_v: vec![0.,0.,1.,1.],
+            control_points: (0..2).map(|i| (0..2).map(|j| vec![2.,i as f64,-(j as f64)]).collect()).collect(),
+            weights: vec![vec![1.;2];2], periodic_u: false, periodic_v: false,
+        };
+        let coordinates = [[1.,0.,0.,0.],[0.,1.,0.,0.],[0.,0.,1.,0.]];
+        let before = format!("{s:?}");
+        assert!(certify_polar_projection(&s,coordinates,4,16).unwrap().is_some());
+        assert!(certify_polar_projection(&s,coordinates,4,15).unwrap().is_none());
+        assert!(certify_polar_projection(&s,coordinates,0,16).is_err());
+        assert!(certify_polar_projection(&s,coordinates,4,0).is_err());
+        let mut invalid = coordinates; invalid[0][0] = f64::NAN;
+        assert!(certify_polar_projection(&s,invalid,4,16).is_err());
+        let mut wrong_branch = coordinates; wrong_branch[0][0] = -1.;
+        assert!(certify_polar_projection(&s,wrong_branch,4,16).unwrap().is_none());
+        assert_eq!(format!("{s:?}"),before);
+        s.control_points[1] = s.control_points[0].clone();
+        assert!(certify_polar_projection(&s,coordinates,4,16).unwrap().is_none());
+        let row = |y| vec![vec![2.,y,0.],vec![2.,y,-1.]];
+        s.control_points = vec![row(0.),row(1.),row(0.)];
+        s.weights = vec![vec![1.;2];3]; s.knots_u = vec![0.,0.,0.5,1.,1.];
+        // Locally invertible halves overlap. No collection of local proofs
+        // may be promoted to a proof of this complete folded chart.
+        assert!(certify_polar_projection(&s,coordinates,4,32).unwrap().is_none());
+        s.control_points = vec![row(0.),row(1.),row(0.),row(1.)];
+        s.weights = vec![vec![1.;2];4]; s.knots_u = vec![0.,0.,0.5,0.5,1.,1.];
+        assert!(certify_polar_projection(&s,coordinates,4,32).is_err());
+    }
+
     fn graph() -> Surface {
         Surface {
             degree_u: 2,

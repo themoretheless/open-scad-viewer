@@ -1090,6 +1090,28 @@ mod tests {
     }
 
     #[test]
+    fn polar_projection_certifies_constant_torus_chart_from_original_controls() {
+        for (outer,height,radius,start,sweep) in [(20.,6.,1.25,0.,std::f64::consts::FRAC_PI_2),(8.,4.,0.5,5.9,0.31),(12.,8.,3.,-1.2,0.7)] {
+            for direction in [-1., 1.] {
+                let span = plane_cylinder_rim(outer,height,radius,start,direction*sweep).unwrap().remove(0);
+                let (sin,cos) = (start+direction*sweep*0.5).sin_cos();
+                let basis = [[cos,sin,0.,0.],[-sin,cos,0.,0.],[0.,0.,1.,0.]];
+                let proof = nurbs_core::surface_injectivity::certify_polar_projection(&span.surface,basis,16,256).unwrap();
+                assert!(proof.is_some(), "polar contraction: {outer}, {radius}, {start}, {direction}: {proof:?}");
+                assert!(nurbs_core::surface_injectivity::certify_polar_projection(&span.surface,basis,16,255).unwrap().is_none());
+                let mut folded = span.surface.clone();
+                folded.control_points[2] = folded.control_points[0].clone();
+                folded.weights[2] = folded.weights[0].clone();
+                assert!(nurbs_core::surface_injectivity::certify_polar_projection(&folded,basis,16,256).unwrap().is_none());
+                let automatic = nurbs_core::surface_injectivity::certify(&span.surface,1000).unwrap();
+                assert!(automatic.proven, "automatic polar candidate: {automatic:?}");
+                assert!(automatic.polar_projection.is_some());
+                assert_eq!(automatic.reason,"global-polar-projection-contraction");
+            }
+        }
+    }
+
+    #[test]
     fn collapsed_transition_tip_has_distinct_normal_limits_not_a_regular_g1_point() {
         // Both contact rails end at the original sharp rim. Their limiting
         // tangent planes differ, even though every nonzero section is tangent
