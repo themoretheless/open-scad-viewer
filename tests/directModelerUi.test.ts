@@ -1095,7 +1095,8 @@ it.each([false,true])('previews and commits a four-boundary patch (rational=%s) 
  await commandKey(ui,'Escape');expect(ui.doc()).toEqual(before)
  await ui.click('Coons patch');await commandKey(ui,'Enter');expect(ui.doc().surfaces).toHaveLength(1);expect(ui.doc().curves).toEqual(before.curves)
  await ui.click('↶');expect(ui.doc()).toEqual(before)
-})
+// Two complete rational Coons previews include construction and tessellation.
+},60_000)
 it('repeats the chosen surface input roles after swapping profile and path',async()=>{
  await geometryKernel.warmGeometryKernel()
  const a=createSolidNurbsCurve('a'),b=createSolidNurbsCurve('b');a.name='Profile input';b.name='Path input';b.curve.controlPoints=b.curve.controlPoints.map(([x,y,z])=>[z,x,y+10])
