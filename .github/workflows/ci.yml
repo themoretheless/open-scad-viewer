@@ -71,8 +71,12 @@ jobs:
       - run: node node_modules/vue-tsc/bin/vue-tsc.js --noEmit
       - run: node node_modules/typescript/bin/tsc --noEmit -p tsconfig.mcp.json
       # Each test worker may initialize WASM and spawn geometry subprocesses.
-      # Match the bounded local control instead of multiplying cold runtimes.
+      # Inline projects with extends:true reload maxWorkers from the config,
+      # ignoring the root CLI override. Vitest's environment override applies
+      # to every resolved project, including the DOM suites.
       - run: node node_modules/vitest/vitest.mjs run --maxWorkers 2
+        env:
+          VITEST_MAX_WORKERS: '2'
       - run: node node_modules/vite/bin/vite.js build
       - run: node scripts/verify-dist.mjs
       - uses: actions/upload-artifact@v4
