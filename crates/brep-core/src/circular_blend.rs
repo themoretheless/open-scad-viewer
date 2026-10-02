@@ -10,6 +10,66 @@ pub struct CircularBlendSpan {
     pub surface: Surface,
 }
 
+pub struct CircularBlendBoundary {
+    pub curve: Curve,
+    pub pcurve: Curve,
+    pub collapsed_pole: Option<[f64; 3]>,
+}
+
+impl CircularBlendSpan {
+    /// Four oriented chart boundaries. A collapsed endpoint is certified by
+    /// its complete control row using the same pole check as Model::validate.
+    pub fn boundaries(&self) -> Result<[CircularBlendBoundary; 4]> {
+        self.surface.validate()?;
+        let meridian = |row: usize| Curve {
+            degree: self.surface.degree_v,
+            knots: self.surface.knots_v.clone(),
+            control_points: self.surface.control_points[row].clone(),
+            weights: self.surface.weights[row].clone(),
+            periodic: false,
+        };
+        let last = self.surface.control_points.len() - 1;
+        let curves = [
+            self.plane_contact.clone(),
+            meridian(last),
+            self.cylinder_contact.reverse()?,
+            meridian(0).reverse()?,
+        ];
+        let uv = [
+            ([0., 0.], [1., 0.]),
+            ([1., 0.], [1., 1.]),
+            ([1., 1.], [0., 1.]),
+            ([0., 1.], [0., 0.]),
+        ];
+        let mut result = Vec::new();
+        for (curve, (a, b)) in curves.into_iter().zip(uv) {
+            curve.validate()?;
+            let pcurve = Curve {
+                degree: 1,
+                knots: vec![0., 0., 1., 1.],
+                control_points: vec![a.to_vec(), b.to_vec()],
+                weights: vec![1., 1.],
+                periodic: false,
+            };
+            let first = &curve.control_points[0];
+            let collapsed_pole = curve
+                .control_points
+                .iter()
+                .all(|p| p == first)
+                .then(|| [first[0], first[1], first[2]]);
+            if let Some(pole) = collapsed_pole {
+                crate::validate_pole_boundary(&self.surface, &pcurve, pole)?;
+            }
+            result.push(CircularBlendBoundary {
+                curve,
+                pcurve,
+                collapsed_pole,
+            });
+        }
+        Ok(result.try_into().ok().unwrap())
+    }
+}
+
 fn arc(radius: f64, z: f64, start: f64, sweep: f64) -> Curve {
     let middle = start + sweep / 2.;
     let weight = (sweep / 2.).cos();
@@ -182,6 +242,20 @@ pub fn plane_cylinder_transition(
             }
         }
     }
+    // Canonicalize true zero-radius poles exactly. Arithmetic evaluation of
+    // equivalent weighted controls can differ by an ulp; topology requires
+    // one identical vertex, not tolerance-based collapse of a small edge.
+    for (k, r, angular_index) in [(0, start_radius, 0), (5, end_radius, 2)] {
+        if r == 0. {
+            let pole = vec![
+                outer_radius * unit.control_points[angular_index][0],
+                outer_radius * unit.control_points[angular_index][1],
+                height,
+            ];
+            center_controls[k] = pole.clone();
+            controls[k] = vec![pole; 3];
+        }
+    }
     let knots: Vec<_> = std::iter::repeat_n(0., 6)
         .chain(std::iter::repeat_n(1., 6))
         .collect();
@@ -319,6 +393,39 @@ mod tests {
                 let alignment: f64 = (0..3).map(|k| na[k] * nb[k]).sum();
                 assert!((alignment - 1.).abs() < 1e-10);
             }
+        }
+    }
+
+    #[test]
+    fn transition_boundaries_certify_poles_and_form_an_oriented_loop() {
+        for (r0, r1, pole_index) in [(0., 1.25, 3), (1.25, 0., 1)] {
+            let span = plane_cylinder_transition(20., 6., r0, r1, 5.9, 0.7).unwrap();
+            let boundaries = span.boundaries().unwrap();
+            assert_eq!(
+                boundaries
+                    .iter()
+                    .filter(|b| b.collapsed_pole.is_some())
+                    .count(),
+                1
+            );
+            assert!(boundaries[pole_index].collapsed_pole.is_some());
+            for i in 0..4 {
+                let a = boundaries[i].curve.evaluate(1.).unwrap().point;
+                let b = boundaries[(i + 1) % 4].curve.evaluate(0.).unwrap().point;
+                assert!((0..3).all(|k| (a[k] - b[k]).abs() < 1e-10));
+            }
+            let mut bad = span.surface.clone();
+            let row = if r0 == 0. { 0 } else { 5 };
+            bad.control_points[row][1][0] += 1e-8;
+            let boundary = &boundaries[pole_index];
+            assert!(
+                crate::validate_pole_boundary(
+                    &bad,
+                    &boundary.pcurve,
+                    boundary.collapsed_pole.unwrap()
+                )
+                .is_err()
+            );
         }
     }
 

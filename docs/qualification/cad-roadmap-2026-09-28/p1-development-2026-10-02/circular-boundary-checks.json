@@ -1,0 +1,15 @@
+{
+  "schema": "cad-p1-circular-boundary/1",
+  "state": "oriented support boundaries; closed solid not assembled",
+  "testsPassed": 5,
+  "boundariesPerSpan": 4,
+  "boundaryRepresentation": "exact rational 3D curves and straight UV pcurves",
+  "poleCertification": "same control-net equality test used by Model::validate; no tolerance-based collapse",
+  "zeroRadiusCanonicalization": "only exact zero radius; all pole controls replaced by identical analytical rim point",
+  "negativeTest": "1e-8 displaced pole control rejected",
+  "supportBoundaryPreparationComplete": true,
+  "solidTrimmingAndSewImplemented": false,
+  "independentOracleVerified": false,
+  "bridgeAndUiExposed": false,
+  "generalP1Complete": false
+}
