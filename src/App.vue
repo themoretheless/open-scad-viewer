@@ -3424,7 +3424,7 @@ button, select { color: inherit; }
 
 /* Top bar: three quiet zones — file, mode, tools. Nothing else competes with the viewport. */
 .topbar {
-  z-index: 10; height: var(--topbar-h); display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 12px;
+  z-index: 35; height: var(--topbar-h); display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 12px;
   padding: 0 8px 0 12px; background: var(--surface); border-bottom: 1px solid var(--hairline); flex-shrink: 0;
 }
 .topbar-left, .topbar-right { display: flex; align-items: center; gap: 4px; min-width: 0; }
