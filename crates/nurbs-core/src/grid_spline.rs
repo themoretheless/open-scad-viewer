@@ -2,7 +2,7 @@
 use crate::{Result, check, surface::Surface};
 
 /// Site grid is indexed [u][v]. Cubic spans have normalized [0,1] parameters.
-/// The current surface budget admits 2..11 sites per axis (up to 31 controls).
+/// The current surface budget admits 2..86 sites per axis (up to 256 controls).
 pub fn interpolate(
     points: &[Vec<[f64; 3]>],
     parameters_u: &[f64],
@@ -10,13 +10,13 @@ pub fn interpolate(
 ) -> Result<Surface> {
     let nu = points.len();
     check(
-        (2..=11).contains(&nu) && parameters_u.len() == nu,
-        "Grid spline needs 2..11 U sites and matching parameters",
+        (2..=86).contains(&nu) && parameters_u.len() == nu,
+        "Grid spline needs 2..86 U sites and matching parameters",
     )?;
     let nv = points[0].len();
     check(
-        (2..=11).contains(&nv) && parameters_v.len() == nv && points.iter().all(|r| r.len() == nv),
-        "Grid spline needs a rectangular 2..11 V site grid and matching parameters",
+        (2..=86).contains(&nv) && parameters_v.len() == nv && points.iter().all(|r| r.len() == nv),
+        "Grid spline needs a rectangular 2..86 V site grid and matching parameters",
     )?;
     check(
         points.iter().flatten().flatten().all(|x| x.is_finite()),
@@ -143,9 +143,9 @@ mod tests {
         assert!(interpolate(&[vec![[0.; 3]; 2], vec![[0.; 3]; 3]], &[0., 1.], &[0., 1.]).is_err());
         assert!(
             interpolate(
-                &vec![vec![[0.; 3]; 12]; 2],
+                &vec![vec![[0.; 3]; 87]; 2],
                 &[0., 1.],
-                &(0..12).map(|i| i as f64).collect::<Vec<_>>()
+                &(0..87).map(|i| i as f64).collect::<Vec<_>>()
             )
             .is_err()
         );

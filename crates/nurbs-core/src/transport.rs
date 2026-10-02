@@ -30,8 +30,17 @@ pub fn dispatch(v: Value) -> Result<Value> {
     if op == "curve_closed_spline" { return encode(closed_spline::interpolate(&field::<Vec<[f64;3]>>(&v,"points")?,&field::<Vec<f64>>(&v,"parameters")?)?); }
     if op == "surface_closed_loft" { return encode(natural_loft::closed(&field::<Vec<curve::Curve>>(&v,"curves")?,&field::<Vec<f64>>(&v,"parameters")?)?); }
     if op == "surface_auto_guided_loft" {
-        let result=loft_alignment::interpolate_with_parameter_tolerance(&field::<Vec<curve::Curve>>(&v,"curves")?,&field::<Vec<f64>>(&v,"parameters")?,&field::<Vec<curve::Curve>>(&v,"guides")?,field(&v,"budget")?, optional_field::<f64>(&v,"parameter_tolerance")?.unwrap_or(1e-8))?;
-        return Ok(json!({"surface":result.surface,"guides":result.guides,"guide_parameters":result.guide_parameters,"guide_order":result.guide_order,"reversed":result.reversed,"section_error_upper":result.section_error_upper,"guide_error_upper":result.guide_error_upper}));
+        let curves = field::<Vec<curve::Curve>>(&v,"curves")?;
+        let mapped = optional_field::<Vec<Option<Value>>>(&v,"section_mappings")?
+            .map(|m| loft_reparameterization::prepare(&curves,&m)).transpose()?;
+        let sections = mapped.as_ref().map_or(curves.as_slice(), |m| m.curves.as_slice());
+        let result=loft_alignment::interpolate_with_parameter_tolerance(sections,&field::<Vec<f64>>(&v,"parameters")?,&field::<Vec<curve::Curve>>(&v,"guides")?,field(&v,"budget")?, optional_field::<f64>(&v,"parameter_tolerance")?.unwrap_or(1e-8))?;
+        let mut output = json!({"surface":result.surface,"guides":result.guides,"guide_parameters":result.guide_parameters,"guide_order":result.guide_order,"reversed":result.reversed,"section_error_upper":result.section_error_upper,"guide_error_upper":result.guide_error_upper});
+        if let Some(mapped) = mapped {
+            output["sections"] = value_codec::to_value(mapped.curves).map_err(|e| input(e.to_string()))?;
+            output["section_mapping_certificates"] = Value::Array(mapped.certificates);
+        }
+        return Ok(output);
     }
     if op == "surface_loft_match_ends" {
         let mut references:[Option<surface::Surface>;2]=[None,None];
@@ -72,7 +81,14 @@ pub fn dispatch(v: Value) -> Result<Value> {
         )?);
     }
     if op == "surface_clamped_loft" { return encode(natural_loft::clamped(&field::<Vec<curve::Curve>>(&v,"curves")?,&field::<Vec<f64>>(&v,"parameters")?,field(&v,"start_tangent")?,field(&v,"end_tangent")?)?); }
-    if op == "surface_natural_loft" { return encode(natural_loft::interpolate(&field::<Vec<curve::Curve>>(&v,"curves")?,&field::<Vec<f64>>(&v,"parameters")?)?); }
+    if op == "surface_natural_loft" {
+        let curves = field::<Vec<curve::Curve>>(&v,"curves")?;
+        let parameters = field::<Vec<f64>>(&v,"parameters")?;
+        return encode(match optional_field::<Vec<Option<Value>>>(&v,"section_mappings")? {
+            Some(m) => loft_reparameterization::interpolate(&curves,&parameters,&m)?,
+            None => natural_loft::interpolate(&curves,&parameters)?,
+        });
+    }
     if op == "surface_gordon" {return encode(gordon::patch(&field::<Vec<curve::Curve>>(&v,"u_curves")?,&field::<Vec<curve::Curve>>(&v,"v_curves")?,&field::<Vec<f64>>(&v,"parameters_u")?,&field::<Vec<f64>>(&v,"parameters_v")?)?);}
     if op == "surface_grid_spline" { return encode(grid_spline::interpolate(&field::<Vec<Vec<[f64;3]>>>(&v,"points")?,&field::<Vec<f64>>(&v,"parameters_u")?,&field::<Vec<f64>>(&v,"parameters_v")?)?); }
 

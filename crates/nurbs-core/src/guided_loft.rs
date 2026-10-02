@@ -36,7 +36,7 @@ fn across_guides(curves: &[Curve], stations: &[f64]) -> Result<Surface> {
 
 /// `guide_parameters` are normalized U locations. One guide may lie anywhere
 /// in [0,1]; with multiple guides, missing boundaries retain base isocurves.
-/// Effective guide count including retained boundaries must not exceed 11. Section stations are
+/// Effective guide count including retained boundaries must not exceed 86. Section stations are
 /// authored V parameters. Guide domains normalize to V=[0,1].
 /// Optional tangent controls use the aligned section U basis, in dP/dt units.
 /// Guides must match homogeneous section crossings exactly. With tangents,
@@ -60,12 +60,12 @@ pub(crate) fn interpolate_budgeted(
     crossing_budget: f64,
 ) -> Result<Surface> {
     check(
-        (2..=11).contains(&sections.len()),
-        "Guided loft needs 2..11 sections",
+        (2..=86).contains(&sections.len()),
+        "Guided loft needs 2..86 sections",
     )?;
     check(
-        (1..=11).contains(&guides.len()) && guide_parameters.len() == guides.len(),
-        "Guided loft needs 1..11 guides and matching U stations",
+        (1..=86).contains(&guides.len()) && guide_parameters.len() == guides.len(),
+        "Guided loft needs 1..86 guides and matching U stations",
     )?;
     check(
         guide_parameters
@@ -139,8 +139,8 @@ pub(crate) fn interpolate_budgeted(
             stations.push(1.);
         }
         check(
-            guides.len() <= 11,
-            "Guided loft exceeds 11 effective guides including retained boundaries",
+            guides.len() <= 86,
+            "Guided loft exceeds 86 effective guides including retained boundaries",
         )?;
     }
     // The correction vanishes on each section. At every guide station its

@@ -113,7 +113,7 @@ fn align(s: &mut [Surface], axis: Axis) -> Result<()> {
     }
     Ok(())
 }
-/// U curves are stationed along V; V curves along U. Each family has 2..11
+/// U curves are stationed along V; V curves along U. Each family has 2..86
 /// members. Aligned homogeneous crossings must match exactly, without snapping.
 /// Natural cubic interpolation combines Su + Sv - Suv in homogeneous space.
 pub fn patch(
@@ -123,8 +123,8 @@ pub fn patch(
     parameters_v: &[f64],
 ) -> Result<Surface> {
     check(
-        (2..=11).contains(&u_curves.len()) && (2..=11).contains(&v_curves.len()),
-        "Gordon needs 2..11 curves per family",
+        (2..=86).contains(&u_curves.len()) && (2..=86).contains(&v_curves.len()),
+        "Gordon needs 2..86 curves per family",
     )?;
     let u: Vec<Curve> = u_curves.iter().map(normalized).collect::<Result<_>>()?;
     let v: Vec<Curve> = v_curves.iter().map(normalized).collect::<Result<_>>()?;

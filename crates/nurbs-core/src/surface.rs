@@ -227,13 +227,13 @@ impl Surface {
     }
     pub fn validate(&self) -> Result<()> {
         check(
-            (2..=32).contains(&self.control_points.len()),
-            "NURBS surface requires 2..32 U rows of control points.",
+            (2..=256).contains(&self.control_points.len()),
+            "NURBS surface requires 2..256 U rows of control points.",
         )?;
         let nv = self.control_points[0].len();
         check(
-            (2..=32).contains(&nv) && self.control_points.iter().all(|r| r.len() == nv),
-            "NURBS surface control net must be rectangular with 2..32 V points per U row.",
+            (2..=256).contains(&nv) && self.control_points.iter().all(|r| r.len() == nv),
+            "NURBS surface control net must be rectangular with 2..256 V points per U row.",
         )?;
         check(
             self.control_points.iter().flatten().all(|p| p.len() == 3),
@@ -506,8 +506,8 @@ impl Surface {
 }
 pub fn loft(curves: &[Curve]) -> Result<Surface> {
     check(
-        (2..=32).contains(&curves.len()),
-        "Loft requires 2..32 compatible curves.",
+        (2..=256).contains(&curves.len()),
+        "Loft requires 2..256 compatible curves.",
     )?;
     for c in curves {
         c.validate()?;
@@ -687,8 +687,8 @@ pub fn sweep(profile: &Curve, path: &Curve) -> Result<Surface> {
 /// knot multiplicities without changing section geometry. V remains piecewise linear.
 pub fn loft_aligned(curves: &[Curve]) -> Result<Surface> {
     check(
-        (2..=32).contains(&curves.len()),
-        "Loft requires 2..32 sections",
+        (2..=256).contains(&curves.len()),
+        "Loft requires 2..256 sections",
     )?;
     for c in curves {
         c.validate()?;
@@ -724,8 +724,8 @@ pub fn loft_aligned(curves: &[Curve]) -> Result<Surface> {
                 *c = c.insert(k, count - existing)?;
             }
             check(
-                c.control_points.len() <= 32,
-                "Aligned loft exceeds 32 section controls",
+                c.control_points.len() <= 256,
+                "Aligned loft exceeds 256 section controls",
             )?;
         }
     }

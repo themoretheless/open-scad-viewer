@@ -2068,6 +2068,10 @@ pub fn certify_reparameterization(
     mapping: &Value,
     tolerance: Option<ToleranceContext>,
 ) -> Result<Value> {
+    certify_mapping(mapping,tolerance,0)
+}
+fn certify_mapping(mapping: &Value, tolerance: Option<ToleranceContext>, depth: usize) -> Result<Value> {
+    check(depth <= 8,"Mapping certification nesting exceeds 8")?;
     if let Some(composition) = mapping.get("composition").and_then(Value::as_array) {
         check(
             !composition.is_empty() && composition.len() <= 16,
@@ -2075,13 +2079,11 @@ pub fn certify_reparameterization(
         )?;
         let factors = composition
             .iter()
-            .map(|factor| certify_reparameterization(factor, None))
+            .map(|factor| certify_mapping(factor, None, depth + 1))
             .collect::<Result<Vec<_>>>()?;
-        for pair in composition.windows(2) {
-            let first = map_pieces(&pair[0])?;
-            let second = map_pieces(&pair[1])?;
+        for pair in factors.windows(2) {
             check(
-                first.last().unwrap().range == second.first().unwrap().domain,
+                pair[0]["range"] == pair[1]["domain"],
                 "Composed mapping ranges and domains must match exactly",
             )?;
         }
@@ -2089,6 +2091,7 @@ pub fn certify_reparameterization(
         return Ok(
             json!({"version":"nurbs-foundation/3","mapping":mapping.clone(),
             "classification":"certified_strictly_monotone_composition","factors":factors,
+            "domain":factors.first().unwrap()["domain"].clone(),"range":factors.last().unwrap()["range"].clone(),
             "composition":"exact-semantic-evaluation","inverse":"reverse-factor-interval-chain",
             "evidence":tolerance_evidence(&tolerance)}),
         );
@@ -2119,6 +2122,8 @@ pub fn certify_reparameterization(
     let tolerance = context(tolerance);
     Ok(
         json!({"version":"nurbs-foundation/3","mapping":mapping.clone(),"classification":"certified_strictly_monotone",
+        "domain":[pieces.first().unwrap().domain[0],pieces.last().unwrap().domain[1]],
+        "range":[pieces.first().unwrap().range[0],pieces.last().unwrap().range[1]],
         "pieces":certificates,"composition":"exact-semantic-evaluation","inverse":"interval-bisection-certified",
         "evidence":tolerance_evidence(&tolerance)}),
     )
@@ -2601,10 +2606,6 @@ fn budget_controls(count: usize) -> Result<()> {
 }
 
 fn compose_curve_with_piece(curve: &Curve, piece: &MapPiece) -> Result<Curve> {
-    check(
-        curve.degree <= 8 && piece.values.len() <= 9,
-        "Admitted composition requires degree ≤8 map and curve",
-    )?;
     let [a, b] = curve.domain();
     check(
         (piece.range[0] - a).abs() <= 64. * f64::EPSILON
@@ -2619,6 +2620,20 @@ fn compose_curve_with_piece(curve: &Curve, piece: &MapPiece) -> Result<Curve> {
     } else {
         curve.trim(piece.range[0], piece.range[1])?
     };
+    // An affine map can retain every source knot directly. Do not restrict
+    // this case to one Bezier span or increase its degree unnecessarily.
+    if piece.values.len() == 2 && piece.weights[0] == piece.weights[1] {
+        let mut result = restricted;
+        for knot in &mut result.knots {
+            *knot = piece.domain[0] + (*knot - piece.range[0])
+                / (piece.range[1] - piece.range[0]) * (piece.domain[1] - piece.domain[0]);
+        }
+        result.validate()?;
+        return Ok(result);
+    }
+    if curve.degree.saturating_mul(piece.values.len()-1) > 25 {
+        return Err(crate::resource("Composed curve exceeds the degree-25 representation budget"));
+    }
     let segments = restricted.decompose()?;
     check(
         segments.len() == 1,
@@ -2705,18 +2720,26 @@ fn materialize_pieces(curve: &Curve, pieces: &[MapPiece]) -> Result<(Curve, usiz
         degree_growth = degree_growth.max(part.degree.saturating_sub(curve.degree));
         composed.push(part);
     }
-    let mut result = composed[0].clone();
-    for next in composed.into_iter().skip(1) {
-        check(
-            result.degree == next.degree,
-            "Piecewise composition produced unequal degrees",
-        )?;
+    let degree = composed.iter().map(|c| c.degree).max().unwrap();
+    let mut composed = composed.into_iter().map(|c| c.elevate(degree)).collect::<Result<Vec<_>>>()?.into_iter();
+    let mut result = composed.next().unwrap();
+    for mut next in composed {
         let left = result.evaluate(result.domain()[1])?.point;
         let right = next.evaluate(next.domain()[0])?.point;
         check(
             distance(&left, &right) <= 1e-9,
             "Composed pieces are not C0 joinable",
         )?;
+        // A shared endpoint must have the same homogeneous scale. Replacing
+        // only the next endpoint weight changes the entire next rational span.
+        check(result.control_points.last() == next.control_points.first(),
+            "Composed pieces require identical endpoint controls")?;
+        let factor = result.weights.last().unwrap() / next.weights[0];
+        check(factor.is_finite() && factor > 0., "Composition weight scale overflow")?;
+        for weight in &mut next.weights {
+            *weight *= factor;
+        }
+        next.validate()?;
         let mut knots = result.knots[..result.knots.len() - 1].to_vec();
         knots.extend(next.knots[next.degree + 1..].iter().copied());
         let mut controls = result.control_points.clone();
@@ -2750,7 +2773,9 @@ fn materialize_mapping_tree(
         let mut current = curve.clone();
         let mut growth = 0_usize;
         let mut children = Vec::new();
-        for part in parts {
+        // Evaluation applies authored factors first-to-last. Materializing
+        // C(map(u)) pulls them through the curve in the opposite order.
+        for part in parts.iter().rev() {
             let (next, part_growth, child) = materialize_mapping_tree(&current, part, depth + 1)?;
             growth = growth.saturating_add(part_growth);
             children.push(child);

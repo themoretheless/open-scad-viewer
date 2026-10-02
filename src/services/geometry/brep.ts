@@ -372,3 +372,16 @@ export const exactLayeredPrismFillet=(model:NurbsBrep,edges:number[],radius:numb
 
 export const createNaturalBrepSectionLoft=(sections:NurbsCurve[][][],parameters:number[]):NurbsBrep=>callGeometryRust('brep_nurbs_natural_section_loft',{sections,parameters})
 export const createCappedBrepLoftSurfaces=(start:NurbsCurve[][],end:NurbsCurve[][],sides:NurbsSurface[][]):NurbsBrep=>callGeometryRust('brep_nurbs_capped_loft_surfaces',{start,end,sides})
+
+export interface NurbsLoftCap { surface:NurbsSurface; trims:NurbsCurve[][] }
+export interface LoftEmbeddingLimits {
+ exactWork:number; trimPairs:number; trimCells:number; trimDomainCells:number; spans:number
+ facePairs:number; faceCells:number; faceDomainCells:number; faceCellsPerPair:number; faceDomainCellsPerPair:number
+}
+const defaultLoftEmbeddingLimits:LoftEmbeddingLimits={exactWork:1000000,trimPairs:10000,trimCells:100000,
+ trimDomainCells:1000000,spans:10000,facePairs:10000,faceCells:1000000,faceDomainCells:1000000,
+ faceCellsPerPair:10000,faceDomainCellsPerPair:10000}
+/** Authored curved caps; refuses unless whole-boundary embedding is proven. */
+export const createCappedBrepLoftWithCaps=(start:NurbsCurve[][],end:NurbsCurve[][],sides:NurbsSurface[][],
+ caps:[NurbsLoftCap,NurbsLoftCap],embeddingLimits:LoftEmbeddingLimits=defaultLoftEmbeddingLimits,toleranceUv=1e-9):NurbsBrep=>
+ callGeometryRust('brep_nurbs_capped_loft_with_caps',{start,end,sides,caps,embeddingLimits,toleranceUv})

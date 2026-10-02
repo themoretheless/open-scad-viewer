@@ -36,11 +36,13 @@ fn remap(c: &Curve, source: &[f64], target: &[f64]) -> Result<(Curve, f64)> {
             *k = t[1];
         }
         if let Some(r) = &mut result {
-            check(
-                r.control_points.last() == part.control_points.first()
-                    && r.weights.last() == part.weights.first(),
-                "Guide remapping endpoint rounding mismatch",
-            )?;
+            // Independent trims can round the same endpoint differently.
+            // Retain one shared control and one homogeneous scale; the
+            // whole-curve mapping bounds below include every resulting error.
+            let factor = r.weights.last().unwrap() / part.weights[0];
+            check(factor.is_finite() && factor > 0., "Guide remapping scale overflow")?;
+            for weight in &mut part.weights { *weight *= factor; }
+            part.validate()?;
             r.knots.pop();
             r.knots.extend_from_slice(&part.knots[part.degree + 1..]);
             r.control_points
@@ -92,8 +94,8 @@ pub fn interpolate_with_parameter_tolerance(
         "Automatic loft alignment needs a positive finite budget",
     )?;
     check(
-        (2..=11).contains(&sections.len()) && (1..=9).contains(&guides.len()),
-        "Automatic loft alignment needs 2..11 sections and 1..9 guides",
+        (2..=86).contains(&sections.len()) && (1..=84).contains(&guides.len()),
+        "Automatic loft alignment needs 2..86 sections and 1..84 guides",
     )?;
     let stations = crate::gordon::stations(parameters, sections.len())?;
     let sections = sections
