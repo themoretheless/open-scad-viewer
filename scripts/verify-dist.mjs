@@ -86,7 +86,8 @@ const limits = new Map([
 // Prismatic cap Push/Pull: measured geometry chunk 3,240,213 bytes.
 // Incidence-based cap identity preservation: measured 3,243,603 bytes.
 // Partial circular supports and source preview bridge: measured 3,249,730 bytes; retain 397-byte margin.
-const geometryChunkBudget = 3_250_127
+// Polar injectivity adds 6,444 packed bytes: measured 3,256,174; retain 397-byte margin.
+const geometryChunkBudget = 3_256_571
 const jsChunkBudgets = [
   // CAD worker with lazy ModelGraph importer: surface boundary diagnostics included: measured 108,116 bytes.
   [/^assets\/mainSolid\.worker-[^/]+\.js$/, 120_000], // Retained profile pair diagnostics and validated transport: measured 117,652 bytes; 848-byte margin. Distance kernel worker additions: measured 115,579 bytes. Surface distance worker dispatch: measured 115,110 bytes. Retained NURBS snap intervals: measured 114,200 bytes. Sketch snap preparation: measured 113,885 bytes. Body snap preparation: measured 112,083 bytes. Face sketch preparation in worker: measured 109,472 bytes.
@@ -356,6 +357,7 @@ for (const [name, artifact, compression] of [
 // Rigid cuboid corner-frame recovery adds 4,644 measured asset bytes.
 // Preserve the preceding 1,042-byte margin.
 // Partial annular preview: measured assets 7,248,560 bytes (+24,841); retain 1,042-byte margin.
-const totalBudget = 7_249_602
+// Global polar proof and source-bound protocol: measured 7,257,258 asset bytes; retain 1,042-byte margin.
+const totalBudget = 7_258_300
 if (total > totalBudget) throw new Error(`dist totals ${total} bytes; budget is ${totalBudget}`)
 console.log(`Verified ${files.length} dist artifacts (${total} asset bytes + ${rawWasmBytes} raw WASM bytes = ${total + rawWasmBytes} total bytes)`)

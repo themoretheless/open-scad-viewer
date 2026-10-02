@@ -156,7 +156,7 @@ it('qualifies actual WASM perspective face proofs and exhausted aggregate budget
   const r=inspectSelfIntersection(model,toleranceUv,limits,budget)
   expect(validSelfIntersection(selfIntersectionExpectation(model,toleranceUv,limits,budget),r)).toBe(true)
   expect(r.absenceProven).toBe(false);expect(r.allFacesInjective).toBe(budget===maxSpans)
-  if(budget===maxSpans){expect(r.faces).toEqual(fixture.result.faces);expect(r.spans).toBe(968)}
+  if(budget===maxSpans){expect(r.faces).toEqual(fixture.result.faces.map((f:any)=>({...f,result:{...f.result,polarProjection:null}})));expect(r.spans).toBe(968)}
   else expect(r.spans).toBe(budget)
  }
  expect(JSON.stringify(model)).toBe(before)

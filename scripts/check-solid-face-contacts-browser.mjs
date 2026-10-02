@@ -21,7 +21,7 @@ let browser,page
 const errors=[]
 try {
  const {playwright}=await loadQualificationPlaywrightPackage()
- browser=await playwright.chromium.launch({headless:true})
+ browser=await playwright.chromium.launch({headless:true,...(process.env.CHROMIUM_EXECUTABLE?{executablePath:process.env.CHROMIUM_EXECUTABLE}:{})})
  page=await browser.newPage({acceptDownloads:true});page.on('pageerror',e=>errors.push(String(e)))
  await page.addInitScript(()=>{
   const Native=window.Worker;window.__contactsRequests=0;window.__selfResults=[]
@@ -161,8 +161,33 @@ try {
   await page.screenshot({path:path.join(directory,'sphere-projective-partial.png')})
   assert.deepEqual(await exportDoc('sphere-partial-after.json'),before)
  }
+ let polar=null
+ if(process.argv.includes('--polar')){
+  const document=JSON.parse(await readFile('docs/qualification/cad-roadmap-2026-09-28/p1-development-2026-10-02/polar-injectivity/wasm/browser-document.json','utf8'))
+  await act(menu);await solid.locator('input[accept=".json,application/json"]').setInputFiles({name:'polar.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(document))});await closeMenu();await ready()
+  await act(solid.getByRole('tab',{name:'Сцена',exact:true}));await act(solid.getByRole('button',{name:'Polar annular',exact:true}))
+  const before=await exportDoc('polar-before.json');await openDiagnostics()
+  if(!await panel.isVisible())await act(solid.getByRole('button',{name:'Проверить контакты граней',exact:true}))
+  const within=panel.getByRole('checkbox',{name:'Проверять внутри граней',exact:true})
+  await number(limit,'4096')
+  if(!await within.isChecked()){if(keyboard){await focus(within);await page.keyboard.press('Space')}else await within.click()}
+  await page.waitForFunction(()=>window.__selfResults.some(r=>r.faces.length===27&&r.maxSpans===4096),null,{timeout:120000})
+  polar=await page.evaluate(()=>window.__selfResults.findLast(r=>r.faces.length===27&&r.maxSpans===4096))
+  assert.equal(polar.faces.filter(f=>f.result?.proven).length,25)
+  assert.equal(polar.faces[5].result.reason,'global-polar-projection-contraction')
+  assert.equal(polar.absenceProven,false)
+  const unresolved=panel.getByText('Не проверены или не доказаны грани: 1, 11',{exact:true})
+  await unresolved.waitFor();await unresolved.scrollIntoViewIfNeeded();await page.screenshot({path:path.join(directory,'polar.png')})
+  assert.deepEqual(await exportDoc('polar-after.json'),before)
+  await number(limit,'448')
+  await page.waitForFunction(()=>window.__selfResults.some(r=>r.faces.length===27&&r.maxSpans===448),null,{timeout:120000})
+  const partial=await page.evaluate(()=>window.__selfResults.findLast(r=>r.faces.length===27&&r.maxSpans===448))
+  assert.equal(partial.faces[5].result.proven,false);assert.equal(partial.absenceProven,false)
+  await panel.getByText('Не проверены или не доказаны грани: 1, 6, 11',{exact:true}).waitFor()
+  assert.deepEqual(await exportDoc('polar-partial-after.json'),before)
+ }
  assert.deepEqual(errors,[])
  const artifact={geometryWasmSha256:createHash('sha256').update(await readFile(path.join(root,'wasm/geometry-kernel.wasm'))).digest('hex'),indexSha256:createHash('sha256').update(await readFile(path.join(root,'index.html'))).digest('hex')}
- await writeFile(path.join(directory,'result.json'),JSON.stringify({artifact,ok:true,selfIntersection:process.argv.includes('--self-intersection'),projective,keyboard,tabs,contactPairCount:fixture.result.contactPairCount,cubeSharedBoundaries:12,cubeClassified:true,curvedSharedBoundaries:12,curvedUnresolvedPairs:0,partial:true,invalidInput:true,retry:true,cancel:true,restart:true,selectionCancellation:true,modelSwitchCancellation:true,staleReplyAfterImport:true,unchanged:true,errors},null,2))
+ await writeFile(path.join(directory,'result.json'),JSON.stringify({artifact,ok:true,selfIntersection:process.argv.includes('--self-intersection'),projective,polar,keyboard,tabs,contactPairCount:fixture.result.contactPairCount,cubeSharedBoundaries:12,cubeClassified:true,curvedSharedBoundaries:12,curvedUnresolvedPairs:0,partial:true,invalidInput:true,retry:true,cancel:true,restart:true,selectionCancellation:true,modelSwitchCancellation:true,staleReplyAfterImport:true,unchanged:true,errors},null,2))
 }catch(error){if(page){await page.screenshot({path:path.join(directory,'failure.png')}).catch(()=>{});await writeFile(path.join(directory,'failure.txt'),await page.locator('body').innerText().catch(()=>''))}throw error}
 finally{await browser?.close();await new Promise(resolve=>server.close(resolve))}
