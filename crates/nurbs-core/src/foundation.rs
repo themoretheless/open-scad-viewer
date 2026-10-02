@@ -3455,3 +3455,7 @@ mod periodic_surface_rebuild_tests {
   assert_eq!(classify_normal_box(&[[0.,0.],[0.,0.],[1.,2.]]),"certified_regular");
  }
 }
+
+#[path = "reparameterization_preimages.rs"]
+mod preimages;
+pub use preimages::bound_reparameterization_preimages;
