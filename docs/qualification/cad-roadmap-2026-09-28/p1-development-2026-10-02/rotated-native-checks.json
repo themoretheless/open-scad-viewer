@@ -1,0 +1,16 @@
+{
+  "schema": "cad-p1-rotated-corner/1",
+  "scope": "rigid cuboid local frame recovered from three selected edges; full local cuboid recognition and world-space audit",
+  "rustOperationTestsPassed": 40,
+  "rotatedCornersChecked": 8,
+  "rotationRadians": [
+    0.37,
+    -0.61
+  ],
+  "volumeToleranceMm3": 2e-05,
+  "shearRefusalChecked": true,
+  "independentRotatedStepVerified": false,
+  "browserVerified": false,
+  "wasmBuild": "running; process session 43240; log /private/tmp/cad-p1-rotated-wasm-build.log",
+  "generalP1Complete": false
+}

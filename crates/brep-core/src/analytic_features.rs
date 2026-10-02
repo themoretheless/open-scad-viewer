@@ -766,6 +766,97 @@ pub fn exact_valence3_corner_blend(
     edges: &[usize],
     radius: f64,
 ) -> Result<AuditedFeatureResult> {
+    if is_axis_aligned_cuboid(model) {
+        return exact_axis_aligned_valence3_corner_blend(model, edges, radius);
+    }
+    model.validate()?;
+    let refusal = || {
+        refuse(
+            "BREP_VALENCE3_CORNER_BLEND_REFUSED",
+            "Corner blend requires three distinct orthogonal edges of a planar cuboid",
+        )
+    };
+    if edges.len() != 3
+        || edges.iter().any(|&i| i >= model.edges.len())
+        || edges
+            .iter()
+            .copied()
+            .collect::<std::collections::BTreeSet<_>>()
+            .len()
+            != 3
+    {
+        return Err(refusal());
+    }
+    let vertex = model.edges[edges[0]]
+        .vertices
+        .iter()
+        .copied()
+        .find(|v| edges.iter().all(|&e| model.edges[e].vertices.contains(v)))
+        .ok_or_else(refusal)?;
+    let origin = model.vertices[vertex].point;
+    let mut axes = [[0.; 3]; 3];
+    for (i, &edge) in edges.iter().enumerate() {
+        let edge = &model.edges[edge];
+        if edge.curve.degree != 1 {
+            return Err(refusal());
+        }
+        let other = edge
+            .vertices
+            .iter()
+            .copied()
+            .find(|&v| v != vertex)
+            .ok_or_else(refusal)?;
+        let delta: [f64; 3] = std::array::from_fn(|j| model.vertices[other].point[j] - origin[j]);
+        let length = delta[0].hypot(delta[1]).hypot(delta[2]);
+        if !length.is_finite() || length <= 1e-12 {
+            return Err(refusal());
+        }
+        axes[i] = delta.map(|v| v / length);
+    }
+    for i in 0..3 {
+        for j in 0..i {
+            let dot: f64 = (0..3).map(|k| axes[i][k] * axes[j][k]).sum();
+            if dot.abs() > 1e-12 {
+                return Err(refusal());
+            }
+        }
+    }
+    let mut to_local = [[0.; 4]; 4];
+    let mut to_world = [[0.; 4]; 4];
+    to_local[3][3] = 1.;
+    to_world[3][3] = 1.;
+    for i in 0..3 {
+        for j in 0..3 {
+            to_local[i][j] = axes[i][j];
+            to_world[i][j] = axes[j][i];
+        }
+        to_local[i][3] = -(0..3).map(|j| axes[i][j] * origin[j]).sum::<f64>();
+        to_world[i][3] = origin[i];
+    }
+    // Full cuboid recognition and audit run in the recovered orthonormal frame;
+    // selected edges alone never establish the source's geometric class.
+    let local = crate::transform::affine(model, to_local)?;
+    let result = exact_axis_aligned_valence3_corner_blend(&local, edges, radius)?;
+    let world = crate::transform::affine(&result.model, to_world)?;
+    certify_blend_result(
+        world,
+        EXACT_VALENCE3_CORNER_BLEND_CAPABILITY,
+        vec![
+            "exact_equal_radius_sphere_octant",
+            "three_rational_cylinders",
+            "plane_cylinder_sphere_network",
+            "rigid_cuboid_placement",
+        ],
+        radius,
+        "BREP_VALENCE3_CORNER_BLEND_REFUSED",
+    )
+}
+
+fn exact_axis_aligned_valence3_corner_blend(
+    model: &Model,
+    edges: &[usize],
+    radius: f64,
+) -> Result<AuditedFeatureResult> {
     audit_solid(model).map_err(|_| {
         refuse(
             "BREP_VALENCE3_CORNER_BLEND_REFUSED",
@@ -3285,6 +3376,47 @@ mod tests {
                 .contains(&"no_constant_radius_substitution")
         );
         out.model.validate().unwrap();
+    }
+
+    #[test]
+    fn exact_valence3_corner_blend_rotated_cuboid_and_shear_refusal() {
+        let source = cuboid([-7., 3., -2.], [3., 11., 4.]).unwrap();
+        let a = 0.37_f64;
+        let b = -0.61_f64;
+        let matrix = [
+            [a.cos() * b.cos(), -a.sin(), a.cos() * b.sin(), 17.],
+            [a.sin() * b.cos(), a.cos(), a.sin() * b.sin(), -9.],
+            [-b.sin(), 0., b.cos(), 23.],
+            [0., 0., 0., 1.],
+        ];
+        let placed = crate::transform::affine(&source, matrix).unwrap();
+        for vertex in 0..8 {
+            let edges: Vec<_> = source
+                .edges
+                .iter()
+                .enumerate()
+                .filter_map(|(i, e)| e.vertices.contains(&vertex).then_some(i))
+                .collect();
+            let out = exact_valence3_corner_blend(&placed, &edges, 1.).unwrap();
+            assert!(out.audit.ok && out.naming_complete);
+            let volume = crate::analysis::mass_properties(&out.model, 1e-9, 300_000)
+                .unwrap()
+                .signed_volume_mm3;
+            let expected =
+                480. - (1. - std::f64::consts::PI / 4.) * 21. - (1. - std::f64::consts::PI / 6.);
+            assert!((volume - expected).abs() < 2e-5);
+            let sheared = crate::transform::affine(
+                &source,
+                [
+                    [1., 0.2, 0., 0.],
+                    [0., 1., 0., 0.],
+                    [0., 0., 1., 0.],
+                    [0., 0., 0., 1.],
+                ],
+            )
+            .unwrap();
+            assert!(exact_valence3_corner_blend(&sheared, &edges, 1.).is_err());
+        }
     }
 
     #[test]
