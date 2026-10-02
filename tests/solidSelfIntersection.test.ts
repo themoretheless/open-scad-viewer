@@ -1,5 +1,6 @@
 import {readFileSync} from 'node:fs'
 import {expect,it} from 'vitest'
+import {MainSolidWorkerClient} from '../src/services/mainSolidWorkerClient'
 import {selfIntersectionExpectation,validSelfIntersection} from '../src/services/solidSelfIntersection'
 const fixture=JSON.parse(readFileSync(new URL('../docs/qualification/cad-roadmap-2026-09-28/surface-contact-native/face-contact-api-fixtures.json',import.meta.url),'utf8')).cases[0]
 const {model,toleranceUv,op,...limits}=fixture.request
@@ -238,7 +239,7 @@ it('binds explicit boundary audit and exact contacts to source, budgets and owne
   const copy=structuredClone(r);Object.assign(copy.pairs.find((p:any)=>p.status==='shared-boundary').sharedBoundary,patch)
   expect(validSelfIntersection(e,copy)).toBe(false)
  }
- for(const patch of [{exactAgreement:false},{exactJoins:false},{trimValid:false},{positiveTrimWinding:false},{exactWork:1000001},{trimCells:10001}]){
+ for(const patch of [{exactAgreement:false},{exactJoins:false},{trimValid:false},{positiveTrimWinding:false},{proven:false},{exactWork:1000001},{trimCells:10001}]){
   const copy=structuredClone(r);Object.assign(copy.boundaryEmbedding,patch)
   expect(validSelfIntersection(e,copy)).toBe(false)
  }
@@ -248,4 +249,22 @@ it('binds explicit boundary audit and exact contacts to source, budgets and owne
  expect(validSelfIntersection(selfIntersectionExpectation(stale,toleranceUv,limits,6,audit),r)).toBe(false)
  const budget=structuredClone(r);budget.boundaryEmbedding.limits.exactWork=1
  expect(validSelfIntersection(e,budget)).toBe(false)
+})
+
+it('cancels an audited request when the audit mode changes and ignores its late reply',async()=>{
+ const ports:any[]=[]
+ const client=new MainSolidWorkerClient(()=>{const p:any={onmessage:null,onerror:null,onmessageerror:null,terminated:false,postMessage(m:any){this.request=m},terminate(){this.terminated=true}};ports.push(p);return p})
+ const base={kind:'selfIntersection' as const,model,toleranceUv,limits,maxSpans:6}
+ try{
+  const audited=client.run({...base,boundaryAudit:{exactWork:1000000,trimPairs:1000,trimCells:10000,trimDomainCells:100000}})
+  const cancelled=expect(audited).rejects.toMatchObject({name:'AbortError'})
+  const stale=ports[0].onmessage,old=ports[0].request
+  const fresh=client.run(base);await cancelled
+  expect(ports[0].terminated).toBe(true)
+  let settled=false;void fresh.then(()=>{settled=true})
+  stale({data:{version:1,id:old.id,kind:'selfIntersection',ok:true,result:report}})
+  await Promise.resolve();expect(settled).toBe(false)
+  ports[1].onmessage({data:{version:1,id:ports[1].request.id,kind:'selfIntersection',ok:true,result:report}})
+  await expect(fresh).resolves.toMatchObject({absenceProven:true})
+ }finally{client.dispose()}
 })

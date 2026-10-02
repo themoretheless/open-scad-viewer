@@ -161,6 +161,14 @@ export function validSelfIntersection(e:ReturnType<typeof selfIntersectionExpect
   }
   all=all&&faceAbsenceProven(f)
  }
+ for(const pair of r.pairs){
+  const c=pair.sharedBoundary
+  if(c?.kind==='exact-hull'&&c.joinedProof){
+   const j=c.joinedProof,q=e.quotients[j.blendFace]
+   if(!q||q.collapsedEnd!==j.collapsedEnd||!r.faces[j.blendFace].quotientProof?.proven)return false
+  }
+ }
+ if(e.boundaryAudit&&r.boundaryEmbedding!.proven!==(admitted&&r.absenceProven))return false
  return r.spans===used&&r.allFacesInjective===all&&r.absenceProven===(all&&r.allPairsClassified)
 }
 export function inspectSelfIntersection(model:NurbsBrep,toleranceUv:number,limits:FaceContactLimits,maxSpans:number,boundaryAudit?:BoundaryAuditLimits):SelfIntersection {
