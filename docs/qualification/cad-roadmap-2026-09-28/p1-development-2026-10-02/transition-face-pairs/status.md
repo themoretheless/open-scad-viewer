@@ -9,6 +9,13 @@ passes 723 tests with three ignored. Latest joined-chart WASM packaging and
 application checks remain pending. Endpoint G1, thickness, volume and the
 full P0–P3 roadmap remain open; preview Apply remains disabled.
 
+The combined Rust API now accepts explicit boundary audit limits and returns
+source-bound embedding evidence, positive trim winding and joined contact
+proofs. Seven bridge regressions pass, including exact-work exhaustion.
+The frontend protocol and diagnostic option are implemented: 24 focused tests
+and Vue type checking pass. Current packaged-WASM and mouse/keyboard checks
+for this integration remain pending; scripts include those acceptance cases.
+
 The following sections record each qualification stage and its scope.
 
 Native and actual WASM checks on 2026-10-02. Mouse and keyboard browser regression checks

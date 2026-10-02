@@ -833,7 +833,7 @@ const boundarySelected=computed(()=>boundaryDefects.value[boundaryIndex.value])
 const boundaryLine=computed(()=>boundaryResult.value?.lines.find(line=>line.edge===boundarySelected.value?.edge))
 
 const faceContactsOpen=ref(false),faceContactsBudget=ref(10000),faceContactsRevision=ref(0),faceContactsPending=ref(false),faceContactIndex=ref(0)
-const inspectWithinFaces=ref(false)
+const inspectWithinFaces=ref(false),inspectExactBoundary=ref(false)
 const faceContactsResult=shallowRef<FaceContacts|SelfIntersection|null>(null),faceContactsError=ref('')
 const faceContactsWorker=createSolidPreviewWorker()
 onUnmounted(()=>faceContactsWorker.dispose())
@@ -849,7 +849,7 @@ watchEffect(onCleanup=>{
  if(!body.brep){faceContactsError.value=label('Выберите тело с исходной B-rep геометрией.','Choose a body with original B-rep geometry.');return}
  faceContactsPending.value=true
  const valid=()=>current&&document.value===snapshot&&selectedBody.value?.id===body.id
- void faceContactsWorker.run({...inspectWithinFaces.value?{kind:'selfIntersection' as const,maxSpans:Math.min(maxCells,100000)}:{kind:'faceContacts' as const},model:body.brep,toleranceUv:1e-8,limits:{maxPairs:10000,maxCells,maxDomainCells:Math.min(8000000,maxCells*100),cellsPerPair:Math.min(100000,Math.max(1,Math.floor(maxCells/20))),domainCellsPerPair:Math.min(1000000,Math.max(1,maxCells*5)),maxBoxes:64}})
+ void faceContactsWorker.run({...inspectWithinFaces.value?{kind:'selfIntersection' as const,maxSpans:Math.min(maxCells,100000),...(inspectExactBoundary.value?{boundaryAudit:{exactWork:Math.min(maxCells*100,1000000),trimPairs:10000,trimCells:Math.min(maxCells,100000),trimDomainCells:Math.min(maxCells*100,1000000)}}:{})}:{kind:'faceContacts' as const},model:body.brep,toleranceUv:1e-8,limits:{maxPairs:10000,maxCells,maxDomainCells:Math.min(8000000,maxCells*100),cellsPerPair:Math.min(100000,Math.max(1,Math.floor(maxCells/20))),domainCellsPerPair:Math.min(1000000,Math.max(1,maxCells*5)),maxBoxes:64}})
  .then(value=>{if(valid())faceContactsResult.value=value})
  .catch(()=>{if(valid())faceContactsError.value=label('Не удалось проверить контакты граней. Повторите проверку; при повторном отказе проверьте структуру модели.','Could not inspect face contacts. Retry; if it fails again, inspect the model structure.')})
  .finally(()=>{if(valid())faceContactsPending.value=false})
@@ -4142,11 +4142,13 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
           <fieldset v-if="faceContactsOpen" aria-label="face-contacts" class="boundary-agreement-panel">
             <legend>{{ label('Контакты B-rep-граней','B-rep face contacts') }}</legend>
             <label><input v-model="inspectWithinFaces" type="checkbox">{{ label('Проверять внутри граней','Inspect within faces') }}</label>
+            <label v-if="inspectWithinFaces"><input v-model="inspectExactBoundary" type="checkbox">{{ label('Проверять точное совпадение и замыкание границ','Inspect exact boundary agreement and closure') }}</label>
             <label>{{ label('Лимит проверки контактов','Contact inspection limit') }}<input v-model.number="faceContactsBudget" type="number" min="1" max="1000000" step="1" :aria-invalid="faceContactsBudgetInvalid" aria-describedby="face-contacts-error" :aria-label="label('Лимит проверки контактов','Contact inspection limit')"></label>
             <p v-if="faceContactsPending" role="status" aria-label="face-contacts-pending">{{ label('Проверяю контакты…','Inspecting contacts…') }} <button @click="faceContactsOpen=false">Esc</button></p>
             <template v-if="faceContactsResult">
               <template v-if="'absenceProven' in faceContactsResult">
                 <p role="status">{{ faceContactsResult.absenceProven ? label('Отсутствие самопересечений подтверждено.','Absence of self-intersections is proven.') : label('Отсутствие самопересечений не доказано.','Absence of self-intersections is unproven.') }}</p>
+                <p v-if="faceContactsResult.boundaryEmbedding" data-testid="boundary-embedding-summary">{{ faceContactsResult.boundaryEmbedding.proven ? label('Границы согласованы, замкнуты и не пересекаются.','Boundary agreement, closure and absence of intersections are proven.') : label('Полная проверка границ не завершена.','Complete boundary proof is unresolved.') }}</p>
                 <p v-if="faceContactsResult.allFacesInjective">{{ label('Все грани проверены на самоналожение.','All faces are proven free of self-overlap.') }}</p>
                 <p v-else>{{ label('Не проверены или не доказаны грани: ','Unvisited or unproven faces: ')+faceContactsResult.faces.filter(f=>!faceAbsenceProven(f)).map(f=>f.face+1).join(', ') }}</p>
                 <p v-if="faceContactsResult.faces.some(f=>f.quotientProof?.proven)">{{ label('Самоналожение исключено на гранях со схлопнутой границей: ','Self-overlap is excluded on faces with a collapsed boundary: ')+faceContactsResult.faces.filter(f=>f.quotientProof?.proven).map(f=>f.face+1).join(', ')+label('. Гладкость в конечной точке не подтверждена.','. Endpoint smoothness is unqualified.') }}</p>

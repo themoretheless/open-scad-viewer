@@ -5,7 +5,11 @@ export interface FaceInjectivity {
  proven:boolean;projection:[number,number]|null;linearProjection?:[[number,number,number],[number,number,number]]|null;projectiveProjection?:number[][]|null;polarProjection?:number[][]|null;contractionUpper:number|null;spans:number
  reason:'global-projection-contraction'|'global-linear-projection-contraction'|'global-projective-projection-contraction'|'global-polar-projection-contraction'|'collapsed-boundary-requires-quotient-proof'|'projection-not-proven'|'work-limit'|'periodic-domain'
 }
+export interface BoundaryAuditLimits {exactWork:number;trimPairs:number;trimCells:number;trimDomainCells:number}
+export interface BoundaryEmbeddingEvidence {proven:boolean;exactAgreement:boolean;exactJoins:boolean;exactWork:number;trimValid:boolean;positiveTrimWinding:boolean;trimPairs:number;trimCells:number;trimDomainCells:number;limits:BoundaryAuditLimits;sourceModel:NurbsBrep}
+function sourceSnapshot(value:unknown):string {return JSON.stringify(value,(_,v)=>v&&typeof v==='object'&&!Array.isArray(v)?Object.fromEntries(Object.keys(v).sort().map(k=>[k,v[k]])):v)}
 export interface SelfIntersection extends Omit<FaceContacts,'scope'> {
+ boundaryEmbedding?:BoundaryEmbeddingEvidence
  scope:'within-face-and-distinct-face-pairs';absenceProven:boolean;allFacesInjective:boolean
  spans:number;maxSpans:number;faces:Array<{face:number;result:FaceInjectivity|null;quotientProof?:QuotientProof|null}>
 }
@@ -15,7 +19,7 @@ export interface QuotientProof {
  sourceSurface:NurbsBrep['faces'][number]['surface']
 }
 export function faceAbsenceProven(f:SelfIntersection['faces'][number]):boolean{return !!(f.result?.proven||f.quotientProof?.proven)}
-export function selfIntersectionExpectation(model:NurbsBrep,toleranceUv:number,limits:FaceContactLimits,maxSpans:number){
+export function selfIntersectionExpectation(model:NurbsBrep,toleranceUv:number,limits:FaceContactLimits,maxSpans:number,boundaryAudit?:BoundaryAuditLimits){
  const spans=(knots:number[],degree:number,count:number)=>knots.slice(degree,count).filter((k,i)=>k<knots[degree+i+1]).length
  const projectiveData=model.faces.map(({surface:s})=>[0,1,2].map(axis=>{
   const anchor=s.controlPoints[s.controlPoints.length-1][0][axis]
@@ -31,7 +35,7 @@ export function selfIntersectionExpectation(model:NurbsBrep,toleranceUv:number,l
    return knots.every(k=>k===knots[0])&&p.every(row=>eq(row[j],p[0][j]))
   })
  })
- return {...faceContactExpectation(model,toleranceUv,limits),maxSpans,projectiveData,collapsed,quotients:model.faces.map((_,i)=>quotientExpectation(model,i)),polarCandidates:model.faces.map(({surface})=>polarCandidates(surface)),faceSpans:model.faces.map(({surface:s})=>spans(s.knotsU,s.degreeU,s.controlPoints.length)*spans(s.knotsV,s.degreeV,s.controlPoints[0].length))}
+ return {boundaryAudit:boundaryAudit?{...boundaryAudit}:undefined,sourceSnapshot:boundaryAudit?sourceSnapshot(model):undefined,...faceContactExpectation(model,toleranceUv,limits),maxSpans,projectiveData,collapsed,quotients:model.faces.map((_,i)=>quotientExpectation(model,i)),polarCandidates:model.faces.map(({surface})=>polarCandidates(surface)),faceSpans:model.faces.map(({surface:s})=>spans(s.knotsU,s.degreeU,s.controlPoints.length)*spans(s.knotsV,s.degreeV,s.controlPoints[0].length))}
 }
 function quotientExpectation(model:NurbsBrep,face:number){
  const f=model.faces[face],s=f.surface,p=s.controlPoints,u=[s.knotsU[s.degreeU],s.knotsU[p.length]],v=[s.knotsV[s.degreeV],s.knotsV[p[0].length]]
@@ -94,7 +98,15 @@ function polarCandidates(s:NurbsBrep['faces'][number]['surface']):number[][][]{
 const linearProjections=[[[1,1,0],[0,0,1]],[[1,-1,0],[0,0,1]],[[1,0,1],[0,1,0]],[[1,0,-1],[0,1,0]],[[0,1,1],[1,0,0]],[[0,1,-1],[1,0,0]]]
 export function validSelfIntersection(e:ReturnType<typeof selfIntersectionExpectation>,value:unknown):value is SelfIntersection {
  const r=value as SelfIntersection
- if(!r||r.scope!=='within-face-and-distinct-face-pairs'||r.maxSpans!==e.maxSpans||!Array.isArray(r.faces)||r.faces.length!==e.domains.length||!validFaceContacts(e,{...r,scope:'distinct-face-pairs'}))return false
+ let admitted=false
+ if(e.boundaryAudit){
+  const d=r?.boundaryEmbedding,l=e.boundaryAudit
+  const work=(n:unknown,max:number)=>typeof n==='number'&&Number.isSafeInteger(n)&&n>=0&&n<=max
+  if(!d||sourceSnapshot(d.sourceModel)!==e.sourceSnapshot||!d.limits||!Object.keys(l).every(k=>d.limits[k as keyof BoundaryAuditLimits]===l[k as keyof BoundaryAuditLimits])||![d.proven,d.exactAgreement,d.exactJoins,d.trimValid,d.positiveTrimWinding].every(n=>typeof n==='boolean')||!work(d.exactWork,l.exactWork)||!work(d.trimPairs,l.trimPairs)||!work(d.trimCells,l.trimCells)||!work(d.trimDomainCells,l.trimDomainCells))return false
+  admitted=d.exactAgreement&&d.exactJoins&&d.trimValid&&d.positiveTrimWinding&&r.allFacesInjective
+  if(d.proven&&(!admitted||!r.absenceProven))return false
+ }else if(r?.boundaryEmbedding!==undefined)return false
+ if(!r||r.scope!=='within-face-and-distinct-face-pairs'||r.maxSpans!==e.maxSpans||!Array.isArray(r.faces)||r.faces.length!==e.domains.length||!validFaceContacts(e,{...r,scope:'distinct-face-pairs'},admitted))return false
  let used=0,all=true
  for(let i=0;i<r.faces.length;i++){
   const f=r.faces[i];if(!f||f.face!==i)return false
@@ -151,6 +163,6 @@ export function validSelfIntersection(e:ReturnType<typeof selfIntersectionExpect
  }
  return r.spans===used&&r.allFacesInjective===all&&r.absenceProven===(all&&r.allPairsClassified)
 }
-export function inspectSelfIntersection(model:NurbsBrep,toleranceUv:number,limits:FaceContactLimits,maxSpans:number):SelfIntersection {
- return callGeometryRust<SelfIntersection>('cad_self_intersection',{model,toleranceUv,...limits,maxSpans})
+export function inspectSelfIntersection(model:NurbsBrep,toleranceUv:number,limits:FaceContactLimits,maxSpans:number,boundaryAudit?:BoundaryAuditLimits):SelfIntersection {
+ return callGeometryRust<SelfIntersection>('cad_self_intersection',{model,toleranceUv,...limits,maxSpans,...(boundaryAudit?{boundaryAudit}:{})})
 }

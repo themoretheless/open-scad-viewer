@@ -59,7 +59,7 @@ async function execute(job:MainSolidJob):Promise<MainSolidResults[keyof MainSoli
     case 'profileDisplay':return retainedProfileDisplay(job.profile)
     case 'surfaceMesh':return tessellateSolidNurbsSurface(job.item)
     case 'surfaceBoundary':return measureSurfaceBoundaries(job.a,job.b,job.options)
-    case 'selfIntersection':return inspectSelfIntersection(job.model,job.toleranceUv,job.limits,job.maxSpans)
+    case 'selfIntersection':return inspectSelfIntersection(job.model,job.toleranceUv,job.limits,job.maxSpans,job.boundaryAudit)
     case 'faceContacts':return inspectFaceContacts(job.model,job.toleranceUv,job.limits)
     case 'boundaryAgreement':return inspectBoundaryAgreement(job.model,job.maxCells)
     case 'solidDistance':return measureSolidDistance(job.options)

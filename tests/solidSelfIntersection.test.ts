@@ -221,3 +221,31 @@ it('qualifies owned quotient charts in actual WASM and keeps exhausted coverage 
  }
  expect(JSON.stringify(model)).toBe(before)
 })
+
+it('binds explicit boundary audit and exact contacts to source, budgets and ownership',()=>{
+ const audit={exactWork:1000000,trimPairs:1000,trimCells:10000,trimDomainCells:100000}
+ const e=selfIntersectionExpectation(model,toleranceUv,limits,6,audit)
+ const r:any=structuredClone(report)
+ r.boundaryEmbedding={proven:true,exactAgreement:true,exactJoins:true,exactWork:20,trimValid:true,positiveTrimWinding:true,trimPairs:3,trimCells:5,trimDomainCells:7,limits:audit,sourceModel:structuredClone(model)}
+ expect(validSelfIntersection(e,r)).toBe(true)
+ expect(validSelfIntersection(expectation,r)).toBe(false)
+ const pair=r.pairs.find((p:any)=>p.status==='shared-boundary')
+ expect(pair).toBeDefined()
+ const edge=pair.sharedBoundary.edge
+ pair.sharedBoundary={kind:'exact-hull',faces:pair.faces,edges:[edge],vertex:null,contactEnclosure:[[0,1],[0,1],[0,1]],joinedProof:null}
+ expect(validSelfIntersection(e,r)).toBe(true)
+ for(const patch of [{edges:[999]},{edges:[]},{vertex:999},{faces:[1,0]},{contactEnclosure:[[1,0],[0,1],[0,1]]},{joinedProof:{proven:true}}]){
+  const copy=structuredClone(r);Object.assign(copy.pairs.find((p:any)=>p.status==='shared-boundary').sharedBoundary,patch)
+  expect(validSelfIntersection(e,copy)).toBe(false)
+ }
+ for(const patch of [{exactAgreement:false},{exactJoins:false},{trimValid:false},{positiveTrimWinding:false},{exactWork:1000001},{trimCells:10001}]){
+  const copy=structuredClone(r);Object.assign(copy.boundaryEmbedding,patch)
+  expect(validSelfIntersection(e,copy)).toBe(false)
+ }
+ const changed=structuredClone(r);changed.boundaryEmbedding.sourceModel.faces[0].surface.controlPoints[0][0][0]+=0.01
+ expect(validSelfIntersection(e,changed)).toBe(false)
+ const stale=structuredClone(model);stale.faces[0].surface.weights[0][0]*=1.01
+ expect(validSelfIntersection(selfIntersectionExpectation(stale,toleranceUv,limits,6,audit),r)).toBe(false)
+ const budget=structuredClone(r);budget.boundaryEmbedding.limits.exactWork=1
+ expect(validSelfIntersection(e,budget)).toBe(false)
+})

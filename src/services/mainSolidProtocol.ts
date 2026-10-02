@@ -61,7 +61,7 @@ export type MainSolidJob =
   | {kind:'profileDisplay';profile:BrepProfile}
   | {kind:'surfaceMesh';item:SolidNurbsSurface}
   | {kind:'surfaceBoundary';a:NurbsSurface;b:NurbsSurface;options:SurfaceBoundaryOptions}
-  | {kind:'selfIntersection';model:NurbsBrep;toleranceUv:number;limits:FaceContactLimits;maxSpans:number}
+  | {kind:'selfIntersection';model:NurbsBrep;toleranceUv:number;limits:FaceContactLimits;maxSpans:number;boundaryAudit?:import('./solidSelfIntersection').BoundaryAuditLimits}
   | {kind:'faceContacts';model:NurbsBrep;toleranceUv:number;limits:FaceContactLimits}
   | {kind:'boundaryAgreement';model:NurbsBrep;maxCells:number}
   | {kind:'solidDistance';options:SolidDistanceOptions}
@@ -160,7 +160,7 @@ export function mainSolidExpectation(job:MainSolidJob):MainSolidExpectation {
   if(job.kind==='profilePrepare')return {kind:job.kind,chainSegments:job.ids.map(id=>{if(job.document.curves?.some(c=>c.id===id))return 1;const s=job.document.sketches.find(s=>s.id===id);return s?.analytic?.kind==='arc'?Math.ceil(Math.abs(s.analytic.sweep)/90):Math.max(0,(s?.points.length??0)-1)})}
   if(job.kind==='trimmedCurveOffset')return {kind:job.kind,createdId:job.options.createdId,fillRule:job.options.fillRule,toleranceMm:job.options.toleranceMm,intersectionToleranceMm:job.options.intersectionToleranceMm}
   if(job.kind==='solidDistance')return {kind:job.kind,...solidDistanceExpectation(job.options)}
-  if(job.kind==='selfIntersection')return {kind:job.kind,...selfIntersectionExpectation(job.model,job.toleranceUv,job.limits,job.maxSpans)}
+  if(job.kind==='selfIntersection')return {kind:job.kind,...selfIntersectionExpectation(job.model,job.toleranceUv,job.limits,job.maxSpans,job.boundaryAudit)}
   if(job.kind==='faceContacts')return {kind:job.kind,...faceContactExpectation(job.model,job.toleranceUv,job.limits)}
   if(job.kind==='boundaryAgreement')return {kind:job.kind,...boundaryExpectation(job.model,job.maxCells)}
   if(job.kind==='shellDistance'){const o=job.options;return {kind:job.kind,domains:[o.a,o.b].map(m=>m.faces.map(({surface:s})=>[[s.knotsU[s.degreeU],s.knotsU[s.controlPoints.length]],[s.knotsV[s.degreeV],s.knotsV[s.controlPoints[0]?.length??0]]])),toleranceMm:o.toleranceMm,toleranceUv:o.toleranceUv,maxCells:o.maxCells,maxDomainCells:o.maxDomainCells}}
