@@ -1090,6 +1090,30 @@ mod tests {
     }
 
     #[test]
+    fn collapsed_transition_tip_has_distinct_normal_limits_not_a_regular_g1_point() {
+        // Both contact rails end at the original sharp rim. Their limiting
+        // tangent planes differ, even though every nonzero section is tangent
+        // to both supports. A collapsed UV edge cannot certify a regular G1 tip.
+        for direction in [-1., 1.] {
+            for (r0, r1, pole_u) in [(0., 1.25, 0.), (1.25, 0., 1.)] {
+                let span = plane_cylinder_transition(20., 6., r0, r1, 0.3, direction * 0.7).unwrap();
+                for distance in [0.1, 0.01, 0.001] {
+                    let u = if pole_u == 0. { distance } else { 1. - distance };
+                    let plane = span.surface.evaluate(u, 0.).unwrap();
+                    let cylinder = span.surface.evaluate(u, 1.).unwrap();
+                    let np = plane.unit_normal().unwrap();
+                    let nc = cylinder.unit_normal().unwrap();
+                    let dot: f64 = (0..3).map(|k| np[k] * nc[k]).sum();
+                    assert!(dot.abs() < 1e-7, "distinct limiting support normals: {dot}");
+                    assert!((np[2].abs() - 1.).abs() < 1e-7);
+                    assert!(nc[2].abs() < 1e-7);
+                }
+                assert!(span.surface.evaluate(pole_u, 0.5).unwrap().unit_normal().is_none());
+            }
+        }
+    }
+
+    #[test]
     fn transition_joins_constant_radius_patch_with_matching_tangent_planes() {
         for direction in [-1., 1.] {
             let transition =
