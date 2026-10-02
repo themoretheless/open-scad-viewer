@@ -64,6 +64,8 @@ responses and source mutation refusal. `vue-tsc --noEmit` passed.
 `scripts/check-cad-material-wasm.mts` is prepared to run all seven fixtures
 through the packaged kernel and the real worker handler after packaging finishes.
 
-Packaged WASM and UI qualification are pending. Normal alignment, automatic
+Packaged WASM and UI qualification passed for the documented seven fixtures
+and final mouse/keyboard annular scenarios; see `../material-wasm/status.md`.
+Normal alignment, automatic
 opposing region selection and global minimum wall thickness remain open.
 The generic chord result is not a minimum thickness certificate.

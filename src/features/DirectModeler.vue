@@ -86,6 +86,7 @@ const ru = computed(() => props.locale === 'ru')
 const ShellDistanceSummary=defineAsyncComponent(()=>import('../components/ShellDistanceSummary.vue'))
 const SolidVolumeWitness=defineAsyncComponent(()=>import('../components/SolidVolumeWitness.vue'))
 const SolidVolumeDistance=defineAsyncComponent(()=>import('../components/SolidVolumeDistance.vue'))
+const MaterialPathCheck=defineAsyncComponent(()=>import('../components/MaterialPathCheck.vue'))
 const label = (a: string, b: string) => ru.value ? a : b
 const key = props.embedded ? 'scad-main-modeler-v1' : 'scad-solid-modeler-v1'
 const error = ref(''), saveError = ref(false), savePending=ref(false)
@@ -677,6 +678,8 @@ function chooseSketchFace() {
 }
 function resetWorkplane() { cancelGesture();activePlane.value=xyPlane();workplaneOutline.value=[];workplaneBodyId.value='';choosingSketchFace.value=false;selection.value='';extraSelection.value=[] }
 const volumeDistanceOpen=ref(false),volumeContact=shallowRef<Vec3[]|null>(null)
+const materialPathOpen=ref(false)
+const materialPathOverlay=shallowRef<import('../services/solidMaterialVolume').MaterialOverlay|null>(null)
 const measurementOpen=ref(false),measureTarget=ref(''),measureA=ref(1),measureB=ref(2),curveParameter=ref(.5)
 const formatMeasurement=(value:number)=>value!==0&&Math.abs(value)<1e-6?value.toExponential(3):value.toFixed(6)
 const clearanceOpen=ref(false),clearanceRevision=ref(0),clearanceRetryVisible=ref(false)
@@ -712,7 +715,7 @@ const measurement=shallowRef<{value:PointMeasurement|null;error:string}|null>(nu
 const curvatureMeasurement=shallowRef<{value:CurveMeasurement|null;error:string}|null>(null)
 onUnmounted(()=>{measurementWorker.dispose();curvatureWorker.dispose()})
 watchEffect(onCleanup=>{
- const enabled=props.open&&measurementOpen.value&&!clearanceOpen.value&&!volumeDistanceOpen.value
+ const enabled=props.open&&measurementOpen.value&&!clearanceOpen.value&&!volumeDistanceOpen.value&&!materialPathOpen.value
  const source=selectedBody.value,target=measurementTarget.value,a=measureA.value-1,b=measureB.value-1
  let current=true
  onCleanup(()=>{current=false;measurementWorker.cancel()})
@@ -3626,11 +3629,15 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
                   <path v-if="pane==='3d'||target.local" :d="(()=>{const p=pane==='2d'?project(target.local!,'2d'):project(target.point,'3d'),r=views[pane]/180;return `M ${p[0]-r} ${p[1]} H ${p[0]+r} M ${p[0]} ${p[1]-r} V ${p[1]+r}`})()" vector-effect="non-scaling-stroke" />
                 </template>
               </g>
-              <g v-if="pane==='3d' && !shellDistanceOpen && !volumeDistanceOpen && measurement?.value" pointer-events="none" data-measurement="distance">
+              <g v-if="pane==='3d' && !shellDistanceOpen && !volumeDistanceOpen && !materialPathOpen && measurement?.value" pointer-events="none" data-measurement="distance">
                 <polyline :points="[measurement.value.a,measurement.value.b].map(p=>project(p,'3d').join(',')).join(' ')" fill="none" stroke="#ffda75" stroke-width="2" vector-effect="non-scaling-stroke"/>
                 <g v-for="(point,i) in [measurement.value.a,measurement.value.b]" :key="i" :transform="`translate(${project(point,'3d').join(' ')})`"><circle :r="views['3d']/120" fill="#ffda75"/><text :font-size="views['3d']/40" fill="#ffda75" :x="views['3d']/90">{{ i===0?'A':'B' }}</text></g>
               </g>
               <SolidVolumeWitness v-if="pane==='3d' && volumeContact" :points="volumeContact" :project="project" :size="views['3d']" :ru="ru"/>
+              <g v-if="pane==='3d' && materialPathOverlay" pointer-events="none" data-diagnostic="material-path">
+                <line :x1="project(materialPathOverlay.line[0],'3d')[0]" :y1="project(materialPathOverlay.line[0],'3d')[1]" :x2="project(materialPathOverlay.line[1],'3d')[0]" :y2="project(materialPathOverlay.line[1],'3d')[1]" :stroke="materialPathOverlay.proven?'#77eac5':'#ff6978'" stroke-dasharray="5 3" stroke-width="2" vector-effect="non-scaling-stroke"/>
+                <circle v-for="(m,i) in materialPathOverlay.marks" :key="i" :data-material-face="m.face+1" :cx="project(m.point,'3d')[0]" :cy="project(m.point,'3d')[1]" :r="views['3d']/85" fill="none" :stroke="m.unresolved?'#ffc977':materialPathOverlay.proven?'#77eac5':'#ff6978'" stroke-width="3" vector-effect="non-scaling-stroke"><title>{{label('Грань','Face')}} {{m.face+1}} · {{m.unresolved?label('Непроверенный участок','Unchecked region'):label('Пересечение линии','Line crossing')}}</title></circle>
+              </g>
               <g v-if="pane==='3d' && clearanceMeasurement?.value?.closestPoints" pointer-events="none" data-measurement="clearance">
                 <polyline :points="clearanceMeasurement.value.closestPoints.map(p=>project(p,'3d').join(',')).join(' ')" fill="none" stroke="#77eac5" stroke-width="3" vector-effect="non-scaling-stroke"/>
                 <circle v-for="(point,i) in clearanceMeasurement.value.closestPoints" :key="i" :cx="project(point,'3d')[0]" :cy="project(point,'3d')[1]" :r="views['3d']/100" fill="#77eac5"/>
@@ -4070,13 +4077,13 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
       <section v-if="selectedBody" class="body-diagnostics" :aria-label="label('Измерения','Measurements')">
         <button @click="measurementOpen=!measurementOpen" :aria-pressed="measurementOpen">{{ label('Измерения','Measurements') }}</button>
         <template v-if="measurementOpen">
-          <label v-if="!clearanceOpen && !shellDistanceOpen && !volumeDistanceOpen">{{ label('Вершина A','Vertex A') }}<input v-model.number="measureA" type="number" min="1" :max="solidVertexCount(selectedBody)" :aria-invalid="!vertexAValid" :aria-describedby="!vertexAValid ? 'vertex-measurement-error' : undefined" :aria-label="label('Вершина A','Vertex A')"></label>
-          <label>{{ label('Тело B','Body B') }}<select v-model="measureTarget" :aria-describedby="shellDistanceOpen?'shell-distance-error':undefined" :aria-invalid="shellDistanceOpen&&(!measurementTarget?.brep||measurementTarget.id===selectedBody.id)" :aria-label="label('Тело B','Body B')"><option value="">{{ label('Выбранное тело','Selected body') }}</option><option v-for="body in document.bodies" :key="body.id" :value="body.id">{{ body.name }}</option></select></label>
-          <label v-if="!clearanceOpen && !shellDistanceOpen && !volumeDistanceOpen">{{ label('Вершина B','Vertex B') }}<input v-model.number="measureB" type="number" min="1" :max="measurementTarget?solidVertexCount(measurementTarget):1" :aria-invalid="!vertexBValid" :aria-describedby="!vertexBValid ? 'vertex-measurement-error' : undefined" :aria-label="label('Вершина B','Vertex B')"></label>
-          <small v-if="measurementPending && !shellDistanceOpen && !volumeDistanceOpen" role="status" aria-label="vertex-measurement">{{ label('Измеряю вершины…','Measuring vertices…') }} <button @click="measurementOpen=false">Esc</button></small>
-          <output v-if="measurement?.value && !shellDistanceOpen && !volumeDistanceOpen">{{ measurement.value.distanceMm.toFixed(6) }} mm · ΔXYZ [{{ measurement.value.deltaMm.map(v=>v.toFixed(6)).join(', ') }}]</output>
-          <small v-if="measurement?.value && !shellDistanceOpen && !volumeDistanceOpen">A [{{ measurement.value.a.map(v=>v.toFixed(6)).join(', ') }}] · B [{{ measurement.value.b.map(v=>v.toFixed(6)).join(', ') }}] mm</small>
-          <p v-if="measurement?.error && !shellDistanceOpen && !volumeDistanceOpen" id="vertex-measurement-error" role="alert">{{ measurement.error }}</p><button v-if="measurementRetryVisible" @click="measurementRevision++">{{ label('Повторить измерение вершин','Retry vertex measurement') }}</button>
+          <label v-if="!clearanceOpen && !shellDistanceOpen && !volumeDistanceOpen && !materialPathOpen">{{ label('Вершина A','Vertex A') }}<input v-model.number="measureA" type="number" min="1" :max="solidVertexCount(selectedBody)" :aria-invalid="!vertexAValid" :aria-describedby="!vertexAValid ? 'vertex-measurement-error' : undefined" :aria-label="label('Вершина A','Vertex A')"></label>
+          <label v-if="!materialPathOpen">{{ label('Тело B','Body B') }}<select v-model="measureTarget" :aria-describedby="shellDistanceOpen?'shell-distance-error':undefined" :aria-invalid="shellDistanceOpen&&(!measurementTarget?.brep||measurementTarget.id===selectedBody.id)" :aria-label="label('Тело B','Body B')"><option value="">{{ label('Выбранное тело','Selected body') }}</option><option v-for="body in document.bodies" :key="body.id" :value="body.id">{{ body.name }}</option></select></label>
+          <label v-if="!clearanceOpen && !shellDistanceOpen && !volumeDistanceOpen && !materialPathOpen">{{ label('Вершина B','Vertex B') }}<input v-model.number="measureB" type="number" min="1" :max="measurementTarget?solidVertexCount(measurementTarget):1" :aria-invalid="!vertexBValid" :aria-describedby="!vertexBValid ? 'vertex-measurement-error' : undefined" :aria-label="label('Вершина B','Vertex B')"></label>
+          <small v-if="measurementPending && !shellDistanceOpen && !volumeDistanceOpen && !materialPathOpen" role="status" aria-label="vertex-measurement">{{ label('Измеряю вершины…','Measuring vertices…') }} <button @click="measurementOpen=false">Esc</button></small>
+          <output v-if="measurement?.value && !shellDistanceOpen && !volumeDistanceOpen && !materialPathOpen">{{ measurement.value.distanceMm.toFixed(6) }} mm · ΔXYZ [{{ measurement.value.deltaMm.map(v=>v.toFixed(6)).join(', ') }}]</output>
+          <small v-if="measurement?.value && !shellDistanceOpen && !volumeDistanceOpen && !materialPathOpen">A [{{ measurement.value.a.map(v=>v.toFixed(6)).join(', ') }}] · B [{{ measurement.value.b.map(v=>v.toFixed(6)).join(', ') }}] mm</small>
+          <p v-if="measurement?.error && !shellDistanceOpen && !volumeDistanceOpen && !materialPathOpen" id="vertex-measurement-error" role="alert">{{ measurement.error }}</p><button v-if="measurementRetryVisible" @click="measurementRevision++">{{ label('Повторить измерение вершин','Retry vertex measurement') }}</button>
           <button v-if="selectedBody.brep" @click="edgeDistanceOpen=!edgeDistanceOpen" :aria-pressed="edgeDistanceOpen">{{ label('Расстояние между рёбрами','Distance between edges') }}</button>
           <fieldset v-if="edgeDistanceOpen" class="edge-distance-panel" aria-label="edge-distance">
             <legend>{{ label('Расстояние между исходными рёбрами','Distance between original edges') }}</legend>
@@ -4110,6 +4117,7 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
             <p v-if="faceDistance?.error" id="face-distance-error" role="alert">{{ faceDistance.error }}</p><button v-if="faceDistanceRetryVisible" @click="faceDistanceRevision++">{{ label('Повторить измерение граней','Retry face distance') }}</button>
           </fieldset>
           <SolidVolumeDistance @state="(active,point)=>{volumeDistanceOpen=active;volumeContact=point}" :active="props.open && measurementOpen" :ru="ru" :a="selectedBody.brep" :b="measurementTarget?.brep" :same="selectedBody.id===measurementTarget?.id" :names="[selectedBody.name,measurementTarget?.name??'B']"/>
+          <MaterialPathCheck :key="selectedBody.id" :active="props.open && measurementOpen" :ru="ru" :model="selectedBody.brep" @state="(active,overlay)=>{materialPathOpen=active;materialPathOverlay=overlay}"/>
           <button v-if="selectedBody.brep" @click="shellDistanceOpen=!shellDistanceOpen" :aria-pressed="shellDistanceOpen">{{ label('Расстояние между оболочками','Distance between shells') }}</button>
           <fieldset v-if="shellDistanceOpen" class="shell-distance-panel" aria-label="shell-distance">
             <legend>{{ label('Расстояние между всеми гранями оболочек','Distance between all shell faces') }}</legend>
@@ -4131,7 +4139,7 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
             <output v-if="curvatureMeasurement?.value">{{ label('Локальный радиус кривизны','Local curvature radius') }}: {{ curvatureMeasurement.value.radiusMm===null?'∞':curvatureMeasurement.value.radiusMm.toFixed(6)+' mm' }}</output>
             <p v-if="curvatureMeasurement?.error" id="curvature-measurement-error" role="alert">{{ curvatureMeasurement.error }}</p><button v-if="curvatureRetryVisible" @click="curvatureRevision++">{{ label('Повторить измерение кривизны','Retry curvature measurement') }}</button>
           </template>
-          <small v-if="!clearanceOpen && !shellDistanceOpen && !volumeDistanceOpen">{{ label('Расстояние между указанными вершинами, не минимальное расстояние между телами. Для радиуса выберите ребро B-rep.','Distance between the specified vertices, not the minimum distance between bodies. Select a B-rep edge to measure curvature.') }}</small>
+          <small v-if="!clearanceOpen && !shellDistanceOpen && !volumeDistanceOpen && !materialPathOpen">{{ label('Расстояние между указанными вершинами, не минимальное расстояние между телами. Для радиуса выберите ребро B-rep.','Distance between the specified vertices, not the minimum distance between bodies. Select a B-rep edge to measure curvature.') }}</small>
         </template>
       </section>
       <section v-if="selectedBody" ref="diagnosticPanel" tabindex="-1" aria-label="Body diagnostics" class="body-diagnostics">

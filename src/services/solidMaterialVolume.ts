@@ -12,6 +12,7 @@ interface Base {sourceModel:NurbsBrep;origin:number[];direction:number[];paramet
 export interface MaterialSegment extends Base {method:'continuous-material-segment';scope:'strict-interior-authored-parametric-segment';segment:Boundary|null}
 export interface MaterialChord extends Base {method:'continuous-material-chord';scope:'material-between-original-transverse-boundary-roots';normalAlignment:'not-qualified';minimumWallThickness:'not-qualified';boundary:Boundary;pointEnclosures:[Interval[],Interval[]]|null;lengthIntervalMm:Interval|null}
 export type MaterialResult=MaterialSegment|MaterialChord
+export interface MaterialOverlay {line:[[number,number,number],[number,number,number]];marks:Array<{point:[number,number,number];face:number;unresolved:boolean}>;proven:boolean}
 const snapshot=(v:unknown)=>JSON.stringify(v,(_,x)=>x&&typeof x==='object'&&!Array.isArray(x)?Object.fromEntries(Object.keys(x).sort().map(k=>[k,x[k]])):x)
 const interval=(x:unknown):x is Interval=>Array.isArray(x)&&x.length===2&&x.every(Number.isFinite)&&x[0]<=x[1]
 const work=(x:unknown,max:number)=>typeof x==='number'&&Number.isSafeInteger(x)&&x>=0&&x<=max
