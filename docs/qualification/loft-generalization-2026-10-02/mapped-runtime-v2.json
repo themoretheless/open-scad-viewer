@@ -70,9 +70,21 @@
     "nonplanarCapVolume": 1.0
   },
   "checks": {
-    "rustWorkspace": "passed",
+    "rustWorkspace": {
+      "passed": 2946,
+      "ignored": 5,
+      "suites": 207
+    },
     "typescriptAndMcp": "passed",
-    "fullFrontend": "pending final collection; initial MCP burst timeout under concurrent runs"
+    "fullFrontend": {
+      "node": "22.23.3",
+      "filesPassed": 438,
+      "filesSkipped": 4,
+      "testsPassed": 4324,
+      "testsSkipped": 9,
+      "earlierNode26Attempt": "One MCP burst timeout; separate MCP repeat and full Node22 repeat passed"
+    },
+    "clippy": "CI targets passed"
   },
   "publication": {
     "pushed": false,
