@@ -65,6 +65,19 @@ pub(super) fn cells(
     }
     let ucells = axis(&u, &pu)?;
     let vcells = axis(&v, &pv)?;
+    let degree = |cells: &[Cell]| {
+        cells
+            .iter()
+            .flat_map(|c| c.numerators.iter())
+            .map(|n| n.len() - 1)
+            .max()
+            .unwrap()
+    };
+    if ucells.len() * degree(&ucells) + 1 > 256 || vcells.len() * degree(&vcells) + 1 > 256 {
+        return Err(crate::resource(
+            "Cartesian Gordon exceeds 256 controls per axis",
+        ));
+    }
     let mut result = Vec::new();
     for uc in &ucells {
         for vc in &vcells {
@@ -139,6 +152,147 @@ pub(super) fn cells(
     }
     Ok(result)
 }
+
+fn stitch_u(parts: &[Surface], tolerance: f64) -> Result<Surface> {
+    let mut result = parts[0].clone();
+    for next in &parts[1..] {
+        check(
+            result.degree_u == next.degree_u
+                && result.degree_v == next.degree_v
+                && result.knots_v == next.knots_v,
+            "Cartesian Gordon cell basis mismatch",
+        )?;
+        let last = result.control_points.len() - 1;
+        check(
+            result.knots_u[result.control_points.len()] == next.knots_u[next.degree_u],
+            "Cartesian Gordon cells are not adjacent",
+        )?;
+        let scale = result.weights[last][0] / next.weights[0][0];
+        for j in 0..result.control_points[0].len() {
+            let distance = (0..3)
+                .map(|k| (result.control_points[last][j][k] - next.control_points[0][j][k]).powi(2))
+                .sum::<f64>()
+                .sqrt();
+            crate::numeric(distance <= tolerance, "Cartesian Gordon cell seam mismatch")?;
+            let w = next.weights[0][j] * scale;
+            crate::numeric(
+                (w - result.weights[last][j]).abs() <= 1e-10 * w.abs().max(result.weights[last][j]),
+                "Cartesian Gordon cell seam weights mismatch",
+            )?;
+        }
+        if result.control_points.len() + next.control_points.len() - 1 > 256 {
+            return Err(crate::resource(
+                "Cartesian Gordon exceeds 256 controls per axis",
+            ));
+        }
+        // One owner for each C0 seam; whole-source retention must audit this rounding.
+        result
+            .control_points
+            .extend(next.control_points.iter().skip(1).cloned());
+        result.weights.extend(
+            next.weights
+                .iter()
+                .skip(1)
+                .map(|row| row.iter().map(|w| w * scale).collect::<Vec<_>>()),
+        );
+        result
+            .knots_u
+            .truncate(result.knots_u.len() - result.degree_u - 1);
+        result
+            .knots_u
+            .extend(vec![next.knots_u[next.degree_u]; result.degree_u]);
+        result
+            .knots_u
+            .extend_from_slice(&next.knots_u[next.degree_u + 1..]);
+        result.validate()?;
+    }
+    Ok(result)
+}
+/// Native candidate construction. Numerical curve retention is a separate gate.
+pub(super) fn assemble(
+    u: &[Curve],
+    v: &[Curve],
+    pu: &[f64],
+    pv: &[f64],
+    tolerance: f64,
+) -> Result<Surface> {
+    check(
+        tolerance.is_finite() && tolerance > 0.,
+        "Cartesian Gordon needs positive seam tolerance",
+    )?;
+    let mut patches = cells(u, v, pu, pv)?;
+    let du = patches.iter().map(|s| s.degree_u).max().unwrap();
+    let dv = patches.iter().map(|s| s.degree_v).max().unwrap();
+    for patch in &mut patches {
+        *patch = patch.edit_axis(crate::surface::Axis::U, |c| c.elevate(du))?;
+        *patch = patch.edit_axis(crate::surface::Axis::V, |c| c.elevate(dv))?;
+    }
+    let mut udomains: Vec<_> = patches.iter().map(|s| s.knots_u[du]).collect();
+    let mut vdomains: Vec<_> = patches.iter().map(|s| s.knots_v[dv]).collect();
+    udomains.sort_by(f64::total_cmp);
+    udomains.dedup();
+    vdomains.sort_by(f64::total_cmp);
+    vdomains.dedup();
+    if udomains.len() * du + 1 > 256 || vdomains.len() * dv + 1 > 256 {
+        return Err(crate::resource(
+            "Cartesian Gordon exceeds 256 controls per axis",
+        ));
+    }
+    let mut strips = Vec::new();
+    for start in vdomains {
+        let row: Vec<_> = patches
+            .iter()
+            .filter(|s| s.knots_v[dv] == start)
+            .cloned()
+            .collect();
+        strips.push(super::transpose(stitch_u(&row, tolerance)?));
+    }
+    Ok(super::transpose(stitch_u(&strips, tolerance)?))
+}
+
+pub(super) fn checked(
+    u: &[Curve],
+    v: &[Curve],
+    pu: &[f64],
+    pv: &[f64],
+    tolerance: f64,
+    max_cells: usize,
+    max_map_evaluations: usize,
+) -> Result<(Surface, Vec<value_codec::Value>)> {
+    let surface = assemble(u, v, pu, pv, tolerance)?;
+    let pu = stations(pu, v.len())?;
+    let pv = stations(pv, u.len())?;
+    let mut certificates = Vec::new();
+    for (curves, stations, axis) in [
+        (u, pv, crate::surface::Axis::V),
+        (v, pu, crate::surface::Axis::U),
+    ] {
+        for (curve, station) in curves.iter().zip(stations) {
+            let [start, end] = curve.domain();
+            let identity = value_codec::json!({"pieces":[{"domain":[0.,1.],"range":[start,end],
+                "controlValues":[start,end],"weights":[1.,1.]}]});
+            let result = surface.iso(axis, station)?;
+            let report = crate::foundation::certify_reparameterized_curve_retention(
+                curve,
+                &identity,
+                &result,
+                tolerance,
+                max_cells,
+                max_map_evaluations,
+            )?;
+            let certificate = report["certificate"].clone();
+            crate::numeric(
+                certificate["accepted"] == value_codec::json!(true),
+                &format!(
+                    "Cartesian Gordon whole-curve retention was not established: {certificate}"
+                ),
+            )?;
+            certificates.push(certificate);
+        }
+    }
+    Ok((surface, certificates))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -161,6 +315,13 @@ mod tests {
         ];
         assert!(super::super::patch(&u, &v, &[0., 1.], &[0., 1.]).is_err());
         let patches = cells(&u, &v, &[0., 1.], &[0., 1.]).unwrap();
+        let (_, certificates) = checked(&u, &v, &[0., 1.], &[0., 1.], 1e-6, 50000, 200000).unwrap();
+        assert_eq!(certificates.len(), 4);
+        assert!(
+            certificates
+                .iter()
+                .all(|c| c["accepted"] == value_codec::json!(true))
+        );
         assert_eq!(patches.len(), 1);
         let s = &patches[0];
         for sample in 0..=100 {
@@ -214,6 +375,7 @@ mod tests {
             .map(|(i, &s)| make(s, [4., 0.5, 2.][i], true))
             .collect();
         let patches = cells(&u, &v, &stations, &stations).unwrap();
+        let joined = assemble(&u, &v, &stations, &stations, 1e-6).unwrap();
         assert_eq!(patches.len(), 4);
         for patch in &patches {
             assert!(patch.weights.iter().flatten().all(|w| *w > 0.));
@@ -232,6 +394,10 @@ mod tests {
                 for (j, c) in u.iter().enumerate() {
                     if stations[j] >= va && stations[j] <= vb {
                         let actual = patch.evaluate(x, stations[j]).unwrap().point;
+                        let global = joined.evaluate(x, stations[j]).unwrap().point;
+                        for k in 0..3 {
+                            assert!((global[k] - actual[k]).abs() < 1e-11);
+                        }
                         let expected = c.evaluate(x).unwrap().point;
                         for k in 0..3 {
                             assert!((actual[k] - expected[k]).abs() < 1e-11);
@@ -241,6 +407,10 @@ mod tests {
                 for (i, c) in v.iter().enumerate() {
                     if stations[i] >= ua && stations[i] <= ub {
                         let actual = patch.evaluate(stations[i], y).unwrap().point;
+                        let global = joined.evaluate(stations[i], y).unwrap().point;
+                        for k in 0..3 {
+                            assert!((global[k] - actual[k]).abs() < 1e-11);
+                        }
                         let expected = c.evaluate(y).unwrap().point;
                         for k in 0..3 {
                             assert!((actual[k] - expected[k]).abs() < 1e-11);
