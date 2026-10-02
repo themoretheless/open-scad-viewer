@@ -1,4 +1,5 @@
-//! Exact axis-aligned hull contact restricted to common authored topology.
+//! Exact hull contact restricted to common authored topology.
+//! Axis bounds and exact oblique supporting planes provide sufficient proofs.
 //! Only used after exact edge/lift agreement, simple trims and chart injectivity.
 use crate::Model;
 use std::collections::BTreeSet;
@@ -18,6 +19,9 @@ fn edge_ends(model: &Model, edge: usize) -> Option<[[f64;3];2]> {
 }
 /// Input must be structurally valid. Does not establish its prerequisites.
 pub(crate) fn certify(model:&Model, faces:[usize;2])->Option<Certificate>{
+    certify_axis(model,faces).or_else(||certify_vertex_plane(model,faces))
+}
+fn certify_axis(model:&Model, faces:[usize;2])->Option<Certificate>{
     let edges=faces.map(|f|std::iter::once(model.faces[f].outer).chain(model.faces[f].holes.iter().copied())
         .flat_map(|l|model.loops[l].coedges.iter().map(|c|c.edge)).collect::<BTreeSet<_>>());
     let mut hulls=faces.map(|f|{
@@ -84,9 +88,66 @@ pub(crate) fn certify(model:&Model, faces:[usize;2])->Option<Certificate>{
     None
 }
 
+// A supporting plane need not align with world axes. Original binary64
+// controls and an exact orientation predicate establish its two half spaces.
+// If one net reaches the plane only at the shared vertex, every possible
+// surface contact is that vertex. No tolerance or sampled normal is used.
+fn certify_vertex_plane(model:&Model, faces:[usize;2])->Option<Certificate>{
+    use cad_predicates::Sign;
+    let nets=faces.map(|f|model.faces[f].surface.control_points.iter().flatten()
+        .map(|p|p.as_slice()).collect::<Vec<_>>());
+    if nets.iter().any(|n|n.len()>64){return None;}
+    let vertices=faces.map(|f|std::iter::once(model.faces[f].outer).chain(model.faces[f].holes.iter().copied())
+        .flat_map(|l|model.loops[l].coedges.iter()).flat_map(|c| {
+            let ends=edge_ends(model,c.edge);
+            (0..2).filter_map(move |i|ends.filter(|p|p[i]==model.vertices[model.edges[c.edge].vertices[i]].point)
+                .map(|_|model.edges[c.edge].vertices[i]))
+        }).collect::<BTreeSet<_>>());
+    for &vertex in vertices[0].intersection(&vertices[1]) {
+        let point=model.vertices[vertex].point;
+        let mut candidates=Vec::<&[f64]>::new();
+        for p in nets.iter().flatten().copied(){
+            if p!=point && !candidates.contains(&p){candidates.push(p);}
+            if candidates.len()==16{break;}
+        }
+        for a in 0..candidates.len(){for b in a+1..candidates.len(){
+            let mut signs=[None,None];let mut vertex_only=[true,true];let mut valid=true;
+            for side in 0..2 {for &p in &nets[side] {
+                let Some(sign)=crate::shared_boundary::orient(&[&point,candidates[a],candidates[b],p],None) else {valid=false;break};
+                if sign==Sign::Zero {vertex_only[side]&=p==point;}
+                else if signs[side].is_some_and(|previous|previous!=sign){valid=false;break;}
+                else {signs[side]=Some(sign);}
+            } if !valid{break;} }
+            if valid && (vertex_only[0]||vertex_only[1]) && signs.iter().any(Option::is_some)
+                && !(signs[0].is_some()&&signs[0]==signs[1]) {
+                return Some(Certificate{faces,hull_intersection:point.map(|v|[v,v]),edges:Vec::new(),vertex:Some(vertex)});
+            }
+        }}
+    }
+    None
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn oblique_support_is_exact_and_requires_the_owned_vertex() {
+        let mut model=crate::analytic::sphere(3.).unwrap();
+        let map=|p:&mut [f64]| {let [x,y,z]=[p[0],p[1],p[2]];p[0]=x-y;p[1]=-x+2.*y;p[2]=x-2.*y+z;};
+        for v in &mut model.vertices{map(&mut v.point);}
+        for e in &mut model.edges{for p in &mut e.curve.control_points{map(p);}}
+        for f in &mut model.faces{for p in f.surface.control_points.iter_mut().flatten(){map(p);}}
+        model.validate().unwrap();
+
+        assert!(certify_axis(&model,[0,2]).is_none());
+        let c=certify_vertex_plane(&model,[0,2]).unwrap();
+        assert_eq!(c.vertex,Some(4));assert!(c.edges.is_empty());
+        assert_eq!(c.hull_intersection,model.vertices[4].point.map(|v|[v,v]));
+        let mut overlap=model.clone();overlap.faces[2].surface=overlap.faces[0].surface.clone();
+        assert!(certify_vertex_plane(&overlap,[0,2]).is_none());
+        let mut moved=model.clone();moved.vertices[4].point[0]+=1e-12;
+        assert!(certify_vertex_plane(&moved,[0,2]).is_none());
+    }
     #[test]
     fn opposite_sphere_quadrants_meet_only_at_the_authored_pole(){
         let model=crate::analytic::sphere(3.).unwrap();let before=format!("{model:?}");

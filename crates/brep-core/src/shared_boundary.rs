@@ -14,7 +14,7 @@ pub struct Certificate {
     pub planar_face: usize,
     pub sided_face: usize,
 }
-fn orient(points: &[&[f64]], projection: Option<[usize; 2]>) -> Option<Sign> {
+pub(crate) fn orient(points: &[&[f64]], projection: Option<[usize; 2]>) -> Option<Sign> {
     let values = points
         .iter()
         .flat_map(|p| p.iter().map(|x| AuthoredScalar::Binary64Bits(x.to_bits())))

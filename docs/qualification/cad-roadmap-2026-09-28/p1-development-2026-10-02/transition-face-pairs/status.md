@@ -83,3 +83,20 @@ Reproduce the expanded audit with `transition-boundary-prerequisites`,
 The new native regression `partial_annular_separate_pairs_require_complete_search_coverage`
 passes for all six pairs, checks both insufficient and sufficient budgets,
 and verifies source preservation. No production runtime changes in this step.
+
+## Native oblique vertex support
+
+A bounded additional hull proof uses exact orient3d signs on original
+binary64 controls. Candidate planes pass through an owned shared vertex and
+two control points. Opposite closed half spaces restrict any contact to the
+plane; one net must reach it only at that exact vertex. Supporting geometry
+without shared ownership, overlapping interiors and shifted vertices refuse.
+Candidate search is limited to 16 distinct controls per vertex and nets of
+at most 64 controls. Missing certificates retain the unresolved result.
+
+Six hull-contact tests and three boundary-embedding tests pass. A nonsingular
+dyadic shear of sphere quadrants demonstrates a vertex certificate where
+world-axis hull filtering cannot certify it. The regenerated transition
+recheck retains 240 disjoint, 43 shared and 68 unresolved pairs; the new method
+adds no certificate for this specimen. WASM packaging of this native change
+and its runtime qualification remain pending.
