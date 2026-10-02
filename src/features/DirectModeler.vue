@@ -4146,3 +4146,20 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
  .canvas-viewport{min-height:120px}
 }
 </style>
+
+<style scoped>
+/* Quiet chrome: the app shell already owns title, search and file actions. */
+.direct-workspace { inset: var(--topbar-h, 40px) 0 var(--statusbar-h, 24px); font-size: 12px; }
+.direct-workspace .workspace-bar { gap: 6px; padding: 4px 10px; background: var(--surface); border-bottom: 1px solid var(--hairline); }
+.direct-workspace .workspace-bar > strong,
+.direct-workspace .workspace-bar > .subtle,
+.direct-workspace .workspace-bar > .command-search { display: none; }
+.direct-workspace .workspace-bar > .file-menu { margin-left: auto; }
+.direct-workspace button, .direct-workspace summary, .direct-workspace select { border-color: transparent; background: transparent; border-radius: 6px; }
+.direct-workspace button:hover:not(:disabled), .direct-workspace summary:hover { background: var(--hover); }
+.direct-workspace button[aria-pressed="true"], .direct-workspace button.active { background: color-mix(in srgb, var(--accent) 16%, transparent); color: var(--accent); border-color: transparent; }
+.direct-workspace button:disabled { opacity: .4; }
+.direct-workspace .primitive-bar, .direct-workspace .sketch-start-bar { border-bottom: 1px solid var(--hairline); }
+.direct-workspace input, .direct-workspace select { border-color: var(--hairline); }
+</style>
+
