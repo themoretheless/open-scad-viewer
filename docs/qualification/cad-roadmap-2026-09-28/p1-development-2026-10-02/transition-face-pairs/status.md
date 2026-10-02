@@ -100,3 +100,27 @@ world-axis hull filtering cannot certify it. The regenerated transition
 recheck retains 240 disjoint, 43 shared and 68 unresolved pairs; the new method
 adds no certificate for this specimen. WASM packaging of this native change
 and its runtime qualification remain pending.
+
+## Native planar trimmed hull enclosure
+
+Axis-planar faces now use the original outer-loop curve controls as an
+enclosure, provided every such control is exactly in the surface plane.
+A simple positive outer trim, an injective face chart and exact 3D boundary
+agreement put the filled planar face inside that loop's convex hull. Positive
+rational curve weights enclose the loop by its original controls. Holes
+remove material and do not enlarge this enclosure. Admission remains gated
+by all exact boundary, trim and injectivity prerequisites.
+
+Full regenerated specimen audit visits all 351 pairs: 240 disjoint, 101
+shared boundary, 10 unresolved (eight shared edges and two shared vertices).
+Hull certificates increase from 18 to 76; geometry work decreases to 18558
+cells and UV work to 182445 cells at the same budgets. Whole-model absence
+remains unproven. See `embedding-planar-trim-hulls.json` and
+`unresolved-planar-trim-topology.json`.
+
+Six hull regressions and three existing embedding regressions pass. The new
+integration regression also passes: it admits owned vertex/edge contacts
+after complete prerequisites, and admits no hull certificates with an
+insufficient exact-agreement budget. Model preservation is checked. These
+latest planar enclosure changes are native only; current in-flight WASM
+build was started before them and must be followed by updated packaging.

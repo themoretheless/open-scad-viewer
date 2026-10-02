@@ -77,6 +77,24 @@ mod tests {
         assert_eq!(format!("{model:?}"),before);
     }
     #[test]
+    fn trimmed_plane_hulls_require_complete_exact_boundary_prerequisites() {
+        let model=crate::circular_blend::partial_annular_quarter(20.,5.,6.,1.25,1.,1e-7).unwrap();
+        let before=format!("{model:?}");
+        let mut l=limits();l.spans=4096;l.contacts.pairs=400;
+        l.contacts.cells=150000;l.contacts.domain_cells=1500000;
+        l.contacts.cells_per_pair=256;l.contacts.domain_cells_per_pair=4000;
+        let r=inspect(&model,1e-8,l).unwrap();
+        assert!(r.agreement.all_equal&&r.agreement.all_joins_exact&&r.trim.all_valid);
+        assert!(r.intersections.faces.all_faces_injective);
+        assert!(r.hull_contacts.iter().any(|c|c.faces==[0,6]&&c.vertex.is_some()));
+        assert!(r.hull_contacts.iter().any(|c|c.faces==[1,23]&&!c.edges.is_empty()));
+        assert!(!r.proven); // Endpoint/edge contacts still need further proofs.
+        l.exact_work=1;l.contacts.pairs=1;
+        let incomplete=inspect(&model,1e-8,l).unwrap();
+        assert!(!incomplete.agreement.all_equal&&incomplete.hull_contacts.is_empty());
+        assert!(!incomplete.proven);assert_eq!(format!("{model:?}"),before);
+    }
+    #[test]
     fn cube_requires_every_stage_and_preserves_input() {
         let m = crate::cuboid([0.;3], [1.;3]).unwrap();
         let before = format!("{m:?}");

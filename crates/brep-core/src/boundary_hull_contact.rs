@@ -17,6 +17,22 @@ fn edge_ends(model: &Model, edge: usize) -> Option<[[f64;3];2]> {
         || c.knots[n..].iter().any(|k|*k!=c.knots[n]) {return None;}
     Some([std::array::from_fn(|k|c.control_points[0][k]),std::array::from_fn(|k|c.control_points[n-1][k])])
 }
+// With exact boundary agreement, a simple positively wound planar outer
+// loop bounds the trimmed face inside the convex hull of its boundary curves.
+// Positive rational curve weights enclose each curve by its original controls.
+// This avoids using the much larger untrimmed plane chart as a face enclosure.
+fn contact_controls(model:&Model,face:usize)->Vec<&[f64]>{
+    let f=&model.faces[face];
+    let surface=f.surface.control_points.iter().flatten().map(|p|p.as_slice()).collect::<Vec<_>>();
+    for axis in 0..3 {
+        let value=surface[0][axis];
+        if !surface.iter().all(|p|p[axis]==value){continue;}
+        let outer=model.loops[f.outer].coedges.iter().flat_map(|c|model.edges[c.edge].curve.control_points.iter())
+            .map(|p|p.as_slice()).collect::<Vec<_>>();
+        if !outer.is_empty()&&outer.iter().all(|p|p[axis]==value){return outer;}
+    }
+    surface
+}
 /// Input must be structurally valid. Does not establish its prerequisites.
 pub(crate) fn certify(model:&Model, faces:[usize;2])->Option<Certificate>{
     certify_axis(model,faces).or_else(||certify_vertex_plane(model,faces))
@@ -26,7 +42,7 @@ fn certify_axis(model:&Model, faces:[usize;2])->Option<Certificate>{
         .flat_map(|l|model.loops[l].coedges.iter().map(|c|c.edge)).collect::<BTreeSet<_>>());
     let mut hulls=faces.map(|f|{
         let mut h=[[f64::INFINITY,f64::NEG_INFINITY];3];
-        for p in model.faces[f].surface.control_points.iter().flatten(){for k in 0..3{h[k][0]=h[k][0].min(p[k]);h[k][1]=h[k][1].max(p[k]);}}
+        for p in contact_controls(model,f){for k in 0..3{h[k][0]=h[k][0].min(p[k]);h[k][1]=h[k][1].max(p[k]);}}
         h
     });
     // Extrema are authored binary64 values: comparisons introduce no rounding.
@@ -43,7 +59,7 @@ fn certify_axis(model:&Model, faces:[usize;2])->Option<Certificate>{
         if supports.len()<=previous{break;}previous=supports.len();
         let restricted=faces.map(|f|{
             let mut h=[[f64::INFINITY,f64::NEG_INFINITY];3];
-            for p in model.faces[f].surface.control_points.iter().flatten(){
+            for p in contact_controls(model,f){
                 if supports.iter().all(|&k|p[k]==intersection[k][0]){
                     for k in 0..3{h[k][0]=h[k][0].min(p[k]);h[k][1]=h[k][1].max(p[k]);}
                 }
@@ -94,8 +110,7 @@ fn certify_axis(model:&Model, faces:[usize;2])->Option<Certificate>{
 // surface contact is that vertex. No tolerance or sampled normal is used.
 fn certify_vertex_plane(model:&Model, faces:[usize;2])->Option<Certificate>{
     use cad_predicates::Sign;
-    let nets=faces.map(|f|model.faces[f].surface.control_points.iter().flatten()
-        .map(|p|p.as_slice()).collect::<Vec<_>>());
+    let nets=faces.map(|f|contact_controls(model,f));
     if nets.iter().any(|n|n.len()>64){return None;}
     let vertices=faces.map(|f|std::iter::once(model.faces[f].outer).chain(model.faces[f].holes.iter().copied())
         .flat_map(|l|model.loops[l].coedges.iter()).flat_map(|c| {
