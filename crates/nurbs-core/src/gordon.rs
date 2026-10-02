@@ -1,4 +1,6 @@
 //! Homogeneous Gordon interpolation of a compatible rational curve network.
+#[path = "gordon_denominators.rs"]
+mod denominators;
 use crate::{
     Result, check,
     curve::{Curve, basis},

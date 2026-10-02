@@ -28,6 +28,8 @@ These are source/native changes. The packaged WASM and language/runtime delivery
 
 - Public monotonicity certification now uses the same outward pairwise/subdivision proof as inverse bracketing. A cubic map with derivative controls [1.8, -0.6, 1.8] is accepted; a stationary derivative refuses. The public certificate/inverse regression and 23 related reparameterization tests passed. The JSON natural loft also accepts this subdivision-certified cubic through a weighted multi-span source, retaining both authored sections against an independent Bernstein formula at 1001 parameters; the bounded whole-domain retention gate remains enabled. Packaged runtime evidence has not yet been refreshed.
 
+- Cartesian Gordon preparation now partitions all source knot spans and constructs a shared positive Bernstein denominator with each curve numerator scaled by the other denominators. Independent evaluation retains differently weighted multi-span curves; constant polynomial denominators do not consume the rational degree budget (86-curve regression). Both tests passed. This helper is not yet connected to Gordon surface assembly or public constructors.
+
 ## Still required by the complete goal
 
 1. Extend representation qualification beyond the verified bounded multi-span and subdivision-certified cases, then deliver and qualify the bounded multi-span composition through the packaged runtime and language entrypoints. Native evidence now covers an irrational knot preimage, different source weights, nested rational factors, original nonunit domains and incomplete-budget refusal. Periodic source covers remain outside the current loft section contract; the runtime must preserve all stated degree/control/work/conditioning refusals and numerical certificates.
