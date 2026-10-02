@@ -1,5 +1,5 @@
 //! Exact support geometry for a convex plane/cylinder rim blend.
-//! This authors open patches and contact rails, not a sewn solid or end transitions.
+//! Authors support patches, contact rails and open B-rep sheets, not sewn solids.
 use crate::{Result, invalid};
 use nurbs_core::{curve::Curve, surface::Surface};
 
@@ -17,6 +17,78 @@ pub struct CircularBlendBoundary {
 }
 
 impl CircularBlendSpan {
+    /// Assemble one open B-rep face. This intentionally has no volume body;
+    /// the pole edge retains a full UV boundary while its 3D curve is constant.
+    pub fn to_open_sheet(&self, tolerance_mm: f64) -> Result<crate::Model> {
+        if !tolerance_mm.is_finite() || tolerance_mm <= 0. {
+            return Err(invalid(
+                "Circular blend sheet requires positive finite tolerance",
+            ));
+        }
+        let boundaries = self.boundaries()?;
+        let net = &self.surface.control_points;
+        let last = net.len() - 1;
+        let last_v = net[0].len() - 1;
+        let corners = [
+            &net[0][0],
+            &net[last][0],
+            &net[last][last_v],
+            &net[0][last_v],
+        ];
+        let mut vertices: Vec<crate::Vertex> = Vec::new();
+        let mut indices = Vec::new();
+        for p in corners {
+            let point = [p[0], p[1], p[2]];
+            let index = vertices
+                .iter()
+                .position(|v| v.point == point)
+                .unwrap_or_else(|| {
+                    vertices.push(crate::Vertex { point });
+                    vertices.len() - 1
+                });
+            indices.push(index);
+        }
+        let mut edges = Vec::new();
+        let mut coedges = Vec::new();
+        for (i, boundary) in boundaries.into_iter().enumerate() {
+            edges.push(crate::Edge {
+                vertices: [indices[i], indices[(i + 1) % 4]],
+                curve: boundary.curve,
+                degenerate: boundary.collapsed_pole.is_some(),
+            });
+            coedges.push(crate::Coedge {
+                edge: i,
+                reversed: false,
+                pcurve: boundary.pcurve,
+            });
+        }
+        let mut model = crate::Model(
+            brep_topology::Model {
+                vertices,
+                edges,
+                loops: vec![crate::Loop { coedges }],
+                faces: vec![crate::Face {
+                    surface: self.surface.clone(),
+                    outer: 0,
+                    holes: vec![],
+                }],
+                shells: vec![crate::Shell {
+                    faces: vec![crate::FaceUse {
+                        face: 0,
+                        reversed: false,
+                    }],
+                    closed: false,
+                }],
+                bodies: vec![],
+                tolerance_mm,
+            },
+            crate::TopologyIds::default(),
+        );
+        model.rebuild_topology_ids();
+        model.validate()?;
+        Ok(model)
+    }
+
     /// Four oriented chart boundaries. A collapsed endpoint is certified by
     /// its complete control row using the same pole check as Model::validate.
     pub fn boundaries(&self) -> Result<[CircularBlendBoundary; 4]> {
@@ -426,6 +498,39 @@ mod tests {
                 )
                 .is_err()
             );
+        }
+    }
+
+    #[test]
+    fn transition_open_sheet_validates_pole_incidence_and_uv_agreement() {
+        for (r0, r1) in [(0., 1.25), (1.25, 0.), (0.5, 1.25)] {
+            let span = plane_cylinder_transition(20., 6., r0, r1, 5.9, -0.7).unwrap();
+            let sheet = span.to_open_sheet(1e-7).unwrap();
+            let report = sheet.validate().unwrap();
+            assert_eq!(report.body_count, 0);
+            assert_eq!(report.face_count, 1);
+            assert_eq!(
+                report.boundary_edge_count,
+                if r0 == 0. || r1 == 0. { 3 } else { 4 }
+            );
+            assert_eq!(
+                sheet.vertices.len(),
+                if r0 == 0. || r1 == 0. { 3 } else { 4 }
+            );
+            assert!(
+                sheet
+                    .edges
+                    .iter()
+                    .filter(|e| e.degenerate)
+                    .all(|e| e.vertices[0] == e.vertices[1])
+            );
+            let mut invalid_body = sheet.clone();
+            invalid_body.0.bodies.push(crate::Body {
+                outer_shell: 0,
+                inner_shells: vec![],
+            });
+            invalid_body.rebuild_topology_ids();
+            assert!(invalid_body.validate().is_err());
         }
     }
 
