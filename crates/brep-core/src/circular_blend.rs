@@ -111,6 +111,121 @@ pub fn plane_cylinder_rim(
     Ok(spans)
 }
 
+/// Exact end-transition support with cubic smoothstep radius in rational arc
+/// parameter u. This is a cross-section radius law, not a general variable-radius
+/// rolling-ball envelope certificate. Zero-radius ends collapse to a point; they require explicit
+/// degenerate topology handling before this can participate in a sewn solid.
+pub fn plane_cylinder_transition(
+    outer_radius: f64,
+    height: f64,
+    start_radius: f64,
+    end_radius: f64,
+    start: f64,
+    sweep: f64,
+) -> Result<CircularBlendSpan> {
+    if [outer_radius, height, start_radius, end_radius, start, sweep]
+        .iter()
+        .any(|v| !v.is_finite())
+        || start_radius < 0.
+        || end_radius < 0.
+        || start_radius.max(end_radius) <= 0.
+        || outer_radius <= start_radius.max(end_radius)
+        || height <= start_radius.max(end_radius)
+        || sweep.abs() < 1e-12
+        || sweep.abs() > std::f64::consts::FRAC_PI_2
+    {
+        return Err(invalid(
+            "Circular transition requires fitting nonnegative end radii and a nonzero arc of at most pi/2",
+        ));
+    }
+    let unit = arc(1., 0., start, sweep);
+    let law = [start_radius, start_radius, end_radius, end_radius];
+    let angular_binomial = [1., 2., 1.];
+    let law_binomial = [1., 3., 3., 1.];
+    let product_binomial = [1., 5., 10., 10., 5., 1.];
+    let meridian = [(0., 1.), (1., 1.), (1., 0.)];
+    let meridian_weights = [1., std::f64::consts::FRAC_1_SQRT_2, 1.];
+    // Multiply homogeneous angular degree-2 Bernstein polynomials by the
+    // degree-3 radius law. All resulting denominator controls are positive.
+    let mut controls = vec![vec![vec![0.; 3]; 3]; 6];
+    let mut weights = vec![vec![0.; 3]; 6];
+    let mut center_controls = vec![vec![0.; 3]; 6];
+    let mut center_weights = vec![0.; 6];
+    for i in 0..3 {
+        for l in 0..4 {
+            let k = i + l;
+            let coefficient = angular_binomial[i] * law_binomial[l] / product_binomial[k];
+            let angular_weight = unit.weights[i] * coefficient;
+            let p = &unit.control_points[i];
+            let radius = law[l];
+            center_weights[k] += angular_weight;
+            center_controls[k][0] += angular_weight * p[0] * (outer_radius - radius);
+            center_controls[k][1] += angular_weight * p[1] * (outer_radius - radius);
+            center_controls[k][2] += angular_weight * (height - radius);
+            for j in 0..3 {
+                let weight = angular_weight * meridian_weights[j];
+                weights[k][j] += weight;
+                let radial = outer_radius + radius * (meridian[j].0 - 1.);
+                controls[k][j][0] += weight * p[0] * radial;
+                controls[k][j][1] += weight * p[1] * radial;
+                controls[k][j][2] += weight * (height + radius * (meridian[j].1 - 1.));
+            }
+        }
+    }
+    for k in 0..6 {
+        for d in 0..3 {
+            center_controls[k][d] /= center_weights[k];
+        }
+        for j in 0..3 {
+            for d in 0..3 {
+                controls[k][j][d] /= weights[k][j];
+            }
+        }
+    }
+    let knots: Vec<_> = std::iter::repeat_n(0., 6)
+        .chain(std::iter::repeat_n(1., 6))
+        .collect();
+    let centers = Curve {
+        degree: 5,
+        knots: knots.clone(),
+        control_points: center_controls,
+        weights: center_weights,
+        periodic: false,
+    };
+    let boundary = |j: usize| Curve {
+        degree: 5,
+        knots: knots.clone(),
+        control_points: controls
+            .iter()
+            .map(|row: &Vec<Vec<f64>>| row[j].clone())
+            .collect(),
+        weights: weights.iter().map(|row| row[j]).collect(),
+        periodic: false,
+    };
+    let plane_contact = boundary(0);
+    let cylinder_contact = boundary(2);
+    let surface = Surface {
+        degree_u: 5,
+        degree_v: 2,
+        knots_u: knots,
+        knots_v: unit.knots,
+        control_points: controls,
+        weights,
+        periodic_u: false,
+        periodic_v: false,
+    };
+    centers.validate()?;
+    plane_contact.validate()?;
+    cylinder_contact.validate()?;
+    surface.validate()?;
+    Ok(CircularBlendSpan {
+        centers,
+        plane_contact,
+        cylinder_contact,
+        surface,
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -156,6 +271,57 @@ mod tests {
             }
         }
     }
+    #[test]
+    fn transition_radius_law_contacts_and_collapsed_end() {
+        for (r0, r1) in [(0., 1.25), (1.25, 0.), (0.5, 1.25)] {
+            let span = plane_cylinder_transition(20., 6., r0, r1, 5.9, -0.7).unwrap();
+            for i in 0..=40 {
+                let u = i as f64 / 40.;
+                let smooth = 3. * u * u - 2. * u * u * u;
+                let radius = r0 + (r1 - r0) * smooth;
+                let center = span.centers.evaluate(u).unwrap().point;
+                for j in 0..=20 {
+                    let point = span.surface.evaluate(u, j as f64 / 20.).unwrap().point;
+                    let distance = (point[0] - center[0])
+                        .hypot(point[1] - center[1])
+                        .hypot(point[2] - center[2]);
+                    assert!((distance - radius).abs() < 1e-10);
+                }
+                let plane = span.surface.evaluate(u, 0.).unwrap();
+                let cylinder = span.surface.evaluate(u, 1.).unwrap();
+                assert!((plane.point[2] - 6.).abs() < 1e-10);
+                assert!((cylinder.point[0].hypot(cylinder.point[1]) - 20.).abs() < 1e-10);
+                if radius > 1e-5 {
+                    assert!((plane.unit_normal().unwrap()[2].abs() - 1.).abs() < 1e-10);
+                    let n = cylinder.unit_normal().unwrap();
+                    let alignment = (n[0] * cylinder.point[0] + n[1] * cylinder.point[1]) / 20.;
+                    assert!((alignment.abs() - 1.).abs() < 1e-10);
+                }
+            }
+        }
+        assert!(plane_cylinder_transition(20., 6., 0., 0., 0., 0.5).is_err());
+    }
+
+    #[test]
+    fn transition_joins_constant_radius_patch_with_matching_tangent_planes() {
+        for direction in [-1., 1.] {
+            let transition =
+                plane_cylinder_transition(20., 6., 0., 1.25, 0.3, direction * 0.7).unwrap();
+            let constant =
+                plane_cylinder_rim(20., 6., 1.25, 0.3 + direction * 0.7, direction * 0.4).unwrap();
+            for i in 0..=40 {
+                let v = i as f64 / 40.;
+                let a = transition.surface.evaluate(1., v).unwrap();
+                let b = constant[0].surface.evaluate(0., v).unwrap();
+                assert!((0..3).all(|k| (a.point[k] - b.point[k]).abs() < 1e-10));
+                let na = a.unit_normal().unwrap();
+                let nb = b.unit_normal().unwrap();
+                let alignment: f64 = (0..3).map(|k| na[k] * nb[k]).sum();
+                assert!((alignment - 1.).abs() < 1e-10);
+            }
+        }
+    }
+
     #[test]
     fn impossible_and_nonfinite_support_refuses() {
         for radius in [0., -1., 20., f64::NAN] {
