@@ -58,7 +58,7 @@ function runStdioLifecycle(): Promise<StdioRun> {
       if (settled) return
       settled = true
       clearTimeout(timer)
-      if (child.exitCode === null && child.signalCode === null) child.kill()
+      if (child.exitCode === null && child.signalCode === null) child.kill('SIGKILL')
       rejectRun(error)
     }
 
@@ -104,7 +104,7 @@ function runStdioLifecycle(): Promise<StdioRun> {
         stdinEnded = true
         // Bootstrap and analysis may be slow on hosted runners; EOF shutdown stays bounded.
         clearTimeout(timer)
-        timer = setTimeout(() => reject(new Error('Timed out shutting down after stdin EOF')), 10_000)
+        timer = setTimeout(() => reject(new Error(`Timed out shutting down after stdin EOF (exit=${child.exitCode}, signal=${child.signalCode})\nstdout tail:\n${stdout.slice(-2000)}\nstderr:\n${stderr.slice(-4000)}`)), 10_000)
         child.stdin.end()
       }
     })
