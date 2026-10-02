@@ -667,6 +667,65 @@ pub fn circular_blend_strip(
     exit_sweep: f64,
     tolerance_mm: f64,
 ) -> Result<crate::Model> {
+    let [entry, middle, exit] = circular_strip_spans(
+        outer_radius,
+        height,
+        radius,
+        start,
+        entry_sweep,
+        middle_sweep,
+        exit_sweep,
+    )?;
+    assemble_support_sheets(vec![
+        (entry.to_open_sheet(tolerance_mm)?, false),
+        (middle.to_open_sheet(tolerance_mm)?, false),
+        (exit.to_open_sheet(tolerance_mm)?, false),
+    ])
+}
+
+/// Entire three-span region with its retained top and cylindrical neighbors.
+/// Its inner, bottom and two angular boundaries still need the remainder of
+/// the original body. Shared curves are definition-exact, not mesh-welded.
+pub fn circular_blend_retained_strip(
+    outer_radius: f64,
+    inner_radius: f64,
+    height: f64,
+    radius: f64,
+    start: f64,
+    entry_sweep: f64,
+    middle_sweep: f64,
+    exit_sweep: f64,
+    tolerance_mm: f64,
+) -> Result<crate::Model> {
+    let spans = circular_strip_spans(
+        outer_radius,
+        height,
+        radius,
+        start,
+        entry_sweep,
+        middle_sweep,
+        exit_sweep,
+    )?;
+    let mut sheets = Vec::new();
+    for span in spans {
+        let p = &span.cylinder_contact.control_points;
+        let positive = p[0][0] * p[1][1] - p[0][1] * p[1][0] > 0.;
+        sheets.push((span.to_open_sheet(tolerance_mm)?, positive));
+        sheets.push((span.trimmed_plane_sheet(inner_radius, tolerance_mm)?, false));
+        sheets.push((span.trimmed_cylinder_sheet(tolerance_mm)?, !positive));
+    }
+    assemble_support_sheets(sheets)
+}
+
+fn circular_strip_spans(
+    outer_radius: f64,
+    height: f64,
+    radius: f64,
+    start: f64,
+    entry_sweep: f64,
+    middle_sweep: f64,
+    exit_sweep: f64,
+) -> Result<[CircularBlendSpan; 3]> {
     let sweeps = [entry_sweep, middle_sweep, exit_sweep];
     if sweeps.iter().any(|s| {
         !s.is_finite()
@@ -685,11 +744,7 @@ pub fn circular_blend_strip(
     let middle =
         plane_cylinder_rim(outer_radius, height, radius, middle_start, middle_sweep)?.remove(0);
     let exit = plane_cylinder_transition(outer_radius, height, radius, 0., end_start, exit_sweep)?;
-    assemble_support_sheets(vec![
-        (entry.to_open_sheet(tolerance_mm)?, false),
-        (middle.to_open_sheet(tolerance_mm)?, false),
-        (exit.to_open_sheet(tolerance_mm)?, false),
-    ])
+    Ok([entry, middle, exit])
 }
 
 #[cfg(test)]
@@ -958,6 +1013,60 @@ mod tests {
                     })
                     .count();
                 assert_eq!(shared, 2);
+            }
+        }
+    }
+
+    #[test]
+    fn retained_strip_shares_all_internal_seams_and_keeps_only_outer_boundary() {
+        for direction in [-1., 1.] {
+            let region = circular_blend_retained_strip(
+                20.,
+                5.,
+                6.,
+                1.25,
+                5.9,
+                direction * 0.3,
+                direction * 0.7,
+                direction * 0.4,
+                1e-7,
+            )
+            .unwrap();
+            let report = region.validate().unwrap();
+            assert_eq!(report.face_count, 9);
+            assert_eq!(report.body_count, 0);
+            assert_eq!(region.edges.len(), 24);
+            assert_eq!(region.vertices.len(), 14);
+            assert_eq!(report.boundary_edge_count, 10);
+            assert_eq!(region.edges.iter().filter(|e| e.degenerate).count(), 2);
+            let shared = (0..region.edges.len())
+                .filter(|&i| {
+                    region
+                        .loops
+                        .iter()
+                        .flat_map(|l| &l.coedges)
+                        .filter(|c| c.edge == i)
+                        .count()
+                        == 2
+                })
+                .count();
+            assert_eq!(shared, 12);
+            for edge in 0..region.edges.len() {
+                let senses: Vec<_> = region.shells[0]
+                    .faces
+                    .iter()
+                    .flat_map(|face_use| {
+                        region.loops[region.faces[face_use.face].outer]
+                            .coedges
+                            .iter()
+                            .filter(move |c| c.edge == edge)
+                            .map(move |c| c.reversed ^ face_use.reversed)
+                    })
+                    .collect();
+                assert!(senses.len() == 1 || senses.len() == 2);
+                if senses.len() == 2 {
+                    assert_ne!(senses[0], senses[1]);
+                }
             }
         }
     }

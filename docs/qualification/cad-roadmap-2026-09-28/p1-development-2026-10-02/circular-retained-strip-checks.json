@@ -1,0 +1,22 @@
+{
+  "schema": "cad-p1-circular-retained-strip/1",
+  "rustTestsPassed": 11,
+  "directions": [
+    "forward",
+    "reverse"
+  ],
+  "faces": 9,
+  "vertices": 14,
+  "edges": 24,
+  "sharedEdges": 12,
+  "poleEdges": 2,
+  "openBoundaryEdges": 10,
+  "oppositeSharedCoedgeOrientationChecked": true,
+  "nonManifoldEdgeMultiplicityExcludedInCheckedCases": true,
+  "assembly": "authored rational boundary equality; no tolerance welding",
+  "sourceSolidModified": false,
+  "closedSolidAssembled": false,
+  "independentTrimmedRegionOracleVerified": false,
+  "bridgeAndUiExposed": false,
+  "generalP1Complete": false
+}
