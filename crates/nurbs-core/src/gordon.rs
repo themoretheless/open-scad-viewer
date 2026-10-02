@@ -3,6 +3,8 @@
 mod denominators;
 #[path = "gordon_cartesian.rs"]
 mod cartesian;
+#[path = "gordon_tangent_fields.rs"]
+mod tangent_fields;
 use crate::{
     Result, check,
     curve::{Curve, basis},
