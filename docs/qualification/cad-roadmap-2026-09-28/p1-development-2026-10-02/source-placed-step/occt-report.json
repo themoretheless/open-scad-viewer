@@ -1,0 +1,115 @@
+{
+  "schema": "cad-partial-annular-placed-occt/1",
+  "passed": true,
+  "scope": "Enumerated source arcs and rigid placements; numeric volume, bounds and OCCT validity, not a whole-boundary intersection proof.",
+  "parts": [
+    {
+      "file": "placement-0-edge-2.step",
+      "sha256": "03e445fbd5b35b2a9f307e021b8b3bd8e56e445da62f6b400ad5d6d7c244e7b3",
+      "valid": true,
+      "solids": 1,
+      "boundsErrorMm": 0.0,
+      "volumeErrorMm3": 6.888058123877272e-08,
+      "passed": true
+    },
+    {
+      "file": "placement-0-edge-6.step",
+      "sha256": "f63a8b463d03cd2ee6f9f2e5b6bdd190dce97c635dfde4b34c43124842b3b062",
+      "valid": true,
+      "solids": 1,
+      "boundsErrorMm": 0.0,
+      "volumeErrorMm3": 6.888058123877272e-08,
+      "passed": true
+    },
+    {
+      "file": "placement-0-edge-9.step",
+      "sha256": "6a4c84de6023333d3828d0dd685931b3598d9cef6156fbc9754b8de2957fd1cd",
+      "valid": true,
+      "solids": 1,
+      "boundsErrorMm": 0.0,
+      "volumeErrorMm3": 6.888058123877272e-08,
+      "passed": true
+    },
+    {
+      "file": "placement-0-edge-11.step",
+      "sha256": "5d06a7049039961bc38cdd01b43d536aa4a3aab682611d6c7eac022070568e1e",
+      "valid": true,
+      "solids": 1,
+      "boundsErrorMm": 0.0,
+      "volumeErrorMm3": 6.888058123877272e-08,
+      "passed": true
+    },
+    {
+      "file": "placement-1-edge-2.step",
+      "sha256": "850e522123d082327a3084aed71a9eaffdef018ffe622ff9fa5df070a5fc9ddd",
+      "valid": true,
+      "solids": 1,
+      "boundsErrorMm": 0.0,
+      "volumeErrorMm3": 6.887967174407095e-08,
+      "passed": true
+    },
+    {
+      "file": "placement-1-edge-6.step",
+      "sha256": "f678bfb0cd22c3c18c75c104f8e284dbb504862350b00d0b76cb65d4cf1ed286",
+      "valid": true,
+      "solids": 1,
+      "boundsErrorMm": 0.0,
+      "volumeErrorMm3": 6.887967174407095e-08,
+      "passed": true
+    },
+    {
+      "file": "placement-1-edge-9.step",
+      "sha256": "758210fdd965681b85588606e2c8e9797f21071db3c106d771e804a4f7130c22",
+      "valid": true,
+      "solids": 1,
+      "boundsErrorMm": 0.0,
+      "volumeErrorMm3": 6.887967174407095e-08,
+      "passed": true
+    },
+    {
+      "file": "placement-1-edge-11.step",
+      "sha256": "4e02efbe041981f8029a94d75b21b62186c3fb03357882196ef9ae15d6873926",
+      "valid": true,
+      "solids": 1,
+      "boundsErrorMm": 0.0,
+      "volumeErrorMm3": 6.888058123877272e-08,
+      "passed": true
+    },
+    {
+      "file": "placement-2-edge-2.step",
+      "sha256": "4ef4795293926f0977b1e875a0409e12aed6edfa4f5dcbd27f10e0c244320673",
+      "valid": true,
+      "solids": 1,
+      "boundsErrorMm": 1.4210854715202004e-14,
+      "volumeErrorMm3": 6.886148185003549e-08,
+      "passed": true
+    },
+    {
+      "file": "placement-2-edge-6.step",
+      "sha256": "9cf42e5c0ddc58133824fb892d0022360704b4c43004ba24ee81c8e48ccf44af",
+      "valid": true,
+      "solids": 1,
+      "boundsErrorMm": 1.4210854715202004e-14,
+      "volumeErrorMm3": 6.886602932354435e-08,
+      "passed": true
+    },
+    {
+      "file": "placement-2-edge-9.step",
+      "sha256": "673a118ecaca4cb30d487f061a0bdddd4064fd1eab3b74fed470c381a056e4bd",
+      "valid": true,
+      "solids": 1,
+      "boundsErrorMm": 1.4210854715202004e-14,
+      "volumeErrorMm3": 6.886330083943903e-08,
+      "passed": true
+    },
+    {
+      "file": "placement-2-edge-11.step",
+      "sha256": "3bb7e6dd49e6e9a910339d831b88ff8dedb48e00ee6fd8c2c21f2f36c70ad6a2",
+      "valid": true,
+      "solids": 1,
+      "boundsErrorMm": 1.4210854715202004e-14,
+      "volumeErrorMm3": 6.886421033414081e-08,
+      "passed": true
+    }
+  ]
+}

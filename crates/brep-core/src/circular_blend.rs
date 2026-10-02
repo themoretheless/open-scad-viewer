@@ -1527,4 +1527,61 @@ mod tests {
             .is_err()
         );
     }
+
+    #[test]
+    fn source_preview_face_ownership_survives_rigid_placement() {
+        let base = crate::tube(20., 5., 6.).unwrap();
+        let (sa, ca) = 0.37_f64.sin_cos();
+        let (sb, cb) = (-0.61_f64).sin_cos();
+        for matrix in [
+            [
+                [0., 0., 1., 7.],
+                [1., 0., 0., -3.],
+                [0., 1., 0., 11.],
+                [0., 0., 0., 1.],
+            ],
+            [
+                [ca * cb, -sa, ca * sb, 17.],
+                [sa * cb, ca, sa * sb, -9.],
+                [-sb, 0., cb, 23.],
+                [0., 0., 0., 1.],
+            ],
+        ] {
+            let source = crate::transform::affine(&base, matrix).unwrap();
+            let original = format!("{source:?}");
+            let mut admitted = 0;
+            for edge in 0..source.edges.len() {
+                if let Ok(result) =
+                    crate::analytic_features::build_partial_annular_preview(&source, edge, 1.25)
+                {
+                    result.validate().unwrap();
+                    assert_eq!(source.1.bodies, result.1.bodies);
+                    let mut owned = 0;
+                    for id in &result.1.faces {
+                        let owners: Vec<_> = result
+                            .1
+                            .change_set
+                            .changes
+                            .iter()
+                            .filter(|c| {
+                                c.topo_kind == crate::TopoKind::Face
+                                    && !c.parents.is_empty()
+                                    && c.children.contains(id)
+                            })
+                            .collect();
+                        if !owners.is_empty() {
+                            assert_eq!(owners.len(), 1);
+                            assert_eq!(owners[0].parents.len(), 1);
+                            assert!(source.1.faces.contains(&owners[0].parents[0]));
+                            owned += 1;
+                        }
+                    }
+                    assert_eq!(owned, 24);
+                    admitted += 1;
+                }
+            }
+            assert_eq!(admitted, 4);
+            assert_eq!(original, format!("{source:?}"));
+        }
+    }
 }
