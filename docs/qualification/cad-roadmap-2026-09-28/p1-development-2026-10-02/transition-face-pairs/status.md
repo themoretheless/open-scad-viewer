@@ -1,5 +1,16 @@
 # Exact partial annular boundary construction
 
+## Current qualification
+
+For the canonical quarter specimen (20/5/6/1.25), native exact boundary
+embedding and self-intersection absence are proven: 108 exact boundary
+uses, 27 injective faces and all 351 pairs classified. The full native suite
+passes 723 tests with three ignored. Latest joined-chart WASM packaging and
+application checks remain pending. Endpoint G1, thickness, volume and the
+full P0–P3 roadmap remain open; preview Apply remains disabled.
+
+The following sections record each qualification stage and its scope.
+
 Native and actual WASM checks on 2026-10-02. Mouse and keyboard browser regression checks
 for these changes pass. Preview commit remains disabled.
 
@@ -176,3 +187,31 @@ packaging and browser qualification are still required.
 
 All four embedding regressions pass, including exact-prerequisite exhaustion
 and the newly admitted vertex and curved-boundary contact cases.
+
+## Native joined-chart qualification
+
+Both remaining transition/wall pairs now pass a complete joined projection
+proof, with exact source seam control/weight equality and global weighted
+derivative dominance across the concatenated chart rectangle. The two
+512-cell certificates have margins above 1.63753. This excludes extra
+contacts; an isolated successful face proof is not accepted as a joined
+proof. See `joined-chart-proof.md` for the integral argument and source
+factor checks, and `joined-projection-prerequisites.json` for both accepted
+and refused projection choices.
+
+The canonical regenerated source model now has all 351 pairs classified:
+240 disjoint and 111 shared contacts, with zero unresolved pairs. All 27
+faces are injective, 108 boundary uses and all joins are exactly equal,
+and all trims are valid. Its boundary embedding and self-intersection
+absence flags are true. Eighty-four boundary-support certificates include
+the two joined proofs. Pair-search work is 8318 geometry cells and 45340
+UV cells; joined proof work is reported separately (512 cells each).
+
+The native full B-rep suite passes: 723 passed, zero failed, three ignored.
+Four embedding tests and the new joined source/budget/order/dominance
+regression pass. Mutations of seam positions, V weights, the required U
+factor and wall traversal are refused. A projection proving the blend
+alone but failing joined global dominance is also refused. Updated WASM
+packaging and application checks remain pending; preview Apply stays gated.
+Endpoint G1, thickness, full volume qualification and general P0–P3 scope
+remain open.

@@ -11,6 +11,15 @@ pub struct Certificate {
     pub contact_enclosure: [[f64;2];3],
     pub edges: Vec<usize>,
     pub vertex: Option<usize>,
+    pub joined_proof:Option<JoinedProof>,
+}
+#[derive(Clone,Debug)]
+pub struct JoinedProof {
+    pub blend_face:usize,
+    pub wall_face:usize,
+    pub collapsed_end:usize,
+    pub projection:[[f64;3];2],
+    pub report:nurbs_core::surface_quotient_injectivity::JoinedReport,
 }
 fn edge_ends(model: &Model, edge: usize) -> Option<[[f64;3];2]> {
     let c=&model.edges[edge].curve;
@@ -37,7 +46,7 @@ fn contact_controls(model:&Model,face:usize)->Vec<&[f64]>{
 }
 /// Input must be structurally valid. Does not establish its prerequisites.
 pub(crate) fn certify(model:&Model, faces:[usize;2])->Option<Certificate>{
-    certify_axis(model,faces).or_else(||certify_edge_plane(model,faces)).or_else(||certify_vertex_plane(model,faces))
+    certify_axis(model,faces).or_else(||certify_edge_plane(model,faces)).or_else(||certify_vertex_plane(model,faces)).or_else(||certify_joined_charts(model,faces))
 }
 fn certify_axis(model:&Model, faces:[usize;2])->Option<Certificate>{
     let edges=faces.map(|f|std::iter::once(model.faces[f].outer).chain(model.faces[f].holes.iter().copied())
@@ -74,7 +83,7 @@ fn certify_axis(model:&Model, faces:[usize;2])->Option<Certificate>{
     }
     let free=(0..3).filter(|&k|intersection[k][0]<intersection[k][1]).collect::<Vec<_>>();
     if free.len()>1{return None;}
-    let mut out=Certificate{faces,contact_enclosure:intersection,edges:Vec::new(),vertex:None};
+    let mut out=Certificate{faces,contact_enclosure:intersection,edges:Vec::new(),vertex:None,joined_proof:None};
     if free.is_empty(){
         let point=intersection.map(|r|r[0]);
         // Require the same topological vertex and an exact curve endpoint on
@@ -102,6 +111,38 @@ fn certify_axis(model:&Model, faces:[usize;2])->Option<Certificate>{
         if lo>covered{break;}
         if hi>covered{covered=hi;out.edges.push(e);}
         if covered>=intersection[axis][1]{return Some(out);}
+    }
+    None
+}
+
+// The normalized chart union is globally injective under the projected
+// weighted bounds. Exact shared natural-boundary lifts bind that union to
+// the authored edge, including its owned collapsed endpoint.
+fn certify_joined_charts(model:&Model,faces:[usize;2])->Option<Certificate>{
+    let uses=faces.map(|f|std::iter::once(model.faces[f].outer).chain(model.faces[f].holes.iter().copied())
+        .flat_map(|l|model.loops[l].coedges.iter()).collect::<Vec<_>>());
+    for (blend_face,wall_face,blend_uses,wall_uses) in [
+        (faces[0],faces[1],&uses[0],&uses[1]),(faces[1],faces[0],&uses[1],&uses[0])] {
+        let blend=&model.faces[blend_face].surface;let wall=&model.faces[wall_face].surface;
+        if wall.degree_v!=1||wall.degree_u!=blend.degree_u{continue;}
+        for end in 0..2 {
+            let row=if end==0{0}else{blend.control_points.len()-1};
+            if !blend.control_points[row].iter().all(|p|p==&blend.control_points[row][0]){continue;}
+            for ca in blend_uses.iter(){for cb in wall_uses.iter(){
+                if ca.edge!=cb.edge{continue;}
+                let edge=&model.edges[ca.edge].curve;
+                if crate::shared_boundary::boundary(blend,&ca.pcurve,edge)!=Some((1,blend.control_points[0].len()-1))
+                    ||crate::shared_boundary::boundary(wall,&cb.pcurve,edge)!=Some((1,1)){continue;}
+                for projection in [[[0.,1.,0.],[1.,0.,-1.]],[[1.,0.,0.],[0.,1.,-1.]]] {
+                    let report=nurbs_core::surface_quotient_injectivity::certify_ruled_join(blend,wall,end,projection,16,512).ok()?;
+                    if !report.proven{continue;}
+                    let mut enclosure=[[f64::INFINITY,f64::NEG_INFINITY];3];
+                    for p in &edge.control_points {for k in 0..3{enclosure[k][0]=enclosure[k][0].min(p[k]);enclosure[k][1]=enclosure[k][1].max(p[k]);}}
+                    return Some(Certificate{faces,contact_enclosure:enclosure,edges:vec![ca.edge],vertex:None,
+                        joined_proof:Some(JoinedProof{blend_face,wall_face,collapsed_end:end,projection,report})});
+                }
+            }}
+        }
     }
     None
 }
@@ -140,7 +181,7 @@ fn certify_edge_plane(model:&Model,faces:[usize;2])->Option<Certificate>{
             if valid&&(segment_only[0]||segment_only[1])&&signs.iter().any(Option::is_some)
                 && !(signs[0].is_some()&&signs[0]==signs[1]) {
                 return Some(Certificate{faces,contact_enclosure:std::array::from_fn(|k|[a[k].min(b[k]),a[k].max(b[k])]),
-                    edges:vec![edge],vertex:None});
+                    edges:vec![edge],vertex:None,joined_proof:None});
             }
         }
     }
@@ -211,7 +252,7 @@ fn certify_vertex_plane(model:&Model, faces:[usize;2])->Option<Certificate>{
             }}
             if valid && (vertex_only[0]||vertex_only[1]) && signs.iter().any(Option::is_some)
                 && !(signs[0].is_some()&&signs[0]==signs[1]) {
-                return Some(Certificate{faces,contact_enclosure:point.map(|v|[v,v]),edges:Vec::new(),vertex:Some(vertex)});
+                return Some(Certificate{faces,contact_enclosure:point.map(|v|[v,v]),edges:Vec::new(),vertex:Some(vertex),joined_proof:None});
             }
         }}
     }
@@ -221,6 +262,31 @@ fn certify_vertex_plane(model:&Model, faces:[usize;2])->Option<Certificate>{
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn joined_projection_requires_source_seam_budget_order_and_dominance() {
+        let model=crate::circular_blend::partial_annular_quarter(20.,5.,6.,1.25,1.,1e-7).unwrap();
+        for (a,b,end,projection) in [(0,2,0,[[0.,1.,0.],[1.,0.,-1.]]),(10,12,1,[[1.,0.,0.],[0.,1.,-1.]])] {
+            let blend=&model.faces[a].surface;let wall=&model.faces[b].surface;
+            let run=|wall:&nurbs_core::surface::Surface,budget|nurbs_core::surface_quotient_injectivity::certify_ruled_join(blend,wall,end,projection,16,budget).unwrap();
+            let r=run(wall,512);assert!(r.proven);assert_eq!(r.cells,512);assert!(r.dominance_margin_lower.unwrap()>0.);
+            assert!(!run(wall,511).proven);
+            let mut weak=projection;weak[1][if a==0{0}else{1}]=0.25;
+            assert!(nurbs_core::surface_quotient_injectivity::certify(blend,end,weak,16,256).unwrap().proven);
+            assert!(!nurbs_core::surface_quotient_injectivity::certify_ruled_join(blend,wall,end,weak,16,512).unwrap().proven);
+            let mut moved=wall.clone();moved.control_points[0][1][0]+=1e-12;
+            assert!(!run(&moved,512).proven);
+            let mut weight=wall.clone();weight.weights[0][0]*=2.;
+            assert!(!run(&weight,512).proven);
+            let mut order=wall.clone();let i=if end==0{1}else{order.control_points.len()-2};
+            order.control_points[i][0][2]+=1e-12;
+            assert!(!run(&order,512).proven);
+            let mut reversed=wall.clone();for row in &mut reversed.control_points{row[0][2]=12.;}
+            assert!(!run(&reversed,512).proven);
+            let c=certify_joined_charts(&model,[a,b]).unwrap();
+            assert!(c.joined_proof.as_ref().unwrap().report.proven);
+            assert!(c.edges.contains(&if a==0{2}else{27}));
+        }
+    }
     #[test]
     fn strict_bezier_basis_excludes_intermediate_support_controls_from_vertex_contact() {
         let model=crate::circular_blend::partial_annular_quarter(20.,5.,6.,1.25,1.,1e-7).unwrap();

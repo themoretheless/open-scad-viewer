@@ -107,7 +107,7 @@ fn same_boundary(s: &Surface, axis: usize, row: usize, edge: &Curve, reverse: bo
 
 /// Identify a complete natural boundary traversed by a straight pcurve and
 /// verify that its rational Bezier image equals the shared authored edge.
-fn boundary(s: &Surface, p: &Curve, edge: &Curve) -> Option<(usize, usize)> {
+pub(crate) fn boundary(s: &Surface, p: &Curve, edge: &Curve) -> Option<(usize, usize)> {
     if p.degree != 1 || !bezier(p) || !bezier(edge) || p.control_points.iter().any(|p| p.len() != 2)
     {
         return None;
