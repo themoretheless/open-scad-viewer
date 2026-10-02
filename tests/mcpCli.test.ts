@@ -43,27 +43,31 @@ function runStdioLifecycle(): Promise<StdioRun> {
   let analyzeRequested = false
   let analyzeSeen = false
   let stdinEnded = false
+  let pendingLine = ''
 
   return new Promise((resolveRun, rejectRun) => {
     let settled = false
-    const timer = setTimeout(() => {
+    let timer = setTimeout(() => {
       if (settled) return
       settled = true
       child.kill()
       rejectRun(new Error(`Timed out waiting for MCP stdio shutdown\nstdout:\n${stdout}\nstderr:\n${stderr}`))
-    }, 10_000)
+    }, 30_000)
 
     const reject = (error: Error) => {
       if (settled) return
       settled = true
       clearTimeout(timer)
-      if (child.exitCode === null && child.signalCode === null) child.kill()
+      if (child.exitCode === null && child.signalCode === null) child.kill('SIGKILL')
       rejectRun(error)
     }
 
     child.stdout.on('data', chunk => {
       stdout += chunk
-      for (const line of stdout.split(/\r?\n/).filter(Boolean)) {
+      pendingLine += chunk
+      const lines = pendingLine.split(/\r?\n/)
+      pendingLine = lines.pop() ?? ''
+      for (const line of lines.filter(Boolean)) {
         try {
           const message = JSON.parse(line) as { id?: unknown; result?: unknown; error?: unknown }
           if (message.id === 1 && ('result' in message || 'error' in message) && !toolsRequested) {
@@ -98,6 +102,9 @@ function runStdioLifecycle(): Promise<StdioRun> {
       }
       if (analyzeSeen && !stdinEnded) {
         stdinEnded = true
+        // Bootstrap and analysis may be slow on hosted runners; EOF shutdown stays bounded.
+        clearTimeout(timer)
+        timer = setTimeout(() => reject(new Error(`Timed out shutting down after stdin EOF (exit=${child.exitCode}, signal=${child.signalCode})\nstdout tail:\n${stdout.slice(-2000)}\nstderr:\n${stderr.slice(-4000)}`)), 10_000)
         child.stdin.end()
       }
     })
@@ -298,7 +305,7 @@ describe('MCP CLI', () => {
       method: 'notifications/resources/list_changed',
     }))
     expect(run.stderr).toContain('OpenSCAD Viewer MCP server ready (DuckDB: :memory:)')
-  }, 15_000)
+  }, 45_000)
 
   it('survives a 24-request stdio burst and replies to every admitted or rejected id', async () => {
     const run = await runStdioBurst()

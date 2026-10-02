@@ -1,3 +1,5 @@
+import {lineNurbsCurve,circleNurbsCurve,bezierNurbsCurve,autoGuidedLoftNurbsCurves,matchNurbsLoftEnds,guidedLoftNurbsCurves,controlTangentLoftNurbsCurves,clampedLoftNurbsCurves,naturalLoftNurbsCurves,closedLoftNurbsCurves} from './nurbsConstructors';
+import {createNaturalBrepSectionLoft,createCappedBrepLoftSurfaces} from './geometry/brep';
 import {createNativeGeometryArtifact} from '../core/nativeGeometry';
 import { stringifyMeshJson } from './meshJson'
 import {extrudePolygonProfile,revolvePolygonProfile,loftPolygonSections,sweepPolygonProfile,type PolygonProfile} from './geometry/polygon';
@@ -90,6 +92,7 @@ export function buildOwnNurbs(document: unknown, request: OwnNurbsRequest) {
         throw new Error(`Expected tessellated mesh at ${key}.`); return result.data; };
     const needBrep=(key:string):NurbsBrep=>{const v=get(key);if(v.kind!=='brep')throw new Error('Expected a B-rep body');return v.data;};
     const needSdf=(key:string):SdfField=>{const v=get(key);if(v.kind!=='sdf')throw new Error('Expected SDF field');return v.data;};
+    const constructionReports:Record<string,unknown>={};
     const reconstructionReports:Record<string,unknown>={};
     let meshTriangles = 0;
     function get(key: string): Value {
@@ -169,6 +172,29 @@ export function buildOwnNurbs(document: unknown, request: OwnNurbsRequest) {
                 case 'polygon_sweep': {const v=get(n.input);if(v.kind!=='profile')throw new Error('Expected polygon profile');if(v.data.holes?.length)throw new Error('Sweep with profile holes is not supported');result={kind:'mesh',data:sweepPolygonProfile(v.data.outer,n.path,n.up)};break;}
                 case 'polygon_loft': result={kind:'mesh',data:loftPolygonSections(n.sections)};break;
                 case 'surface_sweep': result={kind:'surface',data:sweepNurbsCurve(needCurve(n.inputs[0]),needCurve(n.inputs[1]))};break;
+                case 'control_tangent_loft_surface': result={kind:'surface',data:controlTangentLoftNurbsCurves(n.inputs.map(needCurve),n.parameters,n.start_tangents,n.end_tangents)};break;
+                case 'auto_guided_loft_surface': {
+                    const built=autoGuidedLoftNurbsCurves(n.inputs.map(needCurve),n.parameters,n.guides.map(needCurve),n.budget,n.parameter_tolerance);
+                    constructionReports[key]={method:"automatic-loft-alignment",guideParameters:built.guide_parameters,guideOrder:built.guide_order,reversed:built.reversed,sectionErrorUpper:built.section_error_upper,guideErrorUpper:built.guide_error_upper};
+                    result={kind:'surface',data:built.surface};break;
+                }
+                case 'loft_match_surface': {
+                    const start=n.start_reference?{reference:needSurface(n.start_reference),boundary:n.start_boundary,order:n.order as 1|2,scale:n.start_scale,reverse:n.start_reverse}:undefined;
+                    const end=n.end_reference?{reference:needSurface(n.end_reference),boundary:n.end_boundary,order:n.order as 1|2,scale:n.end_scale,reverse:n.end_reverse}:undefined;
+                    const built=matchNurbsLoftEnds(needSurface(n.input),n.sections.map(needCurve),n.parameters,n.budget,start,end,n.guides.map(needCurve),n.guide_parameters);
+                    constructionReports[key]={method:"loft-end-jets",seams:built.seams,sectionErrorUpper:built.section_error_upper,guideErrorUpper:built.guide_error_upper};
+                    result={kind:'surface',data:built.surface};break;
+                }
+                case 'brep_natural_loft': result={kind:'brep',data:createNaturalBrepSectionLoft(n.sections.map(s=>s.map(r=>r.map(needCurve))),n.parameters)};break;
+                case 'brep_capped_loft': result={kind:'brep',data:createCappedBrepLoftSurfaces(n.start.map(r=>r.map(needCurve)),n.end.map(r=>r.map(needCurve)),n.sides.map(r=>r.map(needSurface)))};break;
+                case 'guided_loft_surface': result={kind:'surface',data:guidedLoftNurbsCurves(n.inputs.map(needCurve),n.parameters,n.guides.map(needCurve),n.guide_parameters,n.start_tangents,n.end_tangents)};break;
+                case 'clamped_loft_surface': result={kind:'surface',data:clampedLoftNurbsCurves(n.inputs.map(needCurve),n.parameters,n.start_tangent,n.end_tangent)};break;
+
+                case 'line_curve': result={kind:'curve',data:lineNurbsCurve(n.start,n.end)};break;
+                case 'bezier_curve': result={kind:'curve',data:bezierNurbsCurve(n.points,n.weights)};break;
+                case 'circle_curve': result={kind:'curve',data:circleNurbsCurve(n.center,n.normal,n.radius)};break;
+                case 'closed_loft_surface': result={kind:'surface',data:closedLoftNurbsCurves(n.inputs.map(needCurve),n.parameters)};break;
+                case 'natural_loft_surface': result={kind:'surface',data:naturalLoftNurbsCurves(n.inputs.map(needCurve),n.parameters)};break;
                 case 'surface_loft': result={kind:'surface',data:loftAlignedNurbsCurves(n.inputs.map(needCurve))};break;
                 case 'triangle_mesh': {
                     const mesh={positions:Float64Array.from(n.vertices.flat()),indices:Uint32Array.from(n.triangles.flat())};
@@ -291,7 +317,7 @@ export function buildOwnNurbs(document: unknown, request: OwnNurbsRequest) {
     const extendedGeometry=compiled.document.nodes.some(n=>n.op.startsWith('polygon_')||n.op==='subdivision'||n.op==='triangle_mesh'||n.op.startsWith('mesh_to_')||n.op==='mesh_fit_nurbs'||n.op.startsWith('sdf_'));
     const foundationCertificate = root.kind === 'curve' ? certifyNurbsCurveFoundation(root.data)
         : root.kind === 'surface' ? certifyNurbsSurfaceFoundation(root.data) : null;
-    const report = { ...(Object.keys(reconstructionReports).length?{reconstruction:reconstructionReports}:{}), bounds_scope: foundationCertificate ? 'outward-rounded rational span hulls' : root.kind === 'mesh' ? 'derived mesh vertices' : 'conservative control hull', kernel: extendedGeometry?'own-rust-geometry':'own-rust-nurbs', polygon_core: 'own-rust-polygons', geometry_authority: extendedGeometry?'source geometry definitions':'rational control data', root: compiled.document.root, root_kind: root.kind, bounds: root.kind === 'curve' ? nurbsCurveBounds(root.data) : root.kind === 'surface' ? nurbsSurfaceBounds(root.data) : meshBounds, foundation_certificate: foundationCertificate, foundation_successor: foundationCertificate ? {version:'nurbs-ss/1',curve_projection:'Bernstein stationary isolation',surface_projection:'2d outward hull subdivision with Krawczyk/interval uniqueness',normal_regularity:'recursive sub-knot-cell homogeneous cone localization',simplification:'adaptive Lipschitz rollback certified',periodic_editing:'wrapped cyclic collocation with C0/C1/C2 seam evidence',reparameterization:'piecewise positive rational monotone with nested/periodic exact control-net materialization',fitting:'ranked bounded approximate-only with cloud Hausdorff enclosure',intersection:'certified general CC/CS/SS with Bernstein/Krawczyk isolation, BranchGraph, CoedgeTrim maps; Boolean mutation deferred'} : null, definitions, mesh: root.kind === 'mesh' ? root.data.report : null, printability: 'unknown', error_bound_certified: foundationCertificate !== null };
+    const report = { ...(Object.keys(constructionReports).length?{construction:constructionReports}:{}), ...(Object.keys(reconstructionReports).length?{reconstruction:reconstructionReports}:{}), bounds_scope: foundationCertificate ? 'outward-rounded rational span hulls' : root.kind === 'mesh' ? 'derived mesh vertices' : 'conservative control hull', kernel: extendedGeometry?'own-rust-geometry':'own-rust-nurbs', polygon_core: 'own-rust-polygons', geometry_authority: extendedGeometry?'source geometry definitions':'rational control data', root: compiled.document.root, root_kind: root.kind, bounds: root.kind === 'curve' ? nurbsCurveBounds(root.data) : root.kind === 'surface' ? nurbsSurfaceBounds(root.data) : meshBounds, foundation_certificate: foundationCertificate, foundation_successor: foundationCertificate ? {version:'nurbs-ss/1',curve_projection:'Bernstein stationary isolation',surface_projection:'2d outward hull subdivision with Krawczyk/interval uniqueness',normal_regularity:'recursive sub-knot-cell homogeneous cone localization',simplification:'adaptive Lipschitz rollback certified',periodic_editing:'wrapped cyclic collocation with C0/C1/C2 seam evidence',reparameterization:'piecewise positive rational monotone with nested/periodic exact control-net materialization',fitting:'ranked bounded approximate-only with cloud Hausdorff enclosure',intersection:'certified general CC/CS/SS with Bernstein/Krawczyk isolation, BranchGraph, CoedgeTrim maps; Boolean mutation deferred'} : null, definitions, mesh: root.kind === 'mesh' ? root.data.report : null, printability: 'unknown', error_bound_certified: foundationCertificate !== null };
     const evaluations = (request.evaluations ?? []).map(q => { const v = get(q.node); if (v.kind === 'curve')
         return { node: q.node, ...evaluateNurbsCurve(v.data, q.u) }; if (v.kind === 'surface' && q.v !== undefined)
         return { node: q.node, ...evaluateNurbsSurface(v.data, q.u, q.v) }; throw new Error('Evaluation requires a curve or surface, and v for a surface.'); });

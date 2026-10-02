@@ -162,6 +162,11 @@ impl Compiler {
         self.nodes.push(node);
         Ok(V::Json(json!({"geometry":id})))
     }
+    fn loft_references(&mut self, value: V, depth: usize) -> R<J> {
+        if depth==0 { return Ok(json!(self.geometry(value)?)); }
+        let V::Array(items)=value else { return Err(crate::error("Loft references require nested arrays")); };
+        Ok(J::Array(items.into_iter().map(|v|self.loft_references(v,depth-1)).collect::<R<Vec<_>>>()?))
+    }
     fn geometry(&mut self, v: V) -> R<String> {
         match v {
             V::Array(a) => {
@@ -733,6 +738,79 @@ impl Compiler {
             "rect" => "rectangle",
             _ => name,
         };
+            if ["loft_match_surface","brep_natural_loft","brep_capped_loft"].contains(&name) {
+            let mut node=json!({"op":name});
+            if name=="loft_match_surface" {
+                let source=if let Some(id)=input {id} else {
+                    if args.is_empty() || args[0].0.is_some(){return Err(crate::error("Loft match needs a positional surface"));}
+                    self.geometry(args.remove(0).1)?
+                };
+                node["input"]=json!(source);
+            } else if input.is_some(){return Err(crate::error("Capped loft uses named loop arrays"));}
+            for (key,value) in args {
+                let key=key.ok_or_else(||crate::error("Loft options must be named"))?;
+                let depth=match (name,key.as_str()) {
+                    ("brep_natural_loft","sections")=>Some(3),
+                    ("brep_capped_loft","start"|"end"|"sides")=>Some(2),
+                    ("loft_match_surface","sections"|"guides")=>Some(1),
+                    ("loft_match_surface","start_reference"|"end_reference")=>Some(0),
+                    _=>None,
+                };
+                node[&key]=if let Some(depth)=depth {self.loft_references(value,depth)?} else {raw(value)?};
+            }
+            return self.add(node);
+        }
+        if name=="guided_loft_surface" || name=="auto_guided_loft_surface" || name=="control_tangent_loft_surface" {
+            let mut node=json!({"op":name});
+            let at=args.iter().position(|(n,_)|n.as_deref()==Some("parameters")).ok_or_else(||crate::error("Loft requires named parameters"))?;
+            node["parameters"]=raw(args.remove(at).1)?;
+            if name=="guided_loft_surface" || name=="auto_guided_loft_surface" {
+                let at=args.iter().position(|(n,_)|n.as_deref()==Some("guides")).ok_or_else(||crate::error("Guided loft requires named guides"))?;
+                let V::Array(values)=args.remove(at).1 else{return Err(crate::error("Guides must be curve references"));};
+                let mut ids=Vec::new();for value in values{ids.push(self.geometry(value)?);}
+                node["guides"]=json!(ids);
+                let field=if name=="auto_guided_loft_surface" {"budget"} else {"guide_parameters"};
+                let at=args.iter().position(|(n,_)|n.as_deref()==Some(field)).ok_or_else(||crate::error(format!("Guided loft requires named {field}")))?;
+                node[field]=raw(args.remove(at).1)?;
+            }
+            if name=="auto_guided_loft_surface" {
+                if let Some(at)=args.iter().position(|(n,_)|n.as_deref()==Some("parameter_tolerance")) {
+                    node["parameter_tolerance"]=raw(args.remove(at).1)?;
+                }
+            }
+            for key in ["start_tangents","end_tangents"] {
+                if let Some(at)=args.iter().position(|(n,_)|n.as_deref()==Some(key)) {node[key]=raw(args.remove(at).1)?;}
+                else if name=="control_tangent_loft_surface" {return Err(crate::error(format!("Loft requires named {key}")));}
+            }
+            if node.get("start_tangents").is_some()!=node.get("end_tangents").is_some() {return Err(crate::error("Loft requires both tangent fields"));}
+            if args.iter().any(|(n,_)|n.is_some()){return Err(crate::error("Loft sections must be positional"));}
+            let mut inputs=Vec::new();if let Some(id)=input{inputs.push(id);}
+            for(_,value)in args{inputs.push(self.geometry(value)?);}
+            if !(2..=11).contains(&inputs.len()){return Err(crate::error("Loft requires 2..11 sections"));}
+            node["inputs"]=json!(inputs);return self.add(node);
+        }
+        if name=="clamped_loft_surface" {
+            let mut node=json!({"op":name});
+            for key in ["parameters","start_tangent","end_tangent"] {
+                let at=args.iter().position(|(n,_)|n.as_deref()==Some(key)).ok_or_else(||crate::error(format!("clamped_loft_surface requires named {key}")))?;
+                node[key]=raw(args.remove(at).1)?;
+            }
+            if args.iter().any(|(n,_)|n.is_some()){return Err(crate::error("Clamped loft sections must be positional"));}
+            let mut inputs=Vec::new();if let Some(id)=input{inputs.push(id);}
+            for(_,value)in args{inputs.push(self.geometry(value)?);}
+            if !(2..=11).contains(&inputs.len()){return Err(crate::error("Clamped loft requires 2..11 sections"));}
+            node["inputs"]=json!(inputs);return self.add(node);
+        }
+        if name=="natural_loft_surface" || name=="closed_loft_surface" {
+            let at=args.iter().position(|(n,_)|n.as_deref()==Some("parameters")).ok_or_else(||crate::error("natural_loft_surface requires named parameters"))?;
+            let parameters=raw(args.remove(at).1)?;
+            if args.iter().any(|(n,_)|n.is_some()){return Err(crate::error("natural loft sections must be positional"));}
+            let mut inputs=Vec::new();if let Some(id)=input{inputs.push(id);}
+            for(_,value)in args{inputs.push(self.geometry(value)?);}
+            if !(if name=="closed_loft_surface" {4} else {2}..=11).contains(&inputs.len()){return Err(crate::error("Cubic loft section count is outside its budget"));}
+            return self.add(json!({"op":name,"inputs":inputs,"parameters":parameters}));
+        }
+
         if [
             "surface_sweep",
             "surface_loft",
@@ -754,7 +832,7 @@ impl Compiler {
         ]
         .contains(&name)
         {
-            let smooth = name == "sdf_smooth_union";
+        let smooth = name == "sdf_smooth_union";
             let radius = if smooth {
                 args.iter()
                     .position(|(n, _)| n.as_deref() == Some("radius"))
@@ -2049,6 +2127,9 @@ fn signature(name: &str) -> Option<&'static [&'static str]> {
             "control_points",
             "weights",
         ],
+        "line_curve" => &["start", "end"],
+        "bezier_curve" => &["points", "weights"],
+        "circle_curve" => &["center", "normal", "radius"],
         "nurbs_curve" => &["degree", "knots", "control_points", "weights"],
         "surface_extrude" => &["vector"],
         "surface_revolve" => &["origin", "axis", "angle"],

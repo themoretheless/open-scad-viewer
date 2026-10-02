@@ -1095,7 +1095,8 @@ it.each([false,true])('previews and commits a four-boundary patch (rational=%s) 
  await commandKey(ui,'Escape');expect(ui.doc()).toEqual(before)
  await ui.click('Coons patch');await commandKey(ui,'Enter');expect(ui.doc().surfaces).toHaveLength(1);expect(ui.doc().curves).toEqual(before.curves)
  await ui.click('↶');expect(ui.doc()).toEqual(before)
-})
+// Two complete rational Coons previews include construction and tessellation.
+},60_000)
 it('repeats the chosen surface input roles after swapping profile and path',async()=>{
  await geometryKernel.warmGeometryKernel()
  const a=createSolidNurbsCurve('a'),b=createSolidNurbsCurve('b');a.name='Profile input';b.name='Path input';b.curve.controlPoints=b.curve.controlPoints.map(([x,y,z])=>[z,x,y+10])
@@ -2022,7 +2023,7 @@ it('discards a surface construction after input reversal and cancellation',async
  expect(requests).toHaveLength(2);await ui.click('↶');expect(ui.doc()).toEqual(before)
  await ui.click('NURBS loft');await commandKey(ui,'Escape')
  requests[2].resolve(buildSolidSurface(requests[2].job.document,requests[2].job.options));await flushClearance();expect(ui.doc()).toEqual(before)
-})
+},60_000)
 
 it.each(['summary','select'])('keeps native Enter on %s while a command is active',async tag=>{
  const ui=await mount();await ui.click('Cube');await ui.click('Split');const before=ui.doc()

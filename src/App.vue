@@ -21,7 +21,7 @@ import { emptyDirectDocument } from './services/directModeling'
 import type { DirectBody } from './services/directModeling'
 import type { WorkspaceMode } from './services/workspaceModes'
 import { WORKSPACE_MODES, workspaceModeHint, workspaceModeLabel } from './services/workspaceModes'
-import { sceneMeshesToSolidDocument, meshDocumentToSolidDocument, meshDataToPolygon, polygonToMeshObject } from './services/solidBridge'
+import { sceneMeshesToSolidDocument, meshDocumentToSolidDocument, meshDataToPolygon, meshDataToEditablePolygon, polygonToMeshObject } from './services/solidBridge'
 import { emptyMeshDocument, type MeshWorkspaceDocument } from './services/meshEditing'
 const DirectModeler = defineAsyncComponent(() => import('./features/DirectModeler.vue'))
 const MeshModeler = defineAsyncComponent(() => import('./features/MeshModeler.vue'))
@@ -442,7 +442,7 @@ function sceneMeshesToMeshDocument(): MeshWorkspaceDocument {
   const doc = emptyMeshDocument()
   const prefix = lang.value === 'ru' ? 'Объект' : 'Object'
   sceneMeshes.value.forEach((mesh, index) => {
-    const polygon = meshDataToPolygon(mesh)
+    const polygon = meshDataToEditablePolygon(mesh)
     if (polygon) doc.objects.push(polygonToMeshObject(polygon, `${prefix} ${index + 1}`, `scene-${index + 1}-${Date.now().toString(36)}`))
   })
   return doc

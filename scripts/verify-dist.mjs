@@ -85,7 +85,8 @@ const limits = new Map([
 // Exact rational Bezier identity: measured 3,236,243 packed bytes.
 // Prismatic cap Push/Pull: measured geometry chunk 3,240,213 bytes.
 // Incidence-based cap identity preservation: measured 3,243,603 bytes.
-const geometryChunkBudget = 3_244_000
+// Guided/G2 loft: CI production chunk measured at 3,247,548 bytes.
+const geometryChunkBudget = 3_248_000
 const jsChunkBudgets = [
   // CAD worker with lazy ModelGraph importer: surface boundary diagnostics included: measured 108,116 bytes.
   [/^assets\/mainSolid\.worker-[^/]+\.js$/, 116_000], // Distance kernel worker additions: measured 115,579 bytes. Surface distance worker dispatch: measured 115,110 bytes. Retained NURBS snap intervals: measured 114,200 bytes. Sketch snap preparation: measured 113,885 bytes. Body snap preparation: measured 112,083 bytes. Face sketch preparation in worker: measured 109,472 bytes.
@@ -325,6 +326,7 @@ for (const [name, artifact, compression] of [
 // Explicit quantity labels and linked errors: measured assets 7,062,786 bytes.
 // WebXR stereo viewer and controls across all workspaces: measured 7,072,458 bytes.
 // Separate VR core payload plus current CAD retry/error UI: measured 7,149,470 bytes.
-const totalBudget = 7_152_000
+// Loft operations, language schema and mobile menu: Linux CI measured 7,209,826 asset bytes.
+const totalBudget = 7_211_000
 if (total > totalBudget) throw new Error(`dist totals ${total} bytes; budget is ${totalBudget}`)
 console.log(`Verified ${files.length} dist artifacts (${total} asset bytes + ${rawWasmBytes} raw WASM bytes = ${total + rawWasmBytes} total bytes)`)

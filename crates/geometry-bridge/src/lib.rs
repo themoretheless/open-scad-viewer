@@ -986,6 +986,10 @@ pub fn dispatch(mut v: Value) -> Result<Value> {
                 field(&v, "zMax")?,
             )?)
         }
+        "brep_nurbs_natural_section_loft" => encode(brep_core::natural_section_loft(&field::<Vec<Vec<Vec<Curve>>>>(&v,"sections")?, &field::<Vec<f64>>(&v,"parameters")?)?),
+        "brep_nurbs_capped_loft_surfaces" => encode(brep_core::capped_loft_surfaces(&field::<Vec<Vec<Curve>>>(&v,"start")?, &field::<Vec<Vec<Curve>>>(&v,"end")?, &field::<Vec<Vec<Surface>>>(&v,"sides")?)?),
+        "brep_nurbs_periodic_section_loft" => encode(brep_core::periodic_section_loft(&field::<Vec<Vec<Vec<Curve>>>>(&v,"sections")?)?),
+        "brep_nurbs_rational_section_loft" => encode(brep_core::rational_section_loft(&field::<Vec<Vec<Vec<Curve>>>>(&v,"sections")?)?),
         "brep_nurbs_ruled_loft" => encode(brep_core::ruled_loft(&field::<Vec<Vec<[f64; 3]>>>(
             &v, "sections",
         )?)?),

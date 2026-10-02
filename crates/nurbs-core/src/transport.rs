@@ -18,6 +18,64 @@ fn optional_field<T: for<'a> Deserialize<'a>>(v: &Value, k: &str) -> Result<Opti
 }
 pub fn dispatch(v: Value) -> Result<Value> {
     let op: String = field(&v, "op")?;
+    if op=="curve_compose" {return encode(paths::compose(&field::<Vec<curve::Curve>>(&v,"curves")?)?)}
+    if op=="curve_polyline" {return encode(primitives::polyline(&field::<Vec<[f64;3]>>(&v,"points")?,optional_field(&v,"closed")?.unwrap_or(false))?)}
+    if op=="curve_bezier" {return encode(paths::bezier(field(&v,"points")?,optional_field(&v,"weights")?)?)}
+    if op=="curve_circle_arc" {return encode(primitives::circle_arc(field(&v,"center")?,field(&v,"normal")?,field(&v,"radius")?,field(&v,"startDegrees")?,field(&v,"sweepDegrees")?)?)}
+    if op=="curve_circle" {return encode(primitives::circle(field(&v,"center")?,field(&v,"normal")?,field(&v,"radius")?)?)}
+    if op=="curve_line" {return encode(primitives::line(field(&v,"start")?,field(&v,"end")?)?)}
+    if op == "curve_hermite" { return encode(hermite::interpolate(&field::<Vec<[f64;3]>>(&v,"points")?,&field::<Vec<[f64;3]>>(&v,"tangents")?,&field::<Vec<f64>>(&v,"parameters")?)?); }
+    if op == "curve_natural_spline" { return encode(natural_spline::interpolate(&field::<Vec<[f64;3]>>(&v,"points")?,&field::<Vec<f64>>(&v,"parameters")?)?); }
+    if op == "curve_clamped_spline" { return encode(natural_spline::clamped(&field::<Vec<[f64;3]>>(&v,"points")?,&field::<Vec<f64>>(&v,"parameters")?,field(&v,"start_tangent")?,field(&v,"end_tangent")?)?); }
+    if op == "curve_closed_spline" { return encode(closed_spline::interpolate(&field::<Vec<[f64;3]>>(&v,"points")?,&field::<Vec<f64>>(&v,"parameters")?)?); }
+    if op == "surface_closed_loft" { return encode(natural_loft::closed(&field::<Vec<curve::Curve>>(&v,"curves")?,&field::<Vec<f64>>(&v,"parameters")?)?); }
+    if op == "surface_auto_guided_loft" {
+        let result=loft_alignment::interpolate_with_parameter_tolerance(&field::<Vec<curve::Curve>>(&v,"curves")?,&field::<Vec<f64>>(&v,"parameters")?,&field::<Vec<curve::Curve>>(&v,"guides")?,field(&v,"budget")?, optional_field::<f64>(&v,"parameter_tolerance")?.unwrap_or(1e-8))?;
+        return Ok(json!({"surface":result.surface,"guides":result.guides,"guide_parameters":result.guide_parameters,"guide_order":result.guide_order,"reversed":result.reversed,"section_error_upper":result.section_error_upper,"guide_error_upper":result.guide_error_upper}));
+    }
+    if op == "surface_loft_match_ends" {
+        let mut references:[Option<surface::Surface>;2]=[None,None];
+        let mut boundaries=[String::new(),String::new()];
+        let mut orders=[1usize;2];let mut scales=[1.;2];let mut reversed=[false;2];
+        for (i,key) in ["start","end"].iter().enumerate(){
+            if let Some(value)=v.get(*key).filter(|x|!x.is_null()) {
+                references[i]=Some(field(value,"reference")?);boundaries[i]=field(value,"boundary")?;
+                orders[i]=field(value,"order")?;scales[i]=field(value,"scale")?;
+                reversed[i]=optional_field(value,"reverse")?.unwrap_or(false);
+            }
+        }
+        let ends=std::array::from_fn(|i|references[i].as_ref().map(|reference|loft_continuity::EndConstraint{reference,boundary:&boundaries[i],order:orders[i],scale:scales[i],reverse:reversed[i]}));
+        let result=loft_continuity::match_ends(&field(&v,"surface")?,&field::<Vec<curve::Curve>>(&v,"curves")?,&field::<Vec<f64>>(&v,"parameters")?,&optional_field::<Vec<curve::Curve>>(&v,"guides")?.unwrap_or_default(),&optional_field::<Vec<f64>>(&v,"guide_parameters")?.unwrap_or_default(),ends,field(&v,"budget")?)?;
+        return Ok(json!({"surface":result.surface,"seams":result.seams,"section_error_upper":result.section_error_upper,"guide_error_upper":result.guide_error_upper}));
+    }
+    if op == "surface_guided_loft" {
+        let start = optional_field::<Vec<[f64; 3]>>(&v, "start_tangents")?;
+        let end = optional_field::<Vec<[f64; 3]>>(&v, "end_tangents")?;
+        let tangents = match (start, end) {
+            (None, None) => None,
+            (Some(a), Some(b)) => Some([a,b]),
+            _ => return Err(input("Guided loft requires both endpoint tangent fields")),
+        };
+        return encode(guided_loft::interpolate(
+            &field::<Vec<curve::Curve>>(&v,"curves")?,
+            &field::<Vec<f64>>(&v,"parameters")?,
+            &field::<Vec<curve::Curve>>(&v,"guides")?,
+            &field::<Vec<f64>>(&v,"guide_parameters")?, tangents,
+        )?);
+    }
+    if op == "surface_control_tangent_loft" {
+        return encode(natural_loft::clamped_control_tangents(
+            &field::<Vec<curve::Curve>>(&v, "curves")?,
+            &field::<Vec<f64>>(&v, "parameters")?,
+            &field::<Vec<[f64; 3]>>(&v, "start_tangents")?,
+            &field::<Vec<[f64; 3]>>(&v, "end_tangents")?,
+        )?);
+    }
+    if op == "surface_clamped_loft" { return encode(natural_loft::clamped(&field::<Vec<curve::Curve>>(&v,"curves")?,&field::<Vec<f64>>(&v,"parameters")?,field(&v,"start_tangent")?,field(&v,"end_tangent")?)?); }
+    if op == "surface_natural_loft" { return encode(natural_loft::interpolate(&field::<Vec<curve::Curve>>(&v,"curves")?,&field::<Vec<f64>>(&v,"parameters")?)?); }
+    if op == "surface_gordon" {return encode(gordon::patch(&field::<Vec<curve::Curve>>(&v,"u_curves")?,&field::<Vec<curve::Curve>>(&v,"v_curves")?,&field::<Vec<f64>>(&v,"parameters_u")?,&field::<Vec<f64>>(&v,"parameters_v")?)?);}
+    if op == "surface_grid_spline" { return encode(grid_spline::interpolate(&field::<Vec<Vec<[f64;3]>>>(&v,"points")?,&field::<Vec<f64>>(&v,"parameters_u")?,&field::<Vec<f64>>(&v,"parameters_v")?)?); }
+
     if op == "curve_chain_diagnostics" {
         return Ok(crate::curve_offset_diagnostics::inspect_curves(&field::<Vec<curve::Curve>>(&v,"curves")?, optional_field::<usize>(&v,"maxPairs")?.unwrap_or(1_000_000))?.to_value());
     }

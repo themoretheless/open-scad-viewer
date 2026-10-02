@@ -8,6 +8,7 @@ import type { MeshObject, MeshWorkspaceDocument } from './meshEditing'
 import { emptyMeshDocument } from './meshEditing'
 import { tessellateSolidNurbsSurface } from './solidNurbs'
 import {placeSolidMeshInKernel} from './geometry/meshAnalysis'
+import {flattenGroupGeometry} from './meshFlatten'
 import { createSelectionTransferService } from './geometry/selectionTransfer'
 import { isTopoId, type TopoId } from '../core/topologyLineage'
 
@@ -61,6 +62,17 @@ export function meshDataToPolygonBody(mesh: MeshData, name: string, id: string):
   }
   if (!polygon) return null
   return { id, name, mesh: polygon }
+}
+
+/** Editable Mesh drops rendering normals; weld exact coincident BRep display
+ * vertices so shared authored boundaries remain connected in indexed topology. */
+export function meshDataToEditablePolygon(mesh: MeshData): PolygonMesh | null {
+  if (mesh.nativeGeometry?.kind === 'brep') {
+    if (!isNativeGeometryArtifact(mesh.nativeGeometry)) throw new Error('Invalid native B-rep snapshot.')
+    const polygon=flattenGroupGeometry([mesh])
+    return polygon.indices.length ? polygon : null
+  }
+  return meshDataToPolygon(mesh)
 }
 
 /** MeshData uses interleaved position+normal (stride 6). */

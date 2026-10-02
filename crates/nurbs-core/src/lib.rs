@@ -76,3 +76,15 @@ pub use transport::{dispatch, execute};
 mod tests;
 
 pub mod chord_fill_selection;
+
+pub mod natural_loft;
+pub mod guided_loft;
+pub mod loft_alignment;
+pub mod loft_continuity;
+pub mod gordon;
+pub mod natural_spline;
+pub mod closed_spline;
+pub mod hermite;
+pub mod grid_spline;
+pub mod paths;
+pub mod primitives;

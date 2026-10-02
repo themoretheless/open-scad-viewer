@@ -2388,7 +2388,10 @@ impl<'a> DirectBuilder<'a> {
                 "EDGE_CURVE same_sense does not orient geometry from edge_start to edge_end",
             ));
         }
-        let degenerate = va == vb;
+        let pole = self.vertices[va].point;
+        let degenerate = va == vb && c3.control_points.iter().all(|point| {
+            point.len() == 3 && point.iter().zip(pole).all(|(a, b)| *a == b)
+        });
         verify_correspondence(
             &c3,
             &pc,
@@ -5259,7 +5262,8 @@ mod tests {
     fn product_assembly_frames_use_their_own_units() {
         let text = include_str!(
             "../../../tests/fixtures/step-v6/self-authored-mixed-unit-product-assembly.step"
-        );
+        )
+        .replace("\r\n", "\n");
         let extra = "#700=CARTESIAN_POINT('',(1.,0.,0.));\n#701=AXIS2_PLACEMENT_3D('',#700,$,$);\n#702=CARTESIAN_POINT('',(100.,0.,0.));\n#703=AXIS2_PLACEMENT_3D('',#702,$,$);\n#704=ITEM_DEFINED_TRANSFORMATION('','',#701,#703);\n";
         let moved = text
             .replace(
@@ -5279,7 +5283,8 @@ mod tests {
     fn product_assembly_rejects_cycles_mismatched_products_and_geometry_containers() {
         let text = include_str!(
             "../../../tests/fixtures/step-v6/self-authored-mixed-unit-product-assembly.step"
-        );
+        )
+        .replace("\r\n", "\n");
         let bad_item = text.replace(
             "SHAPE_REPRESENTATION('',(#7),#5)",
             "SHAPE_REPRESENTATION('',(#15),#5)",

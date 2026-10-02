@@ -92,6 +92,11 @@ jobs:
       matrix:
         os: [macos-latest, windows-latest]
     steps:
+      # Generated artifacts and frozen source digests compare repository bytes.
+      # Git for Windows must not rewrite Rust/WGSL sources during checkout.
+      - name: Preserve repository line endings on Windows
+        if: runner.os == 'Windows'
+        run: git config --global core.autocrlf false
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
         with:
@@ -102,7 +107,8 @@ jobs:
           toolchain: nightly-2026-09-16
           targets: wasm32-unknown-unknown
           components: rustfmt, clippy
-      - uses: actions/cache@v4
+      - uses: actions/cache/restore@v4
+        id: native-rust-cache
         with:
           path: |
             ~/.cargo/registry
@@ -111,8 +117,26 @@ jobs:
       - run: npm ci
       - run: npm run test:wasm-optimize
       - run: npm run build:geometry
+      # Hosted Windows smoke does not qualify the software DX12 adapter. An
+      # unavailable Vulkan adapter exercises the existing optional-GPU skip;
+      # COMPUTE_REQUIRE_GPU keeps required GPU runs fail-closed.
       - run: cargo test --locked --manifest-path crates/Cargo.toml --workspace
+        env:
+          WGPU_BACKEND: ${{ runner.os == 'Windows' && 'vulkan' || 'metal' }}
       - run: node node_modules/vitest/vitest.mjs run tests/duckdbModelStore.test.ts tests/mcpCli.test.ts
+
+      # Cache compression is optional and must not consume the job budget
+      # after native tests have passed (cold Windows targets can be very large).
+      - name: Save native Rust cache
+        if: steps.native-rust-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        timeout-minutes: 3
+        continue-on-error: true
+        with:
+          path: |
+            ~/.cargo/registry
+            crates/target
+          key: ${{ steps.native-rust-cache.outputs.cache-primary-key }}
 
   official-openscad-mcp:
     runs-on: ubuntu-latest

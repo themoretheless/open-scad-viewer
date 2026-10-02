@@ -94,6 +94,7 @@ pub(crate) fn execute_text_value(source: &str) -> Value {
                 "brep_gear",
                 "brep_extrude_curves",
                 "nurbs_surface",
+                "line_curve", "circle_curve", "bezier_curve", "control_tangent_loft_surface", "guided_loft_surface", "auto_guided_loft_surface", "loft_match_surface", "brep_natural_loft", "brep_capped_loft", "natural_loft_surface", "closed_loft_surface", "clamped_loft_surface",
                 "nurbs_curve",
                 "mesh_boolean",
             ]

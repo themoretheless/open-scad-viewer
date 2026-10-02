@@ -76,7 +76,9 @@ impl GpuContext {
     /// requests `SUBGROUP | TIMESTAMP_QUERY`.
     pub fn with_features(required_features: wgpu::Features) -> Result<Self, GpuContextError> {
         let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
-            backends: wgpu::Backends::PRIMARY,
+            // Honor wgpu's explicit host/backend selector without a fallback to
+            // another backend when that requested adapter is unavailable.
+            backends: wgpu::Backends::from_env().unwrap_or(wgpu::Backends::PRIMARY),
             flags: wgpu::InstanceFlags::default(),
             memory_budget_thresholds: wgpu::MemoryBudgetThresholds::default(),
             backend_options: wgpu::BackendOptions::default(),

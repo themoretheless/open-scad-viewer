@@ -1,7 +1,8 @@
-// Path-independent wasm builds. rustc embeds source paths in panic locations,
+// Normalize source paths in wasm builds. rustc embeds them in panic locations,
 // and registry crates live under $CARGO_HOME, so without remapping every
 // machine (developer checkout, CI runner) packs different kernel bytes and the
-// frozen byte fingerprints only match the machine that recorded them.
+// frozen byte fingerprints retain those paths. Compiler hosts can still emit
+// distinct artifacts; each accepted build must have an explicitly recorded digest.
 import {homedir} from 'node:os'
 import {join} from 'node:path'
 

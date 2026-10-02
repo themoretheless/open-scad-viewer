@@ -171,15 +171,25 @@ async function main() {
 
   try {
     const running = await runMcpServer(options)
+    let stopping = false
     const stop = () => {
-      void running.close().catch(error => {
+      if (stopping) return
+      stopping = true
+      void running.close().then(() => {
+        console.error('OpenSCAD Viewer MCP server closed')
+      }).catch(error => {
         console.error('MCP shutdown failed:', error)
         process.exitCode = 1
+      }).finally(() => {
+        // The stdio transport pauses stdin; explicitly release its owned pipe
+        // after joining workers and closing the store, including on macOS.
+        process.stdin.destroy()
       })
     }
     process.once('SIGINT', stop)
     process.once('SIGTERM', stop)
     process.stdin.once('end', stop)
+    process.stdin.once('close', stop)
   } catch (error) {
     console.error('Could not start OpenSCAD Viewer MCP server:', error)
     process.exitCode = 1

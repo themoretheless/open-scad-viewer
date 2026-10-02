@@ -1814,3 +1814,5 @@ mod tests {
         m.validate().unwrap();
     }
 }
+
+pub use analytic::{rational_section_loft, natural_section_loft, capped_loft_surfaces, periodic_section_loft};

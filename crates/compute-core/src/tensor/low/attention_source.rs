@@ -7,7 +7,8 @@ fn replace(source: &mut String, from: &str, to: &str) {
     *source = source.replace(from, to);
 }
 pub(super) fn source(dtype: tensor_core::LowDtype) -> String {
-    let mut source = crate::shaders::TENSOR_ATTENTION_WGSL.to_owned();
+    // Git checkouts on Windows may use CRLF; specialization hooks use LF.
+    let mut source = crate::shaders::TENSOR_ATTENTION_WGSL.replace("\r\n", "\n");
     for name in ["query", "key", "value"] {
         replace(
             &mut source,
@@ -25,7 +26,8 @@ pub(super) fn source(dtype: tensor_core::LowDtype) -> String {
         "value[vbase + (start + item) * params[22] + channel * params[23]]",
         "low_value(vbase + (start + item) * params[22] + channel * params[23])",
     );
-    let mut loader = include_str!("../../../shaders/tensor_low_attention_load.wgsl").to_owned();
+    let mut loader =
+        include_str!("../../../shaders/tensor_low_attention_load.wgsl").replace("\r\n", "\n");
     if dtype == tensor_core::LowDtype::F16 {
         // Bounded query reuse benefits f16 decoding. BF16 keeps its original
         // source with no cache storage or added synchronization.

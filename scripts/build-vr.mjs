@@ -7,7 +7,7 @@ import { reproducibleCargo } from './reproducible-cargo.mjs'
 const root = fileURLToPath(new URL('..', import.meta.url))
 const target = resolve(root, 'crates/target')
 const reproducible = reproducibleCargo(root)
-const result = spawnSync('cargo', ['build', '--config', 'profile.release.strip="symbols"', ...reproducible.args, '--locked', '--offline', '--release', '--target', 'wasm32-unknown-unknown', '--manifest-path', 'crates/Cargo.toml', '-p', 'vr-core'], {
+const result = spawnSync('cargo', ['build', '--config', 'profile.release.strip="symbols"', ...reproducible.args, '--locked', '--release', '--target', 'wasm32-unknown-unknown', '--manifest-path', 'crates/Cargo.toml', '-p', 'vr-core'], {
   cwd: root, stdio: 'inherit', env: { ...process.env, ...reproducible.env, CARGO_TARGET_DIR: target },
 })
 if (result.error) throw result.error

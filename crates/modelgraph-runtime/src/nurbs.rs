@@ -272,6 +272,21 @@ pub fn compile(mut document: J) -> Result<J> {
         } else {
             node["input"].as_str().into_iter().collect()
         };
+        if ["guided_loft_surface","auto_guided_loft_surface"].contains(&s(node,"op")) {
+            if node.get("start_tangents").is_some()!=node.get("end_tangents").is_some() {
+                return Err(err(&path,"Guided loft requires both endpoint tangent fields"));
+            }
+            if let Some(xs)=node["guides"].as_array(){refs.extend(xs.iter().filter_map(J::as_str));}
+        }
+        if ["loft_match_surface","brep_natural_loft","brep_capped_loft"].contains(&s(node,"op")) {
+            fn collect<'a>(value:&'a J,refs:&mut Vec<&'a str>){
+                if let Some(id)=value.as_str(){refs.push(id);}
+                else if let Some(items)=value.as_array(){for item in items{collect(item,refs);}}
+            }
+            for field in ["sections","guides","start_reference","end_reference","start","end","sides"] {
+                if let Some(value)=node.get(field){collect(value,&mut refs);}
+            }
+        }
         if s(node, "op") == "tessellate" && node.get("trim_curves").is_some() {
             refs.push(s(&node["trim_curves"], "outer"));
             if let Some(holes) = node["trim_curves"]["holes"].as_array() {
@@ -597,6 +612,7 @@ pub fn compile_text(nodes: Vec<J>, parameters: &[J], mut root: String) -> Result
             "brep_tessellate",
             "surface",
             "curve",
+            "line_curve", "circle_curve", "bezier_curve", "control_tangent_loft_surface", "auto_guided_loft_surface", "loft_match_surface", "brep_natural_loft", "brep_capped_loft", "guided_loft_surface", "clamped_loft_surface", "natural_loft_surface", "closed_loft_surface",
             "surface_extrude",
             "surface_revolve",
             "tessellate",
@@ -613,8 +629,10 @@ pub fn compile_text(nodes: Vec<J>, parameters: &[J], mut root: String) -> Result
                 ),
             ));
         }
+        let loft_refs=["loft_match_surface","brep_natural_loft","brep_capped_loft"].contains(&s(&node,"op"));
         for (key, value) in node.as_object_mut().unwrap() {
-            if ["id", "op", "input", "inputs", "operation", "loops"].contains(&key.as_str()) {
+            if loft_refs && ["sections","guides","start_reference","end_reference","start","end","sides","start_boundary","end_boundary","start_reverse","end_reverse"].contains(&key.as_str()){continue;}
+            if ["id", "op", "input", "inputs", "guides", "operation", "loops"].contains(&key.as_str()) {
                 continue;
             }
             if key == "matrix" {
@@ -670,7 +688,7 @@ pub fn compile_text(nodes: Vec<J>, parameters: &[J], mut root: String) -> Result
                     "distance",
                     "min",
                     "max",
-                    "control_points",
+                    "start", "end", "points", "start_tangents", "end_tangents", "start_tangent", "end_tangent", "budget", "control_points",
                     "vector",
                     "origin",
                 ]
