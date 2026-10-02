@@ -81,6 +81,18 @@ mod tests {
     use super::*;
     use nurbs_core::{curve::Curve, trim_domain::Location};
     #[test]
+    fn concentric_retained_walls_have_certified_clearance_with_one_geometry_cell() {
+        let model=crate::circular_blend::partial_annular_quarter(20.,5.,6.,1.25,1.,1e-7).unwrap();
+        let before=format!("{model:?}");
+        let r=distance_between_faces(&model,16,&model,17,1e-6,1e-8,1,10000).unwrap();
+        assert!(r.converged,"{r:?}");
+        assert!(r.lower_bound_mm<=15.&&r.upper_bound_mm.unwrap()>=15.);
+        assert!(r.upper_bound_mm.unwrap()-r.lower_bound_mm<1e-6);
+        assert!(r.parameters.is_some()&&r.point_enclosures.is_some());
+        assert_eq!(r.cells,1);
+        assert_eq!(format!("{model:?}"),before);
+    }
+    #[test]
     fn box_faces_use_pcurves_in_loop_order() {
         let model = crate::cuboid([0., 0., 0.], [10., 20., 30.]).unwrap();
         assert!(

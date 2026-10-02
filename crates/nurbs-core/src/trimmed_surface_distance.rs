@@ -206,6 +206,7 @@ pub fn distance(
         (1..=8000000).contains(&max_domain_cells),
         "Trimmed surface distance needs 1..8000000 domain cells",
     )?;
+    let axis_lower = crate::radial_bounds::axis_separation_lower(a, b);
     let aa = patches(a)?;
     let bb = patches(b)?;
     if aa.len().saturating_mul(bb.len()) > max_cells {
@@ -245,7 +246,7 @@ pub fn distance(
             }
             heap.push(Cell {
                 parts,
-                lower: patch_lower(&pa.patch, &pb.patch)?,
+                lower: patch_lower(&pa.patch, &pb.patch)?.max(axis_lower),
                 order: cells,
             });
         }
@@ -309,7 +310,7 @@ pub fn distance(
             let mut parts = cell.parts.clone();
             parts[side] = Part { patch, location };
             sample_pair(a, b, &parts, &mut domains, &mut best)?;
-            let lower = patch_lower(&parts[0].patch, &parts[1].patch)?;
+            let lower = patch_lower(&parts[0].patch, &parts[1].patch)?.max(axis_lower);
             if best.as_ref().is_none_or(|w| lower <= w.upper) {
                 heap.push(Cell {
                     parts,
