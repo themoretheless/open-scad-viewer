@@ -1166,6 +1166,23 @@ fn annular_fillet_bridge_requires_complete_rim() {
 }
 
 #[test]
+fn partial_annular_bridge_is_explicitly_preview_only() {
+    let model=brep_core::tube(20.,5.,6.).unwrap();
+    let body_id=model.1.bodies[0];
+    let encoded=encode(model).unwrap();
+    let result=dispatch(json!({"op":"brep_nurbs_partial_annular_preview","model":encoded.clone(),"edge":2,"radius":1.25})).unwrap();
+    assert_eq!(result["qualification"]["status"].as_str(),Some("preview-only"));
+    assert_eq!(result["qualification"]["commitAllowed"],false);
+    assert_eq!(result["qualification"]["boundaryIntersectionProof"].as_str(),Some("unqualified"));
+    assert!(result.get("certificate").is_none());
+    let restored:brep_core::Model=field(&result,"model").unwrap();
+    assert_eq!(restored.1.bodies[0],body_id);
+    assert_eq!(restored.validate().unwrap().boundary_edge_count,0);
+    assert!(dispatch(json!({"op":"brep_nurbs_partial_annular_preview","model":encoded.clone(),"edge":999,"radius":1.25})).is_err());
+    assert!(dispatch(json!({"op":"brep_nurbs_partial_annular_preview","model":encoded,"edge":2,"radius":1.25,"commitAllowed":true})).is_err());
+}
+
+#[test]
 fn layered_fillet_bridge_checks_chain_and_cavity() {
     let outer=brep_core::cuboid([0.,0.,0.],[40.,30.,20.]).unwrap();
     let cutter=brep_core::cuboid([2.,2.,2.],[38.,28.,22.]).unwrap();

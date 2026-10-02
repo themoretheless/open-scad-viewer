@@ -310,6 +310,13 @@ export interface AuditedBrepFeature {
  changeSet:RustChangeSet
  namingComplete:true
 }
+/** Experimental geometry result; it must not enter the audited commit path. */
+export interface PartialAnnularPreview {
+ model:NurbsBrep
+ changeSet:RustChangeSet
+ qualification:{status:'preview-only';commitAllowed:false;boundaryIntersectionProof:'unqualified';transitionContinuityProof:'unqualified'}
+}
+export const partialAnnularPreview=(model:NurbsBrep,edge:number,radius:number):PartialAnnularPreview=>callGeometryRust('brep_nurbs_partial_annular_preview',{model,edge,radius})
 export const auditedMultiEdgeFillet=(model:NurbsBrep,edges:number[],radius:number):AuditedBrepFeature=>callGeometryRust('brep_nurbs_audited_multi_edge_fillet',{model,edges,radius})
 /** Exact equal-distance chamfer on a connected open/closed convex edge selection. */
 export const exactConvexChamfer=(model:NurbsBrep,edges:number[],distance:number):AuditedBrepFeature=>callGeometryRust('brep_nurbs_exact_convex_chamfer',{model,edges,distance})

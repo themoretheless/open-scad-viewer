@@ -1171,6 +1171,20 @@ pub fn dispatch(mut v: Value) -> Result<Value> {
                 field(&v, "radius")?,
             )?)
         }
+        "brep_nurbs_partial_annular_preview" => {
+            require_exact_fields(&v,&["op","model","edge","radius"],"partial annular preview request")?;
+            let model=brep_core::analytic_features::build_partial_annular_preview(
+                &field(&v,"model")?,field(&v,"edge")?,field(&v,"radius")?)?;
+            Ok(json!({
+                "model":model,
+                "changeSet":model.1.change_set,
+                "qualification":{
+                    "status":"preview-only", "commitAllowed":false,
+                    "boundaryIntersectionProof":"unqualified",
+                    "transitionContinuityProof":"unqualified"
+                }
+            }))
+        }
         "brep_nurbs_exact_variable_radius_fillet" => {
             require_exact_fields(
                 &v,
