@@ -319,3 +319,23 @@ export function createCartesianGordonSurface(
     u_curves: uCurves, v_curves: vCurves, parameters_u: parametersU, parameters_v: parametersV,
     errorBudget, maxCells, maxMapEvaluations})
 }
+
+export interface CartesianGuidedLoftResult {
+  surface: NurbsSurface
+  certificate: {
+    operation: 'cartesian-guided-loft'
+    exact: false
+    fittedToExactPromotion: false
+    curves: CartesianGordonResult['certificate']['curves']
+  }
+}
+
+/** Audit budgets apply to each authored curve and generated boundary guide. */
+export function createCartesianGuidedLoft(
+  curves: NurbsCurve[], parameters: number[], guides: NurbsCurve[], guideParameters: number[],
+  errorBudget = 1e-6, maxCells = 50000, maxMapEvaluations = 200000,
+): CartesianGuidedLoftResult {
+  return callNurbsRust<CartesianGuidedLoftResult>('surface_guided_loft_cartesian', {
+    curves, parameters, guides, guide_parameters: guideParameters, errorBudget, maxCells, maxMapEvaluations,
+  })
+}

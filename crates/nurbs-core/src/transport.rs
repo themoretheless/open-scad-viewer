@@ -57,6 +57,17 @@ pub fn dispatch(v: Value) -> Result<Value> {
         let result=loft_continuity::match_ends(&field(&v,"surface")?,&field::<Vec<curve::Curve>>(&v,"curves")?,&field::<Vec<f64>>(&v,"parameters")?,&optional_field::<Vec<curve::Curve>>(&v,"guides")?.unwrap_or_default(),&optional_field::<Vec<f64>>(&v,"guide_parameters")?.unwrap_or_default(),ends,field(&v,"budget")?)?;
         return Ok(json!({"surface":result.surface,"seams":result.seams,"section_error_upper":result.section_error_upper,"guide_error_upper":result.guide_error_upper}));
     }
+    if op == "surface_guided_loft_cartesian" {
+        check(v.get("start_tangents").is_none_or(Value::is_null)
+            && v.get("end_tangents").is_none_or(Value::is_null),
+            "Cartesian guided loft endpoint tangent constraints are not yet qualified")?;
+        let (surface, curves)=guided_loft::interpolate_cartesian(
+            &field::<Vec<curve::Curve>>(&v,"curves")?, &field::<Vec<f64>>(&v,"parameters")?,
+            &field::<Vec<curve::Curve>>(&v,"guides")?, &field::<Vec<f64>>(&v,"guide_parameters")?,
+            field::<f64>(&v,"errorBudget")?, field::<usize>(&v,"maxCells")?, field::<usize>(&v,"maxMapEvaluations")?)?;
+        return Ok(json!({"surface":surface,"certificate":{"operation":"cartesian-guided-loft",
+            "exact":false,"fittedToExactPromotion":false,"curves":curves}}));
+    }
     if op == "surface_guided_loft" {
         let start = optional_field::<Vec<[f64; 3]>>(&v, "start_tangents")?;
         let end = optional_field::<Vec<[f64; 3]>>(&v, "end_tangents")?;

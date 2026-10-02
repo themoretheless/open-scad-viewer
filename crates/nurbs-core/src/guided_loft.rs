@@ -152,6 +152,74 @@ pub(crate) fn interpolate_budgeted(
     ])
 }
 
+/// Guided Cartesian interpolation with independent rational weights.
+/// Missing U boundaries are natural Cartesian splines through section endpoints.
+/// The returned numerical certificates cover authored sections, guides and the
+/// generated boundary guides. Endpoint tangent constraints use the separate
+/// homogeneous constructor until Cartesian tangent qualification is available.
+pub fn interpolate_cartesian(
+    sections: &[Curve],
+    parameters: &[f64],
+    guides: &[Curve],
+    guide_parameters: &[f64],
+    tolerance: f64,
+    max_cells: usize,
+    max_map_evaluations: usize,
+) -> Result<(Surface, Vec<value_codec::Value>)> {
+    check(
+        (2..=86).contains(&sections.len()),
+        "Cartesian guided loft needs 2..86 sections",
+    )?;
+    check(
+        (1..=86).contains(&guides.len()) && guides.len() == guide_parameters.len(),
+        "Cartesian guided loft needs matching guides and stations",
+    )?;
+    check(
+        guide_parameters
+            .iter()
+            .all(|u| u.is_finite() && (0. ..=1.).contains(u))
+            && guide_parameters.windows(2).all(|u| u[0] < u[1]),
+        "Cartesian guided loft guide stations must increase in [0,1]",
+    )?;
+    let normalized = sections
+        .iter()
+        .map(crate::gordon::normalized)
+        .collect::<Result<Vec<_>>>()?;
+    let mut network = guides.to_vec();
+    let mut stations = guide_parameters.to_vec();
+    let boundary = |parameter| -> Result<Curve> {
+        let sites = normalized
+            .iter()
+            .map(|c| {
+                c.evaluate(parameter)
+                    .map(|e| [e.point[0], e.point[1], e.point[2]])
+            })
+            .collect::<Result<Vec<_>>>()?;
+        crate::natural_spline::interpolate(&sites, parameters)
+    };
+    if stations[0] != 0. {
+        network.insert(0, boundary(0.)?);
+        stations.insert(0, 0.);
+    }
+    if *stations.last().unwrap() != 1. {
+        network.push(boundary(1.)?);
+        stations.push(1.);
+    }
+    check(
+        network.len() <= 86,
+        "Cartesian guided loft exceeds 86 effective guides",
+    )?;
+    crate::gordon::patch_cartesian(
+        sections,
+        &network,
+        &stations,
+        parameters,
+        tolerance,
+        max_cells,
+        max_map_evaluations,
+    )
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -289,6 +357,43 @@ mod tests {
                 Some(std::array::from_fn(|_| vec![[0., 0., 2.]; 2]))
             )
             .is_err()
+        );
+    }
+}
+
+#[cfg(test)]
+mod cartesian_tests {
+    use super::*;
+    #[test]
+    fn independent_guide_weights_and_missing_boundaries_are_retained() {
+        let sections = [
+            crate::primitives::line([0., 0., 0.], [1., 0., 0.]).unwrap(),
+            crate::primitives::line([0., 0., 1.], [1., 0., 1.]).unwrap(),
+        ];
+        let mut guide = crate::primitives::line([0.5, 0., 0.], [0.5, 0., 1.]).unwrap();
+        guide.weights = vec![1., 2.];
+        assert!(interpolate(&sections, &[0., 1.], &[guide.clone()], &[0.5], None).is_err());
+        let (surface, certificates) = interpolate_cartesian(
+            &sections,
+            &[0., 1.],
+            &[guide.clone()],
+            &[0.5],
+            1e-6,
+            50000,
+            200000,
+        )
+        .unwrap();
+        assert_eq!(certificates.len(), 5);
+        for sample in 0..=100 {
+            let t = sample as f64 / 100.;
+            let actual = surface.evaluate(0.5, t).unwrap().point;
+            let expected = guide.evaluate(t).unwrap().point;
+            for k in 0..3 {
+                assert!((actual[k] - expected[k]).abs() < 1e-11);
+            }
+        }
+        assert!(
+            interpolate_cartesian(&sections, &[0., 1.], &[guide], &[0.5], 1e-6, 1, 200000).is_err()
         );
     }
 }

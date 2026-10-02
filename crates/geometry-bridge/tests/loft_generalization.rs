@@ -198,3 +198,35 @@ fn json_cartesian_gordon_retains_incompatible_weights_and_refuses_incomplete_aud
     depleted["maxCells"] = json!(1);
     assert!(geometry_bridge::dispatch(depleted).is_err());
 }
+
+#[test]
+fn json_cartesian_guided_loft_retains_independent_guide_weights() {
+    let sections = [
+        nurbs_core::primitives::line([0., 0., 0.], [1., 0., 0.]).unwrap(),
+        nurbs_core::primitives::line([0., 0., 1.], [1., 0., 1.]).unwrap(),
+    ];
+    let mut guide = nurbs_core::primitives::line([0.5, 0., 0.], [0.5, 0., 1.]).unwrap();
+    guide.weights = vec![1., 2.];
+    let request = json!({"op":"surface_guided_loft_cartesian","curves":sections,
+        "parameters":[0.,1.],"guides":[guide],"guide_parameters":[0.5],
+        "errorBudget":1e-6,"maxCells":50000,"maxMapEvaluations":200000});
+    let result = geometry_bridge::dispatch(request.clone()).unwrap();
+    assert_eq!(result["certificate"]["operation"], "cartesian-guided-loft");
+    assert_eq!(result["certificate"]["exact"], false);
+    assert_eq!(result["certificate"]["curves"].as_array().unwrap().len(), 5);
+    let surface: Surface = value_codec::from_value(result["surface"].clone()).unwrap();
+    for i in 0..=100 {
+        let v = i as f64 / 100.;
+        let expected = guide.evaluate(v).unwrap().point;
+        let actual = surface.evaluate(0.5, v).unwrap().point;
+        for k in 0..3 {
+            assert!((actual[k] - expected[k]).abs() < 1e-11);
+        }
+    }
+    let mut tangents = request.clone();
+    tangents["start_tangents"] = json!([[0., 0., 1.], [0., 0., 1.]]);
+    assert!(geometry_bridge::dispatch(tangents).is_err());
+    let mut depleted = request;
+    depleted["maxCells"] = json!(1);
+    assert!(geometry_bridge::dispatch(depleted).is_err());
+}
