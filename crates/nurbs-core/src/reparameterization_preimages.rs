@@ -121,40 +121,55 @@ fn derivative_piece(piece: &MapPiece, input: I) -> Result<I> {
 fn choose(n: usize, k: usize) -> u64 {
     (0..k.min(n - k)).fold(1, |v, i| v * (n - i) as u64 / (i + 1) as u64)
 }
-fn product(a: &[I], b: &[I]) -> Result<Vec<I>> {
-    let (n, m) = (a.len() - 1, b.len() - 1);
-    let mut out = vec![I::point(0.); n + m + 1];
-    for (i, &x) in a.iter().enumerate() {
-        for (j, &y) in b.iter().enumerate() {
-            // Input degrees <=25 and product degree <=49: each binomial is exactly representable.
-            let coefficient = I::point(choose(n, i) as f64)
-                .mul(I::point(choose(m, j) as f64))?
-                .div(I::point(choose(n + m, i + j) as f64))?;
-            out[i + j] = out[i + j].add(x.mul(y)?.mul(coefficient)?)?;
+fn prove_increasing(piece: &MapPiece) -> Result<()> {
+    // Pairwise form of P'Q-PQ' avoids subtracting two large products.
+    // Its degree is 2*n-2; all arithmetic encloses the authored binary64 data.
+    let n = piece.values.len() - 1;
+    let degree = 2 * n - 2;
+    let mut coefficients = vec![I::point(0.); degree + 1];
+    for i in 0..=n {
+        for j in i + 1..=n {
+            let k = i + j - 1;
+            let scale = I::point((j - i) as f64)
+                .mul(I::point(choose(n, i) as f64))?
+                .mul(I::point(choose(n, j) as f64))?
+                .div(I::point(choose(degree, k) as f64))?;
+            let term = I::point(piece.values[j])
+                .sub(I::point(piece.values[i]))?
+                .mul(I::point(piece.weights[i]))?
+                .mul(I::point(piece.weights[j]))?
+                .mul(scale)?;
+            coefficients[k] = coefficients[k].add(term)?;
         }
     }
-    Ok(out)
-}
-fn prove_increasing(piece: &MapPiece) -> Result<()> {
-    let p = piece
-        .values
-        .iter()
-        .zip(&piece.weights)
-        .map(|(&x, &w)| I::point(x).mul(I::point(w)))
-        .collect::<Result<Vec<_>>>()?;
-    let q: Vec<_> = piece.weights.iter().map(|&w| I::point(w)).collect();
-    let derivative = |v: &[I]| {
-        v.windows(2)
-            .map(|pair| pair[1].sub(pair[0])?.mul(I::point((v.len() - 1) as f64)))
-            .collect::<Result<Vec<_>>>()
-    };
-    let a = product(&derivative(&p)?, &q)?;
-    let b = product(&p, &derivative(&q)?)?;
-    for (x, y) in a.into_iter().zip(b) {
+    let mut pending = vec![(coefficients, 0usize)];
+    let mut cells = 0usize;
+    while let Some((coefficients, depth)) = pending.pop() {
+        cells += 1;
+        if cells > 4096 {
+            return Err(resource("Map monotonicity subdivision budget exhausted"));
+        }
+        if coefficients.iter().all(|c| c.lo > 0.) {
+            continue;
+        }
         numeric(
-            x.sub(y)?.lo > 0.,
+            depth < 32 && coefficients.iter().any(|c| c.hi > 0.),
             "Map derivative lacks an outward positive certificate",
         )?;
+        let mut row = coefficients;
+        let mut left = vec![row[0]];
+        let mut right = vec![*row.last().unwrap()];
+        while row.len() > 1 {
+            row = row
+                .windows(2)
+                .map(|p| p[0].add(p[1])?.mul(I::point(0.5)))
+                .collect::<Result<Vec<_>>>()?;
+            left.push(row[0]);
+            right.push(*row.last().unwrap());
+        }
+        right.reverse();
+        pending.push((right, depth + 1));
+        pending.push((left, depth + 1));
     }
     Ok(())
 }
@@ -318,5 +333,37 @@ mod tests {
         assert!(bound_reparameterization_preimages(&polynomial(), &[1.1], 1e-12, 1000).is_err());
         assert!(bound_reparameterization_preimages(&polynomial(), &[0.5], 0., 1000).is_err());
         assert!(bound_reparameterization_preimages(&polynomial(), &[0.5], 1e-30, 1000).is_err());
+    }
+}
+
+#[cfg(test)]
+mod monotonicity_tests {
+    use super::*;
+    #[test]
+    fn subdivision_proves_positive_derivative_with_negative_control() {
+        let piece = MapPiece {
+            domain: [0., 1.],
+            range: [0., 1.],
+            values: vec![0., 1., 0., 1.],
+            weights: vec![1.; 4],
+        };
+        // This derivative vanishes at 1/2 and must refuse.
+        assert!(prove_increasing(&piece).is_err());
+        let piece = MapPiece {
+            values: vec![0., 0.6, 0.4, 1.],
+            ..piece
+        };
+        // Derivative controls [1.8,-0.6,1.8], minimum 0.6.
+        prove_increasing(&piece).unwrap();
+    }
+    #[test]
+    fn pairwise_derivative_avoids_large_weight_cancellation() {
+        let piece = MapPiece {
+            domain: [0., 1.],
+            range: [0., 1.],
+            values: vec![0., 1.],
+            weights: vec![1e-12, 1e12],
+        };
+        prove_increasing(&piece).unwrap();
     }
 }
