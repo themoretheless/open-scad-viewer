@@ -48,7 +48,8 @@ round-trip time separately from subsequent rendering. Those runs now pass on the
   localized invalid-face input, Retry, unchanged documents and exact reload.
   Both final mouse screenshots were visually inspected.
 - Forty focused frontend regressions pass on the new kernel. The full native
-  B-rep suite has been started; its result is not yet recorded here.
+  B-rep suite before the subsequent face-group extension passes: 725 tests,
+  zero failures, three ignored.
 
 The twelve observed worker round trips range from 17.3 to 78.9 ms during four
 concurrent browser qualifications. These measurements include worker startup
