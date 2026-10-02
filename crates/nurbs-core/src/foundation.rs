@@ -3437,9 +3437,12 @@ mod periodic_surface_rebuild_tests {
 mod preimages;
 pub use preimages::bound_reparameterization_preimages;
 
+#[path = "reparameterization_residual.rs"]
+mod reparameterization_residual;
+
 #[path = "reparameterization_retention.rs"]
 mod reparameterization_retention;
-pub use reparameterization_retention::certify_reparameterized_curve_retention;
+pub use reparameterization_retention::{certify_reparameterized_curve_retention,certify_reparameterized_surface_section_retention};
 
 #[path = "reparameterization_materialization.rs"]
 mod reparameterization_materialization;

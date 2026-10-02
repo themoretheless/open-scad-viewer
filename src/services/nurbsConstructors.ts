@@ -111,6 +111,7 @@ export interface AlignedNurbsLoft {
  guide_error_upper:number[]
  sections?:NurbsCurve[]
  section_mapping_certificates?:unknown[]
+ original_section_certificates?:Array<Record<string,unknown>>
 }
 /** Automatic isolated intersections, guide reversal/sorting and piecewise V mapping. */
 export const autoGuidedLoftNurbsCurves=(curves:NurbsCurve[],parameters:number[],guides:NurbsCurve[],budget:number,parameterTolerance=1e-8,sectionMappings?:Array<RationalReparameterization|null>):AlignedNurbsLoft=>callNurbsRust('surface_auto_guided_loft',{curves,parameters,guides,budget,parameter_tolerance:parameterTolerance,section_mappings:sectionMappings})

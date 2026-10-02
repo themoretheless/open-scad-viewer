@@ -43,14 +43,16 @@ pub fn dispatch(v: Value) -> Result<Value> {
     if op == "surface_closed_loft" { return encode(natural_loft::closed(&field::<Vec<curve::Curve>>(&v,"curves")?,&field::<Vec<f64>>(&v,"parameters")?)?); }
     if op == "surface_auto_guided_loft" || op == "surface_auto_guided_loft_cartesian" {
         let curves = field::<Vec<curve::Curve>>(&v,"curves")?;
-        let mapped = optional_field::<Vec<Option<Value>>>(&v,"section_mappings")?
-            .map(|m| loft_reparameterization::prepare(&curves,&m)).transpose()?;
+        let mappings = optional_field::<Vec<Option<Value>>>(&v,"section_mappings")?;
+        let mapped = mappings.as_ref().map(|m| loft_reparameterization::prepare_with_budget(&curves,m,
+            field(&v,"budget")?,optional_field(&v,"maxCells")?.unwrap_or(50_000),
+            optional_field(&v,"maxMapEvaluations")?.unwrap_or(200_000))).transpose()?;
         let sections = mapped.as_ref().map_or(curves.as_slice(), |m| m.curves.as_slice());
         let parameters=field::<Vec<f64>>(&v,"parameters")?;
         let guides=field::<Vec<curve::Curve>>(&v,"guides")?;
         let budget=field::<f64>(&v,"budget")?;
         let parameter_tolerance=optional_field::<f64>(&v,"parameter_tolerance")?.unwrap_or(1e-8);
-        let result=if op=="surface_auto_guided_loft_cartesian" {
+        let mut result=if op=="surface_auto_guided_loft_cartesian" {
             if let Some(controls)=control_tangents(&v)? {
                 loft_alignment::interpolate_cartesian_with_control_tangents(sections,&parameters,&guides,&controls,
                     budget,parameter_tolerance,field(&v,"maxCells")?,field(&v,"maxMapEvaluations")?)?
@@ -64,10 +66,21 @@ pub fn dispatch(v: Value) -> Result<Value> {
         } else {
             loft_alignment::interpolate_with_parameter_tolerance(sections,&parameters,&guides,budget,parameter_tolerance)?
         };
+        let original_section_certificates = if let Some(mappings) = mappings.as_ref() {
+            let certificates = loft_reparameterization::certify_final_sections(&result.surface,
+                &curves,&parameters,mappings,budget,
+                optional_field(&v,"maxCells")?.unwrap_or(50_000),
+                optional_field(&v,"maxMapEvaluations")?.unwrap_or(200_000))?;
+            result.section_error_upper = certificates.iter().map(|c| c["errorUpper"].as_f64().unwrap()).collect();
+            certificates
+        } else {Vec::new()};
         let mut output = json!({"surface":result.surface,"guides":result.guides,"guide_parameters":result.guide_parameters,"guide_order":result.guide_order,"reversed":result.reversed,"section_error_upper":result.section_error_upper,"guide_error_upper":result.guide_error_upper});
         if op=="surface_auto_guided_loft_cartesian" {
             output["certificate"]=json!({"operation":"cartesian-auto-guided-loft","exact":false,
                 "fittedToExactPromotion":false,"curves":result.curve_certificates,"tangents":result.tangent_certificates});
+        }
+        if !original_section_certificates.is_empty() {
+            output["original_section_certificates"] = Value::Array(original_section_certificates);
         }
         if let Some(mapped) = mapped {
             output["sections"] = value_codec::to_value(mapped.curves).map_err(|e| input(e.to_string()))?;
@@ -91,7 +104,11 @@ pub fn dispatch(v: Value) -> Result<Value> {
         return Ok(json!({"surface":result.surface,"seams":result.seams,"section_error_upper":result.section_error_upper,"guide_error_upper":result.guide_error_upper}));
     }
     if op == "surface_guided_loft_cartesian" {
-        let sections=field::<Vec<curve::Curve>>(&v,"curves")?;
+        let originals=field::<Vec<curve::Curve>>(&v,"curves")?;
+        let mappings=optional_field::<Vec<Option<Value>>>(&v,"section_mappings")?;
+        let mapped=mappings.as_ref().map(|m|loft_reparameterization::prepare_with_budget(&originals,m,
+            field(&v,"errorBudget")?,field(&v,"maxCells")?,field(&v,"maxMapEvaluations")?)).transpose()?;
+        let sections=mapped.as_ref().map_or(originals.as_slice(),|m|m.curves.as_slice());
         let parameters=field::<Vec<f64>>(&v,"parameters")?;
         let guides=field::<Vec<curve::Curve>>(&v,"guides")?;
         let guide_parameters=field::<Vec<f64>>(&v,"guide_parameters")?;
@@ -99,18 +116,28 @@ pub fn dispatch(v: Value) -> Result<Value> {
         let max_cells=field(&v,"maxCells")?;
         let max_map_evaluations=field(&v,"maxMapEvaluations")?;
         let (surface,curves,tangents)=if let Some(controls)=control_tangents(&v)? {
-            guided_loft::interpolate_cartesian_with_control_tangents(&sections,&parameters,&guides,&guide_parameters,
+            guided_loft::interpolate_cartesian_with_control_tangents(sections,&parameters,&guides,&guide_parameters,
                 &controls,tolerance,max_cells,max_map_evaluations)?
         } else if let Some(targets)=optional_field::<[curve::Curve;2]>(&v,"boundary_tangents")? {
-            guided_loft::interpolate_cartesian_with_tangents(&sections,&parameters,&guides,&guide_parameters,
+            guided_loft::interpolate_cartesian_with_tangents(sections,&parameters,&guides,&guide_parameters,
                 &targets,tolerance,max_cells,max_map_evaluations)?
         } else {
-            let (surface,curves)=guided_loft::interpolate_cartesian(&sections,&parameters,&guides,&guide_parameters,
+            let (surface,curves)=guided_loft::interpolate_cartesian(sections,&parameters,&guides,&guide_parameters,
                 tolerance,max_cells,max_map_evaluations)?;
             (surface,curves,Vec::new())
         };
-        return Ok(json!({"surface":surface,"certificate":{"operation":"cartesian-guided-loft",
-            "exact":false,"fittedToExactPromotion":false,"curves":curves,"tangents":tangents}}));
+        let original_sections=if let Some(mappings)=mappings.as_ref() {
+            loft_reparameterization::certify_final_sections(&surface,&originals,&parameters,mappings,
+                tolerance,max_cells,max_map_evaluations)?
+        } else {Vec::new()};
+        let mut output=json!({"surface":surface,"certificate":{"operation":"cartesian-guided-loft",
+            "exact":false,"fittedToExactPromotion":false,"curves":curves,"tangents":tangents}});
+        if let Some(mapped)=mapped {
+            output["sections"]=encode(mapped.curves)?;
+            output["section_mapping_certificates"]=Value::Array(mapped.certificates);
+            output["original_section_certificates"]=Value::Array(original_sections);
+        }
+        return Ok(output);
     }
 
     if op == "surface_guided_loft" {
@@ -137,6 +164,17 @@ pub fn dispatch(v: Value) -> Result<Value> {
         )?);
     }
     if op == "surface_clamped_loft" { return encode(natural_loft::clamped(&field::<Vec<curve::Curve>>(&v,"curves")?,&field::<Vec<f64>>(&v,"parameters")?,field(&v,"start_tangent")?,field(&v,"end_tangent")?)?); }
+    if op == "surface_natural_loft_checked" {
+        let curves=field::<Vec<curve::Curve>>(&v,"curves")?;
+        let parameters=field::<Vec<f64>>(&v,"parameters")?;
+        let mappings=field::<Vec<Option<Value>>>(&v,"section_mappings")?;
+        let prepared=loft_reparameterization::prepare(&curves,&mappings)?;
+        let surface=natural_loft::interpolate(&prepared.curves,&parameters)?;
+        let certificates=loft_reparameterization::certify_final_sections(&surface,&curves,&parameters,&mappings,1e-6,50_000,200_000)?;
+        return Ok(json!({"surface":surface,"sections":prepared.curves,
+            "section_mapping_certificates":prepared.certificates,"original_section_certificates":certificates,
+            "certificate":{"operation":"mapped-natural-loft","exact":false,"fittedToExactPromotion":false}}));
+    }
     if op == "surface_natural_loft" {
         let curves = field::<Vec<curve::Curve>>(&v,"curves")?;
         let parameters = field::<Vec<f64>>(&v,"parameters")?;

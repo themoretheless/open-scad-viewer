@@ -40,3 +40,25 @@ fn cartesian_authored_tangent_examples_preserve_units_and_budgets() {
         assert_eq!(node["start_tangents"].as_array().unwrap().len(), 2);
     }
 }
+
+#[test]
+fn mapped_loft_descriptors_lower_without_geometry_nodes_or_inline_records() {
+    for source in [include_str!("../../../examples/rush/cartesian-mapped-loft.r"),
+                   include_str!("../../../examples/rush/mapped-natural-loft.r")] {
+        let lowered=compile(source).unwrap();
+        let nodes=lowered["nodes"].as_array().unwrap();
+        assert!(!nodes.iter().any(|n|n["op"]=="loft_parameter_map"));
+        let node=nodes.iter().find(|n|n.get("section_mappings").is_some()).unwrap();
+        assert_eq!(node["section_mappings"].as_array().unwrap().len(),2);
+        assert_eq!(node["parameters"],value_codec::json!([2.,7.]));
+    }
+}
+
+#[test]
+fn authored_nonplanar_cap_example_lowers_carriers_and_uv_trim_references() {
+    let lowered=compile(include_str!("../../../examples/rush/authored-nonplanar-cap-loft.r")).unwrap();
+    let node=lowered["nodes"].as_array().unwrap().iter().find(|n|n["op"]=="brep_capped_loft").unwrap();
+    assert_eq!(node["cap_surfaces"].as_array().unwrap().len(),2);
+    assert_eq!(node["cap_trims"][0][0].as_array().unwrap().len(),4);
+    assert_eq!(node["embedding_limits"]["facePairs"],value_codec::json!(10000));
+}

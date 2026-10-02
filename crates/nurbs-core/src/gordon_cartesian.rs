@@ -381,6 +381,7 @@ fn curve_audits(
     let pu = stations(pu, v.len())?;
     let pv = stations(pv, u.len())?;
     let mut certificates = Vec::new();
+    let transposed = super::transpose(surface.clone());
     for (curves, stations, axis) in [
         (u, pv, crate::surface::Axis::V),
         (v, pu, crate::surface::Axis::U),
@@ -389,11 +390,16 @@ fn curve_audits(
             let [start, end] = curve.domain();
             let identity = value_codec::json!({"pieces":[{"domain":[0.,1.],"range":[start,end],
                 "controlValues":[start,end],"weights":[1.,1.]}]});
-            let result = surface.iso(axis, station)?;
-            let report = crate::foundation::certify_reparameterized_curve_retention(
+            let target = if matches!(axis, crate::surface::Axis::V) {
+                surface
+            } else {
+                &transposed
+            };
+            let report = crate::foundation::certify_reparameterized_surface_section_retention(
                 curve,
                 &identity,
-                &result,
+                target,
+                station,
                 tolerance,
                 max_cells,
                 max_map_evaluations,

@@ -102,8 +102,72 @@ it('retains authored tangent units through Cartesian Rush and packaged geometry'
   expect(built.report.construction?.[loft.id]).toMatchObject({exact:false,
    tangents:[{accepted:true,targetUnits:'authored-dP/dt',stationDomain:[2,7]},
              {accepted:true,targetUnits:'authored-dP/dt',stationDomain:[2,7]}]})
-  expect(()=>buildOwnNurbs(compileModelGraphText(source.replace('max_cells: 50000','max_cells: 1')).document,{action:'build'})).toThrow()
+  expect(()=>buildOwnNurbs(compileModelGraphText(source.replace('max_map_evaluations: 200000','max_map_evaluations: 1')).document,{action:'build'})).toThrow()
   expect(()=>compileModelGraphText(source.replace('construction: "cartesian"','construction: "homogeneous"'))).toThrow()
   expect(()=>compileModelGraphText(source.replace('parameters: [2,7]','parameters: [2mm,7mm]'))).toThrow()
+ }
+},60000)
+
+it('retains original section compositions through mapped Rush entrypoints',()=>{
+ const source=readFileSync('examples/rush/cartesian-mapped-loft.r','utf8')
+ const automatic=source.replace('guided_loft_surface(a,b','auto_guided_loft_surface(a,b').replace('guide_parameters: [0],','').replace('error_budget:','budget:')
+ const factor=(u:number)=>{const a=(1-u)**2,b=2*u*(1-u)*.75,c=u*u;return(.2*b+c)/(a+b+c)}
+ for(const text of [source,automatic]){
+  const compiled=compileModelGraphText(text),loft=compiled.document.nodes.find(n=>n.op==='guided_loft_surface'||n.op==='auto_guided_loft_surface')!
+  const built=buildOwnNurbs(compiled.document,{action:'build'})
+  const report=built.report.construction?.[loft.id] as any
+  expect(report.originalSectionCertificates).toHaveLength(2)
+  for(const certificate of report.originalSectionCertificates){
+   expect(certificate).toMatchObject({accepted:true,exact:false,targetAuthority:'original-rational-tensor-controls'})
+   expect(certificate.errorUpper).toBeLessThanOrEqual(1e-6)
+  }
+  const surface=built.report.definitions[loft.id] as any
+  for(const u of [0,.13,.37,.5,.87,1])for(const [v,weights] of [[0,[1,2]],[1,[3,1]]] as const){
+   const t=factor(factor(u)),expected=20*t*weights[1]/((1-t)*weights[0]+t*weights[1])
+   expect(evaluateNurbsSurface(surface,u,v).point[0]).toBeCloseTo(expected,9)
+  }
+  expect(()=>buildOwnNurbs(compileModelGraphText(text.replace('max_map_evaluations: 200000','max_map_evaluations: 1')).document,{action:'build'})).toThrow()
+  expect(()=>compileModelGraphText(text.replace('range: [0,1]','range: [0,1mm]'))).toThrow()
+  const exported=buildOwnNurbs(compiled.document,{action:'export',format:'json'})
+  if(!('artifact' in exported)||!exported.artifact)throw new Error('Missing mapped loft JSON')
+  expect(compileModelGraphNurbs(JSON.parse(exported.artifact.text)).document_sha256).toBe(compiled.document_sha256)
+ }
+ const natural=compileModelGraphText(readFileSync('examples/rush/mapped-natural-loft.r','utf8'))
+ const node=natural.document.nodes.find(n=>n.op==='natural_loft_surface')!
+ const built=buildOwnNurbs(natural.document,{action:'build'})
+ expect(built.report.construction?.[node.id]).toMatchObject({operation:'mapped-natural-loft',exact:false,
+  originalSectionCertificates:[{accepted:true},{accepted:true}]})
+},60000)
+
+it('builds authored nonplanar caps and refuses incomplete embedding through Rush',()=>{
+ const source=readFileSync('examples/rush/authored-nonplanar-cap-loft.r','utf8')
+ const compiled=compileModelGraphText(source),built=buildOwnNurbs(compiled.document,{action:'build'})
+ expect(built.report.root_kind).toBe('brep')
+ const model=built.report.definitions[compiled.document.root] as any
+ expect(model.faces).toHaveLength(6)
+ expect(model.bodies).toHaveLength(1)
+ expect(evaluateNurbsSurface(model.faces[4].surface,.5,.5).point[2]).toBeCloseTo(.125,12)
+ expect(()=>buildOwnNurbs(compileModelGraphText(source.replace('loft_embedding_limits()','loft_embedding_limits(facePairs: 1)')).document,{action:'build'})).toThrow(/embedding|pairs|budget/i)
+ expect(()=>compileModelGraphText(source.replace('cap_surfaces: [a,b],',''))).toThrow()
+ expect(()=>compileModelGraphText(source.replace('tolerance_uv: 0.000000001','tolerance_uv: 0.000000001mm'))).toThrow()
+},60000)
+
+it('combines nested section maps, unequal weights, curved guides and authored tangent units',()=>{
+ const source=readFileSync('examples/rush/cartesian-mapped-loft.r','utf8')
+ // Two quadratic map factors composed with a linear source yield five U controls.
+ // The degree-two weighted guide has original dP/dt = (0, +/-6.4, 16)
+ // at the ends of the section station interval [2,7].
+ const start=JSON.stringify(Array.from({length:5},()=>[0,6.4,16])),end=JSON.stringify(Array.from({length:5},()=>[0,-6.4,16]))
+ const guided=source.replace('max_map_evaluations: 200000)',`max_map_evaluations: 200000,start_tangents: ${start},end_tangents: ${end})`)
+ const automatic=guided.replace('guided_loft_surface(a,b','auto_guided_loft_surface(a,b').replace('guide_parameters: [0],','').replace('error_budget:','budget:')
+ for(const text of [guided,automatic]){
+  const compiled=compileModelGraphText(text),node=compiled.document.nodes.find(n=>n.op==='guided_loft_surface'||n.op==='auto_guided_loft_surface')!
+  const built=buildOwnNurbs(compiled.document,{action:'build'}),report=built.report.construction?.[node.id] as any
+  expect(report.originalSectionCertificates.every((c:any)=>c.accepted&&c.errorUpper<=1e-6)).toBe(true)
+  expect(report.tangents).toMatchObject([{accepted:true,targetUnits:'authored-dP/dt'},{accepted:true,targetUnits:'authored-dP/dt'}])
+  for(const u of [0,.13,.37,.83,1])for(const [v,y] of [[0,32],[1,-32]]){
+   const dv=evaluateNurbsSurface(built.report.definitions[node.id] as any,u,v).dv!
+   expect(dv[0]).toBeCloseTo(0,8);expect(dv[1]).toBeCloseTo(y,8);expect(dv[2]).toBeCloseTo(80,8)
+  }
  }
 },60000)

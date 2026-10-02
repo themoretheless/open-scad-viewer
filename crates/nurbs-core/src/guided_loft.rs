@@ -562,7 +562,7 @@ mod cartesian_tests {
             }
         }
         assert!(
-            interpolate_cartesian(&sections, &[0., 1.], &[guide], &[0.5], 1e-6, 1, 200000).is_err()
+            interpolate_cartesian(&sections, &[0., 1.], &[guide], &[0.5], 1e-6, 50000, 1).is_err()
         );
     }
 }
@@ -685,8 +685,8 @@ mod authored_cartesian_tests {
                 &[0.],
                 &controls,
                 1e-6,
-                1,
-                200000
+                50000,
+                1
             )
             .is_err()
         );

@@ -323,6 +323,9 @@ export function createCartesianGordonSurface(
 
 export interface CartesianGuidedLoftResult {
   surface: NurbsSurface
+  sections?: NurbsCurve[]
+  section_mapping_certificates?: Array<Record<string, unknown>>
+  original_section_certificates?: Array<Record<string, unknown>>
   certificate: {
     operation: 'cartesian-guided-loft'
     exact: false
@@ -336,8 +339,10 @@ export interface CartesianGuidedLoftResult {
 export function createCartesianGuidedLoft(
   curves: NurbsCurve[], parameters: number[], guides: NurbsCurve[], guideParameters: number[],
   errorBudget = 1e-6, maxCells = 50000, maxMapEvaluations = 200000,
+  sectionMappings?: Array<RationalReparameterization | null>,
 ): CartesianGuidedLoftResult {
   return callNurbsRust<CartesianGuidedLoftResult>('surface_guided_loft_cartesian', {
+    ...(sectionMappings ? {section_mappings: sectionMappings} : {}),
     curves, parameters, guides, guide_parameters: guideParameters, errorBudget, maxCells, maxMapEvaluations,
   })
 }
@@ -352,6 +357,7 @@ export interface AutoCartesianGuidedLoftResult {
   guide_error_upper: number[]
   sections?: NurbsCurve[]
   section_mapping_certificates?: Array<Record<string, unknown> | null>
+  original_section_certificates?: Array<Record<string, unknown>>
   certificate: {
     operation: 'cartesian-auto-guided-loft'
     exact: false
@@ -414,8 +420,10 @@ export function createClampedCartesianGordonSurface(
 export function createClampedCartesianGuidedLoft(
   curves: NurbsCurve[], parameters: number[], guides: NurbsCurve[], guideParameters: number[],
   boundaryTangents: [NurbsCurve, NurbsCurve], errorBudget = 1e-6, maxCells = 50000, maxMapEvaluations = 200000,
+  sectionMappings?: Array<RationalReparameterization | null>,
 ): CartesianGuidedLoftResult {
   return callNurbsRust<CartesianGuidedLoftResult>('surface_guided_loft_cartesian', {
+    ...(sectionMappings ? {section_mappings: sectionMappings} : {}),
     curves, parameters, guides, guide_parameters: guideParameters, boundary_tangents: boundaryTangents,
     errorBudget, maxCells, maxMapEvaluations,
   })
@@ -439,8 +447,10 @@ export function createControlTangentCartesianGuidedLoft(
   curves: NurbsCurve[], parameters: number[], guides: NurbsCurve[], guideParameters: number[],
   startTangents: [number, number, number][], endTangents: [number, number, number][],
   errorBudget = 1e-6, maxCells = 50000, maxMapEvaluations = 200000,
+  sectionMappings?: Array<RationalReparameterization | null>,
 ): CartesianGuidedLoftResult {
   return callNurbsRust<CartesianGuidedLoftResult>('surface_guided_loft_cartesian', {
+    ...(sectionMappings ? {section_mappings: sectionMappings} : {}),
     curves, parameters, guides, guide_parameters: guideParameters,
     start_tangents: startTangents, end_tangents: endTangents, errorBudget, maxCells, maxMapEvaluations,
   })
@@ -458,4 +468,16 @@ export function createAutoControlTangentCartesianGuidedLoft(
     budget, parameter_tolerance: parameterTolerance, maxCells, maxMapEvaluations,
     ...(sectionMappings ? {section_mappings: sectionMappings} : {}),
   })
+}
+
+/** A mapped natural loft carries whole-domain audits against the authored sections. */
+export interface MappedNaturalLoftResult {
+  surface:NurbsSurface
+  sections:NurbsCurve[]
+  section_mapping_certificates:Array<Record<string,unknown>>
+  original_section_certificates:Array<Record<string,unknown>>
+  certificate:{operation:'mapped-natural-loft',exact:false,fittedToExactPromotion:false}
+}
+export function createMappedNaturalLoft(curves:NurbsCurve[],parameters:number[],sectionMappings:Array<RationalReparameterization|null>):MappedNaturalLoftResult {
+  return callNurbsRust<MappedNaturalLoftResult>('surface_natural_loft_checked',{curves,parameters,section_mappings:sectionMappings})
 }

@@ -94,6 +94,7 @@ fn json_multispan_section_mapping_retains_the_original_section() {
     assert_eq!(mapped["certificate"]["retention"]["accepted"], true);
     let mut depleted = materialization;
     depleted["maxCells"] = json!(1);
+    depleted["maxMapEvaluations"] = json!(1);
     assert!(geometry_bridge::dispatch(depleted).is_err());
     let loft = geometry_bridge::dispatch(
         json!({"op":"surface_natural_loft","curves":[start.clone(),end],
@@ -223,9 +224,11 @@ fn json_cartesian_gordon_retains_incompatible_weights_and_refuses_incomplete_aud
         }
     }
     clamped["maxCells"] = json!(1);
+    clamped["maxMapEvaluations"] = json!(1);
     assert!(geometry_bridge::dispatch(clamped).is_err());
     let mut depleted = request;
     depleted["maxCells"] = json!(1);
+    depleted["maxMapEvaluations"] = json!(1);
     assert!(geometry_bridge::dispatch(depleted).is_err());
 }
 
@@ -270,6 +273,7 @@ fn json_cartesian_guided_loft_retains_independent_guide_weights() {
         assert!(error.as_f64().unwrap() <= 1e-6);
     }
     automatic["maxCells"] = json!(1);
+    automatic["maxMapEvaluations"] = json!(1);
     assert!(geometry_bridge::dispatch(automatic).is_err());
     let field = |z| Curve {
         degree: 1,
@@ -299,8 +303,10 @@ fn json_cartesian_guided_loft_retains_independent_guide_weights() {
         assert_eq!(certificate["accepted"], true);
     }
     auto_clamped["maxCells"] = json!(1);
+    auto_clamped["maxMapEvaluations"] = json!(1);
     assert!(geometry_bridge::dispatch(auto_clamped).is_err());
     clamped["maxCells"] = json!(1);
+    clamped["maxMapEvaluations"] = json!(1);
     assert!(geometry_bridge::dispatch(clamped).is_err());
     let mut authored = request.clone();
     authored["parameters"] = json!([2., 7.]);
@@ -323,6 +329,7 @@ fn json_cartesian_guided_loft_retains_independent_guide_weights() {
         assert!(geometry_bridge::dispatch(conflicting).is_err());
         let mut incomplete = authored.clone();
         incomplete["maxCells"] = json!(1);
+        incomplete["maxMapEvaluations"] = json!(1);
         assert!(geometry_bridge::dispatch(incomplete).is_err());
     }
     let mut tangents = request.clone();
@@ -330,5 +337,67 @@ fn json_cartesian_guided_loft_retains_independent_guide_weights() {
     assert!(geometry_bridge::dispatch(tangents).is_err());
     let mut depleted = request;
     depleted["maxCells"] = json!(1);
+    depleted["maxMapEvaluations"] = json!(1);
     assert!(geometry_bridge::dispatch(depleted).is_err());
+}
+
+#[test]
+fn mapped_cartesian_loft_bounds_original_weighted_sections_and_curved_guide() {
+    let mut a = nurbs_core::primitives::line([0., 0., 0.], [1., 0., 0.]).unwrap();
+    a.weights = vec![1., 2.];
+    a.knots = vec![2., 2., 7., 7.];
+    let mut b = a.clone();
+    b.weights = vec![3., 1.];
+    for p in &mut b.control_points {
+        p[2] = 2.;
+    }
+    let guide = nurbs_core::paths::bezier(
+        vec![vec![0., 0., 0.], vec![0., 0.4, 1.], vec![0., 0., 2.]],
+        Some(vec![1., 2., 1.]),
+    )
+    .unwrap();
+    let factor = json!({"pieces":[{"domain":[0.,1.],"range":[0.,1.],
+        "controlValues":[0.,0.2,1.],"weights":[1.,0.75,1.]}]});
+    let mappings = json!([Value::Null,{"composition":[factor.clone(),factor]}]);
+    let mut request = json!({"op":"surface_guided_loft_cartesian","curves":[a.clone(),b.clone()],
+        "parameters":[2.,7.],"section_mappings":mappings,"guides":[guide.clone()],
+        "guide_parameters":[0.],"errorBudget":1e-6,"maxCells":50000,"maxMapEvaluations":200000});
+    for operation in [
+        "surface_guided_loft_cartesian",
+        "surface_auto_guided_loft_cartesian",
+    ] {
+        request["op"] = json!(operation);
+        request["budget"] = json!(1e-6);
+        let result = geometry_bridge::dispatch(request.clone()).unwrap();
+        let certificates = result["original_section_certificates"].as_array().unwrap();
+        assert_eq!(certificates.len(), 2);
+        for (i, c) in certificates.iter().enumerate() {
+            assert_eq!(c["accepted"], true);
+            assert_eq!(c["operation"], "original-composed-loft-section-retention");
+            assert!(c["errorUpper"].as_f64().unwrap() <= 1e-6);
+            if operation == "surface_auto_guided_loft_cartesian" {
+                assert_eq!(result["section_error_upper"][i], c["errorUpper"]);
+            }
+        }
+        let surface: Surface = value_codec::from_value(result["surface"].clone()).unwrap();
+        for i in 0..=100 {
+            let u = i as f64 / 100.;
+            let factor = |x: f64| {
+                let t = 1. - x;
+                (0.3 * t * x + x * x) / (t * t + 1.5 * t * x + x * x)
+            };
+            let f = factor(factor(u));
+            let p = surface.evaluate(u, 1.).unwrap().point;
+            assert!((p[0] - f / (3. * (1. - f) + f)).abs() < 1e-10);
+            let actual = surface.evaluate(0., u).unwrap().point;
+            let expected = guide.evaluate(u).unwrap().point;
+            for k in 0..3 {
+                assert!((actual[k] - expected[k]).abs() < 1e-10);
+            }
+        }
+        let mut depleted = request.clone();
+        depleted["maxCells"] = json!(1);
+        depleted["maxMapEvaluations"] = json!(1);
+        assert!(geometry_bridge::dispatch(depleted).is_err());
+    }
 }

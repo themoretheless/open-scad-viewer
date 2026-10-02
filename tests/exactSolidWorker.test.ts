@@ -1,3 +1,4 @@
+import {readFileSync} from 'node:fs'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { buildExactSolidsInWorker, type ExactSolidWorkerPort } from '../src/services/solid/exactSolidClient'
 import { runExactSolidRequest } from '../src/services/solid/exactSolidRuntime'
@@ -102,3 +103,19 @@ describe('exact-solid worker boundary', () => {
     expect(vi.getTimerCount()).toBe(0)
   })
 })
+
+
+it('retains a Rush authored nonplanar loft in the exact Solid worker without mesh reconstruction',async()=>{
+ const source=readFileSync('examples/rush/authored-nonplanar-cap-loft.r','utf8')
+ const worker=new FakeWorker(),pending=buildExactSolidsInWorker(source,undefined,()=>worker)
+ worker.reply(await runExactSolidRequest(worker.postMessage.mock.calls[0][0]))
+ const bodies=await pending
+ expect(bodies).toHaveLength(1)
+ expect(bodies[0]!.brep!.faces).toHaveLength(6)
+ expect(bodies[0]!.brep!.bodies).toHaveLength(1)
+ expect(bodies[0]!.brep!.faces[4]!.surface.degreeU).toBe(2)
+ const refused=await runExactSolidRequest({kind:'exact-solid',version:1,source:readFileSync('examples/rush/cartesian-mapped-loft.r','utf8')})
+ expect(refused).toMatchObject({ok:false,error:{message:expect.stringContaining('authored NURBS solid')}})
+ const exhausted=await runExactSolidRequest({kind:'exact-solid',version:1,source:source.replace('loft_embedding_limits()','loft_embedding_limits(facePairs: 1)')})
+ expect(exhausted.ok).toBe(false)
+},60000)

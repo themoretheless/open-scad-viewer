@@ -2,16 +2,8 @@
 import packagedArtifact from '../generated/geometry-kernels/identity'
 export const OWN_RUST_CAD_ARTIFACTS = Object.freeze([
   {
-    "sha256": "54539bb039b8047ba4bc5c030d7361655c0172f58ec85c78c95da106de146cf6",
-    "byteLength": 9676259
-  },
-  {
-    "sha256": "58889ee35bbf97aa6bb7f8bd01404928668cdddccec7a349934b797fe8d88d5c",
-    "byteLength": null
-  },
-  {
-    "sha256": "c30474a3b4b6ddf0134d59a897d3b1dd1d2e93dc9c15adebdf5db47b94768b5c",
-    "byteLength": 9676099
+    "sha256": "3e1ce8e993ff2a5c62d6728bc570c16f28833390e1dedfef42df4e79f2f73280",
+    "byteLength": 9846250
   }
 ])
 export function recordedOwnRustCadFingerprint(artifact: {sha256:string;byteLength:number}): string|null {

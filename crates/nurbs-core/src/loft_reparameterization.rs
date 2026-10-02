@@ -42,6 +42,23 @@ fn full_cover(mapping: &Value, depth: usize) -> Result<()> {
 /// Materialization retains the foundation resource limits and requires a
 /// whole-domain numerical retention certificate within 1e-6 model units.
 pub fn prepare(sections: &[Curve], mappings: &[Option<Value>]) -> Result<PreparedSections> {
+    prepare_with_budget(sections, mappings, 1e-6, 50_000, 200_000)
+}
+
+pub fn prepare_with_budget(
+    sections: &[Curve],
+    mappings: &[Option<Value>],
+    tolerance: f64,
+    max_cells: usize,
+    max_map_evaluations: usize,
+) -> Result<PreparedSections> {
+    check(
+        tolerance.is_finite()
+            && tolerance > 0.
+            && (1..=1_000_000).contains(&max_cells)
+            && (1..=1_000_000).contains(&max_map_evaluations),
+        "Invalid mapped section audit budget",
+    )?;
     check(
         sections.len() == mappings.len(),
         "Loft needs one mapping entry per section",
@@ -53,7 +70,11 @@ pub fn prepare(sections: &[Curve], mappings: &[Option<Value>]) -> Result<Prepare
         if let Some(mapping) = mapping {
             full_cover(mapping, 0)?;
             let result = crate::foundation::materialize_reparameterized_curve_bounded(
-                &source, mapping, 1e-6, 50_000, 200_000,
+                &source,
+                mapping,
+                tolerance,
+                max_cells,
+                max_map_evaluations,
             )?;
             let curve: Curve = value_codec::from_value(result["curve"].clone())
                 .map_err(|e| crate::input(e.to_string()))?;
@@ -81,9 +102,9 @@ pub fn prepare(sections: &[Curve], mappings: &[Option<Value>]) -> Result<Prepare
                 section,
                 &reference_mapping,
                 &curve,
-                1e-6,
-                50_000,
-                200_000,
+                tolerance,
+                max_cells,
+                max_map_evaluations,
             )?;
             if retained["certificate"]["accepted"].as_bool() != Some(true) {
                 return Err(crate::numeric_err(
@@ -106,13 +127,68 @@ pub fn prepare(sections: &[Curve], mappings: &[Option<Value>]) -> Result<Prepare
     })
 }
 
+/// Audit the final loft against original authored section compositions, rather
+/// than adding separately established intermediate construction bounds.
+pub fn certify_final_sections(
+    surface: &Surface,
+    sections: &[Curve],
+    parameters: &[f64],
+    mappings: &[Option<Value>],
+    tolerance: f64,
+    max_cells: usize,
+    max_map_evaluations: usize,
+) -> Result<Vec<Value>> {
+    check(
+        sections.len() >= 2 && mappings.len() == sections.len(),
+        "Final loft retention needs matching original sections and maps",
+    )?;
+    surface.validate()?;
+    check(
+        surface.knots_u[surface.degree_u] == 0.
+            && surface.knots_u[surface.control_points.len()] == 1.
+            && surface.knots_v[surface.degree_v] == 0.
+            && surface.knots_v[surface.control_points[0].len()] == 1.,
+        "Final loft retention needs normalized surface domains",
+    )?;
+    let stations = crate::gordon::stations(parameters, sections.len())?;
+    sections.iter().zip(mappings).zip(stations).map(|((section, mapping), station)| {
+        section.validate()?;
+        let domain = section.domain();
+        let affine = json!({"pieces":[{"domain":[0.,1.],"range":domain,
+            "controlValues":domain,"weights":[1.,1.]}]});
+        let reference = match mapping {
+            None => affine,
+            Some(mapping) if domain == [0.,1.] => mapping.clone(),
+            Some(mapping) => {
+                let mut factors = mapping.get("composition").and_then(Value::as_array)
+                    .cloned().unwrap_or_else(|| vec![mapping.clone()]);
+                factors.push(affine);
+                json!({"composition":factors})
+            }
+        };
+        let retained = crate::foundation::certify_reparameterized_surface_section_retention(section,
+            &reference, surface, station,
+            tolerance, max_cells, max_map_evaluations)?;
+        let mut certificate = retained["certificate"].clone();
+        crate::numeric(certificate["accepted"].as_bool() == Some(true),
+            "Final loft could not retain the original composed section within the requested budget")?;
+        certificate["operation"] = json!("original-composed-loft-section-retention");
+        certificate["sectionStation"] = json!(station);
+        Ok(certificate)
+    }).collect()
+}
+
 pub fn interpolate(
     sections: &[Curve],
     parameters: &[f64],
     mappings: &[Option<Value>],
 ) -> Result<Surface> {
     let prepared = prepare(sections, mappings)?;
-    crate::natural_loft::interpolate(&prepared.curves, parameters)
+    let surface = crate::natural_loft::interpolate(&prepared.curves, parameters)?;
+    certify_final_sections(
+        &surface, sections, parameters, mappings, 1e-6, 50_000, 200_000,
+    )?;
+    Ok(surface)
 }
 
 #[cfg(test)]
@@ -127,6 +203,94 @@ mod tests {
     fn mapping(weight: f64) -> Value {
         json!({"pieces":[{"domain":[0.,1.],"range":[0.,1.],
             "controlValues":[0.,0.2,1.],"weights":[1.,weight,1.]}]})
+    }
+    #[test]
+    fn final_loft_audit_uses_original_tensor_not_a_rounded_isocurve() {
+        let x = (1_u64 << 29) as f64;
+        let station = 1e-8;
+        let surface = Surface {
+            degree_u: 1,
+            degree_v: 1,
+            knots_u: vec![0., 0., 1., 1.],
+            knots_v: vec![0., 0., 1., 1.],
+            control_points: vec![
+                vec![vec![x, 0., 0.], vec![x + 1., 0., 1.]],
+                vec![vec![x, 1., 0.], vec![x + 1., 1., 1.]],
+            ],
+            weights: vec![vec![1.; 2]; 2],
+            periodic_u: false,
+            periodic_v: false,
+        };
+        let rounded = [
+            surface.iso(crate::surface::Axis::V, 0.).unwrap(),
+            surface.iso(crate::surface::Axis::V, station).unwrap(),
+            surface.iso(crate::surface::Axis::V, 1.).unwrap(),
+        ];
+        assert_eq!(rounded[1].control_points[0][0], x);
+        assert!(station > 1e-10);
+        assert!(
+            certify_final_sections(
+                &surface,
+                &rounded,
+                &[0., station, 1.],
+                &[None, None, None],
+                1e-10,
+                50000,
+                200000
+            )
+            .is_err()
+        );
+        let originals = [
+            crate::primitives::line([x, 0., 0.], [x, 1., 0.]).unwrap(),
+            crate::primitives::line([x + 1., 0., 1.], [x + 1., 1., 1.]).unwrap(),
+        ];
+        let certificates = certify_final_sections(
+            &surface,
+            &originals,
+            &[0., 1.],
+            &[None, None],
+            1e-10,
+            50000,
+            200000,
+        )
+        .unwrap();
+        assert!(
+            certificates
+                .iter()
+                .all(|c| c["targetAuthority"] == json!("original-rational-tensor-controls"))
+        );
+    }
+    #[test]
+    fn final_loft_audit_retains_original_nonunit_composition_and_refuses_damage() {
+        let mut source = sections();
+        for section in &mut source {
+            section.knots = vec![2., 2., 7., 7.];
+        }
+        let mappings = vec![
+            None,
+            Some(json!({"composition":[mapping(0.75),mapping(1.)]})),
+        ];
+        let surface = interpolate(&source, &[2., 7.], &mappings).unwrap();
+        let certificates =
+            certify_final_sections(&surface, &source, &[2., 7.], &mappings, 1e-6, 50000, 200000)
+                .unwrap();
+        assert!(
+            certificates
+                .iter()
+                .all(|c| c["accepted"].as_bool() == Some(true)
+                    && c["errorUpper"].as_f64().unwrap() <= 1e-6)
+        );
+        let mut damaged = surface.clone();
+        let nv = damaged.control_points[0].len();
+        damaged.control_points[1][nv - 1][1] += 0.1;
+        assert!(
+            certify_final_sections(&damaged, &source, &[2., 7.], &mappings, 1e-6, 256, 200000)
+                .is_err()
+        );
+        assert!(
+            certify_final_sections(&surface, &source, &[2., 7.], &mappings, 1e-6, 50000, 1)
+                .is_err()
+        );
     }
     #[test]
     fn rational_mapping_retains_the_complete_section_and_independent_parameter_formula() {

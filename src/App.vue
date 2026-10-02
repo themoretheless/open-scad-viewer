@@ -459,6 +459,8 @@ function cancelSolidBuild() { solidBuildAbort?.abort() }
 const solidAppendBodies = ref<{ bodies: DirectBody[]; token: number; group?: { name: string; source: string; replaces: string | null } } | null>(null)
 /** Set while the left panel edits one scene group's source instead of the document. */
 const groupEdit = ref<{ name: string; source: string; replaces: string | null } | null>(null)
+// A completed worker must not publish a superseded source snapshot.
+watch([code, fileName, () => groupEdit.value?.source], cancelSolidBuild, { flush: 'sync' })
 const groupHighlight = computed(() => (groupEdit.value ? highlightCode(groupEdit.value.source, 'group.scad') : ''))
 
 function openGroupEditor(request: { name: string; source: string; replaces: string | null }) {
@@ -2697,6 +2699,7 @@ function sanitizeFileName(name: string) { return (name.replace(/[^\w.() -]+/g, '
           @click="openWorkspaceMode(mode)"
         >{{ workspaceModeLabel(mode, lang) }}</button>
       </div>
+      <div class="topbar-right">
       <button
         class="icon-btn source-toggle"
         type="button"
@@ -2708,7 +2711,6 @@ function sanitizeFileName(name: string) { return (name.replace(/[^\w.() -]+/g, '
       >
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M8 6 3 12l5 6M16 6l5 6-5 6"/></svg>
       </button>
-      <div class="topbar-right">
         <div v-if="workspaceConflict" class="persistence-conflict" role="alert">
           <span>⚠ {{ t('storageConflict') }}</span>
           <button type="button" @click="saveSource">{{ t('exportDraft') }}</button>
@@ -3350,6 +3352,7 @@ function sanitizeFileName(name: string) { return (name.replace(/[^\w.() -]+/g, '
   --focus: #6e4100;
 }
 
+@media (max-width: 800px) { :root { --topbar-h: 76px; } }
 *, *::before, *::after { box-sizing: border-box; }
 html, body, #app { width: 100%; height: 100%; margin: 0; }
 body {
@@ -3397,7 +3400,7 @@ button, select { color: inherit; }
 
 /* Top bar */
 .topbar {
-  z-index: 10; height: var(--topbar-h); display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 12px;
+  position: relative; z-index: 35; height: var(--topbar-h); display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 12px;
   padding: 0 12px 0 14px; background: var(--surface); border-bottom: 1px solid var(--border); flex-shrink: 0;
 }
 .topbar-left, .topbar-right { display: flex; align-items: center; gap: 8px; min-width: 0; }
@@ -3751,8 +3754,11 @@ button, select { color: inherit; }
 }
 
 @media (max-width: 800px) {
-  .topbar { grid-template-columns: 1fr auto; row-gap: 0; height: auto; min-height: 44px; padding-block: 6px; }
-  .mode-switch { grid-column: 1 / -1; justify-self: stretch; }
+  .topbar { grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: 32px 32px; row-gap: 0; height: var(--topbar-h); padding-block: 6px; }
+  .topbar-left { grid-column: 1; grid-row: 1; }
+  .topbar-right { grid-column: 2; grid-row: 1; gap: 4px; }
+  .app :deep(.direct-workspace:not(.embedded)), .app :deep(.mesh-workspace) { inset: var(--topbar-h) 0 28px; }
+  .mode-switch { grid-column: 1 / -1; grid-row: 2; justify-self: stretch; }
   .mode-switch button { flex: 1; }
   .main { flex-direction: column; overflow: auto; }
   .editor-panel { width: 100% !important; min-width: 0; max-width: none; height: 46dvh; flex: 0 0 46dvh; border-right: 0; }
