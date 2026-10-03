@@ -55,6 +55,7 @@ fn affine_validated(model: &Model, matrix: [[f64; 4]; 4]) -> Result<Model> {
             }
         }
     }
+    crate::transform_plane_charts::reexpress(model, &mut result)?;
     if determinant < 0. {
         for shell in &mut result.shells {
             for face in &mut shell.faces {

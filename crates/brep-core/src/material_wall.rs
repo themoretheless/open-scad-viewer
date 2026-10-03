@@ -125,7 +125,7 @@ mod tests {
         .unwrap()
     }
     #[test]
-    fn placed_annular_wall_retains_distance_bounds_when_volume_is_unproven() {
+    fn placed_annular_wall_qualifies_original_face_groups() {
         let source =
             crate::circular_blend::partial_annular_quarter(20., 5., 6., 1.25, 1., 1e-7).unwrap();
         let model = crate::transform::affine(
@@ -140,9 +140,7 @@ mod tests {
         .unwrap();
         let aa = [2, 7, 12, 16, 20, 24];
         let bb = [3, 8, 13, 17, 21, 25];
-        let mut budget = limits();
-        budget.material.volume.boundary.contacts.cells = 64;
-        budget.material.volume.boundary.contacts.cells_per_pair = 8;
+        let budget = limits();
         let r = inspect(
             &model,
             [&aa, &bb],
@@ -154,10 +152,19 @@ mod tests {
             budget,
         )
         .unwrap();
-        assert!(!r.converged && r.interval_mm.is_none());
-        assert_eq!(r.reason, "material-chord-unproven");
-        assert_eq!(r.candidate.chord.reason, "volume-unproven");
+        assert!(r.candidate.chord.validity.boundary.proven);
+        let interval = r.interval_mm.unwrap();
+        assert!(r.converged && interval[0] <= 15. && interval[1] >= 15.);
+        assert!(interval[1] - interval[0] <= 1e-5);
         assert!(r.clearance.converged && r.clearance.lower_bound_mm > 14.99);
+        let mut exhausted = limits();
+        exhausted.material.volume.boundary.contacts.pairs = 1;
+        exhausted.material.volume.boundary.contacts.cells = 1;
+        exhausted.material.volume.boundary.contacts.cells_per_pair = 1;
+        let limited = inspect(&model, [&aa,&bb], [103.,-48.,82.], [19.2,0.,-14.4],
+            1e-5,1e-7,1e-6,exhausted).unwrap();
+        assert!(!limited.converged && limited.interval_mm.is_none());
+        assert_eq!(limited.candidate.chord.reason,"volume-unproven");
     }
     #[test]
     fn full_wall_groups_have_bounds_from_material_not_surface_gap() {

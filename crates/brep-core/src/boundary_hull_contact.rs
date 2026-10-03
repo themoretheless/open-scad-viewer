@@ -133,7 +133,23 @@ fn certify_joined_charts(model:&Model,faces:[usize;2])->Option<Certificate>{
                 let edge=&model.edges[ca.edge].curve;
                 if crate::shared_boundary::boundary(blend,&ca.pcurve,edge)!=Some((1,blend.control_points[0].len()-1))
                     ||crate::shared_boundary::boundary(wall,&cb.pcurve,edge)!=Some((1,1)){continue;}
-                for projection in [[[0.,1.,0.],[1.,0.,-1.]],[[1.,0.,0.],[0.,1.,-1.]]] {
+                // Try a bounded family of coordinate projections. Each admission still
+                // requires the full original-chart ruled-join certificate below.
+                let mut projections=vec![[[0.,1.,0.],[1.,0.,-1.]],[[1.,0.,0.],[0.,1.,-1.]]];
+                for axis in 0..3 {for first_sign in [-1.,1.] {for a in [-1.,1.] {for b in [-1.,1.] {
+                    let mut first=[0.;3];first[axis]=first_sign;
+                    let other=(0..3).filter(|k|*k!=axis).collect::<Vec<_>>();
+                    let mut second=[0.;3];second[other[0]]=a;second[other[1]]=b;
+                    let projection=[first,second];
+                    if !projections.contains(&projection){projections.push(projection);}
+                }}}}
+                for projection in projections {
+                    // Filter exact structural requirements before expensive bounds.
+                    if (0..3).any(|k| projection[0][k]!=0. && wall.control_points.iter().any(|r|r[0][k]!=r[1][k])) {continue;}
+                    let pole=if end==0 {0} else {wall.control_points.len()-1};
+                    let neighbor=if end==0 {1} else {pole-1};
+                    if (0..2).any(|j|(0..3).any(|k|projection[1][k]!=0. && wall.control_points[pole][j][k]!=wall.control_points[neighbor][j][k])) {continue;}
+
                     let report=nurbs_core::surface_quotient_injectivity::certify_ruled_join(blend,wall,end,projection,16,512).ok()?;
                     if !report.proven{continue;}
                     let mut enclosure=[[f64::INFINITY,f64::NEG_INFINITY];3];
@@ -285,6 +301,19 @@ mod tests {
             let c=certify_joined_charts(&model,[a,b]).unwrap();
             assert!(c.joined_proof.as_ref().unwrap().report.proven);
             assert!(c.edges.contains(&if a==0{2}else{27}));
+        }
+    }
+    #[test]
+    fn joined_projection_is_covariant_for_coordinate_rotation_and_translation() {
+        let source=crate::circular_blend::partial_annular_quarter(20.,5.,6.,1.25,1.,1e-7).unwrap();
+        let model=crate::transform::affine(&source,[[0.,-1.,0.,123.],[0.,0.,-1.,-45.],[1.,0.,0.,67.],[0.,0.,0.,1.]]).unwrap();
+        for faces in [[0,2],[10,12]] {
+            let certificate=certify_joined_charts(&model,faces).unwrap();
+            let proof=certificate.joined_proof.unwrap();
+            assert!(proof.report.proven && proof.report.cells==512);
+            let mut broken=model.clone();
+            broken.faces[proof.wall_face].surface.control_points[0][1][0]+=1e-12;
+            assert!(certify_joined_charts(&broken,faces).is_none());
         }
     }
     #[test]

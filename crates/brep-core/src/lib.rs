@@ -79,6 +79,7 @@ pub mod step_interchange_v3;
 mod stepped_prism;
 pub mod transactions;
 pub mod transform;
+mod transform_plane_charts;
 pub mod trim_sew;
 pub mod uv_arrangement;
 mod uv_regions;
