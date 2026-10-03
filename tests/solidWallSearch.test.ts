@@ -1,6 +1,6 @@
 import {readFileSync} from 'node:fs'
 import {expect,it} from 'vitest'
-import {wallSearchCandidates} from '../src/services/solidWallSearch'
+import {wallSearchCandidates,wholeWallSearchCandidates} from '../src/services/solidWallSearch'
 import {inspectMaterialWall,materialWallExpectation,validMaterialWall} from '../src/services/solidMaterialWall'
 import {transformNurbsBrep} from '../src/services/geometry/brep'
 import {evaluateNurbsSurface} from '../src/services/nurbsSurface'
@@ -48,4 +48,14 @@ it('refuses invalid groups and skips singular normal samples',()=>{
  expect(()=>wallSearchCandidates(model,c.request.faceGroups,undefined,0)).toThrow('budget')
  const singular=(s:any,u:number,v:number)=>({...evaluateNurbsSurface(s,u,v),normal:null})
  expect(wallSearchCandidates(model,c.request.faceGroups,singular)).toEqual([])
+})
+
+it('bounds whole-model sample work and skips singular regions without marking them covered',()=>{
+ const source=fixtures[0].request.model,model=structuredClone(source)
+ model.faces=Array.from({length:10000},()=>structuredClone(source.faces[0]))
+ let evaluations=0
+ const singular=(s:any,u:number,v:number)=>{evaluations++;return {point:[0,0,0],normal:null} as any}
+ expect(wholeWallSearchCandidates(model,singular,8)).toEqual([])
+ expect(evaluations).toBe(8+4*8)
+ expect(()=>wholeWallSearchCandidates(model,singular,257)).toThrow('budget')
 })

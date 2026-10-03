@@ -96,10 +96,11 @@ const limits = new Map([
 // Material wall interval API: measured 3,299,244 bytes (+4,274); preserve 397-byte headroom.
 // Placement-aware wall lower bounds: measured 3,301,354 bytes; preserve 397-byte headroom.
 // Exact placed-plane charts and bounded joined projections: measured 3,305,320 bytes; retain 397-byte headroom.
-const geometryChunkBudget = 3_305_717
+// Whole-wall coverage and exact coordinate-plane authoring: measured 3,310,492 bytes; retain 397-byte headroom.
+const geometryChunkBudget = 3_310_889
 const jsChunkBudgets = [
   // CAD worker with lazy ModelGraph importer: surface boundary diagnostics included: measured 108,116 bytes.
-  [/^assets\/mainSolid\.worker-[^/]+\.js$/, 120_083], // Material wall dispatch: measured 120,079 bytes; preserve 4-byte headroom. Retained profile pair diagnostics and validated transport: measured 117,652 bytes; 848-byte margin. Distance kernel worker additions: measured 115,579 bytes. Surface distance worker dispatch: measured 115,110 bytes. Retained NURBS snap intervals: measured 114,200 bytes. Sketch snap preparation: measured 113,885 bytes. Body snap preparation: measured 112,083 bytes. Face sketch preparation in worker: measured 109,472 bytes.
+  [/^assets\/mainSolid\.worker-[^/]+\.js$/, 120_160], // Whole-wall worker dispatch: measured 120,156 bytes; retain 4-byte headroom. Material wall dispatch: measured 120,079 bytes; preserve 4-byte headroom. Retained profile pair diagnostics and validated transport: measured 117,652 bytes; 848-byte margin. Distance kernel worker additions: measured 115,579 bytes. Surface distance worker dispatch: measured 115,110 bytes. Retained NURBS snap intervals: measured 114,200 bytes. Sketch snap preparation: measured 113,885 bytes. Body snap preparation: measured 112,083 bytes. Face sketch preparation in worker: measured 109,472 bytes.
   // After removing logical-expression payload inlining: 470353 / 84511 / 34064 bytes.
   [/^assets\/geometry\.worker-[^/]+\.js$/, 500_000],
   // Theme uniforms + default-material setters added ~0.8 kB; measured: 100,763 bytes.
@@ -377,6 +378,7 @@ for (const [name, artifact, compression] of [
 // Current app redesign, wall panel and sampled candidate search: measured 7,344,965 bytes; preserve 668-byte headroom.
 // Placement-aware lower bounds and early refusal of unproven volumes: measured 7,347,115 bytes; preserve 668-byte headroom.
 // Placed wall qualification: measured 7,351,136 asset bytes; retain preceding 613-byte headroom.
-const totalBudget = 7_351_749
+// Whole-wall coverage UI and source-bound transport: measured 7,364,029 asset bytes; retain 613-byte headroom.
+const totalBudget = 7_364_642
 if (total > totalBudget) throw new Error(`dist totals ${total} bytes; budget is ${totalBudget}`)
 console.log(`Verified ${files.length} dist artifacts (${total} asset bytes + ${rawWasmBytes} raw WASM bytes = ${total + rawWasmBytes} total bytes)`)

@@ -1,5 +1,26 @@
 use super::{Result, Value, field};
 use value_codec::json;
+pub(super) fn decode_limits(
+    config: &Value,
+    normal: &Value,
+    cells: usize,
+    domains: usize,
+) -> Result<brep_core::material_wall::Limits> {
+    Ok(brep_core::material_wall::Limits {
+        material: brep_core::material_segment::Limits {
+            volume: super::cad_solid_distance::validity_limits(&field::<Value>(
+                config, "validity",
+            )?)?,
+            point_cells: field(config, "pointCells")?,
+            point_domain_cells: field(config, "pointDomainCells")?,
+            segment_cells: field(config, "segmentCells")?,
+            segment_domain_cells: field(config, "segmentDomainCells")?,
+        },
+        distance_cells: cells,
+        distance_domain_cells: domains,
+        normal_spans: field(normal, "maxSpans")?,
+    })
+}
 pub fn inspect(v: Value) -> Result<Value> {
     let model: brep_core::Model = field(&v, "model")?;
     let groups: [Vec<usize>; 2] = field(&v, "faceGroups")?;
@@ -11,20 +32,7 @@ pub fn inspect(v: Value) -> Result<Value> {
     let normal: Value = field(&v, "normalAudit")?;
     let cells: usize = field(&v, "maxDistanceCells")?;
     let domains: usize = field(&v, "maxDistanceDomainCells")?;
-    let limits = brep_core::material_wall::Limits {
-        material: brep_core::material_segment::Limits {
-            volume: super::cad_solid_distance::validity_limits(&field::<Value>(
-                &config, "validity",
-            )?)?,
-            point_cells: field(&config, "pointCells")?,
-            point_domain_cells: field(&config, "pointDomainCells")?,
-            segment_cells: field(&config, "segmentCells")?,
-            segment_domain_cells: field(&config, "segmentDomainCells")?,
-        },
-        distance_cells: cells,
-        distance_domain_cells: domains,
-        normal_spans: field(&normal, "maxSpans")?,
-    };
+    let limits = decode_limits(&config, &normal, cells, domains)?;
     let r = brep_core::material_wall::inspect(
         &model,
         [&groups[0], &groups[1]],

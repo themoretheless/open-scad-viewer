@@ -1279,14 +1279,24 @@ fn face_integral(
                     let a = start + (end - start) * part as f64 / divisions[0] as f64;
                     let b = start + (end - start) * (part + 1) as f64 / divisions[0] as f64;
                     for &(x, w) in quadrature {
-                        let evaluation = curve.evaluate((a + b) / 2. + x * (b - a) / 2.)?;
+                        let evaluation = curve.evaluate(((a + b) / 2. + x * (b - a) / 2.).clamp(a,b))?;
                         let dv = evaluation.d1.ok_or_else(|| {
                             Error::new("BREP_ANALYSIS_INDETERMINATE", "Undefined trim derivative")
                         })?[1];
                         if dv == 0. {
                             continue;
                         }
-                        let [u, v] = [evaluation.point[0], evaluation.point[1]];
+                        let mut uv = [evaluation.point[0], evaluation.point[1]];
+                        // A positive rational trim stays in its control hull.
+                        // World-coordinate charts can round an endpoint one ULP
+                        // outside the surface. Clamp only when the complete
+                        // original trim hull proves containment in that domain.
+                        let domains=[[surface.knots_u[surface.degree_u],surface.knots_u[surface.knots_u.len()-surface.degree_u-1]],
+                            [surface.knots_v[surface.degree_v],surface.knots_v[surface.knots_v.len()-surface.degree_v-1]]];
+                        if curve.control_points.iter().all(|p|(0..2).all(|k|p[k]>=domains[k][0]&&p[k]<=domains[k][1])) {
+                            for k in 0..2 {uv[k]=uv[k].clamp(domains[k][0],domains[k][1]);}
+                        }
+                        let [u,v]=uv;
                         for [low, high] in spans(&integration_grids[use_.face][0], [u0, u]) {
                             for inner in 0..divisions[1] {
                                 let l = low + (high - low) * inner as f64 / divisions[1] as f64;
@@ -1295,7 +1305,10 @@ fn face_integral(
                                 for &(ix, iw) in quadrature {
                                     let values = flux(
                                         surface,
-                                        (l + h) / 2. + ix * (h - l) / 2.,
+                                        // Every quadrature node lies in its admitted interval.
+                                        // Rounding on a narrow world-coordinate span may
+                                        // otherwise place it one ULP before the lower knot.
+                                        ((l + h) / 2. + ix * (h - l) / 2.).clamp(l,h),
                                         v,
                                         origin,
                                         if use_.reversed { -1. } else { 1. },
@@ -1568,6 +1581,19 @@ mod tests {
         near(t.signed_volume_mm3, 40. * std::f64::consts::PI);
         near(t.surface_area_mm2, 90. * std::f64::consts::PI);
         near(t.inertia_mm5[2][2], t.signed_volume_mm3 * 13. / 2.);
+    }
+    #[test]
+    fn world_coordinate_trim_endpoints_preserve_cap_mass() {
+        let shell=crate::operations::boolean(&cuboid([0.;3],[40.,30.,20.]).unwrap(),
+            &cuboid([2.,2.,2.],[38.,28.,22.]).unwrap(),"difference").unwrap();
+        let top=shell.faces.iter().position(|f|f.surface.control_points.iter().flatten().all(|p|p[2]==20.)).unwrap();
+        let edited=crate::operations::push_planar_face(&shell,top,0.5).unwrap();
+        near(mass_properties(&edited,1e-7,200_000).unwrap().signed_volume_mm3,7152.+264.*0.5);
+    }
+    #[test]
+    fn narrow_world_chart_after_repeated_cap_placement_preserves_mass() {
+        let model:Model=value_codec::from_str(include_str!("../../../docs/qualification/cad-roadmap-2026-09-28/p1-development-2026-10-03/whole-wall/rotated-enclosure-mass.json")).unwrap();
+        near(mass_properties(&model,1e-7,300_000).unwrap().signed_volume_mm3,7416.);
     }
     #[test]
     fn holes_translations_and_resource_refusals_are_explicit() {

@@ -1660,3 +1660,12 @@ Final mixed20 qualification: mouse and keyboard exit 0 for bracket/enclosure/fla
 P0 object/instance execution group: both Chromium runs pass linked creation, absolute placement/Undo, source selection/transform, Duplicate/Delete-copy/Make-independent with full document Undo/Redo, detached ID/world bounds/source preservation and exact reload. Invalid-input localized association/recovery and late transform-success cancellation pass. Both transformed source STEP files pass independent OCCT. Evidence in command-coverage-2026-10-01/object-history/status.md; only keyboard transform preview image inspected. Two-body qualification does not replace large-scene source deletion/groups or all-error/all-command coverage. Full P0-P3 open.
 
 P0 polygonal sketch execution group: Fillet/DogEar/Circular copies pass mouse and keyboard on square, with per-command preview cancellation/full baseline equality, invalid-input preview suppression, injected failure/full document preservation/retry, prepared-result Apply, per-corner-command Undo/Redo, exact copy rotation/IDs/history and full reload. Evidence in command-coverage-2026-10-01/sketch-history/status.md. Keyboard array preview inspected. This does not close sketch drawing tools, general NURBS/composite fillets, all native errors or full P0-P3.
+
+
+## 2026-10-03 — whole-wall coverage in the redesigned workspace
+
+Whole-wall thickness now has Rust, WASM, worker and UI integration. Every original face pair, including self pairs, contributes to explicit coverage. Automatic search qualifies the 10 mm box and the 1.4 mm planar enclosure; candidate samples supply upper witnesses only. Curved same-face domains keep a zero lower bound and visible uncertainty. This does not close general curved minimum thickness.
+
+The final artifact passes 749 native B-rep tests, 354 bridge tests and 915 CAD regression tests. Both mouse and keyboard repeat all three controlled 20-edit histories with seven cancelled previews, complete Undo/Redo and exact reload. Independent OpenCascade verifies service and UI STEP, plus actual current-geometry menu export/import/reexport: six files and 16 fixed gauges per route. The 95-command execution/error matrix and remaining arbitrary fillet/general B-rep/P2/P3 work stay open.
+
+Evidence and exact limits: [whole-wall qualification](../qualification/cad-roadmap-2026-09-28/p1-development-2026-10-03/whole-wall/status.md). The local preview serves the verified new design and WASM at `http://127.0.0.1:5175/`.

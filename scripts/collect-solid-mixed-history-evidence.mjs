@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import {readFile,writeFile,mkdir} from 'node:fs/promises'
 import {createHash} from 'node:crypto'
-import {gzipSync} from 'node:zlib'
+import {gzipSync,brotliCompressSync,constants} from 'node:zlib'
 import path from 'node:path'
 const [fixtures,mouse,keyboard,output]=process.argv.slice(2)
 assert.ok(fixtures&&mouse&&keyboard&&output,'Usage: fixtures mouse keyboard output')
@@ -41,6 +41,10 @@ for(const [interaction,root] of [['mouse',mouse],['keyboard',keyboard]]){
   report.parts.push({interaction,name,committedEdits:20,cancelledPreviews:7,undoStates:20,redoStates:20,reloadExact:true,topologyIdsUnique:true,boundsToleranceMm:1e-6})
  }
 }
-await writeFile(path.join(output,'documents.jsonl.gz'),gzipSync([...archive.values()].map(v=>JSON.stringify(v)).join('\n')+'\n'))
+const sourceBytes=Buffer.from([...archive.values()].map(v=>JSON.stringify(v)).join('\n')+'\n')
+const brotli=process.argv.includes('--brotli'),archiveName=brotli?'documents.jsonl.br':'documents.jsonl.gz'
+const packed=brotli?brotliCompressSync(sourceBytes,{params:{[constants.BROTLI_PARAM_QUALITY]:6,[constants.BROTLI_PARAM_LGWIN]:24}}):gzipSync(sourceBytes)
+report.archive={file:archiveName,encoding:brotli?'brotli':'gzip',bytes:packed.length,sourceBytes:sourceBytes.length,sha256:createHash('sha256').update(packed).digest('hex')}
+await writeFile(path.join(output,archiveName),packed)
 await writeFile(path.join(output,'history-audit.json'),JSON.stringify(report,null,2)+'\n')
 console.log(JSON.stringify({passed:true,cases:report.parts.length,documents:report.files.length,uniquePayloads:archive.size}))

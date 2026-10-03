@@ -265,6 +265,24 @@ fn model_from_trimmed_polygons(mut polygons: Vec<PlanarBoundary>, tolerance: f64
             .chain(boundary.holes.iter().flatten())
             .copied()
             .collect();
+        // Author exact coordinate-plane charts from the original polygon
+        // coordinates. Normalizing decimal UVs and lifting them independently
+        // can introduce a nonzero exact edge/face discrepancy.
+        let coordinate_chart = (0..3).find_map(|fixed| {
+            let height=all_points[0][fixed];
+            if !all_points.iter().all(|p|p[fixed]==height) {return None;}
+            let mut axes=[(fixed+1)%3,(fixed+2)%3];
+            if normal[fixed]<0. {axes.swap(0,1);}
+            let ranges=axes.map(|axis| [
+                all_points.iter().map(|p|p[axis]).fold(f64::INFINITY,f64::min),
+                all_points.iter().map(|p|p[axis]).fold(f64::NEG_INFINITY,f64::max)]);
+            if ranges.iter().any(|r|r[1]-r[0]<=tolerance) {return None;}
+            // The edge graph chooses the canonical vertex. Do not project a
+            // tolerance-merged vertex into this plane or outside its rectangle.
+            if all_points.iter().any(|p|model.vertices.iter().find(|v|close(v.point,*p,tolerance*4.))
+                .is_some_and(|v|v.point[fixed]!=height || (0..2).any(|k|v.point[axes[k]]<ranges[k][0] || v.point[axes[k]]>ranges[k][1]))) {return None;}
+            Some((fixed,height,axes,ranges))
+        });
         let coordinates: Vec<_> = all_points
             .iter()
             .map(|&p| {
@@ -310,10 +328,12 @@ fn model_from_trimmed_polygons(mut polygons: Vec<PlanarBoundary>, tolerance: f64
                     });
                 ids.push(id);
                 let d = sub(*point, origin);
-                uv.push([
+                uv.push(if let Some((_,_,axes,_))=coordinate_chart {
+                    axes.map(|axis|model.vertices[id].point[axis])
+                } else {[
                     (dot(d, u) - min_u) / (max_u - min_u),
                     (dot(d, v) - min_v) / (max_v - min_v),
-                ]);
+                ]});
             }
             let mut coedges = Vec::with_capacity(ids.len());
             for i in 0..ids.len() {
@@ -341,8 +361,7 @@ fn model_from_trimmed_polygons(mut polygons: Vec<PlanarBoundary>, tolerance: f64
             model.loops.push(Loop { coedges });
         }
         let outer = loop_ids[0];
-        model.faces.push(Face {
-            surface: Surface {
+        let mut surface=Surface {
                 degree_u: 1,
                 degree_v: 1,
                 knots_u: vec![0., 0., 1., 1.],
@@ -357,7 +376,17 @@ fn model_from_trimmed_polygons(mut polygons: Vec<PlanarBoundary>, tolerance: f64
                 weights: vec![vec![1., 1.], vec![1., 1.]],
                 periodic_u: false,
                 periodic_v: false,
-            },
+            };
+        if let Some((fixed,height,axes,ranges))=coordinate_chart {
+            for a in 0..2 {for b in 0..2 {
+                let mut p=vec![0.;3];p[fixed]=height;p[axes[0]]=ranges[0][a];p[axes[1]]=ranges[1][b];
+                surface.control_points[a][b]=p;
+            }}
+            surface.knots_u=vec![ranges[0][0],ranges[0][0],ranges[0][1],ranges[0][1]];
+            surface.knots_v=vec![ranges[1][0],ranges[1][0],ranges[1][1],ranges[1][1]];
+        }
+        model.faces.push(Face {
+            surface,
             outer,
             holes: loop_ids[1..].to_vec(),
         });

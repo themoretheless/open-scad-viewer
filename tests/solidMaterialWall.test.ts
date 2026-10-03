@@ -8,7 +8,7 @@ it('accepts native full wall bounds and explicit refusal or wide intervals',()=>
   expect(validMaterialWall(materialWallExpectation(c.request),c.result),c.name).toBe(true)
   expect(mainSolidResult(mainSolidExpectation({kind:'materialWall',options:c.request}),c.result),c.name).toBe(true)
  }
- expect(cases.map((c:any)=>c.result.converged)).toEqual([true,false,true,false,false])
+ expect(cases.map((c:any)=>c.result.converged)).toEqual([true,false,true,false,false,true,false])
  expect(cases[3].result.clearance.totalPairs).toBe(54)
 })
 it('rejects changed sources, groups, budgets and substituted surface-gap upper bounds',()=>{

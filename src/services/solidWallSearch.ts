@@ -7,21 +7,36 @@ export interface WallSearchCandidate {face:number;uv:[number,number];origin:Poin
 export function wallSearchCandidates(model:NurbsBrep,groups:[number[],number[]],evaluate:(s:NurbsSurface,u:number,v:number)=>NurbsSurfaceEvaluation=evaluateNurbsSurface,maxCandidates=64):WallSearchCandidate[]{
  if(!Number.isSafeInteger(maxCandidates)||maxCandidates<1||maxCandidates>256)throw Error('Invalid wall search budget')
  if(!groups.every(g=>g.length>0&&new Set(g).size===g.length&&g.every(i=>Number.isSafeInteger(i)&&i>=0&&i<model.faces.length))||groups[0].some(i=>groups[1].includes(i)))throw Error('Invalid wall search groups')
- const points=model.faces.flatMap(f=>f.surface.controlPoints.flat())
- const bounds=[0,1,2].map(k=>[Math.min(...points.map(p=>p[k])),Math.max(...points.map(p=>p[k]))])
+ return candidates(model,groups,evaluate,maxCandidates)
+}
+/** Whole-model candidate search. The native pair audit supplies coverage. */
+export function wholeWallSearchCandidates(model:NurbsBrep,evaluate:(s:NurbsSurface,u:number,v:number)=>NurbsSurfaceEvaluation=evaluateNurbsSurface,maxCandidates=64):WallSearchCandidate[]{
+ if(!Number.isSafeInteger(maxCandidates)||maxCandidates<1||maxCandidates>256)throw Error('Invalid wall search budget')
+ if(!model.faces.length)throw Error('Invalid wall search source')
+ const faces=model.faces.map((_,i)=>i)
+ return candidates(model,[faces,faces],evaluate,maxCandidates)
+}
+function candidates(model:NurbsBrep,groups:[number[],number[]],evaluate:(s:NurbsSurface,u:number,v:number)=>NurbsSurfaceEvaluation,maxCandidates:number):WallSearchCandidate[]{
+ const bounds=[0,1,2].map(()=>[Infinity,-Infinity])
+ for(const f of model.faces)for(const row of f.surface.controlPoints)for(const p of row)for(let k=0;k<3;k++){
+  bounds[k][0]=Math.min(bounds[k][0],p[k]);bounds[k][1]=Math.max(bounds[k][1],p[k])
+ }
  const diagonal=Math.hypot(...bounds.map(([lo,hi])=>hi-lo))
  if(!Number.isFinite(diagonal)||diagonal<=0)throw Error('Invalid wall search bounds')
  const domain=(s:NurbsSurface):[[number,number],[number,number]]=>[[s.knotsU[s.degreeU],s.knotsU[s.knotsU.length-s.degreeU-1]],[s.knotsV[s.degreeV],s.knotsV[s.knotsV.length-s.degreeV-1]]]
  const at=(s:NurbsSurface,a:number,b:number)=>{const d=domain(s);const uv:[number,number]=[d[0][0]*(1-a)+d[0][1]*a,d[1][0]*(1-b)+d[1][1]*b];return {uv,value:evaluate(s,...uv)}}
- const targets=groups[1].map(i=>at(model.faces[i].surface,.5,.5).value.point)
+ const targets=groups[1].slice(0,maxCandidates).map(i=>at(model.faces[i].surface,.5,.5).value)
  const result:WallSearchCandidate[]=[]
  // Interleave faces so a small budget cannot consume every sample on the first face.
+ let attempts=0
  for(const a of [.5,.25,.75])for(const b of [.5,.25,.75])for(const face of groups[0]){
+  if(attempts++===4*maxCandidates)return result
   const {uv,value}=at(model.faces[face].surface,a,b),n=value.normal,p=value.point
   if(!n||!n.every(Number.isFinite)||!p.every(Number.isFinite))continue
   const length=Math.hypot(...n);if(length<=0)continue
   const unit=n.map(x=>x/length)
-  const projections=targets.map(t=>t.reduce((sum,x,k)=>sum+(x-p[k])*unit[k],0)).filter(x=>Number.isFinite(x)&&Math.abs(x)>model.toleranceMm)
+  const aligned=targets.filter(t=>t.normal&&Math.abs(t.normal.reduce((sum,x,k)=>sum+x*unit[k],0))/Math.hypot(...t.normal)>1-1e-6)
+  const projections=(aligned.length?aligned:targets).map(t=>t.point.reduce((sum,x,k)=>sum+(x-p[k])*unit[k],0)).filter(x=>Number.isFinite(x)&&Math.abs(x)>model.toleranceMm)
   if(!projections.length)continue
   const projection=projections.reduce((best,x)=>Math.abs(x)<Math.abs(best)?x:best)
   const sign=Math.sign(projection),pad=Math.max(model.toleranceMm*10,Math.abs(projection)*.05)
