@@ -45,6 +45,14 @@ fn main() {
             let result=geometry_bridge::dispatch(input.clone()).unwrap();assert_eq!(result["converged"],json!(converged));
             wall_cases.push(json!({"name":name,"request":input,"result":result}));
         }
+        let placed=brep_core::transform::affine(&annular,[[0.,-1.,0.,123.],[0.,0.,-1.,-45.],[1.,0.,0.,67.],[0.,0.,0.,1.]]).unwrap();
+        let mut input=wall_cases[2]["request"].clone();
+        input["model"]=json!(placed);input["origin"]=json!([103.,-48.,82.]);input["direction"]=json!([19.2,0.,-14.4]);
+        let result=geometry_bridge::dispatch(input.clone()).unwrap();assert_eq!(result["converged"],json!(true));
+        wall_cases.push(json!({"name":"placed-annular-wall","request":input.clone(),"result":result}));
+        input["limits"]["validity"]["faceCells"]=json!(1);
+        let result=geometry_bridge::dispatch(input.clone()).unwrap();assert_eq!(result["converged"],json!(false));
+        wall_cases.push(json!({"name":"placed-annular-volume-budget","request":input,"result":result}));
         cases=wall_cases;
     }
     if std::env::args().nth(2).as_deref()==Some("normal") {

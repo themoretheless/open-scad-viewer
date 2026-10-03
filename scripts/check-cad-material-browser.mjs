@@ -57,6 +57,15 @@ try {
  async function command(name){await closeMenu();await activate(page.getByRole('button',{name:'Команды',exact:true}));const search=page.getByRole('combobox',{name:'Search commands / Поиск команд'});await input(search,name);await search.press('Enter')}
 
  const documentFixture=JSON.parse(await readFile('docs/qualification/cad-roadmap-2026-09-28/p1-development-2026-10-02/boundary-embedding-wasm/browser-document.json','utf8'))
+ const placed=process.argv.includes('--placed')
+ if(placed){
+  const contract=JSON.parse(await readFile('docs/qualification/cad-roadmap-2026-09-28/p1-development-2026-10-03/material-wall/contract.json','utf8'))
+  const specimen=contract.cases.find(c=>c.name==='placed-annular-wall');assert.ok(specimen)
+  documentFixture.bodies[0].brep=specimen.request.model
+  const points=documentFixture.bodies[0].mesh.positions
+  for(let i=0;i<points.length;i+=3){const [x,y,z]=points.slice(i,i+3);points.splice(i,3,123-y,-45-z,67+x)}
+ }
+
  await ready();await activate(menu)
  await solid.locator('input[accept=".json,application/json"]').setInputFiles({name:'material.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(documentFixture))})
  await closeMenu();await ready();await activate(solid.getByRole('tab',{name:'Сцена',exact:true}))
@@ -65,7 +74,9 @@ try {
  const toggle=solid.getByRole('button',{name:'Проверка материала вдоль линии',exact:true})
  await activate(toggle)
  const field=solid.getByRole('group',{name:'Материал вдоль линии',exact:true})
- async function coords(origin,direction){for(const [values,name] of [[origin,'origin'],[direction,'direction']])for(let i=0;i<3;i++)await input(field.getByRole('spinbutton',{name:(name==='origin'?'Начало ':'Смещение ')+['X','Y','Z'][i],exact:true}),String(values[i]))}
+ async function coords(origin,direction){
+  if(placed){origin=[123-origin[1],-45-origin[2],67+origin[0]];direction=[-direction[1],-direction[2],direction[0]]}
+  for(const [values,name] of [[origin,'origin'],[direction,'direction']])for(let i=0;i<3;i++)await input(field.getByRole('spinbutton',{name:(name==='origin'?'Начало ':'Смещение ')+['X','Y','Z'][i],exact:true}),String(values[i]))}
  async function run(){await activate(field.getByRole('button',{name:/^(Проверить|Повторить проверку)/}))}
  async function proven(){await field.locator('[data-material-proven="true"]').waitFor({timeout:120000})}
  await coords([25,2,3],[-24,0,0]);await run();await proven()
@@ -150,6 +161,6 @@ try {
  const after=await exportDoc('after.json');assert.deepEqual(after,before)
  await page.reload();await ready();const restored=await exportDoc('reloaded.json');assert.deepEqual(restored,before)
  assert.deepEqual(errors,[])
- await writeFile(path.join(directory,'report.json'),JSON.stringify({passed:true,wasmSha256:createHash('sha256').update(await readFile(path.join(root,'wasm/geometry-kernel.wasm'))).digest('hex'),wall:process.argv.includes('--wall'),keyboard,tabs,length,radialLength,results,cancelledHeldRequest:true,retry:true,invalidLineLocalized:true,documentUnchanged:true,reloadExact:true,errors},null,2)+'\n')
+ await writeFile(path.join(directory,'report.json'),JSON.stringify({passed:true,placed,wasmSha256:createHash('sha256').update(await readFile(path.join(root,'wasm/geometry-kernel.wasm'))).digest('hex'),wall:process.argv.includes('--wall'),keyboard,tabs,length,radialLength,results,cancelledHeldRequest:true,retry:true,invalidLineLocalized:true,documentUnchanged:true,reloadExact:true,errors},null,2)+'\n')
  console.log(JSON.stringify({passed:true,keyboard,cases:results.length,length}))
 }finally{await browser?.close();await new Promise(resolve=>server.close(resolve))}

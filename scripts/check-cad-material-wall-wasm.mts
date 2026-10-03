@@ -28,7 +28,7 @@ for(const [i,c] of fixtures.entries()){
  assert.equal(reply.result.converged,c.result.converged,c.name)
 }
 const automatic=[]
-for(const name of ['cube-wall','annular-wall']){
+for(const name of ['cube-wall','annular-wall','placed-annular-wall']){
  const c=fixtures.find(c=>c.name===name),before=JSON.stringify(c.request.model)
  const lines=wallSearchCandidates(c.request.model,c.request.faceGroups,undefined,8)
  assert.ok(lines.length>0&&lines.length<=8,name)

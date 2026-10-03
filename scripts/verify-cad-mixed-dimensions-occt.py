@@ -35,11 +35,15 @@ def gauges(name):
     raise ValueError('Unsupported acceptance specimen: ' + name)
 
 
-def main(directory):
+def main(directory, service=False):
     manifest = json.loads((directory / 'manifest.json').read_text())
+    marker = '-mixed20-' if service else '-ui20-'
+    expected_names = {name + marker + str(cycle) for name in ['bracket', 'flange', 'enclosure'] for cycle in range(2)}
+    if len(manifest['parts']) != 6 or {part['name'] for part in manifest['parts']} != expected_names:
+        raise ValueError('Expected all three declared specimens and both STEP cycles')
     results = []
     for part in manifest['parts']:
-        if '-ui20-' not in part['name']:
+        if marker not in part['name']:
             raise ValueError('Expected the actual UI 20-edit exports')
         file = directory / part['file']
         digest = hashlib.sha256(file.read_bytes()).hexdigest()
@@ -50,7 +54,7 @@ def main(directory):
             raise ValueError('Independent STEP import failed')
         shape = reader.OneShape()
         rows = []
-        for label, origin, direction, expected in gauges(part['name'].split('-ui20-')[0]):
+        for label, origin, direction, expected in gauges(part['name'].split(marker)[0]):
             query = IntCurvesFace_ShapeIntersector()
             query.Load(shape, 1e-8)
             query.Perform(gp_Lin(gp_Pnt(*origin), gp_Dir(*direction)), 0, 100)
@@ -68,7 +72,8 @@ def main(directory):
                              maxErrorMm=error, passed=passed))
         results.append(dict(name=part['name'], stepSha256=digest, gauges=rows,
                             passed=all(row['passed'] for row in rows)))
-    report = dict(schema='cad-mixed-ui-independent-dimensions/1',
+    report = dict(schema='cad-mixed-service-independent-dimensions/1' if service else 'cad-mixed-ui-independent-dimensions/1',
+                  source='20-edit service exports' if service else '20-edit browser exports',
                   oracle='OpenCascade original STEP faces and exact line intersections',
                   scope='Specified walls, bore and radius-1 corner/fillet sections of the declared 20-edit specimens; not whole-body thickness coverage',
                   passed=all(row['passed'] for row in results), parts=results)
@@ -79,4 +84,4 @@ def main(directory):
 
 
 if __name__ == '__main__':
-    sys.exit(main(Path(sys.argv[1]).resolve()))
+    sys.exit(main(Path(sys.argv[1]).resolve(), '--service' in sys.argv[2:]))

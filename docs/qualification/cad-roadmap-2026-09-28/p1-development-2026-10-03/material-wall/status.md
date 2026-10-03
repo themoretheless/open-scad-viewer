@@ -14,11 +14,11 @@ The UI samples original face points and normals, interleaves faces under a bound
 
 Canonical cuboid 10 mm and the six-by-six annular cylindrical wall unions 15 mm pass. The expanded 54-pair transition union retains a wide interval under exhausted work. The tests cover oblique/through-hole refusal, reversed shells, invalid/changed groups, incomplete normals, forged sources, cancellation, late replies and recovery through a fresh worker.
 
-Placement-aware radial estimates use matching shared finite origins for both compared faces. Nine distance regressions pass, including translated/reoriented complete annular wall unions and a one-cell coarse-bound test. Rotated/translated cuboid search passes; annular candidate geometry is covariant under rigid placement. The curved volume qualifier still refuses the placed partial-annular specimen, including a full-budget native trial (71.14 s). The explicit bounded-refusal regression preserves its distance evidence and emits no material interval. `placed-limitation.json` records the limitation.
+Placement-aware radial estimates use matching shared finite origins for both compared faces. Nine distance regressions pass, including translated/reoriented complete annular wall unions and a one-cell coarse-bound test. Rotated/translated cuboid search passes; annular candidate geometry is covariant under rigid placement. The earlier placed partial-annular refusal is retained in `placed-limitation.json` as historical evidence. The follow-up in `placement/status.md` resolves its specific coordinate rotation/translation through exact rational-cap charts and fully checked joined projections; arbitrary Euler placement remains unqualified.
 
 ## Packaged and UI evidence
 
-Final WASM: 9,842,562 bytes, SHA-256 `cff6a19a77de3f20241aa1f8ea1c3d57fe4e6dc5e9372908e3df407c53f94798`.
+Initial wall delivery WASM: 9,842,562 bytes, SHA-256 `cff6a19a77de3f20241aa1f8ea1c3d57fe4e6dc5e9372908e3df407c53f94798`. Current placed-wall package and requalification are recorded in `placement/status.md`.
 
 Five actual WASM cases, five real worker-handler cases and automatic cuboid/annular searches pass. Final mouse and keyboard browser scenarios each produce nine checked results, including an oblique wall refusal with red scene markers; group selection, original-face markers, direct and automatic cancellation, localized failure/Retry, unchanged document export and exact reload pass. Detailed reports are compressed under `wasm` and `browser`, with inspected screenshots.
 
