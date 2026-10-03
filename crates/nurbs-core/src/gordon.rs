@@ -1,4 +1,12 @@
 //! Homogeneous Gordon interpolation of a compatible rational curve network.
+#[path = "gordon_denominators.rs"]
+mod denominators;
+#[path = "gordon_cartesian.rs"]
+mod cartesian;
+#[path = "gordon_tangent_fields.rs"]
+mod tangent_fields;
+#[path = "gordon_tangent_audit.rs"]
+mod tangent_audit;
 use crate::{
     Result, check,
     curve::{Curve, basis},
@@ -113,7 +121,7 @@ fn align(s: &mut [Surface], axis: Axis) -> Result<()> {
     }
     Ok(())
 }
-/// U curves are stationed along V; V curves along U. Each family has 2..11
+/// U curves are stationed along V; V curves along U. Each family has 2..86
 /// members. Aligned homogeneous crossings must match exactly, without snapping.
 /// Natural cubic interpolation combines Su + Sv - Suv in homogeneous space.
 pub fn patch(
@@ -123,8 +131,8 @@ pub fn patch(
     parameters_v: &[f64],
 ) -> Result<Surface> {
     check(
-        (2..=11).contains(&u_curves.len()) && (2..=11).contains(&v_curves.len()),
-        "Gordon needs 2..11 curves per family",
+        (2..=86).contains(&u_curves.len()) && (2..=86).contains(&v_curves.len()),
+        "Gordon needs 2..86 curves per family",
     )?;
     let u: Vec<Curve> = u_curves.iter().map(normalized).collect::<Result<_>>()?;
     let v: Vec<Curve> = v_curves.iter().map(normalized).collect::<Result<_>>()?;
@@ -166,6 +174,60 @@ pub fn patch(
         grid,
     ];
     combine(s)
+}
+
+/// Cartesian Gordon interpolation with independent rational crossing weights.
+/// Every authored section and guide must pass a bounded whole-domain retention
+/// audit. Returned certificates are numerical, never exact-identity claims.
+pub fn patch_cartesian(
+    u_curves: &[Curve], v_curves: &[Curve],
+    parameters_u: &[f64], parameters_v: &[f64],
+    tolerance: f64, max_cells: usize, max_map_evaluations: usize,
+) -> Result<(Surface, Vec<value_codec::Value>)> {
+    check((1..=1_000_000).contains(&max_cells)
+        && (1..=1_000_000).contains(&max_map_evaluations),
+        "Cartesian Gordon audit budgets must be in 1..1000000")?;
+    cartesian::checked(u_curves,v_curves,parameters_u,parameters_v,
+        tolerance,max_cells,max_map_evaluations)
+}
+
+/// Cartesian network interpolation with authored dP/dV boundary fields.
+/// V and tangent-curve U parameters are normalized to [0,1]. Curve and tangent
+/// certificates must both establish their complete-domain numerical bounds.
+pub fn patch_cartesian_with_tangents(
+    u:&[Curve],v:&[Curve],pu:&[f64],pv:&[f64],tangents:&[Curve;2],
+    tolerance:f64,max_cells:usize,max_map_evaluations:usize,
+)->Result<(Surface,Vec<value_codec::Value>,Vec<value_codec::Value>)> {
+    check((1..=1_000_000).contains(&max_cells) && (1..=1_000_000).contains(&max_map_evaluations),
+        "Cartesian tangent construction audit budgets must be in 1..1000000")?;
+    cartesian::checked_with_tangents(u,v,pu,pv,tangents,tolerance,max_cells,max_map_evaluations)
+}
+
+/// Certifies the complete boundary dP/dv field against contiguous target curves.
+/// Uses original tensor controls and outward arithmetic; incomplete work returns
+/// accepted:false and no error bound, never an exact-identity certificate.
+pub fn certify_boundary_v_tangent(
+    surface:&Surface,targets:&[Curve],end:bool,tolerance:f64,max_cells:usize,
+)->Result<value_codec::Value> {
+    tangent_audit::verify(surface,targets,end,tolerance,max_cells)
+}
+
+/// Certifies normalized dP/dV against authored dP/dt controls multiplied
+/// by the original station extent, including subtraction and scaling rounding.
+pub fn certify_authored_boundary_v_tangent(
+    surface: &Surface, target: &Curve, end: bool, parameters: &[f64],
+    tolerance: f64, max_cells: usize,
+) -> Result<value_codec::Value> {
+    check(parameters.len() >= 2, "Tangent conversion needs two stations")?;
+    stations(parameters, parameters.len())?;
+    let scale = crate::distance_bounds::Interval::point(*parameters.last().unwrap())
+        .sub(crate::distance_bounds::Interval::point(parameters[0]))?;
+    let mut certificate = tangent_audit::verify_scaled(surface, std::slice::from_ref(target),
+        end, tolerance, max_cells, scale)?;
+    certificate["targetUnits"] = value_codec::json!("authored-dP/dt");
+    certificate["normalizedScaleEnclosure"] = value_codec::json!([scale.lo, scale.hi]);
+    certificate["stationDomain"] = value_codec::json!([parameters[0], parameters[parameters.len()-1]]);
+    Ok(certificate)
 }
 
 pub(crate) fn combine(mut s: [Surface; 3]) -> Result<Surface> {

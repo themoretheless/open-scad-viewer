@@ -1,5 +1,5 @@
 import {lineNurbsCurve,circleNurbsCurve,bezierNurbsCurve,autoGuidedLoftNurbsCurves,matchNurbsLoftEnds,guidedLoftNurbsCurves,controlTangentLoftNurbsCurves,clampedLoftNurbsCurves,naturalLoftNurbsCurves,closedLoftNurbsCurves} from './nurbsConstructors';
-import {createNaturalBrepSectionLoft,createCappedBrepLoftSurfaces} from './geometry/brep';
+import {createNaturalBrepSectionLoft,createCappedBrepLoftSurfaces,createCappedBrepLoftWithCaps} from './geometry/brep';
 import {createNativeGeometryArtifact} from '../core/nativeGeometry';
 import { stringifyMeshJson } from './meshJson'
 import {extrudePolygonProfile,revolvePolygonProfile,loftPolygonSections,sweepPolygonProfile,type PolygonProfile} from './geometry/polygon';
@@ -13,7 +13,7 @@ import { exportMeshFormat, meshExportBase64, type MeshExportFormat } from './mes
 import { compileModelGraphNurbs } from './modelGraphNurbsCompiler';
 import { validateNurbsCurve, evaluateNurbsCurve, insertNurbsKnot, elevateNurbsCurve, trimNurbsCurve, reverseNurbsCurve, nurbsCurveBounds, type NurbsCurve } from './nurbsCurve';
 import { validateNurbsSurface, evaluateNurbsSurface, insertNurbsSurfaceKnot, elevateNurbsSurface, trimNurbsSurface, reverseNurbsSurface, isoNurbsCurve, nurbsSurfaceBounds, type NurbsSurface } from './nurbsSurface';
-import {certifyNurbsCurveFoundation, certifyNurbsSurfaceFoundation} from './nurbsFoundation';
+import {createMappedNaturalLoft, createCartesianGuidedLoft, createControlTangentCartesianGuidedLoft, createAutoCartesianGuidedLoft, createAutoControlTangentCartesianGuidedLoft, certifyNurbsCurveFoundation, certifyNurbsSurfaceFoundation} from './nurbsFoundation';
 import { loftAlignedNurbsCurves,sweepNurbsCurve,loftNurbsCurves, extrudeNurbsCurve, revolveNurbsCurve } from './nurbsConstructors';
 import { tessellateNurbsSurface, thickenNurbsMesh, exportNurbsStl } from './geometry/tessellation';
 type Mesh = ReturnType<typeof tessellateNurbsSurface>;
@@ -174,8 +174,16 @@ export function buildOwnNurbs(document: unknown, request: OwnNurbsRequest) {
                 case 'surface_sweep': result={kind:'surface',data:sweepNurbsCurve(needCurve(n.inputs[0]),needCurve(n.inputs[1]))};break;
                 case 'control_tangent_loft_surface': result={kind:'surface',data:controlTangentLoftNurbsCurves(n.inputs.map(needCurve),n.parameters,n.start_tangents,n.end_tangents)};break;
                 case 'auto_guided_loft_surface': {
-                    const built=autoGuidedLoftNurbsCurves(n.inputs.map(needCurve),n.parameters,n.guides.map(needCurve),n.budget,n.parameter_tolerance);
-                    constructionReports[key]={method:"automatic-loft-alignment",guideParameters:built.guide_parameters,guideOrder:built.guide_order,reversed:built.reversed,sectionErrorUpper:built.section_error_upper,guideErrorUpper:built.guide_error_upper};
+                    if(n.construction==='cartesian') {
+                        const curves=n.inputs.map(needCurve),guides=n.guides.map(needCurve);
+                        const built=n.start_tangents && n.end_tangents
+                            ?createAutoControlTangentCartesianGuidedLoft(curves,n.parameters,guides,n.start_tangents,n.end_tangents,n.budget,n.parameter_tolerance,n.max_cells,n.max_map_evaluations,n.section_mappings)
+                            :createAutoCartesianGuidedLoft(curves,n.parameters,guides,n.budget,n.parameter_tolerance,n.max_cells,n.max_map_evaluations,n.section_mappings);
+                        constructionReports[key]={...built.certificate,guideParameters:built.guide_parameters,guideOrder:built.guide_order,reversed:built.reversed,sectionErrorUpper:built.section_error_upper,guideErrorUpper:built.guide_error_upper,sectionMappingCertificates:built.section_mapping_certificates,originalSectionCertificates:built.original_section_certificates};
+                        result={kind:'surface',data:built.surface};break;
+                    }
+                    const built=autoGuidedLoftNurbsCurves(n.inputs.map(needCurve),n.parameters,n.guides.map(needCurve),n.budget,n.parameter_tolerance,n.section_mappings);
+                    constructionReports[key]={method:"automatic-loft-alignment",guideParameters:built.guide_parameters,guideOrder:built.guide_order,reversed:built.reversed,sectionErrorUpper:built.section_error_upper,guideErrorUpper:built.guide_error_upper,sectionMappingCertificates:built.section_mapping_certificates,originalSectionCertificates:built.original_section_certificates};
                     result={kind:'surface',data:built.surface};break;
                 }
                 case 'loft_match_surface': {
@@ -186,15 +194,41 @@ export function buildOwnNurbs(document: unknown, request: OwnNurbsRequest) {
                     result={kind:'surface',data:built.surface};break;
                 }
                 case 'brep_natural_loft': result={kind:'brep',data:createNaturalBrepSectionLoft(n.sections.map(s=>s.map(r=>r.map(needCurve))),n.parameters)};break;
-                case 'brep_capped_loft': result={kind:'brep',data:createCappedBrepLoftSurfaces(n.start.map(r=>r.map(needCurve)),n.end.map(r=>r.map(needCurve)),n.sides.map(r=>r.map(needSurface)))};break;
-                case 'guided_loft_surface': result={kind:'surface',data:guidedLoftNurbsCurves(n.inputs.map(needCurve),n.parameters,n.guides.map(needCurve),n.guide_parameters,n.start_tangents,n.end_tangents)};break;
+                case 'brep_capped_loft': {
+                    const start=n.start.map(r=>r.map(needCurve)),end=n.end.map(r=>r.map(needCurve)),sides=n.sides.map(r=>r.map(needSurface));
+                    if(n.cap_surfaces && n.cap_trims) {
+                        result={kind:'brep',data:createCappedBrepLoftWithCaps(start,end,sides,
+                            [{surface:needSurface(n.cap_surfaces[0]),trims:n.cap_trims[0].map(r=>r.map(needCurve))},
+                             {surface:needSurface(n.cap_surfaces[1]),trims:n.cap_trims[1].map(r=>r.map(needCurve))}],n.embedding_limits,n.tolerance_uv)};
+                        constructionReports[key]={method:'authored-cap-loft',boundaryEmbedding:'accepted',globalEmbedding:'accepted',exact:false};
+                    } else result={kind:'brep',data:createCappedBrepLoftSurfaces(start,end,sides)};
+                    break;
+                }
+                case 'guided_loft_surface': {
+                    if(n.construction==='cartesian') {
+                        const curves=n.inputs.map(needCurve),guides=n.guides.map(needCurve);
+                        const built=n.start_tangents && n.end_tangents
+                            ?createControlTangentCartesianGuidedLoft(curves,n.parameters,guides,n.guide_parameters,n.start_tangents,n.end_tangents,n.error_budget,n.max_cells,n.max_map_evaluations,n.section_mappings)
+                            :createCartesianGuidedLoft(curves,n.parameters,guides,n.guide_parameters,n.error_budget,n.max_cells,n.max_map_evaluations,n.section_mappings);
+                        constructionReports[key]={...built.certificate,sectionMappingCertificates:built.section_mapping_certificates,originalSectionCertificates:built.original_section_certificates};
+                        result={kind:'surface',data:built.surface};break;
+                    }
+                    result={kind:'surface',data:guidedLoftNurbsCurves(n.inputs.map(needCurve),n.parameters,n.guides.map(needCurve),n.guide_parameters,n.start_tangents,n.end_tangents)};break;
+                }
                 case 'clamped_loft_surface': result={kind:'surface',data:clampedLoftNurbsCurves(n.inputs.map(needCurve),n.parameters,n.start_tangent,n.end_tangent)};break;
 
                 case 'line_curve': result={kind:'curve',data:lineNurbsCurve(n.start,n.end)};break;
                 case 'bezier_curve': result={kind:'curve',data:bezierNurbsCurve(n.points,n.weights)};break;
                 case 'circle_curve': result={kind:'curve',data:circleNurbsCurve(n.center,n.normal,n.radius)};break;
                 case 'closed_loft_surface': result={kind:'surface',data:closedLoftNurbsCurves(n.inputs.map(needCurve),n.parameters)};break;
-                case 'natural_loft_surface': result={kind:'surface',data:naturalLoftNurbsCurves(n.inputs.map(needCurve),n.parameters)};break;
+                case 'natural_loft_surface': {
+                    if(n.section_mappings) {
+                        const built=createMappedNaturalLoft(n.inputs.map(needCurve),n.parameters,n.section_mappings);
+                        constructionReports[key]={...built.certificate,sectionMappingCertificates:built.section_mapping_certificates,originalSectionCertificates:built.original_section_certificates};
+                        result={kind:'surface',data:built.surface};
+                    } else result={kind:'surface',data:naturalLoftNurbsCurves(n.inputs.map(needCurve),n.parameters)};
+                    break;
+                }
                 case 'surface_loft': result={kind:'surface',data:loftAlignedNurbsCurves(n.inputs.map(needCurve))};break;
                 case 'triangle_mesh': {
                     const mesh={positions:Float64Array.from(n.vertices.flat()),indices:Uint32Array.from(n.triangles.flat())};

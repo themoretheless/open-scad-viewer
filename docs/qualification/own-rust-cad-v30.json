@@ -1,0 +1,90 @@
+{
+  "id": "own-rust-cad-v30",
+  "successorOf": "docs/qualification/own-rust-cad-v29.json",
+  "previousSha256": "ed39ed3c55b33c3a6b9ef734d2813f83b6fbc6b73672d2134f43284db60ba32c",
+  "recordedAt": "2026-10-03",
+  "purpose": "Append-only registration of the exact Linux kernel observed in PR 28 CI, preserving the unchanged source bundle and prior macOS artifact. No clean qualification is claimed.",
+  "qualificationClaim": "none",
+  "wasm": {
+    "path": "src/generated/geometry-kernels/kernel_bg.wasm",
+    "sha256": "3e1ce8e993ff2a5c62d6728bc570c16f28833390e1dedfef42df4e79f2f73280",
+    "byteLength": 9846250,
+    "variants": [
+      {
+        "sha256": "3e1ce8e993ff2a5c62d6728bc570c16f28833390e1dedfef42df4e79f2f73280",
+        "byteLength": 9846250,
+        "builder": "macos-aarch64",
+        "evidence": "Observed local rebuild with pinned nightly-2026-09-16 and Node 26.10.0. No foreign-host artifact is inferred."
+      },
+      {
+        "sha256": "5e030e8565dd58bb10eb84ced8dbc85a47c404ec0a3747b26a15381425aee122",
+        "byteLength": 9846446,
+        "builder": "github-actions-ubuntu",
+        "evidence": "https://github.com/themoretheless/open-scad-viewer/actions/runs/37057997898/job/111007333771; geometry-kernels artifact output at 2026-10-02T20:13:32Z; source d92e5e889a1979f7b1248931fa8b1d76c14ce946"
+      }
+    ]
+  },
+  "sourceBundle": {
+    "canonicalization": "UTF-8 path sorted: path + NUL + exact file bytes + LF",
+    "sha256": "e57323c62abc604141487fb2421c55135a51bbd1a257af2b99e96beb5481f8db",
+    "paths": [
+      "crates/brep-core/src/analysis.rs",
+      "crates/brep-core/src/analytic.rs",
+      "crates/brep-core/src/analytic/loft.rs",
+      "crates/brep-core/src/analytic_features.rs",
+      "crates/brep-core/src/close_topology.rs",
+      "crates/brep-core/src/iges_interchange_v2.rs",
+      "crates/brep-core/src/imprint_pipeline.rs",
+      "crates/brep-core/src/intersections.rs",
+      "crates/brep-core/src/lib.rs",
+      "crates/brep-core/src/nurbs_ss_g6.rs",
+      "crates/brep-core/src/operations.rs",
+      "crates/brep-core/src/solid_audit.rs",
+      "crates/brep-core/src/step_interchange_v3.rs",
+      "crates/brep-core/src/transactions.rs",
+      "crates/brep-core/src/trim_sew.rs",
+      "crates/brep-core/src/uv_arrangement.rs",
+      "crates/brep-topology/src/lib.rs",
+      "crates/geometry-bridge/src/brep.rs",
+      "crates/geometry-bridge/src/lib.rs",
+      "crates/geometry-bridge/src/tests.rs",
+      "crates/modelgraph-runtime/src/nurbs.rs",
+      "crates/modelgraph-text/src/lower.rs",
+      "crates/nurbs-core/src/gordon.rs",
+      "crates/nurbs-core/src/gordon_tangent_audit.rs",
+      "crates/nurbs-core/src/gordon_tangent_fields.rs",
+      "crates/nurbs-core/src/guided_loft.rs",
+      "crates/nurbs-core/src/loft_alignment.rs",
+      "crates/nurbs-core/src/loft_continuity.rs",
+      "crates/nurbs-core/src/loft_reparameterization.rs",
+      "crates/nurbs-core/src/natural_loft.rs",
+      "crates/nurbs-core/src/reparameterization_residual.rs",
+      "crates/nurbs-core/src/reparameterization_retention.rs",
+      "crates/nurbs-core/src/transport.rs",
+      "docs/languages/modelgraph-nurbs-1.schema.json",
+      "src/services/cadIges.ts",
+      "src/services/cadNurbsStep.ts",
+      "src/services/geometry/brep.ts",
+      "src/services/geometry/brepCapability.ts",
+      "src/services/modelGraphNurbsKernel.ts",
+      "src/services/nurbsConstructors.ts",
+      "src/services/nurbsFoundation.ts",
+      "tests/brepInterchangeV11.test.ts",
+      "tests/brepQualificationV10.test.ts",
+      "tests/brepQualificationV11.test.ts",
+      "tests/brepQualificationV12.test.ts",
+      "tests/brepQualificationV8.test.ts",
+      "tests/brepQualificationV9.test.ts"
+    ]
+  },
+  "dependencyFingerprints": {
+    "noticesSha256": "789499bf4bcbaacad6ead9d5e8f51e5ecbd3ec37bb9b9ef2d45bb7c115bd5c84",
+    "npmLockfileSha256": "8e84112c568fc204b2db0906d7e20860a3e28af3a3df92c18af994f485b87271",
+    "rustLockfileSha256": "ba03ef15f1a195c613fa74f9393843d49826d0b195305b540cd63c77db847c2c"
+  },
+  "claimBoundary": [
+    "This enumerates exact observed build artifacts; compiler hosts are not assumed to produce identical bytes. It is not an external clean qualification run.",
+    "It covers only the finite explicit topology, correspondence, direct-cell interchange and typed-refusal matrix.",
+    "It does not approve G0, G1, production cutover, silent healing, tolerance growth, arbitrary branching or singular topology."
+  ]
+}

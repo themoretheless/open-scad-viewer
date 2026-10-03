@@ -1,6 +1,7 @@
 import { evaluateExactSolids } from '../geometryBuildEngine'
 import { stringifyMeshJson } from '../meshJson'
 import { buildExactSolidBodies } from './brepBuild'
+import { meshDataToPolygonBody } from '../solidBridge'
 import { EXACT_SOLID_MAX_DOCUMENT_CHARACTERS, isExactSolidRequest, type ExactSolidResponse } from './exactSolidProtocol'
 
 /** Runs entirely in the geometry worker; only detached JSON crosses the boundary. */
@@ -10,7 +11,13 @@ export async function runExactSolidRequest(request: unknown): Promise<ExactSolid
     const evaluated = await evaluateExactSolids(request.source)
     const plan = evaluated.exactSolids
     if (plan && plan.roots.length > 200) throw new Error('An exact-solid group is limited to 200 bodies.')
-    const bodies = plan ? buildExactSolidBodies(plan.nodes, plan.roots) : []
+    const bodies = plan ? buildExactSolidBodies(plan.nodes, plan.roots) : evaluated.meshes.map((mesh,index)=>{
+      if(mesh.nativeGeometry?.kind!=='brep') throw new Error('Source does not describe an authored NURBS solid.')
+      const body=meshDataToPolygonBody(mesh,mesh.nativeGeometry.nodeId,crypto.randomUUID())
+      if(!body?.brep?.bodies.length) throw new Error('Authored geometry has no solid body.')
+      return body
+    })
+    if(bodies.length>200) throw new Error('An exact-solid group is limited to 200 bodies.')
     const document = stringifyMeshJson({ version: 1, sketches: [], bodies })
     if (document.length > EXACT_SOLID_MAX_DOCUMENT_CHARACTERS) throw new Error('Document exceeds 64 MB.')
     return { kind: 'exact-solid', version: 1, ok: true, document }

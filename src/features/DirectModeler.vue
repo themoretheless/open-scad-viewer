@@ -4181,4 +4181,3 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
 .direct-workspace .splitter:hover, .direct-workspace .splitter:focus-visible { background: var(--accent); }
 .direct-workspace input, .direct-workspace select { border-color: var(--hairline); }
 </style>
-

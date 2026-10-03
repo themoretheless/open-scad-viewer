@@ -80,6 +80,7 @@ pub mod chord_fill_selection;
 pub mod natural_loft;
 pub mod guided_loft;
 pub mod loft_alignment;
+pub mod loft_reparameterization;
 pub mod loft_continuity;
 pub mod gordon;
 pub mod natural_spline;

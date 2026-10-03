@@ -38,6 +38,48 @@ struct Cap {
     surface: Surface,
     loops: Vec<Vec<Curve>>,
 }
+/// Authored cap carrier and its outer/hole trims in carrier UV coordinates.
+/// Trim spans correspond in order to the endpoint section's Bezier spans.
+#[derive(Clone)]
+pub struct LoftCap {
+    pub surface: Surface,
+    pub trims: Vec<Vec<Curve>>,
+}
+fn supplied_cap(definition: &LoftCap, sections: &[Vec<Curve>]) -> Result<Cap> {
+    definition.surface.validate()?;
+    let s = &definition.surface;
+    if s.knots_u[s.degree_u] != 0. || s.knots_u[s.control_points.len()] != 1.
+        || s.knots_v[s.degree_v] != 0. || s.knots_v[s.control_points[0].len()] != 1. {
+        return Err(err("Authored loft caps need normalized U/V domains"));
+    }
+    let loops = definition.trims.iter().map(|ring| {
+        let mut spans = Vec::new();
+        for curve in ring {
+            curve.validate()?;
+            if curve.periodic || curve.control_points[0].len() != 2 {
+                return Err(err("Cap trims must be nonperiodic 2D curves"));
+            }
+            for span in curve.decompose()? {
+                let mut c = span.definition().clone();
+                c.knots = std::iter::repeat_n(0.,c.degree+1)
+                    .chain(std::iter::repeat_n(1.,c.degree+1)).collect();
+                spans.push(c);
+            }
+        }
+        Ok(spans)
+    }).collect::<Result<Vec<_>>>()?;
+    if loops.len() != sections.len() || loops.iter().zip(sections).any(|(a,b)| a.len()!=b.len()) {
+        return Err(err("Cap trims must correspond to endpoint section spans"));
+    }
+    let audit = nurbs_core::trim_region_audit::inspect(&loops,1e-10,100000,100000,1000000)?;
+    if audit.valid != Some(true) || audit.winding.first() != Some(&Some(1)) {
+        return Err(err("Authored cap trim region must have a resolved positive outer winding"));
+    }
+    let sample = s.evaluate(0.5,0.5)?;
+    let (u,v) = sample.first_derivatives().ok_or_else(|| err("Cap reference derivatives are unavailable"))?;
+    let normal = unit(cross(u,v))?;
+    Ok(Cap { normal, surface: s.clone(), loops })
+}
 fn cap(loops: &[Vec<Curve>]) -> Result<Cap> {
     let origin = point(&loops[0][0], true);
     let u = unit(minus(point(&loops[0][0], false), origin))?;
@@ -128,22 +170,22 @@ fn cap(loops: &[Vec<Curve>]) -> Result<Cap> {
 
 /// Sections contain one outer loop followed by clockwise holes in a common
 /// authored correspondence. Curves are decomposed exactly into Bezier spans;
-/// corresponding spans retain degree and weights. Planar end caps must pass
+/// corresponding spans retain degree; weights may differ by section. Planar end caps must pass
 /// interval trim-region audit. Side regularity/global self-intersections remain
 /// unproven and are reported by the model's separate solid audit.
 pub fn rational_section_loft(sections: &[Vec<Vec<Curve>>]) -> Result<Model> {
-    section_loft(sections, None, None, false)
+    section_loft(sections, None, None, false, None)
 }
 
 /// Cubic section interpolation with audited planar caps and shared side edges.
 /// Requires authored span correspondence; global embedding is audited separately.
 pub fn natural_section_loft(sections: &[Vec<Vec<Curve>>], parameters: &[f64]) -> Result<Model> {
-    if !(2..=11).contains(&sections.len()) || parameters.len() != sections.len() {
+    if !(2..=86).contains(&sections.len()) || parameters.len() != sections.len() {
         return Err(err(
-            "Natural capped loft needs 2..11 sections and matching stations",
+            "Natural capped loft needs 2..86 sections and matching stations",
         ));
     }
-    section_loft(sections, Some(parameters), None, false)
+    section_loft(sections, Some(parameters), None, false, None)
 }
 
 /// Caps complete authored side patches. Every patch corresponds to one Bezier
@@ -153,7 +195,35 @@ pub fn capped_loft_surfaces(
     end: &[Vec<Curve>],
     sides: &[Vec<Surface>],
 ) -> Result<Model> {
-    section_loft(&[start.to_vec(), end.to_vec()], None, Some(sides), false)
+    section_loft(&[start.to_vec(), end.to_vec()], None, Some(sides), false, None)
+}
+
+/// Caps supplied loft patches with authored rational carriers, including
+/// nonplanar caps. The whole edge/lift agreement must be exact, independently
+/// of the model's sampled validation. Global embedding is a separate audit.
+pub fn capped_loft_with_caps(start: &[Vec<Curve>], end: &[Vec<Curve>],
+    sides: &[Vec<Surface>], caps: [&LoftCap;2]) -> Result<Model> {
+    let model = section_loft(&[start.to_vec(),end.to_vec()],None,Some(sides),false,Some(caps))?;
+    let agreement = crate::boundary_agreement::verify_exact(&model,1_000_000)?;
+    if !agreement.all_equal || !agreement.all_joins_exact {
+        return Err(err("Authored cap whole-boundary agreement is not proven exact"));
+    }
+    Ok(model)
+}
+
+/// Returns a model only after whole-boundary embedding is proven. Incomplete
+/// face injectivity, unvisited pairs and unresolved contacts all refuse.
+pub fn capped_loft_with_caps_checked(start: &[Vec<Curve>], end: &[Vec<Curve>],
+    sides: &[Vec<Surface>], caps: [&LoftCap;2], tolerance_uv: f64,
+    limits: crate::boundary_embedding::Limits) -> Result<Model> {
+    let model = capped_loft_with_caps(start,end,sides,caps)?;
+    let report = crate::boundary_embedding::inspect(&model,tolerance_uv,limits)?;
+    if !report.proven {
+        return Err(err(format!("Loft global embedding is unproven: trims={}, injective={}, allPairsClassified={}",
+            report.trim.all_valid, report.intersections.faces.all_faces_injective,
+            report.intersections.pairs.all_pairs_classified)));
+    }
+    Ok(model)
 }
 
 /// Uncapped periodic topology: final section must be an exact repeat of the
@@ -165,7 +235,7 @@ pub fn periodic_section_loft(sections: &[Vec<Vec<Curve>>]) -> Result<Model> {
             "Periodic loft needs at least four sections including repeated seam",
         ));
     }
-    section_loft(sections, None, None, true)
+    section_loft(sections, None, None, true, None)
 }
 
 fn section_loft(
@@ -173,6 +243,7 @@ fn section_loft(
     parameters: Option<&[f64]>,
     sides: Option<&[Vec<Surface>]>,
     periodic: bool,
+    caps: Option<[&LoftCap;2]>,
 ) -> Result<Model> {
     if !(2..=1025).contains(&sections.len()) {
         return Err(err("Need 2..1025 rational sections"));
@@ -234,10 +305,10 @@ fn section_loft(
             if a.len() != b.len()
                 || a.iter()
                     .zip(b)
-                    .any(|(a, b)| a.degree != b.degree || a.weights != b.weights)
+                    .any(|(a, b)| a.degree != b.degree)
             {
                 return Err(err(
-                    "Rational section span correspondence/weights must match",
+                    "Rational section span correspondence/degrees must match",
                 ));
             }
         }
@@ -269,11 +340,13 @@ fn section_loft(
             }
         }
     }
-    let lower = cap(&prepared[0])?;
+    let lower = if let Some(caps) = caps { supplied_cap(caps[0],&prepared[0])? }
+        else { cap(&prepared[0])? };
     let upper = if periodic {
         None
     } else {
-        Some(cap(prepared.last().unwrap())?)
+        Some(if let Some(caps) = caps { supplied_cap(caps[1],prepared.last().unwrap())? }
+            else { cap(prepared.last().unwrap())? })
     };
     let travel = minus(
         point(&prepared[1][0][0], true),

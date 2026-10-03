@@ -80,7 +80,7 @@ fn invalid_holes_joins_correspondence_and_nonplanar_caps_refuse() {
     nonplanar[0][0].control_points[1][2] = 0.1;
     assert!(rational_section_loft(&[nonplanar, end.clone()]).is_err());
     let mut weight = end.clone();
-    weight[0][0].weights[1] *= 2.;
+    weight[0][0].weights[1] = -1.;
     assert!(rational_section_loft(&[start.clone(), weight]).is_err());
     assert!(rational_section_loft(&[start]).is_err());
 }
@@ -256,4 +256,33 @@ fn natural_capped_loft_step_roundtrip_and_independent_fixture() {
         std::fs::create_dir_all(&dir).unwrap();
         std::fs::write(format!("{dir}/natural-hollow-solid.step"), text).unwrap();
     }
+}
+
+#[test]
+fn differing_section_weights_retain_rational_sections_and_closed_topology() {
+    let mut sections = [circles(0., 1.), circles(5., 1.2), circles(10., 1.5)];
+    for (j, section) in sections.iter_mut().enumerate() {
+        for ring in section {
+            // Change the conic shape, not just its homogeneous scale.
+            ring[0].weights[1] *= 1. + j as f64 / 8.;
+        }
+    }
+    let ruled = rational_section_loft(&sections).unwrap();
+    assert_eq!(ruled.validate().unwrap().boundary_edge_count, 0);
+    let natural = brep_core::natural_section_loft(&sections, &[0., 0.5, 1.]).unwrap();
+    assert_eq!(natural.validate().unwrap().boundary_edge_count, 0);
+    for (j, section) in sections.iter().enumerate() {
+        let spans = section.iter().flat_map(|ring| ring[0].decompose().unwrap())
+            .map(|s| s.definition().clone()).collect::<Vec<_>>();
+        for (i, span) in spans.iter().enumerate() {
+            for u in [0., 0.13, 0.5, 0.87, 1.] {
+                let [a,b] = span.domain();
+                let expected = span.evaluate(a + u * (b-a)).unwrap().point;
+                let actual = natural.faces[i].surface.evaluate(u, j as f64 / 2.).unwrap().point;
+                for k in 0..3 { assert!((actual[k]-expected[k]).abs() < 1e-11); }
+            }
+        }
+    }
+    let (step, _, _) = brep_core::export_step_v5(&natural).unwrap();
+    assert!(step.contains("RATIONAL_B_SPLINE_SURFACE"));
 }

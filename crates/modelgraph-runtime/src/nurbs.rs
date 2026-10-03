@@ -50,6 +50,7 @@ fn normalize(v: &mut J, schema: &J, path: &str, depth: usize) -> Result<()> {
         // selected without cloning a candidate subtree for speculative validation.
         let matches_shape = |choice: &&J| match s(choice, "type") {
             "number" | "integer" => v.is_number(),
+            "null" => v.is_null(),
             "object" => v.is_object(),
             "array" => v.as_array().is_some_and(|items| {
                 choice["prefixItems"]
@@ -67,6 +68,7 @@ fn normalize(v: &mut J, schema: &J, path: &str, depth: usize) -> Result<()> {
         for choice in choices {
             let matches = match s(choice, "type") {
                 "number" | "integer" => v.is_number(),
+            "null" => v.is_null(),
                 "object" => v.is_object(),
                 "array" => v.is_array(),
                 _ => true,
@@ -168,6 +170,7 @@ fn normalize(v: &mut J, schema: &J, path: &str, depth: usize) -> Result<()> {
                 return Err(err(path, "Invalid identifier."));
             }
         }
+        "null" if !v.is_null() => return Err(err(path, "Expected null.")),
         "boolean" if !v.is_boolean() => return Err(err(path, "Expected boolean.")),
         _ => {}
     }
@@ -272,9 +275,27 @@ pub fn compile(mut document: J) -> Result<J> {
         } else {
             node["input"].as_str().into_iter().collect()
         };
+        if let Some(maps)=node.get("section_mappings") {
+            if maps.as_array().map(Vec::len)!=node["inputs"].as_array().map(Vec::len) {
+                return Err(err(&path,"Loft needs one mapping entry per section"));
+            }
+            if s(node,"op")=="guided_loft_surface" && s(node,"construction")!="cartesian" {
+                return Err(err(&path,"Guided section maps require Cartesian construction"));
+            }
+        }
         if ["guided_loft_surface","auto_guided_loft_surface"].contains(&s(node,"op")) {
             if node.get("start_tangents").is_some()!=node.get("end_tangents").is_some() {
                 return Err(err(&path,"Guided loft requires both endpoint tangent fields"));
+            }
+            let cartesian = s(node,"construction") == "cartesian";
+            if !cartesian && ["error_budget","max_cells","max_map_evaluations"].iter().any(|k| node.get(*k).is_some()) {
+                return Err(err(&path,"Numerical loft audit options require Cartesian construction"));
+            }
+            if s(node,"op") == "auto_guided_loft_surface" && !cartesian && node.get("start_tangents").is_some() {
+                return Err(err(&path,"Automatic authored tangents require Cartesian construction"));
+            }
+            if s(node,"op") == "auto_guided_loft_surface" && node.get("error_budget").is_some() {
+                return Err(err(&path,"Automatic Cartesian loft uses budget, not error_budget"));
             }
             if let Some(xs)=node["guides"].as_array(){refs.extend(xs.iter().filter_map(J::as_str));}
         }
@@ -283,8 +304,16 @@ pub fn compile(mut document: J) -> Result<J> {
                 if let Some(id)=value.as_str(){refs.push(id);}
                 else if let Some(items)=value.as_array(){for item in items{collect(item,refs);}}
             }
-            for field in ["sections","guides","start_reference","end_reference","start","end","sides"] {
+            for field in ["sections","guides","start_reference","end_reference","start","end","sides","cap_surfaces","cap_trims"] {
                 if let Some(value)=node.get(field){collect(value,&mut refs);}
+            }
+        }
+        if s(node,"op")=="brep_capped_loft" {
+            if node.get("cap_surfaces").is_some()!=node.get("cap_trims").is_some() {
+                return Err(err(&path,"Authored loft caps require both surfaces and trims"));
+            }
+            if node.get("cap_surfaces").is_none() && ["embedding_limits","tolerance_uv"].iter().any(|k|node.get(*k).is_some()) {
+                return Err(err(&path,"Cap audit options require authored cap surfaces and trims"));
             }
         }
         if s(node, "op") == "tessellate" && node.get("trim_curves").is_some() {
@@ -631,8 +660,28 @@ pub fn compile_text(nodes: Vec<J>, parameters: &[J], mut root: String) -> Result
         }
         let loft_refs=["loft_match_surface","brep_natural_loft","brep_capped_loft"].contains(&s(&node,"op"));
         for (key, value) in node.as_object_mut().unwrap() {
-            if loft_refs && ["sections","guides","start_reference","end_reference","start","end","sides","start_boundary","end_boundary","start_reverse","end_reverse"].contains(&key.as_str()){continue;}
-            if ["id", "op", "input", "inputs", "guides", "operation", "loops"].contains(&key.as_str()) {
+            if loft_refs && ["sections","guides","start_reference","end_reference","start","end","sides","start_boundary","end_boundary","start_reverse","end_reverse","cap_surfaces","cap_trims"].contains(&key.as_str()){continue;}
+            if ["id", "op", "input", "inputs", "guides", "operation", "loops", "construction"].contains(&key.as_str()) {
+                continue;
+            }
+            if key=="section_mappings" {
+                fn maps(value:&J,params:&BTreeMap<String,Numeric>,path:&str)->Result<J> {
+                    if value.is_null() {return Ok(J::Null);}
+                    if let Some(items)=value.as_array() {return Ok(J::Array(items.iter().enumerate().map(|(i,v)|maps(v,params,&format!("{path}/{i}"))).collect::<Result<_>>()?));}
+                    if let Some(object)=value.as_object() {
+                        if object.contains_key("pieces") || object.contains_key("composition") || object.contains_key("controlValues") {
+                            return Ok(J::Object(object.iter().map(|(k,v)|Ok((k.clone(),maps(v,params,&format!("{path}/{k}"))?))).collect::<Result<_>>()?));
+                        }
+                    }
+                    field(value,SCALAR,params,path)
+                }
+                *value=maps(value,&params,key)?;
+                continue;
+            }
+            if key=="embedding_limits" {
+                for (name,limit) in value.as_object_mut().ok_or_else(||text_error(key,"Expected embedding limits"))? {
+                    *limit=field(limit,SCALAR,&params,&format!("{key}/{name}"))?;
+                }
                 continue;
             }
             if key == "matrix" {
@@ -688,7 +737,7 @@ pub fn compile_text(nodes: Vec<J>, parameters: &[J], mut root: String) -> Result
                     "distance",
                     "min",
                     "max",
-                    "start", "end", "points", "start_tangents", "end_tangents", "start_tangent", "end_tangent", "budget", "control_points",
+                    "start", "end", "points", "start_tangents", "end_tangents", "start_tangent", "end_tangent", "budget", "error_budget", "control_points",
                     "vector",
                     "origin",
                 ]
@@ -946,4 +995,61 @@ mod tests {
             "matrix/0/0"
         );
     }
+}
+
+#[cfg(test)]
+mod cartesian_loft_tests {
+    use super::*;
+    fn document(operation: &str) -> J {
+        let mut loft=json!({"id":"loft","op":operation,"inputs":["a","b"],
+            "parameters":[2.,7.],"guides":["g"],"construction":"cartesian",
+            "max_cells":50000,"max_map_evaluations":200000,
+            "start_tangents":[[0.,0.,0.4],[0.,0.,0.4]],
+            "end_tangents":[[0.,0.,0.1],[0.,0.,0.1]]});
+        if operation=="guided_loft_surface" {loft["guide_parameters"]=json!([0.]);loft["error_budget"]=json!(1e-6);}
+        else {loft["budget"]=json!(1e-6);}
+        json!({"language":"modelgraph/nurbs-1","units":"mm","nodes":[
+            {"id":"a","op":"line_curve","start":[0.,0.,0.],"end":[1.,0.,0.]},
+            {"id":"b","op":"line_curve","start":[0.,0.,1.],"end":[1.,0.,1.]},
+            {"id":"g","op":"line_curve","start":[0.,0.,0.],"end":[0.,0.,1.]},loft],"root":"loft"})
+    }
+    #[test]
+    fn cartesian_loft_graph_retains_audit_options_and_refuses_ignored_fields() {
+        for operation in ["guided_loft_surface","auto_guided_loft_surface"] {
+            let input=document(operation);
+            assert!(compile(input.clone()).is_ok());
+            let nodes=input["nodes"].as_array().unwrap().clone();
+            assert!(compile_text(nodes,&[],"loft".into()).is_ok());
+            let mut wrong=input.clone();
+            wrong["nodes"][3]["construction"]=json!("homogeneous");
+            assert!(compile(wrong).is_err());
+            let mut depleted=input.clone();
+            depleted["nodes"][3]["max_cells"]=json!(0);
+            assert!(compile(depleted).is_err());
+            let mut unpaired=input;
+            unpaired["nodes"][3].as_object_mut().unwrap().remove("end_tangents");
+            assert!(compile(unpaired).is_err());
+        }
+    }
+    #[test]
+    fn section_maps_resolve_dimensionless_values_and_validate_nullable_shapes() {
+        let mut input=document("guided_loft_surface");
+        let leaf=json!({"pieces":[{"domain":[0.,1.],"range":[0.,1.],"controlValues":[0.,{"param":"q"},1.],"weights":[1.,1.,1.]}]});
+        input["parameters"]=json!([{"id":"q","value":0.2}]);
+        input["nodes"][3]["section_mappings"]=json!([J::Null,{"composition":[leaf.clone(),leaf.clone()]}]);
+        let compiled=compile(input.clone()).unwrap();
+        assert_eq!(compiled["resolved_document"]["nodes"][3]["section_mappings"][1]["composition"][0]["pieces"][0]["controlValues"][1],json!(0.2));
+        let text=compile_text(input["nodes"].as_array().unwrap().clone(),input["parameters"].as_array().unwrap(),"loft".into()).unwrap();
+        assert_eq!(text["document"]["nodes"][3]["section_mappings"][0],J::Null);
+        let mut wrong=input.clone();
+        wrong["nodes"][3]["section_mappings"]=json!([J::Null,{"unknown":1}]);
+        assert!(compile(wrong).is_err());
+        let mut wrong=input.clone();
+        wrong["nodes"][3]["section_mappings"]=json!([leaf.clone()]);
+        assert!(compile(wrong).is_err());
+        let mut wrong=input;
+        wrong["nodes"][3]["section_mappings"][1]["composition"][0]["pieces"][0]["controlValues"][1]=json!({"op":"quantity","value":0.2,"unit":"mm"});
+        assert!(compile_text(wrong["nodes"].as_array().unwrap().clone(),&[],"loft".into()).is_err());
+    }
+
 }

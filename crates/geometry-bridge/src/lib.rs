@@ -987,6 +987,27 @@ pub fn dispatch(mut v: Value) -> Result<Value> {
             )?)
         }
         "brep_nurbs_natural_section_loft" => encode(brep_core::natural_section_loft(&field::<Vec<Vec<Vec<Curve>>>>(&v,"sections")?, &field::<Vec<f64>>(&v,"parameters")?)?),
+        "brep_nurbs_capped_loft_with_caps" => {
+            let definitions: Vec<Value> = field(&v,"caps")?;
+            if definitions.len()!=2 { return Err(input("Loft requires two authored caps")); }
+            let caps = definitions.iter().map(|c| Ok(brep_core::LoftCap {
+                surface:field(c,"surface")?,trims:field(c,"trims")?,
+            })).collect::<Result<Vec<_>>>()?;
+            let l:Value=field(&v,"embeddingLimits")?;
+            let limits=brep_core::boundary_embedding::Limits {
+                exact_work:field(&l,"exactWork")?,trim_pairs:field(&l,"trimPairs")?,
+                trim_cells:field(&l,"trimCells")?,trim_domain_cells:field(&l,"trimDomainCells")?,
+                spans:field(&l,"spans")?,contacts:brep_core::face_contacts::Limits {
+                    pairs:field(&l,"facePairs")?,cells:field(&l,"faceCells")?,
+                    domain_cells:field(&l,"faceDomainCells")?,cells_per_pair:field(&l,"faceCellsPerPair")?,
+                    domain_cells_per_pair:field(&l,"faceDomainCellsPerPair")?,
+                },
+            };
+            encode(brep_core::capped_loft_with_caps_checked(
+                &field::<Vec<Vec<Curve>>>(&v,"start")?, &field::<Vec<Vec<Curve>>>(&v,"end")?,
+                &field::<Vec<Vec<Surface>>>(&v,"sides")?, [&caps[0],&caps[1]],
+                field(&v,"toleranceUv")?, limits)?)
+        }
         "brep_nurbs_capped_loft_surfaces" => encode(brep_core::capped_loft_surfaces(&field::<Vec<Vec<Curve>>>(&v,"start")?, &field::<Vec<Vec<Curve>>>(&v,"end")?, &field::<Vec<Vec<Surface>>>(&v,"sides")?)?),
         "brep_nurbs_periodic_section_loft" => encode(brep_core::periodic_section_loft(&field::<Vec<Vec<Vec<Curve>>>>(&v,"sections")?)?),
         "brep_nurbs_rational_section_loft" => encode(brep_core::rational_section_loft(&field::<Vec<Vec<Vec<Curve>>>>(&v,"sections")?)?),

@@ -1,0 +1,66 @@
+{
+  "id": "loft-authored-tangent-runtime-v1",
+  "recordedAt": "2026-10-02",
+  "qualificationClaim": "finite-authored-tangent-runtime-cases-only",
+  "artifacts": [
+    {
+      "path": "public/wasm/geometry-kernel.wasm",
+      "sha256": "f54ffad35ee5090745e14765fd4b3aa84b8a44bf54bd565fcf859a7bef35c693",
+      "byteLength": 9809585
+    },
+    {
+      "path": "public/wasm/language-kernel.wasm",
+      "sha256": "ef52734cd8488955d2dc3dac1febf9a6f782c5a2ef5074ffab4efe42e960d3e0",
+      "byteLength": 1416997
+    }
+  ],
+  "sourceHashes": {
+    "crates/nurbs-core/src/gordon.rs": "2c6c1af8653b487d31e684a4405498dd8c9b9538c99c18f7a81139bae4d15c3b",
+    "crates/nurbs-core/src/gordon_tangent_audit.rs": "1e4b9b8740134b0baf5bf0c137e1112fcc8101512bc6cee7fbf28d3dafafd8c7",
+    "crates/nurbs-core/src/guided_loft.rs": "ef3b20dca72b2ad0d3cbc81dec78b8af5b405329a11c8db756004416b64297d1",
+    "crates/nurbs-core/src/loft_alignment.rs": "d1371b333096599bf36a9ee147cdcba40ec5309d6c615a25ce51af0818358b45",
+    "crates/nurbs-core/src/transport.rs": "a40ac0b4f1ab52ce0a666a2fb027ab8185f7f62ac235ce3524d535182ed730b9",
+    "crates/modelgraph-text/src/lower.rs": "8876506b44318ca82628b84cff7f59695452c22599090822261e144b20e9ad4a",
+    "crates/modelgraph-runtime/src/nurbs.rs": "cd49d84763867e95218ff3ac424ed8da1c2cf179e41814c95343a8864a8ead50",
+    "src/services/nurbsFoundation.ts": "904f0d701553430bfe6a15de1297f671bbe9a05e059c571b53d4fd41afe39d3e",
+    "src/services/modelGraphNurbs.ts": "b33c8f2ae154ca85daea6d1df48826a7b79feee3023e740c1fbb6ec820f8f96c",
+    "src/services/modelGraphNurbsKernel.ts": "d15481c19c746d84eb048e661019e708ed7e07093e1e06fc4a2155700c89d379",
+    "docs/languages/modelgraph-nurbs-1.schema.json": "1b640c9cb8ef5f79e6fedf886bd470055b95f65249132adaccaf6fbb18a1e4c4"
+  },
+  "verification": [
+    {
+      "command": "cargo test --manifest-path crates/Cargo.toml -p nurbs-core",
+      "unitPassed": 314,
+      "capacityPassed": 2,
+      "docPassed": 1
+    },
+    {
+      "command": "cargo test --manifest-path crates/Cargo.toml -p geometry-bridge --test loft_generalization",
+      "passed": 5
+    },
+    {
+      "command": "cargo test --manifest-path crates/Cargo.toml -p modelgraph-runtime",
+      "unitPassed": 55,
+      "emitterParityPassed": 1
+    },
+    {
+      "command": "cargo test --manifest-path crates/Cargo.toml -p modelgraph-text --test loft",
+      "passed": 3
+    },
+    {
+      "command": "node node_modules/vue-tsc/bin/vue-tsc.js --noEmit",
+      "passed": true
+    },
+    {
+      "command": "node node_modules/vitest/vitest.mjs run tests/nurbsGuidedLoft.test.ts tests/nurbsAdvancedLoft.test.ts tests/modelGraphLoft.test.ts",
+      "passed": 19
+    }
+  ],
+  "claimBoundary": [
+    "Original station dP/dt controls use aligned endpoint rational U bases.",
+    "Construction uses normalized candidates; original-tensor outward audit includes original station-extent rounding.",
+    "Cases cover varying rational endpoint weights, nonunit stations, reversed automatic guide, incompatible derivatives, incomplete work and Rush units.",
+    "This is local finite-case evidence, not new CI, browser, STEP or global mapped-loft qualification.",
+    "Historical qualification and artifact allowlists are not replaced by this evidence."
+  ]
+}

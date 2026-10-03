@@ -481,6 +481,8 @@ function cancelSolidBuild() { solidBuildAbort?.abort() }
 const solidAppendBodies = ref<{ bodies: DirectBody[]; token: number; group?: { name: string; source: string; replaces: string | null } } | null>(null)
 /** Set while the left panel edits one scene group's source instead of the document. */
 const groupEdit = ref<{ name: string; source: string; replaces: string | null } | null>(null)
+// A completed worker must not publish a superseded source snapshot.
+watch([code, fileName, () => groupEdit.value?.source], cancelSolidBuild, { flush: 'sync' })
 const groupHighlight = computed(() => (groupEdit.value ? highlightCode(groupEdit.value.source, 'group.scad') : ''))
 
 function openGroupEditor(request: { name: string; source: string; replaces: string | null }) {
@@ -3375,7 +3377,7 @@ function sanitizeFileName(name: string) { return (name.replace(/[^\w.() -]+/g, '
   --focus: #8a4310;
 }
 
-@media (max-width: 800px) { :root { --topbar-h: 64px; } }
+@media (max-width: 800px) { :root { --topbar-h: 76px; } }
 *, *::before, *::after { box-sizing: border-box; }
 html, body, #app { width: 100%; height: 100%; margin: 0; }
 body {
@@ -3424,7 +3426,7 @@ button, select { color: inherit; }
 
 /* Top bar: three quiet zones — file, mode, tools. Nothing else competes with the viewport. */
 .topbar {
-  z-index: 35; height: var(--topbar-h); display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 12px;
+  position: relative; z-index: 35; height: var(--topbar-h); display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 12px;
   padding: 0 8px 0 12px; background: var(--surface); border-bottom: 1px solid var(--hairline); flex-shrink: 0;
 }
 .topbar-left, .topbar-right { display: flex; align-items: center; gap: 4px; min-width: 0; }
@@ -3770,8 +3772,11 @@ button, select { color: inherit; }
 }
 
 @media (max-width: 800px) {
-  .topbar { grid-template-columns: 1fr auto; row-gap: 0; height: auto; min-height: 40px; padding-block: 4px; }
-  .mode-switch { grid-column: 1 / -1; justify-self: stretch; }
+  .topbar { grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: 32px 32px; row-gap: 0; height: var(--topbar-h); padding-block: 6px; }
+  .topbar-left { grid-column: 1; grid-row: 1; }
+  .topbar-right { grid-column: 2; grid-row: 1; gap: 4px; }
+  .app :deep(.direct-workspace:not(.embedded)), .app :deep(.mesh-workspace) { inset: var(--topbar-h) 0 var(--statusbar-h); }
+  .mode-switch { grid-column: 1 / -1; grid-row: 2; justify-self: stretch; }
   .mode-switch button { flex: 1; }
   .main { flex-direction: column; overflow: auto; }
   .editor-panel { width: 100% !important; min-width: 0; max-width: none; height: 46dvh; flex: 0 0 46dvh; }

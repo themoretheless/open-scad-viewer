@@ -752,6 +752,8 @@ impl Compiler {
                 let depth=match (name,key.as_str()) {
                     ("brep_natural_loft","sections")=>Some(3),
                     ("brep_capped_loft","start"|"end"|"sides")=>Some(2),
+                    ("brep_capped_loft","cap_surfaces")=>Some(1),
+                    ("brep_capped_loft","cap_trims")=>Some(3),
                     ("loft_match_surface","sections"|"guides")=>Some(1),
                     ("loft_match_surface","start_reference"|"end_reference")=>Some(0),
                     _=>None,
@@ -760,7 +762,51 @@ impl Compiler {
             }
             return self.add(node);
         }
-        if name=="guided_loft_surface" || name=="auto_guided_loft_surface" || name=="control_tangent_loft_surface" {
+        if name=="loft_embedding_limits" {
+            if input.is_some() {return Err(crate::error("Embedding limits cannot take a geometry receiver"));}
+            let mut limits=json!({"exactWork":1000000,"trimPairs":10000,"trimCells":100000,
+                "trimDomainCells":1000000,"spans":10000,"facePairs":10000,"faceCells":1000000,
+                "faceDomainCells":1000000,"faceCellsPerPair":10000,"faceDomainCellsPerPair":10000});
+            let mut seen=std::collections::BTreeSet::new();
+            for (key,value) in args {
+                let key=key.ok_or_else(||crate::error("Embedding limits must be named"))?;
+                if limits.get(&key).is_none() || !seen.insert(key.clone()) {return Err(crate::error("Invalid or repeated embedding limit"));}
+                limits[&key]=raw(value)?;
+            }
+            return Ok(V::Json(limits));
+        }
+        if name=="loft_parameter_map" {
+            if input.is_some() { return Err(crate::error("Parameter maps cannot take a geometry receiver")); }
+            let mut fields=json!({});
+            for (key,value) in args {
+                let key=key.ok_or_else(||crate::error("Parameter map options must be named"))?;
+                let key=if key=="control_values" {"controlValues".to_string()} else {key};
+                if !["domain","range","controlValues","weights","composition","pieces"].contains(&key.as_str()) || fields.get(&key).is_some() {
+                    return Err(crate::error("Invalid or repeated parameter map option"));
+                }
+                fields[&key]=raw(value)?;
+            }
+            if fields.get("composition").is_some() || fields.get("pieces").is_some() {
+                if fields.as_object().unwrap().len()!=1 { return Err(crate::error("Map composition/pieces cannot be mixed with scalar controls")); }
+                if let Some(items)=fields.get("pieces") {
+                    let mut pieces=Vec::new();
+                    for item in items.as_array().ok_or_else(||crate::error("Map pieces must be an array"))? {
+                        let values=item["pieces"].as_array().ok_or_else(||crate::error("Piece entries must be leaf parameter maps"))?;
+                        pieces.extend(values.iter().cloned());
+                    }
+                    fields["pieces"]=json!(pieces);
+                }
+                return Ok(V::Json(fields));
+            }
+            if fields.as_object().unwrap().is_empty() {
+                fields=json!({"domain":[0.,1.],"range":[0.,1.],"controlValues":[0.,1.],"weights":[1.,1.]});
+            }
+            for key in ["domain","range","controlValues","weights"] {
+                if fields.get(key).is_none() { return Err(crate::error(format!("Parameter map requires {key}"))); }
+            }
+            return Ok(V::Json(json!({"pieces":[fields]})));
+        }
+        if name=="guided_loft_surface" || name=="auto_guided_loft_surface" || name=="control_tangent_loft_surface" || name=="natural_loft_surface" {
             let mut node=json!({"op":name});
             let at=args.iter().position(|(n,_)|n.as_deref()==Some("parameters")).ok_or_else(||crate::error("Loft requires named parameters"))?;
             node["parameters"]=raw(args.remove(at).1)?;
@@ -778,6 +824,16 @@ impl Compiler {
                     node["parameter_tolerance"]=raw(args.remove(at).1)?;
                 }
             }
+            for key in ["construction","error_budget","max_cells","max_map_evaluations","section_mappings"] {
+                if let Some(at)=args.iter().position(|(n,_)|n.as_deref()==Some(key)) {
+                    let value=raw(args.remove(at).1)?;
+                    node[key]=if key=="construction" {
+                        let mode=value["text"].as_str().ok_or_else(||crate::error("Loft construction must be a string"))?;
+                        if !["cartesian","homogeneous"].contains(&mode){return Err(crate::error("Invalid loft construction"));}
+                        json!(mode)
+                    } else {value};
+                }
+            }
             for key in ["start_tangents","end_tangents"] {
                 if let Some(at)=args.iter().position(|(n,_)|n.as_deref()==Some(key)) {node[key]=raw(args.remove(at).1)?;}
                 else if name=="control_tangent_loft_surface" {return Err(crate::error(format!("Loft requires named {key}")));}
@@ -786,7 +842,7 @@ impl Compiler {
             if args.iter().any(|(n,_)|n.is_some()){return Err(crate::error("Loft sections must be positional"));}
             let mut inputs=Vec::new();if let Some(id)=input{inputs.push(id);}
             for(_,value)in args{inputs.push(self.geometry(value)?);}
-            if !(2..=11).contains(&inputs.len()){return Err(crate::error("Loft requires 2..11 sections"));}
+            if !(2..=86).contains(&inputs.len()){return Err(crate::error("Loft requires 2..86 sections"));}
             node["inputs"]=json!(inputs);return self.add(node);
         }
         if name=="clamped_loft_surface" {
@@ -801,7 +857,7 @@ impl Compiler {
             if !(2..=11).contains(&inputs.len()){return Err(crate::error("Clamped loft requires 2..11 sections"));}
             node["inputs"]=json!(inputs);return self.add(node);
         }
-        if name=="natural_loft_surface" || name=="closed_loft_surface" {
+        if name=="closed_loft_surface" {
             let at=args.iter().position(|(n,_)|n.as_deref()==Some("parameters")).ok_or_else(||crate::error("natural_loft_surface requires named parameters"))?;
             let parameters=raw(args.remove(at).1)?;
             if args.iter().any(|(n,_)|n.is_some()){return Err(crate::error("natural loft sections must be positional"));}

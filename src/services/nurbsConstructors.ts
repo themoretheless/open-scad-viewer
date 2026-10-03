@@ -1,6 +1,7 @@
 /** Surface construction is implemented by the own Rust kernel. */
 import { type NurbsCurve } from './nurbsCurve'
 import { type NurbsSurface } from './nurbsSurface'
+import type { RationalReparameterization } from './nurbsFoundation'
 import { callNurbsRust } from './geometry/nurbs'
 export function loftNurbsCurves(curves: NurbsCurve[]): NurbsSurface { return callNurbsRust('loft', { curves }) }
 export function extrudeNurbsCurve(curve: NurbsCurve, vector: number[]): NurbsSurface { return callNurbsRust('extrude', { curve, vector }) }
@@ -96,7 +97,7 @@ export const lineNurbsCurve = (start: [number,number,number], end: [number,numbe
 export const circleNurbsCurve = (center: [number,number,number], normal: [number,number,number], radius: number): NurbsCurve => callNurbsRust('curve_circle',{center,normal,radius})
 export const clampedLoftNurbsCurves=(curves:NurbsCurve[],parameters:number[],startTangent:[number,number,number],endTangent:[number,number,number]):NurbsSurface=>callNurbsRust('surface_clamped_loft',{curves,parameters,start_tangent:startTangent,end_tangent:endTangent})
 export const closedLoftNurbsCurves=(curves:NurbsCurve[],parameters:number[]):NurbsSurface=>callNurbsRust('surface_closed_loft',{curves,parameters})
-export const naturalLoftNurbsCurves=(curves:NurbsCurve[],parameters:number[]):NurbsSurface=>callNurbsRust('surface_natural_loft',{curves,parameters})
+export const naturalLoftNurbsCurves=(curves:NurbsCurve[],parameters:number[],sectionMappings?:Array<RationalReparameterization|null>):NurbsSurface=>callNurbsRust('surface_natural_loft',{curves,parameters,section_mappings:sectionMappings})
 export const controlTangentLoftNurbsCurves = (curves: NurbsCurve[], parameters: number[], startTangents: [number,number,number][], endTangents: [number,number,number][]): NurbsSurface => callNurbsRust('surface_control_tangent_loft', {curves, parameters, start_tangents:startTangents, end_tangents:endTangents})
 export const guidedLoftNurbsCurves = (curves: NurbsCurve[], parameters: number[], guides: NurbsCurve[], guideParameters: number[], startTangents?: [number,number,number][], endTangents?: [number,number,number][]): NurbsSurface => callNurbsRust('surface_guided_loft', {curves, parameters, guides, guide_parameters:guideParameters, start_tangents:startTangents, end_tangents:endTangents})
 
@@ -108,9 +109,12 @@ export interface AlignedNurbsLoft {
  reversed:boolean[]
  section_error_upper:number[]
  guide_error_upper:number[]
+ sections?:NurbsCurve[]
+ section_mapping_certificates?:unknown[]
+ original_section_certificates?:Array<Record<string,unknown>>
 }
 /** Automatic isolated intersections, guide reversal/sorting and piecewise V mapping. */
-export const autoGuidedLoftNurbsCurves=(curves:NurbsCurve[],parameters:number[],guides:NurbsCurve[],budget:number,parameterTolerance=1e-8):AlignedNurbsLoft=>callNurbsRust('surface_auto_guided_loft',{curves,parameters,guides,budget,parameter_tolerance:parameterTolerance})
+export const autoGuidedLoftNurbsCurves=(curves:NurbsCurve[],parameters:number[],guides:NurbsCurve[],budget:number,parameterTolerance=1e-8,sectionMappings?:Array<RationalReparameterization|null>):AlignedNurbsLoft=>callNurbsRust('surface_auto_guided_loft',{curves,parameters,guides,budget,parameter_tolerance:parameterTolerance,section_mappings:sectionMappings})
 export interface LoftEndConstraint {
  reference:NurbsSurface
  boundary:'uMin'|'uMax'|'vMin'|'vMax'

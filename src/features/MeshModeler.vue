@@ -951,4 +951,3 @@ const sceneFaces = computed(() => scene.value.flatMap(object =>
 }
 .mesh-body > :deep(.modeling-grid-controls details > div) { top: auto; bottom: 100%; right: auto; left: 0; }
 </style>
-
