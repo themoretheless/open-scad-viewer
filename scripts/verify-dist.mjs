@@ -87,7 +87,9 @@ const limits = new Map([
 // Incidence-based cap identity preservation: measured 3,243,603 bytes.
 // Guided/G2 loft: CI production chunk measured at 3,247,548 bytes.
 // Authored tangents and direct original-tensor mapped-loft proofs: measured 3,301,916 bytes.
-const geometryChunkBudget = 3_305_000
+// Native exact strip jets and retained-family audits: observed Ubuntu CI chunk
+// 3,321,602 bytes (run 37193131950, Node 22). Keep 8,398 bytes of headroom.
+const geometryChunkBudget = 3_330_000
 const jsChunkBudgets = [
   // CAD worker with lazy ModelGraph importer: surface boundary diagnostics included: measured 108,116 bytes.
   [/^assets\/mainSolid\.worker-[^/]+\.js$/, 116_000], // Distance kernel worker additions: measured 115,579 bytes. Surface distance worker dispatch: measured 115,110 bytes. Retained NURBS snap intervals: measured 114,200 bytes. Sketch snap preparation: measured 113,885 bytes. Body snap preparation: measured 112,083 bytes. Face sketch preparation in worker: measured 109,472 bytes.
@@ -330,6 +332,6 @@ for (const [name, artifact, compression] of [
 // Loft operations, language schema and mobile menu: Linux CI measured 7,209,826 asset bytes.
 // Mapped Rush/cap integration with main UI: Linux CI measured 7,288,439 asset bytes.
 // Registration of the observed Linux identity adds 190 local asset bytes.
-const totalBudget = 7_291_000
+const totalBudget = 7_316_000
 if (total > totalBudget) throw new Error(`dist totals ${total} bytes; budget is ${totalBudget}`)
 console.log(`Verified ${files.length} dist artifacts (${total} asset bytes + ${rawWasmBytes} raw WASM bytes = ${total + rawWasmBytes} total bytes)`)
