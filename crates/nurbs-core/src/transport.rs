@@ -50,6 +50,11 @@ pub fn dispatch(v: Value) -> Result<Value> {
         return Ok(json!({"certified":report.certified,"exactIdentity":report.exact_identity,
             "regularityCertified":report.regularity_certified,"work":report.work,"reason":report.reason}));
     }
+    if op == "sweep_retained_wall_coefficients_audit" {
+        let exact=retained_wall_coefficients::matches(&field::<surface::Surface>(&v,"surface")?,
+            &field::<curve::Curve>(&v,"start")?,&field::<curve::Curve>(&v,"end")?,field(&v,"maxControls")?);
+        return Ok(json!({"coefficientIdentity":exact,"globalEmbeddingCertified":false}));
+    }
     if op == "surface_station_normal_scale" {
         return encode(continuity::propose_station_normal_scale(
             &field::<surface::Surface>(&v, "reference")?,

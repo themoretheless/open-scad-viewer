@@ -89,3 +89,5 @@ pub mod hermite;
 pub mod grid_spline;
 pub mod paths;
 pub mod primitives;
+
+pub mod retained_wall_coefficients;
