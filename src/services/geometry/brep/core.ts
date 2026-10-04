@@ -378,4 +378,3 @@ export const exactAnnularFillet=(model:NurbsBrep,edges:number[],radius:number):A
 export const exactLayeredPrismFillet=(model:NurbsBrep,edges:number[],radius:number):AuditedBrepFeature=>callGeometryRust('brep_nurbs_exact_layered_prism_fillet',{model,edges,radius})
 
 export const constantFilletFamily=(model:NurbsBrep,edges:number[]):'annular'|'layered'|'simple'=>callGeometryRust('brep_nurbs_constant_fillet_family',{model,edges})
-
