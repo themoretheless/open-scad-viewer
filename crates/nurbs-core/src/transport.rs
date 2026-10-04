@@ -30,6 +30,14 @@ fn control_tangents(v: &Value) -> Result<Option<[Vec<[f64; 3]>; 2]>> {
 }
 pub fn dispatch(v: Value) -> Result<Value> {
     let op: String = field(&v, "op")?;
+    if op == "surface_station_normal_scale" {
+        return encode(continuity::propose_station_normal_scale(
+            &field::<surface::Surface>(&v, "reference")?,
+            &field::<surface::Surface>(&v, "edited")?,
+            &field::<String>(&v, "referenceBoundary")?,
+            &field::<String>(&v, "editedBoundary")?,
+        )?);
+    }
     if op=="curve_compose" {return encode(paths::compose(&field::<Vec<curve::Curve>>(&v,"curves")?)?)}
     if op=="curve_polyline" {return encode(primitives::polyline(&field::<Vec<[f64;3]>>(&v,"points")?,optional_field(&v,"closed")?.unwrap_or(false))?)}
     if op=="curve_bezier" {return encode(paths::bezier(field(&v,"points")?,optional_field(&v,"weights")?)?)}

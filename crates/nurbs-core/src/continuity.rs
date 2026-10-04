@@ -6,6 +6,8 @@ use crate::{check,curve::basis,surface::Surface,Result};
 use value_codec::{Value,json};
 mod regularity;
 mod bounds;
+mod station_scale;
+pub use station_scale::propose_station_normal_scale;
 pub mod preparation;
 pub mod deviation;
 pub mod curve_match;
