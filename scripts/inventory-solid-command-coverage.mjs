@@ -21,6 +21,20 @@ function primitiveValues(node){
 const primitives=primitiveValues(source)
 if(!primitives?.length)throw Error('Missing primitiveKinds inventory')
 function visit(node){
+ if(ts.isVariableDeclaration(node)&&node.name.getText(source)==='solidCommands'){
+  const collect=n=>{
+   if(ts.isObjectLiteralExpression(n)){
+    const property=name=>n.properties.find(p=>ts.isPropertyAssignment(p)&&p.name.getText(source)===name)?.initializer
+    const id=literal(property('id')),label=property('label')
+    if(id&&property('run')){
+     if(!label||!ts.isCallExpression(label)||label.expression.getText(source)!=='label')throw Error('Unresolved explicit command label: '+id)
+     commands.push({id,ru:literal(label.arguments[0]),en:literal(label.arguments[1]),line:text.slice(0,bodyStart+n.getStart(source)).split('\n').length,expansion:'solidCommands-object',...checks()})
+    }
+   }
+   ts.forEachChild(n,collect)
+  }
+  if(node.initializer)collect(node.initializer)
+ }
  if(ts.isCallExpression(node)&&ts.isIdentifier(node.expression)&&['cmd','toolCmd'].includes(node.expression.text)){
   const [id,ru,en]=node.arguments.map(literal)
   const line=text.slice(0,bodyStart+node.getStart(source)).split('\n').length

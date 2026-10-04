@@ -1,0 +1,19 @@
+{
+  "scope": "Current UI keyboard: 20 edits per part, 7 cancelled previews, 20 Undo, 20 Redo and reload",
+  "wasmSha256": "ed2e5a614790b691c5e41ae04409a49a4c6f805c301c5c3ca3267dc4fd91be84",
+  "files": {
+    "bracket.png": "a72826da8e5603ef2c2b9ee6af44894ba0fee4571f240727ca667238ac3f32ae",
+    "result.json": "28083b9fc41e47db77ada07b0ff60c4192f743d4882dce361b2b2082bf847b94",
+    "bracket-20.json": "3e358f5b368a38302dc60a4a86c100b0ed604e83154d6a13aa19ad1384c74148",
+    "flange.png": "2018981d78f5f2256b582227c768e8e5f72b0492ae63c32cf32efac44468989a",
+    "bracket-reload.json": "79de8192bda59355e1db7c792d2f80afe9407261bb86e72dc90b641dff04213a",
+    "flange-20.json": "d0e5fbfb159212977160bb6177d161877acd8420ca0667ec5b5cefba6e4d55ee",
+    "enclosure-0.json": "295dfea2dc25ca2fdde7d500ab8afb1bae507ef6ff9e44ec9aa8554fc5095ce5",
+    "enclosure-20.json": "3d7e465ab2c34906fc3288943edb4fd017e072432bd2036605e1184618f4c4cb",
+    "enclosure-reload.json": "c893ce2b299ccbda80873be87b586ae835d3d6b50cbc5aecb1128497eda64a05",
+    "flange-reload.json": "cc35205028729995916044cbf6481ba16c96f40ae322a789a788299c1e4ee41c",
+    "bracket-0.json": "437b9fb42b9c6a08fbe240ae0496679338fbfa03935dc8e1f410189b397f225c",
+    "flange-0.json": "91c53f5e643971f4cb7794d2623fc40a26f2b3d889611709309b438e1645dd63",
+    "enclosure.png": "0409e556e172f30a8a5a0877f217e6051f290c6528021623e2fdba0191073575"
+  }
+}
