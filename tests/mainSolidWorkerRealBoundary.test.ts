@@ -432,3 +432,19 @@ it('prepares original general NURBS through the real worker boundary',async()=>{
  expect(result.document.curves).toEqual([])
  expect(document).toEqual(before)
 })
+
+it('converges oblique sphere distances across the real worker boundary',async()=>{
+ const {obliqueSphereRequests}=await import('./fixtures/oblique-sphere-distance')
+ const {validSolidDistance,solidDistanceExpectation}=await import('../src/services/solidDistance')
+ const client=new MainSolidWorkerClient(realWorker);clients.push(client)
+ for(const {options,expected} of await obliqueSphereRequests()){
+  const before=structuredClone(options),r=await client.run({kind:'solidDistance',options})
+  expect(validSolidDistance(solidDistanceExpectation(options),r)).toBe(true)
+  expect(r.converged,JSON.stringify(r)).toBe(true)
+  expect(r.distanceIntervalMm![0]).toBeLessThanOrEqual(expected)
+  expect(r.distanceIntervalMm![1]).toBeGreaterThanOrEqual(expected)
+  expect(r.distanceIntervalMm![1]-r.distanceIntervalMm![0]).toBeLessThanOrEqual(options.toleranceMm)
+  expect(r.separationWitness).not.toBeNull()
+  expect(options).toEqual(before)
+ }
+})

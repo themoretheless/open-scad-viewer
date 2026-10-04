@@ -119,7 +119,29 @@ pub fn distance_between_face_sets(
             [0.; 3]
         },
     ];
-    let prepare = |m: &Model, selected: &[usize]| -> Result<_> {
+    // Each patch can also be enclosed in a ball about its model's own center.
+    // Bernstein radius bounds prove that enclosure from authored controls;
+    // no analytic-shape recognition or sampled radius is used.
+    let model_center = |m: &Model| {
+        std::array::from_fn::<_, 3, _>(|axis| {
+            let lo = m
+                .vertices
+                .iter()
+                .map(|v| v.point[axis])
+                .fold(f64::INFINITY, f64::min);
+            let hi = m
+                .vertices
+                .iter()
+                .map(|v| v.point[axis])
+                .fold(f64::NEG_INFINITY, f64::max);
+            let value = lo / 2. + hi / 2.;
+            if value.is_finite() { value } else { 0. }
+        })
+    };
+    let centers = [model_center(a), model_center(b)];
+    let center_distance =
+        enclosure_distance(&centers[0].map(|x| [x; 2]), &centers[1].map(|x| [x; 2]));
+    let prepare = |m: &Model, selected: &[usize], own_center: [f64; 3]| -> Result<_> {
         selected
             .iter()
             .map(|&i| {
@@ -147,15 +169,18 @@ pub fn distance_between_face_sets(
                         .ok()
                         .flatten()
                     }),
+                    nurbs_core::radial_bounds::radius_bounds(s, own_center)
+                        .ok()
+                        .flatten(),
                 ))
             })
             .collect::<Result<Vec<_>>>()
     };
-    let aa = prepare(a, faces_a)?;
-    let bb = prepare(b, faces_b)?;
+    let aa = prepare(a, faces_a, centers[0])?;
+    let bb = prepare(b, faces_b, centers[1])?;
     let mut queue = Vec::with_capacity(pairs);
-    for (i, (_, ba, ra, axes_a)) in aa.iter().enumerate() {
-        for (j, (_, bb, rb, axes_b)) in bb.iter().enumerate() {
+    for (i, (_, ba, ra, axes_a, own_a)) in aa.iter().enumerate() {
+        for (j, (_, bb, rb, axes_b, own_b)) in bb.iter().enumerate() {
             let mut radial = 0_f64;
             for (a, b) in ra.iter().zip(rb) {
                 if let (Some(a), Some(b)) = (a, b) {
@@ -172,10 +197,20 @@ pub fn distance_between_face_sets(
                     _ => None,
                 })
                 .fold(0_f64, f64::max);
+            let ball = match (&center_distance, own_a, own_b) {
+                (Ok((lower, _)), Some(a), Some(b)) => {
+                    ((lower - a[1]).next_down() - b[1]).next_down().max(0.)
+                }
+                _ => 0.,
+            };
             queue.push(Pair {
                 slots: [i, j],
                 faces: [faces_a[i], faces_b[j]],
-                lower: enclosure_distance(ba, bb)?.0.max(radial).max(axial),
+                lower: enclosure_distance(ba, bb)?
+                    .0
+                    .max(radial)
+                    .max(axial)
+                    .max(ball),
             })
         }
     }
@@ -290,6 +325,89 @@ pub fn distance_between_face_sets(
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn oblique_sphere_separation_uses_certified_balls_and_authored_witnesses() {
+        let a = crate::sphere(3.).unwrap();
+        for offset in [[4., 4., 4.], [8., 1., 2.]] {
+            let b = crate::transform::affine(
+                &a,
+                [
+                    [1., 0., 0., offset[0]],
+                    [0., 1., 0., offset[1]],
+                    [0., 0., 1., offset[2]],
+                    [0., 0., 0., 1.],
+                ],
+            )
+            .unwrap();
+            let expected = offset[0].hypot(offset[1]).hypot(offset[2]) - 6.;
+            let r = distance(&a, &b, 1e-5, 1e-8, 20000, 1000000).unwrap();
+            assert!(r.lower_bound_mm <= expected && r.upper_bound_mm.unwrap() >= expected);
+            assert!(
+                r.converged,
+                "{offset:?}: [{}, {:?}], {} cells",
+                r.lower_bound_mm, r.upper_bound_mm, r.cells
+            );
+            assert!(r.upper_bound_mm.unwrap() - r.lower_bound_mm <= 1e-5);
+            assert!(r.cells <= 20000 && r.domain_cells <= 1000000);
+            let faces = r.faces.unwrap();
+            let witness = r.witness.unwrap();
+            let uv = witness.parameters.unwrap();
+            let points = witness.points.unwrap();
+            for (side, model) in [&a, &b].into_iter().enumerate() {
+                let actual = model.faces[faces[side]]
+                    .surface
+                    .evaluate(uv[side][0], uv[side][1])
+                    .unwrap()
+                    .point;
+                assert!(
+                    actual
+                        .iter()
+                        .zip(points[side])
+                        .all(|(a, b)| (a - b).abs() < 1e-10)
+                );
+            }
+            eprintln!(
+                "offset={offset:?} interval=[{}, {}] cells={} domainCells={}",
+                r.lower_bound_mm,
+                r.upper_bound_mm.unwrap(),
+                r.cells,
+                r.domain_cells
+            );
+        }
+    }
+    #[test]
+    fn enclosing_ball_does_not_treat_an_ellipsoid_as_a_sphere() {
+        let a = crate::transform::affine(
+            &crate::sphere(3.).unwrap(),
+            [
+                [1., 0., 0., 0.],
+                [0., 2., 0., 0.],
+                [0., 0., 1.5, 0.],
+                [0., 0., 0., 1.],
+            ],
+        )
+        .unwrap();
+        let b = crate::transform::affine(
+            &a,
+            [
+                [1., 0., 0., 8.],
+                [0., 1., 0., 0.],
+                [0., 0., 1., 0.],
+                [0., 0., 0., 1.],
+            ],
+        )
+        .unwrap();
+        // The two convex ellipsoids meet the supporting X planes at X=3,5.
+        // Their maximum radius is six, whereas their X radius is three.
+        let r = distance(&a, &b, 1e-5, 1e-8, 20000, 1000000).unwrap();
+        assert!(r.lower_bound_mm <= 2. && r.upper_bound_mm.unwrap() >= 2.);
+        assert!(
+            r.converged,
+            "{} [{}, {:?}]",
+            r.reason, r.lower_bound_mm, r.upper_bound_mm
+        );
+        assert!(r.cells <= 20000 && r.domain_cells <= 1000000);
+    }
     #[test]
     fn complete_opposing_face_groups_keep_original_indices_and_global_coverage() {
         let model =

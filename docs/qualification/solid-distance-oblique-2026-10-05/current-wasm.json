@@ -1,0 +1,557 @@
+{
+  "wasmSha256": "345afdb41c69a9f2090b69c775dcb4c9a538bbff870c8015136b7926ce5fcffd",
+  "rows": [
+    {
+      "expected": 0.9282032302755088,
+      "result": {
+        "cells": 658,
+        "contact": null,
+        "contactPairsVisited": 0,
+        "converged": true,
+        "distanceIntervalMm": [
+          0.9282032302754816,
+          0.9282032302756225
+        ],
+        "domainCells": 676,
+        "limits": {
+          "maxCells": 100000,
+          "maxContactPairs": 1000,
+          "maxDomainCells": 1000000,
+          "maxPairs": 100,
+          "validity": {
+            "exactWork": 1000000,
+            "faceCells": 100000,
+            "faceCellsPerPair": 1000,
+            "faceDomainCells": 1000000,
+            "faceDomainCellsPerPair": 10000,
+            "facePairs": 10000,
+            "nestingCells": 100000,
+            "nestingDomainCells": 1000000,
+            "nestingPairs": 100,
+            "orientationCells": 100000,
+            "orientationDomainCells": 1000000,
+            "orientationSpans": 100,
+            "spans": 1000,
+            "trimCells": 100000,
+            "trimDomainCells": 1000000,
+            "trimPairs": 10000
+          }
+        },
+        "materialOverlap": false,
+        "method": "certified-volume-distance",
+        "reason": "separated-volumes",
+        "scope": "closed-material-sets",
+        "separationWitness": {
+          "faces": [
+            0,
+            6
+          ],
+          "parameters": [
+            [
+              0.36602532863616943,
+              0.36602532863616943
+            ],
+            [
+              0.366025447845459,
+              0.366025447845459
+            ]
+          ],
+          "pointEnclosures": [
+            [
+              [
+                1.732050602259945,
+                1.7320506022599642
+              ],
+              [
+                1.732050602259945,
+                1.7320506022599642
+              ],
+              [
+                1.7320512181866408,
+                1.7320512181866585
+              ]
+            ],
+            [
+              [
+                2.267949072054178,
+                2.2679490720541975
+              ],
+              [
+                2.267949072054178,
+                2.2679490720541975
+              ],
+              [
+                2.267949433185008,
+                2.2679494331850267
+              ]
+            ]
+          ],
+          "points": [
+            [
+              1.7320506022599544,
+              1.7320506022599547,
+              1.7320512181866496
+            ],
+            [
+              2.267949072054188,
+              2.267949072054188,
+              2.2679494331850174
+            ]
+          ]
+        },
+        "toleranceMm": 0.00001,
+        "toleranceUv": 1e-8,
+        "totalShellPairs": 1,
+        "validity": [
+          {
+            "boundaryProven": true,
+            "exactAgreement": true,
+            "exactJoins": true,
+            "nestingRolesConsistent": true,
+            "orientations": [
+              {
+                "expectedOutward": true,
+                "outward": true,
+                "shell": 0
+              }
+            ],
+            "proven": true,
+            "selfIntersectionAbsent": true,
+            "trimValid": true
+          },
+          {
+            "boundaryProven": true,
+            "exactAgreement": true,
+            "exactJoins": true,
+            "nestingRolesConsistent": true,
+            "orientations": [
+              {
+                "expectedOutward": true,
+                "outward": true,
+                "shell": 0
+              }
+            ],
+            "proven": true,
+            "selfIntersectionAbsent": true,
+            "trimValid": true
+          }
+        ],
+        "visitedShellPairs": 1
+      }
+    },
+    {
+      "expected": 2.306623862918075,
+      "result": {
+        "cells": 974,
+        "contact": null,
+        "contactPairsVisited": 0,
+        "converged": true,
+        "distanceIntervalMm": [
+          2.3066238629180438,
+          2.3066238629181566
+        ],
+        "domainCells": 1437,
+        "limits": {
+          "maxCells": 100000,
+          "maxContactPairs": 1000,
+          "maxDomainCells": 1000000,
+          "maxPairs": 100,
+          "validity": {
+            "exactWork": 1000000,
+            "faceCells": 100000,
+            "faceCellsPerPair": 1000,
+            "faceDomainCells": 1000000,
+            "faceDomainCellsPerPair": 10000,
+            "facePairs": 10000,
+            "nestingCells": 100000,
+            "nestingDomainCells": 1000000,
+            "nestingPairs": 100,
+            "orientationCells": 100000,
+            "orientationDomainCells": 1000000,
+            "orientationSpans": 100,
+            "spans": 1000,
+            "trimCells": 100000,
+            "trimDomainCells": 1000000,
+            "trimPairs": 10000
+          }
+        },
+        "materialOverlap": false,
+        "method": "certified-volume-distance",
+        "reason": "separated-volumes",
+        "scope": "closed-material-sets",
+        "separationWitness": {
+          "faces": [
+            0,
+            6
+          ],
+          "parameters": [
+            [
+              0.7761999368667603,
+              0.09702503681182861
+            ],
+            [
+              0.7761998176574707,
+              0.09702491760253906
+            ]
+          ],
+          "pointEnclosures": [
+            [
+              [
+                2.889260527353425,
+                2.889260527353461
+              ],
+              [
+                0.36115773231961773,
+                0.36115773231962167
+              ],
+              [
+                0.7223148188034324,
+                0.7223148188034628
+              ]
+            ],
+            [
+              [
+                5.110739543204164,
+                5.110739543204201
+              ],
+              [
+                0.6388426647678019,
+                0.638842664767806
+              ],
+              [
+                1.2776847004222958,
+                1.2776847004223255
+              ]
+            ]
+          ],
+          "points": [
+            [
+              2.8892605273534424,
+              0.3611577323196197,
+              0.722314818803448
+            ],
+            [
+              5.1107395432041836,
+              0.638842664767804,
+              1.2776847004223093
+            ]
+          ]
+        },
+        "toleranceMm": 0.00001,
+        "toleranceUv": 1e-8,
+        "totalShellPairs": 1,
+        "validity": [
+          {
+            "boundaryProven": true,
+            "exactAgreement": true,
+            "exactJoins": true,
+            "nestingRolesConsistent": true,
+            "orientations": [
+              {
+                "expectedOutward": true,
+                "outward": true,
+                "shell": 0
+              }
+            ],
+            "proven": true,
+            "selfIntersectionAbsent": true,
+            "trimValid": true
+          },
+          {
+            "boundaryProven": true,
+            "exactAgreement": true,
+            "exactJoins": true,
+            "nestingRolesConsistent": true,
+            "orientations": [
+              {
+                "expectedOutward": true,
+                "outward": true,
+                "shell": 0
+              }
+            ],
+            "proven": true,
+            "selfIntersectionAbsent": true,
+            "trimValid": true
+          }
+        ],
+        "visitedShellPairs": 1
+      }
+    },
+    {
+      "expected": 9.5367431640625e-7,
+      "result": {
+        "cells": 1738,
+        "contact": null,
+        "contactPairsVisited": 0,
+        "converged": true,
+        "distanceIntervalMm": [
+          9.536743164062496e-7,
+          9.600703036350156e-7
+        ],
+        "domainCells": 13028,
+        "limits": {
+          "maxCells": 100000,
+          "maxContactPairs": 1000,
+          "maxDomainCells": 1000000,
+          "maxPairs": 100,
+          "validity": {
+            "exactWork": 1000000,
+            "faceCells": 100000,
+            "faceCellsPerPair": 1000,
+            "faceDomainCells": 1000000,
+            "faceDomainCellsPerPair": 10000,
+            "facePairs": 10000,
+            "nestingCells": 100000,
+            "nestingDomainCells": 1000000,
+            "nestingPairs": 100,
+            "orientationCells": 100000,
+            "orientationDomainCells": 1000000,
+            "orientationSpans": 100,
+            "spans": 1000,
+            "trimCells": 100000,
+            "trimDomainCells": 1000000,
+            "trimPairs": 10000
+          }
+        },
+        "materialOverlap": false,
+        "method": "certified-volume-distance",
+        "reason": "separated-volumes",
+        "scope": "closed-material-sets",
+        "separationWitness": {
+          "faces": [
+            0,
+            6
+          ],
+          "parameters": [
+            [
+              0.9999999888241291,
+              1.1175870895385742e-8
+            ],
+            [
+              0.9999999850988388,
+              1.4901161193847656e-8
+            ]
+          ],
+          "pointEnclosures": [
+            [
+              [
+                2.999999999999981,
+                3
+              ],
+              [
+                3.352761306085731e-8,
+                3.352761306085767e-8
+              ],
+              [
+                3.3527595366678036e-8,
+                3.3527629117458e-8
+              ]
+            ],
+            [
+              [
+                3.0000009536743164,
+                3.000000953674335
+              ],
+              [
+                -4.470348424767702e-8,
+                -4.470348424767656e-8
+              ],
+              [
+                -4.470350001284374e-8,
+                -4.470346670615299e-8
+              ]
+            ]
+          ],
+          "points": [
+            [
+              2.999999999999999,
+              3.352761306085749e-8,
+              3.3527613130246436e-8
+            ],
+            [
+              3.0000009536743173,
+              -4.470348424767678e-8,
+              -4.470348402563218e-8
+            ]
+          ]
+        },
+        "toleranceMm": 0.00001,
+        "toleranceUv": 1e-8,
+        "totalShellPairs": 1,
+        "validity": [
+          {
+            "boundaryProven": true,
+            "exactAgreement": true,
+            "exactJoins": true,
+            "nestingRolesConsistent": true,
+            "orientations": [
+              {
+                "expectedOutward": true,
+                "outward": true,
+                "shell": 0
+              }
+            ],
+            "proven": true,
+            "selfIntersectionAbsent": true,
+            "trimValid": true
+          },
+          {
+            "boundaryProven": true,
+            "exactAgreement": true,
+            "exactJoins": true,
+            "nestingRolesConsistent": true,
+            "orientations": [
+              {
+                "expectedOutward": true,
+                "outward": true,
+                "shell": 0
+              }
+            ],
+            "proven": true,
+            "selfIntersectionAbsent": true,
+            "trimValid": true
+          }
+        ],
+        "visitedShellPairs": 1
+      }
+    },
+    {
+      "expected": 9.5367431640625e-7,
+      "result": {
+        "cells": 1394,
+        "contact": null,
+        "contactPairsVisited": 0,
+        "converged": true,
+        "distanceIntervalMm": [
+          9.536743164062497e-7,
+          9.790074292242433e-7
+        ],
+        "domainCells": 6987,
+        "limits": {
+          "maxCells": 100000,
+          "maxContactPairs": 1000,
+          "maxDomainCells": 1000000,
+          "maxPairs": 100,
+          "validity": {
+            "exactWork": 1000000,
+            "faceCells": 100000,
+            "faceCellsPerPair": 1000,
+            "faceDomainCells": 1000000,
+            "faceDomainCellsPerPair": 10000,
+            "facePairs": 10000,
+            "nestingCells": 100000,
+            "nestingDomainCells": 1000000,
+            "nestingPairs": 100,
+            "orientationCells": 100000,
+            "orientationDomainCells": 1000000,
+            "orientationSpans": 100,
+            "spans": 1000,
+            "trimCells": 100000,
+            "trimDomainCells": 1000000,
+            "trimPairs": 10000
+          }
+        },
+        "materialOverlap": false,
+        "method": "certified-volume-distance",
+        "reason": "separated-volumes",
+        "scope": "closed-material-sets",
+        "separationWitness": {
+          "faces": [
+            0,
+            6
+          ],
+          "parameters": [
+            [
+              1.1175870895385742e-8,
+              1.1175870895385742e-8
+            ],
+            [
+              1.4901161193847656e-8,
+              1.4901161193847656e-8
+            ]
+          ],
+          "pointEnclosures": [
+            [
+              [
+                6.70552253723142e-8,
+                6.705522537231464e-8
+              ],
+              [
+                6.70552253723142e-8,
+                6.705522537231464e-8
+              ],
+              [
+                2.9999999999999982,
+                2.999999999999999
+              ]
+            ],
+            [
+              [
+                -8.94069671630862e-8,
+                -8.940696716308562e-8
+              ],
+              [
+                -8.94069671630862e-8,
+                -8.940696716308562e-8
+              ],
+              [
+                3.0000009536743186,
+                3.0000009536743195
+              ]
+            ]
+          ],
+          "points": [
+            [
+              6.705522537231444e-8,
+              6.705522537231444e-8,
+              2.9999999999999987
+            ],
+            [
+              -8.940696716308588e-8,
+              -8.940696716308588e-8,
+              3.000000953674319
+            ]
+          ]
+        },
+        "toleranceMm": 0.00001,
+        "toleranceUv": 1e-8,
+        "totalShellPairs": 1,
+        "validity": [
+          {
+            "boundaryProven": true,
+            "exactAgreement": true,
+            "exactJoins": true,
+            "nestingRolesConsistent": true,
+            "orientations": [
+              {
+                "expectedOutward": true,
+                "outward": true,
+                "shell": 0
+              }
+            ],
+            "proven": true,
+            "selfIntersectionAbsent": true,
+            "trimValid": true
+          },
+          {
+            "boundaryProven": true,
+            "exactAgreement": true,
+            "exactJoins": true,
+            "nestingRolesConsistent": true,
+            "orientations": [
+              {
+                "expectedOutward": true,
+                "outward": true,
+                "shell": 0
+              }
+            ],
+            "proven": true,
+            "selfIntersectionAbsent": true,
+            "trimValid": true
+          }
+        ],
+        "visitedShellPairs": 1
+      }
+    }
+  ]
+}

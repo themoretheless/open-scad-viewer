@@ -1,3 +1,5 @@
+import {evaluateNurbsSurface} from '../src/services/nurbsSurface'
+import {obliqueSphereRequests} from './fixtures/oblique-sphere-distance'
 import {readFileSync} from 'node:fs'
 import {expect,it} from 'vitest'
 import {solidDistanceExpectation,validSolidDistance} from '../src/services/solidDistance'
@@ -70,8 +72,21 @@ it('validates actual WASM volume-distance responses without changing either inpu
   const before=JSON.stringify(c.request),r=measureSolidDistance(c.request)
   expect(validSolidDistance(solidDistanceExpectation(c.request),r)).toBe(true)
   expect(r.reason).toBe(c.result.reason)
-  expect(r.distanceIntervalMm).toEqual(c.result.distanceIntervalMm)
-  expect(r.separationWitness).toEqual(c.result.separationWitness)
+  if(c.result.distanceIntervalMm===null)expect(r.distanceIntervalMm).toBeNull()
+  if(c.result.separationWitness===null)expect(r.separationWitness).toBeNull()
+  else {
+   const witness=r.separationWitness!
+   expect(witness).not.toBeNull()
+   for(let side=0;side<2;side++){
+    const surface=[c.request.a,c.request.b][side].faces[witness.faces[side]].surface
+    const uv=witness.parameters[side],point=evaluateNurbsSurface(surface,uv[0],uv[1]).point
+    for(let axis=0;axis<3;axis++){
+     expect(witness.points[side][axis]).toBeCloseTo(point[axis],10)
+     expect(witness.pointEnclosures[side][axis][0]).toBeLessThanOrEqual(witness.points[side][axis])
+     expect(witness.pointEnclosures[side][axis][1]).toBeGreaterThanOrEqual(witness.points[side][axis])
+    }
+   }
+  }
   if(r.reason==='separated-volumes'){const gap=c.expectedDistanceMm??(index===3?3:1);expect(r.distanceIntervalMm![0]).toBeLessThanOrEqual(gap);expect(r.distanceIntervalMm![1]).toBeGreaterThanOrEqual(gap);expect(r.distanceIntervalMm![1]-r.distanceIntervalMm![0]).toBeLessThanOrEqual(c.request.toleranceMm)}
   expect(JSON.stringify(c.request)).toBe(before)
  }
@@ -159,4 +174,19 @@ it('audits multispan NURBS trim boundaries in WASM and retains unknown when trim
  expect(incomplete.reason).toBe('volume-validity-unproven')
  expect(validSolidDistance(solidDistanceExpectation(limited),incomplete)).toBe(true)
  expect(request).toEqual(before)
+})
+
+it('converges oblique sphere clearances with original-face witnesses in actual WASM',async()=>{
+ const {measureSolidDistance}=await import('../src/services/solidDistance')
+ for(const {options,expected} of await obliqueSphereRequests()){
+  const before=structuredClone(options),r=measureSolidDistance(options)
+  expect(validSolidDistance(solidDistanceExpectation(options),r)).toBe(true)
+  expect(r.converged,JSON.stringify(r)).toBe(true)
+  expect(r.reason).toBe('separated-volumes')
+  expect(r.distanceIntervalMm![0]).toBeLessThanOrEqual(expected)
+  expect(r.distanceIntervalMm![1]).toBeGreaterThanOrEqual(expected)
+  expect(r.distanceIntervalMm![1]-r.distanceIntervalMm![0]).toBeLessThanOrEqual(options.toleranceMm)
+  expect(r.separationWitness).not.toBeNull()
+  expect(options).toEqual(before)
+ }
 })
