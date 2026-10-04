@@ -1839,7 +1839,10 @@ async function importFile(event: Event) {
    historyPending.value=false;finishCommit(added);selection.value='';extraSelection.value=[]
   }
   fit('2d');fit('3d')
- }catch(e){if(generation===historyGeneration)error.value=String(e)}
+ }catch(e){
+  const {solidImportErrorMessage}=await import('../services/solidImportErrorMessage')
+  if(generation===historyGeneration)error.value=solidImportErrorMessage(e,ru.value?'ru':'en')
+ }
  finally{if(generation===historyGeneration)historyPending.value=false;input.value=''}
 }
 const bodyExportFormat = ref<MeshExportFormat>('stl_binary')
