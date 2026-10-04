@@ -4,6 +4,10 @@ export const OWN_RUST_CAD_ARTIFACTS = Object.freeze([
   {
     "sha256": "d18ff8c6a310a587bda1268d92a8b708fd101346ef2497ed95d516a666f67892",
     "byteLength": 10584966
+  },
+  {
+    "sha256": "f7fa6acf3475c23f49890985f6b1a178b321853480becaf2b0ad437f67360ebc",
+    "byteLength": 10581969
   }
 ])
 export function recordedOwnRustCadFingerprint(artifact: {sha256:string;byteLength:number}): string|null {

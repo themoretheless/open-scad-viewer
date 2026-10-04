@@ -1,0 +1,34 @@
+{
+  "headSha": "124eea3b4e2c331959908badb512238fc6efd46f",
+  "runId": 37206543588,
+  "builder": "github-actions-ubuntu-latest",
+  "variants": [
+    {
+      "node": "20.19",
+      "artifactId": 11305156565,
+      "sha256": "f7fa6acf3475c23f49890985f6b1a178b321853480becaf2b0ad437f67360ebc",
+      "byteLength": 10581969,
+      "identitySha256": "1362d8ef5145f8100154d21d1d148c41a858a2cd2dc1c9f65e3256dc4d3ebbcb"
+    },
+    {
+      "node": "22",
+      "artifactId": 11305117762,
+      "sha256": "f7fa6acf3475c23f49890985f6b1a178b321853480becaf2b0ad437f67360ebc",
+      "byteLength": 10581969,
+      "identitySha256": "1362d8ef5145f8100154d21d1d148c41a858a2cd2dc1c9f65e3256dc4d3ebbcb"
+    }
+  ],
+  "qualificationClaim": "Observed build identity only. Initial CI tests rejected missing identity; focused provenance tests passed after v37 binding. Fresh full CI pending.",
+  "verification": [
+    {
+      "artifact": "macos-d18",
+      "testsPassed": 35,
+      "logSha256": "7c05ff7f1c74aa5a05410e58f6f96c1c0e543f77c8627aa64124343d5eeecef0"
+    },
+    {
+      "artifact": "ubuntu-f7fa",
+      "testsPassed": 35,
+      "logSha256": "c0f70204deeda39fbe818a7545401d026dad583657116fd7c68af0517c908412"
+    }
+  ]
+}

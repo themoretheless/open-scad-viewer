@@ -42,3 +42,7 @@ Exhausted or unresolved geometric proofs refuse certification. A boundary Hausdo
 ## Lossless proof packaging
 
 1690 raw proof files are preserved in ten deterministic gzip/tar archives with archive and per-file SHA-256 hashes in `artifact-archives/index.json`. Each archived file was read back and matched against the original bytes. Compact UI and OpenCascade reports remain directly readable. Raw directories remain unchanged locally and are ignored by Git; restore their complete contents using the archive README.
+
+## CI provenance correction after 124eea3b
+
+Initial published CI passed Rust (3187 tests, four ignored), OpenSCAD MCP and STEP v8/v9/V10. Both Node matrices rejected the unrecorded Ubuntu build; Node 22 reported 4382 passed and six failed. Five failures were the exact artifact identity gate and one was the expected historical `.gitattributes` drift after committing raw terminal logs. Own-Rust v37 records the independently downloaded Linux bytes in addition to unchanged local d18, bound by G0 v46 / G1 v63. All 35 focused tests passed with both actual WASM binaries; local d18 was restored and verified. Historical records remain immutable. Fresh full CI remains required.
