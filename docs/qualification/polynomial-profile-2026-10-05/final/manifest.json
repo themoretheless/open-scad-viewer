@@ -1,0 +1,136 @@
+{
+  "scope": "quadratic polynomial profile and analytic sphere fixes, final WASM acceptance, G-code/Laser regression",
+  "wasmSha256": "ed2e5a614790b691c5e41ae04409a49a4c6f805c301c5c3ca3267dc4fd91be84",
+  "wasmBytes": 10954290,
+  "includesMidpointGuard": true,
+  "wasmTestsPassed": 55,
+  "sphereDisplayTestsPassed": 8,
+  "cadRoadmapRegression": "passed",
+  "fullCommandMatrixComplete": false,
+  "sources": [
+    {
+      "path": "crates/nurbs-core/src/planar_area.rs",
+      "sha256": "83862ddb00eac287dc1c8a3d9338cc972a1f63fc342f08315b7d04217fb8c534"
+    },
+    {
+      "path": "crates/brep-core/src/profile_region.rs",
+      "sha256": "6efd260004484087047fd06bc8f93ee3bc5fe89ee25aed08a0293bb3d67ca256"
+    },
+    {
+      "path": "crates/geometry-bridge/src/brep.rs",
+      "sha256": "58b4818e9381842fb76c80df300d0a8d9129bca1855615b671ddf52acdc39839"
+    },
+    {
+      "path": "src/services/solidDraftHeadStore.ts",
+      "sha256": "5fc90e3b959d5b230f84d10c420741110ab4316fea6bf5df45ccd8fc148ef058"
+    },
+    {
+      "path": "tests/brepCurveExtrusionModelGraph.test.ts",
+      "sha256": "c3d87c883a0e35bbeb0ac63c0bf3ff77b977fb10fe26bcdd33b1dfd21916110f"
+    },
+    {
+      "path": "tests/mainSolidWorkerRealBoundary.test.ts",
+      "sha256": "918ed8cf87803211a02b3eb51b8d14245ea5896c4055e9791127c16661ce4687"
+    },
+    {
+      "path": "tests/solidDisplayPreparation.test.ts",
+      "sha256": "0bcc615853816895915a25fbf064bd49364394ced326f6f0b728e99bcbd5b7ad"
+    }
+  ],
+  "evidence": [
+    {
+      "path": "build.log.gz",
+      "sha256": "67133e0ce828e3277d47f1dd93b324d7755fa93b6ba0e90dd05dac2f47bafa4a"
+    },
+    {
+      "path": "cad-roadmap.log.gz",
+      "sha256": "cc84e946f273280880cf34b028d51d3b4e725eecd8ea31eb306e1ee49c2a46a9"
+    },
+    {
+      "path": "dist.log.gz",
+      "sha256": "3b6c6d1614f104179d4b11fa89a57e3a653165e659b599ae7d58e005782f5dc5"
+    },
+    {
+      "path": "manufacturing-keyboard/configured-job.gcode",
+      "sha256": "1f553b3689d5f840304158b4f4f84641f9590d77e38a2e45d0de819e56926102"
+    },
+    {
+      "path": "manufacturing-keyboard/laser-job.gcode",
+      "sha256": "a434d4adabf7ea45bd6235ef91d066e780ae8cd642aeb5c08d784ce486faff39"
+    },
+    {
+      "path": "manufacturing-keyboard/manufacturing.png",
+      "sha256": "0b37d0fc10449515eef2449a12447b7930745d952a028aacf4b13c89d6e3361a"
+    },
+    {
+      "path": "manufacturing-keyboard/report.json",
+      "sha256": "6f60303bf03159806c98298512e730846bfa28d8182534a6ef7863279e7c3179"
+    },
+    {
+      "path": "manufacturing-mouse/configured-job.gcode",
+      "sha256": "1f553b3689d5f840304158b4f4f84641f9590d77e38a2e45d0de819e56926102"
+    },
+    {
+      "path": "manufacturing-mouse/laser-job.gcode",
+      "sha256": "a434d4adabf7ea45bd6235ef91d066e780ae8cd642aeb5c08d784ce486faff39"
+    },
+    {
+      "path": "manufacturing-mouse/manufacturing.png",
+      "sha256": "74419a97d9f00e6ce5b0c7fe9a6ada904db3cba0b4d5f958a72a895259071c0d"
+    },
+    {
+      "path": "manufacturing-mouse/report.json",
+      "sha256": "34e12bd5ab22e7172ecc963fb4d29646edfc1bde36beddc6824981fbc19e5960"
+    },
+    {
+      "path": "profile-keyboard/browser-retained.step",
+      "sha256": "12dcf4ccc3c44154c381a37222301776f91c684b85ca873bf7a68a01ca3748af"
+    },
+    {
+      "path": "profile-keyboard/manifest.json",
+      "sha256": "116aabb7c01638eaedafad461b789997738f297ab90c6cbfc3c0b36d28bffb3d"
+    },
+    {
+      "path": "profile-keyboard/occt-report.json",
+      "sha256": "f30ee0da6bcce87011b4dbbb48667014149fb248a469544bc384d0ebae5f6255"
+    },
+    {
+      "path": "profile-keyboard/retained-browser.json",
+      "sha256": "b01fa0636786b806b1827d169465449abe8eac5c8621d49a717b49fb33fe0553"
+    },
+    {
+      "path": "profile-keyboard/retained-extruded.png",
+      "sha256": "7bb9e3f7499b8e0c18178f918896edad6264ff7567e62ed5abdd1c3cc3e6c288"
+    },
+    {
+      "path": "profile-mouse/browser-retained.step",
+      "sha256": "12dcf4ccc3c44154c381a37222301776f91c684b85ca873bf7a68a01ca3748af"
+    },
+    {
+      "path": "profile-mouse/manifest.json",
+      "sha256": "116aabb7c01638eaedafad461b789997738f297ab90c6cbfc3c0b36d28bffb3d"
+    },
+    {
+      "path": "profile-mouse/occt-report.json",
+      "sha256": "f30ee0da6bcce87011b4dbbb48667014149fb248a469544bc384d0ebae5f6255"
+    },
+    {
+      "path": "profile-mouse/retained-browser.json",
+      "sha256": "c58c939c0d1ff628d66799db585a503cea9dc14802360de87cfea23202142e31"
+    },
+    {
+      "path": "profile-mouse/retained-extruded.png",
+      "sha256": "1eea4edd73379e042afbb69192c3b6c771df7eff4adab79026c04e61df7ae345"
+    },
+    {
+      "path": "sphere-display.log.gz",
+      "sha256": "f073dbe48bb288ec6aede7b99af080e44c86c3bde5ffaacb6de7eb4328584e78"
+    },
+    {
+      "path": "wasm-tests.log.gz",
+      "sha256": "3317ee8a97d22eefbb26d508c6912f23ea4e110538786e283472b6a83f103382"
+    }
+  ],
+  "cadRoadmapTestsPassed": 918,
+  "typecheckPassed": true
+}

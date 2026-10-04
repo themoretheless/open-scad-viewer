@@ -121,10 +121,13 @@ it('checks nested references, scalar dimensions, runtime curve kinds and active-
   expect(() => compileModelGraphText('// @modelgraph-text/1\nshow brep_extrude_curves([[]],0mm,2mm)')).toThrow(/nonempty/)
 })
 
-it('retains and extrudes a general polynomial rounded loop with independently known volume', () => {
+it.each([
+  {knots:[0,0,0,.25,.25,.5,.5,.75,.75,1,1,1]},
+  {knots:[2,2,2,2.1,2.1,4,4,9,9,10,10,10]},
+])('retains and extrudes a general polynomial rounded loop with independently known volume (%j)', ({knots}) => {
   // Equal weights make this a polynomial rounded profile, not an invalid
   // circular arc. General profiles are admitted only after topology proof.
-  const outer = {...circle('outer',3),weights:Array(9).fill(1)}
+  const outer = {...circle('outer',3),knots,weights:Array(9).fill(2)}
   const input = document([outer,body([['outer']])])
   const before = JSON.stringify(input)
   const built = buildOwnNurbs(input,{action:'build'})

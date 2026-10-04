@@ -1,5 +1,14 @@
 # Polynomial profile area and analytic display fixes
 
+Final WASM SHA-256:
+`ed2e5a614790b691c5e41ae04409a49a4c6f805c301c5c3ca3267dc4fd91be84`.
+The final source passed 918 CAD roadmap tests, 55 profile/worker/manufacturing
+tests, type checking and dist budgets. Both mouse and keyboard profile scenarios
+passed on this artifact, including independent OpenCascade STEP measurements.
+G-code/Laser browser export and reimport also passed with both interactions.
+See `docs/qualification/polynomial-profile-2026-10-05/final/manifest.json`.
+The full command matrix and the broader P1–P3 roadmap remain incomplete.
+
 ## Changes
 
 Equal-weight NURBS knot spans of degree at most two now use Simpson integration
@@ -34,7 +43,7 @@ Triangle and position limits remain unchanged.
   five millimetres and compare with the analytic volume 150 mm³.
 - WASM snapshot `a86645ce1295debbd1de0e9d48e438f8cf6b5ce045e8dc41f78f31563f0e4068`
   passed 29 profile, real-worker and partial-annular protocol tests. This
-  snapshot predates the final midpoint guard; final source acceptance is pending.
+  snapshot predates the final midpoint guard; final source acceptance is recorded above.
 - The polynomial arch profile passed mouse and Tab/Enter browser preparation,
   cancellation, extrusion, STEP export, Undo/Redo and JSON reload in the new
   interface. OpenCascade independently accepted both STEP exports: one valid

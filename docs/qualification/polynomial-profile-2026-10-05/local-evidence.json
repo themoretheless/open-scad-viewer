@@ -52,6 +52,19 @@
       "path": "docs/qualification/polynomial-profile-2026-10-05/draft-concurrency-browser.json",
       "sha256": "fa665d20794a57593cbdb3dcdb039a218465c941a726140fde2e839c360d6eba",
       "scope": "new interface concurrent tabs, renderer crashes, corrupt cache, real quota and persistent browser restart"
+    },
+    {
+      "path": "docs/qualification/polynomial-profile-2026-10-05/polynomial-nonuniform.log.gz",
+      "sha256": "6eea64d9fbe61c484e3cf6f80f2479984b1e979c4e47f6c2b9a86ca84a91ec5b",
+      "passed": 7,
+      "scope": "uniform and nonuniform knots, constant weights 2, known volume 150",
+      "includesMidpointGuard": false
+    },
+    {
+      "path": "docs/qualification/polynomial-profile-2026-10-05/interface-dist.log.gz",
+      "sha256": "cd19fffccf12d540a1e581ba3ed012ed07dd81c9185123bf7bd0948c5fc541ac",
+      "scope": "pre-guard interface dist budgets; 150 artifacts, 7891053 asset bytes",
+      "includesMidpointGuard": false
     }
   ],
   "sources": [
