@@ -97,7 +97,7 @@ const renderer=createRenderer<Node,Node>({
 })
 const mounts:Array<()=>void>=[]
 afterEach(()=>{mounts.splice(0).forEach(f=>f());const settings=useModelingGrid();settings.enabled.value=true;settings.grid.value=true;settings.geometry.value=true;settings.guides.value=true;settings.step.value=10;settings.unit.value='mm';vi.unstubAllGlobals()})
-async function mount(props: Record<string,unknown> = {}, savedDraft?:string, preferences:Record<string,string>={}){
+async function mount(props: Record<string,unknown> = {}, savedDraft?:string, preferences:Record<string,string>={'scad-solid-dock':'true'}){
  const sketch={id:'s',name:'Profile',closed:true,points:[[0,0],[10,0],[10,10],[0,10]] as [number,number][]}
  let stored=savedDraft??stringifyMeshJson({version:1,sketches:[sketch,{id:'circle',name:'Circle',closed:true,analytic:{kind:'circle',center:[20,5],radius:3,start:0,sweep:360},points:sampleCurve({kind:'circle',center:[20,5],radius:3,start:0,sweep:360})},{id:'line',name:'Line',closed:false,points:[[0,-5],[2,-5]]},{id:'boundary',name:'Boundary',closed:false,points:[[5,-10],[5,0]]}],bodies:[{...extrudeDirectSketch(sketch,10,'b'),name:'Cube'}]})
  vi.stubGlobal('navigator',{locks:{request:(_name:string,_options:unknown,action:()=>unknown)=>Promise.resolve(action())}})

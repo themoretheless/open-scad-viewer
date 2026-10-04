@@ -2704,7 +2704,7 @@ function up(e: PointerEvent) {
 // Command palette: every tool, primitive and context action of the workspace, searchable by its Russian or English name.
 const paletteOpen = ref(false)
 const notice = ref('')
-const dockOpen = ref(storageGet('scad-solid-dock') !== 'false')
+const dockOpen = ref(storageGet('scad-solid-dock') === 'true')
 const dockTab = ref<'scene' | 'props'>('scene')
 watch(dockOpen, open => storageSet('scad-solid-dock', String(open)))
 const exactCardOpen = computed({ get: () => dockOpen.value && dockTab.value === 'props', set: open => { if (open) { dockOpen.value = true; dockTab.value = 'props' } else dockTab.value = 'scene' } })
@@ -2761,6 +2761,7 @@ const availableSolidCommands = computed<SolidCommand[]>(() => {
     cmd('orbit', 'Обзор камерой', 'Orbit camera', () => { movingBody.value = false }, { detail: label('Вид', 'View') }),
     cmd('move-body', 'Двигать тело', 'Move body', () => { movingBody.value = true }, { detail: label('Вид', 'View'), shortcut: 'G' }),
     cmd('sketch-pane', sketchPaneOpen.value ? 'Скрыть панель эскизов 2D' : 'Показать панель эскизов 2D', sketchPaneOpen.value ? 'Hide 2D sketch pane' : 'Show 2D sketch pane', () => toggleSketchPane(), { detail: label('Вид', 'View') }),
+    cmd('scene-panel', dockOpen.value ? 'Скрыть панель сцены' : 'Показать панель сцены', dockOpen.value ? 'Hide scene panel' : 'Show scene panel', () => { dockOpen.value = !dockOpen.value }, { detail: label('Вид', 'View'), shortcut: '\\' }),
     cmd('fit', 'Вписать', 'Fit', () => fit(mode.value), { detail: label('Вид', 'View'), shortcut: 'F' }),
     cmd('iso', 'Изометрия', 'Isometric view', () => { camera.value = defaultDirectCamera(); fit('3d') }, { detail: label('Вид', 'View') }),
     cmd('smooth', smoothDisplay.value ? 'Показывать B-rep гранёным' : 'Показывать B-rep гладким', smoothDisplay.value ? 'Show B-rep faceted' : 'Show B-rep smooth', () => { smoothDisplay.value = !smoothDisplay.value }, { detail: label('Вид', 'View') }),
@@ -2885,6 +2886,7 @@ function keydown(e: KeyboardEvent) {
     e.preventDefault(); applyCommand(); return
   }
   if ((e.target as HTMLElement).matches('input,textarea,select')) return
+  if (e.key === '\\' && !e.ctrlKey && !e.metaKey && !e.altKey) { e.preventDefault(); dockOpen.value = !dockOpen.value; return }
   if(tool.value==='polyline' && draft.value.length && (e.key==='Backspace'||((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='z'&&!e.shiftKey))){e.preventDefault();undoDraftPoint();return}
   if(tool.value==='polyline' && e.key==='Enter'){e.preventDefault();finish(false);return}
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'd') { e.preventDefault(); duplicate(); return }
@@ -4174,7 +4176,7 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
   background: color-mix(in srgb, var(--surface) 92%, transparent); backdrop-filter: blur(8px);
 }
 .direct-workspace .pane > .modeling-grid-controls :deep(details > div) { top: auto; bottom: 100%; right: auto; left: 0; }
-.direct-workspace .workspace-state { gap: 6px 10px; padding: 3px 12px; border-bottom: 1px solid var(--hairline); background: var(--surface); }
+.direct-workspace .workspace-state { flex-wrap: nowrap; overflow: hidden; white-space: nowrap; gap: 4px 10px; padding: 2px 12px; min-height: 24px; border-bottom: 1px solid var(--hairline); background: var(--surface); }
 .direct-workspace .workspace-state .state-legend { display: none; }
 .direct-workspace .splitter { border: 0; background: var(--hairline); }
 .direct-workspace .splitter span { display: none; }
