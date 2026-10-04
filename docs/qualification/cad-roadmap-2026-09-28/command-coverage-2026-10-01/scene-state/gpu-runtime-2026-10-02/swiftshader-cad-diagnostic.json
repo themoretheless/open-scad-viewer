@@ -1,0 +1,158 @@
+[
+  {
+    "documentId": "5200e098-0ac1-4f48-bd93-f64890124648",
+    "time": 600.1000000014901,
+    "kind": "configure",
+    "device": 1,
+    "canvas": "gpu-layer"
+  },
+  {
+    "documentId": "5200e098-0ac1-4f48-bd93-f64890124648",
+    "time": 653.3000000044703,
+    "kind": "view-error",
+    "device": 1,
+    "message": "[Invalid Texture] is invalid due to a previous error.\n - While calling [Invalid Texture].CreateView([TextureViewDescriptor]).\n",
+    "format": "bgra8unorm",
+    "width": 611,
+    "height": 419,
+    "stack": "Error\n    at GPUTexture.createView (<anonymous>:13:16)\n    at a.render (http://127.0.0.1:60139/assets/solid-gpu-view-CtE3nftO.js:76:6615)\n    at http://127.0.0.1:60139/assets/solid-gpu-view-CtE3nftO.js:76:6036"
+  },
+  {
+    "documentId": "5200e098-0ac1-4f48-bd93-f64890124648",
+    "time": 653.8000000044703,
+    "kind": "uncaptured-error",
+    "device": 1,
+    "message": "[Invalid TextureView] is invalid due to a previous error.\n - While validating colorAttachments[0].\n - While encoding [CommandEncoder (unlabeled)].BeginRenderPass([RenderPassDescriptor]).\n - While finishing [CommandEncoder (unlabeled)].\n"
+  },
+  {
+    "documentId": "5200e098-0ac1-4f48-bd93-f64890124648",
+    "time": 654.3000000044703,
+    "kind": "destroy-device",
+    "device": 1,
+    "stack": "Error\n    at device.destroy (<anonymous>:31:88)\n    at a.destroy (http://127.0.0.1:60139/assets/solid-gpu-view-CtE3nftO.js:76:7900)\n    at a.fail (http://127.0.0.1:60139/assets/solid-gpu-view-CtE3nftO.js:76:941)\n    at GPUDevice.<anonymous> (http://127.0.0.1:60139/assets/solid-gpu-view-CtE3nftO.js:76:2752)"
+  },
+  {
+    "documentId": "5200e098-0ac1-4f48-bd93-f64890124648",
+    "time": 660,
+    "kind": "device-lost",
+    "device": 1,
+    "reason": "unknown",
+    "message": "A valid external Instance reference no longer exists."
+  },
+  {
+    "documentId": "5200e098-0ac1-4f48-bd93-f64890124648",
+    "time": 660.2000000029802,
+    "kind": "scope-cancelled",
+    "message": "OperationError: Instance dropped in popErrorScope"
+  },
+  {
+    "documentId": "5200e098-0ac1-4f48-bd93-f64890124648",
+    "time": 660.3000000044703,
+    "kind": "scope-cancelled",
+    "message": "OperationError: Instance dropped in popErrorScope"
+  },
+  {
+    "documentId": "a6cbb9b9-1506-4af8-8f0a-80d34b30840b",
+    "time": 115.19999999552965,
+    "kind": "configure",
+    "device": 1,
+    "canvas": "gpu-layer"
+  },
+  {
+    "documentId": "a6cbb9b9-1506-4af8-8f0a-80d34b30840b",
+    "time": 131.39999999850988,
+    "kind": "view-error",
+    "device": 1,
+    "message": "[Invalid Texture] is invalid due to a previous error.\n - While calling [Invalid Texture].CreateView([TextureViewDescriptor]).\n",
+    "format": "bgra8unorm",
+    "width": 611,
+    "height": 415,
+    "stack": "Error\n    at GPUTexture.createView (<anonymous>:13:16)\n    at a.render (http://127.0.0.1:60139/assets/solid-gpu-view-CtE3nftO.js:76:6615)\n    at http://127.0.0.1:60139/assets/solid-gpu-view-CtE3nftO.js:76:6036"
+  },
+  {
+    "documentId": "a6cbb9b9-1506-4af8-8f0a-80d34b30840b",
+    "time": 131.39999999850988,
+    "kind": "uncaptured-error",
+    "device": 1,
+    "message": "[Invalid TextureView] is invalid due to a previous error.\n - While validating colorAttachments[0].\n - While encoding [CommandEncoder (unlabeled)].BeginRenderPass([RenderPassDescriptor]).\n - While finishing [CommandEncoder (unlabeled)].\n"
+  },
+  {
+    "documentId": "a6cbb9b9-1506-4af8-8f0a-80d34b30840b",
+    "time": 131.60000000149012,
+    "kind": "destroy-device",
+    "device": 1,
+    "stack": "Error\n    at device.destroy (<anonymous>:31:88)\n    at a.destroy (http://127.0.0.1:60139/assets/solid-gpu-view-CtE3nftO.js:76:7900)\n    at a.fail (http://127.0.0.1:60139/assets/solid-gpu-view-CtE3nftO.js:76:941)\n    at GPUDevice.<anonymous> (http://127.0.0.1:60139/assets/solid-gpu-view-CtE3nftO.js:76:2752)"
+  },
+  {
+    "documentId": "a6cbb9b9-1506-4af8-8f0a-80d34b30840b",
+    "time": 133.89999999850988,
+    "kind": "device-lost",
+    "device": 1,
+    "reason": "unknown",
+    "message": "A valid external Instance reference no longer exists."
+  },
+  {
+    "documentId": "a6cbb9b9-1506-4af8-8f0a-80d34b30840b",
+    "time": 134,
+    "kind": "scope-cancelled",
+    "message": "OperationError: Instance dropped in popErrorScope"
+  },
+  {
+    "documentId": "a6cbb9b9-1506-4af8-8f0a-80d34b30840b",
+    "time": 134,
+    "kind": "scope-cancelled",
+    "message": "OperationError: Instance dropped in popErrorScope"
+  },
+  {
+    "documentId": "1fe6be6d-9a45-40d4-be81-809b5367758b",
+    "time": 118.79999999701977,
+    "kind": "configure",
+    "device": 1,
+    "canvas": "gpu-layer"
+  },
+  {
+    "documentId": "1fe6be6d-9a45-40d4-be81-809b5367758b",
+    "time": 137.10000000149012,
+    "kind": "view-error",
+    "device": 1,
+    "message": "[Invalid Texture] is invalid due to a previous error.\n - While calling [Invalid Texture].CreateView([TextureViewDescriptor]).\n",
+    "format": "bgra8unorm",
+    "width": 611,
+    "height": 415,
+    "stack": "Error\n    at GPUTexture.createView (<anonymous>:13:16)\n    at a.render (http://127.0.0.1:60139/assets/solid-gpu-view-CtE3nftO.js:76:6615)\n    at http://127.0.0.1:60139/assets/solid-gpu-view-CtE3nftO.js:76:6036"
+  },
+  {
+    "documentId": "1fe6be6d-9a45-40d4-be81-809b5367758b",
+    "time": 137.10000000149012,
+    "kind": "uncaptured-error",
+    "device": 1,
+    "message": "[Invalid TextureView] is invalid due to a previous error.\n - While validating colorAttachments[0].\n - While encoding [CommandEncoder (unlabeled)].BeginRenderPass([RenderPassDescriptor]).\n - While finishing [CommandEncoder (unlabeled)].\n"
+  },
+  {
+    "documentId": "1fe6be6d-9a45-40d4-be81-809b5367758b",
+    "time": 137.29999999701977,
+    "kind": "destroy-device",
+    "device": 1,
+    "stack": "Error\n    at device.destroy (<anonymous>:31:88)\n    at a.destroy (http://127.0.0.1:60139/assets/solid-gpu-view-CtE3nftO.js:76:7900)\n    at a.fail (http://127.0.0.1:60139/assets/solid-gpu-view-CtE3nftO.js:76:941)\n    at GPUDevice.<anonymous> (http://127.0.0.1:60139/assets/solid-gpu-view-CtE3nftO.js:76:2752)"
+  },
+  {
+    "documentId": "1fe6be6d-9a45-40d4-be81-809b5367758b",
+    "time": 139.69999999552965,
+    "kind": "device-lost",
+    "device": 1,
+    "reason": "unknown",
+    "message": "A valid external Instance reference no longer exists."
+  },
+  {
+    "documentId": "1fe6be6d-9a45-40d4-be81-809b5367758b",
+    "time": 139.69999999552965,
+    "kind": "scope-cancelled",
+    "message": "OperationError: Instance dropped in popErrorScope"
+  },
+  {
+    "documentId": "1fe6be6d-9a45-40d4-be81-809b5367758b",
+    "time": 139.69999999552965,
+    "kind": "scope-cancelled",
+    "message": "OperationError: Instance dropped in popErrorScope"
+  }
+]

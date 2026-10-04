@@ -760,8 +760,99 @@ pub fn exact_variable_radius_fillet(
 }
 
 /// Exact equal-radius valence-3 corner blend: three concurrent cuboid edges at the
-/// max corner become rational quarter-cylinders joined by a stereographic spherical octant.
+/// selected corner become rational quarter-cylinders joined by a stereographic spherical octant.
 pub fn exact_valence3_corner_blend(
+    model: &Model,
+    edges: &[usize],
+    radius: f64,
+) -> Result<AuditedFeatureResult> {
+    if is_axis_aligned_cuboid(model) {
+        return exact_axis_aligned_valence3_corner_blend(model, edges, radius);
+    }
+    model.validate()?;
+    let refusal = || {
+        refuse(
+            "BREP_VALENCE3_CORNER_BLEND_REFUSED",
+            "Corner blend requires three distinct orthogonal edges of a planar cuboid",
+        )
+    };
+    if edges.len() != 3
+        || edges.iter().any(|&i| i >= model.edges.len())
+        || edges
+            .iter()
+            .copied()
+            .collect::<std::collections::BTreeSet<_>>()
+            .len()
+            != 3
+    {
+        return Err(refusal());
+    }
+    let vertex = model.edges[edges[0]]
+        .vertices
+        .iter()
+        .copied()
+        .find(|v| edges.iter().all(|&e| model.edges[e].vertices.contains(v)))
+        .ok_or_else(refusal)?;
+    let origin = model.vertices[vertex].point;
+    let mut axes = [[0.; 3]; 3];
+    for (i, &edge) in edges.iter().enumerate() {
+        let edge = &model.edges[edge];
+        if edge.curve.degree != 1 {
+            return Err(refusal());
+        }
+        let other = edge
+            .vertices
+            .iter()
+            .copied()
+            .find(|&v| v != vertex)
+            .ok_or_else(refusal)?;
+        let delta: [f64; 3] = std::array::from_fn(|j| model.vertices[other].point[j] - origin[j]);
+        let length = delta[0].hypot(delta[1]).hypot(delta[2]);
+        if !length.is_finite() || length <= 1e-12 {
+            return Err(refusal());
+        }
+        axes[i] = delta.map(|v| v / length);
+    }
+    for i in 0..3 {
+        for j in 0..i {
+            let dot: f64 = (0..3).map(|k| axes[i][k] * axes[j][k]).sum();
+            if dot.abs() > 1e-12 {
+                return Err(refusal());
+            }
+        }
+    }
+    let mut to_local = [[0.; 4]; 4];
+    let mut to_world = [[0.; 4]; 4];
+    to_local[3][3] = 1.;
+    to_world[3][3] = 1.;
+    for i in 0..3 {
+        for j in 0..3 {
+            to_local[i][j] = axes[i][j];
+            to_world[i][j] = axes[j][i];
+        }
+        to_local[i][3] = -(0..3).map(|j| axes[i][j] * origin[j]).sum::<f64>();
+        to_world[i][3] = origin[i];
+    }
+    // Full cuboid recognition and audit run in the recovered orthonormal frame;
+    // selected edges alone never establish the source's geometric class.
+    let local = crate::transform::affine(model, to_local)?;
+    let result = exact_axis_aligned_valence3_corner_blend(&local, edges, radius)?;
+    let world = crate::transform::affine(&result.model, to_world)?;
+    certify_blend_result(
+        world,
+        EXACT_VALENCE3_CORNER_BLEND_CAPABILITY,
+        vec![
+            "exact_equal_radius_sphere_octant",
+            "three_rational_cylinders",
+            "plane_cylinder_sphere_network",
+            "rigid_cuboid_placement",
+        ],
+        radius,
+        "BREP_VALENCE3_CORNER_BLEND_REFUSED",
+    )
+}
+
+fn exact_axis_aligned_valence3_corner_blend(
     model: &Model,
     edges: &[usize],
     radius: f64,
@@ -778,10 +869,17 @@ pub fn exact_valence3_corner_blend(
             "Valence-3 radius must be finite and positive",
         ));
     }
-    if edges.len() != 3 {
+    if edges.len() != 3
+        || edges
+            .iter()
+            .copied()
+            .collect::<std::collections::BTreeSet<_>>()
+            .len()
+            != 3
+    {
         return Err(refuse(
             "BREP_VALENCE3_CORNER_BLEND_REFUSED",
-            "exact-valence3-corner-blend/1 admits exactly three concurrent edges at the max corner",
+            "exact-valence3-corner-blend/1 admits exactly three distinct concurrent cuboid edges",
         ));
     }
     if !is_axis_aligned_cuboid(model) {
@@ -812,7 +910,7 @@ pub fn exact_valence3_corner_blend(
             ));
         }
     }
-    // Three edges must share exactly one common vertex, and that vertex must be the max corner.
+    // Three distinct edges must share one cuboid corner.
     let sets: Vec<[usize; 2]> = edges.iter().map(|&e| model.edges[e].vertices).collect();
     for &v in &sets[0] {
         if sets[1].contains(&v) && sets[2].contains(&v) {
@@ -827,20 +925,36 @@ pub fn exact_valence3_corner_blend(
         ));
     };
     let p = model.vertices[vid].point;
-    let at_max = (0..3).all(|i| (p[i] - max[i]).abs() <= model.tolerance_mm.max(1e-9));
-    if !at_max {
-        return Err(refuse(
-            "BREP_VALENCE3_CORNER_BLEND_REFUSED",
-            "exact-valence3-corner-blend/1 admits the axis-aligned max corner only",
-        ));
-    }
-    let result = crate::imprint_pipeline::valence3_cuboid_max_corner(model, min, max, radius)
-        .map_err(|error| {
-            refuse(
+    // Reflect each minimum coordinate to the maximum corner. This is an
+    // isometry: radius and contact angles remain unchanged. affine() also
+    // reverses shell uses for odd reflections and preserves topology IDs.
+    let tolerance = model.tolerance_mm.max(1e-9);
+    let mut placement = [[0.; 4]; 4];
+    placement[3][3] = 1.;
+    for i in 0..3 {
+        if (p[i] - max[i]).abs() <= tolerance {
+            placement[i][i] = 1.;
+        } else if (p[i] - min[i]).abs() <= tolerance {
+            placement[i][i] = -1.;
+            placement[i][3] = min[i] + max[i];
+        } else {
+            return Err(refuse(
                 "BREP_VALENCE3_CORNER_BLEND_REFUSED",
-                &format!("Valence-3 authorship refused: {}", error.message),
-            )
-        })?;
+                "Selected vertex must be a cuboid corner",
+            ));
+        }
+    }
+    let local_source = crate::transform::affine(model, placement)?;
+    let local_result =
+        crate::imprint_pipeline::valence3_cuboid_max_corner(&local_source, min, max, radius)
+            .map_err(|error| {
+                refuse(
+                    "BREP_VALENCE3_CORNER_BLEND_REFUSED",
+                    &format!("Valence-3 authorship refused: {}", error.message),
+                )
+            })?;
+    // The reflection is its own inverse. Certify the final world-space solid.
+    let result = crate::transform::affine(&local_result, placement)?;
     let spheres = result
         .faces
         .iter()
@@ -1994,6 +2108,96 @@ fn place_axial(
 }
 
 type AnalyticTube = (f64, f64, f64, [f64; 3], [f64; 3], [[f64; 3]; 2]);
+
+/// Experimental preview construction for one top outer quarter-rim edge.
+/// This returns no feature certificate: result boundary proof and complete
+/// source ownership qualification are still required before command admission.
+pub fn build_partial_annular_preview(model: &Model, edge_index: usize, radius: f64) -> Result<Model> {
+    const CODE: &str = "BREP_PARTIAL_ANNULAR_PREVIEW_REFUSED";
+    model.validate()?;
+    audit_solid(model)?;
+    let (outer,inner,height,origin,axis,_) = recognize_analytic_tube(model)
+        .ok_or_else(|| refuse(CODE,"Preview source must be a recognized annular cylinder"))?;
+    let edge=model.edges.get(edge_index).ok_or_else(|| refuse(CODE,"Invalid circular edge"))?;
+    let curve=&edge.curve;
+    if curve.degree!=2 || curve.periodic || curve.knots!=[0.,0.,0.,1.,1.,1.]
+        || curve.control_points.len()!=3 || curve.weights.len()!=3 {
+        return Err(refuse(CODE,"Select a top outer quarter-circle edge"));
+    }
+    let tolerance=(outer.max(height)*1e-10).max(1e-12);
+    let local:Vec<_>=curve.control_points.iter().map(|p|sub3([p[0],p[1],p[2]],origin)).collect();
+    let radial:Vec<_>=local.iter().map(|p| {
+        let z=dot3(*p,axis);
+        [p[0]-z*axis[0],p[1]-z*axis[1],p[2]-z*axis[2]]
+    }).collect();
+    if local.iter().any(|p|(dot3(*p,axis)-height).abs()>tolerance)
+        || [0,2].iter().any(|i|(dot3(radial[*i],radial[*i]).sqrt()-outer).abs()>tolerance)
+        || dot3(radial[0],radial[2]).abs()>outer*tolerance
+        || (0..3).any(|k|(radial[1][k]-radial[0][k]-radial[2][k]).abs()>tolerance)
+        || curve.weights.iter().zip([1.,std::f64::consts::FRAC_1_SQRT_2,1.]).any(|(a,b)|(*a-b).abs()>1e-12) {
+        return Err(refuse(CODE,"Edge is not a recognized top outer quarter-circle"));
+    }
+    let first=unit3(radial[0]).ok_or_else(||refuse(CODE,"Invalid radial frame"))?;
+    let second=unit3(cross3(axis,first)).ok_or_else(||refuse(CODE,"Invalid radial frame"))?;
+    let direction=dot3(radial[2],second).signum();
+    let local=crate::circular_blend::partial_annular_quarter(outer,inner,height,radius,direction,model.tolerance_mm)?;
+    let mut result=place_axial(&local,[first,second],axis,origin)?;
+    result.inherit_topology_ids(&[model]);
+    // This explicitly selected edit replaces exactly one source body with
+    // exactly one result body. Preserve its identity independently of the
+    // changed shell signature. Persisted means entity identity, not geometry.
+    if model.bodies.len()!=1 || result.bodies.len()!=1 {
+        return Err(refuse(CODE,"Preview requires one source and one result body"));
+    }
+    let body_id=model.1.bodies[0];
+    result.1.bodies[0]=body_id;
+    result.1.lineage.push(crate::TopologyLineageRecord {
+        operation:"persist".into(), entity_kind:"body".into(),
+        parents:vec![body_id], children:vec![body_id],
+    });
+    let mut face_relations=vec![vec![];result.faces.len()];
+    if result.faces.len()!=27 {
+        return Err(refuse(CODE,"Unexpected partial annular preview face layout"));
+    }
+    for (target_index,target) in result.faces.iter().enumerate() {
+        // The prototype author fixes this face ordering: three
+        // five-face blend sectors, then three four-face unrounded sectors.
+        let role=if target_index<15 {target_index%5}
+            else { [1,2,3,4][(target_index-15)%4] };
+        if role==0 {continue;} // New blend surface, not retained support.
+        let candidates:Vec<_>=model.faces.iter().enumerate().filter_map(|(source_index,source)| {
+            let s=&source.surface;
+            if role==1 || role==4 {
+                let z=if role==1 {height} else {0.};
+                return (s.degree_u==1 && s.degree_v==1 &&
+                    s.control_points.iter().flatten().all(|p|
+                        (dot3(sub3([p[0],p[1],p[2]],origin),axis)-z).abs()<=tolerance))
+                    .then_some(source_index);
+            }
+            if s.degree_u!=2 || s.degree_v!=1 {return None;}
+            let radial_point=|p:&Vec<f64>| {
+                let d=sub3([p[0],p[1],p[2]],origin);let z=dot3(d,axis);
+                [d[0]-z*axis[0],d[1]-z*axis[1],d[2]-z*axis[2]]
+            };
+            let a=radial_point(&s.control_points[0][0]);
+            let b=radial_point(&s.control_points[2][0]);
+            let expected=if role==2 {outer} else {inner};
+            if (dot3(a,a).sqrt()-expected).abs()>tolerance {return None;}
+            let controls:Vec<_>=target.surface.control_points.iter().flatten().map(radial_point).collect();
+            let contained=controls.iter().all(|p|dot3(*p,a)>=-outer*tolerance && dot3(*p,b)>=-outer*tolerance);
+            let interior=controls.iter().any(|p|dot3(*p,a)>outer*tolerance && dot3(*p,b)>outer*tolerance);
+            (contained && interior).then_some(source_index)
+        }).collect();
+        if candidates.len()!=1 {
+            return Err(refuse(CODE,"Retained preview support has ambiguous source ownership"));
+        }
+        face_relations[target_index]=candidates;
+    }
+    Model::record_relations(&mut result.1.lineage,"face",&model.1.faces,&result.1.faces,&face_relations);
+    result.refresh_change_set(&[model]);
+    result.validate()?;
+    Ok(result)
+}
 
 /// Full circular rims of a recognized annular cylinder. Partial arcs require
 /// endpoint transitions and are refused rather than extending the selection.
@@ -3262,6 +3466,103 @@ mod tests {
                 .contains(&"no_constant_radius_substitution")
         );
         out.model.validate().unwrap();
+    }
+
+    #[test]
+    fn exact_valence3_corner_blend_rotated_cuboid_and_shear_refusal() {
+        let source = cuboid([-7., 3., -2.], [3., 11., 4.]).unwrap();
+        let a = 0.37_f64;
+        let b = -0.61_f64;
+        let matrix = [
+            [a.cos() * b.cos(), -a.sin(), a.cos() * b.sin(), 17.],
+            [a.sin() * b.cos(), a.cos(), a.sin() * b.sin(), -9.],
+            [-b.sin(), 0., b.cos(), 23.],
+            [0., 0., 0., 1.],
+        ];
+        let placed = crate::transform::affine(&source, matrix).unwrap();
+        for vertex in 0..8 {
+            let edges: Vec<_> = source
+                .edges
+                .iter()
+                .enumerate()
+                .filter_map(|(i, e)| e.vertices.contains(&vertex).then_some(i))
+                .collect();
+            let out = exact_valence3_corner_blend(&placed, &edges, 1.).unwrap();
+            assert!(out.audit.ok && out.naming_complete);
+            let volume = crate::analysis::mass_properties(&out.model, 1e-9, 300_000)
+                .unwrap()
+                .signed_volume_mm3;
+            let expected =
+                480. - (1. - std::f64::consts::PI / 4.) * 21. - (1. - std::f64::consts::PI / 6.);
+            assert!((volume - expected).abs() < 2e-5);
+            let sheared = crate::transform::affine(
+                &source,
+                [
+                    [1., 0.2, 0., 0.],
+                    [0., 1., 0., 0.],
+                    [0., 0., 1., 0.],
+                    [0., 0., 0., 1.],
+                ],
+            )
+            .unwrap();
+            assert!(exact_valence3_corner_blend(&sheared, &edges, 1.).is_err());
+        }
+    }
+
+    #[test]
+    fn exact_valence3_corner_blend_all_eight_corners_and_duplicate_refusal() {
+        let min = [-7., 3., -2.];
+        let max = [3., 11., 4.];
+        let source = cuboid(min, max).unwrap();
+        let before = format!("{source:?}");
+        let mut reference_volume: Option<f64> = None;
+        for mask in 0..8 {
+            let corner =
+                std::array::from_fn::<_, 3, _>(
+                    |i| if mask & (1 << i) == 0 { min[i] } else { max[i] },
+                );
+            let vertex = source
+                .vertices
+                .iter()
+                .position(|v| v.point == corner)
+                .unwrap();
+            let edges: Vec<_> = source
+                .edges
+                .iter()
+                .enumerate()
+                .filter_map(|(i, e)| e.vertices.contains(&vertex).then_some(i))
+                .collect();
+            assert_eq!(edges.len(), 3);
+            let out = exact_valence3_corner_blend(&source, &edges, 1.).unwrap();
+            assert!(
+                out.audit.ok && out.naming_complete && out.feature.complete,
+                "corner {mask}"
+            );
+            let volume = crate::analysis::mass_properties(&out.model, 1e-9, 300_000)
+                .unwrap()
+                .signed_volume_mm3;
+            let expected = 480. - (1. - std::f64::consts::PI / 4.) * 21.
+                - (1. - std::f64::consts::PI / 6.);
+            assert!((volume - expected).abs() < 2e-5, "corner {mask}: {volume} != {expected}");
+            if let Some(reference) = reference_volume {
+                assert!(
+                    (volume - reference).abs() < 2e-5,
+                    "corner {mask}: {volume} != {reference}"
+                );
+            } else {
+                reference_volume = Some(volume);
+            }
+            let (actual_min, actual_max) = model_bounds(&out.model);
+            for i in 0..3 {
+                assert!((actual_min[i] - min[i]).abs() < 1e-9);
+                assert!((actual_max[i] - max[i]).abs() < 1e-9);
+            }
+            assert!(
+                exact_valence3_corner_blend(&source, &[edges[0], edges[0], edges[1]], 1.).is_err()
+            );
+            assert!(exact_valence3_corner_blend(&source, &edges, 3.).is_err());
+        }
+        assert_eq!(format!("{source:?}"), before);
     }
 
     #[test]

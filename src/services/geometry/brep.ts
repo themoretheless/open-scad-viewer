@@ -210,7 +210,7 @@ export const extrudeBrepCurves=(loops:NurbsCurve[][],zMin:number,zMax:number):Nu
 export const extrudeBrepPolygon=(profile:[number,number][],zMin:number,zMax:number,holes:[number,number][][]=[]):NurbsBrep=>callGeometryRust('brep_nurbs_extrude_polygon',{profile,holes,zMin,zMax})
 /** Planar-triangulated construction, not a smooth NURBS loft. */
 /** Native bilinear side patches between admitted parallel convex sections. */
-export const createRuledSketchLoft=(sketches:DirectSketch[],ids:string[]):{brep:NurbsBrep;mesh:PolygonMesh}=>{if(sketches.some(s=>ids.includes(s.id)&&s.retainedProfile))throw Error('Ruled sketch loft does not yet support retained curve profiles.');const r=callGeometryRust<{brep:NurbsBrep;mesh:PolygonMesh}>('cad_ruled_sketch_loft',{sketches,ids});normalizePolygonMesh(r.mesh);return r}
+export const createRuledSketchLoft=(sketches:DirectSketch[],ids:string[]):{brep:NurbsBrep;mesh:PolygonMesh}=>{const r=callGeometryRust<{brep:NurbsBrep;mesh:PolygonMesh}>('cad_ruled_sketch_loft',{sketches,ids});normalizePolygonMesh(r.mesh);return r}
 export const createRuledBrepLoft=(sections:[number,number,number][][]):NurbsBrep=>callGeometryRust('brep_nurbs_ruled_loft',{sections})
 export const createFacetedBrepLoft=(sections:[number,number,number][][]):NurbsBrep=>callGeometryRust('brep_nurbs_faceted_loft',{sections})
 /** Planar-triangulated polyline sweep, not an analytic pipe. */
@@ -318,6 +318,13 @@ export interface AuditedBrepFeature {
  changeSet:RustChangeSet
  namingComplete:true
 }
+/** Experimental geometry result; it must not enter the audited commit path. */
+export interface PartialAnnularPreview {
+ model:NurbsBrep
+ changeSet:RustChangeSet
+ qualification:{status:'preview-only';commitAllowed:false;boundaryIntersectionProof:'unqualified';transitionContinuityProof:'unqualified'}
+}
+export const partialAnnularPreview=(model:NurbsBrep,edge:number,radius:number):PartialAnnularPreview=>callGeometryRust('brep_nurbs_partial_annular_preview',{model,edge,radius})
 export const auditedMultiEdgeFillet=(model:NurbsBrep,edges:number[],radius:number):AuditedBrepFeature=>callGeometryRust('brep_nurbs_audited_multi_edge_fillet',{model,edges,radius})
 /** Exact equal-distance chamfer on a connected open/closed convex edge selection. */
 export const exactConvexChamfer=(model:NurbsBrep,edges:number[],distance:number):AuditedBrepFeature=>callGeometryRust('brep_nurbs_exact_convex_chamfer',{model,edges,distance})
@@ -326,7 +333,7 @@ export const exactConvexPrismFillet=(model:NurbsBrep,edges:number[],radius:numbe
 export const exactSimplePrismFillet=(model:NurbsBrep,edges:number[],radius:number):AuditedBrepFeature=>callGeometryRust('brep_nurbs_exact_simple_prism_fillet',{model,edges,radius})
 /** Exact linear radius law on one vertical cuboid edge; constant-radius pairs refuse. */
 export const exactVariableRadiusFillet=(model:NurbsBrep,edges:number[],radii:[number,number][]):AuditedBrepFeature=>callGeometryRust('brep_nurbs_exact_variable_radius_fillet',{model,edges,radii})
-/** Exact equal-radius sphere+cylinder valence-3 blend at the AA cuboid max corner. */
+/** Exact equal-radius sphere+cylinder valence-3 blend at any corner of a rigidly placed cuboid. */
 export const exactValence3CornerBlend=(model:NurbsBrep,edges:number[],radius:number):AuditedBrepFeature=>callGeometryRust('brep_nurbs_exact_valence3_corner_blend',{model,edges,radius})
 export const auditedParallelFrameSweep=(profile:[number,number][],path:[number,number,number][],frameLaw:'fixed'|'rotation-minimizing'|'rmf'='rmf'):AuditedBrepFeature=>callGeometryRust('brep_nurbs_audited_parallel_frame_sweep',{profile,path,frameLaw})
 /** Exact indexed 3..16-section rational ruled/Bezier solid loft successor. */

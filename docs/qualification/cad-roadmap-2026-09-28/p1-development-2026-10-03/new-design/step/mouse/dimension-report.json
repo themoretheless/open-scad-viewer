@@ -1,0 +1,426 @@
+{
+  "schema": "cad-mixed-ui-independent-dimensions/1",
+  "oracle": "OpenCascade original STEP faces and exact line intersections",
+  "scope": "Specified walls, bore and radius-1 corner/fillet sections of the declared 20-edit specimens; not whole-body thickness coverage",
+  "passed": true,
+  "parts": [
+    {
+      "name": "bracket-ui20-0",
+      "stepSha256": "2899c6c8a4b8c3c195f4b38ad5ae9de0c2fff1a45ad81429693560ba610c6019",
+      "gauges": [
+        {
+          "gauge": "horizontal web 5 mm",
+          "origin": [
+            27,
+            -10,
+            13
+          ],
+          "direction": [
+            0,
+            1,
+            0
+          ],
+          "expectedParametersMm": [
+            10,
+            15
+          ],
+          "actualParametersMm": [
+            10.0,
+            15.0
+          ],
+          "maxErrorMm": 0.0,
+          "passed": true
+        },
+        {
+          "gauge": "upright web 5 mm",
+          "origin": [
+            -10,
+            20,
+            13
+          ],
+          "direction": [
+            1,
+            0,
+            0
+          ],
+          "expectedParametersMm": [
+            17,
+            22
+          ],
+          "actualParametersMm": [
+            17.0,
+            22.0
+          ],
+          "maxErrorMm": 0.0,
+          "passed": true
+        },
+        {
+          "gauge": "corner radius 1 mm",
+          "origin": [
+            -10,
+            0.5,
+            13
+          ],
+          "direction": [
+            1,
+            0,
+            0
+          ],
+          "expectedParametersMm": [
+            17.133974596215563,
+            63
+          ],
+          "actualParametersMm": [
+            17.133974596215563,
+            63.0
+          ],
+          "maxErrorMm": 0.0,
+          "passed": true
+        }
+      ],
+      "passed": true
+    },
+    {
+      "name": "bracket-ui20-1",
+      "stepSha256": "422cc795f39312ef2ebb8b1fccb71911cb887eb462b05e460d720c261de1338e",
+      "gauges": [
+        {
+          "gauge": "horizontal web 5 mm",
+          "origin": [
+            27,
+            -10,
+            13
+          ],
+          "direction": [
+            0,
+            1,
+            0
+          ],
+          "expectedParametersMm": [
+            10,
+            15
+          ],
+          "actualParametersMm": [
+            10.0,
+            15.0
+          ],
+          "maxErrorMm": 0.0,
+          "passed": true
+        },
+        {
+          "gauge": "upright web 5 mm",
+          "origin": [
+            -10,
+            20,
+            13
+          ],
+          "direction": [
+            1,
+            0,
+            0
+          ],
+          "expectedParametersMm": [
+            17,
+            22
+          ],
+          "actualParametersMm": [
+            17.0,
+            22.0
+          ],
+          "maxErrorMm": 0.0,
+          "passed": true
+        },
+        {
+          "gauge": "corner radius 1 mm",
+          "origin": [
+            -10,
+            0.5,
+            13
+          ],
+          "direction": [
+            1,
+            0,
+            0
+          ],
+          "expectedParametersMm": [
+            17.133974596215563,
+            63
+          ],
+          "actualParametersMm": [
+            17.133974596215563,
+            63.0
+          ],
+          "maxErrorMm": 0.0,
+          "passed": true
+        }
+      ],
+      "passed": true
+    },
+    {
+      "name": "enclosure-ui20-0",
+      "stepSha256": "a1ce3183519cdc447e8f10146667af1669045721b2c37b2f20c18c6cf4ed7afb",
+      "gauges": [
+        {
+          "gauge": "opposing walls 1.4 mm",
+          "origin": [
+            -10,
+            15,
+            13
+          ],
+          "direction": [
+            1,
+            0,
+            0
+          ],
+          "expectedParametersMm": [
+            17,
+            18.4,
+            55.6,
+            57
+          ],
+          "actualParametersMm": [
+            17.0,
+            18.4,
+            55.6,
+            57.0
+          ],
+          "maxErrorMm": 0.0,
+          "passed": true
+        },
+        {
+          "gauge": "bottom thickness 2 mm",
+          "origin": [
+            27,
+            15,
+            -10
+          ],
+          "direction": [
+            0,
+            0,
+            1
+          ],
+          "expectedParametersMm": [
+            10,
+            12
+          ],
+          "actualParametersMm": [
+            10.0,
+            12.0
+          ],
+          "maxErrorMm": 0.0,
+          "passed": true
+        },
+        {
+          "gauge": "corner radius 1 mm",
+          "origin": [
+            -10,
+            0.5,
+            13
+          ],
+          "direction": [
+            1,
+            0,
+            0
+          ],
+          "expectedParametersMm": [
+            17.133974596215563,
+            57
+          ],
+          "actualParametersMm": [
+            17.133974596215563,
+            57.0
+          ],
+          "maxErrorMm": 0.0,
+          "passed": true
+        }
+      ],
+      "passed": true
+    },
+    {
+      "name": "enclosure-ui20-1",
+      "stepSha256": "720037fe0b7df88d5a3a0ce0ccf17a99f3d1323a7f583c880a6a80a263916e12",
+      "gauges": [
+        {
+          "gauge": "opposing walls 1.4 mm",
+          "origin": [
+            -10,
+            15,
+            13
+          ],
+          "direction": [
+            1,
+            0,
+            0
+          ],
+          "expectedParametersMm": [
+            17,
+            18.4,
+            55.6,
+            57
+          ],
+          "actualParametersMm": [
+            17.0,
+            18.4,
+            55.6,
+            57.0
+          ],
+          "maxErrorMm": 0.0,
+          "passed": true
+        },
+        {
+          "gauge": "bottom thickness 2 mm",
+          "origin": [
+            27,
+            15,
+            -10
+          ],
+          "direction": [
+            0,
+            0,
+            1
+          ],
+          "expectedParametersMm": [
+            10,
+            12
+          ],
+          "actualParametersMm": [
+            10.0,
+            12.0
+          ],
+          "maxErrorMm": 0.0,
+          "passed": true
+        },
+        {
+          "gauge": "corner radius 1 mm",
+          "origin": [
+            -10,
+            0.5,
+            13
+          ],
+          "direction": [
+            1,
+            0,
+            0
+          ],
+          "expectedParametersMm": [
+            17.133974596215563,
+            57
+          ],
+          "actualParametersMm": [
+            17.133974596215563,
+            57.0
+          ],
+          "maxErrorMm": 0.0,
+          "passed": true
+        }
+      ],
+      "passed": true
+    },
+    {
+      "name": "flange-ui20-0",
+      "stepSha256": "0c3c85d672dc2317275977f27b37868342216d040b0e36a6254b26f42253ab4f",
+      "gauges": [
+        {
+          "gauge": "bore radius 6.5 mm and outside radius 20 mm",
+          "origin": [
+            7,
+            0,
+            6
+          ],
+          "direction": [
+            1,
+            0,
+            0
+          ],
+          "expectedParametersMm": [
+            6.5,
+            20
+          ],
+          "actualParametersMm": [
+            6.5,
+            20.0
+          ],
+          "maxErrorMm": 0.0,
+          "passed": true
+        },
+        {
+          "gauge": "outer fillet radius 1 mm",
+          "origin": [
+            7,
+            0,
+            11.5
+          ],
+          "direction": [
+            1,
+            0,
+            0
+          ],
+          "expectedParametersMm": [
+            6.5,
+            19.866025403784437
+          ],
+          "actualParametersMm": [
+            6.5,
+            19.866025403784434
+          ],
+          "maxErrorMm": 3.552713678800501e-15,
+          "passed": true
+        }
+      ],
+      "passed": true
+    },
+    {
+      "name": "flange-ui20-1",
+      "stepSha256": "d35e76c1186650060cf68edbad85e64db75cacc8cdd6dbbb1efe18dbd17f67a5",
+      "gauges": [
+        {
+          "gauge": "bore radius 6.5 mm and outside radius 20 mm",
+          "origin": [
+            7,
+            0,
+            6
+          ],
+          "direction": [
+            1,
+            0,
+            0
+          ],
+          "expectedParametersMm": [
+            6.5,
+            20
+          ],
+          "actualParametersMm": [
+            6.5,
+            20.0
+          ],
+          "maxErrorMm": 0.0,
+          "passed": true
+        },
+        {
+          "gauge": "outer fillet radius 1 mm",
+          "origin": [
+            7,
+            0,
+            11.5
+          ],
+          "direction": [
+            1,
+            0,
+            0
+          ],
+          "expectedParametersMm": [
+            6.5,
+            19.866025403784437
+          ],
+          "actualParametersMm": [
+            6.5,
+            19.866025403784434
+          ],
+          "maxErrorMm": 3.552713678800501e-15,
+          "passed": true
+        }
+      ],
+      "passed": true
+    }
+  ]
+}

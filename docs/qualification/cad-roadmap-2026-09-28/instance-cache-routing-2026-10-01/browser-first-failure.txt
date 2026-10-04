@@ -1,0 +1,8 @@
+file:///private/tmp/open-scad-viewer-cad-resume/scripts/check-solid-scene-edit-worker-browser.mjs:99
+  for(let i=0;i<linked.mesh.positions.length;i++)assert.ok(Math.abs(actual.mesh.positions[i]-linked.mesh.positions[i]-(i%3===0?7:0))<1e-10)
+                            ^
+
+TypeError: Cannot read properties of undefined (reading 'positions')
+    at file:///private/tmp/open-scad-viewer-cad-resume/scripts/check-solid-scene-edit-worker-browser.mjs:99:29
+
+Node.js v26.10.0

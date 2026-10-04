@@ -1,0 +1,28 @@
+{
+  "schema": "cad-roadmap-step/1",
+  "units": "mm",
+  "toleranceMm": 0.000001,
+  "relativeVolumeTolerance": 1e-8,
+  "parts": [
+    {
+      "name": "Retained annular loft",
+      "file": "retained-loft.step",
+      "sha256": "382c1f9ed9b2122bf82739bd7feaf682c0e4ccf6e5fcc8e75f88100c32099be6",
+      "expected": {
+        "volumeMm3": 586.4306286700947,
+        "boundsMm": [
+          [
+            -3,
+            -3,
+            0
+          ],
+          [
+            11,
+            13,
+            10
+          ]
+        ]
+      }
+    }
+  ]
+}

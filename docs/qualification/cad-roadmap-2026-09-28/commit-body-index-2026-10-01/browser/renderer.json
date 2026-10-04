@@ -1,0 +1,15 @@
+{
+  "navigatorGpu": true,
+  "diagnostics": [
+    {
+      "event": "adapter",
+      "available": false
+    },
+    {
+      "event": "adapter",
+      "available": false
+    }
+  ],
+  "gpuCanvasVisible": false,
+  "backend": "Объекты 4Треугольники 1 116Объём 9 375,63Площадь 3 994,72Готово · 139 ms"
+}

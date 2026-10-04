@@ -1,0 +1,142 @@
+{
+  "keyboard": true,
+  "tabs": 1163,
+  "gpuActive": true,
+  "reloadExact": true,
+  "workerFailureRetry": true,
+  "browser": "157.0.8081.0",
+  "workerRequests": 6,
+  "cancelledWorkerTerminated": true,
+  "keyboardRestart": true,
+  "planar": {
+    "cells": 1,
+    "converged": true,
+    "distanceIntervalMm": [
+      0.2499999999999999,
+      0.25000000000001976
+    ],
+    "maxCells": 10000,
+    "method": "interval-tensor-de-boor-pair-subdivision",
+    "parameters": [
+      [
+        1,
+        0
+      ],
+      [
+        0,
+        0
+      ]
+    ],
+    "pointEnclosures": [
+      [
+        [
+          9.999999999999982,
+          10
+        ],
+        [
+          0,
+          1.33e-322
+        ],
+        [
+          0,
+          0
+        ]
+      ],
+      [
+        [
+          10.25,
+          10.250000000000002
+        ],
+        [
+          0,
+          1.33e-322
+        ],
+        [
+          0,
+          0
+        ]
+      ]
+    ],
+    "points": [
+      [
+        10,
+        0,
+        0
+      ],
+      [
+        10.25,
+        0,
+        0
+      ]
+    ],
+    "reason": "tolerance",
+    "scope": "untrimmed-surfaces",
+    "toleranceMm": 0.001
+  },
+  "curved": {
+    "cells": 343,
+    "converged": true,
+    "distanceIntervalMm": [
+      1.9991624999999933,
+      2.0001000000000073
+    ],
+    "maxCells": 100000,
+    "method": "interval-tensor-de-boor-pair-subdivision",
+    "parameters": [
+      [
+        0.375,
+        0.625
+      ],
+      [
+        0.375,
+        0.625
+      ]
+    ],
+    "pointEnclosures": [
+      [
+        [
+          0.3749999999999991,
+          0.37500000000000117
+        ],
+        [
+          0.6249999999999981,
+          0.6250000000000022
+        ],
+        [
+          0.00004999999999710791,
+          0.00005000000000277006
+        ]
+      ],
+      [
+        [
+          0.3749999999999991,
+          0.37500000000000117
+        ],
+        [
+          0.6249999999999981,
+          0.6250000000000022
+        ],
+        [
+          -2.000050000000003,
+          -2.0000499999999968
+        ]
+      ]
+    ],
+    "points": [
+      [
+        0.375,
+        0.625,
+        0.00004999999999999449
+      ],
+      [
+        0.375,
+        0.625,
+        -2.00005
+      ]
+    ],
+    "reason": "tolerance",
+    "scope": "untrimmed-surfaces",
+    "toleranceMm": 0.001
+  },
+  "documentUnchanged": true
+}

@@ -1,0 +1,35 @@
+{
+  "counts": {
+    "shared-edge": 2
+  },
+  "pairs": [
+    {
+      "faces": [
+        0,
+        2
+      ],
+      "kind": "shared-edge",
+      "edges": [
+        2
+      ],
+      "vertices": [
+        0,
+        2
+      ]
+    },
+    {
+      "faces": [
+        10,
+        12
+      ],
+      "kind": "shared-edge",
+      "edges": [
+        27
+      ],
+      "vertices": [
+        10,
+        14
+      ]
+    }
+  ]
+}

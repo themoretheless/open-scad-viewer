@@ -1,0 +1,17 @@
+{
+  "browser": "151.0.7922.34",
+  "profileWorkerCancelled": false,
+  "operation": "Prepare profile",
+  "retainedArcs": false,
+  "retainedGeneralNurbs": true,
+  "exactExtrusion": true,
+  "gpuFallback": true,
+  "renderedTriangles": 28,
+  "cancel": true,
+  "undo": true,
+  "repeat": true,
+  "jsonReload": true,
+  "keyboard": false,
+  "tabPresses": 0,
+  "downloads": 9
+}

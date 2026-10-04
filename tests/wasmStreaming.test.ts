@@ -135,3 +135,13 @@ it('cancels a bound body that stalls and discards a response arriving after time
   expect(lateCancel).toHaveBeenCalledTimes(1)
   expect(vi.getTimerCount()).toBe(0)
 })
+
+it('keeps non-browser realms offline unless the worker composition root opts in',async()=>{
+ vi.stubGlobal('window',undefined)
+ const bytes=new Uint8Array([0,97,115,109,1,0,0,0]),identity={byteLength:bytes.length,sha256:createHash('sha256').update(bytes).digest('hex')}
+ const fetchMock=vi.fn().mockImplementation(async()=>new Response(bytes));vi.stubGlobal('fetch',fetchMock)
+ await expect(compileStreamingWasm('/wasm/test.wasm',identity)).resolves.toBeNull();expect(fetchMock).not.toHaveBeenCalled()
+ const module=await compileStreamingWasm('/wasm/test.wasm',identity,true);expect(module).toBeInstanceOf(WebAssembly.Module);assertVerifiedWasmModule(module!,identity)
+ vi.stubGlobal('fetch',vi.fn().mockResolvedValue(new Response(new Uint8Array([0,97,115,109,1,0,0,1]))))
+ await expect(compileStreamingWasm('/wasm/test.wasm',identity,true)).resolves.toBeNull()
+})

@@ -24,3 +24,15 @@ it('does not transfer unrelated scene results or failed responses',()=>{
  expect(document.bodies[0].mesh.positions.byteLength).toBe(24)
  expect(prepareMainSolidTransfer({version:1,id:2,kind:'restoreDocument',ok:false,error:{name:'Error',message:'invalid'}}).transfer).toEqual([])
 })
+
+it('rejects out-of-range or malformed profile provenance without throwing',async()=>{
+ const {mainSolidResult}=await import('../src/services/mainSolidProtocol')
+ const expected={kind:'profilePrepare' as const,chainSegments:[2,1]}
+ const source={chain:0,segment:1,reversed:true,connector:false}
+ const result={document:{version:1,sketches:[],bodies:[]},id:'a',plane:{origin:[0,0,0],u:[1,0,0],v:[0,1,0]},report:{accepted:false,reason:'invalid-contour',points:[],defects:[],connectors:[],curveSources:[source]}}
+ expect(mainSolidResult(expected,result)).toBe(true)
+ for(const invalid of [{...source,chain:2},{...source,segment:2},{...source,reversed:'yes'},{chain:0,end:'middle',nextChain:1,reversed:false,connector:true},{chain:0,end:'end',nextChain:2,reversed:false,connector:true}]){
+  expect(mainSolidResult(expected,{...result,report:{...result.report,curveSources:[invalid]}})).toBe(false)
+ }
+ expect(mainSolidResult(expected,{...result,report:{...result.report,profile:{loops:null}}})).toBe(false)
+})

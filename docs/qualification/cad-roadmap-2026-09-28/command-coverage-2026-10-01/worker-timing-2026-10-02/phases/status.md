@@ -1,0 +1,9 @@
+# Opt-in worker phases, 2026-10-02
+
+MainSolid requests may set traceTiming:true. Successful and failed responses then include worker-local warmupMs, executeMs and prepareMs. Ordinary requests omit timing and retain their result/protocol behavior. Warmup measures warmGeometryKernel, execution wraps the complete command function (including JS/WASM serialization), preparation wraps transferable response packaging. It does not isolate pure Rust execution or worker module loading before message reception. No cross-realm absolute timestamp subtraction is used.
+
+40 runtime/transport tests pass, including opt-in/ordinary result equivalence, finite nonnegative durations, omitted metadata for ordinary requests and failed traced execution. Typecheck, Vite and dist verification pass; total assets 7,203,174 bytes are within existing budgets. Kernel binary was not rebuilt.
+
+Two sequential Chrome Canary 157 / Apple Metal measurement scenarios pass with traceTiming injected only by qualification instrumentation. Strict console/page error, cancellation, retry, full-document Undo/Redo and reload checks remain intact. First vertex/curvature requests warm the kernel in 67.4..78.3 ms and execute in 0.5..0.7 ms. Subsequent measurement execution is 0..0.1 ms; warmup is 0 at clock resolution. Primitive warmup is 71.9..72.4 ms and execution 14.3..14.6 ms. Transfer preparation is 0..0.1 ms for these small results.
+
+This identifies warmup as a large measured part of cold measurement latency on the fixture. It does not prove the cause of all latency, robust percentiles, large-scene performance or physical paint timing. Bootstrap and transfer scheduling remain outside these three stages; the remainder cannot be attributed to a single mechanism. No performance improvement or full P0–P3 completion is claimed.

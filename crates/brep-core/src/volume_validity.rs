@@ -324,4 +324,74 @@ mod tests {
         assert!(r.proven, "embedding={} nesting={:?}",r.boundary.proven,r.nesting.as_ref().map(|n|n.roles_consistent));
     }
 
+
+    #[test]
+    fn canonical_partial_annular_boundary_has_consistent_material_volume() {
+        let model=crate::circular_blend::partial_annular_quarter(20.,5.,6.,1.25,1.,1e-7).unwrap();
+        let before=format!("{model:?}");
+        let mut budget=limits();
+        budget.boundary.spans=4096;
+        budget.boundary.contacts.cells=150000;
+        budget.boundary.contacts.domain_cells=1500000;
+        budget.boundary.contacts.cells_per_pair=1024;
+        budget.boundary.contacts.domain_cells_per_pair=100000;
+        let r=inspect(&model,1e-8,budget).unwrap();
+        assert!(r.boundary.proven);
+        assert!(r.proven,"nesting={:?} orientation={:?}",r.nesting.as_ref().map(|n|n.roles_consistent),r.orientations.iter().map(|o|o.outward).collect::<Vec<_>>());
+        assert_eq!(r.orientations.len(),1);
+        assert_eq!(r.orientations[0].outward,Some(true));
+        assert_eq!(format!("{model:?}"),before);
+    }
+    #[test]
+    fn binary_exact_sphere_has_certified_volume_validity(){
+        let model=crate::analytic::sphere(3.).unwrap();let before=format!("{model:?}");
+        let r=inspect(&model,1e-8,limits()).unwrap();
+        assert!(r.proven,"boundary={} orientation={:?}",r.boundary.proven,r.orientations.iter().map(|o|o.outward).collect::<Vec<_>>());
+        assert!(r.boundary.intersections.absence_proven);assert_eq!(r.orientations[0].outward,Some(true));
+        assert_eq!(format!("{model:?}"),before);
+        let rounded=crate::analytic::sphere(2.).unwrap();let r=inspect(&rounded,1e-8,limits()).unwrap();
+        assert!(!r.proven);assert!(!r.boundary.agreement.all_equal);
+        for offset in [[8.,-4.,6.],[-8.,4.,-6.]]{
+            let mut moved=model.clone();
+            for v in &mut moved.vertices{for k in 0..3{v.point[k]+=offset[k];}}
+            for e in &mut moved.edges{for p in &mut e.curve.control_points{for k in 0..3{p[k]+=offset[k];}}}
+            for f in &mut moved.faces{for row in &mut f.surface.control_points{for p in row{for k in 0..3{p[k]+=offset[k];}}}}
+            let r=inspect(&moved,1e-8,limits()).unwrap();assert!(r.proven,"offset={offset:?}");
+        }
+    }
+    #[test]
+    fn exact_sphere_radius_family_keeps_all_volume_proofs(){
+        for radius in [0.000011444091796875,0.375,1.5,6.,12.,786432.]{
+            let model=crate::analytic::sphere(radius).unwrap();let before=format!("{model:?}");
+            let r=inspect(&model,1e-8,limits()).unwrap();
+            assert!(r.proven,"radius={radius}, boundary={}, orientations={:?}",r.boundary.proven,r.orientations.iter().map(|o|o.outward).collect::<Vec<_>>());
+            assert!(r.boundary.agreement.all_equal);assert!(r.boundary.intersections.absence_proven);
+            assert_eq!(format!("{model:?}"),before);
+        }
+    }
+    #[test]
+    fn authored_cylinder_has_certified_volume_validity(){
+        let m=crate::analytic::cylinder(2.,4.).unwrap();let before=format!("{m:?}");
+        let r=inspect(&m,1e-8,limits()).unwrap();
+        assert!(r.proven);assert!(r.boundary.intersections.absence_proven);
+        assert_eq!(r.orientations[0].outward,Some(true));assert_eq!(format!("{m:?}"),before);
+    }
+    #[test]
+    #[ignore = "Roadmap gate: curved face embedding remains unproven"]
+    fn authored_curved_primitives_have_certified_volume_validity(){
+        for (name,m) in [("cylinder",crate::analytic::cylinder(2.,4.).unwrap()),("sphere",crate::analytic::sphere(2.).unwrap())]{
+            let r=inspect(&m,1e-8,limits()).unwrap();
+            if !r.boundary.agreement.all_equal {
+                for use_ in &r.boundary.agreement.uses {
+                    if !use_.decision.as_ref().is_some_and(|d|d.outcome==cad_predicates::BezierIdentity::Equal) {
+                        eprintln!("{name}: boundary face={} wire={} coedge={} edge={} decision={:?}",use_.face,use_.wire,use_.coedge,use_.edge,use_.decision);
+                    }
+                }
+            }
+            assert!(r.proven,"{name}: exact={} joins={} trim={} faces={} pairs={} nesting={:?} orientations={:?}",
+                r.boundary.agreement.all_equal,r.boundary.agreement.all_joins_exact,r.boundary.trim.all_valid,
+                r.boundary.intersections.faces.all_faces_injective,r.boundary.intersections.pairs.all_pairs_classified,
+                r.nesting.as_ref().and_then(|n|n.roles_consistent),r.orientations.iter().map(|o|o.outward).collect::<Vec<_>>());
+        }
+    }
 }

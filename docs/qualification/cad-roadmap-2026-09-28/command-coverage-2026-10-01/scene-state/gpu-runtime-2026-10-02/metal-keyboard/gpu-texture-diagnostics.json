@@ -1,0 +1,44 @@
+[
+  {
+    "documentId": "1b318fed-3d8f-49bc-830a-746890500a1f",
+    "time": 424.69999999552965,
+    "kind": "configure",
+    "device": 1,
+    "canvas": "gpu-layer"
+  },
+  {
+    "documentId": "1b318fed-3d8f-49bc-830a-746890500a1f",
+    "time": 457.8999999985099,
+    "kind": "configure",
+    "device": 2,
+    "canvas": "gpu-canvas"
+  },
+  {
+    "documentId": "4020dd03-757b-41bd-bda5-37a190ec64ad",
+    "time": 125,
+    "kind": "configure",
+    "device": 1,
+    "canvas": "gpu-layer"
+  },
+  {
+    "documentId": "4020dd03-757b-41bd-bda5-37a190ec64ad",
+    "time": 125.19999999552965,
+    "kind": "configure",
+    "device": 2,
+    "canvas": "gpu-canvas"
+  },
+  {
+    "documentId": "a679f2b8-4a9d-478f-a561-04efc7457275",
+    "time": 114.20000000298023,
+    "kind": "configure",
+    "device": 1,
+    "canvas": "gpu-layer"
+  },
+  {
+    "documentId": "a679f2b8-4a9d-478f-a561-04efc7457275",
+    "time": 121.89999999850988,
+    "kind": "configure",
+    "device": 2,
+    "canvas": "gpu-canvas"
+  }
+]

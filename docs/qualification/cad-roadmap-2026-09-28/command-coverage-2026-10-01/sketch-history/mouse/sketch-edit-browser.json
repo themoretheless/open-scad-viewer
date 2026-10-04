@@ -1,0 +1,18 @@
+{
+  "browser": "151.0.7922.34",
+  "workerRequests": 16,
+  "retryFailure": true,
+  "applyWithoutNewWorkerRequest": true,
+  "invalidQuantities": [
+    "fillet",
+    "dogear",
+    "array"
+  ],
+  "undoRedo": true,
+  "eachSketchCommandHistory": true,
+  "cancelledPreviews": 3,
+  "reloadExact": true,
+  "keyboard": false,
+  "tabPresses": 0,
+  "downloads": 17
+}

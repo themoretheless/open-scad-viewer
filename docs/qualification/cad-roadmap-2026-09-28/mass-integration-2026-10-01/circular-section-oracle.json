@@ -1,0 +1,14 @@
+{
+  "status": "numerical_oracle",
+  "results": [
+    {
+      "panels": 10000,
+      "volumeMm3": 492.5826172072568
+    },
+    {
+      "panels": 100000,
+      "volumeMm3": 492.5826172795644
+    }
+  ],
+  "differenceMm3": 7.230755727505311e-08
+}

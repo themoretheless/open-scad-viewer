@@ -1,0 +1,33 @@
+{
+  "schema": "cad-roadmap-occt/1",
+  "oracle": "OpenCascade via cadquery-ocp",
+  "version": "8.0.1.0.0",
+  "scope": "Independent STEP read, solid validity, exact bounding box, volume and OCCT-tessellated preview. Does not certify all STEP inputs.",
+  "passed": true,
+  "parts": [
+    {
+      "name": "Retained annular loft",
+      "stepSha256": "382c1f9ed9b2122bf82739bd7feaf682c0e4ccf6e5fcc8e75f88100c32099be6",
+      "valid": true,
+      "solids": 1,
+      "faces": 10,
+      "boundsMm": [
+        [
+          -3.0000001000000003,
+          -3.0000001000000003,
+          -1e-07
+        ],
+        [
+          11.000000100000001,
+          13.000000100000001,
+          10.0000001
+        ]
+      ],
+      "volumeMm3": 586.4306286646402,
+      "maxBoundsErrorMm": 1.0000000116860974e-07,
+      "volumeErrorMm3": 5.4545807870454155e-09,
+      "passed": true,
+      "previewTriangles": 1738
+    }
+  ]
+}

@@ -74,11 +74,17 @@ export function transformBodies(bodies:DirectBody[],delta:Vec3,axis:Vec3,angle:n
 
 /** Transform the entire selection around one world-space pivot, preserving analytic sketches. */
 export function transformSelection(document: import('./directModeling').DirectDocument, ids:string[],delta:Vec3,axis:Vec3,angle:number,scale:number):import('./directModeling').DirectDocument {
- const source={...document,sketches:document.sketches.map(sketch=>ids.includes(sketch.id)&&sketch.retainedProfile?{...sketch,points:sketch.retainedProfile.loops.flatMap(loop=>loop.flatMap(curve=>curve.controlPoints)) as [number,number][]}:sketch)}
+ const selected=new Set(ids)
+ const source={version:document.version,bodies:document.bodies.filter(body=>selected.has(body.id)),sketches:document.sketches.filter(sketch=>selected.has(sketch.id)).map(sketch=>sketch.retainedProfile?{...sketch,points:sketch.retainedProfile.loops.flatMap(loop=>loop.flatMap(curve=>curve.controlPoints)) as [number,number][]}:sketch)}
  const result=callGeometryRust<import('./directModeling').DirectDocument>('cad_transform_selection',{document:source,ids,delta,axis,angle,scale})
  for(const sketch of result.sketches)if(ids.includes(sketch.id)&&sketch.retainedProfile){
   let offset=0;for(const curve of sketch.retainedProfile.loops.flat()){const count=curve.controlPoints.length;curve.controlPoints=sketch.points.slice(offset,offset+count);offset+=count}
   Object.assign(sketch,withRetainedProfile(sketch,validateBrepProfile(sketch.retainedProfile.loops,'material-left',sketch.retainedProfile.toleranceMm)))
  }
- result.bodies.forEach(typedBody);return result
+ result.bodies.forEach(typedBody)
+ // Keep an independent result without encoding unchanged scene geometry through WASM.
+ const next=structuredClone(document),bodies=new Map(result.bodies.map(body=>[body.id,body])),sketches=new Map(result.sketches.map(sketch=>[sketch.id,sketch]))
+ next.bodies=next.bodies.map(body=>bodies.get(body.id)??body)
+ next.sketches=next.sketches.map(sketch=>sketches.get(sketch.id)??sketch)
+ return next
 }

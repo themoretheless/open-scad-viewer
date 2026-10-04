@@ -1,0 +1,274 @@
+{
+  "browser": "151.0.7922.34",
+  "supported": true,
+  "frames": 24,
+  "adapters": [
+    {
+      "vendor": "google",
+      "architecture": "swiftshader",
+      "device": "",
+      "description": ""
+    },
+    {
+      "vendor": "google",
+      "architecture": "swiftshader",
+      "device": "",
+      "description": ""
+    }
+  ],
+  "devices": 2,
+  "errors": [
+    {
+      "id": "second",
+      "frame": 0,
+      "message": "[Invalid Texture] is invalid due to a previous error.\n - While calling [Invalid Texture].CreateView([TextureViewDescriptor]).\n"
+    },
+    {
+      "id": "first",
+      "frame": 0,
+      "message": "OperationError: Instance dropped in popErrorScope"
+    },
+    {
+      "id": "second",
+      "frame": 1,
+      "message": "OperationError: Instance dropped in popErrorScope"
+    },
+    {
+      "id": "first",
+      "frame": 1,
+      "message": "OperationError: Instance dropped in popErrorScope"
+    },
+    {
+      "id": "second",
+      "frame": 2,
+      "message": "OperationError: Instance dropped in popErrorScope"
+    },
+    {
+      "id": "first",
+      "frame": 2,
+      "message": "OperationError: Instance dropped in popErrorScope"
+    },
+    {
+      "id": "second",
+      "frame": 3,
+      "message": "OperationError: Instance dropped in popErrorScope"
+    },
+    {
+      "id": "first",
+      "frame": 3,
+      "message": "OperationError: Instance dropped in popErrorScope"
+    },
+    {
+      "id": "second",
+      "frame": 4,
+      "message": "OperationError: Instance dropped in popErrorScope"
+    },
+    {
+      "id": "first",
+      "frame": 4,
+      "message": "OperationError: Instance dropped in popErrorScope"
+    },
+    {
+      "id": "second",
+      "frame": 5,
+      "message": "OperationError: Instance dropped in popErrorScope"
+    },
+    {
+      "id": "first",
+      "frame": 5,
+      "message": "OperationError: Instance dropped in popErrorScope"
+    },
+    {
+      "id": "second",
+      "frame": 6,
+      "message": "OperationError: Instance dropped in popErrorScope"
+    },
+    {
+      "id": "first",
+      "frame": 6,
+      "message": "OperationError: Instance dropped in popErrorScope"
+    },
+    {
+      "id": "second",
+      "frame": 7,
+      "message": "OperationError: Instance dropped in popErrorScope"
+    },
+    {
+      "id": "first",
+      "frame": 7,
+      "message": "OperationError: Instance dropped in popErrorScope"
+    },
+    {
+      "id": "second",
+      "frame": 8,
+      "message": "OperationError: Instance dropped in popErrorScope"
+    },
+    {
+      "id": "first",
+      "frame": 8,
+      "message": "OperationError: Instance dropped in popErrorScope"
+    },
+    {
+      "id": "second",
+      "frame": 9,
+      "message": "OperationError: Instance dropped in popErrorScope"
+    },
+    {
+      "id": "first",
+      "frame": 9,
+      "message": "OperationError: Instance dropped in popErrorScope"
+    },
+    {
+      "id": "second",
+      "frame": 10,
+      "message": "OperationError: Instance dropped in popErrorScope"
+    },
+    {
+      "id": "first",
+      "frame": 10,
+      "message": "OperationError: Instance dropped in popErrorScope"
+    },
+    {
+      "id": "second",
+      "frame": 11,
+      "message": "OperationError: Instance dropped in popErrorScope"
+    },
+    {
+      "id": "first",
+      "frame": 11,
+      "message": "OperationError: Instance dropped in popErrorScope"
+    },
+    {
+      "id": "second",
+      "frame": 12,
+      "message": "OperationError: Instance dropped in popErrorScope"
+    },
+    {
+      "id": "first",
+      "frame": 12,
+      "message": "OperationError: Instance dropped in popErrorScope"
+    },
+    {
+      "id": "second",
+      "frame": 13,
+      "message": "OperationError: Instance dropped in popErrorScope"
+    },
+    {
+      "id": "first",
+      "frame": 13,
+      "message": "OperationError: Instance dropped in popErrorScope"
+    },
+    {
+      "id": "second",
+      "frame": 14,
+      "message": "OperationError: Instance dropped in popErrorScope"
+    },
+    {
+      "id": "first",
+      "frame": 14,
+      "message": "OperationError: Instance dropped in popErrorScope"
+    },
+    {
+      "id": "second",
+      "frame": 15,
+      "message": "OperationError: Instance dropped in popErrorScope"
+    },
+    {
+      "id": "first",
+      "frame": 15,
+      "message": "OperationError: Instance dropped in popErrorScope"
+    },
+    {
+      "id": "second",
+      "frame": 16,
+      "message": "OperationError: Instance dropped in popErrorScope"
+    },
+    {
+      "id": "first",
+      "frame": 16,
+      "message": "OperationError: Instance dropped in popErrorScope"
+    },
+    {
+      "id": "second",
+      "frame": 17,
+      "message": "OperationError: Instance dropped in popErrorScope"
+    },
+    {
+      "id": "first",
+      "frame": 17,
+      "message": "OperationError: Instance dropped in popErrorScope"
+    },
+    {
+      "id": "second",
+      "frame": 18,
+      "message": "OperationError: Instance dropped in popErrorScope"
+    },
+    {
+      "id": "first",
+      "frame": 18,
+      "message": "OperationError: Instance dropped in popErrorScope"
+    },
+    {
+      "id": "second",
+      "frame": 19,
+      "message": "OperationError: Instance dropped in popErrorScope"
+    },
+    {
+      "id": "first",
+      "frame": 19,
+      "message": "OperationError: Instance dropped in popErrorScope"
+    },
+    {
+      "id": "second",
+      "frame": 20,
+      "message": "OperationError: Instance dropped in popErrorScope"
+    },
+    {
+      "id": "first",
+      "frame": 20,
+      "message": "OperationError: Instance dropped in popErrorScope"
+    },
+    {
+      "id": "second",
+      "frame": 21,
+      "message": "OperationError: Instance dropped in popErrorScope"
+    },
+    {
+      "id": "first",
+      "frame": 21,
+      "message": "OperationError: Instance dropped in popErrorScope"
+    },
+    {
+      "id": "second",
+      "frame": 22,
+      "message": "OperationError: Instance dropped in popErrorScope"
+    },
+    {
+      "id": "first",
+      "frame": 22,
+      "message": "OperationError: Instance dropped in popErrorScope"
+    },
+    {
+      "id": "second",
+      "frame": 23,
+      "message": "OperationError: Instance dropped in popErrorScope"
+    },
+    {
+      "id": "first",
+      "frame": 23,
+      "message": "OperationError: Instance dropped in popErrorScope"
+    }
+  ],
+  "lost": [
+    {
+      "id": "second",
+      "reason": "unknown",
+      "message": "A valid external Instance reference no longer exists."
+    },
+    {
+      "id": "first",
+      "reason": "unknown",
+      "message": "A valid external Instance reference no longer exists."
+    }
+  ]
+}

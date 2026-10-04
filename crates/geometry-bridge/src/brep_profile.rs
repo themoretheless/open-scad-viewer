@@ -1,18 +1,24 @@
-//! Retained 2D analytic profiles. No temporary solids or mesh construction.
+//! Retained 2D rational profiles. No temporary solids or mesh construction.
 use super::{Result, Value, encode, field, input};
 use brep_core::planar_trim;
 use nurbs_core::curve::Curve;
 use value_codec::json;
 
 pub(crate) fn profile(loops: Vec<Vec<Curve>>, tolerance: f64) -> Result<Value> {
-    planar_trim::validate(&loops, tolerance)?;
-    let area = loops.iter().try_fold(0., |sum, wire| {
-        Ok::<_, super::Error>(sum + planar_trim::signed_area(wire, tolerance)?)
-    })?;
-    Ok(json!({
-        "kind":"brep-profile", "loops":loops, "areaMm2":area,
-        "toleranceMm":tolerance, "geometryStatus":"numerical_uncertified"
-    }))
+    if planar_trim::validate(&loops, tolerance).is_ok() {
+        let area = loops.iter().try_fold(0., |sum, wire| {
+            Ok::<_, super::Error>(sum + planar_trim::signed_area(wire, tolerance)?)
+        })?;
+        return Ok(json!({"kind":"brep-profile", "loops":loops, "areaMm2":area,
+            "toleranceMm":tolerance, "geometryStatus":"numerical_uncertified"}));
+    }
+    let report=brep_core::profile_region::inspect(&loops,tolerance,true)?;
+    let mut interval=[0_f64,0_f64];
+    for area in report.areas_mm2 {interval[0]=(interval[0]+area[0]).next_down();interval[1]=(interval[1]+area[1]).next_up();}
+    if interval[0]<=0. {return Err(input("Profile material area is unproven"));}
+    Ok(json!({"kind":"brep-profile", "loops":loops,
+        "areaMm2":interval[0]*0.5+interval[1]*0.5,"areaIntervalMm2":interval,
+        "toleranceMm":tolerance, "geometryStatus":"numerical_uncertified"}))
 }
 
 pub fn dispatch(v: Value) -> Result<Value> {
@@ -21,6 +27,10 @@ pub fn dispatch(v: Value) -> Result<Value> {
         None => 1e-7,
     };
     match v["op"].as_str() {
+        Some("brep_profile_intersections") => brep_core::profile_intersections::inspect(
+            &field::<Vec<Vec<Curve>>>(&v,"loops")?,tolerance,
+            if v.get("maxPairs").is_some(){field(&v,"maxPairs")?}else{128},
+            if v.get("maxBoxes").is_some(){field(&v,"maxBoxes")?}else{32768}),
         Some("brep_profile_offset") => profile(planar_trim::offset(&field::<Vec<Vec<Curve>>>(&v,"loops")?,field(&v,"distance")?,tolerance)?,tolerance),
         Some("brep_profile_transform") => profile(
             brep_core::transform::profile(
@@ -70,7 +80,7 @@ pub fn dispatch(v: Value) -> Result<Value> {
             };
             match fill_rule.as_str() {
                 "material-left" => profile(loops, tolerance),
-                "even-odd" => profile(planar_trim::orient_even_odd(&loops, tolerance)?, tolerance),
+                "even-odd" => profile(brep_core::profile_region::orient_even_odd(&loops, tolerance)?, tolerance),
                 _ => Err(input("Profile fillRule must be material-left or even-odd")),
             }
         }
@@ -108,6 +118,31 @@ mod tests {
             .rev()
             .map(|c| c.reverse().unwrap())
             .collect()
+    }
+    #[test]
+    fn retained_intersection_query_reports_original_segments_and_work_bounds(){
+        let loops=vec![vec![Curve::from_polyline(vec![vec![0.,0.],vec![2.,2.]]).unwrap()],vec![Curve::from_polyline(vec![vec![0.,2.],vec![2.,0.]]).unwrap()]];
+        let r=dispatch(json!({"op":"brep_profile_intersections","loops":loops,"maxPairs":1,"maxBoxes":8192})).unwrap();
+        assert_eq!(r["scope"].as_str(),Some("distinct-profile-segment-pairs"));assert_eq!(r["complete"].as_bool(),Some(true),"{r:?}");
+        assert!(r["boxesVisited"].as_u64().unwrap()<=8192);assert_eq!(r["pairs"][0]["report"]["components"][0]["kind"].as_str(),Some("point"));
+    }
+    #[test]
+    fn general_profile_validation_roundtrip_transform_and_area_enclosure() {
+        let mut wire=rectangle([0.,0.],[2.,2.]);
+        wire[0]=Curve{degree:2,knots:vec![0.,0.,0.,1.,1.,1.],control_points:vec![vec![0.,0.],vec![1.,-1.],vec![2.,0.]],weights:vec![1.;3],periodic:false};
+        let loops=vec![wire];
+        let original=value_codec::to_string(&loops).unwrap();
+        let profile=profile(loops.clone(),1e-7).unwrap();
+        let bounds:[f64;2]=field(&profile,"areaIntervalMm2").unwrap();
+        assert!(bounds[0]<=14./3.&&bounds[1]>=14./3.);
+        assert_eq!(field::<Vec<Vec<Curve>>>(&profile,"loops").unwrap()[0][0].control_points,loops[0][0].control_points);
+        let reloaded:Value=value_codec::from_str(&value_codec::to_string(&profile).unwrap()).unwrap();
+        let checked=dispatch(json!({"op":"brep_profile_validate","loops":reloaded["loops"]})).unwrap();
+        assert_eq!(profile,checked);
+        let matrix=[-2.,0.,0.,0.,0.,3.,0.,0.,0.,0.,1.,0.,10.,20.,0.,1.];
+        let moved=dispatch(json!({"op":"brep_profile_transform","loops":loops,"matrix":matrix})).unwrap();
+        let area:[f64;2]=field(&moved,"areaIntervalMm2").unwrap();assert!(area[0]<=28.&&area[1]>=28.);
+        assert_eq!(value_codec::to_string(&loops).unwrap(),original);
     }
     #[test]
     fn even_odd_normalizes_unordered_original_rings_and_retains_holes() {

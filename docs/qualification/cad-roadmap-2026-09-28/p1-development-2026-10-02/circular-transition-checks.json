@@ -1,0 +1,35 @@
+{
+  "schema": "cad-p1-circular-transition/1",
+  "state": "support surfaces only; solid endpoint treatment incomplete",
+  "representation": "degree 5 x 2 rational Bernstein-product surface with positive weights",
+  "radiusLaw": "r0+(r1-r0)*(3*u*u-2*u*u*u); cross-section radius, not general rolling-ball curvature",
+  "testsPassed": 4,
+  "checkedEndRadiusPairs": [
+    [
+      0,
+      1.25
+    ],
+    [
+      1.25,
+      0
+    ],
+    [
+      0.5,
+      1.25
+    ]
+  ],
+  "transitionRadiusSamples": 2583,
+  "transitionContactNormals": 242,
+  "constantPatchJoinSamples": 82,
+  "joinDirections": [
+    "forward",
+    "reverse"
+  ],
+  "sampleTolerance": 1e-10,
+  "collapsedEndpointTopologicalHandling": false,
+  "continuousProofVerified": false,
+  "independentOracleVerified": false,
+  "solidTrimmingAndSewImplemented": false,
+  "bridgeAndUiExposed": false,
+  "generalP1Complete": false
+}

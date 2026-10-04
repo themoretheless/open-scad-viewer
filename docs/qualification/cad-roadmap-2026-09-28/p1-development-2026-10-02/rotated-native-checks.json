@@ -1,0 +1,47 @@
+{
+  "schema": "cad-p1-rotated-corner/1",
+  "scope": "rigid cuboid local frame recovered from three selected edges; full local cuboid recognition and world-space audit",
+  "rustOperationTestsPassed": 40,
+  "rotatedCornersChecked": 8,
+  "rotationRadians": [
+    0.37,
+    -0.61
+  ],
+  "volumeToleranceMm3": 2e-05,
+  "shearRefusalChecked": true,
+  "independentRotatedStepVerified": true,
+  "browserVerified": true,
+  "wasmBuild": "completed",
+  "generalP1Complete": false,
+  "independentStepCases": 144,
+  "wasmSha256": "105c4def695089fa0f4011d178410c239cc14477ef8c9069a3c22f0950a4608b",
+  "wasmBytes": 9618131,
+  "serviceStepPackingTestsPassed": 34,
+  "productionBuildPassed": true,
+  "assetBytes": 7223719,
+  "assetGrowthBytes": 4644,
+  "assetBudget": 7224761,
+  "distVerificationPassed": true,
+  "typecheckPassed": true,
+  "browserScope": {
+    "corners": 1,
+    "placements": 1,
+    "inputs": [
+      "mouse edge selection and command activation",
+      "keyboard edge selection and command activation"
+    ],
+    "numericFields": "Native keyboard text input with select-all, deletion, insertion and Tab commit; native select typeahead uses Chromium char events.",
+    "checks": [
+      "localized excessive-radius refusal",
+      "radius correction",
+      "late reply ignored after cancel and reopen",
+      "apply without recomputation",
+      "whole-document Undo/Redo",
+      "actual page reload"
+    ],
+    "camera": "fit before selection and after orbit",
+    "sourceWasmSha256": "105c4def695089fa0f4011d178410c239cc14477ef8c9069a3c22f0950a4608b",
+    "keyboardNumericInputVerified": true,
+    "sequentialTabNavigationQualified": false
+  }
+}

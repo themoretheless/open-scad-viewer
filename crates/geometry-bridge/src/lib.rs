@@ -58,6 +58,10 @@ mod cad_diagnostics;
 mod cad_face_distance;
 mod cad_shell_distance;
 mod cad_solid_distance;
+mod cad_material_segment;
+mod cad_material_chord;
+mod cad_material_wall;
+mod cad_whole_wall;
 mod cad_boundary_agreement;
 mod cad_face_contacts;
 mod cad_surface_diagnostics;
@@ -585,6 +589,7 @@ pub fn dispatch(mut v: Value) -> Result<Value> {
         | "brep_profile_validate"
         | "brep_profile_offset"
         | "brep_profile_boolean"
+        | "brep_profile_intersections"
         | "brep_profile_signed_area" => brep_profile::dispatch(v),
         "cad" | "mesh" => mesh::dispatch(v),
         "path2d" => path2d::dispatch(v),
@@ -769,6 +774,10 @@ pub fn dispatch(mut v: Value) -> Result<Value> {
         "cad_face_distance" => cad_face_distance::measure(v),
         "cad_shell_distance" => cad_shell_distance::measure(v),
         "cad_solid_distance" => cad_solid_distance::measure(v),
+        "cad_material_segment" => cad_material_segment::inspect(v),
+        "cad_material_chord" => cad_material_chord::inspect(v),
+        "cad_material_wall" => cad_material_wall::inspect(v),
+        "cad_whole_wall" => cad_whole_wall::inspect(v),
         "cad_boundary_agreement" => cad_boundary_agreement::diagnose(v),
         "cad_face_contacts" => cad_face_contacts::diagnose(v),
         "cad_self_intersection" => cad_face_contacts::diagnose_self_intersection(v),
@@ -1276,6 +1285,20 @@ pub fn dispatch(mut v: Value) -> Result<Value> {
                 &field::<Vec<usize>>(&v, "edges")?,
                 field(&v, "radius")?,
             )?)
+        }
+        "brep_nurbs_partial_annular_preview" => {
+            require_exact_fields(&v,&["op","model","edge","radius"],"partial annular preview request")?;
+            let model=brep_core::analytic_features::build_partial_annular_preview(
+                &field(&v,"model")?,field(&v,"edge")?,field(&v,"radius")?)?;
+            Ok(json!({
+                "model":model,
+                "changeSet":model.1.change_set,
+                "qualification":{
+                    "status":"preview-only", "commitAllowed":false,
+                    "boundaryIntersectionProof":"unqualified",
+                    "transitionContinuityProof":"unqualified"
+                }
+            }))
         }
         "brep_nurbs_exact_variable_radius_fillet" => {
             require_exact_fields(

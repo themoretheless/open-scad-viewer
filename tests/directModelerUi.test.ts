@@ -9,14 +9,14 @@ import * as stepStore from '../src/services/cadStepIndexedDb'
 import * as geometryKernel from '../src/services/geometry/kernel'
 import { useModelingGrid } from '../src/services/modelingGrid'
 import DirectModeler from '../src/features/DirectModeler.vue'
-beforeAll(async()=>{await import('../src/components/CurvePointTrimControls.vue')})
+beforeAll(async()=>{await import('../src/components/CurvePointTrimControls.vue');await import('../src/components/ProfileIntersectionPresentation.vue')})
 import {extrudeDirectSketch,parseDirectDocument,type DirectDocument} from '../src/services/directModeling'
 import {projectDirectPoint,unprojectDirectXY,defaultDirectCamera} from '../src/services/directModelingTools'
 import {solidTopology} from '../src/services/directSolidTools'
 import {sampleCurve} from '../src/services/directSketchGeometry'
 import {inspectPolygonMesh} from '../src/services/geometry/polygon'
 import {stringifyMeshJson} from '../src/services/meshJson'
-import {createBrepBox,analyzeNurbsBrep,createBrepCylinder,createBrepSphere,transformNurbsBrep,tessellateNurbsBrep} from '../src/services/geometry/brep'
+import {createBrepBox,createBrepTube,analyzeNurbsBrep,createBrepCylinder,createBrepSphere,transformNurbsBrep,tessellateNurbsBrep} from '../src/services/geometry/brep'
 vi.mock('../src/services/solidDraftHeadStore',()=>({readSolidDraftHead:async()=>null,writeSolidDraftHead:async(key:string,_expected:string|null,text:string)=>({key,revision:crypto.randomUUID(),text})}))
 const previewWorkerRun=vi.hoisted(()=>vi.fn())
 const displayWorkerRun=vi.hoisted(()=>vi.fn())
@@ -61,7 +61,7 @@ vi.mock('../src/services/solidPreviewWorker',async()=>{
  const {applySolidSceneEdit}=await import('../src/services/solidSceneEdit')
  const {applySolidBrepTool}=await import('../src/services/solidBrepTool')
  const {applySolidNurbsEdit}=await import('../src/services/solidNurbsEdit')
- return {createSolidPreviewWorker:()=>({run:(job:any)=>(job.kind==='sketchSnaps'?sketchSnapsWorkerRun(job):job.kind==='bodySnaps'?bodySnapsWorkerRun(job):job.kind==='faceSketch'?faceSketchWorkerRun(job):job.kind==='bodyEdges'?bodyEdgesWorkerRun(job):job.kind==='topology'?topologyWorkerRun(job):job.kind==='curveDisplay'?undefined:job.kind==='profileDisplay'?undefined:job.kind==='surfaceMesh'?surfaceDisplayWorkerRun(job):job.kind==='surfaceBoundary'?boundaryWorkerRun(job):['shellDistance','faceDistance','surfaceDistance','curveDistance','measureVertices','measureEdge'].includes(job.kind)?measurementWorkerRun(job):job.kind==='primitive'?primitiveWorkerRun(job):job.kind==='displayMesh'?displayWorkerRun(job):previewWorkerRun(job))??Promise.resolve().then(()=>(job.kind==='sketchSnaps'?sketchSnapGeometry(structuredClone([job.sketch])):job.kind==='bodySnaps'?bodySnapGeometry(job.body):job.kind==='faceSketch'?prepareSolidFaceSketch(job.body,job.face):job.kind==='bodyEdges'?solidBodyEdges(job.body):job.kind==='topology'?solidTopology(job.mesh):job.kind==='curveDisplay'?sampleSolidNurbsCurve(job.curve):job.kind==='profileDisplay'?retainedProfileDisplay(job.profile):job.kind==='surfaceMesh'?tessellateSolidNurbsSurface(job.item):job.kind==='surfaceBoundary'?measureSurfaceBoundaries(job.a,job.b,job.options):job.kind==='shellDistance'?measureShellDistance(job.options):job.kind==='faceDistance'?measureFaceDistance(job.options):job.kind==='surfaceDistance'?measureNurbsSurfaceDistance(job.a,job.b,job.toleranceMm,job.maxCells):job.kind==='curveDistance'?measureNurbsCurveDistance(job.a,job.b,job.toleranceMm,job.maxCells):job.kind==='measureVertices'?measureSolidVertices(job.a,job.indexA,job.b,job.indexB):job.kind==='measureEdge'?measureSolidEdgeCurvature(job.body,job.edge,job.parameter):job.kind==='primitive'?addSolidPrimitive(job.document,job.options):job.kind==='modelGraphImport'?importSolidModelGraph(job.document,job.text,job.group):job.kind==='displayMesh'?prepareSolidDisplay(job.mesh,job.brep,job.segments):job.kind==='restoreDocument'?parseDirectDocument(job.text):job.kind==='brepTool'?applySolidBrepTool(job.document,job.options):job.kind==='nurbsEdit'?applySolidNurbsEdit(job.document,job.options):job.kind==='pointEdit'?applySolidPointEdit(job.document,job.options):job.kind==='sketchEdit'?applySolidSketchEdit(job.document,job.options):job.kind==='boolean'?applySolidBoolean(job.document,job.options):job.kind==='sceneEdit'?applySolidSceneEdit(job.document,job.options):job.kind==='curveMatch'?matchSolidCurve(...job.args):job.kind==='surfaceMatch'?matchSolidSurface(...job.args):job.kind==='seamPrepare'?prepareSolidSurfaceSeams(...job.args):job.kind==='surfaceBuild'?buildSolidSurface(job.document,job.options):job.kind==='nurbsRefit'?refitSolidNurbs(job.document,job.options):job.kind==='profilePrepare'?prepareSolidProfile(job.document,job.ids,job.tolerance):job.kind==='profileEdit'?applySolidProfileEdit(job.document,job.options):job.kind==='bodyEdit'?applySolidBodyEdit(job.document,job.options):job.kind==='revolve'?applySolidRevolve(job.document,job.options):applyDirectExtrusionProfile(job.document,job.options))),cancel:()=>{},dispose:()=>{}})}
+ return {createSolidPreviewWorker:()=>({run:(job:any)=>(job.kind==='sketchSnaps'?sketchSnapsWorkerRun(job):job.kind==='bodySnaps'?bodySnapsWorkerRun(job):job.kind==='faceSketch'?faceSketchWorkerRun(job):job.kind==='bodyEdges'?bodyEdgesWorkerRun(job):job.kind==='topology'?topologyWorkerRun(job):job.kind==='curveDisplay'?undefined:job.kind==='profileDisplay'?undefined:job.kind==='surfaceMesh'?surfaceDisplayWorkerRun(job):job.kind==='surfaceBoundary'?boundaryWorkerRun(job):['shellDistance','faceDistance','surfaceDistance','curveDistance','measureVertices','measureEdge'].includes(job.kind)?measurementWorkerRun(job):job.kind==='primitive'?primitiveWorkerRun(job):job.kind==='displayMesh'?displayWorkerRun(job):previewWorkerRun(job))??Promise.resolve().then(()=>(job.kind==='sketchSnaps'?sketchSnapGeometry(structuredClone([job.sketch])):job.kind==='bodySnaps'?bodySnapGeometry(job.body):job.kind==='faceSketch'?prepareSolidFaceSketch(job.body,job.face):job.kind==='bodyEdges'?solidBodyEdges(job.body):job.kind==='topology'?solidTopology(job.mesh):job.kind==='curveDisplay'?sampleSolidNurbsCurve(job.curve):job.kind==='profileDisplay'?retainedProfileDisplay(job.profile):job.kind==='surfaceMesh'?tessellateSolidNurbsSurface(job.item):job.kind==='surfaceBoundary'?measureSurfaceBoundaries(job.a,job.b,job.options):job.kind==='shellDistance'?measureShellDistance(job.options):job.kind==='faceDistance'?measureFaceDistance(job.options):job.kind==='surfaceDistance'?measureNurbsSurfaceDistance(job.a,job.b,job.toleranceMm,job.maxCells):job.kind==='curveDistance'?measureNurbsCurveDistance(job.a,job.b,job.toleranceMm,job.maxCells):job.kind==='measureVertices'?measureSolidVertices(job.a,job.indexA,job.b,job.indexB):job.kind==='measureEdge'?measureSolidEdgeCurvature(job.body,job.edge,job.parameter):job.kind==='primitive'?addSolidPrimitive(job.document,job.options):job.kind==='modelGraphImport'?importSolidModelGraph(job.document,job.text,job.group):job.kind==='displayMesh'?prepareSolidDisplay(job.mesh,job.brep,job.segments):job.kind==='restoreDocument'?parseDirectDocument(job.text):job.kind==='brepTool'?applySolidBrepTool(job.document,job.options):job.kind==='nurbsEdit'?applySolidNurbsEdit(job.document,job.options):job.kind==='pointEdit'?applySolidPointEdit(job.document,job.options):job.kind==='sketchEdit'?applySolidSketchEdit(job.document,job.options):job.kind==='boolean'?applySolidBoolean(job.document,job.options):job.kind==='sceneEdit'?applySolidSceneEdit(typeof job.document==='string'?parseDirectDocument(job.document):job.document,job.options):job.kind==='curveMatch'?matchSolidCurve(...job.args):job.kind==='surfaceMatch'?matchSolidSurface(...job.args):job.kind==='seamPrepare'?prepareSolidSurfaceSeams(...job.args):job.kind==='surfaceBuild'?buildSolidSurface(job.document,job.options):job.kind==='nurbsRefit'?refitSolidNurbs(job.document,job.options):job.kind==='profilePrepare'?prepareSolidProfile(job.document,job.ids,job.tolerance):job.kind==='profileEdit'?applySolidProfileEdit(job.document,job.options):job.kind==='bodyEdit'?applySolidBodyEdit(job.document,job.options):job.kind==='revolve'?applySolidRevolve(job.document,job.options):applyDirectExtrusionProfile(job.document,job.options))),cancel:()=>{},dispose:()=>{}})}
 })
 afterEach(()=>{previewWorkerRun.mockReset();displayWorkerRun.mockReset();primitiveWorkerRun.mockReset();measurementWorkerRun.mockReset();boundaryWorkerRun.mockReset();surfaceDisplayWorkerRun.mockReset();topologyWorkerRun.mockReset();bodyEdgesWorkerRun.mockReset();faceSketchWorkerRun.mockReset();bodySnapsWorkerRun.mockReset();sketchSnapsWorkerRun.mockReset()})
 const svgWorkerRun=vi.hoisted(()=>vi.fn())
@@ -118,7 +118,7 @@ async function mount(props: Record<string,unknown> = {}, savedDraft?:string, pre
  const svg=()=>all().find(n=>n.tag==='svg'&&n.props['aria-label']==='3D body canvas')!
  const event=(n:Node,x=0,y=0)=>({button:0,target:n,currentTarget:n,clientX:x,clientY:y,pointerId:1,preventDefault(){},stopPropagation(){}})
  const pointer=async(n:Node,x=0,y=0)=>{n.props.onPointerdown(event(n,x,y));await nextTick()}
- return {storageChanged:()=>windowListeners.get('storage')?.({key:'scad-solid-modeler-v1'}),all,text,button,click,svg,pointer,event,setProps:async(next:Record<string,unknown>)=>{Object.assign(currentProps,next);await nextTick()},preferences,serialized:()=>stored,doc:()=>{const parsed=JSON.parse(stored) as DirectDocument;return parsed.bodies.some(body=>body.instance&&!body.mesh)?JSON.parse(stringifyMeshJson(parseDirectDocument(stored))) as DirectDocument:parsed},field:async(value:number)=>{const input=all().find(n=>n.tag==='input'&&n.props['onUpdate:modelValue']&&n.props.step===.5)??all().find(n=>n.tag==='input'&&n.props.type==='number'&&n.props['onUpdate:modelValue']);if(!input)throw Error('Missing field');input.props['onUpdate:modelValue'](value);await flushClearance()}}
+ return {commands:()=>instance.value.solidCommands as Array<{id:string;label:string;enabled?:boolean;disabledReason?:string}>,storageChanged:()=>windowListeners.get('storage')?.({key:'scad-solid-modeler-v1'}),all,text,button,click,svg,pointer,event,setProps:async(next:Record<string,unknown>)=>{Object.assign(currentProps,next);await nextTick()},preferences,serialized:()=>stored,doc:()=>{const parsed=JSON.parse(stored) as DirectDocument;return parsed.bodies.some(body=>body.instance&&!body.mesh)?JSON.parse(stringifyMeshJson(parseDirectDocument(stored))) as DirectDocument:parsed},field:async(value:number)=>{const input=all().find(n=>n.tag==='input'&&n.props['onUpdate:modelValue']&&n.props.step===.5)??all().find(n=>n.tag==='input'&&n.props.type==='number'&&n.props['onUpdate:modelValue']);if(!input)throw Error('Missing field');input.props['onUpdate:modelValue'](value);await flushClearance()}}
 }
 
 function cylinderSeed(): DirectDocument {
@@ -915,7 +915,7 @@ it('draws a slot with a validated width and undoes it as one operation',async()=
  width.props['onUpdate:modelValue']('0.4 cm');await nextTick()
  const svg=ui.all().find(n=>n.tag==='svg'&&n.props['aria-label']==='2D sketch canvas')!
  svg.props.onPointerdown({...ui.event(svg,40,-40),altKey:true});svg.props.onPointermove({...ui.event(svg,50,-40),altKey:true});svg.props.onPointerup({...ui.event(svg,50,-40),altKey:true});await flushClearance()
- const slot=ui.doc().sketches.at(-1)!;expect(slot.closed).toBe(true);expect(slot.points).toHaveLength(66)
+ const slot=ui.doc().sketches.at(-1)!;expect(slot.closed).toBe(true);expect(slot.retainedProfile!.loops[0]).toHaveLength(6)
  expect(Math.max(...slot.points.map(p=>p[1]))-Math.min(...slot.points.map(p=>p[1]))).toBeCloseTo(4)
  await ui.click('↶');expect(ui.doc()).toEqual(before)
 })
@@ -3325,6 +3325,8 @@ it.each([
  ['CAD_TIMEOUT','The calculation timed out'],
  ['CAD_TRANSPORT','A valid calculation result could not be received'],
  ['CAD_PROTOCOL','A valid calculation result could not be received'],
+ ['BREP_RESOURCE_LIMIT','The calculation budget was exhausted'],
+ ['BREP_ANALYSIS_INDETERMINATE','Calculation accuracy is unconfirmed'],
 ] as const)('explains %s body failures with a recovery action',async(code,message)=>{
  const requests:Array<{reject:(error:Error)=>void}>=[]
  previewWorkerRun.mockImplementation(job=>job.kind==='restoreDocument'?undefined:new Promise((_resolve,reject)=>requests.push({reject})))
@@ -3334,8 +3336,23 @@ it.each([
  requests.at(-1)!.reject(Object.assign(Error('internal implementation detail'),{code}));await flushClearance()
  const text=ui.text(ui.all()[0]);expect(text).toContain(message);expect(text).toContain('The model is unchanged')
  expect(text).not.toContain('internal implementation detail');expect(ui.doc()).toEqual(before)
+ if(code==='BREP_RESOURCE_LIMIT'||code==='BREP_ANALYSIS_INDETERMINATE')expect(text).toContain('Cube: ')
  expect(ui.button('Retry calculation').props.disabled).toBe(false)
  expect(ui.button('Apply · Enter').props.disabled).toBe(true)
+})
+
+
+it.each([
+ ['BREP_RESOURCE_LIMIT','Исчерпан лимит вычислений'],
+ ['BREP_ANALYSIS_INDETERMINATE','Точность расчёта не подтверждена'],
+] as const)('localizes %s body failures in Russian without changing the model',async(code,message)=>{
+ const requests:Array<{reject:(error:Error)=>void}>=[]
+ previewWorkerRun.mockImplementation(job=>job.kind==='restoreDocument'?undefined:new Promise((_resolve,reject)=>requests.push({reject})))
+ const ui=await mount({locale:'ru'});await ui.click('Cube');const before=ui.doc();await ui.click('Разрезать')
+ requests.at(-1)!.reject(Object.assign(Error('internal implementation detail'),{code}));await flushClearance()
+ const text=ui.text(ui.all()[0]);expect(text).toContain('Cube: '+message);expect(text).toContain('Модель не изменена')
+ expect(text).not.toContain('internal implementation detail');expect(ui.doc()).toEqual(before)
+ await commandKey(ui,'Escape');expect(ui.doc()).toEqual(before)
 })
 
 
@@ -3775,4 +3792,367 @@ it('refuses a drag with pending snaps without materializing or cloning history g
   expect(ui.text(ui.all()[0])).toContain('Body snaps are not ready')
   expect(read).not.toHaveBeenCalled();expect(ui.doc()).toEqual(before)
  }finally{read.mockRestore()}
+})
+it('revolves a retained holed profile in exact mode and preserves it through cancel and Undo',async()=>{
+ await geometryKernel.warmGeometryKernel()
+ const {authorBrepProfile}=await import('../src/services/geometry/brepProfile')
+ const {withRetainedProfile}=await import('../src/services/retainedSketchProfile')
+ const profile=authorBrepProfile({kind:'polygon',rings:[[[3,0],[6,0],[6,4],[3,4]],[[4,1],[4,3],[5,3],[5,1]]]})
+ const sketch=withRetainedProfile({id:'retained',name:'Retained holes',closed:true,points:[]},profile)
+ const ui=await mount({},JSON.stringify({version:1,bodies:[],sketches:[sketch]}))
+ await ui.click(sketch.name);const before=ui.doc()
+ await ui.click('Revolve')
+ const geometry=ui.all().find(n=>n.tag==='select'&&n.parent&&ui.text(n.parent).startsWith('Revolve surfaces'))!
+ expect(geometry.props['onUpdate:modelValue']).toBeDefined()
+ expect(geometry.children.find(n=>n.tag==='option'&&n.props.value==='faceted')!.props.disabled).toBe(true)
+ geometry.props.onKeydown({key:'Home',preventDefault(){},stopPropagation(){}})
+ quantityField(ui,'Angle, °').props['onUpdate:modelValue']('90')
+ await vi.waitFor(()=>expect(ui.button('Apply · Enter').props.disabled).toBe(false),{timeout:3000})
+ await commandKey(ui,'Escape');expect(ui.doc()).toEqual(before)
+ await ui.click('Revolve')
+ await vi.waitFor(()=>expect(ui.button('Apply · Enter').props.disabled).toBe(false),{timeout:3000})
+ await ui.click('Apply · Enter')
+ expect(ui.doc().bodies[0].name).toMatch(/exact B-rep/)
+ expect(ui.doc().bodies[0].brep!.faces.filter(face=>face.holes.length===1)).toHaveLength(2)
+ expect(ui.doc().sketches[0].retainedProfile).toEqual(profile)
+ await ui.click('↶');expect(ui.doc()).toEqual(before)
+})
+
+it('marks rational profile crossings in both views and refuses Enter without changing source geometry',async()=>{
+ await geometryKernel.warmGeometryKernel()
+ const arch={id:'arch',name:'Rational arch',curve:{degree:2,knots:[0,0,0,1,1,1],controlPoints:[[0,0],[1,5],[2,0]],weights:[1,.8,1]}}
+ const lines={id:'lines',name:'Closing lines',closed:false,points:[[2,0],[2,2],[0,2],[0,0]]}
+ const ui=await mount({},JSON.stringify({version:1,sketches:[lines],curves:[arch],bodies:[]}))
+ await ui.click(arch.name);await ui.click(lines.name,true);const before=ui.doc()
+ await ui.click('Prepare profile');await flushClearance()
+ const markers=ui.all().filter(n=>n.props['data-diagnostic']==='profile-curve-intersection')
+ expect(markers).toHaveLength(4)
+ expect(markers.every(n=>n.props['data-segments']==='0,2')).toBe(true)
+ expect(ui.all().filter(n=>n.props['data-diagnostic']==='profile-curve-segment'&&n.props['data-status']==='intersection')).toHaveLength(4)
+ expect(ui.text(ui.all()[0])).toContain('The marked segments intersect')
+ expect(ui.text(ui.all()[0])).toContain('Self-intersections within a single curve are outside this check')
+ expect(ui.button('Apply · Enter').props.disabled).toBe(true)
+ await commandKey(ui,'Enter');expect(ui.doc()).toEqual(before)
+ await commandKey(ui,'Escape');expect(ui.doc()).toEqual(before)
+ expect(ui.all().some(n=>n.props['data-diagnostic']==='profile-curve-intersection')).toBe(false)
+})
+
+it('discards a late rational crossing diagnostic after Escape',async()=>{
+ const {prepareSolidProfile}=await import('../src/services/solidProfilePreparation')
+ const requests:Array<{job:any;resolve:(value:any)=>void}>=[]
+ previewWorkerRun.mockImplementation(job=>job.kind==='profilePrepare'?new Promise(resolve=>requests.push({job,resolve})):undefined)
+ const arch={id:'arch',name:'Late arch',curve:{degree:2,knots:[0,0,0,1,1,1],controlPoints:[[0,0],[1,5],[2,0]],weights:[1,.8,1]}}
+ const lines={id:'lines',name:'Late lines',closed:false,points:[[2,0],[2,2],[0,2],[0,0]]}
+ const ui=await mount({},JSON.stringify({version:1,sketches:[lines],curves:[arch],bodies:[]}))
+ await ui.click(arch.name);await ui.click(lines.name,true);const before=ui.doc()
+ await ui.click('Prepare profile');expect(requests).toHaveLength(1)
+ await commandKey(ui,'Escape')
+ const request=requests[0]!;request.resolve(prepareSolidProfile(request.job.document,request.job.ids,request.job.tolerance));await flushClearance()
+ expect(ui.all().some(n=>n.props['data-diagnostic']==='profile-curve-intersection')).toBe(false)
+ expect(ui.doc()).toEqual(before)
+})
+
+
+it.each(['en','ru'])('keeps the complete command registry identified and explains disabled actions in %s',async locale=>{
+ const ui=await mount({locale})
+ let ids:string[]=[]
+ for(const selection of [null,'Cube','Profile']){
+  if(selection)await ui.click(selection)
+  const commands=ui.commands(),current=commands.map(c=>c.id)
+  expect(commands).toHaveLength(96);expect(new Set(current).size).toBe(current.length)
+  if(ids.length)expect(current).toEqual(ids);else ids=current
+  for(const command of commands){
+   expect(command.label.trim(),command.id).not.toBe('')
+   if(command.enabled===false)expect(command.disabledReason?.trim(),command.id).toBeTruthy()
+  }
+ }
+ expect(ids).toContain('repeat')
+ expect(ids).toContain('scene-panel')
+ for(const kind of ['box','wedge','cylinder','frustum','tube','cone','sphere','torus'])expect(ids).toContain('add-'+kind)
+})
+
+for(const locale of ['en','ru'])it('localizes source deletion and group deletion dependencies without changing history: '+locale,async()=>{
+ await geometryKernel.warmGeometryKernel()
+ const base=extrudeDirectSketch({id:'profile',name:'Profile',closed:true,points:[[0,0],[10,0],[10,10],[0,10]]},10,'source')
+ const {createSolidInstance}=await import('../src/services/solidInstances')
+ const seed=createSolidInstance({version:1,sketches:[],bodies:[{...base,name:'Source',group:'Sources'}],groups:[{name:'Sources',source:''}]},'source','linked',[[1,0,0,20],[0,1,0,0],[0,0,1,0],[0,0,0,1]])
+ seed.bodies[1].name='Linked';seed.bodies[1].group='Copies'
+ const ui=await mount({locale},stringifyMeshJson(seed)),before=ui.doc()
+ await ui.click('Source');await ui.click(locale==='ru'?'Удалить':'Delete')
+ expect(ui.doc()).toEqual(before)
+ expect(ui.text(ui.all()[0])).toContain(locale==='ru'?'Нельзя удалить источник «Source»: остаются связанные экземпляры — 1':'Cannot delete source “Source”: linked instances remain — 1')
+ expect(ui.text(ui.all()[0])).toContain(locale==='ru'?'Сделайте их независимыми или удалите вместе с источником.':'Make them independent or delete them together with the source.')
+ await ui.click((locale==='ru'?'Удалить группу ':'Delete group ')+'Sources');expect(ui.doc()).toEqual(before)
+ await ui.click('Linked');await ui.click(locale==='ru'?'Сделать независимым':'Make independent')
+ const detached=ui.doc();expect(detached.bodies[1].instance).toBeUndefined()
+ await ui.click((locale==='ru'?'Удалить группу ':'Delete group ')+'Sources')
+ const removed=ui.doc();expect(removed.bodies.map(body=>body.id)).toEqual(['linked']);expect(removed.bodies[0]).toEqual(detached.bodies[1])
+ await ui.click('↶');expect(ui.doc()).toEqual(detached)
+ await ui.click('↷');expect(ui.doc()).toEqual(removed)
+})
+
+it('preserves 1000 linked instances on source refusal and restores deleting the entire group',async()=>{
+ await geometryKernel.warmGeometryKernel()
+ const source={...extrudeDirectSketch({id:'profile',name:'Profile',closed:true,points:[[0,0],[10,0],[10,10],[0,10]]},10,'source'),name:'Source',group:'Sources'}
+ const bodies=[source,...Array.from({length:1000},(_,i)=>({id:'linked-'+i,name:'Linked '+i,group:'Copies',instance:{sourceId:source.id,matrix:[[1,0,0,(i%40)*20],[0,1,0,Math.floor(i/40)*20],[0,0,1,0],[0,0,0,1]]}}))]
+ const ui=await mount({},stringifyMeshJson({version:1,sketches:[],bodies,groups:[{name:'Sources',source:''},{name:'Copies',source:''}]})),before=ui.serialized()
+ await ui.click('Source');await ui.click('Delete')
+ expect(ui.serialized()).toBe(before);expect(ui.text(ui.all()[0])).toContain('linked instances remain — 1000')
+ await ui.click('Delete group Sources');expect(ui.serialized()).toBe(before)
+ await ui.click('Active group: Copies');await ui.click('Move selection to group')
+ const grouped=ui.serialized();expect(JSON.parse(grouped).bodies.every((body:any)=>body.group==='Copies')).toBe(true)
+ await ui.click('Delete group Copies');expect(ui.doc().bodies).toEqual([])
+ await ui.click('↶');expect(ui.serialized()).toBe(grouped)
+ await ui.click('↷');expect(ui.doc().bodies).toEqual([])
+})
+
+for(const locale of ['en','ru'])it('locates invalid vertex and curvature input without worker calls: '+locale,async()=>{
+ const seed=cylinderSeed(),ui=await mount({locale,seedDocument:seed});await ui.click('Imported cylinder')
+ await ui.click(locale==='ru'?'Измерить вершины / ребро':'Measure vertices / edge')
+ const field=(en:string,ru:string)=>ui.all().find(n=>n.props['aria-label']===(locale==='ru'?ru:en))!
+ const before=ui.doc(),vertex=field('Vertex B','Вершина B'),calls=measurementWorkerRun.mock.calls.length
+ vertex.props['onUpdate:modelValue'](9999);await flushClearance()
+ expect(vertex.props['aria-invalid']).toBe(true);expect(vertex.props['aria-describedby']).toBe('vertex-measurement-error')
+ expect(ui.text(ui.all()[0])).toContain(locale==='ru'?'Укажите существующую вершину B.':'Choose an existing vertex B.')
+ expect(measurementWorkerRun.mock.calls.length).toBe(calls)
+ vertex.props['onUpdate:modelValue'](2);await flushClearance()
+ await ui.click(locale==='ru'?'Рёбра':'Edges')
+ field('Select edge','Выбрать ребро').props.onChange({target:{value:String(seed.bodies[0].brep!.edges.findIndex(edge=>edge.curve.degree===2))}});await flushClearance()
+ const parameter=field('Edge parameter','Параметр ребра'),edgeCalls=measurementWorkerRun.mock.calls.length
+ for(const invalid of [-1,1.1,NaN,'']){
+  parameter.props['onUpdate:modelValue'](invalid);await flushClearance()
+  expect(parameter.props['aria-invalid']).toBe(true);expect(parameter.props['aria-describedby']).toBe('curvature-measurement-error')
+  expect(ui.text(ui.all()[0])).toContain(locale==='ru'?'Задайте параметр ребра от 0 до 1.':'Set an edge parameter between 0 and 1.')
+  expect(measurementWorkerRun.mock.calls.length).toBe(edgeCalls)
+ }
+ parameter.props['onUpdate:modelValue'](.25);await flushClearance();expect(parameter.props['aria-invalid']).toBe(false)
+ const picker=field('Select edge','Выбрать ребро')
+ picker.props.onKeydown({key:'Home',preventDefault(){},stopPropagation(){}});await flushClearance();expect(picker.props.value).toBe(-1)
+ picker.props.onKeydown({key:'ArrowDown',preventDefault(){},stopPropagation(){}});await flushClearance();expect(picker.props.value).toBe(seed.bodies[0].brep!.edges.findIndex(edge=>edge.curve.degree===2))
+ expect(ui.doc()).toEqual(before)
+})
+
+for(const locale of ['en','ru'])it('localizes current measurement worker failures and retries both reports: '+locale,async()=>{
+ const {measureSolidVertices,measureSolidEdgeCurvature}=await import('../src/services/solidMeasurements')
+ const ui=await mount({locale,seedDocument:cylinderSeed()});await ui.click('Imported cylinder');await ui.click(locale==='ru'?'Рёбра':'Edges')
+ const picker=ui.all().find(n=>n.props['aria-label']===(locale==='ru'?'Выбрать ребро':'Select edge'))!
+ picker.props.onKeydown({key:'ArrowDown',preventDefault(){},stopPropagation(){}});await flushClearance()
+ let failVertices=true,failCurvature=true
+ measurementWorkerRun.mockImplementation(async job=>{
+  if(job.kind==='measureVertices'){if(failVertices){failVertices=false;return Promise.reject(Error('private vertex failure'))}return measureSolidVertices(job.a,job.indexA,job.b,job.indexB)}
+  if(failCurvature){failCurvature=false;return Promise.reject(Error('private curvature failure'))}return measureSolidEdgeCurvature(job.body,job.edge,job.parameter)
+ })
+ const before=ui.doc();await ui.click(locale==='ru'?'Измерить вершины / ребро':'Measure vertices / edge')
+ expect(ui.text(ui.all()[0])).toContain(locale==='ru'?'Не удалось измерить вершины.':'Could not measure these vertices.')
+ expect(ui.text(ui.all()[0])).toContain(locale==='ru'?'Не удалось измерить кривизну.':'Could not measure curvature.')
+ expect(ui.text(ui.all()[0])).not.toContain('private')
+ await ui.click(locale==='ru'?'Повторить измерение вершин':'Retry vertex measurement')
+ await ui.click(locale==='ru'?'Повторить измерение кривизны':'Retry curvature measurement')
+ expect(ui.all().some(n=>n.props['data-measurement']==='distance')).toBe(true)
+ expect(ui.all().some(n=>n.props['data-measurement']==='curvature')).toBe(true)
+ expect(ui.doc()).toEqual(before)
+})
+
+for(const locale of ['en','ru'] as const)it('localizes mesh clearance failures and retries without edits: '+locale,async()=>{
+ await geometryKernel.warmGeometryKernel()
+ const body=(id:string,min:number[],max:number[])=>{const brep=createBrepBox(min,max);return {id,name:id,brep,mesh:tessellateNurbsBrep(brep,1)}}
+ const ui=await mount({locale},stringifyMeshJson({version:1,sketches:[],bodies:[body('Mesh A',[0,0,0],[10,10,10]),body('Mesh B',[13,0,0],[23,10,10])]}))
+ await ui.click('Mesh A');await ui.click('Mesh B',true);const before=ui.doc()
+ clearanceWorkerRun.mockRejectedValueOnce(new Error('Private mesh worker transport failure'))
+ await ui.click(locale==='ru'?'Зазор двух тел по сетке':'Two-body mesh clearance');await flushClearance()
+ const text=ui.text(ui.all()[0]);expect(text).toContain(locale==='ru'?'Не удалось вычислить зазор по сетке.':'Could not compute mesh clearance.');expect(text).not.toContain('Private mesh worker')
+ expect(ui.all().some(n=>n.props['data-measurement']==='clearance')).toBe(false)
+ await ui.click(locale==='ru'?'Повторить расчёт зазора':'Retry mesh clearance');await flushClearance()
+ expect(ui.text(ui.all()[0])).toContain(locale==='ru'?'Зазор: 3.000000 mm':'Clearance: 3.000000 mm');expect(ui.all().some(n=>n.props['data-measurement']==='clearance')).toBe(true);expect(ui.doc()).toEqual(before)
+ expect(ui.all().some(n=>n.tag==='button'&&ui.text(n)===(locale==='ru'?'Повторить расчёт зазора':'Retry mesh clearance'))).toBe(false)
+})
+
+for(const locale of ['en','ru'] as const)it('validates and retries surface boundary inspection: '+locale,async()=>{
+ await geometryKernel.warmGeometryKernel()
+ const ui=await mount({locale},readFileSync('tests/fixtures/solid-surface-boundary.json','utf8'))
+ await ui.click('Surface A');await ui.click('Surface B',true);const before=ui.doc()
+ boundaryWorkerRun.mockRejectedValueOnce(new Error('Private surface boundary transport failure'))
+ await ui.click(locale==='ru'?'Проверить стык поверхностей':'Inspect surface boundary');await flushClearance()
+ expect(ui.text(ui.all()[0])).toContain(locale==='ru'?'Не удалось проверить стык поверхностей.':'Could not inspect the surface boundary.');expect(ui.text(ui.all()[0])).not.toContain('Private surface')
+ await ui.click(locale==='ru'?'Повторить проверку стыка':'Retry surface boundary inspection');await flushClearance()
+ expect(ui.all().filter(n=>n.props['data-boundary-inspection'])).toHaveLength(2)
+ for(const [name,bad,good] of [[locale==='ru'?'Точек проверки':'Sample count',1,65],[locale==='ru'?'Допуск зазора, мм':'Gap tolerance, mm',0,.01],[locale==='ru'?'Допуск угла, °':'Angle tolerance, °',91,1]] as const){
+  const field=ui.all().find(n=>n.props['aria-label']===name)!,requests=boundaryWorkerRun.mock.calls.length
+  field.props['onUpdate:modelValue'](bad);await flushClearance();expect(field.props['aria-invalid']).toBe(true);expect(field.props['aria-describedby']).toBe('surface-boundary-error');expect(boundaryWorkerRun.mock.calls.length).toBe(requests);expect(ui.all().filter(n=>n.props['data-boundary-inspection'])).toHaveLength(0)
+  field.props['onUpdate:modelValue'](good);await flushClearance();expect(ui.all().filter(n=>n.props['data-boundary-inspection'])).toHaveLength(2)
+ }
+ expect(ui.doc()).toEqual(before)
+})
+
+for(const locale of ['en','ru'] as const)it('retries surface distance after localized transport failure: '+locale,async()=>{
+ await geometryKernel.warmGeometryKernel()
+ const ui=await mount({locale},readFileSync('tests/fixtures/solid-surface-boundary.json','utf8'))
+ await ui.click('Surface A');await ui.click('Surface B',true);const before=ui.doc()
+ measurementWorkerRun.mockImplementationOnce(async(job:any)=>{expect(job.kind).toBe('surfaceDistance');throw new Error('Private surface distance transport failure')})
+ await ui.click(locale==='ru'?'Расстояние между поверхностями':'Distance between surfaces');await flushClearance()
+ expect(ui.text(ui.all()[0])).toContain(locale==='ru'?'Не удалось измерить поверхности.':'Could not measure the surfaces.');expect(ui.text(ui.all()[0])).not.toContain('Private surface')
+ await ui.click(locale==='ru'?'Повторить измерение поверхностей':'Retry surface distance');await flushClearance()
+ expect(ui.all().some(n=>n.props['data-surface-distance']!==undefined)).toBe(true);expect(ui.doc()).toEqual(before)
+})
+
+it('creates an exact polyline contour through coordinate inputs and preserves history',async()=>{
+ await geometryKernel.warmGeometryKernel();const ui=await mount();await ui.click('Polyline');const before=ui.doc()
+ const field=(axis:string)=>ui.all().find(n=>n.props['aria-label']==='Point coordinate '+axis)!
+ for(const [x,y] of [[0,0],[20,0],[20,10],[0,10]]){field('X').props['onUpdate:modelValue'](x);field('Y').props['onUpdate:modelValue'](y);await nextTick();await ui.click('Add point')}
+ expect(ui.button('Add point').props.disabled).toBe(true);expect(ui.doc()).toEqual(before)
+ await ui.click('Close contour');const after=ui.doc();expect(after.sketches).toHaveLength(before.sketches.length+1);expect(after.sketches.at(-1)!.points).toEqual([[0,0],[20,0],[20,10],[0,10]]);expect(after.sketches.at(-1)!.closed).toBe(true)
+ await ui.click('↶');expect(ui.doc()).toEqual(before);await ui.click('↷');expect(ui.doc()).toEqual(after)
+ await ui.click('Polyline');field('X').props['onUpdate:modelValue']('bad');await nextTick();expect(ui.button('Add point').props.disabled).toBe(true);expect(ui.doc()).toEqual(after)
+ await commandKey(ui,'Escape');expect(ui.doc()).toEqual(after)
+})
+
+it('creates an exact circle from numeric inputs without committing its preview',async()=>{
+ await geometryKernel.warmGeometryKernel();const ui=await mount();await commandKey(ui,'c');const before=ui.doc()
+ const field=(name:string)=>ui.all().find(n=>n.props['aria-label']===name)!
+ field('Point coordinate X').props['onUpdate:modelValue']('2 cm');field('Point coordinate Y').props['onUpdate:modelValue'](-5);field('Circle radius').props['onUpdate:modelValue']('6 mm');await nextTick()
+ expect(ui.doc()).toEqual(before);expect(ui.all().some(n=>n.props['data-preview']==='numeric-circle')).toBe(true)
+ await ui.click('Create circle');const after=ui.doc();expect(after.sketches.at(-1)!.analytic).toEqual({kind:'circle',center:[20,-5],radius:6,start:0,sweep:360})
+ await ui.click('↶');expect(ui.doc()).toEqual(before);await ui.click('↷');expect(ui.doc()).toEqual(after)
+ await commandKey(ui,'c');field('Circle radius').props['onUpdate:modelValue']('bad');await nextTick();expect(ui.button('Create circle').props.disabled).toBe(true);expect(ui.all().some(n=>n.props['data-preview']==='numeric-circle')).toBe(false)
+ field('Circle radius').props['onUpdate:modelValue']('9 mm');await nextTick();expect(ui.all().some(n=>n.props['data-preview']==='numeric-circle')).toBe(true)
+ await commandKey(ui,'Escape');expect(ui.doc()).toEqual(after);expect(ui.all().some(n=>n.props['data-preview']==='numeric-circle')).toBe(false)
+})
+
+it.each([120,-120])('authors an exact directed arc with sweep %s and cancels preview',async(sweep)=>{
+ await geometryKernel.warmGeometryKernel();const ui=await mount();await ui.click('Arc');const before=ui.doc()
+ const field=(name:string)=>ui.all().find(n=>n.props['aria-label']===name)!
+ field('Point coordinate X').props['onUpdate:modelValue']('2 cm');field('Point coordinate Y').props['onUpdate:modelValue'](-5);field('Arc radius').props['onUpdate:modelValue']('6 mm');field('Arc start angle').props['onUpdate:modelValue']('30 deg');field('Arc sweep').props['onUpdate:modelValue'](sweep);await nextTick()
+ expect(ui.doc()).toEqual(before);expect(ui.all().some(n=>n.props['data-preview']==='numeric-arc')).toBe(true)
+ await ui.click('Create arc');const after=ui.doc();expect(after.sketches.at(-1)!.analytic).toEqual({kind:'arc',center:[20,-5],radius:6,start:30,sweep});expect(after.sketches.at(-1)!.closed).toBe(false)
+ await ui.click('↶');expect(ui.doc()).toEqual(before);await ui.click('↷');expect(ui.doc()).toEqual(after)
+ await ui.click('Arc');for(const invalid of ['bad',0,.01,-.05,360,-360]){field('Arc sweep').props['onUpdate:modelValue'](invalid);await nextTick();expect(ui.button('Create arc').props.disabled).toBe(true);expect(ui.all().some(n=>n.props['data-preview']==='numeric-arc')).toBe(false)}
+ field('Arc sweep').props['onUpdate:modelValue'](-90);await nextTick();expect(ui.all().some(n=>n.props['data-preview']==='numeric-arc')).toBe(true);await commandKey(ui,'Escape');expect(ui.doc()).toEqual(after);expect(ui.all().some(n=>n.props['data-preview']==='numeric-arc')).toBe(false)
+})
+
+it('creates a numeric rectangle with exact dimensions, preview, cancel and history',async()=>{
+ const ui=await mount();await commandKey(ui,'r');const before=ui.doc()
+ const field=(name:string)=>ui.all().find(n=>n.props['aria-label']===name)!
+ field('Origin coordinate X').props['onUpdate:modelValue']('2 cm');field('Origin coordinate Y').props['onUpdate:modelValue'](-5);field('Rectangle size Width').props['onUpdate:modelValue']('10 mm');field('Rectangle size Height').props['onUpdate:modelValue'](6);await nextTick()
+ expect(ui.doc()).toEqual(before);expect(ui.all().some(n=>n.props['data-preview']==='numeric-rectangle')).toBe(true)
+ await ui.click('Create rectangle');const after=ui.doc();expect(after.sketches.at(-1)!.points).toEqual([[20,-5],[30,-5],[30,1],[20,1]])
+ await ui.click('↶');expect(ui.doc()).toEqual(before);await ui.click('↷');expect(ui.doc()).toEqual(after)
+ await commandKey(ui,'r');for(const value of ['bad',0,-1]){field('Rectangle size Width').props['onUpdate:modelValue'](value);await nextTick();expect(ui.button('Create rectangle').props.disabled).toBe(true)}
+ field('Rectangle size Width').props['onUpdate:modelValue'](10);await nextTick();await commandKey(ui,'Escape');expect(ui.doc()).toEqual(after);expect(ui.all().some(n=>n.props['data-preview']==='numeric-rectangle')).toBe(false)
+})
+it('creates a retained numeric slot from its prepared preview and preserves history',async()=>{
+ const ui=await mount();await ui.click('Slot');const before=ui.doc()
+ const field=(name:string)=>ui.all().find(n=>n.props['aria-label']===name)!
+ field('Origin coordinate X').props['onUpdate:modelValue'](0);field('Origin coordinate Y').props['onUpdate:modelValue'](0);field('End coordinate X').props['onUpdate:modelValue'](10);field('End coordinate Y').props['onUpdate:modelValue'](0);field('Slot width, mm').props['onUpdate:modelValue']('0.4 cm');await flushClearance()
+ expect(ui.doc()).toEqual(before);expect(ui.all().some(n=>n.props['data-preview']==='numeric-slot')).toBe(true)
+ await ui.click('Create slot');const after=ui.doc();expect(after.sketches.at(-1)!.retainedProfile!.areaMm2).toBeCloseTo(40+4*Math.PI,10)
+ await ui.click('↶');expect(ui.doc()).toEqual(before);await ui.click('↷');expect(ui.doc()).toEqual(after)
+ await ui.click('Slot');field('End coordinate X').props['onUpdate:modelValue'](0);await flushClearance();expect(ui.button('Create slot').props.disabled).toBe(true);expect(ui.all().some(n=>n.props['data-preview']==='numeric-slot')).toBe(false)
+ await commandKey(ui,'Escape');expect(ui.doc()).toEqual(after)
+})
+it('discards cancelled and superseded numeric slot preparation replies',async()=>{
+ const {prepareSolidProfile}=await import('../src/services/solidProfilePreparation');const requests:Array<{job:any;resolve:(value:any)=>void}>=[]
+ previewWorkerRun.mockImplementation(job=>job.kind==='profilePrepare'?new Promise(resolve=>requests.push({job,resolve})):undefined)
+ const ui=await mount();await ui.click('Slot');const before=ui.doc();expect(requests).toHaveLength(1)
+ const field=ui.all().find(n=>n.props['aria-label']==='End coordinate X')!;field.props['onUpdate:modelValue'](10);await flushClearance();expect(requests).toHaveLength(2)
+ const reply=(r:typeof requests[number])=>prepareSolidProfile(r.job.document,r.job.ids,r.job.tolerance)
+ requests[0].resolve(reply(requests[0]));await flushClearance();expect(ui.button('Create slot').props.disabled).toBe(true)
+ await commandKey(ui,'Escape');requests[1].resolve(reply(requests[1]));await flushClearance();expect(ui.doc()).toEqual(before);expect(ui.all().some(n=>n.props['data-preview']==='numeric-slot')).toBe(false)
+})
+it.each(['en','ru'])('localizes numeric slot worker failure and recovers through retry in %s',async(locale)=>{
+ let fail=true;previewWorkerRun.mockImplementation(job=>{if(job.kind==='profilePrepare'&&fail){fail=false;return Promise.reject(Error('PRIVATE TRANSPORT'))}return undefined})
+ const ui=await mount({locale});await ui.click(locale==='ru'?'Паз':'Slot');const before=ui.doc()
+ const expected=locale==='ru'?'Не удалось подготовить паз.':'Could not prepare the slot.'
+ expect(ui.all().some(n=>n.props.role==='alert'&&ui.text(n).includes(expected))).toBe(true);expect(ui.all().some(n=>ui.text(n).includes('PRIVATE TRANSPORT'))).toBe(false)
+ await ui.click(locale==='ru'?'Повторить расчёт паза':'Retry slot calculation');expect(ui.doc()).toEqual(before);expect(ui.all().some(n=>n.props['data-preview']==='numeric-slot')).toBe(true)
+})
+
+it('cancels automatic slot creation after a mouse drag while its profile worker is pending',async()=>{
+ const {prepareSolidProfile}=await import('../src/services/solidProfilePreparation');const requests:Array<{job:any;resolve:(value:any)=>void}>=[]
+ previewWorkerRun.mockImplementation(job=>job.kind==='profilePrepare'?new Promise(resolve=>requests.push({job,resolve})):undefined)
+ const ui=await mount();await ui.click('Slot');const before=ui.doc(),svg=ui.all().find(n=>n.tag==='svg'&&n.props['aria-label']==='2D sketch canvas')!
+ svg.props.onPointerdown({...ui.event(svg,40,-40),altKey:true});svg.props.onPointermove({...ui.event(svg,50,-40),altKey:true});svg.props.onPointerup({...ui.event(svg,50,-40),altKey:true});await flushClearance();expect(ui.doc()).toEqual(before)
+ await commandKey(ui,'Escape');for(const r of requests)r.resolve(prepareSolidProfile(r.job.document,r.job.ids,r.job.tolerance));await flushClearance()
+ expect(ui.doc()).toEqual(before);expect(ui.all().some(n=>n.props['data-preview']==='numeric-slot')).toBe(false)
+})
+
+it.each([
+ ['en','Select distinct open sketches or NURBS curves.','Remove duplicate inputs'],
+ ['ru','Select distinct open sketches or NURBS curves.','Уберите повторяющиеся входы'],
+ ['en','Profile input private-id must lie in the same sketch plane; control deviation exceeds 0.0000001 mm.','Control points deviate from the profile plane'],
+ ['ru','Profile input private-id must lie in the same sketch plane; control deviation exceeds 0.0000001 mm.','Управляющие точки выходят из плоскости профиля'],
+ ['en','Profile input private-id requires exactly clamped non-periodic endpoints.','NURBS endpoints must be clamped'],
+ ['ru','Profile input private-id requires exactly clamped non-periodic endpoints.','Концы NURBS должны быть зажаты узлами'],
+ ['en','Profile inputs must use the same sketch plane.','All lines must use one sketch plane'],
+ ['ru','Profile inputs must use the same sketch plane.','Все линии должны использовать одну плоскость'],
+ ['en','Profile preparation requires open polylines, arcs or NURBS curves.','Select open polylines, arcs or NURBS'],
+ ['ru','Profile preparation requires open polylines, arcs or NURBS curves.','Выберите открытые ломаные, дуги или NURBS'],
+])('localizes profile preparation refusal and retries without consuming inputs (%s, %s)',async(locale,message,visible)=>{
+ await geometryKernel.warmGeometryKernel()
+ const {prepareSolidProfile}=await import('../src/services/solidProfilePreparation')
+ const requests:Array<{job:any;resolve:(value:any)=>void;reject:(error:Error)=>void}>=[]
+ previewWorkerRun.mockImplementation(job=>job.kind==='profilePrepare'?new Promise((resolve,reject)=>requests.push({job,resolve,reject})):undefined)
+ const sketches=[{id:'first',name:'First chain',closed:false,points:[[0,0],[10,0],[10,6]]},{id:'second',name:'Second chain',closed:false,points:[[10,6],[0,6],[0,0]]}]
+ const ui=await mount({locale},JSON.stringify({version:1,sketches,bodies:[]}))
+ await ui.click('First chain');await ui.click('Second chain',true);const before=ui.doc()
+ await ui.click(locale==='ru'?'Собрать профиль':'Prepare profile');await flushClearance()
+ expect(requests).toHaveLength(1);requests[0]!.reject(Error(message));await flushClearance()
+ expect(ui.text(ui.all()[0])).toContain(visible)
+ expect(ui.text(ui.all()[0])).toContain('First chain, Second chain:')
+ expect(ui.text(ui.all()[0])).not.toContain(message)
+ expect(ui.doc()).toEqual(before)
+ await ui.click(locale==='ru'?'Повторить вычисление':'Retry calculation');await flushClearance()
+ expect(requests).toHaveLength(2);expect(requests[1]!.job).toEqual(requests[0]!.job)
+ const latest=requests[1]!;latest.resolve(prepareSolidProfile(latest.job.document,latest.job.ids,latest.job.tolerance));await flushClearance()
+ expect(ui.doc()).toEqual(before)
+ await commandKey(ui,'Enter');expect(ui.doc().sketches).toHaveLength(1)
+ expect(ui.doc().sketches[0].id).toBe('first')
+ await ui.click('↶');expect(ui.doc()).toEqual(before)
+})
+
+it.each(['en','ru'])('blocks undersized analytic arc sweeps before worker dispatch in %s',async locale=>{
+ await geometryKernel.warmGeometryKernel()
+ const arc={id:'edit-arc',name:'Editable arc',closed:false,points:[],analytic:{kind:'arc',center:[0,0],radius:2,start:0,sweep:180}}
+ const ui=await mount({locale},JSON.stringify(parseDirectDocument(JSON.stringify({version:1,sketches:[arc],bodies:[]}))));await ui.click(arc.name)
+ await ui.click(locale==='ru'?'Параметры кривой':'Curve parameters');await flushClearance();const before=ui.doc()
+ const field=quantityField(ui,locale==='ru'?'Угол дуги':'Arc sweep')
+ for(const sweep of ['0','0.01','-0.05']){
+  const jobs=previewWorkerRun.mock.calls.filter(([job])=>job.kind==='profileEdit').length
+  field.props['onUpdate:modelValue'](sweep);await flushClearance()
+  expect(ui.button(locale==='ru'?'Готово · Enter':'Apply · Enter').props.disabled).toBe(true)
+  expect(ui.text(ui.all()[0])).toContain(locale==='ru'?'Модуль угла дуги':'Arc sweep magnitude')
+  expect(previewWorkerRun.mock.calls.filter(([job])=>job.kind==='profileEdit').length).toBe(jobs)
+  const requests=previewWorkerRun.mock.calls.length;await commandKey(ui,'Enter');expect(previewWorkerRun.mock.calls.length).toBe(requests);expect(ui.doc()).toEqual(before)
+ }
+ field.props['onUpdate:modelValue']('-0.1 deg');await flushClearance()
+ expect(ui.button(locale==='ru'?'Готово · Enter':'Apply · Enter').props.disabled).toBe(false)
+ await commandKey(ui,'Enter');expect(ui.doc().sketches[0].analytic?.sweep).toBe(-.1)
+ await ui.click('↶');expect(parseDirectDocument(JSON.stringify(ui.doc()))).toEqual(parseDirectDocument(JSON.stringify(before)))
+})
+
+
+it('keeps partial annular mode preview-only and ignores a response after Escape',async()=>{
+ const brep=createBrepTube(20,5,6),mesh=tessellateNurbsBrep(brep,2)
+ const seed:DirectDocument={version:1,sketches:[],bodies:[{id:'annular',name:'Annular',brep,mesh}]}
+ const ui=await mount({seedDocument:seed});await flushClearance();const before=ui.doc()
+ await ui.click('Edges')
+ const edge=ui.all(ui.svg()).find(n=>n.props['data-topology-edge']===brep.topologyIds!.edges[2])!
+ edge.props.onPointerdown(ui.event(edge));await nextTick();await ui.click('Fillet 3D')
+ let resolvePreview:(value:any)=>void=()=>{}
+ let request:any
+ previewWorkerRun.mockImplementation(job=>{
+  if(job.kind!=='partialAnnularPreview')return undefined
+  request=job;return new Promise(resolve=>{resolvePreview=resolve})
+ })
+ try {
+  ui.all().find(n=>n.tag==='select'&&n.props['aria-label']==='Fillet type')!.props['onUpdate:modelValue']('partial-preview')
+  await flushClearance()
+  expect(request?.kind).toBe('partialAnnularPreview');expect(request.edge).toBe(2)
+  expect(ui.text(ui.all()[0])).toContain('Preview only: geometry checks remain incomplete')
+  expect(ui.button('Apply · Enter').props.disabled).toBe(true)
+  await ui.click('Apply · Enter');expect(ui.doc()).toEqual(before)
+  await ui.click('Esc')
+  resolvePreview({body:seed.bodies[0],evidence:{qualification:{status:'preview-only',commitAllowed:false}}})
+  await flushClearance();expect(ui.doc()).toEqual(before)
+  expect(ui.all().some(n=>n.tag==='select'&&n.props['aria-label']==='Fillet type')).toBe(false)
+ }finally {previewWorkerRun.mockReset()}
 })

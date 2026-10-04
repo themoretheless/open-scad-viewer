@@ -1,0 +1,38 @@
+{
+  "route": "retained-ap242-brep",
+  "retained": true,
+  "refusalBoundary": [
+    "unresolved/untrusted external references",
+    "singular transforms",
+    "assembly graph beyond configured budgets"
+  ],
+  "identityLoss": [],
+  "metadataLoss": [],
+  "definitionIdentities": [
+    "representation:614d11347ee7de4f58c024d1d67539d58ee716959ad375f60ca697a86e160bf8",
+    "representation:2b46471007a64ed674cf2f858b609ba933bba3ec22c458d9eb5565c072561e44"
+  ],
+  "occurrenceIdentities": [
+    "occurrence:e24293bf3d2f9ea76f58cfc7ac9ef77a9e87c0263a0ab6124c82e088432c560c",
+    "occurrence:85e1bdb8397d98f9ea0172473a27addd45a2bb31c6ab233983c813a08a2730fa"
+  ],
+  "productHierarchy": [
+    "product:#9:solid-scene:Solid scene",
+    "product_definition_formation:#10:1:",
+    "product_definition:#11:design:",
+    "product:#292:mm:mm",
+    "product_definition_formation:#293:1:",
+    "product_definition:#295:design:",
+    "assembly-use:#298:#11:#295",
+    "product:#579:inch:inch",
+    "product_definition_formation:#580:1:",
+    "product_definition:#582:design:",
+    "assembly-use:#585:#11:#582"
+  ],
+  "externalReferences": [],
+  "semanticConformance": {
+    "status": "not-checked",
+    "validator": null,
+    "detail": "Native bounded parsing is not an independent AP242 semantic validation."
+  }
+}

@@ -1,0 +1,181 @@
+[
+  {
+    "firstRequest": true,
+    "workerAgeMs": 0,
+    "dispatchAt": 311.70000000298023,
+    "postMessageMs": 0,
+    "ok": false,
+    "receivedAt": 368.5,
+    "roundTripMs": 56.79999999701977
+  },
+  {
+    "kind": "primitive",
+    "id": 1,
+    "firstRequest": true,
+    "workerAgeMs": 0,
+    "dispatchAt": 529.7000000029802,
+    "postMessageMs": 0,
+    "ok": true,
+    "timing": {
+      "warmupMs": 71.89999999850988,
+      "executeMs": 14.600000001490116,
+      "prepareMs": 0
+    },
+    "receivedAt": 643.1000000014901,
+    "roundTripMs": 113.39999999850988
+  },
+  {
+    "kind": "topology",
+    "id": 1,
+    "firstRequest": true,
+    "workerAgeMs": 0,
+    "dispatchAt": 645.1000000014901,
+    "postMessageMs": 0,
+    "ok": true,
+    "timing": {
+      "warmupMs": 74.39999999850988,
+      "executeMs": 1.5,
+      "prepareMs": 0.10000000149011612
+    },
+    "receivedAt": 749.3000000044703,
+    "roundTripMs": 104.20000000298023
+  },
+  {
+    "kind": "bodySnaps",
+    "id": 1,
+    "firstRequest": true,
+    "workerAgeMs": 0,
+    "dispatchAt": 647.9000000059605,
+    "postMessageMs": 0.09999999403953552,
+    "ok": true,
+    "timing": {
+      "warmupMs": 71.39999999850988,
+      "executeMs": 8.300000004470348,
+      "prepareMs": 0.09999999403953552
+    },
+    "receivedAt": 753.1000000014901,
+    "roundTripMs": 105.19999999552965
+  },
+  {
+    "kind": "displayMesh",
+    "id": 1,
+    "firstRequest": true,
+    "workerAgeMs": 0,
+    "dispatchAt": 645.6000000014901,
+    "postMessageMs": 0,
+    "ok": true,
+    "timing": {
+      "warmupMs": 74.30000000447035,
+      "executeMs": 26.299999997019768,
+      "prepareMs": 0
+    },
+    "receivedAt": 773.9000000059605,
+    "roundTripMs": 128.30000000447035
+  },
+  {
+    "kind": "measureVertices",
+    "id": 2,
+    "firstRequest": true,
+    "workerAgeMs": 0,
+    "dispatchAt": 1139.7000000029802,
+    "postMessageMs": 0,
+    "ok": true,
+    "timing": {
+      "warmupMs": 67.39999999850988,
+      "executeMs": 0.6000000014901161,
+      "prepareMs": 0
+    },
+    "receivedAt": 1228.3000000044703,
+    "roundTripMs": 88.60000000149012,
+    "domPublicationMs": 0.6999999955296516,
+    "nextAnimationFrameMs": 2
+  },
+  {
+    "kind": "bodyEdges",
+    "id": 1,
+    "firstRequest": true,
+    "workerAgeMs": 0,
+    "dispatchAt": 1364.9000000059605,
+    "postMessageMs": 0.09999999403953552,
+    "ok": true,
+    "timing": {
+      "warmupMs": 72.20000000298023,
+      "executeMs": 4.699999995529652,
+      "prepareMs": 0.10000000149011612
+    },
+    "receivedAt": 1457.7000000029802,
+    "roundTripMs": 92.79999999701977
+  },
+  {
+    "kind": "measureEdge",
+    "id": 1,
+    "firstRequest": true,
+    "workerAgeMs": 0,
+    "dispatchAt": 1496.1000000014901,
+    "postMessageMs": 0.10000000149011612,
+    "ok": true,
+    "timing": {
+      "warmupMs": 69.29999999701977,
+      "executeMs": 0.7000000029802322,
+      "prepareMs": 0
+    },
+    "receivedAt": 1582.9000000059605,
+    "roundTripMs": 86.80000000447035,
+    "domPublicationMs": 0.5,
+    "nextAnimationFrameMs": 12.799999997019768
+  },
+  {
+    "kind": "measureEdge",
+    "id": 2,
+    "firstRequest": false,
+    "workerAgeMs": 188.30000000447035,
+    "dispatchAt": 1684.4000000059605,
+    "postMessageMs": 0.09999999403953552,
+    "ok": true,
+    "timing": {
+      "warmupMs": 0,
+      "executeMs": 0.10000000149011612,
+      "prepareMs": 0
+    },
+    "receivedAt": 1685.5,
+    "roundTripMs": 1.0999999940395355,
+    "domPublicationMs": 0.30000000447034836,
+    "nextAnimationFrameMs": 10.600000001490116
+  },
+  {
+    "kind": "measureVertices",
+    "id": 4,
+    "firstRequest": false,
+    "workerAgeMs": 640.6000000014901,
+    "dispatchAt": 1780.3000000044703,
+    "postMessageMs": 0.10000000149011612,
+    "ok": true,
+    "timing": {
+      "warmupMs": 0,
+      "executeMs": 0.10000000149011612,
+      "prepareMs": 0
+    },
+    "receivedAt": 1796.4000000059605,
+    "roundTripMs": 16.100000001490116,
+    "domPublicationMs": 0.6999999955296516,
+    "nextAnimationFrameMs": 15.699999995529652
+  },
+  {
+    "kind": "measureEdge",
+    "id": 4,
+    "firstRequest": false,
+    "workerAgeMs": 400.6000000014901,
+    "dispatchAt": 1896.7000000029802,
+    "postMessageMs": 0.10000000149011612,
+    "ok": true,
+    "timing": {
+      "warmupMs": 0,
+      "executeMs": 0,
+      "prepareMs": 0
+    },
+    "receivedAt": 1912.8000000044703,
+    "roundTripMs": 16.100000001490116,
+    "domPublicationMs": 0.6000000014901161,
+    "nextAnimationFrameMs": 15.899999998509884
+  }
+]

@@ -84,7 +84,7 @@ try {
    await solid.getByRole('alert').filter({hasText:'Не удалось получить корректный результат вычисления'}).waitFor()
    assert.equal(await apply.isDisabled(),true)
    const failed=await download('Скачать проект JSON',`failed-${requests}.json`)
-   assert.deepEqual(failed.sketches[0].points,original.sketches[0].points);assert.equal(failed.sketches.length,1)
+   assert.deepEqual(failed,baseline)
    if(await menu.evaluate(e=>e.parentElement.open))await activate(menu)
    await page.screenshot({path:path.join(directory,`retry-${requests}.png`)})
    await activate(solid.getByRole('button',{name:'Повторить вычисление',exact:true}))
@@ -95,6 +95,17 @@ try {
  }
 
  await activate(solid.getByRole('button',{name:'Square',exact:true}))
+ const baseline=await download('Скачать проект JSON','baseline.json')
+ if(await menu.evaluate(e=>e.parentElement.open))await activate(menu)
+ async function historyRoundtrip(before,after,key){
+  await activate(solid.getByRole('button',{name:'↶',exact:true}));await solid.getByRole('status',{name:'history-restore',exact:true}).waitFor({state:'hidden'})
+  assert.deepEqual(await download('Скачать проект JSON',key+'-undo.json'),before)
+  if(await menu.evaluate(e=>e.parentElement.open))await activate(menu)
+  await activate(solid.getByRole('button',{name:'↷',exact:true}));await solid.getByRole('status',{name:'history-restore',exact:true}).waitFor({state:'hidden'})
+  assert.deepEqual(await download('Скачать проект JSON',key+'-redo.json'),after)
+  if(await menu.evaluate(e=>e.parentElement.open))await activate(menu)
+ }
+ async function cancelPrepared(key){await page.waitForFunction(element=>!element.disabled,await apply.elementHandle());if(keyboard)await page.keyboard.press('Escape');else await solid.getByRole('button',{name:'Esc',exact:true}).last().click();assert.deepEqual(await download('Скачать проект JSON',key+'-cancel.json'),baseline);if(await menu.evaluate(e=>e.parentElement.open))await activate(menu)}
  await command('Fillet')
  const radius=solid.getByLabel(/^Радиус, мм/)
  await input(radius,'20')
@@ -103,17 +114,18 @@ try {
  await input(radius,'2');await apply.click({trial:true})
  await invalidateQuantity(radius,'2','path[fill="#77eac5"][stroke-width="3"]')
  await page.screenshot({path:path.join(directory,'corner-preview.png')})
+ await cancelPrepared('fillet');await command('Fillet');await input(radius,'2');await apply.click({trial:true})
  const beforeApply=await page.evaluate(()=>window.__sketchEditRequests)
  await activate(apply);assert.equal(await page.evaluate(()=>window.__sketchEditRequests),beforeApply)
  const rounded=await download('Скачать проект JSON','rounded.json')
  assert.equal(rounded.sketches[0].id,'square');assert.ok(rounded.sketches[0].points.length>4)
  assert.ok(Math.abs(rounded.sketches[0].points[0][1]-2)<1e-9)
  if(await menu.evaluate(e=>e.parentElement.open))await activate(menu)
- await activate(solid.getByRole('button',{name:'↶',exact:true}))
- await command('DogEar');await apply.click({trial:true});await invalidateQuantity(radius,'2','path[fill="#77eac5"][stroke-width="3"]');await activate(apply)
+ await historyRoundtrip(baseline,rounded,'fillet');await activate(solid.getByRole('button',{name:'↶',exact:true}));await solid.getByRole('status',{name:'history-restore',exact:true}).waitFor({state:'hidden'})
+ await command('DogEar');await apply.click({trial:true});await invalidateQuantity(radius,'2','path[fill="#77eac5"][stroke-width="3"]');await cancelPrepared('dogear');await command('DogEar');await input(radius,'2');await activate(apply)
  const dogear=await download('Скачать проект JSON','dogear.json');assert.ok(dogear.sketches[0].points.length>rounded.sketches[0].points.length)
  if(await menu.evaluate(e=>e.parentElement.open))await activate(menu)
- await activate(solid.getByRole('button',{name:'↶',exact:true}))
+ await historyRoundtrip(baseline,dogear,'dogear');await activate(solid.getByRole('button',{name:'↶',exact:true}));await solid.getByRole('status',{name:'history-restore',exact:true}).waitFor({state:'hidden'})
  await command('Circular copies')
  const count=solid.locator('input[type="number"][min="2"][max="64"]')
  await input(count,'65');await solid.getByRole('alert').filter({hasText:'Задайте 2–64'}).waitFor();assert.equal(await apply.isDisabled(),true)
@@ -123,7 +135,19 @@ try {
  const sketchPane=solid.getByRole('region',{name:'2D — эскизы',exact:true})
  const canvasBounds=await sketchPane.locator('.canvas-viewport').boundingBox(),paneBounds=await sketchPane.boundingBox()
  assert.ok(canvasBounds.width>paneBounds.width*.9);assert.ok(canvasBounds.height>=120)
+ await input(solid.getByLabel('Центр Y',{exact:true}),'0')
+ const titleVisibility=await sketchPane.locator('.operation-card').evaluate(card=>{
+  card.scrollTop=card.scrollHeight
+  const title=card.querySelector(':scope > strong'),a=card.getBoundingClientRect(),b=title.getBoundingClientRect()
+  return {scrollTop:card.scrollTop,top:b.top,bottom:b.bottom,panelTop:a.top,panelBottom:a.bottom,text:title.textContent,visible:document.elementFromPoint(b.left+b.width/2,b.top+b.height/2)===title}
+ })
+ assert.ok(titleVisibility.scrollTop>0,'exercise a scrolled command panel')
+ assert.ok(titleVisibility.top>=titleVisibility.panelTop && titleVisibility.bottom<=titleVisibility.panelBottom)
+ assert.equal(titleVisibility.visible,true,'operation title remains unobscured')
+ assert.equal(titleVisibility.text,'Круговые копии')
+ await writeFile(path.join(directory,'title-visibility.json'),JSON.stringify(titleVisibility,null,2))
  await page.screenshot({path:path.join(directory,'array-preview.png')})
+ await cancelPrepared('array');await command('Circular copies');await input(count,'4');await input(solid.getByLabel(/^Угол/),'360');await apply.click({trial:true})
  const requests=await page.evaluate(()=>window.__sketchEditRequests)
  await activate(apply);assert.equal(await page.evaluate(()=>window.__sketchEditRequests),requests)
  const changed=await download('Скачать проект JSON','copies.json');assert.equal(changed.sketches.length,4)
@@ -134,12 +158,16 @@ try {
   assert.ok(Math.abs(v-(x*Math.sin(a)+y*Math.cos(a)))<1e-8)
  }
  if(await menu.evaluate(e=>e.parentElement.open))await activate(menu)
- await activate(solid.getByRole('button',{name:'↶',exact:true}))
+ await activate(solid.getByRole('button',{name:'↶',exact:true}));await solid.getByRole('status',{name:'history-restore',exact:true}).waitFor({state:'hidden'})
  const undone=await download('Скачать проект JSON','undone.json');assert.deepEqual(undone.sketches[0].points,original.sketches[0].points);assert.equal(undone.sketches.length,1)
  if(await menu.evaluate(e=>e.parentElement.open))await activate(menu)
- await activate(solid.getByRole('button',{name:'↷',exact:true}))
+ await activate(solid.getByRole('button',{name:'↷',exact:true}));await solid.getByRole('status',{name:'history-restore',exact:true}).waitFor({state:'hidden'})
  const redone=await download('Скачать проект JSON','redone.json');assert.deepEqual(redone.sketches,changed.sketches)
+ if(await menu.evaluate(e=>e.parentElement.open))await activate(menu)
+ await solid.getByRole('status',{name:'Сохранено в браузере',exact:true}).waitFor();await page.reload()
+ await solid.getByRole('status',{name:'history-restore',exact:true}).waitFor({state:'hidden'})
+ assert.deepEqual(await download('Скачать проект JSON','reloaded.json'),redone)
  assert.deepEqual(renderErrors,[])
- const report={browser:browser.version(),workerRequests:requests,retryFailure:process.argv.includes('--fail-preview'),applyWithoutNewWorkerRequest:true,invalidQuantities:['fillet','dogear','array'],undoRedo:true,keyboard,tabPresses,downloads}
+ const report={browser:browser.version(),workerRequests:requests,retryFailure:process.argv.includes('--fail-preview'),applyWithoutNewWorkerRequest:true,invalidQuantities:['fillet','dogear','array'],undoRedo:true,eachSketchCommandHistory:true,cancelledPreviews:3,reloadExact:true,keyboard,tabPresses,downloads}
  await writeFile(path.join(directory,'sketch-edit-browser.json'),JSON.stringify(report,null,2)+'\n');console.log(report)
 }catch(error){if(page){await page.screenshot({path:path.join(directory,'failure.png')}).catch(()=>{});await writeFile(path.join(directory,'failure.txt'),await page.locator('body').innerText().catch(()=>''))}throw error}finally{await browser?.close();await new Promise(resolve=>server.close(resolve))}

@@ -1,0 +1,45 @@
+{
+  "scope": "Node/WASM retained region validation and binary ABI only; excludes UI, worker messaging and rendering",
+  "alternatingArtifacts": true,
+  "fixtureSha256": "1ba9b0d31e2cab58eab60c06bd94c975ea684423e8c6d2bc4723957e9fc8c824",
+  "resultSha256": "2da426745c2f3e60d4b94aa269ca113150ba5750660b2c1886b036db047ef799",
+  "sourcePreserved": true,
+  "kernels": [
+    {
+      "identity": {
+        "sha256": "9de77a21ce7a63fa0ee1069ff6c424be075584e0f2d9f7b92ebeac572eeb6313",
+        "byteLength": 9600320
+      },
+      "iterations": 7,
+      "samplesMs": [
+        1279.4464579999994,
+        1227.0591249999998,
+        1255.5019169999996,
+        1289.2083330000005,
+        1226.8595409999998,
+        1332.3160000000025,
+        1250.7118749999972
+      ],
+      "medianMs": 1255.5019169999996,
+      "maxMs": 1332.3160000000025
+    },
+    {
+      "identity": {
+        "sha256": "005b69d645824ebe5660f6223e294837c93caee35845bbf24544e47c89c8959a",
+        "byteLength": 9600358
+      },
+      "iterations": 7,
+      "samplesMs": [
+        755.4252919999999,
+        736.4864169999992,
+        784.9031250000007,
+        773.3000419999989,
+        736.241958999999,
+        738.4255000000012,
+        775.2433330000022
+      ],
+      "medianMs": 755.4252919999999,
+      "maxMs": 784.9031250000007
+    }
+  ]
+}

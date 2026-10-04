@@ -1,0 +1,131 @@
+[
+  {
+    "firstRequest": true,
+    "workerAgeMs": 0.10000000149011612,
+    "dispatchAt": 355.8999999985099,
+    "postMessageMs": 0,
+    "ok": false,
+    "receivedAt": 432.09999999403954,
+    "roundTripMs": 76.19999999552965
+  },
+  {
+    "kind": "primitive",
+    "id": 1,
+    "firstRequest": true,
+    "workerAgeMs": 0,
+    "dispatchAt": 645.1999999955297,
+    "postMessageMs": 0.10000000149011612,
+    "ok": true,
+    "receivedAt": 768.0999999940395,
+    "roundTripMs": 122.89999999850988
+  },
+  {
+    "kind": "topology",
+    "id": 1,
+    "firstRequest": true,
+    "workerAgeMs": 0,
+    "dispatchAt": 770,
+    "postMessageMs": 0,
+    "ok": true,
+    "receivedAt": 886.5999999940395,
+    "roundTripMs": 116.59999999403954
+  },
+  {
+    "kind": "bodySnaps",
+    "id": 1,
+    "firstRequest": true,
+    "workerAgeMs": 0,
+    "dispatchAt": 773,
+    "postMessageMs": 0,
+    "ok": true,
+    "receivedAt": 907.6999999955297,
+    "roundTripMs": 134.69999999552965
+  },
+  {
+    "kind": "displayMesh",
+    "id": 1,
+    "firstRequest": true,
+    "workerAgeMs": 0,
+    "dispatchAt": 770.5,
+    "postMessageMs": 0,
+    "ok": true,
+    "receivedAt": 919.1999999955297,
+    "roundTripMs": 148.69999999552965
+  },
+  {
+    "kind": "measureVertices",
+    "id": 2,
+    "firstRequest": true,
+    "workerAgeMs": 0,
+    "dispatchAt": 1406,
+    "postMessageMs": 0.09999999403953552,
+    "ok": true,
+    "receivedAt": 1505.8999999985099,
+    "roundTripMs": 99.89999999850988,
+    "domPublicationMs": 0.6999999955296516,
+    "nextAnimationFrameMs": 2.100000001490116
+  },
+  {
+    "kind": "bodyEdges",
+    "id": 1,
+    "firstRequest": true,
+    "workerAgeMs": 0,
+    "dispatchAt": 1644.0999999940395,
+    "postMessageMs": 0.10000000149011612,
+    "ok": true,
+    "receivedAt": 1743.1999999955297,
+    "roundTripMs": 99.10000000149012
+  },
+  {
+    "kind": "measureEdge",
+    "id": 1,
+    "firstRequest": true,
+    "workerAgeMs": 0.09999999403953552,
+    "dispatchAt": 1786.5999999940395,
+    "postMessageMs": 0.10000000149011612,
+    "ok": true,
+    "receivedAt": 1873.5999999940395,
+    "roundTripMs": 87,
+    "domPublicationMs": 0.7000000029802322,
+    "nextAnimationFrameMs": 1.9000000059604645
+  },
+  {
+    "kind": "measureEdge",
+    "id": 2,
+    "firstRequest": false,
+    "workerAgeMs": 189.59999999403954,
+    "dispatchAt": 1976.0999999940395,
+    "postMessageMs": 0.10000000149011612,
+    "ok": true,
+    "receivedAt": 1977.2999999970198,
+    "roundTripMs": 1.2000000029802322,
+    "domPublicationMs": 0.29999999701976776,
+    "nextAnimationFrameMs": 12.799999997019768
+  },
+  {
+    "kind": "measureVertices",
+    "id": 4,
+    "firstRequest": false,
+    "workerAgeMs": 652.1999999955297,
+    "dispatchAt": 2058.1999999955297,
+    "postMessageMs": 0.10000000149011612,
+    "ok": true,
+    "receivedAt": 2074.0999999940395,
+    "roundTripMs": 15.899999998509884,
+    "domPublicationMs": 0.7000000029802322,
+    "nextAnimationFrameMs": 15.800000004470348
+  },
+  {
+    "kind": "measureEdge",
+    "id": 4,
+    "firstRequest": false,
+    "workerAgeMs": 389.79999999701977,
+    "dispatchAt": 2176.2999999970198,
+    "postMessageMs": 0,
+    "ok": true,
+    "receivedAt": 2190.6999999955297,
+    "roundTripMs": 14.399999998509884,
+    "domPublicationMs": 0.7000000029802322,
+    "nextAnimationFrameMs": 18.30000000447035
+  }
+]

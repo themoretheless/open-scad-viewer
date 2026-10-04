@@ -32,6 +32,14 @@ fn arc(radius: f64, z: f64, quadrant: usize) -> Curve {
         periodic: false,
     }
 }
+// Rational t -> ((1-t*t)/(1+t*t), 2*t/(1+t*t)). Unlike the
+// symmetric sqrt(1/2) weight, these binary coefficients satisfy the circle
+// identity exactly. Sphere trims and their equator edges share this traversal.
+fn rational_quarter_arc(radius:f64,z:f64,quadrant:usize)->Curve{
+    let mut curve=arc(radius,z,quadrant);
+    curve.weights=vec![1.,1.,2.];
+    curve
+}
 fn arc_span(radius: f64, z: f64, start: f64, end: f64) -> Curve {
     let middle = (start + end) * 0.5;
     let weight = ((end - start) * 0.5).cos();
@@ -442,7 +450,7 @@ pub fn sphere(radius: f64) -> Result<Model> {
                 weights: vec![1., 1., 2.],
                 periodic: false,
             };
-            let mut circular_trim = arc(1., 0., 0);
+            let mut circular_trim = rational_quarter_arc(1., 0., 0);
             circular_trim.control_points.iter_mut().for_each(|p| {
                 p.pop();
             });
@@ -456,7 +464,7 @@ pub fn sphere(radius: f64) -> Result<Model> {
                 build.coedge(
                     equator[quadrant],
                     equator[next],
-                    arc(radius, 0., quadrant),
+                    rational_quarter_arc(radius, 0., quadrant),
                     circular_trim,
                 ),
                 build.coedge(

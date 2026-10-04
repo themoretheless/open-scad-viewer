@@ -1,0 +1,1 @@
+{"version":1,"sketches":[{"id":"bad-a","name":"First plane","closed":false,"points":[[0,0],[10,0]]},{"id":"bad-b","name":"Second plane","closed":false,"points":[[10,0],[0,0]],"plane":{"origin":[0,0,1],"u":[1,0,0],"v":[0,1,0]}}],"bodies":[],"blenderProjectId":"39b048b3-f3f8-4635-8c47-a37f90dc3886","curves":[],"surfaces":[]}

@@ -1,0 +1,56 @@
+{
+  "artifacts": {
+    "directModeler": {
+      "file": "DirectModeler-CS0NXpiF.js",
+      "sha256": "bdbfad75315c385ebb9311d3981be4ee8a0f97083fdeea5f46fb26df06f6aec0"
+    },
+    "wasm": {
+      "sha256": "07cd41b96faa8f5bb05507c461845711c4355613c0fb856eb4f5fb20d736b5fe"
+    },
+    "sourceSha256": "286ddbacca71bf2612b73e32015af22ff808d4158333b254a14a3e9bfc66e08c"
+  },
+  "browser": "157.0.8081.0",
+  "keyboard": true,
+  "tabs": 1377,
+  "gpuActive": true,
+  "rotated": true,
+  "facePlane": false,
+  "plane": {
+    "origin": [
+      5,
+      10,
+      15
+    ],
+    "u": [
+      0,
+      1,
+      0
+    ],
+    "v": [
+      0,
+      0,
+      1
+    ]
+  },
+  "sweep": -120,
+  "exactCoordinates": true,
+  "invalidInput": true,
+  "invalidRadiusValues": [
+    "bad",
+    0,
+    -1,
+    1000001
+  ],
+  "invalidSweepValues": [
+    "bad",
+    0,
+    0.01,
+    -0.05,
+    360,
+    -360
+  ],
+  "endpointToleranceMm": 1e-9,
+  "cancelledDraftUnchanged": true,
+  "undoRedo": true,
+  "reloadExact": true
+}

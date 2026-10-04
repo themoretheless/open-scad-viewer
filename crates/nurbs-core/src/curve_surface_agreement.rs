@@ -207,6 +207,53 @@ pub fn verify_exact(c: &Curve, p: &Curve, s: &Surface, reversed: bool, max_work:
         [s.knots_v[s.degree_v],s.knots_v[s.control_points[0].len()]]];
     // Positive rational weights put the entire pcurve in its control hull.
     if p.control_points.iter().any(|v|(0..2).any(|k|v[k]<domain[k][0]||v[k]>domain[k][1])) {return Ok(None);}
+    if p.degree==1&&p.weights[0]==p.weights[1] {
+        for fixed in 0..2 {for end in 0..2 {
+            let free=1-fixed;let a=&p.control_points[0];let b=&p.control_points[1];
+            if a[fixed]!=domain[fixed][end]||b[fixed]!=a[fixed]{continue;}
+            let forward=a[free]==domain[free][0]&&b[free]==domain[free][1];
+            let backward=a[free]==domain[free][1]&&b[free]==domain[free][0];
+            if !forward&&!backward{continue;}
+            let size=[s.control_points.len(),s.control_points[0].len()];
+            let row=if end==0{0}else{size[fixed]-1};let count=size[free];
+            let mut values=Vec::new();
+            for i in 0..c.control_points.len(){let i=if reversed{c.control_points.len()-1-i}else{i};values.extend(c.control_points[i].iter().copied());values.push(c.weights[i]);}
+            for i in 0..count {
+                let i=if backward{count-1-i}else{i};let (u,v)=if fixed==0{(row,i)}else{(i,row)};
+                values.extend(s.control_points[u][v].iter().copied());values.push(s.weights[u][v]);
+            }
+            let source=SourceArena::authored("natural-bezier-boundary",1,values.into_iter().map(|v|AuthoredScalar::Binary64Bits(v.to_bits())).collect()).map_err(|_|crate::Error::new("NURBS_INVALID_INPUT","Invalid natural boundary source"))?;
+            let mut index=0;let mut leaf=||{let r=source.leaf(index).unwrap();index+=1;r};
+            let first:Vec<_>=(0..c.control_points.len()).map(|_|std::array::from_fn(|_|leaf())).collect();
+            let second:Vec<_>=(0..count).map(|_|std::array::from_fn(|_|leaf())).collect();
+            let tolerance=ToleranceContext::default_valid();let mut ctx=PredicateContext::new(&source,&tolerance,Limits{max_work,..Limits::default()},None);
+            return cad_predicates::rational_bezier_identity(&mut ctx,&first,&second).map(Some).map_err(|_|crate::Error::new("NURBS_INVALID_INPUT","Invalid natural boundary identity request"));
+        }}
+    }
+    // A coordinate identity plane needs no polynomial surface composition.
+    // Recognize the exact authored chart, then lift pcurve controls by copying
+    // original numbers only. No fitted plane or rounded affine inverse is used.
+    if s.degree_u==1&&s.degree_v==1&&s.weights.iter().flatten().all(|w|*w==s.weights[0][0]) {
+        for axes in [[0,1],[0,2],[1,0],[1,2],[2,0],[2,1]] {
+            let fixed=3-axes[0]-axes[1];let height=s.control_points[0][0][fixed];
+            let identity=(0..2).all(|u|(0..2).all(|v| {
+                let point=&s.control_points[u][v];
+                point[axes[0]]==domain[0][u]&&point[axes[1]]==domain[1][v]&&point[fixed]==height
+            }));
+            if !identity{continue;}
+            let mut values=Vec::new();
+            for i in 0..c.control_points.len(){let i=if reversed{c.control_points.len()-1-i}else{i};values.extend(c.control_points[i].iter().copied());values.push(c.weights[i]);}
+            for (point,weight) in p.control_points.iter().zip(&p.weights){
+                let mut lifted=[height;3];lifted[axes[0]]=point[0];lifted[axes[1]]=point[1];values.extend(lifted);values.push(*weight);
+            }
+            let source=SourceArena::authored("identity-plane-boundary",1,values.into_iter().map(|v|AuthoredScalar::Binary64Bits(v.to_bits())).collect()).map_err(|_|crate::Error::new("NURBS_INVALID_INPUT","Invalid identity plane source"))?;
+            let mut index=0;let mut leaf=||{let r=source.leaf(index).unwrap();index+=1;r};
+            let first:Vec<_>=(0..c.control_points.len()).map(|_|std::array::from_fn(|_|leaf())).collect();
+            let second:Vec<_>=(0..p.control_points.len()).map(|_|std::array::from_fn(|_|leaf())).collect();
+            let tolerance=ToleranceContext::default_valid();let mut ctx=PredicateContext::new(&source,&tolerance,Limits{max_work,..Limits::default()},None);
+            return cad_predicates::rational_bezier_identity(&mut ctx,&first,&second).map(Some).map_err(|_|crate::Error::new("NURBS_INVALID_INPUT","Invalid identity plane boundary request"));
+        }
+    }
     let mut values=Vec::new();
     for i in 0..c.control_points.len() {
         let i=if reversed {c.control_points.len()-1-i}else{i};
@@ -394,6 +441,34 @@ mod tests {
         assert!(matches!(verify_exact(&c,&p,&plane(),true,0).unwrap().unwrap().outcome,BezierIdentity::Indeterminate(_)));
         let outside=line(vec![vec![-1.,0.],vec![1.,1.]]);
         assert!(verify_exact(&c,&outside,&plane(),false,1000000).unwrap().is_none());
+    }
+    #[test]
+    fn natural_rational_boundary_keeps_direction_and_parameterization() {
+        use cad_predicates::BezierIdentity;
+        let edge=Curve{degree:2,knots:vec![0.,0.,0.,1.,1.,1.],control_points:vec![vec![0.,0.,0.],vec![1.,2.,0.],vec![3.,0.,0.]],weights:vec![1.,0.75,1.],periodic:false};
+        let s=Surface{degree_u:1,degree_v:2,knots_u:vec![2.,2.,8.,8.],knots_v:vec![-2.,-2.,-2.,3.,3.,3.],control_points:vec![edge.control_points.clone(),edge.control_points.iter().map(|p|vec![p[0],p[1],1.]).collect()],weights:vec![edge.weights.clone(),edge.weights.clone()],periodic_u:false,periodic_v:false};
+        let p=line(vec![vec![2.,-2.],vec![2.,3.]]);
+        for (c,p,reversed) in [(edge.clone(),p.clone(),false),(edge.reverse().unwrap(),p.clone(),true),(edge.reverse().unwrap(),p.reverse().unwrap(),false)] {
+            assert_eq!(verify_exact(&c,&p,&s,reversed,10000).unwrap().unwrap().outcome,BezierIdentity::Equal);
+        }
+        let mut nonlinear=p.clone();nonlinear.weights[1]=2.;
+        assert_eq!(verify_exact(&edge,&nonlinear,&s,false,1_000_000).unwrap().unwrap().outcome,BezierIdentity::Different);
+        let mut shifted=edge.clone();shifted.control_points[1][2]=1e-12;
+        assert_eq!(verify_exact(&shifted,&p,&s,false,10000).unwrap().unwrap().outcome,BezierIdentity::Different);
+    }
+    #[test]
+    fn identity_plane_preserves_rational_boundaries_on_nonunit_domains() {
+        use cad_predicates::BezierIdentity;
+        let mut s=plane();s.knots_u=vec![-20.,-20.,20.,20.];s.knots_v=s.knots_u.clone();
+        s.control_points=vec![vec![vec![-20.,-20.,6.],vec![-20.,20.,6.]],vec![vec![20.,-20.,6.],vec![20.,20.,6.]]];
+        let p=Curve{degree:2,knots:vec![0.,0.,0.,1.,1.,1.],control_points:vec![vec![-10.,0.],vec![0.,10.],vec![10.,0.]],weights:vec![1.,0.75,1.],periodic:false};
+        let c=Curve{control_points:p.control_points.iter().map(|p|vec![p[0],p[1],6.]).collect(),..p.clone()};
+        let r=verify_exact(&c,&p,&s,false,10000).unwrap().unwrap();assert_eq!(r.outcome,BezierIdentity::Equal);assert!(r.work_used<10000);
+        assert_eq!(verify_exact(&c.reverse().unwrap(),&p,&s,true,10000).unwrap().unwrap().outcome,BezierIdentity::Equal);
+        let mut changed=c.clone();changed.control_points[1][2]+=1e-12;
+        assert_eq!(verify_exact(&changed,&p,&s,false,10000).unwrap().unwrap().outcome,BezierIdentity::Different);
+        let mut changed_surface=s.clone();changed_surface.control_points[1][1][2]+=1e-12;
+        assert_eq!(verify_exact(&c,&p,&changed_surface,false,1_000_000).unwrap().unwrap().outcome,BezierIdentity::Different);
     }
     #[test]
     fn matching_reversed_and_exhausted() {

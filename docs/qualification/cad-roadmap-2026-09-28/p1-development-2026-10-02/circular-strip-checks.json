@@ -1,0 +1,24 @@
+{
+  "schema": "cad-p1-circular-strip/1",
+  "rustTestsPassed": 7,
+  "assembly": "three authored spans with exact shared curve definitions; not general tolerance sewing",
+  "checkedDirections": [
+    "forward",
+    "reverse"
+  ],
+  "faces": 3,
+  "vertices": 6,
+  "edges": 10,
+  "sharedSeams": 2,
+  "collapsedPoleEdges": 2,
+  "openBoundaryEdges": 6,
+  "volumeBodies": 0,
+  "nativeTopologyValidationPassed": true,
+  "independentSupportCasesRechecked": 9,
+  "independentStripTopologyChecked": false,
+  "contextBoundSewCertificateIssued": false,
+  "sourceSolidTrimmed": false,
+  "closedSolidAssembled": false,
+  "bridgeAndUiExposed": false,
+  "generalP1Complete": false
+}

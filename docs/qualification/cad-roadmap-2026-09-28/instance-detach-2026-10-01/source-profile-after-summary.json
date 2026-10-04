@@ -1,0 +1,212 @@
+[
+  {
+    "function": "(root)",
+    "artifact": "",
+    "line": -1,
+    "column": -1,
+    "inclusiveMs": 6335.314
+  },
+  {
+    "function": "(idle)",
+    "artifact": "",
+    "line": -1,
+    "column": -1,
+    "inclusiveMs": 4815.377
+  },
+  {
+    "function": "(program)",
+    "artifact": "",
+    "line": -1,
+    "column": -1,
+    "inclusiveMs": 419.365
+  },
+  {
+    "function": "rn",
+    "artifact": "vue-Bwdd4767.js",
+    "line": 0,
+    "column": 19280,
+    "inclusiveMs": 321.39
+  },
+  {
+    "function": "t",
+    "artifact": "meshJson-CVKQT5bI.js",
+    "line": 0,
+    "column": 130,
+    "inclusiveMs": 274.625
+  },
+  {
+    "function": "bn",
+    "artifact": "vue-Bwdd4767.js",
+    "line": 0,
+    "column": 20955,
+    "inclusiveMs": 237.678
+  },
+  {
+    "function": "prepare",
+    "artifact": "DirectModeler-C7UVKJJT.js",
+    "line": 1,
+    "column": 45124,
+    "inclusiveMs": 222.876
+  },
+  {
+    "function": "prepare",
+    "artifact": "DirectModeler-C7UVKJJT.js",
+    "line": 1,
+    "column": 38484,
+    "inclusiveMs": 202.588
+  },
+  {
+    "function": "run",
+    "artifact": "mainSolidWorkerClient-BHbjQQFu.js",
+    "line": 0,
+    "column": 45577,
+    "inclusiveMs": 198.516
+  },
+  {
+    "function": "",
+    "artifact": "mainSolidWorkerClient-BHbjQQFu.js",
+    "line": 0,
+    "column": 46136,
+    "inclusiveMs": 197.242
+  },
+  {
+    "function": "postMessage",
+    "artifact": "",
+    "line": 4,
+    "column": 14,
+    "inclusiveMs": 193.481
+  },
+  {
+    "function": "B",
+    "artifact": "vue-Bwdd4767.js",
+    "line": 0,
+    "column": 19345,
+    "inclusiveMs": 177.545
+  },
+  {
+    "function": "commitAsync",
+    "artifact": "direct-modeling-DIr7Uhve.js",
+    "line": 0,
+    "column": 9679,
+    "inclusiveMs": 176.74
+  },
+  {
+    "function": "O",
+    "artifact": "direct-modeling-DIr7Uhve.js",
+    "line": 0,
+    "column": 1237,
+    "inclusiveMs": 175.48
+  },
+  {
+    "function": "run",
+    "artifact": "vue-Bwdd4767.js",
+    "line": 0,
+    "column": 5389,
+    "inclusiveMs": 144.34
+  },
+  {
+    "function": "runIfDirty",
+    "artifact": "vue-Bwdd4767.js",
+    "line": 0,
+    "column": 5790,
+    "inclusiveMs": 143.845
+  },
+  {
+    "function": "pn",
+    "artifact": "DirectModeler-C7UVKJJT.js",
+    "line": 1,
+    "column": 44651,
+    "inclusiveMs": 142.536
+  },
+  {
+    "function": "s",
+    "artifact": "vue-Bwdd4767.js",
+    "line": 0,
+    "column": 50930,
+    "inclusiveMs": 141.811
+  },
+  {
+    "function": "$t",
+    "artifact": "DirectModeler-C7UVKJJT.js",
+    "line": 1,
+    "column": 38136,
+    "inclusiveMs": 130.326
+  },
+  {
+    "function": "a.onmessage",
+    "artifact": "mainSolidWorkerClient-BHbjQQFu.js",
+    "line": 0,
+    "column": 46445,
+    "inclusiveMs": 104.376
+  },
+  {
+    "function": "gS",
+    "artifact": "DirectModeler-C7UVKJJT.js",
+    "line": 2,
+    "column": 68015,
+    "inclusiveMs": 103.879
+  },
+  {
+    "function": "bS",
+    "artifact": "DirectModeler-C7UVKJJT.js",
+    "line": 2,
+    "column": 68906,
+    "inclusiveMs": 93.809
+  },
+  {
+    "function": "n",
+    "artifact": "vue-Bwdd4767.js",
+    "line": 0,
+    "column": 71297,
+    "inclusiveMs": 93.809
+  },
+  {
+    "function": "vn",
+    "artifact": "vue-Bwdd4767.js",
+    "line": 0,
+    "column": 20656,
+    "inclusiveMs": 91.348
+  },
+  {
+    "function": "Mn.u.call",
+    "artifact": "vue-Bwdd4767.js",
+    "line": 0,
+    "column": 22627,
+    "inclusiveMs": 79.971
+  },
+  {
+    "function": "w",
+    "artifact": "vue-Bwdd4767.js",
+    "line": 0,
+    "column": 18387,
+    "inclusiveMs": 79.971
+  },
+  {
+    "function": "FT",
+    "artifact": "DirectModeler-C7UVKJJT.js",
+    "line": 2,
+    "column": 141225,
+    "inclusiveMs": 76.243
+  },
+  {
+    "function": "c.immediate",
+    "artifact": "DirectModeler-C7UVKJJT.js",
+    "line": 2,
+    "column": 141487,
+    "inclusiveMs": 76.243
+  },
+  {
+    "function": "Rr",
+    "artifact": "vue-Bwdd4767.js",
+    "line": 0,
+    "column": 33675,
+    "inclusiveMs": 73.855
+  },
+  {
+    "function": "",
+    "artifact": "DirectModeler-C7UVKJJT.js",
+    "line": 2,
+    "column": 160526,
+    "inclusiveMs": 73.855
+  }
+]

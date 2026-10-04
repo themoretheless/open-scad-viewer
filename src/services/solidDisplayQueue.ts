@@ -22,15 +22,16 @@ export class SolidDisplayQueue {
  async prepare(bodies:readonly DirectBody[]):Promise<boolean>{
   this.cancel();const generation=this.generation
   const requested=new Map<string,DirectBody>(),preparedKeys=new WeakMap<DirectBody,string>()
-  let scanned=0,yielded=false,hasCached=false
+  let scanned=0,yielded=false,hasCached=false,sliceStart=performance.now()
   for(const body of bodies)if(body.brep){
    const key=solidDisplayKey(body);preparedKeys.set(body,this.cache.canonicalKey(key)??key)
    if(this.cache.get(key))hasCached=true;else requested.set(key,body)
    // Key construction traverses full B-rep geometry. Let input/cancellation run
    // between bounded batches rather than blocking a thousand-body scene scan.
-   if(++scanned%32===0&&scanned<bodies.length){
+   if((++scanned%32===0||performance.now()-sliceStart>=8)&&scanned<bodies.length){
     yielded=true;await this.yieldScan()
     if(generation!==this.generation)return false
+    sliceStart=performance.now()
    }
   }
   this.keys=preparedKeys

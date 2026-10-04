@@ -36,7 +36,7 @@ pub fn inspect(loops:&[Vec<Curve>],tolerance_uv:f64,max_pairs:usize,max_cells:us
     for a in 0..loops.len(){for b in a+1..loops.len(){
         for ca in &loops[a]{for cb in &loops[b]{
             if out.pairs==max_pairs || out.cells==max_cells {out.problem_loops=Some([a,b]);return Ok(out);}
-            let r=curve_distance::distance(ca,cb,tolerance_uv,((max_cells-out.cells)/(count*count).max(1)).max(1))?;
+            let r=curve_distance::prove_separation(ca,cb,tolerance_uv,((max_cells-out.cells)/(count*count).max(1)).max(1))?;
             out.pairs+=1;out.cells+=r.cells;
             if r.distance_interval_mm[0]<=0. {out.problem_loops=Some([a,b]);return Ok(out);}
         }}
@@ -79,6 +79,15 @@ mod tests {
         (0..4).map(|i|Curve::from_polyline(vec![p[i].to_vec(),p[(i+1)%4].to_vec()]).unwrap()).collect()
     }
     fn audit(l:Vec<Vec<Curve>>)->Report{inspect(&l,1e-8,1000,10000,100000).unwrap()}
+    #[test]
+    fn multispan_rational_outer_with_hole_is_audited_without_chords(){
+        let mut outer=square(0.,10.,false);
+        outer[0]=Curve{degree:2,knots:vec![0.,0.,0.,0.5,1.,1.,1.],control_points:vec![vec![0.,0.],vec![2.5,-1.],vec![7.5,-1.],vec![10.,0.]],weights:vec![1.,0.8,1.2,1.],periodic:false};
+        let loops=vec![outer,square(2.,4.,true)];let before=format!("{loops:?}");
+        let r=audit(loops.clone());assert_eq!(r.valid,Some(true));assert!(r.loops[0].injective[0]);assert_eq!(r.winding,vec![Some(1),Some(-1)]);
+        assert_eq!(format!("{loops:?}"),before);
+        let limited=inspect(&loops,1e-8,1000,1,100000).unwrap();assert_eq!(limited.valid,None);assert!(limited.cells<=1);
+    }
     #[test]
     fn correct_hole_and_reversed_whole_region_are_admitted(){
         for reverse in [false,true]{let r=audit(vec![square(0.,10.,reverse),square(2.,4.,!reverse)]);assert_eq!(r.valid,Some(true));assert!(r.cells<=10000&&r.domain_cells<=100000);}

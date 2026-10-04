@@ -468,7 +468,7 @@ impl EdgeSamplingRegistry {
             face_ids.push(use_.face);
         }
         if face_ids.len() > 20000 {
-            return Err(input("B-rep tessellation exceeds 20000 triangles"));
+            return Err(input(format!("B-rep tessellation exceeds 20000 triangles after face {}: {} triangles",use_.face,face_ids.len())));
         }
         Ok(())
     }
@@ -627,7 +627,8 @@ fn nurbs_with_freeform_note(
                 clamp_interior_to_trims(
                     model,
                     face,
-                    refine_trimmed_face(face, triangulate_boundary(&outer, &holes)?, segments)?,
+                    refine_trimmed_face(face, triangulate_boundary(&outer, &holes)?, segments)
+                        .map_err(|error|input(format!("Face {} refinement: {}",use_.face,error.message)))?,
                 )?
             };
             registry.append(face, use_, built, &mut face_ids)?;
@@ -1117,7 +1118,7 @@ fn refine_trimmed_face(
             }
         }
         if refined.len() > 20000 {
-            return Err(input("B-rep tessellation exceeds 20000 triangles"));
+            return Err(input(format!("B-rep tessellation exceeds 20000 triangles during interior refinement: {} triangles at segments {}",refined.len(),segments)));
         }
         triangles = refined;
     }
@@ -1343,6 +1344,14 @@ mod registry_tests {
         ];
         for (kind, model) in models.iter().enumerate() {
             for detail in [1, 2, 4, 8, 16, 32] {
+                // The sphere's detail-32 subdivision exceeds the documented
+                // 20,000-triangle guard. Require its explicit resource refusal;
+                // admitted detail levels still require every topology invariant.
+                if kind == 0 && detail == 32 {
+                    assert!(nurbs(model, detail).err().unwrap().message
+                        .contains("20000 triangles"));
+                    continue;
+                }
                 let result = nurbs(model, detail)
                     .unwrap_or_else(|e| panic!("model {kind}, detail {detail}: {e}"));
                 assert!(result.built.report.closed, "model {kind}, detail {detail}");

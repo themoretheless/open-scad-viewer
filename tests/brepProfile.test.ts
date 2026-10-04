@@ -1,5 +1,5 @@
 import {describe,expect,it} from 'vitest'
-import {booleanBrepProfiles,signedAreaBrepProfileLoop,validateBrepProfile} from '../src/services/geometry/brepProfile'
+import {booleanBrepProfiles,signedAreaBrepProfileLoop,validateBrepProfile,transformBrepProfile} from '../src/services/geometry/brepProfile'
 import {GeometryKernelError} from '../src/services/geometry/kernel'
 import {evaluateNurbsCurve,reverseNurbsCurve,type NurbsCurve} from '../src/services/nurbsCurve'
 
@@ -74,4 +74,44 @@ describe('retained 2D B-rep profiles',()=>{
     expect(()=>validateBrepProfile(Array.from({length:257},(_,i)=>rectangle(i*3,0,1,1)))).toThrow(/256|resource/i)
     expect(()=>validateBrepProfile([], 'material-left',0)).toThrow(/tolerance/i)
   })
+})
+
+it('retains a general NURBS profile through validation, document reload, affine placement and extrusion',async()=>{
+  const {emptyDirectDocument,serializeDirectDocument,parseDirectDocument}=await import('../src/services/directModeling')
+  const {withRetainedProfile}=await import('../src/services/retainedSketchProfile')
+  const {extrudeBrepCurves,analyzeNurbsBrep}=await import('../src/services/geometry/brep')
+  const loop=rectangle(0,0,2,2)
+  loop[0]={degree:2,knots:[0,0,0,1,1,1],controlPoints:[[0,0],[1,-1],[2,0]],weights:[1,1,1]}
+  const original=JSON.stringify(loop),profile=validateBrepProfile([loop])
+  expect(profile.areaIntervalMm2?.[0]).toBeLessThanOrEqual(14/3)
+  expect(profile.areaIntervalMm2?.[1]).toBeGreaterThanOrEqual(14/3)
+  expect(profile.loops[0][0]).toMatchObject(loop[0])
+  const document=emptyDirectDocument()
+  document.sketches=[withRetainedProfile({id:'general-profile',name:'General',closed:true,points:[]},profile)]
+  const reloaded=parseDirectDocument(serializeDirectDocument(document))
+  expect(reloaded.sketches[0].id).toBe('general-profile')
+  expect(reloaded.sketches[0].retainedProfile).toEqual(profile)
+  const placed=transformBrepProfile(profile,[-2,0,0,0,0,3,0,0,0,0,1,0,10,20,0,1])
+  expect(placed.areaIntervalMm2?.[0]).toBeLessThanOrEqual(28)
+  expect(placed.areaIntervalMm2?.[1]).toBeGreaterThanOrEqual(28)
+  const model=extrudeBrepCurves(placed.loops,0,5)
+  expect(model.bodies).toHaveLength(1)
+  expect(analyzeNurbsBrep(model).signedVolumeMm3).toBeCloseTo(140,6)
+  expect(JSON.stringify(loop)).toBe(original)
+})
+
+it('keeps holes, nested islands and separate components in a general rational region',async()=>{
+  const {extrudeBrepCurves,analyzeNurbsBrep}=await import('../src/services/geometry/brep')
+  const outer=rectangle(0,0,2,2)
+  outer[0]={degree:2,knots:[0,0,0,1,1,1],controlPoints:[[0,0],[1,-1],[2,0]],weights:[1,1,1]}
+  const rings=[rectangle(.5,.5,.75,.75),rectangle(.75,.75,.25,.25),rectangle(3,0,1,1),outer]
+  const source=JSON.stringify(rings),profile=validateBrepProfile(rings,'even-odd')
+  expect(profile.loops).toHaveLength(4)
+  expect(profile.areaIntervalMm2?.[0]).toBeLessThanOrEqual(31/6)
+  expect(profile.areaIntervalMm2?.[1]).toBeGreaterThanOrEqual(31/6)
+  expect(validateBrepProfile(profile.loops)).toEqual(profile)
+  const model=extrudeBrepCurves(profile.loops,0,3)
+  expect(model.bodies).toHaveLength(3)
+  expect(analyzeNurbsBrep(model).signedVolumeMm3).toBeCloseTo(15.5,6)
+  expect(JSON.stringify(rings)).toBe(source)
 })

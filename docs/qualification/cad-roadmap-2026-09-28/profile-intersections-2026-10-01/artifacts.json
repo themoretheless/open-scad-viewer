@@ -1,0 +1,20 @@
+{
+  "sourceBaseline": "1d76d7093a69c083f0cb78e7eff5f6b726ae0026",
+  "wasmSha256": "64022a84450cb4d79bd051368b063f9203f5afa9c51fa33f7fe4940263442877",
+  "wasmBytes": 9607164,
+  "assetBytes": 7193674,
+  "rawWasmBytes": 11663284,
+  "totalBytes": 18856958,
+  "baselineAssetBytes": 7172503,
+  "assetGrowthBytes": 21171,
+  "assetBudget": 7194600,
+  "directModelerBytes": 379305,
+  "directModelerBudget": 380100,
+  "mainSolidWorkerBytes": 117652,
+  "mainSolidWorkerBudget": 118500,
+  "presentationBytes": 4621,
+  "baselineMassFailure": {
+    "root": "/private/tmp/cad-profile-baseline-9kmxl2s7",
+    "commit": "1d76d7093a69c083f0cb78e7eff5f6b726ae0026"
+  }
+}

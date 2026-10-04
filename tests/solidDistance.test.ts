@@ -72,7 +72,7 @@ it('validates actual WASM volume-distance responses without changing either inpu
   expect(r.reason).toBe(c.result.reason)
   expect(r.distanceIntervalMm).toEqual(c.result.distanceIntervalMm)
   expect(r.separationWitness).toEqual(c.result.separationWitness)
-  if(r.reason==='separated-volumes'){const gap=index===3?3:1;expect(r.distanceIntervalMm![0]).toBeLessThanOrEqual(gap);expect(r.distanceIntervalMm![1]).toBeGreaterThanOrEqual(gap);expect(r.distanceIntervalMm![1]-r.distanceIntervalMm![0]).toBeLessThanOrEqual(c.request.toleranceMm)}
+  if(r.reason==='separated-volumes'){const gap=c.expectedDistanceMm??(index===3?3:1);expect(r.distanceIntervalMm![0]).toBeLessThanOrEqual(gap);expect(r.distanceIntervalMm![1]).toBeGreaterThanOrEqual(gap);expect(r.distanceIntervalMm![1]-r.distanceIntervalMm![0]).toBeLessThanOrEqual(c.request.toleranceMm)}
   expect(JSON.stringify(c.request)).toBe(before)
  }
 })
@@ -85,4 +85,78 @@ it('keeps the cavity witness on the inner authored shell',()=>{
  expect(request.a.bodies[0].innerShells.some((s:number)=>request.a.shells[s].faces.some((f:any)=>f.face===face))).toBe(true)
  expect(result.distanceIntervalMm[0]).toBeLessThanOrEqual(1)
  expect(result.distanceIntervalMm[1]).toBeGreaterThanOrEqual(1)
+})
+
+it('validates native curved-cylinder volume and original-face witness reports',()=>{
+ const {request,result,displayMeshes}=cases[5]
+ expect(validSolidDistance(solidDistanceExpectation(request),result)).toBe(true)
+ expect(result.validity.every((v:any)=>v.proven)).toBe(true)
+ expect(result.reason).toBe('separated-volumes')
+ expect(result.distanceIntervalMm[0]).toBeLessThanOrEqual(3)
+ expect(result.distanceIntervalMm[1]).toBeGreaterThanOrEqual(3)
+ expect(displayMeshes.every((mesh:any)=>mesh.positions.length>100)).toBe(true)
+})
+
+it('validates native exact-sphere volume and separation without accepting incomplete validity',()=>{
+ const {request,result,displayMeshes,expectedDistanceMm}=cases[6]
+ const e=solidDistanceExpectation(request)
+ expect(validSolidDistance(e,result)).toBe(true);expect(expectedDistanceMm).toBe(2)
+ expect(result.validity.every((v:any)=>v.proven&&v.boundaryProven&&v.exactAgreement&&v.selfIntersectionAbsent)).toBe(true)
+ expect(result.reason).toBe('separated-volumes');expect(result.materialOverlap).toBe(false)
+ expect(result.distanceIntervalMm[0]).toBeLessThanOrEqual(2);expect(result.distanceIntervalMm[1]).toBeGreaterThanOrEqual(2)
+ expect(result.separationWitness.points).toHaveLength(2)
+ expect(displayMeshes.every((mesh:any)=>mesh.positions.length>100)).toBe(true)
+ for(const side of [0,1]){
+  const incomplete=structuredClone(result);incomplete.validity[side].selfIntersectionAbsent=false
+  expect(validSolidDistance(e,incomplete)).toBe(false)
+ }
+})
+
+it('qualifies actual WASM exact sphere distances across the tested radius scales',async()=>{
+ const {callGeometryRust}=await import('../src/services/geometry/kernel')
+ const {measureSolidDistance}=await import('../src/services/solidDistance')
+ for(const radius of [0.000011444091796875,0.375,1.5,6,12,786432]){
+  const a=callGeometryRust<any>('brep_nurbs_sphere',{radius}),contained=radius===786432
+  const b=contained?callGeometryRust<any>('brep_nurbs_sphere',{radius:3}):structuredClone(a),offset=2*radius+2
+  if(!contained){
+   for(const v of b.vertices)v.point[0]+=offset
+   for(const edge of b.edges)for(const p of edge.curve.controlPoints)p[0]+=offset
+   for(const face of b.faces)for(const row of face.surface.controlPoints)for(const p of row)p[0]+=offset
+  }
+  const options={...structuredClone(cases[6].request),a,b},before=JSON.stringify(options)
+  const r=measureSolidDistance(options)
+  expect(validSolidDistance(solidDistanceExpectation(options),r)).toBe(true)
+  expect(r.validity.every(v=>v.proven),`radius=${radius}`).toBe(true)
+  expect(r.converged,`radius=${radius}, reason=${r.reason}`).toBe(true)
+  expect(r.materialOverlap).toBe(contained)
+  const gap=contained?0:2
+  expect(r.distanceIntervalMm![0]).toBeLessThanOrEqual(gap);expect(r.distanceIntervalMm![1]).toBeGreaterThanOrEqual(gap)
+  expect(r.distanceIntervalMm![1]-r.distanceIntervalMm![0]).toBeLessThanOrEqual(options.toleranceMm)
+  expect(JSON.stringify(options)).toBe(before)
+  if(contained){
+   const invalid=structuredClone(a);for(const v of invalid.vertices)v.point[0]+=offset
+   expect(()=>measureSolidDistance({...options,b:invalid})).toThrow('Invalid vertex coordinates')
+  }
+ }
+})
+
+it('audits multispan NURBS trim boundaries in WASM and retains unknown when trim work runs out',async()=>{
+ const {warmGeometryKernel}=await import('../src/services/geometry/kernel')
+ const {measureSolidDistance}=await import('../src/services/solidDistance')
+ await warmGeometryKernel()
+ const request=structuredClone(cases[3].request)
+ const coedge=request.a.loops[request.a.faces[0].outer].coedges[0],curve=coedge.pcurve
+ const [a,b]=curve.controlPoints
+ coedge.pcurve={degree:2,knots:[0,0,0,.5,1,1,1],controlPoints:[0,.25,.75,1].map(t=>a.map((x:number,i:number)=>x*(1-t)+b[i]*t)),weights:[1,1,1,1],periodic:false}
+ const before=structuredClone(request)
+ const result=measureSolidDistance(request)
+ expect(result.validity[0].trimValid).toBe(true)
+ expect(validSolidDistance(solidDistanceExpectation(request),result)).toBe(true)
+ const limited={...request,validityLimits:{...request.validityLimits,trimCells:1}}
+ const incomplete=measureSolidDistance(limited)
+ expect(incomplete.validity[0].trimValid).toBe(false)
+ expect(incomplete.converged).toBe(false)
+ expect(incomplete.reason).toBe('volume-validity-unproven')
+ expect(validSolidDistance(solidDistanceExpectation(limited),incomplete)).toBe(true)
+ expect(request).toEqual(before)
 })

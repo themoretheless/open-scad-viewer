@@ -1,0 +1,59 @@
+
+ RUN  v4.1.11 /private/tmp/open-scad-viewer-cad-resume
+
+ ❯ |node| tests/solidSceneEditCache.test.ts (2 tests | 2 failed) 150ms
+   × reuses transformed instance batches during authoritative result validation 146ms
+   × reuses exact cached batches for instance creation and placement without sharing caller geometry 4ms
+ ❯ |node| tests/mainSolidWorkerRealBoundary.test.ts (14 tests | 3 failed) 3439ms
+   × transforms typed scene meshes through postMessage without detaching or changing source buffers 152ms
+   × changes groups through the worker without changing geometry, identities or instance links 138ms
+   × accepts compact scene snapshots with exact parity and rejects invalid geometry before metadata edits 140ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 5 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |node| tests/mainSolidWorkerRealBoundary.test.ts > transforms typed scene meshes through postMessage without detaching or changing source buffers
+ FAIL  |node| tests/mainSolidWorkerRealBoundary.test.ts > changes groups through the worker without changing geometry, identities or instance links
+ FAIL  |node| tests/mainSolidWorkerRealBoundary.test.ts > accepts compact scene snapshots with exact parity and rejects invalid geometry before metadata edits
+ReferenceError: cache is not defined
+ ❯ NodePort.worker.onmessage src/services/mainSolidWorkerClient.ts:70:18
+     68|           && typeof data.error.name==='string' && typeof data.error.me…
+     69|           && (data.error.code===undefined || typeof data.error.code===…
+     70|           finish(new MainSolidWorkerError(data.error.code??'CAD_OPERAT…
+       |                  ^
+     71|         } else fail(new MainSolidWorkerError('CAD_PROTOCOL','Invalid C…
+     72|       }
+ ❯ Worker.<anonymous> tests/mainSolidWorkerRealBoundary.test.ts:17:36
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/5]⎯
+
+ FAIL  |node| tests/solidSceneEditCache.test.ts > reuses transformed instance batches during authoritative result validation
+ReferenceError: cache is not defined
+ ❯ applySolidSceneEdit src/services/solidSceneEdit.ts:14:134
+     12|  if(p.operation==='instance-detach')return detachSolidInstances(docume…
+     13|  const axis=p.axis==='x'?[1,0,0] as const:p.axis==='y'?[0,1,0] as cons…
+     14|  if(p.operation==='transform')return resolveSolidInstances(transformSe…
+       |                                                                                                                                      ^
+     15|  if(p.operation==='instance-transform')return transformSolidInstance(d…
+     16|  if(p.operation==='instance-create')return createSolidInstance(documen…
+ ❯ tests/solidSceneEditCache.test.ts:12:15
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/5]⎯
+
+ FAIL  |node| tests/solidSceneEditCache.test.ts > reuses exact cached batches for instance creation and placement without sharing caller geometry
+ReferenceError: cache is not defined
+ ❯ applySolidSceneEdit src/services/solidSceneEdit.ts:16:138
+     14|  if(p.operation==='transform')return resolveSolidInstances(transformSe…
+     15|  if(p.operation==='instance-transform')return transformSolidInstance(d…
+     16|  if(p.operation==='instance-create')return createSolidInstance(documen…
+       |                                                                                                                                          ^
+     17|  const d=structuredClone(document)
+     18|  switch(p.operation){
+ ❯ tests/solidSceneEditCache.test.ts:27:16
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/5]⎯
+
+
+ Test Files  2 failed | 1 passed (3)
+      Tests  5 failed | 29 passed (34)
+   Start at  16:01:03
+   Duration  4.26s (transform 1.73s, setup 0ms, import 2.03s, tests 4.73s, environment 1ms)

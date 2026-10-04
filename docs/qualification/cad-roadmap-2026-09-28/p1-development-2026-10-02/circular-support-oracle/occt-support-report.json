@@ -1,0 +1,98 @@
+{
+  "schema": "cad-circular-support-occt/1",
+  "sourceSha256": "65c55a61b039af378ba1e512ce5bdeda64d120ade877f59904aa27d95ca9af6b",
+  "scope": "Independent rational surface evaluation, contact normals and OCCT-created open-face validity. Does not certify a sewn solid, native coedge import, or absence of all intersections.",
+  "passed": true,
+  "cases": [
+    {
+      "r0": 0.0,
+      "r1": 1.25,
+      "sweep": 0.31,
+      "faceValid": true,
+      "samples": 861,
+      "maxPointErrorMm": 1.0658141036401503e-14,
+      "maxNormalAlignmentError": 4.440892098500626e-16,
+      "passed": true
+    },
+    {
+      "r0": 0.0,
+      "r1": 1.25,
+      "sweep": -0.7,
+      "faceValid": true,
+      "samples": 861,
+      "maxPointErrorMm": 1.0658141036401503e-14,
+      "maxNormalAlignmentError": 2.220446049250313e-16,
+      "passed": true
+    },
+    {
+      "r0": 0.0,
+      "r1": 1.25,
+      "sweep": 1.5,
+      "faceValid": true,
+      "samples": 861,
+      "maxPointErrorMm": 1.0658141036401503e-14,
+      "maxNormalAlignmentError": 4.440892098500626e-16,
+      "passed": true
+    },
+    {
+      "r0": 1.25,
+      "r1": 0.0,
+      "sweep": 0.31,
+      "faceValid": true,
+      "samples": 861,
+      "maxPointErrorMm": 1.4210854715202004e-14,
+      "maxNormalAlignmentError": 4.440892098500626e-16,
+      "passed": true
+    },
+    {
+      "r0": 1.25,
+      "r1": 0.0,
+      "sweep": -0.7,
+      "faceValid": true,
+      "samples": 861,
+      "maxPointErrorMm": 1.0658141036401503e-14,
+      "maxNormalAlignmentError": 3.3306690738754696e-16,
+      "passed": true
+    },
+    {
+      "r0": 1.25,
+      "r1": 0.0,
+      "sweep": 1.5,
+      "faceValid": true,
+      "samples": 861,
+      "maxPointErrorMm": 1.0658141036401503e-14,
+      "maxNormalAlignmentError": 4.440892098500626e-16,
+      "passed": true
+    },
+    {
+      "r0": 0.5,
+      "r1": 1.25,
+      "sweep": 0.31,
+      "faceValid": true,
+      "samples": 861,
+      "maxPointErrorMm": 1.0658141036401503e-14,
+      "maxNormalAlignmentError": 4.440892098500626e-16,
+      "passed": true
+    },
+    {
+      "r0": 0.5,
+      "r1": 1.25,
+      "sweep": -0.7,
+      "faceValid": true,
+      "samples": 861,
+      "maxPointErrorMm": 1.0658141036401503e-14,
+      "maxNormalAlignmentError": 4.440892098500626e-16,
+      "passed": true
+    },
+    {
+      "r0": 0.5,
+      "r1": 1.25,
+      "sweep": 1.5,
+      "faceValid": true,
+      "samples": 861,
+      "maxPointErrorMm": 1.4210854715202004e-14,
+      "maxNormalAlignmentError": 4.440892098500626e-16,
+      "passed": true
+    }
+  ]
+}

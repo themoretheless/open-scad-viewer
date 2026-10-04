@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import {createHash} from 'node:crypto'
 import {createServer} from 'node:http'
-import {readFile,mkdir,writeFile} from 'node:fs/promises'
+import {readFile,mkdir,writeFile,readdir} from 'node:fs/promises'
 import path from 'node:path'
 import {loadQualificationPlaywrightPackage} from './qualificationPlaywrightPackage.mjs'
 const root=path.resolve('dist'),directory=path.resolve(process.argv[2]??'/tmp/solid-seam-preparation')
@@ -11,12 +11,16 @@ await mkdir(directory,{recursive:true})
 const server=createServer(async(req,res)=>{
  try {
   const url=new URL(req.url,'http://localhost'),file=path.resolve(root,'.'+(url.pathname==='/'?'/index.html':decodeURIComponent(url.pathname)))
+  if(url.pathname==='/favicon.ico'){res.writeHead(204).end();return}
   if(!file.startsWith(root+path.sep)){res.writeHead(403).end();return}
   res.setHeader('Content-Type',file.endsWith('.html')?'text/html':file.endsWith('.js')?'text/javascript':file.endsWith('.css')?'text/css':file.endsWith('.wasm')?'application/wasm':'application/octet-stream')
   res.end(await readFile(file))
  }catch{res.writeHead(404).end()}
 })
 await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve))
+const chunks=(await readdir(path.join(root,'assets'))).filter(n=>/^DirectModeler-[^/]+\.js$/.test(n));assert.equal(chunks.length,1)
+const digest=async file=>createHash('sha256').update(await readFile(file)).digest('hex')
+const artifacts={directModeler:{file:chunks[0],sha256:await digest(path.join(root,'assets',chunks[0]))},wasmSha256:await digest(path.join(root,'wasm/geometry-kernel.wasm')),sourceSha256:await digest('src/features/DirectModeler.vue')}
 let browser,page
 const renderErrors=[]
 try {
@@ -24,7 +28,14 @@ try {
  browser=await playwright.chromium.launch({headless:process.env.SOLID_GPU_HEADED!=='1',args:['--enable-unsafe-webgpu'],...(process.env.CHROMIUM_EXECUTABLE?{executablePath:process.env.CHROMIUM_EXECUTABLE}:{})})
  page=await browser.newPage({acceptDownloads:true})
  page.on('pageerror',e=>renderErrors.push(String(e)));page.on('console',m=>{if(m.type()==='error')renderErrors.push(m.text())})
+ if(process.argv.includes('--profile-provenance')||process.argv.includes('--profile-intersections'))await page.addInitScript(()=>{
+  const OriginalWorker=window.Worker;window.__profileProvenance=null
+  window.Worker=class extends OriginalWorker{
+   constructor(...args){super(...args);this.addEventListener('message',event=>{if(event.data?.kind==='profilePrepare'&&event.data.ok)window.__profileProvenance=event.data.result.report})}
+  }
+ })
  await page.addInitScript(()=>{
+  if(window.GPUCanvasContext){const configure=GPUCanvasContext.prototype.configure;GPUCanvasContext.prototype.configure=function(descriptor){if(this.canvas.className==='gpu-layer'){window.__solidGpuDevice=descriptor.device;window.__solidGpuDeviceConfigurations=(window.__solidGpuDeviceConfigurations??0)+1}return configure.call(this,descriptor)}}
   if(!navigator.gpu)return
   const request=navigator.gpu.requestAdapter.bind(navigator.gpu)
   navigator.gpu.requestAdapter=async(...args)=>{const adapter=await request(...args);if(adapter){const make=adapter.requestDevice.bind(adapter);adapter.requestDevice=async(...args)=>{const device=await make(...args);window.__qualificationGpuDevice=device;return device}}return adapter}
@@ -40,18 +51,51 @@ try {
    terminate(){if(this.heldProfile)window.__profileDisplayTerminated=true;return super.terminate()}
   }
  })
+ if(process.argv.includes('--stale-preparation'))await page.addInitScript(()=>{
+  const NativeWorker=window.Worker;window.__preparationHeld=[];window.__preparationTerminated=0
+  window.Worker=class extends NativeWorker{
+   constructor(...args){super(...args);this.addEventListener('message',event=>{if(event.data?.kind==='profilePrepare'&&event.data.ok)window.__preparationLastReply=structuredClone(event.data)})}
+   postMessage(message,...rest){if(window.__holdPreparation&&message?.job?.kind==='profilePrepare'){this.__heldPreparation=true;window.__preparationHeld.push({message:structuredClone(message),callback:this.onmessage});return}return super.postMessage(message,...rest)}
+   terminate(){if(this.__heldPreparation)window.__preparationTerminated++;return super.terminate()}
+  }
+ })
+ if(process.argv.includes('--stale-regions'))await page.addInitScript(()=>{
+  const NativeWorker=window.Worker;window.__regionHeld=[];window.__regionTerminated=0;window.__failRegion=true
+  window.Worker=class extends NativeWorker{
+   constructor(...args){super(...args);this.addEventListener('message',event=>{if(event.data?.kind==='profileEdit'&&event.data.ok)window.__regionLastReply=structuredClone(event.data)})}
+   postMessage(message,...rest){
+    if(message?.job?.kind==='profileEdit'){
+     if(window.__failRegion){window.__failRegion=false;queueMicrotask(()=>this.onmessage?.({data:{version:1,id:message.id,kind:'profileEdit',ok:false,error:{name:'Error',code:'CAD_TRANSPORT',message:'PRIVATE REGION FAILURE'}}}));return}
+     if(window.__holdRegion){this.__heldRegion=true;window.__regionHeld.push({message:structuredClone(message),callback:this.onmessage});return}
+    }
+    return super.postMessage(message,...rest)
+   }
+   terminate(){if(this.__heldRegion)window.__regionTerminated++;return super.terminate()}
+  }
+ })
  const origin=`http://127.0.0.1:${server.address().port}`
  await page.goto(origin)
  await page.getByRole('combobox',{name:'Тема',exact:true}).selectOption(theme)
  let tabPresses=0
  async function tabTo(locator){
-  for(let i=0;i<250;i++){
+  for(let i=0;i<1500;i++){
    if(await locator.evaluate(el=>el===document.activeElement))return
    await page.keyboard.press('Tab');tabPresses++
   }
   throw Error('Target is unreachable through sequential Tab navigation: '+await locator.getAttribute('aria-label'))
  }
+ async function enterText(locator,value){if(keyboard){await tabTo(locator);await page.keyboard.press('ControlOrMeta+A');await page.keyboard.insertText(value)}else await locator.fill(value)}
+ async function choose(locator,value){
+  if(!keyboard){await locator.selectOption(value);return}
+  const label=await locator.locator('option').evaluateAll((nodes,value)=>nodes.find(n=>n.value===value)?.textContent,value);assert.ok(label)
+  await tabTo(locator);await page.keyboard.press('Tab');await page.keyboard.press('Shift+Tab');await tabTo(locator)
+  const cdp=await page.context().newCDPSession(page)
+  try{for(const letter of label)await cdp.send('Input.dispatchKeyEvent',{type:'char',text:letter,key:letter})}finally{await cdp.detach()}
+  assert.equal(await locator.inputValue(),value)
+ }
  async function activate(locator){
+  await locator.waitFor()
+  await page.waitForFunction(el=>!(el instanceof HTMLButtonElement)||!el.disabled,await locator.elementHandle())
   if(keyboard){await tabTo(locator);await page.keyboard.press('Enter')}
   else await locator.click()
  }
@@ -74,79 +118,186 @@ try {
   const text=await readFile(path.join(directory,file),'utf8')
   return json?JSON.parse(text):text
  }
- const arcs=process.argv.includes('--arcs')
+ const arcs=process.argv.includes('--arcs'),generalNurbs=process.argv.includes('--general-nurbs'),preparation=arcs||generalNurbs
  const regionOperation=process.argv.find(a=>a.startsWith('--profile-operation='))?.split('=')[1]??'union'
- assert.ok(['union','difference','intersection'].includes(regionOperation));assert.ok(!arcs||regionOperation==='union')
- const operation=arcs?'Prepare profile':regionOperation==='difference'?'Subtract profile regions':regionOperation==='intersection'?'Intersect exact profiles':'Union exact profiles'
+ assert.ok(['union','difference','intersection'].includes(regionOperation));assert.ok(!preparation||regionOperation==='union')
+ const operation=preparation?'Prepare profile':regionOperation==='difference'?'Subtract profile regions':regionOperation==='intersection'?'Intersect exact profiles':'Union exact profiles'
  const original={version:1,sketches:[{id:'rect',name:'Rectangle',closed:true,points:[[-4,-3],[3,-3],[3,3],[-4,3]]},{id:'circle',name:'Circle',closed:true,points:[],analytic:{kind:'circle',center:[3,0],radius:2,start:0,sweep:360}}],bodies:[]}
  if(regionOperation!=='union')original.sketches=[{id:'rect',name:'Plate',closed:true,points:[[-4,-3],[4,-3],[4,3],[-4,3]]},{id:'circle',name:'Circular cutter',closed:true,points:[],analytic:{kind:'circle',center:[0,0],radius:2,start:0,sweep:360}}]
  if(arcs)original.sketches=[{id:'rect',name:'Diameter',closed:false,points:[[-2,0],[2,0]]},{id:'circle',name:'Semicircle',closed:false,points:[],analytic:{kind:'arc',center:[0,0],radius:2,start:0,sweep:180}}]
+ if(generalNurbs){original.sketches=[{id:'line',name:'Profile lines',closed:false,points:[[2,0],[2,2],[0,2],[0,0]]}];original.curves=[{id:'nurbs',name:'General NURBS',curve:{degree:2,knots:[0,0,0,1,1,1],controlPoints:[[0,0],[1,-1],[2,0]],weights:[1,1,1]}}]}
+ const rational=process.argv.includes('--rational');assert.ok(!rational||generalNurbs)
+ if(rational)original.curves[0].curve.weights=[1,.8,1]
+ const diagnosticFixture=process.argv.includes('--profile-intersections')
+ if(diagnosticFixture){assert.ok(generalNurbs);original.curves[0].curve.controlPoints[1][1]=5;original.curves[0].curve.weights=[1,.8,1]}
+ // Independent analytic rational-Bezier evaluation and Simpson area oracle.
+ const curveWeight=rational ? 0.8 : 1
+ function archArea(){
+  const w=curveWeight,n=20000,h=1/n
+  const value=t=>{const d=(1-t)**2+2*w*t*(1-t)+t*t,dd=2*(1-w)*(2*t-1),nx=2*w*t*(1-t)+2*t*t,dx=2*w*(1-2*t)+4*t,ny=-2*w*t*(1-t);return -(ny/d)*(dx*d-nx*dd)/(d*d)}
+  let sum=value(0)+value(1);for(let i=1;i<n;i++)sum+=(i%2?4:2)*value(i*h);return sum*h/3
+ }
+ const generalArea=4+archArea()
+ const inputs=generalNurbs?[original.curves[0],original.sketches[0]]:original.sketches
  await openMenu()
  await solid.locator('input[accept=".json,application/json"]').setInputFiles({name:'profiles.json' ,mimeType:'application/json',buffer:Buffer.from(JSON.stringify(original))})
- await solid.getByRole('button',{name:original.sketches[0].name,exact:true}).waitFor()
+ await solid.getByRole('button',{name:inputs[0].name,exact:true}).waitFor()
  const before=await download('Скачать проект JSON','before.json')
  if(await menu.evaluate(e=>e.parentElement.open))await activate(menu)
- await activate(solid.getByRole('button',{name:original.sketches[0].name,exact:true}))
- const second=solid.getByRole('button',{name:original.sketches[1].name,exact:true})
+ await activate(solid.getByRole('button',{name:inputs[0].name,exact:true}))
+ const second=solid.getByRole('button',{name:inputs[1].name,exact:true})
  if(keyboard){await tabTo(second);await page.keyboard.press('Shift+Enter')}else await second.click({modifiers:['Shift']})
  await activate(solid.getByRole('region',{name:'2D — эскизы',exact:true}).getByRole('button',{name:'Вписать',exact:true}))
- async function command(name){await activate(solid.getByRole('button',{name:'Команда… Ctrl K',exact:true}));const search=page.getByRole('combobox',{name:'Search commands / Поиск команд'});await search.fill(name);await search.press('Enter')}
+ async function command(name){await activate(solid.getByRole('button',{name:'Команда… Ctrl K',exact:true}));const search=page.getByRole('combobox',{name:'Search commands / Поиск команд'});await enterText(search,name);await page.keyboard.press('Enter')}
  const apply=solid.getByRole('button',{name:'Готово · Enter',exact:true})
  await command(operation)
+ if(process.argv.includes('--stale-regions')){
+  assert.ok(!preparation)
+  await solid.getByRole('alert').filter({hasText:'Не удалось получить корректный результат вычисления.'}).waitFor()
+  assert.equal(await apply.isDisabled(),true);assert.equal((await solid.innerText()).includes('PRIVATE REGION FAILURE'),false)
+  await activate(solid.getByRole('button',{name:'Повторить вычисление',exact:true}))
+ }
+ if(diagnosticFixture){
+  await solid.getByTestId('profile-intersection-coverage').waitFor({timeout:90000})
+  assert.equal(await apply.isDisabled(),true)
+  const report=await page.evaluate(()=>window.__profileProvenance)
+  assert.equal(report.accepted,false);assert.equal(report.reason,'invalid-contour')
+  assert.ok(report.intersections?.visitedPairs>0)
+  const pane=solid.getByRole('region',{name:'2D — эскизы',exact:true})
+  const points=pane.locator('[data-diagnostic="profile-curve-intersection"]')
+  assert.equal(await points.count(),2)
+  for(const marker of await points.all()){
+   assert.equal(await marker.getAttribute('data-segments'),'0,2')
+   assert.ok(Math.abs(Number(await marker.getAttribute('cy'))+2)<1e-6)
+  }
+  assert.ok(await pane.locator('[data-diagnostic="profile-curve-segment"][data-status="intersection"]').count()>=2)
+  await page.screenshot({path:path.join(directory,'profile-intersections.png')})
+  await writeFile(path.join(directory,'diagnostic-report.json'),JSON.stringify(report,null,2)+'\n')
+  if(keyboard)await page.keyboard.press('Escape');else await activate(solid.getByRole('button',{name:'Esc',exact:true}))
+  const canceled=await download('Скачать проект JSON','canceled.json')
+  assert.deepEqual(canceled.sketches,before.sketches);assert.deepEqual(canceled.curves,before.curves)
+  assert.deepEqual(canceled.bodies,before.bodies)
+  const result={browser:browser.version(),keyboard,tabPresses,intersections:2,sourceSegments:[0,2],applyRefused:true,cancelPreservesSources:true,downloads,scope:'distinct-profile-segment-pairs'}
+  await writeFile(path.join(directory,'intersection-browser.json'),JSON.stringify(result,null,2)+'\n');console.log(result)
+ }else{
  if(regionOperation==='difference'){
   const target=solid.getByLabel('Основной профиль',{exact:true})
-  await target.selectOption('circle');assert.equal(await apply.isDisabled(),true)
-  await solid.getByText('Общей области нет или основной профиль полностью вырезан. Измените входы или основной профиль.',{exact:true}).first().waitFor()
+  await choose(target,'circle');assert.equal(await apply.isDisabled(),true)
+  await solid.getByText('Пустой результат. Измените входные профили или основной профиль.',{exact:true}).first().waitFor()
   await page.screenshot({path:path.join(directory,'empty-result.png')})
-  await target.selectOption('rect');assert.match(await solid.getByTestId('profile-operands').textContent(),/Circular cutter/)
+  await choose(target,'rect');assert.match(await solid.getByTestId('profile-operands').textContent(),/Circular cutter/)
  }
- await apply.click({trial:true});assert.equal(await solid.locator(arcs?'[data-preview="prepared-profile"]':'[data-preview="retained-profile"]').count(),1)
+ await apply.click({trial:true});assert.equal(await solid.locator(preparation?'[data-preview="prepared-profile"]':'[data-preview="retained-profile"]').count(),1)
+ let staleRegionChecked=false
+ if(process.argv.includes('--stale-regions')){
+  await page.waitForFunction(()=>window.__regionLastReply?.ok===true)
+  await page.keyboard.press('Escape');await page.evaluate(()=>window.__holdRegion=true)
+  await command(operation);await page.waitForFunction(()=>window.__regionHeld.length===1)
+  await page.keyboard.press('Escape');await command(operation);await page.waitForFunction(()=>window.__regionHeld.length===2)
+  await page.evaluate(()=>{const held=window.__regionHeld[0];held.callback({data:{...window.__regionLastReply,id:held.message.id}})})
+  assert.equal(await apply.isDisabled(),true);assert.equal(await solid.locator('[data-preview="retained-profile"]').count(),0)
+  await page.keyboard.press('Escape');assert.equal(await page.evaluate(()=>window.__regionTerminated),2)
+  await page.evaluate(()=>{window.__holdRegion=false;const held=window.__regionHeld[1];held.callback({data:{...window.__regionLastReply,id:held.message.id}})})
+  assert.deepEqual(await download('Скачать проект JSON','region-late-cancelled.json'),before)
+  assert.equal(await solid.locator('[data-preview="retained-profile"]').count(),0)
+  if(await menu.evaluate(e=>e.parentElement.open))await activate(menu)
+  await command(operation);await apply.click({trial:true});await solid.locator('[data-preview="retained-profile"]').waitFor()
+  staleRegionChecked=true
+ }
+ let stalePreparationChecked=false
+ if(process.argv.includes('--stale-preparation')){
+  assert.ok(preparation);await page.waitForFunction(()=>window.__preparationLastReply?.ok===true)
+  await page.evaluate(()=>window.__holdPreparation=true)
+  const tolerance=solid.getByLabel('Допуск разрыва, мм',{exact:true})
+  await enterText(tolerance,'0.02 mm');await page.waitForFunction(()=>window.__preparationHeld.length===1)
+  await enterText(tolerance,'0.03 mm');await page.waitForFunction(()=>window.__preparationHeld.length===2)
+  await page.evaluate(()=>{const held=window.__preparationHeld[0];held.callback({data:{...window.__preparationLastReply,id:held.message.id}})})
+  assert.equal(await apply.isDisabled(),true);assert.equal(await solid.locator('[data-preview="prepared-profile"]').count(),0)
+  await page.keyboard.press('Escape');assert.equal(await page.evaluate(()=>window.__preparationTerminated),2)
+  await page.evaluate(()=>{window.__holdPreparation=false;const held=window.__preparationHeld[1];held.callback({data:{...window.__preparationLastReply,id:held.message.id}})})
+  const stale=await download('Скачать проект JSON','late-cancelled.json');assert.deepEqual(stale,before)
+  assert.equal(await solid.locator('[data-preview="prepared-profile"]').count(),0)
+  if(await menu.evaluate(e=>e.parentElement.open))await activate(menu)
+  await command(operation);await apply.click({trial:true});await solid.locator('[data-preview="prepared-profile"]').waitFor()
+  stalePreparationChecked=true
+ }
+ if(process.argv.includes('--profile-provenance')){
+  assert.ok(preparation,'Provenance fixture requires preparation')
+  const report=await page.evaluate(()=>window.__profileProvenance)
+  assert.ok(report?.accepted);assert.equal(report.curveSources.length,generalNurbs?4:3)
+  assert.equal(report.curveSources.filter(s=>s.chain===0).length,1)
+  assert.equal(report.curveSources.filter(s=>s.chain===1).length,generalNurbs?3:2)
+  assert.ok(report.curveSources.every(s=>s.connector===false&&typeof s.reversed==='boolean'))
+  await writeFile(path.join(directory,'profile-provenance.json'),JSON.stringify(report,null,2)+'\n')
+ }
  if(process.argv.includes('--hold-profile-display')){
   const status=solid.getByRole('status',{name:'profile-display',exact:true})
   await status.waitFor();await page.waitForFunction(()=>window.__profileDisplayHeld)
   assert.equal(await solid.locator('[data-preview="retained-profile"]').getAttribute('d'),'')
-  await status.getByRole('button',{name:'Esc',exact:true}).click()
+  await activate(status.getByRole('button',{name:'Esc',exact:true}))
   assert.equal(await page.evaluate(()=>window.__profileDisplayTerminated),true)
-  await solid.getByRole('button',{name:'Обновить профили',exact:true}).click()
+  await activate(solid.getByRole('button',{name:'Обновить профили',exact:true}))
  }
  await solid.getByRole('status',{name:'profile-display',exact:true}).waitFor({state:'hidden'})
- if(!arcs)assert.ok((await solid.locator('[data-preview="retained-profile"]').getAttribute('d'))?.includes(' L '),'Retained preview must contain sampled geometry')
+ if(!preparation)assert.ok((await solid.locator('[data-preview="retained-profile"]').getAttribute('d'))?.includes(' L '),'Retained preview must contain sampled geometry')
  const heading=solid.locator('.operation-card>strong'),headingBox=await heading.boundingBox(),cardBox=await solid.locator('.operation-card').boundingBox()
  assert.ok(headingBox&&cardBox&&headingBox.y>=cardBox.y&&headingBox.y+headingBox.height<=cardBox.y+cardBox.height,'Command heading must remain visible')
+ if(generalNurbs){const helpBox=await solid.locator('.operation-card>small').first().boundingBox();await writeFile(path.join(directory,'command-layout.json'),JSON.stringify({headingBox,helpBox,cardBox,scrollTop:await solid.locator('.operation-card').evaluate(el=>el.scrollTop)}));assert.ok(helpBox&&helpBox.y>=headingBox.y+headingBox.height,'Command heading must not cover help text')}
  await page.screenshot({path:path.join(directory,'retained-preview.png')})
  await activate(solid.getByRole('button',{name:'Esc',exact:true}))
- const canceled=await download('Скачать проект JSON','canceled.json');assert.deepEqual(canceled.sketches,before.sketches)
+ const canceled=await download('Скачать проект JSON','canceled.json');assert.deepEqual(canceled,before)
  if(await menu.evaluate(e=>e.parentElement.open))await activate(menu)
  await command(operation);await activate(apply)
- const joined=await download('Скачать проект JSON','joined.json');assert.equal(joined.sketches.length,1)
+ const joined=await download('Скачать проект JSON','joined.json');assert.equal(joined.sketches.length,1);if(generalNurbs){assert.equal(joined.sketches[0].id,'nurbs');assert.deepEqual(joined.curves,[]);assert.ok(joined.sketches[0].retainedProfile.areaIntervalMm2)}
  assert.ok(joined.sketches[0].retainedProfile.loops.flat().some(c=>c.degree===2))
  if(await menu.evaluate(e=>e.parentElement.open))await activate(menu)
  await activate(solid.getByRole('button',{name:'↶',exact:true}))
  await activate(solid.getByRole('button',{name:'Повтор · Shift R',exact:true}));await activate(apply)
- const repeated=await download('Скачать проект JSON','repeated.json');assert.deepEqual(repeated.sketches,joined.sketches)
+ const repeated=await download('Скачать проект JSON','repeated.json');assert.deepEqual(repeated,joined)
  if(await menu.evaluate(e=>e.parentElement.open))await activate(menu)
  await command('Extrude')
- await solid.getByLabel('Высота, мм',{exact:true}).fill('5 mm');await activate(apply)
+ await enterText(solid.getByLabel('Высота, мм',{exact:true}),'5 mm');await activate(apply)
  const extruded=await download('Скачать проект JSON','extruded.json');assert.equal(extruded.bodies.length,1)
  assert.ok(extruded.bodies[0].brep.faces.some(f=>f.surface.degreeU===2||f.surface.degreeV===2))
  if(await menu.evaluate(e=>e.parentElement.open))await activate(menu)
  await activate(solid.getByRole('region',{name:'3D — тела',exact:true}).getByRole('button',{name:'Вписать',exact:true}))
- const gpuDeviceDestroyed=await page.evaluate(()=>{const device=window.__qualificationGpuDevice;if(!device)return false;device.destroy();return true})
- await solid.locator('[data-body]').first().waitFor({state:'visible'})
- const renderedTriangles=await solid.locator('[data-body]').count();assert.ok(renderedTriangles>0);assert.deepEqual(renderErrors,[])
+ const gpuLoss=process.argv.includes('--gpu-loss');const gpuDeviceDestroyed=gpuLoss&&await page.evaluate(()=>{const device=window.__solidGpuDevice;if(!device)return false;device.destroy();return true})
+ if(gpuLoss){assert.equal(gpuDeviceDestroyed,true);await solid.getByRole('button',{name:'Повторить WebGPU',exact:true}).waitFor();assert.equal(await solid.locator('.gpu-layer').evaluate(c=>c.style.visibility==='visible'),false);await solid.locator('[data-body]').first().waitFor({state:'visible'})}
+ else assert.equal(await solid.locator('.gpu-layer').evaluate(c=>c.style.visibility==='visible'),true)
+ const renderedTriangles=await solid.locator('[data-body]').count();if(gpuLoss)assert.ok(renderedTriangles>0);assert.deepEqual(renderErrors,[])
  await writeFile(path.join(directory,'render-state.json'),JSON.stringify({errors:renderErrors,canvases:await solid.locator('canvas').evaluateAll(nodes=>nodes.map(n=>({width:n.width,height:n.height,rect:n.getBoundingClientRect().toJSON(),display:getComputedStyle(n).display}))),svgPolygons:await solid.locator('[data-body]').count()},null,2))
  if(await solid.locator('canvas.gpu-layer').isVisible())await solid.locator('canvas.gpu-layer').screenshot({path:path.join(directory,'gpu-only.png')})
  await page.screenshot({path:path.join(directory,'retained-extruded.png')})
+ if(gpuLoss){
+  const failed=await download('Скачать проект JSON','gpu-failed.json');assert.deepEqual(failed,extruded)
+  if(await menu.evaluate(e=>e.parentElement.open))await activate(menu)
+  const configurations=await page.evaluate(()=>window.__solidGpuDeviceConfigurations)
+  await activate(solid.getByRole('button',{name:'Повторить WebGPU',exact:true}));await solid.getByRole('status',{name:'gpu-recovery',exact:true}).waitFor({state:'hidden'})
+  assert.equal(await solid.locator('.gpu-layer').evaluate(c=>c.style.visibility==='visible'),true)
+  assert.ok(await page.evaluate(()=>window.__solidGpuDeviceConfigurations)>configurations)
+  const recovered=await download('Скачать проект JSON','gpu-recovered.json');assert.deepEqual(recovered,extruded)
+  if(await menu.evaluate(e=>e.parentElement.open))await activate(menu)
+  assert.equal(await solid.getByRole('button',{name:extruded.bodies[0].name,exact:true}).getAttribute('aria-pressed'),'true')
+  await page.screenshot({path:path.join(directory,'gpu-recovered.png')})
+ }
  const step=await download('STEP выбранного тела · текущая геометрия','browser-retained.step',false)
- await writeFile(path.join(directory,'manifest.json'),JSON.stringify({schema:'cad-roadmap-step/1',units:'mm',toleranceMm:1e-6,relativeVolumeTolerance:1e-8,parts:[{name:'Browser retained union',file:'browser-retained.step',sha256:createHash('sha256').update(step).digest('hex'),expected:{volumeMm3:(arcs?2*Math.PI:regionOperation==='difference'?48-4*Math.PI:regionOperation==='intersection'?4*Math.PI:42+2*Math.PI)*5,boundsMm:arcs?[[-2,0,0],[2,2,5]]:regionOperation==='difference'?[[-4,-3,0],[4,3,5]]:regionOperation==='intersection'?[[-2,-2,0],[2,2,5]]:[[-4,-3,0],[5,3,5]]}}]}))
+ await writeFile(path.join(directory,'manifest.json'),JSON.stringify({schema:'cad-roadmap-step/1',units:'mm',toleranceMm:1e-6,relativeVolumeTolerance:1e-8,parts:[{name:'Browser retained union',file:'browser-retained.step',sha256:createHash('sha256').update(step).digest('hex'),expected:{volumeMm3:(generalNurbs?generalArea:arcs?2*Math.PI:regionOperation==='difference'?48-4*Math.PI:regionOperation==='intersection'?4*Math.PI:42+2*Math.PI)*5,boundsMm:generalNurbs?[[0,-curveWeight/(1+curveWeight),0],[2,2,5]]:arcs?[[-2,0,0],[2,2,5]]:regionOperation==='difference'?[[-4,-3,0],[4,3,5]]:regionOperation==='intersection'?[[-2,-2,0],[2,2,5]]:[[-4,-3,0],[5,3,5]]}}]}))
  if(await menu.evaluate(e=>e.parentElement.open))await activate(menu)
  await activate(solid.getByRole('button',{name:'↶',exact:true}))
- const undoBody=await download('Скачать проект JSON','undo-body.json');assert.deepEqual(undoBody.sketches,joined.sketches);assert.equal(undoBody.bodies.length,0)
+ await solid.getByRole('button',{name:extruded.bodies[0].name,exact:true}).waitFor({state:'hidden'})
+ const undoBody=await download('Скачать проект JSON','undo-body.json');assert.deepEqual(undoBody,joined)
  if(await menu.evaluate(e=>e.parentElement.open))await activate(menu)
  await activate(solid.getByRole('button',{name:'↶',exact:true}))
- const undone=await download('Скачать проект JSON','undone.json');assert.deepEqual(undone.sketches,before.sketches)
+ if(generalNurbs)await solid.getByRole('button',{name:'Profile lines',exact:true}).waitFor()
+ const undone=await download('Скачать проект JSON','undone.json');assert.deepEqual(undone,before)
  await openMenu();await solid.locator('input[accept=".json,application/json"]').setInputFiles({name:'joined.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(joined))})
- const reloaded=await download('Скачать проект JSON','reloaded.json');assert.deepEqual(reloaded.sketches,joined.sketches)
- const report={browser:browser.version(),profileWorkerCancelled:await page.evaluate(()=>window.__profileDisplayTerminated===true),operation,retainedArcs:true,exactExtrusion:true,gpuFallback:gpuDeviceDestroyed,renderedTriangles,cancel:true,undo:true,repeat:true,jsonReload:true,keyboard,tabPresses,downloads}
+ await solid.getByRole('button',{name:inputs[1].name,exact:true}).waitFor({state:'hidden'})
+ await solid.getByRole('status',{name:'history-restore',exact:true}).waitFor({state:'hidden'})
+ const reloaded=await download('Скачать проект JSON','reloaded.json');assert.deepEqual(reloaded,joined)
+ await page.reload();await solid.getByRole('button',{name:joined.sketches[0].name,exact:true}).waitFor();await solid.getByRole('status',{name:'history-restore',exact:true}).waitFor({state:'hidden'})
+ const restored=await download('Скачать проект JSON','restored.json');assert.deepEqual(restored,joined)
+ assert.deepEqual(renderErrors,[])
+ const report={artifacts,staleRegionChecked,stalePreparationChecked,completeDocumentChecks:true,browserReloadExact:true,browser:browser.version(),profileWorkerCancelled:await page.evaluate(()=>window.__profileDisplayTerminated===true),operation,retainedArcs:!generalNurbs,retainedGeneralNurbs:generalNurbs,rationalWeights:rational,generalAreaMm2:generalNurbs?generalArea:undefined,exactExtrusion:true,gpuFallback:gpuDeviceDestroyed,gpuRecovered:gpuLoss,renderedTriangles,cancel:true,undo:true,repeat:true,jsonReload:true,keyboard,tabPresses,downloads}
  await writeFile(path.join(directory,'retained-browser.json'),JSON.stringify(report,null,2)+'\n');console.log(report)
+ }
 }catch(error){if(page){await page.screenshot({path:path.join(directory,'failure.png')}).catch(()=>{});await writeFile(path.join(directory,'failure.txt'),await page.locator('body').innerText().catch(()=>''))}throw error}finally{await browser?.close();await new Promise(resolve=>server.close(resolve))}

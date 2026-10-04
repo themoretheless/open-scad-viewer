@@ -1,0 +1,90 @@
+{
+  "timings": [],
+  "timingScope": "Post request through receipt of worker response; includes startup and messaging, excludes subsequent rendering.",
+  "workerFailureRetry": true,
+  "keyboard": false,
+  "tabs": 0,
+  "gpuActive": true,
+  "reloadExact": true,
+  "browser": "157.0.8083.0",
+  "fixturePath": "docs/qualification/cad-roadmap-2026-09-28/p1-development-2026-10-02/opposing-clearance-wasm/entry-inner-browser-fixture.json",
+  "faceA": 0,
+  "faceB": 3,
+  "expectedMm": 13.75,
+  "displayedIntervalMm": [
+    13.75,
+    13.7500001768
+  ],
+  "nativeResult": {
+    "cells": 29,
+    "converged": true,
+    "distanceIntervalMm": [
+      13.749999999999917,
+      13.750000176776974
+    ],
+    "domainCells": 551,
+    "maxCells": 100000,
+    "maxDomainCells": 8000000,
+    "method": "interval-trimmed-surface-subdivision",
+    "parameters": [
+      [
+        0.999999825,
+        1.0000000000000001e-7
+      ],
+      [
+        2.9999998249999997,
+        0.999999825
+      ]
+    ],
+    "pointEnclosures": [
+      [
+        [
+          17.322741887849062,
+          17.32274188784916
+        ],
+        [
+          7.175313241670139,
+          7.175313241670368
+        ],
+        [
+          5.999999999999987,
+          5.9999999999999885
+        ]
+      ],
+      [
+        [
+          4.61939770610683,
+          4.619397706106842
+        ],
+        [
+          1.9134170566854487,
+          1.9134170566855
+        ],
+        [
+          5.999998949999908,
+          5.9999989500000925
+        ]
+      ]
+    ],
+    "points": [
+      [
+        17.32274188784911,
+        7.175313241670251,
+        5.999999999999988
+      ],
+      [
+        4.619397706106836,
+        1.9134170566854742,
+        5.99999895
+      ]
+    ],
+    "reason": "tolerance",
+    "scope": "trimmed-surfaces-bounded-joins",
+    "toleranceMm": 0.001,
+    "toleranceUv": 1e-7
+  },
+  "requests": 7,
+  "cancelledWorkerTerminated": true,
+  "invalidFaceLocalized": true,
+  "documentUnchanged": true
+}

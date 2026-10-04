@@ -1,0 +1,22 @@
+{
+  "schema": "cad-p1-circular-annular-strip/1",
+  "rustTestsPassed": 13,
+  "directions": [
+    "forward",
+    "reverse"
+  ],
+  "faces": 15,
+  "vertices": 18,
+  "edges": 35,
+  "poleEdges": 2,
+  "openBoundaryEdges": 8,
+  "openBoundaryMeaning": "two unrounded angular cross-section loops; no longitudinal gap",
+  "innerWallAndBottomCapIncluded": true,
+  "oppositeSharedEdgeOrientationChecked": true,
+  "seamMatching": "full rational definitions, exact shared endpoints, no tolerance welding",
+  "closedSolidAssembled": false,
+  "sourceSolidEdited": false,
+  "independentStripOracleVerified": false,
+  "bridgeAndUiExposed": false,
+  "generalP1Complete": false
+}

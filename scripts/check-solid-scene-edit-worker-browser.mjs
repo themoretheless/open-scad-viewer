@@ -10,7 +10,8 @@ assert.ok(['system','dark','light','nord','solarized'].includes(theme))
 await mkdir(directory,{recursive:true})
 const server=createServer(async(req,res)=>{
  try {
-  const url=new URL(req.url,'http://localhost'),file=path.resolve(root,'.'+(url.pathname==='/'?'/index.html':decodeURIComponent(url.pathname)))
+  const url=new URL(req.url,'http://localhost');if(url.pathname==='/favicon.ico'){res.writeHead(204).end();return}
+  const file=path.resolve(root,'.'+(url.pathname==='/'?'/index.html':decodeURIComponent(url.pathname)))
   if(!file.startsWith(root+path.sep)){res.writeHead(403).end();return}
   res.setHeader('Content-Type',file.endsWith('.html')?'text/html':file.endsWith('.js')?'text/javascript':file.endsWith('.css')?'text/css':file.endsWith('.wasm')?'application/wasm':'application/octet-stream')
   res.end(await readFile(file))
@@ -52,6 +53,7 @@ try {
   throw Error('Target is unreachable through sequential Tab navigation: '+await locator.getAttribute('aria-label'))
  }
  async function activate(locator){
+  await locator.waitFor({state:'visible'});await page.waitForFunction(e=>!e.disabled,await locator.elementHandle())
   if(keyboard){await tabTo(locator);await page.keyboard.press('Enter')}
   else await locator.click()
  }
@@ -60,6 +62,7 @@ try {
  const menu=solid.locator('summary[title="Файл"]')
  async function openMenu(){if(await menu.evaluate(e=>!e.parentElement.open))await activate(menu)}
  async function download(label,file,json=true){
+  await solid.getByRole('status',{name:'history-restore',exact:true}).waitFor({state:'hidden'})
   await openMenu()
   const pending=page.waitForEvent('download',{timeout:20000})
   await activate(solid.getByRole('button',{name:label,exact:true}))
@@ -81,9 +84,31 @@ try {
  async function input(locator,value){if(keyboard){await tabTo(locator);await page.keyboard.press('ControlOrMeta+A');await page.keyboard.insertText(value)}else await locator.fill(value)}
  const apply=solid.getByRole('button',{name:'Готово · Enter',exact:true})
  await command('Box')
- await solid.locator('[data-body]').first().waitFor({state:'visible'})
+ await solid.getByRole('button',{name:'Куб · 3D',exact:true}).waitFor({state:'visible'})
  await solid.getByRole('status',{name:'primitive-build',exact:true}).waitFor({state:'hidden'})
  await command('Create linked instance');await activate(apply)
+ if(process.argv.includes('--instance-placement')||process.argv.includes('--absolute-placement')){
+  const created=await download('Скачать проект JSON','instance-created.json')
+  if(await menu.evaluate(e=>e.parentElement.open))await activate(menu)
+  const linked=created.bodies.find(body=>body.instance);assert.ok(linked)
+  const absolute=process.argv.includes('--absolute-placement')
+  await command(absolute?'Place instance':'Transform instance')
+  await input(solid.getByLabel(/^X/),'7')
+  await activate(apply)
+  const placed=await download('Скачать проект JSON','instance-placed.json')
+  assert.deepEqual(placed.bodies.find(body=>!body.instance),created.bodies.find(body=>!body.instance))
+  const actual=placed.bodies.find(body=>body.id===linked.id)
+  assert.equal(actual.instance.sourceId,linked.instance.sourceId)
+  const expectedMatrix=structuredClone(linked.instance.matrix);if(absolute)expectedMatrix[0][3]=7;else expectedMatrix[0][3]+=7
+  assert.deepEqual(actual.instance.matrix,expectedMatrix)
+  assert.equal(actual.mesh,undefined,'Compact export stores linked placement rather than duplicate geometry')
+  if(await menu.evaluate(e=>e.parentElement.open))await activate(menu)
+  await activate(solid.getByRole('button',{name:'↶',exact:true}))
+  await solid.getByRole('status',{name:'history-restore',exact:true}).waitFor({state:'hidden'})
+  await solid.getByRole('status',{name:'Сохранено в браузере',exact:true}).waitFor()
+  assert.deepEqual(await download('Скачать проект JSON','instance-placement-undone.json'),created)
+  if(await menu.evaluate(e=>e.parentElement.open))await activate(menu)
+ }
  await command('Select instance source')
  const before=await download('Скачать проект JSON','before.json');assert.equal(before.bodies.length,2)
  if(await menu.evaluate(e=>e.parentElement.open))await activate(menu)
@@ -137,7 +162,34 @@ try {
  if(await menu.evaluate(e=>e.parentElement.open))await activate(menu)
  await activate(solid.getByRole('button',{name:'↷',exact:true}))
  const redone=await download('Скачать проект JSON','redone.json');assert.deepEqual(redone.bodies,changed.bodies)
+ if(process.argv.includes('--object-history')){
+  async function snapshot(file){const value=await download('Скачать проект JSON',file);if(await menu.evaluate(e=>e.parentElement.open))await activate(menu);return value}
+  async function historyRoundtrip(before,after,key){
+   await activate(solid.getByRole('button',{name:'↶',exact:true}));assert.deepEqual(await snapshot(key+'-undo.json'),before)
+   await activate(solid.getByRole('button',{name:'↷',exact:true}));assert.deepEqual(await snapshot(key+'-redo.json'),after)
+  }
+  if(await menu.evaluate(e=>e.parentElement.open))await activate(menu)
+  await command('Duplicate');const duplicated=await snapshot('duplicated.json')
+  assert.equal(duplicated.bodies.length,3);assert.deepEqual(duplicated.bodies.slice(0,2),redone.bodies)
+  const copy=duplicated.bodies[2];assert.ok(!redone.bodies.some(b=>b.id===copy.id))
+  await historyRoundtrip(redone,duplicated,'duplicate')
+  await activate(solid.getByRole('button',{name:copy.name,exact:true}));await command('Delete')
+  const deleted=await snapshot('deleted-copy.json');assert.deepEqual(deleted,redone)
+  await historyRoundtrip(duplicated,deleted,'delete')
+  const linked=deleted.bodies.find(b=>b.instance),source=deleted.bodies.find(b=>b.id===linked.instance.sourceId)
+  await activate(solid.getByRole('button',{name:linked.name,exact:true}));await command('Make independent')
+  await solid.getByText('Создаётся независимое тело. Esc — отменить.',{exact:true}).waitFor({state:'hidden'})
+  const detached=await snapshot('detached.json'),body=detached.bodies.find(b=>b.id===linked.id)
+  assert.equal(body.instance,undefined);assert.ok(body.brep);assert.deepEqual(detached.bodies.find(b=>b.id===source.id),source)
+  const expected=source.brep.vertices.map(v=>linked.instance.matrix.slice(0,3).map(row=>row[0]*v.point[0]+row[1]*v.point[1]+row[2]*v.point[2]+row[3]))
+  for(let axis=0;axis<3;axis++)for(const fn of [Math.min,Math.max])assert.ok(Math.abs(fn(...body.brep.vertices.map(v=>v.point[axis]))-fn(...expected.map(p=>p[axis])))<1e-8)
+  await historyRoundtrip(deleted,detached,'detach')
+  await solid.getByRole('status',{name:'Сохранено в браузере',exact:true}).waitFor();await page.reload()
+  await solid.getByRole('status',{name:'history-restore',exact:true}).waitFor({state:'hidden'})
+  assert.deepEqual(await snapshot('object-reloaded.json'),detached)
+ }
  assert.deepEqual(renderErrors,[])
- const report={browser:browser.version(),workerRequests:requests,applyWithoutNewWorkerRequest:true,cancelledLateSuccess:true,invalidInput:process.argv.includes('--invalid-input'),fieldErrors:process.argv.includes('--field-errors'),undoRedo:true,keyboard,tabPresses,downloads}
+ const gpuActive=await solid.locator('.gpu-layer').evaluate(c=>c.style.visibility==='visible');if(process.argv.includes('--require-gpu'))assert.equal(gpuActive,true)
+ const report={gpuActive,browser:browser.version(),workerRequests:requests,applyWithoutNewWorkerRequest:true,cancelledLateSuccess:true,invalidInput:process.argv.includes('--invalid-input'),fieldErrors:process.argv.includes('--field-errors'),undoRedo:true,objectHistory:process.argv.includes('--object-history'),keyboard,tabPresses,downloads}
  await writeFile(path.join(directory,'scene-edit-browser.json'),JSON.stringify(report,null,2)+'\n');console.log(report)
 }catch(error){if(page){await page.screenshot({path:path.join(directory,'failure.png')}).catch(()=>{});await writeFile(path.join(directory,'failure.txt'),await page.locator('body').innerText().catch(()=>''))}throw error}finally{await browser?.close();await new Promise(resolve=>server.close(resolve))}

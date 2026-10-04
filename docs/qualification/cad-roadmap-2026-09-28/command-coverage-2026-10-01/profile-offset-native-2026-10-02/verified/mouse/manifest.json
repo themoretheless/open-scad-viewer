@@ -1,0 +1,1 @@
+{"schema":"cad-roadmap-step/1","units":"mm","toleranceMm":0.000001,"relativeVolumeTolerance":1e-8,"parts":[{"name":"Browser offset plate","file":"browser-offset.step","sha256":"2e79d44817027ce0e91d42e44088c1247c86e7b695e1403da16b30ac42659823","expected":{"volumeMm3":310,"boundsMm":[[-0.5,-0.5,0],[8.5,6.5,5]]}}]}

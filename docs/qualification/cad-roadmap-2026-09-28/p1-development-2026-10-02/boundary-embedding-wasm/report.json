@@ -1,0 +1,29 @@
+{
+  "schema": "cad-boundary-embedding-wasm/1",
+  "passed": true,
+  "source": "/private/tmp/open-scad-viewer-cad-resume/docs/qualification/cad-roadmap-2026-09-28/p1-development-2026-10-02/transition-face-pairs/embedding-joined-charts.json",
+  "wasmSha256": "0b03b8dc61d645539c143efbf8f6b1bd082e1a7bdf604c926c5e9b8439d247c3",
+  "wasmBytes": 9781868,
+  "cases": [
+    {
+      "name": "complete",
+      "elapsedMs": 2040.283042,
+      "proven": true,
+      "visitedPairs": 351
+    },
+    {
+      "name": "exact-work-exhausted",
+      "elapsedMs": 278.7255839999998,
+      "proven": false,
+      "visitedPairs": 1
+    },
+    {
+      "name": "face-work-exhausted",
+      "elapsedMs": 102.58162500000026,
+      "proven": false,
+      "visitedPairs": 1
+    }
+  ],
+  "workerHandlerCases": 1,
+  "scope": "Canonical source only. Boundary embedding and self-intersection absence; endpoint G1, thickness and material volume remain unqualified."
+}

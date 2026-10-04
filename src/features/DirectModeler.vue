@@ -3,7 +3,7 @@ import {TransparentBsp} from '../services/transparentBsp'
 import CpuOrbitCanvas from '../components/CpuOrbitCanvas.vue'
 import VrControls from '../components/VrControls.vue'
 import { prepareVrPolygons } from '../services/vrScene'
-import type {SelfIntersection} from '../services/solidSelfIntersection'
+import {faceAbsenceProven,type SelfIntersection} from '../services/solidSelfIntersection'
 import type {FaceContacts} from '../services/solidFaceContacts'
 import type {BoundaryAgreement} from '../services/solidBoundaryAgreement'
 import type {NurbsSurfaceDistance} from '../services/nurbsSurface'
@@ -12,11 +12,11 @@ import {SolidSketchSnapPreparation} from '../services/solidSketchSnapPreparation
 import {readSolidDraftHead,writeSolidDraftHead} from '../services/solidDraftHeadStore'
 import type {MainSolidJob} from '../services/mainSolidProtocol'
 import {collectSolidDraftSnapshots,withSolidDraftLock,solidDraftSnapshotId,readSolidDraftSnapshot,writeSolidDraftSnapshot,removeSolidDraftSnapshot} from '../services/solidDraftStore'
-import {detachSolidInstances} from '../services/solidInstances'
 import SceneObjectControls from '../components/SceneObjectControls.vue'
 import SceneVirtualList from '../components/SceneVirtualList.vue'
 import { connectedEdgeChain } from '../services/edgeSelection'
 import CadQuantityInput from '../components/CadQuantityInput.vue'
+import {numericRectangle,numericSlotSources} from '../services/numericSketchAuthoring'
 import {type SurfaceBoundaryReport,type SurfaceBoundaryOptions} from '../services/solidSurfaceDiagnostics'
 import { type inspectSolidDisplay, inspectSolidIntersections } from '../services/solidDiagnostics'
 import SketchDimensionPanel from '../components/SketchDimensionPanel.vue'
@@ -59,8 +59,7 @@ import { polygonMeshToExportMesh, MESH_EXPORT_FORMATS, MESH_FORMAT_LABELS, type 
 import { exportMeshFormatCompressed } from '../services/meshExportFormats'
 import { downloadBytes } from '../services/downloadArtifact'
 import { solidDocumentToMeshDocument } from '../services/solidBridge'
-import {requirePolylineSketch} from '../services/retainedSketchProfile'
-import type {prepareSolidProfile} from '../services/solidProfilePreparation'
+import {isProfilePreparationInput,type prepareSolidProfile} from '../services/solidProfilePreparation'
 import type {matchSolidCurve} from '../services/solidCurveMatching'
 import type {matchSolidSurface,prepareSolidSurfaceSeams} from '../services/solidSurfaceMatching'
 import type {SolidBrepToolOptions} from '../services/solidBrepTool'
@@ -75,6 +74,7 @@ import {isSolidNurbsRefit,type refitSolidNurbs} from '../services/solidCurveRedu
 import {isSolidSurfaceBuild,type buildSolidSurface} from '../services/solidSurfaceConstruction'
 import { isGeometryKernelReady, warmGeometryKernel } from '../services/geometry/kernel'
 import { type BrepMassProperties, type BrepBooleanOperation } from '../services/geometry/brep'
+const ProfileIntersectionPresentation=defineAsyncComponent(()=>import('../components/ProfileIntersectionPresentation.vue'))
 const CurvePointTrimControls=defineAsyncComponent(()=>import('../components/CurvePointTrimControls.vue'))
 const CurveOffsetPreview=defineAsyncComponent(()=>import('../components/CurveOffsetPreview'))
 const CurveOffsetConstructionInfo=defineAsyncComponent(()=>import('../components/CurveOffsetConstructionInfo'))
@@ -86,6 +86,7 @@ const ru = computed(() => props.locale === 'ru')
 const ShellDistanceSummary=defineAsyncComponent(()=>import('../components/ShellDistanceSummary.vue'))
 const SolidVolumeWitness=defineAsyncComponent(()=>import('../components/SolidVolumeWitness.vue'))
 const SolidVolumeDistance=defineAsyncComponent(()=>import('../components/SolidVolumeDistance.vue'))
+const MaterialPathCheck=defineAsyncComponent(()=>import('../components/MaterialPathCheck.vue'))
 const label = (a: string, b: string) => ru.value ? a : b
 const key = props.embedded ? 'scad-main-modeler-v1' : 'scad-solid-modeler-v1'
 const error = ref(''), saveError = ref(false), savePending=ref(false)
@@ -117,6 +118,44 @@ const undoable = ref(false), redoable = ref(false)
 const selection = ref(props.initialSelection ?? ''), mode = ref<'2d' | '3d'>('2d'), tool = ref<'select' | 'rectangle' | 'circle' | 'arc' | 'polyline' | 'trim' | 'slot'>('select')
 const draftCursor=ref<Point2|null>(null)
 const slotWidth=ref(5), slotWidthValid=ref(true)
+const draftPoint=ref<Point2>([0,0]),draftPointValid=ref([true,true])
+const draftRadius=ref(10),draftRadiusValid=ref(true),draftArcStart=ref(0),draftArcSweep=ref(180),draftArcValid=ref([true,true])
+const exactRoundCurve=computed(()=>{
+ if(!draftPointValid.value.every(Boolean)||!draftPoint.value.every(Number.isFinite)||!draftRadiusValid.value||!Number.isFinite(draftRadius.value)||draftRadius.value<.01||draftRadius.value>1000000)return null
+ if(tool.value==='arc'&&(!draftArcValid.value.every(Boolean)||!Number.isFinite(draftArcStart.value)||!Number.isFinite(draftArcSweep.value)||Math.abs(draftArcSweep.value)<.1||Math.abs(draftArcSweep.value)>=360))return null
+ return {kind:tool.value==='arc'?'arc' as const:'circle' as const,center:[...draftPoint.value] as Point2,radius:draftRadius.value,start:tool.value==='arc'?draftArcStart.value:0,sweep:tool.value==='arc'?draftArcSweep.value:360}
+})
+const exactRoundPoints=computed(()=>(tool.value==='circle'||tool.value==='arc')&&exactRoundCurve.value?sampleCurve(exactRoundCurve.value):[])
+function createExactRoundCurve(){if((tool.value!=='circle'&&tool.value!=='arc')||!exactRoundCurve.value)return;run(()=>{addSketch(sampleCurve(exactRoundCurve.value!),exactRoundCurve.value!.kind==='circle',exactRoundCurve.value!);draft.value=[];draftCursor.value=null;tool.value='select'})}
+const draftSize=ref<Point2>([20,10]),draftSizeValid=ref([true,true]),draftEnd=ref<Point2>([20,0]),draftEndValid=ref([true,true])
+const exactRectangle=computed(()=>draftPointValid.value.every(Boolean)&&draftSizeValid.value.every(Boolean)?numericRectangle(draftPoint.value,draftSize.value):null)
+function createExactRectangle(){if(tool.value!=='rectangle'||!exactRectangle.value)return;run(()=>{addSketch(exactRectangle.value!,true);draft.value=[];draftCursor.value=null;tool.value='select'})}
+const numericSlotWorker=createSolidPreviewWorker(),numericSlotPending=ref(false),numericSlotResult=shallowRef<DirectSketch|null>(null),numericSlotError=ref(false),numericSlotRetry=ref(0)
+let numericSlotGeneration=0,numericSlotAutoApply=false
+function cancelNumericSlot(){numericSlotGeneration++;numericSlotWorker.cancel();numericSlotPending.value=false;numericSlotResult.value=null;numericSlotError.value=false;numericSlotAutoApply=false}
+onUnmounted(()=>{cancelNumericSlot();numericSlotWorker.dispose()})
+const numericSlotInput=computed(()=>draftPointValid.value.every(Boolean)&&draftEndValid.value.every(Boolean)&&slotWidthValid.value?numericSlotSources(draftPoint.value,draftEnd.value,slotWidth.value,activePlane.value):null)
+function createExactSlot(){const sketch=numericSlotResult.value;if(tool.value!=='slot'||numericSlotPending.value||!sketch?.retainedProfile||!numericSlotInput.value)return;run(()=>{addSketch(sketch.points,true,undefined,sketch.retainedProfile);draft.value=[];draftCursor.value=null;tool.value='select'})}
+function refreshNumericSlot(){
+ const autoApply=numericSlotAutoApply;cancelNumericSlot()
+ if(!props.open||tool.value!=='slot'||!numericSlotInput.value)return
+ const generation=numericSlotGeneration,source=document.value,input=numericSlotInput.value
+ numericSlotPending.value=true
+ queueMicrotask(async()=>{
+  if(generation!==numericSlotGeneration)return
+  try{
+   const result=await numericSlotWorker.run({kind:'profilePrepare',...input,tolerance:1e-7})
+   if(generation!==numericSlotGeneration||tool.value!=='slot'||document.value!==source)return
+   const sketch=result.document.sketches.find(s=>s.id===result.id)
+   if(!result.report.accepted||!sketch?.retainedProfile)throw Error('Slot profile preparation failed')
+   numericSlotResult.value=sketch;numericSlotPending.value=false
+   if(autoApply)createExactSlot()
+  }catch{if(generation===numericSlotGeneration)numericSlotError.value=true}
+  finally{if(generation===numericSlotGeneration)numericSlotPending.value=false}
+ })
+}
+const canAddDraftPoint=computed(()=>draftPointValid.value.every(Boolean)&&draftPoint.value.every(Number.isFinite)&&!draft.value.some(p=>p[0]===draftPoint.value[0]&&p[1]===draftPoint.value[1]))
+function addExactDraftPoint(){if(tool.value!=='polyline'||!canAddDraftPoint.value)return;draft.value=[...draft.value,[...draftPoint.value]];draftCursor.value=null;snapMarker.value=null;snapGuide.value=null}
 function undoDraftPoint(){draft.value=draft.value.slice(0,-1);draftCursor.value=null;snapMarker.value=null;snapGuide.value=null}
 const draft = ref<Point2[]>([]), height = ref(10), dx = ref(0), dy = ref(0), dz = ref(0), angle = ref(0), scale = ref(1)
 type Pane = '2d' | '3d'
@@ -267,7 +306,7 @@ let orbitDrag: { x: number; y: number; yaw: number; pitch: number; pointer: numb
 // While the camera is being dragged the view falls back to the working mesh so orbiting stays responsive.
 const cameraDragging = ref(false)
 let heightDrag: { y: number; height: number; pointer: number; svg: SVGSVGElement } | null = null
-let gesture: { start: Point2; document: DirectDocument; vertex: number | null; id: string; pointer: number; pane: Pane; svg: SVGSVGElement; pan: boolean; center: Point2; sketch?: boolean; anchor?: Point2; anchor3?: Vec3; dragStart?: Point2; workerEdit?:boolean; inverse?:DOMMatrix|null; bodyDrag?: { ids: string[]; delta: Vec3 } | null } | null = null
+let gesture: { start: Point2; document: DirectDocument; vertex: number | null; id: string; pointer: number; pane: Pane; svg: SVGSVGElement; pan: boolean; center: Point2; end?:Point2; sketch?: boolean; anchor?: Point2; anchor3?: Vec3; dragStart?: Point2; workerEdit?:boolean; inverse?:DOMMatrix|null; bodyDrag?: { ids: string[]; delta: Vec3 } | null } | null = null
 
 /**
  * Elements offset directly while a body drag is in flight.
@@ -350,7 +389,7 @@ function setProfileTarget(id:string){
 const pointTrimPick=shallowRef<{point:[number,number];matrix:NurbsScreenProjection;radius:number}|null>(null)
 const activePlane=ref<SketchPlane>(xyPlane()),advancedOp=ref<'nurbs-offset'|'nurbs-point-trim'|'instance-transform'|'instance-create'|'instance-place'|'push'|'chamfer'|'edge-fillet'|'shell'|'split'|'offset'|'extend'|'curve'|'transform'|'loft'|'nurbs-loft'|'nurbs-sweep'|'nurbs-rebuild'|'nurbs-reduce'|'nurbs-surface-rebuild'|'nurbs-surface-reduce'|'nurbs-patch'|'nurbs-match'|'nurbs-prepare'|'nurbs-curve-match'|'profile-prepare'|'profile-union'|'profile-difference'|'profile-intersection'|null>(null)
 const loftPreviewId=ref(''),surfaceInputs=ref<string[]>([]),surfaceReversed=ref<boolean[]>([])
-const advanced=ref({offsetJoin:'smooth' as 'smooth'|'bevel'|'trim-nonzero'|'trim-evenodd',patchPrepare:false,patchError:1e-6,profileGap:.01,curveEndA:'end' as 'start'|'end',curveEndB:'start' as 'start'|'end',curveAngle:1e-6,prepareOpenPeriodic:false,matchOrder:1 as 1|2,matchBoundaryA:'uMax' as SurfaceJetBoundary,matchBoundaryB:'uMin' as SurfaceJetBoundary,matchScale:1,matchReverse:false,matchError:1e-6,sweepMode:'translation' as 'translation'|'framed',sweepSections:24,sweepDeviation:.01,sweepNormalX:0,sweepNormalY:0,sweepNormalZ:1,surfaceAxis:'u' as 'u'|'v',rebuildControls:6,reduceDegree:1,maxError:.01,distance:2,radius:2,endRadius:3,filletMode:'constant' as 'constant'|'variable'|'corner',axis:'z' as 'x'|'y'|'z',x:0,y:0,z:0,angle:0,scale:1,cx:0,cy:0,start:0,sweep:180,end:'end' as 'start'|'end'})
+const advanced=ref({offsetJoin:'smooth' as 'smooth'|'bevel'|'trim-nonzero'|'trim-evenodd',patchPrepare:false,patchError:1e-6,profileGap:.01,curveEndA:'end' as 'start'|'end',curveEndB:'start' as 'start'|'end',curveAngle:1e-6,prepareOpenPeriodic:false,matchOrder:1 as 1|2,matchBoundaryA:'uMax' as SurfaceJetBoundary,matchBoundaryB:'uMin' as SurfaceJetBoundary,matchScale:1,matchReverse:false,matchError:1e-6,sweepMode:'translation' as 'translation'|'framed',sweepSections:24,sweepDeviation:.01,sweepNormalX:0,sweepNormalY:0,sweepNormalZ:1,surfaceAxis:'u' as 'u'|'v',rebuildControls:6,reduceDegree:1,maxError:.01,distance:2,radius:2,endRadius:3,filletMode:'constant' as 'constant'|'variable'|'corner'|'partial-preview',axis:'z' as 'x'|'y'|'z',x:0,y:0,z:0,angle:0,scale:1,cx:0,cy:0,start:0,sweep:180,end:'end' as 'start'|'end'})
 const brepSegments=ref(4),filletSegments=ref(12)
 const revolveGeometry=ref<'faceted'|'exact'>('faceted')
 function selectIndexKey(e:KeyboardEvent,current:number,last:number,min=0){
@@ -358,8 +397,14 @@ function selectIndexKey(e:KeyboardEvent,current:number,last:number,min=0){
  e.preventDefault();e.stopPropagation()
  return e.key==='Home'?min:e.key==='End'?last:Math.max(min,Math.min(last,current+(e.key==='ArrowDown'?1:-1)))
 }
+function setPickedEdge(index:number){edgeIndex.value=index;edgeIndexes.value=index>=0?[index]:[];advancedOp.value=null}
+function edgeSelectionKey(e:KeyboardEvent){
+ const indices=[-1,...featureEdges.value.map(edge=>edge.i)]
+ const index=selectIndexKey(e,Math.max(0,indices.indexOf(edgeIndex.value)),indices.length-1)
+ if(index!==null)setPickedEdge(indices[index])
+}
 function revolveGeometryKey(e: KeyboardEvent){
- const index=selectIndexKey(e,revolveGeometry.value==='exact'?1:0,1)
+ const index=selectIndexKey(e,revolveGeometry.value==='exact'?1:0,1,selectedSketch.value?.retainedProfile?1:0)
  if(index!==null)revolveGeometry.value=index?'exact':'faceted'
 }
 function surfaceInputKey(e:KeyboardEvent,role:number){
@@ -412,7 +457,7 @@ let nativeNurbsGeneration=0
 const gizmoWorker=createSolidPreviewWorker(),gizmoPending=ref(false)
 let gizmoEpoch=0,gizmoRevision=0,gizmoRunning=false,gizmoPublishing=false,gizmoHistoryPending=false
 let gizmoApplyRevision:number|null=null,gizmoBase:DirectDocument|null=null,gizmoPublished:DirectDocument|null=null
-type DragWorkerJob=Extract<MainSolidJob,{kind:'sceneEdit'|'pointEdit'}>
+type DragWorkerJob=Extract<MainSolidJob,{kind:'sceneEdit'|'pointEdit'}>&{document:DirectDocument}
 const pointEditActive=ref(false)
 let numericPointEdit=false
 let gizmoQueued:{job:DragWorkerJob;revision:number}|null=null
@@ -490,17 +535,15 @@ function toggleObjectState(id:string, kind:'hidden'|'locked') {
 }
 function moveSelectionToGroup() {
   cancelCommand()
-  const next=history.document
-  for(const object of documentObjects(next))if(selectedIds.value.includes(object.id)&&objectSelectable(object.id)) {
-    if(activeGroup.value)object.group=activeGroup.value;else delete object.group
-  }
-  commit(next)
+  void commitDirectTransform(snapDocument.value,selectedIds.value.filter(objectSelectable),[0,0,0],0,1,false,false,false,{operation:'group-move',group:activeGroup.value})
 }
-function addEmptyGroup() {
+async function addEmptyGroup() {
+  if(directTransformPending.value)return
+  cancelCommand()
   const names=new Set([...documentObjects(document.value).map(b=>b.group),...(document.value.groups??[]).map(g=>g.name)])
   let i=1;while(names.has(label('Группа ','Group ')+i))i++
-  const name=label('Группа ','Group ')+i,next=history.document
-  next.groups=[...(next.groups??[]),{name,source:''}];commit(next);activeGroup.value=name
+  const name=label('Группа ','Group ')+i
+  if(await commitDirectTransform(snapDocument.value,[],[0,0,0],0,1,false,false,false,{operation:'group-create',group:name}))activeGroup.value=name
 }
 function selectEdgeChain() {
   if(!selectedBody.value || edgeIndex.value<0)return
@@ -538,11 +581,13 @@ const selectedFace = computed(() => topology.value.faces[faceIndex.value])
 const selectedFaceTriangles=computed(()=>new Set((openingFaces.value.length?openingFaces.value:[faceIndex.value]).flatMap(i=>topology.value.faces[i]?.triangles??[])))
 const samePlane = sameSketchPlane
 const surfaceDistanceOpen=ref(false),surfaceDistanceBudget=ref(10000),surfaceDistancePending=ref(false)
+const surfaceDistanceRevision=ref(0),surfaceDistanceRetryVisible=ref(false)
 const surfaceDistanceWorker=createSolidPreviewWorker()
 const surfaceDistance=shallowRef<{value:NurbsSurfaceDistance|null;error:string}|null>(null)
 onUnmounted(()=>surfaceDistanceWorker.dispose())
-const boundaryInspection=ref(false)
+const boundaryInspection=ref(false),boundaryInspectionRevision=ref(0),boundaryRetryVisible=ref(false)
 const boundaryOptions=ref<SurfaceBoundaryOptions>({boundaryA:'uMax',boundaryB:'uMin',reverse:false,samples:65,toleranceMm:.01,angleToleranceDeg:1})
+const boundaryInputValid=computed(()=>({gap:Number.isFinite(boundaryOptions.value.toleranceMm)&&boundaryOptions.value.toleranceMm>=.000001,angle:Number.isFinite(boundaryOptions.value.angleToleranceDeg)&&boundaryOptions.value.angleToleranceDeg>=0&&boundaryOptions.value.angleToleranceDeg<=90,samples:Number.isInteger(boundaryOptions.value.samples)&&boundaryOptions.value.samples>=2&&boundaryOptions.value.samples<=257}))
 const boundaryWorker=createSolidPreviewWorker(),boundaryPending=ref(false)
 const boundaryReport=shallowRef<{value:SurfaceBoundaryReport|null;error:string}|null>(null)
 onUnmounted(()=>boundaryWorker.dispose())
@@ -633,71 +678,84 @@ function chooseSketchFace() {
 }
 function resetWorkplane() { cancelGesture();activePlane.value=xyPlane();workplaneOutline.value=[];workplaneBodyId.value='';choosingSketchFace.value=false;selection.value='';extraSelection.value=[] }
 const volumeDistanceOpen=ref(false),volumeContact=shallowRef<Vec3[]|null>(null)
+const materialPathOpen=ref(false)
+const materialPathOverlay=shallowRef<import('../services/solidMaterialVolume').MaterialOverlay|null>(null)
 const measurementOpen=ref(false),measureTarget=ref(''),measureA=ref(1),measureB=ref(2),curveParameter=ref(.5)
 const formatMeasurement=(value:number)=>value!==0&&Math.abs(value)<1e-6?value.toExponential(3):value.toFixed(6)
-const clearanceOpen=ref(false)
+const clearanceOpen=ref(false),clearanceRevision=ref(0),clearanceRetryVisible=ref(false)
 const measurementTarget=computed(()=>measureTarget.value?document.value.bodies.find(body=>body.id===measureTarget.value):selectedBody.value)
 const clearanceWorker=createSolidClearanceWorker()
 const clearanceMeasurement=shallowRef<{value:CadPairReport|null;error:string}|null>(null)
 const clearancePending=ref(false)
 onUnmounted(()=>clearanceWorker.dispose())
 watchEffect(onCleanup=>{
+ void clearanceRevision.value
  const enabled=props.open&&measurementOpen.value&&clearanceOpen.value
  const source=selectedBody.value,target=measurementTarget.value,snapshot=document.value
  const sourceId=selection.value,targetId=measureTarget.value
  let current=true
  onCleanup(()=>{current=false;clearanceWorker.cancel()})
- clearanceMeasurement.value=null;clearancePending.value=false
+ clearanceMeasurement.value=null;clearancePending.value=false;clearanceRetryVisible.value=false
  if(!enabled||!source)return
  if(!target||target.id===source.id){clearanceMeasurement.value={value:null,error:label('Выберите другое тело B.','Choose a different body B.')};return}
  clearancePending.value=true
  const valid=()=>current&&props.open&&document.value===snapshot&&selection.value===sourceId&&measureTarget.value===targetId&&measurementOpen.value&&clearanceOpen.value
  void clearanceWorker.run({kind:'inspect',bodies:[source,target].map(({id,name,mesh})=>({id,name,mesh}))}).then(reports=>{
   if(valid())clearanceMeasurement.value={value:reports[0],error:''}
- }).catch(e=>{if(valid())clearanceMeasurement.value={value:null,error:e instanceof Error?e.message:String(e)}})
+ }).catch(()=>{if(valid()){clearanceRetryVisible.value=true;clearanceMeasurement.value={value:null,error:label('Не удалось вычислить зазор по сетке. Повторите расчёт; при повторном отказе проверьте сетки выбранных тел.','Could not compute mesh clearance. Retry; if it fails again, inspect the selected body meshes.')}}})
  .finally(()=>{if(valid())clearancePending.value=false})
 })
 const measurementWorker=createSolidPreviewWorker(),curvatureWorker=createSolidPreviewWorker()
 const measurementPending=ref(false),curvaturePending=ref(false)
+const vertexAValid=computed(()=>!!selectedBody.value && Number.isInteger(measureA.value) && measureA.value>=1 && measureA.value<=solidVertexCount(selectedBody.value))
+const vertexBValid=computed(()=>!!measurementTarget.value && Number.isInteger(measureB.value) && measureB.value>=1 && measureB.value<=solidVertexCount(measurementTarget.value))
+const curveParameterValid=computed(()=>Number.isFinite(curveParameter.value) && curveParameter.value>=0 && curveParameter.value<=1)
+const measurementRevision=ref(0),curvatureRevision=ref(0),measurementRetryVisible=ref(false),curvatureRetryVisible=ref(false)
 const measurement=shallowRef<{value:PointMeasurement|null;error:string}|null>(null)
 const curvatureMeasurement=shallowRef<{value:CurveMeasurement|null;error:string}|null>(null)
 onUnmounted(()=>{measurementWorker.dispose();curvatureWorker.dispose()})
 watchEffect(onCleanup=>{
- const enabled=props.open&&measurementOpen.value&&!clearanceOpen.value&&!volumeDistanceOpen.value
+ const enabled=props.open&&measurementOpen.value&&!clearanceOpen.value&&!volumeDistanceOpen.value&&!materialPathOpen.value
  const source=selectedBody.value,target=measurementTarget.value,a=measureA.value-1,b=measureB.value-1
  let current=true
  onCleanup(()=>{current=false;measurementWorker.cancel()})
- measurement.value=null;measurementPending.value=false
+ void measurementRevision.value
+ measurement.value=null;measurementPending.value=false;measurementRetryVisible.value=false
  if(!enabled||!source)return
  if(!target){measurement.value={value:null,error:label('Выберите существующее тело B.','Choose an existing target body.')};return}
+ if(!vertexAValid.value || !vertexBValid.value){measurement.value={value:null,error:!vertexAValid.value?label('Укажите существующую вершину A.','Choose an existing vertex A.'):label('Укажите существующую вершину B.','Choose an existing vertex B.')};return}
  measurementPending.value=true
  void measurementWorker.run({kind:'measureVertices',a:source,indexA:a,b:target,indexB:b}).then(value=>{
   if(current)measurement.value={value,error:''}
- }).catch(e=>{if(current)measurement.value={value:null,error:e instanceof Error?e.message:String(e)}})
+ }).catch(()=>{if(current){measurementRetryVisible.value=true;measurement.value={value:null,error:label('Не удалось измерить вершины. Проверьте тела и повторите измерение.','Could not measure these vertices. Check the bodies and retry the measurement.')}}})
  .finally(()=>{if(current)measurementPending.value=false})
 })
 watchEffect(onCleanup=>{
  const enabled=props.open&&measurementOpen.value,body=selectedBody.value,edge=edgeIndex.value,parameter=curveParameter.value
  let current=true
  onCleanup(()=>{current=false;curvatureWorker.cancel()})
- curvatureMeasurement.value=null;curvaturePending.value=false
+ void curvatureRevision.value
+ curvatureMeasurement.value=null;curvaturePending.value=false;curvatureRetryVisible.value=false
  if(!enabled||!body?.brep||edge<0)return
+ if(!curveParameterValid.value){curvatureMeasurement.value={value:null,error:label('Задайте параметр ребра от 0 до 1.','Set an edge parameter between 0 and 1.')};return}
  curvaturePending.value=true
  void curvatureWorker.run({kind:'measureEdge',body,edge,parameter}).then(value=>{
   if(current)curvatureMeasurement.value={value,error:''}
- }).catch(e=>{if(current)curvatureMeasurement.value={value:null,error:e instanceof Error?e.message:String(e)}})
+ }).catch(()=>{if(current){curvatureRetryVisible.value=true;curvatureMeasurement.value={value:null,error:label('Не удалось измерить кривизну. Проверьте ребро и повторите измерение.','Could not measure curvature. Check the edge and retry the measurement.')}}})
  .finally(()=>{if(current)curvaturePending.value=false})
 })
 const edgeDistanceOpen=ref(false),edgeDistanceA=ref(1),edgeDistanceB=ref(2),edgeDistanceBudget=ref(10000)
+const edgeDistanceRevision=ref(0),edgeDistanceRetryVisible=ref(false)
 const edgeDistanceWorker=createSolidPreviewWorker(),edgeDistancePending=ref(false)
 const edgeDistance=shallowRef<{value:NurbsCurveDistance|null;error:string}|null>(null)
 onUnmounted(()=>edgeDistanceWorker.dispose())
 watchEffect(onCleanup=>{
+ void edgeDistanceRevision.value
  const enabled=props.open&&measurementOpen.value&&edgeDistanceOpen.value
  const source=selectedBody.value,target=measurementTarget.value,a=edgeDistanceA.value-1,b=edgeDistanceB.value-1,maxCells=edgeDistanceBudget.value
  let current=true
  onCleanup(()=>{current=false;edgeDistanceWorker.cancel()})
- edgeDistance.value=null;edgeDistancePending.value=false
+ edgeDistance.value=null;edgeDistancePending.value=false;edgeDistanceRetryVisible.value=false
  if(!enabled||!source)return
  if(!source.brep||!target?.brep){edgeDistance.value={value:null,error:label('Выберите два тела с B-rep геометрией.','Choose two bodies with B-rep geometry.')};return}
  if(!Number.isInteger(a)||!source.brep.edges[a]){edgeDistance.value={value:null,error:label('Укажите существующее ребро A.','Choose an existing edge A.')};return}
@@ -705,19 +763,21 @@ watchEffect(onCleanup=>{
  edgeDistancePending.value=true
  void edgeDistanceWorker.run({kind:'curveDistance',a:source.brep.edges[a].curve,b:target.brep.edges[b].curve,toleranceMm:.001,maxCells}).then(value=>{
   if(current)edgeDistance.value={value,error:''}
- }).catch(()=>{if(current)edgeDistance.value={value:null,error:label('Не удалось измерить выбранные рёбра. Проверьте геометрию или увеличьте объём расчёта.','Could not measure these edges. Check their geometry or increase the calculation budget.')}})
+ }).catch(()=>{if(current){edgeDistanceRetryVisible.value=true;edgeDistance.value={value:null,error:label('Не удалось измерить выбранные рёбра. Проверьте геометрию или увеличьте объём расчёта.','Could not measure these edges. Check their geometry or increase the calculation budget.')}}})
  .finally(()=>{if(current)edgeDistancePending.value=false})
 })
 const faceDistanceOpen=ref(false),faceDistanceA=ref(1),faceDistanceB=ref(2),faceDistanceBudget=ref(10000)
+const faceDistanceRevision=ref(0),faceDistanceRetryVisible=ref(false)
 const faceDistanceWorker=createSolidPreviewWorker(),faceDistancePending=ref(false)
 const faceDistance=shallowRef<{value:FaceDistanceResult|null;error:string}|null>(null)
 onUnmounted(()=>faceDistanceWorker.dispose())
 watchEffect(onCleanup=>{
+ void faceDistanceRevision.value
  const enabled=props.open&&measurementOpen.value&&faceDistanceOpen.value
  const source=selectedBody.value,target=measurementTarget.value,a=faceDistanceA.value-1,b=faceDistanceB.value-1,maxCells=faceDistanceBudget.value
  let current=true
  onCleanup(()=>{current=false;faceDistanceWorker.cancel()})
- faceDistance.value=null;faceDistancePending.value=false
+ faceDistance.value=null;faceDistancePending.value=false;faceDistanceRetryVisible.value=false
  if(!enabled||!source)return
  if(!source.brep||!target?.brep){faceDistance.value={value:null,error:label('Выберите два тела с B-rep геометрией.','Choose two bodies with B-rep geometry.')};return}
  if(!Number.isInteger(a)||!source.brep.faces[a]){faceDistance.value={value:null,error:label('Укажите существующую грань A.','Choose an existing face A.')};return}
@@ -725,26 +785,28 @@ watchEffect(onCleanup=>{
  faceDistancePending.value=true
  void faceDistanceWorker.run({kind:'faceDistance',options:{a:source.brep,b:target.brep,faceA:a,faceB:b,toleranceMm:.001,toleranceUv:1e-7,maxCells,maxDomainCells:maxCells===10000?1000000:8000000}}).then(value=>{
   if(current)faceDistance.value={value,error:''}
- }).catch(()=>{if(current)faceDistance.value={value:null,error:label('Не удалось измерить выбранные грани. Проверьте геометрию или увеличьте объём расчёта.','Could not measure these faces. Check their geometry or increase the calculation budget.')}})
+ }).catch(()=>{if(current){faceDistanceRetryVisible.value=true;faceDistance.value={value:null,error:label('Не удалось измерить выбранные грани. Проверьте геометрию или увеличьте объём расчёта.','Could not measure these faces. Check their geometry or increase the calculation budget.')}}})
  .finally(()=>{if(current)faceDistancePending.value=false})
 })
 const shellDistanceOpen=ref(false),shellDistanceBudget=ref(100000)
+const shellDistanceRevision=ref(0),shellDistanceRetryVisible=ref(false)
 const shellDistanceWorker=createSolidPreviewWorker(),shellDistancePending=ref(false)
 const shellDistance=shallowRef<{value:ShellDistanceResult|null;error:string}|null>(null)
 onUnmounted(()=>shellDistanceWorker.dispose())
 watchEffect(onCleanup=>{
+ void shellDistanceRevision.value
  const enabled=props.open&&measurementOpen.value&&shellDistanceOpen.value
  const source=selectedBody.value,target=measurementTarget.value,maxCells=shellDistanceBudget.value
  let current=true
  onCleanup(()=>{current=false;shellDistanceWorker.cancel()})
- shellDistance.value=null;shellDistancePending.value=false
+ shellDistance.value=null;shellDistancePending.value=false;shellDistanceRetryVisible.value=false
  if(!enabled||!source)return
  if(!source.brep||!target?.brep){shellDistance.value={value:null,error:label('Выберите два тела с B-rep геометрией.','Choose two bodies with B-rep geometry.')};return}
  if(source.id===target.id){shellDistance.value={value:null,error:label('Выберите другое тело B.','Choose a different body B.')};return}
  shellDistancePending.value=true
  void shellDistanceWorker.run({kind:'shellDistance',options:{a:source.brep,b:target.brep,toleranceMm:.001,toleranceUv:1e-7,maxCells,maxDomainCells:maxCells===100000?1000000:8000000}}).then(value=>{
   if(current)shellDistance.value={value,error:''}
- }).catch(()=>{if(current)shellDistance.value={value:null,error:label('Не удалось измерить оболочки тел. Проверьте геометрию или увеличьте объём расчёта.','Could not measure these boundary shells. Check their geometry or increase the calculation budget.')}})
+ }).catch(()=>{if(current){shellDistanceRetryVisible.value=true;shellDistance.value={value:null,error:label('Не удалось измерить оболочки тел. Проверьте геометрию или увеличьте объём расчёта.','Could not measure these boundary shells. Check their geometry or increase the calculation budget.')}}})
  .finally(()=>{if(current)shellDistancePending.value=false})
 })
 const diagnosticPanel=ref<HTMLElement>()
@@ -774,7 +836,7 @@ const boundarySelected=computed(()=>boundaryDefects.value[boundaryIndex.value])
 const boundaryLine=computed(()=>boundaryResult.value?.lines.find(line=>line.edge===boundarySelected.value?.edge))
 
 const faceContactsOpen=ref(false),faceContactsBudget=ref(10000),faceContactsRevision=ref(0),faceContactsPending=ref(false),faceContactIndex=ref(0)
-const inspectWithinFaces=ref(false)
+const inspectWithinFaces=ref(false),inspectExactBoundary=ref(false)
 const faceContactsResult=shallowRef<FaceContacts|SelfIntersection|null>(null),faceContactsError=ref('')
 const faceContactsWorker=createSolidPreviewWorker()
 onUnmounted(()=>faceContactsWorker.dispose())
@@ -790,7 +852,7 @@ watchEffect(onCleanup=>{
  if(!body.brep){faceContactsError.value=label('Выберите тело с исходной B-rep геометрией.','Choose a body with original B-rep geometry.');return}
  faceContactsPending.value=true
  const valid=()=>current&&document.value===snapshot&&selectedBody.value?.id===body.id
- void faceContactsWorker.run({...inspectWithinFaces.value?{kind:'selfIntersection' as const,maxSpans:Math.min(maxCells,100000)}:{kind:'faceContacts' as const},model:body.brep,toleranceUv:1e-8,limits:{maxPairs:10000,maxCells,maxDomainCells:Math.min(8000000,maxCells*100),cellsPerPair:Math.min(100000,Math.max(1,Math.floor(maxCells/20))),domainCellsPerPair:Math.min(1000000,Math.max(1,maxCells*5)),maxBoxes:64}})
+ void faceContactsWorker.run({...inspectWithinFaces.value?{kind:'selfIntersection' as const,maxSpans:Math.min(maxCells,100000),...(inspectExactBoundary.value?{boundaryAudit:{exactWork:Math.min(maxCells*100,1000000),trimPairs:10000,trimCells:Math.min(maxCells,100000),trimDomainCells:Math.min(maxCells*100,1000000)}}:{})}:{kind:'faceContacts' as const},model:body.brep,toleranceUv:1e-8,limits:{maxPairs:10000,maxCells,maxDomainCells:Math.min(8000000,maxCells*100),cellsPerPair:Math.min(100000,Math.max(1,Math.floor(maxCells/20))),domainCellsPerPair:Math.min(1000000,Math.max(1,maxCells*5)),maxBoxes:64}})
  .then(value=>{if(valid())faceContactsResult.value=value})
  .catch(()=>{if(valid())faceContactsError.value=label('Не удалось проверить контакты граней. Повторите проверку; при повторном отказе проверьте структуру модели.','Could not inspect face contacts. Retry; if it fails again, inspect the model structure.')})
  .finally(()=>{if(valid())faceContactsPending.value=false})
@@ -959,7 +1021,9 @@ const preparedProfileResult=shallowRef<ReturnType<typeof prepareSolidProfile>|nu
 const profilePreparation=computed(()=>{
  if(advancedOp.value!=='profile-prepare')return null
  const message=bodyEditError.value
- return {value:preparedProfileResult.value,error:message.includes('same sketch plane')?label('Все линии должны использовать одну плоскость эскиза. Перенесите их в общую плоскость.','All lines must use one sketch plane. Move them into a common plane.'):message.includes('open polylines')?label('Выберите открытые ломаные или дуги в одной плоскости.','Select open polylines or arcs in one plane.'):message}
+ const names=surfaceInputs.value.map(id=>document.value.sketches.find(s=>s.id===id)?.name??document.value.curves?.find(c=>c.id===id)?.name).filter(Boolean).join(', ')
+ const context=names?names+': ':''
+ return {value:preparedProfileResult.value,error:message?context+(message.includes('control deviation exceeds')?label('Управляющие точки выходят из плоскости профиля больше чем на 0,0000001 мм. Перенесите кривые в общую плоскость.','Control points deviate from the profile plane by more than 0.0000001 mm. Move the curves into a common plane.'):message.includes('Select distinct open sketches')?label('Для каждой роли выберите отдельную открытую линию или NURBS-кривую. Уберите повторяющиеся входы.','Choose a distinct open sketch or NURBS curve for each role. Remove duplicate inputs.'):message.includes('exactly clamped')?label('Концы NURBS должны быть зажаты узлами. Подготовьте или обрежьте выбранную кривую.','NURBS endpoints must be clamped. Prepare or trim the selected curve.'):message.includes('same sketch plane')?label('Все линии должны использовать одну плоскость эскиза. Перенесите их в общую плоскость.','All lines must use one sketch plane. Move them into a common plane.'):message.includes('open polylines')?label('Выберите открытые ломаные, дуги или NURBS в одной плоскости.','Select open polylines, arcs or NURBS in one plane.'):message) : ''}
 })
 function curveMatchError(reason:string){
  if(reason==='unproven-endpoint-regularity')return label('Касательная вырождена. Измените соседнюю управляющую точку.','The tangent is degenerate. Move the adjacent control point.')
@@ -1043,6 +1107,12 @@ function bodyCalculationFailure(error:unknown,hasRetryButton=true):string {
    ?label('Размер сопряжения не помещается. Уменьшите радиус или размер фаски.','The feature does not fit. Reduce the radius or chamfer size.')
    :label('Сопряжение не подтверждено для выбранной геометрии. Проверьте условия режима ниже и выберите подходящие рёбра.','The feature is unproven for this geometry. Check the mode requirements below and select suitable edges.'))
  }
+ if(code==='BREP_RESOURCE_LIMIT'||code==='BREP_ANALYSIS_INDETERMINATE'){
+  const source=selectedBody.value?.name??selectedNurbsCurve.value?.name??label('Выбранная геометрия','Selected geometry')
+  return source+': '+(code==='BREP_RESOURCE_LIMIT'
+   ?label('Исчерпан лимит вычислений. Модель не изменена. Упростите геометрию или разделите операцию.','The calculation budget was exhausted. The model is unchanged. Simplify geometry or split the operation.')
+   :label('Точность расчёта не подтверждена. Модель не изменена. Проверьте замкнутость, ориентацию и вырожденные участки.','Calculation accuracy is unconfirmed. The model is unchanged. Check closure, orientation and degenerate regions.'))
+ }
  if(code==='CAD_CRASH')return label('Вычисление прервано из-за сбоя. Модель не изменена. ','The calculation stopped unexpectedly. The model is unchanged. ')+(hasRetryButton?label('Нажмите «Повторить вычисление».','Choose Retry calculation.'):label('Повторите операцию с выбранными телами.','Run the operation again with the selected bodies.'))
  if(code==='CAD_TIMEOUT')return label('Истекло время расчёта. Модель не изменена. Упростите геометрию или повторите расчёт.','The calculation timed out. The model is unchanged. Simplify geometry or retry.')
  if(code==='CAD_TRANSPORT'||code==='CAD_PROTOCOL')return label('Не удалось получить корректный результат вычисления. Модель не изменена. Повторите вычисление.','A valid calculation result could not be received. The model is unchanged. Retry the calculation.')
@@ -1089,6 +1159,7 @@ function surfaceConstructionError(error:unknown):string {
 }
 const surfaceBuildResult=shallowRef<ReturnType<typeof buildSolidSurface>|null>(null)
 const invalidQuantities = ref<Record<string, boolean>>({})
+watch(()=>[advancedOp.value,advanced.value.sweep,selectedSketch.value?.analytic?.kind],()=>quantityValidity('curve.sweep-range',advancedOp.value!=='curve'||selectedSketch.value?.analytic?.kind!=='arc'||Number.isFinite(advanced.value.sweep)&&Math.abs(advanced.value.sweep)>=.1&&Math.abs(advanced.value.sweep)<=360),{flush:'sync'})
 const bodyEditRevision=ref(0),bodyEditRetryVisible=ref(false)
 watch(advancedOp,()=>{bodyEditRetryVisible.value=false},{flush:'sync'})
 watch(()=>props.open,open=>{if(!open)advancedOp.value=null},{flush:'sync'})
@@ -1159,7 +1230,15 @@ watch(()=>[props.open,bodyEditRevision.value,advancedOp.value,document.value,sel
    }
    if(operation==='profile-prepare'){
     const result=await bodyEditWorker.run({kind:'profilePrepare',document:source,ids:options.inputs,tolerance:options.profileGap})
-    if(generation===bodyEditGeneration)preparedProfileResult.value=result
+    if(generation===bodyEditGeneration){preparedProfileResult.value=result;activePlane.value=structuredClone(result.plane)}
+    return
+   }
+   if(operation==='edge-fillet' && options.filletMode==='partial-preview') {
+    const body=source.bodies.find(body=>body.id===options.id)
+    if(!body?.brep)throw Error('Select a B-rep annular body.')
+    if(options.edges.length!==1)throw Error('Select one outer circular quarter-arc for preview.')
+    const result=await bodyEditWorker.run({kind:'partialAnnularPreview',body,edge:options.edges[0],radius:options.radius})
+    if(generation===bodyEditGeneration)bodyEditResult.value={...source,bodies:source.bodies.map(body=>body.id===result.body.id?result.body:body)}
     return
    }
    const result=isSolidProfileEdit(operation)
@@ -1211,7 +1290,7 @@ function applyAdvanced(){run(()=>{
  const d=structuredClone(advancedPreview.value.document),splitBody=d.bodies.find(b=>b.id==='preview-split');if(splitBody)splitBody.id=crypto.randomUUID()
  const prepared=advancedOp.value==='nurbs-prepare'
  const profileId=(isProfileCommand(advancedOp.value))?surfaceInputs.value[0]:''
- const created=(advancedOp.value==='instance-create'||advancedOp.value==='nurbs-offset')?loftPreviewId.value:''
+ const created=(advancedOp.value==='instance-create'||advancedOp.value==='nurbs-offset'||advancedOp.value==='loft')?loftPreviewId.value:''
  commit(d);advancedOp.value=null;if(profileId){selection.value=profileId;extraSelection.value=[]}if(prepared)advanced.value.matchReverse=false;if(created)pickObject(created,'3d');faceIndex.value=edgeIndex.value=-1;edgeIndexes.value=[];openingFaces.value=[]
 })}
 const axisVector=(axis:string):Vec3=>axis==='x'?[1,0,0]:axis==='y'?[0,1,0]:[0,0,1]
@@ -1451,15 +1530,21 @@ function prepareCommit(next: DirectDocument, origin:'edit'|'file'='edit') {
   const previous=origin==='file'&&!lockedIds.value.length?undefined:snapDocument.value
   const existing=new Set(previous?documentObjects(previous).map(b=>b.id):history.objectIds)
   const sourceChanges=new Map<string,boolean>()
+  const previousBodies=new Map(previous?.bodies.map(body=>[body.id,body])??[])
+  const nextBodies=new Map(next.bodies.map(body=>[body.id,body]))
+  if(origin==='edit')for(const source of previous?.bodies??[])if(!nextBodies.has(source.id)) {
+    const linked=next.bodies.filter(body=>body.instance?.sourceId===source.id)
+    if(linked.length)throw Error(label('Нельзя удалить источник «','Cannot delete source “')+source.name+label('»: остаются связанные экземпляры — ','”: linked instances remain — ')+linked.length+'. '+label('Сделайте их независимыми или удалите вместе с источником.','Make them independent or delete them together with the source.'))
+  }
   // Imported caches are checked and rebuilt by the authoritative history parser.
   // The edit-only guard detects attempts to modify a live linked body directly.
   for(const body of previous?.bodies??[])if(origin==='edit'&&body.instance) {
     const sourceId=body.instance.sourceId
     if(!sourceChanges.has(sourceId)) {
-      const oldSource=previous!.bodies.find(item=>item.id===sourceId),newSource=next.bodies.find(item=>item.id===sourceId)
+      const oldSource=previousBodies.get(sourceId),newSource=nextBodies.get(sourceId)
       sourceChanges.set(sourceId,stringifyMeshJson({mesh:oldSource?.mesh,brep:oldSource?.brep})!==stringifyMeshJson({mesh:newSource?.mesh,brep:newSource?.brep}))
     }
-    const candidate=next.bodies.find(item=>item.id===body.id)
+    const candidate=nextBodies.get(body.id)
     if(!sourceChanges.get(sourceId)&&candidate?.instance&&stringifyMeshJson(candidate.instance)===stringifyMeshJson(body.instance)
       &&stringifyMeshJson({mesh:candidate.mesh,brep:candidate.brep})!==stringifyMeshJson({mesh:body.mesh,brep:body.brep}))
       throw Error(label('Измените источник или отсоедините экземпляр: ','Edit the source or detach the instance: ')+body.name)
@@ -1503,22 +1588,22 @@ async function undo(redo = false) {
 }
 watch(()=>[props.open,document.value,lockedIds.value.join(','),activeGroup.value],()=>{if(historyPending.value)cancelHistoryRestore()},{flush:'sync'})
 onUnmounted(()=>{cancelHistoryRestore();historyWorker.dispose()})
-function addSketch(points: Point2[], closed: boolean, analytic?: import('../services/directSketchGeometry').AnalyticCurve) {
+function addSketch(points: Point2[], closed: boolean, analytic?: import('../services/directSketchGeometry').AnalyticCurve,retainedProfile?:import('../services/geometry/brepProfile').BrepProfile) {
   validateSimpleSketch(points,closed)
   const d = history.document, id = crypto.randomUUID()
-  d.sketches.push({ id, name: label('Эскиз ', 'Sketch ') + (d.sketches.length + 1), points, closed, analytic, plane: JSON.parse(JSON.stringify(activePlane.value)), ...(workplaneBodyId.value?{supportBodyId:workplaneBodyId.value}:{}) })
+  d.sketches.push({ id, name: label('Эскиз ', 'Sketch ') + (d.sketches.length + 1), points, closed, analytic, ...(retainedProfile?{retainedProfile}:{}), plane: JSON.parse(JSON.stringify(activePlane.value)), ...(workplaneBodyId.value?{supportBodyId:workplaneBodyId.value}:{}) })
   commit(d); pickObject(id,'2d')
 }
 function beginSketch(value: typeof tool.value) {
   cancelGesture(); operation.value = null; advancedOp.value = null; boxSelect.value = false
-  choosingSketchFace.value=false;tool.value = value; mode.value = workplaneBodyId.value ? '3d' : '2d'; sketchPaneOpen.value = true
+  choosingSketchFace.value=false;draftPoint.value=[0,0];draftPointValid.value=[true,true];draftRadius.value=10;draftRadiusValid.value=true;draftArcStart.value=0;draftArcSweep.value=180;draftArcValid.value=[true,true];draftSize.value=[20,10];draftSizeValid.value=[true,true];draftEnd.value=[20,0];draftEndValid.value=[true,true];tool.value = value; mode.value = workplaneBodyId.value ? '3d' : '2d'; sketchPaneOpen.value = true
 }
 const canExtrudeSketch = computed(() => !!selectedSketch.value?.closed && tool.value === 'select' && !draft.value.length)
 function finish(closed: boolean) { run(() => { if (draft.value.length < (closed ? 3 : 2)) return; addSketch(draft.value, closed); draft.value = []; draftCursor.value=null; tool.value = 'select' }) }
 function beginExtrude(kind: 'extrude'|'revolve' = 'extrude') {
- if(kind==='revolve'&&selectedSketch.value)requirePolylineSketch(selectedSketch.value)
   if (!canExtrudeSketch.value) return
   cancelCommand(); boxSelect.value=false
+  if(kind==='revolve'&&selectedSketch.value?.retainedProfile)revolveGeometry.value='exact'
   profileIds.value=selectedIds.value.filter(id=>document.value.sketches.some(s=>s.id===id&&s.closed&&samePlane(s.plane,selectedSketch.value!.plane)))
   if(!profileIds.value.length)profileIds.value=[selectedSketch.value!.id]
   const support=document.value.bodies.find(b=>b.id===selectedSketch.value!.supportBodyId)
@@ -1652,19 +1737,19 @@ watch(()=>[props.open,document.value,JSON.stringify(selectedIds.value)],()=>{
 watch(()=>[cvU.value,cvV.value],()=>{if(pointEditActive.value&&(gizmoBase||gizmoPending.value)){cancelGizmoWorker();cvDrag=null}},{flush:'sync'})
 watch(()=>[cvU.value,cvV.value,cvX.value,cvY.value,cvZ.value,cvWeight.value],()=>{if(numericPointEdit&&gizmoPending.value)cancelGizmoWorker()},{flush:'sync'})
 onUnmounted(()=>{cancelGizmoWorker();gizmoWorker.dispose()})
-const directTransformWorker=createSolidPreviewWorker(),directTransformPending=ref(false)
+const directTransformWorker=createSolidPreviewWorker(),directTransformPending=ref(false),directTransformOperation=ref('transform')
 let directTransformGeneration=0
 function cancelDirectTransform(){
  directTransformGeneration++;directTransformWorker.cancel()
  if(directTransformPending.value){history.cancelRestore();clearDragPreview()}
  directTransformPending.value=false
 }
-async function commitDirectTransform(before:DirectDocument,ids:string[],delta:Vec3,rotation=0,factor=1,localSketch=false,resetFields=false){
+async function commitDirectTransform(before:DirectDocument,ids:string[],delta:Vec3,rotation=0,factor=1,localSketch=false,resetFields=false,detach=false,metadata?:{operation:'group-create'|'group-move';group:string}){
  cancelDirectTransform()
  const generation=directTransformGeneration
- directTransformPending.value=true;error.value=''
+ directTransformPending.value=true;directTransformOperation.value=metadata?.operation??(detach?'instance-detach':'transform');error.value=''
  try{
-  const result=await directTransformWorker.run({kind:'sceneEdit',document:before,options:{operation:localSketch?'sketch-transform':'transform',id:ids[0],ids,createdId:'',x:delta[0],y:delta[1],z:delta[2],axis:'z',angle:rotation,scale:factor}})
+  const result=await directTransformWorker.run({kind:'sceneEdit',document:before.bodies.some(body=>body.instance)?serializeDirectDocument(before):before,options:{operation:metadata?.operation??(detach?'instance-detach':localSketch?'sketch-transform':'transform'),group:metadata?.group,id:ids[0]??'',ids,createdId:'',x:delta[0],y:delta[1],z:delta[2],axis:'z',angle:rotation,scale:factor}})
   if(generation!==directTransformGeneration)return
   const {validateLocked,added}=prepareCommit(result)
   result.blenderProjectId ??= snapDocument.value.blenderProjectId
@@ -1672,10 +1757,11 @@ async function commitDirectTransform(before:DirectDocument,ids:string[],delta:Ve
   if(generation!==directTransformGeneration||!applied)return
   directTransformPending.value=false;finishCommit(added,result);settleAfterDrag()
   if(resetFields){dx.value=dy.value=dz.value=angle.value=0;scale.value=1}
+  return true
  }catch(e){if(generation===directTransformGeneration){error.value=e instanceof Error?e.message:String(e);clearDragPreview()}}
  finally{if(generation===directTransformGeneration)directTransformPending.value=false}
 }
-watch(()=>[props.open,document.value,JSON.stringify(selectedIds.value),dx.value,dy.value,dz.value,angle.value,scale.value],()=>{if(directTransformPending.value)cancelDirectTransform()},{flush:'sync'})
+watch(()=>[props.open,document.value,JSON.stringify(selectedIds.value),activeGroup.value,dx.value,dy.value,dz.value,angle.value,scale.value],()=>{if(directTransformPending.value)cancelDirectTransform()},{flush:'sync'})
 onUnmounted(()=>{cancelDirectTransform();directTransformWorker.dispose()})
 const transformInputErrors=ref<Record<string,boolean>>({})
 const transformInputInvalid=computed(()=>Object.keys(transformInputErrors.value).length>0)
@@ -1685,7 +1771,7 @@ function transformValidity(key:string,valid:boolean){
 function transform(){
  if(directTransformPending.value||transformInputInvalid.value)return
  cancelCommand()
- void commitDirectTransform(history.document,selectedIds.value,[dx.value,dy.value,dz.value],angle.value,scale.value,!!selectedSketch.value&&selectedIds.value.length===1,true)
+ void commitDirectTransform(snapDocument.value,selectedIds.value,[dx.value,dy.value,dz.value],angle.value,scale.value,!!selectedSketch.value&&selectedIds.value.length===1,true)
 }
 function appendBodies() {
   run(() => {
@@ -2046,24 +2132,42 @@ const gpuActive = ref(false)
 watch(gpuActive,value=>emit('backend',value),{immediate:true})
 let gpuLayer: SolidGpuLayer | null = null
 let gpuResize: ResizeObserver | null = null
-let gpuInitStarted = false
-function mountGpuCanvas(el: Element | ComponentPublicInstance | null) {
-  if (typeof HTMLCanvasElement === 'undefined' || !(el instanceof HTMLCanvasElement) || gpuInitStarted || !isSolidGpuSupported()) return
-  gpuInitStarted = true
-  const layer = new SolidGpuLayer(el,()=>{gpuActive.value=false;notice.value=label('WebGPU отключён. Работа продолжена на CPU; можно сохранить проект.','WebGPU stopped. Work continues on CPU; you can save the project.')})
-  void layer.init().then(ok => {
-    if (!ok || !layer.ready) { layer.destroy(); return }
-    gpuLayer = layer
-    const wrap = el.parentElement
-    if (wrap) {
-      gpuResize = new ResizeObserver(() => layer.resize(wrap.clientWidth, wrap.clientHeight, window.devicePixelRatio || 1))
-      gpuResize.observe(wrap)
-      layer.resize(wrap.clientWidth, wrap.clientHeight, window.devicePixelRatio || 1)
-    }
-    gpuActive.value = true
+let gpuInitStarted = false, gpuGeneration = 0
+let gpuCanvas: HTMLCanvasElement | null = null
+const gpuInitializing=ref(false),gpuRetryVisible=ref(false)
+let gpuFailureNotice=''
+function stopGpuLayer() {
+  gpuGeneration++;gpuResize?.disconnect();gpuResize=null
+  gpuLayer?.destroy();gpuLayer=null;gpuActive.value=false;gpuInitializing.value=false
+}
+function retryGpuLayer() {
+  if(gpuInitializing.value || !gpuCanvas || !props.open)return
+  stopGpuLayer()
+  const generation=gpuGeneration,canvas=gpuCanvas
+  gpuInitializing.value=true
+  const unavailable=()=>{
+    if(generation!==gpuGeneration)return
+    gpuInitializing.value=false;gpuActive.value=false;gpuRetryVisible.value=true
+    gpuResize?.disconnect();gpuResize=null
+    gpuFailureNotice=label('WebGPU отключён. Работа продолжена на CPU; можно сохранить проект.','WebGPU stopped. Work continues on CPU; you can save the project.')
+    notice.value=gpuFailureNotice
+  }
+  const layer=new SolidGpuLayer(canvas,unavailable);gpuLayer=layer
+  void layer.init().then(ok=>{
+    if(generation!==gpuGeneration){layer.destroy();return}
+    if(!ok || !layer.ready){layer.destroy();unavailable();return}
+    const wrap=canvas.parentElement
+    if(wrap){gpuResize=new ResizeObserver(()=>layer.resize(wrap.clientWidth,wrap.clientHeight,window.devicePixelRatio||1));gpuResize.observe(wrap);layer.resize(wrap.clientWidth,wrap.clientHeight,window.devicePixelRatio||1)}
+    gpuInitializing.value=false;gpuRetryVisible.value=false;gpuActive.value=true
+    if(notice.value===gpuFailureNotice)notice.value=''
   })
 }
-onUnmounted(() => { gpuResize?.disconnect(); gpuLayer?.destroy(); gpuLayer = null; if (fpsHandle) cancelAnimationFrame(fpsHandle); fpsHandle = 0; clearTimeout(settleHandle) })
+function mountGpuCanvas(el: Element | ComponentPublicInstance | null) {
+  if(typeof HTMLCanvasElement==='undefined' || !(el instanceof HTMLCanvasElement) || gpuInitStarted || !isSolidGpuSupported())return
+  gpuInitStarted=true;gpuCanvas=el;retryGpuLayer()
+}
+watch(()=>props.open,open=>{if(!open){stopGpuLayer();gpuRetryVisible.value=false}else if(gpuCanvas)void nextTick(retryGpuLayer)})
+onUnmounted(() => { stopGpuLayer();gpuCanvas=null; if (fpsHandle) cancelAnimationFrame(fpsHandle); fpsHandle = 0; clearTimeout(settleHandle) })
 watch(() => props.open, open => {
   // The DOM-less test renderer has no frame callbacks, and a hidden workspace need not count.
   if (typeof requestAnimationFrame !== 'function') return
@@ -2110,7 +2214,7 @@ const commandHint = computed(() => {
   if(nativeNurbsPending.value&&nativeBrepMode.value)return label('Вычисляется B-rep. Esc — отменить.', 'Computing B-rep. Esc cancels.')
   if(nativeNurbsPending.value)return label('Вычисляется NURBS-команда. Esc — отменить.', 'Computing NURBS command. Esc cancels.')
   if(gizmoPending.value)return label('Вычисляется преобразование. Esc — отменить.', 'Computing transform. Esc cancels.')
-  if(directTransformPending.value)return label('Вычисляется преобразование. Esc — отменить.', 'Computing transform. Esc cancels.')
+  if(directTransformPending.value)return directTransformOperation.value.startsWith('group-')?label('Изменяется группа. Esc — отменить.','Updating group. Esc cancels.'):directTransformOperation.value==='instance-detach'?label('Создаётся независимое тело. Esc — отменить.','Making body independent. Esc cancels.'):label('Вычисляется преобразование. Esc — отменить.', 'Computing transform. Esc cancels.')
   if(sketchEditPending.value)return label('Вычисляется предпросмотр. Esc — отменить.', 'Computing preview. Esc cancels.')
   if(booleanPending.value)return label('Вычисляется Boolean. Esc — отменить.', 'Computing Boolean. Esc cancels.')
   if (commandFailure.value) return label('Измените параметры или выбор. Исходная модель сохранена.', 'Change parameters or selection. The original model is preserved.')
@@ -2144,13 +2248,14 @@ function cancelCommandState() {
   cancelDisplayPreparation()
   cancelHistoryRestore()
   cancelDirectTransform(); cancelSketchEdit(); cancelBoolean(); invalidateSolidPreview(); invalidQuantities.value = {}
-  cancelGesture(); operation.value = null; advancedOp.value = null; subtract.value = null
+  cancelNumericSlot();cancelGesture(); operation.value = null; advancedOp.value = null; subtract.value = null
   previewBody.value = null; previewEmpty.value = false; previewError.value = ''
 }
-function cancelCommand(){cancelCommandState();workspace.value?.focus()}
+function cancelCommand(){cancelCommandState();tool.value='select';workspace.value?.focus()}
 
 function quantityValidity(key: string, valid: boolean) { if (valid) delete invalidQuantities.value[key]; else invalidQuantities.value[key] = true }
 const commandReady = computed(() => {
+  if(advancedOp.value==='edge-fillet' && advanced.value.filletMode==='partial-preview')return false
   if (nativeNurbsPending.value || gizmoPending.value || directTransformPending.value || sketchEditPending.value || booleanPending.value || Object.keys(invalidQuantities.value).length) return false
   if (subtract.value) return !!(subtract.value.a.length && subtract.value.b.length)
   if (advancedOp.value) return !!advancedPreview.value.document
@@ -2174,7 +2279,8 @@ watch(()=>advancedOp.value??operation.value,async command=>{
   await nextTick();await nextTick()
   if(!props.open||(advancedOp.value??operation.value)!==command)return
   const input=workspace.value?.querySelector?.<HTMLInputElement>('.operation-card input:not([disabled]):not([type=checkbox]):not([type=radio]), .operation-card select:not([disabled])')
-  input?.focus();input?.select?.()
+  input?.focus({preventScroll:true});input?.select?.()
+  const card=input?.closest<HTMLElement>('.operation-card');if(card)card.scrollTop=0
 })
 const commandAnchor = computed(() => {
   const point = solidActive.value && extrusionHandle.value ? extrusionHandle.value.top : selectedFace.value ? project(selectedFace.value.center, '3d') : gizmoCenter.value ? project(gizmoCenter.value, '3d') : null
@@ -2625,6 +2731,7 @@ function move(e: PointerEvent) {
     else p = snapped(p,e,start,gesture.pane)
   } else { const anchor=gesture.anchor3??[start[0],start[1],0],target=snapped3([anchor[0]+p[0]-start[0],anchor[1]+p[1]-start[1],anchor[2]],e,gesture.document,selectedIds.value,anchor,undefined,true);p=[start[0]+target[0]-anchor[0],start[1]+target[1]-anchor[1]] }
   if (gesture.sketch) {
+    gesture.end=[...p]
     try { draft.value = tool.value === 'slot' ? (slotWidthValid.value && Math.hypot(p[0]-start[0],p[1]-start[1])>1e-6 ? slotSketch(start,p,slotWidth.value) : []) : tool.value === 'rectangle' ? [start, [p[0], start[1]], p, [start[0], p[1]]] : Array.from({ length: tool.value==='arc'?33:64 }, (_, i) => { const r = Math.hypot(p[0] - start[0], p[1] - start[1]), a = i * Math.PI / 32; return [start[0] + r * Math.cos(a), start[1] + r * Math.sin(a)] as Point2 })
     } catch(cause) { draft.value=[];error.value=String(cause);return }
     drawMeasure.value = tool.value === 'slot' ? label('Паз: ширина ','Slot width: ')+slotWidth.value+' mm' : tool.value === 'circle' ? `R ${Math.hypot(p[0]-start[0],p[1]-start[1]).toFixed(2)} mm` : `${Math.abs(p[0]-start[0]).toFixed(2)} × ${Math.abs(p[1]-start[1]).toFixed(2)} mm`
@@ -2685,9 +2792,10 @@ function up(e: PointerEvent) {
   drawMeasure.value = ''; snapMarker.value = null
   if (!gesture || gesture.pointer !== e.pointerId) return
   move(e)
-  const start=gesture.start, before = gesture.document, pane = gesture.pane, drawing=gesture.sketch, pan = gesture.pan, bodyDrag = gesture.bodyDrag, selectionOnly = gesture.dragStart && !bodyDrag, workerEdit=gesture.workerEdit; gesture = null
+  const start=gesture.start, before = gesture.document, pane = gesture.pane, drawing=gesture.sketch, pan = gesture.pan, bodyDrag = gesture.bodyDrag, end=gesture.end, selectionOnly = gesture.dragStart && !bodyDrag, workerEdit=gesture.workerEdit; gesture = null
   if (pan || selectionOnly) return
   if(workerEdit){gizmoApplyRevision=gizmoRevision;return}
+  if(drawing&&tool.value==='slot'&&draft.value.length&&end){draftPoint.value=[...start];draftEnd.value=[...end];draftPointValid.value=[true,true];draftEndValid.value=[true,true];numericSlotAutoApply=true;draft.value=[];refreshNumericSlot();return}
   run(() => {
     // The exact translation, including B-rep, is applied once here rather than per move.
     if (bodyDrag) { void commitDirectTransform(before,bodyDrag.ids,bodyDrag.delta); return }
@@ -2739,7 +2847,7 @@ const availableSolidCommands = computed<SolidCommand[]>(() => {
     cmd('profile-union','Объединить точные профили','Union exact profiles',()=>beginAdvanced('profile-union'),{enabled:selectedIds.value.length>=2&&selectedIds.value.every(id=>document.value.sketches.some(s=>s.id===id&&s.closed)),disabledReason:label('Выберите два замкнутых профиля','Select two closed profiles')}),
     cmd('profile-difference','Вычесть области профилей','Subtract profile regions',()=>beginAdvanced('profile-difference'),{enabled:selectedIds.value.length>=2&&selectedIds.value.every(id=>document.value.sketches.some(s=>s.id===id&&s.closed)),disabledReason:label('Выберите два замкнутых профиля','Select two closed profiles')}),
     cmd('profile-intersection','Пересечь точные профили','Intersect exact profiles',()=>beginAdvanced('profile-intersection'),{enabled:selectedIds.value.length>=2&&selectedIds.value.every(id=>document.value.sketches.some(s=>s.id===id&&s.closed)),disabledReason:label('Выберите два замкнутых профиля','Select two closed profiles')}),
-    cmd('profile-prepare','Собрать профиль','Prepare profile',()=>beginAdvanced('profile-prepare'),{enabled:!!selectedIds.value.length&&selectedIds.value.every(id=>document.value.sketches.some(s=>s.id===id&&!s.closed&&!s.retainedProfile&&s.analytic?.kind!=='circle')),disabledReason:label('Выберите открытые ломаные и дуги в одной плоскости','Select open polylines and arcs in one plane')}),
+    cmd('profile-prepare','Собрать профиль','Prepare profile',()=>beginAdvanced('profile-prepare'),{enabled:!!selectedIds.value.length&&selectedIds.value.every(id=>isProfilePreparationInput(document.value,id)),disabledReason:label('Выберите открытые ломаные, дуги и NURBS в одной плоскости','Select open polylines, arcs and NURBS in one plane')}),
     cmd('nurbs-offset','Смещение NURBS-кривой','Offset NURBS curve',()=>beginAdvanced('nurbs-offset'),{enabled:!!selectedNurbsCurve.value,disabledReason:label('Выберите NURBS-кривую','Select a NURBS curve')}),
     cmd('nurbs-point-trim','Обрезать NURBS по точке','Trim NURBS at point',()=>beginAdvanced('nurbs-point-trim'),{enabled:!!selectedNurbsCurve.value,disabledReason:label('Выберите NURBS-кривую','Select a NURBS curve')}),
     cmd('nurbs-curve-match','Согласовать кривые G1','Match curves G1',()=>beginAdvanced('nurbs-curve-match'),{enabled:!!selectedCurvePair.value,disabledReason:label('Выберите две NURBS-кривые','Select two NURBS curves')}),
@@ -2786,7 +2894,7 @@ const availableSolidCommands = computed<SolidCommand[]>(() => {
     cmd('instance-create','Создать связанный экземпляр','Create linked instance',()=>beginAdvanced('instance-create'),{enabled:!!body&&!body.instance,disabledReason:label('Выберите независимое тело-источник','Select an independent source body')}),
     cmd('instance-transform','Преобразовать экземпляр','Transform instance',()=>beginAdvanced('instance-transform'),{enabled:!!body?.instance,disabledReason:label('Выберите связанный экземпляр','Select a linked instance')}),
     cmd('instance-place','Разместить экземпляр','Place instance',()=>beginAdvanced('instance-place'),{enabled:!!body?.instance,disabledReason:label('Выберите связанный экземпляр','Select a linked instance')}),
-    cmd('instance-detach','Сделать независимым','Make independent',()=>run(()=>commit(detachSolidInstances(history.document,selectedIds.value))),{enabled:!!body?.instance,disabledReason:label('Выберите связанный экземпляр','Select a linked instance')}),
+    cmd('instance-detach','Сделать независимым','Make independent',()=>run(()=>commitDirectTransform(snapDocument.value,[...selectedIds.value],[0,0,0],0,1,false,false,true)),{enabled:!!body?.instance,disabledReason:label('Выберите связанный экземпляр','Select a linked instance')}),
     cmd('instance-source','Выбрать источник экземпляра','Select instance source',()=>{if(body?.instance)pickObject(body.instance.sourceId,'3d')},{enabled:!!body?.instance,disabledReason:label('Выберите связанный экземпляр','Select a linked instance')}),
     cmd('body-clearance','Зазор двух тел по сетке','Two-body mesh clearance',()=>{measureTarget.value=selectedIds.value.find(id=>id!==selection.value)??'';exactCardOpen.value=true;measurementOpen.value=true;clearanceOpen.value=true;workspace.value?.focus()},{enabled:!!body&&selectedIds.value.length===2&&selectedIds.value.every(id=>document.value.bodies.some(b=>b.id===id)),disabledReason:label('Выберите два тела с Shift','Shift-select two bodies')}),
     cmd('measurements','Измерить вершины / ребро','Measure vertices / edge',()=>{exactCardOpen.value=true;measurementOpen.value=true;workspace.value?.focus()},{enabled:!!body,disabledReason:needSelection}),
@@ -2828,7 +2936,7 @@ const lastCommand = shallowRef<ReturnType<typeof captureCommand>>(null)
 const repeatProfileInputs = computed(() => {
  const saved=lastCommand.value
  if(!saved||!isProfileCommand(saved.id)||selectedIds.value.length!==1||selectedIds.value[0]!==saved.surfaceInputs[0])return []
- return saved.surfaceInputs.every(id=>document.value.sketches.some(s=>s.id===id&&(profileBooleanOperation(saved.id)?s.closed:!s.closed&&!s.retainedProfile&&s.analytic?.kind!=='circle')))?saved.surfaceInputs:[]
+ return saved.surfaceInputs.every(id=>profileBooleanOperation(saved.id)?document.value.sketches.some(s=>s.id===id&&s.closed):isProfilePreparationInput(document.value,id))?saved.surfaceInputs:[]
 })
 const repeatEntry = computed(() => availableSolidCommands.value.find(c => c.id === lastCommand.value?.id))
 const repeatReason = computed(() => {
@@ -2846,7 +2954,7 @@ function repeatCommand() {
   cancelCommand()
   if(restoredInputs.length){selection.value=restoredInputs[0];extraSelection.value=restoredInputs.slice(1)}
   repeatEntry.value.run()
-  if((isProfileCommand(saved.id))&&saved.surfaceInputs.every(id=>document.value.sketches.some(s=>s.id===id))&&saved.inputSelection.every(id=>selectedIds.value.includes(id)))surfaceInputs.value=[...saved.surfaceInputs]
+  if((isProfileCommand(saved.id))&&saved.surfaceInputs.every(id=>document.value.sketches.some(s=>s.id===id)||saved.id==='profile-prepare'&&isProfilePreparationInput(document.value,id))&&saved.inputSelection.every(id=>selectedIds.value.includes(id)))surfaceInputs.value=[...saved.surfaceInputs]
   if(saved.id==='nurbs-curve-match'&&saved.surfaceInputs.every(id=>document.value.curves?.some(c=>c.id===id))&&saved.inputSelection.every(id=>selectedIds.value.includes(id)))surfaceInputs.value=[...saved.surfaceInputs]
   if((saved.id==='nurbs-match'||saved.id==='nurbs-prepare')&&saved.surfaceInputs.every(id=>document.value.surfaces?.some(s=>s.id===id))&&saved.inputSelection.every(id=>selectedIds.value.includes(id)))surfaceInputs.value=[...saved.surfaceInputs]
   if(['nurbs-loft','nurbs-sweep','nurbs-patch'].includes(saved.id)) {
@@ -2888,7 +2996,7 @@ function keydown(e: KeyboardEvent) {
   if ((e.target as HTMLElement).matches('input,textarea,select')) return
   if (e.key === '\\' && !e.ctrlKey && !e.metaKey && !e.altKey) { e.preventDefault(); dockOpen.value = !dockOpen.value; return }
   if(tool.value==='polyline' && draft.value.length && (e.key==='Backspace'||((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='z'&&!e.shiftKey))){e.preventDefault();undoDraftPoint();return}
-  if(tool.value==='polyline' && e.key==='Enter'){e.preventDefault();finish(false);return}
+  if(tool.value==='polyline' && e.key==='Enter'){if((e.target as HTMLElement).closest?.('button, summary, a[href], select'))return;e.preventDefault();finish(false);return}
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'd') { e.preventDefault(); duplicate(); return }
   if (e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey && e.key.toLowerCase() === 'r') { e.preventDefault(); repeatCommand(); return }
   if (!e.ctrlKey && !e.metaKey && !e.altKey) {
@@ -3177,6 +3285,7 @@ async function refreshCurveDisplay(){
  if(result.changed)curveDisplayVersion.value++
  curveDisplayErrors.value=result.errors;curveDisplayPending.value=false
 }
+watch(()=>[props.open,tool.value,document.value,JSON.stringify(activePlane.value),JSON.stringify(draftPoint.value),JSON.stringify(draftPointValid.value),JSON.stringify(draftEnd.value),JSON.stringify(draftEndValid.value),slotWidth.value,slotWidthValid.value,numericSlotRetry.value],refreshNumericSlot,{flush:'sync'})
 watch(()=>[props.open,kernelReady.value,displayCurves.value],()=>void refreshCurveDisplay(),{immediate:true,flush:'post'})
 
 const displayProfiles=computed(()=>[...document.value.sketches,...(advancedPreview.value.document?.sketches??[])].flatMap(s=>s.retainedProfile?[{id:s.id,profile:s.retainedProfile}]:[]))
@@ -3207,31 +3316,34 @@ async function refreshSurfaceDisplay(){
 watch(()=>[props.open,kernelReady.value,document.value.surfaces,advancedPreview.value.document?.surfaces],()=>void refreshSurfaceDisplay(),{immediate:true,flush:'post'})
 
 watchEffect(onCleanup=>{
+ void surfaceDistanceRevision.value
  const enabled=props.open&&surfaceDistanceOpen.value&&!commandActive.value,pair=selectedSurfacePair.value
  const surfaces=document.value.surfaces,maxCells=surfaceDistanceBudget.value
  let current=true
  onCleanup(()=>{current=false;surfaceDistanceWorker.cancel()})
- surfaceDistance.value=null;surfaceDistancePending.value=false
+ surfaceDistance.value=null;surfaceDistancePending.value=false;surfaceDistanceRetryVisible.value=false
  if(!enabled||!pair)return
  const [a,b]=pair.map(id=>surfaces!.find(s=>s.id===id)!.surface)
  surfaceDistancePending.value=true
  void surfaceDistanceWorker.run({kind:'surfaceDistance',a,b,toleranceMm:.001,maxCells}).then(value=>{
   if(current)surfaceDistance.value={value,error:''}
- }).catch(()=>{if(current)surfaceDistance.value={value:null,error:label('Не удалось измерить поверхности. Проверьте геометрию или увеличьте объём расчёта.','Could not measure the surfaces. Check their geometry or increase the calculation budget.')}})
+ }).catch(()=>{if(current){surfaceDistanceRetryVisible.value=true;surfaceDistance.value={value:null,error:label('Не удалось измерить поверхности. Проверьте геометрию или увеличьте объём расчёта.','Could not measure the surfaces. Check their geometry or increase the calculation budget.')}}})
  .finally(()=>{if(current)surfaceDistancePending.value=false})
 })
 watchEffect(onCleanup=>{
+ void boundaryInspectionRevision.value
  const enabled=props.open&&boundaryInspection.value&&!commandActive.value,pair=selectedSurfacePair.value
  const surfaces=document.value.surfaces,options={...boundaryOptions.value}
  let current=true
  onCleanup(()=>{current=false;boundaryWorker.cancel()})
- boundaryReport.value=null;boundaryPending.value=false
+ boundaryReport.value=null;boundaryPending.value=false;boundaryRetryVisible.value=false
  if(!enabled||!pair)return
+ if(!Object.values(boundaryInputValid.value).every(Boolean)){boundaryReport.value={value:null,error:label('Исправьте выделенные поля: зазор не меньше 0,000001 мм, угол от 0 до 90°, целое число точек от 2 до 257.','Correct the highlighted fields: gap at least 0.000001 mm, angle from 0 to 90°, integer sample count from 2 to 257.')};return}
  const [a,b]=pair.map(id=>surfaces!.find(s=>s.id===id)!.surface)
  boundaryPending.value=true
  void boundaryWorker.run({kind:'surfaceBoundary',a,b,options}).then(value=>{
   if(current)boundaryReport.value={value,error:''}
- }).catch(e=>{if(current)boundaryReport.value={value:null,error:e instanceof Error?e.message:String(e)}})
+ }).catch(()=>{if(current){boundaryRetryVisible.value=true;boundaryReport.value={value:null,error:label('Не удалось проверить стык поверхностей. Повторите проверку; при повторном отказе проверьте выбранные границы.','Could not inspect the surface boundary. Retry; if it fails again, inspect the selected boundaries.')}}})
  .finally(()=>{if(current)boundaryPending.value=false})
 })
 
@@ -3348,12 +3460,12 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
     </div>
     <div class="workspace-state" aria-live="polite">
       <label>{{ label('Создавать в','Create in') }} <select v-model="activeGroup" :aria-label="label('Активная группа','Active group')"><option value="">{{ label('Без группы','Ungrouped') }}</option><option v-for="section in bodySections.filter(s=>s.name)" :key="section.key" :value="section.name!">{{ section.name }}</option></select></label>
-      <button :disabled="!selectedIds.length" @click="moveSelectionToGroup">{{ label('Перенести выбор', 'Move selection to group') }}</button>
-      <button @click="addEmptyGroup">{{ label('Новая группа','New empty group') }}</button>
+      <button :disabled="!selectedIds.length||directTransformPending" @click="moveSelectionToGroup">{{ label('Перенести выбор', 'Move selection to group') }}</button>
+      <button :disabled="directTransformPending" @click="addEmptyGroup">{{ label('Новая группа','New empty group') }}</button>
       <button v-if="hiddenIds.length" @click="hiddenIds=[]">{{ label('Показать всё','Show all objects') }} ({{ hiddenIds.length }})</button>
       <span v-if="lockedIds.length">{{ label('Заблокировано','Locked') }}: {{ lockedIds.length }}</span>
       <span v-if="subtract">{{ label('A — основа · B — вырез', 'A — target · B — cutter') }}</span>
-      <label v-if="pickMode==='edge' && selectedBody">{{ label('Ребро','Edge') }} <select :value="edgeIndex" :aria-label="label('Выбрать ребро','Select edge')" @change="edgeIndex=Number(($event.target as HTMLSelectElement).value);edgeIndexes=edgeIndex>=0?[edgeIndex]:[];advancedOp=null"><option :value="-1">—</option><option v-for="edge in featureEdges" :key="edge.i" :value="edge.i">{{ edge.i+1 }}</option></select></label>
+      <label v-if="pickMode==='edge' && selectedBody">{{ label('Ребро','Edge') }} <select :value="edgeIndex" :aria-label="label('Выбрать ребро','Select edge')" @change="setPickedEdge(Number(($event.target as HTMLSelectElement).value))" @keydown="edgeSelectionKey"><option :value="-1">—</option><option v-for="edge in featureEdges" :key="edge.i" :value="edge.i">{{ edge.i+1 }}</option></select></label>
       <span v-if="edgeIndexes.length">{{ label('Рёбра','Edges') }}: {{ edgeIndexes.length }}</span>
       <span v-if="dragConstraint">{{ label('Ограничение','Constraint') }}: {{ dragConstraint }} · Esc {{ label('отмена','cancel') }}</span>
       <span v-else-if="advancedOp==='split' || advancedOp==='transform'">{{ label('Ось','Axis') }}: {{ advanced.axis.toUpperCase() }}</span>
@@ -3467,6 +3579,8 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
                   <circle v-for="cv in nativeCage" :key="cv.u+'-'+cv.v" :cx="project(cv.point,'3d')[0]" :cy="project(cv.point,'3d')[1]" :r="views['3d']/110" :fill="cvU===cv.u&&cvV===cv.v?'#ff8b77':'#ffc977'" stroke="#2a2114" vector-effect="non-scaling-stroke" @pointerdown.stop="startCv($event,cv.u,cv.v)" />
                 </g>
               </g>
+              <polyline v-if="pane===mode && (tool==='circle'||tool==='arc') && !draft.length && exactRoundPoints.length" :data-preview="tool==='circle'?'numeric-circle':'numeric-arc'" :points="exactRoundPoints.map(p=>project(pane==='3d'?worldPoint(p,activePlane):p,pane).join(',')).join(' ')" fill="none" stroke="#77eac5" stroke-width="2" stroke-dasharray="4 3" vector-effect="non-scaling-stroke" pointer-events="none" />
+              <polyline v-if="pane===mode && !draft.length && (tool==='rectangle'&&exactRectangle || tool==='slot'&&numericSlotResult)" :data-preview="tool==='rectangle'?'numeric-rectangle':'numeric-slot'" :points="[...(tool==='rectangle'?exactRectangle!:numericSlotResult!.points),(tool==='rectangle'?exactRectangle!:numericSlotResult!.points)[0]].map(p=>project(pane==='3d'?worldPoint(p,activePlane):p,pane).join(',')).join(' ')" fill="none" stroke="#77eac5" stroke-width="2" stroke-dasharray="4 3" vector-effect="non-scaling-stroke" pointer-events="none" />
               <g v-if="pane==='3d' && workplaneBodyId" pointer-events="none" fill="none" stroke="#77eac5" vector-effect="non-scaling-stroke">
                 <path v-for="(loop,i) in workplaneOutline" :key="i" :d="'M '+loop.map(p=>project(worldPoint(p,activePlane),'3d').join(',')).join(' L ')+' Z'" stroke-dasharray="5 3" stroke-width="1" vector-effect="non-scaling-stroke" />
                 <polyline v-if="draft.length" :points="(tool==='polyline'&&draftCursor?[...draft,draftCursor]:draft).map(p=>project(worldPoint(p,activePlane),'3d').join(',')).join(' ')" stroke-width="2" />
@@ -3517,11 +3631,15 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
                   <path v-if="pane==='3d'||target.local" :d="(()=>{const p=pane==='2d'?project(target.local!,'2d'):project(target.point,'3d'),r=views[pane]/180;return `M ${p[0]-r} ${p[1]} H ${p[0]+r} M ${p[0]} ${p[1]-r} V ${p[1]+r}`})()" vector-effect="non-scaling-stroke" />
                 </template>
               </g>
-              <g v-if="pane==='3d' && !shellDistanceOpen && !volumeDistanceOpen && measurement?.value" pointer-events="none" data-measurement="distance">
+              <g v-if="pane==='3d' && !shellDistanceOpen && !volumeDistanceOpen && !materialPathOpen && measurement?.value" pointer-events="none" data-measurement="distance">
                 <polyline :points="[measurement.value.a,measurement.value.b].map(p=>project(p,'3d').join(',')).join(' ')" fill="none" stroke="#ffda75" stroke-width="2" vector-effect="non-scaling-stroke"/>
                 <g v-for="(point,i) in [measurement.value.a,measurement.value.b]" :key="i" :transform="`translate(${project(point,'3d').join(' ')})`"><circle :r="views['3d']/120" fill="#ffda75"/><text :font-size="views['3d']/40" fill="#ffda75" :x="views['3d']/90">{{ i===0?'A':'B' }}</text></g>
               </g>
               <SolidVolumeWitness v-if="pane==='3d' && volumeContact" :points="volumeContact" :project="project" :size="views['3d']" :ru="ru"/>
+              <g v-if="pane==='3d' && materialPathOverlay" pointer-events="none" data-diagnostic="material-path">
+                <line :x1="project(materialPathOverlay.line[0],'3d')[0]" :y1="project(materialPathOverlay.line[0],'3d')[1]" :x2="project(materialPathOverlay.line[1],'3d')[0]" :y2="project(materialPathOverlay.line[1],'3d')[1]" :stroke="materialPathOverlay.proven?'#77eac5':'#ff6978'" stroke-dasharray="5 3" stroke-width="2" vector-effect="non-scaling-stroke"/>
+                <circle v-for="(m,i) in materialPathOverlay.marks" :key="i" :data-material-face="m.face+1" :cx="project(m.point,'3d')[0]" :cy="project(m.point,'3d')[1]" :r="views['3d']/85" fill="none" :stroke="m.unresolved?'#ffc977':materialPathOverlay.proven?'#77eac5':'#ff6978'" stroke-width="3" vector-effect="non-scaling-stroke"><title>{{label('Грань','Face')}} {{m.face+1}} · {{m.unresolved?label('Непроверенный участок','Unchecked region'):label('Пересечение линии','Line crossing')}}</title></circle>
+              </g>
               <g v-if="pane==='3d' && clearanceMeasurement?.value?.closestPoints" pointer-events="none" data-measurement="clearance">
                 <polyline :points="clearanceMeasurement.value.closestPoints.map(p=>project(p,'3d').join(',')).join(' ')" fill="none" stroke="#77eac5" stroke-width="3" vector-effect="non-scaling-stroke"/>
                 <circle v-for="(point,i) in clearanceMeasurement.value.closestPoints" :key="i" :cx="project(point,'3d')[0]" :cy="project(point,'3d')[1]" :r="views['3d']/100" fill="#77eac5"/>
@@ -3550,6 +3668,7 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
                 <circle v-for="(defect,i) in profilePreparation.value.report.defects" :key="i" :cx="defect.point[0]" :cy="-defect.point[1]" :r="views['2d']/90" fill="#ff647c"/>
                 <polyline v-for="(connector,i) in profilePreparation.value.report.connectors" :key="'link'+i" :points="[connector.a,connector.b].map(p=>[p[0],-p[1]].join(',')).join(' ')" fill="none" stroke="#ffc977" stroke-width="4" vector-effect="non-scaling-stroke"/>
               </g>
+              <ProfileIntersectionPresentation v-if="advancedOp==='profile-prepare' && profilePreparation?.value?.report.intersections" mode="preview" :report="profilePreparation.value.report" :project="project" :pane="pane" :plane="profilePreparation.value.plane" :view="views[pane]"/>
               <g v-if="pane==='3d' && advancedOp==='nurbs-curve-match'" data-diagnostic="curve-match-endpoints" pointer-events="none"><g v-for="guide in curveMatchGuides" :key="guide.id"><polyline :points="guide.points" fill="none" :stroke="guide.color" stroke-width="2" stroke-dasharray="5 3" vector-effect="non-scaling-stroke"/><circle :cx="guide.x" :cy="guide.y" :r="views['3d']/(guide.id===0?85:140)" :fill="guide.color"/><text :x="guide.x+(guide.id===0?-1:1)*views['3d']/35" :y="guide.y-views['3d']/45" :fill="guide.color" :font-size="views['3d']/40">{{ guide.id===0?'A':'B' }}</text></g></g>
               <g v-if="pane==='3d' && advancedOp==='nurbs-point-trim'" pointer-events="none">
                 <polyline v-if="pointTrimPreviewPoints.length" data-preview="point-trim" :points="pointTrimPreviewPoints.map(p=>project(p,'3d').join(',')).join(' ')" fill="none" stroke="#77eac5" stroke-width="4" vector-effect="non-scaling-stroke" />
@@ -3593,13 +3712,55 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
             <div class="zoom-tools"><button :aria-label="label('Приблизить ', 'Zoom in ') + pane" @click="zoom(pane, .8)">+</button><button :aria-label="label('Отдалить ', 'Zoom out ') + pane" @click="zoom(pane, 1.25)">−</button></div>
             <div v-if="pane === '3d'" class="fps-badge" :class="{ low: fps > 0 && fps < 30 }" role="status" :aria-label="label('Кадров в секунду', 'Frames per second')">{{ fps }} FPS · {{ frameMs }} ms<template v-if="gpuActive"> · draw {{ drawMs }} ms</template></div>
             </div>
+            <section v-if="(tool==='rectangle'||tool==='slot')&&pane===mode" class="operation-card" :aria-label="tool==='rectangle'?label('Точный прямоугольник','Exact rectangle'):label('Точный паз','Exact slot')">
+              <header class="numeric-authoring-header"><strong>{{ tool==='rectangle'?label('Прямоугольник — точка и размеры','Rectangle — origin and size'):label('Паз — центры и ширина','Slot — centers and width') }}</strong>
+                <template v-if="tool==='rectangle'"><small v-if="!exactRectangle" role="alert">{{ label('Исправьте точку и размеры. Размеры от 0,01 мм; все углы должны быть в пределах ±1 000 000 мм.','Correct origin and size. Dimensions start at 0.01 mm; all corners must stay within ±1,000,000 mm.') }}</small></template>
+                <template v-else><small v-if="!numericSlotInput" role="alert">{{ label('Исправьте центры и ширину. Центры должны различаться минимум на 0,000001 мм, ширина — от 0,02 мм; контур — в пределах ±1 000 000 мм.','Correct centers and width. Centers must be at least 0.000001 mm apart, width starts at 0.02 mm; contour must stay within ±1,000,000 mm.') }}</small><small v-else-if="numericSlotError" role="alert">{{ label('Не удалось подготовить паз. Повторите расчёт или измените центры и ширину.','Could not prepare the slot. Retry or change centers and width.') }}</small><button v-if="numericSlotError" @click="numericSlotRetry++">{{ label('Повторить расчёт паза','Retry slot calculation') }}</button><small v-if="numericSlotPending" role="status" aria-label="numeric-slot-preparation">{{ label('Готовлю точный паз…','Preparing exact slot…') }}</small></template>
+              </header>
+              <small>{{ tool==='rectangle'?label('Начальная точка и положительные размеры в активной плоскости, мм. Создать — применить, Esc — отменить.','Origin and positive dimensions in the active plane, mm. Create applies; Esc cancels.'):label('Два центра торцов и полная ширина, мм. Создать — применить, Esc — отменить.','Two end-cap centers and full width, mm. Create applies; Esc cancels.') }}</small>
+              <label v-for="(axis,i) in ['X','Y']" :key="axis">{{ tool==='slot'?'A · ':'' }}{{ axis }}<CadQuantityInput v-model="draftPoint[i]" :locale="locale" :min="-1000000" :max="1000000" :aria-label="label('Начальная координата ','Origin coordinate ')+axis" @validity="draftPointValid[i]=$event" /></label>
+              <template v-if="tool==='rectangle'">
+                <label v-for="(axis,i) in [label('Ширина','Width'),label('Высота','Height')]" :key="axis">{{ axis }}<CadQuantityInput v-model="draftSize[i]" :locale="locale" :min=".01" :max="1000000" :aria-label="label('Размер прямоугольника ','Rectangle size ')+axis" @validity="draftSizeValid[i]=$event" /></label>
+
+                <button :disabled="!exactRectangle" @click="createExactRectangle">{{ label('Создать прямоугольник','Create rectangle') }}</button>
+              </template>
+              <template v-else>
+                <label v-for="(axis,i) in ['X','Y']" :key="axis">B · {{ axis }}<CadQuantityInput v-model="draftEnd[i]" :locale="locale" :min="-1000000" :max="1000000" :aria-label="label('Конечная координата ','End coordinate ')+axis" @validity="draftEndValid[i]=$event" /></label>
+                <label>{{ label('Ширина паза, мм','Slot width, mm') }}<CadQuantityInput v-model="slotWidth" :locale="locale" :min=".02" :max="1000000" :aria-label="label('Ширина паза, мм','Slot width, mm')" @validity="slotWidthValid=$event" /></label>
+
+
+
+
+                <button :disabled="!numericSlotInput||numericSlotPending||!numericSlotResult" @click="createExactSlot">{{ label('Создать паз','Create slot') }}</button>
+              </template>
+            </section>
+            <section v-if="(tool==='polyline'||tool==='circle'||tool==='arc') && pane===mode" class="operation-card" :aria-label="tool==='arc'?label('Точная дуга','Exact arc'):tool==='circle'?label('Точный круг','Exact circle'):label('Точки ломаной','Polyline points')">
+              <strong>{{ tool==='arc'?label('Дуга — центр, радиус и углы','Arc — center, radius and angles'):tool==='circle'?label('Круг — центр и радиус','Circle — center and radius'):label('Ломаная — точные координаты','Polyline — exact coordinates') }}</strong>
+              <small>{{ tool==='arc'?label('Углы в градусах. Положительный разворот — против часовой стрелки. Создать дугу — применить, Esc — отменить.','Angles in degrees. Positive sweep runs counterclockwise. Create arc applies; Esc cancels.'):tool==='circle'?label('Центр и радиус в активной плоскости, мм. Создать круг — применить, Esc — отменить.','Center and radius in the active plane, mm. Create circle applies; Esc cancels.'):label('Координаты в активной плоскости, мм. Добавьте точки, затем замкните контур или завершите линию. Esc — отмена.','Coordinates in the active plane, mm. Add points, then close the contour or finish the line. Esc cancels.') }}</small>
+              <label v-for="(axis,i) in ['X','Y']" :key="axis">{{ axis }}<CadQuantityInput v-model="draftPoint[i]" :locale="locale" :min="-1000000" :max="1000000" :aria-label="label('Координата точки ','Point coordinate ')+axis" @validity="draftPointValid[i]=$event" /></label>
+              <template v-if="tool==='circle'||tool==='arc'">
+                <label>{{ label('Радиус, мм','Radius, mm') }}<CadQuantityInput v-model="draftRadius" :locale="locale" :min=".01" :max="1000000" :aria-label="tool==='arc'?label('Радиус дуги','Arc radius'):label('Радиус круга','Circle radius')" @validity="draftRadiusValid=$event" /></label>
+                <template v-if="tool==='arc'">
+                  <label>{{ label('Начальный угол','Start angle') }}<CadQuantityInput v-model="draftArcStart" kind="angle" :locale="locale" :min="-360000" :max="360000" :aria-label="label('Начальный угол дуги','Arc start angle')" @validity="draftArcValid[0]=$event" /></label>
+                  <label>{{ label('Разворот','Sweep') }}<CadQuantityInput v-model="draftArcSweep" kind="angle" :locale="locale" :min="-359.999999" :max="359.999999" :aria-label="label('Разворот дуги','Arc sweep')" @validity="draftArcValid[1]=$event" /></label>
+                </template>
+                <button :disabled="!exactRoundCurve" @click="createExactRoundCurve">{{ tool==='arc'?label('Создать дугу','Create arc'):label('Создать круг','Create circle') }}</button>
+                <small v-if="!exactRoundCurve" role="alert">{{ tool==='arc'?label('Исправьте центр, радиус и углы. Радиус от 0,01 мм; модуль разворота от 0,1° до 360° без полного оборота.','Correct center, radius and angles. Radius starts at 0.01 mm; absolute sweep starts at 0.1° and must be below 360°.'):label('Исправьте центр и радиус (0,01–1 000 000 мм).','Correct the center and radius (0.01–1,000,000 mm).') }}</small>
+              </template>
+              <template v-else>
+              <button :disabled="!canAddDraftPoint" @click="addExactDraftPoint">{{ label('Добавить точку','Add point') }}</button>
+              <small v-if="!draftPointValid.every(Boolean)" role="alert">{{ label('Исправьте координаты точки.','Correct the point coordinates.') }}</small>
+              <small v-else-if="!canAddDraftPoint" role="status">{{ label('Такая точка уже есть в контуре. Задайте другую или замкните контур.','This point is already in the contour. Choose another point or close the contour.') }}</small>
+              <small>{{ draft.length }} {{ label('точек','points') }}</small>
+              </template>
+            </section>
             <div v-if="advancedOp && pane === (['offset','extend','curve','profile-prepare','profile-union','profile-difference','profile-intersection'].includes(advancedOp) ? '2d' : '3d')" class="operation-card">
               <strong>{{ ({'nurbs-offset':label('Смещение NURBS-кривой','Offset NURBS curve'),'nurbs-point-trim':label('Обрезать NURBS по точке','Trim NURBS at point'),'profile-difference':label('Вычесть области профилей','Subtract profile regions'),'profile-intersection':label('Пересечь точные профили','Intersect exact profiles'),'profile-union':label('Объединить точные профили','Union exact profiles'),'profile-prepare':label('Собрать профиль','Prepare profile'),'nurbs-curve-match':label('Согласовать кривые G1','Match curves G1'),'nurbs-prepare':label('Подготовить границы','Prepare boundaries'),'nurbs-match':label('Согласовать поверхности G1/G2','Match surfaces G1/G2'),'instance-transform':label('Преобразовать экземпляр','Transform instance'),'instance-create':label('Создать связанный экземпляр','Create linked instance'),'instance-place':label('Разместить экземпляр','Place instance'),'nurbs-surface-rebuild':label('Перестроить поверхность','Rebuild surface'),'nurbs-rebuild':label('Перестроить кривую','Rebuild curve'),'nurbs-patch':label('Coons patch','Coons patch'),'nurbs-surface-reduce':label('Снизить степень поверхности','Reduce surface degree'),'nurbs-reduce':label('Снизить степень кривой','Reduce curve degree'),'nurbs-loft':label('Поверхность по сечениям','NURBS loft'),'nurbs-sweep':label('Перенос профиля по пути','Sweep'),loft:label('Линейчатый B-rep loft','Ruled B-rep loft'),push:label('Сдвиг грани','Push / Pull'),chamfer:label('Фаска ребра','Edge chamfer'),'edge-fillet':label('Скругление ребра','Edge fillet'),shell:label('Полое тело','Shell'),split:label('Разрез плоскостью','Plane split'),offset:label('Отступ контура','Offset'),extend:label('Продлить линию','Extend'),curve:label('Окружность / дуга','Circle / arc'),transform:label('Преобразовать выбор','Transform selection')})[advancedOp] }}</strong>
               <small v-if="advancedPreview.error" role="alert">{{ advancedPreview.error }}</small>
               <small v-if="selectedBody?.brep && (advancedOp==='chamfer' || advancedOp==='edge-fillet' && advanced.filletMode==='constant')">{{ label('Точный B-rep: скругление — полные выпуклые продольные цепочки призмы/корпуса или круговые рёбра фланца; фаска — связанные прямые выпуклые рёбра. Shift добавляет рёбра. При отказе уменьшите радиус или измените набор рёбер.', 'Exact B-rep: fillet complete convex longitudinal chains of a prism/enclosure or circular annular rims; chamfer connected straight convex edges. Shift adds edges. If refused, reduce the radius or change the edge selection.') }}</small>
               <small v-else-if="advancedOp === 'push'">{{ label('Сдвиг плоской грани выпуклого тела или торца цилиндра.', 'Move a planar face of a convex solid or a cylinder end cap.') }}</small>
               <small v-else-if="!selectedBody?.brep && ['chamfer','edge-fillet','shell'].includes(advancedOp)">{{ label('Mesh-операция для выпуклых тел с плоскими гранями.', 'Mesh operation for convex solids with planar faces.') }}</small>
-              <small v-if="advancedOp==='loft'">{{ label('Выберите с Shift параллельные выпуклые эскизы с одинаковым числом вершин. Порядок выбора задаёт порядок сечений.','Shift-select parallel convex sketches with matching vertex counts. Selection order defines section order.') }}</small>
+              <small v-if="advancedOp==='loft'">{{ label('Выберите с Shift параллельные сечения по порядку. Для сохранённых кривых нужны два соответствующих профиля: перенос и положительный равномерный масштаб.','Shift-select parallel sections in order. Retained curves require two corresponding profiles related by translation and positive uniform scale.') }}</small>
               <template v-if="advancedOp==='nurbs-prepare'">
                 <label v-for="(role,i) in [label('A · первая','A · first'),label('B · вторая','B · second')]" :key="role">{{ role }}<select v-model="surfaceInputs[i]" :aria-label="role"><option v-for="item in document.surfaces" :key="item.id" :value="item.id">{{ item.name }}</option></select></label>
                 <label>{{ label('Граница A','Boundary A') }}<select v-model="advanced.matchBoundaryA" :aria-label="label('Граница A','Boundary A')"><option v-for="b in ['uMin','uMax','vMin','vMax']" :key="b">{{ b }}</option></select></label>
@@ -3619,9 +3780,10 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
               </template>
               <CurveOffsetControls v-if="advancedOp==='nurbs-offset'" v-model:join="advanced.offsetJoin" v-model:distance="advanced.distance" v-model:tolerance="advanced.maxError" :locale="locale" :state="curveOffsetState" :on-distance-validity="valid=>quantityValidity('distance',valid)" :on-tolerance-validity="valid=>quantityValidity('maxError',valid)" />
               <template v-if="advancedOp==='profile-prepare'">
-                <small>{{ label('Первый выбранный профиль сохраняет ID и свойства. Дуги сохраняют кривизну. Остальные входят в его контур. Размеры удаляются; Undo восстанавливает входы.','The first selected profile keeps its identity and properties. Arcs retain their curvature. The others merge into its contour. Dimensions are removed; Undo restores the inputs.') }}</small>
+                <small>{{ label('Первый вход сохраняет ID и свойства. Кривые сохраняются, размеры удаляются. Undo восстанавливает входы.','The first input keeps its identity and properties. Curves are retained; dimensions are removed. Undo restores the inputs.') }}</small>
                 <label class="preparation-tolerance">{{ label('Допуск разрыва, мм','Gap tolerance, mm') }}<CadQuantityInput v-model="advanced.profileGap" :locale="locale" :min="0" :max="1000000" style="width:110px" :aria-label="label('Допуск разрыва, мм','Gap tolerance, mm')" @validity="quantityValidity('profileGap',$event)" /></label>
-                <output v-if="profilePreparation?.value" data-testid="profile-preparation-report">{{ profilePreparation.value.report.accepted?label('Контур замкнут. Добавлено отрезков: ','Closed contour. Added connectors: ')+profilePreparation.value.report.connectors.length:profilePreparationError(profilePreparation.value.report.reason,profilePreparation.value.report.segmentDefect?.kind) }}</output>
+                <output v-if="profilePreparation?.value?.report.accepted" data-testid="profile-preparation-report">{{ profilePreparation.value.report.accepted?label('Контур замкнут. Добавлено отрезков: ','Closed contour. Added connectors: ')+profilePreparation.value.report.connectors.length:profilePreparationError(profilePreparation.value.report.reason,profilePreparation.value.report.segmentDefect?.kind) }}</output>
+                <ProfileIntersectionPresentation v-if="profilePreparation?.value" mode="status" :report="profilePreparation.value.report" :locale="locale"/>
               </template>
               <CurvePointTrimControls v-if="advancedOp==='nurbs-point-trim'" :advanced="advanced" @update:advanced="value=>advanced={...advanced,...value}" :locale="locale" :dimension="selectedNurbsCurve?.curve.controlPoints[0]?.length??3" :pick="pointTrimPick" :cut="pointTrimCut" @numeric="pointTrimNumeric" @validity="quantityValidity" />
               <template v-if="advancedOp==='nurbs-curve-match'">
@@ -3677,11 +3839,12 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
               </template>
               <small v-if="advancedOp==='offset' && selectedSketch?.retainedProfile">{{ label('Круглые сопряжения. Положительное значение добавляет материал, отрицательное удаляет. Отверстия изменяются вместе с областью.','Round joins. Positive values expand material; negative values shrink it. Holes follow the region offset.') }}</small>
               <label v-if="['push','shell','split','offset'].includes(advancedOp)">{{ advancedOp==='shell'?label('Толщина, мм','Thickness, mm'):label('Расстояние, мм','Distance, mm') }}<CadQuantityInput :aria-label="advancedOp==='shell'?label('Толщина, мм','Thickness, mm'):label('Расстояние, мм','Distance, mm')" v-model="advanced.distance" kind="length" :locale="locale" @validity="quantityValidity('advanced.distance', $event)" step=".5" /></label>
-              <label v-if="advancedOp==='edge-fillet' && selectedBody?.brep">{{ label('Тип скругления','Fillet type') }}<select v-model="advanced.filletMode" :aria-label="label('Тип скругления','Fillet type')" @change="quantityValidity('endRadius',true)"><option value="constant">{{ label('Постоянный радиус','Constant radius') }}</option><option value="variable">{{ label('Радиус A → B','Radius A → B') }}</option><option value="corner">{{ label('Угол трёх рёбер','Three-edge corner') }}</option></select></label>
+              <label v-if="advancedOp==='edge-fillet' && selectedBody?.brep">{{ label('Тип скругления','Fillet type') }}<select v-model="advanced.filletMode" :aria-label="label('Тип скругления','Fillet type')" @change="quantityValidity('endRadius',true)"><option value="constant">{{ label('Постоянный радиус','Constant radius') }}</option><option value="variable">{{ label('Радиус A → B','Radius A → B') }}</option><option value="corner">{{ label('Угол трёх рёбер','Three-edge corner') }}</option><option value="partial-preview">{{ label("Частичная дуга · просмотр", "Partial arc preview") }}</option></select></label>
+              <small v-if="advancedOp==='edge-fillet' && selectedBody?.brep && advanced.filletMode==='partial-preview'" role="status">{{ label('Только предпросмотр: проверка геометрии не завершена. Выберите одну внешнюю дугу кольца. Esc — закрыть.', 'Preview only: geometry checks remain incomplete. Select one outer quarter-circle of an annular body. Esc to close.') }}</small>
               <small v-if="advancedOp==='edge-fillet' && selectedBody?.brep && advanced.filletMode==='variable'">{{ label('Один вертикальный край осевого параллелепипеда. Радиус меняется линейно от A к B; оба радиуса положительны и различны.','One vertical edge of an axis-aligned cuboid. Radius varies linearly from A to B; both radii must be positive and different.') }}</small>
               <small v-if="advancedOp==='edge-fillet' && selectedBody?.brep && advanced.filletMode==='corner'">{{ label('Три ребра у вершины с максимальными X, Y, Z осевого параллелепипеда. Общий радиус; сферическое сопряжение.','Three edges at the maximum X, Y, Z corner of an axis-aligned cuboid. Equal radius with a spherical corner blend.') }}</small>
               <label v-if="advancedOp==='edge-fillet' && selectedBody?.brep && advanced.filletMode==='variable'">{{ label('Радиус B, мм','Radius B, mm') }}<CadQuantityInput :aria-label="label('Радиус B, мм','Radius B, mm')" v-model="advanced.endRadius" kind="length" :locale="locale" :min=".01" @validity="quantityValidity('endRadius',$event)" /></label>
-              <label v-if="['edge-fillet','chamfer','curve'].includes(advancedOp)">{{ advancedOp==='edge-fillet' && selectedBody?.brep && advanced.filletMode==='variable'?label('Радиус A, мм','Radius A, mm'):label('Радиус / размер, мм','Radius / size, mm') }}<CadQuantityInput :aria-label="advancedOp==='edge-fillet' && selectedBody?.brep && advanced.filletMode==='variable'?label('Радиус A, мм','Radius A, mm'):label('Радиус / размер, мм','Radius / size, mm')" v-model="advanced.radius" kind="length" :locale="locale" @validity="quantityValidity('advanced.radius', $event)" :min=".01" step=".5" /></label>
+              <label v-if="['edge-fillet','chamfer','curve'].includes(advancedOp)">{{ advancedOp==='edge-fillet' && selectedBody?.brep && advanced.filletMode==='variable'?label('Радиус A, мм','Radius A, mm'):label('Радиус / размер, мм','Radius / size, mm') }}<CadQuantityInput :aria-label="advancedOp==='edge-fillet' && selectedBody?.brep && advanced.filletMode==='variable'?label('Радиус A, мм','Radius A, mm'):label('Радиус / размер, мм','Radius / size, mm')" v-model="advanced.radius" kind="length" :locale="locale" @validity="quantityValidity('advanced.radius', $event)" :min=".01" :max="advancedOp==='curve'?1000000:undefined" step=".5" /></label>
               <label v-if="advancedOp==='edge-fillet' && !selectedBody?.brep">{{ label('Грани скругления','Fillet segments') }}<input v-model.number="filletSegments" type="number" min="2" max="32" step="1"></label>
               <label v-if="advancedOp==='split'||advancedOp==='transform'||advancedOp==='instance-transform'">{{ label('Ось','Axis') }}<select v-model="advanced.axis"><option>x</option><option>y</option><option>z</option></select></label>
               <small v-if="advancedOp==='split'">{{ label('Обе части сохраняются отдельными телами. Пунктир — плоскость разреза.', 'Both halves remain separate bodies. The dashed outline is the cutting plane.') }}</small>
@@ -3689,8 +3852,9 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
               <template v-if="advancedOp==='curve'">
                 <label>{{ label('Центр X','Center X') }}<CadQuantityInput :aria-label="label('Центр X','Center X')" v-model="advanced.cx" kind="length" :locale="locale" @validity="quantityValidity('advanced.cx', $event)" /></label><label>{{ label('Центр Y','Center Y') }}<CadQuantityInput :aria-label="label('Центр Y','Center Y')" v-model="advanced.cy" kind="length" :locale="locale" @validity="quantityValidity('advanced.cy', $event)" /></label>
                 <label>{{ label('Начальный угол','Start angle') }}<CadQuantityInput :aria-label="label('Начальный угол','Start angle')" v-model="advanced.start" kind="angle" :locale="locale" @validity="quantityValidity('advanced.start', $event)" /></label>
-                <label v-if="selectedSketch?.analytic?.kind==='arc'">{{ label('Угол дуги','Arc sweep') }}<CadQuantityInput :aria-label="label('Угол дуги','Arc sweep')" v-model="advanced.sweep" kind="angle" :locale="locale" @validity="quantityValidity('advanced.sweep', $event)" :min="-360" :max="360" /></label>
+                <label v-if="selectedSketch?.analytic?.kind==='arc'">{{ label('Угол дуги','Arc sweep') }}<CadQuantityInput :aria-label="label('Угол дуги','Arc sweep')" v-model="advanced.sweep" kind="angle" :locale="locale" @validity="quantityValidity('advanced.sweep', $event)" :min="-360" :max="360" :aria-describedby="invalidQuantities['curve.sweep-range']?'curve-sweep-error':undefined" /></label>
               </template>
+              <small v-if="advancedOp==='curve' && invalidQuantities['curve.sweep-range']" id="curve-sweep-error" role="alert">{{ label('Модуль угла дуги должен быть от 0,1° до 360°. Измените угол; знак задаёт направление.','Arc sweep magnitude must be between 0.1° and 360°. Change the sweep; its sign sets the direction.') }}</small>
               <label v-if="advancedOp==='extend'">{{ label('Конец','Endpoint') }}<select v-model="advanced.end"><option value="start">{{ label('Начало','Start') }}</option><option value="end">{{ label('Конец','End') }}</option></select></label>
               <template v-if="advancedOp==='instance-create'||advancedOp==='instance-place'">
                 <small>{{ label('Смещение относительно источника. Правки источника обновляют экземпляр.','Offset from the source. Editing the source updates the instance.') }}</small>
@@ -3722,7 +3886,7 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
                     <p v-else role="status">{{ label('Расчёт не завершён: показаны нижняя и верхняя границы. Увеличьте объём расчёта или проверьте меньшие участки поверхностей.','Calculation incomplete: lower and upper bounds are shown. Increase the calculation budget or inspect smaller surface regions.') }}</p>
                     <small>{{ label('Измерены полные выбранные NURBS-поверхности.','The complete selected NURBS surfaces are measured.') }}</small>
                   </template>
-                  <p v-if="surfaceDistance?.error" role="alert">{{ surfaceDistance.error }}</p>
+                  <p v-if="surfaceDistance?.error" role="alert">{{ surfaceDistance.error }}</p><button v-if="surfaceDistanceRetryVisible" @click="surfaceDistanceRevision++">{{ label('Повторить измерение поверхностей','Retry surface distance') }}</button>
                 </template>
               </section>
               <section v-if="selectedSurfacePair" aria-label="Surface boundary inspection" class="body-diagnostics">
@@ -3733,15 +3897,15 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
                   <label>{{ label('Граница A','Boundary A') }}<select v-model="boundaryOptions.boundaryA" :aria-label="label('Граница A','Boundary A')"><option v-for="b in ['uMin','uMax','vMin','vMax']" :key="b">{{ b }}</option></select></label>
                   <label>{{ label('Граница B','Boundary B') }}<select v-model="boundaryOptions.boundaryB" :aria-label="label('Граница B','Boundary B')"><option v-for="b in ['uMin','uMax','vMin','vMax']" :key="b">{{ b }}</option></select></label>
                   <label><input type="checkbox" v-model="boundaryOptions.reverse">{{ label('Обратное направление B','Reverse B direction') }}</label>
-                  <label>{{ label('Допуск зазора, мм','Gap tolerance, mm') }}<input v-model.number="boundaryOptions.toleranceMm" type="number" min="0.000001" step=".01"></label>
-                  <label>{{ label('Допуск угла, °','Angle tolerance, °') }}<input v-model.number="boundaryOptions.angleToleranceDeg" type="number" min="0" max="90" step=".1"></label>
-                  <label>{{ label('Точек проверки','Sample count') }}<input v-model.number="boundaryOptions.samples" type="number" min="2" max="257" step="1"></label>
+                  <label>{{ label('Допуск зазора, мм','Gap tolerance, mm') }}<input v-model.number="boundaryOptions.toleranceMm" :aria-label="label('Допуск зазора, мм','Gap tolerance, mm')" :aria-invalid="!boundaryInputValid.gap" :aria-describedby="!boundaryInputValid.gap?'surface-boundary-error':undefined" type="number" min="0.000001" step=".01"></label>
+                  <label>{{ label('Допуск угла, °','Angle tolerance, °') }}<input v-model.number="boundaryOptions.angleToleranceDeg" :aria-label="label('Допуск угла, °','Angle tolerance, °')" :aria-invalid="!boundaryInputValid.angle" :aria-describedby="!boundaryInputValid.angle?'surface-boundary-error':undefined" type="number" min="0" max="90" step=".1"></label>
+                  <label>{{ label('Точек проверки','Sample count') }}<input v-model.number="boundaryOptions.samples" :aria-label="label('Точек проверки','Sample count')" :aria-invalid="!boundaryInputValid.samples" :aria-describedby="!boundaryInputValid.samples?'surface-boundary-error':undefined" type="number" min="2" max="257" step="1"></label>
                   <template v-if="boundaryReport?.value">
                     <output>{{ label('Максимальный зазор: ','Maximum gap: ')+boundaryReport.value.maxGapMm.toFixed(6) }} mm</output>
                     <output>{{ label('Угол касательных плоскостей: ','Tangent-plane angle: ')+(boundaryReport.value.maxTangentPlaneAngleDeg?.toFixed(6)??label('не определён','undefined')) }}°</output>
                     <strong>{{ boundaryReport.value.sampledWithinTolerance?label('Проверенные точки в допуске','Sampled points within tolerance'):label('Допуск не подтверждён','Tolerance not confirmed') }}</strong>
                   </template>
-                  <p v-if="boundaryReport?.error" role="alert">{{ boundaryReport.error }}</p>
+                  <p v-if="boundaryReport?.error" id="surface-boundary-error" role="alert">{{ boundaryReport.error }}</p><button v-if="boundaryRetryVisible" @click="boundaryInspectionRevision++">{{ label('Повторить проверку стыка','Retry surface boundary inspection') }}</button>
                   <small>{{ label('Проверка по равномерной выборке, не гарантия между точками. Жёлтый — A, зелёный — B, красный — зазоры. Сравниваются касательные плоскости без учёта знака нормали.','Uniform samples do not prove agreement between points. Yellow: A; green: B; red: gaps. Tangent planes are compared without normal orientation.') }}</small>
                 </template>
               </section>
@@ -3783,7 +3947,7 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
               <small>{{ label('Нажмите вершину контура для выбора угла.', 'Click a contour vertex to choose a corner.') }}</small>
               <small v-if="operation === 'dogear'">{{ label('Круглый выход в прямом углу. Радиус соответствует радиусу инструмента.', 'Circular relief at a right-angle corner. Radius is the tool radius.') }}</small>
               <label>{{ label('Вершина', 'Vertex') }}<select v-model.number="cornerVertex" :aria-label="label('Вершина', 'Vertex')"><option v-for="(_, i) in selectedSketch?.points" :key="i" :value="i">{{ i + 1 }}</option></select></label>
-              <label>{{ label('Радиус, мм', 'Radius, mm') }}<CadQuantityInput :aria-label="label('Радиус, мм', 'Radius, mm')" v-model="cornerRadius" kind="length" :locale="locale" @validity="quantityValidity('cornerRadius', $event)" :min=".01" step=".5" /></label>
+              <label>{{ label('Радиус, мм', 'Radius, mm') }}<CadQuantityInput :aria-label="label('Радиус, мм', 'Radius, mm')" v-model="cornerRadius" kind="length" :locale="locale" @validity="quantityValidity('cornerRadius', $event)" :min=".01" :max="advancedOp==='curve'?1000000:undefined" step=".5" /></label>
               <small v-if="sketchEditPending" role="status">{{ label('Вычисляется предпросмотр…','Computing preview…') }}</small>
               <small v-if="cornerPreview.error" role="alert">{{ cornerPreview.error }}</small>
               <button v-if="sketchEditRetryVisible" :disabled="sketchEditPending || Object.keys(invalidQuantities).length>0" @click="sketchEditRevision++">{{ label('Повторить вычисление','Retry calculation') }}</button>
@@ -3803,7 +3967,7 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
                 <label>{{ label('Ось в эскизе', 'Sketch axis') }}<select v-model="revolveAxis"><option value="y">Y · {{ label('вертикаль', 'vertical') }}</option><option value="x">X · {{ label('горизонталь', 'horizontal') }}</option></select></label>
                 <label>{{ label('Смещение оси, мм', 'Axis offset, mm') }}<CadQuantityInput :aria-label="label('Смещение оси, мм', 'Axis offset, mm')" v-model="revolveOffset" kind="length" :locale="locale" @validity="quantityValidity('revolveOffset', $event)" step="1" /></label>
                 <label>{{ label('Угол, °', 'Angle, °') }}<CadQuantityInput :aria-label="label('Угол, °', 'Angle, °')" v-model="revolveAngle" kind="angle" :locale="locale" @validity="quantityValidity('revolveAngle', $event)" :min="-360" :max="360" step="15" /></label>
-            <label>{{ label('Поверхности вращения','Revolve surfaces') }}<select v-model="revolveGeometry" @keydown="revolveGeometryKey"><option value="faceted">{{ label('Гранёные','Faceted') }}</option><option value="exact">{{ label('Точные NURBS','Exact NURBS') }}</option></select></label>
+            <label>{{ label('Поверхности вращения','Revolve surfaces') }}<select v-model="revolveGeometry" @keydown="revolveGeometryKey"><option value="faceted" :disabled="!!selectedSketch?.retainedProfile">{{ label('Гранёные','Faceted') }}</option><option value="exact">{{ label('Точные NURBS','Exact NURBS') }}</option></select></label>
                 <label>{{ label('Сегменты', 'Segments') }}<input v-model.number="revolveSegments" type="number" min="8" max="128"></label>
                 <small>{{ label('Пунктир слева — ось вращения. Контур должен лежать по одну сторону от неё.', 'The dashed line on the left is the rotation axis. Keep the profile on one side of it.') }}</small>
               </template>
@@ -3822,7 +3986,7 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
               <div><button class="primary" :disabled="!commandReady" @click="applyCommand">{{ label('Готово · Enter', 'Apply · Enter') }}</button><button @click="cancelCommand">Esc</button></div>
             </div>
             <div v-if="pane === '2d' && !document.sketches.length && !draft.length" class="empty-hint"><strong>{{ label('Начните с контура', 'Start with a contour') }}</strong><span>{{ label('Выберите фигуру сверху и нарисуйте её мышью', 'Choose a tool above and draw with the mouse') }}</span></div>
-            <div v-if="pane === '3d' && !document.bodies.length && !document.curves?.length && !document.surfaces?.length && !solidActive" class="empty-hint"><strong>{{ label('Из плоской фигуры — в объём', 'Turn a flat shape into a solid') }}</strong><span>{{ label('Выберите эскиз слева и нажмите «Выдавить»', 'Select a sketch on the left and press Extrude') }}</span></div>
+            <div v-if="pane === '3d' && !advancedOp && !document.bodies.length && !document.curves?.length && !document.surfaces?.length && !solidActive" class="empty-hint"><strong>{{ label('Из плоской фигуры — в объём', 'Turn a flat shape into a solid') }}</strong><span>{{ label('Выберите эскиз слева и нажмите «Выдавить»', 'Select a sketch on the left and press Extrude') }}</span></div>
             <div v-if="pane === '3d' && subtract" class="operation-card subtract-card" role="dialog" :aria-label="label('Вычитание', 'Subtraction')">
               <strong>{{ label('Вычесть: A − B', 'Subtract: A − B') }}</strong>
               <button type="button" class="subtract-field" :aria-pressed="subtract.active === 'a'" @click="subtract.active = 'a'">
@@ -3915,13 +4079,13 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
       <section v-if="selectedBody" class="body-diagnostics" :aria-label="label('Измерения','Measurements')">
         <button @click="measurementOpen=!measurementOpen" :aria-pressed="measurementOpen">{{ label('Измерения','Measurements') }}</button>
         <template v-if="measurementOpen">
-          <label v-if="!clearanceOpen && !shellDistanceOpen && !volumeDistanceOpen">{{ label('Вершина A','Vertex A') }}<input v-model.number="measureA" type="number" min="1" :max="solidVertexCount(selectedBody)" :aria-label="label('Вершина A','Vertex A')"></label>
-          <label>{{ label('Тело B','Body B') }}<select v-model="measureTarget" :aria-describedby="shellDistanceOpen?'shell-distance-error':undefined" :aria-invalid="shellDistanceOpen&&(!measurementTarget?.brep||measurementTarget.id===selectedBody.id)" :aria-label="label('Тело B','Body B')"><option value="">{{ label('Выбранное тело','Selected body') }}</option><option v-for="body in document.bodies" :key="body.id" :value="body.id">{{ body.name }}</option></select></label>
-          <label v-if="!clearanceOpen && !shellDistanceOpen && !volumeDistanceOpen">{{ label('Вершина B','Vertex B') }}<input v-model.number="measureB" type="number" min="1" :max="measurementTarget?solidVertexCount(measurementTarget):1" :aria-label="label('Вершина B','Vertex B')"></label>
-          <small v-if="measurementPending && !shellDistanceOpen && !volumeDistanceOpen" role="status" aria-label="vertex-measurement">{{ label('Измеряю вершины…','Measuring vertices…') }} <button @click="measurementOpen=false">Esc</button></small>
-          <output v-if="measurement?.value && !shellDistanceOpen && !volumeDistanceOpen">{{ measurement.value.distanceMm.toFixed(6) }} mm · ΔXYZ [{{ measurement.value.deltaMm.map(v=>v.toFixed(6)).join(', ') }}]</output>
-          <small v-if="measurement?.value && !shellDistanceOpen && !volumeDistanceOpen">A [{{ measurement.value.a.map(v=>v.toFixed(6)).join(', ') }}] · B [{{ measurement.value.b.map(v=>v.toFixed(6)).join(', ') }}] mm</small>
-          <p v-if="measurement?.error && !shellDistanceOpen && !volumeDistanceOpen" role="alert">{{ measurement.error }}</p>
+          <label v-if="!clearanceOpen && !shellDistanceOpen && !volumeDistanceOpen && !materialPathOpen">{{ label('Вершина A','Vertex A') }}<input v-model.number="measureA" type="number" min="1" :max="solidVertexCount(selectedBody)" :aria-invalid="!vertexAValid" :aria-describedby="!vertexAValid ? 'vertex-measurement-error' : undefined" :aria-label="label('Вершина A','Vertex A')"></label>
+          <label v-if="!materialPathOpen">{{ label('Тело B','Body B') }}<select v-model="measureTarget" :aria-describedby="shellDistanceOpen?'shell-distance-error':undefined" :aria-invalid="shellDistanceOpen&&(!measurementTarget?.brep||measurementTarget.id===selectedBody.id)" :aria-label="label('Тело B','Body B')"><option value="">{{ label('Выбранное тело','Selected body') }}</option><option v-for="body in document.bodies" :key="body.id" :value="body.id">{{ body.name }}</option></select></label>
+          <label v-if="!clearanceOpen && !shellDistanceOpen && !volumeDistanceOpen && !materialPathOpen">{{ label('Вершина B','Vertex B') }}<input v-model.number="measureB" type="number" min="1" :max="measurementTarget?solidVertexCount(measurementTarget):1" :aria-invalid="!vertexBValid" :aria-describedby="!vertexBValid ? 'vertex-measurement-error' : undefined" :aria-label="label('Вершина B','Vertex B')"></label>
+          <small v-if="measurementPending && !shellDistanceOpen && !volumeDistanceOpen && !materialPathOpen" role="status" aria-label="vertex-measurement">{{ label('Измеряю вершины…','Measuring vertices…') }} <button @click="measurementOpen=false">Esc</button></small>
+          <output v-if="measurement?.value && !shellDistanceOpen && !volumeDistanceOpen && !materialPathOpen">{{ measurement.value.distanceMm.toFixed(6) }} mm · ΔXYZ [{{ measurement.value.deltaMm.map(v=>v.toFixed(6)).join(', ') }}]</output>
+          <small v-if="measurement?.value && !shellDistanceOpen && !volumeDistanceOpen && !materialPathOpen">A [{{ measurement.value.a.map(v=>v.toFixed(6)).join(', ') }}] · B [{{ measurement.value.b.map(v=>v.toFixed(6)).join(', ') }}] mm</small>
+          <p v-if="measurement?.error && !shellDistanceOpen && !volumeDistanceOpen && !materialPathOpen" id="vertex-measurement-error" role="alert">{{ measurement.error }}</p><button v-if="measurementRetryVisible" @click="measurementRevision++">{{ label('Повторить измерение вершин','Retry vertex measurement') }}</button>
           <button v-if="selectedBody.brep" @click="edgeDistanceOpen=!edgeDistanceOpen" :aria-pressed="edgeDistanceOpen">{{ label('Расстояние между рёбрами','Distance between edges') }}</button>
           <fieldset v-if="edgeDistanceOpen" class="edge-distance-panel" aria-label="edge-distance">
             <legend>{{ label('Расстояние между исходными рёбрами','Distance between original edges') }}</legend>
@@ -3935,7 +4099,7 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
               <p v-else role="status">{{ label('Расчёт не завершён: показаны нижняя и верхняя границы. Увеличьте объём расчёта; если лимит уже максимальный, проверьте более короткие участки рёбер.','Calculation incomplete: lower and upper bounds are shown. Increase the calculation budget; at the maximum budget, inspect shorter edge sections.') }}</p>
               <small>{{ label('Измерены только выбранные рёбра.','Only the selected edges are measured.') }}</small>
             </template>
-            <p v-if="edgeDistance?.error" id="edge-distance-error" role="alert">{{ edgeDistance.error }}</p>
+            <p v-if="edgeDistance?.error" id="edge-distance-error" role="alert">{{ edgeDistance.error }}</p><button v-if="edgeDistanceRetryVisible" @click="edgeDistanceRevision++">{{ label('Повторить измерение рёбер','Retry edge distance') }}</button>
           </fieldset>
           <button v-if="selectedBody.brep" @click="faceDistanceOpen=!faceDistanceOpen" :aria-pressed="faceDistanceOpen">{{ label('Расстояние между гранями','Distance between faces') }}</button>
           <fieldset v-if="faceDistanceOpen" class="face-distance-panel" aria-label="face-distance">
@@ -3952,31 +4116,32 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
               <p v-else role="status">{{ label('Расчёт не завершён: показаны нижняя и верхняя границы. Увеличьте объём расчёта; при максимальном лимите результат остаётся неполным.','Calculation incomplete: lower and upper bounds are shown. Increase the calculation budget; at the maximum budget, the result remains incomplete.') }}</p>
               <small>{{ label('Измерены выбранные грани с их отверстиями.','The selected faces and their holes are measured.') }}</small>
             </template>
-            <p v-if="faceDistance?.error" id="face-distance-error" role="alert">{{ faceDistance.error }}</p>
+            <p v-if="faceDistance?.error" id="face-distance-error" role="alert">{{ faceDistance.error }}</p><button v-if="faceDistanceRetryVisible" @click="faceDistanceRevision++">{{ label('Повторить измерение граней','Retry face distance') }}</button>
           </fieldset>
           <SolidVolumeDistance @state="(active,point)=>{volumeDistanceOpen=active;volumeContact=point}" :active="props.open && measurementOpen" :ru="ru" :a="selectedBody.brep" :b="measurementTarget?.brep" :same="selectedBody.id===measurementTarget?.id" :names="[selectedBody.name,measurementTarget?.name??'B']"/>
+          <MaterialPathCheck :key="selectedBody.id" :active="props.open && measurementOpen" :ru="ru" :model="selectedBody.brep" @state="(active,overlay)=>{materialPathOpen=active;materialPathOverlay=overlay}"/>
           <button v-if="selectedBody.brep" @click="shellDistanceOpen=!shellDistanceOpen" :aria-pressed="shellDistanceOpen">{{ label('Расстояние между оболочками','Distance between shells') }}</button>
           <fieldset v-if="shellDistanceOpen" class="shell-distance-panel" aria-label="shell-distance">
             <legend>{{ label('Расстояние между всеми гранями оболочек','Distance between all shell faces') }}</legend>
             <label>{{ label('Объём расчёта','Calculation budget') }}<select v-model.number="shellDistanceBudget" :aria-label="label('Объём расчёта оболочек','Shell calculation budget')"><option :value="100000">{{ label('Обычный','Standard') }}</option><option :value="1000000">{{ label('Расширенный','Extended') }}</option></select></label>
             <small v-if="shellDistancePending" role="status">{{ label('Измеряю расстояние…','Measuring distance…') }} <button @click="shellDistanceOpen=false">Esc</button></small>
             <ShellDistanceSummary v-if="shellDistance?.value" :value="shellDistance.value" :ru="ru"/>
-            <p v-if="shellDistance?.error" id="shell-distance-error" role="alert">{{ shellDistance.error }}</p>
+            <p v-if="shellDistance?.error" id="shell-distance-error" role="alert">{{ shellDistance.error }}</p><button v-if="shellDistanceRetryVisible" @click="shellDistanceRevision++">{{ label('Повторить измерение оболочек','Retry shell distance') }}</button>
           </fieldset>
           <button @click="clearanceOpen=!clearanceOpen" :aria-pressed="clearanceOpen">{{ label('Зазор тел по сетке','Body mesh clearance') }}</button>
           <template v-if="clearanceOpen">
             <small>{{ label('Расчёт по сеткам тел. Для B-rep точность ограничена детализацией.','Measured on body meshes. B-rep accuracy is limited by tessellation.') }}</small>
             <p v-if="clearancePending" role="status">{{ label('Вычисляем зазор…','Computing clearance…') }}</p>
             <output v-if="clearanceMeasurement?.value">{{ label('Зазор','Clearance') }}: {{ formatMeasurement(clearanceMeasurement.value.gapMm) }} mm · {{ label('Перекрытие','Overlap') }}: {{ formatMeasurement(clearanceMeasurement.value.overlapMm3) }} mm³</output>
-            <p v-if="clearanceMeasurement?.error" role="alert">{{ clearanceMeasurement.error }}</p>
+            <p v-if="clearanceMeasurement?.error" role="alert">{{ clearanceMeasurement.error }}</p><button v-if="clearanceRetryVisible" @click="clearanceRevision++">{{ label('Повторить расчёт зазора','Retry mesh clearance') }}</button>
           </template>
           <template v-if="selectedBody.brep && edgeIndex>=0">
             <small v-if="curvaturePending" role="status" aria-label="edge-measurement">{{ label('Измеряю кривизну…','Measuring curvature…') }} <button @click="measurementOpen=false">Esc</button></small>
-            <label>{{ label('Параметр ребра (0…1)','Edge parameter (0…1)') }}<input v-model.number="curveParameter" type="number" min="0" max="1" step=".05" :aria-label="label('Параметр ребра','Edge parameter')"></label>
+            <label>{{ label('Параметр ребра (0…1)','Edge parameter (0…1)') }}<input v-model.number="curveParameter" type="number" min="0" max="1" step=".05" :aria-invalid="!curveParameterValid" :aria-describedby="!curveParameterValid ? 'curvature-measurement-error' : undefined" :aria-label="label('Параметр ребра','Edge parameter')"></label>
             <output v-if="curvatureMeasurement?.value">{{ label('Локальный радиус кривизны','Local curvature radius') }}: {{ curvatureMeasurement.value.radiusMm===null?'∞':curvatureMeasurement.value.radiusMm.toFixed(6)+' mm' }}</output>
-            <p v-if="curvatureMeasurement?.error" role="alert">{{ curvatureMeasurement.error }}</p>
+            <p v-if="curvatureMeasurement?.error" id="curvature-measurement-error" role="alert">{{ curvatureMeasurement.error }}</p><button v-if="curvatureRetryVisible" @click="curvatureRevision++">{{ label('Повторить измерение кривизны','Retry curvature measurement') }}</button>
           </template>
-          <small v-if="!clearanceOpen && !shellDistanceOpen && !volumeDistanceOpen">{{ label('Расстояние между указанными вершинами, не минимальное расстояние между телами. Для радиуса выберите ребро B-rep.','Distance between the specified vertices, not the minimum distance between bodies. Select a B-rep edge to measure curvature.') }}</small>
+          <small v-if="!clearanceOpen && !shellDistanceOpen && !volumeDistanceOpen && !materialPathOpen">{{ label('Расстояние между указанными вершинами, не минимальное расстояние между телами. Для радиуса выберите ребро B-rep.','Distance between the specified vertices, not the minimum distance between bodies. Select a B-rep edge to measure curvature.') }}</small>
         </template>
       </section>
       <section v-if="selectedBody" ref="diagnosticPanel" tabindex="-1" aria-label="Body diagnostics" class="body-diagnostics">
@@ -3986,13 +4151,17 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
           <button v-if="selectedBody.brep" @click="faceContactsOpen=!faceContactsOpen" :aria-pressed="faceContactsOpen">{{ label('Проверить контакты граней','Inspect face contacts') }}</button>
           <fieldset v-if="faceContactsOpen" aria-label="face-contacts" class="boundary-agreement-panel">
             <legend>{{ label('Контакты B-rep-граней','B-rep face contacts') }}</legend>
-            <label><input v-model="inspectWithinFaces" type="checkbox">{{ label('Проверять внутри граней','Inspect within faces') }}</label>
+            <label class="diagnostic-checkbox"><input v-model="inspectWithinFaces" type="checkbox">{{ label('Проверять внутри граней','Inspect within faces') }}</label>
+            <label v-if="inspectWithinFaces" class="diagnostic-checkbox"><input v-model="inspectExactBoundary" type="checkbox">{{ label('Проверять точное совпадение и замыкание границ','Inspect exact boundary agreement and closure') }}</label>
             <label>{{ label('Лимит проверки контактов','Contact inspection limit') }}<input v-model.number="faceContactsBudget" type="number" min="1" max="1000000" step="1" :aria-invalid="faceContactsBudgetInvalid" aria-describedby="face-contacts-error" :aria-label="label('Лимит проверки контактов','Contact inspection limit')"></label>
             <p v-if="faceContactsPending" role="status" aria-label="face-contacts-pending">{{ label('Проверяю контакты…','Inspecting contacts…') }} <button @click="faceContactsOpen=false">Esc</button></p>
             <template v-if="faceContactsResult">
               <template v-if="'absenceProven' in faceContactsResult">
                 <p role="status">{{ faceContactsResult.absenceProven ? label('Отсутствие самопересечений подтверждено.','Absence of self-intersections is proven.') : label('Отсутствие самопересечений не доказано.','Absence of self-intersections is unproven.') }}</p>
-                <p>{{ label('Не проверены или не доказаны грани: ','Unvisited or unproven faces: ')+faceContactsResult.faces.filter(f=>!f.result?.proven).map(f=>f.face+1).join(', ') }}</p>
+                <p v-if="faceContactsResult.boundaryEmbedding" data-testid="boundary-embedding-summary">{{ faceContactsResult.boundaryEmbedding.proven ? label('Границы согласованы, замкнуты и не пересекаются.','Boundary agreement, closure and absence of intersections are proven.') : label('Полная проверка границ не завершена.','Complete boundary proof is unresolved.') }}</p>
+                <p v-if="faceContactsResult.allFacesInjective">{{ label('Все грани проверены на самоналожение.','All faces are proven free of self-overlap.') }}</p>
+                <p v-else>{{ label('Не проверены или не доказаны грани: ','Unvisited or unproven faces: ')+faceContactsResult.faces.filter(f=>!faceAbsenceProven(f)).map(f=>f.face+1).join(', ') }}</p>
+                <p v-if="faceContactsResult.faces.some(f=>f.quotientProof?.proven)">{{ label('Самоналожение исключено на гранях со схлопнутой границей: ','Self-overlap is excluded on faces with a collapsed boundary: ')+faceContactsResult.faces.filter(f=>f.quotientProof?.proven).map(f=>f.face+1).join(', ')+label('. Гладкость в конечной точке не подтверждена.','. Endpoint smoothness is unqualified.') }}</p>
               </template>
               <p data-testid="face-contacts-summary">{{ label('Контактов: ','Contacts: ')+faceContactsResult.contactPairCount+' · '+label('Общих границ: ','Shared boundaries: ')+faceContactsResult.sharedBoundaryPairCount+' · '+label('Не завершено пар: ','Unresolved pairs: ')+faceContactsResult.unresolvedPairCount+' · '+label('Не посещено: ','Unvisited: ')+faceContactsResult.unvisitedPairs }}</p>
               <p v-if="faceContactsResult.allPairsDisjoint">{{ label('Все разные пары граней разнесены.','All distinct face pairs are disjoint.') }}</p>
@@ -4026,6 +4195,8 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
           </fieldset>
 
           <label>{{ label('Нормаль плоскости','Plane normal') }}<span role="group" :aria-label="label('Нормаль плоскости','Plane normal')" :aria-invalid="diagnostics?.value?.sectionError.includes('Section normal')||undefined" :aria-describedby="sectionInputInvalid||diagnostics?.value?.sectionError?'solid-section-error':undefined"><CadQuantityInput v-for="(axis,i) in ['X','Y','Z']" :key="axis" v-model="sectionNormal[i]" kind="scalar" :locale="locale" :aria-label="label('Нормаль ','Normal ')+axis" :aria-describedby="sectionInputInvalid||diagnostics?.value?.sectionError?'solid-section-error':undefined" style="width:70px" @validity="sectionValidity(axis,$event)" /></span></label>
+          <p v-if="sectionInputInvalid" id="solid-section-error" role="alert">{{ label('Сечение не проверено. Исправьте выделенные поля плоскости.','Section not checked. Correct the highlighted plane fields.') }}</p>
+          <template v-else-if="diagnostics?.value?.sectionError"><p id="solid-section-error" role="alert">{{ sectionErrorMessage(diagnostics.value.sectionError) }}</p><button v-if="diagnostics.value.sectionError.includes('Section normal')" @click="sectionNormal=[0,0,1]">{{ label('Плоскость XY','XY plane') }}</button><details><summary>{{ label('Технические сведения','Technical details') }}</summary>{{ diagnostics.value.sectionError }}</details></template>
           <small>{{ label('Нормаль задаёт направление плоскости; смещение измеряется от начала координат в миллиметрах.','The normal sets the plane direction; offset is measured from the origin in millimeters.') }}</small>
           <label>{{ label('Смещение сечения, мм','Section offset, mm') }}<CadQuantityInput v-model="sectionZ" :locale="locale" :aria-label="label('Смещение сечения, мм','Section offset, mm')" :aria-describedby="sectionInputInvalid||diagnostics?.value?.sectionError?'solid-section-error':undefined" @validity="sectionValidity('offset',$event)" /></label>
           <p v-if="diagnosticsPending" role="status">{{ label('Вычисляется сечение и диагностика сетки…','Computing section and mesh diagnostics…') }}</p>
@@ -4037,8 +4208,6 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
           <p v-if="diagnostics.value.report.degenerateTriangles">{{ label('Красные контуры отмечают вырожденные треугольники. Удалите или перестройте их перед операциями с объёмом.','Red outlines mark degenerate triangles. Remove or rebuild them before solid operations.') }}</p>
           <p v-if="diagnostics.value.report.boundaryEdges">{{ label('Замкните выделенные границы перед операциями с объёмом.','Close the highlighted boundaries before solid operations.') }}</p></template>
           <p v-if="diagnostics?.value?.section.collapsedSegmentTriangles.length" role="status">{{ label('Сегментов с потерей точности: ','Section segments collapsed at floating-point precision: ')+diagnostics.value.section.collapsedSegmentTriangles.length }}. {{ label('Контур только для просмотра; измените смещение для точных измерений.','Display only; change the offset for precise measurements.') }}</p>
-          <p v-if="sectionInputInvalid" id="solid-section-error" role="alert">{{ label('Сечение не проверено. Исправьте выделенные поля плоскости.','Section not checked. Correct the highlighted plane fields.') }}</p>
-          <template v-else-if="diagnostics?.value?.sectionError"><p id="solid-section-error" role="alert">{{ sectionErrorMessage(diagnostics.value.sectionError) }}</p><button v-if="diagnostics.value.sectionError.includes('Section normal')" @click="sectionNormal=[0,0,1]">{{ label('Плоскость XY','XY plane') }}</button><details><summary>{{ label('Технические сведения','Technical details') }}</summary>{{ diagnostics.value.sectionError }}</details></template>
           <template v-if="diagnostics?.value?.boundaryError"><p role="alert">{{ label('Не удалось собрать открытые границы. Проверьте выделенные красные и оранжевые рёбра тела.','Could not assemble open boundaries. Inspect the highlighted red and orange body edges.') }}</p><details><summary>{{ label('Технические сведения','Technical details') }}</summary>{{ diagnostics.value.boundaryError }}</details></template>
           <p v-if="intersectionPending" role="status">{{ label('Проверяю контакты сетки…','Inspecting mesh contacts…') }}</p>
           <label>{{ label('Объём проверки контактов','Contact inspection effort') }}<select v-model.number="intersectionWork" :aria-label="label('Объём проверки контактов','Contact inspection effort')"><option :value="200000">{{ label('Обычный','Standard') }}</option><option :value="1000000">{{ label('Расширенный','Extended') }}</option><option :value="8000000">{{ label('Максимальный','Maximum') }}</option></select></label>
@@ -4069,14 +4238,15 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
     </aside>
     </div>
     <footer v-if="tool==='slot' || (tool === 'polyline' && draft.length)" class="context-bar">
-      <span v-if="tool==='slot'">{{ label('Потяните от центра одного торца к другому. Esc — отмена.','Drag between the two end-cap centers. Esc cancels.') }}</span><label v-if="tool==='slot'">{{ label('Ширина паза, мм','Slot width, mm') }} <CadQuantityInput v-model="slotWidth" :locale="locale" :min="0.02" :max="1000000" :aria-label="label('Ширина паза, мм','Slot width, mm')" @validity="slotWidthValid=$event" /></label><template v-if="tool === 'polyline' && draft.length"><button @click="undoDraftPoint">{{ label('Убрать точку · Backspace','Undo point · Backspace') }}</button><span>{{ draft.length }} {{ label('точек', 'points') }}</span><button :disabled="draft.length < 3" @click="finish(true)">{{ label('Замкнуть контур', 'Close contour') }}</button><button :disabled="draft.length < 2" @click="finish(false)">{{ label('Завершить линию', 'Finish line') }}</button><button @click="cancelGesture">Esc</button></template>
+      <span v-if="tool==='slot'">{{ label('Потяните от центра одного торца к другому. Esc — отмена.','Drag between the two end-cap centers. Esc cancels.') }}</span><template v-if="tool === 'polyline' && draft.length"><button @click="undoDraftPoint">{{ label('Убрать точку · Backspace','Undo point · Backspace') }}</button><span>{{ draft.length }} {{ label('точек', 'points') }}</span><button :disabled="draft.length < 3" @click="finish(true)">{{ label('Замкнуть контур', 'Close contour') }}</button><button :disabled="draft.length < 2" @click="finish(false)">{{ label('Завершить линию', 'Finish line') }}</button><button @click="cancelGesture">Esc</button></template>
     </footer>
     <CommandPalette v-if="paletteOpen" :open="paletteOpen" :commands="solidCommands" @close="paletteOpen = false" @execute="executeSolidCommand" />
     <div class="input-hint" role="status">{{ inputMode === 'touch' ? label('Два пальца: масштаб и перенос · Навигация: одним пальцем вращать 3D / двигать 2D', 'Two fingers: zoom and pan · Navigate: one finger orbits 3D / pans 2D') : label('ЛКМ: выбор / вращение 3D · СКМ или Shift: перенос · Колесо: масштаб', 'Left drag: select / orbit 3D · Middle drag or Shift: pan · Wheel: zoom') }}</div>
     <div v-if="showHelp" class="help-card"><p>{{ label('Грани: выберите поверхность, затем тяните её или жёлтую ручку. Ctrl/⌘ + клик выбирает несколько открытых граней для Shell. Для фаски и скругления включите «Рёбра».','Faces: select a surface, then drag it or its yellow handle. Ctrl/⌘ click selects multiple Shell openings. Switch to Edges for chamfers and fillets.') }}</p><p>{{ label('Shift + клик и «Рамка» выделяют несколько объектов. Манипулятор двигает, вращает и масштабирует весь выбор. У окружностей и дуг есть ручки центра, радиуса и концов дуги.','Shift click and Box select select multiple objects. The gizmo moves, rotates and scales the whole selection. Circles and arcs have center, radius and arc endpoint handles.') }}</p><strong>{{ label('Управление', 'Controls') }}</strong><p>{{ label('2D: тяните фигуру или вершину. Alt временно отключает привязку. Ломаная замыкается кликом по первой точке.', '2D: drag shapes or vertices. Alt bypasses snapping. Close a polyline by clicking its first point.') }}</p><p>{{ label('3D: тяните для вращения; G включает перемещение тела. ПКМ всегда вращает. Shift или средняя кнопка — панорама. Колесо — масштаб.', '3D: drag to orbit; G enables body movement. Right drag always orbits. Shift or middle drag pans. Wheel zooms.') }}</p><p>{{ label('E — предпросмотр выдавливания; зелёная ручка меняет высоту. Enter подтверждает, Escape отменяет. Ctrl/⌘ Z — отмена, Ctrl/⌘ Shift Z — повтор.', 'E previews extrusion; the green handle changes height. Enter applies, Escape cancels. Ctrl/⌘ Z undoes; Ctrl/⌘ Shift Z redoes.') }}</p><button @click="showHelp = false">{{ label('Понятно', 'Got it') }}</button></div>
     <div v-if="polygonView.limited" class="notice-bar" role="status" aria-label="transparency-limit">{{ label('Прозрачность приблизительная. Скройте часть сцены.','Transparency is approximate. Hide some objects.') }}</div>
+    <div v-if="gpuRetryVisible || gpuInitializing" class="notice-bar" role="status" aria-label="gpu-recovery"><span>{{ gpuInitializing ? label('Восстанавливаю WebGPU…','Restoring WebGPU…') : gpuFailureNotice }}</span><button v-if="gpuRetryVisible" type="button" :disabled="gpuInitializing" @click="retryGpuLayer">{{ label('Повторить WebGPU','Retry WebGPU') }}</button></div>
     <div v-if="error" class="error-bar" role="alert">{{ error }} <button @click="error = ''">×</button></div>
-    <div v-else-if="notice" class="notice-bar" role="status">{{ notice }} <button @click="notice = ''">×</button></div>
+    <div v-else-if="notice && !((gpuRetryVisible || gpuInitializing) && notice===gpuFailureNotice)" class="notice-bar" role="status">{{ notice }} <button @click="notice = ''">×</button></div>
   </section>
 </template>
 <style scoped>
@@ -4134,9 +4304,8 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
 
 @media(max-width:750px){
   .workspace-bar{flex-wrap:wrap}
-  .workspace-bar>.file-menu{margin-left:auto}
   .command-search{flex:1 1 160px;min-width:0}
-  .file-menu>div{max-width:calc(100vw - 16px);max-height:calc(100dvh - 140px);overflow:auto;box-sizing:border-box}
+  .file-menu>div{left:0;right:auto;max-width:calc(100vw - 16px);max-height:calc(100dvh - 140px);overflow:auto;box-sizing:border-box}
 }
 .direct-workspace.embedded{position:absolute;inset:0;z-index:9}.embedded .workspace-bar{flex-wrap:wrap;gap:8px;padding:6px}.primitive-bar{display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:8px;border-bottom:1px solid var(--border)}.primitive-bar input{width:75px}.primitive-icon{width:36px;height:36px;padding:0;display:inline-flex;align-items:center;justify-content:center;border-radius:8px}.primitive-icon:hover{color:var(--accent)}.tool-icon{width:34px;height:34px;padding:0;display:inline-flex;align-items:center;justify-content:center;gap:3px;border-radius:7px}.tool-icon .tool-tag{font-size:9px;font-weight:700;letter-spacing:.04em}.tool-icon:has(.tool-tag){width:auto;padding:0 7px}.tool-group{display:inline-flex;gap:3px}.tool-divider{width:1px;height:22px;background:var(--border);margin:0 3px}.primitive-divider{width:1px;height:22px;background:var(--border);margin:0 4px}.embedded .pane-tools{padding:5px}.embedded .save-status{display:none}
 .input-hint{padding:5px 12px;color:var(--text-dim);font-size:11px;flex-shrink:0}
@@ -4147,39 +4316,4 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
  .canvas-wrap>.operation-card{flex:0 1 auto;width:100%;max-height:45%;border-left:0;border-right:0;gap:8px;padding:10px}
  .canvas-viewport{min-height:120px}
 }
-</style>
-
-<style scoped>
-/* Quiet chrome: the app shell already owns title, search and file actions. */
-.direct-workspace { inset: var(--topbar-h, 40px) 0 var(--statusbar-h, 24px); font-size: 12px; }
-.direct-workspace .workspace-bar { gap: 6px; padding: 4px 10px; background: var(--surface); border-bottom: 1px solid var(--hairline); }
-.direct-workspace .workspace-bar > strong,
-.direct-workspace .workspace-bar > .subtle,
-.direct-workspace .workspace-bar > .command-search { display: none; }
-.direct-workspace .workspace-bar > .file-menu { margin-left: auto; }
-.direct-workspace button:not(.primary), .direct-workspace summary, .direct-workspace select { border-color: transparent; background: transparent; border-radius: 6px; }
-.direct-workspace button:hover:not(:disabled):not(.primary), .direct-workspace summary:hover { background: var(--hover); }
-.direct-workspace button[aria-pressed="true"]:not(.primary), .direct-workspace button.active:not(.primary) { background: color-mix(in srgb, var(--accent) 16%, transparent); color: var(--accent); border-color: transparent; }
-.direct-workspace button:disabled { opacity: .4; }
-.direct-workspace .primitive-bar, .direct-workspace .sketch-start-bar { border-bottom: 1px solid var(--hairline); }
-/* Viewport first: pane tools and grid controls float over the scene instead of taking rows. */
-.direct-workspace .pane { position: relative; }
-.direct-workspace .pane-tools {
-  position: absolute; z-index: 3; top: 10px; left: 10px; max-width: calc(100% - 20px); min-height: 0; padding: 3px; gap: 1px;
-  border: 1px solid var(--hairline); border-radius: 8px; background: color-mix(in srgb, var(--surface) 92%, transparent);
-  backdrop-filter: blur(8px); box-shadow: 0 4px 16px rgba(0,0,0,.18);
-}
-.direct-workspace .pane-tools .tool-icon { width: 30px; height: 30px; }
-.direct-workspace .pane-tools .tool-divider { height: 16px; background: var(--hairline); }
-.direct-workspace .pane > .modeling-grid-controls {
-  position: absolute; z-index: 3; left: 10px; bottom: 10px; padding: 2px 6px; border: 1px solid var(--hairline); border-radius: 8px;
-  background: color-mix(in srgb, var(--surface) 92%, transparent); backdrop-filter: blur(8px);
-}
-.direct-workspace .pane > .modeling-grid-controls :deep(details > div) { top: auto; bottom: 100%; right: auto; left: 0; }
-.direct-workspace .workspace-state { flex-wrap: nowrap; overflow: hidden; white-space: nowrap; gap: 4px 10px; padding: 2px 12px; min-height: 24px; border-bottom: 1px solid var(--hairline); background: var(--surface); }
-.direct-workspace .workspace-state .state-legend { display: none; }
-.direct-workspace .splitter { border: 0; background: var(--hairline); }
-.direct-workspace .splitter span { display: none; }
-.direct-workspace .splitter:hover, .direct-workspace .splitter:focus-visible { background: var(--accent); }
-.direct-workspace input, .direct-workspace select { border-color: var(--hairline); }
 </style>

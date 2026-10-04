@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict'
+import {createHash} from 'node:crypto'
 import {workerHeapSampler} from './qualificationWorkerHeap.mjs'
 import {createServer} from 'node:http'
 import {readFile,mkdir,writeFile} from 'node:fs/promises'
@@ -16,6 +17,7 @@ const collectWorkers=process.argv.includes('--worker-memory'),collectRetained=pr
 const iterations=Number(process.argv.find(arg=>arg.startsWith('--iterations='))?.split('=')[1]??5)
 assert.ok(Number.isInteger(iterations)&&iterations>=1&&iterations<=100,'iterations must be between 1 and 100')
 const text=await readFile(fixture,'utf8'),expected=JSON.parse(text),root=path.resolve('dist'),directory=path.resolve(output)
+const fixtureIdentity={sha256:createHash('sha256').update(text).digest('hex'),bytes:Buffer.byteLength(text),bodies:expected.bodies.length}
 await mkdir(directory,{recursive:true})
 const server=createServer(async(req,res)=>{
  try{
@@ -48,6 +50,32 @@ try{
  })
  page.setDefaultTimeout(120000);page.on('pageerror',error=>errors.push(String(error)))
  if(process.argv.includes('--disable-cpu-canvas'))await page.addInitScript(()=>{const original=HTMLCanvasElement.prototype.getContext;HTMLCanvasElement.prototype.getContext=function(...args){return this.hasAttribute('data-cpu-orbit')?null:original.apply(this,args)}})
+ if(process.argv.includes('--groups'))await page.addInitScript(()=>{
+  const NativeWorker=window.Worker;window.__holdGroup=false;window.__groupTerminations=0
+  window.Worker=class extends NativeWorker{
+   postMessage(message,...args){if(window.__holdGroup&&message?.job?.kind==='sceneEdit'&&message.job.options.operation.startsWith('group-')){this.__groupHeld=true;window.__groupHeld=true;return}return super.postMessage(message,...args)}
+   terminate(){if(this.__groupHeld)window.__groupTerminations++;return super.terminate()}
+  }
+ })
+ if(process.argv.includes('--detach'))await page.addInitScript(()=>{
+  const NativeWorker=window.Worker;window.__holdDetach=false;window.__detachTerminations=0
+  window.Worker=class extends NativeWorker{
+   postMessage(message,...args){if(window.__holdDetach&&message?.job?.kind==='sceneEdit'&&message.job.options.operation==='instance-detach'){this.__detachHeld=true;window.__detachHeld=true;return}return super.postMessage(message,...args)}
+   terminate(){if(this.__detachHeld)window.__detachTerminations++;return super.terminate()}
+  }
+ })
+ if(process.argv.includes('--require-compact-scene'))await page.addInitScript(()=>{
+  const NativeWorker=window.Worker;window.__compactSceneRequests=[]
+  window.Worker=class extends NativeWorker{
+   postMessage(message,...args){
+    if(message?.job?.kind==='sceneEdit'&&['group-create','group-move','instance-detach','transform'].includes(message.job.options.operation)){
+     const document=message.job.document,text=typeof document==='string'?document:null
+     window.__compactSceneRequests.push({operation:message.job.options.operation,compact:!!text,characters:text?.length??null})
+    }
+    return super.postMessage(message,...args)
+   }
+  }
+ })
  await page.goto(`http://127.0.0.1:${server.address().port}`)
  if(process.argv.includes('--disable-outliner-containment'))await page.addStyleTag({content:'.scene-list .object-row{content-visibility:visible!important;contain-intrinsic-block-size:none!important}'})
  const solid=page.getByRole('region',{name:'Solid — CAD-лепка',exact:true}),menu=solid.locator('summary[title="Файл"]')
@@ -72,8 +100,8 @@ try{
   const poll=()=>{if(!memoryPending)memoryPending=sample().catch(e=>memoryErrors.push(String(e))).finally(()=>{memoryPending=null})}
   poll();memoryTimer=setInterval(poll,memoryIntervalMs)
  }
- const profileAction=process.argv.includes('--profile-source-edit')?'source-edit':process.argv.includes('--profile-import')?'import':'redo'
- const profiling=process.argv.includes('--profile-source-edit')||process.argv.includes('--profile')||process.argv.includes('--profile-import')||process.argv.includes('--profile-orbit')
+ const profileAction=process.argv.includes('--profile-detached-source-edit')?'detached-source-edit':process.argv.includes('--profile-source-edit')?'source-edit':process.argv.includes('--profile-import')?'import':'redo'
+ const profiling=process.argv.includes('--profile-detached-source-edit')||process.argv.includes('--profile-source-edit')||process.argv.includes('--profile')||process.argv.includes('--profile-import')||process.argv.includes('--profile-orbit')
  let profileCaptured=false
  if(profiling)await cdp.send('Profiler.enable')
  async function measure(action,run){
@@ -86,6 +114,7 @@ try{
   if(profile){const {profile:cpu}=await cdp.send('Profiler.stop');await writeFile(path.join(directory,profileAction+'.cpuprofile'),JSON.stringify(cpu));profileCaptured=true}
   samples.push({action,profiled:profile,elapsedMs,heap:await heap(),frameCount:frameGapsMs.length,maxFrameGapMs:Math.max(0,...frameGapsMs)})
   if(collectRetained){await cdp.send('HeapProfiler.collectGarbage');retainedSamples.push({action,...await heap(),...(workerHeap?{workers:await workerHeap()}: {})})}
+  await writeFile(path.join(directory,'measurements-partial.json'),JSON.stringify({complete:false,before,samples,memoryReadings,memoryErrors},null,2)+'\n')
  }
  if(process.argv.includes('--check-import-cancel')){
   await page.evaluate(()=>{window.__importPosted=false;const post=Worker.prototype.postMessage;Worker.prototype.postMessage=function(message,...args){if(message?.job?.kind==='restoreDocument')window.__importPosted=true;return post.call(this,message,...args)}})
@@ -101,6 +130,60 @@ try{
  for(let i=0;i<iterations;i++){
   await measure('undo',()=>solid.getByRole('button',{name:'↶',exact:true}).click())
   await measure('redo',()=>solid.getByRole('button',{name:'↷',exact:true}).click())
+ }
+ if(process.argv.includes('--groups')){
+  const instance=expected.bodies.find(body=>body.instance);assert.ok(instance)
+  let groupTabs=0
+  const keyboard=process.argv.includes('--group-keyboard')
+  async function focusGroupControl(locator){const key=await locator.evaluate(el=>document.activeElement?.compareDocumentPosition(el)&Node.DOCUMENT_POSITION_PRECEDING?'Shift+Tab':'Tab');for(let i=0;i<5000;i++){if(await locator.evaluate(el=>el===document.activeElement))return;await page.keyboard.press(key);groupTabs++}throw Error('Group control unreachable with '+key)}
+  async function activateGroupControl(locator){if(keyboard){await focusGroupControl(locator);await page.keyboard.press('Enter')}else await locator.click()}
+  const active=solid.getByRole('combobox',{name:'Активная группа',exact:true})
+  async function exportGroupState(name){await saved();await activateGroupControl(menu);const download=page.waitForEvent('download');await activateGroupControl(solid.getByRole('button',{name:'Скачать проект JSON',exact:true}));await (await download).saveAs(path.join(directory,name+'.json'));await activateGroupControl(menu);return JSON.parse(await readFile(path.join(directory,name+'.json'),'utf8'))}
+  const original=await exportGroupState('group-before')
+  await measure('group-create',async()=>{await activateGroupControl(solid.getByRole('button',{name:'Новая группа',exact:true}));await page.waitForFunction(()=>document.querySelector('select[aria-label="Активная группа"]')?.value==='Группа 1')})
+  const created=await exportGroupState('group-created');assert.deepEqual(created.groups,[{name:'Группа 1',source:''}]);assert.deepEqual(created.bodies,original.bodies)
+  await activateGroupControl(solid.getByRole('tab',{name:'Сцена',exact:true}));await activateGroupControl(solid.getByRole('button',{name:instance.name,exact:true}))
+  const move=solid.getByRole('button',{name:'Перенести выбор',exact:true})
+  await page.evaluate(()=>window.__holdGroup=true);await activateGroupControl(move);await page.waitForFunction(()=>window.__groupHeld);assert.equal(await move.isDisabled(),true)
+  await page.keyboard.press('Escape');await page.waitForFunction(()=>window.__groupTerminations>0);assert.deepEqual(await exportGroupState('group-cancelled'),created)
+  await page.evaluate(()=>window.__groupHeld=false)
+  await activateGroupControl(move);await page.waitForFunction(()=>window.__groupHeld)
+  const terminations=await page.evaluate(()=>window.__groupTerminations)
+  if(keyboard){await focusGroupControl(active);await page.keyboard.press('Home');await page.keyboard.press('Tab')}else await active.selectOption('')
+  await page.waitForFunction(count=>window.__groupTerminations>count,terminations)
+  assert.deepEqual(await exportGroupState('group-target-change-cancelled'),created)
+  if(keyboard){await focusGroupControl(active);await page.keyboard.press('End');await page.keyboard.press('Tab')}else await active.selectOption('Группа 1')
+  await page.evaluate(()=>window.__holdGroup=false)
+  await measure('group-move',async()=>{await activateGroupControl(move);await page.waitForFunction(()=>Array.from(document.querySelectorAll('button')).some(b=>b.textContent.trim()==='Перенести выбор'&&!b.disabled))})
+  const grouped=await exportGroupState('group-moved');assert.deepEqual(grouped.bodies,created.bodies.map(b=>b.id===instance.id?{...b,group:'Группа 1'}:b))
+  await measure('group-move-undo',()=>solid.getByRole('button',{name:'↶',exact:true}).click());assert.deepEqual(await exportGroupState('group-undone'),created)
+  await measure('group-move-redo',()=>solid.getByRole('button',{name:'↷',exact:true}).click());assert.deepEqual(await exportGroupState('group-redone'),grouped)
+  await activateGroupControl(solid.getByRole('button',{name:'↶',exact:true}));await saved();await activateGroupControl(solid.getByRole('button',{name:'↶',exact:true}));await saved();assert.deepEqual(await exportGroupState('group-restored'),original)
+  await writeFile(path.join(directory,'group-controls.json'),JSON.stringify({keyboard,groupTabs,targetChangeCancellation:true,escCancellation:true,undoRedo:true,exactDocument:true},null,2))
+ }
+ if(process.argv.includes('--detach')){
+  const instance=expected.bodies.find(body=>body.instance),source=expected.bodies.find(body=>body.id===instance?.instance.sourceId);assert.ok(instance&&source)
+  async function exportState(name){await saved();await menu.click();const download=page.waitForEvent('download');await solid.getByRole('button',{name:'Скачать проект JSON',exact:true}).click();await (await download).saveAs(path.join(directory,name+'.json'));await menu.click();return JSON.parse(await readFile(path.join(directory,name+'.json'),'utf8'))}
+  async function selectInstance(){await solid.getByRole('tab',{name:'Сцена',exact:true}).click();await solid.getByRole('button',{name:instance.name,exact:true}).click();await solid.getByRole('tab',{name:'Свойства',exact:true}).click()}
+  const beforeDetach=await exportState('detach-before');await selectInstance()
+  await page.evaluate(()=>window.__holdDetach=true)
+  await solid.getByRole('button',{name:'Сделать независимым',exact:true}).click();await page.waitForFunction(()=>window.__detachHeld)
+  await page.keyboard.press('Escape');await page.waitForFunction(()=>window.__detachTerminations>0)
+  assert.deepEqual(await exportState('detach-cancelled'),beforeDetach)
+  await page.evaluate(()=>window.__holdDetach=false);await selectInstance()
+  await measure('instance-detach',async()=>{await solid.getByRole('button',{name:'Сделать независимым',exact:true}).click();await solid.getByRole('button',{name:'Сделать независимым',exact:true}).waitFor({state:'hidden'})})
+  const detached=await exportState('detached'),independent=detached.bodies.find(body=>body.id===instance.id)
+  assert.ok(independent&&!independent.instance);assert.deepEqual(detached.bodies.find(body=>body.id===source.id),source)
+  const m=instance.instance.matrix,transformed=[]
+  for(let i=0;i<source.mesh.positions.length;i+=3)for(let axis=0;axis<3;axis++)transformed.push(m[axis][0]*source.mesh.positions[i]+m[axis][1]*source.mesh.positions[i+1]+m[axis][2]*source.mesh.positions[i+2]+m[axis][3])
+  assert.deepEqual(independent.mesh.positions,transformed);assert.deepEqual(independent.mesh.indices,source.mesh.indices)
+  await measure('instance-detach-undo',()=>solid.getByRole('button',{name:'↶',exact:true}).click());assert.deepEqual(await exportState('detach-undone'),beforeDetach)
+  await measure('instance-detach-redo',()=>solid.getByRole('button',{name:'↷',exact:true}).click());assert.deepEqual(await exportState('detach-redone'),detached)
+  await solid.getByRole('tab',{name:'Сцена',exact:true}).click();await solid.getByRole('button',{name:source.name,exact:true}).click();await solid.getByRole('tab',{name:'Свойства',exact:true}).click()
+  await solid.getByRole('textbox',{name:'ΔX',exact:true}).fill('1 mm')
+  await measure('detached-source-edit',async()=>{await solid.getByRole('button',{name:'Применить',exact:true}).click();await page.waitForFunction(()=>document.querySelector('input[aria-label="ΔX"]')?.value==='0')})
+  const changed=await exportState('detached-source-changed');assert.deepEqual(changed.bodies.find(body=>body.id===instance.id),independent);assert.notDeepEqual(changed.bodies.find(body=>body.id===source.id),source)
+  await solid.getByRole('button',{name:'↶',exact:true}).click();await saved();await solid.getByRole('button',{name:'↶',exact:true}).click();await saved();assert.deepEqual(await exportState('detach-restored'),beforeDetach)
  }
  if(process.argv.includes('--source-edit')){
   const source=expected.bodies.find(body=>!body.instance);assert.ok(source)
@@ -197,6 +280,7 @@ try{
  if(process.argv.includes('--require-webgpu'))assert.equal(renderer.gpuCanvasVisible,true,'WebGPU must remain active; CPU fallback cannot qualify GPU performance')
  let orbit=null
  if(process.argv.includes('--orbit')){
+  await solid.getByRole('tab',{name:'Сцена',exact:true}).click()
   for(const name of ['snap-preparation','sketch-snap-preparation','topology-preparation'])await solid.getByRole('status',{name,exact:true}).waitFor({state:'hidden'})
   const svg=solid.locator('svg[aria-label="Холст тел 3D"]'),box=await svg.boundingBox()
   assert.ok(box)
@@ -222,6 +306,7 @@ try{
   orbit.rafFps=orbit.frameGapsMs.length*1000/orbit.durationMs
   orbit.pointerMoves=180
   orbit.scope='RAF cadence during 180 automated right-button orbit moves; includes input automation, automated rendering, not physical display presentation rate.'
+  await writeFile(path.join(directory,'orbit-partial.json'),JSON.stringify({complete:false,orbit,renderer},null,2)+'\n')
   let hit=await svg.evaluate(svg=>{
    for(const polygon of svg.querySelectorAll('polygon[data-body]')){
     const points=[...polygon.points];if(!points.length)continue
@@ -264,7 +349,7 @@ try{
  assert.deepEqual(errors,[])
  await page.screenshot({path:path.join(directory,'scene.png')})
  const percentile=(values,p)=>{const sorted=[...values].sort((a,b)=>a-b);return sorted[Math.max(0,Math.ceil(sorted.length*p)-1)]??null}
- const timingSummary=Object.fromEntries(['import','undo','redo',...(process.argv.includes('--source-edit')?['source-edit','source-edit-undo']:[]),...(process.argv.includes('--reimport')?['reimport']:[])].map(action=>{
+ const timingSummary=Object.fromEntries(['import','undo','redo',...(process.argv.includes('--groups')?['group-create','group-move','group-move-undo','group-move-redo']:[]),...(process.argv.includes('--detach')?['instance-detach','instance-detach-undo','instance-detach-redo','detached-source-edit']:[]),...(process.argv.includes('--source-edit')?['source-edit','source-edit-undo']:[]),...(process.argv.includes('--reimport')?['reimport']:[])].map(action=>{
   const measured=samples.filter(sample=>sample.action===action&&!sample.profiled)
   return [action,{count:measured.length,p50Ms:percentile(measured.map(s=>s.elapsedMs),.5),p95Ms:percentile(measured.map(s=>s.elapsedMs),.95),maxFrameGapMs:Math.max(0,...measured.map(s=>s.maxFrameGapMs))}]
  }))
@@ -277,7 +362,10 @@ try{
   scope:'Polling during the whole run, including operations and orbit. Main-page JS heap excludes workers; aggregate Chromium RSS includes shared pages more than once. Sampled maxima are not a guaranteed instantaneous peak. CDP and ps instrumentation can affect timings.',
  }:null
  const retainedMemory=collectRetained?{scope:'Main-page heap after explicit GC after each operation, outside its elapsed timer. GC changes subsequent operation conditions; these timings are not comparable with ordinary runs. Native/process allocations are excluded. Optional worker records report each worker isolate separately after GC; ended workers are marked explicitly.',samples:retainedSamples}:null
- const result={renderer,outlinerContainmentDisabled:process.argv.includes('--disable-outliner-containment'),outlinerChecked:process.argv.includes('--check-outliner'),outlinerControlsChecked:process.argv.includes('--check-outliner-controls'),outlinerDeletionChecked:process.argv.includes('--check-outliner-delete'),retainedMemory,memory,scope:(process.env.SOLID_GPU_HEADED==='1'?'Headed':'Headless')+' Chromium UI import and Undo/Redo through durable save; automation latency included. RAF gaps during operations are not orbit FPS; heap is sampled '+(collectRetained?'with separate forced-GC diagnostics.':'without forced GC.'),importCancellationChecked:process.argv.includes('--check-import-cancel'),cpuProfile:process.argv.includes('--profile-orbit')?'orbit.cpuprofile':profileCaptured?profileAction+'.cpuprofile':null,cancellationChecked:process.argv.includes('--check-cancel'),browser:browser.version(),machine:{platform:os.platform(),release:os.release(),arch:os.arch(),cpu:os.cpus()[0]?.model,logicalCpus:os.cpus().length,ramBytes:os.totalmem()},iterations,timingSummary,orbit,maxObservedHeapBytes:Math.max(before.JSHeapUsedSize,...samples.map(s=>s.heap.JSHeapUsedSize)),heapScope:'Samples after each operation only; not peak process memory.',viewport:{width:1280,height:800},bodies:expected.bodies.length,before,after:await heap(),samples}
+ const compactSceneRequests=await page.evaluate(()=>window.__compactSceneRequests??null)
+ if(process.argv.includes('--require-compact-scene'))assert.ok(compactSceneRequests?.length&&compactSceneRequests.every(request=>request.compact),'Metadata and detach edits must send compact snapshots')
+ const result={compactSceneRequests,groupEditingChecked:process.argv.includes('--groups'),instanceDetachChecked:process.argv.includes('--detach'),renderer,outlinerContainmentDisabled:process.argv.includes('--disable-outliner-containment'),outlinerChecked:process.argv.includes('--check-outliner'),outlinerControlsChecked:process.argv.includes('--check-outliner-controls'),outlinerDeletionChecked:process.argv.includes('--check-outliner-delete'),retainedMemory,memory,scope:(process.env.SOLID_GPU_HEADED==='1'?'Headed':'Headless')+' Chromium UI import and Undo/Redo through durable save; automation latency included. RAF gaps during operations are not orbit FPS; heap is sampled '+(collectRetained?'with separate forced-GC diagnostics.':'without forced GC.'),importCancellationChecked:process.argv.includes('--check-import-cancel'),cpuProfile:process.argv.includes('--profile-orbit')?'orbit.cpuprofile':profileCaptured?profileAction+'.cpuprofile':null,cancellationChecked:process.argv.includes('--check-cancel'),browser:browser.version(),machine:{platform:os.platform(),release:os.release(),arch:os.arch(),cpu:os.cpus()[0]?.model,logicalCpus:os.cpus().length,ramBytes:os.totalmem()},iterations,timingSummary,orbit,maxObservedHeapBytes:Math.max(before.JSHeapUsedSize,...samples.map(s=>s.heap.JSHeapUsedSize)),heapScope:'Samples after each operation only; not peak process memory.',viewport:{width:1280,height:800},bodies:expected.bodies.length,before,after:await heap(),samples}
+ result.fixtureIdentity=fixtureIdentity
  await writeFile(path.join(directory,'measurements.json'),JSON.stringify(result,null,2)+'\n')
  console.log(JSON.stringify(result))
 }finally{clearInterval(memoryTimer);await memoryPending;await browser?.close();await new Promise(resolve=>server.close(resolve))}

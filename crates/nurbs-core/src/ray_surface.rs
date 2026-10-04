@@ -128,19 +128,22 @@ fn net(
     }
     Ok(out)
 }
-fn average(a: [I; 2], b: [I; 2]) -> Result<[I; 2]> {
+fn blend(a: [I; 2], b: [I; 2], t: f64) -> Result<[I; 2]> {
     Ok([
-        a[0].mul(I::point(0.5))?.add(b[0].mul(I::point(0.5))?)?,
-        a[1].mul(I::point(0.5))?.add(b[1].mul(I::point(0.5))?)?,
+        a[0].mul(I::point(1. - t))?.add(b[0].mul(I::point(t))?)?,
+        a[1].mul(I::point(1. - t))?.add(b[1].mul(I::point(t))?)?,
     ])
 }
-fn split_line(mut row: Vec<[I; 2]>) -> Result<[Vec<[I; 2]>; 2]> {
+fn split_line(row: Vec<[I; 2]>) -> Result<[Vec<[I; 2]>; 2]> {
+    split_line_at(row, 0.5)
+}
+fn split_line_at(mut row: Vec<[I; 2]>, t: f64) -> Result<[Vec<[I; 2]>; 2]> {
     let n = row.len();
     let mut left = vec![row[0]];
     let mut right = vec![row[n - 1]];
     for count in (1..n).rev() {
         for j in 0..count {
-            row[j] = average(row[j], row[j + 1])?
+            row[j] = blend(row[j], row[j + 1], t)?
         }
         left.push(row[0]);
         right.push(row[count - 1])
@@ -153,7 +156,7 @@ fn split(net: &Net, axis: usize) -> Result<[Net; 2]> {
     let mut out = [net.clone(), net.clone()];
     if axis == 0 {
         for v in 0..nv {
-            let pair = split_line((0..nu).map(|u| net[u][v]).collect())?;
+            let pair = split_line_at((0..nu).map(|u| net[u][v]).collect(), 0.375)?;
             for side in 0..2 {
                 for u in 0..nu {
                     out[side][u][v] = pair[side][u]
@@ -162,7 +165,7 @@ fn split(net: &Net, axis: usize) -> Result<[Net; 2]> {
         }
     } else {
         for u in 0..nu {
-            let pair = split_line(net[u].clone())?;
+            let pair = split_line_at(net[u].clone(), 0.375)?;
             for side in 0..2 {
                 out[side][u] = pair[side].clone()
             }
@@ -181,6 +184,31 @@ enum Verdict {
     Excluded,
     Unique([I; 2]),
     Unresolved,
+}
+// Domain endpoints must agree exactly with the Bernstein subdivision recipe.
+// Rounded endpoints would silently move a certified/excluded cell. Stop with
+// explicit unresolved coverage when the next dyadic split is not representable.
+fn exact_split(lo: f64, hi: f64) -> Option<f64> {
+    fn sum_error(a: f64, b: f64, sum: f64) -> f64 {
+        let z = sum - a;
+        (a - (sum - z)) + (b - z)
+    }
+    let width = hi - lo;
+    let part = width * 0.375;
+    let mid = lo + part;
+    if !width.is_finite()
+        || !mid.is_finite()
+        || width < f64::MIN_POSITIVE * 18014398509481984.
+        || sum_error(hi, -lo, width) != 0.
+        || width.mul_add(0.375, -part) != 0.
+        || sum_error(lo, part, mid) != 0.
+        || mid <= lo
+        || mid >= hi
+    {
+        None
+    } else {
+        Some(mid)
+    }
 }
 fn krawczyk(net: &Net) -> Result<Verdict> {
     if (0..2).any(|k| {
@@ -361,11 +389,13 @@ pub fn intersections(
                 1
             };
         let [lo, hi] = cell.domain[axis];
-        let mid = lo + (hi - lo) * 0.5;
-        if mid <= lo || mid >= hi {
+        // A dyadic asymmetric split keeps common mid-plane roots inside cells.
+        // Roots on any actual cell boundary still require strict certification;
+        // changing the split never turns an unresolved root into an exclusion.
+        let Some(mid) = exact_split(lo, hi) else {
             report.unresolved.push(unresolved_domain(&cell)?);
             continue;
-        }
+        };
         let [left, right] = split(&cell.net, axis)?;
         for (net, range) in [(left, [lo, mid]), (right, [mid, hi])] {
             let mut domain = cell.domain;
@@ -467,6 +497,17 @@ mod tests {
             assert!(root.uv[0][0] <= u && root.uv[0][1] >= u);
             assert!(root.parameter[0] <= 1. + u && root.parameter[1] >= 1. + u)
         }
+    }
+    #[test]
+    fn mid_plane_crossings_survive_subdivision_and_rounding_stays_explicit() {
+        let r = intersections(&folded(), [0., 0.5, -1.], [0., 0., 1.], 1e-7, 10000).unwrap();
+        assert!(r.complete);
+        assert_eq!(r.roots.len(), 2);
+        for root in &r.roots {
+            assert!(root.uv[1][0] <= 0.5 && root.uv[1][1] >= 0.5);
+        }
+        assert_eq!(exact_split(0., 1.), Some(0.375));
+        assert_eq!(exact_split(0.5, 0.5_f64.next_up()), None);
     }
     #[test]
     fn tangency_coincidence_and_limits_never_claim_empty_coverage() {

@@ -362,6 +362,7 @@ pub fn distance(
         (1..=100_000).contains(&max_cells),
         "Surface distance needs 1..100000 cells",
     )?;
+    let axis_lower = crate::radial_bounds::axis_separation_lower(a, b);
     let aa = patches(a)?;
     let bb = patches(b)?;
     if aa.len().saturating_mul(bb.len()) > max_cells {
@@ -392,7 +393,7 @@ pub fn distance(
             }
             heap.push(Cell {
                 parts: [pa.clone(), pb.clone()],
-                lower: patch_lower(pa, pb)?,
+                lower: patch_lower(pa, pb)?.max(axis_lower),
                 order: cells,
             });
             cells += 1;
@@ -439,7 +440,7 @@ pub fn distance(
             let mut improved = Some(best);
             consider(a, b, uv, &mut improved)?;
             best = improved.unwrap();
-            let lower = patch_lower(&parts[0], &parts[1])?;
+            let lower = patch_lower(&parts[0], &parts[1])?.max(axis_lower);
             if lower <= best.upper {
                 heap.push(Cell {
                     parts,

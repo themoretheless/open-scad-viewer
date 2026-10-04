@@ -1,0 +1,30 @@
+{
+  "schema": "cad-partial-quarter-occt/1",
+  "scope": "Two fixed quarter-rim specimens; numerical volume and OCCT topology validity. General self-intersections and whole-domain tangency remain unqualified.",
+  "oracleConvergenceMm3": 0.0,
+  "passed": true,
+  "parts": [
+    {
+      "name": "negative",
+      "sha256": "d2ac8313ee09eb9bb4212e11e7f4de9cf402caa267ae90572ea62205659c8e7e",
+      "valid": true,
+      "solids": 1,
+      "volumeMm3": 7061.457370769891,
+      "expectedVolumeMm3": 7061.457370838772,
+      "volumeErrorMm3": 6.888058123877272e-08,
+      "integrationRelativeError": 7.593201722731463e-16,
+      "passed": true
+    },
+    {
+      "name": "positive",
+      "sha256": "3f9f622ac61c0853f19eef64654f78ce7f367903c421449280b7a176ec884ae0",
+      "valid": true,
+      "solids": 1,
+      "volumeMm3": 7061.457370769891,
+      "expectedVolumeMm3": 7061.457370838772,
+      "volumeErrorMm3": 6.888058123877272e-08,
+      "integrationRelativeError": 8.486519572464575e-16,
+      "passed": true
+    }
+  ]
+}

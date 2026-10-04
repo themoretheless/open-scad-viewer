@@ -1,0 +1,11 @@
+# Analytic curve parameter editing — validation and browser proof
+
+Arc sweep editing previously accepted zero and sub-0.1 degree magnitude despite the native sampler requiring 0.1..360 degrees. The UI now checks that range, displays a localized corrective message associated with the sweep field, blocks Apply and prevents profileEdit dispatch for zero/subminimum values. Signed sweep remains supported. Curve radius editing now has the native upper limit of 1,000,000 mm in addition to its 0.01 mm minimum.
+
+Two English/Russian component regression cases prove no profile worker dispatch for 0, 0.01, -0.05 degrees, valid -0.1 degree commit and canonical document restoration on Undo. Native history omits optional empty curves/surfaces arrays; the unit comparison normalizes both complete documents rather than treating those optional empty fields as geometry changes. Full UI suite: 316 passed, 63.89 seconds. TypeScript, Vite, dist and whitespace checks pass. DirectModeler 401,363 bytes; total assets 7,219,661 bytes. Validation/messages add 803 bytes; artifact budgets retain their previous margins. WASM unchanged.
+
+Four verified browser scenarios cover circles/arcs with actual mouse and keyboard actions in Chrome Canary 157.0.8081.0, active WebGPU, zero page/console errors. Radius values 0/-1/1000001 refuse Apply. Arc sweep 0/0.01/-0.05 produces the corrective message without dispatch. Fields accept center (2 cm,-5 mm), radius 6 mm, initial angle 30 degrees, arc sweep -120 degrees. Analytic identity and definitions are preserved; all sampled points are independently checked on the 6 mm circle and start/end against sin/cos formulas to 1e-9 mm.
+
+Complete exported documents are checked during preview/cancel, Undo/Redo and page reload. Keyboard Tab counts: circle 400, arc 482. A failed initial circle keyboard run exported before history restoration completed; the qualifier now waits for history-restore. Final evidence is in verified/. The arc command preview screenshot was inspected.
+
+Scope: these XY analytic edits and parameter values. All workplanes, all valid values, stale/transport error cases for curve editing, STEP extrusion of these edited fixtures and full P0–P3 remain open.

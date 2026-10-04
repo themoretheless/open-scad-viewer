@@ -31,7 +31,7 @@ let previousFocus: HTMLElement | null = null
 function restorePreviousFocus() {
   const target=previousFocus
   previousFocus=null
-  void nextTick(()=>{if(props.restoreFocus && target?.isConnected)target.focus({preventScroll:true})})
+  void nextTick(()=>{if(props.restoreFocus && target?.isConnected && (document.activeElement===document.body || dialogRef.value?.contains(document.activeElement)))target.focus({preventScroll:true})})
 }
 onBeforeUnmount(restorePreviousFocus)
 
@@ -174,7 +174,7 @@ function handleKeydown(event: KeyboardEvent) {
               :aria-disabled="!isPaletteCommandEnabled(command)"
               :aria-describedby="!isPaletteCommandEnabled(command) ? reasonId(index) : undefined"
               :data-palette-index="index"
-              @pointerenter="activatePointer(index)"
+              @pointermove="activatePointer(index)"
               @click="execute(command)"
             >
               <span class="command-copy">

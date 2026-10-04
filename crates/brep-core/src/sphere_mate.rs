@@ -154,10 +154,11 @@ pub(crate) fn snap_to_piece(piece: usize, w: [f64; 2]) -> [f64; 2] {
 }
 /// Piece parameter in loop (CCW) direction: piece 0 is (0,0)->(1,0), piece 1
 /// the rational quarter arc (1,0)->(0,1), piece 2 is (0,1)->(0,0).
-pub(crate) fn piece_tau(piece: usize, w: [f64; 2]) -> f64 {
+pub(crate) fn piece_tau(piece: usize, w: [f64; 2], pcurve:&Curve) -> f64 {
     match piece {
         0 => w[0],
         2 => 1. - w[1],
+        _ if pcurve.weights == [1.,1.,2.] => w[1]/(1.+w[0]),
         _ => quarter_arc_parameter(w[0], w[1]),
     }
 }
@@ -167,6 +168,23 @@ pub(crate) fn quarter_arc_parameter(cos: f64, sin: f64) -> f64 {
     let s = sin / (1. + cos);
     let aw = sphere_sphere::ARC_WEIGHT;
     s / (aw + s * (1. - aw))
+}
+#[cfg(test)]
+mod parameter_tests {
+    use super::*;
+    #[test]
+    fn sphere_boundary_parameter_preserves_legacy_and_rational_traversals(){
+        for weights in [vec![1.,sphere_sphere::ARC_WEIGHT,1.],vec![1.,1.,2.]] {
+            let curve=Curve{degree:2,knots:vec![0.,0.,0.,1.,1.,1.],
+                control_points:vec![vec![1.,0.],vec![1.,1.],vec![0.,1.]],weights,periodic:false};
+            assert!(sphere_sphere::unit_quarter_arc(&curve));
+            for i in 0..=100 {
+                let t=i as f64/100.;let point=curve.evaluate(t).unwrap().point;
+                let back=piece_tau(1,[point[0],point[1]],&curve);
+                assert!((back-t).abs()<5e-16,"weights={:?}, t={t}, recovered={back}",curve.weights);
+            }
+        }
+    }
 }
 pub(crate) fn strictly_inside_quarter_disk(uv: [f64; 2], margin: f64) -> bool {
     uv[0] > margin && uv[1] > margin && uv[0] * uv[0] + uv[1] * uv[1] < 1. - margin
@@ -466,10 +484,10 @@ impl<'m, M: Mate> Imprint<'m, M> {
                     let raw = [cc[0] + ruv * angle.cos(), cc[1] + ruv * angle.sin()];
                     let piece = piece_of(raw)?;
                     let w = snap_to_piece(piece, raw);
-                    let tau = piece_tau(piece, w);
                     let model = self.sphere_model();
                     let coedge = &model.loops[model.faces[patch].outer].coedges
                         [self.sphere_pieces[patch][piece]];
+                    let tau = piece_tau(piece, w, &coedge.pcurve);
                     let edge = coedge.edge;
                     let t = if coedge.reversed { 1. - tau } else { tau };
                     if !(1e-9..=1. - 1e-9).contains(&t) {

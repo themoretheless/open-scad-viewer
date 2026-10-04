@@ -5,7 +5,7 @@ import {MainSolidWorkerClient, type MainSolidPort} from '../src/services/mainSol
 import type {MainSolidRequest} from '../src/services/mainSolidProtocol'
 import type {TrussModel} from '../src/services/trussAnalysis'
 import {resolveTrussScenario} from '../src/services/trussScenario'
-import {extrudeDirectSketch} from '../src/services/directModeling'
+import {serializeDirectDocument,extrudeDirectSketch} from '../src/services/directModeling'
 import {previewMeshes} from '../src/services/mainModeling'
 import type {LighteningOptions} from '../src/services/solidLightening'
 
@@ -265,4 +265,136 @@ it('transforms typed scene meshes through postMessage without detaching or chang
  expect(Array.from(second.bodies[1].mesh.positions)).toEqual(Array.from(first.bodies[1].mesh.positions))
  expect(second.bodies[1].instance?.sourceId).toBe('a')
  expect(Math.min(...Array.from(second.bodies[1].mesh.positions).filter((_,i)=>i%3===0))).toBe(26)
+ const beforeDetach=structuredClone(second)
+ const detached=await client.run({kind:'sceneEdit',document:second,options:{...options,operation:'instance-detach',id:'linked',ids:['linked']}})
+ expect(detached.bodies[1].instance).toBeUndefined()
+ expect(detached.bodies[1].id).toBe('linked')
+ expect(detached.bodies[1].brep).toEqual(second.bodies[1].brep)
+ expect(Array.from(detached.bodies[1].mesh.positions)).toEqual(Array.from(second.bodies[1].mesh.positions))
+ expect(second).toEqual(beforeDetach)
+ const changedSource=await client.run({kind:'sceneEdit',document:detached,options})
+ expect(changedSource.bodies[1]).toEqual(detached.bodies[1])
+ expect(Array.from(changedSource.bodies[0].mesh.positions)).not.toEqual(Array.from(detached.bodies[0].mesh.positions))
 },30000)
+
+it('changes groups through the worker without changing geometry, identities or instance links',async()=>{
+ const client=new MainSolidWorkerClient(realWorker);clients.push(client)
+ const source=extrudeDirectSketch({id:'sketch',name:'Box',closed:true,points:[[0,0],[2,0],[2,3],[0,3]]},4,'source')
+ const options={operation:'instance-create' as const,id:'source',ids:['source'],createdId:'linked',x:10,y:0,z:0,axis:'z' as const,angle:0,scale:1}
+ const linked=await client.run({kind:'sceneEdit',document:{version:1,sketches:[],bodies:[source]},options})
+ const before=structuredClone(linked)
+ const grouped=await client.run({kind:'sceneEdit',document:linked,options:{...options,operation:'group-move',ids:['linked'],group:'Assembly'}})
+ expect(grouped.bodies[0]).toEqual(linked.bodies[0])
+ expect(grouped.bodies[1]).toEqual({...linked.bodies[1],group:'Assembly'})
+ expect(linked).toEqual(before)
+ const created=await client.run({kind:'sceneEdit',document:grouped,options:{...options,operation:'group-create',group:'Empty'}})
+ expect(created.groups).toEqual([{name:'Empty',source:''}]);expect(created.bodies).toEqual(grouped.bodies)
+ const ungrouped=await client.run({kind:'sceneEdit',document:created,options:{...options,operation:'group-move',ids:['linked'],group:''}})
+ expect(ungrouped.bodies).toEqual(linked.bodies)
+ await expect(client.run({kind:'sceneEdit',document:created,options:{...options,operation:'group-create',group:'Empty'}})).rejects.toThrow('Group already exists')
+ await expect(client.run({kind:'sceneEdit',document:created,options:{...options,operation:'group-create',group:''}})).rejects.toThrow('Invalid object group')
+})
+
+it('accepts compact scene snapshots with exact parity and rejects invalid geometry before metadata edits',async()=>{
+ const client=new MainSolidWorkerClient(realWorker);clients.push(client)
+ const source=extrudeDirectSketch({id:'sketch',name:'Box',closed:true,points:[[0,0],[2,0],[2,3],[0,3]]},4,'source')
+ const options={operation:'instance-create' as const,id:'source',ids:['source'],createdId:'linked',x:10,y:0,z:0,axis:'z' as const,angle:0,scale:1}
+ const linked=await client.run({kind:'sceneEdit',document:{version:1,sketches:[],bodies:[source]},options})
+ const text=serializeDirectDocument(linked),compact=JSON.parse(text)
+ expect(compact.bodies[1].mesh).toBeUndefined();expect(compact.bodies[1].brep).toBeUndefined()
+ for(const operation of ['group-move','group-create','instance-detach','transform','instance-transform','instance-create','instance-place'] as const){
+  const edit={...options,operation,id:operation==='instance-transform'||operation==='instance-place'?'linked':'source',createdId:'another-link',ids:['linked'],group:'Assembly'}
+  const full=await client.run({kind:'sceneEdit',document:linked,options:edit})
+  const restored=await client.run({kind:'sceneEdit',document:text,options:edit})
+  expect(restored).toEqual(full)
+ }
+ compact.bodies[0].mesh.indices[0]=99999
+ await expect(client.run({kind:'sceneEdit',document:JSON.stringify(compact),options:{...options,operation:'group-create',group:'Unsafe'}})).rejects.toThrow()
+ expect(linked.bodies[1].instance?.sourceId).toBe('source')
+})
+it('revolves retained holed profiles through postMessage and preserves source controls and identities',async()=>{
+ const {warmGeometryKernel}=await import('../src/services/geometry/kernel')
+ const {authorBrepProfile}=await import('../src/services/geometry/brepProfile')
+ const {withRetainedProfile}=await import('../src/services/retainedSketchProfile')
+ const {applySolidRevolve}=await import('../src/services/solidRevolve')
+ await warmGeometryKernel()
+ const profile=authorBrepProfile({kind:'polygon',rings:[[[3,0],[6,0],[6,4],[3,4]],[[4,1],[4,3],[5,3],[5,1]]]})
+ const sketch=withRetainedProfile({id:'profile',name:'Holed',closed:true,points:[]},profile)
+ const document={version:1 as const,bodies:[],sketches:[sketch]},before=structuredClone(document)
+ const options={sketchId:'profile',geometry:'exact' as const,operation:'new' as const,targetId:'',id:'result',name:'Revolved',tessellation:2,axis:'y' as const,offset:0,angle:90,segments:32}
+ const client=new MainSolidWorkerClient(realWorker);clients.push(client)
+ const result=await client.run({kind:'revolve',document,options})
+ expect(result).toEqual(applySolidRevolve(document,options))
+ expect(result.bodies[0].id).toBe('result')
+ expect(result.bodies[0].brep!.faces.filter(face=>face.holes.length===1)).toHaveLength(2)
+ expect(result.sketches[0].retainedProfile).toEqual(profile)
+ expect(document).toEqual(before)
+ await expect(client.run({kind:'revolve',document,options:{...options,offset:4}})).rejects.toThrow(/one side of its axis/)
+ expect(document).toEqual(before)
+})
+it('builds a retained holed loft through postMessage without changing source profiles',async()=>{
+ const {retainedLoftFixture}=await import('./support/retainedLoftFixture')
+ const {applySolidSceneEdit}=await import('../src/services/solidSceneEdit')
+ const sketches=await retainedLoftFixture()
+ const document={version:1 as const,bodies:[],sketches},before=structuredClone(document)
+ const options={operation:'loft' as const,id:'base',ids:['base','top'],createdId:'loft',x:0,y:0,z:0,axis:'z' as const,angle:0,scale:1}
+ const client=new MainSolidWorkerClient(realWorker);clients.push(client)
+ const result=await client.run({kind:'sceneEdit',document,options})
+ expect(result).toEqual(applySolidSceneEdit(document,options))
+ expect(result.bodies[0].id).toBe('loft')
+ expect(result.bodies[0].brep!.faces.filter(face=>face.holes.length===1)).toHaveLength(2)
+ expect(result.sketches).toEqual(sketches)
+ expect(document).toEqual(before)
+ await expect(client.run({kind:'sceneEdit',document,options:{...options,ids:['top','base']}})).rejects.toThrow(/positive sketch normal/)
+ expect(document).toEqual(before)
+})
+
+it('preserves retained profile segment provenance across the real worker boundary',async()=>{
+ const {prepareSolidProfile}=await import('../src/services/solidProfilePreparation')
+ const {warmGeometryKernel}=await import('../src/services/geometry/kernel')
+ await warmGeometryKernel()
+ const document={version:1 as const,bodies:[],sketches:[
+  {id:'arc',name:'Arc',closed:false,points:[[999,999],[998,998]] as [number,number][],analytic:{kind:'arc' as const,center:[0,0] as [number,number],radius:2,start:0,sweep:-180}},
+  {id:'line',name:'Line',closed:false,points:[[-2,0],[2,0]] as [number,number][]},
+ ]},before=structuredClone(document)
+ const client=new MainSolidWorkerClient(realWorker);clients.push(client)
+ const result=await client.run({kind:'profilePrepare',document,ids:['arc','line'],tolerance:0})
+ expect(result).toEqual(prepareSolidProfile(document,['arc','line'],0))
+ expect(result.report.accepted).toBe(true)
+ expect(result.report.curveSources).toHaveLength(3)
+ expect(result.report.curveSources!.filter(s=>s.chain===0).every(s=>s.reversed)).toBe(true)
+ expect(result.document.sketches[0].id).toBe('arc')
+ expect(document).toEqual(before)
+})
+
+it('retains multispan trim proofs and incomplete budgets across real postMessage',async()=>{
+ const {readFileSync}=await import('node:fs')
+ const cases=JSON.parse(readFileSync(new URL('../docs/qualification/cad-roadmap-2026-09-28/solid-distance-2026-09-30/contract-fixtures.json',import.meta.url),'utf8')).cases
+ const options=structuredClone(cases[3].request)
+ const coedge=options.a.loops[options.a.faces[0].outer].coedges[0],curve=coedge.pcurve,[a,b]=curve.controlPoints
+ coedge.pcurve={degree:2,knots:[0,0,0,.5,1,1,1],controlPoints:[0,.25,.75,1].map(t=>a.map((x:number,i:number)=>x*(1-t)+b[i]*t)),weights:[1,1,1,1],periodic:false}
+ const before=structuredClone(options),client=new MainSolidWorkerClient(realWorker);clients.push(client)
+ const result=await client.run({kind:'solidDistance',options})
+ expect(result.validity[0].trimValid).toBe(true)
+ const limited=await client.run({kind:'solidDistance',options:{...options,validityLimits:{...options.validityLimits,trimCells:1}}})
+ expect(limited.validity[0].trimValid).toBe(false)
+ expect(limited.converged).toBe(false)
+ expect(limited.reason).toBe('volume-validity-unproven')
+ expect(options).toEqual(before)
+})
+
+it('prepares original general NURBS through the real worker boundary',async()=>{
+ const {emptyDirectDocument}=await import('../src/services/directModeling')
+ const {prepareSolidProfile}=await import('../src/services/solidProfilePreparation')
+ const {warmGeometryKernel}=await import('../src/services/geometry/kernel');await warmGeometryKernel()
+ const document=emptyDirectDocument()
+ document.curves=[{id:'nurbs',name:'NURBS',curve:{degree:2,knots:[0,0,0,1,1,1],controlPoints:[[0,0],[1,-1],[2,0]],weights:[1,1,1]}}]
+ document.sketches=[{id:'line',name:'Line',closed:false,points:[[2,0],[2,2],[0,2],[0,0]]}]
+ const before=structuredClone(document),client=new MainSolidWorkerClient(realWorker);clients.push(client)
+ const result=await client.run({kind:'profilePrepare',document,ids:['nurbs','line'],tolerance:0})
+ expect(result).toEqual(prepareSolidProfile(document,['nurbs','line'],0))
+ expect(result.report.accepted).toBe(true)
+ expect(result.document.sketches[0].id).toBe('nurbs')
+ expect(result.document.curves).toEqual([])
+ expect(document).toEqual(before)
+})
