@@ -30,6 +30,26 @@ fn control_tangents(v: &Value) -> Result<Option<[Vec<[f64; 3]>; 2]>> {
 }
 pub fn dispatch(v: Value) -> Result<Value> {
     let op: String = field(&v, "op")?;
+    if op == "surface_projective_strip_jets_audit" {
+        let order:usize=field(&v,"order")?;
+        let report=continuity::inspect_surface_projective_strip_jets(
+            &field::<surface::Surface>(&v,"reference")?,&field::<surface::Surface>(&v,"edited")?,
+            &field::<String>(&v,"referenceBoundary")?,&field::<String>(&v,"editedBoundary")?,
+            order,field(&v,"normalScale")?,field(&v,"maxWork")?)?;
+        return Ok(json!({"certified":report.certified,"exactIdentity":report.exact_identity,
+            "regularityCertified":report.regularity_certified,"work":report.work,"reason":report.reason,
+            "method":"constant-projective-strip-jets","certifiedOrder":if report.certified {Some(order)}else{None}}));
+    }
+    if op == "surface_exact_strip_jets_audit" {
+        let a=field::<surface::Surface>(&v,"reference")?;
+        let b=field::<surface::Surface>(&v,"edited")?;
+        let ab=field::<String>(&v,"referenceBoundary")?;
+        let bb=field::<String>(&v,"editedBoundary")?;
+        let report=continuity::inspect_surface_exact_strip_jets(&a,&b,&ab,&bb,
+            field(&v,"order")?,field(&v,"normalScale")?,field(&v,"maxWork")?)?;
+        return Ok(json!({"certified":report.certified,"exactIdentity":report.exact_identity,
+            "regularityCertified":report.regularity_certified,"work":report.work,"reason":report.reason}));
+    }
     if op == "surface_station_normal_scale" {
         return encode(continuity::propose_station_normal_scale(
             &field::<surface::Surface>(&v, "reference")?,

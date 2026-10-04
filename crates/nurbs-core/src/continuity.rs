@@ -2,6 +2,8 @@
 //! must agree after affine parameter normalization. Regularity of each seam
 //! is checked separately with outward-rounded Bernstein normal enclosures.
 //! Representation reference: MIT Hyperbook, sections 1.4.2 and 1.5.
+mod exact_strip;
+pub use exact_strip::{ExactStripJetReport, inspect_surface_exact_strip_jets, inspect_surface_projective_strip_jets};
 use crate::{check,curve::basis,surface::Surface,Result};
 use value_codec::{Value,json};
 mod regularity;
