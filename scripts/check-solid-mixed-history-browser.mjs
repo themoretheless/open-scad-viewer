@@ -82,11 +82,17 @@ try{
     await solid.getByRole('button',{name:'ISO',exact:true}).click()
     const mesh=current.bodies.find(b=>b.id===name).mesh,candidates=[]
     for(let i=0;i<mesh.indices.length;i+=3){const points=mesh.indices.slice(i,i+3).map(j=>mesh.positions.slice(j*3,j*3+3));if(points.every(p=>Math.abs(p[2]-z)<1e-7))candidates.push([0,1,2].map(a=>points.reduce((sum,p)=>sum+p[a],0)/3))}
-    const point=await solid.locator('svg[aria-label="Холст тел 3D"]').evaluate((svg,{candidates,id})=>{
-     for(const [x,y,z] of candidates){const p=new DOMPoint((x-y)*Math.SQRT1_2,(x+y)*Math.SQRT1_2/Math.sqrt(3)-z*Math.sqrt(2/3)).matrixTransform(svg.getScreenCTM());if(document.elementFromPoint(p.x,p.y)?.getAttribute('data-body')===id)return {x:p.x,y:p.y}}
-     return null
-    },{candidates,id:name})
-    assert.ok(point,`${name}: visible top cap`);await page.mouse.click(point.x,point.y)
+    const points=await solid.locator('svg[aria-label="Холст тел 3D"]').evaluate((svg,candidates)=>{
+     return candidates.map(([x,y,z])=>new DOMPoint((x-y)*Math.SQRT1_2,(x+y)*Math.SQRT1_2/Math.sqrt(3)-z*Math.sqrt(2/3)).matrixTransform(svg.getScreenCTM()))
+      .filter(p=>document.elementFromPoint(p.x,p.y)?.closest('svg')===svg).map(p=>({x:p.x,y:p.y}))
+    },candidates)
+    let picked=false
+    for(const point of points){
+     await page.mouse.click(point.x,point.y)
+     if(await selector.inputValue()===String(top)&&await solid.getByRole('button',{name:title,exact:true}).getAttribute('aria-pressed')==='true'){picked=true;break}
+     await select()
+    }
+    assert.ok(picked,`${name}: viewport picking selects the top cap`)
    }
    await command('Push / Pull');await input('Расстояние, мм','1 mm');await cancelPreview();await command('Push / Pull');await input('Расстояние, мм','1 mm');await activate(apply);await save()
    await select();const tool=solid.getByRole('button',{name:`Tool ${cycle}`,exact:true})
