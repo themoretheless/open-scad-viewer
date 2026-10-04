@@ -17,7 +17,23 @@ try{
  const {playwright}=await loadQualificationPlaywrightPackage()
  browser=await playwright.chromium.launch({headless:true,...(process.env.CHROMIUM_EXECUTABLE?{executablePath:process.env.CHROMIUM_EXECUTABLE}:{})})
  page=await browser.newPage({acceptDownloads:true,viewport:{width:1440,height:1100}});page.on('pageerror',(e:Error)=>errors.push(String(e)))
- await page.addInitScript(()=>{const Native=window.Worker;(window as any).__bodyEditRequests=0;window.Worker=class extends Native{postMessage(message:any,...args:any[]){if(message?.job?.kind==='bodyEdit')(window as any).__bodyEditRequests++;return super.postMessage(message,...args)}}})
+ await page.addInitScript(()=>{
+  const Native=window.Worker,w=window as any;w.__bodyEditRequests=0
+  window.Worker=class extends Native{
+   constructor(...args:any[]){super(...args);this.addEventListener('message',(event:any)=>{
+    if(w.__holdBodyEdit&&event.data?.kind==='bodyEdit'&&event.data.ok){
+     event.stopImmediatePropagation();const deliver=this.onmessage;w.__lateBodyEdit=()=>deliver?.call(this,event);w.__holdBodyEdit=false
+    }
+   },true)}
+   postMessage(message:any,...args:any[]){
+    if(message?.job?.kind==='bodyEdit'){
+     w.__bodyEditRequests++
+     if(w.__failBodyEdit){w.__failBodyEdit=false;queueMicrotask(()=>this.onmessage?.({data:{version:1,id:message.id,kind:'bodyEdit',ok:false,error:{name:'Error',code:'CAD_TRANSPORT',message:'Injected worker transport failure'}}} as any));return}
+    }
+    return super.postMessage(message,...args)
+   }
+  }
+ })
  await page.goto(`http://127.0.0.1:${(server.address() as any).port}`)
  const solid=page.getByRole('region',{name:'Solid — CAD-лепка',exact:true}),menu=solid.locator('summary[title="Файл"]'),apply=solid.getByRole('button',{name:'Готово · Enter',exact:true})
  async function tabTo(control:any){for(let i=0;i<500;i++){if(await control.evaluate((e:HTMLElement)=>e===document.activeElement))return;await page.keyboard.press('Tab');tabs++}throw Error('Unreachable control')}
@@ -51,12 +67,20 @@ try{
  assert.deepEqual(await exportDoc('invalid-import-preserved.json'),before)
  await activate(solid.getByRole('button',{name:'Rotated cuboid',exact:true}))
  async function begin(){await activate(solid.getByRole('button',{name:'Рёбра',exact:true}));await ready();await choose(solid.getByRole('combobox',{name:'Выбрать ребро',exact:true}),'0');await activate(page.getByRole('button',{name:'Команды',exact:true}));const search=page.getByRole('combobox',{name:'Search commands / Поиск команд'});if(keyboard){await tabTo(search);await page.keyboard.insertText('Скруглить 3D')}else await search.fill('Скруглить 3D');await search.press('Enter');await choose(solid.getByRole('combobox',{name:'Тип скругления',exact:true}),'variable');await fill('Радиус A, мм','0.5 mm');await fill('Радиус B, мм','1.5 mm');await apply.click({trial:true})}
+ if(process.argv.includes('--faults')){
+  await begin();await page.evaluate(()=>{(window as any).__failBodyEdit=true});await fill('Радиус B, мм','1.6 mm')
+  const retry=solid.getByRole('button',{name:'Повторить вычисление',exact:true});await retry.waitFor();assert.equal(await apply.isDisabled(),true)
+  assert.deepEqual(await exportDoc('worker-error-preserved.json'),before)
+  await activate(retry);await apply.click({trial:true});await page.keyboard.press('Escape');assert.deepEqual(await exportDoc('retry-cancelled.json'),before)
+  await begin();await page.evaluate(()=>{(window as any).__holdBodyEdit=true});await fill('Радиус B, мм','1.7 mm');await page.waitForFunction(()=>typeof(window as any).__lateBodyEdit==='function')
+  await page.keyboard.press('Escape');await page.evaluate(()=>{(window as any).__lateBodyEdit()});assert.deepEqual(await exportDoc('late-result-preserved.json'),before)
+ }
  await begin();await page.keyboard.press('Escape');assert.deepEqual(await exportDoc('cancelled.json'),before)
  await begin();const requests=await page.evaluate(()=>(window as any).__bodyEditRequests);assert.ok(requests>0);await page.screenshot({path:path.join(directory,'preview.png')});await activate(apply)
  const changed=await exportDoc('applied.json');assert.equal(changed.bodies[0].id,'rotated');assert.deepEqual(changed.bodies[0].material,before.bodies[0].material)
  const [p,q]=source.edges[0].vertices.map(i=>source.vertices[i].point),length=Math.hypot(...p.map((x,i)=>x-q[i]));const expectedVolume=480-(1-Math.PI/4)*length*(.25+.75+2.25)/3,volume=analyzeNurbsBrep(changed.bodies[0].brep).signedVolumeMm3;assert.ok(Math.abs(volume-expectedVolume)<1e-4)
  await activate(solid.getByRole('button',{name:'↶',exact:true}));assert.deepEqual(await exportDoc('undo.json'),before);await activate(solid.getByRole('button',{name:'↷',exact:true}));assert.deepEqual(await exportDoc('redo.json'),changed)
  await solid.getByRole('status',{name:'Сохранено в браузере',exact:true}).waitFor();await page.reload();await solid.getByRole('button',{name:'Rotated cuboid',exact:true}).waitFor();assert.deepEqual(await exportDoc('reload.json'),changed);assert.deepEqual(errors,[])
- const report={passed:true,keyboard,tabs,workerRequests:requests,cancel:true,invalidImportPreservesDocument:true,undoRedo:true,reload:true,volumeMm3:volume,expectedVolumeMm3:expectedVolume,errors,scope:'one rotated cuboid edge through current UI; all-edge qualification is native/product/worker evidence'};await writeFile(path.join(directory,'report.json'),JSON.stringify(report,null,2));console.log(report)
+ const report={passed:true,workerFaults:process.argv.includes('--faults'),keyboard,tabs,workerRequests:requests,cancel:true,invalidImportPreservesDocument:true,undoRedo:true,reload:true,volumeMm3:volume,expectedVolumeMm3:expectedVolume,errors,scope:'one rotated cuboid edge through current UI; all-edge qualification is native/product/worker evidence'};await writeFile(path.join(directory,'report.json'),JSON.stringify(report,null,2));console.log(report)
 }catch(error){if(page){await page.screenshot({path:path.join(directory,'failure.png')}).catch(()=>{});await writeFile(path.join(directory,'failure.txt'),await page.locator('body').innerText().catch(()=>''))}throw error}
 finally{await browser?.close();await new Promise<void>(resolve=>server.close(()=>resolve()))}

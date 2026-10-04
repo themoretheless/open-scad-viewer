@@ -1,0 +1,15 @@
+{
+  "passed": true,
+  "workerFaults": true,
+  "keyboard": false,
+  "tabs": 0,
+  "workerRequests": 12,
+  "cancel": true,
+  "invalidImportPreservesDocument": true,
+  "undoRedo": true,
+  "reload": true,
+  "volumeMm3": 478.14011741611205,
+  "expectedVolumeMm3": 478.1401174161112,
+  "errors": [],
+  "scope": "one rotated cuboid edge through current UI; all-edge qualification is native/product/worker evidence"
+}
