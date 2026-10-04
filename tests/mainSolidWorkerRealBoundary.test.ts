@@ -448,3 +448,37 @@ it('converges oblique sphere distances across the real worker boundary',async()=
   expect(options).toEqual(before)
  }
 })
+
+it('certifies every parameter of an offset contact band through the actual worker and WASM',async()=>{
+ const a={degreeU:1,degreeV:1,knotsU:[0,0,1,1],knotsV:[0,0,1,1],controlPoints:[[[0,0,0],[0,1,0]],[[1,0,0],[1,1,0]]],weights:[[1,1],[1,1]],periodicU:false,periodicV:false}
+ const b=structuredClone(a);for(const row of b.controlPoints)for(const p of row){const z=p[1];p[1]=.5;p[2]=z}
+ const options={a,b,distances:[.2,.2] as [number,number],fixedAxis:0 as const,fixedInterval:[.35,.39] as [number,number],firstOther:[.25,.35] as [number,number],secondDomain:[[.30,.44],[.15,.25]] as [[number,number],[number,number]],maxSpans:2}
+ const before=structuredClone(options),client=new MainSolidWorkerClient(realWorker);clients.push(client)
+ const pending=client.run({kind:'offsetContactBand',options})
+ // postMessage and the expectation must retain their own request snapshot.
+ options.fixedInterval[0]=.36
+ options.secondDomain[0][0]=.31
+ const r=await pending
+ expect(r).toMatchObject({status:'continuous-branch',rootForEveryParameterProven:true,continuousBranchProven:true,wholeCurveComplete:false,trimMembershipProven:false,topologyAuthority:false})
+ expect(r.witness!.firstUV[0]).toEqual(before.fixedInterval)
+ options.fixedInterval[0]=before.fixedInterval[0];options.secondDomain[0][0]=before.secondDomain[0][0]
+ expect(options).toEqual(before)
+ const narrow=await client.run({kind:'offsetContactBand',options:{...options,secondDomain:[[.36,.38],[.15,.25]]}})
+ expect(narrow).toMatchObject({status:'unresolved',rootForEveryParameterProven:false,witness:null})
+ await expect(client.run({kind:'offsetContactBand',options:{...options,maxSpans:0}})).rejects.toMatchObject({code:'NURBS_INVALID_INPUT'})
+ expect((await client.run({kind:'offsetContactBand',options})).status).toBe('continuous-branch')
+ // Capture a genuinely successful worker reply, cancel before its admission,
+ // then deliver it through the original callback. Cancellation must stay final.
+ const heldPort=realWorker(),heldClient=new MainSolidWorkerClient(()=>heldPort);clients.push(heldClient)
+ const cancelled=heldClient.run({kind:'offsetContactBand',options})
+ const rejection=expect(cancelled).rejects.toMatchObject({code:'CAD_CANCELLED'})
+ const callback=heldPort.onmessage!
+ let release!:(event:MessageEvent)=>void
+ const captured=new Promise<MessageEvent>(resolve=>{release=resolve})
+ heldPort.onmessage=event=>release(event)
+ const event=await captured
+ expect(event.data.ok).toBe(true)
+ heldClient.cancel();callback(event)
+ await rejection
+ expect((await client.run({kind:'offsetContactBand',options})).status).toBe('continuous-branch')
+},30_000)

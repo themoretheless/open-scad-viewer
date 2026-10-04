@@ -798,6 +798,27 @@ pub fn dispatch(v: Value) -> Result<Value> {
             "rootExistenceProven":false,"wholeCurveComplete":false,"trimMembershipProven":false,"topologyAuthority":false}),
         );
     }
+    if op == "surface_offset_contact_band" {
+        let a: Surface = field(&v, "a")?;
+        let b: Surface = field(&v, "b")?;
+        let r = surface_offset::certify_contact_band(
+            [&a, &b], field(&v, "distances")?, field(&v, "fixedAxis")?,
+            field(&v, "fixedInterval")?, field(&v, "firstOther")?,
+            field(&v, "secondDomain")?, field(&v, "maxSpans")?,
+        )?;
+        let (status, witness) = match r {
+            surface_offset::ContactBand::Excluded => ("excluded", Value::Null),
+            surface_offset::ContactBand::Unresolved => ("unresolved", Value::Null),
+            surface_offset::ContactBand::ContinuousBranch(w) => (
+                "continuous-branch", json!({"firstUV":w.first_uv,"secondUV":w.second_uv,
+                "centerIntervalMm":w.point,"contractionUpper":w.contraction_upper}),
+            ),
+        };
+        return Ok(json!({"method":"interval-offset-band-krawczyk","scope":"parameter-band-within-tube",
+            "status":status,"witness":witness,"rootForEveryParameterProven":status=="continuous-branch",
+            "uniqueWithinTube":status=="continuous-branch","continuousBranchProven":status=="continuous-branch",
+            "wholeCurveComplete":false,"trimMembershipProven":false,"topologyAuthority":false}));
+    }
     if op == "surface_offset_contact_section" {
         let a: Surface = field(&v, "a")?;
         let b: Surface = field(&v, "b")?;

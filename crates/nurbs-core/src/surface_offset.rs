@@ -403,9 +403,76 @@ pub fn certify_contact_section(
     second: [[f64; 2]; 2],
     max_spans: usize,
 ) -> Result<crate::surface_contact::Verdict> {
+    check(fixed.is_finite(), "Choose a finite fixed offset parameter")?;
+    certify_contact_box(
+        surfaces,
+        distances,
+        fixed_axis,
+        [fixed; 2],
+        first_other,
+        second,
+        max_spans,
+    )
+}
+
+#[derive(Debug)]
+pub enum ContactBand {
+    Excluded,
+    Unresolved,
+    /// For every parameter in fixed_interval there is exactly one contact
+    /// inside the supplied three-dimensional tube. Its dependence on that
+    /// parameter is continuous. This says nothing about roots outside the tube.
+    ContinuousBranch(crate::surface_contact::Witness),
+}
+/// Uniform contraction and inclusion over a complete parameter interval.
+/// The residual at the tube midpoint retains the entire driving interval;
+/// no sampled section is substituted for interval coverage. Source continuity
+/// and a uniform contraction give continuous dependence of the unique root.
+/// UVs are source parameters and point is an offset-center enclosure. Trim,
+/// global branch completeness, envelope regularity and topology are unproved.
+pub fn certify_contact_band(
+    surfaces: [&Surface; 2],
+    distances: [f64; 2],
+    fixed_axis: usize,
+    fixed_interval: [f64; 2],
+    first_other: [f64; 2],
+    second: [[f64; 2]; 2],
+    max_spans: usize,
+) -> Result<ContactBand> {
+    check(
+        fixed_interval.iter().all(|v| v.is_finite()) && fixed_interval[0] < fixed_interval[1],
+        "Offset contact band needs a positive finite driving interval",
+    )?;
+    use crate::surface_contact::Verdict;
+    Ok(
+        match certify_contact_box(
+            surfaces,
+            distances,
+            fixed_axis,
+            fixed_interval,
+            first_other,
+            second,
+            max_spans,
+        )? {
+            Verdict::Excluded => ContactBand::Excluded,
+            Verdict::Unresolved => ContactBand::Unresolved,
+            Verdict::Witness(w) => ContactBand::ContinuousBranch(w),
+        },
+    )
+}
+
+fn certify_contact_box(
+    surfaces: [&Surface; 2],
+    distances: [f64; 2],
+    fixed_axis: usize,
+    fixed_interval: [f64; 2],
+    first_other: [f64; 2],
+    second: [[f64; 2]; 2],
+    max_spans: usize,
+) -> Result<crate::surface_contact::Verdict> {
     use crate::surface_contact::{SectionVerdict, Verdict, Witness, section_krawczyk};
     check(
-        fixed_axis < 2 && fixed.is_finite(),
+        fixed_axis < 2 && fixed_interval.iter().all(|v| v.is_finite()),
         "Choose a finite fixed offset parameter",
     )?;
     check(
@@ -416,7 +483,7 @@ pub fn certify_contact_section(
     )?;
     let free = 1 - fixed_axis;
     let mut first = [first_other; 2];
-    first[fixed_axis] = [fixed; 2];
+    first[fixed_axis] = fixed_interval;
     let initial = [
         bounds(surfaces[0], first, distances[0], max_spans)?,
         bounds(surfaces[1], second, distances[1], max_spans)?,
@@ -879,6 +946,71 @@ mod tests {
         assert!(matches!(separated, Verdict::Excluded));
     }
     #[test]
+    fn contact_band_covers_every_driving_parameter_and_refuses_an_inadequate_tube() {
+        let a = plane();
+        let mut b = a.clone();
+        for row in &mut b.control_points {
+            for p in row {
+                let z = p[1];
+                p[1] = 0.5;
+                p[2] = z;
+            }
+        }
+        let r = certify_contact_band(
+            [&a, &b],
+            [0.2, 0.2],
+            0,
+            [0.35, 0.39],
+            [0.25, 0.35],
+            [[0.30, 0.44], [0.15, 0.25]],
+            2,
+        )
+        .unwrap();
+        let ContactBand::ContinuousBranch(w) = r else {
+            panic!("{r:?}")
+        };
+        assert_eq!(w.first_uv[0], [0.35, 0.39]);
+        // Samples check the analytic fixture; the actual proof uses the full
+        // interval residual and Jacobian, including both driving endpoints.
+        for t in [0.35, 0.351, 0.367, 0.389, 0.39] {
+            enclosed(w.point, [t, 0.3, 0.2]);
+        }
+        let r = certify_contact_band(
+            [&a, &b],
+            [0.2, 0.2],
+            0,
+            [0.35, 0.39],
+            [0.25, 0.35],
+            [[0.36, 0.38], [0.15, 0.25]],
+            2,
+        )
+        .unwrap();
+        assert!(matches!(r, ContactBand::Unresolved));
+        let r = certify_contact_band(
+            [&a, &a],
+            [0.2, 0.2],
+            0,
+            [0.35, 0.39],
+            [0.25, 0.35],
+            [[0.30, 0.44], [0.25, 0.35]],
+            2,
+        )
+        .unwrap();
+        assert!(matches!(r, ContactBand::Unresolved));
+        assert!(
+            certify_contact_band(
+                [&a, &b],
+                [0.2, 0.2],
+                0,
+                [0.39, 0.35],
+                [0.25, 0.35],
+                [[0.30, 0.44], [0.15, 0.25]],
+                2
+            )
+            .is_err()
+        );
+    }
+    #[test]
     fn rational_cylinder_plane_offsets_have_a_certified_contact_section() {
         use crate::surface_contact::Verdict;
         let a = cylinder();
@@ -899,6 +1031,23 @@ mod tests {
         }
         let y = (3.2_f64 * 3.2 - 2.2 * 2.2).sqrt();
         let b_u = y / 4.;
+        let band = certify_contact_band(
+            [&a, &b],
+            [0.2, 0.2],
+            1,
+            [0.369, 0.371],
+            [u - 1e-4, u + 1e-4],
+            [[b_u - 1e-4, b_u + 1e-4], [0.367, 0.373]],
+            2,
+        )
+        .unwrap();
+        let ContactBand::ContinuousBranch(branch) = band else {
+            panic!("{band:?}")
+        };
+        for v in [0.369, 0.3693, 0.37, 0.3707, 0.371] {
+            enclosed(branch.point, [2.2, y, 5. * v]);
+        }
+
         let r = certify_contact_section(
             [&a, &b],
             [0.2, 0.2],

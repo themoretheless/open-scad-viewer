@@ -55,3 +55,17 @@ export const certifyNurbsOffsetContactSection=(options:OffsetContactOptions):Off
  callNurbsRust('surface_offset_contact_section',options)
 export const findNurbsOffsetCandidateBoxes=(options:OffsetCandidateOptions):OffsetCandidates=>
  callNurbsRust('surface_offset_candidates',options)
+
+export interface OffsetContactBandOptions extends Omit<OffsetContactOptions,'fixed'> {
+ fixedInterval:Interval
+}
+export interface OffsetContactBand {
+ method:'interval-offset-band-krawczyk';scope:'parameter-band-within-tube'
+ status:'continuous-branch'|'excluded'|'unresolved'
+ witness:OffsetContactSection['witness']
+ rootForEveryParameterProven:boolean;uniqueWithinTube:boolean;continuousBranchProven:boolean
+ wholeCurveComplete:false;trimMembershipProven:false;topologyAuthority:false
+}
+/** Uniform root coverage within a tube; does not exclude branches outside it. */
+export const certifyNurbsOffsetContactBand=(options:OffsetContactBandOptions):OffsetContactBand=>
+ callNurbsRust('surface_offset_contact_band',options)

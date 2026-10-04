@@ -1,7 +1,8 @@
+import {mainSolidExpectation,mainSolidResult} from '../src/services/mainSolidProtocol'
 import {beforeAll,expect,it} from 'vitest'
 import {warmGeometryKernel} from '../src/services/geometry/kernel'
 import type {NurbsSurface} from '../src/services/nurbsSurface'
-import {evaluateNurbsSurfaceOffset,boundNurbsSurfaceOffset,boundNurbsSurfaceOffsetJacobian,certifyNurbsOffsetContactSection,findNurbsOffsetCandidateBoxes} from '../src/services/nurbsSurfaceOffset'
+import {certifyNurbsOffsetContactBand,evaluateNurbsSurfaceOffset,boundNurbsSurfaceOffset,boundNurbsSurfaceOffsetJacobian,certifyNurbsOffsetContactSection,findNurbsOffsetCandidateBoxes} from '../src/services/nurbsSurfaceOffset'
 beforeAll(async()=>{await warmGeometryKernel()})
 const plane=():NurbsSurface=>({degreeU:1,degreeV:1,knotsU:[0,0,1,1],knotsV:[0,0,1,1],controlPoints:[[[0,0,0],[0,1,0]],[[1,0,0],[1,1,0]]],weights:[[1,1],[1,1]],periodicU:false,periodicV:false})
 function contains(bounds:number[][],point:number[]){point.forEach((x,k)=>{expect(bounds[k][0]).toBeLessThanOrEqual(x);expect(bounds[k][1]).toBeGreaterThanOrEqual(x)})}
@@ -32,4 +33,21 @@ it('keeps unvisited candidate boxes and refuses invalid second surfaces',()=>{
  expect(r.rootExistenceProven).toBe(false);expect(r.topologyAuthority).toBe(false)
  const invalid=plane();invalid.weights[0][0]=0
  expect(()=>findNurbsOffsetCandidateBoxes({...options,b:invalid})).toThrow()
+})
+
+it('proves a continuous branch over the driving interval and refuses a tube missing its endpoints',()=>{
+ const a=plane(),b=plane();for(const row of b.controlPoints)for(const p of row){const z=p[1];p[1]=.5;p[2]=z}
+ const options={a,b,distances:[.2,.2] as [number,number],fixedAxis:0 as const,fixedInterval:[.35,.39] as [number,number],firstOther:[.25,.35] as [number,number],secondDomain:[[.30,.44],[.15,.25]] as [[number,number],[number,number]],maxSpans:2}
+ const before=structuredClone(options),r=certifyNurbsOffsetContactBand(options)
+ expect(r).toMatchObject({status:'continuous-branch',rootForEveryParameterProven:true,uniqueWithinTube:true,continuousBranchProven:true,wholeCurveComplete:false,trimMembershipProven:false,topologyAuthority:false})
+ for(const t of [.35,.351,.37,.389,.39])contains(r.witness!.centerIntervalMm,[t,.3,.2])
+ expect(options).toEqual(before)
+ const expectation=mainSolidExpectation({kind:'offsetContactBand',options})
+ expect(mainSolidResult(expectation,r)).toBe(true)
+ expect(mainSolidResult(expectation,{...r,wholeCurveComplete:true})).toBe(false)
+ expect(mainSolidResult(expectation,{...r,continuousBranchProven:false})).toBe(false)
+ expect(mainSolidResult(expectation,{...r,witness:{...r.witness!,firstUV:[[.36,.38],r.witness!.firstUV[1]]}})).toBe(false)
+ expect(mainSolidResult(expectation,{...r,witness:{...r.witness!,contractionUpper:.5}})).toBe(false)
+ const narrow=certifyNurbsOffsetContactBand({...options,secondDomain:[[.36,.38],[.15,.25]]})
+ expect(narrow).toMatchObject({status:'unresolved',rootForEveryParameterProven:false,continuousBranchProven:false,witness:null})
 })

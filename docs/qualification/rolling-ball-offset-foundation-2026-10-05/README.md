@@ -52,3 +52,25 @@ The complete P1 requirement includes general NURBS edges, cylinder/cylinder case
 - Packed geometry chunk measured 3,674,022 bytes; production assets measured 7,906,737 bytes. Explicit package budgets move to 3,675,000 and 7,910,000 bytes respectively. No runtime dependency was added.
 
 This delivery provides kernel queries and typed adapters. It does not admit general fillets to the worker or UI, nor prove a complete centerline or trimmed solid.
+
+## Uniform contact band extension
+
+`certify_contact_band` fixes a full interval of one source parameter and encloses the offset equation at the midpoint of the other three parameters over that entire interval. The same interval Jacobian and preconditioner enclose every section. A contraction below 0.5 and a strictly invariant tube prove existence and uniqueness within the supplied tube for every driving parameter, including endpoints. Continuity of the source offset equation and uniform contraction establish continuous dependence of the root on the driving parameter.
+
+This is a local graph certificate within one tube. It does not exclude other branches outside that tube, prove global curve completeness, admit UV trims, certify an embedded envelope, or construct a solid fillet. A failed inclusion returns unresolved; it never substitutes sampled sections for uniform coverage.
+
+Native checks exercise a moving plane/plane contact and a rational cylinder/plane band, and refuse a tube which contains the midpoint section but misses both driving endpoints. The JSON operation and typed adapter expose separate `rootForEveryParameterProven`, `uniqueWithinTube`, and `continuousBranchProven` flags; whole-curve, trim and topology gates remain false. Native offset/transport tests: 19 passed. WASM validation of the new band operation passes.
+
+### Worker boundary
+
+The existing MainSolid worker accepts the `offsetContactBand` job. Its response validator checks the exact driving interval, strict inclusion of all three free parameter intervals, a finite contraction bound below 0.5, and all three uniform-contact flags. It rejects promoted whole-curve, trim or topology claims. Non-certified outcomes must have a null witness and false uniform-contact flags.
+
+The client expectation copies request intervals independently of the host object, because postMessage also snapshots the payload. A real-worker test mutates the host intervals after sending the job and expects the original driving interval in the response. This guards against a UI edit changing admission of an already-dispatched result. Forty existing worker runtime/transport tests and Vue/MCP type checks pass; the new real-worker test passes on the final WASM artifact, including precise invalid-input errors, successful Retry, cancellation after capture of a genuine successful worker response, and delivery of that late response to the original callback.
+
+### Final band delivery checks
+
+- 96 product tests across nine files passed, including actual WASM band coverage and real-worker transport/recovery tests.
+- Vue and MCP type checks, production Vite build, package verification and diff whitespace checks passed.
+- WASM: 11,003,806 bytes; SHA-256 `eec0102d42cfb8f512ac0ffd31e12a989752b438574c2c0b5116d706ed4c7cfd`.
+- Production assets: 7,907,646 bytes; existing package limits remain unchanged.
+- No new UI fillet command is admitted by this delivery.

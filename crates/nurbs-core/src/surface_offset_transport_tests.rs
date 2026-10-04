@@ -71,3 +71,41 @@ fn offset_candidate_transport_retains_incomplete_work_and_validates_second_opera
     invalid["b"]["weights"][0][0] = json!(0.);
     assert!(dispatch(invalid).is_err());
 }
+
+#[test]
+fn offset_band_transport_exposes_uniform_coverage_without_global_admission() {
+    let a = plane();
+    let mut b = a.clone();
+    for row in &mut b.control_points {
+        for p in row {
+            let z = p[1];
+            p[1] = 0.5;
+            p[2] = z;
+        }
+    }
+    let request = json!({"op":"surface_offset_contact_band","a":a,"b":b,"distances":[0.2,0.2],
+        "fixedAxis":0,"fixedInterval":[0.35,0.39],"firstOther":[0.25,0.35],
+        "secondDomain":[[0.30,0.44],[0.15,0.25]],"maxSpans":2});
+    let r = dispatch(request.clone()).unwrap();
+    assert_eq!(r["status"], json!("continuous-branch"));
+    for field in [
+        "rootForEveryParameterProven",
+        "uniqueWithinTube",
+        "continuousBranchProven",
+    ] {
+        assert_eq!(r[field], json!(true));
+    }
+    for field in [
+        "wholeCurveComplete",
+        "trimMembershipProven",
+        "topologyAuthority",
+    ] {
+        assert_eq!(r[field], json!(false));
+    }
+    let mut narrow = request;
+    narrow["secondDomain"][0] = json!([0.36, 0.38]);
+    let r = dispatch(narrow).unwrap();
+    assert_eq!(r["status"], json!("unresolved"));
+    assert_eq!(r["rootForEveryParameterProven"], json!(false));
+    assert!(r["witness"].is_null());
+}
