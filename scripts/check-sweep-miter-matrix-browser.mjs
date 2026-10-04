@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import {createHash} from 'node:crypto'
 import {createServer} from 'node:http'
-import {mkdir,readFile,writeFile} from 'node:fs/promises'
+import {mkdir,readFile,readdir,writeFile} from 'node:fs/promises'
 import path from 'node:path'
 import {loadQualificationPlaywrightPackage} from './qualificationPlaywrightPackage.mjs'
 
@@ -9,31 +9,30 @@ const dist=path.resolve('dist')
 const output=path.resolve(process.argv[2]??'docs/qualification/sweep-ui-matrix-2026-10-03')
 const filter=process.argv.find(a=>a.startsWith('--mode='))?.slice(7)
 const widthFilter=Number(process.argv.find(a=>a.startsWith('--width='))?.slice(8))
-const sources=[
- 'miter-periodic-hollow.r','miter-unclamped-hollow.r',
- 'progressive-miter-reconstructed-conic-half.r','progressive-miter-reconstructed-conic-one.r','progressive-miter-reconstructed-conic-two.r',
- 'closed-miter-frame-guide-affine-hollow-corrected.r','closed-progressive-miter-reconstructed-frame-guide-affine-hollow.r',
- 'progressive-miter-reconstructed-guide-frame-affine-hollow.r','progressive-miter-reconstructed-moving-frame-guide-affine-hollow.r',
- 'miter-combined-frame-affine-hollow.r','miter-affine-hollow.r',
- 'miter-combined-frame-guide-affine-hollow.r','miter-combined-frame-guide-affine-hollow-corrected.r','miter-moving-frame-guide-affine-hollow-corrected.r','miter-authored-frame-hollow.r','miter-guide-hollow.r','miter-guide-affine-hollow.r',
- 'miter-combined-frame-affine-hollow-corrected.r','miter-authored-frame-hollow-corrected.r',
- 'miter-guide-hollow-corrected.r','miter-guide-affine-hollow-corrected.r',
- 'miter-unsegmented-plain-hollow.r','miter-unsegmented-affine-hollow.r',
- 'miter-unsegmented-frame-affine-hollow.r','miter-unsegmented-guide-affine-hollow.r',
- 'miter-hollow-body.r','miter-hollow-corrected.r','closed-miter-hollow-body.r',
- 'progressive-miter-certified-hollow.r','progressive-miter-circle-corrected-hollow.r','progressive-miter-spatial-circle-corrected-hollow.r','progressive-miter-affine-circle-corrected-hollow.r','progressive-miter-oblique-circle-corrected-hollow.r','miter-rational-curved-guide-frame-affine-hollow.r','progressive-miter-station-g2-hollow.r','progressive-miter-reconstructed-stations.r','progressive-miter-reconstructed-sharp.r','closed-miter-frame-guide-affine-hollow.r','miter-g1-profile-frame-guide-affine.r',
-].filter(file=>!filter||file===filter)
+const catalog=JSON.parse(await readFile(new URL('../docs/design/sweep-qualification-catalog.json',import.meta.url),'utf8'))
+const sources=catalog.browser.solid.filter(file=>!filter||file===filter)
 assert.ok(sources.length,'Unknown mode filter')
 const viewports=[{width:1440,height:1000},{width:600,height:1000}].filter(v=>!widthFilter||v.width===widthFilter)
 assert.ok(viewports.length,'Unknown viewport filter')
 await mkdir(output,{recursive:true})
 const sha=bytes=>createHash('sha256').update(bytes).digest('hex')
-const report={schema:'sweep-miter-ui-matrix/1',recordedAt:new Date().toISOString(),
+const report={selectionCatalogSha256:sha(await readFile(new URL('../docs/design/sweep-qualification-catalog.json',import.meta.url))),schema:'sweep-miter-ui-matrix/1',recordedAt:new Date().toISOString(),
  scope:'Finite retained-miter UI scenarios; held dispatch tests lifecycle cancellation, not mid-kernel interruption latency. Headless CPU fallback is not GPU qualification.',
  geometryWasmSha256:sha(await readFile('public/wasm/geometry-kernel.wasm')),
  appSourceSha256:sha(await readFile('src/App.vue')),distIndexSha256:sha(await readFile(path.join(dist,'index.html'))),cases:[]}
+// Include implementation files as well as compatibility facades in provenance.
+const implementationSources=[]
+async function collectSources(directory){
+ for(const entry of await readdir(directory,{withFileTypes:true})){
+  const file=path.join(directory,entry.name)
+  if(entry.isDirectory())await collectSources(file)
+  else if(file.endsWith('.ts'))implementationSources.push(file)
+ }
+}
+await collectSources('src/services/sweep')
+await collectSources('src/services/geometry/brep')
 report.sourceHashes = Object.fromEntries(await Promise.all([
- 'src/App.vue', 'src/services/sweepRetainedCorrespondence.ts', 'src/services/geometry/brep.ts',
+ ...implementationSources.sort(), 'src/App.vue', 'src/services/sweepRetainedCorrespondence.ts', 'src/services/geometry/brep.ts',
  'src/features/DirectModeler.vue', 'src/generated/geometry-kernels/bytes.ts',
 ].map(async file => [file, sha(await readFile(file))])))
 const save=()=>writeFile(path.join(output,'matrix.json'),JSON.stringify(report,null,2)+'\n')

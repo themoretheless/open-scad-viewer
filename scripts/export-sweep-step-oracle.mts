@@ -283,6 +283,9 @@ const fixtures=[
   sourceSha256:createHash('sha256').update(affineRushSource).digest('hex'),construction:affineRushConstruction,
   expectedVolume:Math.PI*(.5**2-.2**2)*10*1.5},
 ]
+const qualificationCatalog=JSON.parse(readFileSync(new URL('../docs/design/sweep-qualification-catalog.json',import.meta.url),'utf8'))
+const catalogFiles:string[]=qualificationCatalog.step.baseline.map((entry:{file:string})=>entry.file)
+if(new Set(fixtures.map(f=>f.file)).size!==fixtures.length||fixtures.length!==catalogFiles.length||catalogFiles.some(file=>!fixtures.some(f=>f.file===file)))throw Error('STEP fixtures differ from the shared qualification catalog')
 const cases=fixtures.map(({model,...fixture})=>{
  const auditBudgets={
   ...DEFAULT_SWEEP_VOLUME_BUDGETS,maxTrimPairs:10000,maxTrimCells:100000,
@@ -293,6 +296,8 @@ const cases=fixtures.map(({model,...fixture})=>{
  const nativeProfileSmoothness=inspectMiterProfileSmoothness(model,caps)
  const nativeRetainedWallCharts=inspectSweepRetainedWallCharts(model,caps,100000)
  const nativeVolume=inspectSweepVolume(model,caps,auditBudgets)
+ const expectedAdmission=qualificationCatalog.step.baseline.find((entry:{file:string})=>entry.file===fixture.file).nativeAdmission
+ if(nativeVolume.solidGeometryCertified!==(expectedAdmission==='certify'))throw Error('Native admission differs from catalog: '+fixture.file)
  if('requireNativeSolid' in fixture&&fixture.requireNativeSolid&&!nativeVolume.solidGeometryCertified)throw Error('Required native Solid certificate refused: '+fixture.file)
  const nativeBoundary=caps.length?inspectSweepEmbedding(model,caps,auditBudgets):null
  let exactWork=0
@@ -317,5 +322,5 @@ const cases=fixtures.map(({model,...fixture})=>{
  if(wallSamples.length!==fixture.faces-caps.length)throw Error('Unexpected wall sample coverage')
  return {...fixture,capFaces:caps,nativeProfileSmoothness,nativeRetainedWallCharts,nativeVolume,nativeBoundary,nativeExactUses,exactWork,edges:model.edges.length,faceLoops:model.faces.map(face=>({outer:model.loops[face.outer]!.coedges.map(c=>c.edge),holes:face.holes.map(loop=>model.loops[loop]!.coedges.map(c=>c.edge))})),edgeCurves:model.edges.map(edge=>({curve:edge.curve,samples:[0,.25,.5,.75,1].map(u=>({u,point:evaluateNurbsCurve(edge.curve,u).point}))})),wallCoedges:walls.map(face=>model.loops[face.outer]!.coedges.map(c=>({edge:c.edge,reversed:c.reversed,pcurve:c.pcurve}))),wallSurfaces:walls.map(face=>face.surface),wallSamples,surfaceToleranceMm:1e-8,solids:1,sha256:createHash('sha256').update(text).digest('hex'),relativeVolumeTolerance:1e-7}
 })
-writeFileSync(resolve(root,'manifest.json'),JSON.stringify({schema:'sweep-external-step/2',units:'mm',artifactProvenance,cases},null,2)+'\n')
+writeFileSync(resolve(root,'manifest.json'),JSON.stringify({schema:'sweep-external-step/2',units:'mm',selectionCatalogSha256:createHash('sha256').update(readFileSync(new URL('../docs/design/sweep-qualification-catalog.json',import.meta.url))).digest('hex'),artifactProvenance,cases},null,2)+'\n')
 console.log(root)
