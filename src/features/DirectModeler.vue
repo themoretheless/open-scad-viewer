@@ -33,6 +33,7 @@ import { SolidGpuLayer, isSolidGpuSupported, smoothTriangleList, type SolidGpuBo
 import { rayTriangleDistance } from '../services/math3d'
 import ModelingFloorGrid from '../components/ModelingFloorGrid.vue'
 import ModelingGridControls from '../components/ModelingGridControls.vue'
+import WorkspaceActionBar from '../components/WorkspaceActionBar.vue'
 import {createSolidPreviewWorker} from '../services/solidPreviewWorker'
 import { sameSketchPlane } from '../services/directExtrusion'
 import { useModelingGrid } from '../services/modelingGrid'
@@ -2812,6 +2813,8 @@ function up(e: PointerEvent) {
 // Command palette: every tool, primitive and context action of the workspace, searchable by its Russian or English name.
 const paletteOpen = ref(false)
 const notice = ref('')
+// Creation strips stay out of the way once the scene has content; the Create button brings them back.
+const createOpen = ref(document.value.bodies.length === 0 && document.value.sketches.length === 0)
 const dockOpen = ref(storageGet('scad-solid-dock') === 'true')
 const dockTab = ref<'scene' | 'props'>('scene')
 watch(dockOpen, open => storageSet('scad-solid-dock', String(open)))
@@ -3380,6 +3383,8 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
       <button class="input-mode-toggle" :aria-pressed="inputMode === 'touch'" :title="label('Переключить управление: тач / мышь', 'Switch controls: touch / mouse')" @click="toggleInputMode">{{ inputMode === 'touch' ? label('Тач', 'Touch') : label('Мышь', 'Mouse') }}</button>
       <button v-if="inputMode === 'touch'" :aria-pressed="touchNavigate" @click="toggleTouchNavigation">{{ label('Навигация', 'Navigate') }}</button>
       <button :aria-pressed="compactWorkspace" @click="compactWorkspace = !compactWorkspace">{{ compactWorkspace ? label('Инструменты', 'Tools') : label('Больше места', 'More space') }}</button>
+      <button class="create-toggle" :aria-pressed="createOpen" :aria-expanded="createOpen" :title="label('Фигуры и примитивы', 'Shapes and primitives')" @click="createOpen = !createOpen">{{ label('Создать', 'Create') }}</button>
+      <span class="ws-count" aria-live="polite">{{ label('Выбрано', 'Selected') }}: {{ selectedIds.length }}</span>
       <button @click="showHelp = !showHelp" title="Keyboard shortcuts">?</button>
       <button class="command-search" :title="label('Поиск команд · Ctrl/⌘ K', 'Search commands · Ctrl/⌘ K')" @click="paletteOpen = true"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><span>{{ label('Команда…', 'Command…') }}</span><kbd>Ctrl K</kbd></button>
       <span v-if="sketchSnapPending" role="status" aria-label="sketch-snap-preparation">{{ label('Готовлю привязки эскизов…','Preparing sketch snaps…') }} <button @click="cancelSketchSnaps">Esc</button></span>
@@ -3430,7 +3435,7 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
         <button :disabled="!document.bodies.length" @click="sendToMesh">{{ label('Открыть в Mesh', 'Open in Mesh') }}</button>
       </div></details>
     </header>
-    <div class="sketch-start-bar" :aria-label="label('От плоской фигуры к объёму', 'From a flat shape to a solid')">
+    <div v-show="createOpen || canExtrudeSketch || choosingSketchFace" class="sketch-start-bar" :aria-label="label('От плоской фигуры к объёму', 'From a flat shape to a solid')">
       <strong>{{ label('Плоские фигуры', 'Flat shapes') }}</strong>
       <button v-for="item in [{ tool: 'rectangle' as const, ru: 'Прямоугольник', en: 'Rectangle', key: 'R' }, { tool: 'circle' as const, ru: 'Круг', en: 'Circle', key: 'C' }, { tool: 'polyline' as const, ru: 'Контур', en: 'Contour', key: 'L' }]" :key="item.tool" type="button" :aria-pressed="tool === item.tool" :title="`${label(item.ru,item.en)} · ${item.key}`" @click="beginSketch(item.tool)">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path :d="TOOL_ICONS[item.tool]" /></svg>{{ label(item.ru,item.en) }} · {{ item.key }}
@@ -3442,7 +3447,7 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
       <span class="subtle">{{ selectedSketch && !selectedSketch.closed ? label('Для объёма нужен замкнутый контур', 'Close the contour to create a solid') : label('Нарисуйте на плоскости → задайте высоту → Enter', 'Draw on a plane → set height → Enter') }}</span>
     </div>
     <div v-if="choosingSketchFace || (workplaneBodyId && tool!=='select')" class="workplane-hint" role="status">{{ choosingSketchFace ? label('Выберите плоскую грань тела в 3D. Esc — отмена.', 'Pick a planar body face in 3D. Esc cancels.') : label('Рисуйте на выделенной грани в 3D или в панели эскиза. Затем нажмите «Выдавить».', 'Draw on the highlighted face in 3D or in the sketch pane, then choose Extrude.') }}</div>
-    <div class="primitive-bar">
+    <div v-show="createOpen" class="primitive-bar">
       <strong>{{ label('Примитивы','Primitives') }}</strong>
       <button v-for="kind in primitiveKinds" :key="kind" class="primitive-icon" :disabled="!kernelReady" :title="primitiveLabel(kind)" :aria-label="primitiveLabel(kind)" @click="addPrimitive(kind)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><path :d="PRIMITIVE_ICONS[kind]" /></svg></button>
       <span class="primitive-divider" aria-hidden="true"></span>
@@ -3532,6 +3537,15 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
               <button class="tool-icon" :disabled="!selectedBody" :title="label('Скачать выбранное тело в выбранном формате','Download the selected body in the chosen format')" :aria-label="label('Скачать', 'Download')" @click="downloadBody"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><path :d="TOOL_ICONS.download" /></svg></button></template>
           </div>
           <ModelingGridControls :locale="locale" snapping />
+          <WorkspaceActionBar v-if="pane === '3d' && selectedBody && !commandActive" :label="label('Действия над телом', 'Body actions')">
+            <span class="ws-name">{{ selectedBody.name || label('Тело', 'Body') }}</span>
+            <span class="ws-sep" aria-hidden="true"></span>
+            <button type="button" :aria-pressed="movingBody" :title="label('Двигать тело · G', 'Move body · G')" @click="movingBody = !movingBody">{{ label('Двигать', 'Move') }}</button>
+            <button type="button" :title="label('Вычесть: A − B', 'Subtract: A − B')" @click="beginSubtract()">{{ label('Вычесть', 'Subtract') }}</button>
+            <button type="button" :aria-pressed="!!isolatedBodyIds.length" @click="toggleBodyIsolation">{{ label('Изолировать', 'Isolate') }}</button>
+            <span class="ws-sep" aria-hidden="true"></span>
+            <button type="button" class="danger" :title="label('Удалить · Del', 'Delete · Del')" @click="remove">{{ label('Удалить', 'Delete') }}</button>
+          </WorkspaceActionBar>
           <div class="canvas-wrap" :class="{'profile-preparation-pane':pane==='2d' && (isProfileCommand(advancedOp)||advancedOp==='offset')}">
             <div class="canvas-viewport">
             <canvas v-if="pane === '3d'" :ref="mountGpuCanvas" class="gpu-layer" :style="{visibility:gpuActive?'visible':'hidden'}" aria-hidden="true"></canvas>
@@ -4347,6 +4361,12 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
 .direct-workspace .pane > .modeling-grid-controls :deep(details > div) { top: auto; bottom: 100%; right: auto; left: 0; }
 .direct-workspace .workspace-state { gap: 6px 10px; padding: 3px 12px; border-bottom: 1px solid var(--hairline); background: var(--surface); }
 .direct-workspace .workspace-state .state-legend { display: none; }
+.direct-workspace .command-guidance {
+  position: absolute; z-index: 6; left: 50%; bottom: 44px; transform: translateX(-50%); max-width: calc(100% - 24px);
+  border: 1px solid var(--accent); border-radius: 10px; background: color-mix(in srgb, var(--surface) 98%, transparent); box-shadow: 0 8px 28px rgba(0,0,0,.4);
+}
+.direct-workspace .command-guidance.failed { border-color: var(--danger); }
+.direct-workspace .ws-count { color: var(--text-dim); font-size: 11px; white-space: nowrap; }
 .direct-workspace .splitter { border: 0; background: var(--hairline); }
 .direct-workspace .splitter span { display: none; }
 .direct-workspace .splitter:hover, .direct-workspace .splitter:focus-visible { background: var(--accent); }

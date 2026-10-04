@@ -5,6 +5,7 @@ import { computed, nextTick, ref, shallowRef, watch } from 'vue'
 import { stringifyMeshJson } from '../services/meshJson'
 import ModelingFloorGrid from '../components/ModelingFloorGrid.vue'
 import ModelingGridControls from '../components/ModelingGridControls.vue'
+import WorkspaceActionBar from '../components/WorkspaceActionBar.vue'
 import CommandPalette from '../components/CommandPalette.vue'
 import type { PaletteCommand } from '../services/commandSearch'
 import { SCULPT_FALLOFFS, SCULPT_KINDS, buildSculptBrush, isFractionalSculptKind, type SculptFalloff, type SculptKind } from '../services/geometryEditing'
@@ -429,7 +430,7 @@ async function downloadMesh() {
 
 // Command palette: header actions, object tools and edit operations, filtered to what applies to the current selection.
 const paletteOpen = ref(false)
-const dockOpen = ref(storageGet('scad-mesh-dock') !== 'false')
+const dockOpen = ref(storageGet('scad-mesh-dock') === 'true')
 const dockTab = ref<'scene' | 'props'>('scene')
 watch(dockOpen, open => storageSet('scad-mesh-dock', String(open)))
 const propsOpen = computed({ get: () => dockOpen.value && dockTab.value === 'props', set: open => { if (open) { dockOpen.value = true; dockTab.value = 'props' } else dockTab.value = 'scene' } })
@@ -479,6 +480,7 @@ function onWorkspaceKey(event: KeyboardEvent) {
   if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') { event.preventDefault(); paletteOpen.value = true; return }
   if (event.key === 'Escape') { if (elementDrag) { cancelElementDrag(); return } if (propsOpen.value) { propsOpen.value = false; return } emit('close') }
   if ((event.target as HTMLElement).matches('input,textarea,select')) return
+  if (event.key === '\\' && !event.ctrlKey && !event.metaKey && !event.altKey) { event.preventDefault(); dockOpen.value = !dockOpen.value; return }
   const modes: Record<string, MeshSelectMode> = { '1': 'object', '2': 'vertex', '3': 'edge', '4': 'face' }
   if (modes[event.key]) { selectMode.value = modes[event.key]; return }
   if (event.key.toLowerCase() === 'f') resetView()
@@ -643,15 +645,16 @@ const sceneFaces = computed(() => scene.value.flatMap(object =>
       <strong>{{ label('Mesh', 'Mesh') }}</strong>
       <button type="button" class="command-search" :title="label('Поиск команд · Ctrl/⌘ K', 'Search commands · Ctrl/⌘ K')" @click="paletteOpen = true"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><span>{{ label('Команда…', 'Command…') }}</span><kbd>Ctrl K</kbd></button>
       <span class="hint"></span>
-      <button type="button" class="icon" :disabled="!undoable" :title="label('Отменить · Ctrl/⌘ Z', 'Undo · Ctrl/⌘ Z')" :aria-label="label('Отменить', 'Undo')" @click="undo"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 14 4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-3"/></svg></button>
-      <details class="file-menu"><summary :title="label('Файл', 'File')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6"/></svg><span>{{ label('Файл', 'File') }}</span><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></summary><div>
+      <span class="ws-count" aria-live="polite">{{ label('Выбрано', 'Selected') }}: {{ selected ? 1 : 0 }}</span>
+      <button type="button" class="icon mesh-undo" :disabled="!undoable" :title="label('Отменить · Ctrl/⌘ Z', 'Undo · Ctrl/⌘ Z')" :aria-label="label('Отменить', 'Undo')" @click="undo"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 14 4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-3"/></svg></button>
+      <details class="file-menu mesh-file"><summary :title="label('Файл', 'File')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6"/></svg><span>{{ label('Файл', 'File') }}</span><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></summary><div>
         <button type="button" @click="fileInput?.click()">{{ label('Импорт STL / OBJ / PLY / OFF / AMF / 3MF', 'Import STL / OBJ / PLY / OFF / AMF / 3MF') }}</button>
         <button type="button" :disabled="!selected" @click="downloadStl">{{ label('Скачать STL выбранного', 'Download selected as STL') }}</button>
         <label class="file-row"><select v-model="exportFormat" :aria-label="label('Формат экспорта', 'Export format')"><option v-for="format in MESH_EXPORT_FORMATS" :key="format" :value="format">{{ MESH_FORMAT_LABELS[format] }}</option></select><button type="button" :disabled="!selected" @click="downloadMesh">{{ label('Скачать', 'Download') }}</button></label>
         <button type="button" @click="downloadJson">{{ label('Скачать проект JSON', 'Download JSON project') }}</button>
         <button type="button" :disabled="!document.objects.length" @click="emit('exportToSolid', document)">{{ label('Открыть в Solid', 'Open in Solid') }}</button>
       </div></details>
-      <button type="button" class="icon" :disabled="!redoable" :title="label('Повторить · Ctrl/⌘ Shift Z', 'Redo · Ctrl/⌘ Shift Z')" :aria-label="label('Повторить', 'Redo')" @click="redo"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 14 5-5-5-5"/><path d="M20 9H9a5 5 0 0 0 0 10h3"/></svg></button>
+      <button type="button" class="icon mesh-redo" :disabled="!redoable" :title="label('Повторить · Ctrl/⌘ Shift Z', 'Redo · Ctrl/⌘ Shift Z')" :aria-label="label('Повторить', 'Redo')" @click="redo"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 14 5-5-5-5"/><path d="M20 9H9a5 5 0 0 0 0 10h3"/></svg></button>
     </header>
     <CommandPalette v-if="paletteOpen" :open="paletteOpen" :commands="meshCommands.filter(command => command.enabled !== false)" @close="paletteOpen = false" @execute="executeMeshCommand" />
 
@@ -676,6 +679,17 @@ const sceneFaces = computed(() => scene.value.flatMap(object =>
         <p v-if="error" class="error" role="alert">{{ error }}</p>
       </div>
       <ModelingGridControls :locale="locale" />
+      <WorkspaceActionBar v-if="selected" :label="label('Действия над объектом', 'Object actions')">
+        <span class="ws-name">{{ selected.name }}</span>
+        <span class="ws-sep" aria-hidden="true"></span>
+        <template v-if="selectMode === 'face'">
+          <button type="button" @click="applyExtrude">{{ label('Выдавить', 'Extrude') }}</button>
+          <button type="button" @click="applyInset">Inset</button>
+        </template>
+        <button type="button" :aria-pressed="propsOpen" @click="propsOpen = !propsOpen">{{ label('Свойства', 'Properties') }}</button>
+        <span class="ws-sep" aria-hidden="true"></span>
+        <button type="button" class="danger" @click="removeSelected">{{ label('Удалить', 'Delete') }}</button>
+      </WorkspaceActionBar>
       <div class="mesh-stage">
       <div class="mesh-stage-view">
       <div class="mesh-view-wrap">
@@ -728,7 +742,6 @@ const sceneFaces = computed(() => scene.value.flatMap(object =>
           </g>
         </g>
       </svg>
-      </div>
       </div>
       </div>
       <aside class="side-dock" :class="{ collapsed: !dockOpen }" :aria-label="label('Панель', 'Panel')">
@@ -828,6 +841,7 @@ const sceneFaces = computed(() => scene.value.flatMap(object =>
           </template>
         </div>
       </aside>
+      </div>
     </div>
   </div>
 </template>
@@ -952,3 +966,11 @@ const sceneFaces = computed(() => scene.value.flatMap(object =>
 .mesh-body > :deep(.modeling-grid-controls details > div) { top: auto; bottom: 100%; right: auto; left: 0; }
 </style>
 
+<style scoped>
+/* Same header as Solid: history on the left, selection count, file menu on the right. */
+.mesh-undo { order: 0; }
+.mesh-redo { order: 1; }
+.mesh-bar .hint { order: 2; }
+.mesh-bar .ws-count { order: 3; color: var(--text-dim); font-size: 11px; white-space: nowrap; }
+.mesh-file { order: 4; }
+</style>
