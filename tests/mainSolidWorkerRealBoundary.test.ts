@@ -32,6 +32,27 @@ function realWorker(){
 }
 afterEach(async()=>{clients.splice(0).forEach(c=>c.dispose());await Promise.all(workers.splice(0).map(w=>w.terminate()));vi.unstubAllGlobals()})
 
+it('rounds all rotated cuboid edges with endpoint radii through the real body-edit worker',async()=>{
+  const {createBrepBox,transformNurbsBrep,tessellateNurbsBrep,analyzeNurbsBrep}=await import('../src/services/geometry/brep')
+  const source=createBrepBox([-7,3,-2],[3,11,4]),a=.37,b=-.61
+  const brep=transformNurbsBrep(source,[
+    [Math.cos(a)*Math.cos(b),-Math.sin(a),Math.cos(a)*Math.sin(b),17],
+    [Math.sin(a)*Math.cos(b),Math.cos(a),Math.sin(a)*Math.sin(b),-9],
+    [-Math.sin(b),0,Math.cos(b),23],[0,0,0,1],
+  ])
+  const body={id:'rotated',name:'Rotated',brep,mesh:tessellateNurbsBrep(brep)}
+  const document={version:1 as const,sketches:[],bodies:[body]},before=JSON.stringify(document)
+  const client=new MainSolidWorkerClient(realWorker);clients.push(client)
+  for(let edge=0;edge<brep.edges.length;edge++){
+    const result=await client.run({kind:'bodyEdit',document,options:{operation:'edge-fillet',id:body.id,face:0,edges:[edge],openings:[],segments:8,distance:0,radius:.5,endRadius:1.5,filletMode:'variable',axis:'z'}})
+    const [p,q]=source.edges[edge].vertices.map(i=>source.vertices[i].point)
+    const length=Math.hypot(...p.map((x,i)=>x-q[i]))
+    expect(result.bodies[0].id).toBe(body.id)
+    expect(analyzeNurbsBrep(result.bodies[0].brep!).signedVolumeMm3).toBeCloseTo(480-(1-Math.PI/4)*length*(.25+.75+2.25)/3,4)
+  }
+  expect(JSON.stringify(document)).toBe(before)
+},60_000)
+
 it('prepares and extrudes polynomial rounded profiles through the shipped worker',async()=>{
   const client=new MainSolidWorkerClient(realWorker);clients.push(client)
   const points=[[[3,0],[3,3],[0,3]],[[0,3],[-3,3],[-3,0]],[[-3,0],[-3,-3],[0,-3]],[[0,-3],[3,-3],[3,0]]]

@@ -1,7 +1,7 @@
 import {expect,it} from 'vitest'
 import {solidExactEdgeFeature} from '../src/services/solidExactEdgeFeature'
 import {solidTopology} from '../src/services/directSolidTools'
-import {createBrepBox,tessellateNurbsBrep,analyzeNurbsBrep,inspectNurbsBrep} from '../src/services/geometry/brep'
+import {createBrepBox,tessellateNurbsBrep,analyzeNurbsBrep,inspectNurbsBrep,transformNurbsBrep} from '../src/services/geometry/brep'
 import {DirectHistory,parseDirectDocument} from '../src/services/directModeling'
 import {stringifyMeshJson} from '../src/services/meshJson'
 
@@ -14,6 +14,29 @@ function fixture(){
  })
  return {body,vertical}
 }
+it('preserves endpoint ordering, dimensions and identity for variable-radius rounds on all rotated cuboid edges',()=>{
+ const source=createBrepBox([-7,3,-2],[3,11,4]),a=.37,b=-.61
+ const brep=transformNurbsBrep(source,[
+  [Math.cos(a)*Math.cos(b),-Math.sin(a),Math.cos(a)*Math.sin(b),17],
+  [Math.sin(a)*Math.cos(b),Math.cos(a),Math.sin(a)*Math.sin(b),-9],
+  [-Math.sin(b),0,Math.cos(b),23],[0,0,0,1],
+ ])
+ const body={id:'rotated',name:'Rotated part',brep,mesh:tessellateNurbsBrep(brep),material:{name:'Copper',color:'#cc7744'}}
+ const before=stringifyMeshJson(body)
+ for(let edge=0;edge<brep.edges.length;edge++)for(const [start,end] of [[.5,1.5],[1.5,.5]]){
+  const [p,q]=source.edges[edge].vertices.map(i=>source.vertices[i].point)
+  const length=Math.hypot(...p.map((x,i)=>x-q[i]))
+  const result=solidExactEdgeFeature(body,[edge],start,'fillet','brep',{mode:'variable',endRadius:end})
+  expect(result.evidence.audit.ok&&result.evidence.namingComplete).toBe(true)
+  expect(result.body.id).toBe(body.id);expect(result.body.material).toEqual(body.material)
+  expect(analyzeNurbsBrep(result.body.brep).signedVolumeMm3).toBeCloseTo(480-(1-Math.PI/4)*length*(start**2+start*end+end**2)/3,4)
+  const history=new DirectHistory({version:1,sketches:[],bodies:[body]})
+  history.commit({...history.document,bodies:[result.body]})
+  expect(history.undo().bodies[0].brep).toEqual(body.brep)
+  expect(parseDirectDocument(stringifyMeshJson(history.redo())).bodies[0].brep).toEqual(result.body.brep)
+ }
+ expect(stringifyMeshJson(body)).toBe(before)
+},60_000)
 it('authors exact cylindrical fillets from display selection, with analytic volume and restorable identity',()=>{
  const {body,vertical}=fixture(),before=structuredClone(body)
  expect(vertical).toHaveLength(4)

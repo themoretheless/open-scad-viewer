@@ -1,0 +1,27 @@
+{
+  "capability": "exact-variable-radius-fillet/1",
+  "scope": "one straight cuboid edge under rigid placement, linear cross-section radius law",
+  "wasmSha256": "6c65564f24078a69f30cebe05ba64152b19ee1343242e01a888ce7e98dfd74d7",
+  "wasmBytes": 10957188,
+  "nativeResults": 48,
+  "nativeAnalyticTestsPassed": 41,
+  "nativeEndpointCheckPassed": true,
+  "nativeConcaveAndInvalidLawRefusalPassed": true,
+  "wasmProductTestsPassed": 35,
+  "realWorkerRotatedEdges": 12,
+  "uiBrowserAcceptance": "passed for one rotated edge using mouse and keyboard",
+  "fullRoadmapComplete": false,
+  "cadRegressionTestsPassed": 920,
+  "uiBrowserMouseAcceptance": true,
+  "uiBrowserKeyboardAcceptance": true,
+  "publication": "local verification complete; Git publication tracked by the containing commit",
+  "sourceHashes": {
+    "crates/brep-core/src/analytic_features.rs": "3efb4ab518e793a0c435c6fc9d6f95049ce5b78bcd1fc92e5cc31e619874fafe",
+    "src/services/geometry/brepCapability.ts": "2717a621e05269bd4c28d1091805d433c23feb88b18b4c4fd877446deb1e80c3",
+    "src/features/DirectModeler.vue": "13c2e03de3ff70ccc26781f8403fd3dbb8273cfc15a14fe7fcbfe78403846129",
+    "tests/mainSolidWorkerRealBoundary.test.ts": "4efa8a69f36532547d2bd336855edf1ae3e19c871e3001f25b5144530c92d4e6",
+    "tests/solidExactEdgeFeature.test.ts": "a0a1cd64f90794838c2fbe7919ad31b8c55b3e689334c8ae5bc2da035b4e2001",
+    "scripts/check-solid-variable-radius-browser.mts": "45172a9d541849446e9b616ed6af5d86ec1890785ec055c91bcadd09934fbdfa"
+  },
+  "distVerificationPassed": true
+}
