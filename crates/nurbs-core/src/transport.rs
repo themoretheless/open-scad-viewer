@@ -50,6 +50,16 @@ pub fn dispatch(v: Value) -> Result<Value> {
         return Ok(json!({"certified":report.certified,"exactIdentity":report.exact_identity,
             "regularityCertified":report.regularity_certified,"work":report.work,"reason":report.reason}));
     }
+    if op == "curve_segmented_bezier_controls" {
+        return encode(retained_wall_coefficients::segmented_bezier_controls(
+            &field::<curve::Curve>(&v,"curve")?,field(&v,"maxControlRows")?));
+    }
+    if op == "sweep_retained_wall_family_audit" {
+        let exact=retained_wall_coefficients::family_matches(
+            &field::<Vec<surface::Surface>>(&v,"surfaces")?,
+            &field::<Vec<Vec<Vec<curve::Curve>>>>(&v,"sections")?,field(&v,"closed")?,field(&v,"maxFaces")?);
+        return Ok(json!({"coefficientFamilyIdentity":exact,"globalEmbeddingCertified":false}));
+    }
     if op == "sweep_retained_wall_coefficients_audit" {
         let exact=retained_wall_coefficients::matches(&field::<surface::Surface>(&v,"surface")?,
             &field::<curve::Curve>(&v,"start")?,&field::<curve::Curve>(&v,"end")?,field(&v,"maxControls")?);

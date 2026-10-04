@@ -27,6 +27,73 @@ pub fn matches(surface: &Surface, start: &Curve, end: &Curve, max_controls: usiz
     })
 }
 
+/// Slice already segmented clamped B-spline controls without knot insertion or
+/// changing authored controls/weights. Internal multiplicity must be >= degree.
+/// The total copied control rows are charged before producing an atomic result.
+pub fn segmented_bezier_controls(c:&Curve,max_control_rows:usize)->Option<Vec<Curve>> {
+    let p=c.degree;let n=c.control_points.len();let width=p.checked_add(1)?;
+    if max_control_rows==0 || max_control_rows>1000000 || p==0 || n<width || n>4096
+        || c.periodic || c.weights.len()!=n || c.knots.len()!=n.checked_add(width)?
+        || c.control_points.iter().any(|v|v.len()!=3||v.iter().any(|x|!x.is_finite()))
+        || c.weights.iter().any(|w|!w.is_finite()||*w<=0.)
+        || c.knots.iter().any(|x|!x.is_finite())
+        || c.knots.windows(2).any(|v|v[0]>v[1]) {return None;}
+    let a=c.knots[p];let b=c.knots[n];
+    if a>=b || c.knots[..width].iter().any(|&k|k!=a)
+        || c.knots[n..].iter().any(|&k|k!=b) {return None;}
+    let mut i=width;
+    while i<n {
+        let k=c.knots[i];let mut end=i+1;
+        while end<c.knots.len()&&c.knots[end]==k {end+=1;}
+        if k>a && k<b && end-i<p {return None;} i=end;
+    }
+    let count=(p..n).filter(|&i|c.knots[i]<c.knots[i+1]).count();
+    if count==0 || count.checked_mul(width)?>max_control_rows {return None;}
+    Some((p..n).filter(|&i|c.knots[i]<c.knots[i+1]).map(|i|Curve {
+        degree:p,knots:std::iter::repeat_n(0.,width).chain(std::iter::repeat_n(1.,width)).collect(),
+        control_points:c.control_points[i-p..=i].to_vec(),weights:c.weights[i-p..=i].to_vec(),periodic:false,
+    }).collect())
+}
+
+/// Complete coefficient-family premise, including endpoint/ring partition and
+/// all retained wall faces. This does not replace UV or shell ownership audits.
+pub fn family_matches(surfaces:&[Surface],sections:&[Vec<Vec<Curve>>],closed:bool,max_faces:usize)->bool {
+    if max_faces==0 || max_faces>1024 || !(2..=1025).contains(&sections.len())
+        || surfaces.len()>max_faces+if closed {0}else{2} {return false;}
+    let mut prepared=Vec::new();let mut rows_left=1000000usize;
+    for station in sections {
+        if station.is_empty()||station.len()>1024 {return false;}
+        let mut rings=Vec::new();
+        for ring in station {
+            if ring.is_empty()||ring.len()>1024 {return false;}
+            let mut curves=Vec::new();
+            for curve in ring {
+                let Some(pieces)=segmented_bezier_controls(curve,rows_left) else {return false;};
+                let rows:usize=pieces.iter().map(|p|p.control_points.len()).sum();rows_left-=rows;
+                curves.push(pieces);
+            }
+            rings.push(curves);
+        }
+        prepared.push(rings);
+    }
+    let mut face=0;
+    for pair in prepared.windows(2) {
+        if pair[0].len()!=pair[1].len() {return false;}
+        for (a,b) in pair[0].iter().zip(&pair[1]) {
+            if a.len()!=b.len() {return false;}
+            for (a,b) in a.iter().zip(b) {
+                if a.len()!=b.len() {return false;}
+                for (a,b) in a.iter().zip(b) {
+                    if face>=max_faces {return false;}
+                    let Some(surface)=surfaces.get(face) else {return false;};
+                    if !matches(surface,a,b,4096) {return false;}face+=1;
+                }
+            }
+        }
+    }
+    face>0 && face==surfaces.len().saturating_sub(if closed {0}else{2})
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -57,6 +124,43 @@ mod tests {
         let (s,a,mut b)=fixture();b.weights[1]=0.25;assert!(!matches(&s,&a,&b,3));
         let (mut s,a,b)=fixture();s.control_points[0][0].pop();assert!(!matches(&s,&a,&b,3));
         let (s,mut a,b)=fixture();a.weights[0]=f64::NAN;assert!(!matches(&s,&a,&b,3));
+    }
+    #[test]
+    fn segmented_controls_preserve_authored_rows_and_refuse_partial_budget() {
+        let c=Curve{degree:2,knots:vec![7.,7.,7.,13.,13.,19.,19.,19.],
+            control_points:(0..5).map(|i|vec![i as f64,(i%2)as f64,0.]).collect(),
+            weights:vec![1.,0.5,1.,2.,1.],periodic:false};
+        let before=c.clone();let parts=segmented_bezier_controls(&c,6).unwrap();
+        assert_eq!(parts.len(),2);assert_eq!(parts[0].control_points,c.control_points[..3]);
+        assert_eq!(parts[1].weights,c.weights[2..]);assert_eq!(c,before);
+        assert!(segmented_bezier_controls(&c,5).is_none());
+        let mut unsegmented=c.clone();unsegmented.knots.remove(4);
+        unsegmented.control_points.pop();unsegmented.weights.pop();
+        assert!(segmented_bezier_controls(&unsegmented,6).is_none());
+        let mut periodic=c;periodic.periodic=true;assert!(segmented_bezier_controls(&periodic,6).is_none());
+    }
+    #[test]
+    fn complete_family_checks_face_count_partition_and_source_damage() {
+        let(s,a,b)=fixture();let sections=vec![vec![vec![a.clone()]],vec![vec![b.clone()]]];
+        let surfaces=vec![s.clone(),s.clone(),s.clone()];
+        assert!(family_matches(&surfaces,&sections,false,1));
+        assert!(!family_matches(&surfaces[..2],&sections,false,1));
+        assert!(!family_matches(&surfaces,&sections,false,0));
+        let mut damaged=sections.clone();damaged[1][0][0].control_points[1][0]+=0.125;
+        assert!(!family_matches(&surfaces,&damaged,false,1));
+        let mut partition=sections;partition[1].push(vec![b]);
+        assert!(!family_matches(&surfaces,&partition,false,1));
+    }
+    #[cfg(feature="transport")]
+    #[test]
+    fn family_and_segmentation_json_boundaries_preserve_proof_scope() {
+        let(s,a,b)=fixture();let r=crate::transport::dispatch(value_codec::json!({
+            "op":"curve_segmented_bezier_controls","curve":a.clone(),"maxControlRows":3})).unwrap();
+        let parts:value_codec::Value=r;assert_eq!(parts.as_array().unwrap().len(),1);
+        let r=crate::transport::dispatch(value_codec::json!({"op":"sweep_retained_wall_family_audit",
+            "surfaces":[s.clone(),s.clone(),s],"sections":[[[a]],[[b]]],"closed":false,"maxFaces":1})).unwrap();
+        assert_eq!(r["coefficientFamilyIdentity"].as_bool(),Some(true));
+        assert_eq!(r["globalEmbeddingCertified"].as_bool(),Some(false));
     }
     #[cfg(feature="transport")]
     #[test]
