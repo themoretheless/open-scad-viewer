@@ -40,6 +40,7 @@ const save=()=>writeFile(path.join(output,'matrix.json'),JSON.stringify(report,n
 const server=createServer(async(req,res)=>{
  try {
   const url=new URL(req.url,'http://localhost')
+  if(url.pathname==='/favicon.ico'){res.writeHead(204).end();return}
   const file=path.resolve(dist,'.'+(url.pathname==='/'?'/index.html':decodeURIComponent(url.pathname)))
   if(!file.startsWith(dist+path.sep)){res.writeHead(403).end();return}
   res.setHeader('Content-Type',file.endsWith('.html')?'text/html':file.endsWith('.js')?'text/javascript':file.endsWith('.css')?'text/css':file.endsWith('.wasm')?'application/wasm':'application/octet-stream')
@@ -48,7 +49,7 @@ const server=createServer(async(req,res)=>{
 })
 await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve))
 const {playwright}=await loadQualificationPlaywrightPackage()
-const browser=await playwright.chromium.launch({headless:true,args:['--enable-unsafe-webgpu']})
+const browser=await playwright.chromium.launch({headless:true,channel:'chromium',args:['--enable-unsafe-webgpu']})
 report.browser=browser.version()
 try {
  for(const viewport of viewports)for(const file of sources){
@@ -59,6 +60,7 @@ try {
   const page=await context.newPage(),pageErrors=[]
   page.setDefaultTimeout(30000)
   page.on('pageerror',error=>pageErrors.push(error.message))
+  page.on('console',message=>{if(message.type()==='error')pageErrors.push(message.text())})
   const entry={viewport,file,sourceSha256:sha(source),assertions:[],pageErrors,status:'running'}
   report.cases.push(entry);await save()
   try {
@@ -210,7 +212,15 @@ try {
     geometrySha256:sha(JSON.stringify(document.bodies[0].brep))}
    entry.assertions.push({case:'solid-publication',status:'passed'})
    await solid.getByRole('button',{name:'Вписать',exact:true}).last().click()
-   assert.ok(await solid.locator('svg[aria-label="Холст тел 3D"] polygon').count()>0)
+   const gpuCanvas=solid.locator('canvas.gpu-layer')
+   if(await gpuCanvas.isVisible()){
+    await page.waitForFunction(canvas=>canvas.width>1&&canvas.height>1,await gpuCanvas.elementHandle())
+    await solid.locator('.fps-badge').filter({hasText:/draw [\d.]+ ms/}).waitFor()
+    entry.displayBackend='webgpu'
+   }else{
+    assert.ok(await solid.locator('svg[aria-label="Холст тел 3D"] polygon').count()>0)
+    entry.displayBackend='svg'
+   }
    await page.screenshot({path:path.join(directory,'solid.png'),fullPage:true})
    await solid.getByRole('status',{name:'Сохранено в браузере',exact:true,includeHidden:true}).waitFor({state:'attached'})
    await page.reload();await solid.waitFor()

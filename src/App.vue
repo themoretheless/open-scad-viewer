@@ -454,6 +454,23 @@ const workspaceMode = computed<WorkspaceMode>(() => (meshModelerOpen.value ? 'me
 
 /** Source is no longer a workspace of its own; it opens as a drawer over either one. */
 const editorOpen = ref(false)
+// The source viewport is visible only when the source drawer previews a sweep.
+// Keep its GPU resources separate from the active Solid/Mesh viewport.
+const sourceViewportVisible = computed(() =>
+  (!directModelerOpen.value && !meshModelerOpen.value && !functionReferenceOpen.value) ||
+  (editorOpen.value && isModelGraphText(code.value) &&
+    (code.value.includes('progressive_sweep') || code.value.includes('miter_sweep'))))
+watch(sourceViewportVisible, async visible => {
+  if (!visible) {
+    renderer?.destroy()
+    renderer = null
+    gpuOk.value = false
+    return
+  }
+  await nextTick()
+  if (!renderer) await initializeViewportRenderer()
+  else renderer.resize()
+})
 const solidBuilding = ref(false)
 let solidBuildAbort: AbortController | null = null
 function cancelSolidBuild() { solidBuildAbort?.abort() }
@@ -1093,18 +1110,19 @@ onMounted(async () => {
   } catch {
     error.value = t('workerError')
   }
-  await initializeViewportRenderer()
+  if (sourceViewportVisible.value) await initializeViewportRenderer()
 })
 
 async function initializeViewportRenderer() {
   const canvas = canvasRef.value
-  if (!canvas || !componentActive || rendererInitializing.value) return
+  if (!canvas || !componentActive || !sourceViewportVisible.value || rendererInitializing.value) return
   rendererInitializing.value = true
   rendererUnavailableMessage.value = ''
   const nextRenderer = new WebGPURenderer()
   const ok = await nextRenderer.init(canvas)
-  if (!componentActive) {
+  if (!componentActive || !sourceViewportVisible.value) {
     nextRenderer.destroy()
+    rendererInitializing.value = false
     return
   }
   if (!ok) {
@@ -2755,7 +2773,7 @@ function sanitizeFileName(name: string) { return (name.replace(/[^\w.() -]+/g, '
           :title="storageFailureDetail || t('retrySave')"
           @click="retryWorkspacePersistence"
         >⚠ {{ t('unsavedDraft') }}</button>
-        <button class="icon-btn command-btn" type="button" :title="t('commandHelp')" aria-keyshortcuts="Control+K Meta+K" @click="openCommandPalette">
+        <button class="icon-btn command-btn" type="button" :title="t('commandHelp')" :aria-label="t('commands')" aria-keyshortcuts="Control+K Meta+K" @click="openCommandPalette">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
           <span>{{ t('commands') }}</span> <kbd>Ctrl K</kbd>
         </button>

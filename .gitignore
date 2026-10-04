@@ -50,3 +50,4 @@ src/generated/vr-core/
 /docs/qualification/sweep-publication-native-owned-2026-10-04/ui*/**
 !/docs/qualification/sweep-publication-native-owned-2026-10-04/ui*/matrix.json
 !/docs/qualification/sweep-publication-native-owned-2026-10-04/logs/*.log
+src/generated/photogrammetry/.wasm-pack-stamp*

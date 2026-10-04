@@ -91,7 +91,8 @@ const limits = new Map([
 // 3,321,602 bytes (run 37193131950, Node 22). Keep 8,398 bytes of headroom.
 // Expanded native sweep/miter, retained decomposition and authored surface input:
 // local c94f6fca artifact production chunk measured at 3,521,252 bytes.
-const geometryChunkBudget = 3_545_000
+// Combined sweep and CAD diagnostics: locally measured 3,647,400 packed bytes.
+const geometryChunkBudget = 3_655_000
 const jsChunkBudgets = [
   // Native sweep Solid admission and boundary proof adapters: measured 150,489 bytes.
   [/^assets\/mainSolid\.worker-[^/]+\.js$/, 155_000], // Distance kernel worker additions: measured 115,579 bytes. Surface distance worker dispatch: measured 115,110 bytes. Retained NURBS snap intervals: measured 114,200 bytes. Sketch snap preparation: measured 113,885 bytes. Body snap preparation: measured 112,083 bytes. Face sketch preparation in worker: measured 109,472 bytes.
@@ -337,6 +338,7 @@ for (const [name, artifact, compression] of [
 // Registration of the observed Linux identity adds 190 local asset bytes.
 // Expanded kernel, Rush operations, preview lifecycle and proof status UI:
 // local c94f6fca production assets measured at 7,663,736 bytes.
-const totalBudget = 7_680_000
+// Combined CAD and sweep build: measured 7,858,043 asset bytes.
+const totalBudget = 7_870_000
 if (total > totalBudget) throw new Error(`dist totals ${total} bytes; budget is ${totalBudget}`)
 console.log(`Verified ${files.length} dist artifacts (${total} asset bytes + ${rawWasmBytes} raw WASM bytes = ${total + rawWasmBytes} total bytes)`)
