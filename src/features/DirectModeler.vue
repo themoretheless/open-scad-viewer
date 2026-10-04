@@ -4367,6 +4367,7 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
 }
 .direct-workspace .command-guidance.failed { border-color: var(--danger); }
 .direct-workspace .ws-count { color: var(--text-dim); font-size: 11px; white-space: nowrap; }
+@media (max-width: 750px) { .direct-workspace .workspace-bar > .file-menu > div { left: auto; right: 0; } }
 .direct-workspace .splitter { border: 0; background: var(--hairline); }
 .direct-workspace .splitter span { display: none; }
 .direct-workspace .splitter:hover, .direct-workspace .splitter:focus-visible { background: var(--accent); }
