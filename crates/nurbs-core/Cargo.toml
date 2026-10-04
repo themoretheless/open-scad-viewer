@@ -7,7 +7,8 @@ publish.workspace = true
 
 [features]
 default = ["transport"]
-transport = []
+transport = ["codec"]
+codec = []
 
 [dependencies]
 math-core = { package = "osv-math", path = "../math-core" }

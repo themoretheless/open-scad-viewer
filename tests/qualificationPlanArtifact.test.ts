@@ -817,7 +817,7 @@ describe('frozen-pending G1 QualificationPlan artifacts', () => {
     }
     expect(changed, 'v27 remains historical after the V35 dependency/toolchain rebind')
       .toEqual([
-        'package.json', 'package-lock.json', 'vitest.config.ts', 'THIRD_PARTY_NOTICES.md',
+        'package.json', 'package-lock.json', 'vitest.config.ts', '.gitattributes', 'THIRD_PARTY_NOTICES.md',
         'g1-candidate-bundle', 'g1-static-dependency-audit-bundle',
         'g1-qualification-harness-bundle', 'g1-mcp-support-bundle',
         'g1-pinned-legacy-support-bundle',

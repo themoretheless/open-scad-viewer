@@ -3,6 +3,77 @@
 use super::{Result, Value, field};
 use brep_core::face_contacts::Limits;
 use value_codec::json;
+pub fn diagnose_sweep_volume(v:Value)->Result<Value> {
+    let model:brep_core::Model=field(&v,"model")?;
+    let cap=field::<Value>(&v,"capBudgets")?;
+    let r=brep_core::volume_validity::inspect_sweep(&model,field(&v,"toleranceUv")?,
+        brep_core::volume_validity::Limits {
+            boundary:brep_core::boundary_embedding::Limits {
+                exact_work:field(&v,"maxExactWork")?,trim_pairs:field(&v,"maxTrimPairs")?,
+                trim_cells:field(&v,"maxTrimCells")?,trim_domain_cells:field(&v,"maxTrimDomainCells")?,
+                spans:field(&v,"maxSpans")?,contacts:Limits {
+                    pairs:field(&v,"maxPairs")?,cells:field(&v,"maxCells")?,
+                    domain_cells:field(&v,"maxDomainCells")?,cells_per_pair:field(&v,"cellsPerPair")?,
+                    domain_cells_per_pair:field(&v,"domainCellsPerPair")?,
+                },
+            },
+            nesting_pairs:field(&v,"nestingPairs")?,nesting_cells:field(&v,"nestingCells")?,
+            nesting_domain_cells:field(&v,"nestingDomainCells")?,orientation_cells:field(&v,"orientationCells")?,
+            orientation_domain_cells:field(&v,"orientationDomainCells")?,orientation_spans:field(&v,"orientationSpans")?,
+        },field(&v,"maxLinearCells")?,&field::<Vec<usize>>(&v,"capFaces")?,
+        brep_core::sweep_cap_contacts::Budgets {
+            max_walls:field(&cap,"maxWalls")?,max_exact_work:field(&cap,"maxExactWork")?,
+            max_chart_cells:field(&cap,"maxChartCells")?,max_trim_pairs:field(&cap,"maxTrimPairs")?,
+            max_trim_cells:field(&cap,"maxTrimCells")?,max_trim_domain_cells:field(&cap,"maxTrimDomainCells")?,
+        })?;
+    Ok(json!({"solidGeometryCertified":r.proven,"boundaryEmbeddingCertified":r.boundary.proven,
+        "allFacesInjective":r.boundary.intersections.faces.all_faces_injective,
+        "allPairsClassified":r.boundary.intersections.pairs.all_pairs_classified,
+        "nextPair":r.boundary.intersections.pairs.next_pair,
+        "nesting":r.nesting.as_ref().map(|n|json!({"rolesConsistent":n.roles_consistent,
+            "parents":n.parents,"totalPairs":n.total_pairs,"visitedPairs":n.pairs.len(),
+            "cells":n.cells,"domainCells":n.domain_cells,
+            "pairs":n.pairs.iter().map(|p|json!({"shells":p.shells,"reason":p.result.reason,
+                "boundarySeparationCertified":p.result.boundary_separation_certified,
+                "separationLower":p.result.boundary.lower_bound_mm})).collect::<Vec<_>>() })),
+        "orientationCells":r.orientation_cells,"orientationDomainCells":r.orientation_domain_cells,
+        "orientations":r.orientations.iter().map(|s|json!({"shell":s.shell,"expectedOutward":s.expected_outward,
+            "outward":s.outward,"attempts":s.attempts.len()})).collect::<Vec<_>>() }))
+}
+pub fn diagnose_sweep_embedding(v:Value)->Result<Value> {
+    let model:brep_core::Model=field(&v,"model")?;
+    let cap=field::<Value>(&v,"capBudgets")?;
+    let r=brep_core::boundary_embedding::inspect_sweep(&model,field(&v,"toleranceUv")?,
+        brep_core::boundary_embedding::Limits {
+            exact_work:field(&v,"maxExactWork")?,trim_pairs:field(&v,"maxTrimPairs")?,
+            trim_cells:field(&v,"maxTrimCells")?,trim_domain_cells:field(&v,"maxTrimDomainCells")?,
+            spans:field(&v,"maxSpans")?,contacts:Limits {
+                pairs:field(&v,"maxPairs")?,cells:field(&v,"maxCells")?,
+                domain_cells:field(&v,"maxDomainCells")?,cells_per_pair:field(&v,"cellsPerPair")?,
+                domain_cells_per_pair:field(&v,"domainCellsPerPair")?,
+            },
+        },field(&v,"maxLinearCells")?,&field::<Vec<usize>>(&v,"capFaces")?,
+        brep_core::sweep_cap_contacts::Budgets {
+            max_walls:field(&cap,"maxWalls")?,max_exact_work:field(&cap,"maxExactWork")?,
+            max_chart_cells:field(&cap,"maxChartCells")?,max_trim_pairs:field(&cap,"maxTrimPairs")?,
+            max_trim_cells:field(&cap,"maxTrimCells")?,max_trim_domain_cells:field(&cap,"maxTrimDomainCells")?,
+        })?;
+    Ok(json!({"boundaryEmbeddingCertified":r.proven,"solidGeometryCertified":false,
+        "exactBoundaryCertified":r.agreement.all_equal && r.agreement.all_joins_exact,
+        "trimCertified":r.trim.all_valid,"allFacesInjective":r.intersections.faces.all_faces_injective,
+        "linearCells":r.intersections.faces.linear_cells,"spans":r.intersections.faces.spans,
+        "allPairsClassified":r.intersections.pairs.all_pairs_classified,
+        "totalPairs":r.intersections.pairs.total_pairs,"nextPair":r.intersections.pairs.next_pair,
+        "pairs":r.intersections.pairs.pairs.iter().map(|p|json!({"faces":p.faces,"reason":p.reason,
+            "allowedBoundary":p.boundary.is_some()})).collect::<Vec<_>>(),
+        "unresolvedFaces":r.intersections.faces.faces.iter().filter(|f|
+            !f.result.as_ref().is_some_and(|r|r.proven) && !f.linear.as_ref().is_some_and(|r|r.certified))
+            .map(|f|f.face).collect::<Vec<_>>(),
+        "caps":r.cap_contacts.iter().map(|(cap,r)|json!({"face":cap,"capCertified":r.cap_certified,
+            "planarControlHullCertified":r.planar_control_hull_certified,
+            "allowedBoundaries":r.allowed_boundaries,"unresolvedWalls":r.unresolved_walls,"reason":r.reason}))
+            .collect::<Vec<_>>() }))
+}
 pub fn diagnose(v: Value) -> Result<Value> { diagnose_inner(v, false) }
 pub fn diagnose_self_intersection(v: Value) -> Result<Value> { diagnose_inner(v, true) }
 fn diagnose_inner(v: Value, combined: bool) -> Result<Value> {
@@ -44,6 +115,7 @@ fn diagnose_inner(v: Value, combined: bool) -> Result<Value> {
             (witness,r.cells,r.domain_cells,boxes,count)
         } else {if p.boundary.is_some() {shared_boundaries+=1;} else {unresolved_pairs+=1;}(None,0,0,Vec::new(),0)};
         json!({"faces":p.faces,"status":p.reason,"sharedBoundary":p.boundary.as_ref().map(|c|match c {
+            brep_core::face_contacts::SharedBoundary::SweepCap{cap,wall,edge}=>json!({"kind":"sweep-cap","cap":cap,"wall":wall,"edge":edge}),
             brep_core::face_contacts::SharedBoundary::ExactHull(c)=>json!({"kind":"exact-hull","faces":c.faces,"edges":c.edges,"vertex":c.vertex,"hullIntersection":c.hull_intersection}),
             brep_core::face_contacts::SharedBoundary::PlanarFace(c)=>json!({"kind":"planar-face","edge":c.edge,"planarFace":c.planar_face,"sidedFace":c.sided_face}),
             brep_core::face_contacts::SharedBoundary::OppositeSides(c)=>json!({"kind":"opposite-sides","edge":c.edge,"faces":c.faces}),
@@ -64,7 +136,7 @@ fn diagnose_inner(v: Value, combined: bool) -> Result<Value> {
         output["maxSpans"] = json!(max_spans);
         output["faces"] = json!(faces.faces.iter().map(|face| json!({
             "face": face.face,
-            "result": face.result.as_ref().map(|r| json!({"proven":r.proven,"projection":r.projection,"linearProjection":r.linear_projection,
+            "result": face.result.as_ref().map(|r| json!({"proven":r.proven,"projection":r.projection,"linearProjection":r.linear_projection.or_else(||face.linear.as_ref().map(|linear|linear.projection.map(|row|row.map(f64::from)))),
                 "contractionUpper":r.contraction_upper,"spans":r.spans,"reason":r.reason}))
         })).collect::<Vec<_>>());
     }

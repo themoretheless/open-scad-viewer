@@ -164,7 +164,7 @@ pub type Edge = brep_topology::Edge<Curve>;
 pub type Coedge = brep_topology::Coedge<Curve>;
 pub type Loop = brep_topology::Loop<Curve>;
 pub type Face = brep_topology::Face<Surface>;
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, PartialEq)]
 pub struct TopologyIds {
     pub vertices: Vec<TopoId>,
     pub edges: Vec<TopoId>,
@@ -320,7 +320,7 @@ impl<'de> value_codec::Deserialize<'de> for TopologyIds {
         })
     }
 }
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Model(
     pub brep_topology::Model<Curve, Surface, Curve>,
     pub TopologyIds,
@@ -1816,3 +1816,13 @@ mod tests {
 }
 
 pub use analytic::{rational_section_loft, natural_section_loft, capped_loft_surfaces, capped_loft_with_caps, capped_loft_with_caps_checked, LoftCap, periodic_section_loft};
+
+pub mod sweep_cap_contacts;
+
+mod control_hull_separation;
+
+pub mod affine_lattice;
+
+pub mod sweep_retained;
+
+pub mod miter_seams;

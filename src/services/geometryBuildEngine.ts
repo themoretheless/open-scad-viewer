@@ -65,6 +65,7 @@ export interface GeometryBuildRequest {
 export interface GeometryBuildControl {
   shouldAbort?: () => boolean
   onYield?: () => void
+  onSweepPreview?: import('./modelGraphNurbsKernel').OwnNurbsBuildControl['onSweepPreview']
 }
 
 export interface GeometryBuildResult {
@@ -105,6 +106,7 @@ class MeshBackendProvider implements GeometryBackendProvider {
       quality: request.quality,
       shouldAbort: control.shouldAbort,
       onYield: control.onYield,
+      onSweepPreview: control.onSweepPreview,
     })
   }
 }

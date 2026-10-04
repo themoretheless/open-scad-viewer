@@ -28,7 +28,7 @@ pub const MAX_ENTITIES: usize = 16384;
 pub const MAX_FACES: usize = 1024;
 pub const MAX_COEDGES: usize = 32768;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Vertex<V = [f64; 3]> {
     pub point: V,
 }
@@ -59,7 +59,7 @@ impl<'de, V: value_codec::Deserialize<'de>> value_codec::Deserialize<'de> for Ve
         Ok(Self { point })
     }
 }
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Edge<C> {
     /// A surface boundary collapsed to one pole vertex. It contributes no
     /// one-dimensional incidence; geometric kernels must certify collapse.
@@ -143,7 +143,7 @@ impl CoedgeTrim {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Coedge<P> {
     pub edge: usize,
     pub reversed: bool,
@@ -195,7 +195,7 @@ impl<'de, P: value_codec::Deserialize<'de>> value_codec::Deserialize<'de> for Co
         })
     }
 }
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Loop<P> {
     pub coedges: Vec<Coedge<P>>,
 }
@@ -227,7 +227,7 @@ impl<'de, P: value_codec::Deserialize<'de>> value_codec::Deserialize<'de> for Lo
     }
 }
 /// Outer loop is CCW in UV, holes CW. Shell face uses control normal reversal.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Face<S> {
     pub surface: S,
     pub outer: usize,
@@ -282,7 +282,7 @@ impl<'de, S: value_codec::Deserialize<'de>> value_codec::Deserialize<'de> for Fa
         })
     }
 }
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct FaceUse {
     pub face: usize,
     pub reversed: bool,
@@ -320,7 +320,7 @@ impl<'de> value_codec::Deserialize<'de> for FaceUse {
         Ok(Self { face, reversed })
     }
 }
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Shell {
     pub faces: Vec<FaceUse>,
     pub closed: bool,
@@ -362,7 +362,7 @@ impl<'de> value_codec::Deserialize<'de> for Shell {
     }
 }
 /// Outer and cavity shells are explicit; containment is not inferred or certified.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Body {
     pub outer_shell: usize,
     pub inner_shells: Vec<usize>,
@@ -406,7 +406,7 @@ impl<'de> value_codec::Deserialize<'de> for Body {
         })
     }
 }
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Model<C, S, P, V = [f64; 3]> {
     pub vertices: Vec<Vertex<V>>,
     pub edges: Vec<Edge<C>>,
@@ -561,7 +561,7 @@ impl<
 /// payload edits need no entries; tolerance changes need none either.
 /// Under-reporting is a contract violation: the snapshot may then publish a
 /// candidate the full validator would reject.
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, PartialEq)]
 pub struct EditScope {
     full: bool,
     vertices: Vec<usize>,

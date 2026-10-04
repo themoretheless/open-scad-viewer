@@ -61,6 +61,13 @@ jobs:
       - run: npm run test:wasm-optimize
       - run: npm run test:qualification-drift
       - run: npm run build:geometry
+      - uses: actions/upload-artifact@v4
+        with:
+          name: geometry-kernels-node-${{ matrix.node-version }}
+          path: |
+            src/generated/geometry-kernels/kernel_bg.wasm
+            src/generated/geometry-kernels/identity.ts
+          if-no-files-found: error
       - run: cargo check --locked --manifest-path crates/Cargo.toml -p tensor-core -p compute-core -p compute-mlx --target wasm32-unknown-unknown
       - run: node --import tsx benchmarks/provider-readiness.mts > provider-readiness.json
       - run: node --import tsx benchmarks/provider-readiness.mts > provider-readiness-concurrent.json

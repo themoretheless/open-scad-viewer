@@ -1,0 +1,31 @@
+{
+  "schema": "sweep-miter-ui-matrix/1",
+  "recordedAt": "2026-10-04T11:54:32.949Z",
+  "scope": "Finite retained-miter UI scenarios; held dispatch tests lifecycle cancellation, not mid-kernel interruption latency. Headless CPU fallback is not GPU qualification.",
+  "geometryWasmSha256": "8d347589e5eed6292661d903454856c7d6f0ad50d4d5e5818c2d9eb5f138cd15",
+  "appSourceSha256": "e09c3e6533189fcbcd3a500141787f477c21eec9e9d0b7a32513cc383e5f75c4",
+  "distIndexSha256": "738004667978d0247f1bf71210b0a164af1ee373025195b1f1392b395680f060",
+  "cases": [
+    {
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "file": "miter-periodic-hollow.r",
+      "sourceSha256": "01ead3bb6a54a1ea5875086c953e4e95522b431468d13dd2851b10993211aa79",
+      "assertions": [],
+      "pageErrors": [],
+      "status": "failed",
+      "error": "miter-periodic-hollow.r\n\n1 !== 0\n",
+      "bodyText": "sweep-matrix.r\nSolid\nMesh\nПоиск действий\nCtrl K\nЭкспорт\nVR\nСобрать\nАвто\n1\n2\n3\n▾\n4\n5\n▾\n6\n7\n▾\n8\n9\n10\n11\n12\n13\n// @rush/1\n// Explicit periodic storage; exact active-domain blossom extraction certifies closure.\nouter = nurbs_curve(degree: 2, knots: [0,1,2,3,4,5,6,7,8],\n control_points: [[1mm,0mm,0mm],[0mm,1mm,0mm],[-1mm,0mm,0mm],[0mm,-1mm,0mm],[1mm,0mm,0mm],[0mm,1mm,0mm]], weights: [1,1,1,1,1,1], periodic: true)\nhole = nurbs_curve(degree: 2, knots: [0,1,2,3,4,5,6,7,8],\n control_points: [[0mm,0.25mm,0mm],[0.25mm,0mm,0mm],[0mm,-0.25mm,0mm],[-0.25mm,0mm,0mm],[0mm,0.25mm,0mm],[0.25mm,0mm,0mm]], weights: [1,1,1,1,1,1], periodic: true)\nshow brep_progressive_miter_sweep([[outer],[hole]],\n points: [[0,0,0],[0,0,10mm]], normal: [1,0,0],\n scale: {degree: 1, knots: [0,0,1,1], values: [1,1], weights: [1,1]},\n twist: {degree: 1, knots: [0,0,1,1], values: [0deg,0deg], weights: [1,1]},\n initial_steps: 1, max_steps: 1, max_deviation: 0.001mm\n).brep_tessellate(4)\n\n\nInvalid patches: Missing field mode\nОбъекты 0\nТреугольники 0\nОшибка сборки · 60 ms\nCPU · SVG\nManifold\nФайл открыт\n↶\n↷\nМышь\nИнструменты\n?\nФайл\nСоздавать в \nБез группы\nПеренести выбор\nНовая группа\nПовтор · Shift R\nПривязки: вкл\nПлоскость: XY\nИзолировать тела\nВыбрано: 0\nXY\nРазмеры\nКлетка\nmm\ncm\nm\nin\nПривязки\n⋯\n+\n−\nНачните с контура\nВыберите фигуру сверху и нарисуйте её мышью\nVR\nISO\nSTL\nSTL (ASCII)\nSTL (binary)\n3MF\nOBJ\nPLY\nOFF\nAMF\nКлетка\nmm\ncm\nm\nin\nПривязки\n⋯\n+\n−\n0 FPS · 0 ms\nИз плоской фигуры — в объём\nВыберите эскиз слева и нажмите «Выдавить»\nСцена\n0\nСцена пуста. Добавьте примитив или нарисуйте эскиз.\nЛКМ: выбор / вращение 3D · СКМ или Shift: перенос · Колесо: масштаб\nWebGPU отключён. Работа продолжена на CPU; можно сохранить проект.\n×"
+    }
+  ],
+  "sourceHashes": {
+    "src/App.vue": "e09c3e6533189fcbcd3a500141787f477c21eec9e9d0b7a32513cc383e5f75c4",
+    "src/services/sweepRetainedCorrespondence.ts": "606a97111b7226f72cfe35b12985ed4eacaf5443ec5e85ea076a860f70955068",
+    "src/services/geometry/brep.ts": "246958983af2bac384f4e63df10a969d2a2b263c53407a4036af7c15e96ecb75",
+    "src/features/DirectModeler.vue": "58a9de5f3a19e634804ef7cfce605893d2e140c4c120b6d4f91cc4dd42ce0daf",
+    "src/generated/geometry-kernels/bytes.ts": "5641d15b419231c8c8a81732969fcfcd174bf8848405e00a13828e8f3ec00b1c"
+  },
+  "browser": "151.0.7922.34"
+}

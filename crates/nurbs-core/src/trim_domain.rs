@@ -281,6 +281,10 @@ impl TrimDomain {
     }
     /// A determinate result applies to every point of the rectangle. A band,
     /// precision or work stop never admits the rectangle as inside or outside.
+    pub fn classify_point(&self, point: [f64; 2], max_cells: usize) -> Result<Classification> {
+        self.classify(point.map(|x| [x, x]), max_cells)
+    }
+
     pub fn classify(&self, rectangle: Rectangle, max_cells: usize) -> Result<Classification> {
         check(
             rectangle

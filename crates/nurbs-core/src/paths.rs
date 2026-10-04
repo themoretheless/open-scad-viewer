@@ -224,3 +224,9 @@ mod tests {
         }
     }
 }
+
+mod miter_sections;
+pub use miter_sections::{miter_sections, closed_miter_sections};
+
+mod round_polyline;
+pub use round_polyline::{round_polyline,transition_polyline,closed_round_polyline,closed_transition_polyline};

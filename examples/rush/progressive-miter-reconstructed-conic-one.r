@@ -1,0 +1,13 @@
+// @rush/1
+// Symmetric rational conic profile with middle weight 1; bounded G2 station reconstruction.
+outer = nurbs_curve(degree: 2, knots: [0,0,0,0.25,0.25,0.5,0.5,0.75,0.75,1,1,1],
+ control_points: [[1mm,0,0],[1mm,1mm,0],[0,1mm,0],[-1mm,1mm,0],[-1mm,0,0],[-1mm,-1mm,0],[0,-1mm,0],[1mm,-1mm,0],[1mm,0,0]], weights: [1,1,1,1,1,1,1,1,1])
+show brep_progressive_miter_sweep([[outer]],
+ points: [[0,0,0],[0,0,10mm]], normal: [1,0,0],
+ scale: {degree: 1, knots: [0,0,1,1], values: [1,1], weights: [1,1]},
+ twist: {degree: 1, knots: [0,0,1,1], values: [0deg,0deg], weights: [1,1]},
+ center_law: {degree: 1, knots: [7,7,8,9,9], values: [[0mm,0mm,0mm],[1mm,0mm,0mm],[0mm,0mm,0mm]], weights: [1,1,1]},
+ retained_wall_max_injectivity_cells: 100000,
+ initial_steps: 2, max_steps: 2, max_deviation: 1mm
+).brep_smooth_miter_stations(wall_tolerance: 0.5mm, quantum: 0.125mm, max_work: 10000, max_deviation: 2mm)
+ .brep_tessellate(4)

@@ -2,10 +2,14 @@
 //! must agree after affine parameter normalization. Regularity of each seam
 //! is checked separately with outward-rounded Bernstein normal enclosures.
 //! Representation reference: MIT Hyperbook, sections 1.4.2 and 1.5.
+mod exact_strip;
+pub use exact_strip::{ExactStripJetReport, inspect_surface_exact_strip_jets, inspect_surface_projective_strip_jets};
 use crate::{check,curve::basis,surface::Surface,Result};
 use value_codec::{Value,json};
 mod regularity;
 mod bounds;
+mod station_scale;
+pub use station_scale::propose_station_normal_scale;
 pub mod preparation;
 pub mod deviation;
 pub mod curve_match;
@@ -282,7 +286,7 @@ pub fn inspect_surface_jets_checked_report(
     let (rp,rn,rk,_)=r.along(reference);let (ep,en,ek,_)=e.along(edited);
     check(rp==ep&&rn==en,"Surface jet inspection requires a common seam basis")?;
     affine_knots(rk,[rk[rp],rk[rn]],ek,[ek[ep],ek[en]])?;
-    r.coefficients(reference,order)?;e.coefficients(edited,order)?;
+    r.coefficients(reference,order.min(r.cross(reference).0))?;e.coefficients(edited,order.min(e.cross(edited).0))?;
     let reference_regularity=regularity::certify(reference,r)?;
     let edited_regularity=regularity::certify(edited,e)?;
     let error_bounds=bounds::certify(reference,edited,r,e,order,scale)?;

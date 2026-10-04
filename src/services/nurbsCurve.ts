@@ -87,3 +87,21 @@ export interface NurbsCurveDistance {
 export function measureNurbsCurveDistance(a:NurbsCurve,b:NurbsCurve,toleranceMm=0.001,maxCells=10000):NurbsCurveDistance {
   return callNurbsRust('curve_distance',{a,b,toleranceMm,maxCells})
 }
+
+/** Conditional parameterwise original-span/retained-Bezier error. Ownership
+ * and complete wall/cap coverage are separate; exhaustion has no partial bound. */
+export interface NurbsDecompositionAudit {
+ errorUpper:number|null;products:number;reason:string|null
+ method:'original-span-bernstein-decomposition';continuousBound:false
+}
+export function inspectNurbsDecomposition(curve:NurbsCurve,span:number,retained:NurbsCurve,maxProducts=10000):NurbsDecompositionAudit {
+ return callNurbsRust('curve_decomposition_audit',{curve,span,retained,maxProducts})
+}
+export interface NurbsDecompositionBatchAudit extends NurbsDecompositionAudit {pairsInspected:number}
+/** Complete maximum under one shared product budget. A refused final span
+ * invalidates the aggregate; previously proved bounds are not returned. */
+export function inspectNurbsDecompositionBatch(pairs:{curve:NurbsCurve;span:number;retained:NurbsCurve}[],maxProducts=100000):NurbsDecompositionBatchAudit {
+ return callNurbsRust('curve_decomposition_batch_audit',{pairs,maxProducts})
+}
+
+export function transformNurbsCurve(curve:NurbsCurve,matrix:number[][]):NurbsCurve {return callNurbsRust("curve_affine",{curve,matrix})}

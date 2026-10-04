@@ -43,3 +43,10 @@ src/generated/harfbuzz
 
 # Independent VR WASM module
 src/generated/vr-core/
+
+# Sweep qualification raw evidence is preserved in verified lossless archives.
+/docs/qualification/sweep-publication-native-owned-2026-10-04/step-*/**
+!/docs/qualification/sweep-publication-native-owned-2026-10-04/step-*/opencascade-sweep.json
+/docs/qualification/sweep-publication-native-owned-2026-10-04/ui*/**
+!/docs/qualification/sweep-publication-native-owned-2026-10-04/ui*/matrix.json
+!/docs/qualification/sweep-publication-native-owned-2026-10-04/logs/*.log

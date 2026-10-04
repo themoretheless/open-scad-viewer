@@ -89,3 +89,46 @@ pub mod hermite;
 pub mod grid_spline;
 pub mod paths;
 pub mod primitives;
+
+pub mod retained_wall_coefficients;
+
+pub mod sweeps;
+mod sweep_support;
+#[path="sweeps/audit/contour.rs"]
+pub mod sweep_contour_audit;
+#[path="sweeps/audit/pair.rs"]
+pub mod sweep_pair_audit;
+#[path="sweeps/audit/wall.rs"]
+pub mod sweep_wall_audit;
+pub mod curve_regularity;
+pub mod surface_regularity;
+pub mod surface_monotonicity;
+pub mod surface_measure;
+pub mod curve_decomposition_certificate;
+pub mod polynomial;
+pub use sweeps::progressive_miter;
+pub use sweeps::progressive_sweep;
+pub mod interval_eval;
+#[path="sweeps/audit/cap_boundary.rs"]
+pub mod sweep_cap_boundary;
+pub mod curve_measure;
+
+#[path="sweeps/audit/cap_wall.rs"]
+pub mod sweep_cap_wall;
+
+pub mod surface_linear_monotonicity;
+
+pub mod section_projection;
+
+pub mod affine;
+
+pub mod section_circle_repair;
+
+#[path="sweeps/audit/seam.rs"]
+pub mod sweep_seam_audit;
+
+pub mod retained_wall_domain;
+
+pub mod sweep_seam_set;
+
+pub mod sweep_section_correction;

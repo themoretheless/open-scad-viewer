@@ -267,12 +267,25 @@ pub fn nurbs_from_mesh(mesh: &Mesh, mode: Mode, max_deviation_mm: f64) -> Result
 }
 /// Tessellate individual patches and sew matching boundary samples. No B-rep
 /// is inferred for smooth patches; the source face IDs remain explicit.
-pub fn tessellate_patches(set: &PatchSet, segments: usize) -> Result<brep::Tessellation> {
-    if set.patches.is_empty()
-        || set.patches.len() > 2048
-        || set.face_ids.len() != set.patches.len()
+/// Authored surface union carries no mesh reconstruction provenance.
+pub struct SurfaceSet { pub patches:Vec<Surface>,pub face_ids:Vec<usize> }
+impl<'de> value_codec::Deserialize<'de> for SurfaceSet {
+    fn from_value(value:value_codec::Value)->value_codec::Result<Self> {
+        Ok(Self {patches:value_codec::from_value(value["patches"].clone())?,face_ids:value_codec::from_value(value["faceIds"].clone())?})
+    }
+}
+pub fn tessellate_surface_set(set:&SurfaceSet,segments:usize)->Result<brep::Tessellation> {
+    tessellate_surfaces(&set.patches,&set.face_ids,segments)
+}
+pub fn tessellate_patches(set:&PatchSet,segments:usize)->Result<brep::Tessellation> {
+    tessellate_surfaces(&set.patches,&set.face_ids,segments)
+}
+fn tessellate_surfaces(patches:&[Surface],face_ids:&[usize],segments:usize) -> Result<brep::Tessellation> {
+    if patches.is_empty()
+        || patches.len() > 2048
+        || face_ids.len() != patches.len()
         || !(1..=16).contains(&segments)
-        || set.patches.len().saturating_mul(segments * segments * 2) > 20_000
+        || patches.len().saturating_mul(segments * segments * 2) > 20_000
     {
         return Err(input("NURBS patch tessellation budget exceeded"));
     }
@@ -282,7 +295,7 @@ pub fn tessellate_patches(set: &PatchSet, segments: usize) -> Result<brep::Tesse
         uv: None,
     };
     let mut ids = Vec::new();
-    for (i, s) in set.patches.iter().enumerate() {
+    for (i, s) in patches.iter().enumerate() {
         let built = tessellate_nurbs(
             s,
             &tessellation::Options {
@@ -293,7 +306,7 @@ pub fn tessellate_patches(set: &PatchSet, segments: usize) -> Result<brep::Tesse
             },
         )?;
         let offset = mesh.positions.len() / 3;
-        ids.extend(vec![set.face_ids[i]; built.mesh.indices.len() / 3]);
+        ids.extend(vec![face_ids[i]; built.mesh.indices.len() / 3]);
         mesh.indices
             .extend(built.mesh.indices.iter().map(|j| j + offset));
         mesh.positions.extend(built.mesh.positions);
@@ -496,6 +509,21 @@ mod tests {
     fn cube() -> Mesh {
         let m = brep_core::cuboid([-1.; 3], [1.; 3]).unwrap();
         brep::nurbs(&m, 1).unwrap().built.mesh
+    }
+    #[test]
+    fn authored_surface_set_tessellates_without_reconstruction_metadata() {
+        let mesh=cube();let reconstructed=nurbs_from_mesh(&mesh,Mode::Faceted,0.).unwrap();
+        let payload=json!({"patches":reconstructed.patches,"faceIds":reconstructed.face_ids});
+        let mut authored:SurfaceSet=value_codec::from_value(payload).unwrap();
+        let actual=tessellate_surface_set(&authored,3).unwrap();
+        let legacy=tessellate_patches(&reconstructed,3).unwrap();
+        assert_eq!(actual.built.mesh.positions,legacy.built.mesh.positions);
+        assert_eq!(actual.built.mesh.indices,legacy.built.mesh.indices);
+        assert_eq!(actual.face_ids,legacy.face_ids);
+        assert!(actual.built.report.closed);
+        assert!((actual.built.report.signed_volume_mm3-8.).abs()<1e-9);
+        authored.face_ids.pop();assert!(tessellate_surface_set(&authored,3).is_err());
+        assert!(tessellate_surface_set(&authored,0).is_err());
     }
     #[test]
     fn exact_nurbs_round_trip() {

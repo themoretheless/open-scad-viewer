@@ -6,6 +6,7 @@ import {
   type GeometryBuildFailure,
   type GeometryBuildPhase,
   type GeometryBuildProgress,
+  type GeometrySweepPreview,
   type GeometryBuildRequest,
   type GeometryBuildStale,
   type GeometryBuildSuccess,
@@ -70,6 +71,7 @@ export interface BuildCoordinatorOptions {
   /** Called for publishable successes and failures only; stale jobs never reach it. */
   onPublish?: (outcome: PublishedGeometryBuild) => void
   onProgress?: (progress: GeometryBuildProgress) => void
+  onSweepPreview?: (preview:GeometrySweepPreview)=>void
   onStateChange?: (state: BuildCoordinatorState) => void
   now?: () => number
   timers?: CoordinatorTimers
@@ -282,6 +284,7 @@ export class BuildCoordinator {
     const request: GeometryBuildRequest = {
       protocolVersion: GEOMETRY_WORKER_PROTOCOL_VERSION,
       type: 'build',
+      ...(this.options.onSweepPreview?{acknowledgeSweepPreviews:true}:{}),
       documentRevision: input.documentRevision,
       jobId: this.nextJobId++,
       source: input.source,
@@ -626,6 +629,11 @@ export class BuildCoordinator {
     if (!this.isCurrentLatest(record)) return
     if (event.status === 'accepted') record.lifecycle = 'accepted'
     else if (event.status === 'started') record.lifecycle = 'started'
+    else if(event.status==='sweep-preview'){
+      try{this.options.onSweepPreview?.(event)}finally{
+        if(record.request.acknowledgeSweepPreviews)this.binding?.worker.postMessage({protocolVersion:GEOMETRY_WORKER_PROTOCOL_VERSION,type:'sweep-preview-ack',documentRevision:event.documentRevision,jobId:event.jobId,quality:event.quality,sourceSha256:event.sourceSha256,nodeId:event.nodeId,sections:event.sections})
+      }
+    }
     else this.options.onProgress?.(event)
 
     if (record.request.quality === this.requestedQuality()) {

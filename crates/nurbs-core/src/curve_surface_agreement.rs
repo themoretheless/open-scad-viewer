@@ -224,12 +224,129 @@ pub fn verify_exact(c: &Curve, p: &Curve, s: &Surface, reversed: bool, max_work:
     let dd=std::array::from_fn(|_|std::array::from_fn(|_|leaf()));
     let tolerance=ToleranceContext::default_valid();
     let mut ctx=PredicateContext::new(&source,&tolerance,Limits{max_work,..Limits::default()},None);
+    // A constant-weight linear pcurve spanning one full tensor boundary is
+    // exactly normalized affine traversal of that boundary Bezier curve.
+    // Keep the complete immutable source arena/context and shared work limit;
+    // compare authored boundary controls, never a rounded extracted curve.
+    if p.degree==1 && p.weights[0]==p.weights[1] {
+        let a=&p.control_points[0];let b=&p.control_points[1];
+        for axis in 0..2 {
+            let fixed=1-axis;
+            if a[fixed]!=b[fixed] {continue;}
+            let at=if a[fixed]==domain[fixed][0] {0}
+                else if a[fixed]==domain[fixed][1] {if fixed==0 {ss.len()-1} else {ss[0].len()-1}}
+                else {continue;};
+            let forward=a[axis]==domain[axis][0] && b[axis]==domain[axis][1];
+            let backward=a[axis]==domain[axis][1] && b[axis]==domain[axis][0];
+            let degree=if axis==0 {s.degree_u} else {s.degree_v};
+            if (!forward && !backward) || c.degree!=degree {continue;}
+            let mut boundary=if axis==0 {ss.iter().map(|row|row[at]).collect::<Vec<_>>()}
+                else {ss[at].clone()};
+            if backward {boundary.reverse();}
+            return cad_predicates::rational_bezier_identity(&mut ctx,&cc,&boundary)
+                .map(Some).map_err(|_|crate::Error::new("NURBS_INVALID_INPUT","Invalid tensor boundary identity request"));
+        }
+    }
     cad_predicates::rational_bezier_composition_identity(&mut ctx,&cc,&pp,&ss,dd)
         .map(Some).map_err(|_|crate::Error::new("NURBS_INVALID_INPUT","Invalid composition identity request"))
 }
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn tensor_boundary_identity_preserves_domains_reversal_weights_and_limits() {
+        use cad_predicates::BezierIdentity;
+        let surface=Surface {
+            degree_u:2,degree_v:1,knots_u:vec![2.,2.,2.,5.,5.,5.],knots_v:vec![-7.,-7.,11.,11.],
+            control_points:(0..3).map(|i|(0..2).map(|j|vec![i as f64,j as f64,(10+i*i+j*3) as f64]).collect()).collect(),
+            weights:vec![vec![1.,3.],vec![2.,5.],vec![4.,7.]],periodic_u:false,periodic_v:false,
+        };
+        for axis in 0..2 {for side in 0..2 {for backward in [false,true] {for reversed in [false,true] {
+            let domain=[[2.,5.],[-7.,11.]];let fixed=1-axis;
+            let mut a=[0.;2];let mut b=[0.;2];a[fixed]=domain[fixed][side];b[fixed]=a[fixed];
+            a[axis]=domain[axis][usize::from(backward)];b[axis]=domain[axis][usize::from(!backward)];
+            let p=Curve {degree:1,knots:vec![-9.,-9.,-3.,-3.],control_points:vec![a.to_vec(),b.to_vec()],weights:vec![2.,2.],periodic:false};
+            let indices=if axis==0 {(0..3).map(|i|(i,side)).collect::<Vec<_>>()}else{(0..2).map(|j|(side*2,j)).collect()};
+            let degree=indices.len()-1;
+            let mut c=Curve {degree,knots:vec![5.;degree+1].into_iter().chain(vec![11.;degree+1]).collect(),
+                control_points:indices.iter().map(|&(i,j)|surface.control_points[i][j].clone()).collect(),
+                weights:indices.iter().map(|&(i,j)|surface.weights[i][j]).collect(),periodic:false};
+            if backward!=reversed {c.control_points.reverse();c.weights.reverse();}
+            let r=verify_exact(&c,&p,&surface,reversed,256).unwrap().unwrap();
+            assert_eq!(r.outcome,BezierIdentity::Equal);assert!(r.work_used>0 && r.work_used<256);
+            assert_eq!(verify_exact(&c,&p,&surface,reversed,r.work_used).unwrap().unwrap().outcome,BezierIdentity::Equal);
+            assert!(matches!(verify_exact(&c,&p,&surface,reversed,r.work_used-1).unwrap().unwrap().outcome,BezierIdentity::Indeterminate(_)));
+            let mut changed=c.clone();changed.control_points[0][2]=changed.control_points[0][2].next_up();
+            assert_eq!(verify_exact(&changed,&p,&surface,reversed,1000000).unwrap().unwrap().outcome,BezierIdentity::Different);
+            let mut scaled=c;for w in &mut scaled.weights {*w*=2.;}
+            assert_eq!(verify_exact(&scaled,&p,&surface,reversed,1000000).unwrap().unwrap().outcome,BezierIdentity::Equal);
+        }}}}
+        let c=Curve {degree:2,knots:vec![0.,0.,0.,1.,1.,1.],control_points:surface.control_points.iter().map(|row|row[0].clone()).collect(),weights:vec![1.,2.,4.],periodic:false};
+        let p=Curve {degree:1,knots:vec![0.,0.,1.,1.],control_points:vec![vec![2.,-7.],vec![5.,-7.]],weights:vec![1.,1.],periodic:false};
+        let mut subnormal=c.clone();subnormal.control_points[0][0]=f64::from_bits(1);
+        assert_ne!(verify_exact(&subnormal,&p,&surface,false,1000000).unwrap().unwrap().outcome,BezierIdentity::Equal);
+        let mut nonlinear=p.clone();nonlinear.weights[1]=2.;
+        assert_eq!(verify_exact(&c,&nonlinear,&surface,false,1000000).unwrap().unwrap().outcome,BezierIdentity::Different);
+        let mut interior=p.clone();for q in &mut interior.control_points {q[1]=(-7_f64).next_up();}
+        assert_eq!(verify_exact(&c,&interior,&surface,false,1000000).unwrap().unwrap().outcome,BezierIdentity::Different);
+        let mut partial=p;partial.control_points[0][0]=2.5;
+        assert_eq!(verify_exact(&c,&partial,&surface,false,1000000).unwrap().unwrap().outcome,BezierIdentity::Different);
+    }
+    #[test]
+    fn affine_chart_identity_uses_exact_poles_and_bounded_work() {
+        use cad_predicates::BezierIdentity;
+        let s=Surface{degree_u:1,degree_v:1,knots_u:vec![2.,2.,4.,4.],knots_v:vec![3.,3.,7.,7.],
+            control_points:vec![vec![vec![0.,0.,10.],vec![0.,4.,8.]],vec![vec![2.,0.,10.],vec![2.,4.,8.]]],
+            weights:vec![vec![1.;2];2],periodic_u:false,periodic_v:false};
+        let p=Curve{degree:2,knots:vec![0.,0.,0.,1.,1.,1.],control_points:vec![vec![2.,3.],vec![3.,5.],vec![4.,7.]],weights:vec![1.,0.5,1.],periodic:false};
+        let c=Curve{control_points:vec![vec![0.,0.,10.],vec![1.,2.,9.],vec![2.,4.,8.]],..p.clone()};
+        let report=verify_exact(&c,&p,&s,false,1000000).unwrap().unwrap();
+        assert_eq!(report.outcome,BezierIdentity::Equal);
+        assert_eq!(verify_exact(&c,&p,&s,false,report.work_used).unwrap().unwrap().outcome,BezierIdentity::Equal);
+        assert!(matches!(verify_exact(&c,&p,&s,false,0).unwrap().unwrap().outcome,BezierIdentity::Indeterminate(_)));
+        let mut changed=c;changed.control_points[1][2]=9_f64.next_up();
+        assert_eq!(verify_exact(&changed,&p,&s,false,1000000).unwrap().unwrap().outcome,BezierIdentity::Different);
+    }
+    #[test]
+    fn constant_coordinates_are_exact_with_independent_positive_rational_weights() {
+        use cad_predicates::BezierIdentity;
+        let c=Curve{degree:1,knots:vec![0.,0.,1.,1.],control_points:vec![vec![10.,20.,30.];2],weights:vec![1.,2.],periodic:false};
+        let p=Curve{degree:1,knots:vec![0.,0.,1.,1.],control_points:vec![vec![0.,0.],vec![1.,1.]],weights:vec![1.,3.],periodic:false};
+        let mut s=plane();s.control_points=vec![vec![vec![10.,20.,30.];2];2];s.weights=vec![vec![1.,2.],vec![3.,4.]];
+        assert_eq!(verify_exact(&c,&p,&s,false,1000000).unwrap().unwrap().outcome,BezierIdentity::Equal);
+        let mut changed=c.clone();changed.control_points[0][0]=10_f64.next_up();
+        assert_eq!(verify_exact(&changed,&p,&s,false,1000000).unwrap().unwrap().outcome,BezierIdentity::Different);
+        s.control_points[0][0][0]=10_f64.next_up();
+        assert_eq!(verify_exact(&c,&p,&s,false,1000000).unwrap().unwrap().outcome,BezierIdentity::Different);
+        assert!(matches!(verify_exact(&c,&p,&s,false,0).unwrap().unwrap().outcome,BezierIdentity::Indeterminate(_)));
+    }
+    #[cfg(feature = "transport")]
+    #[test]
+    fn sweep_coedge_transport_retains_zero_budget_and_mismatch() {
+        let world=Curve{degree:1,knots:vec![0.,0.,1.,1.],control_points:vec![vec![0.,0.,0.],vec![1.,0.,0.]],weights:vec![1.;2],periodic:false};
+        let uv=Curve{degree:1,knots:vec![0.,0.,1.,1.],control_points:vec![vec![0.,0.],vec![1.,0.]],weights:vec![1.;2],periodic:false};
+        let mut request=value_codec::json!({"op":"sweep_coedge_agreement_audit","world":world,"uv":uv,"surface":plane(),"reversed":false,"tolerance":1e-9,"maxCells":100});
+        let mut exact=request.clone();
+        exact["op"]=value_codec::json!("sweep_coedge_exact_audit");
+        exact["maxWork"]=value_codec::json!(100000);
+        assert_eq!(crate::transport::dispatch(exact.clone()).unwrap()["status"],"equal");
+        exact["maxWork"]=value_codec::json!(0);
+        assert_eq!(crate::transport::dispatch(exact.clone()).unwrap()["status"],"unresolved");
+        exact["maxWork"]=value_codec::json!(100000);
+        exact["world"]["controlPoints"][0][2]=value_codec::json!(1e-12);
+        assert_eq!(crate::transport::dispatch(exact).unwrap()["status"],"different");
+        let positive=crate::transport::dispatch(request.clone()).unwrap();
+        assert_eq!(positive["withinTolerance"],true);
+        assert_eq!(positive["exactIdentityCertified"],false);
+        request["maxCells"]=value_codec::json!(0);
+        let zero=crate::transport::dispatch(request.clone()).unwrap();
+        assert_eq!(zero["status"],"unresolved");assert_eq!(zero["cells"],0);
+        request["maxCells"]=value_codec::json!(100);
+        request["world"]["controlPoints"][0][2]=value_codec::json!(1.);
+        let mismatch=crate::transport::dispatch(request).unwrap();
+        assert_eq!(mismatch["status"],"mismatch");
+        assert!(!mismatch["witnessDistance"].is_null());
+    }
     fn plane() -> Surface {
         Surface {
             degree_u: 1,

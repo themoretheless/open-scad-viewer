@@ -52,8 +52,15 @@ fn split(a:&[I])->(Vec<I>,Vec<I>){
  right.reverse();(left,right)
 }
 pub(super) fn certify(surface:&Surface,b:Boundary)->Result<Value>{
+ certify_impl(surface,b,false)
+}
+// Exact along-knot jets must be proven by the caller before bypassing the basis gate.
+pub(super) fn certify_after_exact_along_jets(surface:&Surface,b:Boundary)->Result<Value>{
+ certify_impl(surface,b,true)
+}
+fn certify_impl(surface:&Surface,b:Boundary,exact_along_jets:bool)->Result<Value>{
  let(p,n,k,_)=b.along(surface);let a=k[p];let z=k[n];let mut breaks=k[p..=n].to_vec();breaks.dedup();
- for &u in &breaks{if u>a&&u<z&&k.iter().filter(|&&x|x==u).count()>=p{
+ for &u in &breaks{if !exact_along_jets&&u>a&&u<z&&k.iter().filter(|&&x|x==u).count()>=p{
   return Ok(json!({"certified":false,"reason":"seam-basis-is-not-C1","unresolvedIntervals":[[a,z]]}));
  }}
  let mut controls:Vec<Pair>=(0..n).map(|i|std::array::from_fn(|c|{

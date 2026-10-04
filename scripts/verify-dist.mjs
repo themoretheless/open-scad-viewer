@@ -87,12 +87,16 @@ const limits = new Map([
 // Incidence-based cap identity preservation: measured 3,243,603 bytes.
 // Guided/G2 loft: CI production chunk measured at 3,247,548 bytes.
 // Authored tangents and direct original-tensor mapped-loft proofs: measured 3,301,916 bytes.
-const geometryChunkBudget = 3_305_000
+// Native exact strip jets and retained-family audits: observed Ubuntu CI chunk
+// 3,321,602 bytes (run 37193131950, Node 22). Keep 8,398 bytes of headroom.
+// Expanded native sweep/miter, retained decomposition and authored surface input:
+// local c94f6fca artifact production chunk measured at 3,521,252 bytes.
+const geometryChunkBudget = 3_545_000
 const jsChunkBudgets = [
-  // CAD worker with lazy ModelGraph importer: surface boundary diagnostics included: measured 108,116 bytes.
-  [/^assets\/mainSolid\.worker-[^/]+\.js$/, 116_000], // Distance kernel worker additions: measured 115,579 bytes. Surface distance worker dispatch: measured 115,110 bytes. Retained NURBS snap intervals: measured 114,200 bytes. Sketch snap preparation: measured 113,885 bytes. Body snap preparation: measured 112,083 bytes. Face sketch preparation in worker: measured 109,472 bytes.
-  // After removing logical-expression payload inlining: 470353 / 84511 / 34064 bytes.
-  [/^assets\/geometry\.worker-[^/]+\.js$/, 500_000],
+  // Native sweep Solid admission and boundary proof adapters: measured 150,489 bytes.
+  [/^assets\/mainSolid\.worker-[^/]+\.js$/, 155_000], // Distance kernel worker additions: measured 115,579 bytes. Surface distance worker dispatch: measured 115,110 bytes. Retained NURBS snap intervals: measured 114,200 bytes. Sketch snap preparation: measured 113,885 bytes. Body snap preparation: measured 112,083 bytes. Face sketch preparation in worker: measured 109,472 bytes.
+  // Native sweep/miter adapters and acknowledged preview lifecycle: measured 569,369 bytes.
+  [/^assets\/geometry\.worker-[^/]+\.js$/, 580_000],
   // Theme uniforms + default-material setters added ~0.8 kB; measured: 100,763 bytes.
   // Textured matcap (group-2 capture binding, texture loading, material alpha)
   // adds ~4 kB; measured: 107,981 bytes.
@@ -106,8 +110,8 @@ const jsChunkBudgets = [
   [/^assets\/language-kernel-bytes-[^/]+\.js$/, 470_000],
   // Photogrammetry kernel bytes, measured after WGSL variants: 243,472 bytes.
   [/^assets\/photogrammetry-bytes-[^/]+\.js$/, 270_000],
-  // Eager app shell, measured: 211,966 bytes.
-  [/^assets\/index-[^/]+\.js$/, 240_000],
+  // Sweep preview and boundary proof status app shell, measured: 241,848 bytes.
+  [/^assets\/index-[^/]+\.js$/, 245_000],
   // Packed HarfBuzz runtime, measured: 179,520 bytes.
   [/^assets\/harfbuzz-bytes-[^/]+\.js$/, 200_000],
   // Direct modeling panel with command guidance, inline dimensions, and isolation.
@@ -330,6 +334,8 @@ for (const [name, artifact, compression] of [
 // Loft operations, language schema and mobile menu: Linux CI measured 7,209,826 asset bytes.
 // Mapped Rush/cap integration with main UI: Linux CI measured 7,288,439 asset bytes.
 // Registration of the observed Linux identity adds 190 local asset bytes.
-const totalBudget = 7_291_000
+// Expanded kernel, Rush operations, preview lifecycle and proof status UI:
+// local c94f6fca production assets measured at 7,663,736 bytes.
+const totalBudget = 7_680_000
 if (total > totalBudget) throw new Error(`dist totals ${total} bytes; budget is ${totalBudget}`)
 console.log(`Verified ${files.length} dist artifacts (${total} asset bytes + ${rawWasmBytes} raw WASM bytes = ${total + rawWasmBytes} total bytes)`)

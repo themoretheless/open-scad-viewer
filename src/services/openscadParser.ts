@@ -175,6 +175,7 @@ export interface ParseOptions {
    * "alive but heavy" from "wedged" instead of killing legitimate long builds.
    */
   onYield?: () => void
+  onSweepPreview?: import('./modelGraphNurbsKernel').OwnNurbsBuildControl['onSweepPreview']
   /** Injectable monotonic clock for deterministic phase-timing tests. */
   now?: () => number
   /** Injectable macrotask yield used by cooperative-cancellation tests. */
@@ -3547,7 +3548,7 @@ export function parseOpenSCAD(source: string, options: ParseOptions = {}): Promi
       if (compiled.execution_target === 'own-nurbs') {
         const { buildTextNurbsScene } = await import('./modelGraphTextScene')
         if (options.shouldAbort?.()) throw new AbortedError()
-        const result = await buildTextNurbsScene(compiled.document, options.quality)
+        const result = await buildTextNurbsScene(compiled.document, options.quality, {shouldAbort:options.shouldAbort,onYield:options.onYield,onSweepPreview:options.onSweepPreview})
         if (options.shouldAbort?.()) throw new AbortedError()
         return result
       }
