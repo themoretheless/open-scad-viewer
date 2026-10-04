@@ -9,8 +9,8 @@ import { REFREEZE_CORE, digest, jsonBytes, shaRecord, bundleBytes, ordinaryBytes
 
 const defaultRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 export const REFRESH_SCRIPT = 'scripts/refresh-qualification-fingerprints.mjs'
-export const REFRESH_REVIEW = 'docs/qualification/g0-v39-g1-v56-refreeze-review.md'
-const OWN_RUST_EVIDENCE = 'docs/qualification/own-rust-cad-v31.json'
+export const REFRESH_REVIEW = 'docs/qualification/g0-v40-g1-v57-refreeze-review.md'
+const OWN_RUST_EVIDENCE = 'docs/qualification/own-rust-cad-v32.json'
 export const REFRESH_EXECUTORS = Object.freeze([
   '.github/workflows/g1-qualification-clean.yml',
   'scripts/g1-github-actions.mjs',
@@ -18,14 +18,14 @@ export const REFRESH_EXECUTORS = Object.freeze([
   'scripts/run-g1-ubuntu-docker-fragment.mjs',
 ])
 export const REFRESH_OUTPUTS = Object.freeze({
-  fingerprint: 'docs/qualification/g0-toolchain-fingerprints-v39.json',
-  plan: 'docs/qualification/semantic-manifold-g1-plan-v56.json',
-  status: 'docs/qualification/g0-v39-g1-v56-refreeze-status-v1.json',
+  fingerprint: 'docs/qualification/g0-toolchain-fingerprints-v40.json',
+  plan: 'docs/qualification/semantic-manifold-g1-plan-v57.json',
+  status: 'docs/qualification/g0-v40-g1-v57-refreeze-status-v1.json',
 })
-const oldFingerprint = 'docs/qualification/g0-toolchain-fingerprints-v38.json'
-const oldPlan = 'docs/qualification/semantic-manifold-g1-plan-v55.json'
-const oldStatus = 'docs/qualification/g0-v38-g1-v55-refreeze-status-v1.json'
-const oldReview = 'docs/qualification/g0-v38-g1-v55-refreeze-review.md'
+const oldFingerprint = 'docs/qualification/g0-toolchain-fingerprints-v39.json'
+const oldPlan = 'docs/qualification/semantic-manifold-g1-plan-v56.json'
+const oldStatus = 'docs/qualification/g0-v39-g1-v56-refreeze-status-v1.json'
+const oldReview = 'docs/qualification/g0-v39-g1-v56-refreeze-review.md'
 const githubEnvironment = 'docs/qualification/environment-freeze/g1-github-actions-v34.json'
 const historicalPlanHashes = [
   '050a1dd7a30d19dd85a8ed16fd724f7579c2430f1d7bf03ed68009d46bd2cbfa',
@@ -185,11 +185,17 @@ export const FROZEN_ARCHIVES = Object.freeze({
   'docs/qualification/g0-v37-g1-v54-refreeze-status-v1.json': 'a34d957fb47094865ec246047d47412f602bad128d153dd4e721fc602d86622e',
   'docs/qualification/g0-v36-g1-v53-refreeze-review.md': '1128f32ece26df16c263df33f1558c67744e9aaa5612e06ee1b11b7f3c2c4344',
   'docs/qualification/g0-v37-g1-v54-refreeze-review.md': 'd5ceb5b0aebf727060a3fbf11251cdc45a5fb7d25710e97b38b5eee2a9dba43d',
-  [oldFingerprint]: 'b6f1367765d4e8a85d0ba454816fbdd54aa9281aa3144e1ba813af35d4871c64',
-  [oldPlan]: '0cb7ce594bff47923c479e2b163cf7c98a1e88c315f52c3a980d845a6621ff09',
-  [oldStatus]: '5f9a8de7fb39a79a81d8d99f93f0415b4b05745baee8bdf1f325cbeae5e717cb',
-  [oldReview]: '4ea726ab32ee4e68c96c478422b105e93705e0407819d0559302a7bf8194374a',
+  'docs/qualification/g0-toolchain-fingerprints-v38.json': 'b6f1367765d4e8a85d0ba454816fbdd54aa9281aa3144e1ba813af35d4871c64',
+  'docs/qualification/semantic-manifold-g1-plan-v55.json': '0cb7ce594bff47923c479e2b163cf7c98a1e88c315f52c3a980d845a6621ff09',
+  'docs/qualification/g0-v38-g1-v55-refreeze-status-v1.json': '5f9a8de7fb39a79a81d8d99f93f0415b4b05745baee8bdf1f325cbeae5e717cb',
+  'docs/qualification/g0-v38-g1-v55-refreeze-review.md': '4ea726ab32ee4e68c96c478422b105e93705e0407819d0559302a7bf8194374a',
   'docs/qualification/own-rust-cad-v30.json': '2ad3734f556c01825ba1da90fff0dd2790ffd89249e19ed49a3424e4e4aec353',
+
+  [oldFingerprint]: 'e8b0dc8ba829a4d666cb04ac9cfe31b4901d6c3a8d18f63467e29d9b785d3dc1',
+  [oldPlan]: '40cd5fd07e0ef90efe55bb6218f8c00015fdf9e0828c707daf06938a4cb27fd8',
+  [oldStatus]: '6ffcdd8e005df2ed40d11b81a52413fc2be8fc025210ba021ffc1e1c4cc1fdcc',
+  [oldReview]: '48fa42d9c10e296625513236da6d5f841426bf23f1208b3fec74a8d37087ae8f',
+  'docs/qualification/own-rust-cad-v31.json': 'a9e1f9f37666825f5c28dced976b7f923912354d3779e7deccdb0e772b2da4e2',
 
 })
 
@@ -224,7 +230,7 @@ export function assertRefreshStable(prepared) {
 }
 
 function assertNoCandidateResults(root) {
-  assertCandidateResultsAbsent(root, 'semantic-manifold-g1-candidate-run-v56')
+  assertCandidateResultsAbsent(root, 'semantic-manifold-g1-candidate-run-v57')
 }
 
 /** Pure preparation apart from reading ordinary files; it writes no artifacts. */
@@ -264,14 +270,14 @@ export function prepareQualificationRefresh({
     .match(/^channel\s*=\s*"([^"]+)"/mu)?.[1]
   assert(channel, 'Pinned Rust toolchain channel is missing')
   const fingerprint = structuredClone(previousFingerprint)
-  fingerprint.fingerprintId = 'g0-toolchain-fingerprints-v39'
+  fingerprint.fingerprintId = 'g0-toolchain-fingerprints-v40'
   fingerprint.recordedAt = recordedAt
   fingerprint.previousFingerprintId = previousFingerprint.fingerprintId
   fingerprint.previousFingerprintSha256 = FROZEN_ARCHIVES[oldFingerprint]
   fingerprint.purpose = reason.trim()
   fingerprint.claimBoundary.excludes = [
     'Full SPDX SBOM', 'Playwright qualification locks',
-    'Any rewrite of G0 v1-v38 or G1 v1 through v55',
+    'Any rewrite of G0 v1-v39 or G1 v1 through v56',
     'G0 closure, G1 qualification, completed clean work, or production cutover',
   ]
   fingerprint.claimBoundary.includes = [
@@ -307,7 +313,7 @@ export function prepareQualificationRefresh({
     .map(item => /^geometry-v3-source-(\d+)$/u.exec(item.id)?.[1])
     .filter(Boolean).map(Number))
   const geometryArtifacts = [
-    { id: 'own-rust-cad-v31-evidence', path: OWN_RUST_EVIDENCE },
+    { id: 'own-rust-cad-v32-evidence', path: OWN_RUST_EVIDENCE },
     ...ownRust.sourceBundle.paths
       .filter(path => !existingArtifactPaths.has(path))
       .map(path => ({
@@ -319,11 +325,11 @@ export function prepareQualificationRefresh({
     .filter(item => !existingArtifactIds.has(item.id))
     .map(item => ({ ...item, ...snapshot.get(item.path) })))
   const qualificationArtifacts = [
-    { id: 'g1-v39-github-workflow', path: '.github/workflows/g1-qualification-clean.yml' },
-    { id: 'g1-v39-github-harness', path: 'scripts/g1-github-actions.mjs' },
-    { id: 'g1-v39-clean-fragment-selector', path: 'scripts/run-g1-candidate-clean-fragment.mjs' },
-    { id: 'g1-v39-ubuntu-selector', path: 'scripts/run-g1-ubuntu-docker-fragment.mjs' },
-    { id: 'g1-v39-github-environment', path: githubEnvironment },
+    { id: 'g1-v40-github-workflow', path: '.github/workflows/g1-qualification-clean.yml' },
+    { id: 'g1-v40-github-harness', path: 'scripts/g1-github-actions.mjs' },
+    { id: 'g1-v40-clean-fragment-selector', path: 'scripts/run-g1-candidate-clean-fragment.mjs' },
+    { id: 'g1-v40-ubuntu-selector', path: 'scripts/run-g1-ubuntu-docker-fragment.mjs' },
+    { id: 'g1-v40-github-environment', path: githubEnvironment },
   ]
   fingerprint.artifacts.push(...qualificationArtifacts
     .filter(item => !existingArtifactPaths.has(item.path))
@@ -331,18 +337,18 @@ export function prepareQualificationRefresh({
   fingerprint.knownDrift = previousFingerprint.artifacts
     .filter(item => item.sha256 !== snapshot.get(item.path).sha256)
     .map(item => ({ relativeTo: oldFingerprint, bindingId: item.id,
-      note: `Current bytes are newly bound in v39; v38 remains archived. ${reason.trim()}` }))
+      note: `Current bytes are newly bound in v40; v39 remains archived. ${reason.trim()}` }))
 
   const plan = structuredClone(previousPlan)
-  plan.planId = 'semantic-manifold-g1-plan-v56'
+  plan.planId = 'semantic-manifold-g1-plan-v57'
   plan.processAmendment = {
     kind: 'post-freeze-harness-amendment', previousPlanId: previousPlan.planId,
     previousPlanSha256: FROZEN_ARCHIVES[oldPlan], reason: reason.trim(),
     changes: [
       'Recompute artifact and canonical bundle digests from current source bytes.',
       'Bind the exact GitHub Actions workflow, evidence-producing harness, selectors, and hosted-runner image identities.',
-      'Start semantic-manifold-g1-candidate-run-v56 with zero completed clean runs and zero completed work units; no prior result is imported.',
-      'Retain G0 v1-v38 and G1 v1 through v55 byte-for-byte; G0 toolchain fingerprints advance separately to v39.',
+      'Start semantic-manifold-g1-candidate-run-v57 with zero completed clean runs and zero completed work units; no prior result is imported.',
+      'Retain G0 v1-v39 and G1 v1 through v56 byte-for-byte; G0 toolchain fingerprints advance separately to v40.',
     ],
     preserved: [
       'All 65 oracle cases, 18 comparator mutations, boundary cases, matrix rows, environment IDs, seeds, budgets, required clean runs and all 4740 work units.',
@@ -397,10 +403,10 @@ export function prepareQualificationRefresh({
     const bytes = bundleBytes(bundle.paths, snapshot)
     bundle.sha256 = { ...bundle.sha256, value: digest(bytes), byteLength: bytes.byteLength }
   }
-  plan.executionProtocol.candidateRunId = 'semantic-manifold-g1-candidate-run-v56'
-  plan.executionProtocol.resultPath = 'output/qualification/semantic-manifold-g1-candidate-run-v56/result.json'
+  plan.executionProtocol.candidateRunId = 'semantic-manifold-g1-candidate-run-v57'
+  plan.executionProtocol.resultPath = 'output/qualification/semantic-manifold-g1-candidate-run-v57/result.json'
   plan.executionProtocol.cleanRunDefinition[0] = previousPlan.executionProtocol.cleanRunDefinition[0]
-    .replace('exact v55 frozen artifact', 'exact v56 frozen artifact')
+    .replace('exact v56 frozen artifact', 'exact v57 frozen artifact')
   assert.equal(plan.executionProtocol.priorResultsMayBeImported, false)
   assert.equal(plan.approvals.qualificationApproval, 'not-approved')
   assert(plan.matrix.every(row => row.evidenceState === 'not-executed-clean-post-freeze'))
@@ -436,7 +442,7 @@ export function prepareQualificationRefresh({
   }
   const status = {
     schema: 'open-scad-viewer/qualification-refreeze-status', schemaVersion: 1,
-    statusId: 'g0-v39-g1-v56-refreeze-status-v1', recordedAt, reason: reason.trim(),
+    statusId: 'g0-v40-g1-v57-refreeze-status-v1', recordedAt, reason: reason.trim(),
     qualificationClaim: 'none', qualificationApproval: 'not-approved', g0Closed: false,
     priorEvidenceTreatment: 'discovery-only', priorResultsMayBeImported: false,
     candidateRunId: plan.executionProtocol.candidateRunId,
@@ -455,7 +461,7 @@ export function prepareQualificationRefresh({
     changedBindings: changes,
     executionNotes: [
       'This artifact records a new freeze, not an execution result. All 4740 units remain mandatory.',
-      'The workflow, GitHub harness, and two fragment helpers select v56 and are frozen inputs; no v54 fragment is imported.',
+      'The workflow, GitHub harness, and two fragment helpers select v57 and are frozen inputs; no v54 fragment is imported.',
       'No result artifact, test invocation, clean-run approval or production authorization is created by this script.',
     ],
   }
